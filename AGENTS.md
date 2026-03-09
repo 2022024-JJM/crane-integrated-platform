@@ -13,27 +13,40 @@
 - Tailwind CSS v4
 - shadcn/ui
 - FSD(Feature-Sliced Design)
+- Atomic Design(`shared/ui` 내부 보조 규칙)
 
 ## 현재 프로젝트 기준
 
 - 소스 루트는 `src` 이다.
 - 경로 alias는 `@/* -> ./src/*` 를 사용한다.
-- shadcn/ui 공용 컴포넌트는 `src/shared/ui` 에 둔다.
+- 전역 스타일과 테마는 `src/app/styles` 에서 관리한다.
 - 공용 훅은 `src/shared/hooks` 에 둔다.
 - 공용 유틸은 `src/shared/lib` 에 둔다.
-- 전역 스타일과 테마는 `src/app/styles` 에서 관리한다.
-- `components.json` 기준 alias는 아래를 따른다.
-  - `components`: `@/shared`
-  - `ui`: `@/shared/ui`
-  - `lib`: `@/shared/lib`
-  - `hooks`: `@/shared/hooks`
-  - `utils`: `@/shared/lib/utils`
+- 공용 UI는 `src/shared/ui` 에 둔다.
+- `src/shared/ui` 내부는 `atoms / molecules / organisms` 로 구분한다.
+- 이 프로젝트는 더 이상 `widgets` 레이어를 사용하지 않는다.
+- 현재 핵심 slice 예시는 아래와 같다.
+  - `pages/main`
+  - `pages/outdoor-work`
+  - `pages/indoor-work`
+  - `features/outdoor-work-model-simulation`
+  - `entities/monitoring-region`
+  - `entities/3d-model`
+
+## components.json 기준 alias
+
+- `components`: `@/shared`
+- `ui`: `@/shared/ui`
+- `lib`: `@/shared/lib`
+- `hooks`: `@/shared/hooks`
+- `utils`: `@/shared/lib/utils`
 
 ## 기본 원칙
 
 - 기존 프로젝트 구조와 네이밍을 우선 존중한다.
 - 새 코드는 FSD 레이어 규칙에 맞게 배치한다.
-- UI는 먼저 기존 `shadcn/ui` 컴포넌트를 재사용하는 방향으로 작성한다.
+- Atomic Design은 최상위 구조가 아니라 `shared/ui` 내부 분류 기준으로만 사용한다.
+- UI는 먼저 기존 `shadcn/ui` 및 공용 molecule/organism 재사용을 우선한다.
 - 불필요한 폴더 이동, 대규모 구조 변경, 전면 리네이밍은 요청이 있을 때만 수행한다.
 - 단순 구현보다 유지보수 가능한 구조를 우선한다.
 - 임시 코드, 하드코딩, 의미 없는 축약 이름은 지양한다.
@@ -46,12 +59,13 @@
 - 하위 레이어가 상위 레이어를 import 하면 안 된다.
 - 다른 slice의 내부 구현 파일에 직접 접근하는 import는 지양한다.
 - 외부에 공개할 모듈은 가능하면 `index.ts` 를 통해 export 한다.
+- `shared` 는 어느 레이어에서도 import 가능하지만, 도메인 의미가 강한 코드는 두지 않는다.
 
 ## FSD 레이어 규칙
 
 레이어 우선순위는 아래와 같다.
 
-`app > pages > widgets > features > entities > shared`
+`app > pages > features > entities > shared`
 
 각 레이어의 역할은 아래 기준을 따른다.
 
@@ -68,27 +82,24 @@
 ### `pages`
 
 - 라우트 단위 화면
-- 여러 `widgets`, `features` 를 조합하는 레벨
+- 화면 레이아웃과 페이지 전용 조합 UI
+- 여러 `features`, `entities`, `shared` 를 조합하는 레벨
 
-`pages` 는 화면 조합에 집중하고, 세부 로직 구현은 하위 레이어로 내린다.
-
-### `widgets`
-
-- 페이지를 구성하는 비교적 큰 UI 블록
-- 여러 `features`, `entities` 를 묶는 화면 단위 조합
+`pages` 는 페이지 구성을 담당하고, 재사용 가능한 기능 로직은 하위 레이어로 내린다.
 
 ### `features`
 
 - 사용자 행동 중심 기능
-- 예: 조회 필터, 장비 선택, 알림 확인, 등록, 수정
+- 여러 엔티티를 묶는 기능 단위 로직
+- 예: 3D 모델 시뮬레이션, 장비 선택, 알림 확인, 조회 필터
 
 `features` 는 "사용자가 수행하는 일" 기준으로 나눈다.
 
 ### `entities`
 
 - 도메인 개체 중심 코드
-- 예: `crane`, `sensor`, `alarm`, `operator`
-- 도메인 타입, 상태, 포맷터, 엔티티 전용 UI 조각 등
+- 도메인 타입, 모델, 포맷터, 엔티티 전용 UI
+- 예: `monitoring-region`, `3d-model`
 
 ### `shared`
 
@@ -96,8 +107,7 @@
 - 공용 UI
 - 공용 훅
 - 유틸 함수
-- 설정값
-- 공통 API 클라이언트
+- 범용 설정값
 
 도메인 의미가 강한 코드는 `shared` 에 두지 않는다.
 
@@ -114,15 +124,40 @@
 항상 모든 세그먼트를 만들 필요는 없다.
 필요한 만큼만 만든다.
 
+## Atomic Design 규칙
+
+Atomic Design은 `src/shared/ui` 내부에서만 적용한다.
+
+### `shared/ui/atoms`
+
+- 더 이상 쪼개기 어려운 기본 UI 조각
+- 예: `button`, `input`, `label`, `badge`, `hanwha-icon`
+
+### `shared/ui/molecules`
+
+- atom 2개 이상을 조합한 작은 UI 블록
+- 예: `input-group`, `field`, `top-status-card`
+
+### `shared/ui/organisms`
+
+- 비교적 큰 공용 UI 묶음
+- 예: `dialog`, `table`, `sidebar`, `calendar`
+
+### Atomic 적용 기준
+
+- 여러 페이지에서 재사용되는 공용 UI만 `shared/ui` 로 올린다.
+- 특정 페이지에 강하게 결합된 조합 UI는 `pages/*/ui` 에 둔다.
+- Atomic은 UI 복잡도 기준이고, FSD는 책임 기준이다.
+- 따라서 `organisms` 는 `widgets` 대체 레이어가 아니다.
+
 ## UI / shadcn 규칙
 
 - shadcn 컴포넌트는 기본적으로 `src/shared/ui` 에 둔다.
-- 공용 primitive는 `shared/ui` 에 둔다.
-- 특정 기능에 강하게 결합된 조합 컴포넌트는 `features/*/ui` 또는 `widgets/*/ui` 에 둔다.
-- shadcn 기본 패턴을 크게 벗어나는 래퍼는 꼭 필요할 때만 만든다.
+- shadcn에서 생성한 공용 primitive는 현재 Atomic 분류 기준에 맞게 `atoms / molecules / organisms` 로 배치한다.
+- 새 UI를 만들기 전에 기존 `shared/ui` 에 같은 역할의 컴포넌트가 있는지 먼저 확인한다.
 - 스타일 수정은 우선 Tailwind 유틸리티와 현재 theme 토큰을 활용한다.
 - 전역 테마 및 토큰은 `src/app/styles/theme.css` 기준으로 관리한다.
-- 새 UI를 만들기 전에 기존 `shared/ui` 에 같은 역할의 컴포넌트가 있는지 먼저 확인한다.
+- shadcn 기본 패턴을 크게 벗어나는 래퍼는 꼭 필요할 때만 만든다.
 
 ## 스타일링 규칙
 
@@ -172,15 +207,16 @@
 
 1. 기존 구조와 규칙을 해치지 않는가
 2. FSD 레이어 책임이 맞는가
-3. shadcn/ui 및 기존 공용 코드 재사용이 가능한가
-4. 타입 안정성과 유지보수성이 확보되는가
-5. 필요 이상으로 추상화하지 않았는가
+3. 공용 UI와 공용 훅 재사용이 가능한가
+4. Atomic 분류 기준이 일관적인가
+5. 타입 안정성과 유지보수성이 확보되는가
+6. 필요 이상으로 추상화하지 않았는가
 
 ## 금지 사항
 
 - 하위 레이어에서 상위 레이어 import
 - 도메인 로직을 무분별하게 `shared` 에 배치
-- shadcn 공용 primitive를 기능 전용 폴더에 중복 생성
+- 페이지 전용 UI를 무리하게 `shared/ui` 로 승격
 - 요청 없는 대규모 구조 변경
 - 의미 없는 약어, 임시 네이밍, 주석 처리된 죽은 코드 방치
 
@@ -192,5 +228,6 @@
 - 새 파일 생성 시 왜 그 레이어에 두는지가 설명 가능해야 한다.
 - UI 변경 시 기존 `shared/ui` 와 theme 토큰 재사용을 우선한다.
 - 구조 제안 시 반드시 FSD 기준에서 레이어 책임을 설명한다.
+- Atomic Design은 `shared/ui` 내부 보조 규칙으로만 설명한다.
 - 단순 구현 요청이어도 아키텍처를 깨는 변경은 피한다.
 - 애매하면 가장 작은 변경으로 해결하고, 큰 구조 변경은 제안 후 진행한다.
