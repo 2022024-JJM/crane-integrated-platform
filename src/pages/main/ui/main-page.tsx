@@ -1,10 +1,10 @@
 import { monitoringRegions } from '@/entities/monitoring-region';
 import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
-import { MainFooter } from '@/widgets/main-footer';
-import { MainHeader } from '@/widgets/main-header';
-import { MainHero } from '@/widgets/main-hero';
-import { MainRegionOverview } from '@/widgets/main-region-overview';
-import { MainSummary } from '@/widgets/main-summary';
+import { MainFooter } from '@/pages/main/ui/main-footer';
+import { MainHeader } from '@/pages/main/ui/main-header';
+import { MainHero } from '@/pages/main/ui/main-hero';
+import { MainRegionOverview } from '@/pages/main/ui/main-region-overview';
+import { MainSummary } from '@/pages/main/ui/main-summary';
 
 import './main-page.css';
 

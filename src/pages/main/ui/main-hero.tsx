@@ -1,9 +1,9 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { mainHeroShortcuts } from '@/widgets/main-hero/model/main-hero-shortcuts';
+import { mainHeroShortcuts } from '@/pages/main/model/main-hero-shortcuts';
 import { cn } from '@/shared/lib/utils';
-import { Button } from '@/shared/ui/button';
+import { Button } from '@/shared/ui/atoms/button';
 
 import './main-hero.css';
 

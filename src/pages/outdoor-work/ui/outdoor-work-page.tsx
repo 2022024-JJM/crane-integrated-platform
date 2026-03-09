@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 
-import { Button } from '@/shared/ui/button';
+import { Button } from '@/shared/ui/atoms/button';
 
 const TEXT = {
   title: '\uc2e4\uc678 \uc791\uc5c5',
