@@ -5,8 +5,6 @@ import { mainHeroShortcuts } from '@/pages/main/model/main-hero-shortcuts';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/atoms/button';
 
-import './main-hero.css';
-
 const TEXT = {
   titleLead: '크레인 통합',
   titleEmphasis: '모니터링',
@@ -17,7 +15,7 @@ const TEXT = {
 function HeroCraneIllustration() {
   return (
     <svg
-      className="main-page__hero-art"
+      className="w-[min(100%,320px)] shrink-0 opacity-[0.58] animate-[main-page-float_6s_ease-in-out_infinite]"
       width="220"
       height="160"
       viewBox="0 0 220 160"
@@ -95,33 +93,44 @@ function HeroCraneIllustration() {
 
 export function MainHero() {
   return (
-    <section className="main-page__hero">
-      <div className="main-page__hero-copy">
-        <div className="main-page__eyebrow">Region Control Desk</div>
-        <h1 className="main-page__title">
+    <section className="flex items-end justify-between gap-8 px-[clamp(20px,4vw,40px)] py-[clamp(44px,7vw,64px)] pb-[36px] animate-[main-page-fade-up_0.5s_ease_both] max-[960px]:flex-col max-[960px]:items-start">
+      <div className="max-w-[560px]">
+        <div className="inline-flex items-center gap-2.5 mb-[18px] text-[11px] text-[var(--main-page-steel)] uppercase tracking-[0.14em] before:content-[''] before:w-[30px] before:h-px before:bg-[linear-gradient(90deg,var(--main-page-accent),transparent)]">
+          Region Control Desk
+        </div>
+        <h1 className="mt-0 text-[#fff] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {TEXT.titleLead}
           <span className="mt-2">{TEXT.titleEmphasis}</span>
         </h1>
-        <p className="main-page__description">{TEXT.description}</p>
-        <div className="main-page__actions">
+        <p className="max-w-[470px] mt-4 text-[14px] leading-[1.75] font-light text-[var(--main-page-steel)]">
+          {TEXT.description}
+        </p>
+        <div className="mt-7 flex flex-wrap gap-3 max-[640px]:w-full">
           {mainHeroShortcuts.map((shortcut, index) => (
             <Button
               key={shortcut.route}
               asChild
-              variant={index === 0 ? 'outline' : 'default'}
+              variant="outline"
               className={cn(
-                'main-page__action',
+                'min-w-[172px] h-auto justify-between gap-4 px-4 py-3 rounded-full max-[640px]:w-full',
                 index === 0
-                  ? 'main-page__action--secondary'
-                  : 'main-page__action--primary',
+                  ? 'bg-[rgb(255_255_255_/0.02)] border-[#3a3d45] text-[#f3f4f6] hover:bg-[rgb(245_166_35_/0.07)] hover:border-[rgb(245_166_35_/0.28)]'
+                  : 'bg-[var(--main-page-accent)] text-[#111214] hover:bg-[#ffb33c]',
               )}
             >
               <Link to={shortcut.route}>
-                <span className="main-page__action-copy">
-                  <span className="main-page__action-title">
+                <span className="flex flex-col items-start gap-0.5">
+                  <span className="text-[14px] font-semibold">
                     {shortcut.title}
                   </span>
-                  <span className="main-page__action-description">
+                  <span
+                    className={cn(
+                      'text-[11px] font-normal',
+                      index === 0
+                        ? 'text-[rgb(255_255_255_/0.72)]'
+                        : 'text-[rgb(17_18_20_/0.72)]',
+                    )}
+                  >
                     {shortcut.description}
                   </span>
                 </span>
