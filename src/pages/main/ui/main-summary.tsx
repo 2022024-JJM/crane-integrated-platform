@@ -67,13 +67,13 @@ export function MainSummary({ regions }: MainSummaryProps) {
   const summaryItems = getSummaryItems(regions);
 
   return (
-    <section className="grid grid-cols-5 gap-px mb-9 mx-10 border border-(--main-page-border) overflow-hidden bg-(--main-page-border) animate-[main-page-fade-up_0.5s_0.08s_ease_both] max-[960px]:grid-cols-3 max-[640px]:grid-cols-2">
+    <section className="grid grid-cols-5 gap-px mb-13 mx-10 border border-(--main-page-border) overflow-hidden bg-(--main-page-border) animate-[main-page-fade-up_0.5s_0.08s_ease_both] max-[960px]:grid-cols-3 max-[640px]:grid-cols-2">
       {summaryItems.map((item) => (
         <div
           key={item.label}
           className="px-4.5 py-3.5 bg-(--main-page-surface) flex flex-col gap-1"
         >
-          <div className="text-[10px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
+          <div className="text-[12px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
             {item.label}
           </div>
           <div

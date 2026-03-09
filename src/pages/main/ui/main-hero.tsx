@@ -86,18 +86,18 @@ function HeroCraneIllustration() {
 
 export function MainHero() {
   return (
-    <section className="flex items-end justify-between gap-8 px-[clamp(20px,4vw,40px)] py-[clamp(44px,7vw,64px)] pb-[36px] animate-[main-page-fade-up_0.5s_ease_both] max-[960px]:flex-col max-[960px]:items-start">
-      <div className="max-w-[560px]">
-        <div className="inline-flex items-center gap-2.5 mb-[18px] text-[11px] text-[var(--main-page-steel)] uppercase tracking-[0.14em] before:content-[''] before:w-[30px] before:h-px before:bg-[linear-gradient(90deg,var(--main-page-accent),transparent)]">
+    <section className="flex items-end justify-between gap-8 px-[clamp(20px,4vw,40px)] py-[clamp(44px,7vw,64px)] pb-12 animate-[main-page-fade-up_0.5s_ease_both] max-[960px]:flex-col max-[960px]:items-start">
+      <div className="max-w-140">
+        <div className="inline-flex items-center gap-2.5 mb-4.5 text-[11px] text-(--main-page-steel) uppercase tracking-[0.14em] before:content-[''] before:w-7.5 before:h-px before:bg-[linear-gradient(90deg,var(--main-page-accent),transparent)]">
           Region Control Desk
         </div>
-        <h1 className="mt-0 text-[#fff] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
+        <h1 className="mt-0 text-white text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {TEXT.titleLead}
         </h1>
         <h1 className="mt-2 text-[#f5a623] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {TEXT.titleEmphasis}
         </h1>
-        <p className="max-w-[470px] mt-4 text-[14px] leading-[1.75] font-light text-[var(--main-page-steel)]">
+        <p className="max-w-117.5 mt-4 text-[14px] leading-[1.75] font-light text-(--main-page-steel)">
           {TEXT.description}
         </p>
       </div>

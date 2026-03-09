@@ -16,7 +16,7 @@ const MAIN_PAGE_STYLE: CSSProperties = {
   '--main-page-accent': '#f5a623',
   '--main-page-steel': '#8a96a3',
   '--main-page-text': '#d4dae0',
-  '--main-page-text-dim': '#5a626a',
+  '--main-page-text-dim': '#8a96a3',
   '--main-page-ok': '#3dd68c',
   '--main-page-warn': '#f5a623',
   '--main-page-error': '#f04747',

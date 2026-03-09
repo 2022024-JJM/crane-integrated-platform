@@ -8,5 +8,5 @@ export interface MonitoringRegion {
   status: MonitoringRegionStatus;
   statusLabel: string;
   screens: string[];
-  route: '/indoor-work' | '/outdoor-work';
+  route: '/' | '/indoor-work' | '/outdoor-work';
 }

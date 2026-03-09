@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type {
@@ -8,17 +8,17 @@ import type {
 import { cn } from '@/shared/lib/utils';
 
 const TEXT = {
-  craneLabel: '\ud06c\ub808\uc778',
-  craneUnit: '\uae30',
+  craneLabel: '크레인',
+  craneUnit: '기',
 } as const;
 
 function getCardStripeClassName(status: MonitoringRegionStatus) {
   if (status === 'warning') {
-    return 'bg-[var(--main-page-accent)]';
+    // return 'bg-[var(--main-page-accent)]';
   }
 
   if (status === 'error') {
-    return 'bg-[var(--main-page-error)]';
+    // return 'bg-[var(--main-page-error)]';
   }
 
   return 'bg-[var(--main-page-border)]';
@@ -113,8 +113,8 @@ export function MonitoringRegionCard({
         <div className="text-[#fff] text-[22px] leading-none tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {region.name}
         </div>
-        <div className="text-[11px] text-[var(--main-page-text-dim)] font-light">
-          {region.siteName} {TEXT.craneLabel} {region.craneCount}
+        <div className="text-[12px] text-[var(--main-page-text-dim)]">
+          {region.siteName} {TEXT.craneLabel} {region.craneCount}{' '}
           {TEXT.craneUnit}
         </div>
         <div className="mt-2.5 flex flex-col gap-1.5">
@@ -123,7 +123,7 @@ export function MonitoringRegionCard({
               key={screen}
               className="inline-flex items-center gap-1.5 w-full px-2 py-1.5 border border-[var(--main-page-border)] rounded-[6px] bg-[rgb(255_255_255_/_0.03)] text-[var(--main-page-steel)] text-[11px] transition-[color,border-color,background-color] duration-180 hover:text-[var(--main-page-text)] hover:border-[rgb(245_166_35_/_0.2)] hover:bg-[rgb(245_166_35_/_0.04)]"
             >
-              <span className="size-1.5 shrink-0 rounded-full bg-[var(--main-page-text-dim)]" />
+              <ChevronRight className="size-3.5 shrink-0 text-yellow-500 stroke-[2.5]" />
               {screen}
             </div>
           ))}
