@@ -1,0 +1,133 @@
+.main-page__hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-inline: clamp(20px, 4vw, 40px);
+  padding-block: clamp(44px, 7vw, 64px) 36px;
+  animation: main-page-fade-up 0.5s ease both;
+}
+
+.main-page__hero-copy {
+  max-width: 560px;
+}
+
+.main-page__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--main-page-steel);
+  font-size: 11px;
+  margin-bottom: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.main-page__eyebrow::before {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--main-page-accent), transparent);
+}
+
+.main-page__title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3rem, 3vw, 5.2rem);
+  line-height: 0.92;
+  letter-spacing: 0.06em;
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+.main-page__title span {
+  display: block;
+  color: var(--main-page-accent);
+}
+
+.main-page__description {
+  max-width: 470px;
+  margin-top: 16px;
+  color: var(--main-page-steel);
+  font-size: 14px;
+  line-height: 1.75;
+  font-weight: 300;
+}
+
+.main-page__actions {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.main-page__action {
+  min-width: 172px;
+  height: auto;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 9999px;
+}
+
+.main-page__action--primary {
+  background: var(--main-page-accent);
+  color: #111214;
+}
+
+.main-page__action--primary:hover {
+  background: #ffb33c;
+}
+
+.main-page__action--secondary {
+  border-color: #3a3d45;
+  background: rgb(255 255 255 / 0.02);
+  color: #f3f4f6;
+}
+
+.main-page__action--secondary:hover {
+  background: rgb(245 166 35 / 0.07);
+  border-color: rgb(245 166 35 / 0.28);
+  color: #fff;
+}
+
+.main-page__action-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.main-page__action-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.main-page__action-description {
+  color: rgb(255 255 255 / 0.72);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.main-page__action--primary .main-page__action-description {
+  color: rgb(17 18 20 / 0.72);
+}
+
+.main-page__hero-art {
+  width: min(100%, 320px);
+  flex-shrink: 0;
+  opacity: 0.58;
+  animation: main-page-float 6s ease-in-out infinite;
+}
+
+@media (max-width: 960px) {
+  .main-page__hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-page__action {
+    width: 100%;
+  }
+}
