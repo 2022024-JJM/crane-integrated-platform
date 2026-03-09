@@ -46,6 +46,11 @@ const TEXT = {
   alarmTitle: '알람 내역',
 } as const;
 
+function normalizeSidebarTitle(regionName?: string) {
+  if (!regionName) return null;
+  return regionName.replace(/\s+/g, '');
+}
+
 const panelSurfaceClass =
   'min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(8,11,24,0.98),rgba(5,7,18,0.98))]';
 const sectionTitleClass = 'mb-2.5 text-[18px] font-bold text-[#f2f5ff]';
@@ -63,6 +68,7 @@ const tableHeadClass =
 export function IndoorWorkPage() {
   const location = useLocation();
   const regionName = (location.state as { regionName?: string } | null)?.regionName;
+  const sidebarTitle = normalizeSidebarTitle(regionName) ?? TEXT.sidebarTitle;
   const { dateTime, clockLabel } = useMainPageClock();
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName,
@@ -636,7 +642,7 @@ export function IndoorWorkPage() {
               <Menu size={16} />
             </button>
             <div className="sidebar-title text-[24px] font-bold tracking-[0.03em] text-[#f2a329] transition-all">
-              {TEXT.sidebarTitle}
+              {sidebarTitle}
             </div>
           </div>
 
