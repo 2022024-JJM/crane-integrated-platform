@@ -14,6 +14,7 @@ import { OutdoorWorkModelSimulation } from '@/features/outdoor-work-model-simula
 const DEFAULT_CAMERA_POSITION = new Vector3(-65, 20, -10);
 const DEFAULT_TARGET = new Vector3(-65, 0, -35);
 const TOP_VIEW_CAMERA_POSITION = new Vector3(-65, 92, -35);
+const DEFAULT_CAMERA_DISTANCE = DEFAULT_CAMERA_POSITION.distanceTo(DEFAULT_TARGET);
 
 export interface OutdoorWork3dViewHandle {
   resetView: () => void;
@@ -24,11 +25,33 @@ export interface OutdoorWork3dViewHandle {
 
 interface ViewportControllerProps {
   onReady: (controls: OrbitControlsImpl) => void;
+  onZoomChange?: (zoomPercent: number) => void;
 }
 
-function ViewportController({ onReady }: ViewportControllerProps) {
+interface OutdoorWork3dViewProps {
+  onZoomChange?: (zoomPercent: number) => void;
+}
+
+function getZoomPercent(controls: OrbitControlsImpl) {
+  const distance = controls.object.position.distanceTo(controls.target);
+  const percent = Math.round((DEFAULT_CAMERA_DISTANCE / distance) * 100);
+
+  return Math.max(40, Math.min(300, percent));
+}
+
+function ViewportController({ onReady, onZoomChange }: ViewportControllerProps) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  const onReadyRef = useRef(onReady);
+  const onZoomChangeRef = useRef(onZoomChange);
   const { camera } = useThree();
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  useEffect(() => {
+    onZoomChangeRef.current = onZoomChange;
+  }, [onZoomChange]);
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -40,14 +63,27 @@ function ViewportController({ onReady }: ViewportControllerProps) {
     camera.position.copy(DEFAULT_CAMERA_POSITION);
     controls.target.copy(DEFAULT_TARGET);
     controls.update();
-    onReady(controls);
-  }, [camera, onReady]);
+    onReadyRef.current(controls);
+    onZoomChangeRef.current?.(getZoomPercent(controls));
+
+    const handleChange = () => {
+      onZoomChangeRef.current?.(getZoomPercent(controls));
+    };
+
+    controls.addEventListener('change', handleChange);
+
+    return () => {
+      controls.removeEventListener('change', handleChange);
+    };
+  }, [camera]);
 
   return <OrbitControls ref={controlsRef} enableDamping={false} />;
 }
 
-export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
-  function OutdoorWork3dView(_, ref) {
+export const OutdoorWork3dView = forwardRef<
+  OutdoorWork3dViewHandle,
+  OutdoorWork3dViewProps
+>(function OutdoorWork3dView({ onZoomChange }, ref) {
     const controlsRef = useRef<OrbitControlsImpl | null>(null);
     const [isTopView, setIsTopView] = useState(false);
 
@@ -62,6 +98,7 @@ export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
         controls.object.position.copy(DEFAULT_CAMERA_POSITION);
         controls.target.copy(DEFAULT_TARGET);
         controls.update();
+        onZoomChange?.(getZoomPercent(controls));
         setIsTopView(false);
       },
       zoomIn: () => {
@@ -78,6 +115,7 @@ export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
 
         controls.object.position.add(direction);
         controls.update();
+        onZoomChange?.(getZoomPercent(controls));
       },
       zoomOut: () => {
         const controls = controlsRef.current;
@@ -93,6 +131,7 @@ export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
 
         controls.object.position.add(direction);
         controls.update();
+        onZoomChange?.(getZoomPercent(controls));
       },
       toggleTopView: () => {
         const controls = controlsRef.current;
@@ -109,6 +148,7 @@ export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
           );
           controls.target.copy(DEFAULT_TARGET);
           controls.update();
+          onZoomChange?.(getZoomPercent(controls));
 
           return next;
         });
@@ -138,9 +178,9 @@ export const OutdoorWork3dView = forwardRef<OutdoorWork3dViewHandle>(
           onReady={(controls) => {
             controlsRef.current = controls;
           }}
+          onZoomChange={onZoomChange}
         />
         <OutdoorWorkModelSimulation />
       </Canvas>
     );
-  },
-);
+  });

@@ -61,6 +61,7 @@ export function OutdoorWorkPage() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(156);
   const [rightPanelWidth, setRightPanelWidth] = useState(248);
   const [viewerHeight, setViewerHeight] = useState(0);
+  const [zoomPercent, setZoomPercent] = useState(100);
   const [draggingPanel, setDraggingPanel] = useState<
     'left' | 'right' | 'bottom' | null
   >(null);
@@ -640,7 +641,7 @@ export function OutdoorWorkPage() {
               </div>
             </div>
             <div className="rounded-lg border border-[rgba(255,166,0,0.24)] bg-[rgba(255,166,0,0.08)] px-2.5 py-[5px] font-mono text-[12px] font-bold text-[#ffbe54]">
-              100%
+              {zoomPercent}%
             </div>
           </div>
 
@@ -681,7 +682,10 @@ export function OutdoorWorkPage() {
             </div>
 
             <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[linear-gradient(180deg,rgba(5,17,37,0.92),rgba(4,13,31,0.98))] [&>*]:h-full [&>*]:w-full [&_canvas]:block">
-              <OutdoorWork3dView ref={viewerRef} />
+              <OutdoorWork3dView
+                ref={viewerRef}
+                onZoomChange={setZoomPercent}
+              />
             </div>
 
             <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(7,11,19,0.7)] px-3 py-1.5 text-[12px] text-[#97a4c5]">
