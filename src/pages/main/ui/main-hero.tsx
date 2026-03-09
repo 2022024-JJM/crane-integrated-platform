@@ -1,15 +1,8 @@
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-import { mainHeroShortcuts } from '@/pages/main/model/main-hero-shortcuts';
-import { cn } from '@/shared/lib/utils';
-import { Button } from '@/shared/ui/atoms/button';
-
 const TEXT = {
   titleLead: '크레인 통합',
   titleEmphasis: '모니터링',
   description:
-    '모니터링할 지역을 선택하면 해당 지역의 3D 크레인 현황 화면으로 이동합니다. 현재 구조에 연결된 실내 작업과 실외 작업 화면도 바로 열 수 있도록 진입점을 함께 배치했습니다.',
+    '모니터링할 지역을 선택하면 해당 지역의 3D 크레인 현황 화면으로 이동합니다.',
 } as const;
 
 function HeroCraneIllustration() {
@@ -100,45 +93,13 @@ export function MainHero() {
         </div>
         <h1 className="mt-0 text-[#fff] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {TEXT.titleLead}
-          <span className="mt-2">{TEXT.titleEmphasis}</span>
+        </h1>
+        <h1 className="mt-2 text-[#f5a623] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
+          {TEXT.titleEmphasis}
         </h1>
         <p className="max-w-[470px] mt-4 text-[14px] leading-[1.75] font-light text-[var(--main-page-steel)]">
           {TEXT.description}
         </p>
-        <div className="mt-7 flex flex-wrap gap-3 max-[640px]:w-full">
-          {mainHeroShortcuts.map((shortcut, index) => (
-            <Button
-              key={shortcut.route}
-              asChild
-              variant="outline"
-              className={cn(
-                'min-w-[172px] h-auto justify-between gap-4 px-4 py-3 rounded-full max-[640px]:w-full',
-                index === 0
-                  ? 'bg-[rgb(255_255_255_/0.02)] border-[#3a3d45] text-[#f3f4f6] hover:bg-[rgb(245_166_35_/0.07)] hover:border-[rgb(245_166_35_/0.28)]'
-                  : 'bg-[var(--main-page-accent)] text-[#111214] hover:bg-[#ffb33c]',
-              )}
-            >
-              <Link to={shortcut.route}>
-                <span className="flex flex-col items-start gap-0.5">
-                  <span className="text-[14px] font-semibold">
-                    {shortcut.title}
-                  </span>
-                  <span
-                    className={cn(
-                      'text-[11px] font-normal',
-                      index === 0
-                        ? 'text-[rgb(255_255_255_/0.72)]'
-                        : 'text-[rgb(17_18_20_/0.72)]',
-                    )}
-                  >
-                    {shortcut.description}
-                  </span>
-                </span>
-                <ArrowRight size={16} />
-              </Link>
-            </Button>
-          ))}
-        </div>
       </div>
       <HeroCraneIllustration />
     </section>

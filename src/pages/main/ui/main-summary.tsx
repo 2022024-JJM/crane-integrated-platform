@@ -2,12 +2,11 @@ import type { MonitoringRegion } from '@/entities/monitoring-region';
 import { cn } from '@/shared/lib/utils';
 
 const TEXT = {
-  totalRegions: '\uc804\uccb4 \uc9c0\uc5ed',
-  normalOperation: '\uc815\uc0c1 \uc6b4\uc601',
-  warningDetected: '\uacbd\uace0 \uac10\uc9c0',
-  abnormalAlert: '\uc774\uc0c1 \uc54c\ub9bc',
-  totalCraneCount: '\ucd1d \ud06c\ub808\uc778 \uc218',
-  summaryAria: '\uc6b4\uc601 \uc694\uc57d',
+  totalRegions: '전체 지역',
+  normalOperation: '정상 운영',
+  warningDetected: '경고 감지',
+  abnormalAlert: '이상 알림',
+  totalCraneCount: '총 크레인 수',
 } as const;
 
 type SummaryTone = 'normal' | 'ok' | 'warning' | 'error';
@@ -68,16 +67,13 @@ export function MainSummary({ regions }: MainSummaryProps) {
   const summaryItems = getSummaryItems(regions);
 
   return (
-    <section
-      className="grid [grid-template-columns:repeat(5,minmax(0,1fr))] gap-px mb-9 px-[clamp(20px,4vw,40px)] border border-[var(--main-page-border)] rounded-[8px] overflow-hidden bg-[var(--main-page-border)] animate-[main-page-fade-up_0.5s_0.08s_ease_both] max-[960px]:[grid-template-columns:repeat(3,minmax(0,1fr))] max-[640px]:[grid-template-columns:repeat(2,minmax(0,1fr))]"
-      aria-label={TEXT.summaryAria}
-    >
+    <section className="grid grid-cols-5 gap-px mb-9 mx-10 border border-(--main-page-border) overflow-hidden bg-(--main-page-border) animate-[main-page-fade-up_0.5s_0.08s_ease_both] max-[960px]:grid-cols-3 max-[640px]:grid-cols-2">
       {summaryItems.map((item) => (
         <div
           key={item.label}
-          className="px-[18px] py-[14px] bg-[var(--main-page-surface)] flex flex-col gap-1"
+          className="px-4.5 py-3.5 bg-(--main-page-surface) flex flex-col gap-1"
         >
-          <div className="text-[10px] text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
+          <div className="text-[10px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
             {item.label}
           </div>
           <div
