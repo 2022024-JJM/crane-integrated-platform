@@ -24,6 +24,7 @@ import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { cn } from '@/shared/lib/utils';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
+import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 import type { OutdoorWork3dViewHandle } from './outdoor-work-3d-view';
 import { OutdoorWork3dView } from './outdoor-work-3d-view';
 
@@ -61,14 +62,16 @@ const tableHeadClass =
 
 export function OutdoorWorkPage() {
   const location = useLocation();
-  const regionName = (location.state as { regionName?: string } | null)?.regionName;
+  const regionName = (location.state as { regionName?: string } | null)
+    ?.regionName;
   const { dateTime, clockLabel } = useMainPageClock();
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName,
   });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeMenu, setActiveMenu] =
-    useState<OutdoorMenuKey>('realtime-monitoring');
+  const [activeMenu, setActiveMenu] = useState<OutdoorMenuKey>(
+    'realtime-monitoring',
+  );
   const [leftPanelWidth, setLeftPanelWidth] = useState(156);
   const [rightPanelWidth, setRightPanelWidth] = useState(248);
   const [viewerHeight, setViewerHeight] = useState(0);
@@ -110,13 +113,132 @@ export function OutdoorWorkPage() {
   ] as const;
 
   const craneRows = [
-    ['GC-4', true, true, false, false, false, false, '74.3', '', '71.3', '67.8', '118.4', '', '', '239', '24.4'],
-    ['TTC-26', true, true, false, false, false, false, '', '85', '52', '', '', '85', '', '696.6', '6.6'],
-    ['TTC-20', true, true, false, false, false, false, '', '89', '49', '', '', '89', '', '604.8', '0'],
-    ['TTC-13', true, true, true, false, false, false, '', '75.5', '62', '', '16.8', '', '', '635.7', '-0.6'],
-    ['TTC-5', true, true, false, false, false, false, '', '90.8', '61', '', '34.1', '', '', '307.7', '-0.1'],
-    ['TTC-12', true, true, false, false, false, false, '', '265.6', '55', '', '85.3', '', '', '806.6', '0'],
-    ['TTC-30', true, true, false, false, false, false, '', '352.9', '39.1', '', '53.2', '', '', '528.1', '0'],
+    [
+      'GC-4',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '74.3',
+      '',
+      '71.3',
+      '67.8',
+      '118.4',
+      '',
+      '',
+      '239',
+      '24.4',
+    ],
+    [
+      'TTC-26',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '85',
+      '52',
+      '',
+      '',
+      '85',
+      '',
+      '696.6',
+      '6.6',
+    ],
+    [
+      'TTC-20',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '89',
+      '49',
+      '',
+      '',
+      '89',
+      '',
+      '604.8',
+      '0',
+    ],
+    [
+      'TTC-13',
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      '',
+      '75.5',
+      '62',
+      '',
+      '16.8',
+      '',
+      '',
+      '635.7',
+      '-0.6',
+    ],
+    [
+      'TTC-5',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '90.8',
+      '61',
+      '',
+      '34.1',
+      '',
+      '',
+      '307.7',
+      '-0.1',
+    ],
+    [
+      'TTC-12',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '265.6',
+      '55',
+      '',
+      '85.3',
+      '',
+      '',
+      '806.6',
+      '0',
+    ],
+    [
+      'TTC-30',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '352.9',
+      '39.1',
+      '',
+      '53.2',
+      '',
+      '',
+      '528.1',
+      '0',
+    ],
   ] as const;
 
   const operationInfoCards = [
@@ -176,11 +298,15 @@ export function OutdoorWorkPage() {
       const rect = layoutElement.getBoundingClientRect();
 
       if (draggingPanel === 'left' && !isSidebarCollapsed) {
-        setLeftPanelWidth(Math.min(Math.max(event.clientX - rect.left, 120), 320));
+        setLeftPanelWidth(
+          Math.min(Math.max(event.clientX - rect.left, 120), 320),
+        );
       }
 
       if (draggingPanel === 'right') {
-        setRightPanelWidth(Math.min(Math.max(rect.right - event.clientX, 220), 420));
+        setRightPanelWidth(
+          Math.min(Math.max(rect.right - event.clientX, 220), 420),
+        );
       }
 
       if (draggingPanel === 'bottom') {
@@ -227,7 +353,9 @@ export function OutdoorWorkPage() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsViewerFullscreen(document.fullscreenElement === viewerFrameRef.current);
+      setIsViewerFullscreen(
+        document.fullscreenElement === viewerFrameRef.current,
+      );
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -263,17 +391,24 @@ export function OutdoorWorkPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {['장비', '유형', '위치', '상태', '작업', '방향'].map((header) => (
-                <th key={header} className={tableHeadClass}>
-                  {header}
-                </th>
-              ))}
+              {['장비', '유형', '위치', '상태', '작업', '방향'].map(
+                (header) => (
+                  <th key={header} className={tableHeadClass}>
+                    {header}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
             {operationInfoRows.map((row) => (
               <tr key={row[0]}>
-                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    'text-left font-bold text-[#f0b144]',
+                  )}
+                >
                   {row[0]}
                 </td>
                 <td className={tableCellClass}>{row[1]}</td>
@@ -306,7 +441,12 @@ export function OutdoorWorkPage() {
             {operationStatusRows.map((row) => (
               <tr key={`${row[0]}-${row[1]}`}>
                 <td className={tableCellClass}>{row[0]}</td>
-                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    'text-left font-bold text-[#f0b144]',
+                  )}
+                >
                   {row[1]}
                 </td>
                 <td className={tableCellClass}>{row[2]}</td>
@@ -357,7 +497,12 @@ export function OutdoorWorkPage() {
         <tbody>
           {craneRows.map((row) => (
             <tr key={row[0]}>
-              <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+              <td
+                className={cn(
+                  tableCellClass,
+                  'text-left font-bold text-[#f0b144]',
+                )}
+              >
                 {row[0]}
               </td>
               {[row[1], row[2], row[3]].map((value, index) => (
@@ -407,7 +552,9 @@ export function OutdoorWorkPage() {
                   key={label}
                   className="border border-[rgba(255,255,255,0.06)] bg-[rgba(8,9,21,0.94)] p-3"
                 >
-                  <div className="mb-1.5 text-[11px] text-[#607097]">{label}</div>
+                  <div className="mb-1.5 text-[11px] text-[#607097]">
+                    {label}
+                  </div>
                   <div className="text-[13px] font-semibold leading-[1.5] text-[#eef3ff]">
                     {value}
                   </div>
@@ -444,7 +591,10 @@ export function OutdoorWorkPage() {
             <div className={sectionTitleClass}>운행 현황</div>
             <div className="grid grid-cols-2 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
               {operationStatusCards.map(([label, value, tone]) => (
-                <div key={label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+                <div
+                  key={label}
+                  className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+                >
                   <div className="text-[11px] text-[#5f6f93]">{label}</div>
                   <div className={getStatValueClass(tone)}>{value}</div>
                 </div>
@@ -479,7 +629,10 @@ export function OutdoorWorkPage() {
           <div className={sectionTitleClass}>{TEXT.statsTitle}</div>
           <div className="grid grid-cols-3 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
             {statCards.map((item) => (
-              <div key={item.label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+              <div
+                key={item.label}
+                className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+              >
                 <div className="text-[11px] text-[#5f6f93]">{item.label}</div>
                 <div className={getStatValueClass(item.tone)}>{item.value}</div>
               </div>
@@ -505,39 +658,41 @@ export function OutdoorWorkPage() {
                 </tr>
               </thead>
               <tbody>
-                {alarmRows.map(([no, severity, occurrenceTime, target, count]) => (
-                  <tr key={no}>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {no}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                          severity === 'Warning'
-                            ? 'bg-[rgba(244,179,71,0.12)] text-[#f4b347]'
-                            : 'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
-                        )}
-                      >
-                        {severity === 'Warning' ? (
-                          <AlertTriangle size={10} />
-                        ) : (
-                          <ShieldAlert size={10} />
-                        )}
-                        {severity}
-                      </span>
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {occurrenceTime}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {target}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
-                      {count}
-                    </td>
-                  </tr>
-                ))}
+                {alarmRows.map(
+                  ([no, severity, occurrenceTime, target, count]) => (
+                    <tr key={no}>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {no}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                            severity === 'Warning'
+                              ? 'bg-[rgba(244,179,71,0.12)] text-[#f4b347]'
+                              : 'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
+                          )}
+                        >
+                          {severity === 'Warning' ? (
+                            <AlertTriangle size={10} />
+                          ) : (
+                            <ShieldAlert size={10} />
+                          )}
+                          {severity}
+                        </span>
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {occurrenceTime}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {target}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
+                        {count}
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -558,7 +713,11 @@ export function OutdoorWorkPage() {
             <ChevronLeft size={18} />
           </Link>
           <div className="flex items-center gap-2.5">
-            <HanwhaIcon className="h-[26px] w-[26px] shrink-0" width={26} height={26} />
+            <HanwhaIcon
+              className="h-[26px] w-[26px] shrink-0"
+              width={26}
+              height={26}
+            />
             <div>
               <div className="text-[18px] leading-none tracking-[0.1em] text-[#f3f6ff]">
                 CRANE<span className="text-[#f7b443]">OPS</span>
@@ -580,47 +739,30 @@ export function OutdoorWorkPage() {
         </div>
 
         <div className="flex items-center justify-self-end gap-2 max-[1080px]:justify-self-start max-[720px]:flex-wrap">
-          <div className="flex min-w-[132px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(255,166,0,0.1)] text-[#f7b443]">
-              <CloudSun size={15} />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
-                Weather
-              </div>
-              <div className="truncate text-[12px] font-semibold text-[#dbe5fb]">
-                {siteLabel} {weatherLabel}
-              </div>
-              <div className="text-[11px] text-[#8ea0c6]">{temperatureLabel}</div>
-            </div>
-          </div>
-          <div className="flex min-w-[116px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(110,130,255,0.1)] text-[#9fb4ff]">
-              <Clock3 size={15} />
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
-                Time
-              </div>
-              <time
-                className="font-mono text-[13px] font-semibold text-[#dbe5fb]"
-                dateTime={dateTime}
-              >
+          <TopStatusCard
+            icon={<CloudSun size={15} />}
+            label="Weather"
+            value={`${siteLabel} ${weatherLabel}`}
+            subValue={temperatureLabel}
+          />
+          <TopStatusCard
+            icon={<Clock3 size={15} />}
+            label="Time"
+            value={
+              <time className="font-mono" dateTime={dateTime}>
                 {clockLabel}
               </time>
-            </div>
-          </div>
-          <div className="flex min-w-[134px] items-center gap-2 rounded-xl border border-[rgba(55,214,122,0.18)] bg-[rgba(7,24,16,0.72)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(55,214,122,0.12)]">
+            }
+            className="[&>div:first-child]:bg-[rgba(110,130,255,0.1)] [&>div:first-child]:text-[#9fb4ff]"
+          />
+          <TopStatusCard
+            icon={
               <span className="h-2.5 w-2.5 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#5d9271]">
-                Status
-              </div>
-              <div className="text-[12px] font-semibold text-[#5ff29a]">{TEXT.live}</div>
-            </div>
-          </div>
+            }
+            label="Status"
+            value={TEXT.live}
+            tone="success"
+          />
         </div>
       </div>
 
@@ -683,7 +825,10 @@ export function OutdoorWorkPage() {
         </aside>
 
         <div
-          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          className={cn(
+            resizeHandleClass,
+            'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden',
+          )}
           role="separator"
           aria-orientation="vertical"
           aria-label="좌측 패널 크기 조절"
@@ -767,7 +912,11 @@ export function OutdoorWorkPage() {
                   void toggleViewerFullscreen();
                 }}
               >
-                {isViewerFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                {isViewerFullscreen ? (
+                  <Minimize2 size={15} />
+                ) : (
+                  <Maximize2 size={15} />
+                )}
               </button>
             </div>
 
@@ -777,7 +926,6 @@ export function OutdoorWorkPage() {
                 onZoomChange={setZoomPercent}
               />
             </div>
-
           </div>
 
           <div
@@ -802,7 +950,10 @@ export function OutdoorWorkPage() {
         </section>
 
         <div
-          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          className={cn(
+            resizeHandleClass,
+            'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden',
+          )}
           role="separator"
           aria-orientation="vertical"
           aria-label="우측 패널 크기 조절"

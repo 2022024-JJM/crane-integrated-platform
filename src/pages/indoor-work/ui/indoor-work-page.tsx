@@ -26,6 +26,7 @@ import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { cn } from '@/shared/lib/utils';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
+import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 
 type IndoorMenuKey =
   | 'realtime-monitoring'
@@ -582,47 +583,30 @@ export function IndoorWorkPage() {
         </div>
 
         <div className="flex items-center justify-self-end gap-2 max-[1080px]:justify-self-start max-[720px]:flex-wrap">
-          <div className="flex min-w-[132px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(255,166,0,0.1)] text-[#f7b443]">
-              <CloudSun size={15} />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
-                Weather
-              </div>
-              <div className="truncate text-[12px] font-semibold text-[#dbe5fb]">
-                {siteLabel} {weatherLabel}
-              </div>
-              <div className="text-[11px] text-[#8ea0c6]">{temperatureLabel}</div>
-            </div>
-          </div>
-          <div className="flex min-w-[116px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(110,130,255,0.1)] text-[#9fb4ff]">
-              <Clock3 size={15} />
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
-                Time
-              </div>
-              <time
-                className="font-mono text-[13px] font-semibold text-[#dbe5fb]"
-                dateTime={dateTime}
-              >
+          <TopStatusCard
+            icon={<CloudSun size={15} />}
+            label="Weather"
+            value={`${siteLabel} ${weatherLabel}`}
+            subValue={temperatureLabel}
+          />
+          <TopStatusCard
+            icon={<Clock3 size={15} />}
+            label="Time"
+            value={
+              <time className="font-mono" dateTime={dateTime}>
                 {clockLabel}
               </time>
-            </div>
-          </div>
-          <div className="flex min-w-[134px] items-center gap-2 rounded-xl border border-[rgba(55,214,122,0.18)] bg-[rgba(7,24,16,0.72)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(55,214,122,0.12)]">
+            }
+            className="[&>div:first-child]:bg-[rgba(110,130,255,0.1)] [&>div:first-child]:text-[#9fb4ff]"
+          />
+          <TopStatusCard
+            icon={
               <span className="h-2.5 w-2.5 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#5d9271]">
-                Status
-              </div>
-              <div className="text-[12px] font-semibold text-[#5ff29a]">{TEXT.live}</div>
-            </div>
-          </div>
+            }
+            label="Status"
+            value={TEXT.live}
+            tone="success"
+          />
         </div>
       </div>
 
