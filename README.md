@@ -18,7 +18,7 @@
 
 ## 2. 기술 스택
 
-- Architecture : `FSD`
+- Architecture : `FSD + Atomic Design`
 - Build Tool: `Vite 7`
 - UI: `React 19`
 - Language: `TypeScript 5`
@@ -74,15 +74,17 @@ npm run dev
 
 ```text
 src/
-  app/         # 앱 진입점, 전역 스타일
-  pages/       # 페이지 레벨 구성 예정
-  widgets/     # 복합 UI 블록 구성 예정
-  features/    # 기능 단위 모듈 구성 예정
-  entities/    # 도메인 엔티티 레이어 구성 예정
+  app/         # 애플리케이션 진입점 및 전역 설정 관리 (Router, Provider, Global Style 등)
+  pages/       # 라우트 단위 화면 구성 및 페이지 전용 UI/로직 관리
+  features/    # 사용자 액션 중심 기능 모듈 (검색, 로그인, 네비게이션 등)
+  entities/    # 도메인 엔티티 레이어 (핵심 데이터 모델 및 관련 UI)
   shared/
-    hooks/     # 공통 훅
-    lib/       # 공통 유틸
-    ui/        # shadcn/ui 기반 공통 컴포넌트
+    hooks/     # 프로젝트 전역에서 재사용되는 React Hook
+    lib/       # 공통 유틸리티 함수 및 헬퍼 모듈
+    ui/        # 공통 UI 컴포넌트 (shadcn/ui 기반 Atomic Design 구조)
+      atoms/       # 최소 단위 UI 컴포넌트 (Button, Input 등)
+      molecules/   # atoms 조합 컴포넌트 (InputGroup, Select 등)
+      organisms/   # 복합 UI 컴포넌트 (Table, Dialog, Sidebar 등)
 ```
 
 <br>
