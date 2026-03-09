@@ -7,7 +7,9 @@ import {
   FileText,
   Gauge,
   Info,
+  Maximize2,
   Menu,
+  Minimize2,
   Monitor,
   PencilLine,
   Search,
@@ -71,11 +73,13 @@ export function IndoorWorkPage() {
   const [rightPanelWidth, setRightPanelWidth] = useState(248);
   const [viewerHeight, setViewerHeight] = useState(0);
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [draggingPanel, setDraggingPanel] = useState<
     'left' | 'right' | 'bottom' | null
   >(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const viewerPanelRef = useRef<HTMLElement | null>(null);
+  const viewerFrameRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<OutdoorWork3dViewHandle | null>(null);
 
   const menuItems = [
@@ -220,6 +224,30 @@ export function IndoorWorkPage() {
       window.removeEventListener('resize', updateDefaultViewerHeight);
     };
   }, [viewerHeight]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsViewerFullscreen(document.fullscreenElement === viewerFrameRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleViewerFullscreen = async () => {
+    const viewerFrameElement = viewerFrameRef.current;
+    if (!viewerFrameElement) return;
+
+    if (document.fullscreenElement === viewerFrameElement) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await viewerFrameElement.requestFullscreen();
+  };
 
   const getStatValueClass = (tone: string) =>
     cn(
@@ -693,7 +721,13 @@ export function IndoorWorkPage() {
             </div>
           </div>
 
-          <div className="relative min-h-0 overflow-hidden">
+          <div
+            ref={viewerFrameRef}
+            className={cn(
+              'relative min-h-0 overflow-hidden',
+              isViewerFullscreen && 'bg-[rgba(4,8,18,0.98)]',
+            )}
+          >
             <div className="absolute left-3 top-3 z-[2] flex gap-2">
               <button
                 type="button"
@@ -726,6 +760,16 @@ export function IndoorWorkPage() {
                 onClick={() => viewerRef.current?.toggleTopView()}
               >
                 <Gauge size={15} />
+              </button>
+              <button
+                type="button"
+                className={viewerControlClass}
+                aria-label={isViewerFullscreen ? '전체화면 종료' : '전체화면'}
+                onClick={() => {
+                  void toggleViewerFullscreen();
+                }}
+              >
+                {isViewerFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </button>
             </div>
 
