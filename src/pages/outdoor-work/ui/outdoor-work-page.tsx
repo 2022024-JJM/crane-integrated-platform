@@ -1,6 +1,8 @@
 import {
   Activity,
   AlertTriangle,
+  ChevronLeft,
+  CloudSun,
   Clock3,
   FileText,
   Gauge,
@@ -14,9 +16,12 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
+import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
+import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { cn } from '@/shared/lib/utils';
+import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import type { OutdoorWork3dViewHandle } from './outdoor-work-3d-view';
 import { OutdoorWork3dView } from './outdoor-work-3d-view';
 
@@ -29,13 +34,11 @@ type OutdoorMenuKey =
   | 'screen-editor';
 
 const TEXT = {
-  back: '대시보드',
   sidebarTitle: '2도크',
   viewerTitle: '3D CRANE VIEW',
-  viewerHint: '스크롤 = 줌, 드래그 = 이동',
   topTag: '실외 작업 모니터링',
   topDescription: '야드 · 항만 실외 3D 모니터링',
-  live: '실시간 연결됨',
+  live: '온라인',
   statsTitle: '알람 통계',
   alarmTitle: '알람 내역',
 } as const;
@@ -44,7 +47,7 @@ const panelSurfaceClass =
   'min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(8,11,24,0.98),rgba(5,7,18,0.98))]';
 const sectionTitleClass = 'mb-2.5 text-[18px] font-bold text-[#f2f5ff]';
 const viewerControlClass =
-  'grid h-[34px] w-[34px] place-items-center rounded-lg border border-[rgba(133,149,190,0.2)] bg-[rgba(7,18,36,0.84)] text-[#c6d1ec] shadow-[0_8px_18px_rgba(0,0,0,0.22)]';
+  'grid h-[34px] w-[34px] cursor-pointer place-items-center rounded-lg border border-[rgba(133,149,190,0.2)] bg-[rgba(7,18,36,0.84)] text-[#c6d1ec] shadow-[0_8px_18px_rgba(0,0,0,0.22)]';
 const resizeHandleClass =
   'group flex items-center justify-center bg-[linear-gradient(180deg,rgba(255,166,0,0.04),rgba(255,166,0,0.12),rgba(255,166,0,0.04))] transition-colors hover:bg-[linear-gradient(180deg,rgba(255,166,0,0.12),rgba(255,166,0,0.3),rgba(255,166,0,0.12))]';
 const resizeGripClass =
@@ -55,6 +58,12 @@ const tableHeadClass =
   'border-r border-b border-[rgba(255,255,255,0.04)] bg-[rgba(16,15,34,0.9)] px-2 py-[9px] text-[11px] font-medium text-[#54627f]';
 
 export function OutdoorWorkPage() {
+  const location = useLocation();
+  const regionName = (location.state as { regionName?: string } | null)?.regionName;
+  const { dateTime, clockLabel } = useMainPageClock();
+  const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
+    regionName,
+  });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeMenu, setActiveMenu] =
     useState<OutdoorMenuKey>('realtime-monitoring');
@@ -136,7 +145,7 @@ export function OutdoorWorkPage() {
   ] as const;
 
   const viewerSubtitleMap: Record<OutdoorMenuKey, string> = {
-    'realtime-monitoring': '스크롤 · 드래그 이동',
+    'realtime-monitoring': '',
     'operation-info': '운행 정보 · 장비 위치 · 작업 구간',
     'operation-status': '운행 현황 · 장비 상태 · 이벤트 흐름',
     'event-log': '이벤트 로그 · 최근 발생 이력',
@@ -515,21 +524,19 @@ export function OutdoorWorkPage() {
         <div className="flex items-center gap-3.5">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,166,0,0.22)] bg-[rgba(255,166,0,0.08)] px-3 py-[7px] text-[13px] font-semibold text-[#ffb84d] no-underline"
+            aria-label="뒤로가기"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[rgba(255,166,0,0.22)] bg-[rgba(255,166,0,0.08)] text-[#ffb84d] no-underline"
           >
-            <span className="text-[16px] leading-none">‹</span>
-            {TEXT.back}
+            <ChevronLeft size={18} />
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[rgba(255,166,0,0.25)] bg-[linear-gradient(180deg,rgba(255,166,0,0.18),rgba(255,166,0,0.04))] text-[14px] font-bold text-[#ffb84d]">
-              C
-            </div>
+            <HanwhaIcon className="h-[26px] w-[26px] shrink-0" width={26} height={26} />
             <div>
-              <div className="text-[18px] font-bold tracking-[0.14em] text-[#f3f6ff]">
-                CRANEOPS
+              <div className="text-[18px] leading-none tracking-[0.1em] text-[#f3f6ff]">
+                CRANE<span className="text-[#f7b443]">OPS</span>
               </div>
-              <div className="text-[9px] tracking-[0.18em] text-[#66718f]">
-                3D MONITORING SYSTEM
+              <div className="text-[9px] tracking-[0.14em] text-[#66718f]">
+                3D Monitoring System
               </div>
             </div>
           </div>
@@ -544,9 +551,48 @@ export function OutdoorWorkPage() {
           </div>
         </div>
 
-        <div className="inline-flex items-center justify-self-end gap-2 text-[13px] font-semibold text-[#37d67a] max-[1080px]:justify-self-start">
-          <span className="h-2 w-2 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
-          {TEXT.live}
+        <div className="flex items-center justify-self-end gap-2 max-[1080px]:justify-self-start max-[720px]:flex-wrap">
+          <div className="flex min-w-[132px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(255,166,0,0.1)] text-[#f7b443]">
+              <CloudSun size={15} />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
+                Weather
+              </div>
+              <div className="truncate text-[12px] font-semibold text-[#dbe5fb]">
+                {siteLabel} {weatherLabel}
+              </div>
+              <div className="text-[11px] text-[#8ea0c6]">{temperatureLabel}</div>
+            </div>
+          </div>
+          <div className="flex min-w-[116px] items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(110,130,255,0.1)] text-[#9fb4ff]">
+              <Clock3 size={15} />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#66789f]">
+                Time
+              </div>
+              <time
+                className="font-mono text-[13px] font-semibold text-[#dbe5fb]"
+                dateTime={dateTime}
+              >
+                {clockLabel}
+              </time>
+            </div>
+          </div>
+          <div className="flex min-w-[134px] items-center gap-2 rounded-xl border border-[rgba(55,214,122,0.18)] bg-[rgba(7,24,16,0.72)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[rgba(55,214,122,0.12)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.12em] text-[#5d9271]">
+                Status
+              </div>
+              <div className="text-[12px] font-semibold text-[#5ff29a]">{TEXT.live}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -688,9 +734,6 @@ export function OutdoorWorkPage() {
               />
             </div>
 
-            <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(7,11,19,0.7)] px-3 py-1.5 text-[12px] text-[#97a4c5]">
-              {TEXT.viewerHint}
-            </div>
           </div>
 
           <div
