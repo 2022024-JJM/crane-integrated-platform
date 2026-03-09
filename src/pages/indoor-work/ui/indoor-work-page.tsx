@@ -1,35 +1,736 @@
-import { Link, useLocation } from 'react-router-dom';
+import {
+  Activity,
+  AlertTriangle,
+  Clock3,
+  FileText,
+  Gauge,
+  Info,
+  Menu,
+  Monitor,
+  PencilLine,
+  Search,
+  ShieldAlert,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import { Button } from '@/shared/ui/atoms/button';
+import { OutdoorWork3dView } from '@/pages/outdoor-work/ui/outdoor-work-3d-view';
+import type { OutdoorWork3dViewHandle } from '@/pages/outdoor-work/ui/outdoor-work-3d-view';
+import { cn } from '@/shared/lib/utils';
+
+type IndoorMenuKey =
+  | 'realtime-monitoring'
+  | 'operation-info'
+  | 'operation-status'
+  | 'event-log'
+  | 'playback'
+  | 'screen-editor';
 
 const TEXT = {
-  title: '\uc2e4\ub0b4 \uc791\uc5c5',
-  fallbackDescription:
-    '\uc2e4\ub0b4 \uc124\ube44 \ubaa8\ub2c8\ud130\ub9c1 \ud654\uba74\uc744 \uc5f0\uacb0\ud560 \uc218 \uc788\ub3c4\ub85d \ud604\uc7ac \uc9c4\uc785\uc810\ub9cc \uc900\ube44\ud574 \ub450\uc5c8\uc2b5\ub2c8\ub2e4.',
-  regionSuffixDescription:
-    '\ud604\uc7a5\uacfc \uc5f0\ub3d9\ud560 \uc2e4\ub0b4 \uc791\uc5c5 \ud654\uba74\uc740 \ub2e4\uc74c \ub2e8\uacc4\uc5d0\uc11c \uad6c\uc131\ud558\uba74 \ub429\ub2c8\ub2e4.',
-  back: '\uba54\uc778\uc73c\ub85c \ub3cc\uc544\uac00\uae30',
+  back: '대시보드',
+  sidebarTitle: '1도크',
+  viewerTitle: '3D CRANE VIEW',
+  viewerHint: '스크롤 = 줌, 드래그 = 이동',
+  topTag: '실내 작업 모니터링',
+  topDescription: '창고 · 실내 설비 3D 모니터링',
+  live: '실시간 연결됨',
+  statsTitle: '알람 통계',
+  alarmTitle: '알람 내역',
 } as const;
 
+const panelSurfaceClass =
+  'min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(8,11,24,0.98),rgba(5,7,18,0.98))]';
+const sectionTitleClass = 'mb-2.5 text-[18px] font-bold text-[#f2f5ff]';
+const viewerControlClass =
+  'grid h-[34px] w-[34px] place-items-center rounded-lg border border-[rgba(133,149,190,0.2)] bg-[rgba(7,18,36,0.84)] text-[#c6d1ec] shadow-[0_8px_18px_rgba(0,0,0,0.22)]';
+const resizeHandleClass =
+  'group flex items-center justify-center bg-[linear-gradient(180deg,rgba(255,166,0,0.04),rgba(255,166,0,0.12),rgba(255,166,0,0.04))] transition-colors hover:bg-[linear-gradient(180deg,rgba(255,166,0,0.12),rgba(255,166,0,0.3),rgba(255,166,0,0.12))]';
+const resizeGripClass =
+  'grid select-none place-items-center rounded-full border border-[rgba(255,166,0,0.26)] bg-[rgba(11,17,30,0.96)] text-[12px] leading-none text-[#f3b247]';
+const tableCellClass =
+  'border-r border-b border-[rgba(255,255,255,0.04)] px-2 py-2 text-center font-mono text-[11px] text-[#71809e]';
+const tableHeadClass =
+  'border-r border-b border-[rgba(255,255,255,0.04)] bg-[rgba(16,15,34,0.9)] px-2 py-[9px] text-[11px] font-medium text-[#54627f]';
+
 export function IndoorWorkPage() {
-  const location = useLocation();
-  const regionName = (location.state as { regionName?: string } | null)?.regionName;
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [activeMenu, setActiveMenu] =
+    useState<IndoorMenuKey>('realtime-monitoring');
+  const [leftPanelWidth, setLeftPanelWidth] = useState(156);
+  const [rightPanelWidth, setRightPanelWidth] = useState(248);
+  const [viewerHeight, setViewerHeight] = useState(0);
+  const [zoomPercent, setZoomPercent] = useState(100);
+  const [draggingPanel, setDraggingPanel] = useState<
+    'left' | 'right' | 'bottom' | null
+  >(null);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const viewerPanelRef = useRef<HTMLElement | null>(null);
+  const viewerRef = useRef<OutdoorWork3dViewHandle | null>(null);
+
+  const menuItems = [
+    { key: 'realtime-monitoring', label: '실시간 감시', icon: Monitor },
+    { key: 'operation-info', label: '운행 정보', icon: Info },
+    { key: 'operation-status', label: '운행 현황', icon: Activity },
+    { key: 'event-log', label: '이벤트 로그', icon: FileText },
+    { key: 'playback', label: '다시 보기', icon: Clock3 },
+    { key: 'screen-editor', label: '화면 편집', icon: PencilLine },
+  ] as const;
+
+  const statCards = [
+    { label: '# Alarms', value: '2', tone: 'danger' },
+    { label: 'Elapsed Time', value: '3 min', tone: 'neutral' },
+    { label: '# Occurrence', value: '1', tone: 'ok' },
+    { label: 'Abnormal', value: '2', tone: 'danger' },
+    { label: 'Danger', value: '1', tone: 'danger' },
+    { label: 'Normal', value: '0', tone: 'ok' },
+  ] as const;
+
+  const alarmRows = [
+    ['88', 'Normal', '2019-01-23 14:55', 'BL-01', '1'],
+    ['87', 'Warning', '2019-01-23 14:48', 'BL-03', '2'],
+    ['86', 'Warning', '2019-01-23 14:40', 'OHC-11', '3'],
+    ['85', 'Critical', '2019-01-23 14:31', 'OHC-07', '1'],
+    ['84', 'Normal', '2019-01-23 14:22', 'BL-05', '2'],
+    ['83', 'Warning', '2019-01-23 14:15', 'OHC-02', '1 minute'],
+  ] as const;
+
+  const craneRows = [
+    ['OHC-01', true, true, false, false, false, false, '12.5', '', '18.4', '22.1', '', '34.2', '', '112.3', '8.2'],
+    ['OHC-02', true, true, false, false, false, false, '30.1', '', '22', '', '', '58.7', '', '230.1', '5.5'],
+    ['OHC-07', true, true, true, false, false, false, '', '95.3', '35', '', '42.1', '', '95.3', '415.9', '-0.3'],
+    ['OHC-11', true, true, false, false, false, false, '', '72', '28.5', '', '19.8', '', '72', '508.4', '3.8'],
+    ['OHC-14', true, true, false, false, true, false, '', '210.5', '0', '', '8.3', '', '210.5', '0', '0'],
+    ['BL-01', true, true, false, false, false, false, '5.8', '22.1', '14.2', '10.5', '', '22.1', '', '178.6', '12.1'],
+    ['BL-03', true, true, false, false, false, false, '', '140.3', '16', '', '30.7', '', '140.3', '320.5', '0'],
+  ] as const;
+
+  const operationInfoCards = [
+    ['도크명', '1도크 / Indoor Storage'],
+    ['활성 장비', 'OHC 4기, Bay Lift 2기'],
+    ['현재 작업', '창고 반입 · 베이 이송'],
+    ['작업 구간', '1Bay ~ 3Bay / 조립 5공장'],
+  ] as const;
+
+  const operationInfoRows = [
+    ['OHC-01', 'Overhead Crane', '3Bay', '정상', '반입 적재', '동측'],
+    ['OHC-07', 'Overhead Crane', '1Bay', '주의', '라인 이송', '중앙'],
+    ['BL-01', 'Bay Lift', '2Bay', '정상', '자재 이동', '서측'],
+    ['BL-03', 'Bay Lift', '1Bay', '정상', '적재 완료', '남측'],
+  ] as const;
+
+  const operationStatusCards = [
+    ['총 운행 장비', '9', 'neutral'],
+    ['정상 장비', '6', 'ok'],
+    ['주의 장비', '2', 'danger'],
+    ['점검 장비', '1', 'danger'],
+  ] as const;
+
+  const operationStatusRows = [
+    ['09:05', 'OHC-01', '횡행 이동 시작', '정상', '3Bay 상단'],
+    ['09:12', 'OHC-07', '권상 속도 편차', '주의', '1Bay 중앙'],
+    ['09:16', 'BL-01', '베이간 이송 완료', '정상', '2Bay'],
+    ['09:19', 'OHC-14', '점검 모드 전환', '점검', '3Bay 후면'],
+    ['09:22', 'BL-03', '자재 반입 대기', '정상', '1Bay'],
+  ] as const;
+
+  const viewerSubtitleMap: Record<IndoorMenuKey, string> = {
+    'realtime-monitoring': '스크롤 · 드래그 이동',
+    'operation-info': '운행 정보 · 설비 위치 · 작업 구간',
+    'operation-status': '운행 현황 · 장비 상태 · 이벤트 흐름',
+    'event-log': '이벤트 로그 · 최근 발생 이력',
+    playback: '다시 보기 · 과거 시점 재생',
+    'screen-editor': '화면 편집 · 배치 및 패널 구성',
+  };
+
+  const lowerPanelTitleMap: Record<IndoorMenuKey, string> = {
+    'realtime-monitoring': '실시간 장비 상태 테이블',
+    'operation-info': '장비 운행 정보',
+    'operation-status': '운행 상태 이력',
+    'event-log': '이벤트 로그 목록',
+    playback: '재생 구간 요약',
+    'screen-editor': '패널 배치 정보',
+  };
+
+  useEffect(() => {
+    if (!draggingPanel) return;
+
+    const handlePointerMove = (event: MouseEvent) => {
+      const layoutElement = layoutRef.current;
+      if (!layoutElement) return;
+
+      const rect = layoutElement.getBoundingClientRect();
+
+      if (draggingPanel === 'left' && !isSidebarCollapsed) {
+        setLeftPanelWidth(Math.min(Math.max(event.clientX - rect.left, 120), 320));
+      }
+
+      if (draggingPanel === 'right') {
+        setRightPanelWidth(Math.min(Math.max(rect.right - event.clientX, 220), 420));
+      }
+
+      if (draggingPanel === 'bottom') {
+        const viewerPanelElement = viewerPanelRef.current;
+        if (!viewerPanelElement) return;
+
+        const viewerRect = viewerPanelElement.getBoundingClientRect();
+        const nextHeight = Math.min(
+          Math.max(event.clientY - viewerRect.top - 42, 260),
+          viewerRect.height - 160,
+        );
+
+        setViewerHeight(nextHeight);
+      }
+    };
+
+    const handlePointerUp = () => setDraggingPanel(null);
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+    };
+  }, [draggingPanel, isSidebarCollapsed]);
+
+  useEffect(() => {
+    const viewerPanelElement = viewerPanelRef.current;
+    if (!viewerPanelElement || viewerHeight > 0) return;
+
+    const updateDefaultViewerHeight = () => {
+      const panelHeight = viewerPanelElement.getBoundingClientRect().height;
+      setViewerHeight(Math.max(panelHeight - 240, 320));
+    };
+
+    updateDefaultViewerHeight();
+    window.addEventListener('resize', updateDefaultViewerHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateDefaultViewerHeight);
+    };
+  }, [viewerHeight]);
+
+  const getStatValueClass = (tone: string) =>
+    cn(
+      'mt-2.5 text-[34px] leading-none font-bold',
+      tone === 'ok' && 'text-[#36d681]',
+      tone === 'danger' && 'text-[#ff4e5f]',
+      tone === 'neutral' && 'text-[#f4f7ff]',
+    );
+
+  const renderBottomPanel = () => {
+    if (activeMenu === 'operation-info') {
+      return (
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {['장비', '유형', '위치', '상태', '작업', '방향'].map((header) => (
+                <th key={header} className={tableHeadClass}>
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {operationInfoRows.map((row) => (
+              <tr key={row[0]}>
+                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                  {row[0]}
+                </td>
+                <td className={tableCellClass}>{row[1]}</td>
+                <td className={tableCellClass}>{row[2]}</td>
+                <td className={tableCellClass}>{row[3]}</td>
+                <td className={tableCellClass}>{row[4]}</td>
+                <td className={cn(tableCellClass, 'font-bold text-[#f0b144]')}>
+                  {row[5]}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+
+    if (activeMenu === 'operation-status') {
+      return (
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {['시각', '장비', '상태 변화', '레벨', '위치'].map((header) => (
+                <th key={header} className={tableHeadClass}>
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {operationStatusRows.map((row) => (
+              <tr key={`${row[0]}-${row[1]}`}>
+                <td className={tableCellClass}>{row[0]}</td>
+                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                  {row[1]}
+                </td>
+                <td className={tableCellClass}>{row[2]}</td>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    row[3] !== '정상' && 'font-bold text-[#f0b144]',
+                  )}
+                >
+                  {row[3]}
+                </td>
+                <td className={tableCellClass}>{row[4]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+
+    return (
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            {[
+              'Crane',
+              'Comm',
+              'On',
+              'Fault',
+              'Not Comm',
+              'Free Slewing',
+              'Rotate',
+              'Trolley #1',
+              'Trolley #2',
+              'Gantry',
+              'Hoist #1',
+              'Hoist #2',
+              'Hoist #3',
+              'Trolley #2',
+              'Slewing',
+              'Gantry',
+            ].map((header) => (
+              <th key={header} className={tableHeadClass}>
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {craneRows.map((row) => (
+            <tr key={row[0]}>
+              <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                {row[0]}
+              </td>
+              {[row[1], row[2], row[3]].map((value, index) => (
+                <td key={index} className={tableCellClass}>
+                  <span
+                    className={cn(
+                      'inline-block h-2 w-2 rounded-full bg-[rgba(111,123,155,0.34)]',
+                      value === true &&
+                        index < 2 &&
+                        'bg-[#39d47f] shadow-[0_0_8px_rgba(57,212,127,0.7)]',
+                      value === true &&
+                        index === 2 &&
+                        'bg-[#ef4545] shadow-[0_0_8px_rgba(239,69,69,0.6)]',
+                    )}
+                  />
+                </td>
+              ))}
+              {[0, 1, 2].map((index) => (
+                <td key={`dot-${index}`} className={tableCellClass}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-[rgba(111,123,155,0.34)]" />
+                </td>
+              ))}
+              {row.slice(7, 15).map((value, index) => (
+                <td key={index} className={tableCellClass}>
+                  {value}
+                </td>
+              ))}
+              <td className={cn(tableCellClass, 'font-bold text-[#f0b144]')}>
+                {row[15]}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
+  const renderRightPanel = () => {
+    if (activeMenu === 'operation-info') {
+      return (
+        <>
+          <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+            <div className={sectionTitleClass}>운행 정보</div>
+            <div className="grid grid-cols-1 gap-2">
+              {operationInfoCards.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="border border-[rgba(255,255,255,0.06)] bg-[rgba(8,9,21,0.94)] p-3"
+                >
+                  <div className="mb-1.5 text-[11px] text-[#607097]">{label}</div>
+                  <div className="text-[13px] font-semibold leading-[1.5] text-[#eef3ff]">
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3">
+            <div className={sectionTitleClass}>운행 메모</div>
+            <div className="flex flex-col gap-2">
+              {[
+                '1Bay 반입 라인 우선순위 상향',
+                'OHC-14는 점검 모드 유지',
+                'BL-01 자재 이송 사이클 정상',
+                '3Bay 상부 센서 응답 0.6s',
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="border border-[rgba(255,255,255,0.06)] border-l-[2px] border-l-[rgba(255,166,0,0.45)] bg-[rgba(8,9,21,0.94)] px-3 py-2.5 text-[12px] leading-[1.5] text-[#cfd6e8]"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      );
+    }
+
+    if (activeMenu === 'operation-status') {
+      return (
+        <>
+          <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+            <div className={sectionTitleClass}>운행 현황</div>
+            <div className="grid grid-cols-2 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
+              {operationStatusCards.map(([label, value, tone]) => (
+                <div key={label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+                  <div className="text-[11px] text-[#5f6f93]">{label}</div>
+                  <div className={getStatValueClass(tone)}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3">
+            <div className={sectionTitleClass}>상태 요약</div>
+            <div className="flex flex-col gap-2">
+              {[
+                '정상 장비 비율 66%',
+                '주의 레벨 2건 유지',
+                '점검 장비 1건 대응 중',
+                '평균 베이 이송 응답 0.74s',
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="border border-[rgba(255,255,255,0.06)] border-l-[2px] border-l-[rgba(255,166,0,0.45)] bg-[rgba(8,9,21,0.94)] px-3 py-2.5 text-[12px] leading-[1.5] text-[#cfd6e8]"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+          <div className={sectionTitleClass}>{TEXT.statsTitle}</div>
+          <div className="grid grid-cols-3 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
+            {statCards.map((item) => (
+              <div key={item.label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+                <div className="text-[11px] text-[#5f6f93]">{item.label}</div>
+                <div className={getStatValueClass(item.tone)}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3">
+          <div className={sectionTitleClass}>{TEXT.alarmTitle}</div>
+          <div className="max-h-full min-h-0 overflow-auto border border-[rgba(255,255,255,0.06)]">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  {['NO', 'Severity', 'OccurrenceTime', 'Crane', 'Count'].map(
+                    (header) => (
+                      <th
+                        key={header}
+                        className="border-r border-b border-[rgba(255,255,255,0.04)] bg-[rgba(15,16,31,0.92)] px-1.5 py-2 text-left text-[10px] font-semibold text-[#576683]"
+                      >
+                        {header}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {alarmRows.map(([no, severity, occurrenceTime, target, count]) => (
+                  <tr key={no}>
+                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      {no}
+                    </td>
+                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                          severity === 'Normal' && 'bg-[rgba(54,214,129,0.12)] text-[#36d681]',
+                          severity === 'Warning' && 'bg-[rgba(244,179,71,0.12)] text-[#f4b347]',
+                          severity === 'Critical' && 'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
+                        )}
+                      >
+                        {severity === 'Critical' ? (
+                          <ShieldAlert size={10} />
+                        ) : severity === 'Warning' ? (
+                          <AlertTriangle size={10} />
+                        ) : (
+                          <Activity size={10} />
+                        )}
+                        {severity}
+                      </span>
+                    </td>
+                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      {occurrenceTime}
+                    </td>
+                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      {target}
+                    </td>
+                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
+                      {count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </>
+    );
+  };
 
   return (
-    <main className="bg-zinc-950 text-zinc-50 flex min-h-screen flex-col items-center justify-center px-6 py-12">
-      <div className="flex w-full max-w-xl flex-col items-center gap-4 rounded-3xl border border-zinc-800 bg-zinc-900/80 px-8 py-10 text-center shadow-2xl">
-        <p className="text-xs font-medium tracking-[0.24em] text-zinc-500 uppercase">
-          Indoor Workspace
-        </p>
-        <h1 className="text-3xl font-semibold">{TEXT.title}</h1>
-        <p className="text-sm leading-6 text-zinc-400">
-          {regionName
-            ? `${regionName} ${TEXT.regionSuffixDescription}`
-            : TEXT.fallbackDescription}
-        </p>
-        <Button asChild>
-          <Link to="/">{TEXT.back}</Link>
-        </Button>
+    <main className="h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(4,8,18,0.94),rgba(6,10,20,0.98)),repeating-linear-gradient(-45deg,transparent_0,transparent_18px,rgba(255,255,255,0.012)_18px,rgba(255,255,255,0.012)_19px)] text-[#d7def0]">
+      <div className="grid min-h-[52px] grid-cols-[320px_1fr_220px] items-center gap-4 border-b border-b-[rgba(255,166,0,0.16)] bg-[linear-gradient(180deg,rgba(6,8,16,0.98),rgba(4,7,14,0.92))] px-3.5 py-2 shadow-[inset_0_-1px_0_rgba(255,166,0,0.08)] max-[1080px]:grid-cols-1 max-[1080px]:justify-items-start">
+        <div className="flex items-center gap-3.5">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,166,0,0.22)] bg-[rgba(255,166,0,0.08)] px-3 py-[7px] text-[13px] font-semibold text-[#ffb84d] no-underline"
+          >
+            <span className="text-[16px] leading-none">‹</span>
+            {TEXT.back}
+          </Link>
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[rgba(255,166,0,0.25)] bg-[linear-gradient(180deg,rgba(255,166,0,0.18),rgba(255,166,0,0.04))] text-[14px] font-bold text-[#ffb84d]">
+              C
+            </div>
+            <div>
+              <div className="text-[18px] font-bold tracking-[0.14em] text-[#f3f6ff]">
+                CRANEOPS
+              </div>
+              <div className="text-[9px] tracking-[0.18em] text-[#66718f]">
+                3D MONITORING SYSTEM
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-center justify-center gap-3 max-[1080px]:flex-wrap max-[1080px]:justify-start">
+          <div className="rounded-lg border border-[rgba(255,166,0,0.24)] bg-[rgba(255,166,0,0.08)] px-3 py-1.5 text-[12px] font-bold text-[#ffb33f]">
+            {TEXT.topTag}
+          </div>
+          <div className="whitespace-nowrap text-[13px] text-[#7b89aa]">
+            {TEXT.topDescription}
+          </div>
+        </div>
+
+        <div className="inline-flex items-center justify-self-end gap-2 text-[13px] font-semibold text-[#37d67a] max-[1080px]:justify-self-start">
+          <span className="h-2 w-2 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
+          {TEXT.live}
+        </div>
+      </div>
+
+      <div
+        ref={layoutRef}
+        className="grid h-[calc(100vh-52px)] min-h-0 max-[1080px]:block max-[1080px]:h-auto"
+        style={{
+          gridTemplateColumns: `${isSidebarCollapsed ? 64 : leftPanelWidth}px 8px minmax(0, 1fr) 8px ${rightPanelWidth}px`,
+        }}
+      >
+        <aside
+          className={cn(
+            panelSurfaceClass,
+            'flex flex-col border-r border-r-[rgba(255,166,0,0.08)]',
+            isSidebarCollapsed &&
+              '[&_.sidebar-title]:pointer-events-none [&_.sidebar-title]:-translate-x-1.5 [&_.sidebar-title]:opacity-0 [&_.sidebar-head]:justify-center [&_.sidebar-item]:justify-center [&_.sidebar-item]:px-0 [&_.sidebar-item_span]:hidden',
+          )}
+        >
+          <div className="sidebar-head flex h-[46px] items-center gap-2 border-b border-b-[rgba(255,166,0,0.08)] px-2.5">
+            <button
+              className="grid h-6 w-6 place-items-center rounded-md border border-[rgba(107,120,166,0.22)] bg-[rgba(255,255,255,0.02)] text-[#8793b2]"
+              type="button"
+              aria-label={isSidebarCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
+              aria-expanded={!isSidebarCollapsed}
+              onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+            >
+              <Menu size={16} />
+            </button>
+            <div className="sidebar-title text-[24px] font-bold tracking-[0.03em] text-[#f2a329] transition-all">
+              {TEXT.sidebarTitle}
+            </div>
+          </div>
+
+          <nav className="min-h-0 flex-1 overflow-auto p-2">
+            <ul className="flex flex-col gap-1.5">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.key === activeMenu;
+
+                return (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      className={cn(
+                        'sidebar-item flex w-full items-center gap-2 rounded-lg border border-transparent px-2.5 py-[11px] text-left text-[13px] text-[#8490b0] transition-all',
+                        isActive &&
+                          'border-[rgba(255,166,0,0.18)] bg-[linear-gradient(90deg,rgba(255,166,0,0.14),rgba(255,166,0,0.03))] text-[#f4af3c] shadow-[inset_3px_0_0_#f4af3c]',
+                      )}
+                      title={item.label}
+                      onClick={() => setActiveMenu(item.key)}
+                    >
+                      <Icon size={14} />
+                      <span>{item.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </aside>
+
+        <div
+          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="좌측 패널 크기 조절"
+          onMouseDown={() => {
+            if (!isSidebarCollapsed) setDraggingPanel('left');
+          }}
+        >
+          <div className={cn(resizeGripClass, 'h-11 w-3')}>⋮</div>
+        </div>
+
+        <section
+          ref={viewerPanelRef}
+          className="grid h-full min-h-0 min-w-0 border-r border-r-[rgba(255,166,0,0.08)] bg-[linear-gradient(180deg,rgba(8,13,27,0.96),rgba(5,9,19,0.98)),radial-gradient(circle_at_top_left,rgba(255,166,0,0.08),transparent_28%)]"
+          style={{
+            gridTemplateRows:
+              viewerHeight > 0
+                ? `42px minmax(0, ${viewerHeight}px) 8px minmax(120px, 1fr)`
+                : '42px minmax(0,1fr) 8px minmax(170px,26vh)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-b-[rgba(255,166,0,0.08)] px-3.5">
+            <div className="flex min-w-0 items-center gap-2.5 max-[720px]:flex-wrap">
+              <div className="h-[22px] w-[3px] rounded-full bg-[linear-gradient(180deg,#ffcc6e,#f29f05)]" />
+              <h1 className="m-0 text-[24px] font-bold tracking-[0.04em] text-[#f7b443] max-[1280px]:text-[20px] max-[720px]:text-[18px]">
+                {TEXT.viewerTitle}
+              </h1>
+              <div className="text-[14px] text-[#506181] max-[720px]:w-full max-[720px]:text-[12px]">
+                {viewerSubtitleMap[activeMenu]}
+              </div>
+            </div>
+            <div className="rounded-lg border border-[rgba(255,166,0,0.24)] bg-[rgba(255,166,0,0.08)] px-2.5 py-[5px] font-mono text-[12px] font-bold text-[#ffbe54]">
+              {zoomPercent}%
+            </div>
+          </div>
+
+          <div className="relative min-h-0 overflow-hidden">
+            <div className="absolute left-3 top-3 z-[2] flex gap-2">
+              <button
+                type="button"
+                className={viewerControlClass}
+                aria-label="기본 시점으로 이동"
+                onClick={() => viewerRef.current?.resetView()}
+              >
+                <Search size={15} />
+              </button>
+              <button
+                type="button"
+                className={viewerControlClass}
+                aria-label="확대"
+                onClick={() => viewerRef.current?.zoomIn()}
+              >
+                <ZoomIn size={15} />
+              </button>
+              <button
+                type="button"
+                className={viewerControlClass}
+                aria-label="축소"
+                onClick={() => viewerRef.current?.zoomOut()}
+              >
+                <ZoomOut size={15} />
+              </button>
+              <button
+                type="button"
+                className={viewerControlClass}
+                aria-label="탑뷰 전환"
+                onClick={() => viewerRef.current?.toggleTopView()}
+              >
+                <Gauge size={15} />
+              </button>
+            </div>
+
+            <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[linear-gradient(180deg,rgba(5,17,37,0.92),rgba(4,13,31,0.98))] [&>*]:h-full [&>*]:w-full [&_canvas]:block">
+              <OutdoorWork3dView ref={viewerRef} onZoomChange={setZoomPercent} />
+            </div>
+
+            <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(7,11,19,0.7)] px-3 py-1.5 text-[12px] text-[#97a4c5]">
+              {TEXT.viewerHint}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              resizeHandleClass,
+              'h-2 min-h-2 w-full cursor-row-resize max-[1080px]:hidden',
+            )}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="하단 그리드 크기 조절"
+            onMouseDown={() => setDraggingPanel('bottom')}
+          >
+            <div className={cn(resizeGripClass, 'h-3 w-11')}>⋯</div>
+          </div>
+
+          <div className="min-h-0 overflow-auto border-t border-t-[rgba(255,166,0,0.08)] bg-[rgba(5,8,17,0.96)]">
+            <div className="sticky top-0 z-[1] border-b border-b-[rgba(255,255,255,0.04)] bg-[rgba(11,13,27,0.96)] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#8795b6]">
+              {lowerPanelTitleMap[activeMenu]}
+            </div>
+            {renderBottomPanel()}
+          </div>
+        </section>
+
+        <div
+          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="우측 패널 크기 조절"
+          onMouseDown={() => setDraggingPanel('right')}
+        >
+          <div className={cn(resizeGripClass, 'h-11 w-3')}>⋮</div>
+        </div>
+
+        <aside
+          className={cn(
+            panelSurfaceClass,
+            'grid h-full min-h-0 grid-rows-[minmax(212px,32vh)_minmax(0,1fr)] max-[1080px]:grid-rows-none',
+          )}
+        >
+          {renderRightPanel()}
+        </aside>
       </div>
     </main>
   );
