@@ -10,7 +10,12 @@ import { cn } from '@/shared/lib/utils';
 const TEXT = {
   craneLabel: '크레인',
   craneUnit: '기',
+  normalLabel: '정상',
+  warningLabel: '경고',
+  errorLabel: '이상',
 } as const;
+
+type SummaryTone = 'ok' | 'warning' | 'error';
 
 function getCardStripeClassName(status: MonitoringRegionStatus) {
   if (status === 'warning') {
@@ -36,16 +41,36 @@ function getCardStatusDotClassName(status: MonitoringRegionStatus) {
   return 'bg-[var(--main-page-ok)] shadow-[0_0_6px_rgb(61_214_140_/_0.6)]';
 }
 
-function getCardFooterStatusClassName(status: MonitoringRegionStatus) {
-  if (status === 'warning') {
+function getCardFooterSummaryClassName(tone: SummaryTone) {
+  if (tone === 'warning') {
     return 'text-[var(--main-page-warn)]';
   }
 
-  if (status === 'error') {
+  if (tone === 'error') {
     return 'text-[var(--main-page-error)]';
   }
 
-  return 'text-[var(--main-page-text-dim)]';
+  return 'text-[var(--main-page-ok)]';
+}
+
+function getRegionStatusSummary(region: MonitoringRegion) {
+  return [
+    {
+      label: TEXT.normalLabel,
+      count: region.status === 'normal' ? region.craneCount : 0,
+      tone: 'ok' as const,
+    },
+    {
+      label: TEXT.warningLabel,
+      count: region.status === 'warning' ? region.craneCount : 0,
+      tone: 'warning' as const,
+    },
+    {
+      label: TEXT.errorLabel,
+      count: region.status === 'error' ? region.craneCount : 0,
+      tone: 'error' as const,
+    },
+  ];
 }
 
 function RegionCraneIllustration({ className }: { className?: string }) {
@@ -129,10 +154,22 @@ export function MonitoringRegionCard({
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--main-page-border)] text-[10px] font-mono text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
-        <span className={getCardFooterStatusClassName(region.status)}>
-          {region.statusLabel}
-        </span>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--main-page-border)] text-[11px] font-mono text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {getRegionStatusSummary(region).map((item) => (
+            <span key={item.label} className="inline-flex items-center gap-1">
+              <span>{item.label}</span>
+              <span
+                className={cn(
+                  'font-semibold tabular-nums',
+                  getCardFooterSummaryClassName(item.tone),
+                )}
+              >
+                {item.count}
+              </span>
+            </span>
+          ))}
+        </div>
         <ArrowRight
           size={14}
           className="text-[var(--main-page-accent)] opacity-0 -translate-x-1 transition-all duration-220 group-hover/main-page-card:opacity-100 group-hover/main-page-card:translate-x-0"
