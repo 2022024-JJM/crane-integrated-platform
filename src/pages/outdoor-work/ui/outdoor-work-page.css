@@ -1,0 +1,740 @@
+.ow-monitor {
+  height: 100vh;
+  overflow: hidden;
+  color: #d7def0;
+  background:
+    linear-gradient(180deg, rgb(4 8 18 / 0.94), rgb(6 10 20 / 0.98)),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0,
+      transparent 18px,
+      rgb(255 255 255 / 0.012) 18px,
+      rgb(255 255 255 / 0.012) 19px
+    );
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.ow-monitor__topbar {
+  display: grid;
+  grid-template-columns: 320px 1fr 220px;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgb(255 166 0 / 0.16);
+  background: linear-gradient(180deg, rgb(6 8 16 / 0.98), rgb(4 7 14 / 0.92));
+  box-shadow: inset 0 -1px 0 rgb(255 166 0 / 0.08);
+}
+
+.ow-monitor__topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ow-monitor__back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid rgb(255 166 0 / 0.22);
+  border-radius: 10px;
+  color: #ffb84d;
+  text-decoration: none;
+  background: rgb(255 166 0 / 0.08);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ow-monitor__back-chevron {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ow-monitor__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ow-monitor__brand-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgb(255 166 0 / 0.25);
+  border-radius: 6px;
+  color: #ffb84d;
+  background: linear-gradient(180deg, rgb(255 166 0 / 0.18), rgb(255 166 0 / 0.04));
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ow-monitor__brand-title {
+  color: #f3f6ff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.ow-monitor__brand-subtitle {
+  color: #66718f;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+
+.ow-monitor__topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ow-monitor__top-tag {
+  padding: 6px 12px;
+  border: 1px solid rgb(255 166 0 / 0.24);
+  border-radius: 8px;
+  color: #ffb33f;
+  background: rgb(255 166 0 / 0.08);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ow-monitor__top-description {
+  color: #7b89aa;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ow-monitor__live {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #37d67a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ow-monitor__live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #37d67a;
+  box-shadow: 0 0 10px rgb(55 214 122 / 0.8);
+}
+
+.ow-monitor__layout {
+  display: grid;
+  height: calc(100vh - 52px);
+  min-height: 0;
+}
+
+.ow-monitor__sidebar,
+.ow-monitor__right-panel {
+  background: linear-gradient(180deg, rgb(8 11 24 / 0.98), rgb(5 7 18 / 0.98));
+}
+
+.ow-monitor__sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid rgb(255 166 0 / 0.08);
+  overflow: hidden;
+}
+
+.ow-monitor__sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 10px;
+  border-bottom: 1px solid rgb(255 166 0 / 0.08);
+}
+
+.ow-monitor__menu-button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgb(107 120 166 / 0.22);
+  border-radius: 6px;
+  color: #8793b2;
+  background: rgb(255 255 255 / 0.02);
+}
+
+.ow-monitor__sidebar-title {
+  color: #f2a329;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.ow-monitor__nav {
+  height: calc(100% - 46px);
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 8px;
+}
+
+.ow-monitor__nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ow-monitor__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #8490b0;
+  background: transparent;
+  font-size: 13px;
+  text-align: left;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    padding 0.18s ease;
+}
+
+.ow-monitor__nav-item.is-active {
+  border-color: rgb(255 166 0 / 0.18);
+  color: #f4af3c;
+  background: linear-gradient(90deg, rgb(255 166 0 / 0.14), rgb(255 166 0 / 0.03));
+  box-shadow: inset 3px 0 0 #f4af3c;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__sidebar-head {
+  justify-content: center;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__sidebar-title {
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__nav {
+  padding-inline: 6px;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__nav-item {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__nav-item span {
+  display: none;
+}
+
+.ow-monitor__sidebar.is-collapsed .ow-monitor__nav-item.is-active {
+  box-shadow: inset 0 0 0 1px rgb(255 166 0 / 0.2);
+}
+
+.ow-monitor__viewer-panel {
+  display: grid;
+  grid-template-rows: 42px minmax(0, 1fr) 8px minmax(170px, 26vh);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid rgb(255 166 0 / 0.08);
+  background:
+    linear-gradient(180deg, rgb(8 13 27 / 0.96), rgb(5 9 19 / 0.98)),
+    radial-gradient(circle at top left, rgb(255 166 0 / 0.08), transparent 28%);
+}
+
+.ow-monitor__viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgb(255 166 0 / 0.08);
+}
+
+.ow-monitor__viewer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ow-monitor__viewer-bar {
+  width: 3px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #ffcc6e, #f29f05);
+}
+
+.ow-monitor__viewer-title {
+  margin: 0;
+  color: #f7b443;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ow-monitor__viewer-subtitle {
+  color: #506181;
+  font-size: 14px;
+}
+
+.ow-monitor__viewer-badge {
+  padding: 5px 10px;
+  border: 1px solid rgb(255 166 0 / 0.24);
+  border-radius: 8px;
+  color: #ffbe54;
+  background: rgb(255 166 0 / 0.08);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ow-monitor__viewer-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ow-monitor__viewer-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+
+.ow-monitor__viewer-control {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(133 149 190 / 0.2);
+  border-radius: 8px;
+  color: #c6d1ec;
+  background: rgb(7 18 36 / 0.84);
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.22);
+}
+
+.ow-monitor__viewer-frame {
+  height: 100%;
+  min-height: 0;
+  border-left: 1px solid rgb(255 166 0 / 0.06);
+  border-right: 1px solid rgb(255 166 0 / 0.06);
+  background:
+    linear-gradient(180deg, rgb(5 17 37 / 0.92), rgb(4 13 31 / 0.98));
+}
+
+.ow-monitor__viewer-frame > * {
+  width: 100%;
+  height: 100%;
+}
+
+.ow-monitor__viewer-frame canvas {
+  display: block;
+}
+
+.ow-monitor__viewer-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  color: #97a4c5;
+  background: rgb(7 11 19 / 0.7);
+  font-size: 12px;
+}
+
+.ow-monitor__table-wrap {
+  overflow: auto;
+  min-height: 0;
+  border-top: 1px solid rgb(255 166 0 / 0.08);
+  background: rgb(5 8 17 / 0.96);
+}
+
+.ow-monitor__subpanel-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+  color: #8795b6;
+  background: rgb(11 13 27 / 0.96);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ow-monitor__table,
+.ow-monitor__alarm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ow-monitor__table th,
+.ow-monitor__table td,
+.ow-monitor__alarm-table th,
+.ow-monitor__alarm-table td {
+  border-right: 1px solid rgb(255 255 255 / 0.04);
+  border-bottom: 1px solid rgb(255 255 255 / 0.04);
+}
+
+.ow-monitor__table th {
+  padding: 9px 8px;
+  color: #54627f;
+  background: rgb(16 15 34 / 0.9);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ow-monitor__table td {
+  padding: 8px 8px;
+  color: #71809e;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+}
+
+.ow-monitor__table td.is-name {
+  color: #f0b144;
+  font-weight: 700;
+  text-align: left;
+}
+
+.ow-monitor__table td.is-accent {
+  color: #f0b144;
+  font-weight: 700;
+}
+
+.ow-monitor__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: rgb(111 123 155 / 0.34);
+}
+
+.ow-monitor__dot.is-green {
+  background: #39d47f;
+  box-shadow: 0 0 8px rgb(57 212 127 / 0.7);
+}
+
+.ow-monitor__dot.is-red {
+  background: #ef4545;
+  box-shadow: 0 0 8px rgb(239 69 69 / 0.6);
+}
+
+.ow-monitor__right-panel {
+  display: grid;
+  grid-template-rows: minmax(212px, 32vh) minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ow-monitor__resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  min-width: 8px;
+  cursor: col-resize;
+  background: linear-gradient(
+    180deg,
+    rgb(255 166 0 / 0.04),
+    rgb(255 166 0 / 0.12),
+    rgb(255 166 0 / 0.04)
+  );
+}
+
+.ow-monitor__resize-handle:hover {
+  background: linear-gradient(
+    180deg,
+    rgb(255 166 0 / 0.12),
+    rgb(255 166 0 / 0.3),
+    rgb(255 166 0 / 0.12)
+  );
+}
+
+.ow-monitor__resize-handle-grip {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 44px;
+  border: 1px solid rgb(255 166 0 / 0.26);
+  border-radius: 9999px;
+  color: #f3b247;
+  background: rgb(11 17 30 / 0.96);
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+}
+
+.ow-monitor__resize-handle--horizontal {
+  width: 100%;
+  min-width: 0;
+  height: 8px;
+  min-height: 8px;
+  cursor: row-resize;
+}
+
+.ow-monitor__resize-handle-grip--horizontal {
+  width: 44px;
+  height: 12px;
+}
+
+.ow-monitor__stats,
+.ow-monitor__alarms {
+  padding: 12px;
+  min-height: 0;
+}
+
+.ow-monitor__stats {
+  border-bottom: 1px solid rgb(255 166 0 / 0.08);
+}
+
+.ow-monitor__section-title {
+  margin-bottom: 10px;
+  color: #f2f5ff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ow-monitor__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.06);
+  background: rgb(255 255 255 / 0.05);
+}
+
+.ow-monitor__stats-grid--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ow-monitor__stat-card {
+  min-height: 82px;
+  padding: 10px;
+  background: rgb(8 9 21 / 0.94);
+}
+
+.ow-monitor__stat-label {
+  color: #5f6f93;
+  font-size: 11px;
+}
+
+.ow-monitor__stat-value {
+  margin-top: 10px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ow-monitor__stat-value.is-danger {
+  color: #ff4e5f;
+}
+
+.ow-monitor__stat-value.is-neutral {
+  color: #f4f7ff;
+}
+
+.ow-monitor__stat-value.is-ok {
+  color: #36d681;
+}
+
+.ow-monitor__alarm-table-wrap {
+  overflow: auto;
+  min-height: 0;
+  max-height: 100%;
+  border: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.ow-monitor__alarms {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ow-monitor__info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.ow-monitor__info-card {
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.06);
+  background: rgb(8 9 21 / 0.94);
+}
+
+.ow-monitor__info-label {
+  color: #607097;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.ow-monitor__info-value {
+  color: #eef3ff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.ow-monitor__info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ow-monitor__info-list-item {
+  padding: 10px 12px;
+  border: 1px solid rgb(255 255 255 / 0.06);
+  border-left: 2px solid rgb(255 166 0 / 0.45);
+  background: rgb(8 9 21 / 0.94);
+  color: #cfd6e8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ow-monitor__alarm-table th {
+  padding: 8px 6px;
+  color: #576683;
+  background: rgb(15 16 31 / 0.92);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.ow-monitor__alarm-table td {
+  padding: 9px 6px;
+  color: #7f8dad;
+  font-size: 11px;
+  vertical-align: top;
+}
+
+.ow-monitor__severity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ow-monitor__severity.is-warning {
+  color: #f4b347;
+  background: rgb(244 179 71 / 0.12);
+}
+
+.ow-monitor__severity.is-critical {
+  color: #ff5a64;
+  background: rgb(255 90 100 / 0.12);
+}
+
+.ow-monitor__alarm-table td.is-count {
+  color: #f0b144;
+  font-weight: 700;
+}
+
+@media (max-width: 1280px) {
+  .ow-monitor__viewer-title {
+    font-size: 20px;
+  }
+
+  .ow-monitor__topbar {
+    grid-template-columns: 300px 1fr 180px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .ow-monitor__topbar {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .ow-monitor__topbar-center {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ow-monitor__live {
+    justify-self: start;
+  }
+
+  .ow-monitor__layout {
+    height: auto;
+    display: block;
+  }
+
+  .ow-monitor__sidebar,
+  .ow-monitor__right-panel,
+  .ow-monitor__viewer-panel {
+    border-right: 0;
+  }
+
+  .ow-monitor__resize-handle {
+    display: none;
+  }
+
+  .ow-monitor__sidebar {
+    border-bottom: 1px solid rgb(255 166 0 / 0.08);
+  }
+
+  .ow-monitor__nav-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ow-monitor__viewer-panel {
+    grid-template-rows: 42px minmax(420px, 60vh) 8px minmax(180px, 28vh);
+  }
+
+  .ow-monitor__right-panel {
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .ow-monitor__nav-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ow-monitor__brand-title {
+    font-size: 16px;
+  }
+
+  .ow-monitor__viewer-title-wrap {
+    flex-wrap: wrap;
+  }
+
+  .ow-monitor__viewer-title {
+    font-size: 18px;
+  }
+
+  .ow-monitor__viewer-subtitle {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .ow-monitor__stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
