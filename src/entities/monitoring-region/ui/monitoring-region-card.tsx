@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type {
@@ -8,17 +8,22 @@ import type {
 import { cn } from '@/shared/lib/utils';
 
 const TEXT = {
-  craneLabel: '\ud06c\ub808\uc778',
-  craneUnit: '\uae30',
+  craneLabel: '크레인',
+  craneUnit: '기',
+  normalLabel: '정상',
+  warningLabel: '경고',
+  errorLabel: '이상',
 } as const;
+
+type SummaryTone = 'ok' | 'warning' | 'error';
 
 function getCardStripeClassName(status: MonitoringRegionStatus) {
   if (status === 'warning') {
-    return 'bg-[var(--main-page-accent)]';
+    // return 'bg-[var(--main-page-accent)]';
   }
 
   if (status === 'error') {
-    return 'bg-[var(--main-page-error)]';
+    // return 'bg-[var(--main-page-error)]';
   }
 
   return 'bg-[var(--main-page-border)]';
@@ -36,16 +41,36 @@ function getCardStatusDotClassName(status: MonitoringRegionStatus) {
   return 'bg-[var(--main-page-ok)] shadow-[0_0_6px_rgb(61_214_140_/_0.6)]';
 }
 
-function getCardFooterStatusClassName(status: MonitoringRegionStatus) {
-  if (status === 'warning') {
+function getCardFooterSummaryClassName(tone: SummaryTone) {
+  if (tone === 'warning') {
     return 'text-[var(--main-page-warn)]';
   }
 
-  if (status === 'error') {
+  if (tone === 'error') {
     return 'text-[var(--main-page-error)]';
   }
 
-  return 'text-[var(--main-page-text-dim)]';
+  return 'text-[var(--main-page-ok)]';
+}
+
+function getRegionStatusSummary(region: MonitoringRegion) {
+  return [
+    {
+      label: TEXT.normalLabel,
+      count: region.status === 'normal' ? region.craneCount : 0,
+      tone: 'ok' as const,
+    },
+    {
+      label: TEXT.warningLabel,
+      count: region.status === 'warning' ? region.craneCount : 0,
+      tone: 'warning' as const,
+    },
+    {
+      label: TEXT.errorLabel,
+      count: region.status === 'error' ? region.craneCount : 0,
+      tone: 'error' as const,
+    },
+  ];
 }
 
 function RegionCraneIllustration({ className }: { className?: string }) {
@@ -113,8 +138,8 @@ export function MonitoringRegionCard({
         <div className="text-[#fff] text-[22px] leading-none tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {region.name}
         </div>
-        <div className="text-[11px] text-[var(--main-page-text-dim)] font-light">
-          {region.siteName} {TEXT.craneLabel} {region.craneCount}
+        <div className="text-[12px] text-[var(--main-page-text-dim)]">
+          {region.siteName} {TEXT.craneLabel} {region.craneCount}{' '}
           {TEXT.craneUnit}
         </div>
         <div className="mt-2.5 flex flex-col gap-1.5">
@@ -123,16 +148,28 @@ export function MonitoringRegionCard({
               key={screen}
               className="inline-flex items-center gap-1.5 w-full px-2 py-1.5 border border-[var(--main-page-border)] rounded-[6px] bg-[rgb(255_255_255_/_0.03)] text-[var(--main-page-steel)] text-[11px] transition-[color,border-color,background-color] duration-180 hover:text-[var(--main-page-text)] hover:border-[rgb(245_166_35_/_0.2)] hover:bg-[rgb(245_166_35_/_0.04)]"
             >
-              <span className="size-1.5 shrink-0 rounded-full bg-[var(--main-page-text-dim)]" />
+              <ChevronRight className="size-3.5 shrink-0 text-yellow-500 stroke-[2.5]" />
               {screen}
             </div>
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--main-page-border)] text-[10px] font-mono text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
-        <span className={getCardFooterStatusClassName(region.status)}>
-          {region.statusLabel}
-        </span>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--main-page-border)] text-[11px] font-mono text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {getRegionStatusSummary(region).map((item) => (
+            <span key={item.label} className="inline-flex items-center gap-1">
+              <span>{item.label}</span>
+              <span
+                className={cn(
+                  'font-semibold tabular-nums',
+                  getCardFooterSummaryClassName(item.tone),
+                )}
+              >
+                {item.count}
+              </span>
+            </span>
+          ))}
+        </div>
         <ArrowRight
           size={14}
           className="text-[var(--main-page-accent)] opacity-0 -translate-x-1 transition-all duration-220 group-hover/main-page-card:opacity-100 group-hover/main-page-card:translate-x-0"
