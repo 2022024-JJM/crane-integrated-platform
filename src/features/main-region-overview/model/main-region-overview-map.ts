@@ -22,7 +22,6 @@ export interface RegionPolygonDefinition {
 export interface MapZoneStyle {
   fillColor: string;
   strokeColor: string;
-  textColor: string;
 }
 
 export interface ResolvedMapZone extends RegionPolygonDefinition {
