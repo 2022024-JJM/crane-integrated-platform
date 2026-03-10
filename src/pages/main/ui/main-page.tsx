@@ -5,8 +5,8 @@ import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
 import { MainFooter } from '@/pages/main/ui/main-footer';
 import { MainHeader } from '@/pages/main/ui/main-header';
 import { MainHero } from '@/pages/main/ui/main-hero';
-import { MainRegionOverview } from '@/pages/main/ui/main-region-overview';
 import { MainSummary } from '@/pages/main/ui/main-summary';
+import { MainRegionOverview } from '@/features/main-region-overview';
 
 const MAIN_PAGE_STYLE: CSSProperties = {
   '--main-page-bg': '#111214',
