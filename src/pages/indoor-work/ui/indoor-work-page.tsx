@@ -67,15 +67,17 @@ const tableHeadClass =
 
 export function IndoorWorkPage() {
   const location = useLocation();
-  const regionName = (location.state as { regionName?: string } | null)?.regionName;
+  const regionName = (location.state as { regionName?: string } | null)
+    ?.regionName;
   const sidebarTitle = normalizeSidebarTitle(regionName) ?? TEXT.sidebarTitle;
   const { dateTime, clockLabel } = useMainPageClock();
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName,
   });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeMenu, setActiveMenu] =
-    useState<IndoorMenuKey>('realtime-monitoring');
+  const [activeMenu, setActiveMenu] = useState<IndoorMenuKey>(
+    'realtime-monitoring',
+  );
   const [leftPanelWidth, setLeftPanelWidth] = useState(156);
   const [rightPanelWidth, setRightPanelWidth] = useState(248);
   const [viewerHeight, setViewerHeight] = useState(0);
@@ -117,13 +119,132 @@ export function IndoorWorkPage() {
   ] as const;
 
   const craneRows = [
-    ['OHC-01', true, true, false, false, false, false, '12.5', '', '18.4', '22.1', '', '34.2', '', '112.3', '8.2'],
-    ['OHC-02', true, true, false, false, false, false, '30.1', '', '22', '', '', '58.7', '', '230.1', '5.5'],
-    ['OHC-07', true, true, true, false, false, false, '', '95.3', '35', '', '42.1', '', '95.3', '415.9', '-0.3'],
-    ['OHC-11', true, true, false, false, false, false, '', '72', '28.5', '', '19.8', '', '72', '508.4', '3.8'],
-    ['OHC-14', true, true, false, false, true, false, '', '210.5', '0', '', '8.3', '', '210.5', '0', '0'],
-    ['BL-01', true, true, false, false, false, false, '5.8', '22.1', '14.2', '10.5', '', '22.1', '', '178.6', '12.1'],
-    ['BL-03', true, true, false, false, false, false, '', '140.3', '16', '', '30.7', '', '140.3', '320.5', '0'],
+    [
+      'OHC-01',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '12.5',
+      '',
+      '18.4',
+      '22.1',
+      '',
+      '34.2',
+      '',
+      '112.3',
+      '8.2',
+    ],
+    [
+      'OHC-02',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '30.1',
+      '',
+      '22',
+      '',
+      '',
+      '58.7',
+      '',
+      '230.1',
+      '5.5',
+    ],
+    [
+      'OHC-07',
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      '',
+      '95.3',
+      '35',
+      '',
+      '42.1',
+      '',
+      '95.3',
+      '415.9',
+      '-0.3',
+    ],
+    [
+      'OHC-11',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '72',
+      '28.5',
+      '',
+      '19.8',
+      '',
+      '72',
+      '508.4',
+      '3.8',
+    ],
+    [
+      'OHC-14',
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      '',
+      '210.5',
+      '0',
+      '',
+      '8.3',
+      '',
+      '210.5',
+      '0',
+      '0',
+    ],
+    [
+      'BL-01',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '5.8',
+      '22.1',
+      '14.2',
+      '10.5',
+      '',
+      '22.1',
+      '',
+      '178.6',
+      '12.1',
+    ],
+    [
+      'BL-03',
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      '',
+      '140.3',
+      '16',
+      '',
+      '30.7',
+      '',
+      '140.3',
+      '320.5',
+      '0',
+    ],
   ] as const;
 
   const operationInfoCards = [
@@ -183,11 +304,15 @@ export function IndoorWorkPage() {
       const rect = layoutElement.getBoundingClientRect();
 
       if (draggingPanel === 'left' && !isSidebarCollapsed) {
-        setLeftPanelWidth(Math.min(Math.max(event.clientX - rect.left, 120), 320));
+        setLeftPanelWidth(
+          Math.min(Math.max(event.clientX - rect.left, 120), 320),
+        );
       }
 
       if (draggingPanel === 'right') {
-        setRightPanelWidth(Math.min(Math.max(rect.right - event.clientX, 220), 420));
+        setRightPanelWidth(
+          Math.min(Math.max(rect.right - event.clientX, 220), 420),
+        );
       }
 
       if (draggingPanel === 'bottom') {
@@ -234,7 +359,9 @@ export function IndoorWorkPage() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsViewerFullscreen(document.fullscreenElement === viewerFrameRef.current);
+      setIsViewerFullscreen(
+        document.fullscreenElement === viewerFrameRef.current,
+      );
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -270,17 +397,24 @@ export function IndoorWorkPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {['장비', '유형', '위치', '상태', '작업', '방향'].map((header) => (
-                <th key={header} className={tableHeadClass}>
-                  {header}
-                </th>
-              ))}
+              {['장비', '유형', '위치', '상태', '작업', '방향'].map(
+                (header) => (
+                  <th key={header} className={tableHeadClass}>
+                    {header}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
             {operationInfoRows.map((row) => (
               <tr key={row[0]}>
-                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    'text-left font-bold text-[#f0b144]',
+                  )}
+                >
                   {row[0]}
                 </td>
                 <td className={tableCellClass}>{row[1]}</td>
@@ -313,7 +447,12 @@ export function IndoorWorkPage() {
             {operationStatusRows.map((row) => (
               <tr key={`${row[0]}-${row[1]}`}>
                 <td className={tableCellClass}>{row[0]}</td>
-                <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    'text-left font-bold text-[#f0b144]',
+                  )}
+                >
                   {row[1]}
                 </td>
                 <td className={tableCellClass}>{row[2]}</td>
@@ -364,7 +503,12 @@ export function IndoorWorkPage() {
         <tbody>
           {craneRows.map((row) => (
             <tr key={row[0]}>
-              <td className={cn(tableCellClass, 'text-left font-bold text-[#f0b144]')}>
+              <td
+                className={cn(
+                  tableCellClass,
+                  'text-left font-bold text-[#f0b144]',
+                )}
+              >
                 {row[0]}
               </td>
               {[row[1], row[2], row[3]].map((value, index) => (
@@ -414,7 +558,9 @@ export function IndoorWorkPage() {
                   key={label}
                   className="border border-[rgba(255,255,255,0.06)] bg-[rgba(8,9,21,0.94)] p-3"
                 >
-                  <div className="mb-1.5 text-[11px] text-[#607097]">{label}</div>
+                  <div className="mb-1.5 text-[11px] text-[#607097]">
+                    {label}
+                  </div>
                   <div className="text-[13px] font-semibold leading-[1.5] text-[#eef3ff]">
                     {value}
                   </div>
@@ -451,7 +597,10 @@ export function IndoorWorkPage() {
             <div className={sectionTitleClass}>운행 현황</div>
             <div className="grid grid-cols-2 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
               {operationStatusCards.map(([label, value, tone]) => (
-                <div key={label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+                <div
+                  key={label}
+                  className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+                >
                   <div className="text-[11px] text-[#5f6f93]">{label}</div>
                   <div className={getStatValueClass(tone)}>{value}</div>
                 </div>
@@ -486,7 +635,10 @@ export function IndoorWorkPage() {
           <div className={sectionTitleClass}>{TEXT.statsTitle}</div>
           <div className="grid grid-cols-3 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
             {statCards.map((item) => (
-              <div key={item.label} className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5">
+              <div
+                key={item.label}
+                className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+              >
                 <div className="text-[11px] text-[#5f6f93]">{item.label}</div>
                 <div className={getStatValueClass(item.tone)}>{item.value}</div>
               </div>
@@ -512,41 +664,46 @@ export function IndoorWorkPage() {
                 </tr>
               </thead>
               <tbody>
-                {alarmRows.map(([no, severity, occurrenceTime, target, count]) => (
-                  <tr key={no}>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {no}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                          severity === 'Normal' && 'bg-[rgba(54,214,129,0.12)] text-[#36d681]',
-                          severity === 'Warning' && 'bg-[rgba(244,179,71,0.12)] text-[#f4b347]',
-                          severity === 'Critical' && 'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
-                        )}
-                      >
-                        {severity === 'Critical' ? (
-                          <ShieldAlert size={10} />
-                        ) : severity === 'Warning' ? (
-                          <AlertTriangle size={10} />
-                        ) : (
-                          <Activity size={10} />
-                        )}
-                        {severity}
-                      </span>
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {occurrenceTime}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
-                      {target}
-                    </td>
-                    <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
-                      {count}
-                    </td>
-                  </tr>
-                ))}
+                {alarmRows.map(
+                  ([no, severity, occurrenceTime, target, count]) => (
+                    <tr key={no}>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {no}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                            severity === 'Normal' &&
+                              'bg-[rgba(54,214,129,0.12)] text-[#36d681]',
+                            severity === 'Warning' &&
+                              'bg-[rgba(244,179,71,0.12)] text-[#f4b347]',
+                            severity === 'Critical' &&
+                              'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
+                          )}
+                        >
+                          {severity === 'Critical' ? (
+                            <ShieldAlert size={10} />
+                          ) : severity === 'Warning' ? (
+                            <AlertTriangle size={10} />
+                          ) : (
+                            <Activity size={10} />
+                          )}
+                          {severity}
+                        </span>
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {occurrenceTime}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                        {target}
+                      </td>
+                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
+                        {count}
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -567,7 +724,11 @@ export function IndoorWorkPage() {
             <ChevronLeft size={18} />
           </Link>
           <div className="flex items-center gap-2.5">
-            <HanwhaIcon className="h-[26px] w-[26px] shrink-0" width={26} height={26} />
+            <HanwhaIcon
+              className="h-[26px] w-[26px] shrink-0"
+              width={26}
+              height={26}
+            />
             <div>
               <div className="text-[18px] leading-none tracking-[0.1em] text-[#f3f6ff]">
                 CRANE<span className="text-[#f7b443]">OPS</span>
@@ -675,7 +836,10 @@ export function IndoorWorkPage() {
         </aside>
 
         <div
-          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          className={cn(
+            resizeHandleClass,
+            'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden',
+          )}
           role="separator"
           aria-orientation="vertical"
           aria-label="좌측 패널 크기 조절"
@@ -759,14 +923,23 @@ export function IndoorWorkPage() {
                   void toggleViewerFullscreen();
                 }}
               >
-                {isViewerFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                {isViewerFullscreen ? (
+                  <Minimize2 size={15} />
+                ) : (
+                  <Maximize2 size={15} />
+                )}
               </button>
             </div>
 
-            <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[linear-gradient(180deg,rgba(5,17,37,0.92),rgba(4,13,31,0.98))] [&>*]:h-full [&>*]:w-full [&_canvas]:block">
-              <OutdoorWork3dView ref={viewerRef} onZoomChange={setZoomPercent} />
+            <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[rgba(43,43,43)]">
+              <div className="flex h-full w-full items-center justify-center">
+                <img
+                  src="/images/indoor-work.png"
+                  alt="실내 작업 뷰"
+                  className="h-auto w-auto max-h-[85%] max-w-[85%] object-contain"
+                />
+              </div>
             </div>
-
           </div>
 
           <div
@@ -791,7 +964,10 @@ export function IndoorWorkPage() {
         </section>
 
         <div
-          className={cn(resizeHandleClass, 'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden')}
+          className={cn(
+            resizeHandleClass,
+            'w-2 min-w-2 cursor-col-resize max-[1080px]:hidden',
+          )}
           role="separator"
           aria-orientation="vertical"
           aria-label="우측 패널 크기 조절"
