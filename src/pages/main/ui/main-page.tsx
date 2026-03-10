@@ -14,9 +14,9 @@ const MAIN_PAGE_STYLE: CSSProperties = {
   '--main-page-card': '#1c1e23',
   '--main-page-border': '#2a2c32',
   '--main-page-accent': '#f5a623',
-  '--main-page-steel': '#8a96a3',
+  '--main-page-steel': '#A1ACB7',
   '--main-page-text': '#d4dae0',
-  '--main-page-text-dim': '#8a96a3',
+  '--main-page-text-dim': '#d4dae0',
   '--main-page-ok': '#3dd68c',
   '--main-page-warn': '#f5a623',
   '--main-page-error': '#f04747',
@@ -31,7 +31,7 @@ export function MainPage() {
 
   return (
     <main
-      className="relative overflow-hidden isolate min-h-screen text-[var(--main-page-text)] [font-family:'Noto_Sans_KR',sans-serif]"
+      className="relative overflow-hidden isolate min-h-screen text-(--main-page-text) font-['Noto_Sans_KR',sans-serif]"
       style={MAIN_PAGE_STYLE}
     >
       <div

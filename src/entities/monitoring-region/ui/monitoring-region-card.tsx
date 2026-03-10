@@ -138,7 +138,7 @@ export function MonitoringRegionCard({
         <div className="text-[#fff] text-[22px] leading-none tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
           {region.name}
         </div>
-        <div className="text-[12px] text-[var(--main-page-text-dim)]">
+        <div className="text-[12px] text-(--main-page-text-dim)">
           {region.siteName} {TEXT.craneLabel} {region.craneCount}{' '}
           {TEXT.craneUnit}
         </div>
@@ -146,7 +146,7 @@ export function MonitoringRegionCard({
           {region.screens.map((screen) => (
             <div
               key={screen}
-              className="inline-flex items-center gap-1.5 w-full px-2 py-1.5 border border-[var(--main-page-border)] rounded-[6px] bg-[rgb(255_255_255_/_0.03)] text-[var(--main-page-steel)] text-[11px] transition-[color,border-color,background-color] duration-180 hover:text-[var(--main-page-text)] hover:border-[rgb(245_166_35_/_0.2)] hover:bg-[rgb(245_166_35_/_0.04)]"
+              className="inline-flex items-center gap-1.5 w-full px-2 py-1.5 border border-(--main-page-border) rounded-[6px] bg-[rgb(255_255_255/0.03)] text-(--main-page-text-dim) text-[11px] transition-[color,border-color,background-color] duration-180 hover:text-[var(--main-page-text)] hover:border-[rgb(245_166_35_/_0.2)] hover:bg-[rgb(245_166_35_/_0.04)]"
             >
               <ChevronRight className="size-3.5 shrink-0 text-yellow-500 stroke-[2.5]" />
               {screen}
@@ -154,7 +154,7 @@ export function MonitoringRegionCard({
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[var(--main-page-border)] text-[11px] font-mono text-[var(--main-page-text-dim)] uppercase tracking-[0.14em]">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-(--main-page-border) text-[12px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {getRegionStatusSummary(region).map((item) => (
             <span key={item.label} className="inline-flex items-center gap-1">

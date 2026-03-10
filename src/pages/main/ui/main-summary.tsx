@@ -73,7 +73,7 @@ export function MainSummary({ regions }: MainSummaryProps) {
           key={item.label}
           className="px-4.5 py-3.5 bg-(--main-page-surface) flex flex-col gap-1"
         >
-          <div className="text-[12px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
+          <div className="text-[13px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
             {item.label}
           </div>
           <div

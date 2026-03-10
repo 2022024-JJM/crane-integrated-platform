@@ -27,10 +27,10 @@ export function MainHeader({ dateTime, clockLabel }: MainHeaderProps) {
       <div className="flex items-center gap-3.5">
         <HanwhaIcon className="size-[38px] shrink-0" width={38} height={38} />
         <div className="flex flex-col gap-0.5">
-          <div className="text-[#fff] text-[20px] leading-none tracking-[0.1em] font-['Noto_Sans_KR',sans-serif]">
-            CRANE<span className="text-[var(--main-page-accent)]">OPS</span>
+          <div className="text-white text-[20px] leading-none tracking-widest font-['Noto_Sans_KR',sans-serif]">
+            CRANE<span className="text-(--main-page-accent)">OPS</span>
           </div>
-          <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--main-page-text-dim)]">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-(--main-page-text-dim)">
             3D Monitoring System
           </div>
         </div>

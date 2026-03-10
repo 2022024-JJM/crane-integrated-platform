@@ -4,7 +4,7 @@ export const monitoringRegions: MonitoringRegion[] = [
   {
     id: '1dock',
     name: '1 도크',
-    siteName: '타워 / 골리앗',
+    siteName: '타워 & 골리앗',
     craneCount: 8,
     status: 'normal',
     statusLabel: '정상 운영 중',
@@ -14,7 +14,7 @@ export const monitoringRegions: MonitoringRegion[] = [
   {
     id: '2dock',
     name: '2 도크',
-    siteName: '타워 / 골리앗',
+    siteName: '타워 & 골리앗',
     craneCount: 0,
     status: 'warning',
     statusLabel: '준비중 입니다...',
