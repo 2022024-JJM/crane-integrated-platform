@@ -31,14 +31,14 @@ function getCardStripeClassName(status: MonitoringRegionStatus) {
 
 function getCardStatusDotClassName(status: MonitoringRegionStatus) {
   if (status === 'warning') {
-    return 'bg-[var(--main-page-warn)] shadow-[0_0_6px_rgb(245_166_35_/_0.6)] animate-[main-page-blink_2s_ease-in-out_infinite]';
+    return 'bg-[var(--main-page-warn)] shadow-[0_0_6px_rgb(var(--main-page-warn-rgb)_/_0.6)] [--main-page-blink-shadow:var(--main-page-warn-rgb)] animate-[main-page-blink_2s_ease-in-out_infinite]';
   }
 
   if (status === 'error') {
-    return 'bg-[var(--main-page-error)] shadow-[0_0_6px_rgb(240_71_71_/_0.6)] animate-[main-page-blink_1s_ease-in-out_infinite]';
+    return 'bg-[var(--main-page-error)] shadow-[0_0_6px_rgb(var(--main-page-error-rgb)_/_0.6)] [--main-page-blink-shadow:var(--main-page-error-rgb)] animate-[main-page-blink_1s_ease-in-out_infinite]';
   }
 
-  return 'bg-[var(--main-page-ok)] shadow-[0_0_6px_rgb(61_214_140_/_0.6)]';
+  return 'bg-[var(--main-page-ok)] shadow-[0_0_6px_rgb(var(--main-page-ok-rgb)_/_0.6)]';
 }
 
 function getCardFooterSummaryClassName(tone: SummaryTone) {
@@ -84,21 +84,63 @@ function RegionCraneIllustration({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect x="35" y="5" width="5" height="55" fill="#f5a623" rx="1" />
-      <rect x="25" y="5" width="45" height="3" fill="#f5a623" rx="1" />
-      <rect x="15" y="5" width="21" height="2" fill="#c77a1f" rx="1" />
+      <rect
+        x="35"
+        y="5"
+        width="5"
+        height="55"
+        fill="var(--main-page-accent)"
+        rx="1"
+      />
+      <rect
+        x="25"
+        y="5"
+        width="45"
+        height="3"
+        fill="var(--main-page-accent)"
+        rx="1"
+      />
+      <rect
+        x="15"
+        y="5"
+        width="21"
+        height="2"
+        fill="var(--main-page-accent-strong)"
+        rx="1"
+      />
       <line
         x1="58"
         y1="8"
         x2="58"
         y2="38"
-        stroke="#8a96a3"
+        stroke="var(--main-page-illustration-line)"
         strokeWidth="1"
         strokeDasharray="2 2"
       />
-      <rect x="53" y="38" width="10" height="7" rx="1" fill="#4a525a" />
-      <rect x="27" y="58" width="18" height="8" rx="2" fill="#2a2c32" />
-      <rect x="22" y="64" width="28" height="5" rx="1" fill="#3a3d45" />
+      <rect
+        x="53"
+        y="38"
+        width="10"
+        height="7"
+        rx="1"
+        fill="var(--main-page-illustration-body)"
+      />
+      <rect
+        x="27"
+        y="58"
+        width="18"
+        height="8"
+        rx="2"
+        fill="var(--main-page-border)"
+      />
+      <rect
+        x="22"
+        y="64"
+        width="28"
+        height="5"
+        rx="1"
+        fill="var(--main-page-illustration-base)"
+      />
     </svg>
   );
 }
@@ -114,7 +156,7 @@ export function MonitoringRegionCard({
 }: MonitoringRegionCardProps) {
   return (
     <Link
-      className="group/main-page-card flex flex-col overflow-hidden text-inherit no-underline border border-[var(--main-page-border)] rounded-[10px] bg-[var(--main-page-card)] shadow-[0_22px_60px_rgb(0_0_0_/_0.18)] transition-[transform,border-color,box-shadow] duration-220 hover:-translate-y-[3px] hover:border-[var(--main-page-accent)] hover:shadow-[0_16px_36px_rgb(0_0_0_/_0.42),_0_0_0_1px_rgb(245_166_35_/_0.15)] animate-[main-page-fade-up_0.45s_ease_both]"
+      className="group/main-page-card flex flex-col overflow-hidden rounded-[10px] border border-[var(--main-page-border)] bg-[var(--main-page-card)] text-inherit no-underline shadow-[var(--main-page-card-shadow)] transition-[transform,border-color,box-shadow] duration-220 hover:-translate-y-[3px] hover:border-[var(--main-page-accent)] hover:shadow-[var(--main-page-card-hover-shadow)] animate-[main-page-fade-up_0.45s_ease_both]"
       to={region.route}
       state={{ regionId: region.id, regionName: region.name }}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -125,7 +167,7 @@ export function MonitoringRegionCard({
           getCardStripeClassName(region.status),
         )}
       />
-      <div className="relative h-[108px] flex items-center justify-center overflow-hidden border-b border-[var(--main-page-border)] bg-[linear-gradient(160deg,_rgb(245_166_35_/_0.05),_transparent_60%)] after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:transition-opacity after:duration-220 after:opacity-0 after:bg-gradient-to-r after:from-transparent after:via-[var(--main-page-accent)] after:to-transparent group-hover/main-page-card:after:opacity-[0.55]">
+      <div className="relative flex h-[108px] items-center justify-center overflow-hidden border-b border-[var(--main-page-border)] bg-[linear-gradient(160deg,var(--main-page-card-hero-glow),_transparent_60%)] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-[var(--main-page-accent)] after:to-transparent after:opacity-0 after:transition-opacity after:duration-220 after:content-[''] group-hover/main-page-card:after:opacity-[0.55]">
         <RegionCraneIllustration className="group-hover/main-page-card:opacity-[0.58] opacity-[0.28] transition-opacity duration-220" />
         <div
           className={cn(
@@ -135,7 +177,7 @@ export function MonitoringRegionCard({
         />
       </div>
       <div className="flex-1 flex flex-col gap-1.5 p-4">
-        <div className="text-[#fff] text-[22px] leading-none tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
+        <div className="text-[22px] leading-none tracking-[0.06em] text-[var(--main-page-title)] font-['Bebas_Neue',sans-serif]">
           {region.name}
         </div>
         <div className="text-[12px] text-(--main-page-text-dim)">
@@ -146,9 +188,9 @@ export function MonitoringRegionCard({
           {region.screens.map((screen) => (
             <div
               key={screen}
-              className="inline-flex items-center gap-1.5 w-full px-2 py-1.5 border border-(--main-page-border) rounded-[6px] bg-[rgb(255_255_255/0.03)] text-(--main-page-text-dim) text-[11px] transition-[color,border-color,background-color] duration-180 hover:text-[var(--main-page-text)] hover:border-[rgb(245_166_35_/_0.2)] hover:bg-[rgb(245_166_35_/_0.04)]"
+              className="inline-flex w-full items-center gap-1.5 rounded-[6px] border border-(--main-page-border) bg-[var(--main-page-chip-bg)] px-2 py-1.5 text-[11px] text-(--main-page-text-dim) transition-[color,border-color,background-color] duration-180 hover:border-[var(--main-page-chip-hover-border)] hover:bg-[var(--main-page-chip-hover-bg)] hover:text-[var(--main-page-text)]"
             >
-              <ChevronRight className="size-3.5 shrink-0 text-yellow-500 stroke-[2.5]" />
+              <ChevronRight className="size-3.5 shrink-0 text-[var(--main-page-accent)] stroke-[2.5]" />
               {screen}
             </div>
           ))}

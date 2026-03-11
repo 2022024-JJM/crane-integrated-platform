@@ -35,7 +35,7 @@ export function MainRegionOverviewMap({
 
   return (
     <section className="relative flex-1 px-[clamp(20px,4vw,40px)] pb-8 animate-[main-page-fade-up_0.5s_0.16s_ease_both]">
-      <div className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border border-(--main-page-border) bg-black/30 px-5 py-5">
+      <div className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border border-(--main-page-border) bg-[var(--main-page-map-shell-bg)] px-5 py-5">
         <div className="flex flex-wrap justify-start gap-2 text-[20px] tracking-[0.13em] text-(--main-page-text)">
           <span>{TEXT.region}</span>
         </div>
@@ -46,7 +46,7 @@ export function MainRegionOverviewMap({
               alt={TEXT.mapAlt}
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-[rgba(0,0,0,0.30)]" />
+            <div className="absolute inset-0 bg-[var(--main-page-map-image-overlay)]" />
 
             <div className="absolute inset-0">
               <svg
@@ -54,7 +54,7 @@ export function MainRegionOverviewMap({
                 className="absolute inset-0 h-full w-full"
                 preserveAspectRatio="xMidYMid meet"
               >
-                {mapZones.map((zone, index) => {
+                {mapZones.map((zone) => {
                   const displayLabel = zone.labelText ?? zone.region.name;
                   const style = zone.style;
                   const connectorStart = zone.labelPoint ?? zone.center;

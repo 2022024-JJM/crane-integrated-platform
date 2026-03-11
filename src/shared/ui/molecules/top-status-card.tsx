@@ -26,42 +26,28 @@ export function TopStatusCard({
   return (
     <div
       className={cn(
-        'flex h-[56px] min-w-[156px] items-center gap-2 rounded-xl border px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
+        'flex h-[56px] min-w-[156px] items-center gap-2 rounded-xl border px-3 py-2 shadow-[var(--top-status-card-shadow)]',
         isSuccess
-          ? 'border-[rgba(55,214,122,0.18)] bg-[rgba(7,24,16,0.72)]'
-          : 'border-[rgba(255,255,255,0.06)] bg-[rgba(9,14,28,0.82)]',
+          ? '[--top-status-card-current-border:var(--top-status-card-success-border)] [--top-status-card-current-bg:var(--top-status-card-success-bg)] [--top-status-card-current-icon-bg:var(--top-status-card-success-icon-bg)] [--top-status-card-current-icon:var(--top-status-card-success-icon)] [--top-status-card-current-label:var(--top-status-card-success-label)] [--top-status-card-current-value:var(--top-status-card-success-value)] [--top-status-card-current-subvalue:var(--top-status-card-success-subvalue)]'
+          : '[--top-status-card-current-border:var(--top-status-card-border)] [--top-status-card-current-bg:var(--top-status-card-bg)] [--top-status-card-current-icon-bg:var(--top-status-card-icon-bg)] [--top-status-card-current-icon:var(--top-status-card-icon)] [--top-status-card-current-label:var(--top-status-card-label)] [--top-status-card-current-value:var(--top-status-card-value)] [--top-status-card-current-subvalue:var(--top-status-card-subvalue)]',
+        'border-[var(--top-status-card-current-border)] bg-[var(--top-status-card-current-bg)]',
         className,
       )}
     >
       <div
-        className={cn(
-          'grid h-8 w-8 shrink-0 place-items-center rounded-lg',
-          isSuccess
-            ? 'bg-[rgba(55,214,122,0.12)] text-[#37d67a]'
-            : 'bg-[rgba(255,166,0,0.1)] text-[#f7b443]',
-        )}
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--top-status-card-current-icon-bg)] text-[var(--top-status-card-current-icon)]"
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <div
-          className={cn(
-            'text-[10px] uppercase tracking-[0.12em]',
-            isSuccess ? 'text-[#5d9271]' : 'text-[#66789f]',
-          )}
-        >
+        <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--top-status-card-current-label)]">
           {label}
         </div>
-        <div
-          className={cn(
-            'truncate text-[12px] font-semibold',
-            isSuccess ? 'text-[#5ff29a]' : 'text-[#dbe5fb]',
-          )}
-        >
+        <div className="truncate text-[12px] font-semibold text-[var(--top-status-card-current-value)]">
           {value}
         </div>
         {subValue ? (
-          <div className={cn('text-[11px]', isSuccess ? 'text-[#8fe3b3]' : 'text-[#8ea0c6]')}>
+          <div className="text-[11px] text-[var(--top-status-card-current-subvalue)]">
             {subValue}
           </div>
         ) : null}

@@ -74,6 +74,21 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --top-status-card-border: rgb(148 163 184 / 0.24);
+  --top-status-card-bg: rgb(255 255 255 / 0.82);
+  --top-status-card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
+  --top-status-card-icon-bg: rgb(217 138 16 / 0.12);
+  --top-status-card-icon: #d98a10;
+  --top-status-card-label: #64748b;
+  --top-status-card-value: #0f1728;
+  --top-status-card-subvalue: #475569;
+  --top-status-card-success-border: rgb(22 154 101 / 0.2);
+  --top-status-card-success-bg: rgb(22 154 101 / 0.08);
+  --top-status-card-success-icon-bg: rgb(22 154 101 / 0.12);
+  --top-status-card-success-icon: #169a65;
+  --top-status-card-success-label: #4f7e69;
+  --top-status-card-success-value: #0b8a57;
+  --top-status-card-success-subvalue: #3c8e67;
 }
 
 .dark {
@@ -108,6 +123,21 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --top-status-card-border: rgb(255 255 255 / 0.06);
+  --top-status-card-bg: rgb(9 14 28 / 0.82);
+  --top-status-card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+  --top-status-card-icon-bg: rgb(255 166 0 / 0.1);
+  --top-status-card-icon: #f7b443;
+  --top-status-card-label: #66789f;
+  --top-status-card-value: #dbe5fb;
+  --top-status-card-subvalue: #8ea0c6;
+  --top-status-card-success-border: rgb(55 214 122 / 0.18);
+  --top-status-card-success-bg: rgb(7 24 16 / 0.72);
+  --top-status-card-success-icon-bg: rgb(55 214 122 / 0.12);
+  --top-status-card-success-icon: #37d67a;
+  --top-status-card-success-label: #5d9271;
+  --top-status-card-success-value: #5ff29a;
+  --top-status-card-success-subvalue: #8fe3b3;
 }
 
 @layer base {

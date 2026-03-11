@@ -22,13 +22,17 @@ interface MainHeaderProps {
 
 export function MainHeader({ dateTime, clockLabel }: MainHeaderProps) {
   const dateLabel = DATE_FORMATTER.format(new Date(dateTime));
+  const mainStatusCardClassName =
+    '[--top-status-card-border:var(--main-page-status-card-border)] [--top-status-card-bg:var(--main-page-status-card-bg)] [--top-status-card-icon-bg:var(--main-page-status-icon-bg)] [--top-status-card-icon:var(--main-page-status-icon)] [--top-status-card-label:var(--main-page-status-label)] [--top-status-card-value:var(--main-page-status-value)] [--top-status-card-subvalue:var(--main-page-status-subvalue)]';
+  const mainSuccessStatusCardClassName =
+    '[--top-status-card-border:var(--main-page-status-success-border)] [--top-status-card-bg:var(--main-page-status-success-bg)] [--top-status-card-icon-bg:var(--main-page-status-success-icon-bg)] [--top-status-card-icon:var(--main-page-status-success-icon)] [--top-status-card-label:var(--main-page-status-success-label)] [--top-status-card-value:var(--main-page-status-success-value)] [--top-status-card-subvalue:var(--main-page-status-success-subvalue)]';
 
   return (
-    <header className="flex items-center justify-between gap-6 px-[clamp(20px,4vw,40px)] py-[18px] border-b border-[var(--main-page-border)] bg-[rgb(17_18_20_/_0.88)] backdrop-blur-[10px] max-[960px]:flex-col max-[960px]:items-start">
+    <header className="flex items-center justify-between gap-6 border-b border-[var(--main-page-border)] bg-[var(--main-page-header-bg)] px-[clamp(20px,4vw,40px)] py-[18px] backdrop-blur-[10px] max-[960px]:flex-col max-[960px]:items-start">
       <div className="flex items-center gap-3.5">
         <HanwhaIcon className="size-[38px] shrink-0" width={38} height={38} />
         <div className="flex flex-col gap-0.5">
-          <div className="text-white text-[20px] leading-none tracking-widest font-['Noto_Sans_KR',sans-serif]">
+          <div className="text-[20px] leading-none tracking-widest text-[var(--main-page-title)] font-['Noto_Sans_KR',sans-serif]">
             CRANE<span className="text-(--main-page-accent)">OPS</span>
           </div>
           <div className="text-[10px] uppercase tracking-[0.14em] text-(--main-page-text-dim)">
@@ -41,7 +45,7 @@ export function MainHeader({ dateTime, clockLabel }: MainHeaderProps) {
           icon={<CalendarDays size={15} />}
           label="Date"
           value={dateLabel}
-          className="border-white/6 bg-[rgba(24,26,32,0.92)]"
+          className={mainStatusCardClassName}
         />
         <TopStatusCard
           icon={<Clock3 size={15} />}
@@ -51,14 +55,14 @@ export function MainHeader({ dateTime, clockLabel }: MainHeaderProps) {
               {clockLabel}
             </time>
           }
-          className="border-white/6 bg-[rgba(24,26,32,0.92)] [&>div:first-child]:bg-[rgba(110,130,255,0.1)] [&>div:first-child]:text-[#9fb4ff]"
+          className={`${mainStatusCardClassName} [--top-status-card-icon-bg:var(--main-page-status-clock-icon-bg)] [--top-status-card-icon:var(--main-page-status-clock-icon)]`}
         />
         <TopStatusCard
           icon={<RadioTower size={15} />}
           label="Status"
           value={TEXT.liveConnected}
           tone="success"
-          className="[&>div:first-child]:text-[var(--main-page-ok)]"
+          className={`${mainSuccessStatusCardClassName} [--top-status-card-icon:var(--main-page-ok)]`}
         />
         <ModeToggle />
       </div>
