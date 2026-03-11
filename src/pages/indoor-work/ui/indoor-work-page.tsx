@@ -1,3 +1,5 @@
+import '@/pages/outdoor-work/ui/outdoor-work-page.css';
+
 import {
   Activity,
   AlertTriangle,
@@ -27,6 +29,7 @@ import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { cn } from '@/shared/lib/utils';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
+import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
 
 type IndoorMenuKey =
   | 'realtime-monitoring'
@@ -37,7 +40,7 @@ type IndoorMenuKey =
   | 'screen-editor';
 
 const TEXT = {
-  sidebarTitle: '1도크',
+  sidebarTitle: '내업',
   viewerTitle: '3D CRANE VIEW',
   topTag: '실내 작업 모니터링',
   topDescription: '창고 · 실내 설비 3D 모니터링',
@@ -52,18 +55,19 @@ function normalizeSidebarTitle(regionName?: string) {
 }
 
 const panelSurfaceClass =
-  'min-h-0 overflow-hidden bg-[linear-gradient(180deg,rgba(8,11,24,0.98),rgba(5,7,18,0.98))]';
-const sectionTitleClass = 'mb-2.5 text-[18px] font-bold text-[#f2f5ff]';
+  'min-h-0 overflow-hidden bg-[linear-gradient(180deg,var(--outdoor-page-panel-surface-from),var(--outdoor-page-panel-surface-to))]';
+const sectionTitleClass =
+  'mb-2.5 text-[18px] font-bold text-[var(--outdoor-page-text-strong)]';
 const viewerControlClass =
-  'grid h-[34px] w-[34px] cursor-pointer place-items-center rounded-lg border border-[rgba(133,149,190,0.2)] bg-[rgba(7,18,36,0.84)] text-[#c6d1ec] shadow-[0_8px_18px_rgba(0,0,0,0.22)]';
+  'grid h-[34px] w-[34px] cursor-pointer place-items-center rounded-lg border border-[var(--outdoor-page-control-border)] bg-[var(--outdoor-page-control-bg)] text-[var(--outdoor-page-control-text)] shadow-[var(--outdoor-page-control-shadow)]';
 const resizeHandleClass =
-  'group flex items-center justify-center bg-[linear-gradient(180deg,rgba(255,166,0,0.04),rgba(255,166,0,0.12),rgba(255,166,0,0.04))] transition-colors hover:bg-[linear-gradient(180deg,rgba(255,166,0,0.12),rgba(255,166,0,0.3),rgba(255,166,0,0.12))]';
+  'outdoor-work-page-resize-handle group flex items-center justify-center transition-colors';
 const resizeGripClass =
-  'grid select-none place-items-center rounded-full border border-[rgba(255,166,0,0.26)] bg-[rgba(11,17,30,0.96)] text-[12px] leading-none text-[#f3b247]';
+  'grid select-none place-items-center rounded-full border border-[var(--outdoor-page-resize-grip-border)] bg-[var(--outdoor-page-resize-grip-bg)] text-[12px] leading-none text-[var(--outdoor-page-resize-grip-text)]';
 const tableCellClass =
-  'border-r border-b border-[rgba(255,255,255,0.04)] px-2 py-2 text-center font-mono text-[11px] text-[#71809e]';
+  'border-r border-b border-[var(--outdoor-page-table-border)] px-2 py-2 text-center font-mono text-[11px] text-[var(--outdoor-page-table-text)]';
 const tableHeadClass =
-  'border-r border-b border-[rgba(255,255,255,0.04)] bg-[rgba(16,15,34,0.9)] px-2 py-[9px] text-[11px] font-medium text-[#54627f]';
+  'border-r border-b border-[var(--outdoor-page-table-border)] bg-[var(--outdoor-page-table-head-bg)] px-2 py-[9px] text-[11px] font-medium text-[var(--outdoor-page-table-head-text)]';
 
 export function IndoorWorkPage() {
   const location = useLocation();
@@ -78,8 +82,8 @@ export function IndoorWorkPage() {
   const [activeMenu, setActiveMenu] = useState<IndoorMenuKey>(
     'realtime-monitoring',
   );
-  const [leftPanelWidth, setLeftPanelWidth] = useState(156);
-  const [rightPanelWidth, setRightPanelWidth] = useState(248);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(200);
+  const [rightPanelWidth, setRightPanelWidth] = useState(350);
   const [viewerHeight, setViewerHeight] = useState(0);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
@@ -115,7 +119,7 @@ export function IndoorWorkPage() {
     ['86', 'Warning', '2019-01-23 14:40', 'OHC-11', '3'],
     ['85', 'Critical', '2019-01-23 14:31', 'OHC-07', '1'],
     ['84', 'Normal', '2019-01-23 14:22', 'BL-05', '2'],
-    ['83', 'Warning', '2019-01-23 14:15', 'OHC-02', '1 minute'],
+    ['83', 'Warning', '2019-01-23 14:15', 'OHC-02', '1'],
   ] as const;
 
   const craneRows = [
@@ -385,10 +389,10 @@ export function IndoorWorkPage() {
 
   const getStatValueClass = (tone: string) =>
     cn(
-      'mt-2.5 text-[34px] leading-none font-bold',
-      tone === 'ok' && 'text-[#36d681]',
-      tone === 'danger' && 'text-[#ff4e5f]',
-      tone === 'neutral' && 'text-[#f4f7ff]',
+      'mt-2.5 text-[20px] leading-none font-bold text-center',
+      tone === 'ok' && 'text-[var(--outdoor-page-ok)]',
+      tone === 'danger' && 'text-[var(--outdoor-page-danger)]',
+      tone === 'neutral' && 'text-[var(--outdoor-page-neutral)]',
     );
 
   const renderBottomPanel = () => {
@@ -412,7 +416,7 @@ export function IndoorWorkPage() {
                 <td
                   className={cn(
                     tableCellClass,
-                    'text-left font-bold text-[#f0b144]',
+                    'text-left font-bold text-[var(--outdoor-page-table-emphasis)]',
                   )}
                 >
                   {row[0]}
@@ -421,7 +425,12 @@ export function IndoorWorkPage() {
                 <td className={tableCellClass}>{row[2]}</td>
                 <td className={tableCellClass}>{row[3]}</td>
                 <td className={tableCellClass}>{row[4]}</td>
-                <td className={cn(tableCellClass, 'font-bold text-[#f0b144]')}>
+                <td
+                  className={cn(
+                    tableCellClass,
+                    'font-bold text-[var(--outdoor-page-table-emphasis)]',
+                  )}
+                >
                   {row[5]}
                 </td>
               </tr>
@@ -450,7 +459,7 @@ export function IndoorWorkPage() {
                 <td
                   className={cn(
                     tableCellClass,
-                    'text-left font-bold text-[#f0b144]',
+                    'text-left font-bold text-[var(--outdoor-page-table-emphasis)]',
                   )}
                 >
                   {row[1]}
@@ -459,7 +468,8 @@ export function IndoorWorkPage() {
                 <td
                   className={cn(
                     tableCellClass,
-                    row[3] !== '정상' && 'font-bold text-[#f0b144]',
+                    row[3] !== '정상' &&
+                      'font-bold text-[var(--outdoor-page-table-emphasis)]',
                   )}
                 >
                   {row[3]}
@@ -506,7 +516,7 @@ export function IndoorWorkPage() {
               <td
                 className={cn(
                   tableCellClass,
-                  'text-left font-bold text-[#f0b144]',
+                  'text-left font-bold text-[var(--outdoor-page-table-emphasis)]',
                 )}
               >
                 {row[0]}
@@ -515,20 +525,20 @@ export function IndoorWorkPage() {
                 <td key={index} className={tableCellClass}>
                   <span
                     className={cn(
-                      'inline-block h-2 w-2 rounded-full bg-[rgba(111,123,155,0.34)]',
+                      'inline-block h-2 w-2 rounded-full bg-[var(--outdoor-page-dot-idle)]',
                       value === true &&
                         index < 2 &&
-                        'bg-[#39d47f] shadow-[0_0_8px_rgba(57,212,127,0.7)]',
+                        'bg-[var(--outdoor-page-dot-ok)] shadow-[var(--outdoor-page-dot-ok-shadow)]',
                       value === true &&
                         index === 2 &&
-                        'bg-[#ef4545] shadow-[0_0_8px_rgba(239,69,69,0.6)]',
+                        'bg-[var(--outdoor-page-dot-danger)] shadow-[var(--outdoor-page-dot-danger-shadow)]',
                     )}
                   />
                 </td>
               ))}
               {[0, 1, 2].map((index) => (
                 <td key={`dot-${index}`} className={tableCellClass}>
-                  <span className="inline-block h-2 w-2 rounded-full bg-[rgba(111,123,155,0.34)]" />
+                  <span className="inline-block h-2 w-2 rounded-full bg-[var(--outdoor-page-dot-idle)]" />
                 </td>
               ))}
               {row.slice(7, 15).map((value, index) => (
@@ -536,7 +546,12 @@ export function IndoorWorkPage() {
                   {value}
                 </td>
               ))}
-              <td className={cn(tableCellClass, 'font-bold text-[#f0b144]')}>
+              <td
+                className={cn(
+                  tableCellClass,
+                  'font-bold text-[var(--outdoor-page-table-emphasis)]',
+                )}
+              >
                 {row[15]}
               </td>
             </tr>
@@ -550,18 +565,18 @@ export function IndoorWorkPage() {
     if (activeMenu === 'operation-info') {
       return (
         <>
-          <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+          <section className="min-h-0 border-b border-[var(--outdoor-page-panel-border)] p-3">
             <div className={sectionTitleClass}>운행 정보</div>
             <div className="grid grid-cols-1 gap-2">
               {operationInfoCards.map(([label, value]) => (
                 <div
                   key={label}
-                  className="border border-[rgba(255,255,255,0.06)] bg-[rgba(8,9,21,0.94)] p-3"
+                  className="border border-[var(--outdoor-page-card-border)] bg-[var(--outdoor-page-card-bg)] p-3"
                 >
-                  <div className="mb-1.5 text-[11px] text-[#607097]">
+                  <div className="mb-1.5 text-[11px] text-[var(--outdoor-page-card-label)]">
                     {label}
                   </div>
-                  <div className="text-[13px] font-semibold leading-[1.5] text-[#eef3ff]">
+                  <div className="text-[13px] font-semibold leading-[1.5] text-[var(--outdoor-page-card-value)]">
                     {value}
                   </div>
                 </div>
@@ -579,7 +594,7 @@ export function IndoorWorkPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="border border-[rgba(255,255,255,0.06)] border-l-[2px] border-l-[rgba(255,166,0,0.45)] bg-[rgba(8,9,21,0.94)] px-3 py-2.5 text-[12px] leading-[1.5] text-[#cfd6e8]"
+                  className="border border-[var(--outdoor-page-card-border)] border-l-[2px] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
                 >
                   {item}
                 </div>
@@ -593,15 +608,17 @@ export function IndoorWorkPage() {
     if (activeMenu === 'operation-status') {
       return (
         <>
-          <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+          <section className="min-h-0 border-b border-[var(--outdoor-page-panel-border)] p-3">
             <div className={sectionTitleClass}>운행 현황</div>
-            <div className="grid grid-cols-2 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
+            <div className="grid grid-cols-2 gap-px overflow-hidden border border-[var(--outdoor-page-card-border)] bg-[var(--outdoor-page-card-grid-gap)]">
               {operationStatusCards.map(([label, value, tone]) => (
                 <div
                   key={label}
-                  className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+                  className="min-h-[82px] bg-[var(--outdoor-page-card-bg)] p-2.5"
                 >
-                  <div className="text-[11px] text-[#5f6f93]">{label}</div>
+                  <div className="text-[11px] text-[var(--outdoor-page-card-label)]">
+                    {label}
+                  </div>
                   <div className={getStatValueClass(tone)}>{value}</div>
                 </div>
               ))}
@@ -618,7 +635,7 @@ export function IndoorWorkPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="border border-[rgba(255,255,255,0.06)] border-l-[2px] border-l-[rgba(255,166,0,0.45)] bg-[rgba(8,9,21,0.94)] px-3 py-2.5 text-[12px] leading-[1.5] text-[#cfd6e8]"
+                  className="border border-[var(--outdoor-page-card-border)] border-l-[2px] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
                 >
                   {item}
                 </div>
@@ -631,15 +648,17 @@ export function IndoorWorkPage() {
 
     return (
       <>
-        <section className="min-h-0 border-b border-[rgba(255,166,0,0.08)] p-3">
+        <section className="min-h-0 border-b border-[var(--outdoor-page-panel-border)] p-3">
           <div className={sectionTitleClass}>{TEXT.statsTitle}</div>
-          <div className="grid grid-cols-3 gap-px overflow-hidden border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.05)]">
+          <div className="grid grid-cols-3 gap-px overflow-hidden border border-[var(--outdoor-page-card-border)] bg-[var(--outdoor-page-card-grid-gap)]">
             {statCards.map((item) => (
               <div
                 key={item.label}
-                className="min-h-[82px] bg-[rgba(8,9,21,0.94)] p-2.5"
+                className="min-h-[82px] bg-[var(--outdoor-page-card-bg)] p-2.5"
               >
-                <div className="text-[11px] text-[#5f6f93]">{item.label}</div>
+                <div className="text-[11px] text-[var(--outdoor-page-card-label)]">
+                  {item.label}
+                </div>
                 <div className={getStatValueClass(item.tone)}>{item.value}</div>
               </div>
             ))}
@@ -647,7 +666,7 @@ export function IndoorWorkPage() {
         </section>
         <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3">
           <div className={sectionTitleClass}>{TEXT.alarmTitle}</div>
-          <div className="max-h-full min-h-0 overflow-auto border border-[rgba(255,255,255,0.06)]">
+          <div className="max-h-full min-h-0 overflow-auto border border-[var(--outdoor-page-card-border)]">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -655,7 +674,7 @@ export function IndoorWorkPage() {
                     (header) => (
                       <th
                         key={header}
-                        className="border-r border-b border-[rgba(255,255,255,0.04)] bg-[rgba(15,16,31,0.92)] px-1.5 py-2 text-left text-[10px] font-semibold text-[#576683]"
+                        className="border-r border-b border-[var(--outdoor-page-table-border)] bg-[var(--outdoor-page-table-head-bg)] px-1.5 py-2 text-left text-[10px] font-semibold text-[var(--outdoor-page-table-head-text)]"
                       >
                         {header}
                       </th>
@@ -667,38 +686,33 @@ export function IndoorWorkPage() {
                 {alarmRows.map(
                   ([no, severity, occurrenceTime, target, count]) => (
                     <tr key={no}>
-                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] text-[var(--outdoor-page-table-text)]">
                         {no}
                       </td>
-                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] text-[var(--outdoor-page-table-text)]">
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                            severity === 'Normal' &&
-                              'bg-[rgba(54,214,129,0.12)] text-[#36d681]',
-                            severity === 'Warning' &&
-                              'bg-[rgba(244,179,71,0.12)] text-[#f4b347]',
-                            severity === 'Critical' &&
-                              'bg-[rgba(255,90,100,0.12)] text-[#ff5a64]',
+                            severity === 'Warning'
+                              ? 'bg-[var(--outdoor-page-pill-warning-bg)] text-[var(--outdoor-page-pill-warning-text)]'
+                              : 'bg-[var(--outdoor-page-pill-danger-bg)] text-[var(--outdoor-page-pill-danger-text)]',
                           )}
                         >
-                          {severity === 'Critical' ? (
-                            <ShieldAlert size={10} />
-                          ) : severity === 'Warning' ? (
+                          {severity === 'Warning' ? (
                             <AlertTriangle size={10} />
                           ) : (
-                            <Activity size={10} />
+                            <ShieldAlert size={10} />
                           )}
                           {severity}
                         </span>
                       </td>
-                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] text-[var(--outdoor-page-table-text)]">
                         {occurrenceTime}
                       </td>
-                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] text-[#7f8dad]">
+                      <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] text-[var(--outdoor-page-table-text)]">
                         {target}
                       </td>
-                      <td className="border-r border-b border-[rgba(255,255,255,0.04)] px-1.5 py-[9px] text-[11px] font-bold text-[#f0b144]">
+                      <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] font-bold text-[var(--outdoor-page-table-emphasis)]">
                         {count}
                       </td>
                     </tr>
@@ -713,13 +727,13 @@ export function IndoorWorkPage() {
   };
 
   return (
-    <main className="h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(4,8,18,0.94),rgba(6,10,20,0.98)),repeating-linear-gradient(-45deg,transparent_0,transparent_18px,rgba(255,255,255,0.012)_18px,rgba(255,255,255,0.012)_19px)] text-[#d7def0]">
-      <div className="grid min-h-[52px] grid-cols-[320px_1fr_220px] items-center gap-4 border-b border-b-[rgba(255,166,0,0.16)] bg-[linear-gradient(180deg,rgba(6,8,16,0.98),rgba(4,7,14,0.92))] px-3.5 py-2 shadow-[inset_0_-1px_0_rgba(255,166,0,0.08)] max-[1080px]:grid-cols-1 max-[1080px]:justify-items-start">
+    <main className="outdoor-work-page h-screen overflow-hidden">
+      <div className="grid min-h-[52px] grid-cols-[320px_1fr_220px] items-center gap-4 border-b border-b-[var(--outdoor-page-topbar-border)] bg-[linear-gradient(180deg,var(--outdoor-page-topbar-from),var(--outdoor-page-topbar-to))] px-3.5 py-2 shadow-[var(--outdoor-page-topbar-shadow)] max-[1080px]:grid-cols-1 max-[1080px]:justify-items-start">
         <div className="flex items-center gap-3.5">
           <Link
             to="/"
             aria-label="뒤로가기"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[rgba(255,166,0,0.22)] bg-[rgba(255,166,0,0.08)] text-[#ffb84d] no-underline"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-accent-soft-bg)] text-[var(--outdoor-page-accent-button-text)] no-underline"
           >
             <ChevronLeft size={18} />
           </Link>
@@ -730,10 +744,11 @@ export function IndoorWorkPage() {
               height={26}
             />
             <div>
-              <div className="text-[18px] leading-none tracking-[0.1em] text-[#f3f6ff]">
-                CRANE<span className="text-[#f7b443]">OPS</span>
+              <div className="text-[18px] leading-none tracking-[0.1em] text-[var(--outdoor-page-text-strong)]">
+                CRANE
+                <span className="text-[var(--outdoor-page-accent)]">OPS</span>
               </div>
-              <div className="text-[9px] tracking-[0.14em] text-[#66718f]">
+              <div className="text-[9px] tracking-[0.14em] text-[var(--outdoor-page-text-dim)]">
                 3D Monitoring System
               </div>
             </div>
@@ -741,10 +756,10 @@ export function IndoorWorkPage() {
         </div>
 
         <div className="flex min-w-0 items-center justify-center gap-3 max-[1080px]:flex-wrap max-[1080px]:justify-start">
-          <div className="rounded-lg border border-[rgba(255,166,0,0.24)] bg-[rgba(255,166,0,0.08)] px-3 py-1.5 text-[12px] font-bold text-[#ffb33f]">
+          <div className="rounded-lg border border-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-accent-soft-bg)] px-3 py-1.5 text-[12px] font-bold text-[var(--outdoor-page-accent-chip-text)]">
             {TEXT.topTag}
           </div>
-          <div className="whitespace-nowrap text-[13px] text-[#7b89aa]">
+          <div className="whitespace-nowrap text-[13px] text-[var(--outdoor-page-text-soft)]">
             {TEXT.topDescription}
           </div>
         </div>
@@ -764,16 +779,17 @@ export function IndoorWorkPage() {
                 {clockLabel}
               </time>
             }
-            className="[&>div:first-child]:bg-[rgba(110,130,255,0.1)] [&>div:first-child]:text-[#9fb4ff]"
+            className="[--top-status-card-current-icon-bg:var(--outdoor-page-status-clock-icon-bg)] [--top-status-card-current-icon:var(--outdoor-page-status-clock-icon)]"
           />
           <TopStatusCard
             icon={
-              <span className="h-2.5 w-2.5 rounded-full bg-[#37d67a] shadow-[0_0_10px_rgba(55,214,122,0.8)]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--outdoor-page-status-indicator)] shadow-[var(--outdoor-page-status-indicator-shadow)]" />
             }
             label="Status"
             value={TEXT.live}
             tone="success"
           />
+          <ModeToggle />
         </div>
       </div>
 
@@ -787,14 +803,14 @@ export function IndoorWorkPage() {
         <aside
           className={cn(
             panelSurfaceClass,
-            'flex flex-col border-r border-r-[rgba(255,166,0,0.08)]',
+            'flex flex-col border-r border-r-[var(--outdoor-page-panel-border)]',
             isSidebarCollapsed &&
               '[&_.sidebar-title]:pointer-events-none [&_.sidebar-title]:-translate-x-1.5 [&_.sidebar-title]:opacity-0 [&_.sidebar-head]:justify-center [&_.sidebar-item]:justify-center [&_.sidebar-item]:px-0 [&_.sidebar-item_span]:hidden',
           )}
         >
-          <div className="sidebar-head flex h-[46px] items-center gap-2 border-b border-b-[rgba(255,166,0,0.08)] px-2.5">
+          <div className="sidebar-head flex h-[46px] items-center gap-2 border-b border-b-[var(--outdoor-page-panel-border)] px-2.5">
             <button
-              className="grid h-6 w-6 place-items-center rounded-md border border-[rgba(107,120,166,0.22)] bg-[rgba(255,255,255,0.02)] text-[#8793b2]"
+              className="grid h-6 w-6 place-items-center rounded-md bg-[var(--outdoor-page-sidebar-button-bg)] text-[var(--outdoor-page-sidebar-button-text)]"
               type="button"
               aria-label={isSidebarCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
               aria-expanded={!isSidebarCollapsed}
@@ -802,7 +818,7 @@ export function IndoorWorkPage() {
             >
               <Menu size={16} />
             </button>
-            <div className="sidebar-title text-[24px] font-bold tracking-[0.03em] text-[#f2a329] transition-all">
+            <div className="sidebar-title text-[18px] font-bold tracking-[0.03em] text-[var(--outdoor-page-accent-strong)] transition-all">
               {sidebarTitle}
             </div>
           </div>
@@ -818,9 +834,9 @@ export function IndoorWorkPage() {
                     <button
                       type="button"
                       className={cn(
-                        'sidebar-item flex w-full items-center gap-2 rounded-lg border border-transparent px-2.5 py-[11px] text-left text-[13px] text-[#8490b0] transition-all',
+                        'sidebar-item flex w-full items-center gap-2 rounded-lg border border-transparent px-2.5 py-[11px] text-left text-[13px] text-[var(--outdoor-page-sidebar-item-text)] transition-all',
                         isActive &&
-                          'border-[rgba(255,166,0,0.18)] bg-[linear-gradient(90deg,rgba(255,166,0,0.14),rgba(255,166,0,0.03))] text-[#f4af3c] shadow-[inset_3px_0_0_#f4af3c]',
+                          'border-[var(--outdoor-page-accent-active-border)] bg-[linear-gradient(90deg,var(--outdoor-page-accent-active-bg-start),var(--outdoor-page-accent-active-bg-end))] text-[var(--outdoor-page-accent)] shadow-[inset_3px_0_0_var(--outdoor-page-accent-active-shadow)]',
                       )}
                       title={item.label}
                       onClick={() => setActiveMenu(item.key)}
@@ -852,25 +868,25 @@ export function IndoorWorkPage() {
 
         <section
           ref={viewerPanelRef}
-          className="grid h-full min-h-0 min-w-0 border-r border-r-[rgba(255,166,0,0.08)] bg-[linear-gradient(180deg,rgba(8,13,27,0.96),rgba(5,9,19,0.98)),radial-gradient(circle_at_top_left,rgba(255,166,0,0.08),transparent_28%)]"
+          className="outdoor-work-page-viewer-panel grid h-full min-h-0 min-w-0 border-r border-r-[var(--outdoor-page-panel-border)]"
           style={{
             gridTemplateRows:
               viewerHeight > 0
-                ? `42px minmax(0, ${viewerHeight}px) 8px minmax(120px, 1fr)`
-                : '42px minmax(0,1fr) 8px minmax(170px,26vh)',
+                ? `42px minmax(0, ${viewerHeight}px) 8px minmax(270px, 1fr)`
+                : '42px minmax(0,1fr) 8px minmax(270px,26vh)',
           }}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-b-[rgba(255,166,0,0.08)] px-3.5">
+          <div className="flex items-center justify-between gap-3 border-b border-b-[var(--outdoor-page-panel-border)] px-3.5">
             <div className="flex min-w-0 items-center gap-2.5 max-[720px]:flex-wrap">
-              <div className="h-[22px] w-[3px] rounded-full bg-[linear-gradient(180deg,#ffcc6e,#f29f05)]" />
-              <h1 className="m-0 text-[24px] font-bold tracking-[0.04em] text-[#f7b443] max-[1280px]:text-[20px] max-[720px]:text-[18px]">
+              <div className="h-[22px] w-[3px] rounded-full bg-[linear-gradient(180deg,var(--outdoor-page-accent-line-start),var(--outdoor-page-accent-line-end))]" />
+              <h1 className="m-0 text-[18px] font-bold tracking-[0.04em] text-[var(--outdoor-page-viewer-title)] max-[1280px]:text-[20px] max-[720px]:text-[18px]">
                 {TEXT.viewerTitle}
               </h1>
-              <div className="text-[14px] text-[#506181] max-[720px]:w-full max-[720px]:text-[12px]">
+              <div className="text-[14px] text-[var(--outdoor-page-viewer-subtitle)] max-[720px]:w-full max-[720px]:text-[12px]">
                 {viewerSubtitleMap[activeMenu]}
               </div>
             </div>
-            <div className="rounded-lg border border-[rgba(255,166,0,0.24)] bg-[rgba(255,166,0,0.08)] px-2.5 py-[5px] font-mono text-[12px] font-bold text-[#ffbe54]">
+            <div className="rounded-lg border border-[var(--outdoor-page-zoom-chip-border)] bg-[var(--outdoor-page-zoom-chip-bg)] px-2.5 py-[5px] font-mono text-[12px] font-bold text-[var(--outdoor-page-zoom-chip-text)]">
               {zoomPercent}%
             </div>
           </div>
@@ -879,7 +895,8 @@ export function IndoorWorkPage() {
             ref={viewerFrameRef}
             className={cn(
               'relative min-h-0 overflow-hidden',
-              isViewerFullscreen && 'bg-[rgba(4,8,18,0.98)]',
+              isViewerFullscreen &&
+                'bg-[var(--outdoor-page-viewer-fullscreen-bg)]',
             )}
           >
             <div className="absolute left-3 top-3 z-[2] flex gap-2">
@@ -955,8 +972,8 @@ export function IndoorWorkPage() {
             <div className={cn(resizeGripClass, 'h-3 w-11')}>⋯</div>
           </div>
 
-          <div className="min-h-0 overflow-auto border-t border-t-[rgba(255,166,0,0.08)] bg-[rgba(5,8,17,0.96)]">
-            <div className="sticky top-0 z-[1] border-b border-b-[rgba(255,255,255,0.04)] bg-[rgba(11,13,27,0.96)] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#8795b6]">
+          <div className="min-h-0 overflow-auto border-t border-t-[var(--outdoor-page-panel-border)] bg-[var(--outdoor-page-lower-panel-bg)]">
+            <div className="sticky top-0 z-[1] border-b border-b-[var(--outdoor-page-panel-border-soft)] bg-[var(--outdoor-page-lower-panel-sticky-bg)] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--outdoor-page-lower-panel-sticky-text)]">
               {lowerPanelTitleMap[activeMenu]}
             </div>
             {renderBottomPanel()}
