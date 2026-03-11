@@ -1,0 +1,46 @@
+@layer components {
+  .main-page {
+    --main-page-bg: #111214;
+    --main-page-surface: #18191d;
+    --main-page-card: #1c1e23;
+    --main-page-border: #2a2c32;
+    --main-page-accent: #f5a623;
+    --main-page-steel: #a1acb7;
+    --main-page-text: #d4dae0;
+    --main-page-text-dim: #d4dae0;
+    --main-page-ok: #3dd68c;
+    --main-page-warn: #f5a623;
+    --main-page-error: #f04747;
+    --main-page-background: radial-gradient(
+        circle at top right,
+        rgb(245 166 35 / 0.12),
+        transparent 26%
+      ),
+      linear-gradient(180deg, #15161a 0%, var(--main-page-bg) 100%);
+    --main-page-grid-overlay: repeating-linear-gradient(
+      -45deg,
+      transparent 0,
+      transparent 18px,
+      rgb(255 255 255 / 0.012) 18px,
+      rgb(255 255 255 / 0.012) 19px
+    );
+
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    min-height: 100vh;
+    color: var(--main-page-text);
+    font-family: 'Noto Sans KR', sans-serif;
+    background-image: var(--main-page-background);
+    background-size: auto;
+    background-repeat: no-repeat;
+  }
+
+  .main-page-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: var(--main-page-grid-overlay);
+  }
+}

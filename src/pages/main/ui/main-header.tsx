@@ -2,6 +2,7 @@ import { CalendarDays, Clock3, RadioTower } from 'lucide-react';
 
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
+import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
 
 const TEXT = {
   liveConnected: '온라인',
@@ -59,6 +60,7 @@ export function MainHeader({ dateTime, clockLabel }: MainHeaderProps) {
           tone="success"
           className="[&>div:first-child]:text-[var(--main-page-ok)]"
         />
+        <ModeToggle />
       </div>
     </header>
   );

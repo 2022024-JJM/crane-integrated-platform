@@ -1,5 +1,9 @@
-import { AppRouterProvider } from '@/app/providers';
+import { AppRouterProvider, ThemeProvider } from '@/app/providers';
 
 export function App() {
-  return <AppRouterProvider />;
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AppRouterProvider />
+    </ThemeProvider>
+  );
 }
