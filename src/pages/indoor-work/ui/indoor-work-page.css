@@ -1,0 +1,276 @@
+@layer components {
+  .outdoor-work-page {
+    --outdoor-page-bg-start: rgb(4 8 18 / 0.94);
+    --outdoor-page-bg-end: rgb(6 10 20 / 0.98);
+    --outdoor-page-grid-line: rgb(255 255 255 / 0.012);
+    --outdoor-page-text: #d7def0;
+    --outdoor-page-text-strong: #f3f6ff;
+    --outdoor-page-text-muted: #8795b6;
+    --outdoor-page-text-dim: #66718f;
+    --outdoor-page-text-soft: #7b89aa;
+    --outdoor-page-text-subtle: #506181;
+    --outdoor-page-accent: #f7b443;
+    --outdoor-page-accent-strong: #f2a329;
+    --outdoor-page-accent-soft-text: #ffbe54;
+    --outdoor-page-accent-chip-text: #ffb33f;
+    --outdoor-page-accent-button-text: #ffb84d;
+    --outdoor-page-accent-line-start: #ffcc6e;
+    --outdoor-page-accent-line-end: #f29f05;
+    --outdoor-page-accent-soft-bg: rgb(255 166 0 / 0.08);
+    --outdoor-page-accent-soft-border: rgb(255 166 0 / 0.24);
+    --outdoor-page-accent-panel-border: rgb(255 166 0 / 0.08);
+    --outdoor-page-accent-active-border: rgb(255 166 0 / 0.18);
+    --outdoor-page-accent-active-bg-start: rgb(255 166 0 / 0.14);
+    --outdoor-page-accent-active-bg-end: rgb(255 166 0 / 0.03);
+    --outdoor-page-accent-active-shadow: #f4af3c;
+    --outdoor-page-panel-surface-from: rgb(8 11 24 / 0.98);
+    --outdoor-page-panel-surface-to: rgb(5 7 18 / 0.98);
+    --outdoor-page-panel-border: rgb(255 166 0 / 0.08);
+    --outdoor-page-panel-border-soft: rgb(255 255 255 / 0.04);
+    --outdoor-page-card-border: rgb(255 255 255 / 0.06);
+    --outdoor-page-card-bg: rgb(8 9 21 / 0.94);
+    --outdoor-page-card-grid-gap: rgb(255 255 255 / 0.05);
+    --outdoor-page-card-label: #5f6f93;
+    --outdoor-page-card-value: #eef3ff;
+    --outdoor-page-note-text: #cfd6e8;
+    --outdoor-page-control-border: rgb(133 149 190 / 0.2);
+    --outdoor-page-control-bg: rgb(7 18 36 / 0.84);
+    --outdoor-page-control-text: #c6d1ec;
+    --outdoor-page-control-shadow: 0 8px 18px rgb(0 0 0 / 0.22);
+    --outdoor-page-resize-handle-bg: linear-gradient(
+      180deg,
+      rgb(255 166 0 / 0.04),
+      rgb(255 166 0 / 0.12),
+      rgb(255 166 0 / 0.04)
+    );
+    --outdoor-page-resize-handle-hover-bg: linear-gradient(
+      180deg,
+      rgb(255 166 0 / 0.12),
+      rgb(255 166 0 / 0.3),
+      rgb(255 166 0 / 0.12)
+    );
+    --outdoor-page-resize-grip-border: rgb(255 166 0 / 0.26);
+    --outdoor-page-resize-grip-bg: rgb(11 17 30 / 0.96);
+    --outdoor-page-resize-grip-text: #f3b247;
+    --outdoor-page-table-border: rgb(255 255 255 / 0.04);
+    --outdoor-page-table-head-bg: rgb(16 15 34 / 0.9);
+    --outdoor-page-table-head-text: #54627f;
+    --outdoor-page-table-text: #71809e;
+    --outdoor-page-table-emphasis: #f0b144;
+    --outdoor-page-dot-idle: rgb(111 123 155 / 0.34);
+    --outdoor-page-dot-ok: #39d47f;
+    --outdoor-page-dot-ok-shadow: 0 0 8px rgb(57 212 127 / 0.7);
+    --outdoor-page-dot-danger: #ef4545;
+    --outdoor-page-dot-danger-shadow: 0 0 8px rgb(239 69 69 / 0.6);
+    --outdoor-page-ok: #36d681;
+    --outdoor-page-danger: #ff4e5f;
+    --outdoor-page-neutral: #f4f7ff;
+    --outdoor-page-pill-warning-bg: rgb(244 179 71 / 0.12);
+    --outdoor-page-pill-warning-text: #f4b347;
+    --outdoor-page-pill-danger-bg: rgb(255 90 100 / 0.12);
+    --outdoor-page-pill-danger-text: #ff5a64;
+    --outdoor-page-topbar-from: rgb(6 8 16 / 0.98);
+    --outdoor-page-topbar-to: rgb(4 7 14 / 0.92);
+    --outdoor-page-topbar-border: rgb(255 166 0 / 0.16);
+    --outdoor-page-topbar-shadow: inset 0 -1px 0 rgb(255 166 0 / 0.08);
+    --outdoor-page-sidebar-button-bg: rgb(255 255 255 / 0.02);
+    --outdoor-page-sidebar-button-border: rgb(107 120 166 / 0.22);
+    --outdoor-page-sidebar-button-text: #8793b2;
+    --outdoor-page-sidebar-item-text: #8490b0;
+    --outdoor-page-viewer-bg:
+      linear-gradient(180deg, rgb(8 13 27 / 0.96), rgb(5 9 19 / 0.98)),
+      radial-gradient(
+        circle at top left,
+        rgb(255 166 0 / 0.08),
+        transparent 28%
+      );
+    --outdoor-page-viewer-fullscreen-bg: rgb(4 8 18 / 0.98);
+    --outdoor-page-canvas-bg: linear-gradient(
+      180deg,
+      rgb(5 17 37 / 0.92),
+      rgb(4 13 31 / 0.98)
+    );
+    --outdoor-page-canvas-border: rgb(255 166 0 / 0.06);
+    --outdoor-page-viewer-title: #f7b443;
+    --outdoor-page-viewer-subtitle: #506181;
+    --outdoor-page-zoom-chip-bg: rgb(255 166 0 / 0.08);
+    --outdoor-page-zoom-chip-border: rgb(255 166 0 / 0.24);
+    --outdoor-page-zoom-chip-text: #ffbe54;
+    --outdoor-page-lower-panel-bg: rgb(5 8 17 / 0.96);
+    --outdoor-page-lower-panel-sticky-bg: rgb(11 13 27 / 0.96);
+    --outdoor-page-lower-panel-sticky-text: #8795b6;
+    --outdoor-page-status-clock-icon-bg: rgb(110 130 255 / 0.1);
+    --outdoor-page-status-clock-icon: #9fb4ff;
+    --outdoor-page-status-indicator: #37d67a;
+    --outdoor-page-status-indicator-shadow: 0 0 10px rgb(55 214 122 / 0.8);
+    --top-status-card-border: rgb(255 255 255 / 0.06);
+    --top-status-card-bg: rgb(9 14 28 / 0.82);
+    --top-status-card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+    --top-status-card-icon-bg: rgb(255 166 0 / 0.1);
+    --top-status-card-icon: #f7b443;
+    --top-status-card-label: #66789f;
+    --top-status-card-value: #dbe5fb;
+    --top-status-card-subvalue: #8ea0c6;
+    --top-status-card-success-border: rgb(55 214 122 / 0.18);
+    --top-status-card-success-bg: rgb(7 24 16 / 0.72);
+    --top-status-card-success-icon-bg: rgb(55 214 122 / 0.12);
+    --top-status-card-success-icon: #37d67a;
+    --top-status-card-success-label: #5d9271;
+    --top-status-card-success-value: #5ff29a;
+    --top-status-card-success-subvalue: #8fe3b3;
+
+    background-image:
+      linear-gradient(
+        180deg,
+        var(--outdoor-page-bg-start),
+        var(--outdoor-page-bg-end)
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent 0,
+        transparent 18px,
+        var(--outdoor-page-grid-line) 18px,
+        var(--outdoor-page-grid-line) 19px
+      );
+    background-size: auto;
+    background-repeat: no-repeat;
+    color: var(--outdoor-page-text);
+  }
+
+  .light .outdoor-work-page {
+    --outdoor-page-bg-start: rgb(246 248 252 / 0.96);
+    --outdoor-page-bg-end: rgb(231 238 247 / 0.98);
+    --outdoor-page-grid-line: rgb(15 23 42 / 0.035);
+    --outdoor-page-text: #1f2a3b;
+    --outdoor-page-text-strong: #0f1728;
+    --outdoor-page-text-muted: #5f6f86;
+    --outdoor-page-text-dim: #708099;
+    --outdoor-page-text-soft: #60708a;
+    --outdoor-page-text-subtle: #6f7f95;
+    --outdoor-page-accent: #d98a10;
+    --outdoor-page-accent-strong: #c67a06;
+    --outdoor-page-accent-soft-text: #cf840c;
+    --outdoor-page-accent-chip-text: #c98216;
+    --outdoor-page-accent-button-text: #cf840c;
+    --outdoor-page-accent-line-start: #f1b65c;
+    --outdoor-page-accent-line-end: #cf840c;
+    --outdoor-page-accent-soft-bg: rgb(217 138 16 / 0.1);
+    --outdoor-page-accent-soft-border: rgb(217 138 16 / 0.22);
+    --outdoor-page-accent-panel-border: rgb(217 138 16 / 0.14);
+    --outdoor-page-accent-active-border: rgb(217 138 16 / 0.24);
+    --outdoor-page-accent-active-bg-start: rgb(217 138 16 / 0.16);
+    --outdoor-page-accent-active-bg-end: rgb(217 138 16 / 0.04);
+    --outdoor-page-accent-active-shadow: #d98a10;
+    --outdoor-page-panel-surface-from: rgb(252 253 255 / 0.98);
+    --outdoor-page-panel-surface-to: rgb(238 242 248 / 0.98);
+    --outdoor-page-panel-border: rgb(148 163 184 / 0.22);
+    --outdoor-page-panel-border-soft: rgb(148 163 184 / 0.18);
+    --outdoor-page-card-border: rgb(148 163 184 / 0.24);
+    --outdoor-page-card-bg: rgb(255 255 255 / 0.92);
+    --outdoor-page-card-grid-gap: rgb(148 163 184 / 0.12);
+    --outdoor-page-card-label: #64748b;
+    --outdoor-page-card-value: #0f1728;
+    --outdoor-page-note-text: #334155;
+    --outdoor-page-control-border: rgb(148 163 184 / 0.28);
+    --outdoor-page-control-bg: rgb(255 255 255 / 0.86);
+    --outdoor-page-control-text: #42526a;
+    --outdoor-page-control-shadow: 0 8px 18px rgb(148 163 184 / 0.2);
+    --outdoor-page-resize-handle-bg: linear-gradient(
+      180deg,
+      rgb(217 138 16 / 0.04),
+      rgb(217 138 16 / 0.14),
+      rgb(217 138 16 / 0.04)
+    );
+    --outdoor-page-resize-handle-hover-bg: linear-gradient(
+      180deg,
+      rgb(217 138 16 / 0.1),
+      rgb(217 138 16 / 0.24),
+      rgb(217 138 16 / 0.1)
+    );
+    --outdoor-page-resize-grip-border: rgb(217 138 16 / 0.22);
+    --outdoor-page-resize-grip-bg: rgb(255 255 255 / 0.96);
+    --outdoor-page-resize-grip-text: #cf840c;
+    --outdoor-page-table-border: rgb(148 163 184 / 0.18);
+    --outdoor-page-table-head-bg: rgb(239 243 249 / 0.94);
+    --outdoor-page-table-head-text: #191d24;
+    --outdoor-page-table-text: #191d24;
+    --outdoor-page-table-emphasis: #cf840c;
+    --outdoor-page-dot-idle: rgb(148 163 184 / 0.36);
+    --outdoor-page-dot-ok: #16a34a;
+    --outdoor-page-dot-ok-shadow: 0 0 8px rgb(22 163 74 / 0.35);
+    --outdoor-page-dot-danger: #dc2626;
+    --outdoor-page-dot-danger-shadow: 0 0 8px rgb(220 38 38 / 0.25);
+    --outdoor-page-ok: #169a65;
+    --outdoor-page-danger: #d64545;
+    --outdoor-page-neutral: #0f1728;
+    --outdoor-page-pill-warning-bg: rgb(217 138 16 / 0.12);
+    --outdoor-page-pill-warning-text: #cf840c;
+    --outdoor-page-pill-danger-bg: rgb(220 38 38 / 0.1);
+    --outdoor-page-pill-danger-text: #d64545;
+    --outdoor-page-topbar-from: rgb(255 255 255 / 0.94);
+    --outdoor-page-topbar-to: rgb(244 247 251 / 0.94);
+    --outdoor-page-topbar-border: rgb(148 163 184 / 0.22);
+    --outdoor-page-topbar-shadow: inset 0 -1px 0 rgb(148 163 184 / 0.16);
+    --outdoor-page-sidebar-button-bg: rgb(255 255 255 / 0.72);
+    --outdoor-page-sidebar-button-border: rgb(148 163 184 / 0.26);
+    --outdoor-page-sidebar-button-text: #191d24;
+    --outdoor-page-sidebar-item-text: #191d24;
+    --outdoor-page-viewer-bg:
+      linear-gradient(180deg, rgb(250 252 255 / 0.96), rgb(235 241 248 / 0.98)),
+      radial-gradient(
+        circle at top left,
+        rgb(217 138 16 / 0.08),
+        transparent 28%
+      );
+    --outdoor-page-viewer-fullscreen-bg: rgb(245 247 251 / 0.98);
+    --outdoor-page-canvas-bg: linear-gradient(
+      180deg,
+      rgb(5 17 37 / 0.92),
+      rgb(4 13 31 / 0.98)
+    );
+    --outdoor-page-canvas-border: rgb(148 163 184 / 0.16);
+    --outdoor-page-viewer-title: #cf840c;
+    --outdoor-page-viewer-subtitle: #191d24;
+    --outdoor-page-zoom-chip-bg: rgb(217 138 16 / 0.1);
+    --outdoor-page-zoom-chip-border: rgb(217 138 16 / 0.2);
+    --outdoor-page-zoom-chip-text: #cf840c;
+    --outdoor-page-lower-panel-bg: rgb(249 251 253 / 0.96);
+    --outdoor-page-lower-panel-sticky-bg: rgb(241 245 250 / 0.96);
+    --outdoor-page-lower-panel-sticky-text: #191d24;
+    --outdoor-page-status-clock-icon-bg: rgb(59 130 246 / 0.12);
+    --outdoor-page-status-clock-icon: #3b82f6;
+    --outdoor-page-status-indicator: #169a65;
+    --outdoor-page-status-indicator-shadow: 0 0 10px rgb(22 154 101 / 0.35);
+    --top-status-card-border: rgb(148 163 184 / 0.24);
+    --top-status-card-bg: rgb(255 255 255 / 0.82);
+    --top-status-card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
+    --top-status-card-icon-bg: rgb(217 138 16 / 0.12);
+    --top-status-card-icon: #d98a10;
+    --top-status-card-label: #64748b;
+    --top-status-card-value: #0f1728;
+    --top-status-card-subvalue: #475569;
+    --top-status-card-success-border: rgb(22 154 101 / 0.2);
+    --top-status-card-success-bg: rgb(22 154 101 / 0.08);
+    --top-status-card-success-icon-bg: rgb(22 154 101 / 0.12);
+    --top-status-card-success-icon: #169a65;
+    --top-status-card-success-label: #4f7e69;
+    --top-status-card-success-value: #0b8a57;
+    --top-status-card-success-subvalue: #3c8e67;
+  }
+
+  .outdoor-work-page-resize-handle {
+    background-image: var(--outdoor-page-resize-handle-bg);
+  }
+
+  .outdoor-work-page-resize-handle:hover {
+    background-image: var(--outdoor-page-resize-handle-hover-bg);
+  }
+
+  .outdoor-work-page-viewer-panel {
+    background-image: var(--outdoor-page-viewer-bg);
+  }
+
+  .outdoor-work-page-canvas {
+    background-image: var(--outdoor-page-canvas-bg);
+  }
+}
