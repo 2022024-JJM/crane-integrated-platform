@@ -55,14 +55,7 @@ export function GltfModel({
         zIndexRange={[5, 0]}
         position={[position[0], position[1] + offsetY, position[2]]}
       >
-        <div
-          className="
-              px-1 py-0
-              text-white bg-black/60
-              rounded text-lg font-mono
-              whitespace-nowrap cursor-pointer
-            "
-        >
+        <div className="cursor-pointer rounded bg-black/60 px-1 py-0 font-mono text-lg whitespace-nowrap text-white">
           {equipName}
         </div>
       </Html>

@@ -576,7 +576,7 @@ export function OutdoorWorkPage() {
                   <div className="mb-1.5 text-[11px] text-[var(--outdoor-page-card-label)]">
                     {label}
                   </div>
-                  <div className="text-[13px] font-semibold leading-[1.5] text-[var(--outdoor-page-card-value)]">
+                  <div className="text-[13px] leading-[1.5] font-semibold text-[var(--outdoor-page-card-value)]">
                     {value}
                   </div>
                 </div>
@@ -594,7 +594,7 @@ export function OutdoorWorkPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="border border-[var(--outdoor-page-card-border)] border-l-[2px] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
+                  className="border border-l-[2px] border-[var(--outdoor-page-card-border)] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
                 >
                   {item}
                 </div>
@@ -635,7 +635,7 @@ export function OutdoorWorkPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="border border-[var(--outdoor-page-card-border)] border-l-[2px] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
+                  className="border border-l-[2px] border-[var(--outdoor-page-card-border)] border-l-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-card-bg)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--outdoor-page-note-text)]"
                 >
                   {item}
                 </div>
@@ -759,12 +759,12 @@ export function OutdoorWorkPage() {
           <div className="rounded-lg border border-[var(--outdoor-page-accent-soft-border)] bg-[var(--outdoor-page-accent-soft-bg)] px-3 py-1.5 text-[12px] font-bold text-[var(--outdoor-page-accent-chip-text)]">
             {TEXT.topTag}
           </div>
-          <div className="whitespace-nowrap text-[13px] text-[var(--outdoor-page-text-soft)]">
+          <div className="text-[13px] whitespace-nowrap text-[var(--outdoor-page-text-soft)]">
             {TEXT.topDescription}
           </div>
         </div>
 
-        <div className="flex items-center justify-self-end gap-2 max-[1080px]:justify-self-start max-[720px]:flex-wrap">
+        <div className="flex items-center gap-2 justify-self-end max-[1080px]:justify-self-start max-[720px]:flex-wrap">
           <TopStatusCard
             icon={<CloudSun size={15} />}
             label="Weather"
@@ -805,7 +805,7 @@ export function OutdoorWorkPage() {
             panelSurfaceClass,
             'flex flex-col border-r border-r-[var(--outdoor-page-panel-border)]',
             isSidebarCollapsed &&
-              '[&_.sidebar-title]:pointer-events-none [&_.sidebar-title]:-translate-x-1.5 [&_.sidebar-title]:opacity-0 [&_.sidebar-head]:justify-center [&_.sidebar-item]:justify-center [&_.sidebar-item]:px-0 [&_.sidebar-item_span]:hidden',
+              '[&_.sidebar-head]:justify-center [&_.sidebar-item]:justify-center [&_.sidebar-item]:px-0 [&_.sidebar-item_span]:hidden [&_.sidebar-title]:pointer-events-none [&_.sidebar-title]:-translate-x-1.5 [&_.sidebar-title]:opacity-0',
           )}
         >
           <div className="sidebar-head flex h-[46px] items-center gap-2 border-b border-b-[var(--outdoor-page-panel-border)] px-2.5">
@@ -899,7 +899,7 @@ export function OutdoorWorkPage() {
                 'bg-[var(--outdoor-page-viewer-fullscreen-bg)]',
             )}
           >
-            <div className="absolute left-3 top-3 z-[2] flex gap-2">
+            <div className="absolute top-3 left-3 z-[2] flex gap-2">
               <button
                 type="button"
                 className={viewerControlClass}
@@ -948,7 +948,7 @@ export function OutdoorWorkPage() {
               </button>
             </div>
 
-            <div className="outdoor-work-page-canvas h-full min-h-0 border-x border-x-[var(--outdoor-page-canvas-border)] [&>*]:h-full [&>*]:w-full [&_canvas]:block">
+            <div className="outdoor-work-page-canvas h-full min-h-0 border-x border-x-[var(--outdoor-page-canvas-border)] [&_canvas]:block [&>*]:h-full [&>*]:w-full">
               <OutdoorWork3dView
                 ref={viewerRef}
                 onZoomChange={setZoomPercent}
@@ -970,7 +970,7 @@ export function OutdoorWorkPage() {
           </div>
 
           <div className="min-h-0 overflow-auto border-t border-t-[var(--outdoor-page-panel-border)] bg-[var(--outdoor-page-lower-panel-bg)]">
-            <div className="sticky top-0 z-[1] border-b border-b-[var(--outdoor-page-panel-border-soft)] bg-[var(--outdoor-page-lower-panel-sticky-bg)] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--outdoor-page-lower-panel-sticky-text)]">
+            <div className="sticky top-0 z-[1] border-b border-b-[var(--outdoor-page-panel-border-soft)] bg-[var(--outdoor-page-lower-panel-sticky-bg)] px-3 py-2 text-[11px] font-bold tracking-[0.08em] text-[var(--outdoor-page-lower-panel-sticky-text)] uppercase">
               {lowerPanelTitleMap[activeMenu]}
             </div>
             {renderBottomPanel()}

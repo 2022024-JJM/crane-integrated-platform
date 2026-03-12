@@ -27,7 +27,7 @@ const SITE_LOCATION_MAP: Record<string, SiteLocation> = {
   광양: { label: '광양', latitude: 34.9407, longitude: 127.6959 },
   평택: { label: '평택', latitude: 36.9921, longitude: 127.1127 },
   군산: { label: '군산', latitude: 35.9677, longitude: 126.7369 },
-  포항: { label: '포항', latitude: 36.0190, longitude: 129.3435 },
+  포항: { label: '포항', latitude: 36.019, longitude: 129.3435 },
   목포: { label: '목포', latitude: 34.8118, longitude: 126.3922 },
   여수: { label: '여수', latitude: 34.7604, longitude: 127.6622 },
 };

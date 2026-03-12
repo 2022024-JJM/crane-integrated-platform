@@ -12,13 +12,9 @@ export function MainPage() {
   const { dateTime, clockLabel, footerLabel } = useMainPageClock();
 
   return (
-    <main
-      className="main-page min-h-screen"
-    >
-      <div
-        className="main-page-overlay"
-      />
-      <div className="relative z-10 min-h-screen flex flex-col">
+    <main className="main-page min-h-screen">
+      <div className="main-page-overlay" />
+      <div className="relative z-10 flex min-h-screen flex-col">
         <MainHeader dateTime={dateTime} clockLabel={clockLabel} />
         <MainHero />
         <MainSummary regions={monitoringRegions} />

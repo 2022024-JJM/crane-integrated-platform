@@ -8,7 +8,7 @@ const TEXT = {
 function HeroCraneIllustration() {
   return (
     <svg
-      className="w-[min(100%,320px)] shrink-0 opacity-[0.58] animate-[main-page-float_6s_ease-in-out_infinite]"
+      className="w-[min(100%,320px)] shrink-0 animate-[main-page-float_6s_ease-in-out_infinite] opacity-[0.58]"
       width="220"
       height="160"
       viewBox="0 0 220 160"
@@ -163,18 +163,18 @@ function HeroCraneIllustration() {
 
 export function MainHero() {
   return (
-    <section className="flex items-end justify-between gap-8 px-[clamp(20px,4vw,40px)] py-[clamp(44px,7vw,64px)] pb-12 animate-[main-page-fade-up_0.5s_ease_both] max-[960px]:flex-col max-[960px]:items-start">
+    <section className="flex animate-[main-page-fade-up_0.5s_ease_both] items-end justify-between gap-8 px-[clamp(20px,4vw,40px)] py-[clamp(44px,7vw,64px)] pb-12 max-[960px]:flex-col max-[960px]:items-start">
       <div className="max-w-140">
-        <div className="inline-flex items-center gap-2.5 mb-4.5 text-[11px] text-(--main-page-steel) uppercase tracking-[0.14em] before:content-[''] before:w-7.5 before:h-px before:bg-[linear-gradient(90deg,var(--main-page-accent),transparent)]">
+        <div className="mb-4.5 inline-flex items-center gap-2.5 text-[11px] tracking-[0.14em] text-(--main-page-steel) uppercase before:h-px before:w-7.5 before:bg-[linear-gradient(90deg,var(--main-page-accent),transparent)] before:content-['']">
           Region Control Desk
         </div>
-        <h1 className="mt-0 text-[var(--main-page-title)] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
+        <h1 className="mt-0 font-['Bebas_Neue',sans-serif] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] text-[var(--main-page-title)]">
           {TEXT.titleLead}
         </h1>
-        <h1 className="mt-2 text-[var(--main-page-accent)] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] font-['Bebas_Neue',sans-serif]">
+        <h1 className="mt-2 font-['Bebas_Neue',sans-serif] text-[clamp(3rem,3vw,5.2rem)] leading-[0.92] tracking-[0.06em] text-[var(--main-page-accent)]">
           {TEXT.titleEmphasis}
         </h1>
-        <p className="max-w-117.5 mt-4 text-[14px] leading-[1.75] text-(--main-page-steel)">
+        <p className="mt-4 max-w-117.5 text-[14px] leading-[1.75] text-(--main-page-steel)">
           {TEXT.description}
         </p>
       </div>

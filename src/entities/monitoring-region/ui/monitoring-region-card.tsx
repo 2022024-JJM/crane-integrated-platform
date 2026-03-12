@@ -156,7 +156,7 @@ export function MonitoringRegionCard({
 }: MonitoringRegionCardProps) {
   return (
     <Link
-      className="group/main-page-card flex flex-col overflow-hidden rounded-[10px] border border-[var(--main-page-border)] bg-[var(--main-page-card)] text-inherit no-underline shadow-[var(--main-page-card-shadow)] transition-[transform,border-color,box-shadow] duration-220 hover:-translate-y-[3px] hover:border-[var(--main-page-accent)] hover:shadow-[var(--main-page-card-hover-shadow)] animate-[main-page-fade-up_0.45s_ease_both]"
+      className="group/main-page-card flex animate-[main-page-fade-up_0.45s_ease_both] flex-col overflow-hidden rounded-[10px] border border-[var(--main-page-border)] bg-[var(--main-page-card)] text-inherit no-underline shadow-[var(--main-page-card-shadow)] transition-[transform,border-color,box-shadow] duration-220 hover:-translate-y-[3px] hover:border-[var(--main-page-accent)] hover:shadow-[var(--main-page-card-hover-shadow)]"
       to={region.route}
       state={{ regionId: region.id, regionName: region.name }}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -168,7 +168,7 @@ export function MonitoringRegionCard({
         )}
       />
       <div className="relative flex h-[108px] items-center justify-center overflow-hidden border-b border-[var(--main-page-border)] bg-[linear-gradient(160deg,var(--main-page-card-hero-glow),_transparent_60%)] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-[var(--main-page-accent)] after:to-transparent after:opacity-0 after:transition-opacity after:duration-220 after:content-[''] group-hover/main-page-card:after:opacity-[0.55]">
-        <RegionCraneIllustration className="group-hover/main-page-card:opacity-[0.58] opacity-[0.28] transition-opacity duration-220" />
+        <RegionCraneIllustration className="opacity-[0.28] transition-opacity duration-220 group-hover/main-page-card:opacity-[0.58]" />
         <div
           className={cn(
             'absolute top-[10px] right-3 size-2 rounded-full',
@@ -176,8 +176,8 @@ export function MonitoringRegionCard({
           )}
         />
       </div>
-      <div className="flex-1 flex flex-col gap-1.5 p-4">
-        <div className="text-[22px] leading-none tracking-[0.06em] text-[var(--main-page-title)] font-['Bebas_Neue',sans-serif]">
+      <div className="flex flex-1 flex-col gap-1.5 p-4">
+        <div className="font-['Bebas_Neue',sans-serif] text-[22px] leading-none tracking-[0.06em] text-[var(--main-page-title)]">
           {region.name}
         </div>
         <div className="text-[12px] text-(--main-page-text-dim)">
@@ -190,13 +190,13 @@ export function MonitoringRegionCard({
               key={screen}
               className="inline-flex w-full items-center gap-1.5 rounded-[6px] border border-(--main-page-border) bg-[var(--main-page-chip-bg)] px-2 py-1.5 text-[11px] text-(--main-page-text-dim) transition-[color,border-color,background-color] duration-180 hover:border-[var(--main-page-chip-hover-border)] hover:bg-[var(--main-page-chip-hover-bg)] hover:text-[var(--main-page-text)]"
             >
-              <ChevronRight className="size-3.5 shrink-0 text-[var(--main-page-accent)] stroke-[2.5]" />
+              <ChevronRight className="size-3.5 shrink-0 stroke-[2.5] text-[var(--main-page-accent)]" />
               {screen}
             </div>
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-(--main-page-border) text-[12px] text-(--main-page-text-dim) uppercase tracking-[0.14em]">
+      <div className="flex items-center justify-between gap-3 border-t border-(--main-page-border) px-4 py-3 text-[12px] tracking-[0.14em] text-(--main-page-text-dim) uppercase">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {getRegionStatusSummary(region).map((item) => (
             <span key={item.label} className="inline-flex items-center gap-1">
@@ -214,7 +214,7 @@ export function MonitoringRegionCard({
         </div>
         <ArrowRight
           size={14}
-          className="text-[var(--main-page-accent)] opacity-0 -translate-x-1 transition-all duration-220 group-hover/main-page-card:opacity-100 group-hover/main-page-card:translate-x-0"
+          className="-translate-x-1 text-[var(--main-page-accent)] opacity-0 transition-all duration-220 group-hover/main-page-card:translate-x-0 group-hover/main-page-card:opacity-100"
         />
       </div>
     </Link>

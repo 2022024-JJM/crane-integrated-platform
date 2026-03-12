@@ -34,13 +34,13 @@ export function MainRegionOverviewMap({
   };
 
   return (
-    <section className="relative flex-1 px-[clamp(20px,4vw,40px)] pb-8 animate-[main-page-fade-up_0.5s_0.16s_ease_both]">
+    <section className="relative flex-1 animate-[main-page-fade-up_0.5s_0.16s_ease_both] px-[clamp(20px,4vw,40px)] pb-8">
       <div className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border border-(--main-page-border) bg-[var(--main-page-map-shell-bg)] px-5 py-5">
         <div className="flex flex-wrap justify-start gap-2 text-[20px] tracking-[0.13em] text-(--main-page-text)">
           <span>{TEXT.region}</span>
         </div>
         <div className="mx-auto flex w-full justify-center">
-          <div className="relative w-full overflow-hidden rounded-xl border border-(--main-page-border) bg-(--main-page-surface) aspect-418/238 min-w-200 max-w-200 min-h-150">
+          <div className="relative aspect-418/238 min-h-150 w-full max-w-200 min-w-200 overflow-hidden rounded-xl border border-(--main-page-border) bg-(--main-page-surface)">
             <img
               src={MAP_IMAGE_PATH}
               alt={TEXT.mapAlt}
@@ -102,7 +102,7 @@ export function MainRegionOverviewMap({
                       <text
                         x={connectorStart.x}
                         y={connectorStart.y + 4}
-                        className="select-none tracking-[0.02em]"
+                        className="tracking-[0.02em] select-none"
                         textAnchor="middle"
                         fill="#ffffff"
                         fontSize="8"

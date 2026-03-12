@@ -36,7 +36,7 @@ export function MainRegionOverview({ regions }: MainRegionOverviewProps) {
   return (
     <>
       <div className="mb-[18px] flex items-center gap-3 px-[clamp(20px,4vw,40px)]">
-        <div className="flex min-w-0 flex-1 items-center gap-3 text-[13px] text-[var(--main-page-text-dim)] uppercase tracking-[0.14em] before:content-[''] before:w-0.75 before:h-3.5 before:rounded-full before:bg-[var(--main-page-accent)] after:content-[''] after:flex-1 after:h-px after:bg-[var(--main-page-border)]">
+        <div className="flex min-w-0 flex-1 items-center gap-3 text-[13px] tracking-[0.14em] text-[var(--main-page-text-dim)] uppercase before:h-3.5 before:w-0.75 before:rounded-full before:bg-[var(--main-page-accent)] before:content-[''] after:h-px after:flex-1 after:bg-[var(--main-page-border)] after:content-['']">
           {TEXT.sectionLabel}
         </div>
         <ToggleGroup
