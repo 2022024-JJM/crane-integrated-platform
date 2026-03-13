@@ -24,5 +24,4 @@ export {
   tableHeadClass,
   viewerControlClass,
 } from './lib/indoor-work-panel-styles';
-export { IndoorWorkBottomPanel } from './ui/indoor-work-bottom-panel';
 export { IndoorWorkRightPanel } from './ui/indoor-work-right-panel';

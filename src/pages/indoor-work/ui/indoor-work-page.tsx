@@ -32,7 +32,8 @@ import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
 import { useClock } from '@/shared/hooks/use-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { Link } from 'react-router-dom';
-import { IndoorWorkViewerPanel } from '@/features/3d-model/ui/indoor-work-viewer-panel';
+import { ViewerControls } from '@/features/3d-model/viewer/ui/viewer-controls';
+import { IndoorWorkBottomPanel } from '@/entities/indoor-work/ui/indoor-work-bottom-panel';
 
 export function IndoorWorkPage() {
   const TEXT = {
@@ -44,7 +45,6 @@ export function IndoorWorkPage() {
     regionName: '부산',
   });
   const {
-    isCompactLayout,
     isDetailView,
     isViewerFullscreen,
     resetViewer,
@@ -61,6 +61,7 @@ export function IndoorWorkPage() {
   return (
     <main className="outdoor-work-page flex h-screen flex-col overflow-hidden">
       <SidebarProvider defaultOpen={false} className="flex flex-col">
+        {/* 헤더 */}
         <Topbar className="h-18 shrink-0 px-2 py-4">
           <TopbarBrand>
             <SidebarTrigger />
@@ -94,6 +95,7 @@ export function IndoorWorkPage() {
           </TopbarContent>
         </Topbar>
 
+        {/* 메뉴 */}
         <MonitoringMenu
           title="내업"
           menuItems={INDOOR_WORK_MENU_ITEMS}
@@ -101,34 +103,68 @@ export function IndoorWorkPage() {
           onSelectMenu={setActiveMenu}
         />
 
+        {/* 컨텐츠 */}
         <SidebarInset className="min-h-0 flex-1 bg-transparent">
-          <ResizablePanelGroup
-            orientation="horizontal"
-            className="min-h-0 flex-1"
-          >
+          <ResizablePanelGroup orientation="horizontal">
             <ResizablePanel minSize="40%">
-              <IndoorWorkViewerPanel
-                activeMenu={activeMenu}
-                isCompactLayout={isCompactLayout}
-                isDetailView={isDetailView}
-                isViewerFullscreen={isViewerFullscreen}
-                viewerFrameRef={viewerFrameRef}
-                viewerScale={viewerScale}
-                zoomPercent={zoomPercent}
-                onResetViewer={resetViewer}
-                onToggleDetailView={toggleDetailView}
-                onToggleFullscreen={toggleViewerFullscreen}
-                onZoomIn={zoomInViewer}
-                onZoomOut={zoomOutViewer}
-              />
+              <ResizablePanelGroup orientation="vertical">
+                <ResizablePanel defaultSize="70%" minSize="260px">
+                  {/* 3D 뷰어 */}
+                  <div
+                    ref={viewerFrameRef}
+                    className={cn(
+                      'relative h-full min-h-0 overflow-hidden',
+                      isViewerFullscreen &&
+                        'bg-[var(--outdoor-page-viewer-fullscreen-bg)]',
+                    )}
+                  >
+                    {/* 뷰어 컨트롤러 */}
+                    <ViewerControls
+                      isDetailView={isDetailView}
+                      isViewerFullscreen={isViewerFullscreen}
+                      onResetViewer={resetViewer}
+                      onToggleDetailView={toggleDetailView}
+                      onToggleFullscreen={toggleViewerFullscreen}
+                      onZoomIn={zoomInViewer}
+                      onZoomOut={zoomOutViewer}
+                    />
+                    <div className="absolute right-3 bottom-3 z-2 font-mono text-[12px] font-bold text-amber-400">
+                      {zoomPercent}%
+                    </div>
+                    {/* 애니메이션 화면 */}
+                    <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[rgba(43,43,43)]">
+                      <div className="flex h-full w-full items-center justify-center overflow-auto">
+                        <img
+                          src="/images/indoor-work.png"
+                          alt="실내 작업 뷰"
+                          className={cn(
+                            'object-contain transition-transform duration-200',
+                            isDetailView
+                              ? 'h-full max-h-none w-full max-w-none'
+                              : 'h-auto max-h-[85%] w-auto max-w-[85%]',
+                          )}
+                          style={{ transform: `scale(${viewerScale})` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </ResizablePanel>
+
+                <ResizableHandle />
+
+                {/* 크레인 상태 */}
+                <ResizablePanel defaultSize="30%" minSize="160px">
+                  <IndoorWorkBottomPanel activeMenu={activeMenu} />
+                </ResizablePanel>
+              </ResizablePanelGroup>
             </ResizablePanel>
 
             <ResizableHandle />
 
             <ResizablePanel
               defaultSize="350px"
-              minSize="220px"
-              maxSize="420px"
+              minSize="150px"
+              maxSize="500px"
               groupResizeBehavior="preserve-pixel-size"
             >
               <aside

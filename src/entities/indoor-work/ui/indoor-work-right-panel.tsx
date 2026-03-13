@@ -9,15 +9,15 @@ import {
   INDOOR_WORK_STAT_CARDS,
   INDOOR_WORK_TEXT,
 } from '@/entities/indoor-work/model/indoor-work-content';
-import type { IndoorMenuKey } from '@/entities/indoor-work/model/types';
 import {
   getStatValueClass,
   sectionTitleClass,
 } from '@/entities/indoor-work/lib/indoor-work-panel-styles';
 import { cn } from '@/shared/lib/utils';
+import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
 
 interface IndoorWorkRightPanelProps {
-  activeMenu: IndoorMenuKey;
+  activeMenu: MonitoringMenuKey;
 }
 
 function NoteList({ items }: { items: readonly string[] }) {

@@ -7,7 +7,7 @@ function Topbar({ className, ...props }: React.ComponentProps<'header'>) {
     <header
       data-slot="topbar"
       className={cn(
-        'flex w-full items-center justify-between gap-6 border-b border-(--main-page-border) bg-(--main-page-header-bg)',
+        'flex w-full items-center justify-between gap-6 border-b bg-(--main-page-header-bg)',
         className,
       )}
       {...props}
