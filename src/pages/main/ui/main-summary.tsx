@@ -1,4 +1,4 @@
-import type { MonitoringRegion } from '@/entities/monitoring-region';
+import type { MonitoringRegion } from '@/entities/monitoring/region';
 import { cn } from '@/shared/lib/utils';
 
 const TEXT = {

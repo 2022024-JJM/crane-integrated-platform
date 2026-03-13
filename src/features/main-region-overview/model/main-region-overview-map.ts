@@ -1,4 +1,4 @@
-import type { MonitoringRegion } from '@/entities/monitoring-region';
+import type { MonitoringRegion } from '@/entities/monitoring/region';
 
 export const MAP_IMAGE_PATH = '/images/hanwha-ocean.png';
 

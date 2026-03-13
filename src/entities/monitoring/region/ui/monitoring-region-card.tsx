@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import type {
   MonitoringRegion,
   MonitoringRegionStatus,
-} from '@/entities/monitoring-region/model/monitoring-region';
+} from '@/entities/monitoring/region/model/monitoring-region';
 import { cn } from '@/shared/lib/utils';
 
 const TEXT = {

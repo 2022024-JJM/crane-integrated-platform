@@ -1,6 +1,6 @@
 import '@/pages/main/ui/main-page.css';
 
-import { monitoringRegions } from '@/entities/monitoring-region';
+import { monitoringRegions } from '@/entities/monitoring/region';
 import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
 import { MainFooter } from '@/pages/main/ui/main-footer';
 import { MainHeader } from '@/pages/main/ui/main-header';

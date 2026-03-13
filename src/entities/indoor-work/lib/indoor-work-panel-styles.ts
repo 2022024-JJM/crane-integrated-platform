@@ -1,4 +1,4 @@
-import type { IndoorStatTone } from '@/pages/indoor-work/model/types';
+import type { IndoorStatTone } from '@/entities/indoor-work/model/types';
 import { cn } from '@/shared/lib/utils';
 
 export const panelSurfaceClass =

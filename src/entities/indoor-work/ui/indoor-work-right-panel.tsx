@@ -8,12 +8,12 @@ import {
   INDOOR_WORK_OPERATION_STATUS_SUMMARY,
   INDOOR_WORK_STAT_CARDS,
   INDOOR_WORK_TEXT,
-} from '@/pages/indoor-work/config/indoor-work-content';
-import type { IndoorMenuKey } from '@/pages/indoor-work/model/types';
+} from '@/entities/indoor-work/model/indoor-work-content';
+import type { IndoorMenuKey } from '@/entities/indoor-work/model/types';
 import {
   getStatValueClass,
   sectionTitleClass,
-} from '@/pages/indoor-work/ui/indoor-work-page.styles';
+} from '@/entities/indoor-work/lib/indoor-work-panel-styles';
 import { cn } from '@/shared/lib/utils';
 
 interface IndoorWorkRightPanelProps {

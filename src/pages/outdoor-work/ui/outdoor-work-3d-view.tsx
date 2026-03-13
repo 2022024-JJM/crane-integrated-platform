@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Vector3 } from 'three';
-import { OutdoorWorkModelSimulation } from '@/features/outdoor-work-model-simulation/ui/outdoor-work-model-simulation';
+import { OutdoorWorkModelSimulation } from '@/features/3d-model/ui/outdoor-work-model-simulation';
 
 const DEFAULT_CAMERA_POSITION = new Vector3(-65, 20, -10);
 const DEFAULT_TARGET = new Vector3(-65, 0, -35);

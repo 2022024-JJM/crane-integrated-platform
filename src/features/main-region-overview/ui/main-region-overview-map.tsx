@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { MonitoringRegion } from '@/entities/monitoring-region';
+import type { MonitoringRegion } from '@/entities/monitoring/region';
 import {
   MAP_IMAGE_PATH,
   MAP_VIEWBOX,

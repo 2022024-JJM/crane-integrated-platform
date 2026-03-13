@@ -1,22 +1,6 @@
-import type { LucideIcon } from 'lucide-react';
-
-export type IndoorMenuKey =
-  | 'realtime-monitoring'
-  | 'operation-info'
-  | 'operation-status'
-  | 'event-log'
-  | 'playback'
-  | 'screen-editor';
-
 export type IndoorStatTone = 'danger' | 'neutral' | 'ok';
 
 export type IndoorAlarmSeverity = 'Critical' | 'Normal' | 'Warning';
-
-export interface IndoorMenuItem {
-  key: IndoorMenuKey;
-  label: string;
-  icon: LucideIcon;
-}
 
 export interface IndoorStatCard {
   label: string;

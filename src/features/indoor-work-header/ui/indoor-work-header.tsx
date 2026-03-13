@@ -2,27 +2,24 @@ import { ChevronLeft, CloudSun, Clock3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
-import { INDOOR_WORK_TEXT } from '@/pages/indoor-work/config/indoor-work-content';
+import { INDOOR_WORK_TEXT } from '@/entities/indoor-work';
+import { useIndoorWorkClock } from '@/features/indoor-work-header/model/use-indoor-work-clock';
+import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 
-interface IndoorWorkTopBarProps {
-  clockLabel: string;
-  dateTime: string;
-  siteLabel: string;
-  temperatureLabel: string;
-  weatherLabel: string;
+interface IndoorWorkHeaderProps {
+  regionName?: string;
 }
 
-export function IndoorWorkTopBar({
-  clockLabel,
-  dateTime,
-  siteLabel,
-  temperatureLabel,
-  weatherLabel,
-}: IndoorWorkTopBarProps) {
+export function IndoorWorkHeader({ regionName }: IndoorWorkHeaderProps) {
+  const { dateTime, clockLabel } = useIndoorWorkClock();
+  const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
+    regionName,
+  });
+
   return (
-    <div className="grid min-h-[52px] grid-cols-[320px_1fr_220px] items-center gap-4 border-b border-b-[var(--outdoor-page-topbar-border)] bg-[linear-gradient(180deg,var(--outdoor-page-topbar-from),var(--outdoor-page-topbar-to))] px-3.5 py-2 shadow-[var(--outdoor-page-topbar-shadow)] max-[1080px]:grid-cols-1 max-[1080px]:justify-items-start">
+    <div className="grid h-[52px] grid-cols-[320px_1fr_220px] items-center gap-4 border-b border-b-[var(--outdoor-page-topbar-border)] bg-[linear-gradient(180deg,var(--outdoor-page-topbar-from),var(--outdoor-page-topbar-to))] px-3.5 py-2 shadow-[var(--outdoor-page-topbar-shadow)] max-[1080px]:grid-cols-1 max-[1080px]:justify-items-start">
       <div className="flex items-center gap-3.5">
         <Link
           to="/"

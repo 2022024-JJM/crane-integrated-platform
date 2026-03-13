@@ -8,7 +8,7 @@ import type { RegionViewMode } from '@/features/main-region-overview/model/use-m
 import { useMainRegionOverviewMode } from '@/features/main-region-overview/model/use-main-region-overview-mode';
 import { MainRegionOverviewCards } from '@/features/main-region-overview/ui/main-region-overview-cards';
 import { MainRegionOverviewMap } from '@/features/main-region-overview/ui/main-region-overview-map';
-import type { MonitoringRegion } from '@/entities/monitoring-region';
+import type { MonitoringRegion } from '@/entities/monitoring/region';
 
 const TEXT = {
   sectionLabel: '지역 선택',

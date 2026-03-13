@@ -2,12 +2,12 @@ import {
   INDOOR_WORK_CRANE_ROWS,
   INDOOR_WORK_OPERATION_INFO_ROWS,
   INDOOR_WORK_OPERATION_STATUS_ROWS,
-} from '@/pages/indoor-work/config/indoor-work-content';
-import type { IndoorMenuKey } from '@/pages/indoor-work/model/types';
+} from '@/entities/indoor-work/model/indoor-work-content';
+import type { IndoorMenuKey } from '@/entities/indoor-work/model/types';
 import {
   tableCellClass,
   tableHeadClass,
-} from '@/pages/indoor-work/ui/indoor-work-page.styles';
+} from '@/entities/indoor-work/lib/indoor-work-panel-styles';
 import { cn } from '@/shared/lib/utils';
 
 interface IndoorWorkBottomPanelProps {

@@ -1,5 +1,5 @@
-import { MonitoringRegionCard } from '@/entities/monitoring-region';
-import type { MonitoringRegion } from '@/entities/monitoring-region';
+import { MonitoringRegionCard } from '@/entities/monitoring/region';
+import type { MonitoringRegion } from '@/entities/monitoring/region';
 
 interface MainRegionOverviewCardsProps {
   regions: MonitoringRegion[];

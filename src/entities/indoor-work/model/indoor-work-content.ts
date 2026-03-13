@@ -1,23 +1,13 @@
-import {
-  Activity,
-  Clock3,
-  FileText,
-  Info,
-  Monitor,
-  PencilLine,
-} from 'lucide-react';
-
 import type {
   IndoorAlarmRow,
   IndoorCraneRow,
   IndoorInfoCard,
   IndoorInfoRow,
-  IndoorMenuItem,
-  IndoorMenuKey,
   IndoorStatCard,
   IndoorStatusCard,
   IndoorStatusRow,
-} from '@/pages/indoor-work/model/types';
+} from '@/entities/indoor-work/model/types';
+import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
 
 export const INDOOR_WORK_TEXT = {
   alarmTitle: '알람 내역',
@@ -29,16 +19,10 @@ export const INDOOR_WORK_TEXT = {
   viewerTitle: '3D CRANE VIEW',
 } as const;
 
-export const INDOOR_WORK_MENU_ITEMS = [
-  { key: 'realtime-monitoring', label: '실시간 감시', icon: Monitor },
-  { key: 'operation-info', label: '운행 정보', icon: Info },
-  { key: 'operation-status', label: '운행 현황', icon: Activity },
-  { key: 'event-log', label: '이벤트 로그', icon: FileText },
-  { key: 'playback', label: '다시 보기', icon: Clock3 },
-  { key: 'screen-editor', label: '화면 편집', icon: PencilLine },
-] satisfies readonly IndoorMenuItem[];
-
-export const INDOOR_WORK_VIEWER_SUBTITLE_MAP: Record<IndoorMenuKey, string> = {
+export const INDOOR_WORK_VIEWER_SUBTITLE_MAP: Record<
+  MonitoringMenuKey,
+  string
+> = {
   'event-log': '이벤트 로그 · 최근 발생 이력',
   'operation-info': '운행 정보 · 설비 위치 · 작업 구간',
   'operation-status': '운행 현황 · 장비 상태 · 이벤트 흐름',
@@ -47,15 +31,17 @@ export const INDOOR_WORK_VIEWER_SUBTITLE_MAP: Record<IndoorMenuKey, string> = {
   'screen-editor': '화면 편집 · 배치 및 패널 구성',
 };
 
-export const INDOOR_WORK_LOWER_PANEL_TITLE_MAP: Record<IndoorMenuKey, string> =
-  {
-    'event-log': '이벤트 로그 목록',
-    'operation-info': '장비 운행 정보',
-    'operation-status': '운행 상태 이력',
-    playback: '재생 구간 요약',
-    'realtime-monitoring': '실시간 장비 상태 테이블',
-    'screen-editor': '패널 배치 정보',
-  };
+export const INDOOR_WORK_LOWER_PANEL_TITLE_MAP: Record<
+  MonitoringMenuKey,
+  string
+> = {
+  'event-log': '이벤트 로그 목록',
+  'operation-info': '장비 운행 정보',
+  'operation-status': '운행 상태 이력',
+  playback: '재생 구간 요약',
+  'realtime-monitoring': '실시간 장비 상태 테이블',
+  'screen-editor': '패널 배치 정보',
+};
 
 export const INDOOR_WORK_STAT_CARDS = [
   { label: '# Alarms', value: '2', tone: 'danger' },
@@ -246,11 +232,3 @@ export const INDOOR_WORK_OPERATION_STATUS_SUMMARY = [
   '점검 장비 1건 대응 중',
   '평균 베이 이송 응답 0.74s',
 ] as const;
-
-export function resolveIndoorSidebarTitle(regionName?: string) {
-  if (!regionName) {
-    return INDOOR_WORK_TEXT.sidebarTitle;
-  }
-
-  return regionName.replace(/\s+/g, '');
-}

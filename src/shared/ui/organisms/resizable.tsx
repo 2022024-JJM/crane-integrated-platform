@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { GripVerticalIcon } from 'lucide-react';
 import * as ResizablePrimitive from 'react-resizable-panels';
 
@@ -20,20 +19,9 @@ function ResizablePanelGroup({
   );
 }
 
-const ResizablePanel = React.forwardRef<
-  React.ElementRef<typeof ResizablePrimitive.Panel>,
-  ResizablePrimitive.PanelProps
->(({ ...props }, ref) => {
-  return (
-    <ResizablePrimitive.Panel
-      ref={ref}
-      data-slot="resizable-panel"
-      {...props}
-    />
-  );
-});
-
-ResizablePanel.displayName = 'ResizablePanel';
+function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
+  return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />;
+}
 
 function ResizableHandle({
   withHandle,
