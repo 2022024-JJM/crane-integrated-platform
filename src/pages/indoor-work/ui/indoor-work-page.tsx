@@ -1,42 +1,53 @@
 import '@/pages/indoor-work/ui/indoor-work-page.css';
 
-import type { CSSProperties } from 'react';
-import { useLocation } from 'react-router-dom';
-
 import {
   IndoorWorkRightPanel,
   panelSurfaceClass,
 } from '@/entities/indoor-work';
-import { IndoorWorkHeader } from '@/features/indoor-work-header';
 import { useIndoorWorkLayout } from '@/features/indoor-work-layout';
-import { IndoorWorkViewerPanel } from '@/features/indoor-work-monitoring-viewer';
 import { cn } from '@/shared/lib/utils';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/shared/ui/organisms/resizable';
-import { SidebarInset, SidebarProvider } from '@/shared/ui/organisms/sidebar';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/shared/ui/organisms/sidebar';
 import { useMonitoringMenu } from '@/entities/monitoring/menu/model/use-monitoring-menu';
 import { MonitoringMenu } from '@/entities/monitoring/menu/ui/monitoring-menu';
 import { INDOOR_WORK_MENU_ITEMS } from '@/entities/monitoring/menu/model/indoor-work-content';
-
-const INDOOR_SIDEBAR_STYLE = {
-  '--sidebar-width': '200px',
-  '--sidebar-width-icon': '64px',
-} as CSSProperties & Record<'--sidebar-width' | '--sidebar-width-icon', string>;
+import {
+  Topbar,
+  TopbarBrand,
+  TopbarContent,
+} from '@/shared/ui/organisms/topbar';
+import { Clock3, CloudSun, RadioTower } from 'lucide-react';
+import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
+import { Brand } from '@/shared/ui/molecules/brand';
+import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
+import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
+import { useClock } from '@/shared/hooks/use-clock';
+import { useSiteWeather } from '@/shared/hooks/use-site-weather';
+import { Link } from 'react-router-dom';
+import { IndoorWorkViewerPanel } from '@/features/3d-model/ui/indoor-work-viewer-panel';
 
 export function IndoorWorkPage() {
-  const location = useLocation();
-  const regionName = (location.state as { regionName?: string } | null)
-    ?.regionName;
+  const TEXT = {
+    liveConnected: '온라인',
+  } as const;
+
+  const { hmsLabel } = useClock();
+  const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
+    regionName: '부산',
+  });
   const {
     isCompactLayout,
     isDetailView,
-    isSidebarCollapsed,
     isViewerFullscreen,
     resetViewer,
-    setSidebarCollapsed,
     toggleDetailView,
     toggleViewerFullscreen,
     viewerFrameRef,
@@ -48,15 +59,41 @@ export function IndoorWorkPage() {
   const { activeMenu, setActiveMenu } = useMonitoringMenu();
 
   return (
-    <main className="outdoor-work-page h-screen overflow-hidden">
-      <IndoorWorkHeader regionName={regionName} />
+    <main className="outdoor-work-page flex h-screen flex-col overflow-hidden">
+      <SidebarProvider defaultOpen={false} className="flex flex-col">
+        <Topbar className="h-18 shrink-0 px-2 py-4">
+          <TopbarBrand>
+            <SidebarTrigger />
+            <Link to="/" className="flex gap-3">
+              <HanwhaIcon />
+              <Brand />
+            </Link>
+          </TopbarBrand>
+          <TopbarContent>
+            <div className="flex items-center gap-2 justify-self-end max-[720px]:flex-wrap">
+              <TopStatusCard
+                icon={<CloudSun size={15} />}
+                label="Weather"
+                value={`${siteLabel} `}
+                subValue={`${weatherLabel} ${temperatureLabel}`}
+              />
+              <TopStatusCard
+                icon={<Clock3 size={15} />}
+                label="Time"
+                value={<time className="font-mono">{hmsLabel}</time>}
+                className="[--top-status-card-current-icon-bg:var(--outdoor-page-status-clock-icon-bg)] [--top-status-card-current-icon:var(--outdoor-page-status-clock-icon)]"
+              />
+              <TopStatusCard
+                icon={<RadioTower size={15} />}
+                label="Status"
+                value={TEXT.liveConnected}
+                tone="success"
+              />
+              <ModeToggle />
+            </div>
+          </TopbarContent>
+        </Topbar>
 
-      <SidebarProvider
-        open={!isSidebarCollapsed}
-        onOpenChange={(open) => setSidebarCollapsed(!open)}
-        className="h-[calc(100vh-52px)] min-h-0"
-        style={INDOOR_SIDEBAR_STYLE}
-      >
         <MonitoringMenu
           title="내업"
           menuItems={INDOOR_WORK_MENU_ITEMS}
@@ -64,7 +101,7 @@ export function IndoorWorkPage() {
           onSelectMenu={setActiveMenu}
         />
 
-        <SidebarInset className="min-h-0 bg-transparent">
+        <SidebarInset className="min-h-0 flex-1 bg-transparent">
           <ResizablePanelGroup
             orientation="horizontal"
             className="min-h-0 flex-1"

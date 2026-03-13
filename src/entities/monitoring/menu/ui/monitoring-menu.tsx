@@ -24,8 +24,8 @@ export function MonitoringMenu({
 }: Props) {
   return (
     <Sidebar
-      collapsible="icon"
-      className="bottom-0 h-auto [&>[data-slot=sidebar-inner]]:border-r [&>[data-slot=sidebar-inner]]:border-r-[var(--outdoor-page-panel-border)] [&>[data-slot=sidebar-inner]]:bg-[linear-gradient(180deg,var(--outdoor-page-panel-surface-from),var(--outdoor-page-panel-surface-to))]"
+      collapsible="offcanvas"
+      className="[&>[data-slot=sidebar-inner]]:border-r [&>[data-slot=sidebar-inner]]:border-r-[var(--outdoor-page-panel-border)] [&>[data-slot=sidebar-inner]]:bg-[linear-gradient(180deg,var(--outdoor-page-panel-surface-from),var(--outdoor-page-panel-surface-to))]"
     >
       <SidebarHeader className="h-[46px] flex-row items-center gap-2 border-b border-b-[var(--outdoor-page-panel-border)] px-2.5 py-0">
         <SidebarTrigger />

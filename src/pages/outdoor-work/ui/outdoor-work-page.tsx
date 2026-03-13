@@ -22,7 +22,6 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { useMainPageClock } from '@/pages/main/model/use-main-page-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { cn } from '@/shared/lib/utils';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
@@ -30,6 +29,7 @@ import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 import type { OutdoorWork3dViewHandle } from './outdoor-work-3d-view';
 import { OutdoorWork3dView } from './outdoor-work-3d-view';
 import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
+import { useClock } from '@/shared/hooks/use-clock';
 
 type OutdoorMenuKey =
   | 'realtime-monitoring'
@@ -74,7 +74,7 @@ export function OutdoorWorkPage() {
   const regionName = (location.state as { regionName?: string } | null)
     ?.regionName;
   const sidebarTitle = normalizeSidebarTitle(regionName) ?? TEXT.sidebarTitle;
-  const { dateTime, clockLabel } = useMainPageClock();
+  const { hmsLabel } = useClock();
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName,
   });
@@ -774,11 +774,7 @@ export function OutdoorWorkPage() {
           <TopStatusCard
             icon={<Clock3 size={15} />}
             label="Time"
-            value={
-              <time className="font-mono" dateTime={dateTime}>
-                {clockLabel}
-              </time>
-            }
+            value={<time className="font-mono">{hmsLabel}</time>}
             className="[--top-status-card-current-icon-bg:var(--outdoor-page-status-clock-icon-bg)] [--top-status-card-current-icon:var(--outdoor-page-status-clock-icon)]"
           />
           <TopStatusCard

@@ -9,8 +9,6 @@ interface HanwhaIconProps extends ComponentPropsWithoutRef<'svg'> {
 export function HanwhaIcon({
   className,
   title = 'Hanwha',
-  width = 36,
-  height = 36,
   ...props
 }: HanwhaIconProps) {
   return (
@@ -19,8 +17,8 @@ export function HanwhaIcon({
       viewBox="0 0 120 120"
       role="img"
       aria-label={props['aria-label'] ?? title}
-      width={width}
-      height={height}
+      width="36"
+      height="36"
       className={cn('shrink-0', className)}
       {...props}
     >
