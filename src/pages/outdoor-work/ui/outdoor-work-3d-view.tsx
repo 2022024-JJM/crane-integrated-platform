@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Vector3 } from 'three';
+import type { Viewer3dHandle } from '@/features/3d-model/viewer';
 import { OutdoorWorkModelSimulation } from '@/features/3d-model/simulation';
 
 const DEFAULT_CAMERA_POSITION = new Vector3(-65, 20, -10);
@@ -16,13 +17,6 @@ const DEFAULT_TARGET = new Vector3(-65, 0, -35);
 const TOP_VIEW_CAMERA_POSITION = new Vector3(-65, 92, -35);
 const DEFAULT_CAMERA_DISTANCE =
   DEFAULT_CAMERA_POSITION.distanceTo(DEFAULT_TARGET);
-
-export interface OutdoorWork3dViewHandle {
-  resetView: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  toggleTopView: () => void;
-}
 
 interface ViewportControllerProps {
   onReady: (controls: OrbitControlsImpl) => void;
@@ -85,7 +79,7 @@ function ViewportController({
 }
 
 export const OutdoorWork3dView = forwardRef<
-  OutdoorWork3dViewHandle,
+  Viewer3dHandle,
   OutdoorWork3dViewProps
 >(function OutdoorWork3dView({ onZoomChange }, ref) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);

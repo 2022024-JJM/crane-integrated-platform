@@ -28,6 +28,7 @@ import {
   INDOOR_WORK_MENU_ITEMS,
   INDOOR_WORK_MENU_TITLE,
 } from '@/pages/indoor-work/model/indoor-work-content';
+import { useIndoorImageViewerControls } from '@/pages/indoor-work/model/use-indoor-image-viewer-controls';
 import { useActiveWorkMenu } from '@/entities/monitoring/menu';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -68,7 +69,9 @@ function renderRightPanel(activeMenu: MonitoringMenuKey) {
     return (
       <>
         <OperationStatusCardsSection cards={INDOOR_OPERATION_STATUS_CARDS} />
-        <OperationStatusSummarySection items={INDOOR_OPERATION_STATUS_SUMMARY} />
+        <OperationStatusSummarySection
+          items={INDOOR_OPERATION_STATUS_SUMMARY}
+        />
       </>
     );
   }
@@ -89,18 +92,17 @@ export function IndoorWorkPage() {
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName: '부산',
   });
+  const { isViewerFullscreen, toggleViewerFullscreen, viewerFrameRef } =
+    useViewerControls();
   const {
     isDetailView,
-    isViewerFullscreen,
     resetViewer,
     toggleDetailView,
-    toggleViewerFullscreen,
-    viewerFrameRef,
     viewerScale,
     zoomInViewer,
     zoomOutViewer,
     zoomPercent,
-  } = useViewerControls();
+  } = useIndoorImageViewerControls();
   const { activeMenu, setActiveMenu } = useActiveWorkMenu();
   const craneStatusTable = INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 

@@ -9,6 +9,10 @@ import {
 } from 'lucide-react';
 
 interface Props {
+  detailViewLabels?: {
+    active: string;
+    inactive: string;
+  };
   isDetailView: boolean;
   isViewerFullscreen: boolean;
   onResetViewer: () => void;
@@ -19,6 +23,7 @@ interface Props {
 }
 
 export function ViewerControls({
+  detailViewLabels,
   isDetailView,
   isViewerFullscreen,
   onResetViewer,
@@ -27,6 +32,10 @@ export function ViewerControls({
   onZoomIn,
   onZoomOut,
 }: Props) {
+  const detailButtonAriaLabel = isDetailView
+    ? (detailViewLabels?.active ?? '기본 보기')
+    : (detailViewLabels?.inactive ?? '상세 보기');
+
   return (
     <div className="absolute top-3 left-3 z-2 flex gap-2">
       <Button
@@ -56,7 +65,7 @@ export function ViewerControls({
       <Button
         size={'sm'}
         variant={'secondary'}
-        aria-label={isDetailView ? '기본 보기' : '상세 보기'}
+        aria-label={detailButtonAriaLabel}
         onClick={onToggleDetailView}
       >
         <Gauge />

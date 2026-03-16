@@ -21,7 +21,11 @@ import {
   OUTDOOR_OPERATION_STATUS_CARDS,
   OUTDOOR_OPERATION_STATUS_SUMMARY,
 } from '@/entities/monitoring/operation';
-import { useViewerControls, ViewerControls } from '@/features/3d-model/viewer';
+import {
+  use3dViewerControls,
+  useViewerControls,
+  ViewerControls,
+} from '@/features/3d-model/viewer';
 import { ModeToggle } from '@/features/theme-toggle';
 import { useActiveWorkMenu } from '@/entities/monitoring/menu';
 import { cn } from '@/shared/lib/utils';
@@ -52,6 +56,7 @@ import {
   OUTDOOR_WORK_MENU_ITEMS,
   OUTDOOR_WORK_MENU_TITLE,
 } from '../model/outdoor-work-content';
+import { OutdoorWork3dView } from './outdoor-work-3d-view';
 import { panelSurfaceClass } from './outdoor-work-page-styles';
 
 function renderRightPanel(activeMenu: MonitoringMenuKey) {
@@ -91,18 +96,18 @@ export function OutdoorWorkPage() {
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName: '부산',
   });
+  const { isViewerFullscreen, toggleViewerFullscreen, viewerFrameRef } =
+    useViewerControls();
   const {
     isDetailView,
-    isViewerFullscreen,
     resetViewer,
     toggleDetailView,
-    toggleViewerFullscreen,
-    viewerFrameRef,
-    viewerScale,
+    handleZoomChange,
+    viewerRef,
     zoomInViewer,
     zoomOutViewer,
     zoomPercent,
-  } = useViewerControls();
+  } = use3dViewerControls();
   const { activeMenu, setActiveMenu } = useActiveWorkMenu();
   const craneStatusTable = OUTDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 
@@ -168,6 +173,10 @@ export function OutdoorWorkPage() {
                   >
                     {/* 뷰어 컨트롤러 */}
                     <ViewerControls
+                      detailViewLabels={{
+                        active: '기본 시점으로 이동',
+                        inactive: '탑뷰로 이동',
+                      }}
                       isDetailView={isDetailView}
                       isViewerFullscreen={isViewerFullscreen}
                       onResetViewer={resetViewer}
@@ -181,19 +190,10 @@ export function OutdoorWorkPage() {
                     </div>
                     {/* 애니메이션 화면 */}
                     <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[rgba(43,43,43)]">
-                      <div className="flex h-full w-full items-center justify-center overflow-auto">
-                        <img
-                          src="/images/indoor-work.png"
-                          alt="실내 작업 뷰"
-                          className={cn(
-                            'object-contain transition-transform duration-200',
-                            isDetailView
-                              ? 'h-full max-h-none w-full max-w-none'
-                              : 'h-auto max-h-[85%] w-auto max-w-[85%]',
-                          )}
-                          style={{ transform: `scale(${viewerScale})` }}
-                        />
-                      </div>
+                      <OutdoorWork3dView
+                        ref={viewerRef}
+                        onZoomChange={handleZoomChange}
+                      />
                     </div>
                   </div>
                 </ResizablePanel>
