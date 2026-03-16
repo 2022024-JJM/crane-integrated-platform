@@ -1,10 +1,10 @@
 import { LayoutGrid, Map } from 'lucide-react';
 
 import type { MonitoringRegion } from '@/entities/monitoring/region';
-import type { RegionViewMode } from '@/features/region-overview/model/use-region-overview-mode';
-import { useRegionOverviewMode } from '@/features/region-overview/model/use-region-overview-mode';
-import { RegionOverviewCards } from '@/features/region-overview/ui/region-overview-cards';
-import { RegionOverviewMap } from '@/features/region-overview/ui/region-overview-map';
+import type { RegionViewMode } from '@/features/monitoring/region/model/use-region-overview-mode';
+import { useRegionOverviewMode } from '@/features/monitoring/region/model/use-region-overview-mode';
+import { MonitoringRegionCards } from '@/features/monitoring/region/ui/monitoring-region-cards';
+import { MonitoringRegionMap } from '@/features/monitoring/region/ui/monitoring-region-map';
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -24,7 +24,7 @@ function isRegionMode(value: string | undefined): value is RegionViewMode {
   return value === 'card' || value === 'map';
 }
 
-export function RegionOverview({ regions }: RegionOverviewProps) {
+export function MonitoringRegionOverview({ regions }: RegionOverviewProps) {
   const { mode, setMode } = useRegionOverviewMode();
 
   const handleModeChange = (value: string | undefined) => {
@@ -67,9 +67,9 @@ export function RegionOverview({ regions }: RegionOverviewProps) {
         </ToggleGroup>
       </div>
       {mode === 'card' ? (
-        <RegionOverviewCards regions={regions} />
+        <MonitoringRegionCards regions={regions} />
       ) : (
-        <RegionOverviewMap regions={regions} />
+        <MonitoringRegionMap regions={regions} />
       )}
     </>
   );

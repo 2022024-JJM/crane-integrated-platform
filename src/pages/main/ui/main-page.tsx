@@ -5,7 +5,7 @@ import { MainFooter } from '@/pages/main/ui/main-footer';
 import { MainHeader } from '@/pages/main/ui/main-header';
 import { MainHero } from '@/pages/main/ui/main-hero';
 import { MainSummary } from '@/pages/main/ui/main-summary';
-import { RegionOverview } from '@/features/region-overview';
+import { MonitoringRegionOverview } from '@/features/monitoring/region';
 
 export function MainPage() {
   return (
@@ -15,7 +15,7 @@ export function MainPage() {
         <MainHeader />
         <MainHero />
         <MainSummary regions={monitoringRegions} />
-        <RegionOverview regions={monitoringRegions} />
+        <MonitoringRegionOverview regions={monitoringRegions} />
         <MainFooter />
       </div>
     </main>
