@@ -1,49 +1,17 @@
 import { createElement } from 'react';
 
+import { MonitoringStatusDot } from '../lib/cell-renderers';
 import {
   createMonitoringStatusTable,
-  MonitoringStatusDot,
   type MonitoringStatusColumn,
   type MonitoringStatusTableData,
-} from '@/entities/monitoring/crane-status';
+} from './types';
 import type {
   IndoorCraneRow,
   IndoorInfoRow,
   IndoorStatusRow,
-} from '@/entities/indoor-work/model/types';
+} from './indoor-work-types';
 import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
-
-export const INDOOR_WORK_TEXT = {
-  live: '온라인',
-  sidebarTitle: '내업',
-  topDescription: '창고 · 실내 설비 3D 모니터링',
-  topTag: '실내 작업 모니터링',
-  viewerTitle: '3D CRANE VIEW',
-} as const;
-
-export const INDOOR_WORK_VIEWER_SUBTITLE_MAP: Record<
-  MonitoringMenuKey,
-  string
-> = {
-  'event-log': '이벤트 로그 · 최근 발생 이력',
-  'operation-info': '운행 정보 · 설비 위치 · 작업 구간',
-  'operation-status': '운행 현황 · 장비 상태 · 이벤트 흐름',
-  playback: '다시 보기 · 과거 시점 재생',
-  'realtime-monitoring': '',
-  'screen-editor': '화면 편집 · 배치 및 패널 구성',
-};
-
-export const INDOOR_WORK_LOWER_PANEL_TITLE_MAP: Record<
-  MonitoringMenuKey,
-  string
-> = {
-  'event-log': '이벤트 로그 목록',
-  'operation-info': '장비 운행 정보',
-  'operation-status': '운행 상태 이력',
-  playback: '재생 구간 요약',
-  'realtime-monitoring': '실시간 장비 상태 테이블',
-  'screen-editor': '패널 배치 정보',
-};
 
 export const INDOOR_WORK_CRANE_ROWS = [
   {

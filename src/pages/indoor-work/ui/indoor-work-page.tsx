@@ -1,14 +1,13 @@
 import '@/pages/indoor-work/ui/indoor-work-page.css';
 
 import {
-  INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
-  panelSurfaceClass,
-} from '@/entities/indoor-work';
-import {
   AlarmStatsSection,
   AlarmTableSection,
 } from '@/entities/monitoring/alarm';
-import { MonitoringStatusTable } from '@/entities/monitoring/crane-status';
+import {
+  INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
+  MonitoringStatusTable,
+} from '@/entities/monitoring/crane-status';
 import {
   OperationInfoCardsSection,
   OperationInfoNotesSection,
@@ -44,6 +43,7 @@ import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { Link } from 'react-router-dom';
 import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
 import { useViewerControls, ViewerControls } from '@/features/3d-model/viewer';
+import { panelSurfaceClass } from './indoor-work-page-styles';
 
 function renderRightPanel(activeMenu: MonitoringMenuKey) {
   if (activeMenu === 'operation-info') {
