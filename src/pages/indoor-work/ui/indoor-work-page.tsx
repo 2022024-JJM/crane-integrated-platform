@@ -4,16 +4,25 @@ import {
   AlarmStatsSection,
   AlarmTableSection,
 } from '@/entities/monitoring/alarm';
+import { MonitoringStatusTable } from '@/entities/monitoring/crane-status';
 import {
-  INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
-  MonitoringStatusTable,
-} from '@/entities/monitoring/crane-status';
+  MonitoringMenu,
+  type MonitoringMenuKey,
+} from '@/entities/monitoring/menu';
 import {
   OperationInfoCardsSection,
   OperationInfoNotesSection,
   OperationStatusCardsSection,
   OperationStatusSummarySection,
 } from '@/entities/monitoring/operation';
+import { useViewerControls, ViewerControls } from '@/features/3d-model/viewer';
+import { ModeToggle } from '@/features/theme-toggle';
+import {
+  INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
+  INDOOR_WORK_MENU_ITEMS,
+  INDOOR_WORK_MENU_TITLE,
+} from '@/pages/indoor-work/model/indoor-work-content';
+import { useIndoorWorkMenu } from '@/pages/indoor-work/model/use-indoor-work-menu';
 import { cn } from '@/shared/lib/utils';
 import {
   ResizableHandle,
@@ -25,9 +34,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/shared/ui/organisms/sidebar';
-import { useMonitoringMenu } from '@/entities/monitoring/menu/model/use-monitoring-menu';
-import { MonitoringMenu } from '@/entities/monitoring/menu/ui/monitoring-menu';
-import { INDOOR_WORK_MENU_ITEMS } from '@/entities/monitoring/menu/model/indoor-work-content';
 import {
   Topbar,
   TopbarBrand,
@@ -37,12 +43,9 @@ import { Clock3, CloudSun, RadioTower } from 'lucide-react';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { Brand } from '@/shared/ui/molecules/brand';
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
-import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
 import { useClock } from '@/shared/hooks/use-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { Link } from 'react-router-dom';
-import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
-import { useViewerControls, ViewerControls } from '@/features/3d-model/viewer';
 import { panelSurfaceClass } from './indoor-work-page-styles';
 
 function renderRightPanel(activeMenu: MonitoringMenuKey) {
@@ -92,7 +95,7 @@ export function IndoorWorkPage() {
     zoomOutViewer,
     zoomPercent,
   } = useViewerControls();
-  const { activeMenu, setActiveMenu } = useMonitoringMenu();
+  const { activeMenu, setActiveMenu } = useIndoorWorkMenu();
   const craneStatusTable = INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 
   return (
@@ -134,7 +137,7 @@ export function IndoorWorkPage() {
 
         {/* 메뉴 */}
         <MonitoringMenu
-          title="내업"
+          title={INDOOR_WORK_MENU_TITLE}
           menuItems={INDOOR_WORK_MENU_ITEMS}
           activeMenu={activeMenu}
           onSelectMenu={setActiveMenu}

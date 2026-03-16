@@ -1,6 +1,6 @@
 import { CalendarDays, Clock3, RadioTower } from 'lucide-react';
 
-import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
+import { ModeToggle } from '@/features/theme-toggle';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import {
   Topbar,

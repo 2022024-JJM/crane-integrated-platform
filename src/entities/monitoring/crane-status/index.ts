@@ -2,7 +2,11 @@ export {
   MonitoringStatusDot,
   type MonitoringStatusDotTone,
 } from './lib/cell-renderers';
-export { INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP } from './model/indoor-work-content';
+export {
+  OPERATION_INFO_TABLE,
+  OPERATION_STATUS_TABLE,
+  REALTIME_MONITORING_TABLE,
+} from './model/indoor-work-content';
 export type {
   IndoorCraneRow,
   IndoorInfoRow,

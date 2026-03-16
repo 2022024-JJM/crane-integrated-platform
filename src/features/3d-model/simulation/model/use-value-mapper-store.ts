@@ -2,12 +2,10 @@ import {
   degToRad,
   numRound,
   radToDeg,
-} from '@/entities/3d-model/lib/math-utils';
-import {
   type SavedModelInfo,
   type ValueMapType,
   type Vector3Tuple,
-} from '@/entities/3d-model/model/types';
+} from '@/entities/3d-model';
 
 import type { Scene } from 'three';
 import { create } from 'zustand';

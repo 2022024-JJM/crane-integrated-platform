@@ -28,7 +28,7 @@ import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 import type { OutdoorWork3dViewHandle } from './outdoor-work-3d-view';
 import { OutdoorWork3dView } from './outdoor-work-3d-view';
-import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
+import { ModeToggle } from '@/features/theme-toggle';
 import { useClock } from '@/shared/hooks/use-clock';
 
 type OutdoorMenuKey =

@@ -4,14 +4,12 @@ import { MonitoringStatusDot } from '../lib/cell-renderers';
 import {
   createMonitoringStatusTable,
   type MonitoringStatusColumn,
-  type MonitoringStatusTableData,
 } from './types';
 import type {
   IndoorCraneRow,
   IndoorInfoRow,
   IndoorStatusRow,
 } from './indoor-work-types';
-import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
 
 export const INDOOR_WORK_CRANE_ROWS = [
   {
@@ -446,7 +444,8 @@ const OPERATION_STATUS_COLUMNS: readonly MonitoringStatusColumn<IndoorStatusRow>
     },
   ];
 
-const REALTIME_MONITORING_TABLE = createMonitoringStatusTable<IndoorCraneRow>({
+export const REALTIME_MONITORING_TABLE =
+  createMonitoringStatusTable<IndoorCraneRow>({
   columns: MONITORING_STATUS_COLUMNS,
   rows: INDOOR_WORK_CRANE_ROWS,
   getRowKey(row) {
@@ -454,7 +453,7 @@ const REALTIME_MONITORING_TABLE = createMonitoringStatusTable<IndoorCraneRow>({
   },
 });
 
-const OPERATION_INFO_TABLE = createMonitoringStatusTable<IndoorInfoRow>({
+export const OPERATION_INFO_TABLE = createMonitoringStatusTable<IndoorInfoRow>({
   columns: OPERATION_INFO_COLUMNS,
   rows: INDOOR_WORK_OPERATION_INFO_ROWS,
   getRowKey(row) {
@@ -462,22 +461,11 @@ const OPERATION_INFO_TABLE = createMonitoringStatusTable<IndoorInfoRow>({
   },
 });
 
-const OPERATION_STATUS_TABLE = createMonitoringStatusTable<IndoorStatusRow>({
+export const OPERATION_STATUS_TABLE =
+  createMonitoringStatusTable<IndoorStatusRow>({
   columns: OPERATION_STATUS_COLUMNS,
   rows: INDOOR_WORK_OPERATION_STATUS_ROWS,
   getRowKey(row) {
     return `${row.time}-${row.equipment}`;
   },
 });
-
-export const INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP: Record<
-  MonitoringMenuKey,
-  MonitoringStatusTableData<unknown>
-> = {
-  'event-log': REALTIME_MONITORING_TABLE,
-  'operation-info': OPERATION_INFO_TABLE,
-  'operation-status': OPERATION_STATUS_TABLE,
-  playback: REALTIME_MONITORING_TABLE,
-  'realtime-monitoring': REALTIME_MONITORING_TABLE,
-  'screen-editor': REALTIME_MONITORING_TABLE,
-};

@@ -1,5 +1,4 @@
-import { type Theme } from '@/features/theme-toggle/model/types';
-import { ThemeProviderContext } from '@/features/theme-toggle/model/use-theme';
+import { ThemeProviderContext, type Theme } from '@/features/theme-toggle';
 import { useEffect, useState } from 'react';
 
 type ThemeProviderProps = {
