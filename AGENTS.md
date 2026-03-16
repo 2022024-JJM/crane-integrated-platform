@@ -5,42 +5,6 @@
 이 프로젝트에서 작업할 때는 아래 규칙을 기본 원칙으로 따른다.
 코드 제안, 리팩터링, 파일 생성, 컴포넌트 추가, 구조 변경 시 모두 이 문서를 우선 적용한다.
 
-## 프로젝트 스택
-
-- React 19
-- Vite 7
-- TypeScript 5
-- Tailwind CSS v4
-- shadcn/ui
-- FSD(Feature-Sliced Design)
-- Atomic Design(`shared/ui` 내부 보조 규칙)
-
-## 현재 프로젝트 기준
-
-- 소스 루트는 `src` 이다.
-- 경로 alias는 `@/* -> ./src/*` 를 사용한다.
-- 전역 스타일과 테마는 `src/app/styles` 에서 관리한다.
-- 공용 훅은 `src/shared/hooks` 에 둔다.
-- 공용 유틸은 `src/shared/lib` 에 둔다.
-- 공용 UI는 `src/shared/ui` 에 둔다.
-- `src/shared/ui` 내부는 `atoms / molecules / organisms` 로 구분한다.
-- 이 프로젝트는 더 이상 `widgets` 레이어를 사용하지 않는다.
-- 현재 핵심 slice 예시는 아래와 같다.
-  - `pages/main`
-  - `pages/outdoor-work`
-  - `pages/indoor-work`
-  - `features/outdoor-work-model-simulation`
-  - `entities/monitoring-region`
-  - `entities/3d-model`
-
-## components.json 기준 alias
-
-- `components`: `@/shared`
-- `ui`: `@/shared/ui`
-- `lib`: `@/shared/lib`
-- `hooks`: `@/shared/hooks`
-- `utils`: `@/shared/lib/utils`
-
 ## 기본 원칙
 
 - 기존 프로젝트 구조와 네이밍을 우선 존중한다.
@@ -91,7 +55,6 @@
 
 - 사용자 행동 중심 기능
 - 여러 엔티티를 묶는 기능 단위 로직
-- 예: 3D 모델 시뮬레이션, 장비 선택, 알림 확인, 조회 필터
 
 `features` 는 "사용자가 수행하는 일" 기준으로 나눈다.
 
@@ -99,7 +62,6 @@
 
 - 도메인 개체 중심 코드
 - 도메인 타입, 모델, 포맷터, 엔티티 전용 UI
-- 예: `monitoring-region`, `3d-model`
 
 ### `shared`
 
@@ -131,17 +93,14 @@ Atomic Design은 `src/shared/ui` 내부에서만 적용한다.
 ### `shared/ui/atoms`
 
 - 더 이상 쪼개기 어려운 기본 UI 조각
-- 예: `button`, `input`, `label`, `badge`, `hanwha-icon`
 
 ### `shared/ui/molecules`
 
 - atom 2개 이상을 조합한 작은 UI 블록
-- 예: `input-group`, `field`, `top-status-card`
 
 ### `shared/ui/organisms`
 
 - 비교적 큰 공용 UI 묶음
-- 예: `dialog`, `table`, `sidebar`, `calendar`
 
 ### Atomic 적용 기준
 
@@ -156,7 +115,6 @@ Atomic Design은 `src/shared/ui` 내부에서만 적용한다.
 - shadcn에서 생성한 공용 primitive는 현재 Atomic 분류 기준에 맞게 `atoms / molecules / organisms` 로 배치한다.
 - 새 UI를 만들기 전에 기존 `shared/ui` 에 같은 역할의 컴포넌트가 있는지 먼저 확인한다.
 - 스타일 수정은 우선 Tailwind 유틸리티와 현재 theme 토큰을 활용한다.
-- 전역 테마 및 토큰은 `src/app/styles/theme.css` 기준으로 관리한다.
 - shadcn 기본 패턴을 크게 벗어나는 래퍼는 꼭 필요할 때만 만든다.
 
 ## 스타일링 규칙
