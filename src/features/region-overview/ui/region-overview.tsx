@@ -1,14 +1,14 @@
 import { LayoutGrid, Map } from 'lucide-react';
 
+import type { MonitoringRegion } from '@/entities/monitoring/region';
+import type { RegionViewMode } from '@/features/region-overview/model/use-region-overview-mode';
+import { useRegionOverviewMode } from '@/features/region-overview/model/use-region-overview-mode';
+import { RegionOverviewCards } from '@/features/region-overview/ui/region-overview-cards';
+import { RegionOverviewMap } from '@/features/region-overview/ui/region-overview-map';
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@/shared/ui/molecules/toggle-group';
-import type { RegionViewMode } from '@/features/main-region-overview/model/use-main-region-overview-mode';
-import { useMainRegionOverviewMode } from '@/features/main-region-overview/model/use-main-region-overview-mode';
-import { MainRegionOverviewCards } from '@/features/main-region-overview/ui/main-region-overview-cards';
-import { MainRegionOverviewMap } from '@/features/main-region-overview/ui/main-region-overview-map';
-import type { MonitoringRegion } from '@/entities/monitoring/region';
 
 const TEXT = {
   sectionLabel: '지역 선택',
@@ -16,7 +16,7 @@ const TEXT = {
   mapLabel: '지도 형',
 } as const;
 
-interface MainRegionOverviewProps {
+interface RegionOverviewProps {
   regions: MonitoringRegion[];
 }
 
@@ -24,8 +24,8 @@ function isRegionMode(value: string | undefined): value is RegionViewMode {
   return value === 'card' || value === 'map';
 }
 
-export function MainRegionOverview({ regions }: MainRegionOverviewProps) {
-  const { mode, setMode } = useMainRegionOverviewMode();
+export function RegionOverview({ regions }: RegionOverviewProps) {
+  const { mode, setMode } = useRegionOverviewMode();
 
   const handleModeChange = (value: string | undefined) => {
     if (isRegionMode(value)) {
@@ -67,9 +67,9 @@ export function MainRegionOverview({ regions }: MainRegionOverviewProps) {
         </ToggleGroup>
       </div>
       {mode === 'card' ? (
-        <MainRegionOverviewCards regions={regions} />
+        <RegionOverviewCards regions={regions} />
       ) : (
-        <MainRegionOverviewMap regions={regions} />
+        <RegionOverviewMap regions={regions} />
       )}
     </>
   );

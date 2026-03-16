@@ -7,14 +7,14 @@ import {
   MAP_VIEWBOX,
   resolveMapZones,
   type ResolvedMapZone,
-} from '@/features/main-region-overview/model/main-region-overview-map';
+} from '@/features/region-overview/model/region-overview-map';
 
 const TEXT = {
   mapAlt: 'Hanwha crane yard map',
   region: '옥포산업단지',
 } as const;
 
-export function MainRegionOverviewMap({
+export function RegionOverviewMap({
   regions,
 }: {
   regions: MonitoringRegion[];
