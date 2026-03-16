@@ -2,11 +2,19 @@ import '@/pages/indoor-work/ui/indoor-work-page.css';
 
 import {
   INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
-  IndoorWorkRightPanel,
   panelSurfaceClass,
 } from '@/entities/indoor-work';
+import {
+  AlarmStatsSection,
+  AlarmTableSection,
+} from '@/entities/monitoring/alarm';
 import { MonitoringStatusTable } from '@/entities/monitoring/crane-status';
-import { useIndoorWorkLayout } from '@/features/indoor-work-layout';
+import {
+  OperationInfoCardsSection,
+  OperationInfoNotesSection,
+  OperationStatusCardsSection,
+  OperationStatusSummarySection,
+} from '@/entities/monitoring/operation';
 import { cn } from '@/shared/lib/utils';
 import {
   ResizableHandle,
@@ -34,7 +42,35 @@ import { ModeToggle } from '@/features/theme-toggle/ui/mode-toggle';
 import { useClock } from '@/shared/hooks/use-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { Link } from 'react-router-dom';
-import { ViewerControls } from '@/features/3d-model/viewer/ui/viewer-controls';
+import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
+import { useViewerControls, ViewerControls } from '@/features/3d-model/viewer';
+
+function renderRightPanel(activeMenu: MonitoringMenuKey) {
+  if (activeMenu === 'operation-info') {
+    return (
+      <>
+        <OperationInfoCardsSection />
+        <OperationInfoNotesSection />
+      </>
+    );
+  }
+
+  if (activeMenu === 'operation-status') {
+    return (
+      <>
+        <OperationStatusCardsSection />
+        <OperationStatusSummarySection />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AlarmStatsSection />
+      <AlarmTableSection />
+    </>
+  );
+}
 
 export function IndoorWorkPage() {
   const TEXT = {
@@ -55,7 +91,7 @@ export function IndoorWorkPage() {
     zoomInViewer,
     zoomOutViewer,
     zoomPercent,
-  } = useIndoorWorkLayout();
+  } = useViewerControls();
   const { activeMenu, setActiveMenu } = useMonitoringMenu();
   const craneStatusTable = INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 
@@ -178,7 +214,7 @@ export function IndoorWorkPage() {
                   'grid h-full min-h-0 grid-rows-[minmax(212px,32vh)_minmax(0,1fr)]',
                 )}
               >
-                <IndoorWorkRightPanel activeMenu={activeMenu} />
+                {renderRightPanel(activeMenu)}
               </aside>
             </ResizablePanel>
           </ResizablePanelGroup>

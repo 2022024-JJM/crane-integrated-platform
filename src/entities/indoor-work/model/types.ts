@@ -1,21 +1,3 @@
-export type IndoorStatTone = 'danger' | 'neutral' | 'ok';
-
-export type IndoorAlarmSeverity = 'Critical' | 'Normal' | 'Warning';
-
-export interface IndoorStatCard {
-  label: string;
-  value: string;
-  tone: IndoorStatTone;
-}
-
-export type IndoorAlarmRow = readonly [
-  no: string,
-  severity: IndoorAlarmSeverity,
-  occurrenceTime: string,
-  target: string,
-  count: string,
-];
-
 export interface IndoorCraneRow {
   equipment: string;
   comm: boolean;
@@ -35,8 +17,6 @@ export interface IndoorCraneRow {
   gantrySecondary: string;
 }
 
-export type IndoorInfoCard = readonly [label: string, value: string];
-
 export interface IndoorInfoRow {
   equipment: string;
   equipmentType: string;
@@ -45,12 +25,6 @@ export interface IndoorInfoRow {
   task: string;
   direction: string;
 }
-
-export type IndoorStatusCard = readonly [
-  label: string,
-  value: string,
-  tone: IndoorStatTone,
-];
 
 export interface IndoorStatusRow {
   time: string;

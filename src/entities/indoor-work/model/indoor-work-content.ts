@@ -7,21 +7,15 @@ import {
   type MonitoringStatusTableData,
 } from '@/entities/monitoring/crane-status';
 import type {
-  IndoorAlarmRow,
   IndoorCraneRow,
-  IndoorInfoCard,
   IndoorInfoRow,
-  IndoorStatCard,
-  IndoorStatusCard,
   IndoorStatusRow,
 } from '@/entities/indoor-work/model/types';
 import type { MonitoringMenuKey } from '@/entities/monitoring/menu/model/types';
 
 export const INDOOR_WORK_TEXT = {
-  alarmTitle: '알람 내역',
   live: '온라인',
   sidebarTitle: '내업',
-  statsTitle: '알람 통계',
   topDescription: '창고 · 실내 설비 3D 모니터링',
   topTag: '실내 작업 모니터링',
   viewerTitle: '3D CRANE VIEW',
@@ -50,24 +44,6 @@ export const INDOOR_WORK_LOWER_PANEL_TITLE_MAP: Record<
   'realtime-monitoring': '실시간 장비 상태 테이블',
   'screen-editor': '패널 배치 정보',
 };
-
-export const INDOOR_WORK_STAT_CARDS = [
-  { label: '# Alarms', value: '2', tone: 'danger' },
-  { label: 'Elapsed Time', value: '3 min', tone: 'neutral' },
-  { label: '# Occurrence', value: '1', tone: 'ok' },
-  { label: 'Abnormal', value: '2', tone: 'danger' },
-  { label: 'Danger', value: '1', tone: 'danger' },
-  { label: 'Normal', value: '0', tone: 'ok' },
-] satisfies readonly IndoorStatCard[];
-
-export const INDOOR_WORK_ALARM_ROWS = [
-  ['88', 'Normal', '2019-01-23 14:55', 'BL-01', '1'],
-  ['87', 'Warning', '2019-01-23 14:48', 'BL-03', '2'],
-  ['86', 'Warning', '2019-01-23 14:40', 'OHC-11', '3'],
-  ['85', 'Critical', '2019-01-23 14:31', 'OHC-07', '1'],
-  ['84', 'Normal', '2019-01-23 14:22', 'BL-05', '2'],
-  ['83', 'Warning', '2019-01-23 14:15', 'OHC-02', '1'],
-] satisfies readonly IndoorAlarmRow[];
 
 export const INDOOR_WORK_CRANE_ROWS = [
   {
@@ -198,13 +174,6 @@ export const INDOOR_WORK_CRANE_ROWS = [
   },
 ] satisfies readonly IndoorCraneRow[];
 
-export const INDOOR_WORK_OPERATION_INFO_CARDS = [
-  ['도크명', '1도크 / Indoor Storage'],
-  ['활성 장비', 'OHC 4기, Bay Lift 2기'],
-  ['현재 작업', '창고 반입 · 베이 이송'],
-  ['작업 구간', '1Bay ~ 3Bay / 조립 5공장'],
-] satisfies readonly IndoorInfoCard[];
-
 export const INDOOR_WORK_OPERATION_INFO_ROWS = [
   {
     equipment: 'OHC-01',
@@ -239,13 +208,6 @@ export const INDOOR_WORK_OPERATION_INFO_ROWS = [
     direction: '남측',
   },
 ] satisfies readonly IndoorInfoRow[];
-
-export const INDOOR_WORK_OPERATION_STATUS_CARDS = [
-  ['총 운행 장비', '9', 'neutral'],
-  ['정상 장비', '6', 'ok'],
-  ['주의 장비', '2', 'danger'],
-  ['점검 장비', '1', 'danger'],
-] satisfies readonly IndoorStatusCard[];
 
 export const INDOOR_WORK_OPERATION_STATUS_ROWS = [
   {
@@ -284,20 +246,6 @@ export const INDOOR_WORK_OPERATION_STATUS_ROWS = [
     location: '1Bay',
   },
 ] satisfies readonly IndoorStatusRow[];
-
-export const INDOOR_WORK_OPERATION_INFO_NOTES = [
-  '1Bay 반입 라인 우선순위 상향',
-  'OHC-14는 점검 모드 유지',
-  'BL-01 자재 이송 사이클 정상',
-  '3Bay 상부 센서 응답 0.6s',
-] as const;
-
-export const INDOOR_WORK_OPERATION_STATUS_SUMMARY = [
-  '정상 장비 비율 66%',
-  '주의 레벨 2건 유지',
-  '점검 장비 1건 대응 중',
-  '평균 베이 이송 응답 0.74s',
-] as const;
 
 const EMPHASIS_CELL_CLASS =
   'font-bold text-[var(--outdoor-page-table-emphasis)]';

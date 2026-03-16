@@ -1,4 +1,3 @@
-import type { IndoorStatTone } from '@/entities/indoor-work/model/types';
 import { cn } from '@/shared/lib/utils';
 
 export const panelSurfaceClass =
@@ -22,7 +21,7 @@ export const tableCellClass =
 export const tableHeadClass =
   'border-r border-b border-[var(--outdoor-page-table-border)] bg-[var(--outdoor-page-table-head-bg)] px-2 py-[9px] text-[11px] font-medium text-[var(--outdoor-page-table-head-text)]';
 
-export function getStatValueClass(tone: IndoorStatTone) {
+export function getStatValueClass(tone: 'danger' | 'neutral' | 'ok') {
   return cn(
     'mt-2.5 text-center text-[20px] leading-none font-bold',
     tone === 'ok' && 'text-[var(--outdoor-page-ok)]',

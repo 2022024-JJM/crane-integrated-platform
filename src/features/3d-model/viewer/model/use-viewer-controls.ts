@@ -5,7 +5,7 @@ const VIEWER_ZOOM_MIN = 60;
 const VIEWER_ZOOM_MAX = 200;
 const VIEWER_ZOOM_STEP = 10;
 
-export function useIndoorWorkLayout() {
+export function useViewerControls() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [zoomPercent, setZoomPercent] = useState(DEFAULT_ZOOM_PERCENT);
