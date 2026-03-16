@@ -10,6 +10,7 @@ import {
 import { TopStatusCard } from '@/shared/ui/molecules/top-status-card';
 import { Brand } from '@/shared/ui/molecules/brand';
 import { useClock } from '@/shared/hooks/use-clock';
+import { SidebarTrigger } from '@/shared/ui/organisms/sidebar';
 
 const TEXT = {
   liveConnected: '온라인',
@@ -24,8 +25,12 @@ export function MainHeader() {
     '[--top-status-card-border:var(--main-page-status-success-border)] [--top-status-card-bg:var(--main-page-status-success-bg)] [--top-status-card-icon-bg:var(--main-page-status-success-icon-bg)] [--top-status-card-icon:var(--main-page-status-success-icon)] [--top-status-card-label:var(--main-page-status-success-label)] [--top-status-card-value:var(--main-page-status-success-value)] [--top-status-card-subvalue:var(--main-page-status-success-subvalue)]';
 
   return (
-    <Topbar className="px-[clamp(20px,4vw,40px)] py-4">
+    <Topbar className="px-[clamp(20px,4vw,20px)] py-4 md:h-[var(--main-page-header-height)]">
       <TopbarBrand>
+        <SidebarTrigger
+          iconClassName="size-7"
+          className="size-11 rounded-full text-[var(--main-page-text)] hover:bg-[var(--main-page-text-dim)] hover:text-[var(--main-page-title)]"
+        />
         <HanwhaIcon />
         <Brand />
       </TopbarBrand>

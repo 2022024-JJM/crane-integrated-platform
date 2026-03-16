@@ -1,23 +1,34 @@
 import '@/pages/main/ui/main-page.css';
 
-import { monitoringRegions } from '@/entities/monitoring/region';
-import { MainFooter } from '@/pages/main/ui/main-footer';
+import { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+
 import { MainHeader } from '@/pages/main/ui/main-header';
-import { MainHero } from '@/pages/main/ui/main-hero';
-import { MainSummary } from '@/pages/main/ui/main-summary';
-import { MonitoringRegionOverview } from '@/features/monitoring/region';
+import { MainPageSidebar } from '@/pages/main/ui/main-page-sidebar';
+import { SidebarInset, SidebarProvider } from '@/shared/ui/organisms/sidebar';
 
 export function MainPage() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [pathname]);
+
   return (
     <main className="main-page min-h-screen">
       <div className="main-page-overlay" />
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <SidebarProvider
+        defaultOpen={false}
+        className="relative z-10 flex min-h-screen flex-col"
+      >
         <MainHeader />
-        <MainHero />
-        <MainSummary regions={monitoringRegions} />
-        <MonitoringRegionOverview regions={monitoringRegions} />
-        <MainFooter />
-      </div>
+        <div className="flex min-h-0 flex-1">
+          <MainPageSidebar />
+          <SidebarInset className="main-page-content flex min-h-0 flex-1 bg-transparent">
+            <Outlet />
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
     </main>
   );
 }

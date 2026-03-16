@@ -1,5 +1,6 @@
 @layer components {
   .main-page {
+    --main-page-header-height: 5rem;
     --main-page-bg: #111214;
     --main-page-surface: #18191d;
     --main-page-card: #1c1e23;
@@ -64,7 +65,7 @@
     );
 
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
     isolation: isolate;
     min-height: 100vh;
     color: var(--main-page-text);
@@ -145,6 +146,10 @@
     pointer-events: none;
     z-index: 0;
     background-image: var(--main-page-grid-overlay);
+  }
+
+  .main-page-content {
+    min-height: calc(100svh - var(--main-page-header-height));
   }
 }
 
