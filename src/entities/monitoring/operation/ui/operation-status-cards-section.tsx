@@ -1,5 +1,7 @@
-import { OPERATION_STATUS_CARDS } from '@/entities/monitoring/operation/model/operation-panel-content';
-import type { OperationStatusTone } from '@/entities/monitoring/operation/model/types';
+import type {
+  OperationStatusCard,
+  OperationStatusTone,
+} from '@/entities/monitoring/operation/model/types';
 import { cn } from '@/shared/lib/utils';
 
 const SECTION_TITLE_CLASS =
@@ -14,8 +16,12 @@ function getStatValueClass(tone: OperationStatusTone) {
   );
 }
 
-export function OperationStatusCardsSection() {
-  const statusCards = OPERATION_STATUS_CARDS.map(([label, value, tone]) => ({
+interface Props {
+  cards: readonly OperationStatusCard[];
+}
+
+export function OperationStatusCardsSection({ cards }: Props) {
+  const statusCards = cards.map(([label, value, tone]) => ({
     label,
     tone,
     value,

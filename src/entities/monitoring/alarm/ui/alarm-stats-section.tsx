@@ -1,8 +1,8 @@
-import {
-  ALARM_OVERVIEW_TEXT,
-  MONITORING_STAT_CARDS,
-} from '@/entities/monitoring/alarm/model/alarm-overview-content';
-import type { MonitoringStatTone } from '@/entities/monitoring/alarm/model/types';
+import { ALARM_OVERVIEW_TEXT } from '@/entities/monitoring/alarm/model/alarm-overview-content';
+import type {
+  MonitoringStatCard,
+  MonitoringStatTone,
+} from '@/entities/monitoring/alarm/model/types';
 import { cn } from '@/shared/lib/utils';
 
 const SECTION_TITLE_CLASS =
@@ -17,14 +17,18 @@ function getStatValueClass(tone: MonitoringStatTone) {
   );
 }
 
-export function AlarmStatsSection() {
+interface Props {
+  monitoringStatCard: readonly MonitoringStatCard[];
+}
+
+export function AlarmStatsSection({ monitoringStatCard }: Props) {
   return (
     <section className="min-h-0 border-b border-[var(--outdoor-page-panel-border)] p-3">
       <div className={SECTION_TITLE_CLASS}>
         {ALARM_OVERVIEW_TEXT.statsTitle}
       </div>
       <div className="grid grid-cols-3 gap-px overflow-hidden border border-[var(--outdoor-page-card-border)] bg-[var(--outdoor-page-card-grid-gap)]">
-        {MONITORING_STAT_CARDS.map((card) => (
+        {monitoringStatCard.map((card) => (
           <div
             key={card.label}
             className="min-h-[82px] bg-[var(--outdoor-page-card-bg)] p-2.5"

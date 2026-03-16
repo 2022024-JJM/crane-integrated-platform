@@ -3,6 +3,8 @@ import '@/pages/indoor-work/ui/indoor-work-page.css';
 import {
   AlarmStatsSection,
   AlarmTableSection,
+  INDOOR_ALARM_ROWS,
+  INDOOR_MONITORING_STAT_CARDS,
 } from '@/entities/monitoring/alarm';
 import { MonitoringStatusTable } from '@/entities/monitoring/crane-status';
 import {
@@ -10,6 +12,10 @@ import {
   type MonitoringMenuKey,
 } from '@/entities/monitoring/menu';
 import {
+  INDOOR_OPERATION_INFO_CARDS,
+  INDOOR_OPERATION_INFO_NOTES,
+  INDOOR_OPERATION_STATUS_CARDS,
+  INDOOR_OPERATION_STATUS_SUMMARY,
   OperationInfoCardsSection,
   OperationInfoNotesSection,
   OperationStatusCardsSection,
@@ -52,8 +58,8 @@ function renderRightPanel(activeMenu: MonitoringMenuKey) {
   if (activeMenu === 'operation-info') {
     return (
       <>
-        <OperationInfoCardsSection />
-        <OperationInfoNotesSection />
+        <OperationInfoCardsSection cards={INDOOR_OPERATION_INFO_CARDS} />
+        <OperationInfoNotesSection items={INDOOR_OPERATION_INFO_NOTES} />
       </>
     );
   }
@@ -61,16 +67,16 @@ function renderRightPanel(activeMenu: MonitoringMenuKey) {
   if (activeMenu === 'operation-status') {
     return (
       <>
-        <OperationStatusCardsSection />
-        <OperationStatusSummarySection />
+        <OperationStatusCardsSection cards={INDOOR_OPERATION_STATUS_CARDS} />
+        <OperationStatusSummarySection items={INDOOR_OPERATION_STATUS_SUMMARY} />
       </>
     );
   }
 
   return (
     <>
-      <AlarmStatsSection />
-      <AlarmTableSection />
+      <AlarmStatsSection monitoringStatCard={INDOOR_MONITORING_STAT_CARDS} />
+      <AlarmTableSection alarmRows={INDOOR_ALARM_ROWS} />
     </>
   );
 }

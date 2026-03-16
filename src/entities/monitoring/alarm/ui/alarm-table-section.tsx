@@ -1,10 +1,10 @@
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
-import {
-  ALARM_OVERVIEW_TEXT,
-  ALARM_ROWS,
-} from '@/entities/monitoring/alarm/model/alarm-overview-content';
-import type { AlarmSeverity } from '@/entities/monitoring/alarm/model/types';
+import { ALARM_OVERVIEW_TEXT } from '@/entities/monitoring/alarm/model/alarm-overview-content';
+import type {
+  AlarmRow,
+  AlarmSeverity,
+} from '@/entities/monitoring/alarm/model/types';
 import { cn } from '@/shared/lib/utils';
 
 const SECTION_TITLE_CLASS =
@@ -19,7 +19,11 @@ function getSeverityPillClass(severity: AlarmSeverity) {
   );
 }
 
-export function AlarmTableSection() {
+interface Props {
+  alarmRows: readonly AlarmRow[];
+}
+
+export function AlarmTableSection({ alarmRows }: Props) {
   return (
     <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3">
       <div className={SECTION_TITLE_CLASS}>
@@ -42,7 +46,7 @@ export function AlarmTableSection() {
             </tr>
           </thead>
           <tbody>
-            {ALARM_ROWS.map(([no, severity, occurrenceTime, target, count]) => (
+            {alarmRows.map(([no, severity, occurrenceTime, target, count]) => (
               <tr key={no}>
                 <td className="border-r border-b border-[var(--outdoor-page-table-border)] px-1.5 py-[9px] text-[11px] text-[var(--outdoor-page-table-text)]">
                   {no}
