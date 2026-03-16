@@ -1,5 +1,6 @@
 import '@/pages/outdoor-work/ui/outdoor-work-page.css';
 
+import { useState } from 'react';
 import {
   AlarmStatsSection,
   AlarmTableSection,
@@ -29,6 +30,7 @@ import {
 import { ModeToggle } from '@/features/theme-toggle';
 import { useActiveWorkMenu } from '@/entities/monitoring/menu';
 import { cn } from '@/shared/lib/utils';
+import { Spinner } from '@/shared/ui/atoms/spinner';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -110,6 +112,7 @@ export function OutdoorWorkPage() {
   } = use3dViewerControls();
   const { activeMenu, setActiveMenu } = useActiveWorkMenu();
   const craneStatusTable = OUTDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
+  const [isViewerLoading, setIsViewerLoading] = useState(true);
 
   return (
     <main className="outdoor-work-page flex h-screen flex-col overflow-hidden">
@@ -185,13 +188,27 @@ export function OutdoorWorkPage() {
                       onZoomIn={zoomInViewer}
                       onZoomOut={zoomOutViewer}
                     />
-                    <div className="absolute right-3 bottom-3 z-2 font-mono text-[12px] font-bold text-amber-400">
-                      {zoomPercent}%
-                    </div>
+                    {isViewerLoading ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[var(--outdoor-page-card-bg)] text-[var(--outdoor-page-text)] backdrop-blur-xs">
+                        <Spinner
+                          className="size-6 text-[var(--outdoor-page-accent)]"
+                          aria-hidden="true"
+                        />
+                        <p className="text-sm font-medium">
+                          3D 작업장을 불러오는 중
+                        </p>
+                      </div>
+                    ) : null}
+                    {!isViewerLoading ? (
+                      <div className="absolute right-3 bottom-3 z-2 font-mono text-[12px] font-bold text-amber-400">
+                        {zoomPercent}%
+                      </div>
+                    ) : null}
                     {/* 애니메이션 화면 */}
                     <div className="h-full min-h-0 border-x border-x-[rgba(255,166,0,0.06)] bg-[rgba(43,43,43)]">
                       <OutdoorWork3dView
                         ref={viewerRef}
+                        onLoadingChange={setIsViewerLoading}
                         onZoomChange={handleZoomChange}
                       />
                     </div>

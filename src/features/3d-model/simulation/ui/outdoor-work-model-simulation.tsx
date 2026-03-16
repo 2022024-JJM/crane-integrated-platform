@@ -1,33 +1,60 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { GltfModel, type SavedSceneInfo } from '@/entities/3d-model';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
 
-export function OutdoorWorkModelSimulation() {
+interface OutdoorWorkModelSimulationProps {
+  onSceneDataLoadingChange?: (isLoading: boolean) => void;
+}
+
+export function OutdoorWorkModelSimulation({
+  onSceneDataLoadingChange,
+}: OutdoorWorkModelSimulationProps) {
   const SCENE_FILE_URL = '/scenes/1dock.json';
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const { registerFromModel } = useValueMapperStore();
   const start = useValueGeneratorStore((s) => s.start);
   useValueGeneratorRunner();
+  const emitSceneDataLoadingChange = useEffectEvent((isLoading: boolean) => {
+    onSceneDataLoadingChange?.(isLoading);
+  });
 
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
 
   useEffect(() => {
-    const load = async () => {
-      const res = await fetch(SCENE_FILE_URL);
-      const data: SavedSceneInfo = await res.json();
+    let isMounted = true;
 
-      setSceneInfo(data);
-      data.models?.map((modelInfo) => {
-        registerFromModel(modelInfo);
-      });
+    const load = async () => {
+      emitSceneDataLoadingChange(true);
+
+      try {
+        const res = await fetch(SCENE_FILE_URL);
+        const data: SavedSceneInfo = await res.json();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSceneInfo(data);
+        data.models?.forEach((modelInfo) => {
+          registerFromModel(modelInfo);
+        });
+      } finally {
+        if (isMounted) {
+          emitSceneDataLoadingChange(false);
+        }
+      }
     };
 
-    load();
     start();
-  }, []);
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [registerFromModel, start]);
 
   return (
     <>

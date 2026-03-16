@@ -1,6 +1,7 @@
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useProgress } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
+  Suspense,
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -24,6 +25,7 @@ interface ViewportControllerProps {
 }
 
 interface OutdoorWork3dViewProps {
+  onLoadingChange?: (isLoading: boolean) => void;
   onZoomChange?: (zoomPercent: number) => void;
 }
 
@@ -78,12 +80,42 @@ function ViewportController({
   return <OrbitControls ref={controlsRef} enableDamping={false} />;
 }
 
+interface LoadingStateBridgeProps {
+  isSceneContentReady: boolean;
+  isSceneDataLoading: boolean;
+  onLoadingChange?: (isLoading: boolean) => void;
+}
+
+function LoadingStateBridge({
+  isSceneContentReady,
+  isSceneDataLoading,
+  onLoadingChange,
+}: LoadingStateBridgeProps) {
+  const { active } = useProgress();
+
+  useEffect(() => {
+    onLoadingChange?.(isSceneDataLoading || active || !isSceneContentReady);
+  }, [active, isSceneContentReady, isSceneDataLoading, onLoadingChange]);
+
+  return null;
+}
+
+function SceneContentReadyBridge({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+
+  return null;
+}
+
 export const OutdoorWork3dView = forwardRef<
   Viewer3dHandle,
   OutdoorWork3dViewProps
->(function OutdoorWork3dView({ onZoomChange }, ref) {
+>(function OutdoorWork3dView({ onLoadingChange, onZoomChange }, ref) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [, setIsTopView] = useState(false);
+  const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
+  const [isSceneContentReady, setIsSceneContentReady] = useState(false);
 
   useImperativeHandle(ref, () => ({
     resetView: () => {
@@ -166,6 +198,11 @@ export const OutdoorWork3dView = forwardRef<
         depth: true,
       }}
     >
+      <LoadingStateBridge
+        isSceneContentReady={isSceneContentReady}
+        isSceneDataLoading={isSceneDataLoading}
+        onLoadingChange={onLoadingChange}
+      />
       <ambientLight intensity={2} />
       <directionalLight
         position={[0, 50, 10]}
@@ -178,7 +215,24 @@ export const OutdoorWork3dView = forwardRef<
         }}
         onZoomChange={onZoomChange}
       />
-      <OutdoorWorkModelSimulation />
+      <Suspense fallback={null}>
+        <OutdoorWorkModelSimulation
+          onSceneDataLoadingChange={(isLoading) => {
+            setIsSceneDataLoading(isLoading);
+
+            if (isLoading) {
+              setIsSceneContentReady(false);
+            }
+          }}
+        />
+        {!isSceneDataLoading ? (
+          <SceneContentReadyBridge
+            onReady={() => {
+              setIsSceneContentReady(true);
+            }}
+          />
+        ) : null}
+      </Suspense>
     </Canvas>
   );
 });
