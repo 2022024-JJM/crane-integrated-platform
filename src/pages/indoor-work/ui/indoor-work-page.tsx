@@ -22,7 +22,7 @@ import {
   INDOOR_WORK_MENU_ITEMS,
   INDOOR_WORK_MENU_TITLE,
 } from '@/pages/indoor-work/model/indoor-work-content';
-import { useIndoorWorkMenu } from '@/pages/indoor-work/model/use-indoor-work-menu';
+import { useActiveWorkMenu } from '@/entities/monitoring/menu';
 import { cn } from '@/shared/lib/utils';
 import {
   ResizableHandle,
@@ -95,7 +95,7 @@ export function IndoorWorkPage() {
     zoomOutViewer,
     zoomPercent,
   } = useViewerControls();
-  const { activeMenu, setActiveMenu } = useIndoorWorkMenu();
+  const { activeMenu, setActiveMenu } = useActiveWorkMenu();
   const craneStatusTable = INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 
   return (

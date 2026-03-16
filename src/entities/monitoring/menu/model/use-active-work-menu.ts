@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { MonitoringMenuKey } from '@/entities/monitoring/menu';
 
-export function useIndoorWorkMenu() {
+export function useActiveWorkMenu() {
   const [activeMenu, setActiveMenu] = useState<MonitoringMenuKey>(
     'realtime-monitoring',
   );
