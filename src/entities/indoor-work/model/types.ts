@@ -16,35 +16,35 @@ export type IndoorAlarmRow = readonly [
   count: string,
 ];
 
-export type IndoorCraneRow = readonly [
-  crane: string,
-  comm: boolean,
-  on: boolean,
-  fault: boolean,
-  notComm: boolean,
-  freeSlewing: boolean,
-  rotate: boolean,
-  trolley1: string,
-  trolley2: string,
-  gantry: string,
-  hoist1: string,
-  hoist2: string,
-  hoist3: string,
-  trolley2Duplicate: string,
-  slewing: string,
-  gantryDuplicate: string,
-];
+export interface IndoorCraneRow {
+  equipment: string;
+  comm: boolean;
+  on: boolean;
+  fault: boolean;
+  notComm: boolean;
+  freeSlewing: boolean;
+  rotate: boolean;
+  trolley1: string;
+  trolley2: string;
+  gantry: string;
+  hoist1: string;
+  hoist2: string;
+  hoist3: string;
+  trolley2Secondary: string;
+  slewing: string;
+  gantrySecondary: string;
+}
 
 export type IndoorInfoCard = readonly [label: string, value: string];
 
-export type IndoorInfoRow = readonly [
-  equipment: string,
-  equipmentType: string,
-  location: string,
-  status: string,
-  task: string,
-  direction: string,
-];
+export interface IndoorInfoRow {
+  equipment: string;
+  equipmentType: string;
+  location: string;
+  status: string;
+  task: string;
+  direction: string;
+}
 
 export type IndoorStatusCard = readonly [
   label: string,
@@ -52,10 +52,10 @@ export type IndoorStatusCard = readonly [
   tone: IndoorStatTone,
 ];
 
-export type IndoorStatusRow = readonly [
-  time: string,
-  equipment: string,
-  statusChange: string,
-  level: string,
-  location: string,
-];
+export interface IndoorStatusRow {
+  time: string;
+  equipment: string;
+  statusChange: string;
+  level: string;
+  location: string;
+}

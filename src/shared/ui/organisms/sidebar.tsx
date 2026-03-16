@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { MenuIcon, PanelLeftIcon } from 'lucide-react';
+import { MenuIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 
 import { useIsMobile } from '@/shared/hooks/use-mobile';

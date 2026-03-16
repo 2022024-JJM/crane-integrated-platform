@@ -89,7 +89,7 @@ export const OutdoorWork3dView = forwardRef<
   OutdoorWork3dViewProps
 >(function OutdoorWork3dView({ onZoomChange }, ref) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
-  const [isTopView, setIsTopView] = useState(false);
+  const [, setIsTopView] = useState(false);
 
   useImperativeHandle(ref, () => ({
     resetView: () => {

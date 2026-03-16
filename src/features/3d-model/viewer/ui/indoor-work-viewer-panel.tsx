@@ -1,16 +1,7 @@
 import type { RefObject } from 'react';
 
-import {
-  INDOOR_WORK_LOWER_PANEL_TITLE_MAP,
-  INDOOR_WORK_TEXT,
-  IndoorWorkBottomPanel,
-} from '@/entities/indoor-work';
 import { cn } from '@/shared/lib/utils';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/shared/ui/organisms/resizable';
+import { ResizablePanel, ResizablePanelGroup } from '@/shared/ui/organisms/resizable';
 import { ViewerControls } from './viewer-controls';
 
 interface IndoorWorkViewerPanelProps {
@@ -96,16 +87,5 @@ function ViewerCanvas({
         />
       </div>
     </div>
-  );
-}
-
-function LowerPanel({ activeMenu }: { activeMenu: IndoorMenuKey }) {
-  return (
-    <>
-      <div className="sticky top-0 z-[1] border-b border-b-[var(--outdoor-page-panel-border-soft)] bg-[var(--outdoor-page-lower-panel-sticky-bg)] px-3 py-2 text-[11px] font-bold tracking-[0.08em] text-[var(--outdoor-page-lower-panel-sticky-text)] uppercase">
-        {INDOOR_WORK_LOWER_PANEL_TITLE_MAP[activeMenu]}
-      </div>
-      <IndoorWorkBottomPanel activeMenu={activeMenu} />
-    </>
   );
 }

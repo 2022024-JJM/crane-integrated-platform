@@ -1,9 +1,11 @@
 import '@/pages/indoor-work/ui/indoor-work-page.css';
 
 import {
+  INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP,
   IndoorWorkRightPanel,
   panelSurfaceClass,
 } from '@/entities/indoor-work';
+import { MonitoringStatusTable } from '@/entities/monitoring/crane-status';
 import { useIndoorWorkLayout } from '@/features/indoor-work-layout';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -33,13 +35,11 @@ import { useClock } from '@/shared/hooks/use-clock';
 import { useSiteWeather } from '@/shared/hooks/use-site-weather';
 import { Link } from 'react-router-dom';
 import { ViewerControls } from '@/features/3d-model/viewer/ui/viewer-controls';
-import { IndoorWorkBottomPanel } from '@/entities/indoor-work/ui/indoor-work-bottom-panel';
 
 export function IndoorWorkPage() {
   const TEXT = {
     liveConnected: '온라인',
   } as const;
-
   const { hmsLabel } = useClock();
   const { siteLabel, temperatureLabel, weatherLabel } = useSiteWeather({
     regionName: '부산',
@@ -57,6 +57,7 @@ export function IndoorWorkPage() {
     zoomPercent,
   } = useIndoorWorkLayout();
   const { activeMenu, setActiveMenu } = useMonitoringMenu();
+  const craneStatusTable = INDOOR_WORK_BOTTOM_PANEL_TABLE_MAP[activeMenu];
 
   return (
     <main className="outdoor-work-page flex h-screen flex-col overflow-hidden">
@@ -153,8 +154,12 @@ export function IndoorWorkPage() {
                 <ResizableHandle />
 
                 {/* 크레인 상태 */}
-                <ResizablePanel defaultSize="30%" minSize="160px">
-                  <IndoorWorkBottomPanel activeMenu={activeMenu} />
+                <ResizablePanel
+                  defaultSize="30%"
+                  minSize="160px"
+                  className="overflow-auto"
+                >
+                  <MonitoringStatusTable table={craneStatusTable} />
                 </ResizablePanel>
               </ResizablePanelGroup>
             </ResizablePanel>
