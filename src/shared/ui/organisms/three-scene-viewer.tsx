@@ -26,14 +26,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/molecules/tooltip';
-
-export type ThreeSceneViewerVector3 = [number, number, number];
+import type { Vector3Tuple } from '@/shared/types/math';
 
 export interface ThreeSceneViewerCameraPreset {
-  defaultPosition: ThreeSceneViewerVector3;
-  defaultTarget: ThreeSceneViewerVector3;
-  topViewPosition?: ThreeSceneViewerVector3;
-  topViewTarget?: ThreeSceneViewerVector3;
+  defaultPosition: Vector3Tuple;
+  defaultTarget: Vector3Tuple;
+  topViewPosition?: Vector3Tuple;
+  topViewTarget?: Vector3Tuple;
 }
 
 export interface ThreeSceneViewerProps {
@@ -61,7 +60,7 @@ const MIN_CAMERA_DISTANCE = 1;
 const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
 const TOP_VIEW_CAMERA_UP = new Vector3(0, 0, -1);
 
-function toVector3([x, y, z]: ThreeSceneViewerVector3) {
+function toVector3([x, y, z]: Vector3Tuple) {
   return new Vector3(x, y, z);
 }
 

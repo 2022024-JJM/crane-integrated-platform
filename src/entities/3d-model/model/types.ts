@@ -1,4 +1,4 @@
-export type Vector3Tuple = [number, number, number];
+import type { Vector3Tuple } from '@/shared/types/math';
 
 export type ValueMapType =
   | 'PX'

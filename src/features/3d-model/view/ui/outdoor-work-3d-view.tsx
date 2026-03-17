@@ -1,13 +1,11 @@
 import { useProgress } from '@react-three/drei';
 import { Suspense, useEffect, useState } from 'react';
-import {
-  ThreeSceneViewer,
-  type ThreeSceneViewerVector3,
-} from '@/shared/ui/organisms/three-scene-viewer';
+import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
 import { OutdoorWorkModelSimulation } from '../../simulation';
+import type { Vector3Tuple } from '@/shared/types/math';
 
-const DEFAULT_CAMERA_POSITION: ThreeSceneViewerVector3 = [-65, 20, -10];
-const DEFAULT_CAMERA_TARGET: ThreeSceneViewerVector3 = [-65, 0, -35];
+const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
+const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 
 interface LoadingStateBridgeProps {
   isSceneContentReady: boolean;
