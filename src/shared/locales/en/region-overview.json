@@ -1,11 +1,11 @@
 {
   "title": "Region Overview",
-  "description": "Review crane operations by dock and open a card to navigate to the detailed page.",
-  "cardView": "Cards",
+  "description": "Review crane operations by dock and open a one to navigate to the detailed page.",
+  "cardView": "Card",
   "mapView": "Map",
-  "mapComingSoon": "Map view coming soon",
   "normal": "Normal",
   "warning": "Warning",
   "critical": "Critical",
-  "totalCranes": "{{count}} cranes"
+  "totalCranes": "{{count}} cranes",
+  "regionName": "Okpo Shipyard"
 }

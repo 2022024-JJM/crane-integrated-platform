@@ -12,6 +12,7 @@
     "dashboard": "Dashboard",
     "regionOverview": "Region Overview",
     "outdoorWork": "Outdoor Work",
+    "indoorWork": "Indoor Work",
     "realTimeMonitoring": "Real-time 3D Monitoring",
     "craneStatus": "Crane Status",
     "workHistory": "Work History"
