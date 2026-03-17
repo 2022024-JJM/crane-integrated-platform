@@ -1,10 +1,17 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import './styles/index.css';
-import { App } from './app';
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { AppLayout } from "@/shared/ui/organisms/app-layout"
+import { DashboardPage, RegionOverviewPage, OutdoorWorkPage } from "@/pages"
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+export function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="region-overview" element={<RegionOverviewPage />} />
+          <Route path="outdoor-work/:regionId/*" element={<OutdoorWorkPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}

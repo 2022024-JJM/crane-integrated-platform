@@ -1,191 +1,45 @@
 # AGENTS.md
 
-## 목적
+This file provides guidance to AI Agents when working with code in this repository.
 
-이 프로젝트에서 작업할 때는 아래 규칙을 기본 원칙으로 따른다.
-코드 제안, 리팩터링, 파일 생성, 컴포넌트 추가, 구조 변경 시 모두 이 문서를 우선 적용한다.
+## Commands
 
-## 기본 원칙
+- `npm run dev` — Start Vite dev server with HMR
+- `npm run build` — TypeScript check + Vite production build
+- `npm run lint` — ESLint (flat config)
+- `npm run preview` — Preview production build
 
-- 기존 프로젝트 구조와 네이밍을 우선 존중한다.
-- 새 코드는 FSD 레이어 규칙에 맞게 배치한다.
-- Atomic Design은 최상위 구조가 아니라 `shared/ui` 내부 분류 기준으로만 사용한다.
-- UI는 먼저 기존 `shadcn/ui` 및 공용 molecule/organism 재사용을 우선한다.
-- 불필요한 폴더 이동, 대규모 구조 변경, 전면 리네이밍은 요청이 있을 때만 수행한다.
-- 단순 구현보다 유지보수 가능한 구조를 우선한다.
-- 임시 코드, 하드코딩, 의미 없는 축약 이름은 지양한다.
+No test framework is configured yet.
 
-## 경로 및 import 규칙
+## Architecture
 
-- 상대경로보다 alias import를 우선한다.
-- 같은 레이어 내부 참조는 가능하다.
-- 상위 레이어는 하위 레이어를 조합할 수 있다.
-- 하위 레이어가 상위 레이어를 import 하면 안 된다.
-- 다른 slice의 내부 구현 파일에 직접 접근하는 import는 지양한다.
-- 외부에 공개할 모듈은 가능하면 `index.ts` 를 통해 export 한다.
-- `shared` 는 어느 레이어에서도 import 가능하지만, 도메인 의미가 강한 코드는 두지 않는다.
+This is a **Crane Monitoring Dashboard** built with React 19, TypeScript, Vite, Tailwind CSS v4, and shadcn/ui. It follows **Feature-Sliced Design (FSD)** architecture.
 
-## FSD 레이어 규칙
+### Layers (`src/`)
 
-레이어 우선순위는 아래와 같다.
+- **app/** — Application shell, routing (react-router-dom), entry point (`main.tsx`), global styles
+- **pages/** — Route-level components
+- **features/** — User-facing functionality units
+- **entities/** — Business domain models and data
+- **shared/** — Reusable code used across all layers: UI components (`ui/`), utilities (`lib/`), types (`types/`), config (`config/`), assets
 
-`app > pages > features > entities > shared`
+Import rule: layers can only import from layers below them (shared → entities → features → pages → app).
 
-각 레이어의 역할은 아래 기준을 따른다.
+### shared/ui 구조 (Atomic Design)
 
-### `app`
+- **shared/ui/atoms/\*.tsx** — 단일 UI 요소 (Badge, Button, Separator, Toggle)
+- **shared/ui/molecules/\*.tsx** — atoms를 조합한 복합 UI 컴포넌트 (Card, Table, ScrollArea, Resizable, ToggleGroup, Tooltip)
+- **shared/ui/organisms/\*.tsx** — 도메인 프레젠테이션 컴포넌트 (AlarmPanel, CraneStatusTable, AppLayout 등). 데이터는 pages에서 props로 주입받으며, entities 타입만 `import type`으로 참조
 
-- 앱 진입점
-- 전역 스타일
-- 전역 provider
-- 라우팅
-- 앱 전역 설정
+> **참고**: shadcn CLI(`npx shadcn add`)로 추가한 컴포넌트는 `shared/ui/` 루트에 생성됨. 추가 후 atoms 또는 molecules로 수동 이동 필요.
 
-`app` 에는 비즈니스 도메인 로직을 과도하게 넣지 않는다.
+### Key Conventions
 
-### `pages`
-
-- 라우트 단위 화면
-- 화면 레이아웃과 페이지 전용 조합 UI
-- 여러 `features`, `entities`, `shared` 를 조합하는 레벨
-
-`pages` 는 페이지 구성을 담당하고, 재사용 가능한 기능 로직은 하위 레이어로 내린다.
-
-### `features`
-
-- 사용자 행동 중심 기능
-- 여러 엔티티를 묶는 기능 단위 로직
-
-`features` 는 "사용자가 수행하는 일" 기준으로 나눈다.
-
-### `entities`
-
-- 도메인 개체 중심 코드
-- 도메인 타입, 모델, 포맷터, 엔티티 전용 UI
-
-### `shared`
-
-- 프로젝트 전역 재사용 코드
-- 공용 UI
-- 공용 훅
-- 유틸 함수
-- 범용 설정값
-
-도메인 의미가 강한 코드는 `shared` 에 두지 않는다.
-
-## 세그먼트 구성 원칙
-
-각 slice 내부는 필요할 때 아래 세그먼트를 사용한다.
-
-- `ui`: 컴포넌트
-- `model`: 상태, 훅, 타입, 비즈니스 로직
-- `api`: API 호출
-- `lib`: 보조 함수
-- `config`: 상수, 설정
-
-항상 모든 세그먼트를 만들 필요는 없다.
-필요한 만큼만 만든다.
-
-## Atomic Design 규칙
-
-Atomic Design은 `src/shared/ui` 내부에서만 적용한다.
-
-### `shared/ui/atoms`
-
-- 더 이상 쪼개기 어려운 기본 UI 조각
-
-### `shared/ui/molecules`
-
-- atom 2개 이상을 조합한 작은 UI 블록
-
-### `shared/ui/organisms`
-
-- 비교적 큰 공용 UI 묶음
-
-### Atomic 적용 기준
-
-- 여러 페이지에서 재사용되는 공용 UI만 `shared/ui` 로 올린다.
-- 특정 페이지에 강하게 결합된 조합 UI는 `pages/*/ui` 에 둔다.
-- Atomic은 UI 복잡도 기준이고, FSD는 책임 기준이다.
-- 따라서 `organisms` 는 `widgets` 대체 레이어가 아니다.
-
-## UI / shadcn 규칙
-
-- shadcn 컴포넌트는 기본적으로 `src/shared/ui` 에 둔다.
-- shadcn에서 생성한 공용 primitive는 현재 Atomic 분류 기준에 맞게 `atoms / molecules / organisms` 로 배치한다.
-- 새 UI를 만들기 전에 기존 `shared/ui` 에 같은 역할의 컴포넌트가 있는지 먼저 확인한다.
-- 스타일 수정은 우선 Tailwind 유틸리티와 현재 theme 토큰을 활용한다.
-- shadcn 기본 패턴을 크게 벗어나는 래퍼는 꼭 필요할 때만 만든다.
-
-## 스타일링 규칙
-
-- Tailwind CSS v4 기준으로 작성한다.
-- 색상, radius, spacing 등은 가능한 한 전역 theme 토큰을 우선 사용한다.
-- 인라인 style 남용을 피한다.
-- 같은 스타일 패턴이 반복되면 공용 컴포넌트나 유틸 추출을 검토한다.
-- 레이아웃 목적의 클래스와 의미 있는 UI 책임이 한 컴포넌트에 과도하게 섞이지 않게 한다.
-
-## React 규칙
-
-- 함수형 컴포넌트를 사용한다.
-- 컴포넌트 이름은 PascalCase를 사용한다.
-- 한 컴포넌트가 너무 많은 책임을 가지면 분리한다.
-- props 는 명확하게 이름 짓고, 불리언 props 는 의미가 분명해야 한다.
-- 상태는 가능한 한 가까운 곳에 둔다.
-- 여러 레이어에서 재사용되지 않는 로직은 과도하게 추상화하지 않는다.
-- effect 는 꼭 필요한 경우에만 사용하고, 파생 가능한 값은 render 단계에서 계산하는 것을 우선한다.
-
-## TypeScript 규칙
-
-- `strict` 모드를 전제로 타입을 명확하게 작성한다.
-- `any` 사용은 지양한다.
-- 도메인 타입은 가능한 한 `entities` 또는 해당 slice 의 `model` 에 둔다.
-- 단순 객체 구조라도 재사용되면 타입 또는 interface로 명시한다.
-- 타입 이름은 의미 기반으로 작성한다.
-
-## 네이밍 규칙
-
-- 파일/폴더: `kebab-case`
-- React 컴포넌트: `PascalCase`
-- 변수/함수: `camelCase`
-- 상수: `UPPER_SNAKE_CASE`
-- 타입/interface/enum: `PascalCase`
-
-## 코드 작성 기준
-
-- 새 기능 추가 시 먼저 레이어 위치가 맞는지 판단한다.
-- 재사용 가능성이 낮은 코드를 과도하게 `shared` 로 올리지 않는다.
-- 비즈니스 로직과 UI 로직은 가능한 한 분리한다.
-- 매직 넘버, 매직 문자열은 의미 있는 상수로 분리한다.
-- 주석은 꼭 필요한 경우에만 짧고 명확하게 작성한다.
-
-## 작업 우선순위
-
-작업 시 아래 우선순위로 판단한다.
-
-1. 기존 구조와 규칙을 해치지 않는가
-2. FSD 레이어 책임이 맞는가
-3. 공용 UI와 공용 훅 재사용이 가능한가
-4. Atomic 분류 기준이 일관적인가
-5. 타입 안정성과 유지보수성이 확보되는가
-6. 필요 이상으로 추상화하지 않았는가
-
-## 금지 사항
-
-- 하위 레이어에서 상위 레이어 import
-- 도메인 로직을 무분별하게 `shared` 에 배치
-- 페이지 전용 UI를 무리하게 `shared/ui` 로 승격
-- 요청 없는 대규모 구조 변경
-- 의미 없는 약어, 임시 네이밍, 주석 처리된 죽은 코드 방치
-
-## 에이전트 작업 방식
-
-에이전트는 작업할 때 아래를 따른다.
-
-- 먼저 기존 구조를 확인하고 그 규칙에 맞춰 수정한다.
-- 새 파일 생성 시 왜 그 레이어에 두는지가 설명 가능해야 한다.
-- UI 변경 시 기존 `shared/ui` 와 theme 토큰 재사용을 우선한다.
-- 구조 제안 시 반드시 FSD 기준에서 레이어 책임을 설명한다.
-- Atomic Design은 `shared/ui` 내부 보조 규칙으로만 설명한다.
-- 단순 구현 요청이어도 아키텍처를 깨는 변경은 피한다.
-- 애매하면 가장 작은 변경으로 해결하고, 큰 구조 변경은 제안 후 진행한다.
+- **Path alias**: `@/*` maps to `src/*`
+- **shadcn/ui components** go in `src/shared/ui/atoms/` or `src/shared/ui/molecules/` (CLI는 `src/shared/ui/`에 생성, 수동 분류 필요)
+- **Utilities/hooks** go in `src/shared/lib/`
+- Components use **CVA (class-variance-authority)** for variant styling and **cn()** (`clsx` + `tailwind-merge`) for class merging
+- **Tailwind CSS v4** — no `tailwind.config.*`; theme is defined via CSS variables in `src/app/styles/global.css` using OKLCH color space
+- **Base UI** primitives underpin shadcn/ui components for accessibility
+- `.npmrc` has `legacy-peer-deps=true`
+- ESLint exempts `src/shared/ui/**/*.tsx` from `react-refresh/only-export-components` to allow barrel exports from UI components

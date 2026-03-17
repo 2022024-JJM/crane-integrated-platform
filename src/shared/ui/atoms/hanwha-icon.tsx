@@ -17,8 +17,8 @@ export function HanwhaIcon({
       viewBox="0 0 120 120"
       role="img"
       aria-label={props['aria-label'] ?? title}
-      width="32"
-      height="32"
+      width="24"
+      height="24"
       className={cn('shrink-0', className)}
       {...props}
     >
