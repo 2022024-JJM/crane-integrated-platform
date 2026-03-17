@@ -5,11 +5,11 @@ import {
 } from '@/shared/ui/molecules/resizable';
 import { getCranesByRegion } from '@/entities/crane';
 import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
-import { MonitoringViewer } from '@/shared/ui/organisms/monitoring-viewer';
+import { Preparing3dView } from '@/shared/ui/organisms/preparing-3d-view';
 import { CraneStatusTable } from '@/shared/ui/organisms/crane-status-table';
 import { AlarmPanel } from '@/shared/ui/organisms/alarm-panel';
 
-export function Monitoring3dView({ regionId }: { regionId: string }) {
+export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
   const cranes = getCranesByRegion(regionId);
   const alarms = getAlarmsByRegion(regionId);
   const alarmStats = getAlarmStatsByRegion(regionId);
@@ -19,7 +19,7 @@ export function Monitoring3dView({ regionId }: { regionId: string }) {
       <ResizablePanel defaultSize={75} minSize={50}>
         <ResizablePanelGroup orientation="vertical">
           <ResizablePanel defaultSize={60}>
-            <MonitoringViewer regionId={regionId} />
+            <Preparing3dView regionId={regionId} />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={40}>

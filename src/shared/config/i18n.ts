@@ -7,8 +7,8 @@ import koDashboard from '@/shared/locales/ko/dashboard.json';
 import enDashboard from '@/shared/locales/en/dashboard.json';
 import koRegionOverview from '@/shared/locales/ko/region-overview.json';
 import enRegionOverview from '@/shared/locales/en/region-overview.json';
-import koOutdoorWork from '@/shared/locales/ko/outdoor-work.json';
-import enOutdoorWork from '@/shared/locales/en/outdoor-work.json';
+import koMonitoring from '@/shared/locales/ko/monitoring.json';
+import enMonitoring from '@/shared/locales/en/monitoring.json';
 
 const LANGUAGE_STORAGE_KEY = 'language';
 const DEFAULT_NAMESPACE = 'common';
@@ -18,13 +18,13 @@ const resources = {
     common: koCommon,
     dashboard: koDashboard,
     'region-overview': koRegionOverview,
-    'outdoor-work': koOutdoorWork,
+    monitoring: koMonitoring,
   },
   en: {
     common: enCommon,
     dashboard: enDashboard,
     'region-overview': enRegionOverview,
-    'outdoor-work': enOutdoorWork,
+    monitoring: enMonitoring,
   },
 } as const;
 
@@ -44,7 +44,7 @@ void i18n.use(initReactI18next).init({
   lng: getInitialLanguage(),
   fallbackLng: 'ko',
   defaultNS: DEFAULT_NAMESPACE,
-  ns: ['common', 'dashboard', 'region-overview', 'outdoor-work'],
+  ns: ['common', 'dashboard', 'region-overview', 'monitoring'],
   interpolation: {
     escapeValue: false,
   },

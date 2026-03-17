@@ -2,7 +2,7 @@ import { getRegionById } from '@/entities/region';
 import { getRegionTitleKey } from '@/shared/lib/region-presentation';
 import { useParams, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Monitoring3dView } from './monitoring-3d-view';
+import { RealtimeMonitoringView } from './realtime-monitoring-view';
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -33,7 +33,9 @@ export function OutdoorWorkPage() {
 
   return (
     <div className="h-[calc(100vh-3.5rem)] w-full">
-      {subRoute === '3d-monitoring' && <Monitoring3dView regionId={regionId} />}
+      {subRoute === '3d-monitoring' && (
+        <RealtimeMonitoringView regionId={regionId} />
+      )}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={
