@@ -11,7 +11,11 @@ function getOverviewGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.overview'),
     items: [
-      { label: i18n.t('common:nav.dashboard'), path: '/', icon: LayoutDashboard },
+      {
+        label: i18n.t('common:nav.dashboard'),
+        path: '/',
+        icon: LayoutDashboard,
+      },
       {
         label: i18n.t('common:nav.regionOverview'),
         path: '/region-overview',
@@ -46,6 +50,30 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
       ],
     };
   },
+  '/indoor-work': (pathname) => {
+    const regionId = pathname.split('/')[2] || '';
+    const base = `/indoor-work/${regionId}`;
+    return {
+      title: i18n.t('common:nav.indoorWork'),
+      items: [
+        {
+          label: i18n.t('common:nav.realTimeMonitoring'),
+          path: `${base}/3d-monitoring`,
+          icon: Box,
+        },
+        {
+          label: i18n.t('common:nav.craneStatus'),
+          path: `${base}/crane-status`,
+          icon: List,
+        },
+        {
+          label: i18n.t('common:nav.workHistory'),
+          path: `${base}/work-history`,
+          icon: History,
+        },
+      ],
+    };
+  },
 };
 
 export function getNavigationConfig(pathname: string): NavGroup[] {
@@ -58,4 +86,7 @@ export function getNavigationConfig(pathname: string): NavGroup[] {
   return [getOverviewGroup(), systemGroup];
 }
 
-export const navigationConfig: NavGroup[] = [getOverviewGroup(), defaultSystemGroup];
+export const navigationConfig: NavGroup[] = [
+  getOverviewGroup(),
+  defaultSystemGroup,
+];

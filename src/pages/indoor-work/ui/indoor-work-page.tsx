@@ -16,7 +16,7 @@ function PlaceholderView({ title }: { title: string }) {
   );
 }
 
-export function OutdoorWorkPage() {
+export function IndoorWorkPage() {
   const { t } = useTranslation();
   const { regionId, '*': subRoute } = useParams<{
     regionId: string;
@@ -26,7 +26,7 @@ export function OutdoorWorkPage() {
   if (!regionId) return null;
 
   if (!subRoute) {
-    return <Navigate to={`/outdoor-work/${regionId}/3d-monitoring`} replace />;
+    return <Navigate to={`/indoor-work/${regionId}/3d-monitoring`} replace />;
   }
 
   const region = getRegionById(regionId);

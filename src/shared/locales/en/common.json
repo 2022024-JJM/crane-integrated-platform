@@ -49,15 +49,15 @@
   "regions": {
     "dock1": {
       "title": "Dock 1",
-      "subtitle": "Yard & Fitting · 8 cranes"
+      "subtitle": "Tower·Gantry 8 cranes"
     },
     "dock2": {
       "title": "Dock 2",
-      "subtitle": "Container unloading · 6 cranes"
+      "subtitle": "Tower·Gantry 6 cranes"
     },
-    "dock3": {
-      "title": "Dock 3",
-      "subtitle": "Bulk cargo · 4 cranes"
+    "dockin": {
+      "title": "Indoor Work",
+      "subtitle": "Overhead 4 cranes"
     }
   }
 }

@@ -12,6 +12,7 @@
     "dashboard": "대시보드",
     "regionOverview": "지역 선택",
     "outdoorWork": "Outdoor Work",
+    "indoorWork": "Indoor Work",
     "realTimeMonitoring": "실시간 3D 모니터링",
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력"
@@ -49,15 +50,15 @@
   "regions": {
     "dock1": {
       "title": "1 도크",
-      "subtitle": "야드 & 플리팅 · 크레인 8기"
+      "subtitle": "타워·골리앗 크레인 8기"
     },
     "dock2": {
       "title": "2 도크",
-      "subtitle": "컨테이너 하역 · 크레인 6기"
+      "subtitle": "타워·골리앗 크레인 6기"
     },
-    "dock3": {
-      "title": "3 도크",
-      "subtitle": "벌크 화물 · 크레인 4기"
+    "dockin": {
+      "title": "내업",
+      "subtitle": "오버헤드 크레인 4기"
     }
   }
 }

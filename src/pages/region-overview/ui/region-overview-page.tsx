@@ -7,7 +7,7 @@ import {
   ToggleGroupItem,
 } from '@/shared/ui/molecules/toggle-group';
 import { RegionCard } from './region-card';
-import { RegionMapView } from './region-map-view';
+import { RegionMap } from './region-map';
 
 export function RegionOverviewPage() {
   const { t } = useTranslation();
@@ -20,7 +20,9 @@ export function RegionOverviewPage() {
           <h1 className="text-2xl font-bold tracking-tight">
             {t('region-overview:title')}
           </h1>
-          <p className="text-muted-foreground">{t('region-overview:description')}</p>
+          <p className="text-muted-foreground">
+            {t('region-overview:description')}
+          </p>
         </div>
 
         <ToggleGroup
@@ -58,7 +60,7 @@ export function RegionOverviewPage() {
           ))}
         </div>
       ) : (
-        <RegionMapView />
+        <RegionMap />
       )}
     </div>
   );
