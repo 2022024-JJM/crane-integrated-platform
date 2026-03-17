@@ -1,10 +1,13 @@
 import { useProgress } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
 import { Suspense, useEffect, useState } from 'react';
-import { Vector3 } from 'three';
+import {
+  ThreeSceneViewer,
+  type ThreeSceneViewerVector3,
+} from '@/shared/ui/organisms/three-scene-viewer';
 import { OutdoorWorkModelSimulation } from '../../simulation';
 
-const DEFAULT_CAMERA_POSITION = new Vector3(-65, 20, -10);
+const DEFAULT_CAMERA_POSITION: ThreeSceneViewerVector3 = [-65, 20, -10];
+const DEFAULT_CAMERA_TARGET: ThreeSceneViewerVector3 = [-65, 0, -35];
 
 interface LoadingStateBridgeProps {
   isSceneContentReady: boolean;
@@ -43,16 +46,21 @@ export function OutdoorWork3dView({ onLoadingChange }: OutdoorWork3dViewProps) {
   const [isSceneContentReady, setIsSceneContentReady] = useState(false);
 
   return (
-    <Canvas
-      camera={{ position: DEFAULT_CAMERA_POSITION.toArray() }}
-      gl={{
-        toneMapping: 0,
-        powerPreference: 'high-performance',
-        alpha: false,
-        antialias: true,
-        stencil: false,
-        autoClear: false,
-        depth: true,
+    <ThreeSceneViewer
+      cameraPreset={{
+        defaultPosition: DEFAULT_CAMERA_POSITION,
+        defaultTarget: DEFAULT_CAMERA_TARGET,
+      }}
+      canvasProps={{
+        gl: {
+          toneMapping: 0,
+          powerPreference: 'high-performance',
+          alpha: false,
+          antialias: true,
+          stencil: false,
+          autoClear: false,
+          depth: true,
+        },
       }}
     >
       <LoadingStateBridge
@@ -84,6 +92,6 @@ export function OutdoorWork3dView({ onLoadingChange }: OutdoorWork3dViewProps) {
           />
         ) : null}
       </Suspense>
-    </Canvas>
+    </ThreeSceneViewer>
   );
 }
