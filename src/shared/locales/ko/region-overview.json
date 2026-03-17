@@ -6,6 +6,5 @@
   "normal": "정상",
   "warning": "경고",
   "critical": "이상",
-  "totalCranes": "총 {{count}}기",
   "regionName": "옥포국가산업단지"
 }

@@ -28,10 +28,6 @@ interface RegionCardProps {
 export function RegionCard({ region }: RegionCardProps) {
   const { t } = useTranslation();
   const linkItems = getRegionLinkItems(region.id);
-  const total =
-    region.statusSummary.normal +
-    region.statusSummary.warning +
-    region.statusSummary.critical;
 
   return (
     <Link to={region.navigateTo} className="block focus-visible:outline-none">
@@ -44,7 +40,9 @@ export function RegionCard({ region }: RegionCardProps) {
             />
           </div>
           <CardTitle>{t(getRegionTitleKey(region.id))}</CardTitle>
-          <CardDescription>{t(getRegionSubtitleKey(region.id))}</CardDescription>
+          <CardDescription>
+            {t(getRegionSubtitleKey(region.id))}
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -79,9 +77,6 @@ export function RegionCard({ region }: RegionCardProps) {
             <span className="ml-1.5 text-red-600">
               {region.statusSummary.critical}
             </span>
-          </span>
-          <span className="text-muted-foreground ml-auto">
-            {t('region-overview:totalCranes', { count: total })}
           </span>
         </CardFooter>
       </Card>
