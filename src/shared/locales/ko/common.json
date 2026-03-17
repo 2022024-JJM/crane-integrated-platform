@@ -1,0 +1,63 @@
+{
+  "language": "언어",
+  "comingSoon": "준비 중",
+  "header": {
+    "toggleSidebar": "사이드바 토글",
+    "toggleTheme": "테마 전환",
+    "brandPrimary": "CRANE",
+    "brandAccent": "OPS"
+  },
+  "nav": {
+    "overview": "Overview",
+    "dashboard": "대시보드",
+    "regionOverview": "지역 선택",
+    "outdoorWork": "Outdoor Work",
+    "realTimeMonitoring": "실시간 3D 모니터링",
+    "craneStatus": "크레인 상태 목록",
+    "workHistory": "작업 이력"
+  },
+  "craneStatus": {
+    "title": "크레인 실시간 상태",
+    "name": "크레인명",
+    "status": "상태",
+    "load": "하중(t)",
+    "windSpeed": "풍속(m/s)",
+    "boomAngle": "붐각도(°)",
+    "hoistHeight": "호이스트(m)",
+    "slewAngle": "선회각도(°)",
+    "operating": "운행",
+    "idle": "대기",
+    "maintenance": "점검",
+    "warning": "경고",
+    "stopped": "정지"
+  },
+  "alarms": {
+    "title": "알람 현황",
+    "history": "알람 이력",
+    "critical": "위험",
+    "warning": "경고",
+    "info": "정보",
+    "windWarningExceeded": "풍속 경고: {{value}}m/s 초과",
+    "loadWarningReached": "하중 경고: 최대 하중의 {{value}}% 도달",
+    "maintenanceDue": "정기 점검 일정 D-{{days}}",
+    "idleModeCompleted": "대기 모드 전환 완료",
+    "emergencyStopTriggered": "비상 정지: 안전 장치 작동",
+    "workAreaChanged": "작업 구역 변경 완료",
+    "windStopExceeded": "풍속 초과로 운행 정지: {{value}}m/s",
+    "workResumed": "작업 재개 완료"
+  },
+  "regions": {
+    "dock1": {
+      "title": "1 도크",
+      "subtitle": "야드 & 플리팅 · 크레인 8기"
+    },
+    "dock2": {
+      "title": "2 도크",
+      "subtitle": "컨테이너 하역 · 크레인 6기"
+    },
+    "dock3": {
+      "title": "3 도크",
+      "subtitle": "벌크 화물 · 크레인 4기"
+    }
+  }
+}

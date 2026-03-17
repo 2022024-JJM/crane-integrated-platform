@@ -1,0 +1,63 @@
+{
+  "language": "Language",
+  "comingSoon": "Coming soon",
+  "header": {
+    "toggleSidebar": "Toggle sidebar",
+    "toggleTheme": "Toggle theme",
+    "brandPrimary": "CRANE",
+    "brandAccent": "OPS"
+  },
+  "nav": {
+    "overview": "Overview",
+    "dashboard": "Dashboard",
+    "regionOverview": "Region Overview",
+    "outdoorWork": "Outdoor Work",
+    "realTimeMonitoring": "Real-time 3D Monitoring",
+    "craneStatus": "Crane Status",
+    "workHistory": "Work History"
+  },
+  "craneStatus": {
+    "title": "Real-time Crane Status",
+    "name": "Crane",
+    "status": "Status",
+    "load": "Load (t)",
+    "windSpeed": "Wind (m/s)",
+    "boomAngle": "Boom (deg)",
+    "hoistHeight": "Hoist (m)",
+    "slewAngle": "Slew (deg)",
+    "operating": "Operating",
+    "idle": "Idle",
+    "maintenance": "Maintenance",
+    "warning": "Warning",
+    "stopped": "Stopped"
+  },
+  "alarms": {
+    "title": "Alarm Status",
+    "history": "Alarm History",
+    "critical": "Critical",
+    "warning": "Warning",
+    "info": "Info",
+    "windWarningExceeded": "Wind warning: exceeded {{value}}m/s",
+    "loadWarningReached": "Load warning: reached {{value}}% of max load",
+    "maintenanceDue": "Scheduled maintenance D-{{days}}",
+    "idleModeCompleted": "Idle mode transition completed",
+    "emergencyStopTriggered": "Emergency stop: safety device triggered",
+    "workAreaChanged": "Work area changed",
+    "windStopExceeded": "Operation stopped due to wind: {{value}}m/s",
+    "workResumed": "Work resumed"
+  },
+  "regions": {
+    "dock1": {
+      "title": "Dock 1",
+      "subtitle": "Yard & Fitting · 8 cranes"
+    },
+    "dock2": {
+      "title": "Dock 2",
+      "subtitle": "Container unloading · 6 cranes"
+    },
+    "dock3": {
+      "title": "Dock 3",
+      "subtitle": "Bulk cargo · 4 cranes"
+    }
+  }
+}

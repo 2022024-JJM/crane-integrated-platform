@@ -1,6 +1,8 @@
 import { AlertTriangle, AlertCircle, Info } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { ScrollArea } from "@/shared/ui/molecules/scroll-area"
 import type { Alarm, AlarmSeverity } from "@/entities/alarm"
+import { getAlarmMessageTranslation } from "@/shared/lib/alarm-presentation"
 
 interface AlarmHistoryProps {
   alarms: Alarm[]
@@ -12,18 +14,21 @@ const severityIcon: Record<AlarmSeverity, { icon: typeof AlertTriangle; classNam
   info: { icon: Info, className: "text-blue-500" },
 }
 
-function formatTime(timestamp: string) {
+function formatTime(timestamp: string, locale: string) {
   const date = new Date(timestamp)
-  return date.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+  return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
 }
 
 export function AlarmHistory({ alarms }: AlarmHistoryProps) {
+  const { t, i18n } = useTranslation()
+
   return (
     <ScrollArea className="flex-1 overflow-auto">
       <div className="flex flex-col gap-1 p-3">
         {alarms.map((alarm) => {
           const sv = severityIcon[alarm.severity]
           const Icon = sv.icon
+          const message = getAlarmMessageTranslation(alarm)
           return (
             <div
               key={alarm.id}
@@ -34,10 +39,12 @@ export function AlarmHistory({ alarms }: AlarmHistoryProps) {
                 <div className="flex items-center justify-between gap-1">
                   <span className="font-medium">{alarm.craneName}</span>
                   <span className="shrink-0 text-muted-foreground">
-                    {formatTime(alarm.timestamp)}
+                    {formatTime(alarm.timestamp, i18n.language === "ko" ? "ko-KR" : "en-US")}
                   </span>
                 </div>
-                <p className="mt-0.5 text-muted-foreground">{alarm.message}</p>
+                <p className="mt-0.5 text-muted-foreground">
+                  {t(message.key, message.values)}
+                </p>
               </div>
             </div>
           )

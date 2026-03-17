@@ -1,9 +1,13 @@
+import { useTranslation } from "react-i18next"
+
 export function DashboardPage() {
+  const { t } = useTranslation()
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">{t("dashboard:title")}</h1>
       <p className="mt-1 text-muted-foreground">
-        Crane monitoring overview and real-time status.
+        {t("dashboard:description")}
       </p>
     </div>
   )

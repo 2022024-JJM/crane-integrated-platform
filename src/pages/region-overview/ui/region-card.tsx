@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardHeader,
@@ -8,6 +9,11 @@ import {
   CardFooter,
 } from '@/shared/ui/molecules/card';
 import type { Region, StatusLevel } from '@/entities/region';
+import {
+  getRegionLinkItems,
+  getRegionSubtitleKey,
+  getRegionTitleKey,
+} from '@/shared/lib/region-presentation';
 
 const statusDotColor: Record<StatusLevel, string> = {
   normal: 'bg-green-500',
@@ -15,17 +21,13 @@ const statusDotColor: Record<StatusLevel, string> = {
   critical: 'bg-red-500',
 };
 
-const statusLabel: Record<StatusLevel, string> = {
-  normal: '정상',
-  warning: '경고',
-  critical: '이상',
-};
-
 interface RegionCardProps {
   region: Region;
 }
 
 export function RegionCard({ region }: RegionCardProps) {
+  const { t } = useTranslation();
+  const linkItems = getRegionLinkItems(region.id);
   const total =
     region.statusSummary.normal +
     region.statusSummary.warning +
@@ -38,22 +40,22 @@ export function RegionCard({ region }: RegionCardProps) {
           <div className="absolute top-0 right-4">
             <span
               className={`inline-block size-3 rounded-full ${statusDotColor[region.status]}`}
-              title={statusLabel[region.status]}
+              title={t(`region-overview:${region.status}`)}
             />
           </div>
-          <CardTitle>{region.title}</CardTitle>
-          <CardDescription>{region.subtitle}</CardDescription>
+          <CardTitle>{t(getRegionTitleKey(region.id))}</CardTitle>
+          <CardDescription>{t(getRegionSubtitleKey(region.id))}</CardDescription>
         </CardHeader>
 
         <CardContent>
           <ul className="space-y-2 text-sm">
-            {region.links.map((link) => (
+            {linkItems.map((link) => (
               <li
                 key={link.path}
                 className="border-border text-muted-foreground rounded-lg border px-3 py-2"
               >
                 <span className="mr-2 text-yellow-500">›</span>
-                {link.label}
+                {t(link.labelKey)}
               </li>
             ))}
           </ul>
@@ -61,24 +63,26 @@ export function RegionCard({ region }: RegionCardProps) {
 
         <CardFooter className="gap-4 text-xs">
           <span>
-            정상
+            {t('region-overview:normal')}
             <span className="ml-1.5 text-green-600">
               {region.statusSummary.normal}
             </span>
           </span>
           <span>
-            경고
+            {t('region-overview:warning')}
             <span className="ml-1.5 text-yellow-600">
               {region.statusSummary.warning}
             </span>
           </span>
           <span>
-            이상
+            {t('region-overview:critical')}
             <span className="ml-1.5 text-red-600">
               {region.statusSummary.critical}
             </span>
           </span>
-          <span className="text-muted-foreground ml-auto">총 {total}기</span>
+          <span className="text-muted-foreground ml-auto">
+            {t('region-overview:totalCranes', { count: total })}
+          </span>
         </CardFooter>
       </Card>
     </Link>

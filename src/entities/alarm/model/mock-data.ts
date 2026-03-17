@@ -8,7 +8,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-107",
     craneName: "GC-107",
     severity: "warning",
-    message: "풍속 경고: 12.5m/s 초과",
+    eventType: "wind_warning_exceeded",
+    eventData: { value: 12.5 },
     timestamp: "2026-03-17T09:31:00",
   },
   {
@@ -17,7 +18,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-108",
     craneName: "GC-108",
     severity: "warning",
-    message: "하중 경고: 최대 하중의 95% 도달",
+    eventType: "load_warning_reached",
+    eventData: { value: 95 },
     timestamp: "2026-03-17T09:30:00",
   },
   {
@@ -26,7 +28,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-108",
     craneName: "GC-108",
     severity: "warning",
-    message: "풍속 경고: 14.0m/s 초과",
+    eventType: "wind_warning_exceeded",
+    eventData: { value: 14.0 },
     timestamp: "2026-03-17T09:29:00",
   },
   {
@@ -35,7 +38,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-101",
     craneName: "GC-101",
     severity: "info",
-    message: "정기 점검 일정 D-3",
+    eventType: "maintenance_due",
+    eventData: { days: 3 },
     timestamp: "2026-03-17T09:00:00",
   },
   {
@@ -44,7 +48,7 @@ const allAlarms: Alarm[] = [
     craneId: "crane-103",
     craneName: "GC-103",
     severity: "info",
-    message: "대기 모드 전환 완료",
+    eventType: "idle_mode_completed",
     timestamp: "2026-03-17T09:25:00",
   },
   // dock-2 알람
@@ -54,7 +58,7 @@ const allAlarms: Alarm[] = [
     craneId: "crane-206",
     craneName: "QC-206",
     severity: "critical",
-    message: "비상 정지: 안전 장치 작동",
+    eventType: "emergency_stop_triggered",
     timestamp: "2026-03-17T09:00:00",
   },
   {
@@ -63,7 +67,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-205",
     craneName: "QC-205",
     severity: "warning",
-    message: "하중 경고: 최대 하중의 90% 도달",
+    eventType: "load_warning_reached",
+    eventData: { value: 90 },
     timestamp: "2026-03-17T09:31:00",
   },
   {
@@ -72,7 +77,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-205",
     craneName: "QC-205",
     severity: "warning",
-    message: "풍속 경고: 11.0m/s 초과",
+    eventType: "wind_warning_exceeded",
+    eventData: { value: 11.0 },
     timestamp: "2026-03-17T09:28:00",
   },
   {
@@ -81,7 +87,7 @@ const allAlarms: Alarm[] = [
     craneId: "crane-203",
     craneName: "QC-203",
     severity: "info",
-    message: "작업 구역 변경 완료",
+    eventType: "work_area_changed",
     timestamp: "2026-03-17T09:15:00",
   },
   // dock-3 알람
@@ -91,7 +97,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-303",
     craneName: "BC-303",
     severity: "critical",
-    message: "풍속 초과로 운행 정지: 15.0m/s",
+    eventType: "wind_stop_exceeded",
+    eventData: { value: 15.0 },
     timestamp: "2026-03-17T08:45:00",
   },
   {
@@ -100,7 +107,8 @@ const allAlarms: Alarm[] = [
     craneId: "crane-304",
     craneName: "BC-304",
     severity: "critical",
-    message: "풍속 초과로 운행 정지: 15.2m/s",
+    eventType: "wind_stop_exceeded",
+    eventData: { value: 15.2 },
     timestamp: "2026-03-17T08:40:00",
   },
   {
@@ -109,7 +117,7 @@ const allAlarms: Alarm[] = [
     craneId: "crane-301",
     craneName: "BC-301",
     severity: "info",
-    message: "작업 재개 완료",
+    eventType: "work_resumed",
     timestamp: "2026-03-17T09:30:00",
   },
 ]

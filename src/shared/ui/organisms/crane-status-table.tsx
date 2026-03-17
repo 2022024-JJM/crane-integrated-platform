@@ -1,4 +1,5 @@
 import { Badge } from "@/shared/ui/atoms/badge"
+import { useTranslation } from "react-i18next"
 import { ScrollArea } from "@/shared/ui/molecules/scroll-area"
 import {
   Table,
@@ -15,30 +16,32 @@ interface CraneStatusTableProps {
 }
 
 const statusStyle: Record<CraneStatus, string> = {
-  "운행": "bg-green-500/15 text-green-600 dark:text-green-400",
-  "대기": "bg-gray-500/15 text-gray-600 dark:text-gray-400",
-  "점검": "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  "경고": "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  "정지": "bg-red-500/15 text-red-600 dark:text-red-400",
+  operating: "bg-green-500/15 text-green-600 dark:text-green-400",
+  idle: "bg-gray-500/15 text-gray-600 dark:text-gray-400",
+  maintenance: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  warning: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  stopped: "bg-red-500/15 text-red-600 dark:text-red-400",
 }
 
 export function CraneStatusTable({ cranes }: CraneStatusTableProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b px-4 py-2">
-        <h3 className="text-sm font-medium">크레인 실시간 상태</h3>
+        <h3 className="text-sm font-medium">{t("common:craneStatus.title")}</h3>
       </div>
       <ScrollArea className="flex-1 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>크레인명</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead className="text-right">하중(t)</TableHead>
-              <TableHead className="text-right">풍속(m/s)</TableHead>
-              <TableHead className="text-right">붐각도(°)</TableHead>
-              <TableHead className="text-right">호이스트(m)</TableHead>
-              <TableHead className="text-right">선회각도(°)</TableHead>
+              <TableHead>{t("common:craneStatus.name")}</TableHead>
+              <TableHead>{t("common:craneStatus.status")}</TableHead>
+              <TableHead className="text-right">{t("common:craneStatus.load")}</TableHead>
+              <TableHead className="text-right">{t("common:craneStatus.windSpeed")}</TableHead>
+              <TableHead className="text-right">{t("common:craneStatus.boomAngle")}</TableHead>
+              <TableHead className="text-right">{t("common:craneStatus.hoistHeight")}</TableHead>
+              <TableHead className="text-right">{t("common:craneStatus.slewAngle")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -47,7 +50,7 @@ export function CraneStatusTable({ cranes }: CraneStatusTableProps) {
                   <TableCell className="font-medium">{crane.name}</TableCell>
                   <TableCell>
                     <Badge className={statusStyle[crane.status]}>
-                      {crane.status}
+                      {t(`common:craneStatus.${crane.status}`)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

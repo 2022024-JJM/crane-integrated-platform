@@ -1,2 +1,2 @@
-export type { Region, StatusLevel, RegionLink, StatusSummary } from "./model/types"
-export { regions } from "./model/mock-data"
+export type { Region, StatusLevel, StatusSummary } from "./model/types"
+export { regions, getRegionById } from "./model/mock-data"

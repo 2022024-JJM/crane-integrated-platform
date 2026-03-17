@@ -1,33 +1,48 @@
 import { LayoutDashboard, Box, List, History, MapPin } from 'lucide-react';
+import { i18n } from '@/shared/config/i18n';
 import type { NavGroup } from '@/shared/types';
-
-const overviewGroup: NavGroup = {
-  title: 'Overview',
-  items: [
-    { label: '대시보드', path: '/', icon: LayoutDashboard },
-    { label: '지역 선택', path: '/region-overview', icon: MapPin },
-  ],
-};
 
 const defaultSystemGroup: NavGroup = {
   title: '',
   items: [],
 };
 
+function getOverviewGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.overview'),
+    items: [
+      { label: i18n.t('common:nav.dashboard'), path: '/', icon: LayoutDashboard },
+      {
+        label: i18n.t('common:nav.regionOverview'),
+        path: '/region-overview',
+        icon: MapPin,
+      },
+    ],
+  };
+}
+
 const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
   '/outdoor-work': (pathname) => {
     const regionId = pathname.split('/')[2] || '';
     const base = `/outdoor-work/${regionId}`;
     return {
-      title: 'Outdoor Work',
+      title: i18n.t('common:nav.outdoorWork'),
       items: [
         {
-          label: '실시간 3D 모니터링',
+          label: i18n.t('common:nav.realTimeMonitoring'),
           path: `${base}/3d-monitoring`,
           icon: Box,
         },
-        { label: '크레인 상태 목록', path: `${base}/crane-status`, icon: List },
-        { label: '작업 이력', path: `${base}/work-history`, icon: History },
+        {
+          label: i18n.t('common:nav.craneStatus'),
+          path: `${base}/crane-status`,
+          icon: List,
+        },
+        {
+          label: i18n.t('common:nav.workHistory'),
+          path: `${base}/work-history`,
+          icon: History,
+        },
       ],
     };
   },
@@ -40,7 +55,7 @@ export function getNavigationConfig(pathname: string): NavGroup[] {
   const systemGroup = matchedKey
     ? systemGroupOverrides[matchedKey](pathname)
     : defaultSystemGroup;
-  return [overviewGroup, systemGroup];
+  return [getOverviewGroup(), systemGroup];
 }
 
-export const navigationConfig: NavGroup[] = [overviewGroup, defaultSystemGroup];
+export const navigationConfig: NavGroup[] = [getOverviewGroup(), defaultSystemGroup];

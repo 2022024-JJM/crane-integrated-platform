@@ -1,4 +1,13 @@
 export type AlarmSeverity = "critical" | "warning" | "info"
+export type AlarmEventType =
+  | "wind_warning_exceeded"
+  | "load_warning_reached"
+  | "maintenance_due"
+  | "idle_mode_completed"
+  | "emergency_stop_triggered"
+  | "work_area_changed"
+  | "wind_stop_exceeded"
+  | "work_resumed"
 
 export interface Alarm {
   id: string
@@ -6,7 +15,8 @@ export interface Alarm {
   craneId: string
   craneName: string
   severity: AlarmSeverity
-  message: string
+  eventType: AlarmEventType
+  eventData?: Record<string, string | number>
   timestamp: string
 }
 

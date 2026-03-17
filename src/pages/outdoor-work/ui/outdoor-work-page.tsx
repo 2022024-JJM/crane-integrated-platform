@@ -1,4 +1,5 @@
 import { useParams, Navigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -6,6 +7,8 @@ import {
 } from "@/shared/ui/molecules/resizable"
 import { getCranesByRegion } from "@/entities/crane"
 import { getAlarmsByRegion, getAlarmStatsByRegion } from "@/entities/alarm"
+import { getRegionById } from "@/entities/region"
+import { getRegionTitleKey } from "@/shared/lib/region-presentation"
 import { MonitoringViewer } from "@/shared/ui/organisms/monitoring-viewer"
 import { CraneStatusTable } from "@/shared/ui/organisms/crane-status-table"
 import { AlarmPanel } from "@/shared/ui/organisms/alarm-panel"
@@ -37,14 +40,19 @@ function ThreeDMonitoringView({ regionId }: { regionId: string }) {
 }
 
 function PlaceholderView({ title }: { title: string }) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-full items-center justify-center text-muted-foreground">
-      <p className="text-lg">{title} — 준비 중</p>
+      <p className="text-lg">
+        {title} - {t("comingSoon")}
+      </p>
     </div>
   )
 }
 
 export function OutdoorWorkPage() {
+  const { t } = useTranslation()
   const { regionId, "*": subRoute } = useParams<{
     regionId: string
     "*": string
@@ -56,16 +64,30 @@ export function OutdoorWorkPage() {
     return <Navigate to={`/outdoor-work/${regionId}/3d-monitoring`} replace />
   }
 
+  const region = getRegionById(regionId)
+
   return (
     <div className="h-[calc(100vh-3.5rem)] w-full">
       {subRoute === "3d-monitoring" && (
         <ThreeDMonitoringView regionId={regionId} />
       )}
       {subRoute === "crane-status" && (
-        <PlaceholderView title="크레인 상태 목록" />
+        <PlaceholderView
+          title={
+            region
+              ? `${t(getRegionTitleKey(region.id))} ${t("common:nav.craneStatus")}`
+              : t("common:nav.craneStatus")
+          }
+        />
       )}
       {subRoute === "work-history" && (
-        <PlaceholderView title="작업 이력" />
+        <PlaceholderView
+          title={
+            region
+              ? `${t(getRegionTitleKey(region.id))} ${t("common:nav.workHistory")}`
+              : t("common:nav.workHistory")
+          }
+        />
       )}
     </div>
   )

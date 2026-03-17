@@ -1,14 +1,19 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { getNavigationConfig } from "@/shared/config";
 import { Separator } from "@/shared/ui/atoms/separator";
 import { ScrollArea } from "@/shared/ui/molecules/scroll-area";
 import { useSidebar } from "@/shared/lib/sidebar-context";
 
 export function AppSidebar() {
+  const { i18n } = useTranslation();
   const { isOpen } = useSidebar();
   const { pathname } = useLocation();
-  const navGroups = useMemo(() => getNavigationConfig(pathname), [pathname]);
+  const navGroups = useMemo(
+    () => getNavigationConfig(pathname),
+    [pathname, i18n.language],
+  );
 
   return (
     <aside
