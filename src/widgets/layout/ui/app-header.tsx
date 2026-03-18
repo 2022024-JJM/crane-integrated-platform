@@ -13,7 +13,7 @@ export function AppHeader() {
     <header className="bg-background sticky top-0 z-40 flex h-14 items-center border-b px-4">
       <button
         onClick={toggle}
-        className="hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 items-center justify-center rounded-md"
+        className="hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md"
         aria-label={t('header.toggleSidebar')}
       >
         <MenuIcon className="h-5 w-5" />
