@@ -1,0 +1,75 @@
+{
+  "language": "Lingua",
+  "comingSoon": "Mox aderit",
+  "header": {
+    "toggleSidebar": "Barra lateralis commuta",
+    "toggleTheme": "Thema commuta",
+    "pageSettings": "Optiones Paginae",
+    "closeSettings": "Optiones claude",
+    "regionLanguageSection": "Regio et Lingua",
+    "languageSection": "Lingua",
+    "themeSection": "Optiones Thematis",
+    "themeModeLabel": "Modus Obscurus",
+    "koreanLabel": "Corea (Coreane)",
+    "englishLabel": "Globale (Anglice)",
+    "latinLabel": "Latina (Latine)",
+    "lightMode": "Clarus",
+    "darkMode": "Obscurus",
+    "brandPrimary": "CRANE",
+    "brandAccent": "OPS"
+  },
+  "nav": {
+    "overview": "Conspectus",
+    "dashboard": "Tabula",
+    "regionOverview": "Conspectus Regionum",
+    "outdoorWork": "Opera Foris",
+    "indoorWork": "Opera Intus",
+    "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
+    "craneStatus": "Status Gruium",
+    "workHistory": "Historia Operum"
+  },
+  "craneStatus": {
+    "title": "Status Gruium Temporis Veri",
+    "name": "Grus",
+    "status": "Status",
+    "load": "Onus (t)",
+    "windSpeed": "Ventus (m/s)",
+    "boomAngle": "Angulus Brachii (°)",
+    "hoistHeight": "Altitudo Trochleae (m)",
+    "slewAngle": "Angulus Rotationis (°)",
+    "operating": "Operans",
+    "idle": "Quiescens",
+    "maintenance": "Inspectio",
+    "warning": "Monitum",
+    "stopped": "Stat"
+  },
+  "alarms": {
+    "title": "Status Monitorum",
+    "history": "Historia Monitorum",
+    "critical": "Criticum",
+    "warning": "Monitum",
+    "info": "Notitia",
+    "windWarningExceeded": "Monitum venti: {{value}}m/s superatum",
+    "loadWarningReached": "Monitum oneris: {{value}}% oneris maximi attingit",
+    "maintenanceDue": "Inspectio ordinaria D-{{days}}",
+    "idleModeCompleted": "Mutatio ad modum quietis perfecta",
+    "emergencyStopTriggered": "Statio subita: instrumentum salutis actum",
+    "workAreaChanged": "Area operis mutata est",
+    "windStopExceeded": "Operatio propter ventum intermissa: {{value}}m/s",
+    "workResumed": "Operatio resumpta est"
+  },
+  "regions": {
+    "dock1": {
+      "title": "Doca I",
+      "subtitle": "Grues turritae et gigantes VIII"
+    },
+    "dock2": {
+      "title": "Doca II",
+      "subtitle": "Grues turritae et gigantes VI"
+    },
+    "dockin": {
+      "title": "Opera Intus",
+      "subtitle": "Grues supremae IV"
+    }
+  }
+}

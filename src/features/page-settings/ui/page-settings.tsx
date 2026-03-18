@@ -46,6 +46,7 @@ export function PageSettings() {
   const languageOptions = [
     { value: 'ko', label: t('header.koreanLabel') },
     { value: 'en', label: t('header.englishLabel') },
+    { value: 'la', label: t('header.latinLabel') },
   ] as const;
 
   const currentLanguageLabel =
