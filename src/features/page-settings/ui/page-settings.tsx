@@ -2,7 +2,7 @@ import { Check, ChevronDown, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { i18n } from '@/shared/config/i18n';
+import { type SupportedLanguage, i18n } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/atoms/button';
@@ -22,7 +22,7 @@ export function PageSettings() {
     triggerRef.current?.blur();
   }
 
-  async function handleLanguageChange(language: 'ko' | 'en' | 'la') {
+  async function handleLanguageChange(language: SupportedLanguage) {
     await i18n.changeLanguage(language);
     setIsLanguageMenuOpen(false);
 
@@ -225,7 +225,7 @@ export function PageSettings() {
   );
 }
 
-function getLanguageLabelKey(language: 'ko' | 'en' | 'la') {
+function getLanguageLabelKey(language: SupportedLanguage) {
   switch (language) {
     case 'ko':
       return 'koreanLabel';

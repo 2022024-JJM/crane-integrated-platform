@@ -27,6 +27,7 @@ import {
   type Alarm,
   type AlarmSeverity,
 } from '@/entities/alarm';
+import { getFormatLocale } from '@/shared/config/i18n';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Separator } from '@/shared/ui/atoms/separator';
 import { cn } from '@/shared/lib/utils';
@@ -80,7 +81,10 @@ const tooltipLabelKey = {
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const summary = useMemo(() => buildDashboardSummary(), []);
-  const locale = i18n.language === 'ko' ? 'ko-KR' : 'en-US';
+  const locale = useMemo(
+    () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
+    [i18n.language, i18n.resolvedLanguage],
+  );
   const monthFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { month: 'short' }),
     [locale],

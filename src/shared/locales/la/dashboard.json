@@ -1,4 +1,86 @@
 {
-  "title": "Tabula",
-  "description": "Conspectus monitorii gruium et status temporis veri."
+  "units": {
+    "count": ""
+  },
+  "badges": {
+    "sixMonths": "VI M",
+    "now": "NUNC",
+    "priority": "Prioritas"
+  },
+  "metrics": {
+    "regionCount": {
+      "title": "Regiones Operum",
+      "description": "Numerus regionum monitoratarum"
+    },
+    "craneCount": {
+      "title": "Grues Coniunctae",
+      "description": "Numerus totus gruium coniunctarum"
+    },
+    "operatingRate": {
+      "title": "Rata Sanae Operationis",
+      "description": "Ex gruibus operantibus et quiescentibus computata"
+    },
+    "urgentRegion": {
+      "title": "Regio Statim Inspicienda",
+      "description": "Regio summae prioritatis ex monitoribus praesentibus",
+      "meta": "{{critical}} critica · {{total}} monita omnia",
+      "emptyValue": "Omnia Tuta",
+      "emptyMeta": "Nulla nunc adsunt monita quae attentionem requirant."
+    }
+  },
+  "sections": {
+    "trend": {
+      "title": "Relatio Cursus",
+      "description": "Cursus derivati sex mensium et septem dierum ex imagine hodierna compositi",
+      "range": "{{from}} - {{to}}"
+    },
+    "recentAlarms": {
+      "title": "Monita Recentia",
+      "description": "Series recentissima secundum vera tempora monitorum ordinata",
+      "empty": "Nulla monita monstranda sunt."
+    }
+  },
+  "charts": {
+    "monthlyOperating": {
+      "title": "Cursus Menstruus Operationis",
+      "description": "Stabilitas operationis per sex menses proximos derivata",
+      "average": "Rata media operationis",
+      "bestMonth": "Mensis optimus"
+    },
+    "monthlyAlarms": {
+      "title": "Copia Menstrua Monitorum",
+      "description": "Copia monitorum per sex menses proximos derivata",
+      "total": "Summa sex mensium",
+      "peakMonth": "Mensis maximus"
+    },
+    "regionStatus": {
+      "title": "Status Regionalis Gruium",
+      "description": "Grues operantes, monitae et extra rete in singulis regionibus",
+      "totalCranes": "{{count}} grues"
+    },
+    "weeklyTrend": {
+      "title": "Cursus Hebdomadalis Monitorum / Monitionum",
+      "description": "Distributio derivata monitorum per septem dies proximos",
+      "totalAlarms": "Monita hebdomadalia",
+      "totalWarnings": "Monitiones hebdomadales",
+      "average": "Media cotidiana",
+      "peakDay": "Dies maximus"
+    },
+    "riskCranes": {
+      "title": "Grues Periculi Prioris",
+      "description": "Punctum ex ratione oneris, velocitate venti et statu compositum",
+      "riskScore": "Punctum periculi",
+      "loadRatio": "Ratio oneris",
+      "windSpeed": "Velocitas venti"
+    }
+  },
+  "legend": {
+    "healthy": "Sanus",
+    "warning": "Monitum",
+    "offline": "Extra rete",
+    "alarmCount": "Monita",
+    "warningCount": "Monitiones",
+    "operatingRate": "Rata operationis",
+    "riskScore": "Punctum periculi"
+  }
 }
