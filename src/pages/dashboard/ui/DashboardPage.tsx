@@ -28,6 +28,7 @@ import {
   type AlarmSeverity,
 } from '@/entities/alarm';
 import { getFormatLocale } from '@/shared/config/i18n';
+import { useTheme } from '@/shared/lib/theme-context';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Separator } from '@/shared/ui/atoms/separator';
 import { cn } from '@/shared/lib/utils';
@@ -80,6 +81,7 @@ const tooltipLabelKey = {
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
   const summary = useMemo(() => buildDashboardSummary(), []);
   const locale = useMemo(
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
@@ -102,6 +104,16 @@ export function DashboardPage() {
         minute: '2-digit',
       }),
     [locale],
+  );
+  const barChartTooltipCursor = useMemo(
+    () => ({
+      fill:
+        theme === 'dark'
+          ? 'oklch(0.34 0 0 / 82%)'
+          : 'oklch(0.92 0 0 / 92%)',
+      stroke: 'none',
+    }),
+    [theme],
   );
 
   return (
@@ -271,6 +283,7 @@ export function DashboardPage() {
                         width={32}
                       />
                       <Tooltip
+                        cursor={barChartTooltipCursor}
                         content={
                           <ChartTooltip
                             translate={t}
@@ -284,6 +297,7 @@ export function DashboardPage() {
                       <Bar
                         dataKey="alarmCount"
                         fill="var(--chart-4)"
+                        maxBarSize={30}
                         radius={[8, 8, 0, 0]}
                       >
                         {summary.monthlyTrend.map((point) => (
@@ -343,7 +357,11 @@ export function DashboardPage() {
               <CardContent className="space-y-4">
                 <ChartArea className="h-[260px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={summary.weeklyTrend} barGap={8}>
+                    <BarChart
+                      data={summary.weeklyTrend}
+                      maxBarSize={30}
+                      barGap={8}
+                    >
                       <CartesianGrid
                         stroke="var(--border)"
                         strokeDasharray="3 3"
@@ -364,6 +382,7 @@ export function DashboardPage() {
                         width={32}
                       />
                       <Tooltip
+                        cursor={barChartTooltipCursor}
                         content={
                           <ChartTooltip
                             translate={t}
@@ -518,19 +537,20 @@ export function DashboardPage() {
                   {t('dashboard:charts.riskCranes.description')}
                 </CardDescription>
               </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-medium">
-                  {t('dashboard:charts.riskCranes.title')}
-                </h3>
-                <Badge variant="outline">
+              <CardAction>
+                <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300">
                   {t('dashboard:badges.priority')}
                 </Badge>
-              </div>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
               <ChartArea className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summary.riskCranes} layout="vertical">
+                  <BarChart
+                    data={summary.riskCranes}
+                    maxBarSize={20}
+                    layout="vertical"
+                  >
                     <CartesianGrid
                       horizontal={false}
                       stroke="var(--border)"
@@ -546,6 +566,7 @@ export function DashboardPage() {
                       width={56}
                     />
                     <Tooltip
+                      cursor={barChartTooltipCursor}
                       content={
                         <ChartTooltip
                           translate={t}
@@ -591,39 +612,34 @@ export function DashboardPage() {
                   {t('dashboard:sections.recentAlarms.description')}
                 </CardDescription>
               </div>
+              <CardAction>
+                <Badge className="border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                  {summary.recentAlarms.length}
+                  {t('dashboard:units.count')}
+                </Badge>
+              </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-medium">
-                    {t('dashboard:sections.recentAlarms.title')}
-                  </h3>
-                  <Badge variant="outline">
-                    {summary.recentAlarms.length}
-                    {t('dashboard:units.count')}
-                  </Badge>
-                </div>
-                {summary.recentAlarms.length > 0 ? (
-                  <ScrollArea className="h-[560px] pr-3">
-                    <div className="space-y-2 pr-3">
-                      {summary.recentAlarms.map((alarm) => (
-                        <RecentAlarmRow
-                          key={alarm.id}
-                          alarm={alarm}
-                          formatTimestamp={(value) =>
-                            dateTimeFormatter.format(new Date(value))
-                          }
-                          translate={t}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="border-border/70 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
-                    {t('dashboard:sections.recentAlarms.empty')}
+              {summary.recentAlarms.length > 0 ? (
+                <ScrollArea className="h-[560px] pr-3">
+                  <div className="space-y-2 pr-3">
+                    {summary.recentAlarms.map((alarm) => (
+                      <RecentAlarmRow
+                        key={alarm.id}
+                        alarm={alarm}
+                        formatTimestamp={(value) =>
+                          dateTimeFormatter.format(new Date(value))
+                        }
+                        translate={t}
+                      />
+                    ))}
                   </div>
-                )}
-              </div>
+                </ScrollArea>
+              ) : (
+                <div className="border-border/70 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                  {t('dashboard:sections.recentAlarms.empty')}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -644,41 +660,42 @@ function MetricCard({
   const Icon = metricIconMap[metric.id];
   const content = (
     <Card
+      size="sm"
       className={cn(
-        'border-border/70 bg-card/80 h-full border shadow-sm transition',
+        'border-border/70 bg-card/80 h-full min-h-[132px] justify-between border shadow-sm transition',
         metric.tone === 'warning' &&
           'border-amber-500/35 bg-amber-500/5 shadow-amber-500/5',
       )}
     >
-      <CardHeader>
+      <CardHeader className="gap-2 pb-1">
         <div className="space-y-1">
-          <div className="text-muted-foreground flex items-center gap-2">
-            <Icon className="size-4" />
-            <CardTitle className="text-sm">
+          <div className="text-primary flex items-center gap-2">
+            <Icon className="size-5 shrink-0" />
+            <CardTitle className="text-[15px] leading-tight md:text-sm">
               {translate(metric.titleKey)}
             </CardTitle>
           </div>
-          <CardDescription className="text-xs">
+          <CardDescription className="text-[13px] leading-4 md:text-xs">
             {translate(metric.descriptionKey)}
           </CardDescription>
         </div>
         {metric.href ? (
           <CardAction>
-            <ArrowRight className="text-muted-foreground size-4" />
+            <ArrowRight className="text-primary size-3.5" />
           </CardAction>
         ) : null}
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="mt-auto space-y-1.5 pt-0">
         <p
           className={cn(
-            'text-3xl font-semibold tracking-tight',
+            'ml-1 text-[1.8rem] leading-none font-semibold tracking-tight',
             metric.tone === 'success' && 'text-emerald-500',
             metric.tone === 'warning' && 'text-amber-500',
           )}
         >
           {formatMetric(metric, translate, locale)}
         </p>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-xs leading-4">
           {metric.metaKey
             ? translate(metric.metaKey, metric.metaValues)
             : '\u00A0'}
