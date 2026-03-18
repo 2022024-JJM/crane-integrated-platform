@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppLayout } from '@/shared/ui/organisms/app-layout';
 import {
   DashboardPage,
   RegionOverviewPage,
   OutdoorWorkPage,
   IndoorWorkPage,
 } from '@/pages';
+import { AppLayout } from '@/widgets/layout';
 
 export function App() {
   return (

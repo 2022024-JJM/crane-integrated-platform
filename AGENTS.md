@@ -19,11 +19,19 @@ This is a **Crane Monitoring Dashboard** built with React 19, TypeScript, Vite, 
 
 - **app/** — Application shell, routing (react-router-dom), entry point (`main.tsx`), global styles
 - **pages/** — Route-level components
+- **widgets/** — Page-level UI blocks composed from features/entities/shared
 - **features/** — User-facing functionality units
 - **entities/** — Business domain models and data
 - **shared/** — Reusable code used across all layers: UI components (`ui/`), utilities (`lib/`), types (`types/`), config (`config/`), assets
 
-Import rule: layers can only import from layers below them (shared → entities → features → pages → app).
+Import rule: layers can only import from layers below them (`shared` → `entities` → `features` → `widgets` → `pages` → `app`).
+
+### FSD Import Rules
+
+- Cross-layer imports must follow the layer order above. Lower layers must never import higher layers.
+- Cross-slice imports in `pages/`, `widgets/`, `features/`, and `entities/` should go through each slice's public API (`index.ts`) whenever possible.
+- Avoid deep imports such as `@/widgets/foo/ui/bar` or `@/entities/foo/model/types` from outside the owning slice. Expose what is needed via the slice barrel instead.
+- If a slice has consumers outside its own folder, it should provide an `index.ts` public API.
 
 ### shared/ui 구조 (Atomic Design)
 
@@ -42,4 +50,5 @@ Import rule: layers can only import from layers below them (shared → entities 
 - **Tailwind CSS v4** — no `tailwind.config.*`; theme is defined via CSS variables in `src/app/styles/global.css` using OKLCH color space
 - **Base UI** primitives underpin shadcn/ui components for accessibility
 - `.npmrc` has `legacy-peer-deps=true`
-- ESLint exempts `src/shared/ui/**/*.tsx` from `react-refresh/only-export-components` to allow barrel exports from UI components
+- ESLint enforces FSD layer boundaries and restricts deep cross-slice imports with `no-restricted-imports`
+- `react-refresh/only-export-components` is still active globally; if shared UI files intentionally export helpers alongside components, add a targeted override in ESLint rather than assuming it is already exempted

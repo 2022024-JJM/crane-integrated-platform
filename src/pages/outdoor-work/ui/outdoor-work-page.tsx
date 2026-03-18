@@ -1,5 +1,5 @@
 import { getRegionById } from '@/entities/region';
-import { getRegionTitleKey } from '@/shared/lib/region-presentation';
+import { getRegionTitleKey } from '@/entities/region/lib/region-presentation';
 import { useParams, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
-import { HanwhaIcon } from '../atoms/hanwha-icon';
+import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 
 export function AppHeader() {
   const { t } = useTranslation();

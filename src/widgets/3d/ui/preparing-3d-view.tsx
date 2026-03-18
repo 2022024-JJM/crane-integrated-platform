@@ -1,7 +1,7 @@
 import { Box } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getRegionById } from '@/entities/region';
-import { getRegionTitleKey } from '@/shared/lib/region-presentation';
+import { getRegionTitleKey } from '@/entities/region/lib/region-presentation';
 import { Card, CardContent } from '@/shared/ui/molecules/card';
 
 interface PreparationMonitoringViewerProps {

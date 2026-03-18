@@ -5,11 +5,11 @@ import {
 } from '@/shared/ui/molecules/resizable';
 import { getCranesByRegion } from '@/entities/crane';
 import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
-import { CraneStatusTable } from '@/shared/ui/organisms/crane-status-table';
-import { AlarmPanel } from '@/shared/ui/organisms/alarm-panel';
-import { OutdoorWork3dView } from '@/features/3d-model/view/ui/outdoor-work-3d-view';
+import { OutdoorWork3dView } from '@/features/3d/ui/outdoor-work-3d-view';
 import { useState } from 'react';
 import { Spinner } from '@/shared/ui/atoms/spinner';
+import { CraneStatusTable } from '@/widgets/crane';
+import { AlarmPanel } from '@/widgets/alarm';
 
 export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
   const cranes = getCranesByRegion(regionId);

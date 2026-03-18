@@ -28,14 +28,14 @@ import {
 } from '@/shared/ui/molecules/tooltip';
 import type { Vector3Tuple } from '@/shared/types/math';
 
-export interface ThreeSceneViewerCameraPreset {
+interface ThreeSceneViewerCameraPreset {
   defaultPosition: Vector3Tuple;
   defaultTarget: Vector3Tuple;
   topViewPosition?: Vector3Tuple;
   topViewTarget?: Vector3Tuple;
 }
 
-export interface ThreeSceneViewerProps {
+interface ThreeSceneViewerProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
   canvasProps?: Omit<ComponentProps<typeof Canvas>, 'camera' | 'children'>;
   children: ReactNode;

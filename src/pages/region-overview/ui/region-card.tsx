@@ -13,7 +13,7 @@ import {
   getRegionLinkItems,
   getRegionSubtitleKey,
   getRegionTitleKey,
-} from '@/shared/lib/region-presentation';
+} from '@/entities/region/lib/region-presentation';
 
 const statusDotColor: Record<StatusLevel, string> = {
   normal: 'bg-green-500',

@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react';
-import { GltfModel, type SavedSceneInfo } from '@/entities/3d-model';
+import { GltfModel, type SavedSceneInfo } from '@/entities/3d';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';

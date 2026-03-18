@@ -9,7 +9,7 @@ import {
 } from '../model/region-map-types';
 import { regions } from '@/entities/region/model/mock-data';
 import type { Region } from '@/entities/region';
-import { getRegionTitleKey } from '@/shared/lib/region-presentation';
+import { getRegionTitleKey } from '@/entities/region/lib/region-presentation';
 
 export function RegionMap() {
   const { t } = useTranslation();

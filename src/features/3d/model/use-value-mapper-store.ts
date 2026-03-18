@@ -4,9 +4,8 @@ import {
   radToDeg,
   type SavedModelInfo,
   type ValueMapType,
-  type Vector3Tuple,
-} from '@/entities/3d-model';
-
+} from '@/entities/3d';
+import type { Vector3Tuple } from '@/shared/types/math';
 import type { Scene } from 'three';
 import { create } from 'zustand';
 

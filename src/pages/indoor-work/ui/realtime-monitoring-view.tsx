@@ -5,9 +5,9 @@ import {
 } from '@/shared/ui/molecules/resizable';
 import { getCranesByRegion } from '@/entities/crane';
 import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
-import { Preparing3dView } from '@/shared/ui/organisms/preparing-3d-view';
-import { CraneStatusTable } from '@/shared/ui/organisms/crane-status-table';
-import { AlarmPanel } from '@/shared/ui/organisms/alarm-panel';
+import { CraneStatusTable } from '@/widgets/crane';
+import { AlarmPanel } from '@/widgets/alarm';
+import { Preparing3dView } from '@/widgets/3d';
 
 export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
   const cranes = getCranesByRegion(regionId);

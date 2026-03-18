@@ -1,8 +1,8 @@
-import { Outlet } from "react-router-dom"
-import { SidebarProvider } from "@/shared/lib/sidebar-context"
-import { ThemeProvider } from "@/shared/lib/theme-context"
-import { AppHeader } from "./app-header"
-import { AppSidebar } from "./app-sidebar"
+import { Outlet } from 'react-router-dom';
+import { SidebarProvider } from '@/shared/lib/sidebar-context';
+import { ThemeProvider } from '@/shared/lib/theme-context';
+import { AppHeader } from './app-header';
+import { AppSidebar } from './app-sidebar';
 
 export function AppLayout() {
   return (
@@ -19,5 +19,5 @@ export function AppLayout() {
         </div>
       </SidebarProvider>
     </ThemeProvider>
-  )
+  );
 }

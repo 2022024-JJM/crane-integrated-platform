@@ -1,8 +1,8 @@
 import { useProgress } from '@react-three/drei';
 import { Suspense, useEffect, useState } from 'react';
 import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
-import { OutdoorWorkModelSimulation } from '../../simulation';
 import type { Vector3Tuple } from '@/shared/types/math';
+import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
