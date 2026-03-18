@@ -1,4 +1,86 @@
 {
-  "title": "Dashboard",
-  "description": "Crane monitoring overview and real-time status."
+  "units": {
+    "count": "건"
+  },
+  "badges": {
+    "sixMonths": "6M",
+    "now": "NOW",
+    "priority": "우선 확인"
+  },
+  "metrics": {
+    "regionCount": {
+      "title": "공사 지역",
+      "description": "모니터링 대상 region 수"
+    },
+    "craneCount": {
+      "title": "연결 크레인",
+      "description": "전체 crane 연결 수"
+    },
+    "operatingRate": {
+      "title": "정상 운영률",
+      "description": "operating + idle 기준 비율"
+    },
+    "urgentRegion": {
+      "title": "즉시 확인 구역",
+      "description": "현재 알람 기준 최우선 region",
+      "meta": "위험 {{critical}}건 · 전체 알람 {{total}}건",
+      "emptyValue": "이상 없음",
+      "emptyMeta": "현재 확인이 필요한 알람이 없습니다."
+    }
+  },
+  "sections": {
+    "trend": {
+      "title": "Trend Report",
+      "description": "현재 snapshot 집계를 기반으로 만든 6개월/7일 파생 추이",
+      "range": "기간 {{from}} - {{to}}"
+    },
+    "recentAlarms": {
+      "title": "최근 알람",
+      "description": "실제 alarm timestamp 기준 최신 feed",
+      "empty": "표시할 알람이 없습니다."
+    }
+  },
+  "charts": {
+    "monthlyOperating": {
+      "title": "월별 운영률 추이",
+      "description": "최근 6개월 운영 안정도 파생 추이",
+      "average": "평균 운영률",
+      "bestMonth": "최고 운영 월"
+    },
+    "monthlyAlarms": {
+      "title": "월별 알람 발생",
+      "description": "최근 6개월 알람 건수 파생 추이",
+      "total": "6개월 누적",
+      "peakMonth": "최다 발생 월"
+    },
+    "regionStatus": {
+      "title": "지역별 크레인 현황",
+      "description": "region별 operating / warning / offline 현황",
+      "totalCranes": "전체 {{count}}기"
+    },
+    "weeklyTrend": {
+      "title": "주간 알람 / 경고 추이",
+      "description": "최근 7일 알람 건수 파생 분포",
+      "totalAlarms": "주간 알람 합계",
+      "totalWarnings": "주간 경고 합계",
+      "average": "일평균 알람",
+      "peakDay": "최다 발생일"
+    },
+    "riskCranes": {
+      "title": "위험 크레인 우선순위",
+      "description": "하중률, 풍속, 상태 기반 점수",
+      "riskScore": "위험 점수",
+      "loadRatio": "하중률",
+      "windSpeed": "풍속"
+    }
+  },
+  "legend": {
+    "healthy": "정상",
+    "warning": "경고",
+    "offline": "오프라인",
+    "alarmCount": "알람",
+    "warningCount": "경고",
+    "operatingRate": "운영률",
+    "riskScore": "위험 점수"
+  }
 }

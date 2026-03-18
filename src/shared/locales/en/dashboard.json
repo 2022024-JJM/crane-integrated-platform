@@ -1,4 +1,86 @@
 {
-  "title": "Dashboard",
-  "description": "Crane monitoring overview and real-time status."
+  "units": {
+    "count": ""
+  },
+  "badges": {
+    "sixMonths": "6M",
+    "now": "NOW",
+    "priority": "Priority"
+  },
+  "metrics": {
+    "regionCount": {
+      "title": "Work Regions",
+      "description": "Monitored region count"
+    },
+    "craneCount": {
+      "title": "Connected Cranes",
+      "description": "Total connected crane count"
+    },
+    "operatingRate": {
+      "title": "Healthy Operating Rate",
+      "description": "Based on operating + idle cranes"
+    },
+    "urgentRegion": {
+      "title": "Immediate Check Area",
+      "description": "Highest-priority region from current alarms",
+      "meta": "{{critical}} critical · {{total}} total alarms",
+      "emptyValue": "All Clear",
+      "emptyMeta": "There are no alarms that need attention right now."
+    }
+  },
+  "sections": {
+    "trend": {
+      "title": "Trend Report",
+      "description": "Derived 6-month and 7-day trends built from the current snapshot",
+      "range": "{{from}} - {{to}}"
+    },
+    "recentAlarms": {
+      "title": "Recent Alarms",
+      "description": "Latest feed sorted by real alarm timestamps",
+      "empty": "No alarms to display."
+    }
+  },
+  "charts": {
+    "monthlyOperating": {
+      "title": "Monthly Operating Trend",
+      "description": "Derived operating stability across the last 6 months",
+      "average": "Average operating rate",
+      "bestMonth": "Best month"
+    },
+    "monthlyAlarms": {
+      "title": "Monthly Alarm Volume",
+      "description": "Derived alarm volume across the last 6 months",
+      "total": "6-month total",
+      "peakMonth": "Peak month"
+    },
+    "regionStatus": {
+      "title": "Regional Crane Status",
+      "description": "Operating, warning, and offline cranes by region",
+      "totalCranes": "{{count}} cranes"
+    },
+    "weeklyTrend": {
+      "title": "Weekly Alarm / Warning Trend",
+      "description": "Derived alarm distribution over the last 7 days",
+      "totalAlarms": "Weekly alarms",
+      "totalWarnings": "Weekly warnings",
+      "average": "Daily average",
+      "peakDay": "Peak day"
+    },
+    "riskCranes": {
+      "title": "Priority Risk Cranes",
+      "description": "Score built from load ratio, wind speed, and status",
+      "riskScore": "Risk score",
+      "loadRatio": "Load ratio",
+      "windSpeed": "Wind speed"
+    }
+  },
+  "legend": {
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "offline": "Offline",
+    "alarmCount": "Alarms",
+    "warningCount": "Warnings",
+    "operatingRate": "Operating rate",
+    "riskScore": "Risk score"
+  }
 }
