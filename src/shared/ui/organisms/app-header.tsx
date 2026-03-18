@@ -1,5 +1,6 @@
 import { Sun, Moon, MenuIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { i18n } from '@/shared/config/i18n';
 import { useSidebar } from '@/shared/lib/sidebar-context';
 import { useTheme } from '@/shared/lib/theme-context';
@@ -20,12 +21,16 @@ export function AppHeader() {
         <MenuIcon className="h-5 w-5" />
       </button>
 
-      <div className="ml-3 flex items-center gap-2">
+      <Link
+        to="/"
+        className="ml-3 flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={t('common:nav.dashboard')}
+      >
         <HanwhaIcon />
         <span className="text-lg font-semibold">
           {t('header.brandPrimary')} <span className="text-[#f5a623]">{t('header.brandAccent')}</span>
         </span>
-      </div>
+      </Link>
 
       <div className="ml-auto flex items-center gap-1">
         <div
