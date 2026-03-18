@@ -5,6 +5,7 @@
     "toggleSidebar": "Toggle sidebar",
     "toggleTheme": "Toggle theme",
     "pageSettings": "Page Settings",
+    "login": "Login",
     "closeSettings": "Close settings",
     "regionLanguageSection": "Region & Language",
     "languageSection": "Language",
@@ -12,10 +13,15 @@
     "themeModeLabel": "Dark Mode",
     "koreanLabel": "Korea (Korean)",
     "englishLabel": "Global (English)",
+    "latinLabel": "Latin (Latina)",
     "lightMode": "Light",
     "darkMode": "Dark",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
+  },
+  "toast": {
+    "languageChanged": "Language changed to {{language}}.",
+    "themeChanged": "Theme changed to {{theme}} mode."
   },
   "nav": {
     "overview": "Overview",

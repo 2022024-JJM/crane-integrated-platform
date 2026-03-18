@@ -5,6 +5,7 @@
     "toggleSidebar": "사이드바 토글",
     "toggleTheme": "테마 전환",
     "pageSettings": "페이지 설정",
+    "login": "로그인",
     "closeSettings": "설정 닫기",
     "regionLanguageSection": "지역 및 언어",
     "languageSection": "언어",
@@ -12,10 +13,15 @@
     "themeModeLabel": "다크 모드",
     "koreanLabel": "한국 (한국어)",
     "englishLabel": "Global (English)",
+    "latinLabel": "Latin (Latina)",
     "lightMode": "라이트",
     "darkMode": "다크",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
+  },
+  "toast": {
+    "languageChanged": "언어가 {{language}}로 변경되었습니다.",
+    "themeChanged": "테마가 {{theme}} 모드로 변경되었습니다."
   },
   "nav": {
     "overview": "Overview",

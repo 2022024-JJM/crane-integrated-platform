@@ -1,6 +1,7 @@
-import { Check, ChevronDown, Settings2, X } from 'lucide-react';
+import { Check, ChevronDown, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { i18n } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
 import { cn } from '@/shared/lib/utils';
@@ -19,6 +20,31 @@ export function PageSettings() {
     setIsSettingsOpen(false);
     setIsLanguageMenuOpen(false);
     triggerRef.current?.blur();
+  }
+
+  async function handleLanguageChange(language: 'ko' | 'en' | 'la') {
+    await i18n.changeLanguage(language);
+    setIsLanguageMenuOpen(false);
+
+    const fixedT = i18n.getFixedT(language, 'common');
+    const languageLabel = fixedT(`header.${getLanguageLabelKey(language)}`);
+
+    toast.success(
+      fixedT('toast.languageChanged', {
+        language: languageLabel,
+      }),
+    );
+  }
+
+  function handleThemeChange() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+    toggleTheme();
+    toast.success(
+      t('common:toast.themeChanged', {
+        theme: t(`header.${nextTheme === 'dark' ? 'darkMode' : 'lightMode'}`),
+      }),
+    );
   }
 
   useEffect(() => {
@@ -46,6 +72,7 @@ export function PageSettings() {
   const languageOptions = [
     { value: 'ko', label: t('header.koreanLabel') },
     { value: 'en', label: t('header.englishLabel') },
+    { value: 'la', label: t('header.latinLabel') },
   ] as const;
 
   const currentLanguageLabel =
@@ -85,7 +112,7 @@ export function PageSettings() {
         >
           {t('header.pageSettings')}
         </span>
-        <Settings2
+        <Settings
           className="text-foreground size-3.5 shrink-0"
           strokeWidth={2.1}
         />
@@ -151,8 +178,7 @@ export function PageSettings() {
                           key={option.value}
                           type="button"
                           onClick={() => {
-                            void i18n.changeLanguage(option.value);
-                            setIsLanguageMenuOpen(false);
+                            void handleLanguageChange(option.value);
                           }}
                           className={cn(
                             'h-auto w-full justify-between rounded-md px-3 py-2 text-sm',
@@ -186,7 +212,7 @@ export function PageSettings() {
                   </span>
                   <Switch
                     checked={theme === 'dark'}
-                    onCheckedChange={toggleTheme}
+                    onCheckedChange={handleThemeChange}
                     aria-label={t('header.toggleTheme')}
                   />
                 </div>
@@ -197,4 +223,15 @@ export function PageSettings() {
       </div>
     </div>
   );
+}
+
+function getLanguageLabelKey(language: 'ko' | 'en' | 'la') {
+  switch (language) {
+    case 'ko':
+      return 'koreanLabel';
+    case 'en':
+      return 'englishLabel';
+    case 'la':
+      return 'latinLabel';
+  }
 }
