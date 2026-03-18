@@ -4,6 +4,16 @@
   "header": {
     "toggleSidebar": "Toggle sidebar",
     "toggleTheme": "Toggle theme",
+    "pageSettings": "Page Settings",
+    "closeSettings": "Close settings",
+    "regionLanguageSection": "Region & Language",
+    "languageSection": "Language",
+    "themeSection": "Theme Settings",
+    "themeModeLabel": "Dark Mode",
+    "koreanLabel": "Korea (Korean)",
+    "englishLabel": "Global (English)",
+    "lightMode": "Light",
+    "darkMode": "Dark",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },

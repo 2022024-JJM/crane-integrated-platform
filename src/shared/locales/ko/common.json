@@ -4,6 +4,16 @@
   "header": {
     "toggleSidebar": "사이드바 토글",
     "toggleTheme": "테마 전환",
+    "pageSettings": "페이지 설정",
+    "closeSettings": "설정 닫기",
+    "regionLanguageSection": "지역 및 언어",
+    "languageSection": "언어",
+    "themeSection": "테마 설정",
+    "themeModeLabel": "다크 모드",
+    "koreanLabel": "한국 (한국어)",
+    "englishLabel": "Global (English)",
+    "lightMode": "라이트",
+    "darkMode": "다크",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },
