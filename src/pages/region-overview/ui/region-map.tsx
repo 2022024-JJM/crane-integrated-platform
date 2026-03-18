@@ -7,9 +7,7 @@ import {
   resolveMapZones,
   type ResolvedMapZone,
 } from '../model/region-map-types';
-import { regions } from '@/entities/region/model/mock-data';
-import type { Region } from '@/entities/region';
-import { getRegionTitleKey } from '@/entities/region/lib/region-presentation';
+import { getRegionTitleKey, regions, type Region } from '@/entities/region';
 
 export function RegionMap() {
   const { t } = useTranslation();

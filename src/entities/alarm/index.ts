@@ -1,2 +1,8 @@
-export type { AlarmSeverity, AlarmEventType, Alarm, AlarmStatistics } from "./model/types"
-export { getAlarmsByRegion, getAlarmStatsByRegion } from "./model/mock-data"
+export type {
+  AlarmSeverity,
+  AlarmEventType,
+  Alarm,
+  AlarmStatistics,
+} from './model/types';
+export { getAlarmsByRegion, getAlarmStatsByRegion } from './model/mock-data';
+export { getAlarmMessageTranslation } from './lib/alarm-presentation';

@@ -1,54 +1,167 @@
 # AGENTS.md
 
-This file provides guidance to AI Agents when working with code in this repository.
+이 문서는 이 저장소에서 작업하는 AI Agent를 위한 운영 가이드다. 설명은 한글 중심으로 작성하되, 실제 코드에 대응하는 기술 용어와 경로명은 그대로 유지한다.
 
 ## Commands
 
-- `npm run dev` — Start Vite dev server with HMR
-- `npm run build` — TypeScript check + Vite production build
-- `npm run lint` — ESLint (flat config)
-- `npm run preview` — Preview production build
+- `npm run dev` — Vite dev server 실행
+- `npm run build` — TypeScript check(`tsc -b`) 후 production build 실행
+- `npm run lint` — ESLint flat config 기준 정적 검사
+- `npm run preview` — production build preview 실행
 
-No test framework is configured yet.
+현재 테스트 프레임워크는 구성되어 있지 않다. 검증은 주로 `npm run lint` 와 `npm run build` 기준으로 수행한다.
 
 ## Architecture
 
-This is a **Crane Monitoring Dashboard** built with React 19, TypeScript, Vite, Tailwind CSS v4, and shadcn/ui. It follows **Feature-Sliced Design (FSD)** architecture.
+이 프로젝트는 **Crane Monitoring Dashboard** 프론트엔드이며, 다음 스택을 사용한다.
 
-### Layers (`src/`)
+- React 19
+- TypeScript
+- Vite 7
+- Tailwind CSS v4
+- shadcn/ui + Base UI
+- react-router-dom 7
+- i18next / react-i18next
+- Zustand
+- `@react-three/fiber` / `@react-three/drei`
 
-- **app/** — Application shell, routing (react-router-dom), entry point (`main.tsx`), global styles
-- **pages/** — Route-level components
-- **widgets/** — Page-level UI blocks composed from features/entities/shared
-- **features/** — User-facing functionality units
-- **entities/** — Business domain models and data
-- **shared/** — Reusable code used across all layers: UI components (`ui/`), utilities (`lib/`), types (`types/`), config (`config/`), assets
+전체 구조는 **Feature-Sliced Design (FSD)** 를 따른다.
 
-Import rule: layers can only import from layers below them (`shared` → `entities` → `features` → `widgets` → `pages` → `app`).
+### App Shell
 
-### FSD Import Rules
+- `src/app/main.tsx`
+  - React root mount
+  - `@/shared/config/i18n` 초기화
+  - `@/app/styles/global.css` 로드
+- `src/app/index.tsx`
+  - `BrowserRouter`
+  - `Routes` / `Route`
+  - 공통 레이아웃으로 `AppLayout` 사용
+- `src/widgets/layout/ui/app-layout.tsx`
+  - `ThemeProvider`
+  - `SidebarProvider`
+  - `AppHeader`, `AppSidebar`, `Outlet`
 
-- Cross-layer imports must follow the layer order above. Lower layers must never import higher layers.
-- Cross-slice imports in `pages/`, `widgets/`, `features/`, and `entities/` should go through each slice's public API (`index.ts`) whenever possible.
-- Avoid deep imports such as `@/widgets/foo/ui/bar` or `@/entities/foo/model/types` from outside the owning slice. Expose what is needed via the slice barrel instead.
-- If a slice has consumers outside its own folder, it should provide an `index.ts` public API.
+### Current Routes
 
-### shared/ui 구조 (Atomic Design)
+- `/` → `DashboardPage`
+- `/region-overview` → `RegionOverviewPage`
+- `/outdoor-work/:regionId/*` → `OutdoorWorkPage`
+- `/indoor-work/:regionId/*` → `IndoorWorkPage`
 
-- **shared/ui/atoms/\*.tsx** — 단일 UI 요소 (Badge, Button, Separator, Toggle)
-- **shared/ui/molecules/\*.tsx** — atoms를 조합한 복합 UI 컴포넌트 (Card, Table, ScrollArea, Resizable, ToggleGroup, Tooltip)
-- **shared/ui/organisms/\*.tsx** — 도메인 프레젠테이션 컴포넌트 (AlarmPanel, CraneStatusTable, AppLayout 등). 데이터는 pages에서 props로 주입받으며, entities 타입만 `import type`으로 참조
+`outdoor-work` 와 `indoor-work` 페이지는 `:regionId` 와 서브라우트를 전제로 동작한다. 서브라우트가 없으면 `3d-monitoring` 으로 redirect 된다.
 
-> **참고**: shadcn CLI(`npx shadcn add`)로 추가한 컴포넌트는 `shared/ui/` 루트에 생성됨. 추가 후 atoms 또는 molecules로 수동 이동 필요.
+현재 사용 중인 서브라우트는 다음과 같다.
 
-### Key Conventions
+- `3d-monitoring`
+- `crane-status`
+- `work-history`
 
-- **Path alias**: `@/*` maps to `src/*`
-- **shadcn/ui components** go in `src/shared/ui/atoms/` or `src/shared/ui/molecules/` (CLI는 `src/shared/ui/`에 생성, 수동 분류 필요)
-- **Utilities/hooks** go in `src/shared/lib/`
-- Components use **CVA (class-variance-authority)** for variant styling and **cn()** (`clsx` + `tailwind-merge`) for class merging
-- **Tailwind CSS v4** — no `tailwind.config.*`; theme is defined via CSS variables in `src/app/styles/global.css` using OKLCH color space
-- **Base UI** primitives underpin shadcn/ui components for accessibility
-- `.npmrc` has `legacy-peer-deps=true`
-- ESLint enforces FSD layer boundaries and restricts deep cross-slice imports with `no-restricted-imports`
-- `react-refresh/only-export-components` is still active globally; if shared UI files intentionally export helpers alongside components, add a targeted override in ESLint rather than assuming it is already exempted
+## Layers (`src/`)
+
+- **app/** — 애플리케이션 진입점, 라우팅, 전역 스타일
+- **pages/** — 라우트 단위 화면 구성
+  - 예: `dashboard`, `region-overview`, `outdoor-work`, `indoor-work`
+- **widgets/** — 페이지에서 조합하는 큰 UI 블록
+  - 예: `layout`, `alarm`, `crane`, `3d`
+- **features/** — 사용자 기능 단위
+  - 예: `page-settings`, `3d`
+- **entities/** — 도메인 모델, mock data, domain helper
+  - 예: `region`, `crane`, `alarm`, `3d`
+- **shared/** — 전역 재사용 자원
+  - 예: `config`, `lib`, `types`, `ui`, `locales`
+
+Import rule: 상위 레이어는 하위 레이어만 import 할 수 있다.
+
+`shared` → `entities` → `features` → `widgets` → `pages` → `app`
+
+## Current Project State
+
+현재 저장소 기준으로 주의해서 이해해야 할 구현 상태는 다음과 같다.
+
+- 다국어는 `ko`, `en` 두 언어를 지원한다.
+- 언어 리소스는 `src/shared/locales` 아래 namespace 별 JSON으로 관리한다.
+- i18n 초기화와 language persistence 는 `src/shared/config/i18n.ts` 가 담당한다.
+- 테마 상태는 `src/shared/lib/theme-context.tsx` 에서 관리한다.
+- 사이드바 open/close 상태는 `src/shared/lib/sidebar-context.tsx` 에서 관리한다.
+- 공용 3D viewer shell 은 `src/shared/ui/organisms/three-scene-viewer.tsx` 에 있다.
+- 3D simulation/runtime state 일부는 `src/features/3d/model` 의 Zustand store 가 담당한다.
+- `outdoor-work` / `indoor-work` 의 `crane-status`, `work-history` 는 아직 placeholder 성격의 화면이다.
+- 네비게이션 구성은 `src/widgets/layout/config/navigation.ts` 에서 현재 pathname 기준으로 동적으로 만든다.
+
+## FSD Import Rules
+
+다음 규칙은 단순 문서 권고가 아니라, 현재 `eslint.config.js` 의 `no-restricted-imports` 설정으로 실제 강제되는 규칙이다.
+
+- Cross-layer import 는 FSD 레이어 순서를 따라야 한다.
+- `pages`, `widgets`, `features`, `entities` 의 cross-slice import 는 가능하면 각 슬라이스의 public API(`index.ts`)를 통해서만 수행한다.
+- 다른 슬라이스 내부 구현에 대한 deep import 를 지양한다.
+  - 예: `@/widgets/foo/ui/bar`
+  - 예: `@/entities/foo/model/types`
+- 외부에서 소비되는 슬라이스는 `index.ts` public API 를 제공해야 한다.
+- `shared` 는 최하위 레이어이므로 `entities`, `features`, `widgets`, `pages`, `app` 를 import 하면 안 된다.
+
+## Public API / Contract
+
+Agent는 다음 계약을 전제로 수정 범위를 판단한다.
+
+- 외부 소비는 각 슬라이스의 `index.ts` public API 를 우선 사용한다.
+- `pages/index.ts` 는 현재 주요 route page export 집합이다.
+- `widgets/layout` 은 앱 공통 shell 역할을 가진다.
+- 언어 설정은 `src/shared/config/i18n.ts` 를 기준으로 맞춘다.
+- 테마와 사이드바 전역 상태는 각각 `src/shared/lib/theme-context.tsx`, `src/shared/lib/sidebar-context.tsx` 를 기준으로 맞춘다.
+- 3D domain type/helper 는 `entities/3d`, 3D feature state/behavior 는 `features/3d` 에 둔다.
+
+## shared/ui 구조 (Atomic Design)
+
+- `src/shared/ui/atoms/*.tsx` — 단일 UI 요소
+  - 예: `button`, `badge`, `separator`, `switch`, `toggle`, `spinner`
+- `src/shared/ui/molecules/*.tsx` — atoms 조합 컴포넌트
+  - 예: `card`, `table`, `scroll-area`, `resizable`, `toggle-group`, `tooltip`
+- `src/shared/ui/organisms/*.tsx` — 더 큰 공용 UI 조합
+  - 예: `three-scene-viewer`
+
+`components.json` 기준 shadcn CLI 생성 위치는 `src/shared/ui` 이다. 새 컴포넌트를 추가한 뒤에는 적절한 atomic 계층으로 수동 이동하는 것을 기본 원칙으로 한다.
+
+## Conventions
+
+### Path / Config
+
+- Path alias: `@/*` → `src/*`
+- Tailwind CSS v4 를 사용하므로 `tailwind.config.*` 는 없다.
+- 전역 테마 토큰과 스타일 진입점은 `src/app/styles/global.css` 기준으로 맞춘다.
+
+### Formatting
+
+- Prettier 설정은 `.prettierrc` 기준으로 맞춘다.
+- `singleQuote: true`
+- `semi: true`
+- `trailingComma: all`
+- `printWidth: 80`
+- `prettier-plugin-tailwindcss` 로 Tailwind class 정렬을 적용한다.
+
+### UI / Styling
+
+- shadcn/ui 컴포넌트는 `src/shared/ui/atoms` 또는 `src/shared/ui/molecules` 로 정리한다.
+- 공용 복합 viewer 성격의 UI는 `src/shared/ui/organisms` 에 둔다.
+- 스타일 병합은 `cn()` 유틸리티(`src/shared/lib/utils.ts`)를 우선 사용한다.
+- variant 스타일링은 CVA(`class-variance-authority`) 패턴을 따른다.
+
+### State / Data / i18n
+
+- 전역 설정성 상태는 `shared/lib` 컨텍스트 또는 `shared/config` 에 둔다.
+- feature 전용 런타임 상태는 해당 feature 내부 model 에 둔다.
+- mock data 는 각 entity slice 내부 `model/mock-data.ts` 에 두는 현재 패턴을 따른다.
+- 번역 리소스 추가 시 `src/shared/locales/{lang}` 아래 namespace JSON을 함께 맞춘다.
+
+### FSD Usage
+
+- 다른 슬라이스의 내부 구현 파일을 직접 import 하지 말고 public API 를 먼저 확인한다.
+- 새 슬라이스가 외부에서 소비되면 `index.ts` 를 추가한다.
+- 레이어 규칙을 우회하는 편의성 import 는 만들지 않는다.
+
+## Known Caveats
+
+- `README.md` 의 일부 구조/파일 설명은 현재 코드와 다를 수 있다.
+- Agent는 문서 간 충돌이 있으면 `실제 코드`, 그다음 `AGENTS.md`, 마지막으로 `README.md` 순서로 신뢰한다.
+- 테스트 프레임워크가 없으므로, 변경 검증 시 lint/build 와 실제 파일 구조 대조가 특히 중요하다.

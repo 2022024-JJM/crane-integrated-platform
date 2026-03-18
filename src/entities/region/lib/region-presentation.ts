@@ -1,4 +1,4 @@
-import type { Region } from '@/entities/region';
+import type { Region } from '../model/types';
 
 export function getRegionTitleKey(regionId: Region['id']) {
   return `common:regions.${toRegionResourceKey(regionId)}.title`;

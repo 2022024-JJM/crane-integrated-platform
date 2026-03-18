@@ -1,1 +1,1 @@
-export { OutdoorWorkModelSimulation } from '../ui/outdoor-work-model-simulation';
+export { OutdoorWork3dView } from './ui/outdoor-work-3d-view';

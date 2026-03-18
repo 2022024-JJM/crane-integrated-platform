@@ -1,4 +1,4 @@
-import type { Alarm, AlarmEventType } from '@/entities/alarm';
+import type { Alarm, AlarmEventType } from '../model/types';
 
 const alarmEventTranslationKey: Record<AlarmEventType, string> = {
   wind_warning_exceeded: 'common:alarms.windWarningExceeded',

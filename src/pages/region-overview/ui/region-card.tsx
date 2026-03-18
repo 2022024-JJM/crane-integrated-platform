@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  getRegionLinkItems,
+  getRegionSubtitleKey,
+  getRegionTitleKey,
+  type Region,
+  type StatusLevel,
+} from '@/entities/region';
+import {
   Card,
   CardHeader,
   CardTitle,
@@ -8,12 +15,6 @@ import {
   CardContent,
   CardFooter,
 } from '@/shared/ui/molecules/card';
-import type { Region, StatusLevel } from '@/entities/region';
-import {
-  getRegionLinkItems,
-  getRegionSubtitleKey,
-  getRegionTitleKey,
-} from '@/entities/region/lib/region-presentation';
 
 const statusDotColor: Record<StatusLevel, string> = {
   normal: 'bg-green-500',

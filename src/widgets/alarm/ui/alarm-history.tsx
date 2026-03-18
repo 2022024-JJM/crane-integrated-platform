@@ -1,8 +1,11 @@
 import { AlertTriangle, AlertCircle, Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { ScrollArea } from "@/shared/ui/molecules/scroll-area"
-import type { Alarm, AlarmSeverity } from "@/entities/alarm"
-import { getAlarmMessageTranslation } from "@/shared/lib/alarm-presentation"
+import {
+  getAlarmMessageTranslation,
+  type Alarm,
+  type AlarmSeverity,
+} from "@/entities/alarm"
 
 interface AlarmHistoryProps {
   alarms: Alarm[]

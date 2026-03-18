@@ -3,10 +3,10 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/shared/ui/molecules/resizable';
+import { useState } from 'react';
+import { OutdoorWork3dView } from '@/features/3d';
 import { getCranesByRegion } from '@/entities/crane';
 import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
-import { OutdoorWork3dView } from '@/features/3d/ui/outdoor-work-3d-view';
-import { useState } from 'react';
 import { Spinner } from '@/shared/ui/atoms/spinner';
 import { CraneStatusTable } from '@/widgets/crane';
 import { AlarmPanel } from '@/widgets/alarm';
