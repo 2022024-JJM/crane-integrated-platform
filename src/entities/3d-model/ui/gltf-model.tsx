@@ -1,9 +1,9 @@
 import { Html, useGLTF } from '@react-three/drei';
 import { useEffect, useMemo, useState } from 'react';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
-import type { Vector3Tuple } from '../model/types';
 import { degToRad } from '../lib/math-utils';
 import { Box3, Vector3 } from 'three';
+import type { Vector3Tuple } from '@/shared/types/math';
 
 interface GltfModelProps {
   id: string;

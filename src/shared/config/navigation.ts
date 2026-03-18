@@ -1,6 +1,6 @@
 import { LayoutDashboard, Box, List, History, MapPin } from 'lucide-react';
 import { i18n } from '@/shared/config/i18n';
-import type { NavGroup } from '@/shared/types';
+import type { NavGroup } from '@/shared/types/navigation';
 
 const defaultSystemGroup: NavGroup = {
   title: '',

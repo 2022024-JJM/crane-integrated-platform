@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { LayoutGrid, Map } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { regions } from '@/entities/region';
 import {
   ToggleGroup,
@@ -9,9 +10,39 @@ import {
 import { RegionCard } from './region-card';
 import { RegionMap } from './region-map';
 
+type RegionOverviewView = 'card' | 'map';
+
 export function RegionOverviewPage() {
   const { t } = useTranslation();
-  const [view, setView] = useState<'card' | 'map'>('card');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = useMemo<RegionOverviewView>(() => {
+    const requestedView = searchParams.get('view');
+
+    return requestedView === 'map' ? 'map' : 'card';
+  }, [searchParams]);
+
+  const handleViewChange = (values: string[]) => {
+    if (values.length === 0) {
+      return;
+    }
+
+    const nextView = values[values.length - 1];
+    if (nextView !== 'card' && nextView !== 'map') {
+      return;
+    }
+
+    setSearchParams((prev) => {
+      const nextParams = new URLSearchParams(prev);
+
+      if (nextView === 'card') {
+        nextParams.delete('view');
+      } else {
+        nextParams.set('view', nextView);
+      }
+
+      return nextParams;
+    });
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -27,11 +58,7 @@ export function RegionOverviewPage() {
 
         <ToggleGroup
           value={[view]}
-          onValueChange={(values) => {
-            if (values.length > 0) {
-              setView(values[values.length - 1] as 'card' | 'map');
-            }
-          }}
+          onValueChange={handleViewChange}
           className="bg-muted rounded-lg border"
         >
           <ToggleGroupItem

@@ -3,6 +3,5 @@ export type {
   SavedModelInfo,
   SavedSceneInfo,
   ValueMapType,
-  Vector3Tuple,
 } from './model/types';
 export { GltfModel } from './ui/gltf-model';
