@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Settings2, X } from 'lucide-react';
+import { Check, ChevronDown, Settings, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { i18n } from '@/shared/config/i18n';
@@ -86,7 +86,7 @@ export function PageSettings() {
         >
           {t('header.pageSettings')}
         </span>
-        <Settings2
+        <Settings
           className="text-foreground size-3.5 shrink-0"
           strokeWidth={2.1}
         />

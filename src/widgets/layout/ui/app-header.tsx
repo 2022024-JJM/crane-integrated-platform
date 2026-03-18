@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
+import { Button } from '@/shared/ui/atoms/button';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 
 export function AppHeader() {
@@ -31,8 +32,16 @@ export function AppHeader() {
         </span>
       </Link>
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-3">
         <PageSettings />
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 cursor-pointer rounded-lg px-6 text-sm font-medium"
+          aria-label={t('header.login')}
+        >
+          {t('header.login')}
+        </Button>
       </div>
     </header>
   );
