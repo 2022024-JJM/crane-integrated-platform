@@ -29,7 +29,9 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
                     className="size-6 text-orange-500"
                     aria-hidden="true"
                   />
-                  <p className="text-sm font-medium">3D 화면 불러오는 중</p>
+                  <p className="text-sm font-medium text-white">
+                    3D 화면 불러오는 중
+                  </p>
                 </div>
               ) : null}
               <OutdoorWork3dView onLoadingChange={setIs3dViewLoading} />
