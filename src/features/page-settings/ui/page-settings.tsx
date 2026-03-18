@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Settings, X } from 'lucide-react';
+import { Check, ChevronDown, Moon, Settings, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -6,11 +6,16 @@ import { type SupportedLanguage, i18n } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/atoms/button';
-import { Switch } from '@/shared/ui/atoms/switch';
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from '@/shared/ui/molecules/toggle-group';
+
+type ThemeOption = 'light' | 'dark';
 
 export function PageSettings() {
   const { t } = useTranslation();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -36,10 +41,21 @@ export function PageSettings() {
     );
   }
 
-  function handleThemeChange() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  function handleThemeChange(values: string[]) {
+    if (values.length === 0) {
+      return;
+    }
 
-    toggleTheme();
+    const nextTheme = values[values.length - 1];
+    if (nextTheme !== 'light' && nextTheme !== 'dark') {
+      return;
+    }
+
+    if (nextTheme === theme) {
+      return;
+    }
+
+    setTheme(nextTheme);
     toast.success(
       t('common:toast.themeChanged', {
         theme: t(`header.${nextTheme === 'dark' ? 'darkMode' : 'lightMode'}`),
@@ -78,6 +94,22 @@ export function PageSettings() {
   const currentLanguageLabel =
     languageOptions.find((option) => option.value === i18n.language)?.label ??
     languageOptions[0].label;
+  const themeOptions: Array<{
+    value: ThemeOption;
+    label: string;
+    icon: typeof Sun;
+  }> = [
+    {
+      value: 'light',
+      label: t('header.lightMode'),
+      icon: Sun,
+    },
+    {
+      value: 'dark',
+      label: t('header.darkMode'),
+      icon: Moon,
+    },
+  ];
 
   return (
     <div ref={settingsRef} className="group relative">
@@ -206,15 +238,29 @@ export function PageSettings() {
                 <h4 className="text-[15px] font-semibold">
                   {t('header.themeSection')}
                 </h4>
-                <div className="flex items-center justify-between gap-4 rounded-md">
-                  <span className="text-sm font-medium">
-                    {t('header.themeModeLabel')}
-                  </span>
-                  <Switch
-                    checked={theme === 'dark'}
-                    onCheckedChange={handleThemeChange}
-                    aria-label={t('header.toggleTheme')}
-                  />
+                <div>
+                  <ToggleGroup
+                    value={[theme]}
+                    onValueChange={handleThemeChange}
+                    aria-label={t('header.themeSection')}
+                    className="bg-muted border-border/70 grid w-full grid-cols-2 rounded-lg border p-1"
+                  >
+                    {themeOptions.map((option) => {
+                      const Icon = option.icon;
+
+                      return (
+                        <ToggleGroupItem
+                          key={option.value}
+                          value={option.value}
+                          aria-label={option.label}
+                          className="text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground h-8 justify-center gap-2 rounded-md px-4 py-3 text-sm aria-pressed:shadow-sm"
+                        >
+                          <Icon className="size-4" />
+                          <span>{option.label}</span>
+                        </ToggleGroupItem>
+                      );
+                    })}
+                  </ToggleGroup>
                 </div>
               </div>
             </div>
