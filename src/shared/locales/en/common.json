@@ -19,6 +19,10 @@
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },
+  "toast": {
+    "languageChanged": "Language changed to {{language}}.",
+    "themeChanged": "Theme changed to {{theme}} mode."
+  },
   "nav": {
     "overview": "Overview",
     "dashboard": "Dashboard",

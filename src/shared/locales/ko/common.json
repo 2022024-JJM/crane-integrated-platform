@@ -19,6 +19,10 @@
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },
+  "toast": {
+    "languageChanged": "언어가 {{language}}로 변경되었습니다.",
+    "themeChanged": "테마가 {{theme}} 모드로 변경되었습니다."
+  },
   "nav": {
     "overview": "Overview",
     "dashboard": "대시보드",
