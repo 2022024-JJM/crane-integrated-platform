@@ -146,18 +146,19 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-          <Badge variant="outline" className="w-fit px-3 py-1 text-xs">
-            {t('dashboard:sections.trend.range', {
-              from: formatMonth(
-                summary.monthlyTrend[0]?.dateKey,
-                monthFormatter,
-              ),
-              to: formatMonth(
-                summary.monthlyTrend[summary.monthlyTrend.length - 1]?.dateKey,
-                monthFormatter,
-              ),
-            })}
-          </Badge>
+          <div className="flex w-fit items-center gap-2 text-sm md:self-end">
+            <span className="text-muted-foreground">
+              {t('dashboard:sections.trend.rangeLabel')}
+            </span>
+            <span className="text-foreground tabular-nums font-semibold tracking-tight">
+              {t('dashboard:sections.trend.range', {
+                from: formatYearMonth(summary.monthlyTrend[0]?.dateKey),
+                to: formatYearMonth(
+                  summary.monthlyTrend[summary.monthlyTrend.length - 1]?.dateKey,
+                ),
+              })}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
@@ -1010,6 +1011,18 @@ function formatMonth(
   }
 
   return formatter.format(new Date(value));
+}
+
+function formatYearMonth(value: string | null | undefined) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+
+  return `${year}.${month}`;
 }
 
 function formatMonthLabel(value: string, formatter: Intl.DateTimeFormat) {

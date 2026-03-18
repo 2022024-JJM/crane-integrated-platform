@@ -1,6 +1,6 @@
 {
   "units": {
-    "count": ""
+    "count": " count"
   },
   "badges": {
     "sixMonths": "6M",
@@ -32,6 +32,7 @@
     "trend": {
       "title": "Trend Report",
       "description": "Derived 6-month and 7-day trends built from the current snapshot",
+      "rangeLabel": "Period",
       "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {

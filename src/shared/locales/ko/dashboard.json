@@ -32,7 +32,8 @@
     "trend": {
       "title": "Trend Report",
       "description": "현재 snapshot 집계를 기반으로 만든 6개월/7일 파생 추이",
-      "range": "기간 {{from}} - {{to}}"
+      "rangeLabel": "기간",
+      "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {
       "title": "최근 알람",

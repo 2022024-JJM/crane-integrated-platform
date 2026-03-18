@@ -1,6 +1,6 @@
 {
   "units": {
-    "count": ""
+    "count": " numerus"
   },
   "badges": {
     "sixMonths": "VI M",
@@ -32,6 +32,7 @@
     "trend": {
       "title": "Relatio Cursus",
       "description": "Cursus derivati sex mensium et septem dierum ex imagine hodierna compositi",
+      "rangeLabel": "Tempus",
       "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {
