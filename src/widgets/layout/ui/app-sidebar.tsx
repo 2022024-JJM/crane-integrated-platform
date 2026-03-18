@@ -19,7 +19,7 @@ export function AppSidebar() {
     <aside
       className={`${
         isOpen ? 'visible' : 'hidden'
-      } bg-sidebar w-64 shrink-0 overflow-hidden border-r`}
+      } bg-sidebar h-full min-h-0 w-64 shrink-0 overflow-hidden border-r`}
     >
       <ScrollArea className="h-full">
         <nav className="flex flex-col gap-2 p-4">

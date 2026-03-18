@@ -18,9 +18,9 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
+    <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
       <ResizablePanel defaultSize={75} minSize={50}>
-        <ResizablePanelGroup orientation="vertical">
+        <ResizablePanelGroup orientation="vertical" className="min-h-0">
           <ResizablePanel defaultSize={60}>
             <div className="relative h-full bg-[rgba(43,43,43)]">
               {is3dViewLoading ? (

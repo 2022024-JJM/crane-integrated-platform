@@ -11,7 +11,7 @@ export function AppHeader() {
   const { toggle } = useSidebar();
 
   return (
-    <header className="bg-background sticky top-0 z-40 flex h-14 items-center border-b px-4">
+    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center border-b px-4">
       <button
         onClick={toggle}
         className="hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md"

@@ -9,11 +9,11 @@ export function AppLayout() {
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <div className="flex min-h-screen flex-col">
+        <div className="flex h-screen flex-col overflow-hidden">
           <AppHeader />
-          <div className="flex flex-1">
+          <div className="flex min-h-0 flex-1">
             <AppSidebar />
-            <main className="flex-1 overflow-auto">
+            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
               <Outlet />
             </main>
           </div>

@@ -290,7 +290,10 @@ export function ThreeSceneViewer({
   }, []);
 
   return (
-    <div ref={rootRef} className="relative h-full w-full overflow-hidden">
+    <div
+      ref={rootRef}
+      className="relative h-full min-h-0 w-full overflow-hidden"
+    >
       <Canvas
         {...canvasProps}
         camera={{ position: cameraPreset.defaultPosition }}

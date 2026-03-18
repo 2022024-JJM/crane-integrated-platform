@@ -14,7 +14,7 @@ export function Preparing3dView({
   const region = getRegionById(regionId);
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full min-h-0 flex-col">
       <CardContent className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3">
         <Box className="size-12 stroke-1" />
         <div className="text-center">

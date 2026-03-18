@@ -31,7 +31,7 @@ export function IndoorWorkPage() {
   const region = getRegionById(regionId);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] w-full">
+    <div className="h-full min-h-0 w-full">
       {subRoute === '3d-monitoring' && (
         <RealtimeMonitoringView regionId={regionId} />
       )}
