@@ -38,7 +38,7 @@ export function PageSettings() {
     const fixedT = i18n.getFixedT(language, 'common');
     const languageLabel = fixedT(`header.${getLanguageLabelKey(language)}`);
 
-    toast.success(
+    toast.info(
       fixedT('toast.languageChanged', {
         language: languageLabel,
       }),
@@ -60,7 +60,7 @@ export function PageSettings() {
     }
 
     setTheme(nextTheme);
-    toast.success(
+    toast.info(
       t('common:toast.themeChanged', {
         theme: t(`header.${nextTheme === 'dark' ? 'darkMode' : 'lightMode'}`),
       }),
