@@ -1,8 +1,7 @@
 import { CalendarDays, Clock3, type LucideProps, Wifi } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getWeatherPresentation, WeatherIcon } from '@/entities/weather';
-import { useHeaderWeather } from '@/features/weather';
+import type { ComponentType } from 'react';
+import { useHeaderWeatherPill } from '@/features/weather';
 import {
   formatLocalizedDate,
   formatLocalizedTime,
@@ -58,48 +57,21 @@ export function HeaderStatusStrip() {
 }
 
 function HeaderWeatherInfoPill() {
-  const { t } = useTranslation();
-  const weather = useHeaderWeather();
-  const weatherPresentation = weather.snapshot
-    ? getWeatherPresentation(weather.snapshot)
-    : null;
-  const label =
-    weather.status === 'loading'
-      ? t('header.weatherLoading')
-      : weather.locationLabelKey
-        ? t(weather.locationLabelKey)
-        : t('header.weatherUnavailable');
-  const temperature =
-    weather.status === 'success' && weather.snapshot
-      ? `${Math.round(weather.snapshot.temperature)}°`
-      : '--°';
+  const { Icon, label, temperatureText } = useHeaderWeatherPill();
 
   return (
-    <HeaderInfoPill
-      renderIcon={(iconClassName, strokeWidth) => (
-        <WeatherIcon
-          status={weather.status}
-          iconKey={weatherPresentation?.iconKey}
-          className={iconClassName}
-          strokeWidth={strokeWidth}
-        />
-      )}
-      value={label}
-      accentValue={weather.status === 'loading' ? undefined : temperature}
-    />
+    <HeaderInfoPill icon={Icon} value={label} accentValue={temperatureText} />
   );
 }
 
 function HeaderInfoPill({
   icon: Icon,
-  renderIcon,
   value,
   accentValue,
   variant = 'default',
   className,
 }: {
-  icon?: (props: LucideProps) => ReactNode;
-  renderIcon?: (className: string, strokeWidth: number) => ReactNode;
+  icon?: ComponentType<LucideProps>;
   value: string;
   accentValue?: string;
   variant?: 'default' | 'status';
@@ -115,17 +87,7 @@ function HeaderInfoPill({
         className,
       )}
     >
-      {renderIcon ? (
-        renderIcon(
-          cn(
-            'size-3.5 shrink-0',
-            variant === 'default'
-              ? 'text-muted-foreground'
-              : 'text-emerald-500 dark:text-emerald-300',
-          ),
-          2.2,
-        )
-      ) : Icon ? (
+      {Icon ? (
         <Icon
           className={cn(
             'size-3.5 shrink-0',
