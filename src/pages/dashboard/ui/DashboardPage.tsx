@@ -21,7 +21,6 @@ import {
   YAxis,
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import {
   getAlarmMessageTranslation,
   type Alarm,
@@ -29,9 +28,10 @@ import {
 } from '@/entities/alarm';
 import { getFormatLocale } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
-import { Badge } from '@/shared/ui/atoms/badge';
-import { Separator } from '@/shared/ui/atoms/separator';
 import { cn } from '@/shared/lib/utils';
+import { Badge } from '@/shared/ui/atoms/badge';
+import { AppLink } from '@/shared/ui/atoms/app-link';
+import { Separator } from '@/shared/ui/atoms/separator';
 import {
   Card,
   CardAction,
@@ -470,7 +470,7 @@ export function DashboardPage() {
               </div>
               <div className="space-y-3">
                 {summary.regionStatuses.map((regionStatus) => (
-                  <Link
+                  <AppLink
                     key={regionStatus.regionId}
                     to={regionStatus.navigateTo}
                     className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block rounded-2xl border p-3 transition"
@@ -522,7 +522,7 @@ export function DashboardPage() {
                         value={regionStatus.offline}
                       />
                     </div>
-                  </Link>
+                  </AppLink>
                 ))}
               </div>
             </CardContent>
@@ -710,9 +710,9 @@ function MetricCard({
   }
 
   return (
-    <Link to={metric.href} className="block h-full">
+    <AppLink to={metric.href} className="block h-full">
       {content}
-    </Link>
+    </AppLink>
   );
 }
 

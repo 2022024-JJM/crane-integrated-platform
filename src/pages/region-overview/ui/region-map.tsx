@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import {
   MAP_IMAGE_PATH,
   MAP_VIEWBOX,
@@ -8,15 +7,13 @@ import {
   type ResolvedMapZone,
 } from '../model/region-map-types';
 import { getRegionTitleKey, regions, type Region } from '@/entities/region';
+import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 
 export function RegionMap() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useProgressNavigate();
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
-  const mapZones: ResolvedMapZone[] = useMemo(
-    () => resolveMapZones(regions),
-    [regions],
-  );
+  const mapZones: ResolvedMapZone[] = useMemo(() => resolveMapZones(regions), []);
   const handleZoneNavigate = (region: Region) => {
     navigate(region.navigateTo);
   };

@@ -1,6 +1,8 @@
 import { getRegionById, getRegionTitleKey } from '@/entities/region';
-import { useParams, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 
 function PlaceholderView({ title }: { title: string }) {
@@ -15,6 +17,16 @@ function PlaceholderView({ title }: { title: string }) {
   );
 }
 
+function SubRouteRedirect({ to }: { to: string }) {
+  const navigate = useProgressNavigate();
+
+  useEffect(() => {
+    navigate(to, { replace: true });
+  }, [navigate, to]);
+
+  return null;
+}
+
 export function IndoorWorkPage() {
   const { t } = useTranslation();
   const { regionId, '*': subRoute } = useParams<{
@@ -25,7 +37,7 @@ export function IndoorWorkPage() {
   if (!regionId) return null;
 
   if (!subRoute) {
-    return <Navigate to={`/indoor-work/${regionId}/3d-monitoring`} replace />;
+    return <SubRouteRedirect to={`/indoor-work/${regionId}/3d-monitoring`} />;
   }
 
   const region = getRegionById(regionId);

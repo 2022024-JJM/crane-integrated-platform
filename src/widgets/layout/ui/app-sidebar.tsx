@@ -1,6 +1,6 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { AppNavLink } from '@/shared/ui/atoms/app-link';
 import { Separator } from '@/shared/ui/atoms/separator';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 import { useSidebar } from '@/shared/lib/sidebar-context';
@@ -10,10 +10,8 @@ export function AppSidebar() {
   const { i18n } = useTranslation();
   const { isOpen } = useSidebar();
   const { pathname } = useLocation();
-  const navGroups = useMemo(
-    () => getNavigationConfig(pathname),
-    [pathname, i18n.language],
-  );
+  const navGroups = getNavigationConfig(pathname);
+  void i18n.language;
 
   return (
     <aside
@@ -32,7 +30,7 @@ export function AppSidebar() {
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
                   <li key={item.path}>
-                    <NavLink
+                    <AppNavLink
                       to={item.path}
                       end={item.path === '/'}
                       className={({ isActive }) =>
@@ -45,7 +43,7 @@ export function AppSidebar() {
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{item.label}</span>
-                    </NavLink>
+                    </AppNavLink>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   getRegionLinkItems,
@@ -7,6 +6,7 @@ import {
   type Region,
   type StatusLevel,
 } from '@/entities/region';
+import { AppLink } from '@/shared/ui/atoms/app-link';
 import {
   Card,
   CardHeader,
@@ -31,7 +31,7 @@ export function RegionCard({ region }: RegionCardProps) {
   const linkItems = getRegionLinkItems(region.id);
 
   return (
-    <Link to={region.navigateTo} className="block focus-visible:outline-none">
+    <AppLink to={region.navigateTo} className="block focus-visible:outline-none">
       <Card className="hover:bg-muted/50 focus-visible:ring-ring transition-colors focus-visible:ring-2">
         <CardHeader className="relative">
           <div className="absolute top-0 right-4">
@@ -81,6 +81,6 @@ export function RegionCard({ region }: RegionCardProps) {
           </span>
         </CardFooter>
       </Card>
-    </Link>
+    </AppLink>
   );
 }

@@ -1,0 +1,6 @@
+@theme inline {
+  --hanwha-orange-100: #f37221;
+  --hanwha-orange-70: #f89b6c;
+  --hanwha-orange-50: #fbb584;
+  --navigation-progress: var(--hanwha-orange-100);
+}

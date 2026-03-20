@@ -1,8 +1,8 @@
 import { MenuIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
+import { AppLink } from '@/shared/ui/atoms/app-link';
 import { Button } from '@/shared/ui/atoms/button';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { HeaderStatusStrip } from './header-status-strip';
@@ -21,7 +21,7 @@ export function AppHeader() {
         <MenuIcon className="h-5 w-5" />
       </button>
 
-      <Link
+      <AppLink
         to="/"
         className="focus-visible:ring-ring flex shrink-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
         aria-label={t('common:nav.dashboard')}
@@ -31,7 +31,7 @@ export function AppHeader() {
           {t('header.brandPrimary')}{' '}
           <span className="text-[#f5a623]">{t('header.brandAccent')}</span>
         </span>
-      </Link>
+      </AppLink>
 
       <div className="min-w-0 flex-1">
         <HeaderStatusStrip />
