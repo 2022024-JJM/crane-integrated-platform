@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { type SupportedLanguage, i18n } from '@/shared/config/i18n';
+import { useHeaderDisplaySettings } from '@/shared/lib/header-display-settings-context';
 import { useTheme } from '@/shared/lib/theme-context';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/atoms/button';
+import { Switch } from '@/shared/ui/atoms/switch';
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -16,6 +18,8 @@ type ThemeOption = 'light' | 'dark';
 export function PageSettings() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { showDate, showTime, showHealthcheck, setSetting } =
+    useHeaderDisplaySettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +114,23 @@ export function PageSettings() {
       icon: Moon,
     },
   ];
+  const displayOptions = [
+    {
+      key: 'showDate' as const,
+      label: t('header.showDate'),
+      checked: showDate,
+    },
+    {
+      key: 'showTime' as const,
+      label: t('header.showTime'),
+      checked: showTime,
+    },
+    {
+      key: 'showHealthcheck' as const,
+      label: t('header.showHealthcheck'),
+      checked: showHealthcheck,
+    },
+  ];
 
   return (
     <div ref={settingsRef} className="group relative">
@@ -127,9 +148,8 @@ export function PageSettings() {
           });
         }}
         className={cn(
-          'bg-card text-card-foreground border-border/80 flex h-9 max-w-9 min-w-9 cursor-pointer items-center justify-center gap-0 overflow-hidden rounded-full px-0 shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-[max-width,padding,gap,box-shadow,transform,background-color,border-color] duration-300 ease-out hover:max-w-44 hover:justify-start hover:gap-1.5 hover:px-3 hover:shadow-[0_14px_38px_rgba(15,23,42,0.16)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.32)] dark:hover:shadow-[0_16px_42px_rgba(0,0,0,0.38)]',
-          isSettingsOpen &&
-            'max-w-44 justify-start gap-1.5 px-3 shadow-[0_14px_38px_rgba(15,23,42,0.16)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.38)]',
+          'bg-card text-card-foreground border-border/80 flex h-8 max-w-8 min-w-8 cursor-pointer items-center justify-center gap-0 overflow-hidden rounded-full px-0 transition-[max-width,padding,gap,box-shadow,transform,background-color,border-color] duration-300 ease-out hover:max-w-40 hover:justify-start hover:gap-1.5 hover:px-3',
+          isSettingsOpen && 'max-w-40 justify-start gap-1.5 px-3',
         )}
         variant="outline"
         aria-label={t('header.pageSettings')}
@@ -138,16 +158,13 @@ export function PageSettings() {
       >
         <span
           className={cn(
-            'pointer-events-none max-w-0 overflow-hidden pl-0.5 text-sm font-medium tracking-[-0.02em] whitespace-nowrap opacity-0 transition-[max-width,opacity,transform] duration-300 ease-out group-hover:max-w-32 group-hover:opacity-100',
+            'pointer-events-none max-w-0 overflow-hidden text-[12px] tracking-[-0.02em] whitespace-nowrap opacity-0 transition-[max-width,opacity,transform] duration-300 ease-out group-hover:max-w-32 group-hover:opacity-100',
             isSettingsOpen && 'max-w-32 opacity-100',
           )}
         >
           {t('header.pageSettings')}
         </span>
-        <Settings
-          className="text-foreground size-3.5 shrink-0"
-          strokeWidth={2.1}
-        />
+        <Settings className="text-foreground size-[14px] shrink-0" />
       </Button>
 
       <div
@@ -176,7 +193,7 @@ export function PageSettings() {
           <div className="space-y-2">
             <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
               <div className="space-y-3">
-                <h4 className="text-[15px] font-semibold">
+                <h4 className="text-[14px] font-semibold">
                   {t('header.regionLanguageSection')}
                 </h4>
                 <div className="relative">
@@ -235,7 +252,7 @@ export function PageSettings() {
 
             <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
               <div className="space-y-3">
-                <h4 className="text-[15px] font-semibold">
+                <h4 className="text-[14px] font-semibold">
                   {t('header.themeSection')}
                 </h4>
                 <div>
@@ -261,6 +278,33 @@ export function PageSettings() {
                       );
                     })}
                   </ToggleGroup>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
+              <div className="space-y-3">
+                <h4 className="text-[14px] font-semibold">
+                  {t('header.displaySection')}
+                </h4>
+                <div className="space-y-2">
+                  {displayOptions.map((option) => (
+                    <div
+                      key={option.key}
+                      className="bg-muted/60 border-border/70 flex items-center justify-between rounded-md border px-3 py-2.5"
+                    >
+                      <span className="text-[12px] font-medium">
+                        {option.label}
+                      </span>
+                      <Switch
+                        checked={option.checked}
+                        onCheckedChange={(checked) =>
+                          setSetting(option.key, checked)
+                        }
+                        aria-label={option.label}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

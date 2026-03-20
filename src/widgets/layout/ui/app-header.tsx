@@ -5,13 +5,14 @@ import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
 import { Button } from '@/shared/ui/atoms/button';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
+import { HeaderStatusStrip } from './header-status-strip';
 
 export function AppHeader() {
   const { t } = useTranslation();
   const { toggle } = useSidebar();
 
   return (
-    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center border-b px-4">
+    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4">
       <button
         onClick={toggle}
         className="hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md"
@@ -22,7 +23,7 @@ export function AppHeader() {
 
       <Link
         to="/"
-        className="focus-visible:ring-ring ml-3 flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring flex shrink-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
         aria-label={t('common:nav.dashboard')}
       >
         <HanwhaIcon />
@@ -32,12 +33,16 @@ export function AppHeader() {
         </span>
       </Link>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <HeaderStatusStrip />
+      </div>
+
+      <div className="ml-auto flex shrink-0 items-center gap-3">
         <PageSettings />
         <Button
           type="button"
           variant="outline"
-          className="h-10 cursor-pointer rounded-lg px-6 text-sm font-medium"
+          className="h-8 cursor-pointer rounded-lg px-5 text-[13px] font-medium"
           aria-label={t('header.login')}
         >
           {t('header.login')}

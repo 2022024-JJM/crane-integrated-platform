@@ -165,3 +165,5 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `README.md` 의 일부 구조/파일 설명은 현재 코드와 다를 수 있다.
 - Agent는 문서 간 충돌이 있으면 `실제 코드`, 그다음 `AGENTS.md`, 마지막으로 `README.md` 순서로 신뢰한다.
 - 테스트 프레임워크가 없으므로, 변경 검증 시 lint/build 와 실제 파일 구조 대조가 특히 중요하다.
+- 현재 로컬 환경에서는 `npm run build` 실행 시 `tsc -b` 이후 Vite 단계에서 Rollup optional dependency(`@rollup/rollup-linux-x64-gnu`) 누락으로 실패할 수 있다.
+- Agent는 이 알려진 Rollup 누락 이슈만을 이유로 `npm install` 또는 추가 dependency 설치 승인을 요청하지 않는다. 대신 `npx tsc -b` 결과와 `vite build` 실패 원인을 그대로 보고한다.
