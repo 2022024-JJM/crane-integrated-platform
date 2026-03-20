@@ -20,6 +20,10 @@
     "showDate": "Dies",
     "showTime": "Tempus",
     "showHealthcheck": "Sanitas",
+    "showWeather": "Tempestas",
+    "weatherLoading": "Tempestas oneratur",
+    "weatherUnavailable": "Tempestas deest",
+    "currentLocationWeather": "Locus praesens",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },

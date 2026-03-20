@@ -20,6 +20,10 @@
     "showDate": "Date",
     "showTime": "Time",
     "showHealthcheck": "Healthcheck",
+    "showWeather": "Weather",
+    "weatherLoading": "Loading weather",
+    "weatherUnavailable": "Weather unavailable",
+    "currentLocationWeather": "Current location",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS"
   },

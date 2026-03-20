@@ -18,7 +18,7 @@ type ThemeOption = 'light' | 'dark';
 export function PageSettings() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const { showDate, showTime, showHealthcheck, setSetting } =
+  const { showDate, showTime, showHealthcheck, showWeather, setSetting } =
     useHeaderDisplaySettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
@@ -115,6 +115,11 @@ export function PageSettings() {
     },
   ];
   const displayOptions = [
+    {
+      key: 'showWeather' as const,
+      label: t('header.showWeather'),
+      checked: showWeather,
+    },
     {
       key: 'showDate' as const,
       label: t('header.showDate'),

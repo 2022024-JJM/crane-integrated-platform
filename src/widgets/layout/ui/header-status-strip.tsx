@@ -1,5 +1,8 @@
-import { CalendarDays, Clock3, type LucideIcon, Wifi } from 'lucide-react';
+import { CalendarDays, Clock3, type LucideProps, Wifi } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getWeatherPresentation, WeatherIcon } from '@/entities/weather';
+import { useHeaderWeather } from '@/features/weather';
 import {
   formatLocalizedDate,
   formatLocalizedTime,
@@ -15,16 +18,19 @@ const HEADER_HEALTH_STATUS: HeaderHealthStatus = 'online';
 
 export function HeaderStatusStrip() {
   const { t, i18n } = useTranslation();
-  const { showDate, showTime, showHealthcheck } = useHeaderDisplaySettings();
+  const { showDate, showTime, showHealthcheck, showWeather } =
+    useHeaderDisplaySettings();
   const currentDateTime = useCurrentDateTime();
 
-  if (!showDate && !showTime && !showHealthcheck) {
+  if (!showDate && !showTime && !showHealthcheck && !showWeather) {
     return null;
   }
 
   return (
     <div className="flex min-w-0 justify-end">
       <div className="flex max-w-full items-center justify-end gap-2 overflow-x-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {showWeather ? <HeaderWeatherInfoPill /> : null}
+
         {showDate ? (
           <HeaderInfoPill
             icon={CalendarDays}
@@ -51,14 +57,53 @@ export function HeaderStatusStrip() {
   );
 }
 
+function HeaderWeatherInfoPill() {
+  const { t } = useTranslation();
+  const weather = useHeaderWeather();
+  const weatherPresentation = weather.snapshot
+    ? getWeatherPresentation(weather.snapshot)
+    : null;
+  const label =
+    weather.status === 'loading'
+      ? t('header.weatherLoading')
+      : weather.locationLabelKey
+        ? t(weather.locationLabelKey)
+        : t('header.weatherUnavailable');
+  const temperature =
+    weather.status === 'success' && weather.snapshot
+      ? `${Math.round(weather.snapshot.temperature)}°`
+      : '--°';
+
+  return (
+    <HeaderInfoPill
+      renderIcon={(iconClassName, strokeWidth) => (
+        <WeatherIcon
+          status={weather.status}
+          iconKey={weatherPresentation?.iconKey}
+          className={iconClassName}
+          strokeWidth={strokeWidth}
+        />
+      )}
+      value={label}
+      accentValue={weather.status === 'loading' ? undefined : temperature}
+    />
+  );
+}
+
 function HeaderInfoPill({
   icon: Icon,
+  renderIcon,
   value,
+  accentValue,
   variant = 'default',
+  className,
 }: {
-  icon: LucideIcon;
+  icon?: (props: LucideProps) => ReactNode;
+  renderIcon?: (className: string, strokeWidth: number) => ReactNode;
   value: string;
+  accentValue?: string;
   variant?: 'default' | 'status';
+  className?: string;
 }) {
   return (
     <div
@@ -67,25 +112,43 @@ function HeaderInfoPill({
         variant === 'default'
           ? 'border-border bg-background/85 text-foreground'
           : 'text-foreground border-emerald-500/50 bg-emerald-500/8',
+        className,
       )}
     >
-      <Icon
-        className={cn(
-          'size-3.5 shrink-0',
-          variant === 'default'
-            ? 'text-muted-foreground'
-            : 'text-emerald-500 dark:text-emerald-300',
-        )}
-        strokeWidth={2.2}
-      />
+      {renderIcon ? (
+        renderIcon(
+          cn(
+            'size-3.5 shrink-0',
+            variant === 'default'
+              ? 'text-muted-foreground'
+              : 'text-emerald-500 dark:text-emerald-300',
+          ),
+          2.2,
+        )
+      ) : Icon ? (
+        <Icon
+          className={cn(
+            'size-3.5 shrink-0',
+            variant === 'default'
+              ? 'text-muted-foreground'
+              : 'text-emerald-500 dark:text-emerald-300',
+          )}
+          strokeWidth={2.2}
+        />
+      ) : null}
       <span
         className={cn(
-          'text-[11px] tracking-widest tabular-nums',
+          'text-[11px] tracking-wide whitespace-nowrap',
           variant === 'status' && 'text-emerald-600 dark:text-emerald-300',
         )}
       >
         {value}
       </span>
+      {accentValue ? (
+        <span className="shrink-0 text-[12px] font-semibold whitespace-nowrap tabular-nums">
+          {accentValue}
+        </span>
+      ) : null}
       {variant === 'status' ? (
         <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.65)]" />
       ) : null}

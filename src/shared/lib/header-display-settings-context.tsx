@@ -7,6 +7,7 @@ type HeaderDisplaySettings = {
   showDate: boolean;
   showTime: boolean;
   showHealthcheck: boolean;
+  showWeather: boolean;
 };
 
 type HeaderHealthStatus = 'online';
@@ -22,6 +23,7 @@ const DEFAULT_HEADER_DISPLAY_SETTINGS: HeaderDisplaySettings = {
   showDate: true,
   showTime: true,
   showHealthcheck: true,
+  showWeather: true,
 };
 
 const HeaderDisplaySettingsContext =
@@ -58,6 +60,10 @@ function getInitialHeaderDisplaySettings(): HeaderDisplaySettings {
         typeof parsedSettings?.showHealthcheck === 'boolean'
           ? parsedSettings.showHealthcheck
           : DEFAULT_HEADER_DISPLAY_SETTINGS.showHealthcheck,
+      showWeather:
+        typeof parsedSettings?.showWeather === 'boolean'
+          ? parsedSettings.showWeather
+          : DEFAULT_HEADER_DISPLAY_SETTINGS.showWeather,
     };
   } catch {
     return DEFAULT_HEADER_DISPLAY_SETTINGS;
