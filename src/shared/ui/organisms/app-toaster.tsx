@@ -7,7 +7,7 @@ export function AppToaster() {
   return (
     <Toaster
       theme={theme}
-      position="bottom-right"
+      position="top-center"
       expand={false}
       richColors
       closeButton
