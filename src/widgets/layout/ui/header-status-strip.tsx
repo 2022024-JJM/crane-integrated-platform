@@ -28,7 +28,6 @@ export function HeaderStatusStrip() {
         {showDate ? (
           <HeaderInfoPill
             icon={CalendarDays}
-            label={t('header.date')}
             value={formatLocalizedDate(currentDateTime, i18n.language)}
           />
         ) : null}
@@ -36,7 +35,6 @@ export function HeaderStatusStrip() {
         {showTime ? (
           <HeaderInfoPill
             icon={Clock3}
-            label={t('header.time')}
             value={formatLocalizedTime(currentDateTime, i18n.language)}
           />
         ) : null}
@@ -44,7 +42,6 @@ export function HeaderStatusStrip() {
         {showHealthcheck ? (
           <HeaderInfoPill
             icon={Wifi}
-            label={t('header.status')}
             value={t(`header.${HEADER_HEALTH_STATUS}`)}
             variant="status"
           />
@@ -56,19 +53,17 @@ export function HeaderStatusStrip() {
 
 function HeaderInfoPill({
   icon: Icon,
-  label,
   value,
   variant = 'default',
 }: {
   icon: LucideIcon;
-  label: string;
   value: string;
   variant?: 'default' | 'status';
 }) {
   return (
     <div
       className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5',
+        'inline-flex h-8 shrink-0 items-center gap-2 rounded-lg border px-2.5',
         variant === 'default'
           ? 'border-border bg-background/85 text-foreground'
           : 'text-foreground border-emerald-500/50 bg-emerald-500/8',
@@ -83,16 +78,6 @@ function HeaderInfoPill({
         )}
         strokeWidth={2.2}
       />
-      <span
-        className={cn(
-          'text-[10px] tracking-widest uppercase',
-          variant === 'default'
-            ? 'text-muted-foreground'
-            : 'text-muted-foreground',
-        )}
-      >
-        {label}
-      </span>
       <span
         className={cn(
           'text-[11px] tracking-widest tabular-nums',
