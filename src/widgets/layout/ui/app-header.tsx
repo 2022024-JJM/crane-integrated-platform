@@ -39,14 +39,14 @@ export function AppHeader() {
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <PageSettings />
-        <Button
+        {/* <Button
           type="button"
           variant="outline"
           className="h-8 cursor-pointer rounded-lg px-5 text-[13px] font-medium"
           aria-label={t('header.login')}
         >
           {t('header.login')}
-        </Button>
+        </Button> */}
       </div>
     </header>
   );
