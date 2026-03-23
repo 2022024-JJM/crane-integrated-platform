@@ -42,10 +42,15 @@ import {
 } from '@/shared/ui/molecules/card';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 import {
-  buildDashboardSummary,
   type DashboardMetricCard,
   type DashboardRiskCraneDatum,
+  useDashboardSummary,
 } from '../model';
+import {
+  DashboardChartSkeleton,
+  DashboardRegionStatusSkeleton,
+  DashboardRiskCranesSkeleton,
+} from './dashboard-skeletons';
 
 const severityBadgeClassName: Record<AlarmSeverity, string> = {
   critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
@@ -82,7 +87,7 @@ const tooltipLabelKey = {
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
-  const summary = useMemo(() => buildDashboardSummary(), []);
+  const { summary, isLoading } = useDashboardSummary();
   const locale = useMemo(
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
@@ -180,67 +185,79 @@ export function DashboardPage() {
                 </CardAction>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ChartArea>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={summary.monthlyTrend}>
-                      <CartesianGrid
-                        stroke="var(--border)"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis
-                        axisLine={false}
-                        dataKey="dateKey"
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        tickFormatter={(value) =>
-                          formatMonth(value, monthFormatter)
-                        }
-                      />
-                      <YAxis
-                        axisLine={false}
-                        domain={[40, 100]}
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        width={32}
-                      />
-                      <Tooltip
-                        content={
-                          <ChartTooltip
-                            translate={t}
-                            labelFormatter={(value) =>
-                              formatMonthLabel(value, monthFormatter)
-                            }
-                            locale={locale}
+                {isLoading ? (
+                  <DashboardChartSkeleton statsCount={2} variant="line" />
+                ) : (
+                  <>
+                    <ChartArea>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={summary.monthlyTrend}>
+                          <CartesianGrid
+                            stroke="var(--border)"
+                            strokeDasharray="3 3"
                           />
-                        }
-                      />
-                      <Line
-                        dataKey="operationalRate"
-                        dot={{ fill: 'var(--chart-1)', r: 3 }}
-                        stroke="var(--chart-1)"
-                        strokeWidth={3}
-                        type="monotone"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartArea>
-                <Separator />
-                <StatsRow
-                  items={[
-                    {
-                      label: t('dashboard:charts.monthlyOperating.average'),
-                      value: `${summary.averageOperatingRate}%`,
-                      tone: 'text-emerald-500',
-                    },
-                    {
-                      label: t('dashboard:charts.monthlyOperating.bestMonth'),
-                      value: formatMonth(
-                        summary.bestOperatingMonth,
-                        monthFormatter,
-                      ),
-                    },
-                  ]}
-                />
+                          <XAxis
+                            axisLine={false}
+                            dataKey="dateKey"
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            tickFormatter={(value) =>
+                              formatMonth(value, monthFormatter)
+                            }
+                          />
+                          <YAxis
+                            axisLine={false}
+                            domain={[40, 100]}
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            width={32}
+                          />
+                          <Tooltip
+                            content={
+                              <ChartTooltip
+                                translate={t}
+                                labelFormatter={(value) =>
+                                  formatMonthLabel(value, monthFormatter)
+                                }
+                                locale={locale}
+                              />
+                            }
+                          />
+                          <Line
+                            dataKey="operationalRate"
+                            dot={{ fill: 'var(--chart-1)', r: 3 }}
+                            stroke="var(--chart-1)"
+                            strokeWidth={3}
+                            type="monotone"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartArea>
+                    <Separator />
+                    <StatsRow
+                      items={[
+                        {
+                          label: t('dashboard:charts.monthlyOperating.average'),
+                          value: `${summary.averageOperatingRate}%`,
+                          tone: 'text-emerald-500',
+                        },
+                        {
+                          label: t('dashboard:charts.monthlyOperating.bestMonth'),
+                          value: formatMonth(
+                            summary.bestOperatingMonth,
+                            monthFormatter,
+                          ),
+                        },
+                      ]}
+                    />
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -261,74 +278,86 @@ export function DashboardPage() {
                 </CardAction>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ChartArea>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={summary.monthlyTrend}>
-                      <CartesianGrid
-                        stroke="var(--border)"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis
-                        axisLine={false}
-                        dataKey="dateKey"
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        tickFormatter={(value) =>
-                          formatMonth(value, monthFormatter)
-                        }
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        width={32}
-                      />
-                      <Tooltip
-                        cursor={barChartTooltipCursor}
-                        content={
-                          <ChartTooltip
-                            translate={t}
-                            labelFormatter={(value) =>
-                              formatMonthLabel(value, monthFormatter)
-                            }
-                            locale={locale}
+                {isLoading ? (
+                  <DashboardChartSkeleton statsCount={2} variant="bars" />
+                ) : (
+                  <>
+                    <ChartArea>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={summary.monthlyTrend}>
+                          <CartesianGrid
+                            stroke="var(--border)"
+                            strokeDasharray="3 3"
                           />
-                        }
-                      />
-                      <Bar
-                        dataKey="alarmCount"
-                        fill="var(--chart-4)"
-                        maxBarSize={30}
-                        radius={[8, 8, 0, 0]}
-                      >
-                        {summary.monthlyTrend.map((point) => (
-                          <Cell
-                            key={point.dateKey}
-                            fill={
-                              point.dateKey === summary.topAlarmMonth
-                                ? 'var(--chart-5)'
-                                : 'var(--chart-4)'
+                          <XAxis
+                            axisLine={false}
+                            dataKey="dateKey"
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            tickFormatter={(value) =>
+                              formatMonth(value, monthFormatter)
                             }
                           />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartArea>
-                <Separator />
-                <StatsRow
-                  items={[
-                    {
-                      label: t('dashboard:charts.monthlyAlarms.total'),
-                      value: `${summary.monthlyAlarmTotal}${t('dashboard:units.count')}`,
-                      tone: 'text-amber-500',
-                    },
-                    {
-                      label: t('dashboard:charts.monthlyAlarms.peakMonth'),
-                      value: formatMonth(summary.topAlarmMonth, monthFormatter),
-                    },
-                  ]}
-                />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            width={32}
+                          />
+                          <Tooltip
+                            cursor={barChartTooltipCursor}
+                            content={
+                              <ChartTooltip
+                                translate={t}
+                                labelFormatter={(value) =>
+                                  formatMonthLabel(value, monthFormatter)
+                                }
+                                locale={locale}
+                              />
+                            }
+                          />
+                          <Bar
+                            dataKey="alarmCount"
+                            fill="var(--chart-4)"
+                            maxBarSize={30}
+                            radius={[8, 8, 0, 0]}
+                          >
+                            {summary.monthlyTrend.map((point) => (
+                              <Cell
+                                key={point.dateKey}
+                                fill={
+                                  point.dateKey === summary.topAlarmMonth
+                                    ? 'var(--chart-5)'
+                                    : 'var(--chart-4)'
+                                }
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartArea>
+                    <Separator />
+                    <StatsRow
+                      items={[
+                        {
+                          label: t('dashboard:charts.monthlyAlarms.total'),
+                          value: `${summary.monthlyAlarmTotal}${t('dashboard:units.count')}`,
+                          tone: 'text-amber-500',
+                        },
+                        {
+                          label: t('dashboard:charts.monthlyAlarms.peakMonth'),
+                          value: formatMonth(summary.topAlarmMonth, monthFormatter),
+                        },
+                      ]}
+                    />
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -356,83 +385,100 @@ export function DashboardPage() {
                 </CardAction>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ChartArea className="h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={summary.weeklyTrend}
-                      maxBarSize={30}
-                      barGap={8}
-                    >
-                      <CartesianGrid
-                        stroke="var(--border)"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis
-                        axisLine={false}
-                        dataKey="dateKey"
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        tickFormatter={(value) =>
-                          formatWeekday(value, weekFormatter)
-                        }
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                        width={32}
-                      />
-                      <Tooltip
-                        cursor={barChartTooltipCursor}
-                        content={
-                          <ChartTooltip
-                            translate={t}
-                            labelFormatter={(value) =>
-                              formatWeekdayLabel(value, weekFormatter)
-                            }
-                            locale={locale}
+                {isLoading ? (
+                  <DashboardChartSkeleton
+                    chartClassName="h-[260px]"
+                    columnsClassName="md:grid-cols-4"
+                    statsCount={4}
+                    variant="bars"
+                  />
+                ) : (
+                  <>
+                    <ChartArea className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={summary.weeklyTrend}
+                          maxBarSize={30}
+                          barGap={8}
+                        >
+                          <CartesianGrid
+                            stroke="var(--border)"
+                            strokeDasharray="3 3"
                           />
-                        }
-                      />
-                      <Bar
-                        dataKey="alarmCount"
-                        fill="var(--chart-5)"
-                        radius={[6, 6, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="warningCount"
-                        fill="var(--chart-4)"
-                        radius={[6, 6, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartArea>
-                <Separator />
-                <StatsRow
-                  items={[
-                    {
-                      label: t('dashboard:charts.weeklyTrend.totalAlarms'),
-                      value: `${summary.weeklyAlarmTotal}${t('dashboard:units.count')}`,
-                      tone: 'text-amber-500',
-                    },
-                    {
-                      label: t('dashboard:charts.weeklyTrend.totalWarnings'),
-                      value: `${summary.weeklyWarningTotal}${t('dashboard:units.count')}`,
-                    },
-                    {
-                      label: t('dashboard:charts.weeklyTrend.average'),
-                      value: `${summary.averageWeeklyAlarms}${t('dashboard:units.count')}`,
-                    },
-                    {
-                      label: t('dashboard:charts.weeklyTrend.peakDay'),
-                      value: formatWeekday(
-                        summary.peakWeeklyDay,
-                        weekFormatter,
-                      ),
-                    },
-                  ]}
-                  columnsClassName="md:grid-cols-4"
-                />
+                          <XAxis
+                            axisLine={false}
+                            dataKey="dateKey"
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            tickFormatter={(value) =>
+                              formatWeekday(value, weekFormatter)
+                            }
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{
+                              fill: 'var(--muted-foreground)',
+                              fontSize: 12,
+                            }}
+                            width={32}
+                          />
+                          <Tooltip
+                            cursor={barChartTooltipCursor}
+                            content={
+                              <ChartTooltip
+                                translate={t}
+                                labelFormatter={(value) =>
+                                  formatWeekdayLabel(value, weekFormatter)
+                                }
+                                locale={locale}
+                              />
+                            }
+                          />
+                          <Bar
+                            dataKey="alarmCount"
+                            fill="var(--chart-5)"
+                            radius={[6, 6, 0, 0]}
+                          />
+                          <Bar
+                            dataKey="warningCount"
+                            fill="var(--chart-4)"
+                            radius={[6, 6, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartArea>
+                    <Separator />
+                    <StatsRow
+                      items={[
+                        {
+                          label: t('dashboard:charts.weeklyTrend.totalAlarms'),
+                          value: `${summary.weeklyAlarmTotal}${t('dashboard:units.count')}`,
+                          tone: 'text-amber-500',
+                        },
+                        {
+                          label: t('dashboard:charts.weeklyTrend.totalWarnings'),
+                          value: `${summary.weeklyWarningTotal}${t('dashboard:units.count')}`,
+                        },
+                        {
+                          label: t('dashboard:charts.weeklyTrend.average'),
+                          value: `${summary.averageWeeklyAlarms}${t('dashboard:units.count')}`,
+                        },
+                        {
+                          label: t('dashboard:charts.weeklyTrend.peakDay'),
+                          value: formatWeekday(
+                            summary.peakWeeklyDay,
+                            weekFormatter,
+                          ),
+                        },
+                      ]}
+                      columnsClassName="md:grid-cols-4"
+                    />
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -454,77 +500,83 @@ export function DashboardPage() {
               </CardAction>
             </CardHeader>
             <CardContent className="space-y-4 xl:flex-1">
-              <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
-                <LegendPill
-                  colorClassName="bg-emerald-500"
-                  label={t('dashboard:legend.healthy')}
-                />
-                <LegendPill
-                  colorClassName="bg-amber-500"
-                  label={t('dashboard:legend.warning')}
-                />
-                <LegendPill
-                  colorClassName="bg-slate-500"
-                  label={t('dashboard:legend.offline')}
-                />
-              </div>
-              <div className="space-y-3">
-                {summary.regionStatuses.map((regionStatus) => (
-                  <AppLink
-                    key={regionStatus.regionId}
-                    to={regionStatus.navigateTo}
-                    className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block rounded-2xl border p-3 transition"
-                  >
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <div>
-                        <p className="font-medium">
-                          {t(regionStatus.titleKey)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {t('dashboard:charts.regionStatus.totalCranes', {
-                            count: regionStatus.total,
-                          })}
-                        </p>
-                      </div>
-                      <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition" />
-                    </div>
-                    <div className="bg-muted mt-3 flex h-3 overflow-hidden rounded-full">
-                      <BarSegment
-                        colorClassName="bg-emerald-500"
-                        total={regionStatus.total}
-                        value={regionStatus.operating}
-                      />
-                      <BarSegment
-                        colorClassName="bg-amber-500"
-                        total={regionStatus.total}
-                        value={regionStatus.warning}
-                      />
-                      <BarSegment
-                        colorClassName="bg-slate-500"
-                        total={regionStatus.total}
-                        value={regionStatus.offline}
-                      />
-                    </div>
-                    <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
-                      <StatusCount
-                        label={t('dashboard:legend.healthy')}
-                        tone="text-emerald-500"
-                        value={regionStatus.operating}
-                      />
-                      <StatusCount
-                        label={t('dashboard:legend.warning')}
-                        tone="text-amber-500"
-                        value={regionStatus.warning}
-                      />
-                      <StatusCount
-                        label={t('dashboard:legend.offline')}
-                        tone="text-slate-500"
-                        value={regionStatus.offline}
-                      />
-                    </div>
-                  </AppLink>
-                ))}
-              </div>
+              {isLoading ? (
+                <DashboardRegionStatusSkeleton />
+              ) : (
+                <>
+                  <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
+                    <LegendPill
+                      colorClassName="bg-emerald-500"
+                      label={t('dashboard:legend.healthy')}
+                    />
+                    <LegendPill
+                      colorClassName="bg-amber-500"
+                      label={t('dashboard:legend.warning')}
+                    />
+                    <LegendPill
+                      colorClassName="bg-slate-500"
+                      label={t('dashboard:legend.offline')}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    {summary.regionStatuses.map((regionStatus) => (
+                      <AppLink
+                        key={regionStatus.regionId}
+                        to={regionStatus.navigateTo}
+                        className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block rounded-2xl border p-3 transition"
+                      >
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <div>
+                            <p className="font-medium">
+                              {t(regionStatus.titleKey)}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {t('dashboard:charts.regionStatus.totalCranes', {
+                                count: regionStatus.total,
+                              })}
+                            </p>
+                          </div>
+                          <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition" />
+                        </div>
+                        <div className="bg-muted mt-3 flex h-3 overflow-hidden rounded-full">
+                          <BarSegment
+                            colorClassName="bg-emerald-500"
+                            total={regionStatus.total}
+                            value={regionStatus.operating}
+                          />
+                          <BarSegment
+                            colorClassName="bg-amber-500"
+                            total={regionStatus.total}
+                            value={regionStatus.warning}
+                          />
+                          <BarSegment
+                            colorClassName="bg-slate-500"
+                            total={regionStatus.total}
+                            value={regionStatus.offline}
+                          />
+                        </div>
+                        <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
+                          <StatusCount
+                            label={t('dashboard:legend.healthy')}
+                            tone="text-emerald-500"
+                            value={regionStatus.operating}
+                          />
+                          <StatusCount
+                            label={t('dashboard:legend.warning')}
+                            tone="text-amber-500"
+                            value={regionStatus.warning}
+                          />
+                          <StatusCount
+                            label={t('dashboard:legend.offline')}
+                            tone="text-slate-500"
+                            value={regionStatus.offline}
+                          />
+                        </div>
+                      </AppLink>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -545,61 +597,70 @@ export function DashboardPage() {
               </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <ChartArea className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={summary.riskCranes}
-                    maxBarSize={20}
-                    layout="vertical"
-                  >
-                    <CartesianGrid
-                      horizontal={false}
-                      stroke="var(--border)"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis hide type="number" />
-                    <YAxis
-                      axisLine={false}
-                      dataKey="craneName"
-                      tickLine={false}
-                      tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                      type="category"
-                      width={56}
-                    />
-                    <Tooltip
-                      cursor={barChartTooltipCursor}
-                      content={
-                        <ChartTooltip
-                          translate={t}
-                          labelFormatter={(value) => `${value}`}
-                          locale={locale}
+              {isLoading ? (
+                <DashboardRiskCranesSkeleton />
+              ) : (
+                <>
+                  <ChartArea className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={summary.riskCranes}
+                        maxBarSize={20}
+                        layout="vertical"
+                      >
+                        <CartesianGrid
+                          horizontal={false}
+                          stroke="var(--border)"
+                          strokeDasharray="3 3"
                         />
-                      }
-                    />
-                    <Bar dataKey="score" radius={[0, 8, 8, 0]}>
+                        <XAxis hide type="number" />
+                        <YAxis
+                          axisLine={false}
+                          dataKey="craneName"
+                          tickLine={false}
+                          tick={{
+                            fill: 'var(--muted-foreground)',
+                            fontSize: 12,
+                          }}
+                          type="category"
+                          width={56}
+                        />
+                        <Tooltip
+                          cursor={barChartTooltipCursor}
+                          content={
+                            <ChartTooltip
+                              translate={t}
+                              labelFormatter={(value) => `${value}`}
+                              locale={locale}
+                            />
+                          }
+                        />
+                        <Bar dataKey="score" radius={[0, 8, 8, 0]}>
+                          {summary.riskCranes.map((crane) => (
+                            <Cell
+                              key={crane.craneId}
+                              fill={getRiskColor(crane.score)}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartArea>
+                  <Separator />
+                  <ScrollArea className="h-[320px] pr-3">
+                    <div className="space-y-2">
                       {summary.riskCranes.map((crane) => (
-                        <Cell
+                        <RiskCraneRow
                           key={crane.craneId}
-                          fill={getRiskColor(crane.score)}
+                          crane={crane}
+                          locale={locale}
+                          translate={t}
                         />
                       ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartArea>
-              <Separator />
-              <ScrollArea className="h-[320px] pr-3">
-                <div className="space-y-2">
-                  {summary.riskCranes.map((crane) => (
-                    <RiskCraneRow
-                      key={crane.craneId}
-                      crane={crane}
-                      locale={locale}
-                      translate={t}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
+                    </div>
+                  </ScrollArea>
+                </>
+              )}
             </CardContent>
           </Card>
 

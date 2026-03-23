@@ -1,4 +1,5 @@
 export { buildDashboardSummary } from './build-dashboard-summary';
+export { useDashboardSummary } from './use-dashboard-summary';
 export type {
   DashboardMetricCard,
   DashboardRegionStatusDatum,
