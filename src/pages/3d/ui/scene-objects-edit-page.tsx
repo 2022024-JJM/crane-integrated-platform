@@ -3,13 +3,9 @@ import { useSceneObjectSelectionStore } from '@/features/3d';
 import { useEffect, useMemo, useState } from 'react';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { SceneObjectInspector, SceneObjectsEditCanvas } from '@/widgets/3d';
+import { AXIS_INDEX } from '@/features/3d/model/types';
 
 const SCENE_FILE_URL = '/scenes/1dock.json';
-const AXIS_INDEX = {
-  x: 0,
-  y: 1,
-  z: 2,
-} as const;
 
 function updateVectorValue(
   tuple: Vector3Tuple,
@@ -119,7 +115,7 @@ export function SceneObjectsEditPage() {
             updateSelectedModel('position', axis, numRound(value));
           }}
           onRotationChange={(axis, value) => {
-            updateSelectedModel('rotation', axis, numRound(radToDeg(value)));
+            updateSelectedModel('rotation', axis, numRound(value));
           }}
           onScaleChange={(axis, value) => {
             updateSelectedModel('scale', axis, numRound(value));

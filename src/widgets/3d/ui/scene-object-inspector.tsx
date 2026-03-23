@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { Euler, Vector3 } from 'three';
 import { useTranslation } from 'react-i18next';
-import { degToRad, type SavedModelInfo } from '@/entities/3d';
+import type { SavedModelInfo } from '@/entities/3d';
 import {
   PositionController,
   RotationController,
@@ -51,20 +50,6 @@ export function SceneObjectInspector({
     ? selectedModel.equipName || selectedModel.id
     : null;
 
-  const position = selectedModel
-    ? new Vector3(...selectedModel.position)
-    : undefined;
-
-  const rotation = selectedModel
-    ? new Euler(
-        degToRad(selectedModel.rotation[0]),
-        degToRad(selectedModel.rotation[1]),
-        degToRad(selectedModel.rotation[2]),
-      )
-    : undefined;
-
-  const scale = selectedModel ? new Vector3(...selectedModel.scale) : undefined;
-
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
       <CardHeader className="border-b py-4">
@@ -84,20 +69,20 @@ export function SceneObjectInspector({
           <>
             <InspectorSection title={t('common:inspector.position')}>
               <PositionController
-                vec={position}
+                vec={selectedModel.position}
                 onChange={onPositionChange}
               />
             </InspectorSection>
             <Separator />
             <InspectorSection title={t('common:inspector.rotation')}>
               <RotationController
-                vec={rotation}
+                vec={selectedModel.rotation}
                 onChange={onRotationChange}
               />
             </InspectorSection>
             <Separator />
             <InspectorSection title={t('common:inspector.scale')}>
-              <ScaleController vec={scale} onChange={onScaleChange} />
+              <ScaleController vec={selectedModel.scale} onChange={onScaleChange} />
             </InspectorSection>
           </>
         ) : (

@@ -1,12 +1,13 @@
-import { degToRad, numRound, radToDeg } from '@/entities/3d';
+import { numRound } from '@/entities/3d';
+import type { Vector3Tuple } from '@/shared/types/math';
 import { InputNumber } from '@/shared/ui/atoms/input-number';
-import { type Euler } from 'three';
+import { AXIS_INDEX } from '../model/types';
 
 export function RotationController({
   vec,
   onChange,
 }: {
-  vec: Euler | undefined;
+  vec: Vector3Tuple | undefined;
   onChange: (axis: 'x' | 'y' | 'z', v: number) => void;
 }) {
   return (
@@ -15,12 +16,12 @@ export function RotationController({
         <div key={axis} className="flex items-center gap-2">
           <span className="w-5 uppercase">{axis}</span>
           <InputNumber
-            value={vec ? numRound(radToDeg(vec[axis])) : 0}
+            value={vec ? numRound(vec[AXIS_INDEX[axis]]) : 0}
             step={1}
             min={0}
             max={360}
             className="flex-1"
-            onChange={(v) => onChange(axis, degToRad(Number(v)))}
+            onChange={(v) => onChange(axis, Number(v))}
           />
         </div>
       ))}
