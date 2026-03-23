@@ -1,4 +1,12 @@
 {
   "title": "3D Viewer Area",
-  "subtitle": "{{region}} area · Coming soon"
+  "subtitle": "{{region}} area · Coming soon",
+  "inspector": {
+    "title": "Inspector",
+    "name": "Name",
+    "empty": "Click an object in the scene to inspect its properties.",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale"
+  }
 }

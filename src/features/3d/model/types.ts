@@ -1,3 +1,7 @@
+export type AxisKey = 'x' | 'y' | 'z';
+
+export type SceneTransformField = 'position' | 'rotation' | 'scale';
+
 export const AXIS_INDEX = {
   x: 0,
   y: 1,

@@ -1,4 +1,12 @@
 {
   "title": "3D 뷰어 영역",
-  "subtitle": "{{region}} 구역 · 준비 중"
+  "subtitle": "{{region}} 구역 · 준비 중",
+  "inspector": {
+    "title": "Inspector",
+    "name": "이름",
+    "empty": "씬에서 객체를 클릭하면 속성을 볼 수 있습니다.",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale"
+  }
 }

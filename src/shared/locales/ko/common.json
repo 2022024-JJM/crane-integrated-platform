@@ -42,14 +42,6 @@
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력"
   },
-  "inspector": {
-    "title": "Inspector",
-    "object": "객체",
-    "empty": "씬에서 객체를 클릭하면 속성을 볼 수 있습니다.",
-    "position": "Position",
-    "rotation": "Rotation",
-    "scale": "Scale"
-  },
   "craneStatus": {
     "title": "크레인 실시간 상태",
     "name": "크레인명",

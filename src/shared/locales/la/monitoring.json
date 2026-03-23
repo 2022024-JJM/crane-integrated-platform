@@ -1,4 +1,12 @@
 {
   "title": "Area Visoris 3D",
-  "subtitle": "Regio {{region}} · praeparatur"
+  "subtitle": "Regio {{region}} · praeparatur",
+  "inspector": {
+    "title": "Inspector",
+    "name": "Nomen",
+    "empty": "Objectum in scaena preme ut proprietates eius videas.",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale"
+  }
 }

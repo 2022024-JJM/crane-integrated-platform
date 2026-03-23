@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedModelInfo } from '@/entities/3d';
 import {
+  type AxisKey,
   PositionController,
   RotationController,
   ScaleController,
+  type SceneTransformField,
 } from '@/features/3d';
 import { Separator } from '@/shared/ui/atoms/separator';
 import {
@@ -17,9 +19,11 @@ import {
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
-  onPositionChange: (axis: 'x' | 'y' | 'z', value: number) => void;
-  onRotationChange: (axis: 'x' | 'y' | 'z', value: number) => void;
-  onScaleChange: (axis: 'x' | 'y' | 'z', value: number) => void;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
 }
 
 interface InspectorSectionProps {
@@ -40,9 +44,7 @@ function InspectorSection({ title, children }: InspectorSectionProps) {
 
 export function SceneObjectInspector({
   selectedModel,
-  onPositionChange,
-  onRotationChange,
-  onScaleChange,
+  onTransformChange,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
 
@@ -53,41 +55,50 @@ export function SceneObjectInspector({
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
       <CardHeader className="border-b py-4">
-        <CardTitle>{t('common:inspector.title')}</CardTitle>
+        <CardTitle>{t('monitoring:inspector.title')}</CardTitle>
         <CardDescription>
-          {selectedModel ? (
+          {selectedModel && (
             <>
-              {t('common:inspector.object')}: {selectedLabel}
+              {t('monitoring:inspector.name')} : {selectedLabel}
             </>
-          ) : (
-            t('common:inspector.empty')
           )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 py-4">
         {selectedModel ? (
           <>
-            <InspectorSection title={t('common:inspector.position')}>
+            <InspectorSection title={t('monitoring:inspector.position')}>
               <PositionController
                 vec={selectedModel.position}
-                onChange={onPositionChange}
+                onChange={(axis, value) => {
+                  onTransformChange('position', axis, value);
+                }}
               />
             </InspectorSection>
             <Separator />
-            <InspectorSection title={t('common:inspector.rotation')}>
+            <InspectorSection title={t('monitoring:inspector.rotation')}>
               <RotationController
                 vec={selectedModel.rotation}
-                onChange={onRotationChange}
+                onChange={(axis, value) => {
+                  onTransformChange('rotation', axis, value);
+                }}
               />
             </InspectorSection>
             <Separator />
-            <InspectorSection title={t('common:inspector.scale')}>
-              <ScaleController vec={selectedModel.scale} onChange={onScaleChange} />
+            <InspectorSection title={t('monitoring:inspector.scale')}>
+              <ScaleController
+                vec={selectedModel.scale}
+                onChange={(axis, value) => {
+                  onTransformChange('scale', axis, value);
+                }}
+              />
             </InspectorSection>
           </>
         ) : (
           <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-            <p className="max-w-56 text-center">{t('common:inspector.empty')}</p>
+            <p className="max-w-56 text-center">
+              {t('monitoring:inspector.empty')}
+            </p>
           </div>
         )}
       </CardContent>

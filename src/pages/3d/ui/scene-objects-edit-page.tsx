@@ -1,30 +1,23 @@
-import { numRound, radToDeg, type SavedSceneInfo } from '@/entities/3d';
-import { useSceneObjectSelectionStore } from '@/features/3d';
-import { useEffect, useMemo, useState } from 'react';
-import type { Vector3Tuple } from '@/shared/types/math';
+import type { SavedSceneInfo } from '@/entities/3d';
+import {
+  useSelectedSceneObjectEditor,
+  useSceneObjectSelectionStore,
+} from '@/features/3d';
+import { useEffect, useState } from 'react';
 import { SceneObjectInspector, SceneObjectsEditCanvas } from '@/widgets/3d';
-import { AXIS_INDEX } from '@/features/3d/model/types';
 
 const SCENE_FILE_URL = '/scenes/1dock.json';
 
-function updateVectorValue(
-  tuple: Vector3Tuple,
-  axis: keyof typeof AXIS_INDEX,
-  value: number,
-) {
-  const nextTuple = [...tuple] as Vector3Tuple;
-  nextTuple[AXIS_INDEX[axis]] = value;
-  return nextTuple;
-}
-
 export function SceneObjectsEditPage() {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
-  const selectedModelId = useSceneObjectSelectionStore(
-    (state) => state.selectedModelId,
-  );
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
+  const { selectedModel, updateSelectedTransform } =
+    useSelectedSceneObjectEditor({
+      sceneInfo,
+      setSceneInfo,
+    });
 
   useEffect(() => {
     let isMounted = true;
@@ -57,52 +50,6 @@ export function SceneObjectsEditPage() {
     };
   }, [clearSelectedModel]);
 
-  useEffect(() => {
-    if (!sceneInfo || !selectedModelId) {
-      return;
-    }
-
-    const isSelectedModelExists = sceneInfo.models.some(
-      (model) => model.id === selectedModelId,
-    );
-
-    if (!isSelectedModelExists) {
-      clearSelectedModel();
-    }
-  }, [clearSelectedModel, sceneInfo, selectedModelId]);
-
-  const selectedModel = useMemo(
-    () =>
-      sceneInfo?.models.find((model) => model.id === selectedModelId) ?? null,
-    [sceneInfo?.models, selectedModelId],
-  );
-
-  const updateSelectedModel = (
-    key: 'position' | 'rotation' | 'scale',
-    axis: keyof typeof AXIS_INDEX,
-    value: number,
-  ) => {
-    setSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
-
-          return {
-            ...model,
-            [key]: updateVectorValue(model[key], axis, value),
-          };
-        }),
-      };
-    });
-  };
-
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full overflow-hidden">
       <div className="min-w-0 flex-1">
@@ -111,15 +58,7 @@ export function SceneObjectsEditPage() {
       <aside className="absolute top-2 right-2 w-60 shrink-0">
         <SceneObjectInspector
           selectedModel={selectedModel}
-          onPositionChange={(axis, value) => {
-            updateSelectedModel('position', axis, numRound(value));
-          }}
-          onRotationChange={(axis, value) => {
-            updateSelectedModel('rotation', axis, numRound(value));
-          }}
-          onScaleChange={(axis, value) => {
-            updateSelectedModel('scale', axis, numRound(value));
-          }}
+          onTransformChange={updateSelectedTransform}
         />
       </aside>
     </div>
