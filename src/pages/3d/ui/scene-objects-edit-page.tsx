@@ -79,7 +79,6 @@ export function SceneObjectsEditPage() {
         <div className="pointer-events-auto">
           <SceneTransformModeToggle
             mode={transformMode}
-            disabled={!selectedModel}
             onModeChange={setTransformMode}
           />
         </div>
