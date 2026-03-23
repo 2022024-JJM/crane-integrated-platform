@@ -1,4 +1,11 @@
-import { LayoutDashboard, Box, List, History, MapPin } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Box,
+  List,
+  History,
+  MapPin,
+  SquarePen,
+} from 'lucide-react';
 import { i18n } from '@/shared/config/i18n';
 import type { NavGroup } from '@/shared/types/navigation';
 
@@ -38,6 +45,11 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
           icon: Box,
         },
         {
+          label: i18n.t('common:nav.threeViewerEdit'),
+          path: `${base}/3d-viewer-edit`,
+          icon: SquarePen,
+        },
+        {
           label: i18n.t('common:nav.craneStatus'),
           path: `${base}/crane-status`,
           icon: List,
@@ -60,6 +72,11 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
           label: i18n.t('common:nav.realTimeMonitoring'),
           path: `${base}/3d-monitoring`,
           icon: Box,
+        },
+        {
+          label: i18n.t('common:nav.threeViewerEdit'),
+          path: `${base}/3d-viewer-edit`,
+          icon: SquarePen,
         },
         {
           label: i18n.t('common:nav.craneStatus'),

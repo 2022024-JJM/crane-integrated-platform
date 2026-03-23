@@ -5,6 +5,7 @@ export interface NavItem {
   path: string
   icon: LucideIcon
   badge?: string | number
+  separatorBefore?: boolean
 }
 
 export interface NavGroup {

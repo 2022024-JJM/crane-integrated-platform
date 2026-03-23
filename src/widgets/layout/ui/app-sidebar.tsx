@@ -30,6 +30,7 @@ export function AppSidebar() {
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
                   <li key={item.path}>
+                    {item.separatorBefore ? <Separator className="my-2" /> : null}
                     <AppNavLink
                       to={item.path}
                       end={item.path === '/'}

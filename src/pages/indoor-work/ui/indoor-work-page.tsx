@@ -47,6 +47,9 @@ export function IndoorWorkPage() {
       {subRoute === '3d-monitoring' && (
         <RealtimeMonitoringView regionId={regionId} />
       )}
+      {subRoute === '3d-viewer-edit' && (
+        <PlaceholderView title={t('common:nav.threeViewerEdit')} />
+      )}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={

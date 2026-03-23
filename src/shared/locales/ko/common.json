@@ -34,10 +34,11 @@
   "nav": {
     "overview": "Overview",
     "dashboard": "대시보드",
-    "regionOverview": "지역 선택",
+    "regionOverview": "지역 개요",
     "outdoorWork": "Outdoor Work",
     "indoorWork": "Indoor Work",
     "realTimeMonitoring": "실시간 3D 모니터링",
+    "threeViewerEdit": "3D 화면 편집",
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력"
   },
@@ -47,12 +48,12 @@
     "status": "상태",
     "load": "하중(t)",
     "windSpeed": "풍속(m/s)",
-    "boomAngle": "붐각도(°)",
+    "boomAngle": "붐각도(도)",
     "hoistHeight": "호이스트(m)",
-    "slewAngle": "선회각도(°)",
+    "slewAngle": "선회각도(도)",
     "operating": "운행",
     "idle": "대기",
-    "maintenance": "점검",
+    "maintenance": "정비",
     "warning": "경고",
     "stopped": "정지"
   },
@@ -64,7 +65,7 @@
     "info": "정보",
     "windWarningExceeded": "풍속 경고: {{value}}m/s 초과",
     "loadWarningReached": "하중 경고: 최대 하중의 {{value}}% 도달",
-    "maintenanceDue": "정기 점검 일정 D-{{days}}",
+    "maintenanceDue": "정기 정비 일정 D-{{days}}",
     "idleModeCompleted": "대기 모드 전환 완료",
     "emergencyStopTriggered": "비상 정지: 안전 장치 작동",
     "workAreaChanged": "작업 구역 변경 완료",
@@ -74,11 +75,11 @@
   "regions": {
     "dock1": {
       "title": "1 도크",
-      "subtitle": "타워·골리앗 크레인 8기"
+      "subtitle": "타워·갠트리 크레인 8기"
     },
     "dock2": {
       "title": "2 도크",
-      "subtitle": "타워·골리앗 크레인 6기"
+      "subtitle": "타워·갠트리 크레인 6기"
     },
     "dockin": {
       "title": "내업",
