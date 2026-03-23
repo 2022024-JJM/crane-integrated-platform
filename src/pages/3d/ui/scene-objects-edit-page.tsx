@@ -112,7 +112,7 @@ export function SceneObjectsEditPage() {
       <div className="min-w-0 flex-1">
         <SceneObjectsEditCanvas sceneInfo={sceneInfo} />
       </div>
-      <aside className="bg-background/95 w-[340px] shrink-0 border-l p-4 backdrop-blur-sm">
+      <aside className="absolute top-2 right-2 w-60 shrink-0">
         <SceneObjectInspector
           selectedModel={selectedModel}
           onPositionChange={(axis, value) => {

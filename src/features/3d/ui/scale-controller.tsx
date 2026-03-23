@@ -10,7 +10,7 @@ export function ScaleController({
   onChange: (axis: 'x' | 'y' | 'z', v: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-1">
       {(['x', 'y', 'z'] as const).map((axis) => (
         <div key={axis} className="flex items-center gap-2">
           <span className="w-5 uppercase">{axis}</span>
