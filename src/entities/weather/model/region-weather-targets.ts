@@ -1,5 +1,16 @@
 import { getRegionTitleKey } from '@/entities/region';
-import type { WeatherLocationTarget } from './types';
+import type { WeatherLocationTarget, WeatherSiteId } from './types';
+
+const SITE_WEATHER_TARGETS: Record<WeatherSiteId, WeatherLocationTarget> = {
+  geoje: {
+    latitude: 34.8938,
+    longitude: 128.6925,
+    labelKey: 'header.siteWeather',
+    source: 'site',
+  },
+};
+
+const DEFAULT_SITE_WEATHER_TARGET_ID: WeatherSiteId = 'geoje';
 
 const REGION_WEATHER_TARGETS: Record<
   string,
@@ -36,4 +47,18 @@ export function getRegionWeatherTarget(
     ...target,
     source: 'region',
   };
+}
+
+export function getSiteWeatherTarget(): WeatherLocationTarget {
+  return getSiteWeatherTargetById(DEFAULT_SITE_WEATHER_TARGET_ID);
+}
+
+export function getSiteWeatherTargetById(
+  siteId: WeatherSiteId,
+): WeatherLocationTarget {
+  return SITE_WEATHER_TARGETS[siteId];
+}
+
+export function getDefaultSiteWeatherTargetId(): WeatherSiteId {
+  return DEFAULT_SITE_WEATHER_TARGET_ID;
 }

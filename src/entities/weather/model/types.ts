@@ -41,7 +41,9 @@ export type WeatherIconKey =
   | 'cloud-fog'
   | 'cloud-lightning';
 
-export type WeatherLocationSource = 'current-location' | 'region';
+export type WeatherLocationSource = 'site' | 'region';
+
+export type WeatherSiteId = 'geoje';
 
 export interface WeatherSnapshot {
   temperature: number;

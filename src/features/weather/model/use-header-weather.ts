@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   buildOpenMeteoCurrentWeatherUrl,
-  getRegionWeatherTarget,
+  getSiteWeatherTarget,
   parseOpenMeteoCurrentWeatherResponse,
   type WeatherFetchState,
   type WeatherLocationTarget,
   type WeatherSnapshot,
 } from '@/entities/weather';
-
-const CURRENT_LOCATION_LABEL_KEY = 'header.currentLocationWeather';
 
 type HeaderWeatherState = {
   status: WeatherFetchState;
@@ -19,12 +17,7 @@ type HeaderWeatherState = {
 
 type HeaderWeatherRequest =
   | {
-      type: 'current-location';
-      key: string;
-      labelKey: string;
-    }
-  | {
-      type: 'region';
+      type: 'site';
       key: string;
       target: WeatherLocationTarget;
     }
@@ -37,12 +30,6 @@ type HeaderWeatherResult = {
   requestKey: string;
   status: Exclude<WeatherFetchState, 'loading'>;
   snapshot: WeatherSnapshot | null;
-};
-
-const CURRENT_LOCATION_WEATHER_REQUEST: HeaderWeatherRequest = {
-  type: 'current-location',
-  key: 'current-location',
-  labelKey: CURRENT_LOCATION_LABEL_KEY,
 };
 
 const UNAVAILABLE_WEATHER_STATE: HeaderWeatherState = {
@@ -71,32 +58,7 @@ export function useHeaderWeather(): HeaderWeatherState {
     const abortController = new AbortController();
     let isDisposed = false;
 
-    if (request.type === 'region') {
-      void loadWeather(request.target, abortController.signal).then(
-        (snapshot) => {
-          if (isDisposed || abortController.signal.aborted) {
-            return;
-          }
-
-          setResult({
-            requestKey: request.key,
-            status: snapshot ? 'success' : 'unavailable',
-            snapshot,
-          });
-        },
-      );
-
-      return () => {
-        isDisposed = true;
-        abortController.abort();
-      };
-    }
-
-    if (
-      typeof window === 'undefined' ||
-      !window.isSecureContext ||
-      !('geolocation' in navigator)
-    ) {
+    void loadWeather(request.target, abortController.signal).then((snapshot) => {
       queueMicrotask(() => {
         if (isDisposed || abortController.signal.aborted) {
           return;
@@ -104,58 +66,11 @@ export function useHeaderWeather(): HeaderWeatherState {
 
         setResult({
           requestKey: request.key,
-          status: 'unavailable',
-          snapshot: null,
+          status: snapshot ? 'success' : 'unavailable',
+          snapshot,
         });
       });
-
-      return undefined;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (isDisposed || abortController.signal.aborted) {
-          return;
-        }
-
-        const currentLocationTarget: WeatherLocationTarget = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          labelKey: CURRENT_LOCATION_LABEL_KEY,
-          source: 'current-location',
-        };
-
-        void loadWeather(currentLocationTarget, abortController.signal).then(
-          (snapshot) => {
-            if (isDisposed || abortController.signal.aborted) {
-              return;
-            }
-
-            setResult({
-              requestKey: request.key,
-              status: snapshot ? 'success' : 'unavailable',
-              snapshot,
-            });
-          },
-        );
-      },
-      () => {
-        if (isDisposed || abortController.signal.aborted) {
-          return;
-        }
-
-        setResult({
-          requestKey: request.key,
-          status: 'unavailable',
-          snapshot: null,
-        });
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 5000,
-        maximumAge: 300000,
-      },
-    );
+    });
 
     return () => {
       isDisposed = true;
@@ -171,8 +86,7 @@ export function useHeaderWeather(): HeaderWeatherState {
     return {
       status: 'loading',
       snapshot: null,
-      locationLabelKey:
-        request.type === 'region' ? request.target.labelKey : request.labelKey,
+      locationLabelKey: request.target.labelKey,
     };
   }
 
@@ -180,8 +94,7 @@ export function useHeaderWeather(): HeaderWeatherState {
     return {
       status: 'success',
       snapshot: result.snapshot,
-      locationLabelKey:
-        request.type === 'region' ? request.target.labelKey : request.labelKey,
+      locationLabelKey: request.target.labelKey,
     };
   }
 
@@ -220,40 +133,13 @@ async function loadWeather(
   }
 }
 
-function getRegionIdFromPathname(pathname: string) {
-  const matchedPath = pathname.match(
-    /^\/(?:outdoor-work|indoor-work)\/([^/]+)(?:\/.*)?$/,
-  );
-
-  if (!matchedPath) {
-    return null;
-  }
-
-  return decodeURIComponent(matchedPath[1]);
-}
-
 function resolveHeaderWeatherRequest(pathname: string): HeaderWeatherRequest {
-  const regionId = getRegionIdFromPathname(pathname);
-
-  if (regionId) {
-    const target = getRegionWeatherTarget(regionId);
-
-    if (!target) {
-      return {
-        type: 'unavailable',
-        key: `unavailable:${pathname}`,
-      };
-    }
-
+  if (isSiteWeatherSupportedPath(pathname)) {
     return {
-      type: 'region',
-      key: `region:${regionId}`,
-      target,
+      type: 'site',
+      key: 'site:default',
+      target: getSiteWeatherTarget(),
     };
-  }
-
-  if (pathname === '/' || pathname === '/region-overview') {
-    return CURRENT_LOCATION_WEATHER_REQUEST;
   }
 
   return {
@@ -263,3 +149,11 @@ function resolveHeaderWeatherRequest(pathname: string): HeaderWeatherRequest {
 }
 
 export type { HeaderWeatherState };
+
+function isSiteWeatherSupportedPath(pathname: string) {
+  return (
+    pathname === '/' ||
+    pathname === '/region-overview' ||
+    /^\/(?:outdoor-work|indoor-work)\/[^/]+(?:\/.*)?$/.test(pathname)
+  );
+}

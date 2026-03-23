@@ -4,6 +4,7 @@ export type {
   WeatherIconKey,
   WeatherLocationSource,
   WeatherLocationTarget,
+  WeatherSiteId,
   WeatherSnapshot,
 } from './model/types';
 export {
@@ -11,5 +12,10 @@ export {
   parseOpenMeteoCurrentWeatherResponse,
 } from './lib/open-meteo';
 export { getWeatherPresentation } from './lib/weather-presentation';
-export { getRegionWeatherTarget } from './model/region-weather-targets';
+export {
+  getDefaultSiteWeatherTargetId,
+  getRegionWeatherTarget,
+  getSiteWeatherTarget,
+  getSiteWeatherTargetById,
+} from './model/region-weather-targets';
 export { WeatherIcon } from './ui/weather-icon';
