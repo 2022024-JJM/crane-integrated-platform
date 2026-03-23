@@ -140,6 +140,12 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `printWidth: 80`
 - `prettier-plugin-tailwindcss` 로 Tailwind class 정렬을 적용한다.
 
+### Commit Message
+
+- 최근 커밋 기준 메시지 컨벤션은 `type : 한글 설명` 형식을 따른다.
+- `type` 예시는 `feat`, `fix`, `refact` 이며, 콜론 앞뒤 공백까지 동일하게 맞춘다.
+- commit message 본문이 꼭 필요하지 않다면 subject 한 줄만 사용한다.
+
 ### UI / Styling
 
 - shadcn/ui 컴포넌트는 `src/shared/ui/atoms` 또는 `src/shared/ui/molecules` 로 정리한다.

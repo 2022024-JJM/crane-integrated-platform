@@ -1,14 +1,8 @@
-import { OrbitControls } from '@react-three/drei';
-import {
-  GltfModel,
-  numRound,
-  radToDeg,
-  type SavedSceneInfo,
-} from '@/entities/3d';
-import { Canvas } from '@react-three/fiber';
+import { numRound, radToDeg, type SavedSceneInfo } from '@/entities/3d';
+import { useSceneObjectSelectionStore } from '@/features/3d';
 import { useEffect, useMemo, useState } from 'react';
 import type { Vector3Tuple } from '@/shared/types/math';
-import { SceneObjectInspector } from '@/widgets/3d';
+import { SceneObjectInspector, SceneObjectsEditCanvas } from '@/widgets/3d';
 
 const SCENE_FILE_URL = '/scenes/1dock.json';
 const AXIS_INDEX = {
@@ -29,7 +23,12 @@ function updateVectorValue(
 
 export function SceneObjectsEditPage() {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const selectedModelId = useSceneObjectSelectionStore(
+    (state) => state.selectedModelId,
+  );
+  const clearSelectedModel = useSceneObjectSelectionStore(
+    (state) => state.clearSelectedModel,
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -55,6 +54,26 @@ export function SceneObjectsEditPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      clearSelectedModel();
+    };
+  }, [clearSelectedModel]);
+
+  useEffect(() => {
+    if (!sceneInfo || !selectedModelId) {
+      return;
+    }
+
+    const isSelectedModelExists = sceneInfo.models.some(
+      (model) => model.id === selectedModelId,
+    );
+
+    if (!isSelectedModelExists) {
+      clearSelectedModel();
+    }
+  }, [clearSelectedModel, sceneInfo, selectedModelId]);
 
   const selectedModel = useMemo(
     () =>
@@ -91,40 +110,7 @@ export function SceneObjectsEditPage() {
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full overflow-hidden">
       <div className="min-w-0 flex-1">
-        <Canvas
-          camera={{ position: [0, 50, 50] }}
-          onPointerMissed={() => {
-            setSelectedModelId(null);
-          }}
-        >
-          <ambientLight intensity={2} />
-          <directionalLight
-            position={[0, 50, 10]}
-            color={'white'}
-            intensity={5}
-          />
-          <OrbitControls enableDamping={false} />
-          {sceneInfo?.map ? (
-            <GltfModel
-              id={sceneInfo.map.id}
-              onSelect={() => setSelectedModelId(null)}
-              url={sceneInfo.map.path}
-            />
-          ) : null}
-          {sceneInfo?.models.map((model) => (
-            <GltfModel
-              key={model.id}
-              id={model.id}
-              url={model.path}
-              equipName={model.equipName}
-              position={model.position}
-              rotation={model.rotation}
-              scale={model.scale}
-              onSelect={setSelectedModelId}
-              isSelected={model.id === selectedModelId}
-            />
-          ))}
-        </Canvas>
+        <SceneObjectsEditCanvas sceneInfo={sceneInfo} />
       </div>
       <aside className="bg-background/95 w-[340px] shrink-0 border-l p-4 backdrop-blur-sm">
         <SceneObjectInspector
