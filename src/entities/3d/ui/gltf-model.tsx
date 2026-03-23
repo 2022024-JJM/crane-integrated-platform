@@ -1,6 +1,6 @@
 import { Html, useGLTF } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { Box3, Box3Helper, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@/shared/types/math';
@@ -15,6 +15,7 @@ interface GltfModelProps {
   scale?: Vector3Tuple;
   onSelect?: (id: string) => void;
   isSelected?: boolean;
+  onObjectReady?: (id: string, object: Object3D | null) => void;
 }
 
 export function GltfModel({
@@ -26,6 +27,7 @@ export function GltfModel({
   scale = [1, 1, 1],
   onSelect,
   isSelected = false,
+  onObjectReady,
 }: GltfModelProps) {
   const { scene } = useGLTF(url);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -48,6 +50,14 @@ export function GltfModel({
     onSelect?.(id);
   };
 
+  const handleModelRef = useCallback(
+    (object: Object3D | null) => {
+      modelRef.current = object;
+      onObjectReady?.(id, object);
+    },
+    [id, onObjectReady],
+  );
+
   const offsetY = useMemo(() => {
     const box = new Box3().setFromObject(clone);
     const size = new Vector3();
@@ -67,7 +77,7 @@ export function GltfModel({
     <>
       {/* 3D Mesh */}
       <primitive
-        ref={modelRef}
+        ref={handleModelRef}
         key={id}
         name={id}
         object={clone}

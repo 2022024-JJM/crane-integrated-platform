@@ -14,6 +14,10 @@ function updateVectorValue(tuple: Vector3Tuple, axis: AxisKey, value: number) {
   return nextTuple;
 }
 
+function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
+  return tuple.map((value) => numRound(value)) as Vector3Tuple;
+}
+
 interface UseSelectedSceneObjectEditorParams {
   sceneInfo: SavedSceneInfo | null;
   setSceneInfo: Dispatch<SetStateAction<SavedSceneInfo | null>>;
@@ -25,6 +29,10 @@ interface UseSelectedSceneObjectEditorResult {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+  ) => void;
+  updateSelectedTransformVector: (
+    field: SceneTransformField,
+    value: Vector3Tuple,
   ) => void;
 }
 
@@ -85,8 +93,34 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedTransformVector = (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+  ) => {
+    setSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) {
+            return model;
+          }
+
+          return {
+            ...model,
+            [field]: roundVectorValue(value),
+          };
+        }),
+      };
+    });
+  };
+
   return {
     selectedModel,
     updateSelectedTransform,
+    updateSelectedTransformVector,
   };
 }

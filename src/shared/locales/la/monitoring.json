@@ -8,5 +8,13 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale"
+  },
+  "transform": {
+    "title": "Modus transformationis",
+    "mode": {
+      "translate": "Translatio",
+      "rotate": "Rotatio",
+      "scale": "Scala"
+    }
   }
 }

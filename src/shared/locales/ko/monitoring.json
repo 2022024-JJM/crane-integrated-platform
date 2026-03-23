@@ -8,5 +8,13 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale"
+  },
+  "transform": {
+    "title": "변환 모드",
+    "mode": {
+      "translate": "이동",
+      "rotate": "회전",
+      "scale": "스케일"
+    }
   }
 }
