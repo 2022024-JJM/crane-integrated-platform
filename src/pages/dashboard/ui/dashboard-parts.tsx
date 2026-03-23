@@ -1,0 +1,378 @@
+import type { ReactNode } from 'react';
+
+import {
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  RadioTower,
+  ShieldAlert,
+  ShieldCheck,
+} from 'lucide-react';
+
+import {
+  getAlarmMessageTranslation,
+  type Alarm,
+  type AlarmSeverity,
+} from '@/entities/alarm';
+import { cn } from '@/shared/lib/utils';
+import { AppLink } from '@/shared/ui/atoms/app-link';
+import { Badge } from '@/shared/ui/atoms/badge';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/ui/molecules/card';
+import {
+  type DashboardMetricCard,
+  type DashboardRiskCraneDatum,
+} from '../model';
+import {
+  formatMetric,
+  formatTooltipValue,
+  type DashboardStatItem,
+  type DashboardTooltipPayloadEntry,
+  type DashboardTranslate,
+} from './dashboard-helpers';
+import { DashboardMetricSkeleton } from './dashboard-skeletons';
+
+const severityBadgeClassName: Record<AlarmSeverity, string> = {
+  critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
+  warning:
+    'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+  info: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
+};
+
+const statusBadgeClassName = {
+  operating:
+    'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+  idle: 'border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-300',
+  maintenance:
+    'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300',
+  warning:
+    'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+  stopped: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
+} as const;
+
+const metricIconMap = {
+  regionCount: Building2,
+  craneCount: RadioTower,
+  operatingRate: ShieldCheck,
+  urgentRegion: ShieldAlert,
+} as const;
+
+const tooltipLabelKey = {
+  operationalRate: 'dashboard:legend.operatingRate',
+  alarmCount: 'dashboard:legend.alarmCount',
+  warningCount: 'dashboard:legend.warningCount',
+  score: 'dashboard:legend.riskScore',
+} as const;
+
+export function MetricCard({
+  metric,
+  translate,
+  locale,
+  isLoading = false,
+}: {
+  metric: DashboardMetricCard;
+  translate: DashboardTranslate;
+  locale: string;
+  isLoading?: boolean;
+}) {
+  const Icon = metricIconMap[metric.id];
+  const content = (
+    <Card
+      size="sm"
+      className={cn(
+        'border-border/70 bg-card/80 h-full min-h-[132px] justify-between border shadow-sm transition',
+        metric.tone === 'warning' &&
+          'border-amber-500/35 bg-amber-500/5 shadow-amber-500/5',
+      )}
+    >
+      <CardHeader className="gap-2 pb-1">
+        <div className="space-y-1">
+          <div className="text-primary flex items-center gap-2">
+            <Icon className="size-5 shrink-0" />
+            <CardTitle className="text-[15px] leading-tight md:text-sm">
+              {translate(metric.titleKey)}
+            </CardTitle>
+          </div>
+          <CardDescription className="text-[13px] leading-4 md:text-xs">
+            {translate(metric.descriptionKey)}
+          </CardDescription>
+        </div>
+        {metric.href ? (
+          <CardAction>
+            <ArrowRight className="text-primary size-3.5" />
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="mt-auto space-y-1.5 pt-0">
+        {isLoading ? (
+          <DashboardMetricSkeleton />
+        ) : (
+          <>
+            <p
+              className={cn(
+                'ml-1 text-[1.8rem] leading-none font-semibold tracking-tight',
+                metric.tone === 'success' && 'text-emerald-500',
+                metric.tone === 'warning' && 'text-amber-500',
+              )}
+            >
+              {formatMetric(metric, translate, locale)}
+            </p>
+            <p className="text-muted-foreground text-xs leading-4">
+              {metric.metaKey
+                ? translate(metric.metaKey, metric.metaValues)
+                : '\u00A0'}
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  if (!metric.href) {
+    return content;
+  }
+
+  return (
+    <AppLink to={metric.href} className="block h-full">
+      {content}
+    </AppLink>
+  );
+}
+
+export function ChartArea({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn('h-[240px] w-full', className)}>{children}</div>;
+}
+
+export function ChartTooltip({
+  active,
+  payload,
+  label,
+  translate,
+  labelFormatter,
+  locale,
+}: {
+  active?: boolean;
+  payload?: DashboardTooltipPayloadEntry[];
+  label?: string;
+  translate: DashboardTranslate;
+  labelFormatter: (label: string) => string;
+  locale: string;
+}) {
+  if (!active || !payload || payload.length === 0 || !label) {
+    return null;
+  }
+
+  return (
+    <div className="border-border bg-popover/95 min-w-[160px] rounded-xl border p-3 text-xs shadow-lg backdrop-blur-sm">
+      <p className="text-popover-foreground font-medium">
+        {labelFormatter(label)}
+      </p>
+      <div className="mt-2 space-y-1.5">
+        {payload.map((entry) => {
+          const dataKey =
+            typeof entry.dataKey === 'string' ? entry.dataKey : entry.name;
+          const labelKey =
+            dataKey && dataKey in tooltipLabelKey
+              ? tooltipLabelKey[dataKey as keyof typeof tooltipLabelKey]
+              : null;
+
+          return (
+            <div
+              key={`${label}-${dataKey}`}
+              className="text-muted-foreground flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: entry.color ?? 'var(--chart-1)' }}
+                />
+                <span>{labelKey ? translate(labelKey) : dataKey}</span>
+              </div>
+              <span className="text-foreground font-medium">
+                {formatTooltipValue(entry.value, dataKey, locale)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function StatsRow({
+  items,
+  columnsClassName,
+}: {
+  items: DashboardStatItem[];
+  columnsClassName?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'grid grid-cols-2 gap-4 text-sm md:grid-cols-2',
+        columnsClassName,
+      )}
+    >
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <p className="text-muted-foreground text-xs">{item.label}</p>
+          <p className={cn('text-xl font-semibold', item.tone)}>{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function LegendPill({
+  colorClassName,
+  label,
+}: {
+  colorClassName: string;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={cn('size-2 rounded-full', colorClassName)} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+export function BarSegment({
+  value,
+  total,
+  colorClassName,
+}: {
+  value: number;
+  total: number;
+  colorClassName: string;
+}) {
+  if (value <= 0 || total <= 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className={colorClassName}
+      style={{ width: `${(value / total) * 100}%` }}
+    />
+  );
+}
+
+export function StatusCount({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: string;
+}) {
+  return (
+    <div className="bg-muted/50 rounded-xl px-2.5 py-2">
+      <p className="text-muted-foreground text-[11px] tracking-[0.18em] uppercase">
+        {label}
+      </p>
+      <p className={cn('mt-1 text-base font-semibold', tone)}>{value}</p>
+    </div>
+  );
+}
+
+export function RiskCraneRow({
+  crane,
+  translate,
+  locale,
+}: {
+  crane: DashboardRiskCraneDatum;
+  translate: DashboardTranslate;
+  locale: string;
+}) {
+  return (
+    <div className="border-border/70 bg-card/70 rounded-2xl border p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-medium">{crane.craneName}</p>
+          <p className="text-muted-foreground text-xs">
+            {translate(crane.regionTitleKey)}
+          </p>
+        </div>
+        <Badge className={cn('border', statusBadgeClassName[crane.status])}>
+          {translate(`common:craneStatus.${crane.status}`)}
+        </Badge>
+      </div>
+      <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p>{translate('dashboard:charts.riskCranes.riskScore')}</p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            {new Intl.NumberFormat(locale).format(crane.score)}
+          </p>
+        </div>
+        <div>
+          <p>{translate('dashboard:charts.riskCranes.loadRatio')}</p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            {crane.loadRatio}%
+          </p>
+        </div>
+        <div>
+          <p>{translate('dashboard:charts.riskCranes.windSpeed')}</p>
+          <p className="text-foreground mt-1 text-sm font-semibold">
+            {crane.windSpeed}m/s
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function RecentAlarmRow({
+  alarm,
+  translate,
+  formatTimestamp,
+}: {
+  alarm: Alarm;
+  translate: DashboardTranslate;
+  formatTimestamp: (value: string) => string;
+}) {
+  const message = getAlarmMessageTranslation(alarm);
+
+  return (
+    <div className="border-border/70 bg-card/70 rounded-2xl border p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle
+              className={cn(
+                'size-4',
+                alarm.severity === 'critical' && 'text-red-500',
+                alarm.severity === 'warning' && 'text-amber-500',
+                alarm.severity === 'info' && 'text-blue-500',
+              )}
+            />
+            <p className="font-medium">{alarm.craneName}</p>
+          </div>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {translate(message.key, message.values)}
+          </p>
+        </div>
+        <Badge className={cn('border', severityBadgeClassName[alarm.severity])}>
+          {translate(`common:alarms.${alarm.severity}`)}
+        </Badge>
+      </div>
+      <div className="text-muted-foreground mt-3 text-xs">
+        {formatTimestamp(alarm.timestamp)}
+      </div>
+    </div>
+  );
+}

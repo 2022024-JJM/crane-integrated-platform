@@ -4,6 +4,15 @@ import { cn } from '@/shared/lib/utils';
 import { Skeleton } from '@/shared/ui/atoms/skeleton';
 import { Separator } from '@/shared/ui/atoms/separator';
 
+export function DashboardMetricSkeleton() {
+  return (
+    <div className="ml-1 space-y-2 py-1">
+      <Skeleton className="h-8 w-20 rounded-xl" />
+      <Skeleton className="h-3 w-28" />
+    </div>
+  );
+}
+
 export function DashboardChartSkeleton({
   variant,
   statsCount,
@@ -144,7 +153,10 @@ function LineChartGhost() {
   return (
     <div className="flex h-full w-full items-end justify-between gap-3">
       {['35%', '54%', '44%', '62%', '58%', '74%'].map((height, index) => (
-        <div key={index} className="flex h-full flex-1 items-end justify-center">
+        <div
+          key={index}
+          className="flex h-full flex-1 items-end justify-center"
+        >
           <Skeleton
             className="w-full max-w-10 rounded-full"
             style={{ height }}
@@ -159,7 +171,10 @@ function VerticalBarsGhost() {
   return (
     <div className="flex h-full w-full items-end justify-between gap-3">
       {['40%', '52%', '66%', '45%', '71%', '58%'].map((height, index) => (
-        <div key={index} className="flex h-full flex-1 items-end justify-center">
+        <div
+          key={index}
+          className="flex h-full flex-1 items-end justify-center"
+        >
           <Skeleton
             className="w-full max-w-9 rounded-t-xl rounded-b-sm"
             style={{ height }}
@@ -177,7 +192,7 @@ function HorizontalBarsGhost() {
         <div key={index} className="flex items-center gap-3">
           <Skeleton className="h-3 w-12" />
           <Skeleton
-            className="h-7 rounded-r-xl rounded-l-sm"
+            className="h-7 rounded-l-sm rounded-r-xl"
             style={{ width }}
           />
         </div>
