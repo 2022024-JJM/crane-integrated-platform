@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
+import { SceneObjectsEditPage } from '@/pages/3d/ui/scene-objects-edit-page';
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -47,9 +48,7 @@ export function OutdoorWorkPage() {
       {subRoute === '3d-monitoring' && (
         <RealtimeMonitoringView regionId={regionId} />
       )}
-      {subRoute === '3d-viewer-edit' && (
-        <PlaceholderView title={t('common:nav.threeViewerEdit')} />
-      )}
+      {subRoute === '3d-viewer-edit' && <SceneObjectsEditPage />}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={
