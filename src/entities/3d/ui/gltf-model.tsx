@@ -1,9 +1,10 @@
 import { Html, useGLTF } from '@react-three/drei';
-import { useEffect, useMemo, useState } from 'react';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useMemo, useRef } from 'react';
+import { Box3, Box3Helper, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
-import { degToRad } from '../lib/math-utils';
-import { Box3, Vector3 } from 'three';
 import type { Vector3Tuple } from '@/shared/types/math';
+import { degToRad } from '../lib/math-utils';
 
 interface GltfModelProps {
   id: string;
@@ -12,6 +13,8 @@ interface GltfModelProps {
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
+  onSelect?: (id: string) => void;
+  isSelected?: boolean;
 }
 
 export function GltfModel({
@@ -21,30 +24,59 @@ export function GltfModel({
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
+  onSelect,
+  isSelected = false,
 }: GltfModelProps) {
   const { scene } = useGLTF(url);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-  const [offsetY, setOffsetY] = useState<number>(0);
+  const modelRef = useRef<Object3D | null>(null);
+  const selectionBox = useMemo(() => new Box3(), []);
+  const selectionHelper = useMemo(() => {
+    const helper = new Box3Helper(selectionBox, '#ffff00');
+    const material = Array.isArray(helper.material)
+      ? helper.material[0]
+      : helper.material;
 
-  useEffect(() => {
+    material.depthTest = false;
+    helper.renderOrder = 1;
+
+    return helper;
+  }, [selectionBox]);
+
+  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    onSelect?.(id);
+  };
+
+  const offsetY = useMemo(() => {
     const box = new Box3().setFromObject(clone);
     const size = new Vector3();
     box.getSize(size);
+    return size.y + 0.2;
+  }, [clone]);
 
-    setOffsetY(size.y + 0.2);
-  }, []);
+  useFrame(() => {
+    if (!isSelected || !modelRef.current) {
+      return;
+    }
+
+    selectionBox.setFromObject(modelRef.current);
+  });
 
   return (
     <>
       {/* 3D Mesh */}
       <primitive
+        ref={modelRef}
         key={id}
         name={id}
         object={clone}
         position={position}
         rotation={rotation.map((deg) => degToRad(deg))}
         scale={scale}
+        onClick={handleSelect}
       />
+      {isSelected ? <primitive object={selectionHelper} /> : null}
 
       {/* 2D Label */}
       <Html
@@ -55,7 +87,16 @@ export function GltfModel({
         zIndexRange={[5, 0]}
         position={[position[0], position[1] + offsetY, position[2]]}
       >
-        <div className="cursor-pointer rounded bg-black/60 px-1 py-0 font-mono text-lg whitespace-nowrap text-white">
+        <div
+          className="cursor-pointer rounded bg-black/60 px-1 py-0 font-mono text-lg whitespace-nowrap text-white"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect?.(id);
+          }}
+        >
           {equipName}
         </div>
       </Html>

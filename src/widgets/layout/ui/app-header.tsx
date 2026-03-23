@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
 import { AppLink } from '@/shared/ui/atoms/app-link';
-import { Button } from '@/shared/ui/atoms/button';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
 import { HeaderStatusStrip } from './header-status-strip';
 

@@ -42,6 +42,14 @@
     "craneStatus": "Status Gruium",
     "workHistory": "Historia Operum"
   },
+  "inspector": {
+    "title": "Inspector",
+    "object": "Objectum",
+    "empty": "Objectum in scaena preme ut proprietates eius videas.",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale"
+  },
   "craneStatus": {
     "title": "Status Gruium Temporis Veri",
     "name": "Grus",

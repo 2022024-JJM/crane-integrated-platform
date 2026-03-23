@@ -42,6 +42,14 @@
     "craneStatus": "Crane Status",
     "workHistory": "Work History"
   },
+  "inspector": {
+    "title": "Inspector",
+    "object": "Object",
+    "empty": "Click an object in the scene to inspect its properties.",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale"
+  },
   "craneStatus": {
     "title": "Real-time Crane Status",
     "name": "Crane",
