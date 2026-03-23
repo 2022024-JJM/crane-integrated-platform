@@ -97,6 +97,18 @@ export function useHeaderWeather(): HeaderWeatherState {
       !window.isSecureContext ||
       !('geolocation' in navigator)
     ) {
+      queueMicrotask(() => {
+        if (isDisposed || abortController.signal.aborted) {
+          return;
+        }
+
+        setResult({
+          requestKey: request.key,
+          status: 'unavailable',
+          snapshot: null,
+        });
+      });
+
       return undefined;
     }
 
