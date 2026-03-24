@@ -7,6 +7,7 @@ import {
   type SceneModelCatalogItem,
 } from '@/entities/3d';
 import {
+  SceneHistoryControls,
   SceneTransformModeToggle,
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
@@ -18,6 +19,7 @@ import {
   createSceneSnapshot,
   sanitizeSceneInfo,
 } from '../model/scene-snapshot';
+import { useSceneHistory } from '../model/use-scene-history';
 import { useSceneUnsavedChangesGuard } from '../model/use-scene-unsaved-changes-guard';
 import {
   SceneModelPalette,
@@ -69,7 +71,6 @@ export function SceneObjectsEditPage({
   regionId,
 }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
-  const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
     null,
@@ -79,6 +80,17 @@ export function SceneObjectsEditPage({
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
+  const transformHistoryBaseRef = useRef<SavedSceneInfo | null>(null);
+  const {
+    sceneInfo,
+    replaceScene,
+    updateScene,
+    commitHistoryFrom,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+  } = useSceneHistory();
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
@@ -101,7 +113,7 @@ export function SceneObjectsEditPage({
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
-    setSceneInfo,
+    updateSceneInfo: updateScene,
   });
   const currentSceneSnapshot = useMemo(
     () => createSceneSnapshot(sceneInfo),
@@ -123,7 +135,7 @@ export function SceneObjectsEditPage({
           return;
         }
 
-        setSceneInfo(data);
+        replaceScene(data);
         setSavedSceneSnapshot(createSceneSnapshot(data));
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
@@ -133,14 +145,14 @@ export function SceneObjectsEditPage({
     clearSelectedModel();
     resetTransformMode();
     setDraggingCatalogItem(null);
-    setSceneInfo(null);
+    replaceScene(null);
     setSavedSceneSnapshot(null);
     void loadScene();
 
     return () => {
       isMounted = false;
     };
-  }, [clearSelectedModel, regionId, resetTransformMode]);
+  }, [clearSelectedModel, regionId, replaceScene, resetTransformMode]);
 
   useEffect(() => {
     return () => {
@@ -159,10 +171,6 @@ export function SceneObjectsEditPage({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Delete' || !selectedModelId) {
-        return;
-      }
-
       if (isEditableTarget(event.target)) {
         return;
       }
@@ -180,6 +188,32 @@ export function SceneObjectsEditPage({
         return;
       }
 
+      const isUndoShortcut =
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === 'z';
+      const isRedoShortcut =
+        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') ||
+        ((event.ctrlKey || event.metaKey) &&
+          event.shiftKey &&
+          event.key.toLowerCase() === 'z');
+
+      if (isUndoShortcut) {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      if (isRedoShortcut) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if (event.key !== 'Delete' || !selectedModelId) {
+        return;
+      }
+
       event.preventDefault();
       removeSelectedModel();
     };
@@ -188,7 +222,7 @@ export function SceneObjectsEditPage({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [removeSelectedModel, selectedModelId]);
+  }, [redo, removeSelectedModel, selectedModelId, undo]);
 
   const saveCurrentScene = useCallback(async () => {
     if (!sceneInfo || isSaving) {
@@ -204,7 +238,7 @@ export function SceneObjectsEditPage({
         sanitizedSceneInfo,
       );
 
-      setSceneInfo(savedSceneInfo);
+      updateScene(savedSceneInfo, { recordHistory: false });
       setSavedSceneSnapshot(createSceneSnapshot(savedSceneInfo));
       toast.success('Scene saved.');
       return true;
@@ -215,7 +249,7 @@ export function SceneObjectsEditPage({
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, regionId, sceneInfo]);
+  }, [isSaving, regionId, sceneInfo, updateScene]);
 
   useSceneUnsavedChangesGuard({
     isDirty,
@@ -232,7 +266,7 @@ export function SceneObjectsEditPage({
       position,
     });
 
-    setSceneInfo((prev) => {
+    updateScene((prev) => {
       if (!prev) {
         return prev;
       }
@@ -289,14 +323,33 @@ export function SceneObjectsEditPage({
           sceneInfo={sceneInfo}
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
-          onTransformVectorChange={updateSelectedTransformVector}
+          onTransformVectorChange={(field, value) => {
+            updateSelectedTransformVector(field, value, {
+              recordHistory: false,
+            });
+          }}
           onAddModel={handleAddModel}
+          onTransformInteractionStart={() => {
+            transformHistoryBaseRef.current = sceneInfo;
+          }}
+          onTransformInteractionEnd={() => {
+            commitHistoryFrom(transformHistoryBaseRef.current);
+            transformHistoryBaseRef.current = null;
+          }}
         />
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
           <div className="pointer-events-auto">
             <SceneTransformModeToggle
               mode={transformMode}
               onModeChange={setTransformMode}
+              leadingContent={
+                <SceneHistoryControls
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  onUndo={undo}
+                  onRedo={redo}
+                />
+              }
             />
           </div>
         </div>

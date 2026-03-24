@@ -3,7 +3,7 @@ import {
   type SavedModelInfo,
   type SavedSceneInfo,
 } from '@/entities/3d';
-import { useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
 import { AXIS_INDEX, type AxisKey, type SceneTransformField } from './types';
@@ -20,7 +20,12 @@ function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
 
 interface UseSelectedSceneObjectEditorParams {
   sceneInfo: SavedSceneInfo | null;
-  setSceneInfo: Dispatch<SetStateAction<SavedSceneInfo | null>>;
+  updateSceneInfo: (
+    updater: SetStateAction<SavedSceneInfo | null>,
+    options?: {
+      recordHistory?: boolean;
+    },
+  ) => void;
 }
 
 interface UseSelectedSceneObjectEditorResult {
@@ -34,13 +39,16 @@ interface UseSelectedSceneObjectEditorResult {
   updateSelectedTransformVector: (
     field: SceneTransformField,
     value: Vector3Tuple,
+    options?: {
+      recordHistory?: boolean;
+    },
   ) => void;
   removeSelectedModel: () => void;
 }
 
 export function useSelectedSceneObjectEditor({
   sceneInfo,
-  setSceneInfo,
+  updateSceneInfo,
 }: UseSelectedSceneObjectEditorParams): UseSelectedSceneObjectEditorResult {
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
@@ -76,7 +84,7 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    setSceneInfo((prev) => {
+    updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
         return prev;
       }
@@ -102,7 +110,7 @@ export function useSelectedSceneObjectEditor({
     axis: AxisKey,
     value: number,
   ) => {
-    setSceneInfo((prev) => {
+    updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
         return prev;
       }
@@ -126,8 +134,11 @@ export function useSelectedSceneObjectEditor({
   const updateSelectedTransformVector = (
     field: SceneTransformField,
     value: Vector3Tuple,
+    options?: {
+      recordHistory?: boolean;
+    },
   ) => {
-    setSceneInfo((prev) => {
+    updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
         return prev;
       }
@@ -145,7 +156,7 @@ export function useSelectedSceneObjectEditor({
           };
         }),
       };
-    });
+    }, options);
   };
 
   const removeSelectedModel = () => {
@@ -153,7 +164,7 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    setSceneInfo((prev) => {
+    updateSceneInfo((prev) => {
       if (!prev) {
         return prev;
       }

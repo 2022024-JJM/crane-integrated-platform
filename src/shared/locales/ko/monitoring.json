@@ -17,6 +17,10 @@
       "scale": "크기"
     }
   },
+  "history": {
+    "undo": "\uc2e4\ud589 \ucde8\uc18c",
+    "redo": "\ub2e4\uc2dc \uc2e4\ud589"
+  },
   "palette": {
     "title": "모델 팔레트",
     "description": "GLB 모델을 드래그해서 씬에 배치하세요.",

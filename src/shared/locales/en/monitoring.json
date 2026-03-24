@@ -17,6 +17,10 @@
       "scale": "Scale"
     }
   },
+  "history": {
+    "undo": "Undo",
+    "redo": "Redo"
+  },
   "palette": {
     "title": "Model Palette",
     "description": "Drag GLB models into the scene.",

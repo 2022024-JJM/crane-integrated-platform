@@ -50,6 +50,8 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
+  onTransformInteractionStart?: () => void;
+  onTransformInteractionEnd?: () => void;
 }
 
 interface TransformChangeEvent extends Event {
@@ -97,6 +99,8 @@ export function SceneObjectsEditCanvas({
   rootRef,
   onTransformVectorChange,
   onAddModel,
+  onTransformInteractionStart,
+  onTransformInteractionEnd,
 }: SceneObjectsEditCanvasProps) {
   const { t } = useTranslation();
   const selectedModelId = useSceneObjectSelectionStore(
@@ -294,9 +298,12 @@ export function SceneObjectsEditCanvas({
             space="local"
             onMouseDown={() => {
               setIsTransformDragging(true);
+              onTransformInteractionStart?.();
             }}
             onMouseUp={() => {
+              syncSelectedObjectTransform();
               setIsTransformDragging(false);
+              onTransformInteractionEnd?.();
             }}
             onObjectChange={syncSelectedObjectTransform}
           />

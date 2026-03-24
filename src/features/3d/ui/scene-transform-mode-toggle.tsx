@@ -1,4 +1,5 @@
 import { Move3d, RotateCw, Scale3d } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 import {
@@ -17,6 +18,7 @@ interface SceneTransformModeToggleProps {
   mode: SceneTransformMode;
   className?: string;
   onModeChange: (mode: SceneTransformMode) => void;
+  leadingContent?: ReactNode;
 }
 
 const TRANSFORM_MODES: SceneTransformMode[] = ['translate', 'rotate', 'scale'];
@@ -34,6 +36,7 @@ export function SceneTransformModeToggle({
   mode,
   className,
   onModeChange,
+  leadingContent,
 }: SceneTransformModeToggleProps) {
   const { t } = useTranslation();
 
@@ -52,37 +55,37 @@ export function SceneTransformModeToggle({
 
   return (
     <TooltipProvider>
-      <ToggleGroup
-        value={[mode]}
-        onValueChange={handleValueChange}
-        aria-label={t('monitoring:transform.title')}
-        className={cn(
-          'bg-background/95 border-border/80 rounded-lg border p-1 shadow-sm backdrop-blur-sm',
-          className,
-        )}
-      >
-        {TRANSFORM_MODES.map((transformMode) => {
-          const label = t(`monitoring:transform.mode.${transformMode}`);
-          const Icon = TRANSFORM_MODE_ICON[transformMode];
+      <div className={cn('flex items-center gap-2', className)}>
+        {leadingContent}
+        <ToggleGroup
+          value={[mode]}
+          onValueChange={handleValueChange}
+          aria-label={t('monitoring:transform.title')}
+          className="bg-background/95 border-border/80 rounded-lg border p-1 shadow-sm backdrop-blur-sm"
+        >
+          {TRANSFORM_MODES.map((transformMode) => {
+            const label = t(`monitoring:transform.mode.${transformMode}`);
+            const Icon = TRANSFORM_MODE_ICON[transformMode];
 
-          return (
-            <Tooltip key={transformMode}>
-              <TooltipTrigger
-                render={
-                  <ToggleGroupItem
-                    value={transformMode}
-                    aria-label={label}
-                    className="text-muted-foreground hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-10 justify-center rounded-md p-0 aria-pressed:shadow-sm"
-                  >
-                    <Icon className="size-4" />
-                  </ToggleGroupItem>
-                }
-              />
-              <TooltipContent>{label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </ToggleGroup>
+            return (
+              <Tooltip key={transformMode}>
+                <TooltipTrigger
+                  render={
+                    <ToggleGroupItem
+                      value={transformMode}
+                      aria-label={label}
+                      className="text-muted-foreground hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-10 justify-center rounded-md p-0 aria-pressed:shadow-sm"
+                    >
+                      <Icon className="size-4" />
+                    </ToggleGroupItem>
+                  }
+                />
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </ToggleGroup>
+      </div>
     </TooltipProvider>
   );
 }
