@@ -78,7 +78,6 @@ export function GltfModel({
       {/* 3D Mesh */}
       <primitive
         ref={handleModelRef}
-        key={id}
         name={id}
         object={clone}
         position={position}
@@ -90,7 +89,6 @@ export function GltfModel({
 
       {/* 2D Label */}
       <Html
-        key={id}
         transform
         sprite
         center

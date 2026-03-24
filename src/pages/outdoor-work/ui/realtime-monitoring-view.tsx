@@ -34,7 +34,10 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
                   </p>
                 </div>
               ) : null}
-              <OutdoorWork3dView onLoadingChange={setIs3dViewLoading} />
+              <OutdoorWork3dView
+                regionId={regionId}
+                onLoadingChange={setIs3dViewLoading}
+              />
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />

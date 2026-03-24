@@ -1,24 +1,30 @@
-import { useEffect, useEffectEvent, useState } from 'react';
-import { GltfModel, type SavedSceneInfo } from '@/entities/3d';
+import { useEffect, useState } from 'react';
+import {
+  getSceneFileUrlByRegionId,
+  GltfModel,
+  type SavedSceneInfo,
+} from '@/entities/3d';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
 
 interface OutdoorWorkModelSimulationProps {
+  regionId: string;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
 }
 
 export function OutdoorWorkModelSimulation({
+  regionId,
   onSceneDataLoadingChange,
 }: OutdoorWorkModelSimulationProps) {
-  const SCENE_FILE_URL = '/scenes/1dock.json';
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
+  const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
   const { registerFromModel } = useValueMapperStore();
   const start = useValueGeneratorStore((s) => s.start);
   useValueGeneratorRunner();
-  const emitSceneDataLoadingChange = useEffectEvent((isLoading: boolean) => {
-    onSceneDataLoadingChange?.(isLoading);
-  });
+  useEffect(() => {
+    onSceneDataLoadingChange?.(isSceneDataLoading);
+  }, [isSceneDataLoading, onSceneDataLoadingChange]);
 
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
@@ -27,10 +33,16 @@ export function OutdoorWorkModelSimulation({
     let isMounted = true;
 
     const load = async () => {
-      emitSceneDataLoadingChange(true);
+      setIsSceneDataLoading(true);
 
       try {
-        const res = await fetch(SCENE_FILE_URL);
+        const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
+        const res = await fetch(sceneFileUrl, { cache: 'no-store' });
+
+        if (!res.ok) {
+          throw new Error(`Failed to load scene info. HTTP ${res.status}`);
+        }
+
         const data: SavedSceneInfo = await res.json();
 
         if (!isMounted) {
@@ -41,9 +53,16 @@ export function OutdoorWorkModelSimulation({
         data.models?.forEach((modelInfo) => {
           registerFromModel(modelInfo);
         });
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setSceneInfo(null);
+        console.error('Failed to load monitoring scene.', error);
       } finally {
         if (isMounted) {
-          emitSceneDataLoadingChange(false);
+          setIsSceneDataLoading(false);
         }
       }
     };
@@ -54,7 +73,7 @@ export function OutdoorWorkModelSimulation({
     return () => {
       isMounted = false;
     };
-  }, [registerFromModel, start]);
+  }, [regionId, registerFromModel, start]);
 
   return (
     <>

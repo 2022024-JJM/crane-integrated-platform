@@ -1,4 +1,4 @@
-import { Download, GripHorizontal } from 'lucide-react';
+import { Download, GripHorizontal, Loader2, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { SceneModelCatalogItem } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
@@ -19,8 +19,11 @@ interface SceneModelPaletteProps {
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
+  onSave: () => void;
   onExport: () => void;
+  saveDisabled?: boolean;
   exportDisabled?: boolean;
+  isSaving?: boolean;
 }
 
 export function SceneModelPalette({
@@ -28,8 +31,11 @@ export function SceneModelPalette({
   draggingItemId,
   onDragStart,
   onDragEnd,
+  onSave,
   onExport,
+  saveDisabled = false,
   exportDisabled = false,
+  isSaving = false,
 }: SceneModelPaletteProps) {
   const { t } = useTranslation();
 
@@ -37,6 +43,16 @@ export function SceneModelPalette({
     <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
       <CardHeader className={cn('border-b py-4', PALETTE_HORIZONTAL_SPACING)}>
         <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={saveDisabled || isSaving}
+            onClick={onSave}
+          >
+            {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+            Save
+          </Button>
           <Button
             type="button"
             variant="outline"

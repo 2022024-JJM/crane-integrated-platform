@@ -1,5 +1,7 @@
 import {
   createSceneModel,
+  getSceneFileUrlByRegionId,
+  saveSceneInfoByRegionId,
   sceneModelCatalog,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
@@ -10,9 +12,13 @@ import {
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
 } from '@/features/3d';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getSceneFileUrlByRegionId } from '../model/scene-file-registry';
+import {
+  createSceneSnapshot,
+  sanitizeSceneInfo,
+} from '../model/scene-snapshot';
+import { useSceneUnsavedChangesGuard } from '../model/use-scene-unsaved-changes-guard';
 import {
   SceneModelPalette,
   SceneEditorSidebarTabs,
@@ -20,6 +26,7 @@ import {
   SceneObjectInspector,
   SceneObjectsEditCanvas,
 } from '@/widgets/3d';
+import { toast } from 'sonner';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
@@ -63,6 +70,10 @@ export function SceneObjectsEditPage({
 }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
+    null,
+  );
   const [activeSidebarTab, setActiveSidebarTab] =
     useState<SceneEditorSidebarTab>('palette');
   const [draggingCatalogItem, setDraggingCatalogItem] =
@@ -91,6 +102,14 @@ export function SceneObjectsEditPage({
     sceneInfo,
     setSceneInfo,
   });
+  const currentSceneSnapshot = useMemo(
+    () => createSceneSnapshot(sceneInfo),
+    [sceneInfo],
+  );
+  const isDirty =
+    sceneInfo !== null &&
+    savedSceneSnapshot !== null &&
+    currentSceneSnapshot !== savedSceneSnapshot;
 
   useEffect(() => {
     let isMounted = true;
@@ -98,7 +117,7 @@ export function SceneObjectsEditPage({
 
     const loadScene = async () => {
       try {
-        const res = await fetch(sceneFileUrl);
+        const res = await fetch(sceneFileUrl, { cache: 'no-store' });
         const data: SavedSceneInfo = await res.json();
 
         if (!isMounted) {
@@ -106,6 +125,7 @@ export function SceneObjectsEditPage({
         }
 
         setSceneInfo(data);
+        setSavedSceneSnapshot(createSceneSnapshot(data));
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
       }
@@ -115,6 +135,7 @@ export function SceneObjectsEditPage({
     resetTransformMode();
     setDraggingCatalogItem(null);
     setSceneInfo(null);
+    setSavedSceneSnapshot(null);
     void loadScene();
 
     return () => {
@@ -170,6 +191,39 @@ export function SceneObjectsEditPage({
     };
   }, [removeSelectedModel, selectedModelId]);
 
+  const saveCurrentScene = useCallback(async () => {
+    if (!sceneInfo || isSaving) {
+      return false;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const sanitizedSceneInfo = sanitizeSceneInfo(sceneInfo);
+      const savedSceneInfo = await saveSceneInfoByRegionId(
+        regionId,
+        sanitizedSceneInfo,
+      );
+
+      setSceneInfo(savedSceneInfo);
+      setSavedSceneSnapshot(createSceneSnapshot(savedSceneInfo));
+      toast.success('Scene saved.');
+      return true;
+    } catch (error) {
+      console.error('Failed to save scene info.', error);
+      toast.error('Failed to save scene.');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, regionId, sceneInfo]);
+
+  useSceneUnsavedChangesGuard({
+    isDirty,
+    isSaving,
+    onSave: saveCurrentScene,
+  });
+
   const handleAddModel = (
     catalogItem: SceneModelCatalogItem,
     position: [number, number, number],
@@ -210,10 +264,15 @@ export function SceneObjectsEditPage({
               onDragEnd={() => {
                 setDraggingCatalogItem(null);
               }}
+              onSave={() => {
+                void saveCurrentScene();
+              }}
               onExport={() => {
                 downloadSceneInfo(regionId, sceneInfo);
               }}
+              saveDisabled={!sceneInfo}
               exportDisabled={!sceneInfo}
+              isSaving={isSaving}
             />
           ) : (
             <SceneObjectInspector
