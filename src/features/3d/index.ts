@@ -1,4 +1,4 @@
-export { OutdoorWork3dView } from './ui/outdoor-work-3d-view';
+export { Monitoring3dView } from './ui/monitoring-3d-view';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';

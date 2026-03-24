@@ -1,6 +1,6 @@
 import {
   createSceneModel,
-  getSceneFileUrlByRegionId,
+  loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
   sceneModelCatalog,
   type SavedSceneInfo,
@@ -113,12 +113,10 @@ export function SceneObjectsEditPage({
 
   useEffect(() => {
     let isMounted = true;
-    const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
 
     const loadScene = async () => {
       try {
-        const res = await fetch(sceneFileUrl, { cache: 'no-store' });
-        const data: SavedSceneInfo = await res.json();
+        const data = await loadSceneInfoByRegionId(regionId);
 
         if (!isMounted) {
           return;

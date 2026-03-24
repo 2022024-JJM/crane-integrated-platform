@@ -4,7 +4,7 @@ import {
   ResizableHandle,
 } from '@/shared/ui/molecules/resizable';
 import { useState } from 'react';
-import { OutdoorWork3dView } from '@/features/3d';
+import { Monitoring3dView } from '@/features/3d';
 import { getCranesByRegion } from '@/entities/crane';
 import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
 import { Spinner } from '@/shared/ui/atoms/spinner';
@@ -34,7 +34,7 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
                   </p>
                 </div>
               ) : null}
-              <OutdoorWork3dView
+              <Monitoring3dView
                 regionId={regionId}
                 onLoadingChange={setIs3dViewLoading}
               />

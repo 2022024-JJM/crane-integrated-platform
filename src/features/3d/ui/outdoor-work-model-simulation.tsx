@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  getSceneFileUrlByRegionId,
   GltfModel,
+  loadSceneInfoByRegionId,
   type SavedSceneInfo,
 } from '@/entities/3d';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
@@ -36,14 +36,7 @@ export function OutdoorWorkModelSimulation({
       setIsSceneDataLoading(true);
 
       try {
-        const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
-        const res = await fetch(sceneFileUrl, { cache: 'no-store' });
-
-        if (!res.ok) {
-          throw new Error(`Failed to load scene info. HTTP ${res.status}`);
-        }
-
-        const data: SavedSceneInfo = await res.json();
+        const data: SavedSceneInfo = await loadSceneInfoByRegionId(regionId);
 
         if (!isMounted) {
           return;

@@ -1,6 +1,9 @@
 export { degToRad, numRound, radToDeg } from './lib/math-utils';
 export { createSceneModel } from './lib/create-scene-model';
-export { saveSceneInfoByRegionId } from './lib/scene-dev-storage';
+export {
+  loadSceneInfoByRegionId,
+  saveSceneInfoByRegionId,
+} from './lib/scene-dev-storage';
 export type {
   SceneModelCatalogItem,
   SceneModelPreviewPreset,
@@ -9,5 +12,8 @@ export type {
   ValueMapType,
 } from './model/types';
 export { sceneModelCatalog } from './model/scene-model-catalog';
-export { getSceneFileUrlByRegionId } from './model/scene-file-registry';
+export {
+  getDefaultSceneFileUrl,
+  getSceneFileUrlByRegionId,
+} from './model/scene-file-registry';
 export { GltfModel } from './ui/gltf-model';

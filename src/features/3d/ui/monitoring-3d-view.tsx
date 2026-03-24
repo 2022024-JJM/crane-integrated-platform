@@ -6,15 +6,15 @@ import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 
-interface OutdoorWork3dViewProps {
+interface Monitoring3dViewProps {
   regionId: string;
   onLoadingChange?: (isLoading: boolean) => void;
 }
 
-export function OutdoorWork3dView({
+export function Monitoring3dView({
   regionId,
   onLoadingChange,
-}: OutdoorWork3dViewProps) {
+}: Monitoring3dViewProps) {
   return (
     <ThreeSceneViewer
       cameraPreset={{
