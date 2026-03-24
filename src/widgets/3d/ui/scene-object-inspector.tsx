@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedModelInfo } from '@/entities/3d';
 import {
@@ -8,6 +8,7 @@ import {
   ScaleController,
   type SceneTransformField,
 } from '@/features/3d';
+import { Input } from '@/shared/ui/atoms/input';
 import { Separator } from '@/shared/ui/atoms/separator';
 import {
   Card,
@@ -19,6 +20,7 @@ import {
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
+  onNameChange: (name: string) => void;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -44,25 +46,54 @@ function InspectorSection({ title, children }: InspectorSectionProps) {
 
 export function SceneObjectInspector({
   selectedModel,
+  onNameChange,
   onTransformChange,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
+  const selectedLabel = selectedModel?.equipName || selectedModel?.id || '';
+  const [nameDraft, setNameDraft] = useState(selectedLabel);
 
-  const selectedLabel = selectedModel
-    ? selectedModel.equipName || selectedModel.id
-    : null;
+  useEffect(() => {
+    setNameDraft(selectedLabel);
+  }, [selectedLabel]);
 
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
       <CardHeader className="border-b py-4">
         <CardTitle>{t('monitoring:inspector.title')}</CardTitle>
-        <CardDescription>
-          {selectedModel && (
-            <>
-              {t('monitoring:inspector.name')} : {selectedLabel}
-            </>
-          )}
-        </CardDescription>
+        {selectedModel ? (
+          <div className="flex flex-col gap-2">
+            <CardDescription>{t('monitoring:inspector.name')}</CardDescription>
+            <Input
+              value={nameDraft}
+              aria-label={t('monitoring:inspector.name')}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setNameDraft(nextValue);
+
+                if (nextValue.trim()) {
+                  onNameChange(nextValue);
+                }
+              }}
+              onBlur={() => {
+                if (!nameDraft.trim()) {
+                  setNameDraft(selectedLabel);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setNameDraft(selectedLabel);
+                  event.currentTarget.blur();
+                }
+
+                if (event.key === 'Enter' && !nameDraft.trim()) {
+                  setNameDraft(selectedLabel);
+                  event.currentTarget.blur();
+                }
+              }}
+            />
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 overflow-auto py-4">
         {selectedModel ? (

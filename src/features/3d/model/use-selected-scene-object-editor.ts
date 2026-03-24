@@ -25,6 +25,7 @@ interface UseSelectedSceneObjectEditorParams {
 
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
+  updateSelectedName: (name: string) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -67,6 +68,34 @@ export function useSelectedSceneObjectEditor({
       sceneInfo?.models.find((model) => model.id === selectedModelId) ?? null,
     [sceneInfo?.models, selectedModelId],
   );
+
+  const updateSelectedName = (name: string) => {
+    const nextName = name.trim();
+
+    if (!nextName) {
+      return;
+    }
+
+    setSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) {
+            return model;
+          }
+
+          return {
+            ...model,
+            equipName: nextName,
+          };
+        }),
+      };
+    });
+  };
 
   const updateSelectedTransform = (
     field: SceneTransformField,
@@ -140,6 +169,7 @@ export function useSelectedSceneObjectEditor({
 
   return {
     selectedModel,
+    updateSelectedName,
     updateSelectedTransform,
     updateSelectedTransformVector,
     removeSelectedModel,

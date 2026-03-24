@@ -95,6 +95,7 @@ export function SceneObjectsEditPage({
   );
   const {
     selectedModel,
+    updateSelectedName,
     updateSelectedTransform,
     updateSelectedTransformVector,
     removeSelectedModel,
@@ -275,6 +276,7 @@ export function SceneObjectsEditPage({
           ) : (
             <SceneObjectInspector
               selectedModel={selectedModel}
+              onNameChange={updateSelectedName}
               onTransformChange={updateSelectedTransform}
             />
           )}
