@@ -2,9 +2,9 @@ import { getRegionById, getRegionTitleKey } from '@/entities/region';
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { SceneObjectsEditPage } from '@/pages/3d';
 import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
-import { SceneObjectsEditPage } from '@/pages/3d/ui/scene-objects-edit-page';
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -48,7 +48,9 @@ export function OutdoorWorkPage() {
       {subRoute === '3d-monitoring' && (
         <RealtimeMonitoringView regionId={regionId} />
       )}
-      {subRoute === '3d-viewer-edit' && <SceneObjectsEditPage />}
+      {subRoute === '3d-viewer-edit' && (
+        <SceneObjectsEditPage regionId={regionId} />
+      )}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={

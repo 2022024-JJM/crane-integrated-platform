@@ -34,6 +34,7 @@ interface UseSelectedSceneObjectEditorResult {
     field: SceneTransformField,
     value: Vector3Tuple,
   ) => void;
+  removeSelectedModel: () => void;
 }
 
 export function useSelectedSceneObjectEditor({
@@ -118,9 +119,29 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const removeSelectedModel = () => {
+    if (!selectedModelId) {
+      return;
+    }
+
+    setSceneInfo((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        models: prev.models.filter((model) => model.id !== selectedModelId),
+      };
+    });
+
+    clearSelectedModel();
+  };
+
   return {
     selectedModel,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    removeSelectedModel,
   };
 }

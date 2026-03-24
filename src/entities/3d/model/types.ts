@@ -35,3 +35,19 @@ export interface ValueMapItem {
   type: ValueMapType;
   key: string;
 }
+
+export interface SceneModelCatalogItem {
+  id: string;
+  label: string;
+  path: string;
+  defaultScale: Vector3Tuple;
+  preview?: SceneModelPreviewPreset;
+}
+
+export interface SceneModelPreviewPreset {
+  fitScale?: number;
+  centerYRatio?: number;
+  targetYRatio?: number;
+  cameraDistanceMultiplier?: number;
+  cameraDirection?: Vector3Tuple;
+}

@@ -2,6 +2,7 @@ import { getRegionById, getRegionTitleKey } from '@/entities/region';
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { SceneObjectsEditPage } from '@/pages/3d';
 import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 
@@ -48,7 +49,7 @@ export function IndoorWorkPage() {
         <RealtimeMonitoringView regionId={regionId} />
       )}
       {subRoute === '3d-viewer-edit' && (
-        <PlaceholderView title={t('common:nav.threeViewerEdit')} />
+        <SceneObjectsEditPage regionId={regionId} />
       )}
       {subRoute === 'crane-status' && (
         <PlaceholderView

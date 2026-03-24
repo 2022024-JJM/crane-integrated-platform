@@ -1,6 +1,6 @@
 {
   "title": "3D Viewer Area",
-  "subtitle": "{{region}} area · Coming soon",
+  "subtitle": "{{region}} area is coming soon",
   "inspector": {
     "title": "Inspector",
     "name": "Name",
@@ -16,5 +16,19 @@
       "rotate": "Rotate",
       "scale": "Scale"
     }
+  },
+  "palette": {
+    "title": "Model Palette",
+    "description": "Drag GLB models into the scene.",
+    "dragging": "Dragging",
+    "dragToPlace": "Drag to place",
+    "previewPending": "Preview pending",
+    "previewLoading": "Loading preview...",
+    "previewLoadError": "Preview unavailable"
+  },
+  "editor": {
+    "loading": "Loading scene editor...",
+    "exportJson": "Export JSON",
+    "dropHint": "Drop on the scene to place the model"
   }
 }

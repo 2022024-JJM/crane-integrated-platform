@@ -1,13 +1,13 @@
 {
   "title": "Area Visoris 3D",
-  "subtitle": "Regio {{region}} · praeparatur",
+  "subtitle": "Regio {{region}} praeparatur",
   "inspector": {
     "title": "Inspector",
     "name": "Nomen",
     "empty": "Objectum in scaena preme ut proprietates eius videas.",
-    "position": "Position",
-    "rotation": "Rotation",
-    "scale": "Scale"
+    "position": "Positio",
+    "rotation": "Rotatio",
+    "scale": "Scala"
   },
   "transform": {
     "title": "Modus transformationis",
@@ -16,5 +16,19 @@
       "rotate": "Rotatio",
       "scale": "Scala"
     }
+  },
+  "palette": {
+    "title": "Tabula Modellorum",
+    "description": "Exemplar GLB trahe et in scaenam pone.",
+    "dragging": "Trahitur",
+    "dragToPlace": "Trahe ad ponendum",
+    "previewPending": "Praevisio futura",
+    "previewLoading": "Praevisio oneratur...",
+    "previewLoadError": "Praevisio praesto non est"
+  },
+  "editor": {
+    "loading": "Editor scaenae oneratur...",
+    "exportJson": "JSON Exporta",
+    "dropHint": "In scaenam depone ut exemplar ponatur"
   }
 }

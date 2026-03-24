@@ -64,7 +64,7 @@ export function SceneObjectInspector({
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 py-4">
+      <CardContent className="flex flex-1 flex-col gap-4 overflow-auto py-4">
         {selectedModel ? (
           <>
             <InspectorSection title={t('monitoring:inspector.position')}>
