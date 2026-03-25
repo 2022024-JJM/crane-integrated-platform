@@ -46,9 +46,7 @@ export interface SceneModelCatalogItem {
 }
 
 export interface SceneModelPreviewPreset {
-  fitScale?: number;
-  centerYRatio?: number;
-  targetYRatio?: number;
-  cameraDistanceMultiplier?: number;
+  paddingScale?: number;
+  verticalOffsetRatio?: number;
   cameraDirection?: Vector3Tuple;
 }

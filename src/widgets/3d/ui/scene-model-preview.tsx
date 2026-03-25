@@ -17,7 +17,6 @@ import {
   Group,
   Object3D,
   OrthographicCamera,
-  Sphere,
   Vector3,
 } from 'three';
 import { useGLTF } from '@react-three/drei';
@@ -56,7 +55,10 @@ class PreviewErrorBoundary extends Component<
     return { hasError: true };
   }
 
-  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {}
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+    void _error;
+    void _errorInfo;
+  }
 
   render() {
     if (this.state.hasError) {
@@ -129,50 +131,61 @@ function PreviewModel({
   const { scene } = useGLTF(resolvedUrl);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const previewGroupRef = useRef<Group | null>(null);
+  const cameraRef = useRef<OrthographicCamera | null>(null);
   const camera = useThree((state) => state.camera as OrthographicCamera);
   const canvasSize = useThree((state) => state.size);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useLayoutEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
 
   useLayoutEffect(() => {
     if (!previewGroupRef.current) {
       return;
     }
 
+    const sceneCamera = cameraRef.current;
+
+    if (!sceneCamera) {
+      return;
+    }
+
     const box = new Box3().setFromObject(clone);
-    const size = new Vector3();
     const center = new Vector3();
+    const size = new Vector3();
+
+    if (box.isEmpty()) {
+      onReady();
+      return;
+    }
+
     box.getSize(size);
     box.getCenter(center);
-    const sphere = new Sphere();
-    box.getBoundingSphere(sphere);
 
-    const normalizedRadius = preview?.fitScale ?? 0.72;
-    const safeRadius = Math.max(sphere.radius, 0.001);
-    const scale = normalizedRadius / safeRadius;
-    const visualCenterY =
-      box.min.y + size.y * (preview?.centerYRatio ?? 0.42);
-    const target = new Vector3(
-      0,
-      Math.max(size.y * scale * (preview?.targetYRatio ?? 0.06), 0),
-      0,
-    );
-
-    previewGroupRef.current.scale.setScalar(scale);
+    const verticalOffset = size.y * (preview?.verticalOffsetRatio ?? 0);
+    previewGroupRef.current.scale.setScalar(1);
     previewGroupRef.current.position.set(
-      -center.x * scale,
-      -visualCenterY * scale,
-      -center.z * scale,
+      -center.x,
+      -center.y + verticalOffset,
+      -center.z,
     );
+    previewGroupRef.current.updateMatrixWorld(true);
 
-    const cameraDistance = 10 * (preview?.cameraDistanceMultiplier ?? 1);
+    const target = new Vector3(0, 0, 0);
     const viewDirection = new Vector3(
-      ...(preview?.cameraDirection ?? [1.2, 0.72, 1.18]),
+      ...(preview?.cameraDirection ?? [1.16, 0.78, 1.16]),
     ).normalize();
+    const radius = size.length() * 0.5;
+    const cameraDistance = Math.max(radius * 2.25, 3.5);
 
-    camera.position.copy(target).add(viewDirection.multiplyScalar(cameraDistance));
-    camera.near = 0.1;
-    camera.far = 100;
-    camera.lookAt(target);
-    camera.updateMatrixWorld(true);
+    sceneCamera.position
+      .copy(target)
+      .add(viewDirection.multiplyScalar(cameraDistance));
+    sceneCamera.near = 0.1;
+    sceneCamera.far = Math.max(cameraDistance + radius * 4, 100);
+    sceneCamera.lookAt(target);
+    sceneCamera.updateMatrixWorld(true);
 
     const fittedBox = new Box3().setFromObject(previewGroupRef.current);
     const corners = [
@@ -189,21 +202,39 @@ function PreviewModel({
     let maxProjectedY = 0;
 
     for (const corner of corners) {
-      const projectedCorner = corner.clone().applyMatrix4(camera.matrixWorldInverse);
+      const projectedCorner = corner
+        .clone()
+        .applyMatrix4(sceneCamera.matrixWorldInverse);
       maxProjectedX = Math.max(maxProjectedX, Math.abs(projectedCorner.x));
       maxProjectedY = Math.max(maxProjectedY, Math.abs(projectedCorner.y));
     }
 
-    const paddedProjectedX = Math.max(maxProjectedX * 1.45, 0.001);
-    const paddedProjectedY = Math.max(maxProjectedY * 1.45, 0.001);
+    const paddingScale = preview?.paddingScale ?? 1.22;
+    const paddedProjectedX = Math.max(maxProjectedX * paddingScale, 0.001);
+    const paddedProjectedY = Math.max(maxProjectedY * paddingScale, 0.001);
     const zoomFromWidth = canvasSize.width / (paddedProjectedX * 2);
     const zoomFromHeight = canvasSize.height / (paddedProjectedY * 2);
 
-    camera.zoom = Math.max(8, Math.min(zoomFromWidth, zoomFromHeight));
-    camera.updateProjectionMatrix();
+    sceneCamera.zoom = Math.max(6, Math.min(zoomFromWidth, zoomFromHeight));
+    sceneCamera.updateProjectionMatrix();
+    invalidate();
 
-    onReady();
-  }, [camera, canvasSize.height, canvasSize.width, clone, onReady, preview]);
+    const frame = requestAnimationFrame(() => {
+      onReady();
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    clone,
+    camera,
+    invalidate,
+    onReady,
+    preview,
+  ]);
 
   return (
     <group ref={previewGroupRef}>
@@ -267,11 +298,8 @@ function SceneModelPreviewInner({
   className,
 }: SceneModelPreviewProps) {
   const { t } = useTranslation();
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setIsReady(false);
-  }, [path]);
+  const [readyPath, setReadyPath] = useState<string | null>(null);
+  const isReady = readyPath === path;
 
   return (
     <div
@@ -305,10 +333,11 @@ function SceneModelPreviewInner({
         <PreviewStage />
         <Suspense fallback={null}>
           <PreviewModel
+            key={path}
             resolvedUrl={path}
             preview={preview}
             onReady={() => {
-              setIsReady(true);
+              setReadyPath(path);
             }}
           />
         </Suspense>

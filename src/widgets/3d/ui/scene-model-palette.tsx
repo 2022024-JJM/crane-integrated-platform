@@ -1,8 +1,6 @@
 import {
   CheckCircle2,
-  Cuboid,
   Download,
-  GripHorizontal,
   Layers3,
   Loader2,
   Save,
@@ -19,6 +17,7 @@ import { Button } from '@/shared/ui/atoms/button';
 import { Input } from '@/shared/ui/atoms/input';
 import { Card, CardContent, CardHeader } from '@/shared/ui/molecules/card';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
+import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
 
@@ -196,7 +195,7 @@ export function SceneModelPalette({
             </div>
           </div>
           <ScrollArea className="min-h-0 flex-1">
-            <div className="grid grid-cols-1 gap-0.5 p-1.5">
+            <div className="grid grid-cols-2 gap-2 p-2">
               {filteredItems.map((item) => {
                 const isDragging = draggingItemId === item.id;
 
@@ -215,25 +214,31 @@ export function SceneModelPalette({
                     }}
                     onDragEnd={onDragEnd}
                     className={cn(
-                      'group flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-left transition',
+                      'group cursor-pointer rounded-lg border border-white/8 bg-white/[0.03] p-1.5 text-left transition',
                       isDragging
-                        ? 'scale-[0.99] border-primary/40 bg-primary/10'
-                        : 'hover:border-white/6 hover:bg-white/5',
+                        ? 'scale-[0.98] border-primary/40 bg-primary/12'
+                        : 'hover:border-white/12 hover:bg-white/[0.06]',
                     )}
                   >
-                    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-white/8 bg-white/4 text-white/50">
-                      <Cuboid className="size-2.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-medium leading-none text-white">
+                    <SceneModelPreview
+                      path={item.path}
+                      label={item.label}
+                      preview={item.preview}
+                      overlayLabel={item.label}
+                      overlayHint={t('monitoring:palette.dragToPlace')}
+                      showOverlay={isDragging}
+                      className={cn(
+                        'h-20 rounded-[0.8rem]',
+                        isDragging && 'border-primary/40',
+                      )}
+                    />
+                    <div className="mt-1.5 min-w-0 px-0.5">
+                      <p className="truncate text-[11px] font-semibold leading-none text-white">
                         {item.label}
                       </p>
-                      <p className="mt-0.5 truncate text-[9px] leading-none text-white/38">
+                      <p className="mt-1 truncate text-[9px] leading-none text-white/38">
                         {humanizeModelPath(item.path)}
                       </p>
-                    </div>
-                    <div className="rounded-sm border border-white/10 bg-black/22 px-1 py-0.5 text-white/38">
-                      <GripHorizontal className="size-2.5" />
                     </div>
                   </div>
                 );
@@ -299,16 +304,16 @@ export function SceneModelPalette({
                           : 'text-white/80 hover:border-white/6 hover:bg-white/5',
                       )}
                     >
-                      <div
-                        className={cn(
-                          'flex size-5 shrink-0 items-center justify-center rounded-sm border text-[10px]',
-                          isSelected
-                            ? 'border-white/20 bg-white/10 text-white'
-                            : 'border-white/8 bg-white/4 text-white/50',
-                        )}
-                      >
-                        <Cuboid className="size-2.5" />
-                      </div>
+                    <div
+                      className={cn(
+                        'flex size-5 shrink-0 items-center justify-center rounded-sm border text-[10px]',
+                        isSelected
+                          ? 'border-white/20 bg-white/10 text-white'
+                          : 'border-white/8 bg-white/4 text-white/50',
+                      )}
+                    >
+                      <Boxes className="size-2.5" />
+                    </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[12px] font-medium leading-none">
                           {displayName}
