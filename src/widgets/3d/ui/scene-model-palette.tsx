@@ -20,6 +20,7 @@ import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
+const PALETTE_VISIBLE_ROWS_HEIGHT_CLASS = 'h-[15.5rem]';
 
 interface SceneModelPaletteProps {
   items: SceneModelCatalogItem[];
@@ -47,6 +48,10 @@ function humanizeModelPath(path: string) {
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ');
+}
+
+function normalizeModelLabel(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 export function SceneModelPalette({
@@ -166,7 +171,7 @@ export function SceneModelPalette({
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 px-2 py-2">
-        <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-white/8 bg-black/18">
+        <section className="flex shrink-0 flex-col rounded-lg border border-white/8 bg-black/18">
           <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
             <div className="flex items-center gap-2">
               <Boxes className="size-3 text-white/60" />
@@ -194,10 +199,16 @@ export function SceneModelPalette({
               />
             </div>
           </div>
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea
+            className={cn('min-h-0', PALETTE_VISIBLE_ROWS_HEIGHT_CLASS)}
+          >
             <div className="grid grid-cols-2 gap-2 p-2">
               {filteredItems.map((item) => {
                 const isDragging = draggingItemId === item.id;
+                const modelTypeLabel = humanizeModelPath(item.path);
+                const showModelTypeLabel =
+                  normalizeModelLabel(item.label) !==
+                  normalizeModelLabel(modelTypeLabel);
 
                 return (
                   <div
@@ -236,9 +247,11 @@ export function SceneModelPalette({
                       <p className="truncate text-[11px] font-semibold leading-none text-white">
                         {item.label}
                       </p>
-                      <p className="mt-1 truncate text-[9px] leading-none text-white/38">
-                        {humanizeModelPath(item.path)}
-                      </p>
+                      {showModelTypeLabel ? (
+                        <p className="mt-1 truncate text-[9px] leading-none text-white/38">
+                          {modelTypeLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 );
