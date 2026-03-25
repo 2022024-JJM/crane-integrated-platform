@@ -12,7 +12,6 @@ import {
   YAxis,
 } from 'recharts';
 
-import { AppLink } from '@/shared/ui/atoms/app-link';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Separator } from '@/shared/ui/atoms/separator';
 import {
@@ -49,6 +48,7 @@ import {
   StatsRow,
   StatusCount,
 } from './dashboard-parts';
+import type { DashboardRegionStatusDatum } from '../model';
 
 interface DashboardSectionSharedProps {
   summary: DashboardSummary;
@@ -413,7 +413,10 @@ export function DashboardRegionStatusSection({
   summary,
   isLoading,
   translate,
-}: DashboardSectionSharedProps) {
+  onRegionPreviewOpen,
+}: DashboardSectionSharedProps & {
+  onRegionPreviewOpen: (regionStatus: DashboardRegionStatusDatum) => void;
+}) {
   return (
     <Card className="border-border/70 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
@@ -450,10 +453,13 @@ export function DashboardRegionStatusSection({
             </div>
             <div className="space-y-3">
               {summary.regionStatuses.map((regionStatus) => (
-                <AppLink
+                <button
                   key={regionStatus.regionId}
-                  to={regionStatus.navigateTo}
-                  className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block rounded-2xl border p-3 transition"
+                  type="button"
+                  className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block w-full cursor-pointer rounded-2xl border p-3 text-left transition"
+                  onClick={() => {
+                    onRegionPreviewOpen(regionStatus);
+                  }}
                 >
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <div>
@@ -500,7 +506,7 @@ export function DashboardRegionStatusSection({
                       value={regionStatus.offline}
                     />
                   </div>
-                </AppLink>
+                </button>
               ))}
             </div>
           </>

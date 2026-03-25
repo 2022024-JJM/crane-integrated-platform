@@ -83,5 +83,10 @@
     "warningCount": "Warnings",
     "operatingRate": "Operating rate",
     "riskScore": "Risk score"
+  },
+  "preview": {
+    "label": "3D Preview",
+    "openFull": "Open full monitoring",
+    "close": "Close preview"
   }
 }

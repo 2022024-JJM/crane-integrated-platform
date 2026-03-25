@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
 import { getFormatLocale } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
-import { useDashboardSummary } from '../model';
+import {
+  useDashboardSummary,
+  type DashboardRegionStatusDatum,
+} from '../model';
 import { MetricCard } from './dashboard-parts';
+import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
 import {
   DashboardOverviewHeader,
   DashboardRecentAlarmsSection,
@@ -18,6 +22,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { summary, isLoading } = useDashboardSummary();
+  const [selectedPreviewRegion, setSelectedPreviewRegion] =
+    useState<DashboardRegionStatusDatum | null>(null);
   const locale = useMemo(
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
@@ -82,6 +88,7 @@ export function DashboardPage() {
             summary={summary}
             isLoading={isLoading}
             translate={t}
+            onRegionPreviewOpen={setSelectedPreviewRegion}
           />
         </div>
 
@@ -103,6 +110,18 @@ export function DashboardPage() {
           />
         </div>
       </section>
+
+      {selectedPreviewRegion ? (
+        <DashboardRegionPreviewModal
+          open
+          regionId={selectedPreviewRegion.regionId}
+          title={t(selectedPreviewRegion.titleKey)}
+          navigateTo={selectedPreviewRegion.navigateTo}
+          onClose={() => {
+            setSelectedPreviewRegion(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

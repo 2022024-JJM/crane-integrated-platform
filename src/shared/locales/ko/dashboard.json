@@ -10,11 +10,11 @@
   "metrics": {
     "regionCount": {
       "title": "공사 지역",
-      "description": "모니터링 대상 region 수"
+      "description": "모니터링 대상 지역 수"
     },
     "craneCount": {
       "title": "연결 크레인",
-      "description": "전체 crane 연결 수"
+      "description": "전체 연결 크레인 수"
     },
     "operatingRate": {
       "title": "정상 운영률",
@@ -23,7 +23,7 @@
     "urgentRegion": {
       "title": "즉시 확인 구역",
       "description": "현재 알람 기준 최우선 region",
-      "meta": "위험 {{critical}}건 · 전체 알람 {{total}}건",
+      "meta": "위험 {{critical}}건 쨌 전체 알람 {{total}}건",
       "emptyValue": "이상 없음",
       "emptyMeta": "현재 확인이 필요한 알람이 없습니다."
     }
@@ -43,13 +43,13 @@
   },
   "charts": {
     "monthlyOperating": {
-      "title": "월별 운영률 추이",
-      "description": "최근 6개월 운영 안정도 파생 추이",
+      "title": "월간 운영률 추이",
+      "description": "최근 6개월 운영 안정성 파생 추이",
       "average": "평균 운영률",
       "bestMonth": "최고 운영 월"
     },
     "monthlyAlarms": {
-      "title": "월별 알람 발생",
+      "title": "월간 알람 발생",
       "description": "최근 6개월 알람 건수 파생 추이",
       "total": "6개월 누적",
       "peakMonth": "최다 발생 월"
@@ -69,9 +69,9 @@
     },
     "riskCranes": {
       "title": "위험 크레인 우선순위",
-      "description": "하중률, 풍속, 상태 기반 점수",
+      "description": "부하율, 풍속, 상태 기반 점수",
       "riskScore": "위험 점수",
-      "loadRatio": "하중률",
+      "loadRatio": "부하율",
       "windSpeed": "풍속"
     }
   },
@@ -83,5 +83,10 @@
     "warningCount": "경고",
     "operatingRate": "운영률",
     "riskScore": "위험 점수"
+  },
+  "preview": {
+    "label": "3D 미리보기",
+    "openFull": "전체 모니터링 열기",
+    "close": "미리보기 닫기"
   }
 }
