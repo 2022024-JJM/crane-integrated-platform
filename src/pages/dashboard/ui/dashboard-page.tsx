@@ -9,7 +9,13 @@ import {
   type DashboardRegionStatusDatum,
 } from '../model';
 import { MetricCard } from './dashboard-parts';
-import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
+import {
+  DashboardRegionPreviewModal,
+  getDashboardPreviewDefaultPosition,
+  getDashboardPreviewDefaultSize,
+  type DashboardPreviewPosition,
+  type DashboardPreviewSize,
+} from './dashboard-region-preview-modal';
 import {
   DashboardOverviewHeader,
   DashboardRecentAlarmsSection,
@@ -24,6 +30,11 @@ export function DashboardPage() {
   const { summary, isLoading } = useDashboardSummary();
   const [selectedPreviewRegion, setSelectedPreviewRegion] =
     useState<DashboardRegionStatusDatum | null>(null);
+  const [previewPosition, setPreviewPosition] =
+    useState<DashboardPreviewPosition | null>(null);
+  const [previewSize, setPreviewSize] = useState<DashboardPreviewSize | null>(
+    null,
+  );
   const locale = useMemo(
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
@@ -88,7 +99,15 @@ export function DashboardPage() {
             summary={summary}
             isLoading={isLoading}
             translate={t}
-            onRegionPreviewOpen={setSelectedPreviewRegion}
+            onRegionPreviewOpen={(regionStatus) => {
+              setSelectedPreviewRegion(regionStatus);
+              setPreviewPosition((currentPosition) => {
+                return currentPosition ?? getDashboardPreviewDefaultPosition();
+              });
+              setPreviewSize((currentSize) => {
+                return currentSize ?? getDashboardPreviewDefaultSize();
+              });
+            }}
           />
         </div>
 
@@ -117,6 +136,10 @@ export function DashboardPage() {
           regionId={selectedPreviewRegion.regionId}
           title={t(selectedPreviewRegion.titleKey)}
           navigateTo={selectedPreviewRegion.navigateTo}
+          position={previewPosition ?? getDashboardPreviewDefaultPosition()}
+          size={previewSize ?? getDashboardPreviewDefaultSize()}
+          onPositionChange={setPreviewPosition}
+          onSizeChange={setPreviewSize}
           onClose={() => {
             setSelectedPreviewRegion(null);
           }}
