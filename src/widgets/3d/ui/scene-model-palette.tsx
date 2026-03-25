@@ -1,28 +1,25 @@
 import {
   CheckCircle2,
+  Cuboid,
   Download,
   GripHorizontal,
   Layers3,
   Loader2,
   Save,
+  Search,
   Trash2,
+  Boxes,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedModelInfo, SceneModelCatalogItem } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/shared/ui/molecules/card';
-import { Separator } from '@/shared/ui/atoms/separator';
+import { Input } from '@/shared/ui/atoms/input';
+import { Card, CardContent, CardHeader } from '@/shared/ui/molecules/card';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
-import { SceneModelPreview } from './scene-model-preview';
 
-const PALETTE_HORIZONTAL_SPACING = 'px-3';
-const PALETTE_CARD_INSET = 'p-3';
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
 
 interface SceneModelPaletteProps {
@@ -70,6 +67,8 @@ export function SceneModelPalette({
   isSaving = false,
 }: SceneModelPaletteProps) {
   const { t } = useTranslation();
+  const [objectSearch, setObjectSearch] = useState('');
+  const [assetSearch, setAssetSearch] = useState('');
   const saveStatusLabel = isSaving
     ? t('monitoring:editor.statusSaving')
     : isDirty
@@ -81,16 +80,56 @@ export function SceneModelPalette({
       ? 'border-orange-500/25 bg-orange-500/10 text-orange-100'
       : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-100';
 
+  const normalizedObjectSearch = objectSearch.trim().toLowerCase();
+  const filteredPlacedModels = useMemo(() => {
+    if (!normalizedObjectSearch) {
+      return placedModels;
+    }
+
+    return placedModels.filter((model) => {
+      const displayName = model.equipName.trim() || model.id;
+      const modelType = humanizeModelPath(model.path);
+
+      return (
+        displayName.toLowerCase().includes(normalizedObjectSearch) ||
+        modelType.toLowerCase().includes(normalizedObjectSearch)
+      );
+    });
+  }, [normalizedObjectSearch, placedModels]);
+
+  const normalizedAssetSearch = assetSearch.trim().toLowerCase();
+  const filteredItems = useMemo(() => {
+    if (!normalizedAssetSearch) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      const modelType = humanizeModelPath(item.path);
+
+      return (
+        item.label.toLowerCase().includes(normalizedAssetSearch) ||
+        modelType.toLowerCase().includes(normalizedAssetSearch)
+      );
+    });
+  }, [items, normalizedAssetSearch]);
+
   return (
-    <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
-      <CardHeader className={cn('border-b py-4', PALETTE_HORIZONTAL_SPACING)}>
+    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-white/8 bg-[#171717] py-0 text-white">
+      <CardHeader className="border-b border-white/10 px-2.5 py-2.5">
         <div className="flex items-center justify-between gap-2">
           {!saveDisabled ? (
             <Badge
               variant="outline"
-              className={cn('h-7 rounded-full px-3', saveStatusClassName)}
+              className={cn(
+                'h-5 rounded-sm border px-1.5 text-[9px] font-medium tracking-[0.02em]',
+                saveStatusClassName,
+              )}
             >
-              {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-3.5" />
+              )}
               {saveStatusLabel}
             </Badge>
           ) : (
@@ -102,9 +141,14 @@ export function SceneModelPalette({
               variant="outline"
               size="sm"
               disabled={saveDisabled || isSaving}
+              className="h-6 cursor-pointer rounded-sm border-white/8 bg-white/4 px-2 text-[11px] text-white hover:bg-white/10"
               onClick={onSave}
             >
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Save className="size-3.5" />
+              )}
               Save
             </Button>
             <Button
@@ -112,168 +156,191 @@ export function SceneModelPalette({
               variant="outline"
               size="sm"
               disabled={exportDisabled}
+              className="h-6 cursor-pointer rounded-sm border-white/8 bg-white/4 px-2 text-[11px] text-white hover:bg-white/10"
               onClick={onExport}
             >
-              <Download />
+              <Download className="size-3.5" />
               {t('monitoring:editor.exportJson')}
             </Button>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent
-        className={cn(
-          'min-h-0 flex-1 pt-4 pb-4',
-          PALETTE_HORIZONTAL_SPACING,
-        )}
-      >
-        <div className="flex h-full min-h-0 flex-col gap-4">
-          <section className="flex min-h-0 basis-[52%] flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-muted-foreground text-xs font-medium tracking-[0.14em] uppercase">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-2 px-2 py-2">
+        <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-white/8 bg-black/18">
+          <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              <Boxes className="size-3 text-white/60" />
+              <p className="text-[10px] font-semibold tracking-[0.12em] text-white/75 uppercase">
                 {t('monitoring:palette.title')}
               </p>
-              <Badge variant="outline" className="rounded-full px-2.5">
+              <Badge
+                variant="outline"
+                className="rounded-sm border-white/8 bg-white/4 px-1.5 py-0 text-[9px] text-white/75"
+              >
                 {items.length}
               </Badge>
             </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="grid grid-cols-2 gap-3 pr-3">
-                {items.map((item) => {
-                  const isDragging = draggingItemId === item.id;
+          </div>
+          <div className="border-b border-white/10 px-2 py-1.5">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-white/28" />
+              <Input
+                value={assetSearch}
+                onChange={(event) => {
+                  setAssetSearch(event.target.value);
+                }}
+                placeholder="Search models"
+                className="h-6 rounded-sm border-white/8 bg-white/4 pl-7 text-[11px] text-white placeholder:text-white/30"
+              />
+            </div>
+          </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="grid grid-cols-1 gap-0.5 p-1.5">
+              {filteredItems.map((item) => {
+                const isDragging = draggingItemId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={item.label}
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'copy';
+                      event.dataTransfer.setData(SCENE_MODEL_DRAG_TYPE, item.id);
+                      event.dataTransfer.setData('text/plain', item.id);
+                      onDragStart(item);
+                    }}
+                    onDragEnd={onDragEnd}
+                    className={cn(
+                      'group flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-left transition',
+                      isDragging
+                        ? 'scale-[0.99] border-primary/40 bg-primary/10'
+                        : 'hover:border-white/6 hover:bg-white/5',
+                    )}
+                  >
+                    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-white/8 bg-white/4 text-white/50">
+                      <Cuboid className="size-2.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-medium leading-none text-white">
+                        {item.label}
+                      </p>
+                      <p className="mt-0.5 truncate text-[9px] leading-none text-white/38">
+                        {humanizeModelPath(item.path)}
+                      </p>
+                    </div>
+                    <div className="rounded-sm border border-white/10 bg-black/22 px-1 py-0.5 text-white/38">
+                      <GripHorizontal className="size-2.5" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </section>
+
+        <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-white/8 bg-black/18">
+          <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              <Layers3 className="size-3 text-white/60" />
+              <p className="text-[10px] font-semibold tracking-[0.12em] text-white/75 uppercase">
+                {t('monitoring:editor.placedObjects')}
+              </p>
+            </div>
+            <Badge
+              variant="outline"
+              className="rounded-sm border-white/8 bg-white/4 px-1.5 py-0 text-[9px] text-white/75"
+            >
+              {placedModels.length}
+            </Badge>
+          </div>
+          <div className="border-b border-white/8 px-2 py-1.5">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-white/28" />
+              <Input
+                value={objectSearch}
+                onChange={(event) => {
+                  setObjectSearch(event.target.value);
+                }}
+                placeholder="Search objects"
+                className="h-6 rounded-sm border-white/8 bg-white/4 pl-7 text-[11px] text-white placeholder:text-white/30"
+              />
+            </div>
+          </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="flex flex-col py-0.5">
+              {filteredPlacedModels.length > 0 ? (
+                filteredPlacedModels.map((model) => {
+                  const isSelected = selectedModelId === model.id;
+                  const displayName = model.equipName.trim() || model.id;
 
                   return (
                     <div
-                      key={item.id}
+                      key={model.id}
                       role="button"
                       tabIndex={0}
-                      aria-label={item.label}
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.effectAllowed = 'copy';
-                        event.dataTransfer.setData(SCENE_MODEL_DRAG_TYPE, item.id);
-                        event.dataTransfer.setData('text/plain', item.id);
-                        onDragStart(item);
+                      aria-label={displayName}
+                      onClick={() => {
+                        onSelectPlacedModel(model.id);
                       }}
-                      onDragEnd={onDragEnd}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onSelectPlacedModel(model.id);
+                        }
+                      }}
                       className={cn(
-                        'group border-border/70 bg-background/70 hover:border-primary/35 hover:bg-muted/60 relative w-full cursor-pointer rounded-[1.15rem] border text-left transition duration-200 active:cursor-grabbing',
-                        PALETTE_CARD_INSET,
-                        isDragging &&
-                          'border-primary/45 bg-primary/6 scale-[0.985] shadow-[0_18px_40px_rgba(15,23,42,0.18)]',
+                        'mx-0.5 flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-left transition',
+                        isSelected
+                          ? 'border-[#5f83c5]/60 bg-[#34558c] text-white'
+                          : 'text-white/80 hover:border-white/6 hover:bg-white/5',
                       )}
                     >
-                      <SceneModelPreview
-                        path={item.path}
-                        label={item.label}
-                        preview={item.preview}
-                        overlayLabel={item.label}
-                        overlayHint={
-                          isDragging
-                            ? t('monitoring:palette.dragging')
-                            : t('monitoring:palette.dragToPlace')
-                        }
-                        showOverlay={isDragging}
-                        className={cn(
-                          'transition duration-200',
-                          isDragging && 'scale-[0.98] opacity-80',
-                          !isDragging && 'group-hover:scale-[0.99]',
-                        )}
-                      />
-                      <div className="pointer-events-none absolute inset-0 rounded-[1.15rem] ring-1 ring-transparent transition group-hover:ring-white/8" />
-                      <div className="pointer-events-none absolute right-3 bottom-3 left-3 rounded-xl bg-slate-950/82 px-2.5 py-2 text-white opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-                        <p className="truncate text-[11px] font-semibold leading-tight">
-                          {item.label}
-                        </p>
-                        <p className="mt-0.5 truncate text-[10px] leading-tight text-white/65">
-                          {t('monitoring:palette.dragToPlace')}
-                        </p>
-                      </div>
-                      <div className="text-muted-foreground absolute top-3 right-3 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-slate-950/48 px-1.5 py-1 text-[10px] backdrop-blur-sm">
-                        <GripHorizontal className="size-2.5" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </section>
-
-          <Separator />
-
-          <section className="flex min-h-0 flex-1 flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Layers3 className="text-muted-foreground size-4" />
-                <p className="text-muted-foreground text-xs font-medium tracking-[0.14em] uppercase">
-                  {t('monitoring:editor.placedObjects')}
-                </p>
-              </div>
-              <Badge variant="outline" className="rounded-full px-2.5">
-                {placedModels.length}
-              </Badge>
-            </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="flex flex-col gap-2 pr-3">
-                {placedModels.length > 0 ? (
-                  placedModels.map((model) => {
-                    const isSelected = selectedModelId === model.id;
-                    const displayName = model.equipName.trim() || model.id;
-
-                    return (
                       <div
-                        key={model.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={displayName}
-                        onClick={() => {
-                          onSelectPlacedModel(model.id);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onSelectPlacedModel(model.id);
-                          }
-                        }}
                         className={cn(
-                          'border-border/70 bg-background/70 hover:border-primary/35 hover:bg-muted/60 flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition',
-                          isSelected && 'border-primary/45 bg-primary/6 ring-1 ring-primary/20',
+                          'flex size-5 shrink-0 items-center justify-center rounded-sm border text-[10px]',
+                          isSelected
+                            ? 'border-white/20 bg-white/10 text-white'
+                            : 'border-white/8 bg-white/4 text-white/50',
                         )}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {displayName}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
-                            {humanizeModelPath(model.path)}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-muted-foreground hover:text-destructive size-8 rounded-lg"
-                          aria-label={t('monitoring:editor.deleteObject')}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onDeletePlacedModel(model.id);
-                          }}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        <Cuboid className="size-2.5" />
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-muted-foreground flex min-h-24 items-center justify-center rounded-xl border border-dashed px-4 text-center text-sm">
-                    {t('monitoring:editor.noPlacedObjects')}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </section>
-        </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12px] font-medium leading-none">
+                          {displayName}
+                        </p>
+                        <p className="mt-0.5 truncate text-[9px] leading-none text-white/38">
+                          {humanizeModelPath(model.path)}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-5 cursor-pointer rounded-sm text-white/38 hover:bg-white/10 hover:text-red-300"
+                        aria-label={t('monitoring:editor.deleteObject')}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDeletePlacedModel(model.id);
+                        }}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-4 text-center text-[11px] text-white/40">
+                  {t('monitoring:editor.noPlacedObjects')}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </section>
       </CardContent>
     </Card>
   );

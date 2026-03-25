@@ -23,8 +23,6 @@ import { useSceneHistory } from '../model/use-scene-history';
 import { useSceneUnsavedChangesGuard } from '../model/use-scene-unsaved-changes-guard';
 import {
   SceneModelPalette,
-  SceneEditorSidebarTabs,
-  type SceneEditorSidebarTab,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
 } from '@/widgets/3d';
@@ -75,8 +73,6 @@ export function SceneObjectsEditPage({
   const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
     null,
   );
-  const [activeSidebarTab, setActiveSidebarTab] =
-    useState<SceneEditorSidebarTab>('palette');
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
@@ -161,14 +157,6 @@ export function SceneObjectsEditPage({
       resetTransformMode();
     };
   }, [clearSelectedModel, resetTransformMode]);
-
-  useEffect(() => {
-    if (!selectedModelId) {
-      return;
-    }
-
-    setActiveSidebarTab('inspector');
-  }, [selectedModelId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -314,43 +302,38 @@ export function SceneObjectsEditPage({
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full gap-3 overflow-hidden p-3">
-      <aside className="flex w-[22rem] shrink-0 flex-col gap-3">
-        <SceneEditorSidebarTabs
-          activeTab={activeSidebarTab}
-          onTabChange={setActiveSidebarTab}
-        />
-        <div className="min-h-0 flex-1">
-          {activeSidebarTab === 'palette' ? (
-            <SceneModelPalette
-              items={sceneModelCatalog}
-              placedModels={sceneInfo?.models ?? []}
-              draggingItemId={draggingCatalogItem?.id ?? null}
-              selectedModelId={selectedModelId}
-              onDragStart={setDraggingCatalogItem}
-              onDragEnd={() => {
-                setDraggingCatalogItem(null);
-              }}
-              onSelectPlacedModel={handleSelectPlacedModel}
-              onDeletePlacedModel={handleDeletePlacedModel}
-              onSave={() => {
-                void saveCurrentScene();
-              }}
-              onExport={() => {
-                downloadSceneInfo(regionId, sceneInfo);
-              }}
-              saveDisabled={!sceneInfo}
-              exportDisabled={!sceneInfo}
-              isDirty={isDirty}
-              isSaving={isSaving}
-            />
-          ) : (
-            <SceneObjectInspector
-              selectedModel={selectedModel}
-              onNameChange={updateSelectedName}
-              onOpacityChange={updateSelectedOpacity}
-              onTransformChange={updateSelectedTransform}
-            />
-          )}
+      <aside className="flex w-[24rem] shrink-0 flex-col gap-3">
+        <div className="min-h-0 flex-[1.2]">
+          <SceneModelPalette
+            items={sceneModelCatalog}
+            placedModels={sceneInfo?.models ?? []}
+            draggingItemId={draggingCatalogItem?.id ?? null}
+            selectedModelId={selectedModelId}
+            onDragStart={setDraggingCatalogItem}
+            onDragEnd={() => {
+              setDraggingCatalogItem(null);
+            }}
+            onSelectPlacedModel={handleSelectPlacedModel}
+            onDeletePlacedModel={handleDeletePlacedModel}
+            onSave={() => {
+              void saveCurrentScene();
+            }}
+            onExport={() => {
+              downloadSceneInfo(regionId, sceneInfo);
+            }}
+            saveDisabled={!sceneInfo}
+            exportDisabled={!sceneInfo}
+            isDirty={isDirty}
+            isSaving={isSaving}
+          />
+        </div>
+        <div className="min-h-0 flex-[0.85]">
+          <SceneObjectInspector
+            selectedModel={selectedModel}
+            onNameChange={updateSelectedName}
+            onOpacityChange={updateSelectedOpacity}
+            onTransformChange={updateSelectedTransform}
+          />
         </div>
       </aside>
 
