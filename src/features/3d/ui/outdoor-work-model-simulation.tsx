@@ -77,6 +77,7 @@ export function OutdoorWorkModelSimulation({
           id={model.id}
           url={model.path}
           equipName={model.equipName}
+          opacity={model.opacity}
           position={model.position}
           rotation={model.rotation}
           scale={model.scale}

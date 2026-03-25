@@ -73,6 +73,10 @@ function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
   return values.map((value) => numRound(value)) as Vector3Tuple;
 }
 
+function snapValue(value: number, step: number) {
+  return numRound(Math.round(value / step) * step);
+}
+
 function getObjectTransformVectors(object: Object3D): Record<
   SceneTransformField,
   Vector3Tuple
@@ -197,9 +201,9 @@ export function SceneObjectsEditCanvas({
       }
 
       return [
-        numRound(hitPoint.x),
+        snapValue(hitPoint.x, 1),
         numRound(hitPoint.y),
-        numRound(hitPoint.z),
+        snapValue(hitPoint.z, 1),
       ];
     },
     [groundPlane],
@@ -295,6 +299,7 @@ export function SceneObjectsEditCanvas({
             ref={transformControlsRef}
             object={selectedObject}
             mode={transformMode}
+            translationSnap={transformMode === 'translate' ? 1 : undefined}
             space="local"
             onMouseDown={() => {
               setIsTransformDragging(true);
@@ -321,6 +326,7 @@ export function SceneObjectsEditCanvas({
             id={model.id}
             url={model.path}
             equipName={model.equipName}
+            opacity={model.opacity}
             position={model.position}
             rotation={model.rotation}
             scale={model.scale}

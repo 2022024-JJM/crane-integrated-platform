@@ -4,6 +4,7 @@
   "inspector": {
     "title": "Inspector",
     "name": "Name",
+    "opacity": "Opacity",
     "empty": "Click an object in the scene to inspect its properties.",
     "position": "Position",
     "rotation": "Rotation",

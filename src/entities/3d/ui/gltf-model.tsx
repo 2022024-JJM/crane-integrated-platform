@@ -1,7 +1,7 @@
 import { Html, useGLTF } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useCallback, useMemo, useRef } from 'react';
-import { Box3, Box3Helper, Object3D, Vector3 } from 'three';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Box3, Box3Helper, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { degToRad } from '../lib/math-utils';
@@ -10,6 +10,7 @@ interface GltfModelProps {
   id: string;
   url: string;
   equipName?: string;
+  opacity?: number;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -22,6 +23,7 @@ export function GltfModel({
   id,
   url,
   equipName,
+  opacity = 1,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -30,7 +32,24 @@ export function GltfModel({
   onObjectReady,
 }: GltfModelProps) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const clone = useMemo(() => {
+    const nextClone = SkeletonUtils.clone(scene);
+
+    nextClone.traverse((child) => {
+      if (!(child instanceof Mesh)) {
+        return;
+      }
+
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map((material) => material.clone());
+        return;
+      }
+
+      child.material = child.material.clone();
+    });
+
+    return nextClone;
+  }, [scene]);
   const modelRef = useRef<Object3D | null>(null);
   const selectionBox = useMemo(() => new Box3(), []);
   const selectionHelper = useMemo(() => {
@@ -64,6 +83,32 @@ export function GltfModel({
     box.getSize(size);
     return size.y + 0.2;
   }, [clone]);
+
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (!(child instanceof Mesh)) {
+        return;
+      }
+
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+
+      materials.forEach((material) => {
+        const nextMaterial = material as Material & {
+          opacity: number;
+          transparent: boolean;
+          depthWrite: boolean;
+          needsUpdate: boolean;
+        };
+
+        nextMaterial.opacity = opacity;
+        nextMaterial.transparent = opacity < 1;
+        nextMaterial.depthWrite = opacity >= 1;
+        nextMaterial.needsUpdate = true;
+      });
+    });
+  }, [clone, opacity]);
 
   useFrame(() => {
     if (!isSelected || !modelRef.current) {

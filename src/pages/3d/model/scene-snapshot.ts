@@ -16,6 +16,14 @@ function isVector3Tuple(value: unknown) {
   );
 }
 
+function clampOpacity(value: unknown) {
+  if (!isFiniteNumber(value)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0.1, Number(value)));
+}
+
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
 
@@ -60,6 +68,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
           {
             ...model,
             id: nextId,
+            opacity: clampOpacity(model.opacity),
           },
         ];
       })

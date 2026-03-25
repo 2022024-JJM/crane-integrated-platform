@@ -21,6 +21,7 @@ import {
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   onNameChange: (name: string) => void;
+  onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -47,10 +48,12 @@ function InspectorSection({ title, children }: InspectorSectionProps) {
 export function SceneObjectInspector({
   selectedModel,
   onNameChange,
+  onOpacityChange,
   onTransformChange,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName || selectedModel?.id || '';
+  const selectedOpacity = selectedModel?.opacity ?? 1;
   const [nameDraft, setNameDraft] = useState(selectedLabel);
 
   useEffect(() => {
@@ -98,6 +101,25 @@ export function SceneObjectInspector({
       <CardContent className="flex flex-1 flex-col gap-4 overflow-auto py-4">
         {selectedModel ? (
           <>
+            <InspectorSection title={t('monitoring:inspector.opacity')}>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={selectedOpacity}
+                  className="accent-primary h-2 w-full cursor-pointer"
+                  onChange={(event) => {
+                    onOpacityChange(Number(event.target.value));
+                  }}
+                />
+                <span className="text-muted-foreground w-10 text-right text-sm tabular-nums">
+                  {selectedOpacity.toFixed(1)}
+                </span>
+              </div>
+            </InspectorSection>
+            <Separator />
             <InspectorSection title={t('monitoring:inspector.position')}>
               <PositionController
                 vec={selectedModel.position}

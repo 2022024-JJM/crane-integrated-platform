@@ -13,6 +13,7 @@ export function createSceneModel({
     id: crypto.randomUUID(),
     equipName: catalogItem.label,
     path: catalogItem.path,
+    opacity: 1,
     position,
     rotation: [0, 0, 0],
     scale: catalogItem.defaultScale,

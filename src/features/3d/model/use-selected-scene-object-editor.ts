@@ -18,6 +18,10 @@ function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
   return tuple.map((value) => numRound(value)) as Vector3Tuple;
 }
 
+function clampOpacity(value: number) {
+  return numRound(Math.min(1, Math.max(0.1, value)));
+}
+
 interface UseSelectedSceneObjectEditorParams {
   sceneInfo: SavedSceneInfo | null;
   updateSceneInfo: (
@@ -31,6 +35,7 @@ interface UseSelectedSceneObjectEditorParams {
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   updateSelectedName: (name: string) => void;
+  updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -105,6 +110,28 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedOpacity = (value: number) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) {
+            return model;
+          }
+
+          return {
+            ...model,
+            opacity: clampOpacity(value),
+          };
+        }),
+      };
+    });
+  };
+
   const updateSelectedTransform = (
     field: SceneTransformField,
     axis: AxisKey,
@@ -138,25 +165,28 @@ export function useSelectedSceneObjectEditor({
       recordHistory?: boolean;
     },
   ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
+    updateSceneInfo(
+      (prev) => {
+        if (!prev || !selectedModelId) {
+          return prev;
+        }
 
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
+        return {
+          ...prev,
+          models: prev.models.map((model) => {
+            if (model.id !== selectedModelId) {
+              return model;
+            }
 
-          return {
-            ...model,
-            [field]: roundVectorValue(value),
-          };
-        }),
-      };
-    }, options);
+            return {
+              ...model,
+              [field]: roundVectorValue(value),
+            };
+          }),
+        };
+      },
+      options,
+    );
   };
 
   const removeSelectedModel = () => {
@@ -181,6 +211,7 @@ export function useSelectedSceneObjectEditor({
   return {
     selectedModel,
     updateSelectedName,
+    updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
     removeSelectedModel,

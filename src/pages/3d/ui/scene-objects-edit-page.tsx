@@ -108,6 +108,7 @@ export function SceneObjectsEditPage({
   const {
     selectedModel,
     updateSelectedName,
+    updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
     removeSelectedModel,
@@ -311,6 +312,7 @@ export function SceneObjectsEditPage({
             <SceneObjectInspector
               selectedModel={selectedModel}
               onNameChange={updateSelectedName}
+              onOpacityChange={updateSelectedOpacity}
               onTransformChange={updateSelectedTransform}
             />
           )}

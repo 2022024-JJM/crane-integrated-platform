@@ -20,6 +20,7 @@ export interface SavedModelInfo {
   id: string;
   equipName: string;
   path: string;
+  opacity: number;
   position: Vector3Tuple;
   rotation: Vector3Tuple;
   scale: Vector3Tuple;
