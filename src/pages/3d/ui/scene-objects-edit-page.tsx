@@ -282,6 +282,36 @@ export function SceneObjectsEditPage({
     setDraggingCatalogItem(null);
   };
 
+  const handleSelectPlacedModel = useCallback(
+    (id: string) => {
+      selectModel(id);
+    },
+    [selectModel],
+  );
+
+  const handleDeletePlacedModel = useCallback(
+    (id: string) => {
+      updateScene((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          models: prev.models.filter((model) => model.id !== id),
+        };
+      });
+
+      if (selectedModelId === id) {
+        clearSelectedModel();
+      }
+    },
+    [clearSelectedModel, selectedModelId, updateScene],
+  );
+
+  const selectedModelLabel =
+    selectedModel?.equipName.trim() || selectedModel?.id || t('monitoring:editor.noSelection');
+
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full gap-3 overflow-hidden p-3">
       <aside className="flex w-[22rem] shrink-0 flex-col gap-3">
@@ -293,11 +323,15 @@ export function SceneObjectsEditPage({
           {activeSidebarTab === 'palette' ? (
             <SceneModelPalette
               items={sceneModelCatalog}
+              placedModels={sceneInfo?.models ?? []}
               draggingItemId={draggingCatalogItem?.id ?? null}
+              selectedModelId={selectedModelId}
               onDragStart={setDraggingCatalogItem}
               onDragEnd={() => {
                 setDraggingCatalogItem(null);
               }}
+              onSelectPlacedModel={handleSelectPlacedModel}
+              onDeletePlacedModel={handleDeletePlacedModel}
               onSave={() => {
                 void saveCurrentScene();
               }}
@@ -306,6 +340,7 @@ export function SceneObjectsEditPage({
               }}
               saveDisabled={!sceneInfo}
               exportDisabled={!sceneInfo}
+              isDirty={isDirty}
               isSaving={isSaving}
             />
           ) : (
@@ -323,6 +358,7 @@ export function SceneObjectsEditPage({
         <SceneObjectsEditCanvas
           rootRef={canvasRootRef}
           sceneInfo={sceneInfo}
+          catalogItems={sceneModelCatalog}
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
           onTransformVectorChange={(field, value) => {
@@ -351,6 +387,21 @@ export function SceneObjectsEditPage({
                   onUndo={undo}
                   onRedo={redo}
                 />
+              }
+              trailingContent={
+                <div className="bg-background/95 border-border/80 flex items-center gap-2 rounded-lg border px-3 py-2 shadow-sm backdrop-blur-sm">
+                  <span className="max-w-36 truncate text-xs font-medium">
+                    {selectedModelLabel}
+                  </span>
+                  {transformMode === 'translate' ? (
+                    <>
+                      <span className="bg-border h-4 w-px" />
+                      <span className="text-muted-foreground text-[11px] font-medium">
+                        {t('monitoring:editor.snapActive')}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
               }
             />
           </div>

@@ -19,6 +19,7 @@ interface SceneTransformModeToggleProps {
   className?: string;
   onModeChange: (mode: SceneTransformMode) => void;
   leadingContent?: ReactNode;
+  trailingContent?: ReactNode;
 }
 
 const TRANSFORM_MODES: SceneTransformMode[] = ['translate', 'rotate', 'scale'];
@@ -37,6 +38,7 @@ export function SceneTransformModeToggle({
   className,
   onModeChange,
   leadingContent,
+  trailingContent,
 }: SceneTransformModeToggleProps) {
   const { t } = useTranslation();
 
@@ -74,7 +76,7 @@ export function SceneTransformModeToggle({
                     <ToggleGroupItem
                       value={transformMode}
                       aria-label={label}
-                      className="text-muted-foreground hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-10 justify-center rounded-md p-0 aria-pressed:shadow-sm"
+                      className="text-muted-foreground hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-10 cursor-pointer justify-center rounded-md p-0 aria-pressed:shadow-sm"
                     >
                       <Icon className="size-4" />
                     </ToggleGroupItem>
@@ -85,6 +87,7 @@ export function SceneTransformModeToggle({
             );
           })}
         </ToggleGroup>
+        {trailingContent}
       </div>
     </TooltipProvider>
   );

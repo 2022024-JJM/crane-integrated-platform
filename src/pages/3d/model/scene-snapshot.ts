@@ -1,7 +1,8 @@
 import type { SavedSceneInfo } from '@/entities/3d';
+import { createId } from '@/shared/lib/create-id';
 
 function createSceneModelId() {
-  return crypto.randomUUID();
+  return createId();
 }
 
 function isFiniteNumber(value: unknown) {

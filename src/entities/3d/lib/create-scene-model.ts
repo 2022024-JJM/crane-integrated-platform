@@ -1,4 +1,5 @@
 import type { SceneModelCatalogItem, SavedModelInfo } from '../model/types';
+import { createId } from '@/shared/lib/create-id';
 
 interface CreateSceneModelParams {
   catalogItem: SceneModelCatalogItem;
@@ -10,7 +11,7 @@ export function createSceneModel({
   position,
 }: CreateSceneModelParams): SavedModelInfo {
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     equipName: catalogItem.label,
     path: catalogItem.path,
     opacity: 1,

@@ -46,7 +46,7 @@ export function SceneEditorSidebarTabs({
               onTabChange(tab.id);
             }}
             className={cn(
-              'text-muted-foreground flex flex-1 items-center justify-center gap-1.5 rounded-[0.7rem] px-3 py-2 text-xs font-medium transition',
+              'text-muted-foreground flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[0.7rem] px-3 py-2 text-xs font-medium transition',
               isActive && 'bg-primary text-primary-foreground shadow-sm',
             )}
           >

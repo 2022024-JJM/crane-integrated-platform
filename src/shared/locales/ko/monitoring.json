@@ -37,6 +37,14 @@
   "editor": {
     "loading": "씬 편집기를 불러오는 중입니다...",
     "exportJson": "JSON 내보내기",
-    "dropHint": "씬 위에 놓으면 모델이 배치됩니다"
+    "dropHint": "씬 위에 놓으면 모델이 배치됩니다",
+    "statusSaving": "저장 중",
+    "statusUnsaved": "저장되지 않음",
+    "statusSaved": "저장됨",
+    "placedObjects": "배치된 객체",
+    "noPlacedObjects": "아직 배치된 객체가 없습니다.",
+    "deleteObject": "객체 삭제",
+    "noSelection": "선택 없음",
+    "snapActive": "Snap 1.0"
   }
 }

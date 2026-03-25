@@ -90,13 +90,9 @@ export function GltfModel({
     onHoverEnd?.(id);
   };
 
-  const handleModelRef = useCallback(
-    (object: Object3D | null) => {
-      modelRef.current = object;
-      onObjectReady?.(id, object);
-    },
-    [id, onObjectReady],
-  );
+  const handleModelRef = useCallback((object: Object3D | null) => {
+    modelRef.current = object;
+  }, []);
 
   const offsetY = useMemo(() => {
     const box = new Box3().setFromObject(clone);
@@ -130,6 +126,27 @@ export function GltfModel({
       });
     });
   }, [clone, opacity]);
+
+  useEffect(() => {
+    if (!onObjectReady) {
+      return;
+    }
+
+    const object = modelRef.current;
+    const frame = requestAnimationFrame(() => {
+      const nextObject = modelRef.current;
+
+      onObjectReady(
+        id,
+        nextObject && nextObject.parent ? nextObject : object?.parent ? object : null,
+      );
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      onObjectReady(id, null);
+    };
+  }, [id, onObjectReady]);
 
   useFrame(() => {
     if (!isSelected || !modelRef.current) {

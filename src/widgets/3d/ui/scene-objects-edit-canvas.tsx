@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent,
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +40,7 @@ import type { Vector3Tuple } from '@/shared/types/math';
 
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
+  catalogItems: SceneModelCatalogItem[];
   transformMode: SceneTransformMode;
   draggingModelCatalogItem: SceneModelCatalogItem | null;
   rootRef?: RefObject<HTMLDivElement | null>;
@@ -69,6 +71,8 @@ type TransformControlsWithDraggingEvent = TransformControlsImpl & {
   ) => void;
 };
 
+const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
+
 function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
   return values.map((value) => numRound(value)) as Vector3Tuple;
 }
@@ -96,8 +100,22 @@ function getObjectTransformVectors(object: Object3D): Record<
   };
 }
 
+function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
+  return (
+    event.dataTransfer.getData(SCENE_MODEL_DRAG_TYPE) ||
+    event.dataTransfer.getData('text/plain')
+  );
+}
+
+function hasSceneModelDragData(event: DragEvent<HTMLDivElement>) {
+  return Array.from(event.dataTransfer.types).some(
+    (type) => type === SCENE_MODEL_DRAG_TYPE || type === 'text/plain',
+  );
+}
+
 export function SceneObjectsEditCanvas({
   sceneInfo,
+  catalogItems,
   transformMode,
   draggingModelCatalogItem,
   rootRef,
@@ -209,6 +227,50 @@ export function SceneObjectsEditCanvas({
     [groundPlane],
   );
 
+  const handleSceneDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!draggingModelCatalogItem && !hasSceneModelDragData(event)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      setPendingDropPosition(resolveDropPosition(event.clientX, event.clientY));
+    },
+    [draggingModelCatalogItem, resolveDropPosition],
+  );
+
+  const handleSceneDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const draggedItemId = getDraggedCatalogItemId(event);
+      const droppedCatalogItem =
+        catalogItems.find((item) => item.id === draggedItemId) ??
+        draggingModelCatalogItem;
+
+      if (!droppedCatalogItem) {
+        setPendingDropPosition(null);
+        return;
+      }
+
+      const nextPosition = resolveDropPosition(event.clientX, event.clientY);
+
+      if (nextPosition) {
+        onAddModel(droppedCatalogItem, nextPosition);
+      }
+
+      event.currentTarget.focus();
+      setPendingDropPosition(null);
+    },
+    [
+      catalogItems,
+      draggingModelCatalogItem,
+      onAddModel,
+      resolveDropPosition,
+    ],
+  );
+
   useEffect(() => {
     if (!orbitControlsRef.current) {
       return;
@@ -216,6 +278,35 @@ export function SceneObjectsEditCanvas({
 
     orbitControlsRef.current.enabled = !isTransformDragging;
   }, [isTransformDragging]);
+
+  useEffect(() => {
+    if (!selectedModelId) {
+      setSelectedObject(null);
+      setIsTransformDragging(false);
+      return;
+    }
+
+    const isSelectedModelPresent =
+      sceneInfo?.models.some((model) => model.id === selectedModelId) ?? false;
+
+    if (!isSelectedModelPresent) {
+      setSelectedObject(null);
+      setIsTransformDragging(false);
+      modelObjectRegistryRef.current.delete(selectedModelId);
+      return;
+    }
+
+    const nextSelectedObject =
+      modelObjectRegistryRef.current.get(selectedModelId) ?? null;
+
+    if (!nextSelectedObject?.parent) {
+      setSelectedObject(null);
+      setIsTransformDragging(false);
+      return;
+    }
+
+    setSelectedObject(nextSelectedObject);
+  }, [sceneInfo?.models, selectedModelId]);
 
   useEffect(() => {
     const controls = transformControlsRef.current as
@@ -241,6 +332,18 @@ export function SceneObjectsEditCanvas({
     }
   }, [draggingModelCatalogItem]);
 
+  const transformTarget = selectedObject?.parent ? selectedObject : null;
+
+  useEffect(() => {
+    const controls = transformControlsRef.current;
+
+    if (!controls || transformTarget) {
+      return;
+    }
+
+    controls.detach();
+  }, [transformTarget]);
+
   return (
     <div
       ref={rootRef}
@@ -249,37 +352,8 @@ export function SceneObjectsEditCanvas({
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
       }}
-      onDragOver={(event) => {
-        if (!draggingModelCatalogItem) {
-          return;
-        }
-
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-        setPendingDropPosition(
-          resolveDropPosition(event.clientX, event.clientY),
-        );
-      }}
+      onDragOver={handleSceneDragOver}
       onDragLeave={() => {
-        setPendingDropPosition(null);
-      }}
-      onDrop={(event) => {
-        if (!draggingModelCatalogItem) {
-          return;
-        }
-
-        event.preventDefault();
-
-        const nextPosition = resolveDropPosition(
-          event.clientX,
-          event.clientY,
-        );
-
-        if (nextPosition) {
-          onAddModel(draggingModelCatalogItem, nextPosition);
-        }
-
-        event.currentTarget.focus();
         setPendingDropPosition(null);
       }}
     >
@@ -294,10 +368,11 @@ export function SceneObjectsEditCanvas({
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
         <OrbitControls ref={orbitControlsRef} enableDamping={false} />
-        {selectedObject ? (
+        {transformTarget ? (
           <TransformControls
+            key={transformTarget.uuid}
             ref={transformControlsRef}
-            object={selectedObject}
+            object={transformTarget}
             mode={transformMode}
             translationSnap={transformMode === 'translate' ? 1 : undefined}
             space="local"
@@ -352,14 +427,16 @@ export function SceneObjectsEditCanvas({
 
       <div
         className={cn(
-          'pointer-events-none absolute inset-0 flex items-center justify-center transition',
+          'absolute inset-0 flex items-center justify-center transition',
           draggingModelCatalogItem
-            ? 'bg-slate-950/6 backdrop-blur-[1px]'
-            : 'opacity-0',
+            ? 'pointer-events-auto bg-slate-950/6 backdrop-blur-[1px]'
+            : 'pointer-events-none opacity-0',
         )}
+        onDragOver={handleSceneDragOver}
+        onDrop={handleSceneDrop}
       >
         {draggingModelCatalogItem ? (
-          <div className="rounded-2xl border border-amber-500/30 bg-slate-950/80 px-4 py-3 text-center shadow-lg">
+          <div className="pointer-events-none rounded-2xl border border-amber-500/30 bg-slate-950/80 px-4 py-3 text-center shadow-lg">
             <p className="text-sm font-semibold text-white">
               {draggingModelCatalogItem.label}
             </p>

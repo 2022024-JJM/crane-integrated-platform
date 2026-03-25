@@ -14,8 +14,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/shared/ui/molecules/card';
 
 interface SceneObjectInspectorProps {
@@ -62,45 +60,42 @@ export function SceneObjectInspector({
 
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 py-0">
-      <CardHeader className="border-b py-4">
-        <CardTitle>{t('monitoring:inspector.title')}</CardTitle>
-        {selectedModel ? (
-          <div className="flex flex-col gap-2">
-            <CardDescription>{t('monitoring:inspector.name')}</CardDescription>
-            <Input
-              value={nameDraft}
-              aria-label={t('monitoring:inspector.name')}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setNameDraft(nextValue);
-
-                if (nextValue.trim()) {
-                  onNameChange(nextValue);
-                }
-              }}
-              onBlur={() => {
-                if (!nameDraft.trim()) {
-                  setNameDraft(selectedLabel);
-                }
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  setNameDraft(selectedLabel);
-                  event.currentTarget.blur();
-                }
-
-                if (event.key === 'Enter' && !nameDraft.trim()) {
-                  setNameDraft(selectedLabel);
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-          </div>
-        ) : null}
-      </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 overflow-auto py-4">
         {selectedModel ? (
           <>
+            <div className="flex flex-col gap-2">
+              <CardDescription>{t('monitoring:inspector.name')}</CardDescription>
+              <Input
+                value={nameDraft}
+                aria-label={t('monitoring:inspector.name')}
+                className="cursor-text"
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setNameDraft(nextValue);
+
+                  if (nextValue.trim()) {
+                    onNameChange(nextValue);
+                  }
+                }}
+                onBlur={() => {
+                  if (!nameDraft.trim()) {
+                    setNameDraft(selectedLabel);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    setNameDraft(selectedLabel);
+                    event.currentTarget.blur();
+                  }
+
+                  if (event.key === 'Enter' && !nameDraft.trim()) {
+                    setNameDraft(selectedLabel);
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+            </div>
+            <Separator />
             <InspectorSection title={t('monitoring:inspector.opacity')}>
               <div className="flex items-center gap-3">
                 <input

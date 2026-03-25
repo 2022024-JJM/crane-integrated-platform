@@ -297,8 +297,9 @@ function SceneModelPreviewInner({
       ) : null}
       <Canvas
         orthographic
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        frameloop="demand"
+        dpr={[1, 1]}
+        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
         camera={{ position: [2.6, 1.8, 2.6], zoom: 72 }}
       >
         <PreviewStage />

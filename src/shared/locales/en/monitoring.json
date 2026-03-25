@@ -37,6 +37,14 @@
   "editor": {
     "loading": "Loading scene editor...",
     "exportJson": "Export JSON",
-    "dropHint": "Drop on the scene to place the model"
+    "dropHint": "Drop on the scene to place the model",
+    "statusSaving": "Saving",
+    "statusUnsaved": "Unsaved",
+    "statusSaved": "Saved",
+    "placedObjects": "Placed Objects",
+    "noPlacedObjects": "No objects have been placed yet.",
+    "deleteObject": "Delete object",
+    "noSelection": "No selection",
+    "snapActive": "Snap 1.0"
   }
 }
