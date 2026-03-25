@@ -30,6 +30,11 @@ interface InspectorSectionProps {
   children: ReactNode;
 }
 
+interface TransformGroupProps {
+  title: string;
+  children: ReactNode;
+}
+
 function humanizeModelPath(path: string) {
   const fileName = path.split('/').pop() ?? path;
   const stem = fileName.replace(/\.glb$/i, '');
@@ -61,6 +66,20 @@ function InspectorSection({
       </summary>
       <div className="border-t border-white/8 px-2.5 py-2.5">{children}</div>
     </details>
+  );
+}
+
+function TransformGroup({ title, children }: TransformGroupProps) {
+  return (
+    <div className="rounded-md border border-white/8 bg-white/[0.035] px-2.5 py-2">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[10px] font-semibold tracking-[0.14em] text-white/44 uppercase">
+          {title}
+        </p>
+        <span className="h-px flex-1 bg-white/6" />
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -136,24 +155,30 @@ export function SceneObjectInspector({
               icon={<Cuboid className="size-4" />}
             >
               <div className="space-y-2.5">
-                <PositionController
-                  vec={selectedModel.position}
-                  onChange={(axis, value) => {
-                    onTransformChange('position', axis, value);
-                  }}
-                />
-                <RotationController
-                  vec={selectedModel.rotation}
-                  onChange={(axis, value) => {
-                    onTransformChange('rotation', axis, value);
-                  }}
-                />
-                <ScaleController
-                  vec={selectedModel.scale}
-                  onChange={(axis, value) => {
-                    onTransformChange('scale', axis, value);
-                  }}
-                />
+                <TransformGroup title={t('monitoring:inspector.position')}>
+                  <PositionController
+                    vec={selectedModel.position}
+                    onChange={(axis, value) => {
+                      onTransformChange('position', axis, value);
+                    }}
+                  />
+                </TransformGroup>
+                <TransformGroup title={t('monitoring:inspector.rotation')}>
+                  <RotationController
+                    vec={selectedModel.rotation}
+                    onChange={(axis, value) => {
+                      onTransformChange('rotation', axis, value);
+                    }}
+                  />
+                </TransformGroup>
+                <TransformGroup title={t('monitoring:inspector.scale')}>
+                  <ScaleController
+                    vec={selectedModel.scale}
+                    onChange={(axis, value) => {
+                      onTransformChange('scale', axis, value);
+                    }}
+                  />
+                </TransformGroup>
               </div>
             </InspectorSection>
 
