@@ -36,41 +36,38 @@ function devSceneSavePlugin(): Plugin {
   return {
     name: 'dev-scene-save-plugin',
     configureServer(server) {
-      server.middlewares.use(
-        DEV_SCENE_API_PATH,
-        async (req, res, next) => {
-          if (req.method !== 'POST' || !req.url) {
-            next();
-            return;
-          }
+      server.middlewares.use(DEV_SCENE_API_PATH, async (req, res, next) => {
+        if (req.method !== 'POST' || !req.url) {
+          next();
+          return;
+        }
 
-          const requestUrl = new URL(req.url, 'http://localhost');
-          const regionId = requestUrl.searchParams.get('regionId') ?? 'dock-1';
-          const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
-          const sceneFilePath = path.resolve(
-            server.config.root,
-            `public${sceneFileUrl}`,
+        const requestUrl = new URL(req.url, 'http://localhost');
+        const regionId = requestUrl.searchParams.get('regionId') ?? 'dock-1';
+        const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
+        const sceneFilePath = path.resolve(
+          server.config.root,
+          `public${sceneFileUrl}`,
+        );
+
+        try {
+          const requestBody = await readRequestBody(req);
+          const sceneInfo = JSON.parse(requestBody);
+
+          await fs.writeFile(
+            sceneFilePath,
+            JSON.stringify(sceneInfo, null, 2),
+            'utf8',
           );
 
-          try {
-            const requestBody = await readRequestBody(req);
-            const sceneInfo = JSON.parse(requestBody);
-
-            await fs.writeFile(
-              sceneFilePath,
-              JSON.stringify(sceneInfo, null, 2),
-              'utf8',
-            );
-
-            jsonResponse(res, 200, sceneInfo);
-          } catch (error) {
-            console.error('Failed to save scene file.', error);
-            jsonResponse(res, 500, {
-              message: 'Failed to save scene file.',
-            });
-          }
-        },
-      );
+          jsonResponse(res, 200, sceneInfo);
+        } catch (error) {
+          console.error('Failed to save scene file.', error);
+          jsonResponse(res, 500, {
+            message: 'Failed to save scene file.',
+          });
+        }
+      });
     },
   };
 }
@@ -82,5 +79,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  server: {
+    host: true,
+    port: 5173,
   },
 });

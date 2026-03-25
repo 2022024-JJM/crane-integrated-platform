@@ -39,6 +39,7 @@ interface ThreeSceneViewerProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
   canvasProps?: Omit<ComponentProps<typeof Canvas>, 'camera' | 'children'>;
   children: ReactNode;
+  overlay?: ReactNode;
   showZoomIndicator?: boolean;
 }
 
@@ -251,6 +252,7 @@ export function ThreeSceneViewer({
   cameraPreset,
   canvasProps,
   children,
+  overlay,
   showZoomIndicator = true,
 }: ThreeSceneViewerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -305,6 +307,12 @@ export function ThreeSceneViewer({
         />
         {children}
       </Canvas>
+
+      {overlay ? (
+        <div className="pointer-events-none absolute inset-0 z-[2]">
+          {overlay}
+        </div>
+      ) : null}
 
       <TooltipProvider delay={150}>
         <div className="pointer-events-none absolute top-3 right-3 z-[1] flex flex-col items-end gap-2">

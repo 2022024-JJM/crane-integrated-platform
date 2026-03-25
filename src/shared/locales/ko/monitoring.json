@@ -1,6 +1,6 @@
 {
   "title": "3D 뷰어 영역",
-  "subtitle": "{{region}} 구역은 준비 중입니다",
+  "subtitle": "{{region}} 구역을 준비 중입니다",
   "inspector": {
     "title": "속성 편집",
     "name": "이름",
@@ -11,7 +11,7 @@
     "scale": "크기"
   },
   "transform": {
-    "title": "변환 모드",
+    "title": "변형 모드",
     "mode": {
       "translate": "이동",
       "rotate": "회전",
@@ -21,6 +21,9 @@
   "history": {
     "undo": "실행 취소",
     "redo": "다시 실행"
+  },
+  "hover": {
+    "model": "모델"
   },
   "palette": {
     "title": "모델 팔레트",

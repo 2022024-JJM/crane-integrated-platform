@@ -22,6 +22,9 @@
     "undo": "Undo",
     "redo": "Redo"
   },
+  "hover": {
+    "model": "Model"
+  },
   "palette": {
     "title": "Model Palette",
     "description": "Drag GLB models into the scene.",

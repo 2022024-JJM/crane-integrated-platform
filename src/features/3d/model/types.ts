@@ -1,3 +1,5 @@
+import type { SavedModelInfo } from '@/entities/3d';
+
 export type AxisKey = 'x' | 'y' | 'z';
 
 export type SceneTransformField = 'position' | 'rotation' | 'scale';
@@ -14,6 +16,16 @@ export const TRANSFORM_FIELD_BY_MODE = {
   rotate: 'rotation',
   scale: 'scale',
 } as const satisfies Record<SceneTransformMode, SceneTransformField>;
+
+export interface ScreenPosition {
+  x: number;
+  y: number;
+}
+
+export interface MonitoringHoveredModel {
+  model: SavedModelInfo;
+  position: ScreenPosition;
+}
 
 export interface GenValue {
   key: string;

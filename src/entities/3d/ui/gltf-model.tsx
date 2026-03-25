@@ -17,6 +17,9 @@ interface GltfModelProps {
   onSelect?: (id: string) => void;
   isSelected?: boolean;
   onObjectReady?: (id: string, object: Object3D | null) => void;
+  onHoverStart?: (id: string, clientX: number, clientY: number) => void;
+  onHoverMove?: (id: string, clientX: number, clientY: number) => void;
+  onHoverEnd?: (id: string) => void;
 }
 
 export function GltfModel({
@@ -30,6 +33,9 @@ export function GltfModel({
   onSelect,
   isSelected = false,
   onObjectReady,
+  onHoverStart,
+  onHoverMove,
+  onHoverEnd,
 }: GltfModelProps) {
   const { scene } = useGLTF(url);
   const clone = useMemo(() => {
@@ -67,6 +73,21 @@ export function GltfModel({
   const handleSelect = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     onSelect?.(id);
+  };
+
+  const handleHoverStart = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    onHoverStart?.(id, event.clientX, event.clientY);
+  };
+
+  const handleHoverMove = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    onHoverMove?.(id, event.clientX, event.clientY);
+  };
+
+  const handleHoverEnd = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    onHoverEnd?.(id);
   };
 
   const handleModelRef = useCallback(
@@ -129,6 +150,9 @@ export function GltfModel({
         rotation={rotation.map((deg) => degToRad(deg))}
         scale={scale}
         onClick={handleSelect}
+        onPointerOver={handleHoverStart}
+        onPointerMove={handleHoverMove}
+        onPointerOut={handleHoverEnd}
       />
       {isSelected ? <primitive object={selectionHelper} /> : null}
 
@@ -144,6 +168,18 @@ export function GltfModel({
           className="cursor-pointer rounded bg-black/60 px-1 py-0 font-mono text-lg whitespace-nowrap text-white"
           onPointerDown={(event) => {
             event.stopPropagation();
+          }}
+          onPointerEnter={(event) => {
+            event.stopPropagation();
+            onHoverStart?.(id, event.clientX, event.clientY);
+          }}
+          onPointerMove={(event) => {
+            event.stopPropagation();
+            onHoverMove?.(id, event.clientX, event.clientY);
+          }}
+          onPointerLeave={(event) => {
+            event.stopPropagation();
+            onHoverEnd?.(id);
           }}
           onClick={(event) => {
             event.stopPropagation();

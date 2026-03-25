@@ -4,6 +4,7 @@ import {
   loadSceneInfoByRegionId,
   type SavedSceneInfo,
 } from '@/entities/3d';
+import type { MonitoringHoveredModel } from '../model/types';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
@@ -11,11 +12,13 @@ import { useValueGeneratorStore } from '../model/use-value-generator-store';
 interface OutdoorWorkModelSimulationProps {
   regionId: string;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
+  onHoveredModelChange?: (hoveredModel: MonitoringHoveredModel | null) => void;
 }
 
 export function OutdoorWorkModelSimulation({
   regionId,
   onSceneDataLoadingChange,
+  onHoveredModelChange,
 }: OutdoorWorkModelSimulationProps) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
@@ -65,8 +68,30 @@ export function OutdoorWorkModelSimulation({
 
     return () => {
       isMounted = false;
+      onHoveredModelChange?.(null);
     };
-  }, [regionId, registerFromModel, start]);
+  }, [onHoveredModelChange, regionId, registerFromModel, start]);
+
+  const handleHoveredModelChange = (
+    id: string,
+    clientX: number,
+    clientY: number,
+  ) => {
+    const hoveredModel = models.find((model) => model.id === id);
+
+    if (!hoveredModel) {
+      onHoveredModelChange?.(null);
+      return;
+    }
+
+    onHoveredModelChange?.({
+      model: hoveredModel,
+      position: {
+        x: clientX,
+        y: clientY,
+      },
+    });
+  };
 
   return (
     <>
@@ -81,6 +106,11 @@ export function OutdoorWorkModelSimulation({
           position={model.position}
           rotation={model.rotation}
           scale={model.scale}
+          onHoverStart={handleHoveredModelChange}
+          onHoverMove={handleHoveredModelChange}
+          onHoverEnd={() => {
+            onHoveredModelChange?.(null);
+          }}
         />
       ))}
     </>
