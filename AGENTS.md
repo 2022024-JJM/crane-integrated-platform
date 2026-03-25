@@ -54,20 +54,23 @@
 현재 사용 중인 서브라우트는 다음과 같다.
 
 - `3d-monitoring`
+- `3d-viewer-edit`
 - `crane-status`
 - `work-history`
+
+`3d-viewer-edit` 는 `src/pages/3d` 의 scene editor UI를 사용하며, 현재 `outdoor-work` 와 `indoor-work` 양쪽에서 공통으로 재사용한다.
 
 ## Layers (`src/`)
 
 - **app/** — 애플리케이션 진입점, 라우팅, 전역 스타일
 - **pages/** — 라우트 단위 화면 구성
-  - 예: `dashboard`, `region-overview`, `outdoor-work`, `indoor-work`
+  - 예: `dashboard`, `region-overview`, `outdoor-work`, `indoor-work`, `3d`
 - **widgets/** — 페이지에서 조합하는 큰 UI 블록
   - 예: `layout`, `alarm`, `crane`, `3d`
 - **features/** — 사용자 기능 단위
-  - 예: `page-settings`, `3d`
+  - 예: `page-settings`, `3d`, `weather`
 - **entities/** — 도메인 모델, mock data, domain helper
-  - 예: `region`, `crane`, `alarm`, `3d`
+  - 예: `region`, `crane`, `alarm`, `3d`, `weather`
 - **shared/** — 전역 재사용 자원
   - 예: `config`, `lib`, `types`, `ui`, `locales`
 
@@ -79,13 +82,19 @@ Import rule: 상위 레이어는 하위 레이어만 import 할 수 있다.
 
 현재 저장소 기준으로 주의해서 이해해야 할 구현 상태는 다음과 같다.
 
-- 다국어는 `ko`, `en` 두 언어를 지원한다.
+- 다국어는 `ko`, `en`, `la` 세 언어를 지원한다.
 - 언어 리소스는 `src/shared/locales` 아래 namespace 별 JSON으로 관리한다.
+- 현재 namespace 는 `common`, `dashboard`, `region-overview`, `monitoring` 이다.
 - i18n 초기화와 language persistence 는 `src/shared/config/i18n.ts` 가 담당한다.
 - 테마 상태는 `src/shared/lib/theme-context.tsx` 에서 관리한다.
 - 사이드바 open/close 상태는 `src/shared/lib/sidebar-context.tsx` 에서 관리한다.
+- 헤더 표시 옵션(date/time/health/weather)은 `src/shared/lib/header-display-settings-context.tsx` 에서 관리한다.
+- 헤더 우측 날씨 pill 은 `features/weather`, `entities/weather` 를 통해 구성된다.
 - 공용 3D viewer shell 은 `src/shared/ui/organisms/three-scene-viewer.tsx` 에 있다.
 - 3D simulation/runtime state 일부는 `src/features/3d/model` 의 Zustand store 가 담당한다.
+- 3D editor page/session/history/unsaved guard 는 `src/pages/3d` 에 있다.
+- 개발 환경에서 scene JSON 저장은 `vite.config.ts` 의 custom dev middleware(`POST /__dev/scene`)가 담당한다.
+- region별 scene 파일 매핑은 `src/entities/3d/model/scene-file-registry.ts` 를 기준으로 맞춘다.
 - `outdoor-work` / `indoor-work` 의 `crane-status`, `work-history` 는 아직 placeholder 성격의 화면이다.
 - 네비게이션 구성은 `src/widgets/layout/config/navigation.ts` 에서 현재 pathname 기준으로 동적으로 만든다.
 
@@ -107,10 +116,13 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 외부 소비는 각 슬라이스의 `index.ts` public API 를 우선 사용한다.
 - `pages/index.ts` 는 현재 주요 route page export 집합이다.
+- `pages/3d` 는 route 직접 진입점이 아니라 `outdoor-work` / `indoor-work` 내부에서 재사용되는 editor page slice 라는 점을 전제로 본다.
 - `widgets/layout` 은 앱 공통 shell 역할을 가진다.
 - 언어 설정은 `src/shared/config/i18n.ts` 를 기준으로 맞춘다.
 - 테마와 사이드바 전역 상태는 각각 `src/shared/lib/theme-context.tsx`, `src/shared/lib/sidebar-context.tsx` 를 기준으로 맞춘다.
+- 헤더 표시 옵션은 `src/shared/lib/header-display-settings-context.tsx` 를 기준으로 맞춘다.
 - 3D domain type/helper 는 `entities/3d`, 3D feature state/behavior 는 `features/3d` 에 둔다.
+- weather API URL 생성, 파싱, 표시 데이터 변환은 `entities/weather` 에 두고, header에서의 조합은 `features/weather` 에 둔다.
 
 ## shared/ui 구조 (Atomic Design)
 
@@ -159,6 +171,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - feature 전용 런타임 상태는 해당 feature 내부 model 에 둔다.
 - mock data 는 각 entity slice 내부 `model/mock-data.ts` 에 두는 현재 패턴을 따른다.
 - 번역 리소스 추가 시 `src/shared/locales/{lang}` 아래 namespace JSON을 함께 맞춘다.
+- 언어 추가/변경 시 `SUPPORTED_LANGUAGES`, `resources`, `ns`, locale fallback 을 `src/shared/config/i18n.ts` 와 함께 맞춘다.
+- 3D scene 편집 결과는 dev server 경유로 `public/scenes/*.json` 에 저장되므로, 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다.
 
 ### FSD Usage
 
@@ -171,5 +185,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `README.md` 의 일부 구조/파일 설명은 현재 코드와 다를 수 있다.
 - Agent는 문서 간 충돌이 있으면 `실제 코드`, 그다음 `AGENTS.md`, 마지막으로 `README.md` 순서로 신뢰한다.
 - 테스트 프레임워크가 없으므로, 변경 검증 시 lint/build 와 실제 파일 구조 대조가 특히 중요하다.
+- 현재 ESLint 규칙은 FSD import 제약 외에도 React 19 계열 hook/ref 규칙과 `react-refresh/only-export-components` 를 함께 강하게 검사한다.
+- 따라서 단순 동작 수정이어도 ref를 render 중 읽는 패턴, effect 내부 동기 `setState`, component file 내 non-component export 가 lint 실패 원인이 될 수 있다.
 - 현재 로컬 환경에서는 `npm run build` 실행 시 `tsc -b` 이후 Vite 단계에서 Rollup optional dependency(`@rollup/rollup-linux-x64-gnu`) 누락으로 실패할 수 있다.
 - Agent는 이 알려진 Rollup 누락 이슈만을 이유로 `npm install` 또는 추가 dependency 설치 승인을 요청하지 않는다. 대신 `npx tsc -b` 결과와 `vite build` 실패 원인을 그대로 보고한다.
