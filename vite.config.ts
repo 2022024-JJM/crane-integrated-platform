@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
@@ -72,27 +72,38 @@ function devSceneSavePlugin(): Plugin {
   };
 }
 
+const DEFAULT_DEV_PROXY_TARGET_HTTP = 'http://192.168.122.230:8080';
+const DEFAULT_DEV_PROXY_TARGET_WS = 'ws://192.168.122.230:8080';
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss(), devSceneSavePlugin()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    host: true,
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://192.168.122.230:8080',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://192.168.122.230:8080',
-        changeOrigin: true,
-        ws: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const proxyHttpTarget =
+    env.VITE_DEV_PROXY_TARGET_HTTP || DEFAULT_DEV_PROXY_TARGET_HTTP;
+  const proxyWsTarget =
+    env.VITE_DEV_PROXY_TARGET_WS || DEFAULT_DEV_PROXY_TARGET_WS;
+
+  return {
+    plugins: [react(), tailwindcss(), devSceneSavePlugin()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
     },
-  },
+    server: {
+      host: true,
+      port: 5173,
+      proxy: {
+        '/api': {
+          target: proxyHttpTarget,
+          changeOrigin: true,
+        },
+        '/ws': {
+          target: proxyWsTarget,
+          changeOrigin: true,
+          ws: true,
+        },
+      },
+    },
+  };
 });
