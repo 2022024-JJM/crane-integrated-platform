@@ -1,6 +1,7 @@
-import { Badge } from "@/shared/ui/atoms/badge"
-import { useTranslation } from "react-i18next"
-import { ScrollArea } from "@/shared/ui/molecules/scroll-area"
+import { Badge } from '@/shared/ui/atoms/badge';
+import { useTranslation } from 'react-i18next';
+import type { MonitoringReplayRow } from '@/entities/monitoring';
+import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 import {
   Table,
   TableBody,
@@ -8,63 +9,130 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/shared/ui/molecules/table"
-import type { CraneOperationalData, CraneStatus } from "@/entities/crane"
+} from '@/shared/ui/molecules/table';
 
 interface CraneStatusTableProps {
-  cranes: CraneOperationalData[]
+  rows: MonitoringReplayRow[];
+  latestFrameTimestamp: string | null;
+  isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string | null;
+  isEmpty?: boolean;
 }
 
-const statusStyle: Record<CraneStatus, string> = {
-  operating: "bg-green-500/15 text-green-600 dark:text-green-400",
-  idle: "bg-gray-500/15 text-gray-600 dark:text-gray-400",
-  maintenance: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  warning: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  stopped: "bg-red-500/15 text-red-600 dark:text-red-400",
+const booleanBadgeClassName = {
+  true: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  false: 'bg-slate-500/15 text-slate-600 dark:text-slate-400',
+} as const;
+
+function formatValue(value: MonitoringReplayRow['value']) {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+
+  return String(value);
 }
 
-export function CraneStatusTable({ cranes }: CraneStatusTableProps) {
-  const { t } = useTranslation()
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function BooleanBadge({ value }: { value: boolean }) {
+  return (
+    <Badge className={booleanBadgeClassName[String(value) as 'true' | 'false']}>
+      {value ? 'Yes' : 'No'}
+    </Badge>
+  );
+}
+
+export function CraneStatusTable({
+  rows,
+  latestFrameTimestamp,
+  isLoading = false,
+  isError = false,
+  errorMessage = null,
+  isEmpty = false,
+}: CraneStatusTableProps) {
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b px-4 py-2">
-        <h3 className="text-sm font-medium">{t("common:craneStatus.title")}</h3>
+      <div className="flex items-center justify-between border-b px-4 py-2">
+        <h3 className="text-sm font-medium">{t('common:craneStatus.title')}</h3>
+        <span className="text-xs text-muted-foreground">
+          Latest: {formatTimestamp(latestFrameTimestamp)}
+        </span>
       </div>
       <ScrollArea className="flex-1 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("common:craneStatus.name")}</TableHead>
-              <TableHead>{t("common:craneStatus.status")}</TableHead>
-              <TableHead className="text-right">{t("common:craneStatus.load")}</TableHead>
-              <TableHead className="text-right">{t("common:craneStatus.windSpeed")}</TableHead>
-              <TableHead className="text-right">{t("common:craneStatus.boomAngle")}</TableHead>
-              <TableHead className="text-right">{t("common:craneStatus.hoistHeight")}</TableHead>
-              <TableHead className="text-right">{t("common:craneStatus.slewAngle")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {cranes.map((crane) => (
-                <TableRow key={crane.id}>
-                  <TableCell className="font-medium">{crane.name}</TableCell>
+        {isLoading ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            Loading monitoring replay...
+          </div>
+        ) : isError ? (
+          <div className="p-4 text-sm text-destructive">
+            Failed to load monitoring replay.
+            {errorMessage ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {errorMessage}
+              </p>
+            ) : null}
+          </div>
+        ) : isEmpty ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            No replay data found for the current region.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Crane</TableHead>
+                <TableHead>Tag</TableHead>
+                <TableHead>Display Name</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Alarm</TableHead>
+                <TableHead>Stale</TableHead>
+                <TableHead>Changed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium">{row.craneNo}</TableCell>
+                  <TableCell className="font-mono text-xs">{row.tagCode}</TableCell>
+                  <TableCell>{row.displayName}</TableCell>
+                  <TableCell>{formatValue(row.value)}</TableCell>
+                  <TableCell>{row.unit ?? '-'}</TableCell>
+                  <TableCell>{row.category}</TableCell>
                   <TableCell>
-                    <Badge className={statusStyle[crane.status]}>
-                      {t(`common:craneStatus.${crane.status}`)}
-                    </Badge>
+                    <BooleanBadge value={row.alarm} />
                   </TableCell>
-                  <TableCell className="text-right">
-                    {crane.load}/{crane.maxLoad}
+                  <TableCell>
+                    <BooleanBadge value={row.stale} />
                   </TableCell>
-                  <TableCell className="text-right">{crane.windSpeed}</TableCell>
-                  <TableCell className="text-right">{crane.boomAngle}</TableCell>
-                  <TableCell className="text-right">{crane.hoistHeight}</TableCell>
-                  <TableCell className="text-right">{crane.slewAngle}</TableCell>
+                  <TableCell>
+                    <BooleanBadge value={row.changed} />
+                  </TableCell>
                 </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </ScrollArea>
     </div>
-  )
+  );
 }

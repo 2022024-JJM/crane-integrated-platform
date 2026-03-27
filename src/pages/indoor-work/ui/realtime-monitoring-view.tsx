@@ -4,17 +4,17 @@ import {
   ResizableHandle,
 } from '@/shared/ui/molecules/resizable';
 import { useState } from 'react';
+import { useRegionRealtimeAlarms } from '@/features/alarm';
+import { useMonitoringReplay } from '@/features/monitoring';
 import { Monitoring3dView } from '@/features/3d';
-import { getCranesByRegion } from '@/entities/crane';
-import { getAlarmsByRegion, getAlarmStatsByRegion } from '@/entities/alarm';
 import { Spinner } from '@/shared/ui/atoms/spinner';
 import { CraneStatusTable } from '@/widgets/crane';
 import { AlarmPanel } from '@/widgets/alarm';
 
 export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
-  const cranes = getCranesByRegion(regionId);
-  const alarms = getAlarmsByRegion(regionId);
-  const alarmStats = getAlarmStatsByRegion(regionId);
+  const { alarms, stats: alarmStats } = useRegionRealtimeAlarms(regionId);
+  const { rows, latestFrameTimestamp, isLoading, isError, errorMessage, isEmpty } =
+    useMonitoringReplay(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
 
   return (
@@ -42,7 +42,14 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={40}>
-            <CraneStatusTable cranes={cranes} />
+            <CraneStatusTable
+              rows={rows}
+              latestFrameTimestamp={latestFrameTimestamp}
+              isLoading={isLoading}
+              isError={isError}
+              errorMessage={errorMessage}
+              isEmpty={isEmpty}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>

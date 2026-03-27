@@ -1,6 +1,8 @@
 const DEFAULT_API_TIMEOUT_MS = 10_000;
 const DEFAULT_WS_RECONNECT_INTERVAL_MS = 3_000;
 const DEFAULT_WS_MAX_RECONNECT_ATTEMPTS = 5;
+const DEFAULT_WS_CRANES_LITE_URL =
+  'ws://192.168.122.230:8080/ws/cranes-lite/all';
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '');
@@ -46,6 +48,16 @@ export function getWebSocketBaseUrl() {
   return resolveUrl(import.meta.env.VITE_WS_BASE_URL, 'ws');
 }
 
+export function getCranesLiteWebSocketUrl() {
+  const configuredUrl = import.meta.env.VITE_WS_CRANES_LITE_URL;
+
+  if (configuredUrl && configuredUrl.trim()) {
+    return trimTrailingSlash(configuredUrl.trim());
+  }
+
+  return DEFAULT_WS_CRANES_LITE_URL;
+}
+
 export function getApiTimeoutMs() {
   return parsePositiveInteger(
     import.meta.env.VITE_API_TIMEOUT_MS,
@@ -71,6 +83,7 @@ export function getNetworkConfig() {
   return {
     apiBaseUrl: getApiBaseUrl(),
     wsBaseUrl: getWebSocketBaseUrl(),
+    cranesLiteWsUrl: getCranesLiteWebSocketUrl(),
     apiTimeoutMs: getApiTimeoutMs(),
     wsReconnectIntervalMs: getWebSocketReconnectIntervalMs(),
     wsMaxReconnectAttempts: getWebSocketMaxReconnectAttempts(),

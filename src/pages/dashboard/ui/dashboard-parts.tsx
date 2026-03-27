@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import {
+  getAlarmSeverityLabel,
   getAlarmMessageTranslation,
   type Alarm,
   type AlarmSeverity,
@@ -40,7 +41,8 @@ import { DashboardMetricSkeleton } from './dashboard-skeletons';
 
 const severityBadgeClassName: Record<AlarmSeverity, string> = {
   critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
-  warning:
+  high: 'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300',
+  medium:
     'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
   info: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
 };
@@ -340,10 +342,12 @@ export function RecentAlarmRow({
   alarm,
   translate,
   formatTimestamp,
+  locale,
 }: {
   alarm: Alarm;
   translate: DashboardTranslate;
   formatTimestamp: (value: string) => string;
+  locale: string;
 }) {
   const message = getAlarmMessageTranslation(alarm);
 
@@ -356,7 +360,8 @@ export function RecentAlarmRow({
               className={cn(
                 'size-4',
                 alarm.severity === 'critical' && 'text-red-500',
-                alarm.severity === 'warning' && 'text-amber-500',
+                alarm.severity === 'high' && 'text-orange-500',
+                alarm.severity === 'medium' && 'text-amber-500',
                 alarm.severity === 'info' && 'text-blue-500',
               )}
             />
@@ -367,7 +372,7 @@ export function RecentAlarmRow({
           </p>
         </div>
         <Badge className={cn('border', severityBadgeClassName[alarm.severity])}>
-          {translate(`common:alarms.${alarm.severity}`)}
+          {getAlarmSeverityLabel(alarm.severity, locale)}
         </Badge>
       </div>
       <div className="text-muted-foreground mt-3 text-xs">

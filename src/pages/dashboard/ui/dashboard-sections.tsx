@@ -69,6 +69,7 @@ interface DashboardTrendSectionProps extends DashboardSectionSharedProps {
 interface DashboardRecentAlarmsSectionProps
   extends DashboardSectionSharedProps {
   formatTimestamp: (value: string) => string;
+  locale: string;
 }
 
 export function DashboardOverviewHeader({
@@ -615,6 +616,7 @@ export function DashboardRecentAlarmsSection({
   summary,
   translate,
   formatTimestamp,
+  locale,
 }: DashboardRecentAlarmsSectionProps) {
   return (
     <Card className="border-border/70 bg-background/60 border shadow-none xl:h-full">
@@ -641,6 +643,7 @@ export function DashboardRecentAlarmsSection({
                   key={alarm.id}
                   alarm={alarm}
                   formatTimestamp={formatTimestamp}
+                  locale={locale}
                   translate={translate}
                 />
               ))}

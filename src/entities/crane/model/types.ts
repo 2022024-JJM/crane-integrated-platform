@@ -19,3 +19,10 @@ export interface CraneOperationalData {
   trolleyPosition: number;
   lastUpdated: string;
 }
+
+export interface CraneRegistryEntry {
+  craneId: string;
+  craneName: string;
+  craneNo: string;
+  regionId: string;
+}

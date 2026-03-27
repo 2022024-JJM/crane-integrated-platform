@@ -1,0 +1,76 @@
+import { getMonitoringTagMetadata } from '../model/tag-catalog';
+import type {
+  MonitoringReplayRow,
+  ReplayLiteCraneSnapshot,
+  ReplayLiteFrame,
+  ReplayLiteResponse,
+} from '../model/types';
+
+function mapReplayValueToRow(
+  frameTimestamp: string,
+  crane: ReplayLiteCraneSnapshot,
+  tagCode: string,
+  value: string | number | null,
+): MonitoringReplayRow {
+  const metadata = getMonitoringTagMetadata(tagCode);
+
+  return {
+    id: `${frameTimestamp}:${crane.craneId}:${tagCode}`,
+    frameTimestamp,
+    snapshotAt: crane.snapshotAt,
+    craneId: crane.craneId,
+    craneNo: crane.craneNo,
+    tagCode,
+    displayName: metadata.displayName,
+    category: metadata.category,
+    dataType: metadata.dataType,
+    unit: metadata.unit,
+    direction: metadata.direction,
+    value,
+    alarm: metadata.alarm,
+    stale: value === null,
+    changed: false,
+  };
+}
+
+function compareRows(left: MonitoringReplayRow, right: MonitoringReplayRow) {
+  return (
+    left.craneNo.localeCompare(right.craneNo, undefined, { numeric: true }) ||
+    left.tagCode.localeCompare(right.tagCode, undefined, { numeric: true })
+  );
+}
+
+export function getLatestReplayFrame(
+  response: ReplayLiteResponse,
+): ReplayLiteFrame | null {
+  if (response.frames.length === 0) {
+    return null;
+  }
+
+  return [...response.frames].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  )[0]!;
+}
+
+export function mapReplayResponseToRows(
+  response: ReplayLiteResponse,
+  craneIds?: string[],
+): MonitoringReplayRow[] {
+  const latestFrame = getLatestReplayFrame(response);
+
+  if (!latestFrame) {
+    return [];
+  }
+
+  const craneFilter =
+    craneIds && craneIds.length > 0 ? new Set(craneIds) : null;
+
+  return latestFrame.cranes
+    .filter((crane) => !craneFilter || craneFilter.has(crane.craneId))
+    .flatMap<MonitoringReplayRow>((crane) =>
+      Object.entries(crane.values).map(([tagCode, value]) =>
+        mapReplayValueToRow(latestFrame.timestamp, crane, tagCode, value),
+      ),
+    )
+    .sort(compareRows);
+}

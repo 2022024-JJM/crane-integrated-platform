@@ -25,7 +25,11 @@ function appendQueryValue(
 
 function createUrl(baseUrl: string, path: string, query?: RestRequestQuery) {
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
-  const url = new URL(normalizedPath, `${baseUrl}/`);
+  const resolvedBaseUrl =
+    typeof window !== 'undefined'
+      ? new URL(baseUrl, window.location.origin).toString()
+      : baseUrl;
+  const url = new URL(normalizedPath, `${resolvedBaseUrl.replace(/\/+$/, '')}/`);
 
   if (!query) {
     return url;
@@ -139,11 +143,16 @@ export class RestClient {
   private readonly fetchFn: typeof fetch;
 
   constructor(options: RestClientOptions) {
+    const defaultFetch =
+      typeof globalThis.fetch === 'function'
+        ? globalThis.fetch.bind(globalThis)
+        : fetch;
+
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
     this.defaultHeaders = options.defaultHeaders;
     this.timeoutMs = options.timeoutMs;
     this.headersFactory = options.headersFactory;
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? defaultFetch;
   }
 
   get<T>(path: string, options?: RestRequestOptions) {

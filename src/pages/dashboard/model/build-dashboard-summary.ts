@@ -166,7 +166,7 @@ function getUrgentRegion(
         (alarm) => alarm.severity === 'critical',
       ).length;
       const warning = alarms.filter(
-        (alarm) => alarm.severity === 'warning',
+        (alarm) => alarm.severity === 'high' || alarm.severity === 'medium',
       ).length;
       const info = alarms.filter((alarm) => alarm.severity === 'info').length;
 
@@ -225,7 +225,7 @@ function buildMonthlyTrend({
     (alarm) => alarm.severity === 'critical',
   ).length;
   const warningCount = alarms.filter(
-    (alarm) => alarm.severity === 'warning',
+    (alarm) => alarm.severity === 'high' || alarm.severity === 'medium',
   ).length;
   const infoCount = alarms.filter((alarm) => alarm.severity === 'info').length;
   const alarmPressure =

@@ -123,6 +123,7 @@ export function DashboardPage() {
             summary={summary}
             isLoading={isLoading}
             translate={t}
+            locale={locale}
             formatTimestamp={(value) =>
               dateTimeFormatter.format(new Date(value))
             }
