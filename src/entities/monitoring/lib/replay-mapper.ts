@@ -40,6 +40,20 @@ function compareRows(left: MonitoringReplayRow, right: MonitoringReplayRow) {
   );
 }
 
+function hasReplayValue(crane: ReplayLiteCraneSnapshot) {
+  return Object.values(crane.values).some((value) => value !== null);
+}
+
+function filterCraneSnapshots(
+  frame: ReplayLiteFrame,
+  craneIds?: string[],
+) {
+  const craneFilter =
+    craneIds && craneIds.length > 0 ? new Set(craneIds) : null;
+
+  return frame.cranes.filter((crane) => !craneFilter || craneFilter.has(crane.craneId));
+}
+
 export function getLatestReplayFrame(
   response: ReplayLiteResponse,
 ): ReplayLiteFrame | null {
@@ -52,21 +66,32 @@ export function getLatestReplayFrame(
   )[0]!;
 }
 
+export function getLatestReplayFrameWithValues(
+  response: ReplayLiteResponse,
+  craneIds?: string[],
+): ReplayLiteFrame | null {
+  const sortedFrames = [...response.frames].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  );
+
+  return (
+    sortedFrames.find((frame) =>
+      filterCraneSnapshots(frame, craneIds).some((crane) => hasReplayValue(crane)),
+    ) ?? null
+  );
+}
+
 export function mapReplayResponseToRows(
   response: ReplayLiteResponse,
   craneIds?: string[],
 ): MonitoringReplayRow[] {
-  const latestFrame = getLatestReplayFrame(response);
+  const latestFrame = getLatestReplayFrameWithValues(response, craneIds);
 
   if (!latestFrame) {
     return [];
   }
 
-  const craneFilter =
-    craneIds && craneIds.length > 0 ? new Set(craneIds) : null;
-
-  return latestFrame.cranes
-    .filter((crane) => !craneFilter || craneFilter.has(crane.craneId))
+  return filterCraneSnapshots(latestFrame, craneIds)
     .flatMap<MonitoringReplayRow>((crane) =>
       Object.entries(crane.values).map(([tagCode, value]) =>
         mapReplayValueToRow(latestFrame.timestamp, crane, tagCode, value),

@@ -44,6 +44,48 @@
   },
   "craneStatus": {
     "title": "Real-time Crane Status",
+    "latest": "Latest",
+    "loadingTitle": "Loading monitoring replay...",
+    "loadingDescription": "Latest replay frame is being prepared for this region.",
+    "errorTitle": "Failed to load monitoring replay.",
+    "emptyTitle": "No replay data found for the current region.",
+    "emptyDescription": "Try a different region or wait for a fresh replay frame.",
+    "columns": {
+      "crane": "Crane",
+      "tagName": "Tag / Name",
+      "value": "Value",
+      "unit": "Unit",
+      "category": "Category",
+      "dataType": "Data Type",
+      "snapshotAt": "Snapshot At",
+      "status": "Status"
+    },
+    "statusBadges": {
+      "alarm": "Alarm",
+      "stale": "Stale",
+      "changed": "Changed",
+      "normal": "Normal"
+    },
+    "viewing": "Viewing",
+    "search": {
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "submit": "Search",
+      "samplePreset": "Sample Range",
+      "liveRange": "Live Range",
+      "resetRecent": "Live Range",
+      "openStartPicker": "Open start time picker",
+      "openEndPicker": "Open end time picker",
+      "autoRefresh": "Auto refresh",
+      "autoRefreshOn": "On",
+      "autoRefreshOff": "Off",
+      "validation": {
+        "missing": "Start time and end time are required.",
+        "invalid": "Please enter a valid time range.",
+        "order": "Start time must be earlier than end time.",
+        "tooLarge": "Search range must be within 24 hours."
+      }
+    },
     "name": "Crane",
     "status": "Status",
     "load": "Load (t)",

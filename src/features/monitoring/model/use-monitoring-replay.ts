@@ -2,27 +2,36 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
-  buildDefaultReplayQuery,
-  getLatestReplayFrame,
+  getLatestReplayFrameWithValues,
   getMonitoringReplayLite,
+  getReplayDefaultCraneIds,
   mapReplayResponseToRows,
 } from '@/entities/monitoring';
 
-export function useMonitoringReplay(regionId: string) {
-  const defaultQuery = useMemo(() => buildDefaultReplayQuery(regionId), [regionId]);
+interface UseMonitoringReplayParams {
+  regionId: string;
+  from: string;
+  to: string;
+  interval: string;
+}
+
+export function useMonitoringReplay({
+  regionId,
+  from,
+  to,
+  interval,
+}: UseMonitoringReplayParams) {
+  const craneIds = useMemo(() => getReplayDefaultCraneIds(regionId), [regionId]);
 
   const replayQuery = useQuery({
-    queryKey: ['monitoring', 'replay-lite', regionId, defaultQuery.interval],
-    queryFn: () => {
-      const query = buildDefaultReplayQuery(regionId);
-
-      return getMonitoringReplayLite({
-        from: query.from,
-        to: query.to,
-        interval: query.interval,
-      });
-    },
-    enabled: true,
+    queryKey: ['monitoring', 'replay-lite', regionId, from, to, interval],
+    queryFn: () =>
+      getMonitoringReplayLite({
+        from,
+        to,
+        interval,
+    }),
+    enabled: Boolean(from && to && interval),
     refetchInterval: 5_000,
   });
 
@@ -31,16 +40,16 @@ export function useMonitoringReplay(regionId: string) {
       return [];
     }
 
-    return mapReplayResponseToRows(replayQuery.data, defaultQuery.craneIds);
-  }, [defaultQuery.craneIds, replayQuery.data]);
+    return mapReplayResponseToRows(replayQuery.data, craneIds);
+  }, [craneIds, replayQuery.data]);
 
   const latestFrameTimestamp = useMemo(() => {
     if (!replayQuery.data) {
       return null;
     }
 
-    return getLatestReplayFrame(replayQuery.data)?.timestamp ?? null;
-  }, [replayQuery.data]);
+    return getLatestReplayFrameWithValues(replayQuery.data, craneIds)?.timestamp ?? null;
+  }, [craneIds, replayQuery.data]);
 
   return {
     rows,

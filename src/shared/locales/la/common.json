@@ -44,6 +44,48 @@
   },
   "craneStatus": {
     "title": "Status Gruium Temporis Veri",
+    "latest": "Novissimum",
+    "loadingTitle": "Monitoratio replay oneratur...",
+    "loadingDescription": "Novissimum exemplar regionis paratur.",
+    "errorTitle": "Monitoratio replay onerari non potuit.",
+    "emptyTitle": "Nulla data replay pro regione hodierna inventa sunt.",
+    "emptyDescription": "Aliam regionem tenta aut novum exemplar exspecta.",
+    "columns": {
+      "crane": "Grus",
+      "tagName": "Tag / Nomen",
+      "value": "Valor",
+      "unit": "Unitas",
+      "category": "Categoria",
+      "dataType": "Genus Datorum",
+      "snapshotAt": "Tempus Exemplaris",
+      "status": "Status"
+    },
+    "statusBadges": {
+      "alarm": "Monitum",
+      "stale": "Vetustum",
+      "changed": "Mutatum",
+      "normal": "Normale"
+    },
+    "viewing": "Inspectio",
+    "search": {
+      "startTime": "Initium Temporis",
+      "endTime": "Finis Temporis",
+      "submit": "Quaere",
+      "samplePreset": "Tempus Exemplum",
+      "liveRange": "Spatium Vivum",
+      "resetRecent": "Spatium Vivum",
+      "openStartPicker": "Aperi initium temporis",
+      "openEndPicker": "Aperi finem temporis",
+      "autoRefresh": "Renovatio automatica",
+      "autoRefreshOn": "Activa",
+      "autoRefreshOff": "Inactiva",
+      "validation": {
+        "missing": "Tempus initii et finis requiruntur.",
+        "invalid": "Range temporis validum inserere debes.",
+        "order": "Tempus initii ante tempus finis esse debet.",
+        "tooLarge": "Range quaestionis intra XXIV horas esse debet."
+      }
+    },
     "name": "Grus",
     "status": "Status",
     "load": "Onus (t)",

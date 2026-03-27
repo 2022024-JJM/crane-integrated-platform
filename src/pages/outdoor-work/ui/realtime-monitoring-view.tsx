@@ -5,16 +5,36 @@ import {
 } from '@/shared/ui/molecules/resizable';
 import { useState } from 'react';
 import { useRegionRealtimeAlarms } from '@/features/alarm';
-import { useMonitoringReplay } from '@/features/monitoring';
+import {
+  useMonitoringReplay,
+  useMonitoringReplaySearch,
+} from '@/features/monitoring';
 import { Monitoring3dView } from '@/features/3d';
 import { Spinner } from '@/shared/ui/atoms/spinner';
 import { CraneStatusTable } from '@/widgets/crane';
 import { AlarmPanel } from '@/widgets/alarm';
 
-export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
+function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { alarms, stats: alarmStats } = useRegionRealtimeAlarms(regionId);
-  const { rows, latestFrameTimestamp, isLoading, isError, errorMessage, isEmpty } =
-    useMonitoringReplay(regionId);
+  const {
+    draftFrom,
+    draftTo,
+    setDraftFrom,
+    setDraftTo,
+    submitSearch,
+    canSearch,
+    validationReason,
+    viewingFrom,
+    viewingTo,
+    query,
+  } = useMonitoringReplaySearch(regionId);
+  const { rows, isLoading, isError, errorMessage, isEmpty } =
+    useMonitoringReplay({
+      regionId,
+      from: query.from,
+      to: query.to,
+      interval: query.interval,
+    });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
 
   return (
@@ -44,7 +64,15 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
           <ResizablePanel defaultSize={40}>
             <CraneStatusTable
               rows={rows}
-              latestFrameTimestamp={latestFrameTimestamp}
+              searchFrom={draftFrom}
+              searchTo={draftTo}
+              viewingFrom={viewingFrom}
+              viewingTo={viewingTo}
+              isSearchDisabled={!canSearch || isLoading}
+              validationReason={validationReason}
+              onSearchFromChange={setDraftFrom}
+              onSearchToChange={setDraftTo}
+              onSearch={submitSearch}
               isLoading={isLoading}
               isError={isError}
               errorMessage={errorMessage}
@@ -59,4 +87,8 @@ export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
       </ResizablePanel>
     </ResizablePanelGroup>
   );
+}
+
+export function RealtimeMonitoringView({ regionId }: { regionId: string }) {
+  return <RealtimeMonitoringViewContent key={regionId} regionId={regionId} />;
 }
