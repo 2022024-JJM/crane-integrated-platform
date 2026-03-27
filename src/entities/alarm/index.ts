@@ -17,6 +17,7 @@ export {
   formatAlarmHistoryMessage,
   getAlarmMessageTranslation,
   getAlarmSeverityLabel,
+  getAlarmSeverityVisual,
 } from './lib/alarm-presentation';
 export {
   getRealtimeAlarmCraneMetadata,

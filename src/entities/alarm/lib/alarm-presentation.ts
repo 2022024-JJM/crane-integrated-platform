@@ -38,6 +38,33 @@ const alarmSeverityLabelMap = {
   },
 } as const;
 
+const alarmSeverityVisualMap = {
+  critical: {
+    iconClassName: 'text-red-600 dark:text-red-400',
+    valueClassName: 'text-red-600 dark:text-red-400',
+    surfaceClassName: 'border border-red-500/30 bg-red-500/14',
+    emphasisClassName: 'text-red-700 dark:text-red-300',
+  },
+  high: {
+    iconClassName: 'text-orange-500 dark:text-orange-400',
+    valueClassName: 'text-orange-500 dark:text-orange-400',
+    surfaceClassName: 'border border-orange-500/30 bg-orange-500/12',
+    emphasisClassName: 'text-orange-700 dark:text-orange-300',
+  },
+  medium: {
+    iconClassName: 'text-yellow-500 dark:text-yellow-300',
+    valueClassName: 'text-yellow-600 dark:text-yellow-300',
+    surfaceClassName: 'border border-yellow-500/35 bg-yellow-400/14',
+    emphasisClassName: 'text-yellow-700 dark:text-yellow-200',
+  },
+  info: {
+    iconClassName: 'text-blue-500 dark:text-blue-400',
+    valueClassName: 'text-blue-500 dark:text-blue-400',
+    surfaceClassName: 'border border-blue-500/30 bg-blue-500/10',
+    emphasisClassName: 'text-blue-700 dark:text-blue-300',
+  },
+} as const;
+
 function getAlarmActionLabel(active: boolean, language: string) {
   if (language.toLowerCase().startsWith('ko')) {
     return active ? '발생' : '해제';
@@ -90,6 +117,10 @@ export function getAlarmSeverityLabel(
       : 'en';
 
   return alarmSeverityLabelMap[locale][severity];
+}
+
+export function getAlarmSeverityVisual(severity: AlarmSeverity) {
+  return alarmSeverityVisualMap[severity];
 }
 
 export function formatAlarmHistoryMessage(alarm: Alarm, language: string) {

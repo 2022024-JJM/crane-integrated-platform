@@ -10,10 +10,12 @@ import { useTranslation } from 'react-i18next';
 import {
   formatAlarmHistoryMessage,
   getAlarmSeverityLabel,
+  getAlarmSeverityVisual,
   type Alarm,
   type AlarmSeverity,
 } from '@/entities/alarm';
 import { getFormatLocale } from '@/shared/config/i18n';
+import { cn } from '@/shared/lib/utils';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 
 interface AlarmHistoryProps {
@@ -24,10 +26,22 @@ const severityIcon: Record<
   AlarmSeverity,
   { icon: typeof AlertTriangle; className: string }
 > = {
-  critical: { icon: ShieldAlert, className: 'text-destructive' },
-  high: { icon: AlertCircle, className: 'text-orange-500' },
-  medium: { icon: AlertTriangle, className: 'text-amber-500' },
-  info: { icon: Info, className: 'text-blue-500' },
+  critical: {
+    icon: ShieldAlert,
+    className: getAlarmSeverityVisual('critical').iconClassName,
+  },
+  high: {
+    icon: AlertCircle,
+    className: getAlarmSeverityVisual('high').iconClassName,
+  },
+  medium: {
+    icon: AlertTriangle,
+    className: getAlarmSeverityVisual('medium').iconClassName,
+  },
+  info: {
+    icon: Info,
+    className: getAlarmSeverityVisual('info').iconClassName,
+  },
 };
 
 const clearedAlarmVisual = {
@@ -54,18 +68,33 @@ export function AlarmHistory({ alarms }: AlarmHistoryProps) {
             ? severityIcon[alarm.severity]
             : clearedAlarmVisual;
           const Icon = visual.icon;
+          const severityVisual = alarm.active
+            ? getAlarmSeverityVisual(alarm.severity)
+            : null;
 
           return (
             <div
               key={alarm.id}
-              className="flex items-start gap-2 rounded-md border p-2 text-xs"
+              className={cn(
+                'flex items-start gap-2 rounded-md border p-2 text-xs',
+                alarm.active
+                  ? severityVisual?.surfaceClassName
+                  : 'border-emerald-500/20 bg-emerald-500/6',
+              )}
             >
               <Icon className={`mt-0.5 size-3.5 shrink-0 ${visual.className}`} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{alarm.craneName}</span>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span
+                      className={cn(
+                        'text-[11px]',
+                        alarm.active
+                          ? severityVisual?.emphasisClassName
+                          : 'text-emerald-600 dark:text-emerald-400',
+                      )}
+                    >
                       {getAlarmSeverityLabel(alarm.severity, i18n.language)}
                     </span>
                   </div>
@@ -74,11 +103,12 @@ export function AlarmHistory({ alarms }: AlarmHistoryProps) {
                   </span>
                 </div>
                 <p
-                  className={`mt-0.5 ${
+                  className={cn(
+                    'mt-0.5',
                     alarm.active
-                      ? 'text-muted-foreground'
-                      : 'text-emerald-600 dark:text-emerald-400'
-                  }`}
+                      ? 'text-foreground/85'
+                      : 'text-emerald-600 dark:text-emerald-400',
+                  )}
                 >
                   {formatAlarmHistoryMessage(alarm, i18n.language)}
                 </p>
