@@ -198,24 +198,51 @@ function PreviewModel({
       new Vector3(fittedBox.max.x, fittedBox.max.y, fittedBox.min.z),
       new Vector3(fittedBox.max.x, fittedBox.max.y, fittedBox.max.z),
     ];
-    let maxProjectedX = 0;
-    let maxProjectedY = 0;
+    let minProjectedX = Infinity;
+    let maxProjectedX = -Infinity;
+    let minProjectedY = Infinity;
+    let maxProjectedY = -Infinity;
 
     for (const corner of corners) {
       const projectedCorner = corner
         .clone()
         .applyMatrix4(sceneCamera.matrixWorldInverse);
-      maxProjectedX = Math.max(maxProjectedX, Math.abs(projectedCorner.x));
-      maxProjectedY = Math.max(maxProjectedY, Math.abs(projectedCorner.y));
+      minProjectedX = Math.min(minProjectedX, projectedCorner.x);
+      maxProjectedX = Math.max(maxProjectedX, projectedCorner.x);
+      minProjectedY = Math.min(minProjectedY, projectedCorner.y);
+      maxProjectedY = Math.max(maxProjectedY, projectedCorner.y);
     }
 
+    const projectedCenterX = (minProjectedX + maxProjectedX) / 2;
+    const projectedCenterY = (minProjectedY + maxProjectedY) / 2;
+    const cameraRight = new Vector3().setFromMatrixColumn(
+      sceneCamera.matrixWorld,
+      0,
+    );
+    const cameraUp = new Vector3().setFromMatrixColumn(
+      sceneCamera.matrixWorld,
+      1,
+    );
+    previewGroupRef.current.position
+      .sub(cameraRight.multiplyScalar(projectedCenterX))
+      .sub(cameraUp.multiplyScalar(projectedCenterY));
+    previewGroupRef.current.updateMatrixWorld(true);
+
+    const projectedWidth = maxProjectedX - minProjectedX;
+    const projectedHeight = maxProjectedY - minProjectedY;
     const paddingScale = preview?.paddingScale ?? 1.22;
-    const paddedProjectedX = Math.max(maxProjectedX * paddingScale, 0.001);
-    const paddedProjectedY = Math.max(maxProjectedY * paddingScale, 0.001);
+    const paddedProjectedX = Math.max(
+      (projectedWidth / 2) * paddingScale,
+      0.001,
+    );
+    const paddedProjectedY = Math.max(
+      (projectedHeight / 2) * paddingScale,
+      0.001,
+    );
     const zoomFromWidth = canvasSize.width / (paddedProjectedX * 2);
     const zoomFromHeight = canvasSize.height / (paddedProjectedY * 2);
 
-    sceneCamera.zoom = Math.max(6, Math.min(zoomFromWidth, zoomFromHeight));
+    sceneCamera.zoom = Math.max(0.01, Math.min(zoomFromWidth, zoomFromHeight));
     sceneCamera.updateProjectionMatrix();
     invalidate();
 

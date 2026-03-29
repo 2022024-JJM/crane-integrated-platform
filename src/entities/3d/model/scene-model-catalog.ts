@@ -37,4 +37,44 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       paddingScale: 1.32,
     },
   },
+  {
+    id: 'r370',
+    label: 'R370',
+    path: '/models/R370.glb',
+    defaultScale: [0.1, 0.1, 0.1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'ttc-27',
+    label: 'TTC-27',
+    path: '/models/TTC-27.glb',
+    defaultScale: [0.1, 0.1, 0.1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'ttc-28',
+    label: 'TTC-28',
+    path: '/models/TTC-28.glb',
+    defaultScale: [0.1, 0.1, 0.1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'ttc-k5000',
+    label: 'TTC-K5000',
+    path: '/models/TTC-K5000.glb',
+    defaultScale: [0.1, 0.1, 0.1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
 ];
