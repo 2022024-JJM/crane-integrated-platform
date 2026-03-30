@@ -217,6 +217,55 @@ function openDateTimePicker(input: DateTimeInputElement | null) {
   input.showPicker?.();
 }
 
+interface HeartbeatStatus {
+  craneNo: string;
+  craneId: string;
+  stale: boolean;
+}
+
+function buildHeartbeatStatuses(rows: MonitoringReplayRow[]): HeartbeatStatus[] {
+  return rows
+    .filter((row) => row.tagCode === 'heartbeat')
+    .map((row) => ({
+      craneNo: row.craneNo,
+      craneId: row.craneId,
+      stale: row.stale,
+    }))
+    .sort((a, b) => a.craneNo.localeCompare(b.craneNo, undefined, { numeric: true }));
+}
+
+function HeartbeatStatusBar({ rows }: { rows: MonitoringReplayRow[] }) {
+  const statuses = buildHeartbeatStatuses(rows);
+
+  if (statuses.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
+      {statuses.map((s) => (
+        <div
+          key={s.craneId}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
+            s.stale
+              ? 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300'
+              : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+          )}
+        >
+          <span
+            className={cn(
+              'size-1.5 rounded-full',
+              s.stale ? 'bg-red-500' : 'bg-emerald-500',
+            )}
+          />
+          <span>{s.craneNo}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StatusBadge({
   label,
   tone,
@@ -447,6 +496,7 @@ export function CraneStatusTable({
           </form>
         </div>
       </div>
+      <HeartbeatStatusBar rows={rows} />
       <div className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 overflow-auto">
           {isLoading ? (

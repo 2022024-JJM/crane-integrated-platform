@@ -65,8 +65,7 @@ interface DashboardTrendSectionProps extends DashboardSectionSharedProps {
   };
 }
 
-interface DashboardRecentAlarmsSectionProps
-  extends DashboardSectionSharedProps {
+interface DashboardRecentAlarmsSectionProps extends DashboardSectionSharedProps {
   formatTimestamp: (value: string) => string;
   locale: string;
 }
@@ -96,7 +95,7 @@ export function DashboardOverviewHeader({
         <span className="text-muted-foreground">
           {translate('dashboard:sections.trend.rangeLabel')}
         </span>
-        <span className="text-foreground tabular-nums font-semibold tracking-tight">
+        <span className="text-foreground font-semibold tracking-tight tabular-nums">
           {translate('dashboard:sections.trend.range', {
             from: formatYearMonth(summary.monthlyTrend[0]?.dateKey),
             to: formatYearMonth(
@@ -191,13 +190,20 @@ export function DashboardTrendSection({
               <StatsRow
                 items={[
                   {
-                    label: translate('dashboard:charts.monthlyOperating.average'),
+                    label: translate(
+                      'dashboard:charts.monthlyOperating.average',
+                    ),
                     value: `${summary.averageOperatingRate}%`,
                     tone: 'text-emerald-500',
                   },
                   {
-                    label: translate('dashboard:charts.monthlyOperating.bestMonth'),
-                    value: formatMonth(summary.bestOperatingMonth, monthFormatter),
+                    label: translate(
+                      'dashboard:charts.monthlyOperating.bestMonth',
+                    ),
+                    value: formatMonth(
+                      summary.bestOperatingMonth,
+                      monthFormatter,
+                    ),
                   },
                 ]}
               />
@@ -243,7 +249,9 @@ export function DashboardTrendSection({
           {isLoading ? (
             <DashboardChartSkeleton
               statsCount={alarmView === 'monthly' ? 2 : 4}
-              columnsClassName={alarmView === 'weekly' ? 'md:grid-cols-4' : undefined}
+              columnsClassName={
+                alarmView === 'weekly' ? 'md:grid-cols-4' : undefined
+              }
               variant="bars"
             />
           ) : (
@@ -251,7 +259,11 @@ export function DashboardTrendSection({
               <ChartArea>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={alarmView === 'monthly' ? summary.monthlyTrend : summary.weeklyTrend}
+                    data={
+                      alarmView === 'monthly'
+                        ? summary.monthlyTrend
+                        : summary.weeklyTrend
+                    }
                     maxBarSize={30}
                     barGap={8}
                   >
@@ -327,7 +339,9 @@ export function DashboardTrendSection({
                       tone: 'text-amber-500',
                     },
                     {
-                      label: translate('dashboard:charts.monthlyAlarms.peakMonth'),
+                      label: translate(
+                        'dashboard:charts.monthlyAlarms.peakMonth',
+                      ),
                       value: formatMonth(summary.topAlarmMonth, monthFormatter),
                     },
                   ]}
@@ -336,12 +350,16 @@ export function DashboardTrendSection({
                 <StatsRow
                   items={[
                     {
-                      label: translate('dashboard:charts.weeklyTrend.totalAlarms'),
+                      label: translate(
+                        'dashboard:charts.weeklyTrend.totalAlarms',
+                      ),
                       value: `${summary.weeklyAlarmTotal}${translate('dashboard:units.count')}`,
                       tone: 'text-amber-500',
                     },
                     {
-                      label: translate('dashboard:charts.weeklyTrend.totalWarnings'),
+                      label: translate(
+                        'dashboard:charts.weeklyTrend.totalWarnings',
+                      ),
                       value: `${summary.weeklyWarningTotal}${translate('dashboard:units.count')}`,
                     },
                     {
@@ -350,7 +368,10 @@ export function DashboardTrendSection({
                     },
                     {
                       label: translate('dashboard:charts.weeklyTrend.peakDay'),
-                      value: formatWeekday(summary.peakWeeklyDay, weekFormatter),
+                      value: formatWeekday(
+                        summary.peakWeeklyDay,
+                        weekFormatter,
+                      ),
                     },
                   ]}
                   columnsClassName="md:grid-cols-4"
@@ -413,7 +434,9 @@ export function DashboardRegionStatusSection({
     <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
-          <CardTitle>{translate('dashboard:charts.regionStatus.title')}</CardTitle>
+          <CardTitle>
+            {translate('dashboard:charts.regionStatus.title')}
+          </CardTitle>
           <CardDescription>
             {translate('dashboard:charts.regionStatus.description')}
           </CardDescription>
@@ -459,7 +482,9 @@ export function DashboardRiskCranesSection({
     <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
-          <CardTitle>{translate('dashboard:charts.riskCranes.title')}</CardTitle>
+          <CardTitle>
+            {translate('dashboard:charts.riskCranes.title')}
+          </CardTitle>
           <CardDescription>
             {translate('dashboard:charts.riskCranes.description')}
           </CardDescription>
@@ -502,7 +527,9 @@ export function DashboardRecentAlarmsSection({
     <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
-          <CardTitle>{translate('dashboard:sections.recentAlarms.title')}</CardTitle>
+          <CardTitle>
+            {translate('dashboard:sections.recentAlarms.title')}
+          </CardTitle>
           <CardDescription>
             {translate('dashboard:sections.recentAlarms.description')}
           </CardDescription>

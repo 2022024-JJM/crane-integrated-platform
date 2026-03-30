@@ -81,6 +81,35 @@ export function getLatestReplayFrameWithValues(
   );
 }
 
+function getPreviousHeartbeatValues(
+  response: ReplayLiteResponse,
+  latestFrame: ReplayLiteFrame,
+  craneIds?: string[],
+): Map<string, string | number | null> {
+  const sortedFrames = [...response.frames].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  );
+
+  const previousFrame = sortedFrames.find(
+    (frame) =>
+      frame.timestamp < latestFrame.timestamp &&
+      filterCraneSnapshots(frame, craneIds).some((crane) => hasReplayValue(crane)),
+  );
+
+  if (!previousFrame) {
+    return new Map();
+  }
+
+  const result = new Map<string, string | number | null>();
+  for (const crane of filterCraneSnapshots(previousFrame, craneIds)) {
+    if ('heartbeat' in crane.values) {
+      result.set(crane.craneId, crane.values['heartbeat'] ?? null);
+    }
+  }
+
+  return result;
+}
+
 export function mapReplayResponseToRows(
   response: ReplayLiteResponse,
   craneIds?: string[],
@@ -91,11 +120,22 @@ export function mapReplayResponseToRows(
     return [];
   }
 
+  const previousHeartbeats = getPreviousHeartbeatValues(response, latestFrame, craneIds);
+
   return filterCraneSnapshots(latestFrame, craneIds)
     .flatMap<MonitoringReplayRow>((crane) =>
-      Object.entries(crane.values).map(([tagCode, value]) =>
-        mapReplayValueToRow(latestFrame.timestamp, crane, tagCode, value),
-      ),
+      Object.entries(crane.values).map(([tagCode, value]) => {
+        const row = mapReplayValueToRow(latestFrame.timestamp, crane, tagCode, value);
+
+        if (tagCode === 'heartbeat' && value !== null) {
+          const previousValue = previousHeartbeats.get(crane.craneId);
+          if (previousValue !== undefined && String(previousValue) === String(value)) {
+            return { ...row, stale: true };
+          }
+        }
+
+        return row;
+      }),
     )
     .sort(compareRows);
 }
