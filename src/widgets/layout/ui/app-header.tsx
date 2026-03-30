@@ -4,6 +4,7 @@ import { PageSettings } from '@/features/page-settings';
 import { useSidebar } from '@/shared/lib/sidebar-context';
 import { AppLink } from '@/shared/ui/atoms/app-link';
 import { HanwhaIcon } from '@/shared/ui/atoms/hanwha-icon';
+import { HeaderAlarmButton } from '@/features/alarm';
 import { HeaderStatusStrip } from './header-status-strip';
 
 export function AppHeader() {
@@ -37,6 +38,7 @@ export function AppHeader() {
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
+        <HeaderAlarmButton />
         <PageSettings />
         {/* <Button
           type="button"
