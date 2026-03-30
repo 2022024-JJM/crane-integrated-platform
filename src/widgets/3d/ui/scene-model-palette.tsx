@@ -178,13 +178,13 @@ export function SceneModelPalette({
               <p className="text-[10px] font-semibold tracking-[0.12em] text-white/75 uppercase">
                 {t('monitoring:palette.title')}
               </p>
-              <Badge
-                variant="outline"
-                className="rounded-sm border-white/8 bg-white/4 px-1.5 py-0 text-[9px] text-white/75"
-              >
-                {items.length}
-              </Badge>
             </div>
+            <Badge
+              variant="outline"
+              className="rounded-sm border-white/8 bg-white/4 px-1.5 py-0 text-[9px] text-white/75"
+            >
+              {items.length}
+            </Badge>
           </div>
           <div className="border-b border-white/10 px-2 py-1.5">
             <div className="relative">
