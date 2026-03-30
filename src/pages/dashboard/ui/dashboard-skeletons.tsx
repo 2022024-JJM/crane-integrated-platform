@@ -49,43 +49,26 @@ export function DashboardChartSkeleton({
 
 export function DashboardRegionStatusSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <Skeleton className="size-2 rounded-full" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        ))}
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="border-border/70 bg-card/70 rounded-2xl border p-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-              <Skeleton className="size-4" />
+    <div className="space-y-3">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div
+          key={index}
+          className="border-border/70 bg-card/70 rounded-2xl border p-3"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
             </div>
-            <Skeleton className="mt-3 h-3 w-full rounded-full" />
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {Array.from({ length: 3 }, (_, statusIndex) => (
-                <div
-                  key={statusIndex}
-                  className="bg-muted/50 rounded-xl px-2.5 py-2"
-                >
-                  <Skeleton className="h-3 w-10" />
-                  <Skeleton className="mt-2 h-5 w-8" />
-                </div>
-              ))}
-            </div>
+            <Skeleton className="size-4" />
           </div>
-        ))}
-      </div>
+          <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-12 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

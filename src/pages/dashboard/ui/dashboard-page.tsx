@@ -99,6 +99,7 @@ export function DashboardPage() {
             summary={summary}
             isLoading={isLoading}
             translate={t}
+            locale={locale}
             onRegionPreviewOpen={(regionStatus) => {
               setSelectedPreviewRegion(regionStatus);
               setPreviewPosition((currentPosition) => {

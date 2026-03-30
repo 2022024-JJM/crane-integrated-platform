@@ -1,4 +1,5 @@
 import { Activity, ArrowRight } from 'lucide-react';
+import { useRegionRealtimeAlarms } from '@/features/alarm';
 import {
   Bar,
   BarChart,
@@ -39,14 +40,13 @@ import {
   type DashboardTranslate,
 } from './dashboard-helpers';
 import {
-  BarSegment,
   ChartArea,
   ChartTooltip,
+  DockAlarmStats,
   LegendPill,
   RecentAlarmRow,
   RiskCraneRow,
   StatsRow,
-  StatusCount,
 } from './dashboard-parts';
 import type { DashboardRegionStatusDatum } from '../model';
 
@@ -410,12 +410,49 @@ export function DashboardTrendSection({
   );
 }
 
+function DockCard({
+  regionStatus,
+  translate,
+  locale,
+  onOpen,
+}: {
+  regionStatus: DashboardRegionStatusDatum;
+  translate: DashboardTranslate;
+  locale: string;
+  onOpen: (regionStatus: DashboardRegionStatusDatum) => void;
+}) {
+  const { stats } = useRegionRealtimeAlarms(regionStatus.regionId);
+
+  return (
+    <button
+      type="button"
+      className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block w-full cursor-pointer rounded-2xl border p-3 text-left transition"
+      onClick={() => onOpen(regionStatus)}
+    >
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <div>
+          <p className="font-medium">{translate(regionStatus.titleKey)}</p>
+          <p className="text-muted-foreground text-xs">
+            {translate('dashboard:charts.regionStatus.totalCranes', {
+              count: regionStatus.total,
+            })}
+          </p>
+        </div>
+        <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition" />
+      </div>
+      <DockAlarmStats stats={stats} locale={locale} />
+    </button>
+  );
+}
+
 export function DashboardRegionStatusSection({
   summary,
   isLoading,
   translate,
+  locale,
   onRegionPreviewOpen,
 }: DashboardSectionSharedProps & {
+  locale: string;
   onRegionPreviewOpen: (regionStatus: DashboardRegionStatusDatum) => void;
 }) {
   return (
@@ -438,76 +475,15 @@ export function DashboardRegionStatusSection({
           <DashboardRegionStatusSkeleton />
         ) : (
           <>
-            <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
-              <LegendPill
-                colorClassName="bg-emerald-500"
-                label={translate('dashboard:legend.healthy')}
-              />
-              <LegendPill
-                colorClassName="bg-amber-500"
-                label={translate('dashboard:legend.warning')}
-              />
-              <LegendPill
-                colorClassName="bg-slate-500"
-                label={translate('dashboard:legend.offline')}
-              />
-            </div>
             <div className="space-y-3">
               {summary.regionStatuses.map((regionStatus) => (
-                <button
+                <DockCard
                   key={regionStatus.regionId}
-                  type="button"
-                  className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block w-full cursor-pointer rounded-2xl border p-3 text-left transition"
-                  onClick={() => {
-                    onRegionPreviewOpen(regionStatus);
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <div>
-                      <p className="font-medium">{translate(regionStatus.titleKey)}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {translate('dashboard:charts.regionStatus.totalCranes', {
-                          count: regionStatus.total,
-                        })}
-                      </p>
-                    </div>
-                    <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition" />
-                  </div>
-                  <div className="bg-muted mt-3 flex h-3 overflow-hidden rounded-full">
-                    <BarSegment
-                      colorClassName="bg-emerald-500"
-                      total={regionStatus.total}
-                      value={regionStatus.operating}
-                    />
-                    <BarSegment
-                      colorClassName="bg-amber-500"
-                      total={regionStatus.total}
-                      value={regionStatus.warning}
-                    />
-                    <BarSegment
-                      colorClassName="bg-slate-500"
-                      total={regionStatus.total}
-                      value={regionStatus.offline}
-                    />
-                  </div>
-                  <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <StatusCount
-                      label={translate('dashboard:legend.healthy')}
-                      tone="text-emerald-500"
-                      value={regionStatus.operating}
-                    />
-                    <StatusCount
-                      label={translate('dashboard:legend.warning')}
-                      tone="text-amber-500"
-                      value={regionStatus.warning}
-                    />
-                    <StatusCount
-                      label={translate('dashboard:legend.offline')}
-                      tone="text-slate-500"
-                      value={regionStatus.offline}
-                    />
-                  </div>
-                </button>
+                  regionStatus={regionStatus}
+                  translate={translate}
+                  locale={locale}
+                  onOpen={onRegionPreviewOpen}
+                />
               ))}
             </div>
           </>

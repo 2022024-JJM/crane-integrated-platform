@@ -11,9 +11,11 @@ import {
 
 import {
   getAlarmSeverityLabel,
+  getAlarmSeverityVisual,
   getAlarmMessageTranslation,
   type Alarm,
   type AlarmSeverity,
+  type AlarmStatistics,
 } from '@/entities/alarm';
 import { cn } from '@/shared/lib/utils';
 import { AppLink } from '@/shared/ui/atoms/app-link';
@@ -334,6 +336,41 @@ export function RiskCraneRow({
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function DockAlarmStats({
+  stats,
+  locale,
+}: {
+  stats: AlarmStatistics;
+  locale: string;
+}) {
+  const severities: AlarmSeverity[] = ['critical', 'high', 'medium', 'info'];
+
+  return (
+    <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+      {severities.map((severity) => {
+        const visual = getAlarmSeverityVisual(severity);
+        const count = stats[severity];
+        return (
+          <div
+            key={severity}
+            className={cn(
+              'flex flex-col items-center gap-1 rounded-lg px-2 py-2',
+              visual.surfaceClassName,
+            )}
+          >
+            <span className={cn('text-xs font-medium', visual.iconClassName)}>
+              {getAlarmSeverityLabel(severity, locale)}
+            </span>
+            <span className={cn('text-base font-bold tabular-nums', visual.valueClassName)}>
+              {count}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
