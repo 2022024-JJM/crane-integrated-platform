@@ -102,6 +102,8 @@
   "alarms": {
     "title": "Alarm Status",
     "history": "Alarm History",
+    "alarmStatus": "Alarm Status",
+    "filterAll": "All",
     "critical": "Critical",
     "warning": "Warning",
     "info": "Info",

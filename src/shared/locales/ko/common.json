@@ -98,6 +98,8 @@
   "alarms": {
     "title": "알람 현황",
     "history": "알람 이력",
+    "alarmStatus": "알람 상태",
+    "filterAll": "전체",
     "critical": "위험",
     "warning": "경고",
     "info": "정보",

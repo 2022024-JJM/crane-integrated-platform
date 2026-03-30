@@ -102,6 +102,8 @@
   "alarms": {
     "title": "Status Monitorum",
     "history": "Historia Monitorum",
+    "alarmStatus": "Status Alarmae",
+    "filterAll": "Omnia",
     "critical": "Criticum",
     "warning": "Monitum",
     "info": "Notitia",
