@@ -98,8 +98,8 @@ export function GltfModel({
     const box = new Box3().setFromObject(clone);
     const size = new Vector3();
     box.getSize(size);
-    return size.y + 0.2;
-  }, [clone]);
+    return Math.max(size.y * scale[1] + 0.2, 2.0);
+  }, [clone, scale]);
 
   useEffect(() => {
     clone.traverse((child) => {
