@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from 'lucide-react';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
+import { tableRowStatusBadgeClassName, tableCategoryClassName } from '@/shared/lib/status-colors';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringReplayRow } from '@/entities/monitoring';
 import { getFormatLocale } from '@/shared/config/i18n';
@@ -31,25 +32,6 @@ interface CraneStatusTableProps {
   errorMessage?: string | null;
   isEmpty?: boolean;
 }
-
-const categoryClassName: Record<string, string> = {
-  datetime:
-    'border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  measurement:
-    'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
-  status:
-    'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-};
-
-const rowStatusBadgeClassName = {
-  alarm: 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300',
-  stale:
-    'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  changed:
-    'border-cyan-500/20 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
-  normal:
-    'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-} as const;
 
 const CRANE_COLUMN_WIDTH = 120;
 const TAG_NAME_COLUMN_WIDTH = 320;
@@ -180,13 +162,13 @@ function compareRows(
 
 function getCategoryClassName(category: string) {
   return (
-    categoryClassName[category] ??
+    tableCategoryClassName[category] ??
     'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300'
   );
 }
 
 function buildRowStatuses(row: MonitoringReplayRow) {
-  const statuses: Array<{ label: string; tone: keyof typeof rowStatusBadgeClassName }> =
+  const statuses: Array<{ label: string; tone: keyof typeof tableRowStatusBadgeClassName }> =
     [];
 
   if (row.alarm) {
@@ -271,14 +253,14 @@ function StatusBadge({
   tone,
 }: {
   label: string;
-  tone: keyof typeof rowStatusBadgeClassName;
+  tone: keyof typeof tableRowStatusBadgeClassName;
 }) {
   return (
     <Badge
       variant="outline"
       className={cn(
         'h-6 rounded-full px-2.5 text-[11px] font-medium',
-        rowStatusBadgeClassName[tone],
+        tableRowStatusBadgeClassName[tone],
       )}
     >
       {label}

@@ -4,9 +4,9 @@ import {
   getRegionSubtitleKey,
   getRegionTitleKey,
   type Region,
-  type StatusLevel,
 } from '@/entities/region';
 import { AppLink } from '@/shared/ui/atoms/app-link';
+import { StatusDot } from '@/shared/ui/atoms/status-dot';
 import {
   Card,
   CardHeader,
@@ -15,12 +15,6 @@ import {
   CardContent,
   CardFooter,
 } from '@/shared/ui/molecules/card';
-
-const statusDotColor: Record<StatusLevel, string> = {
-  normal: 'bg-green-500',
-  warning: 'bg-yellow-500',
-  critical: 'bg-red-500',
-};
 
 interface RegionCardProps {
   region: Region;
@@ -35,8 +29,8 @@ export function RegionCard({ region }: RegionCardProps) {
       <Card className="hover:bg-muted/50 focus-visible:ring-ring transition-colors focus-visible:ring-2">
         <CardHeader className="relative">
           <div className="absolute top-0 right-4">
-            <span
-              className={`inline-block size-3 rounded-full ${statusDotColor[region.status]}`}
+            <StatusDot
+              status={region.status}
               title={t(`region-overview:${region.status}`)}
             />
           </div>

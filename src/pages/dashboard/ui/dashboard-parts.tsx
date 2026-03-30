@@ -18,6 +18,7 @@ import {
   type AlarmStatistics,
 } from '@/entities/alarm';
 import { cn } from '@/shared/lib/utils';
+import { severityBadgeClassName, craneStatusBadgeClassName } from '@/shared/lib/status-colors';
 import { AppLink } from '@/shared/ui/atoms/app-link';
 import { Badge } from '@/shared/ui/atoms/badge';
 import {
@@ -41,25 +42,6 @@ import {
   type DashboardTranslate,
 } from './dashboard-helpers';
 import { DashboardMetricSkeleton } from './dashboard-skeletons';
-
-const severityBadgeClassName: Record<AlarmSeverity, string> = {
-  critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
-  high: 'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300',
-  medium:
-    'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
-  info: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300',
-};
-
-const statusBadgeClassName = {
-  operating:
-    'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
-  idle: 'border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-300',
-  maintenance:
-    'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300',
-  warning:
-    'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
-  stopped: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
-} as const;
 
 const metricIconMap = {
   regionCount: Building2,
@@ -313,7 +295,7 @@ export function RiskCraneRow({
             {translate(crane.regionTitleKey)}
           </p>
         </div>
-        <Badge className={cn('border', statusBadgeClassName[crane.status])}>
+        <Badge className={cn('border', craneStatusBadgeClassName[crane.status])}>
           {translate(`common:craneStatus.${crane.status}`)}
         </Badge>
       </div>
