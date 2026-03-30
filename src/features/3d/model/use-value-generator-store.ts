@@ -68,9 +68,10 @@ export const useValueGeneratorStore = create<ValueGeneratorState>(
       const { runtimeValues } = get();
       const applyValue = useValueMapperStore.getState().applyValue;
 
+      let changed = false;
       const next = runtimeValues.map((v) => {
         const range = v.max - v.min;
-        const step = range * 0.05; // 🔹 5%씩 이동 (조절 가능)
+        const step = range * 0.05;
 
         let nextValue = v.value + step * v.direction;
         let nextDirection = v.direction;
@@ -87,6 +88,10 @@ export const useValueGeneratorStore = create<ValueGeneratorState>(
 
         applyValue(scene, v.key, nextValue);
 
+        if (nextValue !== v.value || nextDirection !== v.direction) {
+          changed = true;
+        }
+
         return {
           ...v,
           value: nextValue,
@@ -94,7 +99,9 @@ export const useValueGeneratorStore = create<ValueGeneratorState>(
         };
       });
 
-      set({ runtimeValues: next });
+      if (changed) {
+        set({ runtimeValues: next });
+      }
     },
   }),
 );

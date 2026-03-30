@@ -1,10 +1,19 @@
 import { Html, useGLTF } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box3, Box3Helper, Material, Mesh, Object3D, Vector3 } from 'three';
+import { Box3, Box3Helper, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { degToRad } from '../lib/math-utils';
+
+type AlarmHighlightSeverity = 'critical' | 'high' | 'medium' | 'info';
+
+const ALARM_LABEL_CLASS: Record<AlarmHighlightSeverity, string> = {
+  critical: 'bg-red-600 text-white',
+  high: 'bg-orange-500 text-white',
+  medium: 'bg-yellow-400 text-black',
+  info: 'bg-blue-500 text-white',
+};
 
 interface GltfModelProps {
   id: string;
@@ -14,6 +23,7 @@ interface GltfModelProps {
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
+  alarmSeverity?: AlarmHighlightSeverity | null;
   onSelect?: (id: string) => void;
   isSelected?: boolean;
   onObjectReady?: (id: string, object: Object3D | null) => void;
@@ -27,6 +37,7 @@ export function GltfModel({
   url,
   equipName,
   opacity = 1,
+  alarmSeverity = null,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -47,11 +58,21 @@ export function GltfModel({
       }
 
       if (Array.isArray(child.material)) {
-        child.material = child.material.map((material) => material.clone());
+        child.material = child.material.map((material) => {
+          const cloned = material.clone();
+          if ('color' in cloned && cloned.color instanceof Color) {
+            (cloned as Material & { _originalColor: Color })._originalColor = cloned.color.clone();
+          }
+          return cloned;
+        });
         return;
       }
 
-      child.material = child.material.clone();
+      const cloned = child.material.clone();
+      if ('color' in cloned && cloned.color instanceof Color) {
+        (cloned as Material & { _originalColor: Color })._originalColor = (cloned.color as Color).clone();
+      }
+      child.material = cloned;
     });
 
     return nextClone;
@@ -70,29 +91,34 @@ export function GltfModel({
     return helper;
   }, [selectionBox]);
 
-  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
+  const handleSelect = useCallback((event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     onSelect?.(id);
-  };
+  }, [id, onSelect]);
 
-  const handleHoverStart = (event: ThreeEvent<PointerEvent>) => {
+  const handleHoverStart = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     onHoverStart?.(id, event.clientX, event.clientY);
-  };
+  }, [id, onHoverStart]);
 
-  const handleHoverMove = (event: ThreeEvent<PointerEvent>) => {
+  const handleHoverMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     onHoverMove?.(id, event.clientX, event.clientY);
-  };
+  }, [id, onHoverMove]);
 
-  const handleHoverEnd = (event: ThreeEvent<PointerEvent>) => {
+  const handleHoverEnd = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     onHoverEnd?.(id);
-  };
+  }, [id, onHoverEnd]);
 
   const handleModelRef = useCallback((object: Object3D | null) => {
     modelRef.current = object;
   }, []);
+
+  const rotationRad = useMemo(
+    () => rotation.map((deg) => degToRad(deg)) as Vector3Tuple,
+    [rotation],
+  );
 
   const offsetY = useMemo(() => {
     const box = new Box3().setFromObject(clone);
@@ -126,6 +152,7 @@ export function GltfModel({
       });
     });
   }, [clone, opacity]);
+
 
   useEffect(() => {
     if (!onObjectReady) {
@@ -164,7 +191,7 @@ export function GltfModel({
         name={id}
         object={clone}
         position={position}
-        rotation={rotation.map((deg) => degToRad(deg))}
+        rotation={rotationRad}
         scale={scale}
         onClick={handleSelect}
         onPointerOver={handleHoverStart}
@@ -182,7 +209,7 @@ export function GltfModel({
         position={[position[0], position[1] + offsetY, position[2]]}
       >
         <div
-          className="cursor-pointer rounded bg-black/60 px-1 py-0 font-mono text-lg whitespace-nowrap text-white"
+          className={`cursor-pointer rounded px-2 py-0.5 font-mono text-2xl font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
           onPointerDown={(event) => {
             event.stopPropagation();
           }}

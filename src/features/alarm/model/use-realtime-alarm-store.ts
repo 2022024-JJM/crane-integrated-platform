@@ -116,9 +116,14 @@ export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
           eventData: target.alarm.eventData,
         });
 
+        const clearAlarm = nextAlarm;
+        const historyWithClear = state.history.some((h) => h.id === clearAlarm.id)
+          ? state.history
+          : [clearAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS);
+
         return {
           activeAlarms: nextActiveAlarms,
-          history: [nextAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS),
+          history: historyWithClear,
         };
       }
 
@@ -126,9 +131,14 @@ export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
       nextActiveAlarms[createActiveAlarmKey(message.craneId, message.value)] =
         nextAlarm;
 
+      const activeAlarm = nextAlarm;
+      const historyWithActive = state.history.some((h) => h.id === activeAlarm.id)
+        ? state.history
+        : [activeAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS);
+
       return {
         activeAlarms: nextActiveAlarms,
-        history: [nextAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS),
+        history: historyWithActive,
       };
     });
 

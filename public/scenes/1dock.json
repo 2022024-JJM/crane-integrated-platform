@@ -8,289 +8,692 @@
       "id": "1c5949dd-c827-48d5-86f9-45d91f6e4a75",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-66, 0, -12.8],
-      "rotation": [0, 0, 0],
-      "scale": [5, 1, 1],
-      "valueMapList": []
+      "position": [
+        -66,
+        0,
+        -12.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "c9696f5e-38a2-4392-b265-03c93634dd25",
-      "equipName": "GC-4",
+      "equipName": "C-172",
+      "craneId": "C_172",
       "path": "/models/gantry_crane.glb",
-      "position": [-61.4, 0.1, -28.5],
-      "rotation": [0, 90, 0],
-      "scale": [1.2, 1.2, 1.2],
+      "position": [
+        -61.4,
+        0.1,
+        -28.5
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1.2,
+        1.2,
+        1.2
+      ],
       "valueMapList": [
         {
           "type": "PY",
           "key": ""
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "4313b669-39f8-45fd-8441-80a3cfabd58a",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-66, 0, -10.9],
-      "rotation": [0, 0, 0],
-      "scale": [5, 1, 1],
-      "valueMapList": []
+      "position": [
+        -66,
+        0,
+        -10.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "026db40c-bc99-489c-ac8b-d3063f29da5f",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-68.2, 0, -7],
-      "rotation": [0, 0, 0],
-      "scale": [10, 1.2, 1.2],
-      "valueMapList": []
+      "position": [
+        -68.2,
+        0,
+        -7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        10,
+        1.2,
+        1.2
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "633b5a24-f749-4ee1-ba81-e5f219d2d4ce",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-84.3, 0, -10.255],
-      "rotation": [0, 90, 0],
-      "scale": [5, 1, 1],
-      "valueMapList": []
+      "position": [
+        -84.3,
+        0,
+        -10.255
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "be9c5fa8-8a73-438f-99b0-566da708ced6",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-82.5, 0, -10.2],
-      "rotation": [0, 90, 0],
-      "scale": [5, 1, 1],
-      "valueMapList": []
+      "position": [
+        -82.5,
+        0,
+        -10.2
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "95fdfa73-32a0-4a75-a94b-d9726f4158be",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-71, 0, -39.8],
-      "rotation": [0, 90, 0],
-      "scale": [3, 1, 1],
-      "valueMapList": []
+      "position": [
+        -71,
+        0,
+        -39.8
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        3,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "e56efbb0-9026-4811-a9db-d863f7f4514a",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-69.1, 0, -39.8],
-      "rotation": [0, 90, 0],
-      "scale": [3, 1, 1],
-      "valueMapList": []
+      "position": [
+        -69.1,
+        0,
+        -39.8
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        3,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "449436b2-4d3a-4481-b180-c9736c81a937",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-67.2, 0, -39.8],
-      "rotation": [0, 90, 0],
-      "scale": [3, 1, 1],
-      "valueMapList": []
+      "position": [
+        -67.2,
+        0,
+        -39.8
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        3,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "c2ca668c-59e2-4975-a776-e1db4970484e",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-65.3, 0, -39.7],
-      "rotation": [0, 90, 0],
-      "scale": [3, 1, 1],
-      "valueMapList": []
+      "position": [
+        -65.3,
+        0,
+        -39.7
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        3,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "74d9fd75-e428-4331-ba9b-4932db4d4652",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-72.9, 0, -39.7],
-      "rotation": [0, 90, 0],
-      "scale": [3, 1, 1],
-      "valueMapList": []
+      "position": [
+        -72.9,
+        0,
+        -39.7
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        3,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "5d88768a-4855-455e-a4b3-8877f0b1f04f",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-68.3, 0, -5],
-      "rotation": [0, 0, 0],
-      "scale": [10, 0.7, 1],
-      "valueMapList": []
+      "position": [
+        -68.3,
+        0,
+        -5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        10,
+        0.7,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "f061f432-5434-47c9-8347-9c3a0e2e55e1",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-65.9, 0, -9],
-      "rotation": [0, 0, 0],
-      "scale": [5, 1, 1],
-      "valueMapList": []
+      "position": [
+        -65.9,
+        0,
+        -9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "467a8180-3340-4b4e-8efc-d9a0fbb1b18d",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-74.329, 0, -11.873],
-      "rotation": [0, 0, 0],
-      "scale": [1, 1, 1],
-      "valueMapList": []
+      "position": [
+        -74.329,
+        0,
+        -11.873
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "a87f1041-ff45-4a40-bfaa-ce6748b82f66",
-      "equipName": "TC-106",
+      "equipName": "C_801",
+      "craneId": "C_171",
       "path": "/models/crane.glb",
-      "position": [-88.2, 0.2, -27.5],
-      "rotation": [0, 9, 0],
-      "scale": [0.8, 0.8, 0.8],
+      "position": [
+        -88.2,
+        0.2,
+        -27.5
+      ],
+      "rotation": [
+        0,
+        9,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "0645da41-263d-4bd5-a900-ebc09608520e",
-      "equipName": "TC-87",
+      "equipName": "C_172",
+      "craneId": "C_172",
       "path": "/models/crane.glb",
-      "position": [-86.8, 0.2, -31.9],
-      "rotation": [0, 68, 0],
-      "scale": [0.8, 0.9, 0.8],
+      "position": [
+        -86.8,
+        0.2,
+        -31.9
+      ],
+      "rotation": [
+        0,
+        68,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.9,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "987b0e8b-3738-4d06-a989-f4c0ba41eca9",
       "equipName": "TC-88",
+      "craneId": "C_173",
       "path": "/models/crane.glb",
-      "position": [-75.6, 0.2, -20.8],
-      "rotation": [0, 68, 0],
-      "scale": [0.8, 0.7, 0.8],
+      "position": [
+        -75.6,
+        0.2,
+        -20.8
+      ],
+      "rotation": [
+        0,
+        68,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.7,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "a1fb08f0-a198-4b47-8d43-34b770e21ea2",
       "equipName": "TTC-5",
+      "craneId": "C_800",
       "path": "/models/crane.glb",
-      "position": [-88.3, 0.2, -23.4],
-      "rotation": [0, 130, 0],
-      "scale": [0.8, 0.8, 0.8],
+      "position": [
+        -88.3,
+        0.2,
+        -23.4
+      ],
+      "rotation": [
+        0,
+        130,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "0f0fe9c4-04eb-4473-8222-2ffc10b7c392",
       "equipName": "TC-106",
+      "craneId": "C_800",
       "path": "/models/crane.glb",
-      "position": [-68.1, 0.2, -21.5],
-      "rotation": [0, 25, 0],
-      "scale": [0.8, 0.8, 0.8],
+      "position": [
+        -68.1,
+        0.2,
+        -21.5
+      ],
+      "rotation": [
+        0,
+        25,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "3277e301-41c4-4656-8e01-e78ec9a94408",
       "equipName": "TTC-20",
+      "craneId": "C_810",
       "path": "/models/crane.glb",
-      "position": [-70.93, 0.3, -32.81],
-      "rotation": [0, 189, 0],
-      "scale": [0.9, 0.9, 0.9],
+      "position": [
+        -70.93,
+        0.3,
+        -32.81
+      ],
+      "rotation": [
+        0,
+        189,
+        0
+      ],
+      "scale": [
+        0.9,
+        0.9,
+        0.9
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "8b1b7104-eb0c-4fe3-bc9b-f293914d946f",
       "equipName": "TC-57",
+      "craneId": "C_811",
       "path": "/models/crane.glb",
-      "position": [-48, 0.2, -21.2],
-      "rotation": [0, 99, 0],
-      "scale": [0.8, 0.7, 0.8],
+      "position": [
+        -48,
+        0.2,
+        -21.2
+      ],
+      "rotation": [
+        0,
+        99,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.7,
+        0.8
+      ],
       "valueMapList": [
         {
           "type": "RY",
           "key": "crane_rotation_y"
         }
-      ]
+      ],
+      "opacity": 1
     },
     {
       "id": "1243c0ce-05f5-4f1d-83e1-0511cd02d76e",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-80.9, 0, -39.8],
-      "rotation": [0, 90, 0],
-      "scale": [2, 1, 1],
-      "valueMapList": []
+      "position": [
+        -80.9,
+        0,
+        -39.8
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "9a523425-f577-4cd5-be89-e0e16cefe8a8",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-84.9, 0, -39.5],
-      "rotation": [0, 90, 0],
-      "scale": [2, 1, 1],
-      "valueMapList": []
+      "position": [
+        -84.9,
+        0,
+        -39.5
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "877960c3-50e3-492b-9e7a-c2bd9c5bdc8a",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-86.8, 0, -39.4],
-      "rotation": [0, 90, 0],
-      "scale": [2, 1, 1],
-      "valueMapList": []
+      "position": [
+        -86.8,
+        0,
+        -39.4
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "f214002c-e46a-4bcc-b4cd-e7797ea305e9",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-82.9, 0, -39.7],
-      "rotation": [0, 90, 0],
-      "scale": [2, 1, 1],
-      "valueMapList": []
+      "position": [
+        -82.9,
+        0,
+        -39.7
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "9f60ee2e-8b9f-40c2-8d3a-b66ac7ef0d78",
       "equipName": "",
       "path": "/models/house.glb",
-      "position": [-78.9, 0, -39.8],
-      "rotation": [0, 90, 0],
-      "scale": [2, 1, 1],
-      "valueMapList": []
+      "position": [
+        -78.9,
+        0,
+        -39.8
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ],
+      "valueMapList": [],
+      "opacity": 1
     },
     {
       "id": "b4d813f4-d9f4-4c02-b33d-d49a4f637335",
       "equipName": "",
       "path": "/models/ship.glb",
-      "position": [-46.6, 0, -28.2],
-      "rotation": [0, 90, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        -46.6,
+        0,
+        -28.2
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PX",
           "key": "ship_position_x"
         }
-      ]
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "id-mncl1h1n-jq0jptds",
+      "equipName": "TTC-27",
+      "path": "/models/TTC-27.glb",
+      "opacity": 1,
+      "position": [
+        -26,
+        0,
+        -5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "id-mncl1i6u-2eigrj6o",
+      "equipName": "TTC-K5000",
+      "path": "/models/TTC-K5000.glb",
+      "opacity": 1,
+      "position": [
+        -28,
+        0,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "valueMapList": []
     }
   ]
 }

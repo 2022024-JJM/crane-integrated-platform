@@ -4,6 +4,7 @@ import {
   loadSceneInfoByRegionId,
   type SavedSceneInfo,
 } from '@/entities/3d';
+import { useRegionActiveAlarmsByCraneId } from '@/features/alarm';
 import type { MonitoringHoveredModel } from '../model/types';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
@@ -22,8 +23,9 @@ export function OutdoorWorkModelSimulation({
 }: OutdoorWorkModelSimulationProps) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
-  const { registerFromModel } = useValueMapperStore();
+  const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
   const start = useValueGeneratorStore((s) => s.start);
+  const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   useValueGeneratorRunner();
   useEffect(() => {
     onSceneDataLoadingChange?.(isSceneDataLoading);
@@ -103,6 +105,7 @@ export function OutdoorWorkModelSimulation({
           url={model.path}
           equipName={model.equipName}
           opacity={model.opacity}
+          alarmSeverity={model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null}
           position={model.position}
           rotation={model.rotation}
           scale={model.scale}

@@ -19,6 +19,7 @@ export interface SavedSceneInfo {
 export interface SavedModelInfo {
   id: string;
   equipName: string;
+  craneId?: string;
   path: string;
   opacity: number;
   position: Vector3Tuple;

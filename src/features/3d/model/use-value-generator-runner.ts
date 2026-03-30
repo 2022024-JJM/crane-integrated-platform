@@ -9,6 +9,10 @@ export function useValueGeneratorRunner() {
   const { scene } = useThree();
 
   const timerRef = useRef<number | null>(null);
+  const tickRef = useRef(tick);
+  const sceneRef = useRef(scene);
+  tickRef.current = tick;
+  sceneRef.current = scene;
 
   useEffect(() => {
     if (!isRunning) {
@@ -20,7 +24,7 @@ export function useValueGeneratorRunner() {
     }
 
     timerRef.current = window.setInterval(() => {
-      tick(scene);
+      tickRef.current(sceneRef.current);
     }, interval);
 
     return () => {
@@ -29,5 +33,5 @@ export function useValueGeneratorRunner() {
         timerRef.current = null;
       }
     };
-  }, [isRunning, interval, scene, tick]);
+  }, [isRunning, interval]);
 }
