@@ -28,16 +28,20 @@ function clampOpacity(value: unknown) {
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
 
-  const safeMap = {
-    id:
-      typeof sceneInfo?.map?.id === 'string' && sceneInfo.map.id.length > 0
-        ? sceneInfo.map.id
-        : createSceneModelId(),
-    path:
-      typeof sceneInfo?.map?.path === 'string' && sceneInfo.map.path.length > 0
-        ? sceneInfo.map.path
-        : '',
-  };
+  const safeMap =
+    sceneInfo?.map != null
+      ? {
+          id:
+            typeof sceneInfo.map.id === 'string' && sceneInfo.map.id.length > 0
+              ? sceneInfo.map.id
+              : createSceneModelId(),
+          path:
+            typeof sceneInfo.map.path === 'string' &&
+            sceneInfo.map.path.length > 0
+              ? sceneInfo.map.path
+              : '',
+        }
+      : null;
 
   const safeModels = Array.isArray(sceneInfo?.models)
     ? sceneInfo.models.flatMap((model) => {

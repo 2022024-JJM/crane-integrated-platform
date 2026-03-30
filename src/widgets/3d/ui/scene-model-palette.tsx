@@ -3,6 +3,7 @@ import {
   Download,
   Layers3,
   Loader2,
+  Map,
   Save,
   Search,
   Trash2,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedModelInfo, SceneModelCatalogItem } from '@/entities/3d';
+import type { SavedMapInfo, SavedModelInfo, SceneModelCatalogItem } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
@@ -24,6 +25,7 @@ const PALETTE_VISIBLE_ROWS_HEIGHT_CLASS = 'h-[15.5rem]';
 
 interface SceneModelPaletteProps {
   items: SceneModelCatalogItem[];
+  map: SavedMapInfo | null;
   placedModels: SavedModelInfo[];
   draggingItemId: string | null;
   selectedModelId: string | null;
@@ -31,6 +33,7 @@ interface SceneModelPaletteProps {
   onDragEnd: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
+  onDeleteMap: () => void;
   onSave: () => void;
   onExport: () => void;
   saveDisabled?: boolean;
@@ -56,6 +59,7 @@ function normalizeModelLabel(value: string) {
 
 export function SceneModelPalette({
   items,
+  map,
   placedModels,
   draggingItemId,
   selectedModelId,
@@ -63,6 +67,7 @@ export function SceneModelPalette({
   onDragEnd,
   onSelectPlacedModel,
   onDeletePlacedModel,
+  onDeleteMap,
   onSave,
   onExport,
   saveDisabled = false,
@@ -259,6 +264,42 @@ export function SceneModelPalette({
             </div>
           </ScrollArea>
         </section>
+
+        {map ? (
+          <section className="flex shrink-0 flex-col rounded-lg border border-white/8 bg-black/18">
+            <div className="flex items-center justify-between border-white/8 px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <Map className="size-3 text-white/60" />
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-white/75 uppercase">
+                  {t('monitoring:editor.map')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="size-5 cursor-pointer rounded-sm text-white/38 hover:bg-white/10 hover:text-red-300"
+                aria-label={t('monitoring:editor.deleteMap')}
+                onClick={onDeleteMap}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+            <div className="mx-0.5 mb-1 flex items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-white/80">
+              <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-white/8 bg-white/4 text-[10px] text-white/50">
+                <Map className="size-2.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-medium leading-none">
+                  {humanizeModelPath(map.path)}
+                </p>
+                <p className="mt-0.5 truncate text-[9px] leading-none text-white/38">
+                  {map.id}
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-white/8 bg-black/18">
           <div className="flex items-center justify-between border-b border-white/8 px-2 py-1.5">

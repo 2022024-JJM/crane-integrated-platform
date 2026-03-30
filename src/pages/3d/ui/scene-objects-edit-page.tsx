@@ -82,6 +82,7 @@ export function SceneObjectsEditPage({
     addModel,
     selectPlacedModel,
     deletePlacedModel,
+    deleteMap,
     startTransformInteraction,
     endTransformInteraction,
   } = useSceneEditorSession({
@@ -153,6 +154,7 @@ export function SceneObjectsEditPage({
         <div className="min-h-0 flex-1">
           <SceneModelPalette
             items={sceneModelCatalog}
+            map={sceneInfo?.map ?? null}
             placedModels={sceneInfo?.models ?? []}
             draggingItemId={draggingCatalogItem?.id ?? null}
             selectedModelId={selectedModelId}
@@ -162,6 +164,7 @@ export function SceneObjectsEditPage({
             }}
             onSelectPlacedModel={selectPlacedModel}
             onDeletePlacedModel={deletePlacedModel}
+            onDeleteMap={deleteMap}
             onSave={() => {
               void saveCurrentScene();
             }}

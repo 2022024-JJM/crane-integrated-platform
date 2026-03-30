@@ -12,7 +12,7 @@ export type ValueMapType =
   | 'SZ';
 
 export interface SavedSceneInfo {
-  map: SavedMapInfo;
+  map: SavedMapInfo | null;
   models: SavedModelInfo[];
 }
 

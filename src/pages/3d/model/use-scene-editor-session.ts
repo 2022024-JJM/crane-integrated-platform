@@ -56,6 +56,7 @@ interface UseSceneEditorSessionResult {
   ) => void;
   selectPlacedModel: (id: string) => void;
   deletePlacedModel: (id: string) => void;
+  deleteMap: () => void;
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
 }
@@ -204,6 +205,19 @@ export function useSceneEditorSession({
     [selectModel, updateScene],
   );
 
+  const deleteMap = useCallback(() => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        map: null,
+      };
+    });
+  }, [updateScene]);
+
   const selectPlacedModel = useCallback(
     (id: string) => {
       selectModel(id);
@@ -262,6 +276,7 @@ export function useSceneEditorSession({
     addModel,
     selectPlacedModel,
     deletePlacedModel,
+    deleteMap,
     startTransformInteraction,
     endTransformInteraction,
   };

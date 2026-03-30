@@ -43,6 +43,8 @@
     "statusSaved": "Saved",
     "placedObjects": "Placed Objects",
     "noPlacedObjects": "No objects have been placed yet.",
+    "map": "Map",
+    "deleteMap": "Delete map",
     "deleteObject": "Delete object",
     "noSelection": "No selection",
     "snapActive": "Snap 1.0"

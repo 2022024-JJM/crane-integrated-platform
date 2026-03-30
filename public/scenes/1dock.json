@@ -650,50 +650,6 @@
         }
       ],
       "opacity": 1
-    },
-    {
-      "id": "id-mncl1h1n-jq0jptds",
-      "equipName": "TTC-27",
-      "path": "/models/TTC-27.glb",
-      "opacity": 1,
-      "position": [
-        -26,
-        0,
-        -5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.1,
-        0.1,
-        0.1
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "id-mncl1i6u-2eigrj6o",
-      "equipName": "TTC-K5000",
-      "path": "/models/TTC-K5000.glb",
-      "opacity": 1,
-      "position": [
-        -28,
-        0,
-        1
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.1,
-        0.1,
-        0.1
-      ],
-      "valueMapList": []
     }
   ]
 }

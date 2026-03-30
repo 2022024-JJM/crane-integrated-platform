@@ -43,6 +43,8 @@
     "statusSaved": "저장됨",
     "placedObjects": "배치된 객체",
     "noPlacedObjects": "아직 배치된 객체가 없습니다.",
+    "map": "지도",
+    "deleteMap": "지도 삭제",
     "deleteObject": "객체 삭제",
     "noSelection": "선택 없음",
     "snapActive": "Snap 1.0"
