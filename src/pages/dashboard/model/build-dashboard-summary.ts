@@ -69,7 +69,7 @@ export function buildDashboardSummary(): DashboardSummary {
     weeklyTrend,
     regionStatuses,
     riskCranes,
-    recentAlarms: allAlarms.slice(0, 8),
+    recentAlarms: allAlarms.slice(0, 4),
     urgentRegion,
     monthlyAlarmTotal: monthlyTrend.reduce(
       (sum, point) => sum + (point.alarmCount ?? 0),

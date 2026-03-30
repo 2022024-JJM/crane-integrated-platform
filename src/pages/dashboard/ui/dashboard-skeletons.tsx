@@ -53,7 +53,7 @@ export function DashboardRegionStatusSkeleton() {
       {Array.from({ length: 4 }, (_, index) => (
         <div
           key={index}
-          className="border-border/70 bg-card/70 rounded-2xl border p-3"
+          className="border-border/90 bg-card/70 rounded-2xl border p-3"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-2">
@@ -75,35 +75,29 @@ export function DashboardRegionStatusSkeleton() {
 
 export function DashboardRiskCranesSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
-      <ChartSkeletonFrame className="h-[220px]">
-        <HorizontalBarsGhost />
-      </ChartSkeletonFrame>
-      <Separator />
-      <div className="space-y-2">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="border-border/70 bg-card/70 rounded-2xl border p-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-18" />
-              </div>
-              <Skeleton className="h-6 w-16 rounded-full" />
+    <div className="space-y-2">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div
+          key={index}
+          className="border-border/90 bg-card/70 rounded-2xl border p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-18" />
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {Array.from({ length: 3 }, (_, statIndex) => (
-                <div key={statIndex} className="space-y-2">
-                  <Skeleton className="h-3 w-14" />
-                  <Skeleton className="h-4 w-12" />
-                </div>
-              ))}
-            </div>
+            <Skeleton className="h-6 w-16 rounded-full" />
           </div>
-        ))}
-      </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {Array.from({ length: 3 }, (_, statIndex) => (
+              <div key={statIndex} className="space-y-2">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -168,18 +162,4 @@ function VerticalBarsGhost() {
   );
 }
 
-function HorizontalBarsGhost() {
-  return (
-    <div className="flex h-full w-full flex-col justify-center gap-4">
-      {['88%', '76%', '64%', '52%', '40%'].map((width, index) => (
-        <div key={index} className="flex items-center gap-3">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton
-            className="h-7 rounded-l-sm rounded-r-xl"
-            style={{ width }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
+

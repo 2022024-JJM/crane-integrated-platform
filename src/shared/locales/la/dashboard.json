@@ -4,6 +4,7 @@
   },
   "badges": {
     "sixMonths": "VI M",
+    "sevenDays": "VII Dies",
     "now": "NUNC",
     "priority": "Prioritas"
   },
@@ -56,7 +57,7 @@
     },
     "regionStatus": {
       "title": "Status Regionalis Gruium",
-      "description": "Grues operantes, monitae et extra rete in singulis regionibus",
+      "description": "Status alarmarum realtempore per regionem — criticum, altum, medium, notitia",
       "totalCranes": "{{count}} grues"
     },
     "weeklyTrend": {

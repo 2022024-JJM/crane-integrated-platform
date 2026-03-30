@@ -4,6 +4,7 @@
   },
   "badges": {
     "sixMonths": "6M",
+    "sevenDays": "7일",
     "now": "NOW",
     "priority": "우선 확인"
   },
@@ -56,7 +57,7 @@
     },
     "regionStatus": {
       "title": "지역별 크레인 현황",
-      "description": "region별 operating / warning / offline 현황",
+      "description": "지역별 위험·높음·중간·정보 실시간 알람 현황",
       "totalCranes": "전체 {{count}}기"
     },
     "weeklyTrend": {

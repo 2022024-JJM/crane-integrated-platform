@@ -35,6 +35,7 @@ import {
 import {
   formatMetric,
   formatTooltipValue,
+  getRiskColor,
   type DashboardStatItem,
   type DashboardTooltipPayloadEntry,
   type DashboardTranslate,
@@ -90,7 +91,7 @@ export function MetricCard({
     <Card
       size="sm"
       className={cn(
-        'border-border/70 bg-card/80 h-full min-h-[132px] justify-between border shadow-sm transition',
+        'border-border/90 bg-card/80 h-full min-h-[132px] justify-between border shadow-sm transition',
         metric.tone === 'warning' &&
           'border-amber-500/35 bg-amber-500/5 shadow-amber-500/5',
       )}
@@ -304,7 +305,7 @@ export function RiskCraneRow({
   locale: string;
 }) {
   return (
-    <div className="border-border/70 bg-card/70 rounded-2xl border p-3">
+    <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">{crane.craneName}</p>
@@ -315,6 +316,15 @@ export function RiskCraneRow({
         <Badge className={cn('border', statusBadgeClassName[crane.status])}>
           {translate(`common:craneStatus.${crane.status}`)}
         </Badge>
+      </div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(crane.score, 100)}%`,
+            backgroundColor: getRiskColor(crane.score),
+          }}
+        />
       </div>
       <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
         <div>
@@ -389,7 +399,7 @@ export function RecentAlarmRow({
   const message = getAlarmMessageTranslation(alarm);
 
   return (
-    <div className="border-border/70 bg-card/70 rounded-2xl border p-3">
+    <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

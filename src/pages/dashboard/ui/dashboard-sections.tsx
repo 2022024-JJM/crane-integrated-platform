@@ -1,4 +1,5 @@
 import { Activity, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import { useRegionRealtimeAlarms } from '@/features/alarm';
 import {
   Bar,
@@ -36,14 +37,12 @@ import {
   formatWeekday,
   formatWeekdayLabel,
   formatYearMonth,
-  getRiskColor,
   type DashboardTranslate,
 } from './dashboard-helpers';
 import {
   ChartArea,
   ChartTooltip,
   DockAlarmStats,
-  LegendPill,
   RecentAlarmRow,
   RiskCraneRow,
   StatsRow,
@@ -77,7 +76,7 @@ export function DashboardOverviewHeader({
   translate,
 }: Pick<DashboardSectionSharedProps, 'summary' | 'translate'>) {
   return (
-    <div className="border-border/70 flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
+    <div className="border-border/90 flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <div className="flex size-9 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
@@ -119,9 +118,11 @@ export function DashboardTrendSection({
   weekFormatter,
   barChartTooltipCursor,
 }: DashboardTrendSectionProps) {
+  const [alarmView, setAlarmView] = useState<'monthly' | 'weekly'>('monthly');
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="border-border/70 bg-background/60 border shadow-none">
+      <Card className="border-border/90 bg-background/60 border shadow-none">
         <CardHeader>
           <div>
             <CardTitle>
@@ -205,133 +206,52 @@ export function DashboardTrendSection({
         </CardContent>
       </Card>
 
-      <Card className="border-border/70 bg-background/60 border shadow-none">
+      <Card className="border-border/90 bg-background/60 border shadow-none">
         <CardHeader>
           <div>
-            <CardTitle>{translate('dashboard:charts.monthlyAlarms.title')}</CardTitle>
+            <CardTitle>
+              {alarmView === 'monthly'
+                ? translate('dashboard:charts.monthlyAlarms.title')
+                : translate('dashboard:charts.weeklyTrend.title')}
+            </CardTitle>
             <CardDescription>
-              {translate('dashboard:charts.monthlyAlarms.description')}
+              {alarmView === 'monthly'
+                ? translate('dashboard:charts.monthlyAlarms.description')
+                : translate('dashboard:charts.weeklyTrend.description')}
             </CardDescription>
           </div>
           <CardAction>
-            <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300">
-              {translate('dashboard:badges.sixMonths')}
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading ? (
-            <DashboardChartSkeleton statsCount={2} variant="bars" />
-          ) : (
-            <>
-              <ChartArea>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summary.monthlyTrend}>
-                    <CartesianGrid
-                      stroke="var(--border)"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis
-                      axisLine={false}
-                      dataKey="dateKey"
-                      tickLine={false}
-                      tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                      tickFormatter={(value) =>
-                        formatMonth(value, monthFormatter)
-                      }
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                      width={32}
-                    />
-                    <Tooltip
-                      cursor={barChartTooltipCursor}
-                      content={
-                        <ChartTooltip
-                          translate={translate}
-                          labelFormatter={(value) =>
-                            formatMonthLabel(value, monthFormatter)
-                          }
-                          locale={locale}
-                        />
-                      }
-                    />
-                    <Bar
-                      dataKey="alarmCount"
-                      fill="var(--chart-4)"
-                      maxBarSize={30}
-                      radius={[8, 8, 0, 0]}
-                    >
-                      {summary.monthlyTrend.map((point) => (
-                        <Cell
-                          key={point.dateKey}
-                          fill={
-                            point.dateKey === summary.topAlarmMonth
-                              ? 'var(--chart-5)'
-                              : 'var(--chart-4)'
-                          }
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartArea>
-              <Separator />
-              <StatsRow
-                items={[
-                  {
-                    label: translate('dashboard:charts.monthlyAlarms.total'),
-                    value: `${summary.monthlyAlarmTotal}${translate('dashboard:units.count')}`,
-                    tone: 'text-amber-500',
-                  },
-                  {
-                    label: translate('dashboard:charts.monthlyAlarms.peakMonth'),
-                    value: formatMonth(summary.topAlarmMonth, monthFormatter),
-                  },
-                ]}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-background/60 border shadow-none lg:col-span-2">
-        <CardHeader>
-          <div>
-            <CardTitle>{translate('dashboard:charts.weeklyTrend.title')}</CardTitle>
-            <CardDescription>
-              {translate('dashboard:charts.weeklyTrend.description')}
-            </CardDescription>
-          </div>
-          <CardAction>
-            <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
-              <LegendPill
-                colorClassName="bg-amber-500"
-                label={translate('dashboard:legend.alarmCount')}
-              />
-              <LegendPill
-                colorClassName="bg-yellow-400"
-                label={translate('dashboard:legend.warningCount')}
-              />
+            <div className="border-border flex overflow-hidden rounded-lg border text-xs">
+              <button
+                type="button"
+                className={`cursor-pointer px-2.5 py-1 transition ${alarmView === 'monthly' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setAlarmView('monthly')}
+              >
+                {translate('dashboard:badges.sixMonths')}
+              </button>
+              <button
+                type="button"
+                className={`border-border cursor-pointer border-l px-2.5 py-1 transition ${alarmView === 'weekly' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setAlarmView('weekly')}
+              >
+                {translate('dashboard:badges.sevenDays')}
+              </button>
             </div>
           </CardAction>
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
             <DashboardChartSkeleton
-              chartClassName="h-[260px]"
-              columnsClassName="md:grid-cols-4"
-              statsCount={4}
+              statsCount={alarmView === 'monthly' ? 2 : 4}
+              columnsClassName={alarmView === 'weekly' ? 'md:grid-cols-4' : undefined}
               variant="bars"
             />
           ) : (
             <>
-              <ChartArea className="h-[260px]">
+              <ChartArea>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={summary.weeklyTrend}
+                    data={alarmView === 'monthly' ? summary.monthlyTrend : summary.weeklyTrend}
                     maxBarSize={30}
                     barGap={8}
                   >
@@ -345,7 +265,9 @@ export function DashboardTrendSection({
                       tickLine={false}
                       tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                       tickFormatter={(value) =>
-                        formatWeekday(value, weekFormatter)
+                        alarmView === 'monthly'
+                          ? formatMonth(value, monthFormatter)
+                          : formatWeekday(value, weekFormatter)
                       }
                     />
                     <YAxis
@@ -360,7 +282,9 @@ export function DashboardTrendSection({
                         <ChartTooltip
                           translate={translate}
                           labelFormatter={(value) =>
-                            formatWeekdayLabel(value, weekFormatter)
+                            alarmView === 'monthly'
+                              ? formatMonthLabel(value, monthFormatter)
+                              : formatWeekdayLabel(value, weekFormatter)
                           }
                           locale={locale}
                         />
@@ -370,38 +294,68 @@ export function DashboardTrendSection({
                       dataKey="alarmCount"
                       fill="var(--chart-5)"
                       radius={[6, 6, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="warningCount"
-                      fill="var(--chart-4)"
-                      radius={[6, 6, 0, 0]}
-                    />
+                    >
+                      {alarmView === 'monthly' &&
+                        summary.monthlyTrend.map((point) => (
+                          <Cell
+                            key={point.dateKey}
+                            fill={
+                              point.dateKey === summary.topAlarmMonth
+                                ? 'var(--chart-5)'
+                                : 'var(--chart-4)'
+                            }
+                          />
+                        ))}
+                    </Bar>
+                    {alarmView === 'weekly' && (
+                      <Bar
+                        dataKey="warningCount"
+                        fill="var(--chart-4)"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    )}
                   </BarChart>
                 </ResponsiveContainer>
               </ChartArea>
               <Separator />
-              <StatsRow
-                items={[
-                  {
-                    label: translate('dashboard:charts.weeklyTrend.totalAlarms'),
-                    value: `${summary.weeklyAlarmTotal}${translate('dashboard:units.count')}`,
-                    tone: 'text-amber-500',
-                  },
-                  {
-                    label: translate('dashboard:charts.weeklyTrend.totalWarnings'),
-                    value: `${summary.weeklyWarningTotal}${translate('dashboard:units.count')}`,
-                  },
-                  {
-                    label: translate('dashboard:charts.weeklyTrend.average'),
-                    value: `${summary.averageWeeklyAlarms}${translate('dashboard:units.count')}`,
-                  },
-                  {
-                    label: translate('dashboard:charts.weeklyTrend.peakDay'),
-                    value: formatWeekday(summary.peakWeeklyDay, weekFormatter),
-                  },
-                ]}
-                columnsClassName="md:grid-cols-4"
-              />
+              {alarmView === 'monthly' ? (
+                <StatsRow
+                  items={[
+                    {
+                      label: translate('dashboard:charts.monthlyAlarms.total'),
+                      value: `${summary.monthlyAlarmTotal}${translate('dashboard:units.count')}`,
+                      tone: 'text-amber-500',
+                    },
+                    {
+                      label: translate('dashboard:charts.monthlyAlarms.peakMonth'),
+                      value: formatMonth(summary.topAlarmMonth, monthFormatter),
+                    },
+                  ]}
+                />
+              ) : (
+                <StatsRow
+                  items={[
+                    {
+                      label: translate('dashboard:charts.weeklyTrend.totalAlarms'),
+                      value: `${summary.weeklyAlarmTotal}${translate('dashboard:units.count')}`,
+                      tone: 'text-amber-500',
+                    },
+                    {
+                      label: translate('dashboard:charts.weeklyTrend.totalWarnings'),
+                      value: `${summary.weeklyWarningTotal}${translate('dashboard:units.count')}`,
+                    },
+                    {
+                      label: translate('dashboard:charts.weeklyTrend.average'),
+                      value: `${summary.averageWeeklyAlarms}${translate('dashboard:units.count')}`,
+                    },
+                    {
+                      label: translate('dashboard:charts.weeklyTrend.peakDay'),
+                      value: formatWeekday(summary.peakWeeklyDay, weekFormatter),
+                    },
+                  ]}
+                  columnsClassName="md:grid-cols-4"
+                />
+              )}
             </>
           )}
         </CardContent>
@@ -426,7 +380,7 @@ function DockCard({
   return (
     <button
       type="button"
-      className="group border-border/70 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block w-full cursor-pointer rounded-2xl border p-3 text-left transition"
+      className="group border-border/90 bg-card/70 hover:border-primary/30 hover:bg-accent/20 block w-full cursor-pointer rounded-2xl border p-3 text-left transition"
       onClick={() => onOpen(regionStatus)}
     >
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -456,7 +410,7 @@ export function DashboardRegionStatusSection({
   onRegionPreviewOpen: (regionStatus: DashboardRegionStatusDatum) => void;
 }) {
   return (
-    <Card className="border-border/70 bg-background/60 border shadow-none xl:h-full">
+    <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
           <CardTitle>{translate('dashboard:charts.regionStatus.title')}</CardTitle>
@@ -498,16 +452,11 @@ export function DashboardRiskCranesSection({
   isLoading,
   translate,
   locale,
-  barChartTooltipCursor,
 }: DashboardSectionSharedProps & {
   locale: string;
-  barChartTooltipCursor: {
-    fill: string;
-    stroke: string;
-  };
 }) {
   return (
-    <Card className="border-border/70 bg-background/60 border shadow-none xl:h-full">
+    <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
           <CardTitle>{translate('dashboard:charts.riskCranes.title')}</CardTitle>
@@ -525,63 +474,18 @@ export function DashboardRiskCranesSection({
         {isLoading ? (
           <DashboardRiskCranesSkeleton />
         ) : (
-          <>
-            <ChartArea className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={summary.riskCranes}
-                  maxBarSize={20}
-                  layout="vertical"
-                >
-                  <CartesianGrid
-                    horizontal={false}
-                    stroke="var(--border)"
-                    strokeDasharray="3 3"
-                  />
-                  <XAxis hide type="number" />
-                  <YAxis
-                    axisLine={false}
-                    dataKey="craneName"
-                    tickLine={false}
-                    tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-                    type="category"
-                    width={56}
-                  />
-                  <Tooltip
-                    cursor={barChartTooltipCursor}
-                    content={
-                      <ChartTooltip
-                        translate={translate}
-                        labelFormatter={(value) => `${value}`}
-                        locale={locale}
-                      />
-                    }
-                  />
-                  <Bar dataKey="score" radius={[0, 8, 8, 0]}>
-                    {summary.riskCranes.map((crane) => (
-                      <Cell
-                        key={crane.craneId}
-                        fill={getRiskColor(crane.score)}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartArea>
-            <Separator />
-            <ScrollArea className="h-[320px] pr-3">
-              <div className="space-y-2">
-                {summary.riskCranes.map((crane) => (
-                  <RiskCraneRow
-                    key={crane.craneId}
-                    crane={crane}
-                    locale={locale}
-                    translate={translate}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </>
+          <ScrollArea className="pr-3">
+            <div className="space-y-2">
+              {summary.riskCranes.map((crane) => (
+                <RiskCraneRow
+                  key={crane.craneId}
+                  crane={crane}
+                  locale={locale}
+                  translate={translate}
+                />
+              ))}
+            </div>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>
@@ -595,7 +499,7 @@ export function DashboardRecentAlarmsSection({
   locale,
 }: DashboardRecentAlarmsSectionProps) {
   return (
-    <Card className="border-border/70 bg-background/60 border shadow-none xl:h-full">
+    <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
           <CardTitle>{translate('dashboard:sections.recentAlarms.title')}</CardTitle>
@@ -612,21 +516,19 @@ export function DashboardRecentAlarmsSection({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {summary.recentAlarms.length > 0 ? (
-          <ScrollArea className="h-[560px] pr-3">
-            <div className="space-y-2 pr-3">
-              {summary.recentAlarms.map((alarm) => (
-                <RecentAlarmRow
-                  key={alarm.id}
-                  alarm={alarm}
-                  formatTimestamp={formatTimestamp}
-                  locale={locale}
-                  translate={translate}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+          <div className="space-y-2">
+            {summary.recentAlarms.map((alarm) => (
+              <RecentAlarmRow
+                key={alarm.id}
+                alarm={alarm}
+                formatTimestamp={formatTimestamp}
+                locale={locale}
+                translate={translate}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="border-border/70 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+          <div className="border-border/90 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
             {translate('dashboard:sections.recentAlarms.empty')}
           </div>
         )}
