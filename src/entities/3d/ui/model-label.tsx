@@ -33,6 +33,10 @@ export function ModelLabel({
   onHoverMove,
   onHoverEnd,
 }: ModelLabelProps) {
+  if (!equipName) {
+    return null;
+  }
+
   return (
     <Html
       transform

@@ -144,7 +144,7 @@ export function useSceneEditorSession({
   return {
     sceneInfo,
     selectedModelId,
-    selectedModelLabel: selectedModel?.equipName.trim() || selectedModel?.id || null,
+    selectedModelLabel: selectedModel?.equipName.trim() || null,
     selectedModel,
     isSaving,
     isDirty,
