@@ -8,8 +8,10 @@ export {
 export type {
   SceneModelCatalogItem,
   SceneModelPreviewPreset,
+  SavedMapInfo,
   SavedModelInfo,
   SavedSceneInfo,
+  ValueMapItem,
   ValueMapType,
 } from './model/types';
 export { sceneModelCatalog } from './model/scene-model-catalog';

@@ -1,6 +1,12 @@
-import type { SavedSceneInfo } from '@/entities/3d';
+import type {
+  SavedMapInfo,
+  SavedModelInfo,
+  SavedSceneInfo,
+  ValueMapItem,
+} from '@/entities/3d';
 import { createId } from '@/shared/lib/create-id';
 import { clampToRange } from '@/shared/lib/utils';
+import type { Vector3Tuple } from '@/shared/types/math';
 
 function createSceneModelId() {
   return createId();
@@ -92,4 +98,56 @@ export function createSceneSnapshot(sceneInfo: SavedSceneInfo | null) {
   }
 
   return JSON.stringify(sanitizeSceneInfo(sceneInfo));
+}
+
+function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+function isValueMapListEqual(
+  a: ValueMapItem[],
+  b: ValueMapItem[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].type !== b[i].type || a[i].key !== b[i].key) return false;
+  }
+  return true;
+}
+
+function isMapInfoEqual(
+  a: SavedMapInfo | null,
+  b: SavedMapInfo | null,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.id === b.id && a.path === b.path;
+}
+
+function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
+  return (
+    a.id === b.id &&
+    a.equipName === b.equipName &&
+    a.craneId === b.craneId &&
+    a.path === b.path &&
+    a.opacity === b.opacity &&
+    isVector3TupleEqual(a.position, b.position) &&
+    isVector3TupleEqual(a.rotation, b.rotation) &&
+    isVector3TupleEqual(a.scale, b.scale) &&
+    isValueMapListEqual(a.valueMapList, b.valueMapList)
+  );
+}
+
+export function isSceneInfoEqual(
+  a: SavedSceneInfo | null,
+  b: SavedSceneInfo | null,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (!isMapInfoEqual(a.map, b.map)) return false;
+  if (a.models.length !== b.models.length) return false;
+  for (let i = 0; i < a.models.length; i++) {
+    if (!isModelInfoEqual(a.models[i], b.models[i])) return false;
+  }
+  return true;
 }

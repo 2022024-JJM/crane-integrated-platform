@@ -5,7 +5,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { SavedSceneInfo } from '@/entities/3d';
-import { createSceneSnapshot } from './scene-snapshot';
+import { isSceneInfoEqual } from './scene-snapshot';
 
 interface SceneHistoryState {
   past: SavedSceneInfo[];
@@ -59,10 +59,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
             ? updater(prev.present)
             : updater;
 
-        if (
-          createSceneSnapshot(nextSceneInfo) ===
-          createSceneSnapshot(prev.present)
-        ) {
+        if (isSceneInfoEqual(nextSceneInfo, prev.present)) {
           return prev;
         }
 
@@ -91,7 +88,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
     setHistory((prev) => {
       if (
         !prev.present ||
-        createSceneSnapshot(prev.present) === createSceneSnapshot(baseSceneInfo)
+        isSceneInfoEqual(prev.present, baseSceneInfo)
       ) {
         return prev;
       }

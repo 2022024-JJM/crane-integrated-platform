@@ -49,8 +49,9 @@ export function GltfModel({
   onHoverEnd,
 }: GltfModelProps) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => {
+  const { clone, meshMaterials } = useMemo(() => {
     const nextClone = SkeletonUtils.clone(scene);
+    const materials: Material[] = [];
 
     nextClone.traverse((child) => {
       if (!(child instanceof Mesh)) {
@@ -63,6 +64,7 @@ export function GltfModel({
           if ('color' in cloned && cloned.color instanceof Color) {
             (cloned as Material & { _originalColor: Color })._originalColor = cloned.color.clone();
           }
+          materials.push(cloned);
           return cloned;
         });
         return;
@@ -73,9 +75,14 @@ export function GltfModel({
         (cloned as Material & { _originalColor: Color })._originalColor = (cloned.color as Color).clone();
       }
       child.material = cloned;
+      materials.push(cloned);
+
+      if (child.geometry) {
+        child.geometry.computeBoundingSphere();
+      }
     });
 
-    return nextClone;
+    return { clone: nextClone, meshMaterials: materials };
   }, [scene]);
   const modelRef = useRef<Object3D | null>(null);
   const selectionBox = useMemo(() => new Box3(), []);
@@ -128,30 +135,20 @@ export function GltfModel({
   }, [clone, scale]);
 
   useEffect(() => {
-    clone.traverse((child) => {
-      if (!(child instanceof Mesh)) {
-        return;
-      }
+    for (const material of meshMaterials) {
+      const mat = material as Material & {
+        opacity: number;
+        transparent: boolean;
+        depthWrite: boolean;
+        needsUpdate: boolean;
+      };
 
-      const materials = Array.isArray(child.material)
-        ? child.material
-        : [child.material];
-
-      materials.forEach((material) => {
-        const nextMaterial = material as Material & {
-          opacity: number;
-          transparent: boolean;
-          depthWrite: boolean;
-          needsUpdate: boolean;
-        };
-
-        nextMaterial.opacity = opacity;
-        nextMaterial.transparent = opacity < 1;
-        nextMaterial.depthWrite = opacity >= 1;
-        nextMaterial.needsUpdate = true;
-      });
-    });
-  }, [clone, opacity]);
+      mat.opacity = opacity;
+      mat.transparent = opacity < 1;
+      mat.depthWrite = opacity >= 1;
+      mat.needsUpdate = true;
+    }
+  }, [meshMaterials, opacity]);
 
 
   useEffect(() => {
