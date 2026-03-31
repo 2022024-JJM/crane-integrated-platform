@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedModelInfo } from '@/entities/3d';
+import { humanizeModelPath, type SavedModelInfo } from '@/entities/3d';
 import type { ScreenPosition } from '../model/types';
 
 interface MonitoringObjectHoverCardProps {
@@ -21,16 +21,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function humanizeModelPath(path: string) {
-  const fileName = path.split('/').pop() ?? path;
-  const stem = fileName.replace(/\.glb$/i, '');
-
-  return stem
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
-}
 
 function formatTuple(values: [number, number, number]) {
   return values.map((value) => value.toFixed(1)).join(' / ');

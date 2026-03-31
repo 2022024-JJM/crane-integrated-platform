@@ -1,5 +1,6 @@
 import type { SavedSceneInfo } from '@/entities/3d';
 import { createId } from '@/shared/lib/create-id';
+import { clampToRange } from '@/shared/lib/utils';
 
 function createSceneModelId() {
   return createId();
@@ -22,7 +23,7 @@ function clampOpacity(value: unknown) {
     return 1;
   }
 
-  return Math.min(1, Math.max(0.1, Number(value)));
+  return clampToRange(Number(value), 0.1, 1);
 }
 
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {

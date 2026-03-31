@@ -1,4 +1,5 @@
 export { degToRad, numRound, radToDeg } from './lib/math-utils';
+export { humanizeModelPath, normalizeModelLabel } from './lib/model-path-utils';
 export { createSceneModel } from './lib/create-scene-model';
 export {
   loadSceneInfoByRegionId,

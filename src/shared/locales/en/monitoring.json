@@ -46,6 +46,9 @@
     "map": "Map",
     "deleteMap": "Delete map",
     "deleteObject": "Delete object",
+    "nameEmptyError": "Name cannot be empty.",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "deleteSelected": "Delete selected",
     "noSelection": "No selection",
     "snapActive": "Snap 1.0"
   }

@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   Download,
+  Keyboard,
   Layers3,
   Loader2,
   Map,
@@ -11,13 +12,25 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedMapInfo, SavedModelInfo, SceneModelCatalogItem } from '@/entities/3d';
+import {
+  humanizeModelPath,
+  normalizeModelLabel,
+  type SavedMapInfo,
+  type SavedModelInfo,
+  type SceneModelCatalogItem,
+} from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
 import { Input } from '@/shared/ui/atoms/input';
 import { Card, CardContent, CardHeader } from '@/shared/ui/molecules/card';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/ui/molecules/tooltip';
 import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
@@ -42,20 +55,6 @@ interface SceneModelPaletteProps {
   isSaving?: boolean;
 }
 
-function humanizeModelPath(path: string) {
-  const fileName = path.split('/').pop() ?? path;
-  const stem = fileName.replace(/\.glb$/i, '');
-
-  return stem
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
-}
-
-function normalizeModelLabel(value: string) {
-  return value.trim().replace(/\s+/g, ' ').toLowerCase();
-}
 
 export function SceneModelPalette({
   items,
@@ -171,6 +170,39 @@ export function SceneModelPalette({
               <Download className="size-3.5" />
               {t('monitoring:editor.exportJson')}
             </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t('monitoring:editor.keyboardShortcuts')}
+                      className="size-6 cursor-pointer rounded-sm text-white/50 hover:bg-white/10 hover:text-white"
+                    />
+                  }
+                >
+                  <Keyboard className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="end">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">Ctrl+Z</kbd>
+                      <span>{t('monitoring:history.undo')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">Ctrl+Y</kbd>
+                      <span>{t('monitoring:history.redo')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">Del</kbd>
+                      <span>{t('monitoring:editor.deleteSelected')}</span>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </CardHeader>

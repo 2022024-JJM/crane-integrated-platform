@@ -169,7 +169,14 @@ export function useSceneEditorSession({
       return true;
     } catch (error) {
       console.error('Failed to save scene info.', error);
-      toast.error('Failed to save scene.');
+      toast.error('Failed to save scene.', {
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            void saveCurrentScene();
+          },
+        },
+      });
       return false;
     } finally {
       setIsSaving(false);

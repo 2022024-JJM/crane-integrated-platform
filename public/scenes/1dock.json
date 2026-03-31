@@ -487,34 +487,6 @@
       "opacity": 1
     },
     {
-      "id": "8b1b7104-eb0c-4fe3-bc9b-f293914d946f",
-      "equipName": "TC-57",
-      "craneId": "C_811",
-      "path": "/models/crane.glb",
-      "position": [
-        -48,
-        0.2,
-        -21.2
-      ],
-      "rotation": [
-        0,
-        99,
-        0
-      ],
-      "scale": [
-        0.8,
-        0.7,
-        0.8
-      ],
-      "valueMapList": [
-        {
-          "type": "RY",
-          "key": "crane_rotation_y"
-        }
-      ],
-      "opacity": 1
-    },
-    {
       "id": "1243c0ce-05f5-4f1d-83e1-0511cd02d76e",
       "equipName": "",
       "path": "/models/house.glb",

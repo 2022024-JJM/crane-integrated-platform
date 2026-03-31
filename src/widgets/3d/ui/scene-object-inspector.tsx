@@ -1,7 +1,7 @@
 import { ChevronDown, Cuboid, Eye, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SavedModelInfo } from '@/entities/3d';
+import { humanizeModelPath, type SavedModelInfo } from '@/entities/3d';
 import {
   type AxisKey,
   PositionController,
@@ -9,6 +9,7 @@ import {
   ScaleController,
   type SceneTransformField,
 } from '@/features/3d';
+import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/atoms/input';
 import { Card, CardContent } from '@/shared/ui/molecules/card';
 
@@ -35,16 +36,6 @@ interface TransformGroupProps {
   children: ReactNode;
 }
 
-function humanizeModelPath(path: string) {
-  const fileName = path.split('/').pop() ?? path;
-  const stem = fileName.replace(/\.glb$/i, '');
-
-  return stem
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
-}
 
 function InspectorSection({
   title,
@@ -93,6 +84,7 @@ export function SceneObjectInspector({
   const selectedLabel = selectedModel?.equipName || selectedModel?.id || '';
   const selectedOpacity = selectedModel?.opacity ?? 1;
   const [nameDraft, setNameDraft] = useState(selectedLabel);
+  const isNameEmpty = nameDraft.trim() === '';
 
   useEffect(() => {
     setNameDraft(selectedLabel);
@@ -122,7 +114,10 @@ export function SceneObjectInspector({
               <Input
                 value={nameDraft}
                 aria-label={t('monitoring:inspector.name')}
-                className="h-8 cursor-text rounded-sm border-white/8 bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30"
+                className={cn(
+                  'h-8 cursor-text rounded-sm bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30',
+                  isNameEmpty ? 'border-red-400/60' : 'border-white/8',
+                )}
                 onChange={(event) => {
                   const nextValue = event.target.value;
                   setNameDraft(nextValue);
@@ -148,6 +143,11 @@ export function SceneObjectInspector({
                   }
                 }}
               />
+              {isNameEmpty && (
+                <p className="mt-1 text-[10px] text-red-400">
+                  {t('monitoring:inspector.nameEmptyError')}
+                </p>
+              )}
             </InspectorSection>
 
             <InspectorSection

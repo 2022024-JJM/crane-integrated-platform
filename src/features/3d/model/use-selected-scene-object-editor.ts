@@ -5,6 +5,7 @@ import {
 } from '@/entities/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@/shared/types/math';
+import { clampToRange } from '@/shared/lib/utils';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
 import { AXIS_INDEX, type AxisKey, type SceneTransformField } from './types';
 
@@ -19,7 +20,7 @@ function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
 }
 
 function clampOpacity(value: number) {
-  return numRound(Math.min(1, Math.max(0.1, value)));
+  return numRound(clampToRange(value, 0.1, 1));
 }
 
 interface UseSelectedSceneObjectEditorParams {
