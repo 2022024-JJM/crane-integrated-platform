@@ -1,4 +1,5 @@
 import type { WeatherConditionCode, WeatherSnapshot } from '../model/types';
+import { openMeteoClient } from '../api/open-meteo-client';
 
 interface OpenMeteoCurrentWeatherResponse {
   current?: {
@@ -13,21 +14,33 @@ const WEATHER_CONDITION_CODES: WeatherConditionCode[] = [
   80, 81, 82, 85, 86, 95, 96, 99,
 ];
 
-export function buildOpenMeteoCurrentWeatherUrl(
+export async function fetchOpenMeteoCurrentWeather(
   latitude: number,
   longitude: number,
-) {
-  const searchParams = new URLSearchParams({
-    latitude: latitude.toString(),
-    longitude: longitude.toString(),
-    current: 'temperature_2m,weather_code,is_day',
-    temperature_unit: 'celsius',
-  });
+  signal?: AbortSignal,
+): Promise<WeatherSnapshot | null> {
+  try {
+    const response =
+      await openMeteoClient.get<OpenMeteoCurrentWeatherResponse>(
+        '/v1/forecast',
+        {
+          query: {
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+            current: 'temperature_2m,weather_code,is_day',
+            temperature_unit: 'celsius',
+          },
+          signal,
+        },
+      );
 
-  return `https://api.open-meteo.com/v1/forecast?${searchParams.toString()}`;
+    return parseOpenMeteoCurrentWeatherResponse(response);
+  } catch {
+    return null;
+  }
 }
 
-export function parseOpenMeteoCurrentWeatherResponse(
+function parseOpenMeteoCurrentWeatherResponse(
   response: OpenMeteoCurrentWeatherResponse,
 ): WeatherSnapshot | null {
   const temperature = response.current?.temperature_2m;

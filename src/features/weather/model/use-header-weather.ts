@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  buildOpenMeteoCurrentWeatherUrl,
+  fetchOpenMeteoCurrentWeather,
   getSiteWeatherTarget,
-  parseOpenMeteoCurrentWeatherResponse,
   type WeatherFetchState,
   type WeatherLocationTarget,
   type WeatherSnapshot,
@@ -105,32 +104,7 @@ async function loadWeather(
   target: WeatherLocationTarget,
   signal: AbortSignal,
 ): Promise<WeatherSnapshot | null> {
-  try {
-    const response = await fetch(
-      buildOpenMeteoCurrentWeatherUrl(target.latitude, target.longitude),
-      { signal },
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const json = (await response.json()) as {
-      current?: {
-        temperature_2m?: number;
-        weather_code?: number;
-        is_day?: number;
-      };
-    };
-
-    return parseOpenMeteoCurrentWeatherResponse(json);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      return null;
-    }
-
-    return null;
-  }
+  return fetchOpenMeteoCurrentWeather(target.latitude, target.longitude, signal);
 }
 
 function resolveHeaderWeatherRequest(pathname: string): HeaderWeatherRequest {
