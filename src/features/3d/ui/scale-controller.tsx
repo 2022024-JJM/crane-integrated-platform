@@ -22,7 +22,7 @@ export function ScaleController({
             step={0.1}
             min={0.1}
             max={100}
-            className="h-7 flex-1 rounded-sm border-white/8 bg-white/[0.045] px-2 text-[12px]"
+            className="h-7 flex-1 rounded-sm border-white/8 bg-white/[0.045] text-[12px]"
             onChange={(v) => onChange(axis, Number(v))}
           />
         </div>

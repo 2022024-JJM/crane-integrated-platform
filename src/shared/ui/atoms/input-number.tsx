@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type InputHTMLAttributes } from "react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/shared/lib/utils"
 
@@ -46,6 +47,14 @@ function InputNumber({
     [onChange, clamp],
   )
 
+  const increment = useCallback(() => {
+    onChange(clamp(value + step))
+  }, [onChange, clamp, value, step])
+
+  const decrement = useCallback(() => {
+    onChange(clamp(value - step))
+  }, [onChange, clamp, value, step])
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       commit(e.currentTarget.value)
@@ -55,37 +64,60 @@ function InputNumber({
       e.currentTarget.blur()
     } else if (e.key === "ArrowUp") {
       e.preventDefault()
-      onChange(clamp(value + step))
+      increment()
     } else if (e.key === "ArrowDown") {
       e.preventDefault()
-      onChange(clamp(value - step))
+      decrement()
     }
     onKeyDown?.(e)
   }
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      inputMode="decimal"
-      value={draft ?? value}
-      onChange={(e) => {
-        const v = e.target.value
-        if (v === "" || v === "-" || /^-?\d*\.?\d*$/.test(v)) {
-          setDraft(v)
-        }
-      }}
-      onBlur={(e) => {
-        if (draft !== null) commit(draft)
-        onBlur?.(e)
-      }}
-      onKeyDown={handleKeyDown}
+    <div
       className={cn(
-        "h-8 w-full rounded-lg border border-border bg-background px-2.5 text-sm tabular-nums outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
+        "flex overflow-hidden rounded-lg border border-border bg-background transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         className,
       )}
-      {...props}
-    />
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="decimal"
+        value={draft ?? value}
+        onChange={(e) => {
+          const v = e.target.value
+          if (v === "" || v === "-" || /^-?\d*\.?\d*$/.test(v)) {
+            setDraft(v)
+          }
+        }}
+        onBlur={(e) => {
+          if (draft !== null) commit(draft)
+          onBlur?.(e)
+        }}
+        onKeyDown={handleKeyDown}
+        className="min-w-0 flex-1 bg-transparent px-2.5 text-sm tabular-nums outline-none disabled:pointer-events-none disabled:opacity-50"
+        {...props}
+      />
+      <div className="flex flex-col border-l border-border">
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={increment}
+          className="flex flex-1 items-center justify-center px-1 text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+        >
+          <ChevronUp className="size-3" />
+        </button>
+        <div className="border-t border-border" />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={decrement}
+          className="flex flex-1 items-center justify-center px-1 text-white/40 transition-colors hover:bg-white/5 hover:text-white/80"
+        >
+          <ChevronDown className="size-3" />
+        </button>
+      </div>
+    </div>
   )
 }
 
