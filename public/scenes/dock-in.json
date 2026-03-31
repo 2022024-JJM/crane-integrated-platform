@@ -3,27 +3,5 @@
     "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
     "path": "/maps/1dock.glb"
   },
-  "models": [
-    {
-      "id": "b9eae2d0-d4c1-4aa6-be30-1a09292dbfa7",
-      "equipName": "Gantry Crane",
-      "path": "/models/gantry_crane.glb",
-      "position": [
-        -81.663,
-        0,
-        -28.175
-      ],
-      "rotation": [
-        180,
-        87.725,
-        -180
-      ],
-      "scale": [
-        1.2,
-        1.2,
-        1.2
-      ],
-      "valueMapList": []
-    }
-  ]
+  "models": []
 }

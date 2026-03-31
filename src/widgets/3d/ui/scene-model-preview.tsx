@@ -5,6 +5,7 @@ import {
   Suspense,
   type ErrorInfo,
   type ReactNode,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -326,10 +327,38 @@ function SceneModelPreviewInner({
 }: SceneModelPreviewProps) {
   const { t } = useTranslation();
   const [readyPath, setReadyPath] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const isReady = readyPath === path;
+
+  useEffect(() => {
+    const element = containerRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { rootMargin: '100px' },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const handleReady = useCallback(() => {
+    setReadyPath(path);
+  }, [path]);
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         'pointer-events-none relative h-28 overflow-hidden rounded-[0.95rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_38%),linear-gradient(180deg,#111827_0%,#020617_100%)]',
         className,
@@ -350,25 +379,25 @@ function SceneModelPreviewInner({
           message={t('monitoring:palette.previewLoading')}
         />
       ) : null}
-      <Canvas
-        orthographic
-        frameloop="demand"
-        dpr={[1, 1]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
-        camera={{ position: [2.6, 1.8, 2.6], zoom: 72 }}
-      >
-        <PreviewStage />
-        <Suspense fallback={null}>
-          <PreviewModel
-            key={path}
-            resolvedUrl={path}
-            preview={preview}
-            onReady={() => {
-              setReadyPath(path);
-            }}
-          />
-        </Suspense>
-      </Canvas>
+      {isVisible ? (
+        <Canvas
+          orthographic
+          frameloop="demand"
+          dpr={[1, 1]}
+          gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
+          camera={{ position: [2.6, 1.8, 2.6], zoom: 72 }}
+        >
+          <PreviewStage />
+          <Suspense fallback={null}>
+            <PreviewModel
+              key={path}
+              resolvedUrl={path}
+              preview={preview}
+              onReady={handleReady}
+            />
+          </Suspense>
+        </Canvas>
+      ) : null}
       <div
         className={cn(
           'pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-slate-950/82 px-2.5 py-2 text-white transition duration-200',
