@@ -55,6 +55,7 @@ interface UseSceneEditorSessionResult {
 export function useSceneEditorSession({
   regionId,
 }: UseSceneEditorSessionParams): UseSceneEditorSessionResult {
+  const sceneInfoRef = useRef<import('@/entities/3d').SavedSceneInfo | null>(null);
   const transformHistoryBaseRef = useRef(null);
   const {
     sceneInfo,
@@ -97,6 +98,8 @@ export function useSceneEditorSession({
     resetTransformMode();
   }, [clearSelectedModel, resetTransformMode]);
 
+  sceneInfoRef.current = sceneInfo;
+
   const { isDirty, isSaving, saveCurrentScene } = useScenePersistence({
     regionId,
     sceneInfo,
@@ -113,7 +116,7 @@ export function useSceneEditorSession({
         selectModel,
         clearSelectedModel,
         selectedModelId,
-        sceneInfo,
+        sceneInfoRef,
         transformHistoryBaseRef,
       }),
     [
@@ -122,7 +125,6 @@ export function useSceneEditorSession({
       selectModel,
       clearSelectedModel,
       selectedModelId,
-      sceneInfo,
     ],
   );
 

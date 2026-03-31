@@ -1,11 +1,10 @@
 import { useGLTF } from '@react-three/drei';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Box3, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { degToRad } from '../lib/math-utils';
 import type { ThreeEvent } from '@react-three/fiber';
-import { useEffect } from 'react';
 
 interface ModelMeshProps {
   id: string;
@@ -130,6 +129,9 @@ export function ModelMesh({
     modelRef.current = object;
   }, []);
 
+  const onObjectReadyRef = useRef(onObjectReady);
+  onObjectReadyRef.current = onObjectReady;
+
   const rotationRad = useMemo(
     () => rotation.map((deg) => degToRad(deg)) as Vector3Tuple,
     [rotation],
@@ -152,7 +154,7 @@ export function ModelMesh({
   }, [meshMaterials, opacity]);
 
   useEffect(() => {
-    if (!onObjectReady) {
+    if (!onObjectReadyRef.current) {
       return;
     }
 
@@ -160,7 +162,7 @@ export function ModelMesh({
     const frame = requestAnimationFrame(() => {
       const nextObject = modelRef.current;
 
-      onObjectReady(
+      onObjectReadyRef.current?.(
         id,
         nextObject && nextObject.parent
           ? nextObject
@@ -172,9 +174,9 @@ export function ModelMesh({
 
     return () => {
       cancelAnimationFrame(frame);
-      onObjectReady(id, null);
+      onObjectReadyRef.current?.(id, null);
     };
-  }, [id, onObjectReady]);
+  }, [id]);
 
   return (
     <>

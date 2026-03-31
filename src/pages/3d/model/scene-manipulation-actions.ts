@@ -18,7 +18,7 @@ interface SceneManipulationDeps {
   selectModel: (id: string) => void;
   clearSelectedModel: () => void;
   selectedModelId: string | null;
-  sceneInfo: SavedSceneInfo | null;
+  sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -28,7 +28,7 @@ export function createSceneManipulationActions({
   selectModel,
   clearSelectedModel,
   selectedModelId,
-  sceneInfo,
+  sceneInfoRef,
   transformHistoryBaseRef,
 }: SceneManipulationDeps) {
   const addModel = (
@@ -89,7 +89,7 @@ export function createSceneManipulationActions({
   };
 
   const startTransformInteraction = () => {
-    transformHistoryBaseRef.current = sceneInfo;
+    transformHistoryBaseRef.current = sceneInfoRef.current;
   };
 
   const endTransformInteraction = () => {

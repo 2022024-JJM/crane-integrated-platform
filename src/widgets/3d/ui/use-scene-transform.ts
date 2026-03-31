@@ -119,13 +119,9 @@ export function useSceneTransform({
     const nextSelectedObject =
       modelObjectRegistryRef.current.get(selectedModelId) ?? null;
 
-    if (!nextSelectedObject?.parent) {
-      setSelectedObject(null);
-      setIsTransformDragging(false);
-      return;
+    if (nextSelectedObject) {
+      setSelectedObject(nextSelectedObject);
     }
-
-    setSelectedObject(nextSelectedObject);
   }, [sceneModels, selectedModelId, modelObjectRegistryRef]);
 
   useEffect(() => {
