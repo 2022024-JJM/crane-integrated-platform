@@ -1,30 +1,21 @@
-import {
-  createSceneModel,
-  loadSceneInfoByRegionId,
-  saveSceneInfoByRegionId,
-  type SavedSceneInfo,
-  type SceneModelCatalogItem,
-} from '@/entities/3d';
+import { type SceneModelCatalogItem } from '@/entities/3d';
 import {
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
 } from '@/features/3d';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
-import {
-  createSceneSnapshot,
-  sanitizeSceneInfo,
-} from './scene-snapshot';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSceneHistory } from './use-scene-history';
+import { useScenePersistence } from './use-scene-persistence';
 import { useSceneUnsavedChangesGuard } from './use-scene-unsaved-changes-guard';
+import { createSceneManipulationActions } from './scene-manipulation-actions';
 
 interface UseSceneEditorSessionParams {
   regionId: string;
 }
 
 interface UseSceneEditorSessionResult {
-  sceneInfo: SavedSceneInfo | null;
+  sceneInfo: ReturnType<typeof useSceneHistory>['sceneInfo'];
   selectedModelId: string | null;
   selectedModelLabel: string | null;
   selectedModel: ReturnType<typeof useSelectedSceneObjectEditor>['selectedModel'];
@@ -64,11 +55,7 @@ interface UseSceneEditorSessionResult {
 export function useSceneEditorSession({
   regionId,
 }: UseSceneEditorSessionParams): UseSceneEditorSessionResult {
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
-    null,
-  );
-  const transformHistoryBaseRef = useRef<SavedSceneInfo | null>(null);
+  const transformHistoryBaseRef = useRef(null);
   const {
     sceneInfo,
     replaceScene,
@@ -104,43 +91,40 @@ export function useSceneEditorSession({
     sceneInfo,
     updateSceneInfo: updateScene,
   });
-  const currentSceneSnapshot = useMemo(
-    () => createSceneSnapshot(sceneInfo),
-    [sceneInfo],
-  );
-  const isDirty =
-    sceneInfo !== null &&
-    savedSceneSnapshot !== null &&
-    currentSceneSnapshot !== savedSceneSnapshot;
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadScene = async () => {
-      try {
-        const data = await loadSceneInfoByRegionId(regionId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        replaceScene(data);
-        setSavedSceneSnapshot(createSceneSnapshot(data));
-      } catch (error) {
-        console.error('Failed to load scene editor data.', error);
-      }
-    };
-
+  const onLoadReset = useCallback(() => {
     clearSelectedModel();
     resetTransformMode();
-    replaceScene(null);
-    setSavedSceneSnapshot(null);
-    void loadScene();
+  }, [clearSelectedModel, resetTransformMode]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [clearSelectedModel, regionId, replaceScene, resetTransformMode]);
+  const { isDirty, isSaving, saveCurrentScene } = useScenePersistence({
+    regionId,
+    sceneInfo,
+    replaceScene,
+    updateScene,
+    onLoadReset,
+  });
+
+  const manipulation = useMemo(
+    () =>
+      createSceneManipulationActions({
+        updateScene,
+        commitHistoryFrom,
+        selectModel,
+        clearSelectedModel,
+        selectedModelId,
+        sceneInfo,
+        transformHistoryBaseRef,
+      }),
+    [
+      updateScene,
+      commitHistoryFrom,
+      selectModel,
+      clearSelectedModel,
+      selectedModelId,
+      sceneInfo,
+    ],
+  );
 
   useEffect(() => {
     return () => {
@@ -149,117 +133,11 @@ export function useSceneEditorSession({
     };
   }, [clearSelectedModel, resetTransformMode]);
 
-  const saveCurrentScene = useCallback(async () => {
-    if (!sceneInfo || isSaving) {
-      return false;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const sanitizedSceneInfo = sanitizeSceneInfo(sceneInfo);
-      const savedSceneInfo = await saveSceneInfoByRegionId(
-        regionId,
-        sanitizedSceneInfo,
-      );
-
-      updateScene(savedSceneInfo, { recordHistory: false });
-      setSavedSceneSnapshot(createSceneSnapshot(savedSceneInfo));
-      toast.success('Scene saved.');
-      return true;
-    } catch (error) {
-      console.error('Failed to save scene info.', error);
-      toast.error('Failed to save scene.', {
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            void saveCurrentScene();
-          },
-        },
-      });
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [isSaving, regionId, sceneInfo, updateScene]);
-
   useSceneUnsavedChangesGuard({
     isDirty,
     isSaving,
     onSave: saveCurrentScene,
   });
-
-  const addModel = useCallback(
-    (catalogItem: SceneModelCatalogItem, position: [number, number, number]) => {
-      const nextModel = createSceneModel({
-        catalogItem,
-        position,
-      });
-
-      updateScene((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          models: [...prev.models, nextModel],
-        };
-      });
-
-      selectModel(nextModel.id);
-    },
-    [selectModel, updateScene],
-  );
-
-  const deleteMap = useCallback(() => {
-    updateScene((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        map: null,
-      };
-    });
-  }, [updateScene]);
-
-  const selectPlacedModel = useCallback(
-    (id: string) => {
-      selectModel(id);
-    },
-    [selectModel],
-  );
-
-  const deletePlacedModel = useCallback(
-    (id: string) => {
-      updateScene((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          models: prev.models.filter((model) => model.id !== id),
-        };
-      });
-
-      if (selectedModelId === id) {
-        clearSelectedModel();
-      }
-    },
-    [clearSelectedModel, selectedModelId, updateScene],
-  );
-
-  const startTransformInteraction = useCallback(() => {
-    transformHistoryBaseRef.current = sceneInfo;
-  }, [sceneInfo]);
-
-  const endTransformInteraction = useCallback(() => {
-    commitHistoryFrom(transformHistoryBaseRef.current);
-    transformHistoryBaseRef.current = null;
-  }, [commitHistoryFrom]);
 
   return {
     sceneInfo,
@@ -280,11 +158,11 @@ export function useSceneEditorSession({
     updateSelectedTransform,
     updateSelectedTransformVector,
     removeSelectedModel,
-    addModel,
-    selectPlacedModel,
-    deletePlacedModel,
-    deleteMap,
-    startTransformInteraction,
-    endTransformInteraction,
+    addModel: manipulation.addModel,
+    selectPlacedModel: manipulation.selectPlacedModel,
+    deletePlacedModel: manipulation.deletePlacedModel,
+    deleteMap: manipulation.deleteMap,
+    startTransformInteraction: manipulation.startTransformInteraction,
+    endTransformInteraction: manipulation.endTransformInteraction,
   };
 }
