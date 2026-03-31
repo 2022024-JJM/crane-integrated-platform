@@ -1,9 +1,15 @@
-import type { DashboardMetricCard } from '../model';
+import type { DashboardMetricCard, DashboardSummary } from '../model';
 
 export type DashboardTranslate = (
   key: string,
   values?: Record<string, string | number>,
 ) => string;
+
+export interface DashboardSectionSharedProps {
+  summary: DashboardSummary;
+  isLoading: boolean;
+  translate: DashboardTranslate;
+}
 
 export interface DashboardStatItem {
   label: string;

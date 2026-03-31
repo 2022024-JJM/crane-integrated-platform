@@ -10,19 +10,19 @@ import {
 } from '../model';
 import { MetricCard } from './dashboard-parts';
 import {
-  DashboardRegionPreviewModal,
   getDashboardPreviewDefaultPosition,
   getDashboardPreviewDefaultSize,
   type DashboardPreviewPosition,
   type DashboardPreviewSize,
-} from './dashboard-region-preview-modal';
+} from './dashboard-preview-helpers';
+import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
 import {
   DashboardOverviewHeader,
   DashboardRecentAlarmsSection,
   DashboardRegionStatusSection,
   DashboardRiskCranesSection,
-  DashboardTrendSection,
 } from './dashboard-sections';
+import { DashboardTrendSection } from './dashboard-trend-section';
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
