@@ -10,9 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { Object3D } from 'three';
 import {
   GltfModel,
+  type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@/entities/3d';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
@@ -23,12 +25,17 @@ import type { Vector3Tuple } from '@/shared/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 
+const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
+const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
+
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
   catalogItems: SceneModelCatalogItem[];
   transformMode: SceneTransformMode;
   draggingModelCatalogItem: SceneModelCatalogItem | null;
   rootRef?: RefObject<HTMLDivElement | null>;
+  cameraStateRef?: RefObject<SavedCameraInfo | null>;
+  initialCamera?: SavedCameraInfo | null;
   onTransformVectorChange: (
     field: SceneTransformField,
     value: Vector3Tuple,
@@ -47,6 +54,8 @@ export function SceneObjectsEditCanvas({
   transformMode,
   draggingModelCatalogItem,
   rootRef,
+  cameraStateRef,
+  initialCamera,
   onTransformVectorChange,
   onAddModel,
   onTransformInteractionStart,
@@ -127,6 +136,19 @@ export function SceneObjectsEditCanvas({
     clearSelectedModel();
   }, [clearSelectedModel, setIsTransformDragging, setSelectedObject]);
 
+  const handleOrbitChange = useCallback(() => {
+    if (!cameraStateRef || !orbitControlsRef.current) return;
+    const controls = orbitControlsRef.current as OrbitControlsImpl;
+    const cam = controls.object;
+    cameraStateRef.current = {
+      position: [cam.position.x, cam.position.y, cam.position.z],
+      target: [controls.target.x, controls.target.y, controls.target.z],
+    };
+  }, [cameraStateRef, orbitControlsRef]);
+
+  const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
+  const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
+
   useEffect(() => {
     if (!draggingModelCatalogItem) {
       setPendingDropPosition(null);
@@ -145,7 +167,8 @@ export function SceneObjectsEditCanvas({
       onDragLeave={handleDragLeave}
     >
       <Canvas
-        camera={{ position: [0, 50, 50] }}
+        key={initialCamera ? 'loaded' : 'default'}
+        camera={{ position: cameraPosition }}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
@@ -154,7 +177,7 @@ export function SceneObjectsEditCanvas({
       >
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
-        <OrbitControls ref={orbitControlsRef} enableDamping={false} />
+        <OrbitControls ref={orbitControlsRef} enableDamping={false} target={cameraTarget} onChange={handleOrbitChange} />
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}

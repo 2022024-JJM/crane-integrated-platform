@@ -1,4 +1,5 @@
 import type {
+  SavedCameraInfo,
   SavedMapInfo,
   SavedModelInfo,
   SavedSceneInfo,
@@ -86,9 +87,29 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
+  const safeCamera = sanitizeCamera(sceneInfo?.camera);
+
   return {
     map: safeMap,
     models: safeModels,
+    camera: safeCamera,
+  };
+}
+
+function sanitizeCamera(
+  camera: SavedCameraInfo | null | undefined,
+): SavedCameraInfo | null {
+  if (
+    !camera ||
+    !isVector3Tuple(camera.position) ||
+    !isVector3Tuple(camera.target)
+  ) {
+    return null;
+  }
+
+  return {
+    position: camera.position,
+    target: camera.target,
   };
 }
 
@@ -145,9 +166,22 @@ export function isSceneInfoEqual(
   if (a === b) return true;
   if (!a || !b) return false;
   if (!isMapInfoEqual(a.map, b.map)) return false;
+  if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
   if (a.models.length !== b.models.length) return false;
   for (let i = 0; i < a.models.length; i++) {
     if (!isModelInfoEqual(a.models[i], b.models[i])) return false;
   }
   return true;
+}
+
+function isCameraInfoEqual(
+  a: SavedCameraInfo | null,
+  b: SavedCameraInfo | null,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    isVector3TupleEqual(a.position, b.position) &&
+    isVector3TupleEqual(a.target, b.target)
+  );
 }

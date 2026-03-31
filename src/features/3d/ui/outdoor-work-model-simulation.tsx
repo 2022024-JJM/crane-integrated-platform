@@ -3,6 +3,7 @@ import type { AlarmSeverity } from '@/entities/alarm';
 import {
   GltfModel,
   loadSceneInfoByRegionId,
+  type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@/entities/3d';
 import type { MonitoringHoveredModel } from '../model/types';
@@ -15,6 +16,7 @@ interface OutdoorWorkModelSimulationProps {
   alarmsByCraneId: Record<string, AlarmSeverity>;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
   onHoveredModelChange?: (hoveredModel: MonitoringHoveredModel | null) => void;
+  onCameraInfoChange?: (camera: SavedCameraInfo | null) => void;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -22,6 +24,7 @@ export function OutdoorWorkModelSimulation({
   alarmsByCraneId,
   onSceneDataLoadingChange,
   onHoveredModelChange,
+  onCameraInfoChange,
 }: OutdoorWorkModelSimulationProps) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
@@ -49,6 +52,7 @@ export function OutdoorWorkModelSimulation({
         }
 
         setSceneInfo(data);
+        onCameraInfoChange?.(data.camera ?? null);
         data.models?.forEach((modelInfo) => {
           registerFromModel(modelInfo);
         });
@@ -73,7 +77,7 @@ export function OutdoorWorkModelSimulation({
       isMounted = false;
       onHoveredModelChange?.(null);
     };
-  }, [onHoveredModelChange, regionId, registerFromModel, start]);
+  }, [onCameraInfoChange, onHoveredModelChange, regionId, registerFromModel, start]);
 
   const handleHoveredModelChange = (
     id: string,

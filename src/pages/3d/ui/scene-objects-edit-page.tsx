@@ -85,6 +85,8 @@ export function SceneObjectsEditPage({
     deleteMap,
     startTransformInteraction,
     endTransformInteraction,
+    cameraStateRef,
+    initialCamera,
   } = useSceneEditorSession({
     regionId,
   });
@@ -182,6 +184,8 @@ export function SceneObjectsEditPage({
       <div className="relative min-w-0 flex-1">
         <SceneObjectsEditCanvas
           rootRef={canvasRootRef}
+          cameraStateRef={cameraStateRef}
+          initialCamera={initialCamera}
           sceneInfo={sceneInfo}
           catalogItems={sceneModelCatalog}
           transformMode={transformMode}

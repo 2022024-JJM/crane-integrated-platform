@@ -1,4 +1,4 @@
-import { type SceneModelCatalogItem } from '@/entities/3d';
+import { type SavedCameraInfo, type SceneModelCatalogItem } from '@/entities/3d';
 import {
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
@@ -50,6 +50,8 @@ interface UseSceneEditorSessionResult {
   deleteMap: () => void;
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
+  cameraStateRef: React.RefObject<SavedCameraInfo | null>;
+  initialCamera: SavedCameraInfo | null;
 }
 
 export function useSceneEditorSession({
@@ -57,6 +59,7 @@ export function useSceneEditorSession({
 }: UseSceneEditorSessionParams): UseSceneEditorSessionResult {
   const sceneInfoRef = useRef<import('@/entities/3d').SavedSceneInfo | null>(null);
   const transformHistoryBaseRef = useRef(null);
+  const cameraStateRef = useRef<SavedCameraInfo | null>(null);
   const {
     sceneInfo,
     replaceScene,
@@ -100,12 +103,15 @@ export function useSceneEditorSession({
 
   sceneInfoRef.current = sceneInfo;
 
-  const { isDirty, isSaving, saveCurrentScene } = useScenePersistence({
+  const getCameraState = useCallback(() => cameraStateRef.current, []);
+
+  const { isDirty, isSaving, initialCamera, saveCurrentScene } = useScenePersistence({
     regionId,
     sceneInfo,
     replaceScene,
     updateScene,
     onLoadReset,
+    getCameraState,
   });
 
   const manipulation = useMemo(
@@ -166,5 +172,7 @@ export function useSceneEditorSession({
     deleteMap: manipulation.deleteMap,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,
+    cameraStateRef,
+    initialCamera,
   };
 }

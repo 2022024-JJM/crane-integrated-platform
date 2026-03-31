@@ -1,5 +1,6 @@
-import { Suspense, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import type { AlarmSeverity } from '@/entities/alarm';
+import type { SavedCameraInfo } from '@/entities/3d';
 import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@/shared/types/math';
 import type { MonitoringHoveredModel } from '../model/types';
@@ -25,6 +26,17 @@ export function Monitoring3dView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [hoveredModel, setHoveredModel] =
     useState<MonitoringHoveredModel | null>(null);
+  const [savedCamera, setSavedCamera] = useState<SavedCameraInfo | null>(null);
+
+  const handleCameraInfoChange = useCallback(
+    (camera: SavedCameraInfo | null) => {
+      setSavedCamera(camera);
+    },
+    [],
+  );
+
+  const cameraPosition = savedCamera?.position ?? DEFAULT_CAMERA_POSITION;
+  const cameraTarget = savedCamera?.target ?? DEFAULT_CAMERA_TARGET;
   const overlay = useMemo(() => {
     if (!hoveredModel || !rootRef.current) {
       return null;
@@ -51,8 +63,8 @@ export function Monitoring3dView({
     <div ref={rootRef} className="relative h-full min-h-0 w-full">
       <ThreeSceneViewer
         cameraPreset={{
-          defaultPosition: DEFAULT_CAMERA_POSITION,
-          defaultTarget: DEFAULT_CAMERA_TARGET,
+          defaultPosition: cameraPosition,
+          defaultTarget: cameraTarget,
         }}
         canvasProps={{
           gl: {
@@ -79,6 +91,7 @@ export function Monitoring3dView({
             alarmsByCraneId={alarmsByCraneId}
             onSceneDataLoadingChange={onLoadingChange}
             onHoveredModelChange={setHoveredModel}
+            onCameraInfoChange={handleCameraInfoChange}
           />
         </Suspense>
       </ThreeSceneViewer>

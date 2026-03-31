@@ -6,6 +6,7 @@ export {
   saveSceneInfoByRegionId,
 } from './lib/scene-dev-storage';
 export type {
+  SavedCameraInfo,
   SceneModelCatalogItem,
   SceneModelPreviewPreset,
   SavedMapInfo,

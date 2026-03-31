@@ -11,9 +11,15 @@ export type ValueMapType =
   | 'SY'
   | 'SZ';
 
+export interface SavedCameraInfo {
+  position: Vector3Tuple;
+  target: Vector3Tuple;
+}
+
 export interface SavedSceneInfo {
   map: SavedMapInfo | null;
   models: SavedModelInfo[];
+  camera?: SavedCameraInfo | null;
 }
 
 export interface SavedModelInfo {

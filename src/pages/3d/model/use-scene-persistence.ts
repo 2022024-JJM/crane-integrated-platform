@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type SetStateAction } from '
 import {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
+  type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@/entities/3d';
 import { toast } from 'sonner';
@@ -20,11 +21,13 @@ interface UseScenePersistenceParams {
     options?: UpdateSceneOptions,
   ) => void;
   onLoadReset: () => void;
+  getCameraState?: () => SavedCameraInfo | null;
 }
 
 interface UseScenePersistenceResult {
   isDirty: boolean;
   isSaving: boolean;
+  initialCamera: SavedCameraInfo | null;
   saveCurrentScene: () => Promise<boolean>;
 }
 
@@ -34,9 +37,13 @@ export function useScenePersistence({
   replaceScene,
   updateScene,
   onLoadReset,
+  getCameraState,
 }: UseScenePersistenceParams): UseScenePersistenceResult {
   const [isSaving, setIsSaving] = useState(false);
   const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
+    null,
+  );
+  const [initialCamera, setInitialCamera] = useState<SavedCameraInfo | null>(
     null,
   );
 
@@ -61,6 +68,7 @@ export function useScenePersistence({
         }
 
         replaceScene(data);
+        setInitialCamera(data.camera ?? null);
         setSavedSceneSnapshot(createSceneSnapshot(data));
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
@@ -69,6 +77,7 @@ export function useScenePersistence({
 
     onLoadReset();
     replaceScene(null);
+    setInitialCamera(null);
     setSavedSceneSnapshot(null);
     void loadScene();
 
@@ -85,7 +94,12 @@ export function useScenePersistence({
     setIsSaving(true);
 
     try {
-      const sanitizedSceneInfo = sanitizeSceneInfo(sceneInfo);
+      const cameraState = getCameraState?.() ?? null;
+      const sceneWithCamera: SavedSceneInfo = {
+        ...sceneInfo,
+        camera: cameraState,
+      };
+      const sanitizedSceneInfo = sanitizeSceneInfo(sceneWithCamera);
       const savedSceneInfo = await saveSceneInfoByRegionId(
         regionId,
         sanitizedSceneInfo,
@@ -109,11 +123,12 @@ export function useScenePersistence({
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, regionId, sceneInfo, updateScene]);
+  }, [getCameraState, isSaving, regionId, sceneInfo, updateScene]);
 
   return {
     isDirty,
     isSaving,
+    initialCamera,
     saveCurrentScene,
   };
 }
