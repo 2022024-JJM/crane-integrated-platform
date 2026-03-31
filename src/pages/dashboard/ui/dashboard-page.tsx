@@ -4,10 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { getFormatLocale } from '@/shared/config/i18n';
 import { useTheme } from '@/shared/lib/theme-context';
-import {
-  useDashboardSummary,
-  type DashboardRegionStatusDatum,
-} from '../model';
+import { useDashboardSummary, type DashboardRegionStatusDatum } from '../model';
 import { MetricCard } from './dashboard-parts';
 import {
   getDashboardPreviewDefaultPosition,
@@ -60,9 +57,7 @@ export function DashboardPage() {
   const barChartTooltipCursor = useMemo(
     () => ({
       fill:
-        theme === 'dark'
-          ? 'oklch(0.34 0 0 / 82%)'
-          : 'oklch(0.92 0 0 / 92%)',
+        theme === 'dark' ? 'oklch(0.34 0 0 / 82%)' : 'oklch(0.92 0 0 / 92%)',
       stroke: 'none',
     }),
     [theme],
