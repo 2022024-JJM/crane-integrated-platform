@@ -14,12 +14,12 @@ export function RotationController({
     <div className="flex flex-col gap-1.5">
       {(['x', 'y', 'z'] as const).map((axis) => (
         <div key={axis} className="flex items-center gap-1.5">
-          <span className="w-4 text-[10px] font-semibold uppercase text-white/46">
+          <span className="w-4 text-[10px] font-semibold text-white/46 uppercase">
             {axis}
           </span>
           <InputNumber
             value={vec ? numRound(vec[AXIS_INDEX[axis]]) : 0}
-            step={1}
+            step={0.1}
             min={0}
             max={360}
             className="h-7 flex-1 rounded-sm border-white/8 bg-white/[0.045] px-2 text-[12px]"
