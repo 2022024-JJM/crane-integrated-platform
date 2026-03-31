@@ -3,30 +3,13 @@ import { Canvas } from '@react-three/fiber';
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
-  useState,
-  type DragEvent,
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Camera,
-  Object3D,
-  Plane,
-  Raycaster,
-  Vector2,
-  Vector3,
-  WebGLRenderer,
-} from 'three';
-import type {
-  OrbitControls as OrbitControlsImpl,
-  TransformControls as TransformControlsImpl,
-} from 'three-stdlib';
+import { Object3D } from 'three';
 import {
   GltfModel,
-  numRound,
-  radToDeg,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@/entities/3d';
@@ -37,6 +20,8 @@ import {
 } from '@/features/3d';
 import { cn } from '@/shared/lib/utils';
 import type { Vector3Tuple } from '@/shared/types/math';
+import { useSceneDrop } from './use-scene-drop';
+import { useSceneTransform } from './use-scene-transform';
 
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
@@ -54,63 +39,6 @@ interface SceneObjectsEditCanvasProps {
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
-}
-
-interface TransformChangeEvent extends Event {
-  value?: boolean;
-}
-
-type TransformControlsWithDraggingEvent = TransformControlsImpl & {
-  addEventListener: (
-    type: 'dragging-changed',
-    listener: (event: TransformChangeEvent) => void,
-  ) => void;
-  removeEventListener: (
-    type: 'dragging-changed',
-    listener: (event: TransformChangeEvent) => void,
-  ) => void;
-};
-
-const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
-
-function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
-  return values.map((value) => numRound(value)) as Vector3Tuple;
-}
-
-function snapValue(value: number, step: number) {
-  return numRound(Math.round(value / step) * step);
-}
-
-function getObjectTransformVectors(object: Object3D): Record<
-  SceneTransformField,
-  Vector3Tuple
-> {
-  return {
-    position: toVector3Tuple([
-      object.position.x,
-      object.position.y,
-      object.position.z,
-    ]),
-    rotation: toVector3Tuple([
-      radToDeg(object.rotation.x),
-      radToDeg(object.rotation.y),
-      radToDeg(object.rotation.z),
-    ]),
-    scale: toVector3Tuple([object.scale.x, object.scale.y, object.scale.z]),
-  };
-}
-
-function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
-  return (
-    event.dataTransfer.getData(SCENE_MODEL_DRAG_TYPE) ||
-    event.dataTransfer.getData('text/plain')
-  );
-}
-
-function hasSceneModelDragData(event: DragEvent<HTMLDivElement>) {
-  return Array.from(event.dataTransfer.types).some(
-    (type) => type === SCENE_MODEL_DRAG_TYPE || type === 'text/plain',
-  );
 }
 
 export function SceneObjectsEditCanvas({
@@ -132,20 +60,39 @@ export function SceneObjectsEditCanvas({
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
-  const orbitControlsRef = useRef<OrbitControlsImpl | null>(null);
-  const transformControlsRef = useRef<TransformControlsImpl | null>(null);
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
-  const cameraRef = useRef<Camera | null>(null);
-  const rendererRef = useRef<WebGLRenderer | null>(null);
-  const raycasterRef = useRef(new Raycaster());
-  const groundPlane = useMemo(
-    () => new Plane(new Vector3(0, 1, 0), 0),
-    [],
-  );
-  const [selectedObject, setSelectedObject] = useState<Object3D | null>(null);
-  const [isTransformDragging, setIsTransformDragging] = useState(false);
-  const [pendingDropPosition, setPendingDropPosition] =
-    useState<Vector3Tuple | null>(null);
+
+  const {
+    cameraRef,
+    rendererRef,
+    pendingDropPosition,
+    setPendingDropPosition,
+    handleSceneDragOver,
+    handleSceneDrop,
+    handleDragLeave,
+  } = useSceneDrop({
+    catalogItems,
+    draggingModelCatalogItem,
+    onAddModel,
+  });
+
+  const {
+    orbitControlsRef,
+    transformControlsRef,
+    setSelectedObject,
+    setIsTransformDragging,
+    transformTarget,
+    syncSelectedObjectTransform,
+    handleTransformMouseDown,
+    handleTransformMouseUp,
+  } = useSceneTransform({
+    selectedModelId,
+    sceneModels: sceneInfo?.models,
+    modelObjectRegistryRef,
+    onTransformVectorChange,
+    onTransformInteractionStart,
+    onTransformInteractionEnd,
+  });
 
   const handleModelObjectReady = useCallback(
     (id: string, object: Object3D | null) => {
@@ -163,7 +110,7 @@ export function SceneObjectsEditCanvas({
         setIsTransformDragging(false);
       }
     },
-    [selectedModelId],
+    [selectedModelId, setIsTransformDragging, setSelectedObject],
   );
 
   const handleSelectModel = useCallback(
@@ -171,178 +118,20 @@ export function SceneObjectsEditCanvas({
       setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
       selectModel(id);
     },
-    [selectModel],
+    [selectModel, setSelectedObject],
   );
 
   const handleClearSelection = useCallback(() => {
     setSelectedObject(null);
     setIsTransformDragging(false);
     clearSelectedModel();
-  }, [clearSelectedModel]);
-
-  const syncSelectedObjectTransform = useCallback(() => {
-    if (!selectedObject || !selectedModelId) {
-      return;
-    }
-
-    const nextTransform = getObjectTransformVectors(selectedObject);
-    onTransformVectorChange('position', nextTransform.position);
-    onTransformVectorChange('rotation', nextTransform.rotation);
-    onTransformVectorChange('scale', nextTransform.scale);
-  }, [onTransformVectorChange, selectedModelId, selectedObject]);
-
-  const resolveDropPosition = useCallback(
-    (clientX: number, clientY: number): Vector3Tuple | null => {
-      const camera = cameraRef.current;
-      const renderer = rendererRef.current;
-
-      if (!camera || !renderer) {
-        return null;
-      }
-
-      const rect = renderer.domElement.getBoundingClientRect();
-
-      if (rect.width === 0 || rect.height === 0) {
-        return null;
-      }
-
-      const pointer = new Vector2(
-        ((clientX - rect.left) / rect.width) * 2 - 1,
-        -((clientY - rect.top) / rect.height) * 2 + 1,
-      );
-      const hitPoint = new Vector3();
-
-      raycasterRef.current.setFromCamera(pointer, camera);
-
-      if (!raycasterRef.current.ray.intersectPlane(groundPlane, hitPoint)) {
-        return null;
-      }
-
-      return [
-        snapValue(hitPoint.x, 1),
-        numRound(hitPoint.y),
-        snapValue(hitPoint.z, 1),
-      ];
-    },
-    [groundPlane],
-  );
-
-  const handleSceneDragOver = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      if (!draggingModelCatalogItem && !hasSceneModelDragData(event)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'copy';
-      setPendingDropPosition(resolveDropPosition(event.clientX, event.clientY));
-    },
-    [draggingModelCatalogItem, resolveDropPosition],
-  );
-
-  const handleSceneDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const draggedItemId = getDraggedCatalogItemId(event);
-      const droppedCatalogItem =
-        catalogItems.find((item) => item.id === draggedItemId) ??
-        draggingModelCatalogItem;
-
-      if (!droppedCatalogItem) {
-        setPendingDropPosition(null);
-        return;
-      }
-
-      const nextPosition = resolveDropPosition(event.clientX, event.clientY);
-
-      if (nextPosition) {
-        onAddModel(droppedCatalogItem, nextPosition);
-      }
-
-      event.currentTarget.focus();
-      setPendingDropPosition(null);
-    },
-    [
-      catalogItems,
-      draggingModelCatalogItem,
-      onAddModel,
-      resolveDropPosition,
-    ],
-  );
-
-  useEffect(() => {
-    if (!orbitControlsRef.current) {
-      return;
-    }
-
-    orbitControlsRef.current.enabled = !isTransformDragging;
-  }, [isTransformDragging]);
-
-  useEffect(() => {
-    if (!selectedModelId) {
-      setSelectedObject(null);
-      setIsTransformDragging(false);
-      return;
-    }
-
-    const isSelectedModelPresent =
-      sceneInfo?.models.some((model) => model.id === selectedModelId) ?? false;
-
-    if (!isSelectedModelPresent) {
-      setSelectedObject(null);
-      setIsTransformDragging(false);
-      modelObjectRegistryRef.current.delete(selectedModelId);
-      return;
-    }
-
-    const nextSelectedObject =
-      modelObjectRegistryRef.current.get(selectedModelId) ?? null;
-
-    if (!nextSelectedObject?.parent) {
-      setSelectedObject(null);
-      setIsTransformDragging(false);
-      return;
-    }
-
-    setSelectedObject(nextSelectedObject);
-  }, [sceneInfo?.models, selectedModelId]);
-
-  useEffect(() => {
-    const controls = transformControlsRef.current as
-      | TransformControlsWithDraggingEvent
-      | null;
-    if (!controls) {
-      return;
-    }
-
-    const handleDraggingChanged = (event: TransformChangeEvent) => {
-      setIsTransformDragging(Boolean(event.value));
-    };
-
-    controls.addEventListener('dragging-changed', handleDraggingChanged);
-    return () => {
-      controls.removeEventListener('dragging-changed', handleDraggingChanged);
-    };
-  }, [selectedObject]);
+  }, [clearSelectedModel, setIsTransformDragging, setSelectedObject]);
 
   useEffect(() => {
     if (!draggingModelCatalogItem) {
       setPendingDropPosition(null);
     }
-  }, [draggingModelCatalogItem]);
-
-  const transformTarget = selectedObject?.parent ? selectedObject : null;
-
-  useEffect(() => {
-    const controls = transformControlsRef.current;
-
-    if (!controls || transformTarget) {
-      return;
-    }
-
-    controls.detach();
-  }, [transformTarget]);
+  }, [draggingModelCatalogItem, setPendingDropPosition]);
 
   return (
     <div
@@ -353,9 +142,7 @@ export function SceneObjectsEditCanvas({
         event.currentTarget.focus();
       }}
       onDragOver={handleSceneDragOver}
-      onDragLeave={() => {
-        setPendingDropPosition(null);
-      }}
+      onDragLeave={handleDragLeave}
     >
       <Canvas
         camera={{ position: [0, 50, 50] }}
@@ -376,15 +163,8 @@ export function SceneObjectsEditCanvas({
             mode={transformMode}
             translationSnap={transformMode === 'translate' ? 1 : undefined}
             space="local"
-            onMouseDown={() => {
-              setIsTransformDragging(true);
-              onTransformInteractionStart?.();
-            }}
-            onMouseUp={() => {
-              syncSelectedObjectTransform();
-              setIsTransformDragging(false);
-              onTransformInteractionEnd?.();
-            }}
+            onMouseDown={handleTransformMouseDown}
+            onMouseUp={handleTransformMouseUp}
             onObjectChange={syncSelectedObjectTransform}
           />
         ) : null}
