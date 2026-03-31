@@ -4,7 +4,10 @@ import {
   ResizableHandle,
 } from '@/shared/ui/molecules/resizable';
 import { useState } from 'react';
-import { useRegionRealtimeAlarms } from '@/features/alarm';
+import {
+  useRegionRealtimeAlarms,
+  useRegionActiveAlarmsByCraneId,
+} from '@/features/alarm';
 import {
   useMonitoringReplay,
   useMonitoringReplaySearch,
@@ -16,6 +19,7 @@ import { AlarmPanel } from '@/widgets/alarm';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { alarms, stats: alarmStats } = useRegionRealtimeAlarms(regionId);
+  const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const {
     draftFrom,
     draftTo,
@@ -56,6 +60,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
               ) : null}
               <Monitoring3dView
                 regionId={regionId}
+                alarmsByCraneId={alarmsByCraneId}
                 onLoadingChange={setIs3dViewLoading}
               />
             </div>

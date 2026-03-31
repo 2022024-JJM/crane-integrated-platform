@@ -1,4 +1,5 @@
 import { Suspense, useMemo, useRef, useState } from 'react';
+import type { AlarmSeverity } from '@/entities/alarm';
 import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@/shared/types/math';
 import type { MonitoringHoveredModel } from '../model/types';
@@ -10,11 +11,15 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 
 interface Monitoring3dViewProps {
   regionId: string;
+  alarmsByCraneId?: Record<string, AlarmSeverity>;
   onLoadingChange?: (isLoading: boolean) => void;
 }
 
+const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
+
 export function Monitoring3dView({
   regionId,
+  alarmsByCraneId = EMPTY_ALARMS,
   onLoadingChange,
 }: Monitoring3dViewProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -71,6 +76,7 @@ export function Monitoring3dView({
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation
             regionId={regionId}
+            alarmsByCraneId={alarmsByCraneId}
             onSceneDataLoadingChange={onLoadingChange}
             onHoveredModelChange={setHoveredModel}
           />

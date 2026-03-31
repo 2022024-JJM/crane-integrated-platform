@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import type { AlarmSeverity } from '@/entities/alarm';
 import {
   GltfModel,
   loadSceneInfoByRegionId,
   type SavedSceneInfo,
 } from '@/entities/3d';
-import { useRegionActiveAlarmsByCraneId } from '@/features/alarm';
 import type { MonitoringHoveredModel } from '../model/types';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
@@ -12,12 +12,14 @@ import { useValueGeneratorStore } from '../model/use-value-generator-store';
 
 interface OutdoorWorkModelSimulationProps {
   regionId: string;
+  alarmsByCraneId: Record<string, AlarmSeverity>;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
   onHoveredModelChange?: (hoveredModel: MonitoringHoveredModel | null) => void;
 }
 
 export function OutdoorWorkModelSimulation({
   regionId,
+  alarmsByCraneId,
   onSceneDataLoadingChange,
   onHoveredModelChange,
 }: OutdoorWorkModelSimulationProps) {
@@ -25,7 +27,6 @@ export function OutdoorWorkModelSimulation({
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
   const start = useValueGeneratorStore((s) => s.start);
-  const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   useValueGeneratorRunner();
   useEffect(() => {
     onSceneDataLoadingChange?.(isSceneDataLoading);
