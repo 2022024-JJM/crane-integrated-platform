@@ -45,6 +45,7 @@ function getObjectTransformVectors(
 interface UseSceneTransformParams {
   selectedModelId: string | null;
   sceneModels: { id: string }[] | undefined;
+  sceneTexts?: { id: string }[] | undefined;
   modelObjectRegistryRef: React.RefObject<Map<string, Object3D>>;
   onTransformVectorChange: (
     field: SceneTransformField,
@@ -57,6 +58,7 @@ interface UseSceneTransformParams {
 export function useSceneTransform({
   selectedModelId,
   sceneModels,
+  sceneTexts,
   modelObjectRegistryRef,
   onTransformVectorChange,
   onTransformInteractionStart,
@@ -107,7 +109,8 @@ export function useSceneTransform({
     }
 
     const isSelectedModelPresent =
-      sceneModels?.some((model) => model.id === selectedModelId) ?? false;
+      (sceneModels?.some((model) => model.id === selectedModelId) ?? false) ||
+      (sceneTexts?.some((t) => t.id === selectedModelId) ?? false);
 
     if (!isSelectedModelPresent) {
       setSelectedObject(null);

@@ -1,10 +1,16 @@
 import { OrbitControls, TransformControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type RefObject,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Object3D, NoToneMapping } from 'three';
 import {
   GltfModel,
+  SceneText,
   type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
@@ -39,6 +45,8 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
+  isDraggingText?: boolean;
+  onAddText?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
@@ -54,6 +62,8 @@ export function SceneObjectsEditCanvas({
   initialCamera,
   onTransformVectorChange,
   onAddModel,
+  isDraggingText = false,
+  onAddText,
   showLabels = true,
   onTransformInteractionStart,
   onTransformInteractionEnd,
@@ -62,9 +72,8 @@ export function SceneObjectsEditCanvas({
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
-  const selectModel = useSceneObjectSelectionStore(
-    (state) => state.selectModel,
-  );
+  const selectModel = useSceneObjectSelectionStore((state) => state.selectModel);
+  const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -81,7 +90,9 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
+    isDraggingText,
     onAddModel,
+    onAddText,
   });
 
   const {
@@ -96,6 +107,7 @@ export function SceneObjectsEditCanvas({
   } = useSceneTransform({
     selectedModelId,
     sceneModels: sceneInfo?.models,
+    sceneTexts: sceneInfo?.texts,
     modelObjectRegistryRef,
     onTransformVectorChange,
     onTransformInteractionStart,
@@ -129,6 +141,14 @@ export function SceneObjectsEditCanvas({
     [selectModel, setSelectedObject],
   );
 
+  const handleSelectText = useCallback(
+    (id: string) => {
+      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+      selectText(id);
+    },
+    [selectText, setSelectedObject],
+  );
+
   const handleClearSelection = useCallback(() => {
     setSelectedObject(null);
     setIsTransformDragging(false);
@@ -149,16 +169,16 @@ export function SceneObjectsEditCanvas({
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
 
   useEffect(() => {
-    if (!draggingModelCatalogItem) {
+    if (!draggingModelCatalogItem && !isDraggingText) {
       setPendingDropPosition(null);
     }
-  }, [draggingModelCatalogItem, setPendingDropPosition]);
+  }, [draggingModelCatalogItem, isDraggingText, setPendingDropPosition]);
 
   return (
     <div
       ref={rootRef}
       tabIndex={0}
-      className="border-border/70 bg-background relative h-full min-h-0 overflow-hidden rounded-2xl border"
+      className="relative h-full min-h-0 overflow-hidden rounded-2xl border border-border/70 bg-background"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
       }}
@@ -168,25 +188,20 @@ export function SceneObjectsEditCanvas({
       <Canvas
         key={initialCamera ? 'loaded' : 'default'}
         camera={{ position: cameraPosition }}
-        onCreated={({ camera, gl }) => {
-          cameraRef.current = camera;
-          rendererRef.current = gl;
-        }}
-        onPointerMissed={handleClearSelection}
         gl={{
           toneMapping: NoToneMapping,
           powerPreference: 'high-performance',
           antialias: true,
         }}
+        onCreated={({ camera, gl }) => {
+          cameraRef.current = camera;
+          rendererRef.current = gl;
+        }}
+        onPointerMissed={handleClearSelection}
       >
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
-        <OrbitControls
-          ref={orbitControlsRef}
-          enableDamping={false}
-          target={cameraTarget}
-          onChange={handleOrbitChange}
-        />
+        <OrbitControls ref={orbitControlsRef} enableDamping={false} target={cameraTarget} onChange={handleOrbitChange} />
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
@@ -223,6 +238,20 @@ export function SceneObjectsEditCanvas({
             onObjectReady={handleModelObjectReady}
           />
         ))}
+        {(sceneInfo?.texts ?? []).map((text) => (
+          <SceneText
+            key={text.id}
+            id={text.id}
+            content={text.content}
+            color={text.color}
+            position={text.position}
+            rotation={text.rotation}
+            scale={text.scale}
+            isSelected={text.id === selectedModelId}
+            onSelect={handleSelectText}
+            onObjectReady={handleModelObjectReady}
+          />
+        ))}
         {pendingDropPosition ? (
           <mesh
             position={[
@@ -241,17 +270,19 @@ export function SceneObjectsEditCanvas({
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center transition',
-          draggingModelCatalogItem
+          draggingModelCatalogItem || isDraggingText
             ? 'pointer-events-auto bg-slate-950/6 backdrop-blur-[1px]'
             : 'pointer-events-none opacity-0',
         )}
         onDragOver={handleSceneDragOver}
         onDrop={handleSceneDrop}
       >
-        {draggingModelCatalogItem ? (
+        {draggingModelCatalogItem || isDraggingText ? (
           <div className="pointer-events-none rounded-2xl border border-amber-500/30 bg-slate-950/80 px-4 py-3 text-center shadow-lg">
             <p className="text-sm font-semibold text-white">
-              {draggingModelCatalogItem.label}
+              {isDraggingText
+                ? t('monitoring:editor.addText')
+                : draggingModelCatalogItem?.label}
             </p>
             <p className="text-xs text-slate-300">
               {t('monitoring:editor.dropHint')}

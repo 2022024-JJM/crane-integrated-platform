@@ -19,7 +19,17 @@ export interface SavedCameraInfo {
 export interface SavedSceneInfo {
   map: SavedMapInfo | null;
   models: SavedModelInfo[];
+  texts?: SavedTextInfo[];
   camera?: SavedCameraInfo | null;
+}
+
+export interface SavedTextInfo {
+  id: string;
+  content: string;
+  color: string;
+  position: Vector3Tuple;
+  rotation: Vector3Tuple;
+  scale: Vector3Tuple;
 }
 
 export interface SavedModelInfo {

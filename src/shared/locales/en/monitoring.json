@@ -8,7 +8,9 @@
     "empty": "Click an object in the scene to inspect its properties.",
     "position": "Position",
     "rotation": "Rotation",
-    "scale": "Scale"
+    "scale": "Scale",
+    "textContent": "Content",
+    "textColor": "Color"
   },
   "transform": {
     "title": "Transform mode",
@@ -52,6 +54,8 @@
     "noSelection": "No selection",
     "snapActive": "Snap 1.0",
     "hideLabels": "Hide labels",
-    "showLabels": "Show labels"
+    "showLabels": "Show labels",
+    "addText": "Add Text",
+    "textObject": "Text"
   }
 }

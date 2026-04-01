@@ -61,6 +61,7 @@ export function SceneObjectsEditPage({
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
+  const [isDraggingText, setIsDraggingText] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const {
     sceneInfo,
@@ -80,10 +81,19 @@ export function SceneObjectsEditPage({
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    updateSelectedTextContent,
+    updateSelectedTextColor,
+    updateSelectedTextTransform,
+    updateSelectedTextTransformVector,
+    selectedText,
+    selectedObjectType,
     removeSelectedModel,
     addModel,
+    addText,
     selectPlacedModel,
     deletePlacedModel,
+    selectPlacedText,
+    deletePlacedText,
     deleteMap,
     startTransformInteraction,
     endTransformInteraction,
@@ -168,6 +178,11 @@ export function SceneObjectsEditPage({
             }}
             onSelectPlacedModel={selectPlacedModel}
             onDeletePlacedModel={deletePlacedModel}
+            placedTexts={sceneInfo?.texts ?? []}
+            onSelectPlacedText={selectPlacedText}
+            onDeletePlacedText={deletePlacedText}
+            onTextDragStart={() => setIsDraggingText(true)}
+            onTextDragEnd={() => setIsDraggingText(false)}
             onDeleteMap={deleteMap}
             onSave={() => {
               void saveCurrentScene();
@@ -193,13 +208,24 @@ export function SceneObjectsEditPage({
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
           onTransformVectorChange={(field, value) => {
-            updateSelectedTransformVector(field, value, {
-              recordHistory: false,
-            });
+            if (selectedObjectType === 'text') {
+              updateSelectedTextTransformVector(field, value, {
+                recordHistory: false,
+              });
+            } else {
+              updateSelectedTransformVector(field, value, {
+                recordHistory: false,
+              });
+            }
           }}
           onAddModel={(catalogItem, position) => {
             addModel(catalogItem, position);
             setDraggingCatalogItem(null);
+          }}
+          isDraggingText={isDraggingText}
+          onAddText={(position) => {
+            addText(position);
+            setIsDraggingText(false);
           }}
           showLabels={showLabels}
           onTransformInteractionStart={startTransformInteraction}
@@ -258,9 +284,13 @@ export function SceneObjectsEditPage({
         <div className="min-h-0 flex-1">
           <SceneObjectInspector
             selectedModel={selectedModel}
+            selectedText={selectedText}
             onNameChange={updateSelectedName}
             onOpacityChange={updateSelectedOpacity}
             onTransformChange={updateSelectedTransform}
+            onTextContentChange={updateSelectedTextContent}
+            onTextColorChange={updateSelectedTextColor}
+            onTextTransformChange={updateSelectedTextTransform}
           />
         </div>
       </aside>

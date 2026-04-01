@@ -11,6 +11,7 @@ import { numRound, type SceneModelCatalogItem } from '@/entities/3d';
 import type { Vector3Tuple } from '@/shared/types/math';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
+const SCENE_TEXT_DRAG_TYPE = 'application/x-scene-text';
 
 function snapValue(value: number, step: number) {
   return numRound(Math.round(value / step) * step);
@@ -23,25 +24,36 @@ function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
   );
 }
 
-function hasSceneModelDragData(event: DragEvent<HTMLDivElement>) {
+function hasSceneDragData(event: DragEvent<HTMLDivElement>) {
   return Array.from(event.dataTransfer.types).some(
-    (type) => type === SCENE_MODEL_DRAG_TYPE || type === 'text/plain',
+    (type) =>
+      type === SCENE_MODEL_DRAG_TYPE ||
+      type === SCENE_TEXT_DRAG_TYPE ||
+      type === 'text/plain',
   );
+}
+
+function isTextDrag(event: DragEvent<HTMLDivElement>) {
+  return event.dataTransfer.getData(SCENE_TEXT_DRAG_TYPE) === 'text';
 }
 
 interface UseSceneDropParams {
   catalogItems: SceneModelCatalogItem[];
   draggingModelCatalogItem: SceneModelCatalogItem | null;
+  isDraggingText?: boolean;
   onAddModel: (
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
+  onAddText?: (position: Vector3Tuple) => void;
 }
 
 export function useSceneDrop({
   catalogItems,
   draggingModelCatalogItem,
+  isDraggingText = false,
   onAddModel,
+  onAddText,
 }: UseSceneDropParams) {
   const cameraRef = useRef<Camera | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -88,7 +100,11 @@ export function useSceneDrop({
 
   const handleSceneDragOver = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      if (!draggingModelCatalogItem && !hasSceneModelDragData(event)) {
+      if (
+        !draggingModelCatalogItem &&
+        !isDraggingText &&
+        !hasSceneDragData(event)
+      ) {
         return;
       }
 
@@ -96,13 +112,25 @@ export function useSceneDrop({
       event.dataTransfer.dropEffect = 'copy';
       setPendingDropPosition(resolveDropPosition(event.clientX, event.clientY));
     },
-    [draggingModelCatalogItem, resolveDropPosition],
+    [draggingModelCatalogItem, isDraggingText, resolveDropPosition],
   );
 
   const handleSceneDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
+
+      const nextPosition = resolveDropPosition(event.clientX, event.clientY);
+
+      if (isTextDrag(event) || isDraggingText) {
+        if (nextPosition) {
+          onAddText?.(nextPosition);
+        }
+        event.currentTarget.focus();
+        setPendingDropPosition(null);
+        return;
+      }
+
       const draggedItemId = getDraggedCatalogItemId(event);
       const droppedCatalogItem =
         catalogItems.find((item) => item.id === draggedItemId) ??
@@ -113,8 +141,6 @@ export function useSceneDrop({
         return;
       }
 
-      const nextPosition = resolveDropPosition(event.clientX, event.clientY);
-
       if (nextPosition) {
         onAddModel(droppedCatalogItem, nextPosition);
       }
@@ -122,7 +148,14 @@ export function useSceneDrop({
       event.currentTarget.focus();
       setPendingDropPosition(null);
     },
-    [catalogItems, draggingModelCatalogItem, onAddModel, resolveDropPosition],
+    [
+      catalogItems,
+      draggingModelCatalogItem,
+      isDraggingText,
+      onAddModel,
+      onAddText,
+      resolveDropPosition,
+    ],
   );
 
   const handleDragLeave = useCallback(() => {
@@ -140,4 +173,4 @@ export function useSceneDrop({
   };
 }
 
-export { SCENE_MODEL_DRAG_TYPE };
+export { SCENE_MODEL_DRAG_TYPE, SCENE_TEXT_DRAG_TYPE };

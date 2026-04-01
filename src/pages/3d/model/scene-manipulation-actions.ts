@@ -1,5 +1,6 @@
 import {
   createSceneModel,
+  createSceneText,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@/entities/3d';
@@ -16,6 +17,7 @@ interface SceneManipulationDeps {
   ) => void;
   commitHistoryFrom: (base: SavedSceneInfo | null) => void;
   selectModel: (id: string) => void;
+  selectText: (id: string) => void;
   clearSelectedModel: () => void;
   selectedModelId: string | null;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
@@ -26,6 +28,7 @@ export function createSceneManipulationActions({
   updateScene,
   commitHistoryFrom,
   selectModel,
+  selectText,
   clearSelectedModel,
   selectedModelId,
   sceneInfoRef,
@@ -54,6 +57,40 @@ export function createSceneManipulationActions({
     selectModel(nextModel.id);
   };
 
+  const addText = (position: [number, number, number]) => {
+    const nextText = createSceneText({ position });
+
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        texts: [...(prev.texts ?? []), nextText],
+      };
+    });
+
+    selectText(nextText.id);
+  };
+
+  const deletePlacedText = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        texts: (prev.texts ?? []).filter((t) => t.id !== id),
+      };
+    });
+
+    if (selectedModelId === id) {
+      clearSelectedModel();
+    }
+  };
+
   const deleteMap = () => {
     updateScene((prev) => {
       if (!prev) {
@@ -69,6 +106,10 @@ export function createSceneManipulationActions({
 
   const selectPlacedModel = (id: string) => {
     selectModel(id);
+  };
+
+  const selectPlacedText = (id: string) => {
+    selectText(id);
   };
 
   const deletePlacedModel = (id: string) => {
@@ -99,9 +140,12 @@ export function createSceneManipulationActions({
 
   return {
     addModel,
+    addText,
     deleteMap,
     selectPlacedModel,
+    selectPlacedText,
     deletePlacedModel,
+    deletePlacedText,
     startTransformInteraction,
     endTransformInteraction,
   };

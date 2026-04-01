@@ -5,7 +5,10 @@ export { ScaleController } from './ui/scale-controller';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export { useSelectedSceneObjectEditor } from './model/use-selected-scene-object-editor';
-export { useSceneObjectSelectionStore } from './model/use-scene-object-selection-store';
+export {
+  useSceneObjectSelectionStore,
+  type SelectedObjectType,
+} from './model/use-scene-object-selection-store';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export type {
   AxisKey,

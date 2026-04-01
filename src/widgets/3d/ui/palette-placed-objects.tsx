@@ -1,45 +1,71 @@
-import { Boxes, Layers3, Search, Trash2 } from 'lucide-react';
+import { Boxes, Layers3, Search, Trash2, Type } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { humanizeModelPath, type SavedModelInfo } from '@/entities/3d';
+import { humanizeModelPath, type SavedModelInfo, type SavedTextInfo } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
 import { Input } from '@/shared/ui/atoms/input';
 import { ScrollArea } from '@/shared/ui/molecules/scroll-area';
 
+interface PlacedObjectItem {
+  id: string;
+  displayName: string;
+  subtitle: string;
+  type: 'model' | 'text';
+}
+
 interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
+  placedTexts?: SavedTextInfo[];
   selectedModelId: string | null;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
+  onSelectPlacedText?: (id: string) => void;
+  onDeletePlacedText?: (id: string) => void;
 }
 
 export function PalettePlacedObjects({
   placedModels,
+  placedTexts = [],
   selectedModelId,
   onSelectPlacedModel,
   onDeletePlacedModel,
+  onSelectPlacedText,
+  onDeletePlacedText,
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
   const [objectSearch, setObjectSearch] = useState('');
 
   const normalizedObjectSearch = objectSearch.trim().toLowerCase();
-  const filteredPlacedModels = useMemo(() => {
+
+  const allItems = useMemo(() => {
+    const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({
+      id: model.id,
+      displayName: model.equipName.trim() || model.id,
+      subtitle: humanizeModelPath(model.path),
+      type: 'model' as const,
+    }));
+
+    const textItems: PlacedObjectItem[] = placedTexts.map((text) => ({
+      id: text.id,
+      displayName: text.content.trim() || 'Text',
+      subtitle: t('monitoring:editor.textObject'),
+      type: 'text' as const,
+    }));
+
+    const items = [...modelItems, ...textItems];
+
     if (!normalizedObjectSearch) {
-      return placedModels;
+      return items;
     }
 
-    return placedModels.filter((model) => {
-      const displayName = model.equipName.trim() || model.id;
-      const modelType = humanizeModelPath(model.path);
-
-      return (
-        displayName.toLowerCase().includes(normalizedObjectSearch) ||
-        modelType.toLowerCase().includes(normalizedObjectSearch)
-      );
-    });
-  }, [normalizedObjectSearch, placedModels]);
+    return items.filter(
+      (item) =>
+        item.displayName.toLowerCase().includes(normalizedObjectSearch) ||
+        item.subtitle.toLowerCase().includes(normalizedObjectSearch),
+    );
+  }, [normalizedObjectSearch, placedModels, placedTexts, t]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-white/8 bg-black/18">
@@ -54,7 +80,7 @@ export function PalettePlacedObjects({
           variant="outline"
           className="rounded-sm border-white/8 bg-white/4 px-1.5 py-0 text-[9px] text-white/75"
         >
-          {placedModels.length}
+          {placedModels.length + placedTexts.length}
         </Badge>
       </div>
       <div className="border-b border-white/8 px-2 py-1.5">
@@ -72,24 +98,31 @@ export function PalettePlacedObjects({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col py-0.5">
-          {filteredPlacedModels.length > 0 ? (
-            filteredPlacedModels.map((model) => {
-              const isSelected = selectedModelId === model.id;
-              const displayName = model.equipName.trim() || model.id;
+          {allItems.length > 0 ? (
+            allItems.map((item) => {
+              const isSelected = selectedModelId === item.id;
 
               return (
                 <div
-                  key={model.id}
+                  key={item.id}
                   role="button"
                   tabIndex={0}
-                  aria-label={displayName}
+                  aria-label={item.displayName}
                   onClick={() => {
-                    onSelectPlacedModel(model.id);
+                    if (item.type === 'text') {
+                      onSelectPlacedText?.(item.id);
+                    } else {
+                      onSelectPlacedModel(item.id);
+                    }
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      onSelectPlacedModel(model.id);
+                      if (item.type === 'text') {
+                        onSelectPlacedText?.(item.id);
+                      } else {
+                        onSelectPlacedModel(item.id);
+                      }
                     }
                   }}
                   className={cn(
@@ -107,14 +140,18 @@ export function PalettePlacedObjects({
                         : 'border-white/8 bg-white/4 text-white/50',
                     )}
                   >
-                    <Boxes className="size-2.5" />
+                    {item.type === 'text' ? (
+                      <Type className="size-2.5" />
+                    ) : (
+                      <Boxes className="size-2.5" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[12px] font-medium leading-none">
-                      {displayName}
+                      {item.displayName}
                     </p>
                     <p className="mt-0.5 truncate text-[9px] leading-none text-white/38">
-                      {humanizeModelPath(model.path)}
+                      {item.subtitle}
                     </p>
                   </div>
                   <Button
@@ -125,7 +162,11 @@ export function PalettePlacedObjects({
                     aria-label={t('monitoring:editor.deleteObject')}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onDeletePlacedModel(model.id);
+                      if (item.type === 'text') {
+                        onDeletePlacedText?.(item.id);
+                      } else {
+                        onDeletePlacedModel(item.id);
+                      }
                     }}
                   >
                     <Trash2 className="size-3.5" />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AlarmSeverity } from '@/entities/alarm';
 import {
   GltfModel,
+  SceneText,
   loadSceneInfoByRegionId,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -37,6 +38,7 @@ export function OutdoorWorkModelSimulation({
 
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
+  const texts = sceneInfo?.texts ?? [];
 
   useEffect(() => {
     let isMounted = true;
@@ -119,6 +121,17 @@ export function OutdoorWorkModelSimulation({
           onHoverEnd={() => {
             onHoveredModelChange?.(null);
           }}
+        />
+      ))}
+      {texts.map((text) => (
+        <SceneText
+          key={text.id}
+          id={text.id}
+          content={text.content}
+          color={text.color}
+          position={text.position}
+          rotation={text.rotation}
+          scale={text.scale}
         />
       ))}
     </>

@@ -3,6 +3,7 @@ import type {
   SavedMapInfo,
   SavedModelInfo,
   SavedSceneInfo,
+  SavedTextInfo,
   ValueMapItem,
 } from '@/entities/3d';
 import { createId } from '@/shared/lib/create-id';
@@ -87,11 +88,40 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
+  const safeTexts = Array.isArray(sceneInfo?.texts)
+    ? sceneInfo.texts.flatMap((text) => {
+        if (
+          !text ||
+          typeof text.content !== 'string' ||
+          typeof text.color !== 'string' ||
+          !isVector3Tuple(text.position) ||
+          !isVector3Tuple(text.rotation) ||
+          !isVector3Tuple(text.scale)
+        ) {
+          return [];
+        }
+
+        let nextId =
+          typeof text.id === 'string' && text.id.length > 0
+            ? text.id
+            : createSceneModelId();
+
+        if (seenIds.has(nextId)) {
+          nextId = createSceneModelId();
+        }
+
+        seenIds.add(nextId);
+
+        return [{ ...text, id: nextId }];
+      })
+    : [];
+
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   return {
     map: safeMap,
     models: safeModels,
+    texts: safeTexts,
     camera: safeCamera,
   };
 }
@@ -145,6 +175,17 @@ function isMapInfoEqual(
   return a.id === b.id && a.path === b.path;
 }
 
+function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
+  return (
+    a.id === b.id &&
+    a.content === b.content &&
+    a.color === b.color &&
+    isVector3TupleEqual(a.position, b.position) &&
+    isVector3TupleEqual(a.rotation, b.rotation) &&
+    isVector3TupleEqual(a.scale, b.scale)
+  );
+}
+
 function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
   return (
     a.id === b.id &&
@@ -170,6 +211,12 @@ export function isSceneInfoEqual(
   if (a.models.length !== b.models.length) return false;
   for (let i = 0; i < a.models.length; i++) {
     if (!isModelInfoEqual(a.models[i], b.models[i])) return false;
+  }
+  const aTexts = a.texts ?? [];
+  const bTexts = b.texts ?? [];
+  if (aTexts.length !== bTexts.length) return false;
+  for (let i = 0; i < aTexts.length; i++) {
+    if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
   }
   return true;
 }

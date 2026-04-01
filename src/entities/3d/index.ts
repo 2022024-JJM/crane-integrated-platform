@@ -1,6 +1,7 @@
 export { degToRad, numRound, radToDeg } from './lib/math-utils';
 export { humanizeModelPath, normalizeModelLabel } from './lib/model-path-utils';
 export { createSceneModel } from './lib/create-scene-model';
+export { createSceneText } from './lib/create-scene-text';
 export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
@@ -12,6 +13,7 @@ export type {
   SavedMapInfo,
   SavedModelInfo,
   SavedSceneInfo,
+  SavedTextInfo,
   ValueMapItem,
   ValueMapType,
 } from './model/types';
@@ -21,3 +23,4 @@ export {
   getSceneFileUrlByRegionId,
 } from './model/scene-file-registry';
 export { GltfModel } from './ui/gltf-model';
+export { SceneText } from './ui/scene-text';

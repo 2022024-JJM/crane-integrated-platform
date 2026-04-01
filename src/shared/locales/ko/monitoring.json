@@ -8,7 +8,9 @@
     "empty": "씬에서 객체를 선택하면 속성을 편집할 수 있습니다.",
     "position": "위치",
     "rotation": "회전",
-    "scale": "크기"
+    "scale": "크기",
+    "textContent": "내용",
+    "textColor": "색상"
   },
   "transform": {
     "title": "변형 모드",
@@ -52,6 +54,8 @@
     "noSelection": "선택 없음",
     "snapActive": "Snap 1.0",
     "hideLabels": "라벨 숨기기",
-    "showLabels": "라벨 표시"
+    "showLabels": "라벨 표시",
+    "addText": "텍스트 추가",
+    "textObject": "텍스트"
   }
 }

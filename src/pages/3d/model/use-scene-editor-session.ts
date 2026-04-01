@@ -3,6 +3,7 @@ import {
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
+  type SelectedObjectType,
 } from '@/features/3d';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSceneHistory } from './use-scene-history';
@@ -17,8 +18,10 @@ interface UseSceneEditorSessionParams {
 interface UseSceneEditorSessionResult {
   sceneInfo: ReturnType<typeof useSceneHistory>['sceneInfo'];
   selectedModelId: string | null;
+  selectedObjectType: SelectedObjectType | null;
   selectedModelLabel: string | null;
   selectedModel: ReturnType<typeof useSelectedSceneObjectEditor>['selectedModel'];
+  selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
   isSaving: boolean;
   isDirty: boolean;
   canUndo: boolean;
@@ -40,13 +43,28 @@ interface UseSceneEditorSessionResult {
   updateSelectedTransformVector: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTransformVector'];
+  updateSelectedTextContent: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedTextContent'];
+  updateSelectedTextColor: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedTextColor'];
+  updateSelectedTextTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedTextTransform'];
+  updateSelectedTextTransformVector: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedTextTransformVector'];
   removeSelectedModel: () => void;
   addModel: (
     catalogItem: SceneModelCatalogItem,
     position: [number, number, number],
   ) => void;
+  addText: (position: [number, number, number]) => void;
   selectPlacedModel: (id: string) => void;
+  selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
+  deletePlacedText: (id: string) => void;
   deleteMap: () => void;
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
@@ -73,10 +91,14 @@ export function useSceneEditorSession({
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
+  const selectedObjectType = useSceneObjectSelectionStore(
+    (state) => state.selectedObjectType,
+  );
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
   const selectModel = useSceneObjectSelectionStore((state) => state.selectModel);
+  const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const transformMode = useSceneTransformModeStore((state) => state.mode);
   const setTransformMode = useSceneTransformModeStore(
     (state) => state.setMode,
@@ -86,10 +108,15 @@ export function useSceneEditorSession({
   );
   const {
     selectedModel,
+    selectedText,
     updateSelectedName,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    updateSelectedTextContent,
+    updateSelectedTextColor,
+    updateSelectedTextTransform,
+    updateSelectedTextTransformVector,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -120,6 +147,7 @@ export function useSceneEditorSession({
         updateScene,
         commitHistoryFrom,
         selectModel,
+        selectText,
         clearSelectedModel,
         selectedModelId,
         sceneInfoRef,
@@ -129,6 +157,7 @@ export function useSceneEditorSession({
       updateScene,
       commitHistoryFrom,
       selectModel,
+      selectText,
       clearSelectedModel,
       selectedModelId,
     ],
@@ -150,8 +179,11 @@ export function useSceneEditorSession({
   return {
     sceneInfo,
     selectedModelId,
-    selectedModelLabel: selectedModel?.equipName.trim() || null,
+    selectedObjectType,
+    selectedModelLabel:
+      selectedModel?.equipName.trim() || selectedText?.content.trim() || null,
     selectedModel,
+    selectedText,
     isSaving,
     isDirty,
     canUndo,
@@ -165,10 +197,17 @@ export function useSceneEditorSession({
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    updateSelectedTextContent,
+    updateSelectedTextColor,
+    updateSelectedTextTransform,
+    updateSelectedTextTransformVector,
     removeSelectedModel,
     addModel: manipulation.addModel,
+    addText: manipulation.addText,
     selectPlacedModel: manipulation.selectPlacedModel,
+    selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,
+    deletePlacedText: manipulation.deletePlacedText,
     deleteMap: manipulation.deleteMap,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,

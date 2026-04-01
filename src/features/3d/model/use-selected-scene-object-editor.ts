@@ -2,6 +2,7 @@ import {
   numRound,
   type SavedModelInfo,
   type SavedSceneInfo,
+  type SavedTextInfo,
 } from '@/entities/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@/shared/types/math';
@@ -35,6 +36,7 @@ interface UseSelectedSceneObjectEditorParams {
 
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
+  selectedText: SavedTextInfo | null;
   updateSelectedName: (name: string) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
@@ -43,6 +45,20 @@ interface UseSelectedSceneObjectEditorResult {
     value: number,
   ) => void;
   updateSelectedTransformVector: (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: {
+      recordHistory?: boolean;
+    },
+  ) => void;
+  updateSelectedTextContent: (content: string) => void;
+  updateSelectedTextColor: (color: string) => void;
+  updateSelectedTextTransform: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  updateSelectedTextTransformVector: (
     field: SceneTransformField,
     value: Vector3Tuple,
     options?: {
@@ -59,12 +75,25 @@ export function useSelectedSceneObjectEditor({
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
+  const selectedObjectType = useSceneObjectSelectionStore(
+    (state) => state.selectedObjectType,
+  );
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
 
   useEffect(() => {
     if (!sceneInfo || !selectedModelId) {
+      return;
+    }
+
+    if (selectedObjectType === 'text') {
+      const exists = (sceneInfo.texts ?? []).some(
+        (t) => t.id === selectedModelId,
+      );
+      if (!exists) {
+        clearSelectedModel();
+      }
       return;
     }
 
@@ -75,12 +104,23 @@ export function useSelectedSceneObjectEditor({
     if (!isSelectedModelExists) {
       clearSelectedModel();
     }
-  }, [clearSelectedModel, sceneInfo, selectedModelId]);
+  }, [clearSelectedModel, sceneInfo, selectedModelId, selectedObjectType]);
 
   const selectedModel = useMemo(
     () =>
-      sceneInfo?.models.find((model) => model.id === selectedModelId) ?? null,
-    [sceneInfo?.models, selectedModelId],
+      selectedObjectType === 'model'
+        ? sceneInfo?.models.find((model) => model.id === selectedModelId) ??
+          null
+        : null,
+    [sceneInfo?.models, selectedModelId, selectedObjectType],
+  );
+
+  const selectedText = useMemo(
+    () =>
+      selectedObjectType === 'text'
+        ? (sceneInfo?.texts ?? []).find((t) => t.id === selectedModelId) ?? null
+        : null,
+    [sceneInfo?.texts, selectedModelId, selectedObjectType],
   );
 
   const updateSelectedName = (name: string) => {
@@ -184,6 +224,93 @@ export function useSelectedSceneObjectEditor({
     );
   };
 
+  const updateSelectedTextContent = (content: string) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        texts: (prev.texts ?? []).map((t) =>
+          t.id === selectedModelId ? { ...t, content } : t,
+        ),
+      };
+    });
+  };
+
+  const updateSelectedTextColor = (color: string) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        texts: (prev.texts ?? []).map((t) =>
+          t.id === selectedModelId ? { ...t, color } : t,
+        ),
+      };
+    });
+  };
+
+  const updateSelectedTextTransform = (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        texts: (prev.texts ?? []).map((t) => {
+          if (t.id !== selectedModelId) {
+            return t;
+          }
+
+          return {
+            ...t,
+            [field]: updateVectorValue(t[field], axis, numRound(value)),
+          };
+        }),
+      };
+    });
+  };
+
+  const updateSelectedTextTransformVector = (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: {
+      recordHistory?: boolean;
+    },
+  ) => {
+    updateSceneInfo(
+      (prev) => {
+        if (!prev || !selectedModelId) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).map((t) => {
+            if (t.id !== selectedModelId) {
+              return t;
+            }
+
+            return {
+              ...t,
+              [field]: roundVectorValue(value),
+            };
+          }),
+        };
+      },
+      options,
+    );
+  };
+
   const removeSelectedModel = () => {
     if (!selectedModelId) {
       return;
@@ -192,6 +319,13 @@ export function useSelectedSceneObjectEditor({
     updateSceneInfo((prev) => {
       if (!prev) {
         return prev;
+      }
+
+      if (selectedObjectType === 'text') {
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).filter((t) => t.id !== selectedModelId),
+        };
       }
 
       return {
@@ -205,10 +339,15 @@ export function useSelectedSceneObjectEditor({
 
   return {
     selectedModel,
+    selectedText,
     updateSelectedName,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    updateSelectedTextContent,
+    updateSelectedTextColor,
+    updateSelectedTextTransform,
+    updateSelectedTextTransformVector,
     removeSelectedModel,
   };
 }
