@@ -5,7 +5,7 @@
       "id": "49fb6e30-bc93-4dbd-a86c-51110cb519a3",
       "equipName": "1P 3Bay",
       "path": "/models/1p_3bay.glb",
-      "opacity": 0.2,
+      "opacity": 0.7,
       "position": [
         -12,
         0,
@@ -27,7 +27,7 @@
       "id": "58c98310-fea9-4e77-8f19-9a3dc5c3a152",
       "equipName": "3P",
       "path": "/models/3p.glb",
-      "opacity": 0.2,
+      "opacity": 0.7,
       "position": [
         -4,
         0,
@@ -49,7 +49,7 @@
       "id": "63b712a6-d5cb-4bfe-b231-14622a3a5535",
       "equipName": "5P 1Bay",
       "path": "/models/5p_1bay.glb",
-      "opacity": 0.2,
+      "opacity": 0.7,
       "position": [
         4,
         0,
@@ -71,7 +71,7 @@
       "id": "bbf269d9-4ad3-4b10-87a7-a294f8689c2f",
       "equipName": "5P 2Bay",
       "path": "/models/5p_2bay.glb",
-      "opacity": 0.2,
+      "opacity": 0.7,
       "position": [
         12,
         0,
