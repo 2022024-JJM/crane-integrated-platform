@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box3, Object3D } from 'three';
+import { useThree } from '@react-three/fiber';
+import {
+  Box3,
+  MathUtils,
+  Object3D,
+  PerspectiveCamera,
+  Sphere,
+  Vector3,
+} from 'three';
 import type { AlarmSeverity } from '@/entities/alarm';
 import {
   GltfModel,
@@ -8,6 +16,7 @@ import {
   type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@/entities/3d';
+import type { Vector3Tuple } from '@/shared/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
@@ -19,6 +28,8 @@ interface OutdoorWorkModelSimulationProps {
   alarmHighlightMesh?: boolean;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
   onCameraInfoChange?: (camera: SavedCameraInfo | null) => void;
+  onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
+  onResetCamera?: () => void;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -27,7 +38,10 @@ export function OutdoorWorkModelSimulation({
   alarmHighlightMesh = false,
   onSceneDataLoadingChange,
   onCameraInfoChange,
+  onMoveTo,
+  onResetCamera,
 }: OutdoorWorkModelSimulationProps) {
+  const camera = useThree((s) => s.camera);
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
@@ -38,7 +52,7 @@ export function OutdoorWorkModelSimulation({
   }, [isSceneDataLoading, onSceneDataLoadingChange]);
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
-  const focusModel = useObjectFocusStore((s) => s.focusModel);
+  const pushFocus = useObjectFocusStore((s) => s.pushFocus);
 
   const objectMapRef = useRef<Map<string, Object3D>>(new Map());
 
@@ -46,38 +60,87 @@ export function OutdoorWorkModelSimulation({
     (id: string, object: Object3D | null) => {
       if (object) {
         objectMapRef.current.set(id, object);
-      } else {
-        objectMapRef.current.delete(id);
       }
     },
     [],
   );
 
+  const focusStack = useObjectFocusStore((s) => s.focusStack);
+
   const handleModelClick = useCallback(
     (id: string) => {
-      focusModel(id);
+      // If clicking from full scene (stack empty), check if this model
+      // overlaps with a larger model (e.g. crane inside a bay).
+      // If so, push the container first to enable two-level back navigation.
+      if (focusStack.length === 0) {
+        const clickedObj = objectMapRef.current.get(id);
+
+        if (clickedObj) {
+          const clickedBox = new Box3().setFromObject(clickedObj);
+          const clickedSize = new Vector3();
+          clickedBox.getSize(clickedSize);
+          const clickedVolume =
+            clickedSize.x * clickedSize.y * clickedSize.z;
+
+          let bestContainer: string | null = null;
+          let bestVolume = Infinity;
+
+          for (const [otherId, otherObj] of objectMapRef.current) {
+            if (otherId === id) {
+              continue;
+            }
+
+            const otherBox = new Box3().setFromObject(otherObj);
+
+            if (!otherBox.intersectsBox(clickedBox)) {
+              continue;
+            }
+
+            const otherSize = new Vector3();
+            otherBox.getSize(otherSize);
+            const otherVolume =
+              otherSize.x * otherSize.y * otherSize.z;
+
+            // Only consider objects larger than the clicked one as containers
+            if (otherVolume > clickedVolume && otherVolume < bestVolume) {
+              bestContainer = otherId;
+              bestVolume = otherVolume;
+            }
+          }
+
+          if (bestContainer) {
+            pushFocus(bestContainer);
+            pushFocus(id);
+            return;
+          }
+        }
+      }
+
+      pushFocus(id);
     },
-    [focusModel],
+    [focusStack.length, pushFocus],
   );
 
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
-  const isFocusMode = focusedModelId !== null;
-
-  const visibleModelIds = useMemo(() => {
+  const { visibleModelIds, visibleGroupBox } = useMemo(() => {
     if (!focusedModelId) {
-      return null;
+      return { visibleModelIds: null, visibleGroupBox: null };
     }
 
     const focusedObject = objectMapRef.current.get(focusedModelId);
 
     if (!focusedObject) {
-      return new Set([focusedModelId]);
+      return {
+        visibleModelIds: new Set([focusedModelId]),
+        visibleGroupBox: null,
+      };
     }
 
     const focusedBox = new Box3().setFromObject(focusedObject);
     const result = new Set<string>();
+    const groupBox = focusedBox.clone();
 
     for (const [id, object] of objectMapRef.current) {
       if (id === focusedModelId) {
@@ -89,15 +152,84 @@ export function OutdoorWorkModelSimulation({
 
       if (focusedBox.intersectsBox(otherBox)) {
         result.add(id);
+        groupBox.union(otherBox);
       }
     }
 
-    return result;
+    return { visibleModelIds: result, visibleGroupBox: groupBox };
   }, [focusedModelId]);
+
+  const onMoveToRef = useRef(onMoveTo);
+  onMoveToRef.current = onMoveTo;
+  const onResetCameraRef = useRef(onResetCamera);
+  onResetCameraRef.current = onResetCamera;
+
+  useEffect(() => {
+    if (!focusedModelId) {
+      onResetCameraRef.current?.();
+      return;
+    }
+
+    const ids = visibleModelIds;
+
+    if (!ids) {
+      return;
+    }
+
+    const groupBox = new Box3();
+    let hasObject = false;
+
+    for (const id of ids) {
+      const obj = objectMapRef.current.get(id);
+
+      if (obj) {
+        groupBox.expandByObject(obj);
+        hasObject = true;
+      }
+    }
+
+    if (!hasObject) {
+      return;
+    }
+
+    // Bounding sphere gives a single radius that works for any camera angle
+    const sphere = new Sphere();
+    groupBox.getBoundingSphere(sphere);
+    const center = sphere.center;
+    const radius = sphere.radius;
+
+    // Compute required distance so the sphere fits in the viewport
+    const fov = camera instanceof PerspectiveCamera ? camera.fov : 75;
+    const aspect =
+      camera instanceof PerspectiveCamera ? camera.aspect : 16 / 9;
+    const vFov = MathUtils.degToRad(fov / 2);
+    const hFov = Math.atan(Math.tan(vFov) * aspect);
+    const effectiveFov = Math.min(vFov, hFov);
+
+    const fitDistance = radius / Math.sin(effectiveFov);
+
+    // Camera direction: use the initial scene camera direction (consistent angle)
+    // instead of current camera position (which shifts as user orbits)
+    const defaultDir = new Vector3(0, 0.75, 0.65).normalize();
+    const newPosition = center
+      .clone()
+      .add(defaultDir.multiplyScalar(fitDistance));
+
+    const position: Vector3Tuple = [
+      newPosition.x,
+      newPosition.y,
+      newPosition.z,
+    ];
+    const target: Vector3Tuple = [center.x, center.y, center.z];
+
+    onMoveToRef.current?.(position, target);
+  }, [focusedModelId, visibleModelIds]);
 
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
 
   useEffect(() => {
+    objectMapRef.current.clear();
+
     return () => {
       clearFocus();
     };
@@ -168,19 +300,27 @@ export function OutdoorWorkModelSimulation({
           />
         );
       })}
-      {!isFocusMode
-        ? texts.map((text) => (
-            <SceneText
-              key={text.id}
-              id={text.id}
-              content={text.content}
-              color={text.color}
-              position={text.position}
-              rotation={text.rotation}
-              scale={text.scale}
-            />
-          ))
-        : null}
+      {texts.map((text) => {
+        if (visibleGroupBox) {
+          const [tx] = text.position;
+
+          if (tx < visibleGroupBox.min.x || tx > visibleGroupBox.max.x) {
+            return null;
+          }
+        }
+
+        return (
+          <SceneText
+            key={text.id}
+            id={text.id}
+            content={text.content}
+            color={text.color}
+            position={text.position}
+            rotation={text.rotation}
+            scale={text.scale}
+          />
+        );
+      })}
     </>
   );
 }

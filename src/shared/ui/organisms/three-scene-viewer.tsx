@@ -41,13 +41,15 @@ interface ThreeSceneViewerProps {
   children: ReactNode;
   overlay?: ReactNode;
   showZoomIndicator?: boolean;
+  onControllerReady?: (controller: SceneController | null) => void;
 }
 
-interface SceneController {
+export interface SceneController {
   reset: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   moveToTopView: () => void;
+  moveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
 }
 
 interface SceneControlsBridgeProps {
@@ -176,6 +178,13 @@ function SceneControlsBridge({
     zoomByFactor(ZOOM_STEP);
   }, [zoomByFactor]);
 
+  const moveTo = useCallback(
+    (position: Vector3Tuple, target: Vector3Tuple) => {
+      applyCameraState(toVector3(position), toVector3(target), DEFAULT_CAMERA_UP);
+    },
+    [applyCameraState],
+  );
+
   useEffect(() => {
     const controls = controlsRef.current;
 
@@ -194,6 +203,7 @@ function SceneControlsBridge({
       zoomIn,
       zoomOut,
       moveToTopView,
+      moveTo,
     });
 
     reset();
@@ -209,6 +219,7 @@ function SceneControlsBridge({
     zoomIn,
     zoomOut,
     moveToTopView,
+    moveTo,
   ]);
 
   return (
@@ -254,15 +265,20 @@ export function ThreeSceneViewer({
   children,
   overlay,
   showZoomIndicator = true,
+  onControllerReady,
 }: ThreeSceneViewerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<SceneController | null>(null);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const setController = useCallback((controller: SceneController | null) => {
-    controllerRef.current = controller;
-  }, []);
+  const setController = useCallback(
+    (controller: SceneController | null) => {
+      controllerRef.current = controller;
+      onControllerReady?.(controller);
+    },
+    [onControllerReady],
+  );
 
   const toggleFullscreen = useCallback(async () => {
     const root = rootRef.current;

@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@/entities/alarm';
 import type { SavedCameraInfo } from '@/entities/3d';
 import { Button } from '@/shared/ui/atoms/button';
-import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
+import {
+  ThreeSceneViewer,
+  type SceneController,
+} from '@/shared/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
@@ -29,9 +32,29 @@ export function Monitoring3dView({
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const sceneControllerRef = useRef<SceneController | null>(null);
   const [savedCamera, setSavedCamera] = useState<SavedCameraInfo | null>(null);
-  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const focusStack = useObjectFocusStore((s) => s.focusStack);
+  const popFocus = useObjectFocusStore((s) => s.popFocus);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+
+  const handleControllerReady = useCallback(
+    (controller: SceneController | null) => {
+      sceneControllerRef.current = controller;
+    },
+    [],
+  );
+
+  const handleMoveTo = useCallback(
+    (position: Vector3Tuple, target: Vector3Tuple) => {
+      sceneControllerRef.current?.moveTo(position, target);
+    },
+    [],
+  );
+
+  const handleResetCamera = useCallback(() => {
+    sceneControllerRef.current?.reset();
+  }, []);
 
   const handleCameraInfoChange = useCallback(
     (camera: SavedCameraInfo | null) => {
@@ -42,6 +65,19 @@ export function Monitoring3dView({
 
   const cameraPosition = savedCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = savedCamera?.target ?? DEFAULT_CAMERA_TARGET;
+
+  const focusOverlay =
+    focusStack.length > 0 ? (
+      <Button
+        variant="outline"
+        size="sm"
+        className="bg-background/85 border-border/70 pointer-events-auto absolute top-3 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
+        onClick={popFocus}
+      >
+        <ArrowLeft className="size-4" />
+        {t('monitoring:focus.back')}
+      </Button>
+    ) : null;
 
   return (
     <div ref={rootRef} className="relative h-full min-h-0 w-full">
@@ -62,7 +98,8 @@ export function Monitoring3dView({
           },
           onPointerMissed: clearFocus,
         }}
-        overlay={null}
+        overlay={focusOverlay}
+        onControllerReady={handleControllerReady}
       >
         <ambientLight intensity={2} />
         <directionalLight
@@ -77,21 +114,11 @@ export function Monitoring3dView({
             alarmHighlightMesh={alarmHighlightMesh}
             onSceneDataLoadingChange={onLoadingChange}
             onCameraInfoChange={handleCameraInfoChange}
+            onMoveTo={handleMoveTo}
+            onResetCamera={handleResetCamera}
           />
         </Suspense>
       </ThreeSceneViewer>
-
-      {focusedModelId ? (
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-background/85 border-border/70 absolute top-3 left-3 z-1 gap-1.5 shadow-sm backdrop-blur-sm"
-          onClick={clearFocus}
-        >
-          <ArrowLeft className="size-4" />
-          {t('monitoring:focus.back')}
-        </Button>
-      ) : null}
     </div>
   );
 }
