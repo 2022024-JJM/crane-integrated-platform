@@ -39,14 +39,12 @@ export function ModelLabel({
 
   return (
     <Html
-      transform
-      sprite
       center
       zIndexRange={[5, 0]}
       position={[position[0], position[1] + offsetY, position[2]]}
     >
       <div
-        className={`cursor-pointer rounded px-2 py-0.5 font-mono text-2xl font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
+        className={`cursor-pointer rounded px-1.5 py-0.5 font-mono text-xs font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
         onPointerDown={(event) => {
           event.stopPropagation();
         }}
