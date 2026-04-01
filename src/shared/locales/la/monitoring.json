@@ -9,6 +9,9 @@
     "rotation": "Rotatio",
     "scale": "Scala"
   },
+  "focus": {
+    "back": "Redi"
+  },
   "transform": {
     "title": "Modus transformationis",
     "mode": {

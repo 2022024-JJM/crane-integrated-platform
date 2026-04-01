@@ -1,8 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@/entities/alarm';
 import type { SavedCameraInfo } from '@/entities/3d';
+import { Button } from '@/shared/ui/atoms/button';
 import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@/shared/types/math';
+import { useObjectFocusStore } from '../model/use-object-focus-store';
 import type { MonitoringHoveredModel } from '../model/types';
 import { MonitoringObjectHoverCard } from './monitoring-object-hover-card';
 import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
@@ -25,10 +29,13 @@ export function Monitoring3dView({
   alarmHighlightMesh = false,
   onLoadingChange,
 }: Monitoring3dViewProps) {
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [hoveredModel, setHoveredModel] =
     useState<MonitoringHoveredModel | null>(null);
   const [savedCamera, setSavedCamera] = useState<SavedCameraInfo | null>(null);
+  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
 
   const handleCameraInfoChange = useCallback(
     (camera: SavedCameraInfo | null) => {
@@ -78,6 +85,7 @@ export function Monitoring3dView({
             autoClear: false,
             depth: true,
           },
+          onPointerMissed: clearFocus,
         }}
         overlay={overlay}
       >
@@ -98,6 +106,18 @@ export function Monitoring3dView({
           />
         </Suspense>
       </ThreeSceneViewer>
+
+      {focusedModelId ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-background/85 border-border/70 absolute top-3 left-3 z-1 gap-1.5 shadow-sm backdrop-blur-sm"
+          onClick={clearFocus}
+        >
+          <ArrowLeft className="size-4" />
+          {t('monitoring:focus.back')}
+        </Button>
+      ) : null}
     </div>
   );
 }

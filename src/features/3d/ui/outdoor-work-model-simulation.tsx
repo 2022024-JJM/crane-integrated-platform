@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box3, Object3D } from 'three';
 import type { AlarmSeverity } from '@/entities/alarm';
 import {
   GltfModel,
@@ -8,6 +9,7 @@ import {
   type SavedSceneInfo,
 } from '@/entities/3d';
 import type { MonitoringHoveredModel } from '../model/types';
+import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
@@ -38,9 +40,71 @@ export function OutdoorWorkModelSimulation({
     onSceneDataLoadingChange?.(isSceneDataLoading);
   }, [isSceneDataLoading, onSceneDataLoadingChange]);
 
+  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const focusModel = useObjectFocusStore((s) => s.focusModel);
+
+  const objectMapRef = useRef<Map<string, Object3D>>(new Map());
+
+  const handleObjectReady = useCallback(
+    (id: string, object: Object3D | null) => {
+      if (object) {
+        objectMapRef.current.set(id, object);
+      } else {
+        objectMapRef.current.delete(id);
+      }
+    },
+    [],
+  );
+
+  const handleModelClick = useCallback(
+    (id: string) => {
+      focusModel(id);
+    },
+    [focusModel],
+  );
+
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
+  const isFocusMode = focusedModelId !== null;
+
+  const visibleModelIds = useMemo(() => {
+    if (!focusedModelId) {
+      return null;
+    }
+
+    const focusedObject = objectMapRef.current.get(focusedModelId);
+
+    if (!focusedObject) {
+      return new Set([focusedModelId]);
+    }
+
+    const focusedBox = new Box3().setFromObject(focusedObject);
+    const result = new Set<string>();
+
+    for (const [id, object] of objectMapRef.current) {
+      if (id === focusedModelId) {
+        result.add(id);
+        continue;
+      }
+
+      const otherBox = new Box3().setFromObject(object);
+
+      if (focusedBox.intersectsBox(otherBox)) {
+        result.add(id);
+      }
+    }
+
+    return result;
+  }, [focusedModelId]);
+
+  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+
+  useEffect(() => {
+    return () => {
+      clearFocus();
+    };
+  }, [regionId, clearFocus]);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,37 +170,47 @@ export function OutdoorWorkModelSimulation({
 
   return (
     <>
-      {map ? <GltfModel id={map.id} url={map.path} /> : <></>}
-      {models.map((model) => (
-        <GltfModel
-          key={model.id}
-          id={model.id}
-          url={model.path}
-          equipName={model.equipName}
-          opacity={model.opacity}
-          alarmSeverity={model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null}
-          alarmHighlightMesh={alarmHighlightMesh}
-          position={model.position}
-          rotation={model.rotation}
-          scale={model.scale}
-          onHoverStart={handleHoveredModelChange}
-          onHoverMove={handleHoveredModelChange}
-          onHoverEnd={() => {
-            onHoveredModelChange?.(null);
-          }}
-        />
-      ))}
-      {texts.map((text) => (
-        <SceneText
-          key={text.id}
-          id={text.id}
-          content={text.content}
-          color={text.color}
-          position={text.position}
-          rotation={text.rotation}
-          scale={text.scale}
-        />
-      ))}
+      {map ? <GltfModel id={map.id} url={map.path} /> : null}
+      {models.map((model) => {
+        if (visibleModelIds && !visibleModelIds.has(model.id)) {
+          return null;
+        }
+
+        return (
+          <GltfModel
+            key={model.id}
+            id={model.id}
+            url={model.path}
+            equipName={model.equipName}
+            opacity={model.opacity}
+            alarmSeverity={model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null}
+            alarmHighlightMesh={alarmHighlightMesh}
+            position={model.position}
+            rotation={model.rotation}
+            scale={model.scale}
+            onSelect={handleModelClick}
+            onObjectReady={handleObjectReady}
+            onHoverStart={handleHoveredModelChange}
+            onHoverMove={handleHoveredModelChange}
+            onHoverEnd={() => {
+              onHoveredModelChange?.(null);
+            }}
+          />
+        );
+      })}
+      {!isFocusMode
+        ? texts.map((text) => (
+            <SceneText
+              key={text.id}
+              id={text.id}
+              content={text.content}
+              color={text.color}
+              position={text.position}
+              rotation={text.rotation}
+              scale={text.scale}
+            />
+          ))
+        : null}
     </>
   );
 }

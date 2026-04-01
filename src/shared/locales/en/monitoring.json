@@ -24,6 +24,9 @@
     "undo": "Undo",
     "redo": "Redo"
   },
+  "focus": {
+    "back": "Back"
+  },
   "hover": {
     "model": "Model"
   },
