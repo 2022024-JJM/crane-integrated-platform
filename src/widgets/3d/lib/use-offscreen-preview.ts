@@ -14,23 +14,13 @@ interface OffscreenPreviewResult {
   status: PreviewStatus;
 }
 
-// Module-level blob URL cache keyed by "path\0presetHash"
-const urlCache = new Map<string, string>();
-
-function presetCacheKey(path: string, preset?: SceneModelPreviewPreset): string {
-  return `${path}\0${JSON.stringify(preset ?? null)}`;
-}
-
 export function useOffscreenPreview(
   path: string,
   preset: SceneModelPreviewPreset | undefined,
   containerRef: RefObject<HTMLElement | null>,
 ): OffscreenPreviewResult {
   const [status, setStatus] = useState<PreviewStatus>('idle');
-  const [imageUrl, setImageUrl] = useState<string | null>(() => {
-    const cached = urlCache.get(presetCacheKey(path, preset));
-    return cached ?? null;
-  });
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const abortRef = useRef<AbortHandle | null>(null);
   const hasRequestedRef = useRef(false);
@@ -43,18 +33,8 @@ export function useOffscreenPreview(
     };
   }, []);
 
-  // On path/preset change, reset if the new key isn't cached
+  // On path/preset change, reset
   useEffect(() => {
-    const cacheKey = presetCacheKey(path, preset);
-    const cached = urlCache.get(cacheKey);
-
-    if (cached) {
-      setImageUrl(cached);
-      setStatus('ready');
-      hasRequestedRef.current = true;
-      return;
-    }
-
     // Cancel any in-flight render for the previous path
     if (abortRef.current) {
       abortRef.current.abort();
@@ -74,15 +54,6 @@ export function useOffscreenPreview(
       ([entry]) => {
         if (!entry.isIntersecting || hasRequestedRef.current) return;
 
-        const cacheKey = presetCacheKey(path, preset);
-        const cached = urlCache.get(cacheKey);
-        if (cached) {
-          setImageUrl(cached);
-          setStatus('ready');
-          hasRequestedRef.current = true;
-          return;
-        }
-
         hasRequestedRef.current = true;
         setStatus('loading');
 
@@ -90,12 +61,16 @@ export function useOffscreenPreview(
         const width = Math.max(Math.round(rect.width) || 256, 64);
         const height = Math.max(Math.round(rect.height) || 192, 64);
 
-        const { promise, abort } = enqueueRender({ path, preset, width, height });
+        const { promise, abort } = enqueueRender({
+          path,
+          preset,
+          width,
+          height,
+        });
         abortRef.current = abort;
 
         promise.then(
           (url) => {
-            urlCache.set(cacheKey, url);
             setImageUrl(url);
             setStatus('ready');
             abortRef.current = null;

@@ -3,7 +3,7 @@
   "models": [
     {
       "id": "49fb6e30-bc93-4dbd-a86c-51110cb519a3",
-      "equipName": "1P 3Bay",
+      "equipName": "",
       "path": "/models/1p_3bay.glb",
       "opacity": 0.7,
       "position": [
@@ -25,7 +25,7 @@
     },
     {
       "id": "58c98310-fea9-4e77-8f19-9a3dc5c3a152",
-      "equipName": "3P",
+      "equipName": "",
       "path": "/models/3p.glb",
       "opacity": 0.7,
       "position": [
@@ -47,13 +47,13 @@
     },
     {
       "id": "63b712a6-d5cb-4bfe-b231-14622a3a5535",
-      "equipName": "5P 1Bay",
+      "equipName": "",
       "path": "/models/5p_1bay.glb",
       "opacity": 0.7,
       "position": [
         4,
         0,
-        2.5
+        2.3
       ],
       "rotation": [
         0,
@@ -69,13 +69,13 @@
     },
     {
       "id": "bbf269d9-4ad3-4b10-87a7-a294f8689c2f",
-      "equipName": "5P 2Bay",
+      "equipName": "",
       "path": "/models/5p_2bay.glb",
       "opacity": 0.7,
       "position": [
         12,
         0,
-        2.5
+        2.3
       ],
       "rotation": [
         0,
@@ -97,7 +97,7 @@
       "position": [
         -12.1,
         2.1,
-        11
+        12.1
       ],
       "rotation": [
         0,
@@ -510,16 +510,16 @@
   ],
   "texts": [
     {
-      "id": "id-mnfkg57w-cqfwwefk",
-      "content": "해양 1 공장",
+      "id": "49962fa0-518c-4f2c-810a-2c42eb871cbd",
+      "content": "3Bay",
       "color": "#ffffff",
       "position": [
         -12,
         0,
-        17
+        14
       ],
       "rotation": [
-        -58.011,
+        270,
         0,
         0
       ],
@@ -530,16 +530,16 @@
       ]
     },
     {
-      "id": "id-mnfkgvbd-y0362pxw",
-      "content": "해양 3 공장",
+      "id": "1498dcd4-8329-4f12-8b34-99bf9767976a",
+      "content": "해양 3공장",
       "color": "#ffffff",
       "position": [
-        -4,
-        0,
-        17
+        -12.1,
+        -0.683,
+        15.483
       ],
       "rotation": [
-        -72.274,
+        300,
         0,
         0
       ],
@@ -550,96 +550,96 @@
       ]
     },
     {
-      "id": "id-mnfki3ec-erepnp1o",
-      "content": "조립 5 공장",
+      "id": "0f93dad9-eb09-46ad-b004-8191305aef14",
+      "content": "1Bay",
       "color": "#ffffff",
       "position": [
         4.1,
         0,
-        17
-      ],
-      "rotation": [
-        -77.673,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.5,
-        0.5
-      ]
-    },
-    {
-      "id": "id-mnfkixp3-miwfckg5",
-      "content": "조립 5 공장",
-      "color": "#ffffff",
-      "position": [
-        12,
-        0,
-        17
-      ],
-      "rotation": [
-        -71.774,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.5,
-        0.5
-      ]
-    },
-    {
-      "id": "id-mnfkk90u-8hys2rxj",
-      "content": "3Bay",
-      "color": "#ffffff",
-      "position": [
-        -12.1,
-        1.445,
-        14.068
-      ],
-      "rotation": [
-        -87.733,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.5,
-        0.5
-      ]
-    },
-    {
-      "id": "id-mnfknao8-n586y0wc",
-      "content": "1Bay",
-      "color": "#ffffff",
-      "position": [
-        4,
-        0,
-        14
-      ],
-      "rotation": [
-        -77.814,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.5,
-        0.5
-      ]
-    },
-    {
-      "id": "id-mnfknufh-vlcy1cpa",
-      "content": "2Bay",
-      "color": "#ffffff",
-      "position": [
-        12.5,
-        0,
         14.2
       ],
       "rotation": [
-        -89.861,
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "929cd23b-f018-4edb-98d0-eda104331f85",
+      "content": "2Bay",
+      "color": "#ffffff",
+      "position": [
+        12.1,
+        0,
+        14.1
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "6fcd5342-8f91-4e1a-8ff7-be756cbada9e",
+      "content": "해양 1공장",
+      "color": "#ffffff",
+      "position": [
+        -4,
+        -0.683,
+        15.483
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "6ccbab6c-4cee-42cc-afb3-237997eb52c3",
+      "content": "조립 5공장",
+      "color": "#ffffff",
+      "position": [
+        3.9,
+        -0.683,
+        15.483
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "164472d9-a2d8-4eba-bb48-35f22120e073",
+      "content": "조립 5공장",
+      "color": "#ffffff",
+      "position": [
+        12,
+        -0.683,
+        15.483
+      ],
+      "rotation": [
+        300,
         0,
         0
       ],
@@ -652,14 +652,14 @@
   ],
   "camera": {
     "position": [
-      0.1206067990679527,
-      16.80709668832216,
-      17.884182629122297
+      0.44109710472618824,
+      14.406987976802672,
+      17.930580725149724
     ],
     "target": [
-      0.21887428644507395,
-      -0.600333951483712,
-      4.872152706394686
+      0.44109710472618824,
+      -2.948142983274196,
+      3.0252393008530487
     ]
   }
 }
