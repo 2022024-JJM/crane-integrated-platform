@@ -8,7 +8,6 @@ import {
   type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@/entities/3d';
-import type { MonitoringHoveredModel } from '../model/types';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
@@ -19,7 +18,6 @@ interface OutdoorWorkModelSimulationProps {
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
-  onHoveredModelChange?: (hoveredModel: MonitoringHoveredModel | null) => void;
   onCameraInfoChange?: (camera: SavedCameraInfo | null) => void;
 }
 
@@ -28,7 +26,6 @@ export function OutdoorWorkModelSimulation({
   alarmsByCraneId,
   alarmHighlightMesh = false,
   onSceneDataLoadingChange,
-  onHoveredModelChange,
   onCameraInfoChange,
 }: OutdoorWorkModelSimulationProps) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
@@ -143,30 +140,8 @@ export function OutdoorWorkModelSimulation({
 
     return () => {
       isMounted = false;
-      onHoveredModelChange?.(null);
     };
-  }, [onCameraInfoChange, onHoveredModelChange, regionId, registerFromModel, start]);
-
-  const handleHoveredModelChange = (
-    id: string,
-    clientX: number,
-    clientY: number,
-  ) => {
-    const hoveredModel = models.find((model) => model.id === id);
-
-    if (!hoveredModel) {
-      onHoveredModelChange?.(null);
-      return;
-    }
-
-    onHoveredModelChange?.({
-      model: hoveredModel,
-      position: {
-        x: clientX,
-        y: clientY,
-      },
-    });
-  };
+  }, [onCameraInfoChange, regionId, registerFromModel, start]);
 
   return (
     <>
@@ -190,11 +165,6 @@ export function OutdoorWorkModelSimulation({
             scale={model.scale}
             onSelect={handleModelClick}
             onObjectReady={handleObjectReady}
-            onHoverStart={handleHoveredModelChange}
-            onHoverMove={handleHoveredModelChange}
-            onHoverEnd={() => {
-              onHoveredModelChange?.(null);
-            }}
           />
         );
       })}

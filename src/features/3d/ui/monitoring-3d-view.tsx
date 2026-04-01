@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@/entities/alarm';
 import type { SavedCameraInfo } from '@/entities/3d';
@@ -7,8 +7,6 @@ import { Button } from '@/shared/ui/atoms/button';
 import { ThreeSceneViewer } from '@/shared/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import type { MonitoringHoveredModel } from '../model/types';
-import { MonitoringObjectHoverCard } from './monitoring-object-hover-card';
 import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -31,8 +29,6 @@ export function Monitoring3dView({
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [hoveredModel, setHoveredModel] =
-    useState<MonitoringHoveredModel | null>(null);
   const [savedCamera, setSavedCamera] = useState<SavedCameraInfo | null>(null);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
@@ -46,27 +42,6 @@ export function Monitoring3dView({
 
   const cameraPosition = savedCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = savedCamera?.target ?? DEFAULT_CAMERA_TARGET;
-  const overlay = useMemo(() => {
-    if (!hoveredModel || !rootRef.current) {
-      return null;
-    }
-
-    const rect = rootRef.current.getBoundingClientRect();
-
-    return (
-      <MonitoringObjectHoverCard
-        model={hoveredModel.model}
-        position={{
-          x: hoveredModel.position.x - rect.left,
-          y: hoveredModel.position.y - rect.top,
-        }}
-        containerSize={{
-          width: rect.width,
-          height: rect.height,
-        }}
-      />
-    );
-  }, [hoveredModel]);
 
   return (
     <div ref={rootRef} className="relative h-full min-h-0 w-full">
@@ -87,7 +62,7 @@ export function Monitoring3dView({
           },
           onPointerMissed: clearFocus,
         }}
-        overlay={overlay}
+        overlay={null}
       >
         <ambientLight intensity={2} />
         <directionalLight
@@ -101,7 +76,6 @@ export function Monitoring3dView({
             alarmsByCraneId={alarmsByCraneId}
             alarmHighlightMesh={alarmHighlightMesh}
             onSceneDataLoadingChange={onLoadingChange}
-            onHoveredModelChange={setHoveredModel}
             onCameraInfoChange={handleCameraInfoChange}
           />
         </Suspense>
