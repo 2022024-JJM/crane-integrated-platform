@@ -2,6 +2,7 @@ import { ArrowUpRight, Grip, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Monitoring3dView } from '@/features/3d';
+import { useRegionActiveAlarmsByCraneId } from '@/features/alarm';
 import { useProgressNavigate } from '@/shared/lib/use-progress-navigate';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/atoms/button';
@@ -41,6 +42,7 @@ export function DashboardRegionPreviewModal({
 }: DashboardRegionPreviewModalProps) {
   const { t } = useTranslation();
   const navigate = useProgressNavigate();
+  const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [localPosition, setLocalPosition] = useState(position);
@@ -305,7 +307,7 @@ export function DashboardRegionPreviewModal({
         <div className="p-2.5">
           <div className="relative overflow-hidden rounded-[1.15rem] border border-white/10 bg-slate-950">
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-slate-950/45 to-transparent" />
-            <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2">
+            <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
               <span className="rounded-full border border-white/12 bg-black/35 px-2 py-1 text-[9px] font-semibold tracking-[0.18em] text-white/80 uppercase backdrop-blur-sm">
                 3D Viewer
               </span>
@@ -316,7 +318,7 @@ export function DashboardRegionPreviewModal({
                 height: previewBodyHeight,
               }}
             >
-              <Monitoring3dView regionId={regionId} />
+              <Monitoring3dView regionId={regionId} alarmsByCraneId={alarmsByCraneId} alarmHighlightMesh={regionId === 'dock-in'} />
             </div>
             <button
               type="button"
