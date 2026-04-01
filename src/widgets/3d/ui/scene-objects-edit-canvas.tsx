@@ -44,6 +44,7 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
+  showLabels?: boolean;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
 }
@@ -58,6 +59,7 @@ export function SceneObjectsEditCanvas({
   initialCamera,
   onTransformVectorChange,
   onAddModel,
+  showLabels = true,
   onTransformInteractionStart,
   onTransformInteractionEnd,
 }: SceneObjectsEditCanvasProps) {
@@ -204,6 +206,7 @@ export function SceneObjectsEditCanvas({
             id={model.id}
             url={model.path}
             equipName={model.equipName}
+            showLabel={showLabels}
             opacity={model.opacity}
             position={model.position}
             rotation={model.rotation}

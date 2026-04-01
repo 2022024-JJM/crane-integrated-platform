@@ -50,6 +50,8 @@
     "keyboardShortcuts": "Keyboard shortcuts",
     "deleteSelected": "Delete selected",
     "noSelection": "No selection",
-    "snapActive": "Snap 1.0"
+    "snapActive": "Snap 1.0",
+    "hideLabels": "Hide labels",
+    "showLabels": "Show labels"
   }
 }

@@ -13,6 +13,7 @@ interface GltfModelProps {
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
+  showLabel?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   onSelect?: (id: string) => void;
   isSelected?: boolean;
@@ -27,6 +28,7 @@ export function GltfModel({
   url,
   equipName,
   opacity = 1,
+  showLabel = true,
   alarmSeverity = null,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
@@ -63,17 +65,19 @@ export function GltfModel({
         <ModelSelectionBox modelRef={modelRef} isSelected={isSelected} />
       </ModelMesh>
 
-      <ModelLabel
-        id={id}
-        equipName={equipName}
-        position={position}
-        offsetY={offsetY}
-        alarmSeverity={alarmSeverity}
-        onSelect={onSelect}
-        onHoverStart={onHoverStart}
-        onHoverMove={onHoverMove}
-        onHoverEnd={onHoverEnd}
-      />
+      {showLabel ? (
+        <ModelLabel
+          id={id}
+          equipName={equipName}
+          position={position}
+          offsetY={offsetY}
+          alarmSeverity={alarmSeverity}
+          onSelect={onSelect}
+          onHoverStart={onHoverStart}
+          onHoverMove={onHoverMove}
+          onHoverEnd={onHoverEnd}
+        />
+      ) : null}
     </>
   );
 }

@@ -50,6 +50,8 @@
     "keyboardShortcuts": "키보드 단축키",
     "deleteSelected": "선택 객체 삭제",
     "noSelection": "선택 없음",
-    "snapActive": "Snap 1.0"
+    "snapActive": "Snap 1.0",
+    "hideLabels": "라벨 숨기기",
+    "showLabels": "라벨 표시"
   }
 }

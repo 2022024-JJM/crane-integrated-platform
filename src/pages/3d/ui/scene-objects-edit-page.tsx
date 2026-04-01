@@ -7,6 +7,7 @@ import {
   SceneHistoryControls,
   SceneTransformModeToggle,
 } from '@/features/3d';
+import { Tag, Tags } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
@@ -59,6 +60,7 @@ export function SceneObjectsEditPage({
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
+  const [showLabels, setShowLabels] = useState(true);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const {
     sceneInfo,
@@ -199,6 +201,7 @@ export function SceneObjectsEditPage({
             addModel(catalogItem, position);
             setDraggingCatalogItem(null);
           }}
+          showLabels={showLabels}
           onTransformInteractionStart={startTransformInteraction}
           onTransformInteractionEnd={endTransformInteraction}
         />
@@ -217,6 +220,15 @@ export function SceneObjectsEditPage({
               }
               trailingContent={
                 <div className="bg-background/95 border-border/80 flex items-center gap-2 rounded-lg border px-3 py-2 shadow-sm backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowLabels((prev) => !prev)}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    title={showLabels ? t('monitoring:editor.hideLabels') : t('monitoring:editor.showLabels')}
+                  >
+                    {showLabels ? <Tag className="size-4" /> : <Tags className="size-4 opacity-50" />}
+                  </button>
+                  <span className="bg-border h-4 w-px" />
                   <span className="max-w-36 truncate text-xs font-medium">
                     {selectedModelLabel || t('monitoring:editor.noSelection')}
                   </span>
