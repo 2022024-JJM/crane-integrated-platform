@@ -1,13 +1,8 @@
 import { OrbitControls, TransformControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type RefObject,
-} from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Object3D } from 'three';
+import { Object3D, NoToneMapping } from 'three';
 import {
   GltfModel,
   type SavedCameraInfo,
@@ -67,7 +62,9 @@ export function SceneObjectsEditCanvas({
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
-  const selectModel = useSceneObjectSelectionStore((state) => state.selectModel);
+  const selectModel = useSceneObjectSelectionStore(
+    (state) => state.selectModel,
+  );
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -161,7 +158,7 @@ export function SceneObjectsEditCanvas({
     <div
       ref={rootRef}
       tabIndex={0}
-      className="relative h-full min-h-0 overflow-hidden rounded-2xl border border-border/70 bg-background"
+      className="border-border/70 bg-background relative h-full min-h-0 overflow-hidden rounded-2xl border"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
       }}
@@ -176,10 +173,20 @@ export function SceneObjectsEditCanvas({
           rendererRef.current = gl;
         }}
         onPointerMissed={handleClearSelection}
+        gl={{
+          toneMapping: NoToneMapping,
+          powerPreference: 'high-performance',
+          antialias: true,
+        }}
       >
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
-        <OrbitControls ref={orbitControlsRef} enableDamping={false} target={cameraTarget} onChange={handleOrbitChange} />
+        <OrbitControls
+          ref={orbitControlsRef}
+          enableDamping={false}
+          target={cameraTarget}
+          onChange={handleOrbitChange}
+        />
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
