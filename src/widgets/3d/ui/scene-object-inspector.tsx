@@ -9,7 +9,6 @@ import {
   ScaleController,
   type SceneTransformField,
 } from '@/features/3d';
-import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/atoms/input';
 import { Card, CardContent } from '@/shared/ui/molecules/card';
 
@@ -81,10 +80,9 @@ export function SceneObjectInspector({
   onTransformChange,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
-  const selectedLabel = selectedModel?.equipName || selectedModel?.id || '';
+  const selectedLabel = selectedModel?.equipName ?? '';
   const selectedOpacity = selectedModel?.opacity ?? 1;
   const [nameDraft, setNameDraft] = useState(selectedLabel);
-  const isNameEmpty = nameDraft.trim() === '';
 
   useEffect(() => {
     setNameDraft(selectedLabel);
@@ -114,40 +112,19 @@ export function SceneObjectInspector({
               <Input
                 value={nameDraft}
                 aria-label={t('monitoring:inspector.name')}
-                className={cn(
-                  'h-8 cursor-text rounded-sm bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30',
-                  isNameEmpty ? 'border-red-400/60' : 'border-white/8',
-                )}
+                className="h-8 cursor-text rounded-sm border-white/8 bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30"
                 onChange={(event) => {
                   const nextValue = event.target.value;
                   setNameDraft(nextValue);
-
-                  if (nextValue.trim()) {
-                    onNameChange(nextValue);
-                  }
-                }}
-                onBlur={() => {
-                  if (!nameDraft.trim()) {
-                    setNameDraft(selectedLabel);
-                  }
+                  onNameChange(nextValue);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
                     setNameDraft(selectedLabel);
                     event.currentTarget.blur();
                   }
-
-                  if (event.key === 'Enter' && !nameDraft.trim()) {
-                    setNameDraft(selectedLabel);
-                    event.currentTarget.blur();
-                  }
                 }}
               />
-              {isNameEmpty && (
-                <p className="mt-1 text-[10px] text-red-400">
-                  {t('monitoring:inspector.nameEmptyError')}
-                </p>
-              )}
             </InspectorSection>
 
             <InspectorSection

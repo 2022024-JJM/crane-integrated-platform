@@ -84,12 +84,6 @@ export function useSelectedSceneObjectEditor({
   );
 
   const updateSelectedName = (name: string) => {
-    const nextName = name.trim();
-
-    if (!nextName) {
-      return;
-    }
-
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
         return prev;
@@ -104,7 +98,7 @@ export function useSelectedSceneObjectEditor({
 
           return {
             ...model,
-            equipName: nextName,
+            equipName: name,
           };
         }),
       };
