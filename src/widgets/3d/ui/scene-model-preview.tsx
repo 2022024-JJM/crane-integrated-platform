@@ -1,29 +1,14 @@
-import { Canvas, useThree } from '@react-three/fiber';
 import { AlertCircle, Box, Loader2 } from 'lucide-react';
 import {
   Component,
-  Suspense,
   type ErrorInfo,
   type ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
   useRef,
-  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Box3,
-  Group,
-  Object3D,
-  OrthographicCamera,
-  Vector3,
-} from 'three';
-import { useGLTF } from '@react-three/drei';
-import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { SceneModelPreviewPreset } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
+import { useOffscreenPreview } from '../lib/use-offscreen-preview';
 
 interface SceneModelPreviewProps {
   path: string;
@@ -106,171 +91,6 @@ function PreviewFallback({
   );
 }
 
-function PreviewStage() {
-  return (
-    <>
-      <ambientLight intensity={2.4} />
-      <directionalLight position={[3, 4, 2]} intensity={4.4} color="#ffffff" />
-      <directionalLight position={[-2, 2, -3]} intensity={1.2} color="#93c5fd" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.25, 0]} receiveShadow>
-        <circleGeometry args={[2.5, 48]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.92} metalness={0.05} />
-      </mesh>
-    </>
-  );
-}
-
-function PreviewModel({
-  resolvedUrl,
-  preview,
-  onReady,
-}: {
-  resolvedUrl: string;
-  preview?: SceneModelPreviewPreset;
-  onReady: () => void;
-}) {
-  const { scene } = useGLTF(resolvedUrl);
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-  const previewGroupRef = useRef<Group | null>(null);
-  const cameraRef = useRef<OrthographicCamera | null>(null);
-  const camera = useThree((state) => state.camera as OrthographicCamera);
-  const canvasSize = useThree((state) => state.size);
-  const invalidate = useThree((state) => state.invalidate);
-
-  useLayoutEffect(() => {
-    cameraRef.current = camera;
-  }, [camera]);
-
-  useLayoutEffect(() => {
-    if (!previewGroupRef.current) {
-      return;
-    }
-
-    const sceneCamera = cameraRef.current;
-
-    if (!sceneCamera) {
-      return;
-    }
-
-    const box = new Box3().setFromObject(clone);
-    const center = new Vector3();
-    const size = new Vector3();
-
-    if (box.isEmpty()) {
-      onReady();
-      return;
-    }
-
-    box.getSize(size);
-    box.getCenter(center);
-
-    const verticalOffset = size.y * (preview?.verticalOffsetRatio ?? 0);
-    previewGroupRef.current.scale.setScalar(1);
-    previewGroupRef.current.position.set(
-      -center.x,
-      -center.y + verticalOffset,
-      -center.z,
-    );
-    previewGroupRef.current.updateMatrixWorld(true);
-
-    const target = new Vector3(0, 0, 0);
-    const viewDirection = new Vector3(
-      ...(preview?.cameraDirection ?? [1.16, 0.78, 1.16]),
-    ).normalize();
-    const radius = size.length() * 0.5;
-    const cameraDistance = Math.max(radius * 2.25, 3.5);
-
-    sceneCamera.position
-      .copy(target)
-      .add(viewDirection.multiplyScalar(cameraDistance));
-    sceneCamera.near = 0.1;
-    sceneCamera.far = Math.max(cameraDistance + radius * 4, 100);
-    sceneCamera.lookAt(target);
-    sceneCamera.updateMatrixWorld(true);
-
-    const fittedBox = new Box3().setFromObject(previewGroupRef.current);
-    const corners = [
-      new Vector3(fittedBox.min.x, fittedBox.min.y, fittedBox.min.z),
-      new Vector3(fittedBox.min.x, fittedBox.min.y, fittedBox.max.z),
-      new Vector3(fittedBox.min.x, fittedBox.max.y, fittedBox.min.z),
-      new Vector3(fittedBox.min.x, fittedBox.max.y, fittedBox.max.z),
-      new Vector3(fittedBox.max.x, fittedBox.min.y, fittedBox.min.z),
-      new Vector3(fittedBox.max.x, fittedBox.min.y, fittedBox.max.z),
-      new Vector3(fittedBox.max.x, fittedBox.max.y, fittedBox.min.z),
-      new Vector3(fittedBox.max.x, fittedBox.max.y, fittedBox.max.z),
-    ];
-    let minProjectedX = Infinity;
-    let maxProjectedX = -Infinity;
-    let minProjectedY = Infinity;
-    let maxProjectedY = -Infinity;
-
-    for (const corner of corners) {
-      const projectedCorner = corner
-        .clone()
-        .applyMatrix4(sceneCamera.matrixWorldInverse);
-      minProjectedX = Math.min(minProjectedX, projectedCorner.x);
-      maxProjectedX = Math.max(maxProjectedX, projectedCorner.x);
-      minProjectedY = Math.min(minProjectedY, projectedCorner.y);
-      maxProjectedY = Math.max(maxProjectedY, projectedCorner.y);
-    }
-
-    const projectedCenterX = (minProjectedX + maxProjectedX) / 2;
-    const projectedCenterY = (minProjectedY + maxProjectedY) / 2;
-    const cameraRight = new Vector3().setFromMatrixColumn(
-      sceneCamera.matrixWorld,
-      0,
-    );
-    const cameraUp = new Vector3().setFromMatrixColumn(
-      sceneCamera.matrixWorld,
-      1,
-    );
-    previewGroupRef.current.position
-      .sub(cameraRight.multiplyScalar(projectedCenterX))
-      .sub(cameraUp.multiplyScalar(projectedCenterY));
-    previewGroupRef.current.updateMatrixWorld(true);
-
-    const projectedWidth = maxProjectedX - minProjectedX;
-    const projectedHeight = maxProjectedY - minProjectedY;
-    const paddingScale = preview?.paddingScale ?? 1.22;
-    const paddedProjectedX = Math.max(
-      (projectedWidth / 2) * paddingScale,
-      0.001,
-    );
-    const paddedProjectedY = Math.max(
-      (projectedHeight / 2) * paddingScale,
-      0.001,
-    );
-    const zoomFromWidth = canvasSize.width / (paddedProjectedX * 2);
-    const zoomFromHeight = canvasSize.height / (paddedProjectedY * 2);
-
-    sceneCamera.zoom = Math.max(0.01, Math.min(zoomFromWidth, zoomFromHeight));
-    sceneCamera.updateProjectionMatrix();
-    invalidate();
-
-    const frame = requestAnimationFrame(() => {
-      onReady();
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [
-    canvasSize.height,
-    canvasSize.width,
-    clone,
-    camera,
-    invalidate,
-    onReady,
-    preview,
-  ]);
-
-  return (
-    <group ref={previewGroupRef}>
-      <primitive object={clone as Object3D} />
-    </group>
-  );
-}
-
 export function SceneModelPreview({
   path,
   label,
@@ -281,10 +101,6 @@ export function SceneModelPreview({
   className,
 }: SceneModelPreviewProps) {
   const { t } = useTranslation();
-
-  useEffect(() => {
-    useGLTF.preload(path);
-  }, [path]);
 
   return (
     <PreviewErrorBoundary
@@ -326,35 +142,8 @@ function SceneModelPreviewInner({
   className,
 }: SceneModelPreviewProps) {
   const { t } = useTranslation();
-  const [readyPath, setReadyPath] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isReady = readyPath === path;
-
-  useEffect(() => {
-    const element = containerRef.current;
-
-    if (!element) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      { rootMargin: '100px' },
-    );
-
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const handleReady = useCallback(() => {
-    setReadyPath(path);
-  }, [path]);
+  const { imageUrl, status } = useOffscreenPreview(path, preview, containerRef);
 
   return (
     <div
@@ -373,30 +162,24 @@ function SceneModelPreviewInner({
         }}
       />
       <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-950/85 to-transparent" />
-      {!isReady ? (
+      {status !== 'ready' ? (
         <PreviewFallback
           label={label}
-          message={t('monitoring:palette.previewLoading')}
+          message={
+            status === 'error'
+              ? t('monitoring:palette.previewLoadError')
+              : t('monitoring:palette.previewLoading')
+          }
+          tone={status === 'error' ? 'error' : 'loading'}
         />
       ) : null}
-      {isVisible ? (
-        <Canvas
-          orthographic
-          frameloop="demand"
-          dpr={[1, 1]}
-          gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
-          camera={{ position: [2.6, 1.8, 2.6], zoom: 72 }}
-        >
-          <PreviewStage />
-          <Suspense fallback={null}>
-            <PreviewModel
-              key={path}
-              resolvedUrl={path}
-              preview={preview}
-              onReady={handleReady}
-            />
-          </Suspense>
-        </Canvas>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={label}
+          className="absolute inset-0 h-full w-full object-contain"
+          draggable={false}
+        />
       ) : null}
       <div
         className={cn(
