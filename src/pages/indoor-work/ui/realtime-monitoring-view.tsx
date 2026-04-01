@@ -61,6 +61,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
               <Monitoring3dView
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
+                alarmHighlightMesh
                 onLoadingChange={setIs3dViewLoading}
               />
             </div>

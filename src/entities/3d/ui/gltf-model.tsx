@@ -15,6 +15,7 @@ interface GltfModelProps {
   scale?: Vector3Tuple;
   showLabel?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
+  alarmHighlightMesh?: boolean;
   onSelect?: (id: string) => void;
   isSelected?: boolean;
   onObjectReady?: (id: string, object: Object3D | null) => void;
@@ -30,6 +31,7 @@ export function GltfModel({
   opacity = 1,
   showLabel = true,
   alarmSeverity = null,
+  alarmHighlightMesh = false,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -50,6 +52,7 @@ export function GltfModel({
         id={id}
         url={url}
         opacity={opacity}
+        alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
         position={position}
         rotation={rotation}
         scale={scale}

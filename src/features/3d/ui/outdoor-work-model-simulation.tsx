@@ -15,6 +15,7 @@ import { useValueGeneratorStore } from '../model/use-value-generator-store';
 interface OutdoorWorkModelSimulationProps {
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
+  alarmHighlightMesh?: boolean;
   onSceneDataLoadingChange?: (isLoading: boolean) => void;
   onHoveredModelChange?: (hoveredModel: MonitoringHoveredModel | null) => void;
   onCameraInfoChange?: (camera: SavedCameraInfo | null) => void;
@@ -23,6 +24,7 @@ interface OutdoorWorkModelSimulationProps {
 export function OutdoorWorkModelSimulation({
   regionId,
   alarmsByCraneId,
+  alarmHighlightMesh = false,
   onSceneDataLoadingChange,
   onHoveredModelChange,
   onCameraInfoChange,
@@ -113,6 +115,7 @@ export function OutdoorWorkModelSimulation({
           equipName={model.equipName}
           opacity={model.opacity}
           alarmSeverity={model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null}
+          alarmHighlightMesh={alarmHighlightMesh}
           position={model.position}
           rotation={model.rotation}
           scale={model.scale}

@@ -268,6 +268,7 @@
     {
       "id": "bfeaedd8-c425-4ec3-b0aa-523bfc7c200d",
       "equipName": "C-1806",
+      "craneId": "C_1806",
       "path": "/models/c_1806.glb",
       "opacity": 1,
       "position": [
@@ -400,6 +401,7 @@
     {
       "id": "8d41dfab-b8f9-48c2-83c2-b25a9d83e7c7",
       "equipName": "C-870",
+      "craneId": "C_870",
       "path": "/models/c_870.glb",
       "opacity": 1,
       "position": [
@@ -466,6 +468,7 @@
     {
       "id": "ec242f39-4164-4fa7-a2f6-aaacacd85aa6",
       "equipName": "C-871",
+      "craneId": "C_871",
       "path": "/models/c_871.glb",
       "opacity": 1,
       "position": [
@@ -488,6 +491,7 @@
     {
       "id": "4bc3b060-5dbb-466c-9cd9-a73beaffb214",
       "equipName": "C-862",
+      "craneId": "C_862",
       "path": "/models/c_862.glb",
       "opacity": 1,
       "position": [

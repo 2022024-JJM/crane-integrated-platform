@@ -13,6 +13,7 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
 interface Monitoring3dViewProps {
   regionId: string;
   alarmsByCraneId?: Record<string, AlarmSeverity>;
+  alarmHighlightMesh?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
 }
 
@@ -21,6 +22,7 @@ const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
 export function Monitoring3dView({
   regionId,
   alarmsByCraneId = EMPTY_ALARMS,
+  alarmHighlightMesh = false,
   onLoadingChange,
 }: Monitoring3dViewProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -89,6 +91,7 @@ export function Monitoring3dView({
           <OutdoorWorkModelSimulation
             regionId={regionId}
             alarmsByCraneId={alarmsByCraneId}
+            alarmHighlightMesh={alarmHighlightMesh}
             onSceneDataLoadingChange={onLoadingChange}
             onHoveredModelChange={setHoveredModel}
             onCameraInfoChange={handleCameraInfoChange}

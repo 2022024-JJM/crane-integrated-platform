@@ -5,11 +5,20 @@ import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { degToRad } from '../lib/math-utils';
 import type { ThreeEvent } from '@react-three/fiber';
+import type { AlarmHighlightSeverity } from './model-label';
+
+const ALARM_MESH_COLOR: Record<AlarmHighlightSeverity, number> = {
+  critical: 0xdc2626,
+  high: 0xf97316,
+  medium: 0xeab308,
+  info: 0x3b82f6,
+};
 
 interface ModelMeshProps {
   id: string;
   url: string;
   opacity?: number;
+  alarmSeverity?: AlarmHighlightSeverity | null;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -80,6 +89,7 @@ export function ModelMesh({
   id,
   url,
   opacity = 1,
+  alarmSeverity = null,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -152,6 +162,27 @@ export function ModelMesh({
       mat.needsUpdate = true;
     }
   }, [meshMaterials, opacity]);
+
+  useEffect(() => {
+    for (const material of meshMaterials) {
+      const mat = material as Material & {
+        color?: Color;
+        _originalColor?: Color;
+        needsUpdate: boolean;
+      };
+
+      if (!mat.color || !mat._originalColor) {
+        continue;
+      }
+
+      if (alarmSeverity && alarmSeverity in ALARM_MESH_COLOR) {
+        mat.color.setHex(ALARM_MESH_COLOR[alarmSeverity]);
+      } else {
+        mat.color.copy(mat._originalColor);
+      }
+      mat.needsUpdate = true;
+    }
+  }, [meshMaterials, alarmSeverity]);
 
   useEffect(() => {
     if (!onObjectReadyRef.current) {
