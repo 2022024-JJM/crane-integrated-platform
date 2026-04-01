@@ -508,16 +508,158 @@
       "valueMapList": []
     }
   ],
+  "texts": [
+    {
+      "id": "id-mnfkg57w-cqfwwefk",
+      "content": "해양 1 공장",
+      "color": "#ffffff",
+      "position": [
+        -12,
+        0,
+        17
+      ],
+      "rotation": [
+        -58.011,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfkgvbd-y0362pxw",
+      "content": "해양 3 공장",
+      "color": "#ffffff",
+      "position": [
+        -4,
+        0,
+        17
+      ],
+      "rotation": [
+        -72.274,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfki3ec-erepnp1o",
+      "content": "조립 5 공장",
+      "color": "#ffffff",
+      "position": [
+        4.1,
+        0,
+        17
+      ],
+      "rotation": [
+        -77.673,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfkixp3-miwfckg5",
+      "content": "조립 5 공장",
+      "color": "#ffffff",
+      "position": [
+        12,
+        0,
+        17
+      ],
+      "rotation": [
+        -71.774,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfkk90u-8hys2rxj",
+      "content": "3Bay",
+      "color": "#ffffff",
+      "position": [
+        -12.1,
+        1.445,
+        14.068
+      ],
+      "rotation": [
+        -87.733,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfknao8-n586y0wc",
+      "content": "1Bay",
+      "color": "#ffffff",
+      "position": [
+        4,
+        0,
+        14
+      ],
+      "rotation": [
+        -77.814,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "id-mnfknufh-vlcy1cpa",
+      "content": "2Bay",
+      "color": "#ffffff",
+      "position": [
+        12.5,
+        0,
+        14.2
+      ],
+      "rotation": [
+        -89.861,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ],
   "camera": {
     "position": [
-      -0.09654051703135762,
-      14.74554894580489,
-      21.239401364063617
+      0.1206067990679527,
+      16.80709668832216,
+      17.884182629122297
     ],
     "target": [
-      0.027940162853007853,
-      0.5809692919366352,
-      4.756367405527916
+      0.21887428644507395,
+      -0.600333951483712,
+      4.872152706394686
     ]
   }
 }

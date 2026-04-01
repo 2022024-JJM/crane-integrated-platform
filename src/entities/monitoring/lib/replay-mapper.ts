@@ -77,7 +77,7 @@ export function getLatestReplayFrameWithValues(
   return (
     sortedFrames.find((frame) =>
       filterCraneSnapshots(frame, craneIds).some((crane) => hasReplayValue(crane)),
-    ) ?? null
+    ) ?? getLatestReplayFrame(response)
   );
 }
 
