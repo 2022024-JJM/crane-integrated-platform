@@ -68,7 +68,7 @@ export function Monitoring3dView({
         <directionalLight
           position={[0, 50, 10]}
           color={'#ffffff'}
-          intensity={5}
+          intensity={4}
         />
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation

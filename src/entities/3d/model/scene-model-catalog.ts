@@ -78,16 +78,6 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     },
   },
   {
-    id: 'okpo',
-    label: 'Okpo',
-    path: '/models/okpo.glb',
-    defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
     id: '1p-3bay',
     label: '1P 3Bay',
     path: '/models/1p_3bay.glb',
