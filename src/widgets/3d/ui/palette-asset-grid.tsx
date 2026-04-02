@@ -1,11 +1,7 @@
 import { Boxes, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  humanizeModelPath,
-  normalizeModelLabel,
-  type SceneModelCatalogItem,
-} from '@/entities/3d';
+import { type SceneModelCatalogItem } from '@/entities/3d';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Input } from '@/shared/ui/atoms/input';
@@ -80,11 +76,6 @@ export function PaletteAssetGrid({
         <div className="grid grid-cols-2 gap-2 p-2">
           {filteredItems.map((item) => {
             const isDragging = draggingItemId === item.id;
-            const modelTypeLabel = humanizeModelPath(item.path);
-            const showModelTypeLabel =
-              normalizeModelLabel(item.label) !==
-              normalizeModelLabel(modelTypeLabel);
-
             return (
               <div
                 key={item.id}
@@ -122,11 +113,6 @@ export function PaletteAssetGrid({
                   <p className="truncate text-[11px] font-semibold leading-none text-white">
                     {item.label}
                   </p>
-                  {showModelTypeLabel ? (
-                    <p className="mt-1 truncate text-[9px] leading-none text-white/38">
-                      {modelTypeLabel}
-                    </p>
-                  ) : null}
                 </div>
               </div>
             );
