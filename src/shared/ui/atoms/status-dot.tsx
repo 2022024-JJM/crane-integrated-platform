@@ -1,4 +1,4 @@
-import type { StatusLevel } from '@/entities/region';
+import type { StatusLevel } from '@/shared/types/status';
 import { statusLevelDotClassName } from '@/shared/lib/status-colors';
 import { cn } from '@/shared/lib/utils';
 

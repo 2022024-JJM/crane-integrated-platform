@@ -1,5 +1,4 @@
-import type { AlarmSeverity } from '@/entities/alarm';
-import type { CraneStatus } from '@/entities/crane';
+import type { AlarmSeverity, CraneStatus } from '@/shared/types/status';
 import { severityBadgeClassName, craneStatusBadgeClassName } from '@/shared/lib/status-colors';
 import { cn } from '@/shared/lib/utils';
 import { Badge } from './badge';

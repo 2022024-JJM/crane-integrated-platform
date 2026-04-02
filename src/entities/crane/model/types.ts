@@ -1,9 +1,6 @@
-export type CraneStatus =
-  | 'operating'
-  | 'idle'
-  | 'maintenance'
-  | 'warning'
-  | 'stopped';
+import type { CraneStatus } from '@/shared/types/status';
+
+export type { CraneStatus } from '@/shared/types/status';
 
 export interface CraneOperationalData {
   id: string;

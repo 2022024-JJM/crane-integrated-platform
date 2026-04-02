@@ -1,6 +1,4 @@
-import type { AlarmSeverity } from '@/entities/alarm';
-import type { CraneStatus } from '@/entities/crane';
-import type { StatusLevel } from '@/entities/region';
+import type { AlarmSeverity, CraneStatus, StatusLevel } from '@/shared/types/status';
 
 export const severityBadgeClassName: Record<AlarmSeverity, string> = {
   critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',

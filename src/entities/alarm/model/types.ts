@@ -1,4 +1,6 @@
-export type AlarmSeverity = 'critical' | 'high' | 'medium' | 'info';
+import type { AlarmSeverity } from '@/shared/types/status';
+
+export type { AlarmSeverity } from '@/shared/types/status';
 export type AlarmEventType =
   | 'wind_warning_exceeded'
   | 'load_warning_reached'

@@ -1,4 +1,6 @@
-export type StatusLevel = "normal" | "warning" | "critical"
+import type { StatusLevel } from '@/shared/types/status';
+
+export type { StatusLevel } from '@/shared/types/status';
 
 export interface StatusSummary {
   normal: number
