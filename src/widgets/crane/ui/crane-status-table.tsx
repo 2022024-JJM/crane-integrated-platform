@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/shared/ui/atoms/badge';
 import { Button } from '@/shared/ui/atoms/button';
 import { tableRowStatusBadgeClassName } from '@/shared/lib/status-colors';
@@ -17,7 +17,6 @@ import {
 import {
   CRANE_COLUMN_WIDTH,
   TAG_NAME_COLUMN_WIDTH,
-  type DateTimeInputElement,
   type SortKey,
   type SortDirection,
   formatValue,
@@ -26,7 +25,6 @@ import {
   compareRows,
   getCategoryClassName,
   buildRowStatuses,
-  openDateTimePicker,
   buildHeartbeatStatuses,
 } from './crane-status-table-helpers';
 
@@ -131,38 +129,21 @@ function DateTimeField({
   label,
   value,
   onChange,
-  buttonLabel,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  buttonLabel: string;
 }) {
-  const inputRef = useRef<DateTimeInputElement | null>(null);
-
   return (
     <label className="flex min-w-[220px] flex-col gap-1 text-xs text-muted-foreground">
       <span>{label}</span>
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="datetime-local"
-          step={1}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-8 w-full rounded-md border border-border bg-background pr-9 pl-2 text-sm text-foreground outline-none ring-0 transition focus-visible:border-ring"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={buttonLabel}
-          className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          onClick={() => openDateTimePicker(inputRef.current)}
-        >
-          <CalendarDays className="size-3.5" />
-        </Button>
-      </div>
+      <input
+        type="datetime-local"
+        step={1}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none ring-0 transition focus-visible:border-ring"
+      />
     </label>
   );
 }
@@ -223,15 +204,6 @@ export function CraneStatusTable({
   const searchLabel = t('common:craneStatus.search.submit', {
     defaultValue: 'Search',
   });
-  const openStartPickerLabel = t(
-    'common:craneStatus.search.openStartPicker',
-    {
-      defaultValue: 'Open start time picker',
-    },
-  );
-  const openEndPickerLabel = t('common:craneStatus.search.openEndPicker', {
-    defaultValue: 'Open end time picker',
-  });
   const validationMessage =
     validationReason === 'order'
       ? t('common:craneStatus.search.validation.order', {
@@ -291,13 +263,11 @@ export function CraneStatusTable({
                 label={startTimeLabel}
                 value={searchFrom}
                 onChange={onSearchFromChange}
-                buttonLabel={openStartPickerLabel}
               />
               <DateTimeField
                 label={endTimeLabel}
                 value={searchTo}
                 onChange={onSearchToChange}
-                buttonLabel={openEndPickerLabel}
               />
               <Button type="submit" size="default" disabled={isSearchDisabled}>
                 {searchLabel}
