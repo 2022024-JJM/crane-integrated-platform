@@ -4,6 +4,7 @@ import {
   ResizableHandle,
 } from '@/shared/ui/molecules/resizable';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useRegionRealtimeAlarms,
   useRegionActiveAlarmsByCraneId,
@@ -18,6 +19,7 @@ import { CraneStatusTable } from '@/widgets/crane';
 import { AlarmPanel } from '@/widgets/alarm';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
+  const { t } = useTranslation();
   const { alarms, stats: alarmStats } = useRegionRealtimeAlarms(regionId);
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const {
@@ -54,7 +56,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                     aria-hidden="true"
                   />
                   <p className="text-sm font-medium text-white">
-                    3D 화면 불러오는 중
+                    {t('common:viewer3d.loading')}
                   </p>
                 </div>
               ) : null}

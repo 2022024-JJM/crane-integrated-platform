@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Button } from '@/shared/ui/atoms/button';
@@ -267,6 +268,7 @@ export function ThreeSceneViewer({
   showZoomIndicator = true,
   onControllerReady,
 }: ThreeSceneViewerProps) {
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<SceneController | null>(null);
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -340,7 +342,7 @@ export function ThreeSceneViewer({
 
           <div className="pointer-events-auto flex flex-col gap-2">
             <ToolbarButton
-              label="확대"
+              label={t('common:viewer3d.zoomIn')}
               onClick={() => {
                 controllerRef.current?.zoomIn();
               }}
@@ -348,7 +350,7 @@ export function ThreeSceneViewer({
               <ZoomIn />
             </ToolbarButton>
             <ToolbarButton
-              label="축소"
+              label={t('common:viewer3d.zoomOut')}
               onClick={() => {
                 controllerRef.current?.zoomOut();
               }}
@@ -356,7 +358,7 @@ export function ThreeSceneViewer({
               <ZoomOut />
             </ToolbarButton>
             <ToolbarButton
-              label="원래 위치"
+              label={t('common:viewer3d.resetView')}
               onClick={() => {
                 controllerRef.current?.reset();
               }}
@@ -364,7 +366,7 @@ export function ThreeSceneViewer({
               <RotateCcw />
             </ToolbarButton>
             <ToolbarButton
-              label="탑뷰"
+              label={t('common:viewer3d.topView')}
               onClick={() => {
                 controllerRef.current?.moveToTopView();
               }}
@@ -372,7 +374,7 @@ export function ThreeSceneViewer({
               <Map />
             </ToolbarButton>
             <ToolbarButton
-              label={isFullscreen ? '전체화면 복원' : '전체화면'}
+              label={isFullscreen ? t('common:viewer3d.exitFullscreen') : t('common:viewer3d.fullscreen')}
               onClick={() => {
                 void toggleFullscreen();
               }}

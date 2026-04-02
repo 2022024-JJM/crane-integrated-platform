@@ -55,11 +55,13 @@ export function OutdoorWorkModelSimulation({
   const pushFocus = useObjectFocusStore((s) => s.pushFocus);
 
   const objectMapRef = useRef<Map<string, Object3D>>(new Map());
+  const boxCacheRef = useRef<Map<string, Box3>>(new Map());
 
   const handleObjectReady = useCallback(
     (id: string, object: Object3D | null) => {
       if (object) {
         objectMapRef.current.set(id, object);
+        boxCacheRef.current.set(id, new Box3().setFromObject(object));
       }
     },
     [],
@@ -73,10 +75,9 @@ export function OutdoorWorkModelSimulation({
       // overlaps with a larger model (e.g. crane inside a bay).
       // If so, push the container first to enable two-level back navigation.
       if (focusStack.length === 0) {
-        const clickedObj = objectMapRef.current.get(id);
+        const clickedBox = boxCacheRef.current.get(id);
 
-        if (clickedObj) {
-          const clickedBox = new Box3().setFromObject(clickedObj);
+        if (clickedBox) {
           const clickedSize = new Vector3();
           clickedBox.getSize(clickedSize);
           const clickedVolume =
@@ -85,12 +86,10 @@ export function OutdoorWorkModelSimulation({
           let bestContainer: string | null = null;
           let bestVolume = Infinity;
 
-          for (const [otherId, otherObj] of objectMapRef.current) {
+          for (const [otherId, otherBox] of boxCacheRef.current) {
             if (otherId === id) {
               continue;
             }
-
-            const otherBox = new Box3().setFromObject(otherObj);
 
             if (!otherBox.intersectsBox(clickedBox)) {
               continue;
@@ -129,26 +128,23 @@ export function OutdoorWorkModelSimulation({
       return { visibleModelIds: null, visibleGroupBox: null };
     }
 
-    const focusedObject = objectMapRef.current.get(focusedModelId);
+    const focusedBox = boxCacheRef.current.get(focusedModelId);
 
-    if (!focusedObject) {
+    if (!focusedBox) {
       return {
         visibleModelIds: new Set([focusedModelId]),
         visibleGroupBox: null,
       };
     }
 
-    const focusedBox = new Box3().setFromObject(focusedObject);
     const result = new Set<string>();
     const groupBox = focusedBox.clone();
 
-    for (const [id, object] of objectMapRef.current) {
+    for (const [id, otherBox] of boxCacheRef.current) {
       if (id === focusedModelId) {
         result.add(id);
         continue;
       }
-
-      const otherBox = new Box3().setFromObject(object);
 
       if (focusedBox.intersectsBox(otherBox)) {
         result.add(id);
@@ -229,6 +225,7 @@ export function OutdoorWorkModelSimulation({
 
   useEffect(() => {
     objectMapRef.current.clear();
+    boxCacheRef.current.clear();
 
     return () => {
       clearFocus();

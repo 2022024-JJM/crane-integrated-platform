@@ -309,7 +309,7 @@ export function DashboardRegionPreviewModal({
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-slate-950/45 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
               <span className="rounded-full border border-white/12 bg-black/35 px-2 py-1 text-[9px] font-semibold tracking-[0.18em] text-white/80 uppercase backdrop-blur-sm">
-                3D Viewer
+                {t('common:viewer3d.badge')}
               </span>
             </div>
             <div
@@ -322,7 +322,7 @@ export function DashboardRegionPreviewModal({
             </div>
             <button
               type="button"
-              aria-label="Resize preview"
+              aria-label={t('common:viewer3d.resizePreview')}
               className="absolute right-2 bottom-2 z-20 h-5 w-5 cursor-nwse-resize rounded-sm border border-white/10 bg-black/38 text-white/55 backdrop-blur-sm transition hover:bg-black/52 hover:text-white/85"
               onPointerDown={(event) => {
                 if (event.button !== 0 || isDragging) {

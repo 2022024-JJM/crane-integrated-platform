@@ -129,5 +129,16 @@
       "title": "Indoor Work",
       "subtitle": "Overhead 4 cranes"
     }
+  },
+  "viewer3d": {
+    "loading": "Loading 3D view",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Reset view",
+    "topView": "Top view",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "badge": "3D Viewer",
+    "resizePreview": "Resize preview"
   }
 }

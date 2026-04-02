@@ -1,5 +1,5 @@
 import { Text } from '@react-three/drei';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Group } from 'three';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { degToRad } from '../lib/math-utils';
@@ -41,7 +41,7 @@ function TextSelectionOutline({ width, height }: { width: number; height: number
   );
 }
 
-export function SceneText({
+export const SceneText = memo(function SceneText({
   id,
   content,
   color,
@@ -94,7 +94,9 @@ export function SceneText({
           if (info) {
             const w = info.blockBounds[2] - info.blockBounds[0];
             const h = info.blockBounds[3] - info.blockBounds[1];
-            setTextSize({ width: w, height: h });
+            setTextSize((prev) =>
+              prev.width === w && prev.height === h ? prev : { width: w, height: h },
+            );
           }
         }}
       >
@@ -105,4 +107,4 @@ export function SceneText({
       ) : null}
     </group>
   );
-}
+});

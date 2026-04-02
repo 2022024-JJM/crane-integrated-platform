@@ -153,36 +153,26 @@ export function ModelMesh({
         opacity: number;
         transparent: boolean;
         depthWrite: boolean;
+        color?: Color;
+        _originalColor?: Color;
         needsUpdate: boolean;
       };
 
       mat.opacity = opacity;
       mat.transparent = opacity < 1;
       mat.depthWrite = opacity >= 1;
-      mat.needsUpdate = true;
-    }
-  }, [meshMaterials, opacity]);
 
-  useEffect(() => {
-    for (const material of meshMaterials) {
-      const mat = material as Material & {
-        color?: Color;
-        _originalColor?: Color;
-        needsUpdate: boolean;
-      };
-
-      if (!mat.color || !mat._originalColor) {
-        continue;
+      if (mat.color && mat._originalColor) {
+        if (alarmSeverity && alarmSeverity in ALARM_MESH_COLOR) {
+          mat.color.setHex(ALARM_MESH_COLOR[alarmSeverity]);
+        } else {
+          mat.color.copy(mat._originalColor);
+        }
       }
 
-      if (alarmSeverity && alarmSeverity in ALARM_MESH_COLOR) {
-        mat.color.setHex(ALARM_MESH_COLOR[alarmSeverity]);
-      } else {
-        mat.color.copy(mat._originalColor);
-      }
       mat.needsUpdate = true;
     }
-  }, [meshMaterials, alarmSeverity]);
+  }, [meshMaterials, opacity, alarmSeverity]);
 
   useEffect(() => {
     if (!onObjectReadyRef.current) {

@@ -1,5 +1,4 @@
-import { useFrame } from '@react-three/fiber';
-import { useMemo, type RefObject } from 'react';
+import { useEffect, useMemo, type RefObject } from 'react';
 import { Box3, Box3Helper, Object3D } from 'three';
 
 interface ModelSelectionBoxProps {
@@ -24,13 +23,13 @@ export function ModelSelectionBox({
     return helper;
   }, [selectionBox]);
 
-  useFrame(() => {
+  useEffect(() => {
     if (!isSelected || !modelRef.current) {
       return;
     }
 
     selectionBox.setFromObject(modelRef.current);
-  });
+  }, [isSelected, modelRef, selectionBox]);
 
   if (!isSelected) {
     return null;

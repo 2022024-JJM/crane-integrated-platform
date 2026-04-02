@@ -129,5 +129,16 @@
       "title": "Opera Intus",
       "subtitle": "Grues supremae IV"
     }
+  },
+  "viewer3d": {
+    "loading": "Visor 3D oneratur",
+    "zoomIn": "Amplifica",
+    "zoomOut": "Minue",
+    "resetView": "Restitue visum",
+    "topView": "Visus desuper",
+    "fullscreen": "Plenus modus",
+    "exitFullscreen": "Restitue fenestram",
+    "badge": "Visor 3D",
+    "resizePreview": "Muta magnitudinem"
   }
 }

@@ -24,7 +24,7 @@
     "urgentRegion": {
       "title": "즉시 확인 구역",
       "description": "현재 알람 기준 최우선 region",
-      "meta": "위험 {{critical}}건 쨌 전체 알람 {{total}}건",
+      "meta": "위험 {{critical}}건 전체 알람 {{total}}건",
       "emptyValue": "이상 없음",
       "emptyMeta": "현재 확인이 필요한 알람이 없습니다."
     }

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { Object3D } from 'three';
 import type { Vector3Tuple } from '@/shared/types/math';
 import { ModelMesh, useClonedModel, useModelLabelOffsetY } from './model-mesh';
@@ -24,7 +24,7 @@ interface GltfModelProps {
   onHoverEnd?: (id: string) => void;
 }
 
-export function GltfModel({
+export const GltfModel = memo(function GltfModel({
   id,
   url,
   equipName,
@@ -46,6 +46,14 @@ export function GltfModel({
   const { clone } = useClonedModel(url);
   const offsetY = useModelLabelOffsetY(clone, scale);
 
+  const handleObjectReady = useCallback(
+    (readyId: string, object: Object3D | null) => {
+      modelRef.current = object;
+      onObjectReady?.(readyId, object);
+    },
+    [onObjectReady],
+  );
+
   return (
     <>
       <ModelMesh
@@ -57,10 +65,7 @@ export function GltfModel({
         rotation={rotation}
         scale={scale}
         onSelect={onSelect}
-        onObjectReady={(readyId, object) => {
-          modelRef.current = object;
-          onObjectReady?.(readyId, object);
-        }}
+        onObjectReady={handleObjectReady}
         onHoverStart={onHoverStart}
         onHoverMove={onHoverMove}
         onHoverEnd={onHoverEnd}
@@ -83,4 +88,4 @@ export function GltfModel({
       ) : null}
     </>
   );
-}
+});
