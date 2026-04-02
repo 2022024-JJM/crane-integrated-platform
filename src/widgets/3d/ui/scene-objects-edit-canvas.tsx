@@ -271,20 +271,20 @@ export function SceneObjectsEditCanvas({
         className={cn(
           'absolute inset-0 flex items-center justify-center transition',
           draggingModelCatalogItem || isDraggingText
-            ? 'pointer-events-auto bg-slate-950/6 backdrop-blur-[1px]'
+            ? 'pointer-events-auto bg-foreground/5 backdrop-blur-[1px]'
             : 'pointer-events-none opacity-0',
         )}
         onDragOver={handleSceneDragOver}
         onDrop={handleSceneDrop}
       >
         {draggingModelCatalogItem || isDraggingText ? (
-          <div className="pointer-events-none rounded-2xl border border-amber-500/30 bg-slate-950/80 px-4 py-3 text-center shadow-lg">
-            <p className="text-sm font-semibold text-white">
+          <div className="pointer-events-none rounded-2xl border border-amber-500/30 bg-card/95 px-4 py-3 text-center shadow-lg">
+            <p className="text-sm font-semibold text-foreground">
               {isDraggingText
                 ? t('monitoring:editor.addText')
                 : draggingModelCatalogItem?.label}
             </p>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-muted-foreground">
               {t('monitoring:editor.dropHint')}
             </p>
           </div>

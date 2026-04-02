@@ -63,7 +63,7 @@ export function SceneModelPalette({
   const { t } = useTranslation();
 
   return (
-    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-white/8 bg-[#171717] py-0 text-white">
+    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-border bg-card py-0 text-card-foreground">
       <PaletteHeader
         onSave={onSave}
         onExport={onExport}
@@ -89,7 +89,7 @@ export function SceneModelPalette({
             onTextDragStart();
           }}
           onDragEnd={onTextDragEnd}
-          className="flex w-full cursor-grab items-center gap-2 rounded-md border border-white/8 bg-white/4 px-3 py-2 text-[12px] text-white/80 transition hover:bg-white/8 active:cursor-grabbing"
+          className="flex w-full cursor-grab items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-[12px] text-muted-foreground transition hover:bg-muted/80 active:cursor-grabbing"
         >
           <Type className="size-3.5" />
           {t('monitoring:editor.addText')}

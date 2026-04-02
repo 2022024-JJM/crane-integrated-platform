@@ -41,13 +41,13 @@ export function PaletteHeader({
       ? t('monitoring:editor.statusUnsaved')
       : t('monitoring:editor.statusSaved');
   const saveStatusClassName = isSaving
-    ? 'border-amber-500/25 bg-amber-500/10 text-amber-100'
+    ? 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-100'
     : isDirty
-      ? 'border-orange-500/25 bg-orange-500/10 text-orange-100'
-      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-100';
+      ? 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-100'
+      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100';
 
   return (
-    <CardHeader className="border-b border-white/10 px-2.5 py-2.5">
+    <CardHeader className="border-b border-border px-2.5 py-2.5">
       <div className="flex items-center justify-between gap-2">
         {!saveDisabled ? (
           <Badge
@@ -73,7 +73,7 @@ export function PaletteHeader({
             variant="outline"
             size="sm"
             disabled={saveDisabled || isSaving}
-            className="h-6 cursor-pointer rounded-sm border-white/8 bg-white/4 px-2 text-[11px] text-white hover:bg-white/10"
+            className="h-6 cursor-pointer rounded-sm border-border bg-muted px-2 text-[11px] text-foreground hover:bg-muted/80"
             onClick={onSave}
           >
             {isSaving ? (
@@ -88,7 +88,7 @@ export function PaletteHeader({
             variant="outline"
             size="sm"
             disabled={exportDisabled}
-            className="h-6 cursor-pointer rounded-sm border-white/8 bg-white/4 px-2 text-[11px] text-white hover:bg-white/10"
+            className="h-6 cursor-pointer rounded-sm border-border bg-muted px-2 text-[11px] text-foreground hover:bg-muted/80"
             onClick={onExport}
           >
             <Download className="size-3.5" />
@@ -103,7 +103,7 @@ export function PaletteHeader({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={t('monitoring:editor.keyboardShortcuts')}
-                    className="size-6 cursor-pointer rounded-sm text-white/50 hover:bg-white/10 hover:text-white"
+                    className="size-6 cursor-pointer rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                   />
                 }
               >
@@ -112,19 +112,19 @@ export function PaletteHeader({
               <TooltipContent side="bottom" align="end">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
-                    <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">
+                    <kbd className="rounded bg-muted px-1 font-mono text-[10px]">
                       Ctrl+Z
                     </kbd>
                     <span>{t('monitoring:history.undo')}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">
+                    <kbd className="rounded bg-muted px-1 font-mono text-[10px]">
                       Ctrl+Y
                     </kbd>
                     <span>{t('monitoring:history.redo')}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <kbd className="rounded bg-white/15 px-1 font-mono text-[10px]">
+                    <kbd className="rounded bg-muted px-1 font-mono text-[10px]">
                       Del
                     </kbd>
                     <span>{t('monitoring:editor.deleteSelected')}</span>

@@ -53,28 +53,28 @@ function InspectorSection({
   return (
     <details
       open={defaultOpen}
-      className="group rounded-lg border border-white/8 bg-black/18"
+      className="group rounded-lg border border-border bg-card"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2 text-[12px] font-medium text-white/84">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2 text-[12px] font-medium text-foreground">
         <div className="flex items-center gap-2">
-          <span className="text-white/55">{icon}</span>
+          <span className="text-muted-foreground">{icon}</span>
           <span>{title}</span>
         </div>
-        <ChevronDown className="size-3.5 text-white/40 transition group-open:rotate-180" />
+        <ChevronDown className="size-3.5 text-muted-foreground/60 transition group-open:rotate-180" />
       </summary>
-      <div className="border-t border-white/8 px-2.5 py-2.5">{children}</div>
+      <div className="border-t border-border px-2.5 py-2.5">{children}</div>
     </details>
   );
 }
 
 function TransformGroup({ title, children }: TransformGroupProps) {
   return (
-    <div className="rounded-md border border-white/8 bg-white/[0.035] px-2.5 py-2">
+    <div className="rounded-md border border-border bg-muted/50 px-2.5 py-2">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-[10px] font-semibold tracking-[0.14em] text-white/44 uppercase">
+        <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
           {title}
         </p>
-        <span className="h-px flex-1 bg-white/6" />
+        <span className="h-px flex-1 bg-border" />
       </div>
       {children}
     </div>
@@ -108,14 +108,14 @@ function ModelInspectorContent({
 }) {
   return (
     <>
-      <div className="rounded-lg border border-white/8 bg-black/22 px-2.5 py-2.5">
-        <p className="text-[10px] font-semibold tracking-[0.14em] text-white/38 uppercase">
+      <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2.5">
+        <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
           {t('monitoring:inspector.title')}
         </p>
-        <p className="mt-1 truncate text-[15px] font-semibold leading-none text-white">
+        <p className="mt-1 truncate text-[15px] font-semibold leading-none text-foreground">
           {selectedLabel || selectedModel.id}
         </p>
-        <p className="mt-1 truncate text-[10px] leading-none text-white/38">
+        <p className="mt-1 truncate text-[10px] leading-none text-muted-foreground">
           {humanizeModelPath(selectedModel.path)}
         </p>
       </div>
@@ -127,7 +127,7 @@ function ModelInspectorContent({
         <Input
           value={nameDraft}
           aria-label={t('monitoring:inspector.name')}
-          className="h-8 cursor-text rounded-sm border-white/8 bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30"
+          className="h-8 cursor-text rounded-sm border-border bg-muted px-2 text-[12px] text-foreground placeholder:text-muted-foreground"
           onChange={(event) => {
             const nextValue = event.target.value;
             setNameDraft(nextValue);
@@ -190,7 +190,7 @@ function ModelInspectorContent({
               onOpacityChange(Number(event.target.value));
             }}
           />
-          <span className="w-8 text-right text-[12px] tabular-nums text-white/62">
+          <span className="w-8 text-right text-[12px] tabular-nums text-muted-foreground">
             {selectedOpacity.toFixed(1)}
           </span>
         </div>
@@ -222,11 +222,11 @@ function TextInspectorContent({
 }) {
   return (
     <>
-      <div className="rounded-lg border border-white/8 bg-black/22 px-2.5 py-2.5">
-        <p className="text-[10px] font-semibold tracking-[0.14em] text-white/38 uppercase">
+      <div className="rounded-lg border border-border bg-muted/30 px-2.5 py-2.5">
+        <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
           {t('monitoring:editor.textObject')}
         </p>
-        <p className="mt-1 truncate text-[15px] font-semibold leading-none text-white">
+        <p className="mt-1 truncate text-[15px] font-semibold leading-none text-foreground">
           {selectedText.content || 'Text'}
         </p>
       </div>
@@ -238,7 +238,7 @@ function TextInspectorContent({
         <Input
           value={contentDraft}
           aria-label={t('monitoring:inspector.textContent')}
-          className="h-8 cursor-text rounded-sm border-white/8 bg-white/4 px-2 text-[12px] text-white placeholder:text-white/30"
+          className="h-8 cursor-text rounded-sm border-border bg-muted px-2 text-[12px] text-foreground placeholder:text-muted-foreground"
           onChange={(event) => {
             const nextValue = event.target.value;
             setContentDraft(nextValue);
@@ -261,12 +261,12 @@ function TextInspectorContent({
           <input
             type="color"
             value={selectedText.color}
-            className="h-8 w-10 cursor-pointer rounded-sm border border-white/8 bg-transparent"
+            className="h-8 w-10 cursor-pointer rounded-sm border border-border bg-transparent"
             onChange={(event) => {
               onTextColorChange(event.target.value);
             }}
           />
-          <span className="text-[12px] text-white/62">{selectedText.color}</span>
+          <span className="text-[12px] text-muted-foreground">{selectedText.color}</span>
         </div>
       </InspectorSection>
 
@@ -332,7 +332,7 @@ export function SceneObjectInspector({
   const hasSelection = selectedModel || selectedText;
 
   return (
-    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-white/8 bg-[#171717] py-0 text-white">
+    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-border bg-card py-0 text-card-foreground">
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
         {selectedModel ? (
           <ModelInspectorContent
@@ -358,7 +358,7 @@ export function SceneObjectInspector({
           />
         ) : null}
         {!hasSelection ? (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 bg-black/18 px-6 text-[12px] text-white/42">
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-6 text-[12px] text-muted-foreground">
             <p className="max-w-56 text-center">
               {t('monitoring:inspector.empty')}
             </p>

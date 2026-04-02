@@ -14,7 +14,7 @@ export function RotationController({
     <div className="flex flex-col gap-1.5">
       {(['x', 'y', 'z'] as const).map((axis) => (
         <div key={axis} className="flex items-center gap-1.5">
-          <span className="w-4 text-[10px] font-semibold text-white/46 uppercase">
+          <span className="w-4 text-[10px] font-semibold text-muted-foreground uppercase">
             {axis}
           </span>
           <InputNumber
@@ -22,7 +22,7 @@ export function RotationController({
             step={0.1}
             min={-360}
             max={360}
-            className="h-7 flex-1 rounded-sm border-white/8 bg-white/[0.045] text-[12px]"
+            className="h-7 flex-1 rounded-sm border-border bg-muted/50 text-[12px]"
             onChange={(v) => onChange(axis, Number(v))}
           />
         </div>
