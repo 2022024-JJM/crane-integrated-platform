@@ -1,7 +1,7 @@
 import type { AlarmSeverity, CraneStatus } from '@/shared/types/status';
 import { severityBadgeClassName, craneStatusBadgeClassName } from '@/shared/lib/status-colors';
 import { cn } from '@/shared/lib/utils';
-import { Badge } from './badge';
+import { Badge } from '@/shared/ui/atoms/badge';
 
 export function SeverityBadge({
   severity,
