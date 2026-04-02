@@ -20,7 +20,7 @@ export function RotationController({
           <InputNumber
             value={vec ? numRound(vec[AXIS_INDEX[axis]]) : 0}
             step={0.1}
-            min={0}
+            min={-360}
             max={360}
             className="h-7 flex-1 rounded-sm border-white/8 bg-white/[0.045] text-[12px]"
             onChange={(v) => onChange(axis, Number(v))}
