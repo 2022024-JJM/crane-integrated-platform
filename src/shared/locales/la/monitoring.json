@@ -4,13 +4,13 @@
   "inspector": {
     "title": "Inspector",
     "name": "Nomen",
+    "opacity": "Opacitas",
     "empty": "Objectum in scaena preme ut proprietates eius videas.",
     "position": "Positio",
     "rotation": "Rotatio",
-    "scale": "Scala"
-  },
-  "focus": {
-    "back": "Redi"
+    "scale": "Scala",
+    "textContent": "Argumentum",
+    "textColor": "Color"
   },
   "transform": {
     "title": "Modus transformationis",
@@ -19,6 +19,16 @@
       "rotate": "Rotatio",
       "scale": "Scala"
     }
+  },
+  "history": {
+    "undo": "Revoca",
+    "redo": "Restitue"
+  },
+  "focus": {
+    "back": "Redi"
+  },
+  "hover": {
+    "model": "Exemplar"
   },
   "palette": {
     "title": "Tabula Modellorum",
@@ -32,6 +42,23 @@
   "editor": {
     "loading": "Editor scaenae oneratur...",
     "exportJson": "JSON Exporta",
-    "dropHint": "In scaenam depone ut exemplar ponatur"
+    "dropHint": "In scaenam depone ut exemplar ponatur",
+    "statusSaving": "Servatur",
+    "statusUnsaved": "Non servatum",
+    "statusSaved": "Servatum",
+    "placedObjects": "Objecta Posita",
+    "noPlacedObjects": "Nulla objecta adhuc posita sunt.",
+    "map": "Tabula",
+    "deleteMap": "Tabulam dele",
+    "deleteObject": "Objectum dele",
+    "nameEmptyError": "Nomen vacuum esse non potest.",
+    "keyboardShortcuts": "Compendia clavium",
+    "deleteSelected": "Selectum dele",
+    "noSelection": "Nihil selectum",
+    "snapActive": "Snap 1.0",
+    "hideLabels": "Titulos absconde",
+    "showLabels": "Titulos ostende",
+    "addText": "Textum adde",
+    "textObject": "Textus"
   }
 }
