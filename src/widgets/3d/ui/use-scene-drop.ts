@@ -13,10 +13,6 @@ import type { Vector3Tuple } from '@/shared/types/math';
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
 const SCENE_TEXT_DRAG_TYPE = 'application/x-scene-text';
 
-function snapValue(value: number, step: number) {
-  return numRound(Math.round(value / step) * step);
-}
-
 function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
   return (
     event.dataTransfer.getData(SCENE_MODEL_DRAG_TYPE) ||
@@ -90,9 +86,9 @@ export function useSceneDrop({
       }
 
       return [
-        snapValue(hitPoint.x, 1),
+        numRound(hitPoint.x),
         numRound(hitPoint.y),
-        snapValue(hitPoint.z, 1),
+        numRound(hitPoint.z),
       ];
     },
     [groundPlane],

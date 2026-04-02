@@ -208,7 +208,7 @@ export function SceneObjectsEditCanvas({
             ref={transformControlsRef}
             object={transformTarget}
             mode={transformMode}
-            translationSnap={transformMode === 'translate' ? 1 : undefined}
+
             space="local"
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}

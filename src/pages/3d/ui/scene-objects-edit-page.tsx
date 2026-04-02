@@ -258,14 +258,6 @@ export function SceneObjectsEditPage({
                   <span className="max-w-36 truncate text-xs font-medium">
                     {selectedModelLabel || t('monitoring:editor.noSelection')}
                   </span>
-                  {transformMode === 'translate' ? (
-                    <>
-                      <span className="bg-border h-4 w-px" />
-                      <span className="text-muted-foreground text-[11px] font-medium">
-                        {t('monitoring:editor.snapActive')}
-                      </span>
-                    </>
-                  ) : null}
                 </div>
               }
             />
