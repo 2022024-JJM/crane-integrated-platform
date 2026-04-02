@@ -1,11 +1,6 @@
 import { OrbitControls, TransformControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type RefObject,
-} from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Object3D, NoToneMapping } from 'three';
 import {
@@ -72,7 +67,9 @@ export function SceneObjectsEditCanvas({
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
-  const selectModel = useSceneObjectSelectionStore((state) => state.selectModel);
+  const selectModel = useSceneObjectSelectionStore(
+    (state) => state.selectModel,
+  );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
@@ -178,7 +175,7 @@ export function SceneObjectsEditCanvas({
     <div
       ref={rootRef}
       tabIndex={0}
-      className="relative h-full min-h-0 overflow-hidden rounded-2xl border border-border/70 bg-background"
+      className="border-border/70 relative h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
       }}
@@ -201,14 +198,18 @@ export function SceneObjectsEditCanvas({
       >
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
-        <OrbitControls ref={orbitControlsRef} enableDamping={false} target={cameraTarget} onChange={handleOrbitChange} />
+        <OrbitControls
+          ref={orbitControlsRef}
+          enableDamping={false}
+          target={cameraTarget}
+          onChange={handleOrbitChange}
+        />
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
             ref={transformControlsRef}
             object={transformTarget}
             mode={transformMode}
-
             space="local"
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}
@@ -271,20 +272,20 @@ export function SceneObjectsEditCanvas({
         className={cn(
           'absolute inset-0 flex items-center justify-center transition',
           draggingModelCatalogItem || isDraggingText
-            ? 'pointer-events-auto bg-foreground/5 backdrop-blur-[1px]'
+            ? 'bg-foreground/5 pointer-events-auto backdrop-blur-[1px]'
             : 'pointer-events-none opacity-0',
         )}
         onDragOver={handleSceneDragOver}
         onDrop={handleSceneDrop}
       >
         {draggingModelCatalogItem || isDraggingText ? (
-          <div className="pointer-events-none rounded-2xl border border-amber-500/30 bg-card/95 px-4 py-3 text-center shadow-lg">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="bg-card/95 pointer-events-none rounded-2xl border border-amber-500/30 px-4 py-3 text-center shadow-lg">
+            <p className="text-foreground text-sm font-semibold">
               {isDraggingText
                 ? t('monitoring:editor.addText')
                 : draggingModelCatalogItem?.label}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {t('monitoring:editor.dropHint')}
             </p>
           </div>

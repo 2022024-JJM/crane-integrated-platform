@@ -48,7 +48,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       <ResizablePanel defaultSize={75} minSize={50}>
         <ResizablePanelGroup orientation="vertical" className="min-h-0">
           <ResizablePanel defaultSize={60}>
-            <div className="relative h-full bg-[rgba(43,43,43)]">
+            <div className="relative h-full">
               {is3dViewLoading ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
                   <Spinner

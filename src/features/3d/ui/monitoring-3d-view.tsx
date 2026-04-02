@@ -80,7 +80,10 @@ export function Monitoring3dView({
     ) : null;
 
   return (
-    <div ref={rootRef} className="relative h-full min-h-0 w-full">
+    <div
+      ref={rootRef}
+      className="relative h-full min-h-0 w-full bg-(--canvas-background)"
+    >
       <ThreeSceneViewer
         cameraPreset={{
           defaultPosition: cameraPosition,
