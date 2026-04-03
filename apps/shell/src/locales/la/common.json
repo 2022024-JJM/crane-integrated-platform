@@ -1,0 +1,144 @@
+{
+  "language": "Lingua",
+  "comingSoon": "Mox aderit",
+  "header": {
+    "toggleSidebar": "Barra lateralis commuta",
+    "toggleTheme": "Thema commuta",
+    "pageSettings": "Optiones Paginae",
+    "login": "Initium",
+    "closeSettings": "Optiones claude",
+    "regionLanguageSection": "Regio et Lingua",
+    "languageSection": "Lingua",
+    "themeSection": "Modus Thematis",
+    "displaySection": "Ostensio Capitis",
+    "koreanLabel": "Corea (Coreane)",
+    "englishLabel": "Globale (Anglice)",
+    "latinLabel": "Latina (Latine)",
+    "lightMode": "Clarus",
+    "darkMode": "Obscurus",
+    "online": "Online",
+    "showDate": "Dies",
+    "showTime": "Tempus",
+    "showHealthcheck": "Sanitas",
+    "showWeather": "Tempestas",
+    "weatherLoading": "Tempestas oneratur",
+    "weatherUnavailable": "Tempestas deest",
+    "siteWeather": "Geoje",
+    "brandPrimary": "CRANE",
+    "brandAccent": "OPS"
+  },
+  "toast": {
+    "languageChanged": "Lingua in {{language}} mutata est.",
+    "themeChanged": "Thema ad modum {{theme}} mutatum est."
+  },
+  "nav": {
+    "overview": "Conspectus",
+    "dashboard": "Tabula",
+    "regionOverview": "Conspectus Regionum",
+    "outdoorWork": "Opera Foris",
+    "indoorWork": "Opera Intus",
+    "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
+    "threeViewerEdit": "Editor Visoris 3D",
+    "craneStatus": "Status Gruium",
+    "workHistory": "Historia Operum"
+  },
+  "craneStatus": {
+    "title": "Status Gruium Temporis Veri",
+    "latest": "Novissimum",
+    "loadingTitle": "Monitoratio replay oneratur...",
+    "loadingDescription": "Novissimum exemplar regionis paratur.",
+    "errorTitle": "Monitoratio replay onerari non potuit.",
+    "emptyTitle": "Nulla data replay pro regione hodierna inventa sunt.",
+    "emptyDescription": "Aliam regionem tenta aut novum exemplar exspecta.",
+    "columns": {
+      "crane": "Grus",
+      "tagName": "Tag / Nomen",
+      "value": "Valor",
+      "unit": "Unitas",
+      "category": "Categoria",
+      "dataType": "Genus Datorum",
+      "snapshotAt": "Tempus Exemplaris",
+      "status": "Status"
+    },
+    "statusBadges": {
+      "alarm": "Monitum",
+      "stale": "Vetustum",
+      "changed": "Mutatum",
+      "normal": "Normale"
+    },
+    "viewing": "Inspectio",
+    "search": {
+      "startTime": "Initium Temporis",
+      "endTime": "Finis Temporis",
+      "submit": "Quaere",
+      "samplePreset": "Tempus Exemplum",
+      "liveRange": "Spatium Vivum",
+      "resetRecent": "Spatium Vivum",
+      "openStartPicker": "Aperi initium temporis",
+      "openEndPicker": "Aperi finem temporis",
+      "autoRefresh": "Renovatio automatica",
+      "autoRefreshOn": "Activa",
+      "autoRefreshOff": "Inactiva",
+      "validation": {
+        "missing": "Tempus initii et finis requiruntur.",
+        "invalid": "Range temporis validum inserere debes.",
+        "order": "Tempus initii ante tempus finis esse debet.",
+        "tooLarge": "Range quaestionis intra XXIV horas esse debet."
+      }
+    },
+    "name": "Grus",
+    "status": "Status",
+    "load": "Onus (t)",
+    "windSpeed": "Ventus (m/s)",
+    "boomAngle": "Angulus Brachii (°)",
+    "hoistHeight": "Altitudo Trochleae (m)",
+    "slewAngle": "Angulus Rotationis (°)",
+    "operating": "Operans",
+    "idle": "Quiescens",
+    "maintenance": "Inspectio",
+    "warning": "Monitum",
+    "stopped": "Stat"
+  },
+  "alarms": {
+    "title": "Status Monitorum",
+    "history": "Historia Monitorum",
+    "alarmStatus": "Status Alarmae",
+    "filterAll": "Omnia",
+    "critical": "Criticum",
+    "warning": "Monitum",
+    "info": "Notitia",
+    "windWarningExceeded": "Monitum venti: {{value}}m/s superatum",
+    "loadWarningReached": "Monitum oneris: {{value}}% oneris maximi attingit",
+    "maintenanceDue": "Inspectio ordinaria D-{{days}}",
+    "idleModeCompleted": "Mutatio ad modum quietis perfecta",
+    "emergencyStopTriggered": "Statio subita: instrumentum salutis actum",
+    "workAreaChanged": "Area operis mutata est",
+    "windStopExceeded": "Operatio propter ventum intermissa: {{value}}m/s",
+    "workResumed": "Operatio resumpta est"
+  },
+  "regions": {
+    "dock1": {
+      "title": "Doca I",
+      "subtitle": "Grues turritae et gigantes VIII"
+    },
+    "dock2": {
+      "title": "Doca II",
+      "subtitle": "Grues turritae et gigantes VI"
+    },
+    "dockin": {
+      "title": "Opera Intus",
+      "subtitle": "Grues supremae IV"
+    }
+  },
+  "viewer3d": {
+    "loading": "Visor 3D oneratur",
+    "zoomIn": "Amplifica",
+    "zoomOut": "Minue",
+    "resetView": "Restitue visum",
+    "topView": "Visus desuper",
+    "fullscreen": "Plenus modus",
+    "exitFullscreen": "Restitue fenestram",
+    "badge": "Visor 3D",
+    "resizePreview": "Muta magnitudinem"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@crane/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api/index.ts",
+    "./ws": "./src/ws/index.ts",
+    "./config/i18n": "./src/config/i18n.ts",
+    "./config/network": "./src/config/network.ts",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./lib/create-id": "./src/lib/create-id.ts",
+    "./lib/status-colors": "./src/lib/status-colors.ts",
+    "./lib/theme-context": "./src/lib/theme-context.tsx",
+    "./lib/sidebar-context": "./src/lib/sidebar-context.tsx",
+    "./lib/header-display-settings-context": "./src/lib/header-display-settings-context.tsx",
+    "./lib/navigation-progress-context": "./src/lib/navigation-progress-context.tsx",
+    "./lib/navigation-progress-state": "./src/lib/navigation-progress-state.ts",
+    "./lib/use-navigation-progress": "./src/lib/use-navigation-progress.ts",
+    "./lib/use-progress-navigate": "./src/lib/use-progress-navigate.ts",
+    "./lib/use-date-time": "./src/lib/use-date-time.ts",
+    "./providers": "./src/providers/index.ts",
+    "./types/math": "./src/types/math.ts",
+    "./types/navigation": "./src/types/navigation.ts",
+    "./types/status": "./src/types/status.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "i18next": "^25.6.2",
+    "react-i18next": "^16.3.5",
+    "react-router-dom": "^7.13.1",
+    "@tanstack/react-query": "^5.95.2",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.5.0",
+    "zustand": "^5.0.11",
+    "sonner": "^2.0.3"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
+  }
+}

@@ -1,13 +1,12 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
+    { "path": "packages/core" },
+    { "path": "packages/ui" },
+    { "path": "packages/domain" },
+    { "path": "packages/features" },
+    { "path": "packages/widgets" },
+    { "path": "apps/shell" },
+    { "path": "apps/hanwha-ocean" }
+  ]
 }

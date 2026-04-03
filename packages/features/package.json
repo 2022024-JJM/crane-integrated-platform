@@ -1,0 +1,30 @@
+{
+  "name": "@crane/features",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./alarm": "./src/alarm/index.ts",
+    "./monitoring": "./src/monitoring/index.ts",
+    "./weather": "./src/weather/index.ts",
+    "./3d": "./src/3d/index.ts",
+    "./page-settings": "./src/page-settings/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@crane/core": "workspace:*",
+    "@crane/ui": "workspace:*",
+    "@crane/domain": "workspace:*",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/drei": "^10.7.7",
+    "three": "^0.183.2",
+    "zustand": "^5.0.11",
+    "lucide-react": "^0.575.0",
+    "@tanstack/react-query": "^5.95.2"
+  }
+}

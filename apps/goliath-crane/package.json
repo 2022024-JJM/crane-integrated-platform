@@ -1,0 +1,18 @@
+{
+  "name": "@crane/goliath-crane",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {},
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@crane/core": "workspace:*",
+    "@crane/ui": "workspace:*",
+    "@crane/domain": "workspace:*",
+    "@crane/features": "workspace:*",
+    "@crane/widgets": "workspace:*"
+  }
+}
