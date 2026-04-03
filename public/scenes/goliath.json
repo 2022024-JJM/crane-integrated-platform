@@ -1,0 +1,562 @@
+{
+  "map": {
+    "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
+    "path": "/maps/okpo.glb"
+  },
+  "models": [
+    {
+      "id": "807e8233-e52d-4f2c-abd9-53738fef427b",
+      "equipName": "GC-04",
+      "path": "/models/gc-04/gc_04_body.glb",
+      "opacity": 1,
+      "position": [
+        3.283,
+        0.662,
+        -33.051
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "2dbf0148-f451-42ac-84ed-885d12f3c1bf",
+      "equipName": "",
+      "path": "/models/gc-04/gc_04_trolly.glb",
+      "opacity": 1,
+      "position": [
+        3.249,
+        8.65,
+        -36.406
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "976001d4-2dc1-4328-aff9-974b4bc616b8",
+      "equipName": "",
+      "path": "/models/gc-04/gc_04_hook_rope.glb",
+      "opacity": 1,
+      "position": [
+        3.251,
+        6.609,
+        -36.406
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "de798e5f-8245-47ee-b89c-dc56ae766fa3",
+      "equipName": "",
+      "path": "/models/gc-04/gc_04_hook.glb",
+      "opacity": 1,
+      "position": [
+        3.303,
+        5.356,
+        -36.401
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "e47c2efd-3421-4935-a946-8f26bbf32a4b",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        5.851,
+        1.244,
+        -26.005
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "3d234382-d8d6-41ed-87ad-e6eed830d7b4",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        7.078,
+        1.244,
+        -26.012
+      ],
+      "rotation": [
+        -180,
+        0,
+        90
+      ],
+      "scale": [
+        0.788,
+        1.18,
+        5.906
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "fc3f33a3-a99b-478b-9f97-fcfe64f48372",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        5.73,
+        1.157,
+        -26.221
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "df30f5b2-4d9e-49ee-aa67-1630ffc5e2af",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        5.734,
+        1.157,
+        -27.808
+      ],
+      "rotation": [
+        180,
+        90,
+        -90
+      ],
+      "scale": [
+        1.029,
+        1.541,
+        7.707
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "dbd6bf48-3f9f-4218-8d78-0b5ac9958d40",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        5.738,
+        1.157,
+        -24.308
+      ],
+      "rotation": [
+        0,
+        90,
+        -90
+      ],
+      "scale": [
+        0.942,
+        1.414,
+        7.064
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "ba89ed0f-7ddf-4c67-b02e-437536824e69",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        5.756,
+        1.157,
+        -25.756
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "f5255ab9-f2b1-4d3c-b5de-a55391a29981",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        0.881,
+        1.157,
+        -26.241
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "f79c083f-64d6-422b-8c8e-338a4404f5bd",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        0.654,
+        1.244,
+        -25.995
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "8870e7f9-1b18-4b6e-b207-0dde885f1e38",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        0.898,
+        1.157,
+        -25.738
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "98604f23-3616-4c46-910f-06d6a5ba043a",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        0.895,
+        1.157,
+        -27.801
+      ],
+      "rotation": [
+        90,
+        90,
+        0
+      ],
+      "scale": [
+        1.029,
+        1.541,
+        7.707
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "cb89ef46-3956-418e-86ec-1157fa29b237",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        0.902,
+        1.157,
+        -24.291
+      ],
+      "rotation": [
+        90,
+        90,
+        180
+      ],
+      "scale": [
+        0.942,
+        1.414,
+        7.064
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "11be1a12-fa37-4da1-aaa2-b3ac4a166b7b",
+      "equipName": "",
+      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
+      "opacity": 0.2,
+      "position": [
+        -0.576,
+        1.244,
+        -25.995
+      ],
+      "rotation": [
+        0,
+        0,
+        -90
+      ],
+      "scale": [
+        0.788,
+        1.18,
+        5.906
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "d2a8c25a-06ae-4e7a-86de-f0d60f474a66",
+      "equipName": "",
+      "path": "/models/gc-04/ouster_lidar_fov_360x90.glb",
+      "opacity": 0.1,
+      "position": [
+        4.345,
+        7.346,
+        -39.439
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "69ecf231-84ae-4986-a881-1581adf0260b",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        4.42,
+        7.425,
+        -39.515
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "0a78e24f-9cc6-488c-98bd-7b418014cf61",
+      "equipName": "",
+      "path": "/models/gc-04/ouster_lidar_fov_360x90.glb",
+      "opacity": 0.1,
+      "position": [
+        2.006,
+        7.346,
+        -39.593
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3,
+        3,
+        3
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "cec68b78-daa9-4789-a0be-d7eaa6602f81",
+      "equipName": "",
+      "path": "/models/gc-04/point.glb",
+      "opacity": 1,
+      "position": [
+        2.183,
+        7.425,
+        -39.522
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "valueMapList": []
+    }
+  ],
+  "texts": [
+    {
+      "id": "a44f0830-6678-4692-b9d8-cbb973ad37da",
+      "content": "100m",
+      "color": "#ffffff",
+      "position": [
+        -33,
+        1,
+        -24
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "12bdf673-c654-455b-8a46-b195f41b485e",
+      "content": "900m",
+      "color": "#ffffff",
+      "position": [
+        35,
+        1,
+        -24.8
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "42984576-fcce-41ca-925b-219282568bea",
+      "content": "500m",
+      "color": "#ffffff",
+      "position": [
+        4,
+        1,
+        -24.4
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "296831ed-f950-40fb-b0f4-e5f6684bfbd9",
+      "content": "300m",
+      "color": "#ffffff",
+      "position": [
+        -15,
+        1,
+        -24.2
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "4bb5100c-de18-44ac-890f-db02ea01ab3f",
+      "content": "700m",
+      "color": "#ffffff",
+      "position": [
+        21,
+        1,
+        -24.6
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      16.449280274451727,
+      13.230922092946516,
+      -35.4750840425737
+    ],
+    "target": [
+      2.676361606403982,
+      3.8317416257519543,
+      -33.290992776238376
+    ]
+  }
+}

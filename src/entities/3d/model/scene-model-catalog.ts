@@ -297,4 +297,84 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       paddingScale: 1.24,
     },
   },
+  {
+    id: 'gc-04-body',
+    label: 'GC-04 Body',
+    path: '/models/gc-04/gc_04_body.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'gc-04-hook',
+    label: 'GC-04 Hook',
+    path: '/models/gc-04/gc_04_hook.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'gc-04-hook-rope',
+    label: 'GC-04 Hook Rope',
+    path: '/models/gc-04/gc_04_hook_rope.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'gc-04-trolly',
+    label: 'GC-04 Trolly',
+    path: '/models/gc-04/gc_04_trolly.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'gc-04-camera',
+    label: 'GC-04 Camera',
+    path: '/models/gc-04/camera.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'soslab_lidar_fov_120x35',
+    label: 'SOSLAB Lidar Fov',
+    path: '/models/gc-04/soslab_lidar_fov_120x35.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'ouster_lidar_fov_360x90',
+    label: 'OUSTER Lidar Fov',
+    path: '/models/gc-04/ouster_lidar_fov_360x90.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
+  {
+    id: 'gc-04-point',
+    label: 'GC-04 Point',
+    path: '/models/gc-04/point.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.08, 0.72, 1.12],
+      paddingScale: 1.24,
+    },
+  },
 ];
