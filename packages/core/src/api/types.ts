@@ -8,12 +8,7 @@ export type QueryValue =
 
 export type RestRequestQuery = Record<string, QueryValue>;
 export type RestClientHeaders = HeadersInit;
-export type RestClientHttpMethod =
-  | 'GET'
-  | 'POST'
-  | 'PUT'
-  | 'PATCH'
-  | 'DELETE';
+export type RestClientHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface RestRequestOptions {
   headers?: RestClientHeaders;

@@ -85,11 +85,7 @@ export function useSceneDrop({
         return null;
       }
 
-      return [
-        numRound(hitPoint.x),
-        numRound(hitPoint.y),
-        numRound(hitPoint.z),
-      ];
+      return [numRound(hitPoint.x), numRound(hitPoint.y), numRound(hitPoint.z)];
     },
     [groundPlane],
   );

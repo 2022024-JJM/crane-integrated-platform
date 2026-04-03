@@ -47,7 +47,10 @@ let disposeTimer: ReturnType<typeof setTimeout> | null = null;
 let isProcessing = false;
 
 const loader = new GLTFLoader();
-const gltfCache = new Map<string, ReturnType<typeof SkeletonUtils.clone>['parent']>();
+const gltfCache = new Map<
+  string,
+  ReturnType<typeof SkeletonUtils.clone>['parent']
+>();
 const blobUrls = new Set<string>();
 const pendingByPath = new Map<string, QueueEntry>();
 const queue: QueueEntry[] = [];
@@ -196,7 +199,11 @@ function frameCameraToModel(
 
   const target = new Vector3(0, 0, 0);
   const viewDirection = new Vector3(
-    ...((preset?.cameraDirection ?? [1.16, 0.78, 1.16]) as [number, number, number]),
+    ...((preset?.cameraDirection ?? [1.16, 0.78, 1.16]) as [
+      number,
+      number,
+      number,
+    ]),
   ).normalize();
   const radius = size.length() * 0.5;
   const cameraDistance = Math.max(radius * 2.25, 3.5);
@@ -219,7 +226,10 @@ function frameCameraToModel(
     new Vector3(fittedBox.max.x, fittedBox.max.y, fittedBox.max.z),
   ];
 
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
   for (const corner of corners) {
     const p = corner.clone().applyMatrix4(cam.matrixWorldInverse);
     minX = Math.min(minX, p.x);
@@ -232,7 +242,9 @@ function frameCameraToModel(
   const centerY = (minY + maxY) / 2;
   const right = new Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
   const up = new Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
-  group.position.sub(right.multiplyScalar(centerX)).sub(up.multiplyScalar(centerY));
+  group.position
+    .sub(right.multiplyScalar(centerX))
+    .sub(up.multiplyScalar(centerY));
   group.updateMatrixWorld(true);
 
   const projW = maxX - minX;
@@ -307,25 +319,28 @@ async function executeRender(entry: QueueEntry): Promise<void> {
     camera.bottom = -request.height / 2;
     camera.updateProjectionMatrix();
 
-    frameCameraToModel(camera, group, request.width, request.height, request.preset);
+    frameCameraToModel(
+      camera,
+      group,
+      request.width,
+      request.height,
+      request.preset,
+    );
     renderer.render(scene, camera);
 
     scene.remove(group);
     disposeClone(clone);
 
     const blobUrl = await new Promise<string>((res, rej) => {
-      renderer!.domElement.toBlob(
-        (blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            blobUrls.add(url);
-            res(url);
-          } else {
-            rej(new Error('toBlob returned null'));
-          }
-        },
-        'image/png',
-      );
+      renderer!.domElement.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          blobUrls.add(url);
+          res(url);
+        } else {
+          rej(new Error('toBlob returned null'));
+        }
+      }, 'image/png');
     });
 
     resolve(blobUrl);
@@ -371,7 +386,10 @@ function scheduleNext(): void {
   }
 }
 
-export function enqueueRender(request: RenderRequest): { promise: Promise<string>; abort: AbortHandle } {
+export function enqueueRender(request: RenderRequest): {
+  promise: Promise<string>;
+  abort: AbortHandle;
+} {
   // Return cached blob URL if already rendered
   // (cache is managed externally by the hook to avoid path+preset key complexity here)
 
@@ -382,10 +400,20 @@ export function enqueueRender(request: RenderRequest): { promise: Promise<string
       promise: new Promise<string>((resolve, reject) => {
         const origResolve = existing.resolve;
         const origReject = existing.reject;
-        existing.resolve = (url) => { origResolve(url); resolve(url); };
-        existing.reject = (err) => { origReject(err); reject(err); };
+        existing.resolve = (url) => {
+          origResolve(url);
+          resolve(url);
+        };
+        existing.reject = (err) => {
+          origReject(err);
+          reject(err);
+        };
       }),
-      abort: { abort: () => { existing.aborted = true; } },
+      abort: {
+        abort: () => {
+          existing.aborted = true;
+        },
+      },
     };
   }
 
@@ -404,6 +432,10 @@ export function enqueueRender(request: RenderRequest): { promise: Promise<string
 
   return {
     promise,
-    abort: { abort: () => { entry.aborted = true; } },
+    abort: {
+      abort: () => {
+        entry.aborted = true;
+      },
+    },
   };
 }

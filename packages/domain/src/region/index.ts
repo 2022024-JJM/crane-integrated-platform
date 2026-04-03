@@ -1,5 +1,9 @@
 export type { Region, StatusLevel, StatusSummary } from './model/types';
-export { regions, getRegionById } from './model/mock-data';
+export {
+  regions,
+  getRegionById,
+  getRegionsBySiteType,
+} from './model/mock-data';
 export {
   getRegionTitleKey,
   getRegionSubtitleKey,

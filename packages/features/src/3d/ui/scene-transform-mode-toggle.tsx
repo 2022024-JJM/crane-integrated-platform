@@ -2,10 +2,7 @@ import { Move3d, RotateCw, Scale3d } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@crane/ui/molecules/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
   Tooltip,
   TooltipContent,

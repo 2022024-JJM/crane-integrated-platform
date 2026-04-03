@@ -4,13 +4,15 @@ import { AppNavLink } from '@crane/ui/atoms/app-link';
 import { Separator } from '@crane/ui/atoms/separator';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
+import { useSiteType } from '@crane/core/lib/site-type-context';
 import { getNavigationConfig } from '../config/navigation';
 
 export function AppSidebar() {
   const { i18n } = useTranslation();
   const { isOpen } = useSidebar();
+  const { siteType } = useSiteType();
   const { pathname } = useLocation();
-  const navGroups = getNavigationConfig(pathname);
+  const navGroups = getNavigationConfig(pathname, siteType);
   void i18n.language;
 
   return (
@@ -30,7 +32,9 @@ export function AppSidebar() {
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
                   <li key={item.path}>
-                    {item.separatorBefore ? <Separator className="my-2" /> : null}
+                    {item.separatorBefore ? (
+                      <Separator className="my-2" />
+                    ) : null}
                     <AppNavLink
                       to={item.path}
                       end={item.path === '/'}

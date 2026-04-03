@@ -37,7 +37,9 @@ function getSupportedLanguage(
 function getInitialLanguage(): SupportedLanguage {
   if (typeof window === 'undefined') return 'ko';
 
-  const stored = getSupportedLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY));
+  const stored = getSupportedLanguage(
+    localStorage.getItem(LANGUAGE_STORAGE_KEY),
+  );
   if (stored) {
     return stored;
   }

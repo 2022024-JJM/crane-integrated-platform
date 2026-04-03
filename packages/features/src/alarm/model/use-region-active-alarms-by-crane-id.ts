@@ -17,7 +17,9 @@ function shallowEqualRecord(
   return true;
 }
 
-export function useRegionActiveAlarmsByCraneId(regionId: string): Record<string, AlarmSeverity> {
+export function useRegionActiveAlarmsByCraneId(
+  regionId: string,
+): Record<string, AlarmSeverity> {
   const activeAlarms = useRealtimeAlarmStore((s) => s.activeAlarms);
   const prevRef = useRef<Record<string, AlarmSeverity>>({});
 
@@ -32,7 +34,8 @@ export function useRegionActiveAlarmsByCraneId(regionId: string): Record<string,
       const current = result[alarm.craneId];
       const isHigher =
         !current ||
-        SEVERITY_ORDER.indexOf(alarm.severity) < SEVERITY_ORDER.indexOf(current);
+        SEVERITY_ORDER.indexOf(alarm.severity) <
+          SEVERITY_ORDER.indexOf(current);
 
       if (isHigher) {
         result[alarm.craneId] = alarm.severity;

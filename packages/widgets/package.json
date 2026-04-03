@@ -9,7 +9,9 @@
     "./alarm": "./src/alarm/index.ts",
     "./crane": "./src/crane/index.ts",
     "./3d": "./src/3d/index.ts",
-    "./layout": "./src/layout/index.ts"
+    "./layout": "./src/layout/index.ts",
+    "./goliath-crane": "./src/goliath-crane/index.ts",
+    "./scene-editor": "./src/scene-editor/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

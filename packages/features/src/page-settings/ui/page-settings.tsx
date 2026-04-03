@@ -8,10 +8,7 @@ import { useTheme } from '@crane/core/lib/theme-context';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Switch } from '@crane/ui/atoms/switch';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@crane/ui/molecules/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 type ThemeOption = 'light' | 'dark';
 

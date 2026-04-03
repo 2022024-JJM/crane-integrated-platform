@@ -13,7 +13,10 @@ export function RegionMap() {
   const { t } = useTranslation();
   const navigate = useProgressNavigate();
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
-  const mapZones: ResolvedMapZone[] = useMemo(() => resolveMapZones(regions), []);
+  const mapZones: ResolvedMapZone[] = useMemo(
+    () => resolveMapZones(regions),
+    [],
+  );
   const handleZoneNavigate = (region: Region) => {
     navigate(region.navigateTo);
   };

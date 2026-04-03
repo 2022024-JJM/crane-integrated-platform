@@ -1,0 +1,89 @@
+{
+  "pageTitle": "Goliath Crane Monitoring",
+  "selectCrane": "Select a crane to monitor",
+  "notFound": "Crane not found",
+  "back": "Back to list",
+  "status": {
+    "operating": "Operating",
+    "idle": "Idle",
+    "maintenance": "Maintenance",
+    "warning": "Warning",
+    "stopped": "Stopped"
+  },
+  "header": {
+    "emergencyStop": "Emergency Stop",
+    "maintenanceMode": "Maintenance Mode",
+    "craneInfo": "Crane Live Status",
+    "lastHeartbeat": "Last heartbeat",
+    "justNow": "just now",
+    "secondsAgo": "s ago"
+  },
+  "diagram": {
+    "title": "Crane Real-time Diagram"
+  },
+  "viewer3d": {
+    "title": "3D Model Viewer"
+  },
+  "metrics": {
+    "load": "Load",
+    "windSpeed": "Wind Speed",
+    "mainHoistHeight": "Main Hoist",
+    "auxHoistHeight": "Aux Hoist",
+    "trolleyPosition": "Trolley Pos",
+    "slewAngle": "Slew Angle",
+    "operatingHours": "Operating Hours",
+    "cycleCount": "Cycle Count"
+  },
+  "charts": {
+    "title": "Sensor Data Trends",
+    "loadSeries": "Load (ton)",
+    "windSeries": "Wind (m/s)",
+    "heightSeries": "Height (m)"
+  },
+  "safety": {
+    "title": "Safety Status",
+    "safetyParameters": "Safety Parameters",
+    "protectionStatus": "Protection Systems",
+    "antiCollision": "Anti-Collision",
+    "overloadProtection": "Overload Protection",
+    "mainLoad": "Main Load",
+    "auxLoad": "Aux Load",
+    "windSpeed": "Wind Speed",
+    "hoistHeight": "Hoist Height"
+  },
+  "equipment": {
+    "title": "Equipment Status",
+    "hoistMotor": "Hoist Motor",
+    "trolleyMotor": "Trolley Motor",
+    "travelMotor": "Travel Motor",
+    "wireRope": "Wire Rope",
+    "brake": "Brake",
+    "brakeStatus": {
+      "normal": "Normal",
+      "warning": "Check Required",
+      "fault": "Fault"
+    }
+  },
+  "dashboard": {
+    "liveStatus": "Live Status"
+  },
+  "operationLog": {
+    "title": "Operation Log"
+  },
+  "timeRange": {
+    "1h": "1H",
+    "6h": "6H",
+    "12h": "12H",
+    "24h": "24H"
+  },
+  "log": {
+    "hoistUp": "Hoist Up",
+    "hoistDown": "Hoist Down",
+    "trolleyMove": "Trolley Move",
+    "loadPickup": "Load Pickup",
+    "loadRelease": "Load Release",
+    "slewRotate": "Slew Rotation",
+    "emergencyStopTest": "E-Stop Test",
+    "systemCheck": "System Check"
+  }
+}

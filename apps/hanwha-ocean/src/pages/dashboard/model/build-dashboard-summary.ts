@@ -1,11 +1,15 @@
 import { getAlarmsByRegion, type Alarm } from '@crane/domain/alarm';
-import { getCranesByRegion, type CraneOperationalData } from '@crane/domain/crane';
+import {
+  getCranesByRegion,
+  type CraneOperationalData,
+} from '@crane/domain/crane';
 import {
   getRegionSubtitleKey,
   getRegionTitleKey,
-  regions,
+  getRegionsBySiteType,
   type Region,
 } from '@crane/domain/region';
+import type { SiteType } from '@crane/core/lib/site-type-context';
 import type {
   DashboardMetricCard,
   DashboardRegionStatusDatum,
@@ -26,8 +30,9 @@ interface RegionSnapshot {
   alarms: Alarm[];
 }
 
-export function buildDashboardSummary(): DashboardSummary {
-  const snapshots = regions.map((region) => ({
+export function buildDashboardSummary(siteType: SiteType): DashboardSummary {
+  const siteRegions = getRegionsBySiteType(siteType);
+  const snapshots = siteRegions.map((region) => ({
     region,
     cranes: getCranesByRegion(region.id),
     alarms: getAlarmsByRegion(region.id),
@@ -62,7 +67,7 @@ export function buildDashboardSummary(): DashboardSummary {
     metrics: buildMetricCards({
       operatingRate,
       connectedCraneCount: allCranes.length,
-      regionCount: regions.length,
+      regionCount: siteRegions.length,
       urgentRegion,
     }),
     monthlyTrend,

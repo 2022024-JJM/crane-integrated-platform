@@ -44,14 +44,13 @@ function hasReplayValue(crane: ReplayLiteCraneSnapshot) {
   return Object.values(crane.values).some((value) => value !== null);
 }
 
-function filterCraneSnapshots(
-  frame: ReplayLiteFrame,
-  craneIds?: string[],
-) {
+function filterCraneSnapshots(frame: ReplayLiteFrame, craneIds?: string[]) {
   const craneFilter =
     craneIds && craneIds.length > 0 ? new Set(craneIds) : null;
 
-  return frame.cranes.filter((crane) => !craneFilter || craneFilter.has(crane.craneId));
+  return frame.cranes.filter(
+    (crane) => !craneFilter || craneFilter.has(crane.craneId),
+  );
 }
 
 export function getLatestReplayFrame(
@@ -76,7 +75,9 @@ export function getLatestReplayFrameWithValues(
 
   return (
     sortedFrames.find((frame) =>
-      filterCraneSnapshots(frame, craneIds).some((crane) => hasReplayValue(crane)),
+      filterCraneSnapshots(frame, craneIds).some((crane) =>
+        hasReplayValue(crane),
+      ),
     ) ?? getLatestReplayFrame(response)
   );
 }
@@ -93,7 +94,9 @@ function getPreviousHeartbeatValues(
   const previousFrame = sortedFrames.find(
     (frame) =>
       frame.timestamp < latestFrame.timestamp &&
-      filterCraneSnapshots(frame, craneIds).some((crane) => hasReplayValue(crane)),
+      filterCraneSnapshots(frame, craneIds).some((crane) =>
+        hasReplayValue(crane),
+      ),
   );
 
   if (!previousFrame) {
@@ -120,16 +123,28 @@ export function mapReplayResponseToRows(
     return [];
   }
 
-  const previousHeartbeats = getPreviousHeartbeatValues(response, latestFrame, craneIds);
+  const previousHeartbeats = getPreviousHeartbeatValues(
+    response,
+    latestFrame,
+    craneIds,
+  );
 
   return filterCraneSnapshots(latestFrame, craneIds)
     .flatMap<MonitoringReplayRow>((crane) =>
       Object.entries(crane.values).map(([tagCode, value]) => {
-        const row = mapReplayValueToRow(latestFrame.timestamp, crane, tagCode, value);
+        const row = mapReplayValueToRow(
+          latestFrame.timestamp,
+          crane,
+          tagCode,
+          value,
+        );
 
         if (tagCode === 'heartbeat' && value !== null) {
           const previousValue = previousHeartbeats.get(crane.craneId);
-          if (previousValue !== undefined && String(previousValue) === String(value)) {
+          if (
+            previousValue !== undefined &&
+            String(previousValue) === String(value)
+          ) {
             return { ...row, stale: true };
           }
         }

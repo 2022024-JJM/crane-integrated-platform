@@ -10,12 +10,15 @@ interface SceneObjectSelectionState {
   clearSelectedModel: () => void;
 }
 
-export const useSceneObjectSelectionStore =
-  create<SceneObjectSelectionState>()((set) => ({
+export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
+  (set) => ({
     selectedModelId: null,
     selectedObjectType: null,
-    selectModel: (id) => set({ selectedModelId: id, selectedObjectType: 'model' }),
-    selectText: (id) => set({ selectedModelId: id, selectedObjectType: 'text' }),
+    selectModel: (id) =>
+      set({ selectedModelId: id, selectedObjectType: 'model' }),
+    selectText: (id) =>
+      set({ selectedModelId: id, selectedObjectType: 'text' }),
     clearSelectedModel: () =>
       set({ selectedModelId: null, selectedObjectType: null }),
-  }));
+  }),
+);

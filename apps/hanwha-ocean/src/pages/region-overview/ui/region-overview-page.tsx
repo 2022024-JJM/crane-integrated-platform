@@ -2,11 +2,9 @@ import { useMemo } from 'react';
 import { LayoutGrid, Map } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { regions } from '@crane/domain/region';
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@crane/ui/molecules/toggle-group';
+import { getRegionsBySiteType } from '@crane/domain/region';
+import { useSiteType } from '@crane/core/lib/site-type-context';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { RegionCard } from './region-card';
 import { RegionMap } from './region-map';
 
@@ -14,6 +12,8 @@ type RegionOverviewView = 'card' | 'map';
 
 export function RegionOverviewPage() {
   const { t } = useTranslation();
+  const { siteType } = useSiteType();
+  const filteredRegions = getRegionsBySiteType(siteType);
   const [searchParams, setSearchParams] = useSearchParams();
   const view = useMemo<RegionOverviewView>(() => {
     const requestedView = searchParams.get('view');
@@ -82,7 +82,7 @@ export function RegionOverviewPage() {
 
       {view === 'card' ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-5 lg:grid-cols-6">
-          {regions.map((region) => (
+          {filteredRegions.map((region) => (
             <RegionCard key={region.id} region={region} />
           ))}
         </div>

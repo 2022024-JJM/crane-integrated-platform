@@ -25,7 +25,12 @@
     "weatherUnavailable": "Tempestas deest",
     "siteWeather": "Geoje",
     "brandPrimary": "CRANE",
-    "brandAccent": "OPS"
+    "brandAccent": "OPS",
+    "siteType": "Genus Loci"
+  },
+  "siteType": {
+    "hanwha-ocean": "Hanwha Oceanus",
+    "goliath-crane": "Gruis Goliath"
   },
   "toast": {
     "languageChanged": "Lingua in {{language}} mutata est.",
@@ -40,7 +45,9 @@
     "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
     "threeViewerEdit": "Editor Visoris 3D",
     "craneStatus": "Status Gruium",
-    "workHistory": "Historia Operum"
+    "workHistory": "Historia Operum",
+    "goliathCrane": "Gruis Goliath",
+    "goliathCraneMonitoring": "GC-04 Monitio"
   },
   "craneStatus": {
     "title": "Status Gruium Temporis Veri",
@@ -128,6 +135,10 @@
     "dockin": {
       "title": "Opera Intus",
       "subtitle": "Grues supremae IV"
+    },
+    "goliath": {
+      "title": "Gruis Goliath",
+      "subtitle": "GC-04"
     }
   },
   "viewer3d": {

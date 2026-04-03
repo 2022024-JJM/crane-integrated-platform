@@ -36,10 +36,7 @@ export class AppErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <AppErrorFallback
-          error={this.state.error}
-          onReset={this.handleReset}
-        />
+        <AppErrorFallback error={this.state.error} onReset={this.handleReset} />
       );
     }
 
@@ -57,19 +54,19 @@ function AppErrorFallback({
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6 text-center">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10">
-          <AlertTriangle className="size-8 text-destructive" />
+        <div className="border-destructive/20 bg-destructive/10 mx-auto flex size-16 items-center justify-center rounded-2xl border">
+          <AlertTriangle className="text-destructive size-8" />
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold text-foreground">
+          <h1 className="text-foreground text-xl font-semibold">
             {t('common:errorBoundary.title', {
               defaultValue: 'An unexpected error occurred',
             })}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {t('common:errorBoundary.description', {
               defaultValue:
                 'Something went wrong while rendering this page. Please try again.',
@@ -78,8 +75,8 @@ function AppErrorFallback({
         </div>
 
         {error?.message ? (
-          <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-left">
-            <p className="font-mono text-xs text-muted-foreground break-all">
+          <div className="border-border/60 bg-muted/30 rounded-xl border px-4 py-3 text-left">
+            <p className="text-muted-foreground font-mono text-xs break-all">
               {error.message}
             </p>
           </div>

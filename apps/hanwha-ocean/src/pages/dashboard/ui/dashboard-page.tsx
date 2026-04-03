@@ -3,15 +3,17 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getFormatLocale } from '@crane/core/config/i18n';
+import { useSiteType } from '@crane/core/lib/site-type-context';
 import { useTheme } from '@crane/core/lib/theme-context';
 import { useDashboardSummary, type DashboardRegionStatusDatum } from '../model';
+import { DashboardGoliathCraneStatus } from './dashboard-goliath-crane-status';
 import { MetricCard } from './dashboard-parts';
 import {
   getDashboardPreviewDefaultPosition,
   getDashboardPreviewDefaultSize,
   type DashboardPreviewPosition,
   type DashboardPreviewSize,
-} from './dashboard-preview-helpers';
+} from '@crane/core/lib/preview-helpers';
 import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
 import {
   DashboardOverviewHeader,
@@ -24,6 +26,8 @@ import { DashboardTrendSection } from './dashboard-trend-section';
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
+  const { siteType } = useSiteType();
+  const isGoliath = siteType === 'goliath-crane';
   const { summary, isLoading } = useDashboardSummary();
   const [selectedPreviewRegion, setSelectedPreviewRegion] =
     useState<DashboardRegionStatusDatum | null>(null);
@@ -76,6 +80,8 @@ export function DashboardPage() {
           />
         ))}
       </section>
+
+      {isGoliath && <DashboardGoliathCraneStatus />}
 
       <section className="border-border/90 bg-card/60 rounded-[1.75rem] border p-4 shadow-sm backdrop-blur-sm md:p-6">
         <DashboardOverviewHeader summary={summary} translate={t} />

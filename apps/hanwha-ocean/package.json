@@ -10,8 +10,7 @@
     "./pages/dashboard": "./src/pages/dashboard/index.ts",
     "./pages/region-overview": "./src/pages/region-overview/index.ts",
     "./pages/outdoor-work": "./src/pages/outdoor-work/index.ts",
-    "./pages/indoor-work": "./src/pages/indoor-work/index.ts",
-    "./pages/3d": "./src/pages/3d/index.ts"
+    "./pages/indoor-work": "./src/pages/indoor-work/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

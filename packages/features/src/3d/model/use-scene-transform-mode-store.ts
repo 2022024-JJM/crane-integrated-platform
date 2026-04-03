@@ -16,4 +16,3 @@ export const useSceneTransformModeStore = create<SceneTransformModeState>()(
     resetMode: () => set({ mode: DEFAULT_SCENE_TRANSFORM_MODE }),
   }),
 );
-

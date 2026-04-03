@@ -128,9 +128,8 @@ export function useSceneTransform({
   }, [sceneModels, selectedModelId, modelObjectRegistryRef]);
 
   useEffect(() => {
-    const controls = transformControlsRef.current as
-      | TransformControlsWithDraggingEvent
-      | null;
+    const controls =
+      transformControlsRef.current as TransformControlsWithDraggingEvent | null;
     if (!controls) {
       return;
     }

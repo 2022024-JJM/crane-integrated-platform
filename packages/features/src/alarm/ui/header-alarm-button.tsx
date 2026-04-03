@@ -43,10 +43,12 @@ function AlarmRow({ alarm, language }: AlarmRowProps) {
     <tr
       className={cn(
         'border-b text-xs transition-colors last:border-0',
-        alarm.active ? visual?.surfaceClassName : 'border-emerald-500/20 bg-emerald-500/6',
+        alarm.active
+          ? visual?.surfaceClassName
+          : 'border-emerald-500/20 bg-emerald-500/6',
       )}
     >
-      <td className="whitespace-nowrap px-3 py-2">
+      <td className="px-3 py-2 whitespace-nowrap">
         <span
           className={cn(
             'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
@@ -66,11 +68,13 @@ function AlarmRow({ alarm, language }: AlarmRowProps) {
           </span>
         </span>
       </td>
-      <td className="text-muted-foreground whitespace-nowrap px-3 py-2">
+      <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
         {formatDateTime(alarm.timestamp, language)}
       </td>
-      <td className="whitespace-nowrap px-3 py-2 font-medium">{alarm.craneName}</td>
-      <td className="px-3 py-2 text-foreground/80">{description}</td>
+      <td className="px-3 py-2 font-medium whitespace-nowrap">
+        {alarm.craneName}
+      </td>
+      <td className="text-foreground/80 px-3 py-2">{description}</td>
     </tr>
   );
 }
@@ -78,7 +82,9 @@ function AlarmRow({ alarm, language }: AlarmRowProps) {
 export function HeaderAlarmButton() {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [severityFilter, setSeverityFilter] = useState<AlarmSeverity | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<AlarmSeverity | null>(
+    null,
+  );
   const modalRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -87,11 +93,17 @@ export function HeaderAlarmButton() {
 
   const activeList = Object.values(activeAlarms);
   const totalCount = activeList.length;
-  const criticalCount = activeList.filter((a) => a.severity === 'critical').length;
+  const criticalCount = activeList.filter(
+    (a) => a.severity === 'critical',
+  ).length;
   const highCount = activeList.filter((a) => a.severity === 'high').length;
 
   const badgeColor =
-    criticalCount > 0 ? 'bg-red-500' : highCount > 0 ? 'bg-orange-500' : 'bg-amber-500';
+    criticalCount > 0
+      ? 'bg-red-500'
+      : highCount > 0
+        ? 'bg-orange-500'
+        : 'bg-amber-500';
 
   const filteredHistory = severityFilter
     ? history.filter((a) => a.severity === severityFilter)
@@ -155,7 +167,9 @@ export function HeaderAlarmButton() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
               <Bell className="text-muted-foreground h-4 w-4" />
-              <h3 className="text-sm font-semibold">{t('common:alarms.title')}</h3>
+              <h3 className="text-sm font-semibold">
+                {t('common:alarms.title')}
+              </h3>
               {totalCount > 0 && (
                 <span
                   className={cn(
@@ -184,7 +198,8 @@ export function HeaderAlarmButton() {
               onClick={() => setSeverityFilter(null)}
               className={cn(
                 'rounded-full',
-                severityFilter === null && 'bg-foreground text-background hover:bg-foreground/90',
+                severityFilter === null &&
+                  'bg-foreground text-background hover:bg-foreground/90',
               )}
             >
               전체 ({history.length})
@@ -199,9 +214,14 @@ export function HeaderAlarmButton() {
                   variant="ghost"
                   size="xs"
                   onClick={() => setSeverityFilter(isActive ? null : sev)}
-                  className={cn('rounded-full', isActive && visual.surfaceClassName)}
+                  className={cn(
+                    'rounded-full',
+                    isActive && visual.surfaceClassName,
+                  )}
                 >
-                  <span className={isActive ? visual.emphasisClassName : undefined}>
+                  <span
+                    className={isActive ? visual.emphasisClassName : undefined}
+                  >
                     {getAlarmSeverityLabel(sev, i18n.language)} ({count})
                   </span>
                 </Button>
@@ -209,7 +229,10 @@ export function HeaderAlarmButton() {
             })}
           </div>
 
-          <ScrollArea key={severityFilter ?? 'all'} className="min-h-0 flex-1 overflow-auto">
+          <ScrollArea
+            key={severityFilter ?? 'all'}
+            className="min-h-0 flex-1 overflow-auto"
+          >
             {filteredHistory.length === 0 ? (
               <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
                 알람 이력이 없습니다
@@ -218,15 +241,25 @@ export function HeaderAlarmButton() {
               <table className="w-full border-collapse">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr className="text-muted-foreground text-left text-[11px]">
-                    <th className="whitespace-nowrap px-3 py-2 font-medium">단계</th>
-                    <th className="whitespace-nowrap px-3 py-2 font-medium">시간</th>
-                    <th className="whitespace-nowrap px-3 py-2 font-medium">장비</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">
+                      단계
+                    </th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">
+                      시간
+                    </th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">
+                      장비
+                    </th>
                     <th className="px-3 py-2 font-medium">설명</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHistory.map((alarm) => (
-                    <AlarmRow key={alarm.id} alarm={alarm} language={i18n.language} />
+                    <AlarmRow
+                      key={alarm.id}
+                      alarm={alarm}
+                      language={i18n.language}
+                    />
                   ))}
                 </tbody>
               </table>

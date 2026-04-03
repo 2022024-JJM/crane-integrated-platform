@@ -54,9 +54,7 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-export function SceneObjectsEditPage({
-  regionId,
-}: SceneObjectsEditPageProps) {
+export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
@@ -250,9 +248,17 @@ export function SceneObjectsEditPage({
                     type="button"
                     onClick={() => setShowLabels((prev) => !prev)}
                     className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                    title={showLabels ? t('monitoring:editor.hideLabels') : t('monitoring:editor.showLabels')}
+                    title={
+                      showLabels
+                        ? t('monitoring:editor.hideLabels')
+                        : t('monitoring:editor.showLabels')
+                    }
                   >
-                    {showLabels ? <Tag className="size-4" /> : <Tags className="size-4 opacity-50" />}
+                    {showLabels ? (
+                      <Tag className="size-4" />
+                    ) : (
+                      <Tags className="size-4 opacity-50" />
+                    )}
                   </button>
                   <span className="bg-border h-4 w-px" />
                   <span className="max-w-36 truncate text-xs font-medium">

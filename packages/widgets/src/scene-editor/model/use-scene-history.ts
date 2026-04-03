@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type SetStateAction,
-} from 'react';
+import { useCallback, useMemo, useState, type SetStateAction } from 'react';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { isSceneInfoEqual } from './scene-snapshot';
 
@@ -55,9 +50,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
 
       setHistory((prev) => {
         const nextSceneInfo =
-          typeof updater === 'function'
-            ? updater(prev.present)
-            : updater;
+          typeof updater === 'function' ? updater(prev.present) : updater;
 
         if (isSceneInfoEqual(nextSceneInfo, prev.present)) {
           return prev;
@@ -80,26 +73,26 @@ export function useSceneHistory(): UseSceneHistoryResult {
     [],
   );
 
-  const commitHistoryFrom = useCallback((baseSceneInfo: SavedSceneInfo | null) => {
-    if (!baseSceneInfo) {
-      return;
-    }
-
-    setHistory((prev) => {
-      if (
-        !prev.present ||
-        isSceneInfoEqual(prev.present, baseSceneInfo)
-      ) {
-        return prev;
+  const commitHistoryFrom = useCallback(
+    (baseSceneInfo: SavedSceneInfo | null) => {
+      if (!baseSceneInfo) {
+        return;
       }
 
-      return {
-        past: [...prev.past, baseSceneInfo],
-        present: prev.present,
-        future: [],
-      };
-    });
-  }, []);
+      setHistory((prev) => {
+        if (!prev.present || isSceneInfoEqual(prev.present, baseSceneInfo)) {
+          return prev;
+        }
+
+        return {
+          past: [...prev.past, baseSceneInfo],
+          present: prev.present,
+          future: [],
+        };
+      });
+    },
+    [],
+  );
 
   const undo = useCallback(() => {
     setHistory((prev) => {

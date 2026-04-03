@@ -8,8 +8,14 @@ export function getRegionSubtitleKey(regionId: Region['id']) {
   return `common:regions.${toRegionResourceKey(regionId)}.subtitle`;
 }
 
+function getRegionBasePath(regionId: Region['id']) {
+  if (regionId === 'goliath') return `/goliath-work/${regionId}`;
+  if (regionId === 'dock-in') return `/indoor-work/${regionId}`;
+  return `/outdoor-work/${regionId}`;
+}
+
 export function getRegionLinkItems(regionId: Region['id']) {
-  const base = `/outdoor-work/${regionId}`;
+  const base = getRegionBasePath(regionId);
 
   return [
     {

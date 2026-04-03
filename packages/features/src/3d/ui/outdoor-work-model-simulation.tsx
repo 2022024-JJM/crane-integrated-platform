@@ -80,8 +80,7 @@ export function OutdoorWorkModelSimulation({
         if (clickedBox) {
           const clickedSize = new Vector3();
           clickedBox.getSize(clickedSize);
-          const clickedVolume =
-            clickedSize.x * clickedSize.y * clickedSize.z;
+          const clickedVolume = clickedSize.x * clickedSize.y * clickedSize.z;
 
           let bestContainer: string | null = null;
           let bestVolume = Infinity;
@@ -97,8 +96,7 @@ export function OutdoorWorkModelSimulation({
 
             const otherSize = new Vector3();
             otherBox.getSize(otherSize);
-            const otherVolume =
-              otherSize.x * otherSize.y * otherSize.z;
+            const otherVolume = otherSize.x * otherSize.y * otherSize.z;
 
             // Only consider objects larger than the clicked one as containers
             if (otherVolume > clickedVolume && otherVolume < bestVolume) {
@@ -196,8 +194,7 @@ export function OutdoorWorkModelSimulation({
 
     // Compute required distance so the sphere fits in the viewport
     const fov = camera instanceof PerspectiveCamera ? camera.fov : 75;
-    const aspect =
-      camera instanceof PerspectiveCamera ? camera.aspect : 16 / 9;
+    const aspect = camera instanceof PerspectiveCamera ? camera.aspect : 16 / 9;
     const vFov = MathUtils.degToRad(fov / 2);
     const hFov = Math.atan(Math.tan(vFov) * aspect);
     const effectiveFov = Math.min(vFov, hFov);
@@ -287,7 +284,9 @@ export function OutdoorWorkModelSimulation({
             url={model.path}
             equipName={model.equipName}
             opacity={model.opacity}
-            alarmSeverity={model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null}
+            alarmSeverity={
+              model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
+            }
             alarmHighlightMesh={alarmHighlightMesh}
             position={model.position}
             rotation={model.rotation}

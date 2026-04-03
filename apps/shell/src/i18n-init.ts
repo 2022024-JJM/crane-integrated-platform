@@ -12,6 +12,9 @@ import laRegionOverview from './locales/la/region-overview.json';
 import koMonitoring from './locales/ko/monitoring.json';
 import enMonitoring from './locales/en/monitoring.json';
 import laMonitoring from './locales/la/monitoring.json';
+import koGoliathCrane from './locales/ko/goliath-crane.json';
+import enGoliathCrane from './locales/en/goliath-crane.json';
+import laGoliathCrane from './locales/la/goliath-crane.json';
 
 const resources = {
   ko: {
@@ -19,19 +22,28 @@ const resources = {
     dashboard: koDashboard,
     'region-overview': koRegionOverview,
     monitoring: koMonitoring,
+    'goliath-crane': koGoliathCrane,
   },
   en: {
     common: enCommon,
     dashboard: enDashboard,
     'region-overview': enRegionOverview,
     monitoring: enMonitoring,
+    'goliath-crane': enGoliathCrane,
   },
   la: {
     common: laCommon,
     dashboard: laDashboard,
     'region-overview': laRegionOverview,
     monitoring: laMonitoring,
+    'goliath-crane': laGoliathCrane,
   },
 };
 
-initI18n(resources, ['common', 'dashboard', 'region-overview', 'monitoring']);
+initI18n(resources, [
+  'common',
+  'dashboard',
+  'region-overview',
+  'monitoring',
+  'goliath-crane',
+]);

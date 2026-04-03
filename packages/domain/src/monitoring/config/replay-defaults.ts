@@ -18,7 +18,8 @@ export function toDateTimeLocalValue(date: Date) {
     date.getFullYear(),
     padDateTimeSegment(date.getMonth() + 1),
     padDateTimeSegment(date.getDate()),
-  ].join('-')
+  ]
+    .join('-')
     .concat(
       `T${padDateTimeSegment(date.getHours())}:${padDateTimeSegment(
         date.getMinutes(),
@@ -75,10 +76,7 @@ export function validateReplayDateTimeRange(from: string, to: string) {
   const parsedFrom = new Date(from);
   const parsedTo = new Date(to);
 
-  if (
-    Number.isNaN(parsedFrom.getTime()) ||
-    Number.isNaN(parsedTo.getTime())
-  ) {
+  if (Number.isNaN(parsedFrom.getTime()) || Number.isNaN(parsedTo.getTime())) {
     return { isValid: false, reason: 'invalid' as const };
   }
 

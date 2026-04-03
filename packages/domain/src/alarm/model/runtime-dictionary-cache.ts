@@ -1,6 +1,9 @@
 import type { RuntimeAlarmDictionaryItem } from './types';
 
-const runtimeAlarmDictionaryCache = new Map<number, RuntimeAlarmDictionaryItem>();
+const runtimeAlarmDictionaryCache = new Map<
+  number,
+  RuntimeAlarmDictionaryItem
+>();
 
 export function setRuntimeAlarmDictionary(items: RuntimeAlarmDictionaryItem[]) {
   runtimeAlarmDictionaryCache.clear();

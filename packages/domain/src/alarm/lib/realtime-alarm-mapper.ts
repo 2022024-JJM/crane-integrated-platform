@@ -46,7 +46,8 @@ export function mapRealtimeAlarmMessageToAlarm(
     severity: message.severity ?? overrides?.severity ?? 'info',
     eventType: overrides?.eventType ?? 'unknown_realtime_alarm',
     active,
-    alarmNo: overrides?.alarmNo ?? (message.value > 0 ? message.value : undefined),
+    alarmNo:
+      overrides?.alarmNo ?? (message.value > 0 ? message.value : undefined),
     alarmCode: overrides?.alarmCode ?? message.tagCode,
     alarmName:
       overrides?.alarmName ??

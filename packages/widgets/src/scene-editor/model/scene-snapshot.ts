@@ -155,10 +155,7 @@ function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
-function isValueMapListEqual(
-  a: ValueMapItem[],
-  b: ValueMapItem[],
-): boolean {
+function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].type !== b[i].type || a[i].key !== b[i].key) return false;

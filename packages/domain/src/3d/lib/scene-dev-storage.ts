@@ -1,4 +1,7 @@
-import { getDefaultSceneFileUrl, getSceneFileUrlByRegionId } from '../model/scene-file-registry';
+import {
+  getDefaultSceneFileUrl,
+  getSceneFileUrlByRegionId,
+} from '../model/scene-file-registry';
 import type { SavedSceneInfo } from '../model/types';
 
 const DEV_SCENE_API_PATH = '/__dev/scene';

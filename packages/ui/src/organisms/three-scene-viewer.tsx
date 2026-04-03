@@ -181,7 +181,11 @@ function SceneControlsBridge({
 
   const moveTo = useCallback(
     (position: Vector3Tuple, target: Vector3Tuple) => {
-      applyCameraState(toVector3(position), toVector3(target), DEFAULT_CAMERA_UP);
+      applyCameraState(
+        toVector3(position),
+        toVector3(target),
+        DEFAULT_CAMERA_UP,
+      );
     },
     [applyCameraState],
   );
@@ -374,7 +378,11 @@ export function ThreeSceneViewer({
               <Map />
             </ToolbarButton>
             <ToolbarButton
-              label={isFullscreen ? t('common:viewer3d.exitFullscreen') : t('common:viewer3d.fullscreen')}
+              label={
+                isFullscreen
+                  ? t('common:viewer3d.exitFullscreen')
+                  : t('common:viewer3d.fullscreen')
+              }
               onClick={() => {
                 void toggleFullscreen();
               }}

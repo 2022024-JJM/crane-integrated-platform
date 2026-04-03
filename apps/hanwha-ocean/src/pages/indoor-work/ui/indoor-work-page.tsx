@@ -2,7 +2,7 @@ import { getRegionById, getRegionTitleKey } from '@crane/domain/region';
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { SceneObjectsEditPage } from '../../3d';
+import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 

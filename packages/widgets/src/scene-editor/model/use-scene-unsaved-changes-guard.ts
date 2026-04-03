@@ -89,9 +89,7 @@ export function useSceneUnsavedChangesGuard({
       void confirmNavigation()
         .then((shouldProceed) => {
           if (shouldProceed) {
-            navigate(
-              `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
-            );
+            navigate(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
           }
         })
         .finally(() => {
@@ -153,11 +151,7 @@ export function useSceneUnsavedChangesGuard({
       return;
     }
 
-    history.pushState(
-      { __sceneUnsavedGuard: true },
-      '',
-      window.location.href,
-    );
+    history.pushState({ __sceneUnsavedGuard: true }, '', window.location.href);
     hasSentinelStateRef.current = true;
 
     return () => {

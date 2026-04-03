@@ -109,8 +109,8 @@ export function useSelectedSceneObjectEditor({
   const selectedModel = useMemo(
     () =>
       selectedObjectType === 'model'
-        ? sceneInfo?.models.find((model) => model.id === selectedModelId) ??
-          null
+        ? (sceneInfo?.models.find((model) => model.id === selectedModelId) ??
+          null)
         : null,
     [sceneInfo?.models, selectedModelId, selectedObjectType],
   );
@@ -118,7 +118,8 @@ export function useSelectedSceneObjectEditor({
   const selectedText = useMemo(
     () =>
       selectedObjectType === 'text'
-        ? (sceneInfo?.texts ?? []).find((t) => t.id === selectedModelId) ?? null
+        ? ((sceneInfo?.texts ?? []).find((t) => t.id === selectedModelId) ??
+          null)
         : null,
     [sceneInfo?.texts, selectedModelId, selectedObjectType],
   );
@@ -200,28 +201,25 @@ export function useSelectedSceneObjectEditor({
       recordHistory?: boolean;
     },
   ) => {
-    updateSceneInfo(
-      (prev) => {
-        if (!prev || !selectedModelId) {
-          return prev;
-        }
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
 
-        return {
-          ...prev,
-          models: prev.models.map((model) => {
-            if (model.id !== selectedModelId) {
-              return model;
-            }
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) {
+            return model;
+          }
 
-            return {
-              ...model,
-              [field]: roundVectorValue(value),
-            };
-          }),
-        };
-      },
-      options,
-    );
+          return {
+            ...model,
+            [field]: roundVectorValue(value),
+          };
+        }),
+      };
+    }, options);
   };
 
   const updateSelectedTextContent = (content: string) => {
@@ -287,28 +285,25 @@ export function useSelectedSceneObjectEditor({
       recordHistory?: boolean;
     },
   ) => {
-    updateSceneInfo(
-      (prev) => {
-        if (!prev || !selectedModelId) {
-          return prev;
-        }
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
 
-        return {
-          ...prev,
-          texts: (prev.texts ?? []).map((t) => {
-            if (t.id !== selectedModelId) {
-              return t;
-            }
+      return {
+        ...prev,
+        texts: (prev.texts ?? []).map((t) => {
+          if (t.id !== selectedModelId) {
+            return t;
+          }
 
-            return {
-              ...t,
-              [field]: roundVectorValue(value),
-            };
-          }),
-        };
-      },
-      options,
-    );
+          return {
+            ...t,
+            [field]: roundVectorValue(value),
+          };
+        }),
+      };
+    }, options);
   };
 
   const removeSelectedModel = () => {

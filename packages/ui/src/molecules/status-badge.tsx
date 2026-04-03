@@ -1,5 +1,8 @@
 import type { AlarmSeverity, CraneStatus } from '@crane/core/types/status';
-import { severityBadgeClassName, craneStatusBadgeClassName } from '@crane/core/lib/status-colors';
+import {
+  severityBadgeClassName,
+  craneStatusBadgeClassName,
+} from '@crane/core/lib/status-colors';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '../atoms/badge';
 

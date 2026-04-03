@@ -1,7 +1,4 @@
-import {
-  RestClientError,
-  RestClientTimeoutError,
-} from './errors';
+import { RestClientError, RestClientTimeoutError } from './errors';
 import type {
   QueryValue,
   RestClientHeaders,
@@ -29,7 +26,10 @@ function createUrl(baseUrl: string, path: string, query?: RestRequestQuery) {
     typeof window !== 'undefined'
       ? new URL(baseUrl, window.location.origin).toString()
       : baseUrl;
-  const url = new URL(normalizedPath, `${resolvedBaseUrl.replace(/\/+$/, '')}/`);
+  const url = new URL(
+    normalizedPath,
+    `${resolvedBaseUrl.replace(/\/+$/, '')}/`,
+  );
 
   if (!query) {
     return url;
@@ -251,10 +251,7 @@ export class RestClient {
     }
   }
 
-  private createRequestBody(
-    body: RestRequestConfig['body'],
-    headers: Headers,
-  ) {
+  private createRequestBody(body: RestRequestConfig['body'], headers: Headers) {
     if (body === null || body === undefined) {
       return undefined;
     }

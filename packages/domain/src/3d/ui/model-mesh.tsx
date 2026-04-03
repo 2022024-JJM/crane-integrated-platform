@@ -73,10 +73,7 @@ export function useClonedModel(url: string) {
   }, [scene]);
 }
 
-export function useModelLabelOffsetY(
-  clone: Object3D,
-  scale: Vector3Tuple,
-) {
+export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
   return useMemo(() => {
     const box = new Box3().setFromObject(clone);
     const size = new Vector3();

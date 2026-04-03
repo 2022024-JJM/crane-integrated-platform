@@ -13,7 +13,7 @@ import {
   getClampedPreviewWidth,
   getPreviewBodyHeight,
   isSamePosition,
-} from './dashboard-preview-helpers';
+} from '@crane/core/lib/preview-helpers';
 
 const PREVIEW_ASPECT_RATIO = 16 / 9;
 
@@ -229,7 +229,7 @@ export function DashboardRegionPreviewModal({
     >
       <div
         className={cn(
-          'pointer-events-auto fixed overflow-hidden rounded-2xl border border-border bg-card/94 shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-md',
+          'border-border bg-card/94 pointer-events-auto fixed overflow-hidden rounded-2xl border shadow-[0_24px_80px_rgba(2,6,23,0.45)] backdrop-blur-md',
           isDragging || isResizing ? 'select-none' : '',
         )}
         style={{
@@ -245,7 +245,7 @@ export function DashboardRegionPreviewModal({
 
         <div
           className={cn(
-            'border-b border-border bg-muted/80 px-3 py-2.5',
+            'border-border bg-muted/80 border-b px-3 py-2.5',
             isDragging ? 'cursor-grabbing' : 'cursor-grab',
           )}
           onPointerDown={(event) => {
@@ -263,15 +263,15 @@ export function DashboardRegionPreviewModal({
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+              <p className="text-muted-foreground text-[9px] font-semibold tracking-[0.2em] uppercase">
                 {t('dashboard:preview.label')}
               </p>
               <div className="mt-1 flex min-w-0 items-center gap-2">
-                <Grip className="size-3 shrink-0 text-muted-foreground/50" />
-                <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+                <Grip className="text-muted-foreground/50 size-3 shrink-0" />
+                <h3 className="text-foreground truncate text-sm font-semibold tracking-tight">
                   {title}
                 </h3>
-                <span className="shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-cyan-700 dark:text-cyan-100 uppercase">
+                <span className="shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] text-cyan-700 uppercase dark:text-cyan-100">
                   {regionId}
                 </span>
               </div>
@@ -281,7 +281,7 @@ export function DashboardRegionPreviewModal({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                className="h-7 w-7 cursor-pointer rounded-full border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                className="border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground h-7 w-7 cursor-pointer rounded-full"
                 aria-label={t('dashboard:preview.openFull')}
                 onClick={() => {
                   onClose();
@@ -294,7 +294,7 @@ export function DashboardRegionPreviewModal({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                className="h-7 w-7 cursor-pointer rounded-full border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                className="border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground h-7 w-7 cursor-pointer rounded-full"
                 aria-label={t('dashboard:preview.close')}
                 onClick={onClose}
               >
@@ -305,10 +305,10 @@ export function DashboardRegionPreviewModal({
         </div>
 
         <div className="p-2.5">
-          <div className="relative overflow-hidden rounded-[1.15rem] border border-border bg-background">
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background/45 to-transparent" />
+          <div className="border-border bg-background relative overflow-hidden rounded-[1.15rem] border">
+            <div className="from-background/45 pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
-              <span className="rounded-full border border-border bg-muted/80 px-2 py-1 text-[9px] font-semibold tracking-[0.18em] text-muted-foreground uppercase backdrop-blur-sm">
+              <span className="border-border bg-muted/80 text-muted-foreground rounded-full border px-2 py-1 text-[9px] font-semibold tracking-[0.18em] uppercase backdrop-blur-sm">
                 {t('common:viewer3d.badge')}
               </span>
             </div>
@@ -318,12 +318,16 @@ export function DashboardRegionPreviewModal({
                 height: previewBodyHeight,
               }}
             >
-              <Monitoring3dView regionId={regionId} alarmsByCraneId={alarmsByCraneId} alarmHighlightMesh={regionId === 'dock-in'} />
+              <Monitoring3dView
+                regionId={regionId}
+                alarmsByCraneId={alarmsByCraneId}
+                alarmHighlightMesh={regionId === 'dock-in'}
+              />
             </div>
             <button
               type="button"
               aria-label={t('common:viewer3d.resizePreview')}
-              className="absolute right-2 bottom-2 z-20 h-5 w-5 cursor-nwse-resize rounded-sm border border-border bg-muted/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground"
+              className="border-border bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground absolute right-2 bottom-2 z-20 h-5 w-5 cursor-nwse-resize rounded-sm border backdrop-blur-sm transition"
               onPointerDown={(event) => {
                 if (event.button !== 0 || isDragging) {
                   return;

@@ -161,5 +161,3 @@ function VerticalBarsGhost() {
     </div>
   );
 }
-
-

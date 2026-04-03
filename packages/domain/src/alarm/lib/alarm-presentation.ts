@@ -1,6 +1,4 @@
-import {
-  getRuntimeAlarmMetadata,
-} from '../model/runtime-dictionary-cache';
+import { getRuntimeAlarmMetadata } from '../model/runtime-dictionary-cache';
 import type { Alarm, AlarmEventType, AlarmSeverity } from '../model/types';
 
 const alarmEventTranslationKey: Record<AlarmEventType, string> = {

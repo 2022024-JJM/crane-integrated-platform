@@ -1,7 +1,10 @@
 import { Boxes, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { humanizeModelPath, type SceneModelCatalogItem } from '@crane/domain/3d';
+import {
+  humanizeModelPath,
+  type SceneModelCatalogItem,
+} from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
@@ -44,31 +47,31 @@ export function PaletteAssetGrid({
   }, [items, normalizedAssetSearch]);
 
   return (
-    <section className="flex shrink-0 flex-col rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-2 py-1.5">
+    <section className="border-border bg-card flex shrink-0 flex-col rounded-lg border">
+      <div className="border-border flex items-center justify-between border-b px-2 py-1.5">
         <div className="flex items-center gap-2">
-          <Boxes className="size-3 text-muted-foreground" />
-          <p className="text-[10px] font-semibold tracking-[0.12em] text-foreground/75 uppercase">
+          <Boxes className="text-muted-foreground size-3" />
+          <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
             {t('monitoring:palette.title')}
           </p>
         </div>
         <Badge
           variant="outline"
-          className="rounded-sm border-border bg-muted px-1.5 py-0 text-[9px] text-muted-foreground"
+          className="border-border bg-muted text-muted-foreground rounded-sm px-1.5 py-0 text-[9px]"
         >
           {items.length}
         </Badge>
       </div>
-      <div className="border-b border-border px-2 py-1.5">
+      <div className="border-border border-b px-2 py-1.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground/50" />
+          <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
           <Input
             value={assetSearch}
             onChange={(event) => {
               setAssetSearch(event.target.value);
             }}
             placeholder="Search models"
-            className="h-6 rounded-sm border-border bg-muted pl-7 text-[11px] text-foreground placeholder:text-muted-foreground"
+            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>
       </div>
@@ -91,9 +94,9 @@ export function PaletteAssetGrid({
                 }}
                 onDragEnd={onDragEnd}
                 className={cn(
-                  'group cursor-pointer rounded-lg border border-border bg-muted/50 p-1.5 text-left transition',
+                  'group border-border bg-muted/50 cursor-pointer rounded-lg border p-1.5 text-left transition',
                   isDragging
-                    ? 'scale-[0.98] border-primary/40 bg-primary/12'
+                    ? 'border-primary/40 bg-primary/12 scale-[0.98]'
                     : 'hover:border-border/80 hover:bg-muted',
                 )}
               >
@@ -110,7 +113,7 @@ export function PaletteAssetGrid({
                   )}
                 />
                 <div className="mt-1.5 min-w-0 px-0.5">
-                  <p className="truncate text-[11px] font-semibold leading-none text-foreground">
+                  <p className="text-foreground truncate text-[11px] leading-none font-semibold">
                     {item.label}
                   </p>
                 </div>

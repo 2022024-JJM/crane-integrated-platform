@@ -13,7 +13,7 @@ export function NavigationProgressBar() {
       )}
     >
       <div
-        className="bg-[var(--navigation-progress)] h-full origin-left transition-[transform,opacity] duration-200 ease-out will-change-transform"
+        className="h-full origin-left bg-[var(--navigation-progress)] transition-[transform,opacity] duration-200 ease-out will-change-transform"
         style={{ transform: `scaleX(${progress})` }}
       />
     </div>

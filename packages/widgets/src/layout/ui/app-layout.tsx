@@ -8,6 +8,7 @@ import {
 import { HeaderDisplaySettingsProvider } from '@crane/core/lib/header-display-settings-context';
 import { NavigationProgressProvider } from '@crane/core/lib/navigation-progress-context';
 import { SidebarProvider } from '@crane/core/lib/sidebar-context';
+import { SiteTypeProvider } from '@crane/core/lib/site-type-context';
 import { ThemeProvider } from '@crane/core/lib/theme-context';
 import { useNavigationProgress } from '@crane/core/lib/use-navigation-progress';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
@@ -65,26 +66,28 @@ function NavigationProgressSync() {
 export function AppLayout() {
   return (
     <ThemeProvider>
-      <SidebarProvider>
-        <HeaderDisplaySettingsProvider>
-          <NavigationProgressProvider>
-            <NavigationProgressSync />
-            <NavigationProgressBar />
-            <div className="flex h-screen flex-col overflow-hidden">
-              <AppHeader />
-              <div className="flex min-h-0 flex-1">
-                <AppSidebar />
-                <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <Outlet />
-                  </ScrollArea>
-                </main>
+      <SiteTypeProvider>
+        <SidebarProvider>
+          <HeaderDisplaySettingsProvider>
+            <NavigationProgressProvider>
+              <NavigationProgressSync />
+              <NavigationProgressBar />
+              <div className="flex h-screen flex-col overflow-hidden">
+                <AppHeader />
+                <div className="flex min-h-0 flex-1">
+                  <AppSidebar />
+                  <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+                    <ScrollArea className="h-full">
+                      <Outlet />
+                    </ScrollArea>
+                  </main>
+                </div>
+                <AppToaster />
               </div>
-              <AppToaster />
-            </div>
-          </NavigationProgressProvider>
-        </HeaderDisplaySettingsProvider>
-      </SidebarProvider>
+            </NavigationProgressProvider>
+          </HeaderDisplaySettingsProvider>
+        </SidebarProvider>
+      </SiteTypeProvider>
     </ThemeProvider>
   );
 }

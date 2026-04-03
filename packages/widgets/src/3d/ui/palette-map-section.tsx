@@ -8,15 +8,18 @@ interface PaletteMapSectionProps {
   onDeleteMap: () => void;
 }
 
-export function PaletteMapSection({ map, onDeleteMap }: PaletteMapSectionProps) {
+export function PaletteMapSection({
+  map,
+  onDeleteMap,
+}: PaletteMapSectionProps) {
   const { t } = useTranslation();
 
   return (
-    <section className="flex shrink-0 flex-col rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between border-border px-2 py-1.5">
+    <section className="border-border bg-card flex shrink-0 flex-col rounded-lg border">
+      <div className="border-border flex items-center justify-between px-2 py-1.5">
         <div className="flex items-center gap-2">
-          <Map className="size-3 text-muted-foreground" />
-          <p className="text-[10px] font-semibold tracking-[0.12em] text-foreground/75 uppercase">
+          <Map className="text-muted-foreground size-3" />
+          <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
             {t('monitoring:editor.map')}
           </p>
         </div>
@@ -24,22 +27,22 @@ export function PaletteMapSection({ map, onDeleteMap }: PaletteMapSectionProps) 
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="size-5 cursor-pointer rounded-sm text-muted-foreground hover:bg-muted hover:text-red-300"
+          className="text-muted-foreground hover:bg-muted size-5 cursor-pointer rounded-sm hover:text-red-300"
           aria-label={t('monitoring:editor.deleteMap')}
           onClick={onDeleteMap}
         >
           <Trash2 className="size-3.5" />
         </Button>
       </div>
-      <div className="mx-0.5 mb-1 flex items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-foreground/80">
-        <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-border bg-muted text-[10px] text-muted-foreground">
+      <div className="text-foreground/80 mx-0.5 mb-1 flex items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1">
+        <div className="border-border bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-sm border text-[10px]">
           <Map className="size-2.5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-medium leading-none">
+          <p className="truncate text-[12px] leading-none font-medium">
             {humanizeModelPath(map.path)}
           </p>
-          <p className="mt-0.5 truncate text-[9px] leading-none text-muted-foreground">
+          <p className="text-muted-foreground mt-0.5 truncate text-[9px] leading-none">
             {map.id}
           </p>
         </div>

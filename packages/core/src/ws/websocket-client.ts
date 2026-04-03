@@ -34,7 +34,9 @@ export class WebSocketClient {
   private readonly url: string;
   private readonly protocols: string | string[] | undefined;
   private readonly reconnectPolicy: ReturnType<typeof normalizeReconnectPolicy>;
-  private readonly socketFactory: NonNullable<WebSocketClientOptions['socketFactory']>;
+  private readonly socketFactory: NonNullable<
+    WebSocketClientOptions['socketFactory']
+  >;
   private socket: WebSocket | null = null;
   private connectionState: WebSocketConnectionState = 'idle';
   private reconnectAttempts = 0;
@@ -51,7 +53,8 @@ export class WebSocketClient {
     this.protocols = options.protocols;
     this.reconnectPolicy = normalizeReconnectPolicy(options.reconnectPolicy);
     this.socketFactory =
-      options.socketFactory ?? ((url, protocols) => new WebSocket(url, protocols));
+      options.socketFactory ??
+      ((url, protocols) => new WebSocket(url, protocols));
   }
 
   connect() {
@@ -162,7 +165,8 @@ export class WebSocketClient {
 
     const message = createEnvelope(parsedPayload);
     const scopedHandlers = this.messageHandlers.get(message.type) ?? new Set();
-    const globalHandlers = this.messageHandlers.get(ALL_MESSAGES_KEY) ?? new Set();
+    const globalHandlers =
+      this.messageHandlers.get(ALL_MESSAGES_KEY) ?? new Set();
 
     [...scopedHandlers, ...globalHandlers].forEach((handler) => {
       handler(message);

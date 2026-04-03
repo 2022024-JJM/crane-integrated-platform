@@ -26,6 +26,12 @@ const IndoorWorkPage = lazy(() =>
   })),
 );
 
+const GoliathWorkPage = lazy(() =>
+  import('@crane/goliath-crane/pages/goliath-crane').then((m) => ({
+    default: m.GoliathWorkPage,
+  })),
+);
+
 export function App() {
   return (
     <BrowserRouter>
@@ -60,6 +66,14 @@ export function App() {
             element={
               <Suspense fallback={null}>
                 <IndoorWorkPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="goliath-work/:regionId/*"
+            element={
+              <Suspense fallback={null}>
+                <GoliathWorkPage />
               </Suspense>
             }
           />

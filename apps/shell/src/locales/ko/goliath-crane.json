@@ -1,0 +1,89 @@
+{
+  "pageTitle": "골리앗 크레인 모니터링",
+  "selectCrane": "모니터링할 크레인을 선택하세요",
+  "notFound": "크레인을 찾을 수 없습니다",
+  "back": "목록으로",
+  "status": {
+    "operating": "운전중",
+    "idle": "대기",
+    "maintenance": "정비",
+    "warning": "경고",
+    "stopped": "정지"
+  },
+  "header": {
+    "emergencyStop": "비상 정지",
+    "maintenanceMode": "정비 모드",
+    "craneInfo": "크레인 실시간 현황",
+    "lastHeartbeat": "마지막 응답",
+    "justNow": "방금",
+    "secondsAgo": "초 전"
+  },
+  "diagram": {
+    "title": "크레인 실시간 다이어그램"
+  },
+  "viewer3d": {
+    "title": "3D 모델 뷰어"
+  },
+  "metrics": {
+    "load": "하중",
+    "windSpeed": "풍속",
+    "mainHoistHeight": "메인 호이스트",
+    "auxHoistHeight": "보조 호이스트",
+    "trolleyPosition": "트롤리 위치",
+    "slewAngle": "선회 각도",
+    "operatingHours": "금일 운전시간",
+    "cycleCount": "금일 사이클"
+  },
+  "charts": {
+    "title": "센서 데이터 추이",
+    "loadSeries": "하중 (ton)",
+    "windSeries": "풍속 (m/s)",
+    "heightSeries": "높이 (m)"
+  },
+  "safety": {
+    "title": "안전 현황",
+    "safetyParameters": "안전 파라미터",
+    "protectionStatus": "보호 시스템",
+    "antiCollision": "충돌 방지",
+    "overloadProtection": "과부하 보호",
+    "mainLoad": "메인 하중",
+    "auxLoad": "보조 하중",
+    "windSpeed": "풍속",
+    "hoistHeight": "호이스트 높이"
+  },
+  "equipment": {
+    "title": "장비 상태",
+    "hoistMotor": "호이스트 모터",
+    "trolleyMotor": "트롤리 모터",
+    "travelMotor": "주행 모터",
+    "wireRope": "와이어 로프",
+    "brake": "브레이크",
+    "brakeStatus": {
+      "normal": "정상",
+      "warning": "점검 필요",
+      "fault": "이상"
+    }
+  },
+  "dashboard": {
+    "liveStatus": "실시간 현황"
+  },
+  "operationLog": {
+    "title": "운전 기록"
+  },
+  "timeRange": {
+    "1h": "1시간",
+    "6h": "6시간",
+    "12h": "12시간",
+    "24h": "24시간"
+  },
+  "log": {
+    "hoistUp": "호이스트 상승",
+    "hoistDown": "호이스트 하강",
+    "trolleyMove": "트롤리 이동",
+    "loadPickup": "하중 인양",
+    "loadRelease": "하중 해제",
+    "slewRotate": "선회 회전",
+    "emergencyStopTest": "비상정지 테스트",
+    "systemCheck": "시스템 점검"
+  }
+}

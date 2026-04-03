@@ -16,25 +16,38 @@ interface SceneTextProps {
   onObjectReady?: (id: string, object: Group | null) => void;
 }
 
-function TextSelectionOutline({ width, height }: { width: number; height: number }) {
+function TextSelectionOutline({
+  width,
+  height,
+}: {
+  width: number;
+  height: number;
+}) {
   const hw = width / 2 + 0.3;
   const hh = height / 2 + 0.3;
 
   const positions = new Float32Array([
-    -hw, -hh, 0,
-    hw, -hh, 0,
-    hw, hh, 0,
-    -hw, hh, 0,
-    -hw, -hh, 0,
+    -hw,
+    -hh,
+    0,
+    hw,
+    -hh,
+    0,
+    hw,
+    hh,
+    0,
+    -hw,
+    hh,
+    0,
+    -hw,
+    -hh,
+    0,
   ]);
 
   return (
     <line>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <lineBasicMaterial color="#ffff00" depthTest={false} />
     </line>
@@ -77,7 +90,11 @@ export const SceneText = memo(function SceneText({
     <group
       ref={groupRef}
       position={position}
-      rotation={[degToRad(rotation[0]), degToRad(rotation[1]), degToRad(rotation[2])]}
+      rotation={[
+        degToRad(rotation[0]),
+        degToRad(rotation[1]),
+        degToRad(rotation[2]),
+      ]}
       scale={scale}
     >
       <Text
@@ -95,7 +112,9 @@ export const SceneText = memo(function SceneText({
             const w = info.blockBounds[2] - info.blockBounds[0];
             const h = info.blockBounds[3] - info.blockBounds[1];
             setTextSize((prev) =>
-              prev.width === w && prev.height === h ? prev : { width: w, height: h },
+              prev.width === w && prev.height === h
+                ? prev
+                : { width: w, height: h },
             );
           }
         }}

@@ -1,4 +1,7 @@
-import { type SavedCameraInfo, type SceneModelCatalogItem } from '@crane/domain/3d';
+import {
+  type SavedCameraInfo,
+  type SceneModelCatalogItem,
+} from '@crane/domain/3d';
 import {
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
@@ -20,7 +23,9 @@ interface UseSceneEditorSessionResult {
   selectedModelId: string | null;
   selectedObjectType: SelectedObjectType | null;
   selectedModelLabel: string | null;
-  selectedModel: ReturnType<typeof useSelectedSceneObjectEditor>['selectedModel'];
+  selectedModel: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['selectedModel'];
   selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
   isSaving: boolean;
   isDirty: boolean;
@@ -29,7 +34,9 @@ interface UseSceneEditorSessionResult {
   transformMode: ReturnType<typeof useSceneTransformModeStore.getState>['mode'];
   undo: () => void;
   redo: () => void;
-  setTransformMode: ReturnType<typeof useSceneTransformModeStore.getState>['setMode'];
+  setTransformMode: ReturnType<
+    typeof useSceneTransformModeStore.getState
+  >['setMode'];
   saveCurrentScene: () => Promise<boolean>;
   updateSelectedName: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -75,7 +82,9 @@ interface UseSceneEditorSessionResult {
 export function useSceneEditorSession({
   regionId,
 }: UseSceneEditorSessionParams): UseSceneEditorSessionResult {
-  const sceneInfoRef = useRef<import('@crane/domain/3d').SavedSceneInfo | null>(null);
+  const sceneInfoRef = useRef<import('@crane/domain/3d').SavedSceneInfo | null>(
+    null,
+  );
   const transformHistoryBaseRef = useRef(null);
   const cameraStateRef = useRef<SavedCameraInfo | null>(null);
   const {
@@ -97,12 +106,12 @@ export function useSceneEditorSession({
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
-  const selectModel = useSceneObjectSelectionStore((state) => state.selectModel);
+  const selectModel = useSceneObjectSelectionStore(
+    (state) => state.selectModel,
+  );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const transformMode = useSceneTransformModeStore((state) => state.mode);
-  const setTransformMode = useSceneTransformModeStore(
-    (state) => state.setMode,
-  );
+  const setTransformMode = useSceneTransformModeStore((state) => state.setMode);
   const resetTransformMode = useSceneTransformModeStore(
     (state) => state.resetMode,
   );
@@ -132,14 +141,15 @@ export function useSceneEditorSession({
 
   const getCameraState = useCallback(() => cameraStateRef.current, []);
 
-  const { isDirty, isSaving, initialCamera, saveCurrentScene } = useScenePersistence({
-    regionId,
-    sceneInfo,
-    replaceScene,
-    updateScene,
-    onLoadReset,
-    getCameraState,
-  });
+  const { isDirty, isSaving, initialCamera, saveCurrentScene } =
+    useScenePersistence({
+      regionId,
+      sceneInfo,
+      replaceScene,
+      updateScene,
+      onLoadReset,
+      getCameraState,
+    });
 
   const manipulation = useMemo(
     () =>

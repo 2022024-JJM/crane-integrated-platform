@@ -7,7 +7,10 @@ import {
 } from '@crane/domain/monitoring';
 
 export function useMonitoringReplaySearch(regionId: string) {
-  const defaults = useMemo(() => buildDefaultReplayFormValues(regionId), [regionId]);
+  const defaults = useMemo(
+    () => buildDefaultReplayFormValues(regionId),
+    [regionId],
+  );
   const [draftFrom, setDraftFrom] = useState(defaults.from);
   const [draftTo, setDraftTo] = useState(defaults.to);
   const [submittedRange, setSubmittedRange] = useState({

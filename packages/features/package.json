@@ -10,7 +10,8 @@
     "./monitoring": "./src/monitoring/index.ts",
     "./weather": "./src/weather/index.ts",
     "./3d": "./src/3d/index.ts",
-    "./page-settings": "./src/page-settings/index.ts"
+    "./page-settings": "./src/page-settings/index.ts",
+    "./goliath-crane": "./src/goliath-crane/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

@@ -57,19 +57,21 @@ export function useHeaderWeather(): HeaderWeatherState {
     const abortController = new AbortController();
     let isDisposed = false;
 
-    void loadWeather(request.target, abortController.signal).then((snapshot) => {
-      queueMicrotask(() => {
-        if (isDisposed || abortController.signal.aborted) {
-          return;
-        }
+    void loadWeather(request.target, abortController.signal).then(
+      (snapshot) => {
+        queueMicrotask(() => {
+          if (isDisposed || abortController.signal.aborted) {
+            return;
+          }
 
-        setResult({
-          requestKey: request.key,
-          status: snapshot ? 'success' : 'unavailable',
-          snapshot,
+          setResult({
+            requestKey: request.key,
+            status: snapshot ? 'success' : 'unavailable',
+            snapshot,
+          });
         });
-      });
-    });
+      },
+    );
 
     return () => {
       isDisposed = true;
@@ -104,7 +106,11 @@ async function loadWeather(
   target: WeatherLocationTarget,
   signal: AbortSignal,
 ): Promise<WeatherSnapshot | null> {
-  return fetchOpenMeteoCurrentWeather(target.latitude, target.longitude, signal);
+  return fetchOpenMeteoCurrentWeather(
+    target.latitude,
+    target.longitude,
+    signal,
+  );
 }
 
 function resolveHeaderWeatherRequest(pathname: string): HeaderWeatherRequest {

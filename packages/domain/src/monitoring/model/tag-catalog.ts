@@ -43,7 +43,9 @@ function getIndexedDisplayName(prefix: string, index: string, suffix: string) {
   return `${prefix.toUpperCase()}#${index} ${suffix}`;
 }
 
-export function getMonitoringTagMetadata(tagCode: string): MonitoringTagMetadata {
+export function getMonitoringTagMetadata(
+  tagCode: string,
+): MonitoringTagMetadata {
   if (datetimeTagCodes.has(tagCode)) {
     return {
       displayName: humanizeToken(tagCode),
@@ -58,7 +60,11 @@ export function getMonitoringTagMetadata(tagCode: string): MonitoringTagMetadata
   const weightMatch = tagCode.match(/^(mh|ah)(\d+)_weight$/);
   if (weightMatch) {
     return {
-      displayName: getIndexedDisplayName(weightMatch[1], weightMatch[2], 'Weight'),
+      displayName: getIndexedDisplayName(
+        weightMatch[1],
+        weightMatch[2],
+        'Weight',
+      ),
       category: 'measurement',
       dataType: 'INT',
       unit: 'ton',
@@ -70,7 +76,11 @@ export function getMonitoringTagMetadata(tagCode: string): MonitoringTagMetadata
   const heightMatch = tagCode.match(/^(mh|ah)(\d+)_height$/);
   if (heightMatch) {
     return {
-      displayName: getIndexedDisplayName(heightMatch[1], heightMatch[2], 'Height'),
+      displayName: getIndexedDisplayName(
+        heightMatch[1],
+        heightMatch[2],
+        'Height',
+      ),
       category: 'measurement',
       dataType: 'INT',
       unit: 'm',
@@ -109,7 +119,11 @@ export function getMonitoringTagMetadata(tagCode: string): MonitoringTagMetadata
   const statusMatch = tagCode.match(/^(mh|ah|ts|tl)(\d+)_status$/);
   if (statusMatch) {
     return {
-      displayName: getIndexedDisplayName(statusMatch[1], statusMatch[2], 'Status'),
+      displayName: getIndexedDisplayName(
+        statusMatch[1],
+        statusMatch[2],
+        'Status',
+      ),
       category: 'status',
       dataType: null,
       unit: null,

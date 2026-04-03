@@ -7,7 +7,7 @@ import {
 } from '@crane/domain/alarm';
 
 interface AlarmStatsProps {
-  stats: AlarmStatistics
+  stats: AlarmStatistics;
 }
 
 export function AlarmStats({ stats }: AlarmStatsProps) {
@@ -26,7 +26,7 @@ export function AlarmStats({ stats }: AlarmStatsProps) {
         <span className={`text-lg font-bold ${criticalVisual.valueClassName}`}>
           {stats.critical}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-muted-foreground text-[10px]">
           {getAlarmSeverityLabel('critical', i18n.language)}
         </span>
       </div>
@@ -37,7 +37,7 @@ export function AlarmStats({ stats }: AlarmStatsProps) {
         <span className={`text-lg font-bold ${highVisual.valueClassName}`}>
           {stats.high}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-muted-foreground text-[10px]">
           {getAlarmSeverityLabel('high', i18n.language)}
         </span>
       </div>
@@ -48,7 +48,7 @@ export function AlarmStats({ stats }: AlarmStatsProps) {
         <span className={`text-lg font-bold ${mediumVisual.valueClassName}`}>
           {stats.medium}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-muted-foreground text-[10px]">
           {getAlarmSeverityLabel('medium', i18n.language)}
         </span>
       </div>
@@ -59,7 +59,7 @@ export function AlarmStats({ stats }: AlarmStatsProps) {
         <span className={`text-lg font-bold ${infoVisual.valueClassName}`}>
           {stats.info}
         </span>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-muted-foreground text-[10px]">
           {getAlarmSeverityLabel('info', i18n.language)}
         </span>
       </div>

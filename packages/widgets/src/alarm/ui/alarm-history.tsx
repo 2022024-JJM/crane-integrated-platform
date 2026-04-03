@@ -82,7 +82,9 @@ export function AlarmHistory({ alarms }: AlarmHistoryProps) {
                   : 'border-emerald-500/20 bg-emerald-500/6',
               )}
             >
-              <Icon className={`mt-0.5 size-3.5 shrink-0 ${visual.className}`} />
+              <Icon
+                className={`mt-0.5 size-3.5 shrink-0 ${visual.className}`}
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-2">
@@ -98,7 +100,7 @@ export function AlarmHistory({ alarms }: AlarmHistoryProps) {
                       {getAlarmSeverityLabel(alarm.severity, i18n.language)}
                     </span>
                   </div>
-                  <span className="shrink-0 text-muted-foreground">
+                  <span className="text-muted-foreground shrink-0">
                     {formatTime(alarm.timestamp, i18n.language)}
                   </span>
                 </div>

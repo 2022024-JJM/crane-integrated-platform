@@ -96,7 +96,10 @@ export function formatYearMonth(value: string | null | undefined) {
   return `${year}.${month}`;
 }
 
-export function formatMonthLabel(value: string, formatter: Intl.DateTimeFormat) {
+export function formatMonthLabel(
+  value: string,
+  formatter: Intl.DateTimeFormat,
+) {
   return formatter.format(new Date(value));
 }
 

@@ -20,19 +20,18 @@ export async function fetchOpenMeteoCurrentWeather(
   signal?: AbortSignal,
 ): Promise<WeatherSnapshot | null> {
   try {
-    const response =
-      await openMeteoClient.get<OpenMeteoCurrentWeatherResponse>(
-        '/v1/forecast',
-        {
-          query: {
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-            current: 'temperature_2m,weather_code,is_day',
-            temperature_unit: 'celsius',
-          },
-          signal,
+    const response = await openMeteoClient.get<OpenMeteoCurrentWeatherResponse>(
+      '/v1/forecast',
+      {
+        query: {
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          current: 'temperature_2m,weather_code,is_day',
+          temperature_unit: 'celsius',
         },
-      );
+        signal,
+      },
+    );
 
     return parseOpenMeteoCurrentWeatherResponse(response);
   } catch {

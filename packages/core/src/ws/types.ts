@@ -16,9 +16,7 @@ export type WebSocketMessageHandler<TPayload = unknown> = (
   message: WebSocketMessageEnvelope<TPayload>,
 ) => void;
 
-export type WebSocketStateListener = (
-  state: WebSocketConnectionState,
-) => void;
+export type WebSocketStateListener = (state: WebSocketConnectionState) => void;
 
 export interface WebSocketReconnectPolicy {
   enabled?: boolean;

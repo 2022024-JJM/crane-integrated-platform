@@ -14,7 +14,7 @@ export function ScaleController({
     <div className="flex flex-col gap-1.5">
       {(['x', 'y', 'z'] as const).map((axis) => (
         <div key={axis} className="flex items-center gap-1.5">
-          <span className="w-4 text-[10px] font-semibold uppercase text-muted-foreground">
+          <span className="text-muted-foreground w-4 text-[10px] font-semibold uppercase">
             {axis}
           </span>
           <InputNumber
@@ -22,7 +22,7 @@ export function ScaleController({
             step={0.1}
             min={0.1}
             max={100}
-            className="h-7 flex-1 rounded-sm border-border bg-muted/50 text-[12px]"
+            className="border-border bg-muted/50 h-7 flex-1 rounded-sm text-[12px]"
             onChange={(v) => onChange(axis, Number(v))}
           />
         </div>

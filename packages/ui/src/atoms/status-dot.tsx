@@ -13,7 +13,11 @@ export function StatusDot({
 }) {
   return (
     <span
-      className={cn('inline-block size-3 rounded-full', statusLevelDotClassName[status], className)}
+      className={cn(
+        'inline-block size-3 rounded-full',
+        statusLevelDotClassName[status],
+        className,
+      )}
       title={title}
     />
   );

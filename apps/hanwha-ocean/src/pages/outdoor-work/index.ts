@@ -1,1 +1,1 @@
-export { OutdoorWorkPage } from "./ui/outdoor-work-page"
+export { OutdoorWorkPage } from './ui/outdoor-work-page';

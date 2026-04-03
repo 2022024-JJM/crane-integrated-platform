@@ -22,9 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@crane/ui/molecules/card';
-import {
-  DashboardChartSkeleton,
-} from './dashboard-skeletons';
+import { DashboardChartSkeleton } from './dashboard-skeletons';
 import {
   formatMonth,
   formatMonthLabel,
@@ -32,11 +30,7 @@ import {
   formatWeekdayLabel,
   type DashboardSectionSharedProps,
 } from './dashboard-helpers';
-import {
-  ChartArea,
-  ChartTooltip,
-  StatsRow,
-} from './dashboard-parts';
+import { ChartArea, ChartTooltip, StatsRow } from './dashboard-parts';
 
 interface DashboardTrendSectionProps extends DashboardSectionSharedProps {
   locale: string;

@@ -1,4 +1,7 @@
-import { tableRowStatusBadgeClassName, tableCategoryClassName } from '@crane/core/lib/status-colors';
+import {
+  tableRowStatusBadgeClassName,
+  tableCategoryClassName,
+} from '@crane/core/lib/status-colors';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import type { MonitoringReplayRow } from '@crane/domain/monitoring';
 
@@ -143,8 +146,10 @@ export function getCategoryClassName(category: string) {
 }
 
 export function buildRowStatuses(row: MonitoringReplayRow) {
-  const statuses: Array<{ label: string; tone: keyof typeof tableRowStatusBadgeClassName }> =
-    [];
+  const statuses: Array<{
+    label: string;
+    tone: keyof typeof tableRowStatusBadgeClassName;
+  }> = [];
 
   if (row.alarm) {
     statuses.push({ label: 'Alarm', tone: 'alarm' });
@@ -174,7 +179,9 @@ export function openDateTimePicker(input: DateTimeInputElement | null) {
   input.showPicker?.();
 }
 
-export function buildHeartbeatStatuses(rows: MonitoringReplayRow[]): HeartbeatStatus[] {
+export function buildHeartbeatStatuses(
+  rows: MonitoringReplayRow[],
+): HeartbeatStatus[] {
   return rows
     .filter((row) => row.tagCode === 'heartbeat')
     .map((row) => ({
@@ -182,5 +189,7 @@ export function buildHeartbeatStatuses(rows: MonitoringReplayRow[]): HeartbeatSt
       craneId: row.craneId,
       stale: row.stale,
     }))
-    .sort((a, b) => a.craneNo.localeCompare(b.craneNo, undefined, { numeric: true }));
+    .sort((a, b) =>
+      a.craneNo.localeCompare(b.craneNo, undefined, { numeric: true }),
+    );
 }

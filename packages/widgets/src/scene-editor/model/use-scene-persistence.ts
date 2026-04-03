@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type SetStateAction,
+} from 'react';
 import {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,

@@ -9,11 +9,11 @@ export function getMonitoringReplayLite(query: MonitoringReplayLiteQuery) {
   return restClient.get<ReplayLiteResponse>(
     getApiPath('monitoring/replay-lite'),
     {
-    query: {
-      from: query.from,
-      to: query.to,
-      interval: query.interval,
-    },
+      query: {
+        from: query.from,
+        to: query.to,
+        interval: query.interval,
+      },
     },
   );
 }

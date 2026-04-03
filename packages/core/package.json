@@ -22,6 +22,8 @@
     "./lib/use-navigation-progress": "./src/lib/use-navigation-progress.ts",
     "./lib/use-progress-navigate": "./src/lib/use-progress-navigate.ts",
     "./lib/use-date-time": "./src/lib/use-date-time.ts",
+    "./lib/site-type-context": "./src/lib/site-type-context.tsx",
+    "./lib/preview-helpers": "./src/lib/preview-helpers.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
     "./types/navigation": "./src/types/navigation.ts",

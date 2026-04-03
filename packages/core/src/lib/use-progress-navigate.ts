@@ -46,6 +46,12 @@ export function useProgressNavigate() {
 
       navigate(to, options);
     },
-    [location.hash, location.pathname, location.search, navigate, startNavigation],
+    [
+      location.hash,
+      location.pathname,
+      location.search,
+      navigate,
+      startNavigation,
+    ],
   );
 }

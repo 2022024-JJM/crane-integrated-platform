@@ -42,33 +42,32 @@ function useShouldStartNavigation(to: LinkProps['to']) {
   };
 }
 
-export const AppLink = forwardRef<HTMLAnchorElement, LinkProps>(function AppLink(
-  { onClick, target, to, ...props },
-  ref,
-) {
-  const { startNavigation } = useNavigationProgress();
-  const shouldStartNavigation = useShouldStartNavigation(to);
+export const AppLink = forwardRef<HTMLAnchorElement, LinkProps>(
+  function AppLink({ onClick, target, to, ...props }, ref) {
+    const { startNavigation } = useNavigationProgress();
+    const shouldStartNavigation = useShouldStartNavigation(to);
 
-  const handleClick: MouseEventHandler<HTMLAnchorElement> = (event) => {
-    onClick?.(event);
+    const handleClick: MouseEventHandler<HTMLAnchorElement> = (event) => {
+      onClick?.(event);
 
-    if (!shouldHandleNavigation(event, target) || !shouldStartNavigation()) {
-      return;
-    }
+      if (!shouldHandleNavigation(event, target) || !shouldStartNavigation()) {
+        return;
+      }
 
-    startNavigation();
-  };
+      startNavigation();
+    };
 
-  return (
-    <RouterLink
-      {...props}
-      ref={ref}
-      to={to}
-      target={target}
-      onClick={handleClick}
-    />
-  );
-});
+    return (
+      <RouterLink
+        {...props}
+        ref={ref}
+        to={to}
+        target={target}
+        onClick={handleClick}
+      />
+    );
+  },
+);
 
 export const AppNavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
   function AppNavLink({ onClick, target, to, ...props }, ref) {

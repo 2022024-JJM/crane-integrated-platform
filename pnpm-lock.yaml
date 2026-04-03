@@ -68,12 +68,36 @@ importers:
       '@crane/widgets':
         specifier: workspace:*
         version: link:../../packages/widgets
+      '@react-three/drei':
+        specifier: ^10.7.7
+        version: 10.7.7(@react-three/fiber@9.5.0(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
+      '@react-three/fiber':
+        specifier: ^9.5.0
+        version: 9.5.0(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
+      i18next:
+        specifier: ^25.6.2
+        version: 25.10.10(typescript@5.9.3)
+      lucide-react:
+        specifier: ^0.575.0
+        version: 0.575.0(react@19.2.4)
       react:
         specifier: ^19.2.0
         version: 19.2.4
       react-dom:
         specifier: ^19.2.0
         version: 19.2.4(react@19.2.4)
+      react-i18next:
+        specifier: ^16.3.5
+        version: 16.6.6(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+      react-router-dom:
+        specifier: ^7.13.1
+        version: 7.14.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      recharts:
+        specifier: ^3.8.0
+        version: 3.8.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.4)(react@19.2.4)(redux@5.0.1)
+      three:
+        specifier: ^0.183.2
+        version: 0.183.2
 
   apps/hanwha-ocean:
     dependencies:
@@ -137,6 +161,9 @@ importers:
       '@crane/features':
         specifier: workspace:*
         version: link:../../packages/features
+      '@crane/goliath-crane':
+        specifier: workspace:*
+        version: link:../goliath-crane
       '@crane/hanwha-ocean':
         specifier: workspace:*
         version: link:../hanwha-ocean

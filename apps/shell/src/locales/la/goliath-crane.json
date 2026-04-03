@@ -1,0 +1,89 @@
+{
+  "pageTitle": "Goliath Crane Monitio",
+  "selectCrane": "Elige gruem ad monendum",
+  "notFound": "Grues non inventa",
+  "back": "Revertere ad indicem",
+  "status": {
+    "operating": "Operans",
+    "idle": "Otiosus",
+    "maintenance": "Refectio",
+    "warning": "Monitio",
+    "stopped": "Substitit"
+  },
+  "header": {
+    "emergencyStop": "Subsiste Subito",
+    "maintenanceMode": "Modus Refectionis",
+    "craneInfo": "Status Gruis Vivus",
+    "lastHeartbeat": "Ultima responsio",
+    "justNow": "modo",
+    "secondsAgo": "s ante"
+  },
+  "diagram": {
+    "title": "Diagramma Gruis Temporis Realis"
+  },
+  "viewer3d": {
+    "title": "Exemplar 3D"
+  },
+  "metrics": {
+    "load": "Onus",
+    "windSpeed": "Ventus",
+    "mainHoistHeight": "Tolleno Princip.",
+    "auxHoistHeight": "Tolleno Auxil.",
+    "trolleyPosition": "Positio Currus",
+    "slewAngle": "Angulus Gyrat.",
+    "operatingHours": "Horae Operationis",
+    "cycleCount": "Numerus Cyclorum"
+  },
+  "charts": {
+    "title": "Data Sensorum",
+    "loadSeries": "Onus (ton)",
+    "windSeries": "Ventus (m/s)",
+    "heightSeries": "Altitudo (m)"
+  },
+  "safety": {
+    "title": "Status Securitatis",
+    "safetyParameters": "Parametra Securitatis",
+    "protectionStatus": "Systemata Protectionis",
+    "antiCollision": "Anti-Collisio",
+    "overloadProtection": "Protectio Nimii Oneris",
+    "mainLoad": "Onus Principale",
+    "auxLoad": "Onus Auxiliare",
+    "windSpeed": "Ventus",
+    "hoistHeight": "Altitudo Tollenonis"
+  },
+  "equipment": {
+    "title": "Status Instrumenti",
+    "hoistMotor": "Motor Tollenonis",
+    "trolleyMotor": "Motor Currus",
+    "travelMotor": "Motor Itineris",
+    "wireRope": "Funis Ferreus",
+    "brake": "Sufflamen",
+    "brakeStatus": {
+      "normal": "Normalis",
+      "warning": "Inspectio",
+      "fault": "Vitium"
+    }
+  },
+  "dashboard": {
+    "liveStatus": "Status Vivus"
+  },
+  "operationLog": {
+    "title": "Acta Operationis"
+  },
+  "timeRange": {
+    "1h": "1H",
+    "6h": "6H",
+    "12h": "12H",
+    "24h": "24H"
+  },
+  "log": {
+    "hoistUp": "Tolleno Sursum",
+    "hoistDown": "Tolleno Deorsum",
+    "trolleyMove": "Motus Currus",
+    "loadPickup": "Sublatio Oneris",
+    "loadRelease": "Dimissio Oneris",
+    "slewRotate": "Gyratio",
+    "emergencyStopTest": "Probatio Subsist.",
+    "systemCheck": "Inspectio Systematis"
+  }
+}

@@ -40,7 +40,10 @@ function toWebSocketOrigin(origin: string) {
   return origin;
 }
 
-function resolveWebSocketBaseUrl(value: string | undefined, fallbackPath: string) {
+function resolveWebSocketBaseUrl(
+  value: string | undefined,
+  fallbackPath: string,
+) {
   if (value && value.trim()) {
     return trimTrailingSlash(value.trim());
   }

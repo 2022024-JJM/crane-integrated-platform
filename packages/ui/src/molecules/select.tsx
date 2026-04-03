@@ -12,25 +12,17 @@ interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
   label?: string;
 }
 
-function SelectTrigger({
-  className,
-  label,
-  ...props
-}: SelectTriggerProps) {
+function SelectTrigger({ className, label, ...props }: SelectTriggerProps) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium outline-none transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
+        'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
         className,
       )}
       {...props}
     >
-      {label !== undefined ? (
-        <span>{label}</span>
-      ) : (
-        <SelectPrimitive.Value />
-      )}
-      <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+      {label !== undefined ? <span>{label}</span> : <SelectPrimitive.Value />}
+      <ChevronDown className="text-muted-foreground size-3 shrink-0" />
     </SelectPrimitive.Trigger>
   );
 }
@@ -41,7 +33,7 @@ function SelectPopup({ className, ...props }: SelectPrimitive.Popup.Props) {
       <SelectPrimitive.Positioner sideOffset={4} align="start">
         <SelectPrimitive.Popup
           className={cn(
-            'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md',
+            'border-border bg-popover text-popover-foreground z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-md',
             'origin-[var(--transform-origin)] transition-[transform,scale,opacity]',
             'data-[ending-style]:scale-95 data-[ending-style]:opacity-0',
             'data-[starting-style]:scale-95 data-[starting-style]:opacity-0',
@@ -62,7 +54,7 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        'relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none transition-colors',
+        'relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors outline-none',
         'hover:bg-accent hover:text-accent-foreground',
         'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',

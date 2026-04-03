@@ -21,7 +21,10 @@ export function useMonitoringReplay({
   to,
   interval,
 }: UseMonitoringReplayParams) {
-  const craneIds = useMemo(() => getReplayDefaultCraneIds(regionId), [regionId]);
+  const craneIds = useMemo(
+    () => getReplayDefaultCraneIds(regionId),
+    [regionId],
+  );
 
   const replayQuery = useQuery({
     queryKey: ['monitoring', 'replay-lite', regionId, from, to, interval],
@@ -30,7 +33,7 @@ export function useMonitoringReplay({
         from,
         to,
         interval,
-    }),
+      }),
     enabled: Boolean(from && to && interval),
     refetchInterval: 5_000,
   });
@@ -48,7 +51,10 @@ export function useMonitoringReplay({
       return null;
     }
 
-    return getLatestReplayFrameWithValues(replayQuery.data, craneIds)?.timestamp ?? null;
+    return (
+      getLatestReplayFrameWithValues(replayQuery.data, craneIds)?.timestamp ??
+      null
+    );
   }, [craneIds, replayQuery.data]);
 
   return {

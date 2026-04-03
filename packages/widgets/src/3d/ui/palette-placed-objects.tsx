@@ -1,7 +1,11 @@
 import { Boxes, Layers3, Search, Trash2, Type } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { humanizeModelPath, type SavedModelInfo, type SavedTextInfo } from '@crane/domain/3d';
+import {
+  humanizeModelPath,
+  type SavedModelInfo,
+  type SavedTextInfo,
+} from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
@@ -68,31 +72,31 @@ export function PalettePlacedObjects({
   }, [normalizedObjectSearch, placedModels, placedTexts, t]);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-2 py-1.5">
+    <section className="border-border bg-card flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div className="border-border flex items-center justify-between border-b px-2 py-1.5">
         <div className="flex items-center gap-2">
-          <Layers3 className="size-3 text-muted-foreground" />
-          <p className="text-[10px] font-semibold tracking-[0.12em] text-foreground/75 uppercase">
+          <Layers3 className="text-muted-foreground size-3" />
+          <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
             {t('monitoring:editor.placedObjects')}
           </p>
         </div>
         <Badge
           variant="outline"
-          className="rounded-sm border-border bg-muted px-1.5 py-0 text-[9px] text-muted-foreground"
+          className="border-border bg-muted text-muted-foreground rounded-sm px-1.5 py-0 text-[9px]"
         >
           {placedModels.length + placedTexts.length}
         </Badge>
       </div>
-      <div className="border-b border-border px-2 py-1.5">
+      <div className="border-border border-b px-2 py-1.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground/50" />
+          <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
           <Input
             value={objectSearch}
             onChange={(event) => {
               setObjectSearch(event.target.value);
             }}
             placeholder="Search objects"
-            className="h-6 rounded-sm border-border bg-muted pl-7 text-[11px] text-foreground placeholder:text-muted-foreground"
+            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>
       </div>
@@ -147,10 +151,10 @@ export function PalettePlacedObjects({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-medium leading-none">
+                    <p className="truncate text-[12px] leading-none font-medium">
                       {item.displayName}
                     </p>
-                    <p className="mt-0.5 truncate text-[9px] leading-none text-muted-foreground">
+                    <p className="text-muted-foreground mt-0.5 truncate text-[9px] leading-none">
                       {item.subtitle}
                     </p>
                   </div>
@@ -158,7 +162,7 @@ export function PalettePlacedObjects({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    className="size-5 cursor-pointer rounded-sm text-muted-foreground hover:bg-muted hover:text-red-300"
+                    className="text-muted-foreground hover:bg-muted size-5 cursor-pointer rounded-sm hover:text-red-300"
                     aria-label={t('monitoring:editor.deleteObject')}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -175,7 +179,7 @@ export function PalettePlacedObjects({
               );
             })
           ) : (
-            <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-4 text-center text-[11px]">
               {t('monitoring:editor.noPlacedObjects')}
             </div>
           )}

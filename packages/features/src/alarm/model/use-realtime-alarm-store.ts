@@ -33,7 +33,9 @@ function getMostRecentActiveAlarmForCrane(
   return Object.entries(activeAlarms)
     .map(([key, alarm]) => ({ key, alarm }))
     .filter((entry) => entry.alarm.craneId === craneId)
-    .sort((left, right) => right.alarm.timestamp.localeCompare(left.alarm.timestamp))[0];
+    .sort((left, right) =>
+      right.alarm.timestamp.localeCompare(left.alarm.timestamp),
+    )[0];
 }
 
 export function isRealtimeAlarmMessage(
@@ -79,7 +81,10 @@ export function getRealtimeAlarmStatsByRegion(
   };
 }
 
-export function getRealtimeAlarmHistoryByRegion(history: Alarm[], regionId: string) {
+export function getRealtimeAlarmHistoryByRegion(
+  history: Alarm[],
+  regionId: string,
+) {
   return history.filter((alarm) => alarm.regionId === regionId);
 }
 
@@ -117,7 +122,9 @@ export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
         });
 
         const clearAlarm = nextAlarm;
-        const historyWithClear = state.history.some((h) => h.id === clearAlarm.id)
+        const historyWithClear = state.history.some(
+          (h) => h.id === clearAlarm.id,
+        )
           ? state.history
           : [clearAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS);
 
@@ -132,7 +139,9 @@ export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
         nextAlarm;
 
       const activeAlarm = nextAlarm;
-      const historyWithActive = state.history.some((h) => h.id === activeAlarm.id)
+      const historyWithActive = state.history.some(
+        (h) => h.id === activeAlarm.id,
+      )
         ? state.history
         : [activeAlarm, ...state.history].slice(0, MAX_HISTORY_ITEMS);
 

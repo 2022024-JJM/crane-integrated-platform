@@ -1,10 +1,5 @@
 import { AlertCircle, Box, Loader2 } from 'lucide-react';
-import {
-  Component,
-  type ErrorInfo,
-  type ReactNode,
-  useRef,
-} from 'react';
+import { Component, type ErrorInfo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SceneModelPreviewPreset } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -184,13 +179,11 @@ function SceneModelPreviewInner({
       <div
         className={cn(
           'pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-slate-950/82 px-2.5 py-2 text-white transition duration-200',
-          showOverlay
-            ? 'translate-y-0 opacity-100'
-            : 'translate-y-1 opacity-0',
+          showOverlay ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
         )}
       >
         {overlayLabel ? (
-          <p className="truncate text-[11px] font-semibold leading-tight">
+          <p className="truncate text-[11px] leading-tight font-semibold">
             {overlayLabel}
           </p>
         ) : null}

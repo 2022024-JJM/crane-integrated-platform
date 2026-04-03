@@ -11,7 +11,8 @@
     "./monitoring": "./src/monitoring/index.ts",
     "./region": "./src/region/index.ts",
     "./weather": "./src/weather/index.ts",
-    "./3d": "./src/3d/index.ts"
+    "./3d": "./src/3d/index.ts",
+    "./goliath-crane": "./src/goliath-crane/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

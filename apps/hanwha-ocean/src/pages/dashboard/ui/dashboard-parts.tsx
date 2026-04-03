@@ -18,7 +18,10 @@ import {
   type AlarmStatistics,
 } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
-import { severityBadgeClassName, craneStatusBadgeClassName } from '@crane/core/lib/status-colors';
+import {
+  severityBadgeClassName,
+  craneStatusBadgeClassName,
+} from '@crane/core/lib/status-colors';
 import { AppLink } from '@crane/ui/atoms/app-link';
 import { Badge } from '@crane/ui/atoms/badge';
 import {
@@ -295,11 +298,13 @@ export function RiskCraneRow({
             {translate(crane.regionTitleKey)}
           </p>
         </div>
-        <Badge className={cn('border', craneStatusBadgeClassName[crane.status])}>
+        <Badge
+          className={cn('border', craneStatusBadgeClassName[crane.status])}
+        >
           {translate(`common:craneStatus.${crane.status}`)}
         </Badge>
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+      <div className="bg-muted/40 mt-2 h-1.5 w-full overflow-hidden rounded-full">
         <div
           className="h-full rounded-full"
           style={{
@@ -357,7 +362,12 @@ export function DockAlarmStats({
             <span className={cn('text-xs font-medium', visual.iconClassName)}>
               {getAlarmSeverityLabel(severity, locale)}
             </span>
-            <span className={cn('text-base font-bold tabular-nums', visual.valueClassName)}>
+            <span
+              className={cn(
+                'text-base font-bold tabular-nums',
+                visual.valueClassName,
+              )}
+            >
               {count}
             </span>
           </div>

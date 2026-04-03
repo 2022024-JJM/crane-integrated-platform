@@ -107,7 +107,7 @@ function StatusState({
   tone?: 'muted' | 'error';
 }) {
   return (
-    <div className="m-4 rounded-xl border border-border/60 bg-muted/30 p-5">
+    <div className="border-border/60 bg-muted/30 m-4 rounded-xl border p-5">
       <p
         className={cn(
           'text-sm font-medium',
@@ -117,7 +117,7 @@ function StatusState({
         {title}
       </p>
       {description ? (
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs leading-5">
           {description}
         </p>
       ) : null}
@@ -135,14 +135,14 @@ function DateTimeField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="flex min-w-[220px] flex-col gap-1 text-xs text-muted-foreground">
+    <label className="text-muted-foreground flex min-w-[220px] flex-col gap-1 text-xs">
       <span>{label}</span>
       <input
         type="datetime-local"
         step={1}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none ring-0 transition focus-visible:border-ring"
+        className="border-border bg-background text-foreground focus-visible:border-ring h-8 w-full rounded-md border px-2 text-sm ring-0 transition outline-none"
       />
     </label>
   );
@@ -161,14 +161,18 @@ function SortButton({
   onClick: () => void;
   align?: 'left' | 'right';
 }) {
-  const Icon = !isActive ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown;
+  const Icon = !isActive
+    ? ArrowUpDown
+    : direction === 'asc'
+      ? ArrowUp
+      : ArrowDown;
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-1 text-xs font-semibold text-muted-foreground transition hover:text-foreground',
+        'text-muted-foreground hover:text-foreground flex w-full items-center gap-1 text-xs font-semibold transition',
         align === 'right' ? 'justify-end' : 'justify-start',
       )}
     >
@@ -245,11 +249,13 @@ export function CraneStatusTable({
   };
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="bg-background flex h-full flex-col">
       <div className="border-b px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">{t('common:craneStatus.title')}</h3>
+            <h3 className="text-sm font-semibold">
+              {t('common:craneStatus.title')}
+            </h3>
           </div>
           <form
             className="flex flex-col items-stretch gap-2"
@@ -274,7 +280,7 @@ export function CraneStatusTable({
               </Button>
             </div>
             {validationMessage ? (
-              <p className="text-xs text-destructive">{validationMessage}</p>
+              <p className="text-destructive text-xs">{validationMessage}</p>
             ) : null}
           </form>
         </div>
@@ -302,9 +308,9 @@ export function CraneStatusTable({
             <div className="relative min-w-[1120px]">
               <table className="w-full caption-bottom text-sm">
                 <TableHeader>
-                  <TableRow className="border-b bg-muted/50 hover:bg-muted/50">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
                     <TableHead
-                      className="sticky top-0 left-0 z-30 w-[120px] border-r bg-muted px-3 py-3 text-xs font-semibold whitespace-nowrap text-muted-foreground shadow-[1px_0_0_0_hsl(var(--border))]"
+                      className="bg-muted text-muted-foreground sticky top-0 left-0 z-30 w-[120px] border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
                       style={{ minWidth: CRANE_COLUMN_WIDTH }}
                     >
                       <SortButton
@@ -315,7 +321,7 @@ export function CraneStatusTable({
                       />
                     </TableHead>
                     <TableHead
-                      className="sticky top-0 z-30 w-[320px] border-r bg-muted px-3 py-3 text-xs font-semibold whitespace-nowrap text-muted-foreground shadow-[1px_0_0_0_hsl(var(--border))]"
+                      className="bg-muted text-muted-foreground sticky top-0 z-30 w-[320px] border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
                       style={{
                         left: CRANE_COLUMN_WIDTH,
                         minWidth: TAG_NAME_COLUMN_WIDTH,
@@ -328,7 +334,7 @@ export function CraneStatusTable({
                         onClick={() => toggleSort('tagName')}
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[140px] border-r bg-muted px-3 py-3 text-right text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[140px] border-r px-3 py-3 text-right text-xs font-semibold">
                       <SortButton
                         label={t('common:craneStatus.columns.value')}
                         isActive={sortKey === 'value'}
@@ -337,7 +343,7 @@ export function CraneStatusTable({
                         align="right"
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[90px] border-r bg-muted px-3 py-3 text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[90px] border-r px-3 py-3 text-xs font-semibold">
                       <SortButton
                         label={t('common:craneStatus.columns.unit')}
                         isActive={sortKey === 'unit'}
@@ -345,7 +351,7 @@ export function CraneStatusTable({
                         onClick={() => toggleSort('unit')}
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[120px] border-r bg-muted px-3 py-3 text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[120px] border-r px-3 py-3 text-xs font-semibold">
                       <SortButton
                         label={t('common:craneStatus.columns.category')}
                         isActive={sortKey === 'category'}
@@ -353,7 +359,7 @@ export function CraneStatusTable({
                         onClick={() => toggleSort('category')}
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[110px] border-r bg-muted px-3 py-3 text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[110px] border-r px-3 py-3 text-xs font-semibold">
                       <SortButton
                         label={t('common:craneStatus.columns.dataType')}
                         isActive={sortKey === 'dataType'}
@@ -361,7 +367,7 @@ export function CraneStatusTable({
                         onClick={() => toggleSort('dataType')}
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[130px] border-r bg-muted px-3 py-3 text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[130px] border-r px-3 py-3 text-xs font-semibold">
                       <SortButton
                         label={t('common:craneStatus.columns.snapshotAt')}
                         isActive={sortKey === 'snapshotAt'}
@@ -369,7 +375,7 @@ export function CraneStatusTable({
                         onClick={() => toggleSort('snapshotAt')}
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 min-w-[180px] bg-muted px-3 py-3 text-xs font-semibold text-muted-foreground">
+                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 min-w-[180px] px-3 py-3 text-xs font-semibold">
                       {t('common:craneStatus.columns.status')}
                     </TableHead>
                   </TableRow>
@@ -378,47 +384,49 @@ export function CraneStatusTable({
                   {sortedRows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className="border-b border-border/60 hover:bg-muted/20"
+                      className="border-border/60 hover:bg-muted/20 border-b"
                     >
                       <TableCell
-                        className="sticky left-0 z-20 border-r bg-background px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
+                        className="bg-background sticky left-0 z-20 border-r px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
                         style={{ minWidth: CRANE_COLUMN_WIDTH }}
                       >
                         <div className="flex min-w-0 flex-col">
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             {row.craneNo}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-muted-foreground text-[11px]">
                             {row.craneId}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell
-                        className="sticky z-20 border-r bg-background px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
+                        className="bg-background sticky z-20 border-r px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
                         style={{
                           left: CRANE_COLUMN_WIDTH,
                           minWidth: TAG_NAME_COLUMN_WIDTH,
                         }}
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">
+                          <p className="text-foreground truncate text-sm font-medium">
                             {row.displayName}
                           </p>
-                          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                          <p className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">
                             {row.tagCode}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell className="border-r px-3 py-3 text-right">
                         {formatValue(row.value) === null ? (
-                          <span className="text-sm text-muted-foreground/80">-</span>
+                          <span className="text-muted-foreground/80 text-sm">
+                            -
+                          </span>
                         ) : (
-                          <span className="font-mono text-sm font-medium text-foreground">
+                          <span className="text-foreground font-mono text-sm font-medium">
                             {formatValue(row.value)}
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="border-r px-3 py-3 text-sm text-muted-foreground">
+                      <TableCell className="text-muted-foreground border-r px-3 py-3 text-sm">
                         {row.unit ?? '-'}
                       </TableCell>
                       <TableCell className="border-r px-3 py-3">
@@ -433,12 +441,12 @@ export function CraneStatusTable({
                         </Badge>
                       </TableCell>
                       <TableCell className="border-r px-3 py-3">
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="text-muted-foreground font-mono text-xs">
                           {formatDataType(row.dataType)}
                         </span>
                       </TableCell>
                       <TableCell className="border-r px-3 py-3">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {formatTimestamp(row.snapshotAt, i18n.language)}
                         </span>
                       </TableCell>
