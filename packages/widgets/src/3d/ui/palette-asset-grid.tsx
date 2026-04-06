@@ -1,5 +1,5 @@
 import { Boxes, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
@@ -21,7 +21,7 @@ interface PaletteAssetGridProps {
   onDragEnd: () => void;
 }
 
-export function PaletteAssetGrid({
+export const PaletteAssetGrid = memo(function PaletteAssetGrid({
   items,
   draggingItemId,
   onDragStart,
@@ -124,4 +124,4 @@ export function PaletteAssetGrid({
       </ScrollArea>
     </section>
   );
-}
+});

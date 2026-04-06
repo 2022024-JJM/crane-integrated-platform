@@ -1,5 +1,5 @@
 import { AlertCircle, Box, Loader2 } from 'lucide-react';
-import { Component, type ErrorInfo, type ReactNode, useRef } from 'react';
+import { Component, type ErrorInfo, memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SceneModelPreviewPreset } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -86,7 +86,7 @@ function PreviewFallback({
   );
 }
 
-export function SceneModelPreview({
+export const SceneModelPreview = memo(function SceneModelPreview({
   path,
   label,
   preview,
@@ -125,7 +125,7 @@ export function SceneModelPreview({
       />
     </PreviewErrorBoundary>
   );
-}
+});
 
 function SceneModelPreviewInner({
   path,

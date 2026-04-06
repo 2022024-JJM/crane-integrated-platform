@@ -1,4 +1,5 @@
 import { CheckCircle2, Download, Loader2, Save } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
@@ -14,7 +15,7 @@ interface PaletteHeaderProps {
   isSaving: boolean;
 }
 
-export function PaletteHeader({
+export const PaletteHeader = memo(function PaletteHeader({
   onSave,
   onExport,
   saveDisabled,
@@ -86,4 +87,4 @@ export function PaletteHeader({
       </div>
     </CardHeader>
   );
-}
+});

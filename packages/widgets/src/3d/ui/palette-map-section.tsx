@@ -1,4 +1,5 @@
 import { Map, Trash2 } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { humanizeModelPath, type SavedMapInfo } from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
@@ -8,7 +9,7 @@ interface PaletteMapSectionProps {
   onDeleteMap: () => void;
 }
 
-export function PaletteMapSection({
+export const PaletteMapSection = memo(function PaletteMapSection({
   map,
   onDeleteMap,
 }: PaletteMapSectionProps) {
@@ -49,4 +50,4 @@ export function PaletteMapSection({
       </div>
     </section>
   );
-}
+});
