@@ -92,6 +92,60 @@ function TransformGroup({ title, children }: TransformGroupProps) {
   );
 }
 
+interface TransformSectionProps {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  t: (key: string) => string;
+}
+
+function TransformSection({
+  position,
+  rotation,
+  scale,
+  onTransformChange,
+  t,
+}: TransformSectionProps) {
+  return (
+    <InspectorSection
+      title={t('monitoring:transform.title')}
+      icon={<Cuboid className="size-4" />}
+    >
+      <div className="space-y-2.5">
+        <TransformGroup title={t('monitoring:inspector.position')}>
+          <PositionController
+            vec={position}
+            onChange={(axis, value) => {
+              onTransformChange('position', axis, value);
+            }}
+          />
+        </TransformGroup>
+        <TransformGroup title={t('monitoring:inspector.rotation')}>
+          <RotationController
+            vec={rotation}
+            onChange={(axis, value) => {
+              onTransformChange('rotation', axis, value);
+            }}
+          />
+        </TransformGroup>
+        <TransformGroup title={t('monitoring:inspector.scale')}>
+          <ScaleController
+            vec={scale}
+            onChange={(axis, value) => {
+              onTransformChange('scale', axis, value);
+            }}
+          />
+        </TransformGroup>
+      </div>
+    </InspectorSection>
+  );
+}
+
 function ModelInspectorContent({
   selectedModel,
   selectedLabel,
@@ -153,37 +207,13 @@ function ModelInspectorContent({
         />
       </InspectorSection>
 
-      <InspectorSection
-        title={t('monitoring:transform.title')}
-        icon={<Cuboid className="size-4" />}
-      >
-        <div className="space-y-2.5">
-          <TransformGroup title={t('monitoring:inspector.position')}>
-            <PositionController
-              vec={selectedModel.position}
-              onChange={(axis, value) => {
-                onTransformChange('position', axis, value);
-              }}
-            />
-          </TransformGroup>
-          <TransformGroup title={t('monitoring:inspector.rotation')}>
-            <RotationController
-              vec={selectedModel.rotation}
-              onChange={(axis, value) => {
-                onTransformChange('rotation', axis, value);
-              }}
-            />
-          </TransformGroup>
-          <TransformGroup title={t('monitoring:inspector.scale')}>
-            <ScaleController
-              vec={selectedModel.scale}
-              onChange={(axis, value) => {
-                onTransformChange('scale', axis, value);
-              }}
-            />
-          </TransformGroup>
-        </div>
-      </InspectorSection>
+      <TransformSection
+        position={selectedModel.position}
+        rotation={selectedModel.rotation}
+        scale={selectedModel.scale}
+        onTransformChange={onTransformChange}
+        t={t}
+      />
 
       <InspectorSection
         title={t('monitoring:inspector.opacity')}
@@ -283,37 +313,13 @@ function TextInspectorContent({
         </div>
       </InspectorSection>
 
-      <InspectorSection
-        title={t('monitoring:transform.title')}
-        icon={<Cuboid className="size-4" />}
-      >
-        <div className="space-y-2.5">
-          <TransformGroup title={t('monitoring:inspector.position')}>
-            <PositionController
-              vec={selectedText.position}
-              onChange={(axis, value) => {
-                onTextTransformChange('position', axis, value);
-              }}
-            />
-          </TransformGroup>
-          <TransformGroup title={t('monitoring:inspector.rotation')}>
-            <RotationController
-              vec={selectedText.rotation}
-              onChange={(axis, value) => {
-                onTextTransformChange('rotation', axis, value);
-              }}
-            />
-          </TransformGroup>
-          <TransformGroup title={t('monitoring:inspector.scale')}>
-            <ScaleController
-              vec={selectedText.scale}
-              onChange={(axis, value) => {
-                onTextTransformChange('scale', axis, value);
-              }}
-            />
-          </TransformGroup>
-        </div>
-      </InspectorSection>
+      <TransformSection
+        position={selectedText.position}
+        rotation={selectedText.rotation}
+        scale={selectedText.scale}
+        onTransformChange={onTextTransformChange}
+        t={t}
+      />
     </>
   );
 }
