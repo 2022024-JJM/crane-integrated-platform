@@ -328,7 +328,7 @@ async function executeRender(entry: QueueEntry): Promise<void> {
 
     if (entry.aborted) return;
 
-    const clone = SkeletonUtils.clone(gltfScene) as unknown as Object3D;
+    const clone = SkeletonUtils.clone(gltfScene);
     const group = new Group();
     group.add(clone);
     scene.add(group);
