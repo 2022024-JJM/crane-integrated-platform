@@ -70,7 +70,7 @@ export function PaletteAssetGrid({
             onChange={(event) => {
               setAssetSearch(event.target.value);
             }}
-            placeholder="Search models"
+            placeholder={t('monitoring:editor.searchModels')}
             className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>

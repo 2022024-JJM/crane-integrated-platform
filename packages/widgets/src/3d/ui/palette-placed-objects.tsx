@@ -95,7 +95,7 @@ export function PalettePlacedObjects({
             onChange={(event) => {
               setObjectSearch(event.target.value);
             }}
-            placeholder="Search objects"
+            placeholder={t('monitoring:editor.searchObjects')}
             className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>

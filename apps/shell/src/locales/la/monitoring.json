@@ -59,6 +59,9 @@
     "hideLabels": "Titulos absconde",
     "showLabels": "Titulos ostende",
     "addText": "Textum adde",
-    "textObject": "Textus"
+    "textObject": "Textus",
+    "save": "Serva",
+    "searchModels": "Exemplaria quaere",
+    "searchObjects": "Objecta quaere"
   }
 }

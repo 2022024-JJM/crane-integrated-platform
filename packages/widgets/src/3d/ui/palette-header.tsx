@@ -69,7 +69,7 @@ export function PaletteHeader({
             ) : (
               <Save className="size-3.5" />
             )}
-            Save
+            {t('monitoring:editor.save')}
           </Button>
           <Button
             type="button"

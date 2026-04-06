@@ -59,6 +59,9 @@
     "hideLabels": "Hide labels",
     "showLabels": "Show labels",
     "addText": "Add Text",
-    "textObject": "Text"
+    "textObject": "Text",
+    "save": "Save",
+    "searchModels": "Search models",
+    "searchObjects": "Search objects"
   }
 }
