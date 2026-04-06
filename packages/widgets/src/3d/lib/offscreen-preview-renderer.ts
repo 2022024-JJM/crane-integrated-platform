@@ -52,10 +52,33 @@ let disposeTimer: ReturnType<typeof setTimeout> | null = null;
 let isProcessing = false;
 
 const loader = new GLTFLoader();
-const gltfCache = new Map<
-  string,
-  ReturnType<typeof SkeletonUtils.clone>['parent']
->();
+
+const GLTF_CACHE_MAX_SIZE = 50;
+const gltfCache = new Map<string, Object3D>();
+
+function gltfCacheGet(key: string): Object3D | undefined {
+  const value = gltfCache.get(key);
+  if (value !== undefined) {
+    // Move to end (most recently used)
+    gltfCache.delete(key);
+    gltfCache.set(key, value);
+  }
+  return value;
+}
+
+function gltfCacheSet(key: string, value: Object3D): void {
+  if (gltfCache.has(key)) {
+    gltfCache.delete(key);
+  } else if (gltfCache.size >= GLTF_CACHE_MAX_SIZE) {
+    // Evict oldest (first entry)
+    const oldest = gltfCache.keys().next().value;
+    if (oldest !== undefined) {
+      gltfCache.delete(oldest);
+    }
+  }
+  gltfCache.set(key, value);
+}
+
 const blobUrls = new Set<string>();
 const pendingByPath = new Map<string, QueueEntry>();
 const queue: QueueEntry[] = [];
@@ -267,15 +290,16 @@ function frameCameraToModel(
 // ── Render execution ──────────────────────────────────────────────────────────
 
 async function loadGltfScene(path: string): Promise<Object3D> {
-  if (gltfCache.has(path)) {
-    return gltfCache.get(path)!;
+  const cached = gltfCacheGet(path);
+  if (cached) {
+    return cached;
   }
 
   return new Promise<Object3D>((resolve, reject) => {
     loader.load(
       path,
       (gltf) => {
-        gltfCache.set(path, gltf.scene);
+        gltfCacheSet(path, gltf.scene);
         resolve(gltf.scene);
       },
       undefined,
