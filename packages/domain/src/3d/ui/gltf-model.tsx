@@ -70,7 +70,7 @@ export const GltfModel = memo(function GltfModel({
         onHoverMove={onHoverMove}
         onHoverEnd={onHoverEnd}
       >
-        <ModelSelectionBox modelRef={modelRef} isSelected={isSelected} />
+        <ModelSelectionBox modelRef={modelRef} clone={clone} isSelected={isSelected} />
       </ModelMesh>
 
       {showLabel ? (
