@@ -4,7 +4,9 @@ import {
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
+import { createId } from '@crane/core/lib/create-id';
 import type { MutableRefObject, SetStateAction } from 'react';
+import type { SelectedObjectType } from '@crane/features/3d';
 
 interface UpdateSceneOptions {
   recordHistory?: boolean;
@@ -20,6 +22,7 @@ interface SceneManipulationDeps {
   selectText: (id: string) => void;
   clearSelectedModel: () => void;
   selectedModelId: string | null;
+  selectedObjectType: SelectedObjectType | null;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
@@ -31,6 +34,7 @@ export function createSceneManipulationActions({
   selectText,
   clearSelectedModel,
   selectedModelId,
+  selectedObjectType,
   sceneInfoRef,
   transformHistoryBaseRef,
 }: SceneManipulationDeps) {
@@ -138,6 +142,57 @@ export function createSceneManipulationActions({
     transformHistoryBaseRef.current = null;
   };
 
+  const duplicateSelectedObject = () => {
+    if (!selectedModelId) return;
+
+    const scene = sceneInfoRef.current;
+    if (!scene) return;
+
+    if (selectedObjectType === 'text') {
+      const source = (scene.texts ?? []).find((t) => t.id === selectedModelId);
+      if (!source) return;
+
+      const newId = createId();
+      const duplicate = {
+        ...source,
+        id: newId,
+        position: [
+          source.position[0] + 2,
+          source.position[1],
+          source.position[2],
+        ] as [number, number, number],
+      };
+
+      updateScene((prev) => {
+        if (!prev) return prev;
+        return { ...prev, texts: [...(prev.texts ?? []), duplicate] };
+      });
+
+      selectText(newId);
+    } else {
+      const source = scene.models.find((m) => m.id === selectedModelId);
+      if (!source) return;
+
+      const newId = createId();
+      const duplicate = {
+        ...source,
+        id: newId,
+        position: [
+          source.position[0] + 2,
+          source.position[1],
+          source.position[2],
+        ] as [number, number, number],
+      };
+
+      updateScene((prev) => {
+        if (!prev) return prev;
+        return { ...prev, models: [...prev.models, duplicate] };
+      });
+
+      selectModel(newId);
+    }
+  };
+
   return {
     addModel,
     addText,
@@ -148,5 +203,6 @@ export function createSceneManipulationActions({
     deletePlacedText,
     startTransformInteraction,
     endTransformInteraction,
+    duplicateSelectedObject,
   };
 }

@@ -86,6 +86,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectedText,
     selectedObjectType,
     removeSelectedModel,
+    duplicateSelectedObject,
     addModel,
     addText,
     selectPlacedModel,
@@ -146,6 +147,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
+      const isDuplicateShortcut =
+        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd';
+
+      if (isDuplicateShortcut) {
+        event.preventDefault();
+        duplicateSelectedObject();
+        return;
+      }
+
       if (event.key !== 'Delete' || !selectedModelId) {
         return;
       }
@@ -158,7 +168,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [redo, removeSelectedModel, selectedModelId, undo]);
+  }, [duplicateSelectedObject, redo, removeSelectedModel, selectedModelId, undo]);
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full gap-3 overflow-hidden p-3">

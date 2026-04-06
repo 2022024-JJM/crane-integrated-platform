@@ -63,6 +63,7 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextTransformVector'];
   removeSelectedModel: () => void;
+  duplicateSelectedObject: () => void;
   addModel: (
     catalogItem: SceneModelCatalogItem,
     position: [number, number, number],
@@ -160,6 +161,7 @@ export function useSceneEditorSession({
         selectText,
         clearSelectedModel,
         selectedModelId,
+        selectedObjectType,
         sceneInfoRef,
         transformHistoryBaseRef,
       }),
@@ -170,6 +172,7 @@ export function useSceneEditorSession({
       selectText,
       clearSelectedModel,
       selectedModelId,
+      selectedObjectType,
     ],
   );
 
@@ -212,6 +215,7 @@ export function useSceneEditorSession({
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     removeSelectedModel,
+    duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,
     selectPlacedModel: manipulation.selectPlacedModel,
