@@ -5,17 +5,17 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// ── FSD layer boundary messages ──────────────────────────────────────────────
+
 const fsdLayerMessages = {
-  app: 'app layer must not import from another app slice via internal paths.',
-  pages: 'pages can import from widgets/features/entities/shared, but not from app internals.',
-  widgets:
-    'widgets can import from features/entities/shared, but not from pages or app.',
+  domain:
+    'domain(entities) can import from @crane/core and @crane/ui only, not from features/widgets/apps.',
   features:
-    'features can import from entities/shared, but not from widgets/pages/app.',
-  entities:
-    'entities can import from shared only, never from features/widgets/pages/app.',
+    'features can import from domain/core/ui, but not from widgets or apps.',
+  widgets:
+    'widgets can import from features/domain/core/ui, but not from apps.',
   shared:
-    'shared is the lowest layer and must not import from entities/features/widgets/pages/app.',
+    'shared (@crane/core, @crane/ui) must not import from domain/features/widgets/apps.',
 }
 
 function createBoundaryRule(patterns) {
@@ -27,22 +27,24 @@ function createBoundaryRule(patterns) {
   ]
 }
 
+// ── Public API enforcement (no deep imports into slice internals) ─────────────
+
 const publicApiPatterns = [
   {
     group: [
-      '@/pages/*/{ui,model,lib,config}/*',
-      '@/pages/*/*/{ui,model,lib,config}/*',
-      '@/widgets/*/{ui,model,lib,config}/*',
-      '@/widgets/*/*/{ui,model,lib,config}/*',
-      '@/features/*/{ui,model,lib,config}/*',
-      '@/features/*/*/{ui,model,lib,config}/*',
-      '@/entities/*/{ui,model,lib,config}/*',
-      '@/entities/*/*/{ui,model,lib,config}/*',
+      '@crane/features/*/{ui,model,lib,config}/*',
+      '@crane/features/*/*/{ui,model,lib,config}/*',
+      '@crane/widgets/*/{ui,model,lib,config}/*',
+      '@crane/widgets/*/*/{ui,model,lib,config}/*',
+      '@crane/domain/*/{ui,model,lib,config}/*',
+      '@crane/domain/*/*/{ui,model,lib,config}/*',
     ],
     message:
-      'Use the slice public API (`index.ts`) instead of importing another slice internals directly.',
+      'Use the slice public API (`index.ts`) instead of importing slice internals directly.',
   },
 ]
+
+// ── Config ───────────────────────────────────────────────────────────────────
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -59,94 +61,89 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+
+  // shared layer (@crane/core, @crane/ui) — must not import upper layers
   {
-    files: ['src/app/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': createBoundaryRule(publicApiPatterns),
-    },
-  },
-  {
-    files: ['src/pages/**/*.{ts,tsx}'],
+    files: ['packages/core/src/**/*.{ts,tsx}', 'packages/ui/src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': createBoundaryRule([
-        ...publicApiPatterns,
         {
-          group: ['@/app', '@/app/*'],
-          message: fsdLayerMessages.pages,
+          group: [
+            '@crane/domain',
+            '@crane/domain/*',
+            '@crane/features',
+            '@crane/features/*',
+            '@crane/widgets',
+            '@crane/widgets/*',
+            '@crane/hanwha-ocean',
+            '@crane/hanwha-ocean/*',
+            '@crane/goliath-crane',
+            '@crane/goliath-crane/*',
+          ],
+          message: fsdLayerMessages.shared,
         },
       ]),
     },
   },
+
+  // domain/entities layer (@crane/domain) — only core, ui
   {
-    files: ['src/widgets/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': createBoundaryRule([
-        ...publicApiPatterns,
-        {
-          group: ['@/app', '@/app/*', '@/pages', '@/pages/*'],
-          message: fsdLayerMessages.widgets,
-        },
-      ]),
-    },
-  },
-  {
-    files: ['src/features/**/*.{ts,tsx}'],
+    files: ['packages/domain/src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': createBoundaryRule([
         ...publicApiPatterns,
         {
           group: [
-            '@/app',
-            '@/app/*',
-            '@/pages',
-            '@/pages/*',
-            '@/widgets',
-            '@/widgets/*',
+            '@crane/features',
+            '@crane/features/*',
+            '@crane/widgets',
+            '@crane/widgets/*',
+            '@crane/hanwha-ocean',
+            '@crane/hanwha-ocean/*',
+            '@crane/goliath-crane',
+            '@crane/goliath-crane/*',
+          ],
+          message: fsdLayerMessages.domain,
+        },
+      ]),
+    },
+  },
+
+  // features layer (@crane/features) — domain, core, ui
+  {
+    files: ['packages/features/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': createBoundaryRule([
+        ...publicApiPatterns,
+        {
+          group: [
+            '@crane/widgets',
+            '@crane/widgets/*',
+            '@crane/hanwha-ocean',
+            '@crane/hanwha-ocean/*',
+            '@crane/goliath-crane',
+            '@crane/goliath-crane/*',
           ],
           message: fsdLayerMessages.features,
         },
       ]),
     },
   },
+
+  // widgets layer (@crane/widgets) — features, domain, core, ui
   {
-    files: ['src/entities/**/*.{ts,tsx}'],
+    files: ['packages/widgets/src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': createBoundaryRule([
         ...publicApiPatterns,
         {
           group: [
-            '@/app',
-            '@/app/*',
-            '@/pages',
-            '@/pages/*',
-            '@/widgets',
-            '@/widgets/*',
-            '@/features',
-            '@/features/*',
+            '@crane/hanwha-ocean',
+            '@crane/hanwha-ocean/*',
+            '@crane/goliath-crane',
+            '@crane/goliath-crane/*',
           ],
-          message: fsdLayerMessages.entities,
-        },
-      ]),
-    },
-  },
-  {
-    files: ['src/shared/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': createBoundaryRule([
-        {
-          group: [
-            '@/app',
-            '@/app/*',
-            '@/pages',
-            '@/pages/*',
-            '@/widgets',
-            '@/widgets/*',
-            '@/features',
-            '@/features/*',
-            '@/entities',
-            '@/entities/*',
-          ],
-          message: fsdLayerMessages.shared,
+          message: fsdLayerMessages.widgets,
         },
       ]),
     },
