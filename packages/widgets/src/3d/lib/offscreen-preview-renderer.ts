@@ -333,24 +333,26 @@ async function executeRender(entry: QueueEntry): Promise<void> {
     group.add(clone);
     scene.add(group);
 
-    renderer.setSize(request.width, request.height);
-    camera.left = -request.width / 2;
-    camera.right = request.width / 2;
-    camera.top = request.height / 2;
-    camera.bottom = -request.height / 2;
-    camera.updateProjectionMatrix();
+    try {
+      renderer.setSize(request.width, request.height);
+      camera.left = -request.width / 2;
+      camera.right = request.width / 2;
+      camera.top = request.height / 2;
+      camera.bottom = -request.height / 2;
+      camera.updateProjectionMatrix();
 
-    frameCameraToModel(
-      camera,
-      group,
-      request.width,
-      request.height,
-      request.preset,
-    );
-    renderer.render(scene, camera);
-
-    scene.remove(group);
-    disposeClone(clone);
+      frameCameraToModel(
+        camera,
+        group,
+        request.width,
+        request.height,
+        request.preset,
+      );
+      renderer.render(scene, camera);
+    } finally {
+      scene.remove(group);
+      disposeClone(clone);
+    }
 
     const blobUrl = await new Promise<string>((res, rej) => {
       renderer!.domElement.toBlob((blob) => {
