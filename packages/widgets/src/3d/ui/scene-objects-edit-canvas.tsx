@@ -69,6 +69,9 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionEnd,
 }: SceneObjectsEditCanvasProps) {
   const { t } = useTranslation();
+  const selectedIds = useSceneObjectSelectionStore(
+    (state) => state.selectedIds,
+  );
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
@@ -76,10 +79,15 @@ export function SceneObjectsEditCanvas({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
+  const toggleModel = useSceneObjectSelectionStore(
+    (state) => state.toggleModel,
+  );
+  const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
+  const lastPointerEventRef = useRef<PointerEvent | MouseEvent | null>(null);
 
   const {
     cameraRef,
@@ -137,18 +145,28 @@ export function SceneObjectsEditCanvas({
 
   const handleSelectModel = useCallback(
     (id: string) => {
-      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
-      selectModel(id);
+      const isCtrl = lastPointerEventRef.current?.ctrlKey || lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleModel(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectModel(id);
+      }
     },
-    [selectModel, setSelectedObject],
+    [selectModel, toggleModel, setSelectedObject],
   );
 
   const handleSelectText = useCallback(
     (id: string) => {
-      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
-      selectText(id);
+      const isCtrl = lastPointerEventRef.current?.ctrlKey || lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleText(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectText(id);
+      }
     },
-    [selectText, setSelectedObject],
+    [selectText, toggleText, setSelectedObject],
   );
 
   const handleClearSelection = useCallback(() => {
@@ -183,6 +201,7 @@ export function SceneObjectsEditCanvas({
       className="border-border/70 relative h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
+        lastPointerEventRef.current = event.nativeEvent;
       }}
       onDragOver={handleSceneDragOver}
       onDragLeave={handleDragLeave}
@@ -252,7 +271,7 @@ export function SceneObjectsEditCanvas({
             rotation={model.rotation}
             scale={model.scale}
             onSelect={handleSelectModel}
-            isSelected={model.id === selectedModelId}
+            isSelected={selectedIds.has(model.id)}
             onObjectReady={handleModelObjectReady}
           />
         ))}
@@ -265,7 +284,7 @@ export function SceneObjectsEditCanvas({
             position={text.position}
             rotation={text.rotation}
             scale={text.scale}
-            isSelected={text.id === selectedModelId}
+            isSelected={selectedIds.has(text.id)}
             onSelect={handleSelectText}
             onObjectReady={handleModelObjectReady}
           />

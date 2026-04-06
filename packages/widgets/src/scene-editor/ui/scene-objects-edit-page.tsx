@@ -63,7 +63,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const {
     sceneInfo,
-    selectedModelId,
+    selectedIds,
     selectedModelLabel,
     selectedModel,
     isSaving,
@@ -94,6 +94,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectPlacedText,
     deletePlacedText,
     deleteMap,
+    toggleModel,
+    toggleText,
+    selectAll,
     startTransformInteraction,
     endTransformInteraction,
     cameraStateRef,
@@ -156,7 +159,20 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      if (event.key !== 'Delete' || !selectedModelId) {
+      const isSelectAllShortcut =
+        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a';
+
+      if (isSelectAllShortcut && sceneInfo) {
+        event.preventDefault();
+        const allIds = [
+          ...sceneInfo.models.map((m) => m.id),
+          ...(sceneInfo.texts ?? []).map((t) => t.id),
+        ];
+        selectAll(allIds);
+        return;
+      }
+
+      if (event.key !== 'Delete' || selectedIds.size === 0) {
         return;
       }
 
@@ -168,7 +184,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [duplicateSelectedObject, redo, removeSelectedModel, selectedModelId, undo]);
+  }, [duplicateSelectedObject, redo, removeSelectedModel, sceneInfo, selectAll, selectedIds, undo]);
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full gap-3 overflow-hidden p-3">
@@ -179,7 +195,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             map={sceneInfo?.map ?? null}
             placedModels={sceneInfo?.models ?? []}
             draggingItemId={draggingCatalogItem?.id ?? null}
-            selectedModelId={selectedModelId}
+            selectedIds={selectedIds}
             onDragStart={setDraggingCatalogItem}
             onDragEnd={() => {
               setDraggingCatalogItem(null);
@@ -189,6 +205,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             placedTexts={sceneInfo?.texts ?? []}
             onSelectPlacedText={selectPlacedText}
             onDeletePlacedText={deletePlacedText}
+            onTogglePlacedModel={toggleModel}
+            onTogglePlacedText={toggleText}
             onTextDragStart={() => setIsDraggingText(true)}
             onTextDragEnd={() => setIsDraggingText(false)}
             onDeleteMap={deleteMap}
@@ -272,7 +290,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   </button>
                   <span className="bg-border h-4 w-px" />
                   <span className="max-w-36 truncate text-xs font-medium">
-                    {selectedModelLabel || t('monitoring:editor.noSelection')}
+                    {selectedIds.size > 1
+                      ? t('monitoring:editor.multipleSelected', { count: selectedIds.size })
+                      : selectedModelLabel || t('monitoring:editor.noSelection')}
                   </span>
                 </div>
               }
@@ -293,6 +313,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           <SceneObjectInspector
             selectedModel={selectedModel}
             selectedText={selectedText}
+            multiSelectCount={selectedIds.size}
             onNameChange={updateSelectedName}
             onOpacityChange={updateSelectedOpacity}
             onTransformChange={updateSelectedTransform}

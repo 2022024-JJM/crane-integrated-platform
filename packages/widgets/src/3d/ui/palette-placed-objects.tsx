@@ -22,21 +22,25 @@ interface PlacedObjectItem {
 interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
-  selectedModelId: string | null;
+  selectedIds: Set<string>;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText?: (id: string) => void;
   onDeletePlacedText?: (id: string) => void;
+  onTogglePlacedModel?: (id: string) => void;
+  onTogglePlacedText?: (id: string) => void;
 }
 
 export function PalettePlacedObjects({
   placedModels,
   placedTexts = [],
-  selectedModelId,
+  selectedIds,
   onSelectPlacedModel,
   onDeletePlacedModel,
   onSelectPlacedText,
   onDeletePlacedText,
+  onTogglePlacedModel,
+  onTogglePlacedText,
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
   const [objectSearch, setObjectSearch] = useState('');
@@ -104,7 +108,23 @@ export function PalettePlacedObjects({
         <div className="flex flex-col py-0.5">
           {allItems.length > 0 ? (
             allItems.map((item) => {
-              const isSelected = selectedModelId === item.id;
+              const isSelected = selectedIds.has(item.id);
+
+              const handleSelect = (ctrlKey: boolean) => {
+                if (ctrlKey) {
+                  if (item.type === 'text') {
+                    onTogglePlacedText?.(item.id);
+                  } else {
+                    onTogglePlacedModel?.(item.id);
+                  }
+                } else {
+                  if (item.type === 'text') {
+                    onSelectPlacedText?.(item.id);
+                  } else {
+                    onSelectPlacedModel(item.id);
+                  }
+                }
+              };
 
               return (
                 <div
@@ -112,21 +132,13 @@ export function PalettePlacedObjects({
                   role="button"
                   tabIndex={0}
                   aria-label={item.displayName}
-                  onClick={() => {
-                    if (item.type === 'text') {
-                      onSelectPlacedText?.(item.id);
-                    } else {
-                      onSelectPlacedModel(item.id);
-                    }
+                  onClick={(event) => {
+                    handleSelect(event.ctrlKey || event.metaKey);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      if (item.type === 'text') {
-                        onSelectPlacedText?.(item.id);
-                      } else {
-                        onSelectPlacedModel(item.id);
-                      }
+                      handleSelect(event.ctrlKey || event.metaKey);
                     }
                   }}
                   className={cn(

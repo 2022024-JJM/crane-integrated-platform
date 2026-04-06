@@ -78,6 +78,9 @@ export function useSelectedSceneObjectEditor({
   const selectedObjectType = useSceneObjectSelectionStore(
     (state) => state.selectedObjectType,
   );
+  const selectedIds = useSceneObjectSelectionStore(
+    (state) => state.selectedIds,
+  );
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -307,7 +310,7 @@ export function useSelectedSceneObjectEditor({
   };
 
   const removeSelectedModel = () => {
-    if (!selectedModelId) {
+    if (selectedIds.size === 0) {
       return;
     }
 
@@ -316,16 +319,10 @@ export function useSelectedSceneObjectEditor({
         return prev;
       }
 
-      if (selectedObjectType === 'text') {
-        return {
-          ...prev,
-          texts: (prev.texts ?? []).filter((t) => t.id !== selectedModelId),
-        };
-      }
-
       return {
         ...prev,
-        models: prev.models.filter((model) => model.id !== selectedModelId),
+        models: prev.models.filter((model) => !selectedIds.has(model.id)),
+        texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
       };
     });
 

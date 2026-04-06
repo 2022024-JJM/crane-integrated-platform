@@ -26,6 +26,7 @@ import { Card, CardContent } from '@crane/ui/molecules/card';
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  multiSelectCount?: number;
   onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
@@ -320,6 +321,7 @@ function TextInspectorContent({
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
+  multiSelectCount = 0,
   onNameChange,
   onOpacityChange,
   onTransformChange,
@@ -341,12 +343,18 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  const hasSelection = selectedModel || selectedText;
+  const hasSelection = selectedModel || selectedText || multiSelectCount > 1;
 
   return (
     <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
-        {selectedModel ? (
+        {multiSelectCount > 1 ? (
+          <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+            <p className="max-w-56 text-center">
+              {t('monitoring:editor.multipleSelected', { count: multiSelectCount })}
+            </p>
+          </div>
+        ) : selectedModel ? (
           <ModelInspectorContent
             selectedModel={selectedModel}
             selectedLabel={selectedLabel}

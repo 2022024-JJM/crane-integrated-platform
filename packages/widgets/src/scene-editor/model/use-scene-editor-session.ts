@@ -20,6 +20,7 @@ interface UseSceneEditorSessionParams {
 
 interface UseSceneEditorSessionResult {
   sceneInfo: ReturnType<typeof useSceneHistory>['sceneInfo'];
+  selectedIds: Set<string>;
   selectedModelId: string | null;
   selectedObjectType: SelectedObjectType | null;
   selectedModelLabel: string | null;
@@ -74,6 +75,9 @@ interface UseSceneEditorSessionResult {
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
   deleteMap: () => void;
+  toggleModel: (id: string) => void;
+  toggleText: (id: string) => void;
+  selectAll: (ids: string[]) => void;
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
   cameraStateRef: React.RefObject<SavedCameraInfo | null>;
@@ -98,6 +102,9 @@ export function useSceneEditorSession({
     undo,
     redo,
   } = useSceneHistory();
+  const selectedIds = useSceneObjectSelectionStore(
+    (state) => state.selectedIds,
+  );
   const selectedModelId = useSceneObjectSelectionStore(
     (state) => state.selectedModelId,
   );
@@ -111,6 +118,13 @@ export function useSceneEditorSession({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
+  const toggleModel = useSceneObjectSelectionStore(
+    (state) => state.toggleModel,
+  );
+  const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const selectAllStore = useSceneObjectSelectionStore(
+    (state) => state.selectAll,
+  );
   const transformMode = useSceneTransformModeStore((state) => state.mode);
   const setTransformMode = useSceneTransformModeStore((state) => state.setMode);
   const resetTransformMode = useSceneTransformModeStore(
@@ -160,9 +174,9 @@ export function useSceneEditorSession({
         selectModel,
         selectText,
         clearSelectedModel,
-        selectedModelId,
-        selectedObjectType,
+        selectedIds,
         sceneInfoRef,
+        selectAll: selectAllStore,
         transformHistoryBaseRef,
       }),
     [
@@ -171,8 +185,8 @@ export function useSceneEditorSession({
       selectModel,
       selectText,
       clearSelectedModel,
-      selectedModelId,
-      selectedObjectType,
+      selectedIds,
+      selectAllStore,
     ],
   );
 
@@ -191,6 +205,7 @@ export function useSceneEditorSession({
 
   return {
     sceneInfo,
+    selectedIds,
     selectedModelId,
     selectedObjectType,
     selectedModelLabel:
@@ -223,6 +238,9 @@ export function useSceneEditorSession({
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
     deleteMap: manipulation.deleteMap,
+    toggleModel,
+    toggleText,
+    selectAll: selectAllStore,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,
     cameraStateRef,

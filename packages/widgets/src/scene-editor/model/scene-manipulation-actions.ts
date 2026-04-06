@@ -6,7 +6,6 @@ import {
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
 import type { MutableRefObject, SetStateAction } from 'react';
-import type { SelectedObjectType } from '@crane/features/3d';
 
 interface UpdateSceneOptions {
   recordHistory?: boolean;
@@ -21,9 +20,9 @@ interface SceneManipulationDeps {
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
   clearSelectedModel: () => void;
-  selectedModelId: string | null;
-  selectedObjectType: SelectedObjectType | null;
+  selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
+  selectAll: (ids: string[]) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -33,9 +32,9 @@ export function createSceneManipulationActions({
   selectModel,
   selectText,
   clearSelectedModel,
-  selectedModelId,
-  selectedObjectType,
+  selectedIds,
   sceneInfoRef,
+  selectAll,
   transformHistoryBaseRef,
 }: SceneManipulationDeps) {
   const addModel = (
@@ -90,7 +89,7 @@ export function createSceneManipulationActions({
       };
     });
 
-    if (selectedModelId === id) {
+    if (selectedIds.has(id)) {
       clearSelectedModel();
     }
   };
@@ -128,7 +127,7 @@ export function createSceneManipulationActions({
       };
     });
 
-    if (selectedModelId === id) {
+    if (selectedIds.has(id)) {
       clearSelectedModel();
     }
   };
@@ -143,54 +142,60 @@ export function createSceneManipulationActions({
   };
 
   const duplicateSelectedObject = () => {
-    if (!selectedModelId) return;
+    if (selectedIds.size === 0) return;
 
     const scene = sceneInfoRef.current;
     if (!scene) return;
 
-    if (selectedObjectType === 'text') {
-      const source = (scene.texts ?? []).find((t) => t.id === selectedModelId);
-      if (!source) return;
+    const newModelDuplicates: typeof scene.models = [];
+    const newTextDuplicates: NonNullable<typeof scene.texts> = [];
+    const newIds: string[] = [];
 
-      const newId = createId();
-      const duplicate = {
-        ...source,
-        id: newId,
-        position: [
-          source.position[0] + 2,
-          source.position[1],
-          source.position[2],
-        ] as [number, number, number],
-      };
+    for (const id of selectedIds) {
+      const modelSource = scene.models.find((m) => m.id === id);
+      if (modelSource) {
+        const newId = createId();
+        newIds.push(newId);
+        newModelDuplicates.push({
+          ...modelSource,
+          id: newId,
+          position: [
+            modelSource.position[0] + 2,
+            modelSource.position[1],
+            modelSource.position[2],
+          ] as [number, number, number],
+        });
+        continue;
+      }
 
-      updateScene((prev) => {
-        if (!prev) return prev;
-        return { ...prev, texts: [...(prev.texts ?? []), duplicate] };
-      });
-
-      selectText(newId);
-    } else {
-      const source = scene.models.find((m) => m.id === selectedModelId);
-      if (!source) return;
-
-      const newId = createId();
-      const duplicate = {
-        ...source,
-        id: newId,
-        position: [
-          source.position[0] + 2,
-          source.position[1],
-          source.position[2],
-        ] as [number, number, number],
-      };
-
-      updateScene((prev) => {
-        if (!prev) return prev;
-        return { ...prev, models: [...prev.models, duplicate] };
-      });
-
-      selectModel(newId);
+      const textSource = (scene.texts ?? []).find((t) => t.id === id);
+      if (textSource) {
+        const newId = createId();
+        newIds.push(newId);
+        newTextDuplicates.push({
+          ...textSource,
+          id: newId,
+          position: [
+            textSource.position[0] + 2,
+            textSource.position[1],
+            textSource.position[2],
+          ] as [number, number, number],
+        });
+      }
     }
+
+    if (newModelDuplicates.length === 0 && newTextDuplicates.length === 0) return;
+
+    updateScene((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        models: [...prev.models, ...newModelDuplicates],
+        texts: [...(prev.texts ?? []), ...newTextDuplicates],
+      };
+    });
+
+    selectAll(newIds);
   };
 
   return {

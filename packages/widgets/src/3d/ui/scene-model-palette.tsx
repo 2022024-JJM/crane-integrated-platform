@@ -18,7 +18,7 @@ interface SceneModelPaletteProps {
   map: SavedMapInfo | null;
   placedModels: SavedModelInfo[];
   draggingItemId: string | null;
-  selectedModelId: string | null;
+  selectedIds: Set<string>;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
   onSelectPlacedModel: (id: string) => void;
@@ -26,6 +26,8 @@ interface SceneModelPaletteProps {
   placedTexts?: SavedTextInfo[];
   onSelectPlacedText?: (id: string) => void;
   onDeletePlacedText?: (id: string) => void;
+  onTogglePlacedModel?: (id: string) => void;
+  onTogglePlacedText?: (id: string) => void;
   onTextDragStart: () => void;
   onTextDragEnd: () => void;
   onDeleteMap: () => void;
@@ -42,7 +44,7 @@ export function SceneModelPalette({
   map,
   placedModels,
   draggingItemId,
-  selectedModelId,
+  selectedIds,
   onDragStart,
   onDragEnd,
   onSelectPlacedModel,
@@ -50,6 +52,8 @@ export function SceneModelPalette({
   placedTexts,
   onSelectPlacedText,
   onDeletePlacedText,
+  onTogglePlacedModel,
+  onTogglePlacedText,
   onTextDragStart,
   onTextDragEnd,
   onDeleteMap,
@@ -100,11 +104,13 @@ export function SceneModelPalette({
         <PalettePlacedObjects
           placedModels={placedModels}
           placedTexts={placedTexts}
-          selectedModelId={selectedModelId}
+          selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
           onDeletePlacedModel={onDeletePlacedModel}
           onSelectPlacedText={onSelectPlacedText}
           onDeletePlacedText={onDeletePlacedText}
+          onTogglePlacedModel={onTogglePlacedModel}
+          onTogglePlacedText={onTogglePlacedText}
         />
       </CardContent>
     </Card>

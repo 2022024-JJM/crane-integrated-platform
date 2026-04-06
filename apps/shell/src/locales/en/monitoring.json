@@ -62,6 +62,7 @@
     "textObject": "Text",
     "save": "Save",
     "searchModels": "Search models",
-    "searchObjects": "Search objects"
+    "searchObjects": "Search objects",
+    "multipleSelected": "{{count}} objects selected"
   }
 }
