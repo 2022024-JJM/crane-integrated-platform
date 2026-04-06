@@ -429,10 +429,26 @@ function processNext(): void {
   };
 
   scheduleIdle(() => {
-    executeRender(entry).finally(() => {
-      isProcessing = false;
-      scheduleNext();
+    const RENDER_TIMEOUT_MS = 30_000;
+
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error('Render timed out')),
+        RENDER_TIMEOUT_MS,
+      );
     });
+
+    Promise.race([executeRender(entry), timeout])
+      .catch((err) => {
+        rejectListeners(
+          entry,
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      })
+      .finally(() => {
+        isProcessing = false;
+        scheduleNext();
+      });
   });
 }
 
