@@ -1,4 +1,9 @@
-import { OrbitControls, TransformControls } from '@react-three/drei';
+import {
+  GizmoHelper,
+  GizmoViewport,
+  OrbitControls,
+  TransformControls,
+} from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -210,6 +215,12 @@ export function SceneObjectsEditCanvas({
           target={cameraTarget}
           onChange={handleOrbitChange}
         />
+        <GizmoHelper alignment="top-right" margin={[80, 80]}>
+          <GizmoViewport
+            axisColors={['#ff3653', '#0adb50', '#2c8fdf']}
+            labelColor="white"
+          />
+        </GizmoHelper>
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
