@@ -112,6 +112,7 @@ export function useScenePersistence({
       );
 
       updateScene(savedSceneInfo, { recordHistory: false });
+      setInitialCamera(savedSceneInfo.camera ?? null);
       setSavedSceneSnapshot(createSceneSnapshot(savedSceneInfo));
       toast.success('Scene saved.');
       return true;

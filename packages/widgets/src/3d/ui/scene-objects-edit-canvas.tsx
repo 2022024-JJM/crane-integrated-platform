@@ -193,6 +193,12 @@ export function SceneObjectsEditCanvas({
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
+          if (cameraStateRef) {
+            cameraStateRef.current = {
+              position: [camera.position.x, camera.position.y, camera.position.z],
+              target: cameraTarget,
+            };
+          }
         }}
         onPointerMissed={handleClearSelection}
       >
