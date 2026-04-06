@@ -5,7 +5,7 @@ export const alarmWebSocketClient = createWebSocketClient({
   url: getCranesLiteWebSocketUrl(),
   reconnectPolicy: {
     enabled: true,
-    intervalMs: undefined,
+    intervalMs: 5_000,
     maxAttempts: Infinity,
   },
 });
