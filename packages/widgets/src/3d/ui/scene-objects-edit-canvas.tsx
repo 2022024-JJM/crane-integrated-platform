@@ -378,7 +378,7 @@ export function SceneObjectsEditCanvas({
 
       <div
         className={cn(
-          'absolute inset-0 flex items-center justify-center transition',
+          'absolute inset-0 flex items-center justify-center',
           draggingModelCatalogItem || isDraggingText
             ? 'bg-foreground/5 pointer-events-auto backdrop-blur-[1px]'
             : 'pointer-events-none opacity-0',
