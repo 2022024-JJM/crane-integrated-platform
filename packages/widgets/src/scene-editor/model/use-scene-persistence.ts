@@ -78,6 +78,9 @@ export function useScenePersistence({
         setSavedSceneSnapshot(createSceneSnapshot(data));
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
+        if (isMounted) {
+          toast.error('Failed to load scene.');
+        }
       }
     };
 
