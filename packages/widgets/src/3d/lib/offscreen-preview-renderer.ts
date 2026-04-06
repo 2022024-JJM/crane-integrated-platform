@@ -30,10 +30,15 @@ export interface AbortHandle {
   abort: () => void;
 }
 
-interface QueueEntry {
-  request: RenderRequest;
+interface QueueListener {
   resolve: (url: string) => void;
   reject: (error: Error) => void;
+  aborted: boolean;
+}
+
+interface QueueEntry {
+  request: RenderRequest;
+  listeners: QueueListener[];
   aborted: boolean;
 }
 
@@ -106,7 +111,7 @@ function handleContextLost() {
   // Reject all pending queue entries
   for (const entry of queue) {
     if (!entry.aborted) {
-      entry.reject(new Error('WebGL context lost'));
+      rejectListeners(entry, new Error('WebGL context lost'));
     }
   }
   queue.length = 0;
@@ -292,13 +297,29 @@ function disposeClone(obj: Object3D): void {
   });
 }
 
+function resolveListeners(entry: QueueEntry, url: string): void {
+  for (const listener of entry.listeners) {
+    if (!listener.aborted) {
+      listener.resolve(url);
+    }
+  }
+}
+
+function rejectListeners(entry: QueueEntry, error: Error): void {
+  for (const listener of entry.listeners) {
+    if (!listener.aborted) {
+      listener.reject(error);
+    }
+  }
+}
+
 async function executeRender(entry: QueueEntry): Promise<void> {
-  const { request, resolve, reject } = entry;
+  const { request } = entry;
 
   if (entry.aborted) return;
 
   if (!renderer || !scene || !camera) {
-    reject(new Error('Renderer not initialized'));
+    rejectListeners(entry, new Error('Renderer not initialized'));
     return;
   }
 
@@ -343,9 +364,12 @@ async function executeRender(entry: QueueEntry): Promise<void> {
       }, 'image/png');
     });
 
-    resolve(blobUrl);
+    resolveListeners(entry, blobUrl);
   } catch (err) {
-    reject(err instanceof Error ? err : new Error(String(err)));
+    rejectListeners(
+      entry,
+      err instanceof Error ? err : new Error(String(err)),
+    );
   }
 }
 
@@ -393,38 +417,49 @@ export function enqueueRender(request: RenderRequest): {
   // Return cached blob URL if already rendered
   // (cache is managed externally by the hook to avoid path+preset key complexity here)
 
-  // Dedup: if same path already in queue, reuse its promise
+  // Dedup: if same path already in queue, append listener to existing entry
   const existing = pendingByPath.get(request.path);
   if (existing && !existing.aborted) {
+    const listener: QueueListener = {
+      resolve: () => {},
+      reject: () => {},
+      aborted: false,
+    };
+    const promise = new Promise<string>((resolve, reject) => {
+      listener.resolve = resolve;
+      listener.reject = reject;
+    });
+    existing.listeners.push(listener);
+
     return {
-      promise: new Promise<string>((resolve, reject) => {
-        const origResolve = existing.resolve;
-        const origReject = existing.reject;
-        existing.resolve = (url) => {
-          origResolve(url);
-          resolve(url);
-        };
-        existing.reject = (err) => {
-          origReject(err);
-          reject(err);
-        };
-      }),
+      promise,
       abort: {
         abort: () => {
-          existing.aborted = true;
+          listener.aborted = true;
+          // If all listeners are aborted, mark the entire entry as aborted
+          if (existing.listeners.every((l) => l.aborted)) {
+            existing.aborted = true;
+          }
         },
       },
     };
   }
 
-  let resolve!: (url: string) => void;
-  let reject!: (error: Error) => void;
-  const promise = new Promise<string>((res, rej) => {
-    resolve = res;
-    reject = rej;
+  const listener: QueueListener = {
+    resolve: () => {},
+    reject: () => {},
+    aborted: false,
+  };
+  const promise = new Promise<string>((resolve, reject) => {
+    listener.resolve = resolve;
+    listener.reject = reject;
   });
 
-  const entry: QueueEntry = { request, resolve, reject, aborted: false };
+  const entry: QueueEntry = {
+    request,
+    listeners: [listener],
+    aborted: false,
+  };
   queue.push(entry);
   pendingByPath.set(request.path, entry);
 
@@ -434,7 +469,10 @@ export function enqueueRender(request: RenderRequest): {
     promise,
     abort: {
       abort: () => {
-        entry.aborted = true;
+        listener.aborted = true;
+        if (entry.listeners.every((l) => l.aborted)) {
+          entry.aborted = true;
+        }
       },
     },
   };
