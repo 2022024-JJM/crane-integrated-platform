@@ -141,6 +141,12 @@ function handleContextLost() {
   pendingByPath.clear();
   isProcessing = false;
 
+  // Revoke all blob URLs to prevent memory leak
+  for (const url of blobUrls) {
+    URL.revokeObjectURL(url);
+  }
+  blobUrls.clear();
+
   // Force renderer recreation on next request
   renderer = null;
   scene = null;
