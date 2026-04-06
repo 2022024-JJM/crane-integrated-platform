@@ -7,7 +7,7 @@ import {
 import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Object3D, NoToneMapping } from 'three';
+import { Box3, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
@@ -50,6 +50,7 @@ interface SceneObjectsEditCanvasProps {
   showLabels?: boolean;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
+  fitAllRef?: RefObject<(() => void) | null>;
 }
 
 export function SceneObjectsEditCanvas({
@@ -67,6 +68,7 @@ export function SceneObjectsEditCanvas({
   showLabels = true,
   onTransformInteractionStart,
   onTransformInteractionEnd,
+  fitAllRef,
 }: SceneObjectsEditCanvasProps) {
   const { t } = useTranslation();
   const selectedIds = useSceneObjectSelectionStore(
@@ -184,6 +186,51 @@ export function SceneObjectsEditCanvas({
       target: [controls.target.x, controls.target.y, controls.target.z],
     };
   }, [cameraStateRef, orbitControlsRef]);
+
+  const fitAll = useCallback(() => {
+    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+    if (!controls) return;
+
+    const objects = Array.from(modelObjectRegistryRef.current.values());
+    if (objects.length === 0) return;
+
+    const box = new Box3();
+    for (const obj of objects) {
+      box.expandByObject(obj);
+    }
+
+    if (box.isEmpty()) return;
+
+    const center = new Vector3();
+    const size = new Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const distance = maxDim * 1.0;
+
+    const cam = controls.object;
+    const direction = new Vector3()
+      .subVectors(cam.position, controls.target)
+      .normalize();
+
+    cam.position.copy(center).addScaledVector(direction, distance);
+    controls.target.copy(center);
+    controls.update();
+
+    if (cameraStateRef) {
+      cameraStateRef.current = {
+        position: [cam.position.x, cam.position.y, cam.position.z],
+        target: [center.x, center.y, center.z],
+      };
+    }
+  }, [cameraStateRef, orbitControlsRef, modelObjectRegistryRef]);
+
+  useEffect(() => {
+    if (fitAllRef) {
+      fitAllRef.current = fitAll;
+    }
+  }, [fitAll, fitAllRef]);
 
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
