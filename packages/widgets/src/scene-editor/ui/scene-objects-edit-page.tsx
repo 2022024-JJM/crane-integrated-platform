@@ -62,6 +62,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [isDraggingText, setIsDraggingText] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
+  const fitSelectedRef = useRef<(() => void) | null>(null);
   const {
     sceneInfo,
     selectedIds,
@@ -179,6 +180,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
+      if (event.key === 'Enter' && selectedIds.size > 0) {
+        event.preventDefault();
+        fitSelectedRef.current?.();
+        return;
+      }
+
       if (event.key !== 'Delete' || selectedIds.size === 0) {
         return;
       }
@@ -264,6 +271,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           onTransformInteractionStart={startTransformInteraction}
           onTransformInteractionEnd={endTransformInteraction}
           fitAllRef={fitAllRef}
+          fitSelectedRef={fitSelectedRef}
         />
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
           <div className="pointer-events-auto">

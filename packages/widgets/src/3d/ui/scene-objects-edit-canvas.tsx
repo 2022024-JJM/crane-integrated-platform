@@ -51,6 +51,7 @@ interface SceneObjectsEditCanvasProps {
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
   fitAllRef?: RefObject<(() => void) | null>;
+  fitSelectedRef?: RefObject<(() => void) | null>;
 }
 
 export function SceneObjectsEditCanvas({
@@ -69,6 +70,7 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionStart,
   onTransformInteractionEnd,
   fitAllRef,
+  fitSelectedRef,
 }: SceneObjectsEditCanvasProps) {
   const { t } = useTranslation();
   const selectedIds = useSceneObjectSelectionStore(
@@ -187,50 +189,66 @@ export function SceneObjectsEditCanvas({
     };
   }, [cameraStateRef, orbitControlsRef]);
 
+  const fitToObjects = useCallback(
+    (objects: Object3D[]) => {
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls || objects.length === 0) return;
+
+      const box = new Box3();
+      for (const obj of objects) {
+        box.expandByObject(obj);
+      }
+
+      if (box.isEmpty()) return;
+
+      const center = new Vector3();
+      const size = new Vector3();
+      box.getCenter(center);
+      box.getSize(size);
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim * 1.0;
+
+      const cam = controls.object;
+      const direction = new Vector3()
+        .subVectors(cam.position, controls.target)
+        .normalize();
+
+      cam.position.copy(center).addScaledVector(direction, distance);
+      controls.target.copy(center);
+      controls.update();
+
+      if (cameraStateRef) {
+        cameraStateRef.current = {
+          position: [cam.position.x, cam.position.y, cam.position.z],
+          target: [center.x, center.y, center.z],
+        };
+      }
+    },
+    [cameraStateRef, orbitControlsRef],
+  );
+
   const fitAll = useCallback(() => {
-    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-    if (!controls) return;
+    fitToObjects(Array.from(modelObjectRegistryRef.current.values()));
+  }, [fitToObjects, modelObjectRegistryRef]);
 
-    const objects = Array.from(modelObjectRegistryRef.current.values());
-    if (objects.length === 0) return;
-
-    const box = new Box3();
-    for (const obj of objects) {
-      box.expandByObject(obj);
+  const fitSelected = useCallback(() => {
+    const objects: Object3D[] = [];
+    for (const id of selectedIds) {
+      const obj = modelObjectRegistryRef.current.get(id);
+      if (obj) objects.push(obj);
     }
-
-    if (box.isEmpty()) return;
-
-    const center = new Vector3();
-    const size = new Vector3();
-    box.getCenter(center);
-    box.getSize(size);
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 1.0;
-
-    const cam = controls.object;
-    const direction = new Vector3()
-      .subVectors(cam.position, controls.target)
-      .normalize();
-
-    cam.position.copy(center).addScaledVector(direction, distance);
-    controls.target.copy(center);
-    controls.update();
-
-    if (cameraStateRef) {
-      cameraStateRef.current = {
-        position: [cam.position.x, cam.position.y, cam.position.z],
-        target: [center.x, center.y, center.z],
-      };
-    }
-  }, [cameraStateRef, orbitControlsRef, modelObjectRegistryRef]);
+    fitToObjects(objects);
+  }, [fitToObjects, selectedIds, modelObjectRegistryRef]);
 
   useEffect(() => {
     if (fitAllRef) {
       fitAllRef.current = fitAll;
     }
-  }, [fitAll, fitAllRef]);
+    if (fitSelectedRef) {
+      fitSelectedRef.current = fitSelected;
+    }
+  }, [fitAll, fitAllRef, fitSelected, fitSelectedRef]);
 
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
