@@ -217,7 +217,7 @@ export function SceneObjectsEditCanvas({
         />
         <GizmoHelper alignment="top-right" margin={[80, 80]}>
           <GizmoViewport
-            axisColors={['#ff3653', '#0adb50', '#2c8fdf']}
+            axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"
           />
         </GizmoHelper>
