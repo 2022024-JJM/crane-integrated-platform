@@ -1,15 +1,9 @@
-import { CheckCircle2, Download, Keyboard, Loader2, Save } from 'lucide-react';
+import { CheckCircle2, Download, Loader2, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
 import { CardHeader } from '@crane/ui/molecules/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@crane/ui/molecules/tooltip';
 
 interface PaletteHeaderProps {
   onSave: () => void;
@@ -88,45 +82,6 @@ export function PaletteHeader({
             <Download className="size-3.5" />
             {t('monitoring:editor.exportJson')}
           </Button>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t('monitoring:editor.keyboardShortcuts')}
-                    className="text-muted-foreground hover:bg-muted hover:text-foreground size-6 cursor-pointer rounded-sm"
-                  />
-                }
-              >
-                <Keyboard className="size-3.5" />
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="end">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <kbd className="bg-muted rounded px-1 font-mono text-[10px]">
-                      Ctrl+Z
-                    </kbd>
-                    <span>{t('monitoring:history.undo')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <kbd className="bg-muted rounded px-1 font-mono text-[10px]">
-                      Ctrl+Y
-                    </kbd>
-                    <span>{t('monitoring:history.redo')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <kbd className="bg-muted rounded px-1 font-mono text-[10px]">
-                      Del
-                    </kbd>
-                    <span>{t('monitoring:editor.deleteSelected')}</span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
     </CardHeader>
