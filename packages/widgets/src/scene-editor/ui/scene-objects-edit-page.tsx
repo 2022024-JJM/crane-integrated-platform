@@ -99,6 +99,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     toggleModel,
     toggleText,
     selectAll,
+    updateMultiObjectPositions,
     startTransformInteraction,
     endTransformInteraction,
     cameraStateRef,
@@ -257,6 +258,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 recordHistory: false,
               });
             }
+          }}
+          onMultiTransformCommit={(updates) => {
+            updateMultiObjectPositions(updates, { recordHistory: false });
           }}
           onAddModel={(catalogItem, position) => {
             addModel(catalogItem, position);

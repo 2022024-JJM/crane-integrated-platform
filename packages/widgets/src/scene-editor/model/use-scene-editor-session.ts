@@ -78,6 +78,9 @@ interface UseSceneEditorSessionResult {
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   selectAll: (ids: string[]) => void;
+  updateMultiObjectPositions: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateMultiObjectPositions'];
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
   cameraStateRef: React.RefObject<SavedCameraInfo | null>;
@@ -141,6 +144,7 @@ export function useSceneEditorSession({
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
+    updateMultiObjectPositions,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -230,6 +234,7 @@ export function useSceneEditorSession({
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     removeSelectedModel,
+    updateMultiObjectPositions,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,

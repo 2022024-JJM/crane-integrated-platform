@@ -65,6 +65,10 @@ interface UseSelectedSceneObjectEditorResult {
       recordHistory?: boolean;
     },
   ) => void;
+  updateMultiObjectPositions: (
+    updates: Array<{ id: string; position: Vector3Tuple }>,
+    options?: { recordHistory?: boolean },
+  ) => void;
   removeSelectedModel: () => void;
 }
 
@@ -309,6 +313,33 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
+  const updateMultiObjectPositions = (
+    updates: Array<{ id: string; position: Vector3Tuple }>,
+    options?: { recordHistory?: boolean },
+  ) => {
+    if (updates.length === 0) return;
+
+    const updateMap = new Map(updates.map((u) => [u.id, u.position]));
+
+    updateSceneInfo((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          const pos = updateMap.get(model.id);
+          if (!pos) return model;
+          return { ...model, position: roundVectorValue(pos) };
+        }),
+        texts: (prev.texts ?? []).map((t) => {
+          const pos = updateMap.get(t.id);
+          if (!pos) return t;
+          return { ...t, position: roundVectorValue(pos) };
+        }),
+      };
+    }, options);
+  };
+
   const removeSelectedModel = () => {
     if (selectedIds.size === 0) {
       return;
@@ -340,6 +371,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
+    updateMultiObjectPositions,
     removeSelectedModel,
   };
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import { numRound, radToDeg } from '@crane/domain/3d';
-import type { SceneTransformField } from '@crane/features/3d';
+import type { SceneTransformField, SceneTransformMode } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 interface TransformChangeEvent extends Event {
@@ -43,7 +43,9 @@ function getObjectTransformVectors(
 }
 
 interface UseSceneTransformParams {
-  selectedModelId: string | null;
+  primarySelectedId: string | null;
+  selectedIds: Set<string>;
+  transformMode: SceneTransformMode;
   sceneModels: { id: string }[] | undefined;
   sceneTexts?: { id: string }[] | undefined;
   modelObjectRegistryRef: React.RefObject<Map<string, Object3D>>;
@@ -51,16 +53,22 @@ interface UseSceneTransformParams {
     field: SceneTransformField,
     value: Vector3Tuple,
   ) => void;
+  onMultiTransformCommit?: (
+    updates: Array<{ id: string; position: Vector3Tuple }>,
+  ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
 }
 
 export function useSceneTransform({
-  selectedModelId,
+  primarySelectedId,
+  selectedIds,
+  transformMode,
   sceneModels,
   sceneTexts,
   modelObjectRegistryRef,
   onTransformVectorChange,
+  onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
 }: UseSceneTransformParams) {
@@ -71,27 +79,111 @@ export function useSceneTransform({
   const [selectedObject, setSelectedObject] = useState<Object3D | null>(null);
   const [isTransformDragging, setIsTransformDragging] = useState(false);
 
+  const dragStartPositionsRef = useRef<Map<string, Vector3Tuple>>(new Map());
+
+  const isMultiDrag = selectedIds.size > 1 && transformMode === 'translate';
+
   const syncSelectedObjectTransform = useCallback(() => {
-    if (!selectedObject || !selectedModelId) {
+    if (!selectedObject || !primarySelectedId) {
       return;
     }
 
-    const nextTransform = getObjectTransformVectors(selectedObject);
-    onTransformVectorChange('position', nextTransform.position);
-    onTransformVectorChange('rotation', nextTransform.rotation);
-    onTransformVectorChange('scale', nextTransform.scale);
-  }, [onTransformVectorChange, selectedModelId, selectedObject]);
+    if (isMultiDrag) {
+      // Compute delta from primary object's start position
+      const startPos = dragStartPositionsRef.current.get(primarySelectedId);
+      if (!startPos) return;
+
+      const deltaX = selectedObject.position.x - startPos[0];
+      const deltaY = selectedObject.position.y - startPos[1];
+      const deltaZ = selectedObject.position.z - startPos[2];
+
+      // Apply delta to all other selected objects' Object3D directly (visual feedback)
+      for (const id of selectedIds) {
+        if (id === primarySelectedId) continue;
+        const obj = modelObjectRegistryRef.current.get(id);
+        const objStartPos = dragStartPositionsRef.current.get(id);
+        if (!obj || !objStartPos) continue;
+
+        obj.position.set(
+          objStartPos[0] + deltaX,
+          objStartPos[1] + deltaY,
+          objStartPos[2] + deltaZ,
+        );
+      }
+
+      // Still sync the primary object's transform for single-object callback
+      const nextTransform = getObjectTransformVectors(selectedObject);
+      onTransformVectorChange('position', nextTransform.position);
+      onTransformVectorChange('rotation', nextTransform.rotation);
+      onTransformVectorChange('scale', nextTransform.scale);
+    } else {
+      const nextTransform = getObjectTransformVectors(selectedObject);
+      onTransformVectorChange('position', nextTransform.position);
+      onTransformVectorChange('rotation', nextTransform.rotation);
+      onTransformVectorChange('scale', nextTransform.scale);
+    }
+  }, [onTransformVectorChange, primarySelectedId, selectedObject, isMultiDrag, selectedIds, modelObjectRegistryRef]);
 
   const handleTransformMouseDown = useCallback(() => {
     setIsTransformDragging(true);
     onTransformInteractionStart?.();
-  }, [onTransformInteractionStart]);
+
+    // Capture start positions of all selected objects for multi-drag
+    if (selectedIds.size > 1 && transformMode === 'translate') {
+      const startPositions = new Map<string, Vector3Tuple>();
+      for (const id of selectedIds) {
+        const obj = modelObjectRegistryRef.current.get(id);
+        if (obj) {
+          startPositions.set(id, [obj.position.x, obj.position.y, obj.position.z]);
+        }
+      }
+      dragStartPositionsRef.current = startPositions;
+    }
+  }, [onTransformInteractionStart, selectedIds, transformMode, modelObjectRegistryRef]);
 
   const handleTransformMouseUp = useCallback(() => {
-    syncSelectedObjectTransform();
+    if (isMultiDrag && selectedObject && primarySelectedId) {
+      // Compute final positions for all selected objects and commit
+      const startPos = dragStartPositionsRef.current.get(primarySelectedId);
+      if (startPos) {
+        const deltaX = selectedObject.position.x - startPos[0];
+        const deltaY = selectedObject.position.y - startPos[1];
+        const deltaZ = selectedObject.position.z - startPos[2];
+
+        const updates: Array<{ id: string; position: Vector3Tuple }> = [];
+        for (const id of selectedIds) {
+          const objStartPos = dragStartPositionsRef.current.get(id);
+          if (!objStartPos) continue;
+
+          updates.push({
+            id,
+            position: [
+              objStartPos[0] + deltaX,
+              objStartPos[1] + deltaY,
+              objStartPos[2] + deltaZ,
+            ],
+          });
+        }
+
+        onMultiTransformCommit?.(updates);
+      }
+
+      dragStartPositionsRef.current.clear();
+    } else {
+      syncSelectedObjectTransform();
+    }
+
     setIsTransformDragging(false);
     onTransformInteractionEnd?.();
-  }, [onTransformInteractionEnd, syncSelectedObjectTransform]);
+  }, [
+    isMultiDrag,
+    selectedObject,
+    primarySelectedId,
+    selectedIds,
+    onMultiTransformCommit,
+    syncSelectedObjectTransform,
+    onTransformInteractionEnd,
+  ]);
 
   useEffect(() => {
     if (!orbitControlsRef.current) {
@@ -102,30 +194,30 @@ export function useSceneTransform({
   }, [isTransformDragging]);
 
   useEffect(() => {
-    if (!selectedModelId) {
+    if (!primarySelectedId) {
       setSelectedObject(null);
       setIsTransformDragging(false);
       return;
     }
 
     const isSelectedModelPresent =
-      (sceneModels?.some((model) => model.id === selectedModelId) ?? false) ||
-      (sceneTexts?.some((t) => t.id === selectedModelId) ?? false);
+      (sceneModels?.some((model) => model.id === primarySelectedId) ?? false) ||
+      (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false);
 
     if (!isSelectedModelPresent) {
       setSelectedObject(null);
       setIsTransformDragging(false);
-      modelObjectRegistryRef.current.delete(selectedModelId);
+      modelObjectRegistryRef.current.delete(primarySelectedId);
       return;
     }
 
     const nextSelectedObject =
-      modelObjectRegistryRef.current.get(selectedModelId) ?? null;
+      modelObjectRegistryRef.current.get(primarySelectedId) ?? null;
 
     if (nextSelectedObject) {
       setSelectedObject(nextSelectedObject);
     }
-  }, [sceneModels, selectedModelId, modelObjectRegistryRef]);
+  }, [sceneModels, primarySelectedId, modelObjectRegistryRef]);
 
   useEffect(() => {
     const controls =

@@ -48,6 +48,9 @@ interface SceneObjectsEditCanvasProps {
   isDraggingText?: boolean;
   onAddText?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
+  onMultiTransformCommit?: (
+    updates: Array<{ id: string; position: Vector3Tuple }>,
+  ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
   fitAllRef?: RefObject<(() => void) | null>;
@@ -67,6 +70,7 @@ export function SceneObjectsEditCanvas({
   isDraggingText = false,
   onAddText,
   showLabels = true,
+  onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
   fitAllRef,
@@ -76,8 +80,8 @@ export function SceneObjectsEditCanvas({
   const selectedIds = useSceneObjectSelectionStore(
     (state) => state.selectedIds,
   );
-  const selectedModelId = useSceneObjectSelectionStore(
-    (state) => state.selectedModelId,
+  const primarySelectedId = useSceneObjectSelectionStore(
+    (state) => state.primarySelectedId,
   );
   const selectModel = useSceneObjectSelectionStore(
     (state) => state.selectModel,
@@ -119,11 +123,14 @@ export function SceneObjectsEditCanvas({
     handleTransformMouseDown,
     handleTransformMouseUp,
   } = useSceneTransform({
-    selectedModelId,
+    primarySelectedId,
+    selectedIds,
+    transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
     modelObjectRegistryRef,
     onTransformVectorChange,
+    onMultiTransformCommit,
     onTransformInteractionStart,
     onTransformInteractionEnd,
   });
@@ -136,15 +143,15 @@ export function SceneObjectsEditCanvas({
         modelObjectRegistryRef.current.delete(id);
       }
 
-      if (id === selectedModelId) {
+      if (id === primarySelectedId) {
         setSelectedObject(object);
       }
 
-      if (id === selectedModelId && !object) {
+      if (id === primarySelectedId && !object) {
         setIsTransformDragging(false);
       }
     },
-    [selectedModelId, setIsTransformDragging, setSelectedObject],
+    [primarySelectedId, setIsTransformDragging, setSelectedObject],
   );
 
   const handleSelectModel = useCallback(
