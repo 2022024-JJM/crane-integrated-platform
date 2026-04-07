@@ -452,7 +452,10 @@ function FloatingPanel({
   return (
     <div
       className={cn(
-        'pointer-events-none absolute top-3 bottom-3 z-20 flex transition-[width] duration-200 ease-out',
+        // z-0: 글로벌 헤더의 드롭다운/popover보다 낮게 둔다. 패널은 캔버스 위에
+        // 떠 있기만 하면 되고(캔버스는 stacking context의 자연 흐름), 헤더에서
+        // 내려오는 popover에 가리지 않아야 한다.
+        'pointer-events-none absolute top-3 bottom-3 z-0 flex transition-[width] duration-200 ease-out',
         sideClass,
         collapsed ? 'w-10' : expandedWidth,
       )}

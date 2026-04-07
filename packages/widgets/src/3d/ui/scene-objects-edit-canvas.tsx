@@ -16,6 +16,7 @@ import {
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
+  prefetchModelBottomOffset,
   type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
@@ -137,10 +138,13 @@ export function SceneObjectsEditCanvas({
   fitSelectedRef,
   resetCameraRef,
 }: SceneObjectsEditCanvasProps) {
-  // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지
+  // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
+  // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
+  // 모델 바닥이 정확히 지면(y=0)에 닿도록 한다. 사용자 scale은 드롭 시점에 곱한다.
   useEffect(() => {
     for (const item of catalogItems) {
       useGLTF.preload(item.path);
+      void prefetchModelBottomOffset(item.path);
     }
   }, [catalogItems]);
 
@@ -180,6 +184,7 @@ export function SceneObjectsEditCanvas({
     catalogItems,
     draggingModelCatalogItem,
     isDraggingText,
+    mapObjectId: sceneInfo?.map?.id ?? null,
     onAddModel,
     onAddText,
   });

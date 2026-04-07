@@ -8,6 +8,12 @@ export {
 } from './lib/scene-dev-storage';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
+  prefetchModelBottomOffset,
+  fillModelBottomOffsetFromClone,
+  getModelBottomOffset,
+} from './lib/model-bottom-offset-cache';
+export { raycastMapSurfaceY } from './lib/map-surface-raycast';
+export {
   makeMeshId,
   parseMeshId,
   isMeshId,

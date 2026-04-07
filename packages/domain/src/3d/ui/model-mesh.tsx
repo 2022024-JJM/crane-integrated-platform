@@ -6,6 +6,7 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
+import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
@@ -102,8 +103,12 @@ export function useClonedModel(url: string) {
       }
     });
 
+    // 같은 url의 모델이 처음 mount될 때 unscaled bottom offset을 캐시에 채운다.
+    // 드롭 시 이 캐시 값에 사용자의 scale.y를 곱해 모델 바닥을 지면에 닿게 한다.
+    fillModelBottomOffsetFromClone(url, nextClone);
+
     return { clone: nextClone, meshBindings: bindings, originalTransforms };
-  }, [scene]);
+  }, [scene, url]);
 }
 
 /**
