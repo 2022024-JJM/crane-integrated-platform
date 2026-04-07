@@ -1,6 +1,7 @@
 import type {
   SavedCameraInfo,
   SavedMapInfo,
+  SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
   SavedTextInfo,
@@ -32,6 +33,28 @@ function clampOpacity(value: unknown) {
   }
 
   return clampToRange(Number(value), 0.1, 1);
+}
+
+function sanitizeMeshOverrides(
+  raw: unknown,
+): SavedMeshOverride[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: SavedMeshOverride[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const o = item as Record<string, unknown>;
+    if (typeof o.meshPath !== 'string' || o.meshPath.length === 0) continue;
+    const sanitized: SavedMeshOverride = { meshPath: o.meshPath };
+    if (isVector3Tuple(o.position)) sanitized.position = o.position as Vector3Tuple;
+    if (isVector3Tuple(o.rotation)) sanitized.rotation = o.rotation as Vector3Tuple;
+    if (isVector3Tuple(o.scale)) sanitized.scale = o.scale as Vector3Tuple;
+    if (isFiniteNumber(o.opacity))
+      sanitized.opacity = clampToRange(Number(o.opacity), 0.1, 1);
+    if (typeof o.visible === 'boolean') sanitized.visible = o.visible;
+    if (typeof o.name === 'string') sanitized.name = o.name;
+    out.push(sanitized);
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
@@ -83,6 +106,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             ...model,
             id: nextId,
             opacity: clampOpacity(model.opacity),
+            meshOverrides: sanitizeMeshOverrides(model.meshOverrides),
           },
         ];
       })
@@ -183,6 +207,46 @@ function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
   );
 }
 
+function isMeshOverrideEqual(
+  a: SavedMeshOverride,
+  b: SavedMeshOverride,
+): boolean {
+  if (a.meshPath !== b.meshPath) return false;
+  if (a.opacity !== b.opacity) return false;
+  if (a.visible !== b.visible) return false;
+  if (a.name !== b.name) return false;
+  const vecKeys: (keyof Pick<
+    SavedMeshOverride,
+    'position' | 'rotation' | 'scale'
+  >)[] = ['position', 'rotation', 'scale'];
+  for (const k of vecKeys) {
+    const av = a[k];
+    const bv = b[k];
+    if (!av && !bv) continue;
+    if (!av || !bv) return false;
+    if (!isVector3TupleEqual(av, bv)) return false;
+  }
+  return true;
+}
+
+function isMeshOverrideListEqual(
+  a: SavedMeshOverride[] | undefined,
+  b: SavedMeshOverride[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  // 순서 무관 비교: meshPath 기준 lookup
+  const bMap = new Map((b ?? []).map((o) => [o.meshPath, o]));
+  for (const ao of a ?? []) {
+    const bo = bMap.get(ao.meshPath);
+    if (!bo) return false;
+    if (!isMeshOverrideEqual(ao, bo)) return false;
+  }
+  return true;
+}
+
 function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
   return (
     a.id === b.id &&
@@ -193,7 +257,8 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
-    isValueMapListEqual(a.valueMapList, b.valueMapList)
+    isValueMapListEqual(a.valueMapList, b.valueMapList) &&
+    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides)
   );
 }
 

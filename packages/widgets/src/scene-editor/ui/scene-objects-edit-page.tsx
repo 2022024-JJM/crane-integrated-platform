@@ -86,6 +86,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     selectedText,
+    selectedMesh,
+    updateSelectedMeshTransform,
+    updateSelectedMeshTransformVector,
+    updateSelectedMeshOpacity,
+    updateSelectedMeshName,
     selectedObjectType,
     removeSelectedModel,
     duplicateSelectedObject,
@@ -253,6 +258,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               updateSelectedTextTransformVector(field, value, {
                 recordHistory: false,
               });
+            } else if (selectedObjectType === 'mesh') {
+              updateSelectedMeshTransformVector(field, value, {
+                recordHistory: false,
+              });
             } else {
               updateSelectedTransformVector(field, value, {
                 recordHistory: false,
@@ -333,6 +342,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           <SceneObjectInspector
             selectedModel={selectedModel}
             selectedText={selectedText}
+            selectedMesh={selectedMesh}
             multiSelectCount={selectedIds.size}
             onNameChange={updateSelectedName}
             onOpacityChange={updateSelectedOpacity}
@@ -340,6 +350,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             onTextContentChange={updateSelectedTextContent}
             onTextColorChange={updateSelectedTextColor}
             onTextTransformChange={updateSelectedTextTransform}
+            onMeshNameChange={updateSelectedMeshName}
+            onMeshOpacityChange={updateSelectedMeshOpacity}
+            onMeshTransformChange={updateSelectedMeshTransform}
+            onBackToParent={() => {
+              if (selectedMesh) {
+                selectPlacedModel(selectedMesh.modelId);
+              }
+            }}
           />
         </div>
       </aside>

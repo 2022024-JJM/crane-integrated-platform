@@ -12,10 +12,15 @@ import { Box3, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
+  getMeshPath,
+  makeMeshId,
+  modelObjectRegistry as sharedModelObjectRegistry,
+  parseMeshId,
   type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
+import type { ThreeEvent } from '@react-three/fiber';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
@@ -42,12 +47,35 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
  */
 type SelectionAwareGltfModelProps = Omit<
   React.ComponentProps<typeof GltfModel>,
-  'isSelected'
+  'isSelected' | 'selectedMeshTarget'
 >;
 
 function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
   const isSelected = useIsObjectSelected(props.id);
-  return <GltfModel {...props} isSelected={isSelected} />;
+  // 이 모델 안의 자식 mesh가 선택되어 있으면 그 mesh 객체를 selection box
+  // target으로 넘긴다. selectedObjectType이 'mesh'이고 primarySelectedId가
+  // `${this.id}::...` 형태일 때만 해당.
+  const primarySelectedId = useSceneObjectSelectionStore(
+    (s) => s.primarySelectedId,
+  );
+  const selectedObjectType = useSceneObjectSelectionStore(
+    (s) => s.selectedObjectType,
+  );
+  let selectedMeshTarget: Object3D | null = null;
+  if (selectedObjectType === 'mesh' && primarySelectedId) {
+    const parsed = parseMeshId(primarySelectedId);
+    if (parsed && parsed.modelId === props.id) {
+      selectedMeshTarget =
+        sharedModelObjectRegistry.get(primarySelectedId) ?? null;
+    }
+  }
+  return (
+    <GltfModel
+      {...props}
+      isSelected={isSelected}
+      selectedMeshTarget={selectedMeshTarget}
+    />
+  );
 }
 
 type SelectionAwareSceneTextProps = Omit<
@@ -126,10 +154,12 @@ export function SceneObjectsEditCanvas({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
+  const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleMesh = useSceneObjectSelectionStore((state) => state.toggleMesh);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -192,9 +222,28 @@ export function SceneObjectsEditCanvas({
     [primarySelectedId, setIsTransformDragging, setSelectedObject],
   );
 
+  // 마지막 단일 클릭 시각. dblclick 윈도우 안의 두 번째 click이면 selectModel을
+  // skip하여 직후 발화할 onDoubleClick의 selectMesh가 덮어쓰이지 않게 한다.
+  const lastClickTimeRef = useRef(0);
+  const lastClickIdRef = useRef<string | null>(null);
+  const DOUBLE_CLICK_WINDOW_MS = 300;
+
   const handleSelectModel = useCallback(
     (id: string) => {
-      const isCtrl = lastPointerEventRef.current?.ctrlKey || lastPointerEventRef.current?.metaKey;
+      const now = performance.now();
+      const isLikelySecondClick =
+        lastClickIdRef.current === id &&
+        now - lastClickTimeRef.current < DOUBLE_CLICK_WINDOW_MS;
+      lastClickTimeRef.current = now;
+      lastClickIdRef.current = id;
+      if (isLikelySecondClick) {
+        // 곧 onDoubleClick이 따라온다. selection을 건드리지 않는다.
+        return;
+      }
+
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
       if (isCtrl) {
         toggleModel(id);
       } else {
@@ -203,6 +252,33 @@ export function SceneObjectsEditCanvas({
       }
     },
     [selectModel, toggleModel, setSelectedObject],
+  );
+
+  const handleDoubleSelectModel = useCallback(
+    (id: string, event: ThreeEvent<MouseEvent>) => {
+      // R3F의 onDoubleClick은 DOM dblclick과 매핑되어 onClick의 detail 카운트
+      // 보다 안정적이다. 더블클릭 시 클릭된 자식 mesh path를 계산해 drill-in.
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
+      // event.eventObject: 핸들러가 붙은 primitive(=clone root)
+      // event.object: 클릭된 가장 깊은 Mesh
+      const cloneRoot = event.eventObject;
+      const target = event.object;
+      const meshPath = getMeshPath(cloneRoot, target);
+      if (meshPath === null || meshPath === '') {
+        return;
+      }
+      const meshId = makeMeshId(id, meshPath);
+      const meshObject = sharedModelObjectRegistry.get(meshId) ?? null;
+      if (isCtrl) {
+        toggleMesh(meshId);
+      } else {
+        setSelectedObject(meshObject);
+        selectMesh(meshId);
+      }
+    },
+    [selectMesh, toggleMesh, setSelectedObject],
   );
 
   const handleSelectText = useCallback(
@@ -402,7 +478,9 @@ export function SceneObjectsEditCanvas({
             position={model.position}
             rotation={model.rotation}
             scale={model.scale}
+            meshOverrides={model.meshOverrides}
             onSelect={handleSelectModel}
+            onDoubleSelect={handleDoubleSelectModel}
             onObjectReady={handleModelObjectReady}
           />
         ))}

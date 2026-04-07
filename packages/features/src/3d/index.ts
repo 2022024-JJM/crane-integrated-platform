@@ -4,13 +4,22 @@ export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
-export { useSelectedSceneObjectEditor } from './model/use-selected-scene-object-editor';
+export {
+  useSelectedSceneObjectEditor,
+  type SelectedMeshInfo,
+} from './model/use-selected-scene-object-editor';
 export {
   useSceneObjectSelectionStore,
   useIsObjectSelected,
   useIsMultiSelection,
   type SelectedObjectType,
 } from './model/use-scene-object-selection-store';
+// Re-export mesh-id helpers for convenience (FSD: features는 domain을 import 가능)
+export {
+  makeMeshId,
+  parseMeshId,
+  isMeshId,
+} from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export type {
   AxisKey,

@@ -19,13 +19,16 @@ import {
   RotationController,
   ScaleController,
   type SceneTransformField,
+  type SelectedMeshInfo,
 } from '@crane/features/3d';
+import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  selectedMesh: SelectedMeshInfo | null;
   multiSelectCount?: number;
   onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
@@ -41,6 +44,15 @@ interface SceneObjectInspectorProps {
     axis: AxisKey,
     value: number,
   ) => void;
+  onMeshNameChange: (name: string) => void;
+  onMeshOpacityChange: (value: number) => void;
+  onMeshTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
+  onBackToParent: () => void;
 }
 
 interface InspectorSectionProps {
@@ -240,6 +252,133 @@ function ModelInspectorContent({
   );
 }
 
+function MeshInspectorContent({
+  selectedMesh,
+  meshNameDraft,
+  setMeshNameDraft,
+  onMeshNameChange,
+  onMeshOpacityChange,
+  onMeshTransformChange,
+  onBackToParent,
+  t,
+}: {
+  selectedMesh: SelectedMeshInfo;
+  meshNameDraft: string;
+  setMeshNameDraft: (v: string) => void;
+  onMeshNameChange: (name: string) => void;
+  onMeshOpacityChange: (value: number) => void;
+  onMeshTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  onBackToParent: () => void;
+  t: (key: string) => string;
+}) {
+  const override = selectedMesh.override;
+  // override가 없는 axis는 mesh 객체의 현재 transform을 표시(GLTF 원본 또는
+  // 마지막 적용 상태). 사용자가 첫 입력을 할 때 그 값에서 시작하기 위함.
+  const meshObj = selectedMesh.meshObject;
+  const defaultPosition: [number, number, number] = meshObj
+    ? [meshObj.position.x, meshObj.position.y, meshObj.position.z]
+    : [0, 0, 0];
+  const defaultRotation: [number, number, number] = meshObj
+    ? [
+        (meshObj.rotation.x * 180) / Math.PI,
+        (meshObj.rotation.y * 180) / Math.PI,
+        (meshObj.rotation.z * 180) / Math.PI,
+      ]
+    : [0, 0, 0];
+  const defaultScale: [number, number, number] = meshObj
+    ? [meshObj.scale.x, meshObj.scale.y, meshObj.scale.z]
+    : [1, 1, 1];
+  const position = override?.position ?? defaultPosition;
+  const rotation = override?.rotation ?? defaultRotation;
+  const scale = override?.scale ?? defaultScale;
+  const opacity = override?.opacity ?? 1;
+  // 자식 mesh의 표시 이름 우선순위: override.name → mesh segment의 마지막 이름
+  // (path 의 [idx]name 마지막 부분) → meshPath 자체.
+  const lastSegment = selectedMesh.meshPath.split('/').pop() ?? '';
+  const segmentName = /^\[\d+\](.*)$/.exec(lastSegment)?.[1] ?? lastSegment;
+  const displayName = override?.name || segmentName || selectedMesh.meshPath;
+
+  return (
+    <>
+      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
+        <button
+          type="button"
+          onClick={onBackToParent}
+          className="text-muted-foreground hover:text-foreground mb-1.5 flex cursor-pointer items-center gap-1 text-[10px]"
+        >
+          <ArrowLeft className="size-3" />
+          {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
+        </button>
+        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+          {t('monitoring:inspector.title')} · mesh
+        </p>
+        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
+          {displayName}
+        </p>
+        <p className="text-muted-foreground mt-1 truncate text-[10px] leading-none">
+          {selectedMesh.meshPath}
+        </p>
+      </div>
+
+      <InspectorSection
+        title={t('monitoring:inspector.name')}
+        icon={<SlidersHorizontal className="size-4" />}
+      >
+        <Input
+          value={meshNameDraft}
+          aria-label={t('monitoring:inspector.name')}
+          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setMeshNameDraft(nextValue);
+            onMeshNameChange(nextValue);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setMeshNameDraft(displayName);
+              event.currentTarget.blur();
+            }
+          }}
+        />
+      </InspectorSection>
+
+      <TransformSection
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        onTransformChange={onMeshTransformChange}
+        t={t}
+      />
+
+      <InspectorSection
+        title={t('monitoring:inspector.opacity')}
+        icon={<Eye className="size-4" />}
+      >
+        <div className="flex items-center gap-3">
+          <input
+            type="range"
+            min={0.1}
+            max={1}
+            step={0.1}
+            value={opacity}
+            className="accent-primary h-2 w-full cursor-pointer"
+            onChange={(event) => {
+              onMeshOpacityChange(Number(event.target.value));
+            }}
+          />
+          <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
+            {opacity.toFixed(1)}
+          </span>
+        </div>
+      </InspectorSection>
+    </>
+  );
+}
+
 function TextInspectorContent({
   selectedText,
   contentDraft,
@@ -327,6 +466,7 @@ function TextInspectorContent({
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
+  selectedMesh,
   multiSelectCount = 0,
   onNameChange,
   onOpacityChange,
@@ -334,12 +474,18 @@ export function SceneObjectInspector({
   onTextContentChange,
   onTextColorChange,
   onTextTransformChange,
+  onMeshNameChange,
+  onMeshOpacityChange,
+  onMeshTransformChange,
+  onBackToParent,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName ?? '';
   const selectedOpacity = selectedModel?.opacity ?? 1;
   const [nameDraft, setNameDraft] = useState(selectedLabel);
   const [contentDraft, setContentDraft] = useState(selectedText?.content ?? '');
+  const initialMeshName = selectedMesh?.override?.name ?? '';
+  const [meshNameDraft, setMeshNameDraft] = useState(initialMeshName);
 
   useEffect(() => {
     setNameDraft(selectedLabel);
@@ -349,7 +495,12 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  const hasSelection = selectedModel || selectedText || multiSelectCount > 1;
+  useEffect(() => {
+    setMeshNameDraft(initialMeshName);
+  }, [initialMeshName, selectedMesh?.meshPath]);
+
+  const hasSelection =
+    selectedModel || selectedText || selectedMesh || multiSelectCount > 1;
 
   return (
     <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
@@ -360,6 +511,17 @@ export function SceneObjectInspector({
               {t('monitoring:editor.multipleSelected', { count: multiSelectCount })}
             </p>
           </div>
+        ) : selectedMesh ? (
+          <MeshInspectorContent
+            selectedMesh={selectedMesh}
+            meshNameDraft={meshNameDraft}
+            setMeshNameDraft={setMeshNameDraft}
+            onMeshNameChange={onMeshNameChange}
+            onMeshOpacityChange={onMeshOpacityChange}
+            onMeshTransformChange={onMeshTransformChange}
+            onBackToParent={onBackToParent}
+            t={t}
+          />
         ) : selectedModel ? (
           <ModelInspectorContent
             selectedModel={selectedModel}

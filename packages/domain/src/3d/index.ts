@@ -7,11 +7,19 @@ export {
   saveSceneInfoByRegionId,
 } from './lib/scene-dev-storage';
 export { modelObjectRegistry } from './lib/model-object-registry';
+export {
+  makeMeshId,
+  parseMeshId,
+  isMeshId,
+  getMeshPath,
+  findMeshByPath,
+} from './lib/mesh-path';
 export type {
   SavedCameraInfo,
   SceneModelCatalogItem,
   SceneModelPreviewPreset,
   SavedMapInfo,
+  SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
   SavedTextInfo,

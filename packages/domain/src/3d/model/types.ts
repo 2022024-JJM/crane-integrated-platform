@@ -42,6 +42,23 @@ export interface SavedModelInfo {
   rotation: Vector3Tuple;
   scale: Vector3Tuple;
   valueMapList: ValueMapItem[];
+  /**
+   * 자식 mesh 단위 override. 없으면 GLTF 원본 그대로 렌더한다.
+   * 사용자가 더블클릭으로 특정 자식 mesh를 선택해 transform/opacity/visible/이름을
+   * 편집한 결과가 여기 누적된다.
+   */
+  meshOverrides?: SavedMeshOverride[];
+}
+
+export interface SavedMeshOverride {
+  /** ModelMesh가 렌더하는 clone root에서 target mesh까지의 안정 path. */
+  meshPath: string;
+  position?: Vector3Tuple;
+  rotation?: Vector3Tuple;
+  scale?: Vector3Tuple;
+  opacity?: number;
+  visible?: boolean;
+  name?: string;
 }
 
 export interface SavedMapInfo {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SelectedObjectType = 'model' | 'text';
+export type SelectedObjectType = 'model' | 'text' | 'mesh';
 
 interface SceneObjectSelectionState {
   selectedIds: Set<string>;
@@ -11,8 +11,10 @@ interface SceneObjectSelectionState {
   selectedObjectType: SelectedObjectType | null;
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
+  selectMesh: (meshId: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
+  toggleMesh: (meshId: string) => void;
   selectAll: (ids: string[]) => void;
   clearSelectedModel: () => void;
 }
@@ -44,6 +46,9 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
 
     selectText: (id) =>
       set(deriveCompat(new Set([id]), 'text', id)),
+
+    selectMesh: (meshId) =>
+      set(deriveCompat(new Set([meshId]), 'mesh', meshId)),
 
     toggleModel: (id) =>
       set((state) => {
@@ -77,6 +82,23 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
             ? undefined
             : state.primarySelectedId;
         return deriveCompat(next, next.size > 0 ? 'text' : null, primary);
+      }),
+
+    toggleMesh: (meshId) =>
+      set((state) => {
+        const next = new Set(state.selectedIds);
+        const isAdding = !next.has(meshId);
+        if (isAdding) {
+          next.add(meshId);
+        } else {
+          next.delete(meshId);
+        }
+        const primary = isAdding
+          ? meshId
+          : state.primarySelectedId === meshId
+            ? undefined
+            : state.primarySelectedId;
+        return deriveCompat(next, next.size > 0 ? 'mesh' : null, primary);
       }),
 
     selectAll: (ids) =>

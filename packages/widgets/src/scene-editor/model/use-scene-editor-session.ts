@@ -28,6 +28,7 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['selectedModel'];
   selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
+  selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
   canUndo: boolean;
@@ -63,6 +64,18 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextTransformVector: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextTransformVector'];
+  updateSelectedMeshTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMeshTransform'];
+  updateSelectedMeshTransformVector: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMeshTransformVector'];
+  updateSelectedMeshOpacity: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMeshOpacity'];
+  updateSelectedMeshName: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMeshName'];
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (
@@ -136,10 +149,15 @@ export function useSceneEditorSession({
   const {
     selectedModel,
     selectedText,
+    selectedMesh,
     updateSelectedName,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    updateSelectedMeshTransform,
+    updateSelectedMeshTransformVector,
+    updateSelectedMeshOpacity,
+    updateSelectedMeshName,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,
@@ -216,6 +234,7 @@ export function useSceneEditorSession({
       selectedModel?.equipName.trim() || selectedText?.content.trim() || null,
     selectedModel,
     selectedText,
+    selectedMesh,
     isSaving,
     isDirty,
     canUndo,
@@ -233,6 +252,10 @@ export function useSceneEditorSession({
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
+    updateSelectedMeshTransform,
+    updateSelectedMeshTransformVector,
+    updateSelectedMeshOpacity,
+    updateSelectedMeshName,
     removeSelectedModel,
     updateMultiObjectPositions,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,

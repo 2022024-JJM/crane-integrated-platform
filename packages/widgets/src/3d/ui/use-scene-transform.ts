@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
-import { numRound, radToDeg } from '@crane/domain/3d';
+import {
+  numRound,
+  radToDeg,
+  modelObjectRegistry,
+  parseMeshId,
+} from '@crane/domain/3d';
 import {
   useIsMultiSelection,
   useSceneObjectSelectionStore,
@@ -209,24 +214,34 @@ export function useSceneTransform({
       return;
     }
 
-    const isSelectedModelPresent =
-      (sceneModels?.some((model) => model.id === primarySelectedId) ?? false) ||
-      (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false);
+    // mesh selection: id가 `${modelId}::${meshPath}` 형식이면 부모 모델이
+    // 존재하는지를 확인하고, 객체는 도메인 registry에서 가져온다.
+    const meshIdInfo = parseMeshId(primarySelectedId);
 
-    if (!isSelectedModelPresent) {
+    const isSelectedPresent = meshIdInfo
+      ? (sceneModels?.some((model) => model.id === meshIdInfo.modelId) ?? false)
+      : (sceneModels?.some((model) => model.id === primarySelectedId) ??
+          false) ||
+        (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false);
+
+    if (!isSelectedPresent) {
       setSelectedObject(null);
       setIsTransformDragging(false);
       modelObjectRegistryRef.current.delete(primarySelectedId);
       return;
     }
 
+    // 모델/텍스트는 캔버스의 로컬 ref에서, mesh는 도메인 전역 registry에서
+    // 우선 가져온다. 둘 다 fallback으로 검사.
     const nextSelectedObject =
-      modelObjectRegistryRef.current.get(primarySelectedId) ?? null;
+      modelObjectRegistryRef.current.get(primarySelectedId) ??
+      modelObjectRegistry.get(primarySelectedId) ??
+      null;
 
     if (nextSelectedObject) {
       setSelectedObject(nextSelectedObject);
     }
-  }, [sceneModels, primarySelectedId, modelObjectRegistryRef]);
+  }, [sceneModels, sceneTexts, primarySelectedId, modelObjectRegistryRef]);
 
   useEffect(() => {
     const controls =

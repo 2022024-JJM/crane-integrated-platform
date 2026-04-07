@@ -109,6 +109,14 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
         },
+        // Open-Meteo는 정상적으로 CORS를 허용하지만, 일부 사내망/방화벽에서
+        // 외부 호출이 502로 차단되는 경우가 있어 dev 서버가 대신 호출한다.
+        // 클라이언트는 baseUrl을 '/open-meteo'로 사용한다.
+        '/open-meteo': {
+          target: 'https://api.open-meteo.com',
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/open-meteo/, ''),
+        },
       },
     },
   };
