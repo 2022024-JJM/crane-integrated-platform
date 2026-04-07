@@ -2,7 +2,11 @@ import { memo, useCallback } from 'react';
 import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { ModelMesh, useClonedModel, useModelLabelOffsetY } from './model-mesh';
+import {
+  ModelMesh,
+  useClonedModel,
+  useModelLabelLocalAnchor,
+} from './model-mesh';
 import { ModelLabel, type AlarmHighlightSeverity } from './model-label';
 import { ModelSelectionBox } from './model-selection-box';
 import type { SavedMeshOverride } from '../model/types';
@@ -61,7 +65,7 @@ export const GltfModel = memo(function GltfModel({
   onHoverEnd,
 }: GltfModelProps) {
   const { clone } = useClonedModel(url);
-  const offsetY = useModelLabelOffsetY(clone, scale);
+  const labelLocalAnchor = useModelLabelLocalAnchor(clone);
 
   const handleObjectReady = useCallback(
     (readyId: string, object: Object3D | null) => {
@@ -71,36 +75,32 @@ export const GltfModel = memo(function GltfModel({
   );
 
   return (
-    <>
-      <ModelMesh
-        id={id}
-        url={url}
-        opacity={opacity}
-        alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        meshOverrides={meshOverrides}
-        onSelect={onSelect}
-        onDoubleSelect={onDoubleSelect}
-        onObjectReady={handleObjectReady}
-        onHoverStart={onHoverStart}
-        onHoverMove={onHoverMove}
-        onHoverEnd={onHoverEnd}
-      >
-        <ModelSelectionBox
-          clone={clone}
-          isSelected={isSelected || Boolean(selectedMeshTarget)}
-          target={selectedMeshTarget}
-        />
-      </ModelMesh>
-
+    <ModelMesh
+      id={id}
+      url={url}
+      opacity={opacity}
+      alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      meshOverrides={meshOverrides}
+      onSelect={onSelect}
+      onDoubleSelect={onDoubleSelect}
+      onObjectReady={handleObjectReady}
+      onHoverStart={onHoverStart}
+      onHoverMove={onHoverMove}
+      onHoverEnd={onHoverEnd}
+    >
+      <ModelSelectionBox
+        clone={clone}
+        isSelected={isSelected || Boolean(selectedMeshTarget)}
+        target={selectedMeshTarget}
+      />
       {showLabel ? (
         <ModelLabel
           id={id}
           equipName={equipName}
-          position={position}
-          offsetY={offsetY}
+          localAnchor={labelLocalAnchor}
           alarmSeverity={alarmSeverity}
           onSelect={onSelect}
           onHoverStart={onHoverStart}
@@ -108,6 +108,6 @@ export const GltfModel = memo(function GltfModel({
           onHoverEnd={onHoverEnd}
         />
       ) : null}
-    </>
+    </ModelMesh>
   );
 });

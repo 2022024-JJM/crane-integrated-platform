@@ -1,7 +1,7 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import { Vector3 } from 'three';
+import { Vector3, type Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
@@ -24,8 +24,13 @@ const ALARM_LABEL_CLASS: Record<AlarmHighlightSeverity, string> = {
 interface ModelLabelProps {
   id: string;
   equipName?: string;
-  position: Vector3Tuple;
-  offsetY: number;
+  /**
+   * 부모 객체(primitive=clone)의 local 좌표. ModelMesh가 렌더하는
+   * <primitive object={clone}>의 자식으로 마운트되므로 부모 transform
+   * (TransformControls가 매 frame mutate하는 transform 포함)을 자동 상속받는다.
+   * sceneInfo prop이 아니므로 드래그 중에도 정확히 따라간다.
+   */
+  localAnchor: Vector3Tuple;
   alarmSeverity?: AlarmHighlightSeverity | null;
   onSelect?: (id: string, event?: never) => void;
   onHoverStart?: (id: string, clientX: number, clientY: number) => void;
@@ -36,8 +41,7 @@ interface ModelLabelProps {
 export function ModelLabel({
   id,
   equipName,
-  position,
-  offsetY,
+  localAnchor,
   alarmSeverity = null,
   onSelect,
   onHoverStart,
@@ -45,16 +49,16 @@ export function ModelLabel({
   onHoverEnd,
 }: ModelLabelProps) {
   const divRef = useRef<HTMLDivElement>(null);
-  const labelWorldPos = useRef(
-    new Vector3(position[0], position[1] + offsetY, position[2]),
-  );
+  const groupRef = useRef<Group>(null);
+  const tempWorldPos = useRef(new Vector3());
   const lastVisibleRef = useRef(true);
 
   // 카메라 거리에 따라 라벨을 숨긴다. setState 대신 ref 기반 style mutate라
   // React 리렌더가 발생하지 않는다. 알람이 활성화된 라벨은 항상 보여준다.
   useFrame((state) => {
     const div = divRef.current;
-    if (!div) return;
+    const group = groupRef.current;
+    if (!div || !group) return;
 
     if (alarmSeverity) {
       if (!lastVisibleRef.current) {
@@ -64,8 +68,10 @@ export function ModelLabel({
       return;
     }
 
-    labelWorldPos.current.set(position[0], position[1] + offsetY, position[2]);
-    const dist = state.camera.position.distanceTo(labelWorldPos.current);
+    // group은 primitive(clone)의 자식이므로 부모 transform이 적용된 worldMatrix
+    // 를 갖는다. getWorldPosition이 그 결과를 추출.
+    group.getWorldPosition(tempWorldPos.current);
+    const dist = state.camera.position.distanceTo(tempWorldPos.current);
     const visible = dist <= LABEL_VISIBILITY_DISTANCE;
     if (visible !== lastVisibleRef.current) {
       div.style.display = visible ? '' : 'none';
@@ -78,11 +84,8 @@ export function ModelLabel({
   }
 
   return (
-    <Html
-      center
-      zIndexRange={[5, 0]}
-      position={[position[0], position[1] + offsetY, position[2]]}
-    >
+    <group ref={groupRef} position={localAnchor}>
+      <Html center zIndexRange={[5, 0]}>
       <div
         ref={divRef}
         className={`cursor-pointer rounded px-1.5 py-0.5 font-mono text-xs font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
@@ -108,7 +111,8 @@ export function ModelLabel({
       >
         {equipName}
       </div>
-    </Html>
+      </Html>
+    </group>
   );
 }
 

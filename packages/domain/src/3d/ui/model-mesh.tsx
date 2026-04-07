@@ -172,6 +172,49 @@ export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
   }, [clone, scale]);
 }
 
+/**
+ * 라벨을 모델의 정중앙 위에 띄우기 위한 unscaled local anchor.
+ *
+ * (x, z) = clone bbox의 중심 — 모델의 origin이 한쪽으로 치우쳐 있어도
+ *           시각적 정중앙에 라벨이 온다.
+ * y      = clone bbox의 최상단 + 약간의 padding — 모델 위에 살짝 떠 있게.
+ *
+ * 이 hook이 반환하는 값은 unscaled local 좌표다. ModelMesh의 primitive 자식
+ * 으로 라벨을 마운트하면 부모 scale/rotation/position이 자동 적용되어 라벨이
+ * 모델과 함께 움직이고 회전한다. 드래그 중에도 sceneInfo state와 무관하게
+ * 정확히 따라간다.
+ */
+export function useModelLabelLocalAnchor(
+  clone: Object3D,
+): Vector3Tuple {
+  return useMemo(() => {
+    const prevPos = clone.position.clone();
+    const prevRot = clone.rotation.clone();
+    const prevScale = clone.scale.clone();
+    clone.position.set(0, 0, 0);
+    clone.rotation.set(0, 0, 0);
+    clone.scale.set(1, 1, 1);
+    clone.updateMatrixWorld(true);
+
+    const box = new Box3().setFromObject(clone);
+
+    clone.position.copy(prevPos);
+    clone.rotation.copy(prevRot);
+    clone.scale.copy(prevScale);
+    clone.updateMatrixWorld(true);
+
+    if (box.isEmpty()) {
+      return [0, 2, 0];
+    }
+    const cx = (box.min.x + box.max.x) / 2;
+    const cz = (box.min.z + box.max.z) / 2;
+    // unscaled bbox top + 약간의 padding (unscaled 단위). 부모 scale이 곱해져
+    // 화면에서 적절한 거리가 된다.
+    const topY = box.max.y + 0.2;
+    return [cx, topY, cz];
+  }, [clone]);
+}
+
 export function ModelMesh({
   id,
   url,
