@@ -3,6 +3,7 @@ import {
   GizmoViewport,
   OrbitControls,
   TransformControls,
+  useGLTF,
 } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
@@ -21,7 +22,6 @@ import {
   type SceneTransformMode,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
-import { cn } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
@@ -76,6 +76,13 @@ export function SceneObjectsEditCanvas({
   fitAllRef,
   fitSelectedRef,
 }: SceneObjectsEditCanvasProps) {
+  // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지
+  useEffect(() => {
+    for (const item of catalogItems) {
+      useGLTF.preload(item.path);
+    }
+  }, [catalogItems]);
+
   const { t } = useTranslation();
   const selectedIds = useSceneObjectSelectionStore(
     (state) => state.selectedIds,
@@ -260,6 +267,26 @@ export function SceneObjectsEditCanvas({
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
 
+  const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
+  useEffect(() => {
+    if (!initialCamera || initialCamera === appliedCameraRef.current) return;
+    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+    if (!controls) return;
+
+    const cam = controls.object;
+    cam.position.set(...initialCamera.position);
+    controls.target.set(...initialCamera.target);
+    controls.update();
+    appliedCameraRef.current = initialCamera;
+
+    if (cameraStateRef) {
+      cameraStateRef.current = {
+        position: [...initialCamera.position],
+        target: [...initialCamera.target],
+      };
+    }
+  }, [initialCamera, cameraStateRef, orbitControlsRef]);
+
   useEffect(() => {
     if (!draggingModelCatalogItem && !isDraggingText) {
       setPendingDropPosition(null);
@@ -277,9 +304,9 @@ export function SceneObjectsEditCanvas({
       }}
       onDragOver={handleSceneDragOver}
       onDragLeave={handleDragLeave}
+      onDrop={handleSceneDrop}
     >
       <Canvas
-        key={initialCamera ? 'loaded' : 'default'}
         camera={{ position: cameraPosition }}
         gl={{
           toneMapping: NoToneMapping,
@@ -376,18 +403,9 @@ export function SceneObjectsEditCanvas({
         ) : null}
       </Canvas>
 
-      <div
-        className={cn(
-          'absolute inset-0 flex items-center justify-center',
-          draggingModelCatalogItem || isDraggingText
-            ? 'bg-foreground/5 pointer-events-auto backdrop-blur-[1px]'
-            : 'pointer-events-none opacity-0',
-        )}
-        onDragOver={handleSceneDragOver}
-        onDrop={handleSceneDrop}
-      >
-        {draggingModelCatalogItem || isDraggingText ? (
-          <div className="bg-card/95 pointer-events-none rounded-2xl border border-amber-500/30 px-4 py-3 text-center shadow-lg">
+      {(draggingModelCatalogItem || isDraggingText) && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="bg-card/95 rounded-2xl border border-amber-500/30 px-4 py-3 text-center shadow-lg">
             <p className="text-foreground text-sm font-semibold">
               {isDraggingText
                 ? t('monitoring:editor.addText')
@@ -397,8 +415,8 @@ export function SceneObjectsEditCanvas({
               {t('monitoring:editor.dropHint')}
             </p>
           </div>
-        ) : null}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
