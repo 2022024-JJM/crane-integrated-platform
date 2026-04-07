@@ -14,6 +14,10 @@ export {
   useIsMultiSelection,
   type SelectedObjectType,
 } from './model/use-scene-object-selection-store';
+export {
+  useActiveTransformStore,
+  useIsTransformDragActive,
+} from './model/use-active-transform-store';
 // Re-export mesh-id helpers for convenience (FSD: features는 domain을 import 가능)
 export {
   makeMeshId,

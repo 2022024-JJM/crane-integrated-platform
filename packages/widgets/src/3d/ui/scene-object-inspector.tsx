@@ -20,6 +20,7 @@ import {
   ScaleController,
   type SceneTransformField,
   type SelectedMeshInfo,
+  useActiveTransformStore,
 } from '@crane/features/3d';
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
@@ -123,6 +124,19 @@ function TransformSection({
   onTransformChange,
   t,
 }: TransformSectionProps) {
+  // 드래그 중에는 sceneInfo write가 끊긴 상태이므로 props로 받은 값이 멈춘다.
+  // active=true 일 때는 transient store의 라이브 값을 표시해 숫자가 실시간으로
+  // 따라가도록 한다. 드래그가 끝나면 active=false가 되며 sceneInfo의 commit된
+  // 값(=props)으로 자연스럽게 돌아간다.
+  const isActive = useActiveTransformStore((s) => s.active);
+  const livePosition = useActiveTransformStore((s) => s.position);
+  const liveRotation = useActiveTransformStore((s) => s.rotation);
+  const liveScale = useActiveTransformStore((s) => s.scale);
+
+  const displayPosition = isActive && livePosition ? livePosition : position;
+  const displayRotation = isActive && liveRotation ? liveRotation : rotation;
+  const displayScale = isActive && liveScale ? liveScale : scale;
+
   return (
     <InspectorSection
       title={t('monitoring:transform.title')}
@@ -131,7 +145,7 @@ function TransformSection({
       <div className="space-y-2.5">
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
-            vec={position}
+            vec={displayPosition}
             onChange={(axis, value) => {
               onTransformChange('position', axis, value);
             }}
@@ -139,7 +153,7 @@ function TransformSection({
         </TransformGroup>
         <TransformGroup title={t('monitoring:inspector.rotation')}>
           <RotationController
-            vec={rotation}
+            vec={displayRotation}
             onChange={(axis, value) => {
               onTransformChange('rotation', axis, value);
             }}
@@ -147,7 +161,7 @@ function TransformSection({
         </TransformGroup>
         <TransformGroup title={t('monitoring:inspector.scale')}>
           <ScaleController
-            vec={scale}
+            vec={displayScale}
             onChange={(axis, value) => {
               onTransformChange('scale', axis, value);
             }}

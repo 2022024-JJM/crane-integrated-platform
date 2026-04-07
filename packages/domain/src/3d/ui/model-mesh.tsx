@@ -455,29 +455,30 @@ export function ModelMesh({
   // primitive 자체에 prop transform을 적용하면 React가 매 렌더에서 clone의
   // position/rotation/scale을 덮어쓴다. value-mapper가 매 tick `object.position`
   // 을 mutate하는 fast path가 이 동작을 그대로 활용한다(다음 렌더 사이에는
-  // 덮어쓰지 않음). children(ModelSelectionBox 등)은 같은 transform을 가진
-  // 별도 group으로 묶어 primitive와 같은 좌표계에서 그려진다.
+  // 덮어쓰지 않음).
+  //
+  // children(ModelSelectionBox 등)을 primitive 자식으로 직접 마운트하면
+  // three.js scene graph에서 clone의 children 배열에 추가되어 부모 transform
+  // (TransformControls가 매 frame mutate하는 transform 포함)을 자동 상속한다.
+  // 이전에는 별도 group으로 묶어 sceneInfo의 position/rotation/scale prop을
+  // 사용했는데, 드래그 중 sceneInfo write가 멈추면 group이 멈춰서 selection
+  // box가 객체와 분리되는 문제가 있었다.
   return (
-    <>
-      <primitive
-        ref={handleModelRef}
-        name={id}
-        object={clone}
-        position={position}
-        rotation={rotationRad}
-        scale={scale}
-        onClick={handleSelect}
-        onDoubleClick={handleDoubleSelect}
-        onPointerOver={handleHoverStart}
-        onPointerMove={handleHoverMove}
-        onPointerOut={handleHoverEnd}
-      />
-      {children ? (
-        <group position={position} rotation={rotationRad} scale={scale}>
-          {children}
-        </group>
-      ) : null}
-    </>
+    <primitive
+      ref={handleModelRef}
+      name={id}
+      object={clone}
+      position={position}
+      rotation={rotationRad}
+      scale={scale}
+      onClick={handleSelect}
+      onDoubleClick={handleDoubleSelect}
+      onPointerOver={handleHoverStart}
+      onPointerMove={handleHoverMove}
+      onPointerOut={handleHoverEnd}
+    >
+      {children}
+    </primitive>
   );
 }
 
