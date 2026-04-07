@@ -114,6 +114,7 @@ interface SceneObjectsEditCanvasProps {
   onTransformInteractionEnd?: () => void;
   fitAllRef?: RefObject<(() => void) | null>;
   fitSelectedRef?: RefObject<(() => void) | null>;
+  resetCameraRef?: RefObject<(() => void) | null>;
 }
 
 export function SceneObjectsEditCanvas({
@@ -134,6 +135,7 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionEnd,
   fitAllRef,
   fitSelectedRef,
+  resetCameraRef,
 }: SceneObjectsEditCanvasProps) {
   // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지
   useEffect(() => {
@@ -364,6 +366,25 @@ export function SceneObjectsEditCanvas({
     fitToObjects(objects);
   }, [fitToObjects, modelObjectRegistryRef]);
 
+  const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
+  const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
+
+  const resetCamera = useCallback(() => {
+    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+    if (!controls) return;
+    const cam = controls.object;
+    cam.position.set(...cameraPosition);
+    controls.target.set(...cameraTarget);
+    controls.update();
+
+    if (cameraStateRef) {
+      cameraStateRef.current = {
+        position: [...cameraPosition],
+        target: [...cameraTarget],
+      };
+    }
+  }, [cameraPosition, cameraTarget, cameraStateRef, orbitControlsRef]);
+
   useEffect(() => {
     if (fitAllRef) {
       fitAllRef.current = fitAll;
@@ -371,10 +392,17 @@ export function SceneObjectsEditCanvas({
     if (fitSelectedRef) {
       fitSelectedRef.current = fitSelected;
     }
-  }, [fitAll, fitAllRef, fitSelected, fitSelectedRef]);
-
-  const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
-  const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
+    if (resetCameraRef) {
+      resetCameraRef.current = resetCamera;
+    }
+  }, [
+    fitAll,
+    fitAllRef,
+    fitSelected,
+    fitSelectedRef,
+    resetCamera,
+    resetCameraRef,
+  ]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -438,6 +466,7 @@ export function SceneObjectsEditCanvas({
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
         <OrbitControls
           ref={orbitControlsRef}
+          makeDefault
           enableDamping={false}
           target={cameraTarget}
           onChange={handleOrbitChange}

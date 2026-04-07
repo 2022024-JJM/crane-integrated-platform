@@ -63,6 +63,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitSelectedRef = useRef<(() => void) | null>(null);
+  const resetCameraRef = useRef<(() => void) | null>(null);
   const {
     sceneInfo,
     selectedIds,
@@ -192,6 +193,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
+      if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        resetCameraRef.current?.();
+        return;
+      }
+
       if (event.key !== 'Delete' || selectedIds.size === 0) {
         return;
       }
@@ -285,6 +292,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           onTransformInteractionEnd={endTransformInteraction}
           fitAllRef={fitAllRef}
           fitSelectedRef={fitSelectedRef}
+          resetCameraRef={resetCameraRef}
         />
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
           <div className="pointer-events-auto">
