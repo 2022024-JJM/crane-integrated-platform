@@ -6,6 +6,7 @@ export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
 } from './lib/scene-dev-storage';
+export { modelObjectRegistry } from './lib/model-object-registry';
 export type {
   SavedCameraInfo,
   SceneModelCatalogItem,

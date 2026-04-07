@@ -4,6 +4,7 @@ import { Box3, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { degToRad } from '../lib/math-utils';
+import { modelObjectRegistry } from '../lib/model-object-registry';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { AlarmHighlightSeverity } from './model-label';
 
@@ -172,26 +173,33 @@ export function ModelMesh({
   }, [meshMaterials, opacity, alarmSeverity]);
 
   useEffect(() => {
-    if (!onObjectReadyRef.current) {
-      return;
-    }
-
     const object = modelRef.current;
+    let registeredObject: Object3D | null = null;
+
     const frame = requestAnimationFrame(() => {
       const nextObject = modelRef.current;
-
-      onObjectReadyRef.current?.(
-        id,
+      const ready =
         nextObject && nextObject.parent
           ? nextObject
           : object?.parent
             ? object
-            : null,
-      );
+            : null;
+
+      if (ready) {
+        modelObjectRegistry.register(id, ready);
+        registeredObject = ready;
+      }
+
+      onObjectReadyRef.current?.(id, ready);
     });
 
     return () => {
       cancelAnimationFrame(frame);
+      if (registeredObject) {
+        modelObjectRegistry.unregister(id, registeredObject);
+      } else {
+        modelObjectRegistry.unregister(id);
+      }
       onObjectReadyRef.current?.(id, null);
     };
   }, [id]);

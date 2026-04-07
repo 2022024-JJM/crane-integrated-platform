@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { degToRad } from '../lib/math-utils';
+import { modelObjectRegistry } from '../lib/model-object-registry';
 
 interface SceneTextProps {
   id: string;
@@ -72,8 +73,15 @@ export const SceneText = memo(function SceneText({
   });
 
   useEffect(() => {
-    onObjectReady?.(id, groupRef.current);
+    const group = groupRef.current;
+    if (group) {
+      modelObjectRegistry.register(id, group);
+    }
+    onObjectReady?.(id, group);
     return () => {
+      if (group) {
+        modelObjectRegistry.unregister(id, group);
+      }
       onObjectReady?.(id, null);
     };
   }, [id, onObjectReady]);

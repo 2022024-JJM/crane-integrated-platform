@@ -1,12 +1,12 @@
 import {
   degToRad,
+  modelObjectRegistry,
   numRound,
   radToDeg,
   type SavedModelInfo,
   type ValueMapType,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { Scene } from 'three';
 import { create } from 'zustand';
 
 interface ValueMapObject {
@@ -23,7 +23,7 @@ interface ValueMapperState {
   map: Record<string, ValueMapObject[]>;
   register: (key: string, value: ValueMapObject) => void;
   registerFromModel: (model: SavedModelInfo) => void;
-  applyValue: (scene: Scene, key: string, value: number) => void;
+  applyValue: (key: string, value: number) => void;
   clear: () => void;
 }
 
@@ -63,12 +63,12 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
 
       return { map };
     }),
-  applyValue: (scene, key, value) => {
+  applyValue: (key, value) => {
     const list = get().map[key];
     if (!list) return;
 
     list.forEach(({ id, type, originTransform }) => {
-      const object = scene.getObjectByName(id);
+      const object = modelObjectRegistry.get(id);
       if (!object) return;
 
       switch (type) {

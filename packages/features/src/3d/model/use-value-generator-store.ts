@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { GenValue, ValueGeneratorConfig } from './types';
 import { useValueMapperStore } from './use-value-mapper-store';
-import type { Scene } from 'three';
 
 interface RuntimeValue extends GenValue {
   direction: number;
@@ -15,7 +14,7 @@ interface ValueGeneratorState {
   start: () => void;
   pause: () => void;
   updateConfig: (v: ValueGeneratorConfig) => void;
-  tick: (scene: Scene) => void;
+  tick: () => void;
 }
 
 export const useValueGeneratorStore = create<ValueGeneratorState>(
@@ -64,12 +63,16 @@ export const useValueGeneratorStore = create<ValueGeneratorState>(
           direction: 1,
         })),
       }),
-    tick: (scene) => {
-      const { runtimeValues } = get();
+    tick: () => {
+      // 시뮬 값을 mutate할 때 zustand set()을 호출하면 모든 subscribers가
+      // 매 tick 리렌더된다. 시뮬 값은 Three.js Object3D 매트릭스에 직접
+      // 반영되므로 runtimeValues 배열을 in-place 갱신하고 React 상태
+      // 변경은 일으키지 않는다. (UI 패널이 시뮬값을 보여줘야 한다면 추후
+      // useSyncExternalStore + throttle subscribe로 분리)
+      const runtimeValues = get().runtimeValues;
       const applyValue = useValueMapperStore.getState().applyValue;
 
-      let changed = false;
-      const next = runtimeValues.map((v) => {
+      for (const v of runtimeValues) {
         const range = v.max - v.min;
         const step = range * 0.05;
 
@@ -86,21 +89,10 @@ export const useValueGeneratorStore = create<ValueGeneratorState>(
           nextDirection = 1;
         }
 
-        applyValue(scene, v.key, nextValue);
+        applyValue(v.key, nextValue);
 
-        if (nextValue !== v.value || nextDirection !== v.direction) {
-          changed = true;
-        }
-
-        return {
-          ...v,
-          value: nextValue,
-          direction: nextDirection,
-        };
-      });
-
-      if (changed) {
-        set({ runtimeValues: next });
+        v.value = nextValue;
+        v.direction = nextDirection;
       }
     },
   }),

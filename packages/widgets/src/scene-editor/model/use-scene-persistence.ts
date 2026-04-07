@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type SetStateAction,
 } from 'react';
@@ -12,7 +11,7 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import { toast } from 'sonner';
-import { createSceneSnapshot, sanitizeSceneInfo } from './scene-snapshot';
+import { sanitizeSceneInfo } from './scene-snapshot';
 
 interface UpdateSceneOptions {
   recordHistory?: boolean;
@@ -46,21 +45,19 @@ export function useScenePersistence({
   getCameraState,
 }: UseScenePersistenceParams): UseScenePersistenceResult {
   const [isSaving, setIsSaving] = useState(false);
-  const [savedSceneSnapshot, setSavedSceneSnapshot] = useState<string | null>(
+  // 마지막으로 저장된 sceneInfo의 참조. sceneInfo는 모든 mutation에서
+  // 새 객체로 교체되므로 참조 비교만으로 dirty 판단이 가능하다.
+  // 이전 구현은 매 sceneInfo 변경마다 JSON.stringify로 비교했는데,
+  // 모델 수가 많을수록 직렬화 비용이 누적되어 큰 씬에서 입력 lag 원인이었다.
+  const [savedSceneRef, setSavedSceneRef] = useState<SavedSceneInfo | null>(
     null,
   );
   const [initialCamera, setInitialCamera] = useState<SavedCameraInfo | null>(
     null,
   );
 
-  const currentSceneSnapshot = useMemo(
-    () => createSceneSnapshot(sceneInfo),
-    [sceneInfo],
-  );
   const isDirty =
-    sceneInfo !== null &&
-    savedSceneSnapshot !== null &&
-    currentSceneSnapshot !== savedSceneSnapshot;
+    sceneInfo !== null && savedSceneRef !== null && sceneInfo !== savedSceneRef;
 
   useEffect(() => {
     let isMounted = true;
@@ -75,7 +72,7 @@ export function useScenePersistence({
 
         replaceScene(data);
         setInitialCamera(data.camera ?? null);
-        setSavedSceneSnapshot(createSceneSnapshot(data));
+        setSavedSceneRef(data);
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
         if (isMounted) {
@@ -87,7 +84,7 @@ export function useScenePersistence({
     onLoadReset();
     replaceScene(null);
     setInitialCamera(null);
-    setSavedSceneSnapshot(null);
+    setSavedSceneRef(null);
     void loadScene();
 
     return () => {
@@ -116,7 +113,7 @@ export function useScenePersistence({
 
       updateScene(savedSceneInfo, { recordHistory: false });
       setInitialCamera(savedSceneInfo.camera ?? null);
-      setSavedSceneSnapshot(createSceneSnapshot(savedSceneInfo));
+      setSavedSceneRef(savedSceneInfo);
       toast.success('Scene saved.');
       return true;
     } catch (error) {
