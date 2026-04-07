@@ -20,6 +20,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
+  useIsObjectSelected,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -28,6 +29,36 @@ import { useSceneTransform } from './use-scene-transform';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
+
+/**
+ * 모델 list rendering의 hot path 래퍼.
+ *
+ * 부모 캔버스가 `selectedIds: Set<string>`을 직접 구독하면 어떤 객체 하나를
+ * 선택해도 Set 참조가 새로 생성되어 N개의 모델 prop이 모두 새로 평가되며
+ * (memo는 prop 비교 단계까지 도달) 캔버스 전체가 reconcile 된다.
+ *
+ * 이 래퍼는 `useIsObjectSelected(id)`로 자기 자신의 boolean만 구독하므로
+ * "이전 선택 + 새 선택" 두 wrapper만 리렌더되고 GltfModel은 memo로 막힌다.
+ */
+type SelectionAwareGltfModelProps = Omit<
+  React.ComponentProps<typeof GltfModel>,
+  'isSelected'
+>;
+
+function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
+  const isSelected = useIsObjectSelected(props.id);
+  return <GltfModel {...props} isSelected={isSelected} />;
+}
+
+type SelectionAwareSceneTextProps = Omit<
+  React.ComponentProps<typeof SceneText>,
+  'isSelected'
+>;
+
+function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
+  const isSelected = useIsObjectSelected(props.id);
+  return <SceneText {...props} isSelected={isSelected} />;
+}
 
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
@@ -84,9 +115,10 @@ export function SceneObjectsEditCanvas({
   }, [catalogItems]);
 
   const { t } = useTranslation();
-  const selectedIds = useSceneObjectSelectionStore(
-    (state) => state.selectedIds,
-  );
+  // selectedIds 자체는 더 이상 부모에서 구독하지 않는다. 모델/텍스트 wrapper가
+  // boolean selector(useIsObjectSelected)로 자기 자신만 구독하고, 콜백 안에서는
+  // store.getState()로 즉시 fetch 한다. 100개 모델 씬에서 한 객체를 선택할 때
+  // 캔버스 전체 리렌더(N→2)를 막는다.
   const primarySelectedId = useSceneObjectSelectionStore(
     (state) => state.primarySelectedId,
   );
@@ -131,7 +163,6 @@ export function SceneObjectsEditCanvas({
     handleTransformMouseUp,
   } = useSceneTransform({
     primarySelectedId,
-    selectedIds,
     transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
@@ -248,12 +279,14 @@ export function SceneObjectsEditCanvas({
 
   const fitSelected = useCallback(() => {
     const objects: Object3D[] = [];
+    const selectedIds =
+      useSceneObjectSelectionStore.getState().selectedIds;
     for (const id of selectedIds) {
       const obj = modelObjectRegistryRef.current.get(id);
       if (obj) objects.push(obj);
     }
     fitToObjects(objects);
-  }, [fitToObjects, selectedIds, modelObjectRegistryRef]);
+  }, [fitToObjects, modelObjectRegistryRef]);
 
   useEffect(() => {
     if (fitAllRef) {
@@ -359,7 +392,7 @@ export function SceneObjectsEditCanvas({
           />
         ) : null}
         {sceneInfo?.models.map((model) => (
-          <GltfModel
+          <SelectionAwareGltfModel
             key={model.id}
             id={model.id}
             url={model.path}
@@ -370,12 +403,11 @@ export function SceneObjectsEditCanvas({
             rotation={model.rotation}
             scale={model.scale}
             onSelect={handleSelectModel}
-            isSelected={selectedIds.has(model.id)}
             onObjectReady={handleModelObjectReady}
           />
         ))}
         {(sceneInfo?.texts ?? []).map((text) => (
-          <SceneText
+          <SelectionAwareSceneText
             key={text.id}
             id={text.id}
             content={text.content}
@@ -383,7 +415,6 @@ export function SceneObjectsEditCanvas({
             position={text.position}
             rotation={text.rotation}
             scale={text.scale}
-            isSelected={selectedIds.has(text.id)}
             onSelect={handleSelectText}
             onObjectReady={handleModelObjectReady}
           />

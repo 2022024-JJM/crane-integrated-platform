@@ -86,3 +86,23 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
       set(deriveCompat(new Set(), null, null)),
   }),
 );
+
+/**
+ * 특정 객체가 현재 선택되었는지 boolean으로만 구독한다.
+ *
+ * 모델 N개를 렌더링하는 캔버스에서 부모가 `selectedIds: Set<string>` 자체를
+ * 구독하면, 어떤 객체 하나만 선택해도 Set 참조가 바뀌어 N개의 자식이 모두
+ * 리렌더된다. 각 모델 컴포넌트가 이 hook으로 자신의 boolean만 구독하면
+ * "이전 선택 + 새 선택" 두 컴포넌트만 리렌더된다.
+ */
+export function useIsObjectSelected(id: string): boolean {
+  return useSceneObjectSelectionStore((state) => state.selectedIds.has(id));
+}
+
+/**
+ * 다중 선택(2개 이상) 여부만 boolean으로 구독한다. 단일 선택 ↔ 다중 전환
+ * 시점에만 리렌더가 발생한다.
+ */
+export function useIsMultiSelection(): boolean {
+  return useSceneObjectSelectionStore((state) => state.selectedIds.size > 1);
+}

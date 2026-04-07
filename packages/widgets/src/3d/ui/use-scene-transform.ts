@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import { numRound, radToDeg } from '@crane/domain/3d';
-import type { SceneTransformField, SceneTransformMode } from '@crane/features/3d';
+import {
+  useIsMultiSelection,
+  useSceneObjectSelectionStore,
+  type SceneTransformField,
+  type SceneTransformMode,
+} from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 interface TransformChangeEvent extends Event {
@@ -44,7 +49,6 @@ function getObjectTransformVectors(
 
 interface UseSceneTransformParams {
   primarySelectedId: string | null;
-  selectedIds: Set<string>;
   transformMode: SceneTransformMode;
   sceneModels: { id: string }[] | undefined;
   sceneTexts?: { id: string }[] | undefined;
@@ -62,7 +66,6 @@ interface UseSceneTransformParams {
 
 export function useSceneTransform({
   primarySelectedId,
-  selectedIds,
   transformMode,
   sceneModels,
   sceneTexts,
@@ -72,6 +75,10 @@ export function useSceneTransform({
   onTransformInteractionStart,
   onTransformInteractionEnd,
 }: UseSceneTransformParams) {
+  // selectedIds 자체를 구독하면 어떤 객체 하나만 선택해도 Set 참조가 바뀌며
+  // 이 hook을 사용하는 캔버스 전체가 리렌더된다. 대신 boolean(다중 여부)만
+  // 구독하고, 콜백 안에서는 store.getState()로 즉시 fetch 한다.
+  const isMultiSelection = useIsMultiSelection();
   const orbitControlsRef = useRef<import('three-stdlib').OrbitControls | null>(
     null,
   );
@@ -81,7 +88,7 @@ export function useSceneTransform({
 
   const dragStartPositionsRef = useRef<Map<string, Vector3Tuple>>(new Map());
 
-  const isMultiDrag = selectedIds.size > 1 && transformMode === 'translate';
+  const isMultiDrag = isMultiSelection && transformMode === 'translate';
 
   const syncSelectedObjectTransform = useCallback(() => {
     if (!selectedObject || !primarySelectedId) {
@@ -98,6 +105,7 @@ export function useSceneTransform({
       const deltaZ = selectedObject.position.z - startPos[2];
 
       // Apply delta to all other selected objects' Object3D directly (visual feedback)
+      const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
       for (const id of selectedIds) {
         if (id === primarySelectedId) continue;
         const obj = modelObjectRegistryRef.current.get(id);
@@ -122,13 +130,14 @@ export function useSceneTransform({
       onTransformVectorChange('rotation', nextTransform.rotation);
       onTransformVectorChange('scale', nextTransform.scale);
     }
-  }, [onTransformVectorChange, primarySelectedId, selectedObject, isMultiDrag, selectedIds, modelObjectRegistryRef]);
+  }, [onTransformVectorChange, primarySelectedId, selectedObject, isMultiDrag, modelObjectRegistryRef]);
 
   const handleTransformMouseDown = useCallback(() => {
     setIsTransformDragging(true);
     onTransformInteractionStart?.();
 
     // Capture start positions of all selected objects for multi-drag
+    const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
     if (selectedIds.size > 1 && transformMode === 'translate') {
       const startPositions = new Map<string, Vector3Tuple>();
       for (const id of selectedIds) {
@@ -139,7 +148,7 @@ export function useSceneTransform({
       }
       dragStartPositionsRef.current = startPositions;
     }
-  }, [onTransformInteractionStart, selectedIds, transformMode, modelObjectRegistryRef]);
+  }, [onTransformInteractionStart, transformMode, modelObjectRegistryRef]);
 
   const handleTransformMouseUp = useCallback(() => {
     if (isMultiDrag && selectedObject && primarySelectedId) {
@@ -151,6 +160,7 @@ export function useSceneTransform({
         const deltaZ = selectedObject.position.z - startPos[2];
 
         const updates: Array<{ id: string; position: Vector3Tuple }> = [];
+        const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
         for (const id of selectedIds) {
           const objStartPos = dragStartPositionsRef.current.get(id);
           if (!objStartPos) continue;
@@ -179,7 +189,6 @@ export function useSceneTransform({
     isMultiDrag,
     selectedObject,
     primarySelectedId,
-    selectedIds,
     onMultiTransformCommit,
     syncSelectedObjectTransform,
     onTransformInteractionEnd,
