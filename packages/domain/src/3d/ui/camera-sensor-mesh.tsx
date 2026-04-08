@@ -22,6 +22,7 @@ import type { SavedCameraSensorInfo } from '../model/sensor-types';
 // 갱신, 그 사이를 line segments로 그려 와이어프레임 구성.
 
 const CAMERA_FRUSTUM_RAYCAST_FIRST_HIT_ONLY = true;
+const UNSELECTED_RAYCAST_INTERVAL_MS = 500;
 
 const CAMERA_BODY_SIZE: [number, number, number] = [0.45, 0.3, 0.3];
 const LENS_RADIUS = 0.07;
@@ -220,12 +221,14 @@ interface CameraSensorMeshProps {
   sensor: SavedCameraSensorInfo;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
+  isMonitoringMode?: boolean;
 }
 
 export function CameraSensorMesh({
   sensor,
   isSelected = false,
   onSelect,
+  isMonitoringMode = false,
 }: CameraSensorMeshProps) {
   const groupRef = useRef<Group>(null);
   // PerspectiveCamera를 React JSX(`<perspectiveCamera>`)로 마운트하면 R3F가
@@ -301,7 +304,10 @@ export function CameraSensorMesh({
     [sensor.id, onSelect],
   );
 
-  useFrame(() => {
+  const computedRef = useRef(false);
+  const lastRaycastTimeRef = useRef(0);
+
+  useFrame((_, delta) => {
     const camera = perspectiveCamera;
     const group = groupRef.current;
     if (!camera || !group) return;
@@ -312,13 +318,19 @@ export function CameraSensorMesh({
 
     const { meshes: occluderMeshes } = getSceneOccluders(scene);
 
-    // 매 frame 재계산한다. 이전에는 dirty-check로 sensor 파라미터와 occluder
-    // revision만 비교했는데, 그러면 모델이 TransformControls로 움직여도
-    // occluder의 worldMatrix 변화를 감지 못해 frustum이 stale 상태로 남고,
-    // 첫 배치 시에도 occluder 등록 타이밍과 맞물려 절대 갱신되지 않는 경쟁
-    // 조건이 있었다. BVH 가속이 있어 매 frame 수십~수백 ray 계산은 가볍다.
+    if (isMonitoringMode) {
+      // 모니터링 뷰어: occluder 준비 후 딱 1회만 계산
+      if (computedRef.current) return;
+      if (occluderMeshes.length === 0) return;
+      computedRef.current = true;
+    } else if (!isSelected) {
+      // 편집기 비선택 센서: throttle
+      lastRaycastTimeRef.current += delta * 1000;
+      if (lastRaycastTimeRef.current < UNSELECTED_RAYCAST_INTERVAL_MS) return;
+      lastRaycastTimeRef.current = 0;
+    }
 
-    // projection이 stale 하지 않도록 매번 동기화.
+    // projection 동기화.
     syncCameraProjection(camera, sensor);
     group.updateMatrixWorld(true);
     camera.updateMatrixWorld(true);

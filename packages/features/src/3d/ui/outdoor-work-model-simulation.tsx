@@ -309,6 +309,7 @@ export function OutdoorWorkModelSimulation({
               sensor={sensor}
               isSelected={false}
               onSelect={handleModelClick}
+              isMonitoringMode
             />
           );
         }
@@ -319,6 +320,7 @@ export function OutdoorWorkModelSimulation({
               sensor={sensor}
               isSelected={false}
               onSelect={handleModelClick}
+              isMonitoringMode
             />
           );
         }

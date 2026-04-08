@@ -57,16 +57,20 @@ function createLidarPointGeometry(pointCount: number) {
   return geometry;
 }
 
+const UNSELECTED_RAYCAST_INTERVAL_MS = 500;
+
 interface LidarSensorMeshProps {
   sensor: SavedLidarSensorInfo;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
+  isMonitoringMode?: boolean;
 }
 
 export function LidarSensorMesh({
   sensor,
   isSelected = false,
   onSelect,
+  isMonitoringMode = false,
 }: LidarSensorMeshProps) {
   const groupRef = useRef<Group>(null);
   const raycasterRef = useRef(new Raycaster());
@@ -131,14 +135,26 @@ export function LidarSensorMesh({
     [sensor.id, onSelect],
   );
 
-  useFrame(() => {
+  const computedRef = useRef(false);
+  const lastRaycastTimeRef = useRef(0);
+
+  useFrame((_, delta) => {
     const group = groupRef.current;
     if (!group) return;
 
     const { meshes: occluderMeshes } = getSceneOccluders(scene);
-    // 매 frame 재계산. dirty-check는 occluder worldMatrix 변화를 감지하지
-    // 못해 모델 이동 시 point cloud가 stale이 되므로 제거. BVH 가속이 있어
-    // 수백 ray raycast도 가볍다.
+
+    if (isMonitoringMode) {
+      // 모니터링 뷰어: occluder 준비 후 딱 1회만 계산
+      if (computedRef.current) return;
+      if (occluderMeshes.length === 0) return;
+      computedRef.current = true;
+    } else if (!isSelected) {
+      // 편집기 비선택 센서: throttle
+      lastRaycastTimeRef.current += delta * 1000;
+      if (lastRaycastTimeRef.current < UNSELECTED_RAYCAST_INTERVAL_MS) return;
+      lastRaycastTimeRef.current = 0;
+    }
 
     group.updateMatrixWorld(true);
     group.getWorldPosition(worldPositionRef.current);
