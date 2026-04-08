@@ -116,6 +116,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
+    selectPlacedSensor,
+    deletePlacedSensor,
     deleteMap,
     toggleModel,
     toggleText,
@@ -260,6 +262,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             updateSelectedMeshTransformVector(field, value, {
               recordHistory: false,
             });
+          } else if (selectedObjectType === 'sensor' && selectedSensor && (field === 'position' || field === 'rotation')) {
+            updateSensor(selectedSensor.id, { [field]: value });
           } else {
             updateSelectedTransformVector(field, value, {
               recordHistory: false,
@@ -320,6 +324,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           placedTexts={sceneInfo?.texts ?? []}
           onSelectPlacedText={selectPlacedText}
           onDeletePlacedText={deletePlacedText}
+          placedSensors={sceneInfo?.sensors ?? []}
+          onSelectPlacedSensor={selectPlacedSensor}
+          onDeletePlacedSensor={deletePlacedSensor}
           onTogglePlacedModel={toggleModel}
           onTogglePlacedText={toggleText}
           onTextDragStart={() => setIsDraggingText(true)}

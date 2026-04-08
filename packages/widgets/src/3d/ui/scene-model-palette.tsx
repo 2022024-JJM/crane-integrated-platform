@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type {
   SavedMapInfo,
   SavedModelInfo,
+  SavedSensorInfo,
   SavedTextInfo,
   SceneModelCatalogItem,
 } from '@crane/domain/3d';
@@ -27,10 +28,13 @@ interface SceneModelPaletteProps {
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   placedTexts?: SavedTextInfo[];
+  placedSensors?: SavedSensorInfo[];
   onSelectPlacedText?: (id: string) => void;
   onDeletePlacedText?: (id: string) => void;
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
+  onSelectPlacedSensor?: (id: string) => void;
+  onDeletePlacedSensor?: (id: string) => void;
   onTextDragStart: () => void;
   onTextDragEnd: () => void;
   onSensorDragStart: (kind: 'lidar' | 'camera') => void;
@@ -55,10 +59,13 @@ export function SceneModelPalette({
   onSelectPlacedModel,
   onDeletePlacedModel,
   placedTexts,
+  placedSensors,
   onSelectPlacedText,
   onDeletePlacedText,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onSelectPlacedSensor,
+  onDeletePlacedSensor,
   onTextDragStart,
   onTextDragEnd,
   onSensorDragStart,
@@ -139,6 +146,7 @@ export function SceneModelPalette({
         <PalettePlacedObjects
           placedModels={placedModels}
           placedTexts={placedTexts}
+          placedSensors={placedSensors}
           selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
           onDeletePlacedModel={onDeletePlacedModel}
@@ -146,6 +154,8 @@ export function SceneModelPalette({
           onDeletePlacedText={onDeletePlacedText}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
+          onSelectPlacedSensor={onSelectPlacedSensor}
+          onDeletePlacedSensor={onDeletePlacedSensor}
         />
       </CardContent>
     </Card>
