@@ -101,6 +101,7 @@ export function useSceneTransform({
   const [isTransformDragging, setIsTransformDragging] = useState(false);
 
   const dragStartPositionsRef = useRef<Map<string, Vector3Tuple>>(new Map());
+  const dragJustEndedRef = useRef(false);
 
   const isMultiDrag = isMultiSelection && transformMode === 'translate';
 
@@ -253,6 +254,13 @@ export function useSceneTransform({
 
     setIsTransformDragging(false);
     onTransformInteractionEnd?.();
+
+    // 드래그 직후 발화되는 R3F click 이벤트로 인해 선택이 바뀌는 것을 방지.
+    // state 업데이트는 re-render 후 반영되므로 ref로 동기적으로 표시한다.
+    dragJustEndedRef.current = true;
+    requestAnimationFrame(() => {
+      dragJustEndedRef.current = false;
+    });
   }, [
     isMultiDrag,
     selectedObject,
@@ -363,5 +371,6 @@ export function useSceneTransform({
     syncSelectedObjectTransform,
     handleTransformMouseDown,
     handleTransformMouseUp,
+    dragJustEndedRef,
   };
 }

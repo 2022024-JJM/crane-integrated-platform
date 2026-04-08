@@ -305,6 +305,7 @@ export function SceneObjectsEditCanvas({
     syncSelectedObjectTransform,
     handleTransformMouseDown,
     handleTransformMouseUp,
+    dragJustEndedRef,
   } = useSceneTransform({
     primarySelectedId,
     transformMode,
@@ -346,6 +347,7 @@ export function SceneObjectsEditCanvas({
 
   const handleSelectModel = useCallback(
     (id: string) => {
+      if (dragJustEndedRef.current) return;
       const now = performance.now();
       const isLikelySecondClick =
         lastClickIdRef.current === id &&
@@ -367,7 +369,7 @@ export function SceneObjectsEditCanvas({
         selectModel(id);
       }
     },
-    [selectModel, toggleModel, setSelectedObject],
+    [dragJustEndedRef, selectModel, toggleModel, setSelectedObject],
   );
 
   const handleDoubleSelectModel = useCallback(
@@ -399,6 +401,7 @@ export function SceneObjectsEditCanvas({
 
   const handleSelectText = useCallback(
     (id: string) => {
+      if (dragJustEndedRef.current) return;
       const isCtrl = lastPointerEventRef.current?.ctrlKey || lastPointerEventRef.current?.metaKey;
       if (isCtrl) {
         toggleText(id);
@@ -407,11 +410,12 @@ export function SceneObjectsEditCanvas({
         selectText(id);
       }
     },
-    [selectText, toggleText, setSelectedObject],
+    [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
   const handleSelectSensor = useCallback(
     (id: string) => {
+      if (dragJustEndedRef.current) return;
       // 센서 컴포넌트는 mount 시 도메인 전역 modelObjectRegistry에 group을
       // 등록한다. 캔버스 로컬 registryRef에는 없으므로 global fallback.
       setSelectedObject(
@@ -421,7 +425,7 @@ export function SceneObjectsEditCanvas({
       );
       selectSensor(id);
     },
-    [selectSensor, setSelectedObject],
+    [dragJustEndedRef, selectSensor, setSelectedObject],
   );
 
   const handleClearSelection = useCallback(() => {
@@ -587,7 +591,7 @@ export function SceneObjectsEditCanvas({
     <div
       ref={rootRef}
       tabIndex={0}
-      className="border-border/70 relative h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
+      className="border-border/70 relative isolate h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
         lastPointerEventRef.current = event.nativeEvent;
