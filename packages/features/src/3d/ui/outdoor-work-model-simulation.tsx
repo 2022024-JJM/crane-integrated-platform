@@ -12,6 +12,10 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
+  LidarSensorMesh,
+  CameraSensorMesh,
+  isLidarSensor,
+  isCameraSensor,
   loadSceneInfoByRegionId,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -121,6 +125,7 @@ export function OutdoorWorkModelSimulation({
   const map = sceneInfo?.map;
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
+  const sensors = sceneInfo?.sensors ?? [];
   const { visibleModelIds, visibleGroupBox } = useMemo(() => {
     if (!focusedModelId) {
       return { visibleModelIds: null, visibleGroupBox: null };
@@ -295,6 +300,29 @@ export function OutdoorWorkModelSimulation({
             onObjectReady={handleObjectReady}
           />
         );
+      })}
+      {sensors.map((sensor) => {
+        if (isLidarSensor(sensor)) {
+          return (
+            <LidarSensorMesh
+              key={sensor.id}
+              sensor={sensor}
+              isSelected={false}
+              onSelect={handleModelClick}
+            />
+          );
+        }
+        if (isCameraSensor(sensor)) {
+          return (
+            <CameraSensorMesh
+              key={sensor.id}
+              sensor={sensor}
+              isSelected={false}
+              onSelect={handleModelClick}
+            />
+          );
+        }
+        return null;
       })}
       {texts.map((text) => {
         if (visibleGroupBox) {

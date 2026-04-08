@@ -109,6 +109,14 @@ export function getCranesLiteWebSocketUrl() {
   return getWebSocketUrl('cranes-lite/all');
 }
 
+export function getLidarWebSocketUrl() {
+  const envUrl = import.meta.env.VITE_LIDAR_WS_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
+  }
+  return 'ws://192.168.122.140:9002';
+}
+
 export function getApiTimeoutMs() {
   return parsePositiveInteger(
     import.meta.env.VITE_API_TIMEOUT_MS,

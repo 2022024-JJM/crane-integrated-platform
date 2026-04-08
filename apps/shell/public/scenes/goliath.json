@@ -91,358 +91,6 @@
         1
       ],
       "valueMapList": []
-    },
-    {
-      "id": "e47c2efd-3421-4935-a946-8f26bbf32a4b",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        5.851,
-        1.244,
-        -26.005
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "3d234382-d8d6-41ed-87ad-e6eed830d7b4",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        7.078,
-        1.244,
-        -26.012
-      ],
-      "rotation": [
-        -180,
-        0,
-        90
-      ],
-      "scale": [
-        0.788,
-        1.18,
-        5.906
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "fc3f33a3-a99b-478b-9f97-fcfe64f48372",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        5.73,
-        1.157,
-        -26.221
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "df30f5b2-4d9e-49ee-aa67-1630ffc5e2af",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        5.734,
-        1.157,
-        -27.808
-      ],
-      "rotation": [
-        180,
-        90,
-        -90
-      ],
-      "scale": [
-        1.029,
-        1.541,
-        7.707
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "dbd6bf48-3f9f-4218-8d78-0b5ac9958d40",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        5.738,
-        1.157,
-        -24.308
-      ],
-      "rotation": [
-        0,
-        90,
-        -90
-      ],
-      "scale": [
-        0.942,
-        1.414,
-        7.064
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "ba89ed0f-7ddf-4c67-b02e-437536824e69",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        5.756,
-        1.157,
-        -25.756
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "f5255ab9-f2b1-4d3c-b5de-a55391a29981",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        0.881,
-        1.157,
-        -26.241
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "f79c083f-64d6-422b-8c8e-338a4404f5bd",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        0.654,
-        1.244,
-        -25.995
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "8870e7f9-1b18-4b6e-b207-0dde885f1e38",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        0.898,
-        1.157,
-        -25.738
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "98604f23-3616-4c46-910f-06d6a5ba043a",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        0.895,
-        1.157,
-        -27.801
-      ],
-      "rotation": [
-        90,
-        90,
-        0
-      ],
-      "scale": [
-        1.029,
-        1.541,
-        7.707
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "cb89ef46-3956-418e-86ec-1157fa29b237",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        0.902,
-        1.157,
-        -24.291
-      ],
-      "rotation": [
-        90,
-        90,
-        180
-      ],
-      "scale": [
-        0.942,
-        1.414,
-        7.064
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "11be1a12-fa37-4da1-aaa2-b3ac4a166b7b",
-      "equipName": "",
-      "path": "/models/gc-04/soslab_lidar_fov_120x35.glb",
-      "opacity": 0.2,
-      "position": [
-        -0.576,
-        1.244,
-        -25.995
-      ],
-      "rotation": [
-        0,
-        0,
-        -90
-      ],
-      "scale": [
-        0.788,
-        1.18,
-        5.906
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "d2a8c25a-06ae-4e7a-86de-f0d60f474a66",
-      "equipName": "",
-      "path": "/models/gc-04/ouster_lidar_fov_360x90.glb",
-      "opacity": 0.1,
-      "position": [
-        4.345,
-        7.346,
-        -39.439
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        3,
-        3,
-        3
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "69ecf231-84ae-4986-a881-1581adf0260b",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        4.42,
-        7.425,
-        -39.515
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "0a78e24f-9cc6-488c-98bd-7b418014cf61",
-      "equipName": "",
-      "path": "/models/gc-04/ouster_lidar_fov_360x90.glb",
-      "opacity": 0.1,
-      "position": [
-        2.006,
-        7.346,
-        -39.593
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        3,
-        3,
-        3
-      ],
-      "valueMapList": []
-    },
-    {
-      "id": "cec68b78-daa9-4789-a0be-d7eaa6602f81",
-      "equipName": "",
-      "path": "/models/gc-04/point.glb",
-      "opacity": 1,
-      "position": [
-        2.183,
-        7.425,
-        -39.522
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.4,
-        0.4,
-        0.4
-      ],
-      "valueMapList": []
     }
   ],
   "texts": [
@@ -547,16 +195,312 @@
       ]
     }
   ],
+  "sensors": [
+    {
+      "id": "d7f2e570-6b83-45f9-ac4e-50548107568d",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.729,
+        1.288,
+        -26.007
+      ],
+      "rotation": [
+        90,
+        -78,
+        90
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "fd01c0c4-2ff8-432f-858f-3e20972cbb26",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.158,
+        1.279,
+        -25.738
+      ],
+      "rotation": [
+        172,
+        0,
+        0
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "4fda1638-3a13-4b33-989b-294ac4d44bda",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.189,
+        1.279,
+        -26.247
+      ],
+      "rotation": [
+        8,
+        0,
+        180
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "5958db91-dbe9-43da-930a-6775af425875",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        1.365,
+        1.279,
+        -25.738
+      ],
+      "rotation": [
+        172,
+        0,
+        0
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "dd9f6217-c998-490b-b34f-bb13ecb01400",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        0.77,
+        1.246,
+        -26.007
+      ],
+      "rotation": [
+        -90,
+        98,
+        90
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "89de00a4-4a6f-4c3a-8194-f514c545a9e5",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        1.38,
+        1.279,
+        -26.247
+      ],
+      "rotation": [
+        8,
+        0,
+        180
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "b7e08119-fa10-411f-9c07-4ef2b2536f27",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.806,
+        1.214,
+        -39.213
+      ],
+      "rotation": [
+        90,
+        -78,
+        90
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "ddc94536-ca30-45cd-a1ee-40776b96f19f",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.187,
+        1.279,
+        -39.483
+      ],
+      "rotation": [
+        8,
+        0,
+        180
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "c02184c0-956f-4953-ba87-40ebc7b2a10e",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        5.176,
+        1.279,
+        -38.968
+      ],
+      "rotation": [
+        172,
+        0,
+        0
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "0fb51b4d-c531-4324-85ff-53e48212320f",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        1.39,
+        1.279,
+        -39.483
+      ],
+      "rotation": [
+        8,
+        0,
+        180
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "54591df3-48e8-443d-8725-f62b8f2824ba",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        1.388,
+        1.279,
+        -38.968
+      ],
+      "rotation": [
+        172,
+        0,
+        0
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "7516ea32-687b-400c-94f7-5541806eceaa",
+      "type": "camera",
+      "name": "Camera",
+      "position": [
+        0.753,
+        1.284,
+        -39.213
+      ],
+      "rotation": [
+        -90,
+        98,
+        90
+      ],
+      "horizontalFov": 120,
+      "verticalFov": 35,
+      "near": 0.35,
+      "far": 6,
+      "frustumSegmentsX": 32,
+      "frustumSegmentsY": 12
+    },
+    {
+      "id": "2f98008d-3b0c-4da7-96a6-1592e438d692",
+      "type": "lidar",
+      "name": "LiDAR",
+      "position": [
+        3.302,
+        9.857,
+        -39.173
+      ],
+      "rotation": [
+        0,
+        0,
+        180
+      ],
+      "horizontalFov": 360,
+      "verticalFov": 90,
+      "far": 8,
+      "horizontalSegments": 50,
+      "verticalSegments": 50,
+      "pointSize": 0.2
+    },
+    {
+      "id": "6eec5e8b-6100-4d7d-84d1-57531f62e570",
+      "type": "lidar",
+      "name": "LiDAR",
+      "position": [
+        3.309,
+        9.866,
+        -26.121
+      ],
+      "rotation": [
+        0,
+        0,
+        180
+      ],
+      "horizontalFov": 360,
+      "verticalFov": 90,
+      "far": 8,
+      "horizontalSegments": 50,
+      "verticalSegments": 50,
+      "pointSize": 0.2
+    }
+  ],
   "camera": {
     "position": [
-      16.449280274451727,
-      13.230922092946516,
-      -35.4750840425737
+      19.662502929932597,
+      18.11175622376048,
+      -24.63298420886668
     ],
     "target": [
-      2.676361606403982,
-      3.8317416257519543,
-      -33.290992776238376
+      1.7775352906432094,
+      5.362461704213551,
+      -31.032452578314437
     ]
   }
 }
