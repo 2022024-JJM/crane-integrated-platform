@@ -56,6 +56,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedTransformVector: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTransformVector'];
+  commitSelectedTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['commitSelectedTransform'];
   updateSelectedTextContent: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextContent'];
@@ -170,6 +173,7 @@ export function useSceneEditorSession({
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    commitSelectedTransform,
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
@@ -267,6 +271,7 @@ export function useSceneEditorSession({
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,

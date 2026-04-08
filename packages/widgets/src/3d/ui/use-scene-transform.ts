@@ -64,6 +64,11 @@ interface UseSceneTransformParams {
     field: SceneTransformField,
     value: Vector3Tuple,
   ) => void;
+  onTransformCommit?: (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+  ) => void;
   onMultiTransformCommit?: (
     updates: Array<{ id: string; position: Vector3Tuple }>,
   ) => void;
@@ -79,6 +84,7 @@ export function useSceneTransform({
   sceneSensors,
   modelObjectRegistryRef,
   onTransformVectorChange,
+  onTransformCommit,
   onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
@@ -160,10 +166,28 @@ export function useSceneTransform({
       return;
     }
     const nextTransform = getObjectTransformVectors(selectedObject);
-    onTransformVectorChange('position', nextTransform.position);
-    onTransformVectorChange('rotation', nextTransform.rotation);
-    onTransformVectorChange('scale', nextTransform.scale);
-  }, [onTransformVectorChange, primarySelectedId, selectedObject]);
+    if (onTransformCommit) {
+      // position/rotation/scale을 단일 updateSceneInfo 호출로 처리해
+      // 중간 렌더 없이 sceneInfo를 1회만 변경한다.
+      // transformMode에 따라 실제 변경된 필드만 commit — translate 모드에서
+      // rotation/scale을 radToDeg로 역변환하면 부동소수점 오차로 값이 미묘하게
+      // 달라져 다음 렌더에서 rotation prop이 업데이트되며 local space 기준축이
+      // 틀어지는 버그가 생긴다.
+      onTransformCommit(
+        transformMode === 'translate' ? nextTransform.position : null,
+        transformMode === 'rotate' ? nextTransform.rotation : null,
+        transformMode === 'scale' ? nextTransform.scale : null,
+      );
+    } else {
+      if (transformMode === 'translate') {
+        onTransformVectorChange('position', nextTransform.position);
+      } else if (transformMode === 'rotate') {
+        onTransformVectorChange('rotation', nextTransform.rotation);
+      } else if (transformMode === 'scale') {
+        onTransformVectorChange('scale', nextTransform.scale);
+      }
+    }
+  }, [onTransformCommit, onTransformVectorChange, primarySelectedId, selectedObject, transformMode]);
 
   // 기존 호출부 호환을 위한 별칭. canvas의 <TransformControls onObjectChange>가
   // 이 이름을 사용한다. Live sync(매 frame, store만)가 새 의미.

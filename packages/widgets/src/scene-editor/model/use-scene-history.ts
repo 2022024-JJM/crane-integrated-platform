@@ -26,6 +26,8 @@ interface UseSceneHistoryResult {
   redo: () => void;
 }
 
+const MAX_UNDO_DEPTH = 50;
+
 export function useSceneHistory(): UseSceneHistoryResult {
   const [history, setHistory] = useState<SceneHistoryState>({
     past: [],
@@ -64,7 +66,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
         }
 
         return {
-          past: [...prev.past, prev.present],
+          past: [...prev.past.slice(-MAX_UNDO_DEPTH + 1), prev.present],
           present: nextSceneInfo,
           future: [],
         };
@@ -85,7 +87,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
         }
 
         return {
-          past: [...prev.past, baseSceneInfo],
+          past: [...prev.past.slice(-MAX_UNDO_DEPTH + 1), baseSceneInfo],
           present: prev.present,
           future: [],
         };
@@ -124,7 +126,7 @@ export function useSceneHistory(): UseSceneHistoryResult {
       const [nextSceneInfo, ...nextFuture] = prev.future;
 
       return {
-        past: [...prev.past, prev.present],
+        past: [...prev.past.slice(-MAX_UNDO_DEPTH + 1), prev.present],
         present: nextSceneInfo,
         future: nextFuture,
       };

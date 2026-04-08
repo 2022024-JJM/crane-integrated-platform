@@ -387,11 +387,13 @@ export function CameraSensorMesh({
     let nearWriteIndex = 0;
     let farWriteIndex = gridCount * 3;
 
+    const safeSegmentsX = frustumSegmentsX || 1;
+    const safeSegmentsY = frustumSegmentsY || 1;
     for (let j = 0; j <= frustumSegmentsY; j += 1) {
-      const v = j / frustumSegmentsY;
+      const v = j / safeSegmentsY;
       const yNdc = 1 - v * 2;
       for (let i = 0; i <= frustumSegmentsX; i += 1) {
-        const u = i / frustumSegmentsX;
+        const u = i / safeSegmentsX;
         const xNdc = u * 2 - 1;
 
         ndcPoint.set(xNdc, yNdc, 1).unproject(camera);

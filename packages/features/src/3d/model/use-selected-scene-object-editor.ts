@@ -105,6 +105,12 @@ interface UseSelectedSceneObjectEditorResult {
       recordHistory?: boolean;
     },
   ) => void;
+  commitSelectedTransform: (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => void;
   updateSelectedTextContent: (content: string) => void;
   updateSelectedTextColor: (color: string) => void;
   updateSelectedTextTransform: (
@@ -517,6 +523,35 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
+  // position/rotation/scale 3개를 단일 updateSceneInfo 호출로 처리.
+  // commitFinal에서 3번 따로 호출하면 React 배치 처리가 안 될 때 3번 렌더가
+  // 발생하고, 각 렌더마다 sceneModels 참조가 바뀌어 selectedObject가 리셋된다.
+  // position/rotation/scale 중 변경된 필드만 단일 updateSceneInfo 호출로 commit.
+  // null인 필드는 기존 sceneInfo 값을 그대로 유지해 부동소수점 역변환 오차로
+  // 인한 rotation 덮어쓰기를 방지한다 (translate 모드에서 rotation을 건드리지 않음).
+  const commitSelectedTransform = (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) return model;
+          return {
+            ...model,
+            ...(position !== null && { position: roundVectorValue(position) }),
+            ...(rotation !== null && { rotation: roundVectorValue(rotation) }),
+            ...(scale !== null && { scale: roundVectorValue(scale) }),
+          };
+        }),
+      };
+    }, options);
+  };
+
   const updateMultiObjectPositions = (
     updates: Array<{ id: string; position: Vector3Tuple }>,
     options?: { recordHistory?: boolean },
@@ -574,6 +609,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    commitSelectedTransform,
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,

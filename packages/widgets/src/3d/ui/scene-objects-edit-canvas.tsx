@@ -150,6 +150,11 @@ interface SceneObjectsEditCanvasProps {
   onAddLidarSensor?: (position: Vector3Tuple) => void;
   onAddCameraSensor?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
+  onTransformCommit?: (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+  ) => void;
   onMultiTransformCommit?: (
     updates: Array<{ id: string; position: Vector3Tuple }>,
   ) => void;
@@ -169,6 +174,7 @@ export function SceneObjectsEditCanvas({
   cameraStateRef,
   initialCamera,
   onTransformVectorChange,
+  onTransformCommit,
   onAddModel,
   isDraggingText = false,
   onAddText,
@@ -307,6 +313,7 @@ export function SceneObjectsEditCanvas({
     sceneSensors: sceneInfo?.sensors,
     modelObjectRegistryRef,
     onTransformVectorChange,
+    onTransformCommit,
     onMultiTransformCommit,
     onTransformInteractionStart,
     onTransformInteractionEnd,

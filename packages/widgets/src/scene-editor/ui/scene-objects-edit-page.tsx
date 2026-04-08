@@ -93,6 +93,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
+    commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,
@@ -130,6 +131,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useSceneEditorSession({
     regionId,
   });
+
+  // 키보드 핸들러에서 최신 값을 클로저 없이 읽기 위한 ref.
+  // sceneInfo, selectedIds는 자주 변경되므로 의존성 배열에 넣으면 리스너가
+  // 매 수정마다 재등록된다. ref로 추적해 리스너를 1회만 등록한다.
+  const sceneInfoRef = useRef(sceneInfo);
+  sceneInfoRef.current = sceneInfo;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
 
   useEffect(() => {
     setDraggingCatalogItem(null);
@@ -200,11 +209,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       const isSelectAllShortcut =
         (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a';
 
-      if (isSelectAllShortcut && sceneInfo) {
+      const currentSceneInfo = sceneInfoRef.current;
+      if (isSelectAllShortcut && currentSceneInfo) {
         event.preventDefault();
         const allIds = [
-          ...sceneInfo.models.map((m) => m.id),
-          ...(sceneInfo.texts ?? []).map((t) => t.id),
+          ...currentSceneInfo.models.map((m) => m.id),
+          ...(currentSceneInfo.texts ?? []).map((t) => t.id),
         ];
         selectAll(allIds);
         return;
@@ -216,7 +226,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      if (event.key === 'Enter' && selectedIds.size > 0) {
+      const currentSelectedIds = selectedIdsRef.current;
+      if (event.key === 'Enter' && currentSelectedIds.size > 0) {
         event.preventDefault();
         fitSelectedRef.current?.();
         return;
@@ -228,7 +239,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      if (event.key !== 'Delete' || selectedIds.size === 0) {
+      if (event.key !== 'Delete' || currentSelectedIds.size === 0) {
         return;
       }
 
@@ -240,7 +251,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [duplicateSelectedObject, redo, removeSelectedModel, sceneInfo, selectAll, selectedIds, undo]);
+  }, [duplicateSelectedObject, redo, removeSelectedModel, selectAll, undo]);
 
   return (
     <div className="bg-muted/20 relative h-full min-h-0 w-full overflow-hidden">
@@ -269,6 +280,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               recordHistory: false,
             });
           }
+        }}
+        onTransformCommit={(position, rotation, scale) => {
+          // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+          // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+          commitSelectedTransform(position, rotation, scale, {
+            recordHistory: false,
+          });
         }}
         onMultiTransformCommit={(updates) => {
           updateMultiObjectPositions(updates, { recordHistory: false });
