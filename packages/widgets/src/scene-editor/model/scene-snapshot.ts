@@ -1,11 +1,18 @@
 import type {
   SavedCameraInfo,
+  SavedCameraSensorInfo,
+  SavedLidarSensorInfo,
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
+  SavedSensorInfo,
   SavedTextInfo,
   ValueMapItem,
+} from '@crane/domain/3d';
+import {
+  normalizeCameraSettings,
+  normalizeLidarSettings,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
@@ -140,14 +147,88 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
+  const safeSensors = sanitizeSensors(sceneInfo?.sensors, seenIds);
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   return {
     map: safeMap,
     models: safeModels,
     texts: safeTexts,
+    sensors: safeSensors,
     camera: safeCamera,
   };
+}
+
+function sanitizeSensors(
+  raw: unknown,
+  seenIds: Set<string>,
+): SavedSensorInfo[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: SavedSensorInfo[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const sensor = item as Record<string, unknown>;
+    if (
+      typeof sensor.type !== 'string' ||
+      (sensor.type !== 'lidar' && sensor.type !== 'camera')
+    ) {
+      continue;
+    }
+    if (
+      !isVector3Tuple(sensor.position) ||
+      !isVector3Tuple(sensor.rotation)
+    ) {
+      continue;
+    }
+    let nextId =
+      typeof sensor.id === 'string' && sensor.id.length > 0
+        ? sensor.id
+        : createSceneModelId();
+    if (seenIds.has(nextId)) nextId = createSceneModelId();
+    seenIds.add(nextId);
+
+    const name = typeof sensor.name === 'string' ? sensor.name : '';
+
+    if (sensor.type === 'lidar') {
+      const normalized = normalizeLidarSettings({
+        horizontalFov: Number(sensor.horizontalFov),
+        verticalFov: Number(sensor.verticalFov),
+        far: Number(sensor.far),
+        horizontalSegments: Number(sensor.horizontalSegments),
+        verticalSegments: Number(sensor.verticalSegments),
+        pointSize: Number(sensor.pointSize),
+      });
+      const lidar: SavedLidarSensorInfo = {
+        id: nextId,
+        type: 'lidar',
+        name: name || 'LiDAR',
+        position: sensor.position as Vector3Tuple,
+        rotation: sensor.rotation as Vector3Tuple,
+        ...normalized,
+      };
+      out.push(lidar);
+      continue;
+    }
+
+    const normalized = normalizeCameraSettings({
+      horizontalFov: Number(sensor.horizontalFov),
+      verticalFov: Number(sensor.verticalFov),
+      near: Number(sensor.near),
+      far: Number(sensor.far),
+      frustumSegmentsX: Number(sensor.frustumSegmentsX),
+      frustumSegmentsY: Number(sensor.frustumSegmentsY),
+    });
+    const camera: SavedCameraSensorInfo = {
+      id: nextId,
+      type: 'camera',
+      name: name || 'Camera',
+      position: sensor.position as Vector3Tuple,
+      rotation: sensor.rotation as Vector3Tuple,
+      ...normalized,
+    };
+    out.push(camera);
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function sanitizeCamera(
@@ -194,6 +275,35 @@ function isMapInfoEqual(
   if (a === b) return true;
   if (!a || !b) return false;
   return a.id === b.id && a.path === b.path;
+}
+
+function isSensorInfoEqual(a: SavedSensorInfo, b: SavedSensorInfo): boolean {
+  if (a.id !== b.id) return false;
+  if (a.type !== b.type) return false;
+  if (a.name !== b.name) return false;
+  if (!isVector3TupleEqual(a.position, b.position)) return false;
+  if (!isVector3TupleEqual(a.rotation, b.rotation)) return false;
+  if (a.type === 'lidar' && b.type === 'lidar') {
+    return (
+      a.horizontalFov === b.horizontalFov &&
+      a.verticalFov === b.verticalFov &&
+      a.far === b.far &&
+      a.horizontalSegments === b.horizontalSegments &&
+      a.verticalSegments === b.verticalSegments &&
+      a.pointSize === b.pointSize
+    );
+  }
+  if (a.type === 'camera' && b.type === 'camera') {
+    return (
+      a.horizontalFov === b.horizontalFov &&
+      a.verticalFov === b.verticalFov &&
+      a.near === b.near &&
+      a.far === b.far &&
+      a.frustumSegmentsX === b.frustumSegmentsX &&
+      a.frustumSegmentsY === b.frustumSegmentsY
+    );
+  }
+  return false;
 }
 
 function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
@@ -279,6 +389,12 @@ export function isSceneInfoEqual(
   if (aTexts.length !== bTexts.length) return false;
   for (let i = 0; i < aTexts.length; i++) {
     if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
+  }
+  const aSensors = a.sensors ?? [];
+  const bSensors = b.sensors ?? [];
+  if (aSensors.length !== bSensors.length) return false;
+  for (let i = 0; i < aSensors.length; i++) {
+    if (!isSensorInfoEqual(aSensors[i], bSensors[i])) return false;
   }
   return true;
 }

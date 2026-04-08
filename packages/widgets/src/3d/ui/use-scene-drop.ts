@@ -17,6 +17,7 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
 const SCENE_TEXT_DRAG_TYPE = 'application/x-scene-text';
+const SCENE_SENSOR_DRAG_TYPE = 'application/x-scene-sensor';
 
 function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
   return (
@@ -30,6 +31,7 @@ function hasSceneDragData(event: DragEvent<HTMLDivElement>) {
     (type) =>
       type === SCENE_MODEL_DRAG_TYPE ||
       type === SCENE_TEXT_DRAG_TYPE ||
+      type === SCENE_SENSOR_DRAG_TYPE ||
       type === 'text/plain',
   );
 }
@@ -38,10 +40,19 @@ function isTextDrag(event: DragEvent<HTMLDivElement>) {
   return event.dataTransfer.getData(SCENE_TEXT_DRAG_TYPE) === 'text';
 }
 
+/** 'lidar' | 'camera' | '' */
+function getSensorDragType(event: DragEvent<HTMLDivElement>): '' | 'lidar' | 'camera' {
+  const value = event.dataTransfer.getData(SCENE_SENSOR_DRAG_TYPE);
+  if (value === 'lidar' || value === 'camera') return value;
+  return '';
+}
+
 interface UseSceneDropParams {
   catalogItems: SceneModelCatalogItem[];
   draggingModelCatalogItem: SceneModelCatalogItem | null;
   isDraggingText?: boolean;
+  /** lidar/camera 드래그 진행 중인지. 드래그 오버 미리보기 등에 사용. */
+  draggingSensorType?: '' | 'lidar' | 'camera';
   /** 지도가 배치되어 있다면 그 id. 드롭 raycast가 ground plane이 아닌 지도
    *  표면을 대상으로 동작하도록 한다 (지도 표면 높이가 y!=0일 수 있음). */
   mapObjectId?: string | null;
@@ -50,15 +61,20 @@ interface UseSceneDropParams {
     position: Vector3Tuple,
   ) => void;
   onAddText?: (position: Vector3Tuple) => void;
+  onAddLidarSensor?: (position: Vector3Tuple) => void;
+  onAddCameraSensor?: (position: Vector3Tuple) => void;
 }
 
 export function useSceneDrop({
   catalogItems,
   draggingModelCatalogItem,
   isDraggingText = false,
+  draggingSensorType = '',
   mapObjectId = null,
   onAddModel,
   onAddText,
+  onAddLidarSensor,
+  onAddCameraSensor,
 }: UseSceneDropParams) {
   const cameraRef = useRef<Camera | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -116,6 +132,7 @@ export function useSceneDrop({
       if (
         !draggingModelCatalogItem &&
         !isDraggingText &&
+        !draggingSensorType &&
         !hasSceneDragData(event)
       ) {
         return;
@@ -125,7 +142,12 @@ export function useSceneDrop({
       event.dataTransfer.dropEffect = 'copy';
       setPendingDropPosition(resolveDropPosition(event.clientX, event.clientY));
     },
-    [draggingModelCatalogItem, isDraggingText, resolveDropPosition],
+    [
+      draggingModelCatalogItem,
+      isDraggingText,
+      draggingSensorType,
+      resolveDropPosition,
+    ],
   );
 
   const handleSceneDrop = useCallback(
@@ -138,6 +160,20 @@ export function useSceneDrop({
       if (isTextDrag(event) || isDraggingText) {
         if (nextPosition) {
           onAddText?.(nextPosition);
+        }
+        event.currentTarget.focus();
+        setPendingDropPosition(null);
+        return;
+      }
+
+      const sensorKind = getSensorDragType(event) || draggingSensorType;
+      if (sensorKind) {
+        if (nextPosition) {
+          if (sensorKind === 'lidar') {
+            onAddLidarSensor?.(nextPosition);
+          } else {
+            onAddCameraSensor?.(nextPosition);
+          }
         }
         event.currentTarget.focus();
         setPendingDropPosition(null);
@@ -177,9 +213,12 @@ export function useSceneDrop({
     [
       catalogItems,
       draggingModelCatalogItem,
+      draggingSensorType,
       isDraggingText,
       onAddModel,
       onAddText,
+      onAddLidarSensor,
+      onAddCameraSensor,
       resolveDropPosition,
     ],
   );
@@ -199,4 +238,8 @@ export function useSceneDrop({
   };
 }
 
-export { SCENE_MODEL_DRAG_TYPE, SCENE_TEXT_DRAG_TYPE };
+export {
+  SCENE_MODEL_DRAG_TYPE,
+  SCENE_TEXT_DRAG_TYPE,
+  SCENE_SENSOR_DRAG_TYPE,
+};

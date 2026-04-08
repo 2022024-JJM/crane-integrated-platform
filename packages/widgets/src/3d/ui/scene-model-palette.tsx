@@ -1,4 +1,4 @@
-import { Type } from 'lucide-react';
+import { Camera as CameraIcon, Radar, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type {
   SavedMapInfo,
@@ -7,7 +7,10 @@ import type {
   SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import { Card, CardContent } from '@crane/ui/molecules/card';
-import { SCENE_TEXT_DRAG_TYPE } from './use-scene-drop';
+import {
+  SCENE_SENSOR_DRAG_TYPE,
+  SCENE_TEXT_DRAG_TYPE,
+} from './use-scene-drop';
 import { PaletteHeader } from './palette-header';
 import { PaletteAssetGrid } from './palette-asset-grid';
 import { PaletteMapSection } from './palette-map-section';
@@ -30,6 +33,8 @@ interface SceneModelPaletteProps {
   onTogglePlacedText?: (id: string) => void;
   onTextDragStart: () => void;
   onTextDragEnd: () => void;
+  onSensorDragStart: (kind: 'lidar' | 'camera') => void;
+  onSensorDragEnd: () => void;
   onDeleteMap: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -56,6 +61,8 @@ export function SceneModelPalette({
   onTogglePlacedText,
   onTextDragStart,
   onTextDragEnd,
+  onSensorDragStart,
+  onSensorDragEnd,
   onDeleteMap,
   onSave,
   onExport,
@@ -97,6 +104,34 @@ export function SceneModelPalette({
         >
           <Type className="size-3.5" />
           {t('monitoring:editor.addText')}
+        </div>
+
+        <div
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
+            event.dataTransfer.effectAllowed = 'copy';
+            onSensorDragStart('lidar');
+          }}
+          onDragEnd={onSensorDragEnd}
+          className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+        >
+          <Radar className="size-3.5" />
+          {t('monitoring:editor.addLidarSensor')}
+        </div>
+
+        <div
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
+            event.dataTransfer.effectAllowed = 'copy';
+            onSensorDragStart('camera');
+          }}
+          onDragEnd={onSensorDragEnd}
+          className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+        >
+          <CameraIcon className="size-3.5" />
+          {t('monitoring:editor.addCameraSensor')}
         </div>
 
         {map ? <PaletteMapSection map={map} onDeleteMap={onDeleteMap} /> : null}

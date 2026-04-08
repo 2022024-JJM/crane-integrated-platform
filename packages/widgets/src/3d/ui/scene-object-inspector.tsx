@@ -10,7 +10,20 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
+  isCameraSensor,
+  isLidarSensor,
+  MAX_CAMERA_FOV,
+  MAX_LIDAR_FOV,
+  MAX_LIDAR_SEGMENTS,
+  MIN_CAMERA_FOV,
+  MIN_CAMERA_GRID_SEGMENTS,
+  MAX_CAMERA_GRID_SEGMENTS,
+  MIN_LIDAR_FOV,
+  MIN_LIDAR_SEGMENTS,
+  type SavedCameraSensorInfo,
+  type SavedLidarSensorInfo,
   type SavedModelInfo,
+  type SavedSensorInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 import {
@@ -29,6 +42,7 @@ import { Card, CardContent } from '@crane/ui/molecules/card';
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  selectedSensor?: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   multiSelectCount?: number;
   onNameChange: (name: string) => void;
@@ -51,6 +65,13 @@ interface SceneObjectInspectorProps {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+  ) => void;
+  /** 센서 설정 변경 콜백. (id, partial settings) — discriminated union이라
+   *  서브컴포넌트 쪽에서 정확한 type별 patch를 보장한다. */
+  onSensorChange?: (
+    id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch: Record<string, any>,
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
@@ -477,9 +498,235 @@ function TextInspectorContent({
   );
 }
 
+function SensorNumberRow({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2 text-[11px]">
+      <span className="text-muted-foreground">{label}</span>
+      <Input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(event) => {
+          const next = Number(event.target.value);
+          if (Number.isFinite(next)) onChange(next);
+        }}
+        className="border-border bg-muted text-foreground h-7 w-24 rounded-sm px-2 text-right text-[11px]"
+      />
+    </label>
+  );
+}
+
+function LidarSensorInspectorContent({
+  sensor,
+  onChange,
+  onTransformChange,
+  t,
+}: {
+  sensor: SavedLidarSensorInfo;
+  onChange: (
+    id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch: Record<string, any>,
+  ) => void;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <>
+      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
+        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+          LiDAR
+        </p>
+        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
+          {sensor.name || sensor.id}
+        </p>
+      </div>
+
+      <TransformSection
+        position={sensor.position}
+        rotation={sensor.rotation}
+        scale={[1, 1, 1]}
+        onTransformChange={onTransformChange}
+        t={t}
+      />
+
+      <InspectorSection
+        title="LiDAR Settings"
+        icon={<SlidersHorizontal className="size-4" />}
+      >
+        <div className="space-y-2">
+          <SensorNumberRow
+            label="Horizontal FOV (°)"
+            value={sensor.horizontalFov}
+            min={MIN_LIDAR_FOV}
+            max={MAX_LIDAR_FOV}
+            onChange={(v) => onChange(sensor.id, { horizontalFov: v })}
+          />
+          <SensorNumberRow
+            label="Vertical FOV (°)"
+            value={sensor.verticalFov}
+            min={MIN_LIDAR_FOV}
+            max={MAX_LIDAR_FOV}
+            onChange={(v) => onChange(sensor.id, { verticalFov: v })}
+          />
+          <SensorNumberRow
+            label="Far"
+            value={sensor.far}
+            min={0}
+            step={0.1}
+            onChange={(v) => onChange(sensor.id, { far: v })}
+          />
+          <SensorNumberRow
+            label="H Segments"
+            value={sensor.horizontalSegments}
+            min={MIN_LIDAR_SEGMENTS}
+            max={MAX_LIDAR_SEGMENTS}
+            onChange={(v) =>
+              onChange(sensor.id, { horizontalSegments: Math.round(v) })
+            }
+          />
+          <SensorNumberRow
+            label="V Segments"
+            value={sensor.verticalSegments}
+            min={MIN_LIDAR_SEGMENTS}
+            max={MAX_LIDAR_SEGMENTS}
+            onChange={(v) =>
+              onChange(sensor.id, { verticalSegments: Math.round(v) })
+            }
+          />
+          <SensorNumberRow
+            label="Point Size"
+            value={sensor.pointSize}
+            min={0.01}
+            max={1}
+            step={0.01}
+            onChange={(v) => onChange(sensor.id, { pointSize: v })}
+          />
+        </div>
+      </InspectorSection>
+    </>
+  );
+}
+
+function CameraSensorInspectorContent({
+  sensor,
+  onChange,
+  onTransformChange,
+  t,
+}: {
+  sensor: SavedCameraSensorInfo;
+  onChange: (
+    id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch: Record<string, any>,
+  ) => void;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <>
+      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
+        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+          Camera
+        </p>
+        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
+          {sensor.name || sensor.id}
+        </p>
+      </div>
+
+      <TransformSection
+        position={sensor.position}
+        rotation={sensor.rotation}
+        scale={[1, 1, 1]}
+        onTransformChange={onTransformChange}
+        t={t}
+      />
+
+      <InspectorSection
+        title="Camera Settings"
+        icon={<SlidersHorizontal className="size-4" />}
+      >
+        <div className="space-y-2">
+          <SensorNumberRow
+            label="Horizontal FOV (°)"
+            value={sensor.horizontalFov}
+            min={MIN_CAMERA_FOV}
+            max={MAX_CAMERA_FOV}
+            onChange={(v) => onChange(sensor.id, { horizontalFov: v })}
+          />
+          <SensorNumberRow
+            label="Vertical FOV (°)"
+            value={sensor.verticalFov}
+            min={MIN_CAMERA_FOV}
+            max={MAX_CAMERA_FOV}
+            onChange={(v) => onChange(sensor.id, { verticalFov: v })}
+          />
+          <SensorNumberRow
+            label="Near"
+            value={sensor.near}
+            min={0}
+            step={0.05}
+            onChange={(v) => onChange(sensor.id, { near: v })}
+          />
+          <SensorNumberRow
+            label="Far"
+            value={sensor.far}
+            min={0}
+            step={0.1}
+            onChange={(v) => onChange(sensor.id, { far: v })}
+          />
+          <SensorNumberRow
+            label="Frustum Segments X"
+            value={sensor.frustumSegmentsX}
+            min={MIN_CAMERA_GRID_SEGMENTS}
+            max={MAX_CAMERA_GRID_SEGMENTS}
+            onChange={(v) =>
+              onChange(sensor.id, { frustumSegmentsX: Math.round(v) })
+            }
+          />
+          <SensorNumberRow
+            label="Frustum Segments Y"
+            value={sensor.frustumSegmentsY}
+            min={MIN_CAMERA_GRID_SEGMENTS}
+            max={MAX_CAMERA_GRID_SEGMENTS}
+            onChange={(v) =>
+              onChange(sensor.id, { frustumSegmentsY: Math.round(v) })
+            }
+          />
+        </div>
+      </InspectorSection>
+    </>
+  );
+}
+
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
+  selectedSensor = null,
   selectedMesh,
   multiSelectCount = 0,
   onNameChange,
@@ -491,6 +738,7 @@ export function SceneObjectInspector({
   onMeshNameChange,
   onMeshOpacityChange,
   onMeshTransformChange,
+  onSensorChange,
   onBackToParent,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -514,7 +762,11 @@ export function SceneObjectInspector({
   }, [initialMeshName, selectedMesh?.meshPath]);
 
   const hasSelection =
-    selectedModel || selectedText || selectedMesh || multiSelectCount > 1;
+    selectedModel ||
+    selectedText ||
+    selectedSensor ||
+    selectedMesh ||
+    multiSelectCount > 1;
 
   return (
     <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
@@ -558,6 +810,22 @@ export function SceneObjectInspector({
             onTextTransformChange={onTextTransformChange}
             t={t}
           />
+        ) : selectedSensor && onSensorChange ? (
+          isLidarSensor(selectedSensor) ? (
+            <LidarSensorInspectorContent
+              sensor={selectedSensor}
+              onChange={onSensorChange}
+              onTransformChange={onTransformChange}
+              t={t}
+            />
+          ) : isCameraSensor(selectedSensor) ? (
+            <CameraSensorInspectorContent
+              sensor={selectedSensor}
+              onChange={onSensorChange}
+              onTransformChange={onTransformChange}
+              t={t}
+            />
+          ) : null
         ) : null}
         {!hasSelection ? (
           <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">

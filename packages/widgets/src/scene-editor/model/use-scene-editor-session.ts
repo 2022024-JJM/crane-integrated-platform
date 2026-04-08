@@ -1,5 +1,6 @@
 import {
   type SavedCameraInfo,
+  type SavedSensorInfo,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
@@ -28,6 +29,9 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['selectedModel'];
   selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
+  selectedSensor: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['selectedSensor'];
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
@@ -83,6 +87,14 @@ interface UseSceneEditorSessionResult {
     position: [number, number, number],
   ) => void;
   addText: (position: [number, number, number]) => void;
+  addLidarSensor: (position: [number, number, number]) => void;
+  addCameraSensor: (position: [number, number, number]) => void;
+  updateSensor: (
+    id: string,
+    patch: Partial<Omit<SavedSensorInfo, 'id' | 'type'>>,
+  ) => void;
+  selectPlacedSensor: (id: string) => void;
+  deletePlacedSensor: (id: string) => void;
   selectPlacedModel: (id: string) => void;
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
@@ -134,6 +146,9 @@ export function useSceneEditorSession({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
+  const selectSensor = useSceneObjectSelectionStore(
+    (state) => state.selectSensor,
+  );
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
@@ -149,6 +164,7 @@ export function useSceneEditorSession({
   const {
     selectedModel,
     selectedText,
+    selectedSensor,
     selectedMesh,
     updateSelectedName,
     updateSelectedOpacity,
@@ -195,6 +211,7 @@ export function useSceneEditorSession({
         commitHistoryFrom,
         selectModel,
         selectText,
+        selectSensor,
         clearSelectedModel,
         selectedIds,
         sceneInfoRef,
@@ -206,6 +223,7 @@ export function useSceneEditorSession({
       commitHistoryFrom,
       selectModel,
       selectText,
+      selectSensor,
       clearSelectedModel,
       selectedIds,
       selectAllStore,
@@ -234,6 +252,7 @@ export function useSceneEditorSession({
       selectedModel?.equipName.trim() || selectedText?.content.trim() || null,
     selectedModel,
     selectedText,
+    selectedSensor,
     selectedMesh,
     isSaving,
     isDirty,
@@ -261,6 +280,11 @@ export function useSceneEditorSession({
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,
+    addLidarSensor: manipulation.addLidarSensor,
+    addCameraSensor: manipulation.addCameraSensor,
+    updateSensor: manipulation.updateSensor,
+    selectPlacedSensor: manipulation.selectPlacedSensor,
+    deletePlacedSensor: manipulation.deletePlacedSensor,
     selectPlacedModel: manipulation.selectPlacedModel,
     selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,

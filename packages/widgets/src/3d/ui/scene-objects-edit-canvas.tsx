@@ -10,9 +10,13 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
+  CameraSensorMesh,
   GltfModel,
+  LidarSensorMesh,
   SceneText,
   getMeshPath,
+  isCameraSensor,
+  isLidarSensor,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -89,6 +93,26 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
+type SelectionAwareLidarSensorProps = Omit<
+  React.ComponentProps<typeof LidarSensorMesh>,
+  'isSelected'
+>;
+
+function SelectionAwareLidarSensor(props: SelectionAwareLidarSensorProps) {
+  const isSelected = useIsObjectSelected(props.sensor.id);
+  return <LidarSensorMesh {...props} isSelected={isSelected} />;
+}
+
+type SelectionAwareCameraSensorProps = Omit<
+  React.ComponentProps<typeof CameraSensorMesh>,
+  'isSelected'
+>;
+
+function SelectionAwareCameraSensor(props: SelectionAwareCameraSensorProps) {
+  const isSelected = useIsObjectSelected(props.sensor.id);
+  return <CameraSensorMesh {...props} isSelected={isSelected} />;
+}
+
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
   catalogItems: SceneModelCatalogItem[];
@@ -107,6 +131,9 @@ interface SceneObjectsEditCanvasProps {
   ) => void;
   isDraggingText?: boolean;
   onAddText?: (position: Vector3Tuple) => void;
+  draggingSensorType?: '' | 'lidar' | 'camera';
+  onAddLidarSensor?: (position: Vector3Tuple) => void;
+  onAddCameraSensor?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
   onMultiTransformCommit?: (
     updates: Array<{ id: string; position: Vector3Tuple }>,
@@ -130,6 +157,9 @@ export function SceneObjectsEditCanvas({
   onAddModel,
   isDraggingText = false,
   onAddText,
+  draggingSensorType = '',
+  onAddLidarSensor,
+  onAddCameraSensor,
   showLabels = true,
   onMultiTransformCommit,
   onTransformInteractionStart,
@@ -160,6 +190,9 @@ export function SceneObjectsEditCanvas({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
+  const selectSensor = useSceneObjectSelectionStore(
+    (state) => state.selectSensor,
+  );
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
@@ -184,9 +217,12 @@ export function SceneObjectsEditCanvas({
     catalogItems,
     draggingModelCatalogItem,
     isDraggingText,
+    draggingSensorType,
     mapObjectId: sceneInfo?.map?.id ?? null,
     onAddModel,
     onAddText,
+    onAddLidarSensor,
+    onAddCameraSensor,
   });
 
   const {
@@ -203,6 +239,7 @@ export function SceneObjectsEditCanvas({
     transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
+    sceneSensors: sceneInfo?.sensors,
     modelObjectRegistryRef,
     onTransformVectorChange,
     onMultiTransformCommit,
@@ -299,6 +336,20 @@ export function SceneObjectsEditCanvas({
       }
     },
     [selectText, toggleText, setSelectedObject],
+  );
+
+  const handleSelectSensor = useCallback(
+    (id: string) => {
+      // 센서 컴포넌트는 mount 시 도메인 전역 modelObjectRegistry에 group을
+      // 등록한다. 캔버스 로컬 registryRef에는 없으므로 global fallback.
+      setSelectedObject(
+        modelObjectRegistryRef.current.get(id) ??
+          sharedModelObjectRegistry.get(id) ??
+          null,
+      );
+      selectSensor(id);
+    },
+    [selectSensor, setSelectedObject],
   );
 
   const handleClearSelection = useCallback(() => {
@@ -499,6 +550,7 @@ export function SceneObjectsEditCanvas({
             id={sceneInfo.map.id}
             onSelect={handleClearSelection}
             url={sceneInfo.map.path}
+            isSensorOccluder={false}
           />
         ) : null}
         {sceneInfo?.models.map((model) => (
@@ -531,6 +583,27 @@ export function SceneObjectsEditCanvas({
             onObjectReady={handleModelObjectReady}
           />
         ))}
+        {(sceneInfo?.sensors ?? []).map((sensor) => {
+          if (isLidarSensor(sensor)) {
+            return (
+              <SelectionAwareLidarSensor
+                key={sensor.id}
+                sensor={sensor}
+                onSelect={handleSelectSensor}
+              />
+            );
+          }
+          if (isCameraSensor(sensor)) {
+            return (
+              <SelectionAwareCameraSensor
+                key={sensor.id}
+                sensor={sensor}
+                onSelect={handleSelectSensor}
+              />
+            );
+          }
+          return null;
+        })}
         {pendingDropPosition ? (
           <mesh
             position={[

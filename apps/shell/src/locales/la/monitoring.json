@@ -59,6 +59,8 @@
     "hideLabels": "Titulos absconde",
     "showLabels": "Titulos ostende",
     "addText": "Textum adde",
+    "addLidarSensor": "Adde LiDAR",
+    "addCameraSensor": "Adde Cameram",
     "textObject": "Textus",
     "save": "Serva",
     "searchModels": "Exemplaria quaere",

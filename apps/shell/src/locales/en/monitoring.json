@@ -59,6 +59,8 @@
     "hideLabels": "Hide labels",
     "showLabels": "Show labels",
     "addText": "Add Text",
+    "addLidarSensor": "Add LiDAR",
+    "addCameraSensor": "Add Camera",
     "textObject": "Text",
     "save": "Save",
     "searchModels": "Search models",

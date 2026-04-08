@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SelectedObjectType = 'model' | 'text' | 'mesh';
+export type SelectedObjectType = 'model' | 'text' | 'mesh' | 'sensor';
 
 interface SceneObjectSelectionState {
   selectedIds: Set<string>;
@@ -12,6 +12,7 @@ interface SceneObjectSelectionState {
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
   selectMesh: (meshId: string) => void;
+  selectSensor: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMesh: (meshId: string) => void;
@@ -49,6 +50,9 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
 
     selectMesh: (meshId) =>
       set(deriveCompat(new Set([meshId]), 'mesh', meshId)),
+
+    selectSensor: (id) =>
+      set(deriveCompat(new Set([id]), 'sensor', id)),
 
     toggleModel: (id) =>
       set((state) => {

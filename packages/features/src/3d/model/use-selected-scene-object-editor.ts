@@ -6,6 +6,7 @@ import {
   type SavedMeshOverride,
   type SavedModelInfo,
   type SavedSceneInfo,
+  type SavedSensorInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
@@ -76,6 +77,7 @@ export interface SelectedMeshInfo {
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  selectedSensor: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   updateSelectedMeshTransform: (
     field: SceneTransformField,
@@ -172,6 +174,16 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
+    if (selectedObjectType === 'sensor') {
+      const exists = (sceneInfo.sensors ?? []).some(
+        (s) => s.id === selectedModelId,
+      );
+      if (!exists) {
+        clearSelectedModel();
+      }
+      return;
+    }
+
     const isSelectedModelExists = sceneInfo.models.some(
       (model) => model.id === selectedModelId,
     );
@@ -197,6 +209,15 @@ export function useSelectedSceneObjectEditor({
           null)
         : null,
     [sceneInfo?.texts, selectedModelId, selectedObjectType],
+  );
+
+  const selectedSensor = useMemo(
+    () =>
+      selectedObjectType === 'sensor'
+        ? ((sceneInfo?.sensors ?? []).find((s) => s.id === selectedModelId) ??
+          null)
+        : null,
+    [sceneInfo?.sensors, selectedModelId, selectedObjectType],
   );
 
   const selectedMesh = useMemo<SelectedMeshInfo | null>(() => {
@@ -537,6 +558,7 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.filter((model) => !selectedIds.has(model.id)),
         texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
+        sensors: (prev.sensors ?? []).filter((s) => !selectedIds.has(s.id)),
       };
     });
 
@@ -546,6 +568,7 @@ export function useSelectedSceneObjectEditor({
   return {
     selectedModel,
     selectedText,
+    selectedSensor,
     selectedMesh,
     updateSelectedName,
     updateSelectedOpacity,

@@ -1,7 +1,10 @@
 import {
+  createCameraSensor,
+  createLidarSensor,
   createSceneModel,
   createSceneText,
   type SavedSceneInfo,
+  type SavedSensorInfo,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -19,6 +22,7 @@ interface SceneManipulationDeps {
   commitHistoryFrom: (base: SavedSceneInfo | null) => void;
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
+  selectSensor: (id: string) => void;
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
@@ -31,6 +35,7 @@ export function createSceneManipulationActions({
   commitHistoryFrom,
   selectModel,
   selectText,
+  selectSensor,
   clearSelectedModel,
   selectedIds,
   sceneInfoRef,
@@ -132,6 +137,59 @@ export function createSceneManipulationActions({
     }
   };
 
+  // ===== Sensor actions =====
+
+  const addLidarSensor = (position: [number, number, number]) => {
+    const next = createLidarSensor(position);
+    updateScene((prev) => {
+      if (!prev) return prev;
+      return { ...prev, sensors: [...(prev.sensors ?? []), next] };
+    });
+    selectSensor(next.id);
+  };
+
+  const addCameraSensor = (position: [number, number, number]) => {
+    const next = createCameraSensor(position);
+    updateScene((prev) => {
+      if (!prev) return prev;
+      return { ...prev, sensors: [...(prev.sensors ?? []), next] };
+    });
+    selectSensor(next.id);
+  };
+
+  const updateSensor = (
+    id: string,
+    patch: Partial<Omit<SavedSensorInfo, 'id' | 'type'>>,
+    options?: UpdateSceneOptions,
+  ) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sensors: (prev.sensors ?? []).map((s) =>
+          s.id === id ? ({ ...s, ...patch } as SavedSensorInfo) : s,
+        ),
+      };
+    }, options);
+  };
+
+  const deletePlacedSensor = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sensors: (prev.sensors ?? []).filter((s) => s.id !== id),
+      };
+    });
+    if (selectedIds.has(id)) {
+      clearSelectedModel();
+    }
+  };
+
+  const selectPlacedSensor = (id: string) => {
+    selectSensor(id);
+  };
+
   const startTransformInteraction = () => {
     transformHistoryBaseRef.current = sceneInfoRef.current;
   };
@@ -149,6 +207,7 @@ export function createSceneManipulationActions({
 
     const newModelDuplicates: typeof scene.models = [];
     const newTextDuplicates: NonNullable<typeof scene.texts> = [];
+    const newSensorDuplicates: NonNullable<typeof scene.sensors> = [];
     const newIds: string[] = [];
 
     for (const id of selectedIds) {
@@ -181,10 +240,31 @@ export function createSceneManipulationActions({
             textSource.position[2],
           ] as [number, number, number],
         });
+        continue;
+      }
+
+      const sensorSource = (scene.sensors ?? []).find((s) => s.id === id);
+      if (sensorSource) {
+        const newId = createId();
+        newIds.push(newId);
+        newSensorDuplicates.push({
+          ...sensorSource,
+          id: newId,
+          position: [
+            sensorSource.position[0] + 2,
+            sensorSource.position[1],
+            sensorSource.position[2],
+          ] as [number, number, number],
+        });
       }
     }
 
-    if (newModelDuplicates.length === 0 && newTextDuplicates.length === 0) return;
+    if (
+      newModelDuplicates.length === 0 &&
+      newTextDuplicates.length === 0 &&
+      newSensorDuplicates.length === 0
+    )
+      return;
 
     updateScene((prev) => {
       if (!prev) return prev;
@@ -192,6 +272,7 @@ export function createSceneManipulationActions({
         ...prev,
         models: [...prev.models, ...newModelDuplicates],
         texts: [...(prev.texts ?? []), ...newTextDuplicates],
+        sensors: [...(prev.sensors ?? []), ...newSensorDuplicates],
       };
     });
 
@@ -201,6 +282,11 @@ export function createSceneManipulationActions({
   return {
     addModel,
     addText,
+    addLidarSensor,
+    addCameraSensor,
+    updateSensor,
+    deletePlacedSensor,
+    selectPlacedSensor,
     deleteMap,
     selectPlacedModel,
     selectPlacedText,

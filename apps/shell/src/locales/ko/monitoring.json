@@ -59,6 +59,8 @@
     "hideLabels": "라벨 숨기기",
     "showLabels": "라벨 표시",
     "addText": "텍스트 추가",
+    "addLidarSensor": "LiDAR 추가",
+    "addCameraSensor": "카메라 추가",
     "textObject": "텍스트",
     "save": "저장",
     "searchModels": "모델 검색",

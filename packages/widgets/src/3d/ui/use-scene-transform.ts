@@ -58,6 +58,7 @@ interface UseSceneTransformParams {
   transformMode: SceneTransformMode;
   sceneModels: { id: string }[] | undefined;
   sceneTexts?: { id: string }[] | undefined;
+  sceneSensors?: { id: string }[] | undefined;
   modelObjectRegistryRef: React.RefObject<Map<string, Object3D>>;
   onTransformVectorChange: (
     field: SceneTransformField,
@@ -75,6 +76,7 @@ export function useSceneTransform({
   transformMode,
   sceneModels,
   sceneTexts,
+  sceneSensors,
   modelObjectRegistryRef,
   onTransformVectorChange,
   onMultiTransformCommit,
@@ -259,7 +261,8 @@ export function useSceneTransform({
       ? (sceneModels?.some((model) => model.id === meshIdInfo.modelId) ?? false)
       : (sceneModels?.some((model) => model.id === primarySelectedId) ??
           false) ||
-        (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false);
+        (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
+        (sceneSensors?.some((s) => s.id === primarySelectedId) ?? false);
 
     if (!isSelectedPresent) {
       setSelectedObject(null);
@@ -278,7 +281,13 @@ export function useSceneTransform({
     if (nextSelectedObject) {
       setSelectedObject(nextSelectedObject);
     }
-  }, [sceneModels, sceneTexts, primarySelectedId, modelObjectRegistryRef]);
+  }, [
+    sceneModels,
+    sceneTexts,
+    sceneSensors,
+    primarySelectedId,
+    modelObjectRegistryRef,
+  ]);
 
   useEffect(() => {
     const controls =

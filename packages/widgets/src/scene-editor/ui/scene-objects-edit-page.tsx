@@ -68,6 +68,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
   const [isDraggingText, setIsDraggingText] = useState(false);
+  const [draggingSensorType, setDraggingSensorType] = useState<
+    '' | 'lidar' | 'camera'
+  >('');
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitSelectedRef = useRef<(() => void) | null>(null);
@@ -105,6 +108,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     duplicateSelectedObject,
     addModel,
     addText,
+    addLidarSensor,
+    addCameraSensor,
+    updateSensor,
+    selectedSensor,
     selectPlacedModel,
     deletePlacedModel,
     selectPlacedText,
@@ -271,6 +278,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           addText(position);
           setIsDraggingText(false);
         }}
+        draggingSensorType={draggingSensorType}
+        onAddLidarSensor={(position) => {
+          addLidarSensor(position);
+          setDraggingSensorType('');
+        }}
+        onAddCameraSensor={(position) => {
+          addCameraSensor(position);
+          setDraggingSensorType('');
+        }}
         showLabels={showLabels}
         onTransformInteractionStart={startTransformInteraction}
         onTransformInteractionEnd={endTransformInteraction}
@@ -308,6 +324,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           onTogglePlacedText={toggleText}
           onTextDragStart={() => setIsDraggingText(true)}
           onTextDragEnd={() => setIsDraggingText(false)}
+          onSensorDragStart={(kind) => setDraggingSensorType(kind)}
+          onSensorDragEnd={() => setDraggingSensorType('')}
           onDeleteMap={deleteMap}
           onSave={() => {
             void saveCurrentScene();
@@ -335,17 +353,36 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         <SceneObjectInspector
           selectedModel={selectedModel}
           selectedText={selectedText}
+          selectedSensor={selectedSensor}
           selectedMesh={selectedMesh}
           multiSelectCount={selectedIds.size}
           onNameChange={updateSelectedName}
           onOpacityChange={updateSelectedOpacity}
-          onTransformChange={updateSelectedTransform}
+          onTransformChange={(field, axis, value) => {
+            // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
+            // 텍스트/모델/메시는 기존 핸들러로.
+            if (selectedSensor && (field === 'position' || field === 'rotation')) {
+              const current =
+                field === 'position' ? selectedSensor.position : selectedSensor.rotation;
+              const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+              const next: [number, number, number] = [
+                current[0],
+                current[1],
+                current[2],
+              ];
+              next[idx] = value;
+              updateSensor(selectedSensor.id, { [field]: next });
+              return;
+            }
+            updateSelectedTransform(field, axis, value);
+          }}
           onTextContentChange={updateSelectedTextContent}
           onTextColorChange={updateSelectedTextColor}
           onTextTransformChange={updateSelectedTextTransform}
           onMeshNameChange={updateSelectedMeshName}
           onMeshOpacityChange={updateSelectedMeshOpacity}
           onMeshTransformChange={updateSelectedMeshTransform}
+          onSensorChange={updateSensor}
           onBackToParent={() => {
             if (selectedMesh) {
               selectPlacedModel(selectedMesh.modelId);

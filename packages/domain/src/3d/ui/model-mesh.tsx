@@ -1,12 +1,18 @@
 import { useGLTF } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box3, Color, Material, Mesh, Object3D, Vector3 } from 'three';
+import { Box3, BufferGeometry, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import '../lib/bvh-setup';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
+import {
+  registerSceneOccluders,
+  unregisterSceneOccluders,
+} from '../lib/scene-occluder-registry';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
@@ -27,6 +33,8 @@ interface ModelMeshProps {
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
   meshOverrides?: SavedMeshOverride[];
+  /** 센서 raycast occluder로 등록할지. 기본 true. 지도는 false. */
+  isSensorOccluder?: boolean;
   onSelect?: (id: string, event?: ThreeEvent<MouseEvent>) => void;
   /**
    * 더블클릭 시 별도 호출. R3F의 onClick은 detail 카운트가 신뢰적이지 않아
@@ -224,6 +232,7 @@ export function ModelMesh({
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
   meshOverrides,
+  isSensorOccluder = true,
   onSelect,
   onDoubleSelect,
   onObjectReady,
@@ -499,6 +508,34 @@ export function ModelMesh({
       onObjectReadyRef.current?.(id, null);
     };
   }, [id, clone, meshBindings]);
+
+  // 센서(LIDAR/Camera) raycast의 occluder 후보로 이 모델의 mesh들을 등록한다.
+  // 각 geometry에 BVH(boundsTree)를 빌드해 raycast 가속. mount 시 1회.
+  // 부모 모델의 transform은 TransformControls/sceneInfo를 통해 mesh의
+  // worldMatrix에 자동 반영되므로 raycast 결과도 항상 최신 위치 기준이다.
+  //
+  // 지도(isSensorOccluder=false)는 지형 역할이라 등록하지 않는다 — 등록하면
+  // 지도 mesh가 카메라/LIDAR 바로 앞에 있어 모든 ray가 0 거리에서 지도를
+  // 때리면서 frustum이 붕괴하거나 sensor.far로 fallback된다.
+  const scene = useThree((state) => state.scene);
+  useEffect(() => {
+    if (!isSensorOccluder) return;
+    const meshes: Mesh[] = [];
+    for (const binding of meshBindings) {
+      const geometry = binding.mesh.geometry as BufferGeometry & {
+        boundsTree?: unknown;
+        computeBoundsTree?: () => void;
+      };
+      if (!geometry.boundsTree && geometry.computeBoundsTree) {
+        geometry.computeBoundsTree();
+      }
+      meshes.push(binding.mesh);
+    }
+    registerSceneOccluders(scene, id, meshes);
+    return () => {
+      unregisterSceneOccluders(scene, id);
+    };
+  }, [id, scene, meshBindings, isSensorOccluder]);
 
   // primitive 자체에 prop transform을 적용하면 React가 매 렌더에서 clone의
   // position/rotation/scale을 덮어쓴다. value-mapper가 매 tick `object.position`
