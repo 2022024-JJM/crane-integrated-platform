@@ -5,8 +5,9 @@ import {
   WifiOff,
   Maximize2,
   Activity,
+  Crosshair,
+  TriangleAlert,
 } from 'lucide-react';
-import { useState } from 'react';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { GoliathLidarPointCloud } from './goliath-lidar-point-cloud';

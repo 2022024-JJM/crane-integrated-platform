@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Box3,
   BufferGeometry,
@@ -15,6 +15,8 @@ interface ModelSelectionBoxProps {
    */
   target?: Object3D | null;
 }
+
+const boundingBoxGeometryCache = new WeakMap<Object3D, BufferGeometry | null>();
 
 /**
  * clone 전체의 bounding box(local space) 12개 모서리 line 만 만든다.
@@ -102,33 +104,28 @@ function buildBoundingBoxFromClone(clone: Object3D): BufferGeometry | null {
   return geometry;
 }
 
+function getBoundingBoxGeometry(object: Object3D) {
+  const cached = boundingBoxGeometryCache.get(object);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const geometry = buildBoundingBoxFromClone(object);
+  boundingBoxGeometryCache.set(object, geometry);
+  return geometry;
+}
+
 export function ModelSelectionBox({
   clone,
   isSelected,
   target,
 }: ModelSelectionBoxProps) {
-  const [edgesGeometry, setEdgesGeometry] = useState<BufferGeometry | null>(
-    null,
-  );
-
-  useEffect(() => {
+  const edgesGeometry = useMemo(() => {
     if (!isSelected) {
-      setEdgesGeometry((prev) => {
-        prev?.dispose();
-        return null;
-      });
-      return;
+      return null;
     }
 
-    const geometry = buildBoundingBoxFromClone(target ?? clone);
-    setEdgesGeometry((prev) => {
-      prev?.dispose();
-      return geometry;
-    });
-
-    return () => {
-      geometry?.dispose();
-    };
+    return getBoundingBoxGeometry(target ?? clone);
   }, [isSelected, clone, target]);
 
   // ModelSelectionBox는 ModelMesh가 렌더하는 <primitive object={clone}>의

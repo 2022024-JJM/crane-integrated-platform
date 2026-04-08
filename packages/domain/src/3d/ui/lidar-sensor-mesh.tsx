@@ -16,10 +16,6 @@ import { getSceneOccluders } from '../lib/scene-occluder-registry';
 import { degToRad } from '../lib/math-utils';
 import type { SavedLidarSensorInfo } from '../model/sensor-types';
 
-// sensor simulation2의 LidarMesh를 도메인으로 옮긴 버전.
-// 핵심 차이: store 직접 구독 대신 props로 sceneObject + onSelect를 받는다.
-// 메인 프로젝트의 모델/텍스트 컴포넌트와 동일한 패턴.
-
 const LIDAR_RAYCAST_FIRST_HIT_ONLY = true;
 
 const LIDAR_BODY_RADIUS = 0.15;
@@ -34,14 +30,19 @@ const LIDAR_TOP_COLOR = '#1e293b';
 const LIDAR_FOV_COLOR = '#f97316';
 const LIDAR_FOV_OPACITY = 0.82;
 const FULL_ROTATION_DEGREES = 360;
+const COARSE_SEGMENT_DIVISOR = 2;
+const UNSELECTED_SENSOR_UPDATE_MS = 1200;
+const SENSOR_DISTANCE_CULL_THRESHOLD = 120;
 const FORWARD_DIRECTION = new Vector3(0, 0, -1);
 
 function degreesToRadians(value: number) {
   return (value * Math.PI) / 180;
 }
+
 function isWrappedFov(value: number) {
   return value >= FULL_ROTATION_DEGREES;
 }
+
 function getAngleSampleCount(segmentCount: number, wrapped: boolean) {
   return wrapped ? segmentCount : segmentCount + 1;
 }
@@ -57,7 +58,25 @@ function createLidarPointGeometry(pointCount: number) {
   return geometry;
 }
 
-const UNSELECTED_RAYCAST_INTERVAL_MS = 500;
+function getSampleSegmentCount(segmentCount: number, coarse: boolean) {
+  if (!coarse) {
+    return segmentCount;
+  }
+
+  return Math.max(1, Math.floor(segmentCount / COARSE_SEGMENT_DIVISOR));
+}
+
+function getSensorTransformSignature(sensor: SavedLidarSensorInfo) {
+  return [
+    ...sensor.position,
+    ...sensor.rotation,
+    sensor.horizontalFov,
+    sensor.verticalFov,
+    sensor.horizontalSegments,
+    sensor.verticalSegments,
+    sensor.far,
+  ].join('|');
+}
 
 interface LidarSensorMeshProps {
   sensor: SavedLidarSensorInfo;
@@ -75,10 +94,12 @@ export function LidarSensorMesh({
   const groupRef = useRef<Group>(null);
   const raycasterRef = useRef(new Raycaster());
   const scene = useThree((state) => state.scene);
+  const camera = useThree((state) => state.camera);
 
   const localDirectionRef = useRef(new Vector3());
   const worldDirectionRef = useRef(new Vector3());
   const worldPositionRef = useRef(new Vector3());
+  const cameraWorldPositionRef = useRef(new Vector3());
   const worldQuaternionRef = useRef(new Quaternion());
   const sensorEulerRef = useRef(new Euler(0, 0, 0, 'YXZ'));
   const pointGeometryRef = useRef<BufferGeometry | null>(null);
@@ -86,15 +107,15 @@ export function LidarSensorMesh({
 
   const horizontalWrapped = isWrappedFov(sensor.horizontalFov);
   const verticalWrapped = isWrappedFov(sensor.verticalFov);
-  const horizontalSampleCount = getAngleSampleCount(
+  const maxHorizontalSampleCount = getAngleSampleCount(
     sensor.horizontalSegments,
     horizontalWrapped,
   );
-  const verticalSampleCount = getAngleSampleCount(
+  const maxVerticalSampleCount = getAngleSampleCount(
     sensor.verticalSegments,
     verticalWrapped,
   );
-  const pointCount = horizontalSampleCount * verticalSampleCount;
+  const pointCount = maxHorizontalSampleCount * maxVerticalSampleCount;
 
   const pointGeometry = useMemo(
     () => createLidarPointGeometry(pointCount),
@@ -110,8 +131,6 @@ export function LidarSensorMesh({
     };
   }, [pointGeometry]);
 
-  // 모델/텍스트와 동일하게 group을 modelObjectRegistry에 등록한다.
-  // useSceneTransform이 이 객체를 lookup해 TransformControls를 부착할 수 있게.
   useEffect(() => {
     const group = groupRef.current;
     if (!group) return;
@@ -122,7 +141,6 @@ export function LidarSensorMesh({
   }, [sensor.id]);
 
   useEffect(() => {
-    // three-mesh-bvh extension. type 정의에 firstHitOnly 가 없을 수 있어 cast.
     (raycasterRef.current as Raycaster & { firstHitOnly?: boolean }).firstHitOnly =
       LIDAR_RAYCAST_FIRST_HIT_ONLY;
   }, []);
@@ -137,34 +155,73 @@ export function LidarSensorMesh({
 
   const computedRef = useRef(false);
   const lastRaycastTimeRef = useRef(0);
+  const lastTransformSignatureRef = useRef('');
+  const lastOccluderRevisionRef = useRef(-1);
+  const lastLodKeyRef = useRef('');
 
   useFrame((_, delta) => {
     const group = groupRef.current;
     if (!group) return;
 
-    const { meshes: occluderMeshes } = getSceneOccluders(scene);
-
-    if (isMonitoringMode) {
-      // 모니터링 뷰어: occluder 준비 후 딱 1회만 계산
-      if (computedRef.current) return;
-      if (occluderMeshes.length === 0) return;
-      computedRef.current = true;
-    } else if (!isSelected) {
-      // 편집기 비선택 센서: throttle
-      lastRaycastTimeRef.current += delta * 1000;
-      if (lastRaycastTimeRef.current < UNSELECTED_RAYCAST_INTERVAL_MS) return;
-      lastRaycastTimeRef.current = 0;
-    }
+    const { meshes: occluderMeshes, revision } = getSceneOccluders(scene);
+    const isCoarseLod = isMonitoringMode && !isSelected;
+    const horizontalSegments = getSampleSegmentCount(
+      sensor.horizontalSegments,
+      isCoarseLod,
+    );
+    const verticalSegments = getSampleSegmentCount(
+      sensor.verticalSegments,
+      isCoarseLod,
+    );
+    const horizontalSampleCount = getAngleSampleCount(
+      horizontalSegments,
+      horizontalWrapped,
+    );
+    const verticalSampleCount = getAngleSampleCount(
+      verticalSegments,
+      verticalWrapped,
+    );
+    const activePointCount = horizontalSampleCount * verticalSampleCount;
+    const transformSignature = getSensorTransformSignature(sensor);
+    const lodKey = `${horizontalSegments}:${verticalSegments}`;
+    const needsRefresh =
+      !computedRef.current ||
+      lastTransformSignatureRef.current !== transformSignature ||
+      lastOccluderRevisionRef.current !== revision ||
+      lastLodKeyRef.current !== lodKey;
 
     group.updateMatrixWorld(true);
     group.getWorldPosition(worldPositionRef.current);
+    camera.getWorldPosition(cameraWorldPositionRef.current);
+
+    if (
+      !isSelected &&
+      cameraWorldPositionRef.current.distanceTo(worldPositionRef.current) >
+        SENSOR_DISTANCE_CULL_THRESHOLD
+    ) {
+      return;
+    }
+
+    if (isMonitoringMode) {
+      if (occluderMeshes.length === 0) return;
+      if (!needsRefresh) return;
+      lastRaycastTimeRef.current = 0;
+    } else if (!isSelected && !needsRefresh) {
+      lastRaycastTimeRef.current += delta * 1000;
+      if (lastRaycastTimeRef.current < UNSELECTED_SENSOR_UPDATE_MS) return;
+      lastRaycastTimeRef.current = 0;
+    } else if (needsRefresh) {
+      lastRaycastTimeRef.current = 0;
+    }
+
     group.getWorldQuaternion(worldQuaternionRef.current);
 
     const geometry = pointGeometryRef.current;
     if (!geometry) return;
+
     const positions = pointPositionsRef.current;
-    const horizontalDenominator = Math.max(1, sensor.horizontalSegments);
-    const verticalDenominator = Math.max(1, sensor.verticalSegments);
+    const horizontalDenominator = Math.max(1, horizontalSegments);
+    const verticalDenominator = Math.max(1, verticalSegments);
     const horizontalSweep = degreesToRadians(sensor.horizontalFov);
     const verticalSweep = degreesToRadians(sensor.verticalFov);
 
@@ -200,8 +257,15 @@ export function LidarSensorMesh({
         writeIndex += 3;
       }
     }
+
+    geometry.setDrawRange(0, activePointCount);
     geometry.attributes.position.needsUpdate = true;
     geometry.computeBoundingSphere();
+
+    computedRef.current = true;
+    lastTransformSignatureRef.current = transformSignature;
+    lastOccluderRevisionRef.current = revision;
+    lastLodKeyRef.current = lodKey;
   });
 
   return (
@@ -209,7 +273,11 @@ export function LidarSensorMesh({
       ref={groupRef}
       name={sensor.id}
       position={sensor.position}
-      rotation={[degToRad(sensor.rotation[0]), degToRad(sensor.rotation[1]), degToRad(sensor.rotation[2])]}
+      rotation={[
+        degToRad(sensor.rotation[0]),
+        degToRad(sensor.rotation[1]),
+        degToRad(sensor.rotation[2]),
+      ]}
     >
       <mesh onClick={handleClick}>
         <cylinderGeometry

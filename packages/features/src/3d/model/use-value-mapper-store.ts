@@ -27,11 +27,18 @@ interface ValueMapperState {
   clear: () => void;
 }
 
+function isSameValueMapObject(a: ValueMapObject, b: ValueMapObject) {
+  return a.id === b.id && a.type === b.type;
+}
+
 export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
   map: {},
   register: (key, value) =>
     set((state) => {
       const prev = state.map[key] ?? [];
+      if (prev.some((entry) => isSameValueMapObject(entry, value))) {
+        return state;
+      }
 
       return {
         map: {
@@ -50,7 +57,7 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
           map[vm.key] = [];
         }
 
-        map[vm.key].push({
+        const valueMapObject: ValueMapObject = {
           id: model.id,
           type: vm.type,
           originTransform: {
@@ -58,7 +65,15 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
             rotation: [...model.rotation],
             scale: [...model.scale],
           },
-        });
+        };
+
+        if (
+          map[vm.key].some((entry) => isSameValueMapObject(entry, valueMapObject))
+        ) {
+          continue;
+        }
+
+        map[vm.key].push(valueMapObject);
       }
 
       return { map };

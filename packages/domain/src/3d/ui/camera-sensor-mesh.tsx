@@ -17,12 +17,10 @@ import { getSceneOccluders } from '../lib/scene-occluder-registry';
 import { degToRad } from '../lib/math-utils';
 import type { SavedCameraSensorInfo } from '../model/sensor-types';
 
-// sensor simulation2의 CameraMesh를 도메인으로 옮긴 버전.
-// 핵심: NDC unproject + raycast로 프러스텀 면의 near/far 좌표를 매 frame
-// 갱신, 그 사이를 line segments로 그려 와이어프레임 구성.
-
 const CAMERA_FRUSTUM_RAYCAST_FIRST_HIT_ONLY = true;
-const UNSELECTED_RAYCAST_INTERVAL_MS = 500;
+const COARSE_SEGMENT_DIVISOR = 2;
+const UNSELECTED_SENSOR_UPDATE_MS = 1200;
+const SENSOR_DISTANCE_CULL_THRESHOLD = 120;
 
 const CAMERA_BODY_SIZE: [number, number, number] = [0.45, 0.3, 0.3];
 const LENS_RADIUS = 0.07;
@@ -173,7 +171,6 @@ function createFrustumGridSegments(segmentX: number, segmentY: number) {
       );
     }
   }
-  // 코너에 near→far 연결
   addSegment(
     nearOffset + gridIndex(0, 0, segmentX),
     farOffset + gridIndex(0, 0, segmentX),
@@ -217,6 +214,27 @@ function syncCameraProjection(
   camera.updateProjectionMatrix();
 }
 
+function getSampleSegmentCount(segmentCount: number, coarse: boolean) {
+  if (!coarse) {
+    return segmentCount;
+  }
+
+  return Math.max(1, Math.floor(segmentCount / COARSE_SEGMENT_DIVISOR));
+}
+
+function getSensorTransformSignature(sensor: SavedCameraSensorInfo) {
+  return [
+    ...sensor.position,
+    ...sensor.rotation,
+    sensor.horizontalFov,
+    sensor.verticalFov,
+    sensor.frustumSegmentsX,
+    sensor.frustumSegmentsY,
+    sensor.near,
+    sensor.far,
+  ].join('|');
+}
+
 interface CameraSensorMeshProps {
   sensor: SavedCameraSensorInfo;
   isSelected?: boolean;
@@ -231,27 +249,26 @@ export function CameraSensorMesh({
   isMonitoringMode = false,
 }: CameraSensorMeshProps) {
   const groupRef = useRef<Group>(null);
-  // PerspectiveCamera를 React JSX(`<perspectiveCamera>`)로 마운트하면 R3F가
-  // 카메라를 scene 자식이 아닌 별도 처리할 수 있어 group의 worldMatrix가
-  // 카메라에 제대로 상속되지 않는 케이스가 있다. 직접 인스턴스를 만들어
-  // useEffect에서 group에 add하면 일반 Object3D처럼 부모 transform을
-  // 100% 상속받는다. useState lazy init으로 한 번만 생성.
   const [perspectiveCamera] = useState(() => new PerspectiveCamera());
   const scene = useThree((state) => state.scene);
+  const mainCamera = useThree((state) => state.camera);
 
-  const frustumSegmentsX = sensor.frustumSegmentsX;
-  const frustumSegmentsY = sensor.frustumSegmentsY;
+  const isCoarseLod = !isSelected;
+  const frustumSegmentsX = getSampleSegmentCount(
+    sensor.frustumSegmentsX,
+    isCoarseLod,
+  );
+  const frustumSegmentsY = getSampleSegmentCount(
+    sensor.frustumSegmentsY,
+    isCoarseLod,
+  );
 
-  // 기하 객체는 state로 관리. useMemo로 만들면 useFrame 안에서 mutation이
-  // react-hooks/immutability 린트에 걸린다. state는 set 시점에만 참조가 바뀌고
-  // 그 외에는 자유롭게 mutate 가능 — 매 frame attribute.array를 갱신해도 OK.
   const [geometries, setGeometries] = useState<{
     frustum: BufferGeometry;
     line: BufferGeometry;
     segments: FrustumLineSegment[];
   } | null>(null);
 
-  // segment 수가 바뀌면 geometry를 재생성.
   useEffect(() => {
     const frustum = createFrustumGeometry(frustumSegmentsX, frustumSegmentsY);
     const segments = createFrustumGridSegments(
@@ -267,14 +284,13 @@ export function CameraSensorMesh({
   }, [frustumSegmentsX, frustumSegmentsY]);
 
   const raycasterRef = useRef(new Raycaster());
+  const mainCameraWorldPositionRef = useRef(new Vector3());
   const cameraWorldPositionRef = useRef(new Vector3());
   const ndcPointRef = useRef(new Vector3());
   const directionRef = useRef(new Vector3());
   const localNearRef = useRef(new Vector3());
   const localFarRef = useRef(new Vector3());
 
-  // 모델/텍스트와 동일하게 group을 modelObjectRegistry에 등록한다.
-  // 동시에 PerspectiveCamera 인스턴스를 group의 자식으로 add 한다.
   useEffect(() => {
     const group = groupRef.current;
     if (!group) return;
@@ -285,16 +301,22 @@ export function CameraSensorMesh({
       modelObjectRegistry.unregister(sensor.id, group);
       group.remove(camera);
     };
-  }, [sensor.id]);
+  }, [perspectiveCamera, sensor.id]);
 
   useEffect(() => {
     (raycasterRef.current as Raycaster & { firstHitOnly?: boolean }).firstHitOnly =
       CAMERA_FRUSTUM_RAYCAST_FIRST_HIT_ONLY;
   }, []);
 
-  // 초기 projection을 동기적으로 한 번 보정 (첫 frame 전).
-  // 이후 매 frame에도 syncCameraProjection을 호출해 FOV/near/far 변경을 반영.
-  syncCameraProjection(perspectiveCamera, sensor);
+  useEffect(() => {
+    syncCameraProjection(perspectiveCamera, sensor);
+  }, [
+    perspectiveCamera,
+    sensor.far,
+    sensor.horizontalFov,
+    sensor.near,
+    sensor.verticalFov,
+  ]);
 
   const handleClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
@@ -306,33 +328,52 @@ export function CameraSensorMesh({
 
   const computedRef = useRef(false);
   const lastRaycastTimeRef = useRef(0);
+  const lastTransformSignatureRef = useRef('');
+  const lastOccluderRevisionRef = useRef(-1);
+  const lastLodKeyRef = useRef('');
 
   useFrame((_, delta) => {
     const camera = perspectiveCamera;
     const group = groupRef.current;
-    if (!camera || !group) return;
-    if (!geometries) return;
+    if (!group || !geometries) return;
+
     const frustum = geometries.frustum;
     const line = geometries.line;
     const segments = geometries.segments;
+    const { meshes: occluderMeshes, revision } = getSceneOccluders(scene);
+    const transformSignature = getSensorTransformSignature(sensor);
+    const lodKey = `${frustumSegmentsX}:${frustumSegmentsY}`;
+    const needsRefresh =
+      !computedRef.current ||
+      lastTransformSignatureRef.current !== transformSignature ||
+      lastOccluderRevisionRef.current !== revision ||
+      lastLodKeyRef.current !== lodKey;
 
-    const { meshes: occluderMeshes } = getSceneOccluders(scene);
+    group.updateMatrixWorld(true);
+    mainCamera.getWorldPosition(mainCameraWorldPositionRef.current);
+    group.getWorldPosition(cameraWorldPositionRef.current);
+
+    if (
+      !isSelected &&
+      mainCameraWorldPositionRef.current.distanceTo(
+        cameraWorldPositionRef.current,
+      ) > SENSOR_DISTANCE_CULL_THRESHOLD
+    ) {
+      return;
+    }
 
     if (isMonitoringMode) {
-      // 모니터링 뷰어: occluder 준비 후 딱 1회만 계산
-      if (computedRef.current) return;
       if (occluderMeshes.length === 0) return;
-      computedRef.current = true;
-    } else if (!isSelected) {
-      // 편집기 비선택 센서: throttle
+      if (!needsRefresh) return;
+      lastRaycastTimeRef.current = 0;
+    } else if (!isSelected && !needsRefresh) {
       lastRaycastTimeRef.current += delta * 1000;
-      if (lastRaycastTimeRef.current < UNSELECTED_RAYCAST_INTERVAL_MS) return;
+      if (lastRaycastTimeRef.current < UNSELECTED_SENSOR_UPDATE_MS) return;
+      lastRaycastTimeRef.current = 0;
+    } else if (needsRefresh) {
       lastRaycastTimeRef.current = 0;
     }
 
-    // projection 동기화.
-    syncCameraProjection(camera, sensor);
-    group.updateMatrixWorld(true);
     camera.updateMatrixWorld(true);
     const cameraWorldPosition = cameraWorldPositionRef.current;
     const ndcPoint = ndcPointRef.current;
@@ -360,9 +401,6 @@ export function CameraSensorMesh({
         raycasterRef.current.far = sensor.far;
         const hits: { distance: number; object: Object3D }[] =
           raycasterRef.current.intersectObjects(occluderMeshes, false);
-        // hit이 near plane보다 가까우면 무시 — 그 ray는 카메라가 지면에
-        // 박혀 있거나 아주 가까운 mesh에 때려 frustum 모서리가 0 두께로
-        // 붕괴하는 걸 방지한다.
         const firstHit = hits.length > 0 ? hits[0].distance : Infinity;
         const hitDistance =
           firstHit > sensor.near && firstHit < sensor.far
@@ -376,9 +414,6 @@ export function CameraSensorMesh({
           .copy(cameraWorldPosition)
           .addScaledVector(direction, hitDistance);
 
-        // frustum mesh는 group의 자식으로 마운트되므로 group local space로 변환.
-        // (카메라 자체가 group과 동일 transform이라 결과는 같지만 frustum의
-        // 부모가 group이기 때문에 group 기준이 더 명확하고 안전.)
         group.worldToLocal(localNear);
         group.worldToLocal(localFar);
 
@@ -394,7 +429,6 @@ export function CameraSensorMesh({
     }
     frustum.attributes.position.needsUpdate = true;
 
-    // Update wireframe line segments
     const linePositions = line.attributes.position.array as Float32Array;
     let lineWriteIndex = 0;
     segments.forEach(([fromIndex, toIndex]) => {
@@ -410,6 +444,11 @@ export function CameraSensorMesh({
       lineWriteIndex += 3;
     });
     line.attributes.position.needsUpdate = true;
+
+    computedRef.current = true;
+    lastTransformSignatureRef.current = transformSignature;
+    lastOccluderRevisionRef.current = revision;
+    lastLodKeyRef.current = lodKey;
   });
 
   return (
@@ -417,7 +456,11 @@ export function CameraSensorMesh({
       ref={groupRef}
       name={sensor.id}
       position={sensor.position}
-      rotation={[degToRad(sensor.rotation[0]), degToRad(sensor.rotation[1]), degToRad(sensor.rotation[2])]}
+      rotation={[
+        degToRad(sensor.rotation[0]),
+        degToRad(sensor.rotation[1]),
+        degToRad(sensor.rotation[2]),
+      ]}
     >
       <mesh onClick={handleClick}>
         <boxGeometry args={CAMERA_BODY_SIZE} />

@@ -1,6 +1,6 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { ScanLine, Activity } from 'lucide-react';
 import { getLidarWebSocketUrl } from '@crane/core/config/network';
@@ -36,6 +36,38 @@ function PointCloud({ dataRef, frameRef }: PointCloudProps) {
 
   const lastFrameRef = useRef(-1);
   const fittedRef = useRef(false);
+  const capacityRef = useRef(0);
+  const positionAttributeRef = useRef<THREE.BufferAttribute | null>(null);
+  const colorAttributeRef = useRef<THREE.BufferAttribute | null>(null);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
+
+  const ensureCapacity = (nextPointCount: number) => {
+    if (nextPointCount <= capacityRef.current) {
+      return;
+    }
+
+    const nextCapacity = 2 ** Math.ceil(Math.log2(Math.max(1, nextPointCount)));
+    const positionAttribute = new THREE.BufferAttribute(
+      new Float32Array(nextCapacity * 3),
+      3,
+    );
+    const colorAttribute = new THREE.BufferAttribute(
+      new Float32Array(nextCapacity * 3),
+      3,
+    );
+
+    geometry.setAttribute('position', positionAttribute);
+    geometry.setAttribute('color', colorAttribute);
+    positionAttributeRef.current = positionAttribute;
+    colorAttributeRef.current = colorAttribute;
+    capacityRef.current = nextCapacity;
+  };
 
   useFrame(({ camera }) => {
     const frame = frameRef.current;
@@ -46,8 +78,14 @@ function PointCloud({ dataRef, frameRef }: PointCloudProps) {
     if (!data || data.length === 0) return;
 
     const pointCount = Math.floor(data.length / 6);
-    const positions = new Float32Array(pointCount * 3);
-    const colors = new Float32Array(pointCount * 3);
+    ensureCapacity(pointCount);
+
+    const positionAttribute = positionAttributeRef.current;
+    const colorAttribute = colorAttributeRef.current;
+    if (!positionAttribute || !colorAttribute) return;
+
+    const positions = positionAttribute.array as Float32Array;
+    const colors = colorAttribute.array as Float32Array;
 
     for (let i = 0; i < pointCount; i++) {
       const base = i * 6;
@@ -59,8 +97,9 @@ function PointCloud({ dataRef, frameRef }: PointCloudProps) {
       colors[i * 3 + 2]    = toLinear(data[base + 5]);
     }
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, pointCount);
+    positionAttribute.needsUpdate = true;
+    colorAttribute.needsUpdate = true;
     geometry.computeBoundingSphere();
 
     // 첫 프레임에만 카메라를 포인트 클라우드 전체가 보이도록 자동 fit

@@ -6,7 +6,7 @@ import {
   useGLTF,
 } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
@@ -39,6 +39,8 @@ import { useSceneTransform } from './use-scene-transform';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
+const INITIAL_PRELOAD_COUNT = 6;
+const PRELOAD_BATCH_SIZE = 4;
 
 /**
  * 모델 list rendering의 hot path 래퍼.
@@ -55,25 +57,38 @@ type SelectionAwareGltfModelProps = Omit<
   'isSelected' | 'selectedMeshTarget'
 >;
 
+function getSelectedMeshIdForModel(
+  modelId: string,
+  primarySelectedId: string | null,
+  selectedObjectType: string | null,
+) {
+  if (selectedObjectType !== 'mesh' || !primarySelectedId) {
+    return null;
+  }
+
+  const parsed = parseMeshId(primarySelectedId);
+  if (!parsed || parsed.modelId !== modelId) {
+    return null;
+  }
+
+  return primarySelectedId;
+}
+
 function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
   const isSelected = useIsObjectSelected(props.id);
   // 이 모델 안의 자식 mesh가 선택되어 있으면 그 mesh 객체를 selection box
   // target으로 넘긴다. selectedObjectType이 'mesh'이고 primarySelectedId가
   // `${this.id}::...` 형태일 때만 해당.
-  const primarySelectedId = useSceneObjectSelectionStore(
-    (s) => s.primarySelectedId,
+  const selectedMeshId = useSceneObjectSelectionStore((state) =>
+    getSelectedMeshIdForModel(
+      props.id,
+      state.primarySelectedId,
+      state.selectedObjectType,
+    ),
   );
-  const selectedObjectType = useSceneObjectSelectionStore(
-    (s) => s.selectedObjectType,
-  );
-  let selectedMeshTarget: Object3D | null = null;
-  if (selectedObjectType === 'mesh' && primarySelectedId) {
-    const parsed = parseMeshId(primarySelectedId);
-    if (parsed && parsed.modelId === props.id) {
-      selectedMeshTarget =
-        sharedModelObjectRegistry.get(primarySelectedId) ?? null;
-    }
-  }
+  const selectedMeshTarget = selectedMeshId
+    ? (sharedModelObjectRegistry.get(selectedMeshId) ?? null)
+    : null;
   return (
     <GltfModel
       {...props}
@@ -172,10 +187,60 @@ export function SceneObjectsEditCanvas({
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
   // 모델 바닥이 정확히 지면(y=0)에 닿도록 한다. 사용자 scale은 드롭 시점에 곱한다.
   useEffect(() => {
-    for (const item of catalogItems) {
+    const eagerItems = catalogItems.slice(0, INITIAL_PRELOAD_COUNT);
+    const deferredItems = catalogItems.slice(INITIAL_PRELOAD_COUNT);
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const preloadItem = (item: SceneModelCatalogItem) => {
       useGLTF.preload(item.path);
       void prefetchModelBottomOffset(item.path);
+    };
+
+    eagerItems.forEach(preloadItem);
+
+    const scheduleBatch = (startIndex: number) => {
+      const runBatch = () => {
+        if (cancelled) {
+          return;
+        }
+
+        const nextItems = deferredItems.slice(
+          startIndex,
+          startIndex + PRELOAD_BATCH_SIZE,
+        );
+        nextItems.forEach(preloadItem);
+
+        if (startIndex + PRELOAD_BATCH_SIZE < deferredItems.length) {
+          scheduleBatch(startIndex + PRELOAD_BATCH_SIZE);
+        }
+      };
+
+      if (typeof requestIdleCallback !== 'undefined') {
+        idleHandle = requestIdleCallback(runBatch, { timeout: 300 });
+        return;
+      }
+
+      timeoutHandle = setTimeout(runBatch, 32);
+    };
+
+    if (deferredItems.length > 0) {
+      scheduleBatch(0);
     }
+
+    return () => {
+      cancelled = true;
+      if (
+        idleHandle !== null &&
+        typeof cancelIdleCallback !== 'undefined'
+      ) {
+        cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+    };
   }, [catalogItems]);
 
   const { t } = useTranslation();
@@ -407,20 +472,45 @@ export function SceneObjectsEditCanvas({
     [cameraStateRef, orbitControlsRef],
   );
 
+  const sceneModelIds = useMemo(
+    () => sceneInfo?.models.map((model) => model.id) ?? [],
+    [sceneInfo?.models],
+  );
+
+  const getSceneModelObject = useCallback(
+    (id: string) => modelObjectRegistryRef.current.get(id) ?? null,
+    [],
+  );
+
   const fitAll = useCallback(() => {
-    fitToObjects(Array.from(modelObjectRegistryRef.current.values()));
-  }, [fitToObjects, modelObjectRegistryRef]);
+    const objects = sceneModelIds
+      .map((id) => getSceneModelObject(id))
+      .filter((object): object is Object3D => object !== null);
+    fitToObjects(objects);
+  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
 
   const fitSelected = useCallback(() => {
     const objects: Object3D[] = [];
-    const selectedIds =
-      useSceneObjectSelectionStore.getState().selectedIds;
+    const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
+    const seenModelIds = new Set<string>();
     for (const id of selectedIds) {
-      const obj = modelObjectRegistryRef.current.get(id);
-      if (obj) objects.push(obj);
+      const meshIdInfo = parseMeshId(id);
+      const modelId = meshIdInfo?.modelId ?? id;
+
+      if (!sceneModelIds.includes(modelId) || seenModelIds.has(modelId)) {
+        continue;
+      }
+
+      const obj = getSceneModelObject(modelId);
+      if (!obj) {
+        continue;
+      }
+
+      seenModelIds.add(modelId);
+      objects.push(obj);
     }
     fitToObjects(objects);
-  }, [fitToObjects, modelObjectRegistryRef]);
+  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
 
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;

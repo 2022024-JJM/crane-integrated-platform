@@ -49,6 +49,7 @@ export function OutdoorWorkModelSimulation({
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
+  const clearValueMapper = useValueMapperStore((s) => s.clear);
   const start = useValueGeneratorStore((s) => s.start);
   useValueGeneratorRunner();
   useEffect(() => {
@@ -61,15 +62,35 @@ export function OutdoorWorkModelSimulation({
   const objectMapRef = useRef<Map<string, Object3D>>(new Map());
   const boxCacheRef = useRef<Map<string, Box3>>(new Map());
 
+  const getObjectBounds = useCallback((id: string) => {
+    const object = objectMapRef.current.get(id);
+    if (object) {
+      const liveBounds = new Box3().setFromObject(object);
+      boxCacheRef.current.set(id, liveBounds);
+      return liveBounds;
+    }
+
+    return boxCacheRef.current.get(id) ?? null;
+  }, []);
+
   const handleObjectReady = useCallback(
     (id: string, object: Object3D | null) => {
       if (object) {
         objectMapRef.current.set(id, object);
         boxCacheRef.current.set(id, new Box3().setFromObject(object));
+        return;
       }
+
+      objectMapRef.current.delete(id);
     },
     [],
   );
+
+  const map = sceneInfo?.map;
+  const models = sceneInfo?.models ?? [];
+  const modelIds = useMemo(() => models.map((model) => model.id), [models]);
+  const texts = sceneInfo?.texts ?? [];
+  const sensors = sceneInfo?.sensors ?? [];
 
   const focusStack = useObjectFocusStore((s) => s.focusStack);
 
@@ -79,7 +100,7 @@ export function OutdoorWorkModelSimulation({
       // overlaps with a larger model (e.g. crane inside a bay).
       // If so, push the container first to enable two-level back navigation.
       if (focusStack.length === 0) {
-        const clickedBox = boxCacheRef.current.get(id);
+        const clickedBox = getObjectBounds(id);
 
         if (clickedBox) {
           const clickedSize = new Vector3();
@@ -89,8 +110,13 @@ export function OutdoorWorkModelSimulation({
           let bestContainer: string | null = null;
           let bestVolume = Infinity;
 
-          for (const [otherId, otherBox] of boxCacheRef.current) {
+          for (const otherId of modelIds) {
             if (otherId === id) {
+              continue;
+            }
+
+            const otherBox = getObjectBounds(otherId);
+            if (!otherBox) {
               continue;
             }
 
@@ -119,19 +145,15 @@ export function OutdoorWorkModelSimulation({
 
       pushFocus(id);
     },
-    [focusStack.length, pushFocus],
+    [focusStack.length, getObjectBounds, modelIds, pushFocus],
   );
 
-  const map = sceneInfo?.map;
-  const models = sceneInfo?.models ?? [];
-  const texts = sceneInfo?.texts ?? [];
-  const sensors = sceneInfo?.sensors ?? [];
   const { visibleModelIds, visibleGroupBox } = useMemo(() => {
     if (!focusedModelId) {
       return { visibleModelIds: null, visibleGroupBox: null };
     }
 
-    const focusedBox = boxCacheRef.current.get(focusedModelId);
+    const focusedBox = getObjectBounds(focusedModelId);
 
     if (!focusedBox) {
       return {
@@ -143,9 +165,14 @@ export function OutdoorWorkModelSimulation({
     const result = new Set<string>();
     const groupBox = focusedBox.clone();
 
-    for (const [id, otherBox] of boxCacheRef.current) {
+    for (const id of modelIds) {
       if (id === focusedModelId) {
         result.add(id);
+        continue;
+      }
+
+      const otherBox = getObjectBounds(id);
+      if (!otherBox) {
         continue;
       }
 
@@ -156,7 +183,7 @@ export function OutdoorWorkModelSimulation({
     }
 
     return { visibleModelIds: result, visibleGroupBox: groupBox };
-  }, [focusedModelId]);
+  }, [focusedModelId, getObjectBounds, modelIds]);
 
   const onMoveToRef = useRef(onMoveTo);
   onMoveToRef.current = onMoveTo;
@@ -239,6 +266,7 @@ export function OutdoorWorkModelSimulation({
 
     const load = async () => {
       setIsSceneDataLoading(true);
+      clearValueMapper();
 
       try {
         const data: SavedSceneInfo = await loadSceneInfoByRegionId(regionId);
@@ -257,6 +285,7 @@ export function OutdoorWorkModelSimulation({
           return;
         }
 
+        clearValueMapper();
         setSceneInfo(null);
         console.error('Failed to load monitoring scene.', error);
       } finally {
@@ -271,8 +300,9 @@ export function OutdoorWorkModelSimulation({
 
     return () => {
       isMounted = false;
+      clearValueMapper();
     };
-  }, [onCameraInfoChange, regionId, registerFromModel, start]);
+  }, [clearValueMapper, onCameraInfoChange, regionId, registerFromModel, start]);
 
   return (
     <>

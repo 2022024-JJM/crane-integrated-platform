@@ -21,6 +21,15 @@ export interface QueueEntry {
   aborted: boolean;
 }
 
+export function getRenderRequestKey(request: RenderRequest) {
+  return [
+    request.path,
+    request.preset ?? 'default',
+    request.width,
+    request.height,
+  ].join('|');
+}
+
 export function resolveListeners(entry: QueueEntry, url: string): void {
   for (const listener of entry.listeners) {
     if (!listener.aborted) {
@@ -38,7 +47,7 @@ export function rejectListeners(entry: QueueEntry, error: Error): void {
 }
 
 export function createEnqueueRender(
-  pendingByPath: Map<string, QueueEntry>,
+  pendingByKey: Map<string, QueueEntry>,
   queue: QueueEntry[],
   scheduleNext: () => void,
 ) {
@@ -46,7 +55,8 @@ export function createEnqueueRender(
     promise: Promise<string>;
     abort: AbortHandle;
   } {
-    const existing = pendingByPath.get(request.path);
+    const requestKey = getRenderRequestKey(request);
+    const existing = pendingByKey.get(requestKey);
     if (existing && !existing.aborted) {
       const listener: QueueListener = {
         resolve: () => {},
@@ -88,7 +98,7 @@ export function createEnqueueRender(
       aborted: false,
     };
     queue.push(entry);
-    pendingByPath.set(request.path, entry);
+    pendingByKey.set(requestKey, entry);
 
     scheduleNext();
 

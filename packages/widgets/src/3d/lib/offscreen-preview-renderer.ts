@@ -15,6 +15,7 @@ import { loadGltfScene, clearGltfCache } from './preview-gltf-cache';
 import { frameCameraToModel } from './preview-camera-framing';
 import {
   createEnqueueRender,
+  getRenderRequestKey,
   rejectListeners,
   resolveListeners,
   type QueueEntry,
@@ -34,7 +35,8 @@ let disposeTimer: ReturnType<typeof setTimeout> | null = null;
 let isProcessing = false;
 
 const blobUrls = new Set<string>();
-const pendingByPath = new Map<string, QueueEntry>();
+const blobUrlsByPath = new Map<string, string>();
+const pendingByKey = new Map<string, QueueEntry>();
 const queue: QueueEntry[] = [];
 
 // ── Renderer lifecycle ───────────────────────────────────────────────────────
@@ -91,13 +93,14 @@ function handleContextLost() {
     }
   }
   queue.length = 0;
-  pendingByPath.clear();
+  pendingByKey.clear();
   isProcessing = false;
 
   for (const url of blobUrls) {
     URL.revokeObjectURL(url);
   }
   blobUrls.clear();
+  blobUrlsByPath.clear();
 
   renderer = null;
   scene = null;
@@ -154,7 +157,8 @@ function disposeAll() {
     URL.revokeObjectURL(url);
   }
   blobUrls.clear();
-  pendingByPath.clear();
+  blobUrlsByPath.clear();
+  pendingByKey.clear();
   queue.length = 0;
   isProcessing = false;
 }
@@ -218,8 +222,14 @@ async function executeRender(entry: QueueEntry): Promise<void> {
     const blobUrl = await new Promise<string>((res, rej) => {
       renderer!.domElement.toBlob((blob) => {
         if (blob) {
+          const previousUrl = blobUrlsByPath.get(request.path);
+          if (previousUrl) {
+            URL.revokeObjectURL(previousUrl);
+            blobUrls.delete(previousUrl);
+          }
           const url = URL.createObjectURL(blob);
           blobUrls.add(url);
+          blobUrlsByPath.set(request.path, url);
           res(url);
         } else {
           rej(new Error('toBlob returned null'));
@@ -242,7 +252,7 @@ function processNext(): void {
   if (isProcessing || queue.length === 0) return;
 
   const entry = queue.shift()!;
-  pendingByPath.delete(entry.request.path);
+  pendingByKey.delete(getRenderRequestKey(entry.request));
 
   if (entry.aborted) {
     scheduleNext();
@@ -290,7 +300,7 @@ function scheduleNext(): void {
 }
 
 export const enqueueRender = createEnqueueRender(
-  pendingByPath,
+  pendingByKey,
   queue,
   scheduleNext,
 );

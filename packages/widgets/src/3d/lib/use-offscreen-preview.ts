@@ -23,7 +23,7 @@ export function useOffscreenPreview(
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const abortRef = useRef<AbortHandle | null>(null);
-  const hasRequestedRef = useRef(false);
+  const requestedKeyRef = useRef<string | null>(null);
 
   // Acquire/release shared renderer
   useEffect(() => {
@@ -40,7 +40,7 @@ export function useOffscreenPreview(
       abortRef.current.abort();
       abortRef.current = null;
     }
-    hasRequestedRef.current = false;
+    requestedKeyRef.current = null;
     setImageUrl(null);
     setStatus('idle');
   }, [path, preset]);
@@ -52,14 +52,22 @@ export function useOffscreenPreview(
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting || hasRequestedRef.current) return;
-
-        hasRequestedRef.current = true;
-        setStatus('loading');
-
         const rect = element.getBoundingClientRect();
         const width = Math.max(Math.round(rect.width) || 256, 64);
         const height = Math.max(Math.round(rect.height) || 192, 64);
+        const requestKey = [path, preset ?? 'default', width, height].join('|');
+
+        if (!entry.isIntersecting || requestedKeyRef.current === requestKey) {
+          return;
+        }
+
+        if (abortRef.current) {
+          abortRef.current.abort();
+          abortRef.current = null;
+        }
+
+        requestedKeyRef.current = requestKey;
+        setStatus('loading');
 
         const { promise, abort } = enqueueRender({
           path,
