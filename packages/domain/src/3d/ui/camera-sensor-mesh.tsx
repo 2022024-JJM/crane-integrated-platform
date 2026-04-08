@@ -14,6 +14,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import '../lib/bvh-setup';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { getSceneOccluders } from '../lib/scene-occluder-registry';
+import { degToRad } from '../lib/math-utils';
 import type { SavedCameraSensorInfo } from '../model/sensor-types';
 
 // sensor simulation2의 CameraMesh를 도메인으로 옮긴 버전.
@@ -404,7 +405,7 @@ export function CameraSensorMesh({
       ref={groupRef}
       name={sensor.id}
       position={sensor.position}
-      rotation={sensor.rotation}
+      rotation={[degToRad(sensor.rotation[0]), degToRad(sensor.rotation[1]), degToRad(sensor.rotation[2])]}
     >
       <mesh onClick={handleClick}>
         <boxGeometry args={CAMERA_BODY_SIZE} />
