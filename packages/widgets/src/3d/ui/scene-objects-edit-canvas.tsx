@@ -164,6 +164,7 @@ interface SceneObjectsEditCanvasProps {
   fitAllRef?: RefObject<(() => void) | null>;
   fitSelectedRef?: RefObject<(() => void) | null>;
   resetCameraRef?: RefObject<(() => void) | null>;
+  inspectorOpen?: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -189,6 +190,7 @@ export function SceneObjectsEditCanvas({
   fitAllRef,
   fitSelectedRef,
   resetCameraRef,
+  inspectorOpen = false,
 }: SceneObjectsEditCanvasProps) {
   // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
@@ -682,7 +684,10 @@ export function SceneObjectsEditCanvas({
           onChange={handleOrbitChange}
           mouseButtons={{ LEFT: undefined, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN }}
         />
-        <GizmoHelper alignment="top-right" margin={[80, 80]}>
+        <GizmoHelper
+          alignment="top-right"
+          margin={[inspectorOpen ? 400 : 80, 80]}
+        >
           <GizmoViewport
             axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"

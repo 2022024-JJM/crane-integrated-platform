@@ -315,6 +315,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         fitAllRef={fitAllRef}
         fitSelectedRef={fitSelectedRef}
         resetCameraRef={resetCameraRef}
+        inspectorOpen={!rightCollapsed}
       />
 
       {/* 좌측 floating panel — 카탈로그 + 배치 객체 목록 */}
