@@ -8,7 +8,7 @@ import {
 import { Canvas } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, Object3D, NoToneMapping, Vector3 } from 'three';
+import { Box3, MOUSE, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
   CameraSensorMesh,
   GltfModel,
@@ -36,6 +36,7 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
+import { useMarqueeSelection } from './use-marquee-selection';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
@@ -296,11 +297,13 @@ export function SceneObjectsEditCanvas({
     onAddCameraSensor,
   });
 
+
   const {
     orbitControlsRef,
     transformControlsRef,
     setSelectedObject,
     setIsTransformDragging,
+    isTransformDragging,
     transformTarget,
     syncSelectedObjectTransform,
     handleTransformMouseDown,
@@ -428,11 +431,37 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectSensor, setSelectedObject],
   );
 
+  const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
+
+  const { marqueeStyle, isMarqueeActive, marqueeContainerRef: setMarqueeEl, marqueeJustEndedRef } = useMarqueeSelection({
+    cameraRef,
+    rendererRef,
+    modelObjectRegistryRef,
+    isTransformDragging,
+    dragJustEndedRef,
+    isDraggingExternalItem: !!(
+      draggingModelCatalogItem ||
+      isDraggingText ||
+      draggingSensorType
+    ),
+    selectAll,
+    clearSelectedModel,
+  });
+
   const handleClearSelection = useCallback(() => {
+    if (marqueeJustEndedRef.current) return;
     setSelectedObject(null);
     setIsTransformDragging(false);
     clearSelectedModel();
-  }, [clearSelectedModel, setIsTransformDragging, setSelectedObject]);
+  }, [clearSelectedModel, marqueeJustEndedRef, setIsTransformDragging, setSelectedObject]);
+
+  const combinedRootRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (rootRef) rootRef.current = el;
+      setMarqueeEl(el);
+    },
+    [rootRef, setMarqueeEl],
+  );
 
   const handleOrbitChange = useCallback(() => {
     if (!cameraStateRef || !orbitControlsRef.current) return;
@@ -587,9 +616,33 @@ export function SceneObjectsEditCanvas({
     }
   }, [draggingModelCatalogItem, isDraggingText, setPendingDropPosition]);
 
+  // Space 키를 누르는 동안 OrbitControls LEFT를 PAN으로 전환
+  // (기본은 undefined = marquee 전용, Space 누르면 pan 가능)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls) return;
+      controls.mouseButtons.LEFT = MOUSE.PAN;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls) return;
+      (controls.mouseButtons as Record<string, unknown>).LEFT = undefined;
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [orbitControlsRef]);
+
   return (
     <div
-      ref={rootRef}
+      ref={combinedRootRef}
       tabIndex={0}
       className="border-border/70 relative isolate h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
       onPointerDownCapture={(event) => {
@@ -627,6 +680,7 @@ export function SceneObjectsEditCanvas({
           enableDamping={false}
           target={cameraTarget}
           onChange={handleOrbitChange}
+          mouseButtons={{ LEFT: undefined, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN }}
         />
         <GizmoHelper alignment="top-right" margin={[80, 80]}>
           <GizmoViewport
@@ -719,6 +773,14 @@ export function SceneObjectsEditCanvas({
           </mesh>
         ) : null}
       </Canvas>
+
+      {isMarqueeActive && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-10 border border-sky-400/80 bg-sky-400/10"
+          style={marqueeStyle}
+        />
+      )}
 
       {(draggingModelCatalogItem || isDraggingText) && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
