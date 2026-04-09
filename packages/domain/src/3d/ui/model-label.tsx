@@ -10,7 +10,7 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  * 멀리 있어 작아 보이는 라벨까지 그리면 100+ 모델 씬에서 hot path가 된다.
  * 알람이 활성화된 라벨은 멀리서도 보여야 하므로 culling 면제.
  */
-const LABEL_VISIBILITY_DISTANCE = 120;
+const LABEL_VISIBILITY_DISTANCE = 1000;
 
 type AlarmHighlightSeverity = 'critical' | 'high' | 'medium' | 'info';
 
@@ -86,31 +86,31 @@ export function ModelLabel({
   return (
     <group ref={groupRef} position={localAnchor}>
       <Html center zIndexRange={[5, 0]}>
-      <div
-        ref={divRef}
-        className={`cursor-pointer rounded px-1.5 py-0.5 font-mono text-xs font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
-        onPointerDown={(event) => {
-          event.stopPropagation();
-        }}
-        onPointerEnter={(event) => {
-          event.stopPropagation();
-          onHoverStart?.(id, event.clientX, event.clientY);
-        }}
-        onPointerMove={(event) => {
-          event.stopPropagation();
-          onHoverMove?.(id, event.clientX, event.clientY);
-        }}
-        onPointerLeave={(event) => {
-          event.stopPropagation();
-          onHoverEnd?.(id);
-        }}
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect?.(id);
-        }}
-      >
-        {equipName}
-      </div>
+        <div
+          ref={divRef}
+          className={`cursor-pointer rounded px-1.5 py-0.5 font-mono text-xs font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onPointerEnter={(event) => {
+            event.stopPropagation();
+            onHoverStart?.(id, event.clientX, event.clientY);
+          }}
+          onPointerMove={(event) => {
+            event.stopPropagation();
+            onHoverMove?.(id, event.clientX, event.clientY);
+          }}
+          onPointerLeave={(event) => {
+            event.stopPropagation();
+            onHoverEnd?.(id);
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect?.(id);
+          }}
+        >
+          {equipName}
+        </div>
       </Html>
     </group>
   );
