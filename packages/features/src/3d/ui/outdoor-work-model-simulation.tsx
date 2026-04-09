@@ -17,7 +17,6 @@ import {
   isLidarSensor,
   isCameraSensor,
   loadSceneInfoByRegionId,
-  type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -26,35 +25,77 @@ import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
 
+export function useSceneData(regionId: string) {
+  const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
+  const clearValueMapper = useValueMapperStore((s) => s.clear);
+  const start = useValueGeneratorStore((s) => s.start);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      clearValueMapper();
+
+      try {
+        const data: SavedSceneInfo = await loadSceneInfoByRegionId(regionId);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSceneInfo(data);
+        data.models?.forEach((modelInfo) => {
+          registerFromModel(modelInfo);
+        });
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        clearValueMapper();
+        setSceneInfo(null);
+        console.error('Failed to load monitoring scene.', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    start();
+    void load();
+
+    return () => {
+      isMounted = false;
+      clearValueMapper();
+    };
+  }, [clearValueMapper, regionId, registerFromModel, start]);
+
+  return { sceneInfo, isLoading };
+}
+
 interface OutdoorWorkModelSimulationProps {
+  sceneInfo: SavedSceneInfo | null;
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
-  onSceneDataLoadingChange?: (isLoading: boolean) => void;
-  onCameraInfoChange?: (camera: SavedCameraInfo | null) => void;
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
 }
 
 export function OutdoorWorkModelSimulation({
+  sceneInfo,
   regionId,
   alarmsByCraneId,
   alarmHighlightMesh = false,
-  onSceneDataLoadingChange,
-  onCameraInfoChange,
   onMoveTo,
   onResetCamera,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
-  const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
-  const [isSceneDataLoading, setIsSceneDataLoading] = useState(true);
-  const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
-  const clearValueMapper = useValueMapperStore((s) => s.clear);
-  const start = useValueGeneratorStore((s) => s.start);
   useValueGeneratorRunner();
-  useEffect(() => {
-    onSceneDataLoadingChange?.(isSceneDataLoading);
-  }, [isSceneDataLoading, onSceneDataLoadingChange]);
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const pushFocus = useObjectFocusStore((s) => s.pushFocus);
@@ -260,49 +301,6 @@ export function OutdoorWorkModelSimulation({
       clearFocus();
     };
   }, [regionId, clearFocus]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
-      setIsSceneDataLoading(true);
-      clearValueMapper();
-
-      try {
-        const data: SavedSceneInfo = await loadSceneInfoByRegionId(regionId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setSceneInfo(data);
-        onCameraInfoChange?.(data.camera ?? null);
-        data.models?.forEach((modelInfo) => {
-          registerFromModel(modelInfo);
-        });
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        clearValueMapper();
-        setSceneInfo(null);
-        console.error('Failed to load monitoring scene.', error);
-      } finally {
-        if (isMounted) {
-          setIsSceneDataLoading(false);
-        }
-      }
-    };
-
-    start();
-    void load();
-
-    return () => {
-      isMounted = false;
-      clearValueMapper();
-    };
-  }, [clearValueMapper, onCameraInfoChange, regionId, registerFromModel, start]);
 
   return (
     <>

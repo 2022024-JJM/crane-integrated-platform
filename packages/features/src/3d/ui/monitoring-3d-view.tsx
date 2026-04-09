@@ -1,8 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
-import { Suspense, useCallback, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@crane/domain/alarm';
-import type { SavedCameraInfo } from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
   ThreeSceneViewer,
@@ -10,7 +9,7 @@ import {
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { OutdoorWorkModelSimulation } from './outdoor-work-model-simulation';
+import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
@@ -33,10 +32,14 @@ export function Monitoring3dView({
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
-  const [savedCamera, setSavedCamera] = useState<SavedCameraInfo | null>(null);
+  const { sceneInfo, isLoading } = useSceneData(regionId);
   const focusStack = useObjectFocusStore((s) => s.focusStack);
   const popFocus = useObjectFocusStore((s) => s.popFocus);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [isLoading, onLoadingChange]);
 
   const handleControllerReady = useCallback(
     (controller: SceneController | null) => {
@@ -56,15 +59,8 @@ export function Monitoring3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
-  const handleCameraInfoChange = useCallback(
-    (camera: SavedCameraInfo | null) => {
-      setSavedCamera(camera);
-    },
-    [],
-  );
-
-  const cameraPosition = savedCamera?.position ?? DEFAULT_CAMERA_POSITION;
-  const cameraTarget = savedCamera?.target ?? DEFAULT_CAMERA_TARGET;
+  const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
+  const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
 
   const focusOverlay =
     focusStack.length > 0 ? (
@@ -78,6 +74,15 @@ export function Monitoring3dView({
         {t('monitoring:focus.back')}
       </Button>
     ) : null;
+
+  if (isLoading) {
+    return (
+      <div
+        ref={rootRef}
+        className="relative h-full min-h-0 w-full bg-(--canvas-background)"
+      />
+    );
+  }
 
   return (
     <div
@@ -112,11 +117,10 @@ export function Monitoring3dView({
         />
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation
+            sceneInfo={sceneInfo}
             regionId={regionId}
             alarmsByCraneId={alarmsByCraneId}
             alarmHighlightMesh={alarmHighlightMesh}
-            onSceneDataLoadingChange={onLoadingChange}
-            onCameraInfoChange={handleCameraInfoChange}
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
           />
