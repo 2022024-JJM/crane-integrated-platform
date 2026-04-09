@@ -1,0 +1,1 @@
+export { getRegionTitleKey } from '../region';

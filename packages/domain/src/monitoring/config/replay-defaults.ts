@@ -1,4 +1,4 @@
-import { getCraneIdsByRegion } from '../../crane';
+import { getCraneIdsByRegion } from '../../shared';
 
 const DEFAULT_REPLAY_INTERVAL = '5s';
 const MAX_REPLAY_RANGE_MS = 24 * 60 * 60 * 1000;

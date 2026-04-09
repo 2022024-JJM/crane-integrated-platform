@@ -33,6 +33,7 @@ let camera: OrthographicCamera | null = null;
 let refCount = 0;
 let disposeTimer: ReturnType<typeof setTimeout> | null = null;
 let isProcessing = false;
+let contextLostHandler: ((event: Event) => void) | null = null;
 
 const blobUrls = new Set<string>();
 const blobUrlsByPath = new Map<string, string>();
@@ -50,10 +51,11 @@ function createRenderer(): WebGLRenderer {
   });
   r.setPixelRatio(1);
 
-  r.domElement.addEventListener('webglcontextlost', (event) => {
+  contextLostHandler = (event) => {
     event.preventDefault();
     handleContextLost();
-  });
+  };
+  r.domElement.addEventListener('webglcontextlost', contextLostHandler);
 
   return r;
 }
@@ -134,6 +136,10 @@ export function releaseRenderer(): void {
 
 function disposeAll() {
   if (renderer) {
+    if (contextLostHandler) {
+      renderer.domElement.removeEventListener('webglcontextlost', contextLostHandler);
+      contextLostHandler = null;
+    }
     renderer.dispose();
     renderer = null;
   }

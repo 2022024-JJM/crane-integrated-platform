@@ -1,4 +1,4 @@
-import { getCraneById } from '../../crane';
+import { getCraneById } from '../../shared';
 import { getRuntimeAlarmMetadata } from '../model/runtime-dictionary-cache';
 import type { Alarm, AlarmSeverity } from '../model/types';
 

@@ -1,19 +1,35 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "tsconfig.json",
+    "eslint.config.js",
+    ".prettierrc",
+    "turbo.json"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "env": [
+        "VITE_API_BASE_URL",
+        "VITE_WS_BASE_URL",
+        "VITE_LIDAR_WS_URL",
+        "VITE_API_TIMEOUT_MS",
+        "VITE_WS_RECONNECT_INTERVAL_MS",
+        "VITE_WS_MAX_RECONNECT_ATTEMPTS"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputs": []
     }
   }
 }

@@ -15,15 +15,15 @@
   },
   "peerDependencies": {
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "three": "^0.183.2",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/drei": "^10.7.7"
   },
   "dependencies": {
     "@crane/core": "workspace:*",
     "@crane/ui": "workspace:*",
     "@crane/domain": "workspace:*",
-    "@react-three/fiber": "^9.5.0",
-    "@react-three/drei": "^10.7.7",
-    "three": "^0.183.2",
     "zustand": "^5.0.11",
     "lucide-react": "^0.575.0",
     "@tanstack/react-query": "^5.95.2"

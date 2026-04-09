@@ -1,4 +1,4 @@
-import { getRegionTitleKey } from '../../region';
+import { getRegionTitleKey } from '../../shared';
 import type { WeatherLocationTarget, WeatherSiteId } from './types';
 
 const SITE_WEATHER_TARGETS: Record<WeatherSiteId, WeatherLocationTarget> = {
