@@ -104,6 +104,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
     updateSelectedMeshName,
+    updateSelectedValueMap,
     selectedObjectType,
     removeSelectedModel,
     duplicateSelectedObject,
@@ -409,6 +410,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           onMeshOpacityChange={updateSelectedMeshOpacity}
           onMeshTransformChange={updateSelectedMeshTransform}
           onSensorChange={updateSensor}
+          onValueMapChange={updateSelectedValueMap}
           onBackToParent={() => {
             if (selectedMesh) {
               selectPlacedModel(selectedMesh.modelId);

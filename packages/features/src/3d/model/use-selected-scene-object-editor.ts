@@ -8,6 +8,8 @@ import {
   type SavedSceneInfo,
   type SavedSensorInfo,
   type SavedTextInfo,
+  type ValueMapItem,
+  type ValueMapType,
 } from '@crane/domain/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -92,6 +94,7 @@ interface UseSelectedSceneObjectEditorResult {
   updateSelectedMeshOpacity: (value: number) => void;
   updateSelectedMeshName: (name: string) => void;
   updateSelectedName: (name: string) => void;
+  updateSelectedValueMap: (type: ValueMapType, key: string) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
@@ -579,6 +582,23 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
+  const updateSelectedValueMap = (type: ValueMapType, key: string) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) return model;
+          const filtered = model.valueMapList.filter((item) => item.type !== type);
+          const next: ValueMapItem[] = key.trim()
+            ? [...filtered, { type, key: key.trim() }]
+            : filtered;
+          return { ...model, valueMapList: next };
+        }),
+      };
+    });
+  };
+
   const removeSelectedModel = () => {
     if (selectedIds.size === 0) {
       return;
@@ -619,6 +639,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
+    updateSelectedValueMap,
     removeSelectedModel,
   };
 }

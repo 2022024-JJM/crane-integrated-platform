@@ -10,7 +10,9 @@
     "rotation": "Rotation",
     "scale": "Scale",
     "textContent": "Content",
-    "textColor": "Color"
+    "textColor": "Color",
+    "tagMapping": "Tag Mapping",
+    "tagKeyPlaceholder": "Enter tag key"
   },
   "transform": {
     "title": "Transform mode",

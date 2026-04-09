@@ -10,7 +10,9 @@
     "rotation": "Rotatio",
     "scale": "Scala",
     "textContent": "Argumentum",
-    "textColor": "Color"
+    "textColor": "Color",
+    "tagMapping": "Designatio Tags",
+    "tagKeyPlaceholder": "Clavem tag inscribe"
   },
   "transform": {
     "title": "Modus transformationis",

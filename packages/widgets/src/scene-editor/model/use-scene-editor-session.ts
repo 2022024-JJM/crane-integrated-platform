@@ -2,6 +2,7 @@ import {
   type SavedCameraInfo,
   type SavedSensorInfo,
   type SceneModelCatalogItem,
+  type ValueMapType,
 } from '@crane/domain/3d';
 import {
   useSelectedSceneObjectEditor,
@@ -83,6 +84,7 @@ interface UseSceneEditorSessionResult {
   updateSelectedMeshName: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshName'];
+  updateSelectedValueMap: (type: ValueMapType, key: string) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (
@@ -183,6 +185,7 @@ export function useSceneEditorSession({
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
+    updateSelectedValueMap,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -280,6 +283,7 @@ export function useSceneEditorSession({
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
     updateSelectedMeshName,
+    updateSelectedValueMap,
     removeSelectedModel,
     updateMultiObjectPositions,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,

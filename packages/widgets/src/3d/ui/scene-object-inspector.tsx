@@ -4,6 +4,7 @@ import {
   Eye,
   Palette,
   SlidersHorizontal,
+  Tag,
   Type,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -25,6 +26,8 @@ import {
   type SavedModelInfo,
   type SavedSensorInfo,
   type SavedTextInfo,
+  type ValueMapItem,
+  type ValueMapType,
 } from '@crane/domain/3d';
 import {
   type AxisKey,
@@ -75,6 +78,8 @@ interface SceneObjectInspectorProps {
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
+  /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
+  onValueMapChange?: (type: ValueMapType, key: string) => void;
 }
 
 interface InspectorSectionProps {
@@ -123,6 +128,63 @@ function TransformGroup({ title, children }: TransformGroupProps) {
       </div>
       {children}
     </div>
+  );
+}
+
+const VALUE_MAP_GROUPS: { label: string; types: ValueMapType[] }[] = [
+  { label: 'Position', types: ['PX', 'PY', 'PZ'] },
+  { label: 'Rotation', types: ['RX', 'RY', 'RZ'] },
+];
+
+const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
+  PX: 'X', PY: 'Y', PZ: 'Z',
+  RX: 'X', RY: 'Y', RZ: 'Z',
+  SX: 'X', SY: 'Y', SZ: 'Z',
+};
+
+function TagMappingSection({
+  valueMapList,
+  onValueMapChange,
+  t,
+}: {
+  valueMapList: ValueMapItem[];
+  onValueMapChange: (type: ValueMapType, key: string) => void;
+  t: (key: string) => string;
+}) {
+  const getKey = (type: ValueMapType) =>
+    valueMapList.find((item) => item.type === type)?.key ?? '';
+
+  return (
+    <InspectorSection
+      title={t('monitoring:inspector.tagMapping')}
+      icon={<Tag className="size-4" />}
+      defaultOpen={false}
+    >
+      <div className="space-y-3">
+        {VALUE_MAP_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
+              {group.label}
+            </p>
+            <div className="space-y-1.5">
+              {group.types.map((type) => (
+                <label key={type} className="flex items-center gap-2 text-[11px]">
+                  <span className="text-muted-foreground w-4 shrink-0 text-center font-mono">
+                    {VALUE_MAP_AXIS_LABEL[type]}
+                  </span>
+                  <Input
+                    value={getKey(type)}
+                    placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
+                    className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
+                    onChange={(e) => onValueMapChange(type, e.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </InspectorSection>
   );
 }
 
@@ -202,6 +264,7 @@ function ModelInspectorContent({
   onNameChange,
   onOpacityChange,
   onTransformChange,
+  onValueMapChange,
   t,
 }: {
   selectedModel: SavedModelInfo;
@@ -216,6 +279,7 @@ function ModelInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
+  onValueMapChange?: (type: ValueMapType, key: string) => void;
   t: (key: string) => string;
 }) {
   return (
@@ -283,6 +347,14 @@ function ModelInspectorContent({
           </span>
         </div>
       </InspectorSection>
+
+      {onValueMapChange ? (
+        <TagMappingSection
+          valueMapList={selectedModel.valueMapList}
+          onValueMapChange={onValueMapChange}
+          t={t}
+        />
+      ) : null}
     </>
   );
 }
@@ -740,6 +812,7 @@ export function SceneObjectInspector({
   onMeshTransformChange,
   onSensorChange,
   onBackToParent,
+  onValueMapChange,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName ?? '';
@@ -798,6 +871,7 @@ export function SceneObjectInspector({
             onNameChange={onNameChange}
             onOpacityChange={onOpacityChange}
             onTransformChange={onTransformChange}
+            onValueMapChange={onValueMapChange}
             t={t}
           />
         ) : selectedText ? (

@@ -10,7 +10,9 @@
     "rotation": "회전",
     "scale": "크기",
     "textContent": "내용",
-    "textColor": "색상"
+    "textColor": "색상",
+    "tagMapping": "태그 매핑",
+    "tagKeyPlaceholder": "태그 키 입력"
   },
   "transform": {
     "title": "변형 모드",
