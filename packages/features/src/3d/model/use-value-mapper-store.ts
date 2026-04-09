@@ -12,6 +12,12 @@ import { create } from 'zustand';
 interface ValueMapObject {
   id: string;
   type: ValueMapType;
+  /**
+   * 단위 변환 계수. position = value * scale.
+   * 씬 좌표 = 현실 미터 기준. value 단위가 0.1m이면 0.1.
+   */
+  scale: number;
+  /** clear() 시 원위치 복귀용 */
   originTransform: {
     position: Vector3Tuple;
     rotation: Vector3Tuple;
@@ -24,6 +30,9 @@ interface ValueMapperState {
   register: (key: string, value: ValueMapObject) => void;
   registerFromModel: (model: SavedModelInfo) => void;
   applyValue: (key: string, value: number) => void;
+  /** map은 유지하면서 모든 Object3D를 originTransform으로 복귀. */
+  resetToOrigin: () => void;
+  /** map 초기화 + Object3D 원위치 복귀. */
   clear: () => void;
 }
 
@@ -33,19 +42,14 @@ function isSameValueMapObject(a: ValueMapObject, b: ValueMapObject) {
 
 export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
   map: {},
+
   register: (key, value) =>
     set((state) => {
       const prev = state.map[key] ?? [];
       if (prev.some((entry) => isSameValueMapObject(entry, value))) {
         return state;
       }
-
-      return {
-        map: {
-          ...state.map,
-          [key]: [...prev, value],
-        },
-      };
+      return { map: { ...state.map, [key]: [...prev, value] } };
     }),
 
   registerFromModel: (model) =>
@@ -53,13 +57,12 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
       const map = { ...s.map };
 
       for (const vm of model.valueMapList) {
-        if (!map[vm.key]) {
-          map[vm.key] = [];
-        }
+        if (!map[vm.key]) map[vm.key] = [];
 
         const valueMapObject: ValueMapObject = {
           id: model.id,
           type: vm.type,
+          scale: vm.scale ?? 1,
           originTransform: {
             position: [...model.position],
             rotation: [...model.rotation],
@@ -67,9 +70,7 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
           },
         };
 
-        if (
-          map[vm.key].some((entry) => isSameValueMapObject(entry, valueMapObject))
-        ) {
+        if (map[vm.key].some((entry) => isSameValueMapObject(entry, valueMapObject))) {
           continue;
         }
 
@@ -78,61 +79,57 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
 
       return { map };
     }),
+
   applyValue: (key, value) => {
     const list = get().map[key];
     if (!list) return;
 
-    list.forEach(({ id, type, originTransform }) => {
+    list.forEach(({ id, type, scale }) => {
       const object = modelObjectRegistry.get(id);
       if (!object) return;
 
+      // 씬 좌표 = 현실 미터 기준. position = value * scale (단위 변환만).
+      const v = numRound(value * scale);
+
       switch (type) {
-        case 'PX':
-          object.position.x = numRound(originTransform.position[0] + value);
-          break;
-
-        case 'PY':
-          object.position.y = numRound(originTransform.position[1] + value);
-          break;
-
-        case 'PZ':
-          object.position.z = numRound(originTransform.position[2] + value);
-          break;
-
-        case 'RX':
-          object.rotation.x = degToRad(
-            radToDeg(originTransform.rotation[0]) + value,
-          );
-          break;
-
-        case 'RY':
-          object.rotation.y = degToRad(
-            radToDeg(originTransform.rotation[1]) + value,
-          );
-          break;
-
-        case 'RZ':
-          object.rotation.z = degToRad(
-            radToDeg(originTransform.rotation[2]) + value,
-          );
-          break;
-
-        case 'SX':
-          object.scale.x = numRound(originTransform.scale[0] + value);
-          break;
-
-        case 'SY':
-          object.scale.y = numRound(originTransform.scale[1] + value);
-          break;
-
-        case 'SZ':
-          object.scale.z = numRound(originTransform.scale[2] + value);
-          break;
+        case 'PX': object.position.x = v; break;
+        case 'PY': object.position.y = v; break;
+        case 'PZ': object.position.z = v; break;
+        case 'RX': object.rotation.x = degToRad(v); break;
+        case 'RY': object.rotation.y = degToRad(v); break;
+        case 'RZ': object.rotation.z = degToRad(v); break;
+        case 'SX': object.scale.x = v; break;
+        case 'SY': object.scale.y = v; break;
+        case 'SZ': object.scale.z = v; break;
       }
     });
   },
-  clear: () =>
-    set({
-      map: {},
-    }),
+
+  resetToOrigin: () => {
+    const { map } = get();
+    for (const list of Object.values(map)) {
+      for (const { id, originTransform } of list) {
+        const object = modelObjectRegistry.get(id);
+        if (!object) continue;
+        object.position.set(...originTransform.position);
+        object.rotation.set(...originTransform.rotation);
+        object.scale.set(...originTransform.scale);
+      }
+    }
+  },
+
+  clear: () => {
+    // 원위치 복귀 후 map 초기화
+    const { map } = get();
+    for (const list of Object.values(map)) {
+      for (const { id, originTransform } of list) {
+        const object = modelObjectRegistry.get(id);
+        if (!object) continue;
+        object.position.set(...originTransform.position);
+        object.rotation.set(...originTransform.rotation);
+        object.scale.set(...originTransform.scale);
+      }
+    }
+    set({ map: {} });
+  },
 }));

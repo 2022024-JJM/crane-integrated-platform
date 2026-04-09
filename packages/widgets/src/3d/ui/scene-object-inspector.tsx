@@ -79,7 +79,7 @@ interface SceneObjectInspectorProps {
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
-  onValueMapChange?: (type: ValueMapType, key: string) => void;
+  onValueMapChange?: (type: ValueMapType, key: string, scale?: number) => void;
 }
 
 interface InspectorSectionProps {
@@ -144,15 +144,23 @@ const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
 
 function TagMappingSection({
   valueMapList,
+  craneId,
   onValueMapChange,
   t,
 }: {
   valueMapList: ValueMapItem[];
-  onValueMapChange: (type: ValueMapType, key: string) => void;
+  craneId?: string;
+  onValueMapChange: (type: ValueMapType, key: string, scale?: number) => void;
   t: (key: string) => string;
 }) {
-  const getKey = (type: ValueMapType) =>
-    valueMapList.find((item) => item.type === type)?.key ?? '';
+  const prefix = craneId ? `${craneId}:` : '';
+
+  const getTagCode = (type: ValueMapType) => {
+    const key = valueMapList.find((item) => item.type === type)?.key ?? '';
+    return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+  };
+  const getScale = (type: ValueMapType) =>
+    valueMapList.find((item) => item.type === type)?.scale ?? 1;
 
   return (
     <InspectorSection
@@ -160,6 +168,11 @@ function TagMappingSection({
       icon={<Tag className="size-4" />}
       defaultOpen={false}
     >
+      {craneId ? (
+        <p className="text-muted-foreground mb-2 text-[10px]">
+          크레인 ID: <span className="text-foreground font-mono">{craneId}</span>
+        </p>
+      ) : null}
       <div className="space-y-3">
         {VALUE_MAP_GROUPS.map((group) => (
           <div key={group.label}>
@@ -167,19 +180,49 @@ function TagMappingSection({
               {group.label}
             </p>
             <div className="space-y-1.5">
-              {group.types.map((type) => (
-                <label key={type} className="flex items-center gap-2 text-[11px]">
-                  <span className="text-muted-foreground w-4 shrink-0 text-center font-mono">
-                    {VALUE_MAP_AXIS_LABEL[type]}
-                  </span>
-                  <Input
-                    value={getKey(type)}
-                    placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
-                    className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
-                    onChange={(e) => onValueMapChange(type, e.target.value)}
-                  />
-                </label>
-              ))}
+              {group.types.map((type) => {
+                const tagCode = getTagCode(type);
+                return (
+                  <div key={type} className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="text-muted-foreground w-4 shrink-0 text-center font-mono">
+                        {VALUE_MAP_AXIS_LABEL[type]}
+                      </span>
+                      <Input
+                        value={tagCode}
+                        placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
+                        className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
+                        onChange={(e) => {
+                          const fullKey = e.target.value.trim()
+                            ? `${prefix}${e.target.value.trim()}`
+                            : '';
+                          onValueMapChange(type, fullKey, getScale(type));
+                        }}
+                      />
+                    </div>
+                    {tagCode ? (
+                      <div className="ml-6 flex items-center gap-2 text-[11px]">
+                        <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+                          scale
+                        </span>
+                        <Input
+                          type="number"
+                          step="any"
+                          value={getScale(type)}
+                          placeholder="1"
+                          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
+                          onChange={(e) => {
+                            const s = parseFloat(e.target.value);
+                            if (Number.isFinite(s)) {
+                              onValueMapChange(type, `${prefix}${tagCode}`, s);
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -279,7 +322,7 @@ function ModelInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
-  onValueMapChange?: (type: ValueMapType, key: string) => void;
+  onValueMapChange?: (type: ValueMapType, key: string, scale?: number) => void;
   t: (key: string) => string;
 }) {
   return (
@@ -351,6 +394,7 @@ function ModelInspectorContent({
       {onValueMapChange ? (
         <TagMappingSection
           valueMapList={selectedModel.valueMapList}
+          craneId={selectedModel.craneId}
           onValueMapChange={onValueMapChange}
           t={t}
         />

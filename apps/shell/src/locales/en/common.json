@@ -46,6 +46,7 @@
     "threeViewerEdit": "3D Viewer Edit",
     "craneStatus": "Crane Status",
     "workHistory": "Work History",
+    "replayMonitoring": "3D Replay",
     "goliathCrane": "Goliath Crane",
     "goliathCraneMonitoring": "GC-04 Monitoring"
   },
@@ -140,6 +141,21 @@
       "title": "Goliath Crane",
       "subtitle": "GC-04"
     }
+  },
+  "from": "From",
+  "to": "To",
+  "replay": {
+    "title": "3D Replay",
+    "play": "Play",
+    "pause": "Pause",
+    "seekStart": "Go to start",
+    "seekEnd": "Go to end",
+    "speed": "Speed",
+    "loading": "Loading...",
+    "searchForm": "Select Range",
+    "fetch": "Load",
+    "frameInfo": "Frame {{current}} / {{total}}",
+    "noData": "No data"
   },
   "viewer3d": {
     "loading": "Loading 3D view",

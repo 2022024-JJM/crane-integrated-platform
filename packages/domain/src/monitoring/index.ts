@@ -22,3 +22,4 @@ export {
   getLatestReplayFrameWithValues,
   mapReplayResponseToRows,
 } from './lib/replay-mapper';
+export { parseIntervalToMs } from './lib/parse-interval';

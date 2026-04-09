@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
+import { ReplayMonitoringView } from './replay-monitoring-view';
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -68,6 +69,9 @@ export function OutdoorWorkPage() {
               : t('common:nav.workHistory')
           }
         />
+      )}
+      {subRoute === '3d-replay' && (
+        <ReplayMonitoringView regionId={regionId} />
       )}
     </div>
   );

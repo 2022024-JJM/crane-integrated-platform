@@ -4,6 +4,7 @@ import {
   List,
   History,
   MapPin,
+  Play,
   SquarePen,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
@@ -56,6 +57,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         label: i18n.t('common:nav.workHistory'),
         path: `${base}/work-history`,
         icon: History,
+      },
+      {
+        label: i18n.t('common:nav.replayMonitoring'),
+        path: `${base}/3d-replay`,
+        icon: Play,
       },
     ],
   };

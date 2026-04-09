@@ -24,13 +24,20 @@ import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
+import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
+import { useReplayPlayerStore } from '../model/use-replay-player-store';
 
-export function useSceneData(regionId: string) {
+export function useSceneData(
+  regionId: string,
+  mode: 'simulation' | 'replay' = 'simulation',
+) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
   const clearValueMapper = useValueMapperStore((s) => s.clear);
-  const start = useValueGeneratorStore((s) => s.start);
+  const resetToOrigin = useValueMapperStore((s) => s.resetToOrigin);
+  const startSimulation = useValueGeneratorStore((s) => s.start);
+  const resetReplay = useReplayPlayerStore((s) => s.reset);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,14 +72,20 @@ export function useSceneData(regionId: string) {
       }
     };
 
-    start();
+    if (mode === 'simulation') {
+      startSimulation();
+    } else {
+      resetReplay();
+    }
     void load();
 
     return () => {
       isMounted = false;
+      // unmount 전 Object3D가 아직 registry에 있을 때 원위치 복귀
+      resetToOrigin();
       clearValueMapper();
     };
-  }, [clearValueMapper, regionId, registerFromModel, start]);
+  }, [clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, startSimulation]);
 
   return { sceneInfo, isLoading };
 }
@@ -82,6 +95,7 @@ interface OutdoorWorkModelSimulationProps {
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
+  mode?: 'simulation' | 'replay';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
 }
@@ -91,11 +105,14 @@ export function OutdoorWorkModelSimulation({
   regionId,
   alarmsByCraneId,
   alarmHighlightMesh = false,
+  mode = 'simulation',
   onMoveTo,
   onResetCamera,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
+  // 두 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
   useValueGeneratorRunner();
+  useReplayPlayerRunner();
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const pushFocus = useObjectFocusStore((s) => s.pushFocus);

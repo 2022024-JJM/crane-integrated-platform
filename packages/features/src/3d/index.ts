@@ -1,4 +1,7 @@
 export { Monitoring3dView } from './ui/monitoring-3d-view';
+export { Replay3dView } from './ui/replay-3d-view';
+export { ReplaySearchForm } from './ui/replay-search-form';
+export { useReplayPlayerStore } from './model/use-replay-player-store';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';

@@ -75,6 +75,13 @@ export interface SavedMapInfo {
 export interface ValueMapItem {
   type: ValueMapType;
   key: string;
+  /**
+   * 단위 변환 계수. position = value * scale.
+   * 씬 좌표 = 현실 미터 기준이므로 value 단위가 m이면 1.0,
+   * 0.1m(데시미터) 단위이면 0.1로 설정.
+   * 생략 시 1.0.
+   */
+  scale?: number;
 }
 
 export interface SceneModelCatalogItem {

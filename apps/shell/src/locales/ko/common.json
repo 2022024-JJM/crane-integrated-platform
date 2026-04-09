@@ -46,6 +46,7 @@
     "threeViewerEdit": "3D 화면 편집",
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력",
+    "replayMonitoring": "3D 리플레이",
     "goliathCrane": "골리앗 크레인",
     "goliathCraneMonitoring": "GC-04 모니터링"
   },
@@ -136,6 +137,21 @@
       "title": "골리앗 크레인",
       "subtitle": "GC-04 호기"
     }
+  },
+  "from": "시작",
+  "to": "종료",
+  "replay": {
+    "title": "3D 리플레이",
+    "play": "재생",
+    "pause": "일시정지",
+    "seekStart": "처음으로",
+    "seekEnd": "끝으로",
+    "speed": "속도",
+    "loading": "불러오는 중...",
+    "searchForm": "구간 선택",
+    "fetch": "불러오기",
+    "frameInfo": "프레임 {{current}} / {{total}}",
+    "noData": "데이터 없음"
   },
   "viewer3d": {
     "loading": "3D 화면 불러오는 중",
