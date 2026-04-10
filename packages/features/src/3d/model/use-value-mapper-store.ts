@@ -65,7 +65,7 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
           scale: vm.scale ?? 1,
           originTransform: {
             position: [...model.position],
-            rotation: [...model.rotation],
+            rotation: model.rotation.map(degToRad) as Vector3Tuple,
             scale: [...model.scale],
           },
         };
