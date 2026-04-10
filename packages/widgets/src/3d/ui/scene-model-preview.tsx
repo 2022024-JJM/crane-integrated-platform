@@ -1,4 +1,4 @@
-import { AlertCircle, Box, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Component, type ErrorInfo, memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SceneModelPreviewPreset } from '@crane/domain/3d';
@@ -194,10 +194,6 @@ function SceneModelPreviewInner({
         ) : null}
       </div>
       <div className="absolute right-3 bottom-3 left-3 h-3 rounded-full bg-black/30 blur-md" />
-      <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/55 px-2 py-1 text-[9px] font-semibold tracking-[0.18em] text-white/85 uppercase">
-        <Box className="size-2.5" />
-        GLB
-      </div>
     </div>
   );
 }

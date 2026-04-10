@@ -1,5 +1,6 @@
 import {
   sceneModelCatalog,
+  type SavedMapInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
@@ -8,22 +9,32 @@ import {
   SceneTransformModeToggle,
 } from '@crane/features/3d';
 import {
+  Camera as CameraIcon,
   Layers3,
   PanelLeftClose,
   PanelRightClose,
+  Radar,
   SlidersHorizontal,
   Tag,
   Tags,
+  Type,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import {
-  SceneModelPalette,
+  PaletteAssetGrid,
+  PaletteHeader,
+  PaletteMapSection,
+  PalettePlacedObjects,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
 } from '@crane/widgets/3d';
+import {
+  SCENE_SENSOR_DRAG_TYPE,
+  SCENE_TEXT_DRAG_TYPE,
+} from '../../3d/ui/use-scene-drop';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
@@ -255,223 +266,220 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   }, [duplicateSelectedObject, redo, removeSelectedModel, selectAll, undo]);
 
   return (
-    <div className="bg-muted/20 relative h-full min-h-0 w-full overflow-hidden">
-      {/* 캔버스가 부모 컨테이너 100%를 차지. 패널은 위에 떠 있다. */}
-      <SceneObjectsEditCanvas
-        rootRef={canvasRootRef}
-        cameraStateRef={cameraStateRef}
-        initialCamera={initialCamera}
-        sceneInfo={sceneInfo}
-        catalogItems={sceneModelCatalog}
-        transformMode={transformMode}
-        draggingModelCatalogItem={draggingCatalogItem}
-        onTransformVectorChange={(field, value) => {
-          if (selectedObjectType === 'text') {
-            updateSelectedTextTransformVector(field, value, {
+    <div className="bg-muted/20 flex h-full min-h-0 w-full flex-col overflow-hidden">
+      {/* 상단 영역: 캔버스 + 좌우 floating 패널 */}
+      <div className="relative min-h-0 flex-1">
+        {/* 캔버스가 부모 컨테이너 100%를 차지. 패널은 위에 떠 있다. */}
+        <SceneObjectsEditCanvas
+          rootRef={canvasRootRef}
+          cameraStateRef={cameraStateRef}
+          initialCamera={initialCamera}
+          sceneInfo={sceneInfo}
+          catalogItems={sceneModelCatalog}
+          transformMode={transformMode}
+          draggingModelCatalogItem={draggingCatalogItem}
+          onTransformVectorChange={(field, value) => {
+            if (selectedObjectType === 'text') {
+              updateSelectedTextTransformVector(field, value, {
+                recordHistory: false,
+              });
+            } else if (selectedObjectType === 'mesh') {
+              updateSelectedMeshTransformVector(field, value, {
+                recordHistory: false,
+              });
+            } else if (selectedObjectType === 'sensor' && selectedSensor && (field === 'position' || field === 'rotation')) {
+              updateSensor(selectedSensor.id, { [field]: value });
+            } else {
+              updateSelectedTransformVector(field, value, {
+                recordHistory: false,
+              });
+            }
+          }}
+          onTransformCommit={(position, rotation, scale) => {
+            // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+            // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+            commitSelectedTransform(position, rotation, scale, {
               recordHistory: false,
             });
-          } else if (selectedObjectType === 'mesh') {
-            updateSelectedMeshTransformVector(field, value, {
-              recordHistory: false,
-            });
-          } else if (selectedObjectType === 'sensor' && selectedSensor && (field === 'position' || field === 'rotation')) {
-            updateSensor(selectedSensor.id, { [field]: value });
-          } else {
-            updateSelectedTransformVector(field, value, {
-              recordHistory: false,
-            });
-          }
-        }}
-        onTransformCommit={(position, rotation, scale) => {
-          // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
-          // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-          commitSelectedTransform(position, rotation, scale, {
-            recordHistory: false,
-          });
-        }}
-        onMultiTransformCommit={(updates) => {
-          updateMultiObjectPositions(updates, { recordHistory: false });
-        }}
-        onAddModel={(catalogItem, position) => {
-          addModel(catalogItem, position);
-          setDraggingCatalogItem(null);
-        }}
-        isDraggingText={isDraggingText}
-        onAddText={(position) => {
-          addText(position);
-          setIsDraggingText(false);
-        }}
-        draggingSensorType={draggingSensorType}
-        onAddLidarSensor={(position) => {
-          addLidarSensor(position);
-          setDraggingSensorType('');
-        }}
-        onAddCameraSensor={(position) => {
-          addCameraSensor(position);
-          setDraggingSensorType('');
-        }}
-        showLabels={showLabels}
-        onTransformInteractionStart={startTransformInteraction}
-        onTransformInteractionEnd={endTransformInteraction}
-        fitAllRef={fitAllRef}
-        fitSelectedRef={fitSelectedRef}
-        resetCameraRef={resetCameraRef}
-        inspectorOpen={!rightCollapsed}
-      />
-
-      {/* 좌측 floating panel — 카탈로그 + 배치 객체 목록 */}
-      <FloatingPanel
-        side="left"
-        collapsed={leftCollapsed}
-        expandedWidth="w-[24rem]"
-        onExpand={() => setLeftCollapsed(false)}
-        onCollapse={() => setLeftCollapsed(true)}
-        railIcon={<Layers3 className="size-4" />}
-        railLabel={t('monitoring:editor.placedObjects')}
-      >
-        <SceneModelPalette
-          items={sceneModelCatalog}
-          map={sceneInfo?.map ?? null}
-          placedModels={sceneInfo?.models ?? []}
-          draggingItemId={draggingCatalogItem?.id ?? null}
-          selectedIds={selectedIds}
-          onDragStart={setDraggingCatalogItem}
-          onDragEnd={() => {
+          }}
+          onMultiTransformCommit={(updates) => {
+            updateMultiObjectPositions(updates, { recordHistory: false });
+          }}
+          onAddModel={(catalogItem, position) => {
+            addModel(catalogItem, position);
             setDraggingCatalogItem(null);
           }}
-          onSelectPlacedModel={selectPlacedModel}
-          onDeletePlacedModel={deletePlacedModel}
-          placedTexts={sceneInfo?.texts ?? []}
-          onSelectPlacedText={selectPlacedText}
-          onDeletePlacedText={deletePlacedText}
-          placedSensors={sceneInfo?.sensors ?? []}
-          onSelectPlacedSensor={selectPlacedSensor}
-          onDeletePlacedSensor={deletePlacedSensor}
-          onTogglePlacedModel={toggleModel}
-          onTogglePlacedText={toggleText}
-          onTextDragStart={() => setIsDraggingText(true)}
-          onTextDragEnd={() => setIsDraggingText(false)}
-          onSensorDragStart={(kind) => setDraggingSensorType(kind)}
-          onSensorDragEnd={() => setDraggingSensorType('')}
-          onDeleteMap={deleteMap}
-          onSave={() => {
-            void saveCurrentScene();
+          isDraggingText={isDraggingText}
+          onAddText={(position) => {
+            addText(position);
+            setIsDraggingText(false);
           }}
-          onExport={() => {
-            downloadSceneInfo(regionId, sceneInfo);
+          draggingSensorType={draggingSensorType}
+          onAddLidarSensor={(position) => {
+            addLidarSensor(position);
+            setDraggingSensorType('');
           }}
-          saveDisabled={!sceneInfo}
-          exportDisabled={!sceneInfo}
-          isDirty={isDirty}
-          isSaving={isSaving}
+          onAddCameraSensor={(position) => {
+            addCameraSensor(position);
+            setDraggingSensorType('');
+          }}
+          showLabels={showLabels}
+          onTransformInteractionStart={startTransformInteraction}
+          onTransformInteractionEnd={endTransformInteraction}
+          fitAllRef={fitAllRef}
+          fitSelectedRef={fitSelectedRef}
+          resetCameraRef={resetCameraRef}
+          inspectorOpen={!rightCollapsed}
         />
-      </FloatingPanel>
 
-      {/* 우측 floating panel — Inspector. 선택 시 자동 expand. */}
-      <FloatingPanel
-        side="right"
-        collapsed={rightCollapsed}
-        expandedWidth="w-[20rem]"
-        onExpand={() => setRightCollapsed(false)}
-        onCollapse={() => setRightCollapsed(true)}
-        railIcon={<SlidersHorizontal className="size-4" />}
-        railLabel={t('monitoring:inspector.title')}
-      >
-        <SceneObjectInspector
-          selectedModel={selectedModel}
-          selectedText={selectedText}
-          selectedSensor={selectedSensor}
-          selectedMesh={selectedMesh}
-          multiSelectCount={selectedIds.size}
-          onNameChange={updateSelectedName}
-          onOpacityChange={updateSelectedOpacity}
-          onTransformChange={(field, axis, value) => {
-            // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
-            // 텍스트/모델/메시는 기존 핸들러로.
-            if (selectedSensor && (field === 'position' || field === 'rotation')) {
-              const current =
-                field === 'position' ? selectedSensor.position : selectedSensor.rotation;
-              const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
-              const next: [number, number, number] = [
-                current[0],
-                current[1],
-                current[2],
-              ];
-              next[idx] = value;
-              updateSensor(selectedSensor.id, { [field]: next });
-              return;
-            }
-            updateSelectedTransform(field, axis, value);
-          }}
-          onTextContentChange={updateSelectedTextContent}
-          onTextColorChange={updateSelectedTextColor}
-          onTextTransformChange={updateSelectedTextTransform}
-          onMeshNameChange={updateSelectedMeshName}
-          onMeshOpacityChange={updateSelectedMeshOpacity}
-          onMeshTransformChange={updateSelectedMeshTransform}
-          onSensorChange={updateSensor}
-          onValueMapChange={updateSelectedValueMap}
-          onBackToParent={() => {
-            if (selectedMesh) {
-              selectPlacedModel(selectedMesh.modelId);
-            }
-          }}
-        />
-      </FloatingPanel>
-
-      {/* 중앙 상단 floating toolbar (기존) */}
-      <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
-        <div className="pointer-events-auto">
-          <SceneTransformModeToggle
-            mode={transformMode}
-            onModeChange={setTransformMode}
-            leadingContent={
-              <SceneHistoryControls
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={undo}
-                onRedo={redo}
-              />
-            }
-            trailingContent={
-              <div className="bg-background/95 border-border/80 flex items-center gap-2 rounded-lg border px-3 py-2 shadow-sm backdrop-blur-sm">
-                <button
-                  type="button"
-                  onClick={() => setShowLabels((prev) => !prev)}
-                  className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                  title={
-                    showLabels
-                      ? t('monitoring:editor.hideLabels')
-                      : t('monitoring:editor.showLabels')
-                  }
-                >
-                  {showLabels ? (
-                    <Tag className="size-4" />
-                  ) : (
-                    <Tags className="size-4 opacity-50" />
-                  )}
-                </button>
-                <span className="bg-border h-4 w-px" />
-                <span className="max-w-36 truncate text-xs font-medium">
-                  {selectedIds.size > 1
-                    ? t('monitoring:editor.multipleSelected', {
-                        count: selectedIds.size,
-                      })
-                    : selectedModelLabel || t('monitoring:editor.noSelection')}
-                </span>
-              </div>
-            }
+        {/* 좌측 floating panel — Hierarchy: 배치된 객체 목록 */}
+        <FloatingPanel
+          side="left"
+          collapsed={leftCollapsed}
+          expandedWidth="w-[20rem]"
+          onExpand={() => setLeftCollapsed(false)}
+          onCollapse={() => setLeftCollapsed(true)}
+          railIcon={<Layers3 className="size-4" />}
+          railLabel={t('monitoring:editor.placedObjects')}
+        >
+          <HierarchyPanel
+            sceneInfo={sceneInfo}
+            selectedIds={selectedIds}
+            isDirty={isDirty}
+            isSaving={isSaving}
+            onSelectPlacedModel={selectPlacedModel}
+            onDeletePlacedModel={deletePlacedModel}
+            onSelectPlacedText={selectPlacedText}
+            onDeletePlacedText={deletePlacedText}
+            onSelectPlacedSensor={selectPlacedSensor}
+            onDeletePlacedSensor={deletePlacedSensor}
+            onTogglePlacedModel={toggleModel}
+            onTogglePlacedText={toggleText}
+            onSave={() => void saveCurrentScene()}
+            onExport={() => downloadSceneInfo(regionId, sceneInfo)}
           />
+        </FloatingPanel>
+
+        {/* 우측 floating panel — Inspector. 선택 시 자동 expand. */}
+        <FloatingPanel
+          side="right"
+          collapsed={rightCollapsed}
+          expandedWidth="w-[20rem]"
+          onExpand={() => setRightCollapsed(false)}
+          onCollapse={() => setRightCollapsed(true)}
+          railIcon={<SlidersHorizontal className="size-4" />}
+          railLabel={t('monitoring:inspector.title')}
+        >
+          <SceneObjectInspector
+            selectedModel={selectedModel}
+            selectedText={selectedText}
+            selectedSensor={selectedSensor}
+            selectedMesh={selectedMesh}
+            multiSelectCount={selectedIds.size}
+            onNameChange={updateSelectedName}
+            onOpacityChange={updateSelectedOpacity}
+            onTransformChange={(field, axis, value) => {
+              // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
+              // 텍스트/모델/메시는 기존 핸들러로.
+              if (selectedSensor && (field === 'position' || field === 'rotation')) {
+                const current =
+                  field === 'position' ? selectedSensor.position : selectedSensor.rotation;
+                const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+                const next: [number, number, number] = [
+                  current[0],
+                  current[1],
+                  current[2],
+                ];
+                next[idx] = value;
+                updateSensor(selectedSensor.id, { [field]: next });
+                return;
+              }
+              updateSelectedTransform(field, axis, value);
+            }}
+            onTextContentChange={updateSelectedTextContent}
+            onTextColorChange={updateSelectedTextColor}
+            onTextTransformChange={updateSelectedTextTransform}
+            onMeshNameChange={updateSelectedMeshName}
+            onMeshOpacityChange={updateSelectedMeshOpacity}
+            onMeshTransformChange={updateSelectedMeshTransform}
+            onSensorChange={updateSensor}
+            onValueMapChange={updateSelectedValueMap}
+            onBackToParent={() => {
+              if (selectedMesh) {
+                selectPlacedModel(selectedMesh.modelId);
+              }
+            }}
+          />
+        </FloatingPanel>
+
+        {/* 중앙 상단 floating toolbar (기존) */}
+        <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
+          <div className="pointer-events-auto">
+            <SceneTransformModeToggle
+              mode={transformMode}
+              onModeChange={setTransformMode}
+              leadingContent={
+                <SceneHistoryControls
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  onUndo={undo}
+                  onRedo={redo}
+                />
+              }
+              trailingContent={
+                <div className="bg-background/95 border-border/80 flex items-center gap-2 rounded-lg border px-3 py-2 shadow-sm backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowLabels((prev) => !prev)}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    title={
+                      showLabels
+                        ? t('monitoring:editor.hideLabels')
+                        : t('monitoring:editor.showLabels')
+                    }
+                  >
+                    {showLabels ? (
+                      <Tag className="size-4" />
+                    ) : (
+                      <Tags className="size-4 opacity-50" />
+                    )}
+                  </button>
+                  <span className="bg-border h-4 w-px" />
+                  <span className="max-w-36 truncate text-xs font-medium">
+                    {selectedIds.size > 1
+                      ? t('monitoring:editor.multipleSelected', {
+                          count: selectedIds.size,
+                        })
+                      : selectedModelLabel || t('monitoring:editor.noSelection')}
+                  </span>
+                </div>
+              }
+            />
+          </div>
         </div>
+
+        {!sceneInfo ? (
+          <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
+            <p className="text-muted-foreground text-sm font-medium">
+              {t('monitoring:editor.loading')}
+            </p>
+          </div>
+        ) : null}
       </div>
 
-      {!sceneInfo ? (
-        <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-          <p className="text-muted-foreground text-sm font-medium">
-            {t('monitoring:editor.loading')}
-          </p>
-        </div>
-      ) : null}
+      {/* 하단 패널 — Project: 3D 모델 에셋 그리드 + 센서/텍스트 도구 */}
+      <BottomProjectPanel
+        items={sceneModelCatalog}
+        map={sceneInfo?.map ?? null}
+        draggingItemId={draggingCatalogItem?.id ?? null}
+        onDragStart={setDraggingCatalogItem}
+        onDragEnd={() => setDraggingCatalogItem(null)}
+        onTextDragStart={() => setIsDraggingText(true)}
+        onTextDragEnd={() => setIsDraggingText(false)}
+        onSensorDragStart={(kind) => setDraggingSensorType(kind)}
+        onSensorDragEnd={() => setDraggingSensorType('')}
+        onDeleteMap={deleteMap}
+      />
     </div>
   );
 }
@@ -552,6 +560,236 @@ function FloatingPanel({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 좌측 Hierarchy 패널 — 저장/내보내기 헤더 + 배치된 객체 목록.
+ * 모델 팔레트와 센서/텍스트 도구는 하단 패널로 이동했으므로 포함하지 않는다.
+ */
+function HierarchyPanel({
+  sceneInfo,
+  selectedIds,
+  isDirty,
+  isSaving,
+  onSelectPlacedModel,
+  onDeletePlacedModel,
+  onSelectPlacedText,
+  onDeletePlacedText,
+  onSelectPlacedSensor,
+  onDeletePlacedSensor,
+  onTogglePlacedModel,
+  onTogglePlacedText,
+  onSave,
+  onExport,
+}: {
+  sceneInfo: SavedSceneInfo | null;
+  selectedIds: Set<string>;
+  isDirty: boolean;
+  isSaving: boolean;
+  onSelectPlacedModel: (id: string) => void;
+  onDeletePlacedModel: (id: string) => void;
+  onSelectPlacedText: (id: string) => void;
+  onDeletePlacedText: (id: string) => void;
+  onSelectPlacedSensor: (id: string) => void;
+  onDeletePlacedSensor: (id: string) => void;
+  onTogglePlacedModel: (id: string) => void;
+  onTogglePlacedText: (id: string) => void;
+  onSave: () => void;
+  onExport: () => void;
+}) {
+  return (
+    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-sm">
+      <PaletteHeader
+        onSave={onSave}
+        onExport={onExport}
+        saveDisabled={!sceneInfo}
+        exportDisabled={!sceneInfo}
+        isDirty={isDirty}
+        isSaving={isSaving}
+      />
+      <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
+        <PalettePlacedObjects
+          placedModels={sceneInfo?.models ?? []}
+          placedTexts={sceneInfo?.texts ?? []}
+          placedSensors={sceneInfo?.sensors ?? []}
+          selectedIds={selectedIds}
+          onSelectPlacedModel={onSelectPlacedModel}
+          onDeletePlacedModel={onDeletePlacedModel}
+          onSelectPlacedText={onSelectPlacedText}
+          onDeletePlacedText={onDeletePlacedText}
+          onSelectPlacedSensor={onSelectPlacedSensor}
+          onDeletePlacedSensor={onDeletePlacedSensor}
+          onTogglePlacedModel={onTogglePlacedModel}
+          onTogglePlacedText={onTogglePlacedText}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 하단 Project 패널 — 탭으로 분리된 에셋/도구 영역.
+ * 탭 1 "3D 모델": 드래그 가능한 모델 에셋 그리드.
+ * 탭 2 "센서 / 텍스트": 텍스트·LiDAR·카메라 추가 버튼 + 지도 섹션.
+ */
+const BOTTOM_PANEL_MIN_H = 80;
+const BOTTOM_PANEL_MAX_H = 480;
+const BOTTOM_PANEL_DEFAULT_H = 224;
+
+function BottomProjectPanel({
+  items,
+  map,
+  draggingItemId,
+  onDragStart,
+  onDragEnd,
+  onTextDragStart,
+  onTextDragEnd,
+  onSensorDragStart,
+  onSensorDragEnd,
+  onDeleteMap,
+}: {
+  items: SceneModelCatalogItem[];
+  map: SavedMapInfo | null;
+  draggingItemId: string | null;
+  onDragStart: (item: SceneModelCatalogItem) => void;
+  onDragEnd: () => void;
+  onTextDragStart: () => void;
+  onTextDragEnd: () => void;
+  onSensorDragStart: (kind: 'lidar' | 'camera') => void;
+  onSensorDragEnd: () => void;
+  onDeleteMap: () => void;
+}) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
+  const [panelHeight, setPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_H);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartH = useRef<number>(BOTTOM_PANEL_DEFAULT_H);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    dragStartH.current = panelHeight;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (dragStartY.current === null) return;
+      const delta = dragStartY.current - ev.clientY;
+      const next = Math.min(BOTTOM_PANEL_MAX_H, Math.max(BOTTOM_PANEL_MIN_H, dragStartH.current + delta));
+      setPanelHeight(next);
+    };
+
+    const onMouseUp = () => {
+      dragStartY.current = null;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  return (
+    <div
+      className="border-border bg-card text-card-foreground relative flex shrink-0 flex-col overflow-hidden border-t"
+      style={{ height: panelHeight }}
+    >
+      {/* 리사이즈 핸들 */}
+      <div
+        onMouseDown={handleResizeMouseDown}
+        className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
+      >
+        <div className="bg-border hover:bg-primary/60 h-1 w-12 rounded-full transition-colors" />
+      </div>
+      {/* 탭 헤더 */}
+      <div className="border-border flex shrink-0 items-center gap-0 border-b pt-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('models')}
+          className={cn(
+            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+            activeTab === 'models'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {t('monitoring:palette.title')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('tools')}
+          className={cn(
+            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+            activeTab === 'tools'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {t('monitoring:editor.sensorTextTab')}
+        </button>
+      </div>
+
+      {/* 탭 콘텐츠 */}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {activeTab === 'models' ? (
+          <div className="h-full overflow-hidden p-2">
+            <PaletteAssetGrid
+              items={items}
+              draggingItemId={draggingItemId}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
+          </div>
+        ) : (
+          <div className="flex h-full flex-col gap-2 overflow-y-auto p-2">
+            <div
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
+                event.dataTransfer.effectAllowed = 'copy';
+                onTextDragStart();
+              }}
+              onDragEnd={onTextDragEnd}
+              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            >
+              <Type className="size-3.5" />
+              {t('monitoring:editor.addText')}
+            </div>
+
+            <div
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
+                event.dataTransfer.effectAllowed = 'copy';
+                onSensorDragStart('lidar');
+              }}
+              onDragEnd={onSensorDragEnd}
+              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            >
+              <Radar className="size-3.5" />
+              {t('monitoring:editor.addLidarSensor')}
+            </div>
+
+            <div
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
+                event.dataTransfer.effectAllowed = 'copy';
+                onSensorDragStart('camera');
+              }}
+              onDragEnd={onSensorDragEnd}
+              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            >
+              <CameraIcon className="size-3.5" />
+              {t('monitoring:editor.addCameraSensor')}
+            </div>
+
+            {map ? (
+              <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
