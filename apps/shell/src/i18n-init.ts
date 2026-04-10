@@ -15,6 +15,9 @@ import laMonitoring from './locales/la/monitoring.json';
 import koGoliathCrane from './locales/ko/goliath-crane.json';
 import enGoliathCrane from './locales/en/goliath-crane.json';
 import laGoliathCrane from './locales/la/goliath-crane.json';
+import koCmms from './locales/ko/cmms.json';
+import enCmms from './locales/en/cmms.json';
+import laCmms from './locales/la/cmms.json';
 
 const resources = {
   ko: {
@@ -23,6 +26,7 @@ const resources = {
     'region-overview': koRegionOverview,
     monitoring: koMonitoring,
     'goliath-crane': koGoliathCrane,
+    cmms: koCmms,
   },
   en: {
     common: enCommon,
@@ -30,6 +34,7 @@ const resources = {
     'region-overview': enRegionOverview,
     monitoring: enMonitoring,
     'goliath-crane': enGoliathCrane,
+    cmms: enCmms,
   },
   la: {
     common: laCommon,
@@ -37,6 +42,7 @@ const resources = {
     'region-overview': laRegionOverview,
     monitoring: laMonitoring,
     'goliath-crane': laGoliathCrane,
+    cmms: laCmms,
   },
 };
 
@@ -46,4 +52,5 @@ initI18n(resources, [
   'region-overview',
   'monitoring',
   'goliath-crane',
+  'cmms',
 ]);

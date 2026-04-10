@@ -6,6 +6,12 @@ import {
   MapPin,
   Play,
   SquarePen,
+  Activity,
+  ArrowUpDown,
+  ArrowLeftRight,
+  TrendingUp,
+  Settings,
+  MonitorCheck,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -29,6 +35,56 @@ function getOverviewGroup(): NavGroup {
         label: i18n.t('common:nav.regionOverview'),
         path: '/region-overview',
         icon: MapPin,
+      },
+      {
+        label: i18n.t('common:nav.craneDetail'),
+        path: '/crane-detail',
+        icon: MonitorCheck,
+      },
+    ],
+  };
+}
+
+function buildCmmsGroup(craneId: string): NavGroup {
+  const base = `/crane-detail/${craneId}`;
+  const title = craneId.replace(/_/g, '-');
+  return {
+    title,
+    items: [
+      {
+        label: 'Overview',
+        path: `${base}/overview`,
+        icon: LayoutDashboard,
+      },
+      {
+        label: 'Main/Aux Hoist',
+        path: `${base}/hoist`,
+        icon: ArrowUpDown,
+      },
+      {
+        label: 'Trolley/Travelling',
+        path: `${base}/trolley`,
+        icon: ArrowLeftRight,
+      },
+      {
+        label: '가동/고장 정보',
+        path: `${base}/fault-info`,
+        icon: Activity,
+      },
+      {
+        label: '가동/고장 이력',
+        path: `${base}/fault-history`,
+        icon: History,
+      },
+      {
+        label: 'Trend',
+        path: `${base}/trend`,
+        icon: TrendingUp,
+      },
+      {
+        label: 'Configuration',
+        path: `${base}/configuration`,
+        icon: Settings,
       },
     ],
   };
@@ -68,6 +124,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
 }
 
 const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
+  '/crane-detail': (pathname) => {
+    const craneId = pathname.split('/')[2];
+    if (!craneId) return defaultSystemGroup;
+    return buildCmmsGroup(craneId);
+  },
   '/outdoor-work': (pathname) => {
     const regionId = pathname.split('/')[2] || '';
     return buildWorkGroup(

@@ -32,6 +32,18 @@ const GoliathWorkPage = lazy(() =>
   })),
 );
 
+const CraneDetailListPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/crane-detail').then((m) => ({
+    default: m.CraneDetailListPage,
+  })),
+);
+
+const CraneDetailPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/crane-detail').then((m) => ({
+    default: m.CraneDetailPage,
+  })),
+);
+
 export function App() {
   return (
     <BrowserRouter>
@@ -74,6 +86,22 @@ export function App() {
             element={
               <Suspense fallback={null}>
                 <GoliathWorkPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="crane-detail"
+            element={
+              <Suspense fallback={null}>
+                <CraneDetailListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="crane-detail/:craneId/*"
+            element={
+              <Suspense fallback={null}>
+                <CraneDetailPage />
               </Suspense>
             }
           />

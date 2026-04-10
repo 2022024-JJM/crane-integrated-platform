@@ -48,7 +48,8 @@
     "workHistory": "Work History",
     "replayMonitoring": "3D Replay",
     "goliathCrane": "Goliath Crane",
-    "goliathCraneMonitoring": "GC-04 Monitoring"
+    "goliathCraneMonitoring": "GC-04 Monitoring",
+    "craneDetail": "Crane Detail"
   },
   "craneStatus": {
     "title": "Real-time Crane Status",

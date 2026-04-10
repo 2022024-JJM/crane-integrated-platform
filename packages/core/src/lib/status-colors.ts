@@ -1,4 +1,4 @@
-import type { AlarmSeverity, CraneStatus, StatusLevel } from '../types/status';
+import type { AlarmSeverity, CraneStatus, StatusLevel, OnOff, OkNg, RunFaultStatus } from '../types/status';
 
 export const severityBadgeClassName: Record<AlarmSeverity, string> = {
   critical: 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300',
@@ -40,4 +40,21 @@ export const tableCategoryClassName: Record<string, string> = {
     'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
   status:
     'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+};
+
+// ─── CMMS 상태 배지 색상 맵 ──────────────────────────────────────
+export const onOffBadgeClassName: Record<OnOff, string> = {
+  ON:  'border-emerald-500 bg-emerald-500 text-white',
+  OFF: 'border-zinc-600 bg-zinc-600 text-zinc-300',
+};
+
+export const okNgBadgeClassName: Record<OkNg, string> = {
+  OK: 'border-emerald-500 text-emerald-400 bg-transparent',
+  NG: 'border-red-500 bg-red-600 text-white',
+};
+
+export const runFaultBadgeClassName: Record<RunFaultStatus, string> = {
+  STOP:  'border-zinc-500 bg-zinc-600 text-zinc-200',
+  RUN:   'border-green-600 bg-green-600 text-white',
+  FAULT: 'border-red-600 bg-red-600 text-white',
 };
