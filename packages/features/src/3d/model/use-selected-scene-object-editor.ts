@@ -94,7 +94,7 @@ interface UseSelectedSceneObjectEditorResult {
   updateSelectedMeshOpacity: (value: number) => void;
   updateSelectedMeshName: (name: string) => void;
   updateSelectedName: (name: string) => void;
-  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number) => void;
+  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
@@ -582,7 +582,7 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
-  const updateSelectedValueMap = (type: ValueMapType, key: string, scale?: number) => {
+  const updateSelectedValueMap = (type: ValueMapType, key: string, scale?: number, offset?: number) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) return prev;
       return {
@@ -600,6 +600,7 @@ export function useSelectedSceneObjectEditor({
               type,
               key: key.trim(),
               scale: scale ?? existing?.scale ?? 1,
+              ...(offset !== undefined ? { offset } : existing?.offset !== undefined ? { offset: existing.offset } : {}),
             },
           ];
           return { ...model, valueMapList: next };
