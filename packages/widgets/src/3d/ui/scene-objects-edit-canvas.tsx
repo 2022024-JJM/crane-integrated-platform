@@ -240,10 +240,7 @@ export function SceneObjectsEditCanvas({
 
     return () => {
       cancelled = true;
-      if (
-        idleHandle !== null &&
-        typeof cancelIdleCallback !== 'undefined'
-      ) {
+      if (idleHandle !== null && typeof cancelIdleCallback !== 'undefined') {
         cancelIdleCallback(idleHandle);
       }
       if (timeoutHandle !== null) {
@@ -298,7 +295,6 @@ export function SceneObjectsEditCanvas({
     onAddLidarSensor,
     onAddCameraSensor,
   });
-
 
   const {
     orbitControlsRef,
@@ -407,7 +403,9 @@ export function SceneObjectsEditCanvas({
   const handleSelectText = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
-      const isCtrl = lastPointerEventRef.current?.ctrlKey || lastPointerEventRef.current?.metaKey;
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
       if (isCtrl) {
         toggleText(id);
       } else {
@@ -435,7 +433,12 @@ export function SceneObjectsEditCanvas({
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
 
-  const { marqueeStyle, isMarqueeActive, marqueeContainerRef: setMarqueeEl, marqueeJustEndedRef } = useMarqueeSelection({
+  const {
+    marqueeStyle,
+    isMarqueeActive,
+    marqueeContainerRef: setMarqueeEl,
+    marqueeJustEndedRef,
+  } = useMarqueeSelection({
     cameraRef,
     rendererRef,
     modelObjectRegistryRef,
@@ -455,7 +458,12 @@ export function SceneObjectsEditCanvas({
     setSelectedObject(null);
     setIsTransformDragging(false);
     clearSelectedModel();
-  }, [clearSelectedModel, marqueeJustEndedRef, setIsTransformDragging, setSelectedObject]);
+  }, [
+    clearSelectedModel,
+    marqueeJustEndedRef,
+    setIsTransformDragging,
+    setSelectedObject,
+  ]);
 
   const combinedRootRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -646,7 +654,7 @@ export function SceneObjectsEditCanvas({
     <div
       ref={combinedRootRef}
       tabIndex={0}
-      className="border-border/70 relative isolate h-full min-h-0 overflow-hidden rounded-2xl border bg-(--canvas-background)"
+      className="border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background)"
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
         lastPointerEventRef.current = event.nativeEvent;
@@ -667,7 +675,11 @@ export function SceneObjectsEditCanvas({
           rendererRef.current = gl;
           if (cameraStateRef) {
             cameraStateRef.current = {
-              position: [camera.position.x, camera.position.y, camera.position.z],
+              position: [
+                camera.position.x,
+                camera.position.y,
+                camera.position.z,
+              ],
               target: cameraTarget,
             };
           }
@@ -682,7 +694,11 @@ export function SceneObjectsEditCanvas({
           enableDamping={false}
           target={cameraTarget}
           onChange={handleOrbitChange}
-          mouseButtons={{ LEFT: undefined, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN }}
+          mouseButtons={{
+            LEFT: undefined,
+            MIDDLE: MOUSE.ROTATE,
+            RIGHT: MOUSE.PAN,
+          }}
         />
         <GizmoHelper
           alignment="top-right"

@@ -10,6 +10,8 @@ import {
 } from '@crane/features/3d';
 import {
   Camera as CameraIcon,
+  ChevronDown,
+  ChevronUp,
   Layers3,
   PanelLeftClose,
   PanelRightClose,
@@ -637,6 +639,7 @@ function HierarchyPanel({
 const BOTTOM_PANEL_MIN_H = 80;
 const BOTTOM_PANEL_MAX_H = 480;
 const BOTTOM_PANEL_DEFAULT_H = 224;
+const BOTTOM_PANEL_COLLAPSED_H = 44;
 
 function BottomProjectPanel({
   items,
@@ -663,9 +666,13 @@ function BottomProjectPanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [panelHeight, setPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_H);
   const dragStartY = useRef<number | null>(null);
   const dragStartH = useRef<number>(BOTTOM_PANEL_DEFAULT_H);
+  const currentPanelHeight = isCollapsed
+    ? BOTTOM_PANEL_COLLAPSED_H
+    : panelHeight;
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -692,56 +699,74 @@ function BottomProjectPanel({
   return (
     <div
       className="border-border bg-card text-card-foreground relative flex shrink-0 flex-col overflow-hidden border-t"
-      style={{ height: panelHeight }}
+      style={{ height: currentPanelHeight }}
     >
       {/* 리사이즈 핸들 */}
-      <div
-        onMouseDown={handleResizeMouseDown}
-        className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
-      >
-        <div className="bg-border hover:bg-primary/60 h-1 w-12 rounded-full transition-colors" />
-      </div>
+      {!isCollapsed ? (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
+        >
+          <div className="bg-border hover:bg-primary/60 h-1 w-12 rounded-full transition-colors" />
+        </div>
+      ) : null}
       {/* 탭 헤더 */}
-      <div className="border-border flex shrink-0 items-center gap-0 border-b pt-1">
+      <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
+        <div className="flex items-center gap-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('models')}
+            className={cn(
+              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              activeTab === 'models'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t('monitoring:palette.title')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('tools')}
+            className={cn(
+              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              activeTab === 'tools'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t('monitoring:editor.sensorTextTab')}
+          </button>
+        </div>
         <button
           type="button"
-          onClick={() => setActiveTab('models')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-            activeTab === 'models'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
-          )}
+          onClick={() => setIsCollapsed((prev) => !prev)}
+          className="text-muted-foreground hover:text-foreground mr-2 inline-flex size-7 items-center justify-center rounded-md transition-colors"
+          aria-label={isCollapsed ? 'Expand palette' : 'Collapse palette'}
+          title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
         >
-          {t('monitoring:palette.title')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('tools')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-            activeTab === 'tools'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+          {isCollapsed ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
           )}
-        >
-          {t('monitoring:editor.sensorTextTab')}
         </button>
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === 'models' ? (
-          <div className="h-full overflow-hidden p-2">
-            <PaletteAssetGrid
-              items={items}
-              draggingItemId={draggingItemId}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-2 overflow-y-auto p-2">
+      {!isCollapsed ? (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {activeTab === 'models' ? (
+            <div className="h-full overflow-hidden p-2">
+              <PaletteAssetGrid
+                items={items}
+                draggingItemId={draggingItemId}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+              />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col gap-2 overflow-y-auto p-2">
             <div
               draggable
               onDragStart={(event) => {
@@ -787,9 +812,10 @@ function BottomProjectPanel({
             {map ? (
               <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
             ) : null}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
