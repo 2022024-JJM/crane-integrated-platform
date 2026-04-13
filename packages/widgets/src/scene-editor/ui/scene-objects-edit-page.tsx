@@ -194,10 +194,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       ? t('monitoring:editor.statusUnsaved')
       : t('monitoring:editor.statusSaved');
   const saveStatusClassName = isSaving
-    ? 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-100'
+    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
     : isDirty
-      ? 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-100'
-      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100';
+      ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
+      : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
 
   useEffect(() => {
     startTransition(() => {
