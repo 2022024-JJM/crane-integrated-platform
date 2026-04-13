@@ -133,11 +133,60 @@ const craneRegistryById = new Map(
   craneRegistry.map((entry) => [entry.craneId, entry] as const),
 );
 
+const craneIdsByRegion: Record<string, string[]> = {
+  'dock-1': [
+    'C_171',
+    'C_172',
+    'C_173',
+    'C_800',
+    'C_801',
+    'C_810',
+    'C_811',
+    'C_812',
+    'C_863',
+  ],
+  'dock-2': [
+    'C_864',
+    'C_865',
+    'C_866',
+    'C_867',
+    'C_868',
+    'C_869',
+  ],
+  'dock-in': [
+    'C_801',
+    'C_800',
+    'C_172',
+    'C_173',
+    'C_171',
+    'C_811',
+    'C_810',
+    'C_812',
+    'C_864',
+    'C_867',
+    'C_863',
+    'C_866',
+    'C_865',
+    'C_862',
+    'C_871',
+    'C_868',
+    'C_869',
+    'C_870',
+  ],
+  goliath: ['GC_04'],
+};
+
 export function getCraneById(craneId: string) {
   return craneRegistryById.get(craneId);
 }
 
 export function getCraneIdsByRegion(regionId: string) {
+  const regionCraneIds = craneIdsByRegion[regionId];
+
+  if (regionCraneIds) {
+    return regionCraneIds;
+  }
+
   return craneRegistry
     .filter((entry) => entry.regionId === regionId)
     .map((entry) => entry.craneId);

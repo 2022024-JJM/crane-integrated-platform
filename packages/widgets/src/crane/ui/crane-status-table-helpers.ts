@@ -1,45 +1,23 @@
-import {
-  tableRowStatusBadgeClassName,
-  tableCategoryClassName,
-} from '@crane/core/lib/status-colors';
+import type { WebSocketConnectionState } from '@crane/core/ws';
 import {
   formatReplayTimestamp,
-  type MonitoringReplayRow,
+  type MonitoringLiveCell,
 } from '@crane/domain/monitoring';
 
-export const CRANE_COLUMN_WIDTH = 120;
-export const TAG_NAME_COLUMN_WIDTH = 320;
+export const CRANE_INFO_COLUMN_WIDTH = 220;
+export const CRANE_ID_COLUMN_WIDTH = 140;
+export const UPDATED_AT_COLUMN_WIDTH = 120;
+export const TAG_COLUMN_WIDTH = 180;
 
-export type DateTimeInputElement = HTMLInputElement & {
-  showPicker?: () => void;
-};
-
-export type SortKey =
-  | 'crane'
-  | 'tagName'
-  | 'value'
-  | 'unit'
-  | 'category'
-  | 'dataType'
-  | 'snapshotAt';
-
-export type SortDirection = 'asc' | 'desc';
-
-export interface HeartbeatStatus {
-  craneNo: string;
-  craneId: string;
-  stale: boolean;
-}
-
-export function formatValue(value: MonitoringReplayRow['value']) {
-  if (value === null || value === undefined) {
-    return null;
+export function formatCellValue(value: MonitoringLiveCell['value'] | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return '-';
   }
 
   return String(value);
 }
 
-export function formatTimestamp(value: string | null, _language: string) {
+export function formatTimestamp(value: string | null | undefined) {
   if (!value) {
     return '-';
   }
@@ -47,142 +25,25 @@ export function formatTimestamp(value: string | null, _language: string) {
   return formatReplayTimestamp(value, 'time') ?? '-';
 }
 
-export function formatDataType(value: string | null) {
-  return value ?? '-';
-}
-
-function compareNullableValues(
-  left: string | number | null,
-  right: string | number | null,
+export function getConnectionLabel(
+  state: WebSocketConnectionState,
+  labels: Record<WebSocketConnectionState, string>,
 ) {
-  if (left === null && right === null) {
-    return 0;
-  }
-
-  if (left === null) {
-    return 1;
-  }
-
-  if (right === null) {
-    return -1;
-  }
-
-  if (typeof left === 'number' && typeof right === 'number') {
-    return left - right;
-  }
-
-  const leftNumber = Number(left);
-  const rightNumber = Number(right);
-
-  if (!Number.isNaN(leftNumber) && !Number.isNaN(rightNumber)) {
-    return leftNumber - rightNumber;
-  }
-
-  return String(left).localeCompare(String(right), undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  });
+  return labels[state];
 }
 
-function compareDateValues(left: string | null, right: string | null) {
-  if (!left && !right) {
-    return 0;
-  }
-
-  if (!left) {
-    return 1;
-  }
-
-  if (!right) {
-    return -1;
-  }
-
-  return new Date(left).getTime() - new Date(right).getTime();
-}
-
-export function compareRows(
-  left: MonitoringReplayRow,
-  right: MonitoringReplayRow,
-  key: SortKey,
-) {
-  switch (key) {
-    case 'crane':
-      return left.craneNo.localeCompare(right.craneNo, undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      });
-    case 'tagName':
-      return left.displayName.localeCompare(right.displayName, undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      });
-    case 'value':
-      return compareNullableValues(left.value, right.value);
-    case 'unit':
-      return compareNullableValues(left.unit, right.unit);
-    case 'category':
-      return compareNullableValues(left.category, right.category);
-    case 'dataType':
-      return compareNullableValues(left.dataType, right.dataType);
-    case 'snapshotAt':
-      return compareDateValues(left.snapshotAt, right.snapshotAt);
+export function getConnectionClassName(state: WebSocketConnectionState) {
+  switch (state) {
+    case 'open':
+      return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'connecting':
+      return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    case 'closing':
+      return 'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300';
+    case 'closed':
+      return 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300';
+    case 'idle':
     default:
-      return 0;
+      return 'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300';
   }
-}
-
-export function getCategoryClassName(category: string) {
-  return (
-    tableCategoryClassName[category] ??
-    'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300'
-  );
-}
-
-export function buildRowStatuses(row: MonitoringReplayRow) {
-  const statuses: Array<{
-    label: string;
-    tone: keyof typeof tableRowStatusBadgeClassName;
-  }> = [];
-
-  if (row.alarm) {
-    statuses.push({ label: 'Alarm', tone: 'alarm' });
-  }
-
-  if (row.stale) {
-    statuses.push({ label: 'Stale', tone: 'stale' });
-  }
-
-  if (row.changed) {
-    statuses.push({ label: 'Changed', tone: 'changed' });
-  }
-
-  if (statuses.length === 0) {
-    statuses.push({ label: 'Normal', tone: 'normal' });
-  }
-
-  return statuses;
-}
-
-export function openDateTimePicker(input: DateTimeInputElement | null) {
-  if (!input) {
-    return;
-  }
-
-  input.focus();
-  input.showPicker?.();
-}
-
-export function buildHeartbeatStatuses(
-  rows: MonitoringReplayRow[],
-): HeartbeatStatus[] {
-  return rows
-    .filter((row) => row.tagCode === 'heartbeat')
-    .map((row) => ({
-      craneNo: row.craneNo,
-      craneId: row.craneId,
-      stale: row.stale,
-    }))
-    .sort((a, b) =>
-      a.craneNo.localeCompare(b.craneNo, undefined, { numeric: true }),
-    );
 }

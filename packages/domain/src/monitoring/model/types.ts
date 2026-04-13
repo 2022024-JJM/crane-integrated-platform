@@ -67,6 +67,47 @@ export interface MonitoringReplayLiteQuery {
   to: string;
 }
 
+export interface MonitoringTagDefinition {
+  tagDefinitionId: number;
+  tagCode: string;
+  displayName: string;
+  dataType: string | null;
+  unit: string | null;
+}
+
+export interface MonitoringLiveCrane {
+  craneId: string;
+  craneNo: string;
+  craneName?: string;
+}
+
+export interface MonitoringLiveCell {
+  value: string | number | null;
+  timestamp: string;
+  occurredAt: string;
+  quality: number;
+  changed: boolean;
+}
+
+export interface MonitoringLiveRow {
+  craneId: string;
+  craneNo: string;
+  craneName?: string;
+  lastUpdated: string | null;
+  values: Partial<Record<string, MonitoringLiveCell>>;
+}
+
+export interface RealtimeCraneLiteMessage {
+  eventType: 'snapshot.delta';
+  craneId: string;
+  tagCode: string;
+  value: string | number | null;
+  timestamp: string;
+  quality: number;
+  changed: boolean;
+  occurredAt: string;
+}
+
 export interface MonitoringReplayRow {
   id: string;
   frameTimestamp: string;
