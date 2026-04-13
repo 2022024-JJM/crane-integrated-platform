@@ -2,6 +2,7 @@ import { Move3d, RotateCw, Scale3d } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
+import { Button } from '@crane/ui/atoms/button';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
   Tooltip,
@@ -60,7 +61,7 @@ export function SceneTransformModeToggle({
           value={[mode]}
           onValueChange={handleValueChange}
           aria-label={t('monitoring:transform.title')}
-          className="bg-background/95 border-border/80 rounded-lg border p-1 shadow-sm backdrop-blur-sm"
+          className="bg-background/95 border-border/80 h-[34px] rounded-lg border p-px shadow-sm backdrop-blur-sm"
         >
           {TRANSFORM_MODES.map((transformMode) => {
             const label = t(`monitoring:transform.mode.${transformMode}`);
@@ -73,12 +74,18 @@ export function SceneTransformModeToggle({
                     <ToggleGroupItem
                       value={transformMode}
                       aria-label={label}
-                      className="text-muted-foreground hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-10 cursor-pointer justify-center rounded-md p-0 aria-pressed:shadow-sm"
-                    >
-                      <Icon className="size-4" />
-                    </ToggleGroupItem>
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-8 rounded-md"
+                        />
+                      }
+                    />
                   }
-                />
+                >
+                  <Icon className="size-4" />
+                </TooltipTrigger>
                 <TooltipContent>{label}</TooltipContent>
               </Tooltip>
             );
