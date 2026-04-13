@@ -67,20 +67,16 @@ function sanitizeMeshOverrides(
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
 
-  const safeMap =
-    sceneInfo?.map != null
-      ? {
-          id:
-            typeof sceneInfo.map.id === 'string' && sceneInfo.map.id.length > 0
-              ? sceneInfo.map.id
-              : createSceneModelId(),
-          path:
-            typeof sceneInfo.map.path === 'string' &&
-            sceneInfo.map.path.length > 0
-              ? sceneInfo.map.path
-              : '',
-        }
-      : null;
+  const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })?.map;
+  const rawMaps = Array.isArray(sceneInfo?.maps)
+    ? sceneInfo.maps
+    : legacyMap
+      ? [legacyMap]
+      : [];
+  const safeMaps = rawMaps.map((m) => ({
+    id: typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
+    path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
+  }));
 
   const safeModels = Array.isArray(sceneInfo?.models)
     ? sceneInfo.models.flatMap((model) => {
@@ -151,7 +147,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   return {
-    map: safeMap,
+    maps: safeMaps,
     models: safeModels,
     texts: safeTexts,
     sensors: safeSensors,
@@ -273,13 +269,12 @@ function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
   return true;
 }
 
-function isMapInfoEqual(
-  a: SavedMapInfo | null,
-  b: SavedMapInfo | null,
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.id === b.id && a.path === b.path;
+function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
+  }
+  return true;
 }
 
 function isSensorInfoEqual(a: SavedSensorInfo, b: SavedSensorInfo): boolean {
@@ -383,7 +378,7 @@ export function isSceneInfoEqual(
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  if (!isMapInfoEqual(a.map, b.map)) return false;
+  if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
   if (a.models.length !== b.models.length) return false;
   for (let i = 0; i < a.models.length; i++) {

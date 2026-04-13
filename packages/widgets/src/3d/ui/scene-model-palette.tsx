@@ -21,7 +21,7 @@ import { PalettePlacedObjects } from './palette-placed-objects';
 
 interface SceneModelPaletteProps {
   items: SceneModelCatalogItem[];
-  map: SavedMapInfo | null;
+  maps: SavedMapInfo[];
   placedModels: SavedModelInfo[];
   draggingItemId: string | null;
   selectedIds: Set<string>;
@@ -41,7 +41,7 @@ interface SceneModelPaletteProps {
   onTextDragEnd: () => void;
   onSensorDragStart: (kind: 'lidar' | 'camera') => void;
   onSensorDragEnd: () => void;
-  onDeleteMap: () => void;
+  onDeleteMap: (id: string) => void;
   onSave: () => void;
   onExport: () => void;
   saveDisabled?: boolean;
@@ -51,7 +51,7 @@ interface SceneModelPaletteProps {
 
 export function SceneModelPalette({
   items,
-  map,
+  maps,
   placedModels,
   draggingItemId,
   selectedIds,
@@ -154,7 +154,9 @@ export function SceneModelPalette({
           {t('monitoring:editor.addCameraSensor')}
         </div>
 
-        {map ? <PaletteMapSection map={map} onDeleteMap={onDeleteMap} /> : null}
+        {maps.map((m) => (
+          <PaletteMapSection key={m.id} map={m} onDeleteMap={() => onDeleteMap(m.id)} />
+        ))}
 
         <PalettePlacedObjects
           placedModels={placedModels}

@@ -149,7 +149,7 @@ export function OutdoorWorkModelSimulation({
     [],
   );
 
-  const map = sceneInfo?.map;
+  const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];
   const modelIds = useMemo(() => models.map((model) => model.id), [models]);
   const texts = sceneInfo?.texts ?? [];
@@ -326,7 +326,9 @@ export function OutdoorWorkModelSimulation({
 
   return (
     <>
-      {map ? <GltfModel id={map.id} url={map.path} /> : null}
+      {maps.map((m) => (
+        <GltfModel key={m.id} id={m.id} url={m.path} />
+      ))}
       {models.map((model) => {
         if (visibleModelIds && !visibleModelIds.has(model.id)) {
           return null;

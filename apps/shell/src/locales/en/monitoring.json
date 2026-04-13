@@ -64,6 +64,8 @@
     "addLidarSensor": "Add LiDAR",
     "addCameraSensor": "Add Camera",
     "sensorTextTab": "Sensors / Text",
+    "mapTab": "Map",
+    "noMap": "No map has been registered.",
     "textObject": "Text",
     "save": "Save",
     "categoryLibrary": "Categories",

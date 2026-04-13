@@ -104,7 +104,7 @@ interface UseSceneEditorSessionResult {
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
-  deleteMap: () => void;
+  deleteMap: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   selectAll: (ids: string[]) => void;

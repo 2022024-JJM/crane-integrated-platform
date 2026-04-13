@@ -64,6 +64,8 @@
     "addLidarSensor": "Adde LiDAR",
     "addCameraSensor": "Adde Cameram",
     "sensorTextTab": "Sensores / Textus",
+    "mapTab": "Tabula",
+    "noMap": "Nulla tabula registrata est.",
     "textObject": "Textus",
     "save": "Serva",
     "categoryLibrary": "Categoriae",

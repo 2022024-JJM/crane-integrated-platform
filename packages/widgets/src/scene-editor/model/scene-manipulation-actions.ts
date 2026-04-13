@@ -99,7 +99,7 @@ export function createSceneManipulationActions({
     }
   };
 
-  const deleteMap = () => {
+  const deleteMap = (id: string) => {
     updateScene((prev) => {
       if (!prev) {
         return prev;
@@ -107,7 +107,7 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
-        map: null,
+        maps: prev.maps.filter((m) => m.id !== id),
       };
     });
   };

@@ -21,6 +21,7 @@ import {
   FolderClosed,
   Layers3,
   Loader2,
+  Map,
   PanelLeftClose,
   PanelRightClose,
   Radar,
@@ -556,7 +557,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       {/* 하단 패널 — Project: 3D 모델 에셋 그리드 + 센서/텍스트 도구 */}
       <BottomProjectPanel
         items={sceneModelCatalog}
-        map={sceneInfo?.map ?? null}
+        maps={sceneInfo?.maps ?? []}
         draggingItemId={draggingCatalogItem?.id ?? null}
         onDragStart={setDraggingCatalogItem}
         onDragEnd={() => setDraggingCatalogItem(null)}
@@ -749,7 +750,7 @@ const MODEL_CATEGORY_LABEL_KEY: Record<SceneModelCategory, string> = {
 
 function BottomProjectPanel({
   items,
-  map,
+  maps,
   draggingItemId,
   onDragStart,
   onDragEnd,
@@ -760,7 +761,7 @@ function BottomProjectPanel({
   onDeleteMap,
 }: {
   items: SceneModelCatalogItem[];
-  map: SavedMapInfo | null;
+  maps: SavedMapInfo[];
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
@@ -768,7 +769,7 @@ function BottomProjectPanel({
   onTextDragEnd: () => void;
   onSensorDragStart: (kind: 'lidar' | 'camera') => void;
   onSensorDragEnd: () => void;
-  onDeleteMap: () => void;
+  onDeleteMap: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
@@ -786,9 +787,9 @@ function BottomProjectPanel({
   const categoryCounts = useMemo(() => {
     return SCENE_MODEL_CATEGORIES.reduce(
       (acc, category) => {
-        acc[category] = items.filter(
-          (item) => item.category === category,
-        ).length;
+        acc[category] = category === 'map'
+          ? maps.length
+          : items.filter((item) => item.category === category).length;
         return acc;
       },
       {
@@ -798,7 +799,7 @@ function BottomProjectPanel({
         etc: 0,
       } satisfies Record<SceneModelCategory, number>,
     );
-  }, [items]);
+  }, [items, maps]);
   const categoryItems = useMemo(() => {
     return items.filter((item) => item.category === activeCategory);
   }, [activeCategory, items]);
@@ -950,29 +951,50 @@ function BottomProjectPanel({
                     {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
                   </p>
                 </div>
-                <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
-                  <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
-                  <Input
-                    value={assetSearch}
-                    onChange={(event) => {
-                      setAssetSearch(event.target.value);
-                    }}
-                    placeholder={t('monitoring:editor.searchModels')}
-                    className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
-                  />
-                </div>
+                {activeCategory !== 'map' ? (
+                  <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
+                    <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
+                    <Input
+                      value={assetSearch}
+                      onChange={(event) => {
+                        setAssetSearch(event.target.value);
+                      }}
+                      placeholder={t('monitoring:editor.searchModels')}
+                      className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="min-h-0 flex-1 pt-2">
-                <PaletteAssetGrid
-                  items={categoryItems}
-                  draggingItemId={draggingItemId}
-                  onDragStart={onDragStart}
-                  onDragEnd={onDragEnd}
-                  emptyMessage={t('monitoring:editor.noModelsInCategory')}
-                  assetSearch={assetSearch}
-                  onAssetSearchChange={setAssetSearch}
-                  showToolbar={false}
-                />
+                {activeCategory === 'map' ? (
+                  maps.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {maps.map((m) => (
+                        <PaletteMapSection
+                          key={m.id}
+                          map={m}
+                          onDeleteMap={() => onDeleteMap(m.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-[12px]">
+                      <Map className="size-6 opacity-30" />
+                      <p>{t('monitoring:editor.noMap')}</p>
+                    </div>
+                  )
+                ) : (
+                  <PaletteAssetGrid
+                    items={categoryItems}
+                    draggingItemId={draggingItemId}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
+                    emptyMessage={t('monitoring:editor.noModelsInCategory')}
+                    assetSearch={assetSearch}
+                    onAssetSearchChange={setAssetSearch}
+                    showToolbar={false}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -1025,10 +1047,8 @@ function BottomProjectPanel({
             {t('monitoring:editor.addCameraSensor')}
           </div>
 
-          {map ? (
-            <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
-          ) : null}
         </div>
+
       </div>
     </div>
   );

@@ -70,9 +70,10 @@ export function useScenePersistence({
           return;
         }
 
-        replaceScene(data);
-        setInitialCamera(data.camera ?? null);
-        setSavedSceneRef(data);
+        const sanitized = sanitizeSceneInfo(data);
+        replaceScene(sanitized);
+        setInitialCamera(sanitized.camera ?? null);
+        setSavedSceneRef(sanitized);
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
         if (isMounted) {

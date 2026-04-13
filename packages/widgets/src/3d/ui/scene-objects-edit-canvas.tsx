@@ -289,7 +289,7 @@ export function SceneObjectsEditCanvas({
     draggingModelCatalogItem,
     isDraggingText,
     draggingSensorType,
-    mapObjectId: sceneInfo?.map?.id ?? null,
+    mapObjectId: sceneInfo?.maps?.[0]?.id ?? null,
     onAddModel,
     onAddText,
     onAddLidarSensor,
@@ -721,14 +721,15 @@ export function SceneObjectsEditCanvas({
             onObjectChange={syncSelectedObjectTransform}
           />
         ) : null}
-        {sceneInfo?.map ? (
+        {sceneInfo?.maps?.map((m) => (
           <GltfModel
-            id={sceneInfo.map.id}
+            key={m.id}
+            id={m.id}
             onSelect={handleClearSelection}
-            url={sceneInfo.map.path}
+            url={m.path}
             isSensorOccluder={false}
           />
-        ) : null}
+        ))}
         {sceneInfo?.models.map((model) => (
           <SelectionAwareGltfModel
             key={model.id}

@@ -18,7 +18,7 @@ export interface SavedCameraInfo {
 }
 
 export interface SavedSceneInfo {
-  map: SavedMapInfo | null;
+  maps: SavedMapInfo[];
   models: SavedModelInfo[];
   texts?: SavedTextInfo[];
   /**

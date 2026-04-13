@@ -64,6 +64,8 @@
     "addLidarSensor": "LiDAR 추가",
     "addCameraSensor": "카메라 추가",
     "sensorTextTab": "센서 / 텍스트",
+    "mapTab": "지도",
+    "noMap": "등록된 지도가 없습니다.",
     "textObject": "텍스트",
     "save": "저장",
     "categoryLibrary": "카테고리",
