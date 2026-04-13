@@ -153,4 +153,38 @@
   .dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
     filter: invert(1);
   }
+
+  /* ─── Global Scrollbar Standard ─────────────────────────────────────────────
+     모든 overflow-auto / overflow-scroll 영역에 동일한 스크롤바 스타일 적용.
+     ScrollArea 컴포넌트와 동일한 두께(10px) 및 border 토큰 색상 사용.
+     숨김이 필요한 경우엔 [scrollbar-width:none] 유틸리티 클래스를 사용.
+  ─────────────────────────────────────────────────────────────────────────── */
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* Webkit (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
