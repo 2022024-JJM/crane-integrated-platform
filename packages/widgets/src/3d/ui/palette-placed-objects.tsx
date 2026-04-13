@@ -1,29 +1,21 @@
-import { Boxes, Camera, Radar, Search, Trash2, Type } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Boxes, Camera, Radar, Trash2, Type } from 'lucide-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  humanizeModelPath,
-  type SavedModelInfo,
-  type SavedSensorInfo,
-  type SavedTextInfo,
+import type {
+  SavedModelInfo,
+  SavedSensorInfo,
+  SavedTextInfo,
 } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
-import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
-import { Input } from '@crane/ui/atoms/input';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
-
-interface PlacedObjectItem {
-  id: string;
-  displayName: string;
-  subtitle: string;
-  type: 'model' | 'text' | 'sensor';
-}
+import { getPlacedObjectItems } from './placed-object-items';
 
 interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
   placedSensors?: SavedSensorInfo[];
+  objectSearch: string;
   selectedIds: Set<string>;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
@@ -39,6 +31,7 @@ export function PalettePlacedObjects({
   placedModels,
   placedTexts = [],
   placedSensors = [],
+  objectSearch = '',
   selectedIds,
   onSelectPlacedModel,
   onDeletePlacedModel,
@@ -50,65 +43,19 @@ export function PalettePlacedObjects({
   onDeletePlacedSensor,
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
-  const [objectSearch, setObjectSearch] = useState('');
 
-  const normalizedObjectSearch = objectSearch.trim().toLowerCase();
   const allItems = useMemo(() => {
-    const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({
-      id: model.id,
-      displayName: model.equipName.trim() || model.id,
-      subtitle: humanizeModelPath(model.path),
-      type: 'model' as const,
-    }));
-
-    const textItems: PlacedObjectItem[] = placedTexts.map((text) => ({
-      id: text.id,
-      displayName: text.content.trim() || 'Text',
-      subtitle: t('monitoring:editor.textObject'),
-      type: 'text' as const,
-    }));
-
-    const sensorItems: PlacedObjectItem[] = placedSensors.map((sensor) => ({
-      id: sensor.id,
-      displayName: sensor.name || sensor.id,
-      subtitle: sensor.type === 'lidar' ? 'LiDAR' : 'Camera',
-      type: 'sensor' as const,
-    }));
-
-    const items = [...modelItems, ...textItems, ...sensorItems];
-
-    if (!normalizedObjectSearch) {
-      return items;
-    }
-
-    return items.filter(
-      (item) =>
-        item.displayName.toLowerCase().includes(normalizedObjectSearch) ||
-        item.subtitle.toLowerCase().includes(normalizedObjectSearch),
-    );
-  }, [normalizedObjectSearch, placedModels, placedTexts, placedSensors, t]);
+    return getPlacedObjectItems({
+      placedModels,
+      placedTexts,
+      placedSensors,
+      objectSearch,
+      textObjectLabel: t('monitoring:editor.textObject'),
+    });
+  }, [objectSearch, placedModels, placedSensors, placedTexts, t]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-2 px-2 py-1.5">
-        <div className="relative min-w-0 flex-1">
-          <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
-          <Input
-            value={objectSearch}
-            onChange={(event) => {
-              setObjectSearch(event.target.value);
-            }}
-            placeholder={t('monitoring:editor.searchObjects')}
-            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
-          />
-        </div>
-        <Badge
-          variant="outline"
-          className="border-border bg-muted text-muted-foreground inline-flex h-6 items-center rounded-sm px-1.5 py-0 text-[9px]"
-        >
-          {allItems.length}
-        </Badge>
-      </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col px-0.5 pb-0.5">
           {allItems.length > 0 ? (

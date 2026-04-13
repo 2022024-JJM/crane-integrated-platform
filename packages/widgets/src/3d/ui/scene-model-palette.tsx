@@ -1,4 +1,5 @@
 import { Camera as CameraIcon, Radar, Type } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   SavedMapInfo,
@@ -12,6 +13,7 @@ import {
   SCENE_SENSOR_DRAG_TYPE,
   SCENE_TEXT_DRAG_TYPE,
 } from './use-scene-drop';
+import { getPlacedObjectItems } from './placed-object-items';
 import { PaletteHeader } from './palette-header';
 import { PaletteAssetGrid } from './palette-asset-grid';
 import { PaletteMapSection } from './palette-map-section';
@@ -77,10 +79,24 @@ export function SceneModelPalette({
   isSaving = false,
 }: SceneModelPaletteProps) {
   const { t } = useTranslation();
+  const [objectSearch, setObjectSearch] = useState('');
+
+  const placedObjectCount = useMemo(() => {
+    return getPlacedObjectItems({
+      placedModels,
+      placedTexts,
+      placedSensors,
+      objectSearch,
+      textObjectLabel: t('monitoring:editor.textObject'),
+    }).length;
+  }, [objectSearch, placedModels, placedSensors, placedTexts, t]);
 
   return (
     <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
       <PaletteHeader
+        objectSearch={objectSearch}
+        onObjectSearchChange={setObjectSearch}
+        placedObjectCount={placedObjectCount}
         onSave={onSave}
         onExport={onExport}
         saveDisabled={saveDisabled}
@@ -144,6 +160,7 @@ export function SceneModelPalette({
           placedModels={placedModels}
           placedTexts={placedTexts}
           placedSensors={placedSensors}
+          objectSearch={objectSearch}
           selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
           onDeletePlacedModel={onDeletePlacedModel}

@@ -28,6 +28,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
 }: PaletteAssetGridProps) {
   const { t } = useTranslation();
   const [assetSearch, setAssetSearch] = useState('');
+  const controlClassName = 'h-6 rounded-sm';
 
   const normalizedAssetSearch = assetSearch.trim().toLowerCase();
   const filteredItems = useMemo(() => {
@@ -47,27 +48,34 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center gap-2 pb-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
-          <Input
-            value={assetSearch}
-            onChange={(event) => {
-              setAssetSearch(event.target.value);
-            }}
-            placeholder={t('monitoring:editor.searchModels')}
-            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
-          />
+      <div className="shrink-0 px-1 pt-1 pb-2">
+        <div className="flex items-center gap-2">
+          <div
+            className={`border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 ${controlClassName} flex min-w-0 flex-1 items-center border px-2 transition-colors focus-within:ring-3`}
+          >
+            <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
+            <Input
+              value={assetSearch}
+              onChange={(event) => {
+                setAssetSearch(event.target.value);
+              }}
+              placeholder={t('monitoring:editor.searchModels')}
+              className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
+            />
+          </div>
+          <div className="flex h-6 shrink-0 items-center">
+            <Badge
+              render={<div />}
+              variant="outline"
+              className={`border-border bg-muted text-muted-foreground ${controlClassName} flex min-w-6 items-center justify-center px-1.5 py-0 text-[9px] leading-none`}
+            >
+              {filteredItems.length}
+            </Badge>
+          </div>
         </div>
-        <Badge
-          variant="outline"
-          className="border-border bg-muted text-muted-foreground inline-flex h-6 items-center rounded-sm px-1.5 py-0 text-[9px]"
-        >
-          {filteredItems.length}
-        </Badge>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 px-0.5 pb-0.5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 px-1 pb-1">
           {filteredItems.map((item) => {
             const isDragging = draggingItemId === item.id;
             return (

@@ -27,6 +27,7 @@ import {
 import {
   startTransition,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -53,6 +54,7 @@ import {
   SCENE_SENSOR_DRAG_TYPE,
   SCENE_TEXT_DRAG_TYPE,
 } from '../../3d/ui/use-scene-drop';
+import { getPlacedObjectItems } from '../../3d/ui/placed-object-items';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
@@ -676,9 +678,25 @@ function HierarchyPanel({
   onSave: () => void;
   onExport: () => void;
 }) {
+  const { t } = useTranslation();
+  const [objectSearch, setObjectSearch] = useState('');
+
+  const placedObjectCount = useMemo(() => {
+    return getPlacedObjectItems({
+      placedModels: sceneInfo?.models ?? [],
+      placedTexts: sceneInfo?.texts ?? [],
+      placedSensors: sceneInfo?.sensors ?? [],
+      objectSearch,
+      textObjectLabel: t('monitoring:editor.textObject'),
+    }).length;
+  }, [objectSearch, sceneInfo, t]);
+
   return (
     <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
       <PaletteHeader
+        objectSearch={objectSearch}
+        onObjectSearchChange={setObjectSearch}
+        placedObjectCount={placedObjectCount}
         onSave={onSave}
         onExport={onExport}
         saveDisabled={!sceneInfo}
@@ -690,6 +708,7 @@ function HierarchyPanel({
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
           placedSensors={sceneInfo?.sensors ?? []}
+          objectSearch={objectSearch}
           selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
           onDeletePlacedModel={onDeletePlacedModel}
