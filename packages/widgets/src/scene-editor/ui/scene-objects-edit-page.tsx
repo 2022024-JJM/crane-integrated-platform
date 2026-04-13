@@ -9,19 +9,37 @@ import {
   SceneTransformModeToggle,
 } from '@crane/features/3d';
 import {
+  AlertCircle,
   Camera as CameraIcon,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
   Layers3,
+  Loader2,
   PanelLeftClose,
   PanelRightClose,
   Radar,
   SlidersHorizontal,
-  Tag,
-  Tags,
   Type,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
+import { Badge } from '@crane/ui/atoms/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import {
   PaletteAssetGrid,
@@ -148,12 +166,17 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // sceneInfo, selectedIds는 자주 변경되므로 의존성 배열에 넣으면 리스너가
   // 매 수정마다 재등록된다. ref로 추적해 리스너를 1회만 등록한다.
   const sceneInfoRef = useRef(sceneInfo);
-  sceneInfoRef.current = sceneInfo;
   const selectedIdsRef = useRef(selectedIds);
-  selectedIdsRef.current = selectedIds;
 
   useEffect(() => {
-    setDraggingCatalogItem(null);
+    sceneInfoRef.current = sceneInfo;
+    selectedIdsRef.current = selectedIds;
+  }, [sceneInfo, selectedIds]);
+
+  useEffect(() => {
+    startTransition(() => {
+      setDraggingCatalogItem(null);
+    });
   }, [regionId]);
 
   // 좌측 패널은 카탈로그/배치 객체 목록이라 작업 흐름상 자주 본다 → 기본 펼침.
@@ -164,8 +187,22 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
   const hasSelection = selectedIds.size > 0;
+  const saveDisabled = !sceneInfo;
+  const saveStatusLabel = isSaving
+    ? t('monitoring:editor.statusSaving')
+    : isDirty
+      ? t('monitoring:editor.statusUnsaved')
+      : t('monitoring:editor.statusSaved');
+  const saveStatusClassName = isSaving
+    ? 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-100'
+    : isDirty
+      ? 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-100'
+      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100';
+
   useEffect(() => {
-    setRightCollapsed(!hasSelection);
+    startTransition(() => {
+      setRightCollapsed(!hasSelection);
+    });
   }, [hasSelection]);
 
   useEffect(() => {
@@ -287,7 +324,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               updateSelectedMeshTransformVector(field, value, {
                 recordHistory: false,
               });
-            } else if (selectedObjectType === 'sensor' && selectedSensor && (field === 'position' || field === 'rotation')) {
+            } else if (
+              selectedObjectType === 'sensor' &&
+              selectedSensor &&
+              (field === 'position' || field === 'rotation')
+            ) {
               updateSensor(selectedSensor.id, { [field]: value });
             } else {
               updateSelectedTransformVector(field, value, {
@@ -345,7 +386,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           <HierarchyPanel
             sceneInfo={sceneInfo}
             selectedIds={selectedIds}
-            isDirty={isDirty}
             isSaving={isSaving}
             onSelectPlacedModel={selectPlacedModel}
             onDeletePlacedModel={deletePlacedModel}
@@ -381,9 +421,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             onTransformChange={(field, axis, value) => {
               // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
               // 텍스트/모델/메시는 기존 핸들러로.
-              if (selectedSensor && (field === 'position' || field === 'rotation')) {
+              if (
+                selectedSensor &&
+                (field === 'position' || field === 'rotation')
+              ) {
                 const current =
-                  field === 'position' ? selectedSensor.position : selectedSensor.rotation;
+                  field === 'position'
+                    ? selectedSensor.position
+                    : selectedSensor.rotation;
                 const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
                 const next: [number, number, number] = [
                   current[0],
@@ -419,38 +464,72 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               mode={transformMode}
               onModeChange={setTransformMode}
               leadingContent={
-                <SceneHistoryControls
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onUndo={undo}
-                  onRedo={redo}
-                />
+                <div className="flex items-center gap-2">
+                  {!saveDisabled ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
+                        saveStatusClassName,
+                      )}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : isDirty ? (
+                        <AlertCircle className="size-4" />
+                      ) : (
+                        <CheckCircle2 className="size-4" />
+                      )}
+                      {saveStatusLabel}
+                    </Badge>
+                  ) : null}
+                  <SceneHistoryControls
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={undo}
+                    onRedo={redo}
+                  />
+                </div>
               }
               trailingContent={
-                <div className="bg-background/95 border-border/80 flex items-center gap-2 rounded-lg border px-3 py-2 shadow-sm backdrop-blur-sm">
-                  <button
-                    type="button"
-                    onClick={() => setShowLabels((prev) => !prev)}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                    title={
-                      showLabels
-                        ? t('monitoring:editor.hideLabels')
-                        : t('monitoring:editor.showLabels')
-                    }
-                  >
-                    {showLabels ? (
-                      <Tag className="size-4" />
-                    ) : (
-                      <Tags className="size-4 opacity-50" />
-                    )}
-                  </button>
+                <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={
+                              showLabels
+                                ? t('monitoring:editor.hideLabels')
+                                : t('monitoring:editor.showLabels')
+                            }
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors"
+                          />
+                        }
+                        onClick={() => setShowLabels((prev) => !prev)}
+                      >
+                        {showLabels ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4 opacity-50" />
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {showLabels
+                          ? t('monitoring:editor.hideLabels')
+                          : t('monitoring:editor.showLabels')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <span className="bg-border h-4 w-px" />
                   <span className="max-w-36 truncate text-xs font-medium">
                     {selectedIds.size > 1
                       ? t('monitoring:editor.multipleSelected', {
                           count: selectedIds.size,
                         })
-                      : selectedModelLabel || t('monitoring:editor.noSelection')}
+                      : selectedModelLabel ||
+                        t('monitoring:editor.noSelection')}
                   </span>
                 </div>
               }
@@ -571,7 +650,6 @@ function FloatingPanel({
 function HierarchyPanel({
   sceneInfo,
   selectedIds,
-  isDirty,
   isSaving,
   onSelectPlacedModel,
   onDeletePlacedModel,
@@ -586,7 +664,6 @@ function HierarchyPanel({
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
-  isDirty: boolean;
   isSaving: boolean;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
@@ -600,16 +677,15 @@ function HierarchyPanel({
   onExport: () => void;
 }) {
   return (
-    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-sm">
+    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
       <PaletteHeader
         onSave={onSave}
         onExport={onExport}
         saveDisabled={!sceneInfo}
         exportDisabled={!sceneInfo}
-        isDirty={isDirty}
         isSaving={isSaving}
       />
-      <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
+      <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
@@ -637,6 +713,7 @@ function HierarchyPanel({
 const BOTTOM_PANEL_MIN_H = 80;
 const BOTTOM_PANEL_MAX_H = 480;
 const BOTTOM_PANEL_DEFAULT_H = 224;
+const BOTTOM_PANEL_COLLAPSED_H = 44;
 
 function BottomProjectPanel({
   items,
@@ -663,9 +740,13 @@ function BottomProjectPanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [panelHeight, setPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_H);
   const dragStartY = useRef<number | null>(null);
   const dragStartH = useRef<number>(BOTTOM_PANEL_DEFAULT_H);
+  const currentPanelHeight = isCollapsed
+    ? BOTTOM_PANEL_COLLAPSED_H
+    : panelHeight;
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -675,7 +756,10 @@ function BottomProjectPanel({
     const onMouseMove = (ev: MouseEvent) => {
       if (dragStartY.current === null) return;
       const delta = dragStartY.current - ev.clientY;
-      const next = Math.min(BOTTOM_PANEL_MAX_H, Math.max(BOTTOM_PANEL_MIN_H, dragStartH.current + delta));
+      const next = Math.min(
+        BOTTOM_PANEL_MAX_H,
+        Math.max(BOTTOM_PANEL_MIN_H, dragStartH.current + delta),
+      );
       setPanelHeight(next);
     };
 
@@ -692,103 +776,128 @@ function BottomProjectPanel({
   return (
     <div
       className="border-border bg-card text-card-foreground relative flex shrink-0 flex-col overflow-hidden border-t"
-      style={{ height: panelHeight }}
+      style={{ height: currentPanelHeight }}
     >
       {/* 리사이즈 핸들 */}
-      <div
-        onMouseDown={handleResizeMouseDown}
-        className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
-      >
-        <div className="bg-border hover:bg-primary/60 h-1 w-12 rounded-full transition-colors" />
-      </div>
+      {!isCollapsed ? (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
+        />
+      ) : null}
       {/* 탭 헤더 */}
-      <div className="border-border flex shrink-0 items-center gap-0 border-b pt-1">
+      <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
+        <div className="flex items-center gap-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('models')}
+            className={cn(
+              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              activeTab === 'models'
+                ? 'border-primary text-foreground'
+                : 'text-muted-foreground hover:text-foreground border-transparent',
+            )}
+          >
+            {t('monitoring:palette.title')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('tools')}
+            className={cn(
+              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              activeTab === 'tools'
+                ? 'border-primary text-foreground'
+                : 'text-muted-foreground hover:text-foreground border-transparent',
+            )}
+          >
+            {t('monitoring:editor.sensorTextTab')}
+          </button>
+        </div>
         <button
           type="button"
-          onClick={() => setActiveTab('models')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-            activeTab === 'models'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
-          )}
+          onClick={() => setIsCollapsed((prev) => !prev)}
+          className="text-muted-foreground hover:text-foreground mr-2 inline-flex size-7 items-center justify-center rounded-md transition-colors"
+          aria-label={isCollapsed ? 'Expand palette' : 'Collapse palette'}
+          title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
         >
-          {t('monitoring:palette.title')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('tools')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-            activeTab === 'tools'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+          {isCollapsed ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
           )}
-        >
-          {t('monitoring:editor.sensorTextTab')}
         </button>
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === 'models' ? (
-          <div className="h-full overflow-hidden p-2">
-            <PaletteAssetGrid
-              items={items}
-              draggingItemId={draggingItemId}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
+      <div
+        hidden={isCollapsed}
+        aria-hidden={isCollapsed}
+        className="min-h-0 flex-1 overflow-hidden"
+      >
+        <div
+          hidden={activeTab !== 'models'}
+          aria-hidden={activeTab !== 'models'}
+          className="h-full overflow-hidden p-2"
+        >
+          <PaletteAssetGrid
+            items={items}
+            draggingItemId={draggingItemId}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          />
+        </div>
+
+        <div
+          hidden={activeTab !== 'tools'}
+          aria-hidden={activeTab !== 'tools'}
+          className="flex h-full flex-col gap-2 overflow-y-auto p-2"
+        >
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
+              event.dataTransfer.effectAllowed = 'copy';
+              onTextDragStart();
+            }}
+            onDragEnd={onTextDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <Type className="size-3.5" />
+            {t('monitoring:editor.addText')}
           </div>
-        ) : (
-          <div className="flex h-full flex-col gap-2 overflow-y-auto p-2">
-            <div
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
-                event.dataTransfer.effectAllowed = 'copy';
-                onTextDragStart();
-              }}
-              onDragEnd={onTextDragEnd}
-              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-            >
-              <Type className="size-3.5" />
-              {t('monitoring:editor.addText')}
-            </div>
 
-            <div
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
-                event.dataTransfer.effectAllowed = 'copy';
-                onSensorDragStart('lidar');
-              }}
-              onDragEnd={onSensorDragEnd}
-              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-            >
-              <Radar className="size-3.5" />
-              {t('monitoring:editor.addLidarSensor')}
-            </div>
-
-            <div
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
-                event.dataTransfer.effectAllowed = 'copy';
-                onSensorDragStart('camera');
-              }}
-              onDragEnd={onSensorDragEnd}
-              className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-            >
-              <CameraIcon className="size-3.5" />
-              {t('monitoring:editor.addCameraSensor')}
-            </div>
-
-            {map ? (
-              <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
-            ) : null}
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
+              event.dataTransfer.effectAllowed = 'copy';
+              onSensorDragStart('lidar');
+            }}
+            onDragEnd={onSensorDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <Radar className="size-3.5" />
+            {t('monitoring:editor.addLidarSensor')}
           </div>
-        )}
+
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
+              event.dataTransfer.effectAllowed = 'copy';
+              onSensorDragStart('camera');
+            }}
+            onDragEnd={onSensorDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <CameraIcon className="size-3.5" />
+            {t('monitoring:editor.addCameraSensor')}
+          </div>
+
+          {map ? (
+            <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export function SceneHistoryControls({
 
   return (
     <TooltipProvider>
-      <div className="bg-background/95 border-border/80 flex items-center gap-1 rounded-lg border p-1 shadow-sm backdrop-blur-sm">
+      <div className="bg-background/95 border-border/80 flex h-[34px] items-center gap-1 rounded-lg border p-px shadow-sm backdrop-blur-sm">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -34,7 +34,7 @@ export function SceneHistoryControls({
                 size="icon-sm"
                 aria-label={t('monitoring:history.undo')}
                 disabled={!canUndo}
-                className="size-10 rounded-md"
+                className="size-8 rounded-md"
               />
             }
             onClick={onUndo}
@@ -51,7 +51,7 @@ export function SceneHistoryControls({
                 size="icon-sm"
                 aria-label={t('monitoring:history.redo')}
                 disabled={!canRedo}
-                className="size-10 rounded-md"
+                className="size-8 rounded-md"
               />
             }
             onClick={onRedo}

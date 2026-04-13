@@ -1,4 +1,4 @@
-import { Boxes, Camera, Layers3, Radar, Search, Trash2, Type } from 'lucide-react';
+import { Boxes, Camera, Radar, Search, Trash2, Type } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,7 +53,6 @@ export function PalettePlacedObjects({
   const [objectSearch, setObjectSearch] = useState('');
 
   const normalizedObjectSearch = objectSearch.trim().toLowerCase();
-
   const allItems = useMemo(() => {
     const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({
       id: model.id,
@@ -90,23 +89,9 @@ export function PalettePlacedObjects({
   }, [normalizedObjectSearch, placedModels, placedTexts, placedSensors, t]);
 
   return (
-    <section className="border-border bg-card flex min-h-0 flex-1 flex-col rounded-lg border">
-      <div className="border-border flex items-center justify-between border-b px-2 py-1.5">
-        <div className="flex items-center gap-2">
-          <Layers3 className="text-muted-foreground size-3" />
-          <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
-            {t('monitoring:editor.placedObjects')}
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className="border-border bg-muted text-muted-foreground rounded-sm px-1.5 py-0 text-[9px]"
-        >
-          {placedModels.length + placedTexts.length + placedSensors.length}
-        </Badge>
-      </div>
-      <div className="border-border border-b px-2 py-1.5">
-        <div className="relative">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center gap-2 px-2 py-1.5">
+        <div className="relative min-w-0 flex-1">
           <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
           <Input
             value={objectSearch}
@@ -117,9 +102,15 @@ export function PalettePlacedObjects({
             className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>
+        <Badge
+          variant="outline"
+          className="border-border bg-muted text-muted-foreground inline-flex h-6 items-center rounded-sm px-1.5 py-0 text-[9px]"
+        >
+          {allItems.length}
+        </Badge>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col py-0.5">
+        <div className="flex flex-col px-0.5 pb-0.5">
           {allItems.length > 0 ? (
             allItems.map((item) => {
               const isSelected = selectedIds.has(item.id);

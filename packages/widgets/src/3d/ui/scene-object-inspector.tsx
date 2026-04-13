@@ -10,7 +10,6 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  humanizeModelPath,
   isCameraSensor,
   isLidarSensor,
   MAX_CAMERA_FOV,
@@ -377,18 +376,6 @@ function ModelInspectorContent({
 }) {
   return (
     <>
-      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          {t('monitoring:inspector.title')}
-        </p>
-        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
-          {selectedLabel || selectedModel.id}
-        </p>
-        <p className="text-muted-foreground mt-1 truncate text-[10px] leading-none">
-          {humanizeModelPath(selectedModel.path)}
-        </p>
-      </div>
-
       <InspectorSection
         title={t('monitoring:inspector.name')}
         icon={<SlidersHorizontal className="size-4" />}
@@ -505,25 +492,14 @@ function MeshInspectorContent({
 
   return (
     <>
-      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
-        <button
-          type="button"
-          onClick={onBackToParent}
-          className="text-muted-foreground hover:text-foreground mb-1.5 flex cursor-pointer items-center gap-1 text-[10px]"
-        >
-          <ArrowLeft className="size-3" />
-          {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
-        </button>
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          {t('monitoring:inspector.title')} · mesh
-        </p>
-        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
-          {displayName}
-        </p>
-        <p className="text-muted-foreground mt-1 truncate text-[10px] leading-none">
-          {selectedMesh.meshPath}
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={onBackToParent}
+        className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 px-1 text-[11px] transition-colors"
+      >
+        <ArrowLeft className="size-3.5" />
+        {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
+      </button>
 
       <InspectorSection
         title={t('monitoring:inspector.name')}
@@ -603,15 +579,6 @@ function TextInspectorContent({
 }) {
   return (
     <>
-      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          {t('monitoring:editor.textObject')}
-        </p>
-        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
-          {selectedText.content || 'Text'}
-        </p>
-      </div>
-
       <InspectorSection
         title={t('monitoring:inspector.textContent')}
         icon={<Type className="size-4" />}
@@ -719,15 +686,6 @@ function LidarSensorInspectorContent({
 }) {
   return (
     <>
-      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          LiDAR
-        </p>
-        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
-          {sensor.name || sensor.id}
-        </p>
-      </div>
-
       <TransformSection
         position={sensor.position}
         rotation={sensor.rotation}
@@ -815,15 +773,6 @@ function CameraSensorInspectorContent({
 }) {
   return (
     <>
-      <div className="border-border bg-muted/30 rounded-lg border px-2.5 py-2.5">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          Camera
-        </p>
-        <p className="text-foreground mt-1 truncate text-[15px] leading-none font-semibold">
-          {sensor.name || sensor.id}
-        </p>
-      </div>
-
       <TransformSection
         position={sensor.position}
         rotation={sensor.rotation}

@@ -1,4 +1,4 @@
-import { Boxes, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -46,23 +46,9 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
   }, [items, normalizedAssetSearch]);
 
   return (
-    <section className="border-border bg-card flex h-full min-h-0 flex-col rounded-lg border">
-      <div className="border-border flex shrink-0 items-center justify-between border-b px-2 py-1.5">
-        <div className="flex items-center gap-2">
-          <Boxes className="text-muted-foreground size-3" />
-          <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
-            {t('monitoring:palette.title')}
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className="border-border bg-muted text-muted-foreground rounded-sm px-1.5 py-0 text-[9px]"
-        >
-          {items.length}
-        </Badge>
-      </div>
-      <div className="border-border shrink-0 border-b px-2 py-1.5">
-        <div className="relative">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center gap-2 pb-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
           <Input
             value={assetSearch}
@@ -73,9 +59,15 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
             className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 rounded-sm pl-7 text-[11px]"
           />
         </div>
+        <Badge
+          variant="outline"
+          className="border-border bg-muted text-muted-foreground inline-flex h-6 items-center rounded-sm px-1.5 py-0 text-[9px]"
+        >
+          {filteredItems.length}
+        </Badge>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 p-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 px-0.5 pb-0.5">
           {filteredItems.map((item) => {
             const isDragging = draggingItemId === item.id;
             return (

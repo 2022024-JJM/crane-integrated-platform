@@ -3,13 +3,13 @@
 @import 'shadcn/tailwind.css';
 @import './design-token.css';
 
-@source "../../../../packages/ui/src/**/*.tsx";
-@source "../../../../packages/widgets/src/**/*.tsx";
-@source "../../../../packages/features/src/**/*.tsx";
-@source "../../../../packages/domain/src/**/*.tsx";
-@source "../../src/**/*.tsx";
-@source "../../../hanwha-ocean/src/**/*.tsx";
-@source "../../../goliath-crane/src/**/*.tsx";
+@source '../../../../packages/ui/src/**/*.tsx';
+@source '../../../../packages/widgets/src/**/*.tsx';
+@source '../../../../packages/features/src/**/*.tsx';
+@source '../../../../packages/domain/src/**/*.tsx';
+@source '../../src/**/*.tsx';
+@source '../../../hanwha-ocean/src/**/*.tsx';
+@source '../../../goliath-crane/src/**/*.tsx';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -125,11 +125,26 @@
 }
 
 @keyframes lidar-sweep {
-  0%   { transform: translateY(0%); opacity: 0.8; }
-  45%  { transform: translateY(95%); opacity: 0.4; }
-  50%  { transform: translateY(95%); opacity: 0; }
-  55%  { transform: translateY(95%); opacity: 0; }
-  100% { transform: translateY(0%); opacity: 0; }
+  0% {
+    transform: translateY(0%);
+    opacity: 0.8;
+  }
+  45% {
+    transform: translateY(95%);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(95%);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(95%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0%);
+    opacity: 0;
+  }
 }
 
 @layer base {
@@ -187,4 +202,18 @@
   ::-webkit-scrollbar-corner {
     background: transparent;
   }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 999px;
+  border: 1px solid transparent;
 }
