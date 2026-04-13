@@ -12,7 +12,10 @@ function mapReplayValueToRow(
   tagCode: string,
   value: string | number | null,
 ): MonitoringReplayRow {
-  const metadata = getMonitoringTagMetadata(tagCode);
+  const metadata = getMonitoringTagMetadata(
+    tagCode,
+    crane.tagSchema?.[tagCode] ?? null,
+  );
 
   return {
     id: `${frameTimestamp}:${crane.craneId}:${tagCode}`,

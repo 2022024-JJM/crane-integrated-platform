@@ -1,9 +1,17 @@
 export type {
+  MonitoringReplaySite,
+  MonitoringReplaySiteId,
   MonitoringReplayLiteQuery,
   MonitoringReplayRow,
+  OperationIntervalResponse,
+  PlaybackFrameResponse,
+  PlaybackResponse,
+  PlaybackSiteResponse,
   ReplayLiteCraneSnapshot,
   ReplayLiteFrame,
   ReplayLiteResponse,
+  ReplayTagSchema,
+  ReplayTagSchemaItem,
 } from './model/types';
 export {
   buildDefaultReplayQuery,
@@ -15,6 +23,7 @@ export {
   toDateTimeLocalValue,
   validateReplayDateTimeRange,
 } from './config/replay-defaults';
+export { getMonitoringReplaySites } from './api/get-monitoring-replay-sites';
 export { getMonitoringReplayLite } from './api/get-monitoring-replay-lite';
 export { getMonitoringTagMetadata } from './model/tag-catalog';
 export {
@@ -22,4 +31,9 @@ export {
   getLatestReplayFrameWithValues,
   mapReplayResponseToRows,
 } from './lib/replay-mapper';
-export { parseIntervalToMs } from './lib/parse-interval';
+export { getReplayFrameDurationsMs } from './lib/parse-interval';
+export { normalizePlaybackResponse } from './lib/playback-adapter';
+export {
+  getMonitoringReplaySiteIdByRegion,
+  resolveMonitoringReplaySiteId,
+} from './lib/replay-site';

@@ -58,7 +58,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
     regionId: backendRegionId,
     from: query.from,
     to: query.to,
-    interval: query.interval,
   });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const [visionExpanded, setVisionExpanded] = useState<ExpandedView>(null);

@@ -39,7 +39,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       regionId,
       from: query.from,
       to: query.to,
-      interval: query.interval,
     });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
 

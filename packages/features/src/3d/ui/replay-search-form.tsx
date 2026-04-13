@@ -46,6 +46,7 @@ export function ReplaySearchForm({
           <span className="w-8 shrink-0">{t('common:from')}</span>
           <input
             type="datetime-local"
+            step={1}
             value={draftFrom}
             onChange={(e) => onDraftFromChange(e.target.value)}
             className="bg-background border-input focus:ring-ring w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
@@ -55,6 +56,7 @@ export function ReplaySearchForm({
           <span className="w-8 shrink-0">{t('common:to')}</span>
           <input
             type="datetime-local"
+            step={1}
             value={draftTo}
             onChange={(e) => onDraftToChange(e.target.value)}
             className="bg-background border-input focus:ring-ring w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"

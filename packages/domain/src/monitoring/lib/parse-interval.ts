@@ -1,24 +1,43 @@
-/**
- * ISO 8601 duration ("PT5S", "PT1M30S") 또는 단순형 ("5s", "1m") 문자열을
- * 밀리초(ms)로 변환한다.
- *
- * 파싱에 실패하면 기본값 5000ms를 반환한다.
- */
-export function parseIntervalToMs(interval: string): number {
-  // ISO 8601: PT5S, PT1M, PT1M30S
-  const isoMatch = interval.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
-  if (isoMatch) {
-    const minutes = parseInt(isoMatch[1] ?? '0', 10);
-    const seconds = parseFloat(isoMatch[2] ?? '0');
-    return (minutes * 60 + seconds) * 1000;
+import type { ReplayLiteFrame } from '../model/types';
+
+const DEFAULT_REPLAY_INTERVAL_MS = 5_000;
+
+function toTimestampMs(value: string) {
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function getReplayFrameDurationsMs(
+  frames: ReplayLiteFrame[],
+): number[] {
+  if (frames.length === 0) {
+    return [];
   }
 
-  // 단순형: 5s, 30s, 1m
-  const simpleMatch = interval.match(/^(\d+(?:\.\d+)?)(s|m)$/);
-  if (simpleMatch) {
-    const value = parseFloat(simpleMatch[1]);
-    return simpleMatch[2] === 'm' ? value * 60_000 : value * 1_000;
+  const durations = new Array<number>(frames.length).fill(
+    DEFAULT_REPLAY_INTERVAL_MS,
+  );
+
+  for (let index = 0; index < frames.length - 1; index += 1) {
+    const currentTimestamp = toTimestampMs(frames[index]!.timestamp);
+    const nextTimestamp = toTimestampMs(frames[index + 1]!.timestamp);
+
+    if (currentTimestamp === null || nextTimestamp === null) {
+      continue;
+    }
+
+    const durationMs = nextTimestamp - currentTimestamp;
+
+    if (durationMs > 0) {
+      durations[index] = durationMs;
+    }
   }
 
-  return 5_000;
+  if (frames.length > 1) {
+    durations[frames.length - 1] =
+      durations[frames.length - 2] ?? DEFAULT_REPLAY_INTERVAL_MS;
+  }
+
+  return durations;
 }

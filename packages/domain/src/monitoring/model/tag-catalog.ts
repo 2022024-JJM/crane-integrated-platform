@@ -1,3 +1,5 @@
+import type { ReplayTagSchemaItem } from './types';
+
 export interface MonitoringTagMetadata {
   displayName: string;
   category: string;
@@ -45,7 +47,19 @@ function getIndexedDisplayName(prefix: string, index: string, suffix: string) {
 
 export function getMonitoringTagMetadata(
   tagCode: string,
+  tagSchemaItem?: ReplayTagSchemaItem | null,
 ): MonitoringTagMetadata {
+  if (tagSchemaItem) {
+    return {
+      displayName: tagSchemaItem.displayName || humanizeToken(tagCode),
+      category: tagSchemaItem.category || 'status',
+      dataType: tagSchemaItem.dataType,
+      unit: tagSchemaItem.unit,
+      direction: null,
+      alarm: tagSchemaItem.alarm,
+    };
+  }
+
   if (datetimeTagCodes.has(tagCode)) {
     return {
       displayName: humanizeToken(tagCode),

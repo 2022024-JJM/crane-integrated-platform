@@ -43,7 +43,6 @@ export function buildDefaultReplayQuery(regionId: string) {
   return {
     from: SAMPLE_REPLAY_FROM_ISO,
     to: SAMPLE_REPLAY_TO_ISO,
-    interval: DEFAULT_REPLAY_INTERVAL,
     craneIds: getReplayDefaultCraneIds(regionId),
   };
 }
@@ -54,7 +53,6 @@ export function buildDefaultReplayFormValues(regionId: string) {
   return {
     from: toDateTimeLocalValue(new Date(query.from)),
     to: toDateTimeLocalValue(new Date(query.to)),
-    interval: query.interval,
     craneIds: query.craneIds,
   };
 }
@@ -63,7 +61,6 @@ export function buildSampleReplayFormValues(regionId: string) {
   return {
     from: toDateTimeLocalValue(new Date(SAMPLE_REPLAY_FROM_ISO)),
     to: toDateTimeLocalValue(new Date(SAMPLE_REPLAY_TO_ISO)),
-    interval: DEFAULT_REPLAY_INTERVAL,
     craneIds: getReplayDefaultCraneIds(regionId),
   };
 }

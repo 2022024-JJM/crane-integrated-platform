@@ -26,7 +26,6 @@ function ReplayMonitoringViewContent({ regionId }: { regionId: string }) {
     regionId,
     from: query.from,
     to: query.to,
-    interval: query.interval,
   });
 
   return (

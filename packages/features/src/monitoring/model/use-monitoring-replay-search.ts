@@ -16,7 +16,6 @@ export function useMonitoringReplaySearch(regionId: string) {
   const [submittedRange, setSubmittedRange] = useState({
     from: defaults.from,
     to: defaults.to,
-    interval: defaults.interval,
   });
 
   const validation = useMemo(
@@ -29,9 +28,8 @@ export function useMonitoringReplaySearch(regionId: string) {
     () => ({
       from: fromDateTimeLocalValue(submittedRange.from),
       to: fromDateTimeLocalValue(submittedRange.to),
-      interval: submittedRange.interval,
     }),
-    [submittedRange.from, submittedRange.interval, submittedRange.to],
+    [submittedRange.from, submittedRange.to],
   );
 
   const submitSearch = useCallback(() => {
@@ -56,7 +54,6 @@ export function useMonitoringReplaySearch(regionId: string) {
     validationReason: validation.reason,
     viewingFrom: submittedRange.from,
     viewingTo: submittedRange.to,
-    interval: submittedRange.interval,
     query,
   };
 }

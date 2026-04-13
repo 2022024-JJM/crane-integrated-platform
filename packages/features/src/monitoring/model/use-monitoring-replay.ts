@@ -12,14 +12,12 @@ interface UseMonitoringReplayParams {
   regionId: string;
   from: string;
   to: string;
-  interval: string;
 }
 
 export function useMonitoringReplay({
   regionId,
   from,
   to,
-  interval,
 }: UseMonitoringReplayParams) {
   const craneIds = useMemo(
     () => getReplayDefaultCraneIds(regionId),
@@ -27,14 +25,14 @@ export function useMonitoringReplay({
   );
 
   const replayQuery = useQuery({
-    queryKey: ['monitoring', 'replay-lite', regionId, from, to, interval],
+    queryKey: ['monitoring', 'replay-lite', regionId, from, to],
     queryFn: () =>
       getMonitoringReplayLite({
+        regionId,
         from,
         to,
-        interval,
       }),
-    enabled: Boolean(from && to && interval),
+    enabled: Boolean(regionId && from && to),
     refetchInterval: 5_000,
   });
 
