@@ -57,6 +57,16 @@ function InputNumber({
     onChange(clamp(value - step));
   }, [onChange, clamp, value, step]);
 
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    if (document.activeElement !== inputRef.current) return;
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      increment();
+    } else {
+      decrement();
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       commit(e.currentTarget.value);
@@ -96,6 +106,7 @@ function InputNumber({
           if (draft !== null) commit(draft);
           onBlur?.(e);
         }}
+        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         className="min-w-0 flex-1 bg-transparent px-2.5 text-sm tabular-nums outline-none disabled:pointer-events-none disabled:opacity-50"
         {...props}
