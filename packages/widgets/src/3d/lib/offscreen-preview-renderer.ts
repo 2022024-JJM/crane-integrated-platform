@@ -20,6 +20,7 @@ import {
   resolveListeners,
   type QueueEntry,
 } from './preview-render-queue';
+import { setCachedPreviewResult } from './preview-result-cache';
 
 export type { RenderRequest, AbortHandle } from './preview-render-queue';
 
@@ -30,13 +31,10 @@ Cache.enabled = true;
 let renderer: WebGLRenderer | null = null;
 let scene: Scene | null = null;
 let camera: OrthographicCamera | null = null;
-let refCount = 0;
 let disposeTimer: ReturnType<typeof setTimeout> | null = null;
 let isProcessing = false;
 let contextLostHandler: ((event: Event) => void) | null = null;
 
-const blobUrls = new Set<string>();
-const blobUrlsByPath = new Map<string, string>();
 const pendingByKey = new Map<string, QueueEntry>();
 const queue: QueueEntry[] = [];
 
@@ -98,24 +96,16 @@ function handleContextLost() {
   pendingByKey.clear();
   isProcessing = false;
 
-  for (const url of blobUrls) {
-    URL.revokeObjectURL(url);
-  }
-  blobUrls.clear();
-  blobUrlsByPath.clear();
-
   renderer = null;
   scene = null;
   camera = null;
 }
 
-export function acquireRenderer(): void {
+function ensureRenderer(): void {
   if (disposeTimer !== null) {
     clearTimeout(disposeTimer);
     disposeTimer = null;
   }
-
-  refCount++;
 
   if (!renderer) {
     renderer = createRenderer();
@@ -124,20 +114,28 @@ export function acquireRenderer(): void {
   }
 }
 
-export function releaseRenderer(): void {
-  refCount = Math.max(0, refCount - 1);
-
-  if (refCount === 0) {
-    disposeTimer = setTimeout(() => {
-      disposeAll();
-    }, 5000);
+function scheduleDispose(): void {
+  if (disposeTimer !== null || isProcessing || queue.length > 0) {
+    return;
   }
+
+  disposeTimer = setTimeout(() => {
+    disposeAll();
+  }, 5000);
 }
 
 function disposeAll() {
+  if (disposeTimer !== null) {
+    clearTimeout(disposeTimer);
+    disposeTimer = null;
+  }
+
   if (renderer) {
     if (contextLostHandler) {
-      renderer.domElement.removeEventListener('webglcontextlost', contextLostHandler);
+      renderer.domElement.removeEventListener(
+        'webglcontextlost',
+        contextLostHandler,
+      );
       contextLostHandler = null;
     }
     renderer.dispose();
@@ -158,12 +156,6 @@ function disposeAll() {
   }
   camera = null;
   clearGltfCache();
-
-  for (const url of blobUrls) {
-    URL.revokeObjectURL(url);
-  }
-  blobUrls.clear();
-  blobUrlsByPath.clear();
   pendingByKey.clear();
   queue.length = 0;
   isProcessing = false;
@@ -188,6 +180,8 @@ async function executeRender(entry: QueueEntry): Promise<void> {
   const { request } = entry;
 
   if (entry.aborted) return;
+
+  ensureRenderer();
 
   if (!renderer || !scene || !camera) {
     rejectListeners(entry, new Error('Renderer not initialized'));
@@ -228,14 +222,7 @@ async function executeRender(entry: QueueEntry): Promise<void> {
     const blobUrl = await new Promise<string>((res, rej) => {
       renderer!.domElement.toBlob((blob) => {
         if (blob) {
-          const previousUrl = blobUrlsByPath.get(request.path);
-          if (previousUrl) {
-            URL.revokeObjectURL(previousUrl);
-            blobUrls.delete(previousUrl);
-          }
           const url = URL.createObjectURL(blob);
-          blobUrls.add(url);
-          blobUrlsByPath.set(request.path, url);
           res(url);
         } else {
           rej(new Error('toBlob returned null'));
@@ -243,12 +230,10 @@ async function executeRender(entry: QueueEntry): Promise<void> {
       }, 'image/png');
     });
 
+    setCachedPreviewResult(request, blobUrl);
     resolveListeners(entry, blobUrl);
   } catch (err) {
-    rejectListeners(
-      entry,
-      err instanceof Error ? err : new Error(String(err)),
-    );
+    rejectListeners(entry, err instanceof Error ? err : new Error(String(err)));
   }
 }
 
@@ -302,7 +287,10 @@ function processNext(): void {
 function scheduleNext(): void {
   if (queue.length > 0 && !isProcessing) {
     processNext();
+    return;
   }
+
+  scheduleDispose();
 }
 
 export const enqueueRender = createEnqueueRender(

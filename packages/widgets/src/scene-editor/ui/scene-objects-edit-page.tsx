@@ -21,7 +21,13 @@ import {
   SlidersHorizontal,
   Type,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -156,12 +162,17 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // sceneInfo, selectedIds는 자주 변경되므로 의존성 배열에 넣으면 리스너가
   // 매 수정마다 재등록된다. ref로 추적해 리스너를 1회만 등록한다.
   const sceneInfoRef = useRef(sceneInfo);
-  sceneInfoRef.current = sceneInfo;
   const selectedIdsRef = useRef(selectedIds);
-  selectedIdsRef.current = selectedIds;
 
   useEffect(() => {
-    setDraggingCatalogItem(null);
+    sceneInfoRef.current = sceneInfo;
+    selectedIdsRef.current = selectedIds;
+  }, [sceneInfo, selectedIds]);
+
+  useEffect(() => {
+    startTransition(() => {
+      setDraggingCatalogItem(null);
+    });
   }, [regionId]);
 
   // 좌측 패널은 카탈로그/배치 객체 목록이라 작업 흐름상 자주 본다 → 기본 펼침.
@@ -173,7 +184,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 
   const hasSelection = selectedIds.size > 0;
   useEffect(() => {
-    setRightCollapsed(!hasSelection);
+    startTransition(() => {
+      setRightCollapsed(!hasSelection);
+    });
   }, [hasSelection]);
 
   useEffect(() => {
@@ -786,68 +799,76 @@ function BottomProjectPanel({
       </div>
 
       {/* 탭 콘텐츠 */}
-      {!isCollapsed ? (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {activeTab === 'models' ? (
-            <div className="h-full overflow-hidden p-2">
-              <PaletteAssetGrid
-                items={items}
-                draggingItemId={draggingItemId}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-              />
-            </div>
-          ) : (
-            <div className="flex h-full flex-col gap-2 overflow-y-auto p-2">
-              <div
-                draggable
-                onDragStart={(event) => {
-                  event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
-                  event.dataTransfer.effectAllowed = 'copy';
-                  onTextDragStart();
-                }}
-                onDragEnd={onTextDragEnd}
-                className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-              >
-                <Type className="size-3.5" />
-                {t('monitoring:editor.addText')}
-              </div>
-
-              <div
-                draggable
-                onDragStart={(event) => {
-                  event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
-                  event.dataTransfer.effectAllowed = 'copy';
-                  onSensorDragStart('lidar');
-                }}
-                onDragEnd={onSensorDragEnd}
-                className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-              >
-                <Radar className="size-3.5" />
-                {t('monitoring:editor.addLidarSensor')}
-              </div>
-
-              <div
-                draggable
-                onDragStart={(event) => {
-                  event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
-                  event.dataTransfer.effectAllowed = 'copy';
-                  onSensorDragStart('camera');
-                }}
-                onDragEnd={onSensorDragEnd}
-                className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
-              >
-                <CameraIcon className="size-3.5" />
-                {t('monitoring:editor.addCameraSensor')}
-              </div>
-
-              {map ? (
-                <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
-              ) : null}
-            </div>
-          )}
+      <div
+        hidden={isCollapsed}
+        aria-hidden={isCollapsed}
+        className="min-h-0 flex-1 overflow-hidden"
+      >
+        <div
+          hidden={activeTab !== 'models'}
+          aria-hidden={activeTab !== 'models'}
+          className="h-full overflow-hidden p-2"
+        >
+          <PaletteAssetGrid
+            items={items}
+            draggingItemId={draggingItemId}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          />
         </div>
-      ) : null}
+
+        <div
+          hidden={activeTab !== 'tools'}
+          aria-hidden={activeTab !== 'tools'}
+          className="flex h-full flex-col gap-2 overflow-y-auto p-2"
+        >
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
+              event.dataTransfer.effectAllowed = 'copy';
+              onTextDragStart();
+            }}
+            onDragEnd={onTextDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <Type className="size-3.5" />
+            {t('monitoring:editor.addText')}
+          </div>
+
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
+              event.dataTransfer.effectAllowed = 'copy';
+              onSensorDragStart('lidar');
+            }}
+            onDragEnd={onSensorDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <Radar className="size-3.5" />
+            {t('monitoring:editor.addLidarSensor')}
+          </div>
+
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
+              event.dataTransfer.effectAllowed = 'copy';
+              onSensorDragStart('camera');
+            }}
+            onDragEnd={onSensorDragEnd}
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+          >
+            <CameraIcon className="size-3.5" />
+            {t('monitoring:editor.addCameraSensor')}
+          </div>
+
+          {map ? (
+            <PaletteMapSection map={map} onDeleteMap={onDeleteMap} />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
