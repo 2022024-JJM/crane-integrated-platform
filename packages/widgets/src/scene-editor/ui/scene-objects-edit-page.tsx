@@ -9,12 +9,15 @@ import {
   SceneTransformModeToggle,
 } from '@crane/features/3d';
 import {
+  AlertCircle,
   Camera as CameraIcon,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Eye,
   EyeOff,
   Layers3,
+  Loader2,
   PanelLeftClose,
   PanelRightClose,
   Radar,
@@ -30,6 +33,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
+import { Badge } from '@crane/ui/atoms/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -183,6 +187,18 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
   const hasSelection = selectedIds.size > 0;
+  const saveDisabled = !sceneInfo;
+  const saveStatusLabel = isSaving
+    ? t('monitoring:editor.statusSaving')
+    : isDirty
+      ? t('monitoring:editor.statusUnsaved')
+      : t('monitoring:editor.statusSaved');
+  const saveStatusClassName = isSaving
+    ? 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-100'
+    : isDirty
+      ? 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-100'
+      : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100';
+
   useEffect(() => {
     startTransition(() => {
       setRightCollapsed(!hasSelection);
@@ -370,7 +386,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           <HierarchyPanel
             sceneInfo={sceneInfo}
             selectedIds={selectedIds}
-            isDirty={isDirty}
             isSaving={isSaving}
             onSelectPlacedModel={selectPlacedModel}
             onDeletePlacedModel={deletePlacedModel}
@@ -449,15 +464,35 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               mode={transformMode}
               onModeChange={setTransformMode}
               leadingContent={
-                <SceneHistoryControls
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onUndo={undo}
-                  onRedo={redo}
-                />
+                <div className="flex items-center gap-2">
+                  {!saveDisabled ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
+                        saveStatusClassName,
+                      )}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : isDirty ? (
+                        <AlertCircle className="size-4" />
+                      ) : (
+                        <CheckCircle2 className="size-4" />
+                      )}
+                      {saveStatusLabel}
+                    </Badge>
+                  ) : null}
+                  <SceneHistoryControls
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={undo}
+                    onRedo={redo}
+                  />
+                </div>
               }
               trailingContent={
-                <div className="bg-background/95 border-border/80 flex h-[34px] items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
+                <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger
@@ -615,7 +650,6 @@ function FloatingPanel({
 function HierarchyPanel({
   sceneInfo,
   selectedIds,
-  isDirty,
   isSaving,
   onSelectPlacedModel,
   onDeletePlacedModel,
@@ -630,7 +664,6 @@ function HierarchyPanel({
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
-  isDirty: boolean;
   isSaving: boolean;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
@@ -650,7 +683,6 @@ function HierarchyPanel({
         onExport={onExport}
         saveDisabled={!sceneInfo}
         exportDisabled={!sceneInfo}
-        isDirty={isDirty}
         isSaving={isSaving}
       />
       <div className="flex min-h-0 flex-1 flex-col">

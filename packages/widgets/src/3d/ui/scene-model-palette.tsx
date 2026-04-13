@@ -44,7 +44,6 @@ interface SceneModelPaletteProps {
   onExport: () => void;
   saveDisabled?: boolean;
   exportDisabled?: boolean;
-  isDirty?: boolean;
   isSaving?: boolean;
 }
 
@@ -75,7 +74,6 @@ export function SceneModelPalette({
   onExport,
   saveDisabled = false,
   exportDisabled = false,
-  isDirty = false,
   isSaving = false,
 }: SceneModelPaletteProps) {
   const { t } = useTranslation();
@@ -87,7 +85,6 @@ export function SceneModelPalette({
         onExport={onExport}
         saveDisabled={saveDisabled}
         exportDisabled={exportDisabled}
-        isDirty={isDirty}
         isSaving={isSaving}
       />
 
