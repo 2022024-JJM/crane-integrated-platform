@@ -1,5 +1,5 @@
 import { Boxes, Camera, Radar, Trash2, Type } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   SavedModelInfo,
@@ -43,6 +43,7 @@ export function PalettePlacedObjects({
   onDeletePlacedSensor,
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const allItems = useMemo(() => {
     return getPlacedObjectItems({
@@ -59,7 +60,7 @@ export function PalettePlacedObjects({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col px-0.5 pb-0.5">
           {allItems.length > 0 ? (
-            allItems.map((item) => {
+            allItems.map((item, index) => {
               const isSelected = selectedIds.has(item.id);
 
               const handleSelect = (ctrlKey: boolean) => {
@@ -82,9 +83,20 @@ export function PalettePlacedObjects({
                 }
               };
 
+              const selectItem = (targetItem: typeof item) => {
+                if (targetItem.type === 'text') {
+                  onSelectPlacedText?.(targetItem.id);
+                } else if (targetItem.type === 'sensor') {
+                  onSelectPlacedSensor?.(targetItem.id);
+                } else {
+                  onSelectPlacedModel(targetItem.id);
+                }
+              };
+
               return (
                 <div
                   key={item.id}
+                  ref={(el) => { itemRefs.current[index] = el; }}
                   role="button"
                   tabIndex={0}
                   aria-label={item.displayName}
@@ -92,7 +104,17 @@ export function PalettePlacedObjects({
                     handleSelect(event.ctrlKey || event.metaKey);
                   }}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      const next = (index + 1) % allItems.length;
+                      selectItem(allItems[next]);
+                      itemRefs.current[next]?.focus();
+                    } else if (event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      const prev = (index - 1 + allItems.length) % allItems.length;
+                      selectItem(allItems[prev]);
+                      itemRefs.current[prev]?.focus();
+                    } else if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
                       handleSelect(event.ctrlKey || event.metaKey);
                     }

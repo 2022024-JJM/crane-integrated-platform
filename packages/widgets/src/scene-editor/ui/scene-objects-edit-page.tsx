@@ -1013,9 +1013,9 @@ function BottomProjectPanel({
               onTextDragStart();
             }}
             onDragEnd={onTextDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
           >
-            <Type className="size-3.5" />
+            <Type className="size-3" />
             {t('monitoring:editor.addText')}
           </div>
 
@@ -1027,9 +1027,9 @@ function BottomProjectPanel({
               onSensorDragStart('lidar');
             }}
             onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
           >
-            <Radar className="size-3.5" />
+            <Radar className="size-3" />
             {t('monitoring:editor.addLidarSensor')}
           </div>
 
@@ -1041,9 +1041,9 @@ function BottomProjectPanel({
               onSensorDragStart('camera');
             }}
             onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-3 py-2 text-[12px] transition active:cursor-grabbing"
+            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
           >
-            <CameraIcon className="size-3.5" />
+            <CameraIcon className="size-3" />
             {t('monitoring:editor.addCameraSensor')}
           </div>
 

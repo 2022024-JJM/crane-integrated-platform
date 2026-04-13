@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
@@ -35,6 +35,8 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
   showToolbar = true,
 }: PaletteAssetGridProps) {
   const { t } = useTranslation();
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const [uncontrolledAssetSearch, setUncontrolledAssetSearch] = useState('');
   const controlClassName = 'h-6 rounded-sm';
   const assetSearch = controlledAssetSearch ?? uncontrolledAssetSearch;
@@ -96,16 +98,35 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
       ) : null}
       <ScrollArea className="min-h-0 flex-1">
         {filteredItems.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 pr-1 pb-1">
-            {filteredItems.map((item) => {
+          <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 pr-1 pb-1">
+            {filteredItems.map((item, index) => {
               const isDragging = draggingItemId === item.id;
+              const len = filteredItems.length;
               return (
                 <div
                   key={item.id}
+                  ref={(el) => { itemRefs.current[index] = el; }}
                   role="button"
                   tabIndex={0}
                   aria-label={item.label}
                   draggable
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowRight') {
+                      event.preventDefault();
+                      itemRefs.current[(index + 1) % len]?.focus();
+                    } else if (event.key === 'ArrowLeft') {
+                      event.preventDefault();
+                      itemRefs.current[(index - 1 + len) % len]?.focus();
+                    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      const cols = Math.round(
+                        (gridRef.current?.offsetWidth ?? 0) / (itemRefs.current[0]?.offsetWidth ?? 1),
+                      );
+                      const delta = event.key === 'ArrowDown' ? cols : -cols;
+                      const next = Math.min(Math.max(index + delta, 0), len - 1);
+                      itemRefs.current[next]?.focus();
+                    }
+                  }}
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = 'copy';
                     event.dataTransfer.setData(SCENE_MODEL_DRAG_TYPE, item.id);
