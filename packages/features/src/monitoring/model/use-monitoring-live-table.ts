@@ -14,6 +14,7 @@ import { monitoringWebSocketClient } from './monitoring-websocket-client';
 interface UseMonitoringLiveTableParams {
   cranes: MonitoringLiveCrane[];
   tagDefinitionIds: number[];
+  regionId: string;
 }
 
 interface MonitoringLiveRowState {
@@ -24,6 +25,7 @@ interface MonitoringLiveRowState {
 export function useMonitoringLiveTable({
   cranes,
   tagDefinitionIds,
+  regionId,
 }: UseMonitoringLiveTableParams) {
   const [rowStateByCraneId, setRowStateByCraneId] = useState<
     Record<string, MonitoringLiveRowState>
@@ -41,8 +43,12 @@ export function useMonitoringLiveTable({
 
   const columns = useMemo(
     () =>
-      selectMonitoringTagDefinitions(tagsQuery.data ?? [], tagDefinitionIds),
-    [tagDefinitionIds, tagsQuery.data],
+      selectMonitoringTagDefinitions(
+        tagsQuery.data ?? [],
+        tagDefinitionIds,
+        regionId,
+      ),
+    [regionId, tagDefinitionIds, tagsQuery.data],
   );
 
   const allowedCraneIds = useMemo(
@@ -103,9 +109,8 @@ export function useMonitoringLiveTable({
   });
 
   useEffect(() => {
-    const unsubscribeState = monitoringWebSocketClient.subscribeState(
-      setConnectionState,
-    );
+    const unsubscribeState =
+      monitoringWebSocketClient.subscribeState(setConnectionState);
     const unsubscribeMessages = monitoringWebSocketClient.subscribeAll(
       (message) => {
         handleMessage(message.payload);

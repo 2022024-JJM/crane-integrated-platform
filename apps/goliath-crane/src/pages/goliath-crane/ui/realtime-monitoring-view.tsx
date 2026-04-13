@@ -27,6 +27,7 @@ import {
 import { GoliathVisionPip } from './goliath-vision-pip';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
+const GOLIATH_TABLE_REGION_ID = 'dock-2';
 const GOLIATH_CRANE_ID = 'C_171';
 const GOLIATH_TAG_DEFINITION_IDS = [7, 8];
 const GOLIATH_CRANES: MonitoringLiveCrane[] = [
@@ -191,6 +192,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                   <CraneStatusTable
                     cranes={GOLIATH_CRANES}
                     tagDefinitionIds={GOLIATH_TAG_DEFINITION_IDS}
+                    regionId={GOLIATH_TABLE_REGION_ID}
                   />
                 </ResizablePanel>
               </ResizablePanelGroup>

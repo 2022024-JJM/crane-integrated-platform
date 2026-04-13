@@ -25,6 +25,7 @@ import {
 interface CraneStatusTableProps {
   cranes: MonitoringLiveCrane[];
   tagDefinitionIds: number[];
+  regionId: string;
 }
 
 function StatusState({
@@ -58,6 +59,7 @@ function StatusState({
 export function CraneStatusTable({
   cranes,
   tagDefinitionIds,
+  regionId,
 }: CraneStatusTableProps) {
   const { t } = useTranslation();
   const {
@@ -71,6 +73,7 @@ export function CraneStatusTable({
   } = useMonitoringLiveTable({
     cranes,
     tagDefinitionIds,
+    regionId,
   });
 
   const connectionLabels = {
@@ -104,7 +107,7 @@ export function CraneStatusTable({
             <p className="text-muted-foreground mt-1 text-xs">
               {t('common:craneStatus.liveDescription', {
                 defaultValue:
-                  'Columns are built from selected tag metadata and values are updated from WebSocket events.',
+                  'Columns are built from selected tags and region-specific metadata, and values are updated from WebSocket events.',
               })}
             </p>
           </div>
@@ -128,7 +131,7 @@ export function CraneStatusTable({
               })}
               description={t('common:craneStatus.loadingDescription', {
                 defaultValue:
-                  'Tag definitions are being prepared for the live table.',
+                  'Tag definitions and region-specific metadata are being prepared for the live table.',
               })}
             />
           ) : isError ? (
@@ -146,7 +149,7 @@ export function CraneStatusTable({
               })}
               description={t('common:craneStatus.emptyDescription', {
                 defaultValue:
-                  'Set cranes and tagDefinitionIds on the page to render the live table.',
+                  'Set cranes, tagDefinitionIds, and regionId on the page to render the live table.',
               })}
             />
           ) : (
@@ -190,7 +193,10 @@ export function CraneStatusTable({
                         className="bg-muted text-muted-foreground sticky top-0 z-10 border-r px-3 py-3 text-xs font-semibold whitespace-nowrap last:border-r-0"
                         style={{ minWidth: TAG_COLUMN_WIDTH }}
                       >
-                        <div className="flex min-w-0 flex-col">
+                        <div
+                          className="flex min-w-0 flex-col"
+                          title={column.description ?? undefined}
+                        >
                           <span className="truncate">{column.displayName}</span>
                           <span className="text-muted-foreground/80 mt-0.5 truncate font-mono text-[10px] font-normal">
                             {column.unit

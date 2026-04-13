@@ -92,6 +92,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
             <CraneStatusTable
               cranes={cranes}
               tagDefinitionIds={tagDefinitionIds}
+              regionId={regionId}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
