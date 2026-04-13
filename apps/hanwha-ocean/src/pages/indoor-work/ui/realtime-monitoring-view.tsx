@@ -3,7 +3,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@crane/ui/molecules/resizable';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useRegionRealtimeAlarms,
@@ -46,34 +46,24 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       to: query.to,
     });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
   const isCmmsOpen = craneId !== null;
 
-  const handleFullscreenChange = useCallback((next: boolean) => {
-    setIsFullscreen(next);
-  }, []);
-
-  // 전체화면 시 CMMS 패널 (ThreeSceneViewer가 우측 절반에 렌더링)
-  const fullscreenCmmsOverlay =
-    isCmmsOpen ? (
-      <CraneCmmsDetailPanel
-        key={craneId}
-        craneId={craneId}
-        craneName={craneName ?? craneId}
-        onClose={clearFocus}
-      />
-    ) : null;
+  // 전체화면 시에만 CMMS 패널 표시 (ThreeSceneViewer 우측 절반)
+  const fullscreenCmmsOverlay = isCmmsOpen ? (
+    <CraneCmmsDetailPanel
+      key={craneId}
+      craneId={craneId}
+      craneName={craneName ?? craneId}
+      onClose={clearFocus}
+    />
+  ) : null;
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-      {/* ── 좌측: 3D 뷰 + 하단 테이블 ── */}
-      <ResizablePanel
-        defaultSize={isCmmsOpen && !isFullscreen ? 45 : 75}
-        minSize={30}
-      >
+      <ResizablePanel defaultSize={75} minSize={30}>
         <ResizablePanelGroup orientation="vertical" className="min-h-0">
           <ResizablePanel defaultSize={60}>
             <div className="relative h-full">
@@ -94,7 +84,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 alarmHighlightMesh
                 onLoadingChange={setIs3dViewLoading}
                 fullscreenOverlay={fullscreenCmmsOverlay}
-                onFullscreenChange={handleFullscreenChange}
               />
             </div>
           </ResizablePanel>
@@ -120,22 +109,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         </ResizablePanelGroup>
       </ResizablePanel>
 
-      {/* ── 중앙: CMMS 패널 (크레인 선택 + 일반 화면일 때만) ── */}
-      {isCmmsOpen && !isFullscreen && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={30} minSize={20}>
-            <CraneCmmsDetailPanel
-              key={craneId}
-              craneId={craneId}
-              craneName={craneName ?? craneId}
-              onClose={clearFocus}
-            />
-          </ResizablePanel>
-        </>
-      )}
-
-      {/* ── 우측: 알람 패널 ── */}
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={25} minSize={15}>
         <AlarmPanel stats={alarmStats} alarms={alarms} />
