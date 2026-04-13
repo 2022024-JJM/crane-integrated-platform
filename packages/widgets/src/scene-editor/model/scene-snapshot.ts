@@ -263,7 +263,12 @@ function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
 function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
-    if (a[i].type !== b[i].type || a[i].key !== b[i].key) return false;
+    if (
+      a[i].type !== b[i].type ||
+      a[i].key !== b[i].key ||
+      (a[i].scale ?? 1) !== (b[i].scale ?? 1) ||
+      (a[i].offset ?? 0) !== (b[i].offset ?? 0)
+    ) return false;
   }
   return true;
 }

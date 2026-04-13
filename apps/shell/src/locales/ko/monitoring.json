@@ -63,6 +63,7 @@
     "addText": "텍스트 추가",
     "addLidarSensor": "LiDAR 추가",
     "addCameraSensor": "카메라 추가",
+    "sensorTextTab": "센서 / 텍스트",
     "textObject": "텍스트",
     "save": "저장",
     "searchModels": "모델 검색",

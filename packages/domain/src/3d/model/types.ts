@@ -82,6 +82,13 @@ export interface ValueMapItem {
    * 생략 시 1.0.
    */
   scale?: number;
+  /**
+   * 서버 값 0에 대응하는 월드 좌표(해당 축).
+   * PLC 반사판 기준값처럼 축마다 기준점이 다를 때 사용.
+   * 적용 공식: world_position = offset + value * scale.
+   * 생략 시 0.
+   */
+  offset?: number;
 }
 
 export interface SceneModelCatalogItem {

@@ -12,7 +12,6 @@ import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { SceneModelPreview } from './scene-model-preview';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
-const PALETTE_VISIBLE_ROWS_HEIGHT_CLASS = 'h-[15.5rem]';
 
 interface PaletteAssetGridProps {
   items: SceneModelCatalogItem[];
@@ -47,8 +46,8 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
   }, [items, normalizedAssetSearch]);
 
   return (
-    <section className="border-border bg-card flex shrink-0 flex-col rounded-lg border">
-      <div className="border-border flex items-center justify-between border-b px-2 py-1.5">
+    <section className="border-border bg-card flex h-full min-h-0 flex-col rounded-lg border">
+      <div className="border-border flex shrink-0 items-center justify-between border-b px-2 py-1.5">
         <div className="flex items-center gap-2">
           <Boxes className="text-muted-foreground size-3" />
           <p className="text-foreground/75 text-[10px] font-semibold tracking-[0.12em] uppercase">
@@ -62,7 +61,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
           {items.length}
         </Badge>
       </div>
-      <div className="border-border border-b px-2 py-1.5">
+      <div className="border-border shrink-0 border-b px-2 py-1.5">
         <div className="relative">
           <Search className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
           <Input
@@ -75,8 +74,8 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
           />
         </div>
       </div>
-      <ScrollArea className={cn('min-h-0', PALETTE_VISIBLE_ROWS_HEIGHT_CLASS)}>
-        <div className="grid grid-cols-2 gap-2 p-2">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5 p-2">
           {filteredItems.map((item) => {
             const isDragging = draggingItemId === item.id;
             return (
@@ -94,7 +93,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                 }}
                 onDragEnd={onDragEnd}
                 className={cn(
-                  'group border-border bg-muted/50 cursor-pointer rounded-lg border p-1.5 text-left transition',
+                  'group border-border bg-muted/50 cursor-pointer rounded-md border p-1 text-left transition',
                   isDragging
                     ? 'border-primary/40 bg-primary/12 scale-[0.98]'
                     : 'hover:border-border/80 hover:bg-muted',
@@ -108,12 +107,12 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                   overlayHint={t('monitoring:palette.dragToPlace')}
                   showOverlay={isDragging}
                   className={cn(
-                    'h-20 rounded-[0.8rem]',
+                    'h-12 rounded-md',
                     isDragging && 'border-primary/40',
                   )}
                 />
-                <div className="mt-1.5 min-w-0 px-0.5">
-                  <p className="text-foreground truncate text-[11px] leading-none font-semibold">
+                <div className="mt-1 min-w-0 px-0.5">
+                  <p className="text-foreground truncate text-[10px] leading-none font-medium">
                     {item.label}
                   </p>
                 </div>

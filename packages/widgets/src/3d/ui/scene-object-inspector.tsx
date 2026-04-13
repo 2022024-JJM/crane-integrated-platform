@@ -79,7 +79,7 @@ interface SceneObjectInspectorProps {
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number) => void;
+  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
 }
 
 interface InspectorSectionProps {
@@ -142,6 +142,8 @@ const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
   SX: 'X', SY: 'Y', SZ: 'Z',
 };
 
+const POSITION_TYPES = new Set<ValueMapType>(['PX', 'PY', 'PZ']);
+
 function TagMappingSection({
   valueMapList,
   craneId,
@@ -150,7 +152,7 @@ function TagMappingSection({
 }: {
   valueMapList: ValueMapItem[];
   craneId?: string;
-  onValueMapChange: (type: ValueMapType, key: string, scale?: number) => void;
+  onValueMapChange: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   t: (key: string) => string;
 }) {
   const prefix = craneId ? `${craneId}:` : '';
@@ -161,6 +163,29 @@ function TagMappingSection({
   };
   const getScale = (type: ValueMapType) =>
     valueMapList.find((item) => item.type === type)?.scale ?? 1;
+  const getOffset = (type: ValueMapType) =>
+    valueMapList.find((item) => item.type === type)?.offset ?? 0;
+
+  // offset 입력 중간 상태(소수점, 음수 부호 등)를 허용하기 위해 로컬 draft 관리
+  const initialOffsetDrafts = () =>
+    Object.fromEntries(
+      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [t, String(getOffset(t))]),
+    ) as Record<ValueMapType, string>;
+
+  const [offsetDrafts, setOffsetDrafts] = useState<Record<ValueMapType, string>>(initialOffsetDrafts);
+
+  // 외부에서 valueMapList가 바뀔 때(저장 후 로드 등) draft를 동기화
+  useEffect(() => {
+    setOffsetDrafts({
+      PX: String(getOffset('PX')),
+      PY: String(getOffset('PY')),
+      PZ: String(getOffset('PZ')),
+      RX: '0', RY: '0', RZ: '0',
+      SX: '0', SY: '0', SZ: '0',
+    });
+    // valueMapList 참조가 바뀔 때만 동기화
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueMapList]);
 
   return (
     <InspectorSection
@@ -182,6 +207,7 @@ function TagMappingSection({
             <div className="space-y-1.5">
               {group.types.map((type) => {
                 const tagCode = getTagCode(type);
+                const isPosition = POSITION_TYPES.has(type);
                 return (
                   <div key={type} className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-[11px]">
@@ -196,29 +222,53 @@ function TagMappingSection({
                           const fullKey = e.target.value.trim()
                             ? `${prefix}${e.target.value.trim()}`
                             : '';
-                          onValueMapChange(type, fullKey, getScale(type));
+                          onValueMapChange(type, fullKey, getScale(type), isPosition ? getOffset(type) : undefined);
                         }}
                       />
                     </div>
                     {tagCode ? (
-                      <div className="ml-6 flex items-center gap-2 text-[11px]">
-                        <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
-                          scale
-                        </span>
-                        <Input
-                          type="number"
-                          step="any"
-                          value={getScale(type)}
-                          placeholder="1"
-                          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
-                          onChange={(e) => {
-                            const s = parseFloat(e.target.value);
-                            if (Number.isFinite(s)) {
-                              onValueMapChange(type, `${prefix}${tagCode}`, s);
-                            }
-                          }}
-                        />
-                      </div>
+                      <>
+                        <div className="ml-6 flex items-center gap-2 text-[11px]">
+                          <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+                            scale
+                          </span>
+                          <Input
+                            type="number"
+                            step={0.1}
+                            value={getScale(type)}
+                            placeholder="1"
+                            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
+                            onChange={(e) => {
+                              const s = parseFloat(e.target.value);
+                              if (Number.isFinite(s)) {
+                                onValueMapChange(type, `${prefix}${tagCode}`, s, isPosition ? getOffset(type) : undefined);
+                              }
+                            }}
+                          />
+                        </div>
+                        {isPosition ? (
+                          <div className="ml-6 flex items-center gap-2 text-[11px]">
+                            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
+                              offset
+                            </span>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={offsetDrafts[type] ?? '0'}
+                              placeholder="0"
+                              className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                setOffsetDrafts((prev) => ({ ...prev, [type]: raw }));
+                                const o = parseFloat(raw);
+                                if (Number.isFinite(o)) {
+                                  onValueMapChange(type, `${prefix}${tagCode}`, getScale(type), o);
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </>
                     ) : null}
                   </div>
                 );
@@ -322,7 +372,7 @@ function ModelInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number) => void;
+  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   t: (key: string) => string;
 }) {
   return (

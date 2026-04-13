@@ -84,7 +84,7 @@ interface UseSceneEditorSessionResult {
   updateSelectedMeshName: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshName'];
-  updateSelectedValueMap: (type: ValueMapType, key: string) => void;
+  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (

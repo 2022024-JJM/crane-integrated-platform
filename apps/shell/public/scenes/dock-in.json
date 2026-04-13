@@ -7,9 +7,9 @@
       "path": "/models/1p_3bay.glb",
       "opacity": 0.7,
       "position": [
-        -120,
+        22,
         0,
-        91.708
+        161.475
       ],
       "rotation": [
         0,
@@ -29,9 +29,9 @@
       "path": "/models/3p.glb",
       "opacity": 0.7,
       "position": [
-        -40,
+        102,
         0,
-        106.538
+        147.091
       ],
       "rotation": [
         0,
@@ -51,9 +51,9 @@
       "path": "/models/5p_1bay.glb",
       "opacity": 0.7,
       "position": [
-        40,
+        182,
         0,
-        128.462
+        126.826
       ],
       "rotation": [
         0,
@@ -73,9 +73,9 @@
       "path": "/models/5p_2bay.glb",
       "opacity": 0.7,
       "position": [
-        120,
+        262,
         0,
-        128.575
+        126.939
       ],
       "rotation": [
         0,
@@ -96,9 +96,9 @@
       "path": "/models/c_171.glb",
       "opacity": 1,
       "position": [
-        -121,
         21,
-        152.708
+        21,
+        222.475
       ],
       "rotation": [
         0,
@@ -110,7 +110,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_171:tl_distance",
+          "scale": 0.1,
+          "offset": 71
+        }
+      ]
     },
     {
       "id": "656ab87e-a892-49c8-992e-d43ccda13d64",
@@ -119,9 +126,9 @@
       "path": "/models/c_172.glb",
       "opacity": 1,
       "position": [
-        -121,
+        21,
         13,
-        91.708
+        161.475
       ],
       "rotation": [
         0,
@@ -133,7 +140,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_172:tl_distance",
+          "scale": 0.1,
+          "offset": 71
+        }
+      ]
     },
     {
       "id": "969fcd67-1346-4ce0-a885-b549ca1c5bdc",
@@ -142,9 +156,9 @@
       "path": "/models/c_173.glb",
       "opacity": 1,
       "position": [
-        -121,
+        21,
         13,
-        121.708
+        191.475
       ],
       "rotation": [
         0,
@@ -156,7 +170,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_173:tl_distance",
+          "scale": 0.1,
+          "offset": 71
+        }
+      ]
     },
     {
       "id": "7332781e-f10e-460b-8e72-e4decfaa5fb2",
@@ -165,9 +186,9 @@
       "path": "/models/c_800.glb",
       "opacity": 1,
       "position": [
-        -122,
         20,
-        61.708
+        20,
+        131.475
       ],
       "rotation": [
         0,
@@ -179,7 +200,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_800:tl_distance",
+          "scale": 0.1,
+          "offset": 71
+        }
+      ]
     },
     {
       "id": "1785ccac-d65f-492c-a0be-4d11e234ee48",
@@ -188,9 +216,9 @@
       "path": "/models/c_801.glb",
       "opacity": 1,
       "position": [
-        -120.5,
+        21.5,
         15,
-        31.708
+        101.475
       ],
       "rotation": [
         0,
@@ -202,7 +230,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_801:tl_distance",
+          "scale": 0.1,
+          "offset": 71
+        }
+      ]
     },
     {
       "id": "524e86da-b6b8-4071-9369-ca24978309a0",
@@ -211,9 +246,9 @@
       "path": "/models/c_810.glb",
       "opacity": 1,
       "position": [
-        -40,
+        102,
         25,
-        171.538
+        212.091
       ],
       "rotation": [
         0,
@@ -225,7 +260,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_810:tl_distance",
+          "scale": 0.1,
+          "offset": 43
+        }
+      ]
     },
     {
       "id": "c148f689-6971-420a-8329-f964206c7412",
@@ -234,9 +276,9 @@
       "path": "/models/c_811.glb",
       "opacity": 1,
       "position": [
-        -42,
+        100,
         17,
-        111.538
+        152.091
       ],
       "rotation": [
         0,
@@ -248,7 +290,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_811:tl_distance",
+          "scale": 0.1,
+          "offset": 43
+        }
+      ]
     },
     {
       "id": "9593b1be-b80d-4a2a-ae76-e847691237c6",
@@ -257,9 +306,9 @@
       "path": "/models/c_811.glb",
       "opacity": 1,
       "position": [
-        -42,
+        100,
         18,
-        51.538
+        92.091
       ],
       "rotation": [
         0,
@@ -271,7 +320,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_811:tl_distance",
+          "scale": 0.1,
+          "offset": 43
+        }
+      ]
     },
     {
       "id": "bfeaedd8-c425-4ec3-b0aa-523bfc7c200d",
@@ -280,9 +336,9 @@
       "path": "/models/c_1806.glb",
       "opacity": 1,
       "position": [
-        38.833,
+        180.833,
         8,
-        225.462
+        223.826
       ],
       "rotation": [
         0,
@@ -298,12 +354,8 @@
         {
           "type": "PZ",
           "key": "C_1806:tl_distance",
-          "scale": 0.1
-        },
-        {
-          "type": "PX",
-          "key": "C_1806:ts1_distance",
-          "scale": 0.1
+          "scale": 0.1,
+          "offset": 0
         }
       ]
     },
@@ -314,9 +366,9 @@
       "path": "/models/c_865.glb",
       "opacity": 1,
       "position": [
-        39,
+        181,
         8,
-        195.462
+        193.826
       ],
       "rotation": [
         0,
@@ -328,7 +380,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_865:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "613b067a-0323-4b52-ab51-69df75193d9f",
@@ -337,9 +396,9 @@
       "path": "/models/c_866.glb",
       "opacity": 1,
       "position": [
-        40,
+        182,
         0,
-        155.462
+        153.826
       ],
       "rotation": [
         0,
@@ -351,7 +410,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_866:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "cd9cc19e-8fb6-4d37-bd68-0f6309878436",
@@ -360,9 +426,9 @@
       "path": "/models/c_863.glb",
       "opacity": 1,
       "position": [
-        33,
+        175,
         0,
-        105.462
+        103.826
       ],
       "rotation": [
         0,
@@ -374,7 +440,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_863:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "0dba4194-f688-4731-930c-76a44c25fb76",
@@ -383,9 +456,9 @@
       "path": "/models/c_867.glb",
       "opacity": 1,
       "position": [
-        39,
+        181,
         15,
-        65.462
+        63.826
       ],
       "rotation": [
         0,
@@ -397,7 +470,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_867:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "171017df-e04d-4ef7-bc7b-1fc7e54999fe",
@@ -406,9 +486,9 @@
       "path": "/models/c_864.glb",
       "opacity": 1,
       "position": [
-        33,
+        175,
         0,
-        25.462
+        23.826
       ],
       "rotation": [
         0,
@@ -420,7 +500,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_864:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "8d41dfab-b8f9-48c2-83c2-b25a9d83e7c7",
@@ -429,9 +516,9 @@
       "path": "/models/c_870.glb",
       "opacity": 1,
       "position": [
-        119,
+        261,
         20,
-        225.575
+        223.939
       ],
       "rotation": [
         0,
@@ -443,7 +530,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_870:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "10e29bf4-1c3f-4973-a7a9-752265b614b8",
@@ -452,9 +546,9 @@
       "path": "/models/c_869.glb",
       "opacity": 1,
       "position": [
-        118,
+        260,
         13,
-        165.575
+        163.939
       ],
       "rotation": [
         0,
@@ -466,7 +560,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_869:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "a3520796-7a5e-4e38-85f2-f85a7b9fa341",
@@ -475,9 +576,9 @@
       "path": "/models/c_868.glb",
       "opacity": 1,
       "position": [
-        114,
+        256,
         0,
-        125.575
+        123.939
       ],
       "rotation": [
         0,
@@ -489,7 +590,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_868:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "ec242f39-4164-4fa7-a2f6-aaacacd85aa6",
@@ -498,9 +606,9 @@
       "path": "/models/c_871.glb",
       "opacity": 1,
       "position": [
-        120,
+        262,
         20,
-        85.575
+        83.939
       ],
       "rotation": [
         0,
@@ -512,7 +620,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_871:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     },
     {
       "id": "4bc3b060-5dbb-466c-9cd9-a73beaffb214",
@@ -521,9 +636,9 @@
       "path": "/models/c_862.glb",
       "opacity": 1,
       "position": [
-        112.5,
+        254.5,
         0,
-        35.575
+        33.939
       ],
       "rotation": [
         0,
@@ -535,7 +650,14 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [
+        {
+          "type": "PZ",
+          "key": "C_862:tl_distance",
+          "scale": 0.1,
+          "offset": 0
+        }
+      ]
     }
   ],
   "texts": [
@@ -544,9 +666,9 @@
       "content": "3Bay",
       "color": "#ffffff",
       "position": [
-        -120,
+        22,
         0,
-        171.708
+        241.475
       ],
       "rotation": [
         270,
@@ -564,9 +686,9 @@
       "content": "해양 1공장",
       "color": "#ffffff",
       "position": [
-        -121,
+        21,
         -6.83,
-        186.538
+        256.305
       ],
       "rotation": [
         300,
@@ -584,9 +706,9 @@
       "content": "1Bay",
       "color": "#ffffff",
       "position": [
-        41,
+        183,
         0,
-        247.462
+        245.826
       ],
       "rotation": [
         270,
@@ -604,9 +726,9 @@
       "content": "2Bay",
       "color": "#ffffff",
       "position": [
-        121,
+        263,
         0,
-        246.575
+        244.939
       ],
       "rotation": [
         270,
@@ -624,9 +746,9 @@
       "content": "해양 3공장",
       "color": "#ffffff",
       "position": [
-        -40,
+        102,
         -6.83,
-        216.368
+        256.921
       ],
       "rotation": [
         300,
@@ -644,9 +766,9 @@
       "content": "조립 5공장",
       "color": "#ffffff",
       "position": [
-        39,
+        181,
         -6.83,
-        260.292
+        258.656
       ],
       "rotation": [
         300,
@@ -664,9 +786,9 @@
       "content": "조립 5공장",
       "color": "#ffffff",
       "position": [
-        120,
+        262,
         -6.83,
-        260.405
+        258.769
       ],
       "rotation": [
         300,
@@ -682,14 +804,14 @@
   ],
   "camera": {
     "position": [
-      24.56976976069737,
-      132.3244145589355,
-      285.04609532837594
+      141.94482902107518,
+      135.06564025481805,
+      295.72525359807423
     ],
     "target": [
-      23.664682134965076,
-      -7.2464616594894355,
-      162.17437396413044
+      142.58432293953578,
+      36.451184521814135,
+      208.90966387340717
     ]
   }
 }

@@ -63,6 +63,7 @@
     "addText": "Add Text",
     "addLidarSensor": "Add LiDAR",
     "addCameraSensor": "Add Camera",
+    "sensorTextTab": "Sensors / Text",
     "textObject": "Text",
     "save": "Save",
     "searchModels": "Search models",

@@ -17,6 +17,12 @@ interface ValueMapObject {
    * 씬 좌표 = 현실 미터 기준. value 단위가 0.1m이면 0.1.
    */
   scale: number;
+  /**
+   * 서버 값 0에 대응하는 월드 좌표(해당 축).
+   * 적용 공식: world_position = offset + value * scale.
+   * ValueMapItem.offset 생략 시 0.
+   */
+  offset: number;
   /** clear() 시 원위치 복귀용 */
   originTransform: {
     position: Vector3Tuple;
@@ -63,6 +69,7 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
           id: model.id,
           type: vm.type,
           scale: vm.scale ?? 1,
+          offset: vm.offset ?? 0,
           originTransform: {
             position: [...model.position],
             rotation: model.rotation.map(degToRad) as Vector3Tuple,
@@ -84,17 +91,18 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
     const list = get().map[key];
     if (!list) return;
 
-    list.forEach(({ id, type, scale }) => {
+    list.forEach(({ id, type, scale, offset }) => {
       const object = modelObjectRegistry.get(id);
       if (!object) return;
 
-      // 씬 좌표 = 현실 미터 기준. position = value * scale (단위 변환만).
+      // world_position = offset + value * scale
+      // offset: 서버 값 0에 대응하는 월드 좌표(축마다 다른 기준점 적용 가능)
       const v = numRound(value * scale);
 
       switch (type) {
-        case 'PX': object.position.x = v; break;
-        case 'PY': object.position.y = v; break;
-        case 'PZ': object.position.z = v; break;
+        case 'PX': object.position.x = offset + v; break;
+        case 'PY': object.position.y = offset + v; break;
+        case 'PZ': object.position.z = offset + v; break;
         case 'RX': object.rotation.x = degToRad(v); break;
         case 'RY': object.rotation.y = degToRad(v); break;
         case 'RZ': object.rotation.z = degToRad(v); break;
