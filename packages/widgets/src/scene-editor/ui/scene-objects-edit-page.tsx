@@ -1,7 +1,9 @@
 import {
+  SCENE_MODEL_CATEGORIES,
   sceneModelCatalog,
   type SavedMapInfo,
   type SavedSceneInfo,
+  type SceneModelCategory,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
@@ -16,11 +18,13 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  FolderClosed,
   Layers3,
   Loader2,
   PanelLeftClose,
   PanelRightClose,
   Radar,
+  Search,
   SlidersHorizontal,
   Type,
 } from 'lucide-react';
@@ -35,6 +39,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
+import { Input } from '@crane/ui/atoms/input';
 import {
   Tooltip,
   TooltipContent,
@@ -733,6 +738,14 @@ const BOTTOM_PANEL_MIN_H = 80;
 const BOTTOM_PANEL_MAX_H = 480;
 const BOTTOM_PANEL_DEFAULT_H = 224;
 const BOTTOM_PANEL_COLLAPSED_H = 44;
+const DEFAULT_MODEL_CATEGORY: SceneModelCategory = 'indoor';
+
+const MODEL_CATEGORY_LABEL_KEY: Record<SceneModelCategory, string> = {
+  indoor: 'monitoring:editor.modelCategories.indoor',
+  outdoor: 'monitoring:editor.modelCategories.outdoor',
+  map: 'monitoring:editor.modelCategories.map',
+  etc: 'monitoring:editor.modelCategories.etc',
+};
 
 function BottomProjectPanel({
   items,
@@ -759,6 +772,10 @@ function BottomProjectPanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
+  const [activeCategory, setActiveCategory] = useState<SceneModelCategory>(
+    DEFAULT_MODEL_CATEGORY,
+  );
+  const [assetSearch, setAssetSearch] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [panelHeight, setPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_H);
   const dragStartY = useRef<number | null>(null);
@@ -766,6 +783,25 @@ function BottomProjectPanel({
   const currentPanelHeight = isCollapsed
     ? BOTTOM_PANEL_COLLAPSED_H
     : panelHeight;
+  const categoryCounts = useMemo(() => {
+    return SCENE_MODEL_CATEGORIES.reduce(
+      (acc, category) => {
+        acc[category] = items.filter(
+          (item) => item.category === category,
+        ).length;
+        return acc;
+      },
+      {
+        indoor: 0,
+        outdoor: 0,
+        map: 0,
+        etc: 0,
+      } satisfies Record<SceneModelCategory, number>,
+    );
+  }, [items]);
+  const categoryItems = useMemo(() => {
+    return items.filter((item) => item.category === activeCategory);
+  }, [activeCategory, items]);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -856,14 +892,90 @@ function BottomProjectPanel({
         <div
           hidden={activeTab !== 'models'}
           aria-hidden={activeTab !== 'models'}
-          className="h-full overflow-hidden p-2"
+          className="h-full overflow-hidden px-2 pt-2 pb-1"
         >
-          <PaletteAssetGrid
-            items={items}
-            draggingItemId={draggingItemId}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-          />
+          <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)] gap-0 overflow-hidden">
+            <div className="border-border/70 min-h-0 overflow-y-auto border-r pr-2">
+              <div className="text-muted-foreground px-2 pb-2 text-[10px] font-semibold tracking-[0.12em] uppercase">
+                {t('monitoring:editor.categoryLibrary')}
+              </div>
+              <div className="space-y-0.5">
+                {SCENE_MODEL_CATEGORIES.map((category) => {
+                  const isActive = activeCategory === category;
+
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => setActiveCategory(category)}
+                      className={cn(
+                        'text-muted-foreground hover:bg-muted/70 hover:text-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition',
+                        isActive && 'bg-primary/12 text-foreground',
+                      )}
+                    >
+                      <FolderClosed
+                        className={cn(
+                          'size-3.5 shrink-0',
+                          isActive
+                            ? 'text-primary'
+                            : 'text-muted-foreground/80',
+                        )}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
+                        {t(MODEL_CATEGORY_LABEL_KEY[category])}
+                      </span>
+                      <Badge
+                        render={<div />}
+                        variant="outline"
+                        className={cn(
+                          'border-border bg-background/80 min-w-7 shrink-0 justify-center rounded-sm px-1.5 py-0 text-[10px]',
+                          isActive && 'border-primary/30 bg-primary/10',
+                        )}
+                      >
+                        {categoryCounts[category]}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-col overflow-hidden pl-3">
+              <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b pb-2">
+                <div className="min-w-0">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
+                    {t('monitoring:palette.title')}
+                  </p>
+                  <p className="text-foreground truncate text-[12px] font-medium">
+                    {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
+                  </p>
+                </div>
+                <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
+                  <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
+                  <Input
+                    value={assetSearch}
+                    onChange={(event) => {
+                      setAssetSearch(event.target.value);
+                    }}
+                    placeholder={t('monitoring:editor.searchModels')}
+                    className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 pt-2">
+                <PaletteAssetGrid
+                  items={categoryItems}
+                  draggingItemId={draggingItemId}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  emptyMessage={t('monitoring:editor.noModelsInCategory')}
+                  assetSearch={assetSearch}
+                  onAssetSearchChange={setAssetSearch}
+                  showToolbar={false}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div

@@ -1,9 +1,24 @@
-import type { SceneModelCatalogItem } from './types';
+import type { SceneModelCatalogItem, SceneModelPreviewPreset } from './types';
+
+const DEFAULT_PREVIEW: SceneModelPreviewPreset = {
+  cameraDirection: [1.08, 0.72, 1.12],
+  paddingScale: 1.24,
+};
+
+function withDefaultPreview(
+  item: Omit<SceneModelCatalogItem, 'preview'>,
+): SceneModelCatalogItem {
+  return {
+    ...item,
+    preview: DEFAULT_PREVIEW,
+  };
+}
 
 export const sceneModelCatalog: SceneModelCatalogItem[] = [
   {
     id: 'crane',
     label: 'Crane',
+    category: 'outdoor',
     path: '/models/crane.glb',
     defaultScale: [0.8, 0.8, 0.8],
     preview: {
@@ -14,6 +29,7 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
   {
     id: 'gantry-crane',
     label: 'Gantry Crane',
+    category: 'outdoor',
     path: '/models/gantry_crane.glb',
     defaultScale: [1.2, 1.2, 1.2],
     preview: {
@@ -24,12 +40,14 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
   {
     id: 'house',
     label: 'House',
+    category: 'indoor',
     path: '/models/house.glb',
     defaultScale: [1, 1, 1],
   },
   {
     id: 'ship',
     label: 'Ship',
+    category: 'outdoor',
     path: '/models/ship.glb',
     defaultScale: [1, 1, 1],
     preview: {
@@ -37,344 +55,242 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       paddingScale: 1.32,
     },
   },
-  {
+  withDefaultPreview({
     id: 'r370',
     label: 'R370',
+    category: 'outdoor',
     path: '/models/R370.glb',
     defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'ttc-27',
     label: 'TTC-27',
+    category: 'outdoor',
     path: '/models/TTC-27.glb',
     defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'ttc-28',
     label: 'TTC-28',
+    category: 'outdoor',
     path: '/models/TTC-28.glb',
     defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'ttc-k5000',
     label: 'TTC-K5000',
+    category: 'outdoor',
     path: '/models/TTC-K5000.glb',
     defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: '1p-3bay',
     label: '1P 3Bay',
+    category: 'indoor',
     path: '/models/1p_3bay.glb',
     defaultScale: [0.1, 0.1, 0.1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: '3p',
     label: '3P',
+    category: 'indoor',
     path: '/models/3p.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: '5p-1bay',
     label: '5P 1Bay',
+    category: 'indoor',
     path: '/models/5p_1bay.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: '5p-2bay',
     label: '5P 2Bay',
+    category: 'indoor',
     path: '/models/5p_2bay.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-171',
     label: 'C-171',
+    category: 'indoor',
     path: '/models/c_171.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-172',
     label: 'C-172',
+    category: 'indoor',
     path: '/models/c_172.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-173',
     label: 'C-173',
+    category: 'indoor',
     path: '/models/c_173.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-800',
     label: 'C-800',
+    category: 'indoor',
     path: '/models/c_800.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-801',
     label: 'C-801',
+    category: 'indoor',
     path: '/models/c_801.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-810',
     label: 'C-810',
+    category: 'indoor',
     path: '/models/c_810.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-811',
     label: 'C-811',
+    category: 'indoor',
     path: '/models/c_811.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-862',
     label: 'C-862',
+    category: 'indoor',
     path: '/models/c_862.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-863',
     label: 'C-863',
+    category: 'indoor',
     path: '/models/c_863.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-864',
     label: 'C-864',
+    category: 'indoor',
     path: '/models/c_864.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-865',
     label: 'C-865',
+    category: 'indoor',
     path: '/models/c_865.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-866',
     label: 'C-866',
+    category: 'indoor',
     path: '/models/c_866.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-867',
     label: 'C-867',
+    category: 'indoor',
     path: '/models/c_867.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-868',
     label: 'C-868',
+    category: 'indoor',
     path: '/models/c_868.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-869',
     label: 'C-869',
+    category: 'indoor',
     path: '/models/c_869.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-870',
     label: 'C-870',
+    category: 'indoor',
     path: '/models/c_870.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-871',
     label: 'C-871',
+    category: 'indoor',
     path: '/models/c_871.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'c-1806',
     label: 'C-1806',
+    category: 'indoor',
     path: '/models/c_1806.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-body',
     label: 'GC-04 Body',
+    category: 'etc',
     path: '/models/gc-04/gc_04_body.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-hook',
     label: 'GC-04 Hook',
+    category: 'etc',
     path: '/models/gc-04/gc_04_hook.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-hook-rope',
     label: 'GC-04 Hook Rope',
+    category: 'etc',
     path: '/models/gc-04/gc_04_hook_rope.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-trolly',
     label: 'GC-04 Trolly',
+    category: 'etc',
     path: '/models/gc-04/gc_04_trolly.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-camera',
     label: 'GC-04 Camera',
+    category: 'etc',
     path: '/models/gc-04/camera.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'soslab_lidar_fov_120x35',
     label: 'SOSLAB Lidar Fov',
+    category: 'etc',
     path: '/models/gc-04/soslab_lidar_fov_120x35.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'ouster_lidar_fov_360x90',
     label: 'OUSTER Lidar Fov',
+    category: 'etc',
     path: '/models/gc-04/ouster_lidar_fov_360x90.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
+  }),
+  withDefaultPreview({
     id: 'gc-04-point',
     label: 'GC-04 Point',
+    category: 'etc',
     path: '/models/gc-04/point.glb',
     defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
+  }),
 ];

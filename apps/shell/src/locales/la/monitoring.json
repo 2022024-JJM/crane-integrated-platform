@@ -66,6 +66,15 @@
     "sensorTextTab": "Sensores / Textus",
     "textObject": "Textus",
     "save": "Serva",
+    "categoryLibrary": "Categoriae",
+    "categoryAssetCount": "{{count}} exemplaria",
+    "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
+    "modelCategories": {
+      "indoor": "Interior",
+      "outdoor": "Exterior",
+      "map": "Tabula",
+      "etc": "Cetera"
+    },
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta"

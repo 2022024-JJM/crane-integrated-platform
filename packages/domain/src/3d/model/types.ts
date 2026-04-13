@@ -94,10 +94,20 @@ export interface ValueMapItem {
 export interface SceneModelCatalogItem {
   id: string;
   label: string;
+  category: SceneModelCategory;
   path: string;
   defaultScale: Vector3Tuple;
   preview?: SceneModelPreviewPreset;
 }
+
+export const SCENE_MODEL_CATEGORIES = [
+  'indoor',
+  'outdoor',
+  'map',
+  'etc',
+] as const;
+
+export type SceneModelCategory = (typeof SCENE_MODEL_CATEGORIES)[number];
 
 export interface SceneModelPreviewPreset {
   paddingScale?: number;
