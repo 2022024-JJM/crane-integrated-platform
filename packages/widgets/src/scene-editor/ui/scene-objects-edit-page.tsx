@@ -644,7 +644,7 @@ function HierarchyPanel({
   onExport: () => void;
 }) {
   return (
-    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border shadow-sm">
+    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
       <PaletteHeader
         onSave={onSave}
         onExport={onExport}
@@ -653,7 +653,7 @@ function HierarchyPanel({
         isDirty={isDirty}
         isSaving={isSaving}
       />
-      <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
+      <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
@@ -751,9 +751,7 @@ function BottomProjectPanel({
         <div
           onMouseDown={handleResizeMouseDown}
           className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
-        >
-          <div className="bg-border hover:bg-primary/60 h-1 w-12 rounded-full transition-colors" />
-        </div>
+        />
       ) : null}
       {/* 탭 헤더 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
