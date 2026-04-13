@@ -2,8 +2,10 @@ import {
   tableRowStatusBadgeClassName,
   tableCategoryClassName,
 } from '@crane/core/lib/status-colors';
-import { getFormatLocale } from '@crane/core/config/i18n';
-import type { MonitoringReplayRow } from '@crane/domain/monitoring';
+import {
+  formatReplayTimestamp,
+  type MonitoringReplayRow,
+} from '@crane/domain/monitoring';
 
 export const CRANE_COLUMN_WIDTH = 120;
 export const TAG_NAME_COLUMN_WIDTH = 320;
@@ -37,21 +39,12 @@ export function formatValue(value: MonitoringReplayRow['value']) {
   return String(value);
 }
 
-export function formatTimestamp(value: string | null, language: string) {
+export function formatTimestamp(value: string | null, _language: string) {
   if (!value) {
     return '-';
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleTimeString(getFormatLocale(language), {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return formatReplayTimestamp(value, 'time') ?? '-';
 }
 
 export function formatDataType(value: string | null) {

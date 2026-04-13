@@ -2,6 +2,7 @@ import { SkipBack, SkipForward, Play, Pause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
 import { cn } from '@crane/core/lib/utils';
+import { formatReplayTimestamp } from '@crane/domain/monitoring';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 
 const SPEED_OPTIONS = [
@@ -32,17 +33,8 @@ export function ReplayPlayerControls({ className }: ReplayPlayerControlsProps) {
 
   const hasFrames = totalFrames > 0;
 
-  const formattedTimestamp = currentTimestamp
-    ? new Date(currentTimestamp).toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      })
-    : '--';
+  const formattedTimestamp =
+    formatReplayTimestamp(currentTimestamp, 'datetime') ?? '--';
 
   return (
     <div

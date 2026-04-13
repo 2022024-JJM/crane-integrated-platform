@@ -31,6 +31,7 @@ export {
   getLatestReplayFrameWithValues,
   mapReplayResponseToRows,
 } from './lib/replay-mapper';
+export { formatReplayTimestamp } from './lib/format-replay-timestamp';
 export { getReplayFrameDurationsMs } from './lib/parse-interval';
 export { normalizePlaybackResponse } from './lib/playback-adapter';
 export {

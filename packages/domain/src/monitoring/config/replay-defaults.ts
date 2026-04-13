@@ -9,26 +9,49 @@ function padDateTimeSegment(value: number) {
   return String(value).padStart(2, '0');
 }
 
-export function toIsoString(date: Date) {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+function normalizeDateTimeLocalValue(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return trimmedValue;
+  }
+
+  const [datePart, timePart = '00:00:00'] = trimmedValue.split('T');
+  const [hours = '00', minutes = '00', seconds = '00'] = timePart.split(':');
+
+  return `${datePart}T${hours}:${minutes}:${seconds}`;
 }
 
-export function toDateTimeLocalValue(date: Date) {
+export function toIsoString(value: Date | string) {
+  if (typeof value === 'string') {
+    return `${normalizeDateTimeLocalValue(value)}Z`;
+  }
+
+  return value.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+export function toDateTimeLocalValue(value: Date | string) {
+  if (typeof value === 'string') {
+    return normalizeDateTimeLocalValue(
+      value.replace(/\.\d{3}Z$/, 'Z').replace(/Z$/, ''),
+    );
+  }
+
   return [
-    date.getFullYear(),
-    padDateTimeSegment(date.getMonth() + 1),
-    padDateTimeSegment(date.getDate()),
+    value.getFullYear(),
+    padDateTimeSegment(value.getMonth() + 1),
+    padDateTimeSegment(value.getDate()),
   ]
     .join('-')
     .concat(
-      `T${padDateTimeSegment(date.getHours())}:${padDateTimeSegment(
-        date.getMinutes(),
-      )}:${padDateTimeSegment(date.getSeconds())}`,
+      `T${padDateTimeSegment(value.getHours())}:${padDateTimeSegment(
+        value.getMinutes(),
+      )}:${padDateTimeSegment(value.getSeconds())}`,
     );
 }
 
 export function fromDateTimeLocalValue(value: string) {
-  return toIsoString(new Date(value));
+  return toIsoString(value);
 }
 
 export function getReplayDefaultCraneIds(regionId: string) {
@@ -51,16 +74,16 @@ export function buildDefaultReplayFormValues(regionId: string) {
   const query = buildDefaultReplayQuery(regionId);
 
   return {
-    from: toDateTimeLocalValue(new Date(query.from)),
-    to: toDateTimeLocalValue(new Date(query.to)),
+    from: toDateTimeLocalValue(query.from),
+    to: toDateTimeLocalValue(query.to),
     craneIds: query.craneIds,
   };
 }
 
 export function buildSampleReplayFormValues(regionId: string) {
   return {
-    from: toDateTimeLocalValue(new Date(SAMPLE_REPLAY_FROM_ISO)),
-    to: toDateTimeLocalValue(new Date(SAMPLE_REPLAY_TO_ISO)),
+    from: toDateTimeLocalValue(SAMPLE_REPLAY_FROM_ISO),
+    to: toDateTimeLocalValue(SAMPLE_REPLAY_TO_ISO),
     craneIds: getReplayDefaultCraneIds(regionId),
   };
 }
