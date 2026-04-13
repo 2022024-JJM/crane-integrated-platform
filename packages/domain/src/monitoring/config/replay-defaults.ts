@@ -1,7 +1,7 @@
 import { getCraneIdsByRegion } from '../../shared';
 
 const DEFAULT_REPLAY_INTERVAL = '5s';
-const MAX_REPLAY_RANGE_MS = 24 * 60 * 60 * 1000;
+const MAX_REPLAY_RANGE_MS = 60 * 60 * 1000;
 const SAMPLE_REPLAY_FROM_ISO = '2024-02-26T10:22:00Z';
 const SAMPLE_REPLAY_TO_ISO = '2024-02-26T10:25:00Z';
 

@@ -155,6 +155,12 @@
     "loading": "Loading...",
     "searchForm": "Select Range",
     "fetch": "Load",
+    "validation": {
+      "missing": "Start time and end time are required.",
+      "invalid": "Please enter a valid time range.",
+      "order": "Start time must be earlier than end time.",
+      "tooLarge": "Load range must be within 1 hour."
+    },
     "frameInfo": "Frame {{current}} / {{total}}",
     "noData": "No data"
   },

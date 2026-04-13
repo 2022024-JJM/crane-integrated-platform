@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
 import { cn } from '@crane/core/lib/utils';
 
+type ReplayValidationReason = 'missing' | 'invalid' | 'order' | 'tooLarge';
+
 interface ReplaySearchFormProps {
   draftFrom: string;
   draftTo: string;
@@ -10,7 +12,7 @@ interface ReplaySearchFormProps {
   onDraftToChange: (v: string) => void;
   onSearch: () => void;
   canSearch: boolean;
-  validationReason: string | null | undefined;
+  validationReason: ReplayValidationReason | null | undefined;
   isLoading: boolean;
   isError: boolean;
   errorMessage: string | null;
@@ -31,6 +33,16 @@ export function ReplaySearchForm({
   className,
 }: ReplaySearchFormProps) {
   const { t } = useTranslation();
+  const validationMessage =
+    validationReason === 'missing'
+      ? t('common:replay.validation.missing')
+      : validationReason === 'invalid'
+        ? t('common:replay.validation.invalid')
+        : validationReason === 'order'
+          ? t('common:replay.validation.order')
+          : validationReason === 'tooLarge'
+            ? t('common:replay.validation.tooLarge')
+            : null;
 
   return (
     <div
@@ -64,8 +76,8 @@ export function ReplaySearchForm({
         </label>
       </div>
 
-      {validationReason ? (
-        <p className="text-destructive text-xs">{validationReason}</p>
+      {validationMessage ? (
+        <p className="text-destructive text-xs">{validationMessage}</p>
       ) : null}
 
       {isError && errorMessage ? (
