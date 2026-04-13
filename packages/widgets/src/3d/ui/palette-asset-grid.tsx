@@ -85,7 +85,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                 }}
                 onDragEnd={onDragEnd}
                 className={cn(
-                  'group border-border bg-muted/50 cursor-pointer rounded-md border p-1 text-left transition',
+                  'group border-border bg-muted/50 cursor-grab rounded-md border p-1 text-left transition',
                   isDragging
                     ? 'border-primary/40 bg-primary/12 scale-[0.98]'
                     : 'hover:border-border/80 hover:bg-muted',

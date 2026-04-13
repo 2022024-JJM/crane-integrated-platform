@@ -792,7 +792,7 @@ function BottomProjectPanel({
             type="button"
             onClick={() => setActiveTab('models')}
             className={cn(
-              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
               activeTab === 'models'
                 ? 'border-primary text-foreground'
                 : 'text-muted-foreground hover:text-foreground border-transparent',
@@ -804,7 +804,7 @@ function BottomProjectPanel({
             type="button"
             onClick={() => setActiveTab('tools')}
             className={cn(
-              'border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
               activeTab === 'tools'
                 ? 'border-primary text-foreground'
                 : 'text-muted-foreground hover:text-foreground border-transparent',
@@ -816,7 +816,7 @@ function BottomProjectPanel({
         <button
           type="button"
           onClick={() => setIsCollapsed((prev) => !prev)}
-          className="text-muted-foreground hover:text-foreground mr-2 inline-flex size-7 items-center justify-center rounded-md transition-colors"
+          className="text-muted-foreground hover:text-foreground mr-2 inline-flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors"
           aria-label={isCollapsed ? 'Expand palette' : 'Collapse palette'}
           title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
         >
