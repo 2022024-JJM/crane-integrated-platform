@@ -66,6 +66,15 @@
     "sensorTextTab": "Sensors / Text",
     "textObject": "Text",
     "save": "Save",
+    "categoryLibrary": "Categories",
+    "categoryAssetCount": "{{count}} assets",
+    "noModelsInCategory": "No models in this category yet.",
+    "modelCategories": {
+      "indoor": "Indoor",
+      "outdoor": "Outdoor",
+      "map": "Map",
+      "etc": "Etc"
+    },
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected"

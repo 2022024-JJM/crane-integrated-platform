@@ -23,6 +23,7 @@ export {
 export type {
   SavedCameraInfo,
   SceneModelCatalogItem,
+  SceneModelCategory,
   SceneModelPreviewPreset,
   SavedMapInfo,
   SavedMeshOverride,
@@ -40,10 +41,7 @@ export type {
   SavedSensorInfo,
   SensorType,
 } from './model/sensor-types';
-export {
-  isCameraSensor,
-  isLidarSensor,
-} from './model/sensor-types';
+export { isCameraSensor, isLidarSensor } from './model/sensor-types';
 export {
   createLidarSensor,
   createCameraSensor,
@@ -73,6 +71,7 @@ export {
   unregisterSceneOccluders,
 } from './lib/scene-occluder-registry';
 export { sceneModelCatalog } from './model/scene-model-catalog';
+export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {
   getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
