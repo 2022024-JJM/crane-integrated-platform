@@ -41,8 +41,10 @@ interface ThreeSceneViewerProps {
   canvasProps?: Omit<ComponentProps<typeof Canvas>, 'camera' | 'children'>;
   children: ReactNode;
   overlay?: ReactNode;
+  fullscreenOverlay?: ReactNode;
   showZoomIndicator?: boolean;
   onControllerReady?: (controller: SceneController | null) => void;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 export interface SceneController {
@@ -269,8 +271,10 @@ export function ThreeSceneViewer({
   canvasProps,
   children,
   overlay,
+  fullscreenOverlay,
   showZoomIndicator = true,
   onControllerReady,
+  onFullscreenChange,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -301,9 +305,14 @@ export function ThreeSceneViewer({
     await root.requestFullscreen();
   }, []);
 
+  const onFullscreenChangeRef = useRef(onFullscreenChange);
+  onFullscreenChangeRef.current = onFullscreenChange;
+
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === rootRef.current);
+      const next = document.fullscreenElement === rootRef.current;
+      setIsFullscreen(next);
+      onFullscreenChangeRef.current?.(next);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -313,28 +322,43 @@ export function ThreeSceneViewer({
     };
   }, []);
 
+  const showSplitPanel = isFullscreen && fullscreenOverlay;
+
   return (
     <div
       ref={rootRef}
       className="relative h-full min-h-0 w-full overflow-hidden"
     >
-      <Canvas
-        {...canvasProps}
-        camera={{ position: cameraPreset.defaultPosition }}
-      >
-        <SceneControlsBridge
-          cameraPreset={cameraPreset}
-          onControllerChange={setController}
-          onZoomPercentChange={setZoomPercent}
-        />
-        {children}
-      </Canvas>
+      {/* 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 레이아웃 */}
+      <div className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}>
+        {/* 3D 캔버스 영역 */}
+        <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
+          <Canvas
+            {...canvasProps}
+            camera={{ position: cameraPreset.defaultPosition }}
+          >
+            <SceneControlsBridge
+              cameraPreset={cameraPreset}
+              onControllerChange={setController}
+              onZoomPercentChange={setZoomPercent}
+            />
+            {children}
+          </Canvas>
 
-      {overlay ? (
-        <div className="pointer-events-none absolute inset-0 z-[2]">
-          {overlay}
+          {overlay ? (
+            <div className="pointer-events-none absolute inset-0 z-2">
+              {overlay}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+
+        {/* CMMS 패널 (전체화면 시에만) */}
+        {showSplitPanel ? (
+          <div className="relative h-full w-1/2 shrink-0 overflow-hidden">
+            {fullscreenOverlay}
+          </div>
+        ) : null}
+      </div>
 
       <TooltipProvider delay={150}>
         <div className="pointer-events-none absolute top-3 right-3 z-[1] flex flex-col items-end gap-2">

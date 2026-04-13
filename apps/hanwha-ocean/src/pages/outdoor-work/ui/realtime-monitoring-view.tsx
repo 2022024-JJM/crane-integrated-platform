@@ -13,10 +13,15 @@ import {
   useMonitoringReplay,
   useMonitoringReplaySearch,
 } from '@crane/features/monitoring';
-import { Monitoring3dView } from '@crane/features/3d';
+import {
+  Monitoring3dView,
+  useCraneIdFromFocusedModel,
+  useObjectFocusStore,
+} from '@crane/features/3d';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import { CraneStatusTable } from '@crane/widgets/crane';
 import { AlarmPanel } from '@crane/widgets/alarm';
+import { CraneCmmsDetailPanel } from '../../crane-detail/ui/crane-cmms-detail-panel';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
@@ -41,10 +46,25 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       to: query.to,
     });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
+  const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
+  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+  const isCmmsOpen = craneId !== null;
+
+  // 전체화면 시 CMMS 패널 (ThreeSceneViewer가 우측 절반에 렌더링)
+  const fullscreenCmmsOverlay =
+    isCmmsOpen ? (
+      <CraneCmmsDetailPanel
+        key={craneId}
+        craneId={craneId}
+        craneName={craneName ?? craneId}
+        onClose={clearFocus}
+      />
+    ) : null;
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-      <ResizablePanel defaultSize={75} minSize={50}>
+      {/* ── 좌측: 3D 뷰 + 하단 테이블 ── */}
+      <ResizablePanel defaultSize={75} minSize={30}>
         <ResizablePanelGroup orientation="vertical" className="min-h-0">
           <ResizablePanel defaultSize={60}>
             <div className="relative h-full">
@@ -63,6 +83,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
                 onLoadingChange={setIs3dViewLoading}
+                fullscreenOverlay={fullscreenCmmsOverlay}
               />
             </div>
           </ResizablePanel>
@@ -87,6 +108,9 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>
+
+
+      {/* ── 우측: 알람 패널 ── */}
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={25} minSize={15}>
         <AlarmPanel stats={alarmStats} alarms={alarms} />

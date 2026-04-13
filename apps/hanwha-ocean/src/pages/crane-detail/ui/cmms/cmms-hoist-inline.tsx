@@ -1,0 +1,128 @@
+import { useTranslation } from 'react-i18next';
+import { getCmmsMockData } from '../../model/mock-data';
+import type { CmmsHoistUnit } from '../../model/types';
+import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
+import { CmmsStatusLamp } from '@crane/ui/molecules/cmms-status-lamp';
+import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';
+import { RunFaultBadge } from '@crane/ui/molecules/cmms-status-badge';
+import { CmmsBadgeRow } from '@crane/ui/molecules/cmms-badge-row';
+
+interface CmmsHoistInlineProps {
+  craneId: string;
+}
+
+export function CmmsHoistInline({ craneId }: CmmsHoistInlineProps) {
+  const { t } = useTranslation('cmms');
+  const d = getCmmsMockData(craneId).hoist;
+  const units: CmmsHoistUnit[] = [d.hoist1, d.hoist2, d.hoist3];
+
+  return (
+    <div className="flex flex-col gap-2 p-3 bg-background text-foreground">
+      {/* HOIST #1 / #2 / #3 — 세로 스택 */}
+      {units.map((unit, idx) => (
+        <div key={idx} className="flex flex-col gap-2">
+          {/* 헤더 */}
+          <div className="flex items-stretch rounded border border-border bg-card overflow-hidden shrink-0">
+            <div className="w-1 bg-sky-500 shrink-0" />
+            <div className="flex-1 flex items-center justify-between px-3 py-2 bg-muted/60">
+              <span className="text-sm font-bold uppercase tracking-wider text-sky-500 dark:text-sky-400">
+                {t('hoist.title')} #{idx + 1}
+              </span>
+              <RunFaultBadge value={unit.runFault} />
+            </div>
+          </div>
+
+          {/* 수치 */}
+          <div className="rounded border border-border bg-card px-3 py-1">
+            <CmmsValueRow label={t('hoist.joystickStep')} value={unit.joystickStep} />
+            <CmmsValueRow label={t('hoist.speedRef')}     value={unit.speedRef.toFixed(2)} />
+            <CmmsValueRow label={t('hoist.actSpeed')}     value={unit.actSpeed.toFixed(2)} />
+            <CmmsValueRow label={t('hoist.current')}      value={unit.current.toFixed(1)} />
+            <CmmsValueRow label={t('hoist.driveFault')}   value={unit.driveFault} highlight={unit.driveFault !== '!'} />
+            <CmmsValueRow label={t('hoist.position')}     value={unit.position.toFixed(1)} />
+            <CmmsValueRow label={t('hoist.load')}         value={unit.load.toFixed(1)} />
+            <CmmsValueRow label={t('hoist.motorTemp')}    value={unit.motorTemp.toFixed(1)} />
+          </div>
+
+          {/* 상태 비트 */}
+          <div className="rounded border border-border bg-card px-3 py-1">
+            <CmmsStatusLamp label={t('hoist.mechStopRelay')}       status={unit.mechStopRelay} />
+            <CmmsStatusLamp label={t('hoist.driveFaultBit')}       status={unit.driveFaultBit} />
+            <CmmsStatusLamp label={t('hoist.driveMainCb')}         status={unit.driveMainCb} />
+            <CmmsStatusLamp label={t('hoist.driveFanCb')}          status={unit.driveFanCb} />
+            <CmmsStatusLamp label={t('hoist.fieldCb')}             status={unit.fieldCb} />
+            <CmmsStatusLamp label={t('hoist.driveMainMc')}         status={unit.driveMainMc} />
+            <CmmsStatusLamp label={t('hoist.driveFanMc')}          status={unit.driveFanMc} />
+            <CmmsStatusLamp label={t('hoist.driveFieldMc')}        status={unit.driveFieldMc} />
+            <CmmsStatusLamp label={t('hoist.driveFieldFuseBlown')} status={unit.driveFieldFuseBlown} />
+            <CmmsStatusLamp label={t('hoist.motorFanMainCb')}      status={unit.motorFanMainCb} />
+            <CmmsStatusLamp label={t('hoist.motorFanMc')}          status={unit.motorFanMc} />
+            <CmmsStatusLamp label={t('hoist.lubricationMotorCb')}  status={unit.lubricationMotorCb} />
+            <CmmsStatusLamp label={t('hoist.eStopPb')}             status={unit.eStopPb} variant="ok-ng" />
+          </div>
+        </div>
+      ))}
+
+      {/* 하단 종합 패널 — 2열 그리드 */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* 하중 */}
+        <CmmsPanel title={t('hoist.panels.load')}>
+          <CmmsValueRow label={t('hoist.panels.totalLoad')} value={d.load.totalLoad.toFixed(1)} />
+          <CmmsValueRow label={t('hoist.panels.h1h2Diff')}  value={d.load.h1h2Diff.toFixed(1)} />
+          <CmmsBadgeRow label={t('hoist.panels.overloadWarning')}      badges={d.load.overloadWarning} />
+          <CmmsBadgeRow label={t('hoist.panels.overloadTrip')}         badges={d.load.overloadTrip} />
+          <CmmsBadgeRow label={t('hoist.panels.totalOverloadWarning')} badges={[d.load.totalOverloadWarning]} />
+          <CmmsBadgeRow label={t('hoist.panels.totalOverloadTrip')}    badges={[d.load.totalOverloadTrip]} />
+        </CmmsPanel>
+
+        {/* 과속 */}
+        <CmmsPanel title={t('hoist.panels.overspeed')}>
+          <CmmsBadgeRow label={t('hoist.panels.fsl')}      badges={d.overspeed.overspeedFsl} />
+          <CmmsBadgeRow label={t('hoist.panels.esl')}      badges={d.overspeed.overspeedEsl} />
+          <CmmsBadgeRow label={t('hoist.panels.monitor1')} badges={d.overspeed.overspeedMonitor1} />
+          <CmmsBadgeRow label={t('hoist.panels.monitor2')} badges={d.overspeed.overspeedMonitor2} />
+        </CmmsPanel>
+
+        {/* 로프 시브 */}
+        <CmmsPanel title={t('hoist.panels.ropeSheave')}>
+          <CmmsStatusLamp label={t('hoist.panels.ropeSheaveH1Cb')} status={d.ropeSheave.ropeSheaveH1Cb} />
+          <CmmsStatusLamp label={t('hoist.panels.ropeSheaveH2Cb')} status={d.ropeSheave.ropeSheaveH2Cb} />
+          <CmmsStatusLamp label={t('hoist.panels.wsMc')}           status={d.ropeSheave.wsMc} />
+          <CmmsStatusLamp label={t('hoist.panels.lsMc')}           status={d.ropeSheave.lsMc} />
+          <CmmsStatusLamp label={t('hoist.panels.wsEndStop')}      status={d.ropeSheave.wsEndStop} />
+          <CmmsStatusLamp label={t('hoist.panels.lsEndStop')}      status={d.ropeSheave.lsEndStop} />
+        </CmmsPanel>
+
+        {/* 위치 */}
+        <CmmsPanel title={t('hoist.panels.position')}>
+          {([
+            [t('hoist.panels.upSafetyStop'),   d.position.upSafetyStop],
+            [t('hoist.panels.upNormalStop'),   d.position.upNormalStop],
+            [t('hoist.panels.upSlowdown'),     d.position.upSlowdown],
+            [t('hoist.panels.downSlowdown'),   d.position.downSlowdown],
+            [t('hoist.panels.downNormalStop'), d.position.downNormalStop],
+            [t('hoist.panels.downSafetyStop'), d.position.downSafetyStop],
+          ] as [string, ('ON' | 'OFF')[]][]).map(([label, arr]) => (
+            <CmmsBadgeRow key={label} label={label} badges={arr} />
+          ))}
+        </CmmsPanel>
+
+        {/* 브레이크 */}
+        <div className="col-span-2">
+          <CmmsPanel title={t('hoist.panels.brake')}>
+            <div className="grid grid-cols-2 gap-x-4">
+              {([
+                [t('hoist.panels.brakeCb'),    d.brake.brakeCb],
+                [t('hoist.panels.brakeMc'),    d.brake.brakeMc],
+                [t('hoist.panels.brake1Open'), d.brake.brake1Open],
+                [t('hoist.panels.brake2Open'), d.brake.brake2Open],
+              ] as [string, ('ON' | 'OFF')[]][]).map(([label, arr]) => (
+                <CmmsBadgeRow key={label} label={label} badges={arr} />
+              ))}
+            </div>
+          </CmmsPanel>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { Suspense, useCallback, useEffect, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { Button } from '@crane/ui/atoms/button';
@@ -19,6 +19,8 @@ interface Monitoring3dViewProps {
   alarmsByCraneId?: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
+  fullscreenOverlay?: ReactNode;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -28,6 +30,8 @@ export function Monitoring3dView({
   alarmsByCraneId = EMPTY_ALARMS,
   alarmHighlightMesh = false,
   onLoadingChange,
+  fullscreenOverlay,
+  onFullscreenChange,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -107,6 +111,8 @@ export function Monitoring3dView({
           onPointerMissed: clearFocus,
         }}
         overlay={focusOverlay}
+        fullscreenOverlay={fullscreenOverlay}
+        onFullscreenChange={onFullscreenChange}
         onControllerReady={handleControllerReady}
       >
         <ambientLight intensity={2} />

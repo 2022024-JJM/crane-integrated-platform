@@ -21,6 +21,7 @@ import {
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
 import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
@@ -33,6 +34,8 @@ export function useSceneData(
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
+  const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
   const clearValueMapper = useValueMapperStore((s) => s.clear);
   const resetToOrigin = useValueMapperStore((s) => s.resetToOrigin);
@@ -54,6 +57,7 @@ export function useSceneData(
         }
 
         setSceneInfo(data);
+        setSceneInfoInStore(regionId, data);
         data.models?.forEach((modelInfo) => {
           registerFromModel(modelInfo);
         });
@@ -84,8 +88,9 @@ export function useSceneData(
       // unmount 전 Object3D가 아직 registry에 있을 때 원위치 복귀
       resetToOrigin();
       clearValueMapper();
+      clearSceneInfoFromStore(regionId);
     };
-  }, [clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, startSimulation]);
+  }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startSimulation]);
 
   return { sceneInfo, isLoading };
 }
