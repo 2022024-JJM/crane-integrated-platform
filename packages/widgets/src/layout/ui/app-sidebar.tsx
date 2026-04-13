@@ -26,9 +26,16 @@ export function AppSidebar() {
           {navGroups.map((group, groupIdx) => (
             <div key={group.title}>
               {groupIdx > 0 && <Separator className="my-2" />}
-              <p className="text-muted-foreground mb-1 px-2 text-xs font-medium tracking-wider uppercase">
-                {group.title}
-              </p>
+              {group.highlight ? (
+                <div className="mb-2 px-2">
+                  <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">크레인</p>
+                  <p className="text-base font-bold tracking-wide text-foreground">{group.title}</p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground mb-1 px-2 text-xs font-medium tracking-wider uppercase">
+                  {group.title}
+                </p>
+              )}
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
                   <li key={item.path}>

@@ -11,4 +11,5 @@ export interface NavItem {
 export interface NavGroup {
   title: string;
   items: NavItem[];
+  highlight?: boolean;
 }

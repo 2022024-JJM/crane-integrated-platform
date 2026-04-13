@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { AlarmSeverity, CraneStatus, StatusLevel, OnOff, OkNg, RunFaultStatus } from '../types/status';
 
 export const severityBadgeClassName: Record<AlarmSeverity, string> = {
@@ -54,7 +55,13 @@ export const okNgBadgeClassName: Record<OkNg, string> = {
 };
 
 export const runFaultBadgeClassName: Record<RunFaultStatus, string> = {
-  STOP:  'border-zinc-500 bg-zinc-600 text-zinc-200',
-  RUN:   'border-green-600 bg-green-600 text-white',
-  FAULT: 'border-red-600 bg-red-600 text-white',
+  STOP:  '',
+  RUN:   '',
+  FAULT: '',
+};
+
+export const runFaultBadgeStyle: Record<RunFaultStatus, CSSProperties> = {
+  STOP:  { background: '#eab308', borderColor: '#eab308', color: '#000' },
+  RUN:   { background: '#16a34a', borderColor: '#16a34a', color: '#fff' },
+  FAULT: { background: '#dc2626', borderColor: '#dc2626', color: '#fff' },
 };

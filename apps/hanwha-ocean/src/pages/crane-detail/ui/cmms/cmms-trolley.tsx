@@ -5,7 +5,8 @@ import type { CmmsTrolleyUnit } from '../../model/types';
 import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
 import { CmmsStatusLamp } from '@crane/ui/molecules/cmms-status-lamp';
 import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';
-import { RunFaultBadge, OnOffBadge } from '@crane/ui/molecules/cmms-status-badge';
+import { RunFaultBadge } from '@crane/ui/molecules/cmms-status-badge';
+import { CmmsBadgeRow } from '@crane/ui/molecules/cmms-badge-row';
 
 export function CmmsTrolley() {
   const { craneId = '' } = useParams<{ craneId: string }>();
@@ -40,7 +41,7 @@ export function CmmsTrolley() {
               [t('trolley.panels.ppEndStopMgsw'),     data.position.ppEndStopMgsw],
               [t('trolley.panels.ppSafetyStopRelay'), data.position.ppSafetyStopRelay],
             ] as [string, ('ON' | 'OFF')[]][]).map(([label, arr]) => (
-              <BadgeRow key={label} label={label} badges={arr} />
+              <CmmsBadgeRow key={label} label={label} badges={arr as ('ON'|'OFF')[]} stacked />
             ))}
           </CmmsPanel>
         </div>
@@ -48,11 +49,11 @@ export function CmmsTrolley() {
         {/* BRAKE */}
         <div className="flex-1 min-w-0">
           <CmmsPanel title={t('trolley.panels.brake')}>
-            <BadgeRow label={t('trolley.panels.brakeMc')}     badges={data.brake.brakeMc} />
-            <BadgeRow label={t('trolley.panels.brake12Cb')}   badges={data.brake.brake12Cb} />
-            <BadgeRow label={t('trolley.panels.brake34Cb')}   badges={[data.brake.brake34Cb]} />
-            <BadgeRow label={t('trolley.panels.brake12Open')} badges={data.brake.brake12Open} />
-            <BadgeRow label={t('trolley.panels.brake34Open')} badges={[data.brake.brake34Open]} />
+            <CmmsBadgeRow label={t('trolley.panels.brakeMc')}     badges={data.brake.brakeMc}           stacked />
+            <CmmsBadgeRow label={t('trolley.panels.brake12Cb')}   badges={data.brake.brake12Cb}         stacked />
+            <CmmsBadgeRow label={t('trolley.panels.brake34Cb')}   badges={[data.brake.brake34Cb]}       stacked />
+            <CmmsBadgeRow label={t('trolley.panels.brake12Open')} badges={data.brake.brake12Open}       stacked />
+            <CmmsBadgeRow label={t('trolley.panels.brake34Open')} badges={[data.brake.brake34Open]}     stacked />
           </CmmsPanel>
         </div>
 
@@ -127,14 +128,3 @@ function TrolleyColumn({ title, unit, t }: { title: string; unit: CmmsTrolleyUni
   );
 }
 
-function BadgeRow({ label, badges }: { label: string; badges: readonly string[] }) {
-  const isMulti = badges.length > 1;
-  return (
-    <div className={`py-1 border-b border-border last:border-0 ${isMulti ? 'flex flex-col gap-1' : 'flex items-center justify-between gap-2'}`}>
-      <span className="text-xs text-foreground">{label}</span>
-      <div className="flex gap-1 flex-wrap">
-        {badges.map((v, i) => <OnOffBadge key={i} value={v as 'ON' | 'OFF'} />)}
-      </div>
-    </div>
-  );
-}

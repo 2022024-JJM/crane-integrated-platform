@@ -50,6 +50,7 @@ function buildCmmsGroup(craneId: string): NavGroup {
   const title = craneId.replace(/_/g, '-');
   return {
     title,
+    highlight: true,
     items: [
       {
         label: 'Overview',

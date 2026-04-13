@@ -3,9 +3,9 @@ import {
   onOffBadgeClassName,
   okNgBadgeClassName,
   runFaultBadgeClassName,
+  runFaultBadgeStyle,
 } from '@crane/core/lib/status-colors';
 import { cn } from '@crane/core/lib/utils';
-import { Badge } from '../atoms/badge';
 
 // ─── ON / OFF 배지 ────────────────────────────────────────────────
 interface OnOffBadgeProps {
@@ -15,16 +15,15 @@ interface OnOffBadgeProps {
 }
 export function OnOffBadge({ value, label, className }: OnOffBadgeProps) {
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        'rounded w-8 h-5 px-0 py-0 text-[10px] font-bold tracking-wide inline-flex items-center justify-center shrink-0',
+        'rounded w-8 h-5 px-0 py-0 text-[10px] font-bold tracking-wide inline-flex items-center justify-center shrink-0 border',
         onOffBadgeClassName[value],
         className,
       )}
     >
       {label ?? value}
-    </Badge>
+    </span>
   );
 }
 
@@ -35,16 +34,15 @@ interface OkNgBadgeProps {
 }
 export function OkNgBadge({ value, className }: OkNgBadgeProps) {
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        'rounded w-8 h-5 px-0 py-0 text-[10px] font-bold tracking-wide inline-flex items-center justify-center shrink-0',
+        'rounded w-8 h-5 px-0 py-0 text-[10px] font-bold tracking-wide inline-flex items-center justify-center shrink-0 border',
         okNgBadgeClassName[value],
         className,
       )}
     >
       {value}
-    </Badge>
+    </span>
   );
 }
 
@@ -55,16 +53,15 @@ interface RunFaultBadgeProps {
 }
 export function RunFaultBadge({ value, className }: RunFaultBadgeProps) {
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        'rounded px-2 py-0.5 text-[11px] font-bold h-auto',
-        runFaultBadgeClassName[value],
+        'inline-flex items-center justify-center rounded border px-2 py-0.5 text-[11px] font-bold',
         className,
       )}
+      style={runFaultBadgeStyle[value]}
     >
       {value}
-    </Badge>
+    </span>
   );
 }
 
@@ -76,10 +73,9 @@ interface OpenCloseBadgeProps {
 export function OpenCloseBadge({ value, className }: OpenCloseBadgeProps) {
   const isOpen = value === '열림';
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        'rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide h-auto',
+        'inline-flex items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wide',
         isOpen
           ? 'border-emerald-500 bg-emerald-500 text-white'
           : 'border-zinc-600 bg-zinc-600 text-zinc-300',
@@ -87,6 +83,6 @@ export function OpenCloseBadge({ value, className }: OpenCloseBadgeProps) {
       )}
     >
       {value}
-    </Badge>
+    </span>
   );
 }

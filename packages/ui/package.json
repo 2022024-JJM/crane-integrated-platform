@@ -24,6 +24,7 @@
     "./molecules/cmms-value-row": "./src/molecules/cmms-value-row.tsx",
     "./molecules/cmms-status-lamp": "./src/molecules/cmms-status-lamp.tsx",
     "./molecules/cmms-status-badge": "./src/molecules/cmms-status-badge.tsx",
+    "./molecules/cmms-badge-row": "./src/molecules/cmms-badge-row.tsx",
     "./molecules/resizable": "./src/molecules/resizable.tsx",
     "./molecules/scroll-area": "./src/molecules/scroll-area.tsx",
     "./molecules/select": "./src/molecules/select.tsx",

@@ -5,7 +5,8 @@ import type { CmmsHoistUnit } from '../../model/types';
 import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
 import { CmmsStatusLamp } from '@crane/ui/molecules/cmms-status-lamp';
 import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';
-import { RunFaultBadge, OnOffBadge } from '@crane/ui/molecules/cmms-status-badge';
+import { RunFaultBadge } from '@crane/ui/molecules/cmms-status-badge';
+import { CmmsBadgeRow } from '@crane/ui/molecules/cmms-badge-row';
 
 export function CmmsHoist() {
   const { craneId = '' } = useParams<{ craneId: string }>();
@@ -70,20 +71,20 @@ export function CmmsHoist() {
           <CmmsPanel title={t('hoist.panels.load')}>
             <CmmsValueRow label={t('hoist.panels.totalLoad')} value={d.load.totalLoad.toFixed(1)} />
             <CmmsValueRow label={t('hoist.panels.h1h2Diff')}  value={d.load.h1h2Diff.toFixed(1)} />
-            <BadgeRow label={t('hoist.panels.overloadWarning')}      badges={d.load.overloadWarning} />
-            <BadgeRow label={t('hoist.panels.overloadTrip')}         badges={d.load.overloadTrip} />
-            <BadgeRow label={t('hoist.panels.totalOverloadWarning')} badges={[d.load.totalOverloadWarning]} />
-            <BadgeRow label={t('hoist.panels.totalOverloadTrip')}    badges={[d.load.totalOverloadTrip]} />
+            <CmmsBadgeRow label={t('hoist.panels.overloadWarning')}      badges={d.load.overloadWarning} />
+            <CmmsBadgeRow label={t('hoist.panels.overloadTrip')}         badges={d.load.overloadTrip} />
+            <CmmsBadgeRow label={t('hoist.panels.totalOverloadWarning')} badges={[d.load.totalOverloadWarning]} />
+            <CmmsBadgeRow label={t('hoist.panels.totalOverloadTrip')}    badges={[d.load.totalOverloadTrip]} />
           </CmmsPanel>
         </div>
 
         {/* 과속 */}
         <div className="flex-1 min-w-0">
           <CmmsPanel title={t('hoist.panels.overspeed')}>
-            <BadgeRow label={t('hoist.panels.fsl')}      badges={d.overspeed.overspeedFsl} />
-            <BadgeRow label={t('hoist.panels.esl')}      badges={d.overspeed.overspeedEsl} />
-            <BadgeRow label={t('hoist.panels.monitor1')} badges={d.overspeed.overspeedMonitor1} />
-            <BadgeRow label={t('hoist.panels.monitor2')} badges={d.overspeed.overspeedMonitor2} />
+            <CmmsBadgeRow label={t('hoist.panels.fsl')}      badges={d.overspeed.overspeedFsl} />
+            <CmmsBadgeRow label={t('hoist.panels.esl')}      badges={d.overspeed.overspeedEsl} />
+            <CmmsBadgeRow label={t('hoist.panels.monitor1')} badges={d.overspeed.overspeedMonitor1} />
+            <CmmsBadgeRow label={t('hoist.panels.monitor2')} badges={d.overspeed.overspeedMonitor2} />
           </CmmsPanel>
         </div>
 
@@ -110,7 +111,7 @@ export function CmmsHoist() {
               [t('hoist.panels.downNormalStop'),d.position.downNormalStop],
               [t('hoist.panels.downSafetyStop'),d.position.downSafetyStop],
             ] as [string, ('ON'|'OFF')[]][]).map(([label, arr]) => (
-              <BadgeRow key={label} label={label} badges={arr} />
+              <CmmsBadgeRow key={label} label={label} badges={arr} />
             ))}
           </CmmsPanel>
         </div>
@@ -124,7 +125,7 @@ export function CmmsHoist() {
               [t('hoist.panels.brake1Open'), d.brake.brake1Open],
               [t('hoist.panels.brake2Open'), d.brake.brake2Open],
             ] as [string, ('ON'|'OFF')[]][]).map(([label, arr]) => (
-              <BadgeRow key={label} label={label} badges={arr} />
+              <CmmsBadgeRow key={label} label={label} badges={arr} />
             ))}
           </CmmsPanel>
         </div>
@@ -133,13 +134,3 @@ export function CmmsHoist() {
   );
 }
 
-function BadgeRow({ label, badges }: { label: string; badges: readonly string[] }) {
-  return (
-    <div className="flex items-center justify-between gap-2 py-1 border-b border-border last:border-0">
-      <span className="text-xs text-foreground shrink-0">{label}</span>
-      <div className="flex gap-1 shrink-0">
-        {badges.map((v, i) => <OnOffBadge key={i} value={v as 'ON' | 'OFF'} />)}
-      </div>
-    </div>
-  );
-}

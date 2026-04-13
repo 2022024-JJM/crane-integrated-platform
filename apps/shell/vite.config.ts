@@ -83,8 +83,8 @@ function devSceneSavePlugin(): Plugin {
   };
 }
 
-const DEFAULT_DEV_PROXY_TARGET_HTTP = 'http://192.168.135.199:33007';
-const DEFAULT_DEV_PROXY_TARGET_WS = 'ws://192.168.135.199:33007';
+const DEFAULT_DEV_PROXY_TARGET_HTTP = 'http://192.168.135.199:33500';
+const DEFAULT_DEV_PROXY_TARGET_WS = 'ws://192.168.135.199:33500';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
