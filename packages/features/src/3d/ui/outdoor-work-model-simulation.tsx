@@ -27,10 +27,13 @@ import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
 import { useValueGeneratorStore } from '../model/use-value-generator-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
+import { useRealtimeRunner } from '../model/use-realtime-runner';
+import { useRealtimeStore } from '../model/use-realtime-store';
+import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
 
 export function useSceneData(
   regionId: string,
-  mode: 'simulation' | 'replay' = 'simulation',
+  mode: 'simulation' | 'replay' | 'realtime' = 'simulation',
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +44,8 @@ export function useSceneData(
   const resetToOrigin = useValueMapperStore((s) => s.resetToOrigin);
   const startSimulation = useValueGeneratorStore((s) => s.start);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
+  const startRealtime = useRealtimeStore((s) => s.start);
+  const stopRealtime = useRealtimeStore((s) => s.stop);
 
   useEffect(() => {
     let isMounted = true;
@@ -78,6 +83,8 @@ export function useSceneData(
 
     if (mode === 'simulation') {
       startSimulation();
+    } else if (mode === 'realtime') {
+      startRealtime();
     } else {
       resetReplay();
     }
@@ -85,12 +92,13 @@ export function useSceneData(
 
     return () => {
       isMounted = false;
+      stopRealtime();
       // unmount 전 Object3D가 아직 registry에 있을 때 원위치 복귀
       resetToOrigin();
       clearValueMapper();
       clearSceneInfoFromStore(regionId);
     };
-  }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startSimulation]);
+  }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 
   return { sceneInfo, isLoading };
 }
@@ -100,7 +108,7 @@ interface OutdoorWorkModelSimulationProps {
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
-  mode?: 'simulation' | 'replay';
+  mode?: 'simulation' | 'replay' | 'realtime';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
 }
@@ -115,9 +123,11 @@ export function OutdoorWorkModelSimulation({
   onResetCamera,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
-  // 두 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
+  // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
   useValueGeneratorRunner();
   useReplayPlayerRunner();
+  useRealtimeRunner();
+  useRealtimeWebSocketBridge(mode === 'realtime');
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const pushFocus = useObjectFocusStore((s) => s.pushFocus);

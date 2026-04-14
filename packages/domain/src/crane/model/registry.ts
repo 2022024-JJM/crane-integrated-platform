@@ -145,14 +145,7 @@ const craneIdsByRegion: Record<string, string[]> = {
     'C_812',
     'C_863',
   ],
-  'dock-2': [
-    'C_864',
-    'C_865',
-    'C_866',
-    'C_867',
-    'C_868',
-    'C_869',
-  ],
+  'dock-2': ['C_864', 'C_865', 'C_866', 'C_867', 'C_868', 'C_869'],
   'dock-in': [
     'C_801',
     'C_800',
@@ -172,6 +165,7 @@ const craneIdsByRegion: Record<string, string[]> = {
     'C_868',
     'C_869',
     'C_870',
+    'C_1806',
   ],
   goliath: ['GC_04'],
 };
