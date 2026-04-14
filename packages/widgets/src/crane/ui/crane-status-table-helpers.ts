@@ -1,4 +1,3 @@
-import type { WebSocketConnectionState } from '@crane/core/ws';
 import {
   formatReplayTimestamp,
   type MonitoringLiveCell,
@@ -11,6 +10,7 @@ export const GROUP_HEADER_HEIGHT = 28;
 export const DETAIL_HEADER_HEIGHT = 38;
 
 export type StatusDotTone = 'positive' | 'negative' | 'warning' | 'neutral';
+export type ConnectionBadgeState = 'connected' | 'connecting' | 'closed';
 
 export function getColumnWidth(column: MonitoringLiveTableDisplayColumn) {
   switch (column.cellKind) {
@@ -59,23 +59,19 @@ export function formatTimestamp(value: string | null | undefined) {
 }
 
 export function getConnectionLabel(
-  state: WebSocketConnectionState,
-  labels: Record<WebSocketConnectionState, string>,
+  state: ConnectionBadgeState,
+  labels: Record<ConnectionBadgeState, string>,
 ) {
   return labels[state];
 }
 
-export function getConnectionClassName(state: WebSocketConnectionState) {
+export function getConnectionClassName(state: ConnectionBadgeState) {
   switch (state) {
-    case 'open':
+    case 'connected':
       return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
     case 'connecting':
       return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
-    case 'closing':
-      return 'border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
     case 'closed':
-      return 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300';
-    case 'idle':
     default:
       return 'border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
   }

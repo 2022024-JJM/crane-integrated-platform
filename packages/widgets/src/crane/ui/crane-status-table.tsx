@@ -130,7 +130,7 @@ export function CraneStatusTable({
   const {
     columns,
     rows,
-    connectionState,
+    realtimeBadgeState,
     isMetaLoading,
     isError,
     errorMessage,
@@ -159,10 +159,8 @@ export function CraneStatusTable({
   );
 
   const connectionLabels = {
-    idle: t('common:craneStatus.connection.idle'),
+    connected: t('common:craneStatus.connection.open'),
     connecting: t('common:craneStatus.connection.connecting'),
-    open: t('common:craneStatus.connection.open'),
-    closing: t('common:craneStatus.connection.closing'),
     closed: t('common:craneStatus.connection.closed'),
   } as const;
 
@@ -185,10 +183,10 @@ export function CraneStatusTable({
               variant="outline"
               className={cn(
                 'rounded-full px-2 py-0.5 text-[10px] font-medium',
-                getConnectionClassName(connectionState),
+                getConnectionClassName(realtimeBadgeState),
               )}
             >
-              {getConnectionLabel(connectionState, connectionLabels)}
+              {getConnectionLabel(realtimeBadgeState, connectionLabels)}
             </Badge>
           </div>
         </div>

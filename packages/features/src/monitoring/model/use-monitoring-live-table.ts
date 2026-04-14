@@ -23,6 +23,14 @@ interface MonitoringLiveRowState {
   values: Partial<Record<string, MonitoringLiveCell>>;
 }
 
+const MONITORING_DISCONNECT_TIMEOUT_MS = 10 * 60 * 1_000;
+const MONITORING_CONNECTION_CHECK_INTERVAL_MS = 30_000;
+
+export type MonitoringRealtimeBadgeState =
+  | 'connected'
+  | 'connecting'
+  | 'closed';
+
 export function useMonitoringLiveTable({
   cranes,
   tagDefinitionIds,
@@ -35,6 +43,10 @@ export function useMonitoringLiveTable({
     useState<WebSocketConnectionState>(() =>
       monitoringWebSocketClient.getState(),
     );
+  const [lastActivityAtMs, setLastActivityAtMs] = useState<number | null>(() =>
+    monitoringWebSocketClient.getState() === 'open' ? Date.now() : null,
+  );
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const tagsQuery = useQuery({
     queryKey: ['monitoring', 'tags'],
@@ -78,6 +90,8 @@ export function useMonitoringLiveTable({
       return;
     }
 
+    setLastActivityAtMs(Date.now());
+
     if (!allowedCraneIds.has(payload.craneId)) {
       return;
     }
@@ -109,9 +123,41 @@ export function useMonitoringLiveTable({
     });
   });
 
+  const realtimeBadgeState = useMemo<MonitoringRealtimeBadgeState>(() => {
+    switch (connectionState) {
+      case 'open': {
+        if (
+          lastActivityAtMs !== null &&
+          nowMs - lastActivityAtMs < MONITORING_DISCONNECT_TIMEOUT_MS
+        ) {
+          return 'connected';
+        }
+
+        return 'closed';
+      }
+      case 'connecting':
+        return 'connecting';
+      case 'closing':
+      case 'closed':
+      case 'idle':
+      default:
+        return 'closed';
+    }
+  }, [connectionState, lastActivityAtMs, nowMs]);
+
   useEffect(() => {
-    const unsubscribeState =
-      monitoringWebSocketClient.subscribeState(setConnectionState);
+    const unsubscribeState = monitoringWebSocketClient.subscribeState(
+      (state) => {
+        setConnectionState(state);
+
+        if (state === 'open') {
+          setLastActivityAtMs(Date.now());
+          return;
+        }
+
+        setLastActivityAtMs(null);
+      },
+    );
     const unsubscribeMessages = monitoringWebSocketClient.subscribeAll(
       (message) => {
         handleMessage(message.payload);
@@ -127,10 +173,27 @@ export function useMonitoringLiveTable({
     };
   }, []);
 
+  useEffect(() => {
+    setNowMs(Date.now());
+
+    if (connectionState !== 'open') {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, MONITORING_CONNECTION_CHECK_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [connectionState]);
+
   return {
     columns,
     rows,
     connectionState,
+    realtimeBadgeState,
     isMetaLoading: tagsQuery.isLoading,
     isError: tagsQuery.isError,
     errorMessage:
