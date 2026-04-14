@@ -18,6 +18,7 @@ interface Monitoring3dViewProps {
   regionId: string;
   alarmsByCraneId?: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
+  mode?: 'simulation' | 'replay' | 'realtime';
   onLoadingChange?: (isLoading: boolean) => void;
   fullscreenOverlay?: ReactNode;
   onFullscreenChange?: (isFullscreen: boolean) => void;
@@ -29,6 +30,7 @@ export function Monitoring3dView({
   regionId,
   alarmsByCraneId = EMPTY_ALARMS,
   alarmHighlightMesh = false,
+  mode = 'simulation',
   onLoadingChange,
   fullscreenOverlay,
   onFullscreenChange,
@@ -36,7 +38,7 @@ export function Monitoring3dView({
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
-  const { sceneInfo, isLoading } = useSceneData(regionId);
+  const { sceneInfo, isLoading } = useSceneData(regionId, mode);
   const focusStack = useObjectFocusStore((s) => s.focusStack);
   const popFocus = useObjectFocusStore((s) => s.popFocus);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
@@ -127,6 +129,7 @@ export function Monitoring3dView({
             regionId={regionId}
             alarmsByCraneId={alarmsByCraneId}
             alarmHighlightMesh={alarmHighlightMesh}
+            mode={mode}
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
           />

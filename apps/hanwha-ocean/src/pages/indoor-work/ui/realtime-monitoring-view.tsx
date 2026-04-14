@@ -73,6 +73,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
                 alarmHighlightMesh
+                mode="realtime"
                 onLoadingChange={setIs3dViewLoading}
                 fullscreenOverlay={fullscreenCmmsOverlay}
               />
