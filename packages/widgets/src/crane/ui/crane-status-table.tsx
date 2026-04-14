@@ -1,3 +1,4 @@
+import { Clock3 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Badge } from '@crane/ui/atoms/badge';
 import { useMonitoringLiveTable } from '@crane/features/monitoring';
@@ -16,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from '@crane/ui/molecules/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
 import {
   CRANE_INFO_COLUMN_WIDTH,
   DETAIL_HEADER_HEIGHT,
@@ -75,10 +82,12 @@ function StatusDotCell({
   value,
   timestamp,
   statusBehavior,
+  language,
 }: {
   value: MonitoringLiveCell['value'] | undefined;
   timestamp?: string | null;
   statusBehavior: MonitoringLiveTableDisplayColumn['statusBehavior'];
+  language: string;
 }) {
   const tone = getStatusDotTone(value, statusBehavior);
 
@@ -87,7 +96,7 @@ function StatusDotCell({
       className="flex items-center justify-center"
       title={
         timestamp
-          ? `${formatCellValue(value)} | ${formatTimestamp(timestamp)}`
+          ? `${formatCellValue(value)} | ${formatTimestamp(timestamp, language)}`
           : formatCellValue(value)
       }
     >
@@ -126,7 +135,7 @@ export function CraneStatusTable({
   tagDefinitionIds,
   regionId,
 }: CraneStatusTableProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     columns,
     rows,
@@ -157,6 +166,11 @@ export function CraneStatusTable({
       }, null),
     [rows],
   );
+  const formattedLatestUpdatedAt = useMemo(
+    () => formatTimestamp(latestUpdatedAt, i18n.language),
+    [i18n.language, latestUpdatedAt],
+  );
+  const lastUpdatedLabel = t('common:craneStatus.table.lastUpdatedAt');
 
   const connectionLabels = {
     connected: t('common:craneStatus.connection.open'),
@@ -174,11 +188,31 @@ export function CraneStatusTable({
             </h3>
           </div>
           <div className="ml-auto flex items-center justify-end gap-2">
-            <span className="text-muted-foreground text-[10px] tabular-nums">
-              {t('common:craneStatus.table.updatedAt')}
-              {' | '}
-              {formatTimestamp(latestUpdatedAt)}
-            </span>
+            <TooltipProvider delay={150}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span
+                      className="text-muted-foreground inline-flex h-4 items-center gap-1.5 text-[10px] leading-none tabular-nums"
+                      aria-label={`${lastUpdatedLabel}: ${formattedLatestUpdatedAt}`}
+                      tabIndex={0}
+                    />
+                  }
+                >
+                  <Clock3
+                    className="size-3 shrink-0 self-center"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">{lastUpdatedLabel}</span>
+                  <span className="block leading-none">
+                    {formattedLatestUpdatedAt}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {lastUpdatedLabel}: {formattedLatestUpdatedAt}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Badge
               variant="outline"
               className={cn(
@@ -309,6 +343,7 @@ export function CraneStatusTable({
                                 value={cell?.value}
                                 timestamp={cell?.timestamp}
                                 statusBehavior={column.statusBehavior}
+                                language={i18n.language}
                               />
                             ) : (
                               <div
@@ -322,7 +357,7 @@ export function CraneStatusTable({
                                 )}
                                 title={
                                   cell?.timestamp
-                                    ? `${formatCellValue(cell.value)} | ${formatTimestamp(cell.timestamp)}`
+                                    ? `${formatCellValue(cell.value)} | ${formatTimestamp(cell.timestamp, i18n.language)}`
                                     : undefined
                                 }
                               >

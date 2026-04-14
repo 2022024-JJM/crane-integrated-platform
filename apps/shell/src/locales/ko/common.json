@@ -77,7 +77,7 @@
     },
     "table": {
       "statusLabel": "상태",
-      "updatedAt": "갱신",
+      "lastUpdatedAt": "마지막 갱신 시각",
       "groups": {
         "metrics": "측정값",
         "systemStatus": "시스템 상태",

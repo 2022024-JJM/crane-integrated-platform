@@ -1,9 +1,9 @@
 import {
-  formatReplayTimestamp,
   type MonitoringLiveCell,
   type MonitoringLiveTableDisplayColumn,
   type MonitoringLiveTableStatusBehavior,
 } from '@crane/domain/monitoring';
+import { getFormatLocale } from '@crane/core/config/i18n';
 
 export const CRANE_INFO_COLUMN_WIDTH = 84;
 export const GROUP_HEADER_HEIGHT = 28;
@@ -50,12 +50,53 @@ export function formatCellValue(value: MonitoringLiveCell['value'] | undefined) 
   return String(value);
 }
 
-export function formatTimestamp(value: string | null | undefined) {
+const KOREA_TIME_ZONE = 'Asia/Seoul';
+const ISO_TIMESTAMP_WITH_OFFSET_PATTERN =
+  /(?:Z|[+-]\d{2}:\d{2})$/i;
+const ISO_TIMESTAMP_WITHOUT_OFFSET_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/;
+
+function formatTimeInKoreaTimeZone(value: string, language: string) {
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(getFormatLocale(language), {
+    timeZone: KOREA_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(parsedDate);
+}
+
+function formatTimeWithoutOffset(value: string) {
+  const match = value.match(ISO_TIMESTAMP_WITHOUT_OFFSET_PATTERN);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, , , , hour, minute, second = '00'] = match;
+
+  return `${hour}:${minute}:${second}`;
+}
+
+export function formatTimestamp(
+  value: string | null | undefined,
+  language: string,
+) {
   if (!value) {
     return '-';
   }
 
-  return formatReplayTimestamp(value, 'time') ?? '-';
+  if (ISO_TIMESTAMP_WITH_OFFSET_PATTERN.test(value)) {
+    return formatTimeInKoreaTimeZone(value, language) ?? '-';
+  }
+
+  return formatTimeWithoutOffset(value) ?? '-';
 }
 
 export function getConnectionLabel(
