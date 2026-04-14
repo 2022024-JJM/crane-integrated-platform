@@ -9,3 +9,4 @@ export {
   getRegionSubtitleKey,
   getRegionLinkItems,
 } from './lib/region-presentation';
+export { filterRegionsByRole } from './lib/filter-regions-by-role';

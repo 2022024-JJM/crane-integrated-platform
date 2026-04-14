@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useEffect } from 'react';
 import {
   NavigationType,
   Outlet,
   useLocation,
   useNavigationType,
 } from 'react-router-dom';
+import { AuthSiteTypeSync } from '@crane/features/auth';
 import { HeaderDisplaySettingsProvider } from '@crane/core/lib/header-display-settings-context';
 import { NavigationProgressProvider } from '@crane/core/lib/navigation-progress-context';
 import { SidebarProvider } from '@crane/core/lib/sidebar-context';
@@ -70,6 +71,7 @@ export function AppLayout() {
         <SidebarProvider>
           <HeaderDisplaySettingsProvider>
             <NavigationProgressProvider>
+              <AuthSiteTypeSync />
               <NavigationProgressSync />
               <NavigationProgressBar />
               <div className="flex h-screen flex-col overflow-hidden">

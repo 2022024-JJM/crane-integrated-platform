@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AppNavLink } from '@crane/ui/atoms/app-link';
 import { Separator } from '@crane/ui/atoms/separator';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
+import { useAuth } from '@crane/features/auth';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { getNavigationConfig } from '../config/navigation';
@@ -12,7 +13,8 @@ export function AppSidebar() {
   const { isOpen } = useSidebar();
   const { siteType } = useSiteType();
   const { pathname } = useLocation();
-  const navGroups = getNavigationConfig(pathname, siteType);
+  const { user } = useAuth();
+  const navGroups = getNavigationConfig(pathname, siteType, user?.role);
   void i18n.language;
 
   return (

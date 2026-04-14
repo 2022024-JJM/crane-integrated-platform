@@ -21,33 +21,39 @@ import {
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
 import type { SiteType } from '@crane/core/lib/site-type-context';
+import type { UserRole } from '@crane/features/auth';
 
 const defaultSystemGroup: NavGroup = {
   title: '',
   items: [],
 };
 
-function getOverviewGroup(): NavGroup {
-  return {
-    title: i18n.t('common:nav.overview'),
-    items: [
-      {
-        label: i18n.t('common:nav.dashboard'),
-        path: '/',
-        icon: LayoutDashboard,
-      },
-      {
-        label: i18n.t('common:nav.regionOverview'),
-        path: '/region-overview',
-        icon: MapPin,
-      },
-      {
-        label: i18n.t('common:nav.craneDetail'),
-        path: '/crane-detail',
-        icon: MonitorCheck,
-      },
-    ],
-  };
+function getOverviewGroup(role: UserRole): NavGroup {
+  const allItems = [
+    {
+      label: i18n.t('common:nav.dashboard'),
+      path: '/',
+      icon: LayoutDashboard,
+    },
+    {
+      label: i18n.t('common:nav.regionOverview'),
+      path: '/region-overview',
+      icon: MapPin,
+    },
+    {
+      label: i18n.t('common:nav.craneDetail'),
+      path: '/crane-detail',
+      icon: MonitorCheck,
+    },
+  ];
+
+  // goliath: crane-detail 제외
+  const items =
+    role === 'goliath'
+      ? allItems.filter((i) => i.path !== '/crane-detail')
+      : allItems;
+
+  return { title: i18n.t('common:nav.overview'), items };
 }
 
 function buildCmmsGroup(craneId: string): NavGroup {
@@ -191,22 +197,48 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
   },
 };
 
+// role 별로 허용된 systemGroup prefix
+const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
+  ocean: ['/crane-detail', '/outdoor-work', '/indoor-work'],
+  goliath: ['/goliath-work'],
+  philly: [],
+};
+
 export function getNavigationConfig(
   pathname: string,
   _siteType: SiteType,
+  role: UserRole = 'ocean',
 ): NavGroup[] {
   const matchedKey = Object.keys(systemGroupOverrides).find((prefix) =>
     pathname.startsWith(prefix),
   );
-  const systemGroup = matchedKey
-    ? systemGroupOverrides[matchedKey](pathname)
-    : defaultSystemGroup;
 
-  return [getOverviewGroup(), systemGroup, getMroGroup()];
+  const allowed = ALLOWED_SYSTEM_PREFIXES[role];
+  const systemGroup =
+    matchedKey && allowed.includes(matchedKey)
+      ? systemGroupOverrides[matchedKey](pathname)
+      : defaultSystemGroup;
+
+  const groups: NavGroup[] = [];
+
+  // philly: Overview 없음, MRO만
+  // ocean: Overview 3개 + work
+  // goliath: Overview 2개 + goliath-work
+  if (role !== 'philly') {
+    groups.push(getOverviewGroup(role));
+  }
+
+  groups.push(systemGroup);
+
+  if (role === 'philly') {
+    groups.push(getMroGroup());
+  }
+
+  return groups.filter((g) => g.items.length > 0);
 }
 
 export const navigationConfig: NavGroup[] = [
-  getOverviewGroup(),
+  getOverviewGroup('ocean'),
   defaultSystemGroup,
   getMroGroup(),
 ];

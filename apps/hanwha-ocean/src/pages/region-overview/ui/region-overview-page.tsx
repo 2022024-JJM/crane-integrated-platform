@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { LayoutGrid, Map } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { getRegionsBySiteType } from '@crane/domain/region';
+import { getRegionsBySiteType, filterRegionsByRole } from '@crane/domain/region';
+import { useAuth } from '@crane/features/auth';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { RegionCard } from './region-card';
@@ -13,7 +14,11 @@ type RegionOverviewView = 'card' | 'map';
 export function RegionOverviewPage() {
   const { t } = useTranslation();
   const { siteType } = useSiteType();
-  const filteredRegions = getRegionsBySiteType(siteType);
+  const { user } = useAuth();
+  const filteredRegions = filterRegionsByRole(
+    getRegionsBySiteType(siteType),
+    user?.role ?? 'philly',
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const view = useMemo<RegionOverviewView>(() => {
     const requestedView = searchParams.get('view');

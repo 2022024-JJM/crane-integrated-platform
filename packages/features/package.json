@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
+    "./auth": "./src/auth/index.ts",
     "./alarm": "./src/alarm/index.ts",
     "./monitoring": "./src/monitoring/index.ts",
     "./weather": "./src/weather/index.ts",
