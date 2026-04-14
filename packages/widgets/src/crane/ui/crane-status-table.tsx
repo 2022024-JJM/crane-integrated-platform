@@ -93,7 +93,7 @@ function StatusDotCell({
     >
       <span
         className={cn(
-          'inline-flex size-2.5 rounded-full border border-white/10',
+          'border-background/80 inline-flex size-2.5 rounded-full border',
           getStatusDotClassName(tone),
         )}
       />
@@ -171,7 +171,9 @@ export function CraneStatusTable({
       <div className="border-b px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">{t('common:craneStatus.title')}</h3>
+            <h3 className="text-sm font-semibold">
+              {t('common:craneStatus.title')}
+            </h3>
           </div>
           <div className="ml-auto flex items-center justify-end gap-2">
             <span className="text-muted-foreground text-[10px] tabular-nums">
@@ -216,7 +218,7 @@ export function CraneStatusTable({
                   <TableRow className="border-0 hover:bg-transparent">
                     <TableHead
                       rowSpan={2}
-                      className="sticky left-0 z-40 border-r border-slate-600 bg-slate-900 px-2 py-1.5 text-center text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-slate-100 uppercase shadow-[1px_0_0_0_rgba(71,85,105,0.9)]"
+                      className="border-border bg-muted text-foreground sticky left-0 z-40 border-r border-b px-2 py-1.5 text-center text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase"
                       style={{
                         top: 0,
                         minWidth: CRANE_INFO_COLUMN_WIDTH,
@@ -228,19 +230,22 @@ export function CraneStatusTable({
                       <TableHead
                         key={group.key}
                         colSpan={group.columns.length}
-                        className="sticky z-30 border-r border-slate-700 bg-slate-900 px-1.5 py-1 text-center text-[9px] font-semibold tracking-[0.08em] whitespace-nowrap text-slate-200 uppercase last:border-r-0"
-                        style={{ top: 0, height: GROUP_HEADER_HEIGHT }}
+                        className="border-border bg-muted text-foreground sticky z-30 border-r px-1.5 py-1 text-center text-[9px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase last:border-r-0"
+                        style={{
+                          top: 0,
+                          height: GROUP_HEADER_HEIGHT,
+                        }}
                       >
                         {t(group.labelKey, group.defaultLabel)}
                       </TableHead>
                     ))}
                   </TableRow>
-                  <TableRow className="border-0 hover:bg-transparent">
+                  <TableRow className="[&>th]:border-border hover:bg-transparent [&>th]:border-b">
                     {columns.map((column) => (
                       <TableHead
                         key={column.tagDefinitionId}
                         className={cn(
-                          'sticky z-20 border-r border-slate-700 bg-slate-800/95 px-1 py-1 text-[9px] font-medium whitespace-nowrap text-slate-100 last:border-r-0',
+                          'border-border bg-background text-foreground sticky z-20 border-r px-1 py-1 text-[9px] font-medium whitespace-nowrap last:border-r-0',
                           getAlignmentClassName(column.align),
                         )}
                         style={{
@@ -259,7 +264,7 @@ export function CraneStatusTable({
                                 )
                               : (column.shortLabel ?? column.displayName)}
                           </span>
-                          <span className="truncate font-mono text-[8px] leading-none text-slate-400">
+                          <span className="text-muted-foreground truncate font-mono text-[8px] leading-none">
                             {column.cellKind === 'statusDot'
                               ? t('common:craneStatus.table.statusLabel')
                               : (column.unit ?? '-')}
@@ -269,18 +274,20 @@ export function CraneStatusTable({
                     ))}
                   </TableRow>
                 </TableHeader>
-                <TableBody className="[&_tr:nth-child(even)]:bg-slate-900/20">
+                <TableBody>
                   {rows.map((row) => (
                     <TableRow
                       key={row.craneId}
-                      className="border-0 bg-slate-950/20 hover:bg-slate-800/30"
+                      className="hover:bg-muted/30 [&>td]:border-border/60 border-0 [&>td]:border-b last:[&>td]:border-b-0"
                     >
                       <TableCell
-                        className="sticky left-0 z-20 border-r border-slate-700 bg-slate-950 px-2 py-1.5 text-center shadow-[1px_0_0_0_rgba(71,85,105,0.75)]"
-                        style={{ minWidth: CRANE_INFO_COLUMN_WIDTH }}
+                        className="border-border bg-background sticky left-0 z-20 border-r px-2 py-1.5 text-center"
+                        style={{
+                          minWidth: CRANE_INFO_COLUMN_WIDTH,
+                        }}
                       >
                         <div className="flex min-w-0 items-center justify-center">
-                          <span className="text-[11px] font-semibold tracking-wide text-amber-300">
+                          <span className="text-[11px] font-semibold tracking-wide text-[#f5a623]">
                             {row.craneNo}
                           </span>
                         </div>
@@ -292,11 +299,12 @@ export function CraneStatusTable({
                           <TableCell
                             key={`${row.craneId}:${column.tagCode}`}
                             className={cn(
-                              'border-r border-slate-800 px-1 py-1.5 align-middle last:border-r-0',
+                              'border-border border-r px-1 py-1.5 align-middle last:border-r-0',
                               getAlignmentClassName(column.align),
-                              cell?.changed && 'bg-emerald-500/6',
                             )}
-                            style={{ minWidth: getColumnWidth(column) }}
+                            style={{
+                              minWidth: getColumnWidth(column),
+                            }}
                           >
                             {column.cellKind === 'statusDot' ? (
                               <StatusDotCell
@@ -324,8 +332,8 @@ export function CraneStatusTable({
                                   className={cn(
                                     'font-mono text-[10px] font-medium tabular-nums',
                                     cell
-                                      ? 'text-slate-100'
-                                      : 'text-slate-500',
+                                      ? 'text-foreground'
+                                      : 'text-muted-foreground',
                                   )}
                                 >
                                   {formatCellValue(cell?.value)}
