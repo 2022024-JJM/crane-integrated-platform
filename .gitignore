@@ -12,6 +12,8 @@ dist
 dist-ssr
 .codex
 .codex/
+.claude
+.claude/
 .turbo/
 *.local
 *.tsbuildinfo
