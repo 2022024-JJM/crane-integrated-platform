@@ -1,5 +1,6 @@
 export type ReplayLiteValue = string | number | null;
 export type ReplayLiteValueMap = Record<string, ReplayLiteValue>;
+export type MonitoringLiveValue = string | number | boolean | null;
 
 export interface ReplayTagSchemaItem {
   displayName: string;
@@ -125,7 +126,7 @@ export interface MonitoringLiveCrane {
 }
 
 export interface MonitoringLiveCell {
-  value: string | number | null;
+  value: MonitoringLiveValue;
   timestamp: string;
   occurredAt: string;
   quality: number;
@@ -144,7 +145,7 @@ export interface RealtimeCraneLiteMessage {
   eventType: 'snapshot.delta';
   craneId: string;
   tagCode: string;
-  value: string | number | null;
+  value: MonitoringLiveValue;
   timestamp: string;
   quality: number;
   changed: boolean;
@@ -163,7 +164,7 @@ export interface MonitoringReplayRow {
   dataType: string | null;
   unit: string | null;
   direction: string | null;
-  value: string | number | null;
+  value: MonitoringLiveValue;
   alarm: boolean;
   stale: boolean;
   changed: boolean;

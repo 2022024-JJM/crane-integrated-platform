@@ -1,4 +1,5 @@
 import type {
+  MonitoringLiveValue,
   MonitoringLiveTableCellAlign,
   MonitoringLiveTableCellKind,
   MonitoringLiveTableDisplayColumn,
@@ -15,9 +16,12 @@ import {
   type MonitoringTagMetadataOverride,
 } from '../model/region-tag-metadata';
 
-function isValueType(value: unknown): value is string | number | null {
+function isValueType(value: unknown): value is MonitoringLiveValue {
   return (
-    value === null || typeof value === 'string' || typeof value === 'number'
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
   );
 }
 

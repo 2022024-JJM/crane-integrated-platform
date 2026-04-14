@@ -43,6 +43,10 @@ export function formatCellValue(value: MonitoringLiveCell['value'] | undefined) 
     return '-';
   }
 
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+
   return String(value);
 }
 
@@ -80,6 +84,10 @@ export function getConnectionClassName(state: WebSocketConnectionState) {
 function parseBooleanLike(value: MonitoringLiveCell['value'] | undefined) {
   if (value === null || value === undefined || value === '') {
     return null;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
   }
 
   if (typeof value === 'number') {
