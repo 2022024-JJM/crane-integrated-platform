@@ -32,6 +32,11 @@
     "low": "Low"
   },
   "empty": "—",
+  "toast": {
+    "completed": "{{woNumber}} — marked as completed.",
+    "moveTo": "{{woNumber}} — moved to {{status}}"
+  },
+  "completedLabel": "Completed",
   "detail": {
     "backLink": "Maintenance Management",
     "notFound": "Repair record not found.",

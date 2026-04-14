@@ -171,7 +171,7 @@ function RepairCard({
           onClick={() => {
             onMove(wo.id, 'prev');
             if (prevStatus) {
-              toast.info(`${wo.woNumber} — ${t(`pipeline.${prevStatus}`)}으(로) 이동`);
+              toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${prevStatus}`) }));
             }
           }}
           disabled={!canPrev}
@@ -190,9 +190,9 @@ function RepairCard({
             if (nextStatus) {
               const isCompleting = nextStatus === 'completed';
               if (isCompleting) {
-                toast.success(`${wo.woNumber} — 정비 완료 처리되었습니다.`);
+                toast.success(t('toast.completed', { woNumber: wo.woNumber }));
               } else {
-                toast.info(`${wo.woNumber} — ${t(`pipeline.${nextStatus}`)}으(로) 이동`);
+                toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${nextStatus}`) }));
               }
             }
           }}
@@ -203,7 +203,7 @@ function RepairCard({
               : 'text-muted-foreground/25 cursor-not-allowed'
             }`}
         >
-          {nextStatus ? t(`pipeline.${nextStatus}`) : '완료됨'}
+          {nextStatus ? t(`pipeline.${nextStatus}`) : t('completedLabel')}
           <ChevronRight className="h-3 w-3" />
         </button>
       </div>

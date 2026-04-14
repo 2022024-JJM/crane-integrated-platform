@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useAssetDetail } from '@crane/features/asset';
+import type { ComponentStatus, CraneComponent } from '@crane/domain/asset';
+import type { InspectionStatus } from '@crane/domain/inspection';
+import type { RepairPriority } from '@crane/domain/maintenance';
+import { Badge } from '@crane/ui/atoms/badge';
 
 function formatRelativeDate(dateStr: string): string {
   const today = new Date();
@@ -12,12 +18,6 @@ function formatRelativeDate(dateStr: string): string {
   if (diff > 0) return `D-${diff}`;
   return `D+${Math.abs(diff)}`;
 }
-import { useTranslation } from 'react-i18next';
-import { useAssetDetail } from '@crane/features/asset';
-import type { ComponentStatus, CraneComponent } from '@crane/domain/asset';
-import type { InspectionStatus } from '@crane/domain/inspection';
-import type { RepairPriority } from '@crane/domain/maintenance';
-import { Badge } from '@crane/ui/atoms/badge';
 
 const COMPONENT_STATUS_VARIANT: Record<ComponentStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   normal: 'success',

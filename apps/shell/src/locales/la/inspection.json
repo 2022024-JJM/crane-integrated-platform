@@ -77,6 +77,8 @@
     "remarks": "Notae",
     "save": "Serva",
     "submitResult": "Inspectio Perfecta",
-    "progress": "{{completed}} / {{total}} perfecta"
+    "progress": "{{completed}} / {{total}} perfecta",
+    "toastSaved": "Eventus inspectionis servatus est.",
+    "toastSubmitted": "Inspectio perfecta est."
   }
 }

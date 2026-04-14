@@ -150,6 +150,45 @@ importers:
         specifier: ^5.0.11
         version: 5.0.12(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
 
+  apps/philly-shipyard:
+    dependencies:
+      '@crane/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@crane/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@crane/features':
+        specifier: workspace:*
+        version: link:../../packages/features
+      '@crane/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@crane/widgets':
+        specifier: workspace:*
+        version: link:../../packages/widgets
+      i18next:
+        specifier: ^25.6.2
+        version: 25.10.10(typescript@5.9.3)
+      lucide-react:
+        specifier: ^0.575.0
+        version: 0.575.0(react@19.2.4)
+      react:
+        specifier: ^19.2.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.4(react@19.2.4)
+      react-i18next:
+        specifier: ^16.3.5
+        version: 16.6.6(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+      react-router-dom:
+        specifier: ^7.13.1
+        version: 7.14.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      sonner:
+        specifier: ^2.0.3
+        version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+
   apps/shell:
     dependencies:
       '@crane/core':
@@ -167,6 +206,9 @@ importers:
       '@crane/hanwha-ocean':
         specifier: workspace:*
         version: link:../hanwha-ocean
+      '@crane/philly-shipyard':
+        specifier: workspace:*
+        version: link:../philly-shipyard
       '@crane/ui':
         specifier: workspace:*
         version: link:../../packages/ui

@@ -72,7 +72,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       <div className="px-5 py-4 shrink-0 min-w-28 text-center">
         <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
           <Calendar className="h-3 w-3" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">예정일</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">{t('table.scheduled')}</span>
         </div>
         <p className={`text-sm font-bold tabular-nums ${dateOverdue ? 'text-red-500' : 'text-foreground'}`}>
           {dateLabel}
@@ -87,7 +87,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       <div className="px-5 py-4 shrink-0 min-w-28 text-center">
         <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
           <User className="h-3 w-3" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">담당자</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">{t('table.assignedTo')}</span>
         </div>
         <p className="text-sm font-medium truncate max-w-24">{wo.assignedTo}</p>
       </div>

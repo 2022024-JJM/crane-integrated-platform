@@ -55,6 +55,29 @@
     "inventory": "부품/재고",
     "compliance": "OSHA 규제"
   },
+  "phillyDashboard": {
+    "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",
+    "assetManagement": {
+      "label": "자산 관리",
+      "description": "크레인 자산 현황 및 보증 만료 일정 관리"
+    },
+    "inspection": {
+      "label": "점검",
+      "description": "정기 점검 계획 및 이력 조회"
+    },
+    "maintenance": {
+      "label": "정비",
+      "description": "수리 작업 요청 및 진행 현황 관리"
+    },
+    "inventory": {
+      "label": "재고",
+      "description": "부품 및 소모품 재고 현황"
+    },
+    "compliance": {
+      "label": "컴플라이언스",
+      "description": "법정 검사 및 인증 만료 관리"
+    }
+  },
   "craneStatus": {
     "title": "크레인 실시간 상태",
     "latest": "최신",

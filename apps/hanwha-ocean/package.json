@@ -11,12 +11,7 @@
     "./pages/region-overview": "./src/pages/region-overview/index.ts",
     "./pages/outdoor-work": "./src/pages/outdoor-work/index.ts",
     "./pages/indoor-work": "./src/pages/indoor-work/index.ts",
-    "./pages/crane-detail": "./src/pages/crane-detail/index.ts",
-    "./pages/asset-management": "./src/pages/asset-management/index.ts",
-    "./pages/inspection": "./src/pages/inspection/index.ts",
-    "./pages/maintenance": "./src/pages/maintenance/index.ts",
-    "./pages/inventory": "./src/pages/inventory/index.ts",
-    "./pages/compliance": "./src/pages/compliance/index.ts"
+    "./pages/crane-detail": "./src/pages/crane-detail/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

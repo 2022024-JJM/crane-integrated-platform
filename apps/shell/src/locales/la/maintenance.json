@@ -32,6 +32,11 @@
     "low": "Ima"
   },
   "empty": "—",
+  "toast": {
+    "completed": "{{woNumber}} — perfecta est.",
+    "moveTo": "{{woNumber}} — ad {{status}} mota est"
+  },
+  "completedLabel": "Perfecta",
   "detail": {
     "backLink": "Administratio Maintenantiae",
     "notFound": "Documentum reparationis non inventum.",

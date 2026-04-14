@@ -55,6 +55,29 @@
     "inventory": "Inventory",
     "compliance": "OSHA Compliance"
   },
+  "phillyDashboard": {
+    "subtitle": "Quick access to MRO management menu.",
+    "assetManagement": {
+      "label": "Asset Management",
+      "description": "Crane asset status and warranty expiration management"
+    },
+    "inspection": {
+      "label": "Inspection",
+      "description": "Periodic inspection planning and history"
+    },
+    "maintenance": {
+      "label": "Maintenance",
+      "description": "Repair work requests and progress management"
+    },
+    "inventory": {
+      "label": "Inventory",
+      "description": "Parts and consumables inventory status"
+    },
+    "compliance": {
+      "label": "Compliance",
+      "description": "Legal inspection and certification expiration management"
+    }
+  },
   "craneStatus": {
     "title": "Real-time Crane Status",
     "latest": "Latest",

@@ -10,7 +10,8 @@
     "thisMonth": "hoc mense"
   },
   "certAlert": {
-    "title": "Monita Certificationum ({{count}})"
+    "title": "Monita Certificationum ({{count}})",
+    "expiredTitle": "{{count}} certificationes exspiratae — renovatio statim necessaria"
   },
   "certifications": {
     "title": "Certificationes Personarum",
@@ -51,7 +52,8 @@
       "draft": "Scheda",
       "overdue": "Retardata"
     },
-    "download": "Descende"
+    "download": "Descende",
+    "downloadStarted": "Relatio descendi incipit."
   },
   "empty": {
     "certs": "Nulla data certificationum adsunt.",

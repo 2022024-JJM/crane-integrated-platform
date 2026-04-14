@@ -32,6 +32,11 @@
     "low": "낮음"
   },
   "empty": "—",
+  "toast": {
+    "completed": "{{woNumber}} — 정비 완료 처리되었습니다.",
+    "moveTo": "{{woNumber}} — {{status}}(으)로 이동"
+  },
+  "completedLabel": "완료됨",
   "detail": {
     "backLink": "정비 관리",
     "notFound": "수리 기록을 찾을 수 없습니다.",

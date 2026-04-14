@@ -10,7 +10,8 @@
     "thisMonth": "이번 달"
   },
   "certAlert": {
-    "title": "인증서 만료 임박 ({{count}})"
+    "title": "인증서 만료 임박 ({{count}})",
+    "expiredTitle": "만료된 인증서 {{count}}건 — 즉각적인 갱신 필요"
   },
   "certifications": {
     "title": "인증서 현황",
@@ -51,7 +52,8 @@
       "draft": "초안",
       "overdue": "제출 지연"
     },
-    "download": "다운로드"
+    "download": "다운로드",
+    "downloadStarted": "보고서 다운로드가 시작되었습니다."
   },
   "empty": {
     "certs": "인증서 데이터가 없습니다.",

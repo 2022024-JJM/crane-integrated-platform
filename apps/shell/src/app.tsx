@@ -82,49 +82,49 @@ const CraneDetailPage = lazy(() =>
 );
 
 const AssetManagementPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/asset-management').then((m) => ({
+  import('@crane/philly-shipyard/pages/asset-management').then((m) => ({
     default: m.AssetManagementPage,
   })),
 );
 
 const AssetDetailPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/asset-management').then((m) => ({
+  import('@crane/philly-shipyard/pages/asset-management').then((m) => ({
     default: m.AssetDetailPage,
   })),
 );
 
 const InspectionPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/inspection').then((m) => ({
+  import('@crane/philly-shipyard/pages/inspection').then((m) => ({
     default: m.InspectionPage,
   })),
 );
 
 const InspectionDetailPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/inspection').then((m) => ({
+  import('@crane/philly-shipyard/pages/inspection').then((m) => ({
     default: m.InspectionDetailPage,
   })),
 );
 
 const MaintenancePage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/maintenance').then((m) => ({
+  import('@crane/philly-shipyard/pages/maintenance').then((m) => ({
     default: m.MaintenancePage,
   })),
 );
 
 const MaintenanceDetailPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/maintenance').then((m) => ({
+  import('@crane/philly-shipyard/pages/maintenance').then((m) => ({
     default: m.MaintenanceDetailPage,
   })),
 );
 
 const InventoryPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/inventory').then((m) => ({
+  import('@crane/philly-shipyard/pages/inventory').then((m) => ({
     default: m.InventoryPage,
   })),
 );
 
 const CompliancePage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/compliance').then((m) => ({
+  import('@crane/philly-shipyard/pages/compliance').then((m) => ({
     default: m.CompliancePage,
   })),
 );

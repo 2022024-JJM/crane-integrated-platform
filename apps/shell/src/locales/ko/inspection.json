@@ -77,6 +77,8 @@
     "remarks": "비고",
     "save": "저장",
     "submitResult": "점검 완료",
-    "progress": "{{completed}} / {{total}} 완료"
+    "progress": "{{completed}} / {{total}} 완료",
+    "toastSaved": "점검 결과가 저장되었습니다.",
+    "toastSubmitted": "점검이 완료 처리되었습니다."
   }
 }

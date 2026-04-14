@@ -53,6 +53,29 @@
     "inventory": "Copia",
     "compliance": "Conformitas OSHA"
   },
+  "phillyDashboard": {
+    "subtitle": "Accede celeriter ad menus administrationis MRO.",
+    "assetManagement": {
+      "label": "Administratio Bonorum",
+      "description": "Status bonorum gruis et administratio exspirationis garantiae"
+    },
+    "inspection": {
+      "label": "Inspectio",
+      "description": "Planificatio inspectionis periodicae et historia"
+    },
+    "maintenance": {
+      "label": "Manutentio",
+      "description": "Petitiones operis reparationis et status progressus"
+    },
+    "inventory": {
+      "label": "Copia",
+      "description": "Status copiae partium et consumabilium"
+    },
+    "compliance": {
+      "label": "Conformitas",
+      "description": "Inspectio legalis et administratio exspirationis certificationum"
+    }
+  },
   "craneStatus": {
     "title": "Status Gruium Temporis Veri",
     "latest": "Novissimum",

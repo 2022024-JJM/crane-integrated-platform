@@ -77,10 +77,7 @@ export function CompliancePage() {
         <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-red-500">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            {t('certAlert.expiredTitle', {
-              count: expiredCerts.length,
-              defaultValue: `만료된 인증서 ${expiredCerts.length}건 — 즉각적인 갱신 필요`,
-            })}
+            {t('certAlert.expiredTitle', { count: expiredCerts.length })}
           </p>
           {expiredCerts.map((cert) => (
             <div key={cert.id} className="flex items-center gap-3 text-sm">
@@ -104,10 +101,7 @@ export function CompliancePage() {
         <div className="rounded-[1.75rem] border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-500">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            {t('certAlert.title', {
-              count: expirySoonCerts.length,
-              defaultValue: `만료 임박 인증서 ${expirySoonCerts.length}건`,
-            })}
+            {t('certAlert.title', { count: expirySoonCerts.length })}
           </p>
           {expirySoonCerts.map((cert) => {
             const { label: dateLabel, diff } = formatRelativeDate(cert.expiryDate);
@@ -190,7 +184,7 @@ export function CompliancePage() {
                       {t(`oshaReports.result.${report.result}`)}
                     </Badge>
                     <button
-                      onClick={() => toast.info(`${report.reportNumber} — ${t('oshaReports.downloadStarted', { defaultValue: '보고서 다운로드가 시작되었습니다.' })}`)}
+                      onClick={() => toast.info(`${report.reportNumber} — ${t('oshaReports.downloadStarted')}`)}
                       className="cursor-pointer flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <FileDown className="w-3.5 h-3.5" />

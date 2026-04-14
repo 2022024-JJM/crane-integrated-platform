@@ -10,7 +10,8 @@
     "thisMonth": "this month"
   },
   "certAlert": {
-    "title": "Certification Alerts ({{count}})"
+    "title": "Certification Alerts ({{count}})",
+    "expiredTitle": "{{count}} expired certificate(s) — immediate renewal required"
   },
   "certifications": {
     "title": "Personnel Certifications",
@@ -51,7 +52,8 @@
       "draft": "Draft",
       "overdue": "Overdue"
     },
-    "download": "Download"
+    "download": "Download",
+    "downloadStarted": "Report download started."
   },
   "empty": {
     "certs": "No certification data available.",

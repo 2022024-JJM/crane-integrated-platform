@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Layers,
   ClipboardCheck,
@@ -7,40 +8,17 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-const MRO_MENU_ITEMS = [
-  {
-    label: '자산 관리',
-    description: '크레인 자산 현황 및 보증 만료 일정 관리',
-    path: '/asset-management',
-    icon: Layers,
-  },
-  {
-    label: '점검',
-    description: '정기 점검 계획 및 이력 조회',
-    path: '/inspection',
-    icon: ClipboardCheck,
-  },
-  {
-    label: '정비',
-    description: '수리 작업 요청 및 진행 현황 관리',
-    path: '/maintenance',
-    icon: Wrench,
-  },
-  {
-    label: '재고',
-    description: '부품 및 소모품 재고 현황',
-    path: '/inventory',
-    icon: Package,
-  },
-  {
-    label: '컴플라이언스',
-    description: '법정 검사 및 인증 만료 관리',
-    path: '/compliance',
-    icon: ShieldCheck,
-  },
-];
+const MRO_MENU_KEYS = [
+  { key: 'assetManagement', path: '/asset-management', icon: Layers },
+  { key: 'inspection', path: '/inspection', icon: ClipboardCheck },
+  { key: 'maintenance', path: '/maintenance', icon: Wrench },
+  { key: 'inventory', path: '/inventory', icon: Package },
+  { key: 'compliance', path: '/compliance', icon: ShieldCheck },
+] as const;
 
 export function PhillyDashboardPage() {
+  const { t } = useTranslation('common');
+
   return (
     <div className="space-y-8 p-6">
       <div>
@@ -48,12 +26,12 @@ export function PhillyDashboardPage() {
           Philly Shipyard
         </h1>
         <p className="text-muted-foreground mt-1">
-          MRO 관리 메뉴에 빠르게 접근하세요.
+          {t('phillyDashboard.subtitle')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {MRO_MENU_ITEMS.map(({ label, description, path, icon: Icon }) => (
+        {MRO_MENU_KEYS.map(({ key, path, icon: Icon }) => (
           <Link
             key={path}
             to={path}
@@ -63,9 +41,9 @@ export function PhillyDashboardPage() {
               <Icon className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">{label}</p>
+              <p className="text-sm font-semibold text-foreground">{t(`phillyDashboard.${key}.label`)}</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {description}
+                {t(`phillyDashboard.${key}.description`)}
               </p>
             </div>
           </Link>

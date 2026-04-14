@@ -106,13 +106,13 @@ export function InspectionDetailPage() {
 
   function handleSave() {
     setSaved(true);
-    toast.success(t('detail.toastSaved', { defaultValue: '점검 결과가 저장되었습니다.' }));
+    toast.success(t('detail.toastSaved'));
     setTimeout(() => setSaved(false), 2000);
   }
 
   function handleSubmit() {
-    toast.success(t('detail.toastSubmitted', { defaultValue: '점검이 완료 처리되었습니다.' }), {
-      description: t('detail.toastSubmittedDesc', { defaultValue: inspection?.woNumber }),
+    toast.success(t('detail.toastSubmitted'), {
+      description: inspection?.woNumber,
     });
   }
 
