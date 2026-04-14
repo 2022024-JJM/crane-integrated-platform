@@ -1,0 +1,65 @@
+{
+  "title": "Maintenance Management",
+  "description": "Repair work orders, emergency response, and preventive maintenance",
+  "metrics": {
+    "inProgress": "In Progress",
+    "waitingParts": "Waiting Parts",
+    "emergencyActive": "Emergency Active",
+    "avgMttr": "Avg. MTTR"
+  },
+  "emergency": {
+    "banner": "Emergency Repair ({{count}})"
+  },
+  "pipeline": {
+    "received": "Received",
+    "waiting_parts": "Waiting Parts",
+    "in_progress": "In Progress",
+    "re_inspection": "Re-Inspection",
+    "completed": "Completed"
+  },
+  "status": {
+    "received": "Received",
+    "waiting_parts": "Waiting Parts",
+    "in_progress": "In Progress",
+    "re_inspection": "Re-Inspection",
+    "completed": "Completed",
+    "on_hold": "On Hold"
+  },
+  "priority": {
+    "emergency": "Emergency",
+    "high": "High",
+    "normal": "Normal",
+    "low": "Low"
+  },
+  "empty": "—",
+  "detail": {
+    "backLink": "Maintenance Management",
+    "notFound": "Repair record not found.",
+    "fields": {
+      "component": "Component",
+      "failureType": "Failure Type",
+      "repairLevel": "Repair Level",
+      "performer": "Performer",
+      "performerInternal": "Internal",
+      "performerExternal": "3rd Party",
+      "assignedTo": "Assigned To",
+      "source": "Source",
+      "scheduledStart": "Scheduled Start",
+      "scheduledEnd": "Scheduled End",
+      "actualStart": "Actual Start",
+      "actualEnd": "Actual End",
+      "downtime": "Downtime",
+      "reInspection": "Re-Inspection"
+    },
+    "failureDescription": "Failure Description",
+    "partsUsed": "Parts Used",
+    "noParts": "No parts recorded yet.",
+    "partsCost": "Parts Cost",
+    "laborCost": "Labor Cost ({{hours}} h)",
+    "totalCost": "Total Cost",
+    "analysisActions": "Analysis & Actions",
+    "rootCause": "Root Cause",
+    "correctiveAction": "Corrective Action",
+    "preventiveAction": "Preventive Action"
+  }
+}

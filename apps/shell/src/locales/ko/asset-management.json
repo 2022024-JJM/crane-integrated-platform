@@ -1,0 +1,94 @@
+{
+  "title": "자산 관리",
+  "description": "크레인 자산 등록 및 생애주기 관리",
+  "metrics": {
+    "totalAssets": "총 자산",
+    "operating": "운용 중",
+    "inspectionRepair": "점검/수리 중",
+    "idle": "대기"
+  },
+  "sections": {
+    "dock1": { "title": "1 도크", "subtitle": "Goliath / TTC 크레인" },
+    "dock2": { "title": "2 도크", "subtitle": "Quay 크레인" },
+    "blockShop": { "title": "Block Shop", "subtitle": "오버헤드 크레인" }
+  },
+  "criticalAlert": "점검 지연 {{overdueCount}}대 · 수리 진행 {{repairCount}}대 — 즉각적인 조치 필요",
+  "card": {
+    "warrantyExpired": "워런티 만료",
+    "warrantyUntil": "워런티: {{date}}",
+    "overdueInspection": "점검 지연 {{count}}건",
+    "activeRepair": "수리 진행 중"
+  },
+  "status": {
+    "operating": "운용 중",
+    "inspection": "점검 중",
+    "repair": "수리 중",
+    "idle": "대기",
+    "decommissioned": "폐기"
+  },
+  "craneType": {
+    "goliath": "골리앗",
+    "overhead": "오버헤드",
+    "jib": "지브",
+    "gantry": "갠트리",
+    "llc": "LLC",
+    "ttc": "TTC",
+    "luffing": "러핑"
+  },
+  "detail": {
+    "title": "자산 정보",
+    "bomTitle": "구성품 상태 (BOM)",
+    "noBomData": "구성품 데이터가 없습니다.",
+    "notFound": "자산을 찾을 수 없습니다.",
+    "noInspectionHistory": "점검 이력이 없습니다.",
+    "noMaintenanceHistory": "정비 이력이 없습니다.",
+    "tabs": {
+      "info": "기본 정보",
+      "inspection": "점검 이력",
+      "maintenance": "정비 이력"
+    },
+    "componentHealth": {
+      "title": "구성품 상태",
+      "caution": "주의",
+      "warning": "경고",
+      "critical": "위험",
+      "replace": "교체 필요"
+    },
+    "fields": {
+      "craneType": "크레인 유형",
+      "manufacturer": "제조사",
+      "model": "모델",
+      "capacity": "정격 하중",
+      "span": "스팬",
+      "liftHeight": "양정",
+      "serialNo": "시리얼 번호",
+      "site": "사이트",
+      "location": "위치",
+      "indoorOutdoor": "실내/실외",
+      "installDate": "설치일",
+      "manufactureDate": "제조일",
+      "warrantyStart": "워런티 시작",
+      "warrantyEnd": "워런티 종료",
+      "oshaClass": "OSHA 분류",
+      "status": "상태"
+    },
+    "component": {
+      "operatingHours": "운용 시간",
+      "lastInspection": "최근 점검",
+      "nextInspection": "다음 점검",
+      "status": {
+        "normal": "정상",
+        "caution": "주의",
+        "warning": "경고",
+        "critical": "위험",
+        "replace": "즉시 교체"
+      }
+    }
+  },
+  "units": {
+    "ton": "T",
+    "meter": "m",
+    "hours": "h",
+    "units": "기"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Partes et Copia",
+  "description": "Magistri partium, gradus copiae et administratio ordinationum",
+  "metrics": {
+    "totalParts": "Genera Partium",
+    "belowSafetyStock": "Infra Copiam Tutam",
+    "pendingPOs": "Ordinationes Activae",
+    "reorderNeeded": "Re-Ordinatio Necessaria"
+  },
+  "alert": {
+    "lowStock": "Partes Infra Copiam Tutam ({{count}})"
+  },
+  "table": {
+    "partName": "Nomen / P/N",
+    "category": "Categoria",
+    "criticality": "Momentum",
+    "currentStock": "Copia Praesens",
+    "safetyStock": "Copia Tuta",
+    "stockLevel": "Gradus",
+    "status": "Status",
+    "unitCost": "Pretium",
+    "leadTime": "Tempus Admin.",
+    "leadTimeSuffix": "admin."
+  },
+  "status": {
+    "ok": "Bona",
+    "normal": "Normalis",
+    "low": "Ima",
+    "out_of_stock": "Nulla",
+    "excess": "Superflua",
+    "expiry_soon": "Mox Exspirat"
+  },
+  "criticality": {
+    "critical": "Critica",
+    "essential": "Necessaria",
+    "standard": "Ordinaria",
+    "all": "Omne Momentum"
+  },
+  "category": {
+    "brake": "Frenum",
+    "wire_rope": "Funis",
+    "gear_bearing": "Rota / Axiculus",
+    "electrical": "Electrica",
+    "seal_gasket": "Sigillum",
+    "lubricant": "Lubricum",
+    "sensor": "Sensor",
+    "shaft_chain": "Axis / Catena",
+    "drum": "Tympanum",
+    "other": "Alia"
+  },
+  "filter": {
+    "all": "Omnia",
+    "low": "Copia Ima",
+    "ok": "In Copia"
+  },
+  "po": {
+    "title": "Ordinationes Activae",
+    "eta": "ETA",
+    "poNumber": "Numerus PO",
+    "partName": "Nomen Partis",
+    "qty": "Quantitas",
+    "supplier": "Provisor",
+    "orderDate": "Dies Ordinationis",
+    "expectedDate": "Dies Exspectata",
+    "status": {
+      "draft": "Scheda",
+      "ordered": "Ordinatum",
+      "in_transit": "In Itinere",
+      "shipped": "Missum",
+      "received": "Receptum",
+      "cancelled": "Cancellatum"
+    }
+  },
+  "empty": "Nulla partes pro selectione inventae sunt.",
+  "units": {
+    "days": "d",
+    "currency": "$"
+  }
+}

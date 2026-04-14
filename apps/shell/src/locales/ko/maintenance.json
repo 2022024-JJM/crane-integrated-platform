@@ -1,0 +1,65 @@
+{
+  "title": "정비 관리",
+  "description": "수리 작업지시서, 긴급 대응 및 예방 정비",
+  "metrics": {
+    "inProgress": "진행 중",
+    "waitingParts": "부품 대기",
+    "emergencyActive": "긴급 수리",
+    "avgMttr": "평균 MTTR"
+  },
+  "emergency": {
+    "banner": "긴급 수리 ({{count}})"
+  },
+  "pipeline": {
+    "received": "접수",
+    "waiting_parts": "부품 대기",
+    "in_progress": "진행 중",
+    "re_inspection": "재검사",
+    "completed": "완료"
+  },
+  "status": {
+    "received": "접수",
+    "waiting_parts": "부품 대기",
+    "in_progress": "진행 중",
+    "re_inspection": "재검사",
+    "completed": "완료",
+    "on_hold": "보류"
+  },
+  "priority": {
+    "emergency": "긴급",
+    "high": "높음",
+    "normal": "보통",
+    "low": "낮음"
+  },
+  "empty": "—",
+  "detail": {
+    "backLink": "정비 관리",
+    "notFound": "수리 기록을 찾을 수 없습니다.",
+    "fields": {
+      "component": "구성품",
+      "failureType": "고장 유형",
+      "repairLevel": "수리 등급",
+      "performer": "수행자",
+      "performerInternal": "내부",
+      "performerExternal": "외부 업체",
+      "assignedTo": "담당자",
+      "source": "접수 경로",
+      "scheduledStart": "예정 시작일",
+      "scheduledEnd": "예정 완료일",
+      "actualStart": "실제 시작일",
+      "actualEnd": "실제 완료일",
+      "downtime": "비가동 시간",
+      "reInspection": "재검사 결과"
+    },
+    "failureDescription": "고장 설명",
+    "partsUsed": "사용 부품",
+    "noParts": "등록된 부품이 없습니다.",
+    "partsCost": "부품 비용",
+    "laborCost": "인건비 ({{hours}}h)",
+    "totalCost": "합계",
+    "analysisActions": "분석 및 조치",
+    "rootCause": "근본 원인",
+    "correctiveAction": "시정 조치",
+    "preventiveAction": "예방 조치"
+  }
+}

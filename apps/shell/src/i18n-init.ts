@@ -18,6 +18,21 @@ import laGoliathCrane from './locales/la/goliath-crane.json';
 import koCmms from './locales/ko/cmms.json';
 import enCmms from './locales/en/cmms.json';
 import laCmms from './locales/la/cmms.json';
+import koAssetManagement from './locales/ko/asset-management.json';
+import enAssetManagement from './locales/en/asset-management.json';
+import laAssetManagement from './locales/la/asset-management.json';
+import koInspection from './locales/ko/inspection.json';
+import enInspection from './locales/en/inspection.json';
+import laInspection from './locales/la/inspection.json';
+import koMaintenance from './locales/ko/maintenance.json';
+import enMaintenance from './locales/en/maintenance.json';
+import laMaintenance from './locales/la/maintenance.json';
+import koInventory from './locales/ko/inventory.json';
+import enInventory from './locales/en/inventory.json';
+import laInventory from './locales/la/inventory.json';
+import koCompliance from './locales/ko/compliance.json';
+import enCompliance from './locales/en/compliance.json';
+import laCompliance from './locales/la/compliance.json';
 
 const resources = {
   ko: {
@@ -27,6 +42,11 @@ const resources = {
     monitoring: koMonitoring,
     'goliath-crane': koGoliathCrane,
     cmms: koCmms,
+    'asset-management': koAssetManagement,
+    inspection: koInspection,
+    maintenance: koMaintenance,
+    inventory: koInventory,
+    compliance: koCompliance,
   },
   en: {
     common: enCommon,
@@ -35,6 +55,11 @@ const resources = {
     monitoring: enMonitoring,
     'goliath-crane': enGoliathCrane,
     cmms: enCmms,
+    'asset-management': enAssetManagement,
+    inspection: enInspection,
+    maintenance: enMaintenance,
+    inventory: enInventory,
+    compliance: enCompliance,
   },
   la: {
     common: laCommon,
@@ -43,6 +68,11 @@ const resources = {
     monitoring: laMonitoring,
     'goliath-crane': laGoliathCrane,
     cmms: laCmms,
+    'asset-management': laAssetManagement,
+    inspection: laInspection,
+    maintenance: laMaintenance,
+    inventory: laInventory,
+    compliance: laCompliance,
   },
 };
 
@@ -53,4 +83,9 @@ initI18n(resources, [
   'monitoring',
   'goliath-crane',
   'cmms',
+  'asset-management',
+  'inspection',
+  'maintenance',
+  'inventory',
+  'compliance',
 ]);

@@ -1,0 +1,79 @@
+{
+  "title": "부품/재고 관리",
+  "description": "부품 마스터, 재고 현황 및 구매 발주 관리",
+  "metrics": {
+    "totalParts": "총 부품 종류",
+    "belowSafetyStock": "안전재고 미달",
+    "pendingPOs": "진행 중 PO",
+    "reorderNeeded": "재주문 필요"
+  },
+  "alert": {
+    "lowStock": "안전재고 미달 부품 ({{count}})"
+  },
+  "table": {
+    "partName": "부품명 / P/N",
+    "category": "분류",
+    "criticality": "중요도",
+    "currentStock": "현재 재고",
+    "safetyStock": "최소 재고",
+    "stockLevel": "재고 수준",
+    "status": "상태",
+    "unitCost": "단가",
+    "leadTime": "리드타임",
+    "leadTimeSuffix": "리드"
+  },
+  "status": {
+    "ok": "정상",
+    "normal": "정상",
+    "low": "부족",
+    "out_of_stock": "재고 없음",
+    "excess": "과잉",
+    "expiry_soon": "유효기간 임박"
+  },
+  "criticality": {
+    "critical": "위험",
+    "essential": "필수",
+    "standard": "표준",
+    "all": "전체 중요도"
+  },
+  "category": {
+    "brake": "브레이크",
+    "wire_rope": "와이어 로프",
+    "gear_bearing": "기어 / 베어링",
+    "electrical": "전기",
+    "seal_gasket": "씰 / 가스켓",
+    "lubricant": "윤활유",
+    "sensor": "센서",
+    "shaft_chain": "샤프트 / 체인",
+    "drum": "드럼",
+    "other": "기타"
+  },
+  "filter": {
+    "all": "전체",
+    "low": "재고 부족",
+    "ok": "정상"
+  },
+  "po": {
+    "title": "진행 중 발주 (PO)",
+    "eta": "납기",
+    "poNumber": "PO 번호",
+    "partName": "부품명",
+    "qty": "수량",
+    "supplier": "공급업체",
+    "orderDate": "발주일",
+    "expectedDate": "납기 예정일",
+    "status": {
+      "draft": "초안",
+      "ordered": "발주",
+      "in_transit": "배송 중",
+      "shipped": "배송 중",
+      "received": "입고",
+      "cancelled": "취소"
+    }
+  },
+  "empty": "해당 조건의 부품이 없습니다.",
+  "units": {
+    "days": "일",
+    "currency": "$"
+  }
+}

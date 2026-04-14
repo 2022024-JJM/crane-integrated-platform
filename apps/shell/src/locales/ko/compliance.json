@@ -1,0 +1,60 @@
+{
+  "title": "OSHA / 규제 관리",
+  "description": "점검 완료율, 인증서 현황 및 OSHA 보고서 관리",
+  "metrics": {
+    "completionRateFrequent": "수시 점검 완료율",
+    "completionRatePeriodic": "정기 점검 완료율",
+    "expiringCerts": "만료 임박 인증서",
+    "openReports": "미제출 보고서",
+    "nonConformance": "부적합 건수",
+    "thisMonth": "이번 달"
+  },
+  "certAlert": {
+    "title": "인증서 만료 임박 ({{count}})"
+  },
+  "certifications": {
+    "title": "인증서 현황",
+    "certName": "인증서명",
+    "issuedBy": "발급기관",
+    "issuedDate": "발급일",
+    "expiryDate": "만료일",
+    "certType": {
+      "nccco_inspector": "NCCCO 검사관",
+      "nccco_rigger": "NCCCO 리거",
+      "electrical_license": "전기 면허",
+      "contractor_license": "시공업 면허",
+      "osha_30": "OSHA 30시간",
+      "first_aid": "응급처치 / CPR"
+    },
+    "status": {
+      "valid": "유효",
+      "expiring_soon": "만료 임박",
+      "expired": "만료",
+      "renewing": "갱신 중"
+    },
+    "daysLeft": "{{days}}일 남음",
+    "expired": "만료됨"
+  },
+  "oshaReports": {
+    "title": "OSHA 보고서",
+    "reportName": "보고서명",
+    "reportType": "유형",
+    "period": "기간",
+    "submittedDate": "제출일",
+    "result": {
+      "pass": "합격",
+      "fail": "불합격",
+      "conditional": "조건부"
+    },
+    "status": {
+      "submitted": "제출 완료",
+      "draft": "초안",
+      "overdue": "제출 지연"
+    },
+    "download": "다운로드"
+  },
+  "empty": {
+    "certs": "인증서 데이터가 없습니다.",
+    "reports": "보고서 데이터가 없습니다."
+  }
+}

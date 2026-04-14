@@ -1,0 +1,82 @@
+{
+  "title": "Administratio Inspectionum",
+  "description": "OSHA 1910.179 — Ordines Operis Inspectionis Frequentis et Periodicae",
+  "metrics": {
+    "totalScheduled": "Omnia Ordinata",
+    "completed": "Perfecta",
+    "overdue": "Retardata",
+    "completionRate": "Ratio Perfectionis"
+  },
+  "filter": {
+    "allTypes": "Omnia Genera",
+    "allStatus": "Omnes Status"
+  },
+  "type": {
+    "frequent": "Frequens",
+    "periodic": "Periodica",
+    "emergency": "Subita",
+    "special": "Specialis"
+  },
+  "status": {
+    "scheduled": "Ordinata",
+    "in_progress": "In Progressu",
+    "completed": "Perfecta",
+    "overdue": "Retardata",
+    "cancelled": "Cancellata"
+  },
+  "result": {
+    "pass": "Probata",
+    "fail": "Reprobata",
+    "conditional": "Condicionalis"
+  },
+  "table": {
+    "woNumber": "Ordo Operis / Grus",
+    "type": "Genus",
+    "scheduled": "Ordinatum",
+    "assignedTo": "Assignatum",
+    "status": "Status",
+    "result": "Eventus"
+  },
+  "empty": "Nulla documenta inspectionis inventa sunt.",
+  "overdueAlert": "{{count}} inspectio(nes) retardata(e) — statim attendere",
+  "detail": {
+    "backLink": "Administratio Inspectionum",
+    "woInfo": "Informationes Ordinis Operis",
+    "checklist": "Index Inspectionis",
+    "nonConformance": "Elementa Non Conformia",
+    "noNonConformance": "Nulla elementa non conformia",
+    "findings": "Inventiones",
+    "fields": {
+      "crane": "Grus",
+      "site": "Locus",
+      "type": "Genus Inspectionis",
+      "scheduledDate": "Dies Ordinata",
+      "completedDate": "Dies Perfectionis",
+      "assignedTo": "Assignatum",
+      "inspector": "Inspector",
+      "status": "Status",
+      "result": "Eventus",
+      "priority": "Prioritas",
+      "totalHours": "Horae Totales",
+      "cost": "Sumptus",
+      "performerInternal": "Internus",
+      "performerExternal": "Pars Tertia"
+    },
+    "judgment": {
+      "pass": "Probatum",
+      "fail": "Reprobatum",
+      "na": "Non Applicatur"
+    },
+    "action": {
+      "none": "Nulla Actio",
+      "monitor": "Monitora",
+      "repair_needed": "Refectio Necessaria",
+      "immediate_replace": "Statim Replace",
+      "stop_operation": "Opera Siste"
+    },
+    "remarks": "Notae",
+    "save": "Serva",
+    "submitResult": "Inspectio Perfecta",
+    "progress": "{{completed}} / {{total}} perfecta"
+  }
+}

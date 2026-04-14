@@ -1,0 +1,79 @@
+{
+  "title": "Parts & Inventory",
+  "description": "Parts master, stock levels, and purchase order management",
+  "metrics": {
+    "totalParts": "Total Part Types",
+    "belowSafetyStock": "Below Safety Stock",
+    "pendingPOs": "Pending POs",
+    "reorderNeeded": "Reorder Needed"
+  },
+  "alert": {
+    "lowStock": "Parts Below Safety Stock ({{count}})"
+  },
+  "table": {
+    "partName": "Part Name / P/N",
+    "category": "Category",
+    "criticality": "Criticality",
+    "currentStock": "Current Stock",
+    "safetyStock": "Safety Stock",
+    "stockLevel": "Level",
+    "status": "Status",
+    "unitCost": "Unit Cost",
+    "leadTime": "Lead Time",
+    "leadTimeSuffix": "lead"
+  },
+  "status": {
+    "ok": "OK",
+    "normal": "Normal",
+    "low": "Low",
+    "out_of_stock": "Out of Stock",
+    "excess": "Excess",
+    "expiry_soon": "Expiry Soon"
+  },
+  "criticality": {
+    "critical": "Critical",
+    "essential": "Essential",
+    "standard": "Standard",
+    "all": "All Criticality"
+  },
+  "category": {
+    "brake": "Brake",
+    "wire_rope": "Wire Rope",
+    "gear_bearing": "Gear / Bearing",
+    "electrical": "Electrical",
+    "seal_gasket": "Seal / Gasket",
+    "lubricant": "Lubricant",
+    "sensor": "Sensor",
+    "shaft_chain": "Shaft / Chain",
+    "drum": "Drum",
+    "other": "Other"
+  },
+  "filter": {
+    "all": "All",
+    "low": "Low Stock",
+    "ok": "In Stock"
+  },
+  "po": {
+    "title": "Active Purchase Orders",
+    "eta": "ETA",
+    "poNumber": "PO Number",
+    "partName": "Part Name",
+    "qty": "Qty",
+    "supplier": "Supplier",
+    "orderDate": "Order Date",
+    "expectedDate": "Expected Date",
+    "status": {
+      "draft": "Draft",
+      "ordered": "Ordered",
+      "in_transit": "In Transit",
+      "shipped": "Shipped",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    }
+  },
+  "empty": "No parts found for the selected filter.",
+  "units": {
+    "days": "d",
+    "currency": "$"
+  }
+}

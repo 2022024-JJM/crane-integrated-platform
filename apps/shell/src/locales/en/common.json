@@ -47,7 +47,13 @@
     "replayMonitoring": "3D Replay",
     "goliathCrane": "Goliath Crane",
     "goliathCraneMonitoring": "GC-04 Monitoring",
-    "craneDetail": "Crane Detail"
+    "craneDetail": "Crane Detail",
+    "mro": "MRO",
+    "assetManagement": "Asset Management",
+    "inspection": "Inspection",
+    "maintenance": "Maintenance",
+    "inventory": "Inventory",
+    "compliance": "OSHA Compliance"
   },
   "craneStatus": {
     "title": "Real-time Crane Status",

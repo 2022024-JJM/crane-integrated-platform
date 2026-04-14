@@ -1,0 +1,94 @@
+{
+  "title": "Administratio Bonorum",
+  "description": "Registratio gruis et administratio vitae",
+  "metrics": {
+    "totalAssets": "Bona Omnia",
+    "operating": "Operantes",
+    "inspectionRepair": "Inspectio / Refectio",
+    "idle": "Quiescentes"
+  },
+  "sections": {
+    "dock1": { "title": "Doca I", "subtitle": "Grues Goliath / TTC" },
+    "dock2": { "title": "Doca II", "subtitle": "Grues Quay" },
+    "blockShop": { "title": "Officina Fabrica", "subtitle": "Grues Supremae" }
+  },
+  "criticalAlert": "{{overdueCount}} inspectio(nes) retardata(e) · {{repairCount}} refectio(nes) activa(e) — actio statim necessaria",
+  "card": {
+    "warrantyExpired": "Cautio Exspiravit",
+    "warrantyUntil": "Cautio: {{date}}",
+    "overdueInspection": "Inspectio Retardata: {{count}}",
+    "activeRepair": "Refectio In Processu"
+  },
+  "status": {
+    "operating": "Operans",
+    "inspection": "Inspectio",
+    "repair": "Refectio",
+    "idle": "Quiescens",
+    "decommissioned": "Retirata"
+  },
+  "craneType": {
+    "goliath": "Goliath",
+    "overhead": "Suprema",
+    "jib": "Iib",
+    "gantry": "Gantry",
+    "llc": "LLC",
+    "ttc": "TTC",
+    "luffing": "Luffing"
+  },
+  "detail": {
+    "title": "Informationes Boni",
+    "bomTitle": "Status Partium (BOM)",
+    "noBomData": "Nulla data partium adsunt.",
+    "notFound": "Bonum non inventum est.",
+    "noInspectionHistory": "Nulla historia inspectionis.",
+    "noMaintenanceHistory": "Nulla historia refectionis.",
+    "tabs": {
+      "info": "Informationes Basis",
+      "inspection": "Historia Inspectionis",
+      "maintenance": "Historia Refectionis"
+    },
+    "componentHealth": {
+      "title": "Status Partium",
+      "caution": "Cautio",
+      "warning": "Monitum",
+      "critical": "Criticum",
+      "replace": "Repositio Necessaria"
+    },
+    "fields": {
+      "craneType": "Genus Gruis",
+      "manufacturer": "Fabricator",
+      "model": "Exemplar",
+      "capacity": "Capacitas Nominalis",
+      "span": "Amplitudo",
+      "liftHeight": "Altitudo Elevationis",
+      "serialNo": "Numerus Seriei",
+      "site": "Locus",
+      "location": "Positio",
+      "indoorOutdoor": "Intus / Foris",
+      "installDate": "Dies Installationis",
+      "manufactureDate": "Dies Fabricationis",
+      "warrantyStart": "Initium Cautionis",
+      "warrantyEnd": "Finis Cautionis",
+      "oshaClass": "Classis OSHA",
+      "status": "Status"
+    },
+    "component": {
+      "operatingHours": "Horae Operationis",
+      "lastInspection": "Ultima Inspectio",
+      "nextInspection": "Proxima Inspectio",
+      "status": {
+        "normal": "Normale",
+        "caution": "Cautio",
+        "warning": "Monitum",
+        "critical": "Criticum",
+        "replace": "Statim Replace"
+      }
+    }
+  },
+  "units": {
+    "ton": "T",
+    "meter": "m",
+    "hours": "h",
+    "units": "unitates"
+  }
+}

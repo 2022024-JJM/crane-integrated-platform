@@ -23,7 +23,7 @@ export function AppSidebar() {
     >
       <ScrollArea className="h-full">
         <nav className="flex flex-col gap-2 p-4">
-          {navGroups.map((group, groupIdx) => (
+          {navGroups.filter((group) => group.items.length > 0).map((group, groupIdx) => (
             <div key={group.title}>
               {groupIdx > 0 && <Separator className="my-2" />}
               {group.highlight ? (

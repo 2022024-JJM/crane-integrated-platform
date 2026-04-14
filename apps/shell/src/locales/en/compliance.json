@@ -1,0 +1,60 @@
+{
+  "title": "OSHA Compliance",
+  "description": "Inspection completion rate, certifications, and OSHA report management",
+  "metrics": {
+    "completionRateFrequent": "Frequent Completion",
+    "completionRatePeriodic": "Periodic Completion",
+    "expiringCerts": "Expiring Certs (90d)",
+    "openReports": "Open Findings",
+    "nonConformance": "Non-Conformance",
+    "thisMonth": "this month"
+  },
+  "certAlert": {
+    "title": "Certification Alerts ({{count}})"
+  },
+  "certifications": {
+    "title": "Personnel Certifications",
+    "certName": "Certificate",
+    "issuedBy": "Issued By",
+    "issuedDate": "Issued Date",
+    "expiryDate": "Expiry Date",
+    "certType": {
+      "nccco_inspector": "NCCCO Inspector",
+      "nccco_rigger": "NCCCO Rigger",
+      "electrical_license": "Electrical License",
+      "contractor_license": "Contractor License",
+      "osha_30": "OSHA 30-Hour",
+      "first_aid": "First Aid / CPR"
+    },
+    "status": {
+      "valid": "Valid",
+      "expiring_soon": "Expiring Soon",
+      "expired": "Expired",
+      "renewing": "Renewing"
+    },
+    "daysLeft": "{{days}}d left",
+    "expired": "Expired"
+  },
+  "oshaReports": {
+    "title": "OSHA Inspection Reports",
+    "reportName": "Report",
+    "reportType": "Type",
+    "period": "Period",
+    "submittedDate": "Submitted",
+    "result": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "conditional": "Conditional"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "draft": "Draft",
+      "overdue": "Overdue"
+    },
+    "download": "Download"
+  },
+  "empty": {
+    "certs": "No certification data available.",
+    "reports": "No report data available."
+  }
+}

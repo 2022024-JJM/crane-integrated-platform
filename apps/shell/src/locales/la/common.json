@@ -45,7 +45,13 @@
     "craneStatus": "Status Gruium",
     "workHistory": "Historia Operum",
     "goliathCrane": "Gruis Goliath",
-    "goliathCraneMonitoring": "GC-04 Monitio"
+    "goliathCraneMonitoring": "GC-04 Monitio",
+    "mro": "MRO",
+    "assetManagement": "Administratio Bonorum",
+    "inspection": "Inspectio",
+    "maintenance": "Manutentio",
+    "inventory": "Copia",
+    "compliance": "Conformitas OSHA"
   },
   "craneStatus": {
     "title": "Status Gruium Temporis Veri",

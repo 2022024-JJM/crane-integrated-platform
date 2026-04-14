@@ -12,6 +12,11 @@ import {
   TrendingUp,
   Settings,
   MonitorCheck,
+  Layers,
+  ClipboardCheck,
+  Wrench,
+  Package,
+  ShieldCheck,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -124,6 +129,39 @@ function buildWorkGroup(title: string, base: string): NavGroup {
   };
 }
 
+function getMroGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.mro'),
+    items: [
+      {
+        label: i18n.t('common:nav.assetManagement'),
+        path: '/asset-management',
+        icon: Layers,
+      },
+      {
+        label: i18n.t('common:nav.inspection'),
+        path: '/inspection',
+        icon: ClipboardCheck,
+      },
+      {
+        label: i18n.t('common:nav.maintenance'),
+        path: '/maintenance',
+        icon: Wrench,
+      },
+      {
+        label: i18n.t('common:nav.inventory'),
+        path: '/inventory',
+        icon: Package,
+      },
+      {
+        label: i18n.t('common:nav.compliance'),
+        path: '/compliance',
+        icon: ShieldCheck,
+      },
+    ],
+  };
+}
+
 const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
   '/crane-detail': (pathname) => {
     const craneId = pathname.split('/')[2];
@@ -164,10 +202,11 @@ export function getNavigationConfig(
     ? systemGroupOverrides[matchedKey](pathname)
     : defaultSystemGroup;
 
-  return [getOverviewGroup(), systemGroup];
+  return [getOverviewGroup(), systemGroup, getMroGroup()];
 }
 
 export const navigationConfig: NavGroup[] = [
   getOverviewGroup(),
   defaultSystemGroup,
+  getMroGroup(),
 ];

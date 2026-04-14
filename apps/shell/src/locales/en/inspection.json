@@ -1,0 +1,82 @@
+{
+  "title": "Inspection Management",
+  "description": "OSHA 1910.179 — Frequent & Periodic inspection work orders",
+  "metrics": {
+    "totalScheduled": "Total Scheduled",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "completionRate": "Completion Rate"
+  },
+  "filter": {
+    "allTypes": "All Types",
+    "allStatus": "All Status"
+  },
+  "type": {
+    "frequent": "Frequent",
+    "periodic": "Periodic",
+    "emergency": "Emergency",
+    "special": "Special"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled"
+  },
+  "result": {
+    "pass": "Pass",
+    "fail": "Fail",
+    "conditional": "Conditional"
+  },
+  "table": {
+    "woNumber": "Work Order / Crane",
+    "type": "Type",
+    "scheduled": "Scheduled",
+    "assignedTo": "Assigned To",
+    "status": "Status",
+    "result": "Result"
+  },
+  "empty": "No inspection records found.",
+  "overdueAlert": "{{count}} overdue inspection(s) — immediate attention required",
+  "detail": {
+    "backLink": "Inspection Management",
+    "woInfo": "Work Order Info",
+    "checklist": "Inspection Checklist",
+    "nonConformance": "Non-Conformance Items",
+    "noNonConformance": "No non-conformance items",
+    "findings": "Findings",
+    "fields": {
+      "crane": "Crane",
+      "site": "Site",
+      "type": "Inspection Type",
+      "scheduledDate": "Scheduled Date",
+      "completedDate": "Completed Date",
+      "assignedTo": "Assigned To",
+      "inspector": "Inspector",
+      "status": "Status",
+      "result": "Result",
+      "priority": "Priority",
+      "totalHours": "Total Hours",
+      "cost": "Cost",
+      "performerInternal": "Internal",
+      "performerExternal": "3rd Party"
+    },
+    "judgment": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "na": "N/A"
+    },
+    "action": {
+      "none": "No Action",
+      "monitor": "Monitor",
+      "repair_needed": "Repair Needed",
+      "immediate_replace": "Immediate Replace",
+      "stop_operation": "Stop Operation"
+    },
+    "remarks": "Remarks",
+    "save": "Save",
+    "submitResult": "Submit",
+    "progress": "{{completed}} / {{total}} completed"
+  }
+}

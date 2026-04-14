@@ -1,0 +1,60 @@
+{
+  "title": "Conformitas OSHA",
+  "description": "Ratio perfectionis inspectionum, certificationes et administratio relationum OSHA",
+  "metrics": {
+    "completionRateFrequent": "Perfectio Frequens",
+    "completionRatePeriodic": "Perfectio Periodica",
+    "expiringCerts": "Certificationes Exspirant",
+    "openReports": "Inventiones Apertae",
+    "nonConformance": "Non Conformia",
+    "thisMonth": "hoc mense"
+  },
+  "certAlert": {
+    "title": "Monita Certificationum ({{count}})"
+  },
+  "certifications": {
+    "title": "Certificationes Personarum",
+    "certName": "Certificatio",
+    "issuedBy": "Data Ab",
+    "issuedDate": "Dies Dationis",
+    "expiryDate": "Dies Exspirationis",
+    "certType": {
+      "nccco_inspector": "Inspector NCCCO",
+      "nccco_rigger": "Rigger NCCCO",
+      "electrical_license": "Licentia Electricitatis",
+      "contractor_license": "Licentia Fabri",
+      "osha_30": "OSHA XXX Horae",
+      "first_aid": "Prima Auxilia / CPR"
+    },
+    "status": {
+      "valid": "Valida",
+      "expiring_soon": "Mox Exspirat",
+      "expired": "Exspiravit",
+      "renewing": "Renovatur"
+    },
+    "daysLeft": "{{days}}d supersunt",
+    "expired": "Exspiravit"
+  },
+  "oshaReports": {
+    "title": "Relationes Inspectionis OSHA",
+    "reportName": "Relatio",
+    "reportType": "Genus",
+    "period": "Periodus",
+    "submittedDate": "Oblata",
+    "result": {
+      "pass": "Probata",
+      "fail": "Reprobata",
+      "conditional": "Condicionalis"
+    },
+    "status": {
+      "submitted": "Oblata",
+      "draft": "Scheda",
+      "overdue": "Retardata"
+    },
+    "download": "Descende"
+  },
+  "empty": {
+    "certs": "Nulla data certificationum adsunt.",
+    "reports": "Nulla data relationum adsunt."
+  }
+}

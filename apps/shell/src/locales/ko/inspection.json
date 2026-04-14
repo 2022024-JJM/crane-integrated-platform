@@ -1,0 +1,82 @@
+{
+  "title": "점검 관리",
+  "description": "OSHA 1910.179 — 정기 및 수시 점검 작업 지시서",
+  "metrics": {
+    "totalScheduled": "총 예정",
+    "completed": "완료",
+    "overdue": "지연",
+    "completionRate": "완료율"
+  },
+  "filter": {
+    "allTypes": "전체 유형",
+    "allStatus": "전체 상태"
+  },
+  "type": {
+    "frequent": "수시 점검",
+    "periodic": "정기 점검",
+    "emergency": "긴급 점검",
+    "special": "특별 점검"
+  },
+  "status": {
+    "scheduled": "예정",
+    "in_progress": "진행 중",
+    "completed": "완료",
+    "overdue": "지연",
+    "cancelled": "취소"
+  },
+  "result": {
+    "pass": "합격",
+    "fail": "불합격",
+    "conditional": "조건부"
+  },
+  "table": {
+    "woNumber": "작업지시서 / 크레인",
+    "type": "유형",
+    "scheduled": "예정일",
+    "assignedTo": "담당자",
+    "status": "상태",
+    "result": "결과"
+  },
+  "empty": "점검 기록이 없습니다.",
+  "overdueAlert": "지연된 점검 {{count}}건 — 즉시 확인 필요",
+  "detail": {
+    "backLink": "점검 관리",
+    "woInfo": "작업지시서 정보",
+    "checklist": "점검 체크리스트",
+    "nonConformance": "부적합 항목",
+    "noNonConformance": "부적합 항목 없음",
+    "findings": "점검 결과",
+    "fields": {
+      "crane": "크레인",
+      "site": "사이트",
+      "type": "점검 유형",
+      "scheduledDate": "예정일",
+      "completedDate": "완료일",
+      "assignedTo": "담당자",
+      "inspector": "점검자",
+      "status": "상태",
+      "result": "결과",
+      "priority": "우선순위",
+      "totalHours": "총 작업 시간",
+      "cost": "비용",
+      "performerInternal": "내부",
+      "performerExternal": "외부 업체"
+    },
+    "judgment": {
+      "pass": "적합",
+      "fail": "부적합",
+      "na": "해당없음"
+    },
+    "action": {
+      "none": "조치 없음",
+      "monitor": "모니터링",
+      "repair_needed": "수리 필요",
+      "immediate_replace": "즉시 교체",
+      "stop_operation": "운행 정지"
+    },
+    "remarks": "비고",
+    "save": "저장",
+    "submitResult": "점검 완료",
+    "progress": "{{completed}} / {{total}} 완료"
+  }
+}

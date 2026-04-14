@@ -1,0 +1,65 @@
+{
+  "title": "Administratio Maintenantiae",
+  "description": "Ordines operis reparationis, responsio subita, et manutentio praventiva",
+  "metrics": {
+    "inProgress": "In Progressu",
+    "waitingParts": "Partes Exspectantur",
+    "emergencyActive": "Casus Subiti Activi",
+    "avgMttr": "MTTR Mediocris"
+  },
+  "emergency": {
+    "banner": "Reparatio Subita ({{count}})"
+  },
+  "pipeline": {
+    "received": "Recepta",
+    "waiting_parts": "Partes Exspectantur",
+    "in_progress": "In Progressu",
+    "re_inspection": "Re-Inspectio",
+    "completed": "Perfecta"
+  },
+  "status": {
+    "received": "Recepta",
+    "waiting_parts": "Partes Exspectantur",
+    "in_progress": "In Progressu",
+    "re_inspection": "Re-Inspectio",
+    "completed": "Perfecta",
+    "on_hold": "Suspensa"
+  },
+  "priority": {
+    "emergency": "Subita",
+    "high": "Alta",
+    "normal": "Normalis",
+    "low": "Ima"
+  },
+  "empty": "—",
+  "detail": {
+    "backLink": "Administratio Maintenantiae",
+    "notFound": "Documentum reparationis non inventum.",
+    "fields": {
+      "component": "Pars",
+      "failureType": "Genus Defectus",
+      "repairLevel": "Gradus Reparationis",
+      "performer": "Exsecutor",
+      "performerInternal": "Internus",
+      "performerExternal": "Pars Tertia",
+      "assignedTo": "Assignatum",
+      "source": "Fons",
+      "scheduledStart": "Initium Ordinatum",
+      "scheduledEnd": "Finis Ordinatus",
+      "actualStart": "Initium Reale",
+      "actualEnd": "Finis Realis",
+      "downtime": "Tempus Inactivum",
+      "reInspection": "Re-Inspectio"
+    },
+    "failureDescription": "Descriptio Defectus",
+    "partsUsed": "Partes Adhibitae",
+    "noParts": "Nulla partes adnotatae.",
+    "partsCost": "Sumptus Partium",
+    "laborCost": "Sumptus Operae ({{hours}} h)",
+    "totalCost": "Summa",
+    "analysisActions": "Analysis et Actiones",
+    "rootCause": "Causa Radicalis",
+    "correctiveAction": "Actio Correctiva",
+    "preventiveAction": "Actio Praventiva"
+  }
+}

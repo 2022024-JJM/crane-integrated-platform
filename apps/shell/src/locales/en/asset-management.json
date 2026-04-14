@@ -1,0 +1,94 @@
+{
+  "title": "Asset Management",
+  "description": "Crane asset registration and lifecycle management",
+  "metrics": {
+    "totalAssets": "Total Assets",
+    "operating": "Operating",
+    "inspectionRepair": "Inspection / Repair",
+    "idle": "Idle"
+  },
+  "sections": {
+    "dock1": { "title": "Dock 1", "subtitle": "Goliath / TTC Cranes" },
+    "dock2": { "title": "Dock 2", "subtitle": "Quay Cranes" },
+    "blockShop": { "title": "Block Shop", "subtitle": "Overhead Cranes" }
+  },
+  "criticalAlert": "{{overdueCount}} overdue inspection(s) · {{repairCount}} active repair(s) — immediate action required",
+  "card": {
+    "warrantyExpired": "Warranty Expired",
+    "warrantyUntil": "Warranty: {{date}}",
+    "overdueInspection": "Overdue Inspection: {{count}}",
+    "activeRepair": "Repair In Progress"
+  },
+  "status": {
+    "operating": "Operating",
+    "inspection": "Inspection",
+    "repair": "Repair",
+    "idle": "Idle",
+    "decommissioned": "Decommissioned"
+  },
+  "craneType": {
+    "goliath": "Goliath",
+    "overhead": "Overhead",
+    "jib": "Jib",
+    "gantry": "Gantry",
+    "llc": "LLC",
+    "ttc": "TTC",
+    "luffing": "Luffing"
+  },
+  "detail": {
+    "title": "Asset Information",
+    "bomTitle": "Component Status (BOM)",
+    "noBomData": "No component data available.",
+    "notFound": "Asset not found.",
+    "noInspectionHistory": "No inspection history.",
+    "noMaintenanceHistory": "No maintenance history.",
+    "tabs": {
+      "info": "Basic Info",
+      "inspection": "Inspection History",
+      "maintenance": "Maintenance History"
+    },
+    "componentHealth": {
+      "title": "Component Health",
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical",
+      "replace": "Replace"
+    },
+    "fields": {
+      "craneType": "Crane Type",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "capacity": "Rated Capacity",
+      "span": "Span",
+      "liftHeight": "Lift Height",
+      "serialNo": "Serial No.",
+      "site": "Site",
+      "location": "Location",
+      "indoorOutdoor": "Indoor / Outdoor",
+      "installDate": "Install Date",
+      "manufactureDate": "Manufacture Date",
+      "warrantyStart": "Warranty Start",
+      "warrantyEnd": "Warranty End",
+      "oshaClass": "OSHA Class",
+      "status": "Status"
+    },
+    "component": {
+      "operatingHours": "Operating Hours",
+      "lastInspection": "Last Inspection",
+      "nextInspection": "Next Inspection",
+      "status": {
+        "normal": "Normal",
+        "caution": "Caution",
+        "warning": "Warning",
+        "critical": "Critical",
+        "replace": "Replace Now"
+      }
+    }
+  },
+  "units": {
+    "ton": "T",
+    "meter": "m",
+    "hours": "h",
+    "units": "units"
+  }
+}
