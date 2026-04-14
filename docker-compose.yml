@@ -1,0 +1,23 @@
+services:
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_WS_BASE_URL: ${VITE_WS_BASE_URL:-}
+        VITE_LIDAR_WS_URL: ${VITE_LIDAR_WS_URL:-}
+    image: crane-shell:latest
+    container_name: crane-shell
+    ports:
+      - "33600:80"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

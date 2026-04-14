@@ -1,0 +1,40 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Node modules (rebuilt inside Docker)
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+
+# Turbo cache
+.turbo
+
+# Build outputs (rebuilt inside Docker)
+apps/*/dist
+packages/*/dist
+
+# Environment files (pass via --build-arg or env_file)
+.env
+.env.*
+*.local
+
+# Editor / OS artifacts
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Test artifacts
+coverage
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+
+# Docker files (not needed inside build context)
+Dockerfile
+.dockerignore
+docker-compose.yml
