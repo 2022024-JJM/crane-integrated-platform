@@ -16,10 +16,8 @@
     "latinLabel": "Latin (Latina)",
     "lightMode": "라이트",
     "darkMode": "다크",
-    "online": "온라인",
     "showDate": "날짜",
     "showTime": "시간",
-    "showHealthcheck": "연결 상태",
     "showWeather": "날씨",
     "weatherLoading": "날씨 불러오는 중",
     "weatherUnavailable": "날씨 정보 없음",
@@ -61,10 +59,11 @@
     "emptyDescription": "페이지에 cranes, monitoring preset, regionId가 올바르게 설정되어 있는지 확인해 주세요.",
     "connection": {
       "idle": "대기",
-      "connecting": "연결 중",
-      "open": "실시간",
+      "connecting": "접속중",
+      "open": "온라인",
+      "stale": "지연",
       "closing": "종료 중",
-      "closed": "연결 끊김"
+      "closed": "오프라인"
     },
     "columns": {
       "crane": "크레인",

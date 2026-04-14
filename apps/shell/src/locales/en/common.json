@@ -16,10 +16,8 @@
     "latinLabel": "Latin (Latina)",
     "lightMode": "Light",
     "darkMode": "Dark",
-    "online": "Online",
     "showDate": "Date",
     "showTime": "Time",
-    "showHealthcheck": "Healthcheck",
     "showWeather": "Weather",
     "weatherLoading": "Loading weather",
     "weatherUnavailable": "Weather unavailable",
@@ -62,9 +60,10 @@
     "connection": {
       "idle": "Idle",
       "connecting": "Connecting",
-      "open": "Live",
+      "open": "Online",
+      "stale": "Stale",
       "closing": "Closing",
-      "closed": "Disconnected"
+      "closed": "Offline"
     },
     "columns": {
       "crane": "Crane",

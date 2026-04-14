@@ -16,10 +16,8 @@
     "latinLabel": "Latina (Latine)",
     "lightMode": "Clarus",
     "darkMode": "Obscurus",
-    "online": "Online",
     "showDate": "Dies",
     "showTime": "Tempus",
-    "showHealthcheck": "Sanitas",
     "showWeather": "Tempestas",
     "weatherLoading": "Tempestas oneratur",
     "weatherUnavailable": "Tempestas deest",
@@ -60,9 +58,10 @@
     "connection": {
       "idle": "Otiosus",
       "connecting": "Coniungens",
-      "open": "Vivus",
+      "open": "Online",
+      "stale": "Stagnans",
       "closing": "Claudens",
-      "closed": "Separatus"
+      "closed": "Offline"
     },
     "columns": {
       "crane": "Grus",
