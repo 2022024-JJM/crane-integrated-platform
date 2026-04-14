@@ -1,8 +1,13 @@
+import { useMemo } from 'react';
 import { Badge } from '@crane/ui/atoms/badge';
 import { useMonitoringLiveTable } from '@crane/features/monitoring';
 import { cn } from '@crane/core/lib/utils';
 import { useTranslation } from 'react-i18next';
-import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
+import type {
+  MonitoringLiveCell,
+  MonitoringLiveCrane,
+  MonitoringLiveTableDisplayColumn,
+} from '@crane/domain/monitoring';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import {
   TableBody,
@@ -12,20 +17,30 @@ import {
   TableRow,
 } from '@crane/ui/molecules/table';
 import {
-  CRANE_ID_COLUMN_WIDTH,
   CRANE_INFO_COLUMN_WIDTH,
-  TAG_COLUMN_WIDTH,
-  UPDATED_AT_COLUMN_WIDTH,
+  DETAIL_HEADER_HEIGHT,
+  GROUP_HEADER_HEIGHT,
   formatCellValue,
   formatTimestamp,
+  getAlignmentClassName,
+  getColumnWidth,
   getConnectionClassName,
   getConnectionLabel,
+  getStatusDotClassName,
+  getStatusDotTone,
 } from './crane-status-table-helpers';
 
 interface CraneStatusTableProps {
   cranes: MonitoringLiveCrane[];
-  tagDefinitionIds: number[];
+  tagDefinitionIds?: number[];
   regionId: string;
+}
+
+interface ColumnGroup {
+  key: string;
+  labelKey: string;
+  defaultLabel: string;
+  columns: MonitoringLiveTableDisplayColumn[];
 }
 
 function StatusState({
@@ -56,6 +71,56 @@ function StatusState({
   );
 }
 
+function StatusDotCell({
+  value,
+  timestamp,
+  statusBehavior,
+}: {
+  value: MonitoringLiveCell['value'] | undefined;
+  timestamp?: string | null;
+  statusBehavior: MonitoringLiveTableDisplayColumn['statusBehavior'];
+}) {
+  const tone = getStatusDotTone(value, statusBehavior);
+
+  return (
+    <div
+      className="flex items-center justify-center"
+      title={
+        timestamp
+          ? `${formatCellValue(value)} | ${formatTimestamp(timestamp)}`
+          : formatCellValue(value)
+      }
+    >
+      <span
+        className={cn(
+          'inline-flex size-2.5 rounded-full border border-white/10',
+          getStatusDotClassName(tone),
+        )}
+      />
+    </div>
+  );
+}
+
+function buildColumnGroups(columns: MonitoringLiveTableDisplayColumn[]) {
+  return columns.reduce<ColumnGroup[]>((groups, column) => {
+    const lastGroup = groups[groups.length - 1];
+
+    if (lastGroup?.key === column.groupKey) {
+      lastGroup.columns.push(column);
+      return groups;
+    }
+
+    groups.push({
+      key: column.groupKey,
+      labelKey: column.groupLabelKey,
+      defaultLabel: column.groupDefaultLabel,
+      columns: [column],
+    });
+
+    return groups;
+  }, []);
+}
+
 export function CraneStatusTable({
   cranes,
   tagDefinitionIds,
@@ -76,176 +141,149 @@ export function CraneStatusTable({
     regionId,
   });
 
+  const columnGroups = useMemo(() => buildColumnGroups(columns), [columns]);
+  const latestUpdatedAt = useMemo(
+    () =>
+      rows.reduce<string | null>((latest, row) => {
+        if (!row.lastUpdated) {
+          return latest;
+        }
+
+        if (!latest || latest.localeCompare(row.lastUpdated) < 0) {
+          return row.lastUpdated;
+        }
+
+        return latest;
+      }, null),
+    [rows],
+  );
+
   const connectionLabels = {
-    idle: t('common:craneStatus.connection.idle', {
-      defaultValue: 'Idle',
-    }),
-    connecting: t('common:craneStatus.connection.connecting', {
-      defaultValue: 'Connecting',
-    }),
-    open: t('common:craneStatus.connection.open', {
-      defaultValue: 'Live',
-    }),
-    closing: t('common:craneStatus.connection.closing', {
-      defaultValue: 'Closing',
-    }),
-    closed: t('common:craneStatus.connection.closed', {
-      defaultValue: 'Disconnected',
-    }),
+    idle: t('common:craneStatus.connection.idle'),
+    connecting: t('common:craneStatus.connection.connecting'),
+    open: t('common:craneStatus.connection.open'),
+    closing: t('common:craneStatus.connection.closing'),
+    closed: t('common:craneStatus.connection.closed'),
   } as const;
 
   return (
     <div className="bg-background flex h-full min-h-0 flex-col">
-      <div className="border-b px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">
-              {t('common:craneStatus.title', {
-                defaultValue: 'Real-time Crane Status',
-              })}
-            </h3>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {t('common:craneStatus.liveDescription', {
-                defaultValue:
-                  'Columns are built from selected tags and region-specific metadata, and values are updated from WebSocket events.',
-              })}
-            </p>
+            <h3 className="text-sm font-semibold">{t('common:craneStatus.title')}</h3>
           </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              'rounded-full px-2.5 py-1 text-[11px] font-medium',
-              getConnectionClassName(connectionState),
-            )}
-          >
-            {getConnectionLabel(connectionState, connectionLabels)}
-          </Badge>
+          <div className="ml-auto flex items-center justify-end gap-2">
+            <span className="text-muted-foreground text-[10px] tabular-nums">
+              {t('common:craneStatus.table.updatedAt')}
+              {' | '}
+              {formatTimestamp(latestUpdatedAt)}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                getConnectionClassName(connectionState),
+              )}
+            >
+              {getConnectionLabel(connectionState, connectionLabels)}
+            </Badge>
+          </div>
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 overflow-auto">
           {isMetaLoading ? (
             <StatusState
-              title={t('common:craneStatus.loadingTitle', {
-                defaultValue: 'Loading crane status metadata...',
-              })}
-              description={t('common:craneStatus.loadingDescription', {
-                defaultValue:
-                  'Tag definitions and region-specific metadata are being prepared for the live table.',
-              })}
+              title={t('common:craneStatus.loadingTitle')}
+              description={t('common:craneStatus.loadingDescription')}
             />
           ) : isError ? (
             <StatusState
-              title={t('common:craneStatus.errorTitle', {
-                defaultValue: 'Failed to load crane status metadata.',
-              })}
+              title={t('common:craneStatus.errorTitle')}
               description={errorMessage}
               tone="error"
             />
           ) : isEmpty ? (
             <StatusState
-              title={t('common:craneStatus.emptyTitle', {
-                defaultValue: 'No crane or tag configuration is available.',
-              })}
-              description={t('common:craneStatus.emptyDescription', {
-                defaultValue:
-                  'Set cranes, tagDefinitionIds, and regionId on the page to render the live table.',
-              })}
+              title={t('common:craneStatus.emptyTitle')}
+              description={t('common:craneStatus.emptyDescription')}
             />
           ) : (
             <div className="relative min-w-max">
-              <table className="w-full caption-bottom text-sm">
+              <table className="w-full border-separate border-spacing-0 text-xs">
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
+                  <TableRow className="border-0 hover:bg-transparent">
                     <TableHead
-                      className="bg-muted text-muted-foreground sticky top-0 left-0 z-30 border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
-                      style={{ minWidth: CRANE_INFO_COLUMN_WIDTH }}
-                    >
-                      {t('common:craneStatus.columns.crane', {
-                        defaultValue: 'Crane',
-                      })}
-                    </TableHead>
-                    <TableHead
-                      className="bg-muted text-muted-foreground sticky top-0 z-30 border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
+                      rowSpan={2}
+                      className="sticky left-0 z-40 border-r border-slate-600 bg-slate-900 px-2 py-1.5 text-center text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-slate-100 uppercase shadow-[1px_0_0_0_rgba(71,85,105,0.9)]"
                       style={{
-                        left: CRANE_INFO_COLUMN_WIDTH,
-                        minWidth: CRANE_ID_COLUMN_WIDTH,
+                        top: 0,
+                        minWidth: CRANE_INFO_COLUMN_WIDTH,
                       }}
                     >
-                      {t('common:craneStatus.columns.craneId', {
-                        defaultValue: 'Crane ID',
-                      })}
+                      {t('common:craneStatus.columns.crane')}
                     </TableHead>
-                    <TableHead
-                      className="bg-muted text-muted-foreground sticky top-0 z-20 border-r px-3 py-3 text-xs font-semibold whitespace-nowrap"
-                      style={{
-                        left: CRANE_INFO_COLUMN_WIDTH + CRANE_ID_COLUMN_WIDTH,
-                        minWidth: UPDATED_AT_COLUMN_WIDTH,
-                      }}
-                    >
-                      {t('common:craneStatus.columns.updatedAt', {
-                        defaultValue: 'Updated',
-                      })}
-                    </TableHead>
+                    {columnGroups.map((group) => (
+                      <TableHead
+                        key={group.key}
+                        colSpan={group.columns.length}
+                        className="sticky z-30 border-r border-slate-700 bg-slate-900 px-1.5 py-1 text-center text-[9px] font-semibold tracking-[0.08em] whitespace-nowrap text-slate-200 uppercase last:border-r-0"
+                        style={{ top: 0, height: GROUP_HEADER_HEIGHT }}
+                      >
+                        {t(group.labelKey, group.defaultLabel)}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                  <TableRow className="border-0 hover:bg-transparent">
                     {columns.map((column) => (
                       <TableHead
                         key={column.tagDefinitionId}
-                        className="bg-muted text-muted-foreground sticky top-0 z-10 border-r px-3 py-3 text-xs font-semibold whitespace-nowrap last:border-r-0"
-                        style={{ minWidth: TAG_COLUMN_WIDTH }}
+                        className={cn(
+                          'sticky z-20 border-r border-slate-700 bg-slate-800/95 px-1 py-1 text-[9px] font-medium whitespace-nowrap text-slate-100 last:border-r-0',
+                          getAlignmentClassName(column.align),
+                        )}
+                        style={{
+                          top: GROUP_HEADER_HEIGHT,
+                          minWidth: getColumnWidth(column),
+                          height: DETAIL_HEADER_HEIGHT,
+                        }}
+                        title={column.description ?? undefined}
                       >
-                        <div
-                          className="flex min-w-0 flex-col"
-                          title={column.description ?? undefined}
-                        >
-                          <span className="truncate">{column.displayName}</span>
-                          <span className="text-muted-foreground/80 mt-0.5 truncate font-mono text-[10px] font-normal">
-                            {column.unit
-                              ? `${column.unit} / ${column.dataType ?? '-'}`
-                              : (column.dataType ?? '-')}
+                        <div className="flex min-w-0 flex-col gap-px">
+                          <span className="truncate leading-none">
+                            {column.headerLabelKey
+                              ? t(
+                                  column.headerLabelKey,
+                                  column.shortLabel ?? column.displayName,
+                                )
+                              : (column.shortLabel ?? column.displayName)}
+                          </span>
+                          <span className="truncate font-mono text-[8px] leading-none text-slate-400">
+                            {column.cellKind === 'statusDot'
+                              ? t('common:craneStatus.table.statusLabel')
+                              : (column.unit ?? '-')}
                           </span>
                         </div>
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
-                <TableBody className="[&_tr:nth-child(even)]:bg-muted/10">
+                <TableBody className="[&_tr:nth-child(even)]:bg-slate-900/20">
                   {rows.map((row) => (
                     <TableRow
                       key={row.craneId}
-                      className="border-border/60 hover:bg-muted/20 border-b"
+                      className="border-0 bg-slate-950/20 hover:bg-slate-800/30"
                     >
                       <TableCell
-                        className="bg-background sticky left-0 z-20 border-r px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
+                        className="sticky left-0 z-20 border-r border-slate-700 bg-slate-950 px-2 py-1.5 text-center shadow-[1px_0_0_0_rgba(71,85,105,0.75)]"
                         style={{ minWidth: CRANE_INFO_COLUMN_WIDTH }}
                       >
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-foreground font-medium">
+                        <div className="flex min-w-0 items-center justify-center">
+                          <span className="text-[11px] font-semibold tracking-wide text-amber-300">
                             {row.craneNo}
                           </span>
-                          <span className="text-muted-foreground text-[11px]">
-                            {row.craneName ?? '-'}
-                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell
-                        className="bg-background sticky z-20 border-r px-3 py-3 font-mono text-xs shadow-[1px_0_0_0_hsl(var(--border))]"
-                        style={{
-                          left: CRANE_INFO_COLUMN_WIDTH,
-                          minWidth: CRANE_ID_COLUMN_WIDTH,
-                        }}
-                      >
-                        {row.craneId}
-                      </TableCell>
-                      <TableCell
-                        className="bg-background sticky z-10 border-r px-3 py-3 text-xs shadow-[1px_0_0_0_hsl(var(--border))]"
-                        style={{
-                          left: CRANE_INFO_COLUMN_WIDTH + CRANE_ID_COLUMN_WIDTH,
-                          minWidth: UPDATED_AT_COLUMN_WIDTH,
-                        }}
-                      >
-                        <span className="text-muted-foreground">
-                          {formatTimestamp(row.lastUpdated)}
-                        </span>
                       </TableCell>
                       {columns.map((column) => {
                         const cell = row.values[column.tagCode];
@@ -254,25 +292,46 @@ export function CraneStatusTable({
                           <TableCell
                             key={`${row.craneId}:${column.tagCode}`}
                             className={cn(
-                              'border-r px-3 py-3 align-top last:border-r-0',
-                              cell?.changed && 'bg-emerald-500/5',
+                              'border-r border-slate-800 px-1 py-1.5 align-middle last:border-r-0',
+                              getAlignmentClassName(column.align),
+                              cell?.changed && 'bg-emerald-500/6',
                             )}
+                            style={{ minWidth: getColumnWidth(column) }}
                           >
-                            <div className="flex min-w-[120px] flex-col">
-                              <span
+                            {column.cellKind === 'statusDot' ? (
+                              <StatusDotCell
+                                value={cell?.value}
+                                timestamp={cell?.timestamp}
+                                statusBehavior={column.statusBehavior}
+                              />
+                            ) : (
+                              <div
                                 className={cn(
-                                  'font-mono text-sm font-medium',
-                                  cell
-                                    ? 'text-foreground'
-                                    : 'text-muted-foreground/80',
+                                  'flex min-w-0 flex-col',
+                                  column.align === 'center'
+                                    ? 'items-center'
+                                    : column.align === 'right'
+                                      ? 'items-end'
+                                      : 'items-start',
                                 )}
+                                title={
+                                  cell?.timestamp
+                                    ? `${formatCellValue(cell.value)} | ${formatTimestamp(cell.timestamp)}`
+                                    : undefined
+                                }
                               >
-                                {formatCellValue(cell?.value)}
-                              </span>
-                              <span className="text-muted-foreground mt-1 text-[10px]">
-                                {cell ? formatTimestamp(cell.timestamp) : '-'}
-                              </span>
-                            </div>
+                                <span
+                                  className={cn(
+                                    'font-mono text-[10px] font-medium tabular-nums',
+                                    cell
+                                      ? 'text-slate-100'
+                                      : 'text-slate-500',
+                                  )}
+                                >
+                                  {formatCellValue(cell?.value)}
+                                </span>
+                              </div>
+                            )}
                           </TableCell>
                         );
                       })}

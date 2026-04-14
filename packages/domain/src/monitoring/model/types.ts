@@ -75,6 +75,49 @@ export interface MonitoringTagDefinition {
   unit: string | null;
 }
 
+export type MonitoringLiveTableCellKind = 'statusDot' | 'numeric' | 'text';
+
+export type MonitoringLiveTableCellAlign = 'left' | 'center' | 'right';
+
+export type MonitoringLiveTableStatusBehavior =
+  | 'positiveWhenTrue'
+  | 'negativeWhenTrue'
+  | 'warningWhenTrue';
+
+export interface MonitoringLiveTableGroupPreset {
+  key: string;
+  labelKey: string;
+  defaultLabel: string;
+}
+
+export interface MonitoringLiveTableColumnPreset {
+  tagDefinitionId: number;
+  groupKey: string;
+  headerLabelKey?: string;
+  shortLabel?: string;
+  cellKind?: MonitoringLiveTableCellKind;
+  align?: MonitoringLiveTableCellAlign;
+  statusBehavior?: MonitoringLiveTableStatusBehavior;
+}
+
+export interface MonitoringLiveTablePreset {
+  groups: MonitoringLiveTableGroupPreset[];
+  columns: MonitoringLiveTableColumnPreset[];
+}
+
+export interface MonitoringLiveTableDisplayColumn
+  extends MonitoringTagDefinition {
+  description?: string | null;
+  groupKey: string;
+  groupLabelKey: string;
+  groupDefaultLabel: string;
+  headerLabelKey?: string;
+  shortLabel?: string;
+  cellKind: MonitoringLiveTableCellKind;
+  align: MonitoringLiveTableCellAlign;
+  statusBehavior?: MonitoringLiveTableStatusBehavior;
+}
+
 export interface MonitoringLiveCrane {
   craneId: string;
   craneNo: string;

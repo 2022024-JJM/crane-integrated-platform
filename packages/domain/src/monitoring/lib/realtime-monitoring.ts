@@ -1,7 +1,14 @@
 import type {
+  MonitoringLiveTableCellAlign,
+  MonitoringLiveTableCellKind,
+  MonitoringLiveTableDisplayColumn,
   MonitoringTagDefinition,
   RealtimeCraneLiteMessage,
 } from '../model/types';
+import {
+  getMonitoringLiveTablePreset,
+  getMonitoringLiveTableTagDefinitionIds,
+} from '../model/live-table-preset';
 import {
   getMonitoringTagMetadataOverridesByRegion,
   type MonitoringLiveTableColumn,
@@ -84,4 +91,79 @@ function mergeMonitoringTagDefinition(
       ? (metadataOverride.description ?? null)
       : undefined,
   };
+}
+
+function inferCellKind(
+  definition: MonitoringTagDefinition,
+): MonitoringLiveTableCellKind {
+  if (
+    definition.dataType?.toUpperCase().startsWith('BIT') ||
+    definition.tagCode.includes('status')
+  ) {
+    return 'statusDot';
+  }
+
+  if (
+    definition.dataType?.toUpperCase().includes('INT') ||
+    definition.dataType?.toUpperCase().includes('REAL') ||
+    definition.dataType?.toUpperCase().includes('FLOAT') ||
+    definition.dataType?.toUpperCase().includes('DOUBLE')
+  ) {
+    return 'numeric';
+  }
+
+  return 'text';
+}
+
+function inferAlign(
+  cellKind: MonitoringLiveTableCellKind,
+): MonitoringLiveTableCellAlign {
+  if (cellKind === 'text') {
+    return 'left';
+  }
+
+  return 'center';
+}
+
+export function selectMonitoringLiveTableColumns(
+  definitions: MonitoringTagDefinition[],
+  regionId: string,
+  tagDefinitionIds?: number[],
+): MonitoringLiveTableDisplayColumn[] {
+  const preset = getMonitoringLiveTablePreset(regionId);
+  const mergedDefinitions = selectMonitoringTagDefinitions(
+    definitions,
+    tagDefinitionIds?.length
+      ? tagDefinitionIds
+      : getMonitoringLiveTableTagDefinitionIds(regionId),
+    regionId,
+  );
+  const groupByKey = new Map(preset.groups.map((group) => [group.key, group]));
+  const presetColumnById = new Map(
+    preset.columns.map((column) => [column.tagDefinitionId, column]),
+  );
+
+  return mergedDefinitions.map((definition) => {
+    const presetColumn = presetColumnById.get(definition.tagDefinitionId);
+    const group =
+      (presetColumn && groupByKey.get(presetColumn.groupKey)) ??
+      preset.groups[0] ?? {
+        key: 'metrics',
+        labelKey: 'common:craneStatus.table.groups.metrics',
+        defaultLabel: '측정값',
+      };
+    const cellKind = presetColumn?.cellKind ?? inferCellKind(definition);
+
+    return {
+      ...definition,
+      groupKey: group.key,
+      groupLabelKey: group.labelKey,
+      groupDefaultLabel: group.defaultLabel,
+      headerLabelKey: presetColumn?.headerLabelKey,
+      shortLabel: presetColumn?.shortLabel ?? definition.displayName,
+      cellKind,
+      align: presetColumn?.align ?? inferAlign(cellKind),
+      statusBehavior: presetColumn?.statusBehavior,
+    };
+  });
 }

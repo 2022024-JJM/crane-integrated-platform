@@ -21,10 +21,6 @@ import {
 } from '@crane/ui/molecules/resizable';
 import { CraneCmmsDetailPanel } from '../../crane-detail/ui/crane-cmms-detail-panel';
 
-const INDOOR_TAG_DEFINITION_IDS_BY_REGION: Record<string, number[]> = {
-  'dock-in': [7, 8],
-};
-
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
   const { alarms, stats: alarmStats } = useRegionRealtimeAlarms(regionId);
@@ -47,11 +43,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       }),
     [regionId],
   );
-  const tagDefinitionIds = useMemo(
-    () => INDOOR_TAG_DEFINITION_IDS_BY_REGION[regionId] ?? [7, 8],
-    [regionId],
-  );
-
   const fullscreenCmmsOverlay = isCmmsOpen ? (
     <CraneCmmsDetailPanel
       key={craneId}
@@ -89,11 +80,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={40}>
-            <CraneStatusTable
-              cranes={cranes}
-              tagDefinitionIds={tagDefinitionIds}
-              regionId={regionId}
-            />
+            <CraneStatusTable cranes={cranes} regionId={regionId} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>

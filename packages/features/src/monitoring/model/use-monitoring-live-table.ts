@@ -4,16 +4,17 @@ import type { WebSocketConnectionState } from '@crane/core/ws';
 import {
   getMonitoringTags,
   isRealtimeCraneLiteMessage,
-  selectMonitoringTagDefinitions,
+  selectMonitoringLiveTableColumns,
   type MonitoringLiveCell,
   type MonitoringLiveCrane,
+  type MonitoringLiveTableDisplayColumn,
   type MonitoringLiveRow,
 } from '@crane/domain/monitoring';
 import { monitoringWebSocketClient } from './monitoring-websocket-client';
 
 interface UseMonitoringLiveTableParams {
   cranes: MonitoringLiveCrane[];
-  tagDefinitionIds: number[];
+  tagDefinitionIds?: number[];
   regionId: string;
 }
 
@@ -41,12 +42,12 @@ export function useMonitoringLiveTable({
     staleTime: 5 * 60 * 1000,
   });
 
-  const columns = useMemo(
+  const columns = useMemo<MonitoringLiveTableDisplayColumn[]>(
     () =>
-      selectMonitoringTagDefinitions(
+      selectMonitoringLiveTableColumns(
         tagsQuery.data ?? [],
-        tagDefinitionIds,
         regionId,
+        tagDefinitionIds,
       ),
     [regionId, tagDefinitionIds, tagsQuery.data],
   );
