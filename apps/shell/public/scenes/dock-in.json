@@ -6,9 +6,21 @@
       "equipName": "",
       "path": "/models/1p_3bay.glb",
       "opacity": 0.7,
-      "position": [22, 0, 161.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        22,
+        0,
+        161.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": []
     },
     {
@@ -16,9 +28,21 @@
       "equipName": "",
       "path": "/models/3p.glb",
       "opacity": 0.7,
-      "position": [102, 0, 147.091],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        102,
+        0,
+        147.091
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": []
     },
     {
@@ -26,9 +50,21 @@
       "equipName": "",
       "path": "/models/5p_1bay.glb",
       "opacity": 0.7,
-      "position": [182, 0, 126.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        182,
+        0,
+        126.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": []
     },
     {
@@ -36,9 +72,21 @@
       "equipName": "",
       "path": "/models/5p_2bay.glb",
       "opacity": 0.7,
-      "position": [262, 0, 126.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        262,
+        0,
+        126.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": []
     },
     {
@@ -47,9 +95,21 @@
       "craneId": "C_171",
       "path": "/models/c_171.glb",
       "opacity": 1,
-      "position": [21, 21, 222.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        21,
+        21,
+        222.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -65,9 +125,21 @@
       "craneId": "C_172",
       "path": "/models/c_172.glb",
       "opacity": 1,
-      "position": [21, 13, 161.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        21,
+        13,
+        161.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -83,9 +155,21 @@
       "craneId": "C_173",
       "path": "/models/c_173.glb",
       "opacity": 1,
-      "position": [21, 13, 191.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        21,
+        13,
+        191.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -101,9 +185,21 @@
       "craneId": "C_800",
       "path": "/models/c_800.glb",
       "opacity": 1,
-      "position": [20, 20, 131.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        20,
+        20,
+        131.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -119,9 +215,21 @@
       "craneId": "C_801",
       "path": "/models/c_801.glb",
       "opacity": 1,
-      "position": [21.5, 15, 101.475],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        21.5,
+        15,
+        101.475
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -137,9 +245,21 @@
       "craneId": "C_810",
       "path": "/models/c_810.glb",
       "opacity": 1,
-      "position": [102, 25, 212.091],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        102,
+        25,
+        212.091
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -155,9 +275,21 @@
       "craneId": "C_811",
       "path": "/models/c_811.glb",
       "opacity": 1,
-      "position": [100, 17, 152.091],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        100,
+        17,
+        152.091
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -173,9 +305,21 @@
       "craneId": "C_812",
       "path": "/models/c_811.glb",
       "opacity": 1,
-      "position": [100, 18, 92.091],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        100,
+        18,
+        92.091
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -191,9 +335,21 @@
       "craneId": "C_1806",
       "path": "/models/c_1806.glb",
       "opacity": 1,
-      "position": [180.833, 8, 223.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        180.833,
+        8,
+        223.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -209,9 +365,21 @@
       "craneId": "C_865",
       "path": "/models/c_865.glb",
       "opacity": 1,
-      "position": [181, 8, 193.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        181.22,
+        7.79,
+        193.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -227,9 +395,21 @@
       "craneId": "C_866",
       "path": "/models/c_866.glb",
       "opacity": 1,
-      "position": [182, 0, 153.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        180.773,
+        7.722,
+        153.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -245,9 +425,21 @@
       "craneId": "C_863",
       "path": "/models/c_863.glb",
       "opacity": 1,
-      "position": [175, 0, 103.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        175,
+        0,
+        103.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -263,9 +455,21 @@
       "craneId": "C_867",
       "path": "/models/c_867.glb",
       "opacity": 1,
-      "position": [181, 15, 63.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        181,
+        15,
+        63.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -281,9 +485,21 @@
       "craneId": "C_864",
       "path": "/models/c_864.glb",
       "opacity": 1,
-      "position": [175, 0, 23.826],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        175,
+        0,
+        23.826
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -299,9 +515,21 @@
       "craneId": "C_870",
       "path": "/models/c_870.glb",
       "opacity": 1,
-      "position": [261, 20, 223.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        261,
+        20,
+        223.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -317,9 +545,21 @@
       "craneId": "C_869",
       "path": "/models/c_869.glb",
       "opacity": 1,
-      "position": [260, 13, 163.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        260,
+        13,
+        163.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -335,9 +575,21 @@
       "craneId": "C_868",
       "path": "/models/c_868.glb",
       "opacity": 1,
-      "position": [256, 0, 123.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        256,
+        0,
+        123.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -353,9 +605,21 @@
       "craneId": "C_871",
       "path": "/models/c_871.glb",
       "opacity": 1,
-      "position": [262, 20, 83.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        262,
+        20,
+        83.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -371,9 +635,21 @@
       "craneId": "C_862",
       "path": "/models/c_862.glb",
       "opacity": 1,
-      "position": [254.5, 0, 33.939],
-      "rotation": [0, 270, 0],
-      "scale": [1, 1, 1],
+      "position": [
+        254.5,
+        0,
+        33.939
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
       "valueMapList": [
         {
           "type": "PZ",
@@ -389,61 +665,153 @@
       "id": "49962fa0-518c-4f2c-810a-2c42eb871cbd",
       "content": "3Bay",
       "color": "#ffffff",
-      "position": [22, 0, 241.475],
-      "rotation": [270, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        22,
+        0,
+        241.475
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "1498dcd4-8329-4f12-8b34-99bf9767976a",
       "content": "해양 1공장",
       "color": "#ffffff",
-      "position": [21, -6.83, 256.305],
-      "rotation": [300, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        21,
+        -6.83,
+        256.305
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "0f93dad9-eb09-46ad-b004-8191305aef14",
       "content": "1Bay",
       "color": "#ffffff",
-      "position": [183, 0, 245.826],
-      "rotation": [270, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        183,
+        0,
+        245.826
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "929cd23b-f018-4edb-98d0-eda104331f85",
       "content": "2Bay",
       "color": "#ffffff",
-      "position": [263, 0, 244.939],
-      "rotation": [270, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        263,
+        0,
+        244.939
+      ],
+      "rotation": [
+        270,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "6fcd5342-8f91-4e1a-8ff7-be756cbada9e",
       "content": "해양 3공장",
       "color": "#ffffff",
-      "position": [102, -6.83, 256.921],
-      "rotation": [300, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        102,
+        -6.83,
+        256.921
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "6ccbab6c-4cee-42cc-afb3-237997eb52c3",
       "content": "조립 5공장",
       "color": "#ffffff",
-      "position": [181, -6.83, 258.656],
-      "rotation": [300, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        181,
+        -6.83,
+        258.656
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     },
     {
       "id": "164472d9-a2d8-4eba-bb48-35f22120e073",
       "content": "조립 5공장",
       "color": "#ffffff",
-      "position": [262, -6.83, 258.769],
-      "rotation": [300, 0, 0],
-      "scale": [5, 5, 5]
+      "position": [
+        262,
+        -6.83,
+        258.769
+      ],
+      "rotation": [
+        300,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        5,
+        5
+      ]
     }
   ],
   "camera": {
-    "position": [141.94482902107515, 135.06564025481802, 295.7252535980742],
-    "target": [142.58432293953578, 36.451184521814135, 208.90966387340717]
+    "position": [
+      143.86124404706814,
+      124.49410175448281,
+      278.0425099365812
+    ],
+    "target": [
+      144.8031132679004,
+      -26.735998793455057,
+      150.17744431256983
+    ]
   }
 }
