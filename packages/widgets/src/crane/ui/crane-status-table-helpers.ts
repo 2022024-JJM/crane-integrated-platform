@@ -1,188 +1,188 @@
 import {
-  tableRowStatusBadgeClassName,
-  tableCategoryClassName,
-} from '@crane/core/lib/status-colors';
-import {
-  formatReplayTimestamp,
-  type MonitoringReplayRow,
+  type MonitoringLiveCell,
+  type MonitoringLiveTableDisplayColumn,
+  type MonitoringLiveTableStatusBehavior,
 } from '@crane/domain/monitoring';
+import { getFormatLocale } from '@crane/core/config/i18n';
 
-export const CRANE_COLUMN_WIDTH = 120;
-export const TAG_NAME_COLUMN_WIDTH = 320;
+export const CRANE_INFO_COLUMN_WIDTH = 84;
+export const GROUP_HEADER_HEIGHT = 28;
+export const DETAIL_HEADER_HEIGHT = 38;
 
-export type DateTimeInputElement = HTMLInputElement & {
-  showPicker?: () => void;
-};
+export type StatusDotTone = 'positive' | 'negative' | 'warning' | 'neutral';
+export type ConnectionBadgeState = 'connected' | 'connecting' | 'closed';
 
-export type SortKey =
-  | 'crane'
-  | 'tagName'
-  | 'value'
-  | 'unit'
-  | 'category'
-  | 'dataType'
-  | 'snapshotAt';
-
-export type SortDirection = 'asc' | 'desc';
-
-export interface HeartbeatStatus {
-  craneNo: string;
-  craneId: string;
-  stale: boolean;
+export function getColumnWidth(column: MonitoringLiveTableDisplayColumn) {
+  switch (column.cellKind) {
+    case 'statusDot':
+      return 54;
+    case 'numeric':
+      return 74;
+    case 'text':
+    default:
+      return 96;
+  }
 }
 
-export function formatValue(value: MonitoringReplayRow['value']) {
-  if (value === null || value === undefined) {
-    return null;
+export function getAlignmentClassName(
+  align: MonitoringLiveTableDisplayColumn['align'],
+) {
+  switch (align) {
+    case 'left':
+      return 'text-left';
+    case 'right':
+      return 'text-right';
+    case 'center':
+    default:
+      return 'text-center';
+  }
+}
+
+export function formatCellValue(value: MonitoringLiveCell['value'] | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
   }
 
   return String(value);
 }
 
-export function formatTimestamp(value: string | null, _language: string) {
+const KOREA_TIME_ZONE = 'Asia/Seoul';
+const ISO_TIMESTAMP_WITH_OFFSET_PATTERN =
+  /(?:Z|[+-]\d{2}:\d{2})$/i;
+const ISO_TIMESTAMP_WITHOUT_OFFSET_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/;
+
+function formatTimeInKoreaTimeZone(value: string, language: string) {
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(getFormatLocale(language), {
+    timeZone: KOREA_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(parsedDate);
+}
+
+function formatTimeWithoutOffset(value: string) {
+  const match = value.match(ISO_TIMESTAMP_WITHOUT_OFFSET_PATTERN);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, , , , hour, minute, second = '00'] = match;
+
+  return `${hour}:${minute}:${second}`;
+}
+
+export function formatTimestamp(
+  value: string | null | undefined,
+  language: string,
+) {
   if (!value) {
     return '-';
   }
 
-  return formatReplayTimestamp(value, 'time') ?? '-';
+  if (ISO_TIMESTAMP_WITH_OFFSET_PATTERN.test(value)) {
+    return formatTimeInKoreaTimeZone(value, language) ?? '-';
+  }
+
+  return formatTimeWithoutOffset(value) ?? '-';
 }
 
-export function formatDataType(value: string | null) {
-  return value ?? '-';
-}
-
-function compareNullableValues(
-  left: string | number | null,
-  right: string | number | null,
+export function getConnectionLabel(
+  state: ConnectionBadgeState,
+  labels: Record<ConnectionBadgeState, string>,
 ) {
-  if (left === null && right === null) {
-    return 0;
-  }
-
-  if (left === null) {
-    return 1;
-  }
-
-  if (right === null) {
-    return -1;
-  }
-
-  if (typeof left === 'number' && typeof right === 'number') {
-    return left - right;
-  }
-
-  const leftNumber = Number(left);
-  const rightNumber = Number(right);
-
-  if (!Number.isNaN(leftNumber) && !Number.isNaN(rightNumber)) {
-    return leftNumber - rightNumber;
-  }
-
-  return String(left).localeCompare(String(right), undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  });
+  return labels[state];
 }
 
-function compareDateValues(left: string | null, right: string | null) {
-  if (!left && !right) {
-    return 0;
-  }
-
-  if (!left) {
-    return 1;
-  }
-
-  if (!right) {
-    return -1;
-  }
-
-  return new Date(left).getTime() - new Date(right).getTime();
-}
-
-export function compareRows(
-  left: MonitoringReplayRow,
-  right: MonitoringReplayRow,
-  key: SortKey,
-) {
-  switch (key) {
-    case 'crane':
-      return left.craneNo.localeCompare(right.craneNo, undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      });
-    case 'tagName':
-      return left.displayName.localeCompare(right.displayName, undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      });
-    case 'value':
-      return compareNullableValues(left.value, right.value);
-    case 'unit':
-      return compareNullableValues(left.unit, right.unit);
-    case 'category':
-      return compareNullableValues(left.category, right.category);
-    case 'dataType':
-      return compareNullableValues(left.dataType, right.dataType);
-    case 'snapshotAt':
-      return compareDateValues(left.snapshotAt, right.snapshotAt);
+export function getConnectionClassName(state: ConnectionBadgeState) {
+  switch (state) {
+    case 'connected':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'connecting':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    case 'closed':
     default:
-      return 0;
+      return 'border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
   }
 }
 
-export function getCategoryClassName(category: string) {
-  return (
-    tableCategoryClassName[category] ??
-    'border-slate-400/20 bg-slate-500/10 text-slate-700 dark:text-slate-300'
-  );
+function parseBooleanLike(value: MonitoringLiveCell['value'] | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (['1', 'true', 'on', 'yes', 'y', 'ok', 'normal'].includes(normalized)) {
+    return true;
+  }
+
+  if (['0', 'false', 'off', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
+
+  return null;
 }
 
-export function buildRowStatuses(row: MonitoringReplayRow) {
-  const statuses: Array<{
-    label: string;
-    tone: keyof typeof tableRowStatusBadgeClassName;
-  }> = [];
+export function getStatusDotTone(
+  value: MonitoringLiveCell['value'] | undefined,
+  statusBehavior: MonitoringLiveTableStatusBehavior = 'positiveWhenTrue',
+): StatusDotTone {
+  const isActive = parseBooleanLike(value);
 
-  if (row.alarm) {
-    statuses.push({ label: 'Alarm', tone: 'alarm' });
+  if (isActive === null) {
+    return 'neutral';
   }
 
-  if (row.stale) {
-    statuses.push({ label: 'Stale', tone: 'stale' });
+  if (isActive) {
+    switch (statusBehavior) {
+      case 'negativeWhenTrue':
+        return 'negative';
+      case 'warningWhenTrue':
+        return 'warning';
+      case 'positiveWhenTrue':
+      default:
+        return 'positive';
+    }
   }
 
-  if (row.changed) {
-    statuses.push({ label: 'Changed', tone: 'changed' });
+  if (statusBehavior === 'positiveWhenTrue') {
+    return 'negative';
   }
 
-  if (statuses.length === 0) {
-    statuses.push({ label: 'Normal', tone: 'normal' });
-  }
-
-  return statuses;
+  return 'positive';
 }
 
-export function openDateTimePicker(input: DateTimeInputElement | null) {
-  if (!input) {
-    return;
+export function getStatusDotClassName(tone: StatusDotTone) {
+  switch (tone) {
+    case 'positive':
+      return 'bg-lime-400 shadow-[0_0_8px_rgba(163,230,53,0.4)]';
+    case 'negative':
+      return 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.38)]';
+    case 'warning':
+      return 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.38)]';
+    case 'neutral':
+    default:
+      return 'bg-slate-500/60 shadow-none';
   }
-
-  input.focus();
-  input.showPicker?.();
-}
-
-export function buildHeartbeatStatuses(
-  rows: MonitoringReplayRow[],
-): HeartbeatStatus[] {
-  return rows
-    .filter((row) => row.tagCode === 'heartbeat')
-    .map((row) => ({
-      craneNo: row.craneNo,
-      craneId: row.craneId,
-      stale: row.stale,
-    }))
-    .sort((a, b) =>
-      a.craneNo.localeCompare(b.craneNo, undefined, { numeric: true }),
-    );
 }

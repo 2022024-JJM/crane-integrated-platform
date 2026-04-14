@@ -15,7 +15,7 @@ type ThemeOption = 'light' | 'dark';
 export function PageSettings() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const { showDate, showTime, showHealthcheck, showWeather, setSetting } =
+  const { showDate, showTime, showWeather, setSetting } =
     useHeaderDisplaySettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
@@ -126,11 +126,6 @@ export function PageSettings() {
       key: 'showTime' as const,
       label: t('header.showTime'),
       checked: showTime,
-    },
-    {
-      key: 'showHealthcheck' as const,
-      label: t('header.showHealthcheck'),
-      checked: showHealthcheck,
     },
   ];
 

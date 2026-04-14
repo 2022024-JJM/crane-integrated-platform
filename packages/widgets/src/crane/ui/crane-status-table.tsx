@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { Clock3 } from 'lucide-react';
+import { useMemo } from 'react';
 import { Badge } from '@crane/ui/atoms/badge';
-import { Button } from '@crane/ui/atoms/button';
-import { tableRowStatusBadgeClassName } from '@crane/core/lib/status-colors';
-import { useTranslation } from 'react-i18next';
-import type { MonitoringReplayRow } from '@crane/domain/monitoring';
-import { ScrollArea } from '@crane/ui/molecules/scroll-area';
+import { useMonitoringLiveTable } from '@crane/features/monitoring';
 import { cn } from '@crane/core/lib/utils';
+import { useTranslation } from 'react-i18next';
+import type {
+  MonitoringLiveCell,
+  MonitoringLiveCrane,
+  MonitoringLiveTableDisplayColumn,
+} from '@crane/domain/monitoring';
+import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import {
   TableBody,
   TableCell,
@@ -15,86 +18,36 @@ import {
   TableRow,
 } from '@crane/ui/molecules/table';
 import {
-  CRANE_COLUMN_WIDTH,
-  TAG_NAME_COLUMN_WIDTH,
-  type SortKey,
-  type SortDirection,
-  formatValue,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import {
+  CRANE_INFO_COLUMN_WIDTH,
+  DETAIL_HEADER_HEIGHT,
+  GROUP_HEADER_HEIGHT,
+  formatCellValue,
   formatTimestamp,
-  formatDataType,
-  compareRows,
-  getCategoryClassName,
-  buildRowStatuses,
-  buildHeartbeatStatuses,
+  getAlignmentClassName,
+  getColumnWidth,
+  getConnectionClassName,
+  getConnectionLabel,
+  getStatusDotClassName,
+  getStatusDotTone,
 } from './crane-status-table-helpers';
 
 interface CraneStatusTableProps {
-  rows: MonitoringReplayRow[];
-  searchFrom: string;
-  searchTo: string;
-  viewingFrom: string;
-  viewingTo: string;
-  isSearchDisabled?: boolean;
-  validationReason?: 'missing' | 'invalid' | 'order' | 'tooLarge' | null;
-  onSearchFromChange: (value: string) => void;
-  onSearchToChange: (value: string) => void;
-  onSearch: () => void;
-  isLoading?: boolean;
-  isError?: boolean;
-  errorMessage?: string | null;
-  isEmpty?: boolean;
+  cranes: MonitoringLiveCrane[];
+  tagDefinitionIds?: number[];
+  regionId: string;
 }
 
-function HeartbeatStatusBar({ rows }: { rows: MonitoringReplayRow[] }) {
-  const statuses = buildHeartbeatStatuses(rows);
-
-  if (statuses.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
-      {statuses.map((s) => (
-        <div
-          key={s.craneId}
-          className={cn(
-            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
-            s.stale
-              ? 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300'
-              : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-          )}
-        >
-          <span
-            className={cn(
-              'size-1.5 rounded-full',
-              s.stale ? 'bg-red-500' : 'bg-emerald-500',
-            )}
-          />
-          <span>{s.craneNo}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StatusBadge({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: keyof typeof tableRowStatusBadgeClassName;
-}) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'h-6 rounded-full px-2.5 text-[11px] font-medium',
-        tableRowStatusBadgeClassName[tone],
-      )}
-    >
-      {label}
-    </Badge>
-  );
+interface ColumnGroup {
+  key: string;
+  labelKey: string;
+  defaultLabel: string;
+  columns: MonitoringLiveTableDisplayColumn[];
 }
 
 function StatusState({
@@ -125,170 +78,156 @@ function StatusState({
   );
 }
 
-function DateTimeField({
-  label,
+function StatusDotCell({
   value,
-  onChange,
+  timestamp,
+  statusBehavior,
+  language,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
+  value: MonitoringLiveCell['value'] | undefined;
+  timestamp?: string | null;
+  statusBehavior: MonitoringLiveTableDisplayColumn['statusBehavior'];
+  language: string;
 }) {
+  const tone = getStatusDotTone(value, statusBehavior);
+
   return (
-    <label className="text-muted-foreground flex min-w-[220px] flex-col gap-1 text-xs">
-      <span>{label}</span>
-      <input
-        type="datetime-local"
-        step={1}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="border-border bg-background text-foreground focus-visible:border-ring h-8 w-full rounded-md border px-2 text-sm ring-0 transition outline-none"
+    <div
+      className="flex items-center justify-center"
+      title={
+        timestamp
+          ? `${formatCellValue(value)} | ${formatTimestamp(timestamp, language)}`
+          : formatCellValue(value)
+      }
+    >
+      <span
+        className={cn(
+          'border-background/80 inline-flex size-2.5 rounded-full border',
+          getStatusDotClassName(tone),
+        )}
       />
-    </label>
+    </div>
   );
 }
 
-function SortButton({
-  label,
-  isActive,
-  direction,
-  onClick,
-  align = 'left',
-}: {
-  label: string;
-  isActive: boolean;
-  direction: SortDirection;
-  onClick: () => void;
-  align?: 'left' | 'right';
-}) {
-  const Icon = !isActive
-    ? ArrowUpDown
-    : direction === 'asc'
-      ? ArrowUp
-      : ArrowDown;
+function buildColumnGroups(columns: MonitoringLiveTableDisplayColumn[]) {
+  return columns.reduce<ColumnGroup[]>((groups, column) => {
+    const lastGroup = groups[groups.length - 1];
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'text-muted-foreground hover:text-foreground flex w-full items-center gap-1 text-xs font-semibold transition',
-        align === 'right' ? 'justify-end' : 'justify-start',
-      )}
-    >
-      <span>{label}</span>
-      <Icon className="size-3.5" />
-    </button>
-  );
+    if (lastGroup?.key === column.groupKey) {
+      lastGroup.columns.push(column);
+      return groups;
+    }
+
+    groups.push({
+      key: column.groupKey,
+      labelKey: column.groupLabelKey,
+      defaultLabel: column.groupDefaultLabel,
+      columns: [column],
+    });
+
+    return groups;
+  }, []);
 }
 
 export function CraneStatusTable({
-  rows,
-  searchFrom,
-  searchTo,
-  isSearchDisabled = false,
-  validationReason = null,
-  onSearchFromChange,
-  onSearchToChange,
-  onSearch,
-  isLoading = false,
-  isError = false,
-  errorMessage = null,
-  isEmpty = false,
+  cranes,
+  tagDefinitionIds,
+  regionId,
 }: CraneStatusTableProps) {
   const { t, i18n } = useTranslation();
-  const [sortKey, setSortKey] = useState<SortKey>('crane');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const startTimeLabel = t('common:craneStatus.search.startTime', {
-    defaultValue: 'Start Time',
+  const {
+    columns,
+    rows,
+    realtimeBadgeState,
+    isMetaLoading,
+    isError,
+    errorMessage,
+    isEmpty,
+  } = useMonitoringLiveTable({
+    cranes,
+    tagDefinitionIds,
+    regionId,
   });
-  const endTimeLabel = t('common:craneStatus.search.endTime', {
-    defaultValue: 'End Time',
-  });
-  const searchLabel = t('common:craneStatus.search.submit', {
-    defaultValue: 'Search',
-  });
-  const validationMessage =
-    validationReason === 'order'
-      ? t('common:craneStatus.search.validation.order', {
-          defaultValue: 'Start time must be earlier than end time.',
-        })
-      : validationReason === 'tooLarge'
-        ? t('common:craneStatus.search.validation.tooLarge', {
-            defaultValue: 'Search range must be within 24 hours.',
-          })
-        : validationReason === 'invalid'
-          ? t('common:craneStatus.search.validation.invalid', {
-              defaultValue: 'Please enter a valid time range.',
-            })
-          : validationReason === 'missing'
-            ? t('common:craneStatus.search.validation.missing', {
-                defaultValue: 'Start time and end time are required.',
-              })
-            : null;
 
-  const sortedRows = useMemo(() => {
-    const nextRows = [...rows];
+  const columnGroups = useMemo(() => buildColumnGroups(columns), [columns]);
+  const latestUpdatedAt = useMemo(
+    () =>
+      rows.reduce<string | null>((latest, row) => {
+        if (!row.lastUpdated) {
+          return latest;
+        }
 
-    nextRows.sort((left, right) => {
-      const compared = compareRows(left, right, sortKey);
-      return sortDirection === 'asc' ? compared : -compared;
-    });
+        if (!latest || latest.localeCompare(row.lastUpdated) < 0) {
+          return row.lastUpdated;
+        }
 
-    return nextRows;
-  }, [rows, sortDirection, sortKey]);
+        return latest;
+      }, null),
+    [rows],
+  );
+  const formattedLatestUpdatedAt = useMemo(
+    () => formatTimestamp(latestUpdatedAt, i18n.language),
+    [i18n.language, latestUpdatedAt],
+  );
+  const lastUpdatedLabel = t('common:craneStatus.table.lastUpdatedAt');
 
-  const toggleSort = (nextKey: SortKey) => {
-    if (sortKey === nextKey) {
-      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setSortKey(nextKey);
-    setSortDirection('asc');
-  };
+  const connectionLabels = {
+    connected: t('common:craneStatus.connection.open'),
+    connecting: t('common:craneStatus.connection.connecting'),
+    closed: t('common:craneStatus.connection.closed'),
+  } as const;
 
   return (
-    <div className="bg-background flex h-full flex-col">
-      <div className="border-b px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-background flex h-full min-h-0 flex-col">
+      <div className="border-b px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">
               {t('common:craneStatus.title')}
             </h3>
           </div>
-          <form
-            className="flex flex-col items-stretch gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSearch();
-            }}
-          >
-            <div className="flex flex-wrap items-end gap-2">
-              <DateTimeField
-                label={startTimeLabel}
-                value={searchFrom}
-                onChange={onSearchFromChange}
-              />
-              <DateTimeField
-                label={endTimeLabel}
-                value={searchTo}
-                onChange={onSearchToChange}
-              />
-              <Button type="submit" size="default" disabled={isSearchDisabled}>
-                {searchLabel}
-              </Button>
-            </div>
-            {validationMessage ? (
-              <p className="text-destructive text-xs">{validationMessage}</p>
-            ) : null}
-          </form>
+          <div className="ml-auto flex items-center justify-end gap-2">
+            <TooltipProvider delay={150}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span
+                      className="text-muted-foreground inline-flex h-4 items-center gap-1.5 text-[10px] leading-none tabular-nums"
+                      aria-label={`${lastUpdatedLabel}: ${formattedLatestUpdatedAt}`}
+                      tabIndex={0}
+                    />
+                  }
+                >
+                  <Clock3
+                    className="size-3 shrink-0 self-center"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">{lastUpdatedLabel}</span>
+                  <span className="block leading-none">
+                    {formattedLatestUpdatedAt}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {lastUpdatedLabel}: {formattedLatestUpdatedAt}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Badge
+              variant="outline"
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                getConnectionClassName(realtimeBadgeState),
+              )}
+            >
+              {getConnectionLabel(realtimeBadgeState, connectionLabels)}
+            </Badge>
+          </div>
         </div>
       </div>
-      <HeartbeatStatusBar rows={rows} />
       <div className="flex min-h-0 flex-1 flex-col">
         <ScrollArea className="flex-1 overflow-auto">
-          {isLoading ? (
+          {isMetaLoading ? (
             <StatusState
               title={t('common:craneStatus.loadingTitle')}
               description={t('common:craneStatus.loadingDescription')}
@@ -305,164 +244,138 @@ export function CraneStatusTable({
               description={t('common:craneStatus.emptyDescription')}
             />
           ) : (
-            <div className="relative min-w-[1120px]">
-              <table className="w-full caption-bottom text-sm">
+            <div className="relative min-w-max">
+              <table className="w-full border-separate border-spacing-0 text-xs">
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
+                  <TableRow className="border-0 hover:bg-transparent">
                     <TableHead
-                      className="bg-muted text-muted-foreground sticky top-0 left-0 z-30 w-[120px] border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
-                      style={{ minWidth: CRANE_COLUMN_WIDTH }}
-                    >
-                      <SortButton
-                        label={t('common:craneStatus.columns.crane')}
-                        isActive={sortKey === 'crane'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('crane')}
-                      />
-                    </TableHead>
-                    <TableHead
-                      className="bg-muted text-muted-foreground sticky top-0 z-30 w-[320px] border-r px-3 py-3 text-xs font-semibold whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]"
+                      rowSpan={2}
+                      className="border-border bg-muted text-foreground sticky left-0 z-40 border-r border-b px-2 py-1.5 text-center text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase"
                       style={{
-                        left: CRANE_COLUMN_WIDTH,
-                        minWidth: TAG_NAME_COLUMN_WIDTH,
+                        top: 0,
+                        minWidth: CRANE_INFO_COLUMN_WIDTH,
                       }}
                     >
-                      <SortButton
-                        label={t('common:craneStatus.columns.tagName')}
-                        isActive={sortKey === 'tagName'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('tagName')}
-                      />
+                      {t('common:craneStatus.columns.crane')}
                     </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[140px] border-r px-3 py-3 text-right text-xs font-semibold">
-                      <SortButton
-                        label={t('common:craneStatus.columns.value')}
-                        isActive={sortKey === 'value'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('value')}
-                        align="right"
-                      />
-                    </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[90px] border-r px-3 py-3 text-xs font-semibold">
-                      <SortButton
-                        label={t('common:craneStatus.columns.unit')}
-                        isActive={sortKey === 'unit'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('unit')}
-                      />
-                    </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[120px] border-r px-3 py-3 text-xs font-semibold">
-                      <SortButton
-                        label={t('common:craneStatus.columns.category')}
-                        isActive={sortKey === 'category'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('category')}
-                      />
-                    </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[110px] border-r px-3 py-3 text-xs font-semibold">
-                      <SortButton
-                        label={t('common:craneStatus.columns.dataType')}
-                        isActive={sortKey === 'dataType'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('dataType')}
-                      />
-                    </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 w-[130px] border-r px-3 py-3 text-xs font-semibold">
-                      <SortButton
-                        label={t('common:craneStatus.columns.snapshotAt')}
-                        isActive={sortKey === 'snapshotAt'}
-                        direction={sortDirection}
-                        onClick={() => toggleSort('snapshotAt')}
-                      />
-                    </TableHead>
-                    <TableHead className="bg-muted text-muted-foreground sticky top-0 z-10 min-w-[180px] px-3 py-3 text-xs font-semibold">
-                      {t('common:craneStatus.columns.status')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="[&_tr:nth-child(even)]:bg-muted/10">
-                  {sortedRows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="border-border/60 hover:bg-muted/20 border-b"
-                    >
-                      <TableCell
-                        className="bg-background sticky left-0 z-20 border-r px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
-                        style={{ minWidth: CRANE_COLUMN_WIDTH }}
-                      >
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-foreground font-medium">
-                            {row.craneNo}
-                          </span>
-                          <span className="text-muted-foreground text-[11px]">
-                            {row.craneId}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell
-                        className="bg-background sticky z-20 border-r px-3 py-3 shadow-[1px_0_0_0_hsl(var(--border))]"
+                    {columnGroups.map((group) => (
+                      <TableHead
+                        key={group.key}
+                        colSpan={group.columns.length}
+                        className="border-border bg-muted text-foreground sticky z-30 border-r px-1.5 py-1 text-center text-[9px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase last:border-r-0"
                         style={{
-                          left: CRANE_COLUMN_WIDTH,
-                          minWidth: TAG_NAME_COLUMN_WIDTH,
+                          top: 0,
+                          height: GROUP_HEADER_HEIGHT,
                         }}
                       >
-                        <div className="min-w-0">
-                          <p className="text-foreground truncate text-sm font-medium">
-                            {row.displayName}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">
-                            {row.tagCode}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-r px-3 py-3 text-right">
-                        {formatValue(row.value) === null ? (
-                          <span className="text-muted-foreground/80 text-sm">
-                            -
-                          </span>
-                        ) : (
-                          <span className="text-foreground font-mono text-sm font-medium">
-                            {formatValue(row.value)}
-                          </span>
+                        {t(group.labelKey, group.defaultLabel)}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                  <TableRow className="[&>th]:border-border hover:bg-transparent [&>th]:border-b">
+                    {columns.map((column) => (
+                      <TableHead
+                        key={column.tagDefinitionId}
+                        className={cn(
+                          'border-border bg-background text-foreground sticky z-20 border-r px-1 py-1 text-[9px] font-medium whitespace-nowrap last:border-r-0',
+                          getAlignmentClassName(column.align),
                         )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground border-r px-3 py-3 text-sm">
-                        {row.unit ?? '-'}
-                      </TableCell>
-                      <TableCell className="border-r px-3 py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'h-5 rounded-md px-2 text-[11px] font-medium capitalize',
-                            getCategoryClassName(row.category),
-                          )}
-                        >
-                          {row.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="border-r px-3 py-3">
-                        <span className="text-muted-foreground font-mono text-xs">
-                          {formatDataType(row.dataType)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="border-r px-3 py-3">
-                        <span className="text-muted-foreground text-xs">
-                          {formatTimestamp(row.snapshotAt, i18n.language)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {buildRowStatuses(row).map((status) => (
-                            <StatusBadge
-                              key={`${row.id}:${status.label}`}
-                              label={t(
-                                `common:craneStatus.statusBadges.${status.label.toLowerCase()}`,
-                              )}
-                              tone={status.tone}
-                            />
-                          ))}
+                        style={{
+                          top: GROUP_HEADER_HEIGHT,
+                          minWidth: getColumnWidth(column),
+                          height: DETAIL_HEADER_HEIGHT,
+                        }}
+                        title={column.description ?? undefined}
+                      >
+                        <div className="flex min-w-0 flex-col gap-px">
+                          <span className="truncate leading-none">
+                            {column.headerLabelKey
+                              ? t(
+                                  column.headerLabelKey,
+                                  column.shortLabel ?? column.displayName,
+                                )
+                              : (column.shortLabel ?? column.displayName)}
+                          </span>
+                          <span className="text-muted-foreground truncate font-mono text-[8px] leading-none">
+                            {column.cellKind === 'statusDot'
+                              ? t('common:craneStatus.table.statusLabel')
+                              : (column.unit ?? '-')}
+                          </span>
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow
+                      key={row.craneId}
+                      className="hover:bg-muted/30 [&>td]:border-border/60 border-0 [&>td]:border-b last:[&>td]:border-b-0"
+                    >
+                      <TableCell
+                        className="border-border bg-background sticky left-0 z-20 border-r px-2 py-1.5 text-center"
+                        style={{
+                          minWidth: CRANE_INFO_COLUMN_WIDTH,
+                        }}
+                      >
+                        <div className="flex min-w-0 items-center justify-center">
+                          <span className="text-[11px] font-semibold tracking-wide text-[#f5a623]">
+                            {row.craneNo}
+                          </span>
                         </div>
                       </TableCell>
+                      {columns.map((column) => {
+                        const cell = row.values[column.tagCode];
+
+                        return (
+                          <TableCell
+                            key={`${row.craneId}:${column.tagCode}`}
+                            className={cn(
+                              'border-border border-r px-1 py-1.5 align-middle last:border-r-0',
+                              getAlignmentClassName(column.align),
+                            )}
+                            style={{
+                              minWidth: getColumnWidth(column),
+                            }}
+                          >
+                            {column.cellKind === 'statusDot' ? (
+                              <StatusDotCell
+                                value={cell?.value}
+                                timestamp={cell?.timestamp}
+                                statusBehavior={column.statusBehavior}
+                                language={i18n.language}
+                              />
+                            ) : (
+                              <div
+                                className={cn(
+                                  'flex min-w-0 flex-col',
+                                  column.align === 'center'
+                                    ? 'items-center'
+                                    : column.align === 'right'
+                                      ? 'items-end'
+                                      : 'items-start',
+                                )}
+                                title={
+                                  cell?.timestamp
+                                    ? `${formatCellValue(cell.value)} | ${formatTimestamp(cell.timestamp, i18n.language)}`
+                                    : undefined
+                                }
+                              >
+                                <span
+                                  className={cn(
+                                    'font-mono text-[10px] font-medium tabular-nums',
+                                    cell
+                                      ? 'text-foreground'
+                                      : 'text-muted-foreground',
+                                  )}
+                                >
+                                  {formatCellValue(cell?.value)}
+                                </span>
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>

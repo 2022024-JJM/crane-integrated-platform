@@ -4,12 +4,19 @@
 @import './design-token.css';
 
 @source '../../../../packages/ui/src/**/*.tsx';
+@source '../../../../packages/ui/src/**/*.ts';
 @source '../../../../packages/widgets/src/**/*.tsx';
+@source '../../../../packages/widgets/src/**/*.ts';
 @source '../../../../packages/features/src/**/*.tsx';
+@source '../../../../packages/features/src/**/*.ts';
 @source '../../../../packages/domain/src/**/*.tsx';
+@source '../../../../packages/domain/src/**/*.ts';
 @source '../../src/**/*.tsx';
+@source '../../src/**/*.ts';
 @source '../../../hanwha-ocean/src/**/*.tsx';
+@source '../../../hanwha-ocean/src/**/*.ts';
 @source '../../../goliath-crane/src/**/*.tsx';
+@source '../../../goliath-crane/src/**/*.ts';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -183,8 +190,8 @@
 
   /* Webkit (Chrome, Safari, Edge) */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -192,7 +199,7 @@
   ::-webkit-scrollbar-thumb {
     background-color: var(--border);
     border-radius: 9999px;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
@@ -203,4 +210,3 @@
     background: transparent;
   }
 }
-

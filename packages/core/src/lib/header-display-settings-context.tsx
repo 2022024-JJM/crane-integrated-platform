@@ -6,11 +6,8 @@ const HEADER_DISPLAY_SETTINGS_STORAGE_KEY = 'header-display-settings';
 type HeaderDisplaySettings = {
   showDate: boolean;
   showTime: boolean;
-  showHealthcheck: boolean;
   showWeather: boolean;
 };
-
-type HeaderHealthStatus = 'online';
 
 interface HeaderDisplaySettingsContextValue extends HeaderDisplaySettings {
   setSetting: (
@@ -22,7 +19,6 @@ interface HeaderDisplaySettingsContextValue extends HeaderDisplaySettings {
 const DEFAULT_HEADER_DISPLAY_SETTINGS: HeaderDisplaySettings = {
   showDate: true,
   showTime: true,
-  showHealthcheck: true,
   showWeather: true,
 };
 
@@ -56,10 +52,6 @@ function getInitialHeaderDisplaySettings(): HeaderDisplaySettings {
         typeof parsedSettings?.showTime === 'boolean'
           ? parsedSettings.showTime
           : DEFAULT_HEADER_DISPLAY_SETTINGS.showTime,
-      showHealthcheck:
-        typeof parsedSettings?.showHealthcheck === 'boolean'
-          ? parsedSettings.showHealthcheck
-          : DEFAULT_HEADER_DISPLAY_SETTINGS.showHealthcheck,
       showWeather:
         typeof parsedSettings?.showWeather === 'boolean'
           ? parsedSettings.showWeather
@@ -120,4 +112,4 @@ export function useHeaderDisplaySettings() {
   return context;
 }
 
-export type { HeaderDisplaySettings, HeaderHealthStatus };
+export type { HeaderDisplaySettings };

@@ -1,5 +1,6 @@
 export type ReplayLiteValue = string | number | null;
 export type ReplayLiteValueMap = Record<string, ReplayLiteValue>;
+export type MonitoringLiveValue = string | number | boolean | null;
 
 export interface ReplayTagSchemaItem {
   displayName: string;
@@ -67,6 +68,90 @@ export interface MonitoringReplayLiteQuery {
   to: string;
 }
 
+export interface MonitoringTagDefinition {
+  tagDefinitionId: number;
+  tagCode: string;
+  displayName: string;
+  dataType: string | null;
+  unit: string | null;
+}
+
+export type MonitoringLiveTableCellKind = 'statusDot' | 'numeric' | 'text';
+
+export type MonitoringLiveTableCellAlign = 'left' | 'center' | 'right';
+
+export type MonitoringLiveTableStatusBehavior =
+  | 'positiveWhenTrue'
+  | 'negativeWhenTrue'
+  | 'warningWhenTrue';
+
+export interface MonitoringLiveTableGroupPreset {
+  key: string;
+  labelKey: string;
+  defaultLabel: string;
+}
+
+export interface MonitoringLiveTableColumnPreset {
+  tagDefinitionId: number;
+  groupKey: string;
+  headerLabelKey?: string;
+  shortLabel?: string;
+  cellKind?: MonitoringLiveTableCellKind;
+  align?: MonitoringLiveTableCellAlign;
+  statusBehavior?: MonitoringLiveTableStatusBehavior;
+}
+
+export interface MonitoringLiveTablePreset {
+  groups: MonitoringLiveTableGroupPreset[];
+  columns: MonitoringLiveTableColumnPreset[];
+}
+
+export interface MonitoringLiveTableDisplayColumn
+  extends MonitoringTagDefinition {
+  description?: string | null;
+  groupKey: string;
+  groupLabelKey: string;
+  groupDefaultLabel: string;
+  headerLabelKey?: string;
+  shortLabel?: string;
+  cellKind: MonitoringLiveTableCellKind;
+  align: MonitoringLiveTableCellAlign;
+  statusBehavior?: MonitoringLiveTableStatusBehavior;
+}
+
+export interface MonitoringLiveCrane {
+  craneId: string;
+  craneNo: string;
+  craneName?: string;
+}
+
+export interface MonitoringLiveCell {
+  value: MonitoringLiveValue;
+  timestamp: string;
+  occurredAt: string;
+  quality: number;
+  changed: boolean;
+}
+
+export interface MonitoringLiveRow {
+  craneId: string;
+  craneNo: string;
+  craneName?: string;
+  lastUpdated: string | null;
+  values: Partial<Record<string, MonitoringLiveCell>>;
+}
+
+export interface RealtimeCraneLiteMessage {
+  eventType: 'snapshot.delta';
+  craneId: string;
+  tagCode: string;
+  value: MonitoringLiveValue;
+  timestamp: string;
+  quality: number;
+  changed: boolean;
+  occurredAt: string;
+}
+
 export interface MonitoringReplayRow {
   id: string;
   frameTimestamp: string;
@@ -79,7 +164,7 @@ export interface MonitoringReplayRow {
   dataType: string | null;
   unit: string | null;
   direction: string | null;
-  value: string | number | null;
+  value: MonitoringLiveValue;
   alarm: boolean;
   stale: boolean;
   changed: boolean;

@@ -1,39 +1,42 @@
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@crane/ui/molecules/resizable';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import {
   useRegionRealtimeAlarms,
   useRegionActiveAlarmsByCraneId,
 } from '@crane/features/alarm';
-import {
-  useMonitoringReplay,
-  useMonitoringReplaySearch,
-} from '@crane/features/monitoring';
 import { Monitoring3dView } from '@crane/features/3d';
 import {
-  useGoliathCraneData,
   GoliathCraneSvgDiagram,
+  useGoliathCraneData,
 } from '@crane/features/goliath-crane';
 import { Spinner } from '@crane/ui/atoms/spinner';
-import { CraneStatusTable } from '@crane/widgets/crane';
 import { AlarmPanel } from '@crane/widgets/alarm';
+import { CraneStatusTable } from '@crane/widgets/crane';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@crane/ui/molecules/resizable';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
 import {
-  GoliathVisionStrip,
   CAMERA_CHANNELS,
+  GoliathVisionStrip,
   type ExpandedView,
 } from './goliath-vision-strip';
 import { GoliathVisionPip } from './goliath-vision-pip';
 
-// 골리앗은 아직 전용 백엔드가 없으므로 기존 dock-1 데이터를 사용
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
-
-// 골리앗에서 표시할 크레인 (dock-1의 C_171을 GC-04로 매핑)
+const GOLIATH_TABLE_REGION_ID = 'dock-2';
 const GOLIATH_CRANE_ID = 'C_171';
+const GOLIATH_TAG_DEFINITION_IDS = [7, 8];
+const GOLIATH_CRANES: MonitoringLiveCrane[] = [
+  {
+    craneId: GOLIATH_CRANE_ID,
+    craneNo: 'GC-04',
+    craneName: 'GC-04',
+  },
+];
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
@@ -42,72 +45,48 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { alarms, stats: alarmStats } =
     useRegionRealtimeAlarms(backendRegionId);
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(backendRegionId);
-  const {
-    draftFrom,
-    draftTo,
-    setDraftFrom,
-    setDraftTo,
-    submitSearch,
-    canSearch,
-    validationReason,
-    viewingFrom,
-    viewingTo,
-    query,
-  } = useMonitoringReplaySearch(backendRegionId);
-  const { rows, isLoading, isError, errorMessage } = useMonitoringReplay({
-    regionId: backendRegionId,
-    from: query.from,
-    to: query.to,
-  });
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const [visionExpanded, setVisionExpanded] = useState<ExpandedView>(null);
   const { crane } = useGoliathCraneData();
 
-  const goliathRows = useMemo(
-    () =>
-      rows
-        .filter((row) => row.craneId === GOLIATH_CRANE_ID)
-        .map((row) => ({ ...row, craneNo: 'GC-04' })),
-    [rows],
-  );
   const goliathAlarms = useMemo(
     () =>
       alarms
-        .filter((a) => a.craneId === GOLIATH_CRANE_ID)
-        .map((a) => ({ ...a, craneName: 'GC-04' })),
+        .filter((alarm) => alarm.craneId === GOLIATH_CRANE_ID)
+        .map((alarm) => ({ ...alarm, craneName: 'GC-04' })),
     [alarms],
   );
   const goliathAlarmStats = useMemo(() => {
-    if (Object.values(alarmStats).every((v) => v === 0)) return alarmStats;
+    if (Object.values(alarmStats).every((value) => value === 0)) {
+      return alarmStats;
+    }
+
     return {
-      critical: goliathAlarms.filter((a) => a.severity === 'critical').length,
-      high: goliathAlarms.filter((a) => a.severity === 'high').length,
-      medium: goliathAlarms.filter((a) => a.severity === 'medium').length,
-      info: goliathAlarms.filter((a) => a.severity === 'info').length,
+      critical: goliathAlarms.filter((alarm) => alarm.severity === 'critical')
+        .length,
+      high: goliathAlarms.filter((alarm) => alarm.severity === 'high').length,
+      medium: goliathAlarms.filter((alarm) => alarm.severity === 'medium')
+        .length,
+      info: goliathAlarms.filter((alarm) => alarm.severity === 'info').length,
     };
   }, [goliathAlarms, alarmStats]);
-  const goliathIsEmpty = goliathRows.length === 0 && !isLoading;
 
   return (
     <>
-      {/* 최상위: 좌(콘텐츠 영역) | 우(Metrics + Alarms) */}
       <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-        {/* ── 좌측 메인 영역 ── */}
         <ResizablePanel defaultSize={75} minSize={50}>
           <ResizablePanelGroup
             orientation="vertical"
             className="h-full min-h-0"
           >
-            {/* 상단: 3D(2/3) | 2D(1/3) */}
             <ResizablePanel defaultSize={55} minSize={30}>
               <ResizablePanelGroup
                 orientation="horizontal"
                 className="h-full min-h-0"
               >
-                {/* 3D Viewer */}
                 <ResizablePanel defaultSize={65} minSize={40}>
                   <div className="relative h-full">
-                    {is3dViewLoading && (
+                    {is3dViewLoading ? (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
                         <Spinner
                           className="size-6 text-orange-500"
@@ -117,7 +96,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                           {t('common:viewer3d.loading')}
                         </p>
                       </div>
-                    )}
+                    ) : null}
                     <Monitoring3dView
                       regionId={regionId}
                       alarmsByCraneId={alarmsByCraneId}
@@ -128,10 +107,8 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
 
                 <ResizableHandle withHandle />
 
-                {/* 2D SVG Diagram */}
                 <ResizablePanel defaultSize={35} minSize={20}>
                   <div className="bg-card relative h-full overflow-hidden">
-                    {/* 2D badge */}
                     <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-1.5">
                       <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 backdrop-blur-sm">
                         <span className="relative flex size-2">
@@ -143,7 +120,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                         </span>
                       </div>
                     </div>
-                    {/* Bottom status bar */}
                     <div className="from-background/80 pointer-events-none absolute right-0 bottom-0 left-0 z-10 flex items-center justify-between bg-linear-to-t to-transparent px-3 pt-6 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-semibold">
@@ -183,16 +159,13 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
 
             <ResizableHandle withHandle />
 
-            {/* 하단: Vision Strip (좌) | CraneStatusTable (우) */}
             <ResizablePanel defaultSize={45} minSize={25}>
               <ResizablePanelGroup
                 orientation="horizontal"
                 className="h-full min-h-0"
               >
-                {/* Vision Strip (Camera + LiDAR 타일) */}
                 <ResizablePanel defaultSize={35} minSize={20}>
                   <div className="flex h-full flex-col gap-0">
-                    {/* Strip header */}
                     <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5">
                       <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                         Vision
@@ -201,7 +174,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                         BETA
                       </span>
                       <span className="text-muted-foreground/50 ml-auto text-[9px]">
-                        클릭하여 PiP
+                        Click for PiP
                       </span>
                     </div>
                     <div className="min-h-0 flex-1 p-2">
@@ -215,23 +188,11 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
 
                 <ResizableHandle withHandle />
 
-                {/* Crane Status Table */}
                 <ResizablePanel defaultSize={65} minSize={40}>
                   <CraneStatusTable
-                    rows={goliathRows}
-                    searchFrom={draftFrom}
-                    searchTo={draftTo}
-                    viewingFrom={viewingFrom}
-                    viewingTo={viewingTo}
-                    isSearchDisabled={!canSearch || isLoading}
-                    validationReason={validationReason}
-                    onSearchFromChange={setDraftFrom}
-                    onSearchToChange={setDraftTo}
-                    onSearch={submitSearch}
-                    isLoading={isLoading}
-                    isError={isError}
-                    errorMessage={errorMessage}
-                    isEmpty={goliathIsEmpty}
+                    cranes={GOLIATH_CRANES}
+                    tagDefinitionIds={GOLIATH_TAG_DEFINITION_IDS}
+                    regionId={GOLIATH_TABLE_REGION_ID}
                   />
                 </ResizablePanel>
               </ResizablePanelGroup>
@@ -241,7 +202,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
 
         <ResizableHandle withHandle />
 
-        {/* ── 우측: Metrics + Alarms ── */}
         <ResizablePanel defaultSize={25} minSize={15}>
           <ResizablePanelGroup
             orientation="vertical"
@@ -258,7 +218,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* floating PiP — fixed 포지션이라 레이아웃 밖에 렌더링됨 */}
       <GoliathVisionPip
         expanded={visionExpanded}
         channels={CAMERA_CHANNELS}
