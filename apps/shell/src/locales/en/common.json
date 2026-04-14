@@ -76,7 +76,6 @@
       "status": "Status"
     },
     "table": {
-      "statusLabel": "status",
       "lastUpdatedAt": "Last updated at",
       "groups": {
         "metrics": "Metrics",

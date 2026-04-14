@@ -193,7 +193,7 @@ export function CraneStatusTable({
                 <TooltipTrigger
                   render={
                     <span
-                      className="text-muted-foreground inline-flex h-4 items-center gap-1.5 text-[10px] leading-none tabular-nums"
+                      className="text-muted-foreground inline-flex h-4 items-center gap-1.5 text-[12px] leading-none tabular-nums"
                       aria-label={`${lastUpdatedLabel}: ${formattedLatestUpdatedAt}`}
                       tabIndex={0}
                     />
@@ -216,7 +216,7 @@ export function CraneStatusTable({
             <Badge
               variant="outline"
               className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-medium',
+                'rounded-full px-2 py-0.5 text-[12px] font-medium',
                 getConnectionClassName(realtimeBadgeState),
               )}
             >
@@ -250,7 +250,7 @@ export function CraneStatusTable({
                   <TableRow className="border-0 hover:bg-transparent">
                     <TableHead
                       rowSpan={2}
-                      className="border-border bg-muted text-foreground sticky left-0 z-40 border-r border-b px-2 py-1.5 text-center text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase"
+                      className="border-border bg-muted text-foreground sticky left-0 z-40 border-r border-b px-2 py-1.5 text-center text-[12px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase"
                       style={{
                         top: 0,
                         minWidth: CRANE_INFO_COLUMN_WIDTH,
@@ -262,7 +262,7 @@ export function CraneStatusTable({
                       <TableHead
                         key={group.key}
                         colSpan={group.columns.length}
-                        className="border-border bg-muted text-foreground sticky z-30 border-r px-1.5 py-1 text-center text-[9px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase last:border-r-0"
+                        className="border-border bg-muted text-foreground sticky z-30 border-r px-1.5 py-1 text-center text-[12px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase last:border-r-0"
                         style={{
                           top: 0,
                           height: GROUP_HEADER_HEIGHT,
@@ -277,7 +277,7 @@ export function CraneStatusTable({
                       <TableHead
                         key={column.tagDefinitionId}
                         className={cn(
-                          'border-border bg-background text-foreground sticky z-20 border-r px-1 py-1 text-[9px] font-medium whitespace-nowrap last:border-r-0',
+                          'border-border bg-background text-foreground sticky z-20 border-r px-1 py-1 text-[12px] font-medium whitespace-nowrap last:border-r-0',
                           getAlignmentClassName(column.align),
                         )}
                         style={{
@@ -296,11 +296,11 @@ export function CraneStatusTable({
                                 )
                               : (column.shortLabel ?? column.displayName)}
                           </span>
-                          <span className="text-muted-foreground truncate font-mono text-[8px] leading-none">
-                            {column.cellKind === 'statusDot'
-                              ? t('common:craneStatus.table.statusLabel')
-                              : (column.unit ?? '-')}
-                          </span>
+                          {column.cellKind !== 'statusDot' && (
+                            <span className="text-muted-foreground truncate font-mono text-[12px] leading-none">
+                              {column.unit ?? '-'}
+                            </span>
+                          )}
                         </div>
                       </TableHead>
                     ))}
@@ -319,7 +319,7 @@ export function CraneStatusTable({
                         }}
                       >
                         <div className="flex min-w-0 items-center justify-center">
-                          <span className="text-[11px] font-semibold tracking-wide text-[#f5a623]">
+                          <span className="text-[12px] font-semibold tracking-wide text-[#f5a623]">
                             {row.craneNo}
                           </span>
                         </div>
@@ -363,7 +363,7 @@ export function CraneStatusTable({
                               >
                                 <span
                                   className={cn(
-                                    'font-mono text-[10px] font-medium tabular-nums',
+                                    'text-[12px] tabular-nums',
                                     cell
                                       ? 'text-foreground'
                                       : 'text-muted-foreground',

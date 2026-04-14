@@ -74,7 +74,6 @@
       "status": "Status"
     },
     "table": {
-      "statusLabel": "status",
       "lastUpdatedAt": "Tempus renovationis novissimae",
       "groups": {
         "metrics": "Mensurae",
