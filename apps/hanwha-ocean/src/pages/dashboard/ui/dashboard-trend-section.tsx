@@ -161,7 +161,7 @@ export function DashboardTrendSection({
             </CardDescription>
           </div>
           <CardAction>
-            <div className="border-border flex overflow-hidden rounded-lg border text-xs">
+            <div className="border-border flex overflow-hidden rounded border text-xs">
               <button
                 type="button"
                 className={`cursor-pointer px-2.5 py-1 transition ${alarmView === 'monthly' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300' : 'text-muted-foreground hover:text-foreground'}`}
@@ -239,7 +239,7 @@ export function DashboardTrendSection({
                     <Bar
                       dataKey="alarmCount"
                       fill="var(--chart-5)"
-                      radius={[6, 6, 0, 0]}
+                      radius={[2, 2, 0, 0]}
                     >
                       {alarmView === 'monthly' &&
                         summary.monthlyTrend.map((point) => (
@@ -257,7 +257,7 @@ export function DashboardTrendSection({
                       <Bar
                         dataKey="warningCount"
                         fill="var(--chart-4)"
-                        radius={[6, 6, 0, 0]}
+                        radius={[2, 2, 0, 0]}
                       />
                     )}
                   </BarChart>

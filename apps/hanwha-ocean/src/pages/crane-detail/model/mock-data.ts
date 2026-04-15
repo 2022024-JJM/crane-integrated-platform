@@ -82,14 +82,14 @@ function makeTrolleyUnit(status: RunFaultStatus = 'STOP'): CmmsTrolleyUnit {
 }
 
 const TREND_COLORS = [
-  '#f97316', // orange
-  '#eab308', // yellow
-  '#22d3ee', // cyan
-  '#a855f7', // purple
-  '#ef4444', // red
-  '#22c55e', // green
-  '#3b82f6', // blue
-  '#ec4899', // pink
+  '#FF9900', // orange
+  '#05EC8B', // emerald
+  '#70B9FC', // sky blue
+  '#9860ED', // violet
+  '#F66969', // red
+  '#49C1CE', // cyan
+  '#FFCC7E', // amber
+  '#D362AD', // pink
 ];
 
 const TREND_GROUPS = [

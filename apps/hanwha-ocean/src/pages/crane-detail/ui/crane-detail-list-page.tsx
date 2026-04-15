@@ -1,5 +1,13 @@
+import { useState, useMemo } from 'react';
+import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+
 import { useSiteType } from '@crane/core/lib/site-type-context';
+import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
+import { getCmmsMockData } from '../model/mock-data';
+import { Switch } from '@crane/ui/atoms/switch';
 import { CraneListSection } from './crane-list-section';
+
+type StatusFilter = 'ALL' | 'RUN' | 'FAULT' | 'STOP';
 
 const HANWHA_OCEAN_SECTIONS = [
   { regionId: 'dock-1',  title: '1 도크', subtitle: '타워갠트리 크레인 9기' },
@@ -11,32 +19,112 @@ const GOLIATH_SECTIONS = [
   { regionId: 'goliath', title: '골리앗 크레인', subtitle: '골리앗 크레인 1기' },
 ];
 
+const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: string; activeBg: string; activeText: string }> = {
+  ALL:   { label: 'ALL',   color: 'text-muted-foreground', bg: 'bg-muted/40',          activeBg: 'bg-foreground',      activeText: 'text-background'    },
+  RUN:   { label: 'RUN',   color: 'text-emerald-400',      bg: 'bg-emerald-500/10',    activeBg: 'bg-emerald-500',     activeText: 'text-white'         },
+  FAULT: { label: 'FAULT', color: 'text-red-400',          bg: 'bg-red-500/10',        activeBg: 'bg-red-500',         activeText: 'text-white'         },
+  STOP:  { label: 'STOP',  color: 'text-yellow-400',       bg: 'bg-yellow-500/10',     activeBg: 'bg-yellow-500',      activeText: 'text-black'         },
+};
+
 export function CraneDetailListPage() {
   const { siteType } = useSiteType();
   const sections = siteType === 'goliath-crane' ? GOLIATH_SECTIONS : HANWHA_OCEAN_SECTIONS;
 
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  // null = 각 섹션 자체 상태 사용, true = 전체 접기, false = 전체 펼치기
+  const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null);
+
+  // 전체 크레인 상태 집계
+  const counts = useMemo(() => {
+    const tally = { ALL: 0, RUN: 0, FAULT: 0, STOP: 0 };
+    for (const section of sections) {
+      const craneIds = getCraneIdsByRegion(section.regionId);
+      for (const id of craneIds) {
+        const crane = getCraneById(id);
+        if (!crane) continue;
+        const mock = getCmmsMockData(crane.craneId);
+        const status = mock.overview.machines[0].runFault as StatusFilter;
+        tally.ALL++;
+        if (status in tally) tally[status]++;
+      }
+    }
+    return tally;
+  }, [sections]);
+
+  // Switch checked = true → 전체 접기
+  const allCollapsed = globalCollapsed === true;
+  const handleSwitchChange = (checked: boolean) => {
+    setGlobalCollapsed(checked ? true : false);
+  };
+
   return (
-    <div className="flex flex-col gap-6 p-6 h-full overflow-auto">
-      {/* 페이지 헤더 */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">상세 크레인</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            크레인을 선택하면 CMMS 상세 화면으로 이동합니다.
-          </p>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* ── 필터 헤더 ── */}
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-background/80 backdrop-blur-sm shrink-0">
+        {/* 필터 칩 */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
+          {(['ALL', 'RUN', 'FAULT', 'STOP'] as StatusFilter[]).map((f) => {
+            const cfg = FILTER_CONFIG[f];
+            const isActive = statusFilter === f;
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setStatusFilter(f)}
+                className={[
+                  'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all',
+                  isActive
+                    ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
+                    : `${cfg.bg} ${cfg.color} hover:brightness-110`,
+                ].join(' ')}
+              >
+                {f !== 'ALL' && (
+                  <span
+                    className={`size-1.5 rounded-full ${isActive ? 'bg-current opacity-70' : ''}`}
+                    style={!isActive ? { backgroundColor: 'currentColor' } : undefined}
+                  />
+                )}
+                {cfg.label}
+                <span className={`tabular-nums font-mono ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                  {counts[f]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 전체 접기 / 펼치기 */}
+        <div className="flex items-center gap-2 shrink-0">
+          {allCollapsed
+            ? <ChevronsDownUp className="size-3.5 text-muted-foreground" />
+            : <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+          }
+          <span className="text-[11px] text-muted-foreground">
+            {allCollapsed ? '전체 접힘' : '전체 펼침'}
+          </span>
+          <Switch
+            checked={allCollapsed}
+            onCheckedChange={handleSwitchChange}
+            aria-label="전체 접기 / 펼치기"
+          />
         </div>
       </div>
 
-      {/* 섹션들 */}
-      <div className="flex flex-col gap-8">
-        {sections.map((section) => (
-          <CraneListSection
-            key={section.regionId}
-            regionId={section.regionId}
-            title={section.title}
-            subtitle={section.subtitle}
-          />
-        ))}
+      {/* ── 섹션 목록 ── */}
+      <div className="flex flex-col gap-6 p-6 overflow-auto flex-1">
+        <div className="flex flex-col gap-6">
+          {sections.map((section) => (
+            <CraneListSection
+              key={section.regionId}
+              regionId={section.regionId}
+              title={section.title}
+              subtitle={section.subtitle}
+              statusFilter={statusFilter}
+              globalCollapsed={globalCollapsed}
+              onLocalToggle={() => setGlobalCollapsed(null)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

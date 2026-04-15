@@ -83,7 +83,7 @@ export function DashboardPage() {
 
       {isGoliath && <DashboardGoliathCraneStatus />}
 
-      <section className="border-border/90 bg-card/60 rounded-[1.75rem] border p-4 shadow-sm backdrop-blur-sm md:p-6">
+      <section className="border-border/90 bg-card/60 rounded border p-4 shadow-sm backdrop-blur-sm md:p-6">
         <DashboardOverviewHeader summary={summary} translate={t} />
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">

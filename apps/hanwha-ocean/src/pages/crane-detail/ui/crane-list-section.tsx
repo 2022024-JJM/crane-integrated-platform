@@ -1,24 +1,85 @@
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
+import { getCmmsMockData } from '../model/mock-data';
 import { CraneSummaryCard } from './crane-summary-card';
+
+type StatusFilter = 'ALL' | 'RUN' | 'FAULT' | 'STOP';
 
 interface CraneListSectionProps {
   title: string;
   subtitle: string;
   regionId: string;
+  statusFilter?: StatusFilter;
+  globalCollapsed?: boolean | null;
+  onLocalToggle?: () => void;
 }
 
-export function CraneListSection({ title, subtitle, regionId }: CraneListSectionProps) {
+function useLocalCollapsed(key: string, defaultValue = false) {
+  const storageKey = `crane-section-collapsed:${key}`;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return stored !== null ? stored === 'true' : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  const toggle = () =>
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(storageKey, String(next)); } catch { /* noop */ }
+      return next;
+    });
+
+  return [collapsed, toggle] as const;
+}
+
+export function CraneListSection({
+  title,
+  subtitle,
+  regionId,
+  statusFilter = 'ALL',
+  globalCollapsed = null,
+  onLocalToggle,
+}: CraneListSectionProps) {
   const craneIds = getCraneIdsByRegion(regionId);
-  const cranes = craneIds
+  const allCranes = craneIds
     .map((id) => getCraneById(id))
     .filter((c): c is NonNullable<typeof c> => c != null);
 
-  if (cranes.length === 0) return null;
+  const [localCollapsed, localToggle] = useLocalCollapsed(regionId);
+
+  // globalCollapsed가 null이면 로컬 상태 사용, 아니면 전역 우선
+  const collapsed = globalCollapsed !== null ? globalCollapsed : localCollapsed;
+
+  const handleToggle = () => {
+    onLocalToggle?.();
+    localToggle();
+  };
+
+  // 필터 적용
+  const filteredCranes = statusFilter === 'ALL'
+    ? allCranes
+    : allCranes.filter((crane) => {
+        const mock = getCmmsMockData(crane.craneId);
+        const status = mock.overview.machines[0].runFault;
+        return status === statusFilter;
+      });
+
+  if (allCranes.length === 0) return null;
+
+  const visibleCount = filteredCranes.length;
 
   return (
-    <section className="pb-4">
-      {/* 섹션 헤더 — 굵은 구분선 + 타이틀 */}
-      <div className="flex items-center gap-3 mb-4">
+    <section>
+      {/* 섹션 헤더 */}
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="group flex w-full items-center gap-3 mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+      >
         <div className="w-1 h-5 rounded-full bg-primary shrink-0" />
         <div className="flex items-baseline gap-2 min-w-0">
           <h2 className="text-base font-bold text-foreground">{title}</h2>
@@ -26,16 +87,32 @@ export function CraneListSection({ title, subtitle, regionId }: CraneListSection
         </div>
         <div className="flex-1 h-px bg-border" />
         <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-          {cranes.length}기
+          {statusFilter === 'ALL'
+            ? `${allCranes.length}기`
+            : `${visibleCount} / ${allCranes.length}기`}
         </span>
-      </div>
+        <div className="flex items-center justify-center size-6 rounded border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground shrink-0">
+          {collapsed
+            ? <ChevronDown className="size-3.5" />
+            : <ChevronUp   className="size-3.5" />
+          }
+        </div>
+      </button>
 
       {/* 카드 그리드 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 py-1">
-        {cranes.map((crane) => (
-          <CraneSummaryCard key={crane.craneId} crane={crane} />
-        ))}
-      </div>
+      {!collapsed && (
+        filteredCranes.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 pb-4">
+            {filteredCranes.map((crane) => (
+              <CraneSummaryCard key={crane.craneId} crane={crane} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-8 pb-4 text-xs text-muted-foreground">
+            해당 상태의 크레인이 없습니다.
+          </div>
+        )
+      )}
     </section>
   );
 }

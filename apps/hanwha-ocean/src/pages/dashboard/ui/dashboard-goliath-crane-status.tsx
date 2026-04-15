@@ -220,11 +220,11 @@ export function DashboardGoliathCraneStatus() {
   const { crane } = useGoliathCraneData();
 
   return (
-    <section className="border-border/90 bg-card/60 rounded-[1.75rem] border p-4 shadow-sm backdrop-blur-sm md:p-6">
+    <section className="border-border/90 bg-card/60 rounded border p-4 shadow-sm backdrop-blur-sm md:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-(--hanwha-orange-100)/10">
+          <div className="flex size-9 items-center justify-center rounded bg-(--hanwha-orange-100)/10">
             <Anchor className="size-5 text-(--hanwha-orange-100)" />
           </div>
           <div>
@@ -278,7 +278,7 @@ export function DashboardGoliathCraneStatus() {
           </div>
         </div>
 
-        <div className="border-border/50 bg-card/80 relative overflow-hidden rounded-xl border">
+        <div className="border-border/50 bg-card/80 relative overflow-hidden rounded border">
           <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5">
             <span className="relative flex size-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
