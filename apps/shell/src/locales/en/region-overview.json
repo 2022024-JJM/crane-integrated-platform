@@ -1,7 +1,7 @@
 {
   "title": "Region Overview",
   "description": "Review crane operations by dock and open a one to navigate to the detailed page.",
-  "cardView": "Card",
+  "cardView": "Dock Overview",
   "mapView": "Map",
   "normal": "Normal",
   "warning": "Warning",

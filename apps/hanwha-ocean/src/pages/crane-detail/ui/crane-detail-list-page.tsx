@@ -7,7 +7,7 @@ import { getCmmsMockData } from '../model/mock-data';
 import { Switch } from '@crane/ui/atoms/switch';
 import { CraneListSection } from './crane-list-section';
 
-type StatusFilter = 'ALL' | 'RUN' | 'FAULT' | 'STOP';
+type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
 
 const HANWHA_OCEAN_SECTIONS = [
   { regionId: 'dock-1',  title: '1 도크', subtitle: '타워갠트리 크레인 9기' },
@@ -20,7 +20,6 @@ const GOLIATH_SECTIONS = [
 ];
 
 const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: string; activeBg: string; activeText: string }> = {
-  ALL:   { label: 'ALL',   color: 'text-muted-foreground', bg: 'bg-muted/40',          activeBg: 'bg-foreground',      activeText: 'text-background'    },
   RUN:   { label: 'RUN',   color: 'text-emerald-400',      bg: 'bg-emerald-500/10',    activeBg: 'bg-emerald-500',     activeText: 'text-white'         },
   FAULT: { label: 'FAULT', color: 'text-red-400',          bg: 'bg-red-500/10',        activeBg: 'bg-red-500',         activeText: 'text-white'         },
   STOP:  { label: 'STOP',  color: 'text-yellow-400',       bg: 'bg-yellow-500/10',     activeBg: 'bg-yellow-500',      activeText: 'text-black'         },
@@ -30,13 +29,22 @@ export function CraneDetailListPage() {
   const { siteType } = useSiteType();
   const sections = siteType === 'goliath-crane' ? GOLIATH_SECTIONS : HANWHA_OCEAN_SECTIONS;
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(new Set());
   // null = 각 섹션 자체 상태 사용, true = 전체 접기, false = 전체 펼치기
   const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null);
 
+  const toggleFilter = (f: StatusFilter) => {
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(f)) next.delete(f);
+      else next.add(f);
+      return next;
+    });
+  };
+
   // 전체 크레인 상태 집계
   const counts = useMemo(() => {
-    const tally = { ALL: 0, RUN: 0, FAULT: 0, STOP: 0 };
+    const tally = { RUN: 0, FAULT: 0, STOP: 0 };
     for (const section of sections) {
       const craneIds = getCraneIdsByRegion(section.regionId);
       for (const id of craneIds) {
@@ -44,7 +52,6 @@ export function CraneDetailListPage() {
         if (!crane) continue;
         const mock = getCmmsMockData(crane.craneId);
         const status = mock.overview.machines[0].runFault as StatusFilter;
-        tally.ALL++;
         if (status in tally) tally[status]++;
       }
     }
@@ -63,27 +70,25 @@ export function CraneDetailListPage() {
       <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-background/80 backdrop-blur-sm shrink-0">
         {/* 필터 칩 */}
         <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
-          {(['ALL', 'RUN', 'FAULT', 'STOP'] as StatusFilter[]).map((f) => {
+          {(['RUN', 'FAULT', 'STOP'] as StatusFilter[]).map((f) => {
             const cfg = FILTER_CONFIG[f];
-            const isActive = statusFilter === f;
+            const isActive = statusFilters.has(f);
             return (
               <button
                 key={f}
                 type="button"
-                onClick={() => setStatusFilter(f)}
+                onClick={() => toggleFilter(f)}
                 className={[
-                  'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all',
+                  'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer',
                   isActive
                     ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
                     : `${cfg.bg} ${cfg.color} hover:brightness-110`,
                 ].join(' ')}
               >
-                {f !== 'ALL' && (
-                  <span
-                    className={`size-1.5 rounded-full ${isActive ? 'bg-current opacity-70' : ''}`}
-                    style={!isActive ? { backgroundColor: 'currentColor' } : undefined}
-                  />
-                )}
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: 'currentColor' }}
+                />
                 {cfg.label}
                 <span className={`tabular-nums font-mono ${isActive ? 'opacity-80' : 'opacity-60'}`}>
                   {counts[f]}
@@ -119,7 +124,7 @@ export function CraneDetailListPage() {
               regionId={section.regionId}
               title={section.title}
               subtitle={section.subtitle}
-              statusFilter={statusFilter}
+              statusFilters={statusFilters}
               globalCollapsed={globalCollapsed}
               onLocalToggle={() => setGlobalCollapsed(null)}
             />

@@ -1,7 +1,7 @@
 {
   "title": "지역 현황",
   "description": "도크별 크레인 운영 현황을 확인하고, 클릭하여 상세 페이지로 이동합니다.",
-  "cardView": "카드",
+  "cardView": "도크 현황",
   "mapView": "지도",
   "normal": "정상",
   "warning": "경고",

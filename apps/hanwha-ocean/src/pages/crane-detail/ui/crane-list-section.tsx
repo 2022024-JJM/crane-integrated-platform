@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
 import { getCmmsMockData } from '../model/mock-data';
 import { CraneSummaryCard } from './crane-summary-card';
 
-type StatusFilter = 'ALL' | 'RUN' | 'FAULT' | 'STOP';
+type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
 
 interface CraneListSectionProps {
   title: string;
   subtitle: string;
   regionId: string;
-  statusFilter?: StatusFilter;
+  statusFilters?: Set<StatusFilter>;
   globalCollapsed?: boolean | null;
   onLocalToggle?: () => void;
 }
@@ -40,7 +40,7 @@ export function CraneListSection({
   title,
   subtitle,
   regionId,
-  statusFilter = 'ALL',
+  statusFilters,
   globalCollapsed = null,
   onLocalToggle,
 }: CraneListSectionProps) {
@@ -59,18 +59,23 @@ export function CraneListSection({
     localToggle();
   };
 
-  // 필터 적용
-  const filteredCranes = statusFilter === 'ALL'
-    ? allCranes
-    : allCranes.filter((crane) => {
-        const mock = getCmmsMockData(crane.craneId);
-        const status = mock.overview.machines[0].runFault;
-        return status === statusFilter;
-      });
+  // 필터 적용 (빈 Set = 전체 표시) — hide 방식으로 처리해 카드 expanded state 보존
+  const visibleSet = useMemo(() => {
+    if (!statusFilters || statusFilters.size === 0) return null; // null = 전체 표시
+    return new Set(
+      allCranes
+        .filter((crane) => {
+          const mock = getCmmsMockData(crane.craneId);
+          const status = mock.overview.machines[0].runFault as StatusFilter;
+          return statusFilters.has(status);
+        })
+        .map((c) => c.craneId),
+    );
+  }, [allCranes, statusFilters]);
 
   if (allCranes.length === 0) return null;
 
-  const visibleCount = filteredCranes.length;
+  const visibleCount = visibleSet ? visibleSet.size : allCranes.length;
 
   return (
     <section>
@@ -87,7 +92,7 @@ export function CraneListSection({
         </div>
         <div className="flex-1 h-px bg-border" />
         <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-          {statusFilter === 'ALL'
+          {(!statusFilters || statusFilters.size === 0)
             ? `${allCranes.length}기`
             : `${visibleCount} / ${allCranes.length}기`}
         </span>
@@ -101,10 +106,15 @@ export function CraneListSection({
 
       {/* 카드 그리드 */}
       {!collapsed && (
-        filteredCranes.length > 0 ? (
+        visibleCount > 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 pb-4">
-            {filteredCranes.map((crane) => (
-              <CraneSummaryCard key={crane.craneId} crane={crane} />
+            {allCranes.map((crane) => (
+              <div
+                key={crane.craneId}
+                className={visibleSet && !visibleSet.has(crane.craneId) ? 'hidden' : undefined}
+              >
+                <CraneSummaryCard crane={crane} />
+              </div>
             ))}
           </div>
         ) : (

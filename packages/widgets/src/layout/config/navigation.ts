@@ -11,7 +11,6 @@ import {
   ArrowLeftRight,
   TrendingUp,
   Settings,
-  MonitorCheck,
   Layers,
   ClipboardCheck,
   Wrench,
@@ -29,7 +28,7 @@ const defaultSystemGroup: NavGroup = {
 };
 
 function getOverviewGroup(role: UserRole): NavGroup {
-  const allItems = [
+  const items = [
     {
       label: i18n.t('common:nav.dashboard'),
       path: '/',
@@ -40,18 +39,7 @@ function getOverviewGroup(role: UserRole): NavGroup {
       path: '/region-overview',
       icon: MapPin,
     },
-    {
-      label: i18n.t('common:nav.craneDetail'),
-      path: '/crane-detail',
-      icon: MonitorCheck,
-    },
   ];
-
-  // goliath: crane-detail 제외
-  const items =
-    role === 'goliath'
-      ? allItems.filter((i) => i.path !== '/crane-detail')
-      : allItems;
 
   return { title: i18n.t('common:nav.overview'), items };
 }
