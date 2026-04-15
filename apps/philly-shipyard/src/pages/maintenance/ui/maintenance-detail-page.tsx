@@ -33,7 +33,7 @@ export function MaintenanceDetailPage() {
       </div>
 
       {/* W/O 헤더 */}
-      <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-4">
+      <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-lg font-bold">{repair.woNumber}</h1>
@@ -73,7 +73,7 @@ export function MaintenanceDetailPage() {
           ))}
         </dl>
 
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="rounded bg-muted/40 p-3">
           <p className="text-xs font-medium text-muted-foreground mb-1">{t('detail.failureDescription')}</p>
           <p className="text-sm">{repair.failureDescription}</p>
         </div>
@@ -81,10 +81,10 @@ export function MaintenanceDetailPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 사용 부품 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
           <h2 className="text-base font-bold">{t('detail.partsUsed')}</h2>
           {repair.partsUsed.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
               {t('detail.noParts')}
             </div>
           ) : (
@@ -117,7 +117,7 @@ export function MaintenanceDetailPage() {
         </div>
 
         {/* RCA / 조치사항 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
           <h2 className="text-base font-bold">{t('detail.analysisActions')}</h2>
           {[
             { label: t('detail.rootCause'), value: repair.rootCause },

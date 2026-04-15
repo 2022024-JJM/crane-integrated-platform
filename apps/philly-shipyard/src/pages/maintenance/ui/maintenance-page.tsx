@@ -129,7 +129,7 @@ function RepairCard({
   const prevStatus = PIPELINE_PREV[wo.status];
 
   return (
-    <div className={`group flex flex-col gap-2.5 rounded-xl border border-border/60 border-l-4 ${cfg.cardBorderL} bg-card/80 hover:bg-card hover:shadow-md transition-all`}>
+    <div className={`group flex flex-col gap-2.5 rounded border border-border/60 border-l-4 ${cfg.cardBorderL} bg-card/80 hover:bg-card hover:shadow-md transition-all`}>
       {/* 클릭 영역 (상세 페이지 이동) */}
       <Link to={`/maintenance/${wo.id}`} className="cursor-pointer flex flex-col gap-2.5 px-3.5 pt-3.5">
         {/* WO번호 + 우선순위 */}
@@ -175,7 +175,7 @@ function RepairCard({
             }
           }}
           disabled={!canPrev}
-          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl-xl
+          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl
             ${canPrev
               ? 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               : 'text-muted-foreground/25 cursor-not-allowed'
@@ -197,7 +197,7 @@ function RepairCard({
             }
           }}
           disabled={!canNext}
-          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-br-xl
+          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-br
             ${canNext
               ? `${cfg.accent} hover:bg-muted/50`
               : 'text-muted-foreground/25 cursor-not-allowed'
@@ -233,7 +233,7 @@ export function MaintenancePage() {
           { label: t('metrics.emergencyActive'), value: summary.emergency, color: 'text-red-500', card: summary.emergency > 0 ? 'border-red-500/30 bg-red-500/5' : '' },
           { label: t('metrics.avgMttr'), value: `${summary.avgMttrHours} h`, color: 'text-foreground', card: '' },
         ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded-2xl border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
+          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
           </div>
@@ -242,7 +242,7 @@ export function MaintenancePage() {
 
       {/* 긴급 수리 배너 */}
       {emergencyWOs.length > 0 && (
-        <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 p-4 space-y-2">
+        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-red-500">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {t('emergency.banner', { count: emergencyWOs.length })}
@@ -273,7 +273,7 @@ export function MaintenancePage() {
             : 0;
 
           return (
-            <div key={status} className={`flex flex-col rounded-xl border ${cfg.border} overflow-hidden`}>
+            <div key={status} className={`flex flex-col rounded border ${cfg.border} overflow-hidden`}>
               {/* 컬럼 헤더 */}
               <div className={`${cfg.headerBg} px-3 py-2.5`}>
                 <div className="flex items-center justify-between gap-1 mb-2">

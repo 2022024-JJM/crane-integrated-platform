@@ -41,7 +41,7 @@ function InventoryRow({ item }: { item: InventoryItem }) {
   const barColor = stockPct <= 0 ? 'bg-red-500' : stockPct < 100 ? 'bg-amber-500' : 'bg-emerald-400';
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center px-4 py-3.5 rounded-xl border border-border/90 bg-card/70 text-sm">
+    <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center px-4 py-3.5 rounded border border-border/90 bg-card/70 text-sm">
       <div className="min-w-0">
         <p className="font-medium truncate">{item.partName}</p>
         <p className="text-xs text-muted-foreground">{t(`category.${item.category}`)} · {item.partNumber}</p>
@@ -103,7 +103,7 @@ export function InventoryPage() {
           { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, color: 'text-amber-500', card: summary.reorderNeeded > 0 ? 'border-amber-500/35 bg-amber-500/5' : '' },
           { label: t('metrics.pendingPOs'), value: summary.activePOs, color: 'text-blue-500', card: '' },
         ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded-2xl border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
+          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
           </div>
@@ -112,7 +112,7 @@ export function InventoryPage() {
 
       {/* 재고 부족 알림 배너 */}
       {alertItems.length > 0 && (
-        <div className="rounded-[1.75rem] border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
+        <div className="rounded border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-500">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {t('alert.lowStock', { count: alertItems.length })}
@@ -133,7 +133,7 @@ export function InventoryPage() {
 
       {/* 진행 중 PO */}
       {purchaseOrders.length > 0 && (
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-4 shadow-sm backdrop-blur-sm space-y-3">
+        <div className="rounded border border-border/90 bg-card/60 p-4 shadow-sm backdrop-blur-sm space-y-3">
           <h2 className="text-sm font-bold">{t('po.title')}</h2>
           <div className="space-y-2">
             {purchaseOrders.map((po) => {
@@ -164,12 +164,12 @@ export function InventoryPage() {
 
       {/* 필터 */}
       <div className="flex flex-wrap gap-2">
-        <div className="flex gap-1 rounded-lg border border-border p-1">
+        <div className="flex gap-1 rounded border border-border p-1">
           {(['all', 'low', 'out_of_stock'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
                 filterStatus === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -177,12 +177,12 @@ export function InventoryPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-1 rounded-lg border border-border p-1">
+        <div className="flex gap-1 rounded border border-border p-1">
           {(['all', 'critical', 'essential', 'standard'] as const).map((c) => (
             <button
               key={c}
               onClick={() => setFilterCriticality(c)}
-              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
                 filterCriticality === c ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -205,7 +205,7 @@ export function InventoryPage() {
 
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+          <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
             {t('empty')}
           </div>
         ) : (

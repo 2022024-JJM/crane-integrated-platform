@@ -75,7 +75,7 @@ function ComponentRow({ component }: { component: CraneComponent }) {
     pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border/90 bg-card/70 p-3.5">
+    <div className="flex flex-col gap-2 rounded border border-border/90 bg-card/70 p-3.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium truncate">{component.componentName}</span>
         <Badge variant={COMPONENT_STATUS_VARIANT[component.status]} className="shrink-0">
@@ -154,7 +154,7 @@ export function AssetDetailPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 좌: 기본 정보 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-4">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-4">
           <h2 className="text-base font-bold">{asset.name} — {t('detail.title')}</h2>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5">
             {[
@@ -184,14 +184,14 @@ export function AssetDetailPage() {
         </div>
 
         {/* 우: 탭 패널 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm flex flex-col gap-4">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm flex flex-col gap-4">
           {/* 탭 버튼 */}
-          <div className="flex gap-1 rounded-lg border border-border p-1 w-fit">
+          <div className="flex gap-1 rounded border border-border p-1 w-fit">
             {(['info', 'inspection', 'maintenance'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
                   activeTab === tab
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground'
@@ -228,7 +228,7 @@ export function AssetDetailPage() {
 
               <h3 className="text-sm font-bold">{t('detail.bomTitle')}</h3>
               {rootComponents.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
                   {t('detail.noBomData')}
                 </div>
               ) : (
@@ -257,7 +257,7 @@ export function AssetDetailPage() {
           {activeTab === 'inspection' && (
             <div className="flex flex-col gap-2">
               {inspections.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
                   {t('detail.noInspectionHistory')}
                 </div>
               ) : (
@@ -266,7 +266,7 @@ export function AssetDetailPage() {
                     <Link
                       key={wo.id}
                       to={`/inspection/${wo.id}`}
-                      className="cursor-pointer group flex items-center gap-3 px-3.5 py-3 rounded-xl border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
+                      className="cursor-pointer group flex items-center gap-3 px-3.5 py-3 rounded border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{wo.woNumber}</p>
@@ -302,7 +302,7 @@ export function AssetDetailPage() {
           {activeTab === 'maintenance' && (
             <div className="flex flex-col gap-2">
               {repairs.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
                   {t('detail.noMaintenanceHistory')}
                 </div>
               ) : (
@@ -311,7 +311,7 @@ export function AssetDetailPage() {
                     <Link
                       key={wo.id}
                       to={`/maintenance/${wo.id}`}
-                      className="cursor-pointer group flex flex-col gap-1.5 px-3.5 py-3 rounded-xl border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
+                      className="cursor-pointer group flex flex-col gap-1.5 px-3.5 py-3 rounded border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium truncate">{wo.woNumber}</span>

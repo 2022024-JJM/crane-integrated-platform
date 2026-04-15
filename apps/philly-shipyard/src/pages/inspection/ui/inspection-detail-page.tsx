@@ -130,7 +130,7 @@ export function InspectionDetailPage() {
       </div>
 
       {/* W/O 헤더 */}
-      <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm">
+      <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-lg font-bold">{inspection.woNumber}</h1>
@@ -169,7 +169,7 @@ export function InspectionDetailPage() {
         </dl>
 
         {inspection.findings && (
-          <div className="mt-4 rounded-xl bg-muted/40 p-3">
+          <div className="mt-4 rounded bg-muted/40 p-3">
             <p className="text-xs font-medium text-muted-foreground mb-1">{t('detail.findings')}</p>
             <p className="text-sm">{inspection.findings}</p>
           </div>
@@ -178,7 +178,7 @@ export function InspectionDetailPage() {
 
       {/* 부적합 항목 요약 */}
       {failedItems.length > 0 && (
-        <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 p-4 space-y-2">
+        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
           <h2 className="flex items-center gap-2 text-sm font-bold text-red-500">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {t('detail.nonConformance')} ({failedItems.length})
@@ -211,7 +211,7 @@ export function InspectionDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
-                className="cursor-pointer flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted/60 transition-colors"
+                className="cursor-pointer flex items-center gap-1.5 rounded border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted/60 transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
                 {saved ? '✓' : t('detail.save')}
@@ -219,7 +219,7 @@ export function InspectionDetailPage() {
               <button
                 disabled={!allChecked}
                 onClick={handleSubmit}
-                className="cursor-pointer flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+                className="cursor-pointer flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
               >
                 <ClipboardCheck className="w-3.5 h-3.5" />
                 {t('detail.submitResult')}
@@ -241,7 +241,7 @@ export function InspectionDetailPage() {
         {categories.map((category) => {
           const catItems = inspection.checklistItems.filter((i) => i.category === category);
           return (
-            <div key={category} className="rounded-[1.75rem] border border-border/90 bg-card/60 overflow-hidden shadow-sm backdrop-blur-sm">
+            <div key={category} className="rounded border border-border/90 bg-card/60 overflow-hidden shadow-sm backdrop-blur-sm">
               <div className="px-4 py-3 border-b border-border/90 bg-muted/30">
                 <h3 className="text-sm font-semibold">{category}</h3>
               </div>
@@ -288,7 +288,7 @@ export function InspectionDetailPage() {
                           value={comment}
                           onChange={(e) => handleCommentChange(item.id, e.target.value)}
                           placeholder={t('detail.remarks')}
-                          className="ml-8 text-xs rounded-lg border border-border bg-muted/40 px-3 py-1.5 outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
+                          className="ml-8 text-xs rounded border border-border bg-muted/40 px-3 py-1.5 outline-none focus:border-primary transition-colors placeholder:text-muted-foreground/60"
                         />
                       )}
 

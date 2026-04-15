@@ -52,7 +52,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
   return (
     <Link
       to={`/inspection/${wo.id}`}
-      className={`cursor-pointer group flex items-center gap-0 rounded-2xl border border-border/80 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all overflow-hidden border-l-4 ${STATUS_BG[wo.status] || 'border-l-border/40'}`}
+      className={`cursor-pointer group flex items-center gap-0 rounded border border-border/80 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all overflow-hidden border-l-4 ${STATUS_BG[wo.status] || 'border-l-border/40'}`}
     >
       {/* 왼쪽: WO 정보 */}
       <div className="flex-1 min-w-0 px-5 py-4">
@@ -151,7 +151,7 @@ export function InspectionPage() {
 
       {/* 지연 점검 배너 */}
       {overdueCount > 0 && (
-        <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
+        <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
           <p className="text-sm font-medium text-red-600 dark:text-red-400">
             {t('overdueAlert', { count: overdueCount, defaultValue: `지연된 점검 ${overdueCount}건 — 즉시 확인 필요` })}
@@ -172,7 +172,7 @@ export function InspectionPage() {
             card: summary.completionRate < 80 ? 'border-amber-500/35 bg-amber-500/5' : '',
           },
         ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded-2xl border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
+          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
           </div>
@@ -181,12 +181,12 @@ export function InspectionPage() {
 
       {/* 필터 */}
       <div className="flex flex-wrap gap-2">
-        <div className="flex gap-1 rounded-lg border border-border p-1">
+        <div className="flex gap-1 rounded border border-border p-1">
           {(['all', 'frequent', 'periodic'] as const).map((type) => (
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
                 filterType === type ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -194,12 +194,12 @@ export function InspectionPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-1 rounded-lg border border-border p-1">
+        <div className="flex gap-1 rounded border border-border p-1">
           {(['all', 'scheduled', 'in_progress', 'completed', 'overdue'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
                 filterStatus === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -212,7 +212,7 @@ export function InspectionPage() {
       {/* 목록 */}
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+          <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
             {t('empty')}
           </div>
         ) : (

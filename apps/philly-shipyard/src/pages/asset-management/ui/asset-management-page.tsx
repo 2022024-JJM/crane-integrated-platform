@@ -48,7 +48,7 @@ function AssetCard({
   return (
     <Link
       to={`/asset-management/${asset.id}`}
-      className="cursor-pointer group flex flex-col gap-2.5 rounded-[1.75rem] border border-border/90 bg-card/70 p-4 shadow-sm transition-all hover:border-primary/40 hover:bg-card hover:shadow-md"
+      className="cursor-pointer group flex flex-col gap-2.5 rounded border border-border/90 bg-card/70 p-4 shadow-sm transition-all hover:border-primary/40 hover:bg-card hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -159,7 +159,7 @@ export function AssetManagementPage() {
 
       {/* 위험도 롤업 배너 */}
       {criticalCount > 0 && (
-        <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
+        <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
           <p className="text-sm font-medium text-red-600 dark:text-red-400">
             {t('criticalAlert', {
@@ -179,7 +179,7 @@ export function AssetManagementPage() {
           { label: t('metrics.inspectionRepair'), value: summary.inspection + summary.repair, color: 'text-amber-500', card: (summary.inspection + summary.repair) > 0 ? 'border-amber-500/35 bg-amber-500/5' : '' },
           { label: t('metrics.idle'), value: summary.idle, color: 'text-muted-foreground', card: '' },
         ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded-2xl border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
+          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
           </div>

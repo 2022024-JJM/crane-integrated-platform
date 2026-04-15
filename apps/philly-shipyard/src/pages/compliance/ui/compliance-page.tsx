@@ -65,7 +65,7 @@ export function CompliancePage() {
             card: '',
           },
         ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded-2xl border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
+          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
           </div>
@@ -74,7 +74,7 @@ export function CompliancePage() {
 
       {/* 만료된 인증서 배너 (red) */}
       {expiredCerts.length > 0 && (
-        <div className="rounded-[1.75rem] border border-red-500/40 bg-red-500/5 p-4 space-y-2">
+        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-red-500">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {t('certAlert.expiredTitle', { count: expiredCerts.length })}
@@ -98,7 +98,7 @@ export function CompliancePage() {
 
       {/* 만료 임박 인증서 배너 (amber) */}
       {expirySoonCerts.length > 0 && (
-        <div className="rounded-[1.75rem] border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
+        <div className="rounded border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-500">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {t('certAlert.title', { count: expirySoonCerts.length })}
@@ -125,7 +125,7 @@ export function CompliancePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 인증서 목록 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
           <h2 className="text-base font-bold">{t('certifications.title')}</h2>
           <div className="space-y-1">
             {certifications.map((cert) => {
@@ -157,7 +157,7 @@ export function CompliancePage() {
         </div>
 
         {/* OSHA 보고서 목록 */}
-        <div className="rounded-[1.75rem] border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
+        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold">{t('oshaReports.title')}</h2>
             <span className="text-xs text-muted-foreground">{summary.reportsThisMonth} {t('metrics.thisMonth')}</span>
