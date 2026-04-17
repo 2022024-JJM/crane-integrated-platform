@@ -11,3 +11,8 @@ export {
   SceneEditorSidebarTabs,
   type SceneEditorSidebarTab,
 } from './ui/scene-editor-sidebar-tabs';
+export {
+  SCENE_SENSOR_DRAG_TYPE,
+  SCENE_TEXT_DRAG_TYPE,
+} from './ui/use-scene-drop';
+export { getPlacedObjectItems, type PlacedObjectItem } from './ui/placed-object-items';

@@ -4,13 +4,13 @@ import {
   shouldTrackRealtimeAlarmMessage,
   useRealtimeAlarmStore,
 } from '../model/use-realtime-alarm-store';
-import { alarmWebSocketClient } from '../model/alarm-websocket-client';
+import { cranesLiteWebSocketClient } from '@crane/core/ws';
 
 export function RealtimeAlarmSync() {
   useEffect(() => {
     const pushMessage = useRealtimeAlarmStore.getState().pushMessage;
 
-    const unsubscribe = alarmWebSocketClient.subscribeAll((message) => {
+    const unsubscribe = cranesLiteWebSocketClient.subscribeAll((message) => {
       const data = message.payload;
 
       if (
@@ -23,11 +23,11 @@ export function RealtimeAlarmSync() {
       pushMessage(data);
     });
 
-    alarmWebSocketClient.connect();
+    cranesLiteWebSocketClient.connect();
 
     return () => {
       unsubscribe();
-      alarmWebSocketClient.disconnect();
+      cranesLiteWebSocketClient.disconnect();
     };
   }, []);
 

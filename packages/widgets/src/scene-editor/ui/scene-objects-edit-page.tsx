@@ -59,8 +59,8 @@ import {
 import {
   SCENE_SENSOR_DRAG_TYPE,
   SCENE_TEXT_DRAG_TYPE,
-} from '../../3d/ui/use-scene-drop';
-import { getPlacedObjectItems } from '../../3d/ui/placed-object-items';
+  getPlacedObjectItems,
+} from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;

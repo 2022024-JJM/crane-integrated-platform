@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { isRealtimeCraneLiteMessage } from '@crane/domain/monitoring';
-import { monitoringWebSocketClient } from '../../monitoring/model/monitoring-websocket-client';
+import { cranesLiteWebSocketClient } from '@crane/core/ws';
 import { useRealtimeStore } from './use-realtime-store';
 
 /**
- * 실시간 모드일 때 monitoringWebSocketClient를 구독하여
+ * 실시간 모드일 때 cranesLiteWebSocketClient를 구독하여
  * 수신된 크레인 값을 useRealtimeStore 버퍼에 push한다.
  *
  * 키 포맷: `${craneId}:${tagCode}` (use-replay-player-store와 동일)
@@ -16,7 +16,7 @@ export function useRealtimeWebSocketBridge(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = monitoringWebSocketClient.subscribeAll((message) => {
+    const unsubscribe = cranesLiteWebSocketClient.subscribeAll((message) => {
       const payload = message.payload;
       if (!isRealtimeCraneLiteMessage(payload)) return;
       if (typeof payload.value !== 'number') return;
@@ -26,11 +26,11 @@ export function useRealtimeWebSocketBridge(enabled: boolean) {
       useRealtimeStore.getState().pushValue(key, payload.value);
     });
 
-    monitoringWebSocketClient.connect();
+    cranesLiteWebSocketClient.connect();
 
     return () => {
       unsubscribe();
-      monitoringWebSocketClient.disconnect();
+      cranesLiteWebSocketClient.disconnect();
     };
   }, [enabled]);
 }

@@ -10,7 +10,7 @@ import {
   type MonitoringLiveTableDisplayColumn,
   type MonitoringLiveRow,
 } from '@crane/domain/monitoring';
-import { monitoringWebSocketClient } from './monitoring-websocket-client';
+import { cranesLiteWebSocketClient } from '@crane/core/ws';
 
 interface UseMonitoringLiveTableParams {
   cranes: MonitoringLiveCrane[];
@@ -41,10 +41,10 @@ export function useMonitoringLiveTable({
   >({});
   const [connectionState, setConnectionState] =
     useState<WebSocketConnectionState>(() =>
-      monitoringWebSocketClient.getState(),
+      cranesLiteWebSocketClient.getState(),
     );
   const [lastActivityAtMs, setLastActivityAtMs] = useState<number | null>(() =>
-    monitoringWebSocketClient.getState() === 'open' ? Date.now() : null,
+    cranesLiteWebSocketClient.getState() === 'open' ? Date.now() : null,
   );
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -146,7 +146,7 @@ export function useMonitoringLiveTable({
   }, [connectionState, lastActivityAtMs, nowMs]);
 
   useEffect(() => {
-    const unsubscribeState = monitoringWebSocketClient.subscribeState(
+    const unsubscribeState = cranesLiteWebSocketClient.subscribeState(
       (state) => {
         setConnectionState(state);
 
@@ -158,18 +158,18 @@ export function useMonitoringLiveTable({
         setLastActivityAtMs(null);
       },
     );
-    const unsubscribeMessages = monitoringWebSocketClient.subscribeAll(
+    const unsubscribeMessages = cranesLiteWebSocketClient.subscribeAll(
       (message) => {
         handleMessage(message.payload);
       },
     );
 
-    monitoringWebSocketClient.connect();
+    cranesLiteWebSocketClient.connect();
 
     return () => {
       unsubscribeMessages();
       unsubscribeState();
-      monitoringWebSocketClient.disconnect();
+      cranesLiteWebSocketClient.disconnect();
     };
   }, []);
 

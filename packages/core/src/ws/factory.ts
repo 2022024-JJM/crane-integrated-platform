@@ -1,4 +1,5 @@
 import {
+  getCranesLiteWebSocketUrl,
   getWebSocketBaseUrl,
   getWebSocketMaxReconnectAttempts,
   getWebSocketReconnectIntervalMs,
@@ -26,3 +27,12 @@ export function createWebSocketClient(
 }
 
 export const webSocketClient = createWebSocketClient();
+
+export const cranesLiteWebSocketClient = createWebSocketClient({
+  url: getCranesLiteWebSocketUrl(),
+  reconnectPolicy: {
+    enabled: true,
+    intervalMs: 5_000,
+    maxAttempts: Infinity,
+  },
+});

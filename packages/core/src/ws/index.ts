@@ -3,7 +3,7 @@ export {
   DEFAULT_WEBSOCKET_RECONNECT_POLICY,
   normalizeReconnectPolicy,
 } from './reconnect-policy';
-export { createWebSocketClient, webSocketClient } from './factory';
+export { createWebSocketClient, webSocketClient, cranesLiteWebSocketClient } from './factory';
 export type {
   WebSocketClientOptions,
   WebSocketConnectionState,
