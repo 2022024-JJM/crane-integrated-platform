@@ -1,0 +1,115 @@
+{
+  "title": "Create Ticket",
+  "description": "Create a new repair, inspection, or parts request ticket",
+  "createButton": "New Ticket",
+  "stepper": {
+    "selectType": "Select Type",
+    "fillInfo": "Fill Information",
+    "submit": "Submit"
+  },
+  "typeSelector": {
+    "repair": "Repair Ticket",
+    "repairDesc": "Breakdown, preventive, and predictive repair jobs",
+    "inspection": "Inspection Ticket",
+    "inspectionDesc": "Frequent, periodic, and emergency inspections",
+    "parts": "Parts Request",
+    "partsDesc": "Parts reorder and inventory requisition"
+  },
+  "sections": {
+    "basicInfo": "Basic Information",
+    "assignment": "Assignment & Schedule",
+    "parts": "Parts"
+  },
+  "fields": {
+    "crane": "Crane",
+    "cranePlaceholder": "Select crane...",
+    "componentName": "Component Name",
+    "failureType": "Failure Type",
+    "sourceType": "Generation Source",
+    "priority": "Priority",
+    "repairLevel": "Repair Level",
+    "failureDescription": "Failure Description",
+    "performerType": "Performer Type",
+    "assignedTo": "Assigned To",
+    "scheduledStart": "Scheduled Start",
+    "scheduledEnd": "Scheduled End",
+    "scheduledDate": "Scheduled Date",
+    "inspectionType": "Inspection Type",
+    "findings": "Findings (optional)",
+    "note": "Note (optional)",
+    "requester": "Requester",
+    "requestPriority": "Request Priority",
+    "partName": "Select part...",
+    "addPart": "Add Part"
+  },
+  "placeholders": {
+    "componentName": "e.g. Hoist Brake",
+    "assignedTo": "e.g. John Smith / M&S Corp.",
+    "failureDescription": "Describe the failure or required repair...",
+    "findings": "Optional notes about the inspection scope...",
+    "note": "Additional notes..."
+  },
+  "sourceType": {
+    "breakdown": "Breakdown",
+    "inspection": "From Inspection",
+    "preventive": "Preventive",
+    "predictive": "Predictive"
+  },
+  "failureType": {
+    "mechanical": "Mechanical",
+    "electrical": "Electrical",
+    "structural": "Structural",
+    "control": "Control",
+    "other": "Other"
+  },
+  "repairLevel": {
+    "minor": "Minor",
+    "major": "Major",
+    "overhaul": "Overhaul"
+  },
+  "performerType": {
+    "internal": "Internal",
+    "third_party": "3rd Party",
+    "local": "Local"
+  },
+  "priority": {
+    "emergency": "Emergency",
+    "urgent": "Urgent",
+    "high": "High",
+    "normal": "Normal",
+    "low": "Low"
+  },
+  "inspectionType": {
+    "frequent": "Frequent",
+    "periodic": "Periodic",
+    "emergency": "Emergency",
+    "special": "Special"
+  },
+  "requestPriority": {
+    "urgent": "Urgent",
+    "normal": "Normal",
+    "scheduled": "Scheduled"
+  },
+  "validation": {
+    "craneRequired": "Please select a crane.",
+    "componentRequired": "Component name is required.",
+    "descriptionRequired": "Failure description is required.",
+    "assignedToRequired": "Assigned To is required.",
+    "scheduledStartRequired": "Scheduled Start is required.",
+    "scheduledEndRequired": "Scheduled End is required.",
+    "scheduledDateRequired": "Scheduled Date is required.",
+    "requesterRequired": "Requester is required.",
+    "partsRequired": "At least one part must be selected."
+  },
+  "toast": {
+    "repairCreated": "Repair ticket {{woNumber}} created.",
+    "inspectionCreated": "Inspection ticket {{woNumber}} created.",
+    "partsCreated": "Parts request {{requestNumber}} submitted."
+  },
+  "submit": {
+    "repair": "Create Repair Ticket",
+    "inspection": "Create Inspection Ticket",
+    "parts": "Submit Parts Request",
+    "cancel": "Cancel"
+  }
+}

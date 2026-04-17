@@ -8,6 +8,7 @@ export type {
   CraneType,
 } from './model/types';
 export {
+  addCraneAsset,
   getAllCraneAssets,
   getAssetSummary,
   getComponentsByCraneId,

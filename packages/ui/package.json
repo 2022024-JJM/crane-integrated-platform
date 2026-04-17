@@ -31,6 +31,7 @@
     "./molecules/popover": "./src/molecules/popover.tsx",
     "./molecules/profile-button": "./src/molecules/profile-button.tsx",
     "./molecules/status-badge": "./src/molecules/status-badge.tsx",
+    "./molecules/pagination": "./src/molecules/pagination.tsx",
     "./molecules/table": "./src/molecules/table.tsx",
     "./molecules/toggle-group": "./src/molecules/toggle-group.tsx",
     "./molecules/tooltip": "./src/molecules/tooltip.tsx",

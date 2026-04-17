@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ChevronRight, Calendar, User, ClipboardCheck } from 'lucide-react';
+import { AlertCircle, ChevronRight, Calendar, User, ClipboardCheck, Plus } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import type { InspectionStatus, InspectionType, InspectionWO } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
+import { Pagination } from '@crane/ui/molecules/pagination';
 
 const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
   scheduled: 'secondary',
@@ -14,12 +15,12 @@ const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'succes
   cancelled: 'secondary',
 };
 
-const STATUS_BG: Record<InspectionStatus, string> = {
-  scheduled: '',
-  in_progress: 'border-l-amber-500/70',
-  completed: 'border-l-emerald-500/70',
-  overdue: 'border-l-red-500/70',
-  cancelled: '',
+const STATUS_ACCENT: Record<InspectionStatus, string> = {
+  scheduled: 'bg-slate-400',
+  in_progress: 'bg-amber-500',
+  completed: 'bg-emerald-500',
+  overdue: 'bg-red-500',
+  cancelled: 'bg-slate-500',
 };
 
 const RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
@@ -27,6 +28,9 @@ const RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
   fail: 'destructive',
   conditional: 'warning',
 };
+
+// 컬럼: 상태바 · WO/크레인 · 유형 · 예정일 · 담당자 · 진행률 · 상태 · 결과/화살표
+const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minmax(120px,1fr) 100px 100px';
 
 type FilterStatus = 'all' | InspectionStatus;
 type FilterType = 'all' | InspectionType;
@@ -52,77 +56,79 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
   return (
     <Link
       to={`/inspection/${wo.id}`}
-      className={`cursor-pointer group flex items-center gap-0 rounded border border-border/80 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all overflow-hidden border-l-4 ${STATUS_BG[wo.status] || 'border-l-border/40'}`}
+      className="group grid cursor-pointer items-center gap-3 border-b border-border/40 pr-3 text-sm transition-colors hover:bg-muted/40"
+      style={{ gridTemplateColumns: GRID_TEMPLATE }}
     >
-      {/* 왼쪽: WO 정보 */}
-      <div className="flex-1 min-w-0 px-5 py-4">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-sm font-bold tracking-tight">{wo.woNumber}</span>
-          <Badge variant={wo.woType === 'frequent' ? 'secondary' : 'warning'} className="text-[11px]">
-            {t(`type.${wo.woType}`)}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground font-medium">{wo.craneName} · {wo.siteName}</p>
+      {/* 상태 accent 바 */}
+      <div className={`h-11 ${STATUS_ACCENT[wo.status]}`} />
+
+      {/* WO / 크레인 */}
+      <div className="min-w-0 py-2.5">
+        <p className="truncate font-semibold tabular-nums">{wo.woNumber}</p>
+        <p className="truncate text-xs text-muted-foreground">{wo.craneName} · {wo.siteName}</p>
       </div>
 
-      {/* 가운데 구분선 */}
-      <div className="w-px h-12 bg-border/50 shrink-0" />
+      {/* 유형 */}
+      <div>
+        <Badge variant={wo.woType === 'frequent' ? 'secondary' : 'warning'}>
+          {t(`type.${wo.woType}`)}
+        </Badge>
+      </div>
 
       {/* 예정일 */}
-      <div className="px-5 py-4 shrink-0 min-w-28 text-center">
-        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-          <Calendar className="h-3 w-3" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">{t('table.scheduled')}</span>
+      <div className="flex items-center gap-1.5">
+        <Calendar className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+        <div className="min-w-0">
+          <p className={`text-xs font-semibold tabular-nums ${dateOverdue ? 'text-red-500' : ''}`}>
+            {dateLabel}
+          </p>
+          <p className="text-[10px] text-muted-foreground tabular-nums">{wo.scheduledDate}</p>
         </div>
-        <p className={`text-sm font-bold tabular-nums ${dateOverdue ? 'text-red-500' : 'text-foreground'}`}>
-          {dateLabel}
-        </p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{wo.scheduledDate}</p>
       </div>
-
-      {/* 구분선 */}
-      <div className="w-px h-12 bg-border/50 shrink-0" />
 
       {/* 담당자 */}
-      <div className="px-5 py-4 shrink-0 min-w-28 text-center">
-        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-          <User className="h-3 w-3" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">{t('table.assignedTo')}</span>
-        </div>
-        <p className="text-sm font-medium truncate max-w-24">{wo.assignedTo}</p>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <User className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+        <span className="truncate text-xs">{wo.assignedTo}</span>
       </div>
 
-      {/* 구분선 */}
-      <div className="w-px h-12 bg-border/50 shrink-0" />
-
-      {/* 상태 + 결과/진행률 */}
-      <div className="px-5 py-4 shrink-0 flex flex-col items-center gap-2 min-w-26">
-        <Badge variant={STATUS_VARIANT[wo.status]} className="w-full justify-center">
-          {t(`status.${wo.status}`)}
-        </Badge>
-        {wo.result ? (
-          <Badge variant={RESULT_VARIANT[wo.result]} className="w-full justify-center">
-            {t(`result.${wo.result}`)}
-          </Badge>
-        ) : totalItems > 0 ? (
-          <div className="w-full space-y-1">
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+      {/* 진행률 */}
+      <div className="min-w-0">
+        {totalItems > 0 ? (
+          <>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-primary/60 transition-all"
+                className="h-full rounded-full bg-primary/70 transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="flex items-center justify-center gap-1 text-muted-foreground">
-              <ClipboardCheck className="h-3 w-3" />
+            <div className="mt-1 flex items-center justify-end gap-1 text-muted-foreground">
+              <ClipboardCheck className="h-2.5 w-2.5" />
               <span className="text-[10px] tabular-nums">{completedItems}/{totalItems}</span>
             </div>
-          </div>
-        ) : null}
+          </>
+        ) : (
+          <span className="text-[10px] text-muted-foreground/50">—</span>
+        )}
       </div>
 
-      {/* 화살표 */}
-      <div className="pr-4 pl-1 shrink-0">
-        <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+      {/* 상태 */}
+      <div className="flex justify-end">
+        <Badge variant={STATUS_VARIANT[wo.status]}>
+          {t(`status.${wo.status}`)}
+        </Badge>
+      </div>
+
+      {/* 결과 + 화살표 */}
+      <div className="flex items-center justify-end gap-1.5">
+        {wo.result ? (
+          <Badge variant={RESULT_VARIANT[wo.result]}>
+            {t(`result.${wo.result}`)}
+          </Badge>
+        ) : (
+          <span className="text-[10px] text-muted-foreground/50">—</span>
+        )}
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
       </div>
     </Link>
   );
@@ -134,19 +140,34 @@ export function InspectionPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
 
-  const filtered = inspections.filter((w) => {
+  const filtered = useMemo(() => inspections.filter((w) => {
     const matchStatus = filterStatus === 'all' || w.status === filterStatus;
     const matchType = filterType === 'all' || w.woType === filterType;
     return matchStatus && matchType;
-  });
+  }), [inspections, filterStatus, filterType]);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => { setPage(1); }, [filterStatus, filterType, pageSize]);
+  const pageStart = (page - 1) * pageSize;
+  const paginated = filtered.slice(pageStart, pageStart + pageSize);
 
   const overdueCount = inspections.filter((w) => w.status === 'overdue').length;
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+        </div>
+        <Link
+          to="/ticket/create?type=inspection"
+          className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          {t('createButton', { ns: 'ticket', defaultValue: 'New Ticket' })}
+        </Link>
       </div>
 
       {/* 지연 점검 배너 */}
@@ -209,14 +230,47 @@ export function InspectionPage() {
         </div>
       </div>
 
-      {/* 목록 */}
-      <div className="flex flex-col gap-2">
-        {filtered.length === 0 ? (
-          <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-            {t('empty')}
-          </div>
-        ) : (
-          filtered.map((wo) => <InspectionRow key={wo.id} wo={wo} />)
+      {/* 테이블 */}
+      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+        {/* 헤더 */}
+        <div
+          className="grid items-center gap-3 border-b border-border/60 bg-muted/40 pr-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+          style={{ gridTemplateColumns: GRID_TEMPLATE }}
+        >
+          <span />
+          <span>{t('table.woNumber')}</span>
+          <span>{t('table.type')}</span>
+          <span>{t('table.scheduled')}</span>
+          <span>{t('table.assignedTo')}</span>
+          <span className="text-right">{t('table.progress', { defaultValue: '진행률' })}</span>
+          <span className="text-right">{t('table.status')}</span>
+          <span className="text-right">{t('table.result')}</span>
+        </div>
+
+        {/* 바디 */}
+        <div>
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              {t('empty')}
+            </div>
+          ) : (
+            paginated.map((wo) => <InspectionRow key={wo.id} wo={wo} />)
+          )}
+        </div>
+
+        {/* 페이지네이션 */}
+        {filtered.length > 0 && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            labels={{
+              rowsPerPage: t('pagination.rowsPerPage', { defaultValue: '페이지당' }),
+              of: t('pagination.of', { defaultValue: '/' }),
+            }}
+          />
         )}
       </div>
     </div>

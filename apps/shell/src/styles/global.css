@@ -17,6 +17,8 @@
 @source '../../../hanwha-ocean/src/**/*.ts';
 @source '../../../goliath-crane/src/**/*.tsx';
 @source '../../../goliath-crane/src/**/*.ts';
+@source '../../../philly-shipyard/src/**/*.tsx';
+@source '../../../philly-shipyard/src/**/*.ts';
 
 @custom-variant dark (&:is(.dark *));
 

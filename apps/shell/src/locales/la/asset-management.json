@@ -1,6 +1,56 @@
 {
   "title": "Administratio Bonorum",
   "description": "Registratio gruis et administratio vitae",
+  "newAsset": "Bonum Novum",
+  "filter": {
+    "status": "Status",
+    "all": "Omnia",
+    "empty": "Nulla bona conveniunt."
+  },
+  "collapse": {
+    "allCollapsed": "Omnia clausa",
+    "allExpanded": "Omnia aperta",
+    "toggle": "Claude / aperi omnia"
+  },
+  "sites": {
+    "dock1": "Navale I",
+    "dock2": "Navale II",
+    "blockShop": "Officina Blockorum"
+  },
+  "modal": {
+    "title": "Registra Novum Bonum",
+    "description": "Adde novam gruem ad registrum.",
+    "cancel": "Cancella",
+    "submit": "Registra Bonum",
+    "toastCreated": "Bonum {{name}} additum est.",
+    "indoorOutdoor": { "indoor": "Intus", "outdoor": "Foris" },
+    "fields": {
+      "name": "Nomen Boni",
+      "craneType": "Genus Gruis",
+      "manufacturer": "Fabricator",
+      "model": "Exemplar",
+      "capacityTon": "Capacitas (t)",
+      "serialNumber": "Numerus Serialis",
+      "spanM": "Spatium (m)",
+      "liftHeightM": "Altitudo (m)",
+      "siteId": "Locus",
+      "indoorOutdoor": "Intus / Foris",
+      "locationZone": "Zona Loci",
+      "manufactureDate": "Dies Fabricationis",
+      "installationDate": "Dies Institutionis",
+      "warrantyStart": "Initium Tutelae",
+      "warrantyEnd": "Finis Tutelae",
+      "status": "Status"
+    },
+    "validation": {
+      "nameRequired": "Nomen boni necessarium est.",
+      "manufacturerRequired": "Fabricator necessarius est.",
+      "modelRequired": "Exemplar necessarium est.",
+      "serialRequired": "Numerus serialis necessarius est.",
+      "capacityRequired": "Capacitas maior quam 0 esse debet.",
+      "locationRequired": "Zona loci necessaria est."
+    }
+  },
   "metrics": {
     "totalAssets": "Bona Omnia",
     "operating": "Operantes",

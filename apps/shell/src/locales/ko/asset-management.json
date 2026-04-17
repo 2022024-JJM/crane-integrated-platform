@@ -1,6 +1,56 @@
 {
   "title": "자산 관리",
   "description": "크레인 자산 등록 및 생애주기 관리",
+  "newAsset": "새 자산 등록",
+  "filter": {
+    "status": "상태",
+    "all": "전체",
+    "empty": "조건에 맞는 자산이 없습니다."
+  },
+  "collapse": {
+    "allCollapsed": "전체 접힘",
+    "allExpanded": "전체 펼침",
+    "toggle": "전체 접기 / 펼치기"
+  },
+  "sites": {
+    "dock1": "1 도크",
+    "dock2": "2 도크",
+    "blockShop": "Block Shop"
+  },
+  "modal": {
+    "title": "새 자산 등록",
+    "description": "크레인 자산을 레지스트리에 추가합니다.",
+    "cancel": "취소",
+    "submit": "자산 등록",
+    "toastCreated": "자산 {{name}}이(가) 등록되었습니다.",
+    "indoorOutdoor": { "indoor": "실내", "outdoor": "실외" },
+    "fields": {
+      "name": "자산명",
+      "craneType": "크레인 유형",
+      "manufacturer": "제조사",
+      "model": "모델",
+      "capacityTon": "정격 하중 (t)",
+      "serialNumber": "시리얼 번호",
+      "spanM": "스팬 (m)",
+      "liftHeightM": "양정 (m)",
+      "siteId": "사이트",
+      "indoorOutdoor": "실내/실외",
+      "locationZone": "위치 구역",
+      "manufactureDate": "제조일",
+      "installationDate": "설치일",
+      "warrantyStart": "워런티 시작",
+      "warrantyEnd": "워런티 종료",
+      "status": "상태"
+    },
+    "validation": {
+      "nameRequired": "자산명을 입력해 주세요.",
+      "manufacturerRequired": "제조사를 입력해 주세요.",
+      "modelRequired": "모델을 입력해 주세요.",
+      "serialRequired": "시리얼 번호를 입력해 주세요.",
+      "capacityRequired": "정격 하중을 입력해 주세요.",
+      "locationRequired": "위치 구역을 입력해 주세요."
+    }
+  },
   "metrics": {
     "totalAssets": "총 자산",
     "operating": "운용 중",

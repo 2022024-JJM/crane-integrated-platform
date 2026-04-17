@@ -1,6 +1,56 @@
 {
   "title": "Asset Management",
   "description": "Crane asset registration and lifecycle management",
+  "newAsset": "New Asset",
+  "filter": {
+    "status": "Status",
+    "all": "All",
+    "empty": "No assets match the filter."
+  },
+  "collapse": {
+    "allCollapsed": "All collapsed",
+    "allExpanded": "All expanded",
+    "toggle": "Collapse / expand all"
+  },
+  "sites": {
+    "dock1": "Dock No.1",
+    "dock2": "Dock No.2",
+    "blockShop": "Block Shop"
+  },
+  "modal": {
+    "title": "Register New Asset",
+    "description": "Add a new crane asset to the registry.",
+    "cancel": "Cancel",
+    "submit": "Register Asset",
+    "toastCreated": "Asset {{name}} has been added.",
+    "indoorOutdoor": { "indoor": "Indoor", "outdoor": "Outdoor" },
+    "fields": {
+      "name": "Asset Name",
+      "craneType": "Crane Type",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "capacityTon": "Capacity (t)",
+      "serialNumber": "Serial Number",
+      "spanM": "Span (m)",
+      "liftHeightM": "Lift Height (m)",
+      "siteId": "Site",
+      "indoorOutdoor": "Indoor / Outdoor",
+      "locationZone": "Location Zone",
+      "manufactureDate": "Manufacture Date",
+      "installationDate": "Installation Date",
+      "warrantyStart": "Warranty Start",
+      "warrantyEnd": "Warranty End",
+      "status": "Status"
+    },
+    "validation": {
+      "nameRequired": "Asset name is required.",
+      "manufacturerRequired": "Manufacturer is required.",
+      "modelRequired": "Model is required.",
+      "serialRequired": "Serial number is required.",
+      "capacityRequired": "Capacity must be greater than 0.",
+      "locationRequired": "Location zone is required."
+    }
+  },
   "metrics": {
     "totalAssets": "Total Assets",
     "operating": "Operating",

@@ -15,7 +15,7 @@ const frequentChecklist = [
   { id: 'fi-12', category: 'Dynamic Check', category_ko: '동적 점검', itemName: 'Loaded Test Run', itemName_ko: '부하 시운전', judgment: null, actionRequired: 'none' as const },
 ];
 
-const allInspectionWOs: InspectionWO[] = [
+const baseInspectionWOs: InspectionWO[] = [
   {
     id: 'insp-001',
     woNumber: 'INS-2026-0001',
@@ -181,8 +181,113 @@ const allInspectionWOs: InspectionWO[] = [
   },
 ];
 
+const CRANE_POOL: Array<{ craneId: string; craneName: string; siteId: string; siteName: string }> = [
+  { craneId: 'crane-101', craneName: 'GC-101', siteId: 'dock-1', siteName: 'Dock No.1' },
+  { craneId: 'crane-102', craneName: 'GC-102', siteId: 'dock-1', siteName: 'Dock No.1' },
+  { craneId: 'crane-103', craneName: 'GC-103', siteId: 'dock-1', siteName: 'Dock No.1' },
+  { craneId: 'crane-104', craneName: 'GC-104', siteId: 'dock-1', siteName: 'Dock No.1' },
+  { craneId: 'crane-201', craneName: 'QC-201', siteId: 'dock-2', siteName: 'Dock No.2' },
+  { craneId: 'crane-202', craneName: 'QC-202', siteId: 'dock-2', siteName: 'Dock No.2' },
+  { craneId: 'crane-203', craneName: 'QC-203', siteId: 'dock-2', siteName: 'Dock No.2' },
+  { craneId: 'crane-204', craneName: 'QC-204', siteId: 'dock-2', siteName: 'Dock No.2' },
+  { craneId: 'crane-205', craneName: 'QC-205', siteId: 'dock-2', siteName: 'Dock No.2' },
+  { craneId: 'crane-301', craneName: 'BC-301', siteId: 'dock-in', siteName: 'Block Shop' },
+  { craneId: 'crane-302', craneName: 'BC-302', siteId: 'dock-in', siteName: 'Block Shop' },
+  { craneId: 'crane-303', craneName: 'BC-303', siteId: 'dock-in', siteName: 'Block Shop' },
+];
+
+const INSPECTOR_POOL = ['조범희', '박순영', '정종민', 'John Smith', 'Maria Garcia', 'David Chen', '이준호', 'Priya Sharma'];
+const WO_TYPES: InspectionWO['woType'][] = ['frequent', 'frequent', 'frequent', 'periodic', 'periodic', 'emergency', 'special'];
+const STATUS_POOL: InspectionWO['status'][] = ['scheduled', 'scheduled', 'in_progress', 'completed', 'completed', 'completed', 'overdue'];
+const PRIORITY_POOL: InspectionWO['priority'][] = ['normal', 'normal', 'normal', 'high', 'urgent', 'low'];
+const PERFORMER_POOL: InspectionWO['performerType'][] = ['internal', 'internal', 'third_party', 'local'];
+
+function seededRandom(seed: number) {
+  let v = seed;
+  return () => {
+    v = (v * 1664525 + 1013904223) % 4294967296;
+    return v / 4294967296;
+  };
+}
+
+const ispRand = seededRandom(2026);
+const pick = <T,>(arr: T[]): T => arr[Math.floor(ispRand() * arr.length)];
+
+function randDate(startMonth: number, endMonth: number): string {
+  const month = startMonth + Math.floor(ispRand() * (endMonth - startMonth + 1));
+  const day = Math.floor(ispRand() * 28) + 1;
+  return `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+const generatedInspectionWOs: InspectionWO[] = Array.from({ length: 60 }, (_, i) => {
+  const n = i + 9;
+  const crane = pick(CRANE_POOL);
+  const woType = pick(WO_TYPES);
+  const status = pick(STATUS_POOL);
+  const priority = pick(PRIORITY_POOL);
+  const scheduledDate = status === 'overdue' ? randDate(1, 3) : randDate(3, 6);
+  const actualDate = status === 'completed' ? scheduledDate : null;
+  let result: InspectionWO['result'] = null;
+  if (status === 'completed') {
+    const r = ispRand();
+    result = r < 0.7 ? 'pass' : r < 0.9 ? 'conditional' : 'fail';
+  }
+  const checklistItems = frequentChecklist.map((item, idx) => {
+    if (status === 'completed') {
+      const judgment = result === 'fail' && idx % 4 === 0
+        ? 'fail'
+        : result === 'conditional' && idx === 5
+          ? 'fail'
+          : 'pass';
+      return {
+        ...item,
+        judgment: judgment as 'pass' | 'fail',
+        severity: (judgment === 'fail' ? 'minor' : 'normal') as 'minor' | 'normal',
+        actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as 'repair_needed' | 'none',
+      };
+    }
+    if (status === 'in_progress') {
+      return { ...item, judgment: idx < 4 ? ('pass' as const) : null };
+    }
+    return { ...item, judgment: null };
+  });
+
+  return {
+    id: `insp-${String(n).padStart(3, '0')}`,
+    woNumber: `INS-2026-${String(n).padStart(4, '0')}`,
+    woType,
+    craneId: crane.craneId,
+    craneName: crane.craneName,
+    siteId: crane.siteId,
+    siteName: crane.siteName,
+    scheduledDate,
+    actualDate,
+    assignedTo: pick(INSPECTOR_POOL),
+    performerType: pick(PERFORMER_POOL),
+    status,
+    priority,
+    result,
+    findings: result === 'fail' ? 'Critical issue detected during inspection.' : undefined,
+    findings_ko: result === 'fail' ? '점검 중 주요 이슈 발견.' : undefined,
+    totalHours: status === 'completed' ? Math.round(ispRand() * 40 + 10) / 10 : undefined,
+    cost: status === 'completed' ? Math.floor(ispRand() * 500) + 200 : undefined,
+    checklistItems,
+  };
+});
+
+const allInspectionWOs: InspectionWO[] = [...baseInspectionWOs, ...generatedInspectionWOs];
+
 export function getAllInspectionWOs(): InspectionWO[] {
   return allInspectionWOs;
+}
+
+export function addInspectionWO(wo: InspectionWO): void {
+  allInspectionWOs.unshift(wo);
+}
+
+export function getDefaultChecklist(woType: 'frequent' | 'periodic' | 'emergency' | 'special') {
+  void woType;
+  return frequentChecklist.map((item) => ({ ...item, judgment: null as null }));
 }
 
 export function getInspectionWOById(id: string): InspectionWO | undefined {

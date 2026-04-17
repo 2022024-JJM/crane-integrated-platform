@@ -1,0 +1,119 @@
+{
+  "header": {
+    "title": "Navale Philadelphiae",
+    "subtitle": "Tabularium MRO — Navale Philadelphiae"
+  },
+  "alert": {
+    "actionRequired": "Actio Necessaria",
+    "emergencyRepair_one": "{{count}} Refectio Urgens",
+    "emergencyRepair_other": "{{count}} Refectiones Urgentes",
+    "overdueInspection_one": "{{count}} Inspectio Retardata",
+    "overdueInspection_other": "{{count}} Inspectiones Retardatae",
+    "expiredCert_one": "{{count}} Certificatio Exspirata",
+    "expiredCert_other": "{{count}} Certificationes Exspiratae"
+  },
+  "kpi": {
+    "totalCranes": {
+      "label": "Grues Omnes",
+      "meta": "{{operating}} operantes · {{down}} in refectione"
+    },
+    "inspectionRate": {
+      "label": "Ratio Inspectionum",
+      "onSchedule": "In ordine",
+      "overdue": "{{count}} retardatae"
+    },
+    "activeRepairs": {
+      "label": "Refectiones Activae",
+      "noIssues": "Nulla problemata urgentia",
+      "emergency": "{{emergency}} urgentes · {{waiting}} partes exspectantur",
+      "waitingOnly": "{{waiting}} partes exspectantur"
+    },
+    "avgMttr": {
+      "label": "MTTR Medium",
+      "meta": "Tempus Medium ad Refectionem"
+    },
+    "lowStock": {
+      "label": "Partes Deficientes",
+      "noShortage": "Nulla deficientia critica",
+      "criticalParts": "{{count}} partes criticae"
+    },
+    "certifications": {
+      "label": "Certificationes",
+      "allValid": "Omnes Validae",
+      "expired": "{{count}} Exspiratae",
+      "expiringSoon": "{{count}} mox exspirant",
+      "noExpiry": "Nulla mox exspirant"
+    },
+    "operatingRate": {
+      "label": "Ratio Operationis",
+      "meta": "{{operating}} / {{total}} grues"
+    },
+    "emergencyWO": {
+      "label": "Mandatum Urgens",
+      "action": "Actio statim necessaria",
+      "noEmergency": "Nulla urgentia"
+    }
+  },
+  "overview": {
+    "title": "Conspectus Operationum",
+    "subtitle": "Mandata activa, status loci et partes criticae"
+  },
+  "repairCard": {
+    "title": "Mandata Refectionis Activa",
+    "subtitle": "Mandata aperta ordine prioritatis disposita",
+    "active": "{{count}} Activa",
+    "empty": "Nulla mandata refectionis activa"
+  },
+  "inspectionCard": {
+    "title": "Inspectiones Attentione Egentes",
+    "subtitle": "Inspectiones retardatae et in processu",
+    "overdue": "{{count}} Retardatae",
+    "empty": "Omnes inspectiones in ordine",
+    "statusOverdue": "RETARDATA",
+    "statusInProgress": "IN PROCESSU",
+    "typeFrequent": "Frequens",
+    "typePeriodic": "Periodica",
+    "scheduled": "Disposita:"
+  },
+  "siteCard": {
+    "title": "Status Loci",
+    "subtitle": "Status gruum per areas docae",
+    "live": "Vivum",
+    "operating": "Operans",
+    "repair": "Refectio",
+    "overdue": "Retardata",
+    "cranes": "{{count}} grues",
+    "sites": {
+      "dock1": "Doca I",
+      "dock2": "Doca II",
+      "dockIn": "Officina Fabrica"
+    }
+  },
+  "partsCard": {
+    "title": "Monitum de Partibus Criticis",
+    "subtitle": "Partes infra limitem stochi tuti",
+    "low": "{{count}} Deficientes",
+    "empty": "Omnes partes criticae in stocho",
+    "stock": "Stochus: {{available}} / {{min}} min",
+    "lead": "Tempus: {{days}}d"
+  },
+  "status": {
+    "priority": {
+      "emergency": "URGENS",
+      "high": "ALTA",
+      "normal": "NORMALIS",
+      "low": "BASSA"
+    },
+    "repair": {
+      "received": "Acceptum",
+      "waiting_parts": "Partes Exspectantur",
+      "in_progress": "In Processu",
+      "re_inspection": "Re-Inspectio",
+      "on_hold": "Suspensum"
+    },
+    "inventory": {
+      "out_of_stock": "Stochus Exhaustus",
+      "low": "Stochus Deficiens"
+    }
+  }
+}

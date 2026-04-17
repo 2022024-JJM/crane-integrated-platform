@@ -1,0 +1,115 @@
+{
+  "title": "Tessera Nova",
+  "description": "Crea tesseram novam refectionis, inspectionis aut requisitionis partium",
+  "createButton": "Tessera Nova",
+  "stepper": {
+    "selectType": "Elige Genus",
+    "fillInfo": "Imple Informationes",
+    "submit": "Emitte"
+  },
+  "typeSelector": {
+    "repair": "Tessera Refectionis",
+    "repairDesc": "Opera refectionis ex ruina, praeventionis et praedictionis",
+    "inspection": "Tessera Inspectionis",
+    "inspectionDesc": "Inspectiones frequentes, periodicae et urgentes",
+    "parts": "Requisitio Partium",
+    "partsDesc": "Reordinatio partium et requisitio stochi"
+  },
+  "sections": {
+    "basicInfo": "Informationes Basis",
+    "assignment": "Assignatio et Horarium",
+    "parts": "Partes"
+  },
+  "fields": {
+    "crane": "Gruis",
+    "cranePlaceholder": "Elige gruem...",
+    "componentName": "Nomen Componenti",
+    "failureType": "Genus Defectus",
+    "sourceType": "Origo",
+    "priority": "Prioritas",
+    "repairLevel": "Gradus Refectionis",
+    "failureDescription": "Descriptio Defectus",
+    "performerType": "Genus Executoris",
+    "assignedTo": "Assignatus",
+    "scheduledStart": "Initium Dispositum",
+    "scheduledEnd": "Finis Dispositus",
+    "scheduledDate": "Dies Disposita",
+    "inspectionType": "Genus Inspectionis",
+    "findings": "Notae (optionale)",
+    "note": "Nota (optionale)",
+    "requester": "Petitor",
+    "requestPriority": "Prioritas Petitionis",
+    "partName": "Elige partem...",
+    "addPart": "Adde Partem"
+  },
+  "placeholders": {
+    "componentName": "e.g. Frenum Horologii",
+    "assignedTo": "e.g. Ioannes Faber",
+    "failureDescription": "Describe defectum aut refectionem necessariam...",
+    "findings": "Notae optionales de ambitu inspectionis...",
+    "note": "Notae additionis..."
+  },
+  "sourceType": {
+    "breakdown": "Ruina",
+    "inspection": "Ex Inspectione",
+    "preventive": "Praeventionis",
+    "predictive": "Praedictionis"
+  },
+  "failureType": {
+    "mechanical": "Mechanicus",
+    "electrical": "Electricus",
+    "structural": "Structuralis",
+    "control": "Moderationis",
+    "other": "Aliud"
+  },
+  "repairLevel": {
+    "minor": "Minor",
+    "major": "Maior",
+    "overhaul": "Instauratio"
+  },
+  "performerType": {
+    "internal": "Internus",
+    "third_party": "Externus",
+    "local": "Localis"
+  },
+  "priority": {
+    "emergency": "Urgens",
+    "urgent": "Urgens",
+    "high": "Alta",
+    "normal": "Normalis",
+    "low": "Bassa"
+  },
+  "inspectionType": {
+    "frequent": "Frequens",
+    "periodic": "Periodica",
+    "emergency": "Urgens",
+    "special": "Specialis"
+  },
+  "requestPriority": {
+    "urgent": "Urgens",
+    "normal": "Normalis",
+    "scheduled": "Disposita"
+  },
+  "validation": {
+    "craneRequired": "Elige gruem.",
+    "componentRequired": "Nomen componenti necessarium est.",
+    "descriptionRequired": "Descriptio defectus necessaria est.",
+    "assignedToRequired": "Assignatus necessarius est.",
+    "scheduledStartRequired": "Initium dispositum necessarium est.",
+    "scheduledEndRequired": "Finis dispositus necessarius est.",
+    "scheduledDateRequired": "Dies disposita necessaria est.",
+    "requesterRequired": "Petitor necessarius est.",
+    "partsRequired": "Adde saltem unam partem."
+  },
+  "toast": {
+    "repairCreated": "Tessera refectionis {{woNumber}} creata est.",
+    "inspectionCreated": "Tessera inspectionis {{woNumber}} creata est.",
+    "partsCreated": "Petitio partium {{requestNumber}} missa est."
+  },
+  "submit": {
+    "repair": "Crea Tesseram Refectionis",
+    "inspection": "Crea Tesseram Inspectionis",
+    "parts": "Mitte Petitionem Partium",
+    "cancel": "Cancella"
+  }
+}

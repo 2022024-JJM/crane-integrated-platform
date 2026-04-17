@@ -1,0 +1,115 @@
+{
+  "title": "티켓 생성",
+  "description": "수리, 점검 또는 부품 요청 티켓을 생성합니다",
+  "createButton": "새 티켓",
+  "stepper": {
+    "selectType": "유형 선택",
+    "fillInfo": "정보 입력",
+    "submit": "발행"
+  },
+  "typeSelector": {
+    "repair": "수리 티켓",
+    "repairDesc": "고장, 예방, 예측 정비 작업",
+    "inspection": "점검 티켓",
+    "inspectionDesc": "수시, 정기, 긴급 점검",
+    "parts": "부품 요청",
+    "partsDesc": "부품 재주문 및 재고 청구"
+  },
+  "sections": {
+    "basicInfo": "기본 정보",
+    "assignment": "담당자 및 일정",
+    "parts": "부품 목록"
+  },
+  "fields": {
+    "crane": "크레인",
+    "cranePlaceholder": "크레인 선택...",
+    "componentName": "구성품명",
+    "failureType": "고장 유형",
+    "sourceType": "발생 원인",
+    "priority": "우선순위",
+    "repairLevel": "수리 등급",
+    "failureDescription": "고장 설명",
+    "performerType": "수행자 유형",
+    "assignedTo": "담당자",
+    "scheduledStart": "시작 예정일",
+    "scheduledEnd": "종료 예정일",
+    "scheduledDate": "점검 예정일",
+    "inspectionType": "점검 유형",
+    "findings": "비고 (선택)",
+    "note": "메모 (선택)",
+    "requester": "요청자",
+    "requestPriority": "요청 우선순위",
+    "partName": "부품 선택...",
+    "addPart": "부품 추가"
+  },
+  "placeholders": {
+    "componentName": "예: 호이스트 브레이크",
+    "assignedTo": "예: 조범희 / M&S Corp.",
+    "failureDescription": "고장 내용 또는 수리 필요 사항을 입력하세요...",
+    "findings": "점검 범위에 대한 비고를 입력하세요...",
+    "note": "추가 메모..."
+  },
+  "sourceType": {
+    "breakdown": "고장",
+    "inspection": "점검 결과",
+    "preventive": "예방 정비",
+    "predictive": "예측 정비"
+  },
+  "failureType": {
+    "mechanical": "기계",
+    "electrical": "전기",
+    "structural": "구조",
+    "control": "제어",
+    "other": "기타"
+  },
+  "repairLevel": {
+    "minor": "경미",
+    "major": "주요",
+    "overhaul": "오버홀"
+  },
+  "performerType": {
+    "internal": "자체",
+    "third_party": "외부업체",
+    "local": "현지"
+  },
+  "priority": {
+    "emergency": "긴급",
+    "urgent": "긴급",
+    "high": "높음",
+    "normal": "보통",
+    "low": "낮음"
+  },
+  "inspectionType": {
+    "frequent": "수시",
+    "periodic": "정기",
+    "emergency": "긴급",
+    "special": "특별"
+  },
+  "requestPriority": {
+    "urgent": "긴급",
+    "normal": "보통",
+    "scheduled": "계획"
+  },
+  "validation": {
+    "craneRequired": "크레인을 선택해 주세요.",
+    "componentRequired": "구성품명을 입력해 주세요.",
+    "descriptionRequired": "고장 설명을 입력해 주세요.",
+    "assignedToRequired": "담당자를 입력해 주세요.",
+    "scheduledStartRequired": "시작 예정일을 입력해 주세요.",
+    "scheduledEndRequired": "종료 예정일을 입력해 주세요.",
+    "scheduledDateRequired": "점검 예정일을 입력해 주세요.",
+    "requesterRequired": "요청자를 입력해 주세요.",
+    "partsRequired": "부품을 하나 이상 추가해 주세요."
+  },
+  "toast": {
+    "repairCreated": "수리 티켓 {{woNumber}}이(가) 생성되었습니다.",
+    "inspectionCreated": "점검 티켓 {{woNumber}}이(가) 생성되었습니다.",
+    "partsCreated": "부품 요청 {{requestNumber}}이(가) 제출되었습니다."
+  },
+  "submit": {
+    "repair": "수리 티켓 생성",
+    "inspection": "점검 티켓 생성",
+    "parts": "부품 요청 제출",
+    "cancel": "취소"
+  }
+}

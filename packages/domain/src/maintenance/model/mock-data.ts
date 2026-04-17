@@ -230,6 +230,10 @@ export function updateRepairStatus(id: string, status: RepairWO['status']): bool
   return true;
 }
 
+export function addRepairWO(wo: RepairWO): void {
+  allRepairWOs.unshift(wo);
+}
+
 export function getMaintenanceSummary(): MaintenanceSummary {
   return {
     inProgress: allRepairWOs.filter((w) =>

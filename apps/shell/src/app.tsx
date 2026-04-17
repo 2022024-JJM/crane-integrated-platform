@@ -129,6 +129,12 @@ const CompliancePage = lazy(() =>
   })),
 );
 
+const CreateTicketPage = lazy(() =>
+  import('@crane/philly-shipyard/pages/ticket').then((m) => ({
+    default: m.CreateTicketPage,
+  })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -258,6 +264,14 @@ export function App() {
                 element={
                   <Suspense fallback={null}>
                     <CompliancePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ticket/create"
+                element={
+                  <Suspense fallback={null}>
+                    <CreateTicketPage />
                   </Suspense>
                 }
               />

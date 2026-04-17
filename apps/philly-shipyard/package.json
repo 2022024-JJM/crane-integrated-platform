@@ -10,7 +10,8 @@
     "./pages/inspection": "./src/pages/inspection/index.ts",
     "./pages/maintenance": "./src/pages/maintenance/index.ts",
     "./pages/inventory": "./src/pages/inventory/index.ts",
-    "./pages/compliance": "./src/pages/compliance/index.ts"
+    "./pages/compliance": "./src/pages/compliance/index.ts",
+    "./pages/ticket": "./src/pages/ticket/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

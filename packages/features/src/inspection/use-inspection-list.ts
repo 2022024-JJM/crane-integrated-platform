@@ -5,6 +5,7 @@ import {
   getInspectionWOById,
 } from '@crane/domain/inspection';
 import type { InspectionWO, ChecklistItem } from '@crane/domain/inspection';
+import { useTicketCreateStore } from '../ticket/use-ticket-create-store';
 
 function localizeChecklist(items: ChecklistItem[], isKo: boolean): ChecklistItem[] {
   if (!isKo) return items;
@@ -27,6 +28,8 @@ function localizeInspection(wo: InspectionWO, isKo: boolean): InspectionWO {
 export function useInspectionList() {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
+  // 새 티켓 생성 시 강제 리렌더
+  void useTicketCreateStore((s) => s._tick);
   const inspections = getAllInspectionWOs().map((w) => localizeInspection(w, isKo));
   const summary = getInspectionSummary();
   return { inspections, summary };

@@ -22,6 +22,8 @@
     "leadTime": "Lead Time",
     "leadTimeSuffix": "lead"
   },
+  "resultCount": "{{count}} items",
+  "pagination": { "rowsPerPage": "Rows per page", "of": "of" },
   "status": {
     "ok": "OK",
     "normal": "Normal",

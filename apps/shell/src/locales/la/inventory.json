@@ -22,6 +22,8 @@
     "leadTime": "Tempus Admin.",
     "leadTimeSuffix": "admin."
   },
+  "resultCount": "{{count}} res",
+  "pagination": { "rowsPerPage": "In pagina", "of": "de" },
   "status": {
     "ok": "Bona",
     "normal": "Normalis",

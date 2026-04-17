@@ -1,6 +1,6 @@
-import type { InventoryItem, InventorySummary, PurchaseOrder } from './types';
+import type { InventoryItem, InventorySummary, PartCategory, PartCriticality, PartsRequest, PurchaseOrder } from './types';
 
-const allInventoryItems: InventoryItem[] = [
+const baseInventoryItems: InventoryItem[] = [
   {
     id: 'inv-001',
     partId: 'part-br-001',
@@ -213,6 +213,115 @@ const allInventoryItems: InventoryItem[] = [
   },
 ];
 
+const GENERATED_PART_TEMPLATES: Array<{
+  name: string; name_ko: string; category: PartCategory; manufacturer: string; price: number; criticality: PartCriticality; lead: number;
+}> = [
+  { name: 'Motor Brush Set — 180kW', name_ko: '모터 브러시 세트 — 180kW', category: 'electrical', manufacturer: 'ABB', price: 320, criticality: 'essential', lead: 18 },
+  { name: 'Trolley Travel Wheel — Ø400mm', name_ko: '트롤리 주행 휠 — Ø400mm', category: 'gear_bearing', manufacturer: 'Konecranes', price: 1250, criticality: 'critical', lead: 42 },
+  { name: 'Festoon Cable 4G70 (per m)', name_ko: '페스툰 케이블 4G70 (m당)', category: 'electrical', manufacturer: 'Helukabel', price: 42, criticality: 'standard', lead: 10 },
+  { name: 'Proximity Sensor M18 PNP', name_ko: '근접 센서 M18 PNP', category: 'sensor', manufacturer: 'Pepperl+Fuchs', price: 85, criticality: 'essential', lead: 12 },
+  { name: 'Encoder Disc 1024ppr', name_ko: '엔코더 디스크 1024ppr', category: 'sensor', manufacturer: 'Heidenhain', price: 540, criticality: 'critical', lead: 25 },
+  { name: 'Coupling Element — FLEX 180', name_ko: '커플링 엘리먼트 — FLEX 180', category: 'shaft_chain', manufacturer: 'Flender', price: 410, criticality: 'essential', lead: 21 },
+  { name: 'Hook Block 80t', name_ko: '후크 블록 80t', category: 'other', manufacturer: 'Crosby', price: 4200, criticality: 'critical', lead: 56 },
+  { name: 'Anti-Collision Laser Sensor', name_ko: '충돌방지 레이저 센서', category: 'sensor', manufacturer: 'SICK', price: 1850, criticality: 'critical', lead: 30 },
+  { name: 'Slew Bearing — Ø1200', name_ko: '슬루잉 베어링 — Ø1200', category: 'gear_bearing', manufacturer: 'Rothe Erde', price: 18500, criticality: 'critical', lead: 90 },
+  { name: 'Oil Filter Cartridge 10μm', name_ko: '오일 필터 카트리지 10μm', category: 'other', manufacturer: 'Mahle', price: 38, criticality: 'standard', lead: 5 },
+  { name: 'Drum Rope Guide Set', name_ko: '드럼 로프 가이드 세트', category: 'drum', manufacturer: 'LeBus', price: 2600, criticality: 'essential', lead: 35 },
+  { name: 'Radio Remote Transmitter', name_ko: '무선 리모컨 송신기', category: 'electrical', manufacturer: 'HBC-Radiomatic', price: 1200, criticality: 'essential', lead: 20 },
+  { name: 'Load Cell 50t', name_ko: '로드셀 50t', category: 'sensor', manufacturer: 'HBM', price: 2850, criticality: 'critical', lead: 28 },
+  { name: 'Drive Chain 2½" Pitch', name_ko: '구동 체인 2½" 피치', category: 'shaft_chain', manufacturer: 'Tsubaki', price: 780, criticality: 'essential', lead: 18 },
+  { name: 'Brake Coil 24VDC', name_ko: '브레이크 코일 24VDC', category: 'brake', manufacturer: 'Stearns', price: 310, criticality: 'essential', lead: 14 },
+  { name: 'Gearbox Breather Valve', name_ko: '기어박스 브리더 밸브', category: 'other', manufacturer: 'Flender', price: 95, criticality: 'standard', lead: 8 },
+  { name: 'O-Ring Set NBR Ø100', name_ko: 'O-링 세트 NBR Ø100', category: 'seal_gasket', manufacturer: 'Freudenberg', price: 22, criticality: 'standard', lead: 5 },
+  { name: 'Contactor 400A AC3', name_ko: '컨택터 400A AC3', category: 'electrical', manufacturer: 'Siemens', price: 680, criticality: 'essential', lead: 15 },
+  { name: 'PLC I/O Module DI-32', name_ko: 'PLC I/O 모듈 DI-32', category: 'electrical', manufacturer: 'Siemens', price: 450, criticality: 'essential', lead: 20 },
+  { name: 'Limit Switch Lever Type', name_ko: '리밋 스위치 레버형', category: 'sensor', manufacturer: 'Schneider', price: 95, criticality: 'essential', lead: 10 },
+  { name: 'Wire Rope 32mm 6x36 (250m)', name_ko: '와이어 로프 32mm 6x36 (250m)', category: 'wire_rope', manufacturer: 'Bridon', price: 2050, criticality: 'critical', lead: 35 },
+  { name: 'Hydraulic Cylinder Ø80×500', name_ko: '유압 실린더 Ø80×500', category: 'other', manufacturer: 'Parker', price: 1480, criticality: 'essential', lead: 25 },
+  { name: 'EMI Filter 3-Phase 125A', name_ko: 'EMI 필터 3상 125A', category: 'electrical', manufacturer: 'Schaffner', price: 520, criticality: 'standard', lead: 14 },
+  { name: 'Cable Drum Assembly 50m', name_ko: '케이블 드럼 어셈블리 50m', category: 'electrical', manufacturer: 'Conductix', price: 3600, criticality: 'essential', lead: 40 },
+  { name: 'Grease Cartridge Mobilith SHC 220', name_ko: '그리스 카트리지 Mobilith SHC 220', category: 'lubricant', manufacturer: 'Mobil', price: 28, criticality: 'standard', lead: 5 },
+  { name: 'Cable Gland PG29', name_ko: '케이블 글랜드 PG29', category: 'electrical', manufacturer: 'Hummel', price: 8, criticality: 'standard', lead: 3 },
+  { name: 'Overhead Trolley Rail 10m', name_ko: '오버헤드 트롤리 레일 10m', category: 'other', manufacturer: 'Demag', price: 4850, criticality: 'critical', lead: 55 },
+  { name: 'Vibration Sensor IEPE', name_ko: '진동 센서 IEPE', category: 'sensor', manufacturer: 'IFM', price: 420, criticality: 'essential', lead: 16 },
+  { name: 'Servo Motor 15kW', name_ko: '서보 모터 15kW', category: 'electrical', manufacturer: 'Yaskawa', price: 3200, criticality: 'critical', lead: 30 },
+  { name: 'Brake Disc — Ø450', name_ko: '브레이크 디스크 — Ø450', category: 'brake', manufacturer: 'Pintsch Bubenzer', price: 950, criticality: 'critical', lead: 28 },
+  { name: 'Planetary Gearbox Stage-2', name_ko: '유성 감속기 2단', category: 'gear_bearing', manufacturer: 'Flender', price: 8200, criticality: 'critical', lead: 75 },
+  { name: 'Emergency Stop Pushbutton', name_ko: '비상정지 푸시버튼', category: 'electrical', manufacturer: 'Pilz', price: 120, criticality: 'critical', lead: 7 },
+  { name: 'Thermocouple Type-K Ø6', name_ko: '열전대 K형 Ø6', category: 'sensor', manufacturer: 'Omega', price: 65, criticality: 'standard', lead: 10 },
+  { name: 'Carbon Brush Holder', name_ko: '카본 브러시 홀더', category: 'electrical', manufacturer: 'Morgan', price: 180, criticality: 'essential', lead: 18 },
+  { name: 'Sprocket 24T — ANSI 100', name_ko: '스프로킷 24T — ANSI 100', category: 'shaft_chain', manufacturer: 'Tsubaki', price: 340, criticality: 'essential', lead: 14 },
+  { name: 'Pressure Sensor 0-400bar', name_ko: '압력 센서 0-400bar', category: 'sensor', manufacturer: 'Hydac', price: 290, criticality: 'essential', lead: 12 },
+  { name: 'Hydraulic Hose DN25×2m', name_ko: '유압 호스 DN25×2m', category: 'other', manufacturer: 'Parker', price: 85, criticality: 'standard', lead: 7 },
+  { name: 'Drum Grooving Insert', name_ko: '드럼 그루빙 인서트', category: 'drum', manufacturer: 'LeBus', price: 520, criticality: 'essential', lead: 30 },
+  { name: 'Anti-Sway Controller', name_ko: '스웨이 방지 컨트롤러', category: 'electrical', manufacturer: 'ABB', price: 4200, criticality: 'essential', lead: 45 },
+  { name: 'Grease Nipple M10', name_ko: '그리스 니플 M10', category: 'other', manufacturer: 'SKF', price: 4, criticality: 'standard', lead: 3 },
+  { name: 'Motor Cooling Fan 230V', name_ko: '모터 냉각팬 230V', category: 'electrical', manufacturer: 'Ebm-papst', price: 185, criticality: 'essential', lead: 12 },
+  { name: 'Wire Rope Clamp Ø36', name_ko: '와이어 로프 클램프 Ø36', category: 'wire_rope', manufacturer: 'Crosby', price: 28, criticality: 'standard', lead: 5 },
+  { name: 'Insulation Sleeve 11kV', name_ko: '절연 슬리브 11kV', category: 'electrical', manufacturer: '3M', price: 42, criticality: 'essential', lead: 8 },
+  { name: 'Hoist Motor 90kW', name_ko: '호이스트 모터 90kW', category: 'electrical', manufacturer: 'ABB', price: 12500, criticality: 'critical', lead: 60 },
+  { name: 'Drum Shaft — 900T Class', name_ko: '드럼 샤프트 — 900T급', category: 'shaft_chain', manufacturer: 'Konecranes', price: 6800, criticality: 'critical', lead: 80 },
+  { name: 'Gear Oil ISO VG 220 (208L)', name_ko: '기어 오일 ISO VG 220 (208L)', category: 'lubricant', manufacturer: 'Shell', price: 850, criticality: 'standard', lead: 10 },
+  { name: 'Cable Tray 200×60 (2m)', name_ko: '케이블 트레이 200×60 (2m)', category: 'other', manufacturer: 'Legrand', price: 95, criticality: 'standard', lead: 6 },
+  { name: 'Brake Caliper Assembly', name_ko: '브레이크 캘리퍼 어셈블리', category: 'brake', manufacturer: 'Sibre', price: 2400, criticality: 'critical', lead: 35 },
+  { name: 'Crane Runway Endstop', name_ko: '크레인 주행로 엔드스톱', category: 'other', manufacturer: 'Vulkollan', price: 280, criticality: 'essential', lead: 15 },
+  { name: 'Fiber Optic Converter', name_ko: '광 컨버터', category: 'electrical', manufacturer: 'Moxa', price: 350, criticality: 'standard', lead: 10 },
+];
+
+const STATUSES: InventoryItem['status'][] = ['normal', 'normal', 'normal', 'normal', 'low', 'out_of_stock', 'excess'];
+const CATEGORY_PREFIX: Record<PartCategory, string> = {
+  brake: 'BRK', wire_rope: 'WR', drum: 'DRM', gear_bearing: 'GB', shaft_chain: 'SC',
+  electrical: 'ELE', sensor: 'SNS', seal_gasket: 'SG', lubricant: 'LUB', other: 'OTH',
+};
+
+function pseudoRandom(seed: number) {
+  let v = seed;
+  return () => {
+    v = (v * 1664525 + 1013904223) % 4294967296;
+    return v / 4294967296;
+  };
+}
+
+const rand = pseudoRandom(42);
+
+const generatedInventoryItems: InventoryItem[] = GENERATED_PART_TEMPLATES.map((tpl, idx) => {
+  const n = idx + 11;
+  const id = `inv-${String(n).padStart(3, '0')}`;
+  const status = STATUSES[Math.floor(rand() * STATUSES.length)];
+  const minStockQty = Math.max(1, Math.floor(rand() * 10) + 2);
+  const reorderPoint = minStockQty + Math.floor(rand() * 3);
+  let currentQty: number;
+  if (status === 'out_of_stock') currentQty = 0;
+  else if (status === 'low') currentQty = Math.max(1, Math.floor(minStockQty * 0.6));
+  else if (status === 'excess') currentQty = Math.floor(minStockQty * 3) + 5;
+  else currentQty = minStockQty + Math.floor(rand() * minStockQty);
+  const reservedQty = currentQty > 0 ? Math.floor(rand() * Math.min(3, currentQty)) : 0;
+  const prefix = CATEGORY_PREFIX[tpl.category];
+  return {
+    id,
+    partId: `part-gen-${String(n).padStart(3, '0')}`,
+    partNumber: `${prefix}-${tpl.manufacturer.slice(0, 3).toUpperCase()}-${String(2000 + n)}`,
+    partName: tpl.name,
+    partName_ko: tpl.name_ko,
+    category: tpl.category,
+    criticality: tpl.criticality,
+    manufacturer: tpl.manufacturer,
+    unitPrice: tpl.price,
+    currentQty,
+    reservedQty,
+    availableQty: currentQty - reservedQty,
+    minStockQty,
+    reorderPoint,
+    status,
+    lastReceiptDate: `2025-${String(Math.floor(rand() * 12) + 1).padStart(2, '0')}-${String(Math.floor(rand() * 28) + 1).padStart(2, '0')}`,
+    lastIssueDate: `2026-0${Math.floor(rand() * 4) + 1}-${String(Math.floor(rand() * 28) + 1).padStart(2, '0')}`,
+    locationBin: `${String.fromCharCode(65 + (n % 5))}-0${(n % 3) + 1}-0${(n % 9) + 1}`,
+    leadTimeDays: tpl.lead,
+  };
+});
+
+const allInventoryItems: InventoryItem[] = [...baseInventoryItems, ...generatedInventoryItems];
+
 const allPurchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-001',
@@ -259,6 +368,16 @@ const allPurchaseOrders: PurchaseOrder[] = [
     requester: '정종민',
   },
 ];
+
+const allPartsRequests: PartsRequest[] = [];
+
+export function getAllPartsRequests(): PartsRequest[] {
+  return allPartsRequests;
+}
+
+export function addPartsRequest(req: PartsRequest): void {
+  allPartsRequests.unshift(req);
+}
 
 export function getAllInventoryItems(): InventoryItem[] {
   return allInventoryItems;

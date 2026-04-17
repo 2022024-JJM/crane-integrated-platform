@@ -22,6 +22,8 @@
     "leadTime": "리드타임",
     "leadTimeSuffix": "리드"
   },
+  "resultCount": "{{count}}개",
+  "pagination": { "rowsPerPage": "페이지당", "of": "/" },
   "status": {
     "ok": "정상",
     "normal": "정상",

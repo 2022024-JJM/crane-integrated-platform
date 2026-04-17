@@ -34,9 +34,12 @@
     "type": "Genus",
     "scheduled": "Ordinatum",
     "assignedTo": "Assignatum",
+    "progress": "Progressus",
     "status": "Status",
     "result": "Eventus"
   },
+  "resultCount": "{{count}} res",
+  "pagination": { "rowsPerPage": "In pagina", "of": "de" },
   "empty": "Nulla documenta inspectionis inventa sunt.",
   "overdueAlert": "{{count}} inspectio(nes) retardata(e) — statim attendere",
   "detail": {

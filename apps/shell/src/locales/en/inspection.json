@@ -34,9 +34,12 @@
     "type": "Type",
     "scheduled": "Scheduled",
     "assignedTo": "Assigned To",
+    "progress": "Progress",
     "status": "Status",
     "result": "Result"
   },
+  "resultCount": "{{count}} items",
+  "pagination": { "rowsPerPage": "Rows per page", "of": "of" },
   "empty": "No inspection records found.",
   "overdueAlert": "{{count}} overdue inspection(s) — immediate attention required",
   "detail": {

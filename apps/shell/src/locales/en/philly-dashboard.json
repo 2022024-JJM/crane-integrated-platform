@@ -1,0 +1,119 @@
+{
+  "header": {
+    "title": "Philly Shipyard",
+    "subtitle": "MRO Operations Dashboard — Philadelphia Shipyard"
+  },
+  "alert": {
+    "actionRequired": "Action Required",
+    "emergencyRepair_one": "{{count}} Emergency Repair",
+    "emergencyRepair_other": "{{count}} Emergency Repairs",
+    "overdueInspection_one": "{{count}} Overdue Inspection",
+    "overdueInspection_other": "{{count}} Overdue Inspections",
+    "expiredCert_one": "{{count}} Expired Certification",
+    "expiredCert_other": "{{count}} Expired Certifications"
+  },
+  "kpi": {
+    "totalCranes": {
+      "label": "Total Cranes",
+      "meta": "{{operating}} operating · {{down}} down"
+    },
+    "inspectionRate": {
+      "label": "Inspection Rate",
+      "onSchedule": "On schedule",
+      "overdue": "{{count}} overdue"
+    },
+    "activeRepairs": {
+      "label": "Active Repairs",
+      "noIssues": "No critical issues",
+      "emergency": "{{emergency}} emergency · {{waiting}} waiting parts",
+      "waitingOnly": "{{waiting}} waiting parts"
+    },
+    "avgMttr": {
+      "label": "Avg MTTR",
+      "meta": "Mean Time To Repair"
+    },
+    "lowStock": {
+      "label": "Low Stock Parts",
+      "noShortage": "No critical shortage",
+      "criticalParts": "{{count}} critical parts"
+    },
+    "certifications": {
+      "label": "Certifications",
+      "allValid": "All Valid",
+      "expired": "{{count}} Expired",
+      "expiringSoon": "{{count}} expiring soon",
+      "noExpiry": "No expiry soon"
+    },
+    "operatingRate": {
+      "label": "Operating Rate",
+      "meta": "{{operating}} / {{total}} cranes"
+    },
+    "emergencyWO": {
+      "label": "Emergency W/O",
+      "action": "Immediate action required",
+      "noEmergency": "No emergency"
+    }
+  },
+  "overview": {
+    "title": "Operations Overview",
+    "subtitle": "Active work orders, site status, and critical parts"
+  },
+  "repairCard": {
+    "title": "Active Repair Work Orders",
+    "subtitle": "Open repair orders sorted by priority",
+    "active": "{{count}} Active",
+    "empty": "No active repair work orders"
+  },
+  "inspectionCard": {
+    "title": "Inspection Attention Required",
+    "subtitle": "Overdue and in-progress inspections",
+    "overdue": "{{count}} Overdue",
+    "empty": "All inspections on schedule",
+    "statusOverdue": "OVERDUE",
+    "statusInProgress": "IN PROGRESS",
+    "typeFrequent": "Frequent",
+    "typePeriodic": "Periodic",
+    "scheduled": "Scheduled:"
+  },
+  "siteCard": {
+    "title": "Site Status",
+    "subtitle": "Crane status by dock area",
+    "live": "Live",
+    "operating": "Operating",
+    "repair": "Repair",
+    "overdue": "Overdue",
+    "cranes": "{{count}} cranes",
+    "sites": {
+      "dock1": "Dock No.1",
+      "dock2": "Dock No.2",
+      "dockIn": "Block Shop"
+    }
+  },
+  "partsCard": {
+    "title": "Critical Parts Alert",
+    "subtitle": "Parts below safety stock level",
+    "low": "{{count}} Low",
+    "empty": "All critical parts in stock",
+    "stock": "Stock: {{available}} / {{min}} min",
+    "lead": "Lead: {{days}}d"
+  },
+  "status": {
+    "priority": {
+      "emergency": "EMERGENCY",
+      "high": "HIGH",
+      "normal": "NORMAL",
+      "low": "LOW"
+    },
+    "repair": {
+      "received": "Received",
+      "waiting_parts": "Waiting Parts",
+      "in_progress": "In Progress",
+      "re_inspection": "Re-Inspection",
+      "on_hold": "On Hold"
+    },
+    "inventory": {
+      "out_of_stock": "Out of Stock",
+      "low": "Low Stock"
+    }
+  }
+}

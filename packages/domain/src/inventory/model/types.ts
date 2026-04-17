@@ -74,6 +74,31 @@ export interface PurchaseOrder {
   requester: string;
 }
 
+export type PartsRequestStatus = 'pending' | 'approved' | 'ordered' | 'cancelled';
+export type PartsRequestPriority = 'urgent' | 'normal' | 'scheduled';
+
+export interface PartsRequestItem {
+  partId: string;
+  partName: string;
+  qty: number;
+  unitPrice: number;
+}
+
+export interface PartsRequest {
+  id: string;
+  requestNumber: string;
+  requestDate: string;
+  requester: string;
+  craneId: string;
+  craneName: string;
+  siteId: string;
+  siteName: string;
+  priority: PartsRequestPriority;
+  status: PartsRequestStatus;
+  items: PartsRequestItem[];
+  note?: string;
+}
+
 export interface InventorySummary {
   totalParts: number;
   lowStock: number;

@@ -9,10 +9,12 @@ import { getAllInspectionWOs } from '@crane/domain/inspection';
 import type { InspectionWO } from '@crane/domain/inspection';
 import { getAllRepairWOs } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
+import { useAssetCreateStore } from './use-asset-create-store';
 
 const ACTIVE_REPAIR_STATUSES = new Set(['received', 'waiting_parts', 'in_progress', 're_inspection']);
 
 export function useAssetList() {
+  void useAssetCreateStore((s) => s._tick);
   const assets = getAllCraneAssets();
   const summary = getAssetSummary();
 

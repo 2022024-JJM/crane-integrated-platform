@@ -7,6 +7,7 @@ import {
   updateRepairStatus,
 } from '@crane/domain/maintenance';
 import type { RepairStatus, RepairWO } from '@crane/domain/maintenance';
+import { useTicketCreateStore } from '../ticket/use-ticket-create-store';
 
 function localizeRepair(repair: RepairWO, isKo: boolean): RepairWO {
   if (!isKo) return repair;
@@ -43,6 +44,8 @@ export function useMaintenanceList() {
   const isKo = i18n.language === 'ko';
   // 상태 변경 후 강제 리렌더
   const [, setTick] = useState(0);
+  // 새 티켓 생성 시 강제 리렌더
+  void useTicketCreateStore((s) => s._tick);
 
   const repairs = getAllRepairWOs().map((r) => localizeRepair(r, isKo));
   const summary = getMaintenanceSummary();

@@ -1,0 +1,119 @@
+{
+  "header": {
+    "title": "필리 조선소",
+    "subtitle": "MRO 운영 대시보드 — Philadelphia Shipyard"
+  },
+  "alert": {
+    "actionRequired": "조치 필요",
+    "emergencyRepair_one": "긴급 수리 {{count}}건",
+    "emergencyRepair_other": "긴급 수리 {{count}}건",
+    "overdueInspection_one": "점검 지연 {{count}}건",
+    "overdueInspection_other": "점검 지연 {{count}}건",
+    "expiredCert_one": "인증 만료 {{count}}건",
+    "expiredCert_other": "인증 만료 {{count}}건"
+  },
+  "kpi": {
+    "totalCranes": {
+      "label": "전체 크레인",
+      "meta": "{{operating}}대 운행 · {{down}}대 정비"
+    },
+    "inspectionRate": {
+      "label": "점검 완료율",
+      "onSchedule": "정상 운영 중",
+      "overdue": "{{count}}건 지연"
+    },
+    "activeRepairs": {
+      "label": "진행 중 수리",
+      "noIssues": "긴급 이슈 없음",
+      "emergency": "{{emergency}}건 긴급 · {{waiting}}건 부품 대기",
+      "waitingOnly": "{{waiting}}건 부품 대기"
+    },
+    "avgMttr": {
+      "label": "평균 수리 시간",
+      "meta": "평균 장비 복구 시간 (MTTR)"
+    },
+    "lowStock": {
+      "label": "재고 부족 부품",
+      "noShortage": "긴급 부족 없음",
+      "criticalParts": "중요 부품 {{count}}개"
+    },
+    "certifications": {
+      "label": "인증 현황",
+      "allValid": "모두 유효",
+      "expired": "{{count}}건 만료",
+      "expiringSoon": "{{count}}건 만료 임박",
+      "noExpiry": "만료 임박 없음"
+    },
+    "operatingRate": {
+      "label": "가동률",
+      "meta": "{{operating}} / {{total}}대"
+    },
+    "emergencyWO": {
+      "label": "긴급 작업지시",
+      "action": "즉시 조치 필요",
+      "noEmergency": "긴급 없음"
+    }
+  },
+  "overview": {
+    "title": "운영 현황",
+    "subtitle": "진행 중 작업지시, 사이트 현황 및 중요 부품"
+  },
+  "repairCard": {
+    "title": "수리 작업지시 현황",
+    "subtitle": "우선순위 순으로 정렬된 수리 작업지시서",
+    "active": "{{count}}건 진행",
+    "empty": "진행 중인 수리 작업지시 없음"
+  },
+  "inspectionCard": {
+    "title": "점검 주의 필요",
+    "subtitle": "지연 및 진행 중인 점검 현황",
+    "overdue": "{{count}}건 지연",
+    "empty": "모든 점검 정상 진행 중",
+    "statusOverdue": "지연",
+    "statusInProgress": "진행 중",
+    "typeFrequent": "수시",
+    "typePeriodic": "정기",
+    "scheduled": "예정일:"
+  },
+  "siteCard": {
+    "title": "사이트별 현황",
+    "subtitle": "도크별 크레인 상태",
+    "live": "실시간",
+    "operating": "운행",
+    "repair": "수리",
+    "overdue": "지연",
+    "cranes": "{{count}}대",
+    "sites": {
+      "dock1": "1번 도크",
+      "dock2": "2번 도크",
+      "dockIn": "블록 공장"
+    }
+  },
+  "partsCard": {
+    "title": "중요 부품 알림",
+    "subtitle": "안전 재고 미달 부품 현황",
+    "low": "{{count}}건 부족",
+    "empty": "모든 중요 부품 재고 정상",
+    "stock": "재고: {{available}} / {{min}} (최소)",
+    "lead": "리드타임: {{days}}일"
+  },
+  "status": {
+    "priority": {
+      "emergency": "긴급",
+      "high": "높음",
+      "normal": "보통",
+      "low": "낮음"
+    },
+    "repair": {
+      "received": "접수",
+      "waiting_parts": "부품 대기",
+      "in_progress": "진행 중",
+      "re_inspection": "재점검",
+      "on_hold": "보류"
+    },
+    "inventory": {
+      "out_of_stock": "재고 없음",
+      "low": "재고 부족"
+    }
+  }
+}

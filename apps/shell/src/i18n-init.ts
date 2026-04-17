@@ -33,6 +33,12 @@ import laInventory from './locales/la/inventory.json';
 import koCompliance from './locales/ko/compliance.json';
 import enCompliance from './locales/en/compliance.json';
 import laCompliance from './locales/la/compliance.json';
+import koPhillyDashboard from './locales/ko/philly-dashboard.json';
+import enPhillyDashboard from './locales/en/philly-dashboard.json';
+import laPhillyDashboard from './locales/la/philly-dashboard.json';
+import koTicket from './locales/ko/ticket.json';
+import enTicket from './locales/en/ticket.json';
+import laTicket from './locales/la/ticket.json';
 
 const resources = {
   ko: {
@@ -47,6 +53,8 @@ const resources = {
     maintenance: koMaintenance,
     inventory: koInventory,
     compliance: koCompliance,
+    'philly-dashboard': koPhillyDashboard,
+    ticket: koTicket,
   },
   en: {
     common: enCommon,
@@ -60,6 +68,8 @@ const resources = {
     maintenance: enMaintenance,
     inventory: enInventory,
     compliance: enCompliance,
+    'philly-dashboard': enPhillyDashboard,
+    ticket: enTicket,
   },
   la: {
     common: laCommon,
@@ -73,6 +83,8 @@ const resources = {
     maintenance: laMaintenance,
     inventory: laInventory,
     compliance: laCompliance,
+    'philly-dashboard': laPhillyDashboard,
+    ticket: laTicket,
   },
 };
 
@@ -88,4 +100,6 @@ initI18n(resources, [
   'maintenance',
   'inventory',
   'compliance',
+  'philly-dashboard',
+  'ticket',
 ]);

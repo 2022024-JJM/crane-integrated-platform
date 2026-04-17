@@ -10,7 +10,9 @@ export type {
   PerformerType,
 } from './model/types';
 export {
+  addInspectionWO,
   getAllInspectionWOs,
+  getDefaultChecklist,
   getInspectionSummary,
   getInspectionWOById,
 } from './model/mock-data';

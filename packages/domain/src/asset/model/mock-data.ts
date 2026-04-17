@@ -600,6 +600,10 @@ export function getAllCraneAssets(): CraneAsset[] {
   return allCraneAssets;
 }
 
+export function addCraneAsset(asset: CraneAsset): void {
+  allCraneAssets.unshift(asset);
+}
+
 export function getCraneAssetsBySite(siteId: string): CraneAsset[] {
   return allCraneAssets.filter((c) => c.siteId === siteId);
 }
