@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getAllRepairWOs,
@@ -7,7 +7,7 @@ import {
   updateRepairStatus,
 } from '@crane/domain/maintenance';
 import type { RepairStatus, RepairWO } from '@crane/domain/maintenance';
-import { useTicketCreateStore } from '../ticket/use-ticket-create-store';
+import { useDomainEventStore, useEntityTick } from '../shared/use-domain-event-store';
 
 function localizeRepair(repair: RepairWO, isKo: boolean): RepairWO {
   if (!isKo) return repair;
@@ -42,22 +42,23 @@ const PIPELINE_PREV: Record<RepairStatus, RepairStatus | null> = {
 export function useMaintenanceList() {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
-  // 상태 변경 후 강제 리렌더
-  const [, setTick] = useState(0);
-  // 새 티켓 생성 시 강제 리렌더
-  void useTicketCreateStore((s) => s._tick);
+  useEntityTick('repair');
+  const publish = useDomainEventStore((s) => s.publish);
 
   const repairs = getAllRepairWOs().map((r) => localizeRepair(r, isKo));
   const summary = getMaintenanceSummary();
 
-  const moveStatus = useCallback((id: string, direction: 'next' | 'prev') => {
-    const wo = getAllRepairWOs().find((w) => w.id === id);
-    if (!wo) return;
-    const nextStatus = direction === 'next' ? PIPELINE_NEXT[wo.status] : PIPELINE_PREV[wo.status];
-    if (!nextStatus) return;
-    updateRepairStatus(id, nextStatus);
-    setTick((t) => t + 1);
-  }, []);
+  const moveStatus = useCallback(
+    (id: string, direction: 'next' | 'prev') => {
+      const wo = getAllRepairWOs().find((w) => w.id === id);
+      if (!wo) return;
+      const nextStatus = direction === 'next' ? PIPELINE_NEXT[wo.status] : PIPELINE_PREV[wo.status];
+      if (!nextStatus) return;
+      updateRepairStatus(id, nextStatus);
+      publish('repair', id);
+    },
+    [publish],
+  );
 
   return { repairs, summary, moveStatus };
 }
@@ -65,6 +66,7 @@ export function useMaintenanceList() {
 export function useMaintenanceDetail(id: string) {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
+  useEntityTick('repair');
   const raw = getRepairWOById(id);
   const repair = raw ? localizeRepair(raw, isKo) : undefined;
   return { repair };

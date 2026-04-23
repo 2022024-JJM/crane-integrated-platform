@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { addRepairWO } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { useTicketCreateStore } from './use-ticket-create-store';
+import { newRepairId, nextRepairWoNumber } from '@crane/domain/shared';
+import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface RepairTicketDraft {
   craneId: string;
@@ -21,20 +22,14 @@ export interface RepairTicketDraft {
 }
 
 export function useCreateRepairTicket() {
-  const { setLastCreated, bumpTick } = useTicketCreateStore();
+  const publish = useDomainEventStore((s) => s.publish);
 
   return useCallback(
     (draft: RepairTicketDraft): RepairWO => {
-      const now = Date.now();
-      const seq = String(now).slice(-4);
-      const year = new Date().getFullYear();
-      const id = `repair-new-${now}`;
-      const woNumber = `RPR-${year}-${seq}`;
-
       const wo: RepairWO = {
         ...draft,
-        id,
-        woNumber,
+        id: newRepairId(),
+        woNumber: nextRepairWoNumber(),
         status: 'received',
         partsUsed: [],
         actualStart: null,
@@ -47,10 +42,9 @@ export function useCreateRepairTicket() {
       };
 
       addRepairWO(wo);
-      setLastCreated(id, 'repair');
-      bumpTick();
+      publish('repair', wo.id);
       return wo;
     },
-    [setLastCreated, bumpTick],
+    [publish],
   );
 }

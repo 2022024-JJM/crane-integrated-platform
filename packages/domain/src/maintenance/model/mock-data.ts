@@ -1,3 +1,4 @@
+import { seedSequence } from '../../shared/id-generator';
 import type { MaintenanceSummary, RepairWO } from './types';
 
 const allRepairWOs: RepairWO[] = [
@@ -214,6 +215,12 @@ const allRepairWOs: RepairWO[] = [
     totalCost: null,
   },
 ];
+
+const maxRepairSeq = allRepairWOs.reduce((max, wo) => {
+  const m = wo.woNumber.match(/-(\d{4})$/);
+  return m ? Math.max(max, parseInt(m[1], 10)) : max;
+}, 0);
+seedSequence('repair', maxRepairSeq);
 
 export function getAllRepairWOs(): RepairWO[] {
   return allRepairWOs;

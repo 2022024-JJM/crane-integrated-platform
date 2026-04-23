@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { addInspectionWO, getDefaultChecklist } from '@crane/domain/inspection';
 import type { InspectionWO } from '@crane/domain/inspection';
-import { useTicketCreateStore } from './use-ticket-create-store';
+import { newInspectionId, nextInspectionWoNumber } from '@crane/domain/shared';
+import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export interface InspectionTicketDraft {
   craneId: string;
@@ -17,20 +18,14 @@ export interface InspectionTicketDraft {
 }
 
 export function useCreateInspectionTicket() {
-  const { setLastCreated, bumpTick } = useTicketCreateStore();
+  const publish = useDomainEventStore((s) => s.publish);
 
   return useCallback(
     (draft: InspectionTicketDraft): InspectionWO => {
-      const now = Date.now();
-      const seq = String(now).slice(-4);
-      const year = new Date().getFullYear();
-      const id = `insp-new-${now}`;
-      const woNumber = `INS-${year}-${seq}`;
-
       const wo: InspectionWO = {
         ...draft,
-        id,
-        woNumber,
+        id: newInspectionId(),
+        woNumber: nextInspectionWoNumber(),
         status: 'scheduled',
         actualDate: null,
         result: null,
@@ -38,10 +33,9 @@ export function useCreateInspectionTicket() {
       };
 
       addInspectionWO(wo);
-      setLastCreated(id, 'inspection');
-      bumpTick();
+      publish('inspection', wo.id);
       return wo;
     },
-    [setLastCreated, bumpTick],
+    [publish],
   );
 }

@@ -2,7 +2,6 @@ import {
   degToRad,
   modelObjectRegistry,
   numRound,
-  radToDeg,
   type SavedModelInfo,
   type ValueMapType,
 } from '@crane/domain/3d';

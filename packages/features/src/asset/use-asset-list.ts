@@ -9,12 +9,12 @@ import { getAllInspectionWOs } from '@crane/domain/inspection';
 import type { InspectionWO } from '@crane/domain/inspection';
 import { getAllRepairWOs } from '@crane/domain/maintenance';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { useAssetCreateStore } from './use-asset-create-store';
+import { useEntityTicks } from '../shared/use-domain-event-store';
 
 const ACTIVE_REPAIR_STATUSES = new Set(['received', 'waiting_parts', 'in_progress', 're_inspection']);
 
 export function useAssetList() {
-  void useAssetCreateStore((s) => s._tick);
+  useEntityTicks(['asset', 'repair', 'inspection']);
   const assets = getAllCraneAssets();
   const summary = getAssetSummary();
 
@@ -45,6 +45,7 @@ export function useAssetList() {
 export function useAssetDetail(craneId: string) {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
+  useEntityTicks(['asset', 'repair', 'inspection']);
 
   const asset = getCraneAssetById(craneId);
   const components = getComponentsByCraneId(craneId);

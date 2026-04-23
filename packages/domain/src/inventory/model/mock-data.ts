@@ -1,4 +1,5 @@
-import type { InventoryItem, InventorySummary, PartCategory, PartCriticality, PartsRequest, PurchaseOrder } from './types';
+import { seedSequence } from '../../shared/id-generator';
+import type { InventoryItem, InventoryStatus, InventorySummary, PartCategory, PartCriticality, PartsRequest, PurchaseOrder } from './types';
 
 const baseInventoryItems: InventoryItem[] = [
   {
@@ -371,12 +372,32 @@ const allPurchaseOrders: PurchaseOrder[] = [
 
 const allPartsRequests: PartsRequest[] = [];
 
+const maxPartsSeq = allPartsRequests.reduce((max, req) => {
+  const m = req.requestNumber.match(/-(\d{4})$/);
+  return m ? Math.max(max, parseInt(m[1], 10)) : max;
+}, 0);
+seedSequence('parts', maxPartsSeq);
+
+function computeStatus(item: InventoryItem): InventoryStatus {
+  if (item.currentQty === 0) return 'out_of_stock';
+  if (item.availableQty <= item.minStockQty) return 'low';
+  if (item.currentQty > item.minStockQty * 3) return 'excess';
+  return 'normal';
+}
+
 export function getAllPartsRequests(): PartsRequest[] {
   return allPartsRequests;
 }
 
 export function addPartsRequest(req: PartsRequest): void {
   allPartsRequests.unshift(req);
+  for (const line of req.items) {
+    const inv = allInventoryItems.find((i) => i.partId === line.partId);
+    if (!inv) continue;
+    inv.reservedQty += line.qty;
+    inv.availableQty = Math.max(0, inv.currentQty - inv.reservedQty);
+    inv.status = computeStatus(inv);
+  }
 }
 
 export function getAllInventoryItems(): InventoryItem[] {

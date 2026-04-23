@@ -4,8 +4,11 @@ import { getAllInspectionWOs } from '@crane/domain/inspection';
 import { getAllRepairWOs } from '@crane/domain/maintenance';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getAllCertifications } from '@crane/domain/compliance';
+import { useEntityTicks } from '@crane/features/shared';
 
 export function usePhillyDashboard() {
+  const tick = useEntityTicks(['asset', 'repair', 'inspection', 'parts']);
+
   return useMemo(() => {
     const assets = getAllCraneAssets();
     const inspections = getAllInspectionWOs();
@@ -127,5 +130,5 @@ export function usePhillyDashboard() {
       criticalParts,
       siteBreakdown,
     };
-  }, []);
+  }, [tick]);
 }

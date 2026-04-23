@@ -2,7 +2,6 @@ import type { OnOff, OkNg, RunFaultStatus, OpenClose } from '@crane/core/types/s
 import {
   onOffBadgeClassName,
   okNgBadgeClassName,
-  runFaultBadgeClassName,
   runFaultBadgeStyle,
 } from '@crane/core/lib/status-colors';
 import { cn } from '@crane/core/lib/utils';

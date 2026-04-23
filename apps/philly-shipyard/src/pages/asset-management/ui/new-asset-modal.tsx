@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
-import { useCreateAsset } from '@crane/features/asset';
-import type { AssetDraft } from '@crane/features/asset';
+import { useCreateAsset, useAssetForm } from '@crane/features/asset';
 import type { AssetStatus, CraneType } from '@crane/domain/asset';
 import { Button } from '@crane/ui/atoms/button';
 import { DatePicker } from '@crane/ui/molecules/date-picker';
@@ -17,40 +16,11 @@ const SITE_OPTIONS: Array<{ id: string; nameKey: string }> = [
 
 const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc', 'llc', 'luffing'];
 const STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
-const SITE_NAME: Record<string, string> = {
+const SITE_NAME_FALLBACK: Record<string, string> = {
   'dock-1': 'Dock No.1',
   'dock-2': 'Dock No.2',
   'dock-in': 'Block Shop',
 };
-
-const today = () => new Date().toISOString().slice(0, 10);
-const plusYears = (base: string, years: number) => {
-  const d = new Date(base);
-  d.setFullYear(d.getFullYear() + years);
-  return d.toISOString().slice(0, 10);
-};
-
-const initialDraft = (): AssetDraft => ({
-  name: '',
-  craneType: 'overhead',
-  manufacturer: '',
-  model: '',
-  capacityTon: 0,
-  spanM: undefined,
-  liftHeightM: undefined,
-  serialNumber: '',
-  manufactureDate: today(),
-  installationDate: today(),
-  warrantyStart: today(),
-  warrantyEnd: plusYears(today(), 5),
-  siteId: 'dock-1',
-  siteName: 'Dock No.1',
-  locationZone: '',
-  indoorOutdoor: 'outdoor',
-  status: 'operating',
-});
-
-type Errors = Partial<Record<keyof AssetDraft, string>>;
 
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors outline-none hover:border-primary/40 focus:border-ring focus:ring-2 focus:ring-ring/25';
@@ -59,18 +29,19 @@ const selectClass = inputClass + ' cursor-pointer';
 export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation('asset-management');
   const createAsset = useCreateAsset();
-  const [form, setForm] = useState<AssetDraft>(initialDraft);
-  const [errors, setErrors] = useState<Errors>({});
 
-  // open 상태 리셋
-  useEffect(() => {
-    if (open) {
-      setForm(initialDraft());
-      setErrors({});
-    }
-  }, [open]);
+  const { form, errors, set, setSite, validate } = useAssetForm({
+    resetKey: open,
+    messages: {
+      nameRequired: t('modal.validation.nameRequired', { defaultValue: 'Name is required.' }),
+      manufacturerRequired: t('modal.validation.manufacturerRequired', { defaultValue: 'Manufacturer is required.' }),
+      modelRequired: t('modal.validation.modelRequired', { defaultValue: 'Model is required.' }),
+      serialRequired: t('modal.validation.serialRequired', { defaultValue: 'Serial number is required.' }),
+      capacityRequired: t('modal.validation.capacityRequired', { defaultValue: 'Capacity must be > 0.' }),
+      locationRequired: t('modal.validation.locationRequired', { defaultValue: 'Location is required.' }),
+    },
+  });
 
-  // ESC로 닫기
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -82,28 +53,6 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
 
   if (!open) return null;
 
-  function set<K extends keyof AssetDraft>(key: K, value: AssetDraft[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
-  }
-
-  function handleSiteChange(siteId: string) {
-    setForm((f) => ({ ...f, siteId, siteName: SITE_NAME[siteId] ?? siteId }));
-    setErrors((e) => ({ ...e, siteId: undefined }));
-  }
-
-  function validate(): boolean {
-    const e: Errors = {};
-    if (!form.name.trim()) e.name = t('modal.validation.nameRequired', { defaultValue: 'Name is required.' });
-    if (!form.manufacturer.trim()) e.manufacturer = t('modal.validation.manufacturerRequired', { defaultValue: 'Manufacturer is required.' });
-    if (!form.model.trim()) e.model = t('modal.validation.modelRequired', { defaultValue: 'Model is required.' });
-    if (!form.serialNumber.trim()) e.serialNumber = t('modal.validation.serialRequired', { defaultValue: 'Serial number is required.' });
-    if (form.capacityTon <= 0) e.capacityTon = t('modal.validation.capacityRequired', { defaultValue: 'Capacity must be > 0.' });
-    if (!form.locationZone.trim()) e.locationZone = t('modal.validation.locationRequired', { defaultValue: 'Location is required.' });
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-
   function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     if (!validate()) return;
@@ -114,20 +63,17 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-background/70 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
 
-      {/* Dialog */}
       <div
         role="dialog"
         aria-modal="true"
         className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
           <div>
             <h2 className="text-base font-bold">{t('modal.title', { defaultValue: 'Register New Asset' })}</h2>
@@ -143,7 +89,6 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
           </button>
         </div>
 
-        {/* Body */}
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="grid grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2">
             <Field label={t('modal.fields.name', { defaultValue: 'Asset Name' })} required error={errors.name}>
@@ -228,10 +173,10 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
               <select
                 className={selectClass}
                 value={form.siteId}
-                onChange={(e) => handleSiteChange(e.target.value)}
+                onChange={(e) => setSite(e.target.value)}
               >
                 {SITE_OPTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>{t(s.nameKey, { defaultValue: SITE_NAME[s.id] })}</option>
+                  <option key={s.id} value={s.id}>{t(s.nameKey, { defaultValue: SITE_NAME_FALLBACK[s.id] })}</option>
                 ))}
               </select>
             </Field>
@@ -257,31 +202,19 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             </Field>
 
             <Field label={t('modal.fields.manufactureDate', { defaultValue: 'Manufacture Date' })}>
-              <DatePicker
-                value={form.manufactureDate}
-                onChange={(v) => set('manufactureDate', v)}
-              />
+              <DatePicker value={form.manufactureDate} onChange={(v) => set('manufactureDate', v)} />
             </Field>
 
             <Field label={t('modal.fields.installationDate', { defaultValue: 'Installation Date' })}>
-              <DatePicker
-                value={form.installationDate}
-                onChange={(v) => set('installationDate', v)}
-              />
+              <DatePicker value={form.installationDate} onChange={(v) => set('installationDate', v)} />
             </Field>
 
             <Field label={t('modal.fields.warrantyStart', { defaultValue: 'Warranty Start' })}>
-              <DatePicker
-                value={form.warrantyStart}
-                onChange={(v) => set('warrantyStart', v)}
-              />
+              <DatePicker value={form.warrantyStart} onChange={(v) => set('warrantyStart', v)} />
             </Field>
 
             <Field label={t('modal.fields.warrantyEnd', { defaultValue: 'Warranty End' })}>
-              <DatePicker
-                value={form.warrantyEnd}
-                onChange={(v) => set('warrantyEnd', v)}
-              />
+              <DatePicker value={form.warrantyEnd} onChange={(v) => set('warrantyEnd', v)} />
             </Field>
 
             <Field label={t('modal.fields.status', { defaultValue: 'Status' })} colSpan={2}>
@@ -305,7 +238,6 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             </Field>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3">
             <Button type="button" variant="outline" onClick={onClose}>
               {t('modal.cancel', { defaultValue: 'Cancel' })}

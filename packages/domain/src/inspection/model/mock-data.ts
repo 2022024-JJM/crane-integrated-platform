@@ -1,3 +1,4 @@
+import { seedSequence } from '../../shared/id-generator';
 import type { InspectionSummary, InspectionWO } from './types';
 
 const frequentChecklist = [
@@ -276,6 +277,12 @@ const generatedInspectionWOs: InspectionWO[] = Array.from({ length: 60 }, (_, i)
 });
 
 const allInspectionWOs: InspectionWO[] = [...baseInspectionWOs, ...generatedInspectionWOs];
+
+const maxInspectionSeq = allInspectionWOs.reduce((max, wo) => {
+  const m = wo.woNumber.match(/-(\d{4})$/);
+  return m ? Math.max(max, parseInt(m[1], 10)) : max;
+}, 0);
+seedSequence('inspection', maxInspectionSeq);
 
 export function getAllInspectionWOs(): InspectionWO[] {
   return allInspectionWOs;

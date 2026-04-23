@@ -18,7 +18,8 @@
     "./maintenance": "./src/maintenance/index.ts",
     "./inventory": "./src/inventory/index.ts",
     "./compliance": "./src/compliance/index.ts",
-    "./ticket": "./src/ticket/index.ts"
+    "./ticket": "./src/ticket/index.ts",
+    "./shared": "./src/shared/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",
