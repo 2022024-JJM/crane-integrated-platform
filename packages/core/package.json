@@ -24,6 +24,8 @@
     "./lib/use-date-time": "./src/lib/use-date-time.ts",
     "./lib/site-type-context": "./src/lib/site-type-context.tsx",
     "./lib/preview-helpers": "./src/lib/preview-helpers.ts",
+    "./lib/route-error-boundary": "./src/lib/route-error-boundary.tsx",
+    "./lib/safe-storage": "./src/lib/safe-storage.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
     "./types/navigation": "./src/types/navigation.ts",

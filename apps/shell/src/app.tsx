@@ -1,18 +1,41 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Outlet, Routes, Route, useLocation } from 'react-router-dom';
+import { lazy, Suspense, type ReactNode } from 'react';
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Routes,
+  Route,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 import { AuthProvider, useAuth, AUTH_STORAGE_KEY } from '@crane/features/auth';
 import { AppLayout } from '@crane/widgets/layout';
+import { RouteErrorBoundary } from '@crane/core/lib/route-error-boundary';
+import { getStorageJson } from '@crane/core/lib/safe-storage';
+import { getRegionById } from '@crane/domain/region';
 import { LoginPage } from './pages/login/login-page';
 import { PhillyDashboardPage } from './pages/philly-dashboard/philly-dashboard-page';
+import { NotFoundPage } from './pages/not-found/not-found-page';
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={null}>{children}</Suspense>
+    </RouteErrorBoundary>
+  );
+}
+
+function RegionGuard({ children }: { children: ReactNode }) {
+  const { regionId } = useParams<{ regionId: string }>();
+  if (!regionId || !getRegionById(regionId)) {
+    return <NotFoundPage />;
+  }
+  return <>{children}</>;
+}
 
 function getStoredRole(): string | null {
-  try {
-    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    return (JSON.parse(raw) as { role: string }).role ?? null;
-  } catch {
-    return null;
-  }
+  const stored = getStorageJson<{ role?: string }>(AUTH_STORAGE_KEY, 'session');
+  return stored?.role ?? null;
 }
 
 function getHomeRoute(role: string) {
@@ -150,131 +173,138 @@ export function App() {
               <Route
                 index
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <DashboardPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="region-overview"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <RegionOverviewPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="outdoor-work/:regionId/*"
                 element={
-                  <Suspense fallback={null}>
-                    <OutdoorWorkPage />
-                  </Suspense>
+                  <LazyRoute>
+                    <RegionGuard>
+                      <OutdoorWorkPage />
+                    </RegionGuard>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="indoor-work/:regionId/*"
                 element={
-                  <Suspense fallback={null}>
-                    <IndoorWorkPage />
-                  </Suspense>
+                  <LazyRoute>
+                    <RegionGuard>
+                      <IndoorWorkPage />
+                    </RegionGuard>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="goliath-work/:regionId/*"
                 element={
-                  <Suspense fallback={null}>
-                    <GoliathWorkPage />
-                  </Suspense>
+                  <LazyRoute>
+                    <RegionGuard>
+                      <GoliathWorkPage />
+                    </RegionGuard>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="crane-detail"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <CraneDetailListPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="crane-detail/:craneId/*"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <CraneDetailPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="asset-management"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <AssetManagementPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="asset-management/:craneId"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <AssetDetailPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="inspection"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <InspectionPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="inspection/:inspectionId"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <InspectionDetailPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="maintenance"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <MaintenancePage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="maintenance/:repairId"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <MaintenanceDetailPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="inventory"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <InventoryPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="compliance"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <CompliancePage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
               <Route
                 path="ticket/create"
                 element={
-                  <Suspense fallback={null}>
+                  <LazyRoute>
                     <CreateTicketPage />
-                  </Suspense>
+                  </LazyRoute>
                 }
               />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>
         </Routes>

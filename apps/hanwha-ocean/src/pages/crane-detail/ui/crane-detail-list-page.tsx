@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
@@ -10,14 +11,14 @@ import { CraneListSection } from './crane-list-section';
 type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
 
 const HANWHA_OCEAN_SECTIONS = [
-  { regionId: 'dock-1',  title: '1 도크', subtitle: '타워갠트리 크레인 9기' },
-  { regionId: 'dock-2',  title: '2 도크', subtitle: '타워갠트리 크레인 6기' },
-  { regionId: 'dock-in', title: '내업',   subtitle: '오버헤드 크레인 5기' },
-];
+  { regionId: 'dock-1',  titleKey: 'regions.dock1.title',  subtitle: '타워갠트리 크레인 9기' },
+  { regionId: 'dock-2',  titleKey: 'regions.dock2.title',  subtitle: '타워갠트리 크레인 6기' },
+  { regionId: 'dock-in', titleKey: 'regions.dockin.title', subtitle: '오버헤드 크레인 5기' },
+] as const;
 
 const GOLIATH_SECTIONS = [
-  { regionId: 'goliath', title: '골리앗 크레인', subtitle: '골리앗 크레인 1기' },
-];
+  { regionId: 'goliath', titleKey: 'regions.goliath.title', subtitle: '골리앗 크레인 1기' },
+] as const;
 
 const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: string; activeBg: string; activeText: string }> = {
   RUN:   { label: 'RUN',   color: 'text-emerald-400',      bg: 'bg-emerald-500/10',    activeBg: 'bg-emerald-500',     activeText: 'text-white'         },
@@ -26,6 +27,7 @@ const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: st
 };
 
 export function CraneDetailListPage() {
+  const { t } = useTranslation('common');
   const { siteType } = useSiteType();
   const sections = siteType === 'goliath-crane' ? GOLIATH_SECTIONS : HANWHA_OCEAN_SECTIONS;
 
@@ -122,7 +124,7 @@ export function CraneDetailListPage() {
             <CraneListSection
               key={section.regionId}
               regionId={section.regionId}
-              title={section.title}
+              title={t(section.titleKey)}
               subtitle={section.subtitle}
               statusFilters={statusFilters}
               globalCollapsed={globalCollapsed}

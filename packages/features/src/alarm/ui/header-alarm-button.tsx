@@ -229,10 +229,7 @@ export function HeaderAlarmButton() {
             })}
           </div>
 
-          <ScrollArea
-            key={severityFilter ?? 'all'}
-            className="min-h-0 flex-1 overflow-auto"
-          >
+          <ScrollArea className="min-h-0 flex-1 overflow-auto">
             {filteredHistory.length === 0 ? (
               <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
                 알람 이력이 없습니다

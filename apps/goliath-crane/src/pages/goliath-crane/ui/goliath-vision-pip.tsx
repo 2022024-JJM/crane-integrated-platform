@@ -7,6 +7,7 @@ import {
   useState,
   useId,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -69,6 +70,7 @@ function CameraFeedContent({
 }: {
   channel: (typeof CAMERA_CHANNELS)[number];
 }) {
+  const { t } = useTranslation('goliath-crane');
   return (
     <div className="relative flex h-full w-full overflow-hidden bg-zinc-800">
       {/* TV 노이즈 배경 */}
@@ -91,7 +93,7 @@ function CameraFeedContent({
             CH {channel.label.replace('CAM ', '')}
           </span>
           <span className="text-[10px] text-white/50">
-            {channel.description}
+            {t(channel.descriptionKey)}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -179,6 +181,7 @@ export function GoliathVisionPip({
   channels,
   onClose,
 }: GoliathVisionPipProps) {
+  const { t } = useTranslation('goliath-crane');
   const [position, setPosition] = useState<DashboardPreviewPosition>(() =>
     getDashboardPreviewDefaultPosition(),
   );
@@ -335,7 +338,7 @@ export function GoliathVisionPip({
   const isCamera = expanded.type === 'camera' && channel !== undefined;
   const isLidar = expanded.type === 'lidar';
   const pipTitle = isCamera ? channel.label : 'LiDAR';
-  const pipSub = isCamera ? channel.description : 'Point Cloud';
+  const pipSub = isCamera ? t(channel.descriptionKey) : 'Point Cloud';
   const accentColor = isCamera ? 'border-orange-500/30' : 'border-cyan-500/30';
   const badgeColor = isCamera
     ? 'border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400'

@@ -8,6 +8,10 @@ import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { Switch } from '@crane/ui/atoms/switch';
 import { cn } from '@crane/core/lib/utils';
+import {
+  getStorageItem,
+  setStorageItem,
+} from '@crane/core/lib/safe-storage';
 import { NewAssetModal } from './new-asset-modal';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
@@ -131,18 +135,14 @@ function AssetCard({
 function useLocalCollapsed(key: string, defaultValue = false) {
   const storageKey = `asset-section-collapsed:${key}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      return stored !== null ? stored === 'true' : defaultValue;
-    } catch {
-      return defaultValue;
-    }
+    const stored = getStorageItem(storageKey);
+    return stored !== null ? stored === 'true' : defaultValue;
   });
 
   const toggle = () =>
     setCollapsed((prev) => {
       const next = !prev;
-      try { localStorage.setItem(storageKey, String(next)); } catch { /* noop */ }
+      setStorageItem(storageKey, String(next));
       return next;
     });
 

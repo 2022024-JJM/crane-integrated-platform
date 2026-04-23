@@ -1,6 +1,10 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
+import {
+  getStorageItem,
+  setStorageItem,
+} from '@crane/core/lib/safe-storage';
 import { getCmmsMockData } from '../model/mock-data';
 import { CraneSummaryCard } from './crane-summary-card';
 
@@ -18,18 +22,14 @@ interface CraneListSectionProps {
 function useLocalCollapsed(key: string, defaultValue = false) {
   const storageKey = `crane-section-collapsed:${key}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      return stored !== null ? stored === 'true' : defaultValue;
-    } catch {
-      return defaultValue;
-    }
+    const stored = getStorageItem(storageKey);
+    return stored !== null ? stored === 'true' : defaultValue;
   });
 
   const toggle = () =>
     setCollapsed((prev) => {
       const next = !prev;
-      try { localStorage.setItem(storageKey, String(next)); } catch { /* noop */ }
+      setStorageItem(storageKey, String(next));
       return next;
     });
 

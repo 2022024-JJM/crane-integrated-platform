@@ -22,8 +22,12 @@ interface RealtimeAlarmState {
   setRuntimeDictionary: (items: RuntimeAlarmDictionaryItem[]) => void;
 }
 
-function createActiveAlarmKey(craneId: string, alarmNo: number) {
-  return `${craneId}:${alarmNo}`;
+function createActiveAlarmKey(
+  regionId: string,
+  craneId: string,
+  alarmNo: number,
+) {
+  return `${regionId}:${craneId}:${alarmNo}`;
 }
 
 function getMostRecentActiveAlarmForCrane(
@@ -135,8 +139,13 @@ export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
       }
 
       nextAlarm = mapRealtimeAlarmMessageToAlarm(message);
-      nextActiveAlarms[createActiveAlarmKey(message.craneId, message.value)] =
-        nextAlarm;
+      nextActiveAlarms[
+        createActiveAlarmKey(
+          nextAlarm.regionId,
+          nextAlarm.craneId,
+          message.value,
+        )
+      ] = nextAlarm;
 
       const activeAlarm = nextAlarm;
       const historyWithActive = state.history.some(

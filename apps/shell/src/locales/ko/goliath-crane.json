@@ -85,5 +85,22 @@
     "slewRotate": "선회 회전",
     "emergencyStopTest": "비상정지 테스트",
     "systemCheck": "시스템 점검"
+  },
+  "visionStrip": {
+    "cam1": "호이스트 상부",
+    "cam2": "트롤리 전방",
+    "cam3": "레일 좌측",
+    "noImage": "NO IMAGE",
+    "noSignal": "NO SIGNAL",
+    "lidarReady": "준비중",
+    "lidarWaiting": "카메라 피드 연결 대기중",
+    "cameraOffline": "카메라 오프라인",
+    "close": "닫기",
+    "lidarTitle": "LiDAR POINT CLOUD",
+    "lidarHardwareWaiting": "하드웨어 연결 대기중",
+    "lidarHint": "LiDAR 센서 연결 시 포인트 클라우드 표시",
+    "lidarScanRate": "스캔 속도",
+    "lidarPointsPerFrame": "포인트/프레임",
+    "lidarDetectRange": "감지 범위"
   }
 }

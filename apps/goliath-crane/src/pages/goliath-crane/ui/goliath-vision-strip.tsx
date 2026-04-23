@@ -8,6 +8,7 @@ import {
   Crosshair,
   TriangleAlert,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { GoliathLidarPointCloud } from './goliath-lidar-point-cloud';
@@ -16,11 +17,21 @@ export const CAMERA_CHANNELS = [
   {
     id: 'cam-1',
     label: 'CAM 1',
-    description: '호이스트 상부',
+    descriptionKey: 'visionStrip.cam1',
     connected: true,
   },
-  { id: 'cam-2', label: 'CAM 2', description: '트롤리 전방', connected: true },
-  { id: 'cam-3', label: 'CAM 3', description: '레일 좌측', connected: false },
+  {
+    id: 'cam-2',
+    label: 'CAM 2',
+    descriptionKey: 'visionStrip.cam2',
+    connected: true,
+  },
+  {
+    id: 'cam-3',
+    label: 'CAM 3',
+    descriptionKey: 'visionStrip.cam3',
+    connected: false,
+  },
 ] as const;
 
 type ExpandedView = { type: 'camera'; id: string } | { type: 'lidar' } | null;
@@ -35,6 +46,7 @@ function CameraTile({
   isActive: boolean;
   onExpand: () => void;
 }) {
+  const { t } = useTranslation('goliath-crane');
   return (
     <div
       className={cn(
@@ -126,7 +138,7 @@ function CameraTile({
           {channel.label}
         </span>
         <span className="text-muted-foreground/60 text-[8px]">
-          {channel.description}
+          {t(channel.descriptionKey)}
         </span>
       </div>
     </div>
@@ -141,6 +153,7 @@ function LidarTile({
   isActive: boolean;
   onExpand: () => void;
 }) {
+  const { t } = useTranslation('goliath-crane');
   return (
     <div
       className={cn(
@@ -182,7 +195,7 @@ function LidarTile({
           variant="outline"
           className="border-amber-500/30 bg-amber-500/10 text-[7px] text-amber-600 dark:text-amber-400"
         >
-          준비중
+          {t('visionStrip.lidarReady')}
         </Badge>
       </div>
     </div>
@@ -197,6 +210,7 @@ export function ExpandedCameraView({
   channel: (typeof CAMERA_CHANNELS)[number];
   onClose: () => void;
 }) {
+  const { t } = useTranslation('goliath-crane');
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-orange-500/40 bg-zinc-950 shadow-xl">
       {/* Scanline */}
@@ -259,7 +273,7 @@ export function ExpandedCameraView({
             onClick={onClose}
             className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-white/50 hover:bg-white/10 hover:text-white"
           >
-            ✕ 닫기
+            ✕ {t('visionStrip.close')}
           </button>
         </div>
       </div>
@@ -274,24 +288,26 @@ export function ExpandedCameraView({
             </div>
             <div className="flex flex-col items-center gap-1">
               <p className="text-xs font-medium text-white/50">
-                {channel.description}
+                {t(channel.descriptionKey)}
               </p>
               <p className="text-[10px] text-white/30">
-                카메라 피드 연결 대기중
+                {t('visionStrip.lidarWaiting')}
               </p>
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <WifiOff className="size-10 text-red-500/30" />
-            <p className="text-xs text-white/30">카메라 오프라인</p>
+            <p className="text-xs text-white/30">
+              {t('visionStrip.cameraOffline')}
+            </p>
           </div>
         )}
       </div>
       {/* HUD bottom */}
       <div className="relative z-10 flex items-center justify-between px-4 pb-3">
         <span className="font-mono text-[9px] text-white/30">
-          GC-04 · {channel.description}
+          GC-04 · {t(channel.descriptionKey)}
         </span>
         <div className="flex items-center gap-1.5">
           <Activity className="size-2.5 text-emerald-400/50" />
@@ -304,6 +320,7 @@ export function ExpandedCameraView({
 
 // 확장 LiDAR 뷰
 export function ExpandedLidarView({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation('goliath-crane');
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-cyan-500/40 bg-zinc-950 shadow-xl">
       {/* Sweep line */}
@@ -325,7 +342,7 @@ export function ExpandedLidarView({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-white/50 hover:bg-white/10 hover:text-white"
         >
-          ✕ 닫기
+          ✕ {t('visionStrip.close')}
         </button>
       </div>
       {/* Point cloud visualization */}
@@ -342,17 +359,17 @@ export function ExpandedLidarView({ onClose }: { onClose: () => void }) {
             className="border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-500"
           >
             <TriangleAlert className="mr-1 size-3" />
-            하드웨어 연결 대기중
+            {t('visionStrip.lidarHardwareWaiting')}
           </Badge>
           <p className="text-[10px] text-white/30">
-            LiDAR 센서 연결 시 포인트 클라우드 표시
+            {t('visionStrip.lidarHint')}
           </p>
         </div>
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: '스캔 속도', value: '— Hz' },
-            { label: '포인트/프레임', value: '—' },
-            { label: '감지 범위', value: '— m' },
+            { label: t('visionStrip.lidarScanRate'), value: '— Hz' },
+            { label: t('visionStrip.lidarPointsPerFrame'), value: '—' },
+            { label: t('visionStrip.lidarDetectRange'), value: '— m' },
           ].map((s) => (
             <div key={s.label} className="flex flex-col items-center gap-0.5">
               <span className="text-[9px] text-white/30">{s.label}</span>
