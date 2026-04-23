@@ -1,5 +1,5 @@
 import { seedSequence } from '../../shared/id-generator';
-import type { InspectionSummary, InspectionWO } from './types';
+import type { ChecklistItem, InspectionSummary, InspectionWO } from './types';
 
 const frequentChecklist = [
   { id: 'fi-01', category: 'Fluid & Equipment', category_ko: '유체 및 설비', itemName: 'Oil Leak Check', itemName_ko: '오일 누유 점검', judgment: null, actionRequired: 'none' as const },
@@ -290,6 +290,58 @@ export function getAllInspectionWOs(): InspectionWO[] {
 
 export function addInspectionWO(wo: InspectionWO): void {
   allInspectionWOs.unshift(wo);
+}
+
+export interface ChecklistItemPatch {
+  id: string;
+  judgment: ChecklistItem['judgment'];
+  comment?: string;
+  actionRequired: ChecklistItem['actionRequired'];
+}
+
+export function updateChecklistItems(
+  inspectionId: string,
+  patches: ChecklistItemPatch[],
+): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === inspectionId);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  const byId = new Map(patches.map((p) => [p.id, p]));
+  allInspectionWOs[idx] = {
+    ...wo,
+    checklistItems: wo.checklistItems.map((item) => {
+      const patch = byId.get(item.id);
+      if (!patch) return item;
+      return {
+        ...item,
+        judgment: patch.judgment,
+        comment: patch.comment,
+        actionRequired: patch.actionRequired,
+      };
+    }),
+  };
+  return true;
+}
+
+export function submitInspectionResult(inspectionId: string): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === inspectionId);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  const judgments = wo.checklistItems.map((i) => i.judgment);
+  const anyFail = judgments.includes('fail');
+  const anyPending = judgments.includes(null);
+  const result: InspectionWO['result'] = anyPending
+    ? 'conditional'
+    : anyFail
+      ? 'fail'
+      : 'pass';
+  allInspectionWOs[idx] = {
+    ...wo,
+    status: 'completed',
+    result,
+    actualDate: new Date().toISOString().slice(0, 10),
+  };
+  return true;
 }
 
 export function getDefaultChecklist(woType: 'frequent' | 'periodic' | 'emergency' | 'special') {

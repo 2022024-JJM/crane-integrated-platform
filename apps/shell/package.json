@@ -12,24 +12,25 @@
   },
   "dependencies": {
     "@crane/core": "workspace:*",
-    "@crane/ui": "workspace:*",
     "@crane/domain": "workspace:*",
     "@crane/features": "workspace:*",
-    "@crane/widgets": "workspace:*",
-    "@crane/hanwha-ocean": "workspace:*",
     "@crane/goliath-crane": "workspace:*",
+    "@crane/hanwha-ocean": "workspace:*",
     "@crane/philly-shipyard": "workspace:*",
+    "@crane/ui": "workspace:*",
+    "@crane/widgets": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",
+    "recharts": "^3.8.1",
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@types/node": "^24.10.1",
+    "@vitejs/plugin-react": "^5.1.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }

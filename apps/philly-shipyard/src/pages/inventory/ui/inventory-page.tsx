@@ -341,7 +341,7 @@ export function InventoryPage() {
           <span>{t('table.criticality')}</span>
           <span className="text-right">{t('table.currentStock')}</span>
           <span>{t('table.stockLevel')}</span>
-          <span className="text-right">{t('table.unitPrice', { defaultValue: '단가' })}</span>
+          <span className="text-right">{t('table.unitPrice', { defaultValue: 'Unit Price' })}</span>
           <span className="text-right">{t('table.leadTime')}</span>
           <span className="text-right">{t('table.status')}</span>
         </div>
@@ -366,8 +366,8 @@ export function InventoryPage() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
             labels={{
-              rowsPerPage: t('pagination.rowsPerPage', { defaultValue: '페이지당' }),
-              of: t('pagination.of', { defaultValue: '/' }),
+              rowsPerPage: t('pagination.rowsPerPage', { defaultValue: 'Rows per page' }),
+              of: t('pagination.of', { defaultValue: 'of' }),
             }}
           />
         )}

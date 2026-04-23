@@ -175,7 +175,7 @@ export function InspectionPage() {
         <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
           <p className="text-sm font-medium text-red-600 dark:text-red-400">
-            {t('overdueAlert', { count: overdueCount, defaultValue: `지연된 점검 ${overdueCount}건 — 즉시 확인 필요` })}
+            {t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
           </p>
         </div>
       )}
@@ -242,7 +242,7 @@ export function InspectionPage() {
           <span>{t('table.type')}</span>
           <span>{t('table.scheduled')}</span>
           <span>{t('table.assignedTo')}</span>
-          <span className="text-right">{t('table.progress', { defaultValue: '진행률' })}</span>
+          <span className="text-right">{t('table.progress', { defaultValue: 'Progress' })}</span>
           <span className="text-right">{t('table.status')}</span>
           <span className="text-right">{t('table.result')}</span>
         </div>
@@ -267,8 +267,8 @@ export function InspectionPage() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
             labels={{
-              rowsPerPage: t('pagination.rowsPerPage', { defaultValue: '페이지당' }),
-              of: t('pagination.of', { defaultValue: '/' }),
+              rowsPerPage: t('pagination.rowsPerPage', { defaultValue: 'Rows per page' }),
+              of: t('pagination.of', { defaultValue: 'of' }),
             }}
           />
         )}

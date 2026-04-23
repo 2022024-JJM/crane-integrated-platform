@@ -1,10 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, CheckCircle2, XCircle, MinusCircle, Save, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useInspectionDetail } from '@crane/features/inspection';
-import type { ChecklistJudgment, ActionRequired } from '@crane/domain/inspection';
+import {
+  useInspectionDetail,
+  useSaveInspectionChecklist,
+  useSubmitInspection,
+} from '@crane/features/inspection';
+import type { ChecklistJudgment, ActionRequired, ChecklistItemPatch } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
 
 const JUDGMENT_ICON: Record<ChecklistJudgment, React.ReactNode> = {
@@ -37,6 +41,8 @@ function nextJudgment(current: ChecklistJudgment | null): ChecklistJudgment | nu
 export function InspectionDetailPage() {
   const { inspectionId } = useParams<{ inspectionId: string }>();
   const { inspection } = useInspectionDetail(inspectionId ?? '');
+  const saveChecklist = useSaveInspectionChecklist();
+  const submitInspection = useSubmitInspection();
   const { t } = useTranslation('inspection');
 
   const isEditable = inspection?.status !== 'completed';
@@ -57,6 +63,11 @@ export function InspectionDetailPage() {
 
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>(initialItemStates);
   const [saved, setSaved] = useState(false);
+
+  // persist 후 inspection 객체가 새 checklist로 교체되면 로컬 편집 버퍼도 동기화
+  useEffect(() => {
+    setItemStates(initialItemStates);
+  }, [initialItemStates]);
 
   if (!inspection) {
     return (
@@ -104,13 +115,34 @@ export function InspectionDetailPage() {
     setSaved(false);
   }
 
+  function collectPatches(): ChecklistItemPatch[] {
+    return Object.entries(itemStates).map(([id, s]) => ({
+      id,
+      judgment: s.judgment,
+      comment: s.comment || undefined,
+      actionRequired: s.actionRequired,
+    }));
+  }
+
   function handleSave() {
+    if (!inspectionId) return;
+    const ok = saveChecklist(inspectionId, collectPatches());
+    if (!ok) {
+      toast.error(t('detail.toastSaved'));
+      return;
+    }
     setSaved(true);
     toast.success(t('detail.toastSaved'));
     setTimeout(() => setSaved(false), 2000);
   }
 
   function handleSubmit() {
+    if (!inspectionId) return;
+    const ok = submitInspection(inspectionId, collectPatches());
+    if (!ok) {
+      toast.error(t('detail.toastSubmitted'));
+      return;
+    }
     toast.success(t('detail.toastSubmitted'), {
       description: inspection?.woNumber,
     });

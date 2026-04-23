@@ -43,59 +43,81 @@
       "expired": "{{count}} Expired",
       "expiringSoon": "{{count}} expiring soon",
       "noExpiry": "No expiry soon"
-    },
-    "operatingRate": {
-      "label": "Operating Rate",
-      "meta": "{{operating}} / {{total}} cranes"
-    },
-    "emergencyWO": {
-      "label": "Emergency W/O",
-      "action": "Immediate action required",
-      "noEmergency": "No emergency"
     }
   },
-  "overview": {
-    "title": "Operations Overview",
-    "subtitle": "Active work orders, site status, and critical parts"
+  "sites": {
+    "dock1": "Dock No.1",
+    "dock2": "Dock No.2",
+    "dockIn": "Block Shop"
   },
-  "repairCard": {
-    "title": "Active Repair Work Orders",
-    "subtitle": "Open repair orders sorted by priority",
-    "active": "{{count}} Active",
-    "empty": "No active repair work orders"
+  "charts": {
+    "viewAll": "View all",
+    "empty": "No data",
+    "repairPipeline": {
+      "title": "Repair Pipeline",
+      "subtitle": "Active work orders by workflow stage",
+      "center": "Active"
+    },
+    "siteLoad": {
+      "title": "Site Asset Load",
+      "subtitle": "Crane status distribution per dock",
+      "legend": {
+        "operating": "Operating",
+        "inspection": "Inspection",
+        "repair": "Repair",
+        "idle": "Idle"
+      }
+    },
+    "repairTrend": {
+      "title": "Repair Throughput",
+      "subtitle": "Completed work orders, last 8 weeks",
+      "legend": {
+        "completed": "Completed",
+        "emergency": "Emergency"
+      }
+    },
+    "failureMix": {
+      "title": "Failure Mix",
+      "subtitle": "Root cause distribution across all repairs",
+      "center": "Total"
+    }
+  },
+  "topLists": {
+    "viewAll": "View all",
+    "repairs": {
+      "title": "Top Repairs",
+      "subtitle": "By priority",
+      "empty": "No active repairs"
+    },
+    "inspections": {
+      "title": "Urgent Inspections",
+      "subtitle": "Overdue and active",
+      "empty": "All inspections on track"
+    },
+    "parts": {
+      "title": "Critical Parts",
+      "subtitle": "Below safety stock",
+      "empty": "All stock levels healthy"
+    }
   },
   "inspectionCard": {
-    "title": "Inspection Attention Required",
-    "subtitle": "Overdue and in-progress inspections",
-    "overdue": "{{count}} Overdue",
-    "empty": "All inspections on schedule",
     "statusOverdue": "OVERDUE",
-    "statusInProgress": "IN PROGRESS",
-    "typeFrequent": "Frequent",
-    "typePeriodic": "Periodic",
-    "scheduled": "Scheduled:"
+    "statusInProgress": "IN PROGRESS"
   },
-  "siteCard": {
-    "title": "Site Status",
-    "subtitle": "Crane status by dock area",
-    "live": "Live",
-    "operating": "Operating",
-    "repair": "Repair",
-    "overdue": "Overdue",
-    "cranes": "{{count}} cranes",
-    "sites": {
-      "dock1": "Dock No.1",
-      "dock2": "Dock No.2",
-      "dockIn": "Block Shop"
-    }
+  "failureType": {
+    "mechanical": "Mechanical",
+    "electrical": "Electrical",
+    "structural": "Structural",
+    "control": "Control",
+    "other": "Other"
   },
-  "partsCard": {
-    "title": "Critical Parts Alert",
-    "subtitle": "Parts below safety stock level",
-    "low": "{{count}} Low",
-    "empty": "All critical parts in stock",
-    "stock": "Stock: {{available}} / {{min}} min",
-    "lead": "Lead: {{days}}d"
+  "repairStatus": {
+    "received": "Received",
+    "waiting_parts": "Waiting Parts",
+    "in_progress": "In Progress",
+    "re_inspection": "Re-Inspection",
+    "on_hold": "On Hold",
+    "completed": "Completed"
   },
   "status": {
     "priority": {

@@ -43,59 +43,81 @@
       "expired": "{{count}}건 만료",
       "expiringSoon": "{{count}}건 만료 임박",
       "noExpiry": "만료 임박 없음"
-    },
-    "operatingRate": {
-      "label": "가동률",
-      "meta": "{{operating}} / {{total}}대"
-    },
-    "emergencyWO": {
-      "label": "긴급 작업지시",
-      "action": "즉시 조치 필요",
-      "noEmergency": "긴급 없음"
     }
   },
-  "overview": {
-    "title": "운영 현황",
-    "subtitle": "진행 중 작업지시, 사이트 현황 및 중요 부품"
+  "sites": {
+    "dock1": "1번 도크",
+    "dock2": "2번 도크",
+    "dockIn": "블록 공장"
   },
-  "repairCard": {
-    "title": "수리 작업지시 현황",
-    "subtitle": "우선순위 순으로 정렬된 수리 작업지시서",
-    "active": "{{count}}건 진행",
-    "empty": "진행 중인 수리 작업지시 없음"
+  "charts": {
+    "viewAll": "전체 보기",
+    "empty": "데이터 없음",
+    "repairPipeline": {
+      "title": "수리 파이프라인",
+      "subtitle": "진행 중인 작업지시 단계별 분포",
+      "center": "진행 중"
+    },
+    "siteLoad": {
+      "title": "사이트별 자산 부하",
+      "subtitle": "도크별 크레인 상태 분포",
+      "legend": {
+        "operating": "운행",
+        "inspection": "점검",
+        "repair": "수리",
+        "idle": "대기"
+      }
+    },
+    "repairTrend": {
+      "title": "수리 완료 추세",
+      "subtitle": "최근 8주 완료된 작업지시",
+      "legend": {
+        "completed": "완료",
+        "emergency": "긴급"
+      }
+    },
+    "failureMix": {
+      "title": "고장 유형 분포",
+      "subtitle": "전체 수리의 장애 원인별 분포",
+      "center": "총 수리"
+    }
+  },
+  "topLists": {
+    "viewAll": "전체 보기",
+    "repairs": {
+      "title": "우선 수리 TOP 3",
+      "subtitle": "우선순위 순",
+      "empty": "진행 중인 수리 없음"
+    },
+    "inspections": {
+      "title": "지연 점검 TOP 3",
+      "subtitle": "지연 및 진행 중인 점검",
+      "empty": "모든 점검 정상"
+    },
+    "parts": {
+      "title": "임박 재고 TOP 3",
+      "subtitle": "안전 재고 미달 부품",
+      "empty": "재고 수준 정상"
+    }
   },
   "inspectionCard": {
-    "title": "점검 주의 필요",
-    "subtitle": "지연 및 진행 중인 점검 현황",
-    "overdue": "{{count}}건 지연",
-    "empty": "모든 점검 정상 진행 중",
     "statusOverdue": "지연",
-    "statusInProgress": "진행 중",
-    "typeFrequent": "수시",
-    "typePeriodic": "정기",
-    "scheduled": "예정일:"
+    "statusInProgress": "진행 중"
   },
-  "siteCard": {
-    "title": "사이트별 현황",
-    "subtitle": "도크별 크레인 상태",
-    "live": "실시간",
-    "operating": "운행",
-    "repair": "수리",
-    "overdue": "지연",
-    "cranes": "{{count}}대",
-    "sites": {
-      "dock1": "1번 도크",
-      "dock2": "2번 도크",
-      "dockIn": "블록 공장"
-    }
+  "failureType": {
+    "mechanical": "기계",
+    "electrical": "전기",
+    "structural": "구조",
+    "control": "제어",
+    "other": "기타"
   },
-  "partsCard": {
-    "title": "중요 부품 알림",
-    "subtitle": "안전 재고 미달 부품 현황",
-    "low": "{{count}}건 부족",
-    "empty": "모든 중요 부품 재고 정상",
-    "stock": "재고: {{available}} / {{min}} (최소)",
-    "lead": "리드타임: {{days}}일"
+  "repairStatus": {
+    "received": "접수",
+    "waiting_parts": "부품 대기",
+    "in_progress": "진행 중",
+    "re_inspection": "재점검",
+    "on_hold": "보류",
+    "completed": "완료"
   },
   "status": {
     "priority": {

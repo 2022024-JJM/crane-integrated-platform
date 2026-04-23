@@ -43,59 +43,81 @@
       "expired": "{{count}} Exspiratae",
       "expiringSoon": "{{count}} mox exspirant",
       "noExpiry": "Nulla mox exspirant"
-    },
-    "operatingRate": {
-      "label": "Ratio Operationis",
-      "meta": "{{operating}} / {{total}} grues"
-    },
-    "emergencyWO": {
-      "label": "Mandatum Urgens",
-      "action": "Actio statim necessaria",
-      "noEmergency": "Nulla urgentia"
     }
   },
-  "overview": {
-    "title": "Conspectus Operationum",
-    "subtitle": "Mandata activa, status loci et partes criticae"
+  "sites": {
+    "dock1": "Doca I",
+    "dock2": "Doca II",
+    "dockIn": "Officina Fabrica"
   },
-  "repairCard": {
-    "title": "Mandata Refectionis Activa",
-    "subtitle": "Mandata aperta ordine prioritatis disposita",
-    "active": "{{count}} Activa",
-    "empty": "Nulla mandata refectionis activa"
+  "charts": {
+    "viewAll": "Omnia videre",
+    "empty": "Nulla data",
+    "repairPipeline": {
+      "title": "Cursus Refectionum",
+      "subtitle": "Mandata activa per gradus operationis",
+      "center": "Activa"
+    },
+    "siteLoad": {
+      "title": "Onus Locorum",
+      "subtitle": "Distributio status gruum per docam",
+      "legend": {
+        "operating": "Operans",
+        "inspection": "Inspectio",
+        "repair": "Refectio",
+        "idle": "Otiosa"
+      }
+    },
+    "repairTrend": {
+      "title": "Progressus Refectionum",
+      "subtitle": "Mandata perfecta, octo hebdomadae recentiores",
+      "legend": {
+        "completed": "Perfecta",
+        "emergency": "Urgentes"
+      }
+    },
+    "failureMix": {
+      "title": "Genera Defectuum",
+      "subtitle": "Distributio causarum per omnes refectiones",
+      "center": "Summa"
+    }
+  },
+  "topLists": {
+    "viewAll": "Omnia videre",
+    "repairs": {
+      "title": "Refectiones Praecipuae",
+      "subtitle": "Ordine prioritatis",
+      "empty": "Nullae refectiones activae"
+    },
+    "inspections": {
+      "title": "Inspectiones Urgentes",
+      "subtitle": "Retardatae et activae",
+      "empty": "Omnes inspectiones in ordine"
+    },
+    "parts": {
+      "title": "Partes Criticae",
+      "subtitle": "Infra stochum tutum",
+      "empty": "Omnes stochi integri"
+    }
   },
   "inspectionCard": {
-    "title": "Inspectiones Attentione Egentes",
-    "subtitle": "Inspectiones retardatae et in processu",
-    "overdue": "{{count}} Retardatae",
-    "empty": "Omnes inspectiones in ordine",
     "statusOverdue": "RETARDATA",
-    "statusInProgress": "IN PROCESSU",
-    "typeFrequent": "Frequens",
-    "typePeriodic": "Periodica",
-    "scheduled": "Disposita:"
+    "statusInProgress": "IN PROCESSU"
   },
-  "siteCard": {
-    "title": "Status Loci",
-    "subtitle": "Status gruum per areas docae",
-    "live": "Vivum",
-    "operating": "Operans",
-    "repair": "Refectio",
-    "overdue": "Retardata",
-    "cranes": "{{count}} grues",
-    "sites": {
-      "dock1": "Doca I",
-      "dock2": "Doca II",
-      "dockIn": "Officina Fabrica"
-    }
+  "failureType": {
+    "mechanical": "Mechanicus",
+    "electrical": "Electricus",
+    "structural": "Structuralis",
+    "control": "Regimen",
+    "other": "Alia"
   },
-  "partsCard": {
-    "title": "Monitum de Partibus Criticis",
-    "subtitle": "Partes infra limitem stochi tuti",
-    "low": "{{count}} Deficientes",
-    "empty": "Omnes partes criticae in stocho",
-    "stock": "Stochus: {{available}} / {{min}} min",
-    "lead": "Tempus: {{days}}d"
+  "repairStatus": {
+    "received": "Acceptum",
+    "waiting_parts": "Partes Exspectantur",
+    "in_progress": "In Processu",
+    "re_inspection": "Re-Inspectio",
+    "on_hold": "Suspensum",
+    "completed": "Perfectum"
   },
   "status": {
     "priority": {

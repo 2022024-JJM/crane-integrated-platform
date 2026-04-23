@@ -226,7 +226,7 @@ function AssetSection({
           </div>
         ) : (
           <div className="flex items-center justify-center py-8 pb-4 text-xs text-muted-foreground">
-            {t('filter.empty', { defaultValue: '조건에 맞는 자산이 없습니다.' })}
+            {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
           </div>
         )
       )}
@@ -276,7 +276,7 @@ export function AssetManagementPage() {
           className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           <Plus className="size-4" />
-          {t('newAsset', { defaultValue: '새 자산 등록' })}
+          {t('newAsset', { defaultValue: 'New Asset' })}
         </button>
       </div>
 
@@ -288,7 +288,7 @@ export function AssetManagementPage() {
             {t('criticalAlert', {
               overdueCount: overdueAssetCount,
               repairCount: repairAssetCount,
-              defaultValue: `점검 지연 ${overdueAssetCount}대 · 수리 진행 ${repairAssetCount}대 — 즉각적인 조치 필요`,
+              defaultValue: `${overdueAssetCount} overdue inspections · ${repairAssetCount} in repair — immediate action required`,
             })}
           </p>
         </div>
@@ -312,7 +312,7 @@ export function AssetManagementPage() {
       {/* 상태 필터 (CMMS 스타일 멀티셀렉트 pill) + 전체 펼침/접힘 */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t('filter.status', { defaultValue: '상태' })}
+          {t('filter.status', { defaultValue: 'Status' })}
         </span>
         <div className="flex flex-wrap gap-1.5 flex-1">
           {FILTER_STATUSES.map((s) => {
@@ -348,13 +348,13 @@ export function AssetManagementPage() {
           }
           <span className="text-[11px] text-muted-foreground">
             {allCollapsed
-              ? t('collapse.allCollapsed', { defaultValue: '전체 접힘' })
-              : t('collapse.allExpanded', { defaultValue: '전체 펼침' })}
+              ? t('collapse.allCollapsed', { defaultValue: 'All collapsed' })
+              : t('collapse.allExpanded', { defaultValue: 'All expanded' })}
           </span>
           <Switch
             checked={allCollapsed}
             onCheckedChange={(checked) => setGlobalCollapsed(checked ? true : false)}
-            aria-label={t('collapse.toggle', { defaultValue: '전체 접기 / 펼치기' })}
+            aria-label={t('collapse.toggle', { defaultValue: 'Collapse / expand all' })}
           />
         </div>
       </div>
@@ -375,7 +375,7 @@ export function AssetManagementPage() {
         ))}
         {filteredAssets.length === 0 && (
           <div className="rounded-lg border border-dashed border-border/70 py-12 text-center text-sm text-muted-foreground">
-            {t('filter.empty', { defaultValue: '조건에 맞는 자산이 없습니다.' })}
+            {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
           </div>
         )}
       </div>
