@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Calendar } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { DatePicker } from '@crane/ui';
 import { getCmmsMockData } from '@crane/domain/crane';
 
 const PAGE_SIZE = 10;
@@ -111,24 +112,12 @@ function HistoryPanel({
           {t('faultHistory.today')}
         </button>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Calendar className="w-3 h-3" />
           <span>{t('faultHistory.start')}</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => onStartChange(e.target.value)}
-            className="bg-background border border-border rounded px-2 py-0.5 text-foreground text-xs focus:outline-none focus:border-ring"
-          />
+          <DatePicker size="xs" value={startDate} onChange={onStartChange} />
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Calendar className="w-3 h-3" />
           <span>{t('faultHistory.end')}</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => onEndChange(e.target.value)}
-            className="bg-background border border-border rounded px-2 py-0.5 text-foreground text-xs focus:outline-none focus:border-ring"
-          />
+          <DatePicker size="xs" value={endDate} onChange={onEndChange} />
         </div>
         <button
           onClick={onSearch}

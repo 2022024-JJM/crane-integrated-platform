@@ -1,6 +1,7 @@
 import { Search, Loader2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
+import { DateTimePicker } from '@crane/ui/molecules/date-time-picker';
 import { cn } from '@crane/core/lib/utils';
 
 type ReplayValidationReason = 'missing' | 'invalid' | 'order' | 'tooLarge';
@@ -54,26 +55,26 @@ export function ReplaySearchForm({
       <p className="text-sm font-medium">{t('common:replay.searchForm')}</p>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+        <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <span className="w-8 shrink-0">{t('common:from')}</span>
-          <input
-            type="datetime-local"
-            step={1}
+          <DateTimePicker
+            size="sm"
+            withSeconds
             value={draftFrom}
-            onChange={(e) => onDraftFromChange(e.target.value)}
-            className="bg-background border-input focus:ring-ring w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
+            onChange={onDraftFromChange}
+            error={Boolean(validationReason)}
           />
-        </label>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+        </div>
+        <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <span className="w-8 shrink-0">{t('common:to')}</span>
-          <input
-            type="datetime-local"
-            step={1}
+          <DateTimePicker
+            size="sm"
+            withSeconds
             value={draftTo}
-            onChange={(e) => onDraftToChange(e.target.value)}
-            className="bg-background border-input focus:ring-ring w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1"
+            onChange={onDraftToChange}
+            error={Boolean(validationReason)}
           />
-        </label>
+        </div>
       </div>
 
       {validationMessage ? (

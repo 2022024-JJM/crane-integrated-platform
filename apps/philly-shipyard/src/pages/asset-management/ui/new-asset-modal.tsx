@@ -6,6 +6,7 @@ import { useCreateAsset } from '@crane/features/asset';
 import type { AssetDraft } from '@crane/features/asset';
 import type { AssetStatus, CraneType } from '@crane/domain/asset';
 import { Button } from '@crane/ui/atoms/button';
+import { DatePicker } from '@crane/ui/molecules/date-picker';
 import { cn } from '@crane/core/lib/utils';
 
 const SITE_OPTIONS: Array<{ id: string; nameKey: string }> = [
@@ -256,38 +257,30 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             </Field>
 
             <Field label={t('modal.fields.manufactureDate', { defaultValue: 'Manufacture Date' })}>
-              <input
-                type="date"
-                className={selectClass}
+              <DatePicker
                 value={form.manufactureDate}
-                onChange={(e) => set('manufactureDate', e.target.value)}
+                onChange={(v) => set('manufactureDate', v)}
               />
             </Field>
 
             <Field label={t('modal.fields.installationDate', { defaultValue: 'Installation Date' })}>
-              <input
-                type="date"
-                className={selectClass}
+              <DatePicker
                 value={form.installationDate}
-                onChange={(e) => set('installationDate', e.target.value)}
+                onChange={(v) => set('installationDate', v)}
               />
             </Field>
 
             <Field label={t('modal.fields.warrantyStart', { defaultValue: 'Warranty Start' })}>
-              <input
-                type="date"
-                className={selectClass}
+              <DatePicker
                 value={form.warrantyStart}
-                onChange={(e) => set('warrantyStart', e.target.value)}
+                onChange={(v) => set('warrantyStart', v)}
               />
             </Field>
 
             <Field label={t('modal.fields.warrantyEnd', { defaultValue: 'Warranty End' })}>
-              <input
-                type="date"
-                className={selectClass}
+              <DatePicker
                 value={form.warrantyEnd}
-                onChange={(e) => set('warrantyEnd', e.target.value)}
+                onChange={(v) => set('warrantyEnd', v)}
               />
             </Field>
 

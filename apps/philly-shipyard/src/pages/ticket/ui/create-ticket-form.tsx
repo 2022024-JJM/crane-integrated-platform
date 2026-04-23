@@ -15,6 +15,7 @@ import type {
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import type { PartsRequestItem } from '@crane/domain/inventory';
 import { Button } from '@crane/ui/atoms/button';
+import { DatePicker } from '@crane/ui/molecules/date-picker';
 import {
   FormSection,
   FormField,
@@ -350,11 +351,10 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
               </FormField>
 
               <FormField label={t('fields.scheduledDate')} required error={errors.scheduledDate}>
-                <input
-                  type="date"
-                  className={inputClass + ' cursor-pointer'}
+                <DatePicker
                   value={form.scheduledDate}
-                  onChange={(e) => set('scheduledDate', e.target.value)}
+                  onChange={(v) => set('scheduledDate', v)}
+                  error={Boolean(errors.scheduledDate)}
                 />
               </FormField>
             </>
@@ -403,20 +403,18 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
             {type === 'repair' && (
               <>
                 <FormField label={t('fields.scheduledStart')} required error={errors.scheduledStart}>
-                  <input
-                    type="date"
-                    className={inputClass + ' cursor-pointer'}
+                  <DatePicker
                     value={form.scheduledStart}
-                    onChange={(e) => set('scheduledStart', e.target.value)}
+                    onChange={(v) => set('scheduledStart', v)}
+                    error={Boolean(errors.scheduledStart)}
                   />
                 </FormField>
 
                 <FormField label={t('fields.scheduledEnd')} required error={errors.scheduledEnd}>
-                  <input
-                    type="date"
-                    className={inputClass + ' cursor-pointer'}
+                  <DatePicker
                     value={form.scheduledEnd}
-                    onChange={(e) => set('scheduledEnd', e.target.value)}
+                    onChange={(v) => set('scheduledEnd', v)}
+                    error={Boolean(errors.scheduledEnd)}
                   />
                 </FormField>
               </>

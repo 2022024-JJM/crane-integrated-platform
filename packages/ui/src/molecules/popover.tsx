@@ -22,10 +22,14 @@ function PopoverPopup({
 }: PopoverPopupProps) {
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset}>
+      <PopoverPrimitive.Positioner
+        align={align}
+        sideOffset={sideOffset}
+        className="z-9999"
+      >
         <PopoverPrimitive.Popup
           className={cn(
-            'border-border bg-popover text-popover-foreground z-50 min-w-[8rem] overflow-hidden rounded-lg border p-1 shadow-lg',
+            'border-border bg-popover text-popover-foreground min-w-32 overflow-hidden rounded-lg border p-1 shadow-lg',
             'origin-[var(--transform-origin)] transition-[transform,scale,opacity] duration-150',
             'data-[ending-style]:scale-95 data-[ending-style]:opacity-0',
             'data-[starting-style]:scale-95 data-[starting-style]:opacity-0',

@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@crane/ui/molecules/table';
 import { Pagination } from '@crane/ui/molecules/pagination';
+import { DateTimePicker } from '@crane/ui/molecules/date-time-picker';
 
 export interface AlarmHistoryCraneOption {
   id: string;
@@ -301,24 +302,24 @@ export function AlarmHistoryPage({
             <label className="text-muted-foreground text-[11px] font-medium">
               {t('common:alarms.page.filters.from')}
             </label>
-            <input
-              type="datetime-local"
+            <DateTimePicker
+              size="xs"
               value={draft.from}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, from: e.target.value }))
-              }
-              className="bg-background border-input focus:ring-ring h-7 rounded border px-2 text-xs focus:ring-1 focus:outline-none"
+              onChange={(v) => setDraft((d) => ({ ...d, from: v }))}
+              error={rangeInvalid}
+              className="min-w-50"
             />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-muted-foreground text-[11px] font-medium">
               {t('common:alarms.page.filters.to')}
             </label>
-            <input
-              type="datetime-local"
+            <DateTimePicker
+              size="xs"
               value={draft.to}
-              onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))}
-              className="bg-background border-input focus:ring-ring h-7 rounded border px-2 text-xs focus:ring-1 focus:outline-none"
+              onChange={(v) => setDraft((d) => ({ ...d, to: v }))}
+              error={rangeInvalid}
+              className="min-w-50"
             />
           </div>
 
