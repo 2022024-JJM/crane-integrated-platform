@@ -5,7 +5,7 @@ import type {
   OnOff,
   OkNg,
   RunFaultStatus,
-} from './types';
+} from './cmms-types';
 
 // ─── 헬퍼 함수 ──────────────────────────────────────────────────
 function rnd(min: number, max: number, decimal = 2): number {

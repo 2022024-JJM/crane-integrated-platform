@@ -1,0 +1,23 @@
+{
+  "dockStatus": {
+    "title": "Status Docae",
+    "description": "Statum operationis gruium per docas inspice et ad paginam singularem procede."
+  },
+  "map": {
+    "title": "Tabula",
+    "description": "Regiones operationum gruium in tabula inspice.",
+    "regionName": "Complexus Industrialis Nationalis Okpo"
+  },
+  "cmms": {
+    "title": "CMMS",
+    "description": "Statum gruium per regiones uno conspectu inspice.",
+    "allCollapsed": "Omnia complicata",
+    "allExpanded": "Omnia explicata",
+    "toggleAria": "Omnia explicare / complicare"
+  },
+  "status": {
+    "normal": "Normalis",
+    "warning": "Monitum",
+    "critical": "Criticus"
+  }
+}

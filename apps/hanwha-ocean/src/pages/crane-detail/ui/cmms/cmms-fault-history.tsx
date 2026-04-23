@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Calendar } from 'lucide-react';
-import { getCmmsMockData } from '../../model/mock-data';
+import { getCmmsMockData } from '@crane/domain/crane';
 
 const PAGE_SIZE = 10;
 

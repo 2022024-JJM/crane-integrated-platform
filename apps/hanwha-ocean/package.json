@@ -8,7 +8,7 @@
   "exports": {
     "./pages": "./src/pages/index.ts",
     "./pages/dashboard": "./src/pages/dashboard/index.ts",
-    "./pages/region-overview": "./src/pages/region-overview/index.ts",
+    "./pages/monitoring": "./src/pages/monitoring/index.ts",
     "./pages/outdoor-work": "./src/pages/outdoor-work/index.ts",
     "./pages/indoor-work": "./src/pages/indoor-work/index.ts",
     "./pages/crane-detail": "./src/pages/crane-detail/index.ts"

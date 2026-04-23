@@ -1,0 +1,23 @@
+{
+  "dockStatus": {
+    "title": "Dock Status",
+    "description": "Review crane operations by dock and click a card to open the detailed page."
+  },
+  "map": {
+    "title": "Map",
+    "description": "View crane operating regions on the map.",
+    "regionName": "Okpo Shipyard"
+  },
+  "cmms": {
+    "title": "CMMS",
+    "description": "Review crane status by region at a glance.",
+    "allCollapsed": "All collapsed",
+    "allExpanded": "All expanded",
+    "toggleAria": "Toggle expand / collapse all"
+  },
+  "status": {
+    "normal": "Normal",
+    "warning": "Warning",
+    "critical": "Critical"
+  }
+}

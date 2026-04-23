@@ -34,7 +34,7 @@ export function RegionCard({ region }: RegionCardProps) {
           <div className="absolute top-0 right-4">
             <StatusDot
               status={region.status}
-              title={t(`region-overview:${region.status}`)}
+              title={t(`monitoring-overview:status.${region.status}`)}
             />
           </div>
           <CardTitle>{t(getRegionTitleKey(region.id))}</CardTitle>
@@ -59,19 +59,19 @@ export function RegionCard({ region }: RegionCardProps) {
 
         <CardFooter className="gap-4 text-xs">
           <span>
-            {t('region-overview:normal')}
+            {t('monitoring-overview:status.normal')}
             <span className="ml-1.5 text-green-600">
               {region.statusSummary.normal}
             </span>
           </span>
           <span>
-            {t('region-overview:warning')}
+            {t('monitoring-overview:status.warning')}
             <span className="ml-1.5 text-yellow-600">
               {region.statusSummary.warning}
             </span>
           </span>
           <span>
-            {t('region-overview:critical')}
+            {t('monitoring-overview:status.critical')}
             <span className="ml-1.5 text-red-600">
               {region.statusSummary.critical}
             </span>

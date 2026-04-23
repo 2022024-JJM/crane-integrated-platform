@@ -45,7 +45,10 @@
 ### Current Routes
 
 - `/` → `DashboardPage`
-- `/region-overview` → `RegionOverviewPage`
+- `/monitoring/dock-status` → `DockStatusPage`
+- `/monitoring/map` → `RegionMapPage`
+- `/monitoring/cmms` → `RegionCmmsPage`
+- `/region-overview` → `/monitoring/dock-status` 로 redirect (legacy)
 - `/outdoor-work/:regionId/*` → `OutdoorWorkPage`
 - `/indoor-work/:regionId/*` → `IndoorWorkPage`
 
@@ -64,7 +67,7 @@
 
 - **app/** — 애플리케이션 진입점, 라우팅, 전역 스타일
 - **pages/** — 라우트 단위 화면 구성
-  - 예: `dashboard`, `region-overview`, `outdoor-work`, `indoor-work`, `3d`
+  - 예: `dashboard`, `monitoring`, `outdoor-work`, `indoor-work`, `3d`
 - **widgets/** — 페이지에서 조합하는 큰 UI 블록
   - 예: `layout`, `alarm`, `crane`, `3d`
 - **features/** — 사용자 기능 단위
@@ -84,7 +87,7 @@ Import rule: 상위 레이어는 하위 레이어만 import 할 수 있다.
 
 - 다국어는 `ko`, `en`, `la` 세 언어를 지원한다.
 - 언어 리소스는 `src/shared/locales` 아래 namespace 별 JSON으로 관리한다.
-- 현재 namespace 는 `common`, `dashboard`, `region-overview`, `monitoring` 이다.
+- 현재 namespace 는 `common`, `dashboard`, `monitoring`, `monitoring-overview` 이다.
 - i18n 초기화와 language persistence 는 `src/shared/config/i18n.ts` 가 담당한다.
 - 테마 상태는 `src/shared/lib/theme-context.tsx` 에서 관리한다.
 - 사이드바 open/close 상태는 `src/shared/lib/sidebar-context.tsx` 에서 관리한다.

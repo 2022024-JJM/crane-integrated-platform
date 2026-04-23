@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getCmmsMockData } from '../../model/mock-data';
-import type { CmmsHoistUnit } from '../../model/types';
+import { getCmmsMockData, type CmmsHoistUnit } from '@crane/domain/crane';
 import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
 import { CmmsStatusLamp } from '@crane/ui/molecules/cmms-status-lamp';
 import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';

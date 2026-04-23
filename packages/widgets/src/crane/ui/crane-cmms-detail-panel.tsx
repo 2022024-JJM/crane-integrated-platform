@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { getCmmsMockData } from '../model/mock-data';
+import { getCmmsMockData } from '@crane/domain/crane';
 import { CmmsOverviewInline } from './cmms/cmms-overview-inline';
 import { CmmsHoistInline } from './cmms/cmms-hoist-inline';
 import { CmmsTrolleyInline } from './cmms/cmms-trolley-inline';

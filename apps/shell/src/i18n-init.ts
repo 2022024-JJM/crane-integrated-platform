@@ -6,12 +6,12 @@ import laCommon from './locales/la/common.json';
 import koDashboard from './locales/ko/dashboard.json';
 import enDashboard from './locales/en/dashboard.json';
 import laDashboard from './locales/la/dashboard.json';
-import koRegionOverview from './locales/ko/region-overview.json';
-import enRegionOverview from './locales/en/region-overview.json';
-import laRegionOverview from './locales/la/region-overview.json';
 import koMonitoring from './locales/ko/monitoring.json';
 import enMonitoring from './locales/en/monitoring.json';
 import laMonitoring from './locales/la/monitoring.json';
+import koMonitoringOverview from './locales/ko/monitoring-overview.json';
+import enMonitoringOverview from './locales/en/monitoring-overview.json';
+import laMonitoringOverview from './locales/la/monitoring-overview.json';
 import koGoliathCrane from './locales/ko/goliath-crane.json';
 import enGoliathCrane from './locales/en/goliath-crane.json';
 import laGoliathCrane from './locales/la/goliath-crane.json';
@@ -44,8 +44,8 @@ const resources = {
   ko: {
     common: koCommon,
     dashboard: koDashboard,
-    'region-overview': koRegionOverview,
     monitoring: koMonitoring,
+    'monitoring-overview': koMonitoringOverview,
     'goliath-crane': koGoliathCrane,
     cmms: koCmms,
     'asset-management': koAssetManagement,
@@ -59,8 +59,8 @@ const resources = {
   en: {
     common: enCommon,
     dashboard: enDashboard,
-    'region-overview': enRegionOverview,
     monitoring: enMonitoring,
+    'monitoring-overview': enMonitoringOverview,
     'goliath-crane': enGoliathCrane,
     cmms: enCmms,
     'asset-management': enAssetManagement,
@@ -74,8 +74,8 @@ const resources = {
   la: {
     common: laCommon,
     dashboard: laDashboard,
-    'region-overview': laRegionOverview,
     monitoring: laMonitoring,
+    'monitoring-overview': laMonitoringOverview,
     'goliath-crane': laGoliathCrane,
     cmms: laCmms,
     'asset-management': laAssetManagement,
@@ -91,8 +91,8 @@ const resources = {
 initI18n(resources, [
   'common',
   'dashboard',
-  'region-overview',
   'monitoring',
+  'monitoring-overview',
   'goliath-crane',
   'cmms',
   'asset-management',

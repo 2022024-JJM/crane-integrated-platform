@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { AppLink } from '@crane/ui/atoms/app-link';
-import type { CraneRegistryEntry } from '@crane/domain/crane';
-import { getCmmsMockData } from '../model/mock-data';
+import {
+  getCmmsMockData,
+  type CraneRegistryEntry,
+} from '@crane/domain/crane';
 import { ArrowRight, AlertTriangle, XCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CraneSummaryCardProps {

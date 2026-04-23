@@ -1,17 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
-import {
-  useRegionRealtimeAlarms,
-  useRegionActiveAlarmsByCraneId,
-} from '@crane/features/alarm';
+import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
 import { Monitoring3dView } from '@crane/features/3d';
 import {
   GoliathCraneSvgDiagram,
   useGoliathCraneData,
 } from '@crane/features/goliath-crane';
 import { Spinner } from '@crane/ui/atoms/spinner';
-import { AlarmPanel } from '@crane/widgets/alarm';
 import { CraneStatusTable } from '@crane/widgets/crane';
 import {
   ResizableHandle,
@@ -42,34 +38,10 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
   const backendRegionId =
     regionId === 'goliath' ? GOLIATH_BACKEND_REGION_ID : regionId;
-  const { alarms, stats: alarmStats } =
-    useRegionRealtimeAlarms(backendRegionId);
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(backendRegionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const [visionExpanded, setVisionExpanded] = useState<ExpandedView>(null);
   const { crane } = useGoliathCraneData();
-
-  const goliathAlarms = useMemo(
-    () =>
-      alarms
-        .filter((alarm) => alarm.craneId === GOLIATH_CRANE_ID)
-        .map((alarm) => ({ ...alarm, craneName: 'GC-04' })),
-    [alarms],
-  );
-  const goliathAlarmStats = useMemo(() => {
-    if (Object.values(alarmStats).every((value) => value === 0)) {
-      return alarmStats;
-    }
-
-    return {
-      critical: goliathAlarms.filter((alarm) => alarm.severity === 'critical')
-        .length,
-      high: goliathAlarms.filter((alarm) => alarm.severity === 'high').length,
-      medium: goliathAlarms.filter((alarm) => alarm.severity === 'medium')
-        .length,
-      info: goliathAlarms.filter((alarm) => alarm.severity === 'info').length,
-    };
-  }, [goliathAlarms, alarmStats]);
 
   return (
     <>
@@ -203,18 +175,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize={25} minSize={15}>
-          <ResizablePanelGroup
-            orientation="vertical"
-            className="h-full min-h-0"
-          >
-            <ResizablePanel defaultSize={45} minSize={20}>
-              <GoliathMetricsCompact crane={crane} />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={55} minSize={20}>
-              <AlarmPanel stats={goliathAlarmStats} alarms={goliathAlarms} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          <GoliathMetricsCompact crane={crane} />
         </ResizablePanel>
       </ResizablePanelGroup>
 

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { getCmmsMockData } from '../../model/mock-data';
-import type { CmmsTrolleyUnit } from '../../model/types';
+import { getCmmsMockData, type CmmsTrolleyUnit } from '@crane/domain/crane';
 import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
 import { CmmsStatusLamp } from '@crane/ui/molecules/cmms-status-lamp';
 import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';

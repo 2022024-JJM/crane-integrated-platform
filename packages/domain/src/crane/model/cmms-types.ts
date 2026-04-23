@@ -1,5 +1,6 @@
 // ─── 공통 상태 타입 (packages/core에서 re-export) ────────────────
-export type { OnOff, OkNg, RunFaultStatus, OpenClose } from '@crane/core/types/status';
+import type { OnOff, OkNg, RunFaultStatus, OpenClose } from '@crane/core/types/status';
+export type { OnOff, OkNg, RunFaultStatus, OpenClose };
 
 // ─── 알람 ────────────────────────────────────────────────────────
 export interface CmmsAlarmRecord {

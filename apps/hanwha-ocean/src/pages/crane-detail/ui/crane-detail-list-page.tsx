@@ -3,10 +3,9 @@ import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useSiteType } from '@crane/core/lib/site-type-context';
-import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
-import { getCmmsMockData } from '../model/mock-data';
+import { getCraneIdsByRegion, getCraneById, getCmmsMockData } from '@crane/domain/crane';
 import { Switch } from '@crane/ui/atoms/switch';
-import { CraneListSection } from './crane-list-section';
+import { CraneListSection } from '@crane/widgets/crane';
 
 type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
 

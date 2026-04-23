@@ -1,11 +1,30 @@
 import { getRegionById, getRegionTitleKey } from '@crane/domain/region';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
+import { AlarmHistoryPage } from '@crane/widgets/alarm';
+import { useRegionRealtimeAlarms } from '@crane/features/alarm';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 import { ReplayMonitoringView } from './replay-monitoring-view';
+
+const GOLIATH_BACKEND_REGION_ID = 'dock-1';
+const GOLIATH_CRANE_ID = 'C_171';
+
+function AlarmHistoryView({ regionId }: { regionId: string }) {
+  const backendRegionId =
+    regionId === 'goliath' ? GOLIATH_BACKEND_REGION_ID : regionId;
+  const { alarms } = useRegionRealtimeAlarms(backendRegionId);
+  const goliathAlarms = useMemo(
+    () =>
+      alarms
+        .filter((alarm) => alarm.craneId === GOLIATH_CRANE_ID)
+        .map((alarm) => ({ ...alarm, craneName: 'GC-04' })),
+    [alarms],
+  );
+  return <AlarmHistoryPage alarms={goliathAlarms} />;
+}
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -69,6 +88,9 @@ export function GoliathWorkPage() {
               : t('common:nav.workHistory')
           }
         />
+      )}
+      {subRoute === 'alarm-history' && (
+        <AlarmHistoryView regionId={regionId} />
       )}
       {subRoute === '3d-replay' && (
         <ReplayMonitoringView regionId={regionId} />

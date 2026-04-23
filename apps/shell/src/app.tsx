@@ -68,9 +68,21 @@ const DashboardPage = lazy(() =>
   })),
 );
 
-const RegionOverviewPage = lazy(() =>
-  import('@crane/hanwha-ocean/pages/region-overview').then((m) => ({
-    default: m.RegionOverviewPage,
+const DockStatusPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/monitoring').then((m) => ({
+    default: m.DockStatusPage,
+  })),
+);
+
+const RegionMapPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/monitoring').then((m) => ({
+    default: m.RegionMapPage,
+  })),
+);
+
+const RegionCmmsPage = lazy(() =>
+  import('@crane/hanwha-ocean/pages/monitoring').then((m) => ({
+    default: m.RegionCmmsPage,
   })),
 );
 
@@ -180,9 +192,37 @@ export function App() {
               />
               <Route
                 path="region-overview"
+                element={<Navigate to="/monitoring/dock-status" replace />}
+              />
+              <Route
+                path="region-overview/*"
+                element={<Navigate to="/monitoring/dock-status" replace />}
+              />
+              <Route
+                path="monitoring"
+                element={<Navigate to="/monitoring/dock-status" replace />}
+              />
+              <Route
+                path="monitoring/dock-status"
                 element={
                   <LazyRoute>
-                    <RegionOverviewPage />
+                    <DockStatusPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="monitoring/map"
+                element={
+                  <LazyRoute>
+                    <RegionMapPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="monitoring/cmms"
+                element={
+                  <LazyRoute>
+                    <RegionCmmsPage />
                   </LazyRoute>
                 }
               />

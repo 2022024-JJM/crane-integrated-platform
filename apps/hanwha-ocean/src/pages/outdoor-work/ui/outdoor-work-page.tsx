@@ -1,11 +1,33 @@
 import { getRegionById, getRegionTitleKey } from '@crane/domain/region';
-import { useEffect } from 'react';
+import { getCraneById, getCraneIdsByRegion } from '@crane/domain/crane';
+import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
+import {
+  AlarmHistoryPage,
+  type AlarmHistoryCraneOption,
+} from '@crane/widgets/alarm';
+import { useRegionRealtimeAlarms } from '@crane/features/alarm';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 import { ReplayMonitoringView } from './replay-monitoring-view';
+
+function AlarmHistoryView({ regionId }: { regionId: string }) {
+  const { alarms } = useRegionRealtimeAlarms(regionId);
+  const craneOptions = useMemo<AlarmHistoryCraneOption[]>(
+    () =>
+      getCraneIdsByRegion(regionId).map((id) => {
+        const crane = getCraneById(id);
+        return {
+          id,
+          label: crane?.craneNo ?? crane?.craneName ?? id,
+        };
+      }),
+    [regionId],
+  );
+  return <AlarmHistoryPage alarms={alarms} craneOptions={craneOptions} />;
+}
 
 function PlaceholderView({ title }: { title: string }) {
   const { t } = useTranslation();
@@ -69,6 +91,9 @@ export function OutdoorWorkPage() {
               : t('common:nav.workHistory')
           }
         />
+      )}
+      {subRoute === 'alarm-history' && (
+        <AlarmHistoryView regionId={regionId} />
       )}
       {subRoute === '3d-replay' && (
         <ReplayMonitoringView regionId={regionId} />

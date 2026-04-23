@@ -134,6 +134,7 @@ function isSiteWeatherSupportedPath(pathname: string) {
   return (
     pathname === '/' ||
     pathname === '/region-overview' ||
+    pathname.startsWith('/monitoring') ||
     /^\/(?:outdoor-work|indoor-work)\/[^/]+(?:\/.*)?$/.test(pathname)
   );
 }

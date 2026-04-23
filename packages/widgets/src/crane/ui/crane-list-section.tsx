@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { getCraneIdsByRegion, getCraneById } from '@crane/domain/crane';
+import {
+  getCraneIdsByRegion,
+  getCraneById,
+  getCmmsMockData,
+} from '@crane/domain/crane';
 import {
   getStorageItem,
   setStorageItem,
 } from '@crane/core/lib/safe-storage';
-import { getCmmsMockData } from '../model/mock-data';
 import { CraneSummaryCard } from './crane-summary-card';
 
 type StatusFilter = 'RUN' | 'FAULT' | 'STOP';

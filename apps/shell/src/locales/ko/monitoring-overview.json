@@ -1,0 +1,23 @@
+{
+  "dockStatus": {
+    "title": "도크 현황",
+    "description": "도크별 크레인 운영 현황을 확인하고, 클릭하여 상세 페이지로 이동합니다."
+  },
+  "map": {
+    "title": "지도",
+    "description": "지도 위에서 크레인 운영 지역을 확인합니다.",
+    "regionName": "옥포국가산업단지"
+  },
+  "cmms": {
+    "title": "CMMS",
+    "description": "지역별 크레인 상태를 한눈에 확인합니다.",
+    "allCollapsed": "전체 접힘",
+    "allExpanded": "전체 펼침",
+    "toggleAria": "전체 접기 / 펼치기"
+  },
+  "status": {
+    "normal": "정상",
+    "warning": "경고",
+    "critical": "이상"
+  }
+}

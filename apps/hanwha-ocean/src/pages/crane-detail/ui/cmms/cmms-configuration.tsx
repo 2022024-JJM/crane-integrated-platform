@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@crane/core/lib/theme-context';
-import { getCmmsMockData } from '../../model/mock-data';
+import { getCmmsMockData } from '@crane/domain/crane';
 
 export function CmmsConfiguration() {
   const { craneId = '' } = useParams<{ craneId: string }>();

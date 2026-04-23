@@ -6,7 +6,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { Play, FolderOpen, Download, ZoomIn, ZoomOut } from 'lucide-react';
-import { getCmmsMockData } from '../../model/mock-data';
+import { getCmmsMockData } from '@crane/domain/crane';
 
 export function CmmsTrend() {
   const { craneId = '' } = useParams<{ craneId: string }>();

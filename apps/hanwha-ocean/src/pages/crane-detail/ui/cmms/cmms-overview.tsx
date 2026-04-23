@@ -2,13 +2,12 @@ import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getCmmsMockData } from '../../model/mock-data';
-import { getCraneById } from '@crane/domain/crane';
+import { getCmmsMockData, getCraneById } from '@crane/domain/crane';
 import { RunFaultBadge, OkNgBadge, OnOffBadge } from '@crane/ui/molecules/cmms-status-badge';
 import { CmmsPanel } from '@crane/ui/molecules/cmms-panel';
 import { CmmsValueRow } from '@crane/ui/molecules/cmms-value-row';
 import { CmmsBadgeRow } from '@crane/ui/molecules/cmms-badge-row';
-import type { CmmsOverviewMachineRow } from '../../model/types';
+import type { CmmsOverviewMachineRow } from '@crane/domain/crane';
 
 export function CmmsOverview() {
   const { craneId = '' } = useParams<{ craneId: string }>();

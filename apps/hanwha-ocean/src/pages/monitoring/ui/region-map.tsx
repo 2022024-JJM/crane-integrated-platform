@@ -25,7 +25,7 @@ export function RegionMap() {
     <section className="relative flex-1">
       <div className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border px-5 py-5">
         <div className="flex text-[20px] tracking-widest">
-          <span>{t('region-overview:regionName')}</span>
+          <span>{t('monitoring-overview:map.regionName')}</span>
         </div>
         <div className="mx-auto flex w-full justify-center">
           <div className="relative aspect-418/238 min-h-150 w-full max-w-200 min-w-200 overflow-hidden rounded-xl">

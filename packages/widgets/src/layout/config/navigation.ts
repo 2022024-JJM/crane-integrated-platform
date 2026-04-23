@@ -3,7 +3,9 @@ import {
   Box,
   List,
   History,
-  MapPin,
+  Map,
+  MonitorCheck,
+  LayoutGrid,
   Play,
   SquarePen,
   Activity,
@@ -16,6 +18,7 @@ import {
   Wrench,
   Package,
   ShieldCheck,
+  Bell,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -27,21 +30,39 @@ const defaultSystemGroup: NavGroup = {
   items: [],
 };
 
-function getOverviewGroup(role: UserRole): NavGroup {
+function getOverviewGroup(_role: UserRole): NavGroup {
   const items = [
     {
       label: i18n.t('common:nav.dashboard'),
       path: '/',
       icon: LayoutDashboard,
     },
-    {
-      label: i18n.t('common:nav.regionOverview'),
-      path: '/region-overview',
-      icon: MapPin,
-    },
   ];
 
   return { title: i18n.t('common:nav.overview'), items };
+}
+
+function getMonitoringGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.monitoring'),
+    items: [
+      {
+        label: i18n.t('common:nav.dockStatus'),
+        path: '/monitoring/dock-status',
+        icon: LayoutGrid,
+      },
+      {
+        label: i18n.t('common:nav.map'),
+        path: '/monitoring/map',
+        icon: Map,
+      },
+      {
+        label: i18n.t('common:nav.cmms'),
+        path: '/monitoring/cmms',
+        icon: MonitorCheck,
+      },
+    ],
+  };
 }
 
 function buildCmmsGroup(craneId: string): NavGroup {
@@ -113,6 +134,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         label: i18n.t('common:nav.workHistory'),
         path: `${base}/work-history`,
         icon: History,
+      },
+      {
+        label: i18n.t('common:nav.alarmHistory'),
+        path: `${base}/alarm-history`,
+        icon: Bell,
       },
       {
         label: i18n.t('common:nav.replayMonitoring'),
@@ -209,11 +235,11 @@ export function getNavigationConfig(
 
   const groups: NavGroup[] = [];
 
-  // philly: Overview 없음, MRO만
-  // ocean: Overview 3개 + work
-  // goliath: Overview 2개 + goliath-work
+  // philly: MRO만
+  // ocean / goliath: Overview(Dashboard) + Monitoring(3개) + work systemGroup
   if (role !== 'philly') {
     groups.push(getOverviewGroup(role));
+    groups.push(getMonitoringGroup());
   }
 
   groups.push(systemGroup);
@@ -227,6 +253,7 @@ export function getNavigationConfig(
 
 export const navigationConfig: NavGroup[] = [
   getOverviewGroup('ocean'),
+  getMonitoringGroup(),
   defaultSystemGroup,
   getMroGroup(),
 ];
