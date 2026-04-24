@@ -76,6 +76,7 @@ export {
   getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
 } from './model/scene-file-registry';
+export { withBaseUrl } from './lib/asset-url';
 export { GltfModel } from './ui/gltf-model';
 export { SceneText } from './ui/scene-text';
 export { LidarSensorMesh } from './ui/lidar-sensor-mesh';

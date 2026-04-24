@@ -95,6 +95,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_PROXY_TARGET_WS || DEFAULT_DEV_PROXY_TARGET_WS;
 
   return {
+    base: '/crane_rnd/',
     plugins: [react(), tailwindcss(), devSceneSavePlugin()],
     build: {
       rollupOptions: {
@@ -113,6 +114,24 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       proxy: {
+        // 프로덕션과 동일하게 sub-path(/crane_rnd/) 아래 API/WS 를 받는다.
+        // network.ts 가 getBasePathPrefix() 로 생성하는 경로(/crane_rnd/api,
+        // /crane_rnd/ws)를 dev proxy 단에서 /api, /ws 로 rewrite 하여 백엔드로
+        // 전달한다. 이 proxy 블록은 반드시 일반 '/api', '/ws' 보다 먼저
+        // 선언되어야 Vite 가 sub-path 패턴을 먼저 매칭한다.
+        '/crane_rnd/api': {
+          target: proxyHttpTarget,
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/crane_rnd\/api/, '/api'),
+        },
+        '/crane_rnd/ws': {
+          target: proxyWsTarget,
+          changeOrigin: true,
+          ws: true,
+          rewrite: (p) => p.replace(/^\/crane_rnd\/ws/, '/ws'),
+        },
+        // 레거시/직접 접근 호환용 (dev 에서 BASE_URL 을 '/' 로 임시 변경해
+        // 테스트 하는 경우에도 동작).
         '/api': {
           target: proxyHttpTarget,
           changeOrigin: true,

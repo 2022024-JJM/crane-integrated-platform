@@ -1,5 +1,6 @@
 import { Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { withBaseUrl } from '@crane/domain/3d';
 
 const GLTF_CACHE_MAX_SIZE = 50;
 
@@ -35,7 +36,7 @@ export function loadGltfScene(path: string): Promise<Object3D> {
 
   return new Promise<Object3D>((resolve, reject) => {
     loader.load(
-      path,
+      withBaseUrl(path),
       (gltf) => {
         gltfCacheSet(path, gltf.scene);
         resolve(gltf.scene);

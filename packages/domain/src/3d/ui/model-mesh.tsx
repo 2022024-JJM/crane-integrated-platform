@@ -5,6 +5,7 @@ import { Box3, BufferGeometry, Color, Material, Mesh, Object3D, Vector3 } from '
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import '../lib/bvh-setup';
+import { withBaseUrl } from '../lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
@@ -75,7 +76,7 @@ interface OriginalTransform {
 }
 
 export function useClonedModel(url: string) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(withBaseUrl(url));
 
   return useMemo(() => {
     const nextClone = SkeletonUtils.clone(scene);

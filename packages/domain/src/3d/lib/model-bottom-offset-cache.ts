@@ -1,5 +1,6 @@
 import { Box3, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { withBaseUrl } from './asset-url';
 
 /**
  * GLTF url 단위로 모델의 unscaled bottom offset을 캐시한다.
@@ -65,7 +66,7 @@ export function prefetchModelBottomOffset(url: string): Promise<number> {
   }
 
   const promise = sharedLoader
-    .loadAsync(url)
+    .loadAsync(withBaseUrl(url))
     .then((gltf) => {
       const offset = measureBottomOffset(gltf.scene);
       cache.set(url, offset);

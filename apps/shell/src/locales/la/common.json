@@ -48,8 +48,10 @@
     "craneStatus": "Status Gruium",
     "workHistory": "Historia Operum",
     "alarmHistory": "Historia Monitorum",
+    "replayMonitoring": "Repetitio 3D",
     "goliathCrane": "Gruis Goliath",
     "goliathCraneMonitoring": "GC-04 Monitio",
+    "craneDetail": "Gruis Singulatim",
     "mro": "MRO",
     "assetManagement": "Administratio Bonorum",
     "inspection": "Inspectio",
@@ -272,13 +274,26 @@
       "subtitle": "GC-04"
     }
   },
+  "from": "Ex",
+  "to": "Ad",
   "replay": {
+    "title": "Repetitio 3D",
+    "play": "Ludere",
+    "pause": "Sistere",
+    "seekStart": "Ad initium",
+    "seekEnd": "Ad finem",
+    "speed": "Velocitas",
+    "loading": "Onerans...",
+    "searchForm": "Spatium Eligere",
+    "fetch": "Onerare",
     "validation": {
       "missing": "Tempus initii et finis requiruntur.",
       "invalid": "Spatium temporis validum inserere debes.",
       "order": "Tempus initii ante tempus finis esse debet.",
       "tooLarge": "Spatium onerationis intra unam horam esse debet."
-    }
+    },
+    "frameInfo": "Imago {{current}} / {{total}}",
+    "noData": "Nulla data"
   },
   "viewer3d": {
     "loading": "Visor 3D oneratur",

@@ -1,6 +1,9 @@
 import type { Region } from '@crane/domain/region';
 
-export const MAP_IMAGE_PATH = '/images/hanwha-ocean.png';
+const BASE_URL = import.meta.env.BASE_URL ?? '/';
+const NORMALIZED_BASE = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+
+export const MAP_IMAGE_PATH = `${NORMALIZED_BASE}images/hanwha-ocean.png`;
 
 export const MAP_VIEWBOX = {
   width: 418,

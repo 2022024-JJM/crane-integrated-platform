@@ -173,7 +173,7 @@ const CreateTicketPage = lazy(() =>
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <Routes>
           <Route path="login" element={<LoginGuard />} />
           <Route element={<ProtectedRoute />}>

@@ -21,6 +21,7 @@ import {
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
   prefetchModelBottomOffset,
+  withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
@@ -203,7 +204,7 @@ export function SceneObjectsEditCanvas({
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     const preloadItem = (item: SceneModelCatalogItem) => {
-      useGLTF.preload(item.path);
+      useGLTF.preload(withBaseUrl(item.path));
       void prefetchModelBottomOffset(item.path);
     };
 

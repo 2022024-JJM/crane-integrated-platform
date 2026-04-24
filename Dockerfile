@@ -46,7 +46,8 @@ FROM nginx:1.27-alpine AS runner
 
 RUN rm -rf /usr/share/nginx/html/*
 
-COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html
+# Vite 가 base='/crane_rnd/' 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
+COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

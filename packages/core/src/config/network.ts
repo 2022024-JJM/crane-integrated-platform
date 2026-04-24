@@ -1,8 +1,6 @@
 const DEFAULT_API_TIMEOUT_MS = 10_000;
 const DEFAULT_WS_RECONNECT_INTERVAL_MS = 3_000;
 const DEFAULT_WS_MAX_RECONNECT_ATTEMPTS = 5;
-const DEFAULT_API_FALLBACK_PATH = 'api';
-const DEFAULT_WS_FALLBACK_PATH = 'ws';
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '');
@@ -10,6 +8,10 @@ function trimTrailingSlash(value: string) {
 
 function trimLeadingSlash(value: string) {
   return value.replace(/^\/+/, '');
+}
+
+function trimSurroundingSlashes(value: string) {
+  return trimLeadingSlash(trimTrailingSlash(value));
 }
 
 function resolveOrigin() {
@@ -20,12 +22,45 @@ function resolveOrigin() {
   return 'http://localhost:5173';
 }
 
+/**
+ * Vite `base` 설정에서 유도한 sub-path (예: '/crane_rnd').
+ * 배포 환경이 서브패스 아래 서비스될 때 api/ws 도 동일 sub-path 하위로 나가야
+ * 리버스 프록시에서 정상 라우팅된다. leading/trailing slash 는 모두 제거해
+ * 조합하기 쉬운 형태로 반환한다. 서브패스가 없으면 빈 문자열.
+ */
+function getBasePathPrefix(): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const trimmed = trimSurroundingSlashes(base);
+  return trimmed; // '' | 'crane_rnd' | 'some/nested/base'
+}
+
+function defaultApiPath(): string {
+  const prefix = getBasePathPrefix();
+  return prefix ? `${prefix}/api` : 'api';
+}
+
+function defaultWsPath(): string {
+  const prefix = getBasePathPrefix();
+  return prefix ? `${prefix}/ws` : 'ws';
+}
+
+/**
+ * 환경변수 값이 다양한 형태로 들어올 수 있다:
+ *   - 'http://host/api'            완전한 URL
+ *   - '/crane_rnd/api'             절대 path
+ *   - 'crane_rnd/api'              상대 path
+ *   - 'api'                        단순 segment
+ * 모두 origin + path 결합 결과로 정규화한다.
+ */
 function resolveHttpBaseUrl(value: string | undefined, fallbackPath: string) {
-  if (value && value.trim()) {
-    return trimTrailingSlash(value.trim());
+  const raw = value && value.trim() ? value.trim() : undefined;
+
+  if (raw && /^https?:\/\//i.test(raw)) {
+    return trimTrailingSlash(raw);
   }
 
-  return `${resolveOrigin()}/${trimLeadingSlash(fallbackPath)}`;
+  const path = raw ?? fallbackPath;
+  return `${resolveOrigin()}/${trimSurroundingSlashes(path)}`;
 }
 
 function toWebSocketOrigin(origin: string) {
@@ -44,13 +79,19 @@ function resolveWebSocketBaseUrl(
   value: string | undefined,
   fallbackPath: string,
 ) {
-  if (value && value.trim()) {
-    return trimTrailingSlash(value.trim());
+  const raw = value && value.trim() ? value.trim() : undefined;
+
+  if (raw && /^wss?:\/\//i.test(raw)) {
+    return trimTrailingSlash(raw);
   }
 
-  return `${toWebSocketOrigin(resolveOrigin())}/${trimLeadingSlash(
-    fallbackPath,
-  )}`;
+  // http(s):// 로 주면 ws(s):// 로 바꿔서 수용
+  if (raw && /^https?:\/\//i.test(raw)) {
+    return trimTrailingSlash(toWebSocketOrigin(raw));
+  }
+
+  const path = raw ?? fallbackPath;
+  return `${toWebSocketOrigin(resolveOrigin())}/${trimSurroundingSlashes(path)}`;
 }
 
 function parsePositiveInteger(
@@ -76,16 +117,13 @@ function joinPathSegments(baseUrl: string, path: string) {
 }
 
 export function getApiBaseUrl() {
-  return resolveHttpBaseUrl(
-    import.meta.env.VITE_API_BASE_URL,
-    DEFAULT_API_FALLBACK_PATH,
-  );
+  return resolveHttpBaseUrl(import.meta.env.VITE_API_BASE_URL, defaultApiPath());
 }
 
 export function getWebSocketBaseUrl() {
   return resolveWebSocketBaseUrl(
     import.meta.env.VITE_WS_BASE_URL,
-    DEFAULT_WS_FALLBACK_PATH,
+    defaultWsPath(),
   );
 }
 

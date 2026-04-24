@@ -84,5 +84,10 @@
     "warningCount": "Monitiones",
     "operatingRate": "Rata operationis",
     "riskScore": "Punctum periculi"
+  },
+  "preview": {
+    "label": "Praevisio 3D",
+    "openFull": "Monitoratio plena aperire",
+    "close": "Praevisionem claudere"
   }
 }
