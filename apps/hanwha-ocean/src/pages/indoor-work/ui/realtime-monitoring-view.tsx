@@ -1,8 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCraneById, getCraneIdsByRegion } from '@crane/domain/crane';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
-import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
+import {
+  AlarmFullscreenOverlay,
+  AlarmFullscreenToggleButton,
+  useFullscreenAlarmOverlay,
+  useRegionActiveAlarmsByCraneId,
+} from '@crane/features/alarm';
 import {
   Monitoring3dView,
   useCraneIdFromFocusedModel,
@@ -21,6 +26,16 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const {
+    visible: alarmOverlayVisible,
+    toggle: toggleAlarmOverlay,
+    setVisible: setAlarmOverlayVisible,
+    activeAlarmCount,
+  } = useFullscreenAlarmOverlay(regionId);
+  const handleAlarmOverlayClose = useCallback(() => {
+    setAlarmOverlayVisible(false);
+  }, [setAlarmOverlayVisible]);
 
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
   const clearFocus = useObjectFocusStore((state) => state.clearFocus);
@@ -69,6 +84,23 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
             mode="realtime"
             onLoadingChange={setIs3dViewLoading}
             fullscreenOverlay={fullscreenCmmsOverlay}
+            fullscreenTopRightOverlay={
+              <AlarmFullscreenOverlay
+                regionId={regionId}
+                visible={alarmOverlayVisible}
+                onClose={handleAlarmOverlayClose}
+              />
+            }
+            toolbarExtras={
+              isFullscreen ? (
+                <AlarmFullscreenToggleButton
+                  active={alarmOverlayVisible}
+                  alarmCount={activeAlarmCount}
+                  onToggle={toggleAlarmOverlay}
+                />
+              ) : null
+            }
+            onFullscreenChange={setIsFullscreen}
           />
         </div>
       </ResizablePanel>

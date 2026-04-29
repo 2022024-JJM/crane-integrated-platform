@@ -103,21 +103,22 @@ function formatDateTime(timestamp: string, language: string) {
   });
 }
 
-function toDatetimeLocalValue(date: Date) {
+function toDateLocalValue(date: Date, endOfDay = false) {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return endOfDay ? `${dateStr}T23:59` : `${dateStr}T00:00`;
 }
 
 function getDefaultRange(): { from: string; to: string } {
   const now = new Date();
   const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  return { from: toDatetimeLocalValue(from), to: toDatetimeLocalValue(now) };
+  return { from: toDateLocalValue(from), to: toDateLocalValue(now, true) };
 }
 
 function getPresetRange(hours: number): { from: string; to: string } {
   const now = new Date();
   const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
-  return { from: toDatetimeLocalValue(from), to: toDatetimeLocalValue(now) };
+  return { from: toDateLocalValue(from), to: toDateLocalValue(now, true) };
 }
 
 function getDefaultFilters(): FilterValues {
@@ -304,6 +305,7 @@ export function AlarmHistoryPage({
             </label>
             <DateTimePicker
               size="xs"
+              dateOnly
               value={draft.from}
               onChange={(v) => setDraft((d) => ({ ...d, from: v }))}
               error={rangeInvalid}
@@ -316,8 +318,14 @@ export function AlarmHistoryPage({
             </label>
             <DateTimePicker
               size="xs"
+              dateOnly
               value={draft.to}
-              onChange={(v) => setDraft((d) => ({ ...d, to: v }))}
+              onChange={(v) => {
+                const next = v
+                  ? `${v.slice(0, 10)}T23:59`
+                  : v;
+                setDraft((d) => ({ ...d, to: next }));
+              }}
               error={rangeInvalid}
               className="min-w-50"
             />

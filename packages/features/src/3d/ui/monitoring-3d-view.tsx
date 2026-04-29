@@ -1,5 +1,11 @@
 import { ArrowLeft } from 'lucide-react';
-import { Suspense, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { Button } from '@crane/ui/atoms/button';
@@ -21,6 +27,8 @@ interface Monitoring3dViewProps {
   mode?: 'simulation' | 'replay' | 'realtime';
   onLoadingChange?: (isLoading: boolean) => void;
   fullscreenOverlay?: ReactNode;
+  fullscreenTopRightOverlay?: ReactNode;
+  toolbarExtras?: ReactNode;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
@@ -33,6 +41,8 @@ export function Monitoring3dView({
   mode = 'simulation',
   onLoadingChange,
   fullscreenOverlay,
+  fullscreenTopRightOverlay,
+  toolbarExtras,
   onFullscreenChange,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
@@ -114,6 +124,8 @@ export function Monitoring3dView({
         }}
         overlay={focusOverlay}
         fullscreenOverlay={fullscreenOverlay}
+        fullscreenTopRightOverlay={fullscreenTopRightOverlay}
+        toolbarExtras={toolbarExtras}
         onFullscreenChange={onFullscreenChange}
         onControllerReady={handleControllerReady}
       >

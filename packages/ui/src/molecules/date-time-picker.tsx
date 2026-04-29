@@ -19,6 +19,7 @@ interface DateTimePickerProps {
   placeholder?: string;
   size?: Size;
   withSeconds?: boolean;
+  dateOnly?: boolean;
   className?: string;
   id?: string;
   ariaLabel?: string;
@@ -90,6 +91,7 @@ function DateTimePicker({
   placeholder,
   size = 'md',
   withSeconds = false,
+  dateOnly = false,
   className,
   id,
   ariaLabel,
@@ -111,12 +113,12 @@ function DateTimePicker({
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: withSeconds ? '2-digit' : undefined,
+      hour: dateOnly ? undefined : '2-digit',
+      minute: dateOnly ? undefined : '2-digit',
+      second: !dateOnly && withSeconds ? '2-digit' : undefined,
       hour12: false,
     }).format(fullDate);
-  }, [parsed, localeCode, placeholder, withSeconds]);
+  }, [parsed, localeCode, placeholder, withSeconds, dateOnly]);
 
   const disabledMatchers: Matcher[] = [];
   if (minParsed) disabledMatchers.push({ before: minParsed.date });
@@ -171,19 +173,21 @@ function DateTimePicker({
           disabled={disabledMatchers.length > 0 ? disabledMatchers : undefined}
           localeCode={localeCode}
         />
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-          <Clock className="size-3.5 shrink-0 text-muted-foreground" />
-          <input
-            type="time"
-            step={withSeconds ? 1 : 60}
-            value={parsed?.time ?? ''}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            className={cn(
-              'flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground',
-              'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25',
-            )}
-          />
-        </div>
+        {dateOnly ? null : (
+          <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+            <Clock className="size-3.5 shrink-0 text-muted-foreground" />
+            <input
+              type="time"
+              step={withSeconds ? 1 : 60}
+              value={parsed?.time ?? ''}
+              onChange={(e) => handleTimeChange(e.target.value)}
+              className={cn(
+                'flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground',
+                'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25',
+              )}
+            />
+          </div>
+        )}
       </PopoverPopup>
     </Popover>
   );

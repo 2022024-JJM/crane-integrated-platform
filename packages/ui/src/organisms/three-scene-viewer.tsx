@@ -42,6 +42,10 @@ interface ThreeSceneViewerProps {
   children: ReactNode;
   overlay?: ReactNode;
   fullscreenOverlay?: ReactNode;
+  // 전체화면일 때 우측 상단(툴바 좌측 옆)에 떠있는 플로팅 슬롯. 도메인 무관.
+  fullscreenTopRightOverlay?: ReactNode;
+  // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
+  toolbarExtras?: ReactNode;
   showZoomIndicator?: boolean;
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
@@ -293,6 +297,8 @@ export function ThreeSceneViewer({
   children,
   overlay,
   fullscreenOverlay,
+  fullscreenTopRightOverlay,
+  toolbarExtras,
   showZoomIndicator = true,
   onControllerReady,
   onFullscreenChange,
@@ -404,6 +410,12 @@ export function ThreeSceneViewer({
         ) : null}
       </div>
 
+      {isFullscreen && fullscreenTopRightOverlay ? (
+        <div className="pointer-events-auto absolute top-3 right-14 z-50">
+          {fullscreenTopRightOverlay}
+        </div>
+      ) : null}
+
       <TooltipProvider delay={150}>
         <div className="pointer-events-none absolute top-3 right-3 z-[1] flex flex-col items-end gap-2">
           {showZoomIndicator ? (
@@ -413,6 +425,7 @@ export function ThreeSceneViewer({
           ) : null}
 
           <div className="pointer-events-auto flex flex-col gap-2">
+            {toolbarExtras}
             <ToolbarButton
               label={t('common:viewer3d.zoomIn')}
               onClick={() => {
