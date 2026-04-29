@@ -24,10 +24,7 @@ import {
   SelectTrigger,
 } from '@crane/ui/molecules/select';
 import { cn } from '@crane/core/lib/utils';
-import {
-  getStorageItem,
-  setStorageItem,
-} from '@crane/core/lib/safe-storage';
+import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { NewAssetModal } from './new-asset-modal';
 import { PartHealthBar } from './part-health-bar';
 
@@ -199,23 +196,6 @@ function AssetCard({
   );
 }
 
-function useLocalCollapsed(key: string, defaultValue = false) {
-  const storageKey = `asset-section-collapsed:${key}`;
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    const stored = getStorageItem(storageKey);
-    return stored !== null ? stored === 'true' : defaultValue;
-  });
-
-  const toggle = () =>
-    setCollapsed((prev) => {
-      const next = !prev;
-      setStorageItem(storageKey, String(next));
-      return next;
-    });
-
-  return [collapsed, toggle] as const;
-}
-
 function AssetSection({
   siteId,
   sectionKey,
@@ -225,8 +205,8 @@ function AssetSection({
   craneRepairMap,
   craneHealthMap,
   craneLastActivityMap,
-  globalCollapsed,
-  onLocalToggle,
+  collapsed,
+  onToggle,
 }: {
   siteId: string;
   sectionKey: 'dock1' | 'dock2' | 'blockShop';
@@ -236,20 +216,12 @@ function AssetSection({
   craneRepairMap: Record<string, { activeCount: number }>;
   craneHealthMap: Record<string, AssetHealthSnapshot>;
   craneLastActivityMap: Record<string, string>;
-  globalCollapsed: boolean | null;
-  onLocalToggle: () => void;
+  collapsed: boolean;
+  onToggle: () => void;
 }) {
   const { t } = useTranslation('asset-management');
   const siteAssets = assets.filter((a) => a.siteId === siteId);
   const totalSiteAssets = allAssets.filter((a) => a.siteId === siteId).length;
-
-  const [localCollapsed, localToggle] = useLocalCollapsed(siteId);
-  const collapsed = globalCollapsed !== null ? globalCollapsed : localCollapsed;
-
-  const handleToggle = () => {
-    onLocalToggle();
-    localToggle();
-  };
 
   if (totalSiteAssets === 0) return null;
 
@@ -259,7 +231,7 @@ function AssetSection({
     <section>
       <button
         type="button"
-        onClick={handleToggle}
+        onClick={onToggle}
         className="group flex w-full items-center gap-3 mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded cursor-pointer"
       >
         <div className="w-1 h-5 rounded-full bg-primary shrink-0" />
@@ -318,9 +290,13 @@ export function AssetManagementPage() {
 
   const [statusFilters, setStatusFilters] = useState<Set<AssetStatus>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
-  const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('priority');
-  const allCollapsed = globalCollapsed === true;
+  const sectionSiteIds = useMemo(() => SECTIONS.map((s) => s.siteId), []);
+  const collapseGroup = useSectionCollapseGroup({
+    storagePrefix: 'asset-section-collapsed',
+    keys: sectionSiteIds,
+  });
+  const allCollapsed = collapseGroup.allCollapsed;
 
   const toggleFilter = (s: AssetStatus) => {
     setStatusFilters((prev) => {
@@ -548,7 +524,7 @@ export function AssetManagementPage() {
           </span>
           <Switch
             checked={allCollapsed}
-            onCheckedChange={(checked) => setGlobalCollapsed(checked ? true : false)}
+            onCheckedChange={(checked) => collapseGroup.setAll(checked)}
             aria-label={t('collapse.toggle', { defaultValue: 'Collapse / expand all' })}
           />
         </div>
@@ -565,8 +541,8 @@ export function AssetManagementPage() {
             craneRepairMap={craneRepairMap}
             craneHealthMap={craneHealthMap}
             craneLastActivityMap={craneLastActivityMap}
-            globalCollapsed={globalCollapsed}
-            onLocalToggle={() => setGlobalCollapsed(null)}
+            collapsed={collapseGroup.isCollapsed(section.siteId)}
+            onToggle={() => collapseGroup.toggle(section.siteId)}
           />
         ))}
         {sortedAssets.length === 0 && (

@@ -14,6 +14,7 @@ import {
 } from '@crane/domain/crane';
 import { useAuth } from '@crane/features/auth';
 import { useSiteType } from '@crane/core/lib/site-type-context';
+import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { Switch } from '@crane/ui/atoms/switch';
 import { CraneListSection } from '@crane/widgets/crane';
 
@@ -38,9 +39,12 @@ export function RegionCmmsPage() {
   );
 
   const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(new Set());
-  const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null);
-
-  const allCollapsed = globalCollapsed === true;
+  const regionIds = useMemo(() => regions.map((r) => r.id), [regions]);
+  const collapseGroup = useSectionCollapseGroup({
+    storagePrefix: 'crane-section-collapsed',
+    keys: regionIds,
+  });
+  const allCollapsed = collapseGroup.allCollapsed;
 
   const toggleFilter = (f: StatusFilter) => {
     setStatusFilters((prev) => {
@@ -116,7 +120,7 @@ export function RegionCmmsPage() {
           </span>
           <Switch
             checked={allCollapsed}
-            onCheckedChange={(checked) => setGlobalCollapsed(checked ? true : false)}
+            onCheckedChange={(checked) => collapseGroup.setAll(checked)}
             aria-label={t('monitoring-overview:cmms.toggleAria')}
           />
         </div>
@@ -130,8 +134,8 @@ export function RegionCmmsPage() {
             title={t(getRegionTitleKey(region.id))}
             subtitle={t(getRegionSubtitleKey(region.id))}
             statusFilters={statusFilters}
-            globalCollapsed={globalCollapsed}
-            onLocalToggle={() => setGlobalCollapsed(null)}
+            collapsed={collapseGroup.isCollapsed(region.id)}
+            onToggle={() => collapseGroup.toggle(region.id)}
           />
         ))}
       </div>

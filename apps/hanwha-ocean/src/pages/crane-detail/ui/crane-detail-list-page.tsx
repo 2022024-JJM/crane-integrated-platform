@@ -3,6 +3,7 @@ import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useSiteType } from '@crane/core/lib/site-type-context';
+import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { getCraneIdsByRegion, getCraneById, getCmmsMockData } from '@crane/domain/crane';
 import { Switch } from '@crane/ui/atoms/switch';
 import { CraneListSection } from '@crane/widgets/crane';
@@ -31,8 +32,11 @@ export function CraneDetailListPage() {
   const sections = siteType === 'goliath-crane' ? GOLIATH_SECTIONS : HANWHA_OCEAN_SECTIONS;
 
   const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(new Set());
-  // null = 각 섹션 자체 상태 사용, true = 전체 접기, false = 전체 펼치기
-  const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null);
+  const regionIds = useMemo(() => sections.map((s) => s.regionId), [sections]);
+  const collapseGroup = useSectionCollapseGroup({
+    storagePrefix: 'crane-section-collapsed',
+    keys: regionIds,
+  });
 
   const toggleFilter = (f: StatusFilter) => {
     setStatusFilters((prev) => {
@@ -59,11 +63,7 @@ export function CraneDetailListPage() {
     return tally;
   }, [sections]);
 
-  // Switch checked = true → 전체 접기
-  const allCollapsed = globalCollapsed === true;
-  const handleSwitchChange = (checked: boolean) => {
-    setGlobalCollapsed(checked ? true : false);
-  };
+  const allCollapsed = collapseGroup.allCollapsed;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -110,7 +110,7 @@ export function CraneDetailListPage() {
           </span>
           <Switch
             checked={allCollapsed}
-            onCheckedChange={handleSwitchChange}
+            onCheckedChange={(checked) => collapseGroup.setAll(checked)}
             aria-label="전체 접기 / 펼치기"
           />
         </div>
@@ -126,8 +126,8 @@ export function CraneDetailListPage() {
               title={t(section.titleKey)}
               subtitle={section.subtitle}
               statusFilters={statusFilters}
-              globalCollapsed={globalCollapsed}
-              onLocalToggle={() => setGlobalCollapsed(null)}
+              collapsed={collapseGroup.isCollapsed(section.regionId)}
+              onToggle={() => collapseGroup.toggle(section.regionId)}
             />
           ))}
         </div>
