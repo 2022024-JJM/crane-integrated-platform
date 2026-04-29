@@ -1,4 +1,11 @@
-import type { ReactNode } from 'react';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useId,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { cn } from '@crane/core/lib/utils';
 
 export type AccentColor = 'amber' | 'emerald' | 'blue' | 'sky';
@@ -43,6 +50,14 @@ export function FormSection({
   );
 }
 
+interface FormFieldChildProps {
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
+  required?: boolean;
+}
+
 export function FormField({
   label,
   required,
@@ -58,20 +73,65 @@ export function FormField({
   colSpan?: 2;
   hint?: string;
 }) {
+  const reactId = useId();
+  const inputId = `field-${reactId}`;
+  const errorId = error ? `field-${reactId}-error` : undefined;
+  const hintId = hint ? `field-${reactId}-hint` : undefined;
+  const describedBy =
+    [errorId, hintId].filter(Boolean).join(' ') || undefined;
+
+  // 단일 자식이 input/select/textarea/button 등이라면 id, aria-* 속성을 주입한다.
+  // 자식이 자체적으로 id/aria-*를 들고 있으면 자식의 값을 우선한다.
+  let enhancedChildren: ReactNode = children;
+  const onlyChild = Children.toArray(children).find(isValidElement);
+  if (onlyChild) {
+    const child = onlyChild as ReactElement<FormFieldChildProps>;
+    enhancedChildren = cloneElement(child, {
+      id: child.props.id ?? inputId,
+      'aria-describedby': child.props['aria-describedby'] ?? describedBy,
+      'aria-invalid': child.props['aria-invalid'] ?? Boolean(error),
+      'aria-required': child.props['aria-required'] ?? required,
+      required: child.props.required ?? required,
+    });
+  }
+
   return (
     <div className={cn(colSpan === 2 ? 'sm:col-span-2' : '')}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <label className="block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={inputId}
+          className="block text-xs font-medium text-muted-foreground"
+        >
           {label}
-          {required && <span className="ml-0.5 text-destructive">*</span>}
+          {required && (
+            <span aria-hidden="true" className="ml-0.5 text-destructive">
+              *
+            </span>
+          )}
         </label>
-        {hint && <span className="text-[10px] text-muted-foreground/70">{hint}</span>}
+        {hint && (
+          <span
+            id={hintId}
+            className="text-[10px] text-muted-foreground/70"
+          >
+            {hint}
+          </span>
+        )}
       </div>
-      {children}
-      {error && <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
-        <span className="inline-block size-1 rounded-full bg-destructive" />
-        {error}
-      </p>}
+      {enhancedChildren}
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 flex items-center gap-1 text-xs text-destructive"
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block size-1 rounded-full bg-destructive"
+          />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

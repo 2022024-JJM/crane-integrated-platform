@@ -3,22 +3,8 @@
 @import 'shadcn/tailwind.css';
 @import './design-token.css';
 
-@source '../../../../packages/ui/src/**/*.tsx';
-@source '../../../../packages/ui/src/**/*.ts';
-@source '../../../../packages/widgets/src/**/*.tsx';
-@source '../../../../packages/widgets/src/**/*.ts';
-@source '../../../../packages/features/src/**/*.tsx';
-@source '../../../../packages/features/src/**/*.ts';
-@source '../../../../packages/domain/src/**/*.tsx';
-@source '../../../../packages/domain/src/**/*.ts';
-@source '../../src/**/*.tsx';
-@source '../../src/**/*.ts';
-@source '../../../hanwha-ocean/src/**/*.tsx';
-@source '../../../hanwha-ocean/src/**/*.ts';
-@source '../../../goliath-crane/src/**/*.tsx';
-@source '../../../goliath-crane/src/**/*.ts';
-@source '../../../philly-shipyard/src/**/*.tsx';
-@source '../../../philly-shipyard/src/**/*.ts';
+@source '../../../../packages/*/src/**/*.{ts,tsx}';
+@source '../../../../apps/*/src/**/*.{ts,tsx}';
 
 @custom-variant dark (&:is(.dark *));
 

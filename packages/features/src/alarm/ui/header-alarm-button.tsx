@@ -112,8 +112,37 @@ export function HeaderAlarmButton() {
   useEffect(() => {
     if (!open) return;
 
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    // 모달 첫 진입 시 닫기 버튼 등으로 포커스 이동
+    const focusables = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    focusables?.[0]?.focus();
+
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const items = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (items.length === 0) return;
+
+        const first = items[0]!;
+        const last = items[items.length - 1]!;
+        const active = document.activeElement as HTMLElement | null;
+
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
 
     function handleClickOutside(e: MouseEvent) {
@@ -132,6 +161,8 @@ export function HeaderAlarmButton() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
+      // 모달 닫힐 때 트리거 버튼으로 포커스 복귀
+      previouslyFocused?.focus?.();
     };
   }, [open]);
 
@@ -144,10 +175,16 @@ export function HeaderAlarmButton() {
         onClick={() => setOpen((v) => !v)}
         className={cn('relative', open && 'bg-muted text-foreground')}
         aria-label={t('common:alarms.title')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         <Bell className="h-5 w-5" />
         {totalCount > 0 && (
           <span
+            aria-label={t('common:alarms.activeCountLabel', {
+              count: totalCount,
+              defaultValue: `${totalCount} active alarms`,
+            })}
             className={cn(
               'absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white',
               badgeColor,
@@ -161,13 +198,19 @@ export function HeaderAlarmButton() {
       {open && (
         <div
           ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="header-alarm-modal-title"
           className="bg-background fixed top-16 right-4 z-50 flex flex-col overflow-hidden rounded-xl border shadow-[0_8px_40px_rgba(0,0,0,0.3)]"
           style={{ width: 640, maxHeight: 'calc(100vh - 80px)' }}
         >
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
               <Bell className="text-muted-foreground h-4 w-4" />
-              <h3 className="text-sm font-semibold">
+              <h3
+                id="header-alarm-modal-title"
+                className="text-sm font-semibold"
+              >
                 {t('common:alarms.title')}
               </h3>
               {totalCount > 0 && (
@@ -185,7 +228,7 @@ export function HeaderAlarmButton() {
               variant="ghost"
               size="icon-sm"
               onClick={() => setOpen(false)}
-              aria-label="닫기"
+              aria-label={t('common:close', { defaultValue: '닫기' })}
             >
               <X className="h-4 w-4" />
             </Button>

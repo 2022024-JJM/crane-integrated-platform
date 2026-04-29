@@ -94,6 +94,16 @@ export default defineConfig(({ mode }) => {
   const proxyWsTarget =
     env.VITE_DEV_PROXY_TARGET_WS || DEFAULT_DEV_PROXY_TARGET_WS;
 
+  if (
+    !env.VITE_DEV_PROXY_TARGET_HTTP ||
+    !env.VITE_DEV_PROXY_TARGET_WS
+  ) {
+    console.warn(
+      `[vite] using default proxy target ${DEFAULT_DEV_PROXY_TARGET_HTTP}. ` +
+        `Set VITE_DEV_PROXY_TARGET_HTTP / VITE_DEV_PROXY_TARGET_WS in .env.local to override.`,
+    );
+  }
+
   return {
     base: '/crane_rnd/',
     plugins: [react(), tailwindcss(), devSceneSavePlugin()],

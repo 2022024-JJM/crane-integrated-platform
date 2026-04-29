@@ -69,7 +69,13 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <section
+        aria-labelledby="dashboard-metrics-title"
+        className="grid grid-cols-1 gap-4 xl:grid-cols-4"
+      >
+        <h2 id="dashboard-metrics-title" className="sr-only">
+          {t('dashboard:sections.metrics.title', { defaultValue: 'Metrics' })}
+        </h2>
         {summary.metrics.map((metric) => (
           <MetricCard
             key={metric.id}
@@ -83,7 +89,10 @@ export function DashboardPage() {
 
       {isGoliath && <DashboardGoliathCraneStatus />}
 
-      <section className="border-border/90 bg-card/60 rounded border p-4 shadow-sm backdrop-blur-sm md:p-6">
+      <section
+        aria-labelledby="dashboard-overview-title"
+        className="border-border/90 bg-card/60 rounded border p-4 shadow-sm backdrop-blur-sm md:p-6"
+      >
         <DashboardOverviewHeader summary={summary} translate={t} />
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">

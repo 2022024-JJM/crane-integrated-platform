@@ -26,11 +26,11 @@ export function useRealtimeWebSocketBridge(enabled: boolean) {
       useRealtimeStore.getState().pushValue(key, payload.value);
     });
 
-    cranesLiteWebSocketClient.connect();
+    const release = cranesLiteWebSocketClient.acquire();
 
     return () => {
       unsubscribe();
-      cranesLiteWebSocketClient.disconnect();
+      release();
     };
   }, [enabled]);
 }

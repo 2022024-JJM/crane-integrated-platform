@@ -23,11 +23,11 @@ export function RealtimeAlarmSync() {
       pushMessage(data);
     });
 
-    cranesLiteWebSocketClient.connect();
+    const release = cranesLiteWebSocketClient.acquire();
 
     return () => {
       unsubscribe();
-      cranesLiteWebSocketClient.disconnect();
+      release();
     };
   }, []);
 

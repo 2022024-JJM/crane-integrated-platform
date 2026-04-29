@@ -4,7 +4,7 @@ import {
   getReplayFrameDurationsMs,
   getMonitoringReplayLite,
 } from '@crane/domain/monitoring';
-import { useReplayPlayerStore } from '@crane/features/3d';
+import { useReplayPlayerStore } from '../../3d/model/use-replay-player-store';
 
 interface UseMonitoringReplayPlayerParams {
   regionId: string;

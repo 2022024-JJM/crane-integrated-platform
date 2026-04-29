@@ -1,5 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, use, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 const HEADER_DISPLAY_SETTINGS_STORAGE_KEY = 'header-display-settings';
 
@@ -78,23 +86,26 @@ export function HeaderDisplaySettingsProvider({
     );
   }, [settings]);
 
-  function setSetting(
-    key: keyof HeaderDisplaySettings,
-    value: HeaderDisplaySettings[keyof HeaderDisplaySettings],
-  ) {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      [key]: value,
-    }));
-  }
+  const setSetting = useCallback(
+    (
+      key: keyof HeaderDisplaySettings,
+      value: HeaderDisplaySettings[keyof HeaderDisplaySettings],
+    ) => {
+      setSettings((currentSettings) => ({
+        ...currentSettings,
+        [key]: value,
+      }));
+    },
+    [],
+  );
+
+  const value = useMemo(
+    () => ({ ...settings, setSetting }),
+    [settings, setSetting],
+  );
 
   return (
-    <HeaderDisplaySettingsContext
-      value={{
-        ...settings,
-        setSetting,
-      }}
-    >
+    <HeaderDisplaySettingsContext value={value}>
       {children}
     </HeaderDisplaySettingsContext>
   );

@@ -34,6 +34,10 @@ interface ValueMapperState {
   map: Record<string, ValueMapObject[]>;
   register: (key: string, value: ValueMapObject) => void;
   registerFromModel: (model: SavedModelInfo) => void;
+  /** 단일 (id, type) 매핑 해제. 빈 배열이 되면 key 자체를 제거. */
+  unregister: (key: string, predicate: { id: string; type: ValueMapType }) => void;
+  /** 모델의 valueMapList 기준으로 모든 매핑 해제. */
+  unregisterFromModel: (model: SavedModelInfo) => void;
   applyValue: (key: string, value: number) => void;
   /** map은 유지하면서 모든 Object3D를 originTransform으로 복귀. */
   resetToOrigin: () => void;
@@ -84,6 +88,56 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
       }
 
       return { map };
+    }),
+
+  unregister: (key, predicate) =>
+    set((state) => {
+      const prev = state.map[key];
+      if (!prev) return state;
+
+      const next = prev.filter(
+        (entry) => !isSameValueMapObject(entry, predicate as ValueMapObject),
+      );
+
+      if (next.length === prev.length) return state;
+
+      const map = { ...state.map };
+      if (next.length === 0) {
+        delete map[key];
+      } else {
+        map[key] = next;
+      }
+      return { map };
+    }),
+
+  unregisterFromModel: (model) =>
+    set((state) => {
+      const map = { ...state.map };
+      let changed = false;
+
+      for (const vm of model.valueMapList) {
+        const list = map[vm.key];
+        if (!list) continue;
+
+        const next = list.filter(
+          (entry) =>
+            !isSameValueMapObject(entry, {
+              id: model.id,
+              type: vm.type,
+            } as ValueMapObject),
+        );
+
+        if (next.length === list.length) continue;
+
+        changed = true;
+        if (next.length === 0) {
+          delete map[vm.key];
+        } else {
+          map[vm.key] = next;
+        }
+      }
+
+      return changed ? { map } : state;
     }),
 
   applyValue: (key, value) => {

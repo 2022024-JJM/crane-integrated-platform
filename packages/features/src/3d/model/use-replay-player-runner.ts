@@ -11,11 +11,26 @@ export function useReplayPlayerRunner() {
   const speedMultiplier = useReplayPlayerStore((s) => s.speedMultiplier);
 
   const accumulatorRef = useRef(0);
+  const lastFrameIndexRef = useRef(frameIndex);
+  const lastSpeedRef = useRef(speedMultiplier);
 
   useFrame((_, delta) => {
     if (!isPlaying) {
       accumulatorRef.current = 0;
+      lastFrameIndexRef.current = frameIndex;
+      lastSpeedRef.current = speedMultiplier;
       return;
+    }
+
+    // seek(외부 frameIndex 변경) 또는 속도 변경 감지 시 누적기 리셋.
+    // 잔여 누적값을 새 interval로 평가하면 frame이 비정상적으로 길거나 짧게 머무름.
+    if (
+      lastFrameIndexRef.current !== frameIndex ||
+      lastSpeedRef.current !== speedMultiplier
+    ) {
+      accumulatorRef.current = 0;
+      lastFrameIndexRef.current = frameIndex;
+      lastSpeedRef.current = speedMultiplier;
     }
 
     accumulatorRef.current += delta * 1000;
@@ -29,6 +44,7 @@ export function useReplayPlayerRunner() {
     }
 
     accumulatorRef.current = 0;
+    lastFrameIndexRef.current = frameIndex + 1;
     useReplayPlayerStore.getState().tick();
   });
 }

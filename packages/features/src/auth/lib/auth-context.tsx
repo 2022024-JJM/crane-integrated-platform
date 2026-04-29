@@ -1,6 +1,7 @@
 import {
   createContext,
   use,
+  useMemo,
   useState,
   useCallback,
   type ReactNode,
@@ -59,11 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  return (
-    <AuthContext value={{ user, login, logout }}>
-      {children}
-    </AuthContext>
+  const value = useMemo(
+    () => ({ user, login, logout }),
+    [user, login, logout],
   );
+
+  return <AuthContext value={value}>{children}</AuthContext>;
 }
 
 export function useAuth() {

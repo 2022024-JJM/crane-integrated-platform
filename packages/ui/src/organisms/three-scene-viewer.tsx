@@ -66,6 +66,27 @@ const MIN_CAMERA_DISTANCE = 1;
 const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
 const TOP_VIEW_CAMERA_UP = new Vector3(0, 0, -1);
 
+/**
+ * 브라우저가 WebGL을 지원하는지 검사. 모듈 스코프에서 1회만 평가하고
+ * 결과를 캐시하여 매 렌더 시 비용 없음.
+ */
+let cachedWebGLSupport: boolean | null = null;
+function isWebGLSupported(): boolean {
+  if (cachedWebGLSupport !== null) return cachedWebGLSupport;
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl2') ||
+      canvas.getContext('webgl') ||
+      canvas.getContext('experimental-webgl');
+    cachedWebGLSupport = Boolean(gl);
+  } catch {
+    cachedWebGLSupport = false;
+  }
+  return cachedWebGLSupport;
+}
+
 function toVector3([x, y, z]: Vector3Tuple) {
   return new Vector3(x, y, z);
 }
@@ -323,6 +344,29 @@ export function ThreeSceneViewer({
   }, []);
 
   const showSplitPanel = isFullscreen && fullscreenOverlay;
+  const webglSupported = isWebGLSupported();
+
+  if (!webglSupported) {
+    return (
+      <div
+        ref={rootRef}
+        role="alert"
+        className="relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-2 overflow-hidden bg-muted/40 p-6 text-center"
+      >
+        <p className="text-sm font-semibold">
+          {t('common:viewer3d.webglUnsupportedTitle', {
+            defaultValue: '3D viewer is unavailable',
+          })}
+        </p>
+        <p className="text-muted-foreground max-w-md text-xs">
+          {t('common:viewer3d.webglUnsupportedDescription', {
+            defaultValue:
+              'WebGL is disabled or unsupported in this browser. Enable hardware acceleration or use a recent Chromium-based browser.',
+          })}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

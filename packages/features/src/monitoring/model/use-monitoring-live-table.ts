@@ -164,12 +164,12 @@ export function useMonitoringLiveTable({
       },
     );
 
-    cranesLiteWebSocketClient.connect();
+    const release = cranesLiteWebSocketClient.acquire();
 
     return () => {
       unsubscribeMessages();
       unsubscribeState();
-      cranesLiteWebSocketClient.disconnect();
+      release();
     };
   }, []);
 

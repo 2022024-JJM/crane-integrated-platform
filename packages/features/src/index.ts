@@ -10,3 +10,4 @@ export * from './inspection';
 export * from './maintenance';
 export * from './inventory';
 export * from './compliance';
+export * from './ticket';

@@ -44,7 +44,10 @@ export function DashboardOverviewHeader({
             <Activity className="size-4 text-amber-500" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2
+              id="dashboard-overview-title"
+              className="text-xl font-semibold"
+            >
               {translate('dashboard:sections.trend.title')}
             </h2>
             <p className="text-muted-foreground text-sm">

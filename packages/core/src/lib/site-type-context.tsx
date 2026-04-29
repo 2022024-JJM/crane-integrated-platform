@@ -1,6 +1,7 @@
 import {
   createContext,
   use,
+  useMemo,
   useState,
   useCallback,
   type ReactNode,
@@ -32,11 +33,12 @@ export function SiteTypeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, type);
   }, []);
 
-  return (
-    <SiteTypeContext value={{ siteType, setSiteType }}>
-      {children}
-    </SiteTypeContext>
+  const value = useMemo(
+    () => ({ siteType, setSiteType }),
+    [siteType, setSiteType],
   );
+
+  return <SiteTypeContext value={value}>{children}</SiteTypeContext>;
 }
 
 export function useSiteType() {

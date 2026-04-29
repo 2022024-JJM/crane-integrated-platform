@@ -1,4 +1,12 @@
-import { useEffect } from 'react';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useId,
+  useRef,
+  type ReactElement,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
@@ -42,13 +50,44 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
     },
   });
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    // 첫 진입 시 다이얼로그 첫 포커스 가능 요소로 이동
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    focusables?.[0]?.focus();
+
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const items = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (items.length === 0) return;
+        const first = items[0]!;
+        const last = items[items.length - 1]!;
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      previouslyFocused?.focus?.();
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -70,20 +109,27 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
       />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="new-asset-modal-title"
+        aria-describedby="new-asset-modal-desc"
         className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
           <div>
-            <h2 className="text-base font-bold">{t('modal.title', { defaultValue: 'Register New Asset' })}</h2>
-            <p className="text-xs text-muted-foreground">{t('modal.description', { defaultValue: 'Add a new crane asset to the registry.' })}</p>
+            <h2 id="new-asset-modal-title" className="text-base font-bold">
+              {t('modal.title', { defaultValue: 'Register New Asset' })}
+            </h2>
+            <p id="new-asset-modal-desc" className="text-xs text-muted-foreground">
+              {t('modal.description', { defaultValue: 'Add a new crane asset to the registry.' })}
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Close"
+            aria-label={t('modal.close', { defaultValue: 'Close' })}
           >
             <X className="size-4" />
           </button>
@@ -252,6 +298,14 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
   );
 }
 
+interface FieldChildProps {
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
+  required?: boolean;
+}
+
 function Field({
   label,
   required,
@@ -265,17 +319,50 @@ function Field({
   colSpan?: 2;
   children: React.ReactNode;
 }) {
+  const reactId = useId();
+  const inputId = `asset-${reactId}`;
+  const errorId = error ? `asset-${reactId}-error` : undefined;
+
+  let enhancedChildren: React.ReactNode = children;
+  const onlyChild = Children.toArray(children).find(isValidElement);
+  if (onlyChild) {
+    const child = onlyChild as ReactElement<FieldChildProps>;
+    enhancedChildren = cloneElement(child, {
+      id: child.props.id ?? inputId,
+      'aria-describedby': child.props['aria-describedby'] ?? errorId,
+      'aria-invalid': child.props['aria-invalid'] ?? Boolean(error),
+      'aria-required': child.props['aria-required'] ?? required,
+      required: child.props.required ?? required,
+    });
+  }
+
   return (
     <div className={cn(colSpan === 2 ? 'sm:col-span-2' : '')}>
-      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+      <label
+        htmlFor={inputId}
+        className="mb-1.5 block text-xs font-medium text-muted-foreground"
+      >
         {label}
-        {required && <span className="ml-0.5 text-destructive">*</span>}
+        {required && (
+          <span aria-hidden="true" className="ml-0.5 text-destructive">
+            *
+          </span>
+        )}
       </label>
-      {children}
-      {error && <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
-        <span className="inline-block size-1 rounded-full bg-destructive" />
-        {error}
-      </p>}
+      {enhancedChildren}
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 flex items-center gap-1 text-xs text-destructive"
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block size-1 rounded-full bg-destructive"
+          />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

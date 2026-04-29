@@ -1,4 +1,7 @@
-import { normalizeReconnectPolicy } from './reconnect-policy';
+import {
+  computeReconnectDelayMs,
+  normalizeReconnectPolicy,
+} from './reconnect-policy';
 import type {
   WebSocketClientOptions,
   WebSocketConnectionState,
@@ -42,6 +45,8 @@ export class WebSocketClient {
   private reconnectAttempts = 0;
   private reconnectTimeoutId: number | null = null;
   private isManualDisconnect = false;
+  private referenceCount = 0;
+  private pendingReleaseScheduled = false;
   private readonly messageHandlers = new Map<
     string,
     Set<WebSocketMessageHandler>
@@ -74,6 +79,46 @@ export class WebSocketClient {
     this.socket.addEventListener('message', this.handleMessage);
     this.socket.addEventListener('close', this.handleClose);
     this.socket.addEventListener('error', this.handleError);
+  }
+
+  /**
+   * 참조 카운팅 기반 연결 획득. 여러 컴포넌트가 같은 client를 공유할 때 사용.
+   * 첫 acquire에서 connect를 트리거하고, 마지막 release에서 disconnect한다.
+   * 반환된 release는 idempotent (중복 호출 시 1회만 감소).
+   *
+   * StrictMode 더블마운트 race 방지를 위해 release는 microtask로 지연된다.
+   */
+  acquire(): () => void {
+    this.referenceCount += 1;
+    if (this.referenceCount === 1) {
+      this.connect();
+    }
+
+    let released = false;
+    return () => {
+      if (released) {
+        return;
+      }
+      released = true;
+      this.scheduleRelease();
+    };
+  }
+
+  private scheduleRelease() {
+    this.referenceCount -= 1;
+    if (this.referenceCount < 0) {
+      this.referenceCount = 0;
+    }
+    if (this.pendingReleaseScheduled) {
+      return;
+    }
+    this.pendingReleaseScheduled = true;
+    queueMicrotask(() => {
+      this.pendingReleaseScheduled = false;
+      if (this.referenceCount === 0) {
+        this.disconnect();
+      }
+    });
   }
 
   disconnect() {
@@ -202,11 +247,15 @@ export class WebSocketClient {
       return;
     }
 
+    const delayMs = computeReconnectDelayMs(
+      this.reconnectPolicy,
+      this.reconnectAttempts,
+    );
     this.reconnectAttempts += 1;
     this.clearReconnectTimeout();
     this.reconnectTimeoutId = window.setTimeout(() => {
       this.connect();
-    }, this.reconnectPolicy.intervalMs);
+    }, delayMs);
   }
 
   private clearReconnectTimeout() {

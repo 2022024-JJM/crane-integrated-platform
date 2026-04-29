@@ -1,5 +1,6 @@
 const DEFAULT_API_TIMEOUT_MS = 10_000;
-const DEFAULT_WS_RECONNECT_INTERVAL_MS = 3_000;
+const DEFAULT_WS_RECONNECT_INTERVAL_MS = 1_000;
+const DEFAULT_WS_RECONNECT_MAX_INTERVAL_MS = 30_000;
 const DEFAULT_WS_MAX_RECONNECT_ATTEMPTS = 5;
 
 function trimTrailingSlash(value: string) {
@@ -19,7 +20,7 @@ function resolveOrigin() {
     return window.location.origin;
   }
 
-  return 'http://localhost:5173';
+  return import.meta.env.VITE_DEV_ORIGIN ?? 'http://localhost:5173';
 }
 
 /**
@@ -147,12 +148,21 @@ export function getCranesLiteWebSocketUrl() {
   return getWebSocketUrl('cranes-lite/all');
 }
 
+let lidarFallbackWarned = false;
+
 export function getLidarWebSocketUrl() {
   const envUrl = import.meta.env.VITE_LIDAR_WS_URL;
   if (envUrl && envUrl.trim()) {
     return envUrl.trim();
   }
-  return 'ws://192.168.122.140:9002';
+  if (!lidarFallbackWarned) {
+    lidarFallbackWarned = true;
+    console.warn(
+      '[network] VITE_LIDAR_WS_URL is not set. Falling back to default ws sub-path. ' +
+        'Set it in .env.local for explicit LiDAR endpoint.',
+    );
+  }
+  return getWebSocketUrl('lidar');
 }
 
 export function getApiTimeoutMs() {
@@ -162,11 +172,26 @@ export function getApiTimeoutMs() {
   );
 }
 
-export function getWebSocketReconnectIntervalMs() {
+export function getWebSocketInitialIntervalMs() {
   return parsePositiveInteger(
-    import.meta.env.VITE_WS_RECONNECT_INTERVAL_MS,
+    import.meta.env.VITE_WS_RECONNECT_INITIAL_MS ??
+      import.meta.env.VITE_WS_RECONNECT_INTERVAL_MS,
     DEFAULT_WS_RECONNECT_INTERVAL_MS,
   );
+}
+
+export function getWebSocketMaxIntervalMs() {
+  return parsePositiveInteger(
+    import.meta.env.VITE_WS_RECONNECT_MAX_MS,
+    DEFAULT_WS_RECONNECT_MAX_INTERVAL_MS,
+  );
+}
+
+/**
+ * @deprecated `getWebSocketInitialIntervalMs` 사용 권장. 기존 호출부 호환을 위해 유지.
+ */
+export function getWebSocketReconnectIntervalMs() {
+  return getWebSocketInitialIntervalMs();
 }
 
 export function getWebSocketMaxReconnectAttempts() {
@@ -185,6 +210,8 @@ export function getNetworkConfig() {
     cranesLiteWsUrl: getCranesLiteWebSocketUrl(),
     apiTimeoutMs: getApiTimeoutMs(),
     wsReconnectIntervalMs: getWebSocketReconnectIntervalMs(),
+    wsReconnectInitialMs: getWebSocketInitialIntervalMs(),
+    wsReconnectMaxMs: getWebSocketMaxIntervalMs(),
     wsMaxReconnectAttempts: getWebSocketMaxReconnectAttempts(),
   };
 }
