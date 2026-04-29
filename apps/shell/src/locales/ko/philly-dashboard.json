@@ -3,106 +3,55 @@
     "title": "필리 조선소",
     "subtitle": "MRO 운영 대시보드 — Philadelphia Shipyard"
   },
-  "alert": {
-    "actionRequired": "조치 필요",
-    "emergencyRepair_one": "긴급 수리 {{count}}건",
-    "emergencyRepair_other": "긴급 수리 {{count}}건",
-    "overdueInspection_one": "점검 지연 {{count}}건",
-    "overdueInspection_other": "점검 지연 {{count}}건",
-    "expiredCert_one": "인증 만료 {{count}}건",
-    "expiredCert_other": "인증 만료 {{count}}건"
+  "sections": {
+    "service": "서비스",
+    "serviceSubtitle": "핵심 운영 지표"
   },
-  "kpi": {
-    "totalCranes": {
-      "label": "전체 크레인",
-      "meta": "{{operating}}대 운행 · {{down}}대 정비"
-    },
-    "inspectionRate": {
-      "label": "점검 완료율",
-      "onSchedule": "정상 운영 중",
-      "overdue": "{{count}}건 지연"
-    },
-    "activeRepairs": {
-      "label": "진행 중 수리",
-      "noIssues": "긴급 이슈 없음",
-      "emergency": "{{emergency}}건 긴급 · {{waiting}}건 부품 대기",
-      "waitingOnly": "{{waiting}}건 부품 대기"
-    },
-    "avgMttr": {
-      "label": "평균 수리 시간",
-      "meta": "평균 장비 복구 시간 (MTTR)"
-    },
-    "lowStock": {
-      "label": "재고 부족 부품",
-      "noShortage": "긴급 부족 없음",
-      "criticalParts": "중요 부품 {{count}}개"
-    },
-    "certifications": {
-      "label": "인증 현황",
-      "allValid": "모두 유효",
-      "expired": "{{count}}건 만료",
-      "expiringSoon": "{{count}}건 만료 임박",
-      "noExpiry": "만료 임박 없음"
-    }
+  "openItems": {
+    "title": "서비스 - 미해결 항목",
+    "openRisks": "미해결 리스크",
+    "safety": "안전",
+    "production": "생산"
   },
-  "sites": {
-    "dock1": "1번 도크",
-    "dock2": "2번 도크",
-    "dockIn": "블록 공장"
+  "connectivity": {
+    "title": "장비 상태",
+    "componentCondition": "부품 상태",
+    "operatingAlerts": "운영 알림",
+    "critical": "심각",
+    "low": "주의"
   },
-  "charts": {
-    "viewAll": "전체 보기",
-    "empty": "데이터 없음",
-    "repairPipeline": {
-      "title": "수리 파이프라인",
-      "subtitle": "진행 중인 작업지시 단계별 분포",
-      "center": "진행 중"
-    },
-    "siteLoad": {
-      "title": "사이트별 자산 부하",
-      "subtitle": "도크별 크레인 상태 분포",
-      "legend": {
-        "operating": "운행",
-        "inspection": "점검",
-        "repair": "수리",
-        "idle": "대기"
-      }
-    },
-    "repairTrend": {
-      "title": "수리 완료 추세",
-      "subtitle": "최근 8주 완료된 작업지시",
-      "legend": {
-        "completed": "완료",
-        "emergency": "긴급"
-      }
-    },
-    "failureMix": {
-      "title": "고장 유형 분포",
-      "subtitle": "전체 수리의 장애 원인별 분포",
-      "center": "총 수리"
-    }
+  "serviceReview": {
+    "title": "서비스 리뷰 및 리포트",
+    "serviceVisits": "서비스 방문",
+    "assetsServiced": "정비 자산",
+    "totalFindings": "발견 사항"
   },
-  "topLists": {
-    "viewAll": "전체 보기",
-    "repairs": {
-      "title": "우선 수리 TOP 3",
-      "subtitle": "우선순위 순",
-      "empty": "진행 중인 수리 없음"
-    },
-    "inspections": {
-      "title": "지연 점검 TOP 3",
-      "subtitle": "지연 및 진행 중인 점검",
-      "empty": "모든 점검 정상"
-    },
-    "parts": {
-      "title": "임박 재고 TOP 3",
-      "subtitle": "안전 재고 미달 부품",
-      "empty": "재고 수준 정상"
-    }
+  "activeTickets": {
+    "title": "진행 중 티켓",
+    "open": "진행 중",
+    "completed": "완료",
+    "onHold": "보류"
   },
-  "inspectionCard": {
-    "statusOverdue": "지연",
-    "statusInProgress": "진행 중"
+  "assetFleet": {
+    "title": "자산 현황",
+    "agreementAssets": "계약 자산",
+    "connectedAssets": "연결 자산",
+    "assetsUnit": "대"
+  },
+  "dailyInspection": {
+    "title": "일일 점검",
+    "subtitle": "최근 7일 점검 결과",
+    "passed": "정상",
+    "failed": "이상"
+  },
+  "quickLinks": {
+    "businessReview": "비즈니스 리뷰",
+    "serviceCalendar": "서비스 캘린더",
+    "documents": "문서 및 매뉴얼",
+    "agreements": "서비스 계약",
+    "locationActivities": "위치별 활동",
+    "slings": "슬링 및 액세서리",
+    "newTicket": "신규 티켓"
   },
   "failureType": {
     "mechanical": "기계",
@@ -125,17 +74,11 @@
       "high": "높음",
       "normal": "보통",
       "low": "낮음"
-    },
-    "repair": {
-      "received": "접수",
-      "waiting_parts": "부품 대기",
-      "in_progress": "진행 중",
-      "re_inspection": "재점검",
-      "on_hold": "보류"
-    },
-    "inventory": {
-      "out_of_stock": "재고 없음",
-      "low": "재고 부족"
     }
+  },
+  "sites": {
+    "dock1": "1번 도크",
+    "dock2": "2번 도크",
+    "dockIn": "블록 공장"
   }
 }

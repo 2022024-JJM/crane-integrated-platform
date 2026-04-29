@@ -3,106 +3,55 @@
     "title": "Navale Philadelphiae",
     "subtitle": "Tabularium MRO — Navale Philadelphiae"
   },
-  "alert": {
-    "actionRequired": "Actio Necessaria",
-    "emergencyRepair_one": "{{count}} Refectio Urgens",
-    "emergencyRepair_other": "{{count}} Refectiones Urgentes",
-    "overdueInspection_one": "{{count}} Inspectio Retardata",
-    "overdueInspection_other": "{{count}} Inspectiones Retardatae",
-    "expiredCert_one": "{{count}} Certificatio Exspirata",
-    "expiredCert_other": "{{count}} Certificationes Exspiratae"
+  "sections": {
+    "service": "Ministerium",
+    "serviceSubtitle": "Indices operationis praecipui"
   },
-  "kpi": {
-    "totalCranes": {
-      "label": "Grues Omnes",
-      "meta": "{{operating}} operantes · {{down}} in refectione"
-    },
-    "inspectionRate": {
-      "label": "Ratio Inspectionum",
-      "onSchedule": "In ordine",
-      "overdue": "{{count}} retardatae"
-    },
-    "activeRepairs": {
-      "label": "Refectiones Activae",
-      "noIssues": "Nulla problemata urgentia",
-      "emergency": "{{emergency}} urgentes · {{waiting}} partes exspectantur",
-      "waitingOnly": "{{waiting}} partes exspectantur"
-    },
-    "avgMttr": {
-      "label": "MTTR Medium",
-      "meta": "Tempus Medium ad Refectionem"
-    },
-    "lowStock": {
-      "label": "Partes Deficientes",
-      "noShortage": "Nulla deficientia critica",
-      "criticalParts": "{{count}} partes criticae"
-    },
-    "certifications": {
-      "label": "Certificationes",
-      "allValid": "Omnes Validae",
-      "expired": "{{count}} Exspiratae",
-      "expiringSoon": "{{count}} mox exspirant",
-      "noExpiry": "Nulla mox exspirant"
-    }
+  "openItems": {
+    "title": "MINISTERIUM - RES APERTAE",
+    "openRisks": "Pericula Aperta",
+    "safety": "Securitas",
+    "production": "Productio"
   },
-  "sites": {
-    "dock1": "Doca I",
-    "dock2": "Doca II",
-    "dockIn": "Officina Fabrica"
+  "connectivity": {
+    "title": "STATUS CLASSIS",
+    "componentCondition": "Conditio Partium",
+    "operatingAlerts": "Monita Operationis",
+    "critical": "Criticum",
+    "low": "Bassum"
   },
-  "charts": {
-    "viewAll": "Omnia videre",
-    "empty": "Nulla data",
-    "repairPipeline": {
-      "title": "Cursus Refectionum",
-      "subtitle": "Mandata activa per gradus operationis",
-      "center": "Activa"
-    },
-    "siteLoad": {
-      "title": "Onus Locorum",
-      "subtitle": "Distributio status gruum per docam",
-      "legend": {
-        "operating": "Operans",
-        "inspection": "Inspectio",
-        "repair": "Refectio",
-        "idle": "Otiosa"
-      }
-    },
-    "repairTrend": {
-      "title": "Progressus Refectionum",
-      "subtitle": "Mandata perfecta, octo hebdomadae recentiores",
-      "legend": {
-        "completed": "Perfecta",
-        "emergency": "Urgentes"
-      }
-    },
-    "failureMix": {
-      "title": "Genera Defectuum",
-      "subtitle": "Distributio causarum per omnes refectiones",
-      "center": "Summa"
-    }
+  "serviceReview": {
+    "title": "Recensio et Tabulae",
+    "serviceVisits": "Visitationes",
+    "assetsServiced": "Bona Curata",
+    "totalFindings": "Inventiones"
   },
-  "topLists": {
-    "viewAll": "Omnia videre",
-    "repairs": {
-      "title": "Refectiones Praecipuae",
-      "subtitle": "Ordine prioritatis",
-      "empty": "Nullae refectiones activae"
-    },
-    "inspections": {
-      "title": "Inspectiones Urgentes",
-      "subtitle": "Retardatae et activae",
-      "empty": "Omnes inspectiones in ordine"
-    },
-    "parts": {
-      "title": "Partes Criticae",
-      "subtitle": "Infra stochum tutum",
-      "empty": "Omnes stochi integri"
-    }
+  "activeTickets": {
+    "title": "Tessera Activae",
+    "open": "Apertae",
+    "completed": "Perfectae",
+    "onHold": "Suspensae"
   },
-  "inspectionCard": {
-    "statusOverdue": "RETARDATA",
-    "statusInProgress": "IN PROCESSU"
+  "assetFleet": {
+    "title": "Classis Bonorum",
+    "agreementAssets": "Bona Pacti",
+    "connectedAssets": "Bona Conexa",
+    "assetsUnit": "Bona"
+  },
+  "dailyInspection": {
+    "title": "Inspectio Quotidiana",
+    "subtitle": "Inspectiones septem dierum recentium",
+    "passed": "Probata",
+    "failed": "Reprobata"
+  },
+  "quickLinks": {
+    "businessReview": "Recensio Negotii",
+    "serviceCalendar": "Kalendarium Ministerii",
+    "documents": "Documenta et Manualia",
+    "agreements": "Pacta Ministerii",
+    "locationActivities": "Operationes Locorum",
+    "slings": "Funes et Accessoria",
+    "newTicket": "Nova Tessera"
   },
   "failureType": {
     "mechanical": "Mechanicus",
@@ -125,17 +74,11 @@
       "high": "ALTA",
       "normal": "NORMALIS",
       "low": "BASSA"
-    },
-    "repair": {
-      "received": "Acceptum",
-      "waiting_parts": "Partes Exspectantur",
-      "in_progress": "In Processu",
-      "re_inspection": "Re-Inspectio",
-      "on_hold": "Suspensum"
-    },
-    "inventory": {
-      "out_of_stock": "Stochus Exhaustus",
-      "low": "Stochus Deficiens"
     }
+  },
+  "sites": {
+    "dock1": "Doca I",
+    "dock2": "Doca II",
+    "dockIn": "Officina Fabrica"
   }
 }
