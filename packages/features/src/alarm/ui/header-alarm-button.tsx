@@ -10,8 +10,10 @@ import {
   type Alarm,
   type AlarmSeverity,
 } from '@crane/domain/alarm';
+import { getRegionById } from '@crane/domain/region';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import { cn } from '@crane/core/lib/utils';
+import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { Button } from '@crane/ui/atoms/button';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 
@@ -83,8 +85,8 @@ function AlarmRow({ alarm, language }: AlarmRowProps) {
 export function HeaderAlarmButton() {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [severityFilter, setSeverityFilter] = useState<AlarmSeverity | null>(
-    null,
+  const [severityFilter, setSeverityFilter] = useState<Set<AlarmSeverity>>(
+    () => new Set(),
   );
   const modalRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -119,11 +121,34 @@ export function HeaderAlarmButton() {
 
   const filteredHistory = useMemo(
     () =>
-      severityFilter
-        ? history.filter((a) => a.severity === severityFilter)
-        : history,
+      severityFilter.size === 0
+        ? history
+        : history.filter((a) => severityFilter.has(a.severity)),
     [history, severityFilter],
   );
+
+  const toggleSeverity = (sev: AlarmSeverity) => {
+    setSeverityFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(sev)) next.delete(sev);
+      else next.add(sev);
+      return next;
+    });
+  };
+
+  const navigate = useProgressNavigate();
+  const latestRegionId = history[0]?.regionId;
+  const historyHref = useMemo(() => {
+    if (!latestRegionId) return null;
+    const region = getRegionById(latestRegionId);
+    return region ? `${region.navigateTo}/alarm-history` : null;
+  }, [latestRegionId]);
+
+  const handleNavigateHistory = () => {
+    if (!historyHref) return;
+    setOpen(false);
+    navigate(historyHref);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -223,8 +248,8 @@ export function HeaderAlarmButton() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="header-alarm-modal-title"
-          className="bg-background fixed top-16 right-4 z-50 flex flex-col overflow-hidden rounded-xl border shadow-[0_8px_40px_rgba(0,0,0,0.3)]"
-          style={{ width: 640, maxHeight: 'calc(100vh - 80px)' }}
+          className="bg-background fixed top-16 right-4 z-50 flex max-h-[70vh] flex-col overflow-hidden rounded-xl border shadow-[0_8px_40px_rgba(0,0,0,0.3)]"
+          style={{ width: 640 }}
         >
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
@@ -257,36 +282,23 @@ export function HeaderAlarmButton() {
           </div>
 
           <div className="flex items-center gap-1.5 border-b px-4 py-2">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => setSeverityFilter(null)}
-              className={cn(
-                'rounded-full',
-                severityFilter === null &&
-                  'bg-foreground text-background hover:bg-foreground/90',
-              )}
-            >
-              전체 ({history.length})
-            </Button>
             {severityOrder.map((sev) => {
               const visual = getAlarmSeverityVisual(sev);
               const count = history.filter((a) => a.severity === sev).length;
-              const isActive = severityFilter === sev;
+              const isActive = severityFilter.has(sev);
               return (
                 <Button
                   key={sev}
                   variant="ghost"
                   size="xs"
-                  onClick={() => setSeverityFilter(isActive ? null : sev)}
+                  onClick={() => toggleSeverity(sev)}
+                  aria-pressed={isActive}
                   className={cn(
                     'rounded-full',
                     isActive && visual.surfaceClassName,
                   )}
                 >
-                  <span
-                    className={isActive ? visual.emphasisClassName : undefined}
-                  >
+                  <span className={visual.emphasisClassName}>
                     {getAlarmSeverityLabel(sev, i18n.language)} ({count})
                   </span>
                 </Button>
@@ -327,6 +339,20 @@ export function HeaderAlarmButton() {
               </table>
             )}
           </ScrollArea>
+
+          <div className="shrink-0 border-t px-4 py-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNavigateHistory}
+              disabled={!historyHref}
+              className="w-full"
+            >
+              {t('common:alarms.viewAllHistory', {
+                defaultValue: '알람 이력 전체 보기',
+              })}
+            </Button>
+          </div>
         </div>
       )}
     </>
