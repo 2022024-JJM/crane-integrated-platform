@@ -44,6 +44,8 @@ interface ThreeSceneViewerProps {
   fullscreenOverlay?: ReactNode;
   // 전체화면일 때 우측 상단(툴바 좌측 옆)에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
+  // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
+  fullscreenTopCenterOverlay?: ReactNode;
   // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
   showZoomIndicator?: boolean;
@@ -298,6 +300,7 @@ export function ThreeSceneViewer({
   overlay,
   fullscreenOverlay,
   fullscreenTopRightOverlay,
+  fullscreenTopCenterOverlay,
   toolbarExtras,
   showZoomIndicator = true,
   onControllerReady,
@@ -409,6 +412,12 @@ export function ThreeSceneViewer({
           </div>
         ) : null}
       </div>
+
+      {isFullscreen && fullscreenTopCenterOverlay ? (
+        <div className="pointer-events-auto absolute top-3 left-1/2 z-50 -translate-x-1/2">
+          {fullscreenTopCenterOverlay}
+        </div>
+      ) : null}
 
       {isFullscreen && fullscreenTopRightOverlay ? (
         <div className="pointer-events-auto absolute top-3 right-14 z-50">

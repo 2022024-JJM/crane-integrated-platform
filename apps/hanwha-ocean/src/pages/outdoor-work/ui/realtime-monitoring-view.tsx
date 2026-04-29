@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { getCraneById, getCraneIdsByRegion } from '@crane/domain/crane';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import {
+  AlarmCriticalBanner,
   AlarmFullscreenOverlay,
   AlarmFullscreenToggleButton,
+  useCriticalAlarmBanner,
   useFullscreenAlarmOverlay,
   useRegionActiveAlarmsByCraneId,
 } from '@crane/features/alarm';
@@ -36,6 +38,8 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const handleAlarmOverlayClose = useCallback(() => {
     setAlarmOverlayVisible(false);
   }, [setAlarmOverlayVisible]);
+  const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
+    useCriticalAlarmBanner(regionId);
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
   const clearFocus = useObjectFocusStore((state) => state.clearFocus);
   const isCmmsOpen = craneId !== null;
@@ -87,6 +91,12 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 regionId={regionId}
                 visible={alarmOverlayVisible}
                 onClose={handleAlarmOverlayClose}
+              />
+            }
+            fullscreenTopCenterOverlay={
+              <AlarmCriticalBanner
+                alarm={criticalBannerAlarm}
+                onDismiss={dismissCriticalBanner}
               />
             }
             toolbarExtras={

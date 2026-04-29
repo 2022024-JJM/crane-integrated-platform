@@ -28,6 +28,7 @@ interface Monitoring3dViewProps {
   onLoadingChange?: (isLoading: boolean) => void;
   fullscreenOverlay?: ReactNode;
   fullscreenTopRightOverlay?: ReactNode;
+  fullscreenTopCenterOverlay?: ReactNode;
   toolbarExtras?: ReactNode;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -42,6 +43,7 @@ export function Monitoring3dView({
   onLoadingChange,
   fullscreenOverlay,
   fullscreenTopRightOverlay,
+  fullscreenTopCenterOverlay,
   toolbarExtras,
   onFullscreenChange,
 }: Monitoring3dViewProps) {
@@ -125,6 +127,7 @@ export function Monitoring3dView({
         overlay={focusOverlay}
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
+        fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={toolbarExtras}
         onFullscreenChange={onFullscreenChange}
         onControllerReady={handleControllerReady}
