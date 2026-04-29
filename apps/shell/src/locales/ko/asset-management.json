@@ -55,7 +55,22 @@
     "totalAssets": "총 자산",
     "operating": "운용 중",
     "inspectionRepair": "점검/수리 중",
-    "idle": "대기"
+    "idle": "대기",
+    "fleetUptime": "가동률",
+    "fleetUptimeSub": "{{operating}}/{{total}} 운용 중",
+    "criticalHealth": "위험 부품",
+    "criticalHealthSub": "위험 상태 부품 보유 자산",
+    "warrantyAlert": "워런티 경고",
+    "warrantyAlertSub": "만료 {{expired}}건 · 임박 {{soon}}건",
+    "openWorkOrders": "처리 대기 작업",
+    "openWorkOrdersSub": "지연 {{overdue}}건 · 수리 {{repair}}건"
+  },
+  "sort": {
+    "label": "정렬",
+    "priority": "우선순위",
+    "name": "이름",
+    "warranty": "워런티 임박",
+    "lastActivity": "최근 활동"
   },
   "sections": {
     "dock1": { "title": "1 도크", "subtitle": "Goliath / TTC 크레인" },
@@ -67,7 +82,13 @@
     "warrantyExpired": "워런티 만료",
     "warrantyUntil": "워런티: {{date}}",
     "overdueInspection": "점검 지연 {{count}}건",
-    "activeRepair": "수리 진행 중"
+    "activeRepair": "수리 진행 중",
+    "lastActivity": "최근 활동",
+    "noActivity": "활동 없음",
+    "today": "오늘",
+    "yesterday": "어제",
+    "daysAgo": "{{count}}일 전",
+    "monthsAgo": "{{count}}개월 전"
   },
   "status": {
     "operating": "운용 중",

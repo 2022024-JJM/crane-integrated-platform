@@ -55,7 +55,22 @@
     "totalAssets": "Bona Omnia",
     "operating": "Operantes",
     "inspectionRepair": "Inspectio / Refectio",
-    "idle": "Quiescentes"
+    "idle": "Quiescentes",
+    "fleetUptime": "Operatio Classis",
+    "fleetUptimeSub": "{{operating}}/{{total}} operantes",
+    "criticalHealth": "Partes Criticae",
+    "criticalHealthSub": "Grues cum partibus criticis",
+    "warrantyAlert": "Monitum Cautionis",
+    "warrantyAlertSub": "{{expired}} exspiratae · {{soon}} mox",
+    "openWorkOrders": "Mandata Aperta",
+    "openWorkOrdersSub": "{{overdue}} retardata · {{repair}} refectio"
+  },
+  "sort": {
+    "label": "Ordina per",
+    "priority": "Prioritas",
+    "name": "Nomen",
+    "warranty": "Cautio (vetustissima)",
+    "lastActivity": "Activitas recens"
   },
   "sections": {
     "dock1": { "title": "Doca I", "subtitle": "Grues Goliath / TTC" },
@@ -67,7 +82,13 @@
     "warrantyExpired": "Cautio Exspiravit",
     "warrantyUntil": "Cautio: {{date}}",
     "overdueInspection": "Inspectio Retardata: {{count}}",
-    "activeRepair": "Refectio In Processu"
+    "activeRepair": "Refectio In Processu",
+    "lastActivity": "Recens",
+    "noActivity": "Nulla activitas",
+    "today": "Hodie",
+    "yesterday": "Heri",
+    "daysAgo": "Abhinc {{count}}d",
+    "monthsAgo": "Abhinc {{count}}mo"
   },
   "status": {
     "operating": "Operans",

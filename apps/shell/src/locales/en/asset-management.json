@@ -55,7 +55,22 @@
     "totalAssets": "Total Assets",
     "operating": "Operating",
     "inspectionRepair": "Inspection / Repair",
-    "idle": "Idle"
+    "idle": "Idle",
+    "fleetUptime": "Fleet Uptime",
+    "fleetUptimeSub": "{{operating}}/{{total}} operating",
+    "criticalHealth": "Critical Components",
+    "criticalHealthSub": "Cranes with critical parts",
+    "warrantyAlert": "Warranty Alert",
+    "warrantyAlertSub": "{{expired}} expired · {{soon}} soon",
+    "openWorkOrders": "Open Work Orders",
+    "openWorkOrdersSub": "{{overdue}} overdue · {{repair}} repair"
+  },
+  "sort": {
+    "label": "Sort by",
+    "priority": "Priority",
+    "name": "Name",
+    "warranty": "Warranty (oldest)",
+    "lastActivity": "Last activity"
   },
   "sections": {
     "dock1": { "title": "Dock 1", "subtitle": "Goliath / TTC Cranes" },
@@ -67,7 +82,13 @@
     "warrantyExpired": "Warranty Expired",
     "warrantyUntil": "Warranty: {{date}}",
     "overdueInspection": "Overdue Inspection: {{count}}",
-    "activeRepair": "Repair In Progress"
+    "activeRepair": "Repair In Progress",
+    "lastActivity": "Last",
+    "noActivity": "No activity",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}}d ago",
+    "monthsAgo": "{{count}}mo ago"
   },
   "status": {
     "operating": "Operating",
