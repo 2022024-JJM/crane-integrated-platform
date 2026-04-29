@@ -6,6 +6,8 @@
     "toggleTheme": "테마 전환",
     "pageSettings": "페이지 설정",
     "login": "로그인",
+    "logout": "로그아웃",
+    "accountSection": "계정",
     "closeSettings": "설정 닫기",
     "regionLanguageSection": "지역 및 언어",
     "languageSection": "언어",

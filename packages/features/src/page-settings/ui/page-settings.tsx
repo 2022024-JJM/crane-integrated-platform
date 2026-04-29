@@ -1,22 +1,49 @@
-import { Check, ChevronDown, Moon, Settings, Sun, X } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  LogOut,
+  Moon,
+  Settings,
+  Sun,
+  UserCircle,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { type SupportedLanguage, i18n } from '@crane/core/config/i18n';
 import { useHeaderDisplaySettings } from '@crane/core/lib/header-display-settings-context';
 import { useTheme } from '@crane/core/lib/theme-context';
 import { cn } from '@crane/core/lib/utils';
+import { useAuth } from '../../auth';
 import { Button } from '@crane/ui/atoms/button';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 type ThemeOption = 'light' | 'dark';
 
+type AccountRole = 'philly' | 'ocean' | 'goliath';
+
+const ROLE_LABEL: Record<AccountRole, string> = {
+  ocean: 'Ocean',
+  goliath: 'Goliath',
+  philly: 'Philly',
+};
+
+const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
+  ocean: 'bg-blue-500/15 text-blue-400',
+  goliath: 'bg-purple-500/15 text-purple-400',
+  philly: 'bg-green-500/15 text-green-400',
+};
+
 export function PageSettings() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { showDate, showTime, showWeather, setSetting } =
     useHeaderDisplaySettings();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
@@ -26,6 +53,12 @@ export function PageSettings() {
     setIsSettingsOpen(false);
     setIsLanguageMenuOpen(false);
     triggerRef.current?.blur();
+  }
+
+  function handleLogout() {
+    closeSettings();
+    logout();
+    navigate('/login', { replace: true });
   }
 
   async function handleLanguageChange(language: SupportedLanguage) {
@@ -188,6 +221,34 @@ export function PageSettings() {
           </div>
 
           <div className="space-y-2">
+            {user && (
+              <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
+                <div className="space-y-3">
+                  <h4 className="text-[14px] font-semibold">
+                    {t('header.accountSection')}
+                  </h4>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                      <UserCircle className="text-muted-foreground h-5 w-5" />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-foreground truncate text-sm font-semibold">
+                        {user.id}
+                      </p>
+                      <span
+                        className={cn(
+                          'w-fit rounded-full px-2 py-0.5 text-[10px] font-medium',
+                          ROLE_BADGE_CLASS[user.role],
+                        )}
+                      >
+                        {ROLE_LABEL[user.role]}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
               <div className="space-y-3">
                 <h4 className="text-[14px] font-semibold">
@@ -305,6 +366,18 @@ export function PageSettings() {
                 </div>
               </div>
             </div>
+
+            {user && (
+              <Button
+                type="button"
+                onClick={handleLogout}
+                variant="outline"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive flex w-full items-center justify-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                {t('header.logout')}
+              </Button>
+            )}
           </div>
         </div>
       </div>

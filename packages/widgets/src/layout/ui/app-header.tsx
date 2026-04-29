@@ -1,28 +1,12 @@
 import { MenuIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@crane/features/auth';
 import { PageSettings } from '@crane/features/page-settings';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
 import { AppLink } from '@crane/ui/atoms/app-link';
 import { HanwhaIcon } from '@crane/ui/atoms/hanwha-icon';
-import { ProfileButton } from '@crane/ui/molecules/profile-button';
 import { HeaderAlarmButton } from '@crane/features/alarm';
 import { HeaderStatusStrip } from './header-status-strip';
-
-function HeaderProfileButton() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  if (!user) return null;
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
-  return <ProfileButton user={user} onLogout={handleLogout} />;
-}
 
 function useHomeHref() {
   const { user } = useAuth();
@@ -63,7 +47,6 @@ export function AppHeader() {
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <HeaderAlarmButton />
         <PageSettings />
-        <HeaderProfileButton />
       </div>
     </header>
   );
