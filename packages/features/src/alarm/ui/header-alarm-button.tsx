@@ -1,6 +1,7 @@
 import { Bell, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   formatAlarmHistoryMessage,
@@ -88,26 +89,41 @@ export function HeaderAlarmButton() {
   const modalRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const activeAlarms = useRealtimeAlarmStore((s) => s.activeAlarms);
-  const history = useRealtimeAlarmStore((s) => s.history);
+  const { activeAlarms, history } = useRealtimeAlarmStore(
+    useShallow((s) => ({
+      activeAlarms: s.activeAlarms,
+      history: s.history,
+    })),
+  );
 
-  const activeList = Object.values(activeAlarms);
-  const totalCount = activeList.length;
-  const criticalCount = activeList.filter(
-    (a) => a.severity === 'critical',
-  ).length;
-  const highCount = activeList.filter((a) => a.severity === 'high').length;
+  // 활성 알람 단일 순회로 통계 산출. 객체 참조 안정성을 위해 useMemo.
+  const stats = useMemo(() => {
+    let total = 0;
+    let critical = 0;
+    let high = 0;
+    for (const alarm of Object.values(activeAlarms)) {
+      total += 1;
+      if (alarm.severity === 'critical') critical += 1;
+      else if (alarm.severity === 'high') high += 1;
+    }
+    return { total, critical, high };
+  }, [activeAlarms]);
 
+  const totalCount = stats.total;
   const badgeColor =
-    criticalCount > 0
+    stats.critical > 0
       ? 'bg-red-500'
-      : highCount > 0
+      : stats.high > 0
         ? 'bg-orange-500'
         : 'bg-amber-500';
 
-  const filteredHistory = severityFilter
-    ? history.filter((a) => a.severity === severityFilter)
-    : history;
+  const filteredHistory = useMemo(
+    () =>
+      severityFilter
+        ? history.filter((a) => a.severity === severityFilter)
+        : history,
+    [history, severityFilter],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -161,8 +177,14 @@ export function HeaderAlarmButton() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
-      // 모달 닫힐 때 트리거 버튼으로 포커스 복귀
-      previouslyFocused?.focus?.();
+      // 모달 닫힐 때 트리거 버튼으로 포커스 복귀.
+      // 라우트 전환 등으로 트리거가 unmount된 경우엔 focus가 body로 빠지지 않도록 가드.
+      if (
+        previouslyFocused &&
+        document.body.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus();
+      }
     };
   }, [open]);
 

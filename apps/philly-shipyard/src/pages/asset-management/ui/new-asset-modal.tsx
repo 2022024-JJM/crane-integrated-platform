@@ -86,7 +86,13 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
     window.addEventListener('keydown', handler);
     return () => {
       window.removeEventListener('keydown', handler);
-      previouslyFocused?.focus?.();
+      // 트리거가 unmount된 경우 focus가 body로 빠지지 않도록 가드.
+      if (
+        previouslyFocused &&
+        document.body.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus();
+      }
     };
   }, [open, onClose]);
 

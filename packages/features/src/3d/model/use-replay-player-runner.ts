@@ -44,7 +44,9 @@ export function useReplayPlayerRunner() {
     }
 
     accumulatorRef.current = 0;
-    lastFrameIndexRef.current = frameIndex + 1;
     useReplayPlayerStore.getState().tick();
+    // tick()이 store의 frameIndex를 갱신했으므로(또는 마지막 프레임에서 그대로 유지),
+    // 다음 useFrame 진입 시 reset 분기가 트리거되지 않도록 store 최신값과 동기화.
+    lastFrameIndexRef.current = useReplayPlayerStore.getState().frameIndex;
   });
 }
