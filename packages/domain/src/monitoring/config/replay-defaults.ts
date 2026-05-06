@@ -88,6 +88,8 @@ export function buildSampleReplayFormValues(regionId: string) {
   };
 }
 
+export type ReplayValidationReason = 'missing' | 'invalid' | 'order' | 'tooLarge';
+
 export function validateReplayDateTimeRange(from: string, to: string) {
   if (!from || !to) {
     return { isValid: false, reason: 'missing' as const };
@@ -109,4 +111,19 @@ export function validateReplayDateTimeRange(from: string, to: string) {
   }
 
   return { isValid: true, reason: null };
+}
+
+export interface MonitoringReplayUiState {
+  draftFrom: string;
+  draftTo: string;
+  setDraftFrom: (v: string) => void;
+  setDraftTo: (v: string) => void;
+  submitSearch: () => void;
+  canSearch: boolean;
+  validationReason: ReplayValidationReason | null | undefined;
+  viewingFrom: string;
+  viewingTo: string;
+  isLoading: boolean;
+  isError: boolean;
+  errorMessage: string | null;
 }

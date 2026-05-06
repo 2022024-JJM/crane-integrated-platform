@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../molecules/tooltip';
+import { cn } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 interface ThreeSceneViewerCameraPreset {
@@ -48,6 +49,8 @@ interface ThreeSceneViewerProps {
   fullscreenTopCenterOverlay?: ReactNode;
   // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
+  // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
+  toolbarClassName?: string;
   showZoomIndicator?: boolean;
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
@@ -302,6 +305,7 @@ export function ThreeSceneViewer({
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
   toolbarExtras,
+  toolbarClassName,
   showZoomIndicator = true,
   onControllerReady,
   onFullscreenChange,
@@ -399,7 +403,7 @@ export function ThreeSceneViewer({
           </Canvas>
 
           {overlay ? (
-            <div className="pointer-events-none absolute inset-0 z-2">
+            <div className="pointer-events-none absolute inset-0 z-10">
               {overlay}
             </div>
           ) : null}
@@ -426,7 +430,12 @@ export function ThreeSceneViewer({
       ) : null}
 
       <TooltipProvider delay={150}>
-        <div className="pointer-events-none absolute top-3 right-3 z-[1] flex flex-col items-end gap-2">
+        <div
+          className={cn(
+            'pointer-events-none absolute top-3 right-3 z-1 flex flex-col items-end gap-2',
+            toolbarClassName,
+          )}
+        >
           {showZoomIndicator ? (
             <div className="bg-background/85 text-foreground border-border/70 pointer-events-auto rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur-sm">
               {zoomPercent}%

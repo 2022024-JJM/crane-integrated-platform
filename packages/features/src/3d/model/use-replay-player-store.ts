@@ -35,9 +35,41 @@ interface ReplayPlayerState {
   play: () => void;
   pause: () => void;
   seekTo: (index: number) => void;
+  seekByFrames: (delta: number) => void;
+  seekByMs: (deltaMs: number) => void;
   setSpeed: (speed: number) => void;
   tick: () => void;
   reset: () => void;
+}
+
+function findFrameIndexByMsOffset(
+  frameDurationsMs: number[],
+  fromIndex: number,
+  deltaMs: number,
+): number {
+  if (deltaMs === 0 || frameDurationsMs.length === 0) return fromIndex;
+
+  let remaining = Math.abs(deltaMs);
+  let index = fromIndex;
+
+  if (deltaMs > 0) {
+    while (index < frameDurationsMs.length - 1 && remaining > 0) {
+      const dur = frameDurationsMs[index] ?? DEFAULT_REPLAY_FRAME_DURATION_MS;
+      if (remaining <= dur) return index + 1;
+      remaining -= dur;
+      index += 1;
+    }
+    return frameDurationsMs.length - 1;
+  }
+
+  while (index > 0 && remaining > 0) {
+    const dur =
+      frameDurationsMs[index - 1] ?? DEFAULT_REPLAY_FRAME_DURATION_MS;
+    if (remaining <= dur) return index - 1;
+    remaining -= dur;
+    index -= 1;
+  }
+  return 0;
 }
 
 export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
@@ -75,6 +107,17 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
     useValueMapperStore.getState().resetToOrigin();
     set({ frameIndex: clamped, isPlaying: false });
     applyReplayFrame(frames[clamped]);
+  },
+
+  seekByFrames: (delta) => {
+    const { frameIndex } = get();
+    get().seekTo(frameIndex + delta);
+  },
+
+  seekByMs: (deltaMs) => {
+    const { frameIndex, frameDurationsMs } = get();
+    const next = findFrameIndexByMsOffset(frameDurationsMs, frameIndex, deltaMs);
+    get().seekTo(next);
   },
 
   setSpeed: (speed) => set({ speedMultiplier: speed }),

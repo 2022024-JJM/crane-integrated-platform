@@ -83,8 +83,12 @@ export function useSceneData(
 
     if (mode === 'simulation') {
       startSimulation();
+      // 다른 모드에서 남은 replay 재생 상태가 useReplayPlayerRunner를 통해
+      // 이 mode에서도 계속 tick하지 않도록 진입 시 항상 정리.
+      resetReplay();
     } else if (mode === 'realtime') {
       startRealtime();
+      resetReplay();
     } else {
       resetReplay();
     }
@@ -93,6 +97,10 @@ export function useSceneData(
     return () => {
       isMounted = false;
       stopRealtime();
+      // unmount 시 replay 재생 상태도 함께 정리. 그렇지 않으면 다른 페이지로
+      // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
+      // 매 프레임 tick → applyValue를 호출, realtime/simulation의 값과 충돌.
+      resetReplay();
       // unmount 전 Object3D가 아직 registry에 있을 때 원위치 복귀
       resetToOrigin();
       clearValueMapper();

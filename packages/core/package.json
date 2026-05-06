@@ -27,6 +27,7 @@
     "./lib/route-error-boundary": "./src/lib/route-error-boundary.tsx",
     "./lib/safe-storage": "./src/lib/safe-storage.ts",
     "./lib/use-section-collapse-group": "./src/lib/use-section-collapse-group.ts",
+    "./lib/export-csv": "./src/lib/export-csv.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
     "./types/navigation": "./src/types/navigation.ts",

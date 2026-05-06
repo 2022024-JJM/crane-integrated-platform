@@ -18,6 +18,7 @@ interface ReplaySearchFormProps {
   isError: boolean;
   errorMessage: string | null;
   className?: string;
+  bare?: boolean;
 }
 
 export function ReplaySearchForm({
@@ -32,6 +33,7 @@ export function ReplaySearchForm({
   isError,
   errorMessage,
   className,
+  bare = false,
 }: ReplaySearchFormProps) {
   const { t } = useTranslation();
   const validationMessage =
@@ -48,11 +50,15 @@ export function ReplaySearchForm({
   return (
     <div
       className={cn(
-        'bg-background/85 border-border/60 flex flex-col gap-2 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm',
+        'flex flex-col gap-2',
+        !bare &&
+          'bg-background/85 border-border/60 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm',
         className,
       )}
     >
-      <p className="text-sm font-medium">{t('common:replay.searchForm')}</p>
+      {!bare ? (
+        <p className="text-sm font-medium">{t('common:replay.searchForm')}</p>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <div className="text-muted-foreground flex items-center gap-2 text-xs">

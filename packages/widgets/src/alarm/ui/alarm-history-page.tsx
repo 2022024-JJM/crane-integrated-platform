@@ -18,6 +18,11 @@ import {
 } from '@crane/domain/alarm';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import { cn } from '@crane/core/lib/utils';
+import {
+  buildCsv,
+  downloadCsv,
+  formatCsvTimestamp,
+} from '@crane/core/lib/export-csv';
 import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import {
@@ -133,39 +138,15 @@ function getDefaultFilters(): FilterValues {
   };
 }
 
-function csvEscape(value: string) {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-function buildCsv(alarms: Alarm[], headers: string[], language: string) {
-  const rows = alarms.map((alarm) =>
-    [
-      new Date(alarm.timestamp).toISOString(),
-      alarm.craneName,
-      getAlarmSeverityLabel(alarm.severity, language),
-      formatAlarmHistoryMessage(alarm, language),
-      alarm.active ? 'active' : 'cleared',
-    ]
-      .map((cell) => csvEscape(String(cell)))
-      .join(','),
-  );
-  return [headers.map(csvEscape).join(','), ...rows].join('\r\n');
-}
-
-function downloadCsv(filename: string, csv: string) {
-  // BOM for Excel UTF-8 compatibility
-  const blob = new Blob(['﻿', csv], {
-    type: 'text/csv;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+function buildAlarmCsv(alarms: Alarm[], headers: string[], language: string) {
+  const rows = alarms.map((alarm) => [
+    new Date(alarm.timestamp).toISOString(),
+    alarm.craneName,
+    getAlarmSeverityLabel(alarm.severity, language),
+    formatAlarmHistoryMessage(alarm, language),
+    alarm.active ? 'active' : 'cleared',
+  ]);
+  return buildCsv(headers, rows);
 }
 
 export function AlarmHistoryPage({
@@ -262,10 +243,8 @@ export function AlarmHistoryPage({
       t('common:alarms.page.columns.message'),
       t('common:alarms.page.columns.status'),
     ];
-    const csv = buildCsv(filtered, headers, i18n.language);
-    const date = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+    const csv = buildAlarmCsv(filtered, headers, i18n.language);
+    const stamp = formatCsvTimestamp();
     const fileBase = t('common:alarms.page.exportFileName');
     downloadCsv(`${fileBase}-${stamp}.csv`, csv);
   }

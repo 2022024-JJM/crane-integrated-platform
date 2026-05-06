@@ -35,6 +35,10 @@ export {
   toDateTimeLocalValue,
   validateReplayDateTimeRange,
 } from './config/replay-defaults';
+export type {
+  ReplayValidationReason,
+  MonitoringReplayUiState,
+} from './config/replay-defaults';
 export { getMonitoringReplaySites } from './api/get-monitoring-replay-sites';
 export { getMonitoringReplayLite } from './api/get-monitoring-replay-lite';
 export { getMonitoringTags } from './api/get-monitoring-tags';

@@ -1,15 +1,25 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CalendarRange, ChevronDown } from 'lucide-react';
 import { Suspense, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
+import {
+  Popover,
+  PopoverPopup,
+  PopoverTrigger,
+} from '@crane/ui/molecules/popover';
 import {
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import {
+  formatReplayTimestamp,
+  type MonitoringReplayUiState,
+} from '@crane/domain/monitoring';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
+import { ReplaySearchForm } from './replay-search-form';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
@@ -19,9 +29,24 @@ const EMPTY_ALARMS: Record<string, never> = {};
 interface Replay3dViewProps {
   regionId: string;
   onLoadingChange?: (isLoading: boolean) => void;
+  search?: MonitoringReplayUiState;
 }
 
-export function Replay3dView({ regionId, onLoadingChange }: Replay3dViewProps) {
+function formatRangeButtonLabel(
+  viewingFrom: string,
+  viewingTo: string,
+): string {
+  const from = formatReplayTimestamp(viewingFrom, 'datetime');
+  const to = formatReplayTimestamp(viewingTo, 'time');
+  if (from && to) return `${from} ~ ${to}`;
+  return viewingFrom && viewingTo ? `${viewingFrom} ~ ${viewingTo}` : '';
+}
+
+export function Replay3dView({
+  regionId,
+  onLoadingChange,
+  search,
+}: Replay3dViewProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
@@ -60,7 +85,7 @@ export function Replay3dView({ regionId, onLoadingChange }: Replay3dViewProps) {
       <Button
         variant="outline"
         size="sm"
-        className="bg-background/85 border-border/70 pointer-events-auto absolute top-3 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
+        className="bg-background/85 border-border/70 pointer-events-auto absolute top-16 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
         onClick={popFocus}
       >
         <ArrowLeft className="size-4" />
@@ -68,8 +93,46 @@ export function Replay3dView({ regionId, onLoadingChange }: Replay3dViewProps) {
       </Button>
     ) : null;
 
+  const searchSlot = search ? (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 px-2.5"
+          >
+            <CalendarRange className="size-4" />
+            <span className="font-mono text-xs">
+              {formatRangeButtonLabel(search.viewingFrom, search.viewingTo)}
+            </span>
+            <ChevronDown className="size-3.5 opacity-60" />
+          </Button>
+        }
+      />
+      <PopoverPopup align="start" className="w-72 p-3">
+        <ReplaySearchForm
+          bare
+          draftFrom={search.draftFrom}
+          draftTo={search.draftTo}
+          onDraftFromChange={search.setDraftFrom}
+          onDraftToChange={search.setDraftTo}
+          onSearch={search.submitSearch}
+          canSearch={search.canSearch}
+          validationReason={search.validationReason}
+          isLoading={search.isLoading}
+          isError={search.isError}
+          errorMessage={search.errorMessage}
+        />
+      </PopoverPopup>
+    </Popover>
+  ) : null;
+
   const replayControlsOverlay = (
-    <ReplayPlayerControls className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2" />
+    <ReplayPlayerControls
+      className="pointer-events-auto absolute inset-x-0 top-0 z-30"
+      searchSlot={searchSlot}
+    />
   );
 
   if (isLoading) {
@@ -109,6 +172,7 @@ export function Replay3dView({ regionId, onLoadingChange }: Replay3dViewProps) {
             {replayControlsOverlay}
           </>
         }
+        toolbarClassName="top-28"
         onControllerReady={handleControllerReady}
       >
         <ambientLight intensity={2} />
