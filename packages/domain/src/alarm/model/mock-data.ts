@@ -132,6 +132,29 @@ const allAlarms: Alarm[] = [
     active: true,
     timestamp: '2026-03-17T09:30:00',
   },
+  // philly-dock-2
+  {
+    id: 'alarm-philly-003',
+    regionId: 'philly-dock-2',
+    craneId: 'philly-crane-202',
+    craneName: 'PC-202',
+    severity: 'high',
+    eventType: 'load_warning_reached',
+    active: true,
+    eventData: { value: 88 },
+    timestamp: '2026-03-17T09:28:00',
+  },
+  {
+    id: 'alarm-philly-004',
+    regionId: 'philly-dock-2',
+    craneId: 'philly-crane-202',
+    craneName: 'PC-202',
+    severity: 'high',
+    eventType: 'wind_warning_exceeded',
+    active: true,
+    eventData: { value: 12.8 },
+    timestamp: '2026-03-17T09:27:00',
+  },
 ];
 
 export function getAlarmsByRegion(regionId: string): Alarm[] {

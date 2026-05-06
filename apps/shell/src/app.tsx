@@ -5,7 +5,6 @@ import {
   Outlet,
   Routes,
   Route,
-  useLocation,
   useParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth, AUTH_STORAGE_KEY } from '@crane/features/auth';
@@ -38,27 +37,18 @@ function getStoredRole(): string | null {
   return stored?.role ?? null;
 }
 
-function getHomeRoute(role: string) {
-  return role === 'philly' ? '/philly-dashboard' : '/';
-}
-
 function ProtectedRoute() {
   const { user } = useAuth();
-  const { pathname } = useLocation();
 
-  // React 상태보다 sessionStorage를 우선 확인 (뒤로가기 등 stale 렌더 대응)
   const role = user?.role ?? getStoredRole();
   if (!role) return <Navigate to="/login" replace />;
 
-  if (role === 'philly' && pathname === '/') {
-    return <Navigate to="/philly-dashboard" replace />;
-  }
   return <Outlet />;
 }
 
 function LoginGuard() {
   const role = getStoredRole();
-  if (role) return <Navigate to={getHomeRoute(role)} replace />;
+  if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
 }
 
@@ -179,7 +169,7 @@ export function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route
-                path="philly-dashboard"
+                path="mro-dashboard"
                 element={<PhillyDashboardPage />}
               />
               <Route

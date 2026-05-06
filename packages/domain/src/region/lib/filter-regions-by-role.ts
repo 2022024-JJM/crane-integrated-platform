@@ -9,11 +9,15 @@ export function filterRegionsByRole(
 ): Region[] {
   switch (role) {
     case 'philly':
-      return [];
+      return regions.filter((r) => r.siteType === 'philly-shipyard');
     case 'goliath':
       return regions.filter((r) => r.navigateTo.startsWith('/goliath-work'));
     case 'ocean':
-      return regions.filter((r) => !r.navigateTo.startsWith('/goliath-work'));
+      return regions.filter(
+        (r) =>
+          !r.navigateTo.startsWith('/goliath-work') &&
+          r.siteType !== 'philly-shipyard',
+      );
     default: {
       const _exhaustive: never = role;
       return _exhaustive;

@@ -5,20 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { getCraneIdsByRegion, getCraneById, getCmmsMockData } from '@crane/domain/crane';
+import {
+  getRegionsBySiteType,
+  getRegionTitleKey,
+} from '@crane/domain/region';
 import { Switch } from '@crane/ui/atoms/switch';
 import { CraneListSection } from '@crane/widgets/crane';
 
 type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
-
-const HANWHA_OCEAN_SECTIONS = [
-  { regionId: 'dock-1',  titleKey: 'regions.dock1.title',  subtitle: '타워갠트리 크레인 9기' },
-  { regionId: 'dock-2',  titleKey: 'regions.dock2.title',  subtitle: '타워갠트리 크레인 6기' },
-  { regionId: 'dock-in', titleKey: 'regions.dockin.title', subtitle: '오버헤드 크레인 5기' },
-] as const;
-
-const GOLIATH_SECTIONS = [
-  { regionId: 'goliath', titleKey: 'regions.goliath.title', subtitle: '골리앗 크레인 1기' },
-] as const;
 
 const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: string; activeBg: string; activeText: string }> = {
   RUN:   { label: 'RUN',   color: 'text-emerald-400',      bg: 'bg-emerald-500/10',    activeBg: 'bg-emerald-500',     activeText: 'text-white'         },
@@ -29,7 +23,16 @@ const FILTER_CONFIG: Record<StatusFilter, { label: string; color: string; bg: st
 export function CraneDetailListPage() {
   const { t } = useTranslation('common');
   const { siteType } = useSiteType();
-  const sections = siteType === 'goliath-crane' ? GOLIATH_SECTIONS : HANWHA_OCEAN_SECTIONS;
+  const sections = useMemo(() => {
+    return getRegionsBySiteType(siteType).map((region) => {
+      const craneCount = getCraneIdsByRegion(region.id).length;
+      return {
+        regionId: region.id,
+        titleKey: getRegionTitleKey(region.id).replace(/^common:/, ''),
+        subtitle: `${craneCount}기`,
+      };
+    });
+  }, [siteType]);
 
   const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(new Set());
   const regionIds = useMemo(() => sections.map((s) => s.regionId), [sections]);

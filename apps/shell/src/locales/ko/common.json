@@ -55,6 +55,7 @@
     "goliathCraneMonitoring": "GC-04 모니터링",
     "craneDetail": "상세 크레인",
     "mro": "MRO",
+    "mroDashboard": "MRO 대시보드",
     "assetManagement": "자산 관리",
     "inspection": "점검 관리",
     "maintenance": "정비 관리",

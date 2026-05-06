@@ -154,6 +154,11 @@ function getMroGroup(): NavGroup {
     title: i18n.t('common:nav.mro'),
     items: [
       {
+        label: i18n.t('common:nav.mroDashboard'),
+        path: '/mro-dashboard',
+        icon: LayoutDashboard,
+      },
+      {
         label: i18n.t('common:nav.assetManagement'),
         path: '/asset-management',
         icon: Layers,
@@ -215,7 +220,7 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
 const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   ocean: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   goliath: ['/goliath-work'],
-  philly: [],
+  philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
 };
 
 export function getNavigationConfig(
@@ -235,13 +240,10 @@ export function getNavigationConfig(
 
   const groups: NavGroup[] = [];
 
-  // philly: MRO만
-  // ocean / goliath: Overview(Dashboard) + Monitoring(3개) + work systemGroup
-  if (role !== 'philly') {
-    groups.push(getOverviewGroup(role));
-    groups.push(getMonitoringGroup());
-  }
-
+  // 모든 role: Overview(Dashboard) + Monitoring(3개) + work systemGroup
+  // philly만 추가로 MRO 그룹 노출
+  groups.push(getOverviewGroup(role));
+  groups.push(getMonitoringGroup());
   groups.push(systemGroup);
 
   if (role === 'philly') {

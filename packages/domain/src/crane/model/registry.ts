@@ -168,6 +168,7 @@ const craneIdsByRegion: Record<string, string[]> = {
     'C_1806',
   ],
   goliath: ['GC_04'],
+  'philly-dock-2': ['C_864', 'C_865', 'C_866', 'C_867', 'C_868', 'C_869'],
 };
 
 export function getCraneById(craneId: string) {

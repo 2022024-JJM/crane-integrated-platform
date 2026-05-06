@@ -55,6 +55,7 @@
     "goliathCraneMonitoring": "GC-04 Monitoring",
     "craneDetail": "Crane Detail",
     "mro": "MRO",
+    "mroDashboard": "MRO Dashboard",
     "assetManagement": "Asset Management",
     "inspection": "Inspection",
     "maintenance": "Maintenance",

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Alarm, AlarmSeverity } from '@crane/domain/alarm';
+import { getCraneIdsByRegion } from '@crane/domain/crane';
 import { useRealtimeAlarmStore } from './use-realtime-alarm-store';
 
 const AUTO_DISMISS_MS = 5000;
@@ -41,13 +42,18 @@ export function useCriticalAlarmBanner(
     }
   }, []);
 
+  const allowedCraneIdsRef = useMemo(
+    () => new Set(getCraneIdsByRegion(regionId)),
+    [regionId],
+  );
+
   useEffect(() => {
     const currentIds = new Set<string>();
     let bannerCandidate: Alarm | null = null;
 
     for (const candidate of Object.values(activeAlarms)) {
       if (
-        candidate.regionId !== regionId ||
+        !allowedCraneIdsRef.has(candidate.craneId) ||
         !candidate.active ||
         !shouldNotifyForBanner(candidate.severity)
       ) {
@@ -64,7 +70,7 @@ export function useCriticalAlarmBanner(
     const seen = seenIdsRef.current;
     for (const candidate of Object.values(activeAlarms)) {
       if (
-        candidate.regionId !== regionId ||
+        !allowedCraneIdsRef.has(candidate.craneId) ||
         !candidate.active ||
         !shouldNotifyForBanner(candidate.severity) ||
         seen.has(candidate.id)
@@ -103,7 +109,7 @@ export function useCriticalAlarmBanner(
       setAlarm(null);
       timerRef.current = null;
     }, AUTO_DISMISS_MS);
-  }, [activeAlarms, regionId]);
+  }, [activeAlarms, regionId, allowedCraneIdsRef]);
 
   useEffect(() => {
     return () => {

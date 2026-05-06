@@ -30,6 +30,13 @@ export const regions: Region[] = [
     statusSummary: { normal: 1, warning: 0, critical: 0 },
     navigateTo: '/goliath-work/goliath',
   },
+  {
+    id: 'philly-dock-2',
+    siteType: 'philly-shipyard',
+    status: 'warning',
+    statusSummary: { normal: 3, warning: 1, critical: 0 },
+    navigateTo: '/outdoor-work/philly-dock-2',
+  },
 ];
 
 export function getRegionById(regionId: string) {

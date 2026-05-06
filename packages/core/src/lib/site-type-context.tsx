@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export type SiteType = 'hanwha-ocean' | 'goliath-crane';
+export type SiteType = 'hanwha-ocean' | 'goliath-crane' | 'philly-shipyard';
 
 interface SiteTypeContextValue {
   siteType: SiteType;
@@ -19,7 +19,13 @@ const STORAGE_KEY = 'site-type';
 function getInitialSiteType(): SiteType {
   if (typeof window === 'undefined') return 'hanwha-ocean';
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'hanwha-ocean' || stored === 'goliath-crane') return stored;
+  if (
+    stored === 'hanwha-ocean' ||
+    stored === 'goliath-crane' ||
+    stored === 'philly-shipyard'
+  ) {
+    return stored;
+  }
   return 'hanwha-ocean';
 }
 

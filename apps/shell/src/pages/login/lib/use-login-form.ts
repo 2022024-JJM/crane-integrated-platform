@@ -24,7 +24,7 @@ export function useLoginForm() {
     e.preventDefault();
     const role = login(id, password);
     if (role) {
-      navigate(role === 'philly' ? '/philly-dashboard' : '/', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setError(true);
     }

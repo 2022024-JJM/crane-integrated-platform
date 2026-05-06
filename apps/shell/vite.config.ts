@@ -12,6 +12,7 @@ const SCENE_FILE_URL_BY_REGION_ID: Record<string, string> = {
   'dock-2': '/scenes/2dock.json',
   'dock-in': '/scenes/dock-in.json',
   goliath: '/scenes/goliath.json',
+  'philly-dock-2': '/scenes/philly-2dock.json',
 };
 
 function getSceneFileUrlByRegionId(regionId: string) {

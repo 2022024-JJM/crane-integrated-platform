@@ -10,7 +10,7 @@ export function getRegionSubtitleKey(regionId: Region['id']) {
 
 function getRegionBasePath(regionId: Region['id']) {
   if (regionId === 'goliath') return `/goliath-work/${regionId}`;
-  if (regionId === 'dock-in') return `/indoor-work/${regionId}`;
+  if (regionId.endsWith('dock-in')) return `/indoor-work/${regionId}`;
   return `/outdoor-work/${regionId}`;
 }
 
@@ -30,5 +30,6 @@ export function getRegionLinkItems(regionId: Region['id']) {
 }
 
 function toRegionResourceKey(regionId: Region['id']) {
-  return regionId.replace('-', '');
+  // philly-dock-1 → dock1 처럼 site prefix를 벗기고 ocean i18n 키를 재사용
+  return regionId.replace(/^philly-/, '').replace(/-/g, '');
 }

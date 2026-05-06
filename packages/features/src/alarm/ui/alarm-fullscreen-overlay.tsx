@@ -10,6 +10,7 @@ import {
   type Alarm,
   type AlarmSeverity,
 } from '@crane/domain/alarm';
+import { getCraneIdsByRegion } from '@crane/domain/crane';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
@@ -54,9 +55,10 @@ export function AlarmFullscreenOverlay({
   );
 
   const regionAlarms = useMemo(() => {
+    const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
     const result: Alarm[] = [];
     for (const alarm of Object.values(activeAlarms)) {
-      if (alarm.regionId === regionId && alarm.active) {
+      if (allowedCraneIds.has(alarm.craneId) && alarm.active) {
         result.push(alarm);
       }
     }

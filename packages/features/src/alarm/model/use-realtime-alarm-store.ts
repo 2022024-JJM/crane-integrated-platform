@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { getCraneById } from '@crane/domain/crane';
+import { getCraneById, getCraneIdsByRegion } from '@crane/domain/crane';
 import type {
   Alarm,
   AlarmStatistics,
@@ -73,8 +73,9 @@ export function getRealtimeAlarmStatsByRegion(
   activeAlarms: Record<string, Alarm>,
   regionId: string,
 ): AlarmStatistics {
-  const alarms = Object.values(activeAlarms).filter(
-    (alarm) => alarm.regionId === regionId,
+  const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
+  const alarms = Object.values(activeAlarms).filter((alarm) =>
+    allowedCraneIds.has(alarm.craneId),
   );
 
   return {
@@ -89,7 +90,8 @@ export function getRealtimeAlarmHistoryByRegion(
   history: Alarm[],
   regionId: string,
 ) {
-  return history.filter((alarm) => alarm.regionId === regionId);
+  const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
+  return history.filter((alarm) => allowedCraneIds.has(alarm.craneId));
 }
 
 export const useRealtimeAlarmStore = create<RealtimeAlarmState>((set) => ({
