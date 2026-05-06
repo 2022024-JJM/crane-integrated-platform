@@ -14,7 +14,7 @@
   },
   "sites": {
     "dock1": "1 도크",
-    "dock2": "2 도크",
+    "dock2": "4 도크",
     "blockShop": "Block Shop"
   },
   "modal": {
@@ -74,7 +74,7 @@
   },
   "sections": {
     "dock1": { "title": "1 도크", "subtitle": "Goliath / TTC 크레인" },
-    "dock2": { "title": "2 도크", "subtitle": "Quay 크레인" },
+    "dock2": { "title": "4 도크", "subtitle": "Quay 크레인" },
     "blockShop": { "title": "Block Shop", "subtitle": "오버헤드 크레인" }
   },
   "criticalAlert": "점검 지연 {{overdueCount}}대 · 수리 진행 {{repairCount}}대 — 즉각적인 조치 필요",

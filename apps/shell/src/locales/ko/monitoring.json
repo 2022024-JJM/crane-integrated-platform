@@ -80,5 +80,10 @@
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
     "multipleSelected": "{{count}}개 객체 선택됨"
+  },
+  "craneList": {
+    "countAll": "{{count}}기",
+    "countFiltered": "{{visible}} / {{total}}기",
+    "emptyForFilter": "해당 상태의 크레인이 없습니다."
   }
 }

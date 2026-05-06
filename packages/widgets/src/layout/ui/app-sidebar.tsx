@@ -9,7 +9,7 @@ import { useSiteType } from '@crane/core/lib/site-type-context';
 import { getNavigationConfig } from '../config/navigation';
 
 export function AppSidebar() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('common');
   const { isOpen } = useSidebar();
   const { siteType } = useSiteType();
   const { pathname } = useLocation();
@@ -30,7 +30,7 @@ export function AppSidebar() {
               {groupIdx > 0 && <Separator className="my-2" />}
               {group.highlight ? (
                 <div className="mb-2 px-2">
-                  <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">크레인</p>
+                  <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">{t('nav.categoryCrane')}</p>
                   <p className="text-base font-bold tracking-wide text-foreground">{group.title}</p>
                 </div>
               ) : (

@@ -14,7 +14,7 @@
   },
   "sites": {
     "dock1": "Dock No.1",
-    "dock2": "Dock No.2",
+    "dock2": "Dock No.4",
     "blockShop": "Block Shop"
   },
   "modal": {
@@ -74,7 +74,7 @@
   },
   "sections": {
     "dock1": { "title": "Dock 1", "subtitle": "Goliath / TTC Cranes" },
-    "dock2": { "title": "Dock 2", "subtitle": "Quay Cranes" },
+    "dock2": { "title": "Dock 4", "subtitle": "Quay Cranes" },
     "blockShop": { "title": "Block Shop", "subtitle": "Overhead Cranes" }
   },
   "criticalAlert": "{{overdueCount}} overdue inspection(s) · {{repairCount}} active repair(s) — immediate action required",

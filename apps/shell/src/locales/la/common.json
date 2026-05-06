@@ -60,7 +60,8 @@
     "inspection": "Inspectio",
     "maintenance": "Manutentio",
     "inventory": "Copia",
-    "compliance": "Conformitas OSHA"
+    "compliance": "Conformitas OSHA",
+    "categoryCrane": "Grus"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",
@@ -257,7 +258,15 @@
     "emergencyStopTriggered": "Statio subita: instrumentum salutis actum",
     "workAreaChanged": "Area operis mutata est",
     "windStopExceeded": "Operatio propter ventum intermissa: {{value}}m/s",
-    "workResumed": "Operatio resumpta est"
+    "workResumed": "Operatio resumpta est",
+    "viewAllHistory": "Omnem historiam monitorum videre",
+    "historyEmpty": "Nulla historia monitorum",
+    "historyColumns": {
+      "severity": "Gradus",
+      "time": "Tempus",
+      "device": "Instrumentum",
+      "message": "Nuntius"
+    }
   },
   "regions": {
     "dock1": {
@@ -266,6 +275,10 @@
     },
     "dock2": {
       "title": "Doca II",
+      "subtitle": "Grues turritae et gigantes VI"
+    },
+    "phillydock2": {
+      "title": "Doca IV",
       "subtitle": "Grues turritae et gigantes VI"
     },
     "dockin": {

@@ -6,6 +6,10 @@
     "plcCommStatus": "PLC 통신 상태",
     "hoistMode": "호이스트 모드",
     "trolleyMode": "트롤리 모드",
+    "inline": {
+      "wind": "풍속",
+      "load": "하중"
+    },
     "wind": {
       "title": "바람",
       "speed": "풍속 (m/s)",

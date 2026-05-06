@@ -80,5 +80,10 @@
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected"
+  },
+  "craneList": {
+    "countAll": "{{count}} units",
+    "countFiltered": "{{visible}} / {{total}} units",
+    "emptyForFilter": "No cranes match the selected status."
   }
 }

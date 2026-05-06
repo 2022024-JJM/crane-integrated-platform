@@ -60,7 +60,8 @@
     "inspection": "Inspection",
     "maintenance": "Maintenance",
     "inventory": "Inventory",
-    "compliance": "OSHA Compliance"
+    "compliance": "OSHA Compliance",
+    "categoryCrane": "Crane"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",
@@ -257,7 +258,15 @@
     "emergencyStopTriggered": "Emergency stop: safety device triggered",
     "workAreaChanged": "Work area changed",
     "windStopExceeded": "Operation stopped due to wind: {{value}}m/s",
-    "workResumed": "Work resumed"
+    "workResumed": "Work resumed",
+    "viewAllHistory": "View all alarm history",
+    "historyEmpty": "No alarm history",
+    "historyColumns": {
+      "severity": "Level",
+      "time": "Time",
+      "device": "Device",
+      "message": "Message"
+    }
   },
   "regions": {
     "dock1": {
@@ -266,6 +275,10 @@
     },
     "dock2": {
       "title": "Dock 2",
+      "subtitle": "Tower·Gantry 6 cranes"
+    },
+    "phillydock2": {
+      "title": "Dock 4",
       "subtitle": "Tower·Gantry 6 cranes"
     },
     "dockin": {

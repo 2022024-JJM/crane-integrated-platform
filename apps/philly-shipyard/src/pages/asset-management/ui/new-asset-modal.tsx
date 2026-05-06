@@ -26,7 +26,7 @@ const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc',
 const STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 const SITE_NAME_FALLBACK: Record<string, string> = {
   'dock-1': 'Dock No.1',
-  'dock-2': 'Dock No.2',
+  'dock-2': 'Dock No.4',
   'dock-in': 'Block Shop',
 };
 

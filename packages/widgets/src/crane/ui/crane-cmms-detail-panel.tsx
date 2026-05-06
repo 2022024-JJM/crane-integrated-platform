@@ -45,13 +45,13 @@ export function CraneCmmsDetailPanel({ craneId, craneName, onClose }: CraneCmmsD
         {/* KPI 인라인 */}
         <div className="flex items-center gap-2 ml-auto text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
-            <span>풍속</span>
+            <span>{t('overview.inline.wind')}</span>
             <span className={`font-mono font-bold ${windSpeed > 10 ? 'text-amber-400' : 'text-foreground'}`}>
               {windSpeed.toFixed(1)}
             </span>
           </span>
           <span className="flex items-center gap-1">
-            <span>하중</span>
+            <span>{t('overview.inline.load')}</span>
             <span className="font-mono font-bold text-foreground">{totalLoad.toFixed(0)}t</span>
           </span>
           <span className="flex items-center gap-1" title="E-STOP">

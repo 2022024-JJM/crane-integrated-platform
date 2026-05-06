@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [
     "tsconfig.json",
+    "tsconfig.base.json",
     "eslint.config.js",
     ".prettierrc",
     "turbo.json"
@@ -16,7 +17,10 @@
         "VITE_LIDAR_WS_URL",
         "VITE_API_TIMEOUT_MS",
         "VITE_WS_RECONNECT_INTERVAL_MS",
-        "VITE_WS_MAX_RECONNECT_ATTEMPTS"
+        "VITE_WS_RECONNECT_INITIAL_MS",
+        "VITE_WS_RECONNECT_MAX_MS",
+        "VITE_WS_MAX_RECONNECT_ATTEMPTS",
+        "VITE_BASE_URL"
       ]
     },
     "dev": {

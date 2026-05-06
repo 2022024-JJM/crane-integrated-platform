@@ -6,6 +6,10 @@
     "plcCommStatus": "Status Comm. PLC",
     "hoistMode": "Modus Tollenonis",
     "trolleyMode": "Modus Plausti",
+    "inline": {
+      "wind": "Ventus",
+      "load": "Onus"
+    },
     "wind": {
       "title": "Ventus",
       "speed": "Velocitas (m/s)",

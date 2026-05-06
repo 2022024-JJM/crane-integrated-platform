@@ -80,5 +80,10 @@
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta"
+  },
+  "craneList": {
+    "countAll": "{{count}} grues",
+    "countFiltered": "{{visible}} / {{total}} grues",
+    "emptyForFilter": "Nullae grues huic statui congruunt."
   }
 }

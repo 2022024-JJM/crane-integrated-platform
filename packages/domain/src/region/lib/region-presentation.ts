@@ -30,6 +30,7 @@ export function getRegionLinkItems(regionId: Region['id']) {
 }
 
 function toRegionResourceKey(regionId: Region['id']) {
-  // philly-dock-1 → dock1 처럼 site prefix를 벗기고 ocean i18n 키를 재사용
+  // philly-dock-2 는 4도크이므로 별도 키 사용, 나머지는 prefix를 벗기고 ocean 키 재사용
+  if (regionId === 'philly-dock-2') return 'phillydock2';
   return regionId.replace(/^philly-/, '').replace(/-/g, '');
 }

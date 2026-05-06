@@ -13,7 +13,6 @@ import { RouteErrorBoundary } from '@crane/core/lib/route-error-boundary';
 import { getStorageJson } from '@crane/core/lib/safe-storage';
 import { getRegionById } from '@crane/domain/region';
 import { LoginPage } from './pages/login/login-page';
-import { PhillyDashboardPage } from './pages/philly-dashboard/philly-dashboard-page';
 import { NotFoundPage } from './pages/not-found/not-found-page';
 
 function LazyRoute({ children }: { children: ReactNode }) {
@@ -160,6 +159,12 @@ const CreateTicketPage = lazy(() =>
   })),
 );
 
+const PhillyDashboardPage = lazy(() =>
+  import('@crane/philly-shipyard/pages/dashboard').then((m) => ({
+    default: m.PhillyDashboardPage,
+  })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -170,7 +175,11 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route
                 path="mro-dashboard"
-                element={<PhillyDashboardPage />}
+                element={
+                  <LazyRoute>
+                    <PhillyDashboardPage />
+                  </LazyRoute>
+                }
               />
               <Route
                 index

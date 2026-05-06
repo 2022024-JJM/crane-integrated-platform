@@ -81,6 +81,27 @@ Import rule: 상위 레이어는 하위 레이어만 import 할 수 있다.
 
 `shared` → `entities` → `features` → `widgets` → `pages` → `app`
 
+## Apps Layout (Shell + Plugin)
+
+`apps/` 는 Shell 1개 + 사이트 plugin N개 구조다.
+
+- `apps/shell` — 라우팅, 인증 가드, 전역 layout. 모든 사이트별 페이지는 `lazy()` 로 plugin 에서 동적 로드한다. 사이트 전용 비즈니스 로직을 shell 안에 두지 않는다.
+- `apps/{site}` (예: `hanwha-ocean`, `goliath-crane`, `philly-shipyard`) — 사이트 전용 page slice 모음. 다른 plugin 을 import 하지 않는다.
+
+각 plugin 의 page slice 표준 구조:
+
+```
+apps/{site}/src/pages/{page}/
+├── ui/                 # 화면 컴포넌트 (필수)
+├── model/              # hooks, aggregations, 비즈니스 로직 (선택)
+└── index.ts            # public API
+```
+
+- 비즈니스 로직(데이터 집계, hook)은 `model/` 에, JSX 는 `ui/` 에 둔다.
+- `ui/` 가 `model/` 을 import 할 수는 있지만 그 반대는 금지.
+- 새 page 를 추가하면 plugin 의 `package.json` exports 에 `"./pages/{page}": "./src/pages/{page}/index.ts"` 를 등록한다.
+- 새 사이트 plugin 은 `pnpm new-site <slug>` 로 scaffold 한다 (apps/&lt;slug&gt; 와 shell 의존성을 생성). shell 의 `app.tsx` 라우팅 등록과 `navigation.ts` 메뉴 분기는 사이트마다 권한·라우트가 달라서 수동으로 추가한다.
+
 ## Current Project State
 
 현재 저장소 기준으로 주의해서 이해해야 할 구현 상태는 다음과 같다.

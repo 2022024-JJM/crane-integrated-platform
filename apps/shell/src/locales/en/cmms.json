@@ -6,6 +6,10 @@
     "plcCommStatus": "PLC Comm. Status",
     "hoistMode": "Hoist Mode",
     "trolleyMode": "Trolley Mode",
+    "inline": {
+      "wind": "Wind",
+      "load": "Load"
+    },
     "wind": {
       "title": "Wind",
       "speed": "Speed (m/s)",

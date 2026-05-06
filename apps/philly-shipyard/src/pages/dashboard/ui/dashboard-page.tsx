@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { usePhillyDashboard } from './use-philly-dashboard';
-import { formatPeriodLabel } from './aggregations';
+import { usePhillyDashboard } from '../model/use-philly-dashboard';
+import { formatPeriodLabel } from '../model/aggregations';
 import { PageHeaderBar } from './components/page-header-bar';
 import { OpenItemsPanel } from './components/open-items-panel';
 import { FleetStatusPanel } from './components/fleet-status-panel';

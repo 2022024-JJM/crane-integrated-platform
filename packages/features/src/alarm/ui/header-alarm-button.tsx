@@ -309,22 +309,24 @@ export function HeaderAlarmButton() {
           <ScrollArea className="min-h-0 flex-1 overflow-auto">
             {filteredHistory.length === 0 ? (
               <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-                알람 이력이 없습니다
+                {t('common:alarms.historyEmpty')}
               </div>
             ) : (
               <table className="w-full border-collapse">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr className="text-muted-foreground text-left text-[11px]">
                     <th className="px-3 py-2 font-medium whitespace-nowrap">
-                      단계
+                      {t('common:alarms.historyColumns.severity')}
                     </th>
                     <th className="px-3 py-2 font-medium whitespace-nowrap">
-                      시간
+                      {t('common:alarms.historyColumns.time')}
                     </th>
                     <th className="px-3 py-2 font-medium whitespace-nowrap">
-                      장비
+                      {t('common:alarms.historyColumns.device')}
                     </th>
-                    <th className="px-3 py-2 font-medium">설명</th>
+                    <th className="px-3 py-2 font-medium">
+                      {t('common:alarms.historyColumns.message')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

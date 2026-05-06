@@ -14,7 +14,7 @@
   },
   "sites": {
     "dock1": "Navale I",
-    "dock2": "Navale II",
+    "dock2": "Navale IV",
     "blockShop": "Officina Blockorum"
   },
   "modal": {
@@ -74,7 +74,7 @@
   },
   "sections": {
     "dock1": { "title": "Doca I", "subtitle": "Grues Goliath / TTC" },
-    "dock2": { "title": "Doca II", "subtitle": "Grues Quay" },
+    "dock2": { "title": "Doca IV", "subtitle": "Grues Quay" },
     "blockShop": { "title": "Officina Fabrica", "subtitle": "Grues Supremae" }
   },
   "criticalAlert": "{{overdueCount}} inspectio(nes) retardata(e) · {{repairCount}} refectio(nes) activa(e) — actio statim necessaria",

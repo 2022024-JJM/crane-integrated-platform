@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   getCraneIdsByRegion,
@@ -26,6 +27,7 @@ export function CraneListSection({
   collapsed,
   onToggle,
 }: CraneListSectionProps) {
+  const { t } = useTranslation('monitoring');
   const craneIds = getCraneIdsByRegion(regionId);
   const allCranes = craneIds
     .map((id) => getCraneById(id))
@@ -64,8 +66,11 @@ export function CraneListSection({
         <div className="flex-1 h-px bg-border" />
         <span className="text-xs text-muted-foreground tabular-nums shrink-0">
           {(!statusFilters || statusFilters.size === 0)
-            ? `${allCranes.length}기`
-            : `${visibleCount} / ${allCranes.length}기`}
+            ? t('craneList.countAll', { count: allCranes.length })
+            : t('craneList.countFiltered', {
+                visible: visibleCount,
+                total: allCranes.length,
+              })}
         </span>
         <div className="flex items-center justify-center size-6 rounded border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground shrink-0">
           {collapsed
@@ -89,7 +94,7 @@ export function CraneListSection({
           </div>
         ) : (
           <div className="flex items-center justify-center py-8 pb-4 text-xs text-muted-foreground">
-            해당 상태의 크레인이 없습니다.
+            {t('craneList.emptyForFilter')}
           </div>
         )
       )}
