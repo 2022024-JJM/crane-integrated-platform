@@ -127,7 +127,7 @@ export function ReplayPlayerControls({
           value={frameIndex}
           disabled={!hasFrames}
           onChange={(e) => seekTo(Number(e.target.value))}
-          className="[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:bg-orange-500 [&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 relative z-10 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-border/60 disabled:cursor-not-allowed disabled:opacity-40"
+          className="[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:bg-orange-500 [&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 relative z-10 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted-foreground/30 disabled:cursor-not-allowed disabled:opacity-40"
         />
         <div
           aria-hidden
@@ -136,7 +136,7 @@ export function ReplayPlayerControls({
           {tickPositions.map((pct, i) => (
             <span
               key={i}
-              className="bg-border/80 absolute top-0 h-full w-px"
+              className="bg-muted-foreground/40 absolute top-0 h-full w-px"
               style={{ left: `${pct}%` }}
             />
           ))}
