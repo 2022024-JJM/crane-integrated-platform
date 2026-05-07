@@ -1,4 +1,8 @@
 export { Monitoring3dView } from './ui/monitoring-3d-view';
+export type {
+  SensorFeedContext,
+  SensorFeedRenderer,
+} from './ui/sensor-billboard';
 export { Replay3dView } from './ui/replay-3d-view';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';

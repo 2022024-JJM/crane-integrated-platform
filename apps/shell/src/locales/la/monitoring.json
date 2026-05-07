@@ -12,7 +12,10 @@
     "textContent": "Argumentum",
     "textColor": "Color",
     "tagMapping": "Designatio Tags",
-    "tagKeyPlaceholder": "Clavem tag inscribe"
+    "tagKeyPlaceholder": "Clavem tag inscribe",
+    "visionChannel": "Canalis Visoris",
+    "visionChannelEmpty": "(non designatum)",
+    "visionChannelTaken": "in usu"
   },
   "transform": {
     "title": "Modus transformationis",

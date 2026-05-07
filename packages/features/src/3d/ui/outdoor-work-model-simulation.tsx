@@ -20,6 +20,11 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import {
+  BillboardHoverProvider,
+  SensorBillboard,
+  type SensorFeedRenderer,
+} from './sensor-billboard';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
@@ -30,6 +35,8 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
+
+const noop = () => {};
 
 export function useSceneData(
   regionId: string,
@@ -119,6 +126,12 @@ interface OutdoorWorkModelSimulationProps {
   mode?: 'simulation' | 'replay' | 'realtime';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
+  onSensorSelect?: (
+    channelId: string,
+    sensorType: 'camera' | 'lidar',
+  ) => void;
+  isFullscreen?: boolean;
+  renderSensorFeed?: SensorFeedRenderer;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -129,6 +142,9 @@ export function OutdoorWorkModelSimulation({
   mode = 'simulation',
   onMoveTo,
   onResetCamera,
+  onSensorSelect,
+  isFullscreen = false,
+  renderSensorFeed,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
@@ -172,6 +188,15 @@ export function OutdoorWorkModelSimulation({
   const modelIds = useMemo(() => models.map((model) => model.id), [models]);
   const texts = sceneInfo?.texts ?? [];
   const sensors = sceneInfo?.sensors ?? [];
+
+  const handleSensorClick = useCallback(
+    (sensorId: string) => {
+      const sensor = sensors.find((s) => s.id === sensorId);
+      if (!sensor || !sensor.channelId) return;
+      onSensorSelect?.(sensor.channelId, sensor.type);
+    },
+    [sensors, onSensorSelect],
+  );
 
   const focusStack = useObjectFocusStore((s) => s.focusStack);
 
@@ -378,7 +403,7 @@ export function OutdoorWorkModelSimulation({
               key={sensor.id}
               sensor={sensor}
               isSelected={false}
-              onSelect={handleModelClick}
+              onSelect={handleSensorClick}
               isMonitoringMode
             />
           );
@@ -389,13 +414,35 @@ export function OutdoorWorkModelSimulation({
               key={sensor.id}
               sensor={sensor}
               isSelected={false}
-              onSelect={handleModelClick}
+              onSelect={handleSensorClick}
               isMonitoringMode
             />
           );
         }
         return null;
       })}
+      {isFullscreen ? (
+        <BillboardHoverProvider>
+          {sensors.map((sensor) => {
+            if (!sensor.channelId) return null;
+            const label =
+              sensor.type === 'camera'
+                ? `CAM ${sensor.channelId.replace('cam-', '')}`
+                : 'LiDAR';
+            return (
+              <SensorBillboard
+                key={`bb-${sensor.id}`}
+                position={sensor.position}
+                channelId={sensor.channelId}
+                sensorType={sensor.type}
+                label={label}
+                onSelect={onSensorSelect ?? noop}
+                renderFeed={renderSensorFeed}
+              />
+            );
+          })}
+        </BillboardHoverProvider>
+      ) : null}
       {texts.map((text) => {
         if (visibleGroupBox) {
           const [tx] = text.position;

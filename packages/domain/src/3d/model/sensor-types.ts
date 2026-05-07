@@ -12,6 +12,12 @@ interface BaseSavedSensorInfo {
   name: string;
   position: Vector3Tuple;
   rotation: Vector3Tuple;
+  /**
+   * Vision 모니터링 채널 식별자. 풀스크린 3D 모니터링에서 센서를 클릭했을 때
+   * 같은 channelId를 가진 비전 채널(CAM 1, LiDAR 등)이 PiP로 표시된다.
+   * 매핑되지 않은 센서는 클릭해도 비전 PiP가 열리지 않는다.
+   */
+  channelId?: string;
 }
 
 export interface LidarSensorSettings {

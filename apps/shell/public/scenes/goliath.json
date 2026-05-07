@@ -217,7 +217,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-1"
     },
     {
       "id": "fd01c0c4-2ff8-432f-858f-3e20972cbb26",
@@ -238,7 +239,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-2"
     },
     {
       "id": "4fda1638-3a13-4b33-989b-294ac4d44bda",
@@ -259,7 +261,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-3"
     },
     {
       "id": "5958db91-dbe9-43da-930a-6775af425875",
@@ -280,7 +283,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-4"
     },
     {
       "id": "dd9f6217-c998-490b-b34f-bb13ecb01400",
@@ -301,7 +305,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-5"
     },
     {
       "id": "89de00a4-4a6f-4c3a-8194-f514c545a9e5",
@@ -322,7 +327,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-6"
     },
     {
       "id": "b7e08119-fa10-411f-9c07-4ef2b2536f27",
@@ -343,7 +349,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-7"
     },
     {
       "id": "ddc94536-ca30-45cd-a1ee-40776b96f19f",
@@ -364,7 +371,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-8"
     },
     {
       "id": "c02184c0-956f-4953-ba87-40ebc7b2a10e",
@@ -385,7 +393,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-9"
     },
     {
       "id": "0fb51b4d-c531-4324-85ff-53e48212320f",
@@ -406,7 +415,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-10"
     },
     {
       "id": "54591df3-48e8-443d-8725-f62b8f2824ba",
@@ -427,7 +437,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-11"
     },
     {
       "id": "7516ea32-687b-400c-94f7-5541806eceaa",
@@ -448,7 +459,8 @@
       "near": 0.35,
       "far": 6,
       "frustumSegmentsX": 32,
-      "frustumSegmentsY": 12
+      "frustumSegmentsY": 12,
+      "channelId": "cam-12"
     },
     {
       "id": "2f98008d-3b0c-4da7-96a6-1592e438d692",
@@ -469,7 +481,8 @@
       "far": 8,
       "horizontalSegments": 50,
       "verticalSegments": 50,
-      "pointSize": 0.2
+      "pointSize": 0.2,
+      "channelId": "lidar-1"
     },
     {
       "id": "6eec5e8b-6100-4d7d-84d1-57531f62e570",
@@ -490,14 +503,15 @@
       "far": 8,
       "horizontalSegments": 50,
       "verticalSegments": 50,
-      "pointSize": 0.2
+      "pointSize": 0.2,
+      "channelId": "lidar-2"
     }
   ],
   "camera": {
     "position": [
-      15.992170347521336,
-      9.086446314179902,
-      -31.259776018292076
+      13.534853529489594,
+      8.450215347391326,
+      -31.371329731823412
     ],
     "target": [
       2.7447330725094385,

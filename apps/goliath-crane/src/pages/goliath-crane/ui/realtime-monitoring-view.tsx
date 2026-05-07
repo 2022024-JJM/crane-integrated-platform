@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
@@ -12,6 +12,9 @@ import {
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
+import { GoliathVisionPip } from './goliath-vision-pip';
+import { renderSensorFeed } from './sensor-feed-renderer';
+import { CAMERA_CHANNELS, type ExpandedView } from './vision/types';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_TABLE_REGION_ID = 'dock-2';
@@ -31,7 +34,25 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
     regionId === 'goliath' ? GOLIATH_BACKEND_REGION_ID : regionId;
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(backendRegionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
+  const [expanded, setExpanded] = useState<ExpandedView>(null);
   const { crane } = useGoliathCraneData();
+
+  const handleSensorSelect = useCallback(
+    (channelId: string, sensorType: 'camera' | 'lidar') => {
+      if (sensorType === 'lidar') {
+        setExpanded({ type: 'lidar' });
+        return;
+      }
+      const channel = CAMERA_CHANNELS.find((c) => c.id === channelId);
+      if (!channel) return;
+      setExpanded({ type: 'camera', id: channel.id });
+    },
+    [],
+  );
+
+  const handleFullscreenChange = useCallback((next: boolean) => {
+    if (!next) setExpanded(null);
+  }, []);
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
@@ -57,6 +78,16 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
                 onLoadingChange={setIs3dViewLoading}
+                onFullscreenChange={handleFullscreenChange}
+                onSensorSelect={handleSensorSelect}
+                renderSensorFeed={renderSensorFeed}
+                fullscreenTopRightOverlay={
+                  <GoliathVisionPip
+                    expanded={expanded}
+                    channels={CAMERA_CHANNELS}
+                    onClose={() => setExpanded(null)}
+                  />
+                }
               />
             </div>
           </ResizablePanel>

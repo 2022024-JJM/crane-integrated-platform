@@ -184,6 +184,12 @@ function sanitizeSensors(
     seenIds.add(nextId);
 
     const name = typeof sensor.name === 'string' ? sensor.name : '';
+    // 비전 모니터링 채널 매핑. 편집 UI에서 다루지 않더라도 scene JSON에
+    // 정의된 값을 그대로 보존해야 풀스크린 빌보드/PiP 연결이 유지된다.
+    const channelId =
+      typeof sensor.channelId === 'string' && sensor.channelId.length > 0
+        ? sensor.channelId
+        : undefined;
 
     if (sensor.type === 'lidar') {
       const normalized = normalizeLidarSettings({
@@ -202,6 +208,7 @@ function sanitizeSensors(
         rotation: sensor.rotation as Vector3Tuple,
         ...normalized,
       };
+      if (channelId) lidar.channelId = channelId;
       out.push(lidar);
       continue;
     }
@@ -222,6 +229,7 @@ function sanitizeSensors(
       rotation: sensor.rotation as Vector3Tuple,
       ...normalized,
     };
+    if (channelId) camera.channelId = channelId;
     out.push(camera);
   }
   return out.length > 0 ? out : undefined;
@@ -281,6 +289,7 @@ function isSensorInfoEqual(a: SavedSensorInfo, b: SavedSensorInfo): boolean {
   if (a.id !== b.id) return false;
   if (a.type !== b.type) return false;
   if (a.name !== b.name) return false;
+  if ((a.channelId ?? '') !== (b.channelId ?? '')) return false;
   if (!isVector3TupleEqual(a.position, b.position)) return false;
   if (!isVector3TupleEqual(a.rotation, b.rotation)) return false;
   if (a.type === 'lidar' && b.type === 'lidar') {

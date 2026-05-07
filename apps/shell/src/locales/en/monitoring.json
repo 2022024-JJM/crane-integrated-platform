@@ -12,7 +12,10 @@
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",
-    "tagKeyPlaceholder": "Enter tag key"
+    "tagKeyPlaceholder": "Enter tag key",
+    "visionChannel": "Vision Channel",
+    "visionChannelEmpty": "(unmapped)",
+    "visionChannelTaken": "in use"
   },
   "transform": {
     "title": "Transform mode",

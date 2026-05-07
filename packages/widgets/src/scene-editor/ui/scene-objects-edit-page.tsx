@@ -55,6 +55,7 @@ import {
   PalettePlacedObjects,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
+  type VisionChannelOption,
 } from '@crane/widgets/3d';
 import {
   SCENE_SENSOR_DRAG_TYPE,
@@ -64,6 +65,12 @@ import {
 
 interface SceneObjectsEditPageProps {
   regionId: string;
+  /**
+   * 인스펙터에서 카메라/라이다 센서에 매핑할 수 있는 비전 채널 목록.
+   * app 레이어가 자기 도메인 채널(예: goliath-crane의 CAMERA_CHANNELS)을 주입한다.
+   * 미지정 시 인스펙터에 채널 매핑 UI가 표시되지 않는다.
+   */
+  visionChannels?: readonly VisionChannelOption[];
 }
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
@@ -99,7 +106,10 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
+export function SceneObjectsEditPage({
+  regionId,
+  visionChannels,
+}: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
@@ -424,6 +434,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             selectedSensor={selectedSensor}
             selectedMesh={selectedMesh}
             multiSelectCount={selectedIds.size}
+            visionChannels={visionChannels}
+            allSensors={sceneInfo?.sensors}
             onNameChange={updateSelectedName}
             onOpacityChange={updateSelectedOpacity}
             onTransformChange={(field, axis, value) => {

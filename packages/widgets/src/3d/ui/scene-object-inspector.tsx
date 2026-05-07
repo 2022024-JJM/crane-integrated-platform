@@ -12,14 +12,6 @@ import { useTranslation } from 'react-i18next';
 import {
   isCameraSensor,
   isLidarSensor,
-  MAX_CAMERA_FOV,
-  MAX_LIDAR_FOV,
-  MAX_LIDAR_SEGMENTS,
-  MIN_CAMERA_FOV,
-  MIN_CAMERA_GRID_SEGMENTS,
-  MAX_CAMERA_GRID_SEGMENTS,
-  MIN_LIDAR_FOV,
-  MIN_LIDAR_SEGMENTS,
   type SavedCameraSensorInfo,
   type SavedLidarSensorInfo,
   type SavedModelInfo,
@@ -41,12 +33,26 @@ import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 
+/** Vision PiP 채널 정의. app 레이어가 자기 도메인의 채널 목록을 주입한다. */
+export interface VisionChannelOption {
+  id: string;
+  label: string;
+  sensorType: 'camera' | 'lidar';
+}
+
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
   selectedSensor?: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   multiSelectCount?: number;
+  /**
+   * 인스펙터의 비전 채널 드롭다운에 노출할 채널 목록. 비어있거나 미지정 시
+   * 채널 매핑 UI 자체가 표시되지 않는다.
+   */
+  visionChannels?: readonly VisionChannelOption[];
+  /** 현재 씬의 모든 센서. 다른 센서가 이미 점유한 채널을 disabled 표시하기 위해. */
+  allSensors?: readonly SavedSensorInfo[];
   onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
@@ -631,36 +637,68 @@ function TextInspectorContent({
   );
 }
 
-function SensorNumberRow({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
+function VisionChannelSelect({
+  sensor,
   onChange,
+  visionChannels,
+  allSensors,
+  t,
 }: {
-  label: string;
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  onChange: (next: number) => void;
+  sensor: SavedLidarSensorInfo | SavedCameraSensorInfo;
+  onChange: (
+    id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch: Record<string, any>,
+  ) => void;
+  visionChannels?: readonly VisionChannelOption[];
+  allSensors?: readonly SavedSensorInfo[];
+  t: (key: string) => string;
 }) {
+  if (!visionChannels || visionChannels.length === 0) return null;
+
+  // 같은 sensorType의 채널만 노출 — 카메라는 cam-*, 라이다는 lidar-*
+  const candidates = visionChannels.filter(
+    (c) => c.sensorType === sensor.type,
+  );
+  if (candidates.length === 0) return null;
+
+  // 다른 센서가 점유한 채널 집계 (자기 자신 제외)
+  const taken = new Set<string>();
+  for (const s of allSensors ?? []) {
+    if (s.id === sensor.id) continue;
+    if (s.channelId) taken.add(s.channelId);
+  }
+
+  const current = sensor.channelId ?? '';
+
   return (
-    <label className="flex items-center justify-between gap-2 text-[11px]">
-      <span className="text-muted-foreground">{label}</span>
-      <Input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          if (Number.isFinite(next)) onChange(next);
+    <label className="flex items-center justify-between gap-2 py-1">
+      <span className="text-muted-foreground text-[11px]">
+        {t('monitoring:inspector.visionChannel')}
+      </span>
+      <select
+        value={current}
+        onChange={(e) => {
+          const next = e.target.value;
+          onChange(sensor.id, {
+            channelId: next.length > 0 ? next : undefined,
+          });
         }}
-        className="border-border bg-muted text-foreground h-7 w-24 rounded-sm px-2 text-right text-[11px]"
-      />
+        className="border-border bg-muted text-foreground h-7 w-32 rounded-sm px-1.5 text-right text-[11px]"
+      >
+        <option value="">{t('monitoring:inspector.visionChannelEmpty')}</option>
+        {candidates.map((channel) => {
+          const isTaken = taken.has(channel.id);
+          return (
+            <option key={channel.id} value={channel.id} disabled={isTaken}>
+              {channel.label}
+              {isTaken
+                ? ` · ${t('monitoring:inspector.visionChannelTaken')}`
+                : ''}
+            </option>
+          );
+        })}
+      </select>
     </label>
   );
 }
@@ -669,6 +707,8 @@ function LidarSensorInspectorContent({
   sensor,
   onChange,
   onTransformChange,
+  visionChannels,
+  allSensors,
   t,
 }: {
   sensor: SavedLidarSensorInfo;
@@ -682,6 +722,8 @@ function LidarSensorInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
+  visionChannels?: readonly VisionChannelOption[];
+  allSensors?: readonly SavedSensorInfo[];
   t: (key: string) => string;
 }) {
   return (
@@ -699,52 +741,12 @@ function LidarSensorInspectorContent({
         icon={<SlidersHorizontal className="size-4" />}
       >
         <div className="space-y-2">
-          <SensorNumberRow
-            label="Horizontal FOV (°)"
-            value={sensor.horizontalFov}
-            min={MIN_LIDAR_FOV}
-            max={MAX_LIDAR_FOV}
-            onChange={(v) => onChange(sensor.id, { horizontalFov: v })}
-          />
-          <SensorNumberRow
-            label="Vertical FOV (°)"
-            value={sensor.verticalFov}
-            min={MIN_LIDAR_FOV}
-            max={MAX_LIDAR_FOV}
-            onChange={(v) => onChange(sensor.id, { verticalFov: v })}
-          />
-          <SensorNumberRow
-            label="Far"
-            value={sensor.far}
-            min={0}
-            step={0.1}
-            onChange={(v) => onChange(sensor.id, { far: v })}
-          />
-          <SensorNumberRow
-            label="H Segments"
-            value={sensor.horizontalSegments}
-            min={MIN_LIDAR_SEGMENTS}
-            max={MAX_LIDAR_SEGMENTS}
-            onChange={(v) =>
-              onChange(sensor.id, { horizontalSegments: Math.round(v) })
-            }
-          />
-          <SensorNumberRow
-            label="V Segments"
-            value={sensor.verticalSegments}
-            min={MIN_LIDAR_SEGMENTS}
-            max={MAX_LIDAR_SEGMENTS}
-            onChange={(v) =>
-              onChange(sensor.id, { verticalSegments: Math.round(v) })
-            }
-          />
-          <SensorNumberRow
-            label="Point Size"
-            value={sensor.pointSize}
-            min={0.01}
-            max={1}
-            step={0.01}
-            onChange={(v) => onChange(sensor.id, { pointSize: v })}
+          <VisionChannelSelect
+            sensor={sensor}
+            onChange={onChange}
+            visionChannels={visionChannels}
+            allSensors={allSensors}
+            t={t}
           />
         </div>
       </InspectorSection>
@@ -756,6 +758,8 @@ function CameraSensorInspectorContent({
   sensor,
   onChange,
   onTransformChange,
+  visionChannels,
+  allSensors,
   t,
 }: {
   sensor: SavedCameraSensorInfo;
@@ -769,6 +773,8 @@ function CameraSensorInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
+  visionChannels?: readonly VisionChannelOption[];
+  allSensors?: readonly SavedSensorInfo[];
   t: (key: string) => string;
 }) {
   return (
@@ -786,51 +792,12 @@ function CameraSensorInspectorContent({
         icon={<SlidersHorizontal className="size-4" />}
       >
         <div className="space-y-2">
-          <SensorNumberRow
-            label="Horizontal FOV (°)"
-            value={sensor.horizontalFov}
-            min={MIN_CAMERA_FOV}
-            max={MAX_CAMERA_FOV}
-            onChange={(v) => onChange(sensor.id, { horizontalFov: v })}
-          />
-          <SensorNumberRow
-            label="Vertical FOV (°)"
-            value={sensor.verticalFov}
-            min={MIN_CAMERA_FOV}
-            max={MAX_CAMERA_FOV}
-            onChange={(v) => onChange(sensor.id, { verticalFov: v })}
-          />
-          <SensorNumberRow
-            label="Near"
-            value={sensor.near}
-            min={0}
-            step={0.05}
-            onChange={(v) => onChange(sensor.id, { near: v })}
-          />
-          <SensorNumberRow
-            label="Far"
-            value={sensor.far}
-            min={0}
-            step={0.1}
-            onChange={(v) => onChange(sensor.id, { far: v })}
-          />
-          <SensorNumberRow
-            label="Frustum Segments X"
-            value={sensor.frustumSegmentsX}
-            min={MIN_CAMERA_GRID_SEGMENTS}
-            max={MAX_CAMERA_GRID_SEGMENTS}
-            onChange={(v) =>
-              onChange(sensor.id, { frustumSegmentsX: Math.round(v) })
-            }
-          />
-          <SensorNumberRow
-            label="Frustum Segments Y"
-            value={sensor.frustumSegmentsY}
-            min={MIN_CAMERA_GRID_SEGMENTS}
-            max={MAX_CAMERA_GRID_SEGMENTS}
-            onChange={(v) =>
-              onChange(sensor.id, { frustumSegmentsY: Math.round(v) })
-            }
+          <VisionChannelSelect
+            sensor={sensor}
+            onChange={onChange}
+            visionChannels={visionChannels}
+            allSensors={allSensors}
+            t={t}
           />
         </div>
       </InspectorSection>
@@ -844,6 +811,8 @@ export function SceneObjectInspector({
   selectedSensor = null,
   selectedMesh,
   multiSelectCount = 0,
+  visionChannels,
+  allSensors,
   onNameChange,
   onOpacityChange,
   onTransformChange,
@@ -933,6 +902,8 @@ export function SceneObjectInspector({
               sensor={selectedSensor}
               onChange={onSensorChange}
               onTransformChange={onTransformChange}
+              visionChannels={visionChannels}
+              allSensors={allSensors}
               t={t}
             />
           ) : isCameraSensor(selectedSensor) ? (
@@ -940,6 +911,8 @@ export function SceneObjectInspector({
               sensor={selectedSensor}
               onChange={onSensorChange}
               onTransformChange={onTransformChange}
+              visionChannels={visionChannels}
+              allSensors={allSensors}
               t={t}
             />
           ) : null

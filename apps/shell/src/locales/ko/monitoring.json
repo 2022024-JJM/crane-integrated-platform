@@ -12,7 +12,10 @@
     "textContent": "내용",
     "textColor": "색상",
     "tagMapping": "태그 매핑",
-    "tagKeyPlaceholder": "태그 키 입력"
+    "tagKeyPlaceholder": "태그 키 입력",
+    "visionChannel": "비전 채널",
+    "visionChannelEmpty": "(연결 안 됨)",
+    "visionChannelTaken": "이미 사용 중"
   },
   "transform": {
     "title": "변형 모드",

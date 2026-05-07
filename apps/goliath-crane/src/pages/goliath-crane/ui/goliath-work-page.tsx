@@ -9,6 +9,7 @@ import { useRegionRealtimeAlarms } from '@crane/features/alarm';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 import { ReplayMonitoringView } from './replay-monitoring-view';
 import { VisionMonitoringView } from './vision-monitoring-view';
+import { VISION_CHANNELS } from './vision/types';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_CRANE_ID = 'C_171';
@@ -71,7 +72,10 @@ export function GoliathWorkPage() {
       )}
       {subRoute === 'vision' && <VisionMonitoringView regionId={regionId} />}
       {subRoute === '3d-viewer-edit' && (
-        <SceneObjectsEditPage regionId={regionId} />
+        <SceneObjectsEditPage
+          regionId={regionId}
+          visionChannels={VISION_CHANNELS}
+        />
       )}
       {subRoute === 'crane-status' && (
         <PlaceholderView
