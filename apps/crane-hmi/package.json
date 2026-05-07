@@ -1,0 +1,26 @@
+{
+  "name": "@crane/crane-hmi",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/pages/index.ts",
+  "types": "./src/pages/index.ts",
+  "exports": {
+    "./pages/hmi": "./src/pages/hmi/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@crane/core": "workspace:*",
+    "@crane/ui": "workspace:*",
+    "@crane/domain": "workspace:*",
+    "@crane/features": "workspace:*",
+    "@crane/widgets": "workspace:*",
+    "react-router-dom": "^7.13.1",
+    "react-i18next": "^16.3.5",
+    "i18next": "^25.6.2",
+    "lucide-react": "^0.575.0"
+  }
+}

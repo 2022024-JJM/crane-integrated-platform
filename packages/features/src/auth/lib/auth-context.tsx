@@ -19,6 +19,7 @@ const ACCOUNTS: Credentials[] = [
   { id: 'crane.ocean', password: '1', role: 'ocean' },
   { id: 'crane.goliath', password: '1', role: 'goliath' },
   { id: 'crane.MRO', password: '1', role: 'mro' },
+  { id: 'crane.HMI', password: '1', role: 'hmi' },
 ];
 
 export const AUTH_STORAGE_KEY = 'crane-auth-user';

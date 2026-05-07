@@ -61,7 +61,9 @@
     "maintenance": "Maintenance",
     "inventory": "Inventory",
     "compliance": "OSHA Compliance",
-    "categoryCrane": "Crane"
+    "categoryCrane": "Crane",
+    "hmi": "HMI",
+    "hmiDashboard": "HMI Dashboard"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",

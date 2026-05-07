@@ -1,7 +1,7 @@
 import type { Region } from '../model/types';
 
 // UserRole을 직접 import하지 않고 string literal로 정의 (domain은 features에 의존하지 않음)
-type RegionUserRole = 'philly' | 'ocean' | 'goliath' | 'mro';
+type RegionUserRole = 'philly' | 'ocean' | 'goliath' | 'mro' | 'hmi';
 
 export function filterRegionsByRole(
   regions: Region[],
@@ -19,6 +19,8 @@ export function filterRegionsByRole(
           r.siteType !== 'philly-shipyard',
       );
     case 'mro':
+      return [];
+    case 'hmi':
       return [];
     default: {
       const _exhaustive: never = role;

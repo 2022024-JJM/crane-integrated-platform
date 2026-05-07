@@ -61,7 +61,9 @@
     "maintenance": "Manutentio",
     "inventory": "Copia",
     "compliance": "Conformitas OSHA",
-    "categoryCrane": "Grus"
+    "categoryCrane": "Grus",
+    "hmi": "HMI",
+    "hmiDashboard": "HMI Tabula"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",

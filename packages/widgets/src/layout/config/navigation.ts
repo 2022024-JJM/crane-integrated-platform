@@ -19,6 +19,7 @@ import {
   Package,
   ShieldCheck,
   Bell,
+  MonitorCog,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -149,6 +150,19 @@ function buildWorkGroup(title: string, base: string): NavGroup {
   };
 }
 
+function getHmiGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.hmi'),
+    items: [
+      {
+        label: i18n.t('common:nav.hmiDashboard'),
+        path: '/hmi',
+        icon: MonitorCog,
+      },
+    ],
+  };
+}
+
 function getMroGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.mro'),
@@ -222,6 +236,7 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   goliath: ['/goliath-work'],
   philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   mro: [],
+  hmi: [],
 };
 
 export function getNavigationConfig(
@@ -232,6 +247,11 @@ export function getNavigationConfig(
   // mro: MRO 그룹만 노출 (Overview/Monitoring/System 모두 숨김)
   if (role === 'mro') {
     return [getMroGroup()].filter((g) => g.items.length > 0);
+  }
+
+  // hmi: HMI 그룹만 노출
+  if (role === 'hmi') {
+    return [getHmiGroup()].filter((g) => g.items.length > 0);
   }
 
   const matchedKey = Object.keys(systemGroupOverrides).find((prefix) =>

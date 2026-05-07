@@ -23,13 +23,14 @@ import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 type ThemeOption = 'light' | 'dark';
 
-type AccountRole = 'philly' | 'ocean' | 'goliath' | 'mro';
+type AccountRole = 'philly' | 'ocean' | 'goliath' | 'mro' | 'hmi';
 
 const ROLE_LABEL: Record<AccountRole, string> = {
   ocean: 'Ocean',
   goliath: 'Goliath',
   philly: 'Philly',
   mro: 'MRO',
+  hmi: 'HMI',
 };
 
 const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
@@ -37,6 +38,7 @@ const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
   goliath: 'bg-purple-500/15 text-purple-400',
   philly: 'bg-green-500/15 text-green-400',
   mro: 'bg-amber-500/15 text-amber-400',
+  hmi: 'bg-cyan-500/15 text-cyan-400',
 };
 
 export function PageSettings() {

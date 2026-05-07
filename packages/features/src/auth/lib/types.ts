@@ -1,4 +1,4 @@
-export type UserRole = 'philly' | 'ocean' | 'goliath' | 'mro';
+export type UserRole = 'philly' | 'ocean' | 'goliath' | 'mro' | 'hmi';
 
 export interface AuthUser {
   id: string;

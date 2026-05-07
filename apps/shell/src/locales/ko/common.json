@@ -61,7 +61,9 @@
     "maintenance": "정비 관리",
     "inventory": "부품/재고",
     "compliance": "OSHA 규제",
-    "categoryCrane": "크레인"
+    "categoryCrane": "크레인",
+    "hmi": "HMI",
+    "hmiDashboard": "HMI 대시보드"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",

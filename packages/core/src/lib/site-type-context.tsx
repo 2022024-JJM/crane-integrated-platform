@@ -7,7 +7,11 @@ import {
   type ReactNode,
 } from 'react';
 
-export type SiteType = 'hanwha-ocean' | 'goliath-crane' | 'philly-shipyard';
+export type SiteType =
+  | 'hanwha-ocean'
+  | 'goliath-crane'
+  | 'philly-shipyard'
+  | 'crane-hmi';
 
 interface SiteTypeContextValue {
   siteType: SiteType;
@@ -22,7 +26,8 @@ function getInitialSiteType(): SiteType {
   if (
     stored === 'hanwha-ocean' ||
     stored === 'goliath-crane' ||
-    stored === 'philly-shipyard'
+    stored === 'philly-shipyard' ||
+    stored === 'crane-hmi'
   ) {
     return stored;
   }

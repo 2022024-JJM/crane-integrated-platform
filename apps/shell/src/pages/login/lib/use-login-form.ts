@@ -24,7 +24,9 @@ export function useLoginForm() {
     e.preventDefault();
     const role = login(id, password);
     if (role) {
-      navigate(role === 'mro' ? '/mro-dashboard' : '/', { replace: true });
+      const landing =
+        role === 'mro' ? '/mro-dashboard' : role === 'hmi' ? '/hmi' : '/';
+      navigate(landing, { replace: true });
     } else {
       setError(true);
     }
