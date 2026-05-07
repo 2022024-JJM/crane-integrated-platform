@@ -3,10 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
 import { Monitoring3dView } from '@crane/features/3d';
-import {
-  GoliathCraneSvgDiagram,
-  useGoliathCraneData,
-} from '@crane/features/goliath-crane';
+import { useGoliathCraneData } from '@crane/features/goliath-crane';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import { CraneStatusTable } from '@crane/widgets/crane';
 import {
@@ -44,81 +41,24 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           className="h-full min-h-0"
         >
           <ResizablePanel defaultSize={55} minSize={30}>
-            <ResizablePanelGroup
-              orientation="horizontal"
-              className="h-full min-h-0"
-            >
-              <ResizablePanel defaultSize={65} minSize={40}>
-                <div className="relative h-full">
-                  {is3dViewLoading ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
-                      <Spinner
-                        className="size-6 text-orange-500"
-                        aria-hidden="true"
-                      />
-                      <p className="text-sm font-medium text-white">
-                        {t('common:viewer3d.loading')}
-                      </p>
-                    </div>
-                  ) : null}
-                  <Monitoring3dView
-                    regionId={regionId}
-                    alarmsByCraneId={alarmsByCraneId}
-                    onLoadingChange={setIs3dViewLoading}
+            <div className="relative h-full">
+              {is3dViewLoading ? (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
+                  <Spinner
+                    className="size-6 text-orange-500"
+                    aria-hidden="true"
                   />
+                  <p className="text-sm font-medium text-white">
+                    {t('common:viewer3d.loading')}
+                  </p>
                 </div>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-
-              <ResizablePanel defaultSize={35} minSize={20}>
-                <div className="bg-card relative h-full overflow-hidden">
-                  <div className="pointer-events-none absolute top-2 left-2 z-10 flex items-center gap-1.5">
-                    <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 backdrop-blur-sm">
-                      <span className="relative flex size-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400">
-                        2D LIVE
-                      </span>
-                    </div>
-                  </div>
-                  <div className="from-background/80 pointer-events-none absolute right-0 bottom-0 left-0 z-10 flex items-center justify-between bg-linear-to-t to-transparent px-3 pt-6 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-semibold">
-                        {crane.craneNo}
-                      </span>
-                      <span className="text-muted-foreground text-[10px]">
-                        {crane.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[10px] tabular-nums">
-                      <span
-                        className={
-                          crane.load / crane.maxLoad >= 0.9
-                            ? 'font-bold text-red-500'
-                            : crane.load / crane.maxLoad >= 0.7
-                              ? 'font-bold text-amber-500'
-                              : 'text-muted-foreground'
-                        }
-                      >
-                        {crane.load.toFixed(1)}t
-                      </span>
-                      <span className="text-muted-foreground">
-                        {crane.windSpeed.toFixed(1)}m/s
-                      </span>
-                      <span className="text-muted-foreground">
-                        {crane.hoistHeight.toFixed(1)}m
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex h-full items-center justify-center p-2">
-                    <GoliathCraneSvgDiagram crane={crane} />
-                  </div>
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              ) : null}
+              <Monitoring3dView
+                regionId={regionId}
+                alarmsByCraneId={alarmsByCraneId}
+                onLoadingChange={setIs3dViewLoading}
+              />
+            </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
