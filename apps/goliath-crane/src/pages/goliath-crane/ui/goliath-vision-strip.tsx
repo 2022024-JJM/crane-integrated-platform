@@ -12,29 +12,11 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { GoliathLidarPointCloud } from './goliath-lidar-point-cloud';
-
-export const CAMERA_CHANNELS = [
-  {
-    id: 'cam-1',
-    label: 'CAM 1',
-    descriptionKey: 'visionStrip.cam1',
-    connected: true,
-  },
-  {
-    id: 'cam-2',
-    label: 'CAM 2',
-    descriptionKey: 'visionStrip.cam2',
-    connected: true,
-  },
-  {
-    id: 'cam-3',
-    label: 'CAM 3',
-    descriptionKey: 'visionStrip.cam3',
-    connected: false,
-  },
-] as const;
-
-type ExpandedView = { type: 'camera'; id: string } | { type: 'lidar' } | null;
+import {
+  CAMERA_CHANNELS,
+  type CameraChannel,
+  type ExpandedView,
+} from './vision/types';
 
 // 작은 카메라 타일 (하단 스트립용)
 function CameraTile({
@@ -42,7 +24,7 @@ function CameraTile({
   isActive,
   onExpand,
 }: {
-  channel: (typeof CAMERA_CHANNELS)[number];
+  channel: CameraChannel;
   isActive: boolean;
   onExpand: () => void;
 }) {
@@ -207,7 +189,7 @@ export function ExpandedCameraView({
   channel,
   onClose,
 }: {
-  channel: (typeof CAMERA_CHANNELS)[number];
+  channel: CameraChannel;
   onClose: () => void;
 }) {
   const { t } = useTranslation('goliath-crane');
@@ -429,5 +411,3 @@ export function GoliathVisionStrip({
     </div>
   );
 }
-
-export type { ExpandedView };

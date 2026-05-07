@@ -102,5 +102,12 @@
     "lidarScanRate": "Celeritas Scanni",
     "lidarPointsPerFrame": "Puncta per Imaginem",
     "lidarDetectRange": "Spatium Detectionis"
+  },
+  "vision": {
+    "title": "Monitoratio Visus",
+    "layout": "Dispositio",
+    "noImage": "NULLA IMAGO",
+    "noSignal": "NULLUM SIGNUM",
+    "connectedCount": "{{connected}} / {{total}} conexa"
   }
 }

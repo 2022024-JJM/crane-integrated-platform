@@ -102,5 +102,12 @@
     "lidarScanRate": "Scan Rate",
     "lidarPointsPerFrame": "Points/Frame",
     "lidarDetectRange": "Detection Range"
+  },
+  "vision": {
+    "title": "Vision Monitoring",
+    "layout": "Layout",
+    "noImage": "NO IMAGE",
+    "noSignal": "NO SIGNAL",
+    "connectedCount": "{{connected}} / {{total}} connected"
   }
 }

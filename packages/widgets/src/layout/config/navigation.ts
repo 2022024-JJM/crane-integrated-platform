@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Bell,
   MonitorCog,
+  Camera,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -150,6 +151,18 @@ function buildWorkGroup(title: string, base: string): NavGroup {
   };
 }
 
+function buildGoliathWorkGroup(title: string, base: string): NavGroup {
+  const baseGroup = buildWorkGroup(title, base);
+  const visionItem = {
+    label: i18n.t('common:nav.vision'),
+    path: `${base}/vision`,
+    icon: Camera,
+  };
+  // Insert Vision right after Real-time 3D Monitoring (index 0).
+  const items = [baseGroup.items[0], visionItem, ...baseGroup.items.slice(1)];
+  return { ...baseGroup, items };
+}
+
 function getHmiGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.hmi'),
@@ -223,7 +236,7 @@ const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
   },
   '/goliath-work': (pathname) => {
     const regionId = pathname.split('/')[2] || '';
-    return buildWorkGroup(
+    return buildGoliathWorkGroup(
       i18n.t('common:nav.goliathCrane'),
       `/goliath-work/${regionId}`,
     );

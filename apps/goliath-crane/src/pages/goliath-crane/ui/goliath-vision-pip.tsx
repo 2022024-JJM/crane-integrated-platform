@@ -20,8 +20,7 @@ import {
   getDashboardPreviewDefaultSize,
   isSamePosition,
 } from '@crane/core/lib/preview-helpers';
-import type { CAMERA_CHANNELS } from './goliath-vision-strip';
-import type { ExpandedView } from './goliath-vision-strip';
+import type { CameraChannel, ExpandedView } from './vision/types';
 import { GoliathLidarPointCloud } from './goliath-lidar-point-cloud';
 
 const PREVIEW_ASPECT_RATIO = 16 / 9;
@@ -65,11 +64,7 @@ function NoSignalNoise() {
 }
 
 // ── Camera feed content — CCTV No Signal 스타일 ───────────────────────────────
-function CameraFeedContent({
-  channel,
-}: {
-  channel: (typeof CAMERA_CHANNELS)[number];
-}) {
+function CameraFeedContent({ channel }: { channel: CameraChannel }) {
   const { t } = useTranslation('goliath-crane');
   return (
     <div className="relative flex h-full w-full overflow-hidden bg-zinc-800">
@@ -172,7 +167,7 @@ function LidarFeedContent() {
 // ── PiP shell (드래그·리사이즈) ───────────────────────────────────────────────
 interface GoliathVisionPipProps {
   expanded: ExpandedView;
-  channels: typeof CAMERA_CHANNELS;
+  channels: readonly CameraChannel[];
   onClose: () => void;
 }
 

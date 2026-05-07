@@ -102,5 +102,12 @@
     "lidarScanRate": "스캔 속도",
     "lidarPointsPerFrame": "포인트/프레임",
     "lidarDetectRange": "감지 범위"
+  },
+  "vision": {
+    "title": "비전 모니터링",
+    "layout": "배열",
+    "noImage": "NO IMAGE",
+    "noSignal": "NO SIGNAL",
+    "connectedCount": "연결 {{connected}} / {{total}}"
   }
 }

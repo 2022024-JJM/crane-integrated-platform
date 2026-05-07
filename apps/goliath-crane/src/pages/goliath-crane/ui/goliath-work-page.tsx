@@ -8,6 +8,7 @@ import { AlarmHistoryPage } from '@crane/widgets/alarm';
 import { useRegionRealtimeAlarms } from '@crane/features/alarm';
 import { RealtimeMonitoringView } from './realtime-monitoring-view';
 import { ReplayMonitoringView } from './replay-monitoring-view';
+import { VisionMonitoringView } from './vision-monitoring-view';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_CRANE_ID = 'C_171';
@@ -68,6 +69,7 @@ export function GoliathWorkPage() {
       {subRoute === '3d-monitoring' && (
         <RealtimeMonitoringView regionId={regionId} />
       )}
+      {subRoute === 'vision' && <VisionMonitoringView regionId={regionId} />}
       {subRoute === '3d-viewer-edit' && (
         <SceneObjectsEditPage regionId={regionId} />
       )}
