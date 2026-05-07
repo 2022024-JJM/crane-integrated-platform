@@ -13,6 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/shell/package.json            ./apps/shell/package.json
 COPY apps/hanwha-ocean/package.json     ./apps/hanwha-ocean/package.json
 COPY apps/goliath-crane/package.json    ./apps/goliath-crane/package.json
+COPY apps/philly-shipyard/package.json  ./apps/philly-shipyard/package.json
+COPY apps/crane-hmi/package.json        ./apps/crane-hmi/package.json
 COPY packages/core/package.json         ./packages/core/package.json
 COPY packages/domain/package.json       ./packages/domain/package.json
 COPY packages/features/package.json     ./packages/features/package.json
@@ -25,7 +27,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 # --- Source copy layer ---
 COPY apps/      ./apps/
 COPY packages/  ./packages/
-COPY tsconfig.json turbo.json ./
+COPY tsconfig.json tsconfig.base.json turbo.json ./
 
 # Build-time environment variables (embedded into JS bundle by Vite)
 ARG VITE_API_BASE_URL=""
