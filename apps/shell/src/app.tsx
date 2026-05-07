@@ -5,6 +5,7 @@ import {
   Outlet,
   Routes,
   Route,
+  useLocation,
   useParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth, AUTH_STORAGE_KEY } from '@crane/features/auth';
@@ -36,17 +37,42 @@ function getStoredRole(): string | null {
   return stored?.role ?? null;
 }
 
+const MRO_ALLOWED_EXACT = new Set([
+  '/mro-dashboard',
+  '/asset-management',
+  '/inspection',
+  '/maintenance',
+  '/inventory',
+  '/compliance',
+  '/ticket/create',
+]);
+const MRO_ALLOWED_PREFIXES = [
+  '/asset-management/',
+  '/inspection/',
+  '/maintenance/',
+];
+
+function isMroAllowed(pathname: string): boolean {
+  if (MRO_ALLOWED_EXACT.has(pathname)) return true;
+  return MRO_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
 function ProtectedRoute() {
   const { user } = useAuth();
+  const location = useLocation();
 
   const role = user?.role ?? getStoredRole();
   if (!role) return <Navigate to="/login" replace />;
+  if (role === 'mro' && !isMroAllowed(location.pathname)) {
+    return <Navigate to="/mro-dashboard" replace />;
+  }
 
   return <Outlet />;
 }
 
 function LoginGuard() {
   const role = getStoredRole();
+  if (role === 'mro') return <Navigate to="/mro-dashboard" replace />;
   if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
 }

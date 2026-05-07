@@ -8,11 +8,11 @@ export function AuthSiteTypeSync() {
 
   useEffect(() => {
     if (!user) return;
-    // role → siteType 매핑: goliath → goliath-crane, philly → philly-shipyard, ocean → hanwha-ocean
+    // role → siteType 매핑: goliath → goliath-crane, philly/mro → philly-shipyard, ocean → hanwha-ocean
     const next =
       user.role === 'goliath'
         ? 'goliath-crane'
-        : user.role === 'philly'
+        : user.role === 'philly' || user.role === 'mro'
           ? 'philly-shipyard'
           : 'hanwha-ocean';
     setSiteType(next);

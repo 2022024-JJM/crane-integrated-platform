@@ -221,6 +221,7 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   ocean: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   goliath: ['/goliath-work'],
   philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
+  mro: [],
 };
 
 export function getNavigationConfig(
@@ -228,6 +229,11 @@ export function getNavigationConfig(
   _siteType: SiteType,
   role: UserRole = 'ocean',
 ): NavGroup[] {
+  // mro: MRO 그룹만 노출 (Overview/Monitoring/System 모두 숨김)
+  if (role === 'mro') {
+    return [getMroGroup()].filter((g) => g.items.length > 0);
+  }
+
   const matchedKey = Object.keys(systemGroupOverrides).find((prefix) =>
     pathname.startsWith(prefix),
   );
@@ -241,14 +247,10 @@ export function getNavigationConfig(
   const groups: NavGroup[] = [];
 
   // 모든 role: Overview(Dashboard) + Monitoring(3개) + work systemGroup
-  // philly만 추가로 MRO 그룹 노출
+  // MRO 그룹은 'mro' 전용 (위에서 단축 반환)
   groups.push(getOverviewGroup(role));
   groups.push(getMonitoringGroup());
   groups.push(systemGroup);
-
-  if (role === 'philly') {
-    groups.push(getMroGroup());
-  }
 
   return groups.filter((g) => g.items.length > 0);
 }
