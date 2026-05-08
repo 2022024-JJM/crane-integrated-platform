@@ -162,6 +162,16 @@ export function getLidarWebSocketUrl() {
   return `${resolveWebSocketBaseUrl(undefined, defaultLidarPath())}/`;
 }
 
+/**
+ * SOSLAB Edge Node Bridge Server 의 PointCloud 스트림 WebSocket URL.
+ * nginx 가 /lidar/* 를 LIDAR_HOST:LIDAR_PORT 로 path-rewrite 프록시하므로,
+ * 프론트는 동일 origin 의 /lidar/pointcloud (또는 sub-path 시
+ * /crane_rnd/lidar/pointcloud) 로 연결한다.
+ */
+export function getSoslabWebSocketUrl() {
+  return `${getLidarWebSocketUrl().replace(/\/+$/, '')}/pointcloud`;
+}
+
 export function getApiTimeoutMs() {
   return parsePositiveInteger(
     import.meta.env.VITE_API_TIMEOUT_MS,

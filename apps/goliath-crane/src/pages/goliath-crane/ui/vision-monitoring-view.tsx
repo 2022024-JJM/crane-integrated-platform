@@ -6,8 +6,10 @@ import { LidarTile } from './vision/lidar-tile';
 import { NoSignalSlot } from './vision/no-signal-slot';
 import {
   CAMERA_CHANNELS,
+  LIDAR_CHANNELS,
   type CameraChannel,
   type ExpandedView,
+  type LidarSensorKey,
   type VisionSourceFilter,
 } from './vision/types';
 import { VisionTile } from './vision/vision-tile';
@@ -26,7 +28,7 @@ const GRID_CLASS: Record<GridSize, string> = {
 
 type VisionSlot =
   | { kind: 'camera'; channel: CameraChannel }
-  | { kind: 'lidar' };
+  | { kind: 'lidar'; sensor: LidarSensorKey; label: string };
 
 function VisionMonitoringViewContent() {
   const { t } = useTranslation('goliath-crane');
@@ -38,10 +40,17 @@ function VisionMonitoringViewContent() {
     const cameraSlots = CAMERA_CHANNELS.map(
       (channel) => ({ kind: 'camera', channel }) satisfies VisionSlot,
     );
-    const lidarSlot: VisionSlot = { kind: 'lidar' };
+    const lidarSlots = LIDAR_CHANNELS.map(
+      (ch) =>
+        ({
+          kind: 'lidar',
+          sensor: ch.sensorKey,
+          label: ch.label,
+        }) satisfies VisionSlot,
+    );
     if (sourceFilter === 'camera') return cameraSlots;
-    if (sourceFilter === 'lidar') return [lidarSlot];
-    return [...cameraSlots, lidarSlot];
+    if (sourceFilter === 'lidar') return lidarSlots;
+    return [...cameraSlots, ...lidarSlots];
   }, [sourceFilter]);
 
   useEffect(() => {
@@ -94,13 +103,20 @@ function VisionMonitoringViewContent() {
                 return <NoSignalSlot key={`empty-${index}`} />;
               }
               if (slot.kind === 'lidar') {
-                const isActive = expanded?.type === 'lidar';
+                const isActive =
+                  expanded?.type === 'lidar' && expanded.sensor === slot.sensor;
                 return (
                   <LidarTile
-                    key="lidar"
+                    key={`lidar-${slot.sensor}`}
+                    sensor={slot.sensor}
+                    label={slot.label}
                     isActive={isActive}
                     onExpand={() =>
-                      setExpanded(isActive ? null : { type: 'lidar' })
+                      setExpanded(
+                        isActive
+                          ? null
+                          : { type: 'lidar', sensor: slot.sensor },
+                      )
                     }
                   />
                 );

@@ -76,15 +76,20 @@ export const CAMERA_CHANNELS = [
 export type CameraChannel = (typeof CAMERA_CHANNELS)[number];
 
 /**
- * 골리앗 크레인의 LiDAR 채널 목록. 비전 PiP에서는 lidar 타입 단일 처리이지만,
- * 3D 편집 화면 인스펙터에서 센서별로 매핑하기 위해 별도 식별이 필요하다.
+ * 골리앗 크레인의 LiDAR 채널 목록. SOSLAB Edge Node Bridge Server 가 한 WebSocket
+ * 으로 SOSLAB1/SOSLAB2 두 센서 프레임을 동시에 보내며, 비전 모니터링 그리드에서는
+ * 1번 단독 / 2번 단독 / Fusion(둘 다 합성) 3가지 모드로 노출한다.
+ *
+ * sensorKey 는 soslab-stream-store 의 SoslabSensorMode 와 1:1 매칭된다.
  */
 export const LIDAR_CHANNELS = [
-  { id: 'lidar-1', label: 'LiDAR 1' },
-  { id: 'lidar-2', label: 'LiDAR 2' },
+  { id: 'soslab-1', label: 'SOSLAB 1', sensorKey: 'soslab1' },
+  { id: 'soslab-2', label: 'SOSLAB 2', sensorKey: 'soslab2' },
+  { id: 'soslab-fusion', label: 'Fusion', sensorKey: 'fusion' },
 ] as const;
 
 export type LidarChannel = (typeof LIDAR_CHANNELS)[number];
+export type LidarSensorKey = LidarChannel['sensorKey'];
 
 /**
  * 인스펙터/빌보드/PiP가 공유하는 통합 채널 목록. SceneObjectInspector의
@@ -111,7 +116,7 @@ export const VISION_CHANNELS = [
 
 export type ExpandedView =
   | { type: 'camera'; id: string }
-  | { type: 'lidar' }
+  | { type: 'lidar'; sensor: LidarSensorKey }
   | null;
 
 export type VisionSourceFilter = 'all' | 'camera' | 'lidar';

@@ -20,8 +20,12 @@ import {
   getDashboardPreviewDefaultSize,
   isSamePosition,
 } from '@crane/core/lib/preview-helpers';
-import type { CameraChannel, ExpandedView } from './vision/types';
-import { GoliathLidarPointCloud } from './goliath-lidar-point-cloud';
+import type {
+  CameraChannel,
+  ExpandedView,
+  LidarSensorKey,
+} from './vision/types';
+import { SoslabPointCloud } from './soslab-point-cloud';
 
 const PREVIEW_ASPECT_RATIO = 16 / 9;
 
@@ -159,10 +163,16 @@ function CameraFeedContent({ channel }: { channel: CameraChannel }) {
   );
 }
 
-// ── LiDAR feed content — 실제 3D 포인트 클라우드 (목업) ────────────────────────
-function LidarFeedContent() {
-  return <GoliathLidarPointCloud />;
+// ── LiDAR feed content — SOSLAB 포인트 클라우드 ─────────────────────────────
+function LidarFeedContent({ sensor }: { sensor: LidarSensorKey }) {
+  return <SoslabPointCloud mode={sensor} />;
 }
+
+const LIDAR_PIP_TITLE: Record<LidarSensorKey, string> = {
+  soslab1: 'SOSLAB 1',
+  soslab2: 'SOSLAB 2',
+  fusion: 'Fusion',
+};
 
 // ── PiP shell (드래그·리사이즈) ───────────────────────────────────────────────
 interface GoliathVisionPipProps {
@@ -229,6 +239,7 @@ export function GoliathVisionPip({
   }, [
     expanded?.type,
     expanded?.type === 'camera' ? (expanded as { id: string }).id : '',
+    expanded?.type === 'lidar' ? expanded.sensor : '',
   ]);
 
   useEffect(() => {
@@ -332,7 +343,12 @@ export function GoliathVisionPip({
       : undefined;
   const isCamera = expanded.type === 'camera' && channel !== undefined;
   const isLidar = expanded.type === 'lidar';
-  const pipTitle = isCamera ? channel.label : 'LiDAR';
+  const lidarSensor = isLidar ? expanded.sensor : null;
+  const pipTitle = isCamera
+    ? channel.label
+    : lidarSensor
+      ? LIDAR_PIP_TITLE[lidarSensor]
+      : 'LiDAR';
   const pipSub = isCamera ? t(channel.descriptionKey) : 'Point Cloud';
   const accentColor = isCamera ? 'border-orange-500/30' : 'border-cyan-500/30';
   const badgeColor = isCamera
@@ -426,7 +442,9 @@ export function GoliathVisionPip({
             <div className="from-background/40 pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-linear-to-b to-transparent" />
             <div className="relative" style={{ height: previewBodyHeight }}>
               {isCamera && channel && <CameraFeedContent channel={channel} />}
-              {isLidar && <LidarFeedContent />}
+              {isLidar && lidarSensor && (
+                <LidarFeedContent sensor={lidarSensor} />
+              )}
             </div>
             {/* Resize handle */}
             <button

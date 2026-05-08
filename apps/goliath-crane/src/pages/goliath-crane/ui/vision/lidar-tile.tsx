@@ -1,16 +1,23 @@
 import { Maximize2, ScanLine } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
-import { GoliathLidarPointCloud } from '../goliath-lidar-point-cloud';
+import { SoslabPointCloud } from '../soslab-point-cloud';
+import type { LidarSensorKey } from './types';
 
 interface LidarTileProps {
+  sensor: LidarSensorKey;
+  label: string;
   isActive: boolean;
   onExpand: () => void;
 }
 
-export function LidarTile({ isActive, onExpand }: LidarTileProps) {
-  const { t } = useTranslation('goliath-crane');
+const BADGE_TEXT: Record<LidarSensorKey, string> = {
+  soslab1: 'SOSLAB',
+  soslab2: 'SOSLAB',
+  fusion: 'FUSION',
+};
+
+export function LidarTile({ sensor, label, isActive, onExpand }: LidarTileProps) {
   return (
     <div
       className={cn(
@@ -23,7 +30,7 @@ export function LidarTile({ isActive, onExpand }: LidarTileProps) {
     >
       <div className="relative flex-1 overflow-hidden bg-zinc-950">
         <div className="pointer-events-none absolute inset-0">
-          <GoliathLidarPointCloud />
+          <SoslabPointCloud mode={sensor} compact />
         </div>
         <div className="absolute inset-0" />
         <button
@@ -46,13 +53,13 @@ export function LidarTile({ isActive, onExpand }: LidarTileProps) {
           )}
         >
           <ScanLine className="size-3" />
-          LiDAR
+          {label}
         </span>
         <Badge
           variant="outline"
-          className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-[9px] text-amber-600 dark:text-amber-400"
+          className="border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0 text-[9px] text-cyan-600 dark:text-cyan-400"
         >
-          {t('visionStrip.lidarReady')}
+          {BADGE_TEXT[sensor]}
         </Badge>
       </div>
     </div>

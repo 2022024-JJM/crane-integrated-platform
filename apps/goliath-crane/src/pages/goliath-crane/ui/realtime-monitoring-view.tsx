@@ -14,7 +14,11 @@ import {
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
 import { GoliathVisionPip } from './goliath-vision-pip';
 import { renderSensorFeed } from './sensor-feed-renderer';
-import { CAMERA_CHANNELS, type ExpandedView } from './vision/types';
+import {
+  CAMERA_CHANNELS,
+  LIDAR_CHANNELS,
+  type ExpandedView,
+} from './vision/types';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_TABLE_REGION_ID = 'dock-2';
@@ -40,7 +44,11 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const handleSensorSelect = useCallback(
     (channelId: string, sensorType: 'camera' | 'lidar') => {
       if (sensorType === 'lidar') {
-        setExpanded({ type: 'lidar' });
+        const lidarChannel = LIDAR_CHANNELS.find((c) => c.id === channelId);
+        setExpanded({
+          type: 'lidar',
+          sensor: lidarChannel?.sensorKey ?? 'fusion',
+        });
         return;
       }
       const channel = CAMERA_CHANNELS.find((c) => c.id === channelId);
