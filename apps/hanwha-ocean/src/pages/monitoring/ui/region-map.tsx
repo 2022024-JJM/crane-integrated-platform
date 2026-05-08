@@ -1,24 +1,27 @@
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  AdvancedMarker,
-  APIProvider,
-  Map,
-  Pin,
-} from '@vis.gl/react-google-maps';
+import { AdvancedMarker, APIProvider, Map } from '@vis.gl/react-google-maps';
 
+import { cn } from '@crane/core/lib/utils';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { useTheme } from '@crane/core/lib/theme-context';
-import { getRegionTitleKey, regions, type Region } from '@crane/domain/region';
+import {
+  getRegionTitleKey,
+  regions,
+  type LatLng,
+  type Region,
+} from '@crane/domain/region';
 import {
   getStatusPalette,
   MAP_DEFAULT_CENTER,
   MAP_DEFAULT_ZOOM,
 } from '../model/region-map-types';
-import { RegionPolygon } from './region-polygon';
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+
+type RegionMarkerData = Region & { center: LatLng };
 
 export function RegionMap() {
   const { t } = useTranslation();
@@ -55,17 +58,29 @@ function RegionMapInner() {
   const { theme } = useTheme();
   const navigate = useProgressNavigate();
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
 
-  const regionsWithGeo = useMemo(
-    () => regions.filter((region) => region.center || region.polygon),
-    [],
-  );
+  const regionsWithCenter = useMemo(() => regions.filter(hasRegionCenter), []);
 
   const handleNavigate = useCallback(
-    (region: Region) => {
+    (region: RegionMarkerData) => {
       navigate(region.navigateTo);
     },
     [navigate],
+  );
+
+  const toggleSelectedRegion = useCallback((regionId: string) => {
+    setSelectedRegionId((current) => (current === regionId ? null : regionId));
+  }, []);
+
+  const handleMarkerKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, regionId: string) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+
+      event.preventDefault();
+      toggleSelectedRegion(regionId);
+    },
+    [toggleSelectedRegion],
   );
 
   return (
@@ -78,58 +93,119 @@ function RegionMapInner() {
       colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
       className="h-full w-full"
     >
-      {regionsWithGeo.map((region) => {
+      {regionsWithCenter.map((region) => {
         const style = getStatusPalette(region.status);
-        const active = hoveredRegionId === region.id;
+        const selected = selectedRegionId === region.id;
+        const active = selected || hoveredRegionId === region.id;
         const label = t(getRegionTitleKey(region.id));
+        const statusLabel = t(`common:status.${region.status}`, {
+          defaultValue: region.status,
+        });
 
         return (
-          <Fragment key={region.id}>
-            {region.polygon && region.polygon.length >= 3 ? (
-              <RegionPolygon
-                paths={region.polygon}
-                style={style}
-                active={active}
-                onClick={() => handleNavigate(region)}
-                onMouseEnter={() => setHoveredRegionId(region.id)}
-                onMouseLeave={() =>
-                  setHoveredRegionId((current) =>
-                    current === region.id ? null : current,
-                  )
-                }
-              />
-            ) : null}
-            {region.center ? (
-              <AdvancedMarker
-                position={region.center}
-                onClick={() => handleNavigate(region)}
-                onMouseEnter={() => setHoveredRegionId(region.id)}
-                onMouseLeave={() =>
-                  setHoveredRegionId((current) =>
-                    current === region.id ? null : current,
-                  )
-                }
-                title={label}
+          <AdvancedMarker
+            key={region.id}
+            position={region.center}
+            title={label}
+            zIndex={active ? 1 : undefined}
+            onClick={() => toggleSelectedRegion(region.id)}
+            onMouseEnter={() => setHoveredRegionId(region.id)}
+            onMouseLeave={() =>
+              setHoveredRegionId((current) =>
+                current === region.id ? null : current,
+              )
+            }
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={selected}
+              className={cn(
+                'group/map-marker relative flex cursor-pointer items-center rounded-lg border bg-background/95 p-1.5 text-foreground shadow-lg backdrop-blur-sm transition-all duration-200 outline-none',
+                'focus-visible:ring-ring/50 focus-visible:ring-3',
+                active && 'scale-105 shadow-xl',
+              )}
+              style={{ borderColor: active ? style.strokeColor : undefined }}
+              onKeyDown={(event) => handleMarkerKeyDown(event, region.id)}
+            >
+              <div className="relative flex shrink-0 flex-col items-center">
+                <span
+                  className="block max-w-24 truncate rounded-md px-3 py-2 text-sm leading-none font-semibold whitespace-nowrap text-white shadow-sm"
+                  style={{ backgroundColor: style.fillColor }}
+                >
+                  {label}
+                </span>
+                <span
+                  className="size-0 border-x-[7px] border-t-[7px] border-x-transparent"
+                  style={{ borderTopColor: style.fillColor }}
+                />
+              </div>
+
+              <div
+                className={cn(
+                  'grid overflow-hidden transition-all duration-200',
+                  selected ? 'ml-2 w-56 opacity-100' : 'w-0 opacity-0',
+                )}
               >
-                <div className="flex flex-col items-center gap-1">
-                  <Pin
-                    background={style.fillColor}
-                    borderColor={style.strokeColor}
-                    glyphColor="#ffffff"
-                    scale={active ? 1.15 : 1}
-                  />
-                  <span
-                    className="rounded border bg-[#1C1C1C] px-2 py-0.5 text-[11px] font-medium tracking-wide whitespace-nowrap text-white"
-                    style={{ borderColor: style.strokeColor }}
+                <div className="min-w-0 space-y-2 pr-1">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">
+                      {label}
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 text-[11px] uppercase">
+                      {statusLabel}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
+                    <StatusCount
+                      label="Normal"
+                      value={region.statusSummary.normal}
+                    />
+                    <StatusCount
+                      label="Warning"
+                      value={region.statusSummary.warning}
+                    />
+                    <StatusCount
+                      label="Critical"
+                      value={region.statusSummary.critical}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-7 w-full cursor-pointer items-center justify-center rounded-md px-2 text-xs font-medium transition-colors"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleNavigate(region);
+                    }}
                   >
-                    {label}
-                  </span>
+                    Open
+                  </button>
                 </div>
-              </AdvancedMarker>
-            ) : null}
-          </Fragment>
+              </div>
+            </div>
+          </AdvancedMarker>
         );
       })}
     </Map>
+  );
+}
+
+function hasRegionCenter(region: Region): region is RegionMarkerData {
+  return Boolean(region.center);
+}
+
+interface StatusCountProps {
+  label: string;
+  value: number;
+}
+
+function StatusCount({ label, value }: StatusCountProps) {
+  return (
+    <div className="bg-muted/70 rounded px-1.5 py-1">
+      <div className="text-foreground leading-none font-semibold">{value}</div>
+      <div className="text-muted-foreground mt-0.5 truncate">{label}</div>
+    </div>
   );
 }

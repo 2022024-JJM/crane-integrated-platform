@@ -1,19 +1,19 @@
 import type { LatLng, Region } from '@crane/domain/region';
 
-// 옥포 조선소(거제시) 일대를 기본 카메라로 사용한다.
+// Okpo shipyard area is used as the default map camera.
 export const MAP_DEFAULT_CENTER: LatLng = {
-  lat: 34.881,
-  lng: 128.6905,
+  lat: 34.873071,
+  lng: 128.710288,
 };
 
 export const MAP_DEFAULT_ZOOM = 15;
 
-export interface MapZoneStyle {
+export interface MapMarkerStyle {
   fillColor: string;
   strokeColor: string;
 }
 
-export function getStatusPalette(status: Region['status']): MapZoneStyle {
+export function getStatusPalette(status: Region['status']): MapMarkerStyle {
   if (status === 'warning') {
     return {
       fillColor: 'rgb(245 166 35)',
