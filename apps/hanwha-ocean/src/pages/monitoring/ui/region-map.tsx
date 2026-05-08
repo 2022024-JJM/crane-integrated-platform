@@ -1,12 +1,13 @@
-import type { KeyboardEvent } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdvancedMarker, APIProvider, Map } from '@vis.gl/react-google-maps';
+import { Anchor, ChevronRight, ChevronUp, X } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { useTheme } from '@crane/core/lib/theme-context';
 import {
+  getRegionSubtitleKey,
   getRegionTitleKey,
   regions,
   type LatLng,
@@ -69,18 +70,20 @@ function RegionMapInner() {
     [navigate],
   );
 
-  const toggleSelectedRegion = useCallback((regionId: string) => {
-    setSelectedRegionId((current) => (current === regionId ? null : regionId));
+  const closeSelectedRegion = useCallback(() => {
+    setSelectedRegionId(null);
   }, []);
 
-  const handleMarkerKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>, regionId: string) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
+  const selectRegion = useCallback((regionId: string) => {
+    setSelectedRegionId(regionId);
+  }, []);
 
-      event.preventDefault();
-      toggleSelectedRegion(regionId);
-    },
-    [toggleSelectedRegion],
+  const totalCranes = useCallback(
+    (region: RegionMarkerData) =>
+      region.statusSummary.normal +
+      region.statusSummary.warning +
+      region.statusSummary.critical,
+    [],
   );
 
   return (
@@ -98,6 +101,7 @@ function RegionMapInner() {
         const selected = selectedRegionId === region.id;
         const active = selected || hoveredRegionId === region.id;
         const label = t(getRegionTitleKey(region.id));
+        const subtitle = t(getRegionSubtitleKey(region.id));
         const statusLabel = t(`common:status.${region.status}`, {
           defaultValue: region.status,
         });
@@ -107,8 +111,7 @@ function RegionMapInner() {
             key={region.id}
             position={region.center}
             title={label}
-            zIndex={active ? 1 : undefined}
-            onClick={() => toggleSelectedRegion(region.id)}
+            zIndex={selected ? 20 : active ? 10 : undefined}
             onMouseEnter={() => setHoveredRegionId(region.id)}
             onMouseLeave={() =>
               setHoveredRegionId((current) =>
@@ -116,75 +119,18 @@ function RegionMapInner() {
               )
             }
           >
-            <div
-              role="button"
-              tabIndex={0}
-              aria-expanded={selected}
-              className={cn(
-                'group/map-marker relative flex cursor-pointer items-center rounded-lg border bg-background/95 p-1.5 text-foreground shadow-lg backdrop-blur-sm transition-all duration-200 outline-none',
-                'focus-visible:ring-ring/50 focus-visible:ring-3',
-                active && 'scale-105 shadow-xl',
-              )}
-              style={{ borderColor: active ? style.strokeColor : undefined }}
-              onKeyDown={(event) => handleMarkerKeyDown(event, region.id)}
-            >
-              <div className="relative flex shrink-0 flex-col items-center">
-                <span
-                  className="block max-w-24 truncate rounded-md px-3 py-2 text-sm leading-none font-semibold whitespace-nowrap text-white shadow-sm"
-                  style={{ backgroundColor: style.fillColor }}
-                >
-                  {label}
-                </span>
-                <span
-                  className="size-0 border-x-[7px] border-t-[7px] border-x-transparent"
-                  style={{ borderTopColor: style.fillColor }}
-                />
-              </div>
-
-              <div
-                className={cn(
-                  'grid overflow-hidden transition-all duration-200',
-                  selected ? 'ml-2 w-56 opacity-100' : 'w-0 opacity-0',
-                )}
-              >
-                <div className="min-w-0 space-y-2 pr-1">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">
-                      {label}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 text-[11px] uppercase">
-                      {statusLabel}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
-                    <StatusCount
-                      label="Normal"
-                      value={region.statusSummary.normal}
-                    />
-                    <StatusCount
-                      label="Warning"
-                      value={region.statusSummary.warning}
-                    />
-                    <StatusCount
-                      label="Critical"
-                      value={region.statusSummary.critical}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-7 w-full cursor-pointer items-center justify-center rounded-md px-2 text-xs font-medium transition-colors"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleNavigate(region);
-                    }}
-                  >
-                    Open
-                  </button>
-                </div>
-              </div>
-            </div>
+            <RegionMapMarker
+              active={active}
+              craneCount={totalCranes(region)}
+              label={label}
+              onClose={closeSelectedRegion}
+              onNavigate={() => handleNavigate(region)}
+              onSelect={() => selectRegion(region.id)}
+              palette={style}
+              selected={selected}
+              statusLabel={statusLabel}
+              subtitle={subtitle}
+            />
           </AdvancedMarker>
         );
       })}
@@ -196,16 +142,176 @@ function hasRegionCenter(region: Region): region is RegionMarkerData {
   return Boolean(region.center);
 }
 
-interface StatusCountProps {
+interface RegionMapMarkerProps {
+  active: boolean;
+  craneCount: number;
   label: string;
-  value: number;
+  onClose: () => void;
+  onNavigate: () => void;
+  onSelect: () => void;
+  palette: ReturnType<typeof getStatusPalette>;
+  selected: boolean;
+  statusLabel: string;
+  subtitle: string;
 }
 
-function StatusCount({ label, value }: StatusCountProps) {
+function RegionMapMarker({
+  active,
+  craneCount,
+  label,
+  onClose,
+  onNavigate,
+  onSelect,
+  palette,
+  selected,
+  statusLabel,
+  subtitle,
+}: RegionMapMarkerProps) {
   return (
-    <div className="bg-muted/70 rounded px-1.5 py-1">
-      <div className="text-foreground leading-none font-semibold">{value}</div>
-      <div className="text-muted-foreground mt-0.5 truncate">{label}</div>
+    <div className="relative flex w-24 flex-col items-center">
+      <RegionInfoCard
+        craneCount={craneCount}
+        label={label}
+        onClose={onClose}
+        onNavigate={onNavigate}
+        palette={palette}
+        selected={selected}
+        statusLabel={statusLabel}
+        subtitle={subtitle}
+      />
+
+      <button
+        type="button"
+        aria-expanded={selected}
+        aria-label={label}
+        className={cn(
+          'group/map-marker relative flex h-28 w-24 cursor-pointer flex-col items-center justify-end pb-1 transition duration-200 outline-none',
+          'focus-visible:ring-ring/50 focus-visible:ring-3',
+          active && 'scale-105',
+        )}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect();
+        }}
+      >
+        <span className="relative z-10 flex size-14 items-center justify-center transition-transform duration-200 group-hover/map-marker:-translate-y-1">
+          <span
+            aria-hidden
+            className="absolute bottom-1 left-1/2 z-0 size-7 -translate-x-1/2 translate-y-[35%] rotate-45 bg-white"
+          />
+          <span
+            className="relative z-10 flex size-full items-center justify-center rounded-full border-[5px] border-white"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${palette.fillColor}, ${palette.fillColorTo})`,
+            }}
+          >
+            <Anchor className="size-7 text-white drop-shadow-sm" />
+          </span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+interface RegionInfoCardProps {
+  craneCount: number;
+  label: string;
+  onClose: () => void;
+  onNavigate: () => void;
+  palette: ReturnType<typeof getStatusPalette>;
+  selected: boolean;
+  statusLabel: string;
+  subtitle: string;
+}
+
+function RegionInfoCard({
+  craneCount,
+  label,
+  onClose,
+  onNavigate,
+  palette,
+  selected,
+  statusLabel,
+  subtitle,
+}: RegionInfoCardProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className={cn(
+        'bg-card/95 text-card-foreground pointer-events-auto absolute bottom-20 left-1/2 z-30 w-80 -translate-x-1/2 rounded-2xl border p-5 shadow-2xl backdrop-blur-md transition duration-200',
+        selected
+          ? 'translate-y-0 scale-100 opacity-100'
+          : 'pointer-events-none translate-y-2 scale-95 opacity-0',
+      )}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-label={t('monitoring-overview:map.marker.close')}
+        className="bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground absolute top-4 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full transition-colors"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
+      >
+        <X className="size-4" />
+      </button>
+
+      <div className="flex items-start gap-4 pr-8">
+        <div
+          className="flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-white text-white shadow-lg"
+          style={{
+            backgroundImage: `linear-gradient(135deg, ${palette.fillColor}, ${palette.fillColorTo})`,
+          }}
+        >
+          <Anchor className="size-8" />
+        </div>
+
+        <div className="min-w-0 pt-1">
+          <h2 className="truncate text-xl font-bold tracking-tight">{label}</h2>
+          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm leading-6">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      <div className="border-border/80 mt-5 border-t pt-4">
+        <div className="flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="text-foreground text-lg leading-none font-bold tabular-nums">
+              {craneCount}
+            </div>
+            <div className="text-muted-foreground mt-1 text-xs">
+              {t('monitoring-overview:map.marker.craneCount')}
+            </div>
+          </div>
+
+          <div className="bg-border h-11 w-px" />
+
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: palette.fillColor }}
+            />
+            <span className="truncate text-sm font-medium">{statusLabel}</span>
+          </div>
+
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+            aria-label={t('monitoring-overview:map.marker.openDetails')}
+            onClick={(event) => {
+              event.stopPropagation();
+              onNavigate();
+            }}
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      <span className="bg-card border-border absolute bottom-0 left-1/2 size-5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b" />
     </div>
   );
 }

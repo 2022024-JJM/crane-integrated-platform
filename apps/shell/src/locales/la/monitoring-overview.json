@@ -10,6 +10,11 @@
     "missingApiKey": {
       "title": "Clavis API Google Maps necessaria est.",
       "description": "Clavem in .env definite et paginam reficite."
+    },
+    "marker": {
+      "craneCount": "Grues",
+      "openDetails": "Singula regionis aperire",
+      "close": "Singula regionis claudere"
     }
   },
   "cmms": {

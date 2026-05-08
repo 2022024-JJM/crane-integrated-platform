@@ -10,6 +10,11 @@
     "missingApiKey": {
       "title": "Google Maps API 키가 필요합니다.",
       "description": ".env 파일에 키를 설정한 뒤 페이지를 새로고침하세요."
+    },
+    "marker": {
+      "craneCount": "크레인 수",
+      "openDetails": "지역 상세 열기",
+      "close": "지역 상세 닫기"
     }
   },
   "cmms": {
