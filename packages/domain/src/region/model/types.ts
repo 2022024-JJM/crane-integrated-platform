@@ -21,5 +21,4 @@ export interface Region {
   statusSummary: StatusSummary;
   navigateTo: string;
   center?: LatLng;
-  polygon?: LatLng[];
 }

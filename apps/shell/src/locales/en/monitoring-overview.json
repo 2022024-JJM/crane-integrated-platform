@@ -10,6 +10,11 @@
     "missingApiKey": {
       "title": "Google Maps API key is required.",
       "description": "Set the key in your .env file and reload this page."
+    },
+    "marker": {
+      "craneCount": "Cranes",
+      "openDetails": "Open region details",
+      "close": "Close region details"
     }
   },
   "cmms": {

@@ -1,35 +1,47 @@
 import type { LatLng, Region } from '@crane/domain/region';
 
-// 옥포 조선소(거제시) 일대를 기본 카메라로 사용한다.
+// Okpo shipyard area is used as the default map camera.
 export const MAP_DEFAULT_CENTER: LatLng = {
-  lat: 34.881,
-  lng: 128.6905,
+  lat: 34.873071,
+  lng: 128.710288,
 };
 
 export const MAP_DEFAULT_ZOOM = 15;
 
-export interface MapZoneStyle {
+export interface MapMarkerStyle {
   fillColor: string;
+  fillColorTo: string;
   strokeColor: string;
+  shadowColor: string;
+  rippleColor: string;
 }
 
-export function getStatusPalette(status: Region['status']): MapZoneStyle {
+export function getStatusPalette(status: Region['status']): MapMarkerStyle {
   if (status === 'warning') {
     return {
-      fillColor: 'rgb(245 166 35)',
-      strokeColor: 'rgb(245 166 35 / 0.9)',
+      fillColor: 'rgb(245 158 11)',
+      fillColorTo: 'rgb(217 119 6)',
+      strokeColor: 'rgb(245 158 11 / 0.95)',
+      shadowColor: 'rgb(245 158 11 / 0.35)',
+      rippleColor: 'rgb(245 158 11 / 0.22)',
     };
   }
 
   if (status === 'critical') {
     return {
-      fillColor: 'rgb(240 71 71)',
-      strokeColor: 'rgb(240 71 71 / 0.9)',
+      fillColor: 'rgb(239 68 68)',
+      fillColorTo: 'rgb(185 28 28)',
+      strokeColor: 'rgb(239 68 68 / 0.95)',
+      shadowColor: 'rgb(239 68 68 / 0.35)',
+      rippleColor: 'rgb(239 68 68 / 0.22)',
     };
   }
 
   return {
-    fillColor: 'rgb(61 214 140)',
-    strokeColor: 'rgb(61 214 140 / 0.9)',
+    fillColor: 'rgb(34 197 94)',
+    fillColorTo: 'rgb(22 163 74)',
+    strokeColor: 'rgb(34 197 94 / 0.95)',
+    shadowColor: 'rgb(34 197 94 / 0.35)',
+    rippleColor: 'rgb(34 197 94 / 0.22)',
   };
 }
