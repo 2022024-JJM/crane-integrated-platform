@@ -6,7 +6,11 @@
   "map": {
     "title": "Tabula",
     "description": "Regiones operationum gruium in tabula inspice.",
-    "regionName": "Complexus Industrialis Nationalis Okpo"
+    "regionName": "Complexus Industrialis Nationalis Okpo",
+    "missingApiKey": {
+      "title": "Clavis API Google Maps necessaria est.",
+      "description": "Clavem in .env definite et paginam reficite."
+    }
   },
   "cmms": {
     "title": "CMMS",

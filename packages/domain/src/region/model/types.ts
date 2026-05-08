@@ -9,10 +9,17 @@ export interface StatusSummary {
   critical: number;
 }
 
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 export interface Region {
   id: string;
   siteType: SiteType;
   status: StatusLevel;
   statusSummary: StatusSummary;
   navigateTo: string;
+  center?: LatLng;
+  polygon?: LatLng[];
 }

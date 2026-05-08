@@ -1,101 +1,135 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  MAP_IMAGE_PATH,
-  MAP_VIEWBOX,
-  resolveMapZones,
-  type ResolvedMapZone,
-} from '../model/region-map-types';
-import { getRegionTitleKey, regions, type Region } from '@crane/domain/region';
+  AdvancedMarker,
+  APIProvider,
+  Map,
+  Pin,
+} from '@vis.gl/react-google-maps';
+
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
+import { useTheme } from '@crane/core/lib/theme-context';
+import { getRegionTitleKey, regions, type Region } from '@crane/domain/region';
+import {
+  getStatusPalette,
+  MAP_DEFAULT_CENTER,
+  MAP_DEFAULT_ZOOM,
+} from '../model/region-map-types';
+import { RegionPolygon } from './region-polygon';
+
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
 export function RegionMap() {
   const { t } = useTranslation();
-  const navigate = useProgressNavigate();
-  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
-  const mapZones: ResolvedMapZone[] = useMemo(
-    () => resolveMapZones(regions),
-    [],
-  );
-  const handleZoneNavigate = (region: Region) => {
-    navigate(region.navigateTo);
-  };
+
+  if (!apiKey) {
+    return (
+      <section className="relative flex flex-1 items-center justify-center rounded-2xl border border-dashed p-8 text-center">
+        <div className="max-w-md space-y-2">
+          <p className="text-foreground text-base font-semibold">
+            {t('monitoring-overview:map.missingApiKey.title')}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {t('monitoring-overview:map.missingApiKey.description')}
+          </p>
+          <code className="text-muted-foreground bg-muted/60 mt-2 inline-block rounded px-2 py-1 text-xs">
+            VITE_GOOGLE_MAPS_API_KEY
+          </code>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="relative flex-1">
-      <div className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border px-5 py-5">
-        <div className="flex text-[20px] tracking-widest">
-          <span>{t('monitoring-overview:map.regionName')}</span>
-        </div>
-        <div className="mx-auto flex w-full justify-center">
-          <div className="relative aspect-418/238 min-h-150 w-full max-w-200 min-w-200 overflow-hidden rounded-xl">
-            <img src={MAP_IMAGE_PATH} className="h-full w-full object-cover" />
-            <svg
-              viewBox={`0 0 ${MAP_VIEWBOX.width} ${MAP_VIEWBOX.height}`}
-              className="absolute inset-0 h-full w-full"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              {mapZones.map((zone) => {
-                const displayLabel = t(getRegionTitleKey(zone.region.id));
-                const style = zone.style;
-                const connectorStart = zone.labelPoint ?? zone.center;
-                const connectorEnd = zone.center;
-                const isActiveRegion = hoveredRegionId === zone.region.id;
-
-                return (
-                  <g
-                    key={`${zone.region.id}-${zone.points}`}
-                    className={`cursor-pointer ${
-                      isActiveRegion ? 'brightness-150' : 'brightness-100'
-                    }`}
-                    onMouseEnter={() => setHoveredRegionId(zone.region.id)}
-                    onMouseLeave={() => setHoveredRegionId(null)}
-                    onClick={() => handleZoneNavigate(zone.region)}
-                  >
-                    <polygon
-                      points={zone.points}
-                      fill={style.fillColor}
-                      fillOpacity={isActiveRegion ? 0.35 : 0.2}
-                      stroke={style.strokeColor}
-                      strokeWidth={isActiveRegion ? 2.3 : 1.5}
-                      role="link"
-                      tabIndex={0}
-                    />
-                    <line
-                      x1={connectorStart.x}
-                      y1={connectorStart.y}
-                      x2={connectorEnd.x}
-                      y2={connectorEnd.y}
-                      stroke="#ffffff"
-                      strokeWidth={0.7}
-                    />
-                    <rect
-                      x={connectorStart.x - 20}
-                      y={connectorStart.y - 7}
-                      width={60}
-                      height={16}
-                      rx={4}
-                      fill="#1C1C1C"
-                      stroke="#ffffff"
-                      strokeWidth={0.7}
-                    />
-                    <text
-                      x={connectorStart.x + 10}
-                      y={connectorStart.y + 4}
-                      className="tracking-[0.02em] select-none"
-                      textAnchor="middle"
-                      fill="#ffffff"
-                      fontSize="8"
-                    >
-                      {displayLabel}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </div>
-      </div>
+    <section className="relative flex flex-1 overflow-hidden rounded-2xl border">
+      <APIProvider apiKey={apiKey}>
+        <RegionMapInner />
+      </APIProvider>
     </section>
+  );
+}
+
+function RegionMapInner() {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
+  const navigate = useProgressNavigate();
+  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+
+  const regionsWithGeo = useMemo(
+    () => regions.filter((region) => region.center || region.polygon),
+    [],
+  );
+
+  const handleNavigate = useCallback(
+    (region: Region) => {
+      navigate(region.navigateTo);
+    },
+    [navigate],
+  );
+
+  return (
+    <Map
+      mapId={mapId}
+      defaultCenter={MAP_DEFAULT_CENTER}
+      defaultZoom={MAP_DEFAULT_ZOOM}
+      gestureHandling="greedy"
+      disableDefaultUI={false}
+      colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
+      className="h-full w-full"
+    >
+      {regionsWithGeo.map((region) => {
+        const style = getStatusPalette(region.status);
+        const active = hoveredRegionId === region.id;
+        const label = t(getRegionTitleKey(region.id));
+
+        return (
+          <Fragment key={region.id}>
+            {region.polygon && region.polygon.length >= 3 ? (
+              <RegionPolygon
+                paths={region.polygon}
+                style={style}
+                active={active}
+                onClick={() => handleNavigate(region)}
+                onMouseEnter={() => setHoveredRegionId(region.id)}
+                onMouseLeave={() =>
+                  setHoveredRegionId((current) =>
+                    current === region.id ? null : current,
+                  )
+                }
+              />
+            ) : null}
+            {region.center ? (
+              <AdvancedMarker
+                position={region.center}
+                onClick={() => handleNavigate(region)}
+                onMouseEnter={() => setHoveredRegionId(region.id)}
+                onMouseLeave={() =>
+                  setHoveredRegionId((current) =>
+                    current === region.id ? null : current,
+                  )
+                }
+                title={label}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <Pin
+                    background={style.fillColor}
+                    borderColor={style.strokeColor}
+                    glyphColor="#ffffff"
+                    scale={active ? 1.15 : 1}
+                  />
+                  <span
+                    className="rounded border bg-[#1C1C1C] px-2 py-0.5 text-[11px] font-medium tracking-wide whitespace-nowrap text-white"
+                    style={{ borderColor: style.strokeColor }}
+                  >
+                    {label}
+                  </span>
+                </div>
+              </AdvancedMarker>
+            ) : null}
+          </Fragment>
+        );
+      })}
+    </Map>
   );
 }

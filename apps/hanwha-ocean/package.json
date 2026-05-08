@@ -28,6 +28,7 @@
     "lucide-react": "^0.575.0",
     "@react-three/fiber": "^9.5.0",
     "@react-three/drei": "^10.7.7",
+    "@vis.gl/react-google-maps": "^1.5.5",
     "three": "^0.183.2",
     "zustand": "^5.0.11",
     "i18next": "^25.6.2",

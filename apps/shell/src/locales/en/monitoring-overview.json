@@ -6,7 +6,11 @@
   "map": {
     "title": "Map",
     "description": "View crane operating regions on the map.",
-    "regionName": "Okpo Shipyard"
+    "regionName": "Okpo Shipyard",
+    "missingApiKey": {
+      "title": "Google Maps API key is required.",
+      "description": "Set the key in your .env file and reload this page."
+    }
   },
   "cmms": {
     "title": "CMMS",

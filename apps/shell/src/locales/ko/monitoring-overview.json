@@ -6,7 +6,11 @@
   "map": {
     "title": "지도",
     "description": "지도 위에서 크레인 운영 지역을 확인합니다.",
-    "regionName": "옥포국가산업단지"
+    "regionName": "옥포국가산업단지",
+    "missingApiKey": {
+      "title": "Google Maps API 키가 필요합니다.",
+      "description": ".env 파일에 키를 설정한 뒤 페이지를 새로고침하세요."
+    }
   },
   "cmms": {
     "title": "CMMS",
