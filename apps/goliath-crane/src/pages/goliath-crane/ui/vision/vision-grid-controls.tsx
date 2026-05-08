@@ -5,6 +5,10 @@ import {
   SelectPopup,
   SelectTrigger,
 } from '@crane/ui/molecules/select';
+import {
+  VISION_SOURCE_FILTERS,
+  type VisionSourceFilter,
+} from './types';
 
 export type GridSize = 1 | 2 | 3 | 4;
 
@@ -44,6 +48,43 @@ export function VisionGridControls({
               className="font-mono"
             >
               {formatLabel(size)}
+            </SelectItem>
+          ))}
+        </SelectPopup>
+      </Select>
+    </div>
+  );
+}
+
+interface VisionSourceFilterControlsProps {
+  value: VisionSourceFilter;
+  onChange: (value: VisionSourceFilter) => void;
+}
+
+export function VisionSourceFilterControls({
+  value,
+  onChange,
+}: VisionSourceFilterControlsProps) {
+  const { t } = useTranslation('goliath-crane');
+  const optionLabel = (filter: VisionSourceFilter) =>
+    t(`vision.sourceOption.${filter}`);
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+        {t('vision.source')}
+      </span>
+      <Select
+        value={value}
+        onValueChange={(next: string) => onChange(next as VisionSourceFilter)}
+      >
+        <SelectTrigger
+          label={optionLabel(value)}
+          aria-label={t('vision.source')}
+        />
+        <SelectPopup>
+          {VISION_SOURCE_FILTERS.map((filter) => (
+            <SelectItem key={filter} value={filter}>
+              {optionLabel(filter)}
             </SelectItem>
           ))}
         </SelectPopup>

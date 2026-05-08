@@ -148,21 +148,18 @@ export function getCranesLiteWebSocketUrl() {
   return getWebSocketUrl('cranes-lite/all');
 }
 
-let lidarFallbackWarned = false;
+function defaultLidarPath(): string {
+  const prefix = getBasePathPrefix();
+  return prefix ? `${prefix}/lidar` : 'lidar';
+}
 
 export function getLidarWebSocketUrl() {
-  const envUrl = import.meta.env.VITE_LIDAR_WS_URL;
-  if (envUrl && envUrl.trim()) {
-    return envUrl.trim();
-  }
-  if (!lidarFallbackWarned) {
-    lidarFallbackWarned = true;
-    console.warn(
-      '[network] VITE_LIDAR_WS_URL is not set. Falling back to default ws sub-path. ' +
-        'Set it in .env.local for explicit LiDAR endpoint.',
-    );
-  }
-  return getWebSocketUrl('lidar');
+  // LiDAR 서버 IP/PORT 는 런타임 nginx 프록시(LIDAR_HOST/LIDAR_PORT)에서 결정된다.
+  // 프론트는 항상 동일 origin 의 /lidar/ 경로로 ws 연결만 시도한다.
+  // 끝 슬래시를 붙여서 nginx 의 prefix-match `/crane_rnd/lidar/` location 에
+  // 곧장 매칭되도록 한다. 슬래시가 없으면 nginx 가 301 redirect 를 보내는데
+  // WebSocket 핸드셰이크는 redirect 를 따라가지 못해 연결이 실패한다.
+  return `${resolveWebSocketBaseUrl(undefined, defaultLidarPath())}/`;
 }
 
 export function getApiTimeoutMs() {

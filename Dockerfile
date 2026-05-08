@@ -29,16 +29,10 @@ COPY apps/      ./apps/
 COPY packages/  ./packages/
 COPY tsconfig.json tsconfig.base.json turbo.json ./
 
-# Build-time environment variables (embedded into JS bundle by Vite)
-ARG VITE_API_BASE_URL=""
-ARG VITE_WS_BASE_URL=""
-ARG VITE_LIDAR_WS_URL=""
-
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
-    VITE_WS_BASE_URL=$VITE_WS_BASE_URL \
-    VITE_LIDAR_WS_URL=$VITE_LIDAR_WS_URL
-
-# Build shell app + all workspace dependencies in topological order
+# 모든 백엔드/LiDAR IP·PORT 는 런타임 nginx envsubst 로 주입된다.
+# (api/ws/lidar 호출은 프론트에서 동일 origin 의 /api, /ws, /lidar 로 나가고
+#  nginx 가 .env 의 BACKEND_HOST/PORT, LIDAR_HOST/PORT 로 프록시한다.)
+# 따라서 이미지 빌드 시점에는 IP 관련 ARG 가 필요 없다.
 RUN pnpm turbo run build --filter=@crane/shell...
 
 # ============================================================
@@ -50,7 +44,12 @@ RUN rm -rf /usr/share/nginx/html/*
 
 # Vite 가 base='/crane_rnd/' 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
 COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# nginx 공식 이미지의 entrypoint 가 /etc/nginx/templates/*.template 을
+# envsubst 로 치환해 /etc/nginx/conf.d/ 로 출력한다.
+# 따라서 BACKEND_HOST/PORT, LIDAR_HOST/PORT 환경변수만 주입하면
+# 이미지 재빌드 없이 IP 변경이 가능하다.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 

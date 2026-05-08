@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
 import { GoliathVisionPip } from './goliath-vision-pip';
@@ -8,10 +8,12 @@ import {
   CAMERA_CHANNELS,
   type CameraChannel,
   type ExpandedView,
+  type VisionSourceFilter,
 } from './vision/types';
 import { VisionTile } from './vision/vision-tile';
 import {
   VisionGridControls,
+  VisionSourceFilterControls,
   type GridSize,
 } from './vision/vision-grid-controls';
 
@@ -30,16 +32,26 @@ function VisionMonitoringViewContent() {
   const { t } = useTranslation('goliath-crane');
   const [gridSize, setGridSize] = useState<GridSize>(2);
   const [expanded, setExpanded] = useState<ExpandedView>(null);
+  const [sourceFilter, setSourceFilter] = useState<VisionSourceFilter>('all');
 
-  const slots = useMemo<VisionSlot[]>(
-    () => [
-      ...CAMERA_CHANNELS.map(
-        (channel) => ({ kind: 'camera', channel }) satisfies VisionSlot,
-      ),
-      { kind: 'lidar' },
-    ],
-    [],
-  );
+  const slots = useMemo<VisionSlot[]>(() => {
+    const cameraSlots = CAMERA_CHANNELS.map(
+      (channel) => ({ kind: 'camera', channel }) satisfies VisionSlot,
+    );
+    const lidarSlot: VisionSlot = { kind: 'lidar' };
+    if (sourceFilter === 'camera') return cameraSlots;
+    if (sourceFilter === 'lidar') return [lidarSlot];
+    return [...cameraSlots, lidarSlot];
+  }, [sourceFilter]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    if (sourceFilter === 'camera' && expanded.type === 'lidar') {
+      setExpanded(null);
+    } else if (sourceFilter === 'lidar' && expanded.type === 'camera') {
+      setExpanded(null);
+    }
+  }, [sourceFilter, expanded]);
 
   const totalSlots = gridSize * gridSize;
   const cameraConnected = CAMERA_CHANNELS.filter((c) => c.connected).length;
@@ -57,13 +69,19 @@ function VisionMonitoringViewContent() {
               BETA
             </span>
           </div>
-          <span className="text-muted-foreground/70 text-[10px]">
-            {t('vision.connectedCount', {
-              connected: cameraConnected,
-              total: CAMERA_CHANNELS.length,
-            })}
-          </span>
-          <div className="ml-auto">
+          {sourceFilter !== 'lidar' && (
+            <span className="text-muted-foreground/70 text-[10px]">
+              {t('vision.connectedCount', {
+                connected: cameraConnected,
+                total: CAMERA_CHANNELS.length,
+              })}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-3">
+            <VisionSourceFilterControls
+              value={sourceFilter}
+              onChange={setSourceFilter}
+            />
             <VisionGridControls value={gridSize} onChange={setGridSize} />
           </div>
         </div>

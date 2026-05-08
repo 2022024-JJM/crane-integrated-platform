@@ -113,3 +113,11 @@ export type ExpandedView =
   | { type: 'camera'; id: string }
   | { type: 'lidar' }
   | null;
+
+export type VisionSourceFilter = 'all' | 'camera' | 'lidar';
+
+export const VISION_SOURCE_FILTERS: readonly VisionSourceFilter[] = [
+  'all',
+  'camera',
+  'lidar',
+] as const;

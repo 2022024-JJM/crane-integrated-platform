@@ -1,20 +1,27 @@
+# 운영 흐름:
+#   1) 빌드 머신: docker compose build  → docker save crane-shell:latest -o crane-shell.tar
+#   2) tar 를 운영 서버로 옮긴 뒤      : docker load -i crane-shell.tar
+#   3) 운영 서버: 같은 디렉토리에 .env 와 이 docker-compose.yml 만 있으면 됨
+#   4) IP 변경 시: .env 만 수정 후 `docker compose up -d` (재빌드 불필요)
 services:
   shell:
+    # 운영 서버에서는 build 하지 않고 load 한 이미지를 그대로 사용한다.
+    # 빌드 머신에서만 `docker compose build` 가 동작하면 충분하므로 build 블록은 유지.
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_WS_BASE_URL: ${VITE_WS_BASE_URL:-}
-        VITE_LIDAR_WS_URL: ${VITE_LIDAR_WS_URL:-}
     image: crane-shell:latest
     container_name: crane-shell
     ports:
-      - "33600:80"
+      - "${SHELL_PORT:-33600}:80"
+    environment:
+      # nginx envsubst 가 /etc/nginx/templates/default.conf.template 의
+      # ${BACKEND_HOST} 등을 이 값으로 치환한다.
+      BACKEND_HOST: ${BACKEND_HOST}
+      BACKEND_PORT: ${BACKEND_PORT}
+      LIDAR_HOST: ${LIDAR_HOST}
+      LIDAR_PORT: ${LIDAR_PORT}
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
       interval: 30s

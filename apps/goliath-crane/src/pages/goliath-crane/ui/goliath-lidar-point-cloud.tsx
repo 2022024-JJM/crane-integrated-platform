@@ -20,9 +20,10 @@ const toLinear = (c: number) =>
 interface PointCloudProps {
   dataRef: React.MutableRefObject<Float32Array | null>;
   frameRef: React.MutableRefObject<number>;
+  autoFit?: boolean;
 }
 
-function PointCloud({ dataRef, frameRef }: PointCloudProps) {
+function PointCloud({ dataRef, frameRef, autoFit = true }: PointCloudProps) {
   const geometry = useMemo(() => new THREE.BufferGeometry(), []);
   const material = useMemo(
     () =>
@@ -103,7 +104,7 @@ function PointCloud({ dataRef, frameRef }: PointCloudProps) {
     geometry.computeBoundingSphere();
 
     // 첫 프레임에만 카메라를 포인트 클라우드 전체가 보이도록 자동 fit
-    if (!fittedRef.current && geometry.boundingSphere) {
+    if (autoFit && !fittedRef.current && geometry.boundingSphere) {
       fittedRef.current = true;
       const { center, radius } = geometry.boundingSphere;
       const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
@@ -238,24 +239,58 @@ function LidarHud({
   );
 }
 
+// ── 자동 회전 카메라 (compact 모드) ─────────────────────────────────────────
+function AutoOrbitCamera() {
+  const angleRef = useRef(0);
+  useFrame(({ camera }, delta) => {
+    angleRef.current += delta * 0.25;
+    const radius = 8;
+    const height = 4;
+    camera.position.set(
+      Math.cos(angleRef.current) * radius,
+      height,
+      Math.sin(angleRef.current) * radius,
+    );
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
 // ── 최종 컴포넌트 ─────────────────────────────────────────────────────────────
-export function GoliathLidarPointCloud() {
+interface GoliathLidarPointCloudProps {
+  /** 미니 썸네일 등 좁은 영역에서 HUD/컨트롤을 숨기고 자동 회전만 보여준다. */
+  compact?: boolean;
+}
+
+export function GoliathLidarPointCloud({
+  compact = false,
+}: GoliathLidarPointCloudProps = {}) {
   const { status, dataRef, frameRef } = useLidarWebSocket(LIDAR_WS_URL);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-zinc-950">
-      <LidarHud dataRef={dataRef} status={status} isLive={status === 'open'} />
+      {!compact && (
+        <LidarHud dataRef={dataRef} status={status} isLive={status === 'open'} />
+      )}
       <Canvas gl={{ outputColorSpace: THREE.SRGBColorSpace }}>
         <PerspectiveCamera makeDefault position={[5, 3, 5]} fov={50} />
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={0.5}
-          maxDistance={50}
-        />
+        {compact ? (
+          <AutoOrbitCamera />
+        ) : (
+          <OrbitControls
+            enableDamping
+            dampingFactor={0.08}
+            minDistance={0.5}
+            maxDistance={50}
+          />
+        )}
         <ambientLight intensity={0.1} />
         <FloorGrid />
-        <PointCloud dataRef={dataRef} frameRef={frameRef} />
+        <PointCloud
+          dataRef={dataRef}
+          frameRef={frameRef}
+          autoFit={!compact}
+        />
         <ScanRing />
       </Canvas>
     </div>

@@ -117,6 +117,12 @@
     "layout": "Dispositio",
     "noImage": "NULLA IMAGO",
     "noSignal": "NULLUM SIGNUM",
-    "connectedCount": "{{connected}} / {{total}} conexa"
+    "connectedCount": "{{connected}} / {{total}} conexa",
+    "source": "Fons",
+    "sourceOption": {
+      "all": "Omnia",
+      "camera": "Camera",
+      "lidar": "Lidar"
+    }
   }
 }

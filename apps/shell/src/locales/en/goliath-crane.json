@@ -117,6 +117,12 @@
     "layout": "Layout",
     "noImage": "NO IMAGE",
     "noSignal": "NO SIGNAL",
-    "connectedCount": "{{connected}} / {{total}} connected"
+    "connectedCount": "{{connected}} / {{total}} connected",
+    "source": "Source",
+    "sourceOption": {
+      "all": "All",
+      "camera": "Camera",
+      "lidar": "Lidar"
+    }
   }
 }
