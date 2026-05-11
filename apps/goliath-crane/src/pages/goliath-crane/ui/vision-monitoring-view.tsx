@@ -36,11 +36,15 @@ function VisionMonitoringViewContent() {
   const [expanded, setExpanded] = useState<ExpandedView>(null);
   const [sourceFilter, setSourceFilter] = useState<VisionSourceFilter>('all');
 
+  const isFusionOnly = sourceFilter === 'lidar-fusion';
+
   const slots = useMemo<VisionSlot[]>(() => {
     const cameraSlots = CAMERA_CHANNELS.map(
       (channel) => ({ kind: 'camera', channel }) satisfies VisionSlot,
     );
-    const lidarSlots = LIDAR_CHANNELS.map(
+    const individualLidarSlots = LIDAR_CHANNELS.filter(
+      (ch) => ch.sensorKey !== 'fusion',
+    ).map(
       (ch) =>
         ({
           kind: 'lidar',
@@ -48,27 +52,39 @@ function VisionMonitoringViewContent() {
           label: ch.label,
         }) satisfies VisionSlot,
     );
+    const fusionSlot: VisionSlot = {
+      kind: 'lidar',
+      sensor: 'fusion',
+      label: 'Fusion',
+    };
     if (sourceFilter === 'camera') return cameraSlots;
-    if (sourceFilter === 'lidar') return lidarSlots;
-    return [...cameraSlots, ...lidarSlots];
+    if (sourceFilter === 'lidar') return individualLidarSlots;
+    if (sourceFilter === 'lidar-fusion') return [fusionSlot];
+    return [...cameraSlots, ...individualLidarSlots];
   }, [sourceFilter]);
 
   useEffect(() => {
     if (!expanded) return;
     if (sourceFilter === 'camera' && expanded.type === 'lidar') {
       setExpanded(null);
-    } else if (sourceFilter === 'lidar' && expanded.type === 'camera') {
+      return;
+    }
+    if (
+      (sourceFilter === 'lidar' || sourceFilter === 'lidar-fusion') &&
+      expanded.type === 'camera'
+    ) {
       setExpanded(null);
     }
   }, [sourceFilter, expanded]);
 
-  const totalSlots = gridSize * gridSize;
+  const effectiveGridSize: GridSize = isFusionOnly ? 1 : gridSize;
+  const totalSlots = effectiveGridSize * effectiveGridSize;
   const cameraConnected = CAMERA_CHANNELS.filter((c) => c.connected).length;
 
   return (
     <>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-border bg-card/50 flex shrink-0 items-center gap-3 border-b px-4 py-2">
+        <div className="border-border bg-card/50 relative z-20 flex shrink-0 items-center gap-3 border-b px-4 py-2">
           <div className="flex items-center gap-2">
             <Camera className="size-4 text-orange-500" />
             <span className="text-foreground text-sm font-semibold">
@@ -78,7 +94,7 @@ function VisionMonitoringViewContent() {
               BETA
             </span>
           </div>
-          {sourceFilter !== 'lidar' && (
+          {sourceFilter !== 'lidar' && sourceFilter !== 'lidar-fusion' && (
             <span className="text-muted-foreground/70 text-[10px]">
               {t('vision.connectedCount', {
                 connected: cameraConnected,
@@ -91,32 +107,43 @@ function VisionMonitoringViewContent() {
               value={sourceFilter}
               onChange={setSourceFilter}
             />
-            <VisionGridControls value={gridSize} onChange={setGridSize} />
+            {!isFusionOnly && (
+              <VisionGridControls value={gridSize} onChange={setGridSize} />
+            )}
           </div>
         </div>
 
         <div className="min-h-0 flex-1 p-3">
-          <div className={`grid h-full w-full gap-2 ${GRID_CLASS[gridSize]}`}>
+          <div
+            className={`grid h-full w-full gap-2 ${GRID_CLASS[effectiveGridSize]}`}
+          >
             {Array.from({ length: totalSlots }).map((_, index) => {
               const slot = slots[index];
               if (!slot) {
                 return <NoSignalSlot key={`empty-${index}`} />;
               }
               if (slot.kind === 'lidar') {
+                const isFusion = slot.sensor === 'fusion';
                 const isActive =
-                  expanded?.type === 'lidar' && expanded.sensor === slot.sensor;
+                  !isFusion &&
+                  expanded?.type === 'lidar' &&
+                  expanded.sensor === slot.sensor;
                 return (
                   <LidarTile
                     key={`lidar-${slot.sensor}`}
                     sensor={slot.sensor}
                     label={slot.label}
                     isActive={isActive}
-                    onExpand={() =>
-                      setExpanded(
-                        isActive
-                          ? null
-                          : { type: 'lidar', sensor: slot.sensor },
-                      )
+                    fullView={isFusion && isFusionOnly}
+                    onExpand={
+                      isFusion
+                        ? undefined
+                        : () =>
+                            setExpanded(
+                              isActive
+                                ? null
+                                : { type: 'lidar', sensor: slot.sensor },
+                            )
                     }
                   />
                 );

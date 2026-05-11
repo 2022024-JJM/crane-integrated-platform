@@ -119,10 +119,16 @@ export type ExpandedView =
   | { type: 'lidar'; sensor: LidarSensorKey }
   | null;
 
-export type VisionSourceFilter = 'all' | 'camera' | 'lidar';
+/**
+ * 비전 모니터링 그리드의 소스 필터.
+ * - 'lidar': SOSLAB1/2 두 타일 (개별)
+ * - 'lidar-fusion': Fusion 합성 타일 1개
+ */
+export type VisionSourceFilter = 'all' | 'camera' | 'lidar' | 'lidar-fusion';
 
 export const VISION_SOURCE_FILTERS: readonly VisionSourceFilter[] = [
   'all',
   'camera',
   'lidar',
+  'lidar-fusion',
 ] as const;

@@ -26,6 +26,12 @@ export type SoslabConnectionStatus =
   | 'error'
   | 'closed';
 
+export interface SensorTransform {
+  position: { x: number; y: number; z: number };
+  /** degree 단위. 적용 시점에 DEG_TO_RAD 로 변환한다 (참조 viewer.js 와 동일). */
+  rotation: { x: number; y: number; z: number };
+}
+
 export interface SensorBuffer {
   /** 서버가 보낸 원본 sensor_name (예: 'SOSLAB1', 'SOSLAB2') */
   sensorName: string;
@@ -35,6 +41,27 @@ export interface SensorBuffer {
   /** 이 센서에 도착한 누적 프레임 수 */
   frameCounter: number;
   colorHex: string;
+  /** 원본 PointCloudFrame 메타 (HUD 표시용) */
+  frameId: string;
+  sourceTopic: string;
+  vendor: string;
+  /** 가시성 토글 (Fusion HUD 의 sensor card 체크박스) */
+  isVisible: boolean;
+  /** 런타임 transform. position 은 m, rotation 은 deg. */
+  transform: SensorTransform;
+  /** transform 변경 시 +1. SensorPoints 가 polling 해서 mesh 에 반영. */
+  transformRevision: number;
+}
+
+export interface BundleMeta {
+  /** 가장 최근에 받은 sequence. 미수신은 null */
+  lastSequence: bigint | null;
+  /** lastSequence 직전에 빠진 sequence 개수 */
+  lastGap: bigint;
+  processorName: string;
+  windowSizeMs: number;
+  totalRenderedPoints: number;
+  lastBundleAtMs: number;
 }
 
 interface SoslabStreamState {
@@ -45,9 +72,38 @@ interface SoslabStreamState {
   sensors: Map<string, SensorBuffer>;
   /** 구독자가 useFrame 에서 polling 하는 글로벌 카운터 */
   globalFrameCounter: number;
+  /** HUD 가 polling 하는 bundle 메타 */
+  bundle: BundleMeta;
 
   acquire: () => void;
   release: () => void;
+
+  setSensorVisible: (sensorKey: string, visible: boolean) => void;
+  setSensorTransformAxis: (
+    sensorKey: string,
+    group: 'position' | 'rotation',
+    axis: 'x' | 'y' | 'z',
+    value: number,
+  ) => void;
+  resetSensorTransform: (sensorKey: string) => void;
+}
+
+function createDefaultTransform(): SensorTransform {
+  return {
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+  };
+}
+
+function createInitialBundleMeta(): BundleMeta {
+  return {
+    lastSequence: null,
+    lastGap: 0n,
+    processorName: 'unknown',
+    windowSizeMs: 0,
+    totalRenderedPoints: 0,
+    lastBundleAtMs: 0,
+  };
 }
 
 // 모듈-스코프 단일 WebSocket. zustand state 에 두면 set 에 의해 구독자
@@ -119,30 +175,60 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
       try {
         const bundle = decodeBundle(event.data);
         const sensors = get().sensors;
+        const bundleMeta = get().bundle;
+        const now = Date.now();
+
+        let totalRendered = 0;
         for (const frame of bundle.frames) {
           const rawName = frame.sensor_name || 'unknown';
           const key = normalizeSensorKey(rawName) || `sensor${sensors.size}`;
           const parsed = parseFrame(frame);
-          if (!parsed.ok) continue;
 
           const existing = sensors.get(key);
           if (existing) {
             existing.parsed = parsed;
-            existing.lastUpdatedAtMs = Date.now();
+            existing.lastUpdatedAtMs = now;
             existing.frameCounter += 1;
-            // sensorName 은 첫 프레임에서 확정 — 변하지 않음
+            existing.frameId = frame.frame_id || existing.frameId;
+            existing.sourceTopic = frame.source_topic || existing.sourceTopic;
+            existing.vendor = frame.vendor || existing.vendor;
           } else {
             sensors.set(key, {
               sensorName: rawName,
               parsed,
-              lastUpdatedAtMs: Date.now(),
+              lastUpdatedAtMs: now,
               frameCounter: 1,
               colorHex: pickColorForKey(key, sensors.size),
+              frameId: frame.frame_id || '-',
+              sourceTopic: frame.source_topic || '-',
+              vendor: frame.vendor || '-',
+              isVisible: true,
+              transform: createDefaultTransform(),
+              transformRevision: 0,
             });
           }
+
+          if (parsed.ok) {
+            totalRendered += parsed.sampledPointCount;
+          }
         }
-        // 메타 (status/error) 변경 없이 카운터만 +1 — 구독 컴포넌트의 리렌더는
-        // 일으키지 않는다. useFrame 루프에서 직접 store.getState() 로 polling.
+
+        const prevSequence = bundleMeta.lastSequence;
+        const gap =
+          prevSequence !== null && bundle.sequence > prevSequence + 1n
+            ? bundle.sequence - prevSequence - 1n
+            : 0n;
+
+        // 메타 객체는 in-place 갱신 (리렌더 방지). globalFrameCounter +1 로
+        // useFrame polling 측에 변경 알림. React 측에서 HUD 갱신을 원하면
+        // 별도 interval tick 으로 강제 리렌더한다.
+        bundleMeta.lastSequence = bundle.sequence;
+        bundleMeta.lastGap = gap;
+        bundleMeta.processorName = bundle.processor_name;
+        bundleMeta.windowSizeMs = bundle.window_size_ms;
+        bundleMeta.totalRenderedPoints = totalRendered;
+        bundleMeta.lastBundleAtMs = now;
+
         set({ globalFrameCounter: get().globalFrameCounter + 1 });
       } catch (error) {
         set({
@@ -190,6 +276,7 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
       status: 'idle',
       lastError: '',
       globalFrameCounter: 0,
+      bundle: createInitialBundleMeta(),
     });
   }
 
@@ -199,6 +286,7 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
     refCount: 0,
     sensors: new Map<string, SensorBuffer>(),
     globalFrameCounter: 0,
+    bundle: createInitialBundleMeta(),
 
     acquire: () => {
       const next = get().refCount + 1;
@@ -210,6 +298,30 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
       const next = Math.max(0, get().refCount - 1);
       set({ refCount: next });
       if (next === 0) disconnect();
+    },
+
+    setSensorVisible: (sensorKey, visible) => {
+      const buf = get().sensors.get(sensorKey);
+      if (!buf) return;
+      buf.isVisible = visible;
+      set({ globalFrameCounter: get().globalFrameCounter + 1 });
+    },
+
+    setSensorTransformAxis: (sensorKey, group, axis, value) => {
+      const buf = get().sensors.get(sensorKey);
+      if (!buf) return;
+      if (!Number.isFinite(value)) return;
+      buf.transform[group][axis] = value;
+      buf.transformRevision += 1;
+      set({ globalFrameCounter: get().globalFrameCounter + 1 });
+    },
+
+    resetSensorTransform: (sensorKey) => {
+      const buf = get().sensors.get(sensorKey);
+      if (!buf) return;
+      buf.transform = createDefaultTransform();
+      buf.transformRevision += 1;
+      set({ globalFrameCounter: get().globalFrameCounter + 1 });
     },
   };
 });

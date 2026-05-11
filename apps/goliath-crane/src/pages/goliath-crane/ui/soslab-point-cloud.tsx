@@ -1,15 +1,17 @@
 // SOSLAB ProcessedPointCloudBundle 스트림을 React Three Fiber 위에서
-// monitoring_web/src/viewer.js 와 동일한 결과로 렌더링한다.
+// monitoring_web/src/viewer.js + main.js 와 동일한 결과로 렌더링한다.
 //
 // - 한 컴포넌트(<SoslabPointCloud>) = 한 Canvas. 그리드에 SOSLAB1/SOSLAB2/
 //   Fusion 3개 타일이 있으면 Canvas 도 3개지만, 데이터 소스(WebSocket) 는
 //   soslab-stream-store 에서 단일하게 공유된다.
 // - mode 에 따라 SOSLAB1 / SOSLAB2 의 가시성을 토글. fusion = 두 센서 모두 visible.
 // - intensity 가 있으면 HSL 그래디언트 (0.63→0, 0.95, 0.55), 없으면 SENSOR_COLORS
-//   고정색. 점 크기 2.5px, sizeAttenuation 끔 — viewer.js 와 동일.
+//   고정색. 점 크기/그리드/축은 viewer.js 와 동일.
+// - mode === 'fusion' 이고 compact 가 아니면 레퍼런스(main.js) 와 동일한
+//   상단 메트릭 그리드 + 우측 센서 패널(Transform/Reset) HUD 를 노출한다.
 
 import { Activity, ScanLine } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
@@ -22,6 +24,7 @@ import {
   POINT_SIZE_PX,
   SCENE_BG,
   SENSOR_COLORS,
+  STALE_SENSOR_MS,
 } from '../lib/soslab/config';
 import {
   useSoslabStreamStore,
@@ -29,12 +32,14 @@ import {
   type SoslabSensorMode,
 } from '../model/soslab-stream-store';
 
+const DEG_TO_RAD = Math.PI / 180;
 const tempColor = new THREE.Color();
 
 interface SensorPointsProps {
   sensorKey: string;
   fallbackColorHex: string;
-  visible: boolean;
+  /** mode 기반의 강제 hide. 사용자가 패널 체크박스로 끄면 store 의 isVisible 도 false 가 된다. */
+  modeVisible: boolean;
 }
 
 function buildColorBuffer(
@@ -74,7 +79,7 @@ function buildColorBuffer(
 function SensorPoints({
   sensorKey,
   fallbackColorHex,
-  visible,
+  modeVisible,
 }: SensorPointsProps) {
   const geometry = useMemo(() => new THREE.BufferGeometry(), []);
   const material = useMemo(
@@ -91,6 +96,7 @@ function SensorPoints({
   );
 
   const lastSeenFrame = useRef(-1);
+  const lastSeenTransform = useRef(-1);
   const pointsRef = useRef<THREE.Points>(null);
 
   useEffect(
@@ -103,7 +109,31 @@ function SensorPoints({
 
   useFrame(() => {
     const buffer = useSoslabStreamStore.getState().sensors.get(sensorKey);
-    if (!buffer || !buffer.parsed || !buffer.parsed.ok) return;
+    if (!buffer) return;
+    const points = pointsRef.current;
+
+    // 사용자 토글이 꺼져 있거나 mode 가 이 센서를 숨길 때는 mesh 자체를 hide.
+    const effectiveVisible = modeVisible && buffer.isVisible;
+    if (points) {
+      points.visible = effectiveVisible && Boolean(buffer.parsed?.ok);
+    }
+    if (!effectiveVisible) return;
+
+    // Transform 변경 시 mesh position/rotation 갱신.
+    if (lastSeenTransform.current !== buffer.transformRevision && points) {
+      lastSeenTransform.current = buffer.transformRevision;
+      const t = buffer.transform;
+      points.position.set(t.position.x, t.position.y, t.position.z);
+      points.rotation.set(
+        t.rotation.x * DEG_TO_RAD,
+        t.rotation.y * DEG_TO_RAD,
+        t.rotation.z * DEG_TO_RAD,
+      );
+      points.updateMatrix();
+      points.updateMatrixWorld(true);
+    }
+
+    if (!buffer.parsed || !buffer.parsed.ok) return;
     const frameId = buffer.frameCounter;
     if (frameId === lastSeenFrame.current) return;
     lastSeenFrame.current = frameId;
@@ -124,14 +154,18 @@ function SensorPoints({
     );
     geometry.computeBoundingSphere();
 
-    const points = pointsRef.current;
     if (points) {
-      points.visible = visible && count > 0;
+      points.visible = effectiveVisible && count > 0;
     }
   });
 
   return (
-    <points ref={pointsRef} geometry={geometry} material={material} visible={visible} />
+    <points
+      ref={pointsRef}
+      geometry={geometry}
+      material={material}
+      visible={modeVisible}
+    />
   );
 }
 
@@ -170,23 +204,29 @@ function SceneHelpers() {
   );
 }
 
-interface CameraAutoFitProps {
-  enabled: boolean;
+interface CameraControllerProps {
+  /** parent 가 호출하면 강제로 fit 을 다시 수행 (Refit 버튼 용도). */
+  refitToken: number;
 }
 
 /**
  * 첫 프레임에 한해 모든 visible 센서의 bounds 합집합으로 카메라를 fit.
  * OrbitControls 가 한 번이라도 조작되면 fit 을 멈춘다 (참조 viewer.js 와 동일).
+ * Refit 버튼이 누르면 userDirty 를 무시하고 한 번 더 fit.
  */
-function CameraAutoFit({ enabled }: CameraAutoFitProps) {
+function CameraController({ refitToken }: CameraControllerProps) {
   const { camera, controls } = useThree();
   const fittedRef = useRef(false);
   const userDirtyRef = useRef(false);
   const lastSeenFrameRef = useRef(-1);
+  const lastRefitTokenRef = useRef(refitToken);
 
   useEffect(() => {
     const c = controls as unknown as
-      | { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void }
+      | {
+          addEventListener?: (type: string, fn: () => void) => void;
+          removeEventListener?: (type: string, fn: () => void) => void;
+        }
       | null;
     if (!c?.addEventListener) return;
     const onStart = () => {
@@ -196,54 +236,93 @@ function CameraAutoFit({ enabled }: CameraAutoFitProps) {
     return () => c.removeEventListener?.('start', onStart);
   }, [controls]);
 
-  useFrame(() => {
-    if (!enabled) return;
-    if (fittedRef.current || userDirtyRef.current) return;
+  const tryFit = useCallback(
+    (force: boolean) => {
+      const sensors = useSoslabStreamStore.getState().sensors;
+      const box = new THREE.Box3();
+      let hasPoints = false;
+      const corner = new THREE.Vector3();
 
+      for (const buf of sensors.values()) {
+        if (!buf.isVisible) continue;
+        if (!buf.parsed || !buf.parsed.ok || !buf.parsed.bounds) continue;
+        // Transform 이 적용된 world bounds 를 사용.
+        const matrix = new THREE.Matrix4().compose(
+          new THREE.Vector3(
+            buf.transform.position.x,
+            buf.transform.position.y,
+            buf.transform.position.z,
+          ),
+          new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(
+              buf.transform.rotation.x * DEG_TO_RAD,
+              buf.transform.rotation.y * DEG_TO_RAD,
+              buf.transform.rotation.z * DEG_TO_RAD,
+            ),
+          ),
+          new THREE.Vector3(1, 1, 1),
+        );
+        const { min, max } = buf.parsed.bounds;
+        for (const x of [min[0], max[0]]) {
+          for (const y of [min[1], max[1]]) {
+            for (const z of [min[2], max[2]]) {
+              corner.set(x, y, z).applyMatrix4(matrix);
+              box.expandByPoint(corner);
+              hasPoints = true;
+            }
+          }
+        }
+      }
+      if (!hasPoints) return false;
+
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const dominant = Math.max(size.x, size.y, size.z, 1);
+      const offset = new THREE.Vector3(1, 1, 1)
+        .normalize()
+        .multiplyScalar(dominant * 1.6);
+
+      camera.position.copy(center.clone().add(offset));
+      if (camera instanceof THREE.PerspectiveCamera) {
+        camera.near = Math.max(0.1, dominant / 200);
+        camera.far = Math.max(CAMERA.far, dominant * 50);
+        camera.updateProjectionMatrix();
+      }
+      const ctrl = controls as unknown as
+        | { target?: THREE.Vector3; update?: () => void }
+        | null;
+      if (ctrl?.target) {
+        ctrl.target.copy(center);
+        ctrl.update?.();
+      } else {
+        camera.lookAt(center);
+      }
+      if (force) {
+        userDirtyRef.current = false;
+      }
+      return true;
+    },
+    [camera, controls],
+  );
+
+  // 외부 Refit 트리거.
+  useEffect(() => {
+    if (refitToken === lastRefitTokenRef.current) return;
+    lastRefitTokenRef.current = refitToken;
+    const ok = tryFit(true);
+    if (ok) fittedRef.current = true;
+  }, [refitToken, tryFit]);
+
+  // 첫 프레임 auto-fit.
+  useFrame(() => {
+    if (fittedRef.current || userDirtyRef.current) return;
     const counter = useSoslabStreamStore.getState().globalFrameCounter;
     if (counter === lastSeenFrameRef.current) return;
     lastSeenFrameRef.current = counter;
 
-    const sensors = useSoslabStreamStore.getState().sensors;
-    const box = new THREE.Box3();
-    let hasPoints = false;
-    const tmp = new THREE.Vector3();
-    for (const buf of sensors.values()) {
-      if (!buf.parsed || !buf.parsed.ok || !buf.parsed.bounds) continue;
-      const { min, max } = buf.parsed.bounds;
-      for (const x of [min[0], max[0]]) {
-        for (const y of [min[1], max[1]]) {
-          for (const z of [min[2], max[2]]) {
-            tmp.set(x, y, z);
-            box.expandByPoint(tmp);
-            hasPoints = true;
-          }
-        }
-      }
+    if (tryFit(false)) {
+      fittedRef.current = true;
     }
-    if (!hasPoints) return;
-
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const dominant = Math.max(size.x, size.y, size.z, 1);
-    const offset = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(dominant * 1.6);
-
-    camera.position.copy(center.clone().add(offset));
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.near = Math.max(0.1, dominant / 200);
-      camera.far = Math.max(CAMERA.far, dominant * 50);
-      camera.updateProjectionMatrix();
-    }
-    const ctrl = controls as unknown as
-      | { target?: THREE.Vector3; update?: () => void }
-      | null;
-    if (ctrl?.target) {
-      ctrl.target.copy(center);
-      ctrl.update?.();
-    } else {
-      camera.lookAt(center);
-    }
-    fittedRef.current = true;
   });
 
   return null;
@@ -265,15 +344,14 @@ const STATUS_COLOR: Record<SoslabConnectionStatus, string> = {
   closed: 'text-red-400/70',
 };
 
-interface HudProps {
+interface CompactHudProps {
   mode: SoslabSensorMode;
   status: SoslabConnectionStatus;
 }
 
-function Hud({ mode, status }: HudProps) {
+/** 단일/2번/썸네일 모드용 가벼운 HUD. 기존 디자인 유지. */
+function CompactHud({ mode, status }: CompactHudProps) {
   const [, setTick] = useState(0);
-  // 1초마다 점 카운트 갱신을 위해 가벼운 tick. (store 자체의 mutate 패턴 때문에
-  // React 리렌더가 자동으로 일어나지 않으므로 여기서 강제.)
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 500);
     return () => clearInterval(id);
@@ -327,6 +405,353 @@ function Hud({ mode, status }: HudProps) {
   );
 }
 
+function formatBigInt(value: bigint | null): string {
+  if (value === null) return 'n/a';
+  const abs = value < 0n ? -value : value;
+  const grouped = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return value < 0n ? `-${grouped}` : grouped;
+}
+
+function formatRelativeTime(timestampMs: number): string {
+  if (!timestampMs) return 'n/a';
+  const delta = Math.max(0, Date.now() - timestampMs);
+  if (delta < 1000) return 'just now';
+  if (delta < 60_000) return `${Math.floor(delta / 1000)}s ago`;
+  return `${Math.floor(delta / 60_000)}m ago`;
+}
+
+function formatTransformValue(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  return Object.is(value, -0) ? '0' : String(value);
+}
+
+interface FusionHudProps {
+  status: SoslabConnectionStatus;
+  onRefit: () => void;
+}
+
+const CONNECTION_PILL_CLASS: Record<SoslabConnectionStatus, string> = {
+  idle: 'border-white/20 text-white/50',
+  connecting: 'border-amber-400/40 text-amber-300',
+  connected: 'border-emerald-400/40 text-emerald-300',
+  error: 'border-rose-400/40 text-rose-300',
+  closed: 'border-rose-400/40 text-rose-300',
+};
+
+const TRANSFORM_AXES: ReadonlyArray<{
+  group: 'position' | 'rotation';
+  axis: 'x' | 'y' | 'z';
+  label: string;
+}> = [
+  { group: 'position', axis: 'x', label: 'Pos X' },
+  { group: 'position', axis: 'y', label: 'Pos Y' },
+  { group: 'position', axis: 'z', label: 'Pos Z' },
+  { group: 'rotation', axis: 'x', label: 'Rot X' },
+  { group: 'rotation', axis: 'y', label: 'Rot Y' },
+  { group: 'rotation', axis: 'z', label: 'Rot Z' },
+];
+
+/**
+ * Fusion 풀스크린 전용 HUD. monitoring_web/src/main.js 와 동등한 정보를
+ * 모두 제공한다 (Connection / Endpoint / Last Receive / Refit / 메트릭 그리드
+ * / 센서 카드(toggle/메타/Transform/Reset)).
+ */
+function FusionHud({ status, onRefit }: FusionHudProps) {
+  // store mutation 은 set 을 통과하지 않는 in-place 패턴이므로 React 가
+  // 자동 리렌더하지 않는다. 500ms tick 으로 강제 갱신.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  const bundle = useSoslabStreamStore.getState().bundle;
+  const lastError = useSoslabStreamStore((s) => s.lastError);
+  const sensors = useSoslabStreamStore.getState().sensors;
+  const frameCounter = useSoslabStreamStore((s) => s.globalFrameCounter);
+  const setSensorVisible = useSoslabStreamStore((s) => s.setSensorVisible);
+  const setSensorTransformAxis = useSoslabStreamStore(
+    (s) => s.setSensorTransformAxis,
+  );
+  const resetSensorTransform = useSoslabStreamStore(
+    (s) => s.resetSensorTransform,
+  );
+
+  // sensors Map 은 in-place mutate 되어 참조가 바뀌지 않는다. 새 센서가
+  // 추가되거나 visibility/transform 이 바뀌면 store 가 globalFrameCounter 를
+  // 올리므로 그것을 deps 에 포함해 entries 를 다시 평가한다.
+  const sensorEntries = useMemo(
+    () =>
+      Array.from(sensors.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    [sensors, frameCounter],
+  );
+
+  const now = Date.now();
+  const activeCount = sensorEntries.filter(
+    ([, s]) => now - s.lastUpdatedAtMs < STALE_SENSOR_MS,
+  ).length;
+
+  const metrics: Array<[string, string]> = [
+    ['Sequence', formatBigInt(bundle.lastSequence)],
+    [
+      'Drop Gap',
+      bundle.lastGap > 0n ? `${formatBigInt(bundle.lastGap)} dropped` : 'None',
+    ],
+    ['Processor', bundle.processorName],
+    ['Rendered Points', formatBigInt(BigInt(bundle.totalRenderedPoints))],
+    ['Bundle Window', bundle.windowSizeMs ? `${bundle.windowSizeMs} ms` : 'n/a'],
+    ['Decode Error', lastError || 'None'],
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 font-mono text-cyan-100">
+      {/* 우상단: 상태 strip + 메트릭 */}
+      <div className="absolute top-4 right-4 flex max-w-[68vw] flex-col items-end gap-3">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full border bg-slate-900/70 px-3 py-1.5 text-[10px] font-bold tracking-[0.18em] uppercase backdrop-blur ${CONNECTION_PILL_CLASS[status]}`}
+          >
+            {STATUS_LABEL[status]}
+          </span>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2 text-[10px] backdrop-blur">
+            <div className="tracking-[0.16em] text-white/40 uppercase">
+              Last Receive
+            </div>
+            <div className="mt-0.5 text-[12px] font-bold text-white/90">
+              {formatRelativeTime(bundle.lastBundleAtMs)}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onRefit}
+            className="cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold tracking-[0.18em] text-cyan-200 uppercase backdrop-blur transition hover:border-cyan-300 hover:bg-cyan-500/20"
+          >
+            Refit View
+          </button>
+        </div>
+
+        <div className="pointer-events-auto grid w-[min(40vw,520px)] grid-cols-3 gap-2">
+          {metrics.map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 backdrop-blur"
+            >
+              <div className="text-[9px] tracking-[0.14em] text-white/40 uppercase">
+                {label}
+              </div>
+              <div className="mt-0.5 truncate text-[11px] font-bold text-white/90">
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 좌측 센서 패널 */}
+      <aside
+        className={`pointer-events-auto absolute top-4 bottom-4 left-4 z-0 flex flex-col rounded-2xl border border-white/10 bg-slate-950/80 shadow-2xl transition-[width] ${
+          panelOpen ? 'w-[min(420px,calc(100vw-32px))]' : 'w-50'
+        }`}
+      >
+        <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+          <div>
+            <div className="text-[9px] tracking-[0.16em] text-white/40 uppercase">
+              Sensors
+            </div>
+            <div className="mt-0.5 text-[12px] font-bold text-white/90">
+              {activeCount} active
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPanelOpen((v) => !v)}
+            className="cursor-pointer rounded-full border border-white/15 bg-slate-900/70 px-2.5 py-1 text-[9px] font-bold tracking-[0.16em] text-white/70 uppercase transition hover:border-cyan-300 hover:text-cyan-200"
+          >
+            {panelOpen ? 'Collapse' : 'Expand'}
+          </button>
+        </header>
+
+        {panelOpen && (
+          <div className="flex-1 overflow-auto px-3 py-3">
+            {sensorEntries.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-4 py-6 text-center text-[11px] text-white/40">
+                No sensor frames received yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {sensorEntries.map(([key, sensor]) => {
+                  const isStale =
+                    sensor.lastUpdatedAtMs > 0 &&
+                    now - sensor.lastUpdatedAtMs >= STALE_SENSOR_MS;
+                  const parsed = sensor.parsed;
+                  const healthLabel = !parsed
+                    ? 'Waiting'
+                    : !parsed.ok
+                      ? 'Parse error'
+                      : isStale
+                        ? 'Stale'
+                        : 'Live';
+                  const healthClass = !parsed
+                    ? 'text-white/40'
+                    : !parsed.ok
+                      ? 'text-rose-300'
+                      : isStale
+                        ? 'text-amber-300'
+                        : 'text-emerald-300';
+                  const rendered =
+                    parsed && parsed.ok ? parsed.sampledPointCount : 0;
+                  const raw = parsed && parsed.ok ? parsed.pointCount : 0;
+                  const hasIntensity =
+                    parsed && parsed.ok ? parsed.hasIntensity : false;
+                  const skipped =
+                    parsed && parsed.ok ? parsed.skippedPointCount : 0;
+                  const errorMessage =
+                    parsed && !parsed.ok ? parsed.error : '';
+
+                  return (
+                    <article
+                      key={key}
+                      className={`rounded-xl border bg-slate-900/60 px-3 py-3 ${
+                        errorMessage
+                          ? 'border-rose-400/30'
+                          : 'border-white/10'
+                      }`}
+                    >
+                      <label className="flex cursor-pointer items-center gap-2 text-[12px] font-bold text-white/90">
+                        <input
+                          type="checkbox"
+                          checked={sensor.isVisible}
+                          onChange={(e) =>
+                            setSensorVisible(key, e.target.checked)
+                          }
+                          className="size-3.5 cursor-pointer accent-cyan-400"
+                        />
+                        <span
+                          aria-hidden
+                          className="size-2.5 rounded-full"
+                          style={{
+                            background: sensor.colorHex,
+                            boxShadow: `0 0 10px ${sensor.colorHex}`,
+                          }}
+                        />
+                        <span className="flex-1 truncate">
+                          {sensor.sensorName}
+                        </span>
+                      </label>
+
+                      <div
+                        className={`mt-2 inline-flex rounded-full bg-white/5 px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] uppercase ${healthClass}`}
+                      >
+                        {healthLabel}
+                      </div>
+
+                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
+                        <SensorMetaRow
+                          label="Rendered"
+                          value={rendered.toLocaleString()}
+                        />
+                        <SensorMetaRow
+                          label="Raw"
+                          value={raw.toLocaleString()}
+                        />
+                        <SensorMetaRow
+                          label="Intensity"
+                          value={hasIntensity ? 'Yes' : 'No'}
+                        />
+                        <SensorMetaRow
+                          label="Age"
+                          value={formatRelativeTime(sensor.lastUpdatedAtMs)}
+                        />
+                        <SensorMetaRow label="Frame" value={sensor.frameId} />
+                        <SensorMetaRow label="Vendor" value={sensor.vendor} />
+                      </dl>
+
+                      <section className="mt-3 border-t border-white/5 pt-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-[9px] tracking-[0.16em] text-white/40 uppercase">
+                            Transform
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => resetSensorTransform(key)}
+                            className="cursor-pointer rounded-full border border-white/15 bg-slate-900/70 px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] text-white/60 uppercase transition hover:border-cyan-300 hover:text-cyan-200"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {TRANSFORM_AXES.map(({ group, axis, label }) => (
+                            <label
+                              key={`${group}-${axis}`}
+                              className="flex flex-col gap-1"
+                            >
+                              <span className="text-[9px] tracking-[0.12em] text-white/40 uppercase">
+                                {label}
+                              </span>
+                              <input
+                                type="number"
+                                step={0.1}
+                                value={formatTransformValue(
+                                  sensor.transform[group][axis],
+                                )}
+                                onChange={(e) => {
+                                  const next = Number.parseFloat(
+                                    e.target.value,
+                                  );
+                                  if (!Number.isFinite(next)) return;
+                                  setSensorTransformAxis(
+                                    key,
+                                    group,
+                                    axis,
+                                    next,
+                                  );
+                                }}
+                                className="rounded-md border border-white/15 bg-slate-950/80 px-2 py-1 text-[11px] text-white/90 focus:border-cyan-400 focus:outline-none"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </section>
+
+                      <p className="mt-3 truncate text-[10px] text-white/50">
+                        {sensor.sourceTopic}
+                      </p>
+
+                      {errorMessage ? (
+                        <p className="mt-2 text-[10px] text-rose-300">
+                          {errorMessage}
+                        </p>
+                      ) : skipped > 0 ? (
+                        <p className="mt-2 text-[10px] text-white/40">
+                          {skipped.toLocaleString()} points skipped during
+                          sampling or validation.
+                        </p>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function SensorMetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[9px] tracking-[0.12em] text-white/40 uppercase">
+        {label}
+      </dt>
+      <dd className="mt-0.5 truncate font-bold text-white/85">{value}</dd>
+    </div>
+  );
+}
+
 export interface SoslabPointCloudProps {
   /** 어떤 센서를 보여줄지. fusion = 둘 다 visible 합성. */
   mode: SoslabSensorMode;
@@ -346,10 +771,18 @@ export function SoslabPointCloud({
   }, []);
 
   const status = useSoslabStreamStore((s) => s.status);
+  const [refitToken, setRefitToken] = useState(0);
+  const showFusionHud = !compact && mode === 'fusion';
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-zinc-950">
-      {!compact && <Hud mode={mode} status={status} />}
+      {!compact && !showFusionHud && <CompactHud mode={mode} status={status} />}
+      {showFusionHud && (
+        <FusionHud
+          status={status}
+          onRefit={() => setRefitToken((t) => t + 1)}
+        />
+      )}
       <Canvas
         gl={{ outputColorSpace: THREE.SRGBColorSpace, antialias: true }}
         dpr={[1, 2]}
@@ -373,14 +806,14 @@ export function SoslabPointCloud({
         <SensorPoints
           sensorKey="soslab1"
           fallbackColorHex={SENSOR_COLORS[0]}
-          visible={mode === 'soslab1' || mode === 'fusion'}
+          modeVisible={mode === 'soslab1' || mode === 'fusion'}
         />
         <SensorPoints
           sensorKey="soslab2"
           fallbackColorHex={SENSOR_COLORS[1]}
-          visible={mode === 'soslab2' || mode === 'fusion'}
+          modeVisible={mode === 'soslab2' || mode === 'fusion'}
         />
-        <CameraAutoFit enabled />
+        <CameraController refitToken={refitToken} />
       </Canvas>
     </div>
   );

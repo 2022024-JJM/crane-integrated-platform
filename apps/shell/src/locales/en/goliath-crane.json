@@ -122,7 +122,8 @@
     "sourceOption": {
       "all": "All",
       "camera": "Camera",
-      "lidar": "Lidar"
+      "lidar": "LiDAR",
+      "lidar-fusion": "LiDAR - Fusion"
     }
   }
 }

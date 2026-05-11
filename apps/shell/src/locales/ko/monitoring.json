@@ -64,7 +64,7 @@
     "hideLabels": "라벨 숨기기",
     "showLabels": "라벨 표시",
     "addText": "텍스트 추가",
-    "addLidarSensor": "LiDAR 추가",
+    "addLidarSensor": "라이다 추가",
     "addCameraSensor": "카메라 추가",
     "sensorTextTab": "센서 / 텍스트",
     "mapTab": "지도",

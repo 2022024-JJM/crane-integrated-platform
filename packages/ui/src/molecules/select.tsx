@@ -27,13 +27,31 @@ function SelectTrigger({ className, label, ...props }: SelectTriggerProps) {
   );
 }
 
-function SelectPopup({ className, ...props }: SelectPrimitive.Popup.Props) {
+type SelectPopupProps = SelectPrimitive.Popup.Props & {
+  align?: SelectPrimitive.Positioner.Props['align'];
+};
+
+function SelectPopup({
+  className,
+  align = 'start',
+  ...props
+}: SelectPopupProps) {
   return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner sideOffset={4} align="start">
+    <SelectPrimitive.Portal
+      container={
+        typeof document !== 'undefined' ? document.body : undefined
+      }
+    >
+      <SelectPrimitive.Positioner
+        sideOffset={4}
+        align={align}
+        collisionPadding={8}
+        alignItemWithTrigger={false}
+        className="z-9999"
+      >
         <SelectPrimitive.Popup
           className={cn(
-            'border-border bg-popover text-popover-foreground z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-md',
+            'border-border bg-popover text-popover-foreground min-w-32 overflow-hidden rounded-md border p-1 shadow-md',
             'origin-[var(--transform-origin)] transition-[transform,scale,opacity]',
             'data-[ending-style]:scale-95 data-[ending-style]:opacity-0',
             'data-[starting-style]:scale-95 data-[starting-style]:opacity-0',

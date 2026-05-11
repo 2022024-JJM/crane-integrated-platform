@@ -40,7 +40,7 @@ export function VisionGridControls({
           label={formatLabel(value)}
           aria-label={t('vision.layout')}
         />
-        <SelectPopup>
+        <SelectPopup align="end">
           {GRID_SIZES.map((size) => (
             <SelectItem
               key={size}
@@ -81,7 +81,7 @@ export function VisionSourceFilterControls({
           label={optionLabel(value)}
           aria-label={t('vision.source')}
         />
-        <SelectPopup>
+        <SelectPopup align="end">
           {VISION_SOURCE_FILTERS.map((filter) => (
             <SelectItem key={filter} value={filter}>
               {optionLabel(filter)}
@@ -92,3 +92,4 @@ export function VisionSourceFilterControls({
     </div>
   );
 }
+

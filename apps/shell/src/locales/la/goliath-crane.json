@@ -122,7 +122,8 @@
     "sourceOption": {
       "all": "Omnia",
       "camera": "Camera",
-      "lidar": "Lidar"
+      "lidar": "LiDAR",
+      "lidar-fusion": "LiDAR - Fusio"
     }
   }
 }

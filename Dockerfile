@@ -29,10 +29,18 @@ COPY apps/      ./apps/
 COPY packages/  ./packages/
 COPY tsconfig.json tsconfig.base.json turbo.json ./
 
-# 모든 백엔드/LiDAR IP·PORT 는 런타임 nginx envsubst 로 주입된다.
-# (api/ws/lidar 호출은 프론트에서 동일 origin 의 /api, /ws, /lidar 로 나가고
-#  nginx 가 .env 의 BACKEND_HOST/PORT, LIDAR_HOST/PORT 로 프록시한다.)
-# 따라서 이미지 빌드 시점에는 IP 관련 ARG 가 필요 없다.
+# 백엔드/LiDAR IP·PORT 는 런타임 nginx envsubst 로 주입된다 (BACKEND_HOST/PORT,
+# LIDAR_HOST/PORT 등 — docker-compose.yml 의 environment 참조).
+#
+# 반면 VITE_* 환경변수는 Vite 가 빌드 시점에 import.meta.env 로 번들에 인라인하므로
+# ARG 로 주입해야 한다. 운영 서버에서 .env 만 바꿔서는 반영되지 않는다.
+# Google Maps 키는 클라이언트 번들에 박혀 브라우저로 노출되므로
+# Google Cloud Console 에서 HTTP referrer 제한을 반드시 적용한다.
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ARG VITE_GOOGLE_MAPS_MAP_ID=""
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY \
+    VITE_GOOGLE_MAPS_MAP_ID=$VITE_GOOGLE_MAPS_MAP_ID
+
 RUN pnpm turbo run build --filter=@crane/shell...
 
 # ============================================================

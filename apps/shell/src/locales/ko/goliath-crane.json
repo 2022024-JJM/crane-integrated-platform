@@ -107,7 +107,7 @@
     "close": "닫기",
     "lidarTitle": "LiDAR POINT CLOUD",
     "lidarHardwareWaiting": "하드웨어 연결 대기중",
-    "lidarHint": "LiDAR 센서 연결 시 포인트 클라우드 표시",
+    "lidarHint": "라이다 센서 연결 시 포인트 클라우드 표시",
     "lidarScanRate": "스캔 속도",
     "lidarPointsPerFrame": "포인트/프레임",
     "lidarDetectRange": "감지 범위"
@@ -118,11 +118,12 @@
     "noImage": "NO IMAGE",
     "noSignal": "NO SIGNAL",
     "connectedCount": "연결 {{connected}} / {{total}}",
-    "source": "소스",
+    "source": "센서",
     "sourceOption": {
       "all": "전체",
       "camera": "카메라",
-      "lidar": "Lidar"
+      "lidar": "라이다",
+      "lidar-fusion": "라이다 - Fusion"
     }
   }
 }

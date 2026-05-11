@@ -8,7 +8,8 @@ interface LidarTileProps {
   sensor: LidarSensorKey;
   label: string;
   isActive: boolean;
-  onExpand: () => void;
+  onExpand?: () => void;
+  fullView?: boolean;
 }
 
 const BADGE_TEXT: Record<LidarSensorKey, string> = {
@@ -17,33 +18,45 @@ const BADGE_TEXT: Record<LidarSensorKey, string> = {
   fusion: 'FUSION',
 };
 
-export function LidarTile({ sensor, label, isActive, onExpand }: LidarTileProps) {
+export function LidarTile({
+  sensor,
+  label,
+  isActive,
+  onExpand,
+  fullView = false,
+}: LidarTileProps) {
+  const interactive = typeof onExpand === 'function';
   return (
     <div
       className={cn(
-        'group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border transition-all',
+        'group relative flex h-full w-full flex-col overflow-hidden rounded-lg border transition-all',
+        interactive && 'cursor-pointer',
         isActive
           ? 'border-cyan-500/60 ring-1 ring-cyan-500/30'
-          : 'border-border/40 hover:border-border/70',
+          : cn('border-border/40', interactive && 'hover:border-border/70'),
       )}
-      onClick={onExpand}
+      onClick={interactive ? onExpand : undefined}
     >
       <div className="relative flex-1 overflow-hidden bg-zinc-950">
-        <div className="pointer-events-none absolute inset-0">
-          <SoslabPointCloud mode={sensor} compact />
-        </div>
-        <div className="absolute inset-0" />
-        <button
-          type="button"
-          className="absolute top-1.5 right-1.5 z-10 hidden rounded p-1 text-white/60 group-hover:flex hover:bg-white/10 hover:text-white"
-          onClick={(e) => {
-            e.stopPropagation();
-            onExpand();
-          }}
-          aria-label="Expand LiDAR"
+        <div
+          className={cn('absolute inset-0', !fullView && 'pointer-events-none')}
         >
-          <Maximize2 className="size-3" />
-        </button>
+          <SoslabPointCloud mode={sensor} compact={!fullView} />
+        </div>
+        {interactive && <div className="absolute inset-0" />}
+        {interactive && (
+          <button
+            type="button"
+            className="absolute top-1.5 right-1.5 z-10 hidden rounded p-1 text-white/60 group-hover:flex hover:bg-white/10 hover:text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpand?.();
+            }}
+            aria-label="Expand LiDAR"
+          >
+            <Maximize2 className="size-3" />
+          </button>
+        )}
       </div>
       <div className="bg-background/90 flex items-center justify-between px-2 py-1">
         <span
