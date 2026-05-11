@@ -15,6 +15,7 @@ import {
 } from '@crane/domain/region';
 import { RegionMarker } from './region-marker';
 import { RegionInfoCard } from './region-info-card';
+import { RegionMarkerHoverCard } from './region-marker-hover-card';
 
 type RegionWithCenter = Region & { center: LatLng };
 
@@ -74,6 +75,15 @@ export function LiveRegionMarker({
         selected={selected}
         onClose={onClose}
         onNavigate={onNavigate}
+      />
+      <RegionMarkerHoverCard
+        visible={hovered && !selected}
+        statusLevel={statusLevel}
+        label={label}
+        subtitle={subtitle}
+        statusLabel={statusLabel}
+        craneCount={totalCranes}
+        craneCountLabel={t('monitoring-overview:map.marker.craneCount')}
       />
       <RegionMarker
         active={active}
