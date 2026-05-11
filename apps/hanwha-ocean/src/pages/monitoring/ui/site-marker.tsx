@@ -110,15 +110,18 @@ export function SiteMarker({
       />
 
       {/* 라벨 캡슐: 박스 아래 absolute로 띄워 컨테이너 박스 크기가 핀(38x52)로 고정되도록.
-          AdvancedMarker의 anchor 계산이 박스 크기에만 의존하므로 라벨 길이와 무관해진다. */}
+          AdvancedMarker의 anchor 계산이 박스 크기에만 의존하므로 라벨 길이와 무관해진다.
+          hover/focus/active 시에만 노출하여 world 레벨 노이즈 최소화. */}
       <span
         className={cn(
-          'pointer-events-none absolute left-1/2 top-full -translate-x-1/2 mt-1',
-          'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full',
-          'border border-border bg-popover px-2.5 py-1 text-[11px] font-semibold text-popover-foreground',
-          'shadow-md transition-colors duration-200',
-          'tracking-wide',
-          active && 'bg-accent text-accent-foreground',
+          'pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2',
+          'inline-flex items-center gap-1.5 rounded-full whitespace-nowrap',
+          'border-border bg-popover text-popover-foreground border px-2.5 py-1 text-[11px] font-semibold',
+          'tracking-wide shadow-md transition-all duration-200',
+          'translate-y-1 opacity-0',
+          'group-hover/site-marker:translate-y-0 group-hover/site-marker:opacity-100',
+          'group-focus-visible/site-marker:translate-y-0 group-focus-visible/site-marker:opacity-100',
+          active && 'bg-accent text-accent-foreground translate-y-0 opacity-100',
         )}
       >
         <span

@@ -50,15 +50,15 @@ export function RegionMarkerHoverCard({
 
       {/* gradient border wrapper */}
       <div
-        className="relative rounded-2xl p-px shadow-2xl shadow-black/60"
+        className="relative rounded-2xl p-px shadow-2xl"
         style={{
-          backgroundImage: `linear-gradient(180deg, ${palette.fillColor}66 0%, rgb(255 255 255 / 0.08) 35%, rgb(255 255 255 / 0.04) 100%)`,
+          backgroundImage: `linear-gradient(180deg, ${palette.fillColor}66 0%, var(--border) 35%, var(--border) 100%)`,
         }}
       >
         <div
           className={cn(
             'relative overflow-hidden rounded-[15px]',
-            'bg-zinc-950/85 backdrop-blur-xl',
+            'bg-popover/90 text-popover-foreground backdrop-blur-xl',
           )}
         >
           {/* 상단 status 컬러 stripe */}
@@ -73,11 +73,11 @@ export function RegionMarkerHoverCard({
           {/* 안쪽 hairline highlight */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-3 top-px h-px bg-white/15"
+            className="pointer-events-none absolute inset-x-3 top-px h-px bg-foreground/10"
           />
 
           <div className="px-4 pt-3.5 pb-3">
-            {/* Header: 펄스 dot + 라벨/서브타이틀 */}
+            {/* Header: glow dot + 라벨/서브타이틀 */}
             <div className="flex items-start gap-2.5">
               <span
                 aria-hidden
@@ -90,21 +90,14 @@ export function RegionMarkerHoverCard({
                     boxShadow: `0 0 8px 2px ${palette.fillColor}aa`,
                   }}
                 />
-                <span
-                  className="absolute inset-0 rounded-full opacity-60"
-                  style={{
-                    backgroundColor: palette.fillColor,
-                    animation: 'region-map-ripple 1.8s ease-out infinite',
-                  }}
-                />
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold tracking-tight text-white">
+                <p className="text-popover-foreground truncate text-[13px] font-semibold tracking-tight">
                   {label}
                 </p>
                 {subtitle ? (
-                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug font-medium text-zinc-400">
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] leading-snug font-medium">
                     {subtitle}
                   </p>
                 ) : null}
@@ -112,12 +105,12 @@ export function RegionMarkerHoverCard({
             </div>
 
             {/* Metrics row: crane count + status chip */}
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/6 pt-2.5">
+            <div className="border-border/60 mt-3 flex items-center justify-between gap-3 border-t pt-2.5">
               <div className="min-w-0">
-                <div className="text-[15px] leading-none font-bold tabular-nums text-white">
+                <div className="text-popover-foreground text-[15px] leading-none font-bold tabular-nums">
                   {craneCount}
                 </div>
-                <div className="mt-1 text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
+                <div className="text-muted-foreground mt-1 text-[10px] font-semibold tracking-[0.14em] uppercase">
                   {craneCountLabel}
                 </div>
               </div>
@@ -148,7 +141,7 @@ export function RegionMarkerHoverCard({
       {/* 꼬리 */}
       <span
         aria-hidden
-        className="absolute left-1/2 bottom-0 size-2.5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b border-white/10 bg-zinc-950/85"
+        className="border-border bg-popover/90 absolute bottom-0 left-1/2 size-2.5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b"
         style={{
           boxShadow: `0 6px 12px -4px ${palette.fillColor}33`,
         }}

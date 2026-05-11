@@ -47,15 +47,15 @@ export function SiteMarkerHoverCard({
 
       {/* 메인 카드: gradient border 트릭 = 외곽 gradient + 안쪽 패딩 박스 */}
       <div
-        className="relative rounded-2xl p-px shadow-2xl shadow-black/60"
+        className="relative rounded-2xl p-px shadow-2xl"
         style={{
-          backgroundImage: `linear-gradient(180deg, ${palette.fillColor}66 0%, rgb(255 255 255 / 0.08) 35%, rgb(255 255 255 / 0.04) 100%)`,
+          backgroundImage: `linear-gradient(180deg, ${palette.fillColor}66 0%, var(--border) 35%, var(--border) 100%)`,
         }}
       >
         <div
           className={cn(
             'relative overflow-hidden rounded-[15px]',
-            'bg-zinc-950/85 backdrop-blur-xl',
+            'bg-popover/90 text-popover-foreground backdrop-blur-xl',
           )}
         >
           {/* 상단 status 컬러 stripe */}
@@ -70,11 +70,11 @@ export function SiteMarkerHoverCard({
           {/* 안쪽 hairline highlight */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-3 top-px h-px bg-white/15"
+            className="pointer-events-none absolute inset-x-3 top-px h-px bg-foreground/10"
           />
 
           <div className="px-4 pt-3.5 pb-3">
-            {/* Header: 사이트명 + 펄스 dot */}
+            {/* Header: 사이트명 + glow dot */}
             <div className="flex items-start gap-2.5">
               <span
                 aria-hidden
@@ -87,21 +87,14 @@ export function SiteMarkerHoverCard({
                     boxShadow: `0 0 8px 2px ${palette.fillColor}aa`,
                   }}
                 />
-                <span
-                  className="absolute inset-0 rounded-full opacity-60"
-                  style={{
-                    backgroundColor: palette.fillColor,
-                    animation: 'region-map-ripple 1.8s ease-out infinite',
-                  }}
-                />
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold tracking-tight text-white">
+                <p className="text-popover-foreground truncate text-[13px] font-semibold tracking-tight">
                   {displayName}
                 </p>
                 {country ? (
-                  <p className="mt-0.5 truncate text-[11px] font-medium text-zinc-400">
+                  <p className="text-muted-foreground mt-0.5 truncate text-[11px] font-medium">
                     {country}
                   </p>
                 ) : null}
@@ -109,8 +102,8 @@ export function SiteMarkerHoverCard({
             </div>
 
             {/* Status row: uppercase label + glow chip */}
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/6 pt-2.5">
-              <span className="text-[10px] font-semibold tracking-[0.14em] text-zinc-500 uppercase">
+            <div className="border-border/60 mt-3 flex items-center justify-between gap-2 border-t pt-2.5">
+              <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
                 Status
               </span>
               <span
@@ -139,7 +132,7 @@ export function SiteMarkerHoverCard({
       {/* 꼬리 — 카드 톤과 일치하는 다이아몬드 + status 컬러 살짝 */}
       <span
         aria-hidden
-        className="absolute left-1/2 bottom-0 size-2.5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b border-white/10 bg-zinc-950/85"
+        className="border-border bg-popover/90 absolute bottom-0 left-1/2 size-2.5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b"
         style={{
           boxShadow: `0 6px 12px -4px ${palette.fillColor}33`,
         }}

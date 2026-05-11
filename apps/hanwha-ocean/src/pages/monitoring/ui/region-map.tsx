@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
-import { Globe2 } from 'lucide-react';
+import { Globe2, Map as MapIcon, Satellite } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
@@ -22,6 +22,8 @@ import {
 } from '../model/region-map-constants';
 import { findNearestSite } from '../model/find-nearest-site';
 import { useRegionMapCamera } from '../model/use-region-map-camera';
+import { useSiteRealtimeStatus } from '../model/use-site-realtime-status';
+import { getStatusPalette } from '../model/region-map-types';
 import { LiveSiteMarker } from './site-marker-live';
 import { LiveRegionMarker } from './region-marker-live';
 
@@ -30,21 +32,44 @@ const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
 type RegionWithCenter = Region & { center: LatLng };
 type MapLevel = 'world' | 'site';
+type MapView = 'roadmap' | 'hybrid';
 
 export function RegionMap() {
   const { t } = useTranslation();
 
   if (!apiKey) {
     return (
-      <section className="relative flex flex-1 items-center justify-center rounded-2xl border border-dashed p-8 text-center">
-        <div className="max-w-md space-y-2">
+      <section
+        className={cn(
+          'border-border bg-muted/30 relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl border p-8 text-center',
+        )}
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--foreground) 6%, transparent), transparent 55%), radial-gradient(circle at 80% 80%, color-mix(in oklab, var(--foreground) 6%, transparent), transparent 55%)',
+        }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              'linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            maskImage:
+              'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+          }}
+        />
+        <div className="relative max-w-md space-y-3">
+          <div className="bg-background/80 border-border text-muted-foreground mx-auto flex size-14 items-center justify-center rounded-2xl border shadow-sm backdrop-blur-sm">
+            <Globe2 className="size-7" />
+          </div>
           <p className="text-foreground text-base font-semibold">
             {t('monitoring-overview:map.missingApiKey.title')}
           </p>
           <p className="text-muted-foreground text-sm">
             {t('monitoring-overview:map.missingApiKey.description')}
           </p>
-          <code className="text-muted-foreground bg-muted/60 mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="text-muted-foreground bg-muted/60 border-border mt-2 inline-block rounded-md border px-2 py-1 text-xs">
             VITE_GOOGLE_MAPS_API_KEY
           </code>
         </div>
@@ -78,6 +103,7 @@ function RegionMapInner() {
   const [activeSiteId, setActiveSiteId] = useState<SiteType | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<MapView>('roadmap');
 
   // 사용자의 휠/제스처 줌인이 임계값을 넘으면 가장 가까운 site로 자동 진입.
   // 반대로 줌아웃이 EXIT 임계값을 내려가면 자동으로 world로 복귀(하이스테리시스).
@@ -147,6 +173,9 @@ function RegionMapInner() {
   );
 
   const isWorldLevel = level === 'world';
+  const activeSite = !isWorldLevel && activeSiteId
+    ? sites.find((s) => s.id === activeSiteId)
+    : null;
 
   return (
     <Map
@@ -156,7 +185,15 @@ function RegionMapInner() {
       minZoom={1}
       maxZoom={18}
       gestureHandling="greedy"
-      disableDefaultUI={false}
+      mapTypeId={mapView}
+      disableDefaultUI={true}
+      zoomControl={true}
+      mapTypeControl={false}
+      streetViewControl={false}
+      fullscreenControl={false}
+      rotateControl={false}
+      scaleControl={false}
+      clickableIcons={false}
       colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
       restriction={{
         latLngBounds: {
@@ -206,22 +243,33 @@ function RegionMapInner() {
             ))
         : null}
 
-      {/* Return to world view */}
-      <div
-        className={cn(
-          'pointer-events-none absolute top-4 right-4 z-40',
-          'transition-opacity duration-300',
-          isWorldLevel ? 'opacity-0' : 'opacity-100',
-        )}
-      >
+      {/* Top-left floating control: map view toggle */}
+      <div className="pointer-events-none absolute top-4 left-4 z-40 flex items-center gap-2">
+        <MapViewToggle value={mapView} onChange={setMapView} />
+      </div>
+
+      {/* Top-right floating controls: site chip + world view button */}
+      <div className="pointer-events-none absolute top-4 right-4 z-40 flex items-center gap-2">
+        <div
+          className={cn(
+            'flex items-center gap-2 transition-opacity duration-300',
+            isWorldLevel ? 'opacity-0' : 'opacity-100',
+          )}
+        >
+          {activeSite ? <ActiveSiteChip site={activeSite} /> : null}
+        </div>
+
         <button
           type="button"
           onClick={handleReturnToWorld}
           className={cn(
-            'pointer-events-auto inline-flex items-center gap-2 rounded-full',
-            'border border-white/10 bg-zinc-950/80 px-3.5 py-2 text-xs font-semibold tracking-wide text-white',
-            'shadow-lg shadow-black/40 backdrop-blur-md',
-            'transition-colors hover:bg-zinc-900/90',
+            'inline-flex items-center gap-2 rounded-full',
+            'border-border bg-background/85 text-foreground border px-3.5 py-2 text-xs font-semibold tracking-wide',
+            'shadow-lg backdrop-blur-md',
+            'hover:bg-accent transition-all duration-300',
+            isWorldLevel
+              ? 'pointer-events-none opacity-0'
+              : 'pointer-events-auto opacity-100',
           )}
         >
           <Globe2 className="size-4" />
@@ -231,6 +279,112 @@ function RegionMapInner() {
         </button>
       </div>
     </Map>
+  );
+}
+
+function MapViewToggle({
+  value,
+  onChange,
+}: {
+  value: MapView;
+  onChange: (next: MapView) => void;
+}) {
+  const { t } = useTranslation();
+  const mapLabel = t('monitoring-overview:map.view.map', {
+    defaultValue: 'Map',
+  });
+  const satelliteLabel = t('monitoring-overview:map.view.satellite', {
+    defaultValue: 'Satellite',
+  });
+
+  return (
+    <div
+      role="group"
+      aria-label={t('monitoring-overview:map.view.toggleAriaLabel', {
+        defaultValue: 'Map view',
+      })}
+      className={cn(
+        'pointer-events-auto inline-flex items-center gap-0.5 rounded-full',
+        'border-border bg-background/85 border p-0.5 shadow-lg backdrop-blur-md',
+      )}
+    >
+      <ToggleButton
+        active={value === 'roadmap'}
+        onClick={() => onChange('roadmap')}
+        ariaLabel={mapLabel}
+      >
+        <MapIcon className="size-3.5" />
+        <span>{mapLabel}</span>
+      </ToggleButton>
+      <ToggleButton
+        active={value === 'hybrid'}
+        onClick={() => onChange('hybrid')}
+        ariaLabel={satelliteLabel}
+      >
+        <Satellite className="size-3.5" />
+        <span>{satelliteLabel}</span>
+      </ToggleButton>
+    </div>
+  );
+}
+
+function ToggleButton({
+  active,
+  onClick,
+  ariaLabel,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  ariaLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={cn(
+        'inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide transition-colors',
+        active
+          ? 'bg-accent text-accent-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ActiveSiteChip({ site }: { site: Site }) {
+  const { t } = useTranslation();
+  const status = useSiteRealtimeStatus(site);
+  const palette = getStatusPalette(status);
+  const displayName = t(site.displayNameKey);
+  const country = t(site.countryKey, { defaultValue: '' });
+
+  return (
+    <div
+      className={cn(
+        'pointer-events-auto inline-flex items-center gap-2 rounded-full',
+        'border-border bg-popover/90 text-popover-foreground border px-3 py-1.5 text-xs font-semibold tracking-wide',
+        'shadow-lg backdrop-blur-md',
+      )}
+    >
+      <span
+        aria-hidden
+        className="size-2 shrink-0 rounded-full"
+        style={{
+          backgroundColor: palette.fillColor,
+          boxShadow: `0 0 6px ${palette.fillColor}aa`,
+        }}
+      />
+      <span className="truncate">{displayName}</span>
+      {country ? (
+        <span className="text-muted-foreground font-normal">· {country}</span>
+      ) : null}
+    </div>
   );
 }
 

@@ -22,6 +22,16 @@
     "site": {
       "enter": "Sedem ingredi",
       "regionCount": "{{count}} regiones"
+    },
+    "view": {
+      "map": "Tabula",
+      "satellite": "Satelles",
+      "toggleAriaLabel": "Conspectus tabulae"
+    },
+    "kpi": {
+      "sites": "Sedes",
+      "warning": "Monitum",
+      "critical": "Criticus"
     }
   },
   "cmms": {

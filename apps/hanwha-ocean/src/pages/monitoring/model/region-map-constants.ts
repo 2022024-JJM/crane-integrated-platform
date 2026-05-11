@@ -1,7 +1,7 @@
 import type { LatLng } from '@crane/domain/region';
 
-// 세계지도 전체 뷰. 경도는 살짝 동쪽으로 잡아 한국까지 자연스럽게 들어오게.
-export const WORLD_VIEW_CENTER: LatLng = { lat: 15, lng: 40 };
+// 세계지도 전체 뷰. 일반적인 세계지도 관습대로 본초자오선(lng 0) 중심.
+export const WORLD_VIEW_CENTER: LatLng = { lat: 15, lng: 0 };
 export const WORLD_VIEW_ZOOM = 2;
 
 // Site 마커 클릭 시 도달할 줌. 기본 region이 잘 보이는 14대 권장.

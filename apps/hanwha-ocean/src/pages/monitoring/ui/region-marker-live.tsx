@@ -60,8 +60,8 @@ export function LiveRegionMarker({
       title={label}
       zIndex={selected ? 30 : active ? 22 : 21}
       clickable
-      // 칩의 시각 중심이 region 좌표가 되도록.
-      anchorPoint={AdvancedMarkerAnchorPoint.CENTER}
+      // 핀 꼬리 끝이 region 좌표에 닿도록.
+      anchorPoint={AdvancedMarkerAnchorPoint.BOTTOM}
       onClick={onSelect}
       onMouseEnter={() => onHoverChange(region.id)}
       onMouseLeave={() => onHoverChange(null)}
@@ -87,6 +87,7 @@ export function LiveRegionMarker({
       />
       <RegionMarker
         active={active}
+        selected={selected}
         label={label}
         shortCode={getRegionShortCode(region.id)}
         statusLevel={statusLevel}

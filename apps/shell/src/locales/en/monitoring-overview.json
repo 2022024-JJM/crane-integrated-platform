@@ -22,6 +22,16 @@
     "site": {
       "enter": "Enter site",
       "regionCount": "{{count}} regions"
+    },
+    "view": {
+      "map": "Map",
+      "satellite": "Satellite",
+      "toggleAriaLabel": "Map view"
+    },
+    "kpi": {
+      "sites": "Sites",
+      "warning": "Warning",
+      "critical": "Critical"
     }
   },
   "cmms": {

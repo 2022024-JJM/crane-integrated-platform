@@ -22,6 +22,16 @@
     "site": {
       "enter": "사이트 진입",
       "regionCount": "지역 {{count}}곳"
+    },
+    "view": {
+      "map": "지도",
+      "satellite": "위성",
+      "toggleAriaLabel": "지도 보기"
+    },
+    "kpi": {
+      "sites": "사이트",
+      "warning": "경고",
+      "critical": "이상"
     }
   },
   "cmms": {

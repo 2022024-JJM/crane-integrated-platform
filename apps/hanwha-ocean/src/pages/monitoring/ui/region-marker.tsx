@@ -1,18 +1,24 @@
+import { useId } from 'react';
 import type { StatusLevel } from '@crane/core/types/status';
 import { cn } from '@crane/core/lib/utils';
-import { StatusDot } from '@crane/ui';
 import { getStatusPalette } from '../model/region-map-types';
 
 interface RegionMarkerProps {
   active: boolean;
+  selected: boolean;
   label: string;
   shortCode: string;
   statusLevel: StatusLevel;
   onActivate: () => void;
 }
 
+// SiteMarker와 동일한 핀 viewBox: 38x52. 꼬리 끝 = (19, 51).
+const PIN_WIDTH = 38;
+const PIN_HEIGHT = 52;
+
 export function RegionMarker({
   active,
+  selected,
   label,
   shortCode,
   statusLevel,
@@ -20,6 +26,10 @@ export function RegionMarker({
 }: RegionMarkerProps) {
   const palette = getStatusPalette(statusLevel);
   const isCritical = statusLevel === 'critical';
+
+  const uid = useId().replace(/:/g, '');
+  const gradientId = `region-pin-grad-${uid}`;
+  const shadowId = `region-pin-shadow-${uid}`;
 
   return (
     <div
@@ -33,62 +43,99 @@ export function RegionMarker({
         }
       }}
       className={cn(
-        'group/region-marker relative flex cursor-pointer flex-col items-center outline-none',
+        'group/region-marker relative cursor-pointer outline-none',
         'transition-transform duration-200 ease-out',
         active && 'scale-110',
       )}
+      style={{
+        width: PIN_WIDTH,
+        height: PIN_HEIGHT,
+      }}
     >
-      <div className="relative">
-        {/* critical 상태에만 옅은 ripple 1개 */}
-        {isCritical ? (
-          <span
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-xl"
-            style={{
-              backgroundColor: palette.rippleColor,
-              animation: 'region-map-ripple 1.6s ease-out infinite',
-            }}
-          />
-        ) : null}
-
-        {/* 본체 칩 */}
-        <div
-          className={cn(
-            'flex size-9 items-center justify-center rounded-xl border-2 border-card',
-            'shadow-md transition-shadow duration-200',
-            'group-hover/region-marker:shadow-lg',
-            'group-focus-visible/region-marker:ring-2 group-focus-visible/region-marker:ring-ring',
-          )}
+      {/* critical일 때만 핀 헤드 주변에 옅은 ripple */}
+      {isCritical ? (
+        <span
+          aria-hidden
+          className="absolute top-[18px] left-1/2 size-10 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
-            backgroundImage: `linear-gradient(135deg, ${palette.fillColor}, ${palette.fillColorTo})`,
+            backgroundColor: palette.rippleColor,
+            animation: 'region-map-ripple 1.8s ease-out infinite',
           }}
-        >
-          <span className="text-[11px] font-bold tracking-tight text-white drop-shadow-sm">
-            {shortCode}
-          </span>
-        </div>
-
-        {/* 상태 도트: 우상단 */}
-        <StatusDot
-          status={statusLevel}
-          className="absolute -right-1 -top-1 size-2.5 ring-2 ring-card"
         />
-      </div>
+      ) : null}
 
-      {/* 풀 라벨 캡슐: 호버/포커스 시 노출 */}
-      <span
+      {/* selected 시 status 컬러 ring (핀 헤드 바깥) */}
+      {selected ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-[19px] left-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            boxShadow: `0 0 0 2px ${palette.fillColor}, 0 0 12px 2px ${palette.fillColor}66`,
+          }}
+        />
+      ) : null}
+
+      <svg
+        viewBox={`0 0 ${PIN_WIDTH} ${PIN_HEIGHT}`}
+        width={PIN_WIDTH}
+        height={PIN_HEIGHT}
         className={cn(
-          'pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2',
-          'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full',
-          'border border-border bg-popover px-2 py-0.5 text-[10px] font-semibold text-popover-foreground',
-          'shadow-md',
-          'opacity-0 translate-y-1 transition-all duration-200',
-          'group-hover/region-marker:opacity-100 group-hover/region-marker:translate-y-0',
-          'group-focus-visible/region-marker:opacity-100 group-focus-visible/region-marker:translate-y-0',
-          active && 'opacity-100 translate-y-0',
+          'relative drop-shadow-lg transition-[filter] duration-200',
+          'group-focus-visible/region-marker:filter-[drop-shadow(0_0_6px_var(--ring))]',
         )}
       >
-        {label}
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={palette.fillColor} />
+            <stop offset="100%" stopColor={palette.fillColorTo} />
+          </linearGradient>
+          <filter id={shadowId} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow
+              dx="0"
+              dy="2"
+              stdDeviation="2"
+              floodColor="rgb(0 0 0)"
+              floodOpacity="0.45"
+            />
+          </filter>
+        </defs>
+        <path
+          d="M19 1 C28.94 1 37 9.06 37 19 C37 28 30 36 19 51 C8 36 1 28 1 19 C1 9.06 9.06 1 19 1 Z"
+          fill={`url(#${gradientId})`}
+          stroke="var(--card)"
+          strokeWidth="2"
+          filter={`url(#${shadowId})`}
+        />
+      </svg>
+
+      {/* shortCode: 헤드 중심(19, 19) */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute top-[19px] left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px] font-bold tracking-tight text-white drop-shadow-sm"
+      >
+        {shortCode}
+      </span>
+
+      {/* 풀 라벨 캡슐: 핀 박스 아래 absolute */}
+      <span
+        className={cn(
+          'pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2',
+          'inline-flex items-center gap-1.5 rounded-full whitespace-nowrap',
+          'border-border bg-popover text-popover-foreground border px-2.5 py-1 text-[11px] font-semibold',
+          'tracking-wide shadow-md transition-all duration-200',
+          'translate-y-1 opacity-0',
+          'group-hover/region-marker:translate-y-0 group-hover/region-marker:opacity-100',
+          'group-focus-visible/region-marker:translate-y-0 group-focus-visible/region-marker:opacity-100',
+          active && 'translate-y-0 opacity-100',
+          selected && 'bg-accent text-accent-foreground',
+        )}
+      >
+        <span
+          aria-hidden
+          className="size-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: palette.fillColor }}
+        />
+        <span>{label}</span>
       </span>
     </div>
   );
