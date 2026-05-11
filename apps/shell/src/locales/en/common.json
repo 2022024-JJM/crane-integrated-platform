@@ -30,7 +30,16 @@
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Ocean",
-    "goliath-crane": "Goliath Crane"
+    "goliath-crane": "Goliath Crane",
+    "philly-shipyard": "Philly Shipyard"
+  },
+  "sites": {
+    "hanwha-ocean": {
+      "country": "Republic of Korea"
+    },
+    "philly-shipyard": {
+      "country": "United States"
+    }
   },
   "toast": {
     "languageChanged": "Language changed to {{language}}.",

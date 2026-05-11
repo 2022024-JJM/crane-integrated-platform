@@ -15,6 +15,13 @@
       "craneCount": "Grues",
       "openDetails": "Singula regionis aperire",
       "close": "Singula regionis claudere"
+    },
+    "world": {
+      "returnToWorld": "Conspectus mundi"
+    },
+    "site": {
+      "enter": "Sedem ingredi",
+      "regionCount": "{{count}} regiones"
     }
   },
   "cmms": {

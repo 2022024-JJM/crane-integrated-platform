@@ -39,6 +39,8 @@ export const regions: Region[] = [
     status: 'warning',
     statusSummary: { normal: 3, warning: 1, critical: 0 },
     navigateTo: '/outdoor-work/philly-dock-2',
+    // TODO(philly-center): 운영 좌표 확정 후 교체. 임시값: Aker Philadelphia Shipyard 인근.
+    center: { lat: 39.8895, lng: -75.1827 },
   },
 ];
 

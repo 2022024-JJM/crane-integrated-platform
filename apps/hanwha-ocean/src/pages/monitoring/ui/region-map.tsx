@@ -1,28 +1,35 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AdvancedMarker, APIProvider, Map } from '@vis.gl/react-google-maps';
-import { Anchor, ChevronRight, ChevronUp, X } from 'lucide-react';
+import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
+import { Globe2 } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import { useTheme } from '@crane/core/lib/theme-context';
 import {
-  getRegionSubtitleKey,
-  getRegionTitleKey,
-  regions,
+  getSites,
   type LatLng,
   type Region,
+  type Site,
 } from '@crane/domain/region';
+import type { SiteType } from '@crane/core/lib/site-type-context';
 import {
-  getStatusPalette,
-  MAP_DEFAULT_CENTER,
-  MAP_DEFAULT_ZOOM,
-} from '../model/region-map-types';
+  SITE_ENTER_ZOOM,
+  SITE_EXIT_ZOOM,
+  SITE_PROXIMITY_KM,
+  WORLD_VIEW_CENTER,
+  WORLD_VIEW_ZOOM,
+} from '../model/region-map-constants';
+import { findNearestSite } from '../model/find-nearest-site';
+import { useRegionMapCamera } from '../model/use-region-map-camera';
+import { LiveSiteMarker } from './site-marker-live';
+import { LiveRegionMarker } from './region-marker-live';
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
-type RegionMarkerData = Region & { center: LatLng };
+type RegionWithCenter = Region & { center: LatLng };
+type MapLevel = 'world' | 'site';
 
 export function RegionMap() {
   const { t } = useTranslation();
@@ -58,260 +65,175 @@ function RegionMapInner() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const navigate = useProgressNavigate();
-  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
+  const camera = useRegionMapCamera();
+  const map = useMap();
+
+  const sites = useMemo(() => getSites(), []);
+  const regionsWithCenter = useMemo<RegionWithCenter[]>(
+    () => sites.flatMap((site) => site.regions.filter(hasRegionCenter)),
+    [sites],
+  );
+
+  const [level, setLevel] = useState<MapLevel>('world');
+  const [activeSiteId, setActiveSiteId] = useState<SiteType | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
 
-  const regionsWithCenter = useMemo(() => regions.filter(hasRegionCenter), []);
+  // 사용자의 휠/제스처 줌인이 임계값을 넘으면 가장 가까운 site로 자동 진입.
+  // 반대로 줌아웃이 EXIT 임계값을 내려가면 자동으로 world로 복귀(하이스테리시스).
+  // idle 이벤트는 사용자 조작이 끝났을 때만 발생해 깜빡거림을 막는다.
+  useEffect(() => {
+    if (!map) return;
 
-  const handleNavigate = useCallback(
-    (region: RegionMarkerData) => {
+    const handler = () => {
+      const zoom = map.getZoom();
+      const center = map.getCenter();
+      if (zoom === undefined || !center) return;
+
+      if (level === 'world' && zoom >= SITE_ENTER_ZOOM) {
+        const currentCenter: LatLng = { lat: center.lat(), lng: center.lng() };
+        const nearest = findNearestSite(
+          currentCenter,
+          sites,
+          SITE_PROXIMITY_KM,
+        );
+        if (nearest) {
+          setLevel('site');
+          setActiveSiteId(nearest.id);
+          setSelectedRegionId(null);
+          // 사용자가 직접 줌인한 위치를 존중하기 위해 카메라는 건드리지 않는다.
+        }
+      } else if (level === 'site' && zoom <= SITE_EXIT_ZOOM) {
+        setLevel('world');
+        setActiveSiteId(null);
+        setSelectedRegionId(null);
+      }
+    };
+
+    const listener = map.addListener('idle', handler);
+    return () => listener.remove();
+  }, [map, level, sites]);
+
+  const handleEnterSite = useCallback(
+    (site: Site) => {
+      setLevel('site');
+      setActiveSiteId(site.id);
+      setSelectedRegionId(null);
+      camera.jumpToSite(site);
+    },
+    [camera],
+  );
+
+  const handleReturnToWorld = useCallback(() => {
+    setLevel('world');
+    setActiveSiteId(null);
+    setSelectedRegionId(null);
+    camera.jumpToWorld();
+  }, [camera]);
+
+  const handleSelectRegion = useCallback((regionId: string) => {
+    setSelectedRegionId(regionId);
+  }, []);
+
+  const handleCloseRegion = useCallback(() => {
+    setSelectedRegionId(null);
+  }, []);
+
+  const handleNavigateRegion = useCallback(
+    (region: RegionWithCenter) => {
       navigate(region.navigateTo);
     },
     [navigate],
   );
 
-  const closeSelectedRegion = useCallback(() => {
-    setSelectedRegionId(null);
-  }, []);
-
-  const selectRegion = useCallback((regionId: string) => {
-    setSelectedRegionId(regionId);
-  }, []);
-
-  const totalCranes = useCallback(
-    (region: RegionMarkerData) =>
-      region.statusSummary.normal +
-      region.statusSummary.warning +
-      region.statusSummary.critical,
-    [],
-  );
+  const isWorldLevel = level === 'world';
 
   return (
     <Map
       mapId={mapId}
-      defaultCenter={MAP_DEFAULT_CENTER}
-      defaultZoom={MAP_DEFAULT_ZOOM}
+      defaultCenter={WORLD_VIEW_CENTER}
+      defaultZoom={WORLD_VIEW_ZOOM}
+      minZoom={1}
+      maxZoom={18}
       gestureHandling="greedy"
       disableDefaultUI={false}
       colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
+      restriction={{
+        latLngBounds: {
+          north: 85,
+          south: -85,
+          west: -179.999,
+          east: 179.999,
+        },
+        strictBounds: true,
+      }}
       className="h-full w-full"
     >
-      {regionsWithCenter.map((region) => {
-        const style = getStatusPalette(region.status);
-        const selected = selectedRegionId === region.id;
-        const active = selected || hoveredRegionId === region.id;
-        const label = t(getRegionTitleKey(region.id));
-        const subtitle = t(getRegionSubtitleKey(region.id));
-        const statusLabel = t(`common:status.${region.status}`, {
-          defaultValue: region.status,
-        });
-
-        return (
-          <AdvancedMarker
-            key={region.id}
-            position={region.center}
-            title={label}
-            zIndex={selected ? 20 : active ? 10 : undefined}
-            onMouseEnter={() => setHoveredRegionId(region.id)}
-            onMouseLeave={() =>
-              setHoveredRegionId((current) =>
-                current === region.id ? null : current,
-              )
-            }
-          >
-            <RegionMapMarker
-              active={active}
-              craneCount={totalCranes(region)}
-              label={label}
-              onClose={closeSelectedRegion}
-              onNavigate={() => handleNavigate(region)}
-              onSelect={() => selectRegion(region.id)}
-              palette={style}
-              selected={selected}
-              statusLabel={statusLabel}
-              subtitle={subtitle}
+      {/* World 레벨: Site 마커만 mount */}
+      {isWorldLevel
+        ? sites.map((site) => (
+            <LiveSiteMarker
+              key={`site-${site.id}`}
+              site={site}
+              onEnter={() => handleEnterSite(site)}
             />
-          </AdvancedMarker>
-        );
-      })}
+          ))
+        : null}
+
+      {/* Site 레벨: 활성 사이트의 Region 마커만 mount */}
+      {!isWorldLevel
+        ? regionsWithCenter
+            .filter((region) => region.siteType === activeSiteId)
+            .map((region) => (
+              <LiveRegionMarker
+                key={`region-${region.id}`}
+                region={region}
+                selected={selectedRegionId === region.id}
+                hovered={hoveredRegionId === region.id}
+                onSelect={() => handleSelectRegion(region.id)}
+                onClose={handleCloseRegion}
+                onNavigate={() => handleNavigateRegion(region)}
+                onHoverChange={(id) =>
+                  setHoveredRegionId((current) =>
+                    id === null
+                      ? current === region.id
+                        ? null
+                        : current
+                      : id,
+                  )
+                }
+              />
+            ))
+        : null}
+
+      {/* Return to world view */}
+      <div
+        className={cn(
+          'pointer-events-none absolute top-4 right-4 z-40',
+          'transition-opacity duration-300',
+          isWorldLevel ? 'opacity-0' : 'opacity-100',
+        )}
+      >
+        <button
+          type="button"
+          onClick={handleReturnToWorld}
+          className={cn(
+            'pointer-events-auto inline-flex items-center gap-2 rounded-full',
+            'border border-white/10 bg-zinc-950/80 px-3.5 py-2 text-xs font-semibold tracking-wide text-white',
+            'shadow-lg shadow-black/40 backdrop-blur-md',
+            'transition-colors hover:bg-zinc-900/90',
+          )}
+        >
+          <Globe2 className="size-4" />
+          {t('monitoring-overview:map.world.returnToWorld', {
+            defaultValue: 'World view',
+          })}
+        </button>
+      </div>
     </Map>
   );
 }
 
-function hasRegionCenter(region: Region): region is RegionMarkerData {
+function hasRegionCenter(region: Region): region is RegionWithCenter {
   return Boolean(region.center);
-}
-
-interface RegionMapMarkerProps {
-  active: boolean;
-  craneCount: number;
-  label: string;
-  onClose: () => void;
-  onNavigate: () => void;
-  onSelect: () => void;
-  palette: ReturnType<typeof getStatusPalette>;
-  selected: boolean;
-  statusLabel: string;
-  subtitle: string;
-}
-
-function RegionMapMarker({
-  active,
-  craneCount,
-  label,
-  onClose,
-  onNavigate,
-  onSelect,
-  palette,
-  selected,
-  statusLabel,
-  subtitle,
-}: RegionMapMarkerProps) {
-  return (
-    <div className="relative flex w-24 flex-col items-center">
-      <RegionInfoCard
-        craneCount={craneCount}
-        label={label}
-        onClose={onClose}
-        onNavigate={onNavigate}
-        palette={palette}
-        selected={selected}
-        statusLabel={statusLabel}
-        subtitle={subtitle}
-      />
-
-      <button
-        type="button"
-        aria-expanded={selected}
-        aria-label={label}
-        className={cn(
-          'group/map-marker relative flex h-28 w-24 cursor-pointer flex-col items-center justify-end pb-1 transition duration-200 outline-none',
-          'focus-visible:ring-ring/50 focus-visible:ring-3',
-          active && 'scale-105',
-        )}
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect();
-        }}
-      >
-        <span className="relative z-10 flex size-14 items-center justify-center transition-transform duration-200 group-hover/map-marker:-translate-y-1">
-          <span
-            aria-hidden
-            className="absolute bottom-1 left-1/2 z-0 size-7 -translate-x-1/2 translate-y-[35%] rotate-45 bg-white"
-          />
-          <span
-            className="relative z-10 flex size-full items-center justify-center rounded-full border-[5px] border-white"
-            style={{
-              backgroundImage: `linear-gradient(135deg, ${palette.fillColor}, ${palette.fillColorTo})`,
-            }}
-          >
-            <Anchor className="size-7 text-white drop-shadow-sm" />
-          </span>
-        </span>
-      </button>
-    </div>
-  );
-}
-
-interface RegionInfoCardProps {
-  craneCount: number;
-  label: string;
-  onClose: () => void;
-  onNavigate: () => void;
-  palette: ReturnType<typeof getStatusPalette>;
-  selected: boolean;
-  statusLabel: string;
-  subtitle: string;
-}
-
-function RegionInfoCard({
-  craneCount,
-  label,
-  onClose,
-  onNavigate,
-  palette,
-  selected,
-  statusLabel,
-  subtitle,
-}: RegionInfoCardProps) {
-  const { t } = useTranslation();
-
-  return (
-    <div
-      className={cn(
-        'bg-card/95 text-card-foreground pointer-events-auto absolute bottom-20 left-1/2 z-30 w-80 -translate-x-1/2 rounded-2xl border p-5 shadow-2xl backdrop-blur-md transition duration-200',
-        selected
-          ? 'translate-y-0 scale-100 opacity-100'
-          : 'pointer-events-none translate-y-2 scale-95 opacity-0',
-      )}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <button
-        type="button"
-        aria-label={t('monitoring-overview:map.marker.close')}
-        className="bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground absolute top-4 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full transition-colors"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClose();
-        }}
-      >
-        <X className="size-4" />
-      </button>
-
-      <div className="flex items-start gap-4 pr-8">
-        <div
-          className="flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-white text-white shadow-lg"
-          style={{
-            backgroundImage: `linear-gradient(135deg, ${palette.fillColor}, ${palette.fillColorTo})`,
-          }}
-        >
-          <Anchor className="size-8" />
-        </div>
-
-        <div className="min-w-0 pt-1">
-          <h2 className="truncate text-xl font-bold tracking-tight">{label}</h2>
-          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm leading-6">
-            {subtitle}
-          </p>
-        </div>
-      </div>
-
-      <div className="border-border/80 mt-5 border-t pt-4">
-        <div className="flex items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="text-foreground text-lg leading-none font-bold tabular-nums">
-              {craneCount}
-            </div>
-            <div className="text-muted-foreground mt-1 text-xs">
-              {t('monitoring-overview:map.marker.craneCount')}
-            </div>
-          </div>
-
-          <div className="bg-border h-11 w-px" />
-
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span
-              className="size-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: palette.fillColor }}
-            />
-            <span className="truncate text-sm font-medium">{statusLabel}</span>
-          </div>
-
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
-            aria-label={t('monitoring-overview:map.marker.openDetails')}
-            onClick={(event) => {
-              event.stopPropagation();
-              onNavigate();
-            }}
-          >
-            <ChevronRight className="size-5" />
-          </button>
-        </div>
-      </div>
-
-      <span className="bg-card border-border absolute bottom-0 left-1/2 size-5 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b" />
-    </div>
-  );
 }

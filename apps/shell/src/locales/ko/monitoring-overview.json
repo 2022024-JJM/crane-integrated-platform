@@ -15,6 +15,13 @@
       "craneCount": "크레인 수",
       "openDetails": "지역 상세 열기",
       "close": "지역 상세 닫기"
+    },
+    "world": {
+      "returnToWorld": "세계 보기"
+    },
+    "site": {
+      "enter": "사이트 진입",
+      "regionCount": "지역 {{count}}곳"
     }
   },
   "cmms": {

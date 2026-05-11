@@ -164,6 +164,20 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@keyframes region-map-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.75;
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
 @keyframes lidar-sweep {
   0% {
     transform: translateY(0%);

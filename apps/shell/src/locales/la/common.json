@@ -30,7 +30,16 @@
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Oceanus",
-    "goliath-crane": "Gruis Goliath"
+    "goliath-crane": "Gruis Goliath",
+    "philly-shipyard": "Navalia Philadelphiae"
+  },
+  "sites": {
+    "hanwha-ocean": {
+      "country": "Respublica Coreana"
+    },
+    "philly-shipyard": {
+      "country": "Civitates Foederatae"
+    }
   },
   "toast": {
     "languageChanged": "Lingua in {{language}} mutata est.",

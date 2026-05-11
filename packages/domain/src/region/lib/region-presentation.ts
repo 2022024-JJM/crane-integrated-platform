@@ -34,3 +34,25 @@ function toRegionResourceKey(regionId: Region['id']) {
   if (regionId === 'philly-dock-2') return 'phillydock2';
   return regionId.replace(/^philly-/, '').replace(/-/g, '');
 }
+
+/**
+ * 지도 마커 본체에 표시할 짧은 도크 코드.
+ *   philly-dock-2       → 'D4'  (Philly 현장은 Dock 4로 운영)
+ *   dock-in / *-dock-in → 'IN'
+ *   dock-N / *-dock-N   → 'D{N}'
+ *   goliath             → 'GC'
+ *   기타                 → id에서 영숫자 첫 두 글자 대문자
+ */
+export function getRegionShortCode(regionId: Region['id']): string {
+  if (regionId === 'goliath') return 'GC';
+  if (regionId === 'philly-dock-2') return 'D4';
+
+  const normalized = regionId.replace(/^philly-/, '');
+  if (normalized === 'dock-in') return 'IN';
+
+  const dockMatch = normalized.match(/^dock-(\d+)$/);
+  if (dockMatch) return `D${dockMatch[1]}`;
+
+  const fallback = normalized.replace(/[^a-z0-9]/gi, '').slice(0, 2);
+  return fallback.toUpperCase() || '?';
+}

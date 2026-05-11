@@ -1,12 +1,4 @@
-import type { LatLng, Region } from '@crane/domain/region';
-
-// Okpo shipyard area is used as the default map camera.
-export const MAP_DEFAULT_CENTER: LatLng = {
-  lat: 34.873071,
-  lng: 128.710288,
-};
-
-export const MAP_DEFAULT_ZOOM = 15;
+import type { Region } from '@crane/domain/region';
 
 export interface MapMarkerStyle {
   fillColor: string;

@@ -15,6 +15,13 @@
       "craneCount": "Cranes",
       "openDetails": "Open region details",
       "close": "Close region details"
+    },
+    "world": {
+      "returnToWorld": "World view"
+    },
+    "site": {
+      "enter": "Enter site",
+      "regionCount": "{{count}} regions"
     }
   },
   "cmms": {

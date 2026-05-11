@@ -30,7 +30,16 @@
   },
   "siteType": {
     "hanwha-ocean": "한화오션",
-    "goliath-crane": "골리앗 크레인"
+    "goliath-crane": "골리앗 크레인",
+    "philly-shipyard": "필리 조선소"
+  },
+  "sites": {
+    "hanwha-ocean": {
+      "country": "대한민국"
+    },
+    "philly-shipyard": {
+      "country": "미국"
+    }
   },
   "toast": {
     "languageChanged": "언어가 {{language}}로 변경되었습니다.",
