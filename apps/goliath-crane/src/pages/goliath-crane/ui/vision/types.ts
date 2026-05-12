@@ -76,11 +76,11 @@ export const CAMERA_CHANNELS = [
 export type CameraChannel = (typeof CAMERA_CHANNELS)[number];
 
 /**
- * 골리앗 크레인의 LiDAR 채널 목록. SOSLAB Edge Node Bridge Server 가 한 WebSocket
+ * 골리앗 크레인의 LiDAR 채널 목록. LiDAR Edge Node Bridge Server 가 한 WebSocket
  * 으로 SOSLAB1/SOSLAB2 두 센서 프레임을 동시에 보내며, 비전 모니터링 그리드에서는
  * 1번 단독 / 2번 단독 / Fusion(둘 다 합성) 3가지 모드로 노출한다.
  *
- * sensorKey 는 soslab-stream-store 의 SoslabSensorMode 와 1:1 매칭된다.
+ * sensorKey 는 point-cloud-stream-store 의 PointCloudSensorMode 와 1:1 매칭된다.
  */
 export const LIDAR_CHANNELS = [
   { id: 'soslab-1', label: 'SOSLAB 1', sensorKey: 'soslab1' },

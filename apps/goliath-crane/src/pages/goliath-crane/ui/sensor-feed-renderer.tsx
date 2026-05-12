@@ -1,14 +1,15 @@
 import { Camera, WifiOff } from 'lucide-react';
 import type { SensorFeedContext } from '@crane/features/3d';
 import { CAMERA_CHANNELS, type LidarSensorKey } from './vision/types';
-import { SoslabPointCloud } from './soslab-point-cloud';
+import { PointCloudViewer } from './point-cloud-viewer';
 
 /**
  * 빌보드 미니 썸네일 / PiP 안에 들어갈 비전 피드를 그린다.
  *
- * LiDAR는 SOSLAB Edge Node Bridge Server 의 ProcessedPointCloudBundle 스트림을
- * SoslabPointCloud 로 렌더한다. WebSocket 은 soslab-stream-store 가 단일하게
- * 관리하므로 같은 페이지에 미니 썸네일/PiP/타일이 동시에 마운트돼도 연결은 1개.
+ * LiDAR는 LiDAR Edge Node Bridge Server 의 ProcessedPointCloudBundle 스트림을
+ * PointCloudViewer 로 렌더한다. 서버 vendor (SOSLAB/OUSTER/SICK 등) 와 무관하게
+ * 동일한 포맷이며, WebSocket 은 point-cloud-stream-store 가 단일하게 관리하므로
+ * 같은 페이지에 미니 썸네일/PiP/타일이 동시에 마운트돼도 연결은 1개.
  *
  * 카메라는 아직 mock placeholder. 실제 스트림 연결 시 channelId → 스트림 URL
  * 매핑을 만들고 여기서 <video> / hls.js / WebRTC 등을 렌더하면 features
@@ -26,7 +27,7 @@ export function renderSensorFeed(ctx: SensorFeedContext) {
 
   if (sensorType === 'lidar') {
     const mode: LidarSensorKey = CHANNEL_TO_SENSOR[channelId] ?? 'fusion';
-    return <SoslabPointCloud mode={mode} compact={ctx.size === 'thumbnail'} />;
+    return <PointCloudViewer mode={mode} compact={ctx.size === 'thumbnail'} />;
   }
 
   const channel = CAMERA_CHANNELS.find((c) => c.id === channelId);

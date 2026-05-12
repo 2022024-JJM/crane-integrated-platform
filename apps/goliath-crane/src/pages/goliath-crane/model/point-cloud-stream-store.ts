@@ -1,6 +1,7 @@
-// SOSLAB Edge Node Bridge Server 의 ProcessedPointCloudBundle WebSocket 스트림을
+// LiDAR Edge Node Bridge Server 의 ProcessedPointCloudBundle WebSocket 스트림을
 // 단일 연결로 받고, 비전 그리드(SOSLAB1/SOSLAB2/Fusion 3개 타일) + PiP 등
-// 다수 구독자에게 fan-out 한다.
+// 다수 구독자에게 fan-out 한다. 서버 vendor (SOSLAB/OUSTER/SICK 등) 와 무관하게
+// 동일한 포맷이므로 본 store 는 vendor 중립이다.
 //
 // React 상태 변경은 status/lastError/refCount 같은 메타에만 발생시키고,
 // 실제 포인트 데이터는 sensors Map 의 SensorBuffer 객체를 in-place 로 갱신한 뒤
@@ -9,17 +10,17 @@
 // 리렌더가 일어나지 않게 하기 위함이다 (use-realtime-store.ts 와 동일 패턴).
 
 import { create } from 'zustand';
-import { getSoslabWebSocketUrl } from '@crane/core/config/network';
-import { decodeBundle } from '../lib/soslab/proto-decoder';
-import { parseFrame, type ParsedFrame } from '../lib/soslab/point-cloud-parser';
+import { getPointCloudWebSocketUrl } from '@crane/core/config/network';
+import { decodeBundle } from '../lib/point-cloud/proto-decoder';
+import { parseFrame, type ParsedFrame } from '../lib/point-cloud/point-cloud-parser';
 import {
   RECONNECT_BACKOFF_MS,
   SENSOR_COLORS,
-} from '../lib/soslab/config';
+} from '../lib/point-cloud/config';
 
-export type SoslabSensorMode = 'soslab1' | 'soslab2' | 'fusion';
+export type PointCloudSensorMode = 'soslab1' | 'soslab2' | 'fusion';
 
-export type SoslabConnectionStatus =
+export type PointCloudConnectionStatus =
   | 'idle'
   | 'connecting'
   | 'connected'
@@ -64,8 +65,8 @@ export interface BundleMeta {
   lastBundleAtMs: number;
 }
 
-interface SoslabStreamState {
-  status: SoslabConnectionStatus;
+interface PointCloudStreamState {
+  status: PointCloudConnectionStatus;
   lastError: string;
   refCount: number;
   /** key = 정규화된 센서 키 ('soslab1', 'soslab2') */
@@ -123,7 +124,7 @@ function pickColorForKey(key: string, sensorIndex: number): string {
   return SENSOR_COLORS[sensorIndex % SENSOR_COLORS.length];
 }
 
-export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
+export const usePointCloudStreamStore = create<PointCloudStreamState>()((set, get) => {
   function clearReconnectTimer() {
     if (reconnectTimer !== null) {
       clearTimeout(reconnectTimer);
@@ -157,7 +158,7 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
 
     set({ status: 'connecting', lastError: '' });
 
-    const url = getSoslabWebSocketUrl();
+    const url = getPointCloudWebSocketUrl();
     const ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     socket = ws;
@@ -328,5 +329,5 @@ export const useSoslabStreamStore = create<SoslabStreamState>()((set, get) => {
 
 /** 비-React 컨텍스트에서 SensorBuffer 를 직접 읽기 위한 헬퍼 */
 export function getSensorBuffer(sensorKey: string): SensorBuffer | undefined {
-  return useSoslabStreamStore.getState().sensors.get(sensorKey);
+  return usePointCloudStreamStore.getState().sensors.get(sensorKey);
 }

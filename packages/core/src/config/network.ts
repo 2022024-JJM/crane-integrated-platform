@@ -163,12 +163,15 @@ export function getLidarWebSocketUrl() {
 }
 
 /**
- * SOSLAB Edge Node Bridge Server 의 PointCloud 스트림 WebSocket URL.
+ * LiDAR Edge Node Bridge Server 의 PointCloud 스트림 WebSocket URL.
+ * 서버는 vendor (SOSLAB/OUSTER/SICK 등) 와 무관하게 동일한
+ * ProcessedPointCloudBundle 포맷으로 전송한다.
+ *
  * nginx 가 /lidar/* 를 LIDAR_HOST:LIDAR_PORT 로 path-rewrite 프록시하므로,
  * 프론트는 동일 origin 의 /lidar/pointcloud (또는 sub-path 시
  * /crane_rnd/lidar/pointcloud) 로 연결한다.
  */
-export function getSoslabWebSocketUrl() {
+export function getPointCloudWebSocketUrl() {
   return `${getLidarWebSocketUrl().replace(/\/+$/, '')}/pointcloud`;
 }
 

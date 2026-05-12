@@ -7,14 +7,14 @@
 
 import { Reader } from 'protobufjs/minimal';
 
-export interface SoslabPointCloudField {
+export interface PointCloudField {
   name: string;
   offset: number;
   datatype: number;
   count: number;
 }
 
-export interface SoslabPointCloudFrame {
+export interface PointCloudFrame {
   sensor_name: string;
   vendor: string;
   source_topic: string;
@@ -27,16 +27,16 @@ export interface SoslabPointCloudFrame {
   point_step: number;
   row_step: number;
   is_dense: boolean;
-  fields: SoslabPointCloudField[];
+  fields: PointCloudField[];
   data: Uint8Array;
 }
 
-export interface SoslabBundle {
+export interface PointCloudBundle {
   sequence: bigint;
   created_timestamp_ns: bigint;
   window_center_timestamp_ns: bigint;
   window_size_ms: number;
-  frames: SoslabPointCloudFrame[];
+  frames: PointCloudFrame[];
   processor_name: string;
   status: string;
 }
@@ -44,9 +44,9 @@ export interface SoslabBundle {
 function decodePointCloudField(
   reader: Reader,
   length: number,
-): SoslabPointCloudField {
+): PointCloudField {
   const end = reader.pos + length;
-  const message: SoslabPointCloudField = {
+  const message: PointCloudField = {
     name: '',
     offset: 0,
     datatype: 0,
@@ -79,9 +79,9 @@ function decodePointCloudField(
 function decodePointCloudFrame(
   reader: Reader,
   length: number,
-): SoslabPointCloudFrame {
+): PointCloudFrame {
   const end = reader.pos + length;
-  const message: SoslabPointCloudFrame = {
+  const message: PointCloudFrame = {
     sensor_name: '',
     vendor: '',
     source_topic: '',
@@ -170,7 +170,7 @@ function toBigInt(value: unknown): bigint {
   return 0n;
 }
 
-export function decodeBundle(buffer: ArrayBuffer): SoslabBundle {
+export function decodeBundle(buffer: ArrayBuffer): PointCloudBundle {
   const reader = Reader.create(new Uint8Array(buffer));
   const end = reader.len;
 
@@ -179,7 +179,7 @@ export function decodeBundle(buffer: ArrayBuffer): SoslabBundle {
     created_timestamp_ns: 0n as unknown as bigint,
     window_center_timestamp_ns: 0n as unknown as bigint,
     window_size_ms: 0,
-    frames: [] as SoslabPointCloudFrame[],
+    frames: [] as PointCloudFrame[],
     processor_name: 'unknown',
     status: 'unknown',
   };

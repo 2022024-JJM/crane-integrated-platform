@@ -48,5 +48,5 @@ export const CAMERA = {
 
 export const AXES_HELPER_SIZE = 2;
 
-// nginx /lidar/ 프록시 뒤의 SOSLAB Edge Node Bridge Server WebSocket path
-export const SOSLAB_WS_PATH = 'pointcloud';
+// nginx /lidar/ 프록시 뒤의 LiDAR Edge Node Bridge Server WebSocket path
+export const POINT_CLOUD_WS_PATH = 'pointcloud';

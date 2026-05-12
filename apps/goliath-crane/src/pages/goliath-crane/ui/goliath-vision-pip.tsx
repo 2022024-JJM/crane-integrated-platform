@@ -25,7 +25,7 @@ import type {
   ExpandedView,
   LidarSensorKey,
 } from './vision/types';
-import { SoslabPointCloud } from './soslab-point-cloud';
+import { PointCloudViewer } from './point-cloud-viewer';
 
 const PREVIEW_ASPECT_RATIO = 16 / 9;
 
@@ -163,9 +163,9 @@ function CameraFeedContent({ channel }: { channel: CameraChannel }) {
   );
 }
 
-// ── LiDAR feed content — SOSLAB 포인트 클라우드 ─────────────────────────────
+// ── LiDAR feed content — 포인트 클라우드 ────────────────────────────────────
 function LidarFeedContent({ sensor }: { sensor: LidarSensorKey }) {
-  return <SoslabPointCloud mode={sensor} />;
+  return <PointCloudViewer mode={sensor} />;
 }
 
 const LIDAR_PIP_TITLE: Record<LidarSensorKey, string> = {

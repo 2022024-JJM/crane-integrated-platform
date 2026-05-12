@@ -1,7 +1,7 @@
 import { Maximize2, ScanLine } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
-import { SoslabPointCloud } from '../soslab-point-cloud';
+import { PointCloudViewer } from '../point-cloud-viewer';
 import type { LidarSensorKey } from './types';
 
 interface LidarTileProps {
@@ -41,7 +41,7 @@ export function LidarTile({
         <div
           className={cn('absolute inset-0', !fullView && 'pointer-events-none')}
         >
-          <SoslabPointCloud mode={sensor} compact={!fullView} />
+          <PointCloudViewer mode={sensor} compact={!fullView} />
         </div>
         {interactive && <div className="absolute inset-0" />}
         {interactive && (

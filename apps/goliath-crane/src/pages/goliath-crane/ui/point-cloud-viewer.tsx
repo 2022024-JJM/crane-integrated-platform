@@ -1,9 +1,11 @@
-// SOSLAB ProcessedPointCloudBundle 스트림을 React Three Fiber 위에서
+// LiDAR ProcessedPointCloudBundle 스트림을 React Three Fiber 위에서
 // monitoring_web/src/viewer.js + main.js 와 동일한 결과로 렌더링한다.
+// 서버 vendor (SOSLAB/OUSTER/SICK 등) 와 무관하게 동일한 포맷이므로
+// 본 viewer 는 vendor 중립이다.
 //
-// - 한 컴포넌트(<SoslabPointCloud>) = 한 Canvas. 그리드에 SOSLAB1/SOSLAB2/
+// - 한 컴포넌트(<PointCloudViewer>) = 한 Canvas. 그리드에 SOSLAB1/SOSLAB2/
 //   Fusion 3개 타일이 있으면 Canvas 도 3개지만, 데이터 소스(WebSocket) 는
-//   soslab-stream-store 에서 단일하게 공유된다.
+//   point-cloud-stream-store 에서 단일하게 공유된다.
 // - mode 에 따라 SOSLAB1 / SOSLAB2 의 가시성을 토글. fusion = 두 센서 모두 visible.
 // - intensity 가 있으면 HSL 그래디언트 (0.63→0, 0.95, 0.55), 없으면 SENSOR_COLORS
 //   고정색. 점 크기/그리드/축은 viewer.js 와 동일.
@@ -25,12 +27,12 @@ import {
   SCENE_BG,
   SENSOR_COLORS,
   STALE_SENSOR_MS,
-} from '../lib/soslab/config';
+} from '../lib/point-cloud/config';
 import {
-  useSoslabStreamStore,
-  type SoslabConnectionStatus,
-  type SoslabSensorMode,
-} from '../model/soslab-stream-store';
+  usePointCloudStreamStore,
+  type PointCloudConnectionStatus,
+  type PointCloudSensorMode,
+} from '../model/point-cloud-stream-store';
 
 const DEG_TO_RAD = Math.PI / 180;
 const tempColor = new THREE.Color();
@@ -108,7 +110,7 @@ function SensorPoints({
   );
 
   useFrame(() => {
-    const buffer = useSoslabStreamStore.getState().sensors.get(sensorKey);
+    const buffer = usePointCloudStreamStore.getState().sensors.get(sensorKey);
     if (!buffer) return;
     const points = pointsRef.current;
 
@@ -238,7 +240,7 @@ function CameraController({ refitToken }: CameraControllerProps) {
 
   const tryFit = useCallback(
     (force: boolean) => {
-      const sensors = useSoslabStreamStore.getState().sensors;
+      const sensors = usePointCloudStreamStore.getState().sensors;
       const box = new THREE.Box3();
       let hasPoints = false;
       const corner = new THREE.Vector3();
@@ -316,7 +318,7 @@ function CameraController({ refitToken }: CameraControllerProps) {
   // 첫 프레임 auto-fit.
   useFrame(() => {
     if (fittedRef.current || userDirtyRef.current) return;
-    const counter = useSoslabStreamStore.getState().globalFrameCounter;
+    const counter = usePointCloudStreamStore.getState().globalFrameCounter;
     if (counter === lastSeenFrameRef.current) return;
     lastSeenFrameRef.current = counter;
 
@@ -328,7 +330,7 @@ function CameraController({ refitToken }: CameraControllerProps) {
   return null;
 }
 
-const STATUS_LABEL: Record<SoslabConnectionStatus, string> = {
+const STATUS_LABEL: Record<PointCloudConnectionStatus, string> = {
   idle: 'IDLE',
   connecting: 'CONNECTING',
   connected: 'LIVE',
@@ -336,7 +338,7 @@ const STATUS_LABEL: Record<SoslabConnectionStatus, string> = {
   closed: 'DISCONNECTED',
 };
 
-const STATUS_COLOR: Record<SoslabConnectionStatus, string> = {
+const STATUS_COLOR: Record<PointCloudConnectionStatus, string> = {
   idle: 'text-white/40',
   connecting: 'text-yellow-400/70',
   connected: 'text-green-400',
@@ -345,8 +347,8 @@ const STATUS_COLOR: Record<SoslabConnectionStatus, string> = {
 };
 
 interface CompactHudProps {
-  mode: SoslabSensorMode;
-  status: SoslabConnectionStatus;
+  mode: PointCloudSensorMode;
+  status: PointCloudConnectionStatus;
 }
 
 /** 단일/2번/썸네일 모드용 가벼운 HUD. 기존 디자인 유지. */
@@ -357,7 +359,7 @@ function CompactHud({ mode, status }: CompactHudProps) {
     return () => clearInterval(id);
   }, []);
 
-  const sensors = useSoslabStreamStore.getState().sensors;
+  const sensors = usePointCloudStreamStore.getState().sensors;
   const s1 = sensors.get('soslab1');
   const s2 = sensors.get('soslab2');
   const totalPoints =
@@ -426,11 +428,11 @@ function formatTransformValue(value: number): string {
 }
 
 interface FusionHudProps {
-  status: SoslabConnectionStatus;
+  status: PointCloudConnectionStatus;
   onRefit: () => void;
 }
 
-const CONNECTION_PILL_CLASS: Record<SoslabConnectionStatus, string> = {
+const CONNECTION_PILL_CLASS: Record<PointCloudConnectionStatus, string> = {
   idle: 'border-white/20 text-white/50',
   connecting: 'border-amber-400/40 text-amber-300',
   connected: 'border-emerald-400/40 text-emerald-300',
@@ -467,15 +469,15 @@ function FusionHud({ status, onRefit }: FusionHudProps) {
 
   const [panelOpen, setPanelOpen] = useState(true);
 
-  const bundle = useSoslabStreamStore.getState().bundle;
-  const lastError = useSoslabStreamStore((s) => s.lastError);
-  const sensors = useSoslabStreamStore.getState().sensors;
-  const frameCounter = useSoslabStreamStore((s) => s.globalFrameCounter);
-  const setSensorVisible = useSoslabStreamStore((s) => s.setSensorVisible);
-  const setSensorTransformAxis = useSoslabStreamStore(
+  const bundle = usePointCloudStreamStore.getState().bundle;
+  const lastError = usePointCloudStreamStore((s) => s.lastError);
+  const sensors = usePointCloudStreamStore.getState().sensors;
+  const frameCounter = usePointCloudStreamStore((s) => s.globalFrameCounter);
+  const setSensorVisible = usePointCloudStreamStore((s) => s.setSensorVisible);
+  const setSensorTransformAxis = usePointCloudStreamStore(
     (s) => s.setSensorTransformAxis,
   );
-  const resetSensorTransform = useSoslabStreamStore(
+  const resetSensorTransform = usePointCloudStreamStore(
     (s) => s.resetSensorTransform,
   );
 
@@ -752,25 +754,25 @@ function SensorMetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export interface SoslabPointCloudProps {
+export interface PointCloudViewerProps {
   /** 어떤 센서를 보여줄지. fusion = 둘 다 visible 합성. */
-  mode: SoslabSensorMode;
+  mode: PointCloudSensorMode;
   /** 좁은 썸네일용. HUD 와 OrbitControls 를 끄고 자동 회전. */
   compact?: boolean;
 }
 
-export function SoslabPointCloud({
+export function PointCloudViewer({
   mode,
   compact = false,
-}: SoslabPointCloudProps) {
+}: PointCloudViewerProps) {
   // 단일 WebSocket 공유: 마운트마다 acquire, 언마운트마다 release.
   useEffect(() => {
-    const { acquire, release } = useSoslabStreamStore.getState();
+    const { acquire, release } = usePointCloudStreamStore.getState();
     acquire();
     return () => release();
   }, []);
 
-  const status = useSoslabStreamStore((s) => s.status);
+  const status = usePointCloudStreamStore((s) => s.status);
   const [refitToken, setRefitToken] = useState(0);
   const showFusionHud = !compact && mode === 'fusion';
 

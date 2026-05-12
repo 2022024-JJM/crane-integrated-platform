@@ -5,7 +5,7 @@
 // 따라가며 점 단위로 좌표를 읽는다. 점이 60K 를 넘으면 step 다운샘플링.
 
 import { MAX_POINTS_PER_SENSOR } from './config';
-import type { SoslabPointCloudField, SoslabPointCloudFrame } from './proto-decoder';
+import type { PointCloudField, PointCloudFrame } from './proto-decoder';
 
 type Reader = (
   view: DataView,
@@ -25,16 +25,16 @@ const DATATYPE_READERS: Record<number, Reader> = {
 };
 
 function findField(
-  fields: SoslabPointCloudField[],
+  fields: PointCloudField[],
   name: string,
-): SoslabPointCloudField | undefined {
+): PointCloudField | undefined {
   return fields.find((field) => field.name?.toLowerCase() === name);
 }
 
 function readFieldValue(
   view: DataView,
   baseOffset: number,
-  field: SoslabPointCloudField,
+  field: PointCloudField,
   littleEndian: boolean,
 ): number {
   const reader = DATATYPE_READERS[field.datatype];
@@ -65,7 +65,7 @@ export interface ParsedFrameError {
 export type ParsedFrame = ParsedFrameOk | ParsedFrameError;
 
 export function parseFrame(
-  frame: SoslabPointCloudFrame,
+  frame: PointCloudFrame,
   options: { maxPoints?: number } = {},
 ): ParsedFrame {
   const maxPoints = options.maxPoints ?? MAX_POINTS_PER_SENSOR;
