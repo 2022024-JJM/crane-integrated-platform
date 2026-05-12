@@ -5,7 +5,6 @@ import { getStatusPalette } from '../model/region-map-types';
 
 interface RegionMarkerProps {
   active: boolean;
-  selected: boolean;
   label: string;
   shortCode: string;
   statusLevel: StatusLevel;
@@ -18,7 +17,6 @@ const PIN_HEIGHT = 52;
 
 export function RegionMarker({
   active,
-  selected,
   label,
   shortCode,
   statusLevel,
@@ -64,17 +62,6 @@ export function RegionMarker({
         />
       ) : null}
 
-      {/* selected 시 status 컬러 ring (핀 헤드 바깥) */}
-      {selected ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute top-[19px] left-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full"
-          style={{
-            boxShadow: `0 0 0 2px ${palette.fillColor}, 0 0 12px 2px ${palette.fillColor}66`,
-          }}
-        />
-      ) : null}
-
       <svg
         viewBox={`0 0 ${PIN_WIDTH} ${PIN_HEIGHT}`}
         width={PIN_WIDTH}
@@ -114,28 +101,6 @@ export function RegionMarker({
         className="pointer-events-none absolute top-[19px] left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px] font-bold tracking-tight text-white drop-shadow-sm"
       >
         {shortCode}
-      </span>
-
-      {/* 풀 라벨 캡슐: 핀 박스 아래 absolute */}
-      <span
-        className={cn(
-          'pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2',
-          'inline-flex items-center gap-1.5 rounded-full whitespace-nowrap',
-          'border-border bg-popover text-popover-foreground border px-2.5 py-1 text-[11px] font-semibold',
-          'tracking-wide shadow-md transition-all duration-200',
-          'translate-y-1 opacity-0',
-          'group-hover/region-marker:translate-y-0 group-hover/region-marker:opacity-100',
-          'group-focus-visible/region-marker:translate-y-0 group-focus-visible/region-marker:opacity-100',
-          active && 'translate-y-0 opacity-100',
-          selected && 'bg-accent text-accent-foreground',
-        )}
-      >
-        <span
-          aria-hidden
-          className="size-1.5 shrink-0 rounded-full"
-          style={{ backgroundColor: palette.fillColor }}
-        />
-        <span>{label}</span>
       </span>
     </div>
   );

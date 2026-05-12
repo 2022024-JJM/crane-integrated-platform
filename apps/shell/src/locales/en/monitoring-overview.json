@@ -14,7 +14,10 @@
     "marker": {
       "craneCount": "Cranes",
       "openDetails": "Open region details",
-      "close": "Close region details"
+      "close": "Close region details",
+      "siteKicker": "Site",
+      "regionKicker": "Region",
+      "cranes": "Cranes"
     },
     "world": {
       "returnToWorld": "World view"

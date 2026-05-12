@@ -1,14 +1,11 @@
 import { useCallback } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
 import type { Site } from '@crane/domain/region';
-import {
-  WORLD_VIEW_CENTER,
-  WORLD_VIEW_ZOOM,
-} from './region-map-constants';
+import { WORLD_VIEW_BOUNDS } from './region-map-constants';
 
 export interface RegionMapCamera {
   jumpToSite: (site: Site) => void;
-  jumpToWorld: () => void;
+  fitWorld: () => void;
 }
 
 export function useRegionMapCamera(): RegionMapCamera {
@@ -22,10 +19,11 @@ export function useRegionMapCamera(): RegionMapCamera {
     [map],
   );
 
-  const jumpToWorld = useCallback(() => {
+  // 컨테이너 종횡비에 맞춰 세계지도 전체가 한 화면에 들어오도록 맞춘다.
+  const fitWorld = useCallback(() => {
     if (!map) return;
-    map.moveCamera({ center: WORLD_VIEW_CENTER, zoom: WORLD_VIEW_ZOOM });
+    map.fitBounds(WORLD_VIEW_BOUNDS, 0);
   }, [map]);
 
-  return { jumpToSite, jumpToWorld };
+  return { jumpToSite, fitWorld };
 }

@@ -178,6 +178,35 @@
   }
 }
 
+@keyframes ops-brief-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes ops-bracket-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes ops-scan-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes lidar-sweep {
   0% {
     transform: translateY(0%);

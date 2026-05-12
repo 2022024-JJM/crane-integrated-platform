@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
 import { Globe2, Map as MapIcon, Satellite } from 'lucide-react';
@@ -17,8 +24,8 @@ import {
   SITE_ENTER_ZOOM,
   SITE_EXIT_ZOOM,
   SITE_PROXIMITY_KM,
+  WORLD_VIEW_BOUNDS,
   WORLD_VIEW_CENTER,
-  WORLD_VIEW_ZOOM,
 } from '../model/region-map-constants';
 import { findNearestSite } from '../model/find-nearest-site';
 import { useRegionMapCamera } from '../model/use-region-map-camera';
@@ -92,6 +99,7 @@ function RegionMapInner() {
   const navigate = useProgressNavigate();
   const camera = useRegionMapCamera();
   const map = useMap();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const sites = useMemo(() => getSites(), []);
   const regionsWithCenter = useMemo<RegionWithCenter[]>(
@@ -101,7 +109,6 @@ function RegionMapInner() {
 
   const [level, setLevel] = useState<MapLevel>('world');
   const [activeSiteId, setActiveSiteId] = useState<SiteType | null>(null);
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
   const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [mapView, setMapView] = useState<MapView>('roadmap');
 
@@ -126,13 +133,11 @@ function RegionMapInner() {
         if (nearest) {
           setLevel('site');
           setActiveSiteId(nearest.id);
-          setSelectedRegionId(null);
           // 사용자가 직접 줌인한 위치를 존중하기 위해 카메라는 건드리지 않는다.
         }
       } else if (level === 'site' && zoom <= SITE_EXIT_ZOOM) {
         setLevel('world');
         setActiveSiteId(null);
-        setSelectedRegionId(null);
       }
     };
 
@@ -144,7 +149,6 @@ function RegionMapInner() {
     (site: Site) => {
       setLevel('site');
       setActiveSiteId(site.id);
-      setSelectedRegionId(null);
       camera.jumpToSite(site);
     },
     [camera],
@@ -153,17 +157,26 @@ function RegionMapInner() {
   const handleReturnToWorld = useCallback(() => {
     setLevel('world');
     setActiveSiteId(null);
-    setSelectedRegionId(null);
-    camera.jumpToWorld();
+    camera.fitWorld();
   }, [camera]);
 
-  const handleSelectRegion = useCallback((regionId: string) => {
-    setSelectedRegionId(regionId);
-  }, []);
+  // World 레벨 진입 시 1회 fit, 그리고 컨테이너 리사이즈마다 다시 fit.
+  // 화면 종횡비/크기가 달라져도 세계지도 전체가 항상 한 화면에 들어오도록.
+  useEffect(() => {
+    if (!map) return;
+    if (level !== 'world') return;
 
-  const handleCloseRegion = useCallback(() => {
-    setSelectedRegionId(null);
-  }, []);
+    camera.fitWorld();
+
+    const node = containerRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      camera.fitWorld();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [map, level, camera]);
 
   const handleNavigateRegion = useCallback(
     (region: RegionWithCenter) => {
@@ -178,10 +191,11 @@ function RegionMapInner() {
     : null;
 
   return (
+    <div ref={containerRef} className="relative h-full w-full">
     <Map
       mapId={mapId}
       defaultCenter={WORLD_VIEW_CENTER}
-      defaultZoom={WORLD_VIEW_ZOOM}
+      defaultBounds={WORLD_VIEW_BOUNDS}
       minZoom={1}
       maxZoom={18}
       gestureHandling="greedy"
@@ -196,12 +210,7 @@ function RegionMapInner() {
       clickableIcons={false}
       colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
       restriction={{
-        latLngBounds: {
-          north: 85,
-          south: -85,
-          west: -179.999,
-          east: 179.999,
-        },
+        latLngBounds: WORLD_VIEW_BOUNDS,
         strictBounds: true,
       }}
       className="h-full w-full"
@@ -225,10 +234,7 @@ function RegionMapInner() {
               <LiveRegionMarker
                 key={`region-${region.id}`}
                 region={region}
-                selected={selectedRegionId === region.id}
                 hovered={hoveredRegionId === region.id}
-                onSelect={() => handleSelectRegion(region.id)}
-                onClose={handleCloseRegion}
                 onNavigate={() => handleNavigateRegion(region)}
                 onHoverChange={(id) =>
                   setHoveredRegionId((current) =>
@@ -263,22 +269,24 @@ function RegionMapInner() {
           type="button"
           onClick={handleReturnToWorld}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full',
-            'border-border bg-background/85 text-foreground border px-3.5 py-2 text-xs font-semibold tracking-wide',
-            'shadow-lg backdrop-blur-md',
-            'hover:bg-accent transition-all duration-300',
+            'group inline-flex items-center gap-2 rounded-sm',
+            'border-border/50 bg-background/55 text-foreground border px-3.5 py-1.5',
+            'font-sans text-xs font-semibold tracking-[0.14em] uppercase',
+            'backdrop-blur-xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6)]',
+            'hover:bg-foreground/10 cursor-pointer transition-all duration-300',
             isWorldLevel
               ? 'pointer-events-none opacity-0'
               : 'pointer-events-auto opacity-100',
           )}
         >
-          <Globe2 className="size-4" />
+          <Globe2 className="size-3.5" strokeWidth={1.6} />
           {t('monitoring-overview:map.world.returnToWorld', {
             defaultValue: 'World view',
           })}
         </button>
       </div>
     </Map>
+    </div>
   );
 }
 
@@ -298,32 +306,53 @@ function MapViewToggle({
   });
 
   return (
-    <div
-      role="group"
-      aria-label={t('monitoring-overview:map.view.toggleAriaLabel', {
-        defaultValue: 'Map view',
-      })}
-      className={cn(
-        'pointer-events-auto inline-flex items-center gap-0.5 rounded-full',
-        'border-border bg-background/85 border p-0.5 shadow-lg backdrop-blur-md',
-      )}
-    >
-      <ToggleButton
-        active={value === 'roadmap'}
-        onClick={() => onChange('roadmap')}
-        ariaLabel={mapLabel}
+    <div className="relative">
+      {/* Bracket corners (HUD) */}
+      <span
+        aria-hidden
+        className="text-foreground/60 pointer-events-none absolute -top-1 -left-1 size-3 border-t border-l border-current opacity-80"
+      />
+      <span
+        aria-hidden
+        className="text-foreground/60 pointer-events-none absolute -top-1 -right-1 size-3 border-t border-r border-current opacity-80"
+      />
+      <span
+        aria-hidden
+        className="text-foreground/60 pointer-events-none absolute -bottom-1 -left-1 size-3 border-b border-l border-current opacity-80"
+      />
+      <span
+        aria-hidden
+        className="text-foreground/60 pointer-events-none absolute -bottom-1 -right-1 size-3 border-b border-r border-current opacity-80"
+      />
+
+      <div
+        role="group"
+        aria-label={t('monitoring-overview:map.view.toggleAriaLabel', {
+          defaultValue: 'Map view',
+        })}
+        className={cn(
+          'pointer-events-auto inline-flex items-center gap-0.5 rounded-sm',
+          'border-border/50 bg-background/55 border p-0.5 backdrop-blur-xl',
+          'shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_color-mix(in_oklab,var(--foreground)_8%,transparent)]',
+        )}
       >
-        <MapIcon className="size-3.5" />
-        <span>{mapLabel}</span>
-      </ToggleButton>
-      <ToggleButton
-        active={value === 'hybrid'}
-        onClick={() => onChange('hybrid')}
-        ariaLabel={satelliteLabel}
-      >
-        <Satellite className="size-3.5" />
-        <span>{satelliteLabel}</span>
-      </ToggleButton>
+        <ToggleButton
+          active={value === 'roadmap'}
+          onClick={() => onChange('roadmap')}
+          ariaLabel={mapLabel}
+        >
+          <MapIcon className="size-3" strokeWidth={1.6} />
+          <span>{mapLabel}</span>
+        </ToggleButton>
+        <ToggleButton
+          active={value === 'hybrid'}
+          onClick={() => onChange('hybrid')}
+          ariaLabel={satelliteLabel}
+        >
+          <Satellite className="size-3" strokeWidth={1.6} />
+          <span>{satelliteLabel}</span>
+        </ToggleButton>
+      </div>
     </div>
   );
 }
@@ -346,10 +375,10 @@ function ToggleButton({
       aria-label={ariaLabel}
       onClick={onClick}
       className={cn(
-        'inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide transition-colors',
+        'inline-flex cursor-pointer items-center gap-1.5 rounded-sm px-3 py-1.5 font-sans text-xs font-semibold tracking-[0.12em] uppercase transition-colors',
         active
-          ? 'bg-accent text-accent-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+          ? 'bg-foreground/10 text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5',
       )}
     >
       {children}
@@ -367,22 +396,23 @@ function ActiveSiteChip({ site }: { site: Site }) {
   return (
     <div
       className={cn(
-        'pointer-events-auto inline-flex items-center gap-2 rounded-full',
-        'border-border bg-popover/90 text-popover-foreground border px-3 py-1.5 text-xs font-semibold tracking-wide',
-        'shadow-lg backdrop-blur-md',
+        'pointer-events-auto inline-flex items-center gap-2 rounded-sm',
+        'border-border/50 bg-background/55 text-foreground border px-3.5 py-1.5',
+        'font-sans text-xs font-semibold tracking-[0.14em] uppercase',
+        'backdrop-blur-xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6)]',
       )}
     >
       <span
         aria-hidden
-        className="size-2 shrink-0 rounded-full"
+        className="size-1.5 shrink-0 rounded-full"
         style={{
           backgroundColor: palette.fillColor,
-          boxShadow: `0 0 6px ${palette.fillColor}aa`,
+          boxShadow: `0 0 8px ${palette.fillColor}cc`,
         }}
       />
-      <span className="truncate">{displayName}</span>
+      <span className="truncate normal-case">{displayName}</span>
       {country ? (
-        <span className="text-muted-foreground font-normal">· {country}</span>
+        <span className="text-muted-foreground/80 font-normal">· {country}</span>
       ) : null}
     </div>
   );

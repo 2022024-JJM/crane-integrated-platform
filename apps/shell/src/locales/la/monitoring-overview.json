@@ -14,7 +14,10 @@
     "marker": {
       "craneCount": "Grues",
       "openDetails": "Singula regionis aperire",
-      "close": "Singula regionis claudere"
+      "close": "Singula regionis claudere",
+      "siteKicker": "Sedes",
+      "regionKicker": "Regio",
+      "cranes": "Grues"
     },
     "world": {
       "returnToWorld": "Conspectus mundi"
