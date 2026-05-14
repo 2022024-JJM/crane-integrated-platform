@@ -1,6 +1,10 @@
 import { Camera, WifiOff } from 'lucide-react';
 import type { SensorFeedContext } from '@crane/features/3d';
-import { CAMERA_CHANNELS, type LidarSensorKey } from './vision/types';
+import {
+  CAMERA_CHANNELS,
+  LIDAR_BY_CHANNEL_ID,
+  type LidarMode,
+} from './vision/types';
 import { PointCloudViewer } from './point-cloud-viewer';
 
 /**
@@ -16,17 +20,15 @@ import { PointCloudViewer } from './point-cloud-viewer';
  * 레이어 코드는 그대로 둔 채 실시간 영상이 들어온다.
  */
 
-const CHANNEL_TO_SENSOR: Record<string, LidarSensorKey> = {
-  'soslab-1': 'soslab1',
-  'soslab-2': 'soslab2',
-  'soslab-fusion': 'fusion',
-};
-
 export function renderSensorFeed(ctx: SensorFeedContext) {
   const { channelId, sensorType } = ctx;
 
   if (sensorType === 'lidar') {
-    const mode: LidarSensorKey = CHANNEL_TO_SENSOR[channelId] ?? 'fusion';
+    // channelId → mode 매핑은 LIDAR_CHANNELS SSOT 에서 유도된 LIDAR_BY_CHANNEL_ID 사용.
+    // 저장된 scene 의 구 channelId('soslab-1') 가 들어오면 매칭 실패하여 fusion 으로 fallback.
+    const mode: LidarMode =
+      (LIDAR_BY_CHANNEL_ID[channelId]?.mode as LidarMode | undefined) ??
+      'fusion';
     return <PointCloudViewer mode={mode} compact={ctx.size === 'thumbnail'} />;
   }
 

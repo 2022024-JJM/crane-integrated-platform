@@ -7,6 +7,42 @@
 
 import { Reader } from 'protobufjs/minimal';
 
+// .proto schema 가 클라이언트에 동봉되지 않으므로 field tag 가 곧 magic number
+// 가 되기 쉽다. 한 곳에 모아 두면 서버 schema 변경 시 추적이 쉽다.
+const FIELD_TAG = {
+  NAME: 1,
+  OFFSET: 2,
+  DATATYPE: 3,
+  COUNT: 4,
+} as const;
+
+const FRAME_TAG = {
+  SENSOR_NAME: 1,
+  VENDOR: 2,
+  SOURCE_TOPIC: 3,
+  FRAME_ID: 4,
+  TIMESTAMP_SEC: 5,
+  TIMESTAMP_NANOSEC: 6,
+  WIDTH: 7,
+  HEIGHT: 8,
+  IS_BIGENDIAN: 9,
+  POINT_STEP: 10,
+  ROW_STEP: 11,
+  IS_DENSE: 12,
+  FIELDS: 13,
+  DATA: 14,
+} as const;
+
+const BUNDLE_TAG = {
+  SEQUENCE: 1,
+  CREATED_TIMESTAMP_NS: 2,
+  WINDOW_CENTER_TIMESTAMP_NS: 3,
+  WINDOW_SIZE_MS: 4,
+  FRAMES: 5,
+  PROCESSOR_NAME: 6,
+  STATUS: 7,
+} as const;
+
 export interface PointCloudField {
   name: string;
   offset: number;
@@ -39,6 +75,8 @@ export interface PointCloudBundle {
   frames: PointCloudFrame[];
   processor_name: string;
   status: string;
+  /** true 면 서버가 sequence 필드를 보내지 않은 것. gap 계산을 신뢰할 수 없다. */
+  sequence_missing: boolean;
 }
 
 function decodePointCloudField(
@@ -56,16 +94,16 @@ function decodePointCloudField(
   while (reader.pos < end) {
     const tag = reader.uint32();
     switch (tag >>> 3) {
-      case 1:
+      case FIELD_TAG.NAME:
         message.name = reader.string();
         break;
-      case 2:
+      case FIELD_TAG.OFFSET:
         message.offset = reader.uint32();
         break;
-      case 3:
+      case FIELD_TAG.DATATYPE:
         message.datatype = reader.uint32();
         break;
-      case 4:
+      case FIELD_TAG.COUNT:
         message.count = reader.uint32();
         break;
       default:
@@ -101,46 +139,46 @@ function decodePointCloudFrame(
   while (reader.pos < end) {
     const tag = reader.uint32();
     switch (tag >>> 3) {
-      case 1:
+      case FRAME_TAG.SENSOR_NAME:
         message.sensor_name = reader.string();
         break;
-      case 2:
+      case FRAME_TAG.VENDOR:
         message.vendor = reader.string();
         break;
-      case 3:
+      case FRAME_TAG.SOURCE_TOPIC:
         message.source_topic = reader.string();
         break;
-      case 4:
+      case FRAME_TAG.FRAME_ID:
         message.frame_id = reader.string();
         break;
-      case 5:
+      case FRAME_TAG.TIMESTAMP_SEC:
         message.timestamp_sec = reader.int32();
         break;
-      case 6:
+      case FRAME_TAG.TIMESTAMP_NANOSEC:
         message.timestamp_nanosec = reader.uint32();
         break;
-      case 7:
+      case FRAME_TAG.WIDTH:
         message.width = reader.uint32();
         break;
-      case 8:
+      case FRAME_TAG.HEIGHT:
         message.height = reader.uint32();
         break;
-      case 9:
+      case FRAME_TAG.IS_BIGENDIAN:
         message.is_bigendian = reader.bool();
         break;
-      case 10:
+      case FRAME_TAG.POINT_STEP:
         message.point_step = reader.uint32();
         break;
-      case 11:
+      case FRAME_TAG.ROW_STEP:
         message.row_step = reader.uint32();
         break;
-      case 12:
+      case FRAME_TAG.IS_DENSE:
         message.is_dense = reader.bool();
         break;
-      case 13:
+      case FRAME_TAG.FIELDS:
         message.fields.push(decodePointCloudField(reader, reader.uint32()));
         break;
-      case 14:
+      case FRAME_TAG.DATA:
         message.data = reader.bytes();
         break;
       default:
@@ -174,45 +212,40 @@ export function decodeBundle(buffer: ArrayBuffer): PointCloudBundle {
   const reader = Reader.create(new Uint8Array(buffer));
   const end = reader.len;
 
-  const message = {
-    sequence: 0n as unknown as bigint,
-    created_timestamp_ns: 0n as unknown as bigint,
-    window_center_timestamp_ns: 0n as unknown as bigint,
-    window_size_ms: 0,
-    frames: [] as PointCloudFrame[],
-    processor_name: 'unknown',
-    status: 'unknown',
-  };
-
-  // protobufjs 의 uint64/int64 는 longs(string) 옵션이 없으면
-  // Long 객체 또는 number 가 반환되므로 toBigInt 로 통일한다.
-  let sequenceRaw: unknown = 0n;
-  let createdRaw: unknown = 0n;
-  let windowCenterRaw: unknown = 0n;
+  // protobufjs 의 uint64/int64 는 longs(string) 옵션이 없으면 Long 객체 또는
+  // number 가 반환되므로 toBigInt 로 통일한다. message 객체에 직접 두지 않고
+  // 로컬 변수로 받았다가 return 시점에 변환하는 게 타입 안전.
+  let sequenceRaw: unknown = null;
+  let createdRaw: unknown = null;
+  let windowCenterRaw: unknown = null;
+  let windowSizeMs = 0;
+  const frames: PointCloudFrame[] = [];
+  let processorName = 'unknown';
+  let status = 'unknown';
 
   while (reader.pos < end) {
     const tag = reader.uint32();
     switch (tag >>> 3) {
-      case 1:
+      case BUNDLE_TAG.SEQUENCE:
         sequenceRaw = reader.uint64();
         break;
-      case 2:
+      case BUNDLE_TAG.CREATED_TIMESTAMP_NS:
         createdRaw = reader.int64();
         break;
-      case 3:
+      case BUNDLE_TAG.WINDOW_CENTER_TIMESTAMP_NS:
         windowCenterRaw = reader.int64();
         break;
-      case 4:
-        message.window_size_ms = reader.uint32();
+      case BUNDLE_TAG.WINDOW_SIZE_MS:
+        windowSizeMs = reader.uint32();
         break;
-      case 5:
-        message.frames.push(decodePointCloudFrame(reader, reader.uint32()));
+      case BUNDLE_TAG.FRAMES:
+        frames.push(decodePointCloudFrame(reader, reader.uint32()));
         break;
-      case 6:
-        message.processor_name = reader.string();
+      case BUNDLE_TAG.PROCESSOR_NAME:
+        processorName = reader.string();
         break;
-      case 7:
-        message.status = reader.string();
+      case BUNDLE_TAG.STATUS:
+        status = reader.string();
         break;
       default:
         reader.skipType(tag & 7);
@@ -223,9 +256,10 @@ export function decodeBundle(buffer: ArrayBuffer): PointCloudBundle {
     sequence: toBigInt(sequenceRaw),
     created_timestamp_ns: toBigInt(createdRaw),
     window_center_timestamp_ns: toBigInt(windowCenterRaw),
-    window_size_ms: message.window_size_ms,
-    frames: message.frames,
-    processor_name: message.processor_name || 'unknown',
-    status: message.status || 'unknown',
+    window_size_ms: windowSizeMs,
+    frames,
+    processor_name: processorName || 'unknown',
+    status: status || 'unknown',
+    sequence_missing: sequenceRaw === null,
   };
 }

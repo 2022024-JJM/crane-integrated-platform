@@ -482,7 +482,7 @@
       "horizontalSegments": 50,
       "verticalSegments": 50,
       "pointSize": 0.2,
-      "channelId": "soslab-1"
+      "channelId": "lidar-1"
     },
     {
       "id": "6eec5e8b-6100-4d7d-84d1-57531f62e570",
@@ -504,7 +504,7 @@
       "horizontalSegments": 50,
       "verticalSegments": 50,
       "pointSize": 0.2,
-      "channelId": "soslab-2"
+      "channelId": "lidar-2"
     }
   ],
   "camera": {

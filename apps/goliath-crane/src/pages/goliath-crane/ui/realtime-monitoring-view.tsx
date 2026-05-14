@@ -47,7 +47,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         const lidarChannel = LIDAR_CHANNELS.find((c) => c.id === channelId);
         setExpanded({
           type: 'lidar',
-          sensor: lidarChannel?.sensorKey ?? 'fusion',
+          sensor: lidarChannel?.mode ?? 'fusion',
         });
         return;
       }
