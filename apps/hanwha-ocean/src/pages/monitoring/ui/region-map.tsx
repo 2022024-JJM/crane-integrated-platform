@@ -26,6 +26,7 @@ import {
   SITE_PROXIMITY_KM,
   WORLD_VIEW_BOUNDS,
   WORLD_VIEW_CENTER,
+  WORLD_VIEW_ZOOM,
 } from '../model/region-map-constants';
 import { findNearestSite } from '../model/find-nearest-site';
 import { useRegionMapCamera } from '../model/use-region-map-camera';
@@ -100,6 +101,7 @@ function RegionMapInner() {
   const camera = useRegionMapCamera();
   const map = useMap();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const prevLevelRef = useRef<MapLevel | null>(null);
 
   const sites = useMemo(() => getSites(), []);
   const regionsWithCenter = useMemo<RegionWithCenter[]>(
@@ -157,26 +159,33 @@ function RegionMapInner() {
   const handleReturnToWorld = useCallback(() => {
     setLevel('world');
     setActiveSiteId(null);
-    camera.fitWorld();
-  }, [camera]);
+    camera.fitWorld(sites);
+  }, [camera, sites]);
 
-  // World 레벨 진입 시 1회 fit, 그리고 컨테이너 리사이즈마다 다시 fit.
-  // 화면 종횡비/크기가 달라져도 세계지도 전체가 항상 한 화면에 들어오도록.
+  // World로 transition할 때만 1회 fit. 사용자가 World 안에서 드래그/줌으로
+  // 카메라를 옮긴 경우에는 그 위치를 그대로 존중해야 하므로, 부모의 1Hz
+  // 리렌더(useUtcClock)로 effect가 재실행되더라도 transition이 아니면 skip.
+  useEffect(() => {
+    if (!map) return;
+    if (prevLevelRef.current !== 'world' && level === 'world') {
+      camera.fitWorld(sites);
+    }
+    prevLevelRef.current = level;
+  }, [map, level, camera, sites]);
+
+  // 컨테이너 리사이즈(사이드바 토글 등) 시 fit. World 레벨에서만 동작.
   useEffect(() => {
     if (!map) return;
     if (level !== 'world') return;
-
-    camera.fitWorld();
-
     const node = containerRef.current;
     if (!node || typeof ResizeObserver === 'undefined') return;
 
     const observer = new ResizeObserver(() => {
-      camera.fitWorld();
+      camera.fitWorld(sites);
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [map, level, camera]);
+  }, [map, level, camera, sites]);
 
   const handleNavigateRegion = useCallback(
     (region: RegionWithCenter) => {
@@ -195,7 +204,7 @@ function RegionMapInner() {
     <Map
       mapId={mapId}
       defaultCenter={WORLD_VIEW_CENTER}
-      defaultBounds={WORLD_VIEW_BOUNDS}
+      defaultZoom={WORLD_VIEW_ZOOM}
       minZoom={1}
       maxZoom={18}
       gestureHandling="greedy"
@@ -211,7 +220,7 @@ function RegionMapInner() {
       colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
       restriction={{
         latLngBounds: WORLD_VIEW_BOUNDS,
-        strictBounds: true,
+        strictBounds: false,
       }}
       className="h-full w-full"
     >
