@@ -9,7 +9,7 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "typecheck"],
       "outputs": ["dist/**"],
       "env": [
         "VITE_API_BASE_URL",
@@ -27,11 +27,11 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"],
+      "dependsOn": [],
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^typecheck"],
       "outputs": []
     }
   }

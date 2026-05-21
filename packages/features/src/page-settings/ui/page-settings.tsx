@@ -16,7 +16,7 @@ import { type SupportedLanguage, i18n } from '@crane/core/config/i18n';
 import { useHeaderDisplaySettings } from '@crane/core/lib/header-display-settings-context';
 import { useTheme } from '@crane/core/lib/theme-context';
 import { cn } from '@crane/core/lib/utils';
-import { useAuth } from '../../auth';
+import { useAuth } from '@crane/features/auth';
 import { Button } from '@crane/ui/atoms/button';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
