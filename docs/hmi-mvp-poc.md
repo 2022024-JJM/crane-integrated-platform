@@ -155,6 +155,7 @@ Master ↔ Slave 거리 기준 4영역(안전/정지/미속/근접) 판정. 3축
 | 데이터 | `useHmiData` → `useHmiSimulation` — 100ms 틱, 속도 적분형(영역 판정 → 속도 피드백) |
 | 알람 | 영역 상향 진입 감지 → 점멸 트리거 (부저 제외) |
 | 기준값 | `model/limits.ts` — 종류별×축별, localStorage 영속화 (`@crane/core` safe-storage) |
+| 테마 | `ui/theme.ts` — 디자인 토큰 2종: classic(GSI 원본 재현) / modern(모던 산업 SCADA). 하단 바 토글, localStorage 영속화 |
 | 접근 | 로그인 `crane.HMI` → `/hmi` (role 가드 적용) |
 
 ### 주요 파일
@@ -175,6 +176,7 @@ apps/crane-hmi/src/pages/hmi/
     ├── bottom-bar.tsx         # 시스템 화면 / 자유 선회 / 마스터 전환(데모) / 장비 설정
     ├── settings-screen.tsx    # 장비 재설정 (2.5) + 충돌 기준값 설정
     ├── arrows.tsx             # 동작상태 화살표
+    ├── theme.ts               # 디자인 토큰 (classic / modern 테마)
     └── use-fit-scale.ts       # 1024×768 비율 스케일링
 ```
 

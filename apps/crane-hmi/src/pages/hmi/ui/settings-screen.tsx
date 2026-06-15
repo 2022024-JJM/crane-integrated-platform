@@ -4,95 +4,87 @@ import { axisLimits, DEFAULT_LIMITS } from '../model/limits';
 import type { AxisLimits, CollisionLimits } from '../model/limits';
 import type { AxisKey, MasterKind } from '../model/types';
 import { MASTER_AXES } from '../model/types';
+import { useHmiTheme } from './theme';
+import type { HmiTheme } from './theme';
 
-const sectionStyle: CSSProperties = {
-  border: '1px solid #555',
-  background: '#111',
+const sectionStyle = (theme: HmiTheme): CSSProperties => ({
+  border: theme.settings.sectionBorder,
+  background: theme.settings.sectionBg,
+  borderRadius: theme.panel.radius,
   display: 'flex',
   flexDirection: 'column',
   padding: '12px 18px',
   minHeight: 0,
-};
+});
 
-const outputBox: CSSProperties = {
+const outputBox = (theme: HmiTheme): CSSProperties => ({
   width: 120,
-  background: '#d8d8d8',
-  color: '#111',
+  background: theme.settings.outputBg,
+  color: theme.settings.outputText,
   fontSize: 20,
   fontWeight: 700,
   textAlign: 'right',
   padding: '6px 10px',
-  border: '2px inset #888',
+  border: theme.settings.outputBorder,
+  borderRadius: theme.button.radius,
+  fontFamily: theme.valueFont,
   fontVariantNumeric: 'tabular-nums',
-};
+});
 
-const setButton: CSSProperties = {
-  background: '#2e2e2e',
-  borderTop: '1px solid #8a8a8a',
-  borderLeft: '1px solid #8a8a8a',
-  borderRight: '1px solid #101010',
-  borderBottom: '1px solid #101010',
-  color: '#f0f0f0',
+const setButton = (theme: HmiTheme): CSSProperties => ({
+  background: theme.button.bg,
+  borderTop: theme.button.borderTop,
+  borderLeft: theme.button.borderTop,
+  borderRight: theme.button.borderBottom,
+  borderBottom: theme.button.borderBottom,
+  borderRadius: theme.button.radius,
+  color: theme.button.text,
   fontSize: 16,
   fontWeight: 800,
   padding: '7px 18px',
   cursor: 'pointer',
-};
+});
 
-const inputBox: CSSProperties = {
+const inputBox = (theme: HmiTheme): CSSProperties => ({
   width: 120,
-  background: '#fff',
-  color: '#111',
+  background: theme.settings.inputBg,
+  color: theme.settings.inputText,
   fontSize: 18,
   fontWeight: 700,
   padding: '6px 10px',
-  border: '2px inset #888',
+  border: theme.settings.inputBorder,
+  borderRadius: theme.button.radius,
+  fontFamily: theme.valueFont,
   outline: 'none',
-};
+});
 
-const smallLabel: CSSProperties = {
-  color: '#bdbdbd',
+const smallLabel = (theme: HmiTheme): CSSProperties => ({
+  color: theme.row.labelText,
   fontSize: 12,
   fontWeight: 700,
   marginBottom: 3,
-};
+});
 
-const guideTitle: CSSProperties = {
-  color: '#fff',
+const guideTitle = (theme: HmiTheme): CSSProperties => ({
+  color: theme.panel.headerText,
   fontSize: 14,
   fontWeight: 800,
   marginBottom: 4,
-};
+});
 
-const guideLine: CSSProperties = {
-  color: '#9fdf9f',
+const guideLine = (theme: HmiTheme): CSSProperties => ({
+  color: theme.settings.guideText,
   fontSize: 12.5,
   lineHeight: 1.55,
   fontWeight: 600,
-};
+});
 
-const sectionTitle: CSSProperties = {
-  color: '#fff',
+const sectionTitle = (theme: HmiTheme): CSSProperties => ({
+  color: theme.panel.headerText,
   fontSize: 23,
   fontWeight: 900,
   marginBottom: 10,
-};
-
-const limitInput: CSSProperties = {
-  ...inputBox,
-  width: 72,
-  fontSize: 16,
-  padding: '5px 8px',
-  textAlign: 'right',
-};
-
-const limitHeader: CSSProperties = {
-  color: '#bdbdbd',
-  fontSize: 12,
-  fontWeight: 700,
-  width: 72,
-  textAlign: 'center',
-};
+});
 
 type LimitField = keyof AxisLimits;
 const LIMIT_FIELDS: { field: LimitField; label: string }[] = [
@@ -133,14 +125,15 @@ function Section({
   guide: ReactNode;
   flex?: number;
 }) {
+  const theme = useHmiTheme();
   return (
-    <div style={{ ...sectionStyle, flex }}>
-      <div style={sectionTitle}>{title}</div>
+    <div style={{ ...sectionStyle(theme), flex }}>
+      <div style={sectionTitle(theme)}>{title}</div>
       <div style={{ display: 'flex', gap: 20, flex: 1, minHeight: 0 }}>
         <div style={{ width: controlsWidth, flexShrink: 0 }}>{controls}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={guideTitle}>{guideTitleText}</div>
-          <div style={guideLine}>{guide}</div>
+          <div style={guideTitle(theme)}>{guideTitleText}</div>
+          <div style={guideLine(theme)}>{guide}</div>
         </div>
       </div>
     </div>
@@ -164,6 +157,7 @@ export function SettingsScreen({
   limits,
   onSaveLimits,
 }: SettingsScreenProps) {
+  const theme = useHmiTheme();
   const [slewOutput, setSlewOutput] = useState<number | null>(null);
   const [traverseOutput, setTraverseOutput] = useState<number | null>(null);
   const [input1, setInput1] = useState('');
@@ -173,6 +167,26 @@ export function SettingsScreen({
   const [limitsMessage, setLimitsMessage] = useState<string | null>(null);
 
   const encoder = Math.round(trolley * 137 + 4096);
+
+  const limitInput: CSSProperties = {
+    ...inputBox(theme),
+    width: 72,
+    fontSize: 16,
+    padding: '5px 8px',
+    textAlign: 'right',
+  };
+
+  const limitHeader: CSSProperties = {
+    color: theme.row.labelText,
+    fontSize: 12,
+    fontWeight: 700,
+    width: 72,
+    textAlign: 'center',
+  };
+
+  const accentBold: CSSProperties = {
+    color: theme.panel.headerText,
+  };
 
   const setDraftValue = (axis: AxisKey, field: LimitField, raw: string) => {
     const digits = raw.replace(/\D/g, '');
@@ -214,7 +228,6 @@ export function SettingsScreen({
         display: 'flex',
         gap: 8,
         padding: 10,
-        background: '#000',
       }}
     >
       {/* 좌측 컬럼 — 매뉴얼 2.5 (선회/횡행 재설정) */}
@@ -232,14 +245,14 @@ export function SettingsScreen({
           controlsWidth={230}
           controls={
             <>
-              <div style={smallLabel}>출력값</div>
+              <div style={smallLabel(theme)}>출력값</div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <div style={outputBox}>
+                <div style={outputBox(theme)}>
                   {(slewOutput ?? slewDeg).toFixed(1)}
                 </div>
                 <button
                   type="button"
-                  style={setButton}
+                  style={setButton(theme)}
                   onClick={() => setSlewOutput(90)}
                 >
                   SET
@@ -252,7 +265,7 @@ export function SettingsScreen({
             <>
               1. 붐을 정북 방향으로 (주행 레일과 평행) 놓는다.
               <br />
-              2. <b style={{ color: '#fff' }}>SET</b> 버튼을 누른다.
+              2. <b style={accentBold}>SET</b> 버튼을 누른다.
               <br />
               3. 선회 각도가 90도로 바뀌었는지 확인한다.
             </>
@@ -267,26 +280,17 @@ export function SettingsScreen({
             <>
               <div style={{ display: 'flex', gap: 14, marginBottom: 8 }}>
                 <div>
-                  <div style={smallLabel}>출력값</div>
-                  <div style={outputBox}>
+                  <div style={smallLabel(theme)}>출력값</div>
+                  <div style={outputBox(theme)}>
                     {(traverseOutput ?? trolley).toFixed(1)}
                   </div>
                 </div>
                 <div>
-                  <div style={smallLabel}>엔코더 값</div>
-                  <div
-                    style={{
-                      ...outputBox,
-                      background: '#2a2a2a',
-                      color: '#eee',
-                      border: '2px inset #555',
-                    }}
-                  >
-                    {encoder}
-                  </div>
+                  <div style={smallLabel(theme)}>엔코더 값</div>
+                  <div style={outputBox(theme)}>{encoder}</div>
                 </div>
               </div>
-              <div style={smallLabel}>입력1</div>
+              <div style={smallLabel(theme)}>입력1</div>
               <div
                 style={{
                   display: 'flex',
@@ -296,14 +300,14 @@ export function SettingsScreen({
                 }}
               >
                 <input
-                  style={inputBox}
+                  style={inputBox(theme)}
                   value={input1}
                   inputMode="numeric"
                   onChange={(e) => setInput1(e.target.value.replace(/\D/g, ''))}
                 />
                 <button
                   type="button"
-                  style={setButton}
+                  style={setButton(theme)}
                   onClick={() =>
                     input1 && setTraverseOutput(Number(input1) / 10)
                   }
@@ -311,17 +315,17 @@ export function SettingsScreen({
                   SET 1
                 </button>
               </div>
-              <div style={smallLabel}>입력2</div>
+              <div style={smallLabel(theme)}>입력2</div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <input
-                  style={inputBox}
+                  style={inputBox(theme)}
                   value={input2}
                   inputMode="numeric"
                   onChange={(e) => setInput2(e.target.value.replace(/\D/g, ''))}
                 />
                 <button
                   type="button"
-                  style={setButton}
+                  style={setButton(theme)}
                   onClick={() =>
                     input2 && setTraverseOutput(Number(input2) / 10)
                   }
@@ -337,18 +341,20 @@ export function SettingsScreen({
               1. 트롤리를 운전실 안쪽으로 최대한 이동시킨다.
               <br />
               2. 크레인 중심에서 트롤리 중심까지의 거리를 측정하여 0.1m 단위로{' '}
-              <b style={{ color: '#fff' }}>입력1</b>에 입력 후{' '}
-              <b style={{ color: '#fff' }}>SET 1</b> 버튼을 누른다.
+              <b style={accentBold}>입력1</b>에 입력 후{' '}
+              <b style={accentBold}>SET 1</b> 버튼을 누른다.
               <br />
-              <span style={{ color: '#ff4a4a', fontWeight: 800 }}>
+              <span
+                style={{ color: theme.settings.guideAccent, fontWeight: 800 }}
+              >
                 입력 예시: 25.6m =&gt; 256
               </span>
               <br />
               3. 트롤리를 운전실 바깥쪽으로 최대한 이동시킨다.
               <br />
               4. 크레인 중심에서 트롤리 중심까지의 거리를 측정하여 0.1m 단위로{' '}
-              <b style={{ color: '#fff' }}>입력2</b>에 입력 후{' '}
-              <b style={{ color: '#fff' }}>SET 2</b> 버튼을 누른다.
+              <b style={accentBold}>입력2</b>에 입력 후{' '}
+              <b style={accentBold}>SET 2</b> 버튼을 누른다.
               <br />
               5. 출력값이 잘 나오는지 확인한다.
             </>
@@ -390,7 +396,7 @@ export function SettingsScreen({
                   <div
                     style={{
                       width: 44,
-                      color: '#e9e9e9',
+                      color: theme.row.labelText,
                       fontSize: 15,
                       fontWeight: 700,
                     }}
@@ -413,14 +419,14 @@ export function SettingsScreen({
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <button
                   type="button"
-                  style={setButton}
+                  style={setButton(theme)}
                   onClick={handleSaveLimits}
                 >
                   저장
                 </button>
                 <button
                   type="button"
-                  style={{ ...setButton, fontWeight: 600 }}
+                  style={{ ...setButton(theme), fontWeight: 600 }}
                   onClick={handleResetLimits}
                 >
                   권장값
@@ -434,19 +440,23 @@ export function SettingsScreen({
               1. 현재 마스터 크레인 종류({kind})의 축별 기준값을 0.1m 단위로
               입력한다.
               <br />
-              <span style={{ color: '#ff4a4a', fontWeight: 800 }}>
+              <span
+                style={{ color: theme.settings.guideAccent, fontWeight: 800 }}
+              >
                 입력 예시: 25.0m =&gt; 250
               </span>
               <br />
               2. 안전 &lt; 정지 &lt; 근접 순서를 지켜야 하며, 미속거리는
               정지~근접 사이에서 자동 산출된다.
               <br />
-              3. <b style={{ color: '#fff' }}>저장</b> 버튼을 누르면 즉시 충돌
-              판정에 반영되고 재기동 후에도 유지된다.
+              3. <b style={accentBold}>저장</b> 버튼을 누르면 즉시 충돌 판정에
+              반영되고 재기동 후에도 유지된다.
               {limitsMessage && (
                 <>
                   <br />
-                  <span style={{ color: '#ffe33c', fontWeight: 800 }}>
+                  <span
+                    style={{ color: theme.alarm.warnText, fontWeight: 800 }}
+                  >
                     {limitsMessage}
                   </span>
                 </>

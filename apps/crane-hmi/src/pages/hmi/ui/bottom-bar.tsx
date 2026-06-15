@@ -1,19 +1,22 @@
 import type { CSSProperties } from 'react';
 import type { MasterKind } from '../model/types';
+import { useHmiTheme } from './theme';
+import type { HmiTheme, HmiThemeName } from './theme';
 
-const buttonStyle: CSSProperties = {
-  background: '#3a3a3a',
-  borderTop: '1px solid #7a7a7a',
-  borderLeft: '1px solid #7a7a7a',
-  borderRight: '1px solid #151515',
-  borderBottom: '1px solid #151515',
-  color: '#e3e3e3',
+const buttonStyle = (theme: HmiTheme): CSSProperties => ({
+  background: theme.button.bg,
+  borderTop: theme.button.borderTop,
+  borderLeft: theme.button.borderTop,
+  borderRight: theme.button.borderBottom,
+  borderBottom: theme.button.borderBottom,
+  borderRadius: theme.button.radius,
+  color: theme.button.text,
   fontSize: 18,
   fontWeight: 700,
   padding: '9px 20px',
   cursor: 'pointer',
   letterSpacing: 1,
-};
+});
 
 interface BottomBarProps {
   onSystemClick: () => void;
@@ -24,9 +27,11 @@ interface BottomBarProps {
   masterKind: MasterKind;
   onCycleMasterKind: () => void;
   showMasterKind?: boolean;
+  themeName: HmiThemeName;
+  onToggleTheme: () => void;
 }
 
-/** 하측 메뉴 바 — 시스템 화면 / 자유 선회(2.6) / 장비 설정 */
+/** 하측 메뉴 바 — 시스템 화면 / 자유 선회(2.6) / 데모 컨트롤 / 장비 설정 */
 export function BottomBar({
   onSystemClick,
   onSettingsClick,
@@ -36,7 +41,18 @@ export function BottomBar({
   masterKind,
   onCycleMasterKind,
   showMasterKind = true,
+  themeName,
+  onToggleTheme,
 }: BottomBarProps) {
+  const theme = useHmiTheme();
+  const base = buttonStyle(theme);
+  const demoStyle: CSSProperties = {
+    ...base,
+    fontSize: 14,
+    padding: '8px 12px',
+    color: theme.titleBar.screenName,
+  };
+
   return (
     <div
       style={{
@@ -45,11 +61,11 @@ export function BottomBar({
         alignItems: 'center',
         gap: 10,
         padding: '0 12px',
-        background: '#0a0a0a',
-        borderTop: '1px solid #2c2c2c',
+        background: theme.titleBar.bg,
+        borderTop: theme.titleBar.border,
       }}
     >
-      <button type="button" style={buttonStyle} onClick={onSystemClick}>
+      <button type="button" style={base} onClick={onSystemClick}>
         시스템 화면
       </button>
       {showFreeSlew && (
@@ -57,12 +73,14 @@ export function BottomBar({
           type="button"
           className={freeSlew ? 'hmi-pulse' : undefined}
           style={{
-            ...buttonStyle,
-            background: '#52f23a',
-            color: '#000',
+            ...base,
+            background: theme.freeSlew.bg,
+            color: theme.freeSlew.text,
             fontWeight: 800,
-            borderTop: '1px solid #b8ffb0',
-            borderLeft: '1px solid #b8ffb0',
+            borderTop: theme.freeSlew.border,
+            borderLeft: theme.freeSlew.border,
+            borderRight: theme.freeSlew.border,
+            borderBottom: theme.freeSlew.border,
           }}
           onClick={onToggleFreeSlew}
         >
@@ -70,24 +88,18 @@ export function BottomBar({
         </button>
       )}
       {showMasterKind && (
-        <button
-          type="button"
-          style={{
-            ...buttonStyle,
-            fontSize: 14,
-            padding: '8px 12px',
-            color: '#9fb6bd',
-          }}
-          onClick={onCycleMasterKind}
-        >
+        <button type="button" style={demoStyle} onClick={onCycleMasterKind}>
           마스터: {masterKind} (데모)
         </button>
       )}
       <button
         type="button"
-        style={{ ...buttonStyle, marginLeft: 'auto' }}
-        onClick={onSettingsClick}
+        style={{ ...demoStyle, marginLeft: 'auto' }}
+        onClick={onToggleTheme}
       >
+        디자인: {themeName === 'modern' ? '모던' : '클래식'}
+      </button>
+      <button type="button" style={base} onClick={onSettingsClick}>
         장비 설정
       </button>
     </div>

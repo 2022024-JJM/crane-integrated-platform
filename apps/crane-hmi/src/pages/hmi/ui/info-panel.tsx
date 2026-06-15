@@ -7,27 +7,8 @@ import type {
 } from '../model/types';
 import { MASTER_AXES } from '../model/types';
 import { IdleAxisArrows, MotionArrow } from './arrows';
-
-const labelCell: CSSProperties = {
-  width: 66,
-  flexShrink: 0,
-  background: '#262626',
-  borderRight: '1px solid #4d4d4d',
-  color: '#e9e9e9',
-  fontSize: 19,
-  fontWeight: 700,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const rowBase: CSSProperties = {
-  display: 'flex',
-  alignItems: 'stretch',
-  borderTop: '1px solid #4d4d4d',
-  flex: 1,
-  minHeight: 0,
-};
+import { useHmiTheme } from './theme';
+import type { HmiTheme } from './theme';
 
 const rowContent: CSSProperties = {
   flex: 1,
@@ -44,6 +25,57 @@ const centerAbsolute: CSSProperties = {
   display: 'flex',
 };
 
+const labelCellStyle = (theme: HmiTheme): CSSProperties => ({
+  width: 66,
+  flexShrink: 0,
+  background: theme.row.labelBg,
+  borderRight: theme.row.labelBorder,
+  color: theme.row.labelText,
+  fontSize: 19,
+  fontWeight: 700,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+const rowBaseStyle = (theme: HmiTheme): CSSProperties => ({
+  display: 'flex',
+  alignItems: 'stretch',
+  borderTop: theme.row.border,
+  flex: 1,
+  minHeight: 0,
+});
+
+const panelStyle = (
+  theme: HmiTheme,
+  border: string,
+  flex: number,
+): CSSProperties => ({
+  border,
+  background: theme.panel.bg,
+  borderRadius: theme.panel.radius,
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  flex,
+  minHeight: 0,
+});
+
+const headerBoxStyle = (
+  theme: HmiTheme,
+  fontSize: number,
+  letterSpacing: number,
+): CSSProperties => ({
+  border: theme.panel.headerBorder,
+  background: theme.panel.headerBg,
+  borderRadius: Math.max(0, theme.panel.radius - 4),
+  textAlign: 'center',
+  color: theme.panel.headerText,
+  fontSize,
+  fontWeight: 800,
+  letterSpacing,
+});
+
 interface StatusRowProps {
   label: string;
   arrows?: ReactNode;
@@ -59,9 +91,10 @@ function StatusRow({
   unit,
   moving = false,
 }: StatusRowProps) {
+  const theme = useHmiTheme();
   return (
-    <div style={rowBase}>
-      <div style={labelCell}>{label}</div>
+    <div style={rowBaseStyle(theme)}>
+      <div style={labelCellStyle(theme)}>{label}</div>
       <div style={rowContent}>
         {arrows && <span style={centerAbsolute}>{arrows}</span>}
         <div
@@ -76,10 +109,12 @@ function StatusRow({
             style={{
               width: 102,
               textAlign: 'right',
-              fontSize: 30,
-              fontWeight: 800,
-              color: moving ? '#35e83b' : '#fff',
+              fontSize: 28,
+              fontWeight: 700,
+              fontFamily: theme.valueFont,
+              color: moving ? theme.text.valueMoving : theme.text.value,
               fontVariantNumeric: 'tabular-nums',
+              transition: 'color 0.25s',
             }}
           >
             {value}
@@ -87,9 +122,9 @@ function StatusRow({
           <span
             style={{
               width: 18,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
-              color: '#bdbdbd',
+              color: theme.text.unit,
             }}
           >
             {unit}
@@ -102,6 +137,7 @@ function StatusRow({
 
 /** 우측 상단 — Master Crane 번호 및 종류별 동작상태 (매뉴얼 2.2 ⓑ) */
 export function MasterPanel({ snap }: { snap: HmiSnapshot }) {
+  const theme = useHmiTheme();
   const m = snap.master;
   const pair = (a: ArrowDir, b: ArrowDir, moving: boolean, dir: ArrowDir) => (
     <span style={{ display: 'flex', gap: 6 }}>
@@ -111,28 +147,9 @@ export function MasterPanel({ snap }: { snap: HmiSnapshot }) {
   );
 
   return (
-    <div
-      style={{
-        border: '2px solid #d40000',
-        background: '#000',
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 11,
-        minHeight: 0,
-      }}
-    >
+    <div style={panelStyle(theme, theme.panel.masterBorder, 11)}>
       <div style={{ padding: 5 }}>
-        <div
-          style={{
-            border: '2px solid #e3e3e3',
-            textAlign: 'center',
-            padding: '7px 0',
-            color: '#fff',
-            fontSize: 31,
-            fontWeight: 800,
-            letterSpacing: 2,
-          }}
-        >
+        <div style={{ ...headerBoxStyle(theme, 31, 2), padding: '7px 0' }}>
           {m.id}
         </div>
       </div>
@@ -161,21 +178,24 @@ function CollisionRow({
   meta: AxisMeta;
   info: CollisionAxisInfo;
 }) {
+  const theme = useHmiTheme();
   const horizontal = meta.arrows[0] === 'left';
   const alarm = info.zone !== 'none';
-  const color = info.zone === 'stop' ? '#ff2a2a' : '#ffe33c';
+  const color =
+    info.zone === 'stop' ? theme.alarm.stopText : theme.alarm.warnText;
 
   return (
-    <div style={rowBase}>
-      <div style={labelCell}>{meta.label}</div>
+    <div style={rowBaseStyle(theme)}>
+      <div style={labelCellStyle(theme)}>{meta.label}</div>
       <div style={rowContent}>
         {info.targetId ? (
           <>
             <span
               style={{
-                color: alarm ? color : '#fff',
-                fontSize: 19,
+                color: alarm ? color : theme.text.value,
+                fontSize: 18,
                 fontWeight: 800,
+                transition: 'color 0.25s',
               }}
             >
               {info.targetId}
@@ -197,10 +217,12 @@ function CollisionRow({
                 marginLeft: 'auto',
                 width: 104,
                 textAlign: 'right',
-                color: alarm ? color : '#fff',
-                fontSize: 28,
-                fontWeight: 800,
+                color: alarm ? color : theme.text.value,
+                fontSize: 26,
+                fontWeight: 700,
+                fontFamily: theme.valueFont,
                 fontVariantNumeric: 'tabular-nums',
+                transition: 'color 0.25s',
               }}
             >
               {info.distance?.toFixed(1)}m
@@ -218,29 +240,11 @@ function CollisionRow({
 
 /** 우측 하단 — 충돌 정보 (매뉴얼 2.3 ⓒ). 무알람이어도 표시 범위 내 최근접 대상은 흰색으로 표시 */
 export function CollisionPanel({ snap }: { snap: HmiSnapshot }) {
+  const theme = useHmiTheme();
   return (
-    <div
-      style={{
-        border: '2px solid #bdbdbd',
-        background: '#000',
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 9,
-        minHeight: 0,
-      }}
-    >
+    <div style={panelStyle(theme, theme.panel.border, 9)}>
       <div style={{ padding: 5 }}>
-        <div
-          style={{
-            border: '2px solid #e3e3e3',
-            textAlign: 'center',
-            padding: '5px 0',
-            color: '#fff',
-            fontSize: 25,
-            fontWeight: 800,
-            letterSpacing: 6,
-          }}
-        >
+        <div style={{ ...headerBoxStyle(theme, 25, 6), padding: '5px 0' }}>
           충돌 정보
         </div>
       </div>

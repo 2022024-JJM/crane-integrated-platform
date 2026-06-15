@@ -8,14 +8,18 @@ import { BottomBar } from './bottom-bar';
 import { CraneMap } from './crane-map';
 import { CollisionPanel, MasterPanel } from './info-panel';
 import { SettingsScreen } from './settings-screen';
+import {
+  HMI_THEMES,
+  HmiThemeContext,
+  loadThemeName,
+  saveThemeName,
+} from './theme';
+import type { HmiThemeName } from './theme';
 import { TitleBar } from './title-bar';
 import { useFitScale } from './use-fit-scale';
 
 const DESIGN_W = 1024;
 const DESIGN_H = 768;
-
-const HMI_FONT =
-  "'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif";
 
 const HMI_KEYFRAMES = `
 @keyframes hmiBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.12; } }
@@ -44,6 +48,7 @@ export function HmiPage() {
   const [freeSlew, setFreeSlew] = useState(false);
   const [masterKind, setMasterKind] = useState<MasterKind>('TTC');
   const [limits, setLimits] = useState<CollisionLimits>(loadLimits);
+  const [themeName, setThemeName] = useState<HmiThemeName>(loadThemeName);
 
   const snap = useHmiData({ kind: masterKind, commError, limits });
   const { ref, scale } = useFitScale(DESIGN_W, DESIGN_H);
@@ -72,102 +77,116 @@ export function HmiPage() {
     setLimits(next);
   };
 
+  const handleToggleTheme = () => {
+    setThemeName((t) => {
+      const next = t === 'modern' ? 'classic' : 'modern';
+      saveThemeName(next);
+      return next;
+    });
+  };
+
   /** 장비 재설정 화면 출력용 — 해당 축이 없는 마스터 종류는 0 */
   const axisValue = (key: AxisKey) => {
     const i = MASTER_AXES[masterKind].findIndex((meta) => meta.key === key);
     return i < 0 ? 0 : snap.master.status[i].value;
   };
 
+  const theme = HMI_THEMES[themeName];
+
   return (
-    <div
-      ref={ref}
-      style={{
-        width: '100%',
-        height: '100%',
-        background: '#000',
-        display: 'grid',
-        placeItems: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      <style>{HMI_KEYFRAMES}</style>
+    <HmiThemeContext.Provider value={theme}>
       <div
+        ref={ref}
         style={{
-          width: DESIGN_W,
-          height: DESIGN_H,
-          flexShrink: 0,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center',
+          width: '100%',
+          height: '100%',
           background: '#000',
-          fontFamily: HMI_FONT,
-          position: 'relative',
-          userSelect: 'none',
+          display: 'grid',
+          placeItems: 'center',
+          overflow: 'hidden',
         }}
       >
-        <TitleBar
-          clock={clock}
-          screenName={screen === 'main' ? '전체 보기' : '장비 재설정'}
-          controlOn={controlOn}
-          bypassOn={bypassOn}
-          commError={commError}
-          onToggleControl={() => setControlOn((v) => !v)}
-          onToggleBypass={() => setBypassOn((v) => !v)}
-          onToggleComm={() => setCommError((v) => !v)}
-          showIcons={screen === 'main'}
-        />
+        <style>{HMI_KEYFRAMES}</style>
+        <div
+          style={{
+            width: DESIGN_W,
+            height: DESIGN_H,
+            flexShrink: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'center',
+            background: theme.pageBg,
+            fontFamily: theme.font,
+            position: 'relative',
+            userSelect: 'none',
+          }}
+        >
+          <TitleBar
+            clock={clock}
+            screenName={screen === 'main' ? '전체 보기' : '장비 재설정'}
+            controlOn={controlOn}
+            bypassOn={bypassOn}
+            commError={commError}
+            onToggleControl={() => setControlOn((v) => !v)}
+            onToggleBypass={() => setBypassOn((v) => !v)}
+            onToggleComm={() => setCommError((v) => !v)}
+            showIcons={screen === 'main'}
+          />
 
-        {screen === 'main' ? (
-          <div
-            style={{
-              position: 'absolute',
-              top: 50,
-              bottom: 54,
-              left: 0,
-              right: 0,
-              display: 'flex',
-              gap: 8,
-              padding: 8,
-            }}
-          >
-            <div style={{ width: 528, flexShrink: 0 }}>
-              <CraneMap snap={snap} flashKey={snap.alarmAt} />
-            </div>
+          {screen === 'main' ? (
             <div
               style={{
-                flex: 1,
+                position: 'absolute',
+                top: 50,
+                bottom: 54,
+                left: 0,
+                right: 0,
                 display: 'flex',
-                flexDirection: 'column',
                 gap: 8,
-                minWidth: 0,
+                padding: 8,
               }}
             >
-              <MasterPanel snap={snap} />
-              <CollisionPanel snap={snap} />
+              <div style={{ width: 528, flexShrink: 0 }}>
+                <CraneMap snap={snap} flashKey={snap.alarmAt} />
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  minWidth: 0,
+                }}
+              >
+                <MasterPanel snap={snap} />
+                <CollisionPanel snap={snap} />
+              </div>
             </div>
-          </div>
-        ) : (
-          <SettingsScreen
-            slewDeg={axisValue('slew')}
-            trolley={axisValue('traverse')}
-            kind={masterKind}
-            limits={limits}
-            onSaveLimits={handleSaveLimits}
-          />
-        )}
+          ) : (
+            <SettingsScreen
+              slewDeg={axisValue('slew')}
+              trolley={axisValue('traverse')}
+              kind={masterKind}
+              limits={limits}
+              onSaveLimits={handleSaveLimits}
+            />
+          )}
 
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
-          <BottomBar
-            onSystemClick={() => setScreen('main')}
-            onSettingsClick={handleSettingsClick}
-            freeSlew={freeSlew}
-            onToggleFreeSlew={() => setFreeSlew((v) => !v)}
-            showFreeSlew={screen === 'main'}
-            masterKind={masterKind}
-            onCycleMasterKind={() => setMasterKind((k) => KIND_CYCLE[k])}
-            showMasterKind={screen === 'main'}
-          />
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+            <BottomBar
+              onSystemClick={() => setScreen('main')}
+              onSettingsClick={handleSettingsClick}
+              freeSlew={freeSlew}
+              onToggleFreeSlew={() => setFreeSlew((v) => !v)}
+              showFreeSlew={screen === 'main'}
+              masterKind={masterKind}
+              onCycleMasterKind={() => setMasterKind((k) => KIND_CYCLE[k])}
+              showMasterKind={screen === 'main'}
+              themeName={themeName}
+              onToggleTheme={handleToggleTheme}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </HmiThemeContext.Provider>
   );
 }

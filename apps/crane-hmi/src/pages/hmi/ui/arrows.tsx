@@ -1,4 +1,5 @@
 import type { ArrowDir } from '../model/types';
+import { useHmiTheme } from './theme';
 
 const ROT: Record<ArrowDir, number> = {
   up: 0,
@@ -19,8 +20,9 @@ export function MotionArrow({
   dir,
   active = false,
   size = 26,
-  activeColor = '#35e83b',
+  activeColor,
 }: MotionArrowProps) {
+  const theme = useHmiTheme();
   return (
     <svg
       width={size}
@@ -30,8 +32,12 @@ export function MotionArrow({
     >
       <polygon
         points="12,2 22,12 16.5,12 16.5,22 7.5,22 7.5,12 2,12"
-        fill={active ? activeColor : '#484848'}
-        stroke={active ? '#bfffc2' : '#2a2a2a'}
+        fill={
+          active
+            ? (activeColor ?? theme.text.valueMoving)
+            : theme.arrow.idleFill
+        }
+        stroke={active ? '#ffffff66' : theme.arrow.idleStroke}
         strokeWidth="1"
       />
     </svg>

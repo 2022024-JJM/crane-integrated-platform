@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useHmiTheme } from './theme';
 
 interface TitleBarProps {
   clock: string;
@@ -13,20 +14,21 @@ interface TitleBarProps {
   showIcons?: boolean;
 }
 
-const iconBox = (activeBg: string | null): CSSProperties => ({
+const iconBox = (activeBg: string | null, radius: number): CSSProperties => ({
   width: 40,
   height: 40,
-  borderRadius: 7,
-  border: '1px solid #6a6a6a',
-  background: activeBg ?? '#14141d',
+  borderRadius: Math.max(7, radius),
+  border: '1px solid #6a6a6a44',
+  background: activeBg ?? '#ffffff0a',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
   flexShrink: 0,
+  transition: 'background 0.2s',
 });
 
-/** 상단 타이틀 바 — 좌: 모드 상태 아이콘 / 중: GSI 충돌 방지 시스템 / 우: 현재 시각 */
+/** 상단 타이틀 바 — 좌: 모드 상태 아이콘 / 중: 충돌 방지 시스템 + 화면명 / 우: 현재 시각 */
 export function TitleBar({
   clock,
   screenName,
@@ -38,6 +40,7 @@ export function TitleBar({
   onToggleComm,
   showIcons = true,
 }: TitleBarProps) {
+  const theme = useHmiTheme();
   return (
     <div
       style={{
@@ -45,8 +48,8 @@ export function TitleBar({
         display: 'flex',
         alignItems: 'center',
         padding: '0 12px',
-        background: '#000',
-        borderBottom: '1px solid #2c2c2c',
+        background: theme.titleBar.bg,
+        borderBottom: theme.titleBar.border,
         position: 'relative',
       }}
     >
@@ -55,7 +58,7 @@ export function TitleBar({
           {/* 컨트롤 온/오프 */}
           <button
             type="button"
-            style={iconBox(controlOn ? '#13a313' : null)}
+            style={iconBox(controlOn ? '#13a313' : null, theme.button.radius)}
             onClick={onToggleControl}
           >
             <svg width="24" height="24" viewBox="0 0 24 24">
@@ -80,7 +83,7 @@ export function TitleBar({
           {/* 충돌 방지 바이패스 */}
           <button
             type="button"
-            style={iconBox(bypassOn ? '#cf1414' : null)}
+            style={iconBox(bypassOn ? '#cf1414' : null, theme.button.radius)}
             onClick={onToggleBypass}
           >
             <svg width="24" height="24" viewBox="0 0 24 24">
@@ -113,7 +116,7 @@ export function TitleBar({
           {/* PLC-HMI 통신오류 */}
           <button
             type="button"
-            style={iconBox(commError ? '#e8b400' : null)}
+            style={iconBox(commError ? '#e8b400' : null, theme.button.radius)}
             onClick={onToggleComm}
           >
             <svg width="24" height="24" viewBox="0 0 24 24">
@@ -156,7 +159,7 @@ export function TitleBar({
       >
         <span
           style={{
-            color: '#f37321',
+            color: theme.titleBar.brand,
             fontWeight: 900,
             fontSize: 28,
             letterSpacing: 1,
@@ -167,7 +170,7 @@ export function TitleBar({
         </span>
         <span
           style={{
-            color: '#f2f2f2',
+            color: theme.titleBar.title,
             fontWeight: 800,
             fontSize: 26,
             letterSpacing: 4,
@@ -175,7 +178,13 @@ export function TitleBar({
         >
           충돌 방지 시스템
         </span>
-        <span style={{ color: '#9a9a9a', fontWeight: 700, fontSize: 17 }}>
+        <span
+          style={{
+            color: theme.titleBar.screenName,
+            fontWeight: 700,
+            fontSize: 17,
+          }}
+        >
           {screenName}
         </span>
       </div>
@@ -183,9 +192,10 @@ export function TitleBar({
       <span
         style={{
           marginLeft: 'auto',
-          color: '#d8d8d8',
-          fontSize: 17,
+          color: theme.titleBar.clock,
+          fontSize: 16,
           fontWeight: 600,
+          fontFamily: theme.valueFont,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
