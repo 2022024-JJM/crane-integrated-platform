@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInventoryList } from '@crane/features/inventory';
-import type { InventoryItem, InventoryStatus, PartCriticality } from '@crane/domain/inventory';
+import type {
+  InventoryItem,
+  InventoryStatus,
+  PartCategory,
+  PartCriticality,
+} from '@crane/domain/inventory';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
+import { PartDetailPanel } from './part-detail-panel';
 
 const STATUS_VARIANT: Record<InventoryStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   normal: 'success',
@@ -39,6 +45,22 @@ const CRITICALITY_PILL: Record<PartCriticality, { color: string; bg: string; act
 const FILTER_STATUSES: InventoryStatus[] = ['normal', 'low', 'out_of_stock', 'excess', 'expiry_soon'];
 const FILTER_CRITICALITIES: PartCriticality[] = ['critical', 'essential', 'standard'];
 
+type CraneFilter = 'all' | 'crane-660t' | 'crane-50t' | 'common';
+
+const CRANE_FILTERS: { key: Exclude<CraneFilter, 'all'>; label: string }[] = [
+  { key: 'crane-660t', label: '660T' },
+  { key: 'crane-50t', label: '50T' },
+  { key: 'common', label: 'common' },
+];
+
+function craneBadgeOf(craneIds: string[]): { label: string; cls: string; isCommon: boolean } {
+  const has660 = craneIds.includes('crane-660t');
+  const has50 = craneIds.includes('crane-50t');
+  if (has660 && has50) return { label: '', cls: 'bg-sky-500/15 text-sky-400', isCommon: true };
+  if (has660) return { label: '660T', cls: 'bg-purple-500/15 text-purple-400', isCommon: false };
+  return { label: '50T', cls: 'bg-teal-500/15 text-teal-400', isCommon: false };
+}
+
 function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -50,10 +72,19 @@ function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolea
   return { label: `D+${Math.abs(diff)}`, isOverdue: true };
 }
 
-// 컬럼 폭: 부품명(가변, 최소) · 중요도 · 현재재고 · 재고수준(progress) · 단가 · 리드타임 · 상태
-const GRID_TEMPLATE = 'minmax(240px,2.4fr) 90px 100px minmax(140px,1fr) 100px 90px 110px';
+// 컬럼 폭: 부품명(가변, 최소) · 중요도 · 현재재고 · 예약 · 가용 · 단위 · 재고수준(progress) · 단가 · 리드타임 · 상태
+const GRID_TEMPLATE =
+  'minmax(220px,2.2fr) 90px 85px 70px 80px 50px minmax(100px,1fr) 90px 80px 105px';
 
-function InventoryRow({ item }: { item: InventoryItem }) {
+function InventoryRow({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: InventoryItem;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const { t } = useTranslation('inventory');
   const stockPct = item.minStockQty > 0
     ? Math.min(100, Math.round((item.currentQty / item.minStockQty) * 100))
@@ -62,13 +93,27 @@ function InventoryRow({ item }: { item: InventoryItem }) {
 
   return (
     <div
-      className="grid items-center gap-3 border-b border-border/40 px-4 py-2.5 text-sm transition-colors hover:bg-muted/40"
+      onClick={onSelect}
+      className={cn(
+        'grid cursor-pointer items-center gap-3 border-b border-border/40 px-4 py-2.5 text-sm transition-colors hover:bg-muted/40',
+        selected && 'border-l-2 border-l-primary bg-muted/50',
+      )}
       style={{ gridTemplateColumns: GRID_TEMPLATE }}
     >
-      {/* 부품명 / P/N */}
+      {/* 부품명 / P/N / 크레인 적용 */}
       <div className="min-w-0">
-        <p className="truncate font-medium">{item.partName}</p>
-        <p className="truncate text-xs text-muted-foreground">{t(`category.${item.category}`)} · {item.partNumber}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="truncate font-medium">{item.partName}</p>
+          {(() => {
+            const badge = craneBadgeOf(item.craneIds);
+            return (
+              <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${badge.cls}`}>
+                {badge.isCommon ? t('crane.common') : badge.label}
+              </span>
+            );
+          })()}
+        </div>
+        <p className="truncate text-xs text-muted-foreground">{t(`category.${item.category}`)} · {item.partNumber} · {item.manufacturer}</p>
       </div>
 
       {/* 중요도 */}
@@ -83,6 +128,29 @@ function InventoryRow({ item }: { item: InventoryItem }) {
         <span className="font-semibold tabular-nums">{item.currentQty}</span>
         <span className="ml-1 text-xs text-muted-foreground tabular-nums">/ {item.minStockQty}</span>
       </div>
+
+      {/* 예약 */}
+      <div
+        className={cn(
+          'text-right tabular-nums',
+          item.reservedQty > 0 ? 'text-amber-500' : 'text-muted-foreground/60',
+        )}
+      >
+        {item.reservedQty}
+      </div>
+
+      {/* 가용 (출고 판단 기준) */}
+      <div
+        className={cn(
+          'text-right font-semibold tabular-nums',
+          item.availableQty > 0 ? 'text-emerald-500' : 'text-red-500',
+        )}
+      >
+        {item.availableQty}
+      </div>
+
+      {/* 단위 */}
+      <div className="text-center text-xs text-muted-foreground">{item.uom}</div>
 
       {/* 재고 수준 progress */}
       <div className="min-w-0">
@@ -117,6 +185,21 @@ export function InventoryPage() {
   const { t } = useTranslation('inventory');
   const [statusFilters, setStatusFilters] = useState<Set<InventoryStatus>>(new Set());
   const [critFilters, setCritFilters] = useState<Set<PartCriticality>>(new Set());
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<PartCategory | 'all'>('all');
+  const [craneFilter, setCraneFilter] = useState<CraneFilter>('all');
+
+  const categories = useMemo(() => {
+    const seen = new Set<PartCategory>();
+    const result: PartCategory[] = [];
+    for (const item of items) {
+      if (!seen.has(item.category)) {
+        seen.add(item.category);
+        result.push(item.category);
+      }
+    }
+    return result;
+  }, [items]);
 
   const toggleStatus = (s: InventoryStatus) => {
     setStatusFilters((prev) => {
@@ -133,15 +216,44 @@ export function InventoryPage() {
     });
   };
 
-  const filtered = useMemo(() => items.filter((item) => {
-    const matchStatus = statusFilters.size === 0 || statusFilters.has(item.status);
-    const matchCrit = critFilters.size === 0 || critFilters.has(item.criticality);
-    return matchStatus && matchCrit;
-  }), [items, statusFilters, critFilters]);
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchStatus = statusFilters.size === 0 || statusFilters.has(item.status);
+      const matchCrit = critFilters.size === 0 || critFilters.has(item.criticality);
+      const matchCategory = categoryFilter === 'all' || item.category === categoryFilter;
+      const matchCrane =
+        craneFilter === 'all' ||
+        (craneFilter === 'common'
+          ? item.craneIds.length > 1
+          : item.craneIds.includes(craneFilter));
+      const matchSearch =
+        query === '' ||
+        item.partName.toLowerCase().includes(query) ||
+        item.partNumber.toLowerCase().includes(query) ||
+        item.manufacturer.toLowerCase().includes(query);
+      return matchStatus && matchCrit && matchCategory && matchCrane && matchSearch;
+    });
+  }, [items, statusFilters, critFilters, categoryFilter, craneFilter, search]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  useEffect(() => { setPage(1); }, [statusFilters, critFilters, pageSize]);
+
+  // 필터/검색/페이지 크기 변경 시 1페이지로 리셋 (render-time 상태 조정 패턴)
+  const filterKey = [
+    [...statusFilters].join(','),
+    [...critFilters].join(','),
+    categoryFilter,
+    craneFilter,
+    search,
+    pageSize,
+  ].join('|');
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
+
   const pageStart = (page - 1) * pageSize;
   const paginated = filtered.slice(pageStart, pageStart + pageSize);
 
@@ -149,8 +261,32 @@ export function InventoryPage() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [poOpen, setPoOpen] = useState(false);
 
+  // 자산 상세 등에서 ?part=<partId>로 진입 시 해당 부품 패널을 자동으로 연다
+  const [searchParams, setSearchParams] = useSearchParams();
+  const partParam = searchParams.get('part');
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(partParam);
+  const [prevPartParam, setPrevPartParam] = useState(partParam);
+  if (partParam !== prevPartParam) {
+    setPrevPartParam(partParam);
+    setSelectedPartId(partParam);
+  }
+
+  const selectPart = (partId: string | null) => {
+    setSelectedPartId(partId);
+    // URL의 part 파라미터도 정리해 딥링크 상태를 남기지 않는다
+    if (partParam) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('part');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div
+      className="flex flex-col gap-6 p-4 transition-[padding] duration-300 ease-out md:p-6"
+      // 상세 패널이 열리면 본문을 패널 폭(440px)만큼 밀어 테이블이 가려지지 않게 한다
+      style={selectedPartId ? { paddingRight: 'calc(440px + 1.5rem)' } : undefined}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
@@ -263,6 +399,52 @@ export function InventoryPage() {
         </div>
       )}
 
+      {/* 검색 / 카테고리(클러스터) / 크레인 필터 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchPlaceholder', { defaultValue: 'Search part / P/N / manufacturer' })}
+            className="h-9 w-72 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value as PartCategory | 'all')}
+          className="h-9 cursor-pointer rounded border border-border bg-card/60 px-2 text-sm outline-none transition-colors focus:border-primary/50"
+        >
+          <option value="all">{t('categoryAll', { defaultValue: 'All categories' })}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {t(`category.${c}`)}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-1.5">
+          {CRANE_FILTERS.map(({ key, label }) => {
+            const isActive = craneFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setCraneFilter(isActive ? 'all' : key)}
+                className={cn(
+                  'inline-flex cursor-pointer items-center rounded px-3 py-1.5 text-[11px] font-bold tracking-wider transition-all',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label === 'common' ? t('crane.common') : label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 필터 (CMMS 멀티셀렉트 pill) */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
@@ -340,6 +522,9 @@ export function InventoryPage() {
           <span>{t('table.partName')}</span>
           <span>{t('table.criticality')}</span>
           <span className="text-right">{t('table.currentStock')}</span>
+          <span className="text-right">{t('table.reserved')}</span>
+          <span className="text-right">{t('table.available')}</span>
+          <span className="text-center">{t('table.uom')}</span>
           <span>{t('table.stockLevel')}</span>
           <span className="text-right">{t('table.unitPrice', { defaultValue: 'Unit Price' })}</span>
           <span className="text-right">{t('table.leadTime')}</span>
@@ -353,7 +538,16 @@ export function InventoryPage() {
               {t('empty')}
             </div>
           ) : (
-            paginated.map((item) => <InventoryRow key={item.id} item={item} />)
+            paginated.map((item) => (
+              <InventoryRow
+                key={item.id}
+                item={item}
+                selected={item.partId === selectedPartId}
+                onSelect={() =>
+                  selectPart(selectedPartId === item.partId ? null : item.partId)
+                }
+              />
+            ))
           )}
         </div>
 
@@ -372,6 +566,13 @@ export function InventoryPage() {
           />
         )}
       </div>
+
+      {selectedPartId && (
+        <PartDetailPanel
+          partId={selectedPartId}
+          onClose={() => selectPart(null)}
+        />
+      )}
     </div>
   );
 }

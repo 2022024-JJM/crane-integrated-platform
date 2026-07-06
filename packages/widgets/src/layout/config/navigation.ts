@@ -21,6 +21,7 @@ import {
   Bell,
   MonitorCog,
   Camera,
+  CalendarDays,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -199,6 +200,11 @@ function getMroGroup(): NavGroup {
         label: i18n.t('common:nav.maintenance'),
         path: '/maintenance',
         icon: Wrench,
+      },
+      {
+        label: i18n.t('common:nav.serviceCalendar'),
+        path: '/service-calendar',
+        icon: CalendarDays,
       },
       {
         label: i18n.t('common:nav.inventory'),

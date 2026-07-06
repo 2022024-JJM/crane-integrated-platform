@@ -1,0 +1,49 @@
+{
+  "title": "서비스 캘린더",
+  "description": "전 설비의 점검·정비 예정 일정",
+  "view": {
+    "month": "월",
+    "week": "주",
+    "day": "일"
+  },
+  "nav": {
+    "today": "오늘",
+    "prev": "이전",
+    "next": "다음"
+  },
+  "allDay": "종일",
+  "moreCount": "+{{count}}개 더",
+  "popover": {
+    "crane": "크레인",
+    "status": "상태",
+    "time": "시간",
+    "viewDetail": "상세 보기"
+  },
+  "source": {
+    "inspection": "점검",
+    "repair": "정비"
+  },
+  "type": {
+    "frequent": "수시",
+    "periodic": "정기",
+    "emergency": "긴급",
+    "special": "특별"
+  },
+  "status": {
+    "scheduled": "예정",
+    "in_progress": "진행 중",
+    "completed": "완료",
+    "overdue": "지연",
+    "cancelled": "취소",
+    "received": "접수",
+    "waiting_parts": "부품 대기",
+    "re_inspection": "재검사",
+    "on_hold": "보류"
+  },
+  "priority": {
+    "emergency": "긴급",
+    "high": "높음",
+    "normal": "보통",
+    "low": "낮음"
+  }
+}

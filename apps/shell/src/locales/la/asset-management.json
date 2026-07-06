@@ -88,7 +88,18 @@
     "today": "Hodie",
     "yesterday": "Heri",
     "daysAgo": "Abhinc {{count}}d",
-    "monthsAgo": "Abhinc {{count}}mo"
+    "monthsAgo": "Abhinc {{count}}mo",
+    "health": "Valetudo Partium",
+    "worst": "Pessima",
+    "noData": "Nulla data",
+    "components": "Partes",
+    "issueCount": "{{count}} problemata",
+    "allNormal": "Omnia Normalia",
+    "totalParts": "{{count}} partes",
+    "openWo": "WO Aperta",
+    "woBreakdown": "{{overdue}} insp · {{repair}} refec",
+    "noOpenWo": "Nulla",
+    "nextInspection": "Proxima Inspectio"
   },
   "status": {
     "operating": "Operans",
@@ -113,8 +124,16 @@
     "notFound": "Bonum non inventum est.",
     "noInspectionHistory": "Nulla historia inspectionis.",
     "noMaintenanceHistory": "Nulla historia refectionis.",
+    "bomSearch": "Quaere partem / P/N",
+    "bomOnlyIssues": "Solum problemata",
+    "componentCount": "{{count}} partes",
+    "noMatch": "Nullae partes congruunt.",
+    "inStock": "Copia",
+    "viewInInventory": "Vide in copia",
     "tabs": {
       "info": "Informationes Basis",
+      "overview": "Partes",
+      "specs": "Specificationes",
       "inspection": "Historia Inspectionis",
       "maintenance": "Historia Refectionis"
     },
@@ -144,6 +163,7 @@
       "status": "Status"
     },
     "component": {
+      "partsCount": "{{n}} partes",
       "operatingHours": "Horae Operationis",
       "lastInspection": "Ultima Inspectio",
       "nextInspection": "Proxima Inspectio",

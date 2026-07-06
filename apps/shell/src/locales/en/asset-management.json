@@ -88,7 +88,18 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "daysAgo": "{{count}}d ago",
-    "monthsAgo": "{{count}}mo ago"
+    "monthsAgo": "{{count}}mo ago",
+    "health": "Component Health",
+    "worst": "Worst",
+    "noData": "No data",
+    "components": "Components",
+    "issueCount": "{{count}} issues",
+    "allNormal": "All Normal",
+    "totalParts": "{{count}} parts",
+    "openWo": "Open WO",
+    "woBreakdown": "{{overdue}} insp · {{repair}} repair",
+    "noOpenWo": "None open",
+    "nextInspection": "Next Inspection"
   },
   "status": {
     "operating": "Operating",
@@ -113,8 +124,16 @@
     "notFound": "Asset not found.",
     "noInspectionHistory": "No inspection history.",
     "noMaintenanceHistory": "No maintenance history.",
+    "bomSearch": "Search component / P/N",
+    "bomOnlyIssues": "Issues only",
+    "componentCount": "{{count}} components",
+    "noMatch": "No components match.",
+    "inStock": "Stock",
+    "viewInInventory": "View in inventory",
     "tabs": {
       "info": "Basic Info",
+      "overview": "Components",
+      "specs": "Specifications",
       "inspection": "Inspection History",
       "maintenance": "Maintenance History"
     },
@@ -144,6 +163,7 @@
       "status": "Status"
     },
     "component": {
+      "partsCount": "{{n}} parts",
       "operatingHours": "Operating Hours",
       "lastInspection": "Last Inspection",
       "nextInspection": "Next Inspection",

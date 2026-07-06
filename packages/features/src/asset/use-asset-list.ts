@@ -33,6 +33,39 @@ export interface AssetHealthSnapshot {
   componentType: CraneComponent['componentType'];
 }
 
+export interface AssetComponentStats {
+  /** 잎(개별 부품) 컴포넌트 총 개수 */
+  total: number;
+  /** 비정상 상태별 개수 */
+  caution: number;
+  warning: number;
+  critical: number;
+  replace: number;
+  /** 정상 개수 */
+  normal: number;
+  /** 비정상(정상 아님) 총 개수 */
+  issues: number;
+}
+
+/** 잎 컴포넌트(개별 부품)만 집계 — 클러스터 롤업 컴포넌트는 제외 */
+function computeComponentStats(components: CraneComponent[]): AssetComponentStats {
+  const leaves = components.filter((c) => c.parentId !== null);
+  const stats: AssetComponentStats = {
+    total: leaves.length,
+    caution: 0,
+    warning: 0,
+    critical: 0,
+    replace: 0,
+    normal: 0,
+    issues: 0,
+  };
+  for (const c of leaves) {
+    stats[c.status] += 1;
+    if (c.status !== 'normal') stats.issues += 1;
+  }
+  return stats;
+}
+
 function computeWorstHealth(components: CraneComponent[]): AssetHealthSnapshot | null {
   if (components.length === 0) return null;
   let worst = components[0];
@@ -99,9 +132,20 @@ export function useAssetList() {
     }
   }
 
-  // Per-crane health + last activity
+  // Per-crane health + last activity + component stats
   const craneHealthMap: Record<string, AssetHealthSnapshot> = {};
+  const craneComponentStatsMap: Record<string, AssetComponentStats> = {};
   const craneLastActivityMap: Record<string, string> = {};
+  const craneNextInspectionMap: Record<string, string> = {};
+
+  // 다가오는 예정 점검(가장 빠른 scheduled/overdue) 집계
+  for (const wo of allInspections) {
+    if (wo.status === 'completed' || wo.status === 'cancelled') continue;
+    const prev = craneNextInspectionMap[wo.craneId];
+    if (!prev || new Date(wo.scheduledDate).getTime() < new Date(prev).getTime()) {
+      craneNextInspectionMap[wo.craneId] = wo.scheduledDate;
+    }
+  }
 
   // 마지막 점검/수리 일자 집계
   const lastInspectionByAsset: Record<string, string | null> = {};
@@ -125,6 +169,7 @@ export function useAssetList() {
     const components = getComponentsByCraneId(asset.id);
     const health = computeWorstHealth(components);
     if (health) craneHealthMap[asset.id] = health;
+    craneComponentStatsMap[asset.id] = computeComponentStats(components);
     const last = pickLatestDate(
       lastInspectionByAsset[asset.id],
       lastRepairByAsset[asset.id],
@@ -138,7 +183,9 @@ export function useAssetList() {
     craneInspectionMap,
     craneRepairMap,
     craneHealthMap,
+    craneComponentStatsMap,
     craneLastActivityMap,
+    craneNextInspectionMap,
   };
 }
 

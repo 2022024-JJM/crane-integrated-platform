@@ -47,6 +47,7 @@
     "woInfo": "Work Order Info",
     "checklist": "Inspection Checklist",
     "nonConformance": "Non-Conformance Items",
+    "createRepairTicket": "Create Repair Ticket",
     "noNonConformance": "No non-conformance items",
     "findings": "Findings",
     "fields": {

@@ -15,10 +15,14 @@
     "category": "Category",
     "criticality": "Criticality",
     "currentStock": "Current Stock",
+    "reserved": "Reserved",
+    "available": "Available",
+    "uom": "UOM",
     "safetyStock": "Safety Stock",
     "stockLevel": "Level",
     "status": "Status",
     "unitCost": "Unit Cost",
+    "unitPrice": "Unit Price",
     "leadTime": "Lead Time",
     "leadTimeSuffix": "lead"
   },
@@ -39,16 +43,97 @@
     "all": "All Criticality"
   },
   "category": {
-    "brake": "Brake",
-    "wire_rope": "Wire Rope",
-    "gear_bearing": "Gear / Bearing",
-    "electrical": "Electrical",
-    "seal_gasket": "Seal / Gasket",
-    "lubricant": "Lubricant",
-    "sensor": "Sensor",
-    "shaft_chain": "Shaft / Chain",
-    "drum": "Drum",
+    "power-dist": "Power Distribution & Protection",
+    "motor-starter": "Motor Starter / Contactor",
+    "pilot-device": "Pushbutton / Pilot Device",
+    "network": "Network & Communication",
+    "fuse": "Fuse Protection",
+    "plc": "PLC / Controller",
+    "sensing": "Position / Load Sensing",
+    "dcm-drive": "Motor Drive (DCM)",
+    "wiring": "Wiring Accessories",
+    "power-supply": "Power Supply / UPS",
+    "instrument": "Instrumentation / Relay",
+    "computing": "Computing / Display",
+    "mech-drive": "Mechanical Drive Train",
+    "enclosure": "Enclosure Climate / Panel",
+    "operator": "Operator Control (HMI/Joystick)",
+    "transformer": "Transformer",
+    "current-sensing": "Current Sensing (CT)",
+    "resistor": "Resistor (Drive Circuit)",
+    "warning": "Safety / Warning Device",
+    "cctv": "CCTV / Vision",
+    "surge": "Surge Protection (SPD)",
     "other": "Other"
+  },
+  "searchPlaceholder": "Search part / P/N / manufacturer",
+  "categoryAll": "All categories",
+  "crane": {
+    "common": "Common"
+  },
+  "detail": {
+    "close": "Close",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "tabs": {
+      "info": "Part Info",
+      "history": "Stock History",
+      "usage": "WO Usage"
+    },
+    "stock": {
+      "current": "In Stock",
+      "reserved": "Reserved",
+      "available": "Available",
+      "onOrder": "On Order",
+      "reorderPt": "Reorder Pt",
+      "min": "Min Stock"
+    },
+    "onOrder": {
+      "title": "Open Orders",
+      "auto": "Auto-Reorder"
+    },
+    "fields": {
+      "manufacturer": "Manufacturer",
+      "locationBin": "Bin Location",
+      "reorderPoint": "Reorder Point",
+      "lastReceipt": "Last Receipt",
+      "lastIssue": "Last Issue",
+      "cranes": "Applies To"
+    },
+    "tx": {
+      "receipt": "Receipt",
+      "issue": "Issue",
+      "adjust": "Adjust"
+    },
+    "empty": {
+      "history": "No stock transactions yet.",
+      "usage": "No repair WOs have used this part."
+    },
+    "usageQty": "{{n}} used"
+  },
+  "actions": {
+    "issue": "Issue",
+    "receipt": "Receipt",
+    "issueTitle": "Issue Part",
+    "receiptTitle": "Record Receipt",
+    "qty": "Qty",
+    "availableBadge": "Available: {{n}}",
+    "exceedsStock": "Exceeds available — only {{n}}",
+    "linkedWo": "Link Repair WO",
+    "noWo": "No link",
+    "poRef": "PO Reference",
+    "by": "Handled By",
+    "note": "Note",
+    "cancel": "Cancel",
+    "submitIssue": "Record Issue",
+    "submitReceipt": "Record Receipt",
+    "toast": {
+      "issued": "Issued — {{part}} ×{{n}}",
+      "received": "Received — {{part}} ×{{n}}",
+      "insufficient": "Insufficient stock — cannot issue.",
+      "woClosed": "Cannot issue against a completed WO.",
+      "failed": "Action failed."
+    }
   },
   "filter": {
     "all": "All",

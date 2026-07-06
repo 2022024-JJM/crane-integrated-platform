@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Info, type LucideIcon } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -44,6 +45,7 @@ export function SectionCard({
   contentClassName,
   children,
 }: SectionCardProps) {
+  const { t } = useTranslation('common');
   return (
     <Card
       size={variant === 'panel' ? 'default' : 'sm'}
@@ -82,7 +84,7 @@ export function SectionCard({
           <CardAction>
             <Link
               to={href}
-              aria-label={`${title} 이동`}
+              aria-label={t('aria.goTo', { title })}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowRight className="size-4" />

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,26 +8,17 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
-  ChevronsDownUp,
-  ChevronsUpDown,
   Plus,
+  Wrench,
 } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
-import type { AssetHealthSnapshot } from '@crane/features/asset';
+import type { AssetComponentStats, AssetHealthSnapshot } from '@crane/features/asset';
 import type { AssetStatus, CraneAsset, CraneType } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
-import { Switch } from '@crane/ui/atoms/switch';
-import {
-  Select,
-  SelectItem,
-  SelectPopup,
-  SelectTrigger,
-} from '@crane/ui/molecules/select';
 import { cn } from '@crane/core/lib/utils';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { NewAssetModal } from './new-asset-modal';
-import { PartHealthBar } from './part-health-bar';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 
@@ -44,11 +36,11 @@ const STATUS_FILTER_CONFIG: Record<AssetStatus, {
 };
 
 const STATUS_CARD_BORDER: Record<AssetStatus, string> = {
-  operating:      'border-emerald-500/40 bg-emerald-500/[0.03] hover:border-emerald-500/70',
-  inspection:     'border-amber-500/40 bg-amber-500/[0.03] hover:border-amber-500/70',
-  repair:         'border-red-500/40 bg-red-500/[0.03] hover:border-red-500/70',
-  idle:           'border-slate-500/40 bg-slate-500/[0.03] hover:border-slate-500/70',
-  decommissioned: 'border-zinc-600/40 bg-zinc-600/[0.03] hover:border-zinc-600/70',
+  operating:      'border-emerald-500/40 hover:border-emerald-500/70',
+  inspection:     'border-amber-500/40 hover:border-amber-500/70',
+  repair:         'border-red-500/50 hover:border-red-500/80',
+  idle:           'border-slate-500/40 hover:border-slate-500/70',
+  decommissioned: 'border-zinc-600/40 hover:border-zinc-600/70',
 };
 
 const STATUS_TONE: Record<AssetStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
@@ -73,8 +65,6 @@ const SECTIONS: { siteId: string; sectionKey: 'dock1' | 'dock2' | 'blockShop' }[
   { siteId: 'dock-in', sectionKey: 'blockShop' },
 ];
 
-type SortKey = 'priority' | 'name' | 'warranty' | 'lastActivity';
-
 const STATUS_PRIORITY: Record<AssetStatus, number> = {
   repair: 0,
   inspection: 1,
@@ -83,16 +73,31 @@ const STATUS_PRIORITY: Record<AssetStatus, number> = {
   decommissioned: 4,
 };
 
-const TODAY = new Date('2026-04-14');
+// 비정상 구성품 상태 → 색상 (심각도 높은 순으로 표시)
+const ISSUE_TONES: { key: keyof AssetComponentStats; color: string; dot: string }[] = [
+  { key: 'replace', color: 'text-red-500', dot: 'bg-red-500' },
+  { key: 'critical', color: 'text-red-500', dot: 'bg-red-500' },
+  { key: 'warning', color: 'text-amber-500', dot: 'bg-amber-500' },
+  { key: 'caution', color: 'text-amber-400', dot: 'bg-amber-400' },
+];
 
-function daysFromToday(iso: string | null | undefined): number {
-  if (!iso) return Number.POSITIVE_INFINITY;
-  return Math.ceil((TODAY.getTime() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+function daysBetween(target: Date, from: Date): number {
+  return Math.ceil((target.getTime() - from.getTime()) / 86_400_000);
 }
 
-function formatRelativeDays(iso: string | undefined, t: (k: string, opts?: Record<string, unknown>) => string): string {
+function formatRelativeDays(
+  iso: string | undefined,
+  today: Date,
+  t: (k: string, opts?: Record<string, unknown>) => string,
+): string {
   if (!iso) return t('card.noActivity', { defaultValue: 'No activity' });
-  const days = daysFromToday(iso);
+  const days = daysBetween(today, new Date(iso));
   if (days <= 0) return t('card.today', { defaultValue: 'Today' });
   if (days === 1) return t('card.yesterday', { defaultValue: 'Yesterday' });
   if (days < 30) return t('card.daysAgo', { count: days, defaultValue: `${days}d ago` });
@@ -100,98 +105,202 @@ function formatRelativeDays(iso: string | undefined, t: (k: string, opts?: Recor
   return t('card.monthsAgo', { count: months, defaultValue: `${months}mo ago` });
 }
 
-function AssetCard({
+function StatTile({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function AssetSummaryCard({
   asset,
+  today,
   overdueInspections = 0,
   activeRepairs = 0,
   health,
+  componentStats,
   lastActivity,
+  nextInspection,
 }: {
   asset: CraneAsset;
+  today: Date;
   overdueInspections?: number;
   activeRepairs?: number;
   health?: AssetHealthSnapshot;
+  componentStats?: AssetComponentStats;
   lastActivity?: string;
+  nextInspection?: string;
 }) {
   const { t } = useTranslation('asset-management');
 
-  const warrantyEnd = new Date(asset.warrantyEnd);
-  const daysLeft = Math.ceil((warrantyEnd.getTime() - TODAY.getTime()) / (1000 * 60 * 60 * 24));
+  const daysLeft = daysBetween(new Date(asset.warrantyEnd), today);
   const warrantyExpired = daysLeft < 0;
   const warrantySoon = daysLeft >= 0 && daysLeft <= 180;
+
+  const openWo = overdueInspections + activeRepairs;
+  const issues = componentStats?.issues ?? 0;
+  const healthPct = health?.remainingPct ?? 100;
+  const healthBar =
+    healthPct <= 20 ? 'bg-red-500' : healthPct <= 50 ? 'bg-amber-500' : 'bg-emerald-500';
+  const healthText =
+    healthPct <= 20 ? 'text-red-500' : healthPct <= 50 ? 'text-amber-500' : 'text-emerald-500';
+
+  const nextInspDays = nextInspection ? daysBetween(new Date(nextInspection), today) : null;
+  const nextInspOverdue = nextInspDays !== null && nextInspDays < 0;
 
   return (
     <Link
       to={`/asset-management/${asset.id}`}
       className={cn(
-        'cursor-pointer group flex flex-col gap-2.5 rounded border p-4 shadow-sm transition-all hover:shadow-md',
+        'group flex cursor-pointer flex-col gap-4 rounded-lg border bg-card/70 p-5 shadow-sm transition-all hover:shadow-md',
         STATUS_CARD_BORDER[asset.status],
       )}
     >
-      <div className="flex items-start justify-between gap-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <StatusDot status={STATUS_DOT[asset.status]} />
-          <span className="text-sm font-bold truncate">{asset.name}</span>
+      {/* 상단: 아이덴티티 + 보증/이동 */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <StatusDot status={STATUS_DOT[asset.status]} />
+            <h3 className="truncate text-base font-bold">{asset.name}</h3>
+            <Badge variant={STATUS_TONE[asset.status]} className="shrink-0">
+              {t(`status.${asset.status}`)}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t(`craneType.${asset.craneType as CraneType}`)} · {asset.capacityTon}
+            {t('units.ton')} · {asset.manufacturer}
+            <span className="mx-1.5 text-border">|</span>
+            {asset.locationZone}
+          </p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Badge variant={STATUS_TONE[asset.status]}>
-            {t(`status.${asset.status}`)}
+
+        <div className="flex shrink-0 items-center gap-3">
+          <Badge
+            variant={warrantyExpired ? 'destructive' : warrantySoon ? 'warning' : 'secondary'}
+          >
+            {warrantyExpired
+              ? t('card.warrantyExpired')
+              : t('card.warrantyUntil', { date: asset.warrantyEnd })}
           </Badge>
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
         </div>
       </div>
 
-      <div className="space-y-0.5">
-        <p className="text-xs text-muted-foreground truncate">
-          {t(`craneType.${asset.craneType as CraneType}`)} · {asset.capacityTon}T
-        </p>
-        <p className="text-xs text-muted-foreground truncate">{asset.locationZone}</p>
-        <p className="text-xs text-muted-foreground truncate">{asset.manufacturer}</p>
-      </div>
+      {/* 하단: 운영 지표 타일 */}
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        {/* 구성품 건강도 */}
+        <StatTile label={t('card.health', { defaultValue: 'Component Health' })}>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className={cn('h-full rounded-full', healthBar)} style={{ width: `${healthPct}%` }} />
+            </div>
+            <span className={cn('shrink-0 text-sm font-semibold tabular-nums', healthText)}>
+              {healthPct}%
+            </span>
+          </div>
+          <span className="truncate text-[11px] text-muted-foreground">
+            {health
+              ? `${t('card.worst', { defaultValue: 'Worst' })}: ${health.componentName}`
+              : t('card.noData', { defaultValue: 'No data' })}
+          </span>
+        </StatTile>
 
-      {/* Last activity */}
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <CalendarClock className="size-3" />
-        <span>
-          {t('card.lastActivity', { defaultValue: 'Last' })}:{' '}
-          {formatRelativeDays(lastActivity, t)}
-        </span>
-      </div>
-
-      {/* Component health bar */}
-      {health && (
-        <div className="rounded border border-border/60 bg-muted/40 p-2">
-          <PartHealthBar
-            remainingPct={health.remainingPct}
-            componentName={health.componentName}
-            componentStatus={health.componentStatus}
-          />
-        </div>
-      )}
-
-      <Badge
-        variant={warrantyExpired ? 'destructive' : warrantySoon ? 'warning' : 'secondary'}
-        className="w-fit"
-      >
-        {warrantyExpired
-          ? t('card.warrantyExpired')
-          : t('card.warrantyUntil', { date: asset.warrantyEnd })}
-      </Badge>
-
-      {(overdueInspections > 0 || activeRepairs > 0) && (
-        <div className="flex flex-wrap gap-1.5 pt-0.5 border-t border-border/50">
-          {overdueInspections > 0 && (
-            <Badge variant="destructive" className="font-normal">
-              {t('card.overdueInspection', { count: overdueInspections })}
-            </Badge>
+        {/* 구성품 상태 카운트 */}
+        <StatTile label={t('card.components', { defaultValue: 'Components' })}>
+          {issues > 0 ? (
+            <>
+              <span className="text-sm font-semibold tabular-nums text-foreground">
+                {t('card.issueCount', { count: issues, defaultValue: `${issues} issues` })}
+              </span>
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                {ISSUE_TONES.map(({ key, color, dot }) => {
+                  const n = (componentStats?.[key] ?? 0) as number;
+                  if (n === 0) return null;
+                  return (
+                    <span key={key} className={cn('flex items-center gap-1', color)}>
+                      <span className={cn('size-1.5 rounded-full', dot)} />
+                      {t(`detail.componentHealth.${key}`)} {n}
+                    </span>
+                  );
+                })}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-semibold tabular-nums text-emerald-500">
+                {t('card.allNormal', { defaultValue: 'All Normal' })}
+              </span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {t('card.totalParts', { count: componentStats?.total ?? 0, defaultValue: `${componentStats?.total ?? 0} parts` })}
+              </span>
+            </>
           )}
-          {activeRepairs > 0 && (
-            <Badge variant="warning" className="font-normal">
-              {t('card.activeRepair')}
-            </Badge>
+        </StatTile>
+
+        {/* 미결 WO */}
+        <StatTile label={t('card.openWo', { defaultValue: 'Open WO' })}>
+          <span
+            className={cn(
+              'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
+              openWo > 0 ? 'text-amber-500' : 'text-foreground',
+            )}
+          >
+            <Wrench className="size-3.5" />
+            {openWo}
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            {openWo > 0
+              ? t('card.woBreakdown', {
+                  overdue: overdueInspections,
+                  repair: activeRepairs,
+                  defaultValue: `${overdueInspections} insp · ${activeRepairs} repair`,
+                })
+              : t('card.noOpenWo', { defaultValue: 'None open' })}
+          </span>
+        </StatTile>
+
+        {/* 다음 점검 */}
+        <StatTile label={t('card.nextInspection', { defaultValue: 'Next Inspection' })}>
+          {nextInspection ? (
+            <>
+              <span
+                className={cn(
+                  'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
+                  nextInspOverdue ? 'text-red-500' : 'text-foreground',
+                )}
+              >
+                <CalendarClock className="size-3.5" />
+                {nextInspOverdue
+                  ? `D+${Math.abs(nextInspDays!)}`
+                  : nextInspDays === 0
+                    ? 'D-Day'
+                    : `D-${nextInspDays}`}
+              </span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {nextInspection}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-semibold text-muted-foreground">—</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t('card.lastActivity', { defaultValue: 'Last' })}:{' '}
+                {formatRelativeDays(lastActivity, today, t)}
+              </span>
+            </>
           )}
-        </div>
-      )}
+        </StatTile>
+      </div>
     </Link>
   );
 }
@@ -201,10 +310,13 @@ function AssetSection({
   sectionKey,
   assets,
   allAssets,
+  today,
   craneInspectionMap,
   craneRepairMap,
   craneHealthMap,
+  craneComponentStatsMap,
   craneLastActivityMap,
+  craneNextInspectionMap,
   collapsed,
   onToggle,
 }: {
@@ -212,10 +324,13 @@ function AssetSection({
   sectionKey: 'dock1' | 'dock2' | 'blockShop';
   assets: CraneAsset[];
   allAssets: CraneAsset[];
+  today: Date;
   craneInspectionMap: Record<string, { overdueCount: number }>;
   craneRepairMap: Record<string, { activeCount: number }>;
   craneHealthMap: Record<string, AssetHealthSnapshot>;
+  craneComponentStatsMap: Record<string, AssetComponentStats>;
   craneLastActivityMap: Record<string, string>;
+  craneNextInspectionMap: Record<string, string>;
   collapsed: boolean;
   onToggle: () => void;
 }) {
@@ -232,38 +347,38 @@ function AssetSection({
       <button
         type="button"
         onClick={onToggle}
-        className="group flex w-full items-center gap-3 mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded cursor-pointer"
+        className="group mb-4 flex w-full cursor-pointer items-center gap-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <div className="w-1 h-5 rounded-full bg-primary shrink-0" />
-        <div className="flex items-baseline gap-2 min-w-0">
+        <div className="h-5 w-1 shrink-0 rounded-full bg-primary" />
+        <div className="flex min-w-0 items-baseline gap-2">
           <h2 className="text-base font-bold text-foreground">{t(`sections.${sectionKey}.title`)}</h2>
           <span className="text-xs text-muted-foreground">{t(`sections.${sectionKey}.subtitle`)}</span>
         </div>
-        <div className="flex-1 h-px bg-border/70" />
+        <div className="h-px flex-1 bg-border/70" />
         <Badge variant="secondary" className="shrink-0 tabular-nums">
           {isFiltered
             ? `${siteAssets.length} / ${totalSiteAssets} ${t('units.units')}`
             : `${siteAssets.length} ${t('units.units')}`}
         </Badge>
-        <div className="flex items-center justify-center size-6 rounded border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground shrink-0">
-          {collapsed
-            ? <ChevronDown className="size-3.5" />
-            : <ChevronUp className="size-3.5" />
-          }
+        <div className="flex size-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground">
+          {collapsed ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
         </div>
       </button>
 
-      {!collapsed && (
-        siteAssets.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 pb-4">
+      {!collapsed &&
+        (siteAssets.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 pb-2 xl:grid-cols-2">
             {siteAssets.map((asset) => (
-              <AssetCard
+              <AssetSummaryCard
                 key={asset.id}
                 asset={asset}
+                today={today}
                 overdueInspections={craneInspectionMap[asset.id]?.overdueCount ?? 0}
                 activeRepairs={craneRepairMap[asset.id]?.activeCount ?? 0}
                 health={craneHealthMap[asset.id]}
+                componentStats={craneComponentStatsMap[asset.id]}
                 lastActivity={craneLastActivityMap[asset.id]}
+                nextInspection={craneNextInspectionMap[asset.id]}
               />
             ))}
           </div>
@@ -271,8 +386,7 @@ function AssetSection({
           <div className="flex items-center justify-center py-8 pb-4 text-xs text-muted-foreground">
             {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
           </div>
-        )
-      )}
+        ))}
     </section>
   );
 }
@@ -284,19 +398,20 @@ export function AssetManagementPage() {
     craneInspectionMap,
     craneRepairMap,
     craneHealthMap,
+    craneComponentStatsMap,
     craneLastActivityMap,
+    craneNextInspectionMap,
   } = useAssetList();
   const { t } = useTranslation('asset-management');
+  const today = useMemo(() => startOfToday(), []);
 
   const [statusFilters, setStatusFilters] = useState<Set<AssetStatus>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>('priority');
   const sectionSiteIds = useMemo(() => SECTIONS.map((s) => s.siteId), []);
   const collapseGroup = useSectionCollapseGroup({
     storagePrefix: 'asset-section-collapsed',
     keys: sectionSiteIds,
   });
-  const allCollapsed = collapseGroup.allCollapsed;
 
   const toggleFilter = (s: AssetStatus) => {
     setStatusFilters((prev) => {
@@ -308,66 +423,40 @@ export function AssetManagementPage() {
   };
 
   const filteredAssets = useMemo(
-    () => (statusFilters.size === 0
-      ? assets
-      : assets.filter((a) => statusFilters.has(a.status))),
+    () =>
+      statusFilters.size === 0
+        ? assets
+        : assets.filter((a) => statusFilters.has(a.status)),
     [assets, statusFilters],
   );
 
+  // 우선순위(상태 심각도 → 미결 이슈 수) 고정 정렬
   const sortedAssets = useMemo(() => {
-    const arr = [...filteredAssets];
-    switch (sortKey) {
-      case 'name':
-        return arr.sort((a, b) => a.name.localeCompare(b.name));
-      case 'warranty':
-        return arr.sort(
-          (a, b) =>
-            new Date(a.warrantyEnd).getTime() - new Date(b.warrantyEnd).getTime(),
-        );
-      case 'lastActivity':
-        return arr.sort((a, b) => {
-          const aD = craneLastActivityMap[a.id]
-            ? new Date(craneLastActivityMap[a.id]).getTime()
-            : 0;
-          const bD = craneLastActivityMap[b.id]
-            ? new Date(craneLastActivityMap[b.id]).getTime()
-            : 0;
-          return bD - aD;
-        });
-      case 'priority':
-      default:
-        return arr.sort((a, b) => {
-          const sevDiff =
-            STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
-          if (sevDiff !== 0) return sevDiff;
-          const aIssues =
-            (craneInspectionMap[a.id]?.overdueCount ?? 0) +
-            (craneRepairMap[a.id]?.activeCount ?? 0);
-          const bIssues =
-            (craneInspectionMap[b.id]?.overdueCount ?? 0) +
-            (craneRepairMap[b.id]?.activeCount ?? 0);
-          return bIssues - aIssues;
-        });
-    }
-  }, [filteredAssets, sortKey, craneInspectionMap, craneRepairMap, craneLastActivityMap]);
+    return [...filteredAssets].sort((a, b) => {
+      const sevDiff = STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
+      if (sevDiff !== 0) return sevDiff;
+      const aIssues =
+        (craneInspectionMap[a.id]?.overdueCount ?? 0) +
+        (craneRepairMap[a.id]?.activeCount ?? 0);
+      const bIssues =
+        (craneInspectionMap[b.id]?.overdueCount ?? 0) +
+        (craneRepairMap[b.id]?.activeCount ?? 0);
+      return bIssues - aIssues;
+    });
+  }, [filteredAssets, craneInspectionMap, craneRepairMap]);
 
   const overdueAssetCount = Object.keys(craneInspectionMap).length;
   const repairAssetCount = Object.keys(craneRepairMap).length;
   const criticalCount = overdueAssetCount + repairAssetCount;
 
-  // ── Top metrics 재정의 ───────────────────────────────────
   const fleetUptimePct =
-    summary.total > 0
-      ? Math.round((summary.operating / summary.total) * 100)
-      : 0;
+    summary.total > 0 ? Math.round((summary.operating / summary.total) * 100) : 0;
   const warrantyExpiringSoon = assets.filter((a) => {
-    const days = Math.ceil(
-      (new Date(a.warrantyEnd).getTime() - TODAY.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const days = daysBetween(new Date(a.warrantyEnd), today);
     return days >= 0 && days <= 180;
   }).length;
   const warrantyExpired = assets.filter(
-    (a) => new Date(a.warrantyEnd).getTime() < TODAY.getTime(),
+    (a) => new Date(a.warrantyEnd).getTime() < today.getTime(),
   ).length;
   const criticalHealthCount = Object.values(craneHealthMap).filter(
     (h) => h.componentStatus === 'critical' || h.componentStatus === 'replace',
@@ -378,12 +467,12 @@ export function AssetManagementPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           <Plus className="size-4" />
           {t('newAsset', { defaultValue: 'New Asset' })}
@@ -391,8 +480,8 @@ export function AssetManagementPage() {
       </div>
 
       {criticalCount > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
-          <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+        <div className="flex items-center gap-3 rounded border border-red-500/40 bg-red-500/5 px-5 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
           <p className="text-sm font-medium text-red-600 dark:text-red-400">
             {t('criticalAlert', {
               overdueCount: overdueAssetCount,
@@ -403,7 +492,7 @@ export function AssetManagementPage() {
         </div>
       )}
 
-      {/* Top metrics — 재정의 */}
+      {/* Top metrics */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label={t('metrics.fleetUptime', { defaultValue: 'Fleet Uptime' })}
@@ -413,20 +502,12 @@ export function AssetManagementPage() {
             total: summary.total,
             defaultValue: `${summary.operating}/${summary.total} operating`,
           })}
-          tone={
-            fleetUptimePct >= 80
-              ? 'success'
-              : fleetUptimePct >= 60
-                ? 'warning'
-                : 'critical'
-          }
+          tone={fleetUptimePct >= 80 ? 'success' : fleetUptimePct >= 60 ? 'warning' : 'critical'}
         />
         <MetricCard
           label={t('metrics.criticalHealth', { defaultValue: 'Critical Components' })}
           value={criticalHealthCount}
-          sub={t('metrics.criticalHealthSub', {
-            defaultValue: 'Cranes with critical parts',
-          })}
+          sub={t('metrics.criticalHealthSub', { defaultValue: 'Cranes with critical parts' })}
           tone={criticalHealthCount > 0 ? 'critical' : 'success'}
         />
         <MetricCard
@@ -437,13 +518,7 @@ export function AssetManagementPage() {
             soon: warrantyExpiringSoon,
             defaultValue: `${warrantyExpired} expired · ${warrantyExpiringSoon} soon`,
           })}
-          tone={
-            warrantyExpired > 0
-              ? 'critical'
-              : warrantyExpiringSoon > 0
-                ? 'warning'
-                : 'neutral'
-          }
+          tone={warrantyExpired > 0 ? 'critical' : warrantyExpiringSoon > 0 ? 'warning' : 'neutral'}
         />
         <MetricCard
           label={t('metrics.openWorkOrders', { defaultValue: 'Open Work Orders' })}
@@ -457,11 +532,12 @@ export function AssetManagementPage() {
         />
       </section>
 
+      {/* Status filter */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t('filter.status', { defaultValue: 'Status' })}
         </span>
-        <div className="flex flex-wrap gap-1.5 flex-1">
+        <div className="flex flex-1 flex-wrap gap-1.5">
           {FILTER_STATUSES.map((s) => {
             const cfg = STATUS_FILTER_CONFIG[s];
             const isActive = statusFilters.has(s);
@@ -472,7 +548,7 @@ export function AssetManagementPage() {
                 type="button"
                 onClick={() => toggleFilter(s)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer',
+                  'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-bold tracking-wider transition-all',
                   isActive
                     ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
                     : `${cfg.bg} ${cfg.color} hover:brightness-110`,
@@ -480,67 +556,31 @@ export function AssetManagementPage() {
               >
                 <span className="size-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
                 {t(`status.${s}`)}
-                <span className={cn('tabular-nums font-mono', isActive ? 'opacity-80' : 'opacity-60')}>
+                <span className={cn('font-mono tabular-nums', isActive ? 'opacity-80' : 'opacity-60')}>
                   {count}
                 </span>
               </button>
             );
           })}
         </div>
-
-        {/* Sort */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] text-muted-foreground">
-            {t('sort.label', { defaultValue: 'Sort by' })}
-          </span>
-          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-            <SelectTrigger label={t(`sort.${sortKey}`, { defaultValue: sortKey })} />
-            <SelectPopup>
-              <SelectItem value="priority">
-                {t('sort.priority', { defaultValue: 'Priority' })}
-              </SelectItem>
-              <SelectItem value="name">
-                {t('sort.name', { defaultValue: 'Name' })}
-              </SelectItem>
-              <SelectItem value="warranty">
-                {t('sort.warranty', { defaultValue: 'Warranty (oldest)' })}
-              </SelectItem>
-              <SelectItem value="lastActivity">
-                {t('sort.lastActivity', { defaultValue: 'Last activity' })}
-              </SelectItem>
-            </SelectPopup>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {allCollapsed
-            ? <ChevronsDownUp className="size-3.5 text-muted-foreground" />
-            : <ChevronsUpDown className="size-3.5 text-muted-foreground" />
-          }
-          <span className="text-[11px] text-muted-foreground">
-            {allCollapsed
-              ? t('collapse.allCollapsed', { defaultValue: 'All collapsed' })
-              : t('collapse.allExpanded', { defaultValue: 'All expanded' })}
-          </span>
-          <Switch
-            checked={allCollapsed}
-            onCheckedChange={(checked) => collapseGroup.setAll(checked)}
-            aria-label={t('collapse.toggle', { defaultValue: 'Collapse / expand all' })}
-          />
-        </div>
       </div>
 
       <div className="flex flex-col gap-8">
-        {SECTIONS.map((section) => (
+        {SECTIONS.filter((section) =>
+          assets.some((a) => a.siteId === section.siteId),
+        ).map((section) => (
           <AssetSection
             key={section.siteId}
             {...section}
             assets={sortedAssets}
             allAssets={assets}
+            today={today}
             craneInspectionMap={craneInspectionMap}
             craneRepairMap={craneRepairMap}
             craneHealthMap={craneHealthMap}
+            craneComponentStatsMap={craneComponentStatsMap}
             craneLastActivityMap={craneLastActivityMap}
+            craneNextInspectionMap={craneNextInspectionMap}
             collapsed={collapseGroup.isCollapsed(section.siteId)}
             onToggle={() => collapseGroup.toggle(section.siteId)}
           />
@@ -585,7 +625,7 @@ function MetricCard({
   return (
     <div
       className={cn(
-        'rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between',
+        'flex min-h-24 flex-col justify-between rounded border border-border/90 bg-card/80 p-4 shadow-sm',
         TONE_CARD[tone],
       )}
     >
@@ -593,7 +633,7 @@ function MetricCard({
       <div className="mt-2 space-y-1">
         <p
           className={cn(
-            'text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums',
+            'text-[1.8rem] font-semibold leading-none tracking-tight tabular-nums',
             TONE_TEXT[tone],
           )}
         >

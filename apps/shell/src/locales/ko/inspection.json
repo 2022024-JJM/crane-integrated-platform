@@ -47,6 +47,7 @@
     "woInfo": "작업지시서 정보",
     "checklist": "점검 체크리스트",
     "nonConformance": "부적합 항목",
+    "createRepairTicket": "수리 티켓 생성",
     "noNonConformance": "부적합 항목 없음",
     "findings": "점검 결과",
     "fields": {

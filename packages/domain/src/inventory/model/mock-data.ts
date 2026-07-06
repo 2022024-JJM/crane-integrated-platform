@@ -1,279 +1,71 @@
+import { bomCatalog, getBomCraneIds } from '../../shared/bom-catalog';
+import type { BomClusterKey } from '../../shared/bom-catalog';
 import { seedSequence } from '../../shared/id-generator';
-import type { InventoryItem, InventoryStatus, InventorySummary, PartCategory, PartCriticality, PartsRequest, PurchaseOrder } from './types';
+import type {
+  InventoryItem,
+  InventoryStatus,
+  InventorySummary,
+  InventoryTransaction,
+  OpenPoLine,
+  PartCriticality,
+  PartsRequest,
+  PoStatus,
+  PurchaseOrder,
+  StockMovementInput,
+  StockMovementResult,
+} from './types';
 
-const baseInventoryItems: InventoryItem[] = [
-  {
-    id: 'inv-001',
-    partId: 'part-br-001',
-    partNumber: 'KC-BP-900T-2018',
-    partName: 'Brake Pad Set (Hoist) — Konecranes 900T',
-    partName_ko: '브레이크 패드 세트 (호이스트) — Konecranes 900T',
-    category: 'brake',
-    criticality: 'critical',
-    manufacturer: 'Konecranes',
-    unitPrice: 480,
-    currentQty: 4,
-    reservedQty: 1,
-    availableQty: 3,
-    minStockQty: 4,
-    reorderPoint: 5,
-    status: 'low',
-    lastReceiptDate: '2026-01-15',
-    lastIssueDate: '2026-04-14',
-    locationBin: 'A-01-03',
-    leadTimeDays: 21,
-  },
-  {
-    id: 'inv-002',
-    partId: 'part-wr-001',
-    partNumber: 'WR-36MM-6X37-BRIDON',
-    partName: 'Wire Rope 36mm 6x37 (200m) — Main Hoist',
-    partName_ko: '와이어 로프 36mm 6x37 (200m) — 주 호이스트',
-    category: 'wire_rope',
-    criticality: 'critical',
-    manufacturer: 'Bridon',
-    unitPrice: 2200,
-    currentQty: 3,
-    reservedQty: 0,
-    availableQty: 3,
-    minStockQty: 2,
-    reorderPoint: 3,
-    status: 'normal',
-    lastReceiptDate: '2025-11-20',
-    lastIssueDate: '2026-03-10',
-    locationBin: 'B-02-01',
-    leadTimeDays: 35,
-  },
-  {
-    id: 'inv-003',
-    partId: 'part-wr-002',
-    partNumber: 'WR-28MM-6X37-BRIDON',
-    partName: 'Wire Rope 28mm 6x37 (200m) — Aux Hoist',
-    partName_ko: '와이어 로프 28mm 6x37 (200m) — 보조 호이스트',
-    category: 'wire_rope',
-    criticality: 'critical',
-    manufacturer: 'Bridon',
-    unitPrice: 1850,
-    currentQty: 1,
-    reservedQty: 0,
-    availableQty: 1,
-    minStockQty: 2,
-    reorderPoint: 3,
-    status: 'low',
-    lastReceiptDate: '2025-09-05',
-    lastIssueDate: '2026-04-10',
-    locationBin: 'B-02-02',
-    leadTimeDays: 35,
-  },
-  {
-    id: 'inv-004',
-    partId: 'part-plc-001',
-    partNumber: 'SIEMENS-S7-1500-CPU',
-    partName: 'PLC CPU Module (Siemens S7-1500)',
-    partName_ko: 'PLC CPU 모듈 (Siemens S7-1500)',
-    category: 'electrical',
-    criticality: 'critical',
-    manufacturer: 'Siemens',
-    unitPrice: 3200,
-    currentQty: 2,
-    reservedQty: 0,
-    availableQty: 2,
-    minStockQty: 1,
-    reorderPoint: 2,
-    status: 'normal',
-    lastReceiptDate: '2025-12-01',
-    lastIssueDate: '2026-04-13',
-    locationBin: 'C-01-05',
-    leadTimeDays: 45,
-  },
-  {
-    id: 'inv-005',
-    partId: 'part-seal-001',
-    partNumber: 'SEAL-OSK-75MM',
-    partName: 'Output Shaft Oil Seal 75mm',
-    partName_ko: '출력축 오일씰 75mm',
-    category: 'seal_gasket',
-    criticality: 'essential',
-    manufacturer: 'SKF',
-    unitPrice: 45,
-    currentQty: 12,
-    reservedQty: 2,
-    availableQty: 10,
-    minStockQty: 6,
-    reorderPoint: 8,
-    status: 'normal',
-    lastReceiptDate: '2026-02-10',
-    lastIssueDate: '2026-04-14',
-    locationBin: 'A-03-07',
-    leadTimeDays: 14,
-  },
-  {
-    id: 'inv-006',
-    partId: 'part-oil-001',
-    partNumber: 'MOBIL-GLYGOYLE-460-20L',
-    partName: 'Gear Oil Mobil Glygoyle 460 (20L)',
-    partName_ko: '기어 오일 Mobil Glygoyle 460 (20L)',
-    category: 'lubricant',
-    criticality: 'standard',
-    manufacturer: 'Mobil',
-    unitPrice: 120,
-    currentQty: 8,
-    reservedQty: 1,
-    availableQty: 7,
-    minStockQty: 5,
-    reorderPoint: 6,
-    status: 'normal',
-    lastReceiptDate: '2026-03-01',
-    lastIssueDate: '2026-04-14',
-    locationBin: 'D-01-02',
-    leadTimeDays: 7,
-  },
-  {
-    id: 'inv-007',
-    partId: 'part-inv-001',
-    partNumber: 'KC-INV-160KW-2019',
-    partName: 'Hoist Inverter 160kW — Konecranes',
-    partName_ko: '호이스트 인버터 160kW — Konecranes',
-    category: 'electrical',
-    criticality: 'critical',
-    manufacturer: 'Konecranes',
-    unitPrice: 8500,
-    currentQty: 0,
-    reservedQty: 0,
-    availableQty: 0,
-    minStockQty: 1,
-    reorderPoint: 1,
-    status: 'out_of_stock',
-    lastReceiptDate: '2025-06-20',
-    lastIssueDate: '2025-10-15',
-    locationBin: 'C-02-01',
-    leadTimeDays: 60,
-  },
-  {
-    id: 'inv-008',
-    partId: 'part-bearing-001',
-    partNumber: 'SKF-22340-CCK-W33',
-    partName: 'Spherical Roller Bearing SKF 22340',
-    partName_ko: '구면 롤러 베어링 SKF 22340',
-    category: 'gear_bearing',
-    criticality: 'essential',
-    manufacturer: 'SKF',
-    unitPrice: 680,
-    currentQty: 6,
-    reservedQty: 0,
-    availableQty: 6,
-    minStockQty: 4,
-    reorderPoint: 5,
-    status: 'normal',
-    lastReceiptDate: '2026-01-08',
-    lastIssueDate: '2026-02-20',
-    locationBin: 'A-02-04',
-    leadTimeDays: 28,
-  },
-  {
-    id: 'inv-009',
-    partId: 'part-cable-001',
-    partNumber: 'CAB-COMM-SET-LH',
-    partName: 'Communication Cable Set — Liebherr EOT',
-    partName_ko: '통신 케이블 세트 — Liebherr EOT',
-    category: 'electrical',
-    criticality: 'essential',
-    manufacturer: 'Liebherr',
-    unitPrice: 180,
-    currentQty: 3,
-    reservedQty: 0,
-    availableQty: 3,
-    minStockQty: 2,
-    reorderPoint: 3,
-    status: 'normal',
-    lastReceiptDate: '2025-10-14',
-    lastIssueDate: '2026-04-13',
-    locationBin: 'C-01-08',
-    leadTimeDays: 30,
-  },
-  {
-    id: 'inv-010',
-    partId: 'part-ls-001',
-    partNumber: 'LS-HOIST-UPPER-KC',
-    partName: 'Hoist Upper Limit Switch — Konecranes',
-    partName_ko: '호이스트 상부 리밋 스위치 — Konecranes',
-    category: 'sensor',
-    criticality: 'critical',
-    manufacturer: 'Konecranes',
-    unitPrice: 220,
-    currentQty: 2,
-    reservedQty: 0,
-    availableQty: 2,
-    minStockQty: 3,
-    reorderPoint: 4,
-    status: 'low',
-    lastReceiptDate: '2025-08-30',
-    lastIssueDate: '2026-01-15',
-    locationBin: 'C-03-02',
-    leadTimeDays: 21,
-  },
-];
+// 재고 마스터는 HPSI BOM 카탈로그(shared/bom-catalog.ts) 전 품목에서 생성한다.
+// 수량/단가/리드타임/중요도는 원본 BOM에 없어 클러스터별 규칙으로 채운 mock이다 —
+// 실데이터 확보 시 CLUSTER_RULES와 STORY_QTY_OVERRIDES만 교체하면 된다.
 
-const GENERATED_PART_TEMPLATES: Array<{
-  name: string; name_ko: string; category: PartCategory; manufacturer: string; price: number; criticality: PartCriticality; lead: number;
-}> = [
-  { name: 'Motor Brush Set — 180kW', name_ko: '모터 브러시 세트 — 180kW', category: 'electrical', manufacturer: 'ABB', price: 320, criticality: 'essential', lead: 18 },
-  { name: 'Trolley Travel Wheel — Ø400mm', name_ko: '트롤리 주행 휠 — Ø400mm', category: 'gear_bearing', manufacturer: 'Konecranes', price: 1250, criticality: 'critical', lead: 42 },
-  { name: 'Festoon Cable 4G70 (per m)', name_ko: '페스툰 케이블 4G70 (m당)', category: 'electrical', manufacturer: 'Helukabel', price: 42, criticality: 'standard', lead: 10 },
-  { name: 'Proximity Sensor M18 PNP', name_ko: '근접 센서 M18 PNP', category: 'sensor', manufacturer: 'Pepperl+Fuchs', price: 85, criticality: 'essential', lead: 12 },
-  { name: 'Encoder Disc 1024ppr', name_ko: '엔코더 디스크 1024ppr', category: 'sensor', manufacturer: 'Heidenhain', price: 540, criticality: 'critical', lead: 25 },
-  { name: 'Coupling Element — FLEX 180', name_ko: '커플링 엘리먼트 — FLEX 180', category: 'shaft_chain', manufacturer: 'Flender', price: 410, criticality: 'essential', lead: 21 },
-  { name: 'Hook Block 80t', name_ko: '후크 블록 80t', category: 'other', manufacturer: 'Crosby', price: 4200, criticality: 'critical', lead: 56 },
-  { name: 'Anti-Collision Laser Sensor', name_ko: '충돌방지 레이저 센서', category: 'sensor', manufacturer: 'SICK', price: 1850, criticality: 'critical', lead: 30 },
-  { name: 'Slew Bearing — Ø1200', name_ko: '슬루잉 베어링 — Ø1200', category: 'gear_bearing', manufacturer: 'Rothe Erde', price: 18500, criticality: 'critical', lead: 90 },
-  { name: 'Oil Filter Cartridge 10μm', name_ko: '오일 필터 카트리지 10μm', category: 'other', manufacturer: 'Mahle', price: 38, criticality: 'standard', lead: 5 },
-  { name: 'Drum Rope Guide Set', name_ko: '드럼 로프 가이드 세트', category: 'drum', manufacturer: 'LeBus', price: 2600, criticality: 'essential', lead: 35 },
-  { name: 'Radio Remote Transmitter', name_ko: '무선 리모컨 송신기', category: 'electrical', manufacturer: 'HBC-Radiomatic', price: 1200, criticality: 'essential', lead: 20 },
-  { name: 'Load Cell 50t', name_ko: '로드셀 50t', category: 'sensor', manufacturer: 'HBM', price: 2850, criticality: 'critical', lead: 28 },
-  { name: 'Drive Chain 2½" Pitch', name_ko: '구동 체인 2½" 피치', category: 'shaft_chain', manufacturer: 'Tsubaki', price: 780, criticality: 'essential', lead: 18 },
-  { name: 'Brake Coil 24VDC', name_ko: '브레이크 코일 24VDC', category: 'brake', manufacturer: 'Stearns', price: 310, criticality: 'essential', lead: 14 },
-  { name: 'Gearbox Breather Valve', name_ko: '기어박스 브리더 밸브', category: 'other', manufacturer: 'Flender', price: 95, criticality: 'standard', lead: 8 },
-  { name: 'O-Ring Set NBR Ø100', name_ko: 'O-링 세트 NBR Ø100', category: 'seal_gasket', manufacturer: 'Freudenberg', price: 22, criticality: 'standard', lead: 5 },
-  { name: 'Contactor 400A AC3', name_ko: '컨택터 400A AC3', category: 'electrical', manufacturer: 'Siemens', price: 680, criticality: 'essential', lead: 15 },
-  { name: 'PLC I/O Module DI-32', name_ko: 'PLC I/O 모듈 DI-32', category: 'electrical', manufacturer: 'Siemens', price: 450, criticality: 'essential', lead: 20 },
-  { name: 'Limit Switch Lever Type', name_ko: '리밋 스위치 레버형', category: 'sensor', manufacturer: 'Schneider', price: 95, criticality: 'essential', lead: 10 },
-  { name: 'Wire Rope 32mm 6x36 (250m)', name_ko: '와이어 로프 32mm 6x36 (250m)', category: 'wire_rope', manufacturer: 'Bridon', price: 2050, criticality: 'critical', lead: 35 },
-  { name: 'Hydraulic Cylinder Ø80×500', name_ko: '유압 실린더 Ø80×500', category: 'other', manufacturer: 'Parker', price: 1480, criticality: 'essential', lead: 25 },
-  { name: 'EMI Filter 3-Phase 125A', name_ko: 'EMI 필터 3상 125A', category: 'electrical', manufacturer: 'Schaffner', price: 520, criticality: 'standard', lead: 14 },
-  { name: 'Cable Drum Assembly 50m', name_ko: '케이블 드럼 어셈블리 50m', category: 'electrical', manufacturer: 'Conductix', price: 3600, criticality: 'essential', lead: 40 },
-  { name: 'Grease Cartridge Mobilith SHC 220', name_ko: '그리스 카트리지 Mobilith SHC 220', category: 'lubricant', manufacturer: 'Mobil', price: 28, criticality: 'standard', lead: 5 },
-  { name: 'Cable Gland PG29', name_ko: '케이블 글랜드 PG29', category: 'electrical', manufacturer: 'Hummel', price: 8, criticality: 'standard', lead: 3 },
-  { name: 'Overhead Trolley Rail 10m', name_ko: '오버헤드 트롤리 레일 10m', category: 'other', manufacturer: 'Demag', price: 4850, criticality: 'critical', lead: 55 },
-  { name: 'Vibration Sensor IEPE', name_ko: '진동 센서 IEPE', category: 'sensor', manufacturer: 'IFM', price: 420, criticality: 'essential', lead: 16 },
-  { name: 'Servo Motor 15kW', name_ko: '서보 모터 15kW', category: 'electrical', manufacturer: 'Yaskawa', price: 3200, criticality: 'critical', lead: 30 },
-  { name: 'Brake Disc — Ø450', name_ko: '브레이크 디스크 — Ø450', category: 'brake', manufacturer: 'Pintsch Bubenzer', price: 950, criticality: 'critical', lead: 28 },
-  { name: 'Planetary Gearbox Stage-2', name_ko: '유성 감속기 2단', category: 'gear_bearing', manufacturer: 'Flender', price: 8200, criticality: 'critical', lead: 75 },
-  { name: 'Emergency Stop Pushbutton', name_ko: '비상정지 푸시버튼', category: 'electrical', manufacturer: 'Pilz', price: 120, criticality: 'critical', lead: 7 },
-  { name: 'Thermocouple Type-K Ø6', name_ko: '열전대 K형 Ø6', category: 'sensor', manufacturer: 'Omega', price: 65, criticality: 'standard', lead: 10 },
-  { name: 'Carbon Brush Holder', name_ko: '카본 브러시 홀더', category: 'electrical', manufacturer: 'Morgan', price: 180, criticality: 'essential', lead: 18 },
-  { name: 'Sprocket 24T — ANSI 100', name_ko: '스프로킷 24T — ANSI 100', category: 'shaft_chain', manufacturer: 'Tsubaki', price: 340, criticality: 'essential', lead: 14 },
-  { name: 'Pressure Sensor 0-400bar', name_ko: '압력 센서 0-400bar', category: 'sensor', manufacturer: 'Hydac', price: 290, criticality: 'essential', lead: 12 },
-  { name: 'Hydraulic Hose DN25×2m', name_ko: '유압 호스 DN25×2m', category: 'other', manufacturer: 'Parker', price: 85, criticality: 'standard', lead: 7 },
-  { name: 'Drum Grooving Insert', name_ko: '드럼 그루빙 인서트', category: 'drum', manufacturer: 'LeBus', price: 520, criticality: 'essential', lead: 30 },
-  { name: 'Anti-Sway Controller', name_ko: '스웨이 방지 컨트롤러', category: 'electrical', manufacturer: 'ABB', price: 4200, criticality: 'essential', lead: 45 },
-  { name: 'Grease Nipple M10', name_ko: '그리스 니플 M10', category: 'other', manufacturer: 'SKF', price: 4, criticality: 'standard', lead: 3 },
-  { name: 'Motor Cooling Fan 230V', name_ko: '모터 냉각팬 230V', category: 'electrical', manufacturer: 'Ebm-papst', price: 185, criticality: 'essential', lead: 12 },
-  { name: 'Wire Rope Clamp Ø36', name_ko: '와이어 로프 클램프 Ø36', category: 'wire_rope', manufacturer: 'Crosby', price: 28, criticality: 'standard', lead: 5 },
-  { name: 'Insulation Sleeve 11kV', name_ko: '절연 슬리브 11kV', category: 'electrical', manufacturer: '3M', price: 42, criticality: 'essential', lead: 8 },
-  { name: 'Hoist Motor 90kW', name_ko: '호이스트 모터 90kW', category: 'electrical', manufacturer: 'ABB', price: 12500, criticality: 'critical', lead: 60 },
-  { name: 'Drum Shaft — 900T Class', name_ko: '드럼 샤프트 — 900T급', category: 'shaft_chain', manufacturer: 'Konecranes', price: 6800, criticality: 'critical', lead: 80 },
-  { name: 'Gear Oil ISO VG 220 (208L)', name_ko: '기어 오일 ISO VG 220 (208L)', category: 'lubricant', manufacturer: 'Shell', price: 850, criticality: 'standard', lead: 10 },
-  { name: 'Cable Tray 200×60 (2m)', name_ko: '케이블 트레이 200×60 (2m)', category: 'other', manufacturer: 'Legrand', price: 95, criticality: 'standard', lead: 6 },
-  { name: 'Brake Caliper Assembly', name_ko: '브레이크 캘리퍼 어셈블리', category: 'brake', manufacturer: 'Sibre', price: 2400, criticality: 'critical', lead: 35 },
-  { name: 'Crane Runway Endstop', name_ko: '크레인 주행로 엔드스톱', category: 'other', manufacturer: 'Vulkollan', price: 280, criticality: 'essential', lead: 15 },
-  { name: 'Fiber Optic Converter', name_ko: '광 컨버터', category: 'electrical', manufacturer: 'Moxa', price: 350, criticality: 'standard', lead: 10 },
-];
+interface ClusterRule {
+  criticality: PartCriticality;
+  leadTimeDays: number;
+  priceRange: [number, number];
+  minStockRange: [number, number];
+}
 
-const STATUSES: InventoryItem['status'][] = ['normal', 'normal', 'normal', 'normal', 'low', 'out_of_stock', 'excess'];
-const CATEGORY_PREFIX: Record<PartCategory, string> = {
-  brake: 'BRK', wire_rope: 'WR', drum: 'DRM', gear_bearing: 'GB', shaft_chain: 'SC',
-  electrical: 'ELE', sensor: 'SNS', seal_gasket: 'SG', lubricant: 'LUB', other: 'OTH',
+const CLUSTER_RULES: Record<BomClusterKey, ClusterRule> = {
+  'power-dist': { criticality: 'essential', leadTimeDays: 21, priceRange: [40, 2500], minStockRange: [1, 3] },
+  'motor-starter': { criticality: 'essential', leadTimeDays: 21, priceRange: [30, 900], minStockRange: [1, 3] },
+  'pilot-device': { criticality: 'standard', leadTimeDays: 14, priceRange: [12, 90], minStockRange: [3, 8] },
+  network: { criticality: 'essential', leadTimeDays: 30, priceRange: [120, 1800], minStockRange: [1, 2] },
+  fuse: { criticality: 'standard', leadTimeDays: 14, priceRange: [15, 420], minStockRange: [3, 8] },
+  plc: { criticality: 'critical', leadTimeDays: 45, priceRange: [180, 3400], minStockRange: [1, 2] },
+  sensing: { criticality: 'critical', leadTimeDays: 35, priceRange: [150, 2800], minStockRange: [1, 2] },
+  'dcm-drive': { criticality: 'critical', leadTimeDays: 60, priceRange: [900, 24000], minStockRange: [1, 1] },
+  wiring: { criticality: 'standard', leadTimeDays: 10, priceRange: [8, 120], minStockRange: [3, 8] },
+  'power-supply': { criticality: 'essential', leadTimeDays: 25, priceRange: [90, 1600], minStockRange: [1, 2] },
+  instrument: { criticality: 'standard', leadTimeDays: 21, priceRange: [60, 400], minStockRange: [1, 3] },
+  computing: { criticality: 'essential', leadTimeDays: 30, priceRange: [150, 2200], minStockRange: [1, 2] },
+  'mech-drive': { criticality: 'critical', leadTimeDays: 90, priceRange: [3500, 28000], minStockRange: [1, 1] },
+  enclosure: { criticality: 'standard', leadTimeDays: 28, priceRange: [80, 1200], minStockRange: [1, 3] },
+  operator: { criticality: 'essential', leadTimeDays: 40, priceRange: [400, 3200], minStockRange: [1, 2] },
+  transformer: { criticality: 'essential', leadTimeDays: 35, priceRange: [250, 2400], minStockRange: [1, 2] },
+  'current-sensing': { criticality: 'essential', leadTimeDays: 21, priceRange: [90, 380], minStockRange: [1, 3] },
+  resistor: { criticality: 'standard', leadTimeDays: 28, priceRange: [60, 320], minStockRange: [1, 3] },
+  warning: { criticality: 'standard', leadTimeDays: 21, priceRange: [80, 350], minStockRange: [1, 3] },
+  cctv: { criticality: 'essential', leadTimeDays: 30, priceRange: [400, 1600], minStockRange: [1, 2] },
+  surge: { criticality: 'essential', leadTimeDays: 21, priceRange: [180, 520], minStockRange: [1, 2] },
 };
+
+// 수리 WO 스토리와 연동되는 재고 연출 (partId → 현재 수량 강제)
+const STORY_QTY_OVERRIDES: Record<string, number> = {
+  // RPR-2026-0002: 660T 주행 모터 재권선 대기 — 스페어 없음
+  'np225-kl5-cnv-b3': 0,
+  // RPR-2026-0006: 50T 기복 DCM 고장 접수 — 스페어 없음 (리드타임 60일 리스크)
+  '6ra8082-6fv62-0aa0-z': 0,
+  // RPR-2026-0005: UPS 배터리 예방 교체 직후 — 재고 부족
+  'ups-bat-vrla-24dc-3-4ah': 1,
+  // RPR-2026-0004: PLC CPU 교체 사용 — 잔여 1개
+  '6es7516-3ap03-0ab0': 1,
+  // PO-2026-0017(System 자동 재발주) 서사: DC 링크 퓨즈 재주문점 미달
+  '170m8636': 2,
+};
+
+// LAPP 벌크 케이블은 미터 단위로 관리 (수량 스케일도 ×10)
+const METER_UOM_PART_IDS = new Set(['2170484', '2170893', '2170820', '7038904']);
 
 function pseudoRandom(seed: number) {
   let v = seed;
@@ -285,90 +77,442 @@ function pseudoRandom(seed: number) {
 
 const rand = pseudoRandom(42);
 
-const generatedInventoryItems: InventoryItem[] = GENERATED_PART_TEMPLATES.map((tpl, idx) => {
-  const n = idx + 11;
-  const id = `inv-${String(n).padStart(3, '0')}`;
-  const status = STATUSES[Math.floor(rand() * STATUSES.length)];
-  const minStockQty = Math.max(1, Math.floor(rand() * 10) + 2);
-  const reorderPoint = minStockQty + Math.floor(rand() * 3);
+function randInt(min: number, max: number): number {
+  return min + Math.floor(rand() * (max - min + 1));
+}
+
+// monthIndex: 9 = 2025-09, 13 = 2026-01, 18 = 2026-06
+function randDate(fromMonthIndex: number, toMonthIndex: number): string {
+  const monthIndex = randInt(fromMonthIndex, toMonthIndex);
+  const year = monthIndex > 12 ? 2026 : 2025;
+  const month = monthIndex > 12 ? monthIndex - 12 : monthIndex;
+  return `${year}-${String(month).padStart(2, '0')}-${String(randInt(1, 28)).padStart(2, '0')}`;
+}
+
+function roundPrice(value: number): number {
+  if (value >= 1000) return Math.round(value / 50) * 50;
+  if (value >= 100) return Math.round(value / 10) * 10;
+  return Math.round(value);
+}
+
+function computeStatus(
+  item: Pick<InventoryItem, 'currentQty' | 'availableQty' | 'minStockQty'>,
+): InventoryStatus {
+  if (item.currentQty === 0) return 'out_of_stock';
+  if (item.availableQty <= item.minStockQty) return 'low';
+  if (item.currentQty > item.minStockQty * 3) return 'excess';
+  return 'normal';
+}
+
+const allInventoryItems: InventoryItem[] = bomCatalog.map((bomItem, idx) => {
+  const rule = CLUSTER_RULES[bomItem.clusterKey];
+  const [priceMin, priceMax] = rule.priceRange;
+  const unitPrice = roundPrice(priceMin + rand() * (priceMax - priceMin));
+  const isMeterUom = METER_UOM_PART_IDS.has(bomItem.partId);
+  const qtyScale = isMeterUom ? 10 : 1;
+  const minStockQty = randInt(rule.minStockRange[0], rule.minStockRange[1]) * qtyScale;
+  const reorderPoint = minStockQty + randInt(0, 2) * qtyScale;
+
   let currentQty: number;
-  if (status === 'out_of_stock') currentQty = 0;
-  else if (status === 'low') currentQty = Math.max(1, Math.floor(minStockQty * 0.6));
-  else if (status === 'excess') currentQty = Math.floor(minStockQty * 3) + 5;
-  else currentQty = minStockQty + Math.floor(rand() * minStockQty);
-  const reservedQty = currentQty > 0 ? Math.floor(rand() * Math.min(3, currentQty)) : 0;
-  const prefix = CATEGORY_PREFIX[tpl.category];
-  return {
-    id,
-    partId: `part-gen-${String(n).padStart(3, '0')}`,
-    partNumber: `${prefix}-${tpl.manufacturer.slice(0, 3).toUpperCase()}-${String(2000 + n)}`,
-    partName: tpl.name,
-    partName_ko: tpl.name_ko,
-    category: tpl.category,
-    criticality: tpl.criticality,
-    manufacturer: tpl.manufacturer,
-    unitPrice: tpl.price,
+  const override = STORY_QTY_OVERRIDES[bomItem.partId];
+  if (override !== undefined) {
+    currentQty = override;
+  } else {
+    // 대략 8%는 재고 소진, 15%는 부족 상태로 연출
+    const roll = rand();
+    if (roll < 0.08) currentQty = 0;
+    else if (roll < 0.23) currentQty = Math.max(0, minStockQty - randInt(1, 2) * qtyScale);
+    else currentQty = minStockQty + randInt(1, minStockQty / qtyScale + 3) * qtyScale;
+  }
+  const reservedQty = currentQty > 0 ? randInt(0, Math.min(2, currentQty / qtyScale)) * qtyScale : 0;
+  const availableQty = currentQty - reservedQty;
+
+  const item: InventoryItem = {
+    id: `inv-${String(idx + 1).padStart(3, '0')}`,
+    partId: bomItem.partId,
+    partNumber: bomItem.partNumber,
+    partName: bomItem.description,
+    category: bomItem.clusterKey,
+    criticality: rule.criticality,
+    manufacturer: bomItem.manufacturer,
+    uom: isMeterUom ? 'M' : 'EA',
+    unitPrice,
     currentQty,
     reservedQty,
-    availableQty: currentQty - reservedQty,
+    availableQty,
     minStockQty,
     reorderPoint,
-    status,
-    lastReceiptDate: `2025-${String(Math.floor(rand() * 12) + 1).padStart(2, '0')}-${String(Math.floor(rand() * 28) + 1).padStart(2, '0')}`,
-    lastIssueDate: `2026-0${Math.floor(rand() * 4) + 1}-${String(Math.floor(rand() * 28) + 1).padStart(2, '0')}`,
-    locationBin: `${String.fromCharCode(65 + (n % 5))}-0${(n % 3) + 1}-0${(n % 9) + 1}`,
-    leadTimeDays: tpl.lead,
+    status: 'normal',
+    lastReceiptDate: randDate(9, 18),
+    lastIssueDate: randDate(13, 18),
+    locationBin: `${String.fromCharCode(65 + (idx % 4))}-${String(1 + (idx % 12)).padStart(2, '0')}-${String(1 + (idx % 6)).padStart(2, '0')}`,
+    leadTimeDays: rule.leadTimeDays + randInt(-3, 5),
+    craneIds: getBomCraneIds(bomItem),
   };
+  item.status = computeStatus(item);
+  return item;
 });
 
-const allInventoryItems: InventoryItem[] = [...baseInventoryItems, ...generatedInventoryItems];
+function poItem(partId: string, qty: number): PurchaseOrder['items'][number] {
+  const inv = allInventoryItems.find((i) => i.partId === partId);
+  const unitPrice = inv?.unitPrice ?? 0;
+  return {
+    partId,
+    partName: inv?.partName ?? partId,
+    qty,
+    unitPrice,
+    total: qty * unitPrice,
+  };
+}
+
+const sumTotal = (items: PurchaseOrder['items']) =>
+  items.reduce((sum, it) => sum + it.total, 0);
+
+const po1Items = [poItem('6ra8082-6fv62-0aa0-z', 1), poItem('6es7516-3ap03-0ab0', 1)];
+const po2Items = [poItem('170m8636', 4), poItem('ktk-r-1', 10), poItem('fwp-30a14fi', 6)];
+const po3Items = [
+  poItem('787-2742', 2),
+  poItem('855-1001-2500-1001', 3),
+  poItem('ups-bat-vrla-24dc-3-4ah', 4),
+];
 
 const allPurchaseOrders: PurchaseOrder[] = [
   {
     id: 'po-001',
-    poNumber: 'PO-2026-0012',
-    vendor: 'Konecranes Parts & Service',
-    orderDate: '2026-04-14',
-    expectedDelivery: '2026-05-05',
-    items: [
-      { partId: 'part-inv-001', partName: 'Hoist Inverter 160kW', qty: 1, unitPrice: 8500, total: 8500 },
-      { partId: 'part-br-001', partName: 'Brake Pad Set (Hoist)', qty: 4, unitPrice: 480, total: 1920 },
-    ],
-    totalAmount: 10420,
+    poNumber: 'PO-2026-0018',
+    vendor: 'Siemens Korea',
+    orderDate: '2026-06-29',
+    expectedDelivery: '2026-08-25',
+    items: po1Items,
+    totalAmount: sumTotal(po1Items),
     status: 'ordered',
     urgency: 'urgent',
     requester: '조범희',
   },
   {
     id: 'po-002',
-    poNumber: 'PO-2026-0011',
-    vendor: 'Bridon International',
-    orderDate: '2026-04-10',
-    expectedDelivery: '2026-05-15',
-    items: [
-      { partId: 'part-wr-002', partName: 'Wire Rope 28mm 6x37 (200m)', qty: 2, unitPrice: 1850, total: 3700 },
-    ],
-    totalAmount: 3700,
+    poNumber: 'PO-2026-0017',
+    vendor: 'Bussmann (Eaton)',
+    orderDate: '2026-06-20',
+    expectedDelivery: '2026-07-10',
+    items: po2Items,
+    totalAmount: sumTotal(po2Items),
     status: 'in_transit',
     urgency: 'normal',
-    requester: '박순영',
+    requester: 'System',
+    note: 'Auto-reorder — stock fell below reorder point',
+    note_ko: '자동 재발주 — 재주문점 미달 감지',
   },
   {
     id: 'po-003',
-    poNumber: 'PO-2026-0010',
-    vendor: 'SKF Korea',
-    orderDate: '2026-04-05',
-    expectedDelivery: '2026-04-19',
-    items: [
-      { partId: 'part-ls-001', partName: 'Hoist Upper Limit Switch', qty: 4, unitPrice: 220, total: 880 },
-      { partId: 'part-seal-001', partName: 'Output Shaft Oil Seal 75mm', qty: 10, unitPrice: 45, total: 450 },
-    ],
-    totalAmount: 1330,
+    poNumber: 'PO-2026-0016',
+    vendor: 'WAGO Korea',
+    orderDate: '2026-06-12',
+    expectedDelivery: '2026-07-08',
+    items: po3Items,
+    totalAmount: sumTotal(po3Items),
     status: 'in_transit',
     urgency: 'normal',
     requester: '정종민',
   },
 ];
+
+// ── 재고 트랜잭션 원장 ──
+// 스토리 부품(수리 WO 연동) 중심으로 시드. 나머지 부품은 이력 없이 시작한다.
+const allInventoryTransactions: InventoryTransaction[] = [
+  {
+    id: 'tx-015',
+    partId: 'hf1016414',
+    type: 'issue',
+    qty: 1,
+    date: '2026-07-02',
+    ref: 'RPR-2026-0001',
+    refType: 'repair_wo',
+    by: '조범희',
+    note: 'DCM cabinet fan/filter unit replacement — bearing noise',
+    note_ko: 'DCM 판넬 팬/필터 유닛 교체 — 베어링 이상음',
+  },
+  {
+    id: 'tx-014',
+    partId: 'vnso-44-earipz',
+    type: 'issue',
+    qty: 1,
+    date: '2026-06-30',
+    ref: 'RPR-2026-0003',
+    refType: 'repair_wo',
+    by: '정종민',
+    note: 'Joystick replacement — luffing axis neutral drift',
+    note_ko: '조이스틱 교체 — 기복 축 중립 드리프트',
+  },
+  {
+    id: 'tx-013',
+    partId: '6es7516-3ap03-0ab0',
+    type: 'issue',
+    qty: 1,
+    date: '2026-06-27',
+    ref: 'RPR-2026-0004',
+    refType: 'repair_wo',
+    by: 'Siemens Service',
+    note: 'PLC CPU replacement after power surge failure',
+    note_ko: '전원 서지 고장에 따른 PLC CPU 교체',
+  },
+  {
+    id: 'tx-012',
+    partId: '2170484',
+    type: 'issue',
+    qty: 2,
+    date: '2026-06-27',
+    ref: 'RPR-2026-0004',
+    refType: 'repair_wo',
+    by: 'Siemens Service',
+    note: 'PROFINET cable replacement with PLC CPU',
+    note_ko: 'PLC CPU 교체 시 PROFINET 케이블 동반 교체',
+  },
+  {
+    id: 'tx-016',
+    partId: '170m8636',
+    type: 'issue',
+    qty: 2,
+    date: '2026-06-19',
+    refType: 'manual',
+    by: '조범희',
+    note: '660T DC link fuse preventive replacement — triggered auto-reorder',
+    note_ko: '660T DC 링크 퓨즈 예방 교체 — 자동 재발주 트리거',
+  },
+  {
+    id: 'tx-011',
+    partId: 'ups-bat-vrla-24dc-3-4ah',
+    type: 'issue',
+    qty: 2,
+    date: '2026-06-18',
+    ref: 'RPR-2026-0005',
+    refType: 'repair_wo',
+    by: '박순영',
+    note: 'Preventive UPS battery module replacement',
+    note_ko: 'UPS 배터리 모듈 예방 교체',
+  },
+  {
+    id: 'tx-010',
+    partId: 'hf1016414',
+    type: 'issue',
+    qty: 1,
+    date: '2026-06-10',
+    refType: 'manual',
+    by: '조범희',
+    note: '660T panel fan/filter unit swap — contamination',
+    note_ko: '660T 판넬 팬/필터 유닛 교체 — 오염',
+  },
+  {
+    id: 'tx-009',
+    partId: '170m8636',
+    type: 'issue',
+    qty: 2,
+    date: '2026-05-06',
+    refType: 'manual',
+    by: '조범희',
+    note: '660T DC link fuse replacement',
+    note_ko: '660T DC 링크 퓨즈 교체',
+  },
+  {
+    id: 'tx-008',
+    partId: '6ra8082-6fv62-0aa0-z',
+    type: 'issue',
+    qty: 1,
+    date: '2026-05-02',
+    refType: 'manual',
+    by: '박순영',
+    note: 'Commissioning spare consumed — field failure swap. Restock via PO-2026-0018.',
+    note_ko: '시운전 스페어 소진 — 현장 고장 교체 투입. PO-2026-0018로 재발주.',
+  },
+  {
+    id: 'tx-007',
+    partId: 'np225-kl5-cnv-b3',
+    type: 'issue',
+    qty: 1,
+    date: '2026-04-22',
+    refType: 'manual',
+    by: '조범희',
+    note: 'Spare motor consumed for prior traverse defect — restock pending',
+    note_ko: '이전 횡행 결함 대응에 스페어 모터 투입 — 보충 미실시',
+  },
+  {
+    id: 'tx-006',
+    partId: 'ups-bat-vrla-24dc-3-4ah',
+    type: 'issue',
+    qty: 1,
+    date: '2026-03-12',
+    refType: 'manual',
+    by: '박순영',
+    note: 'Bench test unit for UPS commissioning check',
+    note_ko: 'UPS 점검용 벤치 테스트 유닛 사용',
+  },
+  {
+    id: 'tx-005',
+    partId: '170m8636',
+    type: 'receipt',
+    qty: 6,
+    date: '2026-01-15',
+    ref: 'PO-2026-0004',
+    refType: 'po',
+    by: '정종민',
+    note: 'Fuse spare stock replenishment',
+    note_ko: '퓨즈 스페어 재고 보충',
+  },
+  {
+    id: 'tx-004',
+    partId: '6es7516-3ap03-0ab0',
+    type: 'receipt',
+    qty: 2,
+    date: '2025-11-20',
+    ref: 'PO-2025-0083',
+    refType: 'po',
+    by: '박순영',
+    note: 'Initial PLC CPU spare stock',
+    note_ko: 'PLC CPU 초기 스페어 입고',
+  },
+  {
+    id: 'tx-003',
+    partId: 'ups-bat-vrla-24dc-3-4ah',
+    type: 'receipt',
+    qty: 4,
+    date: '2025-09-02',
+    ref: 'PO-2025-0061',
+    refType: 'po',
+    by: '박순영',
+    note: 'UPS battery module stock',
+    note_ko: 'UPS 배터리 모듈 입고',
+  },
+  {
+    id: 'tx-002',
+    partId: '6ra8082-6fv62-0aa0-z',
+    type: 'receipt',
+    qty: 1,
+    date: '2025-06-10',
+    refType: 'manual',
+    by: '박순영',
+    note: '50T commissioning spare (luffing DCM)',
+    note_ko: '50T 시운전 스페어 입고 (기복 DCM)',
+  },
+  {
+    id: 'tx-001',
+    partId: 'np225-kl5-cnv-b3',
+    type: 'receipt',
+    qty: 1,
+    date: '2024-08-15',
+    refType: 'manual',
+    by: '조범희',
+    note: '660T commissioning spare (travelling DC motor)',
+    note_ko: '660T 시운전 스페어 입고 (주행 DC 모터)',
+  },
+];
+
+let txSeq = 100; // 런타임 생성 트랜잭션 ID 시퀀스 (시드와 충돌 방지)
+
+function nextTxId(): string {
+  txSeq += 1;
+  return `tx-${txSeq}`;
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function getTransactionsByPartId(partId: string): InventoryTransaction[] {
+  return allInventoryTransactions
+    .filter((tx) => tx.partId === partId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** 출고 — 재고 차감 + 트랜잭션 기록 */
+export function issuePart(input: StockMovementInput): StockMovementResult {
+  const inv = allInventoryItems.find((i) => i.partId === input.partId);
+  if (!inv) return { success: false, reason: 'not_found' };
+  if (!Number.isFinite(input.qty) || input.qty <= 0)
+    return { success: false, reason: 'invalid_qty' };
+  // 예약분을 제외한 가용 재고 기준으로 출고를 막는다
+  if (inv.availableQty < input.qty)
+    return { success: false, reason: 'insufficient_stock' };
+
+  const date = input.date ?? today();
+  inv.currentQty -= input.qty;
+  inv.availableQty = Math.max(0, inv.currentQty - inv.reservedQty);
+  inv.lastIssueDate = date;
+  inv.status = computeStatus(inv);
+  allInventoryTransactions.unshift({
+    id: nextTxId(),
+    partId: input.partId,
+    type: 'issue',
+    qty: input.qty,
+    date,
+    ref: input.ref,
+    refType: input.refType ?? 'manual',
+    by: input.by,
+    note: input.note,
+    note_ko: input.note_ko,
+  });
+  return { success: true };
+}
+
+/** 입고 — 재고 증가 + 트랜잭션 기록 */
+export function receivePart(input: StockMovementInput): StockMovementResult {
+  const inv = allInventoryItems.find((i) => i.partId === input.partId);
+  if (!inv) return { success: false, reason: 'not_found' };
+  if (!Number.isFinite(input.qty) || input.qty <= 0)
+    return { success: false, reason: 'invalid_qty' };
+
+  const date = input.date ?? today();
+  inv.currentQty += input.qty;
+  inv.availableQty = Math.max(0, inv.currentQty - inv.reservedQty);
+  inv.lastReceiptDate = date;
+  inv.status = computeStatus(inv);
+  allInventoryTransactions.unshift({
+    id: nextTxId(),
+    partId: input.partId,
+    type: 'receipt',
+    qty: input.qty,
+    date,
+    ref: input.ref,
+    refType: input.refType ?? 'manual',
+    by: input.by,
+    note: input.note,
+    note_ko: input.note_ko,
+  });
+  return { success: true };
+}
+
+export function getInventoryItemByPartId(
+  partId: string,
+): InventoryItem | undefined {
+  return allInventoryItems.find((i) => i.partId === partId);
+}
+
+const OPEN_PO_STATUSES: PoStatus[] = ['requested', 'approved', 'ordered', 'in_transit'];
+
+/** 부품 기준 발주중(미입고) PO 라인 — ETA 오름차순 */
+export function getOpenPoLinesByPartId(partId: string): OpenPoLine[] {
+  return allPurchaseOrders
+    .filter((po) => OPEN_PO_STATUSES.includes(po.status))
+    .flatMap((po) =>
+      po.items
+        .filter((it) => it.partId === partId)
+        .map((it) => ({
+          poId: po.id,
+          poNumber: po.poNumber,
+          vendor: po.vendor,
+          qty: it.qty,
+          expectedDelivery: po.expectedDelivery,
+          status: po.status,
+          requester: po.requester,
+          note: po.note,
+          note_ko: po.note_ko,
+        })),
+    )
+    .sort((a, b) => a.expectedDelivery.localeCompare(b.expectedDelivery));
+}
+
+export function getOnOrderQtyByPartId(partId: string): number {
+  return getOpenPoLinesByPartId(partId).reduce((sum, line) => sum + line.qty, 0);
+}
 
 const allPartsRequests: PartsRequest[] = [];
 
@@ -377,13 +521,6 @@ const maxPartsSeq = allPartsRequests.reduce((max, req) => {
   return m ? Math.max(max, parseInt(m[1], 10)) : max;
 }, 0);
 seedSequence('parts', maxPartsSeq);
-
-function computeStatus(item: InventoryItem): InventoryStatus {
-  if (item.currentQty === 0) return 'out_of_stock';
-  if (item.availableQty <= item.minStockQty) return 'low';
-  if (item.currentQty > item.minStockQty * 3) return 'excess';
-  return 'normal';
-}
 
 export function getAllPartsRequests(): PartsRequest[] {
   return allPartsRequests;

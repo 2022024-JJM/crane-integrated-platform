@@ -9,6 +9,7 @@ export type {
   RepairWO,
 } from './model/types';
 export {
+  addPartUsedToRepair,
   addRepairWO,
   getAllRepairWOs,
   getMaintenanceSummary,

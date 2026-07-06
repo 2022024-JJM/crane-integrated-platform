@@ -1,6 +1,9 @@
 {
   "language": "Lingua",
   "comingSoon": "Mox aderit",
+  "aria": {
+    "goTo": "Ad {{title}}"
+  },
   "header": {
     "toggleSidebar": "Barra lateralis commuta",
     "toggleTheme": "Thema commuta",
@@ -69,6 +72,7 @@
     "assetManagement": "Administratio Bonorum",
     "inspection": "Inspectio",
     "maintenance": "Manutentio",
+    "serviceCalendar": "Kalendarium Ministerii",
     "inventory": "Copia",
     "compliance": "Conformitas OSHA",
     "categoryCrane": "Grus",

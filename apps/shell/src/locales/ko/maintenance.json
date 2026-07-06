@@ -59,6 +59,7 @@
     "failureDescription": "고장 설명",
     "partsUsed": "사용 부품",
     "noParts": "등록된 부품이 없습니다.",
+    "viewPart": "재고에서 보기",
     "partsCost": "부품 비용",
     "laborCost": "인건비 ({{hours}}h)",
     "totalCost": "합계",

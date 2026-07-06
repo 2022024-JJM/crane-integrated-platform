@@ -49,6 +49,15 @@ export function PartsFields({
   prioritySlot,
 }: PartsFieldsProps) {
   const { t } = useTranslation('ticket');
+  const { t: tInventory } = useTranslation('inventory');
+
+  // BOM 클러스터(카테고리)별로 부품 옵션 그룹핑 — 306개 옵션 탐색성 개선
+  const groupedItems: [InventoryItem['category'], InventoryItem[]][] = [];
+  for (const inv of inventoryItems) {
+    const group = groupedItems.find(([category]) => category === inv.category);
+    if (group) group[1].push(inv);
+    else groupedItems.push([inv.category, [inv]]);
+  }
 
   return (
     <>
@@ -98,8 +107,14 @@ export function PartsFields({
                 onChange={(e) => onUpdateItem(idx, e.target.value)}
               >
                 <option value="">{t('fields.partName')}</option>
-                {inventoryItems.map((inv) => (
-                  <option key={inv.partId} value={inv.partId}>{inv.partName}</option>
+                {groupedItems.map(([category, invItems]) => (
+                  <optgroup key={category} label={tInventory(`category.${category}`)}>
+                    {invItems.map((inv) => (
+                      <option key={inv.partId} value={inv.partId}>
+                        {inv.partName} ({inv.partNumber})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <input

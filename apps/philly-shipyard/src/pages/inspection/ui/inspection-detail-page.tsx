@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, CheckCircle2, XCircle, MinusCircle, Save, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, MinusCircle, Save, ClipboardCheck, AlertTriangle, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -167,7 +167,14 @@ export function InspectionDetailPage() {
           <div>
             <h1 className="text-lg font-bold">{inspection.woNumber}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {inspection.craneName} · {inspection.siteName}
+              <Link
+                to={`/asset-management/${inspection.craneId}`}
+                className="text-primary hover:underline"
+              >
+                {inspection.craneName}
+              </Link>
+              {' · '}
+              {inspection.siteName}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -211,10 +218,19 @@ export function InspectionDetailPage() {
       {/* 부적합 항목 요약 */}
       {failedItems.length > 0 && (
         <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-red-500">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            {t('detail.nonConformance')} ({failedItems.length})
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-red-500">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {t('detail.nonConformance')} ({failedItems.length})
+            </h2>
+            <Link
+              to={`/ticket/create?type=repair&craneId=${encodeURIComponent(inspection.craneId)}&sourceWo=${encodeURIComponent(inspection.woNumber)}&component=${encodeURIComponent(failedItems[0]?.itemName ?? '')}`}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-red-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600"
+            >
+              <Wrench className="size-3.5" />
+              {t('detail.createRepairTicket')}
+            </Link>
+          </div>
           {failedItems.map((item) => (
             <div key={item.id} className="flex items-start gap-2 text-sm">
               <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />

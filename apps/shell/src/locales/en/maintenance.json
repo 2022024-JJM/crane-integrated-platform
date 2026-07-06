@@ -59,6 +59,7 @@
     "failureDescription": "Failure Description",
     "partsUsed": "Parts Used",
     "noParts": "No parts recorded yet.",
+    "viewPart": "View in inventory",
     "partsCost": "Parts Cost",
     "laborCost": "Labor Cost ({{hours}} h)",
     "totalCost": "Total Cost",

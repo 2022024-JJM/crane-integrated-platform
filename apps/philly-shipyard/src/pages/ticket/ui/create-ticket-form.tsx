@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -42,6 +43,14 @@ interface CraneRef {
 
 interface UnifiedForm extends CraneRef, RepairFieldsState, InspectionFieldsState, PartsFieldsState {
   priority: AnyPriority;
+  /** 점검에서 넘어온 경우 원천 점검 WO 번호 (비노출, 생성 시 기록) */
+  sourceWoNumber?: string;
+}
+
+interface TicketPrefill {
+  craneId?: string;
+  componentName?: string;
+  sourceWoNumber?: string;
 }
 
 type UnifiedErrors = RepairFieldsErrors &
@@ -56,12 +65,16 @@ const ACCENT_BY_TYPE: Record<TicketType, AccentColor> = {
   parts: 'blue',
 };
 
-function makeInitial(): UnifiedForm {
+function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
   const d = new Date().toISOString().slice(0, 10);
   return {
-    craneId: '', craneName: '', siteId: '', siteName: '',
+    craneId: prefill.craneId ?? '', craneName: '', siteId: '', siteName: '',
     priority: 'normal', performerType: 'internal', assignedTo: '',
-    componentName: '', sourceType: 'breakdown', failureType: 'mechanical',
+    componentName: prefill.componentName ?? '',
+    // 점검(sourceWo)에서 넘어왔으면 원천을 inspection으로 설정
+    sourceType: prefill.sourceWoNumber ? 'inspection' : 'breakdown',
+    sourceWoNumber: prefill.sourceWoNumber,
+    failureType: 'mechanical',
     repairLevel: 'minor', failureDescription: '',
     scheduledStart: d, scheduledEnd: d,
     woType: 'frequent', scheduledDate: d, findings: '',
@@ -84,8 +97,36 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   const createInspection = useCreateInspectionTicket();
   const createParts = useCreatePartsTicket();
 
-  const [form, setForm] = useState<UnifiedForm>(makeInitial);
+  // 점검 상세 등에서 넘어온 프리필 (repair 타입에만 의미)
+  const [params] = useSearchParams();
+  const [form, setForm] = useState<UnifiedForm>(() =>
+    makeInitial(
+      type === 'repair'
+        ? {
+            craneId: params.get('craneId') ?? undefined,
+            componentName: params.get('component') ?? undefined,
+            sourceWoNumber: params.get('sourceWo') ?? undefined,
+          }
+        : {},
+    ),
+  );
   const [errors, setErrors] = useState<UnifiedErrors>({});
+
+  // 프리필된 craneId로 크레인명/사이트 정보를 채운다 (cranes 로드 후 1회)
+  useEffect(() => {
+    if (form.craneId && !form.craneName) {
+      const crane = cranes.find((c) => c.id === form.craneId);
+      if (crane) {
+        setForm((f) => ({
+          ...f,
+          craneName: crane.name,
+          siteId: crane.siteId,
+          siteName: crane.siteName,
+        }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cranes]);
 
   function set<K extends keyof UnifiedForm>(key: K, value: UnifiedForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -172,6 +213,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         siteId: form.siteId, siteName: form.siteName,
         componentName: form.componentName,
         sourceType: form.sourceType,
+        sourceWoNumber: form.sourceWoNumber || undefined,
         failureType: form.failureType,
         priority: form.priority as RepairTicketDraft['priority'],
         repairLevel: form.repairLevel,

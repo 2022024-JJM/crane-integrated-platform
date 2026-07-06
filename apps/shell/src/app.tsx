@@ -44,6 +44,7 @@ const MRO_ALLOWED_EXACT = new Set([
   '/maintenance',
   '/inventory',
   '/compliance',
+  '/service-calendar',
   '/ticket/create',
 ]);
 const MRO_ALLOWED_PREFIXES = [
@@ -188,6 +189,12 @@ const InventoryPage = lazy(() =>
 const CompliancePage = lazy(() =>
   import('@crane/philly-shipyard/pages/compliance').then((m) => ({
     default: m.CompliancePage,
+  })),
+);
+
+const ServiceCalendarPage = lazy(() =>
+  import('@crane/philly-shipyard/pages/service-calendar').then((m) => ({
+    default: m.ServiceCalendarPage,
   })),
 );
 
@@ -384,6 +391,14 @@ export function App() {
                 element={
                   <LazyRoute>
                     <CompliancePage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="service-calendar"
+                element={
+                  <LazyRoute>
+                    <ServiceCalendarPage />
                   </LazyRoute>
                 }
               />

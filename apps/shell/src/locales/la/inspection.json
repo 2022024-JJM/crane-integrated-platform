@@ -47,6 +47,7 @@
     "woInfo": "Informationes Ordinis Operis",
     "checklist": "Index Inspectionis",
     "nonConformance": "Elementa Non Conformia",
+    "createRepairTicket": "Crea Tesseram Refectionis",
     "noNonConformance": "Nulla elementa non conformia",
     "findings": "Inventiones",
     "fields": {

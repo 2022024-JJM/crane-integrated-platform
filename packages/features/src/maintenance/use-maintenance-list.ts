@@ -7,6 +7,7 @@ import {
   updateRepairStatus,
 } from '@crane/domain/maintenance';
 import type { RepairStatus, RepairWO } from '@crane/domain/maintenance';
+import { getAllInspectionWOs } from '@crane/domain/inspection';
 import { useDomainEventStore, useEntityTick } from '../shared/use-domain-event-store';
 
 function localizeRepair(repair: RepairWO, isKo: boolean): RepairWO {
@@ -69,7 +70,14 @@ export function useMaintenanceDetail(id: string) {
   useEntityTick('repair');
   const raw = getRepairWOById(id);
   const repair = raw ? localizeRepair(raw, isKo) : undefined;
-  return { repair };
+
+  // 원천 WO(sourceType==='inspection')의 점검 상세로 링크하기 위한 id 해석
+  const sourceInspectionId =
+    raw?.sourceType === 'inspection' && raw.sourceWoNumber
+      ? getAllInspectionWOs().find((w) => w.woNumber === raw.sourceWoNumber)?.id
+      : undefined;
+
+  return { repair, sourceInspectionId };
 }
 
 export { PIPELINE_NEXT, PIPELINE_PREV };
