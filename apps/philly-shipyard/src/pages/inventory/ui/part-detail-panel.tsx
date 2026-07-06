@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -164,7 +165,7 @@ function StockActionModal({
     toast.error(t(reasonKey));
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
@@ -288,7 +289,8 @@ function StockActionModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
