@@ -77,6 +77,14 @@ export {
   getSceneFileUrlByRegionId,
 } from './model/scene-file-registry';
 export { withBaseUrl } from './lib/asset-url';
+export {
+  CRANE_TYPE_MODEL,
+  getCraneModel,
+} from './model/crane-type-model';
+export type {
+  CraneModelConfig,
+  CraneModelCameraPreset,
+} from './model/crane-type-model';
 export { GltfModel } from './ui/gltf-model';
 export { SceneText } from './ui/scene-text';
 export { LidarSensorMesh } from './ui/lidar-sensor-mesh';

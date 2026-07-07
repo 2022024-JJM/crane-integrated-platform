@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
+  Box,
   CalendarClock,
   ChevronDown,
   ChevronRight,
@@ -19,6 +20,7 @@ import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import { NewAssetModal } from './new-asset-modal';
+import { Crane3dViewer } from './crane-3d-viewer';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 
@@ -142,6 +144,7 @@ function AssetSummaryCard({
   nextInspection?: string;
 }) {
   const { t } = useTranslation('asset-management');
+  const [show3d, setShow3d] = useState(false);
 
   const daysLeft = daysBetween(new Date(asset.warrantyEnd), today);
   const warrantyExpired = daysLeft < 0;
@@ -159,15 +162,21 @@ function AssetSummaryCard({
   const nextInspOverdue = nextInspDays !== null && nextInspDays < 0;
 
   return (
-    <Link
-      to={`/asset-management/${asset.id}`}
+    <div
       className={cn(
-        'group flex cursor-pointer flex-col gap-4 rounded-lg border bg-card/70 p-5 shadow-sm transition-all hover:shadow-md',
+        'group relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card/70 p-5 shadow-sm transition-all hover:shadow-md',
         STATUS_CARD_BORDER[asset.status],
       )}
     >
-      {/* 상단: 아이덴티티 + 보증/이동 */}
-      <div className="flex items-start justify-between gap-4">
+      {/* 카드 전체를 덮는 상세 이동 링크 (stretched link) */}
+      <Link
+        to={`/asset-management/${asset.id}`}
+        aria-label={asset.name}
+        className="absolute inset-0 z-0 rounded-lg"
+      />
+
+      {/* 상단: 아이덴티티 + 보증/이동 (링크 위, 클릭은 링크로 통과) */}
+      <div className="pointer-events-none relative z-[1] flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2">
             <StatusDot status={STATUS_DOT[asset.status]} />
@@ -184,7 +193,27 @@ function AssetSummaryCard({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShow3d((v) => !v)}
+            aria-label={t(show3d ? 'card.hide3d' : 'card.view3d', {
+              defaultValue: show3d ? 'Hide 3D' : 'View 3D',
+            })}
+            aria-pressed={show3d}
+            title={t(show3d ? 'card.hide3d' : 'card.view3d', {
+              defaultValue: show3d ? 'Hide 3D' : 'View 3D',
+            })}
+            className={cn(
+              'pointer-events-auto z-[2] inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors',
+              show3d
+                ? 'border-primary/60 bg-primary/10 text-foreground'
+                : 'border-border bg-card/80 text-muted-foreground hover:border-primary/50 hover:text-foreground',
+            )}
+          >
+            <Box className="size-3.5" />
+            3D
+          </button>
           <Badge
             variant={warrantyExpired ? 'destructive' : warrantySoon ? 'warning' : 'secondary'}
           >
@@ -197,7 +226,7 @@ function AssetSummaryCard({
       </div>
 
       {/* 하단: 운영 지표 타일 */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div className="pointer-events-none relative z-[1] grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {/* 구성품 건강도 */}
         <StatTile label={t('card.health', { defaultValue: 'Component Health' })}>
           <div className="flex items-center gap-2">
@@ -301,7 +330,13 @@ function AssetSummaryCard({
           )}
         </StatTile>
       </div>
-    </Link>
+
+      {show3d && (
+        <div className="pointer-events-auto relative z-[5]">
+          <Crane3dViewer craneType={asset.craneType} />
+        </div>
+      )}
+    </div>
   );
 }
 

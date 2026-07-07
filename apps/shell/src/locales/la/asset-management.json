@@ -99,7 +99,9 @@
     "openWo": "WO Aperta",
     "woBreakdown": "{{overdue}} insp · {{repair}} refec",
     "noOpenWo": "Nulla",
-    "nextInspection": "Proxima Inspectio"
+    "nextInspection": "Proxima Inspectio",
+    "view3d": "Vide 3D",
+    "hide3d": "Occulta 3D"
   },
   "status": {
     "operating": "Operans",

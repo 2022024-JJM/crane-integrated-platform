@@ -99,7 +99,9 @@
     "openWo": "Open WO",
     "woBreakdown": "{{overdue}} insp · {{repair}} repair",
     "noOpenWo": "None open",
-    "nextInspection": "Next Inspection"
+    "nextInspection": "Next Inspection",
+    "view3d": "View 3D",
+    "hide3d": "Hide 3D"
   },
   "status": {
     "operating": "Operating",

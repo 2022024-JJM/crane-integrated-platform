@@ -99,7 +99,9 @@
     "openWo": "미결 WO",
     "woBreakdown": "점검 {{overdue}} · 정비 {{repair}}",
     "noOpenWo": "없음",
-    "nextInspection": "다음 점검"
+    "nextInspection": "다음 점검",
+    "view3d": "3D 보기",
+    "hide3d": "3D 닫기"
   },
   "status": {
     "operating": "운용 중",
