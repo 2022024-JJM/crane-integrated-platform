@@ -609,9 +609,9 @@ export function PartDetailPanel({
     return (
       <div
         className={cn(
-          // 사이드바(w-64)를 덮지 않도록 좌측을 오프셋 — 접힌 상태면 left-0
-          'fixed right-0 top-14 bottom-0 z-40 flex flex-col bg-background',
-          sidebarOpen ? 'left-64' : 'left-0',
+          // lg 이상 인라인 사이드바(w-64)만 오프셋 — lg 미만은 드로어라 전체 폭 사용
+          'fixed right-0 top-14 bottom-0 left-0 z-40 flex flex-col bg-background',
+          sidebarOpen && 'lg:left-64',
         )}
       >
         {/* 헤더 */}

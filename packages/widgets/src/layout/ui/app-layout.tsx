@@ -8,7 +8,7 @@ import {
 import { AuthSiteTypeSync } from '@crane/features/auth';
 import { HeaderDisplaySettingsProvider } from '@crane/core/lib/header-display-settings-context';
 import { NavigationProgressProvider } from '@crane/core/lib/navigation-progress-context';
-import { SidebarProvider } from '@crane/core/lib/sidebar-context';
+import { SidebarProvider, useSidebar } from '@crane/core/lib/sidebar-context';
 import { SiteTypeProvider } from '@crane/core/lib/site-type-context';
 import { ThemeProvider } from '@crane/core/lib/theme-context';
 import { useNavigationProgress } from '@crane/core/lib/use-navigation-progress';
@@ -64,6 +64,20 @@ function NavigationProgressSync() {
   return null;
 }
 
+function SidebarDrawerCloseSync() {
+  const { pathname } = useLocation();
+  const { close } = useSidebar();
+
+  useEffect(() => {
+    // lg 미만(오버레이 드로어)에서만 라우트 변경 시 닫는다 — 데스크톱은 no-op
+    if (!window.matchMedia('(min-width: 1024px)').matches) {
+      close();
+    }
+  }, [pathname, close]);
+
+  return null;
+}
+
 export function AppLayout() {
   return (
     <ThemeProvider>
@@ -73,6 +87,7 @@ export function AppLayout() {
             <NavigationProgressProvider>
               <AuthSiteTypeSync />
               <NavigationProgressSync />
+              <SidebarDrawerCloseSync />
               <NavigationProgressBar />
               <div className="flex h-screen flex-col overflow-hidden">
                 <AppHeader />
