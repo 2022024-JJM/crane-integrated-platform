@@ -283,9 +283,11 @@ export function InventoryPage() {
 
   return (
     <div
-      className="flex flex-col gap-6 p-4 transition-[padding] duration-300 ease-out md:p-6"
-      // 상세 패널이 열리면 본문을 패널 폭(440px)만큼 밀어 테이블이 가려지지 않게 한다
-      style={selectedPartId ? { paddingRight: 'calc(440px + 1.5rem)' } : undefined}
+      className={cn(
+        'flex flex-col gap-6 p-4 transition-[padding] duration-300 ease-out md:p-6',
+        // xl 이상에서만 상세 패널 폭(440px)만큼 본문을 민다 — 그 미만은 패널이 오버레이
+        selectedPartId && 'xl:pr-[calc(440px+1.5rem)]',
+      )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -514,42 +516,50 @@ export function InventoryPage() {
 
       {/* 부품 테이블 */}
       <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
-        {/* 헤더 */}
-        <div
-          className="grid items-center gap-3 border-b border-border/60 bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-          style={{ gridTemplateColumns: GRID_TEMPLATE }}
-        >
-          <span>{t('table.partName')}</span>
-          <span>{t('table.criticality')}</span>
-          <span className="text-right">{t('table.currentStock')}</span>
-          <span className="text-right">{t('table.reserved')}</span>
-          <span className="text-right">{t('table.available')}</span>
-          <span className="text-center">{t('table.uom')}</span>
-          <span>{t('table.stockLevel')}</span>
-          <span className="text-right">{t('table.unitPrice', { defaultValue: 'Unit Price' })}</span>
-          <span className="text-right">{t('table.leadTime')}</span>
-          <span className="text-right">{t('table.status')}</span>
+        {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[1120px]">
+            {/* 헤더 */}
+            <div
+              className="grid items-center gap-3 border-b border-border/60 bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            >
+              <span>{t('table.partName')}</span>
+              <span>{t('table.criticality')}</span>
+              <span className="text-right">{t('table.currentStock')}</span>
+              <span className="text-right">{t('table.reserved')}</span>
+              <span className="text-right">{t('table.available')}</span>
+              <span className="text-center">{t('table.uom')}</span>
+              <span>{t('table.stockLevel')}</span>
+              <span className="text-right">{t('table.unitPrice', { defaultValue: 'Unit Price' })}</span>
+              <span className="text-right">{t('table.leadTime')}</span>
+              <span className="text-right">{t('table.status')}</span>
+            </div>
+
+            {/* 바디 */}
+            {filtered.length > 0 && (
+              <div>
+                {paginated.map((item) => (
+                  <InventoryRow
+                    key={item.id}
+                    item={item}
+                    selected={item.partId === selectedPartId}
+                    onSelect={() =>
+                      selectPart(selectedPartId === item.partId ? null : item.partId)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 바디 */}
-        <div>
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {t('empty')}
-            </div>
-          ) : (
-            paginated.map((item) => (
-              <InventoryRow
-                key={item.id}
-                item={item}
-                selected={item.partId === selectedPartId}
-                onSelect={() =>
-                  selectPart(selectedPartId === item.partId ? null : item.partId)
-                }
-              />
-            ))
-          )}
-        </div>
+        {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            {t('empty')}
+          </div>
+        )}
 
         {/* 페이지네이션 */}
         {filtered.length > 0 && (

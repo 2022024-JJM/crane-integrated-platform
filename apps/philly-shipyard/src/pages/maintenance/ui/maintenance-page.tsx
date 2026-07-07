@@ -175,14 +175,14 @@ function RepairCard({
             }
           }}
           disabled={!canPrev}
-          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl
+          className={`cursor-pointer flex-1 min-w-0 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl
             ${canPrev
               ? 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
               : 'text-muted-foreground/25 cursor-not-allowed'
             }`}
         >
-          <ChevronLeft className="h-3 w-3" />
-          {prevStatus ? t(`pipeline.${prevStatus}`) : '—'}
+          <ChevronLeft className="h-3 w-3 shrink-0" />
+          <span className="truncate">{prevStatus ? t(`pipeline.${prevStatus}`) : '—'}</span>
         </button>
         <button
           onClick={() => {
@@ -197,14 +197,14 @@ function RepairCard({
             }
           }}
           disabled={!canNext}
-          className={`cursor-pointer flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-br
+          className={`cursor-pointer flex-1 min-w-0 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-br
             ${canNext
               ? `${cfg.accent} hover:bg-muted/50`
               : 'text-muted-foreground/25 cursor-not-allowed'
             }`}
         >
-          {nextStatus ? t(`pipeline.${nextStatus}`) : t('completedLabel')}
-          <ChevronRight className="h-3 w-3" />
+          <span className="truncate">{nextStatus ? t(`pipeline.${nextStatus}`) : t('completedLabel')}</span>
+          <ChevronRight className="h-3 w-3 shrink-0" />
         </button>
       </div>
     </div>

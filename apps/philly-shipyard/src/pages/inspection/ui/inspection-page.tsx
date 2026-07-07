@@ -232,31 +232,39 @@ export function InspectionPage() {
 
       {/* 테이블 */}
       <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
-        {/* 헤더 */}
-        <div
-          className="grid items-center gap-3 border-b border-border/60 bg-muted/40 pr-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-          style={{ gridTemplateColumns: GRID_TEMPLATE }}
-        >
-          <span />
-          <span>{t('table.woNumber')}</span>
-          <span>{t('table.type')}</span>
-          <span>{t('table.scheduled')}</span>
-          <span>{t('table.assignedTo')}</span>
-          <span className="text-right">{t('table.progress', { defaultValue: 'Progress' })}</span>
-          <span className="text-right">{t('table.status')}</span>
-          <span className="text-right">{t('table.result')}</span>
+        {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[970px]">
+            {/* 헤더 */}
+            <div
+              className="grid items-center gap-3 border-b border-border/60 bg-muted/40 pr-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            >
+              <span />
+              <span>{t('table.woNumber')}</span>
+              <span>{t('table.type')}</span>
+              <span>{t('table.scheduled')}</span>
+              <span>{t('table.assignedTo')}</span>
+              <span className="text-right">{t('table.progress', { defaultValue: 'Progress' })}</span>
+              <span className="text-right">{t('table.status')}</span>
+              <span className="text-right">{t('table.result')}</span>
+            </div>
+
+            {/* 바디 */}
+            {filtered.length > 0 && (
+              <div>
+                {paginated.map((wo) => <InspectionRow key={wo.id} wo={wo} />)}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 바디 */}
-        <div>
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {t('empty')}
-            </div>
-          ) : (
-            paginated.map((wo) => <InspectionRow key={wo.id} wo={wo} />)
-          )}
-        </div>
+        {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            {t('empty')}
+          </div>
+        )}
 
         {/* 페이지네이션 */}
         {filtered.length > 0 && (
