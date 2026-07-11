@@ -85,6 +85,13 @@ export type {
   CraneModelConfig,
   CraneModelCameraPreset,
 } from './model/crane-type-model';
+export { CRANE_ZONE_CONFIG, getCraneZoneConfig } from './model/crane-zone-config';
+export type {
+  CraneZone,
+  CraneZoneConfig,
+  CraneZonePart,
+  CraneZoneRegion,
+} from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
 export { SceneText } from './ui/scene-text';
 export { LidarSensorMesh } from './ui/lidar-sensor-mesh';

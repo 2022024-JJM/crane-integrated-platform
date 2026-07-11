@@ -3,55 +3,24 @@ import { Wrench, ClipboardCheck, Package, Ticket as TicketIcon, Calendar, User, 
 import { cn } from '@crane/core/lib/utils';
 import type { TicketType } from './ticket-type-selector';
 
+// 티켓은 모노크롬 — 타입은 아이콘·라벨로, 색은 우선순위 칩에만 남긴다.
 const PREVIEW_CONFIG: Record<TicketType, {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   prefix: string;
-  accent: string;
-  accentBorder: string;
-  accentText: string;
-  accentBg: string;
-  gradient: string;
 }> = {
-  repair: {
-    icon: Wrench,
-    label: 'REPAIR',
-    prefix: 'RPR',
-    accent: 'bg-amber-500',
-    accentBorder: 'border-amber-500/40',
-    accentText: 'text-amber-600 dark:text-amber-400',
-    accentBg: 'bg-amber-500/10',
-    gradient: 'from-amber-500/5 to-amber-500/0',
-  },
-  inspection: {
-    icon: ClipboardCheck,
-    label: 'INSPECTION',
-    prefix: 'INS',
-    accent: 'bg-emerald-500',
-    accentBorder: 'border-emerald-500/40',
-    accentText: 'text-emerald-600 dark:text-emerald-400',
-    accentBg: 'bg-emerald-500/10',
-    gradient: 'from-emerald-500/5 to-emerald-500/0',
-  },
-  parts: {
-    icon: Package,
-    label: 'PARTS REQUEST',
-    prefix: 'PRQ',
-    accent: 'bg-blue-500',
-    accentBorder: 'border-blue-500/40',
-    accentText: 'text-blue-600 dark:text-blue-400',
-    accentBg: 'bg-blue-500/10',
-    gradient: 'from-blue-500/5 to-blue-500/0',
-  },
+  repair: { icon: Wrench, label: 'REPAIR', prefix: 'RPR' },
+  inspection: { icon: ClipboardCheck, label: 'INSPECTION', prefix: 'INS' },
+  parts: { icon: Package, label: 'PARTS REQUEST', prefix: 'PRQ' },
 };
 
 const PRIORITY_COLOR: Record<string, string> = {
-  emergency: 'bg-red-500 text-white',
-  urgent:    'bg-red-500 text-white',
-  high:      'bg-orange-500 text-white',
-  normal:    'bg-slate-500 text-white',
-  low:       'bg-slate-400 text-white',
-  scheduled: 'bg-blue-500 text-white',
+  emergency: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  urgent:    'bg-red-500/10 text-red-600 dark:text-red-400',
+  high:      'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  normal:    'bg-muted text-muted-foreground',
+  low:       'bg-muted text-muted-foreground',
+  scheduled: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
 };
 
 export function TicketPreview({
@@ -106,25 +75,22 @@ export function TicketPreview({
       </div>
 
       {/* 티켓 본체 */}
-      <div className={cn('relative overflow-hidden rounded-xl border bg-card shadow-lg', cfg.accentBorder)}>
-        {/* 상단 배경 그라디언트 */}
-        <div className={cn('absolute inset-x-0 top-0 h-32 bg-gradient-to-b', cfg.gradient)} />
-
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         {/* 헤더 */}
         <div className="relative flex items-start justify-between gap-3 border-b border-dashed border-border/70 px-5 pb-4 pt-5">
           <div className="flex items-start gap-3">
-            <div className={cn('flex size-10 items-center justify-center rounded-lg', cfg.accentBg)}>
-              <Icon className={cn('size-5', cfg.accentText)} />
+            <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+              <Icon className="size-5 text-foreground" />
             </div>
             <div>
-              <p className={cn('text-[10px] font-bold uppercase tracking-[0.2em]', cfg.accentText)}>{cfg.label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">{cfg.label}</p>
               <p className="mt-0.5 flex items-center gap-1 font-mono text-xs text-muted-foreground">
                 <Hash className="size-3" />
                 {draftNum}
               </p>
             </div>
           </div>
-          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', PRIORITY_COLOR[priority] ?? 'bg-slate-500 text-white')}>
+          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', PRIORITY_COLOR[priority] ?? 'bg-muted text-muted-foreground')}>
             {priorityLabel}
           </span>
         </div>
@@ -190,7 +156,7 @@ export function TicketPreview({
 
         {/* 하단 워터마크 */}
         <div className="relative border-t border-dashed border-border/70 px-5 py-2.5">
-          <p className={cn('text-center text-[9px] font-bold uppercase tracking-[0.3em]', cfg.accentText)}>
+          <p className="text-center text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
             · Crane Ops MRO ·
           </p>
         </div>

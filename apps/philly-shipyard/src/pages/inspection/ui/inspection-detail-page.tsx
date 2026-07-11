@@ -10,10 +10,12 @@ import {
 } from '@crane/features/inspection';
 import type { ChecklistJudgment, ActionRequired, ChecklistItemPatch } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
+import { cn } from '@crane/core/lib/utils';
+import { TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 
 const JUDGMENT_ICON: Record<ChecklistJudgment, React.ReactNode> = {
-  pass: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />,
-  fail: <XCircle className="w-5 h-5 text-red-500 shrink-0" />,
+  pass: <CheckCircle2 className={cn('w-5 h-5 shrink-0', TONE_TEXT.positive)} />,
+  fail: <XCircle className={cn('w-5 h-5 shrink-0', TONE_TEXT.critical)} />,
   na: <MinusCircle className="w-5 h-5 text-muted-foreground shrink-0" />,
 };
 
@@ -217,15 +219,15 @@ export function InspectionDetailPage() {
 
       {/* 부적합 항목 요약 */}
       {failedItems.length > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
+        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.critical)}>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-red-500">
+            <h2 className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.critical)}>
               <AlertTriangle className="w-4 h-4 shrink-0" />
               {t('detail.nonConformance')} ({failedItems.length})
             </h2>
             <Link
               to={`/ticket/create?type=repair&craneId=${encodeURIComponent(inspection.craneId)}&sourceWo=${encodeURIComponent(inspection.woNumber)}&component=${encodeURIComponent(failedItems[0]?.itemName ?? '')}`}
-              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-red-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-destructive/90"
             >
               <Wrench className="size-3.5" />
               {t('detail.createRepairTicket')}
@@ -233,7 +235,7 @@ export function InspectionDetailPage() {
           </div>
           {failedItems.map((item) => (
             <div key={item.id} className="flex items-start gap-2 text-sm">
-              <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <XCircle className={cn('w-4 h-4 shrink-0 mt-0.5', TONE_TEXT.critical)} />
               <div>
                 <span className="font-medium">{item.itemName}</span>
                 {item.comment && <p className="text-xs text-muted-foreground mt-0.5">{item.comment}</p>}

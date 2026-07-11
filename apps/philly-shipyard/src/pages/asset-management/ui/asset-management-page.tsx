@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronUp,
   Plus,
+  Search,
   Wrench,
 } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
@@ -17,32 +18,28 @@ import type { AssetComponentStats, AssetHealthSnapshot } from '@crane/features/a
 import type { AssetStatus, CraneAsset, CraneType } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
+import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
+import {
+  PILL_INACTIVE,
+  TONE_DOT,
+  TONE_PILL_ACTIVE,
+  TONE_SURFACE,
+  TONE_TEXT,
+  type Tone,
+} from '../../../shared/ui/tone';
+import { getSiteInfo, SITES } from '../../../shared/config/sites';
 import { NewAssetModal } from './new-asset-modal';
-import { Crane3dViewer } from './crane-3d-viewer';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 
-const STATUS_FILTER_CONFIG: Record<AssetStatus, {
-  color: string;
-  bg: string;
-  activeBg: string;
-  activeText: string;
-}> = {
-  operating:      { color: 'text-emerald-400', bg: 'bg-emerald-500/10', activeBg: 'bg-emerald-500', activeText: 'text-white' },
-  inspection:     { color: 'text-amber-400',   bg: 'bg-amber-500/10',   activeBg: 'bg-amber-500',   activeText: 'text-black' },
-  repair:         { color: 'text-red-400',     bg: 'bg-red-500/10',     activeBg: 'bg-red-500',     activeText: 'text-white' },
-  idle:           { color: 'text-slate-400',   bg: 'bg-slate-500/10',   activeBg: 'bg-slate-500',   activeText: 'text-white' },
-  decommissioned: { color: 'text-zinc-500',    bg: 'bg-zinc-600/10',    activeBg: 'bg-zinc-700',    activeText: 'text-white' },
-};
-
-const STATUS_CARD_BORDER: Record<AssetStatus, string> = {
-  operating:      'border-emerald-500/40 hover:border-emerald-500/70',
-  inspection:     'border-amber-500/40 hover:border-amber-500/70',
-  repair:         'border-red-500/50 hover:border-red-500/80',
-  idle:           'border-slate-500/40 hover:border-slate-500/70',
-  decommissioned: 'border-zinc-600/40 hover:border-zinc-600/70',
+const STATUS_FILTER_TONE: Record<AssetStatus, Tone> = {
+  operating: 'positive',
+  inspection: 'warning',
+  repair: 'critical',
+  idle: 'neutral',
+  decommissioned: 'neutral',
 };
 
 const STATUS_TONE: Record<AssetStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
@@ -61,11 +58,8 @@ const STATUS_DOT: Record<AssetStatus, 'normal' | 'warning' | 'critical'> = {
   decommissioned: 'critical',
 };
 
-const SECTIONS: { siteId: string; sectionKey: 'dock1' | 'dock2' | 'blockShop' }[] = [
-  { siteId: 'dock-1', sectionKey: 'dock1' },
-  { siteId: 'dock-2', sectionKey: 'dock2' },
-  { siteId: 'dock-in', sectionKey: 'blockShop' },
-];
+// 섹션별 페이지 크기 (100대 확장 대비 — 카드 그리드 유지 + 페이징)
+const SECTION_PAGE_SIZE = 10;
 
 const STATUS_PRIORITY: Record<AssetStatus, number> = {
   repair: 0,
@@ -75,12 +69,12 @@ const STATUS_PRIORITY: Record<AssetStatus, number> = {
   decommissioned: 4,
 };
 
-// 비정상 구성품 상태 → 색상 (심각도 높은 순으로 표시)
-const ISSUE_TONES: { key: keyof AssetComponentStats; color: string; dot: string }[] = [
-  { key: 'replace', color: 'text-red-500', dot: 'bg-red-500' },
-  { key: 'critical', color: 'text-red-500', dot: 'bg-red-500' },
-  { key: 'warning', color: 'text-amber-500', dot: 'bg-amber-500' },
-  { key: 'caution', color: 'text-amber-400', dot: 'bg-amber-400' },
+// 비정상 구성품 상태 → 톤 (심각도 높은 순으로 표시)
+const ISSUE_TONES: { key: keyof AssetComponentStats; tone: Tone }[] = [
+  { key: 'replace', tone: 'critical' },
+  { key: 'critical', tone: 'critical' },
+  { key: 'warning', tone: 'warning' },
+  { key: 'caution', tone: 'warning' },
 ];
 
 const startOfToday = () => {
@@ -144,7 +138,6 @@ function AssetSummaryCard({
   nextInspection?: string;
 }) {
   const { t } = useTranslation('asset-management');
-  const [show3d, setShow3d] = useState(false);
 
   const daysLeft = daysBetween(new Date(asset.warrantyEnd), today);
   const warrantyExpired = daysLeft < 0;
@@ -153,10 +146,8 @@ function AssetSummaryCard({
   const openWo = overdueInspections + activeRepairs;
   const issues = componentStats?.issues ?? 0;
   const healthPct = health?.remainingPct ?? 100;
-  const healthBar =
-    healthPct <= 20 ? 'bg-red-500' : healthPct <= 50 ? 'bg-amber-500' : 'bg-emerald-500';
-  const healthText =
-    healthPct <= 20 ? 'text-red-500' : healthPct <= 50 ? 'text-amber-500' : 'text-emerald-500';
+  const healthTone: Tone =
+    healthPct <= 20 ? 'critical' : healthPct <= 50 ? 'warning' : 'positive';
 
   const nextInspDays = nextInspection ? daysBetween(new Date(nextInspection), today) : null;
   const nextInspOverdue = nextInspDays !== null && nextInspDays < 0;
@@ -164,8 +155,7 @@ function AssetSummaryCard({
   return (
     <div
       className={cn(
-        'group relative flex cursor-pointer flex-col gap-4 rounded-lg border bg-card/70 p-5 shadow-sm transition-all hover:shadow-md',
-        STATUS_CARD_BORDER[asset.status],
+        'group relative flex cursor-pointer flex-col gap-4 rounded-lg border border-border/80 bg-card/70 p-5 shadow-sm transition-all hover:border-border hover:shadow-md',
       )}
     >
       {/* 카드 전체를 덮는 상세 이동 링크 (stretched link) */}
@@ -194,26 +184,15 @@ function AssetSummaryCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShow3d((v) => !v)}
-            aria-label={t(show3d ? 'card.hide3d' : 'card.view3d', {
-              defaultValue: show3d ? 'Hide 3D' : 'View 3D',
-            })}
-            aria-pressed={show3d}
-            title={t(show3d ? 'card.hide3d' : 'card.view3d', {
-              defaultValue: show3d ? 'Hide 3D' : 'View 3D',
-            })}
-            className={cn(
-              'pointer-events-auto z-[2] inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors',
-              show3d
-                ? 'border-primary/60 bg-primary/10 text-foreground'
-                : 'border-border bg-card/80 text-muted-foreground hover:border-primary/50 hover:text-foreground',
-            )}
+          <Link
+            to={`/asset-management/${asset.id}?tab=3d`}
+            aria-label={t('card.view3d', { defaultValue: 'View 3D' })}
+            title={t('card.view3d', { defaultValue: 'View 3D' })}
+            className="pointer-events-auto z-[2] inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
           >
             <Box className="size-3.5" />
             3D
-          </button>
+          </Link>
           <Badge
             variant={warrantyExpired ? 'destructive' : warrantySoon ? 'warning' : 'secondary'}
           >
@@ -231,9 +210,9 @@ function AssetSummaryCard({
         <StatTile label={t('card.health', { defaultValue: 'Component Health' })}>
           <div className="flex items-center gap-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className={cn('h-full rounded-full', healthBar)} style={{ width: `${healthPct}%` }} />
+              <div className={cn('h-full rounded-full', TONE_DOT[healthTone])} style={{ width: `${healthPct}%` }} />
             </div>
-            <span className={cn('shrink-0 text-sm font-semibold tabular-nums', healthText)}>
+            <span className={cn('shrink-0 text-sm font-semibold tabular-nums', TONE_TEXT[healthTone])}>
               {healthPct}%
             </span>
           </div>
@@ -252,12 +231,12 @@ function AssetSummaryCard({
                 {t('card.issueCount', { count: issues, defaultValue: `${issues} issues` })}
               </span>
               <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-                {ISSUE_TONES.map(({ key, color, dot }) => {
+                {ISSUE_TONES.map(({ key, tone }) => {
                   const n = (componentStats?.[key] ?? 0) as number;
                   if (n === 0) return null;
                   return (
-                    <span key={key} className={cn('flex items-center gap-1', color)}>
-                      <span className={cn('size-1.5 rounded-full', dot)} />
+                    <span key={key} className={cn('flex items-center gap-1', TONE_TEXT[tone])}>
+                      <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                       {t(`detail.componentHealth.${key}`)} {n}
                     </span>
                   );
@@ -266,7 +245,7 @@ function AssetSummaryCard({
             </>
           ) : (
             <>
-              <span className="text-sm font-semibold tabular-nums text-emerald-500">
+              <span className={cn('text-sm font-semibold tabular-nums', TONE_TEXT.positive)}>
                 {t('card.allNormal', { defaultValue: 'All Normal' })}
               </span>
               <span className="text-[11px] text-muted-foreground tabular-nums">
@@ -281,7 +260,7 @@ function AssetSummaryCard({
           <span
             className={cn(
               'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
-              openWo > 0 ? 'text-amber-500' : 'text-foreground',
+              openWo > 0 ? TONE_TEXT.warning : 'text-foreground',
             )}
           >
             <Wrench className="size-3.5" />
@@ -305,7 +284,7 @@ function AssetSummaryCard({
               <span
                 className={cn(
                   'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
-                  nextInspOverdue ? 'text-red-500' : 'text-foreground',
+                  nextInspOverdue ? TONE_TEXT.critical : 'text-foreground',
                 )}
               >
                 <CalendarClock className="size-3.5" />
@@ -330,19 +309,12 @@ function AssetSummaryCard({
           )}
         </StatTile>
       </div>
-
-      {show3d && (
-        <div className="pointer-events-auto relative z-[5]">
-          <Crane3dViewer craneType={asset.craneType} />
-        </div>
-      )}
     </div>
   );
 }
 
 function AssetSection({
   siteId,
-  sectionKey,
   assets,
   allAssets,
   today,
@@ -356,7 +328,6 @@ function AssetSection({
   onToggle,
 }: {
   siteId: string;
-  sectionKey: 'dock1' | 'dock2' | 'blockShop';
   assets: CraneAsset[];
   allAssets: CraneAsset[];
   today: Date;
@@ -371,11 +342,34 @@ function AssetSection({
 }) {
   const { t } = useTranslation('asset-management');
   const siteAssets = assets.filter((a) => a.siteId === siteId);
-  const totalSiteAssets = allAssets.filter((a) => a.siteId === siteId).length;
+  const totalSiteAssets = allAssets.filter((a) => a.siteId === siteId);
 
-  if (totalSiteAssets === 0) return null;
+  // 필터/검색 결과 변경 시 1페이지로 리셋 (render-time 상태 조정 패턴)
+  const [page, setPage] = useState(1);
+  const listKey = siteAssets.map((a) => a.id).join(',');
+  const [prevListKey, setPrevListKey] = useState(listKey);
+  if (listKey !== prevListKey) {
+    setPrevListKey(listKey);
+    setPage(1);
+  }
 
-  const isFiltered = siteAssets.length !== totalSiteAssets;
+  if (totalSiteAssets.length === 0) return null;
+
+  const isFiltered = siteAssets.length !== totalSiteAssets.length;
+
+  // 사이트 카탈로그 미등록 사이트는 자산의 siteName으로 폴백 표기
+  const siteInfo = getSiteInfo(siteId);
+  const fallbackName =
+    siteInfo?.fallbackName ?? totalSiteAssets[0]?.siteName ?? siteId;
+  const title = siteInfo
+    ? t(`sections.${siteInfo.i18nKey}.title`, { defaultValue: fallbackName })
+    : fallbackName;
+  const subtitle = siteInfo
+    ? t(`sections.${siteInfo.i18nKey}.subtitle`, { defaultValue: '' })
+    : '';
+
+  const pageStart = (page - 1) * SECTION_PAGE_SIZE;
+  const paginated = siteAssets.slice(pageStart, pageStart + SECTION_PAGE_SIZE);
 
   return (
     <section>
@@ -386,13 +380,13 @@ function AssetSection({
       >
         <div className="h-5 w-1 shrink-0 rounded-full bg-primary" />
         <div className="flex min-w-0 items-baseline gap-2">
-          <h2 className="text-base font-bold text-foreground">{t(`sections.${sectionKey}.title`)}</h2>
-          <span className="text-xs text-muted-foreground">{t(`sections.${sectionKey}.subtitle`)}</span>
+          <h2 className="text-base font-bold text-foreground">{title}</h2>
+          {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
         </div>
         <div className="h-px flex-1 bg-border/70" />
         <Badge variant="secondary" className="shrink-0 tabular-nums">
           {isFiltered
-            ? `${siteAssets.length} / ${totalSiteAssets} ${t('units.units')}`
+            ? `${siteAssets.length} / ${totalSiteAssets.length} ${t('units.units')}`
             : `${siteAssets.length} ${t('units.units')}`}
         </Badge>
         <div className="flex size-6 shrink-0 items-center justify-center rounded border border-border bg-muted/50 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground">
@@ -402,21 +396,35 @@ function AssetSection({
 
       {!collapsed &&
         (siteAssets.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 pb-2 xl:grid-cols-2">
-            {siteAssets.map((asset) => (
-              <AssetSummaryCard
-                key={asset.id}
-                asset={asset}
-                today={today}
-                overdueInspections={craneInspectionMap[asset.id]?.overdueCount ?? 0}
-                activeRepairs={craneRepairMap[asset.id]?.activeCount ?? 0}
-                health={craneHealthMap[asset.id]}
-                componentStats={craneComponentStatsMap[asset.id]}
-                lastActivity={craneLastActivityMap[asset.id]}
-                nextInspection={craneNextInspectionMap[asset.id]}
+          <>
+            <div className="grid grid-cols-1 gap-3 pb-2 xl:grid-cols-2">
+              {paginated.map((asset) => (
+                <AssetSummaryCard
+                  key={asset.id}
+                  asset={asset}
+                  today={today}
+                  overdueInspections={craneInspectionMap[asset.id]?.overdueCount ?? 0}
+                  activeRepairs={craneRepairMap[asset.id]?.activeCount ?? 0}
+                  health={craneHealthMap[asset.id]}
+                  componentStats={craneComponentStatsMap[asset.id]}
+                  lastActivity={craneLastActivityMap[asset.id]}
+                  nextInspection={craneNextInspectionMap[asset.id]}
+                />
+              ))}
+            </div>
+            {siteAssets.length > SECTION_PAGE_SIZE && (
+              <Pagination
+                page={page}
+                pageSize={SECTION_PAGE_SIZE}
+                total={siteAssets.length}
+                onPageChange={setPage}
+                labels={{
+                  rowsPerPage: t('pagination.rowsPerPage', { defaultValue: 'Rows per page' }),
+                  of: t('pagination.of', { defaultValue: 'of' }),
+                }}
               />
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center py-8 pb-4 text-xs text-muted-foreground">
             {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
@@ -441,8 +449,18 @@ export function AssetManagementPage() {
   const today = useMemo(() => startOfToday(), []);
 
   const [statusFilters, setStatusFilters] = useState<Set<AssetStatus>>(new Set());
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const sectionSiteIds = useMemo(() => SECTIONS.map((s) => s.siteId), []);
+
+  // 섹션은 하드코딩 대신 사이트 카탈로그 + 실제 자산 siteId에서 파생
+  // (카탈로그 순서 우선, 미등록 사이트는 뒤에 추가 — 사이트 확장 = 데이터 변경만)
+  const sectionSiteIds = useMemo(() => {
+    const present = [...new Set(assets.map((a) => a.siteId))];
+    const known = SITES.map((s) => s.id).filter((id) => present.includes(id));
+    const unknown = present.filter((id) => !known.includes(id));
+    return [...known, ...unknown];
+  }, [assets]);
+
   const collapseGroup = useSectionCollapseGroup({
     storagePrefix: 'asset-section-collapsed',
     keys: sectionSiteIds,
@@ -457,13 +475,20 @@ export function AssetManagementPage() {
     });
   };
 
-  const filteredAssets = useMemo(
-    () =>
-      statusFilters.size === 0
-        ? assets
-        : assets.filter((a) => statusFilters.has(a.status)),
-    [assets, statusFilters],
-  );
+  const filteredAssets = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return assets.filter((a) => {
+      const matchStatus = statusFilters.size === 0 || statusFilters.has(a.status);
+      const matchSearch =
+        query === '' ||
+        a.name.toLowerCase().includes(query) ||
+        a.serialNumber.toLowerCase().includes(query) ||
+        a.model.toLowerCase().includes(query) ||
+        a.manufacturer.toLowerCase().includes(query) ||
+        a.locationZone.toLowerCase().includes(query);
+      return matchStatus && matchSearch;
+    });
+  }, [assets, statusFilters, search]);
 
   // 우선순위(상태 심각도 → 미결 이슈 수) 고정 정렬
   const sortedAssets = useMemo(() => {
@@ -515,9 +540,9 @@ export function AssetManagementPage() {
       </div>
 
       {criticalCount > 0 && (
-        <div className="flex items-center gap-3 rounded border border-red-500/40 bg-red-500/5 px-5 py-3">
-          <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+        <div className={cn('flex items-center gap-3 rounded border px-5 py-3', TONE_SURFACE.critical)}>
+          <AlertCircle className={cn('h-4 w-4 shrink-0', TONE_TEXT.critical)} />
+          <p className={cn('text-sm font-medium', TONE_TEXT.critical)}>
             {t('criticalAlert', {
               overdueCount: overdueAssetCount,
               repairCount: repairAssetCount,
@@ -569,12 +594,22 @@ export function AssetManagementPage() {
 
       {/* Status filter */}
       <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('filter.search', { defaultValue: 'Search name / S/N / model' })}
+            className="h-9 w-64 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+          />
+        </div>
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t('filter.status', { defaultValue: 'Status' })}
         </span>
         <div className="flex flex-1 flex-wrap gap-1.5">
           {FILTER_STATUSES.map((s) => {
-            const cfg = STATUS_FILTER_CONFIG[s];
+            const tone = STATUS_FILTER_TONE[s];
             const isActive = statusFilters.has(s);
             const count = assets.filter((a) => a.status === s).length;
             return (
@@ -583,13 +618,11 @@ export function AssetManagementPage() {
                 type="button"
                 onClick={() => toggleFilter(s)}
                 className={cn(
-                  'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-bold tracking-wider transition-all',
-                  isActive
-                    ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
-                    : `${cfg.bg} ${cfg.color} hover:brightness-110`,
+                  'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-medium tracking-wider transition-all',
+                  isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                 )}
               >
-                <span className="size-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
+                <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                 {t(`status.${s}`)}
                 <span className={cn('font-mono tabular-nums', isActive ? 'opacity-80' : 'opacity-60')}>
                   {count}
@@ -601,12 +634,10 @@ export function AssetManagementPage() {
       </div>
 
       <div className="flex flex-col gap-8">
-        {SECTIONS.filter((section) =>
-          assets.some((a) => a.siteId === section.siteId),
-        ).map((section) => (
+        {sectionSiteIds.map((siteId) => (
           <AssetSection
-            key={section.siteId}
-            {...section}
+            key={siteId}
+            siteId={siteId}
             assets={sortedAssets}
             allAssets={assets}
             today={today}
@@ -616,8 +647,8 @@ export function AssetManagementPage() {
             craneComponentStatsMap={craneComponentStatsMap}
             craneLastActivityMap={craneLastActivityMap}
             craneNextInspectionMap={craneNextInspectionMap}
-            collapsed={collapseGroup.isCollapsed(section.siteId)}
-            onToggle={() => collapseGroup.toggle(section.siteId)}
+            collapsed={collapseGroup.isCollapsed(siteId)}
+            onToggle={() => collapseGroup.toggle(siteId)}
           />
         ))}
         {sortedAssets.length === 0 && (
@@ -632,20 +663,10 @@ export function AssetManagementPage() {
   );
 }
 
-const TONE_TEXT: Record<'success' | 'warning' | 'critical' | 'neutral', string> = {
-  success: 'text-emerald-500',
-  warning: 'text-amber-500',
-  critical: 'text-red-500',
-  neutral: 'text-foreground',
-};
-
-const TONE_CARD: Record<'success' | 'warning' | 'critical' | 'neutral', string> = {
-  success: '',
-  warning: 'border-amber-500/35 bg-amber-500/5',
-  critical: 'border-red-500/40 bg-red-500/5',
-  neutral: '',
-};
-
+/**
+ * KPI 카드 — 숫자는 항상 뉴트럴 잉크. 주의가 필요한 상태(critical/warning)만
+ * 라벨 옆 도트로 표시한다.
+ */
 function MetricCard({
   label,
   value,
@@ -657,21 +678,16 @@ function MetricCard({
   sub?: string;
   tone?: 'success' | 'warning' | 'critical' | 'neutral';
 }) {
+  const alertTone: Tone | null =
+    tone === 'critical' ? 'critical' : tone === 'warning' ? 'warning' : null;
   return (
-    <div
-      className={cn(
-        'flex min-h-24 flex-col justify-between rounded border border-border/90 bg-card/80 p-4 shadow-sm',
-        TONE_CARD[tone],
-      )}
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="flex min-h-24 flex-col justify-between rounded border border-border/90 bg-card/80 p-4 shadow-sm">
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {alertTone && <span className={cn('size-1.5 rounded-full', TONE_DOT[alertTone])} />}
+        {label}
+      </p>
       <div className="mt-2 space-y-1">
-        <p
-          className={cn(
-            'text-[1.8rem] font-semibold leading-none tracking-tight tabular-nums',
-            TONE_TEXT[tone],
-          )}
-        >
+        <p className="text-[1.8rem] font-semibold leading-none tracking-tight tabular-nums text-foreground">
           {value}
         </p>
         {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}

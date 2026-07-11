@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AssetDraft } from './use-create-asset';
 
 const SITE_NAME: Record<string, string> = {
-  'dock-1': 'Dock No.1',
-  'dock-2': 'Dock No.2',
-  'dock-in': 'Block Shop',
+  'dock-4': 'Dock No.4',
 };
 
 export type AssetFormErrors = Partial<Record<keyof AssetDraft, string>>;
@@ -33,8 +31,8 @@ function initialDraft(): AssetDraft {
     installationDate: today(),
     warrantyStart: today(),
     warrantyEnd: plusYears(today(), 5),
-    siteId: 'dock-1',
-    siteName: 'Dock No.1',
+    siteId: 'dock-4',
+    siteName: 'Dock No.4',
     locationZone: '',
     indoorOutdoor: 'outdoor',
     status: 'operating',

@@ -1,5 +1,5 @@
 import { cn } from '@crane/core/lib/utils';
-import { KCC_TEXT, KCC_UNDERLINE, type KccAccent } from '../constants/konecranes-colors';
+import { KCC_UNDERLINE, type KccAccent } from '../constants/konecranes-colors';
 
 interface MetricWithUnderlineProps {
   value: number | string;
@@ -39,12 +39,11 @@ export function MetricWithUnderline({
       </span>
       <span
         className={cn(
-          'relative pb-1.5 text-xs font-medium',
+          'relative pb-1.5 text-xs font-medium text-muted-foreground',
           'after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-6 after:rounded-full',
           align === 'center' &&
             'text-center after:left-1/2 after:-translate-x-1/2',
           KCC_UNDERLINE[accent],
-          KCC_TEXT[accent],
         )}
       >
         {label}

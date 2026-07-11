@@ -2,9 +2,10 @@ import type { CalendarEvent } from '@crane/features/calendar';
 
 type BadgeVariant = 'success' | 'warning' | 'destructive' | 'secondary';
 
-// 점검 상태 색상 — inspection-page의 STATUS_ACCENT/STATUS_VARIANT 복제
+// 점검 상태 색상 — 공용 톤 규칙(red/amber/emerald/blue 500)과 동일. 솔리드 칩은
+// 흰 텍스트 대비가 필요해 뉴트럴만 slate-500 고정값을 쓴다.
 const INSPECTION_ACCENT: Record<string, string> = {
-  scheduled: 'bg-slate-400',
+  scheduled: 'bg-slate-500',
   in_progress: 'bg-amber-500',
   completed: 'bg-emerald-500',
   overdue: 'bg-red-500',
@@ -24,7 +25,7 @@ const REPAIR_ACCENT: Record<string, string> = {
   emergency: 'bg-red-500',
   high: 'bg-amber-500',
   normal: 'bg-blue-500',
-  low: 'bg-slate-400',
+  low: 'bg-slate-500',
 };
 
 const REPAIR_PRIORITY_BADGE: Record<string, BadgeVariant> = {
@@ -47,7 +48,7 @@ const REPAIR_STATUS_BADGE: Record<string, BadgeVariant> = {
 /** 이벤트 칩/바 배경색 (colorKey = 점검:status / 정비:priority) */
 export function eventAccent(event: CalendarEvent): string {
   const map = event.sourceType === 'inspection' ? INSPECTION_ACCENT : REPAIR_ACCENT;
-  return map[event.colorKey] ?? 'bg-slate-400';
+  return map[event.colorKey] ?? 'bg-slate-500';
 }
 
 /** 실제 상태(status) 기준 뱃지 variant */

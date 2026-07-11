@@ -1,5 +1,6 @@
 import { cn } from '@crane/core/lib/utils';
 import type { ComponentStatus } from '@crane/domain/asset';
+import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 
 interface PartHealthBarProps {
   remainingPct: number;
@@ -8,20 +9,12 @@ interface PartHealthBarProps {
   className?: string;
 }
 
-const STATUS_BAR: Record<ComponentStatus, string> = {
-  normal: 'bg-emerald-500',
-  caution: 'bg-amber-500',
-  warning: 'bg-orange-500',
-  critical: 'bg-red-500',
-  replace: 'bg-red-600',
-};
-
-const STATUS_TEXT: Record<ComponentStatus, string> = {
-  normal: 'text-emerald-500',
-  caution: 'text-amber-500',
-  warning: 'text-orange-500',
-  critical: 'text-red-500',
-  replace: 'text-red-600',
+const STATUS_TONE: Record<ComponentStatus, Tone> = {
+  normal: 'positive',
+  caution: 'warning',
+  warning: 'warning',
+  critical: 'critical',
+  replace: 'critical',
 };
 
 export function PartHealthBar({
@@ -36,7 +29,7 @@ export function PartHealthBar({
       <span
         className={cn(
           'shrink-0 text-xs font-bold tabular-nums',
-          STATUS_TEXT[componentStatus],
+          TONE_TEXT[STATUS_TONE[componentStatus]],
         )}
       >
         {remainingPct}%
@@ -45,7 +38,7 @@ export function PartHealthBar({
         <p className="truncate text-[11px] text-muted-foreground">{componentName}</p>
         <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={cn('h-full rounded-full', STATUS_BAR[componentStatus])}
+            className={cn('h-full rounded-full', TONE_DOT[STATUS_TONE[componentStatus]])}
             style={{ width: `${filled}%` }}
           />
         </div>

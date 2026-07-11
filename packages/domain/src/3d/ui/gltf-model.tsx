@@ -44,8 +44,19 @@ interface GltfModelProps {
    */
   selectedMeshTarget?: Object3D | null;
   onObjectReady?: (id: string, object: Object3D | null) => void;
-  onHoverStart?: (id: string, clientX: number, clientY: number) => void;
-  onHoverMove?: (id: string, clientX: number, clientY: number) => void;
+  /** event는 Canvas 안 3D 본체 hover에서만 전달 (라벨 등 DOM 호출은 undefined). */
+  onHoverStart?: (
+    id: string,
+    clientX: number,
+    clientY: number,
+    event?: ThreeEvent<PointerEvent>,
+  ) => void;
+  onHoverMove?: (
+    id: string,
+    clientX: number,
+    clientY: number,
+    event?: ThreeEvent<PointerEvent>,
+  ) => void;
   onHoverEnd?: (id: string) => void;
 }
 

@@ -43,8 +43,19 @@ interface ModelMeshProps {
    */
   onDoubleSelect?: (id: string, event: ThreeEvent<MouseEvent>) => void;
   onObjectReady?: (id: string, object: Object3D | null) => void;
-  onHoverStart?: (id: string, clientX: number, clientY: number) => void;
-  onHoverMove?: (id: string, clientX: number, clientY: number) => void;
+  /** event는 Canvas 안 3D 본체 hover에서만 전달 (라벨 등 DOM 호출은 undefined). */
+  onHoverStart?: (
+    id: string,
+    clientX: number,
+    clientY: number,
+    event?: ThreeEvent<PointerEvent>,
+  ) => void;
+  onHoverMove?: (
+    id: string,
+    clientX: number,
+    clientY: number,
+    event?: ThreeEvent<PointerEvent>,
+  ) => void;
   onHoverEnd?: (id: string) => void;
   children?: React.ReactNode;
 }
@@ -267,7 +278,7 @@ export function ModelMesh({
   const handleHoverStart = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation();
-      onHoverStart?.(id, event.clientX, event.clientY);
+      onHoverStart?.(id, event.clientX, event.clientY, event);
     },
     [id, onHoverStart],
   );
@@ -275,7 +286,7 @@ export function ModelMesh({
   const handleHoverMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation();
-      onHoverMove?.(id, event.clientX, event.clientY);
+      onHoverMove?.(id, event.clientX, event.clientY, event);
     },
     [id, onHoverMove],
   );

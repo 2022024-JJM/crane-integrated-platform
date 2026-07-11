@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { useComplianceSummary } from '@crane/features/compliance';
 import type { CertStatus } from '@crane/domain/compliance';
 import { Badge } from '@crane/ui/atoms/badge';
+import { cn } from '@crane/core/lib/utils';
+import { TONE_DOT, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 
 const CERT_STATUS_VARIANT: Record<CertStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   valid: 'success',
@@ -43,39 +45,38 @@ export function CompliancePage() {
           {
             label: t('metrics.completionRateFrequent'),
             value: `${summary.frequentCompletionRate}%`,
-            color: summary.frequentCompletionRate >= 80 ? 'text-emerald-500' : 'text-amber-500',
-            card: summary.frequentCompletionRate < 80 ? 'border-amber-500/35 bg-amber-500/5' : '',
+            dot: summary.frequentCompletionRate < 80 ? TONE_DOT.warning : '',
           },
           {
             label: t('metrics.completionRatePeriodic'),
             value: `${summary.periodicCompletionRate}%`,
-            color: summary.periodicCompletionRate >= 80 ? 'text-emerald-500' : 'text-red-500',
-            card: summary.periodicCompletionRate < 80 ? 'border-red-500/30 bg-red-500/5' : '',
+            dot: summary.periodicCompletionRate < 80 ? TONE_DOT.critical : '',
           },
           {
             label: t('metrics.expiringCerts'),
             value: summary.expiringCerts,
-            color: summary.expiringCerts > 0 ? 'text-amber-500' : 'text-emerald-500',
-            card: summary.expiringCerts > 0 ? 'border-amber-500/35 bg-amber-500/5' : '',
+            dot: summary.expiringCerts > 0 ? TONE_DOT.warning : '',
           },
           {
             label: t('metrics.openReports'),
             value: summary.openFindings,
-            color: summary.openFindings > 0 ? 'text-amber-500' : 'text-emerald-500',
-            card: '',
+            dot: summary.openFindings > 0 ? TONE_DOT.warning : '',
           },
-        ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
+        ].map(({ label, value, dot }) => (
+          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
+              {label}
+            </p>
+            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
           </div>
         ))}
       </section>
 
       {/* 만료된 인증서 배너 (red) */}
       {expiredCerts.length > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-bold text-red-500">
+        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.critical)}>
+          <p className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.critical)}>
             <AlertCircle className="w-4 h-4 shrink-0" />
             {t('certAlert.expiredTitle', { count: expiredCerts.length })}
           </p>
@@ -88,7 +89,7 @@ export function CompliancePage() {
               <span className="text-muted-foreground truncate flex-1">
                 {t(`certifications.certType.${cert.certType}`)}
               </span>
-              <span className="text-xs font-semibold text-red-500 shrink-0 tabular-nums">
+              <span className={cn('text-xs font-semibold shrink-0 tabular-nums', TONE_TEXT.critical)}>
                 {t('certifications.expired')}
               </span>
             </div>
@@ -98,8 +99,8 @@ export function CompliancePage() {
 
       {/* 만료 임박 인증서 배너 (amber) */}
       {expirySoonCerts.length > 0 && (
-        <div className="rounded border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-bold text-amber-500">
+        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.warning)}>
+          <p className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.warning)}>
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {t('certAlert.title', { count: expirySoonCerts.length })}
           </p>
@@ -114,7 +115,7 @@ export function CompliancePage() {
                 <span className="text-muted-foreground truncate flex-1">
                   {t(`certifications.certType.${cert.certType}`)}
                 </span>
-                <span className={`text-xs font-semibold shrink-0 tabular-nums ${diff < 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                <span className={cn('text-xs font-semibold shrink-0 tabular-nums', diff < 0 ? TONE_TEXT.critical : TONE_TEXT.warning)}>
                   {dateLabel}
                 </span>
               </div>
@@ -145,7 +146,7 @@ export function CompliancePage() {
                     <Badge variant={CERT_STATUS_VARIANT[cert.status]} className="mb-1">
                       {t(`certifications.status.${cert.status}`)}
                     </Badge>
-                    <p className={`text-xs font-semibold tabular-nums ${isExpired ? 'text-red-500' : diff <= 30 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                    <p className={cn('text-xs font-semibold tabular-nums', isExpired ? TONE_TEXT.critical : diff <= 30 ? TONE_TEXT.warning : 'text-muted-foreground')}>
                       {isExpired ? t('certifications.expired') : dateLabel}
                     </p>
                     <p className="text-[10px] text-muted-foreground">{cert.expiryDate}</p>
@@ -169,7 +170,7 @@ export function CompliancePage() {
                 <div
                   key={report.id}
                   className={`flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0 ${
-                    isConditional ? 'border-l-2 border-l-amber-500/60 pl-3 -ml-3' : ''
+                    isConditional ? 'border-l-2 border-l-amber-500/50 pl-3 -ml-3' : ''
                   }`}
                 >
                   <div className="flex-1 min-w-0">

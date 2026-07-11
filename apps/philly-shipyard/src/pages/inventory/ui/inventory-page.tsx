@@ -12,6 +12,14 @@ import type {
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
+import {
+  PILL_INACTIVE,
+  TONE_DOT,
+  TONE_PILL_ACTIVE,
+  TONE_SURFACE,
+  TONE_TEXT,
+  type Tone,
+} from '../../../shared/ui/tone';
 import { PartDetailPanel } from './part-detail-panel';
 
 const STATUS_VARIANT: Record<InventoryStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
@@ -28,18 +36,18 @@ const CRITICALITY_VARIANT: Record<PartCriticality, 'destructive' | 'warning' | '
   standard: 'secondary',
 };
 
-const STATUS_PILL: Record<InventoryStatus, { color: string; bg: string; activeBg: string; activeText: string }> = {
-  normal:       { color: 'text-emerald-400', bg: 'bg-emerald-500/10', activeBg: 'bg-emerald-500', activeText: 'text-white' },
-  low:          { color: 'text-amber-400',   bg: 'bg-amber-500/10',   activeBg: 'bg-amber-500',   activeText: 'text-black' },
-  out_of_stock: { color: 'text-red-400',     bg: 'bg-red-500/10',     activeBg: 'bg-red-500',     activeText: 'text-white' },
-  excess:       { color: 'text-slate-400',   bg: 'bg-slate-500/10',   activeBg: 'bg-slate-500',   activeText: 'text-white' },
-  expiry_soon:  { color: 'text-orange-400',  bg: 'bg-orange-500/10',  activeBg: 'bg-orange-500',  activeText: 'text-white' },
+const STATUS_TONE: Record<InventoryStatus, Tone> = {
+  normal: 'positive',
+  low: 'warning',
+  out_of_stock: 'critical',
+  excess: 'neutral',
+  expiry_soon: 'warning',
 };
 
-const CRITICALITY_PILL: Record<PartCriticality, { color: string; bg: string; activeBg: string; activeText: string }> = {
-  critical:  { color: 'text-red-400',    bg: 'bg-red-500/10',    activeBg: 'bg-red-500',    activeText: 'text-white' },
-  essential: { color: 'text-amber-400',  bg: 'bg-amber-500/10',  activeBg: 'bg-amber-500',  activeText: 'text-black' },
-  standard:  { color: 'text-slate-400',  bg: 'bg-slate-500/10',  activeBg: 'bg-slate-500',  activeText: 'text-white' },
+const CRITICALITY_TONE: Record<PartCriticality, Tone> = {
+  critical: 'critical',
+  essential: 'warning',
+  standard: 'neutral',
 };
 
 const FILTER_STATUSES: InventoryStatus[] = ['normal', 'low', 'out_of_stock', 'excess', 'expiry_soon'];
@@ -53,12 +61,14 @@ const CRANE_FILTERS: { key: Exclude<CraneFilter, 'all'>; label: string }[] = [
   { key: 'common', label: 'common' },
 ];
 
+// 크레인 적용 칩은 식별용 텍스트 라벨 — 색으로 구분하지 않는다.
 function craneBadgeOf(craneIds: string[]): { label: string; cls: string; isCommon: boolean } {
   const has660 = craneIds.includes('crane-660t');
   const has50 = craneIds.includes('crane-50t');
-  if (has660 && has50) return { label: '', cls: 'bg-sky-500/15 text-sky-400', isCommon: true };
-  if (has660) return { label: '660T', cls: 'bg-purple-500/15 text-purple-400', isCommon: false };
-  return { label: '50T', cls: 'bg-teal-500/15 text-teal-400', isCommon: false };
+  const cls = 'bg-muted text-muted-foreground';
+  if (has660 && has50) return { label: '', cls, isCommon: true };
+  if (has660) return { label: '660T', cls, isCommon: false };
+  return { label: '50T', cls, isCommon: false };
 }
 
 function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
@@ -89,7 +99,7 @@ function InventoryRow({
   const stockPct = item.minStockQty > 0
     ? Math.min(100, Math.round((item.currentQty / item.minStockQty) * 100))
     : 100;
-  const barColor = stockPct <= 0 ? 'bg-red-500' : stockPct < 100 ? 'bg-amber-500' : 'bg-emerald-400';
+  const barColor = stockPct <= 0 ? TONE_DOT.critical : stockPct < 100 ? TONE_DOT.warning : TONE_DOT.positive;
 
   return (
     <div
@@ -133,7 +143,7 @@ function InventoryRow({
       <div
         className={cn(
           'text-right tabular-nums',
-          item.reservedQty > 0 ? 'text-amber-500' : 'text-muted-foreground/60',
+          item.reservedQty > 0 ? TONE_TEXT.warning : 'text-muted-foreground/60',
         )}
       >
         {item.reservedQty}
@@ -143,7 +153,7 @@ function InventoryRow({
       <div
         className={cn(
           'text-right font-semibold tabular-nums',
-          item.availableQty > 0 ? 'text-emerald-500' : 'text-red-500',
+          item.availableQty > 0 ? 'text-foreground' : TONE_TEXT.critical,
         )}
       >
         {item.availableQty}
@@ -306,25 +316,28 @@ export function InventoryPage() {
       {/* 메트릭 */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: t('metrics.totalParts'), value: summary.totalParts, color: 'text-foreground', card: '' },
-          { label: t('metrics.belowSafetyStock'), value: summary.lowStock, color: 'text-red-500', card: summary.lowStock > 0 ? 'border-red-500/30 bg-red-500/5' : '' },
-          { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, color: 'text-amber-500', card: summary.reorderNeeded > 0 ? 'border-amber-500/35 bg-amber-500/5' : '' },
-          { label: t('metrics.pendingPOs'), value: summary.activePOs, color: 'text-blue-500', card: '' },
-        ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
+          { label: t('metrics.totalParts'), value: summary.totalParts, dot: '' },
+          { label: t('metrics.belowSafetyStock'), value: summary.lowStock, dot: summary.lowStock > 0 ? TONE_DOT.critical : '' },
+          { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, dot: summary.reorderNeeded > 0 ? TONE_DOT.warning : '' },
+          { label: t('metrics.pendingPOs'), value: summary.activePOs, dot: '' },
+        ].map(({ label, value, dot }) => (
+          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
+              {label}
+            </p>
+            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
           </div>
         ))}
       </section>
 
       {/* 재고 부족 알림 배너 (접이식) */}
       {alertItems.length > 0 && (
-        <div className="rounded border border-amber-500/40 bg-amber-500/5">
+        <div className={cn('rounded border', TONE_SURFACE.warning)}>
           <button
             type="button"
             onClick={() => setAlertOpen((v) => !v)}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold text-amber-500 transition-colors hover:bg-amber-500/10"
+            className={cn('flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-amber-500/10', TONE_TEXT.warning)}
           >
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span className="flex-1 text-left">
@@ -336,7 +349,7 @@ export function InventoryPage() {
             }
           </button>
           {alertOpen && (
-            <div className="space-y-2 border-t border-amber-500/30 p-4">
+            <div className="space-y-2 border-t border-amber-500/25 p-4">
               {alertItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 text-sm">
                   <Badge variant={STATUS_VARIANT[item.status]} className="shrink-0">
@@ -381,7 +394,7 @@ export function InventoryPage() {
                     <span className="font-medium shrink-0">{po.poNumber}</span>
                     <span className="text-muted-foreground truncate flex-1">{po.vendor}</span>
                     <span className="shrink-0">
-                      <span className={`text-xs font-semibold tabular-nums ${etaPast ? 'text-red-500' : 'text-foreground'}`}>
+                      <span className={cn('text-xs font-semibold tabular-nums', etaPast ? TONE_TEXT.critical : 'text-foreground')}>
                         {etaLabel}
                       </span>
                       <span className="text-xs text-muted-foreground ml-1">{po.expectedDelivery}</span>
@@ -455,7 +468,7 @@ export function InventoryPage() {
           </span>
           <div className="flex flex-wrap gap-1.5">
             {FILTER_STATUSES.map((s) => {
-              const cfg = STATUS_PILL[s];
+              const tone = STATUS_TONE[s];
               const isActive = statusFilters.has(s);
               const count = items.filter((i) => i.status === s).length;
               return (
@@ -464,13 +477,11 @@ export function InventoryPage() {
                   type="button"
                   onClick={() => toggleStatus(s)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer',
-                    isActive
-                      ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
-                      : `${cfg.bg} ${cfg.color} hover:brightness-110`,
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
+                    isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
                 >
-                  <span className="size-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
+                  <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                   {t(`status.${s}`)}
                   <span className={cn('tabular-nums font-mono', isActive ? 'opacity-80' : 'opacity-60')}>
                     {count}
@@ -487,7 +498,7 @@ export function InventoryPage() {
           </span>
           <div className="flex flex-wrap gap-1.5">
             {FILTER_CRITICALITIES.map((c) => {
-              const cfg = CRITICALITY_PILL[c];
+              const tone = CRITICALITY_TONE[c];
               const isActive = critFilters.has(c);
               const count = items.filter((i) => i.criticality === c).length;
               return (
@@ -496,13 +507,11 @@ export function InventoryPage() {
                   type="button"
                   onClick={() => toggleCrit(c)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer',
-                    isActive
-                      ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
-                      : `${cfg.bg} ${cfg.color} hover:brightness-110`,
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
+                    isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
                 >
-                  <span className="size-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
+                  <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                   {t(`criticality.${c}`)}
                   <span className={cn('tabular-nums font-mono', isActive ? 'opacity-80' : 'opacity-60')}>
                     {count}

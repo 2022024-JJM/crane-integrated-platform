@@ -137,7 +137,7 @@ export function MaintenanceDetailPage() {
                   title={t('detail.viewPart')}
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <Package className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-sky-400" />
+                    <Package className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
                     <span className="truncate">{p.partName}</span>
                   </span>
                   <span className="ml-4 text-muted-foreground tabular-nums">×{p.qty}</span>

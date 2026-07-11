@@ -5,7 +5,8 @@
   "filter": {
     "status": "Status",
     "all": "Omnia",
-    "empty": "Nulla bona conveniunt."
+    "empty": "Nulla bona conveniunt.",
+    "search": "Quaere nomen / S/N / exemplar"
   },
   "collapse": {
     "allCollapsed": "Omnia clausa",
@@ -13,9 +14,7 @@
     "toggle": "Claude / aperi omnia"
   },
   "sites": {
-    "dock1": "Navale I",
-    "dock2": "Navale IV",
-    "blockShop": "Officina Blockorum"
+    "dock4": "Doca IV"
   },
   "modal": {
     "title": "Registra Novum Bonum",
@@ -23,7 +22,10 @@
     "cancel": "Cancella",
     "submit": "Registra Bonum",
     "toastCreated": "Bonum {{name}} additum est.",
-    "indoorOutdoor": { "indoor": "Intus", "outdoor": "Foris" },
+    "indoorOutdoor": {
+      "indoor": "Intus",
+      "outdoor": "Foris"
+    },
     "fields": {
       "name": "Nomen Boni",
       "craneType": "Genus Gruis",
@@ -73,9 +75,10 @@
     "lastActivity": "Activitas recens"
   },
   "sections": {
-    "dock1": { "title": "Doca I", "subtitle": "Grues Goliath / TTC" },
-    "dock2": { "title": "Doca IV", "subtitle": "Grues Quay" },
-    "blockShop": { "title": "Officina Fabrica", "subtitle": "Grues Supremae" }
+    "dock4": {
+      "title": "Doca IV",
+      "subtitle": "Grues Goliath / Quay"
+    }
   },
   "criticalAlert": "{{overdueCount}} inspectio(nes) retardata(e) · {{repairCount}} refectio(nes) activa(e) — actio statim necessaria",
   "card": {
@@ -100,8 +103,7 @@
     "woBreakdown": "{{overdue}} insp · {{repair}} refec",
     "noOpenWo": "Nulla",
     "nextInspection": "Proxima Inspectio",
-    "view3d": "Vide 3D",
-    "hide3d": "Occulta 3D"
+    "view3d": "Vide 3D"
   },
   "status": {
     "operating": "Operans",
@@ -137,7 +139,8 @@
       "overview": "Partes",
       "specs": "Specificationes",
       "inspection": "Historia Inspectionis",
-      "maintenance": "Historia Refectionis"
+      "maintenance": "Historia Refectionis",
+      "3d": "Visio 3D"
     },
     "componentHealth": {
       "title": "Status Partium",
@@ -176,6 +179,30 @@
         "critical": "Criticum",
         "replace": "Statim Replace"
       }
+    },
+    "zones": {
+      "body": "Corpus / Trabs",
+      "trolley": "Carrulus",
+      "hook": "Uncus",
+      "hookRope": "Funis",
+      "base": "Basis",
+      "machineryHouse": "Camera Machinarum",
+      "cabin": "Cella Rectoris",
+      "boom": "Bracchium",
+      "upper": "Superior",
+      "middle": "Media",
+      "lower": "Inferior"
+    },
+    "zonePanel": {
+      "hint": "Preme regionem in exemplari 3D ut partium specificationes videas.",
+      "allZones": "Omnia videre",
+      "partSpec": "Partis Specificatio",
+      "partName": "Nomen Partis",
+      "partNumber": "P/N",
+      "manufacturer": "Fabricator",
+      "status": "Status",
+      "remainingLife": "Vita Reliqua",
+      "back": "Ad indicem"
     }
   },
   "units": {
@@ -183,5 +210,9 @@
     "meter": "m",
     "hours": "h",
     "units": "unitates"
+  },
+  "pagination": {
+    "rowsPerPage": "Ordines per paginam",
+    "of": "ex"
   }
 }

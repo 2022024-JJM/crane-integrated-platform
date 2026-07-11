@@ -293,7 +293,8 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         onChange={(e) => handleCraneChange(e.target.value)}
       >
         <option value="">{t('fields.cranePlaceholder')}</option>
-        {['dock-1', 'dock-2', 'dock-in'].map((siteId) => {
+        {/* 사이트 그룹은 크레인 데이터에서 파생 — 사이트 추가 시 코드 수정 불필요 */}
+        {[...new Set(cranes.map((c) => c.siteId))].map((siteId) => {
           const site = cranes.filter((c) => c.siteId === siteId);
           if (!site.length) return null;
           return (

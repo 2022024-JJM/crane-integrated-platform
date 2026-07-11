@@ -6,6 +6,8 @@ import { useInspectionList } from '@crane/features/inspection';
 import type { InspectionStatus, InspectionType, InspectionWO } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
+import { cn } from '@crane/core/lib/utils';
+import { TONE_DOT, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 
 const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
   scheduled: 'secondary',
@@ -16,11 +18,11 @@ const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'succes
 };
 
 const STATUS_ACCENT: Record<InspectionStatus, string> = {
-  scheduled: 'bg-slate-400',
-  in_progress: 'bg-amber-500',
-  completed: 'bg-emerald-500',
-  overdue: 'bg-red-500',
-  cancelled: 'bg-slate-500',
+  scheduled: TONE_DOT.neutral,
+  in_progress: TONE_DOT.warning,
+  completed: TONE_DOT.positive,
+  overdue: TONE_DOT.critical,
+  cancelled: TONE_DOT.neutral,
 };
 
 const RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
@@ -79,7 +81,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       <div className="flex items-center gap-1.5">
         <Calendar className="h-3 w-3 text-muted-foreground/60 shrink-0" />
         <div className="min-w-0">
-          <p className={`text-xs font-semibold tabular-nums ${dateOverdue ? 'text-red-500' : ''}`}>
+          <p className={cn('text-xs font-semibold tabular-nums', dateOverdue && TONE_TEXT.critical)}>
             {dateLabel}
           </p>
           <p className="text-[10px] text-muted-foreground tabular-nums">{wo.scheduledDate}</p>
@@ -172,9 +174,9 @@ export function InspectionPage() {
 
       {/* 지연 점검 배너 */}
       {overdueCount > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
-          <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+        <div className={cn('rounded border px-5 py-3 flex items-center gap-3', TONE_SURFACE.critical)}>
+          <AlertCircle className={cn('h-4 w-4 shrink-0', TONE_TEXT.critical)} />
+          <p className={cn('text-sm font-medium', TONE_TEXT.critical)}>
             {t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
           </p>
         </div>
@@ -183,19 +185,21 @@ export function InspectionPage() {
       {/* 메트릭 */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, color: 'text-foreground', card: '' },
-          { label: t('metrics.completed'), value: summary.completed, color: 'text-emerald-500', card: '' },
-          { label: t('metrics.overdue'), value: summary.overdue, color: 'text-red-500', card: summary.overdue > 0 ? 'border-red-500/30 bg-red-500/5' : '' },
+          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, dot: '' },
+          { label: t('metrics.completed'), value: summary.completed, dot: '' },
+          { label: t('metrics.overdue'), value: summary.overdue, dot: summary.overdue > 0 ? TONE_DOT.critical : '' },
           {
             label: t('metrics.completionRate'),
             value: `${summary.completionRate}%`,
-            color: summary.completionRate >= 80 ? 'text-emerald-500' : 'text-amber-500',
-            card: summary.completionRate < 80 ? 'border-amber-500/35 bg-amber-500/5' : '',
+            dot: summary.completionRate < 80 ? TONE_DOT.warning : '',
           },
-        ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
+        ].map(({ label, value, dot }) => (
+          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
+              {label}
+            </p>
+            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
           </div>
         ))}
       </section>

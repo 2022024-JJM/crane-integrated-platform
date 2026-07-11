@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronLeft,
@@ -16,6 +16,22 @@ import type { RepairPriority } from '@crane/domain/maintenance';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import {
+  PILL_INACTIVE,
+  TONE_DOT,
+  TONE_PILL_ACTIVE,
+  TONE_TEXT,
+  type Tone,
+} from '../../../shared/ui/tone';
+import { Asset3dTab } from './asset-3d-tab';
+
+type DetailTab = 'overview' | '3d' | 'inspection' | 'maintenance' | 'specs';
+
+const DETAIL_TABS: DetailTab[] = ['overview', '3d', 'inspection', 'maintenance', 'specs'];
+
+function isDetailTab(value: string | null): value is DetailTab {
+  return value !== null && (DETAIL_TABS as string[]).includes(value);
+}
 
 const ACTIVE_REPAIR_STATUSES = new Set([
   'received',
@@ -80,12 +96,12 @@ const REPAIR_STATUS_VARIANT: Record<string, 'secondary' | 'warning' | 'success' 
   completed: 'success',
 };
 
-// 비정상 상태별 색상 (심각도 높은 순)
-const ISSUE_TONES: { key: ComponentStatus; color: string; dot: string }[] = [
-  { key: 'replace', color: 'text-red-500', dot: 'bg-red-500' },
-  { key: 'critical', color: 'text-red-500', dot: 'bg-red-500' },
-  { key: 'warning', color: 'text-amber-500', dot: 'bg-amber-500' },
-  { key: 'caution', color: 'text-amber-400', dot: 'bg-amber-400' },
+// 비정상 상태별 톤 (심각도 높은 순)
+const ISSUE_TONES: { key: ComponentStatus; tone: Tone }[] = [
+  { key: 'replace', tone: 'critical' },
+  { key: 'critical', tone: 'critical' },
+  { key: 'warning', tone: 'warning' },
+  { key: 'caution', tone: 'warning' },
 ];
 
 function lifePercent(component: CraneComponent) {
@@ -104,8 +120,7 @@ function partIdFromComponent(c: CraneComponent): string | null {
 function PartLeafRow({ component }: { component: CraneComponent }) {
   const { t } = useTranslation('asset-management');
   const pct = lifePercent(component);
-  const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
-  const pctText = pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-500' : 'text-emerald-500';
+  const lifeTone: Tone = pct >= 90 ? 'critical' : pct >= 70 ? 'warning' : 'positive';
   const partId = partIdFromComponent(component);
 
   const inner = (
@@ -121,14 +136,14 @@ function PartLeafRow({ component }: { component: CraneComponent }) {
       </div>
       <div className="flex w-24 shrink-0 items-center gap-1.5">
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-          <div className={cn('h-full rounded-full', barColor)} style={{ width: `${pct}%` }} />
+          <div className={cn('h-full rounded-full', TONE_DOT[lifeTone])} style={{ width: `${pct}%` }} />
         </div>
-        <span className={cn('w-8 shrink-0 text-right text-[10px] font-semibold tabular-nums', pctText)}>
+        <span className={cn('w-8 shrink-0 text-right text-[10px] font-semibold tabular-nums', TONE_TEXT[lifeTone])}>
           {pct}%
         </span>
       </div>
       {partId ? (
-        <span className="flex w-16 shrink-0 items-center justify-end gap-1 text-[10px] text-sky-400 opacity-0 transition-opacity group-hover:opacity-100">
+        <span className={cn('flex w-16 shrink-0 items-center justify-end gap-1 text-[10px] opacity-0 transition-opacity group-hover:opacity-100', TONE_TEXT.info)}>
           <Package className="size-3" />
           {t('detail.inStock', { defaultValue: 'Stock' })}
         </span>
@@ -142,7 +157,7 @@ function PartLeafRow({ component }: { component: CraneComponent }) {
     return (
       <Link
         to={`/inventory?part=${encodeURIComponent(partId)}`}
-        className="group flex cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 transition-colors hover:bg-sky-500/5"
+        className="group flex cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 transition-colors hover:bg-muted/40"
         title={t('detail.viewInInventory', { defaultValue: 'View in inventory' })}
       >
         {inner}
@@ -195,9 +210,9 @@ function ClusterBlock({
             className={cn(
               'shrink-0 text-[11px] font-semibold tabular-nums',
               worstChildPct >= 90
-                ? 'text-red-500'
+                ? TONE_TEXT.critical
                 : worstChildPct >= 70
-                  ? 'text-amber-500'
+                  ? TONE_TEXT.warning
                   : 'text-muted-foreground',
             )}
           >
@@ -228,7 +243,16 @@ export function AssetDetailPage() {
   const { t } = useTranslation('asset-management');
   const { t: tInspection } = useTranslation('inspection');
   const { t: tMaintenance } = useTranslation('maintenance');
-  const [activeTab, setActiveTab] = useState<'overview' | 'inspection' | 'maintenance' | 'specs'>('overview');
+  // ?tab= 딥링크 (목록 카드 3D 버튼 → ?tab=3d) — 새로고침에도 탭 유지
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: DetailTab = isDetailTab(tabParam) ? tabParam : 'overview';
+  const setActiveTab = (tab: DetailTab) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'overview') next.delete('tab');
+    else next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
   const [onlyIssues, setOnlyIssues] = useState(false);
@@ -319,8 +343,9 @@ export function AssetDetailPage() {
     );
   }
 
-  const tabs: { key: typeof activeTab; count?: number }[] = [
+  const tabs: { key: DetailTab; count?: number }[] = [
     { key: 'overview', count: stats.issues > 0 ? stats.issues : undefined },
+    { key: '3d' },
     { key: 'inspection', count: inspections.length || undefined },
     { key: 'maintenance', count: repairs.length || undefined },
     { key: 'specs' },
@@ -384,12 +409,12 @@ export function AssetDetailPage() {
             </span>
             {stats.issues > 0 ? (
               <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px]">
-                {ISSUE_TONES.map(({ key, color, dot }) => {
+                {ISSUE_TONES.map(({ key, tone }) => {
                   const n = stats.counts[key];
                   if (n === 0) return null;
                   return (
-                    <span key={key} className={cn('flex items-center gap-1 font-semibold', color)}>
-                      <span className={cn('size-1.5 rounded-full', dot)} />
+                    <span key={key} className={cn('flex items-center gap-1 font-semibold', TONE_TEXT[tone])}>
+                      <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
                       {t(`detail.componentHealth.${key}`)} {n}
                     </span>
                   );
@@ -397,7 +422,7 @@ export function AssetDetailPage() {
                 <span className="text-muted-foreground tabular-nums">/ {stats.total}</span>
               </span>
             ) : (
-              <span className="text-[11px] font-semibold text-emerald-500">
+              <span className={cn('text-[11px] font-semibold', TONE_TEXT.positive)}>
                 {t('card.allNormal', { defaultValue: 'All Normal' })}
                 <span className="ml-1 font-normal text-muted-foreground tabular-nums">
                   ({stats.total})
@@ -414,7 +439,7 @@ export function AssetDetailPage() {
             <span
               className={cn(
                 'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
-                openWo > 0 ? 'text-amber-500' : 'text-foreground',
+                openWo > 0 ? TONE_TEXT.warning : 'text-foreground',
               )}
             >
               <Wrench className="size-3.5" />
@@ -440,7 +465,7 @@ export function AssetDetailPage() {
               <span
                 className={cn(
                   'text-sm font-semibold tabular-nums',
-                  nextInspRel.overdue ? 'text-red-500' : 'text-foreground',
+                  nextInspRel.overdue ? TONE_TEXT.critical : 'text-foreground',
                 )}
               >
                 {nextInspRel.label}
@@ -477,6 +502,9 @@ export function AssetDetailPage() {
         ))}
       </div>
 
+      {/* 탭: 3D 뷰 (구역 선택 → 부품 재원) */}
+      {activeTab === '3d' && <Asset3dTab asset={asset} components={components} />}
+
       {/* 탭: 구성품 (BOM) */}
       {activeTab === 'overview' && (
         <div className="flex flex-col gap-4">
@@ -496,13 +524,11 @@ export function AssetDetailPage() {
               type="button"
               onClick={() => setOnlyIssues((v) => !v)}
               className={cn(
-                'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-bold tracking-wider transition-all',
-                onlyIssues
-                  ? 'bg-amber-500 text-black shadow-sm'
-                  : 'bg-amber-500/10 text-amber-400 hover:brightness-110',
+                'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-medium tracking-wider transition-all',
+                onlyIssues ? TONE_PILL_ACTIVE.warning : PILL_INACTIVE,
               )}
             >
-              <span className="size-1.5 rounded-full bg-current" />
+              <span className={cn('size-1.5 rounded-full', TONE_DOT.warning)} />
               {t('detail.bomOnlyIssues', { defaultValue: 'Issues only' })}
               {stats.issues > 0 && (
                 <span className={cn('font-mono tabular-nums', onlyIssues ? 'opacity-80' : 'opacity-60')}>
@@ -562,7 +588,7 @@ export function AssetDetailPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{wo.woNumber}</p>
                     <p className="text-xs text-muted-foreground">
-                      <span className={cn('mr-1 font-semibold', rel.overdue ? 'text-red-500' : 'text-foreground')}>
+                      <span className={cn('mr-1 font-semibold', rel.overdue ? TONE_TEXT.critical : 'text-foreground')}>
                         {rel.label}
                       </span>
                       {wo.scheduledDate}

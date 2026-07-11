@@ -15,20 +15,14 @@ import type { AssetStatus, CraneType } from '@crane/domain/asset';
 import { Button } from '@crane/ui/atoms/button';
 import { DatePicker } from '@crane/ui/molecules/date-picker';
 import { cn } from '@crane/core/lib/utils';
+import { SITES } from '../../../shared/config/sites';
 
-const SITE_OPTIONS: Array<{ id: string; nameKey: string }> = [
-  { id: 'dock-1', nameKey: 'sites.dock1' },
-  { id: 'dock-2', nameKey: 'sites.dock2' },
-  { id: 'dock-in', nameKey: 'sites.blockShop' },
-];
+// 사이트 옵션은 공용 사이트 카탈로그에서 파생 — 사이트 추가 시 sites.ts만 수정
+const SITE_OPTIONS: Array<{ id: string; nameKey: string; fallback: string }> =
+  SITES.map((s) => ({ id: s.id, nameKey: `sites.${s.i18nKey}`, fallback: s.fallbackName }));
 
 const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc', 'llc', 'luffing'];
 const STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
-const SITE_NAME_FALLBACK: Record<string, string> = {
-  'dock-1': 'Dock No.1',
-  'dock-2': 'Dock No.4',
-  'dock-in': 'Block Shop',
-};
 
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors outline-none hover:border-primary/40 focus:border-ring focus:ring-2 focus:ring-ring/25';
@@ -228,7 +222,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
                 onChange={(e) => setSite(e.target.value)}
               >
                 {SITE_OPTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>{t(s.nameKey, { defaultValue: SITE_NAME_FALLBACK[s.id] })}</option>
+                  <option key={s.id} value={s.id}>{t(s.nameKey, { defaultValue: s.fallback })}</option>
                 ))}
               </select>
             </Field>

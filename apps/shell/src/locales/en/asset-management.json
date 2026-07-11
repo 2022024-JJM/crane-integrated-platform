@@ -5,7 +5,8 @@
   "filter": {
     "status": "Status",
     "all": "All",
-    "empty": "No assets match the filter."
+    "empty": "No assets match the filter.",
+    "search": "Search name / S/N / model"
   },
   "collapse": {
     "allCollapsed": "All collapsed",
@@ -13,9 +14,7 @@
     "toggle": "Collapse / expand all"
   },
   "sites": {
-    "dock1": "Dock No.1",
-    "dock2": "Dock No.4",
-    "blockShop": "Block Shop"
+    "dock4": "Dock 4"
   },
   "modal": {
     "title": "Register New Asset",
@@ -23,7 +22,10 @@
     "cancel": "Cancel",
     "submit": "Register Asset",
     "toastCreated": "Asset {{name}} has been added.",
-    "indoorOutdoor": { "indoor": "Indoor", "outdoor": "Outdoor" },
+    "indoorOutdoor": {
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
     "fields": {
       "name": "Asset Name",
       "craneType": "Crane Type",
@@ -73,9 +75,10 @@
     "lastActivity": "Last activity"
   },
   "sections": {
-    "dock1": { "title": "Dock 1", "subtitle": "Goliath / TTC Cranes" },
-    "dock2": { "title": "Dock 4", "subtitle": "Quay Cranes" },
-    "blockShop": { "title": "Block Shop", "subtitle": "Overhead Cranes" }
+    "dock4": {
+      "title": "Dock 4",
+      "subtitle": "Goliath / Quay Cranes"
+    }
   },
   "criticalAlert": "{{overdueCount}} overdue inspection(s) · {{repairCount}} active repair(s) — immediate action required",
   "card": {
@@ -100,8 +103,7 @@
     "woBreakdown": "{{overdue}} insp · {{repair}} repair",
     "noOpenWo": "None open",
     "nextInspection": "Next Inspection",
-    "view3d": "View 3D",
-    "hide3d": "Hide 3D"
+    "view3d": "View 3D"
   },
   "status": {
     "operating": "Operating",
@@ -137,7 +139,8 @@
       "overview": "Components",
       "specs": "Specifications",
       "inspection": "Inspection History",
-      "maintenance": "Maintenance History"
+      "maintenance": "Maintenance History",
+      "3d": "3D View"
     },
     "componentHealth": {
       "title": "Component Health",
@@ -176,6 +179,30 @@
         "critical": "Critical",
         "replace": "Replace Now"
       }
+    },
+    "zones": {
+      "body": "Body / Girder",
+      "trolley": "Trolley",
+      "hook": "Hook",
+      "hookRope": "Hoist Rope",
+      "base": "Travel / Base",
+      "machineryHouse": "Machinery House",
+      "cabin": "Operator Cabin",
+      "boom": "Boom / Jib",
+      "upper": "Upper",
+      "middle": "Middle",
+      "lower": "Lower"
+    },
+    "zonePanel": {
+      "hint": "Click a zone on the 3D model to see matching part specs.",
+      "allZones": "View all",
+      "partSpec": "Part Spec",
+      "partName": "Part Name",
+      "partNumber": "P/N",
+      "manufacturer": "Manufacturer",
+      "status": "Status",
+      "remainingLife": "Remaining Life",
+      "back": "Back to list"
     }
   },
   "units": {
@@ -183,5 +210,9 @@
     "meter": "m",
     "hours": "h",
     "units": "units"
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "of": "of"
   }
 }

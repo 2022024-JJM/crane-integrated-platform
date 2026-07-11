@@ -26,6 +26,7 @@ import type {
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
 import { useSidebar } from '@crane/core/lib/sidebar-context';
+import { TONE_CHIP, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 
 const STATUS_VARIANT: Record<InventoryStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   normal: 'success',
@@ -47,21 +48,21 @@ const TX_STYLE: Record<
 > = {
   receipt: {
     icon: ArrowDownToLine,
-    cls: 'bg-emerald-500/15 text-emerald-400',
+    cls: TONE_CHIP.positive,
     sign: '+',
-    qtyCls: 'text-emerald-400',
+    qtyCls: TONE_TEXT.positive,
   },
   issue: {
     icon: ArrowUpFromLine,
-    cls: 'bg-sky-500/15 text-sky-400',
+    cls: TONE_CHIP.info,
     sign: '−',
-    qtyCls: 'text-sky-400',
+    qtyCls: TONE_TEXT.info,
   },
   adjust: {
     icon: SlidersHorizontal,
-    cls: 'bg-slate-500/15 text-slate-400',
+    cls: TONE_CHIP.neutral,
     sign: '±',
-    qtyCls: 'text-slate-400',
+    qtyCls: 'text-muted-foreground',
   },
 };
 
@@ -194,7 +195,7 @@ function StockActionModal({
               <span
                 className={cn(
                   'tabular-nums',
-                  exceeds ? 'font-semibold text-red-500' : 'text-emerald-500',
+                  exceeds ? cn('font-semibold', TONE_TEXT.critical) : 'text-muted-foreground',
                 )}
               >
                 {exceeds
@@ -209,7 +210,7 @@ function StockActionModal({
               min={1}
               value={qty}
               onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-              className={cn(inputCls, exceeds && 'border-red-500/60')}
+              className={cn(inputCls, exceeds && 'border-destructive/60')}
             />
           </label>
 
@@ -249,7 +250,7 @@ function StockActionModal({
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">
-              {t('actions.by')} <span className="text-red-500">*</span>
+              {t('actions.by')} <span className="text-destructive">*</span>
             </span>
             <input
               value={by}
@@ -308,9 +309,9 @@ function StockChips({
   const { t } = useTranslation('inventory');
   const chips = [
     { label: t('detail.stock.current'), value: item.currentQty, cls: 'text-foreground' },
-    { label: t('detail.stock.reserved'), value: item.reservedQty, cls: 'text-amber-500' },
-    { label: t('detail.stock.available'), value: item.availableQty, cls: 'text-emerald-500' },
-    { label: t('detail.stock.onOrder'), value: onOrderQty, cls: 'text-sky-400' },
+    { label: t('detail.stock.reserved'), value: item.reservedQty, cls: item.reservedQty > 0 ? TONE_TEXT.warning : 'text-foreground' },
+    { label: t('detail.stock.available'), value: item.availableQty, cls: item.availableQty > 0 ? 'text-foreground' : TONE_TEXT.critical },
+    { label: t('detail.stock.onOrder'), value: onOrderQty, cls: onOrderQty > 0 ? TONE_TEXT.info : 'text-foreground' },
     { label: t('detail.stock.reorderPt'), value: item.reorderPoint, cls: 'text-muted-foreground' },
   ];
   return (
@@ -334,14 +335,14 @@ function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
         return (
           <div
             key={line.poId}
-            className="rounded border border-sky-500/25 bg-sky-500/5 px-3 py-2.5"
+            className={cn('rounded border px-3 py-2.5', TONE_SURFACE.info)}
           >
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <ShoppingCart className="h-3 w-3 shrink-0 text-sky-400" />
-              <span className="font-mono text-xs font-medium text-sky-400">{line.poNumber}</span>
+              <ShoppingCart className={cn('h-3 w-3 shrink-0', TONE_TEXT.info)} />
+              <span className={cn('font-mono text-xs font-medium', TONE_TEXT.info)}>{line.poNumber}</span>
               <span className="text-xs font-semibold tabular-nums">×{line.qty}</span>
               {line.requester === 'System' && (
-                <span className="rounded-full bg-sky-500/15 px-1.5 py-px text-[10px] font-semibold text-sky-400">
+                <span className={cn('rounded-full px-1.5 py-px text-[10px] font-semibold', TONE_CHIP.info)}>
                   {t('detail.onOrder.auto')}
                 </span>
               )}
@@ -349,7 +350,7 @@ function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
                 <span
                   className={cn(
                     'text-xs font-semibold tabular-nums',
-                    eta.overdue ? 'text-red-500' : 'text-foreground',
+                    eta.overdue ? TONE_TEXT.critical : 'text-foreground',
                   )}
                 >
                   {eta.label}
@@ -454,7 +455,7 @@ function HistoryContent({ transactions }: { transactions: InventoryTransaction[]
                   {tx.qty}
                 </span>
                 {tx.ref && (
-                  <span className="font-mono text-[10px] text-sky-400">{tx.ref}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{tx.ref}</span>
                 )}
                 <span className="ml-auto font-mono text-[10px] text-muted-foreground">
                   {tx.date}
@@ -492,7 +493,7 @@ function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[] }) {
           className="group flex cursor-pointer flex-col gap-1 rounded border border-border/70 bg-muted/30 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/50"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-medium text-sky-400">
+            <span className="font-mono text-xs font-medium text-foreground">
               {repair.woNumber}
             </span>
             <span className="text-[10px] text-muted-foreground">{repair.craneName}</span>
