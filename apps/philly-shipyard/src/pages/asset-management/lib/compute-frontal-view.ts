@@ -37,7 +37,8 @@ export function computeFrontalViewFromObjects(
   return computeFrontalViewFromBox(box);
 }
 
-function computeFrontalViewFromBox(
+/** 바운딩 박스 기준 정면 뷰 — 서브 존(파트 내 영역)처럼 Object3D가 없는 대상용 */
+export function computeFrontalViewFromBox(
   box: Box3,
 ): { position: Vector3Tuple; target: Vector3Tuple } | null {
   if (box.isEmpty()) return null;

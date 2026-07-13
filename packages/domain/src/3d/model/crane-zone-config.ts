@@ -37,6 +37,13 @@ export interface CraneZone {
   parts?: CraneZonePart[];
   /** 'regions' 전략: 이 구역의 정규화 영역들 (앞선 존이 먼저 매칭됨) */
   regions?: CraneZoneRegion[];
+  /**
+   * 'parts' 전략의 서브 존: 통짜 파트 GLB 안에서 영역만 따로 선택해야 할 때
+   * (예: body 안의 전기실). regions를 이 key를 가진 호스트 존 파트의
+   * 바운딩박스 기준 정규화 좌표로 해석한다. 호스트 히트 시 서브 존이
+   * 먼저 매칭되고, 어느 서브 존에도 안 걸리면 호스트 존으로 처리된다.
+   */
+  subRegionsOf?: string;
 }
 
 export interface CraneZoneConfig {
@@ -55,19 +62,14 @@ const GOLIATH_ZONES: CraneZoneConfig = {
       clusterKeys: [
         'power-dist',
         'transformer',
-        'plc',
         'network',
         'fuse',
         'power-supply',
         'wiring',
-        'enclosure',
         'surge',
         'current-sensing',
         'resistor',
         'instrument',
-        'operator',
-        'computing',
-        'cctv',
       ],
       parts: [
         {
@@ -76,6 +78,21 @@ const GOLIATH_ZONES: CraneZoneConfig = {
           scale: [0.48, 0.48, 0.48],
         },
       ],
+    },
+    // 전기실/운전실은 body GLB에 통짜로 포함 → body 바운딩박스 기준 영역 선택.
+    // 좌표는 gc_04_body.glb 정점 실루엣 분석값: 거더 밴드 y≥0.85, 정면 뷰
+    // 화면 우측 = -z(정규화 z≈0) 끝단. dev에서 시각 튜닝 대상.
+    {
+      key: 'electricalRoom',
+      clusterKeys: ['plc', 'enclosure'],
+      subRegionsOf: 'body',
+      regions: [{ min: [0, 0.78, 0], max: [1, 1, 0.15] }],
+    },
+    {
+      key: 'cabin',
+      clusterKeys: ['operator', 'computing', 'cctv'],
+      subRegionsOf: 'body',
+      regions: [{ min: [0, 0.55, 0], max: [1, 0.78, 0.17] }],
     },
     {
       key: 'trolley',

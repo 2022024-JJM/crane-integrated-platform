@@ -16,9 +16,10 @@ import { cn } from '@crane/core/lib/utils';
 import { TONE_FILL } from '../../../shared/ui/tone';
 import {
   computeFrontalView,
+  computeFrontalViewFromBox,
   computeFrontalViewFromObjects,
 } from '../lib/compute-frontal-view';
-import { classifyPointToZone } from '../lib/zone-hit';
+import { classifyPointToZone, regionToWorldBox } from '../lib/zone-hit';
 
 // 하이라이트는 info 톤 — GltfModel alarmSeverity 'info'와 동일 계열
 const REGION_HIGHLIGHT_COLOR = TONE_FILL.info;
@@ -69,15 +70,60 @@ function PartsScene({
   );
   const readyCountRef = useRef(0);
 
+  // 서브 존(호스트 파트 내 영역 선택, 예: body 안 전기실) — 호스트 key별 그룹
+  const subZonesByHost = useMemo(() => {
+    const map = new Map<string, typeof zoneConfig.zones>();
+    for (const zone of zoneConfig.zones) {
+      if (!zone.subRegionsOf) continue;
+      const list = map.get(zone.subRegionsOf) ?? [];
+      list.push(zone);
+      map.set(zone.subRegionsOf, list);
+    }
+    return map;
+  }, [zoneConfig]);
+
+  // 호스트 파트 바운딩박스 — 서브 존 히트 판정/오버레이용 (로드 시 1회 계산)
+  const [hostBoxes, setHostBoxes] = useState<Map<string, Box3>>(new Map());
+
   const handleObjectReady = useCallback(
     (zoneKey: string, object: Object3D | null) => {
       onZoneObjectReady(zoneKey, object);
       if (!object) return;
+      if (subZonesByHost.has(zoneKey)) {
+        object.updateWorldMatrix(true, true);
+        const box = new Box3().setFromObject(object);
+        setHostBoxes((prev) => new Map(prev).set(zoneKey, box));
+      }
       readyCountRef.current += 1;
       if (readyCountRef.current === totalParts) onGroupReady();
     },
-    [onZoneObjectReady, onGroupReady, totalParts],
+    [onZoneObjectReady, onGroupReady, totalParts, subZonesByHost],
   );
+
+  // 호스트 히트 지점 분류: 서브 존 우선, 미매칭 시 호스트 존
+  const resolveZoneKey = useCallback(
+    (
+      hostKey: string,
+      event?: ThreeEvent<PointerEvent> | ThreeEvent<MouseEvent>,
+    ) => {
+      const subZones = subZonesByHost.get(hostKey);
+      const hostBox = hostBoxes.get(hostKey);
+      if (!subZones || !hostBox || !event) return hostKey;
+      return classifyPointToZone(event.point, hostBox, subZones)?.key ?? hostKey;
+    },
+    [subZonesByHost, hostBoxes],
+  );
+
+  // hover/선택된 서브 존 오버레이 (호스트 박스 기준)
+  const overlaySubZoneKey = [hoveredZoneKey, selectedZoneKey].find((key) =>
+    zoneConfig.zones.some((z) => z.key === key && z.subRegionsOf),
+  );
+  const overlaySubZone = overlaySubZoneKey
+    ? zoneConfig.zones.find((z) => z.key === overlaySubZoneKey)
+    : undefined;
+  const overlayHostBox = overlaySubZone?.subRegionsOf
+    ? hostBoxes.get(overlaySubZone.subRegionsOf)
+    : undefined;
 
   return (
     <>
@@ -100,13 +146,28 @@ function PartsScene({
               alarmSeverity={isHighlighted ? 'info' : null}
               alarmHighlightMesh={isHighlighted}
               isSelected={selectedZoneKey === zone.key}
-              onSelect={() => onZoneSelect(zone.key)}
-              onHoverStart={() => onZoneHover(zone.key)}
+              onSelect={(_id, event) =>
+                onZoneSelect(resolveZoneKey(zone.key, event))
+              }
+              onHoverStart={(_id, _x, _y, event) =>
+                onZoneHover(resolveZoneKey(zone.key, event))
+              }
+              onHoverMove={(_id, _x, _y, event) =>
+                onZoneHover(resolveZoneKey(zone.key, event))
+              }
               onHoverEnd={() => onZoneHover(null)}
               onObjectReady={(_id, object) => handleObjectReady(zone.key, object)}
             />
           );
         }),
+      )}
+      {overlaySubZone && overlayHostBox && (
+        <RegionOverlay
+          zoneConfig={zoneConfig}
+          zoneKey={overlaySubZone.key}
+          modelBox={overlayHostBox}
+          selected={overlaySubZone.key === selectedZoneKey}
+        />
       )}
     </>
   );
@@ -351,6 +412,21 @@ export function Crane3dZoneViewer({
     const controller = controllerRef.current;
     if (!controller) return;
     if (selectedZoneKey) {
+      const zone = zoneConfig.zones.find((z) => z.key === selectedZoneKey);
+      // 서브 존: 호스트 파트 박스 × 정규화 영역으로 줌인 대상 박스 계산
+      if (zone?.subRegionsOf) {
+        const host = zoneObjectsRef.current.get(zone.subRegionsOf);
+        if (!host) return;
+        host.updateWorldMatrix(true, true);
+        const hostBox = new Box3().setFromObject(host);
+        const regionBox = new Box3();
+        for (const region of zone.regions ?? []) {
+          regionBox.union(regionToWorldBox(hostBox, region));
+        }
+        const view = computeFrontalViewFromBox(regionBox);
+        if (view) controller.moveTo(view.position, view.target);
+        return;
+      }
       const object = zoneObjectsRef.current.get(selectedZoneKey);
       if (!object) return;
       const view = computeFrontalView(object);
@@ -358,7 +434,7 @@ export function Crane3dZoneViewer({
     } else {
       controller.reset();
     }
-  }, [selectedZoneKey, zoneConfig.strategy, framedPreset]);
+  }, [selectedZoneKey, zoneConfig, framedPreset]);
 
   return (
     <div

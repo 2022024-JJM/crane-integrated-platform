@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { Box3 as ThreeBox3, Vector3 as ThreeVector3 } from 'three';
 import type { Box3, Vector3 } from 'three';
 import type { CraneZone } from '@crane/domain/3d';
-import { classifyPointToZone } from './zone-hit';
+import { classifyPointToZone, regionToWorldBox } from './zone-hit';
 
 // classifyPointToZone은 min/max/x/y/z만 읽으므로 plain object로 충분하다
 const vec = (x: number, y: number, z: number) => ({ x, y, z }) as Vector3;
@@ -54,5 +55,30 @@ describe('classifyPointToZone', () => {
     const offset = box(vec(100, 50, -20), vec(120, 70, 0));
     // (110, 66, -10) → 정규화 (0.5, 0.8, 0.5) → upper
     expect(classifyPointToZone(vec(110, 66, -10), offset, zones)?.key).toBe('upper');
+  });
+});
+
+describe('regionToWorldBox', () => {
+  it('정규화 영역을 호스트 박스 기준 월드 박스로 변환한다', () => {
+    const host = new ThreeBox3(
+      new ThreeVector3(0, 0, -10),
+      new ThreeVector3(10, 20, 10),
+    );
+    const world = regionToWorldBox(host, {
+      min: [0, 0.5, 0],
+      max: [1, 1, 0.25],
+    });
+    expect(world.min.toArray()).toEqual([0, 10, -10]);
+    expect(world.max.toArray()).toEqual([10, 20, -5]);
+  });
+
+  it('영역이 전체([0,0,0]~[1,1,1])면 호스트 박스와 동일하다', () => {
+    const host = new ThreeBox3(
+      new ThreeVector3(-5, 2, 1),
+      new ThreeVector3(5, 12, 31),
+    );
+    const world = regionToWorldBox(host, { min: [0, 0, 0], max: [1, 1, 1] });
+    expect(world.min.toArray()).toEqual([-5, 2, 1]);
+    expect(world.max.toArray()).toEqual([5, 12, 31]);
   });
 });
