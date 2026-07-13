@@ -14,24 +14,30 @@ import {
 } from './date-utils';
 
 describe('startOfWeek', () => {
-  it('일요일 시작 기준으로 주의 첫날을 반환한다', () => {
-    // 2026-07-15는 수요일 → 주 시작은 7/12 일요일
+  it('월요일 시작 기준으로 주의 첫날을 반환한다 (구글 캘린더와 동일)', () => {
+    // 2026-07-15는 수요일 → 주 시작은 7/13 월요일
     const wed = new Date(2026, 6, 15);
-    const sun = startOfWeek(wed);
-    expect(sun.getDate()).toBe(12);
-    expect(sun.getDay()).toBe(0);
+    const mon = startOfWeek(wed);
+    expect(mon.getDate()).toBe(13);
+    expect(mon.getDay()).toBe(1);
   });
 
-  it('일요일 자신은 그대로 반환한다', () => {
-    const sun = new Date(2026, 6, 12);
-    expect(isSameDay(startOfWeek(sun), sun)).toBe(true);
+  it('월요일 자신은 그대로 반환한다', () => {
+    const mon = new Date(2026, 6, 13);
+    expect(isSameDay(startOfWeek(mon), mon)).toBe(true);
+  });
+
+  it('일요일은 같은 주의 월요일(6일 전)로 돌아간다', () => {
+    // 2026-07-19는 일요일 → 주 시작은 7/13 월요일
+    const sun = new Date(2026, 6, 19);
+    expect(startOfWeek(sun).getDate()).toBe(13);
   });
 
   it('월 경계를 넘는 주도 정확하다', () => {
-    // 2026-08-01은 토요일 → 주 시작은 7/26 일요일
+    // 2026-08-01은 토요일 → 주 시작은 7/27 월요일
     const d = startOfWeek(new Date(2026, 7, 1));
     expect(d.getMonth()).toBe(6);
-    expect(d.getDate()).toBe(26);
+    expect(d.getDate()).toBe(27);
   });
 });
 
@@ -42,12 +48,12 @@ describe('buildMonthMatrix', () => {
     for (const week of weeks) expect(week).toHaveLength(7);
   });
 
-  it('첫 칸은 해당 월 1일을 포함하는 주의 일요일이다', () => {
-    // 2026-07-01은 수요일 → 첫 칸은 6/28 일요일
+  it('첫 칸은 해당 월 1일을 포함하는 주의 월요일이다', () => {
+    // 2026-07-01은 수요일 → 첫 칸은 6/29 월요일
     const weeks = buildMonthMatrix(new Date(2026, 6, 15));
     expect(weeks[0][0].getMonth()).toBe(5);
-    expect(weeks[0][0].getDate()).toBe(28);
-    expect(weeks[0][0].getDay()).toBe(0);
+    expect(weeks[0][0].getDate()).toBe(29);
+    expect(weeks[0][0].getDay()).toBe(1);
   });
 
   it('칸들은 달력 날짜로 연속된다 (DST 전환 주 포함)', () => {
@@ -61,11 +67,11 @@ describe('buildMonthMatrix', () => {
 });
 
 describe('buildWeekDays', () => {
-  it('anchor가 주 중간이어도 일~토 7일을 반환한다', () => {
+  it('anchor가 주 중간이어도 월~일 7일을 반환한다', () => {
     const days = buildWeekDays(new Date(2026, 6, 15));
     expect(days).toHaveLength(7);
-    expect(days[0].getDay()).toBe(0);
-    expect(days[6].getDay()).toBe(6);
+    expect(days[0].getDay()).toBe(1); // 월
+    expect(days[6].getDay()).toBe(0); // 일
   });
 });
 

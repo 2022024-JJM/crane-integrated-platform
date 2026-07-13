@@ -13,10 +13,10 @@ export function endOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0);
 }
 
-/** 일요일(0) 시작 기준 주의 첫날 */
+/** 월요일 시작 기준 주의 첫날 (구글 캘린더 주 시작과 동일) */
 export function startOfWeek(d: Date): Date {
   const s = startOfDay(d);
-  s.setDate(s.getDate() - s.getDay());
+  s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
   return s;
 }
 

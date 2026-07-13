@@ -12,6 +12,21 @@ export function formatTime(d: Date, language: string): string {
   }).format(d);
 }
 
+/** 구글 캘린더식 짧은 시각 — 정시는 '오전 8시', 그 외 '오전 10:30' */
+export function formatTimeShort(d: Date, language: string): string {
+  const opts: Intl.DateTimeFormatOptions =
+    d.getMinutes() === 0 ? { hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' };
+  return new Intl.DateTimeFormat(localeOf(language), opts).format(d);
+}
+
+/** 월 경계 셀 라벨 — '7월 1일' / 'Jul 1' */
+export function formatMonthDay(d: Date, language: string): string {
+  return new Intl.DateTimeFormat(localeOf(language), {
+    month: 'short',
+    day: 'numeric',
+  }).format(d);
+}
+
 /** 타임그리드 시간 눈금 라벨 — 구글 캘린더식 '오전 1시' / '1 AM' */
 export function formatHourLabel(hour: number, language: string): string {
   return new Intl.DateTimeFormat(localeOf(language), { hour: 'numeric' }).format(

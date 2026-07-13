@@ -4,8 +4,9 @@ import type { CalendarEvent } from '@crane/features/calendar';
 import { cn } from '@crane/core/lib/utils';
 import { isSameDay, minutesFromMidnight, startOfDay } from '../model/date-utils';
 import { eventAccent } from '../model/colors';
+import { buildSpanSegments, isStripEvent } from '../model/week-segments';
 import { formatHourLabel, formatTime, formatWeekdayShort, gmtOffsetLabel } from '../model/format';
-import { EventChip } from './event-chip';
+import { EventStripBar } from './event-chip';
 import { EventPopoverContent } from './event-popover';
 import { Popover, PopoverPopup, PopoverTrigger } from '@crane/ui/molecules/popover';
 
@@ -15,16 +16,6 @@ const ROW_H = 48; // 시간당 px
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 // 오늘이 안 보이는 주/일에서의 초기 스크롤 기준 시각 (업무 시작 전 아침)
 const DEFAULT_SCROLL_HOUR = 7;
-
-/** 여러 날에 걸치는 이벤트 여부 (시작·종료 캘린더 날짜가 다름) */
-function isMultiDay(e: CalendarEvent): boolean {
-  return startOfDay(e.start).getTime() !== startOfDay(e.end).getTime();
-}
-
-/** 종일 스트립에 놓일 이벤트: 종일(점검) 또는 다일 이벤트 */
-function isStripEvent(e: CalendarEvent): boolean {
-  return e.allDay || isMultiDay(e);
-}
 
 interface PlacedEvent {
   event: CalendarEvent;
@@ -169,7 +160,14 @@ export function TimeGrid({
   }, [days, events]);
 
   const gridCols = { gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` };
-  const hasAllDay = eventsByDay.some((list) => list.some(isStripEvent));
+  const dayCols = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
+
+  // 종일/다일 이벤트 — 구글 캘린더처럼 날짜 범위를 가로지르는 스패닝 바로 배치
+  const stripSegments = useMemo(
+    () => buildSpanSegments(days, events.filter(isStripEvent)).segments,
+    [days, events],
+  );
+  const hasAllDay = stripSegments.length > 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/80">
@@ -202,19 +200,39 @@ export function TimeGrid({
         })}
       </div>
 
-      {/* 종일 이벤트 행 */}
+      {/* 종일 이벤트 행 — 여러 날을 가로지르는 스패닝 바 (구글 캘린더식) */}
       {hasAllDay && (
         <div className="grid border-b border-border/60 bg-muted/10" style={gridCols}>
-          <div className="flex items-center justify-end border-r border-border/40 px-1.5 py-1 text-[10px] text-muted-foreground">
+          <div className="flex items-start justify-end border-r border-border/40 px-1.5 py-1.5 text-[10px] text-muted-foreground">
             {t('allDay')}
           </div>
-          {eventsByDay.map((list, i) => (
-            <div key={i} className="flex flex-col gap-0.5 border-r border-border/40 p-1 last:border-r-0">
-              {list.filter(isStripEvent).map((e) => (
-                <EventChip key={e.id} event={e} variant="block" />
+          <div className="relative py-1" style={{ gridColumn: `2 / span ${days.length}` }}>
+            {/* 배경 세로 구분선 */}
+            <div className="absolute inset-0 grid" style={dayCols}>
+              {days.map((_, i) => (
+                <div key={i} className="border-r border-border/40 last:border-r-0" />
               ))}
             </div>
-          ))}
+            {/* 스패닝 바 슬롯 */}
+            <div className="relative grid auto-rows-min gap-y-px" style={dayCols}>
+              {stripSegments.map((s) => (
+                <div
+                  key={`${s.event.id}-${s.startCol}`}
+                  className="min-w-0 px-0.5"
+                  style={{
+                    gridColumn: `${s.startCol + 1} / span ${s.span}`,
+                    gridRow: s.slot + 1,
+                  }}
+                >
+                  <EventStripBar
+                    event={s.event}
+                    continuesLeft={s.continuesLeft}
+                    continuesRight={s.continuesRight}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
