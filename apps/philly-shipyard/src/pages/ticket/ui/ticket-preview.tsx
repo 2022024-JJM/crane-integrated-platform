@@ -1,27 +1,25 @@
 import { useTranslation } from 'react-i18next';
 import { Wrench, ClipboardCheck, Package, Ticket as TicketIcon, Calendar, User, MapPin, AlertTriangle, Hash } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_CHIP } from '../../../shared/ui/tone';
+import { PRIORITY_TONE, type TicketPriority } from '../../../shared/ui/status-variants';
 import type { TicketType } from './ticket-type-selector';
 
 // 티켓은 모노크롬 — 타입은 아이콘·라벨로, 색은 우선순위 칩에만 남긴다.
 const PREVIEW_CONFIG: Record<TicketType, {
   icon: React.ComponentType<{ className?: string }>;
-  label: string;
   prefix: string;
 }> = {
-  repair: { icon: Wrench, label: 'REPAIR', prefix: 'RPR' },
-  inspection: { icon: ClipboardCheck, label: 'INSPECTION', prefix: 'INS' },
-  parts: { icon: Package, label: 'PARTS REQUEST', prefix: 'PRQ' },
+  repair: { icon: Wrench, prefix: 'RPR' },
+  inspection: { icon: ClipboardCheck, prefix: 'INS' },
+  parts: { icon: Package, prefix: 'PRQ' },
 };
 
-const PRIORITY_COLOR: Record<string, string> = {
-  emergency: 'bg-red-500/10 text-red-600 dark:text-red-400',
-  urgent:    'bg-red-500/10 text-red-600 dark:text-red-400',
-  high:      'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  normal:    'bg-muted text-muted-foreground',
-  low:       'bg-muted text-muted-foreground',
-  scheduled: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-};
+/** 우선순위 → 톤 칩 (tone.ts 단일 소스, normal/미정의는 뉴트럴) */
+function priorityChip(priority: string): string {
+  const tone = PRIORITY_TONE[priority as TicketPriority];
+  return TONE_CHIP[tone ?? 'neutral'];
+}
 
 export function TicketPreview({
   type,
@@ -83,14 +81,18 @@ export function TicketPreview({
               <Icon className="size-5 text-foreground" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">{cfg.label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
+                {t(`preview.typeLabel.${type}`, {
+                  defaultValue: type === 'parts' ? 'PARTS REQUEST' : type.toUpperCase(),
+                })}
+              </p>
               <p className="mt-0.5 flex items-center gap-1 font-mono text-xs text-muted-foreground">
                 <Hash className="size-3" />
                 {draftNum}
               </p>
             </div>
           </div>
-          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', PRIORITY_COLOR[priority] ?? 'bg-muted text-muted-foreground')}>
+          <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', priorityChip(priority))}>
             {priorityLabel}
           </span>
         </div>
@@ -132,7 +134,7 @@ export function TicketPreview({
           {type === 'parts' && (
             <Row icon={Package} label={t('sections.parts')}>
               <span className={cn('font-medium', (itemsCount ?? 0) > 0 ? 'text-foreground' : 'italic text-muted-foreground/60')}>
-                {itemsCount ?? 0} {itemsCount === 1 ? 'item' : 'items'}
+                {t('preview.itemsCount', { count: itemsCount ?? 0, defaultValue: `${itemsCount ?? 0} item(s)` })}
               </span>
             </Row>
           )}

@@ -60,6 +60,33 @@ export const TONE_PILL_ACTIVE: Record<Tone, string> = {
 export const PILL_INACTIVE =
   'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground';
 
+/** 토글 버튼 활성 — 틴트 500/15 + 테두리 500/40 + 톤 텍스트 */
+export const TONE_TOGGLE_ACTIVE: Record<Tone, string> = {
+  critical: 'border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400',
+  warning: 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  positive: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  info: 'border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-400',
+  neutral: 'border-border bg-muted text-foreground',
+};
+
+/** 메트릭 언더라인 (after 의사요소 채움) */
+export const TONE_UNDERLINE: Record<Tone, string> = {
+  critical: 'after:bg-red-500',
+  warning: 'after:bg-amber-500',
+  positive: 'after:bg-emerald-500',
+  info: 'after:bg-blue-500',
+  neutral: 'after:bg-border',
+};
+
+/** 리스트 행 좌측 강조 보더 */
+export const TONE_BORDER_ACCENT: Record<Tone, string> = {
+  critical: 'border-l-red-500/50',
+  warning: 'border-l-amber-500/50',
+  positive: 'border-l-emerald-500/50',
+  info: 'border-l-blue-500/50',
+  neutral: 'border-l-border',
+};
+
 /**
  * SVG/차트 fill용 고정 hex — Tailwind red/amber/emerald/blue 500 스텝.
  * (도넛 세그먼트는 항상 라벨+수치와 함께 표시되므로 색 단독 의미 전달 없음)

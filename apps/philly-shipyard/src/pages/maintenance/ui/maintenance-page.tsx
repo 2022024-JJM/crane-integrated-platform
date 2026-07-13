@@ -1,19 +1,16 @@
 import { Link } from 'react-router-dom';
-import { AlertCircle, ChevronRight, ChevronLeft, Package, Inbox, Clock, Wrench, SearchCheck, CheckCircle2, Plus } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Package, Inbox, Clock, Wrench, SearchCheck, CheckCircle2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useMaintenanceList, PIPELINE_NEXT, PIPELINE_PREV } from '@crane/features/maintenance';
-import type { RepairPriority, RepairStatus, RepairWO } from '@crane/domain/maintenance';
+import type { RepairStatus, RepairWO } from '@crane/domain/maintenance';
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
-import { TONE_DOT, TONE_SURFACE, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
-
-const PRIORITY_VARIANT: Record<RepairPriority, 'destructive' | 'warning' | 'secondary'> = {
-  emergency: 'destructive',
-  high: 'warning',
-  normal: 'secondary',
-  low: 'secondary',
-};
+import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
+import { REPAIR_PRIORITY_VARIANT as PRIORITY_VARIANT } from '../../../shared/ui/status-variants';
+import { MetricCard } from '../../../shared/ui/metric-card';
+import { AlertBanner } from '../../../shared/ui/alert-banner';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
 
 const PIPELINE_STATUSES: RepairStatus[] = [
   'received',
@@ -33,26 +30,15 @@ const COLUMN_CONFIG: Record<RepairStatus, { icon: React.ReactNode; tone: Tone }>
   on_hold: { icon: <Clock className="h-3.5 w-3.5" />, tone: 'neutral' },
 };
 
-function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return { label: 'D-Day', isOverdue: false };
-  if (diff > 0) return { label: `D-${diff}`, isOverdue: false };
-  return { label: `D+${Math.abs(diff)}`, isOverdue: true };
-}
-
 function RepairCard({
   wo,
   onMove,
 }: {
   wo: RepairWO;
-  onMove: (id: string, direction: 'next' | 'prev') => void;
+  onMove: (id: string, direction: 'next' | 'prev') => RepairStatus | null;
 }) {
   const { t } = useTranslation('maintenance');
-  const { label: dateLabel, isOverdue } = formatRelativeDate(wo.scheduledStart.slice(0, 10));
+  const { label: dateLabel, overdue: isOverdue } = formatRelativeDate(wo.scheduledStart);
   const canNext = PIPELINE_NEXT[wo.status] !== null;
   const canPrev = PIPELINE_PREV[wo.status] !== null;
   const nextStatus = PIPELINE_NEXT[wo.status];
@@ -99,9 +85,9 @@ function RepairCard({
       <div className="flex items-stretch border-t border-border/40 divide-x divide-border/40">
         <button
           onClick={() => {
-            onMove(wo.id, 'prev');
-            if (prevStatus) {
-              toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${prevStatus}`) }));
+            const moved = onMove(wo.id, 'prev');
+            if (moved) {
+              toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${moved}`) }));
             }
           }}
           disabled={!canPrev}
@@ -116,13 +102,12 @@ function RepairCard({
         </button>
         <button
           onClick={() => {
-            onMove(wo.id, 'next');
-            if (nextStatus) {
-              const isCompleting = nextStatus === 'completed';
-              if (isCompleting) {
+            const moved = onMove(wo.id, 'next');
+            if (moved) {
+              if (moved === 'completed') {
                 toast.success(t('toast.completed', { woNumber: wo.woNumber }));
               } else {
-                toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${nextStatus}`) }));
+                toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${moved}`) }));
               }
             }
           }}
@@ -147,6 +132,9 @@ export function MaintenancePage() {
 
   const emergencyWOs = repairs.filter((w) => w.priority === 'emergency');
   const totalActive = repairs.filter((w) => w.status !== 'completed').length;
+  // on_hold는 파이프라인 밖 상태 — 해당 WO가 있을 때만 컬럼을 추가해 목록에서 사라지지 않게 한다.
+  const hasOnHold = repairs.some((w) => w.status === 'on_hold');
+  const boardStatuses: RepairStatus[] = hasOnHold ? [...PIPELINE_STATUSES, 'on_hold'] : PIPELINE_STATUSES;
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -172,23 +160,13 @@ export function MaintenancePage() {
           { label: t('metrics.emergencyActive'), value: summary.emergency, dot: summary.emergency > 0 ? TONE_DOT.critical : '' },
           { label: t('metrics.avgMttr'), value: `${summary.avgMttrHours} h`, dot: '' },
         ].map(({ label, value, dot }) => (
-          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
-              {label}
-            </p>
-            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
-          </div>
+          <MetricCard key={label} label={label} value={value} dot={dot} />
         ))}
       </section>
 
       {/* 긴급 수리 배너 */}
       {emergencyWOs.length > 0 && (
-        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.critical)}>
-          <p className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.critical)}>
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {t('emergency.banner', { count: emergencyWOs.length })}
-          </p>
+        <AlertBanner tone="critical" title={t('emergency.banner', { count: emergencyWOs.length })}>
           {emergencyWOs.map((wo) => (
             <Link
               key={wo.id}
@@ -202,12 +180,12 @@ export function MaintenancePage() {
               </Badge>
             </Link>
           ))}
-        </div>
+        </AlertBanner>
       )}
 
       {/* 파이프라인 칸반 보드 */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        {PIPELINE_STATUSES.map((status) => {
+      <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-3', hasOnHold ? 'lg:grid-cols-6' : 'lg:grid-cols-5')}>
+        {boardStatuses.map((status) => {
           const cfg = COLUMN_CONFIG[status];
           const colWOs = repairs.filter((w) => w.status === status);
           const pct = totalActive > 0 && status !== 'completed'

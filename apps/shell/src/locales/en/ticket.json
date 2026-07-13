@@ -99,7 +99,9 @@
     "scheduledEndRequired": "Scheduled End is required.",
     "scheduledDateRequired": "Scheduled Date is required.",
     "requesterRequired": "Requester is required.",
-    "partsRequired": "At least one part must be selected."
+    "partsRequired": "At least one part must be selected.",
+    "endBeforeStart": "Scheduled End must be on or after Scheduled Start.",
+    "formInvalid": "Please fix the highlighted fields."
   },
   "toast": {
     "repairCreated": "Repair ticket {{woNumber}} created.",
@@ -111,5 +113,13 @@
     "inspection": "Create Inspection Ticket",
     "parts": "Submit Parts Request",
     "cancel": "Cancel"
+  },
+  "preview": {
+    "typeLabel": {
+      "repair": "REPAIR",
+      "inspection": "INSPECTION",
+      "parts": "PARTS REQUEST"
+    },
+    "itemsCount": "{{count}} item(s)"
   }
 }

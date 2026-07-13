@@ -1,4 +1,4 @@
-import { TONE_FILL, type Tone } from '../../../../shared/ui/tone';
+import { TONE_FILL, TONE_UNDERLINE, type Tone } from '../../../../shared/ui/tone';
 
 export type KccAccent =
   | 'safety'
@@ -31,11 +31,11 @@ export const KCC_FILL: Record<KccAccent, string> = {
 };
 
 export const KCC_UNDERLINE: Record<KccAccent, string> = {
-  safety: 'after:bg-red-500',
-  production: 'after:bg-amber-500',
-  critical: 'after:bg-red-500',
-  low: 'after:bg-amber-500',
-  success: 'after:bg-emerald-500',
-  info: 'after:bg-blue-500',
-  neutral: 'after:bg-border',
+  safety: TONE_UNDERLINE.critical,
+  production: TONE_UNDERLINE.warning,
+  critical: TONE_UNDERLINE.critical,
+  low: TONE_UNDERLINE.warning,
+  success: TONE_UNDERLINE.positive,
+  info: TONE_UNDERLINE.info,
+  neutral: TONE_UNDERLINE.neutral,
 };

@@ -18,37 +18,16 @@ import {
   TONE_PILL_ACTIVE,
   TONE_SURFACE,
   TONE_TEXT,
-  type Tone,
 } from '../../../shared/ui/tone';
+import {
+  CRITICALITY_TONE,
+  CRITICALITY_VARIANT,
+  INVENTORY_STATUS_TONE as STATUS_TONE,
+  INVENTORY_STATUS_VARIANT as STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
+import { MetricCard } from '../../../shared/ui/metric-card';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
 import { PartDetailPanel } from './part-detail-panel';
-
-const STATUS_VARIANT: Record<InventoryStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  normal: 'success',
-  low: 'warning',
-  out_of_stock: 'destructive',
-  excess: 'secondary',
-  expiry_soon: 'warning',
-};
-
-const CRITICALITY_VARIANT: Record<PartCriticality, 'destructive' | 'warning' | 'secondary'> = {
-  critical: 'destructive',
-  essential: 'warning',
-  standard: 'secondary',
-};
-
-const STATUS_TONE: Record<InventoryStatus, Tone> = {
-  normal: 'positive',
-  low: 'warning',
-  out_of_stock: 'critical',
-  excess: 'neutral',
-  expiry_soon: 'warning',
-};
-
-const CRITICALITY_TONE: Record<PartCriticality, Tone> = {
-  critical: 'critical',
-  essential: 'warning',
-  standard: 'neutral',
-};
 
 const FILTER_STATUSES: InventoryStatus[] = ['normal', 'low', 'out_of_stock', 'excess', 'expiry_soon'];
 const FILTER_CRITICALITIES: PartCriticality[] = ['critical', 'essential', 'standard'];
@@ -71,17 +50,6 @@ function craneBadgeOf(craneIds: string[]): { label: string; cls: string; isCommo
   return { label: '50T', cls, isCommon: false };
 }
 
-function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return { label: 'D-Day', isOverdue: false };
-  if (diff > 0) return { label: `D-${diff}`, isOverdue: false };
-  return { label: `D+${Math.abs(diff)}`, isOverdue: true };
-}
-
 // 컬럼 폭: 부품명(가변, 최소) · 중요도 · 현재재고 · 예약 · 가용 · 단위 · 재고수준(progress) · 단가 · 리드타임 · 상태
 const GRID_TEMPLATE =
   'minmax(220px,2.2fr) 90px 85px 70px 80px 50px minmax(100px,1fr) 90px 80px 105px';
@@ -100,6 +68,7 @@ function InventoryRow({
     ? Math.min(100, Math.round((item.currentQty / item.minStockQty) * 100))
     : 100;
   const barColor = stockPct <= 0 ? TONE_DOT.critical : stockPct < 100 ? TONE_DOT.warning : TONE_DOT.positive;
+  const craneBadge = craneBadgeOf(item.craneIds);
 
   return (
     <div
@@ -114,14 +83,9 @@ function InventoryRow({
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <p className="truncate font-medium">{item.partName}</p>
-          {(() => {
-            const badge = craneBadgeOf(item.craneIds);
-            return (
-              <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${badge.cls}`}>
-                {badge.isCommon ? t('crane.common') : badge.label}
-              </span>
-            );
-          })()}
+          <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${craneBadge.cls}`}>
+            {craneBadge.isCommon ? t('crane.common') : craneBadge.label}
+          </span>
         </div>
         <p className="truncate text-xs text-muted-foreground">{t(`category.${item.category}`)} · {item.partNumber} · {item.manufacturer}</p>
       </div>
@@ -267,7 +231,10 @@ export function InventoryPage() {
   const pageStart = (page - 1) * pageSize;
   const paginated = filtered.slice(pageStart, pageStart + pageSize);
 
-  const alertItems = items.filter((i) => ['low', 'out_of_stock'].includes(i.status));
+  const alertItems = useMemo(
+    () => items.filter((i) => i.status === 'low' || i.status === 'out_of_stock'),
+    [items],
+  );
   const [alertOpen, setAlertOpen] = useState(false);
   const [poOpen, setPoOpen] = useState(false);
 
@@ -321,13 +288,7 @@ export function InventoryPage() {
           { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, dot: summary.reorderNeeded > 0 ? TONE_DOT.warning : '' },
           { label: t('metrics.pendingPOs'), value: summary.activePOs, dot: '' },
         ].map(({ label, value, dot }) => (
-          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
-              {label}
-            </p>
-            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
-          </div>
+          <MetricCard key={label} label={label} value={value} dot={dot} />
         ))}
       </section>
 
@@ -388,7 +349,7 @@ export function InventoryPage() {
           {poOpen && (
             <div className="space-y-2 border-t border-border/70 p-4">
               {purchaseOrders.map((po) => {
-                const { label: etaLabel, isOverdue: etaPast } = formatRelativeDate(po.expectedDelivery);
+                const { label: etaLabel, overdue: etaPast } = formatRelativeDate(po.expectedDelivery);
                 return (
                   <div key={po.id} className="flex items-center gap-4 text-sm">
                     <span className="font-medium shrink-0">{po.poNumber}</span>

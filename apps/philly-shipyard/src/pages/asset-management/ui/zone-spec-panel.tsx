@@ -1,40 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronLeft, MousePointerClick, X } from 'lucide-react';
-import type { ComponentStatus, CraneComponent } from '@crane/domain/asset';
+import type { CraneComponent } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
-import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
-
-const COMPONENT_STATUS_VARIANT: Record<ComponentStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  normal: 'success',
-  caution: 'warning',
-  warning: 'warning',
-  critical: 'destructive',
-  replace: 'destructive',
-};
-
-const COMPONENT_DOT: Record<ComponentStatus, 'normal' | 'warning' | 'critical'> = {
-  normal: 'normal',
-  caution: 'warning',
-  warning: 'warning',
-  critical: 'critical',
-  replace: 'critical',
-};
-
-/** 사용률 % (asset-detail lifePercent와 동일 규칙) */
-function usedPercent(component: CraneComponent): number {
-  if (component.expectedLifeHours === 0) return 0;
-  return Math.min(
-    100,
-    Math.round((component.currentHours / component.expectedLifeHours) * 100),
-  );
-}
-
-function lifeTone(usedPct: number): Tone {
-  return usedPct >= 90 ? 'critical' : usedPct >= 70 ? 'warning' : 'positive';
-}
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import {
+  COMPONENT_STATUS_DOT,
+  COMPONENT_STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
+import { usedLifePercent as usedPercent, lifeTone } from '../../../shared/lib/component-life';
 
 export interface ZoneClusterGroup {
   cluster: CraneComponent;
@@ -192,7 +168,7 @@ function ClusterGroup({
                 onClick={() => onSelectPart(part.id)}
                 className="flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-left transition-colors hover:bg-muted/40"
               >
-                <StatusDot status={COMPONENT_DOT[part.status]} />
+                <StatusDot status={COMPONENT_STATUS_DOT[part.status]} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{part.componentName}</p>
                   {part.partNumber && (
@@ -255,10 +231,10 @@ export function ZoneSpecPanel({
               className={cn(
                 'inline-flex cursor-pointer items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-all',
                 isActive
-                  ? 'bg-blue-500/15 text-blue-600 ring-1 ring-inset ring-blue-500/30 dark:text-blue-400'
+                  ? TONE_PILL_ACTIVE.info
                   : isHovered
                     ? 'bg-muted text-foreground'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
+                    : PILL_INACTIVE,
               )}
             >
               {t(`detail.zones.${key}`, { defaultValue: key })}

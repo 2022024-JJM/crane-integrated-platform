@@ -97,12 +97,15 @@ export function InspectionDetailPage() {
     setItemStates((prev) => {
       const current = prev[itemId];
       const next = nextJudgment(current.judgment);
+      // fail 전환 시 원본에 fail용 조치(stop_operation 등)가 있으면 유지 — 재토글로 소실 방지
+      const original = inspection?.checklistItems.find((i) => i.id === itemId)?.actionRequired;
+      const failAction = original && original !== 'none' ? original : 'repair_needed';
       return {
         ...prev,
         [itemId]: {
           ...current,
           judgment: next,
-          actionRequired: next === 'fail' ? 'repair_needed' : 'none',
+          actionRequired: next === 'fail' ? failAction : 'none',
         },
       };
     });
@@ -130,7 +133,7 @@ export function InspectionDetailPage() {
     if (!inspectionId) return;
     const ok = saveChecklist(inspectionId, collectPatches());
     if (!ok) {
-      toast.error(t('detail.toastSaved'));
+      toast.error(t('detail.toastSaveFailed', { defaultValue: 'Failed to save checklist' }));
       return;
     }
     setSaved(true);
@@ -142,7 +145,7 @@ export function InspectionDetailPage() {
     if (!inspectionId) return;
     const ok = submitInspection(inspectionId, collectPatches());
     if (!ok) {
-      toast.error(t('detail.toastSubmitted'));
+      toast.error(t('detail.toastSubmitFailed', { defaultValue: 'Failed to submit inspection' }));
       return;
     }
     toast.success(t('detail.toastSubmitted'), {

@@ -99,7 +99,9 @@
     "scheduledEndRequired": "종료 예정일을 입력해 주세요.",
     "scheduledDateRequired": "점검 예정일을 입력해 주세요.",
     "requesterRequired": "요청자를 입력해 주세요.",
-    "partsRequired": "부품을 하나 이상 추가해 주세요."
+    "partsRequired": "부품을 하나 이상 추가해 주세요.",
+    "endBeforeStart": "완료 예정일은 시작 예정일 이후여야 합니다.",
+    "formInvalid": "입력값을 확인해 주세요. 표시된 필드를 수정해야 합니다."
   },
   "toast": {
     "repairCreated": "수리 티켓 {{woNumber}}이(가) 생성되었습니다.",
@@ -111,5 +113,13 @@
     "inspection": "점검 티켓 생성",
     "parts": "부품 요청 제출",
     "cancel": "취소"
+  },
+  "preview": {
+    "typeLabel": {
+      "repair": "수리",
+      "inspection": "점검",
+      "parts": "부품 요청"
+    },
+    "itemsCount": "{{count}}개 품목"
   }
 }

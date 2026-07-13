@@ -13,14 +13,15 @@ import {
 import type { CraneType } from '@crane/domain/asset';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_FILL } from '../../../shared/ui/tone';
 import {
   computeFrontalView,
   computeFrontalViewFromObjects,
 } from '../lib/compute-frontal-view';
 import { classifyPointToZone } from '../lib/zone-hit';
 
-// 하이라이트는 info 톤(#3b82f6) — GltfModel alarmSeverity 'info'와 동일 계열
-const REGION_HIGHLIGHT_COLOR = '#3b82f6';
+// 하이라이트는 info 톤 — GltfModel alarmSeverity 'info'와 동일 계열
+const REGION_HIGHLIGHT_COLOR = TONE_FILL.info;
 
 interface Crane3dZoneViewerProps {
   craneType: CraneType;

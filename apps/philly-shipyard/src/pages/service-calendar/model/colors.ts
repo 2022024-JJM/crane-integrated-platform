@@ -1,66 +1,48 @@
 import type { CalendarEvent } from '@crane/features/calendar';
+import { TONE_DOT } from '../../../shared/ui/tone';
+import {
+  INSPECTION_STATUS_VARIANT,
+  REPAIR_PRIORITY_VARIANT,
+  REPAIR_STATUS_VARIANT,
+  type BadgeVariant,
+} from '../../../shared/ui/status-variants';
 
-type BadgeVariant = 'success' | 'warning' | 'destructive' | 'secondary';
+// 솔리드 칩(흰 텍스트 대비 필요) 전용 뉴트럴 — tone.ts의 반투명 neutral을 쓸 수 없는 유일한 예외
+const SOLID_NEUTRAL = 'bg-slate-500';
 
-// 점검 상태 색상 — 공용 톤 규칙(red/amber/emerald/blue 500)과 동일. 솔리드 칩은
-// 흰 텍스트 대비가 필요해 뉴트럴만 slate-500 고정값을 쓴다.
+// 점검 상태 색상 — TONE_DOT(red/amber/emerald 500)와 동일 스텝
 const INSPECTION_ACCENT: Record<string, string> = {
-  scheduled: 'bg-slate-500',
-  in_progress: 'bg-amber-500',
-  completed: 'bg-emerald-500',
-  overdue: 'bg-red-500',
-  cancelled: 'bg-slate-500',
+  scheduled: SOLID_NEUTRAL,
+  in_progress: TONE_DOT.warning,
+  completed: TONE_DOT.positive,
+  overdue: TONE_DOT.critical,
+  cancelled: SOLID_NEUTRAL,
 };
 
-const INSPECTION_BADGE: Record<string, BadgeVariant> = {
-  scheduled: 'secondary',
-  in_progress: 'warning',
-  completed: 'success',
-  overdue: 'destructive',
-  cancelled: 'secondary',
-};
-
-// 정비 우선순위 색상 — maintenance-page의 PRIORITY_VARIANT 기반
+// 정비 우선순위 색상 (이벤트 칩은 우선순위축으로 색을 쓴다)
 const REPAIR_ACCENT: Record<string, string> = {
-  emergency: 'bg-red-500',
-  high: 'bg-amber-500',
-  normal: 'bg-blue-500',
-  low: 'bg-slate-500',
-};
-
-const REPAIR_PRIORITY_BADGE: Record<string, BadgeVariant> = {
-  emergency: 'destructive',
-  high: 'warning',
-  normal: 'secondary',
-  low: 'secondary',
-};
-
-// 정비 상태별 뱃지 — maintenance-page COLUMN_CONFIG semantics
-const REPAIR_STATUS_BADGE: Record<string, BadgeVariant> = {
-  received: 'secondary',
-  waiting_parts: 'destructive',
-  in_progress: 'warning',
-  re_inspection: 'warning',
-  completed: 'success',
-  on_hold: 'secondary',
+  emergency: TONE_DOT.critical,
+  high: TONE_DOT.warning,
+  normal: TONE_DOT.info,
+  low: SOLID_NEUTRAL,
 };
 
 /** 이벤트 칩/바 배경색 (colorKey = 점검:status / 정비:priority) */
 export function eventAccent(event: CalendarEvent): string {
   const map = event.sourceType === 'inspection' ? INSPECTION_ACCENT : REPAIR_ACCENT;
-  return map[event.colorKey] ?? 'bg-slate-500';
+  return map[event.colorKey] ?? SOLID_NEUTRAL;
 }
 
-/** 실제 상태(status) 기준 뱃지 variant */
+/** 실제 상태(status) 기준 뱃지 variant — 페이지들과 동일한 공용 매핑 사용 */
 export function statusBadgeVariant(event: CalendarEvent): BadgeVariant {
-  const map =
-    event.sourceType === 'inspection' ? INSPECTION_BADGE : REPAIR_STATUS_BADGE;
+  const map: Record<string, BadgeVariant> =
+    event.sourceType === 'inspection' ? INSPECTION_STATUS_VARIANT : REPAIR_STATUS_VARIANT;
   return map[event.status] ?? 'secondary';
 }
 
 /** 정비 우선순위 뱃지 variant */
 export function priorityBadgeVariant(priority: string): BadgeVariant {
-  return REPAIR_PRIORITY_BADGE[priority] ?? 'secondary';
+  return (REPAIR_PRIORITY_VARIANT as Record<string, BadgeVariant>)[priority] ?? 'secondary';
 }
 
 /**

@@ -1,15 +1,18 @@
 import type { RepairWO } from '@crane/domain/maintenance';
 import type { InspectionWO } from '@crane/domain/inspection';
+import { parseLocalDateTime } from '../../../shared/lib/relative-date';
 
+// 날짜전용 문자열('YYYY-MM-DD')을 new Date()로 파싱하면 UTC 기준이 되어
+// 월·주 경계일 완료건이 오귀속된다 — 로컬 파서로 통일.
 function isSameMonth(iso: string | null | undefined, now: Date): boolean {
   if (!iso) return false;
-  const d = new Date(iso);
+  const d = parseLocalDateTime(iso);
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
 function isWithinDays(iso: string | null | undefined, now: Date, days: number): boolean {
   if (!iso) return false;
-  const t = new Date(iso).getTime();
+  const t = parseLocalDateTime(iso).getTime();
   const cutoff = now.getTime() - days * 24 * 60 * 60 * 1000;
   return t >= cutoff && t <= now.getTime();
 }

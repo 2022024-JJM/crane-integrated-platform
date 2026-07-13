@@ -49,14 +49,16 @@ export function useMaintenanceList() {
   const repairs = getAllRepairWOs().map((r) => localizeRepair(r, isKo));
   const summary = getMaintenanceSummary();
 
+  // 이동에 성공하면 전이된 상태를, 이동 불가면 null을 반환한다(호출측 토스트 판단용).
   const moveStatus = useCallback(
-    (id: string, direction: 'next' | 'prev') => {
+    (id: string, direction: 'next' | 'prev'): RepairStatus | null => {
       const wo = getAllRepairWOs().find((w) => w.id === id);
-      if (!wo) return;
+      if (!wo) return null;
       const nextStatus = direction === 'next' ? PIPELINE_NEXT[wo.status] : PIPELINE_PREV[wo.status];
-      if (!nextStatus) return;
+      if (!nextStatus) return null;
       updateRepairStatus(id, nextStatus);
       publish('repair', id);
+      return nextStatus;
     },
     [publish],
   );

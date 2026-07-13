@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from 'react';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_TOGGLE_ACTIVE } from '../../../shared/ui/tone';
+import { PRIORITY_TONE, type TicketPriority } from '../../../shared/ui/status-variants';
 
 // 폼 섹션 accent 색상은 폐기 — 헤더는 뉴트럴 하나로 통일한다. (호환용 타입만 유지)
 export type AccentColor = 'amber' | 'emerald' | 'blue' | 'sky';
@@ -139,15 +141,13 @@ export { selectClass, inputClass, textareaClass };
 
 type ToggleVariant = 'default' | 'priority';
 
-// 우선순위 선택 시에만 톤 틴트로 표시 — 셰이드 규칙: 틴트 500/15 · 텍스트 600(dark 400) · 테두리 500/40
-const PRIORITY_COLORS: Record<string, string> = {
-  emergency: 'border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400',
-  urgent:    'border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400',
-  high:      'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  normal:    'border-primary bg-primary text-primary-foreground',
-  low:       'border-border bg-muted text-foreground',
-  scheduled: 'border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-400',
-};
+// 우선순위 선택 시에만 톤 틴트로 표시 — tone.ts의 TONE_TOGGLE_ACTIVE 단일 소스.
+// normal은 톤 없음(null) → 기본 primary 스타일로 폴백.
+function priorityActiveClass(priority: string): string {
+  const tone = PRIORITY_TONE[priority as TicketPriority];
+  if (tone === undefined || tone === null) return 'border-primary bg-primary text-primary-foreground';
+  return TONE_TOGGLE_ACTIVE[tone];
+}
 
 export function ToggleGroup<T extends string>({
   value,
@@ -166,7 +166,7 @@ export function ToggleGroup<T extends string>({
         const isActive = value === opt.value;
         const activeClass =
           variant === 'priority'
-            ? PRIORITY_COLORS[opt.value] ?? 'border-primary bg-primary text-primary-foreground'
+            ? priorityActiveClass(opt.value)
             : 'border-primary bg-primary text-primary-foreground';
         const inactiveClass =
           'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground';

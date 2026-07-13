@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ import {
   type InspectionFieldsErrors,
 } from './inspection-fields';
 import { PartsFields, type PartsFieldsState, type PartsFieldsErrors } from './parts-fields';
+import { toLocalDateString } from '../../../shared/lib/relative-date';
 
 type TicketType = 'repair' | 'inspection' | 'parts';
 type AnyPriority = 'emergency' | 'urgent' | 'high' | 'normal' | 'low' | 'scheduled';
@@ -66,7 +67,7 @@ const ACCENT_BY_TYPE: Record<TicketType, AccentColor> = {
 };
 
 function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
-  const d = new Date().toISOString().slice(0, 10);
+  const d = toLocalDateString();
   return {
     craneId: prefill.craneId ?? '', craneName: '', siteId: '', siteName: '',
     priority: 'normal', performerType: 'internal', assignedTo: '',
@@ -111,6 +112,9 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
     ),
   );
   const [errors, setErrors] = useState<UnifiedErrors>({});
+  // 부품 행의 안정적 React key — index key는 중간 삭제 시 포커스/상태가 어긋난다
+  const [itemKeys, setItemKeys] = useState<string[]>([]);
+  const nextItemKey = useRef(0);
 
   // 프리필된 craneId로 크레인명/사이트 정보를 채운다 (cranes 로드 후 1회)
   useEffect(() => {
@@ -148,11 +152,13 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
 
   function addItem() {
     set('items', [...form.items, { partId: '', partName: '', qty: 1, unitPrice: 0 }]);
+    setItemKeys((keys) => [...keys, `row-${nextItemKey.current++}`]);
     setErrors((e) => ({ ...e, items: undefined }));
   }
 
   function removeItem(idx: number) {
     set('items', form.items.filter((_, i) => i !== idx));
+    setItemKeys((keys) => keys.filter((_, i) => i !== idx));
   }
 
   function updateItem(idx: number, partId: string) {
@@ -169,9 +175,11 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   }
 
   function updateQty(idx: number, qty: number) {
+    // 빈 입력(Number('') = NaN) 방어 — NaN이 draft로 흘러가지 않게 1로 보정
+    const safeQty = Number.isFinite(qty) ? Math.max(1, Math.round(qty)) : 1;
     set(
       'items',
-      form.items.map((item, i) => (i === idx ? { ...item, qty: Math.max(1, qty) } : item)),
+      form.items.map((item, i) => (i === idx ? { ...item, qty: safeQty } : item)),
     );
   }
 
@@ -185,6 +193,12 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       if (!form.failureDescription.trim()) e.failureDescription = t('validation.descriptionRequired');
       if (!form.scheduledStart) e.scheduledStart = t('validation.scheduledStartRequired');
       if (!form.scheduledEnd) e.scheduledEnd = t('validation.scheduledEndRequired');
+      // 'YYYY-MM-DD'는 사전순 비교 = 날짜 비교
+      if (form.scheduledStart && form.scheduledEnd && form.scheduledEnd < form.scheduledStart) {
+        e.scheduledEnd = t('validation.endBeforeStart', {
+          defaultValue: 'Scheduled End must be on or after Scheduled Start.',
+        });
+      }
     }
     if (type === 'inspection') {
       if (!form.scheduledDate) e.scheduledDate = t('validation.scheduledDateRequired');
@@ -203,7 +217,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) {
-      toast.error(t('validation.craneRequired'), { description: t('description') });
+      toast.error(t('validation.formInvalid', { defaultValue: 'Please fix the highlighted fields.' }));
       return;
     }
 
@@ -348,6 +362,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
             accent={accent}
             state={form}
             errors={errors}
+            itemKeys={itemKeys}
             onRequesterChange={(v) => set('requester', v)}
             onNoteChange={(v) => set('note', v)}
             onAddItem={addItem}

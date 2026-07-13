@@ -1,19 +1,20 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@crane/features/calendar';
-import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { cn } from '@crane/core/lib/utils';
 import { isSameDay, minutesFromMidnight, startOfDay } from '../model/date-utils';
 import { eventAccent } from '../model/colors';
-import { formatTime, formatWeekdayShort } from '../model/format';
+import { formatHourLabel, formatTime, formatWeekdayShort, gmtOffsetLabel } from '../model/format';
 import { EventChip } from './event-chip';
 import { EventPopoverContent } from './event-popover';
 import { Popover, PopoverPopup, PopoverTrigger } from '@crane/ui/molecules/popover';
 
-const START_HOUR = 6;
-const END_HOUR = 21; // 06:00 ~ 21:00 실용 범위
+const START_HOUR = 0;
+const END_HOUR = 24; // 구글 캘린더처럼 24시간 전체 — 세로 스크롤로 탐색
 const ROW_H = 48; // 시간당 px
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+// 오늘이 안 보이는 주/일에서의 초기 스크롤 기준 시각 (업무 시작 전 아침)
+const DEFAULT_SCROLL_HOUR = 7;
 
 /** 여러 날에 걸치는 이벤트 여부 (시작·종료 캘린더 날짜가 다름) */
 function isMultiDay(e: CalendarEvent): boolean {
@@ -140,6 +141,21 @@ export function TimeGrid({
   const { t, i18n } = useTranslation('calendar');
   const language = i18n.language;
   const now = new Date();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 최초 마운트 시 초기 스크롤 — 오늘이 보이면 현재 시각, 아니면 아침(07:00) 부근.
+  // (구글 캘린더 동작. 주/일 이동 시에는 스크롤 위치를 유지한다)
+  useEffect(() => {
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const current = new Date();
+    const hasToday = days.some((d) => isSameDay(d, current));
+    const targetMin = hasToday ? minutesFromMidnight(current) : DEFAULT_SCROLL_HOUR * 60;
+    // 기준 시각이 뷰포트 상단 1/3 지점에 오도록
+    viewport.scrollTop = Math.max(0, (targetMin / 60) * ROW_H - viewport.clientHeight / 3);
+    // 마운트 시 1회만 — 날짜 이동 시 재스크롤하지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const eventsByDay = useMemo(() => {
     return days.map((day) => {
@@ -152,14 +168,17 @@ export function TimeGrid({
     });
   }, [days, events]);
 
-  const gridCols = { gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` };
+  const gridCols = { gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` };
   const hasAllDay = eventsByDay.some((list) => list.some(isStripEvent));
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border/80">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/80">
       {/* 요일 헤더 */}
       <div className="grid border-b border-border/60 bg-muted/40" style={gridCols}>
-        <div className="border-r border-border/40" />
+        {/* 코너 셀 — 구글 캘린더처럼 GMT 오프셋 표시 */}
+        <div className="flex items-end justify-end border-r border-border/40 px-1 pb-1">
+          <span className="text-[9px] text-muted-foreground/70">{gmtOffsetLabel()}</span>
+        </div>
         {days.map((day) => {
           const isToday = isSameDay(day, now);
           return (
@@ -199,10 +218,11 @@ export function TimeGrid({
         </div>
       )}
 
-      {/* 시간 그리드 */}
-      <ScrollArea className="flex-1">
+      {/* 시간 그리드 — 네이티브 세로 스크롤 (base-ui ScrollArea는 flex 최소높이 계산과
+          충돌해 페이지 전체가 늘어나므로 사용하지 않는다) */}
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="grid" style={gridCols}>
-          {/* 시간 눈금 */}
+          {/* 시간 눈금 — 구글 캘린더처럼 자정(0시) 라벨은 생략 */}
           <div className="border-r border-border/40">
             {HOURS.map((h) => (
               <div
@@ -210,9 +230,11 @@ export function TimeGrid({
                 className="relative border-b border-border/30 text-right"
                 style={{ height: ROW_H }}
               >
-                <span className="absolute -top-2 right-1.5 text-[10px] tabular-nums text-muted-foreground">
-                  {String(h).padStart(2, '0')}:00
-                </span>
+                {h > 0 && (
+                  <span className="absolute -top-2 right-1.5 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
+                    {formatHourLabel(h, language)}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -226,7 +248,7 @@ export function TimeGrid({
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

@@ -1,35 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ChevronRight, Calendar, User, ClipboardCheck, Plus } from 'lucide-react';
+import { ChevronRight, Calendar, User, ClipboardCheck, Plus } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import type { InspectionStatus, InspectionType, InspectionWO } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
-import { TONE_DOT, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
-
-const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  scheduled: 'secondary',
-  in_progress: 'warning',
-  completed: 'success',
-  overdue: 'destructive',
-  cancelled: 'secondary',
-};
-
-const STATUS_ACCENT: Record<InspectionStatus, string> = {
-  scheduled: TONE_DOT.neutral,
-  in_progress: TONE_DOT.warning,
-  completed: TONE_DOT.positive,
-  overdue: TONE_DOT.critical,
-  cancelled: TONE_DOT.neutral,
-};
-
-const RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
-  pass: 'success',
-  fail: 'destructive',
-  conditional: 'warning',
-};
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import {
+  INSPECTION_RESULT_VARIANT as RESULT_VARIANT,
+  INSPECTION_STATUS_TONE,
+  INSPECTION_STATUS_VARIANT as STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
+import { MetricCard } from '../../../shared/ui/metric-card';
+import { AlertBanner } from '../../../shared/ui/alert-banner';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
 
 // 컬럼: 상태바 · WO/크레인 · 유형 · 예정일 · 담당자 · 진행률 · 상태 · 결과/화살표
 const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minmax(120px,1fr) 100px 100px';
@@ -37,22 +23,11 @@ const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minma
 type FilterStatus = 'all' | InspectionStatus;
 type FilterType = 'all' | InspectionType;
 
-function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return { label: 'D-Day', isOverdue: false };
-  if (diff > 0) return { label: `D-${diff}`, isOverdue: false };
-  return { label: `D+${Math.abs(diff)}`, isOverdue: true };
-}
-
 function InspectionRow({ wo }: { wo: InspectionWO }) {
   const { t } = useTranslation('inspection');
   const completedItems = wo.checklistItems.filter((i) => i.judgment !== null).length;
   const totalItems = wo.checklistItems.length;
-  const { label: dateLabel, isOverdue: dateOverdue } = formatRelativeDate(wo.scheduledDate);
+  const { label: dateLabel, overdue: dateOverdue } = formatRelativeDate(wo.scheduledDate);
   const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   return (
@@ -62,7 +37,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       style={{ gridTemplateColumns: GRID_TEMPLATE }}
     >
       {/* 상태 accent 바 */}
-      <div className={`h-11 ${STATUS_ACCENT[wo.status]}`} />
+      <div className={`h-11 ${TONE_DOT[INSPECTION_STATUS_TONE[wo.status]]}`} />
 
       {/* WO / 크레인 */}
       <div className="min-w-0 py-2.5">
@@ -174,12 +149,10 @@ export function InspectionPage() {
 
       {/* 지연 점검 배너 */}
       {overdueCount > 0 && (
-        <div className={cn('rounded border px-5 py-3 flex items-center gap-3', TONE_SURFACE.critical)}>
-          <AlertCircle className={cn('h-4 w-4 shrink-0', TONE_TEXT.critical)} />
-          <p className={cn('text-sm font-medium', TONE_TEXT.critical)}>
-            {t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
-          </p>
-        </div>
+        <AlertBanner
+          tone="critical"
+          title={t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
+        />
       )}
 
       {/* 메트릭 */}
@@ -194,13 +167,7 @@ export function InspectionPage() {
             dot: summary.completionRate < 80 ? TONE_DOT.warning : '',
           },
         ].map(({ label, value, dot }) => (
-          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
-              {label}
-            </p>
-            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
-          </div>
+          <MetricCard key={label} label={label} value={value} dot={dot} />
         ))}
       </section>
 
@@ -211,9 +178,10 @@ export function InspectionPage() {
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
-                filterType === type ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
+                filterType === type ? TONE_PILL_ACTIVE.neutral : PILL_INACTIVE,
+              )}
             >
               {type === 'all' ? t('filter.allTypes') : t(`type.${type}`)}
             </button>
@@ -224,9 +192,12 @@ export function InspectionPage() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
-                filterStatus === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
+                filterStatus === s
+                  ? TONE_PILL_ACTIVE[s === 'all' ? 'neutral' : INSPECTION_STATUS_TONE[s]]
+                  : PILL_INACTIVE,
+              )}
             >
               {s === 'all' ? t('filter.allStatus') : t(`status.${s}`)}
             </button>

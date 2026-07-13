@@ -99,7 +99,9 @@
     "scheduledEndRequired": "Finis dispositus necessarius est.",
     "scheduledDateRequired": "Dies disposita necessaria est.",
     "requesterRequired": "Petitor necessarius est.",
-    "partsRequired": "Adde saltem unam partem."
+    "partsRequired": "Adde saltem unam partem.",
+    "endBeforeStart": "Finis destinatus post initium destinatum esse debet.",
+    "formInvalid": "Campos notatos corrige, quaeso."
   },
   "toast": {
     "repairCreated": "Tessera refectionis {{woNumber}} creata est.",
@@ -111,5 +113,13 @@
     "inspection": "Crea Tesseram Inspectionis",
     "parts": "Mitte Petitionem Partium",
     "cancel": "Cancella"
+  },
+  "preview": {
+    "typeLabel": {
+      "repair": "REPARATIO",
+      "inspection": "INSPECTIO",
+      "parts": "PARTIUM PETITIO"
+    },
+    "itemsCount": "{{count}} res"
   }
 }

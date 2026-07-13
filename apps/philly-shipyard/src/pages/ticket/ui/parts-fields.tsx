@@ -23,6 +23,8 @@ interface PartsFieldsProps {
   accent: AccentColor;
   state: PartsFieldsState;
   errors: PartsFieldsErrors;
+  /** items와 1:1 대응하는 안정적 행 key */
+  itemKeys: string[];
   onRequesterChange: (v: string) => void;
   onNoteChange: (v: string) => void;
   onAddItem: () => void;
@@ -38,6 +40,7 @@ export function PartsFields({
   accent,
   state,
   errors,
+  itemKeys,
   onRequesterChange,
   onNoteChange,
   onAddItem,
@@ -95,7 +98,7 @@ export function PartsFields({
           )}
           {state.items.map((item, idx) => (
             <div
-              key={idx}
+              key={itemKeys[idx] ?? idx}
               className="group flex items-center gap-2 rounded-lg border border-border bg-background p-2 transition-colors hover:border-primary/40"
             >
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-bold text-muted-foreground">

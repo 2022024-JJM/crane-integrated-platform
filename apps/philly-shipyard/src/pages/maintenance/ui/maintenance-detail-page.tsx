@@ -3,25 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMaintenanceDetail } from '@crane/features/maintenance';
-import type { RepairPriority, RepairStatus } from '@crane/domain/maintenance';
 import { Badge } from '@crane/ui/atoms/badge';
-
-const PRIORITY_VARIANT: Record<RepairPriority, 'destructive' | 'warning' | 'secondary'> = {
-  emergency: 'destructive',
-  high: 'warning',
-  normal: 'secondary',
-  low: 'secondary',
-};
-
-// 리스트/칸반과 동일한 상태 색상 semantics (asset-detail와도 일치)
-const STATUS_VARIANT: Record<RepairStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  received: 'secondary',
-  waiting_parts: 'destructive',
-  in_progress: 'warning',
-  re_inspection: 'warning',
-  completed: 'success',
-  on_hold: 'secondary',
-};
+import {
+  REPAIR_PRIORITY_VARIANT as PRIORITY_VARIANT,
+  REPAIR_STATUS_VARIANT as STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
 
 export function MaintenanceDetailPage() {
   const { repairId } = useParams<{ repairId: string }>();

@@ -12,6 +12,22 @@ export function formatTime(d: Date, language: string): string {
   }).format(d);
 }
 
+/** 타임그리드 시간 눈금 라벨 — 구글 캘린더식 '오전 1시' / '1 AM' */
+export function formatHourLabel(hour: number, language: string): string {
+  return new Intl.DateTimeFormat(localeOf(language), { hour: 'numeric' }).format(
+    new Date(2000, 0, 1, hour),
+  );
+}
+
+/** 현재 타임존의 GMT 오프셋 라벨 — 'GMT+09' 형식 (타임그리드 코너 셀용) */
+export function gmtOffsetLabel(d: Date = new Date()): string {
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const hours = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, '0');
+  const mins = Math.abs(offsetMin) % 60;
+  return `GMT${sign}${hours}${mins > 0 ? `:${String(mins).padStart(2, '0')}` : ''}`;
+}
+
 export function formatMonthTitle(d: Date, language: string): string {
   return new Intl.DateTimeFormat(localeOf(language), {
     year: 'numeric',

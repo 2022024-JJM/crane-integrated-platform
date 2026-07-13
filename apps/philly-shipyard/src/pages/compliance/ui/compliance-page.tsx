@@ -1,29 +1,17 @@
-import { AlertTriangle, AlertCircle, FileDown } from 'lucide-react';
+import { AlertTriangle, FileDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useComplianceSummary } from '@crane/features/compliance';
-import type { CertStatus } from '@crane/domain/compliance';
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
-import { TONE_DOT, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
+import { TONE_BORDER_ACCENT, TONE_DOT, TONE_TEXT } from '../../../shared/ui/tone';
+import { CERT_STATUS_VARIANT } from '../../../shared/ui/status-variants';
+import { MetricCard } from '../../../shared/ui/metric-card';
+import { AlertBanner } from '../../../shared/ui/alert-banner';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
 
-const CERT_STATUS_VARIANT: Record<CertStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  valid: 'success',
-  expiry_soon: 'warning',
-  expired: 'destructive',
-  renewing: 'secondary',
-};
-
-function formatRelativeDate(dateStr: string): { label: string; diff: number } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return { label: 'D-Day', diff };
-  if (diff > 0) return { label: `D-${diff}`, diff };
-  return { label: `D+${Math.abs(diff)}`, diff };
-}
+/** 만료 임박 강조 기준 일수 */
+const EXPIRY_SOON_DAYS = 30;
 
 export function CompliancePage() {
   const { certifications, oshaReports, summary } = useComplianceSummary();
@@ -63,23 +51,13 @@ export function CompliancePage() {
             dot: summary.openFindings > 0 ? TONE_DOT.warning : '',
           },
         ].map(({ label, value, dot }) => (
-          <div key={label} className="rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {dot && <span className={cn('size-1.5 rounded-full', dot)} />}
-              {label}
-            </p>
-            <p className="text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 text-foreground">{value}</p>
-          </div>
+          <MetricCard key={label} label={label} value={value} dot={dot} />
         ))}
       </section>
 
       {/* 만료된 인증서 배너 (red) */}
       {expiredCerts.length > 0 && (
-        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.critical)}>
-          <p className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.critical)}>
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {t('certAlert.expiredTitle', { count: expiredCerts.length })}
-          </p>
+        <AlertBanner tone="critical" title={t('certAlert.expiredTitle', { count: expiredCerts.length })}>
           {expiredCerts.map((cert) => (
             <div key={cert.id} className="flex items-center gap-3 text-sm">
               <Badge variant="destructive" className="shrink-0">
@@ -94,16 +72,16 @@ export function CompliancePage() {
               </span>
             </div>
           ))}
-        </div>
+        </AlertBanner>
       )}
 
       {/* 만료 임박 인증서 배너 (amber) */}
       {expirySoonCerts.length > 0 && (
-        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.warning)}>
-          <p className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.warning)}>
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            {t('certAlert.title', { count: expirySoonCerts.length })}
-          </p>
+        <AlertBanner
+          tone="warning"
+          icon={AlertTriangle}
+          title={t('certAlert.title', { count: expirySoonCerts.length })}
+        >
           {expirySoonCerts.map((cert) => {
             const { label: dateLabel, diff } = formatRelativeDate(cert.expiryDate);
             return (
@@ -121,7 +99,7 @@ export function CompliancePage() {
               </div>
             );
           })}
-        </div>
+        </AlertBanner>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -146,7 +124,7 @@ export function CompliancePage() {
                     <Badge variant={CERT_STATUS_VARIANT[cert.status]} className="mb-1">
                       {t(`certifications.status.${cert.status}`)}
                     </Badge>
-                    <p className={cn('text-xs font-semibold tabular-nums', isExpired ? TONE_TEXT.critical : diff <= 30 ? TONE_TEXT.warning : 'text-muted-foreground')}>
+                    <p className={cn('text-xs font-semibold tabular-nums', isExpired ? TONE_TEXT.critical : diff <= EXPIRY_SOON_DAYS ? TONE_TEXT.warning : 'text-muted-foreground')}>
                       {isExpired ? t('certifications.expired') : dateLabel}
                     </p>
                     <p className="text-[10px] text-muted-foreground">{cert.expiryDate}</p>
@@ -169,9 +147,10 @@ export function CompliancePage() {
               return (
                 <div
                   key={report.id}
-                  className={`flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0 ${
-                    isConditional ? 'border-l-2 border-l-amber-500/50 pl-3 -ml-3' : ''
-                  }`}
+                  className={cn(
+                    'flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0',
+                    isConditional && cn('border-l-2 pl-3 -ml-3', TONE_BORDER_ACCENT.warning),
+                  )}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{report.reportNumber}</p>
