@@ -10,6 +10,7 @@ import { RealtimeMonitoringView } from './realtime-monitoring-view';
 import { ReplayMonitoringView } from './replay-monitoring-view';
 import { VisionMonitoringView } from './vision-monitoring-view';
 import { VISION_CHANNELS } from './vision/types';
+import { CabinMonitoringView } from './cabin-monitoring-view';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_CRANE_ID = 'C_171';
@@ -71,6 +72,9 @@ export function GoliathWorkPage() {
         <RealtimeMonitoringView regionId={regionId} />
       )}
       {subRoute === 'vision' && <VisionMonitoringView regionId={regionId} />}
+      {subRoute === 'cabin-monitoring' && (
+        <CabinMonitoringView regionId={regionId} />
+      )}
       {subRoute === '3d-viewer-edit' && (
         <SceneObjectsEditPage
           regionId={regionId}
@@ -95,12 +99,8 @@ export function GoliathWorkPage() {
           }
         />
       )}
-      {subRoute === 'alarm-history' && (
-        <AlarmHistoryView regionId={regionId} />
-      )}
-      {subRoute === '3d-replay' && (
-        <ReplayMonitoringView regionId={regionId} />
-      )}
+      {subRoute === 'alarm-history' && <AlarmHistoryView regionId={regionId} />}
+      {subRoute === '3d-replay' && <ReplayMonitoringView regionId={regionId} />}
     </div>
   );
 }
