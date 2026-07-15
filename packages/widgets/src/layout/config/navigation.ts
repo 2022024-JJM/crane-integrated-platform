@@ -22,6 +22,7 @@ import {
   MonitorCog,
   Camera,
   CalendarDays,
+  Cctv,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -33,7 +34,7 @@ const defaultSystemGroup: NavGroup = {
   items: [],
 };
 
-function getOverviewGroup(_role: UserRole): NavGroup {
+function getOverviewGroup(): NavGroup {
   const items = [
     {
       label: i18n.t('common:nav.dashboard'),
@@ -159,8 +160,17 @@ function buildGoliathWorkGroup(title: string, base: string): NavGroup {
     path: `${base}/vision`,
     icon: Camera,
   };
-  // Insert Vision right after Real-time 3D Monitoring (index 0).
-  const items = [baseGroup.items[0], visionItem, ...baseGroup.items.slice(1)];
+  const cabinMonitoringItem = {
+    label: i18n.t('common:nav.cabinMonitoring'),
+    path: `${base}/cabin-monitoring`,
+    icon: Cctv,
+  };
+  const items = [
+    baseGroup.items[0],
+    visionItem,
+    cabinMonitoringItem,
+    ...baseGroup.items.slice(1),
+  ];
   return { ...baseGroup, items };
 }
 
@@ -292,7 +302,7 @@ export function getNavigationConfig(
 
   // 모든 role: Overview(Dashboard) + Monitoring(3개) + work systemGroup
   // MRO 그룹은 'mro' 전용 (위에서 단축 반환)
-  groups.push(getOverviewGroup(role));
+  groups.push(getOverviewGroup());
   groups.push(getMonitoringGroup());
   groups.push(systemGroup);
 
@@ -300,7 +310,7 @@ export function getNavigationConfig(
 }
 
 export const navigationConfig: NavGroup[] = [
-  getOverviewGroup('ocean'),
+  getOverviewGroup(),
   getMonitoringGroup(),
   defaultSystemGroup,
   getMroGroup(),
