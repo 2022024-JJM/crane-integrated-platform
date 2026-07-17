@@ -6,7 +6,15 @@ import {
   type MessageData,
   type SubscriptionId,
 } from '@foxglove/ws-protocol';
+import {
+  GizmoHelper,
+  GizmoViewport,
+  Html,
+  OrbitControls,
+} from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
 
 const BRIDGE_SUBPROTOCOL = 'foxglove.sdk.v1';
 const TOPICS = {
@@ -16,6 +24,12 @@ const TOPICS = {
   lidarPoints: '/lidar/points_preprocessed',
   alarms: '/monitoring/alarms',
 } as const;
+
+const LIDAR_VIEW = {
+  range: 50,
+  fov: (Math.PI * 140) / 180,
+  initialRange: 18,
+};
 
 type ConnectionState = 'connecting' | 'connected' | 'closed' | 'error';
 
@@ -325,17 +339,34 @@ function LidarCanvas({
   pointCloudLabel: string;
   points: RosVector3[];
 }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    drawLidar(canvas, points, markers);
-  }, [markers, points]);
+  const camera = cameraForScene(markers, points);
 
   return (
     <div className="relative min-h-0 overflow-hidden border border-zinc-800 bg-[#080d0b]">
-      <canvas ref={canvasRef} className="h-full w-full" />
+      <Canvas
+        orthographic
+        camera={{
+          position: [0, camera.height, 0],
+          rotation: [-Math.PI / 2, 0, 0],
+          up: [0, 0, 1],
+          zoom: camera.zoom,
+        }}
+      >
+        <FovGuide />
+        <LidarOrigin />
+        <PointCloud points={points} />
+        <OrbitControls makeDefault enableDamping={false} target={[0, 0, 0]} />
+        <GizmoHelper alignment="bottom-right" margin={[54, 54]}>
+          <GizmoViewport
+            axisColors={['#ff5c5c', '#23d77a', '#5c8dff']}
+            labels={['Y', 'Z', 'X']}
+            labelColor="#f7fffb"
+          />
+        </GizmoHelper>
+        {markers.map((marker) => (
+          <RoiBox key={marker.id} marker={marker} />
+        ))}
+      </Canvas>
       <span className="absolute top-3 left-3 border border-zinc-700 bg-black/70 px-2 py-1 text-xs font-bold text-zinc-300">
         PCD {pointCloudLabel} · {points.length} pts
       </span>
@@ -346,6 +377,176 @@ function LidarCanvas({
       ) : null}
     </div>
   );
+}
+
+function FovGuide() {
+  const geometries = useMemo(() => {
+    const edge = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.01, 0),
+      guidePoint(-LIDAR_VIEW.fov / 2, LIDAR_VIEW.range),
+      new THREE.Vector3(0, 0.01, 0),
+      guidePoint(LIDAR_VIEW.fov / 2, LIDAR_VIEW.range),
+    ]);
+    const rings = [10, 20, 30, 40, 50].map((range) =>
+      new THREE.BufferGeometry().setFromPoints(arcPoints(range)),
+    );
+    return { edge, rings };
+  }, []);
+
+  return (
+    <group>
+      <lineSegments geometry={geometries.edge}>
+        <lineBasicMaterial color="#4fa087" transparent opacity={0.62} />
+      </lineSegments>
+      {geometries.rings.map((geometry, index) => (
+        <group key={index}>
+          <lineSegments geometry={geometry}>
+            <lineBasicMaterial color="#2f6f62" transparent opacity={0.55} />
+          </lineSegments>
+          <Html position={guidePoint(0, (index + 1) * 10)} center>
+            <span className="border border-emerald-900/80 bg-black/70 px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-emerald-100">
+              {(index + 1) * 10}m
+            </span>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function LidarOrigin() {
+  const heading = useMemo(
+    () =>
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0.12, 0),
+        new THREE.Vector3(0, 0.12, 0.55),
+      ]),
+    [],
+  );
+
+  return (
+    <group>
+      <mesh position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[0.14, 0.14, 0.16, 24]} />
+        <meshBasicMaterial color="#f7fffb" />
+      </mesh>
+      <lineSegments geometry={heading}>
+        <lineBasicMaterial color="#f7fffb" />
+      </lineSegments>
+    </group>
+  );
+}
+
+function PointCloud({ points }: { points: RosVector3[] }) {
+  const geometry = useMemo(() => {
+    const maxPoints = 12000;
+    // ponytail: canvas cap only; raise it when profiling says the browser can afford more.
+    const step = Math.max(1, Math.ceil(points.length / maxPoints));
+    const positions = new Float32Array(Math.ceil(points.length / step) * 3);
+    let offset = 0;
+
+    for (let i = 0; i < points.length; i += step) {
+      const [sceneX, sceneY, sceneZ] = rosToScenePoint(points[i]);
+      positions[offset] = sceneX;
+      positions[offset + 1] = sceneY;
+      positions[offset + 2] = sceneZ;
+      offset += 3;
+    }
+
+    return new THREE.BufferGeometry().setAttribute(
+      'position',
+      new THREE.BufferAttribute(positions, 3),
+    );
+  }, [points]);
+
+  return (
+    <points geometry={geometry}>
+      <pointsMaterial
+        color="#f2d06b"
+        depthTest={false}
+        size={2}
+        sizeAttenuation={false}
+      />
+    </points>
+  );
+}
+
+function guidePoint(angle: number, range: number) {
+  return new THREE.Vector3(
+    Math.sin(angle) * range,
+    0.01,
+    Math.cos(angle) * range,
+  );
+}
+
+function arcPoints(range: number) {
+  const points: THREE.Vector3[] = [];
+  const segments = 40;
+  let previous = guidePoint(-LIDAR_VIEW.fov / 2, range);
+  for (let i = 1; i <= segments; i += 1) {
+    const angle = -LIDAR_VIEW.fov / 2 + (LIDAR_VIEW.fov * i) / segments;
+    const current = guidePoint(angle, range);
+    points.push(previous, current);
+    previous = current;
+  }
+  return points;
+}
+
+function RoiBox({ marker }: { marker: RoiMarker }) {
+  const { position } = marker.pose;
+  const { scale } = marker;
+  const { x: scaleX, y: scaleY, z: scaleZ } = scale;
+  const geometry = useMemo(() => {
+    const box = new THREE.BoxGeometry(
+      ...rosSizeToSceneSize({ x: scaleX, y: scaleY, z: scaleZ }),
+    );
+    return new THREE.EdgesGeometry(box);
+  }, [scaleX, scaleY, scaleZ]);
+  const color = useMemo(
+    () => new THREE.Color(marker.color.r, marker.color.g, marker.color.b),
+    [marker.color.b, marker.color.g, marker.color.r],
+  );
+
+  return (
+    <group position={rosToScenePoint(position)}>
+      <lineSegments geometry={geometry}>
+        <lineBasicMaterial color={color} />
+      </lineSegments>
+      <Html position={[0, scaleZ / 2 + 0.12, 0]} center>
+        <span className="border border-zinc-600 bg-black/75 px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-zinc-100">
+          x {formatMeter(position.x - scaleX / 2)}-
+          {formatMeter(position.x + scaleX / 2)}m · 폭 {formatMeter(scaleY)}m
+        </span>
+      </Html>
+    </group>
+  );
+}
+
+function cameraForScene(markers: RoiMarker[], points: RosVector3[]) {
+  const range =
+    markers.length === 0 && points.length === 0 ? LIDAR_VIEW.initialRange : 1;
+  let minX = -Math.sin(LIDAR_VIEW.fov / 2) * range;
+  let maxX = Math.sin(LIDAR_VIEW.fov / 2) * range;
+  let minZ = 0;
+  let maxZ = range;
+
+  for (const marker of markers) {
+    const { position } = marker.pose;
+    const { scale } = marker;
+    minX = Math.min(minX, position.y - scale.y / 2);
+    maxX = Math.max(maxX, position.y + scale.y / 2);
+    minZ = Math.min(minZ, position.x - scale.x / 2);
+    maxZ = Math.max(maxZ, position.x + scale.x / 2);
+  }
+
+  const width = Math.max(maxX - minX, maxZ - minZ, 1);
+
+  return {
+    height: 10,
+    x: (minX + maxX) / 2,
+    z: (minZ + maxZ) / 2,
+    zoom: 110 / width,
+  };
 }
 
 function PanelHead({
@@ -566,68 +767,16 @@ function drawImage(canvas: HTMLCanvasElement | null, image: RosImage) {
   context.putImageData(new ImageData(rgba, image.width, image.height), 0, 0);
 }
 
-function drawLidar(
-  canvas: HTMLCanvasElement,
-  points: RosVector3[],
-  markers: RoiMarker[],
-) {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, rect.width, rect.height);
-  ctx.fillStyle = '#080d0b';
-  ctx.fillRect(0, 0, rect.width, rect.height);
-
-  const size = Math.min(rect.width, rect.height);
-  const centerX = rect.width / 2;
-  const originY = rect.height * 0.88;
-  const scale = size / 60;
-
-  ctx.strokeStyle = 'rgba(79, 160, 135, 0.55)';
-  ctx.lineWidth = 1;
-  for (const range of [10, 20, 30, 40, 50]) {
-    ctx.beginPath();
-    ctx.arc(centerX, originY, range * scale, Math.PI * 1.2, Math.PI * 1.8);
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = '#f2d06b';
-  for (
-    let i = 0;
-    i < points.length;
-    i += Math.max(1, Math.ceil(points.length / 12000))
-  ) {
-    const [x, y] = rosToCanvas(points[i], centerX, originY, scale);
-    ctx.fillRect(x, y, 1.5, 1.5);
-  }
-
-  for (const marker of markers) {
-    const [x, y] = rosToCanvas(marker.pose.position, centerX, originY, scale);
-    const w = marker.scale.y * scale;
-    const h = marker.scale.x * scale;
-    ctx.strokeStyle = `rgba(${marker.color.r * 255}, ${marker.color.g * 255}, ${marker.color.b * 255}, ${Math.max(marker.color.a, 0.55)})`;
-    ctx.strokeRect(x - w / 2, y - h / 2, w, h);
-  }
-
-  ctx.fillStyle = '#f7fffb';
-  ctx.beginPath();
-  ctx.arc(centerX, originY, 5, 0, Math.PI * 2);
-  ctx.fill();
+function rosToScenePoint(point: RosVector3): [number, number, number] {
+  return [point.y, point.z, point.x];
 }
 
-function rosToCanvas(
-  point: RosVector3,
-  centerX: number,
-  originY: number,
-  scale: number,
-) {
-  return [centerX + point.y * scale, originY - point.x * scale];
+function rosSizeToSceneSize(size: RosVector3): [number, number, number] {
+  return [size.y, size.z, size.x];
+}
+
+function formatMeter(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 function pointCloudToPoints(cloud: RosPointCloud2) {
