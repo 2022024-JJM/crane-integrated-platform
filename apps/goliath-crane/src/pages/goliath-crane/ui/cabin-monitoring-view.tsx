@@ -144,6 +144,12 @@ function CabinMonitoringViewContent() {
     data: null,
     receivedAt: null,
   });
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const ws = new WebSocket(bridgeUrl, [BRIDGE_SUBPROTOCOL]);
@@ -190,33 +196,39 @@ function CabinMonitoringViewContent() {
   const points = lidarPoints.data ?? [];
 
   return (
-    <main className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-3 bg-zinc-950 p-4 text-zinc-100">
-      <header className="flex min-h-20 items-center justify-between gap-4 border border-zinc-700 bg-zinc-900 p-4">
+    <main className="bg-background text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-4 p-4">
+      <header className="flex items-center justify-between gap-4 border-b pb-3">
         <div>
-          <p className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
-            Crane cabin monitoring
+          <p className="text-muted-foreground font-mono text-[11px] font-semibold tracking-[0.2em] uppercase">
+            Goliath Crane GC-04 · Cabin Watch
           </p>
-          <h1 className="text-3xl font-black">Cabin Watch</h1>
+          <h1 className="text-xl font-black tracking-tight">캐빈 안전 감시</h1>
         </div>
-        <ConnectionBadge connection={connection} url={bridgeUrl} />
+        <div className="flex items-center gap-3">
+          <time className="font-mono text-lg font-bold tracking-tight tabular-nums">
+            {timeLabel(now)}
+          </time>
+          <ConnectionBadge connection={connection} url={bridgeUrl} />
+        </div>
       </header>
 
       <section
-        className="grid min-h-0 grid-cols-2 gap-3 max-lg:grid-cols-1"
+        className="grid min-h-0 grid-cols-2 gap-4 max-lg:grid-cols-1"
         aria-label="실시간 모니터링"
       >
         <CameraPanel
           canvasRef={canvasRef}
           hasImage={imageReceivedAt != null}
-          receivedLabel={timeLabel(imageReceivedAt)}
+          now={now}
+          receivedAt={imageReceivedAt}
           topic={TOPICS.camera}
         />
         <LidarPanel
           markers={roiMarkers}
+          now={now}
           pointCloudLabel={timeLabel(lidarPoints.receivedAt)}
           points={points}
-          received={lidar.receivedAt != null}
-          receivedLabel={timeLabel(lidar.receivedAt)}
+          receivedAt={lidar.receivedAt}
           rois={roiAlarms}
           topic={TOPICS.lidar}
         />
@@ -224,7 +236,8 @@ function CabinMonitoringViewContent() {
 
       <AlarmStrip
         alarm={alarm.data}
-        receivedLabel={timeLabel(alarm.receivedAt)}
+        now={now}
+        receivedAt={alarm.receivedAt}
         topic={TOPICS.alarms}
       />
     </main>
@@ -241,80 +254,115 @@ function ConnectionBadge({
   const isConnected = connection === 'connected';
   const isError = connection === 'closed' || connection === 'error';
   return (
-    <div className="flex items-center gap-2 border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-bold whitespace-nowrap text-zinc-300">
+    <div className="bg-card flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-3">
       <span
         className={
           isConnected
-            ? 'size-2.5 rounded-full bg-emerald-400'
+            ? 'size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,0.8)]'
             : isError
-              ? 'size-2.5 rounded-full bg-red-400'
-              : 'size-2.5 rounded-full bg-zinc-500'
+              ? 'size-2 rounded-full bg-red-400 shadow-[0_0_8px_1px_rgba(248,113,113,0.8)]'
+              : 'bg-muted-foreground size-2 animate-pulse rounded-full'
         }
       />
-      {connectionLabel(connection)} · {url}
+      <span className="text-sm font-bold whitespace-nowrap">
+        {connectionLabel(connection)}
+      </span>
+      <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+        {url}
+      </span>
     </div>
   );
 }
 
 function CameraPanel({
   canvasRef,
-  receivedLabel,
   hasImage,
+  now,
+  receivedAt,
   topic,
 }: {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  receivedLabel: string;
   hasImage: boolean;
+  now: number;
+  receivedAt: number | null;
   topic: string;
 }) {
   return (
-    <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden border border-zinc-700 bg-zinc-900 p-3">
+    <section className="bg-card grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border p-4">
       <PanelHead
-        kicker="Camera"
-        title={topic}
-        active={hasImage}
-        status={receivedLabel}
+        kicker="Camera · Detection"
+        title="객체 검출 영상"
+        topic={topic}
+        now={now}
+        receivedAt={receivedAt}
       />
-      <div className="relative grid min-h-0 place-items-center overflow-hidden border border-zinc-800 bg-black">
+      <div className="relative grid min-h-0 place-items-center overflow-hidden rounded-lg bg-black">
         <canvas
           ref={canvasRef}
           className="h-full w-full object-contain"
           aria-label="객체 검출 카메라 영상"
         />
-        {!hasImage ? (
-          <p className="absolute text-sm font-bold text-zinc-500">
-            영상 수신 대기
-          </p>
-        ) : null}
+        <CornerBrackets />
+        {hasImage ? (
+          <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md border border-slate-700/60 bg-black/70 px-2 py-1 font-mono text-[10px] font-bold tracking-[0.15em] text-red-300">
+            <span className="size-1.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_1px_rgba(239,68,68,0.8)] motion-reduce:animate-none" />
+            LIVE
+          </span>
+        ) : (
+          <WaitingNotice label="영상 수신 대기중" />
+        )}
       </div>
     </section>
   );
 }
 
+function CornerBrackets() {
+  return (
+    <div className="pointer-events-none absolute inset-2" aria-hidden="true">
+      <span className="absolute top-0 left-0 h-4 w-4 border-t border-l border-sky-300/40" />
+      <span className="absolute top-0 right-0 h-4 w-4 border-t border-r border-sky-300/40" />
+      <span className="absolute bottom-0 left-0 h-4 w-4 border-b border-l border-sky-300/40" />
+      <span className="absolute right-0 bottom-0 h-4 w-4 border-r border-b border-sky-300/40" />
+    </div>
+  );
+}
+
+function WaitingNotice({ label }: { label: string }) {
+  return (
+    <p className="absolute inset-0 grid place-items-center">
+      <span className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-black/60 px-4 py-1.5 font-mono text-xs font-semibold text-slate-400">
+        <span className="size-1.5 animate-pulse rounded-full bg-slate-500 motion-reduce:animate-none" />
+        {label}
+      </span>
+    </p>
+  );
+}
+
 function LidarPanel({
   markers,
+  now,
   pointCloudLabel,
   points,
-  received,
-  receivedLabel,
+  receivedAt,
   rois,
   topic,
 }: {
   markers: RoiMarker[];
+  now: number;
   pointCloudLabel: string;
   points: RosVector3[];
-  received: boolean;
-  receivedLabel: string;
+  receivedAt: number | null;
   rois: RoiAlarm[];
   topic: string;
 }) {
   return (
-    <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border border-zinc-700 bg-zinc-900 p-3">
+    <section className="bg-card grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-xl border p-4">
       <PanelHead
-        kicker="LiDAR ROI"
-        title={topic}
-        active={received}
-        status={receivedLabel}
+        kicker="LiDAR · ROI"
+        title="위험구역 포인트 감시"
+        topic={topic}
+        now={now}
+        receivedAt={receivedAt}
       />
       <LidarCanvas
         markers={markers}
@@ -322,9 +370,13 @@ function LidarPanel({
         points={points}
       />
       <div className="mt-3 grid max-h-36 gap-2 overflow-auto">
-        {rois.map((roi) => (
-          <RoiCard key={roi.name} roi={roi} />
-        ))}
+        {rois.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2.5 text-center font-mono text-xs">
+            ROI 알람 수신 대기중
+          </p>
+        ) : (
+          rois.map((roi) => <RoiCard key={roi.name} roi={roi} />)
+        )}
       </div>
     </section>
   );
@@ -342,7 +394,7 @@ function LidarCanvas({
   const camera = cameraForScene(markers, points);
 
   return (
-    <div className="relative min-h-0 overflow-hidden border border-zinc-800 bg-[#080d0b]">
+    <div className="relative min-h-0 overflow-hidden rounded-lg bg-[#04070d]">
       <Canvas
         orthographic
         camera={{
@@ -367,13 +419,17 @@ function LidarCanvas({
           <RoiBox key={marker.id} marker={marker} />
         ))}
       </Canvas>
-      <span className="absolute top-3 left-3 border border-zinc-700 bg-black/70 px-2 py-1 text-xs font-bold text-zinc-300">
-        PCD {pointCloudLabel} · {points.length} pts
+      {points.length > 0 || markers.length > 0 ? (
+        <span
+          className="pointer-events-none absolute inset-x-0 top-0 h-full animate-[lidar-sweep_5s_linear_infinite] border-t border-sky-300/50 bg-gradient-to-b from-sky-400/10 to-transparent to-15% motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      ) : null}
+      <span className="absolute top-3 left-3 rounded-md border border-slate-700/60 bg-black/70 px-2 py-1 font-mono text-xs font-semibold text-sky-200/90 tabular-nums">
+        PCD {pointCloudLabel} · {points.length.toLocaleString()} pts
       </span>
       {markers.length === 0 && points.length === 0 ? (
-        <p className="absolute inset-0 grid place-items-center text-sm font-bold text-zinc-500">
-          ROI/PCD 수신 대기
-        </p>
+        <WaitingNotice label="ROI/PCD 수신 대기중" />
       ) : null}
     </div>
   );
@@ -396,15 +452,15 @@ function FovGuide() {
   return (
     <group>
       <lineSegments geometry={geometries.edge}>
-        <lineBasicMaterial color="#4fa087" transparent opacity={0.62} />
+        <lineBasicMaterial color="#3d7ea6" transparent opacity={0.62} />
       </lineSegments>
       {geometries.rings.map((geometry, index) => (
         <group key={index}>
           <lineSegments geometry={geometry}>
-            <lineBasicMaterial color="#2f6f62" transparent opacity={0.55} />
+            <lineBasicMaterial color="#24506e" transparent opacity={0.55} />
           </lineSegments>
           <Html position={guidePoint(0, (index + 1) * 10)} center>
-            <span className="border border-emerald-900/80 bg-black/70 px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-emerald-100">
+            <span className="rounded border border-sky-900/80 bg-black/70 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-sky-200">
               {(index + 1) * 10}m
             </span>
           </Html>
@@ -513,7 +569,7 @@ function RoiBox({ marker }: { marker: RoiMarker }) {
         <lineBasicMaterial color={color} />
       </lineSegments>
       <Html position={[0, scaleZ / 2 + 0.12, 0]} center>
-        <span className="border border-zinc-600 bg-black/75 px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-zinc-100">
+        <span className="rounded border border-slate-600/80 bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-slate-100 tabular-nums">
           x {formatMeter(position.x - scaleX / 2)}-
           {formatMeter(position.x + scaleX / 2)}m · 폭 {formatMeter(scaleY)}m
         </span>
@@ -552,39 +608,76 @@ function cameraForScene(markers: RoiMarker[], points: RosVector3[]) {
 function PanelHead({
   kicker,
   title,
-  active,
-  status,
+  topic,
+  now,
+  receivedAt,
 }: {
   kicker: string;
   title: string;
-  active: boolean;
-  status: string;
+  topic: string;
+  now: number;
+  receivedAt: number | null;
 }) {
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
+        <p className="text-muted-foreground font-mono text-[10px] font-semibold tracking-[0.18em] uppercase">
           {kicker}
         </p>
-        <h2 className="truncate text-base font-extrabold text-zinc-50">
-          {title}
+        <h2 className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate text-base font-extrabold">{title}</span>
+          <code className="text-muted-foreground/70 truncate font-mono text-[11px]">
+            {topic}
+          </code>
         </h2>
       </div>
-      <StatusPill active={active} label={status} />
+      <StatusPill now={now} receivedAt={receivedAt} />
     </div>
   );
 }
 
-function StatusPill({ active, label }: { active: boolean; label: string }) {
+const STALE_AFTER_MS = 5000;
+
+function isStale(receivedAt: number | null, now: number) {
+  return receivedAt != null && now - receivedAt > STALE_AFTER_MS;
+}
+
+function staleLabel(receivedAt: number, now: number) {
+  return `${Math.floor((now - receivedAt) / 1000)}초 전`;
+}
+
+function StatusPill({
+  now,
+  receivedAt,
+}: {
+  now: number;
+  receivedAt: number | null;
+}) {
+  const stale = isStale(receivedAt, now);
   return (
     <span
       className={
-        active
-          ? 'border border-emerald-700 bg-emerald-950 px-2 py-1 text-xs font-bold whitespace-nowrap text-emerald-300'
-          : 'border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs font-bold whitespace-nowrap text-zinc-400'
+        receivedAt == null
+          ? 'bg-muted text-muted-foreground flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap'
+          : stale
+            ? 'flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap text-amber-600 tabular-nums dark:text-amber-300'
+            : 'flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap text-emerald-600 tabular-nums dark:text-emerald-300'
       }
     >
-      {label}
+      <span
+        className={
+          receivedAt == null
+            ? 'bg-muted-foreground/60 size-1.5 rounded-full'
+            : stale
+              ? 'size-1.5 rounded-full bg-amber-400'
+              : 'size-1.5 rounded-full bg-emerald-400'
+        }
+      />
+      {receivedAt == null
+        ? '대기중'
+        : stale
+          ? staleLabel(receivedAt, now)
+          : timeLabel(receivedAt)}
     </span>
   );
 }
@@ -598,32 +691,35 @@ function RoiCard({ roi }: { roi: RoiAlarm }) {
     <article
       className={
         roi.alarm
-          ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-2 border border-red-500/70 bg-red-950/50 p-3'
-          : 'grid grid-cols-[minmax(0,1fr)_auto] gap-2 border border-zinc-700 bg-zinc-950/60 p-3'
+          ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg border border-red-500/50 bg-red-500/10 p-3 shadow-[0_0_18px_-6px_rgba(239,68,68,0.5)]'
+          : 'bg-muted/40 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg border p-3'
       }
     >
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-extrabold">{roi.name}</h3>
+        <h3 className="truncate text-sm font-bold">{roi.name}</h3>
         <p
           className={
             roi.alarm
-              ? 'text-xs font-bold text-red-300'
-              : 'text-xs font-bold text-emerald-300'
+              ? 'font-mono text-[10px] font-bold tracking-[0.15em] text-red-600 dark:text-red-300'
+              : 'font-mono text-[10px] font-bold tracking-[0.15em] text-emerald-600 dark:text-emerald-400/90'
           }
         >
           {roi.alarm ? 'ALARM' : 'NORMAL'}
         </p>
       </div>
-      <strong className="text-xl leading-none">
+      <strong className="font-mono text-xl leading-none font-bold tabular-nums">
         {roi.point_count}
-        <span className="text-xs text-zinc-500"> / {roi.threshold}</span>
+        <span className="text-muted-foreground text-xs font-semibold">
+          {' '}
+          / {roi.threshold}
+        </span>
       </strong>
-      <div className="col-span-2 h-1.5 bg-zinc-800">
+      <div className="bg-muted col-span-2 h-1 overflow-hidden rounded-full">
         <span
           className={
             roi.alarm
-              ? 'block h-full bg-red-400'
-              : 'block h-full bg-emerald-400'
+              ? 'block h-full rounded-full bg-red-400'
+              : 'block h-full rounded-full bg-emerald-400'
           }
           style={{ width: `${ratio}%` }}
         />
@@ -634,48 +730,124 @@ function RoiCard({ roi }: { roi: RoiAlarm }) {
 
 function AlarmStrip({
   alarm,
-  receivedLabel,
+  now,
+  receivedAt,
   topic,
 }: {
   alarm: MonitoringAlarm | null;
-  receivedLabel: string;
+  now: number;
+  receivedAt: number | null;
   topic: string;
 }) {
   const level = alarmColorLevel(alarm);
+  const waiting = alarm == null;
+  const stale = isStale(receivedAt, now);
   return (
     <>
       {alarm?.alarm === true ? (
         <div
           className={
             level === 'red'
-              ? 'pointer-events-none fixed inset-0 z-20 animate-pulse bg-red-500/30'
-              : 'pointer-events-none fixed inset-0 z-20 animate-pulse bg-yellow-500/25'
+              ? 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(239,68,68,0.45)] motion-reduce:animate-none'
+              : 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(251,191,36,0.35)] motion-reduce:animate-none'
           }
           aria-hidden="true"
         />
       ) : null}
       <section
         className={
-          level === 'red'
-            ? 'flex min-h-24 items-center justify-between gap-4 border border-l-8 border-red-500/70 bg-red-950/50 p-4'
-            : level === 'yellow'
-              ? 'flex min-h-24 items-center justify-between gap-4 border border-l-8 border-yellow-500/70 bg-yellow-950/40 p-4'
-              : 'flex min-h-24 items-center justify-between gap-4 border border-l-8 border-emerald-500/40 bg-zinc-900 p-4'
+          waiting
+            ? 'bg-card/60 flex min-h-24 items-center gap-5 rounded-xl border border-dashed p-4'
+            : level === 'red'
+              ? 'bg-card flex min-h-24 items-center gap-5 rounded-xl border border-red-500/60 bg-gradient-to-r from-red-500/15 to-transparent p-4 shadow-[0_0_40px_-10px_rgba(239,68,68,0.55)]'
+              : level === 'yellow'
+                ? 'bg-card flex min-h-24 items-center gap-5 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-400/10 to-transparent p-4 shadow-[0_0_40px_-12px_rgba(251,191,36,0.45)]'
+                : 'bg-card flex min-h-24 items-center gap-5 rounded-xl border bg-gradient-to-r from-emerald-500/8 to-transparent p-4'
         }
       >
-        <div>
-          <p className="text-xs font-bold tracking-widest text-zinc-400 uppercase">
-            Alarm
+        <StackLight level={level} waiting={waiting} />
+        <div className="min-w-0">
+          <p className="text-muted-foreground font-mono text-[10px] font-semibold tracking-[0.18em] uppercase">
+            Alarm Status
           </p>
-          <h2 className="text-3xl font-black">{alarmTitle(alarm)}</h2>
+          <h2
+            className={
+              waiting
+                ? 'text-muted-foreground text-3xl font-black tracking-tight'
+                : level === 'red'
+                  ? 'text-3xl font-black tracking-tight text-red-600 dark:text-red-300'
+                  : level === 'yellow'
+                    ? 'text-3xl font-black tracking-tight text-amber-600 dark:text-amber-200'
+                    : 'text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-200'
+            }
+          >
+            {alarmTitle(alarm)}
+          </h2>
         </div>
-        <div className="grid justify-items-end gap-1 text-right text-sm font-bold text-zinc-300">
-          <span>{topic}</span>
-          <span>{alarmDescription(alarm)}</span>
-          <span>{receivedLabel}</span>
+        <div className="ml-auto grid shrink-0 justify-items-end gap-1 text-right">
+          <span className="text-muted-foreground font-mono text-xs">
+            {topic}
+          </span>
+          <span className="max-w-96 truncate text-sm font-semibold">
+            {alarmDescription(alarm)}
+          </span>
+          <span
+            className={
+              stale
+                ? 'font-mono text-xs font-semibold text-amber-600 tabular-nums dark:text-amber-300'
+                : 'text-muted-foreground font-mono text-xs tabular-nums'
+            }
+          >
+            {stale && receivedAt != null
+              ? staleLabel(receivedAt, now)
+              : timeLabel(receivedAt)}
+          </span>
         </div>
       </section>
     </>
+  );
+}
+
+function StackLight({
+  level,
+  waiting,
+}: {
+  level: 'green' | 'yellow' | 'red';
+  waiting: boolean;
+}) {
+  const lamps = [
+    {
+      key: 'red',
+      active: !waiting && level === 'red',
+      on: 'bg-red-500 shadow-[0_0_14px_2px_rgba(239,68,68,0.85)] animate-pulse motion-reduce:animate-none',
+      off: 'bg-red-500/15',
+    },
+    {
+      key: 'yellow',
+      active: !waiting && level === 'yellow',
+      on: 'bg-amber-400 shadow-[0_0_14px_2px_rgba(251,191,36,0.75)]',
+      off: 'bg-amber-400/15',
+    },
+    {
+      key: 'green',
+      active: !waiting && level === 'green',
+      on: 'bg-emerald-400 shadow-[0_0_14px_2px_rgba(52,211,153,0.75)]',
+      off: 'bg-emerald-400/15',
+    },
+  ];
+
+  return (
+    <div
+      className="bg-muted/50 grid shrink-0 gap-1 rounded-md border p-1.5"
+      aria-hidden="true"
+    >
+      {lamps.map((lamp) => (
+        <span
+          key={lamp.key}
+          className={`h-4 w-3 rounded-[3px] ${lamp.active ? lamp.on : lamp.off}`}
+        />
+      ))}
+    </div>
   );
 }
 
