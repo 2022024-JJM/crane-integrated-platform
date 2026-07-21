@@ -12,8 +12,15 @@ import {
   Html,
   OrbitControls,
 } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
+import {
+  Popover,
+  PopoverPopup,
+  PopoverTrigger,
+} from '@crane/ui/molecules/popover';
+import { Bell } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import * as THREE from 'three';
 
 const BRIDGE_SUBPROTOCOL = 'foxglove.sdk.v1';
@@ -108,6 +115,13 @@ type TopicState<T> = {
   receivedAt: number | null;
 };
 
+type AlarmEvent = {
+  receivedAt: number;
+  level: 'green' | 'yellow' | 'red';
+  title: string;
+  description: string;
+};
+
 type Subscription = {
   topic: string;
   reader: MessageReader;
@@ -145,6 +159,9 @@ function CabinMonitoringViewContent() {
     receivedAt: null,
   });
   const [now, setNow] = useState(() => Date.now());
+  const [alarmEvents, setAlarmEvents] = useState<AlarmEvent[]>([]);
+  const [alarmStartedAt, setAlarmStartedAt] = useState<number | null>(null);
+  const prevAlarmRef = useRef<MonitoringAlarm | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -155,6 +172,49 @@ function CabinMonitoringViewContent() {
     const ws = new WebSocket(bridgeUrl, [BRIDGE_SUBPROTOCOL]);
     const client = new FoxgloveClient({ ws: ws as unknown as IWebSocket });
     const subscriptions = subscriptionsRef.current;
+
+    const handleAlarmUpdate = (state: TopicState<MonitoringAlarm>) => {
+      setAlarm(state);
+
+      const current = state.data;
+      if (!current) return;
+
+      const prev = prevAlarmRef.current;
+      prevAlarmRef.current = current;
+
+      const level = alarmColorLevel(current);
+      const prevActive = prev?.alarm === true;
+      const prevLevel = prev ? alarmColorLevel(prev) : null;
+      const receivedAt = state.receivedAt ?? Date.now();
+
+      if (current.alarm === true && (!prevActive || prevLevel !== level)) {
+        const title = alarmTitle(current);
+        const description = alarmDescription(current);
+        if (level === 'red') toast.error(title, { description });
+        else toast.warning(title, { description });
+        if (!prevActive) setAlarmStartedAt(receivedAt);
+        setAlarmEvents((events) =>
+          [{ receivedAt, level, title, description }, ...events].slice(0, 100),
+        );
+        return;
+      }
+
+      if (current.alarm !== true && prevActive) {
+        toast.success('정상 복귀', { description: current.status });
+        setAlarmStartedAt(null);
+        setAlarmEvents((events) =>
+          [
+            {
+              receivedAt,
+              level: 'green' as const,
+              title: '정상 복귀',
+              description: current.status,
+            },
+            ...events,
+          ].slice(0, 100),
+        );
+      }
+    };
 
     client.on('open', () => setConnection('connected'));
     client.on('close', () => setConnection('closed'));
@@ -181,7 +241,7 @@ function CabinMonitoringViewContent() {
         setLidar,
         setLidarMarker,
         setLidarPoints,
-        setAlarm,
+        setAlarm: handleAlarmUpdate,
       });
     });
 
@@ -194,10 +254,36 @@ function CabinMonitoringViewContent() {
   const roiAlarms = lidar.data?.alarms ?? [];
   const roiMarkers = lidarMarker.data?.markers ?? [];
   const points = lidarPoints.data ?? [];
+  const alarmLevel = alarmColorLevel(alarm.data);
+  const alarmActive = alarm.data?.alarm === true;
 
   return (
-    <main className="bg-background text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-4 p-4">
-      <header className="flex items-center justify-between gap-4 border-b pb-3">
+    <main
+      className={
+        alarmActive
+          ? 'bg-background text-foreground grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 p-4'
+          : 'bg-background text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4 p-4'
+      }
+    >
+      {alarm.data?.alarm === true ? (
+        <div
+          className={
+            alarmLevel === 'red'
+              ? 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(239,68,68,0.45)] motion-reduce:animate-none'
+              : 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(251,191,36,0.35)] motion-reduce:animate-none'
+          }
+          aria-hidden="true"
+        />
+      ) : null}
+      <header
+        className={
+          alarm.data?.alarm === true && alarmLevel === 'red'
+            ? 'flex items-center justify-between gap-4 border-b border-red-500/50 pb-3'
+            : alarm.data?.alarm === true && alarmLevel === 'yellow'
+              ? 'flex items-center justify-between gap-4 border-b border-amber-400/40 pb-3'
+              : 'flex items-center justify-between gap-4 border-b pb-3'
+        }
+      >
         <div>
           <p className="text-muted-foreground font-mono text-[11px] font-semibold tracking-[0.2em] uppercase">
             Goliath Crane GC-04 · Cabin Watch
@@ -205,6 +291,9 @@ function CabinMonitoringViewContent() {
           <h1 className="text-xl font-black tracking-tight">캐빈 안전 감시</h1>
         </div>
         <div className="flex items-center gap-3">
+          <AlarmStatusChip alarm={alarm.data} />
+          <AlarmHistoryButton events={alarmEvents} />
+          <span className="bg-border h-6 w-px" aria-hidden="true" />
           <time className="font-mono text-lg font-bold tracking-tight tabular-nums">
             {timeLabel(now)}
           </time>
@@ -212,8 +301,17 @@ function CabinMonitoringViewContent() {
         </div>
       </header>
 
+      {alarmActive ? (
+        <AlarmBanner
+          alarm={alarm.data}
+          level={alarmLevel}
+          now={now}
+          startedAt={alarmStartedAt}
+        />
+      ) : null}
+
       <section
-        className="grid min-h-0 grid-cols-2 gap-4 max-lg:grid-cols-1"
+        className="grid min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 max-lg:grid-cols-1"
         aria-label="실시간 모니터링"
       >
         <CameraPanel
@@ -233,14 +331,149 @@ function CabinMonitoringViewContent() {
           topic={TOPICS.lidar}
         />
       </section>
-
-      <AlarmStrip
-        alarm={alarm.data}
-        now={now}
-        receivedAt={alarm.receivedAt}
-        topic={TOPICS.alarms}
-      />
     </main>
+  );
+}
+
+function AlarmBanner({
+  alarm,
+  level,
+  now,
+  startedAt,
+}: {
+  alarm: MonitoringAlarm | null;
+  level: 'green' | 'yellow' | 'red';
+  now: number;
+  startedAt: number | null;
+}) {
+  const durationSeconds =
+    startedAt == null ? null : Math.max(0, Math.floor((now - startedAt) / 1000));
+
+  return (
+    <section
+      role="alert"
+      className={
+        level === 'red'
+          ? 'flex min-h-16 items-center gap-4 rounded-xl border border-red-500/60 bg-red-500/15 px-5 py-3 shadow-[0_0_36px_-8px_rgba(239,68,68,0.6)]'
+          : 'flex min-h-16 items-center gap-4 rounded-xl border border-amber-400/50 bg-amber-400/10 px-5 py-3 shadow-[0_0_36px_-10px_rgba(251,191,36,0.5)]'
+      }
+    >
+      <span
+        className={
+          level === 'red'
+            ? 'size-3 shrink-0 animate-pulse rounded-full bg-red-500 shadow-[0_0_12px_2px_rgba(239,68,68,0.9)] motion-reduce:animate-none'
+            : 'size-3 shrink-0 animate-pulse rounded-full bg-amber-400 shadow-[0_0_12px_2px_rgba(251,191,36,0.8)] motion-reduce:animate-none'
+        }
+        aria-hidden="true"
+      />
+      <strong
+        className={
+          level === 'red'
+            ? 'text-2xl font-black tracking-tight whitespace-nowrap text-red-600 dark:text-red-300'
+            : 'text-2xl font-black tracking-tight whitespace-nowrap text-amber-600 dark:text-amber-200'
+        }
+      >
+        {alarmTitle(alarm)}
+      </strong>
+      <span className="min-w-0 truncate text-sm font-semibold">
+        {alarmDescription(alarm)}
+      </span>
+      {durationSeconds != null ? (
+        <span className="text-muted-foreground ml-auto shrink-0 font-mono text-sm font-semibold tabular-nums">
+          {durationSeconds}초 지속
+        </span>
+      ) : null}
+    </section>
+  );
+}
+
+function AlarmStatusChip({ alarm }: { alarm: MonitoringAlarm | null }) {
+  const level = alarmColorLevel(alarm);
+  const waiting = alarm == null;
+  return (
+    <div
+      className={
+        waiting
+          ? 'bg-card/60 flex items-center gap-2 rounded-full border border-dashed py-1.5 pr-3.5 pl-2'
+          : level === 'red'
+            ? 'flex items-center gap-2 rounded-full border border-red-500/50 bg-red-500/10 py-1.5 pr-3.5 pl-2 shadow-[0_0_18px_-4px_rgba(239,68,68,0.6)]'
+            : level === 'yellow'
+              ? 'flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 py-1.5 pr-3.5 pl-2'
+              : 'flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-1.5 pr-3.5 pl-2'
+      }
+    >
+      <StackLight level={level} waiting={waiting} />
+      <span
+        className={
+          waiting
+            ? 'text-muted-foreground text-sm font-bold whitespace-nowrap'
+            : level === 'red'
+              ? 'text-sm font-bold whitespace-nowrap text-red-600 dark:text-red-300'
+              : level === 'yellow'
+                ? 'text-sm font-bold whitespace-nowrap text-amber-600 dark:text-amber-200'
+                : 'text-sm font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-200'
+        }
+      >
+        {alarmTitle(alarm)}
+      </span>
+    </div>
+  );
+}
+
+function AlarmHistoryButton({ events }: { events: AlarmEvent[] }) {
+  return (
+    <Popover>
+      <PopoverTrigger className="bg-card hover:bg-muted relative grid size-9 place-items-center rounded-full border transition-colors">
+        <Bell className="size-4" aria-hidden="true" />
+        {events.length > 0 ? (
+          <span className="absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 font-mono text-[10px] leading-none font-bold text-white tabular-nums">
+            {events.length > 99 ? '99+' : events.length}
+          </span>
+        ) : null}
+        <span className="sr-only">알람 이력</span>
+      </PopoverTrigger>
+      <PopoverPopup className="w-96 p-0">
+        <div className="flex items-baseline justify-between border-b px-4 py-3">
+          <p className="text-sm font-bold">알람 이력</p>
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">
+            {events.length}건
+          </span>
+        </div>
+        {events.length === 0 ? (
+          <p className="text-muted-foreground px-4 py-10 text-center font-mono text-xs">
+            알람 이력 없음
+          </p>
+        ) : (
+          <ul className="grid max-h-96 gap-0.5 overflow-y-auto p-2">
+            {events.map((event, index) => (
+              <li
+                key={`${event.receivedAt}-${index}`}
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2.5 rounded-md px-2 py-2"
+              >
+                <span
+                  className={
+                    event.level === 'red'
+                      ? 'mt-1.5 size-2 rounded-full bg-red-500'
+                      : event.level === 'yellow'
+                        ? 'mt-1.5 size-2 rounded-full bg-amber-400'
+                        : 'mt-1.5 size-2 rounded-full bg-emerald-400'
+                  }
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{event.title}</p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {event.description}
+                  </p>
+                </div>
+                <time className="text-muted-foreground mt-0.5 font-mono text-[11px] tabular-nums">
+                  {timeLabel(event.receivedAt)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverPopup>
+    </Popover>
   );
 }
 
@@ -254,7 +487,10 @@ function ConnectionBadge({
   const isConnected = connection === 'connected';
   const isError = connection === 'closed' || connection === 'error';
   return (
-    <div className="bg-card flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-3">
+    <div
+      className="bg-card flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-3"
+      title={url}
+    >
       <span
         className={
           isConnected
@@ -267,7 +503,7 @@ function ConnectionBadge({
       <span className="text-sm font-bold whitespace-nowrap">
         {connectionLabel(connection)}
       </span>
-      <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+      <span className="text-muted-foreground hidden font-mono text-[11px] whitespace-nowrap xl:inline">
         {url}
       </span>
     </div>
@@ -369,15 +605,13 @@ function LidarPanel({
         pointCloudLabel={pointCloudLabel}
         points={points}
       />
-      <div className="mt-3 grid max-h-36 gap-2 overflow-auto">
-        {rois.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2.5 text-center font-mono text-xs">
-            ROI 알람 수신 대기중
-          </p>
-        ) : (
-          rois.map((roi) => <RoiCard key={roi.name} roi={roi} />)
-        )}
-      </div>
+      {rois.length > 0 ? (
+        <div className="mt-3 grid max-h-56 grid-cols-2 gap-2 overflow-auto max-xl:grid-cols-1">
+          {rois.map((roi) => (
+            <RoiCard key={roi.name} roi={roi} />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -391,19 +625,18 @@ function LidarCanvas({
   pointCloudLabel: string;
   points: RosVector3[];
 }) {
-  const camera = cameraForScene(markers, points);
-
   return (
     <div className="relative min-h-0 overflow-hidden rounded-lg bg-[#04070d]">
       <Canvas
         orthographic
         camera={{
-          position: [0, camera.height, 0],
+          position: [0, 10, 0],
           rotation: [-Math.PI / 2, 0, 0],
           up: [0, 0, 1],
-          zoom: camera.zoom,
+          zoom: 20,
         }}
       >
+        <FitCamera markers={markers} />
         <FovGuide />
         <LidarOrigin />
         <PointCloud points={points} />
@@ -425,6 +658,7 @@ function LidarCanvas({
           aria-hidden="true"
         />
       ) : null}
+      <CornerBrackets />
       <span className="absolute top-3 left-3 rounded-md border border-slate-700/60 bg-black/70 px-2 py-1 font-mono text-xs font-semibold text-sky-200/90 tabular-nums">
         PCD {pointCloudLabel} · {points.length.toLocaleString()} pts
       </span>
@@ -433,6 +667,72 @@ function LidarCanvas({
       ) : null}
     </div>
   );
+}
+
+function FitCamera({ markers }: { markers: RoiMarker[] }) {
+  const getThree = useThree((state) => state.get);
+  const size = useThree((state) => state.size);
+  const hasControls = useThree((state) => state.controls != null);
+
+  // 위험구역(ROI) + 원점 기준으로 화면 맞춤. 같은 ROI가 계속 재수신되는 동안에는
+  // 키가 변하지 않으므로 사용자의 수동 줌/이동을 덮어쓰지 않는다.
+  const boundsKey = useMemo(() => {
+    let minX = 0;
+    let maxX = 0;
+    let minZ = 0;
+    let maxZ = 0;
+
+    if (markers.length === 0) {
+      const range = LIDAR_VIEW.initialRange;
+      const halfWidth = Math.sin(LIDAR_VIEW.fov / 2) * range;
+      minX = -halfWidth;
+      maxX = halfWidth;
+      maxZ = range;
+    } else {
+      for (const marker of markers) {
+        const { position } = marker.pose;
+        const { scale } = marker;
+        minX = Math.min(minX, position.y - scale.y / 2);
+        maxX = Math.max(maxX, position.y + scale.y / 2);
+        minZ = Math.min(minZ, position.x - scale.x / 2);
+        maxZ = Math.max(maxZ, position.x + scale.x / 2);
+      }
+      const padX = Math.max((maxX - minX) * 0.15, 2);
+      const padZ = Math.max((maxZ - minZ) * 0.15, 2);
+      minX -= padX;
+      maxX += padX;
+      minZ -= padZ;
+      maxZ += padZ;
+    }
+
+    return [minX, maxX, minZ, maxZ]
+      .map((value) => value.toFixed(1))
+      .join(':');
+  }, [markers]);
+
+  useEffect(() => {
+    const [minX, maxX, minZ, maxZ] = boundsKey.split(':').map(Number);
+    const width = Math.max(maxX - minX, 1);
+    const depth = Math.max(maxZ - minZ, 1);
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
+    const { camera, controls } = getThree();
+    camera.zoom = Math.min(size.width / width, size.height / depth) * 0.9;
+    camera.position.set(centerX, camera.position.y, centerZ);
+    camera.updateProjectionMatrix();
+
+    const orbit = controls as unknown as {
+      target: THREE.Vector3;
+      update: () => void;
+    } | null;
+    if (orbit) {
+      orbit.target.set(centerX, 0, centerZ);
+      orbit.update();
+    }
+  }, [boundsKey, size.width, size.height, getThree, hasControls]);
+
+  return null;
 }
 
 function FovGuide() {
@@ -452,12 +752,12 @@ function FovGuide() {
   return (
     <group>
       <lineSegments geometry={geometries.edge}>
-        <lineBasicMaterial color="#3d7ea6" transparent opacity={0.62} />
+        <lineBasicMaterial color="#7dd3fc" transparent opacity={0.85} />
       </lineSegments>
       {geometries.rings.map((geometry, index) => (
         <group key={index}>
           <lineSegments geometry={geometry}>
-            <lineBasicMaterial color="#24506e" transparent opacity={0.55} />
+            <lineBasicMaterial color="#4d94c4" transparent opacity={0.75} />
           </lineSegments>
           <Html position={guidePoint(0, (index + 1) * 10)} center>
             <span className="rounded border border-sky-900/80 bg-black/70 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-sky-200">
@@ -552,21 +852,36 @@ function RoiBox({ marker }: { marker: RoiMarker }) {
   const { position } = marker.pose;
   const { scale } = marker;
   const { x: scaleX, y: scaleY, z: scaleZ } = scale;
+  const sceneSize = useMemo(
+    () => rosSizeToSceneSize({ x: scaleX, y: scaleY, z: scaleZ }),
+    [scaleX, scaleY, scaleZ],
+  );
   const geometry = useMemo(() => {
-    const box = new THREE.BoxGeometry(
-      ...rosSizeToSceneSize({ x: scaleX, y: scaleY, z: scaleZ }),
-    );
+    const box = new THREE.BoxGeometry(...sceneSize);
     return new THREE.EdgesGeometry(box);
-  }, [scaleX, scaleY, scaleZ]);
+  }, [sceneSize]);
   const color = useMemo(
     () => new THREE.Color(marker.color.r, marker.color.g, marker.color.b),
     [marker.color.b, marker.color.g, marker.color.r],
   );
+  const edgeColor = useMemo(
+    () => color.clone().lerp(new THREE.Color('#ffffff'), 0.35),
+    [color],
+  );
 
   return (
     <group position={rosToScenePoint(position)}>
+      <mesh>
+        <boxGeometry args={sceneSize} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.14}
+          depthWrite={false}
+        />
+      </mesh>
       <lineSegments geometry={geometry}>
-        <lineBasicMaterial color={color} />
+        <lineBasicMaterial color={edgeColor} />
       </lineSegments>
       <Html position={[0, scaleZ / 2 + 0.12, 0]} center>
         <span className="rounded border border-slate-600/80 bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-slate-100 tabular-nums">
@@ -576,33 +891,6 @@ function RoiBox({ marker }: { marker: RoiMarker }) {
       </Html>
     </group>
   );
-}
-
-function cameraForScene(markers: RoiMarker[], points: RosVector3[]) {
-  const range =
-    markers.length === 0 && points.length === 0 ? LIDAR_VIEW.initialRange : 1;
-  let minX = -Math.sin(LIDAR_VIEW.fov / 2) * range;
-  let maxX = Math.sin(LIDAR_VIEW.fov / 2) * range;
-  let minZ = 0;
-  let maxZ = range;
-
-  for (const marker of markers) {
-    const { position } = marker.pose;
-    const { scale } = marker;
-    minX = Math.min(minX, position.y - scale.y / 2);
-    maxX = Math.max(maxX, position.y + scale.y / 2);
-    minZ = Math.min(minZ, position.x - scale.x / 2);
-    maxZ = Math.max(maxZ, position.x + scale.x / 2);
-  }
-
-  const width = Math.max(maxX - minX, maxZ - minZ, 1);
-
-  return {
-    height: 10,
-    x: (minX + maxX) / 2,
-    z: (minZ + maxZ) / 2,
-    zoom: 110 / width,
-  };
 }
 
 function PanelHead({
@@ -696,25 +984,25 @@ function RoiCard({ roi }: { roi: RoiAlarm }) {
       }
     >
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-bold">{roi.name}</h3>
+        <h3 className="truncate text-base font-bold">{roi.name}</h3>
         <p
           className={
             roi.alarm
-              ? 'font-mono text-[10px] font-bold tracking-[0.15em] text-red-600 dark:text-red-300'
-              : 'font-mono text-[10px] font-bold tracking-[0.15em] text-emerald-600 dark:text-emerald-400/90'
+              ? 'font-mono text-[11px] font-bold tracking-[0.15em] text-red-600 dark:text-red-300'
+              : 'font-mono text-[11px] font-bold tracking-[0.15em] text-emerald-600 dark:text-emerald-400/90'
           }
         >
           {roi.alarm ? 'ALARM' : 'NORMAL'}
         </p>
       </div>
-      <strong className="font-mono text-xl leading-none font-bold tabular-nums">
+      <strong className="font-mono text-2xl leading-none font-bold tabular-nums">
         {roi.point_count}
-        <span className="text-muted-foreground text-xs font-semibold">
+        <span className="text-muted-foreground text-sm font-semibold">
           {' '}
           / {roi.threshold}
         </span>
       </strong>
-      <div className="bg-muted col-span-2 h-1 overflow-hidden rounded-full">
+      <div className="bg-muted col-span-2 h-1.5 overflow-hidden rounded-full">
         <span
           className={
             roi.alarm
@@ -725,86 +1013,6 @@ function RoiCard({ roi }: { roi: RoiAlarm }) {
         />
       </div>
     </article>
-  );
-}
-
-function AlarmStrip({
-  alarm,
-  now,
-  receivedAt,
-  topic,
-}: {
-  alarm: MonitoringAlarm | null;
-  now: number;
-  receivedAt: number | null;
-  topic: string;
-}) {
-  const level = alarmColorLevel(alarm);
-  const waiting = alarm == null;
-  const stale = isStale(receivedAt, now);
-  return (
-    <>
-      {alarm?.alarm === true ? (
-        <div
-          className={
-            level === 'red'
-              ? 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(239,68,68,0.45)] motion-reduce:animate-none'
-              : 'pointer-events-none fixed inset-0 z-20 animate-pulse shadow-[inset_0_0_140px_36px_rgba(251,191,36,0.35)] motion-reduce:animate-none'
-          }
-          aria-hidden="true"
-        />
-      ) : null}
-      <section
-        className={
-          waiting
-            ? 'bg-card/60 flex min-h-24 items-center gap-5 rounded-xl border border-dashed p-4'
-            : level === 'red'
-              ? 'bg-card flex min-h-24 items-center gap-5 rounded-xl border border-red-500/60 bg-gradient-to-r from-red-500/15 to-transparent p-4 shadow-[0_0_40px_-10px_rgba(239,68,68,0.55)]'
-              : level === 'yellow'
-                ? 'bg-card flex min-h-24 items-center gap-5 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-400/10 to-transparent p-4 shadow-[0_0_40px_-12px_rgba(251,191,36,0.45)]'
-                : 'bg-card flex min-h-24 items-center gap-5 rounded-xl border bg-gradient-to-r from-emerald-500/8 to-transparent p-4'
-        }
-      >
-        <StackLight level={level} waiting={waiting} />
-        <div className="min-w-0">
-          <p className="text-muted-foreground font-mono text-[10px] font-semibold tracking-[0.18em] uppercase">
-            Alarm Status
-          </p>
-          <h2
-            className={
-              waiting
-                ? 'text-muted-foreground text-3xl font-black tracking-tight'
-                : level === 'red'
-                  ? 'text-3xl font-black tracking-tight text-red-600 dark:text-red-300'
-                  : level === 'yellow'
-                    ? 'text-3xl font-black tracking-tight text-amber-600 dark:text-amber-200'
-                    : 'text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-200'
-            }
-          >
-            {alarmTitle(alarm)}
-          </h2>
-        </div>
-        <div className="ml-auto grid shrink-0 justify-items-end gap-1 text-right">
-          <span className="text-muted-foreground font-mono text-xs">
-            {topic}
-          </span>
-          <span className="max-w-96 truncate text-sm font-semibold">
-            {alarmDescription(alarm)}
-          </span>
-          <span
-            className={
-              stale
-                ? 'font-mono text-xs font-semibold text-amber-600 tabular-nums dark:text-amber-300'
-                : 'text-muted-foreground font-mono text-xs tabular-nums'
-            }
-          >
-            {stale && receivedAt != null
-              ? staleLabel(receivedAt, now)
-              : timeLabel(receivedAt)}
-          </span>
-        </div>
-      </section>
-    </>
   );
 }
 
@@ -838,13 +1046,13 @@ function StackLight({
 
   return (
     <div
-      className="bg-muted/50 grid shrink-0 gap-1 rounded-md border p-1.5"
+      className="bg-muted/50 grid shrink-0 gap-0.5 rounded-md border p-1"
       aria-hidden="true"
     >
       {lamps.map((lamp) => (
         <span
           key={lamp.key}
-          className={`h-4 w-3 rounded-[3px] ${lamp.active ? lamp.on : lamp.off}`}
+          className={`h-1.5 w-2.5 rounded-[2px] ${lamp.active ? lamp.on : lamp.off}`}
         />
       ))}
     </div>
@@ -1028,8 +1236,11 @@ function connectionLabel(connection: ConnectionState) {
   }[connection];
 }
 
-function alarmColorLevel(alarm: MonitoringAlarm | null) {
-  if (alarm?.level === 'red' || alarm?.level === 'yellow') return alarm.level;
+function alarmColorLevel(
+  alarm: MonitoringAlarm | null,
+): 'green' | 'yellow' | 'red' {
+  if (alarm?.level === 'red') return 'red';
+  if (alarm?.level === 'yellow') return 'yellow';
   return 'green';
 }
 
