@@ -39,7 +39,10 @@
     "result": "Result"
   },
   "resultCount": "{{count}} items",
-  "pagination": { "rowsPerPage": "Rows per page", "of": "of" },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "of": "of"
+  },
   "empty": "No inspection records found.",
   "overdueAlert": "{{count}} overdue inspection(s) — immediate attention required",
   "detail": {
@@ -47,6 +50,7 @@
     "woInfo": "Work Order Info",
     "checklist": "Inspection Checklist",
     "nonConformance": "Non-Conformance Items",
+    "createRepairTicket": "Create Repair Ticket",
     "noNonConformance": "No non-conformance items",
     "findings": "Findings",
     "fields": {
@@ -82,6 +86,8 @@
     "submitResult": "Submit",
     "progress": "{{completed}} / {{total}} completed",
     "toastSaved": "Inspection result saved.",
-    "toastSubmitted": "Inspection marked as completed."
+    "toastSubmitted": "Inspection marked as completed.",
+    "toastSaveFailed": "Failed to save inspection result.",
+    "toastSubmitFailed": "Failed to submit inspection."
   }
 }

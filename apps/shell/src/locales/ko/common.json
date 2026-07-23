@@ -1,6 +1,9 @@
 {
   "language": "언어",
   "comingSoon": "준비 중",
+  "aria": {
+    "goTo": "{{title}}(으)로 이동"
+  },
   "header": {
     "toggleSidebar": "사이드바 토글",
     "toggleTheme": "테마 전환",
@@ -69,6 +72,8 @@
     "assetManagement": "자산 관리",
     "inspection": "점검 관리",
     "maintenance": "정비 관리",
+    "history": "통합 이력",
+    "serviceCalendar": "서비스 캘린더",
     "inventory": "부품/재고",
     "compliance": "OSHA 규제",
     "categoryCrane": "크레인",

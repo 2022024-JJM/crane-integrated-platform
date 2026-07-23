@@ -1,5 +1,5 @@
 export { useAssetDetail, useAssetList } from './use-asset-list';
-export type { AssetHealthSnapshot } from './use-asset-list';
+export type { AssetComponentStats, AssetHealthSnapshot } from './use-asset-list';
 export { useCreateAsset } from './use-create-asset';
 export type { AssetDraft } from './use-create-asset';
 export { useAssetForm } from './use-asset-form';

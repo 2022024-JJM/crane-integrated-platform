@@ -59,6 +59,7 @@
     "failureDescription": "Descriptio Defectus",
     "partsUsed": "Partes Adhibitae",
     "noParts": "Nulla partes adnotatae.",
+    "viewPart": "Vide in copia",
     "partsCost": "Sumptus Partium",
     "laborCost": "Sumptus Operae ({{hours}} h)",
     "totalCost": "Summa",

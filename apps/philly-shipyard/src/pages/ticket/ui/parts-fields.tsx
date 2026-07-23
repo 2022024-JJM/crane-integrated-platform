@@ -23,6 +23,8 @@ interface PartsFieldsProps {
   accent: AccentColor;
   state: PartsFieldsState;
   errors: PartsFieldsErrors;
+  /** items와 1:1 대응하는 안정적 행 key */
+  itemKeys: string[];
   onRequesterChange: (v: string) => void;
   onNoteChange: (v: string) => void;
   onAddItem: () => void;
@@ -38,6 +40,7 @@ export function PartsFields({
   accent,
   state,
   errors,
+  itemKeys,
   onRequesterChange,
   onNoteChange,
   onAddItem,
@@ -49,6 +52,15 @@ export function PartsFields({
   prioritySlot,
 }: PartsFieldsProps) {
   const { t } = useTranslation('ticket');
+  const { t: tInventory } = useTranslation('inventory');
+
+  // BOM 클러스터(카테고리)별로 부품 옵션 그룹핑 — 306개 옵션 탐색성 개선
+  const groupedItems: [InventoryItem['category'], InventoryItem[]][] = [];
+  for (const inv of inventoryItems) {
+    const group = groupedItems.find(([category]) => category === inv.category);
+    if (group) group[1].push(inv);
+    else groupedItems.push([inv.category, [inv]]);
+  }
 
   return (
     <>
@@ -86,7 +98,7 @@ export function PartsFields({
           )}
           {state.items.map((item, idx) => (
             <div
-              key={idx}
+              key={itemKeys[idx] ?? idx}
               className="group flex items-center gap-2 rounded-lg border border-border bg-background p-2 transition-colors hover:border-primary/40"
             >
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-bold text-muted-foreground">
@@ -98,8 +110,14 @@ export function PartsFields({
                 onChange={(e) => onUpdateItem(idx, e.target.value)}
               >
                 <option value="">{t('fields.partName')}</option>
-                {inventoryItems.map((inv) => (
-                  <option key={inv.partId} value={inv.partId}>{inv.partName}</option>
+                {groupedItems.map(([category, invItems]) => (
+                  <optgroup key={category} label={tInventory(`category.${category}`)}>
+                    {invItems.map((inv) => (
+                      <option key={inv.partId} value={inv.partId}>
+                        {inv.partName} ({inv.partNumber})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <input

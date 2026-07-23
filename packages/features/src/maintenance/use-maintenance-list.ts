@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getAllRepairWOs,
@@ -7,6 +7,7 @@ import {
   updateRepairStatus,
 } from '@crane/domain/maintenance';
 import type { RepairStatus, RepairWO } from '@crane/domain/maintenance';
+import { getAllInspectionWOs } from '@crane/domain/inspection';
 import { useDomainEventStore, useEntityTick } from '../shared/use-domain-event-store';
 
 function localizeRepair(repair: RepairWO, isKo: boolean): RepairWO {
@@ -42,20 +43,27 @@ const PIPELINE_PREV: Record<RepairStatus, RepairStatus | null> = {
 export function useMaintenanceList() {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
-  useEntityTick('repair');
+  const tick = useEntityTick('repair');
   const publish = useDomainEventStore((s) => s.publish);
 
-  const repairs = getAllRepairWOs().map((r) => localizeRepair(r, isKo));
+  // localize는 새 객체를 만들므로 tick 단위로 memoize (참조 안정화)
+  const repairs = useMemo(
+    () => getAllRepairWOs().map((r) => localizeRepair(r, isKo)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isKo, tick],
+  );
   const summary = getMaintenanceSummary();
 
+  // 이동에 성공하면 전이된 상태를, 이동 불가면 null을 반환한다(호출측 토스트 판단용).
   const moveStatus = useCallback(
-    (id: string, direction: 'next' | 'prev') => {
+    (id: string, direction: 'next' | 'prev'): RepairStatus | null => {
       const wo = getAllRepairWOs().find((w) => w.id === id);
-      if (!wo) return;
+      if (!wo) return null;
       const nextStatus = direction === 'next' ? PIPELINE_NEXT[wo.status] : PIPELINE_PREV[wo.status];
-      if (!nextStatus) return;
+      if (!nextStatus) return null;
       updateRepairStatus(id, nextStatus);
       publish('repair', id);
+      return nextStatus;
     },
     [publish],
   );
@@ -66,10 +74,24 @@ export function useMaintenanceList() {
 export function useMaintenanceDetail(id: string) {
   const { i18n } = useTranslation();
   const isKo = i18n.language === 'ko';
-  useEntityTick('repair');
-  const raw = getRepairWOById(id);
-  const repair = raw ? localizeRepair(raw, isKo) : undefined;
-  return { repair };
+  const tick = useEntityTick('repair');
+  // 참조 안정화 — 소비측 useMemo/useEffect 재실행 방지
+  const repair = useMemo(
+    () => {
+      const raw = getRepairWOById(id);
+      return raw ? localizeRepair(raw, isKo) : undefined;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, isKo, tick],
+  );
+
+  // 원천 WO(sourceType==='inspection')의 점검 상세로 링크하기 위한 id 해석
+  const sourceInspectionId =
+    repair?.sourceType === 'inspection' && repair.sourceWoNumber
+      ? getAllInspectionWOs().find((w) => w.woNumber === repair.sourceWoNumber)?.id
+      : undefined;
+
+  return { repair, sourceInspectionId };
 }
 
 export { PIPELINE_NEXT, PIPELINE_PREV };

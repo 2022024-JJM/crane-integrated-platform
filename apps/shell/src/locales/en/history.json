@@ -1,0 +1,58 @@
+{
+  "title": "History",
+  "description": "Unified inspection, repair, and parts request history across all cranes",
+  "totalCount": "{{count}} events",
+  "export": "Export CSV",
+  "empty": "No history matches the filter.",
+  "partsCount": "{{count}} parts",
+  "kind": {
+    "inspection": "Inspection",
+    "repair": "Repair",
+    "parts_request": "Parts Request"
+  },
+  "requestStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "ordered": "Ordered",
+    "cancelled": "Cancelled"
+  },
+  "filters": {
+    "kindAll": "All",
+    "crane": "Crane",
+    "craneAll": "All Cranes",
+    "from": "From",
+    "to": "To",
+    "searchPlaceholder": "Search WO / crane / description",
+    "rangeInvalid": "End date must be on or after start date."
+  },
+  "columns": {
+    "ref": "Ref No",
+    "kind": "Type",
+    "date": "Date",
+    "description": "Description",
+    "parts": "Parts",
+    "status": "Status",
+    "cost": "Cost"
+  },
+  "csv": {
+    "fileName": "maintenance-history",
+    "columns": {
+      "date": "Date",
+      "kind": "Type",
+      "ref": "Ref No",
+      "crane": "Crane",
+      "site": "Site",
+      "component": "Component",
+      "description": "Description",
+      "status": "Status",
+      "result": "Result",
+      "priority": "Priority",
+      "parts": "Parts",
+      "totalCost": "Total Cost"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "of": "of"
+  }
+}

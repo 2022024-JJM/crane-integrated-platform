@@ -1,0 +1,58 @@
+{
+  "title": "통합 이력",
+  "description": "전체 크레인의 점검·수리·부품 요청 이력 조회",
+  "totalCount": "{{count}}건",
+  "export": "CSV 내보내기",
+  "empty": "필터에 해당하는 이력이 없습니다.",
+  "partsCount": "부품 {{count}}종",
+  "kind": {
+    "inspection": "점검",
+    "repair": "수리",
+    "parts_request": "부품 요청"
+  },
+  "requestStatus": {
+    "pending": "대기",
+    "approved": "승인",
+    "ordered": "발주",
+    "cancelled": "취소"
+  },
+  "filters": {
+    "kindAll": "전체",
+    "crane": "크레인",
+    "craneAll": "전체 크레인",
+    "from": "시작일",
+    "to": "종료일",
+    "searchPlaceholder": "WO 번호 / 크레인 / 내용 검색",
+    "rangeInvalid": "종료일은 시작일보다 빠를 수 없습니다."
+  },
+  "columns": {
+    "ref": "번호",
+    "kind": "종류",
+    "date": "날짜",
+    "description": "내용",
+    "parts": "부품",
+    "status": "상태",
+    "cost": "비용"
+  },
+  "csv": {
+    "fileName": "maintenance-history",
+    "columns": {
+      "date": "날짜",
+      "kind": "종류",
+      "ref": "번호",
+      "crane": "크레인",
+      "site": "사이트",
+      "component": "구성품",
+      "description": "내용",
+      "status": "상태",
+      "result": "결과",
+      "priority": "우선순위",
+      "parts": "부품",
+      "totalCost": "총비용"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "페이지당",
+    "of": "/"
+  }
+}

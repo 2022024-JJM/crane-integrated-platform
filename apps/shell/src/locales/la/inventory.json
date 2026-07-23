@@ -15,10 +15,14 @@
     "category": "Categoria",
     "criticality": "Momentum",
     "currentStock": "Copia Praesens",
+    "reserved": "Reservata",
+    "available": "Disponibilis",
+    "uom": "Unitas",
     "safetyStock": "Copia Tuta",
     "stockLevel": "Gradus",
     "status": "Status",
     "unitCost": "Pretium",
+    "unitPrice": "Pretium Unitatis",
     "leadTime": "Tempus Admin.",
     "leadTimeSuffix": "admin."
   },
@@ -39,16 +43,97 @@
     "all": "Omne Momentum"
   },
   "category": {
-    "brake": "Frenum",
-    "wire_rope": "Funis",
-    "gear_bearing": "Rota / Axiculus",
-    "electrical": "Electrica",
-    "seal_gasket": "Sigillum",
-    "lubricant": "Lubricum",
-    "sensor": "Sensor",
-    "shaft_chain": "Axis / Catena",
-    "drum": "Tympanum",
+    "power-dist": "Distributio Electrica",
+    "motor-starter": "Initiator Motoris",
+    "pilot-device": "Pulsatorium",
+    "network": "Rete & Communicatio",
+    "fuse": "Fusibile",
+    "plc": "PLC / Moderator",
+    "sensing": "Sensus Positionis / Oneris",
+    "dcm-drive": "Actuator Motoris (DCM)",
+    "wiring": "Accessoria Filorum",
+    "power-supply": "Alimentatio / UPS",
+    "instrument": "Instrumenta / Relais",
+    "computing": "Computatrum / Monitor",
+    "mech-drive": "Machinatio Mechanica",
+    "enclosure": "Clima Armarii",
+    "operator": "Regimen Operatoris",
+    "transformer": "Transformator",
+    "current-sensing": "Sensus Currentis (CT)",
+    "resistor": "Resistor",
+    "warning": "Monitum / Signum",
+    "cctv": "CCTV / Visio",
+    "surge": "Protectio Fluctus (SPD)",
     "other": "Alia"
+  },
+  "searchPlaceholder": "Quaere partem / P/N / fabricatorem",
+  "categoryAll": "Omnes categoriae",
+  "crane": {
+    "common": "Communis"
+  },
+  "detail": {
+    "close": "Claude",
+    "expand": "Expande",
+    "collapse": "Contrahe",
+    "tabs": {
+      "info": "Notitia Partis",
+      "history": "Historia Copiae",
+      "usage": "Usus WO"
+    },
+    "stock": {
+      "current": "In Copia",
+      "reserved": "Reservata",
+      "available": "Disponibilis",
+      "onOrder": "In Ordine",
+      "reorderPt": "Punctum Iter.",
+      "min": "Minima Copia"
+    },
+    "onOrder": {
+      "title": "Ordines Aperti",
+      "auto": "Auto-Reordinatio"
+    },
+    "fields": {
+      "manufacturer": "Fabricator",
+      "locationBin": "Locus",
+      "reorderPoint": "Punctum Iterationis",
+      "lastReceipt": "Ultima Acceptio",
+      "lastIssue": "Ultima Emissio",
+      "cranes": "Applicatur"
+    },
+    "tx": {
+      "receipt": "Acceptio",
+      "issue": "Emissio",
+      "adjust": "Correctio"
+    },
+    "empty": {
+      "history": "Nullae transactiones copiae.",
+      "usage": "Nulla WO hac parte usa est."
+    },
+    "usageQty": "{{n}} usitata"
+  },
+  "actions": {
+    "issue": "Emissio",
+    "receipt": "Acceptio",
+    "issueTitle": "Emitte Partem",
+    "receiptTitle": "Registra Acceptionem",
+    "qty": "Quantitas",
+    "availableBadge": "Disponibilis: {{n}}",
+    "exceedsStock": "Disponibilem excedit — tantum {{n}}",
+    "linkedWo": "Conecte WO Reparationis",
+    "noWo": "Sine nexu",
+    "poRef": "Referentia PO",
+    "by": "Curator",
+    "note": "Nota",
+    "cancel": "Annulla",
+    "submitIssue": "Registra Emissionem",
+    "submitReceipt": "Registra Acceptionem",
+    "toast": {
+      "issued": "Emissa — {{part}} ×{{n}}",
+      "received": "Accepta — {{part}} ×{{n}}",
+      "insufficient": "Copia insufficiens — emitti non potest.",
+      "woClosed": "In WO perfectam emitti non potest.",
+      "failed": "Actio defecit."
+    }
   },
   "filter": {
     "all": "Omnia",

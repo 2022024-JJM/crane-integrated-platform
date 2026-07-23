@@ -19,7 +19,9 @@
     "./inventory": "./src/inventory/index.ts",
     "./compliance": "./src/compliance/index.ts",
     "./ticket": "./src/ticket/index.ts",
-    "./shared": "./src/shared/index.ts"
+    "./calendar": "./src/calendar/index.ts",
+    "./shared": "./src/shared/index.ts",
+    "./history": "./src/history/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

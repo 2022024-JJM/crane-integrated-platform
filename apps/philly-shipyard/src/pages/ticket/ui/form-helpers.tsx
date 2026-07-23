@@ -7,21 +7,16 @@ import {
   type ReactNode,
 } from 'react';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_TOGGLE_ACTIVE } from '../../../shared/ui/tone';
+import { PRIORITY_TONE, type TicketPriority } from '../../../shared/ui/status-variants';
 
+// 폼 섹션 accent 색상은 폐기 — 헤더는 뉴트럴 하나로 통일한다. (호환용 타입만 유지)
 export type AccentColor = 'amber' | 'emerald' | 'blue' | 'sky';
-
-const ACCENT_STYLES: Record<AccentColor, { bar: string; text: string; bg: string }> = {
-  amber:   { bar: 'bg-amber-500',   text: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-500/5' },
-  emerald: { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5' },
-  blue:    { bar: 'bg-blue-500',    text: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-500/5' },
-  sky:     { bar: 'bg-sky-500',     text: 'text-sky-600 dark:text-sky-400',      bg: 'bg-sky-500/5' },
-};
 
 export function FormSection({
   title,
   children,
   icon: Icon,
-  accent = 'sky',
   step,
 }: {
   title: string;
@@ -30,19 +25,18 @@ export function FormSection({
   accent?: AccentColor;
   step?: number;
 }) {
-  const s = ACCENT_STYLES[accent];
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-stretch border-b border-border">
-        <div className={cn('w-1 shrink-0', s.bar)} />
-        <div className={cn('flex flex-1 items-center gap-2.5 px-4 py-2.5', s.bg)}>
+        <div className="w-1 shrink-0 bg-primary/80" />
+        <div className="flex flex-1 items-center gap-2.5 bg-muted/30 px-4 py-2.5">
           {step !== undefined && (
-            <span className={cn('flex size-5 items-center justify-center rounded-full text-[10px] font-bold', s.bar, 'text-white')}>
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
               {step}
             </span>
           )}
-          {Icon && <Icon className={cn('size-3.5', s.text)} />}
-          <h3 className={cn('text-[11px] font-bold uppercase tracking-widest', s.text)}>{title}</h3>
+          {Icon && <Icon className="size-3.5 text-muted-foreground" />}
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-foreground">{title}</h3>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">{children}</div>
@@ -147,23 +141,13 @@ export { selectClass, inputClass, textareaClass };
 
 type ToggleVariant = 'default' | 'priority';
 
-const PRIORITY_COLORS: Record<string, string> = {
-  emergency: 'border-red-500 bg-red-500 text-white',
-  urgent:    'border-red-500 bg-red-500 text-white',
-  high:      'border-orange-500 bg-orange-500 text-white',
-  normal:    'border-primary bg-primary text-primary-foreground',
-  low:       'border-slate-500 bg-slate-500 text-white',
-  scheduled: 'border-blue-500 bg-blue-500 text-white',
-};
-
-const PRIORITY_INACTIVE: Record<string, string> = {
-  emergency: 'hover:border-red-500/60 hover:text-red-600',
-  urgent:    'hover:border-red-500/60 hover:text-red-600',
-  high:      'hover:border-orange-500/60 hover:text-orange-600',
-  normal:    'hover:border-primary/60 hover:text-primary',
-  low:       'hover:border-slate-400 hover:text-slate-600',
-  scheduled: 'hover:border-blue-500/60 hover:text-blue-600',
-};
+// 우선순위 선택 시에만 톤 틴트로 표시 — tone.ts의 TONE_TOGGLE_ACTIVE 단일 소스.
+// normal은 톤 없음(null) → 기본 primary 스타일로 폴백.
+function priorityActiveClass(priority: string): string {
+  const tone = PRIORITY_TONE[priority as TicketPriority];
+  if (tone === undefined || tone === null) return 'border-primary bg-primary text-primary-foreground';
+  return TONE_TOGGLE_ACTIVE[tone];
+}
 
 export function ToggleGroup<T extends string>({
   value,
@@ -182,12 +166,10 @@ export function ToggleGroup<T extends string>({
         const isActive = value === opt.value;
         const activeClass =
           variant === 'priority'
-            ? PRIORITY_COLORS[opt.value] ?? 'border-primary bg-primary text-primary-foreground'
+            ? priorityActiveClass(opt.value)
             : 'border-primary bg-primary text-primary-foreground';
         const inactiveClass =
-          variant === 'priority'
-            ? cn('border-border bg-background text-muted-foreground', PRIORITY_INACTIVE[opt.value])
-            : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground';
+          'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground';
         return (
           <button
             key={opt.value}

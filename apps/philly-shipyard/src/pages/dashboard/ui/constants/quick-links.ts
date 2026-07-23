@@ -17,7 +17,7 @@ export interface QuickLink {
 
 export const QUICK_LINKS: QuickLink[] = [
   { i18nKey: 'quickLinks.businessReview', to: '/maintenance', icon: ChartBar },
-  { i18nKey: 'quickLinks.serviceCalendar', to: '/inspection', icon: Calendar },
+  { i18nKey: 'quickLinks.serviceCalendar', to: '/service-calendar', icon: Calendar },
   { i18nKey: 'quickLinks.documents', to: '/compliance', icon: FileText },
   { i18nKey: 'quickLinks.agreements', to: '/asset-management', icon: FileCheck2 },
   { i18nKey: 'quickLinks.locationActivities', to: '/maintenance', icon: MapPin },

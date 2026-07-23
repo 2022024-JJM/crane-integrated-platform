@@ -82,7 +82,8 @@ function StepDot({ active, done, num, label }: { active: boolean; done: boolean;
       >
         {done ? <Check className="size-3" strokeWidth={3} /> : num}
       </div>
-      <span className={cn('text-xs font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>
+      {/* sm 미만에서는 번호 점만 표시해 스테퍼가 넘치지 않게 한다 */}
+      <span className={cn('hidden text-xs font-medium sm:inline', active ? 'text-foreground' : 'text-muted-foreground')}>
         {label}
       </span>
     </div>

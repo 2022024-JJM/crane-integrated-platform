@@ -41,7 +41,7 @@ export function PhillyDashboardPage() {
             {t('sections.service')}
           </h2>
           <span className="text-muted-foreground text-xs">
-            {t('sections.serviceSubtitle', { defaultValue: '핵심 운영 지표' })}
+            {t('sections.serviceSubtitle')}
           </span>
           <span aria-hidden className="ml-1 h-px flex-1 bg-border" />
         </div>

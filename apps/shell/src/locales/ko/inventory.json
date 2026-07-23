@@ -15,10 +15,14 @@
     "category": "분류",
     "criticality": "중요도",
     "currentStock": "현재 재고",
+    "reserved": "예약",
+    "available": "가용",
+    "uom": "단위",
     "safetyStock": "최소 재고",
     "stockLevel": "재고 수준",
     "status": "상태",
     "unitCost": "단가",
+    "unitPrice": "단가",
     "leadTime": "리드타임",
     "leadTimeSuffix": "리드"
   },
@@ -39,16 +43,97 @@
     "all": "전체 중요도"
   },
   "category": {
-    "brake": "브레이크",
-    "wire_rope": "와이어 로프",
-    "gear_bearing": "기어 / 베어링",
-    "electrical": "전기",
-    "seal_gasket": "씰 / 가스켓",
-    "lubricant": "윤활유",
-    "sensor": "센서",
-    "shaft_chain": "샤프트 / 체인",
-    "drum": "드럼",
+    "power-dist": "전력 분배·보호",
+    "motor-starter": "모터 스타터/컨택터",
+    "pilot-device": "푸시버튼/파일럿",
+    "network": "네트워크·통신",
+    "fuse": "퓨즈 보호",
+    "plc": "PLC/컨트롤러",
+    "sensing": "위치/하중 센싱",
+    "dcm-drive": "모터 드라이브(DCM)",
+    "wiring": "배선 액세서리",
+    "power-supply": "전원공급/UPS",
+    "instrument": "계측/릴레이",
+    "computing": "컴퓨팅/디스플레이",
+    "mech-drive": "기계 구동계",
+    "enclosure": "판넬 환경/보호",
+    "operator": "운전 조작(HMI/조이스틱)",
+    "transformer": "변압기",
+    "current-sensing": "전류 센싱(CT)",
+    "resistor": "저항기",
+    "warning": "경보/경고 장치",
+    "cctv": "CCTV/영상감시",
+    "surge": "서지 보호(SPD)",
     "other": "기타"
+  },
+  "searchPlaceholder": "부품명 / P/N / 제조사 검색",
+  "categoryAll": "전체 분류",
+  "crane": {
+    "common": "공통"
+  },
+  "detail": {
+    "close": "닫기",
+    "expand": "전체 화면",
+    "collapse": "패널로 축소",
+    "tabs": {
+      "info": "부품 정보",
+      "history": "입출고 이력",
+      "usage": "WO 사용"
+    },
+    "stock": {
+      "current": "현재 재고",
+      "reserved": "예약",
+      "available": "가용",
+      "onOrder": "발주중",
+      "reorderPt": "재주문점",
+      "min": "최소 재고"
+    },
+    "onOrder": {
+      "title": "발주중 주문",
+      "auto": "자동 재발주"
+    },
+    "fields": {
+      "manufacturer": "제조사",
+      "locationBin": "보관 위치",
+      "reorderPoint": "재주문점",
+      "lastReceipt": "최근 입고",
+      "lastIssue": "최근 출고",
+      "cranes": "적용 크레인"
+    },
+    "tx": {
+      "receipt": "입고",
+      "issue": "출고",
+      "adjust": "조정"
+    },
+    "empty": {
+      "history": "입출고 이력이 없습니다.",
+      "usage": "이 부품을 사용한 수리 작업이 없습니다."
+    },
+    "usageQty": "{{n}}개 사용"
+  },
+  "actions": {
+    "issue": "출고",
+    "receipt": "입고",
+    "issueTitle": "부품 출고",
+    "receiptTitle": "부품 입고",
+    "qty": "수량",
+    "availableBadge": "가용 {{n}}",
+    "exceedsStock": "가용 재고 초과 — 가용 {{n}}개",
+    "linkedWo": "수리 WO 연결",
+    "noWo": "연결 안 함",
+    "poRef": "PO 번호",
+    "by": "담당자",
+    "note": "비고",
+    "cancel": "취소",
+    "submitIssue": "출고 기록",
+    "submitReceipt": "입고 기록",
+    "toast": {
+      "issued": "출고 완료 — {{part}} ×{{n}}",
+      "received": "입고 완료 — {{part}} ×{{n}}",
+      "insufficient": "재고가 부족해 출고할 수 없습니다.",
+      "woClosed": "완료된 WO에는 출고할 수 없습니다.",
+      "failed": "처리에 실패했습니다."
+    }
   },
   "filter": {
     "all": "전체",

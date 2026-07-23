@@ -1,13 +1,26 @@
+// BOM 21개 클러스터 기준 카테고리 (shared/bom-catalog.ts의 BomClusterKey와 동일 키)
 export type PartCategory =
-  | 'shaft_chain'
-  | 'wire_rope'
-  | 'drum'
-  | 'gear_bearing'
-  | 'brake'
-  | 'sensor'
-  | 'electrical'
-  | 'seal_gasket'
-  | 'lubricant'
+  | 'power-dist'
+  | 'motor-starter'
+  | 'pilot-device'
+  | 'network'
+  | 'fuse'
+  | 'plc'
+  | 'sensing'
+  | 'dcm-drive'
+  | 'wiring'
+  | 'power-supply'
+  | 'instrument'
+  | 'computing'
+  | 'mech-drive'
+  | 'enclosure'
+  | 'operator'
+  | 'transformer'
+  | 'current-sensing'
+  | 'resistor'
+  | 'warning'
+  | 'cctv'
+  | 'surge'
   | 'other';
 
 export type PartCriticality = 'critical' | 'essential' | 'standard';
@@ -38,6 +51,9 @@ export interface Part {
   shelfLifeMonths?: number;
 }
 
+/** 관리 단위 — 벌크 케이블은 M(미터), 그 외 EA */
+export type Uom = 'EA' | 'M';
+
 export interface InventoryItem {
   id: string;
   partId: string;
@@ -47,6 +63,7 @@ export interface InventoryItem {
   category: PartCategory;
   criticality: PartCriticality;
   manufacturer: string;
+  uom: Uom;
   unitPrice: number;
   currentQty: number;
   reservedQty: number;
@@ -58,6 +75,8 @@ export interface InventoryItem {
   lastIssueDate: string;
   locationBin: string;
   leadTimeDays: number;
+  /** 이 부품이 적용되는 크레인 (둘 다 포함 시 공통 부품) */
+  craneIds: string[];
 }
 
 export interface PurchaseOrder {
@@ -71,7 +90,23 @@ export interface PurchaseOrder {
   totalAmount: number;
   status: PoStatus;
   urgency: 'urgent' | 'normal' | 'scheduled';
+  /** 'System' = 재주문점 미달 자동 재발주 */
   requester: string;
+  note?: string;
+  note_ko?: string;
+}
+
+/** 부품 기준 발주중(미입고) PO 라인 뷰 */
+export interface OpenPoLine {
+  poId: string;
+  poNumber: string;
+  vendor: string;
+  qty: number;
+  expectedDelivery: string;
+  status: PoStatus;
+  requester: string;
+  note?: string;
+  note_ko?: string;
 }
 
 export type PartsRequestStatus = 'pending' | 'approved' | 'ordered' | 'cancelled';
@@ -106,3 +141,41 @@ export interface InventorySummary {
   activePOs: number;
   totalValue: number;
 }
+
+// ── 재고 트랜잭션 (입고/출고 원장) ──
+export type InventoryTransactionType = 'receipt' | 'issue' | 'adjust';
+
+export type InventoryTransactionRefType =
+  | 'po'
+  | 'repair_wo'
+  | 'parts_request'
+  | 'manual';
+
+export interface InventoryTransaction {
+  id: string;
+  partId: string;
+  type: InventoryTransactionType;
+  /** 항상 양수 — 방향은 type이 결정 (receipt=＋, issue=－) */
+  qty: number;
+  date: string;
+  ref?: string;
+  refType?: InventoryTransactionRefType;
+  by: string;
+  note?: string;
+  note_ko?: string;
+}
+
+export interface StockMovementInput {
+  partId: string;
+  qty: number;
+  by: string;
+  date?: string;
+  ref?: string;
+  refType?: InventoryTransactionRefType;
+  note?: string;
+  note_ko?: string;
+}
+
+export type StockMovementResult =
+  | { success: true }
+  | { success: false; reason: 'not_found' | 'insufficient_stock' | 'invalid_qty' };

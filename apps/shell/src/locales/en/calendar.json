@@ -1,0 +1,58 @@
+{
+  "title": "Service Calendar",
+  "description": "Scheduled inspections and maintenance across the fleet",
+  "view": {
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "schedule": "Schedule"
+  },
+  "nav": {
+    "today": "Today",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "allDay": "All day",
+  "moreCount": "+{{count}} more",
+  "popover": {
+    "crane": "Crane",
+    "status": "Status",
+    "time": "Time",
+    "viewDetail": "View details"
+  },
+  "source": {
+    "inspection": "Inspection",
+    "repair": "Maintenance"
+  },
+  "type": {
+    "frequent": "Frequent",
+    "periodic": "Periodic",
+    "emergency": "Emergency",
+    "special": "Special"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled",
+    "received": "Received",
+    "waiting_parts": "Waiting Parts",
+    "re_inspection": "Re-inspection",
+    "on_hold": "On Hold"
+  },
+  "priority": {
+    "emergency": "Emergency",
+    "high": "High",
+    "normal": "Normal",
+    "low": "Low"
+  },
+  "allDayExpand": "Expand all-day events",
+  "allDayCollapse": "Collapse all-day events",
+  "schedule": {
+    "empty": "No events this month."
+  },
+  "toast": {
+    "rescheduled": "{{woNumber}} rescheduled to {{date}}"
+  }
+}

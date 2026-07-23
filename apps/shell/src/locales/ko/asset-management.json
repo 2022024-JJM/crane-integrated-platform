@@ -5,7 +5,8 @@
   "filter": {
     "status": "상태",
     "all": "전체",
-    "empty": "조건에 맞는 자산이 없습니다."
+    "empty": "조건에 맞는 자산이 없습니다.",
+    "search": "자산명 / S/N / 모델 검색"
   },
   "collapse": {
     "allCollapsed": "전체 접힘",
@@ -13,9 +14,7 @@
     "toggle": "전체 접기 / 펼치기"
   },
   "sites": {
-    "dock1": "1 도크",
-    "dock2": "4 도크",
-    "blockShop": "Block Shop"
+    "dock4": "4 도크"
   },
   "modal": {
     "title": "새 자산 등록",
@@ -23,7 +22,10 @@
     "cancel": "취소",
     "submit": "자산 등록",
     "toastCreated": "자산 {{name}}이(가) 등록되었습니다.",
-    "indoorOutdoor": { "indoor": "실내", "outdoor": "실외" },
+    "indoorOutdoor": {
+      "indoor": "실내",
+      "outdoor": "실외"
+    },
     "fields": {
       "name": "자산명",
       "craneType": "크레인 유형",
@@ -73,9 +75,10 @@
     "lastActivity": "최근 활동"
   },
   "sections": {
-    "dock1": { "title": "1 도크", "subtitle": "Goliath / TTC 크레인" },
-    "dock2": { "title": "4 도크", "subtitle": "Quay 크레인" },
-    "blockShop": { "title": "Block Shop", "subtitle": "오버헤드 크레인" }
+    "dock4": {
+      "title": "4 도크",
+      "subtitle": "Goliath / Quay 크레인"
+    }
   },
   "criticalAlert": "점검 지연 {{overdueCount}}대 · 수리 진행 {{repairCount}}대 — 즉각적인 조치 필요",
   "card": {
@@ -88,7 +91,19 @@
     "today": "오늘",
     "yesterday": "어제",
     "daysAgo": "{{count}}일 전",
-    "monthsAgo": "{{count}}개월 전"
+    "monthsAgo": "{{count}}개월 전",
+    "health": "구성품 건강도",
+    "worst": "최저",
+    "noData": "데이터 없음",
+    "components": "구성품",
+    "issueCount": "이상 {{count}}건",
+    "allNormal": "전체 정상",
+    "totalParts": "부품 {{count}}개",
+    "openWo": "미결 WO",
+    "woBreakdown": "점검 {{overdue}} · 정비 {{repair}}",
+    "noOpenWo": "없음",
+    "nextInspection": "다음 점검",
+    "view3d": "3D 보기"
   },
   "status": {
     "operating": "운용 중",
@@ -113,10 +128,21 @@
     "notFound": "자산을 찾을 수 없습니다.",
     "noInspectionHistory": "점검 이력이 없습니다.",
     "noMaintenanceHistory": "정비 이력이 없습니다.",
+    "noHistory": "이력이 없습니다.",
+    "bomSearch": "구성품 / P/N 검색",
+    "bomOnlyIssues": "이상 항목만",
+    "componentCount": "구성품 {{count}}개",
+    "noMatch": "일치하는 구성품이 없습니다.",
+    "inStock": "재고",
+    "viewInInventory": "재고에서 보기",
     "tabs": {
       "info": "기본 정보",
+      "overview": "구성품",
+      "specs": "제원",
       "inspection": "점검 이력",
-      "maintenance": "정비 이력"
+      "maintenance": "정비 이력",
+      "history": "통합 이력",
+      "3d": "3D 뷰"
     },
     "componentHealth": {
       "title": "구성품 상태",
@@ -144,6 +170,7 @@
       "status": "상태"
     },
     "component": {
+      "partsCount": "부품 {{n}}개",
       "operatingHours": "운용 시간",
       "lastInspection": "최근 점검",
       "nextInspection": "다음 점검",
@@ -154,6 +181,31 @@
         "critical": "위험",
         "replace": "즉시 교체"
       }
+    },
+    "zones": {
+      "body": "본체 / 거더",
+      "trolley": "트롤리",
+      "hook": "후크",
+      "hookRope": "호이스트 로프",
+      "base": "주행부 / 베이스",
+      "machineryHouse": "기계실",
+      "electricalRoom": "전기실",
+      "cabin": "운전실",
+      "boom": "붐 / 지브",
+      "upper": "상부",
+      "middle": "중부",
+      "lower": "하부"
+    },
+    "zonePanel": {
+      "hint": "3D 모델에서 구역을 클릭하면 해당 부품 재원이 표시됩니다.",
+      "allZones": "전체 보기",
+      "partSpec": "부품 재원",
+      "partName": "부품명",
+      "partNumber": "P/N",
+      "manufacturer": "제조사",
+      "status": "상태",
+      "remainingLife": "잔여 수명",
+      "back": "목록으로"
     }
   },
   "units": {
@@ -161,5 +213,9 @@
     "meter": "m",
     "hours": "h",
     "units": "기"
+  },
+  "pagination": {
+    "rowsPerPage": "페이지당 행",
+    "of": "/"
   }
 }

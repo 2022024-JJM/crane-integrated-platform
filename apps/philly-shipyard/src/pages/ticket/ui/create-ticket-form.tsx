@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -29,6 +30,7 @@ import {
   type InspectionFieldsErrors,
 } from './inspection-fields';
 import { PartsFields, type PartsFieldsState, type PartsFieldsErrors } from './parts-fields';
+import { toLocalDateString } from '../../../shared/lib/relative-date';
 
 type TicketType = 'repair' | 'inspection' | 'parts';
 type AnyPriority = 'emergency' | 'urgent' | 'high' | 'normal' | 'low' | 'scheduled';
@@ -42,6 +44,16 @@ interface CraneRef {
 
 interface UnifiedForm extends CraneRef, RepairFieldsState, InspectionFieldsState, PartsFieldsState {
   priority: AnyPriority;
+  /** 점검에서 넘어온 경우 원천 점검 WO 번호 (비노출, 생성 시 기록) */
+  sourceWoNumber?: string;
+}
+
+interface TicketPrefill {
+  craneId?: string;
+  componentName?: string;
+  sourceWoNumber?: string;
+  /** 캘린더 빈 슬롯 클릭 등에서 넘어온 예정일 ('YYYY-MM-DD') */
+  date?: string;
 }
 
 type UnifiedErrors = RepairFieldsErrors &
@@ -56,12 +68,16 @@ const ACCENT_BY_TYPE: Record<TicketType, AccentColor> = {
   parts: 'blue',
 };
 
-function makeInitial(): UnifiedForm {
-  const d = new Date().toISOString().slice(0, 10);
+function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
+  const d = prefill.date ?? toLocalDateString();
   return {
-    craneId: '', craneName: '', siteId: '', siteName: '',
+    craneId: prefill.craneId ?? '', craneName: '', siteId: '', siteName: '',
     priority: 'normal', performerType: 'internal', assignedTo: '',
-    componentName: '', sourceType: 'breakdown', failureType: 'mechanical',
+    componentName: prefill.componentName ?? '',
+    // 점검(sourceWo)에서 넘어왔으면 원천을 inspection으로 설정
+    sourceType: prefill.sourceWoNumber ? 'inspection' : 'breakdown',
+    sourceWoNumber: prefill.sourceWoNumber,
+    failureType: 'mechanical',
     repairLevel: 'minor', failureDescription: '',
     scheduledStart: d, scheduledEnd: d,
     woType: 'frequent', scheduledDate: d, findings: '',
@@ -84,8 +100,43 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   const createInspection = useCreateInspectionTicket();
   const createParts = useCreatePartsTicket();
 
-  const [form, setForm] = useState<UnifiedForm>(makeInitial);
+  // 프리필 — craneId/component/sourceWo는 점검 상세→수리 접수, date는 캘린더 클릭-생성
+  const [params] = useSearchParams();
+  const [form, setForm] = useState<UnifiedForm>(() => {
+    const dateParam = params.get('date');
+    const date =
+      dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+    return makeInitial(
+      type === 'repair'
+        ? {
+            craneId: params.get('craneId') ?? undefined,
+            componentName: params.get('component') ?? undefined,
+            sourceWoNumber: params.get('sourceWo') ?? undefined,
+            date,
+          }
+        : { date },
+    );
+  });
   const [errors, setErrors] = useState<UnifiedErrors>({});
+  // 부품 행의 안정적 React key — index key는 중간 삭제 시 포커스/상태가 어긋난다
+  const [itemKeys, setItemKeys] = useState<string[]>([]);
+  const nextItemKey = useRef(0);
+
+  // 프리필된 craneId로 크레인명/사이트 정보를 채운다 (cranes 로드 후 1회)
+  useEffect(() => {
+    if (form.craneId && !form.craneName) {
+      const crane = cranes.find((c) => c.id === form.craneId);
+      if (crane) {
+        setForm((f) => ({
+          ...f,
+          craneName: crane.name,
+          siteId: crane.siteId,
+          siteName: crane.siteName,
+        }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cranes]);
 
   function set<K extends keyof UnifiedForm>(key: K, value: UnifiedForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -107,11 +158,13 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
 
   function addItem() {
     set('items', [...form.items, { partId: '', partName: '', qty: 1, unitPrice: 0 }]);
+    setItemKeys((keys) => [...keys, `row-${nextItemKey.current++}`]);
     setErrors((e) => ({ ...e, items: undefined }));
   }
 
   function removeItem(idx: number) {
     set('items', form.items.filter((_, i) => i !== idx));
+    setItemKeys((keys) => keys.filter((_, i) => i !== idx));
   }
 
   function updateItem(idx: number, partId: string) {
@@ -128,9 +181,11 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   }
 
   function updateQty(idx: number, qty: number) {
+    // 빈 입력(Number('') = NaN) 방어 — NaN이 draft로 흘러가지 않게 1로 보정
+    const safeQty = Number.isFinite(qty) ? Math.max(1, Math.round(qty)) : 1;
     set(
       'items',
-      form.items.map((item, i) => (i === idx ? { ...item, qty: Math.max(1, qty) } : item)),
+      form.items.map((item, i) => (i === idx ? { ...item, qty: safeQty } : item)),
     );
   }
 
@@ -144,6 +199,12 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       if (!form.failureDescription.trim()) e.failureDescription = t('validation.descriptionRequired');
       if (!form.scheduledStart) e.scheduledStart = t('validation.scheduledStartRequired');
       if (!form.scheduledEnd) e.scheduledEnd = t('validation.scheduledEndRequired');
+      // 'YYYY-MM-DD'는 사전순 비교 = 날짜 비교
+      if (form.scheduledStart && form.scheduledEnd && form.scheduledEnd < form.scheduledStart) {
+        e.scheduledEnd = t('validation.endBeforeStart', {
+          defaultValue: 'Scheduled End must be on or after Scheduled Start.',
+        });
+      }
     }
     if (type === 'inspection') {
       if (!form.scheduledDate) e.scheduledDate = t('validation.scheduledDateRequired');
@@ -162,7 +223,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) {
-      toast.error(t('validation.craneRequired'), { description: t('description') });
+      toast.error(t('validation.formInvalid', { defaultValue: 'Please fix the highlighted fields.' }));
       return;
     }
 
@@ -172,6 +233,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         siteId: form.siteId, siteName: form.siteName,
         componentName: form.componentName,
         sourceType: form.sourceType,
+        sourceWoNumber: form.sourceWoNumber || undefined,
         failureType: form.failureType,
         priority: form.priority as RepairTicketDraft['priority'],
         repairLevel: form.repairLevel,
@@ -251,7 +313,8 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         onChange={(e) => handleCraneChange(e.target.value)}
       >
         <option value="">{t('fields.cranePlaceholder')}</option>
-        {['dock-1', 'dock-2', 'dock-in'].map((siteId) => {
+        {/* 사이트 그룹은 크레인 데이터에서 파생 — 사이트 추가 시 코드 수정 불필요 */}
+        {[...new Set(cranes.map((c) => c.siteId))].map((siteId) => {
           const site = cranes.filter((c) => c.siteId === siteId);
           if (!site.length) return null;
           return (
@@ -305,6 +368,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
             accent={accent}
             state={form}
             errors={errors}
+            itemKeys={itemKeys}
             onRequesterChange={(v) => set('requester', v)}
             onNoteChange={(v) => set('note', v)}
             onAddItem={addItem}

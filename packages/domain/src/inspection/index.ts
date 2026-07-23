@@ -16,6 +16,7 @@ export {
   getInspectionSummary,
   getInspectionWOById,
   updateChecklistItems,
+  updateInspectionSchedule,
   submitInspectionResult,
 } from './model/mock-data';
 export type { ChecklistItemPatch } from './model/mock-data';

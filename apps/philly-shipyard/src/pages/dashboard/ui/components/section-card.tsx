@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Info, type LucideIcon } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -11,15 +12,8 @@ import {
 } from '@crane/ui/molecules/card';
 import type { KccAccent } from '../constants/konecranes-colors';
 
-const ICON_BADGE: Record<KccAccent, string> = {
-  safety: 'bg-red-500/15 text-red-500 border-red-500/30',
-  production: 'bg-orange-500/15 text-orange-500 border-orange-500/30',
-  critical: 'bg-red-500/15 text-red-500 border-red-500/30',
-  low: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-  success: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-  info: 'bg-cyan-500/15 text-cyan-500 border-cyan-500/30',
-  neutral: 'bg-muted text-muted-foreground border-border',
-};
+// 아이콘 칩은 항상 뉴트럴 — 색은 카드 내부 데이터(도넛·언더라인)만 사용한다.
+const ICON_BADGE = 'bg-muted text-muted-foreground border-border';
 
 interface SectionCardProps {
   title: string;
@@ -40,10 +34,10 @@ export function SectionCard({
   showInfo = false,
   caption,
   variant = 'card',
-  accent = 'neutral',
   contentClassName,
   children,
 }: SectionCardProps) {
+  const { t } = useTranslation('common');
   return (
     <Card
       size={variant === 'panel' ? 'default' : 'sm'}
@@ -64,7 +58,7 @@ export function SectionCard({
             <span
               className={cn(
                 'inline-flex size-7 shrink-0 items-center justify-center rounded-md border',
-                ICON_BADGE[accent],
+                ICON_BADGE,
               )}
             >
               <Icon className="size-3.5" />
@@ -82,7 +76,7 @@ export function SectionCard({
           <CardAction>
             <Link
               to={href}
-              aria-label={`${title} 이동`}
+              aria-label={t('aria.goTo', { title })}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowRight className="size-4" />

@@ -1,12 +1,17 @@
+import type { ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMaintenanceDetail } from '@crane/features/maintenance';
 import { Badge } from '@crane/ui/atoms/badge';
+import {
+  REPAIR_PRIORITY_VARIANT as PRIORITY_VARIANT,
+  REPAIR_STATUS_VARIANT as STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
 
 export function MaintenanceDetailPage() {
   const { repairId } = useParams<{ repairId: string }>();
-  const { repair } = useMaintenanceDetail(repairId ?? '');
+  const { repair, sourceInspectionId } = useMaintenanceDetail(repairId ?? '');
   const { t } = useTranslation('maintenance');
 
   if (!repair) {
@@ -38,34 +43,55 @@ export function MaintenanceDetailPage() {
           <div>
             <h1 className="text-lg font-bold">{repair.woNumber}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {repair.craneName} · {repair.siteName}
+              <Link
+                to={`/asset-management/${repair.craneId}`}
+                className="text-primary hover:underline"
+              >
+                {repair.craneName}
+              </Link>
+              {' · '}
+              {repair.siteName}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Badge variant={repair.priority === 'emergency' ? 'destructive' : repair.priority === 'high' ? 'warning' : 'secondary'}>
+            <Badge variant={PRIORITY_VARIANT[repair.priority]}>
               {t(`priority.${repair.priority}`).toUpperCase()}
             </Badge>
-            <Badge variant={repair.status === 'completed' ? 'success' : repair.status === 'waiting_parts' ? 'warning' : 'secondary'}>
-              {t(`status.${repair.status}`).toUpperCase()}
+            <Badge variant={STATUS_VARIANT[repair.status]}>
+              {t(`status.${repair.status}`)}
             </Badge>
           </div>
         </div>
 
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-4">
-          {[
+          {([
             { label: t('detail.fields.component'), value: repair.componentName },
             { label: t('detail.fields.failureType'), value: repair.failureType },
             { label: t('detail.fields.repairLevel'), value: repair.repairLevel },
             { label: t('detail.fields.performer'), value: repair.performerType === 'internal' ? t('detail.fields.performerInternal') : t('detail.fields.performerExternal') },
             { label: t('detail.fields.assignedTo'), value: repair.assignedTo },
-            { label: t('detail.fields.source'), value: repair.sourceType },
+            {
+              label: t('detail.fields.source'),
+              value:
+                sourceInspectionId && repair.sourceWoNumber ? (
+                  <Link
+                    to={`/inspection/${sourceInspectionId}`}
+                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  >
+                    {repair.sourceWoNumber}
+                    <ChevronRight className="size-3" />
+                  </Link>
+                ) : (
+                  repair.sourceType
+                ),
+            },
             { label: t('detail.fields.scheduledStart'), value: repair.scheduledStart.slice(0, 10) },
             { label: t('detail.fields.scheduledEnd'), value: repair.scheduledEnd.slice(0, 10) },
             { label: t('detail.fields.actualStart'), value: repair.actualStart?.slice(0, 10) ?? '—' },
             { label: t('detail.fields.actualEnd'), value: repair.actualEnd?.slice(0, 10) ?? '—' },
             { label: t('detail.fields.downtime'), value: repair.downtimeHours != null ? `${repair.downtimeHours} h` : '—' },
             { label: t('detail.fields.reInspection'), value: repair.reInspectionResult ?? '—' },
-          ].map(({ label, value }) => (
+          ] as { label: string; value: ReactNode }[]).map(({ label, value }) => (
             <div key={label}>
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="text-sm font-medium mt-0.5 capitalize">{value}</dd>
@@ -88,13 +114,21 @@ export function MaintenanceDetailPage() {
               {t('detail.noParts')}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {repair.partsUsed.map((p) => (
-                <div key={p.partId} className="flex items-center justify-between text-sm">
-                  <span className="truncate flex-1">{p.partName}</span>
-                  <span className="text-muted-foreground tabular-nums ml-4">×{p.qty}</span>
-                  <span className="font-medium tabular-nums ml-4">${(p.qty * p.unitCost).toLocaleString()}</span>
-                </div>
+                <Link
+                  key={p.partId}
+                  to={`/inventory?part=${encodeURIComponent(p.partId)}`}
+                  className="group flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+                  title={t('detail.viewPart')}
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <Package className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                    <span className="truncate">{p.partName}</span>
+                  </span>
+                  <span className="ml-4 text-muted-foreground tabular-nums">×{p.qty}</span>
+                  <span className="ml-4 font-medium tabular-nums">${(p.qty * p.unitCost).toLocaleString()}</span>
+                </Link>
               ))}
               <div className="flex justify-between text-sm font-bold border-t border-border pt-2 mt-2">
                 <span>{t('detail.partsCost')}</span>

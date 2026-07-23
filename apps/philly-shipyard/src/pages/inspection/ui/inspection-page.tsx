@@ -1,33 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ChevronRight, Calendar, User, ClipboardCheck, Plus } from 'lucide-react';
+import { ChevronRight, Calendar, User, ClipboardCheck, Plus } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import type { InspectionStatus, InspectionType, InspectionWO } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
-
-const STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  scheduled: 'secondary',
-  in_progress: 'warning',
-  completed: 'success',
-  overdue: 'destructive',
-  cancelled: 'secondary',
-};
-
-const STATUS_ACCENT: Record<InspectionStatus, string> = {
-  scheduled: 'bg-slate-400',
-  in_progress: 'bg-amber-500',
-  completed: 'bg-emerald-500',
-  overdue: 'bg-red-500',
-  cancelled: 'bg-slate-500',
-};
-
-const RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
-  pass: 'success',
-  fail: 'destructive',
-  conditional: 'warning',
-};
+import { cn } from '@crane/core/lib/utils';
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import {
+  INSPECTION_RESULT_VARIANT as RESULT_VARIANT,
+  INSPECTION_STATUS_TONE,
+  INSPECTION_STATUS_VARIANT as STATUS_VARIANT,
+} from '../../../shared/ui/status-variants';
+import { MetricCard } from '../../../shared/ui/metric-card';
+import { AlertBanner } from '../../../shared/ui/alert-banner';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
 
 // 컬럼: 상태바 · WO/크레인 · 유형 · 예정일 · 담당자 · 진행률 · 상태 · 결과/화살표
 const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minmax(120px,1fr) 100px 100px';
@@ -35,22 +23,11 @@ const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minma
 type FilterStatus = 'all' | InspectionStatus;
 type FilterType = 'all' | InspectionType;
 
-function formatRelativeDate(dateStr: string): { label: string; isOverdue: boolean } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return { label: 'D-Day', isOverdue: false };
-  if (diff > 0) return { label: `D-${diff}`, isOverdue: false };
-  return { label: `D+${Math.abs(diff)}`, isOverdue: true };
-}
-
 function InspectionRow({ wo }: { wo: InspectionWO }) {
   const { t } = useTranslation('inspection');
   const completedItems = wo.checklistItems.filter((i) => i.judgment !== null).length;
   const totalItems = wo.checklistItems.length;
-  const { label: dateLabel, isOverdue: dateOverdue } = formatRelativeDate(wo.scheduledDate);
+  const { label: dateLabel, overdue: dateOverdue } = formatRelativeDate(wo.scheduledDate);
   const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   return (
@@ -60,7 +37,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       style={{ gridTemplateColumns: GRID_TEMPLATE }}
     >
       {/* 상태 accent 바 */}
-      <div className={`h-11 ${STATUS_ACCENT[wo.status]}`} />
+      <div className={`h-11 ${TONE_DOT[INSPECTION_STATUS_TONE[wo.status]]}`} />
 
       {/* WO / 크레인 */}
       <div className="min-w-0 py-2.5">
@@ -79,7 +56,7 @@ function InspectionRow({ wo }: { wo: InspectionWO }) {
       <div className="flex items-center gap-1.5">
         <Calendar className="h-3 w-3 text-muted-foreground/60 shrink-0" />
         <div className="min-w-0">
-          <p className={`text-xs font-semibold tabular-nums ${dateOverdue ? 'text-red-500' : ''}`}>
+          <p className={cn('text-xs font-semibold tabular-nums', dateOverdue && TONE_TEXT.critical)}>
             {dateLabel}
           </p>
           <p className="text-[10px] text-muted-foreground tabular-nums">{wo.scheduledDate}</p>
@@ -172,31 +149,25 @@ export function InspectionPage() {
 
       {/* 지연 점검 배너 */}
       {overdueCount > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 px-5 py-3 flex items-center gap-3">
-          <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm font-medium text-red-600 dark:text-red-400">
-            {t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
-          </p>
-        </div>
+        <AlertBanner
+          tone="critical"
+          title={t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
+        />
       )}
 
       {/* 메트릭 */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, color: 'text-foreground', card: '' },
-          { label: t('metrics.completed'), value: summary.completed, color: 'text-emerald-500', card: '' },
-          { label: t('metrics.overdue'), value: summary.overdue, color: 'text-red-500', card: summary.overdue > 0 ? 'border-red-500/30 bg-red-500/5' : '' },
+          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, dot: '' },
+          { label: t('metrics.completed'), value: summary.completed, dot: '' },
+          { label: t('metrics.overdue'), value: summary.overdue, dot: summary.overdue > 0 ? TONE_DOT.critical : '' },
           {
             label: t('metrics.completionRate'),
             value: `${summary.completionRate}%`,
-            color: summary.completionRate >= 80 ? 'text-emerald-500' : 'text-amber-500',
-            card: summary.completionRate < 80 ? 'border-amber-500/35 bg-amber-500/5' : '',
+            dot: summary.completionRate < 80 ? TONE_DOT.warning : '',
           },
-        ].map(({ label, value, color, card }) => (
-          <div key={label} className={`rounded border border-border/90 bg-card/80 p-4 shadow-sm min-h-24 flex flex-col justify-between ${card}`}>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={`text-[1.8rem] leading-none font-semibold tracking-tight tabular-nums mt-2 ${color}`}>{value}</p>
-          </div>
+        ].map(({ label, value, dot }) => (
+          <MetricCard key={label} label={label} value={value} dot={dot} />
         ))}
       </section>
 
@@ -207,9 +178,10 @@ export function InspectionPage() {
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
-                filterType === type ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
+                filterType === type ? TONE_PILL_ACTIVE.neutral : PILL_INACTIVE,
+              )}
             >
               {type === 'all' ? t('filter.allTypes') : t(`type.${type}`)}
             </button>
@@ -220,9 +192,12 @@ export function InspectionPage() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
-                filterStatus === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
+                filterStatus === s
+                  ? TONE_PILL_ACTIVE[s === 'all' ? 'neutral' : INSPECTION_STATUS_TONE[s]]
+                  : PILL_INACTIVE,
+              )}
             >
               {s === 'all' ? t('filter.allStatus') : t(`status.${s}`)}
             </button>
@@ -232,31 +207,39 @@ export function InspectionPage() {
 
       {/* 테이블 */}
       <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
-        {/* 헤더 */}
-        <div
-          className="grid items-center gap-3 border-b border-border/60 bg-muted/40 pr-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-          style={{ gridTemplateColumns: GRID_TEMPLATE }}
-        >
-          <span />
-          <span>{t('table.woNumber')}</span>
-          <span>{t('table.type')}</span>
-          <span>{t('table.scheduled')}</span>
-          <span>{t('table.assignedTo')}</span>
-          <span className="text-right">{t('table.progress', { defaultValue: 'Progress' })}</span>
-          <span className="text-right">{t('table.status')}</span>
-          <span className="text-right">{t('table.result')}</span>
+        {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[970px]">
+            {/* 헤더 */}
+            <div
+              className="grid items-center gap-3 border-b border-border/60 bg-muted/40 pr-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              style={{ gridTemplateColumns: GRID_TEMPLATE }}
+            >
+              <span />
+              <span>{t('table.woNumber')}</span>
+              <span>{t('table.type')}</span>
+              <span>{t('table.scheduled')}</span>
+              <span>{t('table.assignedTo')}</span>
+              <span className="text-right">{t('table.progress', { defaultValue: 'Progress' })}</span>
+              <span className="text-right">{t('table.status')}</span>
+              <span className="text-right">{t('table.result')}</span>
+            </div>
+
+            {/* 바디 */}
+            {filtered.length > 0 && (
+              <div>
+                {paginated.map((wo) => <InspectionRow key={wo.id} wo={wo} />)}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 바디 */}
-        <div>
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {t('empty')}
-            </div>
-          ) : (
-            paginated.map((wo) => <InspectionRow key={wo.id} wo={wo} />)
-          )}
-        </div>
+        {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            {t('empty')}
+          </div>
+        )}
 
         {/* 페이지네이션 */}
         {filtered.length > 0 && (

@@ -12,6 +12,8 @@ export interface RepairTicketDraft {
   componentName: string;
   failureType: RepairWO['failureType'];
   sourceType: RepairWO['sourceType'];
+  /** 점검에서 생성된 경우 원천 점검 WO 번호 */
+  sourceWoNumber?: string;
   priority: RepairWO['priority'];
   repairLevel: RepairWO['repairLevel'];
   failureDescription: string;

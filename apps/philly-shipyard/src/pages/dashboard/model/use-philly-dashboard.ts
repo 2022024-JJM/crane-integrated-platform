@@ -5,6 +5,7 @@ import { getAllRepairWOs } from '@crane/domain/maintenance';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getAllCertifications } from '@crane/domain/compliance';
 import { useEntityTicks } from '@crane/features/shared';
+import { parseLocalDateTime } from '../../../shared/lib/relative-date';
 import {
   aggregateMonthlyServiceMetrics,
   aggregateInspectionPassFail,
@@ -40,21 +41,18 @@ export function usePhillyDashboard() {
     const emergencyRepairs = repairs.filter((w) => w.priority === 'emergency').length;
     const waitingParts = repairs.filter((w) => w.status === 'waiting_parts').length;
     const onHoldRepairs = repairs.filter((w) => w.status === 'on_hold').length;
-    const completedThisMonth = repairs.filter(
-      (w) =>
-        w.status === 'completed' &&
-        w.actualEnd &&
-        new Date(w.actualEnd).getMonth() === now.getMonth() &&
-        new Date(w.actualEnd).getFullYear() === now.getFullYear(),
-    ).length;
+    const completedThisMonth = repairs.filter((w) => {
+      if (w.status !== 'completed' || !w.actualEnd) return false;
+      const end = parseLocalDateTime(w.actualEnd);
+      return end.getMonth() === now.getMonth() && end.getFullYear() === now.getFullYear();
+    }).length;
 
     // ── Inspections ───────────────────────────────────────
     const overdue = inspections.filter((w) => w.status === 'overdue').length;
-    const completedInspections = inspections.filter((w) => w.status === 'completed').length;
-    const inspectionCompletionRate =
-      inspections.length > 0
-        ? Math.round((completedInspections / inspections.length) * 100)
-        : 0;
+    // 점검 완료 자산 수 (건수가 아닌 distinct 크레인 — 분모 totalCranes와 단위 일치)
+    const inspectedCraneCount = new Set(
+      inspections.filter((w) => w.status === 'completed').map((w) => w.craneId),
+    ).size;
 
     // ── Inventory ─────────────────────────────────────────
     const lowStockCount = inventoryItems.filter(
@@ -84,7 +82,9 @@ export function usePhillyDashboard() {
 
     const agreementPct =
       totalCranes > 0 ? Math.round((operatingCranes / totalCranes) * 100) : 0;
-    const connectedPct = inspectionCompletionRate;
+    // 도넛 %와 분수(연결 자산/전체 자산)가 같은 지표를 가리키도록 통일
+    const connectedPct =
+      totalCranes > 0 ? Math.round((inspectedCraneCount / totalCranes) * 100) : 0;
 
     return {
       // Period
@@ -117,7 +117,7 @@ export function usePhillyDashboard() {
         connectedPct,
         totalAssets: totalCranes,
         operatingCranes,
-        connectedCount: completedInspections,
+        connectedCount: inspectedCraneCount,
       },
 
       // Daily inspection

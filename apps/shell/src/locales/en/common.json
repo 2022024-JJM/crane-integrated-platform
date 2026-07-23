@@ -1,6 +1,9 @@
 {
   "language": "Language",
   "comingSoon": "Coming soon",
+  "aria": {
+    "goTo": "Go to {{title}}"
+  },
   "header": {
     "toggleSidebar": "Toggle sidebar",
     "toggleTheme": "Toggle theme",
@@ -69,6 +72,8 @@
     "assetManagement": "Asset Management",
     "inspection": "Inspection",
     "maintenance": "Maintenance",
+    "history": "History",
+    "serviceCalendar": "Service Calendar",
     "inventory": "Inventory",
     "compliance": "OSHA Compliance",
     "categoryCrane": "Crane",

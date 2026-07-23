@@ -20,7 +20,7 @@ export function QuickLinksList({ items = QUICK_LINKS }: QuickLinksListProps) {
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-0.5 rounded-l-xl bg-slate-400"
+        className="absolute inset-y-0 left-0 w-0.5 rounded-l-xl bg-border"
       />
       <div className="grid grid-cols-1 md:grid-cols-2">
         {items.map((item, idx) => {

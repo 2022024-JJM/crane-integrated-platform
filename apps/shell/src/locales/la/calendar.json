@@ -1,0 +1,58 @@
+{
+  "title": "Kalendarium Ministerii",
+  "description": "Inspectiones et refectiones ordinatae per totam flottam",
+  "view": {
+    "month": "Mensis",
+    "week": "Hebdomas",
+    "day": "Dies",
+    "schedule": "Agenda"
+  },
+  "nav": {
+    "today": "Hodie",
+    "prev": "Prior",
+    "next": "Posterior"
+  },
+  "allDay": "Totus dies",
+  "moreCount": "+{{count}} plura",
+  "popover": {
+    "crane": "Grus",
+    "status": "Status",
+    "time": "Tempus",
+    "viewDetail": "Vide details"
+  },
+  "source": {
+    "inspection": "Inspectio",
+    "repair": "Refectio"
+  },
+  "type": {
+    "frequent": "Frequens",
+    "periodic": "Periodica",
+    "emergency": "Urgens",
+    "special": "Specialis"
+  },
+  "status": {
+    "scheduled": "Ordinata",
+    "in_progress": "In Processu",
+    "completed": "Perfecta",
+    "overdue": "Retardata",
+    "cancelled": "Cancellata",
+    "received": "Accepta",
+    "waiting_parts": "Exspectat Partes",
+    "re_inspection": "Re-inspectio",
+    "on_hold": "Suspensa"
+  },
+  "priority": {
+    "emergency": "Urgens",
+    "high": "Alta",
+    "normal": "Normalis",
+    "low": "Ima"
+  },
+  "allDayExpand": "Eventus totius diei expandere",
+  "allDayCollapse": "Eventus totius diei complicare",
+  "schedule": {
+    "empty": "Nulli eventus hoc mense."
+  },
+  "toast": {
+    "rescheduled": "{{woNumber}} ad {{date}} reordinatum"
+  }
+}

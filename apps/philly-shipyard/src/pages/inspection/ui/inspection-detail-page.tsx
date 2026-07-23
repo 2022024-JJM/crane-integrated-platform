@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, CheckCircle2, XCircle, MinusCircle, Save, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, XCircle, MinusCircle, Save, ClipboardCheck, AlertTriangle, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -10,10 +10,12 @@ import {
 } from '@crane/features/inspection';
 import type { ChecklistJudgment, ActionRequired, ChecklistItemPatch } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
+import { cn } from '@crane/core/lib/utils';
+import { TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 
 const JUDGMENT_ICON: Record<ChecklistJudgment, React.ReactNode> = {
-  pass: <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />,
-  fail: <XCircle className="w-5 h-5 text-red-500 shrink-0" />,
+  pass: <CheckCircle2 className={cn('w-5 h-5 shrink-0', TONE_TEXT.positive)} />,
+  fail: <XCircle className={cn('w-5 h-5 shrink-0', TONE_TEXT.critical)} />,
   na: <MinusCircle className="w-5 h-5 text-muted-foreground shrink-0" />,
 };
 
@@ -95,12 +97,15 @@ export function InspectionDetailPage() {
     setItemStates((prev) => {
       const current = prev[itemId];
       const next = nextJudgment(current.judgment);
+      // fail 전환 시 원본에 fail용 조치(stop_operation 등)가 있으면 유지 — 재토글로 소실 방지
+      const original = inspection?.checklistItems.find((i) => i.id === itemId)?.actionRequired;
+      const failAction = original && original !== 'none' ? original : 'repair_needed';
       return {
         ...prev,
         [itemId]: {
           ...current,
           judgment: next,
-          actionRequired: next === 'fail' ? 'repair_needed' : 'none',
+          actionRequired: next === 'fail' ? failAction : 'none',
         },
       };
     });
@@ -128,7 +133,7 @@ export function InspectionDetailPage() {
     if (!inspectionId) return;
     const ok = saveChecklist(inspectionId, collectPatches());
     if (!ok) {
-      toast.error(t('detail.toastSaved'));
+      toast.error(t('detail.toastSaveFailed', { defaultValue: 'Failed to save checklist' }));
       return;
     }
     setSaved(true);
@@ -140,7 +145,7 @@ export function InspectionDetailPage() {
     if (!inspectionId) return;
     const ok = submitInspection(inspectionId, collectPatches());
     if (!ok) {
-      toast.error(t('detail.toastSubmitted'));
+      toast.error(t('detail.toastSubmitFailed', { defaultValue: 'Failed to submit inspection' }));
       return;
     }
     toast.success(t('detail.toastSubmitted'), {
@@ -167,7 +172,14 @@ export function InspectionDetailPage() {
           <div>
             <h1 className="text-lg font-bold">{inspection.woNumber}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {inspection.craneName} · {inspection.siteName}
+              <Link
+                to={`/asset-management/${inspection.craneId}`}
+                className="text-primary hover:underline"
+              >
+                {inspection.craneName}
+              </Link>
+              {' · '}
+              {inspection.siteName}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -210,14 +222,23 @@ export function InspectionDetailPage() {
 
       {/* 부적합 항목 요약 */}
       {failedItems.length > 0 && (
-        <div className="rounded border border-red-500/40 bg-red-500/5 p-4 space-y-2">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-red-500">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            {t('detail.nonConformance')} ({failedItems.length})
-          </h2>
+        <div className={cn('rounded border p-4 space-y-2', TONE_SURFACE.critical)}>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className={cn('flex items-center gap-2 text-sm font-bold', TONE_TEXT.critical)}>
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {t('detail.nonConformance')} ({failedItems.length})
+            </h2>
+            <Link
+              to={`/ticket/create?type=repair&craneId=${encodeURIComponent(inspection.craneId)}&sourceWo=${encodeURIComponent(inspection.woNumber)}&component=${encodeURIComponent(failedItems[0]?.itemName ?? '')}`}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-destructive/90"
+            >
+              <Wrench className="size-3.5" />
+              {t('detail.createRepairTicket')}
+            </Link>
+          </div>
           {failedItems.map((item) => (
             <div key={item.id} className="flex items-start gap-2 text-sm">
-              <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <XCircle className={cn('w-4 h-4 shrink-0 mt-0.5', TONE_TEXT.critical)} />
               <div>
                 <span className="font-medium">{item.itemName}</span>
                 {item.comment && <p className="text-xs text-muted-foreground mt-0.5">{item.comment}</p>}

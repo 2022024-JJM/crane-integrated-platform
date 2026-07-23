@@ -1,345 +1,270 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { lazy, Suspense, useMemo } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { ChevronLeft, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAssetDetail } from '@crane/features/asset';
-import type { ComponentStatus, CraneComponent } from '@crane/domain/asset';
-import type { InspectionStatus } from '@crane/domain/inspection';
-import type { RepairPriority } from '@crane/domain/maintenance';
+import { useCraneHistory } from '@crane/features/history';
+import type { ComponentStatus } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
+import { StatusDot } from '@crane/ui/atoms/status-dot';
+import { cn } from '@crane/core/lib/utils';
+import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
+import { ASSET_STATUS_DOT, ASSET_STATUS_VARIANT } from '../../../shared/ui/status-variants';
+import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { AssetBomTab } from './asset-bom-tab';
+import { AssetInspectionTab } from './asset-inspection-tab';
+import { AssetMaintenanceTab } from './asset-maintenance-tab';
+import { AssetHistoryTab } from './asset-history-tab';
+import { AssetSpecsTab } from './asset-specs-tab';
 
-function formatRelativeDate(dateStr: string): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return 'D-Day';
-  if (diff > 0) return `D-${diff}`;
-  return `D+${Math.abs(diff)}`;
+// 3D 탭은 three.js 의존 — 탭을 열 때만 청크를 로드하도록 lazy 분리
+const Asset3dTab = lazy(() =>
+  import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
+);
+
+type DetailTab = 'overview' | '3d' | 'inspection' | 'maintenance' | 'history' | 'specs';
+
+const DETAIL_TABS: DetailTab[] = ['overview', '3d', 'inspection', 'maintenance', 'history', 'specs'];
+
+function isDetailTab(value: string | null): value is DetailTab {
+  return value !== null && (DETAIL_TABS as string[]).includes(value);
 }
 
-const COMPONENT_STATUS_VARIANT: Record<ComponentStatus, 'success' | 'warning' | 'destructive' | 'secondary'> = {
-  normal: 'success',
-  caution: 'warning',
-  warning: 'warning',
-  critical: 'destructive',
-  replace: 'destructive',
-};
+const ACTIVE_REPAIR_STATUSES = new Set([
+  'received',
+  'waiting_parts',
+  'in_progress',
+  're_inspection',
+]);
 
-const INSP_STATUS_VARIANT: Record<InspectionStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  scheduled: 'secondary',
-  in_progress: 'warning',
-  completed: 'success',
-  overdue: 'destructive',
-  cancelled: 'secondary',
-};
-
-const INSP_RESULT_VARIANT: Record<string, 'success' | 'destructive' | 'warning'> = {
-  pass: 'success',
-  fail: 'destructive',
-  conditional: 'warning',
-};
-
-const REPAIR_PRIORITY_VARIANT: Record<RepairPriority, 'destructive' | 'warning' | 'secondary'> = {
-  emergency: 'destructive',
-  high: 'warning',
-  normal: 'secondary',
-  low: 'secondary',
-};
-
-const REPAIR_STATUS_VARIANT: Record<string, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  received: 'secondary',
-  waiting_parts: 'destructive',
-  in_progress: 'warning',
-  re_inspection: 'warning',
-  completed: 'success',
-};
-
-const HEALTH_COLOR: Partial<Record<ComponentStatus, string>> = {
-  caution: 'text-amber-500',
-  warning: 'text-amber-500',
-  critical: 'text-red-500',
-  replace: 'text-red-500',
-};
-
-function lifePercent(component: CraneComponent) {
-  if (component.expectedLifeHours === 0) return 0;
-  return Math.min(100, Math.round((component.currentHours / component.expectedLifeHours) * 100));
-}
-
-function ComponentRow({ component }: { component: CraneComponent }) {
-  const { t } = useTranslation('asset-management');
-  const pct = lifePercent(component);
-  const barColor =
-    pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
-
-  return (
-    <div className="flex flex-col gap-2 rounded border border-border/90 bg-card/70 p-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium truncate">{component.componentName}</span>
-        <Badge variant={COMPONENT_STATUS_VARIANT[component.status]} className="shrink-0">
-          {t(`detail.component.status.${component.status}`)}
-        </Badge>
-      </div>
-      {component.partNumber && (
-        <p className="text-xs text-muted-foreground">P/N: {component.partNumber}</p>
-      )}
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{t('detail.component.operatingHours')}</span>
-          <span className="tabular-nums font-medium">
-            {component.currentHours.toLocaleString()} / {component.expectedLifeHours.toLocaleString()} {t('units.hours')}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-          </div>
-          <span className={`text-xs font-semibold tabular-nums shrink-0 w-9 text-right ${pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-500' : 'text-emerald-500'}`}>
-            {pct}%
-          </span>
-        </div>
-      </div>
-      <div className="flex gap-4 text-xs text-muted-foreground">
-        <span>{t('detail.component.lastInspection')}: {component.lastInspectionDate}</span>
-        <span>{t('detail.component.nextInspection')}: {component.nextInspectionDate}</span>
-      </div>
-    </div>
-  );
-}
+// 비정상 상태별 톤 (심각도 높은 순)
+const ISSUE_TONES: { key: ComponentStatus; tone: Tone }[] = [
+  { key: 'replace', tone: 'critical' },
+  { key: 'critical', tone: 'critical' },
+  { key: 'warning', tone: 'warning' },
+  { key: 'caution', tone: 'warning' },
+];
 
 export function AssetDetailPage() {
   const { craneId } = useParams<{ craneId: string }>();
   const { asset, components, inspections, repairs } = useAssetDetail(craneId ?? '');
+  const history = useCraneHistory(craneId ?? '');
   const { t } = useTranslation('asset-management');
-  const { t: tInspection } = useTranslation('inspection');
-  const { t: tMaintenance } = useTranslation('maintenance');
-  const [activeTab, setActiveTab] = useState<'info' | 'inspection' | 'maintenance'>('info');
+  // ?tab= 딥링크 (목록 카드 3D 버튼 → ?tab=3d) — 새로고침에도 탭 유지
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: DetailTab = isDetailTab(tabParam) ? tabParam : 'overview';
+  const setActiveTab = (tab: DetailTab) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'overview') next.delete('tab');
+    else next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
+
+  // 잎 컴포넌트 상태 집계 (요약 밴드)
+  const stats = useMemo(() => {
+    const leaves = components.filter((c) => c.parentId !== null);
+    const counts: Record<ComponentStatus, number> = {
+      normal: 0,
+      caution: 0,
+      warning: 0,
+      critical: 0,
+      replace: 0,
+    };
+    for (const c of leaves) counts[c.status] += 1;
+    const issues = leaves.length - counts.normal;
+    return { total: leaves.length, counts, issues };
+  }, [components]);
+
+  const overdueInspections = inspections.filter((w) => w.status === 'overdue').length;
+  const activeRepairs = repairs.filter((w) => ACTIVE_REPAIR_STATUSES.has(w.status)).length;
+  const openWo = overdueInspections + activeRepairs;
+
+  const nextInspection = useMemo(() => {
+    const upcoming = inspections
+      .filter((w) => w.status !== 'completed' && w.status !== 'cancelled')
+      .map((w) => w.scheduledDate)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    return upcoming[0];
+  }, [inspections]);
 
   if (!asset) {
     return (
-      <div className="flex items-center justify-center h-full p-6">
+      <div className="flex h-full items-center justify-center p-6">
         <p className="text-muted-foreground">{t('detail.notFound')}</p>
       </div>
     );
   }
 
-  const rootComponents = components.filter((c) => c.parentId === null);
-  const getChildren = (parentId: string) => components.filter((c) => c.parentId === parentId);
+  const tabs: { key: DetailTab; count?: number }[] = [
+    { key: 'overview', count: stats.issues > 0 ? stats.issues : undefined },
+    { key: '3d' },
+    { key: 'inspection', count: inspections.length || undefined },
+    { key: 'maintenance', count: repairs.length || undefined },
+    { key: 'history', count: history.length || undefined },
+    { key: 'specs' },
+  ];
 
-  // 비정상 구성품 상태 집계
-  const nonNormalStatuses: ComponentStatus[] = ['caution', 'warning', 'critical', 'replace'];
-  const healthCounts = components.reduce(
-    (acc, c) => {
-      acc[c.status] = (acc[c.status] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<ComponentStatus, number>,
-  );
-  const hasNonNormal = nonNormalStatuses.some((s) => (healthCounts[s] ?? 0) > 0);
+  const nextInspRel = nextInspection ? formatRelativeDate(nextInspection) : null;
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
-      {/* 헤더 */}
-      <div className="flex items-center gap-3">
-        <Link
-          to="/asset-management"
-          className="cursor-pointer flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t('title')}
-        </Link>
-      </div>
+    <div className="flex flex-col gap-5 p-4 md:p-6">
+      {/* 뒤로 */}
+      <Link
+        to="/asset-management"
+        className="flex w-fit cursor-pointer items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        {t('title')}
+      </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 좌: 기본 정보 */}
-        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm space-y-4">
-          <h2 className="text-base font-bold">{asset.name} — {t('detail.title')}</h2>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5">
-            {[
-              { label: t('detail.fields.craneType'), value: asset.craneType.toUpperCase() },
-              { label: t('detail.fields.manufacturer'), value: asset.manufacturer },
-              { label: t('detail.fields.model'), value: asset.model },
-              { label: t('detail.fields.capacity'), value: `${asset.capacityTon} ${t('units.ton')}` },
-              { label: t('detail.fields.span'), value: asset.spanM ? `${asset.spanM} ${t('units.meter')}` : '—' },
-              { label: t('detail.fields.liftHeight'), value: asset.liftHeightM ? `${asset.liftHeightM} ${t('units.meter')}` : '—' },
-              { label: t('detail.fields.serialNo'), value: asset.serialNumber },
-              { label: t('detail.fields.site'), value: asset.siteName },
-              { label: t('detail.fields.location'), value: asset.locationZone },
-              { label: t('detail.fields.indoorOutdoor'), value: asset.indoorOutdoor },
-              { label: t('detail.fields.installDate'), value: asset.installationDate },
-              { label: t('detail.fields.manufactureDate'), value: asset.manufactureDate },
-              { label: t('detail.fields.warrantyStart'), value: asset.warrantyStart },
-              { label: t('detail.fields.warrantyEnd'), value: asset.warrantyEnd },
-              { label: t('detail.fields.oshaClass'), value: asset.oshaClassification },
-              { label: t('detail.fields.status'), value: asset.status.toUpperCase() },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd className="text-sm font-medium mt-0.5">{value}</dd>
-              </div>
-            ))}
-          </dl>
+      {/* 요약 헤더 밴드 */}
+      <div className="flex flex-col gap-4 rounded-lg border border-border/90 bg-card/60 p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <StatusDot status={ASSET_STATUS_DOT[asset.status]} />
+            <h1 className="truncate text-lg font-bold">{asset.name}</h1>
+            <Badge variant={ASSET_STATUS_VARIANT[asset.status]} className="shrink-0">
+              {t(`status.${asset.status}`)}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {asset.craneType.toUpperCase()} · {asset.capacityTon}
+            {t('units.ton')} · {asset.manufacturer} {asset.model}
+            <span className="mx-1.5 text-border">|</span>
+            {asset.siteName} · {asset.locationZone}
+          </p>
         </div>
 
-        {/* 우: 탭 패널 */}
-        <div className="rounded border border-border/90 bg-card/60 p-5 shadow-sm backdrop-blur-sm flex flex-col gap-4">
-          {/* 탭 버튼 */}
-          <div className="flex gap-1 rounded border border-border p-1 w-fit">
-            {(['info', 'inspection', 'maintenance'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors ${
-                  activeTab === tab
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t(`detail.tabs.${tab}`)}
-              </button>
-            ))}
+        {/* 요약 지표 */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* 구성품 상태 롤업 */}
+          <div className="flex flex-col gap-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('detail.componentHealth.title')}
+            </span>
+            {stats.issues > 0 ? (
+              <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px]">
+                {ISSUE_TONES.map(({ key, tone }) => {
+                  const n = stats.counts[key];
+                  if (n === 0) return null;
+                  return (
+                    <span key={key} className={cn('flex items-center gap-1 font-semibold', TONE_TEXT[tone])}>
+                      <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
+                      {t(`detail.componentHealth.${key}`)} {n}
+                    </span>
+                  );
+                })}
+                <span className="text-muted-foreground tabular-nums">/ {stats.total}</span>
+              </span>
+            ) : (
+              <span className={cn('text-[11px] font-semibold', TONE_TEXT.positive)}>
+                {t('card.allNormal', { defaultValue: 'All Normal' })}
+                <span className="ml-1 font-normal text-muted-foreground tabular-nums">
+                  ({stats.total})
+                </span>
+              </span>
+            )}
           </div>
 
-          {/* 탭: 기본 정보 (BOM) */}
-          {activeTab === 'info' && (
-            <div className="flex flex-col gap-4">
-              {/* 구성품 헬스 롤업 */}
-              {hasNonNormal && (
-                <div className="flex items-center gap-2 flex-wrap px-1">
-                  <span className="text-xs text-muted-foreground">{t('detail.componentHealth.title')}:</span>
-                  {nonNormalStatuses.map((s, i, arr) => {
-                    const count = healthCounts[s] ?? 0;
-                    if (count === 0) return null;
-                    return (
-                      <span key={s} className="flex items-center gap-1">
-                        <span className={`text-xs font-semibold tabular-nums ${HEALTH_COLOR[s]}`}>
-                          {t(`detail.componentHealth.${s}`)} {count}
-                        </span>
-                        {i < arr.length - 1 && (healthCounts[arr[i + 1]] ?? 0) > 0 && (
-                          <span className="text-muted-foreground text-xs">·</span>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
+          {/* 미결 WO */}
+          <div className="flex flex-col gap-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('card.openWo', { defaultValue: 'Open WO' })}
+            </span>
+            <span
+              className={cn(
+                'flex items-center gap-1.5 text-sm font-semibold tabular-nums',
+                openWo > 0 ? TONE_TEXT.warning : 'text-foreground',
               )}
+            >
+              <Wrench className="size-3.5" />
+              {openWo}
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {openWo > 0
+                  ? t('card.woBreakdown', {
+                      overdue: overdueInspections,
+                      repair: activeRepairs,
+                      defaultValue: `${overdueInspections} insp · ${activeRepairs} repair`,
+                    })
+                  : ''}
+              </span>
+            </span>
+          </div>
 
-              <h3 className="text-sm font-bold">{t('detail.bomTitle')}</h3>
-              {rootComponents.length === 0 ? (
-                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                  {t('detail.noBomData')}
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto max-h-120 pr-1">
-                  {rootComponents.map((root) => {
-                    const children = getChildren(root.id);
-                    return (
-                      <div key={root.id} className="space-y-2">
-                        <ComponentRow component={root} />
-                        {children.length > 0 && (
-                          <div className="pl-5 space-y-2">
-                            {children.map((child) => (
-                              <ComponentRow key={child.id} component={child} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 탭: 점검 이력 */}
-          {activeTab === 'inspection' && (
-            <div className="flex flex-col gap-2">
-              {inspections.length === 0 ? (
-                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                  {t('detail.noInspectionHistory')}
-                </div>
-              ) : (
-                <div className="space-y-2 overflow-y-auto max-h-120 pr-1">
-                  {inspections.map((wo) => (
-                    <Link
-                      key={wo.id}
-                      to={`/inspection/${wo.id}`}
-                      className="cursor-pointer group flex items-center gap-3 px-3.5 py-3 rounded border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{wo.woNumber}</p>
-                        <p className="text-xs text-muted-foreground">
-                          <span className={`font-semibold mr-1 ${wo.status === 'overdue' ? 'text-red-500' : 'text-foreground'}`}>
-                            {formatRelativeDate(wo.scheduledDate)}
-                          </span>
-                          {wo.scheduledDate}
-                        </p>
-                      </div>
-                      <Badge variant={wo.woType === 'frequent' ? 'secondary' : 'warning'} className="shrink-0">
-                        {tInspection(`type.${wo.woType}`)}
-                      </Badge>
-                      <Badge variant={INSP_STATUS_VARIANT[wo.status]} className="shrink-0">
-                        {tInspection(`status.${wo.status}`)}
-                      </Badge>
-                      {wo.result ? (
-                        <Badge variant={INSP_RESULT_VARIANT[wo.result]} className="shrink-0">
-                          {tInspection(`result.${wo.result}`)}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground shrink-0 w-10 text-right">—</span>
-                      )}
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 탭: 정비 이력 */}
-          {activeTab === 'maintenance' && (
-            <div className="flex flex-col gap-2">
-              {repairs.length === 0 ? (
-                <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                  {t('detail.noMaintenanceHistory')}
-                </div>
-              ) : (
-                <div className="space-y-2 overflow-y-auto max-h-120 pr-1">
-                  {repairs.map((wo) => (
-                    <Link
-                      key={wo.id}
-                      to={`/maintenance/${wo.id}`}
-                      className="cursor-pointer group flex flex-col gap-1.5 px-3.5 py-3 rounded border border-border/90 bg-card/70 hover:bg-card hover:border-primary/40 transition-all"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium truncate">{wo.woNumber}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Badge variant={REPAIR_PRIORITY_VARIANT[wo.priority]}>
-                            {tMaintenance(`priority.${wo.priority}`).toUpperCase()}
-                          </Badge>
-                          <Badge variant={REPAIR_STATUS_VARIANT[wo.status]}>
-                            {tMaintenance(`status.${wo.status}`)}
-                          </Badge>
-                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{wo.componentName}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{wo.failureDescription}</p>
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold mr-1 text-foreground">
-                          {formatRelativeDate(wo.scheduledStart.slice(0, 10))}
-                        </span>
-                        {wo.scheduledStart.slice(0, 10)}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* 다음 점검 */}
+          <div className="flex flex-col gap-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('card.nextInspection', { defaultValue: 'Next Inspection' })}
+            </span>
+            {nextInspRel ? (
+              <span
+                className={cn(
+                  'text-sm font-semibold tabular-nums',
+                  nextInspRel.overdue ? TONE_TEXT.critical : 'text-foreground',
+                )}
+              >
+                {nextInspRel.label}
+                <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+                  {nextInspection}
+                </span>
+              </span>
+            ) : (
+              <span className="text-sm font-semibold text-muted-foreground">—</span>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* 탭 */}
+      <div role="tablist" className="flex gap-1 border-b border-border">
+        {tabs.map(({ key, count }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === key}
+            onClick={() => setActiveTab(key)}
+            className={cn(
+              'cursor-pointer border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+              activeTab === key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t(`detail.tabs.${key}`)}
+            {count !== undefined && (
+              <span className="ml-1.5 tabular-nums text-muted-foreground">{count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 탭 본문 */}
+      <div role="tabpanel">
+        {/* 탭: 3D 뷰 (구역 선택 → 부품 재원) — three.js 청크 lazy 로드 */}
+        {activeTab === '3d' && (
+          <Suspense
+            fallback={<div className="h-[420px] animate-pulse rounded-lg bg-muted/40 lg:h-[600px]" />}
+          >
+            <Asset3dTab asset={asset} components={components} />
+          </Suspense>
+        )}
+
+        {/* 탭: 구성품 (BOM) */}
+        {activeTab === 'overview' && <AssetBomTab components={components} stats={stats} />}
+
+        {/* 탭: 점검 이력 */}
+        {activeTab === 'inspection' && <AssetInspectionTab inspections={inspections} />}
+
+        {/* 탭: 정비 이력 */}
+        {activeTab === 'maintenance' && <AssetMaintenanceTab repairs={repairs} />}
+
+        {/* 탭: 통합 이력 — 점검·수리·부품요청 타임라인 */}
+        {activeTab === 'history' && <AssetHistoryTab events={history} />}
+
+        {/* 탭: 제원 */}
+        {activeTab === 'specs' && <AssetSpecsTab asset={asset} />}
       </div>
     </div>
   );

@@ -9,9 +9,11 @@ export type {
   RepairWO,
 } from './model/types';
 export {
+  addPartUsedToRepair,
   addRepairWO,
   getAllRepairWOs,
   getMaintenanceSummary,
   getRepairWOById,
   updateRepairStatus,
+  updateRepairSchedule,
 } from './model/mock-data';
