@@ -51,9 +51,15 @@ export interface CraneZoneConfig {
   zones: CraneZone[];
 }
 
-// ─── 골리앗/갠트리: gc-04 파트 조립 ─────────────────────────────────────────
-// 트랜스폼은 apps/shell/public/scenes/goliath.json의 검증된 배치를
-// body 기준 상대 좌표로 환산한 값. (body/trolly scale 0.48, hook/rope 1은 의도된 값)
+// ─── 골리앗/갠트리: body/trolley 분리 파트 + body 서브 존 ──────────────────
+// goliath_crane.glb(통짜)를 지오메트리 연결 요소 기준으로 분리한 파트 파일:
+//   - goliath_crane_body.glb    거더·다리·주행부 (트롤리 제외 전체)
+//   - goliath_crane_trolley.glb 거더 상부 트롤리 어셈블리
+// 두 파일 모두 원본 좌표계를 유지하므로 position [0,0,0]으로 정확히 조립된다.
+// 트롤리는 실제 메시 단위 hover/클릭/하이라이트, 나머지 구역은 body 바운딩박스
+// 기준 정규화 영역(subRegionsOf)으로 분류. 스케일 0.1은 실측 미터 모델
+// (스팬 ~130m)을 뷰어 그리드에 맞춘 값 (CRANE_TYPE_MODEL.goliath와 동일).
+// 영역 좌표는 통상적 골리앗 실루엣 기준 추정치 — dev에서 시각 튜닝 대상.
 const GOLIATH_ZONES: CraneZoneConfig = {
   strategy: 'parts',
   zones: [
@@ -73,57 +79,35 @@ const GOLIATH_ZONES: CraneZoneConfig = {
       ],
       parts: [
         {
-          url: '/models/gc-04/gc_04_body.glb',
+          url: '/models/goliath_crane_body.glb',
           position: [0, 0, 0],
-          scale: [0.48, 0.48, 0.48],
+          scale: [0.1, 0.1, 0.1],
         },
       ],
     },
-    // 전기실/운전실은 body GLB에 통짜로 포함 → body 바운딩박스 기준 영역 선택.
-    // 좌표는 gc_04_body.glb 정점 실루엣 분석값: 거더 밴드 y≥0.85, 정면 뷰
-    // 화면 우측 = -z(정규화 z≈0) 끝단. dev에서 시각 튜닝 대상.
+    // 오른쪽(+x) 상단: 거더 우측 끝단 = 전기실, 그 아래 다리 상단 = 운전실
+    // (body bbox 기준 — 거더는 y 0.89~1.0 밴드, 우측 다리는 x 0.9~1.0)
     {
       key: 'electricalRoom',
       clusterKeys: ['plc', 'enclosure'],
       subRegionsOf: 'body',
-      regions: [{ min: [0, 0.78, 0], max: [1, 1, 0.15] }],
+      regions: [{ min: [0.85, 0.88, 0.25], max: [1, 1, 0.75] }],
     },
     {
       key: 'cabin',
       clusterKeys: ['operator', 'computing', 'cctv'],
       subRegionsOf: 'body',
-      regions: [{ min: [0, 0.55, 0], max: [1, 0.78, 0.17] }],
+      regions: [{ min: [0.9, 0.72, 0.25], max: [1, 0.88, 0.75] }],
     },
+    // 트롤리는 분리 파트 GLB — 메시 단위 hover/클릭/하이라이트
     {
       key: 'trolley',
       clusterKeys: ['dcm-drive', 'motor-starter', 'mech-drive', 'pilot-device'],
       parts: [
         {
-          url: '/models/gc-04/gc_04_trolly.glb',
-          position: [-0.034, 7.988, -3.355],
-          scale: [0.48, 0.48, 0.48],
-        },
-      ],
-    },
-    {
-      key: 'hookRope',
-      clusterKeys: ['mech-drive', 'sensing'],
-      parts: [
-        {
-          url: '/models/gc-04/gc_04_hook_rope.glb',
-          position: [-0.032, 5.947, -3.355],
-          scale: [1, 1, 1],
-        },
-      ],
-    },
-    {
-      key: 'hook',
-      clusterKeys: ['sensing', 'warning'],
-      parts: [
-        {
-          url: '/models/gc-04/gc_04_hook.glb',
-          position: [0.02, 4.694, -3.35],
-          scale: [1, 1, 1],
+          url: '/models/goliath_crane_trolley.glb',
+          position: [0, 0, 0],
+          scale: [0.1, 0.1, 0.1],
         },
       ],
     },
@@ -131,7 +115,7 @@ const GOLIATH_ZONES: CraneZoneConfig = {
 };
 
 // ─── 러핑/지브 계열: 단일 모델 + 정규화 영역 분류 ──────────────────────────
-// 영역 값은 crane.glb 실루엣 기준 추정치 — dev에서 시각 튜닝 대상.
+// 영역 값은 LLC_002.glb 실루엣 기준 추정치 — dev에서 시각 튜닝 대상.
 // 순서 중요: cabin이 machineryHouse보다 먼저 매칭되어야 한다.
 const LUFFING_ZONES: CraneZoneConfig = {
   strategy: 'regions',
