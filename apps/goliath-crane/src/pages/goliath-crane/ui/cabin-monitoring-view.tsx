@@ -18,7 +18,7 @@ import {
   PopoverPopup,
   PopoverTrigger,
 } from '@crane/ui/molecules/popover';
-import { Bell } from 'lucide-react';
+import { Bell, LoaderCircle, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
@@ -266,20 +266,19 @@ function CabinMonitoringViewContent() {
       <header
         className={
           alarm.data?.alarm === true && alarmLevel === 'red'
-            ? 'flex items-center justify-end gap-3 border-b border-red-500/50 pb-2'
+            ? 'flex items-center justify-between gap-3 border-b border-red-500/50 pb-2'
             : alarm.data?.alarm === true && alarmLevel === 'yellow'
-              ? 'flex items-center justify-end gap-3 border-b border-amber-400/40 pb-2'
-              : 'flex items-center justify-end gap-3 border-b pb-2'
+              ? 'flex items-center justify-between gap-3 border-b border-amber-400/40 pb-2'
+              : 'flex items-center justify-between gap-3 border-b pb-2'
         }
       >
+        <AlarmStatusChip alarm={alarm.data} />
         <div className="flex items-center gap-3">
-          <AlarmStatusChip alarm={alarm.data} />
-          <AlarmHistoryButton events={alarmEvents} />
-          <span className="bg-border h-6 w-px" aria-hidden="true" />
           <time className="font-mono text-lg font-bold tracking-tight tabular-nums">
             {timeLabel(now)}
           </time>
           <ConnectionBadge connection={connection} url={bridgeUrl} />
+          <AlarmHistoryButton events={alarmEvents} />
         </div>
       </header>
 
@@ -396,27 +395,48 @@ function ConnectionBadge({
 }) {
   const isConnected = connection === 'connected';
   const isError = connection === 'closed' || connection === 'error';
+  const Icon = isConnected ? Wifi : isError ? WifiOff : LoaderCircle;
+
   return (
-    <div
-      className="bg-card flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-3"
-      title={url}
-    >
-      <span
+    <Popover>
+      <PopoverTrigger
         className={
           isConnected
-            ? 'size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_1px_rgba(52,211,153,0.8)]'
+            ? 'bg-card hover:bg-muted grid size-9 place-items-center rounded-full border text-emerald-500 transition-colors'
             : isError
-              ? 'size-2 rounded-full bg-red-400 shadow-[0_0_8px_1px_rgba(248,113,113,0.8)]'
-              : 'bg-muted-foreground size-2 animate-pulse rounded-full'
+              ? 'bg-card hover:bg-muted grid size-9 place-items-center rounded-full border text-red-500 transition-colors'
+              : 'bg-card hover:bg-muted text-muted-foreground grid size-9 place-items-center rounded-full border transition-colors'
         }
-      />
-      <span className="text-sm font-bold whitespace-nowrap">
-        {connectionLabel(connection)}
-      </span>
-      <span className="text-muted-foreground hidden font-mono text-[11px] whitespace-nowrap xl:inline">
-        {url}
-      </span>
-    </div>
+        title={url}
+      >
+        <Icon
+          className={connection === 'connecting' ? 'size-4 animate-spin' : 'size-4'}
+          aria-hidden="true"
+        />
+        <span className="sr-only">웹소켓 연결 정보</span>
+      </PopoverTrigger>
+      <PopoverPopup className="w-80 p-0">
+        <div className="grid gap-3 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-bold">웹소켓 연결</p>
+            <span
+              className={
+                isConnected
+                  ? 'rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-300'
+                  : isError
+                    ? 'rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-600 dark:text-red-300'
+                    : 'text-muted-foreground rounded-full border px-2 py-0.5 text-xs font-bold'
+              }
+            >
+              {connectionLabel(connection)}
+            </span>
+          </div>
+          <p className="text-muted-foreground break-all font-mono text-xs">
+            {url}
+          </p>
+        </div>
+      </PopoverPopup>
+    </Popover>
   );
 }
 
