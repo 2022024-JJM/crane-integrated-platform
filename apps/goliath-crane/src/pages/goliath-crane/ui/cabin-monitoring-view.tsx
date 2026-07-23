@@ -459,6 +459,8 @@ function LidarCanvas({
   markers: RoiMarker[];
   points: Float32Array;
 }) {
+  const pointCount = points.length / 3;
+
   return (
     <div className="relative h-full min-h-0 overflow-hidden bg-[#04070d]">
       <Canvas
@@ -486,6 +488,9 @@ function LidarCanvas({
           <RoiBox key={marker.id} marker={marker} />
         ))}
       </Canvas>
+      <span className="absolute top-3 right-3 rounded-md border border-slate-700/60 bg-black/70 px-2 py-1 font-mono text-xs font-semibold text-sky-200/90 tabular-nums">
+        {pointCount.toLocaleString()} pts
+      </span>
     </div>
   );
 }
