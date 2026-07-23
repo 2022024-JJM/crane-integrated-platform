@@ -1,0 +1,58 @@
+{
+  "title": "Historia",
+  "description": "Historia integrata inspectionum, refectionum et petitionum partium omnium machinarum",
+  "totalCount": "{{count}} eventus",
+  "export": "CSV Exportare",
+  "empty": "Nulla historia filtro congruit.",
+  "partsCount": "{{count}} partes",
+  "kind": {
+    "inspection": "Inspectio",
+    "repair": "Refectio",
+    "parts_request": "Petitio Partium"
+  },
+  "requestStatus": {
+    "pending": "Pendens",
+    "approved": "Approbata",
+    "ordered": "Ordinata",
+    "cancelled": "Cancellata"
+  },
+  "filters": {
+    "kindAll": "Omnes",
+    "crane": "Machina",
+    "craneAll": "Omnes Machinae",
+    "from": "Ab",
+    "to": "Ad",
+    "searchPlaceholder": "Quaerere WO / machinam / descriptionem",
+    "rangeInvalid": "Dies finis ante diem initii esse non potest."
+  },
+  "columns": {
+    "ref": "Numerus",
+    "kind": "Genus",
+    "date": "Dies",
+    "description": "Descriptio",
+    "parts": "Partes",
+    "status": "Status",
+    "cost": "Sumptus"
+  },
+  "csv": {
+    "fileName": "maintenance-history",
+    "columns": {
+      "date": "Dies",
+      "kind": "Genus",
+      "ref": "Numerus",
+      "crane": "Machina",
+      "site": "Situs",
+      "component": "Pars",
+      "description": "Descriptio",
+      "status": "Status",
+      "result": "Eventus",
+      "priority": "Prioritas",
+      "parts": "Partes",
+      "totalCost": "Sumptus Totalis"
+    }
+  },
+  "pagination": {
+    "rowsPerPage": "In pagina",
+    "of": "de"
+  }
+}

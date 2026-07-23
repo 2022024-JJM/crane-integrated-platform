@@ -15,4 +15,5 @@ export {
   getMaintenanceSummary,
   getRepairWOById,
   updateRepairStatus,
+  updateRepairSchedule,
 } from './model/mock-data';

@@ -202,6 +202,11 @@ function getMroGroup(): NavGroup {
         icon: Wrench,
       },
       {
+        label: i18n.t('common:nav.history'),
+        path: '/history',
+        icon: History,
+      },
+      {
         label: i18n.t('common:nav.serviceCalendar'),
         path: '/service-calendar',
         icon: CalendarDays,

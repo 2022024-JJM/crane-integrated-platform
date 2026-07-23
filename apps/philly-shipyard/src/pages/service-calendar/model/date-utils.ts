@@ -42,11 +42,15 @@ export function isSameMonth(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
-/** 월 그리드용 6×7 = 42칸 (해당 월을 포함하는 주 시작~) */
+/** 월 그리드용 주×7 매트릭스 — 구글 캘린더처럼 해당 월이 걸치는 실제 주 수(4~6)만 */
 export function buildMonthMatrix(anchor: Date): Date[][] {
   const first = startOfWeek(startOfMonth(anchor));
+  const lastWeekStart = startOfWeek(endOfMonth(anchor));
+  // DST로 인한 ±1시간 오차는 round로 흡수
+  const weekCount =
+    Math.round((lastWeekStart.getTime() - first.getTime()) / (7 * 86_400_000)) + 1;
   const weeks: Date[][] = [];
-  for (let w = 0; w < 6; w += 1) {
+  for (let w = 0; w < weekCount; w += 1) {
     const days: Date[] = [];
     for (let i = 0; i < 7; i += 1) {
       days.push(addDays(first, w * 7 + i));

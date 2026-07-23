@@ -1,7 +1,11 @@
 import type { AssetStatus, ComponentStatus } from '@crane/domain/asset';
 import type { InspectionStatus } from '@crane/domain/inspection';
 import type { RepairPriority, RepairStatus } from '@crane/domain/maintenance';
-import type { InventoryStatus, PartCriticality } from '@crane/domain/inventory';
+import type {
+  InventoryStatus,
+  PartCriticality,
+  PartsRequestStatus,
+} from '@crane/domain/inventory';
 import type { CertStatus } from '@crane/domain/compliance';
 import type { Tone } from './tone';
 
@@ -93,6 +97,30 @@ export const REPAIR_STATUS_VARIANT: Record<RepairStatus, BadgeVariant> = {
   re_inspection: 'warning',
   completed: 'success',
   on_hold: 'secondary',
+};
+
+export const REPAIR_STATUS_TONE: Record<RepairStatus, Tone> = {
+  received: 'neutral',
+  waiting_parts: 'critical',
+  in_progress: 'warning',
+  re_inspection: 'warning',
+  completed: 'positive',
+  on_hold: 'neutral',
+};
+
+// ── 부품 요청 ──
+export const PARTS_REQUEST_STATUS_VARIANT: Record<PartsRequestStatus, BadgeVariant> = {
+  pending: 'warning',
+  approved: 'success',
+  ordered: 'secondary',
+  cancelled: 'secondary',
+};
+
+export const PARTS_REQUEST_STATUS_TONE: Record<PartsRequestStatus, Tone> = {
+  pending: 'warning',
+  approved: 'positive',
+  ordered: 'info',
+  cancelled: 'neutral',
 };
 
 // ── 재고 ──

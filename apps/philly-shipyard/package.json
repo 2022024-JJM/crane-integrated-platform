@@ -13,7 +13,8 @@
     "./pages/inventory": "./src/pages/inventory/index.ts",
     "./pages/compliance": "./src/pages/compliance/index.ts",
     "./pages/ticket": "./src/pages/ticket/index.ts",
-    "./pages/service-calendar": "./src/pages/service-calendar/index.ts"
+    "./pages/service-calendar": "./src/pages/service-calendar/index.ts",
+    "./pages/history": "./src/pages/history/index.ts"
   },
   "scripts": {
     "test": "vitest run"

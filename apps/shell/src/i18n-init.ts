@@ -42,6 +42,9 @@ import laTicket from './locales/la/ticket.json';
 import koCalendar from './locales/ko/calendar.json';
 import enCalendar from './locales/en/calendar.json';
 import laCalendar from './locales/la/calendar.json';
+import koHistory from './locales/ko/history.json';
+import enHistory from './locales/en/history.json';
+import laHistory from './locales/la/history.json';
 
 const resources = {
   ko: {
@@ -59,6 +62,7 @@ const resources = {
     'philly-dashboard': koPhillyDashboard,
     ticket: koTicket,
     calendar: koCalendar,
+    history: koHistory,
   },
   en: {
     common: enCommon,
@@ -75,6 +79,7 @@ const resources = {
     'philly-dashboard': enPhillyDashboard,
     ticket: enTicket,
     calendar: enCalendar,
+    history: enHistory,
   },
   la: {
     common: laCommon,
@@ -91,6 +96,7 @@ const resources = {
     'philly-dashboard': laPhillyDashboard,
     ticket: laTicket,
     calendar: laCalendar,
+    history: laHistory,
   },
 };
 
@@ -109,4 +115,5 @@ initI18n(resources, [
   'philly-dashboard',
   'ticket',
   'calendar',
+  'history',
 ]);

@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ChevronLeft, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAssetDetail } from '@crane/features/asset';
+import { useCraneHistory } from '@crane/features/history';
 import type { ComponentStatus } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
@@ -13,6 +14,7 @@ import { formatRelativeDate } from '../../../shared/lib/relative-date';
 import { AssetBomTab } from './asset-bom-tab';
 import { AssetInspectionTab } from './asset-inspection-tab';
 import { AssetMaintenanceTab } from './asset-maintenance-tab';
+import { AssetHistoryTab } from './asset-history-tab';
 import { AssetSpecsTab } from './asset-specs-tab';
 
 // 3D 탭은 three.js 의존 — 탭을 열 때만 청크를 로드하도록 lazy 분리
@@ -20,9 +22,9 @@ const Asset3dTab = lazy(() =>
   import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
 );
 
-type DetailTab = 'overview' | '3d' | 'inspection' | 'maintenance' | 'specs';
+type DetailTab = 'overview' | '3d' | 'inspection' | 'maintenance' | 'history' | 'specs';
 
-const DETAIL_TABS: DetailTab[] = ['overview', '3d', 'inspection', 'maintenance', 'specs'];
+const DETAIL_TABS: DetailTab[] = ['overview', '3d', 'inspection', 'maintenance', 'history', 'specs'];
 
 function isDetailTab(value: string | null): value is DetailTab {
   return value !== null && (DETAIL_TABS as string[]).includes(value);
@@ -46,6 +48,7 @@ const ISSUE_TONES: { key: ComponentStatus; tone: Tone }[] = [
 export function AssetDetailPage() {
   const { craneId } = useParams<{ craneId: string }>();
   const { asset, components, inspections, repairs } = useAssetDetail(craneId ?? '');
+  const history = useCraneHistory(craneId ?? '');
   const { t } = useTranslation('asset-management');
   // ?tab= 딥링크 (목록 카드 3D 버튼 → ?tab=3d) — 새로고침에도 탭 유지
   const [searchParams, setSearchParams] = useSearchParams();
@@ -98,6 +101,7 @@ export function AssetDetailPage() {
     { key: '3d' },
     { key: 'inspection', count: inspections.length || undefined },
     { key: 'maintenance', count: repairs.length || undefined },
+    { key: 'history', count: history.length || undefined },
     { key: 'specs' },
   ];
 
@@ -255,6 +259,9 @@ export function AssetDetailPage() {
 
         {/* 탭: 정비 이력 */}
         {activeTab === 'maintenance' && <AssetMaintenanceTab repairs={repairs} />}
+
+        {/* 탭: 통합 이력 — 점검·수리·부품요청 타임라인 */}
+        {activeTab === 'history' && <AssetHistoryTab events={history} />}
 
         {/* 탭: 제원 */}
         {activeTab === 'specs' && <AssetSpecsTab asset={asset} />}

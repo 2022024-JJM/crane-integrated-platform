@@ -128,6 +128,7 @@
     "notFound": "자산을 찾을 수 없습니다.",
     "noInspectionHistory": "점검 이력이 없습니다.",
     "noMaintenanceHistory": "정비 이력이 없습니다.",
+    "noHistory": "이력이 없습니다.",
     "bomSearch": "구성품 / P/N 검색",
     "bomOnlyIssues": "이상 항목만",
     "componentCount": "구성품 {{count}}개",
@@ -140,6 +141,7 @@
       "specs": "제원",
       "inspection": "점검 이력",
       "maintenance": "정비 이력",
+      "history": "통합 이력",
       "3d": "3D 뷰"
     },
     "componentHealth": {

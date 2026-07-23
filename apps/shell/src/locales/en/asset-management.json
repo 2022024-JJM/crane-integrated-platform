@@ -128,6 +128,7 @@
     "notFound": "Asset not found.",
     "noInspectionHistory": "No inspection history.",
     "noMaintenanceHistory": "No maintenance history.",
+    "noHistory": "No history yet.",
     "bomSearch": "Search component / P/N",
     "bomOnlyIssues": "Issues only",
     "componentCount": "{{count}} components",
@@ -140,6 +141,7 @@
       "specs": "Specifications",
       "inspection": "Inspection History",
       "maintenance": "Maintenance History",
+      "history": "History",
       "3d": "3D View"
     },
     "componentHealth": {

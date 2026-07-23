@@ -4,7 +4,8 @@
   "view": {
     "month": "월",
     "week": "주",
-    "day": "일"
+    "day": "일",
+    "schedule": "일정 목록"
   },
   "nav": {
     "today": "오늘",
@@ -45,5 +46,13 @@
     "high": "높음",
     "normal": "보통",
     "low": "낮음"
+  },
+  "allDayExpand": "종일 일정 펼치기",
+  "allDayCollapse": "종일 일정 접기",
+  "schedule": {
+    "empty": "이번 달 일정이 없습니다."
+  },
+  "toast": {
+    "rescheduled": "{{woNumber}} 일정이 {{date}}(으)로 변경되었습니다"
   }
 }

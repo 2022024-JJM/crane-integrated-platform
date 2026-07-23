@@ -322,6 +322,26 @@ export function submitInspectionResult(inspectionId: string): boolean {
   return true;
 }
 
+/**
+ * 점검 예정일 변경 (캘린더 드래그 재조정).
+ * 완료/취소 WO는 변경 불가. scheduled↔overdue는 새 날짜 기준으로 재계산한다.
+ */
+export function updateInspectionSchedule(id: string, scheduledDate: string): boolean {
+  const idx = allInspectionWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allInspectionWOs[idx];
+  if (wo.status === 'completed' || wo.status === 'cancelled') return false;
+
+  let status = wo.status;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (status === 'overdue' && scheduledDate >= today) status = 'scheduled';
+  else if (status === 'scheduled' && scheduledDate < today) status = 'overdue';
+
+  allInspectionWOs[idx] = { ...wo, scheduledDate, status };
+  return true;
+}
+
 export function getDefaultChecklist(woType: 'frequent' | 'periodic' | 'emergency' | 'special') {
   void woType;
   return frequentChecklist.map((item) => ({ ...item, judgment: null as null }));

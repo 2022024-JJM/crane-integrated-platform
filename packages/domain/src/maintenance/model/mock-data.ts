@@ -273,6 +273,19 @@ export function addRepairWO(wo: RepairWO): void {
   allRepairWOs.unshift(wo);
 }
 
+/** 수리 예정 기간 변경 (캘린더 드래그 재조정). 완료된 WO는 변경 불가. */
+export function updateRepairSchedule(
+  id: string,
+  scheduledStart: string,
+  scheduledEnd: string,
+): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  if (allRepairWOs[idx].status === 'completed') return false;
+  allRepairWOs[idx] = { ...allRepairWOs[idx], scheduledStart, scheduledEnd };
+  return true;
+}
+
 /** 수리 WO에 사용 부품 추가 — partsCost/totalCost 재계산. 완료된 WO에는 추가 불가. */
 export function addPartUsedToRepair(
   repairId: string,

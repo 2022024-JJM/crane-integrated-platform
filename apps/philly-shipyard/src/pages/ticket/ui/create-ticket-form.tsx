@@ -52,6 +52,8 @@ interface TicketPrefill {
   craneId?: string;
   componentName?: string;
   sourceWoNumber?: string;
+  /** 캘린더 빈 슬롯 클릭 등에서 넘어온 예정일 ('YYYY-MM-DD') */
+  date?: string;
 }
 
 type UnifiedErrors = RepairFieldsErrors &
@@ -67,7 +69,7 @@ const ACCENT_BY_TYPE: Record<TicketType, AccentColor> = {
 };
 
 function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
-  const d = toLocalDateString();
+  const d = prefill.date ?? toLocalDateString();
   return {
     craneId: prefill.craneId ?? '', craneName: '', siteId: '', siteName: '',
     priority: 'normal', performerType: 'internal', assignedTo: '',
@@ -98,19 +100,23 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   const createInspection = useCreateInspectionTicket();
   const createParts = useCreatePartsTicket();
 
-  // 점검 상세 등에서 넘어온 프리필 (repair 타입에만 의미)
+  // 프리필 — craneId/component/sourceWo는 점검 상세→수리 접수, date는 캘린더 클릭-생성
   const [params] = useSearchParams();
-  const [form, setForm] = useState<UnifiedForm>(() =>
-    makeInitial(
+  const [form, setForm] = useState<UnifiedForm>(() => {
+    const dateParam = params.get('date');
+    const date =
+      dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+    return makeInitial(
       type === 'repair'
         ? {
             craneId: params.get('craneId') ?? undefined,
             componentName: params.get('component') ?? undefined,
             sourceWoNumber: params.get('sourceWo') ?? undefined,
+            date,
           }
-        : {},
-    ),
-  );
+        : { date },
+    );
+  });
   const [errors, setErrors] = useState<UnifiedErrors>({});
   // 부품 행의 안정적 React key — index key는 중간 삭제 시 포커스/상태가 어긋난다
   const [itemKeys, setItemKeys] = useState<string[]>([]);

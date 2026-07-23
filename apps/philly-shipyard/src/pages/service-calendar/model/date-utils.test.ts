@@ -42,10 +42,15 @@ describe('startOfWeek', () => {
 });
 
 describe('buildMonthMatrix', () => {
-  it('항상 6주 × 7일 = 42칸을 만든다', () => {
-    const weeks = buildMonthMatrix(new Date(2026, 6, 1));
-    expect(weeks).toHaveLength(6);
-    for (const week of weeks) expect(week).toHaveLength(7);
+  it('해당 월이 걸치는 실제 주 수(4~6)만 만든다', () => {
+    // 2026-07: 수요일 시작, 5주에 걸침
+    const july = buildMonthMatrix(new Date(2026, 6, 1));
+    expect(july).toHaveLength(5);
+    for (const week of july) expect(week).toHaveLength(7);
+    // 2026-08: 토요일 시작 31일 — 6주
+    expect(buildMonthMatrix(new Date(2026, 7, 1))).toHaveLength(6);
+    // 2027-02: 월요일 시작 28일 — 정확히 4주
+    expect(buildMonthMatrix(new Date(2027, 1, 1))).toHaveLength(4);
   });
 
   it('첫 칸은 해당 월 1일을 포함하는 주의 월요일이다', () => {

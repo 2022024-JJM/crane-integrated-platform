@@ -128,6 +128,7 @@
     "notFound": "Bonum non inventum est.",
     "noInspectionHistory": "Nulla historia inspectionis.",
     "noMaintenanceHistory": "Nulla historia refectionis.",
+    "noHistory": "Nulla historia adhuc.",
     "bomSearch": "Quaere partem / P/N",
     "bomOnlyIssues": "Solum problemata",
     "componentCount": "{{count}} partes",
@@ -140,6 +141,7 @@
       "specs": "Specificationes",
       "inspection": "Historia Inspectionis",
       "maintenance": "Historia Refectionis",
+      "history": "Historia",
       "3d": "Visio 3D"
     },
     "componentHealth": {

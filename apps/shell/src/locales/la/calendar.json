@@ -4,7 +4,8 @@
   "view": {
     "month": "Mensis",
     "week": "Hebdomas",
-    "day": "Dies"
+    "day": "Dies",
+    "schedule": "Agenda"
   },
   "nav": {
     "today": "Hodie",
@@ -45,5 +46,13 @@
     "high": "Alta",
     "normal": "Normalis",
     "low": "Ima"
+  },
+  "allDayExpand": "Eventus totius diei expandere",
+  "allDayCollapse": "Eventus totius diei complicare",
+  "schedule": {
+    "empty": "Nulli eventus hoc mense."
+  },
+  "toast": {
+    "rescheduled": "{{woNumber}} ad {{date}} reordinatum"
   }
 }

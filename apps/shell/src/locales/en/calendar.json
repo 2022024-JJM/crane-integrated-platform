@@ -4,7 +4,8 @@
   "view": {
     "month": "Month",
     "week": "Week",
-    "day": "Day"
+    "day": "Day",
+    "schedule": "Schedule"
   },
   "nav": {
     "today": "Today",
@@ -45,5 +46,13 @@
     "high": "High",
     "normal": "Normal",
     "low": "Low"
+  },
+  "allDayExpand": "Expand all-day events",
+  "allDayCollapse": "Collapse all-day events",
+  "schedule": {
+    "empty": "No events this month."
+  },
+  "toast": {
+    "rescheduled": "{{woNumber}} rescheduled to {{date}}"
   }
 }
