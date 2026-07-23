@@ -127,17 +127,30 @@ type Subscription = {
   reader: MessageReader;
 };
 
+function toWebSocketUrl(value: string) {
+  if (/^wss?:\/\//i.test(value)) return value;
+  if (/^https?:\/\//i.test(value)) {
+    return value.replace(/^http/i, 'ws');
+  }
+
+  const origin =
+    window.location.protocol === 'https:'
+      ? `wss://${window.location.host}`
+      : `ws://${window.location.host}`;
+  return `${origin}/${value.replace(/^\/+/, '')}`;
+}
+
+function getCabinBridgeUrl() {
+  const url = import.meta.env.VITE_CABIN_BRIDGE_URL;
+  return toWebSocketUrl(url || `ws://${window.location.hostname}:8765`);
+}
+
 export function CabinMonitoringView({ regionId }: { regionId: string }) {
   return <CabinMonitoringViewContent key={regionId} />;
 }
 
 function CabinMonitoringViewContent() {
-  const bridgeUrl = useMemo(
-    () =>
-      import.meta.env.VITE_CABIN_BRIDGE_URL ||
-      `ws://${window.location.hostname}:8765`,
-    [],
-  );
+  const bridgeUrl = useMemo(getCabinBridgeUrl, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const subscriptionsRef = useRef(new Map<SubscriptionId, Subscription>());
   const [connection, setConnection] = useState<ConnectionState>('connecting');
@@ -625,46 +638,52 @@ function LidarCanvas({
   pointCloudLabel: string;
   points: RosVector3[];
 }) {
+  const hasLidarData = markers.length > 0 || points.length > 0;
+
   return (
     <div className="relative min-h-0 overflow-hidden rounded-lg bg-[#04070d]">
-      <Canvas
-        orthographic
-        camera={{
-          position: [0, 10, 0],
-          rotation: [-Math.PI / 2, 0, 0],
-          up: [0, 0, 1],
-          zoom: 20,
-        }}
-      >
-        <FitCamera markers={markers} />
-        <FovGuide />
-        <LidarOrigin />
-        <PointCloud points={points} />
-        <OrbitControls makeDefault enableDamping={false} target={[0, 0, 0]} />
-        <GizmoHelper alignment="bottom-right" margin={[54, 54]}>
-          <GizmoViewport
-            axisColors={['#ff5c5c', '#23d77a', '#5c8dff']}
-            labels={['Y', 'Z', 'X']}
-            labelColor="#f7fffb"
+      {hasLidarData ? (
+        <>
+          <Canvas
+            orthographic
+            camera={{
+              position: [0, 10, 0],
+              rotation: [-Math.PI / 2, 0, 0],
+              up: [0, 0, 1],
+              zoom: 20,
+            }}
+          >
+            <FitCamera markers={markers} />
+            <FovGuide />
+            <LidarOrigin />
+            <PointCloud points={points} />
+            <OrbitControls
+              makeDefault
+              enableDamping={false}
+              target={[0, 0, 0]}
+            />
+            <GizmoHelper alignment="bottom-right" margin={[54, 54]}>
+              <GizmoViewport
+                axisColors={['#ff5c5c', '#23d77a', '#5c8dff']}
+                labels={['Y', 'Z', 'X']}
+                labelColor="#f7fffb"
+              />
+            </GizmoHelper>
+            {markers.map((marker) => (
+              <RoiBox key={marker.id} marker={marker} />
+            ))}
+          </Canvas>
+          <span
+            className="pointer-events-none absolute inset-x-0 top-0 h-full animate-[lidar-sweep_5s_linear_infinite] border-t border-sky-300/50 bg-gradient-to-b from-sky-400/10 to-transparent to-15% motion-reduce:animate-none"
+            aria-hidden="true"
           />
-        </GizmoHelper>
-        {markers.map((marker) => (
-          <RoiBox key={marker.id} marker={marker} />
-        ))}
-      </Canvas>
-      {points.length > 0 || markers.length > 0 ? (
-        <span
-          className="pointer-events-none absolute inset-x-0 top-0 h-full animate-[lidar-sweep_5s_linear_infinite] border-t border-sky-300/50 bg-gradient-to-b from-sky-400/10 to-transparent to-15% motion-reduce:animate-none"
-          aria-hidden="true"
-        />
+        </>
       ) : null}
       <CornerBrackets />
       <span className="absolute top-3 left-3 rounded-md border border-slate-700/60 bg-black/70 px-2 py-1 font-mono text-xs font-semibold text-sky-200/90 tabular-nums">
         PCD {pointCloudLabel} · {points.length.toLocaleString()} pts
       </span>
-      {markers.length === 0 && points.length === 0 ? (
-        <WaitingNotice label="ROI/PCD 수신 대기중" />
-      ) : null}
+      {!hasLidarData ? <WaitingNotice label="ROI/PCD 수신 대기중" /> : null}
     </div>
   );
 }
