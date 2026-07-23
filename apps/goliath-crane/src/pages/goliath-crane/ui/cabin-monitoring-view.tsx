@@ -266,17 +266,17 @@ function CabinMonitoringViewContent() {
       <header
         className={
           alarm.data?.alarm === true && alarmLevel === 'red'
-            ? 'flex items-center justify-between gap-3 border-b border-red-500/50 pb-2'
+            ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-red-500/50 pb-2'
             : alarm.data?.alarm === true && alarmLevel === 'yellow'
-              ? 'flex items-center justify-between gap-3 border-b border-amber-400/40 pb-2'
-              : 'flex items-center justify-between gap-3 border-b pb-2'
+              ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-amber-400/40 pb-2'
+              : 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b pb-2'
         }
       >
+        <time className="justify-self-start font-mono text-lg font-bold tracking-tight tabular-nums">
+          {timeLabel(now)}
+        </time>
         <AlarmStatusChip alarm={alarm.data} />
-        <div className="flex items-center gap-3">
-          <time className="font-mono text-lg font-bold tracking-tight tabular-nums">
-            {timeLabel(now)}
-          </time>
+        <div className="flex items-center gap-3 justify-self-end">
           <ConnectionBadge connection={connection} url={bridgeUrl} />
           <AlarmHistoryButton events={alarmEvents} />
         </div>
@@ -300,27 +300,17 @@ function AlarmStatusChip({ alarm }: { alarm: MonitoringAlarm | null }) {
   const level = alarmColorLevel(alarm);
   const waiting = alarm == null;
   return (
-    <div
-      className={
-        waiting
-          ? 'bg-card/60 flex items-center gap-2 rounded-full border border-dashed py-1.5 pr-3.5 pl-2'
-          : level === 'red'
-            ? 'flex items-center gap-2 rounded-full border border-red-500/50 bg-red-500/10 py-1.5 pr-3.5 pl-2 shadow-[0_0_18px_-4px_rgba(239,68,68,0.6)]'
-            : level === 'yellow'
-              ? 'flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 py-1.5 pr-3.5 pl-2'
-              : 'flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 py-1.5 pr-3.5 pl-2'
-      }
-    >
+    <div className="flex items-center gap-2">
       <StackLight level={level} waiting={waiting} />
       <span
         className={
           waiting
-            ? 'text-muted-foreground text-sm font-bold whitespace-nowrap'
+            ? 'text-muted-foreground text-lg font-bold whitespace-nowrap'
             : level === 'red'
-              ? 'text-sm font-bold whitespace-nowrap text-red-600 dark:text-red-300'
+              ? 'text-lg font-bold whitespace-nowrap text-red-600 dark:text-red-300'
               : level === 'yellow'
-                ? 'text-sm font-bold whitespace-nowrap text-amber-600 dark:text-amber-200'
-                : 'text-sm font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-200'
+                ? 'text-lg font-bold whitespace-nowrap text-amber-600 dark:text-amber-200'
+                : 'text-lg font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-200'
         }
       >
         {alarmTitle(alarm)}
@@ -947,9 +937,21 @@ function timestampToMs(timestamp: bigint) {
 }
 
 function timeLabel(time: number | null) {
-  return time == null
-    ? '대기중'
-    : new Date(time).toLocaleTimeString('ko-KR', { hour12: false });
+  if (time == null) return '대기중';
+
+  const date = new Date(time);
+  const dateLabel = [
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+  ]
+    .map((value) => String(value).padStart(2, '0'))
+    .join('-');
+  const timeLabel = [date.getHours(), date.getMinutes(), date.getSeconds()]
+    .map((value) => String(value).padStart(2, '0'))
+    .join(':');
+
+  return `${dateLabel} ${timeLabel}`;
 }
 
 function connectionLabel(connection: ConnectionState) {
