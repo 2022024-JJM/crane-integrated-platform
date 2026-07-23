@@ -2,72 +2,72 @@
   "maps": [
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
-      "path": "/maps/okpo.glb"
+      "path": "/maps/phillyshipyard.glb"
     }
   ],
   "models": [
     {
-      "id": "id-mrxah00f-c5myrc9f",
+      "id": "id-mry46ydy-rg7sdkbc",
       "equipName": "Goliath Crane",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        24.133,
-        0,
-        -34.057
+        -174.814,
+        0.103,
+        53.338
       ],
       "rotation": [
         0,
-        90,
+        6,
         0
       ],
       "scale": [
-        0.1,
         0.13,
+        0.145,
         0.1
       ],
       "valueMapList": []
     },
     {
-      "id": "id-mrxajja2-y9b74h8t",
+      "id": "id-mry485cl-7obt6yai",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        18.584,
-        0.587,
-        -37.215
+        -170.039,
+        0.007,
+        57.536
       ],
       "rotation": [
         0,
-        90,
+        5.097,
         0
       ],
       "scale": [
         0.1,
-        0.1,
+        0.12,
         0.1
       ],
       "valueMapList": []
     },
     {
-      "id": "id-mrxajuhq-vmafo00v",
+      "id": "id-mry48lyk-4wfgb1uc",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        13.774,
-        0.587,
-        -31.015
+        -177.079,
+        0.007,
+        61.894
       ],
       "rotation": [
         -180,
-        -90,
+        -5,
         -180
       ],
       "scale": [
         0.1,
-        0.1,
+        0.12,
         0.1
       ],
       "valueMapList": []
@@ -177,14 +177,14 @@
   ],
   "camera": {
     "position": [
-      33.056612951393014,
-      8.151139399327986,
-      -28.200254685682978
+      -170.49286437830915,
+      13.450401884507643,
+      65.25726569060136
     ],
     "target": [
-      18.590060602682314,
-      1.5462884162062804,
-      -37.9115371740526
+      -171.1734198164958,
+      11.669739918269311,
+      63.41162423700789
     ]
   }
 }
