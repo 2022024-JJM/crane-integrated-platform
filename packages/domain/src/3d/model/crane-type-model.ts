@@ -15,7 +15,31 @@ export interface CraneModelConfig {
   cameraPreset: CraneModelCameraPreset;
 }
 
-// 갠트리/골리앗 계열 — Goliath3dViewer 프리셋 재사용
+// 660T 골리앗 — 실측 미터 스케일 모델(스팬 ~130m)이라 뷰어 그리드에 맞춰 축소
+const GOLIATH: CraneModelConfig = {
+  url: '/models/goliath_crane.glb',
+  scale: [0.1, 0.1, 0.1],
+  cameraPreset: {
+    defaultPosition: [15, 12, 20],
+    defaultTarget: [0, 4, 0],
+    topViewPosition: [0, 30, 0],
+    topViewTarget: [0, 0, 0],
+  },
+};
+
+// 50T LLC 러핑 — 실측 미터 스케일 모델(높이 ~53m)이라 뷰어 그리드에 맞춰 축소
+const LLC: CraneModelConfig = {
+  url: '/models/LLC_002.glb',
+  scale: [0.15, 0.15, 0.15],
+  cameraPreset: {
+    defaultPosition: [14, 11, 18],
+    defaultTarget: [0, 4, 0],
+    topViewPosition: [0, 28, 0],
+    topViewTarget: [0, 0, 0],
+  },
+};
+
+// 갠트리 계열 — Goliath3dViewer 프리셋 재사용
 const GANTRY: CraneModelConfig = {
   url: '/models/gantry_crane.glb',
   scale: [1.2, 1.2, 1.2],
@@ -51,11 +75,11 @@ const GENERIC: CraneModelConfig = {
 };
 
 export const CRANE_TYPE_MODEL: Record<CraneType, CraneModelConfig> = {
-  goliath: GANTRY,
+  goliath: GOLIATH,
   gantry: GANTRY,
   ttc: TTC,
-  luffing: GENERIC,
-  llc: GENERIC,
+  luffing: LLC,
+  llc: LLC,
   jib: GENERIC,
   overhead: GENERIC,
 };

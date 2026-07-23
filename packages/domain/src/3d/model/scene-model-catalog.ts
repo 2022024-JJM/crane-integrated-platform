@@ -37,6 +37,20 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       paddingScale: 1.28,
     },
   },
+  withDefaultPreview({
+    id: 'goliath-crane',
+    label: 'Goliath Crane',
+    category: 'outdoor',
+    path: '/models/goliath_crane.glb',
+    defaultScale: [0.1, 0.1, 0.1],
+  }),
+  withDefaultPreview({
+    id: 'llc-002',
+    label: 'LLC-002',
+    category: 'outdoor',
+    path: '/models/LLC_002.glb',
+    defaultScale: [0.15, 0.15, 0.15],
+  }),
   {
     id: 'house',
     label: 'House',
