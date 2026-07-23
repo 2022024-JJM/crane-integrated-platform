@@ -35,6 +35,8 @@ const LIDAR_VIEW = {
   fov: (Math.PI * 140) / 180,
   initialRange: 18,
 };
+const MAX_POINT_CLOUD_POINTS = 12000;
+const EMPTY_POINT_CLOUD = new Float32Array(0);
 
 type ConnectionState = 'connecting' | 'connected' | 'closed' | 'error';
 
@@ -152,7 +154,7 @@ function CabinMonitoringViewContent() {
     data: null,
     receivedAt: null,
   });
-  const [lidarPoints, setLidarPoints] = useState<TopicState<RosVector3[]>>({
+  const [lidarPoints, setLidarPoints] = useState<TopicState<Float32Array>>({
     data: null,
     receivedAt: null,
   });
@@ -246,7 +248,7 @@ function CabinMonitoringViewContent() {
   }, [bridgeUrl]);
 
   const roiMarkers = lidarMarker.data?.markers ?? [];
-  const points = lidarPoints.data ?? [];
+  const points = lidarPoints.data ?? EMPTY_POINT_CLOUD;
   const alarmLevel = alarmColorLevel(alarm.data);
 
   return (
@@ -441,7 +443,7 @@ function LidarPanel({
   points,
 }: {
   markers: RoiMarker[];
-  points: RosVector3[];
+  points: Float32Array;
 }) {
   return (
     <section className="bg-card min-h-0 overflow-hidden rounded-xl border">
@@ -455,7 +457,7 @@ function LidarCanvas({
   points,
 }: {
   markers: RoiMarker[];
-  points: RosVector3[];
+  points: Float32Array;
 }) {
   return (
     <div className="relative h-full min-h-0 overflow-hidden bg-[#04070d]">
@@ -568,6 +570,16 @@ function FovGuide() {
     return { edge, rings };
   }, []);
 
+  useEffect(
+    () => () => {
+      geometries.edge.dispose();
+      for (const geometry of geometries.rings) {
+        geometry.dispose();
+      }
+    },
+    [geometries],
+  );
+
   return (
     <group>
       <lineSegments geometry={geometries.edge}>
@@ -599,6 +611,8 @@ function LidarOrigin() {
     [],
   );
 
+  useEffect(() => () => heading.dispose(), [heading]);
+
   return (
     <group>
       <mesh position={[0, 0.08, 0]}>
@@ -612,27 +626,15 @@ function LidarOrigin() {
   );
 }
 
-function PointCloud({ points }: { points: RosVector3[] }) {
+function PointCloud({ points }: { points: Float32Array }) {
   const geometry = useMemo(() => {
-    const maxPoints = 12000;
-    // ponytail: canvas cap only; raise it when profiling says the browser can afford more.
-    const step = Math.max(1, Math.ceil(points.length / maxPoints));
-    const positions = new Float32Array(Math.ceil(points.length / step) * 3);
-    let offset = 0;
-
-    for (let i = 0; i < points.length; i += step) {
-      const [sceneX, sceneY, sceneZ] = rosToScenePoint(points[i]);
-      positions[offset] = sceneX;
-      positions[offset + 1] = sceneY;
-      positions[offset + 2] = sceneZ;
-      offset += 3;
-    }
-
     return new THREE.BufferGeometry().setAttribute(
       'position',
-      new THREE.BufferAttribute(positions, 3),
+      new THREE.BufferAttribute(points, 3),
     );
   }, [points]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
     <points geometry={geometry}>
@@ -677,8 +679,11 @@ function RoiBox({ marker }: { marker: RoiMarker }) {
   );
   const geometry = useMemo(() => {
     const box = new THREE.BoxGeometry(...sceneSize);
-    return new THREE.EdgesGeometry(box);
+    const edges = new THREE.EdgesGeometry(box);
+    box.dispose();
+    return edges;
   }, [sceneSize]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
   const color = useMemo(
     () => new THREE.Color(marker.color.r, marker.color.g, marker.color.b),
     [marker.color.b, marker.color.g, marker.color.r],
@@ -761,7 +766,7 @@ function handleMessage(
   canvas: HTMLCanvasElement | null,
   setters: {
     setLidarMarker: (state: TopicState<RoiMarkerArray>) => void;
-    setLidarPoints: (state: TopicState<RosVector3[]>) => void;
+    setLidarPoints: (state: TopicState<Float32Array>) => void;
     setAlarm: (state: TopicState<MonitoringAlarm>) => void;
   },
 ) {
@@ -780,7 +785,7 @@ function handleMessage(
 
   if (subscription.topic === TOPICS.lidarPoints) {
     setters.setLidarPoints({
-      data: pointCloudToPoints(decoded as RosPointCloud2),
+      data: pointCloudToScenePositions(decoded as RosPointCloud2),
       receivedAt,
     });
     return;
@@ -830,8 +835,8 @@ function drawImage(canvas: HTMLCanvasElement | null, image: RosImage) {
     }
   }
 
-  canvas.width = image.width;
-  canvas.height = image.height;
+  if (canvas.width !== image.width) canvas.width = image.width;
+  if (canvas.height !== image.height) canvas.height = image.height;
   context.putImageData(new ImageData(rgba, image.width, image.height), 0, 0);
 }
 
@@ -847,11 +852,11 @@ function formatMeter(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function pointCloudToPoints(cloud: RosPointCloud2) {
+function pointCloudToScenePositions(cloud: RosPointCloud2) {
   const x = cloud.fields.find((field) => field.name === 'x');
   const y = cloud.fields.find((field) => field.name === 'y');
   const z = cloud.fields.find((field) => field.name === 'z');
-  if (!x || !y || !z || cloud.point_step <= 0) return [];
+  if (!x || !y || !z || cloud.point_step <= 0) return new Float32Array(0);
 
   const source =
     cloud.data instanceof Uint8Array ? cloud.data : Uint8Array.from(cloud.data);
@@ -865,9 +870,11 @@ function pointCloudToPoints(cloud: RosPointCloud2) {
     cloud.width * cloud.height,
     Math.floor(source.length / cloud.point_step),
   );
-  const points: RosVector3[] = [];
+  const step = Math.max(1, Math.ceil(count / MAX_POINT_CLOUD_POINTS));
+  const positions = new Float32Array(Math.ceil(count / step) * 3);
+  let positionOffset = 0;
 
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < count; i += step) {
     const offset = i * cloud.point_step;
     const point = {
       x: readPointField(view, offset + x.offset, x.datatype, littleEndian),
@@ -879,11 +886,16 @@ function pointCloudToPoints(cloud: RosPointCloud2) {
       Number.isFinite(point.y) &&
       Number.isFinite(point.z)
     ) {
-      points.push(point);
+      positions[positionOffset] = point.y;
+      positions[positionOffset + 1] = point.z;
+      positions[positionOffset + 2] = point.x;
+      positionOffset += 3;
     }
   }
 
-  return points;
+  return positions.length === positionOffset
+    ? positions
+    : positions.slice(0, positionOffset);
 }
 
 function readPointField(
