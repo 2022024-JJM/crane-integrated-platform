@@ -138,7 +138,16 @@ function toWebSocketUrl(value: string) {
 
 function getCabinBridgeUrl() {
   const url = import.meta.env.VITE_CABIN_BRIDGE_URL;
-  return toWebSocketUrl(url || `ws://${window.location.hostname}:8765`);
+  if (url) return toWebSocketUrl(url);
+
+  // 브리지 서버 IP/PORT 는 런타임 프록시가 결정한다
+  // (dev: vite VITE_DEV_PROXY_TARGET_CABIN, 운영: nginx CABIN_HOST/CABIN_PORT).
+  // 동일 origin 경로로 연결해야 HTTPS 페이지에서 wss 로 이어져
+  // mixed-content 차단(SecurityError)을 피할 수 있다.
+  // 끝 슬래시는 nginx prefix-match location 에 곧장 매칭되기 위해 필요하다
+  // (WebSocket 핸드셰이크는 redirect 를 따라가지 못한다).
+  const base = (import.meta.env.BASE_URL ?? '/').replace(/\/+$/, '');
+  return toWebSocketUrl(`${base}/cabin-bridge/`);
 }
 
 export function CabinMonitoringView({ regionId }: { regionId: string }) {
