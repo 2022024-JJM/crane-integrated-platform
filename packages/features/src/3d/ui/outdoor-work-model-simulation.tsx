@@ -5,7 +5,6 @@ import {
   MathUtils,
   Object3D,
   PerspectiveCamera,
-  Sphere,
   Vector3,
 } from 'three';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -302,49 +301,73 @@ export function OutdoorWorkModelSimulation({
       return;
     }
 
-    const ids = visibleModelIds;
+    // 포커스된 모델의 박스에만 카메라를 맞춘다. 겹치는 이웃 모델까지 합치면
+    // (예: LLC 클릭 시 골리앗까지 포함) 클릭한 크레인이 화면에서 작아진다.
+    // 이웃 모델의 표시 여부는 visibleModelIds가 별도로 처리한다.
+    const focusedObject = objectMapRef.current.get(focusedModelId);
 
-    if (!ids) {
+    if (!focusedObject) {
       return;
     }
 
-    const groupBox = new Box3();
-    let hasObject = false;
+    const groupBox = new Box3().setFromObject(focusedObject);
 
-    for (const id of ids) {
-      const obj = objectMapRef.current.get(id);
-
-      if (obj) {
-        groupBox.expandByObject(obj);
-        hasObject = true;
-      }
-    }
-
-    if (!hasObject) {
+    if (groupBox.isEmpty()) {
       return;
     }
 
-    // Bounding sphere gives a single radius that works for any camera angle
-    const sphere = new Sphere();
-    groupBox.getBoundingSphere(sphere);
-    const center = sphere.center;
-    const radius = sphere.radius;
+    const center = groupBox.getCenter(new Vector3());
 
-    // Compute required distance so the sphere fits in the viewport
     const fov = camera instanceof PerspectiveCamera ? camera.fov : 75;
     const aspect = camera instanceof PerspectiveCamera ? camera.aspect : 16 / 9;
     const vFov = MathUtils.degToRad(fov / 2);
     const hFov = Math.atan(Math.tan(vFov) * aspect);
-    const effectiveFov = Math.min(vFov, hFov);
-
-    const fitDistance = radius / Math.sin(effectiveFov);
 
     // Camera direction: use the initial scene camera direction (consistent angle)
     // instead of current camera position (which shifts as user orbits)
     const defaultDir = new Vector3(0, 0.75, 0.65).normalize();
+
+    // 바운딩 구(sphere) 대신 박스 8개 코너를 시야 축에 투영해 필요한 최소
+    // 거리를 구한다. 구 반지름(=박스 대각선 절반) 기준은 가로로 긴 크레인을
+    // 실제보다 훨씬 멀리서 잡아 "포커스했는데 작아 보이는" 문제가 있었다.
+    const right = new Vector3().crossVectors(defaultDir, Object3D.DEFAULT_UP);
+    if (right.lengthSq() < 1e-6) {
+      right.set(1, 0, 0);
+    }
+    right.normalize();
+    const up = new Vector3().crossVectors(right, defaultDir).normalize();
+
+    const tanH = Math.tan(hFov);
+    const tanV = Math.tan(vFov);
+    const corner = new Vector3();
+    const offset = new Vector3();
+    let fitDistance = 0;
+
+    for (let i = 0; i < 8; i += 1) {
+      corner.set(
+        i & 1 ? groupBox.max.x : groupBox.min.x,
+        i & 2 ? groupBox.max.y : groupBox.min.y,
+        i & 4 ? groupBox.max.z : groupBox.min.z,
+      );
+      offset.copy(corner).sub(center);
+
+      const along = offset.dot(defaultDir);
+      const lateralX = Math.abs(offset.dot(right));
+      const lateralY = Math.abs(offset.dot(up));
+
+      fitDistance = Math.max(
+        fitDistance,
+        along + lateralX / tanH,
+        along + lateralY / tanV,
+      );
+    }
+
+    // 여백. near plane 클리핑과 답답함을 피할 정도만 띄운다.
+    fitDistance = Math.max(fitDistance * 1.2, 1);
+
     const newPosition = center
       .clone()
-      .add(defaultDir.multiplyScalar(fitDistance));
+      .add(defaultDir.clone().multiplyScalar(fitDistance));
 
     const position: Vector3Tuple = [
       newPosition.x,
@@ -354,7 +377,7 @@ export function OutdoorWorkModelSimulation({
     const target: Vector3Tuple = [center.x, center.y, center.z];
 
     onMoveToRef.current?.(position, target);
-  }, [focusedModelId, visibleModelIds]);
+  }, [focusedModelId, camera]);
 
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
 
