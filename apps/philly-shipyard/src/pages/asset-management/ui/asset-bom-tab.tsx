@@ -6,7 +6,10 @@ import type { CraneComponent } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import {
   COMPONENT_STATUS_DOT,
   COMPONENT_STATUS_VARIANT,
@@ -89,13 +92,13 @@ function ClusterBlock({
   const worstChildPct = parts.reduce((max, c) => Math.max(max, lifePercent(c)), 0);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+    <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
       <button
         type="button"
         onClick={onToggle}
         disabled={forceOpen}
         aria-expanded={isOpen}
-        className={cn(
+        className={cn(FOCUS_RING, 
           'flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors',
           !forceOpen && 'cursor-pointer hover:bg-muted/40',
         )}
@@ -216,7 +219,7 @@ export function AssetBomTab({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('detail.bomSearch', { defaultValue: 'Search component / P/N' })}
-            className="h-9 w-72 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+            className={cn(searchInputClass, 'w-72 pl-8 pr-3')}
           />
         </div>
         <button
@@ -224,6 +227,7 @@ export function AssetBomTab({
           onClick={() => setOnlyIssues((v) => !v)}
           className={cn(
             'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-medium tracking-wider transition-all',
+            FOCUS_RING,
             onlyIssues ? TONE_PILL_ACTIVE.warning : PILL_INACTIVE,
           )}
         >
@@ -244,11 +248,11 @@ export function AssetBomTab({
       </div>
 
       {rootComponents.length === 0 ? (
-        <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+        <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
           {t('detail.noBomData')}
         </div>
       ) : filteredClusters.length === 0 ? (
-        <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+        <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
           {t('detail.noMatch', { defaultValue: 'No components match.' })}
         </div>
       ) : (

@@ -14,6 +14,8 @@ export {
   getAllRepairWOs,
   getMaintenanceSummary,
   getRepairWOById,
+  updateRepairDetails,
   updateRepairStatus,
   updateRepairSchedule,
 } from './model/mock-data';
+export type { RepairDetailsUpdate } from './model/mock-data';

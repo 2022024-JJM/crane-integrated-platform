@@ -18,7 +18,38 @@
   "sections": {
     "basicInfo": "Informationes Basis",
     "assignment": "Assignatio et Horarium",
-    "parts": "Partes"
+    "parts": "Partes",
+    "quick": "Creatio Celeris",
+    "advanced": "Optiones Provectae"
+  },
+  "hints": {
+    "optionalDefaults": "Optionale — valores praedefiniti applicantur si vacuum",
+    "optionalAuto": "Auto-assignatur si vacuum",
+    "recurrence": "Proxima occurrentia auto-creatur post completionem"
+  },
+  "templates": {
+    "title": "Tesserae Frequentes",
+    "hint": "Preme ut formam imples",
+    "hoistBrake": {
+      "label": "Servitium Freni Tollentis",
+      "desc": "Inspice attritionem freni tollentis et substitue laminam."
+    },
+    "wireRope": {
+      "label": "Substitutio Funis Ferrei",
+      "desc": "Inspice attritionem funis ferrei et substitue."
+    },
+    "dcmFan": {
+      "label": "Inspectio Ventilatoris DCM",
+      "desc": "Inspice sonitum/cuscinetum ventilatoris armarii SINAMICS DCM."
+    },
+    "panelFilter": {
+      "label": "Purgatio Ventilatoris/Filtri Tabulae",
+      "desc": "Purga ventilatorem/filtrum tabulae imperii et inspice contaminationem."
+    },
+    "limitSwitch": {
+      "label": "Calibratio Commutatoris Limitis",
+      "desc": "Inspice et calibra positiones commutatoris limitis."
+    }
   },
   "fields": {
     "crane": "Gruis",
@@ -36,14 +67,25 @@
     "scheduledDate": "Dies Disposita",
     "inspectionType": "Genus Inspectionis",
     "findings": "Notae (optionale)",
+    "recurrence": "Recursus",
+    "assigneeCustom": "Scriptio manualis...",
     "note": "Nota (optionale)",
     "requester": "Petitor",
     "requestPriority": "Prioritas Petitionis",
     "partName": "Elige partem...",
     "addPart": "Adde Partem"
   },
+  "recurrence": {
+    "none": "Sine recursu",
+    "weekly": "Hebdomadale",
+    "biweekly": "Bihebdomadale",
+    "monthly": "Menstruum",
+    "quarterly": "Trimestre"
+  },
   "placeholders": {
     "componentName": "e.g. Frenum Horologii",
+    "componentNeedsCrane": "Elige gruem primum",
+    "assigneeSelect": "Elige assignatum...",
     "assignedTo": "e.g. Ioannes Faber",
     "failureDescription": "Describe defectum aut refectionem necessariam...",
     "findings": "Notae optionales de ambitu inspectionis...",

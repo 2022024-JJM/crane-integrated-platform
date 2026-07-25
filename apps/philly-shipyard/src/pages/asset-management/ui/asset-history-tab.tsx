@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { HistoryEvent, HistoryEventKind } from '@crane/features/history';
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import {
   INSPECTION_RESULT_VARIANT,
@@ -137,7 +139,7 @@ function EventRow({ event }: { event: HistoryEvent }) {
   );
 
   const rowClass =
-    'group relative flex flex-col gap-1.5 rounded border border-border/90 bg-card/70 px-3.5 py-3 transition-all';
+    cn(SURFACE_PANEL, 'group relative flex flex-col gap-1.5 px-3.5 py-3 transition-all');
 
   return (
     <div className="relative">
@@ -166,7 +168,7 @@ export function AssetHistoryTab({ events }: { events: HistoryEvent[] }) {
 
   if (events.length === 0) {
     return (
-      <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+      <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
         {t('detail.noHistory')}
       </div>
     );

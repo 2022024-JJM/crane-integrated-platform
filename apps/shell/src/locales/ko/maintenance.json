@@ -15,7 +15,8 @@
     "waiting_parts": "부품 대기",
     "in_progress": "진행 중",
     "re_inspection": "재검사",
-    "completed": "완료"
+    "completed": "완료",
+    "on_hold": "보류"
   },
   "status": {
     "received": "접수",
@@ -34,9 +35,46 @@
   "empty": "—",
   "toast": {
     "completed": "{{woNumber}} — 정비 완료 처리되었습니다.",
-    "moveTo": "{{woNumber}} — {{status}}(으)로 이동"
+    "moveTo": "{{woNumber}} — {{status}}(으)로 이동",
+    "detailsSaved": "{{woNumber}} — 정비 결과가 저장되었습니다.",
+    "reInspectionRequired": "완료 처리 전에 재검사 결과를 입력하세요.",
+    "partIssued": "{{part}} ×{{n}} — {{woNumber}}에 출고되었습니다."
   },
   "completedLabel": "완료됨",
+  "panel": {
+    "label": "작업지시서: {{wo}}",
+    "close": "닫기",
+    "stageLabel": "파이프라인 단계",
+    "subStateLabel": "세부 상태",
+    "working": "작업 중",
+    "onHoldHint": "보류 중 — 단계를 클릭하면 재개됩니다.",
+    "completedLocked": "완료된 작업지시서는 수정할 수 없습니다.",
+    "addPart": "부품 추가",
+    "part": {
+      "title": "부품 사용 기록",
+      "selectPart": "부품",
+      "choosePart": "부품을 선택하세요…",
+      "available": "가용 {{n}}",
+      "exceedsStock": "가용 재고({{n}})를 초과합니다",
+      "insufficient": "재고가 부족합니다.",
+      "failed": "부품 출고에 실패했습니다.",
+      "qty": "수량",
+      "by": "출고자",
+      "note": "비고",
+      "submit": "출고",
+      "cancel": "취소"
+    },
+    "results": {
+      "title": "정비 결과",
+      "laborHours": "작업 공수 (h)",
+      "downtime": "비가동 시간 (h)",
+      "reInspection": "재검사 결과",
+      "reInspectionHint": "완료 처리 전 필수",
+      "pass": "합격",
+      "fail": "불합격",
+      "save": "결과 저장"
+    }
+  },
   "detail": {
     "backLink": "정비 관리",
     "notFound": "수리 기록을 찾을 수 없습니다.",

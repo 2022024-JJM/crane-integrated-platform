@@ -18,7 +18,38 @@
   "sections": {
     "basicInfo": "기본 정보",
     "assignment": "담당자 및 일정",
-    "parts": "부품 목록"
+    "parts": "부품 목록",
+    "quick": "빠른 등록",
+    "advanced": "상세 옵션"
+  },
+  "hints": {
+    "optionalDefaults": "선택 사항 — 비워두면 기본값이 적용됩니다",
+    "optionalAuto": "비워두면 자동 지정",
+    "recurrence": "완료 시 다음 회차가 자동 생성됩니다"
+  },
+  "templates": {
+    "title": "자주 쓰는 티켓",
+    "hint": "클릭하면 폼이 자동으로 채워집니다",
+    "hoistBrake": {
+      "label": "호이스트 브레이크 정비",
+      "desc": "호이스트 브레이크 마모 점검 및 라이닝 교체."
+    },
+    "wireRope": {
+      "label": "와이어로프 교체",
+      "desc": "와이어로프 마모/소선 단선 확인 및 교체."
+    },
+    "dcmFan": {
+      "label": "DCM 냉각팬 점검",
+      "desc": "SINAMICS DCM 판넬 냉각팬 이상음/베어링 점검."
+    },
+    "panelFilter": {
+      "label": "판넬 팬/필터 청소",
+      "desc": "제어 판넬 팬/필터 유닛 청소 및 오염 상태 확인."
+    },
+    "limitSwitch": {
+      "label": "리밋스위치 교정",
+      "desc": "리밋 스위치 작동 위치 점검 및 교정."
+    }
   },
   "fields": {
     "crane": "크레인",
@@ -36,14 +67,25 @@
     "scheduledDate": "점검 예정일",
     "inspectionType": "점검 유형",
     "findings": "비고 (선택)",
+    "recurrence": "반복 주기",
+    "assigneeCustom": "직접 입력...",
     "note": "메모 (선택)",
     "requester": "요청자",
     "requestPriority": "요청 우선순위",
     "partName": "부품 선택...",
     "addPart": "부품 추가"
   },
+  "recurrence": {
+    "none": "반복 없음",
+    "weekly": "매주",
+    "biweekly": "격주",
+    "monthly": "매월",
+    "quarterly": "분기"
+  },
   "placeholders": {
     "componentName": "예: 호이스트 브레이크",
+    "componentNeedsCrane": "크레인을 먼저 선택하세요",
+    "assigneeSelect": "담당자 선택...",
     "assignedTo": "예: 조범희 / M&S Corp.",
     "failureDescription": "고장 내용 또는 수리 필요 사항을 입력하세요...",
     "findings": "점검 범위에 대한 비고를 입력하세요...",

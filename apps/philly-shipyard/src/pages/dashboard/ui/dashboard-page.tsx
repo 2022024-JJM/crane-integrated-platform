@@ -9,6 +9,7 @@ import { ActiveTicketsCard } from './components/active-tickets-card';
 import { AssetFleetCard } from './components/asset-fleet-card';
 import { DailyInspectionCard } from './components/daily-inspection-card';
 import { QuickLinksList } from './components/quick-links-list';
+import { PAGE_CONTAINER } from '../../../shared/ui/page';
 
 export function PhillyDashboardPage() {
   const { t, i18n } = useTranslation('philly-dashboard');
@@ -16,7 +17,7 @@ export function PhillyDashboardPage() {
   const periodLabel = formatPeriodLabel(data.now, i18n.language);
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       <PageHeaderBar periodLabel={periodLabel} />
 
       {/* Top: 2-Bay panels */}

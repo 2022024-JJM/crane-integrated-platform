@@ -8,6 +8,8 @@ import type { ComponentStatus } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import { PAGE_CONTAINER, PAGE_TITLE } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import { ASSET_STATUS_DOT, ASSET_STATUS_VARIANT } from '../../../shared/ui/status-variants';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
@@ -16,6 +18,7 @@ import { AssetInspectionTab } from './asset-inspection-tab';
 import { AssetMaintenanceTab } from './asset-maintenance-tab';
 import { AssetHistoryTab } from './asset-history-tab';
 import { AssetSpecsTab } from './asset-specs-tab';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 // 3D 탭은 three.js 의존 — 탭을 열 때만 청크를 로드하도록 lazy 분리
 const Asset3dTab = lazy(() =>
@@ -108,7 +111,7 @@ export function AssetDetailPage() {
   const nextInspRel = nextInspection ? formatRelativeDate(nextInspection) : null;
 
   return (
-    <div className="flex flex-col gap-5 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       {/* 뒤로 */}
       <Link
         to="/asset-management"
@@ -119,11 +122,11 @@ export function AssetDetailPage() {
       </Link>
 
       {/* 요약 헤더 밴드 */}
-      <div className="flex flex-col gap-4 rounded-lg border border-border/90 bg-card/60 p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className={cn(SURFACE_PANEL, 'flex flex-col gap-4 p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between')}>
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2">
             <StatusDot status={ASSET_STATUS_DOT[asset.status]} />
-            <h1 className="truncate text-lg font-bold">{asset.name}</h1>
+            <h1 className={cn(PAGE_TITLE, 'truncate')}>{asset.name}</h1>
             <Badge variant={ASSET_STATUS_VARIANT[asset.status]} className="shrink-0">
               {t(`status.${asset.status}`)}
             </Badge>
@@ -225,7 +228,7 @@ export function AssetDetailPage() {
             role="tab"
             aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
-            className={cn(
+            className={cn(FOCUS_RING, 
               'cursor-pointer border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
               activeTab === key
                 ? 'border-primary text-primary'

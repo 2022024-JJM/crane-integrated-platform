@@ -7,15 +7,19 @@ import type { InspectionStatus, InspectionType, InspectionWO } from '@crane/doma
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
-import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import { TABLE_EMPTY, PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
+import { buttonVariants } from '@crane/ui/atoms/button';
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import {
   INSPECTION_RESULT_VARIANT as RESULT_VARIANT,
   INSPECTION_STATUS_TONE,
   INSPECTION_STATUS_VARIANT as STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
 import { MetricCard } from '../../../shared/ui/metric-card';
-import { AlertBanner } from '../../../shared/ui/alert-banner';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { InspectionQueue } from './inspection-queue';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 // 컬럼: 상태바 · WO/크레인 · 유형 · 예정일 · 담당자 · 진행률 · 상태 · 결과/화살표
 const GRID_TEMPLATE = '4px minmax(220px,2fr) 110px 110px minmax(100px,1fr) minmax(120px,1fr) 100px 100px';
@@ -129,45 +133,38 @@ export function InspectionPage() {
   const pageStart = (page - 1) * pageSize;
   const paginated = filtered.slice(pageStart, pageStart + pageSize);
 
-  const overdueCount = inspections.filter((w) => w.status === 'overdue').length;
-
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <Link
           to="/ticket/create?type=inspection"
-          className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className={buttonVariants({ size: 'lg' })}
         >
           <Plus className="h-4 w-4" />
           {t('createButton', { ns: 'ticket', defaultValue: 'New Ticket' })}
         </Link>
       </div>
 
-      {/* 지연 점검 배너 */}
-      {overdueCount > 0 && (
-        <AlertBanner
-          tone="critical"
-          title={t('overdueAlert', { count: overdueCount, defaultValue: `${overdueCount} overdue inspection(s) — immediate attention required` })}
-        />
-      )}
+      {/* 작업 큐 — 지연/오늘/예정 우선순위로 바로 시작 (기존 지연 배너를 대체) */}
+      <InspectionQueue inspections={inspections} />
 
       {/* 메트릭 */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, dot: '' },
-          { label: t('metrics.completed'), value: summary.completed, dot: '' },
-          { label: t('metrics.overdue'), value: summary.overdue, dot: summary.overdue > 0 ? TONE_DOT.critical : '' },
+          { label: t('metrics.totalScheduled'), value: summary.totalScheduled, tone: 'neutral' },
+          { label: t('metrics.completed'), value: summary.completed, tone: 'neutral' },
+          { label: t('metrics.overdue'), value: summary.overdue, tone: summary.overdue > 0 ? 'critical' : 'neutral' },
           {
             label: t('metrics.completionRate'),
             value: `${summary.completionRate}%`,
-            dot: summary.completionRate < 80 ? TONE_DOT.warning : '',
+            tone: summary.completionRate < 80 ? 'warning' : 'neutral',
           },
-        ].map(({ label, value, dot }) => (
-          <MetricCard key={label} label={label} value={value} dot={dot} />
+        ].map(({ label, value, tone }) => (
+          <MetricCard key={label} label={label} value={value} tone={tone as Tone} />
         ))}
       </section>
 
@@ -178,7 +175,7 @@ export function InspectionPage() {
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={cn(
+              className={cn(FOCUS_RING, 
                 'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
                 filterType === type ? TONE_PILL_ACTIVE.neutral : PILL_INACTIVE,
               )}
@@ -192,7 +189,7 @@ export function InspectionPage() {
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={cn(
+              className={cn(FOCUS_RING, 
                 'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
                 filterStatus === s
                   ? TONE_PILL_ACTIVE[s === 'all' ? 'neutral' : INSPECTION_STATUS_TONE[s]]
@@ -206,7 +203,7 @@ export function InspectionPage() {
       </div>
 
       {/* 테이블 */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+      <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
         {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
         <div className="overflow-x-auto">
           <div className="min-w-[970px]">
@@ -236,7 +233,7 @@ export function InspectionPage() {
 
         {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
         {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-muted-foreground">
+          <div className={TABLE_EMPTY}>
             {t('empty')}
           </div>
         )}

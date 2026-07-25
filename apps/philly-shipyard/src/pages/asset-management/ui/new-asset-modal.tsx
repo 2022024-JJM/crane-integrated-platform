@@ -1,12 +1,4 @@
-import {
-  Children,
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useId,
-  useRef,
-  type ReactElement,
-} from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
@@ -15,7 +7,17 @@ import type { AssetStatus, CraneType } from '@crane/domain/asset';
 import { Button } from '@crane/ui/atoms/button';
 import { DatePicker } from '@crane/ui/molecules/date-picker';
 import { cn } from '@crane/core/lib/utils';
+import { SURFACE_MODAL } from '../../../shared/ui/surface';
+import {
+  FormField as Field,
+  inputClass,
+  selectClass,
+  TOGGLE_ACTIVE,
+  TOGGLE_BASE,
+  TOGGLE_INACTIVE,
+} from '../../../shared/ui/form';
 import { SITES } from '../../../shared/config/sites';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 // 사이트 옵션은 공용 사이트 카탈로그에서 파생 — 사이트 추가 시 sites.ts만 수정
 const SITE_OPTIONS: Array<{ id: string; nameKey: string; fallback: string }> =
@@ -23,10 +25,6 @@ const SITE_OPTIONS: Array<{ id: string; nameKey: string; fallback: string }> =
 
 const CRANE_TYPES: CraneType[] = ['goliath', 'overhead', 'gantry', 'jib', 'ttc', 'llc', 'luffing'];
 const STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
-
-const inputClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors outline-none hover:border-primary/40 focus:border-ring focus:ring-2 focus:ring-ring/25';
-const selectClass = inputClass + ' cursor-pointer';
 
 export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation('asset-management');
@@ -114,7 +112,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
         aria-modal="true"
         aria-labelledby="new-asset-modal-title"
         aria-describedby="new-asset-modal-desc"
-        className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+        className={cn(SURFACE_MODAL, 'relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden')}
       >
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
           <div>
@@ -128,7 +126,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={cn('flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
             aria-label={t('modal.close', { defaultValue: 'Close' })}
           >
             <X className="size-4" />
@@ -140,7 +138,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             <Field label={t('modal.fields.name', { defaultValue: 'Asset Name' })} required error={errors.name}>
               <input
                 className={inputClass}
-                placeholder="e.g. GC-106"
+                placeholder={t('modal.placeholders.name', { defaultValue: 'e.g. GC-106' })}
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
               />
@@ -161,7 +159,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             <Field label={t('modal.fields.manufacturer', { defaultValue: 'Manufacturer' })} required error={errors.manufacturer}>
               <input
                 className={inputClass}
-                placeholder="e.g. Konecranes"
+                placeholder={t('modal.placeholders.manufacturer', { defaultValue: 'e.g. Konecranes' })}
                 value={form.manufacturer}
                 onChange={(e) => set('manufacturer', e.target.value)}
               />
@@ -170,7 +168,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             <Field label={t('modal.fields.model', { defaultValue: 'Model' })} required error={errors.model}>
               <input
                 className={inputClass}
-                placeholder="e.g. Goliath 900T"
+                placeholder={t('modal.placeholders.model', { defaultValue: 'e.g. Goliath 900T' })}
                 value={form.model}
                 onChange={(e) => set('model', e.target.value)}
               />
@@ -189,7 +187,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             <Field label={t('modal.fields.serialNumber', { defaultValue: 'Serial Number' })} required error={errors.serialNumber}>
               <input
                 className={inputClass}
-                placeholder="e.g. KC-2026-GC-001"
+                placeholder={t('modal.placeholders.serialNumber', { defaultValue: 'e.g. KC-2026-GC-001' })}
                 value={form.serialNumber}
                 onChange={(e) => set('serialNumber', e.target.value)}
               />
@@ -241,7 +239,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
             <Field label={t('modal.fields.locationZone', { defaultValue: 'Location Zone' })} required error={errors.locationZone} colSpan={2}>
               <input
                 className={inputClass}
-                placeholder="e.g. Dock No.1 West"
+                placeholder={t('modal.placeholders.locationZone', { defaultValue: 'e.g. Dock No.1 West' })}
                 value={form.locationZone}
                 onChange={(e) => set('locationZone', e.target.value)}
               />
@@ -271,10 +269,8 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
                     type="button"
                     onClick={() => set('status', s)}
                     className={cn(
-                      'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
-                      form.status === s
-                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                        : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                      TOGGLE_BASE,
+                      form.status === s ? TOGGLE_ACTIVE + ' shadow-sm' : TOGGLE_INACTIVE,
                     )}
                   >
                     {t(`status.${s}`, { defaultValue: s })}
@@ -294,75 +290,6 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-interface FieldChildProps {
-  id?: string;
-  'aria-describedby'?: string;
-  'aria-invalid'?: boolean;
-  'aria-required'?: boolean;
-  required?: boolean;
-}
-
-function Field({
-  label,
-  required,
-  error,
-  colSpan,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  colSpan?: 2;
-  children: React.ReactNode;
-}) {
-  const reactId = useId();
-  const inputId = `asset-${reactId}`;
-  const errorId = error ? `asset-${reactId}-error` : undefined;
-
-  let enhancedChildren: React.ReactNode = children;
-  const onlyChild = Children.toArray(children).find(isValidElement);
-  if (onlyChild) {
-    const child = onlyChild as ReactElement<FieldChildProps>;
-    enhancedChildren = cloneElement(child, {
-      id: child.props.id ?? inputId,
-      'aria-describedby': child.props['aria-describedby'] ?? errorId,
-      'aria-invalid': child.props['aria-invalid'] ?? Boolean(error),
-      'aria-required': child.props['aria-required'] ?? required,
-      required: child.props.required ?? required,
-    });
-  }
-
-  return (
-    <div className={cn(colSpan === 2 ? 'sm:col-span-2' : '')}>
-      <label
-        htmlFor={inputId}
-        className="mb-1.5 block text-xs font-medium text-muted-foreground"
-      >
-        {label}
-        {required && (
-          <span aria-hidden="true" className="ml-0.5 text-destructive">
-            *
-          </span>
-        )}
-      </label>
-      {enhancedChildren}
-      {error && (
-        <p
-          id={errorId}
-          role="alert"
-          className="mt-1 flex items-center gap-1 text-xs text-destructive"
-        >
-          <span
-            aria-hidden="true"
-            className="inline-block size-1 rounded-full bg-destructive"
-          />
-          {error}
-        </p>
-      )}
     </div>
   );
 }

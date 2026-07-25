@@ -12,12 +12,19 @@ import type {
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
+import { PAGE_CONTAINER, PAGE_SUBTITLE, PAGE_TITLE, TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_CARD, SURFACE_PANEL } from '../../../shared/ui/surface';
+import { buttonVariants } from '@crane/ui/atoms/button';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import {
   PILL_INACTIVE,
+  TONE_BORDER,
   TONE_DOT,
+  TONE_HOVER_TINT,
   TONE_PILL_ACTIVE,
   TONE_SURFACE,
   TONE_TEXT,
+  type Tone,
 } from '../../../shared/ui/tone';
 import {
   CRITICALITY_TONE,
@@ -261,19 +268,20 @@ export function InventoryPage() {
   return (
     <div
       className={cn(
-        'flex flex-col gap-6 p-4 transition-[padding] duration-300 ease-out md:p-6',
+        PAGE_CONTAINER,
+        'transition-[padding] duration-300 ease-out',
         // xl 이상에서만 상세 패널 폭(440px)만큼 본문을 민다 — 그 미만은 패널이 오버레이
         selectedPartId && 'xl:pr-[calc(440px+1.5rem)]',
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <Link
           to="/ticket/create?type=parts"
-          className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className={buttonVariants({ size: 'lg' })}
         >
           <Plus className="h-4 w-4" />
           {t('createButton', { ns: 'ticket', defaultValue: 'New Ticket' })}
@@ -283,12 +291,12 @@ export function InventoryPage() {
       {/* 메트릭 */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: t('metrics.totalParts'), value: summary.totalParts, dot: '' },
-          { label: t('metrics.belowSafetyStock'), value: summary.lowStock, dot: summary.lowStock > 0 ? TONE_DOT.critical : '' },
-          { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, dot: summary.reorderNeeded > 0 ? TONE_DOT.warning : '' },
-          { label: t('metrics.pendingPOs'), value: summary.activePOs, dot: '' },
-        ].map(({ label, value, dot }) => (
-          <MetricCard key={label} label={label} value={value} dot={dot} />
+          { label: t('metrics.totalParts'), value: summary.totalParts, tone: 'neutral' },
+          { label: t('metrics.belowSafetyStock'), value: summary.lowStock, tone: summary.lowStock > 0 ? 'critical' : 'neutral' },
+          { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, tone: summary.reorderNeeded > 0 ? 'warning' : 'neutral' },
+          { label: t('metrics.pendingPOs'), value: summary.activePOs, tone: 'neutral' },
+        ].map(({ label, value, tone }) => (
+          <MetricCard key={label} label={label} value={value} tone={tone as Tone} />
         ))}
       </section>
 
@@ -298,7 +306,7 @@ export function InventoryPage() {
           <button
             type="button"
             onClick={() => setAlertOpen((v) => !v)}
-            className={cn('flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-amber-500/10', TONE_TEXT.warning)}
+            className={cn(FOCUS_RING, 'flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors', TONE_HOVER_TINT.warning, TONE_TEXT.warning)}
           >
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span className="flex-1 text-left">
@@ -310,7 +318,7 @@ export function InventoryPage() {
             }
           </button>
           {alertOpen && (
-            <div className="space-y-2 border-t border-amber-500/25 p-4">
+            <div className={cn('space-y-2 border-t p-4', TONE_BORDER.warning)}>
               {alertItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 text-sm">
                   <Badge variant={STATUS_VARIANT[item.status]} className="shrink-0">
@@ -329,11 +337,11 @@ export function InventoryPage() {
 
       {/* 진행 중 PO (접이식) */}
       {purchaseOrders.length > 0 && (
-        <div className="rounded border border-border/90 bg-card/60 shadow-sm backdrop-blur-sm">
+        <div className={SURFACE_CARD}>
           <button
             type="button"
             onClick={() => setPoOpen((v) => !v)}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-muted/30"
+            className={cn('flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-muted/30', FOCUS_RING)}
           >
             <span className="flex-1 text-left">
               {t('po.title')}
@@ -384,13 +392,13 @@ export function InventoryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPlaceholder', { defaultValue: 'Search part / P/N / manufacturer' })}
-            className="h-9 w-72 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+            className={cn(searchInputClass, 'w-72 pl-8 pr-3')}
           />
         </div>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as PartCategory | 'all')}
-          className="h-9 cursor-pointer rounded border border-border bg-card/60 px-2 text-sm outline-none transition-colors focus:border-primary/50"
+          className={cn(searchInputClass, 'cursor-pointer px-2')}
         >
           <option value="all">{t('categoryAll', { defaultValue: 'All categories' })}</option>
           {categories.map((c) => (
@@ -407,7 +415,7 @@ export function InventoryPage() {
                 key={key}
                 type="button"
                 onClick={() => setCraneFilter(isActive ? 'all' : key)}
-                className={cn(
+                className={cn(FOCUS_RING, 
                   'inline-flex cursor-pointer items-center rounded px-3 py-1.5 text-[11px] font-bold tracking-wider transition-all',
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-sm'
@@ -437,7 +445,7 @@ export function InventoryPage() {
                   key={s}
                   type="button"
                   onClick={() => toggleStatus(s)}
-                  className={cn(
+                  className={cn(FOCUS_RING, 
                     'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
                     isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
@@ -467,7 +475,7 @@ export function InventoryPage() {
                   key={c}
                   type="button"
                   onClick={() => toggleCrit(c)}
-                  className={cn(
+                  className={cn(FOCUS_RING, 
                     'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
                     isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
@@ -485,7 +493,7 @@ export function InventoryPage() {
       </div>
 
       {/* 부품 테이블 */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+      <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
         {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
         <div className="overflow-x-auto">
           <div className="min-w-[1120px]">
@@ -526,7 +534,7 @@ export function InventoryPage() {
 
         {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
         {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-muted-foreground">
+          <div className={TABLE_EMPTY}>
             {t('empty')}
           </div>
         )}

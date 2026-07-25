@@ -12,6 +12,8 @@ import { TimeGrid } from './time-grid';
 import { CalendarHeader } from './calendar-header';
 import { CalendarLegend } from './calendar-legend';
 import { ScheduleView } from './schedule-view';
+import { cn } from '@crane/core/lib/utils';
+import { PAGE_TITLE, PAGE_SUBTITLE } from '../../../shared/ui/page';
 
 export function ServiceCalendarPage() {
   const { t, i18n } = useTranslation('calendar');
@@ -119,11 +121,12 @@ export function ServiceCalendarPage() {
 
   const weekDays = useMemo(() => buildWeekDays(anchor), [anchor]);
 
+  // 전체 높이 캘린더 특성상 PAGE_CONTAINER(gap-6) 대신 h-full + gap-4 유지 — shared/ui/page.ts 참고
   return (
     <div className="flex h-full flex-col gap-4 p-4 md:p-6">
       <div>
-        <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+        <h1 className={PAGE_TITLE}>{t('title')}</h1>
+        <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
       </div>
 
       <CalendarHeader

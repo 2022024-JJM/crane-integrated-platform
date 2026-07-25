@@ -51,6 +51,14 @@
       "serialRequired": "시리얼 번호를 입력해 주세요.",
       "capacityRequired": "정격 하중을 입력해 주세요.",
       "locationRequired": "위치 구역을 입력해 주세요."
+    },
+    "close": "닫기",
+    "placeholders": {
+      "name": "예: GC-106",
+      "manufacturer": "예: Konecranes",
+      "model": "예: Goliath 900T",
+      "serialNumber": "예: KC-2026-GC-001",
+      "locationZone": "예: Dock No.1 West"
     }
   },
   "metrics": {

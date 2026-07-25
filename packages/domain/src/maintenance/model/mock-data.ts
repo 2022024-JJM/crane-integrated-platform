@@ -262,10 +262,24 @@ export function getRepairWOById(id: string): RepairWO | undefined {
   return allRepairWOs.find((w) => w.id === id);
 }
 
+function localNow(): string {
+  const now = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}:00`;
+}
+
 export function updateRepairStatus(id: string, status: RepairWO['status']): boolean {
   const idx = allRepairWOs.findIndex((w) => w.id === id);
   if (idx === -1) return false;
-  allRepairWOs[idx] = { ...allRepairWOs[idx], status };
+  const wo = allRepairWOs[idx];
+  // 실적 타임스탬프 자동 기록 — 착수/완료 시점을 사용자가 따로 입력하지 않는다.
+  const stamps: Partial<RepairWO> = {};
+  if (status === 'in_progress' && !wo.actualStart) stamps.actualStart = localNow();
+  if (status === 'completed') {
+    stamps.actualEnd = localNow();
+    if (!wo.actualStart) stamps.actualStart = wo.scheduledStart;
+  }
+  allRepairWOs[idx] = { ...wo, status, ...stamps };
   return true;
 }
 
@@ -304,6 +318,47 @@ export function addPartUsedToRepair(
     partsCost,
     totalCost: wo.laborCost != null ? wo.laborCost + partsCost : wo.totalCost,
   };
+  return true;
+}
+
+export interface RepairDetailsUpdate {
+  rootCause?: string;
+  correctiveAction?: string;
+  preventiveAction?: string;
+  laborHours?: number | null;
+  downtimeHours?: number | null;
+  reInspectionResult?: 'pass' | 'fail' | null;
+}
+
+/** 수리 결과 기록 — 완료된 WO는 변경 불가. 텍스트는 localizeRepair의 _ko 우선 규칙 때문에 base/_ko 동시 기록. */
+export function updateRepairDetails(id: string, update: RepairDetailsUpdate): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  const wo = allRepairWOs[idx];
+  if (wo.status === 'completed') return false;
+
+  const patch: Partial<RepairWO> = {};
+  if (update.rootCause !== undefined) {
+    patch.rootCause = update.rootCause;
+    patch.rootCause_ko = update.rootCause;
+  }
+  if (update.correctiveAction !== undefined) {
+    patch.correctiveAction = update.correctiveAction;
+    patch.correctiveAction_ko = update.correctiveAction;
+  }
+  if (update.preventiveAction !== undefined) {
+    patch.preventiveAction = update.preventiveAction;
+    patch.preventiveAction_ko = update.preventiveAction;
+  }
+  if (update.laborHours !== undefined) patch.laborHours = update.laborHours;
+  if (update.downtimeHours !== undefined) patch.downtimeHours = update.downtimeHours;
+  if (update.reInspectionResult !== undefined) patch.reInspectionResult = update.reInspectionResult;
+
+  const next = { ...wo, ...patch };
+  if (next.laborCost != null || next.partsCost != null) {
+    next.totalCost = (next.laborCost ?? 0) + (next.partsCost ?? 0);
+  }
+  allRepairWOs[idx] = next;
   return true;
 }
 

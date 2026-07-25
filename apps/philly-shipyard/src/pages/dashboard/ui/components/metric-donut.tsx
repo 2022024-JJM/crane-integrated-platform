@@ -2,7 +2,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { cn } from '@crane/core/lib/utils';
 
 const SIZE_MAP = {
-  sm: { px: 84, inner: 30, outer: 42, number: 'text-base', label: 'text-[9px]' },
+  sm: { px: 84, inner: 30, outer: 42, number: 'text-base', label: 'text-[10px]' },
   md: { px: 116, inner: 42, outer: 56, number: 'text-xl', label: 'text-[10px]' },
   lg: { px: 148, inner: 56, outer: 72, number: 'text-3xl', label: 'text-[11px]' },
 } as const;

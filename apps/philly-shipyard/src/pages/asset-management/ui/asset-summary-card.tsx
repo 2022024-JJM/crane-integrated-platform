@@ -7,6 +7,7 @@ import type { CraneAsset, CraneType } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import {
   ASSET_STATUS_DOT as STATUS_DOT,
@@ -90,7 +91,8 @@ export function AssetSummaryCard({
   return (
     <div
       className={cn(
-        'group relative flex cursor-pointer flex-col gap-4 rounded-lg border border-border/80 bg-card/70 p-5 shadow-sm transition-all hover:border-border hover:shadow-md',
+        SURFACE_PANEL,
+        'group relative flex cursor-pointer flex-col gap-4 p-5 shadow-sm transition-all hover:border-border hover:shadow-md',
       )}
     >
       {/* 카드 전체를 덮는 상세 이동 링크 (stretched link) */}

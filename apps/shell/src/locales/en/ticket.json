@@ -18,7 +18,38 @@
   "sections": {
     "basicInfo": "Basic Information",
     "assignment": "Assignment & Schedule",
-    "parts": "Parts"
+    "parts": "Parts",
+    "quick": "Quick Create",
+    "advanced": "Advanced Options"
+  },
+  "hints": {
+    "optionalDefaults": "Optional — smart defaults apply if left empty",
+    "optionalAuto": "Auto-assigned if empty",
+    "recurrence": "Next occurrence is auto-created on completion"
+  },
+  "templates": {
+    "title": "Frequent Tickets",
+    "hint": "Click to pre-fill the form",
+    "hoistBrake": {
+      "label": "Hoist Brake Service",
+      "desc": "Inspect hoist brake wear and replace lining."
+    },
+    "wireRope": {
+      "label": "Wire Rope Replacement",
+      "desc": "Check wire rope wear/broken strands and replace."
+    },
+    "dcmFan": {
+      "label": "DCM Cooling Fan Check",
+      "desc": "Inspect SINAMICS DCM cabinet cooling fan noise/bearing."
+    },
+    "panelFilter": {
+      "label": "Panel Fan/Filter Cleaning",
+      "desc": "Clean control panel fan/filter unit and check contamination."
+    },
+    "limitSwitch": {
+      "label": "Limit Switch Calibration",
+      "desc": "Check and calibrate limit switch trip positions."
+    }
   },
   "fields": {
     "crane": "Crane",
@@ -36,14 +67,25 @@
     "scheduledDate": "Scheduled Date",
     "inspectionType": "Inspection Type",
     "findings": "Findings (optional)",
+    "recurrence": "Recurrence",
+    "assigneeCustom": "Custom entry...",
     "note": "Note (optional)",
     "requester": "Requester",
     "requestPriority": "Request Priority",
     "partName": "Select part...",
     "addPart": "Add Part"
   },
+  "recurrence": {
+    "none": "No repeat",
+    "weekly": "Weekly",
+    "biweekly": "Biweekly",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly"
+  },
   "placeholders": {
     "componentName": "e.g. Hoist Brake",
+    "componentNeedsCrane": "Select a crane first",
+    "assigneeSelect": "Select assignee...",
     "assignedTo": "e.g. John Smith / M&S Corp.",
     "failureDescription": "Describe the failure or required repair...",
     "findings": "Optional notes about the inspection scope...",

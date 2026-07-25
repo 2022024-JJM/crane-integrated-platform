@@ -3,9 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, TicketPlus, Check } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
+import { PAGE_CONTAINER, PAGE_TITLE, PAGE_SUBTITLE } from '../../../shared/ui/page';
 import { TicketTypeSelector } from './ticket-type-selector';
 import type { TicketType } from './ticket-type-selector';
 import { CreateTicketForm } from './create-ticket-form';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 export function CreateTicketPage() {
   const { t } = useTranslation('ticket');
@@ -18,13 +20,13 @@ export function CreateTicketPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+    <div className={cn(PAGE_CONTAINER, 'mx-auto max-w-6xl')}>
       {/* 헤더 */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className={cn('flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground', FOCUS_RING)}
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -33,8 +35,8 @@ export function CreateTicketPage() {
             <TicketPlus className="size-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-            <p className="text-xs text-muted-foreground">{t('description')}</p>
+            <h1 className={PAGE_TITLE}>{t('title')}</h1>
+            <p className={PAGE_SUBTITLE}>{t('description')}</p>
           </div>
         </div>
       </div>

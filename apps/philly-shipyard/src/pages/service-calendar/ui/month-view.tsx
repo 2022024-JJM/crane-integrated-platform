@@ -8,6 +8,7 @@ import { buildSpanSegments, daysDiff } from '../model/week-segments';
 import { formatMonthDay, formatWeekdayShort } from '../model/format';
 import { EventChip, EventStripBar } from './event-chip';
 import { MoreEventsPopover } from './more-events-popover';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 // 셀당 이벤트 줄 수 — 초과분은 'N개 더보기' (구글 캘린더식 슬롯 스택)
 const MAX_SLOTS = 4;
@@ -180,7 +181,7 @@ export function MonthView({
                       tabIndex={-1}
                       aria-hidden
                       onClick={() => onEmptyClick(day)}
-                      className={cn(
+                      className={cn(FOCUS_RING, 
                         'cursor-pointer border-r border-border/40 transition-colors last:border-r-0',
                         !isSameMonth(day, anchor) && 'bg-muted/20',
                         !drag && 'hover:bg-muted/30',
@@ -208,7 +209,7 @@ export function MonthView({
                       <button
                         type="button"
                         onClick={() => onDayClick(day)}
-                        className={cn(
+                        className={cn(FOCUS_RING, 
                           'pointer-events-auto flex h-6 min-w-6 cursor-pointer items-center justify-center rounded-full px-1.5 text-xs tabular-nums transition-colors',
                           isToday && 'bg-primary font-semibold text-primary-foreground hover:bg-primary/90',
                           !isToday && !inMonth && 'text-muted-foreground/50 hover:bg-muted',

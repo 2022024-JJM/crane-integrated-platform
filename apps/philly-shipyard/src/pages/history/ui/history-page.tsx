@@ -13,6 +13,8 @@ import { useHistoryList } from '@crane/features/history';
 import type { HistoryEvent, HistoryEventKind } from '@crane/features/history';
 import { buildCsv, downloadCsv, formatCsvTimestamp } from '@crane/core/lib/export-csv';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY, PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -23,7 +25,8 @@ import {
 } from '@crane/ui/molecules/select';
 import { DateTimePicker } from '@crane/ui/molecules/date-time-picker';
 import { Pagination } from '@crane/ui/molecules/pagination';
-import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE } from '../../../shared/ui/tone';
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import type { Tone } from '../../../shared/ui/tone';
 import {
   INSPECTION_RESULT_VARIANT,
@@ -264,12 +267,12 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <Button size="sm" variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
           <Download className="mr-1 size-3" />
@@ -286,7 +289,7 @@ export function HistoryPage() {
               key={k}
               type="button"
               onClick={() => setKind(k)}
-              className={cn(
+              className={cn(FOCUS_RING, 
                 'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors',
                 kind === k ? TONE_PILL_ACTIVE.neutral : PILL_INACTIVE,
               )}
@@ -361,7 +364,7 @@ export function HistoryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('filters.searchPlaceholder')}
-            className="h-9 w-64 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(searchInputClass, 'w-64 pl-8 pr-3')}
           />
         </div>
 
@@ -370,13 +373,13 @@ export function HistoryPage() {
         </span>
       </div>
       {rangeInvalid && (
-        <p className="-mt-4 text-xs text-red-600 dark:text-red-400">
+        <p className={cn('-mt-4 text-xs', TONE_TEXT.critical)}>
           {t('filters.rangeInvalid')}
         </p>
       )}
 
       {/* 테이블 */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+      <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
         <div className="overflow-x-auto">
           <div className="min-w-[1000px]">
             {/* 헤더 */}
@@ -407,7 +410,7 @@ export function HistoryPage() {
 
         {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
         {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-muted-foreground">{t('empty')}</div>
+          <div className={TABLE_EMPTY}>{t('empty')}</div>
         )}
 
         {/* 페이지네이션 */}

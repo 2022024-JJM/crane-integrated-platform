@@ -1,6 +1,7 @@
 import { Wrench, ClipboardCheck, Package, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 export type TicketType = 'repair' | 'inspection' | 'parts';
 
@@ -44,7 +45,7 @@ export function TicketTypeSelector({
             key={value}
             type="button"
             onClick={() => onChange(value)}
-            className={cn(
+            className={cn(FOCUS_RING, 
               'group relative flex cursor-pointer flex-col gap-3 overflow-hidden rounded-xl border bg-card p-4 text-left transition-all duration-200',
               isActive
                 ? 'border-primary ring-2 ring-primary/20 -translate-y-0.5 shadow-md'

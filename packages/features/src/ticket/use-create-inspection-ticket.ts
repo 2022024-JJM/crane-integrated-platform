@@ -15,6 +15,8 @@ export interface InspectionTicketDraft {
   performerType: InspectionWO['performerType'];
   assignedTo: string;
   findings?: string;
+  /** 반복 주기 — 완료 시 다음 회차 WO 자동 생성 */
+  recurrence?: InspectionWO['recurrence'];
 }
 
 export function useCreateInspectionTicket() {

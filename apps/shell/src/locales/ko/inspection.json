@@ -88,6 +88,20 @@
     "toastSaved": "점검 결과가 저장되었습니다.",
     "toastSubmitted": "점검이 완료 처리되었습니다.",
     "toastSaveFailed": "점검 결과 저장에 실패했습니다.",
-    "toastSubmitFailed": "점검 완료 처리에 실패했습니다."
+    "toastSubmitFailed": "점검 완료 처리에 실패했습니다.",
+    "toastNextCreated": "다음 회차 {{woNumber}}이(가) {{date}}로 자동 생성되었습니다.",
+    "toastNextCreatedAction": "열기",
+    "bulkPassCategory": "남은 {{count}}개 적합",
+    "bulkPassRemaining": "나머지 {{count}}개 모두 적합",
+    "categoryDone": "판정 완료"
+  },
+  "queue": {
+    "title": "작업 큐",
+    "overdue": "지연",
+    "today": "오늘",
+    "upcoming": "예정",
+    "start": "점검 시작",
+    "continue": "이어서 점검",
+    "empty": "대기 중인 점검이 없습니다 — 모두 완료되었습니다."
   }
 }

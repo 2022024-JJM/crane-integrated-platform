@@ -51,6 +51,14 @@
       "serialRequired": "Numerus serialis necessarius est.",
       "capacityRequired": "Capacitas maior quam 0 esse debet.",
       "locationRequired": "Zona loci necessaria est."
+    },
+    "close": "Claudere",
+    "placeholders": {
+      "name": "ex. GC-106",
+      "manufacturer": "ex. Konecranes",
+      "model": "ex. Goliath 900T",
+      "serialNumber": "ex. KC-2026-GC-001",
+      "locationZone": "ex. Dock No.1 West"
     }
   },
   "metrics": {

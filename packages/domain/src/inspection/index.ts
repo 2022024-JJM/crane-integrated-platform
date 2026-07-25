@@ -8,6 +8,7 @@ export type {
   InspectionType,
   InspectionWO,
   PerformerType,
+  RecurrenceInterval,
 } from './model/types';
 export {
   addInspectionWO,
@@ -19,4 +20,4 @@ export {
   updateInspectionSchedule,
   submitInspectionResult,
 } from './model/mock-data';
-export type { ChecklistItemPatch } from './model/mock-data';
+export type { ChecklistItemPatch, SubmitInspectionOutcome } from './model/mock-data';

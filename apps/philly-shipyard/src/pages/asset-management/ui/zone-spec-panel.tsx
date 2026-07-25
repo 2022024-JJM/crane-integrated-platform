@@ -5,12 +5,14 @@ import type { CraneComponent } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
 import {
   COMPONENT_STATUS_DOT,
   COMPONENT_STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
 import { usedLifePercent as usedPercent, lifeTone } from '../../../shared/lib/component-life';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 export interface ZoneClusterGroup {
   cluster: CraneComponent;
@@ -56,7 +58,7 @@ function PartSpecCard({
       <button
         type="button"
         onClick={onBack}
-        className="flex w-fit cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className={cn('flex w-fit cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground', FOCUS_RING)}
       >
         <ChevronLeft className="size-3.5" />
         {t('detail.zonePanel.back', { defaultValue: '목록으로' })}
@@ -123,12 +125,12 @@ function ClusterGroup({
   const worstUsedPct = group.parts.reduce((max, c) => Math.max(max, usedPercent(c)), 0);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+    <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+        className={cn('flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-muted/40', FOCUS_RING)}
       >
         <ChevronDown
           className={cn(
@@ -166,7 +168,7 @@ function ClusterGroup({
                 key={part.id}
                 type="button"
                 onClick={() => onSelectPart(part.id)}
-                className="flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-left transition-colors hover:bg-muted/40"
+                className={cn('flex w-full cursor-pointer items-center gap-2.5 rounded px-2.5 py-2 text-left transition-colors hover:bg-muted/40', FOCUS_RING)}
               >
                 <StatusDot status={COMPONENT_STATUS_DOT[part.status]} />
                 <div className="min-w-0 flex-1">
@@ -228,7 +230,7 @@ export function ZoneSpecPanel({
               onClick={() => onZoneSelect(isActive ? null : key)}
               onMouseEnter={() => onZoneHover(key)}
               onMouseLeave={() => onZoneHover(null)}
-              className={cn(
+              className={cn(FOCUS_RING, 
                 'inline-flex cursor-pointer items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-all',
                 isActive
                   ? TONE_PILL_ACTIVE.info
@@ -245,7 +247,7 @@ export function ZoneSpecPanel({
           <button
             type="button"
             onClick={() => onZoneSelect(null)}
-            className="inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            className={cn('inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground', FOCUS_RING)}
           >
             <X className="size-3" />
             {t('detail.zonePanel.allZones', { defaultValue: '전체 보기' })}

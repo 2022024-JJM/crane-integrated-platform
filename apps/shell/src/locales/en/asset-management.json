@@ -51,6 +51,14 @@
       "serialRequired": "Serial number is required.",
       "capacityRequired": "Capacity must be greater than 0.",
       "locationRequired": "Location zone is required."
+    },
+    "close": "Close",
+    "placeholders": {
+      "name": "e.g. GC-106",
+      "manufacturer": "e.g. Konecranes",
+      "model": "e.g. Goliath 900T",
+      "serialNumber": "e.g. KC-2026-GC-001",
+      "locationZone": "e.g. Dock No.1 West"
     }
   },
   "metrics": {

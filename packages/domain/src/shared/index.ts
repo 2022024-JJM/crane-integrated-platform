@@ -7,6 +7,8 @@ export {
 } from './bom-catalog';
 export type { BomCatalogItem, BomClusterKey } from './bom-catalog';
 export { getRegionTitleKey } from './region-presentation';
+export { getTechnicians, getTechniciansByPerformerType } from './technicians';
+export type { Technician } from './technicians';
 export {
   seedSequence,
   nextRepairWoNumber,

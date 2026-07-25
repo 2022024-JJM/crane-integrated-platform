@@ -2,14 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { FileText, UserCog } from 'lucide-react';
 import { DatePicker } from '@crane/ui/molecules/date-picker';
 import type { InspectionTicketDraft } from '@crane/features/ticket';
+import type { RecurrenceInterval } from '@crane/domain/inspection';
 import {
   FormSection,
   FormField,
   ToggleGroup,
-  inputClass,
   textareaClass,
   type AccentColor,
 } from './form-helpers';
+import { AssigneeField } from './assignee-field';
+
+export type RecurrenceChoice = RecurrenceInterval | 'none';
 
 export interface InspectionFieldsState {
   woType: InspectionTicketDraft['woType'];
@@ -17,6 +20,7 @@ export interface InspectionFieldsState {
   performerType: InspectionTicketDraft['performerType'];
   assignedTo: string;
   findings: string;
+  recurrence: RecurrenceChoice;
 }
 
 export type InspectionFieldsErrors = Partial<Record<keyof InspectionFieldsState, string>>;
@@ -53,6 +57,22 @@ export function InspectionFields({
     { value: 'local' as const, label: t('performerType.local') },
   ];
 
+  const recurrenceOptions: { value: RecurrenceChoice; label: string }[] = [
+    { value: 'none', label: t('recurrence.none') },
+    { value: 'weekly', label: t('recurrence.weekly') },
+    { value: 'biweekly', label: t('recurrence.biweekly') },
+    { value: 'monthly', label: t('recurrence.monthly') },
+    { value: 'quarterly', label: t('recurrence.quarterly') },
+  ];
+
+  function handleWoTypeChange(woType: InspectionFieldsState['woType']) {
+    onChange('woType', woType);
+    // 정기점검을 고르면 반복주기 매월을 기본 제안 — 사용자가 바꿀 수 있다
+    if (woType === 'periodic' && state.recurrence === 'none') {
+      onChange('recurrence', 'monthly');
+    }
+  }
+
   return (
     <>
       <FormSection title={t('sections.basicInfo')} icon={FileText} accent={accent} step={1}>
@@ -60,7 +80,7 @@ export function InspectionFields({
         {prioritySlot}
 
         <FormField label={t('fields.inspectionType')}>
-          <ToggleGroup value={state.woType} options={woTypeOptions} onChange={(v) => onChange('woType', v)} />
+          <ToggleGroup value={state.woType} options={woTypeOptions} onChange={handleWoTypeChange} />
         </FormField>
 
         <FormField label={t('fields.scheduledDate')} required error={errors.scheduledDate}>
@@ -68,6 +88,18 @@ export function InspectionFields({
             value={state.scheduledDate}
             onChange={(v) => onChange('scheduledDate', v)}
             error={Boolean(errors.scheduledDate)}
+          />
+        </FormField>
+
+        <FormField
+          label={t('fields.recurrence')}
+          hint={t('hints.recurrence')}
+          colSpan={2}
+        >
+          <ToggleGroup
+            value={state.recurrence}
+            options={recurrenceOptions}
+            onChange={(v) => onChange('recurrence', v)}
           />
         </FormField>
       </FormSection>
@@ -81,12 +113,15 @@ export function InspectionFields({
           />
         </FormField>
 
-        <FormField label={t('fields.assignedTo')} required error={errors.assignedTo}>
-          <input
-            className={inputClass}
-            placeholder={t('placeholders.assignedTo')}
+        <FormField
+          label={t('fields.assignedTo')}
+          error={errors.assignedTo}
+          hint={t('hints.optionalAuto')}
+        >
+          <AssigneeField
+            performerType={state.performerType}
             value={state.assignedTo}
-            onChange={(e) => onChange('assignedTo', e.target.value)}
+            onValueChange={(v) => onChange('assignedTo', v)}
           />
         </FormField>
 

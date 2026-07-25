@@ -4,6 +4,8 @@ import { AlertCircle, Plus, Search } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
 import type { AssetStatus, CraneAsset } from '@crane/domain/asset';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY, PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
+import { buttonVariants } from '@crane/ui/atoms/button';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import {
   PILL_INACTIVE,
@@ -12,12 +14,13 @@ import {
   TONE_SURFACE,
   TONE_TEXT,
 } from '../../../shared/ui/tone';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import { SITES } from '../../../shared/config/sites';
 import { ASSET_STATUS_TONE as STATUS_FILTER_TONE } from '../../../shared/ui/status-variants';
 import { daysBetween, parseLocalDate, startOfToday } from '../../../shared/lib/relative-date';
 import { NewAssetModal } from './new-asset-modal';
 import { AssetSection } from './asset-section';
-import { MetricCard } from './asset-metric-card';
+import { MetricCard } from '../../../shared/ui/metric-card';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 
@@ -163,16 +166,16 @@ export function AssetManagementPage() {
   }, [assets]);
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className={cn(buttonVariants({ size: 'lg' }), 'hover:bg-primary/80')}
         >
           <Plus className="size-4" />
           {t('newAsset', { defaultValue: 'New Asset' })}
@@ -202,13 +205,13 @@ export function AssetManagementPage() {
             total: summary.total,
             defaultValue: `${summary.operating}/${summary.total} operating`,
           })}
-          tone={fleetUptimePct >= 80 ? 'success' : fleetUptimePct >= 60 ? 'warning' : 'critical'}
+          tone={fleetUptimePct >= 80 ? 'positive' : fleetUptimePct >= 60 ? 'warning' : 'critical'}
         />
         <MetricCard
           label={t('metrics.criticalHealth', { defaultValue: 'Critical Components' })}
           value={criticalHealthCount}
           sub={t('metrics.criticalHealthSub', { defaultValue: 'Cranes with critical parts' })}
-          tone={criticalHealthCount > 0 ? 'critical' : 'success'}
+          tone={criticalHealthCount > 0 ? 'critical' : 'positive'}
         />
         <MetricCard
           label={t('metrics.warrantyAlert', { defaultValue: 'Warranty Alert' })}
@@ -228,7 +231,7 @@ export function AssetManagementPage() {
             repair: repairAssetCount,
             defaultValue: `${overdueAssetCount} overdue · ${repairAssetCount} repair`,
           })}
-          tone={overdueAssetCount + repairAssetCount > 0 ? 'warning' : 'success'}
+          tone={overdueAssetCount + repairAssetCount > 0 ? 'warning' : 'positive'}
         />
       </section>
 
@@ -241,7 +244,7 @@ export function AssetManagementPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('filter.search', { defaultValue: 'Search name / S/N / model' })}
-            className="h-9 w-64 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+            className={cn(searchInputClass, 'w-64 pl-8 pr-3')}
           />
         </div>
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -259,6 +262,7 @@ export function AssetManagementPage() {
                 onClick={() => toggleFilter(s)}
                 className={cn(
                   'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-medium tracking-wider transition-all',
+                  FOCUS_RING,
                   isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                 )}
               >
@@ -292,7 +296,7 @@ export function AssetManagementPage() {
           />
         ))}
         {sortedAssets.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border/70 py-12 text-center text-sm text-muted-foreground">
+          <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
             {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
           </div>
         )}

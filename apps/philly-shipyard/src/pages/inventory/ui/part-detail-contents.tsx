@@ -14,9 +14,11 @@ import type {
   OpenPoLine,
 } from '@crane/domain/inventory';
 import { cn } from '@crane/core/lib/utils';
+import { buttonVariants } from '@crane/ui/atoms/button';
 import { TONE_CHIP, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
 import type { ActionMode } from './stock-action-modal';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 const TX_STYLE: Record<
   InventoryTransaction['type'],
@@ -278,7 +280,7 @@ export function ActionButtons({
       <button
         type="button"
         onClick={() => onAction('issue')}
-        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+        className={cn('flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted', FOCUS_RING)}
       >
         <ArrowUpFromLine className="h-3.5 w-3.5" />
         {t('actions.issue')}
@@ -286,7 +288,7 @@ export function ActionButtons({
       <button
         type="button"
         onClick={() => onAction('receipt')}
-        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        className={cn(buttonVariants({ size: 'lg' }), 'flex-1')}
       >
         <ArrowDownToLine className="h-3.5 w-3.5" />
         {t('actions.receipt')}

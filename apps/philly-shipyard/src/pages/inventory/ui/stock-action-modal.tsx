@@ -6,12 +6,17 @@ import { useTranslation } from 'react-i18next';
 import { useIssuePart, useReceivePart } from '@crane/features/inventory';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { cn } from '@crane/core/lib/utils';
-import { TONE_TEXT } from '../../../shared/ui/tone';
+import { SURFACE_MODAL } from '../../../shared/ui/surface';
+import { Button } from '@crane/ui/atoms/button';
+import { FOCUS_RING } from '../../../shared/ui/controls';
+import {
+  FormField,
+  inputClass,
+  selectClass,
+  textareaClass,
+} from '../../../shared/ui/form';
 
 export type ActionMode = 'issue' | 'receipt';
-
-const inputCls =
-  'h-9 w-full rounded border border-border bg-card/60 px-3 text-sm outline-none transition-colors focus:border-primary/50';
 
 export function StockActionModal({
   mode,
@@ -135,7 +140,8 @@ export function StockActionModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="stock-action-modal-title"
-        className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-xl"
+        aria-describedby="stock-action-modal-desc"
+        className={cn(SURFACE_MODAL, 'w-full max-w-sm p-5')}
       >
         <div className="mb-1 flex items-center justify-between gap-2">
           <h3 id="stock-action-modal-title" className="text-sm font-bold">
@@ -144,48 +150,40 @@ export function StockActionModal({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={t('actions.close', { defaultValue: 'Close' })}
+            className={cn('cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="mb-4 truncate text-xs text-muted-foreground">{partName}</p>
+        <p id="stock-action-modal-desc" className="mb-4 truncate text-xs text-muted-foreground">{partName}</p>
 
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-              {t('actions.qty')}
-              <span
-                className={cn(
-                  'tabular-nums',
-                  exceeds ? cn('font-semibold', TONE_TEXT.critical) : 'text-muted-foreground',
-                )}
-              >
-                {exceeds
-                  ? t('actions.exceedsStock', { n: availableQty })
-                  : mode === 'issue'
-                    ? t('actions.availableBadge', { n: availableQty })
-                    : ''}
-              </span>
-            </span>
+        <div className="flex flex-col gap-4">
+          <FormField
+            label={t('actions.qty')}
+            required
+            error={exceeds ? t('actions.exceedsStock', { n: availableQty }) : undefined}
+            hint={
+              !exceeds && mode === 'issue'
+                ? t('actions.availableBadge', { n: availableQty })
+                : undefined
+            }
+          >
             <input
               type="number"
               min={1}
               value={qty}
               onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-              className={cn(inputCls, exceeds && 'border-destructive/60')}
+              className={cn(inputClass, exceeds && 'border-destructive/60')}
             />
-          </label>
+          </FormField>
 
           {mode === 'issue' && (
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('actions.linkedWo')}
-              </span>
+            <FormField label={t('actions.linkedWo')}>
               <select
                 value={repairWoId}
                 onChange={(e) => setRepairWoId(e.target.value)}
-                className={cn(inputCls, 'cursor-pointer')}
+                className={selectClass}
               >
                 <option value="">{t('actions.noWo')}</option>
                 {activeRepairs.map((r) => (
@@ -194,63 +192,45 @@ export function StockActionModal({
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
           )}
 
           {mode === 'receipt' && (
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t('actions.poRef')}
-              </span>
+            <FormField label={t('actions.poRef')}>
               <input
                 value={poRef}
                 onChange={(e) => setPoRef(e.target.value)}
-                placeholder="PO-2026-XXXX"
-                className={inputCls}
+                placeholder={t('actions.poPlaceholder', { defaultValue: 'PO-2026-XXXX' })}
+                className={inputClass}
               />
-            </label>
+            </FormField>
           )}
 
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('actions.by')} <span className="text-destructive">*</span>
-            </span>
+          <FormField label={t('actions.by')} required>
             <input
               value={by}
               onChange={(e) => setBy(e.target.value)}
-              className={inputCls}
+              className={inputClass}
             />
-          </label>
+          </FormField>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('actions.note')}
-            </span>
+          <FormField label={t('actions.note')}>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full resize-none rounded border border-border bg-card/60 px-3 py-2 text-sm outline-none transition-colors focus:border-primary/50"
+              className={textareaClass}
             />
-          </label>
+          </FormField>
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
+          <Button type="button" variant="ghost" onClick={onClose}>
             {t('actions.cancel')}
-          </button>
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-            className="cursor-pointer rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          </Button>
+          <Button type="button" disabled={!canSubmit} onClick={handleSubmit}>
             {t(mode === 'issue' ? 'actions.submitIssue' : 'actions.submitReceipt')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

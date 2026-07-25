@@ -88,6 +88,20 @@
     "toastSaved": "Inspection result saved.",
     "toastSubmitted": "Inspection marked as completed.",
     "toastSaveFailed": "Failed to save inspection result.",
-    "toastSubmitFailed": "Failed to submit inspection."
+    "toastSubmitFailed": "Failed to submit inspection.",
+    "toastNextCreated": "Next inspection {{woNumber}} auto-created for {{date}}.",
+    "toastNextCreatedAction": "Open",
+    "bulkPassCategory": "Pass remaining {{count}}",
+    "bulkPassRemaining": "Pass all remaining {{count}}",
+    "categoryDone": "All judged"
+  },
+  "queue": {
+    "title": "Work Queue",
+    "overdue": "Overdue",
+    "today": "Today",
+    "upcoming": "Upcoming",
+    "start": "Start inspection",
+    "continue": "Resume inspection",
+    "empty": "No inspections waiting — all caught up."
   }
 }
