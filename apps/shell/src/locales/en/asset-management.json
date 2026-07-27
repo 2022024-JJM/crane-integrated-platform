@@ -150,7 +150,8 @@
       "inspection": "Inspection History",
       "maintenance": "Maintenance History",
       "history": "History",
-      "3d": "3D View"
+      "3d": "3D View",
+      "condition": "Condition"
     },
     "componentHealth": {
       "title": "Component Health",
@@ -214,6 +215,16 @@
       "status": "Status",
       "remainingLife": "Remaining Life",
       "back": "Back to list"
+    },
+    "condition": {
+      "gaugesTitle": "Component remaining life",
+      "remaining": "Remaining",
+      "annualAvg": "Annual average",
+      "periodDelta": "During period",
+      "estimatedEol": "Est. end of life",
+      "trendTitle": "Service life trend",
+      "threshold": "Replacement threshold",
+      "perYear": "/yr"
     }
   },
   "units": {

@@ -11,7 +11,16 @@
     "title": "MINISTERIUM - RES APERTAE",
     "openRisks": "Pericula Aperta",
     "safety": "Securitas",
-    "production": "Productio"
+    "production": "Productio",
+    "showRisks": "Pericula videre ({{count}})",
+    "hideRisks": "Celare",
+    "empty": "Nulla pericula aperta",
+    "source": {
+      "inspection_finding": "Inventio inspectionis",
+      "repair": "Refectio",
+      "stock": "Copia partium",
+      "overdue_inspection": "Inspectio tarda"
+    }
   },
   "connectivity": {
     "title": "STATUS CLASSIS",

@@ -150,7 +150,8 @@
       "inspection": "점검 이력",
       "maintenance": "정비 이력",
       "history": "통합 이력",
-      "3d": "3D 뷰"
+      "3d": "3D 뷰",
+      "condition": "부품 수명"
     },
     "componentHealth": {
       "title": "구성품 상태",
@@ -214,6 +215,16 @@
       "status": "상태",
       "remainingLife": "잔여 수명",
       "back": "목록으로"
+    },
+    "condition": {
+      "gaugesTitle": "구성품 잔여 수명",
+      "remaining": "잔여",
+      "annualAvg": "연평균 소모",
+      "periodDelta": "기간 중",
+      "estimatedEol": "예상 수명 도달",
+      "trendTitle": "수명 추이",
+      "threshold": "교체 기준선",
+      "perYear": "/년"
     }
   },
   "units": {

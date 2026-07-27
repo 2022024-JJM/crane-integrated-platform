@@ -22,11 +22,7 @@ export function PhillyDashboardPage() {
 
       {/* Top: 2-Bay panels */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <OpenItemsPanel
-          totalOpen={data.openTotalRisks}
-          safety={data.openSafetyCount}
-          production={data.openProductionCount}
-        />
+        <OpenItemsPanel risks={data.openRisks} />
         <FleetStatusPanel
           componentCritical={data.componentCritical}
           componentLow={data.componentLow}

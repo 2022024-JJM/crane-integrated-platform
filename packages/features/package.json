@@ -21,7 +21,8 @@
     "./ticket": "./src/ticket/index.ts",
     "./calendar": "./src/calendar/index.ts",
     "./shared": "./src/shared/index.ts",
-    "./history": "./src/history/index.ts"
+    "./history": "./src/history/index.ts",
+    "./risk": "./src/risk/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

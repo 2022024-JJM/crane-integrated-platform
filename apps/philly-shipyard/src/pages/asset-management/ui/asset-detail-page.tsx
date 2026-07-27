@@ -13,7 +13,9 @@ import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import { ASSET_STATUS_DOT, ASSET_STATUS_VARIANT } from '../../../shared/ui/status-variants';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { usedLifePercent } from '../../../shared/lib/component-life';
 import { AssetBomTab } from './asset-bom-tab';
+import { AssetConditionTab } from './asset-condition-tab';
 import { AssetInspectionTab } from './asset-inspection-tab';
 import { AssetMaintenanceTab } from './asset-maintenance-tab';
 import { AssetHistoryTab } from './asset-history-tab';
@@ -25,9 +27,9 @@ const Asset3dTab = lazy(() =>
   import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
 );
 
-type DetailTab = 'overview' | '3d' | 'inspection' | 'maintenance' | 'history' | 'specs';
+type DetailTab = 'overview' | 'condition' | '3d' | 'inspection' | 'maintenance' | 'history' | 'specs';
 
-const DETAIL_TABS: DetailTab[] = ['overview', '3d', 'inspection', 'maintenance', 'history', 'specs'];
+const DETAIL_TABS: DetailTab[] = ['overview', 'condition', '3d', 'inspection', 'maintenance', 'history', 'specs'];
 
 function isDetailTab(value: string | null): value is DetailTab {
   return value !== null && (DETAIL_TABS as string[]).includes(value);
@@ -83,6 +85,13 @@ export function AssetDetailPage() {
   const activeRepairs = repairs.filter((w) => ACTIVE_REPAIR_STATUSES.has(w.status)).length;
   const openWo = overdueInspections + activeRepairs;
 
+  // 수명 소모 70% 이상 루트 클러스터 수 — Condition 탭 배지
+  const clustersAtRisk = useMemo(
+    () =>
+      components.filter((c) => c.parentId === null && usedLifePercent(c) >= 70).length,
+    [components],
+  );
+
   const nextInspection = useMemo(() => {
     const upcoming = inspections
       .filter((w) => w.status !== 'completed' && w.status !== 'cancelled')
@@ -101,6 +110,7 @@ export function AssetDetailPage() {
 
   const tabs: { key: DetailTab; count?: number }[] = [
     { key: 'overview', count: stats.issues > 0 ? stats.issues : undefined },
+    { key: 'condition', count: clustersAtRisk || undefined },
     { key: '3d' },
     { key: 'inspection', count: inspections.length || undefined },
     { key: 'maintenance', count: repairs.length || undefined },
@@ -256,6 +266,11 @@ export function AssetDetailPage() {
 
         {/* 탭: 구성품 (BOM) */}
         {activeTab === 'overview' && <AssetBomTab components={components} stats={stats} />}
+
+        {/* 탭: 부품 수명 (TRUCONNECT Condition 벤치마크) */}
+        {activeTab === 'condition' && (
+          <AssetConditionTab asset={asset} components={components} />
+        )}
 
         {/* 탭: 점검 이력 */}
         {activeTab === 'inspection' && <AssetInspectionTab inspections={inspections} />}

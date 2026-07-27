@@ -5,15 +5,17 @@ import { getAllRepairWOs } from '@crane/domain/maintenance';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getAllCertifications } from '@crane/domain/compliance';
 import { useEntityTicks } from '@crane/features/shared';
+import { computeOpenRisks } from '@crane/features/risk';
 import { parseLocalDateTime } from '../../../shared/lib/relative-date';
 import {
   aggregateMonthlyServiceMetrics,
   aggregateInspectionPassFail,
 } from './aggregations';
 
-// Konecranes 패널 매핑 휴리스틱:
-// - openSafety   = emergencyRepairs + overdueInspections (안전 영향)
-// - openProduction = waitingParts + lowStockCount (생산 지연)
+// Konecranes 패널 매핑:
+// - openSafety/openProduction = computeOpenRisks 소견 단위 레지스터 (features/risk)
+//   안전 = 미해소 점검 fail 소견 + 미완료 긴급 수리 + 기한 초과 점검
+//   생산 = 부품 대기 수리 + 저재고/품절
 // - alertSafety  = expiredCerts + emergencyRepairs (즉시 조치)
 // - alertProduction = expiringSoonCerts + overdue (예방 조치)
 
@@ -67,10 +69,11 @@ export function usePhillyDashboard() {
     const expiredCerts = certifications.filter((c) => c.status === 'expired').length;
     const expiringSoonCerts = certifications.filter((c) => c.status === 'expiry_soon').length;
 
-    // ── Konecranes 패널 ───────────────────────────────────
-    const openSafetyCount = emergencyRepairs + overdue;
-    const openProductionCount = waitingParts + lowStockCount;
-    const openTotalRisks = openSafetyCount + openProductionCount;
+    // ── Konecranes 패널 — 소견 단위 오픈 리스크 레지스터가 단일 소스 ──
+    const openRisks = computeOpenRisks({ inspections, repairs, inventoryItems });
+    const openSafetyCount = openRisks.safety.length;
+    const openProductionCount = openRisks.production.length;
+    const openTotalRisks = openRisks.risks.length;
 
     const componentCritical = downCranes;
     const componentLow = inspectionCranes + criticalLowStock;
@@ -91,6 +94,7 @@ export function usePhillyDashboard() {
       now,
 
       // OpenItems panel
+      openRisks,
       openTotalRisks,
       openSafetyCount,
       openProductionCount,

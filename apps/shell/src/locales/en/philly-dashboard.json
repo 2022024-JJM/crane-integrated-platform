@@ -11,7 +11,16 @@
     "title": "SERVICE - OPEN ITEMS",
     "openRisks": "Open Risks",
     "safety": "Safety",
-    "production": "Production"
+    "production": "Production",
+    "showRisks": "View risks ({{count}})",
+    "hideRisks": "Hide risks",
+    "empty": "No open risks",
+    "source": {
+      "inspection_finding": "Inspection finding",
+      "repair": "Repair",
+      "stock": "Stock",
+      "overdue_inspection": "Overdue inspection"
+    }
   },
   "connectivity": {
     "title": "FLEET STATUS",

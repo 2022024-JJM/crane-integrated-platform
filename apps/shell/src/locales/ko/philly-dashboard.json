@@ -11,7 +11,16 @@
     "title": "서비스 - 미해결 항목",
     "openRisks": "미해결 리스크",
     "safety": "안전",
-    "production": "생산"
+    "production": "생산",
+    "showRisks": "리스크 보기 ({{count}}건)",
+    "hideRisks": "접기",
+    "empty": "미해결 리스크가 없습니다",
+    "source": {
+      "inspection_finding": "점검 지적사항",
+      "repair": "수리",
+      "stock": "재고",
+      "overdue_inspection": "점검 기한 초과"
+    }
   },
   "connectivity": {
     "title": "장비 상태",

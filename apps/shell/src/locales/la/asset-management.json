@@ -150,7 +150,8 @@
       "inspection": "Historia Inspectionis",
       "maintenance": "Historia Refectionis",
       "history": "Historia",
-      "3d": "Visio 3D"
+      "3d": "Visio 3D",
+      "condition": "Conditio"
     },
     "componentHealth": {
       "title": "Status Partium",
@@ -214,6 +215,16 @@
       "status": "Status",
       "remainingLife": "Vita Reliqua",
       "back": "Ad indicem"
+    },
+    "condition": {
+      "gaugesTitle": "Vita residua partium",
+      "remaining": "Residuum",
+      "annualAvg": "Media annua",
+      "periodDelta": "In periodo",
+      "estimatedEol": "Finis vitae aestimatus",
+      "trendTitle": "Cursus vitae",
+      "threshold": "Limen substitutionis",
+      "perYear": "/anno"
     }
   },
   "units": {

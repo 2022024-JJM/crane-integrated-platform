@@ -97,6 +97,8 @@ function buildBomClusterComponents(options: {
   nextInspectionDate: string;
   exclude?: string[];
   statusOverrides?: Partial<Record<string, ComponentStatus>>;
+  /** 클러스터별 사용 수명 % 오버라이드 — currentHours를 lifeHours 비율로 재산출 (Condition 뷰 편차용) */
+  usedPctOverrides?: Partial<Record<string, number>>;
 }): CraneComponent[] {
   const {
     craneId,
@@ -106,22 +108,27 @@ function buildBomClusterComponents(options: {
     nextInspectionDate,
     exclude = [],
     statusOverrides = {},
+    usedPctOverrides = {},
   } = options;
   return BOM_CLUSTERS.filter((cluster) => !exclude.includes(cluster.key)).map(
-    (cluster) => ({
-      id: `comp-${craneId}-${cluster.key}`,
-      parentId: null,
-      craneId,
-      componentName: cluster.name,
-      componentType: cluster.type,
-      manufacturer: cluster.manufacturer,
-      installDate,
-      expectedLifeHours: cluster.lifeHours,
-      currentHours,
-      status: statusOverrides[cluster.key] ?? 'normal',
-      lastInspectionDate,
-      nextInspectionDate,
-    }),
+    (cluster) => {
+      const usedPct = usedPctOverrides[cluster.key];
+      return {
+        id: `comp-${craneId}-${cluster.key}`,
+        parentId: null,
+        craneId,
+        componentName: cluster.name,
+        componentType: cluster.type,
+        manufacturer: cluster.manufacturer,
+        installDate,
+        expectedLifeHours: cluster.lifeHours,
+        currentHours:
+          usedPct != null ? Math.round((cluster.lifeHours * usedPct) / 100) : currentHours,
+        status: statusOverrides[cluster.key] ?? 'normal',
+        lastInspectionDate,
+        nextInspectionDate,
+      };
+    },
   );
 }
 
@@ -181,6 +188,14 @@ const allComponents: CraneComponent[] = [
       fuse: 'caution',
       enclosure: 'caution', // 판넬 필터 오염
     },
+    // statusOverrides 스토리와 정렬된 소모율 편차 — dcm-drive가 최악 유지
+    usedPctOverrides: {
+      'dcm-drive': 78,
+      fuse: 71,
+      enclosure: 74,
+      'mech-drive': 52,
+      'power-supply': 44,
+    },
   }),
   // 50T East Luffing — 기계 구동계 제외 20개 클러스터
   ...buildBomClusterComponents({
@@ -193,6 +208,11 @@ const allComponents: CraneComponent[] = [
     statusOverrides: {
       plc: 'caution', // PLC CPU 교체 후 재검사 대기 (RPR-2026-0004)
       operator: 'caution', // 조이스틱 드리프트 수리 중 (RPR-2026-0003)
+    },
+    usedPctOverrides: {
+      plc: 72,
+      operator: 70,
+      'power-supply': 38,
     },
   }),
   // 660T Goliath — BOM 개별 품목 (256개)
