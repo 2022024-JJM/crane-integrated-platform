@@ -60,6 +60,14 @@ interface TicketPrefill {
   date?: string;
 }
 
+/** parts 프리필 — partId가 있으면 인벤토리에서 품목 1행을 시드한다 (리스크→부품 요청 딥링크) */
+function seedPartsItems(partId: string | null): PartsRequestItem[] {
+  if (!partId) return [];
+  const inv = getAllInventoryItems().find((i) => i.partId === partId);
+  if (!inv) return [];
+  return [{ partId: inv.partId, partName: inv.partName, qty: 1, unitPrice: inv.unitPrice }];
+}
+
 type UnifiedErrors = RepairFieldsErrors &
   InspectionFieldsErrors &
   PartsFieldsErrors & {
@@ -112,23 +120,33 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
     const dateParam = params.get('date');
     const date =
       dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
-    return makeInitial(
-      type === 'repair'
-        ? {
-            craneId: params.get('craneId') ?? undefined,
-            componentName: params.get('component') ?? undefined,
-            sourceWoNumber: params.get('sourceWo') ?? undefined,
-            date,
-          }
-        : { date },
-    );
+    if (type === 'repair') {
+      return makeInitial({
+        craneId: params.get('craneId') ?? undefined,
+        componentName: params.get('component') ?? undefined,
+        sourceWoNumber: params.get('sourceWo') ?? undefined,
+        date,
+      });
+    }
+    if (type === 'parts') {
+      const base = makeInitial({
+        craneId: params.get('craneId') ?? undefined,
+        sourceWoNumber: params.get('sourceWo') ?? undefined,
+        date,
+      });
+      return { ...base, items: seedPartsItems(params.get('part')) };
+    }
+    return makeInitial({ date });
   });
   const [errors, setErrors] = useState<UnifiedErrors>({});
   const [templateId, setTemplateId] = useState<string | null>(null);
   // 프리필 딥링크(점검→수리 접수 등)로 들어왔으면 상세 옵션을 미리 펼쳐 맥락을 보여준다
   const hasPrefill = Boolean(params.get('craneId') || params.get('component') || params.get('sourceWo'));
   // 부품 행의 안정적 React key — index key는 중간 삭제 시 포커스/상태가 어긋난다
-  const [itemKeys, setItemKeys] = useState<string[]>([]);
+  // 프리필로 시드된 items가 있으면 키도 같은 길이로 시작해야 삭제 시 어긋나지 않는다
+  const [itemKeys, setItemKeys] = useState<string[]>(() =>
+    form.items.map((_, i) => `seed-${i}`),
+  );
   const nextItemKey = useRef(0);
 
   // 프리필된 craneId로 크레인명/사이트 정보를 채운다 (cranes 로드 후 1회)
@@ -301,6 +319,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       priority: form.priority as PartsTicketDraft['priority'],
       requester: form.requester,
       items: form.items,
+      sourceWoNumber: form.sourceWoNumber || undefined,
       note: form.note || undefined,
     };
     const req = createParts(draft);

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { getAllCraneAssets } from '@crane/domain/asset';
 import { getAllInspectionWOs } from '@crane/domain/inspection';
 import { getAllRepairWOs } from '@crane/domain/maintenance';
-import { getAllInventoryItems } from '@crane/domain/inventory';
+import { getAllInventoryItems, getAllPartsRequests } from '@crane/domain/inventory';
 import { getAllCertifications } from '@crane/domain/compliance';
 import { useEntityTicks } from '@crane/features/shared';
 import { computeOpenRisks } from '@crane/features/risk';
@@ -70,7 +70,12 @@ export function usePhillyDashboard() {
     const expiringSoonCerts = certifications.filter((c) => c.status === 'expiry_soon').length;
 
     // ── Konecranes 패널 — 소견 단위 오픈 리스크 레지스터가 단일 소스 ──
-    const openRisks = computeOpenRisks({ inspections, repairs, inventoryItems });
+    const openRisks = computeOpenRisks({
+      inspections,
+      repairs,
+      inventoryItems,
+      partsRequests: getAllPartsRequests(),
+    });
     const openSafetyCount = openRisks.safety.length;
     const openProductionCount = openRisks.production.length;
     const openTotalRisks = openRisks.risks.length;

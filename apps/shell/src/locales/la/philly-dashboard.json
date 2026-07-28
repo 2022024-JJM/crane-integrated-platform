@@ -20,6 +20,23 @@
       "repair": "Refectio",
       "stock": "Copia partium",
       "overdue_inspection": "Inspectio tarda"
+    },
+    "issueTicket": "Tesseram emittere",
+    "issued": "Emissa",
+    "selectMode": "Selectio multiplex",
+    "exitSelect": "Selectionem revocare",
+    "selectAll": "Omnia seligere",
+    "issueSelected": "{{count}} emittere",
+    "batchConfirm": {
+      "title": "Tesserae pro periculis selectis emittendae?",
+      "repairCount": "{{count}} tesserae refectionis creabuntur",
+      "partsCount": "{{count}} petitiones partium creabuntur",
+      "excluded": "{{count}} pericula non idonea — iam emissa, WO exsistens, aut partes manu eligendae",
+      "cancel": "Abrogare",
+      "confirm": "Emittere"
+    },
+    "toast": {
+      "issued": "{{repair}} tesserae refectionis, {{parts}} petitiones partium creatae"
     }
   },
   "connectivity": {

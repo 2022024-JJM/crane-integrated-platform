@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { getAllInspectionWOs } from '@crane/domain/inspection';
 import { getAllRepairWOs } from '@crane/domain/maintenance';
-import { getAllInventoryItems } from '@crane/domain/inventory';
+import { getAllInventoryItems, getAllPartsRequests } from '@crane/domain/inventory';
 import { useEntityTicks } from '../shared/use-domain-event-store';
 import { computeOpenRisks } from './compute-open-risks';
 
@@ -15,6 +15,7 @@ export function useOpenRisks() {
         inspections: getAllInspectionWOs(),
         repairs: getAllRepairWOs(),
         inventoryItems: getAllInventoryItems(),
+        partsRequests: getAllPartsRequests(),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [tick],

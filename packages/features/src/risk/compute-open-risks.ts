@@ -1,6 +1,6 @@
 import type { ChecklistItem, InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
-import type { InventoryItem } from '@crane/domain/inventory';
+import type { InventoryItem, PartsRequest } from '@crane/domain/inventory';
 
 export type RiskType = 'safety' | 'production';
 
@@ -30,6 +30,12 @@ export interface OpenRisk {
   /** 정렬용 로컬 날짜 (YYYY-MM-DD...) */
   date: string;
   detailPath: string;
+  /** 원천 WO 번호 — 소견은 점검 WO, repair 리스크는 수리 WO (티켓 프리필/연결용) */
+  woNumber?: string;
+  /** stock 리스크의 부품 id (parts 티켓 프리필용) */
+  partId?: string;
+  /** 이 리스크에 대한 티켓(수리 WO/부품 요청)이 이미 발행되어 진행 중인지 — 중복 발행 방지용 */
+  ticketIssued?: boolean;
 }
 
 const OPEN_ACTIONS = new Set(['repair_needed', 'immediate_replace', 'stop_operation']);
@@ -46,48 +52,52 @@ function findingSeverity(item: ChecklistItem): RiskSeverity {
 }
 
 /**
- * 점검 fail 항목의 해소 여부 — 해당 점검을 원천으로 하는 완료된 수리 WO가 있고,
- * (a) WO의 componentName이 항목명과 일치하면 항목 단위 해소,
- * (b) componentName이 그 점검의 어떤 항목명과도 일치하지 않으면 WO 단위 폴백 해소로 본다.
+ * 연결 수리 WO가 특정 점검 항목을 다루는지 —
+ * (a) WO의 componentName이 항목명과 일치하면 항목 단위 매칭,
+ * (b) componentName이 그 점검의 어떤 항목명과도 일치하지 않으면 WO 단위 폴백 매칭으로 본다.
  * (티켓 생성은 첫 fail 항목명만 프리필하고 사용자가 수정할 수 있어 (b)가 필요하다)
+ * 완료된 WO에 적용하면 해소 판정, 미완료 WO에 적용하면 "티켓 이미 발행" 판정이 된다.
  */
-function isFindingResolved(
+function repairMatchesItem(
   item: ChecklistItem,
-  inspection: InspectionWO,
-  completedLinkedRepairs: RepairWO[],
+  itemNames: Set<string | undefined>,
+  repair: RepairWO,
 ): boolean {
-  if (completedLinkedRepairs.length === 0) return false;
-  const itemNames = new Set(
+  if (repair.componentName === item.itemName) return true;
+  if (item.itemName_ko && repair.componentName === item.itemName_ko) return true;
+  // WO 단위 폴백: componentName이 체크리스트 어느 항목과도 불일치 → 점검 전체 대상으로 간주
+  return !itemNames.has(repair.componentName) && !itemNames.has(repair.componentName_ko ?? '');
+}
+
+function checklistItemNames(inspection: InspectionWO): Set<string | undefined> {
+  return new Set(
     inspection.checklistItems.flatMap((c) => [c.itemName, c.itemName_ko]).filter(Boolean),
   );
-  return completedLinkedRepairs.some((r) => {
-    if (r.componentName === item.itemName) return true;
-    if (item.itemName_ko && r.componentName === item.itemName_ko) return true;
-    // WO 단위 폴백: componentName이 체크리스트 어느 항목과도 불일치 → 점검 전체를 해소로 간주
-    return !itemNames.has(r.componentName) && !itemNames.has(r.componentName_ko ?? '');
-  });
 }
 
 export function computeOpenRisks(input: {
   inspections: InspectionWO[];
   repairs: RepairWO[];
   inventoryItems: InventoryItem[];
+  /** 발행 여부(ticketIssued) 판정용 — 생략 시 stock/waiting_parts 리스크는 항상 미발행으로 본다 */
+  partsRequests?: PartsRequest[];
 }): { risks: OpenRisk[]; safety: OpenRisk[]; production: OpenRisk[] } {
-  const { inspections, repairs, inventoryItems } = input;
+  const { inspections, repairs, inventoryItems, partsRequests = [] } = input;
   const safety: OpenRisk[] = [];
   const production: OpenRisk[] = [];
+  const activeRequests = partsRequests.filter((pr) => pr.status !== 'cancelled');
 
   // ── 안전 ① 미해소 점검 fail 소견 ──
   for (const wo of inspections) {
-    const completedLinked = repairs.filter(
-      (r) =>
-        r.sourceType === 'inspection' &&
-        r.sourceWoNumber === wo.woNumber &&
-        r.status === 'completed',
+    const linked = repairs.filter(
+      (r) => r.sourceType === 'inspection' && r.sourceWoNumber === wo.woNumber,
     );
+    const completedLinked = linked.filter((r) => r.status === 'completed');
+    const openLinked = linked.filter((r) => r.status !== 'completed');
+    const itemNames = checklistItemNames(wo);
     for (const item of wo.checklistItems) {
       if (item.judgment !== 'fail' || !OPEN_ACTIONS.has(item.actionRequired)) continue;
-      if (isFindingResolved(item, wo, completedLinked)) continue;
+      if (completedLinked.some((r) => repairMatchesItem(item, itemNames, r))) continue;
       safety.push({
         id: `finding-${wo.id}-${item.id}`,
         riskType: 'safety',
@@ -100,6 +110,8 @@ export function computeOpenRisks(input: {
         severity: findingSeverity(item),
         date: wo.actualDate ?? wo.scheduledDate,
         detailPath: `/inspection/${wo.id}`,
+        woNumber: wo.woNumber,
+        ticketIssued: openLinked.some((r) => repairMatchesItem(item, itemNames, r)),
       });
     }
   }
@@ -122,6 +134,7 @@ export function computeOpenRisks(input: {
       severity: 'critical',
       date: r.scheduledStart,
       detailPath: `/maintenance?wo=${r.id}`,
+      woNumber: r.woNumber,
     });
   }
 
@@ -157,6 +170,8 @@ export function computeOpenRisks(input: {
       severity: 'major',
       date: r.scheduledStart,
       detailPath: `/maintenance?wo=${r.id}`,
+      woNumber: r.woNumber,
+      ticketIssued: activeRequests.some((pr) => pr.sourceWoNumber === r.woNumber),
     });
   }
 
@@ -177,6 +192,10 @@ export function computeOpenRisks(input: {
             : 'minor',
       date: i.lastIssueDate,
       detailPath: `/inventory?part=${encodeURIComponent(i.partId)}`,
+      partId: i.partId,
+      ticketIssued: activeRequests.some((pr) =>
+        pr.items.some((it) => it.partId === i.partId),
+      ),
     });
   }
 

@@ -20,6 +20,23 @@
       "repair": "수리",
       "stock": "재고",
       "overdue_inspection": "점검 기한 초과"
+    },
+    "issueTicket": "티켓 발행",
+    "issued": "발행됨",
+    "selectMode": "일괄 선택",
+    "exitSelect": "선택 취소",
+    "selectAll": "전체 선택",
+    "issueSelected": "{{count}}건 발행",
+    "batchConfirm": {
+      "title": "선택한 리스크의 티켓을 발행할까요?",
+      "repairCount": "수리 티켓 {{count}}건이 생성됩니다",
+      "partsCount": "부품 요청 {{count}}건이 생성됩니다",
+      "excluded": "{{count}}건은 일괄 대상이 아닙니다 — 이미 발행됨, 기존 WO 존재, 또는 품목 직접 선택 필요",
+      "cancel": "취소",
+      "confirm": "발행"
+    },
+    "toast": {
+      "issued": "수리 티켓 {{repair}}건, 부품 요청 {{parts}}건을 생성했습니다"
     }
   },
   "connectivity": {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RepairWO } from '@crane/domain/maintenance';
 import type { InspectionWO, ChecklistItem } from '@crane/domain/inspection';
-import type { InventoryItem } from '@crane/domain/inventory';
+import type { InventoryItem, PartsRequest } from '@crane/domain/inventory';
 import { computeOpenRisks } from '@crane/features/risk';
 
 // 계산이 읽는 필드만 채운 최소 목
@@ -178,5 +178,89 @@ describe('computeOpenRisks — 수리/재고', () => {
     });
     expect(production.map((r) => r.severity)).toEqual(['critical', 'major']);
     expect(production[0]!.detailPath).toBe('/inventory?part=p-1');
+  });
+});
+
+describe('computeOpenRisks — ticketIssued (중복 발행 방지)', () => {
+  const partsRequest = (p: Partial<PartsRequest>): PartsRequest =>
+    ({
+      id: 'pr-1',
+      status: 'pending',
+      items: [],
+      ...p,
+    }) as PartsRequest;
+
+  it('미완료 연결 수리가 항목과 일치하면 리스크는 열린 채 ticketIssued=true다', () => {
+    const { safety } = computeOpenRisks({
+      inspections: [inspection({ checklistItems: [item({})] })],
+      repairs: [repair({ status: 'in_progress', componentName: 'Rope guide' })],
+      inventoryItems: NO_STOCK,
+    });
+    expect(safety).toHaveLength(1);
+    expect(safety[0]!.ticketIssued).toBe(true);
+  });
+
+  it('미완료 연결 수리가 다른 항목명이면 그 항목은 미발행이다', () => {
+    const { safety } = computeOpenRisks({
+      inspections: [
+        inspection({
+          checklistItems: [
+            item({ id: 'ci-1', itemName: 'Rope guide' }),
+            item({ id: 'ci-2', itemName: 'Latch' }),
+          ],
+        }),
+      ],
+      repairs: [repair({ status: 'in_progress', componentName: 'Rope guide' })],
+      inventoryItems: NO_STOCK,
+    });
+    const latch = safety.find((r) => r.title === 'Latch');
+    expect(latch!.ticketIssued).toBe(false);
+  });
+
+  it('동일 partId의 비취소 부품 요청이 있으면 stock 리스크는 ticketIssued=true다', () => {
+    const stockItem = {
+      id: 'inv-1',
+      partId: 'p-1',
+      partName: 'Fuse',
+      status: 'low',
+      criticality: 'critical',
+      lastIssueDate: '2026-07-01',
+    } as InventoryItem;
+
+    const issued = computeOpenRisks({
+      inspections: [],
+      repairs: [],
+      inventoryItems: [stockItem],
+      partsRequests: [partsRequest({ items: [{ partId: 'p-1', partName: 'Fuse', qty: 2, unitPrice: 10 }] })],
+    });
+    expect(issued.production[0]!.ticketIssued).toBe(true);
+
+    const cancelled = computeOpenRisks({
+      inspections: [],
+      repairs: [],
+      inventoryItems: [stockItem],
+      partsRequests: [
+        partsRequest({ status: 'cancelled', items: [{ partId: 'p-1', partName: 'Fuse', qty: 2, unitPrice: 10 }] }),
+      ],
+    });
+    expect(cancelled.production[0]!.ticketIssued).toBe(false);
+  });
+
+  it('sourceWoNumber가 일치하는 부품 요청이 있으면 부품 대기 수리는 ticketIssued=true다', () => {
+    const { production } = computeOpenRisks({
+      inspections: [],
+      repairs: [
+        repair({
+          woNumber: 'RO-0009',
+          status: 'waiting_parts',
+          sourceType: 'breakdown',
+          sourceWoNumber: undefined,
+        }),
+      ],
+      inventoryItems: NO_STOCK,
+      partsRequests: [partsRequest({ sourceWoNumber: 'RO-0009' })],
+    });
+    expect(production).toHaveLength(1);
+    expect(production[0]!.ticketIssued).toBe(true);
   });
 });

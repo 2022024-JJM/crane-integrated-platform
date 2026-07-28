@@ -20,6 +20,23 @@
       "repair": "Repair",
       "stock": "Stock",
       "overdue_inspection": "Overdue inspection"
+    },
+    "issueTicket": "Issue ticket",
+    "issued": "Issued",
+    "selectMode": "Batch select",
+    "exitSelect": "Cancel selection",
+    "selectAll": "Select all",
+    "issueSelected": "Issue {{count}} ticket(s)",
+    "batchConfirm": {
+      "title": "Issue tickets for selected risks?",
+      "repairCount": "{{count}} repair ticket(s) will be created",
+      "partsCount": "{{count}} parts request(s) will be created",
+      "excluded": "{{count}} risk(s) not batch-eligible — already issued, existing WO, or parts to choose manually",
+      "cancel": "Cancel",
+      "confirm": "Issue tickets"
+    },
+    "toast": {
+      "issued": "Created {{repair}} repair ticket(s), {{parts}} parts request(s)"
     }
   },
   "connectivity": {
