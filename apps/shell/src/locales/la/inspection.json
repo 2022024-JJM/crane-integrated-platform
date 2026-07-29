@@ -91,9 +91,11 @@
     "toastSubmitFailed": "Inspectio perfici non potuit.",
     "toastNextCreated": "Proxima inspectio {{woNumber}} auto-creata est pro {{date}}.",
     "toastNextCreatedAction": "Aperi",
+    "unsavedConfirm": "Iudicia non servata habes. Si discedis, mutationes peribunt. Pergere vis?",
     "bulkPassCategory": "Approba reliqua {{count}}",
     "bulkPassRemaining": "Approba omnia reliqua {{count}}",
-    "categoryDone": "Omnia iudicata"
+    "categoryDone": "Omnia iudicata",
+    "toastBulkPassed": "{{count}} res simul probatae"
   },
   "queue": {
     "title": "Ordo Operum",
@@ -102,6 +104,13 @@
     "upcoming": "Ventura",
     "start": "Incipe inspectionem",
     "continue": "Persequere inspectionem",
-    "empty": "Nullae inspectiones exspectant — omnia perfecta."
+    "empty": "Nullae inspectiones exspectant — omnia perfecta.",
+    "showAll": "Vide omnia"
+  },
+  "priority": {
+    "urgent": "Urgens",
+    "high": "Alta",
+    "normal": "Normalis",
+    "low": "Bassa"
   }
 }

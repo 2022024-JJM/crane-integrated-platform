@@ -4,11 +4,8 @@ import { formatPeriodLabel } from '../model/aggregations';
 import { PageHeaderBar } from './components/page-header-bar';
 import { OpenItemsPanel } from './components/open-items-panel';
 import { FleetStatusPanel } from './components/fleet-status-panel';
-import { ServiceReviewCard } from './components/service-review-card';
 import { ActiveTicketsCard } from './components/active-tickets-card';
-import { AssetFleetCard } from './components/asset-fleet-card';
-import { DailyInspectionCard } from './components/daily-inspection-card';
-import { QuickLinksList } from './components/quick-links-list';
+import { FleetSummaryCard } from './components/fleet-summary-card';
 import { PAGE_CONTAINER } from '../../../shared/ui/page';
 
 export function PhillyDashboardPage() {
@@ -43,34 +40,18 @@ export function PhillyDashboardPage() {
           <span aria-hidden className="ml-1 h-px flex-1 bg-border" />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ServiceReviewCard
-            periodLabel={periodLabel}
-            serviceVisits={data.serviceReview.visits}
-            assetsServiced={data.serviceReview.assets}
-            totalFindings={data.serviceReview.findings}
-          />
           <ActiveTicketsCard
-            periodLabel={periodLabel}
             open={data.activeTickets.open}
             completed={data.activeTickets.completed}
             onHold={data.activeTickets.onHold}
           />
-          <AssetFleetCard
-            agreementPct={data.assetFleet.agreementPct}
-            connectedPct={data.assetFleet.connectedPct}
-            totalAssets={data.assetFleet.totalAssets}
-            operatingCranes={data.assetFleet.operatingCranes}
-            connectedCount={data.assetFleet.connectedCount}
-          />
-          <DailyInspectionCard
-            passed={data.dailyInspection.passed}
-            failed={data.dailyInspection.failed}
+          <FleetSummaryCard
+            cranes={data.cranes}
+            byDay={data.inspectionByDay}
+            overdueCount={data.totals.overdue}
           />
         </div>
       </section>
-
-      {/* Quick links */}
-      <QuickLinksList />
     </div>
   );
 }

@@ -73,7 +73,8 @@
     "requester": "요청자",
     "requestPriority": "요청 우선순위",
     "partName": "부품 선택...",
-    "addPart": "부품 추가"
+    "addPart": "부품 추가",
+    "noPartsAdded": "추가된 부품이 없습니다."
   },
   "recurrence": {
     "none": "반복 없음",

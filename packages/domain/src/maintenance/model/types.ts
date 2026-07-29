@@ -72,6 +72,6 @@ export interface MaintenanceSummary {
   inProgress: number;
   waitingParts: number;
   emergency: number;
-  avgMttrHours: number;
-  avgMtbfDays: number;
+  /** 완료 WO의 실제 착수→완료 평균 시간. 완료 실적이 없으면 null */
+  avgMttrHours: number | null;
 }

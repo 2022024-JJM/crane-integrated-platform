@@ -74,6 +74,40 @@ export function aggregateInspectionPassFail(
   return { passed, failed, total: passed + failed };
 }
 
+export interface DailyPassFail {
+  /** 로컬 'YYYY-MM-DD' */
+  date: string;
+  passed: number;
+  failed: number;
+}
+
+/** 최근 N일 일자별 점검 결과 — 미니 바 차트용. 과거→오늘 순, 빈 날도 버킷을 유지한다. */
+export function aggregateInspectionPassFailByDay(
+  inspections: InspectionWO[],
+  now: Date = new Date(),
+  days = 7,
+): DailyPassFail[] {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const buckets: DailyPassFail[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    buckets.push({
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      passed: 0,
+      failed: 0,
+    });
+  }
+  const byKey = new Map(buckets.map((b) => [b.date, b]));
+  for (const wo of inspections) {
+    if (wo.status !== 'completed' || !wo.actualDate) continue;
+    const bucket = byKey.get(wo.actualDate.slice(0, 10));
+    if (!bucket) continue;
+    if (wo.result === 'pass') bucket.passed += 1;
+    else if (wo.result === 'fail') bucket.failed += 1;
+  }
+  return buckets;
+}
+
 export function formatPeriodLabel(now: Date = new Date(), locale = 'en-US'): string {
   return now.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
 }

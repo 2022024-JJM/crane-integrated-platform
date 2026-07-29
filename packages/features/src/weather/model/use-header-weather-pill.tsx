@@ -1,13 +1,15 @@
 import type { LucideProps } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getWeatherPresentation, WeatherIcon } from '@crane/domain/weather';
+import { getWeatherPresentation, WeatherIcon, type WeatherFetchState } from '@crane/domain/weather';
 import { useHeaderWeather } from './use-header-weather';
 
 type HeaderWeatherPillModel = {
   Icon: ComponentType<LucideProps>;
   label: string;
   temperatureText?: string;
+  /** 'success'가 아니면 표시할 데이터가 없다 — 소비처가 pill 자체를 숨길 수 있게 노출 */
+  status: WeatherFetchState;
 };
 
 export function useHeaderWeatherPill(): HeaderWeatherPillModel {
@@ -42,5 +44,6 @@ export function useHeaderWeatherPill(): HeaderWeatherPillModel {
     Icon,
     label,
     temperatureText,
+    status: weather.status,
   };
 }

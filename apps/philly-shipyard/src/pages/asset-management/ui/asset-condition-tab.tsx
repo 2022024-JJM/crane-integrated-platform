@@ -13,6 +13,7 @@ import {
 import type { CraneAsset, CraneComponent } from '@crane/domain/asset';
 import { cn } from '@crane/core/lib/utils';
 import { SURFACE_PANEL } from '../../../shared/ui/surface';
+import { TABLE_EMPTY } from '../../../shared/ui/page';
 import {
   PILL_INACTIVE,
   TONE_FILL,
@@ -90,7 +91,9 @@ export function AssetConditionTab({
         .sort((a, b) => b.usedPct - a.usedPct),
     [components, now],
   );
-  const gauges = conditions.slice(0, GAUGE_COUNT);
+  // 기본은 최악 6개 — 나머지 클러스터도 조회 경로가 있어야 하므로 전체 보기 토글을 둔다
+  const [showAll, setShowAll] = useState(false);
+  const gauges = showAll ? conditions : conditions.slice(0, GAUGE_COUNT);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected =
@@ -103,17 +106,36 @@ export function AssetConditionTab({
 
   if (conditions.length === 0) {
     return (
-      <div className="rounded border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-        —
+      <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
+        {t('detail.condition.noComponents')}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* 게이지 그리드 — 최악 클러스터 */}
+      {/* 게이지 그리드 — 최악 클러스터 우선, 전체 보기로 나머지 접근 */}
       <section className="space-y-3">
-        <h2 className="text-sm font-bold">{t('detail.condition.gaugesTitle')}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold">{t('detail.condition.gaugesTitle')}</h2>
+          {conditions.length > GAUGE_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className={cn(
+                'cursor-pointer rounded px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground',
+                FOCUS_RING,
+              )}
+            >
+              {showAll
+                ? t('detail.condition.showWorst', { defaultValue: 'Show worst 6' })
+                : t('detail.condition.showAll', {
+                    count: conditions.length,
+                    defaultValue: 'View all {{count}}',
+                  })}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {gauges.map((cond) => (
             <ConditionGaugeCard key={cond.component.id} cond={cond} />

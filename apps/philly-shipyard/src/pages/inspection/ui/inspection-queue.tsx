@@ -11,6 +11,7 @@ import {
   TONE_TEXT,
   type Tone,
 } from '../../../shared/ui/tone';
+import { INSPECTION_TYPE_VARIANT as TYPE_VARIANT } from '../../../shared/ui/status-variants';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
 
 type QueueGroup = 'overdue' | 'today' | 'upcoming';
@@ -31,16 +32,35 @@ const MAX_CARDS = 10;
 // 지연이 많아도 오늘/예정이 큐에서 밀려나지 않게 그룹별 상한을 둔다
 const MAX_OVERDUE_CARDS = 5;
 
+interface QueueData {
+  items: QueueItem[];
+  /** 카드 절단·기간 창과 무관한 그룹별 실제 미완료 건수 — 칩은 이 값을 쓴다 */
+  totals: Record<QueueGroup, number>;
+  /** 카드로 노출되지 못한 미완료 건수 */
+  hidden: number;
+}
+
 /** 미완료 점검을 지연 → 오늘 → 예정 순의 작업 큐로 정렬한다. */
-function buildQueue(inspections: InspectionWO[]): QueueItem[] {
+function buildQueue(inspections: InspectionWO[]): QueueData {
   const open = inspections.filter(
     (w) => w.status === 'scheduled' || w.status === 'in_progress' || w.status === 'overdue',
   );
   const items: QueueItem[] = open.map((wo) => {
     const { diff } = formatRelativeDate(wo.scheduledDate);
-    const group: QueueGroup = diff < 0 ? 'overdue' : diff === 0 ? 'today' : 'upcoming';
+    // 상태 우선 그룹핑 — 시작한 점검(진행 중)은 기한이 지났어도 '오늘'(이어서)로 올린다.
+    // '지연'은 시작도 못 한 기한 초과(status overdue)만 남아 목록의 상태 필터 숫자와 일치한다.
+    const group: QueueGroup =
+      wo.status === 'in_progress'
+        ? 'today'
+        : wo.status === 'overdue' || diff < 0
+          ? 'overdue'
+          : diff === 0
+            ? 'today'
+            : 'upcoming';
     return { wo, group };
   });
+  const totals: Record<QueueGroup, number> = { overdue: 0, today: 0, upcoming: 0 };
+  for (const item of items) totals[item.group] += 1;
   const byDate = (a: QueueItem, b: QueueItem) =>
     a.wo.scheduledDate.localeCompare(b.wo.scheduledDate);
   const overdue = items.filter((i) => i.group === 'overdue').sort(byDate).slice(0, MAX_OVERDUE_CARDS);
@@ -50,7 +70,8 @@ function buildQueue(inspections: InspectionWO[]): QueueItem[] {
       (i) => i.group === 'upcoming' && formatRelativeDate(i.wo.scheduledDate).diff <= UPCOMING_WINDOW_DAYS,
     )
     .sort(byDate);
-  return [...overdue, ...today, ...upcoming].slice(0, MAX_CARDS);
+  const shown = [...overdue, ...today, ...upcoming].slice(0, MAX_CARDS);
+  return { items: shown, totals, hidden: open.length - shown.length };
 }
 
 function QueueCard({ item }: { item: QueueItem }) {
@@ -80,7 +101,7 @@ function QueueCard({ item }: { item: QueueItem }) {
         >
           {group === 'today' ? t('queue.today') : dateLabel}
         </span>
-        <Badge variant={wo.woType === 'frequent' ? 'secondary' : 'warning'}>
+        <Badge variant={TYPE_VARIANT[wo.woType]}>
           {t(`type.${wo.woType}`)}
         </Badge>
       </div>
@@ -107,15 +128,16 @@ function QueueCard({ item }: { item: QueueItem }) {
 }
 
 /** 점검 목록 상단 작업 큐 — "오늘 무엇을 해야 하는가"에 바로 답한다. */
-export function InspectionQueue({ inspections }: { inspections: InspectionWO[] }) {
+export function InspectionQueue({
+  inspections,
+  onShowAll,
+}: {
+  inspections: InspectionWO[];
+  /** "+N 더 보기" 클릭 시 전체 목록으로 안내 (필터 해제 + 테이블 스크롤) */
+  onShowAll?: () => void;
+}) {
   const { t } = useTranslation('inspection');
-  const queue = buildQueue(inspections);
-
-  const counts = {
-    overdue: queue.filter((q) => q.group === 'overdue').length,
-    today: queue.filter((q) => q.group === 'today').length,
-    upcoming: queue.filter((q) => q.group === 'upcoming').length,
-  };
+  const { items: queue, totals, hidden } = buildQueue(inspections);
 
   return (
     <section aria-label={t('queue.title')}>
@@ -125,7 +147,7 @@ export function InspectionQueue({ inspections }: { inspections: InspectionWO[] }
         </h2>
         {(['overdue', 'today', 'upcoming'] as const).map(
           (g) =>
-            counts[g] > 0 && (
+            totals[g] > 0 && (
               <span
                 key={g}
                 className={cn(
@@ -133,7 +155,7 @@ export function InspectionQueue({ inspections }: { inspections: InspectionWO[] }
                   TONE_CHIP[GROUP_TONE[g]],
                 )}
               >
-                {t(`queue.${g}`)} {counts[g]}
+                {t(`queue.${g}`)} {totals[g]}
               </span>
             ),
         )}
@@ -144,6 +166,19 @@ export function InspectionQueue({ inspections }: { inspections: InspectionWO[] }
           {queue.map((item) => (
             <QueueCard key={item.wo.id} item={item} />
           ))}
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={onShowAll}
+              className={cn(
+                SURFACE_PANEL,
+                'flex w-28 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 border-dashed p-3 text-muted-foreground transition-colors hover:text-foreground',
+              )}
+            >
+              <span className="text-lg font-bold tabular-nums">+{hidden}</span>
+              <span className="text-[11px] font-medium">{t('queue.showAll')}</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className={cn(SURFACE_PANEL, 'flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground')}>

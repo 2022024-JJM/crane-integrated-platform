@@ -95,7 +95,7 @@ export function PartsFields({
           {state.items.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/30 px-4 py-8 text-center">
               <Boxes className="size-6 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">{t('fields.partName')}</p>
+              <p className="text-xs text-muted-foreground">{t('fields.noPartsAdded')}</p>
             </div>
           )}
           {state.items.map((item, idx) => (

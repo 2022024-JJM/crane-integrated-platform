@@ -344,5 +344,6 @@
     "exitFullscreen": "Exit fullscreen",
     "badge": "3D Viewer",
     "resizePreview": "Resize preview"
-  }
+  },
+  "undo": "Undo"
 }

@@ -40,7 +40,11 @@ export function daysFromToday(dateStr: string, today: Date = startOfToday()): nu
   return Math.round((parseLocalDate(dateStr).getTime() - today.getTime()) / 86_400_000);
 }
 
-/** from → target 일수 (올림). 미래 양수, 과거 음수. */
+/**
+ * from → target 일수 (올림). 미래 양수, 과거 음수.
+ * daysFromToday는 D-day 표기용이라 가장 가까운 날로 반올림(round)하지만,
+ * 이쪽은 보증·점검 잔여일이라 "남은 온전한 일수"를 올림(ceil)한다 — 규칙이 다른 이유.
+ */
 export function daysBetween(target: Date, from: Date): number {
   return Math.ceil((target.getTime() - from.getTime()) / 86_400_000);
 }

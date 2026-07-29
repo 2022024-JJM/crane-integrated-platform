@@ -15,6 +15,10 @@ import { PAGE_TITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
 import { SURFACE_CARD } from '../../../shared/ui/surface';
 import { FOCUS_RING } from '../../../shared/ui/controls';
 import {
+  INSPECTION_RESULT_VARIANT as RESULT_VARIANT,
+  INSPECTION_TYPE_VARIANT as TYPE_VARIANT,
+} from '../../../shared/ui/status-variants';
+import {
   PILL_INACTIVE,
   TONE_BORDER_ACCENT,
   TONE_PILL_ACTIVE,
@@ -107,12 +111,38 @@ export function InspectionDetailPage() {
   }, [inspection]);
 
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>(initialItemStates);
-  const [saved, setSaved] = useState(false);
 
   // persist 후 inspection 객체가 새 checklist로 교체되면 로컬 편집 버퍼도 동기화
   useEffect(() => {
     setItemStates(initialItemStates);
   }, [initialItemStates]);
+
+  // 저장 안 된 판정/코멘트가 있는지 — persisted checklist와 편집 버퍼 비교
+  const dirty = useMemo(
+    () =>
+      Object.entries(itemStates).some(([id, s]) => {
+        const init = initialItemStates[id];
+        if (!init) return true;
+        return (
+          init.judgment !== s.judgment ||
+          init.comment !== s.comment ||
+          init.actionRequired !== s.actionRequired
+        );
+      }),
+    [itemStates, initialItemStates],
+  );
+
+  // BrowserRouter(비-data 라우터)라 useBlocker 불가 — 탭 닫기/새로고침은 beforeunload로,
+  // 페이지 내 이탈 링크는 confirm 가드로 막는다.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
 
   if (!inspection) {
     return (
@@ -151,22 +181,34 @@ export function InspectionDetailPage() {
         },
       };
     });
-    setSaved(false);
   }
 
-  // 예외 중심 점검의 핵심 — 미판정 항목을 한 번에 합격 처리
+  // 예외 중심 점검의 핵심 — 미판정 항목을 한 번에 합격 처리.
+  // 되돌리기는 Undo 토스트로: 대상이던 항목만 미판정으로 복원해 이후의 개별 판정은 건드리지 않는다.
   function bulkPass(itemIds: string[]) {
     if (!isEditable || itemIds.length === 0) return;
+    const changed = itemIds.filter((id) => itemStates[id]?.judgment === null);
+    if (changed.length === 0) return;
     setItemStates((prev) => {
       const next = { ...prev };
-      for (const id of itemIds) {
-        if (next[id]?.judgment === null) {
-          next[id] = { ...next[id], judgment: 'pass', actionRequired: 'none' };
-        }
+      for (const id of changed) {
+        next[id] = { ...next[id], judgment: 'pass', actionRequired: 'none' };
       }
       return next;
     });
-    setSaved(false);
+    toast.success(t('detail.toastBulkPassed', { count: changed.length }), {
+      action: {
+        label: t('undo', { ns: 'common', defaultValue: 'Undo' }),
+        onClick: () =>
+          setItemStates((cur) => {
+            const back = { ...cur };
+            for (const id of changed) {
+              back[id] = { ...back[id], judgment: null, actionRequired: 'none' };
+            }
+            return back;
+          }),
+      },
+    });
   }
 
   function handleCommentChange(itemId: string, value: string) {
@@ -174,7 +216,6 @@ export function InspectionDetailPage() {
       ...prev,
       [itemId]: { ...prev[itemId], comment: value },
     }));
-    setSaved(false);
   }
 
   function collectPatches(): ChecklistItemPatch[] {
@@ -193,9 +234,31 @@ export function InspectionDetailPage() {
       toast.error(t('detail.toastSaveFailed', { defaultValue: 'Failed to save checklist' }));
       return;
     }
-    setSaved(true);
+    // 저장 성공 피드백은 toast로 일원화 — 버튼 라벨을 바꾸지 않아 폭이 흔들리지 않는다
     toast.success(t('detail.toastSaved'));
-    setTimeout(() => setSaved(false), 2000);
+  }
+
+  // 페이지 내 이탈 링크 공용 가드 — dirty면 confirm으로 한 번 묻는다
+  function guardLeave(e: React.MouseEvent) {
+    if (dirty && !window.confirm(t('detail.unsavedConfirm'))) {
+      e.preventDefault();
+    }
+  }
+
+  // 티켓 생성 이동 전에 편집 중인 판정을 먼저 저장 — 실패 시 이동하지 않는다
+  function handleCreateRepairTicket() {
+    if (!inspectionId || !inspection) return;
+    if (dirty) {
+      const ok = saveChecklist(inspectionId, collectPatches());
+      if (!ok) {
+        toast.error(t('detail.toastSaveFailed', { defaultValue: 'Failed to save checklist' }));
+        return;
+      }
+      toast.success(t('detail.toastSaved'));
+    }
+    navigate(
+      `/ticket/create?type=repair&craneId=${encodeURIComponent(inspection.craneId)}&sourceWo=${encodeURIComponent(inspection.woNumber)}&component=${encodeURIComponent(failedItems[0]?.itemName ?? '')}`,
+    );
   }
 
   function handleSubmit() {
@@ -233,6 +296,7 @@ export function InspectionDetailPage() {
       <div className="flex items-center gap-3">
         <Link
           to="/inspection"
+          onClick={guardLeave}
           className="cursor-pointer flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -248,6 +312,7 @@ export function InspectionDetailPage() {
             <p className="text-sm text-muted-foreground mt-0.5">
               <Link
                 to={`/asset-management/${inspection.craneId}`}
+                onClick={guardLeave}
                 className="text-primary hover:underline"
               >
                 {inspection.craneName}
@@ -257,11 +322,11 @@ export function InspectionDetailPage() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Badge variant={inspection.woType === 'frequent' ? 'secondary' : 'warning'}>
+            <Badge variant={TYPE_VARIANT[inspection.woType]}>
               {t(`type.${inspection.woType}`)}
             </Badge>
             {inspection.result && (
-              <Badge variant={inspection.result === 'pass' ? 'success' : inspection.result === 'fail' ? 'destructive' : 'warning'}>
+              <Badge variant={RESULT_VARIANT[inspection.result]}>
                 {t(`result.${inspection.result}`)}
               </Badge>
             )}
@@ -275,7 +340,7 @@ export function InspectionDetailPage() {
             { label: t('detail.fields.assignedTo'), value: inspection.assignedTo },
             { label: t('detail.fields.inspector'), value: inspection.performerType === 'internal' ? t('detail.fields.performerInternal') : t('detail.fields.performerExternal') },
             { label: t('detail.fields.status'), value: t(`status.${inspection.status}`) },
-            { label: t('detail.fields.priority'), value: inspection.priority.toUpperCase() },
+            { label: t('detail.fields.priority'), value: t(`priority.${inspection.priority}`, { defaultValue: inspection.priority }) },
             { label: t('detail.fields.totalHours'), value: inspection.totalHours ? `${inspection.totalHours} h` : '—' },
             { label: t('detail.fields.cost'), value: inspection.cost ? `$${inspection.cost.toLocaleString()}` : '—' },
           ].map(({ label, value }) => (
@@ -302,13 +367,14 @@ export function InspectionDetailPage() {
               <AlertTriangle className="w-4 h-4 shrink-0" />
               {t('detail.nonConformance')} ({failedItems.length})
             </h2>
-            <Link
-              to={`/ticket/create?type=repair&craneId=${encodeURIComponent(inspection.craneId)}&sourceWo=${encodeURIComponent(inspection.woNumber)}&component=${encodeURIComponent(failedItems[0]?.itemName ?? '')}`}
+            <button
+              type="button"
+              onClick={handleCreateRepairTicket}
               className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-destructive/90"
             >
               <Wrench className="size-3.5" />
               {t('detail.createRepairTicket')}
-            </Link>
+            </button>
           </div>
           {failedItems.map((item) => (
             <div key={item.id} className="flex items-start gap-2 text-sm">
@@ -456,7 +522,7 @@ export function InspectionDetailPage() {
               className={cn('cursor-pointer flex items-center gap-1.5 rounded border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted/60 transition-colors', FOCUS_RING)}
             >
               <Save className="w-3.5 h-3.5" />
-              {saved ? '✓' : t('detail.save')}
+              {t('detail.save')}
             </button>
             <button
               disabled={!allChecked}

@@ -105,5 +105,8 @@
     "rootCause": "Root Cause",
     "correctiveAction": "Corrective Action",
     "preventiveAction": "Preventive Action"
+  },
+  "board": {
+    "moreInHistory": "View {{count}} more in history"
   }
 }

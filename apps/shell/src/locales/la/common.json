@@ -344,5 +344,6 @@
     "exitFullscreen": "Restitue fenestram",
     "badge": "Visor 3D",
     "resizePreview": "Muta magnitudinem"
-  }
+  },
+  "undo": "Revoca"
 }

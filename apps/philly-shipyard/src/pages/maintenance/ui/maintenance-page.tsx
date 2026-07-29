@@ -9,17 +9,19 @@ import { cn } from '@crane/core/lib/utils';
 import { PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
 import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { buttonVariants } from '@crane/ui/atoms/button';
-import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
+import { TONE_DOT, TONE_TEXT } from '../../../shared/ui/tone';
 import {
   REPAIR_PRIORITY_VARIANT as PRIORITY_VARIANT,
   REPAIR_STATUS_VARIANT as STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
-import { MetricCard } from '../../../shared/ui/metric-card';
 import { AlertBanner } from '../../../shared/ui/alert-banner';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
 import { FOCUS_RING } from '../../../shared/ui/controls';
 import { MACRO_STAGES, COLUMN_CONFIG, macroOf, type MacroStage } from './pipeline-config';
 import { RepairDetailPanel } from './repair-detail-panel';
+
+/** 완료 컬럼에 남기는 최근 완료 카드 수 — 나머지는 이력 페이지로 안내 */
+const COMPLETED_VISIBLE = 5;
 
 function RepairCard({
   wo,
@@ -87,7 +89,15 @@ function RepairCard({
           <span className="text-xs text-muted-foreground truncate max-w-28">{wo.assignedTo}</span>
           <div className="flex items-center gap-1 shrink-0">
             <Clock className="h-3 w-3 text-muted-foreground" />
-            <span className={cn('text-xs font-semibold tabular-nums', isOverdue ? TONE_TEXT.critical : 'text-muted-foreground')}>
+            {/* 완료된 카드의 지난 기한은 끝난 일 — 위험색을 칠하지 않는다 */}
+            <span
+              className={cn(
+                'text-xs font-semibold tabular-nums',
+                isOverdue && wo.status !== 'completed'
+                  ? TONE_TEXT.critical
+                  : 'text-muted-foreground',
+              )}
+            >
               {dateLabel}
             </span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all" />
@@ -95,20 +105,22 @@ function RepairCard({
         </div>
       </button>
 
-      {/* 단계 이동 버튼 바 (매크로 3단계 기준) */}
+      {/* 단계 이동 버튼 바 (매크로 3단계 기준) — 이전 단계가 없으면 버튼 대신 빈 자리만 유지 */}
       <div className="flex items-stretch border-t border-border/40 divide-x divide-border/40">
-        <button
-          onClick={() => prevStage && onStage(wo, prevStage)}
-          disabled={!prevStage}
-          className={cn(`cursor-pointer flex-1 min-w-0 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl
-            ${prevStage
-              ? 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-              : 'text-muted-foreground/25 pointer-events-none'
-            }`, FOCUS_RING)}
-        >
-          <ChevronLeft className="h-3 w-3 shrink-0" />
-          <span className="truncate">{prevStage ? t(`pipeline.${prevStage}`) : '—'}</span>
-        </button>
+        {prevStage ? (
+          <button
+            onClick={() => onStage(wo, prevStage)}
+            className={cn(
+              'cursor-pointer flex-1 min-w-0 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors rounded-bl text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+              FOCUS_RING,
+            )}
+          >
+            <ChevronLeft className="h-3 w-3 shrink-0" />
+            <span className="truncate">{t(`pipeline.${prevStage}`)}</span>
+          </button>
+        ) : (
+          <div className="flex-1 min-w-0" aria-hidden />
+        )}
         <button
           onClick={() => nextStage && onStage(wo, nextStage)}
           disabled={!nextStage}
@@ -131,20 +143,30 @@ export function MaintenancePage() {
   const setStatus = useSetRepairStatus();
   const { t } = useTranslation('maintenance');
 
-  const emergencyWOs = repairs.filter((w) => w.priority === 'emergency');
+  // 완료된 긴급 건은 더 이상 조치 대상이 아니다 — 배너에 잔류시키지 않는다
+  const emergencyWOs = repairs.filter(
+    (w) => w.priority === 'emergency' && w.status !== 'completed',
+  );
   const totalActive = repairs.filter((w) => w.status !== 'completed').length;
   // on_hold는 파이프라인 밖 상태 — 해당 WO가 있을 때만 컬럼을 추가해 목록에서 사라지지 않게 한다.
   const hasOnHold = repairs.some((w) => w.status === 'on_hold');
   const boardColumns: (MacroStage | 'on_hold')[] = hasOnHold ? [...MACRO_STAGES, 'on_hold'] : MACRO_STAGES;
 
   // 카드 푸터의 매크로 단계 이동 — completed 진입은 재검사 결과 가드에 걸릴 수 있다.
+  // 확인창 대신 Undo 토스트: 일단 실행하고 즉시 되돌릴 수 있게 해 조작을 막지 않는다.
   const handleStage = (wo: RepairWO, stage: MacroStage) => {
     const outcome = setStatus(wo.id, stage);
     if (outcome.success) {
+      const undoAction = outcome.undo && {
+        label: t('undo', { ns: 'common', defaultValue: 'Undo' }),
+        onClick: outcome.undo,
+      };
       if (stage === 'completed') {
-        toast.success(t('toast.completed', { woNumber: wo.woNumber }));
+        toast.success(t('toast.completed', { woNumber: wo.woNumber }), { action: undoAction });
       } else {
-        toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${stage}`) }));
+        toast.info(t('toast.moveTo', { woNumber: wo.woNumber, status: t(`pipeline.${stage}`) }), {
+          action: undoAction,
+        });
       }
       return;
     }
@@ -188,17 +210,22 @@ export function MaintenancePage() {
         </Link>
       </div>
 
-      {/* KPI 카드 */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: t('metrics.inProgress'), value: summary.inProgress, tone: summary.inProgress > 0 ? 'warning' : 'neutral' },
-          { label: t('metrics.waitingParts'), value: summary.waitingParts, tone: summary.waitingParts > 0 ? 'warning' : 'neutral' },
-          { label: t('metrics.emergencyActive'), value: summary.emergency, tone: summary.emergency > 0 ? 'critical' : 'neutral' },
-          { label: t('metrics.avgMttr'), value: `${summary.avgMttrHours} h`, tone: 'neutral' },
-        ].map(({ label, value, tone }) => (
-          <MetricCard key={label} label={label} value={value} tone={tone as Tone} />
-        ))}
-      </section>
+      {/* 보드 컬럼이 단계별 요약을 대신한다 — 컬럼·배너에 안 드러나는 값만 인라인 표기.
+          부품 대기는 '진행 중' 컬럼 안 세부 상태라 집계가 따로 필요하고, MTTR은 보드에 없다. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+        <span>
+          {t('metrics.waitingParts')}{' '}
+          <span className={cn('font-semibold tabular-nums', summary.waitingParts > 0 ? TONE_TEXT.warning : 'text-foreground')}>
+            {summary.waitingParts}
+          </span>
+        </span>
+        <span>
+          {t('metrics.avgMttr')}{' '}
+          <span className="font-semibold tabular-nums text-foreground">
+            {summary.avgMttrHours != null ? `${summary.avgMttrHours} h` : '—'}
+          </span>
+        </span>
+      </div>
 
       {/* 긴급 수리 배너 */}
       {emergencyWOs.length > 0 && (
@@ -230,6 +257,14 @@ export function MaintenancePage() {
           const pct = totalActive > 0 && status !== 'completed'
             ? Math.round((colWOs.length / totalActive) * 100)
             : 0;
+          // 완료 컬럼은 이력이 쌓일수록 무한 성장 — 최근 완료분만 보드에 남기고 나머지는 이력으로
+          const visibleWOs =
+            status === 'completed'
+              ? [...colWOs]
+                  .sort((a, b) => (b.actualEnd ?? '').localeCompare(a.actualEnd ?? ''))
+                  .slice(0, COMPLETED_VISIBLE)
+              : colWOs;
+          const hiddenCompleted = colWOs.length - visibleWOs.length;
 
           return (
             <div key={status} className={cn(SURFACE_PANEL, 'flex flex-col overflow-hidden')}>
@@ -262,15 +297,32 @@ export function MaintenancePage() {
                     <p className="text-xs text-muted-foreground">{t('empty')}</p>
                   </div>
                 ) : (
-                  colWOs.map((wo) => (
-                    <RepairCard
-                      key={wo.id}
-                      wo={wo}
-                      onStage={handleStage}
-                      onSelect={selectRepair}
-                      selected={wo.id === selectedRepairId}
-                    />
-                  ))
+                  <>
+                    {visibleWOs.map((wo) => (
+                      <RepairCard
+                        key={wo.id}
+                        wo={wo}
+                        onStage={handleStage}
+                        onSelect={selectRepair}
+                        selected={wo.id === selectedRepairId}
+                      />
+                    ))}
+                    {hiddenCompleted > 0 && (
+                      <Link
+                        to="/history?kind=repair"
+                        className={cn(
+                          'group flex items-center justify-center gap-1 rounded border border-dashed border-border/70 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground',
+                          FOCUS_RING,
+                        )}
+                      >
+                        {t('board.moreInHistory', {
+                          count: hiddenCompleted,
+                          defaultValue: 'View {{count}} more in history',
+                        })}
+                        <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </div>

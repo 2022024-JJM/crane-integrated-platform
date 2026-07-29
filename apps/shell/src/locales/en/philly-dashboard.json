@@ -12,7 +12,7 @@
     "openRisks": "Open Risks",
     "safety": "Safety",
     "production": "Production",
-    "showRisks": "View risks ({{count}})",
+    "showRisks": "View all ({{count}})",
     "hideRisks": "Hide risks",
     "empty": "No open risks",
     "source": {
@@ -37,46 +37,30 @@
     },
     "toast": {
       "issued": "Created {{repair}} repair ticket(s), {{parts}} parts request(s)"
-    }
+    },
+    "totalCount": "{{count}} total open"
   },
   "connectivity": {
     "title": "FLEET STATUS",
     "componentCondition": "Component Condition",
     "operatingAlerts": "Operating Alerts",
     "critical": "Critical",
-    "low": "Low"
-  },
-  "serviceReview": {
-    "title": "Service Review and Reports",
-    "serviceVisits": "Service Visits",
-    "assetsServiced": "Assets Serviced",
-    "totalFindings": "Total Findings"
+    "low": "Low",
+    "immediate": "Immediate Action",
+    "preventive": "Preventive Action"
   },
   "activeTickets": {
     "title": "Active Tickets",
     "open": "Open",
     "completed": "Completed",
-    "onHold": "On Hold"
-  },
-  "assetFleet": {
-    "title": "Asset Fleet",
-    "agreementAssets": "Agreement Assets",
-    "connectedAssets": "Connected Assets",
-    "assetsUnit": "Assets"
+    "onHold": "On Hold",
+    "completedThisMonth": "Completed this month"
   },
   "dailyInspection": {
-    "title": "Daily Inspection",
-    "subtitle": "Operator's findings (last 7 days)",
     "passed": "Passed",
     "failed": "Failed"
   },
   "quickLinks": {
-    "businessReview": "Business Review",
-    "serviceCalendar": "Service Calendar",
-    "documents": "Documents and Manuals",
-    "agreements": "Service Agreements",
-    "locationActivities": "Location Activities",
-    "slings": "Slings and Accessories",
     "newTicket": "New Ticket"
   },
   "failureType": {
@@ -106,5 +90,14 @@
     "dock1": "Dock No.1",
     "dock2": "Dock No.4",
     "dockIn": "Block Shop"
+  },
+  "fleetSummary": {
+    "title": "Assets & Inspections",
+    "operating": "Operating",
+    "inspected": "Inspected",
+    "recent7": "Inspections, last 7 days",
+    "noRecent": "No inspections completed in the last 7 days",
+    "viewOverdue": "View {{count}} overdue",
+    "viewSchedule": "View schedule"
   }
 }

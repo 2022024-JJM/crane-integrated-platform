@@ -8,7 +8,8 @@
     "reorderNeeded": "Reorder Needed"
   },
   "alert": {
-    "lowStock": "Parts Below Safety Stock ({{count}})"
+    "lowStock": "Parts Below Safety Stock ({{count}})",
+    "filterHint": "Show in table"
   },
   "table": {
     "partName": "Part Name / P/N",

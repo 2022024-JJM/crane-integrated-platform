@@ -17,6 +17,7 @@ import { cn } from '@crane/core/lib/utils';
 import { buttonVariants } from '@crane/ui/atoms/button';
 import { TONE_CHIP, TONE_SURFACE, TONE_TEXT } from '../../../shared/ui/tone';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { formatDateLabel } from '../../../shared/lib/format-date';
 import type { ActionMode } from './stock-action-modal';
 import { FOCUS_RING } from '../../../shared/ui/controls';
 
@@ -83,7 +84,7 @@ export function StockChips({
 }
 
 export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
-  const { t } = useTranslation('inventory');
+  const { t, i18n } = useTranslation('inventory');
   return (
     <div className="flex flex-col gap-2">
       {lines.map((line) => {
@@ -111,8 +112,8 @@ export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
                 >
                   {eta.label}
                 </span>
-                <span className="ml-1 font-mono text-[10px] text-muted-foreground">
-                  {line.expectedDelivery}
+                <span className="ml-1 text-[10px] text-muted-foreground">
+                  {formatDateLabel(line.expectedDelivery, i18n.language)}
                 </span>
               </span>
             </div>
@@ -136,7 +137,7 @@ export function InfoContent({
   item: InventoryItem;
   openPoLines: OpenPoLine[];
 }) {
-  const { t } = useTranslation('inventory');
+  const { t, i18n } = useTranslation('inventory');
   const infoRows: { label: string; value: string }[] = [
     { label: t('table.category'), value: t(`category.${item.category}`) },
     { label: t('detail.fields.manufacturer'), value: item.manufacturer },
@@ -146,8 +147,8 @@ export function InfoContent({
     { label: t('detail.fields.locationBin'), value: item.locationBin },
     { label: t('detail.stock.min'), value: String(item.minStockQty) },
     { label: t('detail.fields.reorderPoint'), value: String(item.reorderPoint) },
-    { label: t('detail.fields.lastReceipt'), value: item.lastReceiptDate },
-    { label: t('detail.fields.lastIssue'), value: item.lastIssueDate },
+    { label: t('detail.fields.lastReceipt'), value: formatDateLabel(item.lastReceiptDate, i18n.language) },
+    { label: t('detail.fields.lastIssue'), value: formatDateLabel(item.lastIssueDate, i18n.language) },
     { label: t('detail.fields.cranes'), value: craneLabel(item.craneIds, t('crane.common')) },
   ];
 
@@ -175,7 +176,7 @@ export function InfoContent({
 }
 
 export function HistoryContent({ transactions }: { transactions: InventoryTransaction[] }) {
-  const { t } = useTranslation('inventory');
+  const { t, i18n } = useTranslation('inventory');
   if (transactions.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
@@ -213,8 +214,8 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
                 {tx.ref && (
                   <span className="font-mono text-[10px] text-muted-foreground">{tx.ref}</span>
                 )}
-                <span className="ml-auto font-mono text-[10px] text-muted-foreground">
-                  {tx.date}
+                <span className="ml-auto text-[10px] text-muted-foreground">
+                  {formatDateLabel(tx.date, i18n.language)}
                 </span>
               </div>
               {tx.note && (

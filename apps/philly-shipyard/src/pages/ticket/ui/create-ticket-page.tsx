@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, TicketPlus, Check } from 'lucide-react';
+import { ChevronLeft, TicketPlus } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import { PAGE_CONTAINER, PAGE_TITLE, PAGE_SUBTITLE } from '../../../shared/ui/page';
 import { TicketTypeSelector } from './ticket-type-selector';
@@ -41,15 +41,6 @@ export function CreateTicketPage() {
         </div>
       </div>
 
-      {/* 스테퍼 */}
-      <div className="flex items-center gap-2">
-        <StepDot active={true} done={!!selectedType} num={1} label={t('stepper.selectType', { defaultValue: 'Select Type' })} />
-        <StepBar active={!!selectedType} />
-        <StepDot active={!!selectedType} done={false} num={2} label={t('stepper.fillInfo', { defaultValue: 'Fill Information' })} />
-        <StepBar active={false} />
-        <StepDot active={false} done={false} num={3} label={t('stepper.submit', { defaultValue: 'Submit' })} />
-      </div>
-
       {/* 타입 선택 */}
       <TicketTypeSelector selected={selectedType} onChange={setSelectedType} />
 
@@ -67,31 +58,4 @@ export function CreateTicketPage() {
       )}
     </div>
   );
-}
-
-function StepDot({ active, done, num, label }: { active: boolean; done: boolean; num: number; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className={cn(
-          'flex size-6 items-center justify-center rounded-full text-[10px] font-bold transition-colors',
-          done
-            ? 'bg-primary text-primary-foreground'
-            : active
-              ? 'border-2 border-primary bg-background text-primary'
-              : 'border-2 border-border bg-background text-muted-foreground',
-        )}
-      >
-        {done ? <Check className="size-3" strokeWidth={3} /> : num}
-      </div>
-      {/* sm 미만에서는 번호 점만 표시해 스테퍼가 넘치지 않게 한다 */}
-      <span className={cn('hidden text-xs font-medium sm:inline', active ? 'text-foreground' : 'text-muted-foreground')}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function StepBar({ active }: { active: boolean }) {
-  return <div className={cn('h-px flex-1 transition-colors', active ? 'bg-primary' : 'bg-border')} />;
 }

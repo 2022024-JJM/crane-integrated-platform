@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useRescheduleEvent, useServiceCalendar } from '@crane/features/calendar';
 import type { CalendarEvent } from '@crane/features/calendar';
 import type { ViewMode } from '../model/types';
-import { addDays, addMonths, buildWeekDays, startOfDay } from '../model/date-utils';
+import { addDays, addMonths, buildWeekDays, isSameDay, startOfDay } from '../model/date-utils';
 import { toLocalDateString } from '../../../shared/lib/relative-date';
 import { MonthView } from './month-view';
 import { TimeGrid } from './time-grid';
@@ -15,32 +15,73 @@ import { ScheduleView } from './schedule-view';
 import { cn } from '@crane/core/lib/utils';
 import { PAGE_TITLE, PAGE_SUBTITLE } from '../../../shared/ui/page';
 
+const VIEW_MODES: ViewMode[] = ['month', 'week', 'day', 'schedule'];
+
+/** ?date= 파라미터 검증 — 'YYYY-MM-DD'가 아니거나 실재하지 않는 날짜면 null (오늘로 폴백) */
+function parseDateParam(value: string | null): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [y, m, d] = value.split('-').map(Number) as [number, number, number];
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+    ? date
+    : null;
+}
+
 export function ServiceCalendarPage() {
   const { t, i18n } = useTranslation('calendar');
   const { events } = useServiceCalendar();
   const reschedule = useRescheduleEvent();
   const navigate = useNavigate();
-  const [view, setView] = useState<ViewMode>('month');
-  const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
+
+  // 뷰·기준일은 ?view=/?date= URL 파라미터가 단일 소스 — 새로고침·뒤로가기·링크 공유에
+  // 그대로 살아남고, 기본값(month/오늘)은 URL에서 생략한다. 잘못된 값은 기본값으로 폴백.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewParam = searchParams.get('view') as ViewMode | null;
+  const view: ViewMode = viewParam && VIEW_MODES.includes(viewParam) ? viewParam : 'month';
+  const dateParam = searchParams.get('date');
+  const anchor = useMemo(
+    () => parseDateParam(dateParam) ?? startOfDay(new Date()),
+    [dateParam],
+  );
+
+  const applyState = useCallback(
+    (nextView: ViewMode, nextAnchor: Date) => {
+      const next = new URLSearchParams(searchParams);
+      if (nextView === 'month') next.delete('view');
+      else next.set('view', nextView);
+      if (isSameDay(nextAnchor, startOfDay(new Date()))) next.delete('date');
+      else next.set('date', toLocalDateString(nextAnchor));
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const setView = useCallback((v: ViewMode) => applyState(v, anchor), [applyState, anchor]);
+  const setAnchor = useCallback((d: Date) => applyState(view, d), [applyState, view]);
 
   const shift = useCallback(
     (dir: -1 | 1) => {
-      setAnchor((prev) => {
-        if (view === 'month' || view === 'schedule') return addMonths(prev, dir);
-        if (view === 'week') return addDays(prev, dir * 7);
-        return addDays(prev, dir);
-      });
+      const nextAnchor =
+        view === 'month' || view === 'schedule'
+          ? addMonths(anchor, dir)
+          : view === 'week'
+            ? addDays(anchor, dir * 7)
+            : addDays(anchor, dir);
+      applyState(view, nextAnchor);
     },
-    [view],
+    [view, anchor, applyState],
   );
 
-  const goToday = useCallback(() => setAnchor(startOfDay(new Date())), []);
+  const goToday = useCallback(
+    () => applyState(view, startOfDay(new Date())),
+    [view, applyState],
+  );
 
   /** 날짜 숫자·요일 헤더 클릭 → 해당 일의 일 뷰 (구글 캘린더 드릴다운) */
-  const jumpToDay = useCallback((d: Date) => {
-    setAnchor(startOfDay(d));
-    setView('day');
-  }, []);
+  const jumpToDay = useCallback(
+    (d: Date) => applyState('day', startOfDay(d)),
+    [applyState],
+  );
 
   /** 빈 셀/슬롯 클릭 → 해당 날짜가 프리필된 티켓 생성 (구글 캘린더의 클릭-생성) */
   const createAt = useCallback(
@@ -50,15 +91,18 @@ export function ServiceCalendarPage() {
     [navigate],
   );
 
-  /** 드래그 이동/리사이즈 커밋 + 토스트 */
+  /** 드래그 이동/리사이즈 커밋 + Undo 토스트 — 잘못 끌었을 때 바로 되돌린다 */
   const commitReschedule = useCallback(
     (event: CalendarEvent, newStart: Date, newEnd: Date) => {
-      if (!reschedule(event, newStart, newEnd)) return;
+      const undo = reschedule(event, newStart, newEnd);
+      if (!undo) return;
       const dateLabel = new Intl.DateTimeFormat(i18n.language, {
         month: 'short',
         day: 'numeric',
       }).format(newStart);
-      toast.success(t('toast.rescheduled', { woNumber: event.woNumber, date: dateLabel }));
+      toast.success(t('toast.rescheduled', { woNumber: event.woNumber, date: dateLabel }), {
+        action: { label: t('undo', { ns: 'common', defaultValue: 'Undo' }), onClick: undo },
+      });
     },
     [reschedule, t, i18n.language],
   );
@@ -117,7 +161,7 @@ export function ServiceCalendarPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [shift, goToday]);
+  }, [shift, goToday, setView]);
 
   const weekDays = useMemo(() => buildWeekDays(anchor), [anchor]);
 

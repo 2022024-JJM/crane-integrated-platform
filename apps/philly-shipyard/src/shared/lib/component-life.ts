@@ -10,6 +10,11 @@ export function usedLifePercent(component: CraneComponent): number {
   );
 }
 
+/** 잔여 수명 % — 화면 표기는 잔여율로 통일한다 (사용률은 내부 계산·임계값 판정용) */
+export function remainingLifePercent(component: CraneComponent): number {
+  return 100 - usedLifePercent(component);
+}
+
 /** 사용률 → 톤 (90%+ critical, 70%+ warning, 그 외 positive) */
 export function lifeTone(usedPct: number): Tone {
   return usedPct >= 90 ? 'critical' : usedPct >= 70 ? 'warning' : 'positive';

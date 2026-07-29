@@ -214,8 +214,14 @@ export function AssetSummaryCard({
           </span>
         </StatTile>
 
-        {/* 다음 점검 */}
-        <StatTile label={t('card.nextInspection', { defaultValue: 'Next Inspection' })}>
+        {/* 다음 점검 — 기한이 지났으면 "다음"이 아니라 "지연"으로 정직하게 라벨링 */}
+        <StatTile
+          label={
+            nextInspOverdue
+              ? t('card.inspectionOverdue', { defaultValue: 'Inspection Overdue' })
+              : t('card.nextInspection', { defaultValue: 'Next Inspection' })
+          }
+        >
           {nextInspection ? (
             <>
               <span

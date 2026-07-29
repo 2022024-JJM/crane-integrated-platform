@@ -64,10 +64,16 @@ export function RepairDetailPanel({
     if (!repair) return;
     const outcome = setStatus(repair.id, stage);
     if (outcome.success) {
+      const undoAction = outcome.undo && {
+        label: t('undo', { ns: 'common', defaultValue: 'Undo' }),
+        onClick: outcome.undo,
+      };
       if (stage === 'completed') {
-        toast.success(t('toast.completed', { woNumber: repair.woNumber }));
+        toast.success(t('toast.completed', { woNumber: repair.woNumber }), { action: undoAction });
       } else {
-        toast.info(t('toast.moveTo', { woNumber: repair.woNumber, status: t(`pipeline.${stage}`) }));
+        toast.info(t('toast.moveTo', { woNumber: repair.woNumber, status: t(`pipeline.${stage}`) }), {
+          action: undoAction,
+        });
       }
       return;
     }

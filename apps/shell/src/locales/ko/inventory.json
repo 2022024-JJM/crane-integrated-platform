@@ -8,7 +8,8 @@
     "reorderNeeded": "재주문 필요"
   },
   "alert": {
-    "lowStock": "안전재고 미달 부품 ({{count}})"
+    "lowStock": "안전재고 미달 부품 ({{count}})",
+    "filterHint": "표에서 보기"
   },
   "table": {
     "partName": "부품명 / P/N",

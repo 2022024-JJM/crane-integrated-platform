@@ -11,6 +11,7 @@ import { CERT_STATUS_VARIANT } from '../../../shared/ui/status-variants';
 import { MetricCard } from '../../../shared/ui/metric-card';
 import { AlertBanner } from '../../../shared/ui/alert-banner';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { formatDateLabel } from '../../../shared/lib/format-date';
 import { FOCUS_RING } from '../../../shared/ui/controls';
 
 /** 만료 임박 강조 기준 일수 */
@@ -18,7 +19,7 @@ const EXPIRY_SOON_DAYS = 30;
 
 export function CompliancePage() {
   const { certifications, oshaReports, summary } = useComplianceSummary();
-  const { t } = useTranslation('compliance');
+  const { t, i18n } = useTranslation('compliance');
 
   const expiredCerts = certifications.filter((c) => c.status === 'expired');
   const expirySoonCerts = certifications.filter((c) => c.status === 'expiry_soon');
@@ -37,24 +38,37 @@ export function CompliancePage() {
             label: t('metrics.completionRateFrequent'),
             value: `${summary.frequentCompletionRate}%`,
             tone: summary.frequentCompletionRate < 80 ? 'warning' : 'neutral',
+            to: '/inspection?type=frequent',
           },
           {
             label: t('metrics.completionRatePeriodic'),
             value: `${summary.periodicCompletionRate}%`,
             tone: summary.periodicCompletionRate < 80 ? 'critical' : 'neutral',
+            to: '/inspection?type=periodic',
           },
           {
-            label: t('metrics.expiringCerts'),
-            value: summary.expiringCerts,
-            tone: summary.expiringCerts > 0 ? 'warning' : 'neutral',
+            // 만료(더 심각)가 임박에 가려지지 않게 합산 카드로 — 내역은 sub에 분리
+            label: t('metrics.certAlerts', { defaultValue: 'Cert Alerts' }),
+            value: summary.expiredCerts + summary.expiringCerts,
+            sub: t('metrics.certAlertsSub', {
+              expired: summary.expiredCerts,
+              soon: summary.expiringCerts,
+              defaultValue: '{{expired}} expired · {{soon}} expiring',
+            }),
+            tone:
+              summary.expiredCerts > 0
+                ? 'critical'
+                : summary.expiringCerts > 0
+                  ? 'warning'
+                  : 'neutral',
           },
           {
             label: t('metrics.openReports'),
             value: summary.openFindings,
             tone: summary.openFindings > 0 ? 'warning' : 'neutral',
           },
-        ].map(({ label, value, tone }) => (
-          <MetricCard key={label} label={label} value={value} tone={tone as Tone} />
+        ].map(({ label, value, tone, to, sub }) => (
+          <MetricCard key={label} label={label} value={value} sub={sub} tone={tone as Tone} to={to} />
         ))}
       </section>
 
@@ -130,7 +144,7 @@ export function CompliancePage() {
                     <p className={cn('text-xs font-semibold tabular-nums', isExpired ? TONE_TEXT.critical : diff <= EXPIRY_SOON_DAYS ? TONE_TEXT.warning : 'text-muted-foreground')}>
                       {isExpired ? t('certifications.expired') : dateLabel}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{cert.expiryDate}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatDateLabel(cert.expiryDate, i18n.language)}</p>
                   </div>
                 </div>
               );
@@ -158,7 +172,7 @@ export function CompliancePage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{report.reportNumber}</p>
                     <p className="text-xs text-muted-foreground">{report.craneName} · {report.siteName}</p>
-                    <p className="text-xs text-muted-foreground">{report.inspectionDate} · {report.inspectorName}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateLabel(report.inspectionDate, i18n.language)} · {report.inspectorName}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <Badge

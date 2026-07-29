@@ -1,5 +1,5 @@
 import type { AssetStatus, ComponentStatus } from '@crane/domain/asset';
-import type { InspectionStatus } from '@crane/domain/inspection';
+import type { InspectionStatus, InspectionType } from '@crane/domain/inspection';
 import type { RepairPriority, RepairStatus } from '@crane/domain/maintenance';
 import type {
   InventoryStatus,
@@ -74,6 +74,15 @@ export const INSPECTION_RESULT_VARIANT: Record<'pass' | 'fail' | 'conditional', 
   conditional: 'warning',
 };
 
+// 유형은 정체성이지 위험 신호가 아니다 — 색은 emergency에만 쓰고 나머지는 뉴트럴.
+// (amber/red는 상태·기한 표시에 예약되어 있어 유형까지 색을 쓰면 신호가 희석된다)
+export const INSPECTION_TYPE_VARIANT: Record<InspectionType, BadgeVariant> = {
+  frequent: 'secondary',
+  periodic: 'secondary',
+  emergency: 'destructive',
+  special: 'secondary',
+};
+
 export const INSPECTION_STATUS_TONE: Record<InspectionStatus, Tone> = {
   scheduled: 'neutral',
   in_progress: 'warning',
@@ -132,9 +141,11 @@ export const INVENTORY_STATUS_VARIANT: Record<InventoryStatus, BadgeVariant> = {
   expiry_soon: 'warning',
 };
 
+// 중요도는 정적 분류 — 절반이 '필수'인 목록에서 amber 배지가 도배되면 신호가 죽는다.
+// 색은 critical(위험)에만 쓰고 나머지는 뉴트럴 (필터 pill 도트는 CRITICALITY_TONE으로 계속 구분).
 export const CRITICALITY_VARIANT: Record<PartCriticality, BadgeVariant> = {
   critical: 'destructive',
-  essential: 'warning',
+  essential: 'secondary',
   standard: 'secondary',
 };
 

@@ -73,7 +73,8 @@
     "warrantyAlert": "Monitum Cautionis",
     "warrantyAlertSub": "{{expired}} exspiratae · {{soon}} mox",
     "openWorkOrders": "Mandata Aperta",
-    "openWorkOrdersSub": "{{overdue}} retardata · {{repair}} refectio"
+    "openWorkOrdersSub": "{{overdue}} retardata · {{repair}} refectio",
+    "fleetUptimeSub2": "{{pct}}% operans"
   },
   "sort": {
     "label": "Ordina per",
@@ -88,7 +89,11 @@
       "subtitle": "Grues Goliath / Quay"
     }
   },
-  "criticalAlert": "{{overdueCount}} inspectio(nes) retardata(e) · {{repairCount}} refectio(nes) activa(e) — actio statim necessaria",
+  "criticalAlert": "{{overdueCount}} machina(e) cum inspectionibus retardatis · {{repairCount}} in refectione — actio statim necessaria",
+  "criticalAlertActions": {
+    "inspections": "Inspectiones retardatas videre",
+    "repairs": "Refectiones videre"
+  },
   "card": {
     "warrantyExpired": "Cautio Exspiravit",
     "warrantyUntil": "Cautio: {{date}}",
@@ -111,7 +116,8 @@
     "woBreakdown": "{{overdue}} insp · {{repair}} refec",
     "noOpenWo": "Nulla",
     "nextInspection": "Proxima Inspectio",
-    "view3d": "Vide 3D"
+    "view3d": "Vide 3D",
+    "inspectionOverdue": "Inspectio Retardata"
   },
   "status": {
     "operating": "Operans",
@@ -224,7 +230,10 @@
       "estimatedEol": "Finis vitae aestimatus",
       "trendTitle": "Cursus vitae",
       "threshold": "Limen substitutionis",
-      "perYear": "/anno"
+      "perYear": "/anno",
+      "noComponents": "Nullae partes ad monstrandum.",
+      "showAll": "Vide omnia {{count}}",
+      "showWorst": "Pessima 6 tantum"
     }
   },
   "units": {

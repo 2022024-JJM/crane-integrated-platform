@@ -283,6 +283,17 @@ export function updateRepairStatus(id: string, status: RepairWO['status']): bool
   return true;
 }
 
+/** Undo 전용 — 상태와 함께 updateRepairStatus가 찍은 실적 타임스탬프까지 이전 스냅샷으로 되돌린다 */
+export function restoreRepairStatus(
+  id: string,
+  snapshot: Pick<RepairWO, 'status' | 'actualStart' | 'actualEnd'>,
+): boolean {
+  const idx = allRepairWOs.findIndex((w) => w.id === id);
+  if (idx === -1) return false;
+  allRepairWOs[idx] = { ...allRepairWOs[idx], ...snapshot };
+  return true;
+}
+
 export function addRepairWO(wo: RepairWO): void {
   allRepairWOs.unshift(wo);
 }
@@ -363,13 +374,27 @@ export function updateRepairDetails(id: string, update: RepairDetailsUpdate): bo
 }
 
 export function getMaintenanceSummary(): MaintenanceSummary {
+  const repairDurations = allRepairWOs
+    .filter((w) => w.status === 'completed' && w.actualStart && w.actualEnd)
+    .map(
+      (w) =>
+        (new Date(w.actualEnd as string).getTime() - new Date(w.actualStart as string).getTime()) /
+        3_600_000,
+    )
+    .filter((hours) => hours > 0);
+
   return {
     inProgress: allRepairWOs.filter((w) =>
       ['in_progress', 're_inspection'].includes(w.status),
     ).length,
     waitingParts: allRepairWOs.filter((w) => w.status === 'waiting_parts').length,
-    emergency: allRepairWOs.filter((w) => w.priority === 'emergency').length,
-    avgMttrHours: 8.4,
-    avgMtbfDays: 42,
+    // 완료된 긴급 건은 조치 대상이 아니므로 제외 — 화면 라벨(긴급 진행)과 계산을 일치시킨다
+    emergency: allRepairWOs.filter(
+      (w) => w.priority === 'emergency' && w.status !== 'completed',
+    ).length,
+    avgMttrHours:
+      repairDurations.length > 0
+        ? Math.round((repairDurations.reduce((a, b) => a + b, 0) / repairDurations.length) * 10) / 10
+        : null,
   };
 }

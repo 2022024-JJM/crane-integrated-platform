@@ -7,7 +7,9 @@
     "expiringCerts": "Certificationes Exspirant",
     "openReports": "Inventiones Apertae",
     "nonConformance": "Non Conformia",
-    "thisMonth": "hoc mense"
+    "thisMonth": "hoc mense",
+    "certAlerts": "Monita Diplomatum",
+    "certAlertsSub": "{{expired}} exspirata · {{soon}} mox"
   },
   "certAlert": {
     "title": "Monita Certificationum ({{count}})",
@@ -29,7 +31,7 @@
     },
     "status": {
       "valid": "Valida",
-      "expiring_soon": "Mox Exspirat",
+      "expiry_soon": "Mox Exspirat",
       "expired": "Exspiravit",
       "renewing": "Renovatur"
     },

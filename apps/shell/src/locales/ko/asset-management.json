@@ -73,7 +73,8 @@
     "warrantyAlert": "워런티 경고",
     "warrantyAlertSub": "만료 {{expired}}건 · 임박 {{soon}}건",
     "openWorkOrders": "처리 대기 작업",
-    "openWorkOrdersSub": "지연 {{overdue}}건 · 수리 {{repair}}건"
+    "openWorkOrdersSub": "지연 {{overdue}}건 · 수리 {{repair}}건",
+    "fleetUptimeSub2": "가동률 {{pct}}%"
   },
   "sort": {
     "label": "정렬",
@@ -89,6 +90,10 @@
     }
   },
   "criticalAlert": "점검 지연 {{overdueCount}}대 · 수리 진행 {{repairCount}}대 — 즉각적인 조치 필요",
+  "criticalAlertActions": {
+    "inspections": "지연 점검 보기",
+    "repairs": "수리 현황 보기"
+  },
   "card": {
     "warrantyExpired": "워런티 만료",
     "warrantyUntil": "워런티: {{date}}",
@@ -111,7 +116,8 @@
     "woBreakdown": "점검 {{overdue}} · 정비 {{repair}}",
     "noOpenWo": "없음",
     "nextInspection": "다음 점검",
-    "view3d": "3D 보기"
+    "view3d": "3D 보기",
+    "inspectionOverdue": "점검 지연"
   },
   "status": {
     "operating": "운용 중",
@@ -224,7 +230,10 @@
       "estimatedEol": "예상 수명 도달",
       "trendTitle": "수명 추이",
       "threshold": "교체 기준선",
-      "perYear": "/년"
+      "perYear": "/년",
+      "noComponents": "표시할 구성품이 없습니다.",
+      "showAll": "전체 {{count}}개 보기",
+      "showWorst": "최악 6개만"
     }
   },
   "units": {

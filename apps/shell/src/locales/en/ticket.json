@@ -73,7 +73,8 @@
     "requester": "Requester",
     "requestPriority": "Request Priority",
     "partName": "Select part...",
-    "addPart": "Add Part"
+    "addPart": "Add Part",
+    "noPartsAdded": "No parts added yet."
   },
   "recurrence": {
     "none": "No repeat",

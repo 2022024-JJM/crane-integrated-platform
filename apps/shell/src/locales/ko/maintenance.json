@@ -105,5 +105,8 @@
     "rootCause": "근본 원인",
     "correctiveAction": "시정 조치",
     "preventiveAction": "예방 조치"
+  },
+  "board": {
+    "moreInHistory": "이력에서 {{count}}건 더 보기"
   }
 }

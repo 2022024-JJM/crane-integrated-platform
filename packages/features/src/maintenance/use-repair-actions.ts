@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import {
   getRepairWOById,
+  restoreRepairStatus,
   updateRepairDetails,
   updateRepairStatus,
 } from '@crane/domain/maintenance';
@@ -8,10 +9,11 @@ import type { RepairDetailsUpdate, RepairStatus } from '@crane/domain/maintenanc
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export type RepairActionOutcome =
-  | { success: true }
+  | { success: true; undo?: () => void }
   | { success: false; reason: 'not_found' | 'wo_closed' | 're_inspection_required' };
 
-/** 임의 단계로 점프 — completed 진입 시 reInspectionResult 필수(경량 가드) */
+/** 임의 단계로 점프 — completed 진입 시 reInspectionResult 필수(경량 가드).
+ *  성공 시 undo 클로저 반환 — 상태와 자동 스탬프된 실적 타임스탬프를 원복한다. */
 export function useSetRepairStatus() {
   const publish = useDomainEventStore((s) => s.publish);
 
@@ -21,9 +23,20 @@ export function useSetRepairStatus() {
       if (!wo) return { success: false, reason: 'not_found' };
       if (status === 'completed' && wo.reInspectionResult == null)
         return { success: false, reason: 're_inspection_required' };
+      const snapshot = {
+        status: wo.status,
+        actualStart: wo.actualStart,
+        actualEnd: wo.actualEnd,
+      };
       updateRepairStatus(id, status);
       publish('repair', id);
-      return { success: true };
+      return {
+        success: true,
+        undo: () => {
+          restoreRepairStatus(id, snapshot);
+          publish('repair', id);
+        },
+      };
     },
     [publish],
   );

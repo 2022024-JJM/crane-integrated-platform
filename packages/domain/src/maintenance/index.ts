@@ -14,6 +14,7 @@ export {
   getAllRepairWOs,
   getMaintenanceSummary,
   getRepairWOById,
+  restoreRepairStatus,
   updateRepairDetails,
   updateRepairStatus,
   updateRepairSchedule,

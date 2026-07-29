@@ -13,18 +13,19 @@ import { getAllCraneAssets } from '@crane/domain/asset';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getTechnicians } from '@crane/domain/shared';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_DOT } from '../../../../shared/ui/tone';
 import { SectionCard } from './section-card';
-import { MetricDonut } from './metric-donut';
-import { MetricWithUnderline } from './metric-with-underline';
 import { OpenRiskList } from './open-risk-list';
 import { RiskBatchConfirmModal } from './risk-batch-confirm-modal';
-import { KCC_FILL } from '../constants/konecranes-colors';
 import { FOCUS_RING } from '../../../../shared/ui/controls';
 import { toLocalDateString } from '../../../../shared/lib/relative-date';
 
 interface OpenItemsPanelProps {
   risks: { risks: OpenRisk[]; safety: OpenRisk[]; production: OpenRisk[] };
 }
+
+/** 접힌 상태에서도 항상 보여주는 상위 리스크 수 (안전 우선 정렬 상단) */
+const TOP_RISK_COUNT = 5;
 
 export function OpenItemsPanel({ risks }: OpenItemsPanelProps) {
   const { t } = useTranslation('philly-dashboard');
@@ -84,11 +85,6 @@ export function OpenItemsPanel({ risks }: OpenItemsPanelProps) {
     resetSelection();
   };
 
-  const segments = [
-    { key: 'safety', value: safety, color: KCC_FILL.safety },
-    { key: 'production', value: production, color: KCC_FILL.production },
-  ];
-
   const toolbarButton =
     'flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors';
 
@@ -100,55 +96,58 @@ export function OpenItemsPanel({ risks }: OpenItemsPanelProps) {
       icon={Wrench}
       href="/maintenance"
     >
-      <div className="flex items-center justify-around gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <MetricDonut segments={segments} centerNumber={totalOpen} size="lg" />
-          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-            {t('openItems.openRisks')}
+      {/* 도넛 대신 행동 우선 위계 — 안전이 주인공, 생산은 보조, 합계는 참고치 */}
+      <div className="px-1">
+        <div className="flex items-end gap-8">
+          <div>
+            <p className="text-4xl font-bold leading-none tracking-tight tabular-nums text-foreground">
+              {safety}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className={cn('size-1.5 rounded-full', TONE_DOT.critical)} />
+              {t('openItems.safety')}
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold leading-none tracking-tight tabular-nums text-foreground">
+              {production}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className={cn('size-1.5 rounded-full', TONE_DOT.warning)} />
+              {t('openItems.production')}
+            </p>
+          </div>
+          <span className="ml-auto self-end text-xs text-muted-foreground tabular-nums">
+            {t('openItems.totalCount', { count: totalOpen, defaultValue: '{{count}} total open' })}
           </span>
         </div>
-        <div className="grid grid-cols-2 divide-x divide-border/80">
-          <div className="px-8">
-            <MetricWithUnderline
-              value={safety}
-              label={t('openItems.safety')}
-              accent="safety"
-              align="center"
-              size="lg"
-            />
+
+        {/* 구성 바 — 분모(총계)가 있는 비율이라 도넛과 달리 진실하다. 수치 라벨은 바로 위에 병기 */}
+        {totalOpen > 0 && (
+          <div className="mt-3.5 flex h-2 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+            {safety > 0 && (
+              <div
+                className={TONE_DOT.critical}
+                style={{ width: `${(safety / totalOpen) * 100}%` }}
+              />
+            )}
+            {production > 0 && (
+              <div
+                className={TONE_DOT.warning}
+                style={{ width: `${(production / totalOpen) * 100}%` }}
+              />
+            )}
           </div>
-          <div className="px-8">
-            <MetricWithUnderline
-              value={production}
-              label={t('openItems.production')}
-              accent="production"
-              align="center"
-              size="lg"
-            />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* 리스크 드릴다운 — 소견 단위 목록 (Konecranes: 수리 완료 전까지 열린 상태) */}
+      {/* 상위 리스크는 항상 노출 — "뭐부터 처리하지"에 클릭 0회로 답한다 (안전 우선 정렬) */}
       <div className="mt-3 border-t border-border/60 pt-2">
-        <button
-          type="button"
-          onClick={() => {
-            setExpanded((v) => !v);
-            if (expanded) resetSelection();
-          }}
-          aria-expanded={expanded}
-          className={cn(
-            'flex w-full cursor-pointer items-center justify-center gap-1 rounded py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground',
-            FOCUS_RING,
-          )}
-        >
-          {expanded ? t('openItems.hideRisks') : t('openItems.showRisks', { count: totalOpen })}
-          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
-        </button>
-        {expanded && (
+        {totalOpen === 0 ? (
+          <p className="py-3 text-center text-sm text-muted-foreground">{t('openItems.empty')}</p>
+        ) : (
           <>
-            {totalOpen > 0 && (
+            {expanded && (
               <div className="flex items-center justify-between gap-2 px-1 pb-1">
                 <button
                   type="button"
@@ -191,9 +190,9 @@ export function OpenItemsPanel({ risks }: OpenItemsPanelProps) {
                 )}
               </div>
             )}
-            <div className="max-h-64 overflow-y-auto">
+            <div className={cn(expanded && 'max-h-64 overflow-y-auto')}>
               <OpenRiskList
-                risks={risks.risks}
+                risks={expanded ? risks.risks : risks.risks.slice(0, TOP_RISK_COUNT)}
                 actions={{
                   planFor: (risk) => planTicketForRisk(risk, planCtx),
                   onIssue: handleIssueOne,
@@ -209,6 +208,27 @@ export function OpenItemsPanel({ risks }: OpenItemsPanelProps) {
                 }}
               />
             </div>
+            {totalOpen > TOP_RISK_COUNT && (
+              <button
+                type="button"
+                onClick={() => {
+                  setExpanded((v) => !v);
+                  if (expanded) resetSelection();
+                }}
+                aria-expanded={expanded}
+                className={cn(
+                  'mt-1 flex w-full cursor-pointer items-center justify-center gap-1 rounded py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground',
+                  FOCUS_RING,
+                )}
+              >
+                {expanded
+                  ? t('openItems.hideRisks')
+                  : t('openItems.showRisks', { count: totalOpen })}
+                <ChevronDown
+                  className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
+                />
+              </button>
+            )}
           </>
         )}
       </div>

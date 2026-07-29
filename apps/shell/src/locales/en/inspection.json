@@ -91,9 +91,11 @@
     "toastSubmitFailed": "Failed to submit inspection.",
     "toastNextCreated": "Next inspection {{woNumber}} auto-created for {{date}}.",
     "toastNextCreatedAction": "Open",
+    "unsavedConfirm": "You have unsaved judgments. Leaving this page will discard them. Continue?",
     "bulkPassCategory": "Pass remaining {{count}}",
     "bulkPassRemaining": "Pass all remaining {{count}}",
-    "categoryDone": "All judged"
+    "categoryDone": "All judged",
+    "toastBulkPassed": "{{count}} items marked as passed"
   },
   "queue": {
     "title": "Work Queue",
@@ -102,6 +104,13 @@
     "upcoming": "Upcoming",
     "start": "Start inspection",
     "continue": "Resume inspection",
-    "empty": "No inspections waiting — all caught up."
+    "empty": "No inspections waiting — all caught up.",
+    "showAll": "View all"
+  },
+  "priority": {
+    "urgent": "Urgent",
+    "high": "High",
+    "normal": "Normal",
+    "low": "Low"
   }
 }

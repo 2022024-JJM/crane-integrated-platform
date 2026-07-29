@@ -91,9 +91,11 @@
     "toastSubmitFailed": "점검 완료 처리에 실패했습니다.",
     "toastNextCreated": "다음 회차 {{woNumber}}이(가) {{date}}로 자동 생성되었습니다.",
     "toastNextCreatedAction": "열기",
+    "unsavedConfirm": "저장하지 않은 판정이 있습니다. 이동하면 변경 내용이 사라집니다. 계속하시겠습니까?",
     "bulkPassCategory": "남은 {{count}}개 적합",
     "bulkPassRemaining": "나머지 {{count}}개 모두 적합",
-    "categoryDone": "판정 완료"
+    "categoryDone": "판정 완료",
+    "toastBulkPassed": "{{count}}개 항목을 일괄 합격 처리했습니다"
   },
   "queue": {
     "title": "작업 큐",
@@ -102,6 +104,13 @@
     "upcoming": "예정",
     "start": "점검 시작",
     "continue": "이어서 점검",
-    "empty": "대기 중인 점검이 없습니다 — 모두 완료되었습니다."
+    "empty": "대기 중인 점검이 없습니다 — 모두 완료되었습니다.",
+    "showAll": "전체 보기"
+  },
+  "priority": {
+    "urgent": "긴급",
+    "high": "높음",
+    "normal": "보통",
+    "low": "낮음"
   }
 }

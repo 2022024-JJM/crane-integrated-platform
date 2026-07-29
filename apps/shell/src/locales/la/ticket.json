@@ -73,7 +73,8 @@
     "requester": "Petitor",
     "requestPriority": "Prioritas Petitionis",
     "partName": "Elige partem...",
-    "addPart": "Adde Partem"
+    "addPart": "Adde Partem",
+    "noPartsAdded": "Nullae partes adhuc additae."
   },
   "recurrence": {
     "none": "Sine recursu",

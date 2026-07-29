@@ -8,7 +8,8 @@
     "reorderNeeded": "Re-Ordinatio Necessaria"
   },
   "alert": {
-    "lowStock": "Partes Infra Copiam Tutam ({{count}})"
+    "lowStock": "Partes Infra Copiam Tutam ({{count}})",
+    "filterHint": "In tabula monstra"
   },
   "table": {
     "partName": "Nomen / P/N",

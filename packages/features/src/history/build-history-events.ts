@@ -82,6 +82,9 @@ export function buildHistoryEvents(opts: {
 
   for (const wo of getAllInspectionWOs()) {
     if (craneId && wo.craneId !== craneId) continue;
+    // 이력은 "발생한 활동"의 기록 — 시작도 안 한 점검(예정·기한 초과)은
+    // 점검 목록·캘린더의 몫이므로 제외한다 (내용·비용이 전부 비어 행이 무의미해진다)
+    if (wo.status === 'scheduled' || wo.status === 'overdue') continue;
     const sortKey = wo.actualDate ?? wo.scheduledDate;
     events.push({
       kind: 'inspection',

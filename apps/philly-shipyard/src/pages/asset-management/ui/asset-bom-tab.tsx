@@ -14,7 +14,11 @@ import {
   COMPONENT_STATUS_DOT,
   COMPONENT_STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
-import { usedLifePercent as lifePercent, lifeTone } from '../../../shared/lib/component-life';
+import {
+  usedLifePercent,
+  remainingLifePercent,
+  lifeTone,
+} from '../../../shared/lib/component-life';
 
 /** 잎 컴포넌트 id(`comp-{craneId}-part-{partId}`)에서 인벤토리 partId를 추출 */
 function partIdFromComponent(c: CraneComponent): string | null {
@@ -26,8 +30,9 @@ function partIdFromComponent(c: CraneComponent): string | null {
 // ── 컴팩트 부품 행 (인벤토리 딥링크) ──
 function PartLeafRow({ component }: { component: CraneComponent }) {
   const { t } = useTranslation('asset-management');
-  const pct = lifePercent(component);
-  const tone = lifeTone(pct);
+  // 화면 표기는 앱 전역 규칙대로 잔여율 — 톤 임계값만 사용률 기준
+  const remainingPct = remainingLifePercent(component);
+  const tone = lifeTone(usedLifePercent(component));
   const partId = partIdFromComponent(component);
 
   const inner = (
@@ -41,12 +46,18 @@ function PartLeafRow({ component }: { component: CraneComponent }) {
           </p>
         )}
       </div>
-      <div className="flex w-24 shrink-0 items-center gap-1.5">
+      <div
+        className="flex w-24 shrink-0 items-center gap-1.5"
+        title={t('detail.zonePanel.remainingLife', { defaultValue: '잔여 수명' })}
+      >
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-          <div className={cn('h-full rounded-full', TONE_DOT[tone])} style={{ width: `${pct}%` }} />
+          <div
+            className={cn('h-full rounded-full', TONE_DOT[tone])}
+            style={{ width: `${remainingPct}%` }}
+          />
         </div>
         <span className={cn('w-8 shrink-0 text-right text-[10px] font-semibold tabular-nums', TONE_TEXT[tone])}>
-          {pct}%
+          {remainingPct}%
         </span>
       </div>
       {partId ? (
@@ -89,7 +100,11 @@ function ClusterBlock({
 }) {
   const { t } = useTranslation('asset-management');
   const isOpen = open || forceOpen;
-  const worstChildPct = parts.reduce((max, c) => Math.max(max, lifePercent(c)), 0);
+  // 클러스터 헤더에는 가장 소모가 심한 자식의 잔여율을 보여준다
+  const worstRemainingPct = parts.reduce(
+    (min, c) => Math.min(min, remainingLifePercent(c)),
+    100,
+  );
 
   return (
     <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
@@ -112,18 +127,18 @@ function ClusterBlock({
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           {cluster.componentName}
         </span>
-        {worstChildPct > 0 && (
+        {parts.length > 0 && worstRemainingPct < 100 && (
           <span
             className={cn(
               'shrink-0 text-[11px] font-semibold tabular-nums',
-              worstChildPct >= 90
+              worstRemainingPct <= 10
                 ? TONE_TEXT.critical
-                : worstChildPct >= 70
+                : worstRemainingPct <= 30
                   ? TONE_TEXT.warning
                   : 'text-muted-foreground',
             )}
           >
-            {worstChildPct}%
+            {worstRemainingPct}%
           </span>
         )}
         <Badge variant={COMPONENT_STATUS_VARIANT[cluster.status]} className="shrink-0">

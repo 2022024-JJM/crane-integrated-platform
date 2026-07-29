@@ -1,6 +1,7 @@
 import { Package, Inbox, Clock, Wrench, SearchCheck, CheckCircle2 } from 'lucide-react';
 import type { RepairStatus } from '@crane/domain/maintenance';
 import type { Tone } from '../../../shared/ui/tone';
+import { REPAIR_STATUS_TONE } from '../../../shared/ui/status-variants';
 
 /**
  * 보드/스테퍼는 3단계 매크로 파이프라인(접수→진행 중→완료)만 노출한다.
@@ -20,12 +21,20 @@ export function macroOf(status: RepairStatus): MacroStage | null {
   return status;
 }
 
-// 컬럼 크롬은 전부 뉴트럴 — 스테이지 식별은 도트 톤 하나로만.
-export const COLUMN_CONFIG: Record<RepairStatus, { icon: React.ReactNode; tone: Tone }> = {
-  received: { icon: <Inbox className="h-3.5 w-3.5" />, tone: 'neutral' },
-  waiting_parts: { icon: <Package className="h-3.5 w-3.5" />, tone: 'warning' },
-  in_progress: { icon: <Wrench className="h-3.5 w-3.5" />, tone: 'info' },
-  re_inspection: { icon: <SearchCheck className="h-3.5 w-3.5" />, tone: 'info' },
-  completed: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, tone: 'positive' },
-  on_hold: { icon: <Clock className="h-3.5 w-3.5" />, tone: 'neutral' },
+// 아이콘만 여기서 정의하고 톤은 status-variants의 단일 소스를 참조한다 —
+// 같은 상태가 보드 도트·상태 배지·이력 화면에서 서로 다른 색으로 어긋나지 않게.
+const COLUMN_ICON: Record<RepairStatus, React.ReactNode> = {
+  received: <Inbox className="h-3.5 w-3.5" />,
+  waiting_parts: <Package className="h-3.5 w-3.5" />,
+  in_progress: <Wrench className="h-3.5 w-3.5" />,
+  re_inspection: <SearchCheck className="h-3.5 w-3.5" />,
+  completed: <CheckCircle2 className="h-3.5 w-3.5" />,
+  on_hold: <Clock className="h-3.5 w-3.5" />,
 };
+
+export const COLUMN_CONFIG = Object.fromEntries(
+  (Object.keys(COLUMN_ICON) as RepairStatus[]).map((s) => [
+    s,
+    { icon: COLUMN_ICON[s], tone: REPAIR_STATUS_TONE[s] },
+  ]),
+) as Record<RepairStatus, { icon: React.ReactNode; tone: Tone }>;

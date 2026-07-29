@@ -7,7 +7,9 @@
     "expiringCerts": "만료 임박 인증서",
     "openReports": "미제출 보고서",
     "nonConformance": "부적합 건수",
-    "thisMonth": "이번 달"
+    "thisMonth": "이번 달",
+    "certAlerts": "인증서 경고",
+    "certAlertsSub": "만료 {{expired}} · 임박 {{soon}}"
   },
   "certAlert": {
     "title": "인증서 만료 임박 ({{count}})",
@@ -29,7 +31,7 @@
     },
     "status": {
       "valid": "유효",
-      "expiring_soon": "만료 임박",
+      "expiry_soon": "만료 임박",
       "expired": "만료",
       "renewing": "갱신 중"
     },

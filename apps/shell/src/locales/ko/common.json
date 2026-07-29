@@ -344,5 +344,6 @@
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",
     "resizePreview": "미리보기 크기 조절"
-  }
+  },
+  "undo": "실행 취소"
 }

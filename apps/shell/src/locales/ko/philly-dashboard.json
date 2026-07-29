@@ -12,7 +12,7 @@
     "openRisks": "미해결 리스크",
     "safety": "안전",
     "production": "생산",
-    "showRisks": "리스크 보기 ({{count}}건)",
+    "showRisks": "전체 보기 ({{count}}건)",
     "hideRisks": "접기",
     "empty": "미해결 리스크가 없습니다",
     "source": {
@@ -37,46 +37,30 @@
     },
     "toast": {
       "issued": "수리 티켓 {{repair}}건, 부품 요청 {{parts}}건을 생성했습니다"
-    }
+    },
+    "totalCount": "미해결 총 {{count}}건"
   },
   "connectivity": {
     "title": "장비 상태",
     "componentCondition": "부품 상태",
     "operatingAlerts": "운영 알림",
     "critical": "심각",
-    "low": "주의"
-  },
-  "serviceReview": {
-    "title": "서비스 리뷰 및 리포트",
-    "serviceVisits": "서비스 방문",
-    "assetsServiced": "정비 자산",
-    "totalFindings": "발견 사항"
+    "low": "주의",
+    "immediate": "즉시 조치",
+    "preventive": "예방 조치"
   },
   "activeTickets": {
     "title": "진행 중 티켓",
     "open": "진행 중",
     "completed": "완료",
-    "onHold": "보류"
-  },
-  "assetFleet": {
-    "title": "자산 현황",
-    "agreementAssets": "계약 자산",
-    "connectedAssets": "연결 자산",
-    "assetsUnit": "대"
+    "onHold": "보류",
+    "completedThisMonth": "이번 달 완료"
   },
   "dailyInspection": {
-    "title": "일일 점검",
-    "subtitle": "최근 7일 점검 결과",
     "passed": "정상",
     "failed": "이상"
   },
   "quickLinks": {
-    "businessReview": "비즈니스 리뷰",
-    "serviceCalendar": "서비스 캘린더",
-    "documents": "문서 및 매뉴얼",
-    "agreements": "서비스 계약",
-    "locationActivities": "위치별 활동",
-    "slings": "슬링 및 액세서리",
     "newTicket": "신규 티켓"
   },
   "failureType": {
@@ -106,5 +90,14 @@
     "dock1": "1번 도크",
     "dock2": "4번 도크",
     "dockIn": "블록 공장"
+  },
+  "fleetSummary": {
+    "title": "자산·점검 현황",
+    "operating": "가동 자산",
+    "inspected": "점검 완료 자산",
+    "recent7": "최근 7일 점검",
+    "noRecent": "최근 7일간 완료된 점검이 없습니다",
+    "viewOverdue": "지연 점검 {{count}}건 보기",
+    "viewSchedule": "점검 일정 보기"
   }
 }

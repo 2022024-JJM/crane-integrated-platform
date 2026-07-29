@@ -12,7 +12,7 @@
     "openRisks": "Pericula Aperta",
     "safety": "Securitas",
     "production": "Productio",
-    "showRisks": "Pericula videre ({{count}})",
+    "showRisks": "Vide omnia ({{count}})",
     "hideRisks": "Celare",
     "empty": "Nulla pericula aperta",
     "source": {
@@ -37,46 +37,30 @@
     },
     "toast": {
       "issued": "{{repair}} tesserae refectionis, {{parts}} petitiones partium creatae"
-    }
+    },
+    "totalCount": "{{count}} in summa aperta"
   },
   "connectivity": {
     "title": "STATUS CLASSIS",
     "componentCondition": "Conditio Partium",
     "operatingAlerts": "Monita Operationis",
     "critical": "Criticum",
-    "low": "Bassum"
-  },
-  "serviceReview": {
-    "title": "Recensio et Tabulae",
-    "serviceVisits": "Visitationes",
-    "assetsServiced": "Bona Curata",
-    "totalFindings": "Inventiones"
+    "low": "Bassum",
+    "immediate": "Actio Statim",
+    "preventive": "Actio Praeventiva"
   },
   "activeTickets": {
     "title": "Tessera Activae",
     "open": "Apertae",
     "completed": "Perfectae",
-    "onHold": "Suspensae"
-  },
-  "assetFleet": {
-    "title": "Classis Bonorum",
-    "agreementAssets": "Bona Pacti",
-    "connectedAssets": "Bona Conexa",
-    "assetsUnit": "Bona"
+    "onHold": "Suspensae",
+    "completedThisMonth": "Hoc mense perfecta"
   },
   "dailyInspection": {
-    "title": "Inspectio Quotidiana",
-    "subtitle": "Inspectiones septem dierum recentium",
     "passed": "Probata",
     "failed": "Reprobata"
   },
   "quickLinks": {
-    "businessReview": "Recensio Negotii",
-    "serviceCalendar": "Kalendarium Ministerii",
-    "documents": "Documenta et Manualia",
-    "agreements": "Pacta Ministerii",
-    "locationActivities": "Operationes Locorum",
-    "slings": "Funes et Accessoria",
     "newTicket": "Nova Tessera"
   },
   "failureType": {
@@ -106,5 +90,14 @@
     "dock1": "Doca I",
     "dock2": "Doca IV",
     "dockIn": "Officina Fabrica"
+  },
+  "fleetSummary": {
+    "title": "Machinae et Inspectiones",
+    "operating": "Operantes",
+    "inspected": "Inspectae",
+    "recent7": "Inspectiones, ultimi 7 dies",
+    "noRecent": "Nullae inspectiones intra 7 dies perfectae",
+    "viewOverdue": "Vide {{count}} retardatas",
+    "viewSchedule": "Vide horarium"
   }
 }

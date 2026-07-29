@@ -67,5 +67,8 @@
     "rootCause": "Causa Radicalis",
     "correctiveAction": "Actio Correctiva",
     "preventiveAction": "Actio Praventiva"
+  },
+  "board": {
+    "moreInHistory": "Vide {{count}} plura in historia"
   }
 }
