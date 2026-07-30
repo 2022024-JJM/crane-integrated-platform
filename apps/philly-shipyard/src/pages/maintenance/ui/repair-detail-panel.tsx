@@ -35,6 +35,8 @@ export function RepairDetailPanel({
   const { repair, sourceInspectionId } = useMaintenanceDetail(repairId);
   const setStatus = useSetRepairStatus();
   const [partModalOpen, setPartModalOpen] = useState(false);
+  // 결과 폼에 미저장 입력이 있는지 — 닫기/새로고침 시 데이터 손실 가드용
+  const [resultsDirty, setResultsDirty] = useState(false);
   // 슬라이드 애니메이션용: 마운트 직후 entered=true로 전환해 오른쪽에서 밀려들어온다
   const [entered, setEntered] = useState(false);
 
@@ -43,11 +45,27 @@ export function RepairDetailPanel({
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // 닫기 요청 — 슬라이드 아웃 후 실제 onClose 호출
+  // 닫기 요청 — 미저장 결과 입력이 있으면 확인 후, 슬라이드 아웃 뒤 실제 onClose 호출
   const requestClose = useCallback(() => {
+    if (resultsDirty && !window.confirm(t('panel.unsavedConfirm', {
+      defaultValue: 'You have unsaved results. Discard and close?',
+    }))) {
+      return;
+    }
     setEntered(false);
     window.setTimeout(onClose, PANEL_SLIDE_MS);
-  }, [onClose]);
+  }, [onClose, resultsDirty, t]);
+
+  // 탭 닫기/새로고침 가드 — 미저장 결과가 있으면 브라우저 확인창
+  useEffect(() => {
+    if (!resultsDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [resultsDirty]);
 
   // ESC: 모달 열림 → 모달이 처리(위임) / 패널 → 닫기
   useEffect(() => {
@@ -142,13 +160,14 @@ export function RepairDetailPanel({
         <div className="h-px bg-border/60" />
         <RepairPartsSection repair={repair} onAddPart={() => setPartModalOpen(true)} />
         <div className="h-px bg-border/60" />
-        <RepairResultsForm key={repair.id} repair={repair} />
+        <RepairResultsForm key={repair.id} repair={repair} onDirtyChange={setResultsDirty} />
       </div>
 
       {partModalOpen && (
         <RepairPartModal
           repairId={repair.id}
           woNumber={repair.woNumber}
+          defaultBy={repair.assignedTo}
           onClose={() => setPartModalOpen(false)}
         />
       )}

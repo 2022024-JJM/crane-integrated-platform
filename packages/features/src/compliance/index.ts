@@ -1,1 +1,1 @@
-export { useComplianceSummary } from './use-compliance-summary';
+export { useComplianceSummary, useRequestCertRenewal } from './use-compliance-summary';

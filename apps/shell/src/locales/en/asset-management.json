@@ -59,7 +59,8 @@
       "model": "e.g. Goliath 900T",
       "serialNumber": "e.g. KC-2026-GC-001",
       "locationZone": "e.g. Dock No.1 West"
-    }
+    },
+    "unsavedConfirm": "You have unsaved changes. Discard and close?"
   },
   "metrics": {
     "totalAssets": "Total Assets",
@@ -153,8 +154,6 @@
       "info": "Basic Info",
       "overview": "Components",
       "specs": "Specifications",
-      "inspection": "Inspection History",
-      "maintenance": "Maintenance History",
       "history": "History",
       "3d": "3D View",
       "condition": "Condition"
@@ -225,6 +224,7 @@
     "condition": {
       "gaugesTitle": "Component remaining life",
       "remaining": "Remaining",
+      "requestRepair": "Request repair",
       "annualAvg": "Annual average",
       "periodDelta": "During period",
       "estimatedEol": "Est. end of life",
@@ -234,7 +234,8 @@
       "noComponents": "No components to display.",
       "showAll": "View all {{count}}",
       "showWorst": "Show worst 6"
-    }
+    },
+    "historyAll": "All"
   },
   "units": {
     "ton": "T",

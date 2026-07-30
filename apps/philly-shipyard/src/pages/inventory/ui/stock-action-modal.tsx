@@ -5,8 +5,10 @@ import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useIssuePart, useReceivePart } from '@crane/features/inventory';
 import { useMaintenanceList } from '@crane/features/maintenance';
+import type { OpenPoLine } from '@crane/domain/inventory';
 import { cn } from '@crane/core/lib/utils';
 import { SURFACE_MODAL } from '../../../shared/ui/surface';
+import { loadLastActor, saveLastActor } from '../../../shared/lib/actor-storage';
 import { Button } from '@crane/ui/atoms/button';
 import { FOCUS_RING } from '../../../shared/ui/controls';
 import {
@@ -18,17 +20,22 @@ import {
 
 export type ActionMode = 'issue' | 'receipt';
 
+const PO_CUSTOM = '__custom__';
+
 export function StockActionModal({
   mode,
   partId,
   partName,
   availableQty,
+  openPoLines = [],
   onClose,
 }: {
   mode: ActionMode;
   partId: string;
   partName: string;
   availableQty: number;
+  /** 이 부품의 발주중(미입고) PO 라인 — 입고 시 손입력 대신 골라 잡는다 */
+  openPoLines?: OpenPoLine[];
   onClose: () => void;
 }) {
   const { t } = useTranslation('inventory');
@@ -38,9 +45,11 @@ export function StockActionModal({
   const activeRepairs = repairs.filter((r) => r.status !== 'completed');
 
   const [qty, setQty] = useState(1);
-  const [by, setBy] = useState('');
+  const [by, setBy] = useState(loadLastActor);
   const [repairWoId, setRepairWoId] = useState('');
   const [poRef, setPoRef] = useState('');
+  // 미결 PO가 있어도 목록에 없는 번호를 적어야 할 때가 있다 — 직접 입력 폴백
+  const [poCustom, setPoCustom] = useState(false);
   const [note, setNote] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -110,6 +119,7 @@ export function StockActionModal({
           });
 
     if (outcome.success) {
+      saveLastActor(by);
       toast.success(
         t(mode === 'issue' ? 'actions.toast.issued' : 'actions.toast.received', {
           part: partName,
@@ -197,12 +207,38 @@ export function StockActionModal({
 
           {mode === 'receipt' && (
             <FormField label={t('actions.poRef')}>
-              <input
-                value={poRef}
-                onChange={(e) => setPoRef(e.target.value)}
-                placeholder={t('actions.poPlaceholder', { defaultValue: 'PO-2026-XXXX' })}
-                className={inputClass}
-              />
+              {openPoLines.length > 0 && !poCustom ? (
+                <select
+                  value={poRef}
+                  onChange={(e) => {
+                    if (e.target.value === PO_CUSTOM) {
+                      setPoCustom(true);
+                      setPoRef('');
+                      return;
+                    }
+                    setPoRef(e.target.value);
+                    // PO 라인을 고르면 발주 수량을 입고 수량 기본값으로 — 대부분 전량 입고
+                    const line = openPoLines.find((l) => l.poNumber === e.target.value);
+                    if (line) setQty(line.qty);
+                  }}
+                  className={selectClass}
+                >
+                  <option value="">{t('actions.poNone')}</option>
+                  {openPoLines.map((l) => (
+                    <option key={l.poId} value={l.poNumber}>
+                      {l.poNumber} — {l.vendor} · {t('actions.poLineQty', { n: l.qty })}
+                    </option>
+                  ))}
+                  <option value={PO_CUSTOM}>{t('actions.poCustom')}</option>
+                </select>
+              ) : (
+                <input
+                  value={poRef}
+                  onChange={(e) => setPoRef(e.target.value)}
+                  placeholder={t('actions.poPlaceholder', { defaultValue: 'PO-2026-XXXX' })}
+                  className={inputClass}
+                />
+              )}
             </FormField>
           )}
 

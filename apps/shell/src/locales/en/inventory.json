@@ -118,6 +118,7 @@
   "actions": {
     "issue": "Issue",
     "receipt": "Receipt",
+    "requestPart": "Request Part",
     "issueTitle": "Issue Part",
     "receiptTitle": "Record Receipt",
     "qty": "Qty",
@@ -139,7 +140,10 @@
       "failed": "Action failed."
     },
     "close": "Close",
-    "poPlaceholder": "PO-2026-XXXX"
+    "poPlaceholder": "PO-2026-XXXX",
+    "poNone": "No PO",
+    "poCustom": "Enter manually...",
+    "poLineQty": "{{n}} expected"
   },
   "filter": {
     "all": "All",
@@ -168,5 +172,9 @@
   "units": {
     "days": "d",
     "currency": "$"
+  },
+  "partPicker": {
+    "placeholder": "Search part name or P/N...",
+    "noResults": "No matching parts"
   }
 }

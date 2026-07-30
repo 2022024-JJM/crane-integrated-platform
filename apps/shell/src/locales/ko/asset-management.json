@@ -59,7 +59,8 @@
       "model": "예: Goliath 900T",
       "serialNumber": "예: KC-2026-GC-001",
       "locationZone": "예: Dock No.1 West"
-    }
+    },
+    "unsavedConfirm": "입력한 내용이 저장되지 않았습니다. 창을 닫으시겠습니까?"
   },
   "metrics": {
     "totalAssets": "총 자산",
@@ -153,9 +154,7 @@
       "info": "기본 정보",
       "overview": "구성품",
       "specs": "제원",
-      "inspection": "점검 이력",
-      "maintenance": "정비 이력",
-      "history": "통합 이력",
+      "history": "이력",
       "3d": "3D 뷰",
       "condition": "부품 수명"
     },
@@ -225,6 +224,7 @@
     "condition": {
       "gaugesTitle": "구성품 잔여 수명",
       "remaining": "잔여",
+      "requestRepair": "정비 요청",
       "annualAvg": "연평균 소모",
       "periodDelta": "기간 중",
       "estimatedEol": "예상 수명 도달",
@@ -234,7 +234,8 @@
       "noComponents": "표시할 구성품이 없습니다.",
       "showAll": "전체 {{count}}개 보기",
       "showWorst": "최악 6개만"
-    }
+    },
+    "historyAll": "전체"
   },
   "units": {
     "ton": "T",

@@ -59,7 +59,8 @@
       "model": "ex. Goliath 900T",
       "serialNumber": "ex. KC-2026-GC-001",
       "locationZone": "ex. Dock No.1 West"
-    }
+    },
+    "unsavedConfirm": "Mutationes non servatae sunt. Visne claudere?"
   },
   "metrics": {
     "totalAssets": "Bona Omnia",
@@ -153,8 +154,6 @@
       "info": "Informationes Basis",
       "overview": "Partes",
       "specs": "Specificationes",
-      "inspection": "Historia Inspectionis",
-      "maintenance": "Historia Refectionis",
       "history": "Historia",
       "3d": "Visio 3D",
       "condition": "Conditio"
@@ -225,6 +224,7 @@
     "condition": {
       "gaugesTitle": "Vita residua partium",
       "remaining": "Residuum",
+      "requestRepair": "Posce Refectionem",
       "annualAvg": "Media annua",
       "periodDelta": "In periodo",
       "estimatedEol": "Finis vitae aestimatus",
@@ -234,7 +234,8 @@
       "noComponents": "Nullae partes ad monstrandum.",
       "showAll": "Vide omnia {{count}}",
       "showWorst": "Pessima 6 tantum"
-    }
+    },
+    "historyAll": "Omnia"
   },
   "units": {
     "ton": "T",

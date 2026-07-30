@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type DomainEntity = 'repair' | 'inspection' | 'parts' | 'asset';
+export type DomainEntity = 'repair' | 'inspection' | 'parts' | 'asset' | 'compliance';
 
 interface DomainEventState {
   ticks: Record<DomainEntity, number>;
@@ -14,6 +14,7 @@ const INITIAL_TICKS: Record<DomainEntity, number> = {
   inspection: 0,
   parts: 0,
   asset: 0,
+  compliance: 0,
 };
 
 export const useDomainEventStore = create<DomainEventState>()((set) => ({

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
@@ -32,8 +34,11 @@ import {
 const REPLACE_THRESHOLD = 20;
 const GAUGE_COUNT = 6;
 
-function ConditionGaugeCard({ cond }: { cond: ClusterCondition }) {
+function ConditionGaugeCard({ cond, craneId }: { cond: ClusterCondition; craneId: string }) {
   const { t } = useTranslation('asset-management');
+  // 잔여 수명이 교체 기준선 이하면 판단에서 바로 행동으로 — 수리 티켓 폼을 크레인·구성품 프리필로 연다
+  const atRisk = cond.remainingPct <= REPLACE_THRESHOLD;
+  const repairHref = `/ticket/create?type=repair&craneId=${craneId}&component=${encodeURIComponent(cond.component.componentName)}`;
   return (
     <div className={cn(SURFACE_PANEL, 'flex flex-col items-center gap-3 p-4')}>
       <RingGauge value={cond.remainingPct} color={TONE_FILL[cond.tone]} size={96} strokeWidth={8}>
@@ -65,6 +70,18 @@ function ConditionGaugeCard({ cond }: { cond: ClusterCondition }) {
           </div>
         </dl>
       </div>
+      {atRisk && (
+        <Link
+          to={repairHref}
+          className={cn(
+            'flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-2 py-1.5 text-[11px] font-medium transition-colors hover:bg-muted',
+            FOCUS_RING,
+          )}
+        >
+          <Wrench className="h-3 w-3" />
+          {t('detail.condition.requestRepair', { defaultValue: 'Request repair' })}
+        </Link>
+      )}
     </div>
   );
 }
@@ -74,6 +91,7 @@ function ConditionGaugeCard({ cond }: { cond: ClusterCondition }) {
  * 모든 값은 기존 installDate/currentHours/expectedLifeHours에서 파생된다.
  */
 export function AssetConditionTab({
+  asset,
   components,
 }: {
   asset: CraneAsset;
@@ -138,7 +156,7 @@ export function AssetConditionTab({
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {gauges.map((cond) => (
-            <ConditionGaugeCard key={cond.component.id} cond={cond} />
+            <ConditionGaugeCard key={cond.component.id} cond={cond} craneId={asset.id} />
           ))}
         </div>
       </section>

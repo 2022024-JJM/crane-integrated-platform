@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AssetDraft } from './use-create-asset';
 
 const SITE_NAME: Record<string, string> = {
@@ -56,12 +56,21 @@ export interface UseAssetFormOptions {
 
 export function useAssetForm({ resetKey, messages }: UseAssetFormOptions) {
   const [form, setForm] = useState<AssetDraft>(initialDraft);
+  const [pristine, setPristine] = useState<AssetDraft>(initialDraft);
   const [errors, setErrors] = useState<AssetFormErrors>({});
 
   useEffect(() => {
-    setForm(initialDraft());
+    const init = initialDraft();
+    setForm(init);
+    setPristine(init);
     setErrors({});
   }, [resetKey]);
+
+  // 리셋 이후 사용자가 한 필드라도 바꿨는지 — 미저장 닫기 가드용
+  const dirty = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(pristine),
+    [form, pristine],
+  );
 
   const set = useCallback(<K extends keyof AssetDraft>(key: K, value: AssetDraft[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -85,5 +94,5 @@ export function useAssetForm({ resetKey, messages }: UseAssetFormOptions) {
     return Object.keys(e).length === 0;
   }, [form, messages]);
 
-  return { form, errors, set, setSite, validate };
+  return { form, errors, dirty, set, setSite, validate };
 }
