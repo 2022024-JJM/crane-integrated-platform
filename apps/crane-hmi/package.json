@@ -6,7 +6,8 @@
   "main": "./src/pages/index.ts",
   "types": "./src/pages/index.ts",
   "exports": {
-    "./pages/hmi": "./src/pages/hmi/index.ts"
+    "./pages/hmi": "./src/pages/hmi/index.ts",
+    "./pages/hmi-philly": "./src/pages/hmi-philly/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

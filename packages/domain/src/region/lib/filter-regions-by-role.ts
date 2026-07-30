@@ -1,7 +1,7 @@
 import type { Region } from '../model/types';
 
 // UserRole을 직접 import하지 않고 string literal로 정의 (domain은 features에 의존하지 않음)
-type RegionUserRole = 'philly' | 'ocean' | 'goliath' | 'mro' | 'hmi';
+type RegionUserRole = 'philly' | 'ocean' | 'goliath' | 'mro' | 'hmi' | 'hmi2';
 
 export function filterRegionsByRole(
   regions: Region[],
@@ -21,6 +21,8 @@ export function filterRegionsByRole(
     case 'mro':
       return [];
     case 'hmi':
+      return [];
+    case 'hmi2':
       return [];
     default: {
       const _exhaustive: never = role;

@@ -8,18 +8,18 @@ export function AuthSiteTypeSync() {
 
   useEffect(() => {
     if (!user) return;
-    // role → siteType 매핑: goliath → goliath-crane, philly/mro → philly-shipyard, hmi → crane-hmi, ocean → hanwha-ocean
+    // role → siteType 매핑: goliath → goliath-crane, philly/mro → philly-shipyard, hmi/hmi2 → crane-hmi, ocean → hanwha-ocean
     const next =
       user.role === 'goliath'
         ? 'goliath-crane'
         : user.role === 'philly' || user.role === 'mro'
           ? 'philly-shipyard'
-          : user.role === 'hmi'
+          : user.role === 'hmi' || user.role === 'hmi2'
             ? 'crane-hmi'
             : 'hanwha-ocean';
     setSiteType(next);
-  // user 객체 참조가 아닌 role 값이 바뀔 때만 재실행
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // user 객체 참조가 아닌 role 값이 바뀔 때만 재실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role, setSiteType]);
 
   return null;

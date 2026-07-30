@@ -79,7 +79,8 @@
     "compliance": "OSHA Compliance",
     "categoryCrane": "Crane",
     "hmi": "HMI",
-    "hmiDashboard": "HMI Dashboard"
+    "hmiDashboard": "HMI Dashboard",
+    "hmiPhillyDashboard": "Anti-Collision HMI"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",
