@@ -252,6 +252,27 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     defaultScale: [1, 1, 1],
   }),
   withDefaultPreview({
+    id: 'factory-sample-01',
+    label: 'Factory Sample 01',
+    category: 'indoor',
+    path: '/models/factory_sample_01.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'factory-sample-02',
+    label: 'Factory Sample 02',
+    category: 'indoor',
+    path: '/models/factory_sample_02.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'factory-sample-03',
+    label: 'Factory Sample 03',
+    category: 'indoor',
+    path: '/models/factory_sample_03.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
     id: 'gc-04-body',
     label: 'GC-04 Body',
     category: 'etc',

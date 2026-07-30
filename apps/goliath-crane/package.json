@@ -27,6 +27,10 @@
     "three": "^0.183.2",
     "recharts": "^3.8.1",
     "protobufjs": "^8.0.1",
+    "@foxglove/rosmsg": "^5.0.5",
+    "@foxglove/rosmsg2-serialization": "^3.1.2",
+    "@foxglove/ws-protocol": "^0.8.0",
+    "sonner": "^2.0.3",
     "zustand": "^5.0.11"
   }
 }

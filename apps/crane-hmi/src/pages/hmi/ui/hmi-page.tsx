@@ -51,7 +51,7 @@ export function HmiPage() {
   const [themeName, setThemeName] = useState<HmiThemeName>(loadThemeName);
 
   const snap = useHmiData({ kind: masterKind, commError, limits });
-  const { ref, scale } = useFitScale(DESIGN_W, DESIGN_H);
+  const { ref, scale, fillW, fillH } = useFitScale(DESIGN_W, DESIGN_H);
 
   const settingsClicks = useRef({ count: 0, last: 0 });
 
@@ -99,24 +99,27 @@ export function HmiPage() {
         ref={ref}
         style={{
           width: '100%',
-          height: '100%',
+          // AppLayout 헤더(h-14 + border 1px)를 제외한 나머지 뷰포트에 맞춤
+          height: 'calc(100dvh - 57px)',
           background: '#000',
-          display: 'grid',
-          placeItems: 'center',
+          position: 'relative',
           overflow: 'hidden',
         }}
       >
         <style>{HMI_KEYFRAMES}</style>
         <div
           style={{
-            width: DESIGN_W,
-            height: DESIGN_H,
-            flexShrink: 0,
-            transform: `scale(${scale})`,
-            transformOrigin: 'center',
+            // 화면 비율에 맞춰 캔버스를 확장해 레터박스 없이 꽉 채움.
+            // absolute 배치라 캔버스 크기가 컨테이너 측정에 되먹임되지 않는다.
+            // (남는 폭은 지도, 남는 높이는 본문 영역이 흡수)
+            width: fillW,
+            height: fillH,
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%) scale(${scale})`,
             background: theme.pageBg,
             fontFamily: theme.font,
-            position: 'relative',
             userSelect: 'none',
           }}
         >
@@ -145,16 +148,17 @@ export function HmiPage() {
                 padding: 8,
               }}
             >
-              <div style={{ width: 528, flexShrink: 0 }}>
+              {/* 지도가 남는 폭을 흡수하고, 정보 패널은 설계 폭(464px)을 유지 */}
+              <div style={{ flex: 1, minWidth: 528 }}>
                 <CraneMap snap={snap} flashKey={snap.alarmAt} />
               </div>
               <div
                 style={{
-                  flex: 1,
+                  width: 464,
+                  flexShrink: 0,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8,
-                  minWidth: 0,
                 }}
               >
                 <MasterPanel snap={snap} />

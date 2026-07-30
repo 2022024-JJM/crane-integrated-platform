@@ -7,7 +7,9 @@
     "expiringCerts": "Expiring Certs (90d)",
     "openReports": "Open Findings",
     "nonConformance": "Non-Conformance",
-    "thisMonth": "this month"
+    "thisMonth": "this month",
+    "certAlerts": "Cert Alerts",
+    "certAlertsSub": "{{expired}} expired · {{soon}} expiring"
   },
   "certAlert": {
     "title": "Certification Alerts ({{count}})",
@@ -29,7 +31,7 @@
     },
     "status": {
       "valid": "Valid",
-      "expiring_soon": "Expiring Soon",
+      "expiry_soon": "Expiring Soon",
       "expired": "Expired",
       "renewing": "Renewing"
     },

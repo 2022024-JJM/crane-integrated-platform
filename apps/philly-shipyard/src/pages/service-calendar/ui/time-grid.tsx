@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { CalendarEvent } from '@crane/features/calendar';
 import { canRescheduleEvent } from '@crane/features/calendar';
 import { cn } from '@crane/core/lib/utils';
+import { TONE_DOT } from '../../../shared/ui/tone';
 import { isSameDay, minutesFromMidnight, startOfDay } from '../model/date-utils';
 import { eventAccent } from '../model/colors';
 import { buildSpanSegments, isStripEvent } from '../model/week-segments';
@@ -11,6 +12,7 @@ import { formatHourLabel, formatTime, formatWeekdayShort, gmtOffsetLabel } from 
 import { EventStripBar } from './event-chip';
 import { EventPopoverContent } from './event-popover';
 import { Popover, PopoverPopup, PopoverTrigger } from '@crane/ui/molecules/popover';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 const START_HOUR = 0;
 const END_HOUR = 24; // 구글 캘린더처럼 24시간 전체 — 세로 스크롤로 탐색
@@ -128,10 +130,11 @@ function DayColumn({
       {/* 현재 시각 표시선 */}
       {showNow && (
         <div
-          className="pointer-events-none absolute inset-x-0 z-10 border-t border-red-500"
+          className="pointer-events-none absolute inset-x-0 z-10"
           style={{ top: ((nowMin - gridStart) / 60) * ROW_H }}
         >
-          <span className="absolute -left-1 -top-1 size-2 rounded-full bg-red-500" />
+          <div className={cn('h-px', TONE_DOT.critical)} />
+          <span className={cn('absolute -left-1 -top-1 size-2 rounded-full', TONE_DOT.critical)} />
         </div>
       )}
 
@@ -402,7 +405,7 @@ export function TimeGrid({
       <div className="grid border-b border-border/60 bg-muted/40" style={gridCols}>
         {/* 코너 셀 — 구글 캘린더처럼 GMT 오프셋 표시 */}
         <div className="flex items-end justify-end border-r border-border/40 px-1 pb-1">
-          <span className="text-[9px] text-muted-foreground/70">{gmtOffsetLabel()}</span>
+          <span className="text-[10px] text-muted-foreground/70">{gmtOffsetLabel()}</span>
         </div>
         {days.map((day) => {
           const isToday = isSameDay(day, now);
@@ -428,7 +431,7 @@ export function TimeGrid({
               key={day.toISOString()}
               type="button"
               onClick={() => onDayClick(day)}
-              className="cursor-pointer border-r border-border/40 py-2 text-center transition-colors last:border-r-0 hover:bg-muted/60"
+              className={cn('cursor-pointer border-r border-border/40 py-2 text-center transition-colors last:border-r-0 hover:bg-muted/60', FOCUS_RING)}
             >
               {inner}
             </button>
@@ -454,7 +457,7 @@ export function TimeGrid({
                 onClick={() => setAllDayExpanded((v) => !v)}
                 aria-label={allDayExpanded ? t('allDayCollapse') : t('allDayExpand')}
                 title={allDayExpanded ? t('allDayCollapse') : t('allDayExpand')}
-                className="cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className={cn('cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
               >
                 {allDayExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
               </button>
@@ -494,7 +497,7 @@ export function TimeGrid({
                       key={`hidden-${ci}`}
                       type="button"
                       onClick={() => setAllDayExpanded(true)}
-                      className="min-w-0 cursor-pointer rounded px-1.5 text-left text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className={cn('min-w-0 cursor-pointer rounded px-1.5 text-left text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
                       style={{ gridColumn: ci + 1, gridRow: visibleRows + 1 }}
                     >
                       {t('moreCount', { count: n })}

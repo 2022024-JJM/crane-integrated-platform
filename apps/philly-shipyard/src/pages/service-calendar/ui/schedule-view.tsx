@@ -13,6 +13,7 @@ import {
 import { eventAccent } from '../model/colors';
 import { formatTime, formatWeekdayShort } from '../model/format';
 import { EventPopoverContent } from './event-popover';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 /** 구글 캘린더 Schedule 뷰 — 앵커 월의 일정을 날짜별 목록으로 (빈 날은 생략) */
 export function ScheduleView({
@@ -71,7 +72,7 @@ export function ScheduleView({
               <button
                 type="button"
                 onClick={() => onDayClick(day)}
-                className="group flex h-fit cursor-pointer flex-col items-center gap-0.5 rounded-md py-1 transition-colors hover:bg-muted"
+                className={cn('group flex h-fit cursor-pointer flex-col items-center gap-0.5 rounded-md py-1 transition-colors hover:bg-muted', FOCUS_RING)}
               >
                 <span
                   className={cn(

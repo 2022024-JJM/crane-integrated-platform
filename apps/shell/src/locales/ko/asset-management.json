@@ -51,6 +51,14 @@
       "serialRequired": "시리얼 번호를 입력해 주세요.",
       "capacityRequired": "정격 하중을 입력해 주세요.",
       "locationRequired": "위치 구역을 입력해 주세요."
+    },
+    "close": "닫기",
+    "placeholders": {
+      "name": "예: GC-106",
+      "manufacturer": "예: Konecranes",
+      "model": "예: Goliath 900T",
+      "serialNumber": "예: KC-2026-GC-001",
+      "locationZone": "예: Dock No.1 West"
     }
   },
   "metrics": {
@@ -65,7 +73,8 @@
     "warrantyAlert": "워런티 경고",
     "warrantyAlertSub": "만료 {{expired}}건 · 임박 {{soon}}건",
     "openWorkOrders": "처리 대기 작업",
-    "openWorkOrdersSub": "지연 {{overdue}}건 · 수리 {{repair}}건"
+    "openWorkOrdersSub": "지연 {{overdue}}건 · 수리 {{repair}}건",
+    "fleetUptimeSub2": "가동률 {{pct}}%"
   },
   "sort": {
     "label": "정렬",
@@ -81,6 +90,10 @@
     }
   },
   "criticalAlert": "점검 지연 {{overdueCount}}대 · 수리 진행 {{repairCount}}대 — 즉각적인 조치 필요",
+  "criticalAlertActions": {
+    "inspections": "지연 점검 보기",
+    "repairs": "수리 현황 보기"
+  },
   "card": {
     "warrantyExpired": "워런티 만료",
     "warrantyUntil": "워런티: {{date}}",
@@ -103,7 +116,8 @@
     "woBreakdown": "점검 {{overdue}} · 정비 {{repair}}",
     "noOpenWo": "없음",
     "nextInspection": "다음 점검",
-    "view3d": "3D 보기"
+    "view3d": "3D 보기",
+    "inspectionOverdue": "점검 지연"
   },
   "status": {
     "operating": "운용 중",
@@ -142,7 +156,8 @@
       "inspection": "점검 이력",
       "maintenance": "정비 이력",
       "history": "통합 이력",
-      "3d": "3D 뷰"
+      "3d": "3D 뷰",
+      "condition": "부품 수명"
     },
     "componentHealth": {
       "title": "구성품 상태",
@@ -206,6 +221,19 @@
       "status": "상태",
       "remainingLife": "잔여 수명",
       "back": "목록으로"
+    },
+    "condition": {
+      "gaugesTitle": "구성품 잔여 수명",
+      "remaining": "잔여",
+      "annualAvg": "연평균 소모",
+      "periodDelta": "기간 중",
+      "estimatedEol": "예상 수명 도달",
+      "trendTitle": "수명 추이",
+      "threshold": "교체 기준선",
+      "perYear": "/년",
+      "noComponents": "표시할 구성품이 없습니다.",
+      "showAll": "전체 {{count}}개 보기",
+      "showWorst": "최악 6개만"
     }
   },
   "units": {

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { FileText, UserCog } from 'lucide-react';
+import { SlidersHorizontal, Zap } from 'lucide-react';
 import { DatePicker } from '@crane/ui/molecules/date-picker';
 import type { RepairTicketDraft } from '@crane/features/ticket';
 import {
@@ -7,10 +7,11 @@ import {
   FormField,
   ToggleGroup,
   selectClass,
-  inputClass,
   textareaClass,
   type AccentColor,
 } from './form-helpers';
+import { ComponentCombobox } from './component-combobox';
+import { AssigneeField } from './assignee-field';
 
 export interface RepairFieldsState {
   componentName: string;
@@ -33,6 +34,10 @@ interface RepairFieldsProps {
   onChange: <K extends keyof RepairFieldsState>(key: K, value: RepairFieldsState[K]) => void;
   craneSelectSlot: React.ReactNode;
   prioritySlot: React.ReactNode;
+  /** 구성품 자동완성용 — 선택된 크레인 */
+  craneId: string;
+  /** 프리필 딥링크로 진입한 경우 상세 옵션을 미리 펼친다 */
+  advancedDefaultOpen?: boolean;
 }
 
 export function RepairFields({
@@ -42,6 +47,8 @@ export function RepairFields({
   onChange,
   craneSelectSlot,
   prioritySlot,
+  craneId,
+  advancedDefaultOpen = false,
 }: RepairFieldsProps) {
   const { t } = useTranslation('ticket');
 
@@ -51,32 +58,27 @@ export function RepairFields({
     { value: 'local' as const, label: t('performerType.local') },
   ];
 
+  // 상세 옵션 안 필드에 검증 에러가 생기면 접힌 채로 숨겨지지 않게 강제로 펼친다
+  const advancedHasError = Boolean(
+    errors.assignedTo || errors.scheduledStart || errors.scheduledEnd,
+  );
+
   return (
     <>
-      <FormSection title={t('sections.basicInfo')} icon={FileText} accent={accent} step={1}>
+      <FormSection title={t('sections.quick')} icon={Zap} accent={accent} step={1}>
         {craneSelectSlot}
         {prioritySlot}
 
-        <FormField label={t('fields.componentName')} required error={errors.componentName}>
-          <input
-            className={inputClass}
-            placeholder={t('placeholders.componentName')}
+        <FormField
+          label={t('fields.componentName')}
+          error={errors.componentName}
+          hint={t('hints.optionalAuto')}
+        >
+          <ComponentCombobox
+            craneId={craneId}
             value={state.componentName}
-            onChange={(e) => onChange('componentName', e.target.value)}
+            onValueChange={(v) => onChange('componentName', v)}
           />
-        </FormField>
-
-        <FormField label={t('fields.sourceType')}>
-          <select
-            className={selectClass}
-            value={state.sourceType}
-            onChange={(e) => onChange('sourceType', e.target.value as RepairFieldsState['sourceType'])}
-          >
-            <option value="breakdown">{t('sourceType.breakdown')}</option>
-            <option value="inspection">{t('sourceType.inspection')}</option>
-            <option value="preventive">{t('sourceType.preventive')}</option>
-            <option value="predictive">{t('sourceType.predictive')}</option>
-          </select>
         </FormField>
 
         <FormField label={t('fields.failureType')}>
@@ -93,6 +95,40 @@ export function RepairFields({
           </select>
         </FormField>
 
+        <FormField label={t('fields.failureDescription')} required error={errors.failureDescription} colSpan={2}>
+          <textarea
+            className={textareaClass}
+            rows={3}
+            placeholder={t('placeholders.failureDescription')}
+            value={state.failureDescription}
+            onChange={(e) => onChange('failureDescription', e.target.value)}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection
+        title={t('sections.advanced')}
+        icon={SlidersHorizontal}
+        accent={accent}
+        step={2}
+        hint={t('hints.optionalDefaults')}
+        collapsible
+        defaultOpen={advancedDefaultOpen}
+        forceOpen={advancedHasError}
+      >
+        <FormField label={t('fields.sourceType')}>
+          <select
+            className={selectClass}
+            value={state.sourceType}
+            onChange={(e) => onChange('sourceType', e.target.value as RepairFieldsState['sourceType'])}
+          >
+            <option value="breakdown">{t('sourceType.breakdown')}</option>
+            <option value="inspection">{t('sourceType.inspection')}</option>
+            <option value="preventive">{t('sourceType.preventive')}</option>
+            <option value="predictive">{t('sourceType.predictive')}</option>
+          </select>
+        </FormField>
+
         <FormField label={t('fields.repairLevel')}>
           <select
             className={selectClass}
@@ -105,18 +141,6 @@ export function RepairFields({
           </select>
         </FormField>
 
-        <FormField label={t('fields.failureDescription')} required error={errors.failureDescription} colSpan={2}>
-          <textarea
-            className={textareaClass}
-            rows={3}
-            placeholder={t('placeholders.failureDescription')}
-            value={state.failureDescription}
-            onChange={(e) => onChange('failureDescription', e.target.value)}
-          />
-        </FormField>
-      </FormSection>
-
-      <FormSection title={t('sections.assignment')} icon={UserCog} accent={accent} step={2}>
         <FormField label={t('fields.performerType')}>
           <ToggleGroup
             value={state.performerType}
@@ -125,16 +149,19 @@ export function RepairFields({
           />
         </FormField>
 
-        <FormField label={t('fields.assignedTo')} required error={errors.assignedTo}>
-          <input
-            className={inputClass}
-            placeholder={t('placeholders.assignedTo')}
+        <FormField
+          label={t('fields.assignedTo')}
+          error={errors.assignedTo}
+          hint={t('hints.optionalAuto')}
+        >
+          <AssigneeField
+            performerType={state.performerType}
             value={state.assignedTo}
-            onChange={(e) => onChange('assignedTo', e.target.value)}
+            onValueChange={(v) => onChange('assignedTo', v)}
           />
         </FormField>
 
-        <FormField label={t('fields.scheduledStart')} required error={errors.scheduledStart}>
+        <FormField label={t('fields.scheduledStart')} error={errors.scheduledStart}>
           <DatePicker
             value={state.scheduledStart}
             onChange={(v) => onChange('scheduledStart', v)}
@@ -142,7 +169,7 @@ export function RepairFields({
           />
         </FormField>
 
-        <FormField label={t('fields.scheduledEnd')} required error={errors.scheduledEnd}>
+        <FormField label={t('fields.scheduledEnd')} error={errors.scheduledEnd}>
           <DatePicker
             value={state.scheduledEnd}
             onChange={(v) => onChange('scheduledEnd', v)}

@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, Plus, Search } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Plus, Search } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
 import type { AssetStatus, CraneAsset } from '@crane/domain/asset';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY, PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
+import { buttonVariants } from '@crane/ui/atoms/button';
 import { useSectionCollapseGroup } from '@crane/core/lib/use-section-collapse-group';
 import {
   PILL_INACTIVE,
@@ -12,12 +15,13 @@ import {
   TONE_SURFACE,
   TONE_TEXT,
 } from '../../../shared/ui/tone';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import { SITES } from '../../../shared/config/sites';
 import { ASSET_STATUS_TONE as STATUS_FILTER_TONE } from '../../../shared/ui/status-variants';
 import { daysBetween, parseLocalDate, startOfToday } from '../../../shared/lib/relative-date';
 import { NewAssetModal } from './new-asset-modal';
 import { AssetSection } from './asset-section';
-import { MetricCard } from './asset-metric-card';
+import { MetricCard } from '../../../shared/ui/metric-card';
 
 const FILTER_STATUSES: AssetStatus[] = ['operating', 'inspection', 'repair', 'idle', 'decommissioned'];
 
@@ -53,8 +57,19 @@ export function AssetManagementPage() {
   const { t } = useTranslation('asset-management');
   const today = useMemo(() => startOfToday(), []);
 
-  const [statusFilters, setStatusFilters] = useState<Set<AssetStatus>>(new Set());
-  const [search, setSearch] = useState('');
+  // 필터/검색은 ?status=/?q= URL 파라미터가 단일 소스 — 상세 이동 후 뒤로가기에도 유지되고,
+  // 대시보드 딥링크(/asset-management?status=repair)와 같은 경로를 쓴다. 기본값(전체/빈 검색)은 URL에서 생략.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('q') ?? '';
+  const statusFilters = useMemo(() => {
+    const raw = searchParams.get('status');
+    if (!raw) return new Set<AssetStatus>();
+    return new Set(
+      raw
+        .split(',')
+        .filter((s): s is AssetStatus => (FILTER_STATUSES as string[]).includes(s)),
+    );
+  }, [searchParams]);
   const [modalOpen, setModalOpen] = useState(false);
 
   // 섹션은 하드코딩 대신 사이트 카탈로그 + 실제 자산 siteId에서 파생
@@ -72,12 +87,20 @@ export function AssetManagementPage() {
   });
 
   const toggleFilter = (s: AssetStatus) => {
-    setStatusFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
+    const updated = new Set(statusFilters);
+    if (updated.has(s)) updated.delete(s);
+    else updated.add(s);
+    const next = new URLSearchParams(searchParams);
+    if (updated.size === 0) next.delete('status');
+    else next.set('status', FILTER_STATUSES.filter((f) => updated.has(f)).join(','));
+    setSearchParams(next, { replace: true });
+  };
+
+  const setSearch = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('q', value);
+    else next.delete('q');
+    setSearchParams(next, { replace: true });
   };
 
   const filteredAssets = useMemo(() => {
@@ -120,6 +143,8 @@ export function AssetManagementPage() {
   const {
     overdueAssetCount,
     repairAssetCount,
+    overdueWoCount,
+    repairWoCount,
     criticalCount,
     fleetUptimePct,
     warrantyExpiringSoon,
@@ -128,6 +153,15 @@ export function AssetManagementPage() {
   } = useMemo(() => {
     const overdue = Object.keys(craneInspectionMap).length;
     const repair = Object.keys(craneRepairMap).length;
+    // 자산 수(대)와 WO 건수(건)는 다른 단위 — KPI 카드는 실제 WO 건수를 쓴다
+    const overdueWo = Object.values(craneInspectionMap).reduce(
+      (sum, v) => sum + (v.overdueCount ?? 0),
+      0,
+    );
+    const repairWo = Object.values(craneRepairMap).reduce(
+      (sum, v) => sum + (v.activeCount ?? 0),
+      0,
+    );
     let soon = 0;
     let expired = 0;
     for (const a of assets) {
@@ -138,6 +172,8 @@ export function AssetManagementPage() {
     return {
       overdueAssetCount: overdue,
       repairAssetCount: repair,
+      overdueWoCount: overdueWo,
+      repairWoCount: repairWo,
       criticalCount: overdue + repair,
       fleetUptimePct:
         summary.total > 0 ? Math.round((summary.operating / summary.total) * 100) : 0,
@@ -163,16 +199,16 @@ export function AssetManagementPage() {
   }, [assets]);
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className={cn(buttonVariants({ size: 'lg' }), 'hover:bg-primary/80')}
         >
           <Plus className="size-4" />
           {t('newAsset', { defaultValue: 'New Asset' })}
@@ -180,7 +216,7 @@ export function AssetManagementPage() {
       </div>
 
       {criticalCount > 0 && (
-        <div className={cn('flex items-center gap-3 rounded border px-5 py-3', TONE_SURFACE.critical)}>
+        <div className={cn('flex flex-wrap items-center gap-3 rounded border px-5 py-3', TONE_SURFACE.critical)}>
           <AlertCircle className={cn('h-4 w-4 shrink-0', TONE_TEXT.critical)} />
           <p className={cn('text-sm font-medium', TONE_TEXT.critical)}>
             {t('criticalAlert', {
@@ -189,6 +225,35 @@ export function AssetManagementPage() {
               defaultValue: `${overdueAssetCount} overdue inspections · ${repairAssetCount} in repair — immediate action required`,
             })}
           </p>
+          {/* 배너의 두 수치는 각각 다른 페이지가 대상 — 문구를 쪼개는 대신 링크 칩으로 행동을 붙인다 */}
+          <span className="ml-auto flex flex-wrap items-center gap-2">
+            {overdueAssetCount > 0 && (
+              <Link
+                to="/inspection?status=overdue"
+                className={cn(
+                  'group inline-flex items-center gap-1 rounded border border-current/30 px-2 py-0.5 text-xs font-medium hover:underline',
+                  FOCUS_RING,
+                  TONE_TEXT.critical,
+                )}
+              >
+                {t('criticalAlertActions.inspections', { defaultValue: 'View overdue inspections' })}
+                <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none" />
+              </Link>
+            )}
+            {repairAssetCount > 0 && (
+              <Link
+                to="/maintenance"
+                className={cn(
+                  'group inline-flex items-center gap-1 rounded border border-current/30 px-2 py-0.5 text-xs font-medium hover:underline',
+                  FOCUS_RING,
+                  TONE_TEXT.critical,
+                )}
+              >
+                {t('criticalAlertActions.repairs', { defaultValue: 'View repairs' })}
+                <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none" />
+              </Link>
+            )}
+          </span>
         </div>
       )}
 
@@ -196,19 +261,18 @@ export function AssetManagementPage() {
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label={t('metrics.fleetUptime', { defaultValue: 'Fleet Uptime' })}
-          value={`${fleetUptimePct}%`}
-          sub={t('metrics.fleetUptimeSub', {
-            operating: summary.operating,
-            total: summary.total,
-            defaultValue: `${summary.operating}/${summary.total} operating`,
+          value={`${summary.operating}/${summary.total}`}
+          sub={t('metrics.fleetUptimeSub2', {
+            pct: fleetUptimePct,
+            defaultValue: `${fleetUptimePct}% operating`,
           })}
-          tone={fleetUptimePct >= 80 ? 'success' : fleetUptimePct >= 60 ? 'warning' : 'critical'}
+          tone={fleetUptimePct >= 80 ? 'positive' : fleetUptimePct >= 60 ? 'warning' : 'critical'}
         />
         <MetricCard
           label={t('metrics.criticalHealth', { defaultValue: 'Critical Components' })}
           value={criticalHealthCount}
           sub={t('metrics.criticalHealthSub', { defaultValue: 'Cranes with critical parts' })}
-          tone={criticalHealthCount > 0 ? 'critical' : 'success'}
+          tone={criticalHealthCount > 0 ? 'critical' : 'positive'}
         />
         <MetricCard
           label={t('metrics.warrantyAlert', { defaultValue: 'Warranty Alert' })}
@@ -222,13 +286,13 @@ export function AssetManagementPage() {
         />
         <MetricCard
           label={t('metrics.openWorkOrders', { defaultValue: 'Open Work Orders' })}
-          value={overdueAssetCount + repairAssetCount}
+          value={overdueWoCount + repairWoCount}
           sub={t('metrics.openWorkOrdersSub', {
-            overdue: overdueAssetCount,
-            repair: repairAssetCount,
-            defaultValue: `${overdueAssetCount} overdue · ${repairAssetCount} repair`,
+            overdue: overdueWoCount,
+            repair: repairWoCount,
+            defaultValue: `${overdueWoCount} overdue · ${repairWoCount} repair`,
           })}
-          tone={overdueAssetCount + repairAssetCount > 0 ? 'warning' : 'success'}
+          tone={overdueWoCount + repairWoCount > 0 ? 'warning' : 'positive'}
         />
       </section>
 
@@ -241,7 +305,7 @@ export function AssetManagementPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('filter.search', { defaultValue: 'Search name / S/N / model' })}
-            className="h-9 w-64 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+            className={cn(searchInputClass, 'w-64 pl-8 pr-3')}
           />
         </div>
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -252,6 +316,8 @@ export function AssetManagementPage() {
             const tone = STATUS_FILTER_TONE[s];
             const isActive = statusFilters.has(s);
             const count = statusCounts[s];
+            // 0건 상태는 필터할 것이 없다 — 활성 상태(해제 가능해야 함)만 예외
+            if (count === 0 && !isActive) return null;
             return (
               <button
                 key={s}
@@ -259,6 +325,7 @@ export function AssetManagementPage() {
                 onClick={() => toggleFilter(s)}
                 className={cn(
                   'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-medium tracking-wider transition-all',
+                  FOCUS_RING,
                   isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                 )}
               >
@@ -292,7 +359,7 @@ export function AssetManagementPage() {
           />
         ))}
         {sortedAssets.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border/70 py-12 text-center text-sm text-muted-foreground">
+          <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
             {t('filter.empty', { defaultValue: 'No assets match the filter.' })}
           </div>
         )}

@@ -278,7 +278,14 @@ export function CraneMap({ snap, flashKey }: CraneMapProps) {
                 />
               </pattern>
             </defs>
-            <rect width="250" height="250" fill="url(#hmiGrid)" />
+            {/* viewBox 밖(넓은 화면에서 생기는 좌우 여백)까지 그리드가 이어지도록 넉넉히 그린다 */}
+            <rect
+              x="-1000"
+              y="-1000"
+              width="2250"
+              height="2250"
+              fill="url(#hmiGrid)"
+            />
           </>
         )}
         {slaves.map((s) =>

@@ -59,6 +59,7 @@
     "indoorWork": "Indoor Work",
     "realTimeMonitoring": "Real-time 3D Monitoring",
     "vision": "Vision Monitoring",
+    "cabinMonitoring": "Cabin Monitoring",
     "threeViewerEdit": "3D Viewer Edit",
     "craneStatus": "Crane Status",
     "workHistory": "Work History",
@@ -78,7 +79,8 @@
     "compliance": "OSHA Compliance",
     "categoryCrane": "Crane",
     "hmi": "HMI",
-    "hmiDashboard": "HMI Dashboard"
+    "hmiDashboard": "HMI Dashboard",
+    "hmiPhillyDashboard": "Anti-Collision HMI"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",
@@ -343,5 +345,6 @@
     "exitFullscreen": "Exit fullscreen",
     "badge": "3D Viewer",
     "resizePreview": "Resize preview"
-  }
+  },
+  "undo": "Undo"
 }

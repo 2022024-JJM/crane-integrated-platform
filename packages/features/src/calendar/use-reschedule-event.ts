@@ -1,5 +1,5 @@
-import { updateInspectionSchedule } from '@crane/domain/inspection';
-import { updateRepairSchedule } from '@crane/domain/maintenance';
+import { getInspectionWOById, updateInspectionSchedule } from '@crane/domain/inspection';
+import { getRepairWOById, updateRepairSchedule } from '@crane/domain/maintenance';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 import type { CalendarEvent } from './types';
 
@@ -21,27 +21,38 @@ function toLocalDateTime(d: Date): string {
 /**
  * 캘린더 이벤트 일정 변경 (구글 캘린더식 드래그 이동/리사이즈의 커밋).
  * 점검은 예정일(date-only), 수리는 예정 기간(datetime)을 갱신하고 tick을 발행한다.
+ * 성공 시 이전 일정으로 되돌리는 undo 클로저를, 실패 시 null을 반환한다.
  */
 export function useRescheduleEvent(): (
   event: CalendarEvent,
   newStart: Date,
   newEnd: Date,
-) => boolean {
+) => (() => void) | null {
   const publish = useDomainEventStore((s) => s.publish);
 
   return (event, newStart, newEnd) => {
-    if (!canRescheduleEvent(event)) return false;
+    if (!canRescheduleEvent(event)) return null;
     if (event.sourceType === 'inspection') {
+      const prevDate = getInspectionWOById(event.sourceId)?.scheduledDate;
       const ok = updateInspectionSchedule(event.sourceId, toLocalDate(newStart));
-      if (ok) publish('inspection');
-      return ok;
+      if (!ok) return null;
+      publish('inspection');
+      return () => {
+        if (prevDate) updateInspectionSchedule(event.sourceId, prevDate);
+        publish('inspection');
+      };
     }
+    const prev = getRepairWOById(event.sourceId);
     const ok = updateRepairSchedule(
       event.sourceId,
       toLocalDateTime(newStart),
       toLocalDateTime(newEnd),
     );
-    if (ok) publish('repair');
-    return ok;
+    if (!ok) return null;
+    publish('repair');
+    return () => {
+      if (prev) updateRepairSchedule(event.sourceId, prev.scheduledStart, prev.scheduledEnd);
+      publish('repair');
+    };
   };
 }

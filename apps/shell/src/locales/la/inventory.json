@@ -8,7 +8,8 @@
     "reorderNeeded": "Re-Ordinatio Necessaria"
   },
   "alert": {
-    "lowStock": "Partes Infra Copiam Tutam ({{count}})"
+    "lowStock": "Partes Infra Copiam Tutam ({{count}})",
+    "filterHint": "In tabula monstra"
   },
   "table": {
     "partName": "Nomen / P/N",
@@ -27,7 +28,10 @@
     "leadTimeSuffix": "admin."
   },
   "resultCount": "{{count}} res",
-  "pagination": { "rowsPerPage": "In pagina", "of": "de" },
+  "pagination": {
+    "rowsPerPage": "In pagina",
+    "of": "de"
+  },
   "status": {
     "ok": "Bona",
     "normal": "Normalis",
@@ -133,7 +137,9 @@
       "insufficient": "Copia insufficiens — emitti non potest.",
       "woClosed": "In WO perfectam emitti non potest.",
       "failed": "Actio defecit."
-    }
+    },
+    "close": "Claudere",
+    "poPlaceholder": "PO-2026-XXXX"
   },
   "filter": {
     "all": "Omnia",

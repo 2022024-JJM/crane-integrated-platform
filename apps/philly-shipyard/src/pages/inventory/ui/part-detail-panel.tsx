@@ -10,6 +10,7 @@ import {
   INVENTORY_STATUS_VARIANT as STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
 import { StockActionModal, type ActionMode } from './stock-action-modal';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 import {
   ActionButtons,
   HistoryContent,
@@ -111,7 +112,7 @@ export function PartDetailPanel({
               <button
                 type="button"
                 onClick={() => setExpanded(false)}
-                className="cursor-pointer rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className={cn('cursor-pointer rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
                 aria-label={t('detail.collapse')}
               >
                 <Minimize2 className="h-4 w-4" />
@@ -119,7 +120,7 @@ export function PartDetailPanel({
               <button
                 type="button"
                 onClick={onClose}
-                className="cursor-pointer rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className={cn('cursor-pointer rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
                 aria-label={t('detail.close', { defaultValue: 'Close' })}
               >
                 <X className="h-4 w-4" />
@@ -193,7 +194,7 @@ export function PartDetailPanel({
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className={cn('cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
               aria-label={t('detail.expand')}
             >
               <Maximize2 className="h-4 w-4" />
@@ -201,7 +202,7 @@ export function PartDetailPanel({
             <button
               type="button"
               onClick={requestClose}
-              className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className={cn('cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
               aria-label={t('detail.close', { defaultValue: 'Close' })}
             >
               <X className="h-4 w-4" />
@@ -223,7 +224,7 @@ export function PartDetailPanel({
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={cn(
+            className={cn(FOCUS_RING, 
               'flex-1 cursor-pointer border-b-2 px-2 py-2.5 text-xs font-medium transition-colors',
               tab === key
                 ? 'border-primary text-primary'

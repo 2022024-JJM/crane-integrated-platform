@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, TicketPlus, Check } from 'lucide-react';
+import { ChevronLeft, TicketPlus } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
+import { PAGE_CONTAINER, PAGE_TITLE, PAGE_SUBTITLE } from '../../../shared/ui/page';
 import { TicketTypeSelector } from './ticket-type-selector';
 import type { TicketType } from './ticket-type-selector';
 import { CreateTicketForm } from './create-ticket-form';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 
 export function CreateTicketPage() {
   const { t } = useTranslation('ticket');
@@ -18,13 +20,13 @@ export function CreateTicketPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+    <div className={cn(PAGE_CONTAINER, 'mx-auto max-w-6xl')}>
       {/* 헤더 */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className={cn('flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground', FOCUS_RING)}
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -33,19 +35,10 @@ export function CreateTicketPage() {
             <TicketPlus className="size-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-            <p className="text-xs text-muted-foreground">{t('description')}</p>
+            <h1 className={PAGE_TITLE}>{t('title')}</h1>
+            <p className={PAGE_SUBTITLE}>{t('description')}</p>
           </div>
         </div>
-      </div>
-
-      {/* 스테퍼 */}
-      <div className="flex items-center gap-2">
-        <StepDot active={true} done={!!selectedType} num={1} label={t('stepper.selectType', { defaultValue: 'Select Type' })} />
-        <StepBar active={!!selectedType} />
-        <StepDot active={!!selectedType} done={false} num={2} label={t('stepper.fillInfo', { defaultValue: 'Fill Information' })} />
-        <StepBar active={false} />
-        <StepDot active={false} done={false} num={3} label={t('stepper.submit', { defaultValue: 'Submit' })} />
       </div>
 
       {/* 타입 선택 */}
@@ -65,31 +58,4 @@ export function CreateTicketPage() {
       )}
     </div>
   );
-}
-
-function StepDot({ active, done, num, label }: { active: boolean; done: boolean; num: number; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className={cn(
-          'flex size-6 items-center justify-center rounded-full text-[10px] font-bold transition-colors',
-          done
-            ? 'bg-primary text-primary-foreground'
-            : active
-              ? 'border-2 border-primary bg-background text-primary'
-              : 'border-2 border-border bg-background text-muted-foreground',
-        )}
-      >
-        {done ? <Check className="size-3" strokeWidth={3} /> : num}
-      </div>
-      {/* sm 미만에서는 번호 점만 표시해 스테퍼가 넘치지 않게 한다 */}
-      <span className={cn('hidden text-xs font-medium sm:inline', active ? 'text-foreground' : 'text-muted-foreground')}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function StepBar({ active }: { active: boolean }) {
-  return <div className={cn('h-px flex-1 transition-colors', active ? 'bg-primary' : 'bg-border')} />;
 }

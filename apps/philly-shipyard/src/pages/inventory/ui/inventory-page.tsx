@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,14 @@ import type {
 import { Badge } from '@crane/ui/atoms/badge';
 import { Pagination } from '@crane/ui/molecules/pagination';
 import { cn } from '@crane/core/lib/utils';
+import { PAGE_CONTAINER, PAGE_SUBTITLE, PAGE_TITLE, TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_CARD, SURFACE_PANEL } from '../../../shared/ui/surface';
+import { buttonVariants } from '@crane/ui/atoms/button';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import {
   PILL_INACTIVE,
   TONE_DOT,
+  TONE_HOVER_TINT,
   TONE_PILL_ACTIVE,
   TONE_SURFACE,
   TONE_TEXT,
@@ -25,8 +30,8 @@ import {
   INVENTORY_STATUS_TONE as STATUS_TONE,
   INVENTORY_STATUS_VARIANT as STATUS_VARIANT,
 } from '../../../shared/ui/status-variants';
-import { MetricCard } from '../../../shared/ui/metric-card';
 import { formatRelativeDate } from '../../../shared/lib/relative-date';
+import { formatDateLabel } from '../../../shared/lib/format-date';
 import { PartDetailPanel } from './part-detail-panel';
 
 const FILTER_STATUSES: InventoryStatus[] = ['normal', 'low', 'out_of_stock', 'excess', 'expiry_soon'];
@@ -126,12 +131,11 @@ function InventoryRow({
       {/* 단위 */}
       <div className="text-center text-xs text-muted-foreground">{item.uom}</div>
 
-      {/* 재고 수준 progress */}
-      <div className="min-w-0">
+      {/* 재고 수준 progress — 수치는 '현재 재고' 열에 이미 있으므로 바 하나로만 (100% 도배 방지) */}
+      <div className="min-w-0" title={`${item.currentQty} / ${item.minStockQty}`}>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div className={`h-full rounded-full ${barColor}`} style={{ width: `${stockPct}%` }} />
         </div>
-        <p className="mt-1 text-right text-[10px] tabular-nums text-muted-foreground">{stockPct}%</p>
       </div>
 
       {/* 단가 */}
@@ -156,7 +160,7 @@ function InventoryRow({
 
 export function InventoryPage() {
   const { items, purchaseOrders, summary } = useInventoryList();
-  const { t } = useTranslation('inventory');
+  const { t, i18n } = useTranslation('inventory');
   const [statusFilters, setStatusFilters] = useState<Set<InventoryStatus>>(new Set());
   const [critFilters, setCritFilters] = useState<Set<PartCriticality>>(new Set());
   const [search, setSearch] = useState('');
@@ -235,105 +239,81 @@ export function InventoryPage() {
     () => items.filter((i) => i.status === 'low' || i.status === 'out_of_stock'),
     [items],
   );
-  const [alertOpen, setAlertOpen] = useState(false);
   const [poOpen, setPoOpen] = useState(false);
 
-  // 자산 상세 등에서 ?part=<partId>로 진입 시 해당 부품 패널을 자동으로 연다
+  const tableRef = useRef<HTMLDivElement>(null);
+  // 부족 스트립 클릭 → 부족·재고없음 필터를 걸고 표로 스크롤 (배너 안 목록 복제 대신)
+  const showLowStock = () => {
+    setStatusFilters(new Set(['low', 'out_of_stock']));
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // 열린 패널의 부품은 ?part=<partId> URL 파라미터가 단일 소스 — 자산 BOM·수리 패널 딥링크와
+  // 행 클릭이 같은 경로를 쓰고, 로컬 state 동기화가 없어 라우터 transition 렌더와 경쟁하지 않는다.
   const [searchParams, setSearchParams] = useSearchParams();
-  const partParam = searchParams.get('part');
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(partParam);
-  const [prevPartParam, setPrevPartParam] = useState(partParam);
-  if (partParam !== prevPartParam) {
-    setPrevPartParam(partParam);
-    setSelectedPartId(partParam);
-  }
+  const selectedPartId = searchParams.get('part');
 
   const selectPart = (partId: string | null) => {
-    setSelectedPartId(partId);
-    // URL의 part 파라미터도 정리해 딥링크 상태를 남기지 않는다
-    if (partParam) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('part');
-      setSearchParams(next, { replace: true });
-    }
+    const next = new URLSearchParams(searchParams);
+    if (partId) next.set('part', partId);
+    else next.delete('part');
+    setSearchParams(next, { replace: true });
   };
 
   return (
     <div
       className={cn(
-        'flex flex-col gap-6 p-4 transition-[padding] duration-300 ease-out md:p-6',
+        PAGE_CONTAINER,
+        'transition-[padding] duration-300 ease-out',
         // xl 이상에서만 상세 패널 폭(440px)만큼 본문을 민다 — 그 미만은 패널이 오버레이
         selectedPartId && 'xl:pr-[calc(440px+1.5rem)]',
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <Link
           to="/ticket/create?type=parts"
-          className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className={buttonVariants({ size: 'lg' })}
         >
           <Plus className="h-4 w-4" />
           {t('createButton', { ns: 'ticket', defaultValue: 'New Ticket' })}
         </Link>
       </div>
 
-      {/* 메트릭 */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: t('metrics.totalParts'), value: summary.totalParts, dot: '' },
-          { label: t('metrics.belowSafetyStock'), value: summary.lowStock, dot: summary.lowStock > 0 ? TONE_DOT.critical : '' },
-          { label: t('metrics.reorderNeeded'), value: summary.reorderNeeded, dot: summary.reorderNeeded > 0 ? TONE_DOT.warning : '' },
-          { label: t('metrics.pendingPOs'), value: summary.activePOs, dot: '' },
-        ].map(({ label, value, dot }) => (
-          <MetricCard key={label} label={label} value={value} dot={dot} />
-        ))}
-      </section>
-
-      {/* 재고 부족 알림 배너 (접이식) */}
+      {/* 재고 부족 스트립 — 목록을 배너 안에 복제하지 않고, 클릭하면 표에 필터를 건다 */}
       {alertItems.length > 0 && (
-        <div className={cn('rounded border', TONE_SURFACE.warning)}>
-          <button
-            type="button"
-            onClick={() => setAlertOpen((v) => !v)}
-            className={cn('flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-amber-500/10', TONE_TEXT.warning)}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span className="flex-1 text-left">
-              {t('alert.lowStock', { count: alertItems.length })}
-            </span>
-            {alertOpen
-              ? <ChevronUp className="h-4 w-4 shrink-0" />
-              : <ChevronDown className="h-4 w-4 shrink-0" />
-            }
-          </button>
-          {alertOpen && (
-            <div className="space-y-2 border-t border-amber-500/25 p-4">
-              {alertItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 text-sm">
-                  <Badge variant={STATUS_VARIANT[item.status]} className="shrink-0">
-                    {t(`status.${item.status}`)}
-                  </Badge>
-                  <span className="truncate flex-1">{item.partName}</span>
-                  <span className="text-muted-foreground tabular-nums shrink-0">
-                    {item.currentQty} / {item.minStockQty} (min)
-                  </span>
-                </div>
-              ))}
-            </div>
+        <button
+          type="button"
+          onClick={showLowStock}
+          className={cn(
+            'flex w-full cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold transition-colors',
+            TONE_SURFACE.warning,
+            TONE_HOVER_TINT.warning,
+            TONE_TEXT.warning,
+            FOCUS_RING,
           )}
-        </div>
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">
+            {t('alert.lowStock', { count: alertItems.length })}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-medium">
+            {t('alert.filterHint', { defaultValue: 'Show in table' })}
+            <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
+          </span>
+        </button>
       )}
 
       {/* 진행 중 PO (접이식) */}
       {purchaseOrders.length > 0 && (
-        <div className="rounded border border-border/90 bg-card/60 shadow-sm backdrop-blur-sm">
+        <div className={SURFACE_CARD}>
           <button
             type="button"
             onClick={() => setPoOpen((v) => !v)}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-muted/30"
+            className={cn('flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-bold transition-colors hover:bg-muted/30', FOCUS_RING)}
           >
             <span className="flex-1 text-left">
               {t('po.title')}
@@ -358,7 +338,7 @@ export function InventoryPage() {
                       <span className={cn('text-xs font-semibold tabular-nums', etaPast ? TONE_TEXT.critical : 'text-foreground')}>
                         {etaLabel}
                       </span>
-                      <span className="text-xs text-muted-foreground ml-1">{po.expectedDelivery}</span>
+                      <span className="text-xs text-muted-foreground ml-1">{formatDateLabel(po.expectedDelivery, i18n.language)}</span>
                     </span>
                     <Badge
                       variant={po.status === 'in_transit' ? 'warning' : 'secondary'}
@@ -384,13 +364,13 @@ export function InventoryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPlaceholder', { defaultValue: 'Search part / P/N / manufacturer' })}
-            className="h-9 w-72 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50"
+            className={cn(searchInputClass, 'w-72 pl-8 pr-3')}
           />
         </div>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as PartCategory | 'all')}
-          className="h-9 cursor-pointer rounded border border-border bg-card/60 px-2 text-sm outline-none transition-colors focus:border-primary/50"
+          className={cn(searchInputClass, 'cursor-pointer px-2')}
         >
           <option value="all">{t('categoryAll', { defaultValue: 'All categories' })}</option>
           {categories.map((c) => (
@@ -407,7 +387,7 @@ export function InventoryPage() {
                 key={key}
                 type="button"
                 onClick={() => setCraneFilter(isActive ? 'all' : key)}
-                className={cn(
+                className={cn(FOCUS_RING, 
                   'inline-flex cursor-pointer items-center rounded px-3 py-1.5 text-[11px] font-bold tracking-wider transition-all',
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-sm'
@@ -432,12 +412,14 @@ export function InventoryPage() {
               const tone = STATUS_TONE[s];
               const isActive = statusFilters.has(s);
               const count = items.filter((i) => i.status === s).length;
+              // 0건 상태는 필터할 것이 없다 — 활성 상태(해제 가능해야 함)만 예외로 남긴다
+              if (count === 0 && !isActive) return null;
               return (
                 <button
                   key={s}
                   type="button"
                   onClick={() => toggleStatus(s)}
-                  className={cn(
+                  className={cn(FOCUS_RING, 
                     'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
                     isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
@@ -467,7 +449,7 @@ export function InventoryPage() {
                   key={c}
                   type="button"
                   onClick={() => toggleCrit(c)}
-                  className={cn(
+                  className={cn(FOCUS_RING, 
                     'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-medium tracking-wider transition-all cursor-pointer',
                     isActive ? TONE_PILL_ACTIVE[tone] : PILL_INACTIVE,
                   )}
@@ -482,10 +464,24 @@ export function InventoryPage() {
             })}
           </div>
         </div>
+
+        {/* pill로 드러나지 않는 요약값만 인라인 — 별도 메트릭 카드 행을 대체 */}
+        <div className="ml-auto flex items-center gap-4 self-center text-xs text-muted-foreground">
+          <span>
+            {t('metrics.totalParts')}{' '}
+            <span className="font-semibold tabular-nums text-foreground">{summary.totalParts}</span>
+          </span>
+          <span>
+            {t('metrics.reorderNeeded')}{' '}
+            <span className={cn('font-semibold tabular-nums', summary.reorderNeeded > 0 ? TONE_TEXT.warning : 'text-foreground')}>
+              {summary.reorderNeeded}
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* 부품 테이블 */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+      <div ref={tableRef} className={cn(SURFACE_PANEL, 'overflow-hidden scroll-mt-4')}>
         {/* 좁은 화면에서는 컬럼을 자르지 않고 가로 스크롤로 접근 */}
         <div className="overflow-x-auto">
           <div className="min-w-[1120px]">
@@ -526,7 +522,7 @@ export function InventoryPage() {
 
         {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
         {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-muted-foreground">
+          <div className={TABLE_EMPTY}>
             {t('empty')}
           </div>
         )}

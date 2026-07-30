@@ -78,6 +78,24 @@ export const TONE_UNDERLINE: Record<Tone, string> = {
   neutral: 'after:bg-border',
 };
 
+/** 상태 테두리 단독 (구분선·박스 보더) — TONE_SURFACE의 보더 스텝과 동일 */
+export const TONE_BORDER: Record<Tone, string> = {
+  critical: 'border-red-500/25',
+  warning: 'border-amber-500/25',
+  positive: 'border-emerald-500/25',
+  info: 'border-blue-500/25',
+  neutral: 'border-border',
+};
+
+/** 톤 표면 위 hover 틴트 (배너 헤더 버튼 등) */
+export const TONE_HOVER_TINT: Record<Tone, string> = {
+  critical: 'hover:bg-red-500/10',
+  warning: 'hover:bg-amber-500/10',
+  positive: 'hover:bg-emerald-500/10',
+  info: 'hover:bg-blue-500/10',
+  neutral: 'hover:bg-muted/50',
+};
+
 /** 리스트 행 좌측 강조 보더 */
 export const TONE_BORDER_ACCENT: Record<Tone, string> = {
   critical: 'border-l-red-500/50',

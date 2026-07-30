@@ -6,6 +6,7 @@ import { Calendar } from '@crane/ui/atoms/calendar';
 import { Popover, PopoverPopup, PopoverTrigger } from '@crane/ui/molecules/popover';
 import type { ViewMode } from '../model/types';
 import { buildWeekDays } from '../model/date-utils';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 import {
   formatDateRange,
   formatDayTitle,
@@ -60,7 +61,7 @@ export function CalendarHeader({
           type="button"
           onClick={onToday}
           title={`${t('nav.today')} (T)`}
-          className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+          className={cn('cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted', FOCUS_RING)}
         >
           {t('nav.today')}
         </button>
@@ -70,7 +71,7 @@ export function CalendarHeader({
             onClick={onPrev}
             aria-label={t('nav.prev')}
             title={`${t('nav.prev')} (K)`}
-            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={cn('cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -79,7 +80,7 @@ export function CalendarHeader({
             onClick={onNext}
             aria-label={t('nav.next')}
             title={`${t('nav.next')} (J)`}
-            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={cn('cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
           >
             <ChevronRight className="size-5" />
           </button>
@@ -115,7 +116,7 @@ export function CalendarHeader({
             type="button"
             onClick={() => onViewChange(v)}
             title={`${t(`view.${v}`)} (${VIEW_SHORTCUT[v]})`}
-            className={cn(
+            className={cn(FOCUS_RING, 
               'cursor-pointer rounded px-3 py-1 text-xs font-medium transition-colors',
               view === v
                 ? 'bg-primary text-primary-foreground'

@@ -45,7 +45,10 @@ export function HeaderStatusStrip() {
 }
 
 function HeaderWeatherInfoPill() {
-  const { Icon, label, temperatureText } = useHeaderWeatherPill();
+  const { Icon, label, temperatureText, status } = useHeaderWeatherPill();
+
+  // "정보 없음 --°"를 상시 노출하는 것보다 없는 게 낫다 — 데이터가 준비되면 나타난다
+  if (status !== 'success') return null;
 
   return (
     <HeaderInfoPill icon={Icon} value={label} accentValue={temperatureText} />

@@ -59,6 +59,7 @@
     "indoorWork": "Indoor Work",
     "realTimeMonitoring": "실시간 3D 모니터링",
     "vision": "비전 모니터링",
+    "cabinMonitoring": "Cabin 모니터링",
     "threeViewerEdit": "3D 화면 편집",
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력",
@@ -78,7 +79,8 @@
     "compliance": "OSHA 규제",
     "categoryCrane": "크레인",
     "hmi": "HMI",
-    "hmiDashboard": "HMI 대시보드"
+    "hmiDashboard": "HMI 대시보드",
+    "hmiPhillyDashboard": "Anti-Collision HMI"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",
@@ -343,5 +345,6 @@
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",
     "resizePreview": "미리보기 크기 조절"
-  }
+  },
+  "undo": "실행 취소"
 }

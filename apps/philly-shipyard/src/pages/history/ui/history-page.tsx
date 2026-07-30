@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronRight,
@@ -13,6 +13,8 @@ import { useHistoryList } from '@crane/features/history';
 import type { HistoryEvent, HistoryEventKind } from '@crane/features/history';
 import { buildCsv, downloadCsv, formatCsvTimestamp } from '@crane/core/lib/export-csv';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY, PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -23,7 +25,8 @@ import {
 } from '@crane/ui/molecules/select';
 import { DateTimePicker } from '@crane/ui/molecules/date-time-picker';
 import { Pagination } from '@crane/ui/molecules/pagination';
-import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE } from '../../../shared/ui/tone';
+import { PILL_INACTIVE, TONE_DOT, TONE_PILL_ACTIVE, TONE_TEXT } from '../../../shared/ui/tone';
+import { FOCUS_RING, searchInputClass } from '../../../shared/ui/controls';
 import type { Tone } from '../../../shared/ui/tone';
 import {
   INSPECTION_RESULT_VARIANT,
@@ -172,21 +175,38 @@ function EventRow({ event }: { event: HistoryEvent }) {
   );
 }
 
+// ?from=/?to= 파라미터 검증 — 'YYYY-MM-DD' 형식이 아니면 빈 값(미적용)으로 폴백
+function readDateParam(value: string | null): string {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
+}
+
 export function HistoryPage() {
   const { t } = useTranslation('history');
   const { events, craneOptions } = useHistoryList();
 
-  const [search, setSearch] = useState('');
-  const [kind, setKind] = useState<KindFilter>('all');
-  const [craneId, setCraneId] = useState('');
-  const [from, setFrom] = useState(''); // 'YYYY-MM-DD' | ''
-  const [to, setTo] = useState('');
-  const [page, setPage] = useState(1);
+  // 필터·페이지는 ?q=&kind=&crane=&from=&to=&page= URL 파라미터가 단일 소스 —
+  // 새로고침·뒤로가기·링크 공유에 그대로 살아남고, 기본값(all/1/빈 값)은 URL에서 생략한다.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('q') ?? '';
+  const kindParam = searchParams.get('kind') as KindFilter | null;
+  const kind: KindFilter = kindParam && KIND_FILTERS.includes(kindParam) ? kindParam : 'all';
+  const craneId = searchParams.get('crane') ?? '';
+  const from = readDateParam(searchParams.get('from')); // 'YYYY-MM-DD' | ''
+  const to = readDateParam(searchParams.get('to'));
+  const pageParam = Number(searchParams.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1;
   const [pageSize, setPageSize] = useState(20);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, kind, craneId, from, to, pageSize]);
+  // 필터 변경은 항상 1페이지로 — 같은 업데이트에서 page 파라미터를 지운다
+  const updateParams = (patch: Record<string, string>, { resetPage = true } = {}) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    if (resetPage) next.delete('page');
+    setSearchParams(next, { replace: true });
+  };
 
   const rangeInvalid = Boolean(from) && Boolean(to) && to < from;
 
@@ -264,12 +284,12 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className={PAGE_CONTAINER}>
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <h1 className={PAGE_TITLE}>{t('title')}</h1>
+          <p className={cn(PAGE_SUBTITLE, 'mt-0.5')}>{t('description')}</p>
         </div>
         <Button size="sm" variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
           <Download className="mr-1 size-3" />
@@ -279,14 +299,16 @@ export function HistoryPage() {
 
       {/* 필터 바 */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        {/* 종류 pill */}
+        {/* 종류 pill — 0건 종류는 필터할 것이 없다 (활성 상태만 예외) */}
         <div className="flex gap-1 rounded border border-border p-1">
-          {KIND_FILTERS.map((k) => (
+          {KIND_FILTERS.filter(
+            (k) => k === 'all' || kindCounts[k] > 0 || kind === k,
+          ).map((k) => (
             <button
               key={k}
               type="button"
-              onClick={() => setKind(k)}
-              className={cn(
+              onClick={() => updateParams({ kind: k === 'all' ? '' : k })}
+              className={cn(FOCUS_RING, 
                 'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors',
                 kind === k ? TONE_PILL_ACTIVE.neutral : PILL_INACTIVE,
               )}
@@ -307,7 +329,7 @@ export function HistoryPage() {
           </label>
           <Select
             value={craneId || '__all__'}
-            onValueChange={(v: string) => setCraneId(v === '__all__' ? '' : v)}
+            onValueChange={(v: string) => updateParams({ crane: v === '__all__' ? '' : v })}
           >
             <SelectTrigger
               label={
@@ -336,7 +358,7 @@ export function HistoryPage() {
             size="xs"
             dateOnly
             value={from ? `${from}T00:00` : ''}
-            onChange={(v) => setFrom(v ? v.slice(0, 10) : '')}
+            onChange={(v) => updateParams({ from: v ? v.slice(0, 10) : '' })}
             error={rangeInvalid}
           />
         </div>
@@ -348,7 +370,7 @@ export function HistoryPage() {
             size="xs"
             dateOnly
             value={to ? `${to}T00:00` : ''}
-            onChange={(v) => setTo(v ? v.slice(0, 10) : '')}
+            onChange={(v) => updateParams({ to: v ? v.slice(0, 10) : '' })}
             error={rangeInvalid}
           />
         </div>
@@ -359,9 +381,9 @@ export function HistoryPage() {
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateParams({ q: e.target.value })}
             placeholder={t('filters.searchPlaceholder')}
-            className="h-9 w-64 rounded border border-border bg-card/60 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(searchInputClass, 'w-64 pl-8 pr-3')}
           />
         </div>
 
@@ -370,13 +392,13 @@ export function HistoryPage() {
         </span>
       </div>
       {rangeInvalid && (
-        <p className="-mt-4 text-xs text-red-600 dark:text-red-400">
+        <p className={cn('-mt-4 text-xs', TONE_TEXT.critical)}>
           {t('filters.rangeInvalid')}
         </p>
       )}
 
       {/* 테이블 */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/50">
+      <div className={cn(SURFACE_PANEL, 'overflow-hidden')}>
         <div className="overflow-x-auto">
           <div className="min-w-[1000px]">
             {/* 헤더 */}
@@ -407,7 +429,7 @@ export function HistoryPage() {
 
         {/* 빈 상태 — 스크롤 래퍼 밖에서 뷰포트 기준 중앙 정렬 */}
         {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-muted-foreground">{t('empty')}</div>
+          <div className={TABLE_EMPTY}>{t('empty')}</div>
         )}
 
         {/* 페이지네이션 */}
@@ -416,8 +438,13 @@ export function HistoryPage() {
             page={page}
             pageSize={pageSize}
             total={filtered.length}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
+            onPageChange={(p) =>
+              updateParams({ page: p > 1 ? String(p) : '' }, { resetPage: false })
+            }
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              updateParams({});
+            }}
             labels={{
               rowsPerPage: t('pagination.rowsPerPage'),
               of: t('pagination.of'),

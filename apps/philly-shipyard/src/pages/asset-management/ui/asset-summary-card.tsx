@@ -7,6 +7,7 @@ import type { CraneAsset, CraneType } from '@crane/domain/asset';
 import { Badge } from '@crane/ui/atoms/badge';
 import { StatusDot } from '@crane/ui/atoms/status-dot';
 import { cn } from '@crane/core/lib/utils';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
 import {
   ASSET_STATUS_DOT as STATUS_DOT,
@@ -90,7 +91,8 @@ export function AssetSummaryCard({
   return (
     <div
       className={cn(
-        'group relative flex cursor-pointer flex-col gap-4 rounded-lg border border-border/80 bg-card/70 p-5 shadow-sm transition-all hover:border-border hover:shadow-md',
+        SURFACE_PANEL,
+        'group relative flex cursor-pointer flex-col gap-4 p-5 shadow-sm transition-all hover:border-border hover:shadow-md',
       )}
     >
       {/* 카드 전체를 덮는 상세 이동 링크 (stretched link) */}
@@ -212,8 +214,14 @@ export function AssetSummaryCard({
           </span>
         </StatTile>
 
-        {/* 다음 점검 */}
-        <StatTile label={t('card.nextInspection', { defaultValue: 'Next Inspection' })}>
+        {/* 다음 점검 — 기한이 지났으면 "다음"이 아니라 "지연"으로 정직하게 라벨링 */}
+        <StatTile
+          label={
+            nextInspOverdue
+              ? t('card.inspectionOverdue', { defaultValue: 'Inspection Overdue' })
+              : t('card.nextInspection', { defaultValue: 'Next Inspection' })
+          }
+        >
           {nextInspection ? (
             <>
               <span

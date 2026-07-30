@@ -1,3 +1,4 @@
+import { getAllInspectionWOs } from '../../inspection/model/mock-data';
 import type { Certification, ComplianceSummary, OshaReport } from './types';
 
 const allCertifications: Certification[] = [
@@ -147,8 +148,25 @@ const allOshaReports: OshaReport[] = [
   },
 ];
 
+/** 만료 임박 판정 기준 일수 */
+const EXPIRY_SOON_DAYS = 30;
+
+// 상태를 만료일에서 파생 — 하드코딩 상태는 시간이 지나면 거짓이 된다
+// (만료일이 지난 인증서가 '임박'으로 남는 것을 방지). renewing은 명시 상태 유지.
+function deriveCertStatus(cert: Certification): Certification['status'] {
+  if (cert.status === 'renewing') return 'renewing';
+  const [y, m, d] = cert.expiryDate.split('-').map(Number);
+  const expiry = new Date(y as number, (m as number) - 1, d as number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((expiry.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return 'expired';
+  if (diffDays <= EXPIRY_SOON_DAYS) return 'expiry_soon';
+  return 'valid';
+}
+
 export function getAllCertifications(): Certification[] {
-  return allCertifications;
+  return allCertifications.map((c) => ({ ...c, status: deriveCertStatus(c) }));
 }
 
 export function getAllOshaReports(): OshaReport[] {
@@ -156,16 +174,32 @@ export function getAllOshaReports(): OshaReport[] {
 }
 
 export function getComplianceSummary(): ComplianceSummary {
-  const expiring = allCertifications.filter((c) => c.status === 'expiry_soon').length;
-  const expired = allCertifications.filter((c) => c.status === 'expired').length;
+  // 파생 상태 기준으로 집계 — 하드코딩 상태와 어긋나지 않게 getAllCertifications를 경유한다
+  const certs = getAllCertifications();
+  const expiring = certs.filter((c) => c.status === 'expiry_soon').length;
+  const expired = certs.filter((c) => c.status === 'expired').length;
+
+  // 완료율은 점검 WO에서 파생 — 점검 페이지와 같은 소스를 써서 두 화면의 숫자가 어긋나지 않게 한다
+  const inspections = getAllInspectionWOs();
+  const rateFor = (woType: 'frequent' | 'periodic') => {
+    const ofType = inspections.filter((w) => w.woType === woType);
+    if (ofType.length === 0) return 0;
+    const completed = ofType.filter((w) => w.status === 'completed').length;
+    return Math.round((completed / ofType.length) * 100);
+  };
+
+  const now = new Date();
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
   return {
-    frequentCompletionRate: 75,
-    periodicCompletionRate: 50,
+    frequentCompletionRate: rateFor('frequent'),
+    periodicCompletionRate: rateFor('periodic'),
     expiringCerts: expiring,
     expiredCerts: expired,
-    openFindings: 2,
+    // 합격이 아닌 보고서(불합격·조건부)가 미결 소견이다
+    openFindings: allOshaReports.filter((r) => r.result !== 'pass').length,
     reportsThisMonth: allOshaReports.filter((r) =>
-      r.inspectionDate.startsWith('2026-07'),
+      r.inspectionDate.startsWith(monthPrefix),
     ).length,
   };
 }

@@ -59,6 +59,7 @@
     "indoorWork": "Opera Intus",
     "realTimeMonitoring": "Monitoratio 3D Temporis Veri",
     "vision": "Monitoratio Visus",
+    "cabinMonitoring": "Monitoratio Cabinae",
     "threeViewerEdit": "Editor Visoris 3D",
     "craneStatus": "Status Gruium",
     "workHistory": "Historia Operum",
@@ -78,7 +79,8 @@
     "compliance": "Conformitas OSHA",
     "categoryCrane": "Grus",
     "hmi": "HMI",
-    "hmiDashboard": "HMI Tabula"
+    "hmiDashboard": "HMI Tabula",
+    "hmiPhillyDashboard": "Anti-Collision HMI"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",
@@ -343,5 +345,6 @@
     "exitFullscreen": "Restitue fenestram",
     "badge": "Visor 3D",
     "resizePreview": "Muta magnitudinem"
-  }
+  },
+  "undo": "Revoca"
 }

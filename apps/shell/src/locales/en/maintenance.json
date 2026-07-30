@@ -15,7 +15,8 @@
     "waiting_parts": "Waiting Parts",
     "in_progress": "In Progress",
     "re_inspection": "Re-Inspection",
-    "completed": "Completed"
+    "completed": "Completed",
+    "on_hold": "On Hold"
   },
   "status": {
     "received": "Received",
@@ -34,9 +35,46 @@
   "empty": "—",
   "toast": {
     "completed": "{{woNumber}} — marked as completed.",
-    "moveTo": "{{woNumber}} — moved to {{status}}"
+    "moveTo": "{{woNumber}} — moved to {{status}}",
+    "detailsSaved": "{{woNumber}} — repair results saved.",
+    "reInspectionRequired": "Set the re-inspection result before completing.",
+    "partIssued": "{{part}} ×{{n}} issued to {{woNumber}}"
   },
   "completedLabel": "Completed",
+  "panel": {
+    "label": "Work order: {{wo}}",
+    "close": "Close",
+    "stageLabel": "Pipeline stage",
+    "subStateLabel": "Detail",
+    "working": "Working",
+    "onHoldHint": "On hold — click a stage to resume.",
+    "completedLocked": "Completed work orders are locked.",
+    "addPart": "Add Part",
+    "part": {
+      "title": "Record Part Usage",
+      "selectPart": "Part",
+      "choosePart": "Select a part…",
+      "available": "{{n}} available",
+      "exceedsStock": "Exceeds available stock ({{n}})",
+      "insufficient": "Insufficient stock.",
+      "failed": "Failed to issue part.",
+      "qty": "Quantity",
+      "by": "Issued By",
+      "note": "Note",
+      "submit": "Issue Part",
+      "cancel": "Cancel"
+    },
+    "results": {
+      "title": "Repair Results",
+      "laborHours": "Labor Hours",
+      "downtime": "Downtime (h)",
+      "reInspection": "Re-Inspection Result",
+      "reInspectionHint": "Required before completion",
+      "pass": "Pass",
+      "fail": "Fail",
+      "save": "Save Results"
+    }
+  },
   "detail": {
     "backLink": "Maintenance Management",
     "notFound": "Repair record not found.",
@@ -67,5 +105,8 @@
     "rootCause": "Root Cause",
     "correctiveAction": "Corrective Action",
     "preventiveAction": "Preventive Action"
+  },
+  "board": {
+    "moreInHistory": "View {{count}} more in history"
   }
 }

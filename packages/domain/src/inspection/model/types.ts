@@ -13,6 +13,9 @@ export type PerformerType = 'internal' | 'third_party' | 'local';
 
 export type ChecklistJudgment = 'pass' | 'fail' | 'na';
 
+/** 반복 점검 주기 — 완료 시 다음 회차 WO가 자동 생성된다. */
+export type RecurrenceInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+
 export type ActionRequired =
   | 'none'
   | 'monitor'
@@ -55,6 +58,8 @@ export interface InspectionWO {
   totalHours?: number;
   cost?: number;
   checklistItems: ChecklistItem[];
+  /** 반복 주기 — 없으면 단발성 점검 */
+  recurrence?: RecurrenceInterval | null;
 }
 
 export interface InspectionSummary {

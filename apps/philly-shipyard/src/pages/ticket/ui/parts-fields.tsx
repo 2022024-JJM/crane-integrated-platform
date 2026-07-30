@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { FileText, Plus, Trash2, Boxes } from 'lucide-react';
 import { Button } from '@crane/ui/atoms/button';
 import type { InventoryItem, PartsRequestItem } from '@crane/domain/inventory';
+import { FOCUS_RING } from '../../../shared/ui/controls';
+import { cn } from '@crane/core/lib/utils';
 import {
   FormSection,
   FormField,
@@ -93,7 +95,7 @@ export function PartsFields({
           {state.items.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/30 px-4 py-8 text-center">
               <Boxes className="size-6 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">{t('fields.partName')}</p>
+              <p className="text-xs text-muted-foreground">{t('fields.noPartsAdded')}</p>
             </div>
           )}
           {state.items.map((item, idx) => (
@@ -130,7 +132,7 @@ export function PartsFields({
               <button
                 type="button"
                 onClick={() => onRemoveItem(idx)}
-                className="shrink-0 cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                className={cn('shrink-0 cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive', FOCUS_RING)}
               >
                 <Trash2 className="size-4" />
               </button>

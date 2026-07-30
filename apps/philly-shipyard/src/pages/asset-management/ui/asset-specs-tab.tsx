@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { CraneAsset } from '@crane/domain/asset';
+import { cn } from '@crane/core/lib/utils';
+import { SURFACE_CARD } from '../../../shared/ui/surface';
 
 // ── 탭: 제원 — 크레인 스펙 필드 그리드 ──
 export function AssetSpecsTab({ asset }: { asset: CraneAsset }) {
@@ -24,7 +26,7 @@ export function AssetSpecsTab({ asset }: { asset: CraneAsset }) {
   ];
 
   return (
-    <div className="rounded-lg border border-border/90 bg-card/60 p-5 shadow-sm">
+    <div className={cn(SURFACE_CARD, 'p-5')}>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
         {specFields.map(({ label, value }) => (
           <div key={label}>

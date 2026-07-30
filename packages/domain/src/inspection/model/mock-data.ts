@@ -1,5 +1,5 @@
-import { seedSequence } from '../../shared/id-generator';
-import type { ChecklistItem, InspectionSummary, InspectionWO } from './types';
+import { newInspectionId, nextInspectionWoNumber, seedSequence } from '../../shared/id-generator';
+import type { ChecklistItem, InspectionSummary, InspectionWO, RecurrenceInterval } from './types';
 
 const frequentChecklist = [
   { id: 'fi-01', category: 'Fluid & Equipment', category_ko: '유체 및 설비', itemName: 'Oil Leak Check', itemName_ko: '오일 누유 점검', judgment: null, actionRequired: 'none' as const },
@@ -84,6 +84,7 @@ const baseInspectionWOs: InspectionWO[] = [
     status: 'overdue',
     priority: 'high',
     result: null,
+    recurrence: 'monthly',
     checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: null })),
   },
   {
@@ -143,6 +144,7 @@ const baseInspectionWOs: InspectionWO[] = [
     status: 'scheduled',
     priority: 'normal',
     result: null,
+    recurrence: 'monthly',
     checklistItems: frequentChecklist.map((item) => ({ ...item, judgment: null })),
   },
   {
@@ -262,8 +264,21 @@ const maxInspectionSeq = allInspectionWOs.reduce((max, wo) => {
 }, 0);
 seedSequence('inspection', maxInspectionSeq);
 
+function localToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+// 예정일이 지난 scheduled는 읽기 시점에 overdue로 파생 — mock 상태값을 mutate하지 않는다.
+function deriveStatus(wo: InspectionWO): InspectionWO {
+  if (wo.status === 'scheduled' && wo.scheduledDate < localToday()) {
+    return { ...wo, status: 'overdue' };
+  }
+  return wo;
+}
+
 export function getAllInspectionWOs(): InspectionWO[] {
-  return allInspectionWOs;
+  return allInspectionWOs.map(deriveStatus);
 }
 
 export function addInspectionWO(wo: InspectionWO): void {
@@ -301,9 +316,29 @@ export function updateChecklistItems(
   return true;
 }
 
-export function submitInspectionResult(inspectionId: string): boolean {
+/** 로컬-세이프 날짜 가산 — 'YYYY-MM-DD' 문자열 기준 (UTC 파싱 오프셋 회피). */
+function addInterval(dateStr: string, interval: RecurrenceInterval): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const next =
+    interval === 'weekly'
+      ? new Date(y, m - 1, d + 7)
+      : interval === 'biweekly'
+        ? new Date(y, m - 1, d + 14)
+        : interval === 'monthly'
+          ? new Date(y, m, d)
+          : new Date(y, m + 2, d);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
+
+export interface SubmitInspectionOutcome {
+  ok: boolean;
+  /** 반복 점검이면 완료 시 자동 생성된 다음 회차 WO */
+  nextWo?: InspectionWO;
+}
+
+export function submitInspectionResult(inspectionId: string): SubmitInspectionOutcome {
   const idx = allInspectionWOs.findIndex((w) => w.id === inspectionId);
-  if (idx === -1) return false;
+  if (idx === -1) return { ok: false };
   const wo = allInspectionWOs[idx];
   const judgments = wo.checklistItems.map((i) => i.judgment);
   const anyFail = judgments.includes('fail');
@@ -317,9 +352,28 @@ export function submitInspectionResult(inspectionId: string): boolean {
     ...wo,
     status: 'completed',
     result,
-    actualDate: new Date().toISOString().slice(0, 10),
+    actualDate: localToday(),
   };
-  return true;
+
+  // 반복 점검이면 다음 회차 자동 생성 — 지연 완료여도 과거 날짜로 태어나지 않게 오늘 이후로 보정.
+  if (!wo.recurrence) return { ok: true };
+  const base = wo.scheduledDate > localToday() ? wo.scheduledDate : localToday();
+  const nextWo: InspectionWO = {
+    ...wo,
+    id: newInspectionId(),
+    woNumber: nextInspectionWoNumber(),
+    scheduledDate: addInterval(base, wo.recurrence),
+    actualDate: null,
+    status: 'scheduled',
+    result: null,
+    findings: undefined,
+    findings_ko: undefined,
+    totalHours: undefined,
+    cost: undefined,
+    checklistItems: getDefaultChecklist(wo.woType),
+  };
+  allInspectionWOs.unshift(nextWo);
+  return { ok: true, nextWo };
 }
 
 /**
@@ -333,8 +387,7 @@ export function updateInspectionSchedule(id: string, scheduledDate: string): boo
   if (wo.status === 'completed' || wo.status === 'cancelled') return false;
 
   let status = wo.status;
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = localToday();
   if (status === 'overdue' && scheduledDate >= today) status = 'scheduled';
   else if (status === 'scheduled' && scheduledDate < today) status = 'overdue';
 
@@ -348,14 +401,16 @@ export function getDefaultChecklist(woType: 'frequent' | 'periodic' | 'emergency
 }
 
 export function getInspectionWOById(id: string): InspectionWO | undefined {
-  return allInspectionWOs.find((w) => w.id === id);
+  const wo = allInspectionWOs.find((w) => w.id === id);
+  return wo ? deriveStatus(wo) : undefined;
 }
 
 export function getInspectionSummary(): InspectionSummary {
-  const total = allInspectionWOs.length;
-  const completed = allInspectionWOs.filter((w) => w.status === 'completed').length;
-  const overdue = allInspectionWOs.filter((w) => w.status === 'overdue').length;
-  const failed = allInspectionWOs.filter((w) => w.result === 'fail').length;
+  const derived = allInspectionWOs.map(deriveStatus);
+  const total = derived.length;
+  const completed = derived.filter((w) => w.status === 'completed').length;
+  const overdue = derived.filter((w) => w.status === 'overdue').length;
+  const failed = derived.filter((w) => w.result === 'fail').length;
   return {
     totalScheduled: total,
     completed,

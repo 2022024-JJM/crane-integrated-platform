@@ -11,8 +11,10 @@ import type {
   RepairTicketDraft,
   InspectionTicketDraft,
   PartsTicketDraft,
+  RepairTemplate,
 } from '@crane/features/ticket';
 import { getAllInventoryItems } from '@crane/domain/inventory';
+import { getTechnicians } from '@crane/domain/shared';
 import type { PartsRequestItem } from '@crane/domain/inventory';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -30,6 +32,8 @@ import {
   type InspectionFieldsErrors,
 } from './inspection-fields';
 import { PartsFields, type PartsFieldsState, type PartsFieldsErrors } from './parts-fields';
+import { TicketTemplatePicker } from './ticket-template-picker';
+import { loadLastAssignee, saveLastAssignee } from './assignee-storage';
 import { toLocalDateString } from '../../../shared/lib/relative-date';
 
 type TicketType = 'repair' | 'inspection' | 'parts';
@@ -56,6 +60,14 @@ interface TicketPrefill {
   date?: string;
 }
 
+/** parts 프리필 — partId가 있으면 인벤토리에서 품목 1행을 시드한다 (리스크→부품 요청 딥링크) */
+function seedPartsItems(partId: string | null): PartsRequestItem[] {
+  if (!partId) return [];
+  const inv = getAllInventoryItems().find((i) => i.partId === partId);
+  if (!inv) return [];
+  return [{ partId: inv.partId, partName: inv.partName, qty: 1, unitPrice: inv.unitPrice }];
+}
+
 type UnifiedErrors = RepairFieldsErrors &
   InspectionFieldsErrors &
   PartsFieldsErrors & {
@@ -72,7 +84,8 @@ function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
   const d = prefill.date ?? toLocalDateString();
   return {
     craneId: prefill.craneId ?? '', craneName: '', siteId: '', siteName: '',
-    priority: 'normal', performerType: 'internal', assignedTo: '',
+    // 담당자는 최근 사용값을 기본으로 — 같은 사람이 연달아 등록하는 흐름이 대부분
+    priority: 'normal', performerType: 'internal', assignedTo: loadLastAssignee(),
     componentName: prefill.componentName ?? '',
     // 점검(sourceWo)에서 넘어왔으면 원천을 inspection으로 설정
     sourceType: prefill.sourceWoNumber ? 'inspection' : 'breakdown',
@@ -81,6 +94,7 @@ function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
     repairLevel: 'minor', failureDescription: '',
     scheduledStart: d, scheduledEnd: d,
     woType: 'frequent', scheduledDate: d, findings: '',
+    recurrence: 'none',
     requester: '', note: '', items: [],
   };
 }
@@ -106,20 +120,33 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
     const dateParam = params.get('date');
     const date =
       dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
-    return makeInitial(
-      type === 'repair'
-        ? {
-            craneId: params.get('craneId') ?? undefined,
-            componentName: params.get('component') ?? undefined,
-            sourceWoNumber: params.get('sourceWo') ?? undefined,
-            date,
-          }
-        : { date },
-    );
+    if (type === 'repair') {
+      return makeInitial({
+        craneId: params.get('craneId') ?? undefined,
+        componentName: params.get('component') ?? undefined,
+        sourceWoNumber: params.get('sourceWo') ?? undefined,
+        date,
+      });
+    }
+    if (type === 'parts') {
+      const base = makeInitial({
+        craneId: params.get('craneId') ?? undefined,
+        sourceWoNumber: params.get('sourceWo') ?? undefined,
+        date,
+      });
+      return { ...base, items: seedPartsItems(params.get('part')) };
+    }
+    return makeInitial({ date });
   });
   const [errors, setErrors] = useState<UnifiedErrors>({});
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  // 프리필 딥링크(점검→수리 접수 등)로 들어왔으면 상세 옵션을 미리 펼쳐 맥락을 보여준다
+  const hasPrefill = Boolean(params.get('craneId') || params.get('component') || params.get('sourceWo'));
   // 부품 행의 안정적 React key — index key는 중간 삭제 시 포커스/상태가 어긋난다
-  const [itemKeys, setItemKeys] = useState<string[]>([]);
+  // 프리필로 시드된 items가 있으면 키도 같은 길이로 시작해야 삭제 시 어긋나지 않는다
+  const [itemKeys, setItemKeys] = useState<string[]>(() =>
+    form.items.map((_, i) => `seed-${i}`),
+  );
   const nextItemKey = useRef(0);
 
   // 프리필된 craneId로 크레인명/사이트 정보를 채운다 (cranes 로드 후 1회)
@@ -141,6 +168,18 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   function set<K extends keyof UnifiedForm>(key: K, value: UnifiedForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
+  }
+
+  function applyTemplate(tpl: RepairTemplate) {
+    setTemplateId(tpl.id);
+    // 크레인/원천 WO 등 컨텍스트는 보존하고 템플릿 값만 덮는다
+    setForm((f) => ({
+      ...f,
+      componentName: tpl.componentName,
+      failureDescription: t(tpl.descKey),
+      ...tpl.draft,
+    }));
+    setErrors((e) => ({ ...e, componentName: undefined, failureDescription: undefined }));
   }
 
   function handleCraneChange(craneId: string) {
@@ -192,10 +231,9 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   function validate(): boolean {
     const e: UnifiedErrors = {};
     if (!form.craneId) e.craneId = t('validation.craneRequired');
-    if (type !== 'parts' && !form.assignedTo.trim()) e.assignedTo = t('validation.assignedToRequired');
+    // 담당자/구성품은 필수에서 제외 — 빈 값은 제출 시 스마트 기본값으로 폴백한다
 
     if (type === 'repair') {
-      if (!form.componentName.trim()) e.componentName = t('validation.componentRequired');
       if (!form.failureDescription.trim()) e.failureDescription = t('validation.descriptionRequired');
       if (!form.scheduledStart) e.scheduledStart = t('validation.scheduledStartRequired');
       if (!form.scheduledEnd) e.scheduledEnd = t('validation.scheduledEndRequired');
@@ -227,11 +265,17 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       return;
     }
 
+    // 빈 담당자는 수행 주체에 맞는 첫 인력으로 폴백 — 필수 입력을 줄이기 위한 스마트 기본값
+    const fallbackAssignee =
+      form.assignedTo.trim() ||
+      getTechnicians().find((p) => p.performerType === form.performerType)?.name ||
+      getTechnicians()[0]?.name || '';
+
     if (type === 'repair') {
       const draft: RepairTicketDraft = {
         craneId: form.craneId, craneName: form.craneName,
         siteId: form.siteId, siteName: form.siteName,
-        componentName: form.componentName,
+        componentName: form.componentName.trim() || 'General',
         sourceType: form.sourceType,
         sourceWoNumber: form.sourceWoNumber || undefined,
         failureType: form.failureType,
@@ -239,11 +283,12 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         repairLevel: form.repairLevel,
         failureDescription: form.failureDescription,
         performerType: form.performerType,
-        assignedTo: form.assignedTo,
+        assignedTo: fallbackAssignee,
         scheduledStart: form.scheduledStart,
         scheduledEnd: form.scheduledEnd,
       };
       const wo = createRepair(draft);
+      saveLastAssignee(form.assignedTo);
       toast.success(t('toast.repairCreated', { woNumber: wo.woNumber }));
       onSuccess(wo.id);
       return;
@@ -257,10 +302,12 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         priority: form.priority as InspectionTicketDraft['priority'],
         scheduledDate: form.scheduledDate,
         performerType: form.performerType,
-        assignedTo: form.assignedTo,
+        assignedTo: fallbackAssignee,
         findings: form.findings || undefined,
+        recurrence: form.recurrence === 'none' ? undefined : form.recurrence,
       };
       const wo = createInspection(draft);
+      saveLastAssignee(form.assignedTo);
       toast.success(t('toast.inspectionCreated', { woNumber: wo.woNumber }));
       onSuccess(wo.id);
       return;
@@ -272,6 +319,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       priority: form.priority as PartsTicketDraft['priority'],
       requester: form.requester,
       items: form.items,
+      sourceWoNumber: form.sourceWoNumber || undefined,
       note: form.note || undefined,
     };
     const req = createParts(draft);
@@ -344,14 +392,19 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
       <form onSubmit={handleSubmit} className="space-y-4">
         {type === 'repair' && (
-          <RepairFields
-            accent={accent}
-            state={form}
-            errors={errors}
-            onChange={(k, v) => set(k as keyof UnifiedForm, v as UnifiedForm[keyof UnifiedForm])}
-            craneSelectSlot={craneSelect}
-            prioritySlot={priorityField}
-          />
+          <>
+            <TicketTemplatePicker selectedId={templateId} onApply={applyTemplate} />
+            <RepairFields
+              accent={accent}
+              state={form}
+              errors={errors}
+              onChange={(k, v) => set(k as keyof UnifiedForm, v as UnifiedForm[keyof UnifiedForm])}
+              craneSelectSlot={craneSelect}
+              prioritySlot={priorityField}
+              craneId={form.craneId}
+              advancedDefaultOpen={hasPrefill}
+            />
+          </>
         )}
         {type === 'inspection' && (
           <InspectionFields

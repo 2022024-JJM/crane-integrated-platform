@@ -51,6 +51,14 @@
       "serialRequired": "Serial number is required.",
       "capacityRequired": "Capacity must be greater than 0.",
       "locationRequired": "Location zone is required."
+    },
+    "close": "Close",
+    "placeholders": {
+      "name": "e.g. GC-106",
+      "manufacturer": "e.g. Konecranes",
+      "model": "e.g. Goliath 900T",
+      "serialNumber": "e.g. KC-2026-GC-001",
+      "locationZone": "e.g. Dock No.1 West"
     }
   },
   "metrics": {
@@ -65,7 +73,8 @@
     "warrantyAlert": "Warranty Alert",
     "warrantyAlertSub": "{{expired}} expired · {{soon}} soon",
     "openWorkOrders": "Open Work Orders",
-    "openWorkOrdersSub": "{{overdue}} overdue · {{repair}} repair"
+    "openWorkOrdersSub": "{{overdue}} overdue · {{repair}} repair",
+    "fleetUptimeSub2": "{{pct}}% operating"
   },
   "sort": {
     "label": "Sort by",
@@ -80,7 +89,11 @@
       "subtitle": "Goliath / Quay Cranes"
     }
   },
-  "criticalAlert": "{{overdueCount}} overdue inspection(s) · {{repairCount}} active repair(s) — immediate action required",
+  "criticalAlert": "{{overdueCount}} crane(s) with overdue inspections · {{repairCount}} in repair — immediate action required",
+  "criticalAlertActions": {
+    "inspections": "View overdue inspections",
+    "repairs": "View repairs"
+  },
   "card": {
     "warrantyExpired": "Warranty Expired",
     "warrantyUntil": "Warranty: {{date}}",
@@ -103,7 +116,8 @@
     "woBreakdown": "{{overdue}} insp · {{repair}} repair",
     "noOpenWo": "None open",
     "nextInspection": "Next Inspection",
-    "view3d": "View 3D"
+    "view3d": "View 3D",
+    "inspectionOverdue": "Inspection Overdue"
   },
   "status": {
     "operating": "Operating",
@@ -142,7 +156,8 @@
       "inspection": "Inspection History",
       "maintenance": "Maintenance History",
       "history": "History",
-      "3d": "3D View"
+      "3d": "3D View",
+      "condition": "Condition"
     },
     "componentHealth": {
       "title": "Component Health",
@@ -206,6 +221,19 @@
       "status": "Status",
       "remainingLife": "Remaining Life",
       "back": "Back to list"
+    },
+    "condition": {
+      "gaugesTitle": "Component remaining life",
+      "remaining": "Remaining",
+      "annualAvg": "Annual average",
+      "periodDelta": "During period",
+      "estimatedEol": "Est. end of life",
+      "trendTitle": "Service life trend",
+      "threshold": "Replacement threshold",
+      "perYear": "/yr",
+      "noComponents": "No components to display.",
+      "showAll": "View all {{count}}",
+      "showWorst": "Show worst 6"
     }
   },
   "units": {

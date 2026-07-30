@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { SectionCard } from './section-card';
-import { MetricWithUnderline } from './metric-with-underline';
+import { StatTile } from './stat-tile';
 
 interface FleetStatusPanelProps {
   componentCritical: number;
@@ -26,38 +26,22 @@ export function FleetStatusPanel({
       icon={Activity}
       href="/asset-management"
     >
-      <div className="grid grid-cols-2 divide-x divide-border/80">
+      {/* 톤 틴트 타일 2×2 — 0은 뉴트럴로 가라앉아 색이 곧 신호가 된다 */}
+      <div className="flex flex-col justify-center gap-4">
         <Group title={t('connectivity.componentCondition')}>
-          <MetricWithUnderline
+          {/* componentCritical = 수리 중 크레인 수 — 자산 관리의 repair 필터와 1:1 */}
+          <StatTile
             value={componentCritical}
             label={t('connectivity.critical')}
-            accent="critical"
-            align="center"
-            size="lg"
+            tone="critical"
+            to="/asset-management?status=repair"
           />
-          <MetricWithUnderline
-            value={componentLow}
-            label={t('connectivity.low')}
-            accent="low"
-            align="center"
-            size="lg"
-          />
+          <StatTile value={componentLow} label={t('connectivity.low')} tone="warning" />
         </Group>
         <Group title={t('connectivity.operatingAlerts')}>
-          <MetricWithUnderline
-            value={alertSafety}
-            label={t('openItems.safety')}
-            accent="safety"
-            align="center"
-            size="lg"
-          />
-          <MetricWithUnderline
-            value={alertProduction}
-            label={t('openItems.production')}
-            accent="production"
-            align="center"
-            size="lg"
-          />
+          {/* openItems.safety/production(리스크 레지스터)과 수식이 다르므로 라벨도 구분한다 */}
+          <StatTile value={alertSafety} label={t('connectivity.immediate')} tone="critical" />
+          <StatTile value={alertProduction} label={t('connectivity.preventive')} tone="warning" />
         </Group>
       </div>
     </SectionCard>
@@ -73,13 +57,13 @@ function Group({
 }) {
   const [first, second] = children;
   return (
-    <div className="flex flex-col items-center gap-3 px-4">
-      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+    <div>
+      <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {title}
       </p>
-      <div className="grid w-full grid-cols-2 divide-x divide-border/80">
-        <div className="px-4">{first}</div>
-        <div className="px-4">{second}</div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {first}
+        {second}
       </div>
     </div>
   );

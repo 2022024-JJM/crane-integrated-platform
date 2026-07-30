@@ -158,7 +158,7 @@ export function TicketPreview({
 
         {/* 하단 워터마크 */}
         <div className="relative border-t border-dashed border-border/70 px-5 py-2.5">
-          <p className="text-center text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
             · Crane Ops MRO ·
           </p>
         </div>

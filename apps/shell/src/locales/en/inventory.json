@@ -8,7 +8,8 @@
     "reorderNeeded": "Reorder Needed"
   },
   "alert": {
-    "lowStock": "Parts Below Safety Stock ({{count}})"
+    "lowStock": "Parts Below Safety Stock ({{count}})",
+    "filterHint": "Show in table"
   },
   "table": {
     "partName": "Part Name / P/N",
@@ -27,7 +28,10 @@
     "leadTimeSuffix": "lead"
   },
   "resultCount": "{{count}} items",
-  "pagination": { "rowsPerPage": "Rows per page", "of": "of" },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "of": "of"
+  },
   "status": {
     "ok": "OK",
     "normal": "Normal",
@@ -133,7 +137,9 @@
       "insufficient": "Insufficient stock — cannot issue.",
       "woClosed": "Cannot issue against a completed WO.",
       "failed": "Action failed."
-    }
+    },
+    "close": "Close",
+    "poPlaceholder": "PO-2026-XXXX"
   },
   "filter": {
     "all": "All",

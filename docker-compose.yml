@@ -27,6 +27,10 @@ services:
       BACKEND_PORT: ${BACKEND_PORT}
       LIDAR_HOST: ${LIDAR_HOST}
       LIDAR_PORT: ${LIDAR_PORT}
+      # 미설정 시 nginx envsubst 가 빈 값을 넣어 부팅이 실패하므로 기본값을 둔다.
+      # (기본값이면 캐빈 모니터링 연결만 502, 나머지 서비스는 정상)
+      CABIN_HOST: ${CABIN_HOST:-127.0.0.1}
+      CABIN_PORT: ${CABIN_PORT:-8765}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]

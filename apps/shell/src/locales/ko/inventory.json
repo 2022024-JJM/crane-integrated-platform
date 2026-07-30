@@ -8,7 +8,8 @@
     "reorderNeeded": "재주문 필요"
   },
   "alert": {
-    "lowStock": "안전재고 미달 부품 ({{count}})"
+    "lowStock": "안전재고 미달 부품 ({{count}})",
+    "filterHint": "표에서 보기"
   },
   "table": {
     "partName": "부품명 / P/N",
@@ -27,7 +28,10 @@
     "leadTimeSuffix": "리드"
   },
   "resultCount": "{{count}}개",
-  "pagination": { "rowsPerPage": "페이지당", "of": "/" },
+  "pagination": {
+    "rowsPerPage": "페이지당",
+    "of": "/"
+  },
   "status": {
     "ok": "정상",
     "normal": "정상",
@@ -133,7 +137,9 @@
       "insufficient": "재고가 부족해 출고할 수 없습니다.",
       "woClosed": "완료된 WO에는 출고할 수 없습니다.",
       "failed": "처리에 실패했습니다."
-    }
+    },
+    "close": "닫기",
+    "poPlaceholder": "PO-2026-XXXX"
   },
   "filter": {
     "all": "전체",

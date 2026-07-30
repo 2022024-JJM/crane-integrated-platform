@@ -3,6 +3,9 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { RepairWO } from '@crane/domain/maintenance';
 import { Badge } from '@crane/ui/atoms/badge';
+import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import {
   REPAIR_PRIORITY_VARIANT,
   REPAIR_STATUS_VARIANT,
@@ -17,7 +20,7 @@ export function AssetMaintenanceTab({ repairs }: { repairs: RepairWO[] }) {
   return (
     <div className="flex flex-col gap-2">
       {repairs.length === 0 ? (
-        <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+        <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
           {t('detail.noMaintenanceHistory')}
         </div>
       ) : (
@@ -25,7 +28,7 @@ export function AssetMaintenanceTab({ repairs }: { repairs: RepairWO[] }) {
           <Link
             key={wo.id}
             to={`/maintenance/${wo.id}`}
-            className="group flex flex-col gap-1.5 rounded border border-border/90 bg-card/70 px-3.5 py-3 transition-all hover:border-primary/40 hover:bg-card"
+            className={cn(SURFACE_PANEL, 'group flex flex-col gap-1.5 px-3.5 py-3 transition-all hover:border-primary/40 hover:bg-card')}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-sm font-medium">{wo.woNumber}</span>

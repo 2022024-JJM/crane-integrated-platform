@@ -2,73 +2,73 @@
   "maps": [
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
-      "path": "/maps/okpo.glb"
+      "path": "/maps/phillyshipyard.glb"
     }
   ],
   "models": [
     {
-      "id": "id-mrxah00f-c5myrc9f",
+      "id": "id-ms6qxnnu-64td5d0c",
       "equipName": "Goliath Crane",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        24.133,
-        0,
-        -34.057
+        -543.246,
+        414.236,
+        812.639
       ],
       "rotation": [
         0,
-        90,
+        4.025,
         0
       ],
       "scale": [
-        0.1,
-        0.13,
-        0.1
+        1,
+        1,
+        1
       ],
       "valueMapList": []
     },
     {
-      "id": "id-mrxajja2-y9b74h8t",
+      "id": "id-ms6r23fo-znbnycb2",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        18.584,
-        0.587,
-        -37.215
+        -513.756,
+        413.627,
+        764.814
       ],
       "rotation": [
         0,
-        90,
+        6.263,
         0
       ],
       "scale": [
-        0.1,
-        0.1,
-        0.1
+        0.7,
+        0.7,
+        1
       ],
       "valueMapList": []
     },
     {
-      "id": "id-mrxajuhq-vmafo00v",
+      "id": "id-ms6r37f1-84slfmle",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        13.774,
-        0.587,
-        -31.015
+        -538.895,
+        413.627,
+        789.314
       ],
       "rotation": [
-        -180,
-        -90,
-        -180
+        180,
+        -5.805,
+        180
       ],
       "scale": [
-        0.1,
-        0.1,
-        0.1
+        0.7,
+        0.7,
+        1
       ],
       "valueMapList": []
     }
@@ -177,14 +177,14 @@
   ],
   "camera": {
     "position": [
-      33.056612951393014,
-      8.151139399327986,
-      -28.200254685682978
+      -578.3662916458051,
+      511.91360572696266,
+      708.0564390396709
     ],
     "target": [
-      18.590060602682314,
-      1.5462884162062804,
-      -37.9115371740526
+      -522.7768451144341,
+      406.8466653262671,
+      828.3512564574106
     ]
   }
 }

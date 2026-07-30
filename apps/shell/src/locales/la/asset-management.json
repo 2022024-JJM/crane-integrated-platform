@@ -51,6 +51,14 @@
       "serialRequired": "Numerus serialis necessarius est.",
       "capacityRequired": "Capacitas maior quam 0 esse debet.",
       "locationRequired": "Zona loci necessaria est."
+    },
+    "close": "Claudere",
+    "placeholders": {
+      "name": "ex. GC-106",
+      "manufacturer": "ex. Konecranes",
+      "model": "ex. Goliath 900T",
+      "serialNumber": "ex. KC-2026-GC-001",
+      "locationZone": "ex. Dock No.1 West"
     }
   },
   "metrics": {
@@ -65,7 +73,8 @@
     "warrantyAlert": "Monitum Cautionis",
     "warrantyAlertSub": "{{expired}} exspiratae · {{soon}} mox",
     "openWorkOrders": "Mandata Aperta",
-    "openWorkOrdersSub": "{{overdue}} retardata · {{repair}} refectio"
+    "openWorkOrdersSub": "{{overdue}} retardata · {{repair}} refectio",
+    "fleetUptimeSub2": "{{pct}}% operans"
   },
   "sort": {
     "label": "Ordina per",
@@ -80,7 +89,11 @@
       "subtitle": "Grues Goliath / Quay"
     }
   },
-  "criticalAlert": "{{overdueCount}} inspectio(nes) retardata(e) · {{repairCount}} refectio(nes) activa(e) — actio statim necessaria",
+  "criticalAlert": "{{overdueCount}} machina(e) cum inspectionibus retardatis · {{repairCount}} in refectione — actio statim necessaria",
+  "criticalAlertActions": {
+    "inspections": "Inspectiones retardatas videre",
+    "repairs": "Refectiones videre"
+  },
   "card": {
     "warrantyExpired": "Cautio Exspiravit",
     "warrantyUntil": "Cautio: {{date}}",
@@ -103,7 +116,8 @@
     "woBreakdown": "{{overdue}} insp · {{repair}} refec",
     "noOpenWo": "Nulla",
     "nextInspection": "Proxima Inspectio",
-    "view3d": "Vide 3D"
+    "view3d": "Vide 3D",
+    "inspectionOverdue": "Inspectio Retardata"
   },
   "status": {
     "operating": "Operans",
@@ -142,7 +156,8 @@
       "inspection": "Historia Inspectionis",
       "maintenance": "Historia Refectionis",
       "history": "Historia",
-      "3d": "Visio 3D"
+      "3d": "Visio 3D",
+      "condition": "Conditio"
     },
     "componentHealth": {
       "title": "Status Partium",
@@ -206,6 +221,19 @@
       "status": "Status",
       "remainingLife": "Vita Reliqua",
       "back": "Ad indicem"
+    },
+    "condition": {
+      "gaugesTitle": "Vita residua partium",
+      "remaining": "Residuum",
+      "annualAvg": "Media annua",
+      "periodDelta": "In periodo",
+      "estimatedEol": "Finis vitae aestimatus",
+      "trendTitle": "Cursus vitae",
+      "threshold": "Limen substitutionis",
+      "perYear": "/anno",
+      "noComponents": "Nullae partes ad monstrandum.",
+      "showAll": "Vide omnia {{count}}",
+      "showWorst": "Pessima 6 tantum"
     }
   },
   "units": {

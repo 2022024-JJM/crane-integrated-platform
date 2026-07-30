@@ -11,46 +11,56 @@
     "title": "서비스 - 미해결 항목",
     "openRisks": "미해결 리스크",
     "safety": "안전",
-    "production": "생산"
+    "production": "생산",
+    "showRisks": "전체 보기 ({{count}}건)",
+    "hideRisks": "접기",
+    "empty": "미해결 리스크가 없습니다",
+    "source": {
+      "inspection_finding": "점검 지적사항",
+      "repair": "수리",
+      "stock": "재고",
+      "overdue_inspection": "점검 기한 초과"
+    },
+    "issueTicket": "티켓 발행",
+    "issued": "발행됨",
+    "selectMode": "일괄 선택",
+    "exitSelect": "선택 취소",
+    "selectAll": "전체 선택",
+    "issueSelected": "{{count}}건 발행",
+    "batchConfirm": {
+      "title": "선택한 리스크의 티켓을 발행할까요?",
+      "repairCount": "수리 티켓 {{count}}건이 생성됩니다",
+      "partsCount": "부품 요청 {{count}}건이 생성됩니다",
+      "excluded": "{{count}}건은 일괄 대상이 아닙니다 — 이미 발행됨, 기존 WO 존재, 또는 품목 직접 선택 필요",
+      "cancel": "취소",
+      "confirm": "발행"
+    },
+    "toast": {
+      "issued": "수리 티켓 {{repair}}건, 부품 요청 {{parts}}건을 생성했습니다"
+    },
+    "totalCount": "미해결 총 {{count}}건"
   },
   "connectivity": {
     "title": "장비 상태",
     "componentCondition": "부품 상태",
     "operatingAlerts": "운영 알림",
     "critical": "심각",
-    "low": "주의"
-  },
-  "serviceReview": {
-    "title": "서비스 리뷰 및 리포트",
-    "serviceVisits": "서비스 방문",
-    "assetsServiced": "정비 자산",
-    "totalFindings": "발견 사항"
+    "low": "주의",
+    "immediate": "즉시 조치",
+    "preventive": "예방 조치"
   },
   "activeTickets": {
     "title": "진행 중 티켓",
     "open": "진행 중",
     "completed": "완료",
-    "onHold": "보류"
-  },
-  "assetFleet": {
-    "title": "자산 현황",
-    "agreementAssets": "계약 자산",
-    "connectedAssets": "연결 자산",
-    "assetsUnit": "대"
+    "onHold": "보류",
+    "completedThisMonth": "이번 달 완료"
   },
   "dailyInspection": {
-    "title": "일일 점검",
-    "subtitle": "최근 7일 점검 결과",
     "passed": "정상",
     "failed": "이상"
   },
   "quickLinks": {
-    "businessReview": "비즈니스 리뷰",
-    "serviceCalendar": "서비스 캘린더",
-    "documents": "문서 및 매뉴얼",
-    "agreements": "서비스 계약",
-    "locationActivities": "위치별 활동",
-    "slings": "슬링 및 액세서리",
     "newTicket": "신규 티켓"
   },
   "failureType": {
@@ -80,5 +90,14 @@
     "dock1": "1번 도크",
     "dock2": "4번 도크",
     "dockIn": "블록 공장"
+  },
+  "fleetSummary": {
+    "title": "자산·점검 현황",
+    "operating": "가동 자산",
+    "inspected": "점검 완료 자산",
+    "recent7": "최근 7일 점검",
+    "noRecent": "최근 7일간 완료된 점검이 없습니다",
+    "viewOverdue": "지연 점검 {{count}}건 보기",
+    "viewSchedule": "점검 일정 보기"
   }
 }

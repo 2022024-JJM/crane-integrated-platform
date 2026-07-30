@@ -3,7 +3,7 @@ import {
   submitInspectionResult,
   updateChecklistItems,
 } from '@crane/domain/inspection';
-import type { ChecklistItemPatch } from '@crane/domain/inspection';
+import type { ChecklistItemPatch, SubmitInspectionOutcome } from '@crane/domain/inspection';
 import { useDomainEventStore } from '../shared/use-domain-event-store';
 
 export function useSaveInspectionChecklist() {
@@ -21,12 +21,16 @@ export function useSaveInspectionChecklist() {
 export function useSubmitInspection() {
   const publish = useDomainEventStore((s) => s.publish);
   return useCallback(
-    (inspectionId: string, patches: ChecklistItemPatch[]): boolean => {
+    (inspectionId: string, patches: ChecklistItemPatch[]): SubmitInspectionOutcome => {
       // Persist any pending edits before finalizing
       updateChecklistItems(inspectionId, patches);
-      const ok = submitInspectionResult(inspectionId);
-      if (ok) publish('inspection', inspectionId);
-      return ok;
+      const outcome = submitInspectionResult(inspectionId);
+      if (outcome.ok) {
+        publish('inspection', inspectionId);
+        // 반복 점검의 다음 회차가 생성됐으면 목록/캘린더도 갱신
+        if (outcome.nextWo) publish('inspection', outcome.nextWo.id);
+      }
+      return outcome;
     },
     [publish],
   );

@@ -131,6 +131,8 @@ export interface PartsRequest {
   priority: PartsRequestPriority;
   status: PartsRequestStatus;
   items: PartsRequestItem[];
+  /** 부품 대기 수리 WO에서 발행된 경우 원천 수리 WO 번호 */
+  sourceWoNumber?: string;
   note?: string;
 }
 

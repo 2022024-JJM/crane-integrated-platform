@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { InspectionWO } from '@crane/domain/inspection';
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
+import { TABLE_EMPTY } from '../../../shared/ui/page';
+import { SURFACE_PANEL } from '../../../shared/ui/surface';
 import { TONE_TEXT } from '../../../shared/ui/tone';
 import {
   INSPECTION_RESULT_VARIANT,
@@ -19,7 +21,7 @@ export function AssetInspectionTab({ inspections }: { inspections: InspectionWO[
   return (
     <div className="flex flex-col gap-2">
       {inspections.length === 0 ? (
-        <div className="rounded border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+        <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
           {t('detail.noInspectionHistory')}
         </div>
       ) : (
@@ -29,7 +31,7 @@ export function AssetInspectionTab({ inspections }: { inspections: InspectionWO[
             <Link
               key={wo.id}
               to={`/inspection/${wo.id}`}
-              className="group flex items-center gap-3 rounded border border-border/90 bg-card/70 px-3.5 py-3 transition-all hover:border-primary/40 hover:bg-card"
+              className={cn(SURFACE_PANEL, 'group flex items-center gap-3 px-3.5 py-3 transition-all hover:border-primary/40 hover:bg-card')}
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{wo.woNumber}</p>
