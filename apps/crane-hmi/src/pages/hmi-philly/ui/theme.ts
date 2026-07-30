@@ -24,6 +24,8 @@ export interface PhillyTheme {
     land: string;
     water: string;
     waterLabel: string;
+    /** 라벨 뒤 헤일로(외곽선) — 도로/건물 위에서도 라벨이 읽히도록 */
+    labelHalo: string;
     green: string;
     building: string;
     buildingLine: string;
@@ -49,8 +51,8 @@ const LIGHT: PhillyTheme = {
   pageBg: '#ffffff',
   text: '#17181a',
   textSub: '#4b4f55',
-  caption: '#9aa0a6',
-  border: '#e3e3e3',
+  caption: '#70767d',
+  border: '#dcdee2',
   panelBg: '#ffffff',
   buttonBg: '#ffffff',
   hanwhaOrange: '#f26f21',
@@ -66,13 +68,14 @@ const LIGHT: PhillyTheme = {
   map: {
     land: '#f2f1ed',
     water: '#8fd0ee',
-    waterLabel: '#3f8fc0',
+    waterLabel: '#2f7fb3',
+    labelHalo: 'rgba(255,255,255,0.85)',
     green: '#cdebb0',
     building: '#e3e1dc',
     buildingLine: '#d4d1cb',
     roadCasing: '#d7dde5',
     roadFill: '#fdfdfd',
-    roadLabel: '#6e6e6e',
+    roadLabel: '#5f6165',
     dock: '#edece8',
     dockLine: '#d0cdc7',
     dockInner: '#f6f5f2',
@@ -81,7 +84,7 @@ const LIGHT: PhillyTheme = {
     poiFill: '#ffffff',
     poiRing: '#b9b9b9',
     poiDot: '#7a7a7a',
-    poiLabel: '#555555',
+    poiLabel: '#46484c',
     purple: '#8e5bc0',
     purpleStroke: '#7a48ab',
     purpleLabel: '#7a5aa0',
@@ -92,8 +95,8 @@ const DARK: PhillyTheme = {
   pageBg: '#101318',
   text: '#e8eaed',
   textSub: '#b6bcc4',
-  caption: '#7c828a',
-  border: '#2a2f36',
+  caption: '#8f959d',
+  border: '#323943',
   panelBg: '#171b21',
   buttonBg: '#1c2129',
   hanwhaOrange: '#f26f21',
@@ -109,13 +112,14 @@ const DARK: PhillyTheme = {
   map: {
     land: '#22262c',
     water: '#17293a',
-    waterLabel: '#5a87a8',
+    waterLabel: '#69a0c4',
+    labelHalo: 'rgba(13,16,21,0.8)',
     green: '#243626',
     building: '#2b3037',
     buildingLine: '#343a42',
     roadCasing: '#31363e',
     roadFill: '#3d434c',
-    roadLabel: '#8b9199',
+    roadLabel: '#9ba1a9',
     dock: '#262b31',
     dockLine: '#3a4048',
     dockInner: '#20242a',
@@ -124,7 +128,7 @@ const DARK: PhillyTheme = {
     poiFill: '#20242a',
     poiRing: '#5a6068',
     poiDot: '#9aa0a8',
-    poiLabel: '#a6acb4',
+    poiLabel: '#b3b9c1',
     purple: '#a06fd6',
     purpleStroke: '#8e5bc0',
     purpleLabel: '#a98fd0',

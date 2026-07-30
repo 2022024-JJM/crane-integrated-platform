@@ -4,9 +4,9 @@ import type { PhillyTheme } from './theme';
 
 function buttonStyle(t: PhillyTheme): CSSProperties {
   return {
-    height: 54,
-    padding: '0 30px',
-    fontSize: 18,
+    height: 62,
+    padding: '0 34px',
+    fontSize: 22,
     fontWeight: 600,
     color: t.textSub,
     background: t.buttonBg,
@@ -47,13 +47,13 @@ export function BottomBar({
           gap: 10,
           color: t.greenText,
           background: t.greenBg,
-          border: `1px solid ${t.greenBg}`,
+          border: `1px solid ${t.greenDot}`,
         }}
       >
         <span
           style={{
-            width: 9,
-            height: 9,
+            width: 11,
+            height: 11,
             borderRadius: '50%',
             background: t.greenDot,
             flexShrink: 0,

@@ -11,7 +11,7 @@ const ROTATION: Record<ArrowDirection, number> = {
 export function ArrowIcon({
   direction,
   color,
-  size = 24,
+  size = 30,
 }: {
   direction: ArrowDirection;
   color: string;

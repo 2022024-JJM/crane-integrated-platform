@@ -1,3 +1,4 @@
+import type { SVGProps } from 'react';
 import type { PhillySnapshot } from '../model/types';
 import { PHILLY_SPRITES } from './assets';
 import { usePhillyTheme } from './theme';
@@ -44,6 +45,20 @@ function luffToJibScale(luffDeg: number) {
 }
 
 // ---- 정적 지도 요소 -------------------------------------------------------
+
+/** 헤일로(배경색 외곽선)가 깔린 지도 라벨 — 도로/건물 위에서도 읽힌다 */
+function MapText(props: SVGProps<SVGTextElement>) {
+  const { map } = usePhillyTheme();
+  return (
+    <text
+      {...props}
+      paintOrder="stroke"
+      stroke={map.labelHalo}
+      strokeWidth={3.5}
+      strokeLinejoin="round"
+    />
+  );
+}
 
 function Road({
   d,
@@ -104,7 +119,7 @@ function Poi({
         <text
           x={x}
           y={y + 4}
-          fontSize={11}
+          fontSize={13}
           fontWeight={700}
           fill="#ffffff"
           textAnchor="middle"
@@ -115,16 +130,16 @@ function Poi({
         <circle cx={x} cy={y} r={3.5} fill={map.poiDot} />
       )}
       {label.map((line, i) => (
-        <text
+        <MapText
           key={line}
           x={tx}
-          y={y - 2 + i * 13}
-          fontSize={11.5}
+          y={y - 2 + i * 16}
+          fontSize={14}
           fill={purple ? map.purpleLabel : map.poiLabel}
           textAnchor={anchor}
         >
           {line}
-        </text>
+        </MapText>
       ))}
     </g>
   );
@@ -235,103 +250,103 @@ function StaticMap() {
       ))}
 
       {/* 도로/수역 라벨 */}
-      <text
+      <MapText
         x={36}
         y={400}
-        fontSize={12.5}
+        fontSize={15.5}
         fill={map.waterLabel}
         fontStyle="italic"
         textAnchor="middle"
         transform="rotate(-90 36 400)"
       >
         Schuylkill River
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={128}
         y={152}
-        fontSize={11.5}
+        fontSize={14}
         fill={map.roadLabel}
         transform="rotate(-33 128 152)"
       >
         Basin Bridge Rd
-      </text>
-      <text x={560} y={50} fontSize={11.5} fill={map.roadLabel}>
+      </MapText>
+      <MapText x={560} y={50} fontSize={14} fill={map.roadLabel}>
         Constitution Ave
-      </text>
-      <text x={140} y={242} fontSize={11.5} fill={map.roadLabel}>
+      </MapText>
+      <MapText x={140} y={242} fontSize={14} fill={map.roadLabel}>
         Kitty Hawk Ave
-      </text>
-      <text x={310} y={238} fontSize={11.5} fill={map.roadLabel}>
+      </MapText>
+      <MapText x={310} y={238} fontSize={14} fill={map.roadLabel}>
         Kitty Hawk Ave
-      </text>
-      <text x={690} y={252} fontSize={11.5} fill={map.roadLabel}>
+      </MapText>
+      <MapText x={690} y={252} fontSize={14} fill={map.roadLabel}>
         Kitty Hawk Ave
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={424}
         y={160}
-        fontSize={11.5}
+        fontSize={14}
         fill={map.roadLabel}
         transform="rotate(-90 424 160)"
         textAnchor="middle"
       >
         S 21st St
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={428}
         y={520}
-        fontSize={11.5}
+        fontSize={14}
         fill={map.roadLabel}
         transform="rotate(-90 428 520)"
         textAnchor="middle"
       >
         S 21st St
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={634}
         y={530}
-        fontSize={11.5}
+        fontSize={14}
         fill={map.roadLabel}
         transform="rotate(-90 634 530)"
         textAnchor="middle"
       >
         S 19th St
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={694}
         y={330}
-        fontSize={11}
+        fontSize={13.5}
         fill={map.roadLabel}
         transform="rotate(-90 694 330)"
         textAnchor="middle"
       >
         S 18th St
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={934}
         y={150}
-        fontSize={11.5}
+        fontSize={14}
         fill={map.roadLabel}
         transform="rotate(-90 934 150)"
         textAnchor="middle"
       >
         S 17th St
-      </text>
-      <text
+      </MapText>
+      <MapText
         x={874}
         y={560}
-        fontSize={11}
+        fontSize={13.5}
         fill={map.roadLabel}
         transform="rotate(-90 874 560)"
         textAnchor="middle"
       >
         Piers Rd
-      </text>
+      </MapText>
 
       {/* POI */}
-      <text x={556} y={288} fontSize={11.5} fill={map.poiLabel}>
+      <MapText x={556} y={288} fontSize={14} fill={map.poiLabel}>
         Rhoads Industries
-      </text>
+      </MapText>
       <Poi x={620} y={296} label={['Navy Yard Cat', 'Community']} />
       <Poi x={655} y={44} label={['DTL-PHILADELPHIA']} anchor="end" />
       <Poi x={790} y={455} label={['Building 1000']} anchor="end" />
@@ -367,6 +382,48 @@ const LLC_JIB_W = 96;
 const LLC_JIB_H = LLC_JIB_W * (77 / 412);
 const LLC_JIB_PIVOT = 0.78;
 
+/** 크레인 이름표 — 지도 위에서 어느 크레인인지 바로 식별되도록 */
+function CraneTag({
+  x,
+  y,
+  label,
+  anchor = 'start',
+}: {
+  x: number;
+  y: number;
+  label: string;
+  anchor?: 'start' | 'end';
+}) {
+  const t = usePhillyTheme();
+  const w = label.length * 8.6 + 16;
+  const h = 24;
+  const left = anchor === 'start' ? x : x - w;
+  return (
+    <g>
+      <rect
+        x={left}
+        y={y - h / 2}
+        width={w}
+        height={h}
+        rx={5}
+        fill={t.panelBg}
+        stroke={t.border}
+        opacity={0.94}
+      />
+      <text
+        x={left + w / 2}
+        y={y + 5}
+        fontSize={14}
+        fontWeight={700}
+        fill={t.text}
+        textAnchor="middle"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 function GcCrane({ snap }: { snap: PhillySnapshot }) {
   const y = gcTravelToY(snap.gc.travel.value);
   const trolleyX = gcTrolleyToX(snap.gc.trolley.value);
@@ -388,6 +445,7 @@ function GcCrane({ snap }: { snap: PhillySnapshot }) {
         height={GC_H}
         preserveAspectRatio="none"
       />
+      <CraneTag x={DOCK_RIGHT + 12} y={y} label="GC-01" />
     </g>
   );
 }
@@ -398,12 +456,16 @@ function LlcCrane({
   slew,
   luff,
   circleR,
+  name,
+  tagAnchor = 'start',
 }: {
   cx: number;
   cy: number;
   slew: number;
   luff: number;
   circleR: number;
+  name: string;
+  tagAnchor?: 'start' | 'end';
 }) {
   const { map } = usePhillyTheme();
   const rotation = slewToRotation(slew);
@@ -442,6 +504,12 @@ function LlcCrane({
           />
         </g>
       </g>
+      <CraneTag
+        x={tagAnchor === 'start' ? cx + circleR + 10 : cx - circleR - 10}
+        y={cy}
+        label={name}
+        anchor={tagAnchor}
+      />
     </g>
   );
 }
@@ -463,6 +531,7 @@ export function PhillyMap({ snap }: { snap: PhillySnapshot }) {
         slew={snap.myCrane.slewing.value}
         luff={snap.myCrane.luffing.value}
         circleR={42}
+        name="LLC-01"
       />
       <LlcCrane
         cx={475}
@@ -470,6 +539,8 @@ export function PhillyMap({ snap }: { snap: PhillySnapshot }) {
         slew={snap.llc2.slewing.value}
         luff={snap.llc2.luffing.value}
         circleR={38}
+        name="LLC-02"
+        tagAnchor="end"
       />
     </svg>
   );

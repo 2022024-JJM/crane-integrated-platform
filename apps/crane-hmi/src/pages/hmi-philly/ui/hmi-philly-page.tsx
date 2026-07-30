@@ -25,7 +25,7 @@ export function HmiPhillyPage() {
   const [clock, setClock] = useState(() => formatClock(new Date()));
   const [freeSlew, setFreeSlew] = useState(false);
   const snap = usePhillySimulation();
-  const { ref, scale } = useFitScale(DESIGN_W, DESIGN_H);
+  const { ref, scale, fillW, fillH } = useFitScale(DESIGN_W, DESIGN_H);
   const { theme } = useTheme();
   const t = PHILLY_THEMES[theme];
 
@@ -43,23 +43,23 @@ export function HmiPhillyPage() {
           // AppLayout 헤더(h-14 + border 1px)를 제외한 나머지 뷰포트에 맞춤
           height: 'calc(100dvh - 57px)',
           background: t.pageBg,
-          display: 'grid',
-          placeItems: 'center',
-          // 설계 캔버스(1150px)가 컨테이너보다 클 때도 중앙 기준으로 스케일되도록
-          placeContent: 'center',
+          position: 'relative',
           overflow: 'hidden',
         }}
       >
         <div
           style={{
-            width: DESIGN_W,
-            height: DESIGN_H,
-            flexShrink: 0,
-            transform: `scale(${scale})`,
-            transformOrigin: 'center',
+            // 화면 비율에 맞춰 캔버스를 확장해 레터박스 없이 꽉 채움.
+            // absolute 배치라 캔버스 크기가 컨테이너 측정에 되먹임되지 않는다.
+            // (남는 폭/높이는 지도 영역이 흡수)
+            width: fillW,
+            height: fillH,
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%) scale(${scale})`,
             background: t.pageBg,
             fontFamily: PHILLY_FONT,
-            position: 'relative',
             userSelect: 'none',
             display: 'flex',
             flexDirection: 'column',
@@ -77,11 +77,18 @@ export function HmiPhillyPage() {
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: 30, fontWeight: 700 }}>
+            <span style={{ fontSize: 38, fontWeight: 700 }}>
               <span style={{ color: t.hanwhaOrange }}>Hanwha</span>
               <span style={{ color: t.text }}> Anti-Collision System</span>
             </span>
-            <span style={{ fontSize: 24, fontWeight: 700, color: t.text }}>
+            <span
+              style={{
+                fontSize: 30,
+                fontWeight: 700,
+                color: t.text,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               {clock}
             </span>
           </div>
@@ -101,7 +108,7 @@ export function HmiPhillyPage() {
             </div>
             <div
               style={{
-                width: 470,
+                width: 520,
                 flexShrink: 0,
                 display: 'flex',
                 flexDirection: 'column',

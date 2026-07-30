@@ -15,7 +15,7 @@ function panelStyle(t: PhillyTheme): CSSProperties {
 
 function captionStyle(t: PhillyTheme): CSSProperties {
   return {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     letterSpacing: 0.8,
     color: t.caption,
@@ -43,14 +43,21 @@ export function MyCranePanel({ snap }: { snap: PhillySnapshot }) {
           marginTop: 6,
         }}
       >
-        <span style={{ fontSize: 30, fontWeight: 700, color: t.text }}>
+        <span style={{ fontSize: 38, fontWeight: 700, color: t.text }}>
           LLC-01
         </span>
         <span>
-          <span style={{ fontSize: 27, fontWeight: 700, color: t.text }}>
+          <span
+            style={{
+              fontSize: 34,
+              fontWeight: 700,
+              color: t.text,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {formatValue(snap.load)}
           </span>
-          <span style={{ fontSize: 14, color: t.caption, marginLeft: 7 }}>
+          <span style={{ fontSize: 18, color: t.caption, marginLeft: 7 }}>
             t
           </span>
         </span>
@@ -92,11 +99,13 @@ function AxisRow({
   axis,
   unit,
   orientation,
+  divider = true,
 }: {
   label: string;
   axis: AxisState;
   unit: string;
   orientation: 'vertical' | 'horizontal';
+  divider?: boolean;
 }) {
   const t = usePhillyTheme();
   return (
@@ -105,23 +114,31 @@ function AxisRow({
         display: 'flex',
         alignItems: 'center',
         padding: '13px 0',
+        borderBottom: divider ? `1px solid ${t.border}` : 'none',
       }}
     >
       <span
-        style={{ fontSize: 19, fontWeight: 600, color: t.text, width: 108 }}
+        style={{ fontSize: 24, fontWeight: 600, color: t.text, width: 132 }}
       >
         {label}
       </span>
       <AxisArrows orientation={orientation} dir={axis.dir} />
       <span style={{ flex: 1 }} />
-      <span style={{ fontSize: 24, fontWeight: 700, color: t.text }}>
+      <span
+        style={{
+          fontSize: 30,
+          fontWeight: 700,
+          color: t.text,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {formatValue(axis.value)}
       </span>
       <span
         style={{
-          fontSize: 14,
+          fontSize: 18,
           color: t.caption,
-          width: 22,
+          width: 26,
           textAlign: 'right',
         }}
       >
@@ -138,7 +155,7 @@ export function AxisStatusPanel({ snap }: { snap: PhillySnapshot }) {
     <div style={panelStyle(t)}>
       <div
         style={{
-          fontSize: 16,
+          fontSize: 20,
           fontWeight: 700,
           color: t.text,
           paddingBottom: 12,
@@ -164,6 +181,7 @@ export function AxisStatusPanel({ snap }: { snap: PhillySnapshot }) {
         axis={snap.myCrane.travel}
         unit="m"
         orientation="vertical"
+        divider={false}
       />
     </div>
   );
@@ -205,31 +223,32 @@ function ClearanceRow({
       }}
     >
       <span
-        style={{ fontSize: 19, fontWeight: 600, color: t.text, width: 104 }}
+        style={{ fontSize: 24, fontWeight: 600, color: t.text, width: 126 }}
       >
         {label}
       </span>
       <AxisArrows orientation={orientation} dir={dir} />
       <span style={{ flex: 1 }} />
-      <span style={{ fontSize: 19, fontWeight: 700, color: toneColor }}>
+      <span style={{ fontSize: 24, fontWeight: 700, color: toneColor }}>
         {target}
       </span>
       <span
         style={{
-          fontSize: 22,
+          fontSize: 28,
           fontWeight: 700,
           color: toneColor,
-          width: 88,
+          width: 104,
           textAlign: 'right',
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {value}
       </span>
       <span
         style={{
-          fontSize: 14,
+          fontSize: 18,
           color: t.caption,
-          width: 22,
+          width: 26,
           textAlign: 'right',
         }}
       >
@@ -244,7 +263,7 @@ export function CollisionClearancePanel({ snap }: { snap: PhillySnapshot }) {
   const t = usePhillyTheme();
   return (
     <div style={panelStyle(t)}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: t.text }}>
+      <div style={{ fontSize: 20, fontWeight: 700, color: t.text }}>
         Collision clearance
       </div>
       <ClearanceRow
