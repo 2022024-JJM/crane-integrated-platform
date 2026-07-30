@@ -67,6 +67,14 @@ function isHmiAllowed(pathname: string): boolean {
   return HMI_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+const HMI2_ALLOWED_EXACT = new Set(['/hmi2']);
+const HMI2_ALLOWED_PREFIXES = ['/hmi2/'];
+
+function isHmi2Allowed(pathname: string): boolean {
+  if (HMI2_ALLOWED_EXACT.has(pathname)) return true;
+  return HMI2_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
 function ProtectedRoute() {
   const { user } = useAuth();
   const location = useLocation();
@@ -79,6 +87,9 @@ function ProtectedRoute() {
   if (role === 'hmi' && !isHmiAllowed(location.pathname)) {
     return <Navigate to="/hmi" replace />;
   }
+  if (role === 'hmi2' && !isHmi2Allowed(location.pathname)) {
+    return <Navigate to="/hmi2" replace />;
+  }
 
   return <Outlet />;
 }
@@ -87,6 +98,7 @@ function LoginGuard() {
   const role = getStoredRole();
   if (role === 'mro') return <Navigate to="/mro-dashboard" replace />;
   if (role === 'hmi') return <Navigate to="/hmi" replace />;
+  if (role === 'hmi2') return <Navigate to="/hmi2" replace />;
   if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
 }
@@ -223,6 +235,12 @@ const HmiPage = lazy(() =>
   })),
 );
 
+const HmiPhillyPage = lazy(() =>
+  import('@crane/crane-hmi/pages/hmi-philly').then((m) => ({
+    default: m.HmiPhillyPage,
+  })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -244,6 +262,14 @@ export function App() {
                 element={
                   <LazyRoute>
                     <HmiPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="hmi2"
+                element={
+                  <LazyRoute>
+                    <HmiPhillyPage />
                   </LazyRoute>
                 }
               />

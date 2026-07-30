@@ -20,6 +20,7 @@ const ACCOUNTS: Credentials[] = [
   { id: 'crane.goliath', password: '1', role: 'goliath' },
   { id: 'crane.MRO', password: '1', role: 'mro' },
   { id: 'crane.HMI', password: '1', role: 'hmi' },
+  { id: 'crane.HMI2', password: '1', role: 'hmi2' },
 ];
 
 export const AUTH_STORAGE_KEY = 'crane-auth-user';
@@ -45,16 +46,19 @@ function getStoredUser(): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
 
-  const login = useCallback((id: string, password: string): UserRole | false => {
-    const account = ACCOUNTS.find(
-      (a) => a.id === id && a.password === password,
-    );
-    if (!account) return false;
-    const authUser: AuthUser = { id: account.id, role: account.role };
-    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-    setUser(authUser);
-    return account.role;
-  }, []);
+  const login = useCallback(
+    (id: string, password: string): UserRole | false => {
+      const account = ACCOUNTS.find(
+        (a) => a.id === id && a.password === password,
+      );
+      if (!account) return false;
+      const authUser: AuthUser = { id: account.id, role: account.role };
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+      setUser(authUser);
+      return account.role;
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(AUTH_STORAGE_KEY);
@@ -62,10 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(
-    () => ({ user, login, logout }),
-    [user, login, logout],
-  );
+  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }

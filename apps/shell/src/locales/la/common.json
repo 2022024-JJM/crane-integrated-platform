@@ -79,7 +79,8 @@
     "compliance": "Conformitas OSHA",
     "categoryCrane": "Grus",
     "hmi": "HMI",
-    "hmiDashboard": "HMI Tabula"
+    "hmiDashboard": "HMI Tabula",
+    "hmiPhillyDashboard": "Anti-Collision HMI"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",

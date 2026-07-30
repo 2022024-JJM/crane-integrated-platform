@@ -187,6 +187,19 @@ function getHmiGroup(): NavGroup {
   };
 }
 
+function getHmi2Group(): NavGroup {
+  return {
+    title: i18n.t('common:nav.hmi'),
+    items: [
+      {
+        label: i18n.t('common:nav.hmiPhillyDashboard'),
+        path: '/hmi2',
+        icon: MonitorCog,
+      },
+    ],
+  };
+}
+
 function getMroGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.mro'),
@@ -271,6 +284,7 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   mro: [],
   hmi: [],
+  hmi2: [],
 };
 
 export function getNavigationConfig(
@@ -286,6 +300,11 @@ export function getNavigationConfig(
   // hmi: HMI 그룹만 노출
   if (role === 'hmi') {
     return [getHmiGroup()].filter((g) => g.items.length > 0);
+  }
+
+  // hmi2: Philly HMI 그룹만 노출
+  if (role === 'hmi2') {
+    return [getHmi2Group()].filter((g) => g.items.length > 0);
   }
 
   const matchedKey = Object.keys(systemGroupOverrides).find((prefix) =>
