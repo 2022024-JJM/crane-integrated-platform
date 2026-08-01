@@ -49,6 +49,7 @@
     "working": "Working",
     "onHoldHint": "On hold — click a stage to resume.",
     "completedLocked": "Completed work orders are locked.",
+    "unsavedConfirm": "You have unsaved results. Discard and close?",
     "addPart": "Add Part",
     "part": {
       "title": "Record Part Usage",

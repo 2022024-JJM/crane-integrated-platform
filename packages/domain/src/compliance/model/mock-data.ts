@@ -165,8 +165,28 @@ function deriveCertStatus(cert: Certification): Certification['status'] {
   return 'valid';
 }
 
+// 갱신 요청된 인증서 id — 세션 내 저장. 요청되면 파생 상태 대신 'renewing'으로 노출한다
+// (만료/임박 알림에서 빠지고 "갱신 중"으로 보여 이미 처리 착수했음을 나타냄)
+const renewalRequestedIds = new Set<string>();
+
 export function getAllCertifications(): Certification[] {
-  return allCertifications.map((c) => ({ ...c, status: deriveCertStatus(c) }));
+  return allCertifications.map((c) => ({
+    ...c,
+    status: renewalRequestedIds.has(c.id) ? 'renewing' : deriveCertStatus(c),
+  }));
+}
+
+/** 인증서 갱신 요청 — 상태를 'renewing'으로 전환. 이미 요청됐으면 false */
+export function requestCertRenewal(id: string): boolean {
+  if (renewalRequestedIds.has(id)) return false;
+  if (!allCertifications.some((c) => c.id === id)) return false;
+  renewalRequestedIds.add(id);
+  return true;
+}
+
+/** 갱신 요청 취소 (Undo용) */
+export function cancelCertRenewal(id: string): void {
+  renewalRequestedIds.delete(id);
 }
 
 export function getAllOshaReports(): OshaReport[] {

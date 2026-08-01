@@ -8,7 +8,7 @@ export function AssetSpecsTab({ asset }: { asset: CraneAsset }) {
   const { t } = useTranslation('asset-management');
 
   const specFields = [
-    { label: t('detail.fields.craneType'), value: asset.craneType.toUpperCase() },
+    { label: t('detail.fields.craneType'), value: t(`craneType.${asset.craneType}`, { defaultValue: asset.craneType.toUpperCase() }) },
     { label: t('detail.fields.manufacturer'), value: asset.manufacturer },
     { label: t('detail.fields.model'), value: asset.model },
     { label: t('detail.fields.capacity'), value: `${asset.capacityTon} ${t('units.ton')}` },
@@ -17,7 +17,7 @@ export function AssetSpecsTab({ asset }: { asset: CraneAsset }) {
     { label: t('detail.fields.serialNo'), value: asset.serialNumber },
     { label: t('detail.fields.site'), value: asset.siteName },
     { label: t('detail.fields.location'), value: asset.locationZone },
-    { label: t('detail.fields.indoorOutdoor'), value: asset.indoorOutdoor },
+    { label: t('detail.fields.indoorOutdoor'), value: t(`modal.indoorOutdoor.${asset.indoorOutdoor}`, { defaultValue: asset.indoorOutdoor }) },
     { label: t('detail.fields.installDate'), value: asset.installationDate },
     { label: t('detail.fields.manufactureDate'), value: asset.manufactureDate },
     { label: t('detail.fields.warrantyStart'), value: asset.warrantyStart },

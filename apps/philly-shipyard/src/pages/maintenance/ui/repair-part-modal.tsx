@@ -8,10 +8,11 @@ import { cn } from '@crane/core/lib/utils';
 import { SURFACE_MODAL } from '../../../shared/ui/surface';
 import { Button } from '@crane/ui/atoms/button';
 import { FOCUS_RING } from '../../../shared/ui/controls';
+import { PartCombobox } from '../../../shared/ui/part-combobox';
+import { loadLastActor, saveLastActor } from '../../../shared/lib/actor-storage';
 import {
   FormField,
   inputClass,
-  selectClass,
   textareaClass,
 } from '../../../shared/ui/form';
 
@@ -22,10 +23,13 @@ import {
 export function RepairPartModal({
   repairId,
   woNumber,
+  defaultBy,
   onClose,
 }: {
   repairId: string;
   woNumber: string;
+  /** WO 담당자 — 부품을 기록하는 사람일 확률이 가장 높아 기본값으로 쓴다 */
+  defaultBy?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation('maintenance');
@@ -34,7 +38,7 @@ export function RepairPartModal({
 
   const [partId, setPartId] = useState('');
   const [qty, setQty] = useState(1);
-  const [by, setBy] = useState('');
+  const [by, setBy] = useState(() => defaultBy || loadLastActor());
   const [note, setNote] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -93,6 +97,7 @@ export function RepairPartModal({
     });
 
     if (outcome.success) {
+      saveLastActor(by);
       toast.success(
         t('toast.partIssued', { part: selected.partName, n: qty, woNumber }),
       );
@@ -142,21 +147,15 @@ export function RepairPartModal({
 
         <div className="flex flex-col gap-4">
           <FormField label={t('panel.part.selectPart')} required>
-            <select
+            <PartCombobox
+              items={items}
               value={partId}
-              onChange={(e) => {
-                setPartId(e.target.value);
+              showAvailable
+              onSelect={(id) => {
+                setPartId(id);
                 setQty(1);
               }}
-              className={selectClass}
-            >
-              <option value="">{t('panel.part.choosePart')}</option>
-              {items.map((i) => (
-                <option key={i.partId} value={i.partId}>
-                  {i.partNumber} — {i.partName} ({t('panel.part.available', { n: i.availableQty })})
-                </option>
-              ))}
-            </select>
+            />
           </FormField>
 
           <FormField

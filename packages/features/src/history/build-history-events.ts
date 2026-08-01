@@ -76,15 +76,21 @@ export type HistoryEvent =
 export function buildHistoryEvents(opts: {
   craneId?: string;
   isKo: boolean;
+  /**
+   * 미시작 점검(예정·기한 초과)도 포함할지. 전역 이력 페이지는 "발생한 활동"만 보므로
+   * 기본 제외. 자산 상세의 단일 이력 탭은 그 크레인의 미결 점검도 봐야 하므로 true로 켠다.
+   */
+  includeUpcoming?: boolean;
 }): HistoryEvent[] {
-  const { craneId, isKo } = opts;
+  const { craneId, isKo, includeUpcoming = false } = opts;
   const events: HistoryEvent[] = [];
 
   for (const wo of getAllInspectionWOs()) {
     if (craneId && wo.craneId !== craneId) continue;
     // 이력은 "발생한 활동"의 기록 — 시작도 안 한 점검(예정·기한 초과)은
-    // 점검 목록·캘린더의 몫이므로 제외한다 (내용·비용이 전부 비어 행이 무의미해진다)
-    if (wo.status === 'scheduled' || wo.status === 'overdue') continue;
+    // 점검 목록·캘린더의 몫이므로 기본 제외 (내용·비용이 비어 행이 무의미).
+    // 단 자산 상세는 미결 점검이 액션 아이템이라 includeUpcoming으로 허용한다.
+    if (!includeUpcoming && (wo.status === 'scheduled' || wo.status === 'overdue')) continue;
     const sortKey = wo.actualDate ?? wo.scheduledDate;
     events.push({
       kind: 'inspection',

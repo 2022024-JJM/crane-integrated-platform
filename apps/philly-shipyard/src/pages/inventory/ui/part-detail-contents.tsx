@@ -3,6 +3,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   ChevronRight,
+  PackagePlus,
   ShoppingCart,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -270,30 +271,48 @@ export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[]
 
 export function ActionButtons({
   onAction,
+  partId,
+  craneIds,
   className,
 }: {
   onAction: (mode: ActionMode) => void;
+  /** 이 부품으로 부품 요청 티켓을 프리필해 딥링크 — 지표를 본 자리에서 바로 조치 */
+  partId: string;
+  craneIds: string[];
   className?: string;
 }) {
   const { t } = useTranslation('inventory');
+  // 부품 요청 딥링크 — 사용처가 단일 크레인일 때만 craneId까지 프리필(다중이면 사용자가 선택)
+  const requestParams = new URLSearchParams({ type: 'parts', part: partId });
+  if (craneIds.length === 1) requestParams.set('craneId', craneIds[0]);
+  const requestHref = `/ticket/create?${requestParams.toString()}`;
   return (
-    <div className={cn('flex gap-2', className)}>
-      <button
-        type="button"
-        onClick={() => onAction('issue')}
-        className={cn('flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted', FOCUS_RING)}
+    <div className={cn('flex flex-col gap-2', className)}>
+      <Link
+        to={requestHref}
+        className={cn('flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted', FOCUS_RING)}
       >
-        <ArrowUpFromLine className="h-3.5 w-3.5" />
-        {t('actions.issue')}
-      </button>
-      <button
-        type="button"
-        onClick={() => onAction('receipt')}
-        className={cn(buttonVariants({ size: 'lg' }), 'flex-1')}
-      >
-        <ArrowDownToLine className="h-3.5 w-3.5" />
-        {t('actions.receipt')}
-      </button>
+        <PackagePlus className="h-3.5 w-3.5" />
+        {t('actions.requestPart')}
+      </Link>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onAction('issue')}
+          className={cn('flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted', FOCUS_RING)}
+        >
+          <ArrowUpFromLine className="h-3.5 w-3.5" />
+          {t('actions.issue')}
+        </button>
+        <button
+          type="button"
+          onClick={() => onAction('receipt')}
+          className={cn(buttonVariants({ size: 'lg' }), 'flex-1')}
+        >
+          <ArrowDownToLine className="h-3.5 w-3.5" />
+          {t('actions.receipt')}
+        </button>
+      </div>
     </div>
   );
 }

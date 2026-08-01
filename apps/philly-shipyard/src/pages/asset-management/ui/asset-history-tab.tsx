@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ClipboardCheck, Package, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,8 @@ import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
 import { TABLE_EMPTY } from '../../../shared/ui/page';
 import { SURFACE_PANEL } from '../../../shared/ui/surface';
-import { TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
+import { PILL_INACTIVE, TONE_DOT, TONE_TEXT, type Tone } from '../../../shared/ui/tone';
+import { FOCUS_RING } from '../../../shared/ui/controls';
 import {
   INSPECTION_RESULT_VARIANT,
   INSPECTION_STATUS_TONE,
@@ -162,21 +164,37 @@ function EventRow({ event }: { event: HistoryEvent }) {
   );
 }
 
-// ── 탭: 통합 이력 — 점검·수리·부품요청 월별 타임라인 (최신순) ──
+const KIND_ORDER: HistoryEventKind[] = ['inspection', 'repair', 'parts_request'];
+
+// ── 탭: 이력 — 점검·수리·부품요청 통합 타임라인 (최신순) + 종류 필터 ──
+// 기존 점검 이력·정비 이력·통합 이력 3개 탭을 이 탭 하나로 합쳤다 (종류 칩으로 좁힌다).
 export function AssetHistoryTab({ events }: { events: HistoryEvent[] }) {
   const { t } = useTranslation('asset-management');
+  const { t: tHistory } = useTranslation('history');
+  const [kindFilter, setKindFilter] = useState<HistoryEventKind | 'all'>('all');
 
-  if (events.length === 0) {
-    return (
-      <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
-        {t('detail.noHistory')}
-      </div>
+  // 종류별 카운트 — 0건 칩은 숨긴다 (앱 전역 규칙)
+  const kindCounts = useMemo(() => {
+    const counts = { inspection: 0, repair: 0, parts_request: 0 } as Record<HistoryEventKind, number>;
+    for (const e of events) counts[e.kind] += 1;
+    return counts;
+  }, [events]);
+
+  const filtered = useMemo(
+    () => (kindFilter === 'all' ? events : events.filter((e) => e.kind === kindFilter)),
+    [events, kindFilter],
+  );
+
+  const chipClass = (active: boolean) =>
+    cn(
+      'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-medium tracking-wider transition-all',
+      FOCUS_RING,
+      active ? 'bg-primary/10 text-primary ring-1 ring-primary/25' : PILL_INACTIVE,
     );
-  }
 
   // 이미 최신순 정렬 — 순서 유지하며 월 단위로만 묶는다
   const groups: { month: string; items: HistoryEvent[] }[] = [];
-  for (const e of events) {
+  for (const e of filtered) {
     const month = e.date.slice(0, 7);
     const last = groups[groups.length - 1];
     if (last && last.month === month) last.items.push(e);
@@ -184,19 +202,49 @@ export function AssetHistoryTab({ events }: { events: HistoryEvent[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {groups.map((g) => (
-        <section key={g.month}>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground tabular-nums">
-            {g.month}
-          </p>
-          <div className="ml-1 flex flex-col gap-2 border-l border-border pl-4">
-            {g.items.map((e) => (
-              <EventRow key={e.key} event={e} />
-            ))}
-          </div>
-        </section>
-      ))}
+    <div className="flex flex-col gap-4">
+      {/* 종류 필터 칩 */}
+      {events.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={() => setKindFilter('all')} className={chipClass(kindFilter === 'all')}>
+            {t('detail.historyAll', { defaultValue: 'All' })}
+            <span className="font-mono tabular-nums opacity-70">{events.length}</span>
+          </button>
+          {KIND_ORDER.map((kind) => {
+            const count = kindCounts[kind];
+            if (count === 0) return null;
+            const active = kindFilter === kind;
+            return (
+              <button key={kind} type="button" onClick={() => setKindFilter(kind)} className={chipClass(active)}>
+                <span className={active ? 'text-primary' : 'text-muted-foreground'}>{KIND_ICON[kind]}</span>
+                {tHistory(`kind.${kind}`)}
+                <span className="font-mono tabular-nums opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {events.length === 0 ? (
+        <div className={cn(TABLE_EMPTY, 'rounded-lg border border-dashed border-border/70')}>
+          {t('detail.noHistory')}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {groups.map((g) => (
+            <section key={g.month}>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground tabular-nums">
+                {g.month}
+              </p>
+              <div className="ml-1 flex flex-col gap-2 border-l border-border pl-4">
+                {g.items.map((e) => (
+                  <EventRow key={e.key} event={e} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

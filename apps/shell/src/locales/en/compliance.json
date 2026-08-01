@@ -36,7 +36,11 @@
       "renewing": "Renewing"
     },
     "daysLeft": "{{days}}d left",
-    "expired": "Expired"
+    "expired": "Expired",
+    "requestRenewal": "Request renewal"
+  },
+  "toast": {
+    "renewalRequested": "Renewal requested for {{name}}"
   },
   "oshaReports": {
     "title": "OSHA Inspection Reports",

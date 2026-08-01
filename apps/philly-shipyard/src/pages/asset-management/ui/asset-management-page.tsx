@@ -179,11 +179,13 @@ export function AssetManagementPage() {
         summary.total > 0 ? Math.round((summary.operating / summary.total) * 100) : 0,
       warrantyExpiringSoon: soon,
       warrantyExpired: expired,
-      criticalHealthCount: Object.values(craneHealthMap).filter(
-        (h) => h.componentStatus === 'critical' || h.componentStatus === 'replace',
+      // 위험 부품 보유 자산 수 — worst-health 스냅샷(이제 잔여수명 기준)이 아니라
+      // 실제 critical/replace 부품 개수에서 직접 센다 (KPI 의미 보존)
+      criticalHealthCount: Object.values(craneComponentStatsMap).filter(
+        (s) => s.critical > 0 || s.replace > 0,
       ).length,
     };
-  }, [assets, summary, craneInspectionMap, craneRepairMap, craneHealthMap, today]);
+  }, [assets, summary, craneInspectionMap, craneRepairMap, craneComponentStatsMap, today]);
 
   // 상태별 자산 수 — 필터 pill 카운트용 (한 번의 순회로 집계)
   const statusCounts = useMemo(() => {

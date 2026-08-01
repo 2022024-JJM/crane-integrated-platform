@@ -9,4 +9,6 @@ export {
   getAllCertifications,
   getAllOshaReports,
   getComplianceSummary,
+  requestCertRenewal,
+  cancelCertRenewal,
 } from './model/mock-data';

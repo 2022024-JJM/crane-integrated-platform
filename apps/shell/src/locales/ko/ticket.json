@@ -1,6 +1,7 @@
 {
   "title": "티켓 생성",
   "description": "수리, 점검 또는 부품 요청 티켓을 생성합니다",
+  "unsavedConfirm": "저장하지 않은 입력이 있습니다. 취소할까요?",
   "createButton": "새 티켓",
   "stepper": {
     "selectType": "유형 선택",

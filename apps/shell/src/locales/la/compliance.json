@@ -36,7 +36,11 @@
       "renewing": "Renovatur"
     },
     "daysLeft": "{{days}}d supersunt",
-    "expired": "Exspiravit"
+    "expired": "Exspiravit",
+    "requestRenewal": "Posce Renovationem"
+  },
+  "toast": {
+    "renewalRequested": "Renovatio pro {{name}} postulata"
   },
   "oshaReports": {
     "title": "Relationes Inspectionis OSHA",

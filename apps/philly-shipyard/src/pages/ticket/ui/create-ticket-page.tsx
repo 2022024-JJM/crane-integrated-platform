@@ -19,13 +19,20 @@ export function CreateTicketPage() {
     initial === 'repair' || initial === 'inspection' || initial === 'parts' ? initial : null,
   );
 
+  // 폼에 입력이 생기면 뒤로가기/타입 변경 시 한 번 확인 (데이터 손실 방지)
+  const [dirty, setDirty] = useState(false);
+  const confirmLeave = () =>
+    !dirty || window.confirm(t('unsavedConfirm', { defaultValue: 'You have unsaved changes. Discard them?' }));
+
   return (
     <div className={cn(PAGE_CONTAINER, 'mx-auto max-w-6xl')}>
       {/* 헤더 */}
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (confirmLeave()) navigate(-1);
+          }}
           className={cn('flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground', FOCUS_RING)}
         >
           <ChevronLeft className="size-4" />
@@ -44,11 +51,14 @@ export function CreateTicketPage() {
       {/* 타입 선택 */}
       <TicketTypeSelector selected={selectedType} onChange={setSelectedType} />
 
-      {/* 통합 폼 */}
+      {/* 통합 폼 — key로 재마운트하지 않아 타입 전환 시 공통 필드(크레인·담당자 등)가 유지된다 */}
       {selectedType && (
         <CreateTicketForm
-          key={selectedType}
           type={selectedType}
+          onDirtyChange={setDirty}
+          onCancel={() => {
+            if (confirmLeave()) navigate(-1);
+          }}
           onSuccess={(id) => {
             if (selectedType === 'repair') navigate(`/maintenance/${id!}`);
             else if (selectedType === 'inspection') navigate(`/inspection/${id!}`);

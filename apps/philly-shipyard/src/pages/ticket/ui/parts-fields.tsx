@@ -3,15 +3,16 @@ import { FileText, Plus, Trash2, Boxes } from 'lucide-react';
 import { Button } from '@crane/ui/atoms/button';
 import type { InventoryItem, PartsRequestItem } from '@crane/domain/inventory';
 import { FOCUS_RING } from '../../../shared/ui/controls';
+import { PartCombobox } from '../../../shared/ui/part-combobox';
 import { cn } from '@crane/core/lib/utils';
 import {
   FormSection,
   FormField,
   inputClass,
-  selectClass,
   textareaClass,
   type AccentColor,
 } from './form-helpers';
+import { AssigneeField } from './assignee-field';
 
 export interface PartsFieldsState {
   requester: string;
@@ -54,15 +55,6 @@ export function PartsFields({
   prioritySlot,
 }: PartsFieldsProps) {
   const { t } = useTranslation('ticket');
-  const { t: tInventory } = useTranslation('inventory');
-
-  // BOM 클러스터(카테고리)별로 부품 옵션 그룹핑 — 306개 옵션 탐색성 개선
-  const groupedItems: [InventoryItem['category'], InventoryItem[]][] = [];
-  for (const inv of inventoryItems) {
-    const group = groupedItems.find(([category]) => category === inv.category);
-    if (group) group[1].push(inv);
-    else groupedItems.push([inv.category, [inv]]);
-  }
 
   return (
     <>
@@ -71,11 +63,11 @@ export function PartsFields({
         {prioritySlot}
 
         <FormField label={t('fields.requester')} required error={errors.requester}>
-          <input
-            className={inputClass}
-            placeholder={t('placeholders.assignedTo')}
+          {/* 인력 마스터에서 고르는 것이 기본, 직접 입력 폴백 — 담당자 필드와 동일 UX */}
+          <AssigneeField
+            performerType="internal"
             value={state.requester}
-            onChange={(e) => onRequesterChange(e.target.value)}
+            onValueChange={onRequesterChange}
           />
         </FormField>
 
@@ -106,29 +98,23 @@ export function PartsFields({
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-bold text-muted-foreground">
                 {idx + 1}
               </span>
-              <select
-                className={selectClass + ' flex-1'}
-                value={item.partId}
-                onChange={(e) => onUpdateItem(idx, e.target.value)}
-              >
-                <option value="">{t('fields.partName')}</option>
-                {groupedItems.map(([category, invItems]) => (
-                  <optgroup key={category} label={tInventory(`category.${category}`)}>
-                    {invItems.map((inv) => (
-                      <option key={inv.partId} value={inv.partId}>
-                        {inv.partName} ({inv.partNumber})
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={1}
-                className={inputClass + ' w-20 text-center'}
-                value={item.qty}
-                onChange={(e) => onUpdateQty(idx, Number(e.target.value))}
-              />
+              {/* 폭은 래퍼 div로 강제 — inputClass의 w-full과 폭 유틸이 충돌하지 않게 */}
+              <div className="min-w-0 flex-1">
+                <PartCombobox
+                  items={inventoryItems}
+                  value={item.partId}
+                  onSelect={(partId) => onUpdateItem(idx, partId)}
+                />
+              </div>
+              <div className="w-20 shrink-0">
+                <input
+                  type="number"
+                  min={1}
+                  className={inputClass + ' text-center'}
+                  value={item.qty}
+                  onChange={(e) => onUpdateQty(idx, Number(e.target.value))}
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => onRemoveItem(idx)}
