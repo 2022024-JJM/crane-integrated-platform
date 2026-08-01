@@ -10,7 +10,7 @@ import { FINDING_TONE_COLOR, KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd, type Findin
 import { KcButton } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import { fmtDate } from '../../../shared/lib/service-status';
-import { CraneIcon } from '../../assets/ui/crane-icon';
+import { CraneIcon } from '../../../shared/ui/crane-icon';
 
 /* ── 소견 분류: 체크리스트 → findings 심각도 문법 ───────────────────── */
 

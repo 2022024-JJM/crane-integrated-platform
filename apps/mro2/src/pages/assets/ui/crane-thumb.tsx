@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import type { CraneType } from '@crane/domain/asset';
 import { KC } from '../../../shared/ui/kc';
-import { CraneIcon } from './crane-icon';
+import { CraneIcon } from '../../../shared/ui/crane-icon';
 
 // three.js는 자산 페이지 진입 시에만 로드되도록 lazy 분리
 const CraneThumbScene = lazy(() => import('./crane-thumb-scene'));

@@ -8,6 +8,12 @@ export type {
   CraneType,
 } from './model/types';
 export {
+  usedLifePercent,
+  remainingLifePercent,
+  lifeSeverity,
+} from './lib/component-life';
+export type { LifeSeverity } from './lib/component-life';
+export {
   addCraneAsset,
   getAllCraneAssets,
   getAssetSummary,

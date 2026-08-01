@@ -14,7 +14,7 @@ import {
   repairTone,
   serviceToneLabel,
 } from '../../../shared/lib/service-status';
-import { COMPONENT_STATUS_COLOR } from '../../../shared/lib/component';
+import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import { CraneThumb } from './crane-thumb';
 
@@ -31,11 +31,6 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
-
-function remainingPct(c: CraneComponent): number {
-  if (c.expectedLifeHours <= 0) return 100;
-  return Math.max(0, Math.round((1 - c.currentHours / c.expectedLifeHours) * 100));
-}
 
 export function Mro2AssetDetailPage() {
   const { t } = useTranslation(['mro2', 'calendar']);

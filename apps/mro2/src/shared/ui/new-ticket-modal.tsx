@@ -10,9 +10,9 @@ import {
 import { getAllCraneAssets, getComponentsByCraneId } from '@crane/domain/asset';
 import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getTechnicians } from '@crane/domain/shared';
-import { KC, KC_FONT_DISPLAY } from '../../../shared/ui/kc';
-import { KcButton } from '../../../shared/ui/kc-ui';
-import { useNewTicket, type TicketKind } from '../../../shared/lib/use-new-ticket';
+import { KC, KC_FONT_DISPLAY } from './kc';
+import { KcButton } from './kc-ui';
+import { useNewTicket, type TicketKind } from '../lib/use-new-ticket';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);

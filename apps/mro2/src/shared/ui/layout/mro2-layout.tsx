@@ -10,7 +10,7 @@ import { createContext, use, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { KC, KC_FONT, KC_FONT_DISPLAY } from '../kc';
-import { NewTicketModal } from '../../../pages/tickets/ui/new-ticket-modal';
+import { NewTicketModal } from '../new-ticket-modal';
 
 /* ── 전역 연도 컨텍스트 (툴바 🕐 연도 셀렉터) ───────────────────────── */
 
