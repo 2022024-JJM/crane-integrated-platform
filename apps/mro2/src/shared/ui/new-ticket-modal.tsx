@@ -12,7 +12,7 @@ import { getAllInventoryItems } from '@crane/domain/inventory';
 import { getTechnicians } from '@crane/domain/shared';
 import { KC, KC_FONT_DISPLAY } from './kc';
 import { KcButton } from './kc-ui';
-import { useNewTicket, type TicketKind } from '../lib/use-new-ticket';
+import { consumeTicketPrefill, useNewTicket, type TicketKind } from '../lib/use-new-ticket';
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -120,6 +120,8 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   onClose: () => void;
 }) {
   const { t } = useTranslation(['mro2', 'calendar']);
+  // 소견→수리 등 컨텍스트 프리필 (모달 오픈 시 1회 소비 — key 리마운트로 초기값에만 반영)
+  const [prefill] = useState(() => consumeTicketPrefill());
   const createRepair = useCreateRepairTicket();
   const createInspection = useCreateInspectionTicket();
   const createParts = useCreatePartsTicket();
@@ -135,10 +137,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   const components = useMemo(() => (craneId ? getComponentsByCraneId(craneId) : []), [craneId]);
 
   // repair
-  const [component, setComponent] = useState('');
-  const [failure, setFailure] = useState('');
+  const [component, setComponent] = useState(prefill?.componentName ?? '');
+  const [failure, setFailure] = useState(prefill?.failureDescription ?? '');
   const [failureType, setFailureType] = useState<'mechanical' | 'electrical' | 'structural' | 'control' | 'other'>('mechanical');
-  const [repairPriority, setRepairPriority] = useState<'emergency' | 'high' | 'normal' | 'low'>('normal');
+  const [repairPriority, setRepairPriority] = useState<'emergency' | 'high' | 'normal' | 'low'>(prefill?.priority ?? 'normal');
   const [schedStart, setSchedStart] = useState(today());
   const [schedEnd, setSchedEnd] = useState(today());
 
@@ -182,14 +184,15 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
         ...base,
         componentName: component.trim() || 'General',
         failureType,
-        sourceType: 'breakdown',
+        sourceType: prefill?.sourceWoNumber ? 'inspection' : 'breakdown',
+        sourceWoNumber: prefill?.sourceWoNumber,
         priority: repairPriority,
         repairLevel: 'minor',
         failureDescription: failure.trim(),
         performerType,
         assignedTo: resolvedAssignee,
         scheduledStart: schedStart,
-        scheduledEnd: schedEnd,
+        scheduledEnd: schedEnd < schedStart ? schedStart : schedEnd,
       });
       woNumber = wo.woNumber;
     } else if (kind === 'inspection') {
@@ -363,13 +366,15 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                   <input
                     type="number"
                     min={1}
+                    aria-label={t('mro2:sr.qty')}
                     value={row.qty}
                     onChange={(e) =>
                       setPartRows((rows) =>
                         rows.map((r, j) => (j === i ? { ...r, qty: Math.max(1, Number(e.target.value) || 1) } : r)),
                       )
                     }
-                    className={`${inputBase} w-16 shrink-0`}
+                    // inputBase의 w-full과 충돌하지 않도록 별도 클래스 (수량은 고정 폭)
+                    className="w-16 shrink-0 rounded-[4px] border px-2 py-1.5 text-center text-[12.5px] outline-none focus:ring-2"
                     style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
                   />
                   {partRows.length > 1 && (

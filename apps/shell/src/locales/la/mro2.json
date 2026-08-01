@@ -6,7 +6,8 @@
     "serviceRequests": "Petitiones Servitii",
     "serviceCalendar": "Calendarium Servitii",
     "spend": "Sumptus",
-    "inventory": "Inventarium et Partes"
+    "inventory": "Inventarium et Partes",
+    "servicePlan": "Consilium Servitii"
   },
   "common": {
     "back": "Retro",
@@ -277,7 +278,8 @@
     "total": "Summa",
     "costSummary": "Summarium Sumptuum",
     "labor": "Labor",
-    "partsCost": "Partes"
+    "partsCost": "Partes",
+    "createRepair": "Petitionem reparationis creare"
   },
   "inventory": {
     "title": "Inventarium et Partes",
@@ -370,5 +372,26 @@
     "cancel": "Cancellare",
     "create": "Petitionem creare",
     "created": "Petitio servitii {{number}} creata"
+  },
+  "plan": {
+    "title": "Pactum Servitii",
+    "agreementInfo": "Informatio Pacti",
+    "name": "Nomen Pacti",
+    "number": "Numerus Pacti",
+    "type": "Genus Pacti",
+    "evergreen": "Sempervirens",
+    "statusLabel": "Status",
+    "active": "Activum",
+    "startDate": "Dies Initii",
+    "billing": "Genus Rationis",
+    "contact": "Contactus Servitii",
+    "summary": "Summarium",
+    "annualSpend": "Sumptus Annuus",
+    "products": "Producta Servitii",
+    "validity": "Validitas",
+    "productsIncluded": "Producta in Pacto Servitii inclusa",
+    "planTitle": "Bona et Consilium Servitii",
+    "serviceStatus": "Status Servitii",
+    "monthHint": "Preme mensem ut Calendarium Servitii aperias"
   }
 }

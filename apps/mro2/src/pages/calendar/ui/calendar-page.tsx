@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 import { useServiceCalendar } from '@crane/features/calendar';
 import type { CalendarEvent } from '@crane/features/calendar';
@@ -12,7 +12,7 @@ import {
   repairTone,
   serviceToneLabel,
 } from '../../../shared/lib/service-status';
-import { MRO2_YEARS, useMro2Year } from '../../../shared/ui/layout/mro2-layout';
+import { MRO2_YEARS, useMro2Year } from '../../../shared/ui/layout';
 
 function eventTone(e: CalendarEvent): ServiceTone {
   return e.sourceType === 'inspection' ? inspectionTone(e.status) : repairTone(e.status);
@@ -49,7 +49,14 @@ export function Mro2CalendarPage() {
     return monthsWithEvents.length > 0 ? Math.min(...monthsWithEvents) : 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
-  const [month, setMonth] = useState(defaultMonth);
+  // 서비스 플랜 등에서 ?m=<0..11> 로 특정 월을 딥링크할 수 있다 (초기값만)
+  const [searchParams] = useSearchParams();
+  const mParam = searchParams.get('m');
+  const deepLinkMonth =
+    mParam !== null && Number.isInteger(Number(mParam)) && Number(mParam) >= 0 && Number(mParam) <= 11
+      ? Number(mParam)
+      : null;
+  const [month, setMonth] = useState(deepLinkMonth ?? defaultMonth);
 
   const monthEvents = yearEvents
     .filter((e) => e.start.getMonth() === month)
@@ -189,7 +196,14 @@ export function Mro2CalendarPage() {
                 type="button"
                 aria-label="Previous month"
                 className="cursor-pointer"
-                onClick={() => setMonth((m) => Math.max(0, m - 1))}
+                onClick={() => {
+                  if (month === 0 && MRO2_YEARS.includes(year - 1)) {
+                    setYear(year - 1);
+                    setMonth(11);
+                  } else {
+                    setMonth((m) => Math.max(0, m - 1));
+                  }
+                }}
               >
                 <ChevronLeft size={15} style={{ color: KC.ink }} />
               </button>
@@ -200,7 +214,14 @@ export function Mro2CalendarPage() {
                 type="button"
                 aria-label="Next month"
                 className="cursor-pointer"
-                onClick={() => setMonth((m) => Math.min(11, m + 1))}
+                onClick={() => {
+                  if (month === 11 && MRO2_YEARS.includes(year + 1)) {
+                    setYear(year + 1);
+                    setMonth(0);
+                  } else {
+                    setMonth((m) => Math.min(11, m + 1));
+                  }
+                }}
               >
                 <ChevronRight size={15} style={{ color: KC.ink }} />
               </button>

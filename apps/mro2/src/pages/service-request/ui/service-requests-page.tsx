@@ -14,7 +14,7 @@ import {
   serviceToneLabel,
   yearOf,
 } from '../../../shared/lib/service-status';
-import { useMro2Year } from '../../../shared/ui/layout/mro2-layout';
+import { useMro2Year } from '../../../shared/ui/layout';
 
 interface SrRow {
   key: string;

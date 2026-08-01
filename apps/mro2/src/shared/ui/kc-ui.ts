@@ -9,5 +9,4 @@ export { KcCard } from './kc-card';
 export { KcInfo } from './kc-info';
 export { KcButton } from './kc-button';
 export { KcFilterRail, KcFilterGroup, KcFilterChip } from './kc-filter';
-export { KcActivityRow } from './kc-activity-row';
 export { KcSectionHeading } from './kc-section-heading';

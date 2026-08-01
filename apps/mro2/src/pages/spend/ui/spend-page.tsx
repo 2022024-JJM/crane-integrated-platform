@@ -6,7 +6,7 @@ import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { KC, KC_FONT_DISPLAY, usd } from '../../../shared/ui/kc';
 import { KcDonut, KcSectionHeading } from '../../../shared/ui/kc-ui';
-import { useMro2Year } from '../../../shared/ui/layout/mro2-layout';
+import { useMro2Year } from '../../../shared/ui/layout';
 import {
   bucketTotal,
   computeSpend,
@@ -60,16 +60,27 @@ function Legend() {
 /** 수직 스택 바 묶음 (Trend by Service Type) */
 function StackedColumns({ data }: { data: { label: string; bucket: SpendBucket }[] }) {
   const max = Math.max(...data.map((d) => bucketTotal(d.bucket)), 1);
+  // 월간(12컬럼)은 콤팩트 폭 — 카드 반폭에서도 넘치지 않게
+  const compact = data.length > 6;
   return (
-    <div className="flex items-end justify-center gap-6 px-4" style={{ height: 190 }}>
+    <div
+      className={`flex items-end justify-center overflow-x-auto px-2 ${compact ? 'gap-1.5' : 'gap-6'}`}
+      style={{ height: 190 }}
+    >
       {data.map((d) => {
         const total = bucketTotal(d.bucket);
         return (
-          <div key={d.label} className="flex h-full w-14 flex-col items-center justify-end">
-            <span className="mb-1 text-[9.5px]" style={{ color: KC.muted }}>
+          <div
+            key={d.label}
+            className={`flex h-full flex-col items-center justify-end ${compact ? 'w-9' : 'w-14'}`}
+          >
+            <span className="mb-1 text-[9px] whitespace-nowrap" style={{ color: KC.muted }}>
               {total > 0 ? usd(total) : ''}
             </span>
-            <div className="flex w-9 flex-col-reverse" style={{ height: `${(total / max) * 78}%` }}>
+            <div
+              className={`flex flex-col-reverse ${compact ? 'w-5' : 'w-9'}`}
+              style={{ height: `${(total / max) * 78}%` }}
+            >
               {SPEND_TYPES.map((t) =>
                 d.bucket[t.key] > 0 ? (
                   <span

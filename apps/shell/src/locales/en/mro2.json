@@ -6,7 +6,8 @@
     "serviceRequests": "Service Requests",
     "serviceCalendar": "Service Calendar",
     "spend": "Spend",
-    "inventory": "Inventory and Parts"
+    "inventory": "Inventory and Parts",
+    "servicePlan": "Service Plan"
   },
   "common": {
     "back": "Back",
@@ -277,7 +278,8 @@
     "total": "Total",
     "costSummary": "Cost Summary",
     "labor": "Labor",
-    "partsCost": "Parts"
+    "partsCost": "Parts",
+    "createRepair": "Create repair request"
   },
   "inventory": {
     "title": "Inventory and Parts",
@@ -370,5 +372,26 @@
     "cancel": "Cancel",
     "create": "Create Request",
     "created": "Service request {{number}} created"
+  },
+  "plan": {
+    "title": "Service Agreement",
+    "agreementInfo": "Agreement Information",
+    "name": "Agreement Name",
+    "number": "Agreement Number",
+    "type": "Agreement Type",
+    "evergreen": "Evergreen",
+    "statusLabel": "Status",
+    "active": "Active",
+    "startDate": "Start Date",
+    "billing": "Billing Type",
+    "contact": "Service Contact",
+    "summary": "Summary",
+    "annualSpend": "Annual Spend",
+    "products": "Service Products",
+    "validity": "Validity",
+    "productsIncluded": "Products included in Service Agreement",
+    "planTitle": "Assets and Service Plan",
+    "serviceStatus": "Service Status",
+    "monthHint": "Click a month to open it in the Service Calendar"
   }
 }

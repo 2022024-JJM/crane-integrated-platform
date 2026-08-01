@@ -260,6 +260,11 @@ const Mro2CalendarPage = lazy(() =>
     default: m.Mro2CalendarPage,
   })),
 );
+const Mro2ServicePlanPage = lazy(() =>
+  import('@crane/mro2/pages/service-plan').then((m) => ({
+    default: m.Mro2ServicePlanPage,
+  })),
+);
 const Mro2ServiceRequestsPage = lazy(() =>
   import('@crane/mro2/pages/service-request').then((m) => ({
     default: m.Mro2ServiceRequestsPage,
@@ -339,6 +344,14 @@ export function App() {
                   element={
                     <LazyRoute>
                       <Mro2CalendarPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="service-plan"
+                  element={
+                    <LazyRoute>
+                      <Mro2ServicePlanPage />
                     </LazyRoute>
                   }
                 />

@@ -10,6 +10,7 @@ import { FINDING_TONE_COLOR, KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd, type Findin
 import { KcButton } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import { fmtDate } from '../../../shared/lib/service-status';
+import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import { CraneIcon } from '../../../shared/ui/crane-icon';
 
 /* ── 소견 분류: 체크리스트 → findings 심각도 문법 ───────────────────── */
@@ -113,6 +114,7 @@ type StructureMode = 'findings' | 'complete';
 
 function InspectionDetail({ wo }: { wo: InspectionWO }) {
   const { t } = useTranslation(['mro2', 'calendar']);
+  const { openTicket } = useNewTicket();
   const [mode, setMode] = useState<StructureMode>('findings');
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
   const [expandAll, setExpandAll] = useState(false);
@@ -324,6 +326,28 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
                       <FieldRow k={t('mro2:sr.measurement')} v={`${item.measurementValue} ${item.measurementUnit ?? ''}`} />
                     ) : null}
                     {item.comment ? <FieldRow k={t('mro2:sr.comment')} v={item.comment} /> : null}
+                    {needsQuote ? (
+                      <div className="mt-2 border-t pt-2" style={{ borderColor: KC.hairline }}>
+                        <KcButton
+                          variant="teal"
+                          onClick={() =>
+                            openTicket('repair', wo.craneId, {
+                              componentName: item.itemName,
+                              failureDescription: item.comment ?? item.itemName,
+                              sourceWoNumber: wo.woNumber,
+                              priority:
+                                item.actionRequired === 'stop_operation'
+                                  ? 'emergency'
+                                  : item.actionRequired === 'immediate_replace'
+                                    ? 'high'
+                                    : 'normal',
+                            })
+                          }
+                        >
+                          {t('mro2:sr.createRepair')}
+                        </KcButton>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

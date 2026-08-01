@@ -6,51 +6,12 @@ import '@fontsource/ibm-plex-sans/700.css';
 import '@fontsource/ibm-plex-sans-condensed/600.css';
 import '@fontsource/ibm-plex-sans-condensed/700.css';
 import '@fontsource/ibm-plex-mono/500.css';
-import { createContext, use, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { KC, KC_FONT, KC_FONT_DISPLAY } from '../kc';
+import { KC, KC_FONT } from '../kc';
 import { NewTicketModal } from '../new-ticket-modal';
-
-/* ── 전역 연도 컨텍스트 (툴바 🕐 연도 셀렉터) ───────────────────────── */
-
-interface Mro2Filter {
-  year: number;
-  setYear: (y: number) => void;
-}
-
-const Mro2FilterContext = createContext<Mro2Filter | null>(null);
-
-export function useMro2Year(): Mro2Filter {
-  const ctx = use(Mro2FilterContext);
-  if (!ctx) throw new Error('useMro2Year must be used within Mro2Layout');
-  return ctx;
-}
-
-export const MRO2_YEARS = [2025, 2026];
-
-/* ── 브랜드 워드마크 (필요 시 페이지 내 사용) ───────────────────────── */
-
-export function Mro2Logo({ size = 15 }: { size?: number }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 font-bold tracking-wide uppercase"
-      style={{ fontSize: size, lineHeight: 1, fontFamily: KC_FONT_DISPLAY }}
-    >
-      <span
-        className="inline-block"
-        style={{
-          width: size * 0.55,
-          height: size * 0.55,
-          background: KC.accent,
-          borderRadius: 2,
-        }}
-      />
-      <span style={{ color: KC.ink }}>CRANE</span>
-      <span style={{ color: KC.accent }}>MRO</span>
-    </span>
-  );
-}
+import { Mro2FilterContext, MRO2_YEARS } from './mro2-year-context';
 
 /* ── 레이아웃 본체 ──────────────────────────────────────────────────────
  * 헤더/햄버거 사이드바는 기존 MRO와 동일하게 shell의 AppLayout이 담당한다.

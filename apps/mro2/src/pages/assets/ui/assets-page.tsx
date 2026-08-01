@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, FileSpreadsheet, MapPin, Plus, Wifi, X } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
@@ -17,11 +17,8 @@ import {
 } from '../../../shared/lib/service-status';
 import { SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import { assetCriticality } from '../lib/asset-criticality';
 import { CraneThumb } from './crane-thumb';
-
-export function assetCriticality(asset: CraneAsset): 'high' | 'moderate' {
-  return asset.capacityTon >= 300 ? 'high' : 'moderate';
-}
 
 interface ActivityLine {
   key: string;
@@ -47,16 +44,10 @@ export function Mro2AssetsPage() {
   const selected = assets.find((a) => a.id === selectedId) ?? null;
   const open = selected !== null;
 
-  // 닫히는 동안에도 내용이 유지되도록 마지막 선택 자산을 잠시 보관 (슬라이드 아웃 애니메이션용)
-  const [displayed, setDisplayed] = useState<CraneAsset | null>(selected);
-  useEffect(() => {
-    if (selected) {
-      setDisplayed(selected);
-      return;
-    }
-    const timer = setTimeout(() => setDisplayed(null), 300);
-    return () => clearTimeout(timer);
-  }, [selected]);
+  // 마지막으로 열렸던 자산 — 닫히는 300ms 동안 패널 내용이 유지되도록 렌더 소스로 쓴다.
+  // (열림 중엔 selected 가 우선이므로 지연 초기화가 필요 없다 → 이펙트 없이 상태만 유지)
+  const [lastSelected, setLastSelected] = useState<CraneAsset | null>(selected);
+  const displayed = selected ?? lastSelected;
 
   const filtered = assets.filter((a) => {
     if (query && !a.name.toLowerCase().includes(query.toLowerCase())) return false;
@@ -96,14 +87,18 @@ export function Mro2AssetsPage() {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspections, repairs, t]);
 
   // 카드 클릭 = 토글: 같은 카드를 다시 누르면 패널이 닫힌다
   const toggleSlideout = (id: string) => {
     const next = new URLSearchParams(searchParams);
-    if (selectedId === id) next.delete('asset');
-    else next.set('asset', id);
+    if (selectedId === id) {
+      next.delete('asset');
+    } else {
+      next.set('asset', id);
+      const asset = assets.find((a) => a.id === id) ?? null;
+      if (asset) setLastSelected(asset);
+    }
     setSearchParams(next);
   };
   const closeSlideout = () => {

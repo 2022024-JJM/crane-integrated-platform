@@ -13,7 +13,8 @@
     "./pages/service-request": "./src/pages/service-request/index.ts",
     "./pages/inventory": "./src/pages/inventory/index.ts",
     "./pages/spend": "./src/pages/spend/index.ts",
-    "./layout": "./src/shared/ui/layout/index.ts"
+    "./layout": "./src/shared/ui/layout/index.ts",
+    "./pages/service-plan": "./src/pages/service-plan/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",
@@ -36,5 +37,11 @@
     "react-router-dom": "^7.13.1",
     "sonner": "^2.0.7",
     "three": "^0.183.2"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }

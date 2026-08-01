@@ -6,7 +6,8 @@
     "serviceRequests": "서비스 요청",
     "serviceCalendar": "서비스 캘린더",
     "spend": "비용",
-    "inventory": "재고·부품"
+    "inventory": "재고·부품",
+    "servicePlan": "서비스 플랜"
   },
   "common": {
     "back": "뒤로",
@@ -277,7 +278,8 @@
     "total": "합계",
     "costSummary": "비용 요약",
     "labor": "인건비",
-    "partsCost": "부품비"
+    "partsCost": "부품비",
+    "createRepair": "수리 요청 생성"
   },
   "inventory": {
     "title": "재고·부품",
@@ -370,5 +372,26 @@
     "cancel": "취소",
     "create": "요청 생성",
     "created": "서비스 요청 {{number}} 생성됨"
+  },
+  "plan": {
+    "title": "서비스 계약",
+    "agreementInfo": "계약 정보",
+    "name": "계약명",
+    "number": "계약 번호",
+    "type": "계약 유형",
+    "evergreen": "자동 갱신",
+    "statusLabel": "상태",
+    "active": "유효",
+    "startDate": "시작일",
+    "billing": "정산 방식",
+    "contact": "서비스 담당",
+    "summary": "요약",
+    "annualSpend": "연간 비용",
+    "products": "서비스 제품",
+    "validity": "유효 기간",
+    "productsIncluded": "계약에 포함된 서비스 제품",
+    "planTitle": "자산 및 서비스 플랜",
+    "serviceStatus": "서비스 상태",
+    "monthHint": "월을 클릭하면 서비스 캘린더로 이동합니다"
   }
 }

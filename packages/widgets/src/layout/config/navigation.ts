@@ -22,6 +22,7 @@ import {
   MonitorCog,
   Camera,
   CalendarDays,
+  CalendarRange,
   Cctv,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
@@ -272,6 +273,11 @@ function getMro2Group(): NavGroup {
         label: i18n.t('mro2:nav.serviceCalendar'),
         path: '/mro2/calendar',
         icon: CalendarDays,
+      },
+      {
+        label: i18n.t('mro2:nav.servicePlan'),
+        path: '/mro2/service-plan',
+        icon: CalendarRange,
       },
       {
         label: i18n.t('mro2:nav.spend'),

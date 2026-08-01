@@ -17,7 +17,7 @@ import { useMaintenanceList } from '@crane/features/maintenance';
 import { useOpenRisks } from '@crane/features/risk';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, usd } from '../../../shared/ui/kc';
 import { KcCard, KcDonut, KcInfo, KcRing, KcStat } from '../../../shared/ui/kc-ui';
-import { useMro2Year } from '../../../shared/ui/layout/mro2-layout';
+import { useMro2Year } from '../../../shared/ui/layout';
 import { computeSpend, SPEND_TYPES, type SpendTypeKey } from '../../../shared/lib/spend';
 import {
   fmtDate,
@@ -118,11 +118,22 @@ export function Mro2OverviewPage() {
             <div className="text-[10px]" style={{ color: KC.muted }}>
               {t('overview.openRisks')}
             </div>
-            <KcRing pct={100} color={KC.safety} size={56} stroke={6}>
+            <KcDonut
+              size={56}
+              stroke={6}
+              segments={
+                openRiskTotal > 0
+                  ? [
+                      { value: safety.length, color: KC.safety },
+                      { value: production.length, color: KC.production },
+                    ]
+                  : [{ value: 1, color: 'var(--kc-track)' }]
+              }
+            >
               <span className="text-[15px] font-bold" style={{ color: KC.ink }}>
                 {openRiskTotal}
               </span>
-            </KcRing>
+            </KcDonut>
           </div>
           <KcStat value={safety.length} label={t('common.safety')} tone={KC.safety} size="lg" />
           <KcStat value={production.length} label={t('common.production')} tone={KC.production} size="lg" />
