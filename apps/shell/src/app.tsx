@@ -59,6 +59,10 @@ function isMroAllowed(pathname: string): boolean {
   return MRO_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+function isMro2Allowed(pathname: string): boolean {
+  return pathname === '/mro2' || pathname.startsWith('/mro2/');
+}
+
 const HMI_ALLOWED_EXACT = new Set(['/hmi']);
 const HMI_ALLOWED_PREFIXES = ['/hmi/'];
 
@@ -84,6 +88,9 @@ function ProtectedRoute() {
   if (role === 'mro' && !isMroAllowed(location.pathname)) {
     return <Navigate to="/mro-dashboard" replace />;
   }
+  if (role === 'mro2' && !isMro2Allowed(location.pathname)) {
+    return <Navigate to="/mro2" replace />;
+  }
   if (role === 'hmi' && !isHmiAllowed(location.pathname)) {
     return <Navigate to="/hmi" replace />;
   }
@@ -97,6 +104,7 @@ function ProtectedRoute() {
 function LoginGuard() {
   const role = getStoredRole();
   if (role === 'mro') return <Navigate to="/mro-dashboard" replace />;
+  if (role === 'mro2') return <Navigate to="/mro2" replace />;
   if (role === 'hmi') return <Navigate to="/hmi" replace />;
   if (role === 'hmi2') return <Navigate to="/hmi2" replace />;
   if (role) return <Navigate to="/" replace />;
@@ -229,6 +237,50 @@ const PhillyDashboardPage = lazy(() =>
   })),
 );
 
+const Mro2Layout = lazy(() =>
+  import('@crane/mro2/layout').then((m) => ({ default: m.Mro2Layout })),
+);
+const Mro2OverviewPage = lazy(() =>
+  import('@crane/mro2/pages/overview').then((m) => ({
+    default: m.Mro2OverviewPage,
+  })),
+);
+const Mro2AssetsPage = lazy(() =>
+  import('@crane/mro2/pages/assets').then((m) => ({
+    default: m.Mro2AssetsPage,
+  })),
+);
+const Mro2AssetDetailPage = lazy(() =>
+  import('@crane/mro2/pages/assets').then((m) => ({
+    default: m.Mro2AssetDetailPage,
+  })),
+);
+const Mro2CalendarPage = lazy(() =>
+  import('@crane/mro2/pages/calendar').then((m) => ({
+    default: m.Mro2CalendarPage,
+  })),
+);
+const Mro2ServiceRequestsPage = lazy(() =>
+  import('@crane/mro2/pages/service-request').then((m) => ({
+    default: m.Mro2ServiceRequestsPage,
+  })),
+);
+const Mro2ServiceRequestDetailPage = lazy(() =>
+  import('@crane/mro2/pages/service-request').then((m) => ({
+    default: m.Mro2ServiceRequestDetailPage,
+  })),
+);
+const Mro2InventoryPage = lazy(() =>
+  import('@crane/mro2/pages/inventory').then((m) => ({
+    default: m.Mro2InventoryPage,
+  })),
+);
+const Mro2SpendPage = lazy(() =>
+  import('@crane/mro2/pages/spend').then((m) => ({
+    default: m.Mro2SpendPage,
+  })),
+);
+
 const HmiPage = lazy(() =>
   import('@crane/crane-hmi/pages/hmi').then((m) => ({
     default: m.HmiPage,
@@ -249,6 +301,80 @@ export function App() {
           <Route path="login" element={<LoginGuard />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
+              {/* MRO2 — 헤더/사이드바는 기존 MRO와 동일한 AppLayout 공용 */}
+              <Route
+                path="mro2"
+                element={
+                  <LazyRoute>
+                    <Mro2Layout />
+                  </LazyRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <LazyRoute>
+                      <Mro2OverviewPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="assets"
+                  element={
+                    <LazyRoute>
+                      <Mro2AssetsPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="assets/:craneId"
+                  element={
+                    <LazyRoute>
+                      <Mro2AssetDetailPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="calendar"
+                  element={
+                    <LazyRoute>
+                      <Mro2CalendarPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="service-requests"
+                  element={
+                    <LazyRoute>
+                      <Mro2ServiceRequestsPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="service-requests/:kind/:id"
+                  element={
+                    <LazyRoute>
+                      <Mro2ServiceRequestDetailPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="inventory"
+                  element={
+                    <LazyRoute>
+                      <Mro2InventoryPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="spend"
+                  element={
+                    <LazyRoute>
+                      <Mro2SpendPage />
+                    </LazyRoute>
+                  }
+                />
+              </Route>
               <Route
                 path="mro-dashboard"
                 element={

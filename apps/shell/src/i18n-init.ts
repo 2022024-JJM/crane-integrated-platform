@@ -45,6 +45,9 @@ import laCalendar from './locales/la/calendar.json';
 import koHistory from './locales/ko/history.json';
 import enHistory from './locales/en/history.json';
 import laHistory from './locales/la/history.json';
+import koMro2 from './locales/ko/mro2.json';
+import enMro2 from './locales/en/mro2.json';
+import laMro2 from './locales/la/mro2.json';
 
 const resources = {
   ko: {
@@ -63,6 +66,7 @@ const resources = {
     ticket: koTicket,
     calendar: koCalendar,
     history: koHistory,
+    mro2: koMro2,
   },
   en: {
     common: enCommon,
@@ -80,6 +84,7 @@ const resources = {
     ticket: enTicket,
     calendar: enCalendar,
     history: enHistory,
+    mro2: enMro2,
   },
   la: {
     common: laCommon,
@@ -97,6 +102,7 @@ const resources = {
     ticket: laTicket,
     calendar: laCalendar,
     history: laHistory,
+    mro2: laMro2,
   },
 };
 
