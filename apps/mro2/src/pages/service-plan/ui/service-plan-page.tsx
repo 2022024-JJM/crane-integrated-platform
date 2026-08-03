@@ -10,7 +10,12 @@ import { useMro2Year } from '../../../shared/ui/layout';
 import { computeSpend } from '../../../shared/lib/spend';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { usd } from '../../../shared/ui/kc';
-import { buildServicePlan, type PlanCell, type PlanRow } from '../lib/build-plan';
+import {
+  buildServicePlan,
+  planStatusPercents,
+  type PlanCell,
+  type PlanRow,
+} from '../lib/build-plan';
 
 /* ── 접이식 섹션 (매뉴얼 6p 스타일) ─────────────────────────────────── */
 
@@ -124,7 +129,8 @@ export function Mro2ServicePlanPage() {
   );
   const spend = useMemo(() => computeSpend(inspections, repairs, year), [inspections, repairs, year]);
 
-  const pct = (n: number) => (plan.summary.total > 0 ? Math.round((n / plan.summary.total) * 100) : 0);
+  // 항목별로 따로 반올림하면 합이 100을 벗어나므로 최대 잔여 방식으로 배분한다
+  const pct = useMemo(() => planStatusPercents(plan.summary), [plan.summary]);
 
   const toggleAsset = (id: string) =>
     setOpenAssets((prev) => {
@@ -188,25 +194,25 @@ export function Mro2ServicePlanPage() {
         </div>
         <div className="mb-5 flex items-start justify-around">
           <KcStat
-            value={`${pct(plan.summary.completed)}%`}
+            value={`${pct.completed}%`}
             label={t('mro2:status.completed')}
             tone={SERVICE_TONE_COLOR.completed}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.open)}%`}
+            value={`${pct.open}%`}
             label={t('mro2:status.open')}
             tone={SERVICE_TONE_COLOR.open}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.inProgress)}%`}
+            value={`${pct.inProgress}%`}
             label={t('mro2:status.inProgress')}
             tone={SERVICE_TONE_COLOR.inProgress}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.delayed)}%`}
+            value={`${pct.delayed}%`}
             label={t('mro2:status.delayed')}
             tone={SERVICE_TONE_COLOR.delayed}
             size="lg"
