@@ -14,7 +14,8 @@
     "./pages/inventory": "./src/pages/inventory/index.ts",
     "./pages/spend": "./src/pages/spend/index.ts",
     "./layout": "./src/shared/ui/layout/index.ts",
-    "./pages/service-plan": "./src/pages/service-plan/index.ts"
+    "./pages/service-plan": "./src/pages/service-plan/index.ts",
+    "./pages/documents": "./src/pages/documents/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

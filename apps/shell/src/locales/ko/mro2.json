@@ -7,7 +7,8 @@
     "serviceCalendar": "서비스 캘린더",
     "spend": "비용",
     "inventory": "재고·부품",
-    "servicePlan": "서비스 플랜"
+    "servicePlan": "서비스 플랜",
+    "documents": "문서 및 보고서"
   },
   "common": {
     "back": "뒤로",
@@ -125,7 +126,13 @@
     "activitySummary": "활동 요약",
     "viewAsset": "자산 상세 보기",
     "notFound": "자산을 찾을 수 없습니다.",
-    "backToFleet": "자산 플릿으로 돌아가기"
+    "backToFleet": "자산 플릿으로 돌아가기",
+    "report": {
+      "openRisks": "미해결 리스크",
+      "serviceHistory": "서비스 이력",
+      "materialHistory": "자재 사용 이력",
+      "serviceSpend": "서비스 비용"
+    }
   },
   "detail": {
     "tabOpenItems": "미결 항목",
@@ -169,7 +176,8 @@
     "location": "위치",
     "indoorOutdoor": "실내/실외",
     "oshaClassification": "OSHA 분류",
-    "status": "상태"
+    "status": "상태",
+    "frontViewCaption": "정면 뷰 — {{name}}"
   },
   "calendar": {
     "title": "서비스 캘린더",
@@ -393,5 +401,33 @@
     "planTitle": "자산 및 서비스 플랜",
     "serviceStatus": "서비스 상태",
     "monthHint": "월을 클릭하면 서비스 캘린더로 이동합니다"
+  },
+  "documents": {
+    "title": "문서 및 보고서",
+    "subtitle": "문서 {{count}}건",
+    "search": "문서 검색...",
+    "typeTitle": "문서 유형",
+    "upload": "업로드",
+    "download": "다운로드",
+    "size": "크기",
+    "empty": "조건에 맞는 문서가 없습니다.",
+    "colName": "문서",
+    "colType": "유형",
+    "colAsset": "자산",
+    "colDate": "일자",
+    "colBy": "작성자",
+    "colDetail": "상세",
+    "type": {
+      "inspection_report": "점검 보고서",
+      "certificate": "인증서",
+      "manual": "매뉴얼",
+      "drawing": "도면",
+      "contract": "계약서",
+      "other": "기타"
+    },
+    "origin": {
+      "generated": "서비스 자동 생성",
+      "uploaded": "고객 업로드"
+    }
   }
 }

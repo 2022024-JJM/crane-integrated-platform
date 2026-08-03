@@ -24,6 +24,7 @@ import {
   CalendarDays,
   CalendarRange,
   Cctv,
+  FileText,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -288,6 +289,11 @@ function getMro2Group(): NavGroup {
         label: i18n.t('mro2:nav.inventory'),
         path: '/mro2/inventory',
         icon: Package,
+      },
+      {
+        label: i18n.t('mro2:nav.documents'),
+        path: '/mro2/documents',
+        icon: FileText,
       },
     ],
   };

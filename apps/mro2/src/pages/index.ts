@@ -5,4 +5,5 @@ export { Mro2ServicePlanPage } from './service-plan';
 export { Mro2ServiceRequestsPage, Mro2ServiceRequestDetailPage } from './service-request';
 export { Mro2InventoryPage } from './inventory';
 export { Mro2SpendPage } from './spend';
+export { Mro2DocumentsPage } from './documents';
 export { Mro2Layout } from '../shared/ui/layout';

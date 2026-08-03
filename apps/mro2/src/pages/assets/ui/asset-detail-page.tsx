@@ -17,6 +17,7 @@ import {
 import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import { CraneThumb } from './crane-thumb';
+import { CraneFrontView } from './crane-front-view';
 
 const Asset3dTab = lazy(() =>
   import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
@@ -166,21 +167,33 @@ export function Mro2AssetDetailPage() {
 
       {/* ── Asset Info ── */}
       {tab === 'info' ? (
-        <div className="max-w-[560px] pt-4">
-          <InfoRow k={t('mro2:info.manufacturer')} v={asset.manufacturer} />
-          <InfoRow k={t('mro2:info.model')} v={asset.model} />
-          <InfoRow k={t('mro2:info.serialNumber')} v={asset.serialNumber} />
-          <InfoRow k={t('mro2:info.capacity')} v={`${asset.capacityTon} t`} />
-          {asset.spanM ? <InfoRow k={t('mro2:info.span')} v={`${asset.spanM} m`} /> : null}
-          {asset.liftHeightM ? <InfoRow k={t('mro2:info.liftHeight')} v={`${asset.liftHeightM} m`} /> : null}
-          <InfoRow k={t('mro2:info.manufactureDate')} v={fmtDate(asset.manufactureDate)} />
-          <InfoRow k={t('mro2:info.installationDate')} v={fmtDate(asset.installationDate)} />
-          <InfoRow k={t('mro2:info.warranty')} v={`${fmtDate(asset.warrantyStart)} – ${fmtDate(asset.warrantyEnd)}`} />
-          <InfoRow k={t('mro2:info.site')} v={asset.siteName} />
-          <InfoRow k={t('mro2:info.location')} v={asset.locationZone} />
-          <InfoRow k={t('mro2:info.indoorOutdoor')} v={asset.indoorOutdoor} />
-          <InfoRow k={t('mro2:info.oshaClassification')} v={asset.oshaClassification} />
-          <InfoRow k={t('mro2:info.status')} v={asset.status} />
+        <div className="grid grid-cols-1 items-stretch gap-6 pt-4 lg:grid-cols-2">
+          {/* 제원 표 */}
+          <div className="min-w-0">
+            <InfoRow k={t('mro2:info.manufacturer')} v={asset.manufacturer} />
+            <InfoRow k={t('mro2:info.model')} v={asset.model} />
+            <InfoRow k={t('mro2:info.serialNumber')} v={asset.serialNumber} />
+            <InfoRow k={t('mro2:info.capacity')} v={`${asset.capacityTon} t`} />
+            {asset.spanM ? <InfoRow k={t('mro2:info.span')} v={`${asset.spanM} m`} /> : null}
+            {asset.liftHeightM ? <InfoRow k={t('mro2:info.liftHeight')} v={`${asset.liftHeightM} m`} /> : null}
+            <InfoRow k={t('mro2:info.manufactureDate')} v={fmtDate(asset.manufactureDate)} />
+            <InfoRow k={t('mro2:info.installationDate')} v={fmtDate(asset.installationDate)} />
+            <InfoRow k={t('mro2:info.warranty')} v={`${fmtDate(asset.warrantyStart)} – ${fmtDate(asset.warrantyEnd)}`} />
+            <InfoRow k={t('mro2:info.site')} v={asset.siteName} />
+            <InfoRow k={t('mro2:info.location')} v={asset.locationZone} />
+            <InfoRow k={t('mro2:info.indoorOutdoor')} v={asset.indoorOutdoor} />
+            <InfoRow k={t('mro2:info.oshaClassification')} v={asset.oshaClassification} />
+            <InfoRow k={t('mro2:info.status')} v={asset.status} />
+          </div>
+
+          {/* 정면 3D 뷰 — 우측 절반을 꽉 채운다 (높이는 좌측 표에 맞춰 늘어남) */}
+          <div className="min-w-0">
+            <CraneFrontView
+              craneType={asset.craneType}
+              caption={t('mro2:info.frontViewCaption', { name: asset.name })}
+              fill
+            />
+          </div>
         </div>
       ) : null}
     </div>
@@ -212,8 +225,8 @@ function WoTimeline({
     ...inspections.map((w) => ({
       key: `i-${w.id}`,
       date: w.actualDate ?? w.scheduledDate,
-      tone: SERVICE_TONE_COLOR[inspectionTone(w.status)],
-      statusLabel: i18n.t('mro2:detail.srOf', { status: serviceToneLabel(inspectionTone(w.status)) }),
+      tone: SERVICE_TONE_COLOR[inspectionTone(w.status, w.scheduledDate)],
+      statusLabel: i18n.t('mro2:detail.srOf', { status: serviceToneLabel(inspectionTone(w.status, w.scheduledDate)) }),
       woNumber: w.woNumber,
       subtitle: i18n.t('mro2:detail.typeInspection', { type: i18n.t(`calendar:type.${w.woType}`) }),
       path: `/mro2/service-requests/inspection/${w.id}`,

@@ -7,7 +7,8 @@
     "serviceCalendar": "Calendarium Servitii",
     "spend": "Sumptus",
     "inventory": "Inventarium et Partes",
-    "servicePlan": "Consilium Servitii"
+    "servicePlan": "Consilium Servitii",
+    "documents": "Documenta"
   },
   "common": {
     "back": "Retro",
@@ -125,7 +126,13 @@
     "activitySummary": "Summarium Actionum",
     "viewAsset": "Bonum videre",
     "notFound": "Bonum non inventum.",
-    "backToFleet": "Retro ad Classem Bonorum"
+    "backToFleet": "Retro ad Classem Bonorum",
+    "report": {
+      "openRisks": "Pericula Aperta",
+      "serviceHistory": "Historia Servitii",
+      "materialHistory": "Historia Materiae",
+      "serviceSpend": "Sumptus Servitii"
+    }
   },
   "detail": {
     "tabOpenItems": "Res Apertae",
@@ -169,7 +176,8 @@
     "location": "Locus",
     "indoorOutdoor": "Intus / Foris",
     "oshaClassification": "Classificatio OSHA",
-    "status": "Status"
+    "status": "Status",
+    "frontViewCaption": "Facies antica — {{name}}"
   },
   "calendar": {
     "title": "Calendarium Servitii",
@@ -393,5 +401,33 @@
     "planTitle": "Bona et Consilium Servitii",
     "serviceStatus": "Status Servitii",
     "monthHint": "Preme mensem ut Calendarium Servitii aperias"
+  },
+  "documents": {
+    "title": "Documenta et Relationes",
+    "subtitle": "Documenta: {{count}}",
+    "search": "Quaere documenta...",
+    "typeTitle": "Genus Documenti",
+    "upload": "Imponere",
+    "download": "Deponere",
+    "size": "Magnitudo",
+    "empty": "Nulla documenta inventa sunt.",
+    "colName": "Documentum",
+    "colType": "Genus",
+    "colAsset": "Bonum",
+    "colDate": "Dies",
+    "colBy": "Auctor",
+    "colDetail": "Singula",
+    "type": {
+      "inspection_report": "Relatio Inspectionis",
+      "certificate": "Testimonium",
+      "manual": "Manuale",
+      "drawing": "Descriptio",
+      "contract": "Pactum",
+      "other": "Alia"
+    },
+    "origin": {
+      "generated": "A servitio generatum",
+      "uploaded": "A cliente impositum"
+    }
   }
 }

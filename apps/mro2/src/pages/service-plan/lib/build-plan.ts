@@ -81,7 +81,7 @@ export function buildServicePlan(
         craneId: w.craneId,
         craneName: w.craneName,
         month: new Date(w.actualDate ?? w.scheduledDate).getMonth(),
-        tone: inspectionTone(w.status),
+        tone: inspectionTone(w.status, w.scheduledDate),
         product: labels.inspectionProduct(w.woType),
       })),
     ...repairs

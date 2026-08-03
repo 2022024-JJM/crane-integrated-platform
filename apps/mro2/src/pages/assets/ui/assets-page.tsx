@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, FileSpreadsheet, MapPin, Plus, Wifi, X } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
@@ -17,7 +17,15 @@ import {
 } from '../../../shared/lib/service-status';
 import { SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
-import { assetCriticality } from '../lib/asset-criticality';
+import { assetCriticality, type AssetCriticality } from '../lib/asset-criticality';
+import { useMro2Year } from '../../../shared/ui/layout';
+import { downloadCsv } from '../../../shared/lib/export-csv';
+import {
+  ASSET_REPORT_KEYS,
+  assetReportToCsv,
+  buildAssetReport,
+  type AssetReportKey,
+} from '../lib/build-asset-report';
 import { CraneThumb } from './crane-thumb';
 
 interface ActivityLine {
@@ -39,6 +47,31 @@ export function Mro2AssetsPage() {
   const { repairs } = useMaintenanceList();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [criticalityFilter, setCriticalityFilter] = useState<AssetCriticality | null>(null);
+  const { year } = useMro2Year();
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // 바깥 클릭으로 리포트 메뉴 닫기
+  useEffect(() => {
+    if (!reportOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!reportRef.current?.contains(e.target as Node)) setReportOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [reportOpen]);
+
+  const exportReport = (key: AssetReportKey) => {
+    const report = buildAssetReport(key, {
+      risks: [...safety, ...production],
+      inspections,
+      repairs,
+      year,
+    });
+    downloadCsv(`${key}-${year}.csv`, assetReportToCsv(report));
+    setReportOpen(false);
+  };
 
   const selectedId = searchParams.get('asset');
   const selected = assets.find((a) => a.id === selectedId) ?? null;
@@ -52,6 +85,7 @@ export function Mro2AssetsPage() {
   const filtered = assets.filter((a) => {
     if (query && !a.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (statusFilter && a.status !== statusFilter) return false;
+    if (criticalityFilter && assetCriticality(a) !== criticalityFilter) return false;
     return true;
   });
 
@@ -74,7 +108,7 @@ export function Mro2AssetsPage() {
         });
       }
       for (const w of inspections.filter((i) => i.craneId === craneId)) {
-        const tone = inspectionTone(w.status);
+        const tone = inspectionTone(w.status, w.scheduledDate);
         lines.push({
           key: `i-${w.id}`,
           title: t('detail.inspectionOf', { status: serviceToneLabel(tone) }),
@@ -117,9 +151,10 @@ export function Mro2AssetsPage() {
           </Link>
         </div>
         <KcFilterRail
-          selectedCount={statusFilter ? 1 : 0}
+          selectedCount={(statusFilter ? 1 : 0) + (criticalityFilter ? 1 : 0)}
           onClear={() => {
             setStatusFilter(null);
+            setCriticalityFilter(null);
             setQuery('');
           }}
         >
@@ -147,9 +182,14 @@ export function Mro2AssetsPage() {
             ))}
           </KcFilterGroup>
           <KcFilterGroup title={t('assets.assetCriticality')}>
-            <KcFilterChip label={t('assets.high')} />
-            <KcFilterChip label={t('assets.moderate')} />
-            <KcFilterChip label={t('assets.low')} />
+            {(['high', 'moderate', 'low'] as const).map((c) => (
+              <KcFilterChip
+                key={c}
+                label={t(`assets.${c}`)}
+                active={criticalityFilter === c}
+                onClick={() => setCriticalityFilter(criticalityFilter === c ? null : c)}
+              />
+            ))}
           </KcFilterGroup>
         </KcFilterRail>
       </div>
@@ -160,9 +200,29 @@ export function Mro2AssetsPage() {
           <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
             {t('assets.nAssets', { count: filtered.length })}
           </h2>
-          <KcButton variant="teal" onClick={() => window.print()}>
-            <FileSpreadsheet size={13} /> {t('common.assetReports')}
-          </KcButton>
+          <div className="relative" ref={reportRef}>
+            <KcButton variant="teal" onClick={() => setReportOpen((v) => !v)}>
+              <FileSpreadsheet size={13} /> {t('common.assetReports')}
+            </KcButton>
+            {reportOpen ? (
+              <div
+                className="absolute right-0 z-30 mt-1 w-[220px] border shadow-lg"
+                style={{ borderColor: KC.border, background: KC.bg }}
+              >
+                {ASSET_REPORT_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => exportReport(key)}
+                    className="kc-hover block w-full cursor-pointer px-3 py-2 text-left text-[11.5px]"
+                    style={{ color: KC.ink }}
+                  >
+                    {t(`assets.report.${key}`)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">

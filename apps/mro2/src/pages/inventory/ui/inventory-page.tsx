@@ -8,6 +8,7 @@ import type { InventoryItem, InventoryStatus } from '@crane/domain/inventory';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
 import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
 import { fmtDate } from '../../../shared/lib/service-status';
+import { downloadCsv, toCsv, type CsvColumn } from '../../../shared/lib/export-csv';
 
 const STATUS_COLOR: Record<InventoryStatus, string> = {
   normal: KC.ok,
@@ -16,6 +17,19 @@ const STATUS_COLOR: Record<InventoryStatus, string> = {
   excess: KC.planned,
   expiry_soon: KC.undetermined,
 };
+
+/** 재고 목록 CSV 컬럼 — 화면 테이블과 같은 순서 */
+const CSV_COLUMNS: CsvColumn<InventoryItem>[] = [
+  { header: 'Part', value: (i) => i.partName },
+  { header: 'Part Number', value: (i) => i.partNumber },
+  { header: 'Bin', value: (i) => i.locationBin },
+  { header: 'Qty', value: (i) => i.currentQty },
+  { header: 'Min Stock', value: (i) => i.minStockQty },
+  { header: 'Reorder Point', value: (i) => i.reorderPoint },
+  { header: 'Unit Price (USD)', value: (i) => i.unitPrice },
+  { header: 'Manufacturer', value: (i) => i.manufacturer },
+  { header: 'Status', value: (i) => i.status },
+];
 
 const STATUS_KEY: Record<InventoryStatus, string> = {
   normal: 'statusNormal',
@@ -124,7 +138,10 @@ export function Mro2InventoryPage() {
           <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
             {t('inventory.title')}
           </h2>
-          <KcButton variant="teal" onClick={() => window.print()}>
+          <KcButton
+            variant="teal"
+            onClick={() => downloadCsv('inventory.csv', toCsv(sorted, CSV_COLUMNS))}
+          >
             <FileText size={12} /> {t('common.generateReport')}
           </KcButton>
         </div>

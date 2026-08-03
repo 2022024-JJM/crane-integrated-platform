@@ -1,5 +1,10 @@
 import { getAllInspectionWOs } from '../../inspection/model/mock-data';
-import type { Certification, ComplianceSummary, OshaReport } from './types';
+import type {
+  Certification,
+  ComplianceSummary,
+  OshaReport,
+  UploadedDocument,
+} from './types';
 
 const allCertifications: Certification[] = [
   {
@@ -191,6 +196,46 @@ export function cancelCertRenewal(id: string): void {
 
 export function getAllOshaReports(): OshaReport[] {
   return allOshaReports;
+}
+
+/* ── 업로드 문서 (세션 내 메모리) ─────────────────────────────────────
+ * 매뉴얼 12p: 자동 생성 보고서 외에 고객이 직접 올린 파일도 함께 보관한다.
+ * 파일 바이트는 저장하지 않고 메타데이터만 유지한다. */
+const uploadedDocuments: UploadedDocument[] = [
+  {
+    id: 'doc-001',
+    fileName: 'HPSI-660T-Operation-Manual-Rev3.pdf',
+    docType: 'manual',
+    craneId: 'crane-660t',
+    craneName: '660T Goliath Crane',
+    uploadedBy: '조범희',
+    uploadedAt: '2026-02-11',
+    sizeBytes: 8_412_000,
+  },
+  {
+    id: 'doc-002',
+    fileName: 'Dock4-Crane-Layout-Drawing.dwg',
+    docType: 'drawing',
+    uploadedBy: '정종민',
+    uploadedAt: '2026-01-23',
+    sizeBytes: 2_140_000,
+  },
+  {
+    id: 'doc-003',
+    fileName: 'HPSI-Maintenance-Agreement-2026.pdf',
+    docType: 'contract',
+    uploadedBy: '박순영',
+    uploadedAt: '2026-01-05',
+    sizeBytes: 645_000,
+  },
+];
+
+export function getAllUploadedDocuments(): UploadedDocument[] {
+  return uploadedDocuments;
+}
+
+export function addUploadedDocument(doc: UploadedDocument): void {
+  uploadedDocuments.unshift(doc);
 }
 
 export function getComplianceSummary(): ComplianceSummary {

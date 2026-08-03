@@ -18,4 +18,4 @@ export function useMro2Year(): Mro2Filter {
   return ctx;
 }
 
-export const MRO2_YEARS = [2025, 2026];
+export const MRO2_YEARS = [2024, 2025, 2026];

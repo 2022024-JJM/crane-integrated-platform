@@ -43,7 +43,7 @@ export function Mro2ServiceRequestsPage() {
         key: `i-${w.id}`,
         path: `/mro2/service-requests/inspection/${w.id}`,
         date: w.actualDate ?? w.scheduledDate,
-        tone: inspectionTone(w.status),
+        tone: inspectionTone(w.status, w.scheduledDate),
         woNumber: w.woNumber,
         product: t('mro2:detail.typeInspection', { type: t(`calendar:type.${w.woType}`) }),
         craneName: w.craneName,

@@ -3,8 +3,9 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 
 // R3F 기본 카메라 fov (Canvas에 fov 미지정 시 75)
 const CAMERA_FOV_DEG = 75;
-// 뷰어 컨테이너의 대략적 가로/세로 비 — 가로 폭 fit 계산용 보수적 추정치
-const ASPECT_ESTIMATE = 1.4;
+// 뷰어 컨테이너의 대략적 가로/세로 비 — 가로 폭 fit 계산용 보수적 추정치.
+// 실제 종횡비가 이보다 좁은 컨테이너는 이 값을 기준으로 거리를 보정한다.
+export const ASPECT_ESTIMATE = 1.4;
 // 프레이밍 여백
 const FIT_MARGIN = 1.15;
 

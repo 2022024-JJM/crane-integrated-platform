@@ -285,6 +285,11 @@ const Mro2SpendPage = lazy(() =>
     default: m.Mro2SpendPage,
   })),
 );
+const Mro2DocumentsPage = lazy(() =>
+  import('@crane/mro2/pages/documents').then((m) => ({
+    default: m.Mro2DocumentsPage,
+  })),
+);
 
 const HmiPage = lazy(() =>
   import('@crane/crane-hmi/pages/hmi').then((m) => ({
@@ -384,6 +389,14 @@ export function App() {
                   element={
                     <LazyRoute>
                       <Mro2SpendPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="documents"
+                  element={
+                    <LazyRoute>
+                      <Mro2DocumentsPage />
                     </LazyRoute>
                   }
                 />

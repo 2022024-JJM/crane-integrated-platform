@@ -122,4 +122,5 @@ initI18n(resources, [
   'ticket',
   'calendar',
   'history',
+  'mro2',
 ]);

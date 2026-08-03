@@ -256,7 +256,57 @@ const generatedInspectionWOs: InspectionWO[] = Array.from({ length: 19 }, (_, i)
   };
 });
 
-const allInspectionWOs: InspectionWO[] = [...baseInspectionWOs, ...generatedInspectionWOs];
+/* 과거 연도(2024~2025) 완료 이력 — Spend 연도 추이와 Service Plan 이력이 성립하려면
+ * 현재 연도 외의 데이터가 필요하다. 과거이므로 전부 completed로 둔다. */
+function historyDate(year: number, month: number): string {
+  const day = Math.floor(ispRand() * 28) + 1;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+const HISTORY_YEARS = [2024, 2025];
+
+const historicalInspectionWOs: InspectionWO[] = HISTORY_YEARS.flatMap((year) =>
+  Array.from({ length: 5 }, (_, i) => {
+    const crane = CRANE_POOL[i % CRANE_POOL.length];
+    const woType = pick(WO_TYPES);
+    // 연중 고르게 분포시켜 월별 추이가 한쪽으로 쏠리지 않게 한다
+    const scheduledDate = historyDate(year, i * 2 + 2);
+    const result: InspectionWO['result'] = ispRand() < 0.75 ? 'pass' : 'conditional';
+    return {
+      id: `insp-h${year}-${String(i + 1).padStart(2, '0')}`,
+      woNumber: `INS-${year}-${String(i + 1).padStart(4, '0')}`,
+      woType,
+      craneId: crane.craneId,
+      craneName: crane.craneName,
+      siteId: crane.siteId,
+      siteName: crane.siteName,
+      scheduledDate,
+      actualDate: scheduledDate,
+      assignedTo: pick(INSPECTOR_POOL),
+      performerType: pick(PERFORMER_POOL),
+      status: 'completed' as const,
+      priority: 'normal' as const,
+      result,
+      totalHours: Math.round(ispRand() * 40 + 10) / 10,
+      cost: Math.floor(ispRand() * 500) + 200,
+      checklistItems: frequentChecklist.map((item, idx) => {
+        const judgment = result === 'conditional' && idx === 5 ? 'fail' : 'pass';
+        return {
+          ...item,
+          judgment: judgment as 'pass' | 'fail',
+          severity: (judgment === 'fail' ? 'minor' : 'normal') as 'minor' | 'normal',
+          actionRequired: (judgment === 'fail' ? 'repair_needed' : 'none') as 'repair_needed' | 'none',
+        };
+      }),
+    };
+  }),
+);
+
+const allInspectionWOs: InspectionWO[] = [
+  ...baseInspectionWOs,
+  ...generatedInspectionWOs,
+  ...historicalInspectionWOs,
+];
 
 const maxInspectionSeq = allInspectionWOs.reduce((max, wo) => {
   const m = wo.woNumber.match(/-(\d{4})$/);
