@@ -118,6 +118,7 @@
   "actions": {
     "issue": "출고",
     "receipt": "입고",
+    "requestPart": "부품 요청",
     "issueTitle": "부품 출고",
     "receiptTitle": "부품 입고",
     "qty": "수량",
@@ -139,7 +140,10 @@
       "failed": "처리에 실패했습니다."
     },
     "close": "닫기",
-    "poPlaceholder": "PO-2026-XXXX"
+    "poPlaceholder": "PO-2026-XXXX",
+    "poNone": "PO 없음",
+    "poCustom": "직접 입력...",
+    "poLineQty": "{{n}}개 입고 예정"
   },
   "filter": {
     "all": "전체",
@@ -168,5 +172,9 @@
   "units": {
     "days": "일",
     "currency": "$"
+  },
+  "partPicker": {
+    "placeholder": "부품명 또는 P/N 검색...",
+    "noResults": "일치하는 부품이 없습니다"
   }
 }

@@ -15,6 +15,7 @@ COPY apps/hanwha-ocean/package.json     ./apps/hanwha-ocean/package.json
 COPY apps/goliath-crane/package.json    ./apps/goliath-crane/package.json
 COPY apps/philly-shipyard/package.json  ./apps/philly-shipyard/package.json
 COPY apps/crane-hmi/package.json        ./apps/crane-hmi/package.json
+COPY apps/mro2/package.json             ./apps/mro2/package.json
 COPY packages/core/package.json         ./packages/core/package.json
 COPY packages/domain/package.json       ./packages/domain/package.json
 COPY packages/features/package.json     ./packages/features/package.json

@@ -39,6 +39,30 @@ export interface OshaReport {
   generatedAt: string;
 }
 
+/** 문서 보관함 분류 — 자동 생성물(점검 보고서·인증서)과 사용자 업로드를 함께 다룬다 */
+export type DocumentType =
+  | 'inspection_report'
+  | 'certificate'
+  | 'manual'
+  | 'drawing'
+  | 'contract'
+  | 'other';
+
+/**
+ * 사용자가 업로드한 문서 — 파일 바이트는 보관하지 않고 메타데이터만 다룬다.
+ * (목업 단계에서 실제 저장소가 없으므로 목록/필터/정렬만 성립시킨다)
+ */
+export interface UploadedDocument {
+  id: string;
+  fileName: string;
+  docType: DocumentType;
+  craneId?: string;
+  craneName?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  sizeBytes: number;
+}
+
 export interface ComplianceSummary {
   frequentCompletionRate: number;
   periodicCompletionRate: number;

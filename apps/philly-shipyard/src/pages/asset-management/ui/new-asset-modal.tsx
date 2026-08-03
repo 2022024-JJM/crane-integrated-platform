@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
@@ -30,7 +30,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
   const { t } = useTranslation('asset-management');
   const createAsset = useCreateAsset();
 
-  const { form, errors, set, setSite, validate } = useAssetForm({
+  const { form, errors, dirty, set, setSite, validate } = useAssetForm({
     resetKey: open,
     messages: {
       nameRequired: t('modal.validation.nameRequired', { defaultValue: 'Name is required.' }),
@@ -44,6 +44,30 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  // 미저장 내용이 있으면 닫기 전 확인 — 15개 필드를 채우다 ESC/백드롭 한 번에 날리는 것 방지.
+  // ref로 최신 dirty를 참조해 포커스 이펙트가 dirty 변화마다 재실행되지 않게 한다.
+  const requestClose = useCallback(() => {
+    if (dirty && !window.confirm(t('modal.unsavedConfirm', {
+      defaultValue: 'You have unsaved changes. Discard and close?',
+    }))) {
+      return;
+    }
+    onClose();
+  }, [dirty, onClose, t]);
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
+
+  // 탭 닫기/새로고침 가드 (SPA 이탈은 ESC/백드롭 confirm이 담당)
+  useEffect(() => {
+    if (!open || !dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [open, dirty]);
+
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -55,7 +79,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
 
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        requestCloseRef.current();
         return;
       }
       if (e.key === 'Tab' && dialogRef.current) {
@@ -102,7 +126,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={requestClose}
         aria-hidden
       />
 
@@ -125,7 +149,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             className={cn('flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
             aria-label={t('modal.close', { defaultValue: 'Close' })}
           >
@@ -281,7 +305,7 @@ export function NewAssetModal({ open, onClose }: { open: boolean; onClose: () =>
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={requestClose}>
               {t('modal.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button type="submit">

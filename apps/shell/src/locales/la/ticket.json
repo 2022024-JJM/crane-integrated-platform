@@ -1,6 +1,7 @@
 {
   "title": "Tessera Nova",
   "description": "Crea tesseram novam refectionis, inspectionis aut requisitionis partium",
+  "unsavedConfirm": "Mutationes non servatae sunt. Visne eas abicere?",
   "createButton": "Tessera Nova",
   "stepper": {
     "selectType": "Elige Genus",

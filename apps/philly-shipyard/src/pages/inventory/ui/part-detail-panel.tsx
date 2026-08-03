@@ -85,6 +85,7 @@ export function PartDetailPanel({
       partId={item.partId}
       partName={item.partName}
       availableQty={item.availableQty}
+      openPoLines={openPoLines}
       onClose={() => setActionMode(null)}
     />
   );
@@ -159,7 +160,12 @@ export function PartDetailPanel({
 
         {/* 푸터 액션 */}
         <div className="flex justify-end border-t border-border px-6 py-3">
-          <ActionButtons onAction={setActionMode} className="w-72" />
+          <ActionButtons
+            onAction={setActionMode}
+            partId={item.partId}
+            craneIds={item.craneIds}
+            className="w-72"
+          />
         </div>
 
         {modal}
@@ -254,7 +260,12 @@ export function PartDetailPanel({
       </div>
 
       {/* 푸터 액션 */}
-      <ActionButtons onAction={setActionMode} className="border-t border-border p-3" />
+      <ActionButtons
+        onAction={setActionMode}
+        partId={item.partId}
+        craneIds={item.craneIds}
+        className="border-t border-border p-3"
+      />
 
       {modal}
     </aside>

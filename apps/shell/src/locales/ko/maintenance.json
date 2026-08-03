@@ -49,6 +49,7 @@
     "working": "작업 중",
     "onHoldHint": "보류 중 — 단계를 클릭하면 재개됩니다.",
     "completedLocked": "완료된 작업지시서는 수정할 수 없습니다.",
+    "unsavedConfirm": "저장하지 않은 결과 입력이 있습니다. 닫을까요?",
     "addPart": "부품 추가",
     "part": {
       "title": "부품 사용 기록",

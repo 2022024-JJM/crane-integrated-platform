@@ -143,6 +143,7 @@ function buildBomPartComponents(options: {
   lastInspectionDate: string;
   nextInspectionDate: string;
   statusOverrides?: Partial<Record<string, ComponentStatus>>;
+  usedPctOverrides?: Partial<Record<string, number>>;
 }): CraneComponent[] {
   const {
     craneId,
@@ -152,11 +153,16 @@ function buildBomPartComponents(options: {
     lastInspectionDate,
     nextInspectionDate,
     statusOverrides = {},
+    usedPctOverrides = {},
   } = options;
   return bomCatalog
     .filter((item) => item[flagKey])
     .map((item) => {
       const cluster = CLUSTER_SPEC_BY_KEY.get(item.clusterKey);
+      const lifeHours = cluster?.lifeHours ?? 60000;
+      // 부품 수명은 소속 클러스터의 사용률을 따른다 — 클러스터 집계(부품 수명 탭)와
+      // 개별 부품 표기(구성품 탭)가 어긋나 같은 서브시스템이 두 탭에서 다른 %로 보이던 것 해소.
+      const usedPct = usedPctOverrides[item.clusterKey];
       return {
         id: `comp-${craneId}-part-${item.partId}`,
         parentId: `comp-${craneId}-${item.clusterKey}`,
@@ -166,14 +172,30 @@ function buildBomPartComponents(options: {
         partNumber: item.partNumber,
         manufacturer: item.manufacturer,
         installDate,
-        expectedLifeHours: cluster?.lifeHours ?? 60000,
-        currentHours,
+        expectedLifeHours: lifeHours,
+        currentHours:
+          usedPct != null ? Math.round((lifeHours * usedPct) / 100) : currentHours,
         status: statusOverrides[item.partId] ?? 'normal',
         lastInspectionDate,
         nextInspectionDate,
       };
     });
 }
+
+// 클러스터 사용률 오버라이드 — 클러스터 노드와 그 자식 부품이 동일 소스를 참조하도록 상수화.
+// (두 곳에 각각 하드코딩하면 값이 갈라져 탭 간 % 모순이 재발한다)
+const USED_PCT_660T: Partial<Record<string, number>> = {
+  'dcm-drive': 78,
+  fuse: 71,
+  enclosure: 74,
+  'mech-drive': 52,
+  'power-supply': 44,
+};
+const USED_PCT_50T: Partial<Record<string, number>> = {
+  plc: 72,
+  operator: 70,
+  'power-supply': 38,
+};
 
 const allComponents: CraneComponent[] = [
   // 660T Goliath — 21개 클러스터 전체 (기계 구동계 포함)
@@ -189,13 +211,7 @@ const allComponents: CraneComponent[] = [
       enclosure: 'caution', // 판넬 필터 오염
     },
     // statusOverrides 스토리와 정렬된 소모율 편차 — dcm-drive가 최악 유지
-    usedPctOverrides: {
-      'dcm-drive': 78,
-      fuse: 71,
-      enclosure: 74,
-      'mech-drive': 52,
-      'power-supply': 44,
-    },
+    usedPctOverrides: USED_PCT_660T,
   }),
   // 50T East Luffing — 기계 구동계 제외 20개 클러스터
   ...buildBomClusterComponents({
@@ -209,11 +225,7 @@ const allComponents: CraneComponent[] = [
       plc: 'caution', // PLC CPU 교체 후 재검사 대기 (RPR-2026-0004)
       operator: 'caution', // 조이스틱 드리프트 수리 중 (RPR-2026-0003)
     },
-    usedPctOverrides: {
-      plc: 72,
-      operator: 70,
-      'power-supply': 38,
-    },
+    usedPctOverrides: USED_PCT_50T,
   }),
   // 660T Goliath — BOM 개별 품목 (256개)
   ...buildBomPartComponents({
@@ -228,6 +240,7 @@ const allComponents: CraneComponent[] = [
       'np225-kl5-cnv-b3': 'critical', // 주행 모터 과열 (RPR-2026-0002)
       hf1016414: 'caution', // 판넬 팬/필터 오염
     },
+    usedPctOverrides: USED_PCT_660T,
   }),
   // 50T East Luffing — BOM 개별 품목 (237개)
   ...buildBomPartComponents({
@@ -242,6 +255,7 @@ const allComponents: CraneComponent[] = [
       'vnso-44-earipz': 'caution', // 조이스틱 드리프트 (RPR-2026-0003)
       '6ra8082-6fv62-0aa0-z': 'warning', // 기복 DCM 고장 알람 (RPR-2026-0006)
     },
+    usedPctOverrides: USED_PCT_50T,
   }),
 ];
 

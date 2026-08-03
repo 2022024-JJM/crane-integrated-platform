@@ -166,6 +166,9 @@ export function InventoryPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<PartCategory | 'all'>('all');
   const [craneFilter, setCraneFilter] = useState<CraneFilter>('all');
+  // '재주문 필요' 지표를 클릭하면 켜지는 파생 필터 — availableQty <= reorderPoint
+  // (상태 pill과 다른 축이라 별도 플래그로 두고, summary.reorderNeeded와 동일 기준을 재현)
+  const [reorderOnly, setReorderOnly] = useState(false);
 
   const categories = useMemo(() => {
     const seen = new Set<PartCategory>();
@@ -210,9 +213,10 @@ export function InventoryPage() {
         item.partName.toLowerCase().includes(query) ||
         item.partNumber.toLowerCase().includes(query) ||
         item.manufacturer.toLowerCase().includes(query);
-      return matchStatus && matchCrit && matchCategory && matchCrane && matchSearch;
+      const matchReorder = !reorderOnly || item.availableQty <= item.reorderPoint;
+      return matchStatus && matchCrit && matchCategory && matchCrane && matchSearch && matchReorder;
     });
-  }, [items, statusFilters, critFilters, categoryFilter, craneFilter, search]);
+  }, [items, statusFilters, critFilters, categoryFilter, craneFilter, search, reorderOnly]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -224,6 +228,7 @@ export function InventoryPage() {
     categoryFilter,
     craneFilter,
     search,
+    reorderOnly,
     pageSize,
   ].join('|');
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
@@ -471,12 +476,31 @@ export function InventoryPage() {
             {t('metrics.totalParts')}{' '}
             <span className="font-semibold tabular-nums text-foreground">{summary.totalParts}</span>
           </span>
-          <span>
-            {t('metrics.reorderNeeded')}{' '}
-            <span className={cn('font-semibold tabular-nums', summary.reorderNeeded > 0 ? TONE_TEXT.warning : 'text-foreground')}>
-              {summary.reorderNeeded}
+          {summary.reorderNeeded > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setReorderOnly((v) => !v);
+                if (!reorderOnly) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              aria-pressed={reorderOnly}
+              className={cn(
+                'inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs transition-colors',
+                FOCUS_RING,
+                reorderOnly ? cn(TONE_PILL_ACTIVE.warning, 'font-medium') : 'hover:bg-muted/60',
+              )}
+            >
+              {t('metrics.reorderNeeded')}
+              <span className={cn('font-semibold tabular-nums', reorderOnly ? '' : TONE_TEXT.warning)}>
+                {summary.reorderNeeded}
+              </span>
+            </button>
+          ) : (
+            <span>
+              {t('metrics.reorderNeeded')}{' '}
+              <span className="font-semibold tabular-nums text-foreground">{summary.reorderNeeded}</span>
             </span>
-          </span>
+          )}
         </div>
       </div>
 

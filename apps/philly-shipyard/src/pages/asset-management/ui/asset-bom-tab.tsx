@@ -218,8 +218,9 @@ export function AssetBomTab({
       })
       .filter(({ children, root }) => {
         if (!filterActive) return true;
-        // 필터 활성 시: 매칭 자식이 있거나 클러스터명이 일치하는 경우만
-        return children.length > 0 || root.componentName.toLowerCase().includes(query.trim().toLowerCase());
+        // 매칭 자식이 있거나, (검색 중일 때) 클러스터명이 검색어와 일치하는 경우만.
+        // q가 빈 문자열이면 includes('')가 항상 참이 되어 "이상 항목만"이 무력화되므로 q 가드 필수.
+        return children.length > 0 || (q !== '' && root.componentName.toLowerCase().includes(q));
       });
   }, [rootComponents, childrenByParent, query, onlyIssues, filterActive]);
 

@@ -27,11 +27,13 @@ export function useLoginForm() {
       const landing =
         role === 'mro'
           ? '/mro-dashboard'
-          : role === 'hmi'
-            ? '/hmi'
-            : role === 'hmi2'
-              ? '/hmi2'
-              : '/';
+          : role === 'mro2'
+            ? '/mro2'
+            : role === 'hmi'
+              ? '/hmi'
+              : role === 'hmi2'
+                ? '/hmi2'
+                : '/';
       navigate(landing, { replace: true });
     } else {
       setError(true);

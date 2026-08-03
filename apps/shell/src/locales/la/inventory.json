@@ -118,6 +118,7 @@
   "actions": {
     "issue": "Emissio",
     "receipt": "Acceptio",
+    "requestPart": "Posce Partem",
     "issueTitle": "Emitte Partem",
     "receiptTitle": "Registra Acceptionem",
     "qty": "Quantitas",
@@ -139,7 +140,10 @@
       "failed": "Actio defecit."
     },
     "close": "Claudere",
-    "poPlaceholder": "PO-2026-XXXX"
+    "poPlaceholder": "PO-2026-XXXX",
+    "poNone": "Sine PO",
+    "poCustom": "Manu insere...",
+    "poLineQty": "{{n}} exspectata"
   },
   "filter": {
     "all": "Omnia",
@@ -168,5 +172,9 @@
   "units": {
     "days": "d",
     "currency": "$"
+  },
+  "partPicker": {
+    "placeholder": "Quaere nomen partis aut P/N...",
+    "noResults": "Nullae partes congruentes"
   }
 }

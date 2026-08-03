@@ -22,7 +22,9 @@ import {
   MonitorCog,
   Camera,
   CalendarDays,
+  CalendarRange,
   Cctv,
+  FileText,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -248,6 +250,55 @@ function getMroGroup(): NavGroup {
   };
 }
 
+function getMro2Group(): NavGroup {
+  return {
+    title: i18n.t('mro2:nav.group'),
+    items: [
+      {
+        label: i18n.t('mro2:nav.overview'),
+        path: '/mro2',
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        label: i18n.t('mro2:nav.assets'),
+        path: '/mro2/assets',
+        icon: Layers,
+      },
+      {
+        label: i18n.t('mro2:nav.serviceRequests'),
+        path: '/mro2/service-requests',
+        icon: ClipboardCheck,
+      },
+      {
+        label: i18n.t('mro2:nav.serviceCalendar'),
+        path: '/mro2/calendar',
+        icon: CalendarDays,
+      },
+      {
+        label: i18n.t('mro2:nav.servicePlan'),
+        path: '/mro2/service-plan',
+        icon: CalendarRange,
+      },
+      {
+        label: i18n.t('mro2:nav.spend'),
+        path: '/mro2/spend',
+        icon: TrendingUp,
+      },
+      {
+        label: i18n.t('mro2:nav.inventory'),
+        path: '/mro2/inventory',
+        icon: Package,
+      },
+      {
+        label: i18n.t('mro2:nav.documents'),
+        path: '/mro2/documents',
+        icon: FileText,
+      },
+    ],
+  };
+}
+
 const systemGroupOverrides: Record<string, (pathname: string) => NavGroup> = {
   '/crane-detail': (pathname) => {
     const craneId = pathname.split('/')[2];
@@ -283,6 +334,7 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   goliath: ['/goliath-work'],
   philly: ['/crane-detail', '/outdoor-work', '/indoor-work'],
   mro: [],
+  mro2: [],
   hmi: [],
   hmi2: [],
 };
@@ -295,6 +347,11 @@ export function getNavigationConfig(
   // mro: MRO 그룹만 노출 (Overview/Monitoring/System 모두 숨김)
   if (role === 'mro') {
     return [getMroGroup()].filter((g) => g.items.length > 0);
+  }
+
+  // mro2: CRANE MRO 그룹만 노출
+  if (role === 'mro2') {
+    return [getMro2Group()].filter((g) => g.items.length > 0);
   }
 
   // hmi: HMI 그룹만 노출

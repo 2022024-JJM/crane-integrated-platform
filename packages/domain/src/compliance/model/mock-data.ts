@@ -1,5 +1,10 @@
 import { getAllInspectionWOs } from '../../inspection/model/mock-data';
-import type { Certification, ComplianceSummary, OshaReport } from './types';
+import type {
+  Certification,
+  ComplianceSummary,
+  OshaReport,
+  UploadedDocument,
+} from './types';
 
 const allCertifications: Certification[] = [
   {
@@ -165,12 +170,72 @@ function deriveCertStatus(cert: Certification): Certification['status'] {
   return 'valid';
 }
 
+// 갱신 요청된 인증서 id — 세션 내 저장. 요청되면 파생 상태 대신 'renewing'으로 노출한다
+// (만료/임박 알림에서 빠지고 "갱신 중"으로 보여 이미 처리 착수했음을 나타냄)
+const renewalRequestedIds = new Set<string>();
+
 export function getAllCertifications(): Certification[] {
-  return allCertifications.map((c) => ({ ...c, status: deriveCertStatus(c) }));
+  return allCertifications.map((c) => ({
+    ...c,
+    status: renewalRequestedIds.has(c.id) ? 'renewing' : deriveCertStatus(c),
+  }));
+}
+
+/** 인증서 갱신 요청 — 상태를 'renewing'으로 전환. 이미 요청됐으면 false */
+export function requestCertRenewal(id: string): boolean {
+  if (renewalRequestedIds.has(id)) return false;
+  if (!allCertifications.some((c) => c.id === id)) return false;
+  renewalRequestedIds.add(id);
+  return true;
+}
+
+/** 갱신 요청 취소 (Undo용) */
+export function cancelCertRenewal(id: string): void {
+  renewalRequestedIds.delete(id);
 }
 
 export function getAllOshaReports(): OshaReport[] {
   return allOshaReports;
+}
+
+/* ── 업로드 문서 (세션 내 메모리) ─────────────────────────────────────
+ * 매뉴얼 12p: 자동 생성 보고서 외에 고객이 직접 올린 파일도 함께 보관한다.
+ * 파일 바이트는 저장하지 않고 메타데이터만 유지한다. */
+const uploadedDocuments: UploadedDocument[] = [
+  {
+    id: 'doc-001',
+    fileName: 'HPSI-660T-Operation-Manual-Rev3.pdf',
+    docType: 'manual',
+    craneId: 'crane-660t',
+    craneName: '660T Goliath Crane',
+    uploadedBy: '조범희',
+    uploadedAt: '2026-02-11',
+    sizeBytes: 8_412_000,
+  },
+  {
+    id: 'doc-002',
+    fileName: 'Dock4-Crane-Layout-Drawing.dwg',
+    docType: 'drawing',
+    uploadedBy: '정종민',
+    uploadedAt: '2026-01-23',
+    sizeBytes: 2_140_000,
+  },
+  {
+    id: 'doc-003',
+    fileName: 'HPSI-Maintenance-Agreement-2026.pdf',
+    docType: 'contract',
+    uploadedBy: '박순영',
+    uploadedAt: '2026-01-05',
+    sizeBytes: 645_000,
+  },
+];
+
+export function getAllUploadedDocuments(): UploadedDocument[] {
+  return uploadedDocuments;
+}
+
+export function addUploadedDocument(doc: UploadedDocument): void {
+  uploadedDocuments.unshift(doc);
 }
 
 export function getComplianceSummary(): ComplianceSummary {

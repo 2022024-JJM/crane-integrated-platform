@@ -16,8 +16,6 @@ import { formatRelativeDate } from '../../../shared/lib/relative-date';
 import { usedLifePercent } from '../../../shared/lib/component-life';
 import { AssetBomTab } from './asset-bom-tab';
 import { AssetConditionTab } from './asset-condition-tab';
-import { AssetInspectionTab } from './asset-inspection-tab';
-import { AssetMaintenanceTab } from './asset-maintenance-tab';
 import { AssetHistoryTab } from './asset-history-tab';
 import { AssetSpecsTab } from './asset-specs-tab';
 import { FOCUS_RING } from '../../../shared/ui/controls';
@@ -27,9 +25,9 @@ const Asset3dTab = lazy(() =>
   import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
 );
 
-type DetailTab = 'overview' | 'condition' | '3d' | 'inspection' | 'maintenance' | 'history' | 'specs';
+type DetailTab = 'overview' | 'condition' | '3d' | 'history' | 'specs';
 
-const DETAIL_TABS: DetailTab[] = ['overview', 'condition', '3d', 'inspection', 'maintenance', 'history', 'specs'];
+const DETAIL_TABS: DetailTab[] = ['overview', 'condition', '3d', 'history', 'specs'];
 
 function isDetailTab(value: string | null): value is DetailTab {
   return value !== null && (DETAIL_TABS as string[]).includes(value);
@@ -108,17 +106,22 @@ export function AssetDetailPage() {
     );
   }
 
-  const tabs: { key: DetailTab; count?: number }[] = [
-    { key: 'overview', count: stats.issues > 0 ? stats.issues : undefined },
-    { key: 'condition', count: clustersAtRisk || undefined },
+  // 탭 배지: 총계(점검/정비/이력 = 행 수)는 뉴트럴, 주의 카운트(수명 위험)는 경고 톤.
+  // 구성품 탭은 헤더 밴드·본문이 이미 이상 건수/총계를 보여주므로 배지 생략(중복 제거).
+  const tabs: { key: DetailTab; count?: number; attention?: boolean }[] = [
+    { key: 'overview' },
+    { key: 'condition', count: clustersAtRisk || undefined, attention: true },
     { key: '3d' },
-    { key: 'inspection', count: inspections.length || undefined },
-    { key: 'maintenance', count: repairs.length || undefined },
     { key: 'history', count: history.length || undefined },
     { key: 'specs' },
   ];
 
   const nextInspRel = nextInspection ? formatRelativeDate(nextInspection) : null;
+
+  // 모델명이 이미 제조사명으로 시작하면 제조사를 중복 출력하지 않는다 ("HPSI HPSI 50T…" 방지)
+  const modelLabel = asset.model.startsWith(asset.manufacturer)
+    ? asset.model
+    : `${asset.manufacturer} ${asset.model}`;
 
   return (
     <div className={PAGE_CONTAINER}>
@@ -142,8 +145,8 @@ export function AssetDetailPage() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {asset.craneType.toUpperCase()} · {asset.capacityTon}
-            {t('units.ton')} · {asset.manufacturer} {asset.model}
+            {t(`craneType.${asset.craneType}`, { defaultValue: asset.craneType })} · {asset.capacityTon}
+            {t('units.ton')} · {modelLabel}
             <span className="mx-1.5 text-border">|</span>
             {asset.siteName} · {asset.locationZone}
           </p>
@@ -208,7 +211,9 @@ export function AssetDetailPage() {
           {/* 다음 점검 */}
           <div className="flex flex-col gap-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('card.nextInspection', { defaultValue: 'Next Inspection' })}
+              {nextInspRel?.overdue
+                ? t('card.inspectionOverdue', { defaultValue: 'Inspection Overdue' })
+                : t('card.nextInspection', { defaultValue: 'Next Inspection' })}
             </span>
             {nextInspRel ? (
               <span
@@ -231,14 +236,14 @@ export function AssetDetailPage() {
 
       {/* 탭 */}
       <div role="tablist" className="flex gap-1 border-b border-border">
-        {tabs.map(({ key, count }) => (
+        {tabs.map(({ key, count, attention }) => (
           <button
             key={key}
             type="button"
             role="tab"
             aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
-            className={cn(FOCUS_RING, 
+            className={cn(FOCUS_RING,
               'cursor-pointer border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
               activeTab === key
                 ? 'border-primary text-primary'
@@ -247,7 +252,14 @@ export function AssetDetailPage() {
           >
             {t(`detail.tabs.${key}`)}
             {count !== undefined && (
-              <span className="ml-1.5 tabular-nums text-muted-foreground">{count}</span>
+              <span
+                className={cn(
+                  'ml-1.5 tabular-nums',
+                  attention ? TONE_TEXT.warning : 'text-muted-foreground',
+                )}
+              >
+                {count}
+              </span>
             )}
           </button>
         ))}
@@ -272,13 +284,7 @@ export function AssetDetailPage() {
           <AssetConditionTab asset={asset} components={components} />
         )}
 
-        {/* 탭: 점검 이력 */}
-        {activeTab === 'inspection' && <AssetInspectionTab inspections={inspections} />}
-
-        {/* 탭: 정비 이력 */}
-        {activeTab === 'maintenance' && <AssetMaintenanceTab repairs={repairs} />}
-
-        {/* 탭: 통합 이력 — 점검·수리·부품요청 타임라인 */}
+        {/* 탭: 이력 — 점검·정비·부품요청 통합 타임라인 (종류 필터) */}
         {activeTab === 'history' && <AssetHistoryTab events={history} />}
 
         {/* 탭: 제원 */}

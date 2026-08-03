@@ -67,26 +67,23 @@ function computeComponentStats(components: CraneComponent[]): AssetComponentStat
 }
 
 function computeWorstHealth(components: CraneComponent[]): AssetHealthSnapshot | null {
-  if (components.length === 0) return null;
-  let worst = components[0];
-  for (const c of components) {
-    const cSev = STATUS_SEVERITY[c.status];
-    const wSev = STATUS_SEVERITY[worst.status];
-    if (cSev > wSev) {
+  // "건강도 최저"는 잔여 수명이 가장 적은 부품 — 상세의 부품 수명 탭이 쓰는 최악 기준과
+  // 동일하게 루트 클러스터에서 고른다(둘이 다른 부품을 가리켜 카드↔상세가 모순되던 것 해소).
+  // 상태 심각도는 별도 '구성품' 타일이 이미 보여주므로 여기선 잔여 수명만 본다.
+  const clusters = components.filter((c) => c.parentId === null);
+  const pool = clusters.length > 0 ? clusters : components;
+  if (pool.length === 0) return null;
+  const usedRatio = (c: CraneComponent) =>
+    c.expectedLifeHours > 0 ? Math.min(1, c.currentHours / c.expectedLifeHours) : 0;
+  let worst = pool[0];
+  for (const c of pool) {
+    const diff = usedRatio(c) - usedRatio(worst);
+    // 잔여 수명 최저(=소모율 최고) 우선, 동률이면 상태 심각도로 결정
+    if (diff > 0 || (diff === 0 && STATUS_SEVERITY[c.status] > STATUS_SEVERITY[worst.status])) {
       worst = c;
-      continue;
-    }
-    if (cSev === wSev) {
-      const cRem = c.expectedLifeHours > 0 ? c.currentHours / c.expectedLifeHours : 1;
-      const wRem = worst.expectedLifeHours > 0 ? worst.currentHours / worst.expectedLifeHours : 1;
-      if (cRem > wRem) worst = c;
     }
   }
-  const usedRatio =
-    worst.expectedLifeHours > 0
-      ? Math.min(1, worst.currentHours / worst.expectedLifeHours)
-      : 0;
-  const remainingPct = Math.max(0, Math.round((1 - usedRatio) * 100));
+  const remainingPct = Math.max(0, Math.round((1 - usedRatio(worst)) * 100));
   return {
     remainingPct,
     componentName: worst.componentName,
@@ -197,11 +194,13 @@ export function useAssetDetail(craneId: string) {
   const asset = getCraneAssetById(craneId);
   const components = getComponentsByCraneId(craneId);
 
+  // 이력 탭은 최신순(예정일 내림차순) — 생성순으로 뒤섞여 보이던 것 해소
   const inspections: InspectionWO[] = getAllInspectionWOs()
     .filter((w) => w.craneId === craneId)
     .map((w) =>
       isKo && w.findings_ko ? { ...w, findings: w.findings_ko } : w,
-    );
+    )
+    .sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime());
 
   const repairs: RepairWO[] = getAllRepairWOs()
     .filter((w) => w.craneId === craneId)
@@ -213,7 +212,8 @@ export function useAssetDetail(craneId: string) {
             failureDescription: w.failureDescription_ko ?? w.failureDescription,
           }
         : w,
-    );
+    )
+    .sort((a, b) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime());
 
   return { asset, components, inspections, repairs };
 }

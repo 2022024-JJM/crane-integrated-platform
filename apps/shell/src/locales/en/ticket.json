@@ -1,6 +1,7 @@
 {
   "title": "Create Ticket",
   "description": "Create a new repair, inspection, or parts request ticket",
+  "unsavedConfirm": "You have unsaved changes. Discard them?",
   "createButton": "New Ticket",
   "stepper": {
     "selectType": "Select Type",

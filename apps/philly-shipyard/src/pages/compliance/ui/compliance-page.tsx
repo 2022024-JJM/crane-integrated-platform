@@ -1,7 +1,7 @@
-import { AlertTriangle, FileDown } from 'lucide-react';
+import { AlertTriangle, FileDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useComplianceSummary } from '@crane/features/compliance';
+import { useComplianceSummary, useRequestCertRenewal } from '@crane/features/compliance';
 import { Badge } from '@crane/ui/atoms/badge';
 import { cn } from '@crane/core/lib/utils';
 import { PAGE_TITLE, PAGE_SUBTITLE, PAGE_CONTAINER } from '../../../shared/ui/page';
@@ -20,9 +20,19 @@ const EXPIRY_SOON_DAYS = 30;
 export function CompliancePage() {
   const { certifications, oshaReports, summary } = useComplianceSummary();
   const { t, i18n } = useTranslation('compliance');
+  const requestRenewal = useRequestCertRenewal();
 
   const expiredCerts = certifications.filter((c) => c.status === 'expired');
   const expirySoonCerts = certifications.filter((c) => c.status === 'expiry_soon');
+
+  // 만료·임박 인증서를 본 자리에서 바로 갱신 착수 — 상태를 'renewing'으로 전환(+Undo)
+  const handleRequestRenewal = (certId: string, personName: string) => {
+    const undo = requestRenewal(certId);
+    if (!undo) return;
+    toast.success(t('toast.renewalRequested', { name: personName, defaultValue: `Renewal requested for ${personName}` }), {
+      action: { label: t('undo', { ns: 'common', defaultValue: 'Undo' }), onClick: undo },
+    });
+  };
 
   return (
     <div className={PAGE_CONTAINER}>
@@ -127,6 +137,8 @@ export function CompliancePage() {
             {certifications.map((cert) => {
               const { label: dateLabel, diff } = formatRelativeDate(cert.expiryDate);
               const isExpired = cert.status === 'expired';
+              // 만료·임박이면서 아직 갱신 요청 전인 경우에만 조치 버튼 노출
+              const canRenew = cert.status === 'expired' || cert.status === 'expiry_soon';
               return (
                 <div key={cert.id} className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
                   <div className="flex-1 min-w-0">
@@ -137,14 +149,24 @@ export function CompliancePage() {
                     <p className="text-xs text-muted-foreground">{t(`certifications.certType.${cert.certType}`)}</p>
                     <p className="text-xs text-muted-foreground">#{cert.certNumber} · {cert.issuingBody}</p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <Badge variant={CERT_STATUS_VARIANT[cert.status]} className="mb-1">
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge variant={CERT_STATUS_VARIANT[cert.status]}>
                       {t(`certifications.status.${cert.status}`)}
                     </Badge>
                     <p className={cn('text-xs font-semibold tabular-nums', isExpired ? TONE_TEXT.critical : diff <= EXPIRY_SOON_DAYS ? TONE_TEXT.warning : 'text-muted-foreground')}>
                       {isExpired ? t('certifications.expired') : dateLabel}
                     </p>
                     <p className="text-[10px] text-muted-foreground">{formatDateLabel(cert.expiryDate, i18n.language)}</p>
+                    {canRenew && (
+                      <button
+                        type="button"
+                        onClick={() => handleRequestRenewal(cert.id, cert.personName)}
+                        className={cn('mt-0.5 flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground', FOCUS_RING)}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        {t('certifications.requestRenewal', { defaultValue: 'Request renewal' })}
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -1,21 +1,16 @@
-import type { CraneComponent } from '@crane/domain/asset';
+import { lifeSeverity, type LifeSeverity } from '@crane/domain/asset';
 import type { Tone } from '../ui/tone';
 
-/** 수명 사용률 % — currentHours / expectedLifeHours (0h 정의 시 0) */
-export function usedLifePercent(component: CraneComponent): number {
-  if (component.expectedLifeHours === 0) return 0;
-  return Math.min(
-    100,
-    Math.round((component.currentHours / component.expectedLifeHours) * 100),
-  );
-}
+// 수명 수치 계산은 도메인 단일 소스를 재사용 — 색/톤 매핑만 앱별로 유지한다.
+export { usedLifePercent, remainingLifePercent } from '@crane/domain/asset';
 
-/** 잔여 수명 % — 화면 표기는 잔여율로 통일한다 (사용률은 내부 계산·임계값 판정용) */
-export function remainingLifePercent(component: CraneComponent): number {
-  return 100 - usedLifePercent(component);
-}
+const SEVERITY_TONE: Record<LifeSeverity, Tone> = {
+  critical: 'critical',
+  warning: 'warning',
+  ok: 'positive',
+};
 
 /** 사용률 → 톤 (90%+ critical, 70%+ warning, 그 외 positive) */
 export function lifeTone(usedPct: number): Tone {
-  return usedPct >= 90 ? 'critical' : usedPct >= 70 ? 'warning' : 'positive';
+  return SEVERITY_TONE[lifeSeverity(usedPct)];
 }

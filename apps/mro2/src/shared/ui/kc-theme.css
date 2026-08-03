@@ -1,0 +1,89 @@
+/**
+ * MRO2 테마 변수 — kc.ts의 모든 토큰은 이 변수를 참조한다.
+ * 테마 전환은 공용 ThemeProvider가 documentElement에 붙이는 `.dark` 클래스를 따른다.
+ */
+:root {
+  /* 브랜드 */
+  --kc-accent: #0b6b73;
+  --kc-bar: #22262a;
+  --kc-ink: #191c1e;
+  --kc-text: #33383b;
+  --kc-muted: #6e7478;
+  --kc-faint: #9aa0a4;
+  --kc-border: #dde0e2;
+  --kc-border-strong: #cfd4d6;
+  --kc-hairline: #eaecee;
+  --kc-bg: #ffffff;
+  --kc-bg-subtle: #f6f8f8;
+  --kc-bg-row: #eef1f2;
+  --kc-track: #ececec;
+  --kc-hover: rgba(0, 0, 0, 0.04);
+
+  /* 반전 표면 (선택 칩·액티브 토글) */
+  --kc-inverse-bg: #191c1e;
+  --kc-inverse-text: #ffffff;
+  --kc-inverse-muted: #bdbdbd;
+
+  /* CTA */
+  --kc-teal: #0e8c96;
+  --kc-teal-dark: #0b6b73;
+  --kc-link: #0e8c96;
+
+  /* 의미 레이어 */
+  --kc-safety: #d92b2b;
+  --kc-production: #ef7d00;
+  --kc-undetermined: #ecb200;
+  --kc-improvement: #3d5aa9;
+  --kc-ok: #4ea72e;
+  --kc-planned: #bcc2c6;
+
+  /* 데이터 계열 레이어 */
+  --kc-s1: #118e9c;
+  --kc-s2: #1c3f5f;
+  --kc-s3: #54c4d4;
+  --kc-s4: #2b3033;
+  --kc-s5: #c9cdd0;
+}
+
+.dark {
+  --kc-accent: #2aa5ad;
+  --kc-bar: #22262a;
+  --kc-ink: #e8eaec;
+  --kc-text: #c9ced2;
+  --kc-muted: #8f969b;
+  --kc-faint: #6b7377;
+  --kc-border: #363c40;
+  --kc-border-strong: #454c51;
+  --kc-hairline: #2c3236;
+  --kc-bg: #17191b;
+  --kc-bg-subtle: #1e2224;
+  --kc-bg-row: #262b2e;
+  --kc-track: #33393d;
+  --kc-hover: rgba(255, 255, 255, 0.06);
+
+  --kc-inverse-bg: #e8eaec;
+  --kc-inverse-text: #17191b;
+  --kc-inverse-muted: #4a5054;
+
+  --kc-teal: #17a3ad;
+  --kc-teal-dark: #0e8c96;
+  --kc-link: #35b5bd;
+
+  --kc-safety: #ef5350;
+  --kc-production: #f59a33;
+  --kc-undetermined: #f0c23d;
+  --kc-improvement: #7391d5;
+  --kc-ok: #66bb4a;
+  --kc-planned: #565e63;
+
+  --kc-s1: #23a7b5;
+  --kc-s2: #3d6a94;
+  --kc-s3: #54c4d4;
+  --kc-s4: #cfd4d6;
+  --kc-s5: #565e63;
+}
+
+/* 테마 인지 hover 행 (Tailwind hover:bg-neutral-50 대체) */
+.kc-hover:hover {
+  background: var(--kc-hover);
+}

@@ -33,7 +33,12 @@ import {
 } from './inspection-fields';
 import { PartsFields, type PartsFieldsState, type PartsFieldsErrors } from './parts-fields';
 import { TicketTemplatePicker } from './ticket-template-picker';
-import { loadLastAssignee, saveLastAssignee } from './assignee-storage';
+import {
+  loadLastAssignee,
+  saveLastAssignee,
+  loadLastRequester,
+  saveLastRequester,
+} from './assignee-storage';
 import { toLocalDateString } from '../../../shared/lib/relative-date';
 
 type TicketType = 'repair' | 'inspection' | 'parts';
@@ -80,6 +85,14 @@ const ACCENT_BY_TYPE: Record<TicketType, AccentColor> = {
   parts: 'blue',
 };
 
+// 타입별 유효 우선순위 — 타입 전환 시 현재 값이 새 타입에 없으면 'normal'로 정규화한다
+// (재마운트 대신 폼을 유지하므로 우선순위 토글이 미선택 상태로 남지 않게)
+const PRIORITIES_BY_TYPE: Record<TicketType, AnyPriority[]> = {
+  repair: ['emergency', 'high', 'normal', 'low'],
+  inspection: ['urgent', 'high', 'normal', 'low'],
+  parts: ['urgent', 'normal', 'scheduled'],
+};
+
 function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
   const d = prefill.date ?? toLocalDateString();
   return {
@@ -95,16 +108,21 @@ function makeInitial(prefill: TicketPrefill = {}): UnifiedForm {
     scheduledStart: d, scheduledEnd: d,
     woType: 'frequent', scheduledDate: d, findings: '',
     recurrence: 'none',
-    requester: '', note: '', items: [],
+    // 요청자도 최근 사용값 기본 — 담당자와 같은 이유
+    requester: loadLastRequester(), note: '', items: [],
   };
 }
 
 interface CreateTicketFormProps {
   type: TicketType;
   onSuccess: (id?: string) => void;
+  /** 입력이 생기면 부모(페이지)에 알려 뒤로가기 등을 가드하게 한다 */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** 취소 클릭 — 페이지가 dirty 가드 후 이탈을 처리 (미지정 시 history.back) */
+  onCancel?: () => void;
 }
 
-export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
+export function CreateTicketForm({ type, onSuccess, onDirtyChange, onCancel }: CreateTicketFormProps) {
   const { t } = useTranslation('ticket');
   const cranes = useCraneOptions();
   const inventoryItems = getAllInventoryItems();
@@ -165,12 +183,43 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cranes]);
 
+  // dirty 추적 — 입력이 하나라도 생기면 이탈 가드가 켜진다
+  const [dirty, setDirty] = useState(false);
+  const markDirty = () => {
+    if (!dirty) {
+      setDirty(true);
+      onDirtyChange?.(true);
+    }
+  };
+
+  // 타입 전환 시 우선순위가 새 타입에 없으면 'normal'로 정규화 (재마운트 없이 폼 유지)
+  useEffect(() => {
+    setForm((f) =>
+      PRIORITIES_BY_TYPE[type].includes(f.priority) ? f : { ...f, priority: 'normal' },
+    );
+    // 타입 전환 자체는 사용자 입력이 아니므로 dirty로 치지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
+
+  // 탭 닫기/새로고침 가드 — 앱 내 이탈은 페이지의 onDirtyChange 가드가 담당
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
   function set<K extends keyof UnifiedForm>(key: K, value: UnifiedForm[K]) {
+    markDirty();
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
   }
 
   function applyTemplate(tpl: RepairTemplate) {
+    markDirty();
     setTemplateId(tpl.id);
     // 크레인/원천 WO 등 컨텍스트는 보존하고 템플릿 값만 덮는다
     setForm((f) => ({
@@ -185,6 +234,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
   function handleCraneChange(craneId: string) {
     const crane = cranes.find((c) => c.id === craneId);
     if (!crane) return;
+    markDirty();
     setForm((f) => ({
       ...f,
       craneId: crane.id,
@@ -265,6 +315,10 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       return;
     }
 
+    // 제출 확정 — 이후 onSuccess 네비게이션이 이탈 가드에 걸리지 않도록 dirty 해제
+    setDirty(false);
+    onDirtyChange?.(false);
+
     // 빈 담당자는 수행 주체에 맞는 첫 인력으로 폴백 — 필수 입력을 줄이기 위한 스마트 기본값
     const fallbackAssignee =
       form.assignedTo.trim() ||
@@ -323,6 +377,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
       note: form.note || undefined,
     };
     const req = createParts(draft);
+    saveLastRequester(form.requester);
     toast.success(t('toast.partsCreated', { requestNumber: req.requestNumber }));
     onSuccess();
   }
@@ -435,7 +490,7 @@ export function CreateTicketForm({ type, onSuccess }: CreateTicketFormProps) {
         )}
 
         <div className="sticky bottom-0 -mx-4 flex items-center justify-end gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
-          <Button type="button" variant="outline" onClick={() => window.history.back()}>
+          <Button type="button" variant="outline" onClick={() => (onCancel ? onCancel() : window.history.back())}>
             {t('submit.cancel')}
           </Button>
           <Button type="submit">{submitLabel}</Button>

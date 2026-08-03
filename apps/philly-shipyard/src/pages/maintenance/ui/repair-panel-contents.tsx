@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Package, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -161,7 +161,14 @@ export function RepairPartsSection({
 }
 
 /** 정비 결과 입력 폼 — 부모에서 key={repair.id}로 마운트해 WO 전환 시 draft를 리셋한다. */
-export function RepairResultsForm({ repair }: { repair: RepairWO }) {
+export function RepairResultsForm({
+  repair,
+  onDirtyChange,
+}: {
+  repair: RepairWO;
+  /** 미저장 입력 여부를 부모(패널)에 알려 닫기/이탈을 가드하게 한다 */
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const { t } = useTranslation('maintenance');
   const updateDetails = useUpdateRepairDetails();
   const isClosed = repair.status === 'completed';
@@ -184,6 +191,11 @@ export function RepairResultsForm({ repair }: { repair: RepairWO }) {
     laborHours !== (repair.laborHours != null ? String(repair.laborHours) : '') ||
     downtimeHours !== (repair.downtimeHours != null ? String(repair.downtimeHours) : '') ||
     reInspection !== (repair.reInspectionResult ?? '');
+
+  // dirty 변화를 부모에 전달 — 저장 성공 시 repair prop이 갱신되며 자동으로 false가 된다
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const handleSave = () => {
     const outcome = updateDetails(repair.id, {
