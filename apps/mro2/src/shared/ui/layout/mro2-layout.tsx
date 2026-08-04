@@ -11,6 +11,7 @@ import { Outlet } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { KC, KC_FONT } from '../kc';
 import { NewTicketModal } from '../new-ticket-modal';
+import { Mro2GlobalSearch } from '../global-search';
 import { Mro2FilterContext, MRO2_YEARS } from './mro2-year-context';
 
 /* ── 레이아웃 본체 ──────────────────────────────────────────────────────
@@ -24,11 +25,12 @@ export function Mro2Layout() {
   return (
     <Mro2FilterContext value={filter}>
       <div
-        className="min-h-full"
+        className="mro2-root min-h-full"
         style={{ background: KC.bg, color: KC.text, fontFamily: KC_FONT }}
       >
-        {/* 콘텐츠 툴바: 전역 기간(연도) 셀렉터 */}
-        <div className="flex items-center justify-end px-3 pt-2.5 md:px-5">
+        {/* 콘텐츠 툴바: 전역 검색 + 기간(연도) 셀렉터 */}
+        <div className="flex items-center justify-end gap-4 px-3 pt-2.5 md:px-5">
+          <Mro2GlobalSearch />
           <label
             className="flex cursor-pointer items-center gap-1 text-[12px]"
             style={{ color: KC.ink }}
@@ -42,7 +44,7 @@ export function Mro2Layout() {
               style={{ color: KC.ink }}
             >
               {MRO2_YEARS.map((y) => (
-                <option key={y} value={y}>
+                <option key={y} value={y} style={{ background: KC.bg, color: KC.ink }}>
                   {y}
                 </option>
               ))}

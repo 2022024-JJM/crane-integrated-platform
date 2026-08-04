@@ -132,7 +132,10 @@
       "serviceHistory": "Historia Servitii",
       "materialHistory": "Historia Materiae",
       "serviceSpend": "Sumptus Servitii"
-    }
+    },
+    "ownLabels": "Pittacia Propria",
+    "addLabel": "Pittacium addere…",
+    "removeLabel": "Pittacium {{label}} removere"
   },
   "detail": {
     "tabOpenItems": "Res Apertae",
@@ -161,7 +164,27 @@
     "hours": "Horae",
     "total": "SUMMA",
     "serviceLife": "Vita Servitii {{pct}}%",
-    "moreComponents": "+{{count}} partes aliae"
+    "moreComponents": "+{{count}} partes aliae",
+    "presetRange": "Intervallum Praestitutum",
+    "rangeLast30": "Ultimi XXX dies",
+    "rangeMonth": "Mensis currens",
+    "rangeYear": "Annus currens",
+    "rangeCustom": "Proprium",
+    "startDate": "Dies Initii",
+    "endDate": "Dies Finis",
+    "clearRange": "Intervallum purgare",
+    "alertsInRange": "Monita intervalli selecti",
+    "lifeEstimate": "Aestimatio vitae servitii",
+    "estimatedEnd": "Finis vitae aestimatus: {{year}}",
+    "noAlerts": "Nulla monita in intervallo selecto.",
+    "alertPareto": "Pareto Monitorum",
+    "alertsTrend": "Tendentia monitorum",
+    "safetyAlerts": "Monita securitatis",
+    "productionAlerts": "Monita productionis",
+    "loadSpectrum": "Spectrum oneris",
+    "excludeLow": "Excludere 0-10%",
+    "spectrumCaption": "Distributio oneris aestimata pro capacitate nominali (approximatio)",
+    "runningHours": "Horae operationis"
   },
   "info": {
     "manufacturer": "Fabricator",
@@ -488,5 +511,9 @@
     },
     "assetDocs": "{{count}} Documenta",
     "emptyAsset": "Nulla documenta huius boni adhuc."
+  },
+  "search": {
+    "placeholder": "Quaere bona aut petitiones servitii…",
+    "noResults": "Nihil inventum."
   }
 }

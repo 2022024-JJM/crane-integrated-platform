@@ -31,6 +31,7 @@ export const KC = {
   bgSubtle: 'var(--kc-bg-subtle)',
   bgRow: 'var(--kc-bg-row)',
   track: 'var(--kc-track)',
+  hover: 'var(--kc-hover)',
 
   /* 반전 표면 (선택 칩·액티브 토글) */
   inverseBg: 'var(--kc-inverse-bg)',

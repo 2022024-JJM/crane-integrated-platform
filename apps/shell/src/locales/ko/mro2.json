@@ -132,7 +132,10 @@
       "serviceHistory": "서비스 이력",
       "materialHistory": "자재 사용 이력",
       "serviceSpend": "서비스 비용"
-    }
+    },
+    "ownLabels": "내 라벨",
+    "addLabel": "라벨 추가…",
+    "removeLabel": "라벨 {{label}} 제거"
   },
   "detail": {
     "tabOpenItems": "미결 항목",
@@ -161,7 +164,27 @@
     "hours": "시간",
     "total": "합계",
     "serviceLife": "잔여 수명 {{pct}}%",
-    "moreComponents": "외 {{count}}개 부품"
+    "moreComponents": "외 {{count}}개 부품",
+    "presetRange": "기간 프리셋",
+    "rangeLast30": "최근 30일",
+    "rangeMonth": "이번 달",
+    "rangeYear": "올해",
+    "rangeCustom": "직접 지정",
+    "startDate": "시작일",
+    "endDate": "종료일",
+    "clearRange": "기간 초기화",
+    "alertsInRange": "선택 기간 알림",
+    "lifeEstimate": "잔여수명 추정",
+    "estimatedEnd": "예상 수명 종료: {{year}}년",
+    "noAlerts": "선택 기간에 알림이 없습니다.",
+    "alertPareto": "알림 파레토",
+    "alertsTrend": "월별 알림 추이",
+    "safetyAlerts": "안전 알림",
+    "productionAlerts": "생산 알림",
+    "loadSpectrum": "부하 스펙트럼",
+    "excludeLow": "0-10% 제외",
+    "spectrumCaption": "정격 대비 부하 분포 추정치 (실측 하중 데이터 연동 전 근사)",
+    "runningHours": "가동 시간"
   },
   "info": {
     "manufacturer": "제조사",
@@ -488,5 +511,9 @@
     },
     "assetDocs": "{{count}}개 문서",
     "emptyAsset": "이 자산의 문서가 아직 없습니다."
+  },
+  "search": {
+    "placeholder": "자산·서비스 요청 검색…",
+    "noResults": "검색 결과가 없습니다."
   }
 }

@@ -17,6 +17,7 @@ import {
 } from '../../../shared/lib/service-status';
 import { SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import { useOwnLabels } from '../../../shared/lib/own-labels';
 import { assetCriticality, type AssetCriticality } from '../lib/asset-criticality';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { downloadCsv } from '../../../shared/lib/export-csv';
@@ -48,6 +49,9 @@ export function Mro2AssetsPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [criticalityFilter, setCriticalityFilter] = useState<AssetCriticality | null>(null);
+  const [labelFilters, setLabelFilters] = useState<Set<string>>(new Set());
+  const { allLabels, labelsFor, addLabel, removeLabel } = useOwnLabels();
+  const [newLabel, setNewLabel] = useState('');
   const { year } = useMro2Year();
   const [reportOpen, setReportOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -86,6 +90,7 @@ export function Mro2AssetsPage() {
     if (query && !a.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (statusFilter && a.status !== statusFilter) return false;
     if (criticalityFilter && assetCriticality(a) !== criticalityFilter) return false;
+    if (labelFilters.size > 0 && !labelsFor(a.id).some((l) => labelFilters.has(l))) return false;
     return true;
   });
 
@@ -151,10 +156,11 @@ export function Mro2AssetsPage() {
           </Link>
         </div>
         <KcFilterRail
-          selectedCount={(statusFilter ? 1 : 0) + (criticalityFilter ? 1 : 0)}
+          selectedCount={(statusFilter ? 1 : 0) + (criticalityFilter ? 1 : 0) + labelFilters.size}
           onClear={() => {
             setStatusFilter(null);
             setCriticalityFilter(null);
+            setLabelFilters(new Set());
             setQuery('');
           }}
         >
@@ -191,6 +197,25 @@ export function Mro2AssetsPage() {
               />
             ))}
           </KcFilterGroup>
+          {allLabels.length > 0 ? (
+            <KcFilterGroup title={t('assets.ownLabels')}>
+              {allLabels.map((label) => (
+                <KcFilterChip
+                  key={label}
+                  label={label}
+                  active={labelFilters.has(label)}
+                  onClick={() =>
+                    setLabelFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(label)) next.delete(label);
+                      else next.add(label);
+                      return next;
+                    })
+                  }
+                />
+              ))}
+            </KcFilterGroup>
+          ) : null}
         </KcFilterRail>
       </div>
 
@@ -346,7 +371,7 @@ export function Mro2AssetsPage() {
               </div>
               <div className="mt-3">
                 <div className="mb-1 text-[10.5px] font-bold" style={{ color: KC.ink }}>
-                  {t('assets.labels', { count: 4 })}
+                  {t('assets.labels', { count: 4 + labelsFor(displayed.id).length })}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {[displayed.siteName, displayed.craneType, displayed.indoorOutdoor, t(`assets.${assetCriticality(displayed)}`)].map(
@@ -356,7 +381,51 @@ export function Mro2AssetsPage() {
                       </span>
                     ),
                   )}
+                  {labelsFor(displayed.id).map((l) => (
+                    <span
+                      key={`own-${l}`}
+                      className="flex items-center gap-1 px-1.5 py-0.5 text-[9.5px]"
+                      style={{ background: KC.bgRow, color: KC.text, borderLeft: `3px solid ${KC.accent}` }}
+                    >
+                      {l}
+                      <button
+                        type="button"
+                        aria-label={t('assets.removeLabel', { label: l })}
+                        onClick={() => removeLabel(displayed.id, l)}
+                        className="cursor-pointer"
+                        style={{ color: KC.muted }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </div>
+                <form
+                  className="mt-1.5 flex items-center gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (newLabel.trim()) {
+                      addLabel(displayed.id, newLabel);
+                      setNewLabel('');
+                    }
+                  }}
+                >
+                  <input
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder={t('assets.addLabel')}
+                    maxLength={24}
+                    className="min-w-0 flex-1 border px-1.5 py-0.5 text-[10px] outline-none"
+                    style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                  />
+                  <button
+                    type="submit"
+                    className="cursor-pointer px-1.5 py-0.5 text-[10px]"
+                    style={{ background: KC.bgRow, color: KC.text }}
+                  >
+                    +
+                  </button>
+                </form>
               </div>
 
               <div className="mt-4">

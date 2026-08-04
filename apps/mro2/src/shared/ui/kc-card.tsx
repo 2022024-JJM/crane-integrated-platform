@@ -23,7 +23,11 @@ export function KcCard({
       >
         {title}
       </span>
-      {to ? <span className="text-[15px]" style={{ color: KC.accent }}>→</span> : null}
+      {to ? (
+        <span className="kc-card-arrow text-[15px]" style={{ color: KC.accent }}>
+          →
+        </span>
+      ) : null}
     </div>
   );
   return (
@@ -32,7 +36,7 @@ export function KcCard({
       style={{ borderColor: KC.border, background: KC.bg }}
     >
       {to ? (
-        <Link to={to} className="kc-hover block">
+        <Link to={to} className="kc-hover kc-card-link block">
           {header}
         </Link>
       ) : (
