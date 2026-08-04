@@ -4,8 +4,15 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, FileText } from 'lucide-react';
 import { useInventoryList } from '@crane/features/inventory';
 import type { InventoryItem, InventoryStatus } from '@crane/domain/inventory';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
-import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
+import {
+  KcButton,
+  KcEmpty,
+  KcFilterChip,
+  KcFilterGroup,
+  KcFilterRail,
+  KcSectionHeading,
+} from '../../../shared/ui/kc-ui';
 import { downloadCsv, toCsv, type CsvColumn } from '../../../shared/lib/export-csv';
 import { PartDetailPanel } from './part-detail-panel';
 
@@ -108,7 +115,7 @@ export function Mro2InventoryPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('common.searchParts')}
-            className="w-full border px-2 py-1 text-[11px] outline-none"
+            className="w-full border px-2 py-1 text-[11px]"
             style={{ borderColor: KC.border, color: KC.ink }}
           />
           <KcFilterGroup title={t('common.selectedLocations')}>
@@ -133,17 +140,18 @@ export function Mro2InventoryPage() {
 
       {/* 본문 테이블 — 넓은 화면에서는 패널이 가리지 않도록 우측 여백 확보 */}
       <div className={`min-w-0 flex-1 ${selectedPartId ? 'xl:pr-[calc(380px+1rem)]' : ''}`}>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('inventory.title')}
-          </h2>
-          <KcButton
-            variant="teal"
-            onClick={() => downloadCsv('inventory.csv', toCsv(sorted, CSV_COLUMNS))}
-          >
-            <FileText size={12} /> {t('common.generateReport')}
-          </KcButton>
-        </div>
+        <KcSectionHeading
+          right={
+            <KcButton
+              variant="teal"
+              onClick={() => downloadCsv('inventory.csv', toCsv(sorted, CSV_COLUMNS))}
+            >
+              <FileText size={12} /> {t('common.generateReport')}
+            </KcButton>
+          }
+        >
+          {t('inventory.title')}
+        </KcSectionHeading>
         <div className="mb-3 text-[11px]" style={{ color: KC.muted }}>
           {t('inventory.subtitle', { customer: t('common.customerName'), count: sorted.length, value: usd(summary.totalValue) })}
         </div>
@@ -166,9 +174,16 @@ export function Mro2InventoryPage() {
               {sorted.map((i) => (
                 <tr
                   key={i.id}
+                  tabIndex={0}
                   className="kc-hover cursor-pointer border-b"
                   style={{ borderColor: KC.hairline }}
                   onClick={() => openPart(i.partId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openPart(i.partId);
+                    }
+                  }}
                 >
                   <td className="max-w-[220px] py-1.5 pr-2">
                     <span className="flex items-center gap-1.5">
@@ -203,6 +218,7 @@ export function Mro2InventoryPage() {
               ))}
             </tbody>
           </table>
+          {sorted.length === 0 ? <KcEmpty>{t('inventory.noParts')}</KcEmpty> : null}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import type { CraneComponent } from '@crane/domain/asset';
 import type { InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
 import { KC, KC_FONT_DISPLAY } from '../../../shared/ui/kc';
-import { KcRing } from '../../../shared/ui/kc-ui';
+import { KcEmpty, KcRing } from '../../../shared/ui/kc-ui';
 import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import {
   alertMonthlyTrend,
@@ -48,7 +48,7 @@ function RangeToolbar({
             const v = e.target.value as RangePreset;
             if (v !== 'custom') onPreset(v);
           }}
-          className="cursor-pointer border px-1.5 py-1 text-[11.5px] outline-none"
+          className="cursor-pointer border px-1.5 py-1 text-[11.5px]"
           style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
         >
           <option value="last30">{t('monitoring.rangeLast30')}</option>
@@ -68,7 +68,7 @@ function RangeToolbar({
           onChange={(e) => {
             if (e.target.value) onCustom(new Date(`${e.target.value}T00:00:00`), range.end);
           }}
-          className="border px-1.5 py-0.5 text-[11.5px] outline-none"
+          className="border px-1.5 py-0.5 text-[11.5px]"
           style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
         />
       </label>
@@ -81,7 +81,7 @@ function RangeToolbar({
           onChange={(e) => {
             if (e.target.value) onCustom(range.start, new Date(`${e.target.value}T23:59:59`));
           }}
-          className="border px-1.5 py-0.5 text-[11.5px] outline-none"
+          className="border px-1.5 py-0.5 text-[11.5px]"
           style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
         />
       </label>
@@ -167,9 +167,7 @@ function ParetoChart({
   const { t } = useTranslation('mro2');
   if (entries.length === 0) {
     return (
-      <div className="py-6 text-center text-[11px]" style={{ color: KC.muted }}>
-        {t('monitoring.noAlerts')}
-      </div>
+      <KcEmpty>{t('monitoring.noAlerts')}</KcEmpty>
     );
   }
   const W = 560;
@@ -443,8 +441,13 @@ export function MonitoringTab({
             {t('mro2:monitoring.alerts')}
           </div>
           <div
-            className="flex items-center justify-center rounded-full text-[15px] font-bold text-white"
-            style={{ background: rangeAlerts.length > 0 ? KC.safety : KC.ok, width: 48, height: 48 }}
+            className="flex items-center justify-center rounded-full text-[15px] font-bold"
+            style={{
+              background: rangeAlerts.length > 0 ? KC.safety : KC.ok,
+              color: rangeAlerts.length > 0 ? KC.onSafety : KC.onOk,
+              width: 48,
+              height: 48,
+            }}
           >
             {rangeAlerts.length}
           </div>

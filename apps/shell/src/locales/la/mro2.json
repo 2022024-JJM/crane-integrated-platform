@@ -327,6 +327,7 @@
     "statusOut": "Copia Nulla",
     "statusExcess": "Excessus",
     "statusExpiry": "Mox Exspirat",
+    "noParts": "Nullae partes filtris congruunt",
     "colPart": "Pars",
     "colSpecification": "Specificatio",
     "colBin": "Loculus",

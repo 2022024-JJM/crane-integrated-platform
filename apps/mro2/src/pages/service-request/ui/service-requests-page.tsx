@@ -4,8 +4,15 @@ import { ChevronLeft, MapPin, Plus, Wrench } from 'lucide-react';
 import { useAssetList } from '@crane/features/asset';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
-import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
+import {
+  KcButton,
+  KcEmpty,
+  KcFilterChip,
+  KcFilterGroup,
+  KcFilterRail,
+  KcSectionHeading,
+} from '../../../shared/ui/kc-ui';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import { useTranslation } from 'react-i18next';
 import {
@@ -166,14 +173,15 @@ export function Mro2ServiceRequestsPage() {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-end justify-between border-b pb-1.5" style={{ borderColor: KC.borderStrong }}>
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('mro2:common.activities', { count: rows.length })}
-          </h2>
-          <KcButton variant="teal" onClick={() => openTicket('repair')}>
-            <Plus size={13} /> {t('mro2:common.newServiceRequest')}
-          </KcButton>
-        </div>
+        <KcSectionHeading
+          right={
+            <KcButton variant="teal" onClick={() => openTicket('repair')}>
+              <Plus size={13} /> {t('mro2:common.newServiceRequest')}
+            </KcButton>
+          }
+        >
+          {t('mro2:common.activities', { count: rows.length })}
+        </KcSectionHeading>
         <div className="mt-3 flex flex-col">
           {rows.map((r) => (
             <div key={r.key} className="flex gap-3">
@@ -184,7 +192,12 @@ export function Mro2ServiceRequestsPage() {
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(r.path)}
-                onKeyDown={(e) => (e.key === 'Enter' ? navigate(r.path) : undefined)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(r.path);
+                  }
+                }}
                 className="kc-hover mb-2 flex-1 cursor-pointer border px-3 py-2"
                 style={{
                   borderColor: KC.hairline,
@@ -214,9 +227,7 @@ export function Mro2ServiceRequestsPage() {
             </div>
           ))}
           {rows.length === 0 ? (
-            <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-              {t('mro2:sr.noRequests')}
-            </div>
+            <KcEmpty>{t('mro2:sr.noRequests')}</KcEmpty>
           ) : null}
         </div>
       </div>

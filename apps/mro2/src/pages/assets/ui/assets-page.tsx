@@ -6,8 +6,8 @@ import { useOpenRisks } from '@crane/features/risk';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import type { CraneAsset } from '@crane/domain/asset';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO } from '../../../shared/ui/kc';
-import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
   fmtDate,
@@ -168,7 +168,7 @@ export function Mro2AssetsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('common.searchAssets')}
-            className="w-full border px-2 py-1 text-[11px] outline-none"
+            className="w-full border px-2 py-1 text-[11px]"
             style={{ borderColor: KC.border, color: KC.ink }}
           />
           <KcFilterGroup title={t('common.selectedCustomers')}>
@@ -221,11 +221,9 @@ export function Mro2AssetsPage() {
 
       {/* 플릿 그리드 */}
       <div className="min-w-0 flex-1">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('assets.nAssets', { count: filtered.length })}
-          </h2>
-          <div className="relative" ref={reportRef}>
+        <KcSectionHeading
+          right={
+            <div className="relative" ref={reportRef}>
             <KcButton variant="teal" onClick={() => setReportOpen((v) => !v)}>
               <FileSpreadsheet size={13} /> {t('common.assetReports')}
             </KcButton>
@@ -247,8 +245,11 @@ export function Mro2AssetsPage() {
                 ))}
               </div>
             ) : null}
-          </div>
-        </div>
+            </div>
+          }
+        >
+          {t('assets.nAssets', { count: filtered.length })}
+        </KcSectionHeading>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((a) => {
@@ -415,7 +416,7 @@ export function Mro2AssetsPage() {
                     onChange={(e) => setNewLabel(e.target.value)}
                     placeholder={t('assets.addLabel')}
                     maxLength={24}
-                    className="min-w-0 flex-1 border px-1.5 py-0.5 text-[10px] outline-none"
+                    className="min-w-0 flex-1 border px-1.5 py-0.5 text-[10px]"
                     style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
                   />
                   <button

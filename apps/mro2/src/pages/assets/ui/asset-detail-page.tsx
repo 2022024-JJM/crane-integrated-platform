@@ -7,7 +7,7 @@ import { useOpenRisks } from '@crane/features/risk';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
-import { KcButton, KcStat } from '../../../shared/ui/kc-ui';
+import { KcButton, KcEmpty, KcStat } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import {
   fmtDate,
@@ -138,9 +138,7 @@ export function Mro2AssetDetailPage() {
             navigate={(p) => navigate(p)}
           />
           {openWoCount === 0 ? (
-            <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-              {t('mro2:detail.noOpenItems')}
-            </div>
+            <KcEmpty>{t('mro2:detail.noOpenItems')}</KcEmpty>
           ) : null}
         </div>
       ) : null}
@@ -275,7 +273,12 @@ function WoTimeline({
             role="button"
             tabIndex={0}
             onClick={() => navigate(row.path)}
-            onKeyDown={(e) => (e.key === 'Enter' ? navigate(row.path) : undefined)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(row.path);
+              }
+            }}
             className="kc-hover mb-2 flex-1 cursor-pointer border"
             style={{ borderColor: KC.hairline, borderLeft: `4px solid ${row.tone}` }}
           >
@@ -361,9 +364,7 @@ function AssetDocumentsTab({ craneId, craneName }: { craneId: string; craneName:
         </KcButton>
       </div>
       {rows.length === 0 ? (
-        <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-          {t('documents.emptyAsset')}
-        </div>
+        <KcEmpty>{t('documents.emptyAsset')}</KcEmpty>
       ) : (
         <div className="flex flex-col">
           {rows.map((row) => (

@@ -40,7 +40,7 @@ export function Mro2Layout() {
               aria-label="Time frame"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="cursor-pointer bg-transparent text-[12px] outline-none"
+              className="cursor-pointer bg-transparent text-[12px]"
               style={{ color: KC.ink }}
             >
               {MRO2_YEARS.map((y) => (

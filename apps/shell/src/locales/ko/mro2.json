@@ -327,6 +327,7 @@
     "statusOut": "품절",
     "statusExcess": "과잉",
     "statusExpiry": "유효기간 임박",
+    "noParts": "조건에 맞는 부품이 없습니다",
     "colPart": "부품",
     "colSpecification": "사양",
     "colBin": "빈",

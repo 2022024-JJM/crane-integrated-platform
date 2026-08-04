@@ -4,8 +4,16 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Download, FileText, Upload, X } from 'lucide-react';
 import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO } from '../../../shared/ui/kc';
-import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import {
+  KcButton,
+  KcEmpty,
+  KcFieldRow,
+  KcFilterChip,
+  KcFilterGroup,
+  KcFilterRail,
+  KcSectionHeading,
+} from '../../../shared/ui/kc-ui';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { downloadCsv, toCsv } from '../../../shared/lib/export-csv';
 import {
@@ -105,7 +113,7 @@ export function Mro2DocumentsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('documents.search')}
-            className="w-full border px-2 py-1 text-[11px] outline-none"
+            className="w-full border px-2 py-1 text-[11px]"
             style={{ borderColor: KC.border, color: KC.ink }}
           />
           <KcFilterGroup title={t('common.selectedCustomers')}>
@@ -133,39 +141,35 @@ export function Mro2DocumentsPage() {
 
       {/* 본문 */}
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center justify-between">
-          <h2
-            className="text-[18px] font-semibold tracking-wide"
-            style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}
-          >
-            {t('documents.title')}
-          </h2>
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => onPickFile(e.target.files?.[0])}
-            />
-            <KcButton variant="outline" onClick={() => fileRef.current?.click()}>
-              <Upload size={12} /> {t('documents.upload')}
-            </KcButton>
-            <KcButton
-              variant="teal"
-              onClick={() => downloadCsv('documents.csv', toCsv(filtered, DOCUMENT_CSV_COLUMNS))}
-            >
-              <FileText size={12} /> {t('common.generateReport')}
-            </KcButton>
-          </div>
-        </div>
+        <KcSectionHeading
+          right={
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => onPickFile(e.target.files?.[0])}
+              />
+              <KcButton variant="outline" onClick={() => fileRef.current?.click()}>
+                <Upload size={12} /> {t('documents.upload')}
+              </KcButton>
+              <KcButton
+                variant="teal"
+                onClick={() => downloadCsv('documents.csv', toCsv(filtered, DOCUMENT_CSV_COLUMNS))}
+              >
+                <FileText size={12} /> {t('common.generateReport')}
+              </KcButton>
+            </div>
+          }
+        >
+          {t('documents.title')}
+        </KcSectionHeading>
         <div className="mb-3 text-[11px]" style={{ color: KC.muted }}>
           {t('documents.subtitle', { count: filtered.length })}
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-10 text-center text-[12px]" style={{ color: KC.muted }}>
-            {t('documents.empty')}
-          </div>
+          <KcEmpty>{t('documents.empty')}</KcEmpty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-[11px]">
@@ -183,9 +187,16 @@ export function Mro2DocumentsPage() {
                 {filtered.map((r) => (
                   <tr
                     key={r.id}
+                    tabIndex={0}
                     className="kc-hover cursor-pointer border-b"
                     style={{ borderColor: KC.hairline }}
                     onClick={() => openDoc(r.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDoc(r.id);
+                      }
+                    }}
                   >
                     <td className="max-w-[260px] py-1.5 pr-2">
                       <span className="flex items-center gap-1.5">
@@ -230,17 +241,6 @@ export function Mro2DocumentsPage() {
 function DocumentInfoPanel({ row, onClose }: { row: DocumentRow; onClose: () => void }) {
   const { t } = useTranslation('mro2');
 
-  const Field = ({ k, v }: { k: string; v: string }) => (
-    <div className="flex py-0.5 text-[11px]">
-      <span className="w-[110px] shrink-0 font-bold" style={{ color: KC.ink }}>
-        {k}:
-      </span>
-      <span className="min-w-0 break-words" style={{ color: KC.text }}>
-        {v}
-      </span>
-    </div>
-  );
-
   return (
     <aside
       className="fixed top-14 right-0 bottom-0 z-40 w-[300px] overflow-y-auto border-l shadow-xl"
@@ -260,12 +260,14 @@ function DocumentInfoPanel({ row, onClose }: { row: DocumentRow; onClose: () => 
         </div>
 
         <div className="mt-3 border-t pt-2" style={{ borderColor: KC.hairline }}>
-          <Field k={t('documents.colType')} v={t(`documents.type.${row.docType}`)} />
-          <Field k={t('documents.colAsset')} v={row.assetName ?? '-'} />
-          <Field k={t('documents.colDate')} v={fmtDate(row.date)} />
-          <Field k={t('documents.colBy')} v={row.by} />
-          <Field k={t('documents.colDetail')} v={row.detail || '-'} />
-          {row.sizeBytes ? <Field k={t('documents.size')} v={formatSize(row.sizeBytes)} /> : null}
+          <KcFieldRow labelWidth={110} k={t('documents.colType')} v={t(`documents.type.${row.docType}`)} />
+          <KcFieldRow labelWidth={110} k={t('documents.colAsset')} v={row.assetName ?? '-'} />
+          <KcFieldRow labelWidth={110} k={t('documents.colDate')} v={fmtDate(row.date)} />
+          <KcFieldRow labelWidth={110} k={t('documents.colBy')} v={row.by} />
+          <KcFieldRow labelWidth={110} k={t('documents.colDetail')} v={row.detail || '-'} />
+          {row.sizeBytes ? (
+            <KcFieldRow labelWidth={110} k={t('documents.size')} v={formatSize(row.sizeBytes)} />
+          ) : null}
         </div>
 
         <div className="mt-4">

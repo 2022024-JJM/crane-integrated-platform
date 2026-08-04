@@ -129,7 +129,7 @@ export function Mro2GlobalSearch() {
           onKeyDown={onKeyDown}
           placeholder={t('search.placeholder')}
           aria-label={t('search.placeholder')}
-          className="w-[200px] bg-transparent text-[11.5px] outline-none"
+          className="w-[200px] bg-transparent text-[11.5px]"
           style={{ color: KC.ink }}
         />
       </div>

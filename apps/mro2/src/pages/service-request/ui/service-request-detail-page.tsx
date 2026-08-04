@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, Download, FileText, Info, Paperclip, Plus } from 'lucide-react';
@@ -8,8 +8,8 @@ import { useDocuments, useUploadDocument } from '@crane/features/compliance';
 import type { DocumentType } from '@crane/domain/compliance';
 import type { ChecklistItem, InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
-import { FINDING_TONE_COLOR, KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd, type FindingTone } from '../../../shared/ui/kc';
-import { KcButton } from '../../../shared/ui/kc-ui';
+import { FINDING_TONE_COLOR, KC, KC_FONT_MONO, usd, type FindingTone } from '../../../shared/ui/kc';
+import { KcButton, KcEmpty, KcFieldRow, KcSection, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
@@ -37,51 +37,6 @@ function categorize(item: ChecklistItem): FindingTone {
   if (item.judgment === 'na') return 'undetermined';
   if (item.actionRequired === 'monitor') return 'improvement';
   return 'ok';
-}
-
-/* ── 접이식 섹션 ────────────────────────────────────────────────────── */
-
-function Section({
-  title,
-  defaultOpen = true,
-  right,
-  children,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  right?: ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="mb-4 border-b pb-3" style={{ borderColor: KC.hairline }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center justify-between py-1 text-left"
-      >
-        <span className="text-[13px] font-bold" style={{ color: KC.ink }}>
-          {title}
-        </span>
-        <span className="flex items-center gap-2">
-          {right}
-          {open ? <ChevronUp size={14} style={{ color: KC.ink }} /> : <ChevronDown size={14} style={{ color: KC.ink }} />}
-        </span>
-      </button>
-      {open ? <div className="pt-2">{children}</div> : null}
-    </div>
-  );
-}
-
-function FieldRow({ k, v }: { k: string; v: ReactNode }) {
-  return (
-    <div className="flex py-0.5 text-[11px]">
-      <span className="w-[150px] shrink-0 font-bold" style={{ color: KC.ink }}>
-        {k}:
-      </span>
-      <span style={{ color: KC.text }}>{v}</span>
-    </div>
-  );
 }
 
 /* 소견 카운트 행: ▌15 Safety Risks */
@@ -137,7 +92,7 @@ function AttachmentsSection({
   };
 
   return (
-    <Section title={t('sr.attachments', { count: files.length })}>
+    <KcSection title={t('sr.attachments', { count: files.length })}>
       {files.length === 0 ? (
         <div className="py-1 text-[11px]" style={{ color: KC.muted }}>
           {t('sr.noAttachments')}
@@ -175,7 +130,7 @@ function AttachmentsSection({
           <Plus size={12} /> {t('sr.addAttachment')}
         </KcButton>
       </div>
-    </Section>
+    </KcSection>
   );
 }
 
@@ -229,24 +184,24 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
 
   return (
     <>
-      <Section title={t('mro2:sr.customerServiceInfo')} defaultOpen={false}>
-        <FieldRow k={t('mro2:sr.customer')} v={t('mro2:common.customerName')} />
-        <FieldRow k={t('mro2:sr.location')} v={wo.siteName} />
-        <FieldRow k={t('mro2:sr.asset')} v={wo.craneName} />
-        <FieldRow k={t('mro2:sr.agreementType')} v={t('mro2:sr.timeMaterial')} />
-        <FieldRow k={t('mro2:sr.technician')} v={wo.assignedTo} />
-        <FieldRow k={t('mro2:sr.scheduledDate')} v={fmtDate(wo.scheduledDate)} />
-        <FieldRow k={t('mro2:sr.actualDate')} v={wo.actualDate ? fmtDate(wo.actualDate) : '-'} />
-        {wo.totalHours ? <FieldRow k={t('mro2:sr.totalHours')} v={`${wo.totalHours} h`} /> : null}
-      </Section>
+      <KcSection title={t('mro2:sr.customerServiceInfo')} defaultOpen={false}>
+        <KcFieldRow k={t('mro2:sr.customer')} v={t('mro2:common.customerName')} />
+        <KcFieldRow k={t('mro2:sr.location')} v={wo.siteName} />
+        <KcFieldRow k={t('mro2:sr.asset')} v={wo.craneName} />
+        <KcFieldRow k={t('mro2:sr.agreementType')} v={t('mro2:sr.timeMaterial')} />
+        <KcFieldRow k={t('mro2:sr.technician')} v={wo.assignedTo} />
+        <KcFieldRow k={t('mro2:sr.scheduledDate')} v={fmtDate(wo.scheduledDate)} />
+        <KcFieldRow k={t('mro2:sr.actualDate')} v={wo.actualDate ? fmtDate(wo.actualDate) : '-'} />
+        {wo.totalHours ? <KcFieldRow k={t('mro2:sr.totalHours')} v={`${wo.totalHours} h`} /> : null}
+      </KcSection>
 
-      <Section title={t('mro2:sr.summary')}>
-        <FieldRow k={t('mro2:sr.srStatus')} v={woStatusLabel(wo.status)} />
-        <FieldRow
+      <KcSection title={t('mro2:sr.summary')}>
+        <KcFieldRow k={t('mro2:sr.srStatus')} v={woStatusLabel(wo.status)} />
+        <KcFieldRow
           k={t('mro2:sr.serviceProducts')}
           v={t('mro2:detail.typeInspection', { type: t(`calendar:type.${wo.woType}`) })}
         />
-        <FieldRow k={t('mro2:sr.assetsServiced')} v="1" />
+        <KcFieldRow k={t('mro2:sr.assetsServiced')} v="1" />
 
         <div className="mt-3 mb-1 text-[11px] font-bold" style={{ color: KC.ink }}>
           {t('mro2:sr.findingsAndActions')}
@@ -298,11 +253,11 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
             </div>
           </div>
         ) : null}
-      </Section>
+      </KcSection>
 
       <AttachmentsSection craneId={wo.craneId} craneName={wo.craneName} woNumber={wo.woNumber} />
 
-      <Section title={t('mro2:sr.findingsSection')}>
+      <KcSection title={t('mro2:sr.findingsSection')}>
         {/* 자산 헤더 — 자산명 클릭 → 자산 상세 (매뉴얼 10p 관례) */}
         <div className="mb-2 border px-3 py-2" style={{ borderColor: KC.hairline, background: KC.bgSubtle }}>
           <div className="flex items-center gap-2">
@@ -402,24 +357,24 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
                 </button>
                 {open ? (
                   <div className="border-t px-4 py-2" style={{ borderColor: KC.hairline, background: KC.bgSubtle }}>
-                    <FieldRow
+                    <KcFieldRow
                       k={t('mro2:sr.tasks')}
                       v={`${t('mro2:sr.visualAssessment')}${item.measurementValue != null ? `, ${t('mro2:sr.measurementTask')}` : ''}`}
                     />
-                    <FieldRow k={t('mro2:sr.dateReported')} v={fmtDate(reportDate)} />
-                    <FieldRow k={t('mro2:sr.technician')} v={wo.assignedTo} />
-                    <FieldRow k={t('mro2:sr.componentPath')} v={`${item.category} / ${item.itemName}`} />
-                    <FieldRow k={t('mro2:sr.taskType')} v={t('mro2:sr.visualAssessment')} />
-                    <FieldRow
+                    <KcFieldRow k={t('mro2:sr.dateReported')} v={fmtDate(reportDate)} />
+                    <KcFieldRow k={t('mro2:sr.technician')} v={wo.assignedTo} />
+                    <KcFieldRow k={t('mro2:sr.componentPath')} v={`${item.category} / ${item.itemName}`} />
+                    <KcFieldRow k={t('mro2:sr.taskType')} v={t('mro2:sr.visualAssessment')} />
+                    <KcFieldRow
                       k={t('mro2:sr.faultCode')}
                       v={tone === 'undetermined' ? t('mro2:sr.notInScope') : (item.severity ?? t('mro2:sr.observed'))}
                     />
-                    <FieldRow k={t('mro2:sr.risk')} v={findingLabel(tone)} />
-                    <FieldRow k={t('mro2:sr.recommendation')} v={actionLabel(item.actionRequired)} />
+                    <KcFieldRow k={t('mro2:sr.risk')} v={findingLabel(tone)} />
+                    <KcFieldRow k={t('mro2:sr.recommendation')} v={actionLabel(item.actionRequired)} />
                     {item.measurementValue != null ? (
-                      <FieldRow k={t('mro2:sr.measurement')} v={`${item.measurementValue} ${item.measurementUnit ?? ''}`} />
+                      <KcFieldRow k={t('mro2:sr.measurement')} v={`${item.measurementValue} ${item.measurementUnit ?? ''}`} />
                     ) : null}
-                    {item.comment ? <FieldRow k={t('mro2:sr.comment')} v={item.comment} /> : null}
+                    {item.comment ? <KcFieldRow k={t('mro2:sr.comment')} v={item.comment} /> : null}
                     {needsQuote ? (
                       <div className="kc-no-print mt-2 border-t pt-2" style={{ borderColor: KC.hairline }}>
                         <KcButton
@@ -448,10 +403,10 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
             );
           })}
         </div>
-      </Section>
+      </KcSection>
 
       {undetermined.length > 0 ? (
-        <Section
+        <KcSection
           title={t('mro2:sr.undeterminedSection', { count: undetermined.length })}
           defaultOpen={false}
           right={<Info size={13} style={{ color: KC.link }} />}
@@ -475,7 +430,7 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
               </div>
             ))}
           </div>
-        </Section>
+        </KcSection>
       ) : null}
 
       {wo.findings ? (
@@ -502,10 +457,10 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
 
   return (
     <>
-      <Section title={t('sr.customerServiceInfo')} defaultOpen={false}>
-        <FieldRow k={t('sr.customer')} v={t('common.customerName')} />
-        <FieldRow k={t('sr.location')} v={wo.siteName} />
-        <FieldRow
+      <KcSection title={t('sr.customerServiceInfo')} defaultOpen={false}>
+        <KcFieldRow k={t('sr.customer')} v={t('common.customerName')} />
+        <KcFieldRow k={t('sr.location')} v={wo.siteName} />
+        <KcFieldRow
           k={t('sr.asset')}
           v={
             <Link to={`/mro2/assets/${wo.craneId}`} className="hover:underline" style={{ color: KC.link }}>
@@ -513,23 +468,23 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
             </Link>
           }
         />
-        <FieldRow
+        <KcFieldRow
           k={t('sr.source')}
           v={`${wo.sourceType.charAt(0).toUpperCase() + wo.sourceType.slice(1)}${wo.sourceWoNumber ? ` (${wo.sourceWoNumber})` : ''}`}
         />
-        <FieldRow k={t('sr.technician')} v={wo.assignedTo} />
-        <FieldRow k={t('sr.scheduledRange')} v={`${fmtDate(wo.scheduledStart)} – ${fmtDate(wo.scheduledEnd)}`} />
-        <FieldRow k={t('sr.actualRange')} v={wo.actualStart ? `${fmtDate(wo.actualStart)} – ${fmtDate(wo.actualEnd)}` : '-'} />
-        {wo.downtimeHours != null ? <FieldRow k={t('sr.downtime')} v={`${wo.downtimeHours} h`} /> : null}
-      </Section>
+        <KcFieldRow k={t('sr.technician')} v={wo.assignedTo} />
+        <KcFieldRow k={t('sr.scheduledRange')} v={`${fmtDate(wo.scheduledStart)} – ${fmtDate(wo.scheduledEnd)}`} />
+        <KcFieldRow k={t('sr.actualRange')} v={wo.actualStart ? `${fmtDate(wo.actualStart)} – ${fmtDate(wo.actualEnd)}` : '-'} />
+        {wo.downtimeHours != null ? <KcFieldRow k={t('sr.downtime')} v={`${wo.downtimeHours} h`} /> : null}
+      </KcSection>
 
-      <Section title={t('sr.summary')}>
-        <FieldRow k={t('sr.srStatus')} v={woStatusLabel(wo.status)} />
-        <FieldRow
+      <KcSection title={t('sr.summary')}>
+        <KcFieldRow k={t('sr.srStatus')} v={woStatusLabel(wo.status)} />
+        <KcFieldRow
           k={t('sr.serviceProducts')}
           v={wo.sourceType === 'breakdown' ? t('sr.onCallRepair') : t('sr.plannedRepairs')}
         />
-        <FieldRow k={t('sr.repairLevel')} v={wo.repairLevel} />
+        <KcFieldRow k={t('sr.repairLevel')} v={wo.repairLevel} />
         <div className="mt-3 mb-1 text-[11px] font-bold" style={{ color: KC.ink }}>
           {t('sr.findingsAndActions')}
         </div>
@@ -540,9 +495,9 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
             <span className="font-bold">1</span> {t('finding.repaired')}
           </div>
         ) : null}
-      </Section>
+      </KcSection>
 
-      <Section title={t('sr.findingsSection')}>
+      <KcSection title={t('sr.findingsSection')}>
         <div className="border" style={{ borderColor: KC.hairline }}>
           <button
             type="button"
@@ -565,20 +520,20 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
           </button>
           {open ? (
             <div className="border-t px-4 py-2" style={{ borderColor: KC.hairline, background: KC.bgSubtle }}>
-              <FieldRow k={t('sr.faultField')} v={wo.failureDescription} />
-              <FieldRow k={t('sr.failureType')} v={wo.failureType} />
-              <FieldRow k={t('sr.risk')} v={findingLabel(tone)} />
-              {wo.rootCause ? <FieldRow k={t('sr.rootCause')} v={wo.rootCause} /> : null}
-              {wo.correctiveAction ? <FieldRow k={t('sr.correctiveAction')} v={wo.correctiveAction} /> : null}
-              {wo.preventiveAction ? <FieldRow k={t('sr.preventiveAction')} v={wo.preventiveAction} /> : null}
-              {wo.reInspectionResult ? <FieldRow k={t('sr.reInspection')} v={wo.reInspectionResult} /> : null}
+              <KcFieldRow k={t('sr.faultField')} v={wo.failureDescription} />
+              <KcFieldRow k={t('sr.failureType')} v={wo.failureType} />
+              <KcFieldRow k={t('sr.risk')} v={findingLabel(tone)} />
+              {wo.rootCause ? <KcFieldRow k={t('sr.rootCause')} v={wo.rootCause} /> : null}
+              {wo.correctiveAction ? <KcFieldRow k={t('sr.correctiveAction')} v={wo.correctiveAction} /> : null}
+              {wo.preventiveAction ? <KcFieldRow k={t('sr.preventiveAction')} v={wo.preventiveAction} /> : null}
+              {wo.reInspectionResult ? <KcFieldRow k={t('sr.reInspection')} v={wo.reInspectionResult} /> : null}
             </div>
           ) : null}
         </div>
-      </Section>
+      </KcSection>
 
       {wo.partsUsed.length > 0 ? (
-        <Section title={t('sr.partsUsed', { count: wo.partsUsed.length })}>
+        <KcSection title={t('sr.partsUsed', { count: wo.partsUsed.length })}>
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b text-left" style={{ borderColor: KC.border, color: KC.muted }}>
@@ -599,14 +554,14 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
               ))}
             </tbody>
           </table>
-        </Section>
+        </KcSection>
       ) : null}
 
-      <Section title={t('sr.costSummary')} defaultOpen={false}>
-        <FieldRow k={t('sr.labor')} v={`${wo.laborHours} h · ${usd(wo.laborCost ?? 0)}`} />
-        <FieldRow k={t('sr.partsCost')} v={usd(wo.partsCost || partsTotal)} />
-        <FieldRow k={t('sr.total')} v={usd(wo.totalCost ?? (wo.laborCost ?? 0) + (wo.partsCost || partsTotal))} />
-      </Section>
+      <KcSection title={t('sr.costSummary')} defaultOpen={false}>
+        <KcFieldRow k={t('sr.labor')} v={`${wo.laborHours} h · ${usd(wo.laborCost ?? 0)}`} />
+        <KcFieldRow k={t('sr.partsCost')} v={usd(wo.partsCost || partsTotal)} />
+        <KcFieldRow k={t('sr.total')} v={usd(wo.totalCost ?? (wo.laborCost ?? 0) + (wo.partsCost || partsTotal))} />
+      </KcSection>
 
       <AttachmentsSection craneId={wo.craneId} craneName={wo.craneName} woNumber={wo.woNumber} />
 
@@ -634,22 +589,21 @@ export function Mro2ServiceRequestDetailPage() {
       >
         <ChevronLeft size={14} /> {t('common.back')}
       </Link>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-          {t('common.serviceRequest')} <span style={{ fontFamily: KC_FONT_MONO }}>{woNumber ?? ''}</span>
-        </h2>
-        <span className="kc-no-print">
-          <KcButton variant="teal" onClick={() => window.print()}>
-            <FileText size={12} /> {t('common.generateReport')}
-          </KcButton>
-        </span>
-      </div>
+      <KcSectionHeading
+        right={
+          <span className="kc-no-print">
+            <KcButton variant="teal" onClick={() => window.print()}>
+              <FileText size={12} /> {t('common.generateReport')}
+            </KcButton>
+          </span>
+        }
+      >
+        {t('common.serviceRequest')} <span style={{ fontFamily: KC_FONT_MONO }}>{woNumber ?? ''}</span>
+      </KcSectionHeading>
       {kind === 'inspection' && inspection ? <InspectionDetail wo={inspection} /> : null}
       {kind === 'repair' && repair ? <RepairDetail wo={repair} /> : null}
       {(kind === 'inspection' && !inspection) || (kind === 'repair' && !repair) ? (
-        <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-          {t('sr.notFound')}
-        </div>
+        <KcEmpty>{t('sr.notFound')}</KcEmpty>
       ) : null}
     </div>
   );

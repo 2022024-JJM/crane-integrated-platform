@@ -51,6 +51,13 @@ export const KC = {
   ok: 'var(--kc-ok)',
   planned: 'var(--kc-planned)',
 
+  /* 의미색 배경 위 텍스트 (배지·히트맵 셀 — 대비 4.5:1 보장 짝) */
+  onSafety: 'var(--kc-on-safety)',
+  onProduction: 'var(--kc-on-production)',
+  onUndetermined: 'var(--kc-on-undetermined)',
+  onOk: 'var(--kc-on-ok)',
+  onPlanned: 'var(--kc-on-planned)',
+
   /* 데이터 계열 레이어 (차트 전용 — 의미색과 분리) */
   s1: 'var(--kc-s1)',
   s2: 'var(--kc-s2)',
@@ -86,6 +93,14 @@ export const SERVICE_TONE_COLOR: Record<ServiceTone, string> = {
   inProgress: KC.undetermined,
   open: KC.planned,
   delayed: KC.safety,
+};
+
+/** SERVICE_TONE_COLOR 배경 위에 얹는 텍스트 색 — 흰색 고정 대신 이 짝을 쓴다 */
+export const SERVICE_TONE_TEXT: Record<ServiceTone, string> = {
+  completed: KC.onOk,
+  inProgress: KC.onUndetermined,
+  open: KC.onPlanned,
+  delayed: KC.onSafety,
 };
 
 export type FindingTone =

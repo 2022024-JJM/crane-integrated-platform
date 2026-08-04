@@ -327,6 +327,7 @@
     "statusOut": "Out of Stock",
     "statusExcess": "Excess",
     "statusExpiry": "Expiry Soon",
+    "noParts": "No parts match the current filters",
     "colPart": "Part",
     "colSpecification": "Specification",
     "colBin": "Bin",

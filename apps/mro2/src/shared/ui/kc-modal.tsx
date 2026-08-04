@@ -34,7 +34,7 @@ export function KcModal({
   }, [onClose]);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:items-center">
+    <div className="mro2-root fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:items-center">
       <button
         type="button"
         aria-label="Close"

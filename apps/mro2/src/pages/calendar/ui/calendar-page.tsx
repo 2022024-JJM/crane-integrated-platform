@@ -4,8 +4,8 @@ import { ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 import { useServiceCalendar } from '@crane/features/calendar';
 import type { CalendarEvent } from '@crane/features/calendar';
 import { useAssetList } from '@crane/features/asset';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
-import { KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
+import { KcEmpty, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
   fmtDate,
@@ -192,12 +192,8 @@ export function Mro2CalendarPage() {
 
       {/* 본문 */}
       <div className="min-w-0 flex-1">
-        <div className="border-b pb-1.5" style={{ borderColor: KC.borderStrong }}>
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('calendar.title')}
-          </h2>
-        </div>
-        <div className="mt-1 mb-4 text-[11px]" style={{ color: KC.muted }}>
+        <KcSectionHeading>{t('calendar.title')}</KcSectionHeading>
+        <div className="-mt-2 mb-4 text-[11px]" style={{ color: KC.muted }}>
           {t('common.customerName')}
         </div>
 
@@ -335,7 +331,12 @@ export function Mro2CalendarPage() {
                   role="button"
                   tabIndex={0}
                   onClick={() => navigate(eventPath(e))}
-                  onKeyDown={(ev) => (ev.key === 'Enter' ? navigate(eventPath(e)) : undefined)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault();
+                      navigate(eventPath(e));
+                    }
+                  }}
                   className="kc-hover mb-2 flex-1 cursor-pointer border px-3 py-2"
                   style={{
                     borderColor: KC.hairline,
@@ -360,9 +361,7 @@ export function Mro2CalendarPage() {
             );
           })}
           {monthEvents.length === 0 ? (
-            <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-              {t('calendar.noActivities', { month: MONTHS[month], year })}
-            </div>
+            <KcEmpty>{t('calendar.noActivities', { month: MONTHS[month], year })}</KcEmpty>
           ) : null}
         </div>
       </div>

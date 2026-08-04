@@ -37,6 +37,13 @@
   --kc-ok: #4ea72e;
   --kc-planned: #bcc2c6;
 
+  /* 의미색 배경 위 텍스트 — 각 상태색 배지/셀에서 4.5:1 이상을 보장하는 짝 */
+  --kc-on-safety: #ffffff;
+  --kc-on-production: #191c1e;
+  --kc-on-undetermined: #191c1e;
+  --kc-on-ok: #191c1e;
+  --kc-on-planned: #191c1e;
+
   /* 데이터 계열 레이어 */
   --kc-s1: #118e9c;
   --kc-s2: #1c3f5f;
@@ -76,11 +83,27 @@
   --kc-ok: #66bb4a;
   --kc-planned: #565e63;
 
+  --kc-on-safety: #17191b;
+  --kc-on-production: #17191b;
+  --kc-on-undetermined: #17191b;
+  --kc-on-ok: #17191b;
+  --kc-on-planned: #ffffff;
+
   --kc-s1: #23a7b5;
   --kc-s2: #3d6a94;
   --kc-s3: #54c4d4;
   --kc-s4: #cfd4d6;
   --kc-s5: #565e63;
+}
+
+/**
+ * 키보드 포커스 링 — 인라인 style 색상 구조라 Tailwind focus: variant를 못 쓰므로
+ * 전역 한 곳에서 처리한다. :focus-visible이라 마우스 클릭에는 뜨지 않는다.
+ * (KcModal은 body로 포털되므로 래퍼에 mro2-root 클래스를 함께 붙일 것)
+ */
+.mro2-root :focus-visible {
+  outline: 2px solid var(--kc-accent);
+  outline-offset: 1px;
 }
 
 /* 테마 인지 hover 행 (Tailwind hover:bg-neutral-50 대체) */

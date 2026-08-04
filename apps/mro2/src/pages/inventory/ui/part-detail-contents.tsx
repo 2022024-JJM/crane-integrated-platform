@@ -15,7 +15,7 @@ import type {
   OpenPoLine,
 } from '@crane/domain/inventory';
 import { KC, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
-import { KcButton } from '../../../shared/ui/kc-ui';
+import { KcButton, KcEmpty } from '../../../shared/ui/kc-ui';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
 import type { ActionMode } from './stock-action-modal';
@@ -173,9 +173,7 @@ export function HistoryContent({ transactions }: { transactions: InventoryTransa
   const { t } = useTranslation('mro2');
   if (transactions.length === 0) {
     return (
-      <div className="py-8 text-center text-[11px]" style={{ color: KC.muted }}>
-        {t('inventory.noTransactions')}
-      </div>
+      <KcEmpty>{t('inventory.noTransactions')}</KcEmpty>
     );
   }
   return (
@@ -226,9 +224,7 @@ export function UsageContent({ repairUsages }: { repairUsages: PartRepairUsage[]
   const { t } = useTranslation('mro2');
   if (repairUsages.length === 0) {
     return (
-      <div className="py-8 text-center text-[11px]" style={{ color: KC.muted }}>
-        {t('inventory.detail.emptyUsage')}
-      </div>
+      <KcEmpty>{t('inventory.detail.emptyUsage')}</KcEmpty>
     );
   }
   return (
