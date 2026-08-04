@@ -148,7 +148,8 @@
     "inspectionOf": "{{status}} Inspection",
     "typeInspection": "{{type}} Inspection",
     "tab3d": "3D View",
-    "loading3d": "Loading 3D viewer…"
+    "loading3d": "Loading 3D viewer…",
+    "tabDocuments": "Documents"
   },
   "monitoring": {
     "summary": "Summary – Current condition",
@@ -182,6 +183,8 @@
   "calendar": {
     "title": "Service Calendar",
     "serviceStatus": "Service Status",
+    "serviceProduct": "Service Product",
+    "assetName": "Asset Name",
     "months": [
       "January",
       "February",
@@ -287,7 +290,10 @@
     "costSummary": "Cost Summary",
     "labor": "Labor",
     "partsCost": "Parts",
-    "createRepair": "Create repair request"
+    "createRepair": "Create repair request",
+    "attachments": "Attachments ({{count}})",
+    "noAttachments": "No attachments.",
+    "addAttachment": "Add"
   },
   "inventory": {
     "title": "Inventory and Parts",
@@ -327,7 +333,57 @@
     "lastIssue": "Last Issue",
     "txnReceipt": "Receipt",
     "txnIssue": "Issue",
-    "txnAdjust": "Adjust"
+    "txnAdjust": "Adjust",
+    "detail": {
+      "tabInfo": "Part Info",
+      "tabHistory": "Transactions",
+      "tabUsage": "WO Usage",
+      "expand": "Expand to full screen",
+      "collapse": "Collapse to panel",
+      "close": "Close",
+      "panelLabel": "Part detail: {{part}}",
+      "stockOnOrder": "On Order",
+      "onOrderTitle": "Open Orders",
+      "onOrderAuto": "Auto",
+      "emptyUsage": "No repair WOs have used this part.",
+      "usageQty": "×{{n}} used",
+      "cranes": "Cranes",
+      "cranesCommon": "Common"
+    },
+    "poStatus": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "ordered": "Ordered",
+      "in_transit": "In Transit",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "requestPart": "Request Part",
+      "issue": "Issue",
+      "receipt": "Receive",
+      "issueTitle": "Issue Part",
+      "receiptTitle": "Receive Part",
+      "qty": "Quantity",
+      "by": "Handled by",
+      "note": "Note",
+      "linkedWo": "Linked repair WO",
+      "noWo": "No WO link",
+      "poRef": "PO reference",
+      "poNone": "No PO selected",
+      "poCustom": "Enter manually…",
+      "poLineQty": "{{n}} pcs",
+      "cancel": "Cancel",
+      "submitIssue": "Issue",
+      "submitReceipt": "Receive",
+      "exceedsStock": "Exceeds available stock ({{n}})",
+      "availableBadge": "{{n}} available",
+      "toastIssued": "Issued {{n}} × {{part}}",
+      "toastReceived": "Received {{n}} × {{part}}",
+      "toastInsufficient": "Not enough available stock",
+      "toastWoClosed": "Cannot issue to a closed WO",
+      "toastFailed": "Action failed"
+    }
   },
   "spend": {
     "title": "Spend",
@@ -400,7 +456,8 @@
     "productsIncluded": "Products included in Service Agreement",
     "planTitle": "Assets and Service Plan",
     "serviceStatus": "Service Status",
-    "monthHint": "Click a month to open it in the Service Calendar"
+    "monthHint": "Click a month or a cell to open it in the Service Calendar",
+    "cellActivities": "{{count}} activities"
   },
   "documents": {
     "title": "Documents and Reports",
@@ -411,6 +468,8 @@
     "download": "Download",
     "size": "Size",
     "empty": "No documents match the current filter.",
+    "assetDocs": "{{count}} Documents",
+    "emptyAsset": "No documents for this asset yet.",
     "colName": "Document",
     "colType": "Type",
     "colAsset": "Asset",

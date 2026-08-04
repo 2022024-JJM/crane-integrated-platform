@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { KcModal } from './kc-modal';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ChevronDown, Plus, Trash2, Wrench, ClipboardCheck, Package, X } from 'lucide-react';
@@ -69,49 +70,6 @@ function Segmented<T extends string>({
   );
 }
 
-/* ── 모달 셸 (fade/scale 애니메이션 + 백드롭) ──────────────────────── */
-
-function ModalShell({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShow(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:items-center">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="fixed inset-0 cursor-default"
-        style={{ background: 'rgba(0,0,0,0.45)', opacity: show ? 1 : 0, transition: 'opacity 180ms ease-out' }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative w-full max-w-[440px] overflow-hidden rounded-[6px] shadow-2xl"
-        style={{
-          background: KC.bg,
-          border: `1px solid ${KC.border}`,
-          opacity: show ? 1 : 0,
-          transform: show ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.98)',
-          transition: 'opacity 180ms ease-out, transform 180ms ease-out',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 /* ── 본체 ──────────────────────────────────────────────────────────── */
 
 function TicketForm({ initialKind, initialCraneId, onClose }: {
@@ -148,8 +106,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   const [woType, setWoType] = useState<'frequent' | 'periodic' | 'emergency' | 'special'>('frequent');
   const [inspDate, setInspDate] = useState(today());
 
-  // parts
-  const [partRows, setPartRows] = useState<{ partId: string; qty: number }[]>([{ partId: '', qty: 1 }]);
+  // parts — 재고 패널의 "부품 요청"에서 열리면 해당 부품이 프리필된다
+  const [partRows, setPartRows] = useState<{ partId: string; qty: number }[]>([
+    { partId: prefill?.partId ?? '', qty: 1 },
+  ]);
 
   // shared advanced
   const [performerType, setPerformerType] = useState<'internal' | 'third_party' | 'local'>('internal');
@@ -523,9 +483,9 @@ export function NewTicketModal() {
   const { isOpen, kind, craneId, closeTicket } = useNewTicket();
   if (!isOpen) return null;
   return (
-    <ModalShell onClose={closeTicket}>
+    <KcModal onClose={closeTicket}>
       {/* key로 열 때마다 폼 상태 초기화 */}
       <TicketForm key={`${kind}-${craneId ?? ''}`} initialKind={kind} initialCraneId={craneId} onClose={closeTicket} />
-    </ModalShell>
+    </KcModal>
   );
 }

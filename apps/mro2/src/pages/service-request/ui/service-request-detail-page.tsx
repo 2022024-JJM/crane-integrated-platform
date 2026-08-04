@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronUp, FileText, Info } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, Download, FileText, Info, Paperclip, Plus } from 'lucide-react';
 import { useInspectionDetail } from '@crane/features/inspection';
 import { useMaintenanceDetail } from '@crane/features/maintenance';
+import { useDocuments, useUploadDocument } from '@crane/features/compliance';
+import type { DocumentType } from '@crane/domain/compliance';
 import type { ChecklistItem, InspectionWO } from '@crane/domain/inspection';
 import type { RepairWO } from '@crane/domain/maintenance';
 import { FINDING_TONE_COLOR, KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd, type FindingTone } from '../../../shared/ui/kc';
@@ -11,6 +13,7 @@ import { KcButton } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import { formatSize } from '../../documents/lib/document-rows';
 import { CraneIcon } from '../../../shared/ui/crane-icon';
 
 /* ── 소견 분류: 체크리스트 → findings 심각도 문법 ───────────────────── */
@@ -88,6 +91,91 @@ function FindingCount({ tone, count }: { tone: FindingTone; count: number }) {
       <span className="inline-block h-4 w-[5px]" style={{ background: FINDING_TONE_COLOR[tone] }} />
       <span className="font-bold">{count}</span> {findingLabel(tone)}
     </div>
+  );
+}
+
+/* 첨부 섹션 — 매뉴얼 9p "Attachments (N) + Add". 파일은 세션 내 object URL 로 보관 */
+function AttachmentsSection({
+  craneId,
+  craneName,
+  woNumber,
+}: {
+  craneId: string;
+  craneName: string;
+  woNumber: string;
+}) {
+  const { t } = useTranslation('mro2');
+  const { uploads } = useDocuments();
+  const uploadDocument = useUploadDocument();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const files = uploads.filter((u) => u.refWoNumber === woNumber);
+
+  const onPickFile = (file: File | undefined) => {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const docType: DocumentType =
+      ext === 'dwg' || ext === 'dxf' ? 'drawing' : ext === 'pdf' ? 'manual' : 'other';
+    uploadDocument({
+      fileName: file.name,
+      docType,
+      craneId,
+      craneName,
+      uploadedBy: i18n.t('mro2:common.customerName'),
+      sizeBytes: file.size,
+      objectUrl: URL.createObjectURL(file),
+      refWoNumber: woNumber,
+    });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const download = (name: string, url: string | undefined) => {
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+  };
+
+  return (
+    <Section title={t('sr.attachments', { count: files.length })}>
+      {files.length === 0 ? (
+        <div className="py-1 text-[11px]" style={{ color: KC.muted }}>
+          {t('sr.noAttachments')}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {files.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => download(f.fileName, f.objectUrl)}
+              className="kc-hover flex cursor-pointer items-center gap-2 border-b py-1.5 text-left text-[11.5px]"
+              style={{ borderColor: KC.hairline }}
+            >
+              <Paperclip size={12} style={{ color: KC.muted }} />
+              <span className="min-w-0 flex-1 truncate" style={{ color: KC.link }}>
+                {f.fileName}
+              </span>
+              <span className="text-[10px]" style={{ color: KC.faint }}>
+                {formatSize(f.sizeBytes)} · {fmtDate(f.uploadedAt)}
+              </span>
+              <Download size={12} style={{ color: KC.muted }} />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="kc-no-print mt-2">
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => onPickFile(e.target.files?.[0])}
+        />
+        <KcButton variant="teal" onClick={() => fileRef.current?.click()}>
+          <Plus size={12} /> {t('sr.addAttachment')}
+        </KcButton>
+      </div>
+    </Section>
   );
 }
 
@@ -212,15 +300,21 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
         ) : null}
       </Section>
 
+      <AttachmentsSection craneId={wo.craneId} craneName={wo.craneName} woNumber={wo.woNumber} />
+
       <Section title={t('mro2:sr.findingsSection')}>
-        {/* 자산 헤더 */}
+        {/* 자산 헤더 — 자산명 클릭 → 자산 상세 (매뉴얼 10p 관례) */}
         <div className="mb-2 border px-3 py-2" style={{ borderColor: KC.hairline, background: KC.bgSubtle }}>
           <div className="flex items-center gap-2">
             <CraneIcon type="goliath" size={18} />
             <div>
-              <div className="text-[12px] font-bold" style={{ color: KC.ink }}>
+              <Link
+                to={`/mro2/assets/${wo.craneId}`}
+                className="text-[12px] font-bold hover:underline"
+                style={{ color: KC.link }}
+              >
                 {wo.craneName}
-              </div>
+              </Link>
               <div className="text-[10px]" style={{ color: KC.muted }}>
                 {t('mro2:sr.serviceProductsLine', {
                   product: t('mro2:detail.typeInspection', { type: t(`calendar:type.${wo.woType}`) }),
@@ -327,7 +421,7 @@ function InspectionDetail({ wo }: { wo: InspectionWO }) {
                     ) : null}
                     {item.comment ? <FieldRow k={t('mro2:sr.comment')} v={item.comment} /> : null}
                     {needsQuote ? (
-                      <div className="mt-2 border-t pt-2" style={{ borderColor: KC.hairline }}>
+                      <div className="kc-no-print mt-2 border-t pt-2" style={{ borderColor: KC.hairline }}>
                         <KcButton
                           variant="teal"
                           onClick={() =>
@@ -411,7 +505,14 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
       <Section title={t('sr.customerServiceInfo')} defaultOpen={false}>
         <FieldRow k={t('sr.customer')} v={t('common.customerName')} />
         <FieldRow k={t('sr.location')} v={wo.siteName} />
-        <FieldRow k={t('sr.asset')} v={wo.craneName} />
+        <FieldRow
+          k={t('sr.asset')}
+          v={
+            <Link to={`/mro2/assets/${wo.craneId}`} className="hover:underline" style={{ color: KC.link }}>
+              {wo.craneName}
+            </Link>
+          }
+        />
         <FieldRow
           k={t('sr.source')}
           v={`${wo.sourceType.charAt(0).toUpperCase() + wo.sourceType.slice(1)}${wo.sourceWoNumber ? ` (${wo.sourceWoNumber})` : ''}`}
@@ -507,6 +608,8 @@ function RepairDetail({ wo }: { wo: RepairWO }) {
         <FieldRow k={t('sr.total')} v={usd(wo.totalCost ?? (wo.laborCost ?? 0) + (wo.partsCost || partsTotal))} />
       </Section>
 
+      <AttachmentsSection craneId={wo.craneId} craneName={wo.craneName} woNumber={wo.woNumber} />
+
       {wo.status === 'completed' && wo.actualEnd ? <Signature name={wo.assignedTo} date={wo.actualEnd} /> : null}
     </>
   );
@@ -523,17 +626,23 @@ export function Mro2ServiceRequestDetailPage() {
   const woNumber = kind === 'inspection' ? inspection?.woNumber : repair?.woNumber;
 
   return (
-    <div className="pt-1">
-      <Link to="/mro2/service-requests" className="mb-2 flex items-center gap-1 text-[12px]" style={{ color: KC.ink }}>
+    <div className="kc-print-root pt-1">
+      <Link
+        to="/mro2/service-requests"
+        className="kc-no-print mb-2 flex items-center gap-1 text-[12px]"
+        style={{ color: KC.ink }}
+      >
         <ChevronLeft size={14} /> {t('common.back')}
       </Link>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
           {t('common.serviceRequest')} <span style={{ fontFamily: KC_FONT_MONO }}>{woNumber ?? ''}</span>
         </h2>
-        <KcButton variant="teal" onClick={() => window.print()}>
-          <FileText size={12} /> {t('common.generateReport')}
-        </KcButton>
+        <span className="kc-no-print">
+          <KcButton variant="teal" onClick={() => window.print()}>
+            <FileText size={12} /> {t('common.generateReport')}
+          </KcButton>
+        </span>
       </div>
       {kind === 'inspection' && inspection ? <InspectionDetail wo={inspection} /> : null}
       {kind === 'repair' && repair ? <RepairDetail wo={repair} /> : null}

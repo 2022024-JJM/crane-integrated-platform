@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 export interface DonutSegment {
   value: number;
   color: string;
+  /** hover 시 네이티브 툴팁으로 표시할 라벨 (예: "Planned Repairs — $10,000") */
+  label?: string;
 }
 
 /** 도넛 차트 (Spend by Service Type) */
@@ -44,7 +46,9 @@ export function KcDonut({
             style={{ stroke: seg.color }}
             strokeDasharray={`${len} ${c}`}
             strokeDashoffset={-offset}
-          />
+          >
+            {seg.label ? <title>{seg.label}</title> : null}
+          </circle>
         ))}
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">{children}</div>

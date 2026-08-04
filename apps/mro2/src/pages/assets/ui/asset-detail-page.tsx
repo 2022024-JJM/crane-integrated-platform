@@ -1,9 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronUp, Plus, Wifi } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, Download, Plus, Upload, Wifi } from 'lucide-react';
 import { useAssetDetail } from '@crane/features/asset';
 import { useOpenRisks } from '@crane/features/risk';
+import { useDocuments, useUploadDocument } from '@crane/features/compliance';
+import type { DocumentType } from '@crane/domain/compliance';
 import type { CraneComponent } from '@crane/domain/asset';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { KcButton, KcRing, KcStat } from '../../../shared/ui/kc-ui';
@@ -16,6 +18,10 @@ import {
 } from '../../../shared/lib/service-status';
 import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import {
+  buildDocumentRows,
+  downloadDocumentRow,
+} from '../../documents/lib/document-rows';
 import { CraneThumb } from './crane-thumb';
 import { CraneFrontView } from './crane-front-view';
 
@@ -28,6 +34,7 @@ const TABS = [
   { key: 'activity', labelKey: 'detail.tabActivities' },
   { key: '3d', labelKey: 'detail.tab3d' },
   { key: 'monitoring', labelKey: 'detail.tabMonitoring' },
+  { key: 'documents', labelKey: 'detail.tabDocuments' },
   { key: 'info', labelKey: 'detail.tabInfo' },
 ] as const;
 
@@ -165,6 +172,11 @@ export function Mro2AssetDetailPage() {
       {/* ── Remote Monitoring ── */}
       {tab === 'monitoring' ? <MonitoringTab components={components} /> : null}
 
+      {/* ── Documents ── */}
+      {tab === 'documents' ? (
+        <AssetDocumentsTab craneId={craneId} craneName={asset.name} />
+      ) : null}
+
       {/* ── Asset Info ── */}
       {tab === 'info' ? (
         <div className="grid grid-cols-1 items-stretch gap-6 pt-4 lg:grid-cols-2">
@@ -289,6 +301,92 @@ function WoTimeline({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* Documents 탭 — 이 자산의 문서만 (매뉴얼 5p 자산 상세 Documents 탭) */
+function AssetDocumentsTab({ craneId, craneName }: { craneId: string; craneName: string }) {
+  const { t } = useTranslation('mro2');
+  const { oshaReports, certifications, uploads } = useDocuments();
+  const uploadDocument = useUploadDocument();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // 인증서는 자산 귀속이 아니므로 제외 — 이 자산의 보고서/업로드만 남긴다
+  const rows = useMemo(
+    () =>
+      buildDocumentRows({ oshaReports, certifications: [], uploads }).filter(
+        (r) => r.craneId === craneId,
+      ),
+    [oshaReports, certifications, uploads, craneId],
+  );
+
+  const onPickFile = (file: File | undefined) => {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const docType: DocumentType =
+      ext === 'dwg' || ext === 'dxf' ? 'drawing' : ext === 'pdf' ? 'manual' : 'other';
+    uploadDocument({
+      fileName: file.name,
+      docType,
+      craneId,
+      craneName,
+      uploadedBy: t('common.customerName'),
+      sizeBytes: file.size,
+      objectUrl: URL.createObjectURL(file),
+    });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  return (
+    <div className="pt-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[13px]" style={{ color: KC.ink }}>
+          {t('documents.assetDocs', { count: rows.length })}
+        </h3>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => onPickFile(e.target.files?.[0])}
+        />
+        <KcButton variant="outline" onClick={() => fileRef.current?.click()}>
+          <Upload size={12} /> {t('documents.upload')}
+        </KcButton>
+      </div>
+      {rows.length === 0 ? (
+        <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
+          {t('documents.emptyAsset')}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className="flex items-center gap-3 border-b py-2 text-[11.5px]"
+              style={{ borderColor: KC.hairline }}
+            >
+              <span className="min-w-0 flex-1 truncate" style={{ color: KC.ink }}>
+                {row.name}
+              </span>
+              <span className="w-[130px] shrink-0 truncate" style={{ color: KC.muted }}>
+                {t(`documents.type.${row.docType}`)}
+              </span>
+              <span className="w-[90px] shrink-0 text-[10.5px]" style={{ color: KC.faint }}>
+                {fmtDate(row.date)}
+              </span>
+              <button
+                type="button"
+                onClick={() => downloadDocumentRow(row)}
+                className="flex cursor-pointer items-center gap-1 text-[11px]"
+                style={{ color: KC.link }}
+              >
+                <Download size={12} /> {t('documents.download')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

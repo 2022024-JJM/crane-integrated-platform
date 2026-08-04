@@ -26,6 +26,10 @@ export interface UploadDocumentInput {
   craneName?: string;
   uploadedBy: string;
   sizeBytes: number;
+  /** 세션 내 실파일 다운로드용 object URL */
+  objectUrl?: string;
+  /** 서비스 요청 첨부인 경우 WO 번호 */
+  refWoNumber?: string;
 }
 
 function todayIso(): string {
@@ -47,6 +51,8 @@ export function useUploadDocument(): (input: UploadDocumentInput) => UploadedDoc
         uploadedBy: input.uploadedBy,
         uploadedAt: todayIso(),
         sizeBytes: input.sizeBytes,
+        objectUrl: input.objectUrl,
+        refWoNumber: input.refWoNumber,
       };
       addUploadedDocument(doc);
       publish('compliance');

@@ -7,10 +7,12 @@ import type { DocumentType } from '@crane/domain/compliance';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO } from '../../../shared/ui/kc';
 import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
 import { fmtDate } from '../../../shared/lib/service-status';
-import { downloadCsv, toCsv, type CsvColumn } from '../../../shared/lib/export-csv';
+import { downloadCsv, toCsv } from '../../../shared/lib/export-csv';
 import {
   buildDocumentRows,
+  DOCUMENT_CSV_COLUMNS,
   DOCUMENT_TYPES,
+  downloadDocumentRow,
   filterDocumentRows,
   formatSize,
   type DocumentRow,
@@ -25,16 +27,6 @@ const TYPE_COLOR: Record<DocumentType, string> = {
   contract: KC.planned,
   other: KC.muted,
 };
-
-const CSV_COLUMNS: CsvColumn<DocumentRow>[] = [
-  { header: 'Document', value: (r) => r.name },
-  { header: 'Type', value: (r) => r.docType },
-  { header: 'Origin', value: (r) => r.origin },
-  { header: 'Asset', value: (r) => r.assetName },
-  { header: 'Date', value: (r) => r.date },
-  { header: 'By', value: (r) => r.by },
-  { header: 'Detail', value: (r) => r.detail },
-];
 
 export function Mro2DocumentsPage() {
   const { t } = useTranslation('mro2');
@@ -77,7 +69,7 @@ export function Mro2DocumentsPage() {
       return next;
     });
 
-  // 파일 선택 — 바이트는 저장하지 않고 이름/크기만 메타데이터로 등록한다
+  // 파일 선택 — 메타데이터 + 세션 한정 object URL 로 등록해 실파일 다운로드를 지원한다
   const onPickFile = (file: File | undefined) => {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
@@ -88,6 +80,7 @@ export function Mro2DocumentsPage() {
       docType,
       uploadedBy: t('common.customerName'),
       sizeBytes: file.size,
+      objectUrl: URL.createObjectURL(file),
     });
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -159,7 +152,7 @@ export function Mro2DocumentsPage() {
             </KcButton>
             <KcButton
               variant="teal"
-              onClick={() => downloadCsv('documents.csv', toCsv(filtered, CSV_COLUMNS))}
+              onClick={() => downloadCsv('documents.csv', toCsv(filtered, DOCUMENT_CSV_COLUMNS))}
             >
               <FileText size={12} /> {t('common.generateReport')}
             </KcButton>
@@ -279,12 +272,7 @@ function DocumentInfoPanel({ row, onClose }: { row: DocumentRow; onClose: () => 
           <KcButton
             variant="outline"
             className="w-full justify-center"
-            onClick={() =>
-              downloadCsv(
-                `${row.name.replace(/\.[^.]+$/, '')}.csv`,
-                toCsv([row], CSV_COLUMNS),
-              )
-            }
+            onClick={() => downloadDocumentRow(row)}
           >
             <Download size={12} /> {t('documents.download')}
           </KcButton>

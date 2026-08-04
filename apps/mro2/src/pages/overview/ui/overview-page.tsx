@@ -124,8 +124,8 @@ export function Mro2OverviewPage() {
               segments={
                 openRiskTotal > 0
                   ? [
-                      { value: safety.length, color: KC.safety },
-                      { value: production.length, color: KC.production },
+                      { value: safety.length, color: KC.safety, label: `${t('common.safety')} — ${safety.length}` },
+                      { value: production.length, color: KC.production, label: `${t('common.production')} — ${production.length}` },
                     ]
                   : [{ value: 1, color: 'var(--kc-track)' }]
               }
@@ -223,7 +223,11 @@ export function Mro2OverviewPage() {
               <KcDonut
                 size={72}
                 stroke={13}
-                segments={SPEND_TYPES.map((s) => ({ value: spend.byType[s.key], color: s.color }))}
+                segments={SPEND_TYPES.map((s) => ({
+                  value: spend.byType[s.key],
+                  color: s.color,
+                  label: `${t(`spendType.${s.key}`)} — ${usd(spend.byType[s.key])}`,
+                }))}
               />
               <div className="flex-1">
                 <div className="mb-1 text-[10px]" style={{ color: KC.muted }}>
@@ -255,12 +259,14 @@ export function Mro2OverviewPage() {
                 const s = safety.filter((r) => r.craneId === a.id).length;
                 const p = production.filter((r) => r.craneId === a.id).length;
                 return (
-                  <div
+                  <button
                     key={a.id}
-                    className="flex items-center justify-between border px-2.5 py-1.5 text-[11px]"
+                    type="button"
+                    onClick={() => navigate(`/mro2/assets/${a.id}`)}
+                    className="kc-hover flex cursor-pointer items-center justify-between border px-2.5 py-1.5 text-left text-[11px]"
                     style={{ borderColor: KC.hairline }}
                   >
-                    <span style={{ color: KC.ink }}>{a.name}</span>
+                    <span style={{ color: KC.link }}>{a.name}</span>
                     <span className="flex items-center gap-3">
                       <span className="border-b-2 px-0.5 font-bold" style={{ borderColor: KC.safety, color: KC.ink }}>
                         {s}
@@ -272,7 +278,7 @@ export function Mro2OverviewPage() {
                         {p}
                       </span>
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>

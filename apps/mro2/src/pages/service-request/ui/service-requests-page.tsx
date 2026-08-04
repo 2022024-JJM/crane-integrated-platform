@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, MapPin, Plus, Wrench } from 'lucide-react';
+import { useAssetList } from '@crane/features/asset';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
@@ -23,6 +24,9 @@ interface SrRow {
   tone: ServiceTone;
   woNumber: string;
   product: string;
+  /** 서비스 상품 필터 키 — 점검=woType, 수리=planned|oncall */
+  productKey: string;
+  craneId: string;
   craneName: string;
   siteName: string;
 }
@@ -34,9 +38,12 @@ export function Mro2ServiceRequestsPage() {
   const { year } = useMro2Year();
   const { inspections } = useInspectionList();
   const { repairs } = useMaintenanceList();
+  const { assets } = useAssetList();
   const [statusFilters, setStatusFilters] = useState<Set<ServiceTone>>(new Set());
+  const [productFilters, setProductFilters] = useState<Set<string>>(new Set());
+  const [assetFilters, setAssetFilters] = useState<Set<string>>(new Set());
 
-  const rows: SrRow[] = [
+  const allRows: SrRow[] = [
     ...inspections
       .filter((w) => yearOf(w.scheduledDate) === year)
       .map((w) => ({
@@ -46,6 +53,8 @@ export function Mro2ServiceRequestsPage() {
         tone: inspectionTone(w.status, w.scheduledDate),
         woNumber: w.woNumber,
         product: t('mro2:detail.typeInspection', { type: t(`calendar:type.${w.woType}`) }),
+        productKey: w.woType as string,
+        craneId: w.craneId,
         craneName: w.craneName,
         siteName: w.siteName,
       })),
@@ -58,11 +67,28 @@ export function Mro2ServiceRequestsPage() {
         tone: repairTone(w.status, w.scheduledEnd),
         woNumber: w.woNumber,
         product: w.sourceType === 'breakdown' ? t('mro2:sr.onCallRepair') : t('mro2:sr.plannedRepairs'),
+        productKey: w.sourceType === 'breakdown' ? 'oncall' : 'planned',
+        craneId: w.craneId,
         craneName: w.craneName,
         siteName: w.siteName,
       })),
-  ]
-    .filter((r) => statusFilters.size === 0 || statusFilters.has(r.tone))
+  ];
+
+  // 올해 데이터에 실제 존재하는 서비스 상품만 후보로 노출한다 (표시 라벨 재사용)
+  const productOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of allRows) if (!seen.has(r.productKey)) seen.set(r.productKey, r.product);
+    return [...seen.entries()].map(([key, label]) => ({ key, label }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspections, repairs, year, t]);
+
+  const rows = allRows
+    .filter(
+      (r) =>
+        (statusFilters.size === 0 || statusFilters.has(r.tone)) &&
+        (productFilters.size === 0 || productFilters.has(r.productKey)) &&
+        (assetFilters.size === 0 || assetFilters.has(r.craneId)),
+    )
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const toggleStatus = (t: ServiceTone) => {
@@ -70,6 +96,15 @@ export function Mro2ServiceRequestsPage() {
       const next = new Set(prev);
       if (next.has(t)) next.delete(t);
       else next.add(t);
+      return next;
+    });
+  };
+
+  const toggleIn = (set: (fn: (prev: Set<string>) => Set<string>) => void, key: string) => {
+    set((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -82,7 +117,14 @@ export function Mro2ServiceRequestsPage() {
             <ChevronLeft size={14} /> {t('mro2:common.back')}
           </Link>
         </div>
-        <KcFilterRail selectedCount={statusFilters.size} onClear={() => setStatusFilters(new Set())}>
+        <KcFilterRail
+          selectedCount={statusFilters.size + productFilters.size + assetFilters.size}
+          onClear={() => {
+            setStatusFilters(new Set());
+            setProductFilters(new Set());
+            setAssetFilters(new Set());
+          }}
+        >
           <KcFilterGroup title={t('mro2:common.selectedCustomers')}>
             <div className="w-full px-2 py-1.5 text-[10.5px]" style={{ background: KC.inverseBg, color: KC.inverseText }}>
               {t('mro2:common.customerName')}
@@ -97,6 +139,26 @@ export function Mro2ServiceRequestsPage() {
                 tone={SERVICE_TONE_COLOR[tone]}
                 active={statusFilters.has(tone)}
                 onClick={() => toggleStatus(tone)}
+              />
+            ))}
+          </KcFilterGroup>
+          <KcFilterGroup title={t('mro2:calendar.serviceProduct')}>
+            {productOptions.map(({ key, label }) => (
+              <KcFilterChip
+                key={key}
+                label={label}
+                active={productFilters.has(key)}
+                onClick={() => toggleIn(setProductFilters, key)}
+              />
+            ))}
+          </KcFilterGroup>
+          <KcFilterGroup title={t('mro2:calendar.assetName')}>
+            {assets.map((a) => (
+              <KcFilterChip
+                key={a.id}
+                label={a.name}
+                active={assetFilters.has(a.id)}
+                onClick={() => toggleIn(setAssetFilters, a.id)}
               />
             ))}
           </KcFilterGroup>

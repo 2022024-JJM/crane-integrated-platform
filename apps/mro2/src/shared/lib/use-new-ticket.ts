@@ -12,6 +12,8 @@ export interface TicketPrefill {
   /** 원천 점검 WO 번호 — 설정 시 수리 sourceType 이 'inspection' 이 되어 리스크 해소 추적과 연결된다 */
   sourceWoNumber?: string;
   priority?: 'emergency' | 'high' | 'normal' | 'low';
+  /** 재고 패널 "부품 요청" — 부품 요청 폼의 첫 행에 프리필된다 */
+  partId?: string;
 }
 
 // 모달 열림/닫힘은 URL 단일 소스, 프리필 상세는 URL 에 담기엔 길어 일회성 메모리로 전달한다.

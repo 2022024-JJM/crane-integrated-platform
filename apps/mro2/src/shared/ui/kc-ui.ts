@@ -8,5 +8,6 @@ export { KcStat } from './kc-stat';
 export { KcCard } from './kc-card';
 export { KcInfo } from './kc-info';
 export { KcButton } from './kc-button';
+export { KcModal } from './kc-modal';
 export { KcFilterRail, KcFilterGroup, KcFilterChip } from './kc-filter';
 export { KcSectionHeading } from './kc-section-heading';

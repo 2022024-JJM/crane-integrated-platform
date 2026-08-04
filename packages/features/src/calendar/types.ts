@@ -11,7 +11,10 @@ export interface CalendarEvent {
   woNumber: string;
   /** 요약 제목 (점검=유형 라벨, 정비=구성품명) */
   title: string;
+  craneId: string;
   craneName: string;
+  /** 서비스 상품 필터 키 — 점검=woType, 정비=planned|oncall */
+  productKey: string;
   /** 로컬 시각 Date (TZ-safe 수동 파서로 생성) */
   start: Date;
   /** 종일이면 start와 동일, 기간 이벤트면 종료 시각 */

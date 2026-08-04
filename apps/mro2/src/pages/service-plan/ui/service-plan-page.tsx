@@ -59,16 +59,31 @@ function FieldRow({ k, v }: { k: string; v: ReactNode }) {
 
 /* ── 히트맵 셀 ──────────────────────────────────────────────────────── */
 
-function Cell({ cell }: { cell: PlanCell | null }) {
+function Cell({
+  cell,
+  title,
+  onClick,
+}: {
+  cell: PlanCell | null;
+  title?: string;
+  onClick?: () => void;
+}) {
   if (!cell) return <span className="flex h-10 items-center justify-center" />;
   return (
     <span className="flex h-10 items-center justify-center">
-      <span
-        className="inline-flex h-[28px] min-w-[28px] items-center justify-center rounded-[4px] px-1.5 text-[13px] font-bold text-white"
+      <button
+        type="button"
+        title={title}
+        onClick={(e) => {
+          // 자산 행 전체가 아코디언 토글이므로 셀 클릭이 그리로 번지지 않게 막는다
+          e.stopPropagation();
+          onClick?.();
+        }}
+        className="inline-flex h-[28px] min-w-[28px] cursor-pointer items-center justify-center rounded-[4px] px-1.5 text-[13px] font-bold text-white transition-transform hover:scale-110"
         style={{ background: SERVICE_TONE_COLOR[cell.tone], fontFamily: KC_FONT_DISPLAY }}
       >
         {cell.count}
-      </span>
+      </button>
     </span>
   );
 }
@@ -80,11 +95,16 @@ function PlanGridRow({
   bold,
   indent,
   right,
+  cellTitle,
+  onCellClick,
 }: {
   row: PlanRow;
   bold?: boolean;
   indent?: boolean;
   right?: ReactNode;
+  /** 셀 툴팁 (월 인덱스, 셀) → 문자열 */
+  cellTitle?: (m: number, cell: PlanCell) => string;
+  onCellClick?: (m: number) => void;
 }) {
   return (
     <div
@@ -98,7 +118,12 @@ function PlanGridRow({
         {row.label}
       </span>
       {row.cells.map((cell, m) => (
-        <Cell key={m} cell={cell} />
+        <Cell
+          key={m}
+          cell={cell}
+          title={cell && cellTitle ? cellTitle(m, cell) : undefined}
+          onClick={onCellClick ? () => onCellClick(m) : undefined}
+        />
       ))}
       <span className="flex justify-end">{right}</span>
     </div>
@@ -141,6 +166,10 @@ export function Mro2ServicePlanPage() {
     });
 
   const goMonth = (m: number) => navigate(`/mro2/calendar?m=${m}`);
+  // 셀 클릭 = 그 달 + 그 자산으로 캘린더 딥링크 (매뉴얼 6p "월 클릭 → 캘린더 상세")
+  const goCell = (m: number, craneId: string) => navigate(`/mro2/calendar?m=${m}&a=${craneId}`);
+  const cellTitle = (m: number, cell: PlanCell) =>
+    `${MONTHS_SHORT[m]} · ${t('mro2:plan.cellActivities', { count: cell.count })} · ${t(`mro2:status.${cell.tone}`)}`;
 
   return (
     <div className="pt-1">
@@ -258,14 +287,18 @@ export function Mro2ServicePlanPage() {
               const open = openAssets.has(asset.craneId);
               return (
                 <div key={asset.craneId}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleAsset(asset.craneId)}
+                    onKeyDown={(e) => (e.key === 'Enter' ? toggleAsset(asset.craneId) : undefined)}
                     className="kc-hover block w-full cursor-pointer text-left"
                   >
                     <PlanGridRow
                       row={asset.total}
                       bold
+                      cellTitle={cellTitle}
+                      onCellClick={(m) => goCell(m, asset.craneId)}
                       right={
                         open ? (
                           <ChevronUp size={13} style={{ color: KC.muted }} />
@@ -274,9 +307,17 @@ export function Mro2ServicePlanPage() {
                         )
                       }
                     />
-                  </button>
+                  </div>
                   {open
-                    ? asset.products.map((row) => <PlanGridRow key={row.key} row={row} indent />)
+                    ? asset.products.map((row) => (
+                        <PlanGridRow
+                          key={row.key}
+                          row={row}
+                          indent
+                          cellTitle={cellTitle}
+                          onCellClick={(m) => goCell(m, asset.craneId)}
+                        />
+                      ))
                     : null}
                 </div>
               );

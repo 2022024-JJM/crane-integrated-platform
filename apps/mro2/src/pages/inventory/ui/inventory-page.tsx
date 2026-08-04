@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, FileText, X } from 'lucide-react';
+import { ChevronLeft, FileText } from 'lucide-react';
 import { useInventoryList } from '@crane/features/inventory';
-import { getTransactionsByPartId } from '@crane/domain/inventory';
 import type { InventoryItem, InventoryStatus } from '@crane/domain/inventory';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, usd } from '../../../shared/ui/kc';
 import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
-import { fmtDate } from '../../../shared/lib/service-status';
 import { downloadCsv, toCsv, type CsvColumn } from '../../../shared/lib/export-csv';
+import { PartDetailPanel } from './part-detail-panel';
 
 const STATUS_COLOR: Record<InventoryStatus, string> = {
   normal: KC.ok,
@@ -47,7 +46,6 @@ export function Mro2InventoryPage() {
   const [query, setQuery] = useState('');
 
   const selectedPartId = searchParams.get('part');
-  const selected = items.find((i) => i.partId === selectedPartId) ?? null;
 
   const filtered = items.filter((i) => {
     if (statusFilters.size > 0 && !statusFilters.has(i.status)) return false;
@@ -86,6 +84,7 @@ export function Mro2InventoryPage() {
   const closePart = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('part');
+    next.delete('ptab'); // 패널 탭 상태도 함께 정리
     setSearchParams(next);
   };
 
@@ -132,8 +131,8 @@ export function Mro2InventoryPage() {
         </KcFilterRail>
       </div>
 
-      {/* 본문 테이블 */}
-      <div className="min-w-0 flex-1">
+      {/* 본문 테이블 — 넓은 화면에서는 패널이 가리지 않도록 우측 여백 확보 */}
+      <div className={`min-w-0 flex-1 ${selectedPartId ? 'xl:pr-[calc(380px+1rem)]' : ''}`}>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
             {t('inventory.title')}
@@ -207,112 +206,8 @@ export function Mro2InventoryPage() {
         </div>
       </div>
 
-      {/* 부품 상세 패널 (?part= URL 단일 소스) */}
-      {selected ? <PartInfoPanel item={selected} onClose={closePart} /> : null}
+      {/* 부품 상세 패널 (?part= URL 단일 소스) — 탭 + 전체화면 확장 + 출고/입고 액션 */}
+      <PartDetailPanel partId={selectedPartId} onClose={closePart} />
     </div>
-  );
-}
-
-function PartInfoPanel({ item, onClose }: { item: InventoryItem; onClose: () => void }) {
-  const { t } = useTranslation('mro2');
-  const transactions = getTransactionsByPartId(item.partId).slice(0, 8);
-  return (
-    <aside
-      className="fixed top-14 right-0 bottom-0 z-40 w-[320px] overflow-y-auto border-l shadow-xl"
-      style={{ borderColor: KC.border, background: KC.bg }}
-    >
-      <div className="flex items-start justify-between px-4 pt-4">
-        <div>
-          <div className="text-[10px]" style={{ color: KC.muted }}>
-            {t('inventory.partInfo')}
-          </div>
-          <h3 className="text-[13px] font-bold" style={{ color: KC.ink }}>
-            {item.partName}
-          </h3>
-        </div>
-        <button type="button" aria-label="Close" onClick={onClose} className="cursor-pointer">
-          <X size={15} style={{ color: KC.ink }} />
-        </button>
-      </div>
-      <div className="px-4 pb-6">
-        <div className="mt-1 flex items-center gap-1.5 text-[10.5px]">
-          <span className="inline-block h-3 w-[4px]" style={{ background: STATUS_COLOR[item.status] }} />
-          <span style={{ color: KC.text }}>{t(`inventory.${STATUS_KEY[item.status]}`)}</span>
-        </div>
-
-        <div className="mt-3 mb-1 text-[11.5px] font-bold" style={{ color: KC.ink }}>
-          {t('inventory.properties')}
-        </div>
-        {(
-          [
-            [t('inventory.partNumber'), item.partNumber],
-            [t('inventory.category'), item.category],
-            [t('inventory.colManufacturer'), item.manufacturer],
-            [t('inventory.criticality'), item.criticality],
-            [t('inventory.uom'), item.uom],
-            [t('inventory.unitPrice'), usd(item.unitPrice)],
-            [t('inventory.leadTime'), t('inventory.leadTimeDays', { days: item.leadTimeDays })],
-          ] as const
-        ).map(([k, v]) => (
-          <div key={k} className="flex border-b py-1 text-[10.5px]" style={{ borderColor: KC.hairline }}>
-            <span className="w-[110px] shrink-0 font-bold" style={{ color: KC.ink }}>
-              {k}
-            </span>
-            <span style={{ color: KC.text }}>{v}</span>
-          </div>
-        ))}
-
-        <div className="mt-3 mb-1 text-[11.5px] font-bold" style={{ color: KC.ink }}>
-          {t('inventory.stockInformation')}
-        </div>
-        {(
-          [
-            [t('inventory.currentQty'), String(item.currentQty)],
-            [t('inventory.reserved'), String(item.reservedQty)],
-            [t('inventory.available'), String(item.availableQty)],
-            [t('inventory.minStock'), String(item.minStockQty)],
-            [t('inventory.reorderPoint'), String(item.reorderPoint)],
-            [t('inventory.colBin'), item.locationBin],
-            [t('inventory.lastReceipt'), fmtDate(item.lastReceiptDate)],
-            [t('inventory.lastIssue'), fmtDate(item.lastIssueDate)],
-          ] as const
-        ).map(([k, v]) => (
-          <div key={k} className="flex border-b py-1 text-[10.5px]" style={{ borderColor: KC.hairline }}>
-            <span className="w-[110px] shrink-0 font-bold" style={{ color: KC.ink }}>
-              {k}
-            </span>
-            <span style={{ color: KC.text }}>{v}</span>
-          </div>
-        ))}
-
-        <div className="mt-3 mb-1 text-[11.5px] font-bold" style={{ color: KC.ink }}>
-          {t('inventory.transactionHistory')}
-        </div>
-        {transactions.length === 0 ? (
-          <div className="text-[10.5px]" style={{ color: KC.muted }}>
-            {t('inventory.noTransactions')}
-          </div>
-        ) : (
-          transactions.map((txn) => (
-            <div key={txn.id} className="flex items-center gap-2 border-b py-1 text-[10.5px]" style={{ borderColor: KC.hairline }}>
-              <span
-                className="inline-block h-3 w-[4px]"
-                style={{ background: txn.type === 'receipt' ? KC.ok : txn.type === 'issue' ? KC.production : KC.planned }}
-              />
-              <span className="w-[52px] font-bold" style={{ color: KC.ink }}>
-                {t(`inventory.txn${txn.type.charAt(0).toUpperCase() + txn.type.slice(1)}`)}
-              </span>
-              <span className="w-[36px] text-right" style={{ color: KC.text }}>
-                {txn.type === 'issue' ? '-' : '+'}
-                {txn.qty}
-              </span>
-              <span className="flex-1 text-right" style={{ color: KC.muted }}>
-                {fmtDate(txn.date)}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-    </aside>
   );
 }

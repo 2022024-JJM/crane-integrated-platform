@@ -87,3 +87,27 @@
 .kc-hover:hover {
   background: var(--kc-hover);
 }
+
+/**
+ * 인쇄 — Generate Report(window.print)가 SR 상세 본문만 종이에 담도록 한다.
+ * .kc-print-root 바깥(셸 헤더·사이드바·버튼류)은 모두 숨긴다.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .kc-print-root,
+  .kc-print-root * {
+    visibility: visible;
+  }
+  .kc-print-root {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 0;
+  }
+  .kc-no-print,
+  .kc-no-print * {
+    display: none !important;
+  }
+}
