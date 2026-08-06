@@ -58,7 +58,8 @@ function repair(over: Partial<RepairWO>): RepairWO {
     laborCost: 400,
     partsCost: 0,
     totalCost: 400,
-  } as RepairWO & typeof over as RepairWO;
+    ...over,
+  } as RepairWO;
 }
 
 function inspection(items: Array<Partial<InspectionWO['checklistItems'][number]>>): InspectionWO {

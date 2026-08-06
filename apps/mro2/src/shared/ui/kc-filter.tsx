@@ -79,7 +79,7 @@ export function KcFilterChip({
       className="cursor-pointer rounded-[3px] px-1.5 py-0.5 text-[11px]"
       style={{
         background: active ? KC.accent : KC.bgRow,
-        color: active ? '#fff' : KC.text,
+        color: active ? KC.onAccent : KC.text,
         borderLeft: tone ? `3px solid ${tone}` : undefined,
       }}
     >

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -59,15 +59,22 @@ export function PartDetailPanel({
   const { isOpen: sidebarOpen } = useSidebar();
 
   const open = partId !== null;
-  // 슬라이드 아웃 동안에도 마지막 부품을 계속 그린다 (assets-page의 displayed 패턴)
-  const lastIdRef = useRef<string | null>(null);
-  if (partId !== null) lastIdRef.current = partId;
-  const displayId = partId ?? lastIdRef.current;
+  // 슬라이드 아웃 동안에도 마지막 부품을 계속 그린다 (assets-page의 displayed 패턴).
+  // 렌더 중 ref 쓰기 대신 state 로 둔다 — 열려 있는 동안엔 partId 가 우선이라
+  // 지연 초기화가 필요 없고, 닫히는 300ms 동안에만 이 값이 렌더 소스가 된다.
+  const [lastId, setLastId] = useState<string | null>(partId);
+  if (partId !== null && partId !== lastId) setLastId(partId);
+  const displayId = partId ?? lastId;
 
   const { item, transactions, repairUsages, openPoLines, onOrderQty } = usePartDetail(displayId ?? '');
 
-  const [actionMode, setActionMode] = useState<ActionMode | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  // 확장/모달은 열려 있을 때만 의미가 있다. 닫히면 이펙트로 리셋하는 대신
+  // 읽는 쪽에서 open 으로 게이트한다 — 리셋용 렌더 한 번이 사라지고,
+  // 다음 부품을 열 때 이전 상태가 이월되지 않는 결과는 동일하다.
+  const [actionModeState, setActionMode] = useState<ActionMode | null>(null);
+  const [expandedState, setExpanded] = useState(false);
+  const actionMode = open ? actionModeState : null;
+  const expanded = open ? expandedState : false;
 
   const rawTab = searchParams.get('ptab');
   const tab: PanelTab = TABS.includes(rawTab as PanelTab) ? (rawTab as PanelTab) : 'info';
@@ -77,14 +84,6 @@ export function PartDetailPanel({
     else params.set('ptab', next);
     setSearchParams(params);
   };
-
-  // 닫히면 일회성 상태 정리 — 다음 부품에서 확장/모달이 이월되지 않게
-  useEffect(() => {
-    if (!open) {
-      setExpanded(false);
-      setActionMode(null);
-    }
-  }, [open]);
 
   // ESC: 모달(재고 액션/WO 생성) 열림 → 해당 모달이 처리 / 확장 뷰 → 패널로 / 패널 → 닫기
   const newTicketOpen = searchParams.get('new') !== null;

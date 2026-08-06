@@ -41,6 +41,8 @@ export const KC = {
   /* CTA — Generate Report / New Service Request */
   teal: 'var(--kc-teal)',
   tealDark: 'var(--kc-teal-dark)',
+  /** 텍스트를 얹는 teal 채움 (버튼) — 라이트에서 AA 를 맞추려 teal 보다 어둡다 */
+  tealFill: 'var(--kc-teal-fill)',
   link: 'var(--kc-link)',
 
   /* 의미 레이어 (findings 심각도 / 서비스 상태) */
@@ -57,6 +59,11 @@ export const KC = {
   onUndetermined: 'var(--kc-on-undetermined)',
   onOk: 'var(--kc-on-ok)',
   onPlanned: 'var(--kc-on-planned)',
+  onImprovement: 'var(--kc-on-improvement)',
+
+  /* 브랜드 채움 위 텍스트 — 흰색 하드코딩 금지, 이 짝을 쓸 것 */
+  onAccent: 'var(--kc-on-accent)',
+  onTeal: 'var(--kc-on-teal)',
 
   /* 데이터 계열 레이어 (차트 전용 — 의미색과 분리) */
   s1: 'var(--kc-s1)',

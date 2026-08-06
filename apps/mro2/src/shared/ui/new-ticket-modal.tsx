@@ -42,13 +42,15 @@ function Segmented<T extends string>({
   onChange,
 }: {
   value: T;
-  options: { key: T; label: string; icon?: ReactNode }[];
+  // activeBg/activeText: 선택 시 의미색으로 채울 때 지정 (미지정 시 브랜드 accent/흰색)
+  options: { key: T; label: string; icon?: ReactNode; activeBg?: string; activeText?: string }[];
   onChange: (v: T) => void;
 }) {
   return (
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
       {options.map((o) => {
         const active = o.key === value;
+        const activeBg = o.activeBg ?? KC.accent;
         return (
           <button
             key={o.key}
@@ -56,9 +58,9 @@ function Segmented<T extends string>({
             onClick={() => onChange(o.key)}
             className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 text-[12px] font-semibold transition-colors"
             style={{
-              background: active ? KC.accent : KC.bg,
-              color: active ? '#fff' : KC.text,
-              borderColor: active ? KC.accent : KC.border,
+              background: active ? activeBg : KC.bg,
+              color: active ? (o.activeText ?? KC.onAccent) : KC.text,
+              borderColor: active ? activeBg : KC.border,
             }}
           >
             {o.icon}
@@ -267,10 +269,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 value={repairPriority}
                 onChange={setRepairPriority}
                 options={[
-                  { key: 'emergency', label: t('mro2:ticket.prioEmergency') },
-                  { key: 'high', label: t('mro2:ticket.prioHigh') },
+                  // 심각도 사다리: 긴급=red(safety) / 높음=orange(production) / 보통=accent / 낮음=grey(planned)
+                  { key: 'emergency', label: t('mro2:ticket.prioEmergency'), activeBg: KC.safety, activeText: KC.onSafety },
+                  { key: 'high', label: t('mro2:ticket.prioHigh'), activeBg: KC.production, activeText: KC.onProduction },
                   { key: 'normal', label: t('mro2:ticket.prioNormal') },
-                  { key: 'low', label: t('mro2:ticket.prioLow') },
+                  { key: 'low', label: t('mro2:ticket.prioLow'), activeBg: KC.planned, activeText: KC.onPlanned },
                 ]}
               />
             </Field>
@@ -287,6 +290,8 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 options={(['frequent', 'periodic', 'emergency', 'special'] as const).map((k) => ({
                   key: k,
                   label: t(`calendar:type.${k}`),
+                  // 긴급 점검만 safety 색 — 수리 우선순위의 긴급과 동일한 시그널
+                  ...(k === 'emergency' ? { activeBg: KC.safety, activeText: KC.onSafety } : null),
                 }))}
               />
             </Field>
@@ -462,15 +467,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
 
       {/* 푸터 */}
       <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer rounded-[4px] px-3 py-1.5 text-[12px] font-semibold"
-          style={{ color: KC.muted }}
-        >
+        <KcButton variant="ghost" onClick={onClose}>
           {t('mro2:ticket.cancel')}
-        </button>
-        <KcButton variant="teal" onClick={submit} style={{ opacity: canSubmit ? 1 : 0.5 }}>
+        </KcButton>
+        <KcButton variant="teal" onClick={submit} disabled={!canSubmit}>
           <Plus size={13} /> {t('mro2:ticket.create')}
         </KcButton>
       </div>

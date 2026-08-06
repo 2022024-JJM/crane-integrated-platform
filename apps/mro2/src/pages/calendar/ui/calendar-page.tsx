@@ -68,20 +68,33 @@ export function Mro2CalendarPage() {
     [events, year, statusFilters, productFilters, assetFilters],
   );
 
-  const defaultMonth = useMemo(() => {
+  /** 해당 연도에서 처음 보여줄 월 — 올해면 이번 달, 아니면 이벤트가 있는 첫 달 */
+  const pickDefaultMonth = (targetYear: number, scoped: typeof yearEvents) => {
     const now = new Date();
-    if (now.getFullYear() === year) return now.getMonth();
-    const monthsWithEvents = yearEvents.map((e) => e.start.getMonth());
+    if (now.getFullYear() === targetYear) return now.getMonth();
+    const monthsWithEvents = scoped.map((e) => e.start.getMonth());
     return monthsWithEvents.length > 0 ? Math.min(...monthsWithEvents) : 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
+  };
+
   // 서비스 플랜 등에서 ?m=<0..11> 로 특정 월을 딥링크할 수 있다 (초기값만)
   const mParam = initialSearchParams.get('m');
   const deepLinkMonth =
     mParam !== null && Number.isInteger(Number(mParam)) && Number(mParam) >= 0 && Number(mParam) <= 11
       ? Number(mParam)
       : null;
-  const [month, setMonth] = useState(deepLinkMonth ?? defaultMonth);
+
+  // 월은 연도에 종속된다 — 어느 연도 기준의 월인지 함께 들고 있다가, 연도가 바뀌면
+  // 그 연도의 기본 월로 다시 잡는다. (이전엔 defaultMonth 가 useState 초기값으로만
+  // 쓰여 연도를 바꿔도 월이 따라가지 않았다.)
+  const [monthState, setMonth] = useState(() => ({
+    year,
+    month: deepLinkMonth ?? pickDefaultMonth(year, yearEvents),
+  }));
+  if (monthState.year !== year) {
+    setMonth({ year, month: pickDefaultMonth(year, yearEvents) });
+  }
+  const month = monthState.month;
+  const setMonthOnly = (next: number) => setMonth({ year, month: next });
 
   const monthEvents = yearEvents
     .filter((e) => e.start.getMonth() === month)
@@ -219,7 +232,7 @@ export function Mro2CalendarPage() {
                   <button
                     key={name}
                     type="button"
-                    onClick={() => setMonth(m)}
+                    onClick={() => setMonthOnly(m)}
                     className="cursor-pointer px-2 py-1.5 text-center text-[11.5px]"
                     style={{
                       background: active ? KC.inverseBg : 'transparent',
@@ -255,10 +268,11 @@ export function Mro2CalendarPage() {
                 className="cursor-pointer"
                 onClick={() => {
                   if (month === 0 && MRO2_YEARS.includes(year - 1)) {
+                    // 연·월을 함께 넘긴다 — 연도만 바꾸면 동기화 로직이 기본 월로 되돌린다
                     setYear(year - 1);
-                    setMonth(11);
+                    setMonth({ year: year - 1, month: 11 });
                   } else {
-                    setMonth((m) => Math.max(0, m - 1));
+                    setMonthOnly(Math.max(0, month - 1));
                   }
                 }}
               >
@@ -274,9 +288,9 @@ export function Mro2CalendarPage() {
                 onClick={() => {
                   if (month === 11 && MRO2_YEARS.includes(year + 1)) {
                     setYear(year + 1);
-                    setMonth(0);
+                    setMonth({ year: year + 1, month: 0 });
                   } else {
-                    setMonth((m) => Math.min(11, m + 1));
+                    setMonthOnly(Math.min(11, month + 1));
                   }
                 }}
               >

@@ -234,15 +234,10 @@ export function StockActionModal({
 
       {/* 푸터 */}
       <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer rounded-[4px] px-3 py-1.5 text-[12px] font-semibold"
-          style={{ color: KC.muted }}
-        >
+        <KcButton variant="ghost" onClick={onClose}>
           {t('inventory.actions.cancel')}
-        </button>
-        <KcButton variant="teal" onClick={handleSubmit} style={{ opacity: canSubmit ? 1 : 0.5 }}>
+        </KcButton>
+        <KcButton variant="teal" onClick={handleSubmit} disabled={!canSubmit}>
           {t(mode === 'issue' ? 'inventory.actions.submitIssue' : 'inventory.actions.submitReceipt')}
         </KcButton>
       </div>

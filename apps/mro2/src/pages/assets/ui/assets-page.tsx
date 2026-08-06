@@ -82,8 +82,10 @@ export function Mro2AssetsPage() {
   const open = selected !== null;
 
   // 마지막으로 열렸던 자산 — 닫히는 300ms 동안 패널 내용이 유지되도록 렌더 소스로 쓴다.
-  // (열림 중엔 selected 가 우선이므로 지연 초기화가 필요 없다 → 이펙트 없이 상태만 유지)
+  // 클릭 핸들러가 아니라 렌더 중 selected 를 따라간다 — 딥링크·뒤로가기처럼
+  // toggleSlideout 을 거치지 않는 진입에서도 값이 채워져야 하기 때문.
   const [lastSelected, setLastSelected] = useState<CraneAsset | null>(selected);
+  if (selected !== null && selected !== lastSelected) setLastSelected(selected);
   const displayed = selected ?? lastSelected;
 
   const filtered = assets.filter((a) => {
@@ -135,8 +137,7 @@ export function Mro2AssetsPage() {
       next.delete('asset');
     } else {
       next.set('asset', id);
-      const asset = assets.find((a) => a.id === id) ?? null;
-      if (asset) setLastSelected(asset);
+      // lastSelected 는 렌더 중 selected 를 따라가므로 여기서 따로 세팅하지 않는다
     }
     setSearchParams(next);
   };

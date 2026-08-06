@@ -43,6 +43,17 @@
   --kc-on-undetermined: #191c1e;
   --kc-on-ok: #191c1e;
   --kc-on-planned: #191c1e;
+  --kc-on-improvement: #ffffff;
+
+  /* 브랜드 채움 위 텍스트 (CTA 버튼·선택 칩) — 다크에서 accent/teal 이 밝아지므로
+     흰색 고정 대신 이 짝을 쓴다. */
+  --kc-on-accent: #ffffff;
+  --kc-on-teal: #ffffff;
+
+  /* CTA 버튼 채움 — 라이트의 --kc-teal(#0e8c96) 위 흰색은 4.03:1 로 AA 미달이라
+     버튼 표면만 한 단계 어둡게 잡아 6.24:1 을 확보한다. 링크·아이콘 등
+     텍스트를 얹지 않는 teal 용도는 --kc-teal 을 그대로 쓴다. */
+  --kc-teal-fill: #0b6b73;
 
   /* 데이터 계열 레이어 */
   --kc-s1: #118e9c;
@@ -88,6 +99,15 @@
   --kc-on-undetermined: #17191b;
   --kc-on-ok: #17191b;
   --kc-on-planned: #ffffff;
+  --kc-on-improvement: #17191b;
+
+  /* 다크에서는 accent(#2aa5ad)·teal(#17a3ad) 이 밝아져 흰 글자가 3:1 로 떨어진다
+     → 잉크로 뒤집어 5.9:1 을 확보한다. */
+  --kc-on-accent: #17191b;
+  --kc-on-teal: #17191b;
+
+  /* 다크는 글자가 잉크로 뒤집히므로 밝은 teal 을 그대로 채움으로 쓴다 (5.77:1) */
+  --kc-teal-fill: #17a3ad;
 
   --kc-s1: #23a7b5;
   --kc-s2: #3d6a94;

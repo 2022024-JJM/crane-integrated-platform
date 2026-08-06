@@ -317,7 +317,7 @@ function WoTimeline({
 /* Documents 탭 — 이 자산의 문서만 (매뉴얼 5p 자산 상세 Documents 탭) */
 function AssetDocumentsTab({ craneId, craneName }: { craneId: string; craneName: string }) {
   const { t } = useTranslation('mro2');
-  const { oshaReports, certifications, uploads } = useDocuments();
+  const { oshaReports, uploads } = useDocuments();
   const uploadDocument = useUploadDocument();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -327,7 +327,7 @@ function AssetDocumentsTab({ craneId, craneName }: { craneId: string; craneName:
       buildDocumentRows({ oshaReports, certifications: [], uploads }).filter(
         (r) => r.craneId === craneId,
       ),
-    [oshaReports, certifications, uploads, craneId],
+    [oshaReports, uploads, craneId],
   );
 
   const onPickFile = (file: File | undefined) => {

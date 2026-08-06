@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowDownToLine,
@@ -74,7 +75,9 @@ export function StockChips({
 
 export function OnOrderList({ lines }: { lines: OpenPoLine[] }) {
   const { t } = useTranslation('mro2');
-  const now = Date.now();
+  // 렌더 중 시계를 읽지 않는다 — 마운트 시 한 번만 기준 시각을 잡는다.
+  // 납기 지연은 일(day) 단위 판정이라 세션 중 갱신되지 않아도 무방하다.
+  const [now] = useState(() => Date.now());
   return (
     <div className="flex flex-col gap-1.5">
       {lines.map((line) => {
