@@ -1,4 +1,11 @@
 export { Monitoring3dView } from './ui/monitoring-3d-view';
+export { CollisionGuard } from './ui/collision-guard';
+export {
+  useCollisionGuardStore,
+  type CollisionGuardZone,
+  type DetectedObjectType,
+  type DetectedTrack,
+} from './model/use-collision-guard-store';
 export type {
   SensorFeedContext,
   SensorFeedRenderer,

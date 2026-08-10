@@ -12,6 +12,16 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  */
 const LABEL_VISIBILITY_DISTANCE = 1000;
 
+/**
+ * 거리 기반 라벨 축소. 카메라가 REF보다 가까우면 원래 크기(1x),
+ * 멀어질수록 REF/dist 비율로 줄어들되 MIN 밑으로는 내려가지 않는다.
+ * 순수 원근 스케일(distanceFactor)과 달리 근접 시 라벨이 과도하게
+ * 커지지 않고, 원거리에서도 최소 가독 크기를 유지한다.
+ * 알람 라벨은 시인성이 우선이라 축소하지 않는다.
+ */
+const LABEL_SCALE_REF_DISTANCE = 300;
+const LABEL_MIN_SCALE = 0.45;
+
 type AlarmHighlightSeverity = 'critical' | 'high' | 'medium' | 'info';
 
 const ALARM_LABEL_CLASS: Record<AlarmHighlightSeverity, string> = {
@@ -52,6 +62,7 @@ export function ModelLabel({
   const groupRef = useRef<Group>(null);
   const tempWorldPos = useRef(new Vector3());
   const lastVisibleRef = useRef(true);
+  const lastScaleRef = useRef(1);
 
   // 카메라 거리에 따라 라벨을 숨긴다. setState 대신 ref 기반 style mutate라
   // React 리렌더가 발생하지 않는다. 알람이 활성화된 라벨은 항상 보여준다.
@@ -65,6 +76,10 @@ export function ModelLabel({
         div.style.display = '';
         lastVisibleRef.current = true;
       }
+      if (lastScaleRef.current !== 1) {
+        div.style.transform = '';
+        lastScaleRef.current = 1;
+      }
       return;
     }
 
@@ -77,6 +92,17 @@ export function ModelLabel({
       div.style.display = visible ? '' : 'none';
       lastVisibleRef.current = visible;
     }
+    if (!visible) return;
+
+    // drei <Html>은 wrapper에 자체 transform을 걸므로, 스케일은 우리가 소유한
+    // 안쪽 div에 적용해 충돌을 피한다. 0.02 단위 스냅으로 매 프레임 style
+    // 재작성을 방지.
+    const rawScale = Math.min(1, LABEL_SCALE_REF_DISTANCE / dist);
+    const scale = Math.max(LABEL_MIN_SCALE, Math.round(rawScale * 50) / 50);
+    if (scale !== lastScaleRef.current) {
+      div.style.transform = scale === 1 ? '' : `scale(${scale})`;
+      lastScaleRef.current = scale;
+    }
   });
 
   if (!equipName) {
@@ -88,7 +114,7 @@ export function ModelLabel({
       <Html center zIndexRange={[5, 0]}>
         <div
           ref={divRef}
-          className={`cursor-pointer rounded px-1.5 py-0.5 font-mono text-xs font-bold whitespace-nowrap drop-shadow-lg ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/80 text-white'}`}
+          className={`cursor-pointer rounded px-1 py-px font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/60 text-white'}`}
           onPointerDown={(event) => {
             event.stopPropagation();
           }}

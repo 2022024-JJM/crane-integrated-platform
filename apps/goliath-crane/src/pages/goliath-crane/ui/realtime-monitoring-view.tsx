@@ -11,6 +11,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
+import {
+  GoliathCollisionGuardScene,
+  GoliathCollisionGuardToggle,
+} from './goliath-collision-guard';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
 import { GoliathVisionPip } from './goliath-vision-pip';
 import { renderSensorFeed } from './sensor-feed-renderer';
@@ -89,6 +93,8 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 onFullscreenChange={handleFullscreenChange}
                 onSensorSelect={handleSensorSelect}
                 renderSensorFeed={renderSensorFeed}
+                sceneExtras={<GoliathCollisionGuardScene />}
+                toolbarExtras={<GoliathCollisionGuardToggle />}
                 fullscreenTopRightOverlay={
                   <GoliathVisionPip
                     expanded={expanded}

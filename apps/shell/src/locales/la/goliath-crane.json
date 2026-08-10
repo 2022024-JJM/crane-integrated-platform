@@ -24,6 +24,10 @@
   "viewer3d": {
     "title": "Exemplar 3D"
   },
+  "collisionGuard": {
+    "enable": "Monstra detectionem collisionis",
+    "disable": "Cela detectionem collisionis"
+  },
   "metrics": {
     "load": "Onus",
     "windSpeed": "Ventus",

@@ -24,6 +24,10 @@
   "viewer3d": {
     "title": "3D 모델 뷰어"
   },
+  "collisionGuard": {
+    "enable": "충돌 감지 표시 켜기",
+    "disable": "충돌 감지 표시 끄기"
+  },
   "metrics": {
     "load": "하중",
     "windSpeed": "풍속",

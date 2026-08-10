@@ -32,6 +32,11 @@ interface Monitoring3dViewProps {
   fullscreenTopRightOverlay?: ReactNode;
   fullscreenTopCenterOverlay?: ReactNode;
   toolbarExtras?: ReactNode;
+  /**
+   * Canvas 안에 추가로 마운트할 씬 콘텐츠(R3F 노드). 충돌 감지 레이어처럼
+   * 페이지별 3D 확장 기능을 도메인 씬과 독립적으로 주입할 때 사용.
+   */
+  sceneExtras?: ReactNode;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   onSensorSelect?: (
     channelId: string,
@@ -56,6 +61,7 @@ export function Monitoring3dView({
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
   toolbarExtras,
+  sceneExtras,
   onFullscreenChange,
   onSensorSelect,
   renderSensorFeed,
@@ -173,6 +179,7 @@ export function Monitoring3dView({
             isFullscreen={isFullscreen}
             renderSensorFeed={renderSensorFeed}
           />
+          {sceneExtras}
         </Suspense>
       </ThreeSceneViewer>
     </div>
