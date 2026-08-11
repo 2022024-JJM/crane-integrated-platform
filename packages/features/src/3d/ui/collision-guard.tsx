@@ -2,9 +2,11 @@ import { Suspense, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
+  CanvasTexture,
   Color,
   DoubleSide,
   Shape,
+  type MeshBasicMaterial,
   type MeshStandardMaterial,
   type Group,
 } from 'three';
@@ -40,9 +42,13 @@ import { DetectedObjectModel } from './collision-guard-object-model';
  *  - 센서(현재는 시뮬레이션)는 ~8Hz의 이산 관측값을 track.target에 쓴다.
  *  - 렌더러는 매 프레임 지수 damping으로 target을 추적한다. 관측 사이의
  *    공백을 보간이 메꿔 이동이 연속적이고 부드럽게 보인다.
- *  - 감지 반경 진입 시 LiDAR 머티리얼라이즈 스윕(컷 플레인이 아래→위로
- *    스캔하며 실체화) + scale 오버슈트(easeOutBack), 이탈 시 역스캔으로
- *    해체 후 트랙을 제거한다. prefers-reduced-motion이면 단순 페이드.
+ *  - 실체화 정도는 시간이 아니라 "경계 침투 깊이"를 따른다: 감지 경계
+ *    바로 안쪽 밴드에서는 고스트(저불투명 + 하반신만 실체화)로 나타나고,
+ *    깊이 들어올수록 컷 플레인이 차오르며 완전한 실체가 된다. 이탈은
+ *    역순 — 경계로 물러날수록 서서히 해체된 뒤 트랙이 제거된다. 스윕
+ *    속도에는 상한(MATERIALIZE_*_DURATION)이 있어 빠른 객체는 클래식
+ *    스캔 연출로 보인다. prefers-reduced-motion이면 컷 없이 거리 비례
+ *    페이드만 수행한다.
  *  - 모든 프레임 갱신은 ref로 수집한 material/Object3D mutate로 수행 —
  *    React 리렌더 0회. material은 JSX로 선언해 R3F가 dispose를 관리한다.
  */
@@ -54,6 +60,21 @@ const FADE_IN_DURATION = 0.4;
 const FADE_OUT_DURATION = 0.45;
 /** 라벨 텍스트 갱신 주기 — 센서 tick(8Hz)과 맞춘다. */
 const LABEL_UPDATE_HZ = 8;
+
+/**
+ * 감지 경계 안쪽의 신뢰도 페이드 밴드 (m). 경계에서 갓 잡힌 트랙은
+ * 고스트로 나타나고, 이 밴드를 통과해 들어오는 동안 실체화가 차오른다.
+ * 이탈도 역순으로 서서히 — 진입/이탈 모두 "한 번에 싹"이 아니라 거리에
+ * 비례해 부드럽게 나타나고 사라진다. 차량(≈7m/s)은 약 1.7초, 도보
+ * (≈1.2m/s)는 밴드를 걷는 동안 내내 고스트 상태를 거친다.
+ */
+const EDGE_FADE_BAND_M = 12;
+/**
+ * 경계 고스트의 최소 불투명도 배율 — 실체화가 시작된 객체가 경계 근처에
+ * 머무는 동안에도 이 비율만큼은 비쳐 보인다. 0이면 밴드 초입에서 스캔
+ * 밴드 글로우조차 안 보여 "감지됐다"는 사실 자체가 전달되지 않는다.
+ */
+const EDGE_MIN_SOLIDITY = 0.3;
 
 /**
  * 감지 링 색 — 채도를 뺀 밝은 회색 배경 위에서 읽혀야 하므로 밝은
@@ -120,13 +141,72 @@ const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
 };
 const LABEL_HEIGHT_OFFSET = 0.45;
 
+/**
+ * 접지 앵커(컨택트 셰이딩) 풋프린트 — 로컬 미터 (장축 = 진행 방향 +X,
+ * 단축 = 횡방향). 감지 객체는 실시간 그림자를 끄므로(castShadow=false)
+ * 부감 구도에서 지면과의 접점이 없어 떠 보인다 — 부드러운 방사형
+ * 그라데이션 타원 하나가 객체를 지면에 붙여 공간 관계를 읽게 한다.
+ */
+const CONTACT_SHADOW_FOOTPRINT: Record<
+  DetectedObjectType,
+  [long: number, cross: number]
+> = {
+  person: [0.55, 0.55],
+  car: [2.5, 1.15],
+  forklift: [1.7, 1.0],
+};
+/** 접지 앵커 최대 불투명도 — 객체 페이드에 이 배율을 곱해 함께 여려진다 */
+const CONTACT_SHADOW_OPACITY = 0.45;
+
+/**
+ * 접지 앵커 텍스처 — 중심 진한 검정에서 가장자리 완전 투명으로 빠지는
+ * 방사형 그라데이션. 모든 트랙이 공유하는 지연 생성 싱글턴 (R3F는
+ * 클라이언트 전용이므로 document 접근이 안전하다).
+ */
+let contactShadowTexture: CanvasTexture | null = null;
+function getContactShadowTexture(): CanvasTexture {
+  if (!contactShadowTexture) {
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const gradient = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2,
+    );
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+    gradient.addColorStop(0.55, 'rgba(0, 0, 0, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    contactShadowTexture = new CanvasTexture(canvas);
+  }
+  return contactShadowTexture;
+}
+
 type Severity = 'idle' | 'warning' | 'danger';
 
-/** 라벨 배경색 — 씬 세버리티 색과 동일 계열 (amber-500 / red-500) */
-const LABEL_BG: Record<'warning' | 'danger', string> = {
-  warning: 'rgba(245, 158, 11, 0.92)',
-  danger: 'rgba(239, 68, 68, 0.92)',
-};
+/**
+ * 라벨 칩 스타일 — 밝은 무채색 무대에서 amber 칩 위 흰 글자는 대비가
+ * 1.9:1 수준이라 안 읽힌다(운영 피드백). 주의는 어두운 칩 + 세버리티색
+ * 보더로 대비를 확보하고, 위험은 칩 전체를 red로 물들여 소리치게 한다.
+ */
+const LABEL_STYLE: Record<'warning' | 'danger', { bg: string; border: string }> =
+  {
+    warning: {
+      bg: 'rgba(15, 23, 42, 0.92)', // slate-900
+      border: 'rgba(251, 191, 36, 0.9)', // amber-400
+    },
+    danger: {
+      bg: 'rgba(220, 38, 38, 0.95)', // red-600
+      border: 'rgba(254, 202, 202, 0.9)', // red-200
+    },
+  };
 
 /** easeOutBack — 진입 시 살짝 튀어오르는 테슬라풍 pop-in */
 function easeOutBack(t: number) {
@@ -138,6 +218,12 @@ function easeOutBack(t: number) {
 
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/** 0→1 clamp + smoothstep — 경계 신뢰도 페이드의 완만한 양끝 처리 */
+function smoothstep01(t: number) {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
 }
 
 /**
@@ -153,9 +239,10 @@ function easeInOutCubic(t: number) {
  * — FSD에서 파란 경로선과 빨간 정지선이 굵기·형태가 완전히 달라
  * 역할이 즉시 구분되는 것과 같은 원리다.
  *
- * 절제 원칙: 평시에 보이는 것은 감지 링 하나뿐이다. 위험 반경은
- * "설정"이 아니라 "상태"로 취급해 객체가 커버 안에 들어왔을 때만
- * 페이드인하고, 카메라 근거리 링은 기본 숨김.
+ * 위험 반경은 "경계"와 "면"을 분리한다: 빨간 경계 링은 상시 표시해
+ * 위험 지역이 어디까지인지 항상 알 수 있게 하고(운영 피드백 — 위험
+ * 반경 인지 안 됨), 면 채움은 상태로 취급해 객체가 커버 안에 들어왔을
+ * 때만 페이드인·danger 펄스한다. 카메라 근거리 링은 기본 숨김.
  */
 function DetectionZoneRing({
   zone,
@@ -196,7 +283,7 @@ function DetectionZoneRing({
       severity === 'danger'
         ? 0.3 + Math.sin(state.clock.elapsedTime * 5) * 0.1
         : severity === 'warning'
-          ? 0.14
+          ? 0.18
           : 0;
     danger.opacity += (dangerTarget - danger.opacity) * k;
   });
@@ -234,8 +321,26 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
-        {/* 위험 반경 — 링이 아니라 채워진 면. 파란 "선"과 형태로 구분된다.
-            파란 채움(1)·감지 링(2)보다 뒤에 그려 위에 얹힌다 */}
+        {/* 위험 반경 경계 — 상시 표시되는 빨간 링. 감지 링(sky)과 색·굵기가
+            달라 "여기부터 위험 지역"이라는 경계가 항상 읽힌다. 부감에서
+            원근으로 눌려도 붉게 남도록 이미시브를 세게 준다 */}
+        <mesh renderOrder={2}>
+          <ringGeometry
+            args={[zone.dangerRadius - ringWidth * 0.8, zone.dangerRadius, 96]}
+          />
+          <meshStandardMaterial
+            ref={markGuardLayer}
+            color={COLOR_DANGER}
+            emissive={COLOR_DANGER}
+            emissiveIntensity={1.1}
+            transparent
+            opacity={0.8}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* 위험 반경 면 — 링이 아니라 채워진 면. 객체가 커버 안에 있을 때만
+            페이드인해 상태를 전달한다. 파란 채움(1)·링(2)보다 뒤에 그린다 */}
         <mesh renderOrder={3}>
           <circleGeometry args={[zone.dangerRadius, 96]} />
           <meshStandardMaterial
@@ -317,6 +422,9 @@ function DetectedObjectMesh({
     arrowMatRef.current = material;
     markGuardLayer(material);
   };
+  // 접지 앵커는 basic material — 포커스 디밍(MeshStandardMaterial만 추적)의
+  // 영향을 받지 않고, 조명과 무관하게 일정한 어둡기를 유지한다.
+  const shadowMatRef = useRef<MeshBasicMaterial>(null);
   const fadeMaterialsRef = useRef<MeshStandardMaterial[]>([]);
   const labelRefsRef = useRef<TrackLabelRefs | null>(null);
   const uniformsRef = useRef<MaterializeUniforms | null>(null);
@@ -384,6 +492,22 @@ function DetectedObjectMesh({
     const smooth = smoothRef.current;
     const dt = Math.min(delta, 0.1);
 
+    // --- 위치/방향 damping (테슬라식 스무딩의 핵심) ---
+    const k = 1 - Math.exp(-dt / POSITION_SMOOTHING_TAU);
+    smooth.x += (track.target.x - smooth.x) * k;
+    smooth.z += (track.target.z - smooth.z) * k;
+
+    let headingDiff = track.target.heading - smooth.heading;
+    headingDiff = Math.atan2(Math.sin(headingDiff), Math.cos(headingDiff));
+    smooth.heading += headingDiff * k;
+
+    // --- 경계 신뢰도 (0 = 감지 경계, 1 = 페이드 밴드 통과) ---
+    // 실체화 스윕·불투명도·라벨이 전부 이 값을 따라 거리 기반으로
+    // 차오르고 빠진다. smooth 좌표는 damping으로 연속이므로 값도 연속.
+    const nearest = nearestZone(smooth.x, smooth.z, zones);
+    const edgeBand = EDGE_FADE_BAND_M / baseZone.metersPerUnit;
+    const presence = smoothstep01((nearest.zone.radius - nearest.dist) / edgeBand);
+
     // --- 페이드/스윕 상태 머신 ---
     if (track.phase === 'leaving') {
       smooth.fade = Math.max(0, smooth.fade - dt / FADE_OUT_DURATION);
@@ -394,17 +518,23 @@ function DetectedObjectMesh({
       }
     } else {
       smooth.fade = Math.min(1, smooth.fade + dt / FADE_IN_DURATION);
-      smooth.sweep = Math.min(1, smooth.sweep + dt / MATERIALIZE_IN_DURATION);
+      // 실체화 목표는 경계 신뢰도 — 시간 램프가 아니라 침투 깊이를
+      // 따른다. 속도 상한이 있어 빠른 객체는 기존 스캔 연출 그대로,
+      // 느린 객체는 밴드를 걸어 들어오는 동안 부분 실체화를 거친다.
+      // 경계 밖(히스테리시스 구간)으로 물러나면 목표가 0이 되어 제거
+      // 전에 이미 서서히 해체된다 — 재진입 시 그 자리에서 되살아난다.
+      if (smooth.sweep < presence) {
+        smooth.sweep = Math.min(
+          presence,
+          smooth.sweep + dt / MATERIALIZE_IN_DURATION,
+        );
+      } else {
+        smooth.sweep = Math.max(
+          presence,
+          smooth.sweep - dt / MATERIALIZE_OUT_DURATION,
+        );
+      }
     }
-
-    // --- 위치/방향 damping (테슬라식 스무딩의 핵심) ---
-    const k = 1 - Math.exp(-dt / POSITION_SMOOTHING_TAU);
-    smooth.x += (track.target.x - smooth.x) * k;
-    smooth.z += (track.target.z - smooth.z) * k;
-
-    let headingDiff = track.target.heading - smooth.heading;
-    headingDiff = Math.atan2(Math.sin(headingDiff), Math.cos(headingDiff));
-    smooth.heading += headingDiff * k;
 
     group.position.set(smooth.x, baseZone.y, smooth.z);
     group.rotation.y = -smooth.heading;
@@ -418,14 +548,23 @@ function DetectedObjectMesh({
     const s = worldScale * Math.max(0.001, scaleEase);
     group.scale.set(s, s, s);
 
-    // --- 불투명도: 스윕보다 빠르게 램프 → depthWrite 조기 활성화로
-    // 반투명 내부면 비침을 최소화한다. reduced-motion이면 순수 페이드.
+    // --- 불투명도: 스윕보다 빠르게 램프(반투명 내부면 비침 최소화)하되,
+    // 경계 신뢰도의 고스트 배율을 곱한다 — 경계 근처의 트랙은 실체화가
+    // 진행돼도 반투명으로 남고, 깊이 들어와야 완전한 실체가 된다.
+    // reduced-motion이면 컷 없이 거리 비례 페이드만.
+    const solidity = EDGE_MIN_SOLIDITY + (1 - EDGE_MIN_SOLIDITY) * presence;
     const opacity = reducedMotion
-      ? smooth.fade
-      : Math.min(1, Math.max(0, smooth.sweep) * 2.5);
+      ? smooth.fade * presence
+      : Math.min(1, Math.max(0, smooth.sweep) * 2.5) * solidity;
     for (const material of fadeMaterialsRef.current) {
       material.opacity = opacity;
       material.depthWrite = opacity >= 0.99;
+    }
+
+    // 접지 앵커 — 객체 페이드를 그대로 따라간다.
+    const shadowMat = shadowMatRef.current;
+    if (shadowMat) {
+      shadowMat.opacity = opacity * CONTACT_SHADOW_OPACITY;
     }
 
     // --- 머티리얼라이즈 컷 플레인 ---
@@ -475,17 +614,19 @@ function DetectedObjectMesh({
 
     const label = labelRefsRef.current;
     if (label) {
-      label.root.style.opacity = String(smooth.fade * smooth.labelVis);
+      // 라벨도 경계 신뢰도를 따라 고스트 객체 위에서 함께 여리게 —
+      // 반투명 실루엣 위에 쨍한 태그만 떠 있으면 따로 논다.
+      label.root.style.opacity = String(smooth.fade * smooth.labelVis * presence);
 
       smooth.labelClock += dt;
       if (smooth.labelVis > 0.01 && smooth.labelClock >= 1 / LABEL_UPDATE_HZ) {
         smooth.labelClock = 0;
-        const meters = Math.round(
-          nearestZone(smooth.x, smooth.z, zones).dist * baseZone.metersPerUnit,
-        );
+        const meters = Math.round(nearest.dist * baseZone.metersPerUnit);
         label.distance.textContent = `${meters} m`;
         label.speed.textContent = `${track.target.speed.toFixed(1)} m/s`;
-        label.root.style.backgroundColor = LABEL_BG[severity];
+        const labelStyle = LABEL_STYLE[severity];
+        label.root.style.backgroundColor = labelStyle.bg;
+        label.root.style.borderColor = labelStyle.border;
       }
     }
   });
@@ -496,13 +637,33 @@ function DetectedObjectMesh({
       position={[track.target.x, baseZone.y, track.target.z]}
       scale={[0.001, 0.001, 0.001]}
     >
+      {/* 접지 앵커 — 존 지면 요소(1~3) 위, 화살표(5) 아래에 그린다 */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.02, 0]}
+        scale={[
+          CONTACT_SHADOW_FOOTPRINT[track.type][0],
+          CONTACT_SHADOW_FOOTPRINT[track.type][1],
+          1,
+        ]}
+        renderOrder={4}
+      >
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial
+          ref={shadowMatRef}
+          map={getContactShadowTexture()}
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </mesh>
       {/* 진행 방향 화살표 — 고정 길이, 방향만 전달 (+X가 heading) */}
       <group
         position={[ARROW_NOSE_OFFSET[track.type], 0.06, 0]}
         scale={[ARROW_LENGTH_M, 1, 1]}
       >
-        {/* 지면 요소(존 채움 1 · 감지 링 2 · 위험 면 3)보다 위에 그린다 */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={4}>
+        {/* 지면 요소(존 1~3)·접지 앵커(4)보다 위에 그린다 */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}>
           <shapeGeometry args={[VELOCITY_ARROW_SHAPE]} />
           <meshStandardMaterial
             ref={registerArrow}

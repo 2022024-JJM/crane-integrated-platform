@@ -28,7 +28,7 @@
     "enable": "충돌 감지 표시 켜기",
     "disable": "충돌 감지 표시 끄기",
     "hud": {
-      "title": "충돌 감지",
+      "title": "감지된 객체 목록",
       "state": {
         "safe": "안전",
         "warning": "주의",

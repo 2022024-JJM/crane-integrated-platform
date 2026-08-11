@@ -28,7 +28,7 @@
     "enable": "Show collision detection",
     "disable": "Hide collision detection",
     "hud": {
-      "title": "Collision guard",
+      "title": "Detected objects",
       "state": {
         "safe": "Safe",
         "warning": "Warning",

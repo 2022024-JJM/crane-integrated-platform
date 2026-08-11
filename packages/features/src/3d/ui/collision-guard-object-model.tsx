@@ -67,16 +67,16 @@ for (const source of Object.values(MODEL_SOURCES)) {
  * 테슬라식 무채색 객체 색 — 세버리티 색 언어(sky/amber/red)와 경쟁하는
  * 색을 화면에서 배제하고, 종류 식별은 실루엣이 담당한다.
  *
- * 배경 채도를 뺀 밝은 회색 무대 위에 올라가므로 밝은 회색(#cbd5e1)이
- * 아니라 어두운 회색을 쓴다 — 밝은 배경에서는 어두운 실루엣이 또렷하다
- * (FSD도 밝은 배경에 어두운 차량 실루엣을 얹는다).
+ * FSD 렌더처럼 밝은 흰색 차체를 쓴다. 밝은 무대 위에서의 분리는 색이
+ * 아니라 접지 앵커(아래 소프트 셰도우)와 세버리티 림 글로우(amber/red
+ * 윤곽선)가 담당한다 — 흰 몸체는 림 색이 가장 순수하게 얹히는 캔버스다.
  */
-const OBJECT_GRAY = new Color('#475569');
+const OBJECT_WHITE = new Color('#f1f5f9');
 
 /**
- * 원본 텍스처/색을 버리고 통일된 밝은 회색 + 자체발광으로 교체한다.
- * 다크 스테이지(포커스 디밍)에서도 실루엣이 유지되고, 세버리티는
- * 머티리얼라이즈 셰이더의 림 글로우가 입힌다.
+ * 원본 텍스처/색을 버리고 통일된 흰색 + 자체발광으로 교체한다.
+ * 포커스 디밍으로 조명이 낮아져도 자체발광이 흰 몸체의 밝기를 지키고,
+ * 세버리티는 머티리얼라이즈 셰이더의 림 글로우가 입힌다.
  */
 function prepareMaterial(material: Material): MeshStandardMaterial {
   const cloned = material.clone() as MeshStandardMaterial;
@@ -84,11 +84,11 @@ function prepareMaterial(material: Material): MeshStandardMaterial {
     cloned.map = null;
     cloned.emissiveMap = null;
     cloned.vertexColors = false;
-    cloned.color = OBJECT_GRAY.clone();
-    // 자체발광은 최소로 — 밝은 무대에서는 발광이 실루엣을 흐린다.
-    // 세버리티 표현은 머티리얼라이즈 셰이더의 림 글로우가 담당한다.
-    cloned.emissive = OBJECT_GRAY.clone();
-    cloned.emissiveIntensity = 0.12;
+    cloned.color = OBJECT_WHITE.clone();
+    // 디밍된 조명 아래에서도 확실한 흰색으로 읽히도록 발광을 준다 —
+    // 형태·깊이는 조명 음영이 아니라 림 글로우와 접지 앵커가 전달한다.
+    cloned.emissive = OBJECT_WHITE.clone();
+    cloned.emissiveIntensity = 0.3;
     cloned.roughness = 1;
     cloned.metalness = 0;
   }

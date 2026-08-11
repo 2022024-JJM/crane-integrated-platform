@@ -25,42 +25,42 @@ const TRACK_ICONS = {
   forklift: Forklift,
 } as const;
 
+/**
+ * 행 레이아웃 — 고정폭 그리드. 컬럼 폭이 행마다 같아야 숫자가 세로로
+ * 정렬되어 목록을 훑어 읽을 수 있다 (flex auto 폭은 값 길이에 따라
+ * 컬럼이 행마다 어긋난다). 내부 트래킹 id는 운영자에게 무의미해 뺀다.
+ */
+const ROW_GRID =
+  'grid grid-cols-[1.25rem_minmax(0,1fr)_3.25rem_3.5rem_2.75rem] items-center gap-1.5 px-2 py-1';
+
 function TrackRow({ track }: { track: HudTrack }) {
   const { t } = useTranslation('goliath-crane');
   const Icon = TRACK_ICONS[track.type];
   const danger = track.severity === 'danger';
 
   return (
-    <li
-      className={cn(
-        'flex items-center gap-2 px-2 py-1',
-        track.phase === 'leaving' && 'opacity-40',
-      )}
-    >
-      <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-      <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px]">
+    <li className={cn(ROW_GRID, track.phase === 'leaving' && 'opacity-40')}>
+      <Icon className="size-3.5 text-slate-400" aria-hidden />
+      <span className="min-w-0 truncate text-[11px] font-medium text-white">
         {t(`collisionGuard.hud.kind.${track.type}`)}
         {track.zoneLabel ? (
-          <span className="bg-muted/60 text-muted-foreground ml-1 rounded px-1 py-px font-mono text-[9px] font-semibold">
+          <span className="ml-1 rounded bg-slate-700/70 px-1 py-px font-mono text-[9px] font-semibold text-slate-300">
             {track.zoneLabel}
           </span>
         ) : null}
-        <span className="text-muted-foreground/60 ml-1 font-mono">
-          {track.id}
-        </span>
       </span>
-      <span className="font-mono text-[11px] font-semibold tabular-nums">
+      <span className="text-right font-mono text-[11px] font-semibold tabular-nums text-white">
         {track.distanceM} m
       </span>
-      <span className="text-muted-foreground/70 font-mono text-[10px] tabular-nums">
+      <span className="text-right font-mono text-[10px] tabular-nums text-slate-400">
         {track.speedMps.toFixed(1)} m/s
       </span>
       <span
         className={cn(
-          'rounded px-1 py-px text-[9px] font-bold tracking-wide uppercase',
+          'rounded px-1 py-px text-center text-[9px] font-bold tracking-wide uppercase',
           danger
-            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+            ? 'bg-red-500/25 text-red-300'
+            : 'bg-amber-500/25 text-amber-300',
         )}
       >
         {t(`collisionGuard.hud.severity.${track.severity}`)}
@@ -81,20 +81,22 @@ export function GoliathCollisionGuardHud() {
   if (!enabled || !derived) return null;
 
   return (
+    // 씬 라벨(다크 칩)과 같은 FSD풍 다크 패널로 고정 — 앱 테마와 무관하게
+    // 밝은 무채색 무대 위에서 흰 글자의 대비가 항상 유지된다.
     <section
       aria-label={t('collisionGuard.hud.title')}
-      className="bg-background/85 border-border/70 absolute top-3 left-3 w-60 overflow-hidden rounded-lg border shadow-sm backdrop-blur-sm"
+      className="absolute top-3 left-3 w-72 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/85 shadow-md backdrop-blur-sm"
     >
-      <header className="text-muted-foreground border-border/50 flex items-center gap-1.5 border-b px-2.5 py-1.5 text-[11px] font-bold tracking-wide uppercase">
+      <header className="flex items-center gap-1.5 border-b border-slate-700/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-slate-200 uppercase">
         <ShieldCheck className="size-3.5" aria-hidden />
         <span className="flex-1">{t('collisionGuard.hud.title')}</span>
       </header>
       {snapshot.tracks.length === 0 ? (
-        <p className="text-muted-foreground px-2.5 py-2 text-[11px]">
+        <p className="px-2.5 py-2 text-[11px] text-slate-400">
           {t('collisionGuard.hud.empty')}
         </p>
       ) : (
-        <ul className="divide-border/50 divide-y py-0.5">
+        <ul className="divide-y divide-slate-700/50 py-0.5">
           {snapshot.tracks.map((track) => (
             <TrackRow key={track.id} track={track} />
           ))}

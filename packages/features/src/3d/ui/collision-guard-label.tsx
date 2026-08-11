@@ -77,12 +77,14 @@ export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
     >
       <div
         ref={handleRoot}
-        // 첫 tick 전까지 완전 투명 — opacity·배경색은 부모가 구동
+        // 첫 tick 전까지 완전 투명 — opacity·배경/보더색은 부모가 구동
+        // (주의: 어두운 칩 + amber 보더, 위험: red 칩 — 밝은 무대 위
+        // amber 칩 + 흰 글자는 대비가 모자라 안 읽힌다)
         style={{ opacity: 0 }}
-        className="rounded px-1.5 py-0.5 font-mono text-[10px] leading-tight font-bold whitespace-nowrap text-white shadow-md"
+        className="rounded-md border px-2 py-1 font-mono text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
       >
         <span data-slot="distance" className="tabular-nums" />
-        <span className="opacity-75"> · </span>
+        <span className="opacity-60"> · </span>
         <span data-slot="speed" className="tabular-nums" />
       </div>
     </Html>
