@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   useCollisionGuardHudSnapshot,
   useCollisionGuardStore,
-  type HudOverallState,
   type HudTrack,
 } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -13,16 +12,12 @@ import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
  * 충돌 감지 HUD — Monitoring3dView의 overlayExtras 슬롯(Canvas 위 DOM).
  *
  * 4Hz 스냅샷 훅으로 구동되는 표시 전용 패널. 컨테이너가
- * pointer-events-none이라 orbit 드래그를 막지 않는다. 위험 비네트 대신
- * DANGER 배너의 red glow + pulse가 위험을 전달한다 (절제된 센서 HUD 룩).
+ * pointer-events-none이라 orbit 드래그를 막지 않는다.
+ *
+ * 레벨(주의/위험) 표기는 행 오른쪽 배지 하나뿐이다 — 배너 색·보더 색·
+ * 아이콘 색까지 세버리티를 중복 인코딩하면 패널 전체가 경보처럼 요란해져
+ * 오히려 읽기 어렵다. 긴급함의 전달은 씬(위험 링 펄스·라벨)이 담당한다.
  */
-
-const BANNER_STYLES: Record<HudOverallState, string> = {
-  safe: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
-  warning: 'bg-amber-500/20 text-amber-600 dark:text-amber-400',
-  danger:
-    'bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.45)]',
-};
 
 const TRACK_ICONS = {
   person: PersonStanding,
@@ -38,20 +33,11 @@ function TrackRow({ track }: { track: HudTrack }) {
   return (
     <li
       className={cn(
-        'flex items-center gap-2 border-l-2 py-1 pr-2 pl-2 transition-colors',
-        danger ? 'border-red-500' : 'border-amber-500/70',
+        'flex items-center gap-2 px-2 py-1',
         track.phase === 'leaving' && 'opacity-40',
       )}
     >
-      <Icon
-        className={cn(
-          'size-3.5 shrink-0',
-          danger
-            ? 'text-red-500'
-            : 'text-muted-foreground',
-        )}
-        aria-hidden
-      />
+      <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
       <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px]">
         {t(`collisionGuard.hud.kind.${track.type}`)}
         {track.zoneLabel ? (
@@ -99,15 +85,9 @@ export function GoliathCollisionGuardHud() {
       aria-label={t('collisionGuard.hud.title')}
       className="bg-background/85 border-border/70 absolute top-3 left-3 w-60 overflow-hidden rounded-lg border shadow-sm backdrop-blur-sm"
     >
-      <header
-        className={cn(
-          'flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold tracking-wide uppercase transition-colors',
-          BANNER_STYLES[snapshot.overall],
-        )}
-      >
+      <header className="text-muted-foreground border-border/50 flex items-center gap-1.5 border-b px-2.5 py-1.5 text-[11px] font-bold tracking-wide uppercase">
         <ShieldCheck className="size-3.5" aria-hidden />
         <span className="flex-1">{t('collisionGuard.hud.title')}</span>
-        <span>{t(`collisionGuard.hud.state.${snapshot.overall}`)}</span>
       </header>
       {snapshot.tracks.length === 0 ? (
         <p className="text-muted-foreground px-2.5 py-2 text-[11px]">

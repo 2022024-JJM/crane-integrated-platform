@@ -12,8 +12,8 @@ import type {
  * 크레인이 움직이면 감지 존·FSD 카메라도 함께 따라온다.
  *
  * - 씬 축척: 크레인 GLB 네이티브 스팬 141 unit = 실측 165m → 1 unit ≈ 1.17m.
- * - 거더는 로컬 X축: rotation Y로 회전한 방향. SPAN 절반 70.5 unit을
- *   거더 방향으로 이동한 지점이 양쪽 다리다. 주행(레일) 방향은 거더의 수직.
+ * - 거더는 로컬 X축: rotation Y로 회전한 방향. 다리 중심선의 거더축
+ *   오프셋은 GLB 실측값(LEG_OFFSETS)을 쓴다. 주행(레일) 방향은 거더의 수직.
  * - 다리별 radius 60 unit ≈ 70m 라이다 감지, dangerRadius 25.6 ≈ 30m 위험,
  *   cameraRadius 32 ≈ 37m 카메라 근거리 음영 커버.
  * - obstacle: A프레임 하부 풋프린트(주행 방향 약 55m × 횡 17m) 키프아웃.
@@ -21,8 +21,15 @@ import type {
  */
 const METERS_PER_UNIT = 1.17;
 
-/** SPAN 165m의 절반 (unit) */
-const LEG_HALF_SPAN = 70.5;
+/**
+ * 다리 중심선의 거더축 오프셋 (unit, 크레인 원점 기준 로컬 +X 부호).
+ *
+ * GLB 지면 접촉 정점(y < 2 unit)을 군집화해 실측한 값이다. 거더 끝단
+ * (±65)은 다리 바깥으로 뻗은 오버행이라 스팬 절반 같은 대칭 상수를 쓰면
+ * 감지 링 중심이 다리에서 ~10m 벗어나고, 모델 원점도 다리 정중앙이
+ * 아니어서(+63.0 / -60.9) 좌우가 미세하게 비대칭이다.
+ */
+const LEG_OFFSETS = { L1: 63.0, L2: -60.9 } as const;
 
 /**
  * 통행 가능 차선 밴드 (m, travel 축 기준 횡 오프셋 — 양수 = 거더 +방향의
@@ -68,14 +75,14 @@ export function buildGoliathCollisionZones(
   return [
     {
       ...LEG_ZONE_BASE,
-      center: [cx + gx * LEG_HALF_SPAN, cz + gz * LEG_HALF_SPAN],
+      center: [cx + gx * LEG_OFFSETS.L1, cz + gz * LEG_OFFSETS.L1],
       travel,
       laneBandsM: L1_LANE_BANDS_M,
       label: 'L1',
     },
     {
       ...LEG_ZONE_BASE,
-      center: [cx - gx * LEG_HALF_SPAN, cz - gz * LEG_HALF_SPAN],
+      center: [cx + gx * LEG_OFFSETS.L2, cz + gz * LEG_OFFSETS.L2],
       travel,
       laneBandsM: L2_LANE_BANDS_M,
       label: 'L2',

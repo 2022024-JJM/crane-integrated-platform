@@ -1,10 +1,10 @@
 import { Suspense, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import {
   Color,
   DoubleSide,
   Shape,
-  type Mesh,
   type MeshStandardMaterial,
   type Group,
 } from 'three';
@@ -64,8 +64,8 @@ const COLOR_DANGER = new Color('#ef4444');
 const COLOR_CAMERA = new Color('#a78bfa');
 
 /**
- * 속도 벡터 화살표 — 단위 길이(+X 방향) 플랫 화살표. 그룹이 heading으로
- * 회전하고 scale.x를 속도 비례 길이로 늘려 쓴다.
+ * 진행 방향 화살표 — 단위 길이(+X 방향) 플랫 화살표. 그룹이 heading으로
+ * 회전하고 scale.x로 고정 길이(ARROW_LENGTH_M)를 편다.
  */
 const VELOCITY_ARROW_SHAPE = (() => {
   const shape = new Shape();
@@ -79,9 +79,12 @@ const VELOCITY_ARROW_SHAPE = (() => {
   shape.closePath();
   return shape;
 })();
-/** 화살표 길이 = 속도(m/s) × 룩어헤드(s), [최소, 최대] 클램프 (m) */
-const ARROW_LOOKAHEAD_S = 1.4;
-const ARROW_LENGTH_RANGE_M: [number, number] = [1.4, 8];
+/**
+ * 화살표 길이 (m) — 전 객체 동일 고정 길이. 속도는 라벨/HUD의 수치가
+ * 담당하고, 화살표는 진행 "방향"만 전달한다 (길이가 제각각이면 탑뷰에서
+ * 시선이 분산된다는 운영 피드백).
+ */
+const ARROW_LENGTH_M = 4;
 /** 화살표 시작점(객체 앞코) X 오프셋 (로컬 m) */
 const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
   person: 0.5,
@@ -101,28 +104,13 @@ const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
 };
 const LABEL_HEIGHT_OFFSET = 0.45;
 
-/**
- * 지면 마커 링 크기/두께 (로컬 미터). 사람은 실루엣이 점 수준으로
- * 작아지는 탑뷰에서 가장 위험한 객체이므로 마커를 차량급으로 키우고
- * 링도 더 두껍게 그린다.
- */
-const MARKER_RADIUS: Record<DetectedObjectType, number> = {
-  person: 2.4,
-  car: 2.8,
-  forklift: 2.6,
-};
-const MARKER_INNER_RATIO: Record<DetectedObjectType, number> = {
-  person: 0.72,
-  car: 0.82,
-  forklift: 0.78,
-};
-/**
- * 마커 화면 최소 크기 보장 — 이 거리보다 멀어지면 카메라 거리에 비례해
- * 마커를 확대해 화면상 크기를 유지한다 (에고 탑뷰 높이 130 기준).
- */
-const MARKER_REF_DISTANCE = 130;
-
 type Severity = 'idle' | 'warning' | 'danger';
+
+/** 라벨 배경색 — 씬 세버리티 색과 동일 계열 (amber-500 / red-500) */
+const LABEL_BG: Record<'warning' | 'danger', string> = {
+  warning: 'rgba(245, 158, 11, 0.92)',
+  danger: 'rgba(239, 68, 68, 0.92)',
+};
 
 /** easeOutBack — 진입 시 살짝 튀어오르는 테슬라풍 pop-in */
 function easeOutBack(t: number) {
@@ -138,12 +126,16 @@ function easeInOutCubic(t: number) {
 
 /**
  * 감지 영역 링(라이다 커버) + 위험 반경 링 + 카메라 근거리 링.
- * 트랙 상태에 따라 색/펄스가 변한다 — 이 링(센서)의 커버 범위 안에 있는
- * 트랙만 반영하므로, 다리별 링이 각자 담당 구역의 상태를 보여준다.
+ *
+ * 색 역할 분담: 감지 링은 "센서 커버 범위"라는 정적 사실이므로 항상
+ * sky를 유지한다 — 상태에 따라 물들이면 링 두 개가 동시에 색을 바꿔
+ * 어느 원이 무엇인지 읽기 어려워진다(운영 피드백). 상태 전달은 위험
+ * 반경 링(등장/펄스)과 객체 마커·라벨의 몫이다.
  *
  * 절제 원칙: 평시에 보이는 원은 감지 링 하나뿐이다. 위험 반경 링은
  * "설정"이 아니라 "상태"로 취급해 객체가 커버 안에 들어왔을 때만
- * 페이드인하고, 카메라 근거리 링은 기본 숨김(showCameraCoverage 토글).
+ * 감지 링과 같은 불투명도로 페이드인하고(두 원의 선명도가 다르면
+ * 하나가 흐릿한 잔상처럼 보인다), 카메라 근거리 링은 기본 숨김.
  */
 function DetectionZoneRing({
   zone,
@@ -152,15 +144,11 @@ function DetectionZoneRing({
   zone: CollisionGuardZone;
   showCameraCoverage?: boolean;
 }) {
-  const outerRef = useRef<MeshStandardMaterial>(null);
-  const fillRef = useRef<MeshStandardMaterial>(null);
   const dangerRef = useRef<MeshStandardMaterial>(null);
-  const targetColorRef = useRef(new Color().copy(COLOR_IDLE));
 
   useFrame((state, delta) => {
-    const outer = outerRef.current;
-    const fill = fillRef.current;
-    if (!outer || !fill) return;
+    const danger = dangerRef.current;
+    if (!danger) return;
 
     const tracks = useCollisionGuardStore.getState().tracks;
 
@@ -176,34 +164,16 @@ function DetectionZoneRing({
       severity = 'warning';
     }
 
-    targetColorRef.current.copy(
-      severity === 'danger'
-        ? COLOR_DANGER
-        : severity === 'warning'
-          ? COLOR_WARNING
-          : COLOR_IDLE,
-    );
-
-    // 색상도 damping — 상태 전환 시 부드럽게 물든다.
+    // 위험 반경 링 — 커버 안에 객체가 있을 때만, 감지 링과 같은 0.55로.
+    // danger에서는 펄스로 긴급함을 전달한다.
     const k = 1 - Math.exp(-delta / 0.25);
-    outer.color.lerp(targetColorRef.current, k);
-    outer.emissive.lerp(targetColorRef.current, k);
-    fill.color.lerp(targetColorRef.current, k);
-
-    // danger일 때만 경계 펄스.
-    const pulse =
+    const dangerTarget =
       severity === 'danger'
-        ? 0.55 + Math.sin(state.clock.elapsedTime * 5) * 0.25
-        : 0.55;
-    outer.opacity += (pulse - outer.opacity) * k;
-
-    // 위험 반경 링은 상태 표시 — 커버 안에 객체가 있을 때만 나타난다.
-    const danger = dangerRef.current;
-    if (danger) {
-      const dangerTarget =
-        severity === 'danger' ? 0.34 : severity === 'warning' ? 0.2 : 0;
-      danger.opacity += (dangerTarget - danger.opacity) * k;
-    }
+        ? 0.55 + Math.sin(state.clock.elapsedTime * 5) * 0.2
+        : severity === 'warning'
+          ? 0.55
+          : 0;
+    danger.opacity += (dangerTarget - danger.opacity) * k;
   });
 
   const [cx, cz] = zone.center;
@@ -212,74 +182,91 @@ function DetectionZoneRing({
   const groundLift = Math.max(0.03, zone.radius * 0.005);
 
   return (
-    <group position={[cx, zone.y + groundLift, cz]} rotation={[-Math.PI / 2, 0, 0]}>
-      <mesh renderOrder={1}>
-        <circleGeometry args={[zone.radius, 96]} />
-        <meshStandardMaterial
-          ref={fillRef}
-          color={COLOR_IDLE}
-          transparent
-          opacity={0.05}
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh renderOrder={2}>
-        <ringGeometry args={[zone.radius - ringWidth, zone.radius, 96]} />
-        <meshStandardMaterial
-          ref={outerRef}
-          color={COLOR_IDLE}
-          emissive={COLOR_IDLE}
-          emissiveIntensity={0.6}
-          transparent
-          opacity={0.55}
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh renderOrder={2}>
-        <ringGeometry
-          args={[zone.dangerRadius - ringWidth * 0.7, zone.dangerRadius, 64]}
-        />
-        <meshStandardMaterial
-          ref={dangerRef}
-          color={COLOR_DANGER}
-          emissive={COLOR_DANGER}
-          emissiveIntensity={0.4}
-          transparent
-          opacity={0}
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      {/* 카메라 근거리 음영 커버 — 기본 숨김, 범례/설정 토글로만 표시 */}
-      {showCameraCoverage && zone.cameraRadius ? (
-        <>
-          <mesh renderOrder={1}>
-            <circleGeometry args={[zone.cameraRadius, 64]} />
-            <meshStandardMaterial
-              color={COLOR_CAMERA}
-              transparent
-              opacity={0.05}
-              side={DoubleSide}
-              depthWrite={false}
-            />
-          </mesh>
-          <mesh renderOrder={2}>
-            <ringGeometry
-              args={[zone.cameraRadius - ringWidth * 0.6, zone.cameraRadius, 64]}
-            />
-            <meshStandardMaterial
-              color={COLOR_CAMERA}
-              emissive={COLOR_CAMERA}
-              emissiveIntensity={0.3}
-              transparent
-              opacity={0.28}
-              side={DoubleSide}
-              depthWrite={false}
-            />
-          </mesh>
-        </>
+    <group position={[cx, zone.y + groundLift, cz]}>
+      <group rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh renderOrder={1}>
+          <circleGeometry args={[zone.radius, 96]} />
+          <meshStandardMaterial
+            color={COLOR_IDLE}
+            transparent
+            opacity={0.05}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh renderOrder={2}>
+          <ringGeometry args={[zone.radius - ringWidth, zone.radius, 96]} />
+          <meshStandardMaterial
+            color={COLOR_IDLE}
+            emissive={COLOR_IDLE}
+            emissiveIntensity={0.6}
+            transparent
+            opacity={0.55}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh renderOrder={2}>
+          <ringGeometry
+            args={[zone.dangerRadius - ringWidth * 0.7, zone.dangerRadius, 64]}
+          />
+          <meshStandardMaterial
+            ref={dangerRef}
+            color={COLOR_DANGER}
+            emissive={COLOR_DANGER}
+            emissiveIntensity={0.4}
+            transparent
+            opacity={0}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* 카메라 근거리 음영 커버 — 기본 숨김, 범례/설정 토글로만 표시 */}
+        {showCameraCoverage && zone.cameraRadius ? (
+          <>
+            <mesh renderOrder={1}>
+              <circleGeometry args={[zone.cameraRadius, 64]} />
+              <meshStandardMaterial
+                color={COLOR_CAMERA}
+                transparent
+                opacity={0.05}
+                side={DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+            <mesh renderOrder={2}>
+              <ringGeometry
+                args={[
+                  zone.cameraRadius - ringWidth * 0.6,
+                  zone.cameraRadius,
+                  64,
+                ]}
+              />
+              <meshStandardMaterial
+                color={COLOR_CAMERA}
+                emissive={COLOR_CAMERA}
+                emissiveIntensity={0.3}
+                transparent
+                opacity={0.28}
+                side={DoubleSide}
+                depthWrite={false}
+              />
+            </mesh>
+          </>
+        ) : null}
+      </group>
+      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점 */}
+      {zone.label ? (
+        <Html
+          center
+          position={[0, 0.5, 0]}
+          zIndexRange={[4, 0]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
+            {zone.label}
+          </div>
+        </Html>
       ) : null}
     </group>
   );
@@ -295,9 +282,6 @@ function DetectedObjectMesh({
   zones: CollisionGuardZone[];
 }) {
   const groupRef = useRef<Group>(null);
-  const markerRef = useRef<MeshStandardMaterial>(null);
-  const markerMeshRef = useRef<Mesh>(null);
-  const arrowGroupRef = useRef<Group>(null);
   const arrowMatRef = useRef<MeshStandardMaterial>(null);
   const fadeMaterialsRef = useRef<MeshStandardMaterial[]>([]);
   const labelRefsRef = useRef<TrackLabelRefs | null>(null);
@@ -307,24 +291,36 @@ function DetectedObjectMesh({
   }
   const remove = useCollisionGuardStore((s) => s.remove);
   const reducedMotion = usePrefersReducedMotion();
-  // 위험 태그(Html)는 danger일 때만 마운트 — drei Html은 마운트만 돼 있어도
-  // 매 프레임 DOM 갱신 비용이 들므로 평시엔 아예 제거한다.
+  // 거리·속도 태그(Html)는 활성 트랙에만 마운트 — drei Html은 마운트만
+  // 돼 있어도 매 프레임 DOM 갱신 비용이 들므로 이탈 페이드아웃이 끝나면
+  // 제거한다.
   const [labelActive, setLabelActive] = useState(false);
 
-  // ref callback으로 mount 시점에 호출된다(렌더 중 접근 아님). useCallback을
-  // 쓰면 react-hooks/immutability가 useFrame에서의 material mutate를 hook
-  // 인자 수정으로 판정하므로 일반 함수로 둔다.
-  const registerFadeMaterial: MaterialRegistrar = (material) => {
-    const list = fadeMaterialsRef.current;
-    if (material && !list.includes(material)) {
-      applyMaterialize(material, uniformsRef.current!);
-      list.push(material);
-    }
-  };
-
-  const registerLabel = (refs: TrackLabelRefs | null) => {
-    labelRefsRef.current = refs;
-  };
+  // 자식의 등록 effect가 이 함수를 의존성으로 잡으므로 참조가 안정적이어야
+  // 한다 — 매 렌더 새 함수를 넘기면 부모 리렌더(위험 태그 마운트 등)마다
+  // 자식 effect가 재실행되어 사용 중인 material이 dispose된다.
+  // useCallback은 react-hooks/immutability가 useFrame에서의 material mutate를
+  // hook 인자 수정으로 판정하므로 쓰지 않고, ref에 담아 1회만 생성한다.
+  const registrarsRef = useRef<{
+    fade: MaterialRegistrar;
+    label: (refs: TrackLabelRefs | null) => void;
+  } | null>(null);
+  if (registrarsRef.current == null) {
+    registrarsRef.current = {
+      fade: (material) => {
+        const list = fadeMaterialsRef.current;
+        if (material && !list.includes(material)) {
+          applyMaterialize(material, uniformsRef.current!);
+          list.push(material);
+        }
+      },
+      label: (refs) => {
+        labelRefsRef.current = refs;
+      },
+    };
+  }
+  const registerFadeMaterial = registrarsRef.current.fade;
+  const registerLabel = registrarsRef.current.label;
 
   // 렌더러가 소유하는 보간 상태. target(센서값)과 분리되어 있다.
   const smoothRef = useRef({
@@ -335,22 +331,21 @@ function DetectedObjectMesh({
     fade: 0,
     /** 머티리얼라이즈 스윕 진행도 (0.6s in / 0.45s out) */
     sweep: 0,
-    /** 위험 거리 태그 가시성 (danger일 때만 1로 수렴) */
+    /** 거리·속도 태그 가시성 (활성 트랙이면 1로 수렴) */
     labelVis: 0,
-    labelClock: 0,
+    // 1/LABEL_UPDATE_HZ보다 크게 시작 — 마운트 직후 첫 프레임에 바로
+    // 텍스트/배경색이 채워져 빈 태그가 깜빡이지 않는다.
+    labelClock: 1,
   });
 
   // 스케일/지면 높이 설정은 전체 존 공통이므로 첫 존의 값을 쓴다.
   const baseZone = zones[0];
   const worldScale = baseZone.sizeMultiplier / baseZone.metersPerUnit;
-  const markerRadius = MARKER_RADIUS[track.type];
-  const markerInnerRatio = MARKER_INNER_RATIO[track.type];
   const objectHeight = OBJECT_HEIGHT[track.type];
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const group = groupRef.current;
-    const marker = markerRef.current;
-    if (!group || !marker) return;
+    if (!group) return;
 
     const smooth = smoothRef.current;
     const dt = Math.min(delta, 0.1);
@@ -398,7 +393,6 @@ function DetectedObjectMesh({
       material.opacity = opacity;
       material.depthWrite = opacity >= 0.99;
     }
-    marker.opacity = opacity * 0.85;
 
     // --- 머티리얼라이즈 컷 플레인 ---
     // 컷은 객체 높이 + 밴드 두께만큼 이동해 스캔 밴드가 머리 위로
@@ -413,29 +407,13 @@ function DetectedObjectMesh({
       uniforms.uBand.value = SCAN_BAND_RATIO * objectHeight * s;
     }
 
-    // --- 위험도 색상: 마커 + 속도 벡터 + 림 글로우 (가장 가까운 센서 존 기준) ---
+    // --- 위험도 색상: 속도 벡터 + 림 글로우 + 라벨 (가장 가까운 센서 존 기준) ---
     const severity = trackSeverity(track, zones);
     const severityColor = severity === 'danger' ? COLOR_DANGER : COLOR_WARNING;
-    marker.color.lerp(severityColor, k);
-    marker.emissive.lerp(severityColor, k);
 
-    // 마커 화면 최소 크기 보장 — 기준 거리보다 멀어지면 비례 확대.
-    const markerMesh = markerMeshRef.current;
-    if (markerMesh) {
-      const camDistance = state.camera.position.distanceTo(group.position);
-      const compensation = Math.max(1, camDistance / MARKER_REF_DISTANCE);
-      markerMesh.scale.setScalar(compensation);
-    }
-
-    // 속도 벡터: 길이 = 속도 × 룩어헤드. 그룹 회전(heading)을 따라간다.
-    const arrowGroup = arrowGroupRef.current;
+    // 진행 방향 화살표 — 길이는 고정, 색만 세버리티를 따른다.
     const arrowMat = arrowMatRef.current;
-    if (arrowGroup && arrowMat) {
-      const lengthM = Math.min(
-        ARROW_LENGTH_RANGE_M[1],
-        Math.max(ARROW_LENGTH_RANGE_M[0], track.target.speed * ARROW_LOOKAHEAD_S),
-      );
-      arrowGroup.scale.set(lengthM, 1, 1);
+    if (arrowMat) {
       arrowMat.opacity = opacity * 0.85;
       arrowMat.color.lerp(severityColor, k);
       arrowMat.emissive.lerp(severityColor, k);
@@ -448,9 +426,9 @@ function DetectedObjectMesh({
     uniforms.uRimStrength.value +=
       (rimStrength - uniforms.uRimStrength.value) * k;
 
-    // --- 위험 거리 태그: danger일 때만 마운트 + 페이드인 (평시엔 객체를
-    // 가리지 않도록 숨김 — 거리/종류/속도는 HUD 패널이 담당) ---
-    const wantLabel = severity === 'danger' && track.phase === 'active';
+    // --- 거리·속도 태그: 활성(주의/위험) 트랙에 표시, 배경색이 세버리티를
+    // 전달한다. 이탈 트랙은 페이드아웃 후 언마운트. ---
+    const wantLabel = track.phase === 'active';
     const labelTarget = wantLabel ? 1 : 0;
     smooth.labelVis += (labelTarget - smooth.labelVis) * Math.min(1, dt / 0.2);
 
@@ -472,6 +450,8 @@ function DetectedObjectMesh({
           nearestZone(smooth.x, smooth.z, zones).dist * baseZone.metersPerUnit,
         );
         label.distance.textContent = `${meters} m`;
+        label.speed.textContent = `${track.target.speed.toFixed(1)} m/s`;
+        label.root.style.backgroundColor = LABEL_BG[severity];
       }
     }
   });
@@ -482,29 +462,10 @@ function DetectedObjectMesh({
       position={[track.target.x, baseZone.y, track.target.z]}
       scale={[0.001, 0.001, 0.001]}
     >
-      {/* 지면 세버리티 마커 링 */}
-      <mesh
-        ref={markerMeshRef}
-        position={[0, 0.04, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        renderOrder={3}
-      >
-        <ringGeometry args={[markerRadius * markerInnerRatio, markerRadius, 48]} />
-        <meshStandardMaterial
-          ref={markerRef}
-          color={COLOR_WARNING}
-          emissive={COLOR_WARNING}
-          emissiveIntensity={0.7}
-          transparent
-          opacity={0}
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      {/* 속도 벡터 화살표 — 진행 방향(+X)으로 속도 비례 길이 */}
+      {/* 진행 방향 화살표 — 고정 길이, 방향만 전달 (+X가 heading) */}
       <group
-        ref={arrowGroupRef}
         position={[ARROW_NOSE_OFFSET[track.type], 0.06, 0]}
+        scale={[ARROW_LENGTH_M, 1, 1]}
       >
         <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
           <shapeGeometry args={[VELOCITY_ARROW_SHAPE]} />

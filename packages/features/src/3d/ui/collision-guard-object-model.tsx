@@ -145,15 +145,28 @@ export function DetectedObjectModel({
     };
   }, [scene, source]);
 
-  // 부모 페이드/머티리얼라이즈 파이프라인에 등록. clone된 material은
-  // R3F 관리 밖이므로 언마운트 시 직접 dispose한다 (geometry는 GLTF
-  // 캐시와 공유하므로 건드리지 않는다).
+  // 부모 페이드/머티리얼라이즈 파이프라인에 등록.
+  //
+  // register는 부모가 매 렌더 새로 만드는 함수이므로 effect 의존성에 두면
+  // 안 된다 — 부모가 리렌더될 때마다(예: 위험 태그 마운트) cleanup이 돌아
+  // 아직 사용 중인 material을 dispose해버린다. 최신 register를 ref로 들고
+  // 등록은 prepared(=material 인스턴스)가 바뀔 때만 수행한다.
+  const registerRef = useRef(register);
+  registerRef.current = register;
+
   useEffect(() => {
-    prepared.materials.forEach((material) => register(material));
-    return () => {
+    prepared.materials.forEach((material) => registerRef.current(material));
+  }, [prepared]);
+
+  // dispose는 material 인스턴스의 수명에만 묶는다. clone된 material은 R3F
+  // 관리 밖이라 직접 정리해야 한다 (geometry는 GLTF 캐시와 공유하므로
+  // 건드리지 않는다).
+  useEffect(
+    () => () => {
       prepared.materials.forEach((material) => material.dispose());
-    };
-  }, [prepared, register]);
+    },
+    [prepared],
+  );
 
   // 애니메이션 (사람 걷기 등) — 첫 클립 루프 재생.
   const mixerRef = useRef<AnimationMixer | null>(null);
