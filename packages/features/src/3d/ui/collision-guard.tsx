@@ -6,6 +6,7 @@ import {
   Color,
   DoubleSide,
   Shape,
+  type Mesh,
   type MeshBasicMaterial,
   type MeshStandardMaterial,
   type Group,
@@ -287,6 +288,10 @@ function smoothstep01(t: number) {
  * 반경 인지 안 됨), 면 채움은 상태로 취급해 객체가 커버 안에 들어왔을
  * 때만 페이드인·danger 펄스한다. 카메라 근거리 링은 기본 숨김.
  */
+/** 레이더 파장 — 동시에 도는 확산 링 수와 한 파장의 주기 (s) */
+const SCAN_WAVE_COUNT = 2;
+const SCAN_WAVE_PERIOD = 3.4;
+
 function DetectionZoneRing({
   zone,
   showCameraCoverage = false,
@@ -299,8 +304,30 @@ function DetectionZoneRing({
     dangerRef.current = material;
     markGuardLayer(material);
   };
+  const waveMeshRefs = useRef<(Mesh | null)[]>([]);
+  const waveMatRefs = useRef<(MeshStandardMaterial | null)[]>([]);
+  const reducedMotion = usePrefersReducedMotion();
 
   useFrame((state, delta) => {
+    // --- 레이더 파장: 중심에서 감지 경계까지 퍼져나가며 소멸하는 링.
+    // "이 영역을 능동적으로 스캔하고 있다"는 감각을 만든다. 위상을
+    // 분산한 두 파장이 번갈아 나가고, 바깥으로 갈수록 빠르게 옅어져
+    // 객체·위험 면보다 시각적 우선순위가 낮게 유지된다.
+    for (let i = 0; i < SCAN_WAVE_COUNT; i++) {
+      const mesh = waveMeshRefs.current[i];
+      const material = waveMatRefs.current[i];
+      if (!mesh || !material) continue;
+      if (reducedMotion) {
+        material.opacity = 0;
+        continue;
+      }
+      const t =
+        (state.clock.elapsedTime / SCAN_WAVE_PERIOD + i / SCAN_WAVE_COUNT) % 1;
+      const s = Math.max(0.001, t) * zone.radius;
+      mesh.scale.set(s, s, 1);
+      material.opacity = (1 - t) * (1 - t) * 0.3;
+    }
+
     const danger = dangerRef.current;
     if (!danger) return;
 
@@ -367,6 +394,31 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
+        {/* 레이더 파장 — 단위 반경 링을 useFrame이 scale·opacity로 구동 */}
+        {Array.from({ length: SCAN_WAVE_COUNT }, (_, waveIndex) => (
+          <mesh
+            key={waveIndex}
+            renderOrder={2}
+            ref={(mesh) => {
+              waveMeshRefs.current[waveIndex] = mesh;
+            }}
+          >
+            <ringGeometry args={[0.94, 1, 96]} />
+            <meshStandardMaterial
+              ref={(material) => {
+                waveMatRefs.current[waveIndex] = material;
+                markGuardLayer(material);
+              }}
+              color={COLOR_IDLE}
+              emissive={COLOR_IDLE}
+              emissiveIntensity={0.9}
+              transparent
+              opacity={0}
+              side={DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
         {/* 위험 반경 경계 — 상시 표시되는 빨간 링. 감지 링(sky)과 색·굵기가
             달라 "여기부터 위험 지역"이라는 경계가 항상 읽힌다. 부감에서
             원근으로 눌려도 붉게 남도록 이미시브를 세게 준다 */}
@@ -436,8 +488,7 @@ function DetectionZoneRing({
           </>
         ) : null}
       </group>
-      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점.
-          커버 반경 실측값을 함께 적어 파란 링의 의미(70m 감지)를 밝힌다 */}
+      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점 */}
       {zone.label ? (
         <Html
           center
@@ -447,27 +498,41 @@ function DetectionZoneRing({
         >
           <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
             {zone.label}
-            <span className="ml-1 font-medium text-sky-400/90">
-              {Math.round(zone.radius * zone.metersPerUnit)}m
-            </span>
           </div>
         </Html>
       ) : null}
-      {/* 위험 반경 수치 — 빨간 링 근측(카메라 쪽)에 붙여 "여기부터 30m
-          위험 구역"을 밝힌다. travel 반대 방향 = 에고 카메라가 물러난 쪽 */}
+      {/* 반경 수치 — 배경·보더 없는 반투명 흰 텍스트. 수치는 참고 정보일
+          뿐 시선의 주인공은 감지 객체이므로 가시성을 한 단계 낮춘다.
+          위험 수치는 빨간 링 안쪽, 감지 수치는 파란 링 안쪽 — 둘 다
+          다크 스테이지 위라 흰 글자가 요란하지 않게 읽힌다. 부착 방위는
+          travel 반대 방향 = 에고 카메라가 물러난 쪽(근측). */}
       <Html
         center
         position={[
-          -(zone.travel?.[0] ?? 1) * zone.dangerRadius,
+          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - ringWidth * 2),
           0.5,
-          -(zone.travel?.[1] ?? 0) * zone.dangerRadius,
+          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - ringWidth * 2),
         ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
-        <div className="rounded border border-red-400/50 bg-red-950/75 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-red-300">
+        <span className="font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/70">
           {Math.round(zone.dangerRadius * zone.metersPerUnit)}m
-        </div>
+        </span>
+      </Html>
+      <Html
+        center
+        position={[
+          -(zone.travel?.[0] ?? 1) * (zone.radius - ringWidth * 2.5),
+          0.5,
+          -(zone.travel?.[1] ?? 0) * (zone.radius - ringWidth * 2.5),
+        ]}
+        zIndexRange={[4, 0]}
+        style={{ pointerEvents: 'none' }}
+      >
+        <span className="font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/70">
+          {Math.round(zone.radius * zone.metersPerUnit)}m
+        </span>
       </Html>
     </group>
   );

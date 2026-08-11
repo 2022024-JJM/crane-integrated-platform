@@ -12,11 +12,13 @@ import {
  *
  * - 라이다는 거더 양쪽 다리에 1기씩 — 에이전트는 라운드로빈으로 배정된
  *   다리 존에 스폰되어 양쪽 커버리지에 고르게 출몰한다.
- * - 이동 경로는 실제 부두 동선을 따른다: 다리 옆 부두 통로를 zone.travel
- *   (레일) 방향으로 통과한다. 차량은 차선을 직진에 가깝게, 사람은 사행을
- *   크게. 존 중심(=다리 구조물)을 관통하는 경로는 만들지 않으며,
- *   zone.obstacle 키프아웃 타원(주행축 기준)에 대한 회피 조향이 사행
- *   드리프트까지 막아준다.
+ * - 이동 경로는 두 모드를 섞는다. 통로형: 다리 옆 부두 통로를
+ *   zone.travel(레일) 방향으로 통과 — 차량은 항상 이 모드(도로를 벗어나
+ *   도크를 가로지르면 부자연스럽다). 방사형: 감지 원 둘레의 임의 방위에서
+ *   진입해 반대편으로 가로지른다 — 사람·지게차 위주로, 객체가 사방에서
+ *   나타나는 화면을 만든다(운영 피드백: 한 방향 흐름은 시뮬레이션 티가
+ *   난다). 두 모드 모두 zone.obstacle 키프아웃 타원(주행축 기준) 회피
+ *   조향이 다리 구조물 관통을 막아준다.
  * - 에이전트끼리도 서로를 회피한다(separateAgents): 접근하면 진로를 틀고,
  *   그래도 가까워지면 하드 가드로 밀어내 사람과 차량이 겹치거나 관통하는
  *   장면이 생기지 않는다. 스폰 시점에도 최소 간격을 확인한다.
@@ -76,6 +78,23 @@ const WANDER_AMPLITUDE: Record<DetectedObjectType, number> = {
 const AVOID_STEER_START = 1.6;
 
 /**
+ * 타입별 방사형 스폰 확률 — 나머지는 통로형. 차량은 도로(통로)를 벗어나면
+ * 부자연스러우므로 항상 통로형, 사람은 어디서든 걸어올 수 있으므로 대부분
+ * 방사형, 지게차는 반반.
+ */
+const RADIAL_SPAWN_CHANCE: Record<DetectedObjectType, number> = {
+  person: 0.8,
+  car: 0,
+  forklift: 0.5,
+};
+/**
+ * 방사형 목표 방위 지터 (rad) — 진입점의 정반대에서 ±이 범위만큼 튼
+ * 현(chord)을 걷는다. 0이면 모두 중심 관통 직선이 되어 위험 이벤트가
+ * 과도해지고, 크면 둘레를 스치는 짧은 경로가 늘어난다.
+ */
+const RADIAL_EXIT_JITTER = 0.9;
+
+/**
  * 에이전트 물리 반경 (m) — 서로 겹치면 안 되는 최소 풋프린트.
  * 두 에이전트 사이의 하드 최소 간격은 두 반경의 합이다.
  */
@@ -133,6 +152,33 @@ function spawnAgent(zone: CollisionGuardZone, id: string): SimAgent {
   const pz = tx;
   const spawnRadius = zone.radius * SPAWN_RADIUS_RATIO;
   const toUnits = 1 / zone.metersPerUnit;
+  const [speedMin, speedMax] = SPEED_RANGE[type];
+
+  // --- 방사형: 원 둘레 임의 방위에서 진입해 반대편으로 가로지른다 ---
+  if (Math.random() < RADIAL_SPAWN_CHANCE[type]) {
+    const entry = rand(0, Math.PI * 2);
+    const exit =
+      entry + Math.PI + rand(-RADIAL_EXIT_JITTER, RADIAL_EXIT_JITTER);
+    const x = cx + Math.cos(entry) * spawnRadius;
+    const z = cz + Math.sin(entry) * spawnRadius;
+    const goalX = cx + Math.cos(exit) * spawnRadius;
+    const goalZ = cz + Math.sin(exit) * spawnRadius;
+    return {
+      id,
+      type,
+      x,
+      z,
+      heading: Math.atan2(goalZ - z, goalX - x),
+      speed: rand(speedMin, speedMax),
+      goalX,
+      goalZ,
+      wanderPhase: rand(0, Math.PI * 2),
+      age: 0,
+      tracked: false,
+    };
+  }
+
+  // --- 통로형: 다리 옆 부두 통로를 travel(레일) 방향으로 통과 ---
 
   // 부두 통로 동선: 다리 옆을 주행(레일) 방향으로 통과한다. 통행 가능한
   // 차선 밴드(zone.laneBandsM — 도크/건물을 피한 통로)에서 차선을 고르되,
@@ -174,8 +220,6 @@ function spawnAgent(zone: CollisionGuardZone, id: string): SimAgent {
   const goalLane = clampToBand(laneOffset + rand(-driftMax, driftMax));
   const goalX = cx + px * goalLane + tx * dir * spawnRadius;
   const goalZ = cz + pz * goalLane + tz * dir * spawnRadius;
-
-  const [speedMin, speedMax] = SPEED_RANGE[type];
 
   return {
     id,
