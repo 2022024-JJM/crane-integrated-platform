@@ -499,6 +499,7 @@ function DetectedObjectMesh({
       {labelActive ? (
         <TrackLabel
           height={objectHeight + LABEL_HEIGHT_OFFSET}
+          worldScale={worldScale}
           register={registerLabel}
         />
       ) : null}

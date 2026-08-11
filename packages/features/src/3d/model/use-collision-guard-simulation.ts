@@ -17,6 +17,9 @@ import {
  *   크게. 존 중심(=다리 구조물)을 관통하는 경로는 만들지 않으며,
  *   zone.obstacle 키프아웃 타원(주행축 기준)에 대한 회피 조향이 사행
  *   드리프트까지 막아준다.
+ * - 에이전트끼리도 서로를 회피한다(separateAgents): 접근하면 진로를 틀고,
+ *   그래도 가까워지면 하드 가드로 밀어내 사람과 차량이 겹치거나 관통하는
+ *   장면이 생기지 않는다. 스폰 시점에도 최소 간격을 확인한다.
  * - 거리 상수는 미터로 정의하고 zone.metersPerUnit으로 환산한다 — 씬마다
  *   좌표계 스케일이 달라도(okpo 11.7m/unit, philly 1.17m/unit) 동작이 같다.
  * - 이동 자체는 매 프레임 연속적으로 계산하고, store로의 발행(ingest)은
@@ -71,6 +74,29 @@ const WANDER_AMPLITUDE: Record<DetectedObjectType, number> = {
 };
 /** 키프아웃 타원 침범 전 조향을 시작하는 정규화 거리 */
 const AVOID_STEER_START = 1.6;
+
+/**
+ * 에이전트 물리 반경 (m) — 서로 겹치면 안 되는 최소 풋프린트.
+ * 두 에이전트 사이의 하드 최소 간격은 두 반경의 합이다.
+ */
+const AGENT_RADIUS_M: Record<DetectedObjectType, number> = {
+  person: 0.6,
+  car: 2.4,
+  forklift: 1.6,
+};
+/**
+ * 상호 회피를 시작하는 여유 거리 (m). 반경 합 + 이 값 안으로 들어오면
+ * 서로 비켜서기 시작한다 — 실제 현장에서도 스치기 한참 전에 진로를
+ * 바꾸므로, 이 값이 넉넉해야 "부딪힐 뻔한" 장면 자체가 안 생긴다.
+ */
+const SEPARATION_MARGIN_M = 7;
+/** 상호 회피 조향 강도 (rad/s 계수) */
+const SEPARATION_STEER_RATE = 3.5;
+/**
+ * 스폰 시 기존 에이전트와 확보해야 하는 최소 간격 (m). 스폰 지점이
+ * 붐비면 태어나자마자 겹친 상태가 되므로 이 tick의 스폰을 건너뛴다.
+ */
+const SPAWN_SEPARATION_M = 14;
 
 interface SimAgent {
   id: string;
@@ -215,6 +241,70 @@ function avoidObstacles(
   }
 }
 
+/**
+ * 에이전트 상호 분리 — 사람·차량·지게차가 서로 겹치거나 스쳐 지나가지
+ * 않도록 한다. 구조물 회피(avoidObstacles)와 같은 원리를 에이전트 쌍에
+ * 적용한다:
+ *
+ *  1. 조향: 반경 합 + 여유 안으로 접근하면 상대 반대편으로 진로를 튼다.
+ *     가까울수록 급하게(urgency) — 멀리서 조금씩 비켜 자연스럽다.
+ *  2. 하드 가드: 그럼에도 반경 합 안으로 들어오면 두 에이전트를 중점
+ *     기준으로 밀어내 물리적 겹침을 원천 차단한다.
+ *
+ * 각 쌍을 한 번만 처리한다(j > i) — 양쪽에 대칭으로 적용하므로 두 번
+ * 돌 필요가 없고, 순서에 따른 편향도 생기지 않는다.
+ */
+function separateAgents(
+  agents: SimAgent[],
+  metersPerUnit: number,
+  dt: number,
+) {
+  const toUnits = 1 / metersPerUnit;
+
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    for (let j = i + 1; j < agents.length; j++) {
+      const b = agents[j];
+
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 1e-6) continue;
+
+      const hardGap =
+        (AGENT_RADIUS_M[a.type] + AGENT_RADIUS_M[b.type]) * toUnits;
+      const steerGap = hardGap + SEPARATION_MARGIN_M * toUnits;
+      if (dist >= steerGap) continue;
+
+      // --- 1. 조향: 서로 반대편으로 진로를 튼다 ---
+      const urgency = (steerGap - dist) / (steerGap - hardGap);
+      const steer = Math.min(1, dt * SEPARATION_STEER_RATE * urgency);
+
+      // a는 b의 반대 방향, b는 a의 반대 방향으로.
+      const awayFromB = Math.atan2(-dz, -dx);
+      let diffA = awayFromB - a.heading;
+      diffA = Math.atan2(Math.sin(diffA), Math.cos(diffA));
+      a.heading += diffA * steer;
+
+      const awayFromA = Math.atan2(dz, dx);
+      let diffB = awayFromA - b.heading;
+      diffB = Math.atan2(Math.sin(diffB), Math.cos(diffB));
+      b.heading += diffB * steer;
+
+      // --- 2. 하드 가드: 겹침 방지 (중점 기준 대칭 분리) ---
+      if (dist < hardGap) {
+        const push = (hardGap - dist) / 2;
+        const nx = dx / dist;
+        const nz = dz / dist;
+        a.x -= nx * push;
+        a.z -= nz * push;
+        b.x += nx * push;
+        b.z += nz * push;
+      }
+    }
+  }
+}
+
 export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
   const enabled = useCollisionGuardStore((s) => s.enabled);
 
@@ -245,11 +335,30 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
     if (spawnTimerRef.current <= 0 && agentsRef.current.length < MAX_AGENTS) {
       idCounterRef.current += 1;
       const zone = zones[idCounterRef.current % zones.length];
-      agentsRef.current.push(spawnAgent(zone, `sim-${idCounterRef.current}`));
-      spawnTimerRef.current = rand(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX);
+      const candidate = spawnAgent(zone, `sim-${idCounterRef.current}`);
+
+      // 스폰 지점이 붐비면 이번엔 건너뛴다 — 태어나자마자 겹친 상태로
+      // 시작하면 분리 로직이 밀어내며 부자연스럽게 튄다.
+      const minGap = SPAWN_SEPARATION_M / zone.metersPerUnit;
+      const crowded = agentsRef.current.some(
+        (other) =>
+          Math.hypot(other.x - candidate.x, other.z - candidate.z) < minGap,
+      );
+
+      if (crowded) {
+        // 다음 프레임에 다시 시도 — id는 이미 소비했으므로 중복되지 않는다.
+        spawnTimerRef.current = 0.3;
+      } else {
+        agentsRef.current.push(candidate);
+        spawnTimerRef.current = rand(SPAWN_DELAY_MIN, SPAWN_DELAY_MAX);
+      }
     }
 
     // --- 이동 (매 프레임 연속) ---
+    // 상호 회피 조향은 목표 조향 뒤·이동 앞에 둔다 — 이번 프레임의 조향이
+    // 곧바로 이번 프레임의 이동에 반영되어야 비켜서는 동작이 즉각적이다.
+    separateAgents(agentsRef.current, zones[0].metersPerUnit, dt);
+
     for (const agent of agentsRef.current) {
       agent.age += dt;
 
@@ -270,6 +379,10 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
       agent.x += Math.cos(agent.heading) * step;
       agent.z += Math.sin(agent.heading) * step;
     }
+
+    // 이동 후 겹침 최종 해소 — 목표 조향이 상호 회피를 이겨 서로를 향해
+    // 파고든 경우에도 물리적 겹침만은 남지 않도록 위치를 분리한다.
+    separateAgents(agentsRef.current, zones[0].metersPerUnit, dt);
 
     // --- 수명 종료 (목표 도달 or 타임아웃) ---
     const goalReach = GOAL_REACH_M * unitSpeedScale;

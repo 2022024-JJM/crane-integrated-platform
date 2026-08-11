@@ -24,13 +24,26 @@ export interface TrackLabelRefs {
   speed: HTMLSpanElement;
 }
 
+/**
+ * 기준 거리(월드 unit) — 이 거리에서 라벨이 CSS 원래 크기로 보이고,
+ * 멀어지면 그에 비례해 작아진다(원근 감쇠). 에고 탑뷰 높이(130)보다
+ * 한 단계 크게 잡아 기본 구도에서 수치가 또렷하게 읽히도록 한다.
+ */
+const LABEL_DISTANCE_FACTOR = 165;
+
 interface TrackLabelProps {
   /** 태그 부착 높이 (로컬 미터 — 그룹 스케일이 월드 unit으로 환산) */
   height: number;
+  /**
+   * 부모 그룹의 월드 스케일. drei의 distanceFactor는 부모 스케일에도
+   * 곱해지므로, 이 값으로 나눠 과장 배율(sizeMultiplier)만큼 라벨이
+   * 덩달아 커지는 것을 상쇄한다.
+   */
+  worldScale: number;
   register: (refs: TrackLabelRefs | null) => void;
 }
 
-export function TrackLabel({ height, register }: TrackLabelProps) {
+export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
   const handleRoot = useCallback(
     (root: HTMLDivElement | null) => {
       if (!root) {
@@ -52,6 +65,7 @@ export function TrackLabel({ height, register }: TrackLabelProps) {
     <Html
       position={[0, height, 0]}
       center
+      distanceFactor={LABEL_DISTANCE_FACTOR / worldScale}
       zIndexRange={[5, 0]}
       style={{ pointerEvents: 'none' }}
     >
@@ -59,7 +73,7 @@ export function TrackLabel({ height, register }: TrackLabelProps) {
         ref={handleRoot}
         // 첫 tick 전까지 완전 투명 — opacity·배경색은 부모가 구동
         style={{ opacity: 0 }}
-        className="rounded px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-white shadow-md"
+        className="rounded px-1.5 py-0.5 font-mono text-[10px] leading-tight font-bold whitespace-nowrap text-white shadow-md"
       >
         <span data-slot="distance" className="tabular-nums" />
         <span className="opacity-75"> · </span>
