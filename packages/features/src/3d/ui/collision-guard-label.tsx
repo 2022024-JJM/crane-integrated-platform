@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { Html } from '@react-three/drei';
 
 /**
@@ -10,6 +10,12 @@ import { Html } from '@react-three/drei';
  * React 상태를 쓰지 않는다 — 부모(DetectedObjectMesh)의 useFrame이
  * register로 받은 DOM ref를 직접 mutate한다(텍스트·배경색 8Hz, opacity는
  * 매 프레임). occlude는 쓰지 않는다(맵 전체 레이캐스트 비용).
+ *
+ * 등록은 useEffect가 아니라 root의 ref 콜백에서 한다: drei Html은 자식을
+ * 별도 React 루트(포털)로 렌더하므로 이 컴포넌트의 effect가 도는 시점에는
+ * 포털 DOM이 아직 없다 — effect 등록은 조용히 영영 실패한다. ref 콜백은
+ * 포털 커밋 시점에 (자식이 모두 붙은 뒤 bottom-up으로) 호출되므로
+ * querySelector로 span들을 함께 넘길 수 있다.
  */
 
 export interface TrackLabelRefs {
@@ -25,20 +31,22 @@ interface TrackLabelProps {
 }
 
 export function TrackLabel({ height, register }: TrackLabelProps) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const distanceRef = useRef<HTMLSpanElement | null>(null);
-  const speedRef = useRef<HTMLSpanElement | null>(null);
-
-  useEffect(() => {
-    if (rootRef.current && distanceRef.current && speedRef.current) {
-      register({
-        root: rootRef.current,
-        distance: distanceRef.current,
-        speed: speedRef.current,
-      });
-    }
-    return () => register(null);
-  }, [register]);
+  const handleRoot = useCallback(
+    (root: HTMLDivElement | null) => {
+      if (!root) {
+        register(null);
+        return;
+      }
+      const distance = root.querySelector<HTMLSpanElement>(
+        '[data-slot="distance"]',
+      );
+      const speed = root.querySelector<HTMLSpanElement>('[data-slot="speed"]');
+      if (distance && speed) {
+        register({ root, distance, speed });
+      }
+    },
+    [register],
+  );
 
   return (
     <Html
@@ -48,14 +56,14 @@ export function TrackLabel({ height, register }: TrackLabelProps) {
       style={{ pointerEvents: 'none' }}
     >
       <div
-        ref={rootRef}
+        ref={handleRoot}
         // 첫 tick 전까지 완전 투명 — opacity·배경색은 부모가 구동
         style={{ opacity: 0 }}
         className="rounded px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-white shadow-md"
       >
-        <span ref={distanceRef} className="tabular-nums" />
+        <span data-slot="distance" className="tabular-nums" />
         <span className="opacity-75"> · </span>
-        <span ref={speedRef} className="tabular-nums" />
+        <span data-slot="speed" className="tabular-nums" />
       </div>
     </Html>
   );

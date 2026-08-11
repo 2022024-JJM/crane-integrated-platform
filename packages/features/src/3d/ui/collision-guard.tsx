@@ -91,9 +91,12 @@ const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
   car: 2.5,
   forklift: 1.7,
 };
-/** 평시 림 글로우 — 세버리티 danger 시 red로 물든다. */
-const COLOR_RIM_IDLE = new Color('#7dd3fc');
-const RIM_STRENGTH_IDLE = 0.55;
+/**
+ * 림 글로우 강도 — 몸체는 무채색을 유지하고 림이 세버리티 색(주의 amber,
+ * 위험 red)을 입힌다. 감지된 트랙은 정의상 최소 warning이므로 "idle 림"은
+ * 없다 — 커버 안의 모든 객체가 자기 레벨 색으로 읽혀야 한다.
+ */
+const RIM_STRENGTH_WARNING = 0.7;
 const RIM_STRENGTH_DANGER = 0.9;
 
 /** 머티리얼라이즈 컷 기준 객체 높이 (로컬 미터, 라벨 부착에도 사용) */
@@ -419,9 +422,9 @@ function DetectedObjectMesh({
       arrowMat.emissive.lerp(severityColor, k);
     }
 
-    const rimColor = severity === 'danger' ? COLOR_DANGER : COLOR_RIM_IDLE;
+    const rimColor = severityColor;
     const rimStrength =
-      severity === 'danger' ? RIM_STRENGTH_DANGER : RIM_STRENGTH_IDLE;
+      severity === 'danger' ? RIM_STRENGTH_DANGER : RIM_STRENGTH_WARNING;
     uniforms.uRimColor.value.lerp(rimColor, k);
     uniforms.uRimStrength.value +=
       (rimStrength - uniforms.uRimStrength.value) * k;

@@ -39,7 +39,9 @@ export function createMaterializeUniforms(): MaterializeUniforms {
     uCutY: { value: CUT_DISABLED },
     uBand: { value: 0.1 },
     uScanColor: { value: new Color('#38bdf8') },
-    uRimColor: { value: new Color('#7dd3fc') },
+    // 감지 진입 = 최소 warning이므로 림은 amber에서 시작한다 — sky에서
+    // lerp로 물들면 등장 순간 파란 잔상이 비친다.
+    uRimColor: { value: new Color('#f59e0b') },
     uRimStrength: { value: 0.55 },
   };
 }
