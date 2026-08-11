@@ -4,58 +4,78 @@ import type { Vector3 } from 'three';
 import { useCollisionGuardStore } from '../model/use-collision-guard-store';
 
 /**
- * 탑뷰 → 충돌 감지 레이어 단방향 동기화.
+ * 크레인 주목 → 충돌 감지 레이어 단방향 동기화.
  *
- * 카메라가 타깃 바로 위에서 내려다보면(폴라각 ≈ 0) 탑뷰로 간주해
- * 충돌 감지를 켠다. 켜진 뒤 각도를 바꿔 탑뷰를 벗어나도 꺼지지 않는다 —
- * 끄는 것은 수동 토글(Radar 버튼)의 몫이다. 초기 로드 시에는 저작 카메라
- * (비탑뷰)이므로 꺼진 상태로 시작한다.
+ * 사용자가 크레인을 화면 중심에 놓고 가까이 들여다보면(= 크레인에
+ * 주목하면) 충돌 감지를 켠다. 켜진 뒤 시점을 옮겨도 꺼지지 않는다 —
+ * 끄는 것은 수동 토글(Radar 버튼)의 몫이다.
  *
- * - 히스테리시스(ON 0.25rad / OFF 0.4rad)로 경계 각도에서의 판정 깜빡임 방지.
- * - 탑뷰 진입 에지에서만 setEnabled(true)를 호출한다.
+ * 판정 기준이 카메라 "각도"가 아니라 "무엇을 보고 있는가"인 이유:
+ * 가드 ON 시의 에고 포즈가 순수 탑뷰가 아니라 기울인 부감(≈51°)이라,
+ * 씬 저작 카메라(≈42°)와 각도가 비슷하다. 각도 임계로는 두 상태를
+ * 구분할 수 없어 초기 로드가 곧바로 "진입"으로 판정되고, 이 훅은
+ * 진입 에지에서만 켜므로 자동 진입이 영영 성립하지 않는다.
+ *
+ * - 크레인 중심으로부터 타깃까지의 거리 + 시거리(dolly)를 함께 본다.
+ * - 히스테리시스로 경계에서의 판정 깜빡임을 막는다.
+ * - 주목 진입 에지에서만 setEnabled(true)를 호출한다.
  */
-
-/** 이 폴라각(rad) 미만이면 탑뷰 진입으로 간주 */
-const TOP_VIEW_ENTER_POLAR = 0.25;
-/** 이 폴라각(rad) 초과면 탑뷰 이탈로 간주 */
-const TOP_VIEW_EXIT_POLAR = 0.4;
 
 interface ControlsLike {
   target: Vector3;
 }
 
-export function CollisionGuardTopViewSync() {
-  const isTopViewRef = useRef<boolean | null>(null);
+interface CollisionGuardTopViewSyncProps {
+  /** 크레인 중심 (x, z) — 이 지점을 주목하면 가드를 켠다 */
+  center: [number, number];
+  /**
+   * 주목 판정 반경 (씬 unit). 카메라 타깃이 크레인 중심에서 이 안에
+   * 있고 시거리도 충분히 가까우면 "크레인에 주목"으로 본다.
+   */
+  focusRadius?: number;
+  /** 주목으로 인정하는 최대 시거리 (씬 unit) */
+  focusDistance?: number;
+}
+
+export function CollisionGuardTopViewSync({
+  center,
+  focusRadius = 90,
+  focusDistance = 320,
+}: CollisionGuardTopViewSyncProps) {
+  const isFocusedRef = useRef<boolean | null>(null);
 
   useFrame((state) => {
     const controls = state.controls as ControlsLike | null;
     if (!controls?.target) return;
 
-    const dx = state.camera.position.x - controls.target.x;
-    const dy = state.camera.position.y - controls.target.y;
-    const dz = state.camera.position.z - controls.target.z;
-    // 0 = 타깃 바로 위에서 수직으로 내려다보는 각도.
-    const polar = Math.atan2(Math.hypot(dx, dz), dy);
+    const [cx, cz] = center;
+    const targetDist = Math.hypot(
+      controls.target.x - cx,
+      controls.target.z - cz,
+    );
+    const camDist = state.camera.position.distanceTo(controls.target);
 
-    const prev = isTopViewRef.current;
-    const isTopView = prev
-      ? polar < TOP_VIEW_EXIT_POLAR
-      : polar < TOP_VIEW_ENTER_POLAR;
+    // 히스테리시스: 켜질 때보다 꺼질 때를 관대하게(1.25배).
+    const prev = isFocusedRef.current;
+    const radius = prev ? focusRadius * 1.25 : focusRadius;
+    const distance = prev ? focusDistance * 1.25 : focusDistance;
+    const isFocused = targetDist < radius && camDist < distance;
 
     if (prev === null) {
-      // 초기 판정: 탑뷰가 아니면 꺼진 상태로 시작 (씬 저작 카메라 존중).
-      isTopViewRef.current = isTopView;
+      // 초기 판정: 로드 시점 상태를 그대로 기록만 한다. 저작 카메라가
+      // 이미 크레인을 보고 있으면 켠 채로 시작하는 것이 자연스럽다.
+      isFocusedRef.current = isFocused;
       const store = useCollisionGuardStore.getState();
-      if (store.enabled !== isTopView) {
-        store.setEnabled(isTopView);
+      if (store.enabled !== isFocused) {
+        store.setEnabled(isFocused);
       }
       return;
     }
 
-    if (isTopView !== prev) {
-      isTopViewRef.current = isTopView;
-      // 단방향: 탑뷰 진입에서만 켠다. 이탈해도 끄지 않는다.
-      if (isTopView) {
+    if (isFocused !== prev) {
+      isFocusedRef.current = isFocused;
+      // 단방향: 주목 진입에서만 켠다. 이탈해도 끄지 않는다.
+      if (isFocused) {
         const store = useCollisionGuardStore.getState();
         if (!store.enabled) {
           store.setEnabled(true);

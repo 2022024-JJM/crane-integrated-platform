@@ -25,8 +25,8 @@ export function GoliathCollisionGuardScene() {
   return (
     <>
       <CollisionGuard zones={derived.zones} />
-      {/* 탑뷰 진입 시 자동 ON, 이탈 시 자동 OFF */}
-      <CollisionGuardTopViewSync />
+      {/* 크레인을 화면 중심에 놓고 들여다보면 자동 ON (끄는 건 수동 토글) */}
+      <CollisionGuardTopViewSync center={derived.craneCenter} />
       {/* 에고 프레이밍: 탑뷰 진입(=가드 ON) 시 크레인 중심 상공으로
           자동 프레이밍. 이탈은 사용자 카메라 조작이 트리거이므로 복귀
           플라이트는 하지 않는다. */}

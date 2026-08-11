@@ -26,6 +26,7 @@ import {
   SCAN_BAND_RATIO,
   applyMaterialize,
   createMaterializeUniforms,
+  markGuardLayer,
   type MaterializeUniforms,
 } from '../lib/materialize-material';
 import { TrackLabel, type TrackLabelRefs } from './collision-guard-label';
@@ -54,7 +55,12 @@ const FADE_OUT_DURATION = 0.45;
 /** 라벨 텍스트 갱신 주기 — 센서 tick(8Hz)과 맞춘다. */
 const LABEL_UPDATE_HZ = 8;
 
-const COLOR_IDLE = new Color('#38bdf8');
+/**
+ * 감지 링 색 — 채도를 뺀 밝은 회색 배경 위에서 읽혀야 하므로 밝은
+ * 하늘색(#38bdf8)이 아니라 한 단계 진한 파랑을 쓴다. 밝은 배경에서는
+ * 밝은 색이 묻히고 어두운 색이 도드라진다.
+ */
+const COLOR_IDLE = new Color('#0284c7');
 const COLOR_WARNING = new Color('#f59e0b');
 const COLOR_DANGER = new Color('#ef4444');
 /**
@@ -83,13 +89,20 @@ const VELOCITY_ARROW_SHAPE = (() => {
  * 화살표 길이 (m) — 전 객체 동일 고정 길이. 속도는 라벨/HUD의 수치가
  * 담당하고, 화살표는 진행 "방향"만 전달한다 (길이가 제각각이면 탑뷰에서
  * 시선이 분산된다는 운영 피드백).
+ *
+ * 객체와 같은 과장 배율(sizeMultiplier) 그룹 안에 있으므로 실측 m가
+ * 아니라 "객체 대비 비율"로 읽힌다 — 객체를 키우면 함께 커진다.
  */
 const ARROW_LENGTH_M = 4;
-/** 화살표 시작점(객체 앞코) X 오프셋 (로컬 m) */
+/**
+ * 화살표 시작점(객체 앞코) X 오프셋 (로컬 m) — 객체 실측 반길이 수준으로
+ * 최소화한다. 이 값도 과장 배율(sizeMultiplier)이 곱해지므로, 크게 잡으면
+ * 화살표가 객체에서 뚝 떨어져 별개 물체처럼 보인다.
+ */
 const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
-  person: 0.5,
-  car: 2.5,
-  forklift: 1.7,
+  person: 0.35,
+  car: 1.6,
+  forklift: 1.1,
 };
 /**
  * 림 글로우 강도 — 몸체는 무채색을 유지하고 림이 세버리티 색(주의 amber,
@@ -133,12 +146,16 @@ function easeInOutCubic(t: number) {
  * 색 역할 분담: 감지 링은 "센서 커버 범위"라는 정적 사실이므로 항상
  * sky를 유지한다 — 상태에 따라 물들이면 링 두 개가 동시에 색을 바꿔
  * 어느 원이 무엇인지 읽기 어려워진다(운영 피드백). 상태 전달은 위험
- * 반경 링(등장/펄스)과 객체 마커·라벨의 몫이다.
+ * 반경 영역(등장/펄스)과 객체 림 글로우·라벨의 몫이다.
  *
- * 절제 원칙: 평시에 보이는 원은 감지 링 하나뿐이다. 위험 반경 링은
+ * 형태 역할 분담: 감지는 "선"(경계), 위험은 "면"(영역)이다. 둘 다 같은
+ * 굵기의 링으로 그리면 화면에 원이 넷 있는 것처럼 읽혀 서로 경쟁한다
+ * — FSD에서 파란 경로선과 빨간 정지선이 굵기·형태가 완전히 달라
+ * 역할이 즉시 구분되는 것과 같은 원리다.
+ *
+ * 절제 원칙: 평시에 보이는 것은 감지 링 하나뿐이다. 위험 반경은
  * "설정"이 아니라 "상태"로 취급해 객체가 커버 안에 들어왔을 때만
- * 감지 링과 같은 불투명도로 페이드인하고(두 원의 선명도가 다르면
- * 하나가 흐릿한 잔상처럼 보인다), 카메라 근거리 링은 기본 숨김.
+ * 페이드인하고, 카메라 근거리 링은 기본 숨김.
  */
 function DetectionZoneRing({
   zone,
@@ -148,6 +165,10 @@ function DetectionZoneRing({
   showCameraCoverage?: boolean;
 }) {
   const dangerRef = useRef<MeshStandardMaterial>(null);
+  const registerDanger = (material: MeshStandardMaterial | null) => {
+    dangerRef.current = material;
+    markGuardLayer(material);
+  };
 
   useFrame((state, delta) => {
     const danger = dangerRef.current;
@@ -167,20 +188,22 @@ function DetectionZoneRing({
       severity = 'warning';
     }
 
-    // 위험 반경 링 — 커버 안에 객체가 있을 때만, 감지 링과 같은 0.55로.
+    // 위험 반경 "면" — 커버 안에 객체가 있을 때만 페이드인. 면은 선보다
+    // 같은 불투명도에서 훨씬 무겁게 읽히므로 낮은 값을 쓴다.
     // danger에서는 펄스로 긴급함을 전달한다.
     const k = 1 - Math.exp(-delta / 0.25);
     const dangerTarget =
       severity === 'danger'
-        ? 0.55 + Math.sin(state.clock.elapsedTime * 5) * 0.2
+        ? 0.3 + Math.sin(state.clock.elapsedTime * 5) * 0.1
         : severity === 'warning'
-          ? 0.55
+          ? 0.14
           : 0;
     danger.opacity += (dangerTarget - danger.opacity) * k;
   });
 
   const [cx, cz] = zone.center;
-  const ringWidth = zone.radius * 0.02;
+  // 굵기 3.5% — 부감 구도에서 링이 원근으로 눌려 얇아 보이므로 넉넉하게.
+  const ringWidth = zone.radius * 0.035;
   // 지면 z-fighting 방지 리프트 — 좌표계 스케일이 달라도 비율로 유지.
   const groundLift = Math.max(0.03, zone.radius * 0.005);
 
@@ -188,36 +211,38 @@ function DetectionZoneRing({
     <group position={[cx, zone.y + groundLift, cz]}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <mesh renderOrder={1}>
-          <circleGeometry args={[zone.radius, 96]} />
+          <circleGeometry args={[zone.radius, 128]} />
           <meshStandardMaterial
+            ref={markGuardLayer}
             color={COLOR_IDLE}
             transparent
-            opacity={0.05}
+            opacity={0.1}
             side={DoubleSide}
             depthWrite={false}
           />
         </mesh>
         <mesh renderOrder={2}>
-          <ringGeometry args={[zone.radius - ringWidth, zone.radius, 96]} />
+          <ringGeometry args={[zone.radius - ringWidth, zone.radius, 128]} />
           <meshStandardMaterial
+            ref={markGuardLayer}
             color={COLOR_IDLE}
             emissive={COLOR_IDLE}
-            emissiveIntensity={0.6}
+            emissiveIntensity={1.1}
             transparent
-            opacity={0.55}
+            opacity={0.9}
             side={DoubleSide}
             depthWrite={false}
           />
         </mesh>
-        <mesh renderOrder={2}>
-          <ringGeometry
-            args={[zone.dangerRadius - ringWidth * 0.7, zone.dangerRadius, 64]}
-          />
+        {/* 위험 반경 — 링이 아니라 채워진 면. 파란 "선"과 형태로 구분된다.
+            파란 채움(1)·감지 링(2)보다 뒤에 그려 위에 얹힌다 */}
+        <mesh renderOrder={3}>
+          <circleGeometry args={[zone.dangerRadius, 96]} />
           <meshStandardMaterial
-            ref={dangerRef}
+            ref={registerDanger}
             color={COLOR_DANGER}
             emissive={COLOR_DANGER}
-            emissiveIntensity={0.4}
+            emissiveIntensity={0.5}
             transparent
             opacity={0}
             side={DoubleSide}
@@ -230,6 +255,7 @@ function DetectionZoneRing({
             <mesh renderOrder={1}>
               <circleGeometry args={[zone.cameraRadius, 64]} />
               <meshStandardMaterial
+                ref={markGuardLayer}
                 color={COLOR_CAMERA}
                 transparent
                 opacity={0.05}
@@ -246,6 +272,7 @@ function DetectionZoneRing({
                 ]}
               />
               <meshStandardMaterial
+                ref={markGuardLayer}
                 color={COLOR_CAMERA}
                 emissive={COLOR_CAMERA}
                 emissiveIntensity={0.3}
@@ -286,6 +313,10 @@ function DetectedObjectMesh({
 }) {
   const groupRef = useRef<Group>(null);
   const arrowMatRef = useRef<MeshStandardMaterial>(null);
+  const registerArrow = (material: MeshStandardMaterial | null) => {
+    arrowMatRef.current = material;
+    markGuardLayer(material);
+  };
   const fadeMaterialsRef = useRef<MeshStandardMaterial[]>([]);
   const labelRefsRef = useRef<TrackLabelRefs | null>(null);
   const uniformsRef = useRef<MaterializeUniforms | null>(null);
@@ -470,10 +501,11 @@ function DetectedObjectMesh({
         position={[ARROW_NOSE_OFFSET[track.type], 0.06, 0]}
         scale={[ARROW_LENGTH_M, 1, 1]}
       >
-        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+        {/* 지면 요소(존 채움 1 · 감지 링 2 · 위험 면 3)보다 위에 그린다 */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={4}>
           <shapeGeometry args={[VELOCITY_ARROW_SHAPE]} />
           <meshStandardMaterial
-            ref={arrowMatRef}
+            ref={registerArrow}
             color={COLOR_WARNING}
             emissive={COLOR_WARNING}
             emissiveIntensity={0.8}

@@ -28,7 +28,8 @@ export function useGoliathCollisionZones() {
     if (!crane) return null;
     return {
       zones: buildGoliathCollisionZones(crane.position, crane.rotation[1]),
-      egoTopPose: buildGoliathEgoTopPose(crane.position),
+      egoTopPose: buildGoliathEgoTopPose(crane.position, crane.rotation[1]),
+      craneCenter: [crane.position[0], crane.position[2]] as [number, number],
     };
   }, [sceneInfo]);
 }

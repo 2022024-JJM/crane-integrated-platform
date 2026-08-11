@@ -54,7 +54,15 @@ const LEG_ZONE_BASE = {
   cameraRadius: 32,
   obstacle: { halfAlong: 26, halfAcross: 7.5 },
   metersPerUnit: METERS_PER_UNIT,
-  sizeMultiplier: 3,
+  /**
+   * 감지 객체 시각적 과장 배율.
+   *
+   * 감지 반경 60 unit(≈70m)에 비해 사람 1.75m는 너무 작아 실측 크기로는
+   * 화면에서 점이 되므로 과장한다. 다만 6배는 객체가 위험 반경을 가릴
+   * 만큼 커져 오히려 공간 관계가 안 읽혔다 — 4배가 "점은 아니되 존을
+   * 침범하지 않는" 절충점.
+   */
+  sizeMultiplier: 4,
 } satisfies Omit<CollisionGuardZone, 'center' | 'label' | 'travel'>;
 
 /** rotation Y(도)로부터 거더 방향 단위 벡터 (로컬 +X의 월드 사영) */
@@ -114,22 +122,49 @@ export function buildGoliathFsdCamera(
 }
 
 /**
- * 에고 탑뷰 포즈 — 탑뷰 진입 시 크레인이 무대의 주인공이 되도록
- * 크레인 바로 위에서 내려다보는 프레이밍 (테슬라의 ego 중심 원리).
+ * 에고 뷰 포즈 — 충돌 감지 진입 시 크레인이 무대의 주인공이 되는 프레이밍.
  *
- * 높이 산정: 거더 스팬 141 + 양쪽 링 지름(2×60) ≈ 261 unit 폭이
- * 화면에 들어와야 한다. fov 75°·가로 화면 기준 h ≈ 130이면 여유 포함
- * 프레임의 ~75%를 채운다. z에 미세 오프셋을 두어 폴라각 0의 짐벌
- * 특이점을 피한다.
+ * 순수 탑뷰(폴라각 ≈ 0) 대신 기울인 부감으로 잡는다. 직하 뷰는 양쪽
+ * 다리를 대칭으로 보여주지만 원근이 없어 모든 것이 납작하고 작아진다 —
+ * 사람이 화면에서 점 수준이 되어 FSD처럼 "객체가 주인공"인 화면이 되지
+ * 못한다. 기울이면 원근이 생겨 가까운 쪽 객체가 커지고 3D 실루엣도 산다.
+ *
+ * 구도 산정 (crane-local 기준):
+ *  - 거더축(gx, gz) 방향으로는 오프셋 0 — 양쪽 다리 L1(+63)·L2(-60.9)가
+ *    좌우 대칭으로 프레임에 들어온다.
+ *  - 주행축(travel) 방향으로 뒤로 물러나며 높이를 낮춰 기울기를 만든다.
+ *    atan2(BACK, HEIGHT) ≈ 47° 폴라각 — 원근을 충분히 주면서도 양쪽
+ *    감지 링(반경 60)이 모두 프레임에 남는 절충점.
+ *  - 타깃을 지면보다 살짝 올려(TARGET_HEIGHT) 크레인 상부가 잘리지 않게 한다.
+ *
+ * 크레인이 레일을 따라 이동해도 같은 상대 구도가 유지된다.
  */
-const EGO_TOP_HEIGHT = 130;
+/**
+ * 주행축 방향 후퇴 거리 / 카메라 높이 (unit).
+ *
+ * 크레인이 화면의 주인공이 되도록 바짝 붙인다. 감지 링 양끝
+ * (L1 +63 +반경 60 = 123, L2 -60.9 -60 = -121)까지 폭 244 unit이
+ * 화면 가로에 담기면 되므로, 시거리 ~130이면 fov 75°·16:9에서
+ * 프레임을 가득 채운다. atan2(95, 88) ≈ 47° 부감으로 원근을 준다.
+ */
+const EGO_BACK = 95;
+/** 카메라 높이 (unit) */
+const EGO_HEIGHT = 100;
+/** 주시점 높이 (unit) — 지면보다 살짝 위 */
+const EGO_TARGET_HEIGHT = 12;
 
 export function buildGoliathEgoTopPose(
   cranePosition: Vector3Tuple,
+  rotationYDeg = 0,
 ): CollisionGuardCameraPose {
   const [cx, , cz] = cranePosition;
+  const [gx, gz] = girderDir(rotationYDeg);
+  // 주행(레일) 방향 — 거더의 수직. 이 축으로 물러나야 거더가 화면
+  // 가로로 눕고 양쪽 다리가 좌우에 배치된다.
+  const [tx, tz] = [-gz, gx];
+
   return {
-    position: [cx, EGO_TOP_HEIGHT, cz + 0.5],
-    target: [cx, 0, cz],
+    position: [cx - tx * EGO_BACK, EGO_HEIGHT, cz - tz * EGO_BACK],
+    target: [cx, EGO_TARGET_HEIGHT, cz],
   };
 }

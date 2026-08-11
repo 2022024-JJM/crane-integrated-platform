@@ -55,10 +55,30 @@ export function createMaterializeUniforms(): MaterializeUniforms {
  * 캐시가 미패치 프로그램을 재사용할 수 있다. 모든 패치 material이
  * 같은 키를 공유해 셰이더 컴파일은 1회만 일어난다.
  */
+/**
+ * 감지 레이어 소속 표식 — 포커스 스테이지(채도 제거)가 건드리면 안 되는
+ * 머티리얼을 구분한다. emissive 유무로는 판정할 수 없다: 맵/크레인 GLB도
+ * emissive를 가질 수 있어 배경이 통째로 제외되어 버린다.
+ */
+export const GUARD_LAYER_FLAG = '__collisionGuardLayer';
+
+export function markGuardLayer(material: MeshStandardMaterial | null) {
+  if (material) {
+    (material as unknown as Record<string, boolean>)[GUARD_LAYER_FLAG] = true;
+  }
+}
+
+export function isGuardLayer(material: MeshStandardMaterial): boolean {
+  return (
+    (material as unknown as Record<string, boolean>)[GUARD_LAYER_FLAG] === true
+  );
+}
+
 export function applyMaterialize(
   material: MeshStandardMaterial,
   uniforms: MaterializeUniforms,
 ) {
+  markGuardLayer(material);
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
 

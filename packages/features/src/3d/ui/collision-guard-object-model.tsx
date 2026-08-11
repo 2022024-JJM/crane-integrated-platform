@@ -66,8 +66,12 @@ for (const source of Object.values(MODEL_SOURCES)) {
 /**
  * 테슬라식 무채색 객체 색 — 세버리티 색 언어(sky/amber/red)와 경쟁하는
  * 색을 화면에서 배제하고, 종류 식별은 실루엣이 담당한다.
+ *
+ * 배경 채도를 뺀 밝은 회색 무대 위에 올라가므로 밝은 회색(#cbd5e1)이
+ * 아니라 어두운 회색을 쓴다 — 밝은 배경에서는 어두운 실루엣이 또렷하다
+ * (FSD도 밝은 배경에 어두운 차량 실루엣을 얹는다).
  */
-const OBJECT_GRAY = new Color('#cbd5e1');
+const OBJECT_GRAY = new Color('#475569');
 
 /**
  * 원본 텍스처/색을 버리고 통일된 밝은 회색 + 자체발광으로 교체한다.
@@ -81,8 +85,10 @@ function prepareMaterial(material: Material): MeshStandardMaterial {
     cloned.emissiveMap = null;
     cloned.vertexColors = false;
     cloned.color = OBJECT_GRAY.clone();
+    // 자체발광은 최소로 — 밝은 무대에서는 발광이 실루엣을 흐린다.
+    // 세버리티 표현은 머티리얼라이즈 셰이더의 림 글로우가 담당한다.
     cloned.emissive = OBJECT_GRAY.clone();
-    cloned.emissiveIntensity = 0.35;
+    cloned.emissiveIntensity = 0.12;
     cloned.roughness = 1;
     cloned.metalness = 0;
   }
