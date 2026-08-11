@@ -2,8 +2,9 @@ import { Radar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   CollisionGuard,
+  CollisionGuardCameraRig,
+  CollisionGuardTopViewSync,
   useCollisionGuardStore,
-  type CollisionGuardZone,
 } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -12,28 +13,30 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import { cn } from '@crane/core/lib/utils';
-
-/**
- * 골리앗 크레인 충돌 감지 존 설정.
- *
- * - center/y: goliath.json의 크레인 배치 위치([12.871, 0.587, -32.316]) 기준.
- * - 씬 축척: 도크 거리 텍스트(100m@x=-33 ↔ 900m@x=35)로부터 1 unit ≈ 11.7m.
- * - radius 6 unit ≈ 70m 감지 반경, dangerRadius 2.5 unit ≈ 30m 위험 반경.
- * - sizeMultiplier 3: 실측 크기(사람 1.7m ≈ 0.15 unit)로는 씬에서 너무
- *   작아 보이므로 시각적으로 3배 과장.
- */
-const GOLIATH_COLLISION_ZONE: CollisionGuardZone = {
-  center: [12.871, -32.316],
-  y: 0.6,
-  radius: 6,
-  dangerRadius: 2.5,
-  metersPerUnit: 11.7,
-  sizeMultiplier: 3,
-};
+import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
 /** Monitoring3dView의 sceneExtras 슬롯에 넣는 씬 레이어 (Canvas 내부) */
 export function GoliathCollisionGuardScene() {
-  return <CollisionGuard zone={GOLIATH_COLLISION_ZONE} />;
+  // 씬의 크레인 배치에서 파생 — 크레인이 이동하면 존도 따라온다.
+  const derived = useGoliathCollisionZones();
+
+  if (!derived) return null;
+
+  return (
+    <>
+      <CollisionGuard zones={derived.zones} />
+      {/* 탑뷰 진입 시 자동 ON, 이탈 시 자동 OFF */}
+      <CollisionGuardTopViewSync />
+      {/* 에고 프레이밍: 탑뷰 진입(=가드 ON) 시 크레인 중심 상공으로
+          자동 프레이밍. 이탈은 사용자 카메라 조작이 트리거이므로 복귀
+          플라이트는 하지 않는다. */}
+      <CollisionGuardCameraRig
+        pose={derived.egoTopPose}
+        duration={0.9}
+        restoreOnDisable={false}
+      />
+    </>
+  );
 }
 
 /** Monitoring3dView의 toolbarExtras 슬롯에 넣는 토글 버튼 (DOM) */

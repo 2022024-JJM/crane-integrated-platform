@@ -26,7 +26,25 @@
   },
   "collisionGuard": {
     "enable": "Show collision detection",
-    "disable": "Hide collision detection"
+    "disable": "Hide collision detection",
+    "hud": {
+      "title": "Collision guard",
+      "state": {
+        "safe": "Safe",
+        "warning": "Warning",
+        "danger": "Danger"
+      },
+      "kind": {
+        "person": "Person",
+        "car": "Car",
+        "forklift": "Forklift"
+      },
+      "severity": {
+        "warning": "Warn",
+        "danger": "Danger"
+      },
+      "empty": "No objects detected"
+    }
   },
   "metrics": {
     "load": "Load",

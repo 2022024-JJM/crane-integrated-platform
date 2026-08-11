@@ -37,6 +37,18 @@ interface Monitoring3dViewProps {
    * 페이지별 3D 확장 기능을 도메인 씬과 독립적으로 주입할 때 사용.
    */
   sceneExtras?: ReactNode;
+  /**
+   * Canvas 위에 겹치는 DOM 오버레이 (충돌 감지 HUD 등). ThreeSceneViewer의
+   * overlay 슬롯(fullscreen 루트 내부)으로 합성되므로 전체화면에서도
+   * 유지된다. 컨테이너가 pointer-events-none이라 orbit 조작을 막지 않는다.
+   */
+  overlayExtras?: ReactNode;
+  /**
+   * 렌더 해상도(DPR) 오버라이드 — 성능 거버닝용. r3f Canvas는 리렌더마다
+   * 자신의 dpr prop을 재적용하므로, 내부에서 setDpr로 바꾸는 대신 이 prop을
+   * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기기 기본값.
+   */
+  canvasDpr?: number | [number, number];
   onFullscreenChange?: (isFullscreen: boolean) => void;
   onSensorSelect?: (
     channelId: string,
@@ -62,6 +74,8 @@ export function Monitoring3dView({
   fullscreenTopCenterOverlay,
   toolbarExtras,
   sceneExtras,
+  overlayExtras,
+  canvasDpr,
   onFullscreenChange,
   onSensorSelect,
   renderSensorFeed,
@@ -141,6 +155,7 @@ export function Monitoring3dView({
           defaultTarget: cameraTarget,
         }}
         canvasProps={{
+          dpr: canvasDpr,
           gl: {
             toneMapping: 0,
             powerPreference: 'high-performance',
@@ -152,7 +167,14 @@ export function Monitoring3dView({
           },
           onPointerMissed: clearFocus,
         }}
-        overlay={focusOverlay}
+        overlay={
+          focusOverlay || overlayExtras ? (
+            <>
+              {focusOverlay}
+              {overlayExtras}
+            </>
+          ) : null
+        }
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}

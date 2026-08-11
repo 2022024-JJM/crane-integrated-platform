@@ -26,7 +26,25 @@
   },
   "collisionGuard": {
     "enable": "Monstra detectionem collisionis",
-    "disable": "Cela detectionem collisionis"
+    "disable": "Cela detectionem collisionis",
+    "hud": {
+      "title": "Custodia collisionis",
+      "state": {
+        "safe": "Tutum",
+        "warning": "Monitio",
+        "danger": "Periculum"
+      },
+      "kind": {
+        "person": "Homo",
+        "car": "Vehiculum",
+        "forklift": "Machina furcata"
+      },
+      "severity": {
+        "warning": "Monitio",
+        "danger": "Periculum"
+      },
+      "empty": "Nullum obiectum detectum"
+    }
   },
   "metrics": {
     "load": "Onus",

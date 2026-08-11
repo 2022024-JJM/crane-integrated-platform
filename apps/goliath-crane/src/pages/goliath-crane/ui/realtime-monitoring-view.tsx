@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
-import { Monitoring3dView } from '@crane/features/3d';
+import { Monitoring3dView, useCollisionGuardStore } from '@crane/features/3d';
 import { useGoliathCraneData } from '@crane/features/goliath-crane';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import { CraneStatusTable } from '@crane/widgets/crane';
@@ -15,6 +15,7 @@ import {
   GoliathCollisionGuardScene,
   GoliathCollisionGuardToggle,
 } from './goliath-collision-guard';
+import { GoliathCollisionGuardHud } from './goliath-collision-hud';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
 import { GoliathVisionPip } from './goliath-vision-pip';
 import { renderSensorFeed } from './sensor-feed-renderer';
@@ -44,6 +45,9 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const [expanded, setExpanded] = useState<ExpandedView>(null);
   const { crane } = useGoliathCraneData();
+  // 성능 거버닝: 충돌 감지 ON 동안 DPR을 1.5로 클램프 — Retina에서
+  // 프래그먼트 부하 ~44% 감소(발열 대책). 다크 스테이지라 체감 없음.
+  const collisionGuardEnabled = useCollisionGuardStore((s) => s.enabled);
 
   const handleSensorSelect = useCallback(
     (channelId: string, sensorType: 'camera' | 'lidar') => {
@@ -95,6 +99,9 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 renderSensorFeed={renderSensorFeed}
                 sceneExtras={<GoliathCollisionGuardScene />}
                 toolbarExtras={<GoliathCollisionGuardToggle />}
+                overlayExtras={<GoliathCollisionGuardHud />}
+                // OFF일 때 [1, 4] = 기기 네이티브 DPR 그대로 (최대 4 클램프)
+                canvasDpr={collisionGuardEnabled ? [1, 1.5] : [1, 4]}
                 fullscreenTopRightOverlay={
                   <GoliathVisionPip
                     expanded={expanded}

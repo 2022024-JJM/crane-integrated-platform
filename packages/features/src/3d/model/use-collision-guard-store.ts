@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 
-export type DetectedObjectType = 'person' | 'vehicle';
+export type DetectedObjectType = 'person' | 'car' | 'forklift';
 
 /**
- * 충돌 감지 영역 설정. 씬 좌표(world unit) 기준.
+ * 충돌 감지 영역(센서 1기 커버리지) 설정. 씬 좌표(world unit) 기준.
+ *
+ * 라이다는 크레인 거더 양쪽 다리에 설치되므로 감지 영역은 다리별로
+ * 하나씩 — 화면에는 이 zone 배열의 합집합이 커버리지로 나타난다.
  *
  * metersPerUnit: 씬 1 unit이 현실 몇 m인지. 시뮬레이션 이동 속도(m/s)와
  *   객체 mesh(미터 단위로 모델링)를 씬 unit으로 환산할 때 사용한다.
@@ -11,14 +14,36 @@ export type DetectedObjectType = 'person' | 'vehicle';
  *   조선소 스케일 씬에서는 사람이 너무 작아 보이므로 2~3배를 권장.
  */
 export interface CollisionGuardZone {
-  /** 감지 원 중심 (x, z) */
+  /** 감지 원 중심 (x, z) — 라이다 설치 지점(다리) */
   center: [number, number];
   /** 지면 높이 (y) */
   y: number;
-  /** 감지 반경 (씬 unit) — 이 안에 들어오면 객체가 나타난다 */
+  /** 라이다 감지 반경 (씬 unit) — 이 안에 들어오면 객체가 나타난다 */
   radius: number;
   /** 위험 반경 (씬 unit) — 이 안이면 danger 상태로 강조 */
   dangerRadius: number;
+  /** 카메라 근거리 음영 커버 반경 (씬 unit, 표시용) */
+  cameraRadius?: number;
+  /**
+   * 주행(레일) 방향 단위 벡터 (x, z). 시뮬레이션 에이전트의 통행 축이자
+   * 구조물 키프아웃 타원의 장축 기준. 생략 시 [1, 0] (X축).
+   */
+  travel?: [number, number];
+  /**
+   * 센서 설치 지점의 구조물(다리) 풋프린트 — 시뮬레이션 에이전트가
+   * 침범하지 못하는 키프아웃 타원 (씬 unit, travel 축 기준).
+   * 골리앗 다리 하부는 주행 방향으로 길쭉하므로 halfAlong > halfAcross.
+   */
+  obstacle?: { halfAlong: number; halfAcross: number };
+  /**
+   * 시뮬레이션 에이전트가 통행할 수 있는 차선 밴드 — travel 축에 대한
+   * 횡방향 부호 있는 오프셋 범위 (m). 도크 피트·건물을 피해 실제로
+   * 다닐 수 있는 통로(주행로 부지, 열린 부두)만 지정한다.
+   * 양수 = travel 방향 기준 왼쪽(+perp). 생략 시 감지 반경 80%까지 전부 허용.
+   */
+  laneBandsM?: Array<[number, number]>;
+  /** 다리 식별 라벨 (HUD 표시용, 예: 'L1') */
+  label?: string;
   metersPerUnit: number;
   sizeMultiplier: number;
 }
@@ -44,6 +69,48 @@ export interface DetectedTrack {
   };
   /** 'leaving'이면 렌더러가 fade-out 후 remove()를 호출한다 */
   phase: 'active' | 'leaving';
+}
+
+export type TrackSeverity = 'warning' | 'danger';
+
+/** 존 중심으로부터의 평면 거리 (씬 unit) */
+export function distanceFromZoneCenter(
+  x: number,
+  z: number,
+  zone: CollisionGuardZone,
+): number {
+  return Math.hypot(x - zone.center[0], z - zone.center[1]);
+}
+
+/** 여러 센서 존 중 (x, z)에서 가장 가까운 존과 그 거리 */
+export function nearestZone(
+  x: number,
+  z: number,
+  zones: CollisionGuardZone[],
+): { zone: CollisionGuardZone; dist: number } {
+  let best = zones[0];
+  let bestDist = distanceFromZoneCenter(x, z, best);
+  for (let i = 1; i < zones.length; i++) {
+    const dist = distanceFromZoneCenter(x, z, zones[i]);
+    if (dist < bestDist) {
+      best = zones[i];
+      bestDist = dist;
+    }
+  }
+  return { zone: best, dist: bestDist };
+}
+
+/**
+ * 트랙 위험도 판정 — 가장 가까운 센서 존 기준. 감지 반경 안이면 최소
+ * warning, 위험 반경 안이면 danger. 씬(링/마커/림), 라벨, HUD가 모두
+ * 이 함수 하나로 판단한다.
+ */
+export function trackSeverity(
+  track: DetectedTrack,
+  zones: CollisionGuardZone[],
+): TrackSeverity {
+  const { zone, dist } = nearestZone(track.target.x, track.target.z, zones);
+  return dist <= zone.dangerRadius ? 'danger' : 'warning';
 }
 
 interface CollisionGuardState {

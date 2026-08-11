@@ -26,7 +26,25 @@
   },
   "collisionGuard": {
     "enable": "충돌 감지 표시 켜기",
-    "disable": "충돌 감지 표시 끄기"
+    "disable": "충돌 감지 표시 끄기",
+    "hud": {
+      "title": "충돌 감지",
+      "state": {
+        "safe": "안전",
+        "warning": "주의",
+        "danger": "위험"
+      },
+      "kind": {
+        "person": "사람",
+        "car": "차량",
+        "forklift": "지게차"
+      },
+      "severity": {
+        "warning": "주의",
+        "danger": "위험"
+      },
+      "empty": "감지된 객체 없음"
+    }
   },
   "metrics": {
     "load": "하중",
