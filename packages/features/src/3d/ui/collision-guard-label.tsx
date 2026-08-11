@@ -80,12 +80,21 @@ export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
         // 첫 tick 전까지 완전 투명 — opacity·배경/보더색은 부모가 구동
         // (주의: 어두운 칩 + amber 보더, 위험: red 칩 — 밝은 무대 위
         // amber 칩 + 흰 글자는 대비가 모자라 안 읽힌다)
-        style={{ opacity: 0 }}
-        className="rounded-md border px-2 py-1 font-mono text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
+        // translateY(-50%): drei center는 칩 "중앙"을 앵커에 놓아 칩
+        // 하단이 객체 상단을 덮는다 — 반 칸 올려 객체를 가리지 않게.
+        style={{ opacity: 0, transform: 'translateY(-50%)' }}
+        className="relative rounded-md border px-2 py-1 font-mono text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
       >
         <span data-slot="distance" className="tabular-nums" />
         <span className="opacity-60"> · </span>
         <span data-slot="speed" className="tabular-nums" />
+        {/* 말풍선 꼬리 — 라벨 높이 분산으로 칩이 떠 있어도 소속 객체를
+            가리킨다. 배경색은 부모 칩(세버리티에 따라 동적)을 상속. */}
+        <span
+          aria-hidden
+          className="absolute top-full left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45"
+          style={{ backgroundColor: 'inherit' }}
+        />
       </div>
     </Html>
   );

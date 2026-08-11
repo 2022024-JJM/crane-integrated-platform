@@ -33,7 +33,10 @@ import {
 } from '../lib/materialize-material';
 import { TrackLabel, type TrackLabelRefs } from './collision-guard-label';
 import { CollisionGuardFocusDim } from './collision-guard-focus-dim';
-import { DetectedObjectModel } from './collision-guard-object-model';
+import {
+  DetectedObjectModel,
+  MODEL_VARIANT_COUNTS,
+} from './collision-guard-object-model';
 
 /**
  * 골리앗 크레인 주변 충돌 감지(안티콜리전) 시각화.
@@ -55,9 +58,16 @@ import { DetectedObjectModel } from './collision-guard-object-model';
 
 /** 위치/방향 damping 시상수 (s). 작을수록 즉각적, 클수록 미끄러지듯. */
 const POSITION_SMOOTHING_TAU = 0.14;
-/** 스케일 팝인/아웃 타이밍 — 머티리얼라이즈 스윕과 병렬로 돈다. */
-const FADE_IN_DURATION = 0.4;
+/** 스케일 성장 인/아웃 타이밍 — 머티리얼라이즈 스윕과 병렬로 돈다. */
+const FADE_IN_DURATION = 0.6;
 const FADE_OUT_DURATION = 0.45;
+/**
+ * 등장 시 시작 스케일 배율 — 0에서 튀어나오는 팝인은 damping 이동과
+ * 겹치면 덜컥거리는 인상을 준다(운영 피드백). FSD처럼 제자리에서
+ * 거의 실제 크기(85%)로 시작해 실체화 스윕이 등장을 전담하고, 스케일은
+ * 마지막 15%만 완만하게 채운다.
+ */
+const SCALE_ENTRY_MIN = 0.85;
 /** 라벨 텍스트 갱신 주기 — 센서 tick(8Hz)과 맞춘다. */
 const LABEL_UPDATE_HZ = 8;
 
@@ -84,6 +94,14 @@ const EDGE_MIN_SOLIDITY = 0.3;
 const COLOR_IDLE = new Color('#0284c7');
 const COLOR_WARNING = new Color('#f59e0b');
 const COLOR_DANGER = new Color('#ef4444');
+/**
+ * 커버 영역 무대 색 — 감지 링 안쪽을 어두운 네이비로 깔아 FSD의 "어두운
+ * 도로"를 만든다. 흰 객체·고스트·발광 화살표·위험 면은 전부 이 어두운
+ * 무대 위에서 대비를 얻는다 (흰 객체 + 밝은 지면은 구조적으로 대비가
+ * 안 나온다는 운영 피드백). 전역 디밍과 달리 필요한 곳만 어두워져
+ * 지도 맥락은 보존된다.
+ */
+const COLOR_STAGE = new Color('#0b1220');
 /**
  * 카메라 근거리 커버 링 — 센서 종류 구분용 정적 색.
  * amber를 쓰면 warning 세버리티와 색 의미가 충돌하므로 보라 계열로 분리.
@@ -132,6 +150,14 @@ const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
  */
 const RIM_STRENGTH_WARNING = 0.7;
 const RIM_STRENGTH_DANGER = 0.9;
+/**
+ * 위험 "진입 순간"의 원샷 림 플래시 — 지속 상태는 damping된 림 강도가,
+ * 전환의 긴급함은 순간 증폭이 전달한다. 색 lerp만으로는 전환이 너무
+ * 조용해 다른 곳을 보고 있으면 놓친다 — 짧은 휘도 스파이크는 주변시가
+ * 잡아낸다 (FSD가 위험 요소 강조에 쓰는 문법).
+ */
+const DANGER_FLASH_DURATION = 0.35;
+const DANGER_FLASH_BOOST = 1.6;
 
 /** 머티리얼라이즈 컷 기준 객체 높이 (로컬 미터, 라벨 부착에도 사용) */
 const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
@@ -140,6 +166,26 @@ const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
   forklift: 2.2,
 };
 const LABEL_HEIGHT_OFFSET = 0.45;
+/**
+ * 트랙별 라벨 높이 분산 (m) — 이웃한 두 객체의 칩이 정확히 포개져 어느
+ * 칩이 어느 객체인지 못 읽는 것을 막는다. id 해시로 결정적으로 버킷을
+ * 골라, 같은 트랙은 항상 같은 높이를 유지한다 (프레임마다 튀지 않음).
+ */
+const LABEL_JITTER_BUCKETS = 5;
+const LABEL_JITTER_STEP_M = 0.22;
+
+/** 트랙 id의 결정적 해시 — 라벨 높이 버킷·모델 배리언트 선택에 공용 */
+function hashTrackId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function labelJitterFor(id: string): number {
+  return (hashTrackId(id) % LABEL_JITTER_BUCKETS) * LABEL_JITTER_STEP_M;
+}
 
 /**
  * 접지 앵커(컨택트 셰이딩) 풋프린트 — 로컬 미터 (장축 = 진행 방향 +X,
@@ -208,12 +254,9 @@ const LABEL_STYLE: Record<'warning' | 'danger', { bg: string; border: string }> 
     },
   };
 
-/** easeOutBack — 진입 시 살짝 튀어오르는 테슬라풍 pop-in */
-function easeOutBack(t: number) {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  const u = t - 1;
-  return 1 + c3 * u * u * u + c1 * u * u;
+function easeOutCubic(t: number) {
+  const u = 1 - t;
+  return 1 - u * u * u;
 }
 
 function easeInOutCubic(t: number) {
@@ -275,16 +318,17 @@ function DetectionZoneRing({
       severity = 'warning';
     }
 
-    // 위험 반경 "면" — 커버 안에 객체가 있을 때만 페이드인. 면은 선보다
-    // 같은 불투명도에서 훨씬 무겁게 읽히므로 낮은 값을 쓴다.
-    // danger에서는 펄스로 긴급함을 전달한다.
+    // 위험 반경 "면" — idle에도 미세 채움을 남겨 다크 스테이지 위에서
+    // 위험 구역이 항상 "면"으로 인지되게 하고, 객체 진입(warning) →
+    // danger 펄스로 단계적으로 차오른다. 면은 선보다 같은 불투명도에서
+    // 훨씬 무겁게 읽히므로 낮은 값을 쓴다.
     const k = 1 - Math.exp(-delta / 0.25);
     const dangerTarget =
       severity === 'danger'
         ? 0.3 + Math.sin(state.clock.elapsedTime * 5) * 0.1
         : severity === 'warning'
           ? 0.18
-          : 0;
+          : 0.05;
     danger.opacity += (dangerTarget - danger.opacity) * k;
   });
 
@@ -297,13 +341,15 @@ function DetectionZoneRing({
   return (
     <group position={[cx, zone.y + groundLift, cz]}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
+        {/* 커버 영역 다크 스테이지 — 링 안쪽을 어둡게 깔아 흰 객체가
+            도드라지는 배경을 만든다 (FSD의 어두운 도로에 해당) */}
         <mesh renderOrder={1}>
           <circleGeometry args={[zone.radius, 128]} />
           <meshStandardMaterial
             ref={markGuardLayer}
-            color={COLOR_IDLE}
+            color={COLOR_STAGE}
             transparent
-            opacity={0.1}
+            opacity={0.38}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -390,7 +436,8 @@ function DetectionZoneRing({
           </>
         ) : null}
       </group>
-      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점 */}
+      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점.
+          커버 반경 실측값을 함께 적어 파란 링의 의미(70m 감지)를 밝힌다 */}
       {zone.label ? (
         <Html
           center
@@ -400,9 +447,28 @@ function DetectionZoneRing({
         >
           <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
             {zone.label}
+            <span className="ml-1 font-medium text-sky-400/90">
+              {Math.round(zone.radius * zone.metersPerUnit)}m
+            </span>
           </div>
         </Html>
       ) : null}
+      {/* 위험 반경 수치 — 빨간 링 근측(카메라 쪽)에 붙여 "여기부터 30m
+          위험 구역"을 밝힌다. travel 반대 방향 = 에고 카메라가 물러난 쪽 */}
+      <Html
+        center
+        position={[
+          -(zone.travel?.[0] ?? 1) * zone.dangerRadius,
+          0.5,
+          -(zone.travel?.[1] ?? 0) * zone.dangerRadius,
+        ]}
+        zIndexRange={[4, 0]}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div className="rounded border border-red-400/50 bg-red-950/75 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-red-300">
+          {Math.round(zone.dangerRadius * zone.metersPerUnit)}m
+        </div>
+      </Html>
     </group>
   );
 }
@@ -469,12 +535,18 @@ function DetectedObjectMesh({
     x: track.target.x,
     z: track.target.z,
     heading: track.target.heading,
-    /** 스케일 팝인 진행도 (0.4s in / 0.45s out) */
+    /** 스케일 성장 진행도 (0.6s in / 0.45s out, 85%→100% 구간만 사용) */
     fade: 0,
     /** 머티리얼라이즈 스윕 진행도 (0.6s in / 0.45s out) */
     sweep: 0,
     /** 거리·속도 태그 가시성 (활성 트랙이면 1로 수렴) */
     labelVis: 0,
+    /** damping된 림 글로우 강도 (플래시와 분리된 기저값) */
+    rim: 0.55,
+    /** 위험 진입 원샷 플래시 잔여량 (1 → 0) */
+    flash: 0,
+    /** 직전 프레임의 danger 여부 — 진입 에지 검출용 */
+    wasDanger: false,
     // 1/LABEL_UPDATE_HZ보다 크게 시작 — 마운트 직후 첫 프레임에 바로
     // 텍스트/배경색이 채워져 빈 태그가 깜빡이지 않는다.
     labelClock: 1,
@@ -539,13 +611,14 @@ function DetectedObjectMesh({
     group.position.set(smooth.x, baseZone.y, smooth.z);
     group.rotation.y = -smooth.heading;
 
-    // 진입 시 easeOutBack 오버슈트, 이탈 시 선형 축소.
-    // reduced-motion이면 오버슈트 없이 선형.
-    const scaleEase =
-      track.phase === 'leaving' || reducedMotion
-        ? smooth.fade
-        : easeOutBack(smooth.fade);
-    const s = worldScale * Math.max(0.001, scaleEase);
+    // 제자리 등장: 스케일은 85% → 100%만 완만하게 채운다 (0에서 튀어
+    // 나오는 팝인 제거 — 등장의 주역은 실체화 스윕이다). 이탈은 같은
+    // 곡선을 역으로 타며 페이드아웃과 함께 살짝만 줄어든다.
+    // reduced-motion이면 스케일 변화 없이 페이드만.
+    const scaleEase = reducedMotion
+      ? 1
+      : SCALE_ENTRY_MIN + (1 - SCALE_ENTRY_MIN) * easeOutCubic(smooth.fade);
+    const s = worldScale * scaleEase;
     group.scale.set(s, s, s);
 
     // --- 불투명도: 스윕보다 빠르게 램프(반투명 내부면 비침 최소화)하되,
@@ -596,14 +669,25 @@ function DetectedObjectMesh({
     const rimStrength =
       severity === 'danger' ? RIM_STRENGTH_DANGER : RIM_STRENGTH_WARNING;
     uniforms.uRimColor.value.lerp(rimColor, k);
-    uniforms.uRimStrength.value +=
-      (rimStrength - uniforms.uRimStrength.value) * k;
+
+    // 위험 진입 에지에서만 플래시 점화 — 이후 짧게 감쇠한다.
+    const isDanger = severity === 'danger';
+    if (isDanger && !smooth.wasDanger) {
+      smooth.flash = 1;
+    }
+    smooth.wasDanger = isDanger;
+    smooth.flash = Math.max(0, smooth.flash - dt / DANGER_FLASH_DURATION);
+
+    smooth.rim += (rimStrength - smooth.rim) * k;
+    uniforms.uRimStrength.value =
+      smooth.rim + smooth.flash * DANGER_FLASH_BOOST;
 
     // --- 거리·속도 태그: 활성(주의/위험) 트랙에 표시, 배경색이 세버리티를
     // 전달한다. 이탈 트랙은 페이드아웃 후 언마운트. ---
     const wantLabel = track.phase === 'active';
     const labelTarget = wantLabel ? 1 : 0;
-    smooth.labelVis += (labelTarget - smooth.labelVis) * Math.min(1, dt / 0.2);
+    // 라벨도 객체 등장과 보조를 맞춰 여유 있게 페이드인한다.
+    smooth.labelVis += (labelTarget - smooth.labelVis) * Math.min(1, dt / 0.35);
 
     if (wantLabel && !labelActive) {
       setLabelActive(true);
@@ -681,6 +765,8 @@ function DetectedObjectMesh({
       <Suspense fallback={null}>
         <DetectedObjectModel
           type={track.type}
+          // 트랙별 모델 배리언트 — id 해시로 결정적 선택 (리마운트에도 유지)
+          variant={hashTrackId(track.id)}
           register={registerFadeMaterial}
           // 걷기 클립(기준 보행 ≈1.4m/s)을 실제 이동 속도에 동기화 —
           // 트랙 속도는 스폰 시 고정이므로 mount 시점 값이면 충분하다.
@@ -691,11 +777,68 @@ function DetectedObjectMesh({
       </Suspense>
       {labelActive ? (
         <TrackLabel
-          height={objectHeight + LABEL_HEIGHT_OFFSET}
+          height={
+            objectHeight + LABEL_HEIGHT_OFFSET + labelJitterFor(track.id)
+          }
           worldScale={worldScale}
           register={registerLabel}
         />
       ) : null}
+    </group>
+  );
+}
+
+const WARMUP_TYPES: DetectedObjectType[] = ['person', 'car', 'forklift'];
+
+/**
+ * 스폰 히치 워밍업 — 감지 객체는 각 타입의 "첫 등장" 프레임에 geometry
+ * GPU 업로드 + 머티리얼라이즈 셰이더 컴파일(스킨드/비스킨드 2종) +
+ * 바운딩박스 계산이 몰려 수십 ms 프레임 스파이크가 난다(등장 연출이
+ * 버벅이는 주범). 씬 로드 직후 세 타입을 화면 밖에서 몇 프레임 그려
+ * 이 비용을 미리 치른다.
+ *
+ * 워밍업 후 언마운트하지 않고 visible=false로 계속 붙들어 두는 이유:
+ * three의 셰이더 프로그램은 참조하는 마지막 material이 dispose되면 함께
+ * 삭제된다 — 언마운트하면 컴파일을 다시 하게 되어 워밍업이 무효가 된다.
+ * (visible=false면 렌더 비용은 0이다.)
+ */
+function CollisionGuardWarmup() {
+  const groupRef = useRef<Group>(null);
+  const warmFramesRef = useRef(0);
+  const uniformsRef = useRef<MaterializeUniforms | null>(null);
+  if (uniformsRef.current == null) {
+    uniformsRef.current = createMaterializeUniforms();
+  }
+  const registerRef = useRef((material: MeshStandardMaterial | null) => {
+    if (material) {
+      applyMaterialize(material, uniformsRef.current!);
+    }
+  });
+
+  useFrame(() => {
+    const group = groupRef.current;
+    if (!group || !group.visible) return;
+    warmFramesRef.current += 1;
+    if (warmFramesRef.current > 3) {
+      group.visible = false;
+    }
+  });
+
+  return (
+    // 지면 한참 아래 + 재질 opacity 0 — 워밍업 프레임에도 화면에는 안 보인다.
+    <group ref={groupRef} position={[0, -2000, 0]}>
+      {WARMUP_TYPES.flatMap((type) =>
+        Array.from({ length: MODEL_VARIANT_COUNTS[type] }, (_, variantIndex) => (
+          <Suspense key={`${type}:${variantIndex}`} fallback={null}>
+            <DetectedObjectModel
+              type={type}
+              variant={variantIndex}
+              register={registerRef.current}
+              animationTimeScale={0}
+            />
+          </Suspense>
+        )),
+      )}
     </group>
   );
 }
@@ -724,6 +867,8 @@ export function CollisionGuard({
     <>
       {/* 디밍은 enabled 여부와 무관하게 마운트 — OFF 전환 시에도 부드럽게 복원 */}
       <CollisionGuardFocusDim />
+      {/* 워밍업도 enabled와 무관 — 가드를 켜기 전에 비용을 다 치러 둔다 */}
+      <CollisionGuardWarmup />
       {enabled && zones.length > 0 ? (
         <>
           {zones.map((zone) => (

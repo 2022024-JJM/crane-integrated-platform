@@ -8,6 +8,7 @@ import {
   Color,
   Mesh,
   Vector3,
+  type Group,
   type Material,
   type MeshStandardMaterial,
 } from 'three';
@@ -38,29 +39,57 @@ interface ObjectModelSource {
   rotationY: number;
 }
 
-const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource> = {
-  person: {
-    path: '/models/human.glb',
-    targetSize: 1.75,
-    sizeAxis: 'height',
-    rotationY: Math.PI / 2,
-  },
-  car: {
-    path: '/models/car.glb',
-    targetSize: 4.5,
-    sizeAxis: 'length',
-    rotationY: Math.PI / 2,
-  },
-  forklift: {
-    path: '/models/fork_lift.glb',
-    targetSize: 2.9,
-    sizeAxis: 'length',
-    rotationY: Math.PI / 2,
-  },
+/**
+ * 타입별 모델 배리언트 — 같은 타입의 트랙이라도 트랙별로 다른 모델을
+ * 입혀 현장감을 준다 (FSD가 세단/SUV/트럭을 구분해 그리는 것과 같은
+ * 원리). 배리언트 선택은 부모가 트랙 id 해시로 결정한다.
+ */
+const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
+  person: [
+    {
+      path: '/models/human.glb',
+      targetSize: 1.75,
+      sizeAxis: 'height',
+      rotationY: Math.PI / 2,
+    },
+    {
+      path: '/models/man.glb',
+      targetSize: 1.75,
+      sizeAxis: 'height',
+      rotationY: Math.PI / 2,
+    },
+  ],
+  car: [
+    {
+      path: '/models/car.glb',
+      targetSize: 4.5,
+      sizeAxis: 'length',
+      rotationY: Math.PI / 2,
+    },
+  ],
+  forklift: [
+    {
+      path: '/models/fork_lift.glb',
+      targetSize: 2.9,
+      sizeAxis: 'length',
+      rotationY: Math.PI / 2,
+    },
+  ],
 };
 
-for (const source of Object.values(MODEL_SOURCES)) {
-  useGLTF.preload(withBaseUrl(source.path));
+/** 타입별 배리언트 수 — 워밍업이 전 배리언트를 미리 그릴 때 사용 */
+export const MODEL_VARIANT_COUNTS: Record<DetectedObjectType, number> =
+  Object.fromEntries(
+    Object.entries(MODEL_SOURCES).map(([type, sources]) => [
+      type,
+      sources.length,
+    ]),
+  ) as Record<DetectedObjectType, number>;
+
+for (const sources of Object.values(MODEL_SOURCES)) {
+  for (const source of sources) {
+    useGLTF.preload(withBaseUrl(source.path));
+  }
 }
 
 /**
@@ -105,14 +134,22 @@ interface DetectedObjectModelProps {
    * (예: 트랙 속도 m/s ÷ 클립의 기준 보행 속도)
    */
   animationTimeScale?: number;
+  /**
+   * 모델 배리언트 선택자 — 임의의 비음수 정수(트랙 id 해시 등)를 받아
+   * 타입의 배리언트 수로 나눈 나머지로 모델을 고른다. 같은 트랙은 항상
+   * 같은 모델을 유지한다.
+   */
+  variant?: number;
 }
 
 export function DetectedObjectModel({
   type,
   register,
   animationTimeScale = 1,
+  variant = 0,
 }: DetectedObjectModelProps) {
-  const source = MODEL_SOURCES[type];
+  const sources = MODEL_SOURCES[type];
+  const source = sources[Math.abs(variant) % sources.length];
   const { scene, animations } = useGLTF(withBaseUrl(source.path));
 
   const prepared = useMemo(() => {
@@ -188,21 +225,44 @@ export function DetectedObjectModel({
     };
   }, [animations, prepared, animationTimeScale]);
 
+  // 걷기 클립이 없는 정적 사람 모델(예: Tripo 생성 man.glb)은 그대로
+  // 두면 마네킹이 미끄러지듯 이동한다 — 케이던스에 맞춘 절차적 보브
+  // (걸음마다 상하 + 미세 요잉)로 걷는 리듬을 흉내 낸다. 차량류에는
+  // 적용하지 않는다.
+  const needsWalkBob =
+    type === 'person' && animations.length === 0 && animationTimeScale > 0;
+  const bobRef = useRef<Group>(null);
+  const bobClockRef = useRef(0);
+
   // 믹서는 24Hz로 스로틀 — 걷기 애니메이션에 60fps 갱신은 과하다.
   const mixerClockRef = useRef(0);
   useFrame((_, delta) => {
     const mixer = mixerRef.current;
-    if (!mixer) return;
-    mixerClockRef.current += delta;
-    if (mixerClockRef.current < 1 / 24) return;
-    mixer.update(Math.min(mixerClockRef.current, 0.1));
-    mixerClockRef.current = 0;
+    if (mixer) {
+      mixerClockRef.current += delta;
+      if (mixerClockRef.current < 1 / 24) return;
+      mixer.update(Math.min(mixerClockRef.current, 0.1));
+      mixerClockRef.current = 0;
+      return;
+    }
+
+    const bobGroup = bobRef.current;
+    if (!needsWalkBob || !bobGroup) return;
+    // 기준 보행(1.4m/s)에서 2보/초 — timeScale이 실제 속도 비율을 반영.
+    bobClockRef.current += delta * animationTimeScale;
+    const t = bobClockRef.current;
+    bobGroup.position.y = Math.abs(Math.sin(t * Math.PI * 2)) * 0.035;
+    bobGroup.rotation.y = Math.sin(t * Math.PI) * 0.06;
   });
 
   return (
     <group rotation={[0, source.rotationY, 0]}>
-      <group scale={prepared.scale}>
-        <primitive object={prepared.clone} position={prepared.offset} />
+      {/* 보브 그룹은 스케일 밖(미터 단위) — 진폭이 모델 원본 단위에
+          좌우되지 않는다 */}
+      <group ref={bobRef}>
+        <group scale={prepared.scale}>
+          <primitive object={prepared.clone} position={prepared.offset} />
+        </group>
       </group>
     </group>
   );
