@@ -29,11 +29,6 @@
     "disable": "Cela detectionem collisionis",
     "hud": {
       "title": "Index obiectorum detectorum",
-      "state": {
-        "safe": "Tutum",
-        "warning": "Monitio",
-        "danger": "Periculum"
-      },
       "kind": {
         "person": "Homo",
         "car": "Vehiculum",

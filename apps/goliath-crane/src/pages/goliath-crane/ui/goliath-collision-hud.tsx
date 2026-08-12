@@ -28,10 +28,12 @@ const TRACK_ICONS = {
 /**
  * 행 레이아웃 — 고정폭 그리드. 컬럼 폭이 행마다 같아야 숫자가 세로로
  * 정렬되어 목록을 훑어 읽을 수 있다 (flex auto 폭은 값 길이에 따라
- * 컬럼이 행마다 어긋난다). 내부 트래킹 id는 운영자에게 무의미해 뺀다.
+ * 컬럼이 행마다 어긋난다). 레그 라벨(L1/L2)도 이름 옆 인라인이 아니라
+ * 별도 컬럼 — 이름 길이에 따라 칩 위치가 행마다 흔들리지 않는다
+ * (운영 피드백). 내부 트래킹 id는 운영자에게 무의미해 뺀다.
  */
 const ROW_GRID =
-  'grid grid-cols-[1.25rem_minmax(0,1fr)_3.25rem_3.5rem_2.75rem] items-center gap-1.5 px-2 py-1';
+  'grid grid-cols-[1.25rem_minmax(0,1fr)_1.5rem_3.25rem_3.5rem_2.75rem] items-center gap-1.5 px-2 py-1';
 
 function TrackRow({ track }: { track: HudTrack }) {
   const { t } = useTranslation('goliath-crane');
@@ -51,8 +53,11 @@ function TrackRow({ track }: { track: HudTrack }) {
       <Icon className="size-3.5 text-slate-400" aria-hidden />
       <span className="min-w-0 truncate text-[11px] font-medium text-white">
         {t(`collisionGuard.hud.kind.${track.type}`)}
+      </span>
+      {/* 라벨이 없어도 셀은 유지 — 뒤 컬럼 정렬이 흔들리지 않는다 */}
+      <span className="text-center">
         {track.zoneLabel ? (
-          <span className="ml-1 rounded bg-slate-700/70 px-1 py-px font-mono text-[9px] font-semibold text-slate-300">
+          <span className="rounded bg-slate-700/70 px-1 py-px font-mono text-[9px] font-semibold text-slate-300">
             {track.zoneLabel}
           </span>
         ) : null}
@@ -105,19 +110,6 @@ export function GoliathCollisionGuardHud() {
       <header className="flex items-center gap-1.5 border-b border-slate-700/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-slate-200 uppercase">
         <ShieldCheck className="size-3.5" aria-hidden />
         <span className="flex-1">{t('collisionGuard.hud.title')}</span>
-        {/* 전체 상태 배지 — 안전/주의/위험 중 가장 급한 레벨 하나 */}
-        <span
-          className={cn(
-            'rounded px-1.5 py-px text-[9px] font-bold tracking-wide uppercase',
-            overall === 'danger'
-              ? 'bg-red-500/25 text-red-300'
-              : overall === 'warning'
-                ? 'bg-amber-500/25 text-amber-300'
-                : 'bg-emerald-500/20 text-emerald-300',
-          )}
-        >
-          {t(`collisionGuard.hud.state.${overall}`)}
-        </span>
       </header>
       {snapshot.tracks.length === 0 ? (
         <p className="px-2.5 py-2 text-[11px] text-slate-400">

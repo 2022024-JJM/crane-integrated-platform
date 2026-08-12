@@ -29,11 +29,6 @@
     "disable": "Hide collision detection",
     "hud": {
       "title": "Detected objects",
-      "state": {
-        "safe": "Safe",
-        "warning": "Warning",
-        "danger": "Danger"
-      },
       "kind": {
         "person": "Person",
         "car": "Car",

@@ -278,12 +278,12 @@ function smoothstep01(t: number) {
  * 어느 원이 무엇인지 읽기 어려워진다(운영 피드백). 상태 전달은 위험
  * 반경 영역(등장/펄스)과 객체 림 글로우·라벨의 몫이다.
  *
- * 형태 역할 분담: 감지는 "선"(경계), 위험은 "면"(영역)이다. 둘 다 같은
- * 굵기의 링으로 그리면 화면에 원이 넷 있는 것처럼 읽혀 서로 경쟁한다
- * — FSD에서 파란 경로선과 빨간 정지선이 굵기·형태가 완전히 달라
- * 역할이 즉시 구분되는 것과 같은 원리다.
+ * 경계선은 헤어라인으로 그린다 — 원래 굵기(반경 3.5%)는 링 두 개가
+ * 화면을 지배할 만큼 무겁다는 운영 피드백. 얇은 선은 범위만 조용히
+ * 표시하고, "면"(다크 스테이지·위험 채움)과 레이더 파장이 영역의
+ * 존재감을 담당한다.
  *
- * 위험 반경은 "경계"와 "면"을 분리한다: 빨간 경계 링은 상시 표시해
+ * 위험 반경은 "경계"와 "면"을 분리한다: 빨간 경계선은 상시 표시해
  * 위험 지역이 어디까지인지 항상 알 수 있게 하고(운영 피드백 — 위험
  * 반경 인지 안 됨), 면 채움은 상태로 취급해 객체가 커버 안에 들어왔을
  * 때만 페이드인·danger 펄스한다. 카메라 근거리 링은 기본 숨김.
@@ -360,8 +360,9 @@ function DetectionZoneRing({
   });
 
   const [cx, cz] = zone.center;
-  // 굵기 3.5% — 부감 구도에서 링이 원근으로 눌려 얇아 보이므로 넉넉하게.
-  const ringWidth = zone.radius * 0.035;
+  // 굵기 1.2% — 헤어라인. 3.5%는 부감에서도 무겁다는 피드백으로 축소.
+  // 원근으로 눌리는 근측에서도 이미시브 발광이 선을 살려준다.
+  const ringWidth = zone.radius * 0.012;
   // 지면 z-fighting 방지 리프트 — 좌표계 스케일이 달라도 비율로 유지.
   const groundLift = Math.max(0.03, zone.radius * 0.005);
 
@@ -381,6 +382,7 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
+        {/* 감지 경계 헤어라인 — 커버 범위의 조용한 상시 표시 */}
         <mesh renderOrder={2}>
           <ringGeometry args={[zone.radius - ringWidth, zone.radius, 128]} />
           <meshStandardMaterial
@@ -389,7 +391,7 @@ function DetectionZoneRing({
             emissive={COLOR_IDLE}
             emissiveIntensity={1.1}
             transparent
-            opacity={0.9}
+            opacity={0.75}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -419,12 +421,11 @@ function DetectionZoneRing({
             />
           </mesh>
         ))}
-        {/* 위험 반경 경계 — 상시 표시되는 빨간 링. 감지 링(sky)과 색·굵기가
-            달라 "여기부터 위험 지역"이라는 경계가 항상 읽힌다. 부감에서
-            원근으로 눌려도 붉게 남도록 이미시브를 세게 준다 */}
+        {/* 위험 반경 경계 헤어라인 — 상시 표시. 부감에서 원근으로 눌려도
+            붉게 남도록 이미시브를 세게 준다 */}
         <mesh renderOrder={2}>
           <ringGeometry
-            args={[zone.dangerRadius - ringWidth * 0.8, zone.dangerRadius, 96]}
+            args={[zone.dangerRadius - ringWidth, zone.dangerRadius, 96]}
           />
           <meshStandardMaterial
             ref={markGuardLayer}
@@ -432,13 +433,14 @@ function DetectionZoneRing({
             emissive={COLOR_DANGER}
             emissiveIntensity={1.1}
             transparent
-            opacity={0.8}
+            opacity={0.7}
             side={DoubleSide}
             depthWrite={false}
           />
         </mesh>
         {/* 위험 반경 면 — 링이 아니라 채워진 면. 객체가 커버 안에 있을 때만
-            페이드인해 상태를 전달한다. 파란 채움(1)·링(2)보다 뒤에 그린다 */}
+            페이드인해 상태를 전달한다. 다크 스테이지(1)·경계선(2)보다 뒤에
+            그린다 */}
         <mesh renderOrder={3}>
           <circleGeometry args={[zone.dangerRadius, 96]} />
           <meshStandardMaterial
@@ -509,9 +511,9 @@ function DetectionZoneRing({
       <Html
         center
         position={[
-          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - ringWidth * 2),
+          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - ringWidth * 6),
           0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - ringWidth * 2),
+          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - ringWidth * 6),
         ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
@@ -523,9 +525,9 @@ function DetectionZoneRing({
       <Html
         center
         position={[
-          -(zone.travel?.[0] ?? 1) * (zone.radius - ringWidth * 2.5),
+          -(zone.travel?.[0] ?? 1) * (zone.radius - ringWidth * 7),
           0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.radius - ringWidth * 2.5),
+          -(zone.travel?.[1] ?? 0) * (zone.radius - ringWidth * 7),
         ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
@@ -854,6 +856,11 @@ function DetectedObjectMesh({
 }
 
 const WARMUP_TYPES: DetectedObjectType[] = ['person', 'car', 'forklift'];
+/** 워밍업이 기다려야 하는 모델 수 — 전 타입의 전 배리언트 */
+const WARMUP_MODEL_COUNT = WARMUP_TYPES.reduce(
+  (count, type) => count + MODEL_VARIANT_COUNTS[type],
+  0,
+);
 
 /**
  * 스폰 히치 워밍업 — 감지 객체는 각 타입의 "첫 등장" 프레임에 geometry
@@ -870,6 +877,7 @@ const WARMUP_TYPES: DetectedObjectType[] = ['person', 'car', 'forklift'];
 function CollisionGuardWarmup() {
   const groupRef = useRef<Group>(null);
   const warmFramesRef = useRef(0);
+  const mountedCountRef = useRef(0);
   const uniformsRef = useRef<MaterializeUniforms | null>(null);
   if (uniformsRef.current == null) {
     uniformsRef.current = createMaterializeUniforms();
@@ -883,6 +891,17 @@ function CollisionGuardWarmup() {
   useFrame(() => {
     const group = groupRef.current;
     if (!group || !group.visible) return;
+    // GLB는 Suspense로 비동기 로드된다 — 그룹 마운트 시점부터 세면
+    // 콜드 스타트(첫 방문, 캐시 없음)에서 모델이 붙기 전에 카운트가
+    // 끝나 한 번도 렌더되지 않는다(= 셰이더 컴파일 워밍업 무효).
+    // 자식 수가 늘 때마다 카운터를 리셋해 "마지막 모델이 마운트된 뒤
+    // 3프레임"을 보장한다 — 배리언트가 시차를 두고 로드돼도 각 모델이
+    // 최소 한 번은 그려진다. 전부 모이기 전에는 내리지 않는다.
+    if (group.children.length > mountedCountRef.current) {
+      mountedCountRef.current = group.children.length;
+      warmFramesRef.current = 0;
+    }
+    if (group.children.length < WARMUP_MODEL_COUNT) return;
     warmFramesRef.current += 1;
     if (warmFramesRef.current > 3) {
       group.visible = false;
