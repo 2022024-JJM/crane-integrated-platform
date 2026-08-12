@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { KcModal } from './kc-modal';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ChevronDown, Plus, Trash2, Wrench, ClipboardCheck, Package, X } from 'lucide-react';
@@ -41,13 +42,15 @@ function Segmented<T extends string>({
   onChange,
 }: {
   value: T;
-  options: { key: T; label: string; icon?: ReactNode }[];
+  // activeBg/activeText: 선택 시 의미색으로 채울 때 지정 (미지정 시 브랜드 accent/흰색)
+  options: { key: T; label: string; icon?: ReactNode; activeBg?: string; activeText?: string }[];
   onChange: (v: T) => void;
 }) {
   return (
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
       {options.map((o) => {
         const active = o.key === value;
+        const activeBg = o.activeBg ?? KC.accent;
         return (
           <button
             key={o.key}
@@ -55,9 +58,9 @@ function Segmented<T extends string>({
             onClick={() => onChange(o.key)}
             className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 text-[12px] font-semibold transition-colors"
             style={{
-              background: active ? KC.accent : KC.bg,
-              color: active ? '#fff' : KC.text,
-              borderColor: active ? KC.accent : KC.border,
+              background: active ? activeBg : KC.bg,
+              color: active ? (o.activeText ?? KC.onAccent) : KC.text,
+              borderColor: active ? activeBg : KC.border,
             }}
           >
             {o.icon}
@@ -65,49 +68,6 @@ function Segmented<T extends string>({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-/* ── 모달 셸 (fade/scale 애니메이션 + 백드롭) ──────────────────────── */
-
-function ModalShell({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShow(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:items-center">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="fixed inset-0 cursor-default"
-        style={{ background: 'rgba(0,0,0,0.45)', opacity: show ? 1 : 0, transition: 'opacity 180ms ease-out' }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative w-full max-w-[440px] overflow-hidden rounded-[6px] shadow-2xl"
-        style={{
-          background: KC.bg,
-          border: `1px solid ${KC.border}`,
-          opacity: show ? 1 : 0,
-          transform: show ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.98)',
-          transition: 'opacity 180ms ease-out, transform 180ms ease-out',
-        }}
-      >
-        {children}
-      </div>
     </div>
   );
 }
@@ -148,8 +108,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
   const [woType, setWoType] = useState<'frequent' | 'periodic' | 'emergency' | 'special'>('frequent');
   const [inspDate, setInspDate] = useState(today());
 
-  // parts
-  const [partRows, setPartRows] = useState<{ partId: string; qty: number }[]>([{ partId: '', qty: 1 }]);
+  // parts — 재고 패널의 "부품 요청"에서 열리면 해당 부품이 프리필된다
+  const [partRows, setPartRows] = useState<{ partId: string; qty: number }[]>([
+    { partId: prefill?.partId ?? '', qty: 1 },
+  ]);
 
   // shared advanced
   const [performerType, setPerformerType] = useState<'internal' | 'third_party' | 'local'>('internal');
@@ -307,10 +269,11 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 value={repairPriority}
                 onChange={setRepairPriority}
                 options={[
-                  { key: 'emergency', label: t('mro2:ticket.prioEmergency') },
-                  { key: 'high', label: t('mro2:ticket.prioHigh') },
+                  // 심각도 사다리: 긴급=red(safety) / 높음=orange(production) / 보통=accent / 낮음=grey(planned)
+                  { key: 'emergency', label: t('mro2:ticket.prioEmergency'), activeBg: KC.safety, activeText: KC.onSafety },
+                  { key: 'high', label: t('mro2:ticket.prioHigh'), activeBg: KC.production, activeText: KC.onProduction },
                   { key: 'normal', label: t('mro2:ticket.prioNormal') },
-                  { key: 'low', label: t('mro2:ticket.prioLow') },
+                  { key: 'low', label: t('mro2:ticket.prioLow'), activeBg: KC.planned, activeText: KC.onPlanned },
                 ]}
               />
             </Field>
@@ -327,6 +290,8 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
                 options={(['frequent', 'periodic', 'emergency', 'special'] as const).map((k) => ({
                   key: k,
                   label: t(`calendar:type.${k}`),
+                  // 긴급 점검만 safety 색 — 수리 우선순위의 긴급과 동일한 시그널
+                  ...(k === 'emergency' ? { activeBg: KC.safety, activeText: KC.onSafety } : null),
                 }))}
               />
             </Field>
@@ -502,15 +467,10 @@ function TicketForm({ initialKind, initialCraneId, onClose }: {
 
       {/* 푸터 */}
       <div className="flex items-center justify-end gap-2 border-t px-4 py-3" style={{ borderColor: KC.hairline }}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer rounded-[4px] px-3 py-1.5 text-[12px] font-semibold"
-          style={{ color: KC.muted }}
-        >
+        <KcButton variant="ghost" onClick={onClose}>
           {t('mro2:ticket.cancel')}
-        </button>
-        <KcButton variant="teal" onClick={submit} style={{ opacity: canSubmit ? 1 : 0.5 }}>
+        </KcButton>
+        <KcButton variant="teal" onClick={submit} disabled={!canSubmit}>
           <Plus size={13} /> {t('mro2:ticket.create')}
         </KcButton>
       </div>
@@ -523,9 +483,9 @@ export function NewTicketModal() {
   const { isOpen, kind, craneId, closeTicket } = useNewTicket();
   if (!isOpen) return null;
   return (
-    <ModalShell onClose={closeTicket}>
+    <KcModal onClose={closeTicket}>
       {/* key로 열 때마다 폼 상태 초기화 */}
       <TicketForm key={`${kind}-${craneId ?? ''}`} initialKind={kind} initialCraneId={craneId} onClose={closeTicket} />
-    </ModalShell>
+    </KcModal>
   );
 }

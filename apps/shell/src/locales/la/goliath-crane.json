@@ -24,6 +24,35 @@
   "viewer3d": {
     "title": "Exemplar 3D"
   },
+  "collisionGuard": {
+    "enable": "Monstra detectionem collisionis",
+    "disable": "Cela detectionem collisionis",
+    "hud": {
+      "title": "Index obiectorum detectorum",
+      "kind": {
+        "person": "Homo",
+        "car": "Vehiculum",
+        "forklift": "Machina furcata"
+      },
+      "severity": {
+        "warning": "Monitio",
+        "danger": "Periculum"
+      },
+      "empty": "Nullum obiectum detectum"
+    },
+    "help": {
+      "title": "Auxilium",
+      "show": "Auxilium monstrare",
+      "hide": "Auxilium claudere",
+      "detectionRing": "Ambitus deprehensionis LiDAR",
+      "dangerRing": "Radius periculi",
+      "sensor": "Statio LiDAR (in utroque crure)",
+      "arrow": "Directio · longitudo velocitati respondet",
+      "severityDanger": "Periculum — intra radium periculi",
+      "severityWarning": "Monitio — intra ambitum deprehensionis",
+      "simulationNote": "Nunc datis simulatis agitur."
+    }
+  },
   "metrics": {
     "load": "Onus",
     "windSpeed": "Ventus",

@@ -132,7 +132,10 @@
       "serviceHistory": "Historia Servitii",
       "materialHistory": "Historia Materiae",
       "serviceSpend": "Sumptus Servitii"
-    }
+    },
+    "ownLabels": "Pittacia Propria",
+    "addLabel": "Pittacium addere…",
+    "removeLabel": "Pittacium {{label}} removere"
   },
   "detail": {
     "tabOpenItems": "Res Apertae",
@@ -148,7 +151,8 @@
     "inspectionOf": "Inspectio {{status}}",
     "typeInspection": "Inspectio {{type}}",
     "tab3d": "Visio 3D",
-    "loading3d": "Visor 3D oneratur…"
+    "loading3d": "Visor 3D oneratur…",
+    "tabDocuments": "Documenta"
   },
   "monitoring": {
     "summary": "Summarium – Condicio praesens",
@@ -160,7 +164,27 @@
     "hours": "Horae",
     "total": "SUMMA",
     "serviceLife": "Vita Servitii {{pct}}%",
-    "moreComponents": "+{{count}} partes aliae"
+    "moreComponents": "+{{count}} partes aliae",
+    "presetRange": "Intervallum Praestitutum",
+    "rangeLast30": "Ultimi XXX dies",
+    "rangeMonth": "Mensis currens",
+    "rangeYear": "Annus currens",
+    "rangeCustom": "Proprium",
+    "startDate": "Dies Initii",
+    "endDate": "Dies Finis",
+    "clearRange": "Intervallum purgare",
+    "alertsInRange": "Monita intervalli selecti",
+    "lifeEstimate": "Aestimatio vitae servitii",
+    "estimatedEnd": "Finis vitae aestimatus: {{year}}",
+    "noAlerts": "Nulla monita in intervallo selecto.",
+    "alertPareto": "Pareto Monitorum",
+    "alertsTrend": "Tendentia monitorum",
+    "safetyAlerts": "Monita securitatis",
+    "productionAlerts": "Monita productionis",
+    "loadSpectrum": "Spectrum oneris",
+    "excludeLow": "Excludere 0-10%",
+    "spectrumCaption": "Distributio oneris aestimata pro capacitate nominali (approximatio)",
+    "runningHours": "Horae operationis"
   },
   "info": {
     "manufacturer": "Fabricator",
@@ -219,7 +243,9 @@
       "Sat",
       "Sol"
     ],
-    "noActivities": "Nullae actiones servitii in {{month}} {{year}}."
+    "noActivities": "Nullae actiones servitii in {{month}} {{year}}.",
+    "serviceProduct": "Productum Servitii",
+    "assetName": "Nomen Boni"
   },
   "sr": {
     "onCallRepair": "Reparatio Vocata",
@@ -287,7 +313,10 @@
     "costSummary": "Summarium Sumptuum",
     "labor": "Labor",
     "partsCost": "Partes",
-    "createRepair": "Petitionem reparationis creare"
+    "createRepair": "Petitionem reparationis creare",
+    "attachments": "Adiuncta ({{count}})",
+    "noAttachments": "Nulla adiuncta.",
+    "addAttachment": "Addere"
   },
   "inventory": {
     "title": "Inventarium et Partes",
@@ -298,6 +327,7 @@
     "statusOut": "Copia Nulla",
     "statusExcess": "Excessus",
     "statusExpiry": "Mox Exspirat",
+    "noParts": "Nullae partes filtris congruunt",
     "colPart": "Pars",
     "colSpecification": "Specificatio",
     "colBin": "Loculus",
@@ -327,7 +357,57 @@
     "lastIssue": "Ultima Emissio",
     "txnReceipt": "Acceptio",
     "txnIssue": "Emissio",
-    "txnAdjust": "Correctio"
+    "txnAdjust": "Correctio",
+    "detail": {
+      "tabInfo": "Informatio Partis",
+      "tabHistory": "Transactiones",
+      "tabUsage": "Usus Mandati",
+      "expand": "Ad plenum conspectum expandere",
+      "collapse": "Ad tabulam claudere",
+      "close": "Claudere",
+      "panelLabel": "Pars singillatim: {{part}}",
+      "stockOnOrder": "In Mandato",
+      "onOrderTitle": "Mandata Aperta",
+      "onOrderAuto": "Auto",
+      "emptyUsage": "Nulla mandata reparationis hac parte usa sunt.",
+      "usageQty": "×{{n}} usa",
+      "cranes": "Grues",
+      "cranesCommon": "Communis"
+    },
+    "poStatus": {
+      "requested": "Petitum",
+      "approved": "Approbatum",
+      "ordered": "Mandatum",
+      "in_transit": "In Transitu",
+      "received": "Acceptum",
+      "cancelled": "Abolitum"
+    },
+    "actions": {
+      "requestPart": "Partem Petere",
+      "issue": "Emittere",
+      "receipt": "Accipere",
+      "issueTitle": "Partem Emittere",
+      "receiptTitle": "Partem Accipere",
+      "qty": "Quantitas",
+      "by": "Actor",
+      "note": "Nota",
+      "linkedWo": "Mandatum reparationis conexum",
+      "noWo": "Sine mandato",
+      "poRef": "Referentia PO",
+      "poNone": "Nullum PO selectum",
+      "poCustom": "Manu inscribere…",
+      "poLineQty": "{{n}} partes",
+      "cancel": "Abrogare",
+      "submitIssue": "Emittere",
+      "submitReceipt": "Accipere",
+      "exceedsStock": "Copiam disponibilem ({{n}}) excedit",
+      "availableBadge": "{{n}} disponibiles",
+      "toastIssued": "Emissae {{n}} × {{part}}",
+      "toastReceived": "Acceptae {{n}} × {{part}}",
+      "toastInsufficient": "Copia disponibilis non sufficit",
+      "toastWoClosed": "Ad mandatum clausum emitti non potest",
+      "toastFailed": "Actio defecit"
+    }
   },
   "spend": {
     "title": "Sumptus",
@@ -400,7 +480,8 @@
     "productsIncluded": "Producta in Pacto Servitii inclusa",
     "planTitle": "Bona et Consilium Servitii",
     "serviceStatus": "Status Servitii",
-    "monthHint": "Preme mensem ut Calendarium Servitii aperias"
+    "monthHint": "Preme mensem aut cellam ut Calendarium Servitii aperias",
+    "cellActivities": "{{count}} actiones"
   },
   "documents": {
     "title": "Documenta et Relationes",
@@ -428,6 +509,12 @@
     "origin": {
       "generated": "A servitio generatum",
       "uploaded": "A cliente impositum"
-    }
+    },
+    "assetDocs": "{{count}} Documenta",
+    "emptyAsset": "Nulla documenta huius boni adhuc."
+  },
+  "search": {
+    "placeholder": "Quaere bona aut petitiones servitii…",
+    "noResults": "Nihil inventum."
   }
 }

@@ -46,6 +46,44 @@ export interface PlanSummary {
   delayed: number;
 }
 
+/** 상태 요약에 표시되는 4개 항목 — 퍼센티지 합이 100이 되어야 하는 단위 */
+export const PLAN_STATUS_KEYS = ['completed', 'open', 'inProgress', 'delayed'] as const;
+
+export type PlanStatusKey = (typeof PLAN_STATUS_KEYS)[number];
+
+/**
+ * 상태별 퍼센티지 — 각 값을 따로 반올림하면 합이 100을 벗어난다.
+ * (예: 32건의 12.5%/37.5%가 각각 올림되어 13+38 → 합계 101)
+ *
+ * 내림으로 배분한 뒤 남는 몫을 소수부가 큰 항목부터 1씩 나눠주는
+ * 최대 잔여(largest remainder) 방식으로 합을 정확히 100에 맞춘다.
+ */
+export function planStatusPercents(summary: PlanSummary): Record<PlanStatusKey, number> {
+  const result = { completed: 0, open: 0, inProgress: 0, delayed: 0 };
+  if (summary.total <= 0) return result;
+
+  const exact = PLAN_STATUS_KEYS.map((key) => {
+    const value = (summary[key] / summary.total) * 100;
+    return { key, floor: Math.floor(value), frac: value - Math.floor(value) };
+  });
+
+  for (const e of exact) result[e.key] = e.floor;
+
+  // 내림으로 잃은 몫을 소수부가 큰 항목부터 되돌려준다.
+  // 소수부가 같으면 원래 건수가 많은 쪽을 우선해 순서를 안정적으로 만든다.
+  let remainder = 100 - exact.reduce((s, e) => s + e.floor, 0);
+  const order = [...exact].sort(
+    (a, b) => b.frac - a.frac || summary[b.key] - summary[a.key],
+  );
+  for (const e of order) {
+    if (remainder <= 0) break;
+    result[e.key] += 1;
+    remainder -= 1;
+  }
+
+  return result;
+}
+
 interface PlanEvent {
   craneId: string;
   craneName: string;

@@ -6,8 +6,8 @@ import { useOpenRisks } from '@crane/features/risk';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
 import type { CraneAsset } from '@crane/domain/asset';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO } from '../../../shared/ui/kc';
-import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_MONO } from '../../../shared/ui/kc';
+import { KcButton, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
   fmtDate,
@@ -17,6 +17,7 @@ import {
 } from '../../../shared/lib/service-status';
 import { SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import { useOwnLabels } from '../../../shared/lib/own-labels';
 import { assetCriticality, type AssetCriticality } from '../lib/asset-criticality';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { downloadCsv } from '../../../shared/lib/export-csv';
@@ -48,6 +49,9 @@ export function Mro2AssetsPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [criticalityFilter, setCriticalityFilter] = useState<AssetCriticality | null>(null);
+  const [labelFilters, setLabelFilters] = useState<Set<string>>(new Set());
+  const { allLabels, labelsFor, addLabel, removeLabel } = useOwnLabels();
+  const [newLabel, setNewLabel] = useState('');
   const { year } = useMro2Year();
   const [reportOpen, setReportOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -78,14 +82,17 @@ export function Mro2AssetsPage() {
   const open = selected !== null;
 
   // 마지막으로 열렸던 자산 — 닫히는 300ms 동안 패널 내용이 유지되도록 렌더 소스로 쓴다.
-  // (열림 중엔 selected 가 우선이므로 지연 초기화가 필요 없다 → 이펙트 없이 상태만 유지)
+  // 클릭 핸들러가 아니라 렌더 중 selected 를 따라간다 — 딥링크·뒤로가기처럼
+  // toggleSlideout 을 거치지 않는 진입에서도 값이 채워져야 하기 때문.
   const [lastSelected, setLastSelected] = useState<CraneAsset | null>(selected);
+  if (selected !== null && selected !== lastSelected) setLastSelected(selected);
   const displayed = selected ?? lastSelected;
 
   const filtered = assets.filter((a) => {
     if (query && !a.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (statusFilter && a.status !== statusFilter) return false;
     if (criticalityFilter && assetCriticality(a) !== criticalityFilter) return false;
+    if (labelFilters.size > 0 && !labelsFor(a.id).some((l) => labelFilters.has(l))) return false;
     return true;
   });
 
@@ -130,8 +137,7 @@ export function Mro2AssetsPage() {
       next.delete('asset');
     } else {
       next.set('asset', id);
-      const asset = assets.find((a) => a.id === id) ?? null;
-      if (asset) setLastSelected(asset);
+      // lastSelected 는 렌더 중 selected 를 따라가므로 여기서 따로 세팅하지 않는다
     }
     setSearchParams(next);
   };
@@ -151,10 +157,11 @@ export function Mro2AssetsPage() {
           </Link>
         </div>
         <KcFilterRail
-          selectedCount={(statusFilter ? 1 : 0) + (criticalityFilter ? 1 : 0)}
+          selectedCount={(statusFilter ? 1 : 0) + (criticalityFilter ? 1 : 0) + labelFilters.size}
           onClear={() => {
             setStatusFilter(null);
             setCriticalityFilter(null);
+            setLabelFilters(new Set());
             setQuery('');
           }}
         >
@@ -162,7 +169,7 @@ export function Mro2AssetsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('common.searchAssets')}
-            className="w-full border px-2 py-1 text-[11px] outline-none"
+            className="w-full border px-2 py-1 text-[11px]"
             style={{ borderColor: KC.border, color: KC.ink }}
           />
           <KcFilterGroup title={t('common.selectedCustomers')}>
@@ -191,16 +198,33 @@ export function Mro2AssetsPage() {
               />
             ))}
           </KcFilterGroup>
+          {allLabels.length > 0 ? (
+            <KcFilterGroup title={t('assets.ownLabels')}>
+              {allLabels.map((label) => (
+                <KcFilterChip
+                  key={label}
+                  label={label}
+                  active={labelFilters.has(label)}
+                  onClick={() =>
+                    setLabelFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(label)) next.delete(label);
+                      else next.add(label);
+                      return next;
+                    })
+                  }
+                />
+              ))}
+            </KcFilterGroup>
+          ) : null}
         </KcFilterRail>
       </div>
 
       {/* 플릿 그리드 */}
       <div className="min-w-0 flex-1">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('assets.nAssets', { count: filtered.length })}
-          </h2>
-          <div className="relative" ref={reportRef}>
+        <KcSectionHeading
+          right={
+            <div className="relative" ref={reportRef}>
             <KcButton variant="teal" onClick={() => setReportOpen((v) => !v)}>
               <FileSpreadsheet size={13} /> {t('common.assetReports')}
             </KcButton>
@@ -222,8 +246,11 @@ export function Mro2AssetsPage() {
                 ))}
               </div>
             ) : null}
-          </div>
-        </div>
+            </div>
+          }
+        >
+          {t('assets.nAssets', { count: filtered.length })}
+        </KcSectionHeading>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((a) => {
@@ -346,7 +373,7 @@ export function Mro2AssetsPage() {
               </div>
               <div className="mt-3">
                 <div className="mb-1 text-[10.5px] font-bold" style={{ color: KC.ink }}>
-                  {t('assets.labels', { count: 4 })}
+                  {t('assets.labels', { count: 4 + labelsFor(displayed.id).length })}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {[displayed.siteName, displayed.craneType, displayed.indoorOutdoor, t(`assets.${assetCriticality(displayed)}`)].map(
@@ -356,7 +383,51 @@ export function Mro2AssetsPage() {
                       </span>
                     ),
                   )}
+                  {labelsFor(displayed.id).map((l) => (
+                    <span
+                      key={`own-${l}`}
+                      className="flex items-center gap-1 px-1.5 py-0.5 text-[9.5px]"
+                      style={{ background: KC.bgRow, color: KC.text, borderLeft: `3px solid ${KC.accent}` }}
+                    >
+                      {l}
+                      <button
+                        type="button"
+                        aria-label={t('assets.removeLabel', { label: l })}
+                        onClick={() => removeLabel(displayed.id, l)}
+                        className="cursor-pointer"
+                        style={{ color: KC.muted }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </div>
+                <form
+                  className="mt-1.5 flex items-center gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (newLabel.trim()) {
+                      addLabel(displayed.id, newLabel);
+                      setNewLabel('');
+                    }
+                  }}
+                >
+                  <input
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder={t('assets.addLabel')}
+                    maxLength={24}
+                    className="min-w-0 flex-1 border px-1.5 py-0.5 text-[10px]"
+                    style={{ borderColor: KC.border, color: KC.ink, background: KC.bg }}
+                  />
+                  <button
+                    type="submit"
+                    className="cursor-pointer px-1.5 py-0.5 text-[10px]"
+                    style={{ background: KC.bgRow, color: KC.text }}
+                  >
+                    +
+                  </button>
+                </form>
               </div>
 
               <div className="mt-4">

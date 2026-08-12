@@ -3,8 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 import { useServiceCalendar } from '@crane/features/calendar';
 import type { CalendarEvent } from '@crane/features/calendar';
-import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
-import { KcFilterChip, KcFilterGroup, KcFilterRail } from '../../../shared/ui/kc-ui';
+import { useAssetList } from '@crane/features/asset';
+import { KC, KC_FONT_MONO, SERVICE_TONE_COLOR, type ServiceTone } from '../../../shared/ui/kc';
+import { KcEmpty, KcFilterChip, KcFilterGroup, KcFilterRail, KcSectionHeading } from '../../../shared/ui/kc-ui';
 import { useTranslation } from 'react-i18next';
 import {
   fmtDate,
@@ -24,39 +25,76 @@ function eventPath(e: CalendarEvent): string {
 
 export function Mro2CalendarPage() {
   const { t } = useTranslation('mro2');
+  const { t: tCal } = useTranslation('calendar');
   const MONTHS = t('calendar.months', { returnObjects: true }) as string[];
   const MONTHS_SHORT = t('calendar.monthsShort', { returnObjects: true }) as string[];
   const WEEKDAYS = t('calendar.weekdays', { returnObjects: true }) as string[];
   const navigate = useNavigate();
   const { year, setYear } = useMro2Year();
   const { events } = useServiceCalendar();
+  const { assets } = useAssetList();
   const [statusFilters, setStatusFilters] = useState<Set<ServiceTone>>(new Set());
+  const [productFilters, setProductFilters] = useState<Set<string>>(new Set());
+  // 서비스 플랜 히트맵 셀 등에서 ?a=<craneId> 로 자산을 지정해 진입할 수 있다 (초기값만)
+  const [initialSearchParams] = useSearchParams();
+  const aParam = initialSearchParams.get('a');
+  const [assetFilters, setAssetFilters] = useState<Set<string>>(
+    () => new Set(aParam && assets.some((x) => x.id === aParam) ? [aParam] : []),
+  );
+
+  // 이벤트에 실제 존재하는 서비스 상품만 필터 후보로 노출한다
+  const productKeys = useMemo(() => {
+    const keys = new Set(events.map((e) => e.productKey));
+    return ['frequent', 'periodic', 'emergency', 'special', 'planned', 'oncall'].filter((k) =>
+      keys.has(k),
+    );
+  }, [events]);
+  const productLabel = (key: string): string =>
+    key === 'planned'
+      ? t('sr.plannedRepairs')
+      : key === 'oncall'
+        ? t('sr.onCallRepair')
+        : t('detail.typeInspection', { type: tCal(`type.${key}`) });
 
   const yearEvents = useMemo(
     () =>
       events.filter(
         (e) =>
           e.start.getFullYear() === year &&
-          (statusFilters.size === 0 || statusFilters.has(eventTone(e))),
+          (statusFilters.size === 0 || statusFilters.has(eventTone(e))) &&
+          (productFilters.size === 0 || productFilters.has(e.productKey)) &&
+          (assetFilters.size === 0 || assetFilters.has(e.craneId)),
       ),
-    [events, year, statusFilters],
+    [events, year, statusFilters, productFilters, assetFilters],
   );
 
-  const defaultMonth = useMemo(() => {
+  /** 해당 연도에서 처음 보여줄 월 — 올해면 이번 달, 아니면 이벤트가 있는 첫 달 */
+  const pickDefaultMonth = (targetYear: number, scoped: typeof yearEvents) => {
     const now = new Date();
-    if (now.getFullYear() === year) return now.getMonth();
-    const monthsWithEvents = yearEvents.map((e) => e.start.getMonth());
+    if (now.getFullYear() === targetYear) return now.getMonth();
+    const monthsWithEvents = scoped.map((e) => e.start.getMonth());
     return monthsWithEvents.length > 0 ? Math.min(...monthsWithEvents) : 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
+  };
+
   // 서비스 플랜 등에서 ?m=<0..11> 로 특정 월을 딥링크할 수 있다 (초기값만)
-  const [searchParams] = useSearchParams();
-  const mParam = searchParams.get('m');
+  const mParam = initialSearchParams.get('m');
   const deepLinkMonth =
     mParam !== null && Number.isInteger(Number(mParam)) && Number(mParam) >= 0 && Number(mParam) <= 11
       ? Number(mParam)
       : null;
-  const [month, setMonth] = useState(deepLinkMonth ?? defaultMonth);
+
+  // 월은 연도에 종속된다 — 어느 연도 기준의 월인지 함께 들고 있다가, 연도가 바뀌면
+  // 그 연도의 기본 월로 다시 잡는다. (이전엔 defaultMonth 가 useState 초기값으로만
+  // 쓰여 연도를 바꿔도 월이 따라가지 않았다.)
+  const [monthState, setMonth] = useState(() => ({
+    year,
+    month: deepLinkMonth ?? pickDefaultMonth(year, yearEvents),
+  }));
+  if (monthState.year !== year) {
+    setMonth({ year, month: pickDefaultMonth(year, yearEvents) });
+  }
+  const month = monthState.month;
+  const setMonthOnly = (next: number) => setMonth({ year, month: next });
 
   const monthEvents = yearEvents
     .filter((e) => e.start.getMonth() === month)
@@ -93,6 +131,15 @@ export function Mro2CalendarPage() {
     });
   };
 
+  const toggleIn = (set: (fn: (prev: Set<string>) => Set<string>) => void, key: string) => {
+    set((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const stepYear = (dir: -1 | 1) => {
     const idx = MRO2_YEARS.indexOf(year);
     const next = MRO2_YEARS[idx + dir];
@@ -108,7 +155,14 @@ export function Mro2CalendarPage() {
             <ChevronLeft size={14} /> {t('common.back')}
           </Link>
         </div>
-        <KcFilterRail selectedCount={statusFilters.size} onClear={() => setStatusFilters(new Set())}>
+        <KcFilterRail
+          selectedCount={statusFilters.size + productFilters.size + assetFilters.size}
+          onClear={() => {
+            setStatusFilters(new Set());
+            setProductFilters(new Set());
+            setAssetFilters(new Set());
+          }}
+        >
           <KcFilterGroup title={t('common.selectedCustomers')}>
             <div className="w-full px-2 py-1.5 text-[10.5px]" style={{ background: KC.inverseBg, color: KC.inverseText }}>
               {t('common.customerName')}
@@ -126,17 +180,33 @@ export function Mro2CalendarPage() {
               />
             ))}
           </KcFilterGroup>
+          <KcFilterGroup title={t('calendar.serviceProduct')}>
+            {productKeys.map((key) => (
+              <KcFilterChip
+                key={key}
+                label={productLabel(key)}
+                active={productFilters.has(key)}
+                onClick={() => toggleIn(setProductFilters, key)}
+              />
+            ))}
+          </KcFilterGroup>
+          <KcFilterGroup title={t('calendar.assetName')}>
+            {assets.map((a) => (
+              <KcFilterChip
+                key={a.id}
+                label={a.name}
+                active={assetFilters.has(a.id)}
+                onClick={() => toggleIn(setAssetFilters, a.id)}
+              />
+            ))}
+          </KcFilterGroup>
         </KcFilterRail>
       </div>
 
       {/* 본문 */}
       <div className="min-w-0 flex-1">
-        <div className="border-b pb-1.5" style={{ borderColor: KC.borderStrong }}>
-          <h2 className="text-[18px] font-semibold tracking-wide" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {t('calendar.title')}
-          </h2>
-        </div>
-        <div className="mt-1 mb-4 text-[11px]" style={{ color: KC.muted }}>
+        <KcSectionHeading>{t('calendar.title')}</KcSectionHeading>
+        <div className="-mt-2 mb-4 text-[11px]" style={{ color: KC.muted }}>
           {t('common.customerName')}
         </div>
 
@@ -162,7 +232,7 @@ export function Mro2CalendarPage() {
                   <button
                     key={name}
                     type="button"
-                    onClick={() => setMonth(m)}
+                    onClick={() => setMonthOnly(m)}
                     className="cursor-pointer px-2 py-1.5 text-center text-[11.5px]"
                     style={{
                       background: active ? KC.inverseBg : 'transparent',
@@ -198,10 +268,11 @@ export function Mro2CalendarPage() {
                 className="cursor-pointer"
                 onClick={() => {
                   if (month === 0 && MRO2_YEARS.includes(year - 1)) {
+                    // 연·월을 함께 넘긴다 — 연도만 바꾸면 동기화 로직이 기본 월로 되돌린다
                     setYear(year - 1);
-                    setMonth(11);
+                    setMonth({ year: year - 1, month: 11 });
                   } else {
-                    setMonth((m) => Math.max(0, m - 1));
+                    setMonthOnly(Math.max(0, month - 1));
                   }
                 }}
               >
@@ -217,9 +288,9 @@ export function Mro2CalendarPage() {
                 onClick={() => {
                   if (month === 11 && MRO2_YEARS.includes(year + 1)) {
                     setYear(year + 1);
-                    setMonth(0);
+                    setMonth({ year: year + 1, month: 0 });
                   } else {
-                    setMonth((m) => Math.min(11, m + 1));
+                    setMonthOnly(Math.min(11, month + 1));
                   }
                 }}
               >
@@ -274,7 +345,12 @@ export function Mro2CalendarPage() {
                   role="button"
                   tabIndex={0}
                   onClick={() => navigate(eventPath(e))}
-                  onKeyDown={(ev) => (ev.key === 'Enter' ? navigate(eventPath(e)) : undefined)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault();
+                      navigate(eventPath(e));
+                    }
+                  }}
                   className="kc-hover mb-2 flex-1 cursor-pointer border px-3 py-2"
                   style={{
                     borderColor: KC.hairline,
@@ -299,9 +375,7 @@ export function Mro2CalendarPage() {
             );
           })}
           {monthEvents.length === 0 ? (
-            <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-              {t('calendar.noActivities', { month: MONTHS[month], year })}
-            </div>
+            <KcEmpty>{t('calendar.noActivities', { month: MONTHS[month], year })}</KcEmpty>
           ) : null}
         </div>
       </div>

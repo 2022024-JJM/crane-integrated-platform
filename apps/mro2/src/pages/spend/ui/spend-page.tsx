@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
@@ -59,6 +59,7 @@ function Legend() {
 
 /** 수직 스택 바 묶음 (Trend by Service Type) */
 function StackedColumns({ data }: { data: { label: string; bucket: SpendBucket }[] }) {
+  const { t } = useTranslation('mro2');
   const max = Math.max(...data.map((d) => bucketTotal(d.bucket)), 1);
   // 월간(12컬럼)은 콤팩트 폭 — 카드 반폭에서도 넘치지 않게
   const compact = data.length > 6;
@@ -81,11 +82,12 @@ function StackedColumns({ data }: { data: { label: string; bucket: SpendBucket }
               className={`flex flex-col-reverse ${compact ? 'w-5' : 'w-9'}`}
               style={{ height: `${(total / max) * 78}%` }}
             >
-              {SPEND_TYPES.map((t) =>
-                d.bucket[t.key] > 0 ? (
+              {SPEND_TYPES.map((st) =>
+                d.bucket[st.key] > 0 ? (
                   <span
-                    key={t.key}
-                    style={{ height: `${(d.bucket[t.key] / (total || 1)) * 100}%`, background: t.color }}
+                    key={st.key}
+                    title={`${d.label} · ${t(`spendType.${st.key}`)} — ${usd(d.bucket[st.key])}`}
+                    style={{ height: `${(d.bucket[st.key] / (total || 1)) * 100}%`, background: st.color }}
                   />
                 ) : null,
               )}
@@ -100,25 +102,45 @@ function StackedColumns({ data }: { data: { label: string; bucket: SpendBucket }
   );
 }
 
-/** 수평 스택 바 (Spend by Location / Assets) */
-function StackedRows({ data }: { data: { label: string; bucket: SpendBucket }[] }) {
+/** 수평 스택 바 (Spend by Location / Assets) — id가 있으면 라벨 클릭 시 자산 상세로 */
+function StackedRows({
+  data,
+  onRowClick,
+}: {
+  data: { label: string; bucket: SpendBucket; id?: string }[];
+  onRowClick?: (id: string) => void;
+}) {
+  const { t } = useTranslation('mro2');
   const max = Math.max(...data.map((d) => bucketTotal(d.bucket)), 1);
   return (
     <div className="flex flex-col gap-2 px-2">
       {data.map((d) => {
         const total = bucketTotal(d.bucket);
+        const clickable = Boolean(d.id && onRowClick);
         return (
           <div key={d.label} className="flex items-center gap-2">
-            <span className="w-[150px] shrink-0 truncate text-right text-[10px]" style={{ color: KC.link }}>
-              {d.label}
-            </span>
+            {clickable ? (
+              <button
+                type="button"
+                onClick={() => onRowClick?.(d.id ?? '')}
+                className="w-[150px] shrink-0 cursor-pointer truncate text-right text-[10px] hover:underline"
+                style={{ color: KC.link }}
+              >
+                {d.label}
+              </button>
+            ) : (
+              <span className="w-[150px] shrink-0 truncate text-right text-[10px]" style={{ color: KC.link }}>
+                {d.label}
+              </span>
+            )}
             <div className="flex h-[16px] flex-1 items-stretch">
               <div className="flex" style={{ width: `${(total / max) * 100}%` }}>
-                {SPEND_TYPES.map((t) =>
-                  d.bucket[t.key] > 0 ? (
+                {SPEND_TYPES.map((st) =>
+                  d.bucket[st.key] > 0 ? (
                     <span
-                      key={t.key}
-                      style={{ width: `${(d.bucket[t.key] / (total || 1)) * 100}%`, background: t.color }}
+                      key={st.key}
+                      title={`${d.label} · ${t(`spendType.${st.key}`)} — ${usd(d.bucket[st.key])}`}
+                      style={{ width: `${(d.bucket[st.key] / (total || 1)) * 100}%`, background: st.color }}
                     />
                   ) : null,
                 )}
@@ -136,6 +158,7 @@ function StackedRows({ data }: { data: { label: string; bucket: SpendBucket }[] 
 
 export function Mro2SpendPage() {
   const { t } = useTranslation('mro2');
+  const navigate = useNavigate();
   const MONTH_SHORT = t('calendar.monthsShort', { returnObjects: true }) as string[];
   const { year } = useMro2Year();
   const { inspections } = useInspectionList();
@@ -151,7 +174,11 @@ export function Mro2SpendPage() {
 
   const monthlyData = spend.byMonth.map((bucket, m) => ({ label: MONTH_SHORT[m], bucket }));
 
-  const assetData = Object.values(spend.byAsset).map((a) => ({ label: a.name, bucket: a.bucket }));
+  const assetData = Object.entries(spend.byAsset).map(([craneId, a]) => ({
+    label: a.name,
+    bucket: a.bucket,
+    id: craneId,
+  }));
   const locationBucket = Object.values(spend.byAsset).reduce<SpendBucket>(
     (acc, a) => {
       acc.ipm += a.bucket.ipm;
@@ -215,7 +242,15 @@ export function Mro2SpendPage() {
             {year}
           </div>
           <div className="flex items-center justify-center gap-10 pt-3">
-            <KcDonut size={148} stroke={24} segments={SPEND_TYPES.map((st) => ({ value: spend.byType[st.key], color: st.color }))} />
+            <KcDonut
+              size={148}
+              stroke={24}
+              segments={SPEND_TYPES.map((st) => ({
+                value: spend.byType[st.key],
+                color: st.color,
+                label: `${t(`spendType.${st.key}`)} — ${usd(spend.byType[st.key])}`,
+              }))}
+            />
             <div className="flex flex-col gap-1.5">
               {SPEND_TYPES.map((st) => (
                 <div key={st.key} className="flex items-center gap-2 text-[11px]">
@@ -283,6 +318,7 @@ export function Mro2SpendPage() {
             ? [{ label: t('spend.locationLabel'), bucket: locationBucket }]
             : assetData
         }
+        onRowClick={byMode === 'assets' ? (id) => navigate(`/mro2/assets/${id}`) : undefined}
       />
       <Legend />
     </div>

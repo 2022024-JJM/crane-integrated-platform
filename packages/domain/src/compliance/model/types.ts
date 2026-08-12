@@ -49,8 +49,8 @@ export type DocumentType =
   | 'other';
 
 /**
- * 사용자가 업로드한 문서 — 파일 바이트는 보관하지 않고 메타데이터만 다룬다.
- * (목업 단계에서 실제 저장소가 없으므로 목록/필터/정렬만 성립시킨다)
+ * 사용자가 업로드한 문서 — 메타데이터 + 세션 한정 blob URL.
+ * (백엔드 저장소가 없으므로 파일 바이트는 브라우저 세션 안에서만 유지된다)
  */
 export interface UploadedDocument {
   id: string;
@@ -61,6 +61,10 @@ export interface UploadedDocument {
   uploadedBy: string;
   uploadedAt: string;
   sizeBytes: number;
+  /** 세션 내 실파일 다운로드용 object URL — 새로고침하면 소실된다 */
+  objectUrl?: string;
+  /** 서비스 요청 첨부로 올린 경우 해당 WO 번호 */
+  refWoNumber?: string;
 }
 
 export interface ComplianceSummary {

@@ -24,6 +24,35 @@
   "viewer3d": {
     "title": "3D 모델 뷰어"
   },
+  "collisionGuard": {
+    "enable": "충돌 감지 표시 켜기",
+    "disable": "충돌 감지 표시 끄기",
+    "hud": {
+      "title": "감지된 객체 목록",
+      "kind": {
+        "person": "사람",
+        "car": "차량",
+        "forklift": "지게차"
+      },
+      "severity": {
+        "warning": "주의",
+        "danger": "위험"
+      },
+      "empty": "감지된 객체 없음"
+    },
+    "help": {
+      "title": "도움말",
+      "show": "도움말 보기",
+      "hide": "도움말 닫기",
+      "detectionRing": "LiDAR 감지 범위",
+      "dangerRing": "위험 반경",
+      "sensor": "LiDAR 설치 위치 (거더 양쪽 다리)",
+      "arrow": "진행 방향 · 길이는 속도에 비례",
+      "severityDanger": "위험 — 위험 반경 안",
+      "severityWarning": "주의 — 감지 범위 안",
+      "simulationNote": "현재 시뮬레이션 데이터로 구동 중입니다."
+    }
+  },
   "metrics": {
     "load": "하중",
     "windSpeed": "풍속",

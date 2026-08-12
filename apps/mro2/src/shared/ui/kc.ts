@@ -31,6 +31,7 @@ export const KC = {
   bgSubtle: 'var(--kc-bg-subtle)',
   bgRow: 'var(--kc-bg-row)',
   track: 'var(--kc-track)',
+  hover: 'var(--kc-hover)',
 
   /* 반전 표면 (선택 칩·액티브 토글) */
   inverseBg: 'var(--kc-inverse-bg)',
@@ -40,6 +41,8 @@ export const KC = {
   /* CTA — Generate Report / New Service Request */
   teal: 'var(--kc-teal)',
   tealDark: 'var(--kc-teal-dark)',
+  /** 텍스트를 얹는 teal 채움 (버튼) — 라이트에서 AA 를 맞추려 teal 보다 어둡다 */
+  tealFill: 'var(--kc-teal-fill)',
   link: 'var(--kc-link)',
 
   /* 의미 레이어 (findings 심각도 / 서비스 상태) */
@@ -49,6 +52,18 @@ export const KC = {
   improvement: 'var(--kc-improvement)',
   ok: 'var(--kc-ok)',
   planned: 'var(--kc-planned)',
+
+  /* 의미색 배경 위 텍스트 (배지·히트맵 셀 — 대비 4.5:1 보장 짝) */
+  onSafety: 'var(--kc-on-safety)',
+  onProduction: 'var(--kc-on-production)',
+  onUndetermined: 'var(--kc-on-undetermined)',
+  onOk: 'var(--kc-on-ok)',
+  onPlanned: 'var(--kc-on-planned)',
+  onImprovement: 'var(--kc-on-improvement)',
+
+  /* 브랜드 채움 위 텍스트 — 흰색 하드코딩 금지, 이 짝을 쓸 것 */
+  onAccent: 'var(--kc-on-accent)',
+  onTeal: 'var(--kc-on-teal)',
 
   /* 데이터 계열 레이어 (차트 전용 — 의미색과 분리) */
   s1: 'var(--kc-s1)',
@@ -85,6 +100,14 @@ export const SERVICE_TONE_COLOR: Record<ServiceTone, string> = {
   inProgress: KC.undetermined,
   open: KC.planned,
   delayed: KC.safety,
+};
+
+/** SERVICE_TONE_COLOR 배경 위에 얹는 텍스트 색 — 흰색 고정 대신 이 짝을 쓴다 */
+export const SERVICE_TONE_TEXT: Record<ServiceTone, string> = {
+  completed: KC.onOk,
+  inProgress: KC.onUndetermined,
+  open: KC.onPlanned,
+  delayed: KC.onSafety,
 };
 
 export type FindingTone =

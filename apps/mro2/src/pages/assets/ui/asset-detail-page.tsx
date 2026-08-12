@@ -1,12 +1,13 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronUp, Plus, Wifi } from 'lucide-react';
+import { ChevronLeft, Download, Plus, Upload } from 'lucide-react';
 import { useAssetDetail } from '@crane/features/asset';
 import { useOpenRisks } from '@crane/features/risk';
-import type { CraneComponent } from '@crane/domain/asset';
+import { useDocuments, useUploadDocument } from '@crane/features/compliance';
+import type { DocumentType } from '@crane/domain/compliance';
 import { KC, KC_FONT_DISPLAY, KC_FONT_MONO, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
-import { KcButton, KcRing, KcStat } from '../../../shared/ui/kc-ui';
+import { KcButton, KcEmpty, KcStat } from '../../../shared/ui/kc-ui';
 import { i18n } from '@crane/core/config/i18n';
 import {
   fmtDate,
@@ -14,10 +15,14 @@ import {
   repairTone,
   serviceToneLabel,
 } from '../../../shared/lib/service-status';
-import { COMPONENT_STATUS_COLOR, remainingPct } from '../../../shared/lib/component';
 import { useNewTicket } from '../../../shared/lib/use-new-ticket';
+import {
+  buildDocumentRows,
+  downloadDocumentRow,
+} from '../../documents/lib/document-rows';
 import { CraneThumb } from './crane-thumb';
 import { CraneFrontView } from './crane-front-view';
+import { MonitoringTab } from './monitoring-tab';
 
 const Asset3dTab = lazy(() =>
   import('./asset-3d-tab').then((m) => ({ default: m.Asset3dTab })),
@@ -28,6 +33,7 @@ const TABS = [
   { key: 'activity', labelKey: 'detail.tabActivities' },
   { key: '3d', labelKey: 'detail.tab3d' },
   { key: 'monitoring', labelKey: 'detail.tabMonitoring' },
+  { key: 'documents', labelKey: 'detail.tabDocuments' },
   { key: 'info', labelKey: 'detail.tabInfo' },
 ] as const;
 
@@ -132,9 +138,7 @@ export function Mro2AssetDetailPage() {
             navigate={(p) => navigate(p)}
           />
           {openWoCount === 0 ? (
-            <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-              {t('mro2:detail.noOpenItems')}
-            </div>
+            <KcEmpty>{t('mro2:detail.noOpenItems')}</KcEmpty>
           ) : null}
         </div>
       ) : null}
@@ -163,7 +167,19 @@ export function Mro2AssetDetailPage() {
       ) : null}
 
       {/* ── Remote Monitoring ── */}
-      {tab === 'monitoring' ? <MonitoringTab components={components} /> : null}
+      {tab === 'monitoring' ? (
+        <MonitoringTab
+          craneId={craneId}
+          components={components}
+          inspections={inspections}
+          repairs={repairs}
+        />
+      ) : null}
+
+      {/* ── Documents ── */}
+      {tab === 'documents' ? (
+        <AssetDocumentsTab craneId={craneId} craneName={asset.name} />
+      ) : null}
 
       {/* ── Asset Info ── */}
       {tab === 'info' ? (
@@ -257,7 +273,12 @@ function WoTimeline({
             role="button"
             tabIndex={0}
             onClick={() => navigate(row.path)}
-            onKeyDown={(e) => (e.key === 'Enter' ? navigate(row.path) : undefined)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(row.path);
+              }
+            }}
             className="kc-hover mb-2 flex-1 cursor-pointer border"
             style={{ borderColor: KC.hairline, borderLeft: `4px solid ${row.tone}` }}
           >
@@ -293,200 +314,86 @@ function WoTimeline({
   );
 }
 
-/* Monitoring 탭 — Condition 클러스터 아코디언 + 요약 */
-function MonitoringTab({ components }: { components: CraneComponent[] }) {
+/* Documents 탭 — 이 자산의 문서만 (매뉴얼 5p 자산 상세 Documents 탭) */
+function AssetDocumentsTab({ craneId, craneName }: { craneId: string; craneName: string }) {
   const { t } = useTranslation('mro2');
-  const clusters = components.filter((c) => c.parentId === null);
-  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
-  const [expandAll, setExpandAll] = useState(false);
+  const { oshaReports, uploads } = useDocuments();
+  const uploadDocument = useUploadDocument();
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const worst = clusters.reduce<CraneComponent | null>((acc, c) => {
-    if (!acc) return c;
-    return remainingPct(c) < remainingPct(acc) ? c : acc;
-  }, null);
-  const criticalCount = components.filter(
-    (c) => c.parentId !== null && (c.status === 'critical' || c.status === 'replace'),
-  ).length;
-  const totalHours = clusters.reduce((s, c) => s + c.currentHours, 0);
+  // 인증서는 자산 귀속이 아니므로 제외 — 이 자산의 보고서/업로드만 남긴다
+  const rows = useMemo(
+    () =>
+      buildDocumentRows({ oshaReports, certifications: [], uploads }).filter(
+        (r) => r.craneId === craneId,
+      ),
+    [oshaReports, uploads, craneId],
+  );
 
-  const toggle = (id: string) => {
-    setOpenKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const onPickFile = (file: File | undefined) => {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const docType: DocumentType =
+      ext === 'dwg' || ext === 'dxf' ? 'drawing' : ext === 'pdf' ? 'manual' : 'other';
+    uploadDocument({
+      fileName: file.name,
+      docType,
+      craneId,
+      craneName,
+      uploadedBy: t('common.customerName'),
+      sizeBytes: file.size,
+      objectUrl: URL.createObjectURL(file),
     });
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   return (
     <div className="pt-4">
-      <div className="mb-1 flex items-center gap-2 border-b pb-1.5" style={{ borderColor: KC.borderStrong }}>
-        <span className="text-[14px]" style={{ color: KC.ink }}>
-          {t('common.remoteMonitoring')}
-        </span>
-        <Wifi size={14} style={{ color: KC.ink }} />
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[13px]" style={{ color: KC.ink }}>
+          {t('documents.assetDocs', { count: rows.length })}
+        </h3>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => onPickFile(e.target.files?.[0])}
+        />
+        <KcButton variant="outline" onClick={() => fileRef.current?.click()}>
+          <Upload size={12} /> {t('documents.upload')}
+        </KcButton>
       </div>
-      <div className="mb-4 text-[11px]" style={{ color: KC.muted }}>
-        {t('monitoring.summary')}
-      </div>
-
-      {/* 3-메트릭 요약 (17p) */}
-      <div className="mb-6 flex items-start justify-around">
-        <div className="flex flex-col items-center gap-1">
-          <div className="text-[10.5px]" style={{ color: KC.muted }}>
-            {t('monitoring.condition')}
-          </div>
-          <KcRing
-            pct={worst ? remainingPct(worst) : 0}
-            color={worst && remainingPct(worst) < 30 ? KC.safety : KC.ok}
-            size={56}
-            stroke={6}
-          >
-            <span className="text-[11px] font-bold" style={{ color: KC.ink }}>
-              {worst ? `${remainingPct(worst)}%` : '-'}
-            </span>
-          </KcRing>
-          <div className="text-center text-[10px]" style={{ color: KC.text }}>
-            {worst?.componentName ?? '-'}
-            <div style={{ color: KC.faint }}>{t('monitoring.shortestServiceLife')}</div>
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <div className="text-[10.5px]" style={{ color: KC.muted }}>
-            {t('monitoring.alerts')}
-          </div>
-          <div
-            className="flex items-center justify-center rounded-full text-[15px] font-bold text-white"
-            style={{ background: KC.safety, width: 48, height: 48 }}
-          >
-            {criticalCount}
-          </div>
-          <div className="text-center text-[10px]" style={{ color: KC.text }}>
-            {t('monitoring.criticalComponents')}
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <div className="text-[10.5px]" style={{ color: KC.muted }}>
-            {t('monitoring.operatingStatistics')}
-          </div>
-          <div className="text-[26px] font-bold" style={{ color: KC.ink, fontFamily: KC_FONT_DISPLAY }}>
-            {totalHours.toLocaleString('en-US')}
-          </div>
-          <div className="text-center text-[10px]" style={{ color: KC.text }}>
-            {t('monitoring.hours')}
-            <div style={{ color: KC.faint }}>{t('monitoring.total')}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Condition 아코디언 */}
-      <div className="mb-2 flex items-center justify-between border-b pb-1" style={{ borderColor: KC.borderStrong }}>
-        <span className="text-[13px]" style={{ color: KC.ink }}>
-          {t('monitoring.condition')}
-        </span>
-        <button
-          type="button"
-          className="cursor-pointer text-[11px]"
-          style={{ color: KC.link }}
-          onClick={() => setExpandAll((v) => !v)}
-        >
-          {expandAll ? t('common.collapseAll') : t('common.expandAll')}
-        </button>
-      </div>
-      <div className="flex flex-col gap-1">
-        {clusters.map((cluster) => {
-          const leaves = components.filter((c) => c.parentId === cluster.id);
-          const open = expandAll || openKeys.has(cluster.id);
-          return (
-            <div key={cluster.id} className="border" style={{ borderColor: KC.hairline }}>
+      {rows.length === 0 ? (
+        <KcEmpty>{t('documents.emptyAsset')}</KcEmpty>
+      ) : (
+        <div className="flex flex-col">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className="flex items-center gap-3 border-b py-2 text-[11.5px]"
+              style={{ borderColor: KC.hairline }}
+            >
+              <span className="min-w-0 flex-1 truncate" style={{ color: KC.ink }}>
+                {row.name}
+              </span>
+              <span className="w-[130px] shrink-0 truncate" style={{ color: KC.muted }}>
+                {t(`documents.type.${row.docType}`)}
+              </span>
+              <span className="w-[90px] shrink-0 text-[10.5px]" style={{ color: KC.faint }}>
+                {fmtDate(row.date)}
+              </span>
               <button
                 type="button"
-                onClick={() => toggle(cluster.id)}
-                className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left"
-                style={{
-                  borderLeft: `4px solid ${COMPONENT_STATUS_COLOR[cluster.status]}`,
-                  background: KC.bgSubtle,
-                }}
+                onClick={() => downloadDocumentRow(row)}
+                className="flex cursor-pointer items-center gap-1 text-[11px]"
+                style={{ color: KC.link }}
               >
-                <span className="text-[11.5px]" style={{ color: KC.ink }}>
-                  {cluster.componentName}
-                </span>
-                <span className="flex items-center gap-3 text-[10px]" style={{ color: KC.muted }}>
-                  {t('monitoring.serviceLife', { pct: remainingPct(cluster) })}
-                  {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                </span>
+                <Download size={12} /> {t('documents.download')}
               </button>
-              {open ? (
-                <div className="px-3 py-2">
-                  {leaves.slice(0, 12).map((leaf) => (
-                    <div
-                      key={leaf.id}
-                      className="flex items-center gap-2 border-b py-1 text-[10.5px] last:border-b-0"
-                      style={{ borderColor: KC.hairline }}
-                    >
-                      <span
-                        className="inline-block h-3 w-[3px]"
-                        style={{ background: COMPONENT_STATUS_COLOR[leaf.status] }}
-                      />
-                      <span className="min-w-0 flex-1 truncate" style={{ color: KC.text }}>
-                        {leaf.componentName}
-                      </span>
-                      <span className="w-[110px]">
-                        <span className="block h-[5px] w-full" style={{ background: KC.track }}>
-                          <span
-                            className="block h-full"
-                            style={{
-                              width: `${remainingPct(leaf)}%`,
-                              background: remainingPct(leaf) < 25 ? KC.safety : KC.s1,
-                            }}
-                          />
-                        </span>
-                      </span>
-                      <span className="w-[36px] text-right" style={{ color: KC.muted }}>
-                        {remainingPct(leaf)}%
-                      </span>
-                    </div>
-                  ))}
-                  {leaves.length > 12 ? (
-                    <div className="pt-1 text-[10px]" style={{ color: KC.faint }}>
-                      {t('monitoring.moreComponents', { count: leaves.length - 12 })}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Operating Statistics */}
-      <div className="mt-6 mb-2 border-b pb-1 text-[13px]" style={{ borderColor: KC.borderStrong, color: KC.ink }}>
-        {t('monitoring.operatingStatistics')}
-      </div>
-      <div className="flex flex-col gap-1">
-        {[...clusters]
-          .sort((a, b) => b.currentHours - a.currentHours)
-          .slice(0, 6)
-          .map((c) => {
-            const max = Math.max(...clusters.map((x) => x.currentHours), 1);
-            return (
-              <div key={c.id} className="flex items-center gap-2 text-[10.5px]">
-                <span className="w-[170px] shrink-0 truncate" style={{ color: KC.text }}>
-                  {c.componentName}
-                </span>
-                <span className="h-[10px] flex-1" style={{ background: KC.track }}>
-                  <span
-                    className="block h-full"
-                    style={{ width: `${(c.currentHours / max) * 100}%`, background: KC.s3 }}
-                  />
-                </span>
-                <span className="w-[64px] text-right" style={{ color: KC.muted }}>
-                  {c.currentHours.toLocaleString('en-US')} h
-                </span>
-              </div>
-            );
-          })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

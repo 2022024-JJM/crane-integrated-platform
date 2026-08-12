@@ -1,4 +1,31 @@
 export { Monitoring3dView } from './ui/monitoring-3d-view';
+export {
+  CollisionGuard,
+  COLLISION_GUARD_COLORS,
+} from './ui/collision-guard';
+export {
+  CollisionGuardCameraRig,
+  type CollisionGuardCameraPose,
+} from './ui/collision-guard-camera-rig';
+export { CollisionGuardTopViewSync } from './ui/collision-guard-top-view-sync';
+export {
+  distanceFromZoneCenter,
+  nearestZone,
+  trackSeverity,
+  useCollisionGuardStore,
+  type CollisionGuardZone,
+  type DetectedObjectType,
+  type DetectedTrack,
+  type TrackSeverity,
+} from './model/use-collision-guard-store';
+export {
+  useCollisionGuardHudSnapshot,
+  type CollisionGuardHudSnapshot,
+  type HudOverallState,
+  type HudTrack,
+} from './model/use-collision-guard-hud';
+export { usePrefersReducedMotion } from './model/use-prefers-reduced-motion';
+export { useSceneInfoStore } from './model/use-scene-info-store';
 export type {
   SensorFeedContext,
   SensorFeedRenderer,

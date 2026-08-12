@@ -28,7 +28,9 @@ export function toCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
  * Excel이 UTF-8을 올바로 인식하도록 BOM을 붙인다 (한글 파트명이 깨지지 않게).
  */
 export function downloadCsv(filename: string, csv: string): void {
-  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+  if (typeof window === 'undefined') return;
+  // U+FEFF(BOM) — 리터럴로 두면 보이지 않아 편집 중 유실되기 쉬우므로 이스케이프로 명시한다.
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

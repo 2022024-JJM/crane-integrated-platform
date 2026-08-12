@@ -236,7 +236,7 @@ export function ZoneSpecPanel({
               className="cursor-pointer rounded-[3px] px-2.5 py-1 text-[11px] font-medium transition-colors"
               style={{
                 background: isActive ? KC.improvement : isHovered ? KC.bgRow : KC.bg,
-                color: isActive ? '#fff' : KC.text,
+                color: isActive ? KC.onImprovement : KC.text,
                 border: `1px solid ${isActive ? KC.improvement : KC.border}`,
               }}
             >

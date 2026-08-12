@@ -4,66 +4,50 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useInspectionList } from '@crane/features/inspection';
 import { useMaintenanceList } from '@crane/features/maintenance';
-import { KC, KC_FONT_DISPLAY, SERVICE_TONE_COLOR } from '../../../shared/ui/kc';
-import { KcSectionHeading, KcStat } from '../../../shared/ui/kc-ui';
+import { KC, KC_FONT_DISPLAY, SERVICE_TONE_COLOR, SERVICE_TONE_TEXT } from '../../../shared/ui/kc';
+import { KcEmpty, KcFieldRow, KcSection, KcSectionHeading, KcStat } from '../../../shared/ui/kc-ui';
 import { useMro2Year } from '../../../shared/ui/layout';
 import { computeSpend } from '../../../shared/lib/spend';
 import { fmtDate } from '../../../shared/lib/service-status';
 import { usd } from '../../../shared/ui/kc';
-import { buildServicePlan, type PlanCell, type PlanRow } from '../lib/build-plan';
-
-/* ── 접이식 섹션 (매뉴얼 6p 스타일) ─────────────────────────────────── */
-
-function Section({
-  title,
-  defaultOpen = true,
-  children,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="mb-4 border-b pb-3" style={{ borderColor: KC.hairline }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center justify-between py-1 text-left"
-      >
-        <span className="text-[13px] font-bold" style={{ color: KC.ink }}>
-          {title}
-        </span>
-        {open ? <ChevronUp size={14} style={{ color: KC.ink }} /> : <ChevronDown size={14} style={{ color: KC.ink }} />}
-      </button>
-      {open ? <div className="pt-2">{children}</div> : null}
-    </div>
-  );
-}
-
-function FieldRow({ k, v }: { k: string; v: ReactNode }) {
-  return (
-    <div className="flex py-1 text-[12.5px]">
-      <span className="w-[170px] shrink-0 font-bold" style={{ color: KC.ink }}>
-        {k}:
-      </span>
-      <span style={{ color: KC.text }}>{v}</span>
-    </div>
-  );
-}
+import {
+  buildServicePlan,
+  planStatusPercents,
+  type PlanCell,
+  type PlanRow,
+} from '../lib/build-plan';
 
 /* ── 히트맵 셀 ──────────────────────────────────────────────────────── */
 
-function Cell({ cell }: { cell: PlanCell | null }) {
+function Cell({
+  cell,
+  title,
+  onClick,
+}: {
+  cell: PlanCell | null;
+  title?: string;
+  onClick?: () => void;
+}) {
   if (!cell) return <span className="flex h-10 items-center justify-center" />;
   return (
     <span className="flex h-10 items-center justify-center">
-      <span
-        className="inline-flex h-[28px] min-w-[28px] items-center justify-center rounded-[4px] px-1.5 text-[13px] font-bold text-white"
-        style={{ background: SERVICE_TONE_COLOR[cell.tone], fontFamily: KC_FONT_DISPLAY }}
+      <button
+        type="button"
+        title={title}
+        onClick={(e) => {
+          // 자산 행 전체가 아코디언 토글이므로 셀 클릭이 그리로 번지지 않게 막는다
+          e.stopPropagation();
+          onClick?.();
+        }}
+        className="inline-flex h-[28px] min-w-[28px] cursor-pointer items-center justify-center rounded-[4px] px-1.5 text-[13px] font-bold transition-transform hover:scale-110"
+        style={{
+          background: SERVICE_TONE_COLOR[cell.tone],
+          color: SERVICE_TONE_TEXT[cell.tone],
+          fontFamily: KC_FONT_DISPLAY,
+        }}
       >
         {cell.count}
-      </span>
+      </button>
     </span>
   );
 }
@@ -75,11 +59,16 @@ function PlanGridRow({
   bold,
   indent,
   right,
+  cellTitle,
+  onCellClick,
 }: {
   row: PlanRow;
   bold?: boolean;
   indent?: boolean;
   right?: ReactNode;
+  /** 셀 툴팁 (월 인덱스, 셀) → 문자열 */
+  cellTitle?: (m: number, cell: PlanCell) => string;
+  onCellClick?: (m: number) => void;
 }) {
   return (
     <div
@@ -93,7 +82,12 @@ function PlanGridRow({
         {row.label}
       </span>
       {row.cells.map((cell, m) => (
-        <Cell key={m} cell={cell} />
+        <Cell
+          key={m}
+          cell={cell}
+          title={cell && cellTitle ? cellTitle(m, cell) : undefined}
+          onClick={onCellClick ? () => onCellClick(m) : undefined}
+        />
       ))}
       <span className="flex justify-end">{right}</span>
     </div>
@@ -124,7 +118,8 @@ export function Mro2ServicePlanPage() {
   );
   const spend = useMemo(() => computeSpend(inspections, repairs, year), [inspections, repairs, year]);
 
-  const pct = (n: number) => (plan.summary.total > 0 ? Math.round((n / plan.summary.total) * 100) : 0);
+  // 항목별로 따로 반올림하면 합이 100을 벗어나므로 최대 잔여 방식으로 배분한다
+  const pct = useMemo(() => planStatusPercents(plan.summary), [plan.summary]);
 
   const toggleAsset = (id: string) =>
     setOpenAssets((prev) => {
@@ -135,25 +130,29 @@ export function Mro2ServicePlanPage() {
     });
 
   const goMonth = (m: number) => navigate(`/mro2/calendar?m=${m}`);
+  // 셀 클릭 = 그 달 + 그 자산으로 캘린더 딥링크 (매뉴얼 6p "월 클릭 → 캘린더 상세")
+  const goCell = (m: number, craneId: string) => navigate(`/mro2/calendar?m=${m}&a=${craneId}`);
+  const cellTitle = (m: number, cell: PlanCell) =>
+    `${MONTHS_SHORT[m]} · ${t('mro2:plan.cellActivities', { count: cell.count })} · ${t(`mro2:status.${cell.tone}`)}`;
 
   return (
     <div className="pt-1">
       <KcSectionHeading>{t('mro2:plan.title')}</KcSectionHeading>
 
       {/* 계약 정보 */}
-      <Section title={t('mro2:plan.agreementInfo')} defaultOpen={false}>
-        <FieldRow k={t('mro2:plan.name')} v={`HPSI Planned Maintenance — ${t('mro2:common.customerName')}`} />
-        <FieldRow k={t('mro2:plan.number')} v="HPSI-MA-2026-001" />
-        <FieldRow k={t('mro2:plan.type')} v={t('mro2:plan.evergreen')} />
-        <FieldRow k={t('mro2:plan.statusLabel')} v={t('mro2:plan.active')} />
-        <FieldRow k={t('mro2:plan.startDate')} v={fmtDate('2026-01-01')} />
-        <FieldRow k={t('mro2:plan.billing')} v={t('mro2:sr.timeMaterial')} />
-        <FieldRow k={t('mro2:ticket.asset')} v={String(plan.assets.length)} />
-        <FieldRow k={t('mro2:plan.contact')} v="정종민 · HPSI Service" />
-      </Section>
+      <KcSection title={t('mro2:plan.agreementInfo')} defaultOpen={false}>
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.name')} v={`HPSI Planned Maintenance — ${t('mro2:common.customerName')}`} />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.number')} v="HPSI-MA-2026-001" />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.type')} v={t('mro2:plan.evergreen')} />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.statusLabel')} v={t('mro2:plan.active')} />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.startDate')} v={fmtDate('2026-01-01')} />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.billing')} v={t('mro2:sr.timeMaterial')} />
+        <KcFieldRow labelWidth={170} k={t('mro2:ticket.asset')} v={String(plan.assets.length)} />
+        <KcFieldRow labelWidth={170} k={t('mro2:plan.contact')} v="정종민 · HPSI Service" />
+      </KcSection>
 
       {/* 요약 */}
-      <Section title={t('mro2:plan.summary')}>
+      <KcSection title={t('mro2:plan.summary')}>
         <div className="mb-4 flex items-start justify-around">
           <KcStat value={usd(spend.total)} label={t('mro2:plan.annualSpend')} size="lg" />
           <KcStat value={plan.products.length} label={t('mro2:plan.products')} size="lg" />
@@ -175,10 +174,10 @@ export function Mro2ServicePlanPage() {
             </span>
           ))}
         </div>
-      </Section>
+      </KcSection>
 
       {/* 자산 및 서비스 플랜 */}
-      <Section title={t('mro2:plan.planTitle')}>
+      <KcSection title={t('mro2:plan.planTitle')}>
         {/* 상태 요약 (88% Completed 스타일) */}
         <div className="mb-1 text-[11px] font-bold" style={{ color: KC.ink }}>
           {t('mro2:plan.serviceStatus')}
@@ -188,25 +187,25 @@ export function Mro2ServicePlanPage() {
         </div>
         <div className="mb-5 flex items-start justify-around">
           <KcStat
-            value={`${pct(plan.summary.completed)}%`}
+            value={`${pct.completed}%`}
             label={t('mro2:status.completed')}
             tone={SERVICE_TONE_COLOR.completed}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.open)}%`}
+            value={`${pct.open}%`}
             label={t('mro2:status.open')}
             tone={SERVICE_TONE_COLOR.open}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.inProgress)}%`}
+            value={`${pct.inProgress}%`}
             label={t('mro2:status.inProgress')}
             tone={SERVICE_TONE_COLOR.inProgress}
             size="lg"
           />
           <KcStat
-            value={`${pct(plan.summary.delayed)}%`}
+            value={`${pct.delayed}%`}
             label={t('mro2:status.delayed')}
             tone={SERVICE_TONE_COLOR.delayed}
             size="lg"
@@ -252,14 +251,23 @@ export function Mro2ServicePlanPage() {
               const open = openAssets.has(asset.craneId);
               return (
                 <div key={asset.craneId}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleAsset(asset.craneId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleAsset(asset.craneId);
+                      }
+                    }}
                     className="kc-hover block w-full cursor-pointer text-left"
                   >
                     <PlanGridRow
                       row={asset.total}
                       bold
+                      cellTitle={cellTitle}
+                      onCellClick={(m) => goCell(m, asset.craneId)}
                       right={
                         open ? (
                           <ChevronUp size={13} style={{ color: KC.muted }} />
@@ -268,24 +276,30 @@ export function Mro2ServicePlanPage() {
                         )
                       }
                     />
-                  </button>
+                  </div>
                   {open
-                    ? asset.products.map((row) => <PlanGridRow key={row.key} row={row} indent />)
+                    ? asset.products.map((row) => (
+                        <PlanGridRow
+                          key={row.key}
+                          row={row}
+                          indent
+                          cellTitle={cellTitle}
+                          onCellClick={(m) => goCell(m, asset.craneId)}
+                        />
+                      ))
                     : null}
                 </div>
               );
             })}
             {plan.assets.length === 0 ? (
-              <div className="py-8 text-center text-[12px]" style={{ color: KC.muted }}>
-                {t('mro2:sr.noRequests')}
-              </div>
+              <KcEmpty>{t('mro2:sr.noRequests')}</KcEmpty>
             ) : null}
           </div>
         </div>
         <div className="mt-2 text-[10px]" style={{ color: KC.faint }}>
           {t('mro2:plan.monthHint')}
         </div>
-      </Section>
+      </KcSection>
     </div>
   );
 }

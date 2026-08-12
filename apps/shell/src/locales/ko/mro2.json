@@ -132,7 +132,10 @@
       "serviceHistory": "서비스 이력",
       "materialHistory": "자재 사용 이력",
       "serviceSpend": "서비스 비용"
-    }
+    },
+    "ownLabels": "내 라벨",
+    "addLabel": "라벨 추가…",
+    "removeLabel": "라벨 {{label}} 제거"
   },
   "detail": {
     "tabOpenItems": "미결 항목",
@@ -148,7 +151,8 @@
     "inspectionOf": "{{status}} 점검",
     "typeInspection": "{{type}} 점검",
     "tab3d": "3D 뷰",
-    "loading3d": "3D 뷰어 로딩 중…"
+    "loading3d": "3D 뷰어 로딩 중…",
+    "tabDocuments": "문서"
   },
   "monitoring": {
     "summary": "요약 – 현재 상태",
@@ -160,7 +164,27 @@
     "hours": "시간",
     "total": "합계",
     "serviceLife": "잔여 수명 {{pct}}%",
-    "moreComponents": "외 {{count}}개 부품"
+    "moreComponents": "외 {{count}}개 부품",
+    "presetRange": "기간 프리셋",
+    "rangeLast30": "최근 30일",
+    "rangeMonth": "이번 달",
+    "rangeYear": "올해",
+    "rangeCustom": "직접 지정",
+    "startDate": "시작일",
+    "endDate": "종료일",
+    "clearRange": "기간 초기화",
+    "alertsInRange": "선택 기간 알림",
+    "lifeEstimate": "잔여수명 추정",
+    "estimatedEnd": "예상 수명 종료: {{year}}년",
+    "noAlerts": "선택 기간에 알림이 없습니다.",
+    "alertPareto": "알림 파레토",
+    "alertsTrend": "월별 알림 추이",
+    "safetyAlerts": "안전 알림",
+    "productionAlerts": "생산 알림",
+    "loadSpectrum": "부하 스펙트럼",
+    "excludeLow": "0-10% 제외",
+    "spectrumCaption": "정격 대비 부하 분포 추정치 (실측 하중 데이터 연동 전 근사)",
+    "runningHours": "가동 시간"
   },
   "info": {
     "manufacturer": "제조사",
@@ -219,7 +243,9 @@
       "토",
       "일"
     ],
-    "noActivities": "{{year}}년 {{month}}에 서비스 활동이 없습니다."
+    "noActivities": "{{year}}년 {{month}}에 서비스 활동이 없습니다.",
+    "serviceProduct": "서비스 상품",
+    "assetName": "자산명"
   },
   "sr": {
     "onCallRepair": "긴급 수리",
@@ -287,7 +313,10 @@
     "costSummary": "비용 요약",
     "labor": "인건비",
     "partsCost": "부품비",
-    "createRepair": "수리 요청 생성"
+    "createRepair": "수리 요청 생성",
+    "attachments": "첨부파일 ({{count}})",
+    "noAttachments": "첨부파일이 없습니다.",
+    "addAttachment": "추가"
   },
   "inventory": {
     "title": "재고·부품",
@@ -298,6 +327,7 @@
     "statusOut": "품절",
     "statusExcess": "과잉",
     "statusExpiry": "유효기간 임박",
+    "noParts": "조건에 맞는 부품이 없습니다",
     "colPart": "부품",
     "colSpecification": "사양",
     "colBin": "빈",
@@ -327,7 +357,57 @@
     "lastIssue": "최근 출고",
     "txnReceipt": "입고",
     "txnIssue": "출고",
-    "txnAdjust": "조정"
+    "txnAdjust": "조정",
+    "detail": {
+      "tabInfo": "부품 정보",
+      "tabHistory": "입출고 이력",
+      "tabUsage": "WO 사용",
+      "expand": "전체 화면으로 보기",
+      "collapse": "패널로 축소",
+      "close": "닫기",
+      "panelLabel": "부품 상세: {{part}}",
+      "stockOnOrder": "발주중",
+      "onOrderTitle": "발주중 주문",
+      "onOrderAuto": "자동",
+      "emptyUsage": "이 부품을 사용한 수리 WO가 없습니다.",
+      "usageQty": "{{n}}개 사용",
+      "cranes": "적용 크레인",
+      "cranesCommon": "공용"
+    },
+    "poStatus": {
+      "requested": "요청됨",
+      "approved": "승인됨",
+      "ordered": "발주됨",
+      "in_transit": "운송 중",
+      "received": "입고됨",
+      "cancelled": "취소됨"
+    },
+    "actions": {
+      "requestPart": "부품 요청",
+      "issue": "출고",
+      "receipt": "입고",
+      "issueTitle": "부품 출고",
+      "receiptTitle": "부품 입고",
+      "qty": "수량",
+      "by": "처리자",
+      "note": "비고",
+      "linkedWo": "연결 수리 WO",
+      "noWo": "WO 연결 없음",
+      "poRef": "PO 참조",
+      "poNone": "PO 선택 안 함",
+      "poCustom": "직접 입력…",
+      "poLineQty": "{{n}}개",
+      "cancel": "취소",
+      "submitIssue": "출고 처리",
+      "submitReceipt": "입고 처리",
+      "exceedsStock": "가용 재고({{n}}개)를 초과합니다",
+      "availableBadge": "가용 {{n}}개",
+      "toastIssued": "{{part}} {{n}}개 출고 완료",
+      "toastReceived": "{{part}} {{n}}개 입고 완료",
+      "toastInsufficient": "가용 재고가 부족합니다",
+      "toastWoClosed": "종결된 WO에는 출고할 수 없습니다",
+      "toastFailed": "처리에 실패했습니다"
+    }
   },
   "spend": {
     "title": "비용",
@@ -400,7 +480,8 @@
     "productsIncluded": "계약에 포함된 서비스 제품",
     "planTitle": "자산 및 서비스 플랜",
     "serviceStatus": "서비스 상태",
-    "monthHint": "월을 클릭하면 서비스 캘린더로 이동합니다"
+    "monthHint": "월 또는 셀을 클릭하면 서비스 캘린더로 이동합니다",
+    "cellActivities": "{{count}}건 활동"
   },
   "documents": {
     "title": "문서 및 보고서",
@@ -428,6 +509,12 @@
     "origin": {
       "generated": "서비스 자동 생성",
       "uploaded": "고객 업로드"
-    }
+    },
+    "assetDocs": "{{count}}개 문서",
+    "emptyAsset": "이 자산의 문서가 아직 없습니다."
+  },
+  "search": {
+    "placeholder": "자산·서비스 요청 검색…",
+    "noResults": "검색 결과가 없습니다."
   }
 }

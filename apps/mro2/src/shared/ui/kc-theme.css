@@ -37,6 +37,24 @@
   --kc-ok: #4ea72e;
   --kc-planned: #bcc2c6;
 
+  /* 의미색 배경 위 텍스트 — 각 상태색 배지/셀에서 4.5:1 이상을 보장하는 짝 */
+  --kc-on-safety: #ffffff;
+  --kc-on-production: #191c1e;
+  --kc-on-undetermined: #191c1e;
+  --kc-on-ok: #191c1e;
+  --kc-on-planned: #191c1e;
+  --kc-on-improvement: #ffffff;
+
+  /* 브랜드 채움 위 텍스트 (CTA 버튼·선택 칩) — 다크에서 accent/teal 이 밝아지므로
+     흰색 고정 대신 이 짝을 쓴다. */
+  --kc-on-accent: #ffffff;
+  --kc-on-teal: #ffffff;
+
+  /* CTA 버튼 채움 — 라이트의 --kc-teal(#0e8c96) 위 흰색은 4.03:1 로 AA 미달이라
+     버튼 표면만 한 단계 어둡게 잡아 6.24:1 을 확보한다. 링크·아이콘 등
+     텍스트를 얹지 않는 teal 용도는 --kc-teal 을 그대로 쓴다. */
+  --kc-teal-fill: #0b6b73;
+
   /* 데이터 계열 레이어 */
   --kc-s1: #118e9c;
   --kc-s2: #1c3f5f;
@@ -76,6 +94,21 @@
   --kc-ok: #66bb4a;
   --kc-planned: #565e63;
 
+  --kc-on-safety: #17191b;
+  --kc-on-production: #17191b;
+  --kc-on-undetermined: #17191b;
+  --kc-on-ok: #17191b;
+  --kc-on-planned: #ffffff;
+  --kc-on-improvement: #17191b;
+
+  /* 다크에서는 accent(#2aa5ad)·teal(#17a3ad) 이 밝아져 흰 글자가 3:1 로 떨어진다
+     → 잉크로 뒤집어 5.9:1 을 확보한다. */
+  --kc-on-accent: #17191b;
+  --kc-on-teal: #17191b;
+
+  /* 다크는 글자가 잉크로 뒤집히므로 밝은 teal 을 그대로 채움으로 쓴다 (5.77:1) */
+  --kc-teal-fill: #17a3ad;
+
   --kc-s1: #23a7b5;
   --kc-s2: #3d6a94;
   --kc-s3: #54c4d4;
@@ -83,7 +116,61 @@
   --kc-s5: #565e63;
 }
 
+/**
+ * 키보드 포커스 링 — 인라인 style 색상 구조라 Tailwind focus: variant를 못 쓰므로
+ * 전역 한 곳에서 처리한다. :focus-visible이라 마우스 클릭에는 뜨지 않는다.
+ * (KcModal은 body로 포털되므로 래퍼에 mro2-root 클래스를 함께 붙일 것)
+ */
+.mro2-root :focus-visible {
+  outline: 2px solid var(--kc-accent);
+  outline-offset: 1px;
+}
+
 /* 테마 인지 hover 행 (Tailwind hover:bg-neutral-50 대체) */
 .kc-hover:hover {
   background: var(--kc-hover);
+}
+
+/* Overview 카드 드릴다운 화살표 — hover 시 → 가 ↗ 로 기울며 "이동" 어포던스를 준다 */
+.kc-card-arrow {
+  display: inline-block;
+  transition: transform 150ms ease;
+}
+.kc-card-link:hover .kc-card-arrow {
+  transform: rotate(-45deg);
+}
+
+/**
+ * 네이티브 위젯(셀렉트 팝업·날짜 선택기·스크롤바)이 테마를 따라가게 한다.
+ * 이게 없으면 다크 테마에서 select 옵션 목록이 밝은 배경에 밝은 글자로 떠서 안 보인다.
+ */
+.mro2-root {
+  color-scheme: light;
+}
+.dark .mro2-root {
+  color-scheme: dark;
+}
+
+/**
+ * 인쇄 — Generate Report(window.print)가 SR 상세 본문만 종이에 담도록 한다.
+ * .kc-print-root 바깥(셸 헤더·사이드바·버튼류)은 모두 숨긴다.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .kc-print-root,
+  .kc-print-root * {
+    visibility: visible;
+  }
+  .kc-print-root {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 0;
+  }
+  .kc-no-print,
+  .kc-no-print * {
+    display: none !important;
+  }
 }

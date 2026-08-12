@@ -352,6 +352,15 @@ importers:
       '@crane/widgets':
         specifier: workspace:*
         version: link:../../packages/widgets
+      '@fontsource/ibm-plex-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-sans-condensed':
+        specifier: ^5.3.0
+        version: 5.3.0
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.2.4)

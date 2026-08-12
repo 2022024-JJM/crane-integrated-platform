@@ -7,18 +7,18 @@
   ],
   "models": [
     {
-      "id": "id-ms6qxnnu-64td5d0c",
+      "id": "id-mshaouxg-byvnie5d",
       "equipName": "Goliath Crane",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        -543.246,
-        414.236,
-        812.639
+        -2191.367,
+        0,
+        1946.164
       ],
       "rotation": [
         0,
-        4.025,
+        6.178,
         0
       ],
       "scale": [
@@ -29,45 +29,45 @@
       "valueMapList": []
     },
     {
-      "id": "id-ms6r23fo-znbnycb2",
+      "id": "id-mshaqgku-n0uu1vne",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -513.756,
-        413.627,
-        764.814
+        -2191.67,
+        0.112,
+        1992.006
       ],
       "rotation": [
         0,
-        6.263,
+        5.735,
         0
       ],
       "scale": [
-        0.7,
-        0.7,
+        1,
+        1,
         1
       ],
       "valueMapList": []
     },
     {
-      "id": "id-ms6r37f1-84slfmle",
+      "id": "id-mshareg6-5n6kj1i9",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -538.895,
-        413.627,
-        789.314
+        -2211.31,
+        0.112,
+        2043.349
       ],
       "rotation": [
         180,
-        -5.805,
+        -3.851,
         180
       ],
       "scale": [
-        0.7,
-        0.7,
+        1,
+        1,
         1
       ],
       "valueMapList": []
@@ -177,14 +177,14 @@
   ],
   "camera": {
     "position": [
-      -578.3662916458051,
-      511.91360572696266,
-      708.0564390396709
+      -2133.5282700693115,
+      175.20588611611004,
+      2142.406058616945
     ],
     "target": [
-      -522.7768451144341,
-      406.8466653262671,
-      828.3512564574106
+      -2286.3909868268784,
+      -279.52598636677584,
+      1766.1783464210437
     ]
   }
 }

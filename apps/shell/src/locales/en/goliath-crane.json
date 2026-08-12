@@ -24,6 +24,35 @@
   "viewer3d": {
     "title": "3D Model Viewer"
   },
+  "collisionGuard": {
+    "enable": "Show collision detection",
+    "disable": "Hide collision detection",
+    "hud": {
+      "title": "Detected objects",
+      "kind": {
+        "person": "Person",
+        "car": "Car",
+        "forklift": "Forklift"
+      },
+      "severity": {
+        "warning": "Warn",
+        "danger": "Danger"
+      },
+      "empty": "No objects detected"
+    },
+    "help": {
+      "title": "Help",
+      "show": "Show help",
+      "hide": "Hide help",
+      "detectionRing": "LiDAR detection range",
+      "dangerRing": "Danger radius",
+      "sensor": "LiDAR mount point (both girder legs)",
+      "arrow": "Heading · length scales with speed",
+      "severityDanger": "Danger — inside danger radius",
+      "severityWarning": "Warning — inside detection range",
+      "simulationNote": "Currently running on simulated data."
+    }
+  },
   "metrics": {
     "load": "Load",
     "windSpeed": "Wind Speed",
