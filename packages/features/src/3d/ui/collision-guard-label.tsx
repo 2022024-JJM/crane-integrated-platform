@@ -22,6 +22,8 @@ export interface TrackLabelRefs {
   root: HTMLDivElement;
   distance: HTMLSpanElement;
   speed: HTMLSpanElement;
+  /** 세버리티 글리프 — 색 외 채널(적록색맹 대비) */
+  mark: HTMLSpanElement;
 }
 
 /**
@@ -60,8 +62,9 @@ export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
         '[data-slot="distance"]',
       );
       const speed = root.querySelector<HTMLSpanElement>('[data-slot="speed"]');
-      if (distance && speed) {
-        register({ root, distance, speed });
+      const mark = root.querySelector<HTMLSpanElement>('[data-slot="mark"]');
+      if (distance && speed && mark) {
+        register({ root, distance, speed, mark });
       }
     },
     [register],
@@ -85,6 +88,10 @@ export function TrackLabel({ height, worldScale, register }: TrackLabelProps) {
         style={{ opacity: 0, transform: 'translateY(-50%)' }}
         className="relative rounded-md border px-2 py-1 font-mono text-xs leading-tight font-bold whitespace-nowrap text-white shadow-md"
       >
+        {/* 세버리티 글리프 — 위험 ▲ / 주의 ● . 칩 배경색만으로 레벨을
+            전달하면 적록색맹에게 amber/red가 같은 색으로 보인다.
+            모양은 색각과 무관하게 읽힌다 */}
+        <span data-slot="mark" className="mr-1 inline-block" />
         <span data-slot="distance" className="tabular-nums" />
         <span className="opacity-60"> · </span>
         <span data-slot="speed" className="tabular-nums" />

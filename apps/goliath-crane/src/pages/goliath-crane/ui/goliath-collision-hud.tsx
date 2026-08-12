@@ -31,9 +31,12 @@ const TRACK_ICONS = {
  * 컬럼이 행마다 어긋난다). 레그 라벨(L1/L2)도 이름 옆 인라인이 아니라
  * 별도 컬럼 — 이름 길이에 따라 칩 위치가 행마다 흔들리지 않는다
  * (운영 피드백). 내부 트래킹 id는 운영자에게 무의미해 뺀다.
+ *
+ * 거리 컬럼이 가장 넓다 — 충돌 HUD에서 가장 행동을 좌우하는 수치이므로
+ * 글자 크기를 키웠고(15px), 그만큼 컬럼도 넓혀야 자리가 난다.
  */
 const ROW_GRID =
-  'grid grid-cols-[1.25rem_minmax(0,1fr)_1.5rem_3.25rem_3.5rem_2.75rem] items-center gap-1.5 px-2 py-1';
+  'grid grid-cols-[1.25rem_minmax(0,1fr)_1.5rem_4rem_3.25rem_3rem] items-center gap-1.5 py-1 pr-2 pl-1.5';
 
 function TrackRow({ track }: { track: HudTrack }) {
   const { t } = useTranslation('goliath-crane');
@@ -44,14 +47,32 @@ function TrackRow({ track }: { track: HudTrack }) {
     <li
       className={cn(
         ROW_GRID,
-        // 위험 행은 배경 틴트로도 구분 — 배지까지 시선이 가기 전에
-        // 목록 스캔 단계에서 걸리게 한다.
-        danger && 'bg-red-500/10',
-        track.phase === 'leaving' && 'opacity-40',
+        // 위험 행은 배경 틴트 + 왼쪽 굵은 세로선. 색 배지는 시선이 행
+        // 끝까지 가야 읽히지만, 왼쪽 모서리 마커는 목록을 훑는 단계에서
+        // 걸린다 — 위험 행이 여럿이면 붉은 띠가 이어져 "위험 그룹"의
+        // 경계가 배지를 읽지 않고도 보인다.
+        'border-l-2',
+        danger ? 'border-red-500 bg-red-500/15' : 'border-transparent',
+        // 이탈 트랙은 opacity로 흐리지 않는다 — opacity는 글자와 배경을
+        // 함께 곱해 대비가 2.10:1까지 떨어진다(위험 구역을 막 벗어난
+        // 객체가 가장 안 읽히게 되는 역설). 색 한 단계 + 기울임으로만
+        // 물려 대비를 지킨다(이 조합의 최악 대비 6.03:1).
+        track.phase === 'leaving' && 'text-slate-400 italic',
       )}
     >
-      <Icon className="size-3.5 text-slate-400" aria-hidden />
-      <span className="min-w-0 truncate text-[11px] font-medium text-white">
+      <Icon
+        className={cn(
+          'size-3.5',
+          track.phase === 'leaving' ? 'text-current' : 'text-slate-300',
+        )}
+        aria-hidden
+      />
+      <span
+        className={cn(
+          'min-w-0 truncate text-[11px]',
+          track.phase === 'leaving' ? 'text-current' : 'text-slate-200',
+        )}
+      >
         {t(`collisionGuard.hud.kind.${track.type}`)}
       </span>
       {/* 라벨이 없어도 셀은 유지 — 뒤 컬럼 정렬이 흔들리지 않는다 */}
@@ -62,20 +83,42 @@ function TrackRow({ track }: { track: HudTrack }) {
           </span>
         ) : null}
       </span>
-      <span className="text-right font-mono text-[11px] font-semibold tabular-nums text-white">
-        {track.distanceM} m
-      </span>
-      <span className="text-right font-mono text-[10px] tabular-nums text-slate-400">
-        {track.speedMps.toFixed(1)} m/s
+      {/* 거리 — 이 패널에서 가장 큰 글자. 운영자가 판단에 쓰는 수치는
+          거리 하나이므로 종류·속도보다 위계가 확실히 위여야 한다.
+          단위는 한 단계 작고 어둡게 — 매 행 반복되므로 눈이 걸러낸다 */}
+      <span
+        className={cn(
+          'text-right font-mono text-[15px] leading-none font-bold tabular-nums',
+          // 이탈 행은 상속색(slate-400)을 따르고, 활성 행만 흰색으로 튄다
+          track.phase === 'leaving' ? 'text-current' : 'text-white',
+        )}
+      >
+        {track.distanceM}
+        <span className="ml-0.5 text-[9px] font-normal text-slate-400">m</span>
       </span>
       <span
         className={cn(
-          'rounded px-1 py-px text-center text-[9px] font-bold tracking-wide uppercase',
-          danger
-            ? 'bg-red-500/25 text-red-300'
-            : 'bg-amber-500/25 text-amber-300',
+          'text-right font-mono text-[10px] tabular-nums',
+          track.phase === 'leaving' ? 'text-current' : 'text-slate-300',
         )}
       >
+        {track.speedMps.toFixed(1)}
+        <span className="ml-0.5 text-slate-400">m/s</span>
+      </span>
+      {/* 세버리티 배지 — 틴트 배경(대비 4.7:1)이 아니라 솔리드. 한글에
+          uppercase·tracking은 자간만 벌려 가독성을 해치므로 쓰지 않는다.
+          글리프(▲/●)는 씬 라벨·도움말과 같은 기호 언어 — 도움말이
+          가르친 기호가 HUD에서도 이어져야 하고, 적록색맹에게는 색과
+          무관한 구분 채널이 된다 */}
+      <span
+        className={cn(
+          'rounded px-1 py-px text-center text-[11px] font-bold',
+          danger ? 'bg-red-700 text-white' : 'bg-amber-400 text-slate-950',
+        )}
+      >
+        <span aria-hidden className="mr-0.5 text-[9px]">
+          {danger ? '▲' : '●'}
+        </span>
         {t(`collisionGuard.hud.severity.${track.severity}`)}
       </span>
     </li>
@@ -103,20 +146,40 @@ export function GoliathCollisionGuardHud() {
     <section
       aria-label={t('collisionGuard.hud.title')}
       className={cn(
-        'absolute top-3 left-3 w-72 overflow-hidden rounded-lg border bg-slate-900/85 shadow-md backdrop-blur-sm',
-        overall === 'danger' ? 'border-red-500/70' : 'border-slate-700/70',
+        // 불투명도 95% — 85%는 밝은 객체가 패널 밑을 지날 때 배경이
+        // 비쳐 slate-400 텍스트가 4.44:1까지 떨어진다(기준 4.5:1 미달).
+        'absolute top-3 left-3 w-80 overflow-hidden rounded-lg border bg-slate-900/95 shadow-md backdrop-blur-sm',
+        // 위험 상태는 1px 테두리가 아니라 링까지 — 목록을 읽지 않아도
+        // 패널의 "덩어리"가 경보로 읽힌다.
+        overall === 'danger'
+          ? 'border-red-500 ring-2 ring-red-500/50'
+          : 'border-slate-700/70',
       )}
     >
-      <header className="flex items-center gap-1.5 border-b border-slate-700/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-slate-200 uppercase">
-        <ShieldCheck className="size-3.5" aria-hidden />
+      {/* 헤더는 정적 라벨이므로 데이터보다 조용하게 — 이전에는 데이터 행과
+          같은 11px bold라 목록과 시선을 다퉜다 */}
+      <header className="flex items-center gap-1.5 border-b border-slate-700/60 px-2.5 py-1.5 text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
+        <ShieldCheck className="size-3" aria-hidden />
         <span className="flex-1">{t('collisionGuard.hud.title')}</span>
       </header>
+      {/* 위험 진입을 스크린리더에 알린다 — 시각 채널(붉은 링·펄스)만으로는
+          전달되지 않는다. 상태가 바뀔 때만 문장이 갱신되므로 4Hz 폴링이
+          그대로 읽히지 않는다. */}
+      <p role="status" aria-live="assertive" className="sr-only">
+        {overall === 'danger'
+          ? t('collisionGuard.hud.severity.danger')
+          : overall === 'warning'
+            ? t('collisionGuard.hud.severity.warning')
+            : ''}
+      </p>
       {snapshot.tracks.length === 0 ? (
-        <p className="px-2.5 py-2 text-[11px] text-slate-400">
+        <p className="px-2.5 py-2 text-[11px] text-slate-300">
           {t('collisionGuard.hud.empty')}
         </p>
       ) : (
-        <ul className="divide-y divide-slate-700/50 py-0.5">
+        // 행 구분선은 아주 옅게 — 위험 행의 붉은 틴트/모서리 마커와
+        // 줄무늬가 경쟁하지 않아야 한다.
+        <ul className="divide-y divide-slate-700/30 py-0.5">
           {snapshot.tracks.map((track) => (
             <TrackRow key={track.id} track={track} />
           ))}

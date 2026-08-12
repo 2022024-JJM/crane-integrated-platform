@@ -39,6 +39,18 @@
         "danger": "Danger"
       },
       "empty": "No objects detected"
+    },
+    "help": {
+      "title": "Help",
+      "show": "Show help",
+      "hide": "Hide help",
+      "detectionRing": "LiDAR detection range",
+      "dangerRing": "Danger radius",
+      "sensor": "LiDAR mount point (both girder legs)",
+      "arrow": "Heading · length scales with speed",
+      "severityDanger": "Danger — inside danger radius",
+      "severityWarning": "Warning — inside detection range",
+      "simulationNote": "Currently running on simulated data."
     }
   },
   "metrics": {

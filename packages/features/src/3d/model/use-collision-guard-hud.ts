@@ -113,7 +113,13 @@ export function useCollisionGuardHudSnapshot(
     // 첫 tick도 interval에 맡긴다 — effect 본문 동기 setState 금지.
     // 토글 직후 최대 1/hz초 동안 EMPTY가 보이는 것은 허용 범위.
     const interval = setInterval(tick, 1000 / hz);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // 비활성 전환 시 스냅샷을 비운다 — 남겨두면 다시 켤 때 첫 tick
+      // 전까지(최대 1/hz초) 꺼지기 직전의 낡은 목록이 되살아나 보인다.
+      // 그 사이 트랙이 모두 정리됐다면 유령 목록이 되는 셈.
+      setSnapshot(EMPTY_SNAPSHOT);
+    };
   }, [enabled, zones, hz]);
 
   // 비활성화 중에는 내부 스냅샷이 무엇이든 EMPTY를 보여준다.

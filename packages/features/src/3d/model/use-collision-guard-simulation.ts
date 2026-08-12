@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   nearestZone,
@@ -29,9 +29,40 @@ import {
  *   — 렌더러의 damping 보간이 이 간격을 메꾸는 것까지가 실전과 같다.
  * - 진입/이탈 판정은 존 합집합 기준: 어느 존이든 반경 안이면 ingest,
  *   모든 존에서 (반경 + 히스테리시스) 밖이면 markLeaving.
- * - 실제 LiDAR 연동 시 이 훅만 제거하고 WebSocket 브리지가
- *   useCollisionGuardStore.ingest()를 호출하도록 바꾸면 된다.
  * - R3F Canvas 안에서만 사용해야 한다.
+ *
+ * ---
+ * 실물 LiDAR 연동 시 유의 (이 훅을 제거하기 전에 읽을 것)
+ *
+ * 이 훅은 "데이터 소스"만이 아니라 아래 네 가지 책임을 함께 지고 있다.
+ * 훅을 지우면 네 가지가 같이 사라지므로, 브리지를 붙이기 전에 각각을
+ * 어디서 담당할지 정해야 한다.
+ *
+ *  1. 좌표 프레이밍 — 에이전트는 처음부터 씬 world unit으로 태어난다
+ *     (spawnAgent가 zone.center에서 출발). 실물은 센서 로컬 프레임이라
+ *     축 변환 · 센서 외부 파라미터 · 크레인 실시간 포즈 합성 ·
+ *     metersPerUnit 환산이 필요하다. 크레인이 레일을 주행하면 존 중심도
+ *     움직이므로 이 변환은 매 프레임 갱신되어야 한다.
+ *  2. 존 진입/이탈 판정 — 아래 센서 발행 루프의 nearestZone + 5m
+ *     히스테리시스가 그 역할이다. 이건 시뮬레이션 로직이 아니라 가드
+ *     로직이므로, 브리지도 같은 판정을 써야 경계에서 깜빡이지 않는다.
+ *     공용 모듈로 빼는 것을 권한다.
+ *  3. 트랙 수명 — markLeaving()을 호출하는 곳은 이 훅뿐이다. 실물
+ *     트래커는 "사라졌다"는 이벤트 없이 그냥 보고를 멈추는 경우가 많으므로,
+ *     타임스탬프 + 무보고 타임아웃 리퍼(reaper)가 반드시 필요하다.
+ *  4. 타입 결정 — 스폰 시 1회 확정한다. 실물 인식은 신뢰도와 함께 오고
+ *     추적 도중 재분류되므로 'unknown'과 confidence 필드가 필요하다.
+ *
+ * 그 외 필요한 것: 소켓 콜백에서 동기로 ingest하지 말고 드레인 버퍼를
+ * 거칠 것(같은 저장소의 use-realtime-store / point-cloud-stream-store가
+ * 이미 이 패턴을 쓴다), 두 센서가 같은 사람을 보는 경우의 연관 처리.
+ *
+ * 앱에는 이미 SOSLAB 센서 2기의 포인트클라우드 스트림 인프라가 있다
+ * (apps/goliath-crane/.../point-cloud) — 재연결 백오프 · 센서 레지스트리 ·
+ * STALE_SENSOR_MS · 좌표 변환 슬라이더가 거기 있으니 재사용할 것.
+ * 다만 브라우저에서 포인트클라우드를 클러스터링해 트랙을 만들려 하지는
+ * 말 것(파서가 6만 점 이상을 다운샘플링한다 — 표시용 손실 데이터다).
+ * 클러스터링/분류는 엣지 노드가 하고, 브라우저는 트랙 토픽을 받는다.
  */
 
 /** 센서 관측 발행 주기 (Hz) */
@@ -116,6 +147,12 @@ const SEPARATION_STEER_RATE = 3.5;
  * 붐비면 태어나자마자 겹친 상태가 되므로 이 tick의 스폰을 건너뛴다.
  */
 const SPAWN_SEPARATION_M = 14;
+
+/**
+ * 시뮬레이션 세션 카운터 — 훅이 마운트될 때마다 증가한다. 재마운트 시
+ * 트랙 id가 이전 세션과 겹치지 않게 하는 용도(아래 sessionIdRef 참고).
+ */
+let simulationSessionCounter = 0;
 
 interface SimAgent {
   id: string;
@@ -357,6 +394,37 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
   const sensorAccumulatorRef = useRef(0);
   const idCounterRef = useRef(0);
   const elapsedRef = useRef(0);
+  /**
+   * 훅 인스턴스별 트랙 id 접두사.
+   *
+   * 카운터만 쓰면 재마운트 때 id가 sim-1부터 다시 시작해, 정리가 한 박자
+   * 늦은 프레임에 이전 세션의 트랙과 id가 겹친다 — ingest()는 같은 id를
+   * "기존 트랙"으로 보고 되살리므로(phase='active') 좀비가 새 객체의 탈을
+   * 쓰고 남는다. 인스턴스마다 접두사를 달리해 id 공간을 분리한다.
+   */
+  const sessionIdRef = useRef(0);
+  if (sessionIdRef.current === 0) {
+    sessionIdRef.current = ++simulationSessionCounter;
+  }
+
+  /**
+   * 언마운트 시 스토어 정리.
+   *
+   * 트랙은 모듈 싱글턴 스토어에 살고, 에이전트는 이 훅의 ref에 산다 —
+   * 수명이 다르다. 다른 화면으로 이동하면 훅(과 useFrame)은 죽지만
+   * 스토어의 트랙 배열은 그대로 남는다. 돌아와서 다시 켜면 그 트랙들이
+   * 마운트되는데, 에이전트는 빈 배열로 새로 시작하므로 아무도
+   * ingest()해 주지 않아 화면에 멈춰 선 채로 남고 그 옆에서 새 객체가
+   * 스폰된다. useFrame 안의 정리 코드(!enabled 분기)는 프레임이 도는
+   * 동안만 유효하므로 이 경우를 잡지 못한다 — 언마운트에서 정리한다.
+   */
+  useEffect(
+    () => () => {
+      agentsRef.current = [];
+      useCollisionGuardStore.getState().clear();
+    },
+    [],
+  );
 
   useFrame((_, delta) => {
     // 탭 비활성 복귀 등으로 delta가 튀면 에이전트가 순간이동하므로 clamp.
@@ -364,8 +432,13 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
     const store = useCollisionGuardStore.getState();
 
     if (!enabled || zones.length === 0) {
+      // 에이전트가 이미 비었더라도 스토어에 트랙이 남아 있으면 지운다 —
+      // 두 상태의 수명이 다르므로 agents 기준으로만 판단하면(이전 구현)
+      // 소유자 없는 트랙이 화면에 멈춰 선 채로 남는다.
       if (agentsRef.current.length > 0) {
         agentsRef.current = [];
+      }
+      if (store.tracks.length > 0) {
         store.clear();
       }
       return;
@@ -379,7 +452,10 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
     if (spawnTimerRef.current <= 0 && agentsRef.current.length < MAX_AGENTS) {
       idCounterRef.current += 1;
       const zone = zones[idCounterRef.current % zones.length];
-      const candidate = spawnAgent(zone, `sim-${idCounterRef.current}`);
+      const candidate = spawnAgent(
+        zone,
+        `sim-${sessionIdRef.current}-${idCounterRef.current}`,
+      );
 
       // 스폰 지점이 붐비면 이번엔 건너뛴다 — 태어나자마자 겹친 상태로
       // 시작하면 분리 로직이 밀어내며 부자연스럽게 튄다.

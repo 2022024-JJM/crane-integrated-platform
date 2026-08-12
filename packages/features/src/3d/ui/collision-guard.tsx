@@ -88,13 +88,33 @@ const EDGE_FADE_BAND_M = 12;
 const EDGE_MIN_SOLIDITY = 0.3;
 
 /**
- * 감지 링 색 — 채도를 뺀 밝은 회색 배경 위에서 읽혀야 하므로 밝은
- * 하늘색(#38bdf8)이 아니라 한 단계 진한 파랑을 쓴다. 밝은 배경에서는
- * 밝은 색이 묻히고 어두운 색이 도드라진다.
+ * 씬 색 토큰 — 도움말 패널(DOM)이 같은 값을 써야 색 견본이 실제 화면과
+ * 일치한다. 한쪽만 바꾸면 도움말이 거짓말을 하게 되므로 단일 소스로
+ * 내보낸다.
+ *
+ * detection: 감지 링 — 채도 뺀 밝은 배경 위에서 읽혀야 하므로 밝은
+ *   하늘색(#38bdf8)이 아니라 한 단계 진한 파랑 (밝은 배경에서는 밝은
+ *   색이 묻히고 어두운 색이 도드라진다).
+ * warning: amber-400 — amber-500은 red와의 적록색맹 분리도가 부족하다
+ *   (아래 세버리티 색 주석 참고). 변경 시 materialize-material.ts의
+ *   uRimColor 초기값도 함께 바꿀 것.
  */
-const COLOR_IDLE = new Color('#0284c7');
-const COLOR_WARNING = new Color('#f59e0b');
-const COLOR_DANGER = new Color('#ef4444');
+export const COLLISION_GUARD_COLORS = {
+  detection: '#0284c7',
+  warning: '#fbbf24',
+  danger: '#ef4444',
+  camera: '#a78bfa',
+} as const;
+
+const COLOR_IDLE = new Color(COLLISION_GUARD_COLORS.detection);
+/**
+ * 세버리티 색 — 적록색맹(남성 약 8%)에게 amber #f59e0b와 red #ef4444는
+ * 거의 같은 색으로 보인다(deutan ΔE 13.9). 한 단계 밝은 amber-400을 쓰면
+ * 분리도가 ΔE 20.4로 47% 올라가 색각 이상에서도 두 레벨이 구분된다.
+ * 색만으로 구분되면 안 되므로 위험은 펄스(모션)로도 인코딩한다.
+ */
+const COLOR_WARNING = new Color(COLLISION_GUARD_COLORS.warning);
+const COLOR_DANGER = new Color(COLLISION_GUARD_COLORS.danger);
 /**
  * 커버 영역 무대 색 — 감지 링 안쪽을 어두운 네이비로 깔아 FSD의 "어두운
  * 도로"를 만든다. 흰 객체·고스트·발광 화살표·위험 면은 전부 이 어두운
@@ -107,33 +127,67 @@ const COLOR_STAGE = new Color('#0b1220');
  * 카메라 근거리 커버 링 — 센서 종류 구분용 정적 색.
  * amber를 쓰면 warning 세버리티와 색 의미가 충돌하므로 보라 계열로 분리.
  */
-const COLOR_CAMERA = new Color('#a78bfa');
+const COLOR_CAMERA = new Color(COLLISION_GUARD_COLORS.camera);
 
 /**
- * 진행 방향 화살표 — 단위 길이(+X 방향) 플랫 화살표. 그룹이 heading으로
- * 회전하고 scale.x로 고정 길이(ARROW_LENGTH_M)를 편다.
+ * 진행 방향 화살표 — 몸통(자루)과 촉을 분리한 두 메시로 그린다.
+ *
+ * 길이가 속도를 인코딩하게 되면서 한 덩어리 shape을 scale.x로 늘이는
+ * 방식을 못 쓴다 — 촉까지 함께 늘어나 빠른 객체의 화살표가 창처럼
+ * 뾰족해지고 느린 객체는 뭉툭해져, 길이가 아니라 "모양"이 달라진다.
+ * 촉은 원형 그대로 두고 자루만 늘여야 길이 비교가 성립한다.
+ *
+ * 둘 다 +X 방향, 자루는 단위 길이(scale.x로 늘임), 촉은 자루 끝에
+ * 붙는 고정 크기.
  */
-const VELOCITY_ARROW_SHAPE = (() => {
+/** 화살촉 길이 (로컬 m) — 자루가 늘어나도 이 값은 고정 */
+const ARROW_HEAD_M = 1.15;
+const ARROW_SHAFT_SHAPE = (() => {
   const shape = new Shape();
   shape.moveTo(0, -0.14);
-  shape.lineTo(0.62, -0.14);
-  shape.lineTo(0.62, -0.32);
-  shape.lineTo(1, 0);
-  shape.lineTo(0.62, 0.32);
-  shape.lineTo(0.62, 0.14);
+  shape.lineTo(1, -0.14);
+  shape.lineTo(1, 0.14);
   shape.lineTo(0, 0.14);
   shape.closePath();
   return shape;
 })();
+const ARROW_HEAD_SHAPE = (() => {
+  const shape = new Shape();
+  shape.moveTo(0, -0.32);
+  shape.lineTo(ARROW_HEAD_M, 0);
+  shape.lineTo(0, 0.32);
+  shape.closePath();
+  return shape;
+})();
 /**
- * 화살표 길이 (m) — 전 객체 동일 고정 길이. 속도는 라벨/HUD의 수치가
- * 담당하고, 화살표는 진행 "방향"만 전달한다 (길이가 제각각이면 탑뷰에서
- * 시선이 분산된다는 운영 피드백).
+ * 화살표 길이 (m) — 속도에 비례한다. 방향뿐 아니라 "얼마나 빠른가"까지
+ * 화살표 하나가 전달하면, 수치를 읽지 않고도 위험의 급박함이 보인다
+ * (느리게 걷는 사람과 달려오는 차량이 형태만으로 구분된다).
+ *
+ * 매핑은 선형이 아니라 제곱근이다: 시뮬레이션 속도 범위가 0.9~8.5 m/s로
+ * 9배가 넘어 선형으로 매핑하면 차량 화살표가 사람의 9배가 되어 탑뷰를
+ * 가로지른다. 제곱근은 느린 쪽의 차이를 살리면서 빠른 쪽을 눌러
+ * 3배 안쪽으로 압축한다(운영 피드백 — 길이 편차가 크면 시선 분산).
  *
  * 객체와 같은 과장 배율(sizeMultiplier) 그룹 안에 있으므로 실측 m가
  * 아니라 "객체 대비 비율"로 읽힌다 — 객체를 키우면 함께 커진다.
  */
-const ARROW_LENGTH_M = 4;
+const ARROW_LENGTH_MIN_M = 2.4;
+const ARROW_LENGTH_MAX_M = 7;
+/** 길이 매핑의 속도 기준 구간 (m/s) — 시뮬레이션 실측 범위에 맞춘다 */
+const ARROW_SPEED_MIN = 0.9;
+const ARROW_SPEED_MAX = 8.5;
+
+/** 속도(m/s) → 화살표 길이(m). 제곱근 매핑 + 양끝 clamp. */
+function arrowLengthFor(speed: number): number {
+  const t = Math.sqrt(
+    Math.min(
+      1,
+      Math.max(0, (speed - ARROW_SPEED_MIN) / (ARROW_SPEED_MAX - ARROW_SPEED_MIN)),
+    ),
+  );
+  return ARROW_LENGTH_MIN_M + (ARROW_LENGTH_MAX_M - ARROW_LENGTH_MIN_M) * t;
+}
 /**
  * 화살표 시작점(객체 앞코) X 오프셋 (로컬 m) — 객체 실측 반길이 수준으로
  * 최소화한다. 이 값도 과장 배율(sizeMultiplier)이 곱해지므로, 크게 잡으면
@@ -152,13 +206,23 @@ const ARROW_NOSE_OFFSET: Record<DetectedObjectType, number> = {
 const RIM_STRENGTH_WARNING = 0.7;
 const RIM_STRENGTH_DANGER = 0.9;
 /**
- * 위험 "진입 순간"의 원샷 림 플래시 — 지속 상태는 damping된 림 강도가,
- * 전환의 긴급함은 순간 증폭이 전달한다. 색 lerp만으로는 전환이 너무
- * 조용해 다른 곳을 보고 있으면 놓친다 — 짧은 휘도 스파이크는 주변시가
- * 잡아낸다 (FSD가 위험 요소 강조에 쓰는 문법).
+ * 위험 "진입 순간"의 원샷 림 플래시 — 전환의 긴급함을 순간 증폭으로
+ * 전달한다. 색 lerp만으로는 전환이 너무 조용해 다른 곳을 보고 있으면
+ * 놓친다.
  */
 const DANGER_FLASH_DURATION = 0.35;
 const DANGER_FLASH_BOOST = 1.6;
+/**
+ * 위험 지속 펄스 — 원샷 플래시(0.35s)만으로는 그 순간 다른 다리를 보고
+ * 있던 운영자가 영영 놓친다. 주변시는 순간 스파이크보다 반복 신호를
+ * 훨씬 잘 잡으므로, 위험 상태가 유지되는 동안 림을 계속 맥동시킨다.
+ *
+ * 색이 아닌 "모션"이 위험의 두 번째 인코딩 채널이다 — 적록색맹에게
+ * amber/red 구분이 어려워도 "깜빡이면 위험"은 색각과 무관하게 읽힌다.
+ * 주의(warning) 객체는 절대 맥동하지 않아 대비가 성립한다.
+ */
+const DANGER_PULSE_HZ = 2;
+const DANGER_PULSE_DEPTH = 0.45;
 
 /** 머티리얼라이즈 컷 기준 객체 높이 (로컬 미터, 라벨 부착에도 사용) */
 const OBJECT_HEIGHT: Record<DetectedObjectType, number> = {
@@ -198,12 +262,24 @@ const CONTACT_SHADOW_FOOTPRINT: Record<
   DetectedObjectType,
   [long: number, cross: number]
 > = {
-  person: [0.55, 0.55],
-  car: [2.5, 1.15],
-  forklift: [1.7, 1.0],
+  person: [0.9, 0.9],
+  car: [3.4, 1.7],
+  forklift: [2.4, 1.5],
 };
 /** 접지 앵커 최대 불투명도 — 객체 페이드에 이 배율을 곱해 함께 여려진다 */
-const CONTACT_SHADOW_OPACITY = 0.45;
+const CONTACT_SHADOW_OPACITY = 0.55;
+/**
+ * 접지 앵커가 유지하는 최소 어둡기 비율.
+ *
+ * 앵커를 객체 불투명도에 그대로 비례시키면, 감지 경계 밴드에 갓 들어온
+ * 고스트(불투명도 30%)는 앵커도 30%가 되어 자기 그늘을 잃는다. 흰 객체가
+ * 밝은 도크 위에 있으면 대비가 2:1까지 떨어지는데 — 하필 "처음 감지된
+ * 순간"이 가장 안 보이는 상태가 된다.
+ *
+ * 앵커는 객체보다 먼저 짙어져 다크 스테이지 밖에서도 국소적인 어두운
+ * 바닥을 만든다. 커버 밖 객체에도 자체 대비가 생긴다.
+ */
+const CONTACT_SHADOW_FLOOR = 0.55;
 
 /**
  * 접지 앵커 텍스처 — 중심 진한 검정에서 가장자리 완전 투명으로 빠지는
@@ -243,17 +319,22 @@ type Severity = 'idle' | 'warning' | 'danger';
  * 1.9:1 수준이라 안 읽힌다(운영 피드백). 주의는 어두운 칩 + 세버리티색
  * 보더로 대비를 확보하고, 위험은 칩 전체를 red로 물들여 소리치게 한다.
  */
-const LABEL_STYLE: Record<'warning' | 'danger', { bg: string; border: string }> =
-  {
-    warning: {
-      bg: 'rgba(15, 23, 42, 0.92)', // slate-900
-      border: 'rgba(251, 191, 36, 0.9)', // amber-400
-    },
-    danger: {
-      bg: 'rgba(220, 38, 38, 0.95)', // red-600
-      border: 'rgba(254, 202, 202, 0.9)', // red-200
-    },
-  };
+const LABEL_STYLE: Record<
+  'warning' | 'danger',
+  { bg: string; border: string; mark: string }
+> = {
+  warning: {
+    bg: 'rgba(15, 23, 42, 0.92)', // slate-900
+    border: 'rgba(251, 191, 36, 0.9)', // amber-400
+    // 색 외 채널 — 원형은 "주의", 삼각형은 "위험" (교통 표지 관습)
+    mark: '●',
+  },
+  danger: {
+    bg: 'rgba(220, 38, 38, 0.95)', // red-600
+    border: 'rgba(254, 202, 202, 0.9)', // red-200
+    mark: '▲',
+  },
+};
 
 function easeOutCubic(t: number) {
   const u = 1 - t;
@@ -306,6 +387,8 @@ function DetectionZoneRing({
   };
   const waveMeshRefs = useRef<(Mesh | null)[]>([]);
   const waveMatRefs = useRef<(MeshStandardMaterial | null)[]>([]);
+  /** 레이더 파장 가시성 (0~0.3) — 객체 진입 시 부드럽게 물러난다 */
+  const waveLevelRef = useRef(0.3);
   const reducedMotion = usePrefersReducedMotion();
 
   useFrame((state, delta) => {
@@ -313,24 +396,6 @@ function DetectionZoneRing({
     // "이 영역을 능동적으로 스캔하고 있다"는 감각을 만든다. 위상을
     // 분산한 두 파장이 번갈아 나가고, 바깥으로 갈수록 빠르게 옅어져
     // 객체·위험 면보다 시각적 우선순위가 낮게 유지된다.
-    for (let i = 0; i < SCAN_WAVE_COUNT; i++) {
-      const mesh = waveMeshRefs.current[i];
-      const material = waveMatRefs.current[i];
-      if (!mesh || !material) continue;
-      if (reducedMotion) {
-        material.opacity = 0;
-        continue;
-      }
-      const t =
-        (state.clock.elapsedTime / SCAN_WAVE_PERIOD + i / SCAN_WAVE_COUNT) % 1;
-      const s = Math.max(0.001, t) * zone.radius;
-      mesh.scale.set(s, s, 1);
-      material.opacity = (1 - t) * (1 - t) * 0.3;
-    }
-
-    const danger = dangerRef.current;
-    if (!danger) return;
-
     const tracks = useCollisionGuardStore.getState().tracks;
 
     let severity: Severity = 'idle';
@@ -345,14 +410,50 @@ function DetectionZoneRing({
       severity = 'warning';
     }
 
+    // 레이더 파장의 불투명도 목표 — 존이 비어 있을 때만 돈다.
+    //
+    // 파장은 화면에서 가장 넓은 면적을 움직이는 요소인데 정작 아무
+    // 정보도 인코딩하지 않는다. 객체가 들어온 순간에도 계속 돌면 위험
+    // 펄스·등장 연출과 주의를 다투게 되므로("가장 큰 움직임이 가장 덜
+    // 중요한 것"), 감지된 객체가 있으면 물러난다. 결과적으로 "화면이
+    // 조용하면 스캔 중, 움직이면 실제 위험"이라는 규칙이 성립한다.
+    const waveTarget = severity === 'idle' && !reducedMotion ? 0.3 : 0;
+    waveLevelRef.current +=
+      (waveTarget - waveLevelRef.current) * (1 - Math.exp(-delta / 0.5));
+
+    for (let i = 0; i < SCAN_WAVE_COUNT; i++) {
+      const mesh = waveMeshRefs.current[i];
+      const material = waveMatRefs.current[i];
+      if (!mesh || !material) continue;
+      const t =
+        (state.clock.elapsedTime / SCAN_WAVE_PERIOD + i / SCAN_WAVE_COUNT) % 1;
+      const s = Math.max(0.001, t) * zone.radius;
+      mesh.scale.set(s, s, 1);
+      material.opacity = (1 - t) * (1 - t) * waveLevelRef.current;
+    }
+
+    const danger = dangerRef.current;
+    if (!danger) return;
+
     // 위험 반경 "면" — idle에도 미세 채움을 남겨 다크 스테이지 위에서
     // 위험 구역이 항상 "면"으로 인지되게 하고, 객체 진입(warning) →
     // danger 펄스로 단계적으로 차오른다. 면은 선보다 같은 불투명도에서
     // 훨씬 무겁게 읽히므로 낮은 값을 쓴다.
+    //
+    // 펄스 주기는 객체 림 펄스와 같은 DANGER_PULSE_HZ — 같은 위험을
+    // 알리는 두 요소가 다른 박자로 깜빡이면 경보가 둘로 쪼개져 읽힌다.
+    // 같은 clock을 쓰므로 위상까지 일치해 "하나의 경보"로 맥동한다.
+    // reduced-motion이면 맥동 없이 상단값 고정 (위험 자체는 계속 표시).
     const k = 1 - Math.exp(-delta / 0.25);
     const dangerTarget =
       severity === 'danger'
-        ? 0.3 + Math.sin(state.clock.elapsedTime * 5) * 0.1
+        ? reducedMotion
+          ? 0.35
+          : 0.3 +
+            Math.sin(
+              state.clock.elapsedTime * Math.PI * 2 * DANGER_PULSE_HZ,
+            ) *
+              0.1
         : severity === 'warning'
           ? 0.18
           : 0.05;
@@ -360,9 +461,34 @@ function DetectionZoneRing({
   });
 
   const [cx, cz] = zone.center;
-  // 굵기 1.2% — 헤어라인. 3.5%는 부감에서도 무겁다는 피드백으로 축소.
-  // 원근으로 눌리는 근측에서도 이미시브 발광이 선을 살려준다.
-  const ringWidth = zone.radius * 0.012;
+  /**
+   * 감지 경계 굵기 0.85% — 헤어라인. 3.5% → 1.2% → 0.85%로 계속 줄여 온
+   * 운영 피드백의 결과.
+   *
+   * 여기가 사실상 하한이다: 47° 부감에서 원거리 호는 원근으로 눌려
+   * 근측의 약 0.6배로 얇아지는데, 0.85%면 원거리가 약 0.9px이라
+   * 안티에일리어싱이 겨우 연속된 선으로 유지한다. 더 줄이면 선이
+   * 끊어진 점선처럼 보이고 카메라를 움직일 때 심하게 깜빡인다
+   * (서브픽셀 선은 밝기가 아니라 커버리지를 잃으므로 발광으로도
+   * 보정되지 않는다).
+   */
+  const ringWidth = zone.radius * 0.0085;
+  /**
+   * 위험 경계는 감지 경계보다 굵게 — 둘이 같은 굵기면 화면상 중요도가
+   * 같아 보이는데, 실제로는 위험 반경이 훨씬 중요한 경계다. 게다가
+   * 반경이 작아(25.6 vs 60) 같은 비율을 쓰면 절대 굵기가 절반 이하로
+   * 떨어져 47° 부감의 원거리 호에서 1px 미만이 되어 끊긴다.
+   * 반경 대비가 아니라 감지 링 굵기의 배수로 잡아 절대 굵기를 맞춘다.
+   */
+  const dangerRingWidth = ringWidth * 2.2;
+  /**
+   * 반경 수치 라벨을 링 안쪽으로 들이는 거리 (씬 unit).
+   *
+   * 링 굵기의 배수가 아니라 반경 비율로 잡는다 — 굵기 배수로 두면
+   * 링을 얇게 조정할 때마다 라벨이 딸려 링에 달라붙는다(굵기와 여백은
+   * 서로 독립적인 값이다).
+   */
+  const labelInset = zone.radius * 0.05;
   // 지면 z-fighting 방지 리프트 — 좌표계 스케일이 달라도 비율로 유지.
   const groundLift = Math.max(0.03, zone.radius * 0.005);
 
@@ -382,16 +508,19 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
-        {/* 감지 경계 헤어라인 — 커버 범위의 조용한 상시 표시 */}
+        {/* 감지 경계 헤어라인 — 커버 범위의 조용한 상시 표시.
+            선이 얇아진 만큼 발광·불투명도를 올려 밝기로 존재감을
+            유지한다(굵기를 늘리지 않고 시인성을 지키는 방법).
+            세그먼트도 128 → 192로 늘려 얇은 호의 다각형 각짐을 없앤다 */}
         <mesh renderOrder={2}>
-          <ringGeometry args={[zone.radius - ringWidth, zone.radius, 128]} />
+          <ringGeometry args={[zone.radius - ringWidth, zone.radius, 192]} />
           <meshStandardMaterial
             ref={markGuardLayer}
             color={COLOR_IDLE}
             emissive={COLOR_IDLE}
-            emissiveIntensity={1.1}
+            emissiveIntensity={1.5}
             transparent
-            opacity={0.75}
+            opacity={0.9}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -425,15 +554,15 @@ function DetectionZoneRing({
             붉게 남도록 이미시브를 세게 준다 */}
         <mesh renderOrder={2}>
           <ringGeometry
-            args={[zone.dangerRadius - ringWidth, zone.dangerRadius, 96]}
+            args={[zone.dangerRadius - dangerRingWidth, zone.dangerRadius, 128]}
           />
           <meshStandardMaterial
             ref={markGuardLayer}
             color={COLOR_DANGER}
             emissive={COLOR_DANGER}
-            emissiveIntensity={1.1}
+            emissiveIntensity={1.5}
             transparent
-            opacity={0.7}
+            opacity={0.85}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -503,36 +632,40 @@ function DetectionZoneRing({
           </div>
         </Html>
       ) : null}
-      {/* 반경 수치 — 배경·보더 없는 반투명 흰 텍스트. 수치는 참고 정보일
-          뿐 시선의 주인공은 감지 객체이므로 가시성을 한 단계 낮춘다.
-          위험 수치는 빨간 링 안쪽, 감지 수치는 파란 링 안쪽 — 둘 다
-          다크 스테이지 위라 흰 글자가 요란하지 않게 읽힌다. 부착 방위는
-          travel 반대 방향 = 에고 카메라가 물러난 쪽(근측). */}
+      {/* 반경 수치 — 수치는 참고 정보일 뿐 시선의 주인공은 감지 객체이므로
+          가시성을 한 단계 낮춘다. 다만 배경 없는 흰 글자는 그 아래 위험
+          면이 펄스로 차오를 때 대비를 잃으므로 옅은 다크 칩을 깐다.
+
+          두 수치는 같은 축(travel 반대 = 에고 카메라가 물러난 근측)에
+          나란히 둔다 — 같은 반직선 위에 있어야 "30m 다음 70m"이라는
+          동심원 구조가 그대로 읽힌다. 두 반경 차가 34 unit(≈40m)이라
+          기본 구도에서 화면상 100px 이상 벌어지므로 겹치지 않는다. */}
       <Html
         center
         position={[
-          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - ringWidth * 6),
+          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - labelInset),
           0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - ringWidth * 6),
+          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - labelInset),
         ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
-        <span className="font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/70">
+        <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
           {Math.round(zone.dangerRadius * zone.metersPerUnit)}m
         </span>
       </Html>
       <Html
         center
+        // 위험 수치와 같은 축(근측) — 동심원 위에 나란히 놓인다.
         position={[
-          -(zone.travel?.[0] ?? 1) * (zone.radius - ringWidth * 7),
+          -(zone.travel?.[0] ?? 1) * (zone.radius - labelInset),
           0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.radius - ringWidth * 7),
+          -(zone.travel?.[1] ?? 0) * (zone.radius - labelInset),
         ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
-        <span className="font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/70">
+        <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
           {Math.round(zone.radius * zone.metersPerUnit)}m
         </span>
       </Html>
@@ -551,8 +684,15 @@ function DetectedObjectMesh({
 }) {
   const groupRef = useRef<Group>(null);
   const arrowMatRef = useRef<MeshStandardMaterial>(null);
+  const arrowHeadMatRef = useRef<MeshStandardMaterial>(null);
+  const arrowShaftRef = useRef<Mesh>(null);
+  const arrowHeadRef = useRef<Mesh>(null);
   const registerArrow = (material: MeshStandardMaterial | null) => {
     arrowMatRef.current = material;
+    markGuardLayer(material);
+  };
+  const registerArrowHead = (material: MeshStandardMaterial | null) => {
+    arrowHeadMatRef.current = material;
     markGuardLayer(material);
   };
   // 접지 앵커는 basic material — 포커스 디밍(MeshStandardMaterial만 추적)의
@@ -610,6 +750,11 @@ function DetectedObjectMesh({
     labelVis: 0,
     /** damping된 림 글로우 강도 (플래시와 분리된 기저값) */
     rim: 0.55,
+    /**
+     * damping된 화살표 길이 (로컬 m). 초기값은 스폰 속도 기준 —
+     * 0에서 시작하면 등장 첫 프레임에 화살표가 쭉 자라 시선을 끈다.
+     */
+    arrowLength: arrowLengthFor(track.target.speed),
     /** 위험 진입 원샷 플래시 잔여량 (1 → 0) */
     flash: 0,
     /** 직전 프레임의 danger 여부 — 진입 에지 검출용 */
@@ -624,7 +769,7 @@ function DetectedObjectMesh({
   const worldScale = baseZone.sizeMultiplier / baseZone.metersPerUnit;
   const objectHeight = OBJECT_HEIGHT[track.type];
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const group = groupRef.current;
     if (!group) return;
 
@@ -701,10 +846,17 @@ function DetectedObjectMesh({
       material.depthWrite = opacity >= 0.99;
     }
 
-    // 접지 앵커 — 객체 페이드를 그대로 따라간다.
+    // 접지 앵커 — 객체보다 먼저 짙어진다. 등장/이탈 페이드(fade)에는
+    // 묶여 사라지되, 경계 고스트의 반투명(presence)에는 바닥값을 둬
+    // 첫 감지 순간에도 객체 아래에 그늘이 깔린다.
     const shadowMat = shadowMatRef.current;
     if (shadowMat) {
-      shadowMat.opacity = opacity * CONTACT_SHADOW_OPACITY;
+      const anchorSolidity =
+        CONTACT_SHADOW_FLOOR + (1 - CONTACT_SHADOW_FLOOR) * presence;
+      const anchorFade = reducedMotion
+        ? smooth.fade
+        : Math.min(1, Math.max(0, smooth.sweep) * 2.5);
+      shadowMat.opacity = anchorFade * anchorSolidity * CONTACT_SHADOW_OPACITY;
     }
 
     // --- 머티리얼라이즈 컷 플레인 ---
@@ -724,12 +876,24 @@ function DetectedObjectMesh({
     const severity = trackSeverity(track, zones);
     const severityColor = severity === 'danger' ? COLOR_DANGER : COLOR_WARNING;
 
-    // 진행 방향 화살표 — 길이는 고정, 색만 세버리티를 따른다.
-    const arrowMat = arrowMatRef.current;
-    if (arrowMat) {
-      arrowMat.opacity = opacity * 0.85;
-      arrowMat.color.lerp(severityColor, k);
-      arrowMat.emissive.lerp(severityColor, k);
+    // 진행 방향 화살표 — 색은 세버리티, 길이는 속도를 따른다.
+    // 자루만 늘이고 촉은 크기를 유지한 채 자루 끝으로 이동한다.
+    smooth.arrowLength +=
+      (arrowLengthFor(track.target.speed) - smooth.arrowLength) * k;
+    const shaftLength = Math.max(0.01, smooth.arrowLength - ARROW_HEAD_M);
+    const shaft = arrowShaftRef.current;
+    if (shaft) {
+      shaft.scale.x = shaftLength;
+    }
+    const head = arrowHeadRef.current;
+    if (head) {
+      head.position.x = shaftLength;
+    }
+    for (const material of [arrowMatRef.current, arrowHeadMatRef.current]) {
+      if (!material) continue;
+      material.opacity = opacity * 0.85;
+      material.color.lerp(severityColor, k);
+      material.emissive.lerp(severityColor, k);
     }
 
     const rimColor = severityColor;
@@ -746,8 +910,18 @@ function DetectedObjectMesh({
     smooth.flash = Math.max(0, smooth.flash - dt / DANGER_FLASH_DURATION);
 
     smooth.rim += (rimStrength - smooth.rim) * k;
+    // 위험 지속 펄스 — 진입 플래시가 끝난 뒤에도 계속 맥동해 뒤늦게
+    // 화면을 본 운영자도 위험을 잡아낸다. 색각과 무관한 두 번째 채널.
+    // reduced-motion이면 맥동 없이 기저 강도만 (색·라벨이 대신 전달).
+    const dangerPulse =
+      isDanger && !reducedMotion
+        ? (Math.sin(state.clock.elapsedTime * Math.PI * 2 * DANGER_PULSE_HZ) *
+            0.5 +
+            0.5) *
+          DANGER_PULSE_DEPTH
+        : 0;
     uniforms.uRimStrength.value =
-      smooth.rim + smooth.flash * DANGER_FLASH_BOOST;
+      smooth.rim + dangerPulse + smooth.flash * DANGER_FLASH_BOOST;
 
     // --- 거리·속도 태그: 활성(주의/위험) 트랙에 표시, 배경색이 세버리티를
     // 전달한다. 이탈 트랙은 페이드아웃 후 언마운트. ---
@@ -778,6 +952,9 @@ function DetectedObjectMesh({
         const labelStyle = LABEL_STYLE[severity];
         label.root.style.backgroundColor = labelStyle.bg;
         label.root.style.borderColor = labelStyle.border;
+        if (label.mark.textContent !== labelStyle.mark) {
+          label.mark.textContent = labelStyle.mark;
+        }
       }
     }
   });
@@ -808,16 +985,28 @@ function DetectedObjectMesh({
           depthWrite={false}
         />
       </mesh>
-      {/* 진행 방향 화살표 — 고정 길이, 방향만 전달 (+X가 heading) */}
-      <group
-        position={[ARROW_NOSE_OFFSET[track.type], 0.06, 0]}
-        scale={[ARROW_LENGTH_M, 1, 1]}
-      >
+      {/* 진행 방향 화살표 — 길이가 속도를 인코딩한다 (+X가 heading).
+          자루 길이와 촉 위치는 useFrame이 ref로 구동한다 */}
+      <group position={[ARROW_NOSE_OFFSET[track.type], 0.06, 0]}>
         {/* 지면 요소(존 1~3)·접지 앵커(4)보다 위에 그린다 */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}>
-          <shapeGeometry args={[VELOCITY_ARROW_SHAPE]} />
+        <mesh ref={arrowShaftRef} rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}>
+          <shapeGeometry args={[ARROW_SHAFT_SHAPE]} />
           <meshStandardMaterial
             ref={registerArrow}
+            color={COLOR_WARNING}
+            emissive={COLOR_WARNING}
+            emissiveIntensity={0.8}
+            transparent
+            opacity={0}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* 촉 — 크기 고정, 자루 끝으로 이동만 한다 */}
+        <mesh ref={arrowHeadRef} rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}>
+          <shapeGeometry args={[ARROW_HEAD_SHAPE]} />
+          <meshStandardMaterial
+            ref={registerArrowHead}
             color={COLOR_WARNING}
             emissive={COLOR_WARNING}
             emissiveIntensity={0.8}

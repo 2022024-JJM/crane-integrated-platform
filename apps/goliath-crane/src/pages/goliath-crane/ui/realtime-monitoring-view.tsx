@@ -16,6 +16,7 @@ import {
   GoliathCollisionGuardToggle,
 } from './goliath-collision-guard';
 import { GoliathCollisionGuardHud } from './goliath-collision-hud';
+import { GoliathCollisionHelp } from './goliath-collision-help';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
 import { GoliathVisionPip } from './goliath-vision-pip';
 import { renderSensorFeed } from './sensor-feed-renderer';
@@ -99,7 +100,12 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 renderSensorFeed={renderSensorFeed}
                 sceneExtras={<GoliathCollisionGuardScene />}
                 toolbarExtras={<GoliathCollisionGuardToggle />}
-                overlayExtras={<GoliathCollisionGuardHud />}
+                overlayExtras={
+                  <>
+                    <GoliathCollisionGuardHud />
+                    <GoliathCollisionHelp />
+                  </>
+                }
                 // OFF일 때 [1, 4] = 기기 네이티브 DPR 그대로 (최대 4 클램프)
                 canvasDpr={collisionGuardEnabled ? [1, 1.5] : [1, 4]}
                 fullscreenTopRightOverlay={

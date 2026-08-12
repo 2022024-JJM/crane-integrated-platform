@@ -41,7 +41,9 @@ export function createMaterializeUniforms(): MaterializeUniforms {
     uScanColor: { value: new Color('#38bdf8') },
     // 감지 진입 = 최소 warning이므로 림은 amber에서 시작한다 — sky에서
     // lerp로 물들면 등장 순간 파란 잔상이 비친다.
-    uRimColor: { value: new Color('#f59e0b') },
+    // COLLISION_GUARD_COLORS.warning(amber-400)과 같은 값이어야 등장 순간
+    // 색이 미끄러지지 않는다 (세버리티 색 변경 시 여기도 함께).
+    uRimColor: { value: new Color('#fbbf24') },
     uRimStrength: { value: 0.55 },
   };
 }

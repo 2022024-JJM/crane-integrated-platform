@@ -39,6 +39,18 @@
         "danger": "Periculum"
       },
       "empty": "Nullum obiectum detectum"
+    },
+    "help": {
+      "title": "Auxilium",
+      "show": "Auxilium monstrare",
+      "hide": "Auxilium claudere",
+      "detectionRing": "Ambitus deprehensionis LiDAR",
+      "dangerRing": "Radius periculi",
+      "sensor": "Statio LiDAR (in utroque crure)",
+      "arrow": "Directio · longitudo velocitati respondet",
+      "severityDanger": "Periculum — intra radium periculi",
+      "severityWarning": "Monitio — intra ambitum deprehensionis",
+      "simulationNote": "Nunc datis simulatis agitur."
     }
   },
   "metrics": {

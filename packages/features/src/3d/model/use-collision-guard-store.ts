@@ -122,8 +122,22 @@ interface CollisionGuardState {
    * 센서 관측값 반영. 새 id면 트랙을 추가(set → mount), 기존 id면 target을
    * in-place 갱신(리렌더 없음). fade-out 중 재진입하면 다시 살린다.
    *
-   * 실제 LiDAR 연동 시 이 함수만 호출하면 된다 — WebSocket 브리지에서
-   * 객체 인식 결과를 ingest()로 밀어 넣는 구조.
+   * 이 push 기반 형태는 실제 센서 연동을 염두에 둔 것이지만, 실물 LiDAR를
+   * 붙이려면 이 함수를 호출하는 것만으로는 부족하다. 아래가 선행되어야
+   * 한다 (자세한 내용은 use-collision-guard-simulation.ts 상단 주석):
+   *
+   *  - 좌표 변환: 여기 x/z는 이미 씬 world unit이다. 실물은 센서 로컬
+   *    프레임(m, Z-up, 센서 원점)으로 오므로 축 변환 · 외부 파라미터 ·
+   *    크레인 실시간 포즈 · metersPerUnit을 합성해야 한다.
+   *  - 수명 관리: 이 스토어에는 타임스탬프가 없다. 트래커가 보고를 멈춘
+   *    트랙은 markLeaving()을 호출해 줄 주체가 없어 영구히 남는다
+   *    (위험 반경 안이면 가짜 경보가 계속된다).
+   *  - id 재사용: 같은 id를 무조건 "같은 객체"로 보고 되살리므로
+   *    (phase='active'), 트래커가 id를 재활용하면 이전 객체가 새 객체로
+   *    둔갑한다. `${sensorId}:${trackId}:${generation}` 같은 네임스페이스가
+   *    필요하다.
+   *  - 다중 센서: 존이 다리마다 하나씩 둘인데 두 센서가 같은 사람을 보면
+   *    트랙이 둘 생긴다. sensorId와 연관(association) 단계가 필요하다.
    */
   ingest: (
     id: string,
