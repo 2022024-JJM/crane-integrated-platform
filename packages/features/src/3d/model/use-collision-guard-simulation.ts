@@ -217,12 +217,19 @@ function spawnAgent(zone: CollisionGuardZone, id: string): SimAgent {
 
   // --- 통로형: 다리 옆 부두 통로를 travel(레일) 방향으로 통과 ---
 
-  // 부두 통로 동선: 다리 옆을 주행(레일) 방향으로 통과한다. 통행 가능한
-  // 차선 밴드(zone.laneBandsM — 도크/건물을 피한 통로)에서 차선을 고르되,
-  // 구조물 여유(laneFloor)보다는 항상 바깥이어야 한다. 위험 반경보다
-  // 안쪽 차선이면 다리를 스칠 때 danger 이벤트가 자연스럽게 발생한다.
-  const laneFloor =
-    (zone.obstacle?.halfAcross ?? 0) + LANE_CLEARANCE_M * toUnits;
+  // 부두 통로 동선: 크레인 옆을 주행(레일) 방향으로 통과한다. 통행 가능한
+  // 차선 밴드(zone.laneBandsM — 도크/건물을 피한 통로)에서 차선을 고른다.
+  // 위험 거리보다 안쪽 차선이면 다리를 스칠 때 danger 이벤트가 자연스럽게
+  // 발생한다.
+  //
+  // laneFloor(중심 구조물 여유)는 센서 중심 존에서만 의미가 있다 —
+  // 그 경우 중심 = 다리라 중심 근처가 통행 불가지만, girder 메타데이터가
+  // 있는 존은 중심 = 거더 중점(머리 위로 거더가 지나갈 뿐 지상은 열려
+  // 있다)이고 다리 회피는 양 다리의 키프아웃 타원(avoidObstacles)이
+  // 담당한다.
+  const laneFloor = zone.girder
+    ? 0
+    : (zone.obstacle?.halfAcross ?? 0) + LANE_CLEARANCE_M * toUnits;
   let bands: Array<[number, number]>;
   if (zone.laneBandsM?.length) {
     bands = zone.laneBandsM.map(
@@ -289,35 +296,43 @@ function avoidObstacles(
     if (!obstacle) continue;
 
     const [tx, tz] = travelAxis(zone);
-    const dx = agent.x - zone.center[0];
-    const dz = agent.z - zone.center[1];
-    // 주행축 프레임으로 회전: along = 주행 방향 성분, across = 횡방향 성분.
-    const along = dx * tx + dz * tz;
-    const across = -dx * tz + dz * tx;
+    // 키프아웃 타원의 중심 — 다리 구조물 위치. girder 존은 양 끝 다리
+    // 각각, 원 존은 존 중심(= 다리).
+    const obstacleCenters: Array<[number, number]> = zone.girder
+      ? [zone.girder.a, zone.girder.b]
+      : [zone.center];
 
-    const na = along / obstacle.halfAlong;
-    const nc = across / obstacle.halfAcross;
-    const d = Math.hypot(na, nc);
-    if (d >= AVOID_STEER_START || d < 1e-4) continue;
+    for (const [ox, oz] of obstacleCenters) {
+      const dx = agent.x - ox;
+      const dz = agent.z - oz;
+      // 주행축 프레임으로 회전: along = 주행 방향 성분, across = 횡방향 성분.
+      const along = dx * tx + dz * tz;
+      const across = -dx * tz + dz * tx;
 
-    // 바깥 방향(타원 거리의 증가 방향)을 월드 프레임으로 되돌려 조향.
-    const ga = na / obstacle.halfAlong;
-    const gc = nc / obstacle.halfAcross;
-    const awayX = ga * tx - gc * tz;
-    const awayZ = ga * tz + gc * tx;
-    const awayHeading = Math.atan2(awayZ, awayX);
-    let diff = awayHeading - agent.heading;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    const urgency = (AVOID_STEER_START - d) / (AVOID_STEER_START - 1);
-    agent.heading += diff * Math.min(1, dt * 3.5 * Math.max(0, urgency));
+      const na = along / obstacle.halfAlong;
+      const nc = across / obstacle.halfAcross;
+      const d = Math.hypot(na, nc);
+      if (d >= AVOID_STEER_START || d < 1e-4) continue;
 
-    // 경계 침범 시 위치를 경계 밖으로 투영 (관통 방지 하드 가드).
-    if (d < 1.02) {
-      const push = 1.02 / d;
-      const outAlong = na * push * obstacle.halfAlong;
-      const outAcross = nc * push * obstacle.halfAcross;
-      agent.x = zone.center[0] + outAlong * tx - outAcross * tz;
-      agent.z = zone.center[1] + outAlong * tz + outAcross * tx;
+      // 바깥 방향(타원 거리의 증가 방향)을 월드 프레임으로 되돌려 조향.
+      const ga = na / obstacle.halfAlong;
+      const gc = nc / obstacle.halfAcross;
+      const awayX = ga * tx - gc * tz;
+      const awayZ = ga * tz + gc * tx;
+      const awayHeading = Math.atan2(awayZ, awayX);
+      let diff = awayHeading - agent.heading;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      const urgency = (AVOID_STEER_START - d) / (AVOID_STEER_START - 1);
+      agent.heading += diff * Math.min(1, dt * 3.5 * Math.max(0, urgency));
+
+      // 경계 침범 시 위치를 경계 밖으로 투영 (관통 방지 하드 가드).
+      if (d < 1.02) {
+        const push = 1.02 / d;
+        const outAlong = na * push * obstacle.halfAlong;
+        const outAcross = nc * push * obstacle.halfAcross;
+        agent.x = ox + outAlong * tx - outAcross * tz;
+        agent.z = oz + outAlong * tz + outAcross * tx;
+      }
     }
   }
 }

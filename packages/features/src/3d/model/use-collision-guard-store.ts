@@ -3,10 +3,13 @@ import { create } from 'zustand';
 export type DetectedObjectType = 'person' | 'car' | 'forklift';
 
 /**
- * 충돌 감지 영역(센서 1기 커버리지) 설정. 씬 좌표(world unit) 기준.
+ * 충돌 감지 영역 설정. 씬 좌표(world unit) 기준. 존은 center 중심의
+ * 원이고, 화면에는 zone 배열의 합집합이 커버리지로 나타난다.
  *
- * 라이다는 크레인 거더 양쪽 다리에 설치되므로 감지 영역은 다리별로
- * 하나씩 — 화면에는 이 zone 배열의 합집합이 커버리지로 나타난다.
+ * 골리앗은 "거더 끝에서 바깥으로 30m/70m"라는 정의를 쓴다(사용자 확정):
+ * 크레인 중심 동심원의 반경을 (거더 끝 오프셋 + 30/70m)로 잡고, 표시
+ * 거리는 distanceDisplayOffset으로 "거더 끝 기준"으로 환산한다 —
+ * 경계 라벨이 30m/70m로 읽히고 판정 임계와도 일치한다.
  *
  * metersPerUnit: 씬 1 unit이 현실 몇 m인지. 시뮬레이션 이동 속도(m/s)와
  *   객체 mesh(미터 단위로 모델링)를 씬 unit으로 환산할 때 사용한다.
@@ -14,14 +17,34 @@ export type DetectedObjectType = 'person' | 'car' | 'forklift';
  *   조선소 스케일 씬에서는 사람이 너무 작아 보이므로 2~3배를 권장.
  */
 export interface CollisionGuardZone {
-  /** 감지 원 중심 (x, z) — 라이다 설치 지점(다리) */
+  /** 감지 원 중심 (x, z) — 골리앗은 크레인(거더) 중심 */
   center: [number, number];
   /** 지면 높이 (y) */
   y: number;
-  /** 라이다 감지 반경 (씬 unit) — 이 안에 들어오면 객체가 나타난다 */
+  /** 감지 반경 (씬 unit) — 중심에서 이 안에 들어오면 객체가 나타난다 */
   radius: number;
-  /** 위험 반경 (씬 unit) — 이 안이면 danger 상태로 강조 */
+  /** 위험 반경 (씬 unit) — 중심에서 이 안이면 danger 상태로 강조 */
   dangerRadius: number;
+  /**
+   * 표시 거리 오프셋 (씬 unit) — 라벨·HUD의 거리 수치를 "중심 기준"이
+   * 아니라 "거더 끝 기준"으로 읽히게 중심 거리에서 빼는 값.
+   *
+   * 반경이 (거더 끝 + 30/70m)로 정의되므로, 수치도 같은 기준으로 환산해야
+   * 경계 라벨(30m/70m)·판정 임계·표시 거리가 하나의 눈금이 된다.
+   * 생략 시 0 (= 중심 기준 그대로).
+   */
+  distanceDisplayOffset?: number;
+  /**
+   * 거더(다리) 메타데이터 — 존 형태와 무관한 센서 표시 정보.
+   * a/b는 양쪽 다리 지면 중심: 센서 배지·레이더 파장 발신점·다리
+   * 키프아웃 타원(obstacle)의 적용 지점, HUD의 근접 센서 라벨에 쓴다.
+   */
+  girder?: {
+    a: [number, number];
+    b: [number, number];
+    aLabel?: string;
+    bLabel?: string;
+  };
   /** 카메라 근거리 음영 커버 반경 (씬 unit, 표시용) */
   cameraRadius?: number;
   /**
@@ -30,8 +53,9 @@ export interface CollisionGuardZone {
    */
   travel?: [number, number];
   /**
-   * 센서 설치 지점의 구조물(다리) 풋프린트 — 시뮬레이션 에이전트가
-   * 침범하지 못하는 키프아웃 타원 (씬 unit, travel 축 기준).
+   * 다리 구조물 풋프린트 — 시뮬레이션 에이전트가 침범하지 못하는
+   * 키프아웃 타원 (씬 unit, travel 축 기준). girder가 있으면 양 끝점
+   * (a, b) 각각에, 없으면 center에 적용된다.
    * 골리앗 다리 하부는 주행 방향으로 길쭉하므로 halfAlong > halfAcross.
    */
   obstacle?: { halfAlong: number; halfAcross: number };
@@ -73,13 +97,28 @@ export interface DetectedTrack {
 
 export type TrackSeverity = 'warning' | 'danger';
 
-/** 존 중심으로부터의 평면 거리 (씬 unit) */
-export function distanceFromZoneCenter(
+/** 존 중심으로부터의 평면 거리 (씬 unit) — radius/dangerRadius의 비교 기준 */
+export function distanceFromZone(
   x: number,
   z: number,
   zone: CollisionGuardZone,
 ): number {
   return Math.hypot(x - zone.center[0], z - zone.center[1]);
+}
+
+/**
+ * 중심 거리(씬 unit) → 표시용 거리(m). distanceDisplayOffset을 빼서
+ * "거더 끝 기준 N m"로 환산한다 — 경계 라벨(30m/70m)과 같은 눈금.
+ * 거더 위(오프셋 안쪽)는 0으로 클램프.
+ */
+export function zoneDisplayDistanceM(
+  dist: number,
+  zone: CollisionGuardZone,
+): number {
+  return Math.max(
+    0,
+    (dist - (zone.distanceDisplayOffset ?? 0)) * zone.metersPerUnit,
+  );
 }
 
 /** 여러 센서 존 중 (x, z)에서 가장 가까운 존과 그 거리 */
@@ -89,15 +128,33 @@ export function nearestZone(
   zones: CollisionGuardZone[],
 ): { zone: CollisionGuardZone; dist: number } {
   let best = zones[0];
-  let bestDist = distanceFromZoneCenter(x, z, best);
+  let bestDist = distanceFromZone(x, z, best);
   for (let i = 1; i < zones.length; i++) {
-    const dist = distanceFromZoneCenter(x, z, zones[i]);
+    const dist = distanceFromZone(x, z, zones[i]);
     if (dist < bestDist) {
       best = zones[i];
       bestDist = dist;
     }
   }
   return { zone: best, dist: bestDist };
+}
+
+/**
+ * (x, z)에서 가장 가까운 센서(라이다)의 식별 라벨 — HUD의 L1/L2 컬럼용.
+ * girder 존은 양 끝 다리 중 가까운 쪽, 원 존은 자체 라벨.
+ */
+export function nearestSensorLabel(
+  x: number,
+  z: number,
+  zone: CollisionGuardZone,
+): string | undefined {
+  const girder = zone.girder;
+  if (!girder) return zone.label;
+  const distA = Math.hypot(x - girder.a[0], z - girder.a[1]);
+  const distB = Math.hypot(x - girder.b[0], z - girder.b[1]);
+  return distA <= distB
+    ? (girder.aLabel ?? zone.label)
+    : (girder.bLabel ?? zone.label);
 }
 
 /**

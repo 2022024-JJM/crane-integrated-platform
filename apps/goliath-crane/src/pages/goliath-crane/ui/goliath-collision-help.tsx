@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { HelpCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { COLLISION_GUARD_COLORS, useCollisionGuardStore } from '@crane/features/3d';
+import {
+  COLLISION_GUARD_COLORS,
+  useCollisionGuardStore,
+  zoneDisplayDistanceM,
+} from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
@@ -64,14 +68,16 @@ export function GoliathCollisionHelp() {
 
   if (!enabled || !derived) return null;
 
-  // 실제 존 설정에서 반경을 읽는다 — 두 다리 설정이 같으므로 첫 존 기준.
+  // 실제 존 설정에서 거리를 읽는다 — 씬 라벨과 같은 "거더 끝 기준" 환산.
   const zone = derived.zones[0];
-  const detectionM = Math.round(zone.radius * zone.metersPerUnit);
-  const dangerM = Math.round(zone.dangerRadius * zone.metersPerUnit);
-  const sensorLabels = derived.zones
-    .map((z) => z.label)
-    .filter(Boolean)
-    .join(' · ');
+  const detectionM = Math.round(zoneDisplayDistanceM(zone.radius, zone));
+  const dangerM = Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone));
+  // 센서 라벨 — 캡슐 존은 거더 양 끝 다리(aLabel/bLabel), 원 존은 자체 라벨.
+  const sensorLabelList = zone.girder
+    ? [zone.girder.aLabel, zone.girder.bLabel]
+    : derived.zones.map((z) => z.label);
+  const sensorLabels = sensorLabelList.filter(Boolean).join(' · ');
+  const sensorBadge = sensorLabelList.find(Boolean) ?? 'L1';
 
   if (!open) {
     return (
@@ -129,7 +135,7 @@ export function GoliathCollisionHelp() {
               aria-hidden
               className="shrink-0 rounded border border-sky-400/50 bg-sky-950/70 px-1 py-px font-mono text-[9px] leading-none font-bold text-sky-300"
             >
-              {derived.zones[0]?.label ?? 'L1'}
+              {sensorBadge}
             </span>
           }
           label={t('collisionGuard.help.sensor')}

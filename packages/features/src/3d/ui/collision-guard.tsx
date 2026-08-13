@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
@@ -12,10 +12,11 @@ import {
   type Group,
 } from 'three';
 import {
-  distanceFromZoneCenter,
+  distanceFromZone,
   nearestZone,
   trackSeverity,
   useCollisionGuardStore,
+  zoneDisplayDistanceM,
   type CollisionGuardZone,
   type DetectedObjectType,
   type DetectedTrack,
@@ -401,7 +402,7 @@ function DetectionZoneRing({
     let severity: Severity = 'idle';
     for (const track of tracks) {
       if (track.phase !== 'active') continue;
-      const dist = distanceFromZoneCenter(track.target.x, track.target.z, zone);
+      const dist = distanceFromZone(track.target.x, track.target.z, zone);
       if (dist > zone.radius) continue;
       if (dist <= zone.dangerRadius) {
         severity = 'danger';
@@ -492,10 +493,49 @@ function DetectionZoneRing({
   // 지면 z-fighting 방지 리프트 — 좌표계 스케일이 달라도 비율로 유지.
   const groundLift = Math.max(0.03, zone.radius * 0.005);
 
+  /**
+   * travel 정렬 로컬 프레임 — 로컬 +Z = travel, 로컬 +X = 거더 축.
+   * 존 자체는 중심 대칭 원이라 회전이 형태에는 영향이 없지만, 이
+   * 프레임 덕에 (1) 수치 라벨의 "근측(-travel)" 배치가 로컬 -Z 고정으로
+   * 단순해지고 (2) 센서(다리) 배지·파장 발신점을 로컬 X 좌표 하나로
+   * 놓을 수 있다.
+   */
+  const frame = useMemo(() => {
+    const [tx, tz] = zone.travel ?? [1, 0];
+    // 로컬 +Z = travel이 되는 회전각. 이때 로컬 +X = (tz, -tx).
+    const rotationY = Math.atan2(tx, tz);
+    const girder = zone.girder;
+    const sensors: Array<{ x: number; label?: string }> = girder
+      ? [
+          {
+            x:
+              (girder.a[0] - zone.center[0]) * tz +
+              (girder.a[1] - zone.center[1]) * -tx,
+            label: girder.aLabel,
+          },
+          {
+            x:
+              (girder.b[0] - zone.center[0]) * tz +
+              (girder.b[1] - zone.center[1]) * -tx,
+            label: girder.bLabel,
+          },
+        ]
+      : [{ x: 0, label: zone.label }];
+    return { rotationY, sensors };
+  }, [zone]);
+
+  // 파장(센서 스캔)의 발신 지점 — 센서(다리) 위치.
+  const waveOrigins = frame.sensors.map((sensor) => sensor.x);
+  // 삼항 내로잉이 map 콜백 안까지 전파되지 않으므로 const로 잡는다.
+  const cameraRadius = zone.cameraRadius;
+
   return (
-    <group position={[cx, zone.y + groundLift, cz]}>
+    <group
+      position={[cx, zone.y + groundLift, cz]}
+      rotation={[0, frame.rotationY, 0]}
+    >
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        {/* 커버 영역 다크 스테이지 — 링 안쪽을 어둡게 깔아 흰 객체가
+        {/* 커버 영역 다크 스테이지 — 경계 안쪽을 어둡게 깔아 흰 객체가
             도드라지는 배경을 만든다 (FSD의 어두운 도로에 해당) */}
         <mesh renderOrder={1}>
           <circleGeometry args={[zone.radius, 128]} />
@@ -509,9 +549,7 @@ function DetectionZoneRing({
           />
         </mesh>
         {/* 감지 경계 헤어라인 — 커버 범위의 조용한 상시 표시.
-            선이 얇아진 만큼 발광·불투명도를 올려 밝기로 존재감을
-            유지한다(굵기를 늘리지 않고 시인성을 지키는 방법).
-            세그먼트도 128 → 192로 늘려 얇은 호의 다각형 각짐을 없앤다 */}
+            선이 얇은 만큼 발광·불투명도를 올려 밝기로 존재감을 유지 */}
         <mesh renderOrder={2}>
           <ringGeometry args={[zone.radius - ringWidth, zone.radius, 192]} />
           <meshStandardMaterial
@@ -525,10 +563,13 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
-        {/* 레이더 파장 — 단위 반경 링을 useFrame이 scale·opacity로 구동 */}
+        {/* 레이더 파장 — 단위 반경 링을 useFrame이 scale·opacity로 구동.
+            발신 지점은 실제 센서 위치(거더 양 끝 다리) — 파장이 다리에서
+            퍼져야 "센서가 스캔한다"는 사실이 위치까지 정확하게 전달된다 */}
         {Array.from({ length: SCAN_WAVE_COUNT }, (_, waveIndex) => (
           <mesh
             key={waveIndex}
+            position={[waveOrigins[waveIndex % waveOrigins.length], 0, 0]}
             renderOrder={2}
             ref={(mesh) => {
               waveMeshRefs.current[waveIndex] = mesh;
@@ -550,11 +591,11 @@ function DetectionZoneRing({
             />
           </mesh>
         ))}
-        {/* 위험 반경 경계 헤어라인 — 상시 표시. 부감에서 원근으로 눌려도
+        {/* 위험 거리 경계 헤어라인 — 상시 표시. 부감에서 원근으로 눌려도
             붉게 남도록 이미시브를 세게 준다 */}
         <mesh renderOrder={2}>
           <ringGeometry
-            args={[zone.dangerRadius - dangerRingWidth, zone.dangerRadius, 128]}
+            args={[zone.dangerRadius - dangerRingWidth, zone.dangerRadius, 160]}
           />
           <meshStandardMaterial
             ref={markGuardLayer}
@@ -567,11 +608,11 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
-        {/* 위험 반경 면 — 링이 아니라 채워진 면. 객체가 커버 안에 있을 때만
+        {/* 위험 거리 면 — 선이 아니라 채워진 면. 객체가 커버 안에 있을 때만
             페이드인해 상태를 전달한다. 다크 스테이지(1)·경계선(2)보다 뒤에
             그린다 */}
         <mesh renderOrder={3}>
-          <circleGeometry args={[zone.dangerRadius, 96]} />
+          <circleGeometry args={[zone.dangerRadius, 128]} />
           <meshStandardMaterial
             ref={registerDanger}
             color={COLOR_DANGER}
@@ -583,90 +624,91 @@ function DetectionZoneRing({
             depthWrite={false}
           />
         </mesh>
-        {/* 카메라 근거리 음영 커버 — 기본 숨김, 범례/설정 토글로만 표시 */}
-        {showCameraCoverage && zone.cameraRadius ? (
-          <>
-            <mesh renderOrder={1}>
-              <circleGeometry args={[zone.cameraRadius, 64]} />
-              <meshStandardMaterial
-                ref={markGuardLayer}
-                color={COLOR_CAMERA}
-                transparent
-                opacity={0.05}
-                side={DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-            <mesh renderOrder={2}>
-              <ringGeometry
-                args={[
-                  zone.cameraRadius - ringWidth * 0.6,
-                  zone.cameraRadius,
-                  64,
-                ]}
-              />
-              <meshStandardMaterial
-                ref={markGuardLayer}
-                color={COLOR_CAMERA}
-                emissive={COLOR_CAMERA}
-                emissiveIntensity={0.3}
-                transparent
-                opacity={0.28}
-                side={DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-          </>
-        ) : null}
+        {/* 카메라 근거리 음영 커버 — 기본 숨김, 범례/설정 토글로만 표시.
+            카메라는 센서(다리)별 설치라 끝점마다 원으로 그린다 */}
+        {showCameraCoverage && cameraRadius
+          ? waveOrigins.map((originX) => (
+              <group key={originX} position={[originX, 0, 0]}>
+                <mesh renderOrder={1}>
+                  <circleGeometry args={[cameraRadius, 64]} />
+                  <meshStandardMaterial
+                    ref={markGuardLayer}
+                    color={COLOR_CAMERA}
+                    transparent
+                    opacity={0.05}
+                    side={DoubleSide}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh renderOrder={2}>
+                  <ringGeometry
+                    args={[
+                      cameraRadius - ringWidth * 0.6,
+                      cameraRadius,
+                      64,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    ref={markGuardLayer}
+                    color={COLOR_CAMERA}
+                    emissive={COLOR_CAMERA}
+                    emissiveIntensity={0.3}
+                    transparent
+                    opacity={0.28}
+                    side={DoubleSide}
+                    depthWrite={false}
+                  />
+                </mesh>
+              </group>
+            ))
+          : null}
       </group>
-      {/* 센서(다리) 식별 배지 — 감지 링 중심 = 라이다 설치 지점 */}
-      {zone.label ? (
-        <Html
-          center
-          position={[0, 0.5, 0]}
-          zIndexRange={[4, 0]}
-          style={{ pointerEvents: 'none' }}
-        >
-          <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
-            {zone.label}
-          </div>
-        </Html>
-      ) : null}
-      {/* 반경 수치 — 수치는 참고 정보일 뿐 시선의 주인공은 감지 객체이므로
+      {/* 센서(다리) 식별 배지 — 라이다 설치 지점(거더 양 끝 다리) */}
+      {frame.sensors.map(({ x, label }) =>
+        label ? (
+          <Html
+            key={label}
+            center
+            position={[x, 0.5, 0]}
+            zIndexRange={[4, 0]}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div className="rounded border border-sky-400/50 bg-sky-950/70 px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold whitespace-nowrap text-sky-300">
+              {label}
+            </div>
+          </Html>
+        ) : null,
+      )}
+      {/* 거리 수치 — 수치는 참고 정보일 뿐 시선의 주인공은 감지 객체이므로
           가시성을 한 단계 낮춘다. 다만 배경 없는 흰 글자는 그 아래 위험
           면이 펄스로 차오를 때 대비를 잃으므로 옅은 다크 칩을 깐다.
 
-          두 수치는 같은 축(travel 반대 = 에고 카메라가 물러난 근측)에
+          값은 반경 그대로가 아니라 표시 오프셋을 뺀 "거더 끝 기준" 환산
+          (zoneDisplayDistanceM) — 골리앗의 30m/70m 정의와 일치한다.
+
+          두 수치는 같은 축(로컬 +Z = travel = 에고 카메라의 원측)에
           나란히 둔다 — 같은 반직선 위에 있어야 "30m 다음 70m"이라는
-          동심원 구조가 그대로 읽힌다. 두 반경 차가 34 unit(≈40m)이라
-          기본 구도에서 화면상 100px 이상 벌어지므로 겹치지 않는다. */}
+          동심원 구조가 그대로 읽힌다. 근측(-Z)이 아닌 이유: 원 반경
+          (≈125 unit)이 에고 카메라 후퇴 거리(95)보다 커서 근측 호는
+          기본 구도에서 카메라 뒤 화면 밖이다. */}
       <Html
         center
-        position={[
-          -(zone.travel?.[0] ?? 1) * (zone.dangerRadius - labelInset),
-          0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.dangerRadius - labelInset),
-        ]}
+        position={[0, 0.5, zone.dangerRadius - labelInset]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
         <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
-          {Math.round(zone.dangerRadius * zone.metersPerUnit)}m
+          {Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone))}m
         </span>
       </Html>
       <Html
         center
-        // 위험 수치와 같은 축(근측) — 동심원 위에 나란히 놓인다.
-        position={[
-          -(zone.travel?.[0] ?? 1) * (zone.radius - labelInset),
-          0.5,
-          -(zone.travel?.[1] ?? 0) * (zone.radius - labelInset),
-        ]}
+        position={[0, 0.5, zone.radius - labelInset]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
         <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
-          {Math.round(zone.radius * zone.metersPerUnit)}m
+          {Math.round(zoneDisplayDistanceM(zone.radius, zone))}m
         </span>
       </Html>
     </group>
@@ -946,7 +988,7 @@ function DetectedObjectMesh({
       smooth.labelClock += dt;
       if (smooth.labelVis > 0.01 && smooth.labelClock >= 1 / LABEL_UPDATE_HZ) {
         smooth.labelClock = 0;
-        const meters = Math.round(nearest.dist * baseZone.metersPerUnit);
+        const meters = Math.round(zoneDisplayDistanceM(nearest.dist, baseZone));
         label.distance.textContent = `${meters} m`;
         label.speed.textContent = `${track.target.speed.toFixed(1)} m/s`;
         const labelStyle = LABEL_STYLE[severity];

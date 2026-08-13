@@ -9,10 +9,11 @@ export {
 } from './ui/collision-guard-camera-rig';
 export { CollisionGuardTopViewSync } from './ui/collision-guard-top-view-sync';
 export {
-  distanceFromZoneCenter,
+  distanceFromZone,
   nearestZone,
   trackSeverity,
   useCollisionGuardStore,
+  zoneDisplayDistanceM,
   type CollisionGuardZone,
   type DetectedObjectType,
   type DetectedTrack,

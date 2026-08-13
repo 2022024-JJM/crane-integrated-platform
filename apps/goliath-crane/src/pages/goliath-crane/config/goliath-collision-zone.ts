@@ -14,10 +14,12 @@ import type {
  * - 씬 축척: 크레인 GLB 네이티브 스팬 141 unit = 실측 165m → 1 unit ≈ 1.17m.
  * - 거더는 로컬 X축: rotation Y로 회전한 방향. 다리 중심선의 거더축
  *   오프셋은 GLB 실측값(LEG_OFFSETS)을 쓴다. 주행(레일) 방향은 거더의 수직.
- * - 다리별 radius 60 unit ≈ 70m 라이다 감지, dangerRadius 25.6 ≈ 30m 위험,
- *   cameraRadius 32 ≈ 37m 카메라 근거리 음영 커버.
- * - obstacle: A프레임 하부 풋프린트(주행 방향 약 55m × 횡 17m) 키프아웃.
- * - sizeMultiplier 3: 감지 객체 시각적 과장 배율.
+ * - 존은 크레인 중심 동심원 하나: 반경 = 거더 끝(±65 unit) + 30m/70m.
+ *   경계·수치·판정 모두 "거더 끝에서 바깥으로 N m" 기준이다.
+ *   cameraRadius 32 ≈ 37m 카메라 근거리 음영 커버(센서별 원).
+ * - obstacle: A프레임 하부 풋프린트(주행 방향 약 55m × 횡 17m) 키프아웃,
+ *   거더 양 끝 다리 각각에 적용.
+ * - sizeMultiplier 4: 감지 객체 시각적 과장 배율.
  */
 const METERS_PER_UNIT = 1.17;
 
@@ -32,38 +34,58 @@ const METERS_PER_UNIT = 1.17;
 const LEG_OFFSETS = { L1: 63.0, L2: -60.9 } as const;
 
 /**
- * 통행 가능 차선 밴드 (m, travel 축 기준 횡 오프셋 — 양수 = 거더 +방향의
- * 왼쪽). 필리 지형 실측(탑뷰): 크레인 도크는 L2 쪽에 인접하고 L1 바깥에는
- * 창고 군락이 있다. 실제로 다닐 수 있는 곳은 다리 옆 레일 주행로 부지뿐이라
+ * 통행 가능 차선 밴드 (m, travel 축 기준 횡 오프셋 — 거더 중점 기준).
+ * 필리 지형 실측(탑뷰): 크레인 도크는 L2 쪽에 인접하고 L1 바깥에는
+ * 창고 군락이 있다. 실제로 다닐 수 있는 곳은 레일 주행로 부지뿐이라
  * 밴드를 좁게 잡는다 — 크레인이 "레일을 따라" 움직이는 한 횡방향 지형은
  * 변하지 않으므로 이 밴드는 크레인 위치와 무관하게 유효하다.
+ *
+ * 값은 다리별 존 시절의 밴드(L1 [13,40]·[-20,-13], L2 [13,22] — 각 다리
+ * 중심 기준)를 거더 중점 기준으로 좌표 변환한 것 — 통로의 실제 위치는
+ * 동일하다.
  */
-const L1_LANE_BANDS_M: Array<[number, number]> = [
-  [13, 40], // 크레인 도크 쪽: 도크 가장자리 전 열린 부지
-  [-20, -13], // 바깥쪽: 창고 군락 전 레일 주행로
-];
-const L2_LANE_BANDS_M: Array<[number, number]> = [
-  [13, 22], // 인접 도크 전 레일 부지 (반대쪽은 바로 크레인 도크라 통행 불가)
+const GOLIATH_LANE_BANDS_M: Array<[number, number]> = [
+  [-60, -33], // L1 안쪽: 크레인 도크 가장자리 전 열린 부지
+  [-93, -86], // L1 바깥: 창고 군락 전 레일 주행로
+  [86, 95], // L2 바깥: 인접 도크 전 레일 부지
 ];
 
-const LEG_ZONE_BASE = {
+/**
+ * 거더 끝의 크레인 중심 기준 오프셋 (unit). GLB 실측 — 거더 끝단은
+ * 다리(±63.0/−60.9)보다 바깥으로 뻗은 오버행 포함 ±65.
+ */
+const GIRDER_END_OFFSET = 65;
+/** 감지·위험 거리 (m) — 거더 끝에서 바깥으로 잰다 (사용자 확정 정의) */
+const DETECTION_BEYOND_GIRDER_M = 70;
+const DANGER_BEYOND_GIRDER_M = 30;
+
+const GOLIATH_ZONE_BASE = {
   y: 0.05,
-  radius: 60,
-  dangerRadius: 25.6,
-  // 위험 반경과 겹치면 링이 포개져 보이므로 한 단계 바깥에 둔다.
+  /**
+   * 반경 = 거더 끝 오프셋 + 거더 끝 기준 거리.
+   *
+   * 30m/70m는 크레인 중심이 아니라 "거더 끝에서 바깥으로" 재는 값이다
+   * (크레인 중심 반경 30m 원은 다리(±63 unit)에도 못 미쳐 무의미).
+   * 원은 크레인 전체를 품고, 경계는 거더 끝에서 정확히 30m/70m 떨어진다.
+   * 표시 수치는 distanceDisplayOffset이 같은 기준으로 환산한다.
+   */
+  radius: GIRDER_END_OFFSET + DETECTION_BEYOND_GIRDER_M / METERS_PER_UNIT,
+  dangerRadius: GIRDER_END_OFFSET + DANGER_BEYOND_GIRDER_M / METERS_PER_UNIT,
+  distanceDisplayOffset: GIRDER_END_OFFSET,
+  // 카메라 근거리 커버 — 센서(다리)별 원, 위험 경계와 포개지지 않게.
   cameraRadius: 32,
   obstacle: { halfAlong: 26, halfAcross: 7.5 },
   metersPerUnit: METERS_PER_UNIT,
   /**
    * 감지 객체 시각적 과장 배율.
    *
-   * 감지 반경 60 unit(≈70m)에 비해 사람 1.75m는 너무 작아 실측 크기로는
-   * 화면에서 점이 되므로 과장한다. 다만 6배는 객체가 위험 반경을 가릴
+   * 감지 원(반경 ≈125 unit)에 비해 사람 1.75m는 너무 작아 실측 크기로는
+   * 화면에서 점이 되므로 과장한다. 다만 6배는 객체가 위험 경계를 가릴
    * 만큼 커져 오히려 공간 관계가 안 읽혔다 — 4배가 "점은 아니되 존을
    * 침범하지 않는" 절충점.
    */
   sizeMultiplier: 4,
-} satisfies Omit<CollisionGuardZone, 'center' | 'label' | 'travel'>;
+} satisfies Omit<CollisionGuardZone, 'center' | 'girder' | 'travel'>;
 
 /** rotation Y(도)로부터 거더 방향 단위 벡터 (로컬 +X의 월드 사영) */
 function girderDir(rotationYDeg: number): [number, number] {
@@ -71,6 +93,14 @@ function girderDir(rotationYDeg: number): [number, number] {
   return [Math.cos(rad), -Math.sin(rad)];
 }
 
+/**
+ * 존은 크레인(거더) 중심의 동심원 하나다 (사용자 확정 형태).
+ *
+ * 반경은 "거더 끝 + 30/70m" — 원이 크레인 전체를 품고 경계가 거더
+ * 끝에서 30m/70m 바깥에 놓인다. 다리별 원 두 개 방식은 두 원 사이
+ * (거더 중앙 아래)에 감지 공백이 생겨 폐기했다.
+ * girder 필드는 형태가 아니라 센서(다리) 표시 메타데이터다.
+ */
 export function buildGoliathCollisionZones(
   cranePosition: Vector3Tuple,
   rotationYDeg: number,
@@ -80,20 +110,23 @@ export function buildGoliathCollisionZones(
   // 주행(레일) 방향 — 거더의 수직.
   const travel: [number, number] = [-gz, gx];
 
+  const legL1: [number, number] = [
+    cx + gx * LEG_OFFSETS.L1,
+    cz + gz * LEG_OFFSETS.L1,
+  ];
+  const legL2: [number, number] = [
+    cx + gx * LEG_OFFSETS.L2,
+    cz + gz * LEG_OFFSETS.L2,
+  ];
+
   return [
     {
-      ...LEG_ZONE_BASE,
-      center: [cx + gx * LEG_OFFSETS.L1, cz + gz * LEG_OFFSETS.L1],
+      ...GOLIATH_ZONE_BASE,
+      // 원 중심 = 크레인 원점 (거더 끝 ±65가 이 점 기준 대칭)
+      center: [cx, cz],
+      girder: { a: legL1, b: legL2, aLabel: 'L1', bLabel: 'L2' },
       travel,
-      laneBandsM: L1_LANE_BANDS_M,
-      label: 'L1',
-    },
-    {
-      ...LEG_ZONE_BASE,
-      center: [cx + gx * LEG_OFFSETS.L2, cz + gz * LEG_OFFSETS.L2],
-      travel,
-      laneBandsM: L2_LANE_BANDS_M,
-      label: 'L2',
+      laneBandsM: GOLIATH_LANE_BANDS_M,
     },
   ];
 }
