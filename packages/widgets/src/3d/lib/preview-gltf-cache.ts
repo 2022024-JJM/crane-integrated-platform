@@ -36,8 +36,9 @@ function gltfCacheSet(key: string, value: Object3D): void {
     const oldest = gltfCache.keys().next().value;
     if (oldest !== undefined) {
       // LRU eviction: outflight clone들이 master geometry/material을 공유할 수 있어
-      // 즉시 dispose하지 않고 reference만 끊는다. clone은 자체 disposeClone으로 정리되며,
-      // master는 GC로 회수된다 (참조가 끊겼을 때).
+      // 즉시 dispose하지 않고 reference만 끊는다. clone 쪽(disposeClone)도 공유
+      // geometry/material은 건드리지 않으므로(skeleton만 해제), master의 GPU
+      // 자원은 참조가 끊긴 뒤 GC로 회수된다.
       gltfCache.delete(oldest);
     }
   }

@@ -188,21 +188,14 @@ export function GoliathCollisionGuardHud() {
           {t('collisionGuard.hud.empty')}
         </p>
       ) : (
-        <>
-          {/* 행 구분선은 아주 옅게 — 위험 행의 붉은 틴트/모서리 마커와
-              줄무늬가 경쟁하지 않아야 한다. */}
-          <ul className="divide-y divide-slate-700/30 py-0.5">
-            {snapshot.tracks.map((track) => (
-              <TrackRow key={track.id} track={track} />
-            ))}
-          </ul>
-          {/* 거리 기준 각주 — "12 m"가 어디서부터인지 화면이 스스로 답한다
-              (거더 끝 기준 환산 zoneDisplayDistanceM). 도움말 각주와 같은
-              톤으로 데이터 행과 시선을 다투지 않는다. */}
-          <p className="border-t border-slate-700/50 px-2.5 py-1 text-[10px] leading-tight text-slate-400">
-            {t('collisionGuard.hud.distanceBasis')}
-          </p>
-        </>
+        // 행 구분선은 아주 옅게 — 위험 행의 붉은 틴트/모서리 마커와
+        // 줄무늬가 경쟁하지 않아야 한다. 거리 기준(거더 끝) 설명은
+        // 도움말 패널이 담당한다.
+        <ul className="divide-y divide-slate-700/30 py-0.5">
+          {snapshot.tracks.map((track) => (
+            <TrackRow key={track.id} track={track} />
+          ))}
+        </ul>
       )}
     </section>
   );

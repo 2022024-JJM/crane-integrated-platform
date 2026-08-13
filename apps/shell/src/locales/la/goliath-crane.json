@@ -39,8 +39,7 @@
         "danger": "Periculum"
       },
       "empty": "Nullum obiectum intra ambitum",
-      "scanning": "Vigilans",
-      "distanceBasis": "Distantiae a fine trabis mensuratae"
+      "scanning": "Vigilans"
     },
     "help": {
       "title": "Auxilium",

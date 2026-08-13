@@ -665,7 +665,9 @@ export function SceneObjectsEditCanvas({
       onDrop={handleSceneDrop}
     >
       <Canvas
-        camera={{ position: cameraPosition }}
+        // far 기본값(1000)은 줌 아웃 시 카메라-타깃 거리가 1000을 넘는 순간
+        // 지도 중앙부터 잘려나간다 — 뷰어(ThreeSceneViewer)와 같은 값으로 맞춘다.
+        camera={{ position: cameraPosition, far: 5000, near: 0.5 }}
         gl={{
           toneMapping: NoToneMapping,
           powerPreference: 'high-performance',
@@ -695,6 +697,11 @@ export function SceneObjectsEditCanvas({
           enableDamping={false}
           target={cameraTarget}
           onChange={handleOrbitChange}
+          // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,
+          // 지오메트리 관통 방지, far(5000) 안쪽에서 줌 아웃 정지.
+          zoomToCursor
+          minDistance={5}
+          maxDistance={3000}
           mouseButtons={{
             LEFT: undefined,
             MIDDLE: MOUSE.ROTATE,

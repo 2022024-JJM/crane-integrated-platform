@@ -393,7 +393,11 @@ export function OutdoorWorkModelSimulation({
   return (
     <>
       {maps.map((m) => (
-        <GltfModel key={m.id} id={m.id} url={m.path} />
+        // 지도는 지형이라 센서 occluder로 등록하지 않는다 — 등록하면 카메라/
+        // LiDAR ray가 0 거리에서 지도를 때려 frustum이 붕괴하고(model-mesh의
+        // 주석 참고), 지도 전 메시에 불필요한 BVH 동기 빌드까지 발생한다.
+        // 에디터·mro2·philly 뷰어는 이미 false — 이 경로만 누락돼 있었다.
+        <GltfModel key={m.id} id={m.id} url={m.path} isSensorOccluder={false} />
       ))}
       {models.map((model) => {
         if (visibleModelIds && !visibleModelIds.has(model.id)) {

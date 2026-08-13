@@ -532,19 +532,51 @@ export function ModelMesh({
   const scene = useThree((state) => state.scene);
   useEffect(() => {
     if (!isSensorOccluder) return;
-    const meshes: Mesh[] = [];
-    for (const binding of meshBindings) {
-      const geometry = binding.mesh.geometry as BufferGeometry & {
+    // 등록은 즉시 — BVH가 아직 없어도 raycast는 동작한다
+    // (acceleratedRaycast는 boundsTree가 없으면 기본 raycast로 폴백).
+    registerSceneOccluders(
+      scene,
+      id,
+      meshBindings.map((binding) => binding.mesh),
+    );
+
+    // BVH 빌드는 유휴 시간으로 분산한다 — mount 시 동기 일괄 빌드는
+    // 10만 삼각형급 메시 하나에 수백 ms라, 모델 수만큼 곱해지면 첫 진입이
+    // 초 단위로 멈춘다(로딩 직후 버벅임의 주범). 한 콜백에 한 메시씩
+    // 빌드해 프레임 사이로 흩뿌린다. 지오메트리는 GLTF 캐시 공유라 같은
+    // 모델의 다른 인스턴스가 이미 빌드했으면 그대로 재사용된다.
+    const pending = meshBindings.map((binding) => binding.mesh);
+    const supportsIdle = typeof requestIdleCallback !== 'undefined';
+    let scheduledId: number | null = null;
+    const buildNext = () => {
+      scheduledId = null;
+      const mesh = pending.shift();
+      if (!mesh) return;
+      const geometry = mesh.geometry as BufferGeometry & {
         boundsTree?: unknown;
         computeBoundsTree?: () => void;
       };
       if (!geometry.boundsTree && geometry.computeBoundsTree) {
         geometry.computeBoundsTree();
       }
-      meshes.push(binding.mesh);
-    }
-    registerSceneOccluders(scene, id, meshes);
+      if (pending.length > 0) {
+        scheduledId = supportsIdle
+          ? requestIdleCallback(buildNext, { timeout: 500 })
+          : window.setTimeout(buildNext, 0);
+      }
+    };
+    scheduledId = supportsIdle
+      ? requestIdleCallback(buildNext, { timeout: 500 })
+      : window.setTimeout(buildNext, 0);
+
     return () => {
+      if (scheduledId !== null) {
+        if (supportsIdle) {
+          cancelIdleCallback(scheduledId);
+        } else {
+          clearTimeout(scheduledId);
+        }
+      }
       unregisterSceneOccluders(scene, id);
     };
   }, [id, scene, meshBindings, isSensorOccluder]);

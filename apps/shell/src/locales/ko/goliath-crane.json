@@ -39,8 +39,7 @@
         "danger": "위험"
       },
       "empty": "감지 범위 내 객체 없음",
-      "scanning": "감시 중",
-      "distanceBasis": "거리는 거더 끝 기준"
+      "scanning": "감시 중"
     },
     "help": {
       "title": "도움말",

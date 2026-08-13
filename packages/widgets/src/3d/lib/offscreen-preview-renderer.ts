@@ -9,6 +9,7 @@ import {
   OrthographicCamera,
   Scene,
   WebGLRenderer,
+  type SkinnedMesh,
 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import { loadGltfScene, clearGltfCache } from './preview-gltf-cache';
@@ -163,15 +164,19 @@ function disposeAll() {
 
 // ── Render execution ─────────────────────────────────────────────────────────
 
+/**
+ * clone 고유 리소스만 해제한다.
+ *
+ * SkeletonUtils.clone은 geometry/material을 마스터(GLTF 캐시)와 **공유**하므로
+ * 여기서 dispose하면 캐시에 살아 있는 마스터의 GPU 버퍼가 파괴된다 — 같은
+ * 모델을 재요청하면 캐시 히트인데 버퍼는 이미 해제된 상태가 된다. clone이
+ * 실제로 소유하는 것은 복제된 Skeleton(렌더 시 생성되는 boneTexture)뿐이다.
+ * 공유 geometry/material의 해제는 clearGltfCache()가 담당한다.
+ */
 function disposeClone(obj: import('three').Object3D): void {
   obj.traverse((child) => {
-    if (child instanceof Mesh) {
-      child.geometry.dispose();
-      if (Array.isArray(child.material)) {
-        child.material.forEach((m) => m.dispose());
-      } else {
-        child.material.dispose();
-      }
+    if ((child as SkinnedMesh).isSkinnedMesh) {
+      (child as SkinnedMesh).skeleton.dispose();
     }
   });
 }

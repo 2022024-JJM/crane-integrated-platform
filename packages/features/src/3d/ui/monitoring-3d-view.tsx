@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -18,6 +19,7 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { SceneEnvironment } from './scene-environment';
+import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import type { SensorFeedRenderer } from './sensor-billboard';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -85,6 +87,8 @@ export function Monitoring3dView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, mode);
+  const [sceneReady, setSceneReady] = useState(false);
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusStack = useObjectFocusStore((s) => s.focusStack);
   const popFocus = useObjectFocusStore((s) => s.popFocus);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
@@ -122,6 +126,13 @@ export function Monitoring3dView({
 
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
+  // 인라인 리터럴로 넘기면 부모 리렌더마다 새 객체 → SceneControlsBridge의
+  // 컨트롤러 재등록 effect가 재실행되며 reset()이 사용자 카메라를 초기
+  // 위치로 되돌린다(알람 배너 등 잦은 리렌더 화면에서 실제 발생).
+  const cameraPreset = useMemo(
+    () => ({ defaultPosition: cameraPosition, defaultTarget: cameraTarget }),
+    [cameraPosition, cameraTarget],
+  );
 
   const focusOverlay =
     focusStack.length > 0 ? (
@@ -151,10 +162,7 @@ export function Monitoring3dView({
       className="relative h-full min-h-0 w-full bg-(--canvas-background)"
     >
       <ThreeSceneViewer
-        cameraPreset={{
-          defaultPosition: cameraPosition,
-          defaultTarget: cameraTarget,
-        }}
+        cameraPreset={cameraPreset}
         canvasProps={{
           dpr: canvasDpr,
           gl: {
@@ -163,18 +171,17 @@ export function Monitoring3dView({
             alpha: false,
             antialias: true,
             stencil: false,
-            autoClear: false,
             depth: true,
           },
           onPointerMissed: clearFocus,
         }}
         overlay={
-          focusOverlay || overlayExtras ? (
-            <>
-              {focusOverlay}
-              {overlayExtras}
-            </>
-          ) : null
+          <>
+            {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
+            <SceneLoadingOverlay ready={sceneReady} />
+            {focusOverlay}
+            {overlayExtras}
+          </>
         }
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
@@ -208,6 +215,7 @@ export function Monitoring3dView({
             renderSensorFeed={renderSensorFeed}
           />
           {sceneExtras}
+          <SceneReadyProbe onReady={handleSceneReady} />
         </Suspense>
       </ThreeSceneViewer>
     </div>

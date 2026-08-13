@@ -90,6 +90,13 @@ function isWebGLSupported(): boolean {
       canvas.getContext('webgl') ||
       canvas.getContext('experimental-webgl');
     cachedWebGLSupport = Boolean(gl);
+    // 검사용 컨텍스트는 즉시 반납 — 브라우저의 동시 WebGL 컨텍스트
+    // 상한(보통 16)을 문서 수명 내내 1개 소모하지 않도록.
+    if (gl && 'getExtension' in gl) {
+      (gl as WebGLRenderingContext)
+        .getExtension('WEBGL_lose_context')
+        ?.loseContext();
+    }
   } catch {
     cachedWebGLSupport = false;
   }
