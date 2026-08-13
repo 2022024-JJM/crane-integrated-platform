@@ -38,7 +38,9 @@
         "warning": "주의",
         "danger": "위험"
       },
-      "empty": "감지된 객체 없음"
+      "empty": "감지 범위 내 객체 없음",
+      "scanning": "감시 중",
+      "distanceBasis": "거리는 거더 끝 기준"
     },
     "help": {
       "title": "도움말",
@@ -50,6 +52,7 @@
       "arrow": "진행 방향 · 길이는 속도에 비례",
       "severityDanger": "위험 — 위험 반경 안",
       "severityWarning": "주의 — 감지 범위 안",
+      "distanceBasis": "표시되는 모든 거리는 거더 끝을 기준으로 측정됩니다.",
       "simulationNote": "현재 시뮬레이션 데이터로 구동 중입니다."
     }
   },

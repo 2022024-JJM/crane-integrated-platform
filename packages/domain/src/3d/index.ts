@@ -76,6 +76,7 @@ export {
   getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
 } from './model/scene-file-registry';
+export { getEnvironmentFileUrlByRegionId } from './model/scene-environment-registry';
 export { withBaseUrl } from './lib/asset-url';
 export {
   CRANE_TYPE_MODEL,

@@ -6,7 +6,6 @@ import {
   useCollisionGuardStore,
   zoneDisplayDistanceM,
 } from '@crane/features/3d';
-import { cn } from '@crane/core/lib/utils';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
 /**
@@ -184,16 +183,14 @@ export function GoliathCollisionHelp() {
         />
       </ul>
 
-      {/* 시뮬레이션 고지 — MVP 단계임을 화면이 스스로 밝힌다. 실물 센서
-          연동 시 이 줄만 제거하면 된다. */}
-      <p
-        className={cn(
-          'border-t border-slate-700/50 px-2.5 py-1.5',
-          'text-[10px] leading-tight text-slate-400',
-        )}
-      >
-        {t('collisionGuard.help.simulationNote')}
-      </p>
+      <div className="space-y-1 border-t border-slate-700/50 px-2.5 py-1.5 text-[10px] leading-tight text-slate-400">
+        {/* 거리 기준 — HUD·씬 라벨의 "N m"가 어디서부터인지 여기서 답한다
+            (거더 끝 기준 환산 zoneDisplayDistanceM). */}
+        <p>{t('collisionGuard.help.distanceBasis')}</p>
+        {/* 시뮬레이션 고지 — MVP 단계임을 화면이 스스로 밝힌다. 실물 센서
+            연동 시 이 줄만 제거하면 된다. */}
+        <p>{t('collisionGuard.help.simulationNote')}</p>
+      </div>
     </section>
   );
 }

@@ -374,6 +374,16 @@ function smoothstep01(t: number) {
 const SCAN_WAVE_COUNT = 2;
 const SCAN_WAVE_PERIOD = 3.4;
 
+/**
+ * 반경 수치 라벨의 부착 방위 — travel 정렬 로컬 XZ 단위 벡터
+ * (+X = 거더 축, +Z = travel = 에고 카메라의 원측).
+ *
+ * 카메라 근측 대각: 원측(+Z) 정면은 크레인 거더·타이틀 라벨과 겹치고,
+ * 근측(-Z) 정면은 에고 기본 구도에서 화면 밖이다. 거더 축으로 비껴
+ * 내린 이 대각이 화면 안 다크 스테이지의 빈 영역에 떨어진다.
+ */
+const RADIUS_LABEL_DIR: readonly [number, number] = [0.8, -0.6];
+
 function DetectionZoneRing({
   zone,
   showCameraCoverage = false,
@@ -686,28 +696,47 @@ function DetectionZoneRing({
           값은 반경 그대로가 아니라 표시 오프셋을 뺀 "거더 끝 기준" 환산
           (zoneDisplayDistanceM) — 골리앗의 30m/70m 정의와 일치한다.
 
-          두 수치는 같은 축(로컬 +Z = travel = 에고 카메라의 원측)에
-          나란히 둔다 — 같은 반직선 위에 있어야 "30m 다음 70m"이라는
-          동심원 구조가 그대로 읽힌다. 근측(-Z)이 아닌 이유: 원 반경
-          (≈125 unit)이 에고 카메라 후퇴 거리(95)보다 커서 근측 호는
-          기본 구도에서 카메라 뒤 화면 밖이다. */}
+          부착 방위는 카메라 근측 대각(RADIUS_LABEL_DIR): 원측(+Z) 정면은
+          크레인 거더·타이틀 라벨과 정확히 겹치고, 근측(-Z) 정면은 원
+          반경(≈125 unit)이 에고 카메라 후퇴(95)보다 커서 화면 밖이다.
+          거더 축으로 비껴 내린 대각은 에고 기본 구도에서 다크 스테이지의
+          빈 영역에 떨어진다. 두 수치는 같은 반직선 위 — "30m 다음 70m"
+          이라는 동심 구조가 그대로 읽힌다.
+
+          칩 왼쪽의 색 틱이 소속 링을 가리킨다 — 두 칩이 같은 무채색이면
+          어느 원의 수치인지 위치로만 추론해야 한다. 색은 링·도움말 견본과
+          같은 단일 소스(COLLISION_GUARD_COLORS)를 쓴다. */}
       <Html
         center
-        position={[0, 0.5, zone.dangerRadius - labelInset]}
+        position={[
+          RADIUS_LABEL_DIR[0] * (zone.dangerRadius - labelInset),
+          0.5,
+          RADIUS_LABEL_DIR[1] * (zone.dangerRadius - labelInset),
+        ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
-        <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
+        <span
+          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
+          style={{ borderLeftColor: COLLISION_GUARD_COLORS.danger }}
+        >
           {Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone))}m
         </span>
       </Html>
       <Html
         center
-        position={[0, 0.5, zone.radius - labelInset]}
+        position={[
+          RADIUS_LABEL_DIR[0] * (zone.radius - labelInset),
+          0.5,
+          RADIUS_LABEL_DIR[1] * (zone.radius - labelInset),
+        ]}
         zIndexRange={[4, 0]}
         style={{ pointerEvents: 'none' }}
       >
-        <span className="rounded-sm bg-slate-950/55 px-1 py-px font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80">
+        <span
+          className="rounded-sm border-l-2 bg-slate-950/55 py-px pr-1 pl-1.5 font-mono text-[10px] leading-none font-semibold whitespace-nowrap text-white/80"
+          style={{ borderLeftColor: COLLISION_GUARD_COLORS.detection }}
+        >
           {Math.round(zoneDisplayDistanceM(zone.radius, zone))}m
         </span>
       </Html>

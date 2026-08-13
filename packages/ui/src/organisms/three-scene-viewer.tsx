@@ -265,6 +265,13 @@ function SceneControlsBridge({
       makeDefault
       enableDamping={false}
       target={cameraPreset.defaultTarget}
+      // 휠 줌을 포인터 방향으로 — 보고 싶은 지점을 조준해 줌인/줌아웃하면
+      // 타깃이 함께 이동해 회전·팬 없이도 지도 전역을 훑을 수 있다
+      zoomToCursor
+      // 줌 인 시 지오메트리 관통 방지
+      minDistance={5}
+      // 무한 줌 아웃 방지 — 지도가 점이 되기 전에 멈춘다 (camera far보다 작게)
+      maxDistance={3000}
     />
   );
 }
@@ -392,7 +399,10 @@ export function ThreeSceneViewer({
         <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
           <Canvas
             {...canvasProps}
-            camera={{ position: cameraPreset.defaultPosition }}
+            // far 기본값(1000)은 줌 아웃 시 카메라-타깃 거리가 1000을 넘는
+            // 순간 지도 중앙부터 잘려나간다 — 씬 최대 폭(~600 unit) 대비
+            // 여유 있게 잡는다. maxDistance(3000) + 씬 반폭보다 커야 잘림이 없다.
+            camera={{ position: cameraPreset.defaultPosition, far: 5000 }}
           >
             <SceneControlsBridge
               cameraPreset={cameraPreset}

@@ -17,6 +17,7 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
+import { SceneEnvironment } from './scene-environment';
 import type { SensorFeedRenderer } from './sensor-billboard';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -188,6 +189,11 @@ export function Monitoring3dView({
           color={'#ffffff'}
           intensity={4}
         />
+        {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
+            표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
+        <Suspense fallback={null}>
+          <SceneEnvironment regionId={regionId} />
+        </Suspense>
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}

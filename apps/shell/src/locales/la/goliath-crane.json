@@ -38,7 +38,9 @@
         "warning": "Monitio",
         "danger": "Periculum"
       },
-      "empty": "Nullum obiectum detectum"
+      "empty": "Nullum obiectum intra ambitum",
+      "scanning": "Vigilans",
+      "distanceBasis": "Distantiae a fine trabis mensuratae"
     },
     "help": {
       "title": "Auxilium",
@@ -50,6 +52,7 @@
       "arrow": "Directio · longitudo velocitati respondet",
       "severityDanger": "Periculum — intra radium periculi",
       "severityWarning": "Monitio — intra ambitum deprehensionis",
+      "distanceBasis": "Omnes distantiae a fine trabis mensurantur.",
       "simulationNote": "Nunc datis simulatis agitur."
     }
   },
