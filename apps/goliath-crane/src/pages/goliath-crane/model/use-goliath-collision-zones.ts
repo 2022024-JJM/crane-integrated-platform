@@ -29,6 +29,8 @@ export function useGoliathCollisionZones() {
     return {
       zones: buildGoliathCollisionZones(crane.position, crane.rotation[1]),
       egoTopPose: buildGoliathEgoTopPose(crane.position, crane.rotation[1]),
+      // 현재 소비처 없음 — CollisionGuardTopViewSync(카메라 주목 자동 ON)의
+      // 입력이었다. 자동 진입을 되살릴 때 그대로 쓴다.
       craneCenter: [crane.position[0], crane.position[2]] as [number, number],
     };
   }, [sceneInfo]);

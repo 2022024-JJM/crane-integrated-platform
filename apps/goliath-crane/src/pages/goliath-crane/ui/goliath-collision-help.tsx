@@ -67,7 +67,8 @@ export function GoliathCollisionHelp() {
 
   if (!enabled || !derived) return null;
 
-  // 실제 존 설정에서 거리를 읽는다 — 씬 라벨과 같은 "거더 끝 기준" 환산.
+  // 실제 존 설정에서 거리를 읽는다 — 씬 라벨과 같은 기준으로 환산한다.
+  // 존이 다리별로 둘이지만 반경 설정은 공통(LEG_ZONE_BASE)이라 첫 존이면 된다.
   const zone = derived.zones[0];
   const detectionM = Math.round(zoneDisplayDistanceM(zone.radius, zone));
   const dangerM = Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone));

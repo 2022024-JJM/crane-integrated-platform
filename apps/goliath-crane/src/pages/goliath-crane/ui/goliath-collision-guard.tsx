@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   CollisionGuard,
   CollisionGuardCameraRig,
-  CollisionGuardTopViewSync,
   useCollisionGuardStore,
 } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
@@ -25,16 +24,10 @@ export function GoliathCollisionGuardScene() {
   return (
     <>
       <CollisionGuard zones={derived.zones} />
-      {/* 크레인을 화면 중심에 놓고 들여다보면 자동 ON (끄는 건 수동 토글) */}
-      <CollisionGuardTopViewSync center={derived.craneCenter} />
-      {/* 에고 프레이밍: 탑뷰 진입(=가드 ON) 시 크레인 중심 상공으로
-          자동 프레이밍. 이탈은 사용자 카메라 조작이 트리거이므로 복귀
-          플라이트는 하지 않는다. */}
-      <CollisionGuardCameraRig
-        pose={derived.egoTopPose}
-        duration={0.9}
-        restoreOnDisable={false}
-      />
+      {/* 에고 프레이밍: 토글 ON에 크레인 중심 상공으로 날아가고, OFF에
+          진입 직전 시점으로 되돌아온다. 카메라 조작으로 인한 자동 진입은
+          두지 않는다 — 토글이 유일한 트리거라야 복귀 지점이 명확하다. */}
+      <CollisionGuardCameraRig pose={derived.egoTopPose} duration={0.9} />
     </>
   );
 }

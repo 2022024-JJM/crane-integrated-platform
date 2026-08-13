@@ -432,11 +432,17 @@ export function useCollisionGuardSimulation(zones: CollisionGuardZone[]) {
    * ingest()해 주지 않아 화면에 멈춰 선 채로 남고 그 옆에서 새 객체가
    * 스폰된다. useFrame 안의 정리 코드(!enabled 분기)는 프레임이 도는
    * 동안만 유효하므로 이 경우를 잡지 못한다 — 언마운트에서 정리한다.
+   *
+   * enabled도 함께 내린다. 가드는 "토글로 진입하는 모드"이고 카메라
+   * 복귀 지점은 진입 시점에만 저장되므로, 켠 채로 화면을 떠나면 다음
+   * 진입이 ON 상태로 시작해 버려(돌아갈 시점 없이) 규약이 깨진다.
    */
   useEffect(
     () => () => {
       agentsRef.current = [];
-      useCollisionGuardStore.getState().clear();
+      const store = useCollisionGuardStore.getState();
+      store.clear();
+      store.setEnabled(false);
     },
     [],
   );

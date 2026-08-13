@@ -213,7 +213,10 @@ interface CollisionGuardState {
 
 export const useCollisionGuardStore = create<CollisionGuardState>()(
   (set, get) => ({
-    enabled: true,
+    // 기본 OFF — 충돌 감지는 사용자가 토글로 진입하는 모드다. 켠 채로
+    // 시작하면 저작 카메라가 곧바로 에고 포즈로 탈취되고, 끌 때 돌아갈
+    // "이전 시점"도 존재하지 않는다.
+    enabled: false,
     tracks: [],
 
     setEnabled: (enabled) => set({ enabled }),
