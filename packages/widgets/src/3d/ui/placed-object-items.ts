@@ -1,6 +1,5 @@
 import {
   humanizeModelPath,
-  isMapLocked,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedSensorInfo,
@@ -12,8 +11,6 @@ export interface PlacedObjectItem {
   displayName: string;
   subtitle: string;
   type: 'model' | 'text' | 'sensor' | 'map';
-  /** map 전용 — 잠금 상태. 목록에서 자물쇠 토글을 그리는 데 쓴다. */
-  locked?: boolean;
 }
 
 interface GetPlacedObjectItemsParams {
@@ -44,7 +41,6 @@ export function getPlacedObjectItems({
     displayName: humanizeModelPath(map.path),
     subtitle: mapObjectLabel,
     type: 'map',
-    locked: isMapLocked(map),
   }));
 
   const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({

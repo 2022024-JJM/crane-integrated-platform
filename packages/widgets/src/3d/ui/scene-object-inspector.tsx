@@ -16,7 +16,6 @@ import {
   humanizeModelPath,
   isCameraSensor,
   isLidarSensor,
-  isMapLocked,
   type SavedCameraSensorInfo,
   type SavedLidarSensorInfo,
   type SavedMapInfo,
@@ -36,6 +35,7 @@ import {
   type SceneTransformField,
   type SelectedMeshInfo,
   useActiveTransformStore,
+  useIsMapLocked,
 } from '@crane/features/3d';
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
@@ -683,7 +683,7 @@ function MapInspectorContent({
   onToggleLock?: (id: string, locked: boolean) => void;
   t: (key: string) => string;
 }) {
-  const locked = isMapLocked(selectedMap);
+  const locked = useIsMapLocked(selectedMap.id);
 
   return (
     <>

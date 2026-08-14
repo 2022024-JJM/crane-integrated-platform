@@ -1,11 +1,8 @@
 import { Lock, Map, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  humanizeModelPath,
-  isMapLocked,
-  type SavedMapInfo,
-} from '@crane/domain/3d';
+import { humanizeModelPath, type SavedMapInfo } from '@crane/domain/3d';
+import { useIsMapLocked } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
 
 interface PaletteMapSectionProps {
@@ -26,7 +23,7 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   onDeleteMap,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
-  const locked = isMapLocked(map);
+  const locked = useIsMapLocked(map.id);
 
   return (
     <section className="border-border bg-card flex shrink-0 flex-col rounded-lg border">

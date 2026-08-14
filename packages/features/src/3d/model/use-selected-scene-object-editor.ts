@@ -16,6 +16,7 @@ import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { clampToRange } from '@crane/core/lib/utils';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
+import { useMapEditLockStore } from './use-map-edit-lock-store';
 import { AXIS_INDEX, type AxisKey, type SceneTransformField } from './types';
 
 function updateVectorValue(tuple: Vector3Tuple, axis: AxisKey, value: number) {
@@ -640,15 +641,13 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
-  /** 지도 편집 잠금 토글. 잠글 때 선택 중이었다면 선택을 해제한다. */
+  /**
+   * 지도 편집 잠금 토글. 씬이 아니라 에디터 세션 스토어에 쓴다 —
+   * 잠금은 저장 대상이 아니다(useMapEditLockStore 주석 참고).
+   * 잠글 때 선택 중이었다면 선택을 해제한다.
+   */
   const setMapLocked = (id: string, locked: boolean) => {
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        maps: (prev.maps ?? []).map((m) => (m.id === id ? { ...m, locked } : m)),
-      };
-    });
+    useMapEditLockStore.getState().setLocked(id, locked);
     if (locked && selectedIds.has(id)) {
       clearSelectedModel();
     }

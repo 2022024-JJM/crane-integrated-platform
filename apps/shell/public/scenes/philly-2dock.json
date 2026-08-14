@@ -2,8 +2,7 @@
   "maps": [
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
-      "path": "/maps/phillyshipyard.glb",
-      "locked": true
+      "path": "/maps/phillyshipyard.glb"
     }
   ],
   "models": [

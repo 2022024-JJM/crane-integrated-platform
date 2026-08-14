@@ -50,6 +50,10 @@ export {
   type SelectedObjectType,
 } from './model/use-scene-object-selection-store';
 export {
+  useMapEditLockStore,
+  useIsMapLocked,
+} from './model/use-map-edit-lock-store';
+export {
   useActiveTransformStore,
   useIsTransformDragActive,
 } from './model/use-active-transform-store';

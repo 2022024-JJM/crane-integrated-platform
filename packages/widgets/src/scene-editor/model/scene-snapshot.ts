@@ -74,8 +74,10 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       ? [legacyMap]
       : [];
   const safeMaps = rawMaps.map((m) => {
-    // transform/locked는 optional이므로 유효할 때만 싣는다 — 손대지 않은
-    // 지도는 저장본에서도 필드 없는 상태로 남아야 기존 씬과 diff가 없다.
+    // transform은 optional이므로 유효할 때만 싣는다 — 손대지 않은 지도는
+    // 저장본에서도 필드 없는 상태로 남아야 기존 씬과 diff가 없다.
+    // 편집 잠금(locked)은 에디터 세션 상태라 저장하지 않는다. 과거 버전이
+    // 남긴 필드가 있으면 여기서 걸러진다(useMapEditLockStore 주석 참고).
     const safeMap: SavedMapInfo = {
       id:
         typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
@@ -84,7 +86,6 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     if (isVector3Tuple(m.position)) safeMap.position = m.position;
     if (isVector3Tuple(m.rotation)) safeMap.rotation = m.rotation;
     if (isVector3Tuple(m.scale)) safeMap.scale = m.scale;
-    if (typeof m.locked === 'boolean') safeMap.locked = m.locked;
     return safeMap;
   });
 
@@ -299,11 +300,11 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
-    // transform/locked도 비교해야 지도 이동·잠금이 dirty로 잡힌다.
+    // transform은 비교해야 지도 이동이 dirty로 잡힌다. 잠금은 씬 데이터가
+    // 아니므로(useMapEditLockStore) 여기서 볼 것이 없다.
     if (!isOptionalVector3TupleEqual(a[i].position, b[i].position)) return false;
     if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation)) return false;
     if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
-    if (a[i].locked !== b[i].locked) return false;
   }
   return true;
 }

@@ -17,7 +17,6 @@ import {
   getMeshPath,
   isCameraSensor,
   isLidarSensor,
-  isMapLocked,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -33,6 +32,7 @@ import {
   type SceneTransformField,
   type SceneTransformMode,
   useIsObjectSelected,
+  useMapEditLockStore,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -279,11 +279,13 @@ export function SceneObjectsEditCanvas({
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
   const lastPointerEventRef = useRef<PointerEvent | MouseEvent | null>(null);
 
+  // 잠금은 씬 데이터가 아니라 에디터 세션 상태다(useMapEditLockStore).
   // 잠금 해제된 지도만 선택/변형 대상이다. 대부분의 씬에서 빈 배열이라
   // 아래 경로들(transform target 탐색, 마퀴 제외)이 사실상 무비용이다.
+  const unlockedMapIds = useMapEditLockStore((s) => s.unlockedIds);
   const unlockedMaps = useMemo(
-    () => (sceneInfo?.maps ?? []).filter((m) => !isMapLocked(m)),
-    [sceneInfo?.maps],
+    () => (sceneInfo?.maps ?? []).filter((m) => unlockedMapIds.has(m.id)),
+    [sceneInfo?.maps, unlockedMapIds],
   );
   const mapIdSet = useMemo(
     () => new Set((sceneInfo?.maps ?? []).map((m) => m.id)),
@@ -773,7 +775,9 @@ export function SceneObjectsEditCanvas({
             rotation={m.rotation}
             scale={m.scale}
             isSensorOccluder={false}
-            onSelect={isMapLocked(m) ? handleClearSelection : handleSelectMap}
+            onSelect={
+              unlockedMapIds.has(m.id) ? handleSelectMap : handleClearSelection
+            }
             onObjectReady={handleModelObjectReady}
           />
         ))}
