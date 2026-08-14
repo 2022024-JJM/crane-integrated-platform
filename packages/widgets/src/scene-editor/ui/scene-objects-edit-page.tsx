@@ -266,28 +266,26 @@ export function SceneObjectsEditPage({
         return;
       }
 
-      const canvasRoot = canvasRootRef.current;
-      if (!canvasRoot) {
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const isCanvasFocused =
-        activeElement instanceof Node && canvasRoot.contains(activeElement);
-
-      if (!isCanvasFocused) {
-        return;
-      }
+      /**
+       * 단축키를 두 부류로 나눈다.
+       *
+       * - **수식키 조합**(Ctrl/Cmd+Z 등): 에디터 어디서든 동작한다. 예전에는
+       *   캔버스에 포커스가 있을 때만 먹어서, 인스펙터를 한 번 클릭하면
+       *   undo/redo까지 죽었다 — 값을 고친 직후가 되돌리고 싶은 순간인데
+       *   바로 그때 안 되는 셈이었다.
+       * - **맨 키**(Delete, R, Home, Enter): 캔버스 포커스일 때만. 패널의
+       *   버튼을 조작하다 Enter나 Delete를 누르면 객체가 지워지는 사고가
+       *   난다. 이쪽은 제약을 유지하는 게 맞다.
+       *
+       * 텍스트 입력 중(isEditableTarget)은 위에서 이미 걸렀다.
+       */
+      const hasModifier = event.ctrlKey || event.metaKey;
 
       const isUndoShortcut =
-        (event.ctrlKey || event.metaKey) &&
-        !event.shiftKey &&
-        event.key.toLowerCase() === 'z';
+        hasModifier && !event.shiftKey && event.key.toLowerCase() === 'z';
       const isRedoShortcut =
-        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') ||
-        ((event.ctrlKey || event.metaKey) &&
-          event.shiftKey &&
-          event.key.toLowerCase() === 'z');
+        (hasModifier && event.key.toLowerCase() === 'y') ||
+        (hasModifier && event.shiftKey && event.key.toLowerCase() === 'z');
 
       if (isUndoShortcut) {
         event.preventDefault();
@@ -321,6 +319,19 @@ export function SceneObjectsEditPage({
           ...(currentSceneInfo.texts ?? []).map((t) => t.id),
         ];
         selectAll(allIds);
+        return;
+      }
+
+      // 여기서부터는 맨 키 단축키다 — 캔버스에 포커스가 있을 때만 처리한다.
+      // 패널 버튼을 조작하다 Enter/Delete를 눌러 객체가 사라지면 안 된다.
+      const canvasRoot = canvasRootRef.current;
+      if (!canvasRoot) {
+        return;
+      }
+      const activeElement = document.activeElement;
+      const isCanvasFocused =
+        activeElement instanceof Node && canvasRoot.contains(activeElement);
+      if (!isCanvasFocused) {
         return;
       }
 
@@ -664,7 +675,7 @@ export function SceneObjectsEditPage({
 /**
  * Floating side panel — collapsed면 화면 가장자리의 작은 rail 버튼만 보이고,
  * expanded면 카드 형태로 콘텐츠를 펼친다. 닫기 버튼은 카드 헤더 위에 absolute로
- * 얹어 자식 컴포넌트(SceneModelPalette / SceneObjectInspector)에 손대지 않는다.
+ * 얹어 자식 컴포넌트(HierarchyPanel / SceneObjectInspector)에 손대지 않는다.
  *
  * pointer-events 처리: 컨테이너 자체는 pointer-events-none으로 두고 rail/카드만
  * pointer-events-auto. 이렇게 하면 collapsed 영역의 빈 공간 위에서도 캔버스

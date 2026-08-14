@@ -38,6 +38,7 @@ export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
 export { SceneEnvironment } from './ui/scene-environment';
+export { SceneObjectBoundary } from './ui/scene-object-boundary';
 export {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,

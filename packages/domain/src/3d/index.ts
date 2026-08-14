@@ -9,6 +9,7 @@ export {
   UnknownRegionError,
 } from './lib/scene-dev-storage';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
+export { preloadGltf, releaseGltfCache } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
   prefetchModelBottomOffset,

@@ -28,6 +28,7 @@ import {
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
   prefetchModelBottomOffset,
+  releaseGltfCache,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -42,6 +43,7 @@ import {
   SCENE_GL_OPTIONS,
   SceneEnvironment,
   SceneLighting,
+  SceneObjectBoundary,
   useIsObjectSelected,
   useMapEditLockStore,
   useSceneObjectSelectionStore,
@@ -262,6 +264,10 @@ export function SceneObjectsEditCanvas({
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
+      // 에디터를 떠나면 프리로드한 카탈로그(40개, 약 97MB)를 캐시에서 비운다.
+      // 해제 호출이 없으면 드래그 앤 드롭 편의를 위해 당겨온 이 전량이
+      // 세션 내내 상주한다 — 실제 씬이 쓰는 건 그중 일부뿐이다.
+      releaseGltfCache(catalogItems.map((item) => item.path));
     };
   }, [catalogItems]);
 
@@ -787,37 +793,47 @@ export function SceneObjectsEditCanvas({
             컴포넌트 타입을 갈아끼우면 토글할 때마다 수십~수백 MB짜리
             지형 GLB가 unmount/remount 되어 화면이 한 번 깜빡인다.
             차이는 클릭 핸들러(선택 vs 선택 해제)뿐이다. */}
+        {/* GLB를 로드하는 객체는 개별 경계로 감싼다 — 경로가 틀린 모델
+            하나가 캔버스 전체를 비우지 않도록. SceneObjectBoundary 주석 참고.
+            에디터는 로딩 오버레이가 없으므로 Suspense도 객체별로 분리해
+            준비된 것부터 보여준다(뷰어는 오버레이 때문에 공유 Suspense 유지). */}
         {sceneInfo?.maps?.map((m) => (
-          <SelectionAwareGltfModel
-            key={m.id}
-            id={m.id}
-            url={m.path}
-            position={m.position}
-            rotation={m.rotation}
-            scale={m.scale}
-            isSensorOccluder={false}
-            onSelect={
-              unlockedMapIds.has(m.id) ? handleSelectMap : handleClearSelection
-            }
-            onObjectReady={handleModelObjectReady}
-          />
+          <SceneObjectBoundary key={m.id} label={`map ${m.path}`} isolateSuspense>
+            <SelectionAwareGltfModel
+              id={m.id}
+              url={m.path}
+              position={m.position}
+              rotation={m.rotation}
+              scale={m.scale}
+              isSensorOccluder={false}
+              onSelect={
+                unlockedMapIds.has(m.id) ? handleSelectMap : handleClearSelection
+              }
+              onObjectReady={handleModelObjectReady}
+            />
+          </SceneObjectBoundary>
         ))}
         {sceneInfo?.models.map((model) => (
-          <SelectionAwareGltfModel
+          <SceneObjectBoundary
             key={model.id}
-            id={model.id}
-            url={model.path}
-            equipName={model.equipName}
-            showLabel={showLabels}
-            opacity={model.opacity}
-            position={model.position}
-            rotation={model.rotation}
-            scale={model.scale}
-            meshOverrides={model.meshOverrides}
-            onSelect={handleSelectModel}
-            onDoubleSelect={handleDoubleSelectModel}
-            onObjectReady={handleModelObjectReady}
-          />
+            label={`model ${model.equipName || model.id} (${model.path})`}
+            isolateSuspense
+          >
+            <SelectionAwareGltfModel
+              id={model.id}
+              url={model.path}
+              equipName={model.equipName}
+              showLabel={showLabels}
+              opacity={model.opacity}
+              position={model.position}
+              rotation={model.rotation}
+              scale={model.scale}
+              meshOverrides={model.meshOverrides}
+              onSelect={handleSelectModel}
+              onDoubleSelect={handleDoubleSelectModel}
+              onObjectReady={handleModelObjectReady}
+            />
+          </SceneObjectBoundary>
         ))}
         {(sceneInfo?.texts ?? []).map((text) => (
           <SelectionAwareSceneText

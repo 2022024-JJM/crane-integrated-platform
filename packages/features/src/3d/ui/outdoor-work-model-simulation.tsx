@@ -16,6 +16,8 @@ import {
   isLidarSensor,
   isCameraSensor,
   loadSceneInfoByRegionId,
+  preloadGltf,
+  releaseGltfCache,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -34,6 +36,7 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
+import { SceneObjectBoundary } from './scene-object-boundary';
 
 const noop = () => {};
 
@@ -43,6 +46,13 @@ export function useSceneData(
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  /** 이 region이 로드한 GLB 경로. cleanup에서 캐시를 비울 때 쓴다. */
+  const loadedAssetPathsRef = useRef<string[]>([]);
+  /**
+   * 현재 마운트된 region. cleanup이 "지역을 떠난 것"과 "같은 지역에서 모드만
+   * 바꾼 것"을 구분하는 데 쓴다 — 후자에서 캐시를 비우면 수십 MB를 다시 받는다.
+   */
+  const activeRegionIdRef = useRef<string | null>(null);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
@@ -55,6 +65,9 @@ export function useSceneData(
 
   useEffect(() => {
     let isMounted = true;
+    // 이 effect가 담당하는 region을 표시한다. cleanup의 지연 해제가 이 값을
+    // 보고 "지역 이탈"과 "모드 전환"을 구분한다.
+    activeRegionIdRef.current = regionId;
 
     const load = async () => {
       setIsLoading(true);
@@ -69,6 +82,22 @@ export function useSceneData(
 
         setSceneInfo(data);
         setSceneInfoInStore(regionId, data);
+        // 이 region이 쓰는 GLB 경로를 기억해 둔다 — cleanup에서 캐시를 비울 때
+        // 필요한데, 그 시점엔 state가 이미 초기화됐을 수 있다.
+        const assetPaths = [
+          ...(data.models ?? []).map((m) => m.path),
+          ...(data.maps ?? []).map((m) => m.path),
+        ];
+        loadedAssetPathsRef.current = assetPaths;
+
+        // 씬 JSON이 필요한 GLB 목록을 이미 알고 있으므로 곧바로 프리로드를
+        // 시작한다. 이걸 안 하면 컴포넌트가 마운트되며 하나씩 요청이 나가
+        // 직렬에 가깝게 로드된다 — 지역 진입당 14~35MB라 체감 지연이 크다.
+        // 중복 경로는 Set으로 걸러 같은 GLB를 두 번 요청하지 않는다.
+        for (const path of new Set(assetPaths)) {
+          preloadGltf(path);
+        }
+
         data.models?.forEach((modelInfo) => {
           registerFromModel(modelInfo);
         });
@@ -111,6 +140,25 @@ export function useSceneData(
       resetToOrigin();
       clearValueMapper();
       clearSceneInfoFromStore(regionId);
+      // 이 region의 GLB 캐시를 비운다. 해제하지 않으면 지역을 오갈수록
+      // 메모리가 단조 증가해 장시간 세션에서 탭이 죽는다.
+      //
+      // 단, **region이 실제로 바뀔 때만** 비운다. 이 effect는 mode(시뮬레이션
+      // ↔ 실시간 ↔ 리플레이)에도 재실행되는데, 같은 지역에서 모드만 바꿨는데
+      // 캐시를 버리면 수십 MB를 다시 받는다 — 모드 전환은 흔한 조작이라
+      // 그때마다 로딩이 걸리면 오히려 퇴보다.
+      const releasedRegionId = regionId;
+      const pathsToRelease = loadedAssetPathsRef.current;
+      loadedAssetPathsRef.current = [];
+      // 표식을 먼저 지운다 — 이어서 같은 region의 effect가 다시 돌면 위에서
+      // 다시 채워지고, 그렇지 않으면 null로 남아 아래 해제가 진행된다.
+      activeRegionIdRef.current = null;
+
+      queueMicrotask(() => {
+        // 다음 effect가 같은 region으로 다시 마운트했다면(=모드 전환) 건너뛴다.
+        if (activeRegionIdRef.current === releasedRegionId) return;
+        releaseGltfCache(pathsToRelease);
+      });
     };
   }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 
@@ -392,20 +440,23 @@ export function OutdoorWorkModelSimulation({
 
   return (
     <>
+      {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
+          그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
       {maps.map((m) => (
         // 지도는 지형이라 센서 occluder로 등록하지 않는다 — 등록하면 카메라/
         // LiDAR ray가 0 거리에서 지도를 때려 frustum이 붕괴하고(model-mesh의
         // 주석 참고), 지도 전 메시에 불필요한 BVH 동기 빌드까지 발생한다.
         // 에디터·mro2·philly 뷰어는 이미 false — 이 경로만 누락돼 있었다.
-        <GltfModel
-          key={m.id}
-          id={m.id}
-          url={m.path}
-          position={m.position}
-          rotation={m.rotation}
-          scale={m.scale}
-          isSensorOccluder={false}
-        />
+        <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
+          <GltfModel
+            id={m.id}
+            url={m.path}
+            position={m.position}
+            rotation={m.rotation}
+            scale={m.scale}
+            isSensorOccluder={false}
+          />
+        </SceneObjectBoundary>
       ))}
       {models.map((model) => {
         if (visibleModelIds && !visibleModelIds.has(model.id)) {
@@ -413,22 +464,26 @@ export function OutdoorWorkModelSimulation({
         }
 
         return (
-          <GltfModel
+          <SceneObjectBoundary
             key={model.id}
-            id={model.id}
-            url={model.path}
-            equipName={model.equipName}
-            opacity={model.opacity}
-            alarmSeverity={
-              model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
-            }
-            alarmHighlightMesh={alarmHighlightMesh}
-            position={model.position}
-            rotation={model.rotation}
-            scale={model.scale}
-            onSelect={handleModelClick}
-            onObjectReady={handleObjectReady}
-          />
+            label={`model ${model.equipName || model.id} (${model.path})`}
+          >
+            <GltfModel
+              id={model.id}
+              url={model.path}
+              equipName={model.equipName}
+              opacity={model.opacity}
+              alarmSeverity={
+                model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
+              }
+              alarmHighlightMesh={alarmHighlightMesh}
+              position={model.position}
+              rotation={model.rotation}
+              scale={model.scale}
+              onSelect={handleModelClick}
+              onObjectReady={handleObjectReady}
+            />
+          </SceneObjectBoundary>
         );
       })}
       {sensors.map((sensor) => {

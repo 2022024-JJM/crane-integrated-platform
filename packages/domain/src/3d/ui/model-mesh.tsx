@@ -578,6 +578,10 @@ export function ModelMesh({
         }
       }
       unregisterSceneOccluders(scene, id);
+      // BVH는 여기서 끊지 않는다 — 지오메트리가 GLTF 캐시 공유라, 같은 GLB의
+      // 다른 인스턴스(예: 씬에 2개 배치된 LLC-002)가 아직 살아 있으면 그쪽
+      // raycast가 느려진다. 해제는 region을 떠나며 캐시를 비울 때 한다
+      // (releaseGltfCache).
     };
   }, [id, scene, meshBindings, isSensorOccluder]);
 
