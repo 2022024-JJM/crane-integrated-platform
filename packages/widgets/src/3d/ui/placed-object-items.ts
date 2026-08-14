@@ -1,5 +1,7 @@
 import {
   humanizeModelPath,
+  isMapLocked,
+  type SavedMapInfo,
   type SavedModelInfo,
   type SavedSensorInfo,
   type SavedTextInfo,
@@ -9,25 +11,41 @@ export interface PlacedObjectItem {
   id: string;
   displayName: string;
   subtitle: string;
-  type: 'model' | 'text' | 'sensor';
+  type: 'model' | 'text' | 'sensor' | 'map';
+  /** map 전용 — 잠금 상태. 목록에서 자물쇠 토글을 그리는 데 쓴다. */
+  locked?: boolean;
 }
 
 interface GetPlacedObjectItemsParams {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
   placedSensors?: SavedSensorInfo[];
+  placedMaps?: SavedMapInfo[];
   objectSearch: string;
   textObjectLabel: string;
+  mapObjectLabel?: string;
 }
 
 export function getPlacedObjectItems({
   placedModels,
   placedTexts = [],
   placedSensors = [],
+  placedMaps = [],
   objectSearch = '',
   textObjectLabel,
+  mapObjectLabel = 'Map',
 }: GetPlacedObjectItemsParams): PlacedObjectItem[] {
   const normalizedObjectSearch = objectSearch.trim().toLowerCase();
+
+  // 지도를 맨 앞에 둔다 — 씬의 바닥이자 다른 객체의 기준면이라
+  // 계층 목록에서도 최상위로 읽히는 편이 자연스럽다.
+  const mapItems: PlacedObjectItem[] = placedMaps.map((map) => ({
+    id: map.id,
+    displayName: humanizeModelPath(map.path),
+    subtitle: mapObjectLabel,
+    type: 'map',
+    locked: isMapLocked(map),
+  }));
 
   const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({
     id: model.id,
@@ -50,7 +68,7 @@ export function getPlacedObjectItems({
     type: 'sensor',
   }));
 
-  const items = [...modelItems, ...textItems, ...sensorItems];
+  const items = [...mapItems, ...modelItems, ...textItems, ...sensorItems];
 
   if (!normalizedObjectSearch) {
     return items;

@@ -168,6 +168,12 @@ export function SceneObjectsEditPage({
     selectPlacedSensor,
     deletePlacedSensor,
     deleteMap,
+    selectPlacedMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setMapLocked,
     toggleModel,
     toggleText,
     selectAll,
@@ -348,6 +354,10 @@ export function SceneObjectsEditPage({
               (field === 'position' || field === 'rotation')
             ) {
               updateSensor(selectedSensor.id, { [field]: value });
+            } else if (selectedObjectType === 'map') {
+              updateSelectedMapTransformVector(field, value, {
+                recordHistory: false,
+              });
             } else {
               updateSelectedTransformVector(field, value, {
                 recordHistory: false,
@@ -357,6 +367,12 @@ export function SceneObjectsEditPage({
           onTransformCommit={(position, rotation, scale) => {
             // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
             // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+            if (selectedObjectType === 'map') {
+              commitSelectedMapTransform(position, rotation, scale, {
+                recordHistory: false,
+              });
+              return;
+            }
             commitSelectedTransform(position, rotation, scale, {
               recordHistory: false,
             });
@@ -413,6 +429,8 @@ export function SceneObjectsEditPage({
             onDeletePlacedSensor={deletePlacedSensor}
             onTogglePlacedModel={toggleModel}
             onTogglePlacedText={toggleText}
+            onSelectPlacedMap={selectPlacedMap}
+            onToggleMapLock={setMapLocked}
             onSave={() => void saveCurrentScene()}
             onExport={() => downloadSceneInfo(regionId, sceneInfo)}
           />
@@ -433,6 +451,7 @@ export function SceneObjectsEditPage({
             selectedText={selectedText}
             selectedSensor={selectedSensor}
             selectedMesh={selectedMesh}
+            selectedMap={selectedMap}
             multiSelectCount={selectedIds.size}
             visionChannels={visionChannels}
             allSensors={sceneInfo?.sensors}
@@ -469,6 +488,8 @@ export function SceneObjectsEditPage({
             onMeshTransformChange={updateSelectedMeshTransform}
             onSensorChange={updateSensor}
             onValueMapChange={updateSelectedValueMap}
+            onMapTransformChange={updateSelectedMapTransform}
+            onToggleMapLock={setMapLocked}
             onBackToParent={() => {
               if (selectedMesh) {
                 selectPlacedModel(selectedMesh.modelId);
@@ -679,12 +700,16 @@ function HierarchyPanel({
   onDeletePlacedSensor,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onSelectPlacedMap,
+  onToggleMapLock,
   onSave,
   onExport,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
   isSaving: boolean;
+  onSelectPlacedMap: (id: string) => void;
+  onToggleMapLock: (id: string, locked: boolean) => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
@@ -704,8 +729,10 @@ function HierarchyPanel({
       placedModels: sceneInfo?.models ?? [],
       placedTexts: sceneInfo?.texts ?? [],
       placedSensors: sceneInfo?.sensors ?? [],
+      placedMaps: sceneInfo?.maps ?? [],
       objectSearch,
       textObjectLabel: t('monitoring:editor.textObject'),
+      mapObjectLabel: t('monitoring:editor.map'),
     }).length;
   }, [objectSearch, sceneInfo, t]);
 
@@ -726,6 +753,7 @@ function HierarchyPanel({
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
           placedSensors={sceneInfo?.sensors ?? []}
+          placedMaps={sceneInfo?.maps ?? []}
           objectSearch={objectSearch}
           selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
@@ -736,6 +764,8 @@ function HierarchyPanel({
           onDeletePlacedSensor={onDeletePlacedSensor}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
+          onSelectPlacedMap={onSelectPlacedMap}
+          onToggleMapLock={onToggleMapLock}
         />
       </div>
     </div>
@@ -981,6 +1011,10 @@ function BottomProjectPanel({
                 {activeCategory === 'map' ? (
                   maps.length > 0 ? (
                     <div className="flex flex-col gap-2">
+                      {/* 선택·잠금은 좌측 계층 목록(Hierarchy)이 담당한다.
+                          여기 Project 패널은 에셋 관리 영역이라 지도 삭제만
+                          남긴다 — 같은 조작을 두 곳에 두면 어느 쪽이 정본인지
+                          모호해진다. */}
                       {maps.map((m) => (
                         <PaletteMapSection
                           key={m.id}

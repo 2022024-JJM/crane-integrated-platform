@@ -70,6 +70,26 @@ export interface SavedMeshOverride {
 export interface SavedMapInfo {
   id: string;
   path: string;
+  /**
+   * 지도 배치 transform. 모두 optional — 기존 저장본(맵에 transform이 없던
+   * 시절)은 필드가 없고, 그 경우 원점/무회전/등배로 렌더된다. 즉 이 필드를
+   * 건드리지 않은 씬은 이전과 픽셀 단위로 동일하다.
+   */
+  position?: Vector3Tuple;
+  rotation?: Vector3Tuple;
+  scale?: Vector3Tuple;
+  /**
+   * 편집 잠금. true면 캔버스 클릭·마퀴로 선택되지 않는다 — 지도는 화면
+   * 대부분을 덮는 거대 메시라, 잠기지 않으면 다른 객체를 고르려는 클릭이
+   * 번번이 지도에 먹힌다. 기본값은 "잠김"(undefined = true 취급)이라
+   * 기존 씬의 작업 흐름이 바뀌지 않는다. 해제는 좌측 패널 토글로 한다.
+   */
+  locked?: boolean;
+}
+
+/** 지도 잠금 기본값은 true — 필드 없는 기존 저장본도 잠긴 것으로 본다. */
+export function isMapLocked(map: SavedMapInfo): boolean {
+  return map.locked !== false;
 }
 
 export interface ValueMapItem {

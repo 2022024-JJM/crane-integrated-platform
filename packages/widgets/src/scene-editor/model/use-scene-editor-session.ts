@@ -1,4 +1,5 @@
 import {
+  humanizeModelPath,
   type SavedCameraInfo,
   type SavedSensorInfo,
   type SceneModelCatalogItem,
@@ -105,6 +106,18 @@ interface UseSceneEditorSessionResult {
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
   deleteMap: (id: string) => void;
+  selectPlacedMap: (id: string) => void;
+  selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
+  updateSelectedMapTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMapTransform'];
+  updateSelectedMapTransformVector: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMapTransformVector'];
+  commitSelectedMapTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['commitSelectedMapTransform'];
+  setMapLocked: ReturnType<typeof useSelectedSceneObjectEditor>['setMapLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   selectAll: (ids: string[]) => void;
@@ -154,6 +167,7 @@ export function useSceneEditorSession({
   const selectSensor = useSceneObjectSelectionStore(
     (state) => state.selectSensor,
   );
+  const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
@@ -186,6 +200,11 @@ export function useSceneEditorSession({
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
     updateSelectedValueMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setMapLocked,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -219,6 +238,7 @@ export function useSceneEditorSession({
         selectModel,
         selectText,
         selectSensor,
+        selectMap,
         clearSelectedModel,
         selectedIds,
         sceneInfoRef,
@@ -231,6 +251,7 @@ export function useSceneEditorSession({
       selectModel,
       selectText,
       selectSensor,
+      selectMap,
       clearSelectedModel,
       selectedIds,
       selectAllStore,
@@ -256,7 +277,10 @@ export function useSceneEditorSession({
     selectedModelId,
     selectedObjectType,
     selectedModelLabel:
-      selectedModel?.equipName.trim() || selectedText?.content.trim() || null,
+      selectedModel?.equipName.trim() ||
+      selectedText?.content.trim() ||
+      (selectedMap ? humanizeModelPath(selectedMap.path) : null) ||
+      null,
     selectedModel,
     selectedText,
     selectedSensor,
@@ -299,6 +323,12 @@ export function useSceneEditorSession({
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
     deleteMap: manipulation.deleteMap,
+    selectPlacedMap: manipulation.selectPlacedMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setMapLocked,
     toggleModel,
     toggleText,
     selectAll: selectAllStore,

@@ -3,6 +3,7 @@ import {
   numRound,
   parseMeshId,
   radToDeg,
+  type SavedMapInfo,
   type SavedMeshOverride,
   type SavedModelInfo,
   type SavedSceneInfo,
@@ -132,6 +133,24 @@ interface UseSelectedSceneObjectEditorResult {
     updates: Array<{ id: string; position: Vector3Tuple }>,
     options?: { recordHistory?: boolean },
   ) => void;
+  selectedMap: SavedMapInfo | null;
+  updateSelectedMapTransform: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  updateSelectedMapTransformVector: (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  commitSelectedMapTransform: (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  setMapLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
 }
 
@@ -193,6 +212,16 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
+    if (selectedObjectType === 'map') {
+      const exists = (sceneInfo.maps ?? []).some(
+        (m) => m.id === selectedModelId,
+      );
+      if (!exists) {
+        clearSelectedModel();
+      }
+      return;
+    }
+
     const isSelectedModelExists = sceneInfo.models.some(
       (model) => model.id === selectedModelId,
     );
@@ -227,6 +256,14 @@ export function useSelectedSceneObjectEditor({
           null)
         : null,
     [sceneInfo?.sensors, selectedModelId, selectedObjectType],
+  );
+
+  const selectedMap = useMemo(
+    () =>
+      selectedObjectType === 'map'
+        ? ((sceneInfo?.maps ?? []).find((m) => m.id === selectedModelId) ?? null)
+        : null,
+    [sceneInfo?.maps, selectedModelId, selectedObjectType],
   );
 
   const selectedMesh = useMemo<SelectedMeshInfo | null>(() => {
@@ -526,6 +563,97 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
+  /**
+   * 지도 transform 갱신. 모델과 달리 필드가 optional이라(기존 저장본 호환)
+   * 매 갱신에서 해당 필드만 채워 넣는다 — 나머지는 없는 채로 두어야
+   * "손대지 않은 지도"가 저장본에서도 계속 필드 없는 상태로 남는다.
+   */
+  const updateSelectedMapTransformVector = (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: { recordHistory?: boolean },
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) =>
+          m.id === selectedModelId
+            ? { ...m, [field]: roundVectorValue(value) }
+            : m,
+        ),
+      };
+    }, options);
+  };
+
+  /**
+   * 인스펙터 수치 입력용 축 단위 갱신. 기존 값이 없으면(손대지 않은 지도)
+   * 렌더러 기본값에서 출발해야 인스펙터에 보이던 수치와 결과가 일치한다.
+   */
+  const updateSelectedMapTransform = (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) => {
+          if (m.id !== selectedModelId) return m;
+          const base = m[field] ?? (field === 'scale' ? [1, 1, 1] : [0, 0, 0]);
+          return {
+            ...m,
+            [field]: updateVectorValue(base, axis, numRound(value)),
+          };
+        }),
+      };
+    });
+  };
+
+  const commitSelectedMapTransform = (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) => {
+          if (m.id !== selectedModelId) return m;
+          return {
+            ...m,
+            ...(position ? { position: roundVectorValue(position) } : null),
+            ...(rotation ? { rotation: roundVectorValue(rotation) } : null),
+            ...(scale ? { scale: roundVectorValue(scale) } : null),
+          };
+        }),
+      };
+    }, options);
+  };
+
+  /** 지도 편집 잠금 토글. 잠글 때 선택 중이었다면 선택을 해제한다. */
+  const setMapLocked = (id: string, locked: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) => (m.id === id ? { ...m, locked } : m)),
+      };
+    });
+    if (locked && selectedIds.has(id)) {
+      clearSelectedModel();
+    }
+  };
+
   // position/rotation/scale 3개를 단일 updateSceneInfo 호출로 처리.
   // commitFinal에서 3번 따로 호출하면 React 배치 처리가 안 될 때 3번 렌더가
   // 발생하고, 각 렌더마다 sceneModels 참조가 바뀌어 selectedObject가 리셋된다.
@@ -650,6 +778,11 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
     updateSelectedValueMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setMapLocked,
     removeSelectedModel,
   };
 }

@@ -1,7 +1,11 @@
-import { Map, Trash2 } from 'lucide-react';
+import { Lock, Map, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { humanizeModelPath, type SavedMapInfo } from '@crane/domain/3d';
+import {
+  humanizeModelPath,
+  isMapLocked,
+  type SavedMapInfo,
+} from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
 
 interface PaletteMapSectionProps {
@@ -9,11 +13,20 @@ interface PaletteMapSectionProps {
   onDeleteMap: () => void;
 }
 
+/**
+ * 하단 Project 패널의 지도 섹션 — 에셋으로서의 지도(무엇이 올라와 있고,
+ * 지울 수 있다)만 보여준다.
+ *
+ * 선택과 편집 잠금은 좌측 계층 목록(PalettePlacedObjects)이 담당한다.
+ * 같은 조작을 두 곳에 두면 어느 쪽이 정본인지 모호해지므로, 여기서는
+ * 잠금 상태를 읽기 전용 배지로만 비춘다.
+ */
 export const PaletteMapSection = memo(function PaletteMapSection({
   map,
   onDeleteMap,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
+  const locked = isMapLocked(map);
 
   return (
     <section className="border-border bg-card flex shrink-0 flex-col rounded-lg border">
@@ -47,6 +60,12 @@ export const PaletteMapSection = memo(function PaletteMapSection({
             {map.id}
           </p>
         </div>
+        {locked ? (
+          <Lock
+            aria-label={t('monitoring:editor.mapLocked')}
+            className="text-muted-foreground/70 size-3 shrink-0"
+          />
+        ) : null}
       </div>
     </section>
   );

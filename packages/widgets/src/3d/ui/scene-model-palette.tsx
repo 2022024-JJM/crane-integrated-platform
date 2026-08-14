@@ -155,7 +155,11 @@ export function SceneModelPalette({
         </div>
 
         {maps.map((m) => (
-          <PaletteMapSection key={m.id} map={m} onDeleteMap={() => onDeleteMap(m.id)} />
+          <PaletteMapSection
+            key={m.id}
+            map={m}
+            onDeleteMap={() => onDeleteMap(m.id)}
+          />
         ))}
 
         <PalettePlacedObjects

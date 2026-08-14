@@ -23,6 +23,7 @@ interface SceneManipulationDeps {
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
   selectSensor: (id: string) => void;
+  selectMap: (id: string) => void;
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
@@ -36,6 +37,7 @@ export function createSceneManipulationActions({
   selectModel,
   selectText,
   selectSensor,
+  selectMap,
   clearSelectedModel,
   selectedIds,
   sceneInfoRef,
@@ -114,6 +116,10 @@ export function createSceneManipulationActions({
 
   const selectPlacedModel = (id: string) => {
     selectModel(id);
+  };
+
+  const selectPlacedMap = (id: string) => {
+    selectMap(id);
   };
 
   const selectPlacedText = (id: string) => {
@@ -288,6 +294,7 @@ export function createSceneManipulationActions({
     deletePlacedSensor,
     selectPlacedSensor,
     deleteMap,
+    selectPlacedMap,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

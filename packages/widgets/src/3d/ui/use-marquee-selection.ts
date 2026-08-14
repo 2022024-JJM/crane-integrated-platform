@@ -10,6 +10,7 @@ import { Box3, Vector3, type Camera, type WebGLRenderer } from 'three';
 import type { Object3D } from 'three';
 
 const DRAG_THRESHOLD_PX = 5;
+const EMPTY_ID_SET: ReadonlySet<string> = new Set<string>();
 
 interface NormalizedRect {
   left: number;
@@ -50,6 +51,7 @@ function computeMarqueeSelection(
   registry: Map<string, Object3D>,
   camera: Camera,
   renderer: WebGLRenderer,
+  excludedIds: ReadonlySet<string>,
 ): string[] {
   const canvasRect = renderer.domElement.getBoundingClientRect();
   const result: string[] = [];
@@ -58,6 +60,11 @@ function computeMarqueeSelection(
   camera.updateMatrixWorld(true);
 
   for (const [id, object] of registry) {
+    // 지도는 마퀴에서 제외한다. 지형 AABB가 씬 전체를 덮어 어떤 마퀴든
+    // 반드시 걸리고, 그대로 그룹 드래그하면 지형이 통째로 딸려 간다.
+    // 지도는 클릭 또는 좌측 패널로만 선택한다.
+    if (excludedIds.has(id)) continue;
+
     // 오브젝트 world 행렬도 최신화
     object.updateWorldMatrix(true, false);
 
@@ -107,6 +114,8 @@ interface UseMarqueeSelectionParams {
   isTransformDragging: boolean;
   dragJustEndedRef: RefObject<boolean>;
   isDraggingExternalItem: boolean;
+  /** 마퀴 선택에서 제외할 id (지도 등). */
+  excludedIds?: ReadonlySet<string>;
   selectAll: (ids: string[]) => void;
   clearSelectedModel: () => void;
 }
@@ -127,6 +136,7 @@ export function useMarqueeSelection({
   isTransformDragging,
   dragJustEndedRef,
   isDraggingExternalItem,
+  excludedIds,
   selectAll,
   clearSelectedModel,
 }: UseMarqueeSelectionParams): UseMarqueeSelectionReturn {
@@ -152,6 +162,9 @@ export function useMarqueeSelection({
 
   const clearSelectedModelRef = useRef(clearSelectedModel);
   clearSelectedModelRef.current = clearSelectedModel;
+
+  const excludedIdsRef = useRef(excludedIds);
+  excludedIdsRef.current = excludedIds;
 
   const isSpacePressedRef = useRef(false);
 
@@ -226,6 +239,7 @@ export function useMarqueeSelection({
         registry,
         camera,
         renderer,
+        excludedIdsRef.current ?? EMPTY_ID_SET,
       );
 
       // onPointerMissed가 이 직후 발화해서 선택을 지우는 것을 방지

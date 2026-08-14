@@ -33,6 +33,7 @@ export type {
   ValueMapItem,
   ValueMapType,
 } from './model/types';
+export { isMapLocked } from './model/types';
 export type {
   CameraSensorSettings,
   LidarSensorSettings,

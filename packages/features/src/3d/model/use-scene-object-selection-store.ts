@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SelectedObjectType = 'model' | 'text' | 'mesh' | 'sensor';
+export type SelectedObjectType = 'model' | 'text' | 'mesh' | 'sensor' | 'map';
 
 interface SceneObjectSelectionState {
   selectedIds: Set<string>;
@@ -13,6 +13,12 @@ interface SceneObjectSelectionState {
   selectText: (id: string) => void;
   selectMesh: (meshId: string) => void;
   selectSensor: (id: string) => void;
+  /**
+   * 지도 선택. 지도는 다중 선택에 참여하지 않는다 — 화면 전체를 덮는
+   * 지형이라 마퀴나 Ctrl+클릭으로 다른 객체와 함께 잡히면 그룹 드래그가
+   * 지형까지 통째로 옮겨 버린다. 항상 단독 선택이다.
+   */
+  selectMap: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMesh: (meshId: string) => void;
@@ -53,6 +59,9 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
 
     selectSensor: (id) =>
       set(deriveCompat(new Set([id]), 'sensor', id)),
+
+    selectMap: (id) =>
+      set(deriveCompat(new Set([id]), 'map', id)),
 
     toggleModel: (id) =>
       set((state) => {

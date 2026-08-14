@@ -73,10 +73,20 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     : legacyMap
       ? [legacyMap]
       : [];
-  const safeMaps = rawMaps.map((m) => ({
-    id: typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
-    path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
-  }));
+  const safeMaps = rawMaps.map((m) => {
+    // transform/locked는 optional이므로 유효할 때만 싣는다 — 손대지 않은
+    // 지도는 저장본에서도 필드 없는 상태로 남아야 기존 씬과 diff가 없다.
+    const safeMap: SavedMapInfo = {
+      id:
+        typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
+      path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
+    };
+    if (isVector3Tuple(m.position)) safeMap.position = m.position;
+    if (isVector3Tuple(m.rotation)) safeMap.rotation = m.rotation;
+    if (isVector3Tuple(m.scale)) safeMap.scale = m.scale;
+    if (typeof m.locked === 'boolean') safeMap.locked = m.locked;
+    return safeMap;
+  });
 
   const safeModels = Array.isArray(sceneInfo?.models)
     ? sceneInfo.models.flatMap((model) => {
@@ -277,10 +287,23 @@ function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
   return true;
 }
 
+function isOptionalVector3TupleEqual(
+  a: Vector3Tuple | undefined,
+  b: Vector3Tuple | undefined,
+): boolean {
+  if (!a || !b) return a === b;
+  return isVector3TupleEqual(a, b);
+}
+
 function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
+    // transform/locked도 비교해야 지도 이동·잠금이 dirty로 잡힌다.
+    if (!isOptionalVector3TupleEqual(a[i].position, b[i].position)) return false;
+    if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation)) return false;
+    if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
+    if (a[i].locked !== b[i].locked) return false;
   }
   return true;
 }

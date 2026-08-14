@@ -17,6 +17,7 @@ import {
   getMeshPath,
   isCameraSensor,
   isLidarSensor,
+  isMapLocked,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -265,6 +266,7 @@ export function SceneObjectsEditCanvas({
   const selectSensor = useSceneObjectSelectionStore(
     (state) => state.selectSensor,
   );
+  const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
@@ -276,6 +278,17 @@ export function SceneObjectsEditCanvas({
   );
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
   const lastPointerEventRef = useRef<PointerEvent | MouseEvent | null>(null);
+
+  // 잠금 해제된 지도만 선택/변형 대상이다. 대부분의 씬에서 빈 배열이라
+  // 아래 경로들(transform target 탐색, 마퀴 제외)이 사실상 무비용이다.
+  const unlockedMaps = useMemo(
+    () => (sceneInfo?.maps ?? []).filter((m) => !isMapLocked(m)),
+    [sceneInfo?.maps],
+  );
+  const mapIdSet = useMemo(
+    () => new Set((sceneInfo?.maps ?? []).map((m) => m.id)),
+    [sceneInfo?.maps],
+  );
 
   const {
     cameraRef,
@@ -314,6 +327,7 @@ export function SceneObjectsEditCanvas({
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
     sceneSensors: sceneInfo?.sensors,
+    sceneMaps: unlockedMaps,
     modelObjectRegistryRef,
     onTransformVectorChange,
     onTransformCommit,
@@ -432,6 +446,18 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectSensor, setSelectedObject],
   );
 
+  // 지도 선택 — Ctrl 다중 선택 분기가 없다. 지도는 단독 선택만 허용한다
+  // (selectMap 주석 참고). 더블클릭 drill-in도 두지 않는다 — 지형 메시는
+  // 수만 개라 자식 단위 편집이 의미가 없다.
+  const handleSelectMap = useCallback(
+    (id: string) => {
+      if (dragJustEndedRef.current) return;
+      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+      selectMap(id);
+    },
+    [dragJustEndedRef, selectMap, setSelectedObject],
+  );
+
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
 
   const {
@@ -450,6 +476,7 @@ export function SceneObjectsEditCanvas({
       isDraggingText ||
       draggingSensorType
     ),
+    excludedIds: mapIdSet,
     selectAll,
     clearSelectedModel,
   });
@@ -729,13 +756,25 @@ export function SceneObjectsEditCanvas({
             onObjectChange={syncSelectedObjectTransform}
           />
         ) : null}
+        {/* 지도 — 잠금(locked)이면 클릭이 선택 해제로 떨어지고(기존 동작),
+            해제하면 일반 모델과 같은 선택·드래그 대상이 된다. 잠금 상태는
+            좌측 패널 토글로 바꾼다.
+
+            잠금 여부와 무관하게 항상 SelectionAwareGltfModel을 쓴다 —
+            컴포넌트 타입을 갈아끼우면 토글할 때마다 수십~수백 MB짜리
+            지형 GLB가 unmount/remount 되어 화면이 한 번 깜빡인다.
+            차이는 클릭 핸들러(선택 vs 선택 해제)뿐이다. */}
         {sceneInfo?.maps?.map((m) => (
-          <GltfModel
+          <SelectionAwareGltfModel
             key={m.id}
             id={m.id}
-            onSelect={handleClearSelection}
             url={m.path}
+            position={m.position}
+            rotation={m.rotation}
+            scale={m.scale}
             isSensorOccluder={false}
+            onSelect={isMapLocked(m) ? handleClearSelection : handleSelectMap}
+            onObjectReady={handleModelObjectReady}
           />
         ))}
         {sceneInfo?.models.map((model) => (

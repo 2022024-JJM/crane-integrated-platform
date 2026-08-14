@@ -2,6 +2,9 @@ import {
   ChevronDown,
   Cuboid,
   Eye,
+  Lock,
+  LockOpen,
+  Map as MapIcon,
   Palette,
   SlidersHorizontal,
   Tag,
@@ -10,16 +13,21 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  humanizeModelPath,
   isCameraSensor,
   isLidarSensor,
+  isMapLocked,
   type SavedCameraSensorInfo,
   type SavedLidarSensorInfo,
+  type SavedMapInfo,
   type SavedModelInfo,
   type SavedSensorInfo,
   type SavedTextInfo,
   type ValueMapItem,
   type ValueMapType,
 } from '@crane/domain/3d';
+import type { Vector3Tuple } from '@crane/core/types/math';
+import { cn } from '@crane/core/lib/utils';
 import {
   type AxisKey,
   PositionController,
@@ -33,6 +41,12 @@ import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 
+// 지도 transform은 optional이라(기존 저장본 호환) 표시용 기본값이 필요하다.
+// 렌더러가 쓰는 GltfModel 기본값과 같은 값이어야 인스펙터 수치와 화면이 일치한다.
+const DEFAULT_MAP_POSITION: Vector3Tuple = [0, 0, 0];
+const DEFAULT_MAP_ROTATION: Vector3Tuple = [0, 0, 0];
+const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
+
 /** Vision PiP 채널 정의. app 레이어가 자기 도메인의 채널 목록을 주입한다. */
 export interface VisionChannelOption {
   id: string;
@@ -45,6 +59,7 @@ interface SceneObjectInspectorProps {
   selectedText: SavedTextInfo | null;
   selectedSensor?: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
+  selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
   /**
    * 인스펙터의 비전 채널 드롭다운에 노출할 채널 목록. 비어있거나 미지정 시
@@ -83,6 +98,14 @@ interface SceneObjectInspectorProps {
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
+  /** 지도 transform 변경 콜백. 미지정 시 지도 인스펙터는 읽기 전용이 된다. */
+  onMapTransformChange?: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  /** 지도 편집 잠금 토글 콜백. */
+  onToggleMapLock?: (id: string, locked: boolean) => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
   onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
 }
@@ -637,6 +660,81 @@ function TextInspectorContent({
   );
 }
 
+/**
+ * 지도 인스펙터 — transform과 잠금 토글만 있다.
+ *
+ * 지도에는 모델의 이름/투명도/태그 매핑에 해당하는 개념이 없다. 파일에서
+ * 온 지형이라 이름은 경로가 곧 정체이고, 투명도를 낮추면 그 위 객체의
+ * 기준면이 사라져 배치 작업 자체가 불가능해진다. 그래서 편집 가능한 것은
+ * 배치(transform)와 "지금 편집 대상인가"(잠금)뿐이다.
+ */
+function MapInspectorContent({
+  selectedMap,
+  onTransformChange,
+  onToggleLock,
+  t,
+}: {
+  selectedMap: SavedMapInfo;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  onToggleLock?: (id: string, locked: boolean) => void;
+  t: (key: string) => string;
+}) {
+  const locked = isMapLocked(selectedMap);
+
+  return (
+    <>
+      <InspectorSection
+        title={t('monitoring:editor.map')}
+        icon={<MapIcon className="size-4" />}
+      >
+        <div className="space-y-2">
+          <p className="text-foreground truncate text-[12px] font-medium">
+            {humanizeModelPath(selectedMap.path)}
+          </p>
+          <button
+            type="button"
+            aria-pressed={locked}
+            onClick={() => onToggleLock?.(selectedMap.id, !locked)}
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5 text-[12px] transition-colors',
+              locked
+                ? 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                : 'border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
+            )}
+          >
+            {locked ? (
+              <Lock className="size-3.5 shrink-0" />
+            ) : (
+              <LockOpen className="size-3.5 shrink-0" />
+            )}
+            <span className="flex-1 text-left">
+              {locked
+                ? t('monitoring:editor.unlockMap')
+                : t('monitoring:editor.lockMap')}
+            </span>
+          </button>
+        </div>
+      </InspectorSection>
+
+      {/* 잠긴 지도는 수치 입력도 막는다 — 캔버스에서 못 옮기는데 인스펙터
+          로는 옮겨지면 자물쇠의 의미가 반쪽이 된다. */}
+      {locked ? null : (
+        <TransformSection
+          position={selectedMap.position ?? DEFAULT_MAP_POSITION}
+          rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
+          scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
+          onTransformChange={onTransformChange}
+          t={t}
+        />
+      )}
+    </>
+  );
+}
+
 function VisionChannelSelect({
   sensor,
   onChange,
@@ -810,6 +908,7 @@ export function SceneObjectInspector({
   selectedText,
   selectedSensor = null,
   selectedMesh,
+  selectedMap = null,
   multiSelectCount = 0,
   visionChannels,
   allSensors,
@@ -825,6 +924,8 @@ export function SceneObjectInspector({
   onSensorChange,
   onBackToParent,
   onValueMapChange,
+  onMapTransformChange,
+  onToggleMapLock,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName ?? '';
@@ -851,6 +952,7 @@ export function SceneObjectInspector({
     selectedText ||
     selectedSensor ||
     selectedMesh ||
+    selectedMap ||
     multiSelectCount > 1;
 
   return (
@@ -916,6 +1018,13 @@ export function SceneObjectInspector({
               t={t}
             />
           ) : null
+        ) : selectedMap ? (
+          <MapInspectorContent
+            selectedMap={selectedMap}
+            onTransformChange={onMapTransformChange ?? onTransformChange}
+            onToggleLock={onToggleMapLock}
+            t={t}
+          />
         ) : null}
         {!hasSelection ? (
           <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
