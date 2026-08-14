@@ -19,6 +19,11 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { SceneEnvironment } from './scene-environment';
+import {
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SceneLighting,
+} from './scene-render-preset';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import type { SensorFeedRenderer } from './sensor-billboard';
 
@@ -163,16 +168,10 @@ export function Monitoring3dView({
     >
       <ThreeSceneViewer
         cameraPreset={cameraPreset}
+        cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           dpr: canvasDpr,
-          gl: {
-            toneMapping: 0,
-            powerPreference: 'high-performance',
-            alpha: false,
-            antialias: true,
-            stencil: false,
-            depth: true,
-          },
+          gl: SCENE_GL_OPTIONS,
           onPointerMissed: clearFocus,
         }}
         overlay={
@@ -190,12 +189,7 @@ export function Monitoring3dView({
         onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
-        <ambientLight intensity={2} />
-        <directionalLight
-          position={[0, 50, 10]}
-          color={'#ffffff'}
-          intensity={4}
-        />
+        <SceneLighting />
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>

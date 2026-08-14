@@ -15,7 +15,7 @@ import {
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, MOUSE, Object3D, NoToneMapping, Vector3 } from 'three';
+import { Box3, MOUSE, Object3D, Vector3 } from 'three';
 import {
   CameraSensorMesh,
   GltfModel,
@@ -38,7 +38,10 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
   SceneEnvironment,
+  SceneLighting,
   useIsObjectSelected,
   useMapEditLockStore,
   useSceneObjectSelectionStore,
@@ -705,14 +708,11 @@ export function SceneObjectsEditCanvas({
       onDrop={handleSceneDrop}
     >
       <Canvas
-        // far 기본값(1000)은 줌 아웃 시 카메라-타깃 거리가 1000을 넘는 순간
-        // 지도 중앙부터 잘려나간다 — 뷰어(ThreeSceneViewer)와 같은 값으로 맞춘다.
-        camera={{ position: cameraPosition, far: 5000, near: 0.5 }}
-        gl={{
-          toneMapping: NoToneMapping,
-          powerPreference: 'high-performance',
-          antialias: true,
-        }}
+        // 카메라 클립·gl 옵션·조명 모두 뷰어와 같은 프리셋을 쓴다. 예전에는
+        // 각자 값을 들고 있다가 어긋나(에디터 조명이 25% 밝았다) 저작 화면과
+        // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
+        camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
+        gl={SCENE_GL_OPTIONS}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
@@ -729,8 +729,7 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
-        <ambientLight intensity={2} />
-        <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
+        <SceneLighting />
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
@@ -742,7 +741,10 @@ export function SceneObjectsEditCanvas({
         <OrbitControls
           ref={orbitControlsRef}
           makeDefault
-          enableDamping={false}
+          // 뷰어와 같은 감쇠값 — 저작 화면과 실제 화면의 조작감이 달라지면
+          // 에디터에서 잡은 카메라 구도가 뷰어에서 다르게 느껴진다.
+          enableDamping
+          dampingFactor={0.12}
           target={cameraTarget}
           onChange={handleOrbitChange}
           // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,

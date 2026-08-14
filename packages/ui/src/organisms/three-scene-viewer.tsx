@@ -40,6 +40,8 @@ interface ThreeSceneViewerCameraPreset {
 interface ThreeSceneViewerProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
   canvasProps?: Omit<ComponentProps<typeof Canvas>, 'camera' | 'children'>;
+  /** 카메라 near/far. 미지정 시 far 5000(지도 잘림 방지 최소값). */
+  cameraClip?: { near: number; far: number };
   children: ReactNode;
   overlay?: ReactNode;
   fullscreenOverlay?: ReactNode;
@@ -270,7 +272,12 @@ function SceneControlsBridge({
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      enableDamping={false}
+      // 관성 감쇠 — 끄면 드래그를 놓는 즉시 회전이 멈춰 조작이 뚝뚝 끊긴다.
+      // 관제 화면에서 마우스 조작은 사용자가 가장 오래 만지는 요소라 체감이 크다.
+      // dampingFactor는 drei 기본(0.05)보다 조금 높여 잔여 관성을 짧게 끊는다 —
+      // 정밀 배치 작업에서 손을 뗀 뒤에도 계속 흐르면 오히려 방해가 된다.
+      enableDamping
+      dampingFactor={0.12}
       target={cameraPreset.defaultTarget}
       // 휠 줌을 포인터 방향으로 — 보고 싶은 지점을 조준해 줌인/줌아웃하면
       // 타깃이 함께 이동해 회전·팬 없이도 지도 전역을 훑을 수 있다
@@ -313,6 +320,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
 export function ThreeSceneViewer({
   cameraPreset,
   canvasProps,
+  cameraClip,
   children,
   overlay,
   fullscreenOverlay,
@@ -406,10 +414,15 @@ export function ThreeSceneViewer({
         <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
           <Canvas
             {...canvasProps}
-            // far 기본값(1000)은 줌 아웃 시 카메라-타깃 거리가 1000을 넘는
-            // 순간 지도 중앙부터 잘려나간다 — 씬 최대 폭(~600 unit) 대비
-            // 여유 있게 잡는다. maxDistance(3000) + 씬 반폭보다 커야 잘림이 없다.
-            camera={{ position: cameraPreset.defaultPosition, far: 5000 }}
+            // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
+            // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
+            // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
+            // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
+            // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
+            camera={{
+              position: cameraPreset.defaultPosition,
+              ...(cameraClip ?? { near: 0.1, far: 5000 }),
+            }}
           >
             <SceneControlsBridge
               cameraPreset={cameraPreset}

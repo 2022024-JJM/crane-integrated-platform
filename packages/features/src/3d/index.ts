@@ -38,6 +38,12 @@ export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
 export { SceneEnvironment } from './ui/scene-environment';
+export {
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SCENE_LIGHTING,
+  SceneLighting,
+} from './ui/scene-render-preset';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export {

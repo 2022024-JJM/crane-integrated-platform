@@ -27,6 +27,11 @@ import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
+import {
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SceneLighting,
+} from './scene-render-preset';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { ReplaySearchForm } from './replay-search-form';
 
@@ -168,15 +173,9 @@ export function Replay3dView({
     >
       <ThreeSceneViewer
         cameraPreset={cameraPreset}
+        cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
-          gl: {
-            toneMapping: 0,
-            powerPreference: 'high-performance',
-            alpha: false,
-            antialias: true,
-            stencil: false,
-            depth: true,
-          },
+          gl: SCENE_GL_OPTIONS,
           onPointerMissed: clearFocus,
         }}
         overlay={
@@ -190,12 +189,7 @@ export function Replay3dView({
         toolbarClassName="top-28"
         onControllerReady={handleControllerReady}
       >
-        <ambientLight intensity={2} />
-        <directionalLight
-          position={[0, 50, 10]}
-          color={'#ffffff'}
-          intensity={4}
-        />
+        <SceneLighting />
         {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
             사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
             재생을 붙잡지 않는다. */}

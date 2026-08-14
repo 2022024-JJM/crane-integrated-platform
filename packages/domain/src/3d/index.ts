@@ -8,6 +8,7 @@ export {
   isSceneStoredLocallyOnly,
   UnknownRegionError,
 } from './lib/scene-dev-storage';
+export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
   prefetchModelBottomOffset,

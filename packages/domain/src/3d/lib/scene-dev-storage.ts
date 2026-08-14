@@ -4,6 +4,7 @@ import {
   isKnownRegionId,
 } from '../model/scene-file-registry';
 import type { SavedSceneInfo } from '../model/types';
+import { sanitizeSceneInfo } from './sanitize-scene-info';
 
 /**
  * Scene 정보 저장 / 로드 어댑터.
@@ -111,11 +112,17 @@ export class UnknownRegionError extends Error {
   }
 }
 
+/**
+ * 씬 로드의 유일한 경계. 어디서 왔든(파일/localStorage) **정규화를 거쳐서만**
+ * 반환한다 — 에디터·뷰어·리플레이가 같은 데이터를 보게 하는 지점이다.
+ * 예전에는 에디터만 정규화해서, legacy 단수 `map` 씬이 뷰어에서 지형 없이
+ * 떴다(sanitize-scene-info 주석 참고).
+ */
 export async function loadSceneInfoByRegionId(regionId: string) {
   // 운영: 사용자가 편집해 둔 localStorage 값이 있으면 우선 사용.
   if (!isDevEnv()) {
     const cached = loadSceneInfoFromLocalStorage(regionId);
-    if (cached) return cached;
+    if (cached) return sanitizeSceneInfo(cached);
   }
 
   const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
@@ -128,7 +135,7 @@ export async function loadSceneInfoByRegionId(regionId: string) {
   }
 
   // 파일이 404여도 다른 지역 파일로 대체하지 않는다 — 같은 이유다.
-  return loadSceneInfoFromUrl(sceneFileUrl);
+  return sanitizeSceneInfo(await loadSceneInfoFromUrl(sceneFileUrl));
 }
 
 export async function saveSceneInfoByRegionId(
