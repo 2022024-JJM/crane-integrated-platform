@@ -1,6 +1,7 @@
 import {
-  getDefaultSceneFileUrl,
+  getKnownRegionIds,
   getSceneFileUrlByRegionId,
+  isKnownRegionId,
 } from '../model/scene-file-registry';
 import type { SavedSceneInfo } from '../model/types';
 
@@ -34,6 +35,19 @@ function buildLocalStorageKey(regionId: string) {
 
 function isDevEnv() {
   return Boolean(import.meta.env.DEV);
+}
+
+/**
+ * 이 환경의 저장이 **이 브라우저 안에만** 남는지 여부.
+ *
+ * dev는 파일(public/scenes/*.json)에 쓰므로 커밋해 공유할 수 있지만, 운영은
+ * localStorage뿐이라 캐시를 지우거나 다른 PC·다른 사람이 열면 존재하지 않는다.
+ * 그런데 화면은 둘을 똑같이 "저장됨"으로 표시해 왔다 — 사용자는 배포됐다고
+ * 믿는데 실제로는 자기 브라우저에만 있는 상태다. UI가 이 차이를 밝히도록
+ * 노출한다. 백엔드 API가 붙으면 이 함수는 false를 반환하게 된다.
+ */
+export function isSceneStoredLocallyOnly(): boolean {
+  return !isDevEnv();
 }
 
 function isBrowser() {
@@ -83,6 +97,20 @@ function saveSceneInfoToLocalStorage(
   );
 }
 
+/** 미등록 region을 다룰 때 던지는 에러. 호출부가 메시지를 그대로 보여준다. */
+export class UnknownRegionError extends Error {
+  // 파라미터 프로퍼티(readonly regionId) 문법은 erasableSyntaxOnly에서 금지된다.
+  readonly regionId: string;
+
+  constructor(regionId: string) {
+    super(
+      `등록되지 않은 지역입니다: "${regionId}". 등록된 지역: ${getKnownRegionIds().join(', ')}`,
+    );
+    this.name = 'UnknownRegionError';
+    this.regionId = regionId;
+  }
+}
+
 export async function loadSceneInfoByRegionId(regionId: string) {
   // 운영: 사용자가 편집해 둔 localStorage 값이 있으면 우선 사용.
   if (!isDevEnv()) {
@@ -90,24 +118,29 @@ export async function loadSceneInfoByRegionId(regionId: string) {
     if (cached) return cached;
   }
 
-  // dev / 운영(localStorage 비어있음) 모두 빌드 시점에 박힌 기본 scene 으로 fallback.
   const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
 
-  try {
-    return await loadSceneInfoFromUrl(sceneFileUrl);
-  } catch (error) {
-    if (sceneFileUrl === getDefaultSceneFileUrl()) {
-      throw error;
-    }
-
-    return loadSceneInfoFromUrl(getDefaultSceneFileUrl());
+  // 미등록 region은 기본 파일로 떨어뜨리지 않는다. 예전에는 1dock.json을
+  // 대신 보여줬는데, 사용자는 그 지역의 씬을 편집한다고 믿은 채로 저장해
+  // 1dock을 덮어썼다. 로드 단계에서 명확히 실패해야 그 경로가 끊긴다.
+  if (!sceneFileUrl) {
+    throw new UnknownRegionError(regionId);
   }
+
+  // 파일이 404여도 다른 지역 파일로 대체하지 않는다 — 같은 이유다.
+  return loadSceneInfoFromUrl(sceneFileUrl);
 }
 
 export async function saveSceneInfoByRegionId(
   regionId: string,
   sceneInfo: SavedSceneInfo,
 ) {
+  // 저장은 되돌릴 수 없으므로 가장 먼저 막는다. dev에서는 미등록 region이
+  // 기본 파일(1dock.json)로 떨어져 남의 씬을 덮어썼다.
+  if (!isKnownRegionId(regionId)) {
+    throw new UnknownRegionError(regionId);
+  }
+
   // 운영: localStorage 에 저장. 백엔드 API 도입 시 이 분기를 교체한다.
   if (!isDevEnv()) {
     saveSceneInfoToLocalStorage(regionId, sceneInfo);

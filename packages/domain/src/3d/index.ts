@@ -5,6 +5,8 @@ export { createSceneText } from './lib/create-scene-text';
 export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
+  isSceneStoredLocallyOnly,
+  UnknownRegionError,
 } from './lib/scene-dev-storage';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
@@ -78,8 +80,9 @@ export {
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {
-  getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
+  getKnownRegionIds,
+  isKnownRegionId,
 } from './model/scene-file-registry';
 export {
   getEnvironmentFileUrlByRegionId,

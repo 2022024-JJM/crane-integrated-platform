@@ -3,20 +3,40 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs/promises';
+import {
+  SCENE_DIR,
+  getKnownRegionIds,
+  getSceneFileNameByRegionId,
+  isKnownRegionId,
+} from '../../packages/domain/src/3d/model/scene-file-map';
 
 const DEV_SCENE_API_PATH = '/__dev/scene';
 
-const DEFAULT_SCENE_FILE_URL = '/scenes/1dock.json';
-const SCENE_FILE_URL_BY_REGION_ID: Record<string, string> = {
-  'dock-1': '/scenes/1dock.json',
-  'dock-2': '/scenes/2dock.json',
-  'dock-in': '/scenes/dock-in.json',
-  goliath: '/scenes/goliath.json',
-  'philly-dock-2': '/scenes/philly-2dock.json',
-};
+/**
+ * region→파일 표는 도메인 패키지와 공유한다(scene-file-map). 예전에는 이
+ * 파일에 표가 복붙돼 있었는데, 한쪽만 고치면 저장과 로드가 다른 파일을
+ * 가리키게 되어 씬이 조용히 파괴된다.
+ *
+ * scene-file-map은 의존성이 0이라(React·three·import.meta 없음) Node
+ * 컨텍스트인 이 설정 파일에서도 그대로 import된다.
+ */
 
-function getSceneFileUrlByRegionId(regionId: string) {
-  return SCENE_FILE_URL_BY_REGION_ID[regionId] ?? DEFAULT_SCENE_FILE_URL;
+/**
+ * 씬 JSON의 최소 형태 검증.
+ *
+ * 예전에는 `JSON.parse` 결과를 그대로 write해서 `{}`·`null`·`"x"` 같은
+ * 값도 씬 파일을 덮어썼다. 완전한 스키마 검증은 과하지만, "적어도 씬처럼
+ * 생겼는가"는 확인해야 한 번의 잘못된 요청이 파일을 못 쓰게 만드는 걸 막는다.
+ */
+function isSceneInfoShaped(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const scene = value as Record<string, unknown>;
+  // models는 필수, maps는 없거나 배열이어야 한다(legacy 단수 map 씬 허용).
+  if (!Array.isArray(scene.models)) return false;
+  if (scene.maps !== undefined && !Array.isArray(scene.maps)) return false;
+  return true;
 }
 
 interface JsonResponseLike {
@@ -55,16 +75,41 @@ function devSceneSavePlugin(): Plugin {
         }
 
         const requestUrl = new URL(req.url, 'http://localhost');
-        const regionId = requestUrl.searchParams.get('regionId') ?? 'dock-1';
-        const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
+        const regionId = requestUrl.searchParams.get('regionId');
+
+        // 미등록(또는 누락) regionId는 저장하지 않는다. 예전에는 'dock-1'과
+        // 1dock.json으로 이중 폴백해서, 오타 하나로 남의 씬을 덮어썼다.
+        if (!regionId || !isKnownRegionId(regionId)) {
+          jsonResponse(res, 400, {
+            message: `Unknown regionId: "${regionId ?? ''}". Known: ${getKnownRegionIds().join(', ')}`,
+          });
+          return;
+        }
+
+        const sceneFileName = getSceneFileNameByRegionId(regionId);
+        if (!sceneFileName) {
+          jsonResponse(res, 400, { message: `Unknown regionId: "${regionId}"` });
+          return;
+        }
+
         const sceneFilePath = path.resolve(
           server.config.root,
-          `public${sceneFileUrl}`,
+          'public',
+          SCENE_DIR,
+          sceneFileName,
         );
 
         try {
           const requestBody = await readRequestBody(req);
           const sceneInfo = JSON.parse(requestBody);
+
+          if (!isSceneInfoShaped(sceneInfo)) {
+            jsonResponse(res, 400, {
+              message:
+                'Invalid scene payload: expected an object with a "models" array.',
+            });
+            return;
+          }
 
           await fs.writeFile(
             sceneFilePath,

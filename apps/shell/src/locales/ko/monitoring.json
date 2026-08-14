@@ -51,6 +51,8 @@
     "statusSaving": "저장 중",
     "statusUnsaved": "저장되지 않음",
     "statusSaved": "저장됨",
+    "statusSavedLocalOnly": "이 브라우저에만 저장됨",
+    "statusSavedLocalOnlyHint": "저장 서버가 없어 편집 내용이 이 브라우저에만 남습니다. 캐시를 지우거나 다른 PC·다른 사용자가 열면 보이지 않습니다. 공유하려면 내보내기로 JSON을 받아 반영하세요.",
     "placedObjects": "배치된 객체",
     "noPlacedObjects": "아직 배치된 객체가 없습니다.",
     "map": "지도",

@@ -1,5 +1,6 @@
 import {
   SCENE_MODEL_CATEGORIES,
+  isSceneStoredLocallyOnly,
   sceneEnvironmentCatalog,
   sceneModelCatalog,
   type SavedMapInfo,
@@ -20,6 +21,7 @@ import {
   Eye,
   EyeOff,
   FolderClosed,
+  HardDrive,
   Layers3,
   Loader2,
   Map,
@@ -215,16 +217,29 @@ export function SceneObjectsEditPage({
 
   const hasSelection = selectedIds.size > 0;
   const saveDisabled = !sceneInfo;
+  // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일 저장)와
+  // 똑같이 "저장됨"으로 표시하면, 사용자는 배포된 줄 알지만 실제로는 자기
+  // 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
+  // "저장됨" 상태일 때만 고지한다 — 저장 전/저장 중에 띄우면 경고가 상시
+  // 노출돼 무뎌지고, 정작 알려야 할 순간(방금 저장했는데 이 브라우저에만
+  // 남았을 때)의 신호가 묻힌다.
+  const showLocalOnlyNotice = isSceneStoredLocallyOnly() && !isSaving && !isDirty;
   const saveStatusLabel = isSaving
     ? t('monitoring:editor.statusSaving')
     : isDirty
       ? t('monitoring:editor.statusUnsaved')
-      : t('monitoring:editor.statusSaved');
+      : showLocalOnlyNotice
+        ? t('monitoring:editor.statusSavedLocalOnly')
+        : t('monitoring:editor.statusSaved');
   const saveStatusClassName = isSaving
     ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
     : isDirty
       ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
-      : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
+      : showLocalOnlyNotice
+        ? // 초록(=안전하게 보관됨)으로 칠하면 고지 문구와 색이 엇갈린다.
+          // 중립 톤으로 "저장은 됐지만 완전하지 않다"를 색으로도 전한다.
+          'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
 
   useEffect(() => {
     startTransition(() => {
@@ -234,6 +249,19 @@ export function SceneObjectsEditPage({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd+S는 캔버스 포커스 검사보다 먼저 처리한다. 아래 게이트에
+      // 걸리면 브라우저의 "페이지 저장" 대화상자가 그대로 뜨는데, 인스펙터에
+      // 값을 입력한 직후(=포커스가 패널에 있을 때)가 사용자가 저장을 누르는
+      // 바로 그 순간이라 가장 잘 터진다. 입력 중에도 저장은 유효한 동작이므로
+      // isEditableTarget도 통과시킨다.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (!saveDisabled && !isSaving) {
+          void saveCurrentScene();
+        }
+        return;
+      }
+
       if (isEditableTarget(event.target)) {
         return;
       }
@@ -327,7 +355,16 @@ export function SceneObjectsEditPage({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [duplicateSelectedObject, redo, removeSelectedModel, selectAll, undo]);
+  }, [
+    duplicateSelectedObject,
+    isSaving,
+    redo,
+    removeSelectedModel,
+    saveCurrentScene,
+    saveDisabled,
+    selectAll,
+    undo,
+  ]);
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full flex-col overflow-hidden">
@@ -510,22 +547,37 @@ export function SceneObjectsEditPage({
               leadingContent={
                 <div className="flex items-center gap-2">
                   {!saveDisabled ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
-                        saveStatusClassName,
-                      )}
-                    >
-                      {isSaving ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : isDirty ? (
-                        <AlertCircle className="size-4" />
-                      ) : (
-                        <CheckCircle2 className="size-4" />
-                      )}
-                      {saveStatusLabel}
-                    </Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
+                                saveStatusClassName,
+                              )}
+                            />
+                          }
+                        >
+                          {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : isDirty ? (
+                            <AlertCircle className="size-4" />
+                          ) : showLocalOnlyNotice ? (
+                            <HardDrive className="size-4" />
+                          ) : (
+                            <CheckCircle2 className="size-4" />
+                          )}
+                          {saveStatusLabel}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {showLocalOnlyNotice
+                            ? t('monitoring:editor.statusSavedLocalOnlyHint')
+                            : saveStatusLabel}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ) : null}
                   <SceneHistoryControls
                     canUndo={canUndo}

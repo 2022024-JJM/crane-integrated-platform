@@ -251,27 +251,10 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     path: '/models/c_1806.glb',
     defaultScale: [1, 1, 1],
   }),
-  withDefaultPreview({
-    id: 'factory-sample-01',
-    label: 'Factory Sample 01',
-    category: 'indoor',
-    path: '/models/factory_sample_01.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'factory-sample-02',
-    label: 'Factory Sample 02',
-    category: 'indoor',
-    path: '/models/factory_sample_02.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'factory-sample-03',
-    label: 'Factory Sample 03',
-    category: 'indoor',
-    path: '/models/factory_sample_03.glb',
-    defaultScale: [1, 1, 1],
-  }),
+  // factory-sample-01~03 제거 (2026-08-14): /models/factory_sample_0*.glb 파일이
+  // 리포에 없어 팔레트에 깨진 타일이 뜨고, 에디터를 열 때마다 404 프리로드가
+  // 나가고, 드롭하면 실패했다. 어떤 씬도 참조하지 않아 안전하게 뺐다.
+  // 에셋을 확보하면 다시 추가할 것 — 파일부터 넣고 등록하는 순서로.
   withDefaultPreview({
     id: 'gc-04-body',
     label: 'GC-04 Body',

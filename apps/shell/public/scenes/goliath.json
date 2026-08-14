@@ -32,7 +32,7 @@
   "texts": [],
   "camera": {
     "position": [
-      -41.037,
+      -41.03699999999999,
       222.858,
       235.266
     ],
@@ -41,5 +41,6 @@
       12,
       60.81
     ]
-  }
+  },
+  "environmentId": "overcast-atlantic"
 }

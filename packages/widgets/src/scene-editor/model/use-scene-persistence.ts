@@ -7,6 +7,7 @@ import {
 import {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
+  UnknownRegionError,
   type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
@@ -77,7 +78,13 @@ export function useScenePersistence({
       } catch (error) {
         console.error('Failed to load scene editor data.', error);
         if (isMounted) {
-          toast.error('Failed to load scene.');
+          // 미등록 region은 원인이 분명하므로 그대로 보여준다. 예전에는
+          // 조용히 1dock 씬으로 대체돼 사용자가 오인한 채 편집·저장했다.
+          toast.error(
+            error instanceof UnknownRegionError
+              ? error.message
+              : 'Failed to load scene.',
+          );
         }
       }
     };
@@ -119,6 +126,11 @@ export function useScenePersistence({
       return true;
     } catch (error) {
       console.error('Failed to save scene info.', error);
+      // 미등록 region은 재시도해도 결과가 같다 — 원인을 밝히고 Retry는 뺀다.
+      if (error instanceof UnknownRegionError) {
+        toast.error(error.message);
+        return false;
+      }
       toast.error('Failed to save scene.', {
         action: {
           label: 'Retry',

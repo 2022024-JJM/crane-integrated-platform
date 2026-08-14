@@ -51,6 +51,8 @@
     "statusSaving": "Servatur",
     "statusUnsaved": "Non servatum",
     "statusSaved": "Servatum",
+    "statusSavedLocalOnly": "In hoc navigatro tantum servatum",
+    "statusSavedLocalOnlyHint": "Servus servandi deest, ergo mutationes in hoc navigatro tantum manent. Si cella purgatur, pereunt; alii computatri vel usores eas non videbunt. Ad communicandum, JSON per exportationem accipe.",
     "placedObjects": "Objecta Posita",
     "noPlacedObjects": "Nulla objecta adhuc posita sunt.",
     "map": "Tabula",

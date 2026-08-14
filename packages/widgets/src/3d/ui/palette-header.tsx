@@ -84,7 +84,11 @@ export const PaletteHeader = memo(function PaletteHeader({
                     <Save className="size-3.5" />
                   )}
                 </TooltipTrigger>
-                <TooltipContent>{t('monitoring:editor.save')}</TooltipContent>
+                {/* 단축키를 툴팁에 노출한다 — 버튼만 있으면 Ctrl+S가 있는지
+                    알 길이 없어 브라우저 저장 대화상자를 먼저 만나게 된다. */}
+                <TooltipContent>
+                  {t('monitoring:editor.save')} (Ctrl+S)
+                </TooltipContent>
               </Tooltip>
             </div>
             <div className="flex h-6 w-6 items-center justify-center">

@@ -51,6 +51,8 @@
     "statusSaving": "Saving",
     "statusUnsaved": "Unsaved",
     "statusSaved": "Saved",
+    "statusSavedLocalOnly": "Saved to this browser only",
+    "statusSavedLocalOnlyHint": "There is no save server, so edits stay in this browser only. They disappear if you clear the cache, and other machines or users will not see them. Use Export to get the JSON and apply it.",
     "placedObjects": "Placed Objects",
     "noPlacedObjects": "No objects have been placed yet.",
     "map": "Map",
