@@ -12,7 +12,7 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import { toast } from 'sonner';
-import { sanitizeSceneInfo } from './scene-snapshot';
+import { isSceneInfoEqual, sanitizeSceneInfo } from './scene-snapshot';
 
 interface UpdateSceneOptions {
   recordHistory?: boolean;
@@ -119,9 +119,22 @@ export function useScenePersistence({
         sanitizedSceneInfo,
       );
 
+      // 저장 결과를 present로 반영하고, **그 결과 실제로 present가 된 객체**를
+      // 기준선으로 삼는다.
+      //
+      // updateScene은 내용이 같으면 present를 바꾸지 않고 이전 참조를 유지한다
+      // (use-scene-history의 isSceneInfoEqual 분기). 그런데 isDirty는 참조
+      // 비교라, 여기서 savedSceneRef만 서버가 돌려준 새 객체로 바꾸면 내용이
+      // 같은데도 참조가 달라져 **저장에 성공했는데 계속 "저장되지 않음"으로
+      // 표시**된다. 그 상태에서는 페이지를 옮길 때마다 확인창이 뜨고 탭을 닫을
+      // 때 beforeunload가 걸린다.
       updateScene(savedSceneInfo, { recordHistory: false });
       setInitialCamera(savedSceneInfo.camera ?? null);
-      setSavedSceneRef(savedSceneInfo);
+      // updateScene이 present를 유지할지(내용 동일) 교체할지를 같은 기준으로
+      // 판정해, 실제로 present가 될 객체를 기준선으로 삼는다.
+      setSavedSceneRef(
+        isSceneInfoEqual(sceneInfo, savedSceneInfo) ? sceneInfo : savedSceneInfo,
+      );
       toast.success('Scene saved.');
       return true;
     } catch (error) {

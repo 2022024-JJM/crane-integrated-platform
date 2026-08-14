@@ -174,7 +174,16 @@ function SceneControlsBridge({
       camera.up.copy(up);
       controls.target.copy(target);
       camera.lookAt(target);
+
+      // 감쇠(damping)를 잠시 끄고 update() 한다. 켠 채로 부르면 직전 드래그의
+      // 잔여 관성이 남아 있다가 이후 프레임에서 계속 적용돼, 방금 맞춘 포즈가
+      // 조금씩 흘러간다("리셋을 눌렀는데 카메라가 미끄러진다"). three-stdlib는
+      // damping이 꺼져 있을 때만 update()에서 델타를 0으로 리셋한다.
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
+
       invalidate();
       syncZoomPercent();
     },
@@ -205,7 +214,14 @@ function SceneControlsBridge({
 
       nextOffset.setLength(nextDistance);
       camera.position.copy(controls.target).add(nextOffset);
+
+      // applyCameraState와 같은 이유로 감쇠를 잠시 끄고 update() 한다 —
+      // 잔여 관성이 남으면 줌 버튼으로 맞춘 거리가 이후 프레임에서 흘러간다.
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
+
       invalidate();
       syncZoomPercent();
     },

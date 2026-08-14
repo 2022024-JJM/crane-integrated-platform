@@ -61,3 +61,43 @@ export function releaseGltfCache(paths: readonly string[]) {
     }
   }
 }
+
+/**
+ * 현재 화면에 올라와 있는 region — **모듈 전역**이다.
+ *
+ * 컴포넌트 ref로 두면 안 되는 이유: 같은 지역 안에서 실시간 → 리플레이 →
+ * 에디터로 이동하면 각 화면이 서로 다른 컴포넌트라 **언마운트 후 다른
+ * 인스턴스가 마운트**된다. 나가는 쪽의 ref와 들어오는 쪽의 ref는 별개라
+ * "같은 지역으로 다시 들어왔다"는 사실을 서로 알 수 없고, 결국 매번
+ * 캐시를 비워 14~35MB를 다시 받게 된다.
+ *
+ * 모듈 전역이면 인스턴스가 바뀌어도 값이 이어지므로, 지연 해제가 "지역
+ * 이탈"과 "같은 지역 내 화면 전환"을 정확히 구분한다.
+ */
+let activeSceneRegionId: string | null = null;
+
+/** 이 region 화면이 올라왔음을 알린다(effect 진입 시 호출). */
+export function markSceneRegionActive(regionId: string) {
+  activeSceneRegionId = regionId;
+}
+
+/**
+ * region 화면이 내려갔음을 알리고, **정말 지역을 떠났을 때만** 캐시를 비운다.
+ *
+ * 언마운트 직후 같은 지역의 다른 화면이 마운트하면(markSceneRegionActive가
+ * 다시 불리면) 해제를 건너뛴다. 판정은 마이크로태스크로 미뤄, React가
+ * [cleanup → 다음 effect]를 동기로 처리한 뒤에 확인한다.
+ */
+export function releaseSceneRegionAssets(
+  regionId: string,
+  paths: readonly string[],
+) {
+  if (activeSceneRegionId === regionId) {
+    activeSceneRegionId = null;
+  }
+  queueMicrotask(() => {
+    // 같은 지역의 다른 화면이 이어받았으면 캐시를 유지한다.
+    if (activeSceneRegionId === regionId) return;
+    releaseGltfCache(paths);
+  });
+}

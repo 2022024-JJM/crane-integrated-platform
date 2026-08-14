@@ -109,7 +109,10 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
-        maps: prev.maps.filter((m) => m.id !== id),
+        // 다른 maps 접근부와 동일하게 방어한다 — sanitize를 거치면 항상
+        // 배열이지만, 이 한 곳만 무방비로 두면 나중에 sanitize를 우회하는
+        // 경로가 생겼을 때 여기서만 터진다.
+        maps: (prev.maps ?? []).filter((m) => m.id !== id),
       };
     });
   };

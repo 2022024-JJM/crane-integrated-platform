@@ -16,8 +16,9 @@ import {
   isLidarSensor,
   isCameraSensor,
   loadSceneInfoByRegionId,
+  markSceneRegionActive,
   preloadGltf,
-  releaseGltfCache,
+  releaseSceneRegionAssets,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -48,11 +49,6 @@ export function useSceneData(
   const [isLoading, setIsLoading] = useState(true);
   /** 이 region이 로드한 GLB 경로. cleanup에서 캐시를 비울 때 쓴다. */
   const loadedAssetPathsRef = useRef<string[]>([]);
-  /**
-   * 현재 마운트된 region. cleanup이 "지역을 떠난 것"과 "같은 지역에서 모드만
-   * 바꾼 것"을 구분하는 데 쓴다 — 후자에서 캐시를 비우면 수십 MB를 다시 받는다.
-   */
-  const activeRegionIdRef = useRef<string | null>(null);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
@@ -65,9 +61,10 @@ export function useSceneData(
 
   useEffect(() => {
     let isMounted = true;
-    // 이 effect가 담당하는 region을 표시한다. cleanup의 지연 해제가 이 값을
-    // 보고 "지역 이탈"과 "모드 전환"을 구분한다.
-    activeRegionIdRef.current = regionId;
+    // 이 지역 화면이 올라왔음을 모듈 전역에 표시한다. 실시간↔리플레이↔에디터는
+    // 서로 다른 컴포넌트라 언마운트/마운트로 전환되므로, 컴포넌트 ref로는
+    // "같은 지역으로 이어졌다"를 알 수 없다(markSceneRegionActive 주석 참고).
+    markSceneRegionActive(regionId);
 
     const load = async () => {
       setIsLoading(true);
@@ -147,18 +144,9 @@ export function useSceneData(
       // ↔ 실시간 ↔ 리플레이)에도 재실행되는데, 같은 지역에서 모드만 바꿨는데
       // 캐시를 버리면 수십 MB를 다시 받는다 — 모드 전환은 흔한 조작이라
       // 그때마다 로딩이 걸리면 오히려 퇴보다.
-      const releasedRegionId = regionId;
       const pathsToRelease = loadedAssetPathsRef.current;
       loadedAssetPathsRef.current = [];
-      // 표식을 먼저 지운다 — 이어서 같은 region의 effect가 다시 돌면 위에서
-      // 다시 채워지고, 그렇지 않으면 null로 남아 아래 해제가 진행된다.
-      activeRegionIdRef.current = null;
-
-      queueMicrotask(() => {
-        // 다음 effect가 같은 region으로 다시 마운트했다면(=모드 전환) 건너뛴다.
-        if (activeRegionIdRef.current === releasedRegionId) return;
-        releaseGltfCache(pathsToRelease);
-      });
+      releaseSceneRegionAssets(regionId, pathsToRelease);
     };
   }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 

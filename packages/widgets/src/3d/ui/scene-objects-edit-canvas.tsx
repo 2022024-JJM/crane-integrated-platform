@@ -210,6 +210,12 @@ export function SceneObjectsEditCanvas({
   resetCameraRef,
   inspectorOpen = false,
 }: SceneObjectsEditCanvasProps) {
+  // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
+  // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
+  // 의존성에 넣지 않고 여기서 최신값을 따라간다.
+  const sceneInfoRef = useRef(sceneInfo);
+  sceneInfoRef.current = sceneInfo;
+
   // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
   // 모델 바닥이 정확히 지면(y=0)에 닿도록 한다. 사용자 scale은 드롭 시점에 곱한다.
@@ -264,10 +270,21 @@ export function SceneObjectsEditCanvas({
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
-      // 에디터를 떠나면 프리로드한 카탈로그(40개, 약 97MB)를 캐시에서 비운다.
-      // 해제 호출이 없으면 드래그 앤 드롭 편의를 위해 당겨온 이 전량이
-      // 세션 내내 상주한다 — 실제 씬이 쓰는 건 그중 일부뿐이다.
-      releaseGltfCache(catalogItems.map((item) => item.path));
+      // 에디터를 떠나면 프리로드한 카탈로그(40개, 약 97MB)를 비운다.
+      // 단 **현재 씬이 실제로 쓰는 모델은 남긴다** — 에디터에서 나가면 보통
+      // 같은 지역의 모니터링 화면으로 가는데, 거기서 곧바로 다시 필요한
+      // 것들이라 지웠다가 다시 받으면 수십 MB를 헛되이 왕복한다.
+      // 남는 것은 "드래그 앤 드롭 편의를 위해 미리 당겨왔지만 이 씬에는
+      // 배치되지 않은" 모델들이고, 그게 해제 대상의 대부분이다.
+      const inUse = new Set([
+        ...(sceneInfoRef.current?.models ?? []).map((m) => m.path),
+        ...(sceneInfoRef.current?.maps ?? []).map((m) => m.path),
+      ]);
+      releaseGltfCache(
+        catalogItems
+          .map((item) => item.path)
+          .filter((path) => !inUse.has(path)),
+      );
     };
   }, [catalogItems]);
 
