@@ -29,6 +29,15 @@
     "undo": "Undo",
     "redo": "Redo"
   },
+  "sceneViews": {
+    "saveCurrent": "Save current view",
+    "namePlaceholder": "View name",
+    "save": "Save",
+    "flyTo": "Go to {{name}}",
+    "deleteView": "Delete {{name}}",
+    "duplicateName": "This name is already in use",
+    "limitReached": "You can save up to {{max}} views"
+  },
   "focus": {
     "back": "Back"
   },

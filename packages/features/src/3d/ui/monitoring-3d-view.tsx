@@ -25,6 +25,8 @@ import {
   SceneLighting,
 } from './scene-render-preset';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { SceneViewBookmarks } from './scene-view-bookmarks';
+import { SceneViewFlightRig } from './scene-view-flight-rig';
 import type { SensorFeedRenderer } from './sensor-billboard';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -129,6 +131,11 @@ export function Monitoring3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
+  const handleGetPose = useCallback(
+    () => sceneControllerRef.current?.getPose() ?? null,
+    [],
+  );
+
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
   // 인라인 리터럴로 넘기면 부모 리렌더마다 새 객체 → SceneControlsBridge의
@@ -185,11 +192,15 @@ export function Monitoring3dView({
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
+        fullscreenBottomCenterOverlay={
+          <SceneViewBookmarks regionId={regionId} getPose={handleGetPose} />
+        }
         toolbarExtras={toolbarExtras}
         onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
         <SceneLighting />
+        <SceneViewFlightRig />
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>

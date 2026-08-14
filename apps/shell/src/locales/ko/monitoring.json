@@ -29,6 +29,15 @@
     "undo": "실행 취소",
     "redo": "다시 실행"
   },
+  "sceneViews": {
+    "saveCurrent": "현재 뷰 저장",
+    "namePlaceholder": "뷰 이름",
+    "save": "저장",
+    "flyTo": "{{name}} 뷰로 이동",
+    "deleteView": "{{name}} 삭제",
+    "duplicateName": "이미 사용 중인 이름입니다",
+    "limitReached": "뷰는 최대 {{max}}개까지 저장할 수 있습니다"
+  },
   "focus": {
     "back": "돌아가기"
   },

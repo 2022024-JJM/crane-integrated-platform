@@ -46,6 +46,14 @@ export {
   SceneLighting,
 } from './ui/scene-render-preset';
 export { SceneHistoryControls } from './ui/scene-history-controls';
+export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
+export { SceneViewFlightRig } from './ui/scene-view-flight-rig';
+export {
+  useSceneViewsStore,
+  SCENE_VIEWS_MAX,
+  SCENE_VIEW_NAME_MAX,
+  type SceneViewBookmark,
+} from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export {
   useSelectedSceneObjectEditor,

@@ -49,6 +49,9 @@ interface ThreeSceneViewerProps {
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
   fullscreenTopCenterOverlay?: ReactNode;
+  // 전체화면일 때 3D 캔버스 하단 중앙에 떠있는 슬롯. 씬 뷰 북마크 바 등.
+  // 루트가 아닌 캔버스 영역에 앵커링 — 분할 레이아웃에서도 3D 뷰 중앙에 온다.
+  fullscreenBottomCenterOverlay?: ReactNode;
   // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
   // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
@@ -64,6 +67,7 @@ export interface SceneController {
   zoomOut: () => void;
   moveToTopView: () => void;
   moveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
+  getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
 }
 
 interface SceneControlsBridgeProps {
@@ -247,6 +251,22 @@ function SceneControlsBridge({
     [applyCameraState],
   );
 
+  const getPose = useCallback((): {
+    position: Vector3Tuple;
+    target: Vector3Tuple;
+  } | null => {
+    const controls = controlsRef.current;
+
+    if (!controls) {
+      return null;
+    }
+
+    return {
+      position: camera.position.toArray() as Vector3Tuple,
+      target: controls.target.toArray() as Vector3Tuple,
+    };
+  }, [camera]);
+
   useEffect(() => {
     const controls = controlsRef.current;
 
@@ -266,6 +286,7 @@ function SceneControlsBridge({
       zoomOut,
       moveToTopView,
       moveTo,
+      getPose,
     });
 
     reset();
@@ -282,6 +303,7 @@ function SceneControlsBridge({
     zoomOut,
     moveToTopView,
     moveTo,
+    getPose,
   ]);
 
   return (
@@ -342,6 +364,7 @@ export function ThreeSceneViewer({
   fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
+  fullscreenBottomCenterOverlay,
   toolbarExtras,
   toolbarClassName,
   showZoomIndicator = true,
@@ -451,6 +474,12 @@ export function ThreeSceneViewer({
           {overlay ? (
             <div className="pointer-events-none absolute inset-0 z-10">
               {overlay}
+            </div>
+          ) : null}
+
+          {isFullscreen && fullscreenBottomCenterOverlay ? (
+            <div className="pointer-events-auto absolute bottom-4 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2">
+              {fullscreenBottomCenterOverlay}
             </div>
           ) : null}
         </div>
