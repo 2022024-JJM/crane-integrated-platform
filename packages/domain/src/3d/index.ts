@@ -33,6 +33,11 @@ export type {
   ValueMapItem,
   ValueMapType,
 } from './model/types';
+export {
+  sceneEnvironmentCatalog,
+  getSceneEnvironmentById,
+  type SceneEnvironmentCatalogItem,
+} from './model/scene-environment-catalog';
 export type {
   CameraSensorSettings,
   LidarSensorSettings,
@@ -76,7 +81,10 @@ export {
   getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
 } from './model/scene-file-registry';
-export { getEnvironmentFileUrlByRegionId } from './model/scene-environment-registry';
+export {
+  getEnvironmentFileUrlByRegionId,
+  resolveEnvironmentFileUrl,
+} from './model/scene-environment-registry';
 export { withBaseUrl } from './lib/asset-url';
 export {
   CRANE_TYPE_MODEL,

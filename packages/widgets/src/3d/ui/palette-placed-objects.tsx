@@ -134,6 +134,9 @@ export function PalettePlacedObjects({
                     handleSelect(event.ctrlKey || event.metaKey);
                   }}
                   onKeyDown={(event) => {
+                    // 방향키는 포커스만 옮기고 선택도 함께 바꾼다. 잠긴
+                    // 지도는 selectItem이 무시하므로 이전 선택이 그대로
+                    // 남는데, 그 편이 "선택이 사라졌다"보다 덜 놀랍다.
                     if (event.key === 'ArrowDown') {
                       event.preventDefault();
                       const next = (index + 1) % allItems.length;

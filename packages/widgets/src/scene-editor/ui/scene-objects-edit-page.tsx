@@ -1,5 +1,6 @@
 import {
   SCENE_MODEL_CATEGORIES,
+  sceneEnvironmentCatalog,
   sceneModelCatalog,
   type SavedMapInfo,
   type SavedSceneInfo,
@@ -50,6 +51,7 @@ import {
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import {
   PaletteAssetGrid,
+  PaletteEnvironmentSection,
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
@@ -169,6 +171,7 @@ export function SceneObjectsEditPage({
     deletePlacedSensor,
     deleteMap,
     selectPlacedMap,
+    setEnvironmentId,
     selectedMap,
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,
@@ -336,6 +339,7 @@ export function SceneObjectsEditPage({
           cameraStateRef={cameraStateRef}
           initialCamera={initialCamera}
           sceneInfo={sceneInfo}
+          regionId={regionId}
           catalogItems={sceneModelCatalog}
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
@@ -489,7 +493,6 @@ export function SceneObjectsEditPage({
             onSensorChange={updateSensor}
             onValueMapChange={updateSelectedValueMap}
             onMapTransformChange={updateSelectedMapTransform}
-            onToggleMapLock={setMapLocked}
             onBackToParent={() => {
               if (selectedMesh) {
                 selectPlacedModel(selectedMesh.modelId);
@@ -599,6 +602,8 @@ export function SceneObjectsEditPage({
         onSensorDragStart={(kind) => setDraggingSensorType(kind)}
         onSensorDragEnd={() => setDraggingSensorType('')}
         onDeleteMap={deleteMap}
+        environmentId={sceneInfo?.environmentId}
+        onEnvironmentChange={setEnvironmentId}
       />
     </div>
   );
@@ -783,11 +788,24 @@ const BOTTOM_PANEL_DEFAULT_H = 224;
 const BOTTOM_PANEL_COLLAPSED_H = 44;
 const DEFAULT_MODEL_CATEGORY: SceneModelCategory = 'indoor';
 
-const MODEL_CATEGORY_LABEL_KEY: Record<SceneModelCategory, string> = {
+/**
+ * Project 패널 좌측 카테고리 목록.
+ *
+ * 'background'는 모델 카테고리가 아니라 이 패널에만 있는 항목이다 —
+ * SceneModelCategory(모델 에셋의 분류)에 넣으면 카탈로그·드래그 앤 드롭
+ * 경로까지 배경을 모델처럼 다루게 되고, 배경은 드롭할 수 있는 물건이 아니다.
+ * 사용자에게는 지도와 나란한 "씬 전역 설정"으로 보이는 편이 자연스러워
+ * 표시 목록에서만 합류시킨다.
+ */
+const PANEL_CATEGORIES = [...SCENE_MODEL_CATEGORIES, 'background'] as const;
+type PanelCategory = (typeof PANEL_CATEGORIES)[number];
+
+const MODEL_CATEGORY_LABEL_KEY: Record<PanelCategory, string> = {
   indoor: 'monitoring:editor.modelCategories.indoor',
   outdoor: 'monitoring:editor.modelCategories.outdoor',
   map: 'monitoring:editor.modelCategories.map',
   etc: 'monitoring:editor.modelCategories.etc',
+  background: 'monitoring:editor.modelCategories.background',
 };
 
 function BottomProjectPanel({
@@ -801,9 +819,13 @@ function BottomProjectPanel({
   onSensorDragStart,
   onSensorDragEnd,
   onDeleteMap,
+  environmentId,
+  onEnvironmentChange,
 }: {
   items: SceneModelCatalogItem[];
   maps: SavedMapInfo[];
+  environmentId: string | null | undefined;
+  onEnvironmentChange: (environmentId: string | null) => void;
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
@@ -815,7 +837,7 @@ function BottomProjectPanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
-  const [activeCategory, setActiveCategory] = useState<SceneModelCategory>(
+  const [activeCategory, setActiveCategory] = useState<PanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
   const [assetSearch, setAssetSearch] = useState('');
@@ -827,11 +849,16 @@ function BottomProjectPanel({
     ? BOTTOM_PANEL_COLLAPSED_H
     : panelHeight;
   const categoryCounts = useMemo(() => {
-    return SCENE_MODEL_CATEGORIES.reduce(
+    return PANEL_CATEGORIES.reduce(
       (acc, category) => {
-        acc[category] = category === 'map'
-          ? maps.length
-          : items.filter((item) => item.category === category).length;
+        acc[category] =
+          category === 'map'
+            ? maps.length
+            : category === 'background'
+              ? // 고를 수 있는 배경 수. 다른 카테고리 배지와 같은 의미
+                // ("이 안에 몇 개가 있나")로 읽힌다.
+                sceneEnvironmentCatalog.length
+              : items.filter((item) => item.category === category).length;
         return acc;
       },
       {
@@ -839,7 +866,8 @@ function BottomProjectPanel({
         outdoor: 0,
         map: 0,
         etc: 0,
-      } satisfies Record<SceneModelCategory, number>,
+        background: 0,
+      } satisfies Record<PanelCategory, number>,
     );
   }, [items, maps]);
   const categoryItems = useMemo(() => {
@@ -943,7 +971,7 @@ function BottomProjectPanel({
                 {t('monitoring:editor.categoryLibrary')}
               </div>
               <div className="space-y-0.5">
-                {SCENE_MODEL_CATEGORIES.map((category) => {
+                {PANEL_CATEGORIES.map((category) => {
                   const isActive = activeCategory === category;
 
                   return (
@@ -993,7 +1021,7 @@ function BottomProjectPanel({
                     {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
                   </p>
                 </div>
-                {activeCategory !== 'map' ? (
+                {activeCategory !== 'map' && activeCategory !== 'background' ? (
                   <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
                     <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
                     <Input
@@ -1007,8 +1035,13 @@ function BottomProjectPanel({
                   </div>
                 ) : null}
               </div>
-              <div className="min-h-0 flex-1 pt-2">
-                {activeCategory === 'map' ? (
+              <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+                {activeCategory === 'background' ? (
+                  <PaletteEnvironmentSection
+                    environmentId={environmentId}
+                    onChange={onEnvironmentChange}
+                  />
+                ) : activeCategory === 'map' ? (
                   maps.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       {/* 선택·잠금은 좌측 계층 목록(Hierarchy)이 담당한다.

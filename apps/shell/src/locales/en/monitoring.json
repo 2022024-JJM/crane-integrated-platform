@@ -81,8 +81,11 @@
       "indoor": "Indoor",
       "outdoor": "Outdoor",
       "map": "Map",
-      "etc": "Etc"
+      "etc": "Etc",
+      "background": "Background"
     },
+    "environmentNone": "No background",
+    "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected"

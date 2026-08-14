@@ -108,6 +108,7 @@ interface UseSceneEditorSessionResult {
   deletePlacedText: (id: string) => void;
   deleteMap: (id: string) => void;
   selectPlacedMap: (id: string) => void;
+  setEnvironmentId: (environmentId: string | null) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
   updateSelectedMapTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -330,6 +331,7 @@ export function useSceneEditorSession({
     deletePlacedText: manipulation.deletePlacedText,
     deleteMap: manipulation.deleteMap,
     selectPlacedMap: manipulation.selectPlacedMap,
+    setEnvironmentId: manipulation.setEnvironmentId,
     selectedMap,
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,

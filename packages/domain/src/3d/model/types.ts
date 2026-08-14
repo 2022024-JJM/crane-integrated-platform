@@ -27,6 +27,15 @@ export interface SavedSceneInfo {
    */
   sensors?: SavedSensorInfo[];
   camera?: SavedCameraInfo | null;
+  /**
+   * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
+   *
+   * - `undefined`: 씬이 배경을 지정하지 않음 → region 기본값으로 떨어진다
+   *   (scene-environment-registry). 기존 저장본이 하늘을 잃지 않게 하는 경로다.
+   * - `null`: 사용자가 "배경 없음"을 **명시적으로** 고름 → region 기본값도
+   *   적용하지 않는다. undefined와 구분되어야 배경을 끌 수 있다.
+   */
+  environmentId?: string | null;
 }
 
 export interface SavedTextInfo {

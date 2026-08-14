@@ -37,6 +37,7 @@ export { useReplayPlayerStore } from './model/use-replay-player-store';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
+export { SceneEnvironment } from './ui/scene-environment';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export {

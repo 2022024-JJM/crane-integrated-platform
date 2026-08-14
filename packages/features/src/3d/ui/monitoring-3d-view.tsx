@@ -199,7 +199,10 @@ export function Monitoring3dView({
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>
-          <SceneEnvironment regionId={regionId} />
+          <SceneEnvironment
+            regionId={regionId}
+            environmentId={sceneInfo?.environmentId}
+          />
         </Suspense>
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation

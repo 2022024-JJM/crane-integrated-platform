@@ -26,6 +26,7 @@ import {
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
+import { SceneEnvironment } from './scene-environment';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { ReplaySearchForm } from './replay-search-form';
 
@@ -195,6 +196,15 @@ export function Replay3dView({
           color={'#ffffff'}
           intensity={4}
         />
+        {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
+            사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
+            재생을 붙잡지 않는다. */}
+        <Suspense fallback={null}>
+          <SceneEnvironment
+            regionId={regionId}
+            environmentId={sceneInfo?.environmentId}
+          />
+        </Suspense>
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}

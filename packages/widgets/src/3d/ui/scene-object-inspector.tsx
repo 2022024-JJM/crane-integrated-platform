@@ -2,8 +2,6 @@ import {
   ChevronDown,
   Cuboid,
   Eye,
-  Lock,
-  LockOpen,
   Map as MapIcon,
   Palette,
   SlidersHorizontal,
@@ -26,7 +24,6 @@ import {
   type ValueMapType,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { cn } from '@crane/core/lib/utils';
 import {
   type AxisKey,
   PositionController,
@@ -35,7 +32,6 @@ import {
   type SceneTransformField,
   type SelectedMeshInfo,
   useActiveTransformStore,
-  useIsMapLocked,
 } from '@crane/features/3d';
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
@@ -104,8 +100,6 @@ interface SceneObjectInspectorProps {
     axis: AxisKey,
     value: number,
   ) => void;
-  /** 지도 편집 잠금 토글 콜백. */
-  onToggleMapLock?: (id: string, locked: boolean) => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
   onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
 }
@@ -661,17 +655,22 @@ function TextInspectorContent({
 }
 
 /**
- * 지도 인스펙터 — transform과 잠금 토글만 있다.
+ * 지도 인스펙터 — 파일명 표시 + transform.
  *
  * 지도에는 모델의 이름/투명도/태그 매핑에 해당하는 개념이 없다. 파일에서
  * 온 지형이라 이름은 경로가 곧 정체이고, 투명도를 낮추면 그 위 객체의
  * 기준면이 사라져 배치 작업 자체가 불가능해진다. 그래서 편집 가능한 것은
- * 배치(transform)와 "지금 편집 대상인가"(잠금)뿐이다.
+ * 배치(transform)뿐이다.
+ *
+ * 잠금 토글은 여기 두지 않는다 — 이 패널은 "지도가 선택된 상태"에서만
+ * 보이는데, 잠긴 지도는 애초에 선택될 수 없고 잠그는 순간 선택이 풀려
+ * 패널이 사라진다. 즉 여기서 잠금 버튼은 항상 "잠그기"만 표시하다가
+ * 누르면 자기 자신이 사라지는 막다른 길이다. 잠금/해제는 좌측 계층
+ * 목록의 자물쇠 버튼이 유일한 경로다(거기서는 잠긴 지도도 보인다).
  */
 function MapInspectorContent({
   selectedMap,
   onTransformChange,
-  onToggleLock,
   t,
 }: {
   selectedMap: SavedMapInfo;
@@ -680,57 +679,26 @@ function MapInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
-  onToggleLock?: (id: string, locked: boolean) => void;
   t: (key: string) => string;
 }) {
-  const locked = useIsMapLocked(selectedMap.id);
-
   return (
     <>
       <InspectorSection
         title={t('monitoring:editor.map')}
         icon={<MapIcon className="size-4" />}
       >
-        <div className="space-y-2">
-          <p className="text-foreground truncate text-[12px] font-medium">
-            {humanizeModelPath(selectedMap.path)}
-          </p>
-          <button
-            type="button"
-            aria-pressed={locked}
-            onClick={() => onToggleLock?.(selectedMap.id, !locked)}
-            className={cn(
-              'flex w-full cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5 text-[12px] transition-colors',
-              locked
-                ? 'border-border bg-muted text-muted-foreground hover:text-foreground'
-                : 'border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
-            )}
-          >
-            {locked ? (
-              <Lock className="size-3.5 shrink-0" />
-            ) : (
-              <LockOpen className="size-3.5 shrink-0" />
-            )}
-            <span className="flex-1 text-left">
-              {locked
-                ? t('monitoring:editor.unlockMap')
-                : t('monitoring:editor.lockMap')}
-            </span>
-          </button>
-        </div>
+        <p className="text-foreground truncate text-[12px] font-medium">
+          {humanizeModelPath(selectedMap.path)}
+        </p>
       </InspectorSection>
 
-      {/* 잠긴 지도는 수치 입력도 막는다 — 캔버스에서 못 옮기는데 인스펙터
-          로는 옮겨지면 자물쇠의 의미가 반쪽이 된다. */}
-      {locked ? null : (
-        <TransformSection
-          position={selectedMap.position ?? DEFAULT_MAP_POSITION}
-          rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
-          scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
-          onTransformChange={onTransformChange}
-          t={t}
-        />
-      )}
+      <TransformSection
+        position={selectedMap.position ?? DEFAULT_MAP_POSITION}
+        rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
+        scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
+        onTransformChange={onTransformChange}
+        t={t}
+      />
     </>
   );
 }
@@ -925,7 +893,6 @@ export function SceneObjectInspector({
   onBackToParent,
   onValueMapChange,
   onMapTransformChange,
-  onToggleMapLock,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName ?? '';
@@ -1022,7 +989,6 @@ export function SceneObjectInspector({
           <MapInspectorContent
             selectedMap={selectedMap}
             onTransformChange={onMapTransformChange ?? onTransformChange}
-            onToggleLock={onToggleMapLock}
             t={t}
           />
         ) : null}

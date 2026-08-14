@@ -157,13 +157,25 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const safeSensors = sanitizeSensors(sceneInfo?.sensors, seenIds);
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
-  return {
+  const sanitized: SavedSceneInfo = {
     maps: safeMaps,
     models: safeModels,
     texts: safeTexts,
     sensors: safeSensors,
     camera: safeCamera,
   };
+
+  // environmentId는 3-상태다(문자열=선택 / null=배경 없음 / 없음=region 기본).
+  // 셋을 구분해 실어야 하므로 값이 있을 때만 넣는다 — 미지정 씬에 null을
+  // 채워 넣으면 region 기본 배경이 꺼져버린다.
+  const rawEnvironmentId = (sceneInfo as SavedSceneInfo).environmentId;
+  if (typeof rawEnvironmentId === 'string' && rawEnvironmentId.length > 0) {
+    sanitized.environmentId = rawEnvironmentId;
+  } else if (rawEnvironmentId === null) {
+    sanitized.environmentId = null;
+  }
+
+  return sanitized;
 }
 
 function sanitizeSensors(
@@ -411,6 +423,9 @@ export function isSceneInfoEqual(
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
+  // 배경 선택도 저장 대상이라 dirty 판정에 포함한다. undefined(미지정)와
+  // null(배경 없음)은 다른 상태이므로 === 로 구분한다.
+  if (a.environmentId !== b.environmentId) return false;
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
   if (a.models.length !== b.models.length) return false;

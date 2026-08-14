@@ -6,7 +6,14 @@ import {
   useGLTF,
 } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type RefObject,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, MOUSE, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
@@ -31,6 +38,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
+  SceneEnvironment,
   useIsObjectSelected,
   useMapEditLockStore,
   useSceneObjectSelectionStore,
@@ -133,6 +141,8 @@ function SelectionAwareCameraSensor(props: SelectionAwareCameraSensorProps) {
 
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
+  /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
+  regionId: string;
   catalogItems: SceneModelCatalogItem[];
   transformMode: SceneTransformMode;
   draggingModelCatalogItem: SceneModelCatalogItem | null;
@@ -171,6 +181,7 @@ interface SceneObjectsEditCanvasProps {
 
 export function SceneObjectsEditCanvas({
   sceneInfo,
+  regionId,
   catalogItems,
   transformMode,
   draggingModelCatalogItem,
@@ -720,6 +731,14 @@ export function SceneObjectsEditCanvas({
       >
         <ambientLight intensity={2} />
         <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
+        {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
+            자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
+        <Suspense fallback={null}>
+          <SceneEnvironment
+            regionId={regionId}
+            environmentId={sceneInfo?.environmentId}
+          />
+        </Suspense>
         <OrbitControls
           ref={orbitControlsRef}
           makeDefault

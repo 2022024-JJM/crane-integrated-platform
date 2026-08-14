@@ -81,8 +81,11 @@
       "indoor": "Interior",
       "outdoor": "Exterior",
       "map": "Tabula",
-      "etc": "Cetera"
+      "etc": "Cetera",
+      "background": "Fundus"
     },
+    "environmentNone": "Sine fundo",
+    "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta"

@@ -122,6 +122,18 @@ export function createSceneManipulationActions({
     selectMap(id);
   };
 
+  /**
+   * 배경 파노라마 선택. null이면 "배경 없음"을 명시적으로 저장한다 —
+   * undefined로 지우면 region 기본 배경이 되살아나 사용자가 끌 수 없다.
+   */
+  const setEnvironmentId = (environmentId: string | null) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (prev.environmentId === environmentId) return prev;
+      return { ...prev, environmentId };
+    });
+  };
+
   const selectPlacedText = (id: string) => {
     selectText(id);
   };
@@ -295,6 +307,7 @@ export function createSceneManipulationActions({
     selectPlacedSensor,
     deleteMap,
     selectPlacedMap,
+    setEnvironmentId,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,
