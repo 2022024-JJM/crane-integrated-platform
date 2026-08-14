@@ -22,13 +22,15 @@ export interface SceneEnvironmentCatalogItem {
  * 원본은 MAX_TEXTURE_SIZE 8192인 GPU에서 업로드가 실패해 배경이 검게 나오고,
  * GPU 메모리도 수백 MB를 먹는다 — 원본은 카탈로그에 넣지 말 것.
  *
- * **파일명의 "4K"를 믿지 말 것.** public/scenes의 *_4K.exr는 실제로 4K가
- * 아니다 — EXR 헤더의 dataWindow로 확인한 실측 해상도는 이렇다:
- *   - overcast-sky-over-the-atlantic_4K.exr : 6656 x 3328
- *   - sky-blue-open-water_4K_*.exr          : (원본, -web으로 대체됨)
- *   - infinite-horizon_4K.exr               : 9216 x 4608  ← 8192 초과
- * DWAA는 손실 압축이라 9K 이미지도 3.6MB로 작아진다. 파일 크기로도
- * 해상도를 가늠할 수 없으니, 새 EXR을 등록하기 전에 반드시 헤더를 볼 것.
+ * **파일명의 "4K"를 믿지 말 것.** 지금까지 확인한 *_4K.exr는 전부 4K가 아니었다 —
+ * EXR 헤더의 dataWindow로 잰 실측값이다:
+ *   - overcast-sky-over-the-atlantic_4K.exr : 6656 x 3328  (2026-08-14 삭제)
+ *   - sky-blue-open-water_4K_*.exr          : 원본          (2026-08-14 삭제)
+ *   - infinite-horizon_4K.exr               : 9216 x 4608  ← 8192 초과, 미등록
+ * DWAA는 손실 압축이라 9K 이미지도 3.6MB로 작아진다. **파일 크기로도 파일명으로도
+ * 해상도를 알 수 없으니, 새 EXR을 등록하기 전에 반드시 헤더를 볼 것.**
+ *
+ * 위 원본 둘은 `-web` 버전으로 대체된 뒤 참조가 없어 삭제했다(합 22.6MB).
  */
 export const sceneEnvironmentCatalog: SceneEnvironmentCatalogItem[] = [
   {

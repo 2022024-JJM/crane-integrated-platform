@@ -93,9 +93,13 @@ export const SCENE_LIGHTING = {
  * 지형을 읽기 어려워졌다. 실시간 shadow map은 더 비싸다(옥외 대형 씬이라
  * shadow camera 범위 튜닝이 따로 필요하고 매 프레임 비용이 든다).
  *
- * 그래서 기존 castShadow/receiveShadow 플래그들은 여전히 dead config다 —
- * Canvas에 `shadows`를 켜지 않는 한 아무 효과가 없다. 되살릴 계획이 없다면
- * 그 플래그들을 지우는 편이 오해가 없다.
+ * 그래서 각 뷰어에 남아 있던 castShadow/receiveShadow 플래그는 2026-08-14에
+ * 제거했다 — Canvas에 `shadows`를 켜지 않는 한 아무 효과가 없어, 남겨두면
+ * "그림자가 되는 설정인데 왜 안 보이지"라는 오해만 남긴다. 그림자를 되살리려면
+ * Canvas의 `shadows`부터 켜야 하고, 그때 이 플래그들도 함께 복원해야 한다.
+ *
+ * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
+ * GLB가 true로 실려 올 수 있어 방어하는 코드라 성격이 다르다.
  */
 export function SceneLighting() {
   return (
