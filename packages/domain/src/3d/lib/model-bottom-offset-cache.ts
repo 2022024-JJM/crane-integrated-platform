@@ -1,5 +1,6 @@
 import { Box3, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { withBaseUrl } from './asset-url';
 
 /**
@@ -22,7 +23,10 @@ import { withBaseUrl } from './asset-url';
 const cache = new Map<string, number>();
 const inflight = new Map<string, Promise<number>>();
 
+// GLB들이 EXT_meshopt_compression으로 압축되어 있어 디코더가 필수다.
+// drei useGLTF는 기본으로 meshopt 디코더를 붙이지만, 이 로더는 별도 인스턴스라 직접 배선한다.
 const sharedLoader = new GLTFLoader();
+sharedLoader.setMeshoptDecoder(MeshoptDecoder);
 
 function measureBottomOffset(root: Object3D): number {
   // Box3.setFromObject는 내부에서 updateWorldMatrix(true, false)를 호출한 후
