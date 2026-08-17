@@ -1,5 +1,4 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { SavedSensorInfo } from './sensor-types';
 
 export type ValueMapType =
   | 'PX'
@@ -21,11 +20,6 @@ export interface SavedSceneInfo {
   maps: SavedMapInfo[];
   models: SavedModelInfo[];
   texts?: SavedTextInfo[];
-  /**
-   * 씬에 배치된 LIDAR / Camera 센서 목록. 각 센서는 sceneInfo 저장에 함께
-   * 직렬화되어 새로고침/저장본 로드 시 그대로 복원된다.
-   */
-  sensors?: SavedSensorInfo[];
   camera?: SavedCameraInfo | null;
   /**
    * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.

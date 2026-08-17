@@ -3,7 +3,7 @@
  *
  * 예전에는 에디터만 이걸 거치고 뷰어는 원본 JSON을 그대로 소비했다. 그래서
  * legacy 단수 `map` 필드를 가진 씬은 에디터엔 지도가 보이고 뷰어엔 안 보였다.
- * id 중복 제거·opacity 클램프·센서 정규화도 뷰어에는 적용되지 않아, 같은
+ * id 중복 제거·opacity 클램프도 뷰어에는 적용되지 않아, 같은
  * 파일을 두 화면이 다르게 해석했다.
  *
  * 지금은 loadSceneInfoByRegionId가 이 함수를 통과시키므로 에디터·뷰어·
@@ -15,15 +15,6 @@ import type {
   SavedMeshOverride,
   SavedSceneInfo,
 } from '../model/types';
-import type {
-  SavedCameraSensorInfo,
-  SavedLidarSensorInfo,
-  SavedSensorInfo,
-} from '../model/sensor-types';
-import {
-  normalizeCameraSettings,
-  normalizeLidarSettings,
-} from './sensor-defaults';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -164,14 +155,12 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
-  const safeSensors = sanitizeSensors(sceneInfo?.sensors, seenIds);
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   const sanitized: SavedSceneInfo = {
     maps: safeMaps,
     models: safeModels,
     texts: safeTexts,
-    sensors: safeSensors,
     camera: safeCamera,
   };
 
@@ -186,86 +175,6 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   }
 
   return sanitized;
-}
-
-function sanitizeSensors(
-  raw: unknown,
-  seenIds: Set<string>,
-): SavedSensorInfo[] | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const out: SavedSensorInfo[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
-    const sensor = item as Record<string, unknown>;
-    if (
-      typeof sensor.type !== 'string' ||
-      (sensor.type !== 'lidar' && sensor.type !== 'camera')
-    ) {
-      continue;
-    }
-    if (
-      !isVector3Tuple(sensor.position) ||
-      !isVector3Tuple(sensor.rotation)
-    ) {
-      continue;
-    }
-    let nextId =
-      typeof sensor.id === 'string' && sensor.id.length > 0
-        ? sensor.id
-        : createSceneModelId();
-    if (seenIds.has(nextId)) nextId = createSceneModelId();
-    seenIds.add(nextId);
-
-    const name = typeof sensor.name === 'string' ? sensor.name : '';
-    // 비전 모니터링 채널 매핑. 편집 UI에서 다루지 않더라도 scene JSON에
-    // 정의된 값을 그대로 보존해야 풀스크린 빌보드/PiP 연결이 유지된다.
-    const channelId =
-      typeof sensor.channelId === 'string' && sensor.channelId.length > 0
-        ? sensor.channelId
-        : undefined;
-
-    if (sensor.type === 'lidar') {
-      const normalized = normalizeLidarSettings({
-        horizontalFov: Number(sensor.horizontalFov),
-        verticalFov: Number(sensor.verticalFov),
-        far: Number(sensor.far),
-        horizontalSegments: Number(sensor.horizontalSegments),
-        verticalSegments: Number(sensor.verticalSegments),
-        pointSize: Number(sensor.pointSize),
-      });
-      const lidar: SavedLidarSensorInfo = {
-        id: nextId,
-        type: 'lidar',
-        name: name || 'LiDAR',
-        position: sensor.position as Vector3Tuple,
-        rotation: sensor.rotation as Vector3Tuple,
-        ...normalized,
-      };
-      if (channelId) lidar.channelId = channelId;
-      out.push(lidar);
-      continue;
-    }
-
-    const normalized = normalizeCameraSettings({
-      horizontalFov: Number(sensor.horizontalFov),
-      verticalFov: Number(sensor.verticalFov),
-      near: Number(sensor.near),
-      far: Number(sensor.far),
-      frustumSegmentsX: Number(sensor.frustumSegmentsX),
-      frustumSegmentsY: Number(sensor.frustumSegmentsY),
-    });
-    const camera: SavedCameraSensorInfo = {
-      id: nextId,
-      type: 'camera',
-      name: name || 'Camera',
-      position: sensor.position as Vector3Tuple,
-      rotation: sensor.rotation as Vector3Tuple,
-      ...normalized,
-    };
-    if (channelId) camera.channelId = channelId;
-    out.push(camera);
-  }
-  return out.length > 0 ? out : undefined;
 }
 
 function sanitizeCamera(

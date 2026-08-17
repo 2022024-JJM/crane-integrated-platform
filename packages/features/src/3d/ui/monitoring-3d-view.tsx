@@ -27,7 +27,6 @@ import {
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 import { SceneViewFlightRig } from './scene-view-flight-rig';
-import type { SensorFeedRenderer } from './sensor-billboard';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
@@ -60,15 +59,6 @@ interface Monitoring3dViewProps {
    */
   canvasDpr?: number | [number, number];
   onFullscreenChange?: (isFullscreen: boolean) => void;
-  onSensorSelect?: (
-    channelId: string,
-    sensorType: 'camera' | 'lidar',
-  ) => void;
-  /**
-   * 풀스크린 빌보드 호버 시 미니 썸네일 안에 렌더할 비전 피드 컴포넌트.
-   * channel/sensorType에 맞는 실제 스트림 또는 placeholder를 반환하는 함수.
-   */
-  renderSensorFeed?: SensorFeedRenderer;
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -87,8 +77,6 @@ export function Monitoring3dView({
   overlayExtras,
   canvasDpr,
   onFullscreenChange,
-  onSensorSelect,
-  renderSensorFeed,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +87,6 @@ export function Monitoring3dView({
   const focusStack = useObjectFocusStore((s) => s.focusStack);
   const popFocus = useObjectFocusStore((s) => s.popFocus);
   const clearFocus = useObjectFocusStore((s) => s.clearFocus);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -107,7 +94,6 @@ export function Monitoring3dView({
 
   const handleFullscreenChange = useCallback(
     (next: boolean) => {
-      setIsFullscreen(next);
       onFullscreenChange?.(next);
     },
     [onFullscreenChange],
@@ -218,9 +204,6 @@ export function Monitoring3dView({
             mode={mode}
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
-            onSensorSelect={onSensorSelect}
-            isFullscreen={isFullscreen}
-            renderSensorFeed={renderSensorFeed}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />

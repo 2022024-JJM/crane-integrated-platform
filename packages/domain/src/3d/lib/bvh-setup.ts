@@ -14,11 +14,10 @@ import {
  *
  * - `Mesh.prototype.raycast = acceleratedRaycast`: 모든 raycast가 BVH 사용
  * - `BufferGeometry.prototype.computeBoundsTree`: 사용처에서 BVH 빌드 트리거
- * - LIDAR/Camera 센서가 매 frame 수백 ray를 쏘는 경우 절대적으로 필요
- * - 기존 클릭 hit-test, drop raycast 등도 자동 가속
+ * - 클릭 hit-test, drop raycast 등이 자동 가속된다
  *
- * 이 모듈은 side-effect import 전용이다. 한 번만 import 되도록 ModelMesh /
- * 센서 컴포넌트의 최상단에서 import 해 둔다.
+ * 이 모듈은 side-effect import 전용이다. 한 번만 import 되도록 ModelMesh의
+ * 최상단에서 import 해 둔다.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

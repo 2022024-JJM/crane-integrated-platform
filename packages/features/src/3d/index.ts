@@ -27,10 +27,6 @@ export {
 } from './model/use-collision-guard-hud';
 export { usePrefersReducedMotion } from './model/use-prefers-reduced-motion';
 export { useSceneInfoStore } from './model/use-scene-info-store';
-export type {
-  SensorFeedContext,
-  SensorFeedRenderer,
-} from './ui/sensor-billboard';
 export { Replay3dView } from './ui/replay-3d-view';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';

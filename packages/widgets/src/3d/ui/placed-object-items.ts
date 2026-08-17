@@ -2,7 +2,6 @@ import {
   humanizeModelPath,
   type SavedMapInfo,
   type SavedModelInfo,
-  type SavedSensorInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 
@@ -10,13 +9,12 @@ export interface PlacedObjectItem {
   id: string;
   displayName: string;
   subtitle: string;
-  type: 'model' | 'text' | 'sensor' | 'map';
+  type: 'model' | 'text' | 'map';
 }
 
 interface GetPlacedObjectItemsParams {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
-  placedSensors?: SavedSensorInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
   textObjectLabel: string;
@@ -26,7 +24,6 @@ interface GetPlacedObjectItemsParams {
 export function getPlacedObjectItems({
   placedModels,
   placedTexts = [],
-  placedSensors = [],
   placedMaps = [],
   objectSearch = '',
   textObjectLabel,
@@ -57,14 +54,7 @@ export function getPlacedObjectItems({
     type: 'text',
   }));
 
-  const sensorItems: PlacedObjectItem[] = placedSensors.map((sensor) => ({
-    id: sensor.id,
-    displayName: sensor.name || sensor.id,
-    subtitle: sensor.type === 'lidar' ? 'LiDAR' : 'Camera',
-    type: 'sensor',
-  }));
-
-  const items = [...mapItems, ...modelItems, ...textItems, ...sensorItems];
+  const items = [...mapItems, ...modelItems, ...textItems];
 
   if (!normalizedObjectSearch) {
     return items;

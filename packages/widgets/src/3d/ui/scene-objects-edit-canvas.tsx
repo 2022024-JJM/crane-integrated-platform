@@ -17,13 +17,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Box3, MOUSE, Object3D, Vector3 } from 'three';
 import {
-  CameraSensorMesh,
   GltfModel,
-  LidarSensorMesh,
   SceneText,
   getMeshPath,
-  isCameraSensor,
-  isLidarSensor,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -124,26 +120,6 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
-type SelectionAwareLidarSensorProps = Omit<
-  React.ComponentProps<typeof LidarSensorMesh>,
-  'isSelected'
->;
-
-function SelectionAwareLidarSensor(props: SelectionAwareLidarSensorProps) {
-  const isSelected = useIsObjectSelected(props.sensor.id);
-  return <LidarSensorMesh {...props} isSelected={isSelected} />;
-}
-
-type SelectionAwareCameraSensorProps = Omit<
-  React.ComponentProps<typeof CameraSensorMesh>,
-  'isSelected'
->;
-
-function SelectionAwareCameraSensor(props: SelectionAwareCameraSensorProps) {
-  const isSelected = useIsObjectSelected(props.sensor.id);
-  return <CameraSensorMesh {...props} isSelected={isSelected} />;
-}
-
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
   /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
@@ -162,11 +138,6 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
-  isDraggingText?: boolean;
-  onAddText?: (position: Vector3Tuple) => void;
-  draggingSensorType?: '' | 'lidar' | 'camera';
-  onAddLidarSensor?: (position: Vector3Tuple) => void;
-  onAddCameraSensor?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
   onTransformCommit?: (
     position: Vector3Tuple | null,
@@ -196,11 +167,6 @@ export function SceneObjectsEditCanvas({
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
-  isDraggingText = false,
-  onAddText,
-  draggingSensorType = '',
-  onAddLidarSensor,
-  onAddCameraSensor,
   showLabels = true,
   onMultiTransformCommit,
   onTransformInteractionStart,
@@ -300,9 +266,6 @@ export function SceneObjectsEditCanvas({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
-  const selectSensor = useSceneObjectSelectionStore(
-    (state) => state.selectSensor,
-  );
   const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
@@ -340,13 +303,8 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
-    isDraggingText,
-    draggingSensorType,
     mapObjectId: sceneInfo?.maps?.[0]?.id ?? null,
     onAddModel,
-    onAddText,
-    onAddLidarSensor,
-    onAddCameraSensor,
   });
 
   const {
@@ -365,7 +323,6 @@ export function SceneObjectsEditCanvas({
     transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
-    sceneSensors: sceneInfo?.sensors,
     sceneMaps: unlockedMaps,
     modelObjectRegistryRef,
     onTransformVectorChange,
@@ -470,21 +427,6 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
-  const handleSelectSensor = useCallback(
-    (id: string) => {
-      if (dragJustEndedRef.current) return;
-      // 센서 컴포넌트는 mount 시 도메인 전역 modelObjectRegistry에 group을
-      // 등록한다. 캔버스 로컬 registryRef에는 없으므로 global fallback.
-      setSelectedObject(
-        modelObjectRegistryRef.current.get(id) ??
-          sharedModelObjectRegistry.get(id) ??
-          null,
-      );
-      selectSensor(id);
-    },
-    [dragJustEndedRef, selectSensor, setSelectedObject],
-  );
-
   // 지도 선택 — Ctrl 다중 선택 분기가 없다. 지도는 단독 선택만 허용한다
   // (selectMap 주석 참고). 더블클릭 drill-in도 두지 않는다 — 지형 메시는
   // 수만 개라 자식 단위 편집이 의미가 없다.
@@ -510,11 +452,7 @@ export function SceneObjectsEditCanvas({
     modelObjectRegistryRef,
     isTransformDragging,
     dragJustEndedRef,
-    isDraggingExternalItem: !!(
-      draggingModelCatalogItem ||
-      isDraggingText ||
-      draggingSensorType
-    ),
+    isDraggingExternalItem: !!draggingModelCatalogItem,
     excludedIds: mapIdSet,
     selectAll,
     clearSelectedModel,
@@ -688,10 +626,10 @@ export function SceneObjectsEditCanvas({
   }, [initialCamera, cameraStateRef, orbitControlsRef]);
 
   useEffect(() => {
-    if (!draggingModelCatalogItem && !isDraggingText) {
+    if (!draggingModelCatalogItem) {
       setPendingDropPosition(null);
     }
-  }, [draggingModelCatalogItem, isDraggingText, setPendingDropPosition]);
+  }, [draggingModelCatalogItem, setPendingDropPosition]);
 
   // Space 키를 누르는 동안 OrbitControls LEFT를 PAN으로 전환
   // (기본은 undefined = marquee 전용, Space 누르면 pan 가능)
@@ -822,7 +760,7 @@ export function SceneObjectsEditCanvas({
               position={m.position}
               rotation={m.rotation}
               scale={m.scale}
-              isSensorOccluder={false}
+              enableRaycastBvh={false}
               onSelect={
                 unlockedMapIds.has(m.id) ? handleSelectMap : handleClearSelection
               }
@@ -852,40 +790,24 @@ export function SceneObjectsEditCanvas({
             />
           </SceneObjectBoundary>
         ))}
+        {/* drei Text는 첫 마운트에서 폰트 preload로 suspend 한다. 경계 없이
+            두면 suspension이 Canvas 루트까지 올라가 씬 전체가 fallback으로
+            내려앉아 화면이 한 번 깜빡인다 — 첫 텍스트 추가 시 특히 눈에 띈다.
+            개별 Suspense로 격리해 폰트가 준비될 때까지 그 텍스트만 늦게 뜬다. */}
         {(sceneInfo?.texts ?? []).map((text) => (
-          <SelectionAwareSceneText
-            key={text.id}
-            id={text.id}
-            content={text.content}
-            color={text.color}
-            position={text.position}
-            rotation={text.rotation}
-            scale={text.scale}
-            onSelect={handleSelectText}
-            onObjectReady={handleModelObjectReady}
-          />
+          <Suspense key={text.id} fallback={null}>
+            <SelectionAwareSceneText
+              id={text.id}
+              content={text.content}
+              color={text.color}
+              position={text.position}
+              rotation={text.rotation}
+              scale={text.scale}
+              onSelect={handleSelectText}
+              onObjectReady={handleModelObjectReady}
+            />
+          </Suspense>
         ))}
-        {(sceneInfo?.sensors ?? []).map((sensor) => {
-          if (isLidarSensor(sensor)) {
-            return (
-              <SelectionAwareLidarSensor
-                key={sensor.id}
-                sensor={sensor}
-                onSelect={handleSelectSensor}
-              />
-            );
-          }
-          if (isCameraSensor(sensor)) {
-            return (
-              <SelectionAwareCameraSensor
-                key={sensor.id}
-                sensor={sensor}
-                onSelect={handleSelectSensor}
-              />
-            );
-          }
-          return null;
-        })}
         {pendingDropPosition ? (
           <mesh
             position={[
@@ -909,13 +831,11 @@ export function SceneObjectsEditCanvas({
         />
       )}
 
-      {(draggingModelCatalogItem || isDraggingText) && (
+      {draggingModelCatalogItem && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="bg-card/95 rounded-2xl border border-amber-500/30 px-4 py-3 text-center shadow-lg">
             <p className="text-foreground text-sm font-semibold">
-              {isDraggingText
-                ? t('monitoring:editor.addText')
-                : draggingModelCatalogItem?.label}
+              {draggingModelCatalogItem.label}
             </p>
             <p className="text-muted-foreground text-xs">
               {t('monitoring:editor.dropHint')}

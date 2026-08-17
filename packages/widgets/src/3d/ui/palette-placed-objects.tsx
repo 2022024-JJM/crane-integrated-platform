@@ -1,19 +1,9 @@
-import {
-  Boxes,
-  Camera,
-  Lock,
-  LockOpen,
-  Map,
-  Radar,
-  Trash2,
-  Type,
-} from 'lucide-react';
+import { Boxes, Lock, LockOpen, Map, Trash2, Type } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   SavedMapInfo,
   SavedModelInfo,
-  SavedSensorInfo,
   SavedTextInfo,
 } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -25,7 +15,6 @@ import { getPlacedObjectItems } from './placed-object-items';
 interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
-  placedSensors?: SavedSensorInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
   selectedIds: Set<string>;
@@ -35,8 +24,6 @@ interface PalettePlacedObjectsProps {
   onDeletePlacedText?: (id: string) => void;
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
-  onSelectPlacedSensor?: (id: string) => void;
-  onDeletePlacedSensor?: (id: string) => void;
   onSelectPlacedMap?: (id: string) => void;
   onToggleMapLock?: (id: string, locked: boolean) => void;
 }
@@ -44,7 +31,6 @@ interface PalettePlacedObjectsProps {
 export function PalettePlacedObjects({
   placedModels,
   placedTexts = [],
-  placedSensors = [],
   placedMaps = [],
   objectSearch = '',
   selectedIds,
@@ -54,8 +40,6 @@ export function PalettePlacedObjects({
   onDeletePlacedText,
   onTogglePlacedModel,
   onTogglePlacedText,
-  onSelectPlacedSensor,
-  onDeletePlacedSensor,
   onSelectPlacedMap,
   onToggleMapLock,
 }: PalettePlacedObjectsProps) {
@@ -68,13 +52,12 @@ export function PalettePlacedObjects({
     return getPlacedObjectItems({
       placedModels,
       placedTexts,
-      placedSensors,
       placedMaps,
       objectSearch,
       textObjectLabel: t('monitoring:editor.textObject'),
       mapObjectLabel: t('monitoring:editor.map'),
     });
-  }, [objectSearch, placedMaps, placedModels, placedSensors, placedTexts, t]);
+  }, [objectSearch, placedMaps, placedModels, placedTexts, t]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -97,8 +80,6 @@ export function PalettePlacedObjects({
                   }
                 } else if (targetItem.type === 'text') {
                   onSelectPlacedText?.(targetItem.id);
-                } else if (targetItem.type === 'sensor') {
-                  onSelectPlacedSensor?.(targetItem.id);
                 } else {
                   onSelectPlacedModel(targetItem.id);
                 }
@@ -113,8 +94,6 @@ export function PalettePlacedObjects({
                 if (ctrlKey) {
                   if (item.type === 'text') {
                     onTogglePlacedText?.(item.id);
-                  } else if (item.type === 'sensor') {
-                    onSelectPlacedSensor?.(item.id);
                   } else {
                     onTogglePlacedModel?.(item.id);
                   }
@@ -174,12 +153,6 @@ export function PalettePlacedObjects({
                       <Map className="size-2.5" />
                     ) : item.type === 'text' ? (
                       <Type className="size-2.5" />
-                    ) : item.type === 'sensor' ? (
-                      item.subtitle === 'LiDAR' ? (
-                        <Radar className="size-2.5" />
-                      ) : (
-                        <Camera className="size-2.5" />
-                      )
                     ) : (
                       <Boxes className="size-2.5" />
                     )}
@@ -240,8 +213,6 @@ export function PalettePlacedObjects({
                         event.stopPropagation();
                         if (item.type === 'text') {
                           onDeletePlacedText?.(item.id);
-                        } else if (item.type === 'sensor') {
-                          onDeletePlacedSensor?.(item.id);
                         } else {
                           onDeletePlacedModel(item.id);
                         }

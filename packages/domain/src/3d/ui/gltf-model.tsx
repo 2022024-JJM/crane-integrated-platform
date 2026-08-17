@@ -24,11 +24,10 @@ interface GltfModelProps {
   alarmHighlightMesh?: boolean;
   meshOverrides?: SavedMeshOverride[];
   /**
-   * 센서(LIDAR/Camera) raycast의 occluder 후보로 이 모델을 등록할지.
-   * 기본 true. 지도(map)처럼 지형 역할이라 센서가 장애물로 감지하면 안 되는
-   * 경우 false로 전달.
+   * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. 지도(map)처럼 메시 수가
+   * 수만 개인 지형은 빌드 비용만 크므로 false로 전달.
    */
-  isSensorOccluder?: boolean;
+  enableRaycastBvh?: boolean;
   /**
    * 모델/메시 선택 콜백. 두 번째 인자(event)는 R3F Canvas 안에서 모델 본체를
    * 클릭했을 때만 전달되며, 라벨 클릭처럼 DOM에서 호출되는 경우는 undefined.
@@ -76,7 +75,7 @@ export const GltfModel = memo(function GltfModel({
   onDoubleSelect,
   isSelected = false,
   selectedMeshTarget = null,
-  isSensorOccluder = true,
+  enableRaycastBvh = true,
   onObjectReady,
   onHoverStart,
   onHoverMove,
@@ -102,7 +101,7 @@ export const GltfModel = memo(function GltfModel({
       rotation={rotation}
       scale={scale}
       meshOverrides={meshOverrides}
-      isSensorOccluder={isSensorOccluder}
+      enableRaycastBvh={enableRaycastBvh}
       onSelect={onSelect}
       onDoubleSelect={onDoubleSelect}
       onObjectReady={handleObjectReady}

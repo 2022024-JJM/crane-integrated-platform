@@ -143,7 +143,7 @@ function PartsScene({
               position={part.position}
               scale={part.scale}
               showLabel={false}
-              isSensorOccluder={false}
+              enableRaycastBvh={false}
               opacity={isDimmed ? 0.35 : 1}
               alarmSeverity={isHighlighted ? 'info' : null}
               alarmHighlightMesh={isHighlighted}
@@ -296,7 +296,7 @@ function RegionsScene({
         url={cfg.url}
         scale={cfg.scale}
         showLabel={false}
-        isSensorOccluder={false}
+        enableRaycastBvh={false}
         onSelect={handleSelect}
         onHoverStart={handleHover}
         onHoverMove={handleHover}

@@ -12,10 +12,7 @@
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",
-    "tagKeyPlaceholder": "Enter tag key",
-    "visionChannel": "Vision Channel",
-    "visionChannelEmpty": "(unmapped)",
-    "visionChannelTaken": "in use"
+    "tagKeyPlaceholder": "Enter tag key"
   },
   "transform": {
     "title": "Transform mode",
@@ -78,9 +75,6 @@
     "hideLabels": "Hide labels",
     "showLabels": "Show labels",
     "addText": "Add Text",
-    "addLidarSensor": "Add LiDAR",
-    "addCameraSensor": "Add Camera",
-    "sensorTextTab": "Sensors / Text",
     "mapTab": "Map",
     "noMap": "No map has been registered.",
     "textObject": "Text",

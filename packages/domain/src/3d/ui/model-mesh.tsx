@@ -1,5 +1,4 @@
 import { useGLTF } from '@react-three/drei';
-import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Box3, BufferGeometry, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
@@ -10,10 +9,6 @@ import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
-import {
-  registerSceneOccluders,
-  unregisterSceneOccluders,
-} from '../lib/scene-occluder-registry';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
@@ -34,8 +29,8 @@ interface ModelMeshProps {
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
   meshOverrides?: SavedMeshOverride[];
-  /** 센서 raycast occluder로 등록할지. 기본 true. 지도는 false. */
-  isSensorOccluder?: boolean;
+  /** 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. 지도(지형, 수만 메시)는 false. */
+  enableRaycastBvh?: boolean;
   onSelect?: (id: string, event?: ThreeEvent<MouseEvent>) => void;
   /**
    * 더블클릭 시 별도 호출. R3F의 onClick은 detail 카운트가 신뢰적이지 않아
@@ -244,7 +239,7 @@ export function ModelMesh({
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
   meshOverrides,
-  isSensorOccluder = true,
+  enableRaycastBvh = true,
   onSelect,
   onDoubleSelect,
   onObjectReady,
@@ -521,24 +516,14 @@ export function ModelMesh({
     };
   }, [id, clone, meshBindings]);
 
-  // 센서(LIDAR/Camera) raycast의 occluder 후보로 이 모델의 mesh들을 등록한다.
-  // 각 geometry에 BVH(boundsTree)를 빌드해 raycast 가속. mount 시 1회.
-  // 부모 모델의 transform은 TransformControls/sceneInfo를 통해 mesh의
-  // worldMatrix에 자동 반영되므로 raycast 결과도 항상 최신 위치 기준이다.
+  // 각 geometry에 BVH(boundsTree)를 빌드해 클릭 hit-test raycast를 가속한다.
+  // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
+  // 없으면 기본 raycast로 폴백).
   //
-  // 지도(isSensorOccluder=false)는 지형 역할이라 등록하지 않는다 — 등록하면
-  // 지도 mesh가 카메라/LIDAR 바로 앞에 있어 모든 ray가 0 거리에서 지도를
-  // 때리면서 frustum이 붕괴하거나 sensor.far로 fallback된다.
-  const scene = useThree((state) => state.scene);
+  // 지도(enableRaycastBvh=false)는 지형이라 빌드하지 않는다 — 수만 개 메시에
+  // BVH를 빌드하면 비용만 크고 개별 메시 클릭 대상도 아니다.
   useEffect(() => {
-    if (!isSensorOccluder) return;
-    // 등록은 즉시 — BVH가 아직 없어도 raycast는 동작한다
-    // (acceleratedRaycast는 boundsTree가 없으면 기본 raycast로 폴백).
-    registerSceneOccluders(
-      scene,
-      id,
-      meshBindings.map((binding) => binding.mesh),
-    );
+    if (!enableRaycastBvh) return;
 
     // BVH 빌드는 유휴 시간으로 분산한다 — mount 시 동기 일괄 빌드는
     // 10만 삼각형급 메시 하나에 수백 ms라, 모델 수만큼 곱해지면 첫 진입이
@@ -577,13 +562,12 @@ export function ModelMesh({
           clearTimeout(scheduledId);
         }
       }
-      unregisterSceneOccluders(scene, id);
       // BVH는 여기서 끊지 않는다 — 지오메트리가 GLTF 캐시 공유라, 같은 GLB의
       // 다른 인스턴스(예: 씬에 2개 배치된 LLC-002)가 아직 살아 있으면 그쪽
       // raycast가 느려진다. 해제는 region을 떠나며 캐시를 비울 때 한다
       // (releaseGltfCache).
     };
-  }, [id, scene, meshBindings, isSensorOccluder]);
+  }, [meshBindings, enableRaycastBvh]);
 
   // primitive 자체에 prop transform을 적용하면 React가 매 렌더에서 clone의
   // position/rotation/scale을 덮어쓴다. value-mapper가 매 tick `object.position`

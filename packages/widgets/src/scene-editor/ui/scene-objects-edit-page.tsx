@@ -14,7 +14,6 @@ import {
 } from '@crane/features/3d';
 import {
   AlertCircle,
-  Camera as CameraIcon,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -27,7 +26,6 @@ import {
   Map,
   PanelLeftClose,
   PanelRightClose,
-  Radar,
   Search,
   SlidersHorizontal,
   Type,
@@ -59,22 +57,11 @@ import {
   PalettePlacedObjects,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
-  type VisionChannelOption,
 } from '@crane/widgets/3d';
-import {
-  SCENE_SENSOR_DRAG_TYPE,
-  SCENE_TEXT_DRAG_TYPE,
-  getPlacedObjectItems,
-} from '@crane/widgets/3d';
+import { getPlacedObjectItems } from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
-  /**
-   * 인스펙터에서 카메라/라이다 센서에 매핑할 수 있는 비전 채널 목록.
-   * app 레이어가 자기 도메인 채널(예: goliath-crane의 CAMERA_CHANNELS)을 주입한다.
-   * 미지정 시 인스펙터에 채널 매핑 UI가 표시되지 않는다.
-   */
-  visionChannels?: readonly VisionChannelOption[];
 }
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
@@ -110,18 +97,11 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-export function SceneObjectsEditPage({
-  regionId,
-  visionChannels,
-}: SceneObjectsEditPageProps) {
+export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
-  const [isDraggingText, setIsDraggingText] = useState(false);
-  const [draggingSensorType, setDraggingSensorType] = useState<
-    '' | 'lidar' | 'camera'
-  >('');
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitSelectedRef = useRef<(() => void) | null>(null);
@@ -161,16 +141,10 @@ export function SceneObjectsEditPage({
     duplicateSelectedObject,
     addModel,
     addText,
-    addLidarSensor,
-    addCameraSensor,
-    updateSensor,
-    selectedSensor,
     selectPlacedModel,
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
-    selectPlacedSensor,
-    deletePlacedSensor,
     deleteMap,
     selectPlacedMap,
     setEnvironmentId,
@@ -217,6 +191,15 @@ export function SceneObjectsEditPage({
 
   const hasSelection = selectedIds.size > 0;
   const saveDisabled = !sceneInfo;
+  // 텍스트는 드래그 앤 드롭이 아니라 툴바 버튼으로 추가한다. 버튼에는 드롭
+  // 좌표가 없으므로 카메라 orbit target(화면 중앙이 바라보는 지점)에 놓는다.
+  const handleAddTextAtView = () => {
+    if (!sceneInfo) {
+      return;
+    }
+    const target = cameraStateRef.current?.target;
+    addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
+  };
   // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일 저장)와
   // 똑같이 "저장됨"으로 표시하면, 사용자는 배포된 줄 알지만 실제로는 자기
   // 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
@@ -400,12 +383,6 @@ export function SceneObjectsEditPage({
               updateSelectedMeshTransformVector(field, value, {
                 recordHistory: false,
               });
-            } else if (
-              selectedObjectType === 'sensor' &&
-              selectedSensor &&
-              (field === 'position' || field === 'rotation')
-            ) {
-              updateSensor(selectedSensor.id, { [field]: value });
             } else if (selectedObjectType === 'map') {
               updateSelectedMapTransformVector(field, value, {
                 recordHistory: false,
@@ -436,20 +413,6 @@ export function SceneObjectsEditPage({
             addModel(catalogItem, position);
             setDraggingCatalogItem(null);
           }}
-          isDraggingText={isDraggingText}
-          onAddText={(position) => {
-            addText(position);
-            setIsDraggingText(false);
-          }}
-          draggingSensorType={draggingSensorType}
-          onAddLidarSensor={(position) => {
-            addLidarSensor(position);
-            setDraggingSensorType('');
-          }}
-          onAddCameraSensor={(position) => {
-            addCameraSensor(position);
-            setDraggingSensorType('');
-          }}
           showLabels={showLabels}
           onTransformInteractionStart={startTransformInteraction}
           onTransformInteractionEnd={endTransformInteraction}
@@ -477,8 +440,6 @@ export function SceneObjectsEditPage({
             onDeletePlacedModel={deletePlacedModel}
             onSelectPlacedText={selectPlacedText}
             onDeletePlacedText={deletePlacedText}
-            onSelectPlacedSensor={selectPlacedSensor}
-            onDeletePlacedSensor={deletePlacedSensor}
             onTogglePlacedModel={toggleModel}
             onTogglePlacedText={toggleText}
             onSelectPlacedMap={selectPlacedMap}
@@ -501,44 +462,18 @@ export function SceneObjectsEditPage({
           <SceneObjectInspector
             selectedModel={selectedModel}
             selectedText={selectedText}
-            selectedSensor={selectedSensor}
             selectedMesh={selectedMesh}
             selectedMap={selectedMap}
             multiSelectCount={selectedIds.size}
-            visionChannels={visionChannels}
-            allSensors={sceneInfo?.sensors}
             onNameChange={updateSelectedName}
             onOpacityChange={updateSelectedOpacity}
-            onTransformChange={(field, axis, value) => {
-              // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
-              // 텍스트/모델/메시는 기존 핸들러로.
-              if (
-                selectedSensor &&
-                (field === 'position' || field === 'rotation')
-              ) {
-                const current =
-                  field === 'position'
-                    ? selectedSensor.position
-                    : selectedSensor.rotation;
-                const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
-                const next: [number, number, number] = [
-                  current[0],
-                  current[1],
-                  current[2],
-                ];
-                next[idx] = value;
-                updateSensor(selectedSensor.id, { [field]: next });
-                return;
-              }
-              updateSelectedTransform(field, axis, value);
-            }}
+            onTransformChange={updateSelectedTransform}
             onTextContentChange={updateSelectedTextContent}
             onTextColorChange={updateSelectedTextColor}
             onTextTransformChange={updateSelectedTextTransform}
             onMeshNameChange={updateSelectedMeshName}
             onMeshOpacityChange={updateSelectedMeshOpacity}
             onMeshTransformChange={updateSelectedMeshTransform}
-            onSensorChange={updateSensor}
             onValueMapChange={updateSelectedValueMap}
             onMapTransformChange={updateSelectedMapTransform}
             onBackToParent={() => {
@@ -549,7 +484,7 @@ export function SceneObjectsEditPage({
           />
         </FloatingPanel>
 
-        {/* 중앙 상단 floating toolbar (기존) */}
+        {/* 중앙 상단 floating toolbar */}
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
           <div className="pointer-events-auto">
             <SceneTransformModeToggle
@@ -606,6 +541,27 @@ export function SceneObjectsEditPage({
                         render={
                           <button
                             type="button"
+                            aria-label={t('monitoring:editor.addText')}
+                            disabled={saveDisabled}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={handleAddTextAtView}
+                      >
+                        <Type className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('monitoring:editor.addText')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="bg-border h-4 w-px" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
                             aria-label={
                               showLabels
                                 ? t('monitoring:editor.hideLabels')
@@ -653,17 +609,13 @@ export function SceneObjectsEditPage({
         ) : null}
       </div>
 
-      {/* 하단 패널 — Project: 3D 모델 에셋 그리드 + 센서/텍스트 도구 */}
+      {/* 하단 패널 — Project: 3D 모델 에셋 그리드 */}
       <BottomProjectPanel
         items={sceneModelCatalog}
         maps={sceneInfo?.maps ?? []}
         draggingItemId={draggingCatalogItem?.id ?? null}
         onDragStart={setDraggingCatalogItem}
         onDragEnd={() => setDraggingCatalogItem(null)}
-        onTextDragStart={() => setIsDraggingText(true)}
-        onTextDragEnd={() => setIsDraggingText(false)}
-        onSensorDragStart={(kind) => setDraggingSensorType(kind)}
-        onSensorDragEnd={() => setDraggingSensorType('')}
         onDeleteMap={deleteMap}
         environmentId={sceneInfo?.environmentId}
         onEnvironmentChange={setEnvironmentId}
@@ -754,7 +706,7 @@ function FloatingPanel({
 
 /**
  * 좌측 Hierarchy 패널 — 저장/내보내기 헤더 + 배치된 객체 목록.
- * 모델 팔레트와 센서/텍스트 도구는 하단 패널로 이동했으므로 포함하지 않는다.
+ * 모델 팔레트는 하단 패널로 이동했으므로 포함하지 않는다.
  */
 function HierarchyPanel({
   sceneInfo,
@@ -764,8 +716,6 @@ function HierarchyPanel({
   onDeletePlacedModel,
   onSelectPlacedText,
   onDeletePlacedText,
-  onSelectPlacedSensor,
-  onDeletePlacedSensor,
   onTogglePlacedModel,
   onTogglePlacedText,
   onSelectPlacedMap,
@@ -782,8 +732,6 @@ function HierarchyPanel({
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
   onDeletePlacedText: (id: string) => void;
-  onSelectPlacedSensor: (id: string) => void;
-  onDeletePlacedSensor: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
   onSave: () => void;
@@ -796,7 +744,6 @@ function HierarchyPanel({
     return getPlacedObjectItems({
       placedModels: sceneInfo?.models ?? [],
       placedTexts: sceneInfo?.texts ?? [],
-      placedSensors: sceneInfo?.sensors ?? [],
       placedMaps: sceneInfo?.maps ?? [],
       objectSearch,
       textObjectLabel: t('monitoring:editor.textObject'),
@@ -820,7 +767,6 @@ function HierarchyPanel({
         <PalettePlacedObjects
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
-          placedSensors={sceneInfo?.sensors ?? []}
           placedMaps={sceneInfo?.maps ?? []}
           objectSearch={objectSearch}
           selectedIds={selectedIds}
@@ -828,8 +774,6 @@ function HierarchyPanel({
           onDeletePlacedModel={onDeletePlacedModel}
           onSelectPlacedText={onSelectPlacedText}
           onDeletePlacedText={onDeletePlacedText}
-          onSelectPlacedSensor={onSelectPlacedSensor}
-          onDeletePlacedSensor={onDeletePlacedSensor}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
           onSelectPlacedMap={onSelectPlacedMap}
@@ -841,9 +785,8 @@ function HierarchyPanel({
 }
 
 /**
- * 하단 Project 패널 — 탭으로 분리된 에셋/도구 영역.
- * 탭 1 "3D 모델": 드래그 가능한 모델 에셋 그리드.
- * 탭 2 "센서 / 텍스트": 텍스트·LiDAR·카메라 추가 버튼 + 지도 섹션.
+ * 하단 Project 패널 — 모델 팔레트 단일 패널.
+ * 좌측 카테고리 목록 + 드래그 가능한 모델 에셋 그리드(지도/배경 포함).
  */
 const BOTTOM_PANEL_MIN_H = 80;
 const BOTTOM_PANEL_MAX_H = 480;
@@ -877,10 +820,6 @@ function BottomProjectPanel({
   draggingItemId,
   onDragStart,
   onDragEnd,
-  onTextDragStart,
-  onTextDragEnd,
-  onSensorDragStart,
-  onSensorDragEnd,
   onDeleteMap,
   environmentId,
   onEnvironmentChange,
@@ -892,14 +831,9 @@ function BottomProjectPanel({
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
-  onTextDragStart: () => void;
-  onTextDragEnd: () => void;
-  onSensorDragStart: (kind: 'lidar' | 'camera') => void;
-  onSensorDragEnd: () => void;
   onDeleteMap: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
   const [activeCategory, setActiveCategory] = useState<PanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
@@ -974,33 +908,10 @@ function BottomProjectPanel({
           className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
         />
       ) : null}
-      {/* 탭 헤더 */}
+      {/* 패널 헤더 — 타이틀 + 접기 버튼 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
-        <div className="flex items-center gap-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('models')}
-            className={cn(
-              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-              activeTab === 'models'
-                ? 'border-primary text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent',
-            )}
-          >
-            {t('monitoring:palette.title')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('tools')}
-            className={cn(
-              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-              activeTab === 'tools'
-                ? 'border-primary text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent',
-            )}
-          >
-            {t('monitoring:editor.sensorTextTab')}
-          </button>
+        <div className="text-foreground px-4 py-2 text-[11px] font-medium">
+          {t('monitoring:palette.title')}
         </div>
         <button
           type="button"
@@ -1017,17 +928,13 @@ function BottomProjectPanel({
         </button>
       </div>
 
-      {/* 탭 콘텐츠 */}
+      {/* 패널 콘텐츠 */}
       <div
         hidden={isCollapsed}
         aria-hidden={isCollapsed}
         className="min-h-0 flex-1 overflow-hidden"
       >
-        <div
-          hidden={activeTab !== 'models'}
-          aria-hidden={activeTab !== 'models'}
-          className="h-full overflow-hidden px-2 pt-2 pb-1"
-        >
+        <div className="h-full overflow-hidden px-2 pt-2 pb-1">
           <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)] gap-0 overflow-hidden">
             <div className="border-border/70 min-h-0 overflow-y-auto border-r pr-2">
               <div className="text-muted-foreground px-2 pb-2 text-[10px] font-semibold tracking-[0.12em] uppercase">
@@ -1141,56 +1048,6 @@ function BottomProjectPanel({
             </div>
           </div>
         </div>
-
-        <div
-          hidden={activeTab !== 'tools'}
-          aria-hidden={activeTab !== 'tools'}
-          className="flex h-full flex-col gap-2 overflow-y-auto p-2"
-        >
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
-              event.dataTransfer.effectAllowed = 'copy';
-              onTextDragStart();
-            }}
-            onDragEnd={onTextDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <Type className="size-3" />
-            {t('monitoring:editor.addText')}
-          </div>
-
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
-              event.dataTransfer.effectAllowed = 'copy';
-              onSensorDragStart('lidar');
-            }}
-            onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <Radar className="size-3" />
-            {t('monitoring:editor.addLidarSensor')}
-          </div>
-
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
-              event.dataTransfer.effectAllowed = 'copy';
-              onSensorDragStart('camera');
-            }}
-            onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <CameraIcon className="size-3" />
-            {t('monitoring:editor.addCameraSensor')}
-          </div>
-
-        </div>
-
       </div>
     </div>
   );

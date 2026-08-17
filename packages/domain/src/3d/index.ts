@@ -47,43 +47,6 @@ export {
   getSceneEnvironmentById,
   type SceneEnvironmentCatalogItem,
 } from './model/scene-environment-catalog';
-export type {
-  CameraSensorSettings,
-  LidarSensorSettings,
-  SavedCameraSensorInfo,
-  SavedLidarSensorInfo,
-  SavedSensorInfo,
-  SensorType,
-} from './model/sensor-types';
-export { isCameraSensor, isLidarSensor } from './model/sensor-types';
-export {
-  createLidarSensor,
-  createCameraSensor,
-  normalizeLidarSettings,
-  normalizeCameraSettings,
-  clampLidarFov,
-  clampLidarSegments,
-  clampLidarPointSize,
-  clampCameraFov,
-  clampCameraGridSegments,
-  MIN_LIDAR_FOV,
-  MAX_LIDAR_FOV,
-  MIN_LIDAR_FAR,
-  MIN_LIDAR_SEGMENTS,
-  MAX_LIDAR_SEGMENTS,
-  MIN_LIDAR_POINT_SIZE,
-  MAX_LIDAR_POINT_SIZE,
-  MIN_CAMERA_FOV,
-  MAX_CAMERA_FOV,
-  MIN_CAMERA_NEAR,
-  MIN_CAMERA_GRID_SEGMENTS,
-  MAX_CAMERA_GRID_SEGMENTS,
-} from './lib/sensor-defaults';
-export {
-  getSceneOccluders,
-  registerSceneOccluders,
-  unregisterSceneOccluders,
-} from './lib/scene-occluder-registry';
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {
@@ -113,5 +76,3 @@ export type {
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
 export { SceneText } from './ui/scene-text';
-export { LidarSensorMesh } from './ui/lidar-sensor-mesh';
-export { CameraSensorMesh } from './ui/camera-sensor-mesh';

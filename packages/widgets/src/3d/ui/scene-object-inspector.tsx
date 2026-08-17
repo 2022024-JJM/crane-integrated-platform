@@ -12,13 +12,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   humanizeModelPath,
-  isCameraSensor,
-  isLidarSensor,
-  type SavedCameraSensorInfo,
-  type SavedLidarSensorInfo,
   type SavedMapInfo,
   type SavedModelInfo,
-  type SavedSensorInfo,
   type SavedTextInfo,
   type ValueMapItem,
   type ValueMapType,
@@ -43,27 +38,12 @@ const DEFAULT_MAP_POSITION: Vector3Tuple = [0, 0, 0];
 const DEFAULT_MAP_ROTATION: Vector3Tuple = [0, 0, 0];
 const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
 
-/** Vision PiP 채널 정의. app 레이어가 자기 도메인의 채널 목록을 주입한다. */
-export interface VisionChannelOption {
-  id: string;
-  label: string;
-  sensorType: 'camera' | 'lidar';
-}
-
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
-  selectedSensor?: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
-  /**
-   * 인스펙터의 비전 채널 드롭다운에 노출할 채널 목록. 비어있거나 미지정 시
-   * 채널 매핑 UI 자체가 표시되지 않는다.
-   */
-  visionChannels?: readonly VisionChannelOption[];
-  /** 현재 씬의 모든 센서. 다른 센서가 이미 점유한 채널을 disabled 표시하기 위해. */
-  allSensors?: readonly SavedSensorInfo[];
   onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
@@ -84,13 +64,6 @@ interface SceneObjectInspectorProps {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
-  ) => void;
-  /** 센서 설정 변경 콜백. (id, partial settings) — discriminated union이라
-   *  서브컴포넌트 쪽에서 정확한 type별 patch를 보장한다. */
-  onSensorChange?: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
@@ -703,183 +676,12 @@ function MapInspectorContent({
   );
 }
 
-function VisionChannelSelect({
-  sensor,
-  onChange,
-  visionChannels,
-  allSensors,
-  t,
-}: {
-  sensor: SavedLidarSensorInfo | SavedCameraSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
-  t: (key: string) => string;
-}) {
-  if (!visionChannels || visionChannels.length === 0) return null;
-
-  // 같은 sensorType의 채널만 노출 — 카메라는 cam-*, 라이다는 lidar-*
-  const candidates = visionChannels.filter(
-    (c) => c.sensorType === sensor.type,
-  );
-  if (candidates.length === 0) return null;
-
-  // 다른 센서가 점유한 채널 집계 (자기 자신 제외)
-  const taken = new Set<string>();
-  for (const s of allSensors ?? []) {
-    if (s.id === sensor.id) continue;
-    if (s.channelId) taken.add(s.channelId);
-  }
-
-  const current = sensor.channelId ?? '';
-
-  return (
-    <label className="flex items-center justify-between gap-2 py-1">
-      <span className="text-muted-foreground text-[11px]">
-        {t('monitoring:inspector.visionChannel')}
-      </span>
-      <select
-        value={current}
-        onChange={(e) => {
-          const next = e.target.value;
-          onChange(sensor.id, {
-            channelId: next.length > 0 ? next : undefined,
-          });
-        }}
-        className="border-border bg-muted text-foreground h-7 w-32 rounded-sm px-1.5 text-right text-[11px]"
-      >
-        <option value="">{t('monitoring:inspector.visionChannelEmpty')}</option>
-        {candidates.map((channel) => {
-          const isTaken = taken.has(channel.id);
-          return (
-            <option key={channel.id} value={channel.id} disabled={isTaken}>
-              {channel.label}
-              {isTaken
-                ? ` · ${t('monitoring:inspector.visionChannelTaken')}`
-                : ''}
-            </option>
-          );
-        })}
-      </select>
-    </label>
-  );
-}
-
-function LidarSensorInspectorContent({
-  sensor,
-  onChange,
-  onTransformChange,
-  visionChannels,
-  allSensors,
-  t,
-}: {
-  sensor: SavedLidarSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
-  onTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
-  t: (key: string) => string;
-}) {
-  return (
-    <>
-      <TransformSection
-        position={sensor.position}
-        rotation={sensor.rotation}
-        scale={[1, 1, 1]}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
-
-      <InspectorSection
-        title="LiDAR Settings"
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <div className="space-y-2">
-          <VisionChannelSelect
-            sensor={sensor}
-            onChange={onChange}
-            visionChannels={visionChannels}
-            allSensors={allSensors}
-            t={t}
-          />
-        </div>
-      </InspectorSection>
-    </>
-  );
-}
-
-function CameraSensorInspectorContent({
-  sensor,
-  onChange,
-  onTransformChange,
-  visionChannels,
-  allSensors,
-  t,
-}: {
-  sensor: SavedCameraSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
-  onTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
-  t: (key: string) => string;
-}) {
-  return (
-    <>
-      <TransformSection
-        position={sensor.position}
-        rotation={sensor.rotation}
-        scale={[1, 1, 1]}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
-
-      <InspectorSection
-        title="Camera Settings"
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <div className="space-y-2">
-          <VisionChannelSelect
-            sensor={sensor}
-            onChange={onChange}
-            visionChannels={visionChannels}
-            allSensors={allSensors}
-            t={t}
-          />
-        </div>
-      </InspectorSection>
-    </>
-  );
-}
-
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
-  selectedSensor = null,
   selectedMesh,
   selectedMap = null,
   multiSelectCount = 0,
-  visionChannels,
-  allSensors,
   onNameChange,
   onOpacityChange,
   onTransformChange,
@@ -889,7 +691,6 @@ export function SceneObjectInspector({
   onMeshNameChange,
   onMeshOpacityChange,
   onMeshTransformChange,
-  onSensorChange,
   onBackToParent,
   onValueMapChange,
   onMapTransformChange,
@@ -917,7 +718,6 @@ export function SceneObjectInspector({
   const hasSelection =
     selectedModel ||
     selectedText ||
-    selectedSensor ||
     selectedMesh ||
     selectedMap ||
     multiSelectCount > 1;
@@ -965,26 +765,6 @@ export function SceneObjectInspector({
             onTextTransformChange={onTextTransformChange}
             t={t}
           />
-        ) : selectedSensor && onSensorChange ? (
-          isLidarSensor(selectedSensor) ? (
-            <LidarSensorInspectorContent
-              sensor={selectedSensor}
-              onChange={onSensorChange}
-              onTransformChange={onTransformChange}
-              visionChannels={visionChannels}
-              allSensors={allSensors}
-              t={t}
-            />
-          ) : isCameraSensor(selectedSensor) ? (
-            <CameraSensorInspectorContent
-              sensor={selectedSensor}
-              onChange={onSensorChange}
-              onTransformChange={onTransformChange}
-              visionChannels={visionChannels}
-              allSensors={allSensors}
-              t={t}
-            />
-          ) : null
         ) : selectedMap ? (
           <MapInspectorContent
             selectedMap={selectedMap}

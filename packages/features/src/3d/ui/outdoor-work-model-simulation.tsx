@@ -11,10 +11,6 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
-  LidarSensorMesh,
-  CameraSensorMesh,
-  isLidarSensor,
-  isCameraSensor,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
   preloadGltf,
@@ -22,11 +18,6 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import {
-  BillboardHoverProvider,
-  SensorBillboard,
-  type SensorFeedRenderer,
-} from './sensor-billboard';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
@@ -38,8 +29,6 @@ import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
 import { SceneObjectBoundary } from './scene-object-boundary';
-
-const noop = () => {};
 
 export function useSceneData(
   regionId: string,
@@ -161,12 +150,6 @@ interface OutdoorWorkModelSimulationProps {
   mode?: 'simulation' | 'replay' | 'realtime';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
-  onSensorSelect?: (
-    channelId: string,
-    sensorType: 'camera' | 'lidar',
-  ) => void;
-  isFullscreen?: boolean;
-  renderSensorFeed?: SensorFeedRenderer;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -177,9 +160,6 @@ export function OutdoorWorkModelSimulation({
   mode = 'simulation',
   onMoveTo,
   onResetCamera,
-  onSensorSelect,
-  isFullscreen = false,
-  renderSensorFeed,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
@@ -222,16 +202,6 @@ export function OutdoorWorkModelSimulation({
   const models = sceneInfo?.models ?? [];
   const modelIds = useMemo(() => models.map((model) => model.id), [models]);
   const texts = sceneInfo?.texts ?? [];
-  const sensors = sceneInfo?.sensors ?? [];
-
-  const handleSensorClick = useCallback(
-    (sensorId: string) => {
-      const sensor = sensors.find((s) => s.id === sensorId);
-      if (!sensor || !sensor.channelId) return;
-      onSensorSelect?.(sensor.channelId, sensor.type);
-    },
-    [sensors, onSensorSelect],
-  );
 
   const focusStack = useObjectFocusStore((s) => s.focusStack);
 
@@ -431,10 +401,8 @@ export function OutdoorWorkModelSimulation({
       {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
           그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
       {maps.map((m) => (
-        // 지도는 지형이라 센서 occluder로 등록하지 않는다 — 등록하면 카메라/
-        // LiDAR ray가 0 거리에서 지도를 때려 frustum이 붕괴하고(model-mesh의
-        // 주석 참고), 지도 전 메시에 불필요한 BVH 동기 빌드까지 발생한다.
-        // 에디터·mro2·philly 뷰어는 이미 false — 이 경로만 누락돼 있었다.
+        // 지도는 지형이라 raycast BVH를 빌드하지 않는다 — 수만 개 메시에
+        // 빌드 비용만 크고 개별 클릭 대상도 아니다(model-mesh 주석 참고).
         <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
           <GltfModel
             id={m.id}
@@ -442,7 +410,7 @@ export function OutdoorWorkModelSimulation({
             position={m.position}
             rotation={m.rotation}
             scale={m.scale}
-            isSensorOccluder={false}
+            enableRaycastBvh={false}
           />
         </SceneObjectBoundary>
       ))}
@@ -474,53 +442,6 @@ export function OutdoorWorkModelSimulation({
           </SceneObjectBoundary>
         );
       })}
-      {sensors.map((sensor) => {
-        if (isLidarSensor(sensor)) {
-          return (
-            <LidarSensorMesh
-              key={sensor.id}
-              sensor={sensor}
-              isSelected={false}
-              onSelect={handleSensorClick}
-              isMonitoringMode
-            />
-          );
-        }
-        if (isCameraSensor(sensor)) {
-          return (
-            <CameraSensorMesh
-              key={sensor.id}
-              sensor={sensor}
-              isSelected={false}
-              onSelect={handleSensorClick}
-              isMonitoringMode
-            />
-          );
-        }
-        return null;
-      })}
-      {isFullscreen ? (
-        <BillboardHoverProvider>
-          {sensors.map((sensor) => {
-            if (!sensor.channelId) return null;
-            const label =
-              sensor.type === 'camera'
-                ? `CAM ${sensor.channelId.replace('cam-', '')}`
-                : 'LiDAR';
-            return (
-              <SensorBillboard
-                key={`bb-${sensor.id}`}
-                position={sensor.position}
-                channelId={sensor.channelId}
-                sensorType={sensor.type}
-                label={label}
-                onSelect={onSensorSelect ?? noop}
-                renderFeed={renderSensorFeed}
-              />
-            );
-          })}
-        </BillboardHoverProvider>
-      ) : null}
       {texts.map((text) => {
         if (visibleGroupBox) {
           const [tx] = text.position;

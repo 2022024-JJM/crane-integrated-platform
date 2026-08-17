@@ -4,7 +4,6 @@ import type {
   SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
-  SavedSensorInfo,
   SavedTextInfo,
   ValueMapItem,
 } from '@crane/domain/3d';
@@ -63,36 +62,6 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
     if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
   }
   return true;
-}
-
-function isSensorInfoEqual(a: SavedSensorInfo, b: SavedSensorInfo): boolean {
-  if (a.id !== b.id) return false;
-  if (a.type !== b.type) return false;
-  if (a.name !== b.name) return false;
-  if ((a.channelId ?? '') !== (b.channelId ?? '')) return false;
-  if (!isVector3TupleEqual(a.position, b.position)) return false;
-  if (!isVector3TupleEqual(a.rotation, b.rotation)) return false;
-  if (a.type === 'lidar' && b.type === 'lidar') {
-    return (
-      a.horizontalFov === b.horizontalFov &&
-      a.verticalFov === b.verticalFov &&
-      a.far === b.far &&
-      a.horizontalSegments === b.horizontalSegments &&
-      a.verticalSegments === b.verticalSegments &&
-      a.pointSize === b.pointSize
-    );
-  }
-  if (a.type === 'camera' && b.type === 'camera') {
-    return (
-      a.horizontalFov === b.horizontalFov &&
-      a.verticalFov === b.verticalFov &&
-      a.near === b.near &&
-      a.far === b.far &&
-      a.frustumSegmentsX === b.frustumSegmentsX &&
-      a.frustumSegmentsY === b.frustumSegmentsY
-    );
-  }
-  return false;
 }
 
 function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
@@ -181,12 +150,6 @@ export function isSceneInfoEqual(
   if (aTexts.length !== bTexts.length) return false;
   for (let i = 0; i < aTexts.length; i++) {
     if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
-  }
-  const aSensors = a.sensors ?? [];
-  const bSensors = b.sensors ?? [];
-  if (aSensors.length !== bSensors.length) return false;
-  for (let i = 0; i < aSensors.length; i++) {
-    if (!isSensorInfoEqual(aSensors[i], bSensors[i])) return false;
   }
   return true;
 }
