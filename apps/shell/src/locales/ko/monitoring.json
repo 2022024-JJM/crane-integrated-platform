@@ -62,6 +62,8 @@
     "noPlacedObjects": "아직 배치된 객체가 없습니다.",
     "map": "지도",
     "mapNone": "지도 없음",
+    "collapsePanel": "패널 접기",
+    "expandPanel": "패널 열기",
     "lockObject": "편집 잠그기",
     "unlockObject": "편집 잠금 해제",
     "objectLocked": "편집 잠김",

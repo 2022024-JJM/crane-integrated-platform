@@ -53,6 +53,8 @@
     "noPlacedObjects": "Nulla objecta adhuc posita sunt.",
     "map": "Tabula",
     "mapNone": "Nulla tabula",
+    "collapsePanel": "Tabulam claude",
+    "expandPanel": "Tabulam aperi",
     "lockObject": "Editionem obsera",
     "unlockObject": "Editionem resera",
     "objectLocked": "Editio obserata",

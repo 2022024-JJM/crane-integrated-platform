@@ -62,6 +62,8 @@
     "noPlacedObjects": "No objects have been placed yet.",
     "map": "Map",
     "mapNone": "No map",
+    "collapsePanel": "Collapse panel",
+    "expandPanel": "Expand panel",
     "lockObject": "Lock editing",
     "unlockObject": "Unlock editing",
     "objectLocked": "Editing locked",

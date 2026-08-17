@@ -20,6 +20,9 @@ import {
   EyeOff,
   HardDrive,
   Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightOpen,
   Save,
   Search,
   Type,
@@ -45,7 +48,6 @@ import {
   SceneObjectInspector,
   SceneObjectsEditCanvas,
 } from '@crane/widgets/3d';
-import { getPlacedObjectItems } from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
@@ -89,6 +91,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
+  // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
+  // 자체를 렌더하지 않아 캔버스(flex-1)가 그만큼 넓어지고, 캔버스 모서리의
+  // 재오픈 버튼만 남는다.
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitSelectedRef = useRef<(() => void) | null>(null);
@@ -338,18 +345,21 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
       {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
-      <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">
-        <ProjectPalettePanel
-          items={sceneModelCatalog}
-          currentMap={sceneInfo?.maps?.[0] ?? null}
-          draggingItemId={draggingCatalogItem?.id ?? null}
-          onDragStart={setDraggingCatalogItem}
-          onDragEnd={() => setDraggingCatalogItem(null)}
-          onSelectMap={setSceneMap}
-          environmentId={sceneInfo?.environmentId}
-          onEnvironmentChange={setEnvironmentId}
-        />
-      </aside>
+      {!leftCollapsed ? (
+        <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">
+          <ProjectPalettePanel
+            items={sceneModelCatalog}
+            currentMap={sceneInfo?.maps?.[0] ?? null}
+            draggingItemId={draggingCatalogItem?.id ?? null}
+            onDragStart={setDraggingCatalogItem}
+            onDragEnd={() => setDraggingCatalogItem(null)}
+            onSelectMap={setSceneMap}
+            environmentId={sceneInfo?.environmentId}
+            onEnvironmentChange={setEnvironmentId}
+            onCollapse={() => setLeftCollapsed(true)}
+          />
+        </aside>
+      ) : null}
 
       {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
       <div className="relative min-h-0 min-w-0 flex-1">
@@ -408,6 +418,30 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           fitSelectedRef={fitSelectedRef}
           resetCameraRef={resetCameraRef}
         />
+
+        {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
+        {leftCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setLeftCollapsed(false)}
+            aria-label={t('monitoring:editor.expandPanel')}
+            title={t('monitoring:editor.expandPanel')}
+            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+          >
+            <PanelLeftOpen className="size-4" />
+          </button>
+        ) : null}
+        {rightCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightCollapsed(false)}
+            aria-label={t('monitoring:editor.expandPanel')}
+            title={t('monitoring:editor.expandPanel')}
+            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+          >
+            <PanelRightOpen className="size-4" />
+          </button>
+        ) : null}
 
         {/* 중앙 상단 floating toolbar */}
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
@@ -575,48 +609,51 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       </div>
 
       {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
-      <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
-        <div className="flex min-h-0 flex-[1] flex-col">
-          <HierarchyPanel
-            sceneInfo={sceneInfo}
-            selectedIds={selectedIds}
-            onSelectPlacedModel={selectPlacedModel}
-            onDeletePlacedModel={deletePlacedModel}
-            onSelectPlacedText={selectPlacedText}
-            onDeletePlacedText={deletePlacedText}
-            onTogglePlacedModel={toggleModel}
-            onTogglePlacedText={toggleText}
-            onSelectPlacedMap={selectPlacedMap}
-            onToggleLock={setObjectLocked}
-          />
-        </div>
-        <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
-          <SceneObjectInspector
-            className="rounded-none bg-transparent ring-0"
-            selectedModel={selectedModel}
-            selectedText={selectedText}
-            selectedMesh={selectedMesh}
-            selectedMap={selectedMap}
-            multiSelectCount={selectedIds.size}
-            onNameChange={updateSelectedName}
-            onOpacityChange={updateSelectedOpacity}
-            onTransformChange={updateSelectedTransform}
-            onTextContentChange={updateSelectedTextContent}
-            onTextColorChange={updateSelectedTextColor}
-            onTextTransformChange={updateSelectedTextTransform}
-            onMeshNameChange={updateSelectedMeshName}
-            onMeshOpacityChange={updateSelectedMeshOpacity}
-            onMeshTransformChange={updateSelectedMeshTransform}
-            onValueMapChange={updateSelectedValueMap}
-            onMapTransformChange={updateSelectedMapTransform}
-            onBackToParent={() => {
-              if (selectedMesh) {
-                selectPlacedModel(selectedMesh.modelId);
-              }
-            }}
-          />
-        </div>
-      </aside>
+      {!rightCollapsed ? (
+        <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
+          <div className="flex min-h-0 flex-[1] flex-col">
+            <HierarchyPanel
+              sceneInfo={sceneInfo}
+              selectedIds={selectedIds}
+              onCollapse={() => setRightCollapsed(true)}
+              onSelectPlacedModel={selectPlacedModel}
+              onDeletePlacedModel={deletePlacedModel}
+              onSelectPlacedText={selectPlacedText}
+              onDeletePlacedText={deletePlacedText}
+              onTogglePlacedModel={toggleModel}
+              onTogglePlacedText={toggleText}
+              onSelectPlacedMap={selectPlacedMap}
+              onToggleLock={setObjectLocked}
+            />
+          </div>
+          <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
+            <SceneObjectInspector
+              className="rounded-none bg-transparent ring-0"
+              selectedModel={selectedModel}
+              selectedText={selectedText}
+              selectedMesh={selectedMesh}
+              selectedMap={selectedMap}
+              multiSelectCount={selectedIds.size}
+              onNameChange={updateSelectedName}
+              onOpacityChange={updateSelectedOpacity}
+              onTransformChange={updateSelectedTransform}
+              onTextContentChange={updateSelectedTextContent}
+              onTextColorChange={updateSelectedTextColor}
+              onTextTransformChange={updateSelectedTextTransform}
+              onMeshNameChange={updateSelectedMeshName}
+              onMeshOpacityChange={updateSelectedMeshOpacity}
+              onMeshTransformChange={updateSelectedMeshTransform}
+              onValueMapChange={updateSelectedValueMap}
+              onMapTransformChange={updateSelectedMapTransform}
+              onBackToParent={() => {
+                if (selectedMesh) {
+                  selectPlacedModel(selectedMesh.modelId);
+                }
+              }}
+            />
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }
@@ -637,11 +674,13 @@ function HierarchyPanel({
   onTogglePlacedText,
   onSelectPlacedMap,
   onToggleLock,
+  onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
   onSelectPlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
+  onCollapse: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
@@ -649,26 +688,14 @@ function HierarchyPanel({
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
 }) {
-  const { t } = useTranslation();
   const [objectSearch, setObjectSearch] = useState('');
-
-  const placedObjectCount = useMemo(() => {
-    return getPlacedObjectItems({
-      placedModels: sceneInfo?.models ?? [],
-      placedTexts: sceneInfo?.texts ?? [],
-      placedMaps: sceneInfo?.maps ?? [],
-      objectSearch,
-      textObjectLabel: t('monitoring:editor.textObject'),
-      mapObjectLabel: t('monitoring:editor.map'),
-    }).length;
-  }, [objectSearch, sceneInfo, t]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <PaletteHeader
         objectSearch={objectSearch}
         onObjectSearchChange={setObjectSearch}
-        placedObjectCount={placedObjectCount}
+        onCollapse={onCollapse}
       />
       <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
@@ -738,6 +765,7 @@ function ProjectPalettePanel({
   onSelectMap,
   environmentId,
   onEnvironmentChange,
+  onCollapse,
 }: {
   items: SceneModelCatalogItem[];
   currentMap: SavedMapInfo | null;
@@ -747,6 +775,7 @@ function ProjectPalettePanel({
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
   onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  onCollapse: () => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -771,27 +800,38 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) */}
-      <div className="border-border flex shrink-0 items-center border-b pt-1">
-        {PANEL_TABS.map((tab) => {
-          const isActive = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-                isActive
-                  ? 'border-primary text-foreground'
-                  : 'text-muted-foreground hover:text-foreground border-transparent',
-              )}
-            >
-              {t(PANEL_TAB_LABEL_KEY[tab])}
-            </button>
-          );
-        })}
+      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) + 접기 버튼 */}
+      <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
+        <div className="flex items-center gap-0">
+          {PANEL_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+                  isActive
+                    ? 'border-primary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground border-transparent',
+                )}
+              >
+                {t(PANEL_TAB_LABEL_KEY[tab])}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label={t('monitoring:editor.collapsePanel')}
+          title={t('monitoring:editor.collapsePanel')}
+          className="text-muted-foreground hover:text-foreground mr-1 inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors"
+        >
+          <PanelLeftClose className="size-4" />
+        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden p-2">

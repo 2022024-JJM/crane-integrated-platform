@@ -724,8 +724,8 @@ export function SceneObjectsEditCanvas({
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
             40px) + 12px(중앙 툴바의 top-3와 같은 여백)로 잡아, 기즈모
-            가장자리가 툴바와 같은 간격으로 캔버스 우상단에 붙는다. */}
-        <GizmoHelper alignment="top-right" margin={[52, 52]}>
+            가장자리가 툴바와 같은 간격으로 캔버스 좌하단에 붙는다. */}
+        <GizmoHelper alignment="bottom-left" margin={[52, 52]}>
           <GizmoViewport
             // 기본 40의 2/3 크기.
             scale={40 * (2 / 3)}
