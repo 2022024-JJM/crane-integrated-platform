@@ -83,8 +83,11 @@
     "modelCategories": {
       "indoor": "Indoor",
       "outdoor": "Outdoor",
+      "etc": "Etc"
+    },
+    "paletteTabs": {
+      "models": "Models",
       "map": "Map",
-      "etc": "Etc",
       "background": "Background"
     },
     "environmentNone": "No background",

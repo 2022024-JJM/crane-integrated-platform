@@ -74,8 +74,11 @@
     "modelCategories": {
       "indoor": "Interior",
       "outdoor": "Exterior",
+      "etc": "Cetera"
+    },
+    "paletteTabs": {
+      "models": "Exempla",
       "map": "Tabula",
-      "etc": "Cetera",
       "background": "Fundus"
     },
     "environmentNone": "Sine fundo",

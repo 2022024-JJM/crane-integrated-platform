@@ -1,8 +1,6 @@
 import {
   SCENE_MODEL_CATEGORIES,
   isSceneStoredLocallyOnly,
-  sceneEnvironmentCatalog,
-  sceneMapCatalog,
   sceneModelCatalog,
   type SavedMapInfo,
   type SavedSceneInfo,
@@ -207,7 +205,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // "저장됨" 상태일 때만 고지한다 — 저장 전/저장 중에 띄우면 경고가 상시
   // 노출돼 무뎌지고, 정작 알려야 할 순간(방금 저장했는데 이 브라우저에만
   // 남았을 때)의 신호가 묻힌다.
-  const showLocalOnlyNotice = isSceneStoredLocallyOnly() && !isSaving && !isDirty;
+  const showLocalOnlyNotice =
+    isSceneStoredLocallyOnly() && !isSaving && !isDirty;
   const saveStatusLabel = isSaving
     ? t('monitoring:editor.statusSaving')
     : isDirty
@@ -301,9 +300,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         // 잠긴 모델은 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
         // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
         const allIds = [
-          ...currentSceneInfo.models
-            .filter((m) => !m.locked)
-            .map((m) => m.id),
+          ...currentSceneInfo.models.filter((m) => !m.locked).map((m) => m.id),
           ...(currentSceneInfo.texts ?? []).map((t) => t.id),
         ];
         selectAll(allIds);
@@ -790,33 +787,45 @@ function HierarchyPanel({
 }
 
 /**
- * 하단 Project 패널 — 모델 팔레트 단일 패널.
- * 좌측 카테고리 목록 + 드래그 가능한 모델 에셋 그리드(지도/배경 포함).
+ * 하단 Project 패널 — 상단 탭(모델/맵/배경)으로 전환한다.
+ * 모델 탭은 좌측 카테고리 목록 + 드래그 가능한 에셋 그리드,
+ * 맵·배경 탭은 클릭 단일 선택 타일 그리드다.
  */
 const BOTTOM_PANEL_MIN_H = 80;
 const BOTTOM_PANEL_MAX_H = 480;
 const BOTTOM_PANEL_DEFAULT_H = 224;
 const BOTTOM_PANEL_COLLAPSED_H = 44;
-const DEFAULT_MODEL_CATEGORY: SceneModelCategory = 'indoor';
+const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
 
 /**
- * Project 패널 좌측 카테고리 목록.
+ * Project 패널은 상단 탭(모델/맵/배경)으로 나뉜다.
  *
- * 'background'는 모델 카테고리가 아니라 이 패널에만 있는 항목이다 —
- * SceneModelCategory(모델 에셋의 분류)에 넣으면 카탈로그·드래그 앤 드롭
- * 경로까지 배경을 모델처럼 다루게 되고, 배경은 드롭할 수 있는 물건이 아니다.
- * 사용자에게는 지도와 나란한 "씬 전역 설정"으로 보이는 편이 자연스러워
- * 표시 목록에서만 합류시킨다.
+ * 맵과 배경은 모델 카테고리가 아니다 — 드래그 앤 드롭으로 배치하는 에셋이
+ * 아니라 씬에 하나뿐인 전역 설정(클릭 단일 선택)이라, 카테고리 목록에 섞으면
+ * 카탈로그·드롭 경로까지 모델처럼 다루게 된다. 그래서 모델 탭 안의 좌측
+ * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
+ * 같은 층위의 탭으로 분리한다.
  */
-const PANEL_CATEGORIES = [...SCENE_MODEL_CATEGORIES, 'background'] as const;
-type PanelCategory = (typeof PANEL_CATEGORIES)[number];
+const PANEL_TABS = ['models', 'map', 'background'] as const;
+type PanelTab = (typeof PANEL_TABS)[number];
 
-const MODEL_CATEGORY_LABEL_KEY: Record<PanelCategory, string> = {
+const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
+  models: 'monitoring:editor.paletteTabs.models',
+  map: 'monitoring:editor.paletteTabs.map',
+  background: 'monitoring:editor.paletteTabs.background',
+};
+
+// 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
+// 빈 폴더로만 남으므로 표시에서 제외한다. domain 타입은 건드리지 않는다.
+type ModelPanelCategory = Exclude<SceneModelCategory, 'map'>;
+const MODEL_PANEL_CATEGORIES = SCENE_MODEL_CATEGORIES.filter(
+  (category): category is ModelPanelCategory => category !== 'map',
+);
+
+const MODEL_CATEGORY_LABEL_KEY: Record<ModelPanelCategory, string> = {
   indoor: 'monitoring:editor.modelCategories.indoor',
   outdoor: 'monitoring:editor.modelCategories.outdoor',
-  map: 'monitoring:editor.modelCategories.map',
   etc: 'monitoring:editor.modelCategories.etc',
-  background: 'monitoring:editor.modelCategories.background',
 };
 
 function BottomProjectPanel({
@@ -839,7 +848,8 @@ function BottomProjectPanel({
   onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
 }) {
   const { t } = useTranslation();
-  const [activeCategory, setActiveCategory] = useState<PanelCategory>(
+  const [activeTab, setActiveTab] = useState<PanelTab>('models');
+  const [activeCategory, setActiveCategory] = useState<ModelPanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
   const [assetSearch, setAssetSearch] = useState('');
@@ -851,27 +861,14 @@ function BottomProjectPanel({
     ? BOTTOM_PANEL_COLLAPSED_H
     : panelHeight;
   const categoryCounts = useMemo(() => {
-    return PANEL_CATEGORIES.reduce(
+    return MODEL_PANEL_CATEGORIES.reduce(
       (acc, category) => {
-        acc[category] =
-          category === 'map'
-            ? // 고를 수 있는 지도 수 — 배경 배지와 같은 의미
-              // ("이 안에 몇 개가 있나")로 읽힌다.
-              sceneMapCatalog.length
-            : category === 'background'
-              ? // 고를 수 있는 배경 수. 다른 카테고리 배지와 같은 의미
-                // ("이 안에 몇 개가 있나")로 읽힌다.
-                sceneEnvironmentCatalog.length
-              : items.filter((item) => item.category === category).length;
+        acc[category] = items.filter(
+          (item) => item.category === category,
+        ).length;
         return acc;
       },
-      {
-        indoor: 0,
-        outdoor: 0,
-        map: 0,
-        etc: 0,
-        background: 0,
-      } satisfies Record<PanelCategory, number>,
+      {} as Record<ModelPanelCategory, number>,
     );
   }, [items]);
   const categoryItems = useMemo(() => {
@@ -915,10 +912,38 @@ function BottomProjectPanel({
           className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
         />
       ) : null}
-      {/* 패널 헤더 — 타이틀 + 접기 버튼 */}
+      {/* 패널 헤더 — 타이틀 + 탭(모델/맵/배경) + 접기 버튼 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
-        <div className="text-foreground px-4 py-2 text-[11px] font-medium">
-          {t('monitoring:palette.title')}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="text-foreground px-4 py-2 text-[11px] font-medium">
+            {t('monitoring:palette.title')}
+          </div>
+          <div className="border-border bg-muted/40 flex items-center gap-0.5 rounded-md border p-0.5">
+            {PANEL_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    // 접힌 채 탭만 바뀌면 아무 일도 안 일어난 것처럼
+                    // 보인다 — 탭 클릭은 곧 그 내용을 보겠다는 뜻이다.
+                    setIsCollapsed(false);
+                  }}
+                  className={cn(
+                    'cursor-pointer rounded-[5px] px-2.5 py-1 text-[11px] font-medium transition',
+                    isActive
+                      ? 'bg-primary/12 text-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t(PANEL_TAB_LABEL_KEY[tab])}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <button
           type="button"
@@ -942,63 +967,77 @@ function BottomProjectPanel({
         className="min-h-0 flex-1 overflow-hidden"
       >
         <div className="h-full overflow-hidden px-2 pt-2 pb-1">
-          <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)] gap-0 overflow-hidden">
-            <div className="border-border/70 min-h-0 overflow-y-auto border-r pr-2">
-              <div className="text-muted-foreground px-2 pb-2 text-[10px] font-semibold tracking-[0.12em] uppercase">
-                {t('monitoring:editor.categoryLibrary')}
-              </div>
-              <div className="space-y-0.5">
-                {PANEL_CATEGORIES.map((category) => {
-                  const isActive = activeCategory === category;
+          {activeTab !== 'models' ? (
+            <div className="h-full min-h-0 overflow-y-auto px-1 pt-1">
+              {activeTab === 'map' ? (
+                <PaletteMapSection
+                  currentMap={currentMap}
+                  onSelectMap={onSelectMap}
+                />
+              ) : (
+                <PaletteEnvironmentSection
+                  environmentId={environmentId}
+                  onChange={onEnvironmentChange}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)] gap-0 overflow-hidden">
+              <div className="border-border/70 min-h-0 overflow-y-auto border-r pr-2">
+                <div className="text-muted-foreground px-2 pb-2 text-[10px] font-semibold tracking-[0.12em] uppercase">
+                  {t('monitoring:editor.categoryLibrary')}
+                </div>
+                <div className="space-y-0.5">
+                  {MODEL_PANEL_CATEGORIES.map((category) => {
+                    const isActive = activeCategory === category;
 
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setActiveCategory(category)}
-                      className={cn(
-                        'text-muted-foreground hover:bg-muted/70 hover:text-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition',
-                        isActive && 'bg-primary/12 text-foreground',
-                      )}
-                    >
-                      <FolderClosed
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setActiveCategory(category)}
                         className={cn(
-                          'size-3.5 shrink-0',
-                          isActive
-                            ? 'text-primary'
-                            : 'text-muted-foreground/80',
-                        )}
-                      />
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
-                        {t(MODEL_CATEGORY_LABEL_KEY[category])}
-                      </span>
-                      <Badge
-                        render={<div />}
-                        variant="outline"
-                        className={cn(
-                          'border-border bg-background/80 min-w-7 shrink-0 justify-center rounded-sm px-1.5 py-0 text-[10px]',
-                          isActive && 'border-primary/30 bg-primary/10',
+                          'text-muted-foreground hover:bg-muted/70 hover:text-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition',
+                          isActive && 'bg-primary/12 text-foreground',
                         )}
                       >
-                        {categoryCounts[category]}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex min-h-0 flex-col overflow-hidden pl-3">
-              <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b pb-2">
-                <div className="min-w-0">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                    {t('monitoring:palette.title')}
-                  </p>
-                  <p className="text-foreground truncate text-[12px] font-medium">
-                    {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
-                  </p>
+                        <FolderClosed
+                          className={cn(
+                            'size-3.5 shrink-0',
+                            isActive
+                              ? 'text-primary'
+                              : 'text-muted-foreground/80',
+                          )}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
+                          {t(MODEL_CATEGORY_LABEL_KEY[category])}
+                        </span>
+                        <Badge
+                          render={<div />}
+                          variant="outline"
+                          className={cn(
+                            'border-border bg-background/80 min-w-7 shrink-0 justify-center rounded-sm px-1.5 py-0 text-[10px]',
+                            isActive && 'border-primary/30 bg-primary/10',
+                          )}
+                        >
+                          {categoryCounts[category]}
+                        </Badge>
+                      </button>
+                    );
+                  })}
                 </div>
-                {activeCategory !== 'map' && activeCategory !== 'background' ? (
+              </div>
+
+              <div className="flex min-h-0 flex-col overflow-hidden pl-3">
+                <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b pb-2">
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
+                      {t('monitoring:palette.title')}
+                    </p>
+                    <p className="text-foreground truncate text-[12px] font-medium">
+                      {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
+                    </p>
+                  </div>
                   <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
                     <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
                     <Input
@@ -1010,20 +1049,8 @@ function BottomProjectPanel({
                       className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
                     />
                   </div>
-                ) : null}
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto pt-2">
-                {activeCategory === 'background' ? (
-                  <PaletteEnvironmentSection
-                    environmentId={environmentId}
-                    onChange={onEnvironmentChange}
-                  />
-                ) : activeCategory === 'map' ? (
-                  <PaletteMapSection
-                    currentMap={currentMap}
-                    onSelectMap={onSelectMap}
-                  />
-                ) : (
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pt-2">
                   <PaletteAssetGrid
                     items={categoryItems}
                     draggingItemId={draggingItemId}
@@ -1034,10 +1061,10 @@ function BottomProjectPanel({
                     onAssetSearchChange={setAssetSearch}
                     showToolbar={false}
                   />
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -83,8 +83,11 @@
     "modelCategories": {
       "indoor": "내업",
       "outdoor": "외업",
+      "etc": "기타"
+    },
+    "paletteTabs": {
+      "models": "모델",
       "map": "맵",
-      "etc": "기타",
       "background": "배경"
     },
     "environmentNone": "배경 없음",
