@@ -338,7 +338,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
       {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
-      <aside className="border-border bg-card text-card-foreground flex w-[17rem] shrink-0 flex-col border-r">
+      <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">
         <ProjectPalettePanel
           items={sceneModelCatalog}
           currentMap={sceneInfo?.maps?.[0] ?? null}
@@ -575,7 +575,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       </div>
 
       {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
-      <aside className="border-border bg-card text-card-foreground flex w-[20rem] shrink-0 flex-col border-l">
+      <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
         <div className="flex min-h-0 flex-[1] flex-col">
           <HierarchyPanel
             sceneInfo={sceneInfo}
