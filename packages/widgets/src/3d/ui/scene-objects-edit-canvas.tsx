@@ -151,7 +151,6 @@ interface SceneObjectsEditCanvasProps {
   fitAllRef?: RefObject<(() => void) | null>;
   fitSelectedRef?: RefObject<(() => void) | null>;
   resetCameraRef?: RefObject<(() => void) | null>;
-  inspectorOpen?: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -173,7 +172,6 @@ export function SceneObjectsEditCanvas({
   fitAllRef,
   fitSelectedRef,
   resetCameraRef,
-  inspectorOpen = false,
 }: SceneObjectsEditCanvasProps) {
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
@@ -292,9 +290,7 @@ export function SceneObjectsEditCanvas({
     () =>
       new Set([
         ...(sceneInfo?.maps ?? []).map((m) => m.id),
-        ...(sceneInfo?.models ?? [])
-          .filter((m) => m.locked)
-          .map((m) => m.id),
+        ...(sceneInfo?.models ?? []).filter((m) => m.locked).map((m) => m.id),
       ]),
     [sceneInfo?.maps, sceneInfo?.models],
   );
@@ -726,10 +722,9 @@ export function SceneObjectsEditCanvas({
             RIGHT: MOUSE.PAN,
           }}
         />
-        <GizmoHelper
-          alignment="top-right"
-          margin={[inspectorOpen ? 400 : 80, 80]}
-        >
+        {/* 도킹 레이아웃에선 캔버스가 인스펙터와 겹치지 않으므로
+            여백 보정이 필요 없다. */}
+        <GizmoHelper alignment="top-right" margin={[80, 80]}>
           <GizmoViewport
             axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"
@@ -760,7 +755,11 @@ export function SceneObjectsEditCanvas({
             에디터는 로딩 오버레이가 없으므로 Suspense도 객체별로 분리해
             준비된 것부터 보여준다(뷰어는 오버레이 때문에 공유 Suspense 유지). */}
         {sceneInfo?.maps?.map((m) => (
-          <SceneObjectBoundary key={m.id} label={`map ${m.path}`} isolateSuspense>
+          <SceneObjectBoundary
+            key={m.id}
+            label={`map ${m.path}`}
+            isolateSuspense
+          >
             <SelectionAwareGltfModel
               id={m.id}
               url={m.path}
@@ -794,9 +793,7 @@ export function SceneObjectsEditCanvas({
               // 잠긴 모델은 클릭이 선택 해제로 떨어진다 — 지도 잠금과 같은
               // 규칙. 핸들러만 갈아끼우고 컴포넌트는 유지해 GLB 리마운트를
               // 피한다(위 지도 주석 참고).
-              onSelect={
-                model.locked ? handleClearSelection : handleSelectModel
-              }
+              onSelect={model.locked ? handleClearSelection : handleSelectModel}
               onDoubleSelect={
                 model.locked ? undefined : handleDoubleSelectModel
               }

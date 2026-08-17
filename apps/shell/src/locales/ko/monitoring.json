@@ -76,7 +76,6 @@
     "addText": "텍스트 추가",
     "textObject": "텍스트",
     "save": "저장",
-    "categoryLibrary": "카테고리",
     "categoryAssetCount": "에셋 {{count}}개",
     "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
     "modelCategories": {

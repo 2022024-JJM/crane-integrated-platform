@@ -67,7 +67,6 @@
     "addText": "Textum adde",
     "textObject": "Textus",
     "save": "Serva",
-    "categoryLibrary": "Categoriae",
     "categoryAssetCount": "{{count}} exemplaria",
     "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
     "modelCategories": {

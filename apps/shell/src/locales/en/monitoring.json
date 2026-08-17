@@ -76,7 +76,6 @@
     "addText": "Add Text",
     "textObject": "Text",
     "save": "Save",
-    "categoryLibrary": "Categories",
     "categoryAssetCount": "{{count}} assets",
     "noModelsInCategory": "No models in this category yet.",
     "modelCategories": {
