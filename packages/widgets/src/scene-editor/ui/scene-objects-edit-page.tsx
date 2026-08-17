@@ -2,9 +2,11 @@ import {
   SCENE_MODEL_CATEGORIES,
   isSceneStoredLocallyOnly,
   sceneEnvironmentCatalog,
+  sceneMapCatalog,
   sceneModelCatalog,
   type SavedMapInfo,
   type SavedSceneInfo,
+  type SceneMapCatalogItem,
   type SceneModelCategory,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
@@ -23,7 +25,6 @@ import {
   HardDrive,
   Layers3,
   Loader2,
-  Map,
   PanelLeftClose,
   PanelRightClose,
   Search,
@@ -145,14 +146,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
-    deleteMap,
+    setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
     selectedMap,
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,
     commitSelectedMapTransform,
-    setMapLocked,
+    setObjectLocked,
     toggleModel,
     toggleText,
     selectAll,
@@ -297,8 +298,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       const currentSceneInfo = sceneInfoRef.current;
       if (isSelectAllShortcut && currentSceneInfo) {
         event.preventDefault();
+        // 잠긴 모델은 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
+        // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
         const allIds = [
-          ...currentSceneInfo.models.map((m) => m.id),
+          ...currentSceneInfo.models
+            .filter((m) => !m.locked)
+            .map((m) => m.id),
           ...(currentSceneInfo.texts ?? []).map((t) => t.id),
         ];
         selectAll(allIds);
@@ -443,7 +448,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             onTogglePlacedModel={toggleModel}
             onTogglePlacedText={toggleText}
             onSelectPlacedMap={selectPlacedMap}
-            onToggleMapLock={setMapLocked}
+            onToggleLock={setObjectLocked}
             onSave={() => void saveCurrentScene()}
             onExport={() => downloadSceneInfo(regionId, sceneInfo)}
           />
@@ -612,11 +617,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       {/* 하단 패널 — Project: 3D 모델 에셋 그리드 */}
       <BottomProjectPanel
         items={sceneModelCatalog}
-        maps={sceneInfo?.maps ?? []}
+        currentMap={sceneInfo?.maps?.[0] ?? null}
         draggingItemId={draggingCatalogItem?.id ?? null}
         onDragStart={setDraggingCatalogItem}
         onDragEnd={() => setDraggingCatalogItem(null)}
-        onDeleteMap={deleteMap}
+        onSelectMap={setSceneMap}
         environmentId={sceneInfo?.environmentId}
         onEnvironmentChange={setEnvironmentId}
       />
@@ -719,7 +724,7 @@ function HierarchyPanel({
   onTogglePlacedModel,
   onTogglePlacedText,
   onSelectPlacedMap,
-  onToggleMapLock,
+  onToggleLock,
   onSave,
   onExport,
 }: {
@@ -727,7 +732,7 @@ function HierarchyPanel({
   selectedIds: Set<string>;
   isSaving: boolean;
   onSelectPlacedMap: (id: string) => void;
-  onToggleMapLock: (id: string, locked: boolean) => void;
+  onToggleLock: (id: string, locked: boolean) => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
@@ -777,7 +782,7 @@ function HierarchyPanel({
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
           onSelectPlacedMap={onSelectPlacedMap}
-          onToggleMapLock={onToggleMapLock}
+          onToggleLock={onToggleLock}
         />
       </div>
     </div>
@@ -816,22 +821,22 @@ const MODEL_CATEGORY_LABEL_KEY: Record<PanelCategory, string> = {
 
 function BottomProjectPanel({
   items,
-  maps,
+  currentMap,
   draggingItemId,
   onDragStart,
   onDragEnd,
-  onDeleteMap,
+  onSelectMap,
   environmentId,
   onEnvironmentChange,
 }: {
   items: SceneModelCatalogItem[];
-  maps: SavedMapInfo[];
+  currentMap: SavedMapInfo | null;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
-  onDeleteMap: (id: string) => void;
+  onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
 }) {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<PanelCategory>(
@@ -850,7 +855,9 @@ function BottomProjectPanel({
       (acc, category) => {
         acc[category] =
           category === 'map'
-            ? maps.length
+            ? // 고를 수 있는 지도 수 — 배경 배지와 같은 의미
+              // ("이 안에 몇 개가 있나")로 읽힌다.
+              sceneMapCatalog.length
             : category === 'background'
               ? // 고를 수 있는 배경 수. 다른 카테고리 배지와 같은 의미
                 // ("이 안에 몇 개가 있나")로 읽힌다.
@@ -866,7 +873,7 @@ function BottomProjectPanel({
         background: 0,
       } satisfies Record<PanelCategory, number>,
     );
-  }, [items, maps]);
+  }, [items]);
   const categoryItems = useMemo(() => {
     return items.filter((item) => item.category === activeCategory);
   }, [activeCategory, items]);
@@ -1012,26 +1019,10 @@ function BottomProjectPanel({
                     onChange={onEnvironmentChange}
                   />
                 ) : activeCategory === 'map' ? (
-                  maps.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {/* 선택·잠금은 좌측 계층 목록(Hierarchy)이 담당한다.
-                          여기 Project 패널은 에셋 관리 영역이라 지도 삭제만
-                          남긴다 — 같은 조작을 두 곳에 두면 어느 쪽이 정본인지
-                          모호해진다. */}
-                      {maps.map((m) => (
-                        <PaletteMapSection
-                          key={m.id}
-                          map={m}
-                          onDeleteMap={() => onDeleteMap(m.id)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-[12px]">
-                      <Map className="size-6 opacity-30" />
-                      <p>{t('monitoring:editor.noMap')}</p>
-                    </div>
-                  )
+                  <PaletteMapSection
+                    currentMap={currentMap}
+                    onSelectMap={onSelectMap}
+                  />
                 ) : (
                   <PaletteAssetGrid
                     items={categoryItems}

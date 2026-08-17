@@ -47,6 +47,10 @@ export {
   getSceneEnvironmentById,
   type SceneEnvironmentCatalogItem,
 } from './model/scene-environment-catalog';
+export {
+  sceneMapCatalog,
+  type SceneMapCatalogItem,
+} from './model/scene-map-catalog';
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {

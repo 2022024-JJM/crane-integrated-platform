@@ -57,6 +57,13 @@ export interface SavedModelInfo {
    * 편집한 결과가 여기 누적된다.
    */
   meshOverrides?: SavedMeshOverride[];
+  /**
+   * 편집 잠금 — 씬 데이터다(저장 대상). true면 에디터에서 선택·변형·삭제가
+   * 모두 막히고, 계층 목록의 자물쇠 토글로만 풀 수 있다.
+   * 필드가 없으면 잠기지 않은 것으로 본다. true일 때만 직렬화해
+   * 기존 저장본과의 diff를 최소화한다.
+   */
+  locked?: boolean;
 }
 
 export interface SavedMeshOverride {
@@ -81,6 +88,14 @@ export interface SavedMapInfo {
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
+  /**
+   * 편집 잠금 — 씬 데이터다(저장 대상). 모델과 달리 **필드가 없으면 잠긴
+   * 것**으로 본다: 지도는 화면 대부분을 덮는 거대 메시라 기본이 잠김이어야
+   * 다른 객체를 고르려는 클릭이 지도에 먹히지 않고, 기존 저장본(필드 없음)도
+   * 종전 UX(항상 잠김 시작) 그대로 열린다. sanitize가 명시적 boolean으로
+   * 정규화한다.
+   */
+  locked?: boolean;
 }
 
 export interface ValueMapItem {

@@ -15,7 +15,6 @@ import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { clampToRange } from '@crane/core/lib/utils';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
-import { useMapEditLockStore } from './use-map-edit-lock-store';
 import { AXIS_INDEX, type AxisKey, type SceneTransformField } from './types';
 
 function updateVectorValue(tuple: Vector3Tuple, axis: AxisKey, value: number) {
@@ -149,7 +148,7 @@ interface UseSelectedSceneObjectEditorResult {
     scale: Vector3Tuple | null,
     options?: { recordHistory?: boolean },
   ) => void;
-  setMapLocked: (id: string, locked: boolean) => void;
+  setObjectLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
 }
 
@@ -219,6 +218,25 @@ export function useSelectedSceneObjectEditor({
       clearSelectedModel();
     }
   }, [clearSelectedModel, sceneInfo, selectedModelId, selectedObjectType]);
+
+  // 잠긴 객체가 선택에 남아 있으면 선택을 해제한다 — 잠금 토글 자체는
+  // setObjectLocked가 처리하지만, undo/redo로 잠금이 복원되는 경로는 씬만
+  // 바뀌므로 여기서 걸러야 기즈모·인스펙터가 함께 내려간다.
+  useEffect(() => {
+    if (!sceneInfo || selectedIds.size === 0) {
+      return;
+    }
+    const hasLockedSelection =
+      sceneInfo.models.some(
+        (m) => m.locked === true && selectedIds.has(m.id),
+      ) ||
+      (sceneInfo.maps ?? []).some(
+        (m) => m.locked !== false && selectedIds.has(m.id),
+      );
+    if (hasLockedSelection) {
+      clearSelectedModel();
+    }
+  }, [clearSelectedModel, sceneInfo, selectedIds]);
 
   const selectedModel = useMemo(
     () =>
@@ -621,12 +639,34 @@ export function useSelectedSceneObjectEditor({
   };
 
   /**
-   * 지도 편집 잠금 토글. 씬이 아니라 에디터 세션 스토어에 쓴다 —
-   * 잠금은 저장 대상이 아니다(useMapEditLockStore 주석 참고).
+   * 편집 잠금 토글 — 씬 데이터에 쓴다(저장·undo·dirty 참여).
+   * 지도는 "필드 없음 = 잠김"이라 항상 명시적 boolean을 기록하고,
+   * 모델은 true일 때만 필드를 남긴다(types.ts 주석 참고).
    * 잠글 때 선택 중이었다면 선택을 해제한다.
    */
-  const setMapLocked = (id: string, locked: boolean) => {
-    useMapEditLockStore.getState().setLocked(id, locked);
+  const setObjectLocked = (id: string, locked: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      if ((prev.maps ?? []).some((m) => m.id === id)) {
+        return {
+          ...prev,
+          maps: (prev.maps ?? []).map((m) =>
+            m.id === id ? { ...m, locked } : m,
+          ),
+        };
+      }
+      return {
+        ...prev,
+        models: prev.models.map((m) => {
+          if (m.id !== id) return m;
+          if (locked) return { ...m, locked: true };
+          const { locked: _removed, ...rest } = m;
+          return rest;
+        }),
+      };
+    });
     if (locked && selectedIds.has(id)) {
       clearSelectedModel();
     }
@@ -758,7 +798,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,
     commitSelectedMapTransform,
-    setMapLocked,
+    setObjectLocked,
     removeSelectedModel,
   };
 }

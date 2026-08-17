@@ -2,6 +2,7 @@ import {
   createSceneModel,
   createSceneText,
   type SavedSceneInfo,
+  type SceneMapCatalogItem,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -96,7 +97,30 @@ export function createSceneManipulationActions({
     }
   };
 
-  const deleteMap = (id: string) => {
+  /**
+   * 지도 선택 — 배경(setEnvironmentId)과 같은 클릭 단일 선택.
+   * null이면 지도를 제거한다.
+   *
+   * 현재 지도가 잠겨 있으면 아무것도 하지 않는다 — 잠금은 선택·변형·삭제를
+   * 모두 막는 규칙이고, 교체는 삭제를 포함한다. UI(PaletteMapSection)도
+   * 잠금 상태에서 타일을 비활성화하지만, 여기서 한 번 더 막아야 다른
+   * 경로가 생겨도 규칙이 깨지지 않는다.
+   *
+   * 새로 고른 지도는 잠기지 않은 상태로 시작한다 — 배치(이동/회전)를 먼저
+   * 하고, 계층 목록의 자물쇠로 잠근다.
+   */
+  const setSceneMap = (catalogItem: SceneMapCatalogItem | null) => {
+    const currentMap = (sceneInfoRef.current?.maps ?? [])[0] ?? null;
+    if (currentMap && currentMap.locked !== false) {
+      return;
+    }
+    if (!catalogItem && !currentMap) {
+      return;
+    }
+    if (catalogItem && currentMap?.path === catalogItem.path) {
+      return;
+    }
+
     updateScene((prev) => {
       if (!prev) {
         return prev;
@@ -104,12 +128,15 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
-        // 다른 maps 접근부와 동일하게 방어한다 — sanitize를 거치면 항상
-        // 배열이지만, 이 한 곳만 무방비로 두면 나중에 sanitize를 우회하는
-        // 경로가 생겼을 때 여기서만 터진다.
-        maps: (prev.maps ?? []).filter((m) => m.id !== id),
+        maps: catalogItem
+          ? [{ id: createId(), path: catalogItem.path, locked: false }]
+          : [],
       };
     });
+
+    if (currentMap && selectedIds.has(currentMap.id)) {
+      clearSelectedModel();
+    }
   };
 
   const selectPlacedModel = (id: string) => {
@@ -139,6 +166,12 @@ export function createSceneManipulationActions({
   const deletePlacedModel = (id: string) => {
     updateScene((prev) => {
       if (!prev) {
+        return prev;
+      }
+
+      // 잠긴 모델은 삭제 불가 — 계층 목록은 잠긴 행의 삭제 버튼을 숨기지만,
+      // updater 안에서 한 번 더 막아야 다른 호출 경로가 생겨도 안전하다.
+      if (prev.models.some((model) => model.id === id && model.locked)) {
         return prev;
       }
 
@@ -180,6 +213,9 @@ export function createSceneManipulationActions({
         newModelDuplicates.push({
           ...modelSource,
           id: newId,
+          // 잠긴 모델은 선택 자체가 안 되니 여기 올 수 없지만, 복제본이
+          // 잠김을 물려받는 일은 어떤 경로로도 없어야 한다.
+          locked: undefined,
           position: [
             modelSource.position[0] + 2,
             modelSource.position[1],
@@ -223,7 +259,7 @@ export function createSceneManipulationActions({
   return {
     addModel,
     addText,
-    deleteMap,
+    setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
     selectPlacedModel,

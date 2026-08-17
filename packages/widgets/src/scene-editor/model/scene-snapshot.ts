@@ -55,8 +55,10 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
-    // transform은 비교해야 지도 이동이 dirty로 잡힌다. 잠금은 씬 데이터가
-    // 아니므로(useMapEditLockStore) 여기서 볼 것이 없다.
+    // 잠금은 씬 데이터다 — 토글이 dirty/undo에 잡혀야 저장된다.
+    // 지도는 필드 없음 = 잠김(types.ts 주석 참고).
+    if ((a[i].locked !== false) !== (b[i].locked !== false)) return false;
+    // transform은 비교해야 지도 이동이 dirty로 잡힌다.
     if (!isOptionalVector3TupleEqual(a[i].position, b[i].position)) return false;
     if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation)) return false;
     if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
@@ -122,6 +124,7 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.craneId === b.craneId &&
     a.path === b.path &&
     a.opacity === b.opacity &&
+    (a.locked ?? false) === (b.locked ?? false) &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&

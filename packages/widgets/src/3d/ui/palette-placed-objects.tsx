@@ -7,7 +7,6 @@ import type {
   SavedTextInfo,
 } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
-import { useMapEditLockStore } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { getPlacedObjectItems } from './placed-object-items';
@@ -25,7 +24,7 @@ interface PalettePlacedObjectsProps {
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
   onSelectPlacedMap?: (id: string) => void;
-  onToggleMapLock?: (id: string, locked: boolean) => void;
+  onToggleLock?: (id: string, locked: boolean) => void;
 }
 
 export function PalettePlacedObjects({
@@ -41,12 +40,10 @@ export function PalettePlacedObjects({
   onTogglePlacedModel,
   onTogglePlacedText,
   onSelectPlacedMap,
-  onToggleMapLock,
+  onToggleLock,
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // 잠금은 씬 데이터가 아니라 에디터 세션 상태다(useMapEditLockStore).
-  const unlockedIds = useMapEditLockStore((s) => s.unlockedIds);
 
   const allItems = useMemo(() => {
     return getPlacedObjectItems({
@@ -67,17 +64,18 @@ export function PalettePlacedObjects({
             allItems.map((item, index) => {
               const isSelected = selectedIds.has(item.id);
 
-              // 잠긴 지도는 목록에서도 선택되지 않는다 — 캔버스와 같은
+              // 잠긴 객체는 목록에서도 선택되지 않는다 — 캔버스와 같은
               // 규칙이라야 자물쇠가 "편집 대상에서 제외"라는 하나의 의미로
               // 읽힌다. 잠금 해제는 옆 자물쇠 버튼으로 한다.
               const isMap = item.type === 'map';
-              const isLockedMap = isMap && !unlockedIds.has(item.id);
+              const isLocked = item.locked === true;
 
               const selectItem = (targetItem: typeof item) => {
+                if (targetItem.locked === true) {
+                  return;
+                }
                 if (targetItem.type === 'map') {
-                  if (unlockedIds.has(targetItem.id)) {
-                    onSelectPlacedMap?.(targetItem.id);
-                  }
+                  onSelectPlacedMap?.(targetItem.id);
                 } else if (targetItem.type === 'text') {
                   onSelectPlacedText?.(targetItem.id);
                 } else {
@@ -92,6 +90,9 @@ export function PalettePlacedObjects({
                   return;
                 }
                 if (ctrlKey) {
+                  if (isLocked) {
+                    return;
+                  }
                   if (item.type === 'text') {
                     onTogglePlacedText?.(item.id);
                   } else {
@@ -114,7 +115,7 @@ export function PalettePlacedObjects({
                   }}
                   onKeyDown={(event) => {
                     // 방향키는 포커스만 옮기고 선택도 함께 바꾼다. 잠긴
-                    // 지도는 selectItem이 무시하므로 이전 선택이 그대로
+                    // 객체는 selectItem이 무시하므로 이전 선택이 그대로
                     // 남는데, 그 편이 "선택이 사라졌다"보다 덜 놀랍다.
                     if (event.key === 'ArrowDown') {
                       event.preventDefault();
@@ -133,10 +134,10 @@ export function PalettePlacedObjects({
                   }}
                   className={cn(
                     'mx-0.5 flex items-center gap-1.5 rounded-sm border border-transparent px-1.5 py-1 text-left transition',
-                    isLockedMap ? 'cursor-default' : 'cursor-pointer',
+                    isLocked ? 'cursor-default' : 'cursor-pointer',
                     isSelected
                       ? 'border-primary/50 bg-primary/15 text-foreground'
-                      : isLockedMap
+                      : isLocked
                         ? 'text-foreground/50'
                         : 'text-foreground/80 hover:border-border hover:bg-muted/50',
                   )}
@@ -165,44 +166,46 @@ export function PalettePlacedObjects({
                       {item.subtitle}
                     </p>
                   </div>
-                  {/* 지도는 삭제 대신 잠금 토글을 둔다 — 지도 삭제는 씬을
-                      통째로 비우는 행위라 목록의 한 줄짜리 휴지통 버튼으로
-                      실수하기 쉽다. 삭제는 하단 Project 패널 Map 섹션에 남겨
-                      두고, 여기서는 일상 작업인 잠금/해제만 노출한다. */}
-                  {isMap ? (
+                  {/* 지도·모델 행에는 잠금 토글을 둔다. 삭제 버튼은
+                      모델·텍스트 행에만 두되 잠기면 숨긴다 — 잠금은
+                      선택·변형·삭제를 전부 막는 규칙이다. 지도 삭제는
+                      하단 Project 패널 Map 카테고리(카탈로그 선택)가
+                      담당한다. */}
+                  {item.type !== 'text' ? (
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-pressed={isLockedMap}
+                      aria-pressed={isLocked}
                       className={cn(
                         'size-5 cursor-pointer rounded-sm',
-                        isLockedMap
+                        isLocked
                           ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
                           : 'text-amber-500 hover:bg-amber-500/15 hover:text-amber-400',
                       )}
                       aria-label={
-                        isLockedMap
-                          ? t('monitoring:editor.unlockMap')
-                          : t('monitoring:editor.lockMap')
+                        isLocked
+                          ? t('monitoring:editor.unlockObject')
+                          : t('monitoring:editor.lockObject')
                       }
                       title={
-                        isLockedMap
-                          ? t('monitoring:editor.unlockMap')
-                          : t('monitoring:editor.lockMap')
+                        isLocked
+                          ? t('monitoring:editor.unlockObject')
+                          : t('monitoring:editor.lockObject')
                       }
                       onClick={(event) => {
                         event.stopPropagation();
-                        onToggleMapLock?.(item.id, !isLockedMap);
+                        onToggleLock?.(item.id, !isLocked);
                       }}
                     >
-                      {isLockedMap ? (
+                      {isLocked ? (
                         <Lock className="size-3.5" />
                       ) : (
                         <LockOpen className="size-3.5" />
                       )}
                     </Button>
-                  ) : (
+                  ) : null}
+                  {!isMap && !isLocked ? (
                     <Button
                       type="button"
                       variant="ghost"
@@ -220,7 +223,7 @@ export function PalettePlacedObjects({
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               );
             })

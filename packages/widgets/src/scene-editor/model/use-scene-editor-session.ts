@@ -1,11 +1,11 @@
 import {
   humanizeModelPath,
   type SavedCameraInfo,
+  type SceneMapCatalogItem,
   type SceneModelCatalogItem,
   type ValueMapType,
 } from '@crane/domain/3d';
 import {
-  useMapEditLockStore,
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
@@ -94,7 +94,7 @@ interface UseSceneEditorSessionResult {
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
-  deleteMap: (id: string) => void;
+  setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
@@ -107,7 +107,9 @@ interface UseSceneEditorSessionResult {
   commitSelectedMapTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['commitSelectedMapTransform'];
-  setMapLocked: ReturnType<typeof useSelectedSceneObjectEditor>['setMapLocked'];
+  setObjectLocked: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['setObjectLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   selectAll: (ids: string[]) => void;
@@ -190,7 +192,7 @@ export function useSceneEditorSession({
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,
     commitSelectedMapTransform,
-    setMapLocked,
+    setObjectLocked,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -200,8 +202,6 @@ export function useSceneEditorSession({
   const onLoadReset = useCallback(() => {
     clearSelectedModel();
     resetTransformMode();
-    // 다른 씬을 로드하면 이전 씬의 잠금 해제 상태를 들고 갈 이유가 없다.
-    useMapEditLockStore.getState().clear();
   }, [clearSelectedModel, resetTransformMode]);
 
   sceneInfoRef.current = sceneInfo;
@@ -248,9 +248,6 @@ export function useSceneEditorSession({
     return () => {
       clearSelectedModel();
       resetTransformMode();
-      // 잠금은 세션 상태다 — 에디터를 벗어나면 비워, 다음 진입이 항상
-      // "지도 잠김"에서 시작하게 한다(모듈 싱글턴 스토어라 명시 정리 필요).
-      useMapEditLockStore.getState().clear();
     };
   }, [clearSelectedModel, resetTransformMode]);
 
@@ -305,14 +302,14 @@ export function useSceneEditorSession({
     selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
-    deleteMap: manipulation.deleteMap,
+    setSceneMap: manipulation.setSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
     selectedMap,
     updateSelectedMapTransform,
     updateSelectedMapTransformVector,
     commitSelectedMapTransform,
-    setMapLocked,
+    setObjectLocked,
     toggleModel,
     toggleText,
     selectAll: selectAllStore,

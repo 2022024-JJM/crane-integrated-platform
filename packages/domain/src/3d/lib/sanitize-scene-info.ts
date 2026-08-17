@@ -77,12 +77,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const safeMaps = rawMaps.map((m) => {
     // transform은 optional이므로 유효할 때만 싣는다 — 손대지 않은 지도는
     // 저장본에서도 필드 없는 상태로 남아야 기존 씬과 diff가 없다.
-    // 편집 잠금(locked)은 에디터 세션 상태라 저장하지 않는다. 과거 버전이
-    // 남긴 필드가 있으면 여기서 걸러진다(useMapEditLockStore 주석 참고).
+    // 편집 잠금(locked)은 씬 데이터다. 필드가 없는 저장본(잠금이 세션
+    // 상태였던 시절)은 잠김으로 정규화한다 — 종전 UX가 "항상 잠김 시작"
+    // 이었으므로 화면 동작이 달라지지 않는다.
     const safeMap: SavedMapInfo = {
       id:
         typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
       path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
+      locked: m.locked !== false,
     };
     if (isVector3Tuple(m.position)) safeMap.position = m.position;
     if (isVector3Tuple(m.rotation)) safeMap.rotation = m.rotation;
@@ -122,6 +124,9 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             id: nextId,
             opacity: clampOpacity(model.opacity),
             meshOverrides: sanitizeMeshOverrides(model.meshOverrides),
+            // true가 아닌 값(과거 버전이 남긴 문자열 등)은 잠기지 않은
+            // 것으로 정규화한다. undefined는 JSON 직렬화에서 빠진다.
+            locked: model.locked === true ? true : undefined,
           },
         ];
       })

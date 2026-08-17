@@ -10,6 +10,11 @@ export interface PlacedObjectItem {
   displayName: string;
   subtitle: string;
   type: 'model' | 'text' | 'map';
+  /**
+   * 편집 잠금 — 씬 데이터(locked)에서 파생. 잠긴 행은 목록에서 선택되지
+   * 않고 삭제 버튼도 숨긴다. 텍스트는 잠금 대상이 아니라 undefined.
+   */
+  locked?: boolean;
 }
 
 interface GetPlacedObjectItemsParams {
@@ -38,6 +43,8 @@ export function getPlacedObjectItems({
     displayName: humanizeModelPath(map.path),
     subtitle: mapObjectLabel,
     type: 'map',
+    // 지도는 필드 없음 = 잠김(SavedMapInfo.locked 주석 참고).
+    locked: map.locked !== false,
   }));
 
   const modelItems: PlacedObjectItem[] = placedModels.map((model) => ({
@@ -45,6 +52,7 @@ export function getPlacedObjectItems({
     displayName: model.equipName.trim() || model.id,
     subtitle: humanizeModelPath(model.path),
     type: 'model',
+    locked: model.locked === true,
   }));
 
   const textItems: PlacedObjectItem[] = placedTexts.map((text) => ({

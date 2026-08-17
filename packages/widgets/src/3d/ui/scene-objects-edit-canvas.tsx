@@ -41,7 +41,6 @@ import {
   SceneLighting,
   SceneObjectBoundary,
   useIsObjectSelected,
-  useMapEditLockStore,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -279,17 +278,25 @@ export function SceneObjectsEditCanvas({
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
   const lastPointerEventRef = useRef<PointerEvent | MouseEvent | null>(null);
 
-  // 잠금은 씬 데이터가 아니라 에디터 세션 상태다(useMapEditLockStore).
-  // 잠금 해제된 지도만 선택/변형 대상이다. 대부분의 씬에서 빈 배열이라
-  // 아래 경로들(transform target 탐색, 마퀴 제외)이 사실상 무비용이다.
-  const unlockedMapIds = useMapEditLockStore((s) => s.unlockedIds);
+  // 잠금은 씬 데이터다(SavedModelInfo/SavedMapInfo.locked). 잠금 해제된
+  // 지도만 선택/변형 대상이다. 대부분의 씬에서 빈 배열이라 아래 경로들
+  // (transform target 탐색, 마퀴 제외)이 사실상 무비용이다.
   const unlockedMaps = useMemo(
-    () => (sceneInfo?.maps ?? []).filter((m) => unlockedMapIds.has(m.id)),
-    [sceneInfo?.maps, unlockedMapIds],
-  );
-  const mapIdSet = useMemo(
-    () => new Set((sceneInfo?.maps ?? []).map((m) => m.id)),
+    () => (sceneInfo?.maps ?? []).filter((m) => m.locked === false),
     [sceneInfo?.maps],
+  );
+  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다
+  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델도 선택 불가 규칙에
+  // 따라 제외한다.
+  const marqueeExcludedIds = useMemo(
+    () =>
+      new Set([
+        ...(sceneInfo?.maps ?? []).map((m) => m.id),
+        ...(sceneInfo?.models ?? [])
+          .filter((m) => m.locked)
+          .map((m) => m.id),
+      ]),
+    [sceneInfo?.maps, sceneInfo?.models],
   );
 
   const {
@@ -453,7 +460,7 @@ export function SceneObjectsEditCanvas({
     isTransformDragging,
     dragJustEndedRef,
     isDraggingExternalItem: !!draggingModelCatalogItem,
-    excludedIds: mapIdSet,
+    excludedIds: marqueeExcludedIds,
     selectAll,
     clearSelectedModel,
   });
@@ -762,7 +769,7 @@ export function SceneObjectsEditCanvas({
               scale={m.scale}
               enableRaycastBvh={false}
               onSelect={
-                unlockedMapIds.has(m.id) ? handleSelectMap : handleClearSelection
+                m.locked === false ? handleSelectMap : handleClearSelection
               }
               onObjectReady={handleModelObjectReady}
             />
@@ -784,8 +791,15 @@ export function SceneObjectsEditCanvas({
               rotation={model.rotation}
               scale={model.scale}
               meshOverrides={model.meshOverrides}
-              onSelect={handleSelectModel}
-              onDoubleSelect={handleDoubleSelectModel}
+              // 잠긴 모델은 클릭이 선택 해제로 떨어진다 — 지도 잠금과 같은
+              // 규칙. 핸들러만 갈아끼우고 컴포넌트는 유지해 GLB 리마운트를
+              // 피한다(위 지도 주석 참고).
+              onSelect={
+                model.locked ? handleClearSelection : handleSelectModel
+              }
+              onDoubleSelect={
+                model.locked ? undefined : handleDoubleSelectModel
+              }
               onObjectReady={handleModelObjectReady}
             />
           </SceneObjectBoundary>
