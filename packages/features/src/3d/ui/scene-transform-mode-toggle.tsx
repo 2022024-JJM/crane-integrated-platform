@@ -1,4 +1,4 @@
-import { Move3d, RotateCw, Scale3d } from 'lucide-react';
+import { Move3d, Rotate3d, Scale3d } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
@@ -23,7 +23,7 @@ interface SceneTransformModeToggleProps {
 const TRANSFORM_MODES: SceneTransformMode[] = ['translate', 'rotate', 'scale'];
 const TRANSFORM_MODE_ICON = {
   translate: Move3d,
-  rotate: RotateCw,
+  rotate: Rotate3d,
   scale: Scale3d,
 } as const;
 
