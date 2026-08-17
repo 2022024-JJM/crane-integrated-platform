@@ -15,10 +15,12 @@ import {
 import {
   AlertCircle,
   CheckCircle2,
+  Download,
   Eye,
   EyeOff,
   HardDrive,
   Loader2,
+  Save,
   Search,
   Type,
 } from 'lucide-react';
@@ -94,7 +96,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const {
     sceneInfo,
     selectedIds,
-    selectedModelLabel,
     selectedModel,
     isSaving,
     isDirty,
@@ -337,7 +338,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
       {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
-      <aside className="flex w-[17rem] shrink-0 flex-col py-3 pl-3">
+      <aside className="border-border bg-card text-card-foreground flex w-[17rem] shrink-0 flex-col border-r">
         <ProjectPalettePanel
           items={sceneModelCatalog}
           currentMap={sceneInfo?.maps?.[0] ?? null}
@@ -510,14 +511,54 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                     </Tooltip>
                   </TooltipProvider>
                   <span className="bg-border h-4 w-px" />
-                  <span className="max-w-36 truncate text-xs font-medium">
-                    {selectedIds.size > 1
-                      ? t('monitoring:editor.multipleSelected', {
-                          count: selectedIds.size,
-                        })
-                      : selectedModelLabel ||
-                        t('monitoring:editor.noSelection')}
-                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={t('monitoring:editor.save')}
+                            disabled={saveDisabled || isSaving}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={() => void saveCurrentScene()}
+                      >
+                        {isSaving ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                      </TooltipTrigger>
+                      {/* 단축키를 툴팁에 노출한다 — 버튼만 있으면 Ctrl+S가
+                          있는지 알 길이 없어 브라우저 저장 대화상자를 먼저
+                          만나게 된다. */}
+                      <TooltipContent>
+                        {t('monitoring:editor.save')} (Ctrl+S)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="bg-border h-4 w-px" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={t('monitoring:editor.exportJson')}
+                            disabled={saveDisabled}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={() => downloadSceneInfo(regionId, sceneInfo)}
+                      >
+                        <Download className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('monitoring:editor.exportJson')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               }
             />
@@ -534,12 +575,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       </div>
 
       {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
-      <aside className="flex w-[20rem] shrink-0 flex-col gap-2 py-3 pr-3">
-        <div className="min-h-0 flex-[1]">
+      <aside className="border-border bg-card text-card-foreground flex w-[20rem] shrink-0 flex-col border-l">
+        <div className="flex min-h-0 flex-[1] flex-col">
           <HierarchyPanel
             sceneInfo={sceneInfo}
             selectedIds={selectedIds}
-            isSaving={isSaving}
             onSelectPlacedModel={selectPlacedModel}
             onDeletePlacedModel={deletePlacedModel}
             onSelectPlacedText={selectPlacedText}
@@ -548,12 +588,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             onTogglePlacedText={toggleText}
             onSelectPlacedMap={selectPlacedMap}
             onToggleLock={setObjectLocked}
-            onSave={() => void saveCurrentScene()}
-            onExport={() => downloadSceneInfo(regionId, sceneInfo)}
           />
         </div>
-        <div className="min-h-0 flex-[2]">
+        <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
           <SceneObjectInspector
+            className="rounded-none bg-transparent ring-0"
             selectedModel={selectedModel}
             selectedText={selectedText}
             selectedMesh={selectedMesh}
@@ -583,13 +622,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 }
 
 /**
- * 우측 상단 Hierarchy 패널 — 저장/내보내기 헤더 + 배치된 객체 목록.
- * 모델 팔레트는 좌측 도킹 패널(ProjectPalettePanel)이 담당한다.
+ * 우측 상단 Hierarchy 패널 — 검색 헤더 + 배치된 객체 목록.
+ * 모델 팔레트는 좌측 도킹 패널(ProjectPalettePanel)이, 저장/내보내기는
+ * 중앙 상단 툴바가 담당한다.
  */
 function HierarchyPanel({
   sceneInfo,
   selectedIds,
-  isSaving,
   onSelectPlacedModel,
   onDeletePlacedModel,
   onSelectPlacedText,
@@ -598,12 +637,9 @@ function HierarchyPanel({
   onTogglePlacedText,
   onSelectPlacedMap,
   onToggleLock,
-  onSave,
-  onExport,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
-  isSaving: boolean;
   onSelectPlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
   onSelectPlacedModel: (id: string) => void;
@@ -612,8 +648,6 @@ function HierarchyPanel({
   onDeletePlacedText: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
-  onSave: () => void;
-  onExport: () => void;
 }) {
   const { t } = useTranslation();
   const [objectSearch, setObjectSearch] = useState('');
@@ -630,16 +664,11 @@ function HierarchyPanel({
   }, [objectSearch, sceneInfo, t]);
 
   return (
-    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <PaletteHeader
         objectSearch={objectSearch}
         onObjectSearchChange={setObjectSearch}
         placedObjectCount={placedObjectCount}
-        onSave={onSave}
-        onExport={onExport}
-        saveDisabled={!sceneInfo}
-        exportDisabled={!sceneInfo}
-        isSaving={isSaving}
       />
       <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
@@ -741,7 +770,7 @@ function ProjectPalettePanel({
   }, [activeCategory, items]);
 
   return (
-    <div className="border-border bg-card text-card-foreground flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) */}
       <div className="border-border flex shrink-0 items-center border-b pt-1">
         {PANEL_TABS.map((tab) => {

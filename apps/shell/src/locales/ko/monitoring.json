@@ -69,7 +69,6 @@
     "nameEmptyError": "이름을 입력해 주세요.",
     "keyboardShortcuts": "키보드 단축키",
     "deleteSelected": "선택 객체 삭제",
-    "noSelection": "선택 없음",
     "snapActive": "Snap 1.0",
     "hideLabels": "라벨 숨기기",
     "showLabels": "라벨 표시",

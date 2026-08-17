@@ -19,6 +19,7 @@ import {
   type ValueMapType,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import { cn } from '@crane/core/lib/utils';
 import {
   type AxisKey,
   PositionController,
@@ -74,7 +75,14 @@ interface SceneObjectInspectorProps {
     value: number,
   ) => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  onValueMapChange?: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
+  /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
+  className?: string;
 }
 
 interface InspectorSectionProps {
@@ -132,9 +140,15 @@ const VALUE_MAP_GROUPS: { label: string; types: ValueMapType[] }[] = [
 ];
 
 const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
-  PX: 'X', PY: 'Y', PZ: 'Z',
-  RX: 'X', RY: 'Y', RZ: 'Z',
-  SX: 'X', SY: 'Y', SZ: 'Z',
+  PX: 'X',
+  PY: 'Y',
+  PZ: 'Z',
+  RX: 'X',
+  RY: 'Y',
+  RZ: 'Z',
+  SX: 'X',
+  SY: 'Y',
+  SZ: 'Z',
 };
 
 const POSITION_TYPES = new Set<ValueMapType>(['PX', 'PY', 'PZ']);
@@ -147,7 +161,12 @@ function TagMappingSection({
 }: {
   valueMapList: ValueMapItem[];
   craneId?: string;
-  onValueMapChange: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  onValueMapChange: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
   t: (key: string) => string;
 }) {
   const prefix = craneId ? `${craneId}:` : '';
@@ -164,10 +183,14 @@ function TagMappingSection({
   // offset 입력 중간 상태(소수점, 음수 부호 등)를 허용하기 위해 로컬 draft 관리
   const initialOffsetDrafts = () =>
     Object.fromEntries(
-      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [t, String(getOffset(t))]),
+      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [
+        t,
+        String(getOffset(t)),
+      ]),
     ) as Record<ValueMapType, string>;
 
-  const [offsetDrafts, setOffsetDrafts] = useState<Record<ValueMapType, string>>(initialOffsetDrafts);
+  const [offsetDrafts, setOffsetDrafts] =
+    useState<Record<ValueMapType, string>>(initialOffsetDrafts);
 
   // 외부에서 valueMapList가 바뀔 때(저장 후 로드 등) draft를 동기화
   useEffect(() => {
@@ -175,8 +198,12 @@ function TagMappingSection({
       PX: String(getOffset('PX')),
       PY: String(getOffset('PY')),
       PZ: String(getOffset('PZ')),
-      RX: '0', RY: '0', RZ: '0',
-      SX: '0', SY: '0', SZ: '0',
+      RX: '0',
+      RY: '0',
+      RZ: '0',
+      SX: '0',
+      SY: '0',
+      SZ: '0',
     });
     // valueMapList 참조가 바뀔 때만 동기화
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,7 +217,8 @@ function TagMappingSection({
     >
       {craneId ? (
         <p className="text-muted-foreground mb-2 text-[10px]">
-          크레인 ID: <span className="text-foreground font-mono">{craneId}</span>
+          크레인 ID:{' '}
+          <span className="text-foreground font-mono">{craneId}</span>
         </p>
       ) : null}
       <div className="space-y-3">
@@ -211,13 +239,20 @@ function TagMappingSection({
                       </span>
                       <Input
                         value={tagCode}
-                        placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
+                        placeholder={t(
+                          'monitoring:inspector.tagKeyPlaceholder',
+                        )}
                         className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
                         onChange={(e) => {
                           const fullKey = e.target.value.trim()
                             ? `${prefix}${e.target.value.trim()}`
                             : '';
-                          onValueMapChange(type, fullKey, getScale(type), isPosition ? getOffset(type) : undefined);
+                          onValueMapChange(
+                            type,
+                            fullKey,
+                            getScale(type),
+                            isPosition ? getOffset(type) : undefined,
+                          );
                         }}
                       />
                     </div>
@@ -236,7 +271,12 @@ function TagMappingSection({
                             onChange={(e) => {
                               const s = parseFloat(e.target.value);
                               if (Number.isFinite(s)) {
-                                onValueMapChange(type, `${prefix}${tagCode}`, s, isPosition ? getOffset(type) : undefined);
+                                onValueMapChange(
+                                  type,
+                                  `${prefix}${tagCode}`,
+                                  s,
+                                  isPosition ? getOffset(type) : undefined,
+                                );
                               }
                             }}
                           />
@@ -254,10 +294,18 @@ function TagMappingSection({
                               className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
                               onChange={(e) => {
                                 const raw = e.target.value;
-                                setOffsetDrafts((prev) => ({ ...prev, [type]: raw }));
+                                setOffsetDrafts((prev) => ({
+                                  ...prev,
+                                  [type]: raw,
+                                }));
                                 const o = parseFloat(raw);
                                 if (Number.isFinite(o)) {
-                                  onValueMapChange(type, `${prefix}${tagCode}`, getScale(type), o);
+                                  onValueMapChange(
+                                    type,
+                                    `${prefix}${tagCode}`,
+                                    getScale(type),
+                                    o,
+                                  );
                                 }
                               }}
                             />
@@ -367,7 +415,12 @@ function ModelInspectorContent({
     axis: AxisKey,
     value: number,
   ) => void;
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  onValueMapChange?: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
   t: (key: string) => string;
 }) {
   return (
@@ -694,6 +747,7 @@ export function SceneObjectInspector({
   onBackToParent,
   onValueMapChange,
   onMapTransformChange,
+  className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
   const selectedLabel = selectedModel?.equipName ?? '';
@@ -723,12 +777,19 @@ export function SceneObjectInspector({
     multiSelectCount > 1;
 
   return (
-    <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
+    <Card
+      className={cn(
+        'border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0',
+        className,
+      )}
+    >
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
         {multiSelectCount > 1 ? (
           <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
             <p className="max-w-56 text-center">
-              {t('monitoring:editor.multipleSelected', { count: multiSelectCount })}
+              {t('monitoring:editor.multipleSelected', {
+                count: multiSelectCount,
+              })}
             </p>
           </div>
         ) : selectedMesh ? (
