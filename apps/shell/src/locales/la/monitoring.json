@@ -5,6 +5,7 @@
     "title": "Inspector",
     "name": "Nomen",
     "opacity": "Opacitas",
+    "transform": "Transformatio",
     "empty": "Objectum in scaena preme ut proprietates eius videas.",
     "position": "Positio",
     "rotation": "Rotatio",

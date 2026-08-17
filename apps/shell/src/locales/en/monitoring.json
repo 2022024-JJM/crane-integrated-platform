@@ -5,6 +5,7 @@
     "title": "Inspector",
     "name": "Name",
     "opacity": "Opacity",
+    "transform": "Transform",
     "empty": "Click an object in the scene to inspect its properties.",
     "position": "Position",
     "rotation": "Rotation",

@@ -1,10 +1,10 @@
 import {
-  ChevronDown,
-  Cuboid,
   Eye,
   Palette,
+  SlidersHorizontal,
   Tag,
   Type,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,12 +29,61 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
 
 // 지도 transform은 optional이라(기존 저장본 호환) 표시용 기본값이 필요하다.
 // 렌더러가 쓰는 GltfModel 기본값과 같은 값이어야 인스펙터 수치와 화면이 일치한다.
 const DEFAULT_MAP_POSITION: Vector3Tuple = [0, 0, 0];
 const DEFAULT_MAP_ROTATION: Vector3Tuple = [0, 0, 0];
 const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
+
+type InspectorTabKey =
+  | 'transform'
+  | 'opacity'
+  | 'tagMapping'
+  | 'textContent'
+  | 'textColor';
+
+type InspectorObjectType = 'model' | 'mesh' | 'text' | 'map';
+
+const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
+  transform: SlidersHorizontal,
+  opacity: Eye,
+  tagMapping: Tag,
+  textContent: Type,
+  textColor: Palette,
+};
+
+const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
+  transform: 'monitoring:inspector.transform',
+  opacity: 'monitoring:inspector.opacity',
+  tagMapping: 'monitoring:inspector.tagMapping',
+  textContent: 'monitoring:inspector.textContent',
+  textColor: 'monitoring:inspector.textColor',
+};
+
+const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
+  model: ['transform', 'opacity', 'tagMapping'],
+  mesh: ['transform', 'opacity'],
+  text: ['textContent', 'textColor', 'transform'],
+  map: ['transform'],
+};
+
+function getTabsForType(
+  type: InspectorObjectType,
+  hasValueMap: boolean,
+): readonly InspectorTabKey[] {
+  const tabs = TABS_BY_TYPE[type];
+  // 태그 매핑은 onValueMapChange가 배선된 화면에서만 존재하는 섹션이다.
+  return type === 'model' && !hasValueMap
+    ? tabs.filter((tab) => tab !== 'tagMapping')
+    : tabs;
+}
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
@@ -80,38 +129,20 @@ interface SceneObjectInspectorProps {
   className?: string;
 }
 
-interface InspectorSectionProps {
-  title: string;
-  icon: ReactNode;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}
-
 interface TransformGroupProps {
   title: string;
   children: ReactNode;
 }
 
-function InspectorSection({
-  title,
-  icon,
-  defaultOpen = true,
-  children,
-}: InspectorSectionProps) {
+/**
+ * 탭 콘텐츠 상단의 얇은 섹션 헤더 — 접기 없음(섹션 전환은 좌측 레일 담당).
+ * 아이콘은 레일에 이미 표시되므로 여기서는 타이틀만 둔다.
+ */
+function SectionHeader({ title }: { title: string }) {
   return (
-    <details
-      open={defaultOpen}
-      className="group border-border bg-card rounded-lg border"
-    >
-      <summary className="text-foreground flex cursor-pointer list-none items-center justify-between px-2.5 py-2 text-[12px] font-medium">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">{icon}</span>
-          <span>{title}</span>
-        </div>
-        <ChevronDown className="text-muted-foreground/60 size-3.5 transition group-open:rotate-180" />
-      </summary>
-      <div className="border-border border-t px-2.5 py-2.5">{children}</div>
-    </details>
+    <div className="text-foreground px-0.5 pb-1.5 text-[12px] font-medium">
+      {title}
+    </div>
   );
 }
 
@@ -205,11 +236,8 @@ function TagMappingSection({
   }, [valueMapList]);
 
   return (
-    <InspectorSection
-      title={t('monitoring:inspector.tagMapping')}
-      icon={<Tag className="size-4" />}
-      defaultOpen={false}
-    >
+    <div>
+      <SectionHeader title={t('monitoring:inspector.tagMapping')} />
       {craneId ? (
         <p className="text-muted-foreground mb-2 text-[10px]">
           크레인 ID:{' '}
@@ -315,7 +343,7 @@ function TagMappingSection({
           </div>
         ))}
       </div>
-    </InspectorSection>
+    </div>
   );
 }
 
@@ -352,10 +380,8 @@ function TransformSection({
   const displayScale = isActive && liveScale ? liveScale : scale;
 
   return (
-    <InspectorSection
-      title={t('monitoring:transform.title')}
-      icon={<Cuboid className="size-4" />}
-    >
+    <div>
+      <SectionHeader title={t('monitoring:inspector.transform')} />
       <div className="space-y-2.5">
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
@@ -382,13 +408,46 @@ function TransformSection({
           />
         </TransformGroup>
       </div>
-    </InspectorSection>
+    </div>
+  );
+}
+
+function OpacitySection({
+  value,
+  onChange,
+  t,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div>
+      <SectionHeader title={t('monitoring:inspector.opacity')} />
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={0.1}
+          max={1}
+          step={0.1}
+          value={value}
+          className="accent-primary h-2 w-full cursor-pointer"
+          onChange={(event) => {
+            onChange(Number(event.target.value));
+          }}
+        />
+        <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
+          {value.toFixed(1)}
+        </span>
+      </div>
+    </div>
   );
 }
 
 function ModelInspectorContent({
   selectedModel,
   selectedOpacity,
+  activeTab,
   onOpacityChange,
   onTransformChange,
   onValueMapChange,
@@ -396,6 +455,7 @@ function ModelInspectorContent({
 }: {
   selectedModel: SavedModelInfo;
   selectedOpacity: number;
+  activeTab: InspectorTabKey;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
@@ -412,37 +472,25 @@ function ModelInspectorContent({
 }) {
   return (
     <>
-      <TransformSection
-        position={selectedModel.position}
-        rotation={selectedModel.rotation}
-        scale={selectedModel.scale}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={selectedModel.position}
+          rotation={selectedModel.rotation}
+          scale={selectedModel.scale}
+          onTransformChange={onTransformChange}
+          t={t}
+        />
+      ) : null}
 
-      <InspectorSection
-        title={t('monitoring:inspector.opacity')}
-        icon={<Eye className="size-4" />}
-      >
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.1}
-            value={selectedOpacity}
-            className="accent-primary h-2 w-full cursor-pointer"
-            onChange={(event) => {
-              onOpacityChange(Number(event.target.value));
-            }}
-          />
-          <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
-            {selectedOpacity.toFixed(1)}
-          </span>
-        </div>
-      </InspectorSection>
+      {activeTab === 'opacity' ? (
+        <OpacitySection
+          value={selectedOpacity}
+          onChange={onOpacityChange}
+          t={t}
+        />
+      ) : null}
 
-      {onValueMapChange ? (
+      {activeTab === 'tagMapping' && onValueMapChange ? (
         <TagMappingSection
           valueMapList={selectedModel.valueMapList}
           craneId={selectedModel.craneId}
@@ -456,12 +504,14 @@ function ModelInspectorContent({
 
 function MeshInspectorContent({
   selectedMesh,
+  activeTab,
   onMeshOpacityChange,
   onMeshTransformChange,
   onBackToParent,
   t,
 }: {
   selectedMesh: SelectedMeshInfo;
+  activeTab: InspectorTabKey;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
@@ -495,6 +545,7 @@ function MeshInspectorContent({
 
   return (
     <>
+      {/* 부모 복귀 버튼은 탭과 무관한 내비게이션이라 항상 상단에 둔다. */}
       <button
         type="button"
         onClick={onBackToParent}
@@ -504,35 +555,19 @@ function MeshInspectorContent({
         {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
       </button>
 
-      <TransformSection
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        onTransformChange={onMeshTransformChange}
-        t={t}
-      />
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={position}
+          rotation={rotation}
+          scale={scale}
+          onTransformChange={onMeshTransformChange}
+          t={t}
+        />
+      ) : null}
 
-      <InspectorSection
-        title={t('monitoring:inspector.opacity')}
-        icon={<Eye className="size-4" />}
-      >
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.1}
-            value={opacity}
-            className="accent-primary h-2 w-full cursor-pointer"
-            onChange={(event) => {
-              onMeshOpacityChange(Number(event.target.value));
-            }}
-          />
-          <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
-            {opacity.toFixed(1)}
-          </span>
-        </div>
-      </InspectorSection>
+      {activeTab === 'opacity' ? (
+        <OpacitySection value={opacity} onChange={onMeshOpacityChange} t={t} />
+      ) : null}
     </>
   );
 }
@@ -540,6 +575,7 @@ function MeshInspectorContent({
 function TextInspectorContent({
   selectedText,
   contentDraft,
+  activeTab,
   setContentDraft,
   onTextContentChange,
   onTextColorChange,
@@ -548,6 +584,7 @@ function TextInspectorContent({
 }: {
   selectedText: SavedTextInfo;
   contentDraft: string;
+  activeTab: InspectorTabKey;
   setContentDraft: (v: string) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
@@ -560,54 +597,56 @@ function TextInspectorContent({
 }) {
   return (
     <>
-      <InspectorSection
-        title={t('monitoring:inspector.textContent')}
-        icon={<Type className="size-4" />}
-      >
-        <Input
-          value={contentDraft}
-          aria-label={t('monitoring:inspector.textContent')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setContentDraft(nextValue);
-            onTextContentChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setContentDraft(selectedText.content);
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      </InspectorSection>
-
-      <InspectorSection
-        title={t('monitoring:inspector.textColor')}
-        icon={<Palette className="size-4" />}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={selectedText.color}
-            className="border-border h-8 w-10 cursor-pointer rounded-sm border bg-transparent"
+      {activeTab === 'textContent' ? (
+        <div>
+          <SectionHeader title={t('monitoring:inspector.textContent')} />
+          <Input
+            value={contentDraft}
+            aria-label={t('monitoring:inspector.textContent')}
+            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
             onChange={(event) => {
-              onTextColorChange(event.target.value);
+              const nextValue = event.target.value;
+              setContentDraft(nextValue);
+              onTextContentChange(nextValue);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setContentDraft(selectedText.content);
+                event.currentTarget.blur();
+              }
             }}
           />
-          <span className="text-muted-foreground text-[12px]">
-            {selectedText.color}
-          </span>
         </div>
-      </InspectorSection>
+      ) : null}
 
-      <TransformSection
-        position={selectedText.position}
-        rotation={selectedText.rotation}
-        scale={selectedText.scale}
-        onTransformChange={onTextTransformChange}
-        t={t}
-      />
+      {activeTab === 'textColor' ? (
+        <div>
+          <SectionHeader title={t('monitoring:inspector.textColor')} />
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={selectedText.color}
+              className="border-border h-8 w-10 cursor-pointer rounded-sm border bg-transparent"
+              onChange={(event) => {
+                onTextColorChange(event.target.value);
+              }}
+            />
+            <span className="text-muted-foreground text-[12px]">
+              {selectedText.color}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={selectedText.position}
+          rotation={selectedText.rotation}
+          scale={selectedText.scale}
+          onTransformChange={onTextTransformChange}
+          t={t}
+        />
+      ) : null}
     </>
   );
 }
@@ -640,15 +679,61 @@ function MapInspectorContent({
   t: (key: string) => string;
 }) {
   return (
-    <>
-      <TransformSection
-        position={selectedMap.position ?? DEFAULT_MAP_POSITION}
-        rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
-        scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
-    </>
+    <TransformSection
+      position={selectedMap.position ?? DEFAULT_MAP_POSITION}
+      rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
+      scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
+      onTransformChange={onTransformChange}
+      t={t}
+    />
+  );
+}
+
+/** 좌측 세로 아이콘 레일 — 선택 타입의 섹션 탭을 나열한다. */
+function InspectorTabRail({
+  tabs,
+  active,
+  onSelect,
+  t,
+}: {
+  tabs: readonly InspectorTabKey[];
+  active: InspectorTabKey;
+  onSelect: (tab: InspectorTabKey) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <TooltipProvider>
+      <div className="border-border flex w-9 shrink-0 flex-col items-center gap-1 border-r py-2">
+        {tabs.map((tab) => {
+          const Icon = TAB_ICON[tab];
+          const label = t(TAB_LABEL_KEY[tab]);
+          const isActive = tab === active;
+          return (
+            <Tooltip key={tab}>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={isActive}
+                    onClick={() => onSelect(tab)}
+                    className={cn(
+                      'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+                      isActive
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  />
+                }
+              >
+                <Icon className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -673,17 +758,37 @@ export function SceneObjectInspector({
   const { t } = useTranslation();
   const selectedOpacity = selectedModel?.opacity ?? 1;
   const [contentDraft, setContentDraft] = useState(selectedText?.content ?? '');
+  const [activeTab, setActiveTab] = useState<InspectorTabKey>('transform');
 
   useEffect(() => {
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  const hasSelection =
-    selectedModel ||
-    selectedText ||
-    selectedMesh ||
-    selectedMap ||
-    multiSelectCount > 1;
+  // 기존 분기 순서(multi > mesh > model > text > map)와 동일하게 타입 판별.
+  const selectedType: InspectorObjectType | null =
+    multiSelectCount > 1
+      ? null
+      : selectedMesh
+        ? 'mesh'
+        : selectedModel
+          ? 'model'
+          : selectedText
+            ? 'text'
+            : selectedMap
+              ? 'map'
+              : null;
+
+  const tabs = selectedType
+    ? getTabsForType(selectedType, Boolean(onValueMapChange))
+    : [];
+  // 타입 전환 시 같은 섹션이 있으면 유지, 없으면 첫 탭 — effect 대신 렌더 시
+  // 파생 보정이라 stale 탭이 한 프레임도 렌더되지 않는다. activeTab은 사용자의
+  // 마지막 명시적 선택으로 남아, 탭이 없는 타입을 거쳐 돌아와도 복원된다.
+  const resolvedTab = tabs.includes(activeTab)
+    ? activeTab
+    : (tabs[0] ?? 'transform');
+
+  const hasSelection = selectedType !== null || multiSelectCount > 1;
 
   return (
     <Card
@@ -692,56 +797,69 @@ export function SceneObjectInspector({
         className,
       )}
     >
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
-        {multiSelectCount > 1 ? (
-          <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
-            <p className="max-w-56 text-center">
-              {t('monitoring:editor.multipleSelected', {
-                count: multiSelectCount,
-              })}
-            </p>
-          </div>
-        ) : selectedMesh ? (
-          <MeshInspectorContent
-            selectedMesh={selectedMesh}
-            onMeshOpacityChange={onMeshOpacityChange}
-            onMeshTransformChange={onMeshTransformChange}
-            onBackToParent={onBackToParent}
-            t={t}
-          />
-        ) : selectedModel ? (
-          <ModelInspectorContent
-            selectedModel={selectedModel}
-            selectedOpacity={selectedOpacity}
-            onOpacityChange={onOpacityChange}
-            onTransformChange={onTransformChange}
-            onValueMapChange={onValueMapChange}
-            t={t}
-          />
-        ) : selectedText ? (
-          <TextInspectorContent
-            selectedText={selectedText}
-            contentDraft={contentDraft}
-            setContentDraft={setContentDraft}
-            onTextContentChange={onTextContentChange}
-            onTextColorChange={onTextColorChange}
-            onTextTransformChange={onTextTransformChange}
-            t={t}
-          />
-        ) : selectedMap ? (
-          <MapInspectorContent
-            selectedMap={selectedMap}
-            onTransformChange={onMapTransformChange ?? onTransformChange}
+      <CardContent className="flex min-h-0 flex-1 flex-row gap-0 overflow-hidden p-0">
+        {selectedType ? (
+          <InspectorTabRail
+            tabs={tabs}
+            active={resolvedTab}
+            onSelect={setActiveTab}
             t={t}
           />
         ) : null}
-        {!hasSelection ? (
-          <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
-            <p className="max-w-56 text-center">
-              {t('monitoring:inspector.empty')}
-            </p>
-          </div>
-        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
+          {multiSelectCount > 1 ? (
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center">
+                {t('monitoring:editor.multipleSelected', {
+                  count: multiSelectCount,
+                })}
+              </p>
+            </div>
+          ) : selectedMesh ? (
+            <MeshInspectorContent
+              selectedMesh={selectedMesh}
+              activeTab={resolvedTab}
+              onMeshOpacityChange={onMeshOpacityChange}
+              onMeshTransformChange={onMeshTransformChange}
+              onBackToParent={onBackToParent}
+              t={t}
+            />
+          ) : selectedModel ? (
+            <ModelInspectorContent
+              selectedModel={selectedModel}
+              selectedOpacity={selectedOpacity}
+              activeTab={resolvedTab}
+              onOpacityChange={onOpacityChange}
+              onTransformChange={onTransformChange}
+              onValueMapChange={onValueMapChange}
+              t={t}
+            />
+          ) : selectedText ? (
+            <TextInspectorContent
+              selectedText={selectedText}
+              contentDraft={contentDraft}
+              activeTab={resolvedTab}
+              setContentDraft={setContentDraft}
+              onTextContentChange={onTextContentChange}
+              onTextColorChange={onTextColorChange}
+              onTextTransformChange={onTextTransformChange}
+              t={t}
+            />
+          ) : selectedMap ? (
+            <MapInspectorContent
+              selectedMap={selectedMap}
+              onTransformChange={onMapTransformChange ?? onTransformChange}
+              t={t}
+            />
+          ) : null}
+          {!hasSelection ? (
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center">
+                {t('monitoring:inspector.empty')}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
