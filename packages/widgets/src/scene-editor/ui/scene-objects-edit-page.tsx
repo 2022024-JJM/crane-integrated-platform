@@ -912,38 +912,33 @@ function BottomProjectPanel({
           className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
         />
       ) : null}
-      {/* 패널 헤더 — 타이틀 + 탭(모델/맵/배경) + 접기 버튼 */}
+      {/* 탭 헤더 — 모델/맵/배경 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="text-foreground px-4 py-2 text-[11px] font-medium">
-            {t('monitoring:palette.title')}
-          </div>
-          <div className="border-border bg-muted/40 flex items-center gap-0.5 rounded-md border p-0.5">
-            {PANEL_TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => {
-                    setActiveTab(tab);
-                    // 접힌 채 탭만 바뀌면 아무 일도 안 일어난 것처럼
-                    // 보인다 — 탭 클릭은 곧 그 내용을 보겠다는 뜻이다.
-                    setIsCollapsed(false);
-                  }}
-                  className={cn(
-                    'cursor-pointer rounded-[5px] px-2.5 py-1 text-[11px] font-medium transition',
-                    isActive
-                      ? 'bg-primary/12 text-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {t(PANEL_TAB_LABEL_KEY[tab])}
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex items-center gap-0">
+          {PANEL_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => {
+                  setActiveTab(tab);
+                  // 접힌 채 탭만 바뀌면 아무 일도 안 일어난 것처럼
+                  // 보인다 — 탭 클릭은 곧 그 내용을 보겠다는 뜻이다.
+                  setIsCollapsed(false);
+                }}
+                className={cn(
+                  'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+                  isActive
+                    ? 'border-primary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground border-transparent',
+                )}
+              >
+                {t(PANEL_TAB_LABEL_KEY[tab])}
+              </button>
+            );
+          })}
         </div>
         <button
           type="button"
@@ -1031,9 +1026,6 @@ function BottomProjectPanel({
               <div className="flex min-h-0 flex-col overflow-hidden pl-3">
                 <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b pb-2">
                   <div className="min-w-0">
-                    <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                      {t('monitoring:palette.title')}
-                    </p>
                     <p className="text-foreground truncate text-[12px] font-medium">
                       {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
                     </p>

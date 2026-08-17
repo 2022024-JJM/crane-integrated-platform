@@ -33,7 +33,6 @@
     "model": "Exemplar"
   },
   "palette": {
-    "title": "Tabula Modellorum",
     "description": "Exemplar GLB trahe et in scaenam pone.",
     "dragging": "Trahitur",
     "dragToPlace": "Trahe ad ponendum",

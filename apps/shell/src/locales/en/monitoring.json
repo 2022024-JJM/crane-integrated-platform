@@ -42,7 +42,6 @@
     "model": "Model"
   },
   "palette": {
-    "title": "Model Palette",
     "description": "Drag GLB models into the scene.",
     "dragging": "Dragging",
     "dragToPlace": "Drag to place",

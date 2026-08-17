@@ -42,7 +42,6 @@
     "model": "모델"
   },
   "palette": {
-    "title": "모델 팔레트",
     "description": "GLB 모델을 드래그해서 씬에 배치하세요.",
     "dragging": "드래그 중",
     "dragToPlace": "드래그해서 배치",
