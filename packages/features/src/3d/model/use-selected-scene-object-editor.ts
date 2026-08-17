@@ -91,8 +91,7 @@ interface UseSelectedSceneObjectEditorResult {
     options?: { recordHistory?: boolean },
   ) => void;
   updateSelectedMeshOpacity: (value: number) => void;
-  updateSelectedMeshName: (name: string) => void;
-  updateSelectedName: (name: string) => void;
+  renameObject: (id: string, name: string) => void;
   updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
@@ -284,25 +283,46 @@ export function useSelectedSceneObjectEditor({
     };
   }, [selectedObjectType, selectedModelId, sceneInfo]);
 
-  const updateSelectedName = (name: string) => {
+  /**
+   * id 기반 이름 변경 — 모델은 equipName, 텍스트는 content(내용이 곧
+   * 표시 이름), 지도는 name(없으면 경로 파생 이름으로 표시)을 바꾼다.
+   * 빈 이름은 무시한다.
+   */
+  const renameObject = (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+
     updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
+      if (!prev) {
         return prev;
       }
-
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
-
-          return {
-            ...model,
-            equipName: name,
-          };
-        }),
-      };
+      if (prev.models.some((model) => model.id === id)) {
+        return {
+          ...prev,
+          models: prev.models.map((model) =>
+            model.id === id ? { ...model, equipName: trimmed } : model,
+          ),
+        };
+      }
+      if ((prev.texts ?? []).some((text) => text.id === id)) {
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).map((text) =>
+            text.id === id ? { ...text, content: trimmed } : text,
+          ),
+        };
+      }
+      if ((prev.maps ?? []).some((map) => map.id === id)) {
+        return {
+          ...prev,
+          maps: (prev.maps ?? []).map((map) =>
+            map.id === id ? { ...map, name: trimmed } : map,
+          ),
+        };
+      }
+      return prev;
     });
   };
 
@@ -458,20 +478,6 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.map((m) =>
           m.id === modelId ? upsertMeshOverride(m, meshPath, { opacity }) : m,
-        ),
-      };
-    });
-  };
-
-  const updateSelectedMeshName = (name: string) => {
-    if (!selectedMesh) return;
-    const { modelId, meshPath } = selectedMesh;
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((m) =>
-          m.id === modelId ? upsertMeshOverride(m, meshPath, { name }) : m,
         ),
       };
     });
@@ -779,7 +785,7 @@ export function useSelectedSceneObjectEditor({
     selectedModel,
     selectedText,
     selectedMesh,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -787,7 +793,6 @@ export function useSelectedSceneObjectEditor({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,

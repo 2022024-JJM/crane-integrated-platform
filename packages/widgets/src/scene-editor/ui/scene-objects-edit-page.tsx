@@ -113,7 +113,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     redo,
     setTransformMode,
     saveCurrentScene,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -127,7 +127,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedValueMap,
     selectedObjectType,
     removeSelectedModel,
@@ -624,6 +623,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onTogglePlacedText={toggleText}
               onSelectPlacedMap={selectPlacedMap}
               onToggleLock={setObjectLocked}
+              onRenameObject={renameObject}
             />
           </div>
           <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
@@ -634,13 +634,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               selectedMesh={selectedMesh}
               selectedMap={selectedMap}
               multiSelectCount={selectedIds.size}
-              onNameChange={updateSelectedName}
               onOpacityChange={updateSelectedOpacity}
               onTransformChange={updateSelectedTransform}
               onTextContentChange={updateSelectedTextContent}
               onTextColorChange={updateSelectedTextColor}
               onTextTransformChange={updateSelectedTextTransform}
-              onMeshNameChange={updateSelectedMeshName}
               onMeshOpacityChange={updateSelectedMeshOpacity}
               onMeshTransformChange={updateSelectedMeshTransform}
               onValueMapChange={updateSelectedValueMap}
@@ -674,12 +672,14 @@ function HierarchyPanel({
   onTogglePlacedText,
   onSelectPlacedMap,
   onToggleLock,
+  onRenameObject,
   onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
   onSelectPlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
+  onRenameObject: (id: string, name: string) => void;
   onCollapse: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
@@ -712,6 +712,7 @@ function HierarchyPanel({
           onTogglePlacedText={onTogglePlacedText}
           onSelectPlacedMap={onSelectPlacedMap}
           onToggleLock={onToggleLock}
+          onRenameObject={onRenameObject}
         />
       </div>
     </div>

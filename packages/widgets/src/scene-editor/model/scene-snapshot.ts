@@ -55,6 +55,7 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
+    if (a[i].name !== b[i].name) return false;
     // 잠금은 씬 데이터다 — 토글이 dirty/undo에 잡혀야 저장된다.
     // 지도는 필드 없음 = 잠김(types.ts 주석 참고).
     if ((a[i].locked !== false) !== (b[i].locked !== false)) return false;

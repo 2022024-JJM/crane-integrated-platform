@@ -2,16 +2,13 @@ import {
   ChevronDown,
   Cuboid,
   Eye,
-  Map as MapIcon,
   Palette,
-  SlidersHorizontal,
   Tag,
   Type,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  humanizeModelPath,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedTextInfo,
@@ -45,7 +42,6 @@ interface SceneObjectInspectorProps {
   selectedMesh: SelectedMeshInfo | null;
   selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
-  onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
@@ -59,7 +55,6 @@ interface SceneObjectInspectorProps {
     axis: AxisKey,
     value: number,
   ) => void;
-  onMeshNameChange: (name: string) => void;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
@@ -393,22 +388,14 @@ function TransformSection({
 
 function ModelInspectorContent({
   selectedModel,
-  selectedLabel,
-  nameDraft,
-  setNameDraft,
   selectedOpacity,
-  onNameChange,
   onOpacityChange,
   onTransformChange,
   onValueMapChange,
   t,
 }: {
   selectedModel: SavedModelInfo;
-  selectedLabel: string;
-  nameDraft: string;
-  setNameDraft: (v: string) => void;
   selectedOpacity: number;
-  onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
@@ -425,28 +412,6 @@ function ModelInspectorContent({
 }) {
   return (
     <>
-      <InspectorSection
-        title={t('monitoring:inspector.name')}
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <Input
-          value={nameDraft}
-          aria-label={t('monitoring:inspector.name')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setNameDraft(nextValue);
-            onNameChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setNameDraft(selectedLabel);
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      </InspectorSection>
-
       <TransformSection
         position={selectedModel.position}
         rotation={selectedModel.rotation}
@@ -491,18 +456,12 @@ function ModelInspectorContent({
 
 function MeshInspectorContent({
   selectedMesh,
-  meshNameDraft,
-  setMeshNameDraft,
-  onMeshNameChange,
   onMeshOpacityChange,
   onMeshTransformChange,
   onBackToParent,
   t,
 }: {
   selectedMesh: SelectedMeshInfo;
-  meshNameDraft: string;
-  setMeshNameDraft: (v: string) => void;
-  onMeshNameChange: (name: string) => void;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
@@ -533,11 +492,6 @@ function MeshInspectorContent({
   const rotation = override?.rotation ?? defaultRotation;
   const scale = override?.scale ?? defaultScale;
   const opacity = override?.opacity ?? 1;
-  // 자식 mesh의 표시 이름 우선순위: override.name → mesh segment의 마지막 이름
-  // (path 의 [idx]name 마지막 부분) → meshPath 자체.
-  const lastSegment = selectedMesh.meshPath.split('/').pop() ?? '';
-  const segmentName = /^\[\d+\](.*)$/.exec(lastSegment)?.[1] ?? lastSegment;
-  const displayName = override?.name || segmentName || selectedMesh.meshPath;
 
   return (
     <>
@@ -549,28 +503,6 @@ function MeshInspectorContent({
         <ArrowLeft className="size-3.5" />
         {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
       </button>
-
-      <InspectorSection
-        title={t('monitoring:inspector.name')}
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <Input
-          value={meshNameDraft}
-          aria-label={t('monitoring:inspector.name')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setMeshNameDraft(nextValue);
-            onMeshNameChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setMeshNameDraft(displayName);
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      </InspectorSection>
 
       <TransformSection
         position={position}
@@ -681,12 +613,12 @@ function TextInspectorContent({
 }
 
 /**
- * 지도 인스펙터 — 파일명 표시 + transform.
+ * 지도 인스펙터 — transform만.
  *
- * 지도에는 모델의 이름/투명도/태그 매핑에 해당하는 개념이 없다. 파일에서
- * 온 지형이라 이름은 경로가 곧 정체이고, 투명도를 낮추면 그 위 객체의
- * 기준면이 사라져 배치 작업 자체가 불가능해진다. 그래서 편집 가능한 것은
- * 배치(transform)뿐이다.
+ * 지도에는 모델의 투명도/태그 매핑에 해당하는 개념이 없다. 투명도를
+ * 낮추면 그 위 객체의 기준면이 사라져 배치 작업 자체가 불가능해진다.
+ * 그래서 편집 가능한 것은 배치(transform)뿐이고, 이름 표시/변경은
+ * 계층 목록(우클릭 메뉴)이 담당한다.
  *
  * 잠금 토글은 여기 두지 않는다 — 이 패널은 "지도가 선택된 상태"에서만
  * 보이는데, 잠긴 지도는 애초에 선택될 수 없고 잠그는 순간 선택이 풀려
@@ -709,15 +641,6 @@ function MapInspectorContent({
 }) {
   return (
     <>
-      <InspectorSection
-        title={t('monitoring:editor.map')}
-        icon={<MapIcon className="size-4" />}
-      >
-        <p className="text-foreground truncate text-[12px] font-medium">
-          {humanizeModelPath(selectedMap.path)}
-        </p>
-      </InspectorSection>
-
       <TransformSection
         position={selectedMap.position ?? DEFAULT_MAP_POSITION}
         rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
@@ -735,13 +658,11 @@ export function SceneObjectInspector({
   selectedMesh,
   selectedMap = null,
   multiSelectCount = 0,
-  onNameChange,
   onOpacityChange,
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
   onTextTransformChange,
-  onMeshNameChange,
   onMeshOpacityChange,
   onMeshTransformChange,
   onBackToParent,
@@ -750,24 +671,12 @@ export function SceneObjectInspector({
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
-  const selectedLabel = selectedModel?.equipName ?? '';
   const selectedOpacity = selectedModel?.opacity ?? 1;
-  const [nameDraft, setNameDraft] = useState(selectedLabel);
   const [contentDraft, setContentDraft] = useState(selectedText?.content ?? '');
-  const initialMeshName = selectedMesh?.override?.name ?? '';
-  const [meshNameDraft, setMeshNameDraft] = useState(initialMeshName);
-
-  useEffect(() => {
-    setNameDraft(selectedLabel);
-  }, [selectedLabel]);
 
   useEffect(() => {
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
-
-  useEffect(() => {
-    setMeshNameDraft(initialMeshName);
-  }, [initialMeshName, selectedMesh?.meshPath]);
 
   const hasSelection =
     selectedModel ||
@@ -795,9 +704,6 @@ export function SceneObjectInspector({
         ) : selectedMesh ? (
           <MeshInspectorContent
             selectedMesh={selectedMesh}
-            meshNameDraft={meshNameDraft}
-            setMeshNameDraft={setMeshNameDraft}
-            onMeshNameChange={onMeshNameChange}
             onMeshOpacityChange={onMeshOpacityChange}
             onMeshTransformChange={onMeshTransformChange}
             onBackToParent={onBackToParent}
@@ -806,11 +712,7 @@ export function SceneObjectInspector({
         ) : selectedModel ? (
           <ModelInspectorContent
             selectedModel={selectedModel}
-            selectedLabel={selectedLabel}
-            nameDraft={nameDraft}
-            setNameDraft={setNameDraft}
             selectedOpacity={selectedOpacity}
-            onNameChange={onNameChange}
             onOpacityChange={onOpacityChange}
             onTransformChange={onTransformChange}
             onValueMapChange={onValueMapChange}

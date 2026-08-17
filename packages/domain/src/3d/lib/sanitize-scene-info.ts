@@ -89,6 +89,9 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     if (isVector3Tuple(m.position)) safeMap.position = m.position;
     if (isVector3Tuple(m.rotation)) safeMap.rotation = m.rotation;
     if (isVector3Tuple(m.scale)) safeMap.scale = m.scale;
+    if (typeof m.name === 'string' && m.name.trim().length > 0) {
+      safeMap.name = m.name;
+    }
     return safeMap;
   });
 

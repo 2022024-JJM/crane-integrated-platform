@@ -43,9 +43,9 @@ interface UseSceneEditorSessionResult {
     typeof useSceneTransformModeStore.getState
   >['setMode'];
   saveCurrentScene: () => Promise<boolean>;
-  updateSelectedName: ReturnType<
+  renameObject: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedName'];
+  >['renameObject'];
   updateSelectedOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedOpacity'];
@@ -79,9 +79,6 @@ interface UseSceneEditorSessionResult {
   updateSelectedMeshOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshOpacity'];
-  updateSelectedMeshName: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshName'];
   updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
@@ -173,7 +170,7 @@ export function useSceneEditorSession({
     selectedModel,
     selectedText,
     selectedMesh,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -181,7 +178,6 @@ export function useSceneEditorSession({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,
@@ -279,7 +275,7 @@ export function useSceneEditorSession({
     redo,
     setTransformMode,
     saveCurrentScene,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -291,7 +287,6 @@ export function useSceneEditorSession({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedValueMap,
     removeSelectedModel,
     updateMultiObjectPositions,

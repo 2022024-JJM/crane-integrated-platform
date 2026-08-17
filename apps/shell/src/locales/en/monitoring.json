@@ -68,6 +68,7 @@
     "unlockObject": "Unlock editing",
     "objectLocked": "Editing locked",
     "deleteObject": "Delete object",
+    "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",
     "keyboardShortcuts": "Keyboard shortcuts",
     "deleteSelected": "Delete selected",

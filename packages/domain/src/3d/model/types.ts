@@ -81,6 +81,11 @@ export interface SavedMapInfo {
   id: string;
   path: string;
   /**
+   * 표시 이름 — 없으면 path에서 파생한 이름(humanizeModelPath)을 쓴다.
+   * 기존 저장본은 필드가 없고, 목록에서 이름을 바꿀 때만 기록된다.
+   */
+  name?: string;
+  /**
    * 지도 배치 transform. 모두 optional — 기존 저장본(맵에 transform이 없던
    * 시절)은 필드가 없고, 그 경우 원점/무회전/등배로 렌더된다. 즉 이 필드를
    * 건드리지 않은 씬은 이전과 픽셀 단위로 동일하다.

@@ -68,6 +68,7 @@
     "unlockObject": "편집 잠금 해제",
     "objectLocked": "편집 잠김",
     "deleteObject": "객체 삭제",
+    "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
     "keyboardShortcuts": "키보드 단축키",
     "deleteSelected": "선택 객체 삭제",

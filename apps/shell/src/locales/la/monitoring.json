@@ -59,6 +59,7 @@
     "unlockObject": "Editionem resera",
     "objectLocked": "Editio obserata",
     "deleteObject": "Objectum dele",
+    "renameObject": "Nomen muta",
     "nameEmptyError": "Nomen vacuum esse non potest.",
     "keyboardShortcuts": "Compendia clavium",
     "deleteSelected": "Selectum dele",
