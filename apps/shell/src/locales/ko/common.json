@@ -80,7 +80,10 @@
     "categoryCrane": "크레인",
     "hmi": "HMI",
     "hmiDashboard": "HMI 대시보드",
-    "hmiPhillyDashboard": "Anti-Collision HMI"
+    "hmiPhillyDashboard": "Anti-Collision HMI",
+    "indoorshop": "내업 공정실적",
+    "indoorshopGathering": "데이터 게더링",
+    "indoorshopKeyin": "실적 Key-In"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",

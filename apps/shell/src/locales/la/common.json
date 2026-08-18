@@ -80,7 +80,10 @@
     "categoryCrane": "Grus",
     "hmi": "HMI",
     "hmiDashboard": "HMI Tabula",
-    "hmiPhillyDashboard": "Anti-Collision HMI"
+    "hmiPhillyDashboard": "Anti-Collision HMI",
+    "indoorshop": "Indoor Shop",
+    "indoorshopGathering": "Data Gathering",
+    "indoorshopKeyin": "Performance Key-In"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",

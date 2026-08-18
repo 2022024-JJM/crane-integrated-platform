@@ -22,6 +22,8 @@ const ACCOUNTS: Credentials[] = [
   { id: 'crane.MRO2', password: '1', role: 'mro2' },
   { id: 'crane.HMI', password: '1', role: 'hmi' },
   { id: 'crane.HMI2', password: '1', role: 'hmi2' },
+  { id: 'Indoorshop.IT', password: '1', role: 'indoorshop' },
+  { id: 'Indoorshop.Keyin', password: '1', role: 'keyin' },
 ];
 
 export const AUTH_STORAGE_KEY = 'crane-auth-user';
@@ -49,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     (id: string, password: string): UserRole | false => {
+      // ID는 앞뒤 공백·대소문자 차이를 허용한다 (비밀번호는 정확히 일치해야 함)
+      const normalized = id.trim().toLowerCase();
       const account = ACCOUNTS.find(
-        (a) => a.id === id && a.password === password,
+        (a) => a.id.toLowerCase() === normalized && a.password === password,
       );
       if (!account) return false;
       const authUser: AuthUser = { id: account.id, role: account.role };

@@ -5,7 +5,9 @@ export type UserRole =
   | 'mro'
   | 'mro2'
   | 'hmi'
-  | 'hmi2';
+  | 'hmi2'
+  | 'indoorshop'
+  | 'keyin';
 
 export interface AuthUser {
   id: string;

@@ -30,7 +30,9 @@ type AccountRole =
   | 'mro'
   | 'mro2'
   | 'hmi'
-  | 'hmi2';
+  | 'hmi2'
+  | 'indoorshop'
+  | 'keyin';
 
 const ROLE_LABEL: Record<AccountRole, string> = {
   ocean: 'Ocean',
@@ -40,6 +42,8 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   mro2: 'MRO2',
   hmi: 'HMI',
   hmi2: 'HMI2',
+  indoorshop: 'Indoorshop',
+  keyin: 'Key-In',
 };
 
 const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
@@ -50,6 +54,8 @@ const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
   mro2: 'bg-red-500/15 text-red-400',
   hmi: 'bg-cyan-500/15 text-cyan-400',
   hmi2: 'bg-cyan-500/15 text-cyan-400',
+  indoorshop: 'bg-orange-500/15 text-orange-400',
+  keyin: 'bg-orange-500/15 text-orange-400',
 };
 
 export function PageSettings() {

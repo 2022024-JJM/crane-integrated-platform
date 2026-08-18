@@ -25,6 +25,7 @@ import {
   CalendarRange,
   Cctv,
   FileText,
+  DatabaseZap,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -202,6 +203,32 @@ function getHmi2Group(): NavGroup {
   };
 }
 
+function getIndoorshopGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.indoorshop'),
+    items: [
+      {
+        label: i18n.t('common:nav.indoorshopGathering'),
+        path: '/indoorshop',
+        icon: DatabaseZap,
+      },
+    ],
+  };
+}
+
+function getKeyinGroup(): NavGroup {
+  return {
+    title: i18n.t('common:nav.indoorshop'),
+    items: [
+      {
+        label: i18n.t('common:nav.indoorshopKeyin'),
+        path: '/keyin',
+        icon: SquarePen,
+      },
+    ],
+  };
+}
+
 function getMroGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.mro'),
@@ -337,6 +364,8 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   mro2: [],
   hmi: [],
   hmi2: [],
+  indoorshop: [],
+  keyin: [],
 };
 
 export function getNavigationConfig(
@@ -362,6 +391,16 @@ export function getNavigationConfig(
   // hmi2: Philly HMI 그룹만 노출
   if (role === 'hmi2') {
     return [getHmi2Group()].filter((g) => g.items.length > 0);
+  }
+
+  // indoorshop: 내업 데이터게더링 그룹만 노출
+  if (role === 'indoorshop') {
+    return [getIndoorshopGroup()].filter((g) => g.items.length > 0);
+  }
+
+  // keyin: 내업 실적 Key-In 그룹만 노출
+  if (role === 'keyin') {
+    return [getKeyinGroup()].filter((g) => g.items.length > 0);
   }
 
   const matchedKey = Object.keys(systemGroupOverrides).find((prefix) =>
