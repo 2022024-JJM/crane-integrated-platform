@@ -21,7 +21,14 @@ interface SceneObjectSelectionState {
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMesh: (meshId: string) => void;
-  selectAll: (ids: string[]) => void;
+  /**
+   * 다중 선택 일괄 설정. 타입은 호출자가 안다 — 마퀴/Ctrl+A/복제 결과에
+   * 텍스트가 섞일 수 있어 'model'로 하드코딩하면 단일 텍스트 선택이 존재
+   * 검증(use-selected-scene-object-editor)에서 즉시 풀린다.
+   */
+  selectAll: (
+    entries: Array<{ id: string; type: SelectedObjectType }>,
+  ) => void;
   clearSelectedModel: () => void;
 }
 
@@ -110,8 +117,17 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
         return deriveCompat(next, next.size > 0 ? 'mesh' : null, primary);
       }),
 
-    selectAll: (ids) =>
-      set(deriveCompat(new Set(ids), ids.length > 0 ? 'model' : null, ids[0])),
+    // 태그는 primary(첫 항목)의 타입을 쓴다 — size 1에서 정확하면 충분하다.
+    // size>1에서는 selectedModelId가 null이라 타입 태그를 읽는 소비자가
+    // 사실상 없다(멀티 경로는 전부 id 기반).
+    selectAll: (entries) =>
+      set(
+        deriveCompat(
+          new Set(entries.map((e) => e.id)),
+          entries[0]?.type ?? null,
+          entries[0]?.id ?? null,
+        ),
+      ),
 
     clearSelectedModel: () =>
       set(deriveCompat(new Set(), null, null)),

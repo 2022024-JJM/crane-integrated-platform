@@ -450,6 +450,24 @@ export function SceneObjectsEditCanvas({
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
 
+  // 마퀴는 레지스트리의 id만 알고 타입을 모른다. 여기서 텍스트/모델을
+  // 분류해 넘겨야 단일 텍스트 선택이 'model'로 태깅돼 존재 검증에서
+  // 풀리는 일이 없다. 지도·잠금 객체는 marqueeExcludedIds로 이미 제외.
+  const textIdSet = useMemo(
+    () => new Set((sceneInfo?.texts ?? []).map((t) => t.id)),
+    [sceneInfo?.texts],
+  );
+  const selectAllClassified = useCallback(
+    (ids: string[]) =>
+      selectAll(
+        ids.map((id) => ({
+          id,
+          type: textIdSet.has(id) ? ('text' as const) : ('model' as const),
+        })),
+      ),
+    [selectAll, textIdSet],
+  );
+
   const {
     marqueeStyle,
     isMarqueeActive,
@@ -463,7 +481,7 @@ export function SceneObjectsEditCanvas({
     dragJustEndedRef,
     isDraggingExternalItem: !!draggingModelCatalogItem,
     excludedIds: marqueeExcludedIds,
-    selectAll,
+    selectAll: selectAllClassified,
     clearSelectedModel,
   });
 

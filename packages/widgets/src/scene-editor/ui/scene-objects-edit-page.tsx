@@ -278,13 +278,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         event.preventDefault();
         // 잠긴 모델·텍스트는 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
         // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
-        const allIds = [
-          ...currentSceneInfo.models.filter((m) => !m.locked).map((m) => m.id),
+        const allEntries = [
+          ...currentSceneInfo.models
+            .filter((m) => !m.locked)
+            .map((m) => ({ id: m.id, type: 'model' as const })),
           ...(currentSceneInfo.texts ?? [])
             .filter((t) => !t.locked)
-            .map((t) => t.id),
+            .map((t) => ({ id: t.id, type: 'text' as const })),
         ];
-        selectAll(allIds);
+        selectAll(allEntries);
         return;
       }
 

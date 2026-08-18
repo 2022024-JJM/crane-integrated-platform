@@ -24,7 +24,9 @@ interface SceneManipulationDeps {
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
-  selectAll: (ids: string[]) => void;
+  selectAll: (
+    entries: Array<{ id: string; type: 'model' | 'text' }>,
+  ) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -209,13 +211,13 @@ export function createSceneManipulationActions({
 
     const newModelDuplicates: typeof scene.models = [];
     const newTextDuplicates: NonNullable<typeof scene.texts> = [];
-    const newIds: string[] = [];
+    const newEntries: Array<{ id: string; type: 'model' | 'text' }> = [];
 
     for (const id of selectedIds) {
       const modelSource = scene.models.find((m) => m.id === id);
       if (modelSource) {
         const newId = createId();
-        newIds.push(newId);
+        newEntries.push({ id: newId, type: 'model' });
         newModelDuplicates.push({
           ...modelSource,
           id: newId,
@@ -234,7 +236,7 @@ export function createSceneManipulationActions({
       const textSource = (scene.texts ?? []).find((t) => t.id === id);
       if (textSource) {
         const newId = createId();
-        newIds.push(newId);
+        newEntries.push({ id: newId, type: 'text' });
         newTextDuplicates.push({
           ...textSource,
           id: newId,
@@ -261,7 +263,7 @@ export function createSceneManipulationActions({
       };
     });
 
-    selectAll(newIds);
+    selectAll(newEntries);
   };
 
   return {

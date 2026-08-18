@@ -109,7 +109,9 @@ interface UseSceneEditorSessionResult {
   >['setObjectLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
-  selectAll: (ids: string[]) => void;
+  selectAll: (
+    entries: Array<{ id: string; type: SelectedObjectType }>,
+  ) => void;
   updateMultiObjectTransforms: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateMultiObjectTransforms'];
