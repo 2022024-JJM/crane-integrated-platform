@@ -143,29 +143,6 @@ export const INDIVIDUAL_LIDAR_CHANNELS = LIDAR_CHANNELS.filter(
   (c) => c.mode !== 'fusion',
 ) as ReadonlyArray<LidarChannel>;
 
-/**
- * 인스펙터/빌보드/PiP가 공유하는 통합 채널 목록. SceneObjectInspector의
- * VisionChannelOption[] prop으로 그대로 주입할 수 있는 형태.
- */
-export const VISION_CHANNELS = [
-  ...CAMERA_CHANNELS.map(
-    (c) =>
-      ({
-        id: c.id,
-        label: c.label,
-        sensorType: 'camera' as const,
-      }),
-  ),
-  ...LIDAR_CHANNELS.map(
-    (c) =>
-      ({
-        id: c.id,
-        label: c.label,
-        sensorType: 'lidar' as const,
-      }),
-  ),
-] as const;
-
 export type ExpandedView =
   | { type: 'camera'; id: string }
   | { type: 'lidar'; sensor: LidarMode }

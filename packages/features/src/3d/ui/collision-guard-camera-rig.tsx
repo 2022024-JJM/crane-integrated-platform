@@ -9,9 +9,11 @@ import { usePrefersReducedMotion } from '../model/use-prefers-reduced-motion';
  * FSD 카메라 리그 — 충돌 감지 토글과 연동된 시네마틱 카메라 플라이트.
  *
  * 토글 ON: 현재 카메라 포즈를 저장하고 크레인 중심 저고도 포즈로 비행.
- * 토글 OFF: 저장해 둔 포즈로 복귀. 초기 마운트에서는 절대 움직이지
- * 않는다(store enabled 기본값이 true라 페이지 로드 시 카메라를 탈취하면
- * 안 됨 — 씬 저작 카메라 존중).
+ * 토글 OFF: 저장해 둔 포즈로 복귀.
+ *
+ * 초기 마운트에서는 절대 움직이지 않는다 — prevEnabledRef가 첫 프레임에
+ * 현재 상태를 기록만 하고 넘어가므로, 어떤 초기값으로 들어와도 전환
+ * 에지가 성립하지 않는다(씬 저작 카메라 존중).
  *
  * OrbitControls(makeDefault)와의 상호작용:
  *  - 플라이트 중 controls.enabled = false로 입력을 완전히 차단하되,

@@ -1,256 +1,22 @@
 import type {
   SavedCameraInfo,
-  SavedCameraSensorInfo,
-  SavedLidarSensorInfo,
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
-  SavedSensorInfo,
   SavedTextInfo,
   ValueMapItem,
 } from '@crane/domain/3d';
-import {
-  normalizeCameraSettings,
-  normalizeLidarSettings,
-} from '@crane/domain/3d';
-import { createId } from '@crane/core/lib/create-id';
-import { clampToRange } from '@crane/core/lib/utils';
+import { sanitizeSceneInfo } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
-function createSceneModelId() {
-  return createId();
-}
+/**
+ * 씬 정규화는 도메인(sanitize-scene-info)이 소유한다 — 로드 경계에서 이미
+ * 적용되므로 에디터·뷰어가 같은 데이터를 본다. 에디터는 저장 직전에 한 번 더
+ * 호출해(사용자 편집 결과를 정규화) 쓰기 때문에 여기서 재수출한다.
+ */
+export { sanitizeSceneInfo };
 
-function isFiniteNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
-function isVector3Tuple(value: unknown) {
-  return (
-    Array.isArray(value) &&
-    value.length === 3 &&
-    value.every((item) => isFiniteNumber(item))
-  );
-}
-
-function clampOpacity(value: unknown) {
-  if (!isFiniteNumber(value)) {
-    return 1;
-  }
-
-  return clampToRange(Number(value), 0.1, 1);
-}
-
-function sanitizeMeshOverrides(
-  raw: unknown,
-): SavedMeshOverride[] | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const out: SavedMeshOverride[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
-    const o = item as Record<string, unknown>;
-    if (typeof o.meshPath !== 'string' || o.meshPath.length === 0) continue;
-    const sanitized: SavedMeshOverride = { meshPath: o.meshPath };
-    if (isVector3Tuple(o.position)) sanitized.position = o.position as Vector3Tuple;
-    if (isVector3Tuple(o.rotation)) sanitized.rotation = o.rotation as Vector3Tuple;
-    if (isVector3Tuple(o.scale)) sanitized.scale = o.scale as Vector3Tuple;
-    if (isFiniteNumber(o.opacity))
-      sanitized.opacity = clampToRange(Number(o.opacity), 0.1, 1);
-    if (typeof o.visible === 'boolean') sanitized.visible = o.visible;
-    if (typeof o.name === 'string') sanitized.name = o.name;
-    out.push(sanitized);
-  }
-  return out.length > 0 ? out : undefined;
-}
-
-export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
-  const seenIds = new Set<string>();
-
-  const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })?.map;
-  const rawMaps = Array.isArray(sceneInfo?.maps)
-    ? sceneInfo.maps
-    : legacyMap
-      ? [legacyMap]
-      : [];
-  const safeMaps = rawMaps.map((m) => ({
-    id: typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
-    path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
-  }));
-
-  const safeModels = Array.isArray(sceneInfo?.models)
-    ? sceneInfo.models.flatMap((model) => {
-        if (
-          !model ||
-          typeof model.path !== 'string' ||
-          model.path.length === 0 ||
-          typeof model.equipName !== 'string' ||
-          !isVector3Tuple(model.position) ||
-          !isVector3Tuple(model.rotation) ||
-          !isVector3Tuple(model.scale) ||
-          !Array.isArray(model.valueMapList)
-        ) {
-          return [];
-        }
-
-        let nextId =
-          typeof model.id === 'string' && model.id.length > 0
-            ? model.id
-            : createSceneModelId();
-
-        if (seenIds.has(nextId)) {
-          nextId = createSceneModelId();
-        }
-
-        seenIds.add(nextId);
-
-        return [
-          {
-            ...model,
-            id: nextId,
-            opacity: clampOpacity(model.opacity),
-            meshOverrides: sanitizeMeshOverrides(model.meshOverrides),
-          },
-        ];
-      })
-    : [];
-
-  const safeTexts = Array.isArray(sceneInfo?.texts)
-    ? sceneInfo.texts.flatMap((text) => {
-        if (
-          !text ||
-          typeof text.content !== 'string' ||
-          typeof text.color !== 'string' ||
-          !isVector3Tuple(text.position) ||
-          !isVector3Tuple(text.rotation) ||
-          !isVector3Tuple(text.scale)
-        ) {
-          return [];
-        }
-
-        let nextId =
-          typeof text.id === 'string' && text.id.length > 0
-            ? text.id
-            : createSceneModelId();
-
-        if (seenIds.has(nextId)) {
-          nextId = createSceneModelId();
-        }
-
-        seenIds.add(nextId);
-
-        return [{ ...text, id: nextId }];
-      })
-    : [];
-
-  const safeSensors = sanitizeSensors(sceneInfo?.sensors, seenIds);
-  const safeCamera = sanitizeCamera(sceneInfo?.camera);
-
-  return {
-    maps: safeMaps,
-    models: safeModels,
-    texts: safeTexts,
-    sensors: safeSensors,
-    camera: safeCamera,
-  };
-}
-
-function sanitizeSensors(
-  raw: unknown,
-  seenIds: Set<string>,
-): SavedSensorInfo[] | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const out: SavedSensorInfo[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
-    const sensor = item as Record<string, unknown>;
-    if (
-      typeof sensor.type !== 'string' ||
-      (sensor.type !== 'lidar' && sensor.type !== 'camera')
-    ) {
-      continue;
-    }
-    if (
-      !isVector3Tuple(sensor.position) ||
-      !isVector3Tuple(sensor.rotation)
-    ) {
-      continue;
-    }
-    let nextId =
-      typeof sensor.id === 'string' && sensor.id.length > 0
-        ? sensor.id
-        : createSceneModelId();
-    if (seenIds.has(nextId)) nextId = createSceneModelId();
-    seenIds.add(nextId);
-
-    const name = typeof sensor.name === 'string' ? sensor.name : '';
-    // 비전 모니터링 채널 매핑. 편집 UI에서 다루지 않더라도 scene JSON에
-    // 정의된 값을 그대로 보존해야 풀스크린 빌보드/PiP 연결이 유지된다.
-    const channelId =
-      typeof sensor.channelId === 'string' && sensor.channelId.length > 0
-        ? sensor.channelId
-        : undefined;
-
-    if (sensor.type === 'lidar') {
-      const normalized = normalizeLidarSettings({
-        horizontalFov: Number(sensor.horizontalFov),
-        verticalFov: Number(sensor.verticalFov),
-        far: Number(sensor.far),
-        horizontalSegments: Number(sensor.horizontalSegments),
-        verticalSegments: Number(sensor.verticalSegments),
-        pointSize: Number(sensor.pointSize),
-      });
-      const lidar: SavedLidarSensorInfo = {
-        id: nextId,
-        type: 'lidar',
-        name: name || 'LiDAR',
-        position: sensor.position as Vector3Tuple,
-        rotation: sensor.rotation as Vector3Tuple,
-        ...normalized,
-      };
-      if (channelId) lidar.channelId = channelId;
-      out.push(lidar);
-      continue;
-    }
-
-    const normalized = normalizeCameraSettings({
-      horizontalFov: Number(sensor.horizontalFov),
-      verticalFov: Number(sensor.verticalFov),
-      near: Number(sensor.near),
-      far: Number(sensor.far),
-      frustumSegmentsX: Number(sensor.frustumSegmentsX),
-      frustumSegmentsY: Number(sensor.frustumSegmentsY),
-    });
-    const camera: SavedCameraSensorInfo = {
-      id: nextId,
-      type: 'camera',
-      name: name || 'Camera',
-      position: sensor.position as Vector3Tuple,
-      rotation: sensor.rotation as Vector3Tuple,
-      ...normalized,
-    };
-    if (channelId) camera.channelId = channelId;
-    out.push(camera);
-  }
-  return out.length > 0 ? out : undefined;
-}
-
-function sanitizeCamera(
-  camera: SavedCameraInfo | null | undefined,
-): SavedCameraInfo | null {
-  if (
-    !camera ||
-    !isVector3Tuple(camera.position) ||
-    !isVector3Tuple(camera.target)
-  ) {
-    return null;
-  }
-
-  return {
-    position: camera.position,
-    target: camera.target,
-  };
-}
 
 export function createSceneSnapshot(sceneInfo: SavedSceneInfo | null) {
   if (!sceneInfo) {
@@ -277,42 +43,28 @@ function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
   return true;
 }
 
+function isOptionalVector3TupleEqual(
+  a: Vector3Tuple | undefined,
+  b: Vector3Tuple | undefined,
+): boolean {
+  if (!a || !b) return a === b;
+  return isVector3TupleEqual(a, b);
+}
+
 function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i].id !== b[i].id || a[i].path !== b[i].path) return false;
+    if (a[i].name !== b[i].name) return false;
+    // 잠금은 씬 데이터다 — 토글이 dirty/undo에 잡혀야 저장된다.
+    // 지도는 필드 없음 = 잠김(types.ts 주석 참고).
+    if ((a[i].locked !== false) !== (b[i].locked !== false)) return false;
+    // transform은 비교해야 지도 이동이 dirty로 잡힌다.
+    if (!isOptionalVector3TupleEqual(a[i].position, b[i].position)) return false;
+    if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation)) return false;
+    if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
   }
   return true;
-}
-
-function isSensorInfoEqual(a: SavedSensorInfo, b: SavedSensorInfo): boolean {
-  if (a.id !== b.id) return false;
-  if (a.type !== b.type) return false;
-  if (a.name !== b.name) return false;
-  if ((a.channelId ?? '') !== (b.channelId ?? '')) return false;
-  if (!isVector3TupleEqual(a.position, b.position)) return false;
-  if (!isVector3TupleEqual(a.rotation, b.rotation)) return false;
-  if (a.type === 'lidar' && b.type === 'lidar') {
-    return (
-      a.horizontalFov === b.horizontalFov &&
-      a.verticalFov === b.verticalFov &&
-      a.far === b.far &&
-      a.horizontalSegments === b.horizontalSegments &&
-      a.verticalSegments === b.verticalSegments &&
-      a.pointSize === b.pointSize
-    );
-  }
-  if (a.type === 'camera' && b.type === 'camera') {
-    return (
-      a.horizontalFov === b.horizontalFov &&
-      a.verticalFov === b.verticalFov &&
-      a.near === b.near &&
-      a.far === b.far &&
-      a.frustumSegmentsX === b.frustumSegmentsX &&
-      a.frustumSegmentsY === b.frustumSegmentsY
-    );
-  }
-  return false;
 }
 
 function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
@@ -373,6 +125,7 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.craneId === b.craneId &&
     a.path === b.path &&
     a.opacity === b.opacity &&
+    (a.locked ?? false) === (b.locked ?? false) &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
@@ -387,6 +140,9 @@ export function isSceneInfoEqual(
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
+  // 배경 선택도 저장 대상이라 dirty 판정에 포함한다. undefined(미지정)와
+  // null(배경 없음)은 다른 상태이므로 === 로 구분한다.
+  if (a.environmentId !== b.environmentId) return false;
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
   if (a.models.length !== b.models.length) return false;
@@ -398,12 +154,6 @@ export function isSceneInfoEqual(
   if (aTexts.length !== bTexts.length) return false;
   for (let i = 0; i < aTexts.length; i++) {
     if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
-  }
-  const aSensors = a.sensors ?? [];
-  const bSensors = b.sensors ?? [];
-  if (aSensors.length !== bSensors.length) return false;
-  for (let i = 0; i < aSensors.length; i++) {
-    if (!isSensorInfoEqual(aSensors[i], bSensors[i])) return false;
   }
   return true;
 }

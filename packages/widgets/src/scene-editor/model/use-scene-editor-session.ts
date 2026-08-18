@@ -1,6 +1,7 @@
 import {
+  humanizeModelPath,
   type SavedCameraInfo,
-  type SavedSensorInfo,
+  type SceneMapCatalogItem,
   type SceneModelCatalogItem,
   type ValueMapType,
 } from '@crane/domain/3d';
@@ -30,9 +31,6 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['selectedModel'];
   selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
-  selectedSensor: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['selectedSensor'];
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
@@ -45,9 +43,9 @@ interface UseSceneEditorSessionResult {
     typeof useSceneTransformModeStore.getState
   >['setMode'];
   saveCurrentScene: () => Promise<boolean>;
-  updateSelectedName: ReturnType<
+  renameObject: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedName'];
+  >['renameObject'];
   updateSelectedOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedOpacity'];
@@ -81,9 +79,6 @@ interface UseSceneEditorSessionResult {
   updateSelectedMeshOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshOpacity'];
-  updateSelectedMeshName: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshName'];
   updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
@@ -92,19 +87,26 @@ interface UseSceneEditorSessionResult {
     position: [number, number, number],
   ) => void;
   addText: (position: [number, number, number]) => void;
-  addLidarSensor: (position: [number, number, number]) => void;
-  addCameraSensor: (position: [number, number, number]) => void;
-  updateSensor: (
-    id: string,
-    patch: Partial<Omit<SavedSensorInfo, 'id' | 'type'>>,
-  ) => void;
-  selectPlacedSensor: (id: string) => void;
-  deletePlacedSensor: (id: string) => void;
   selectPlacedModel: (id: string) => void;
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
-  deleteMap: (id: string) => void;
+  setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  selectPlacedMap: (id: string) => void;
+  setEnvironmentId: (environmentId: string | null) => void;
+  selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
+  updateSelectedMapTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMapTransform'];
+  updateSelectedMapTransformVector: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMapTransformVector'];
+  commitSelectedMapTransform: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['commitSelectedMapTransform'];
+  setObjectLocked: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['setObjectLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   selectAll: (ids: string[]) => void;
@@ -151,9 +153,7 @@ export function useSceneEditorSession({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
-  const selectSensor = useSceneObjectSelectionStore(
-    (state) => state.selectSensor,
-  );
+  const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
@@ -169,9 +169,8 @@ export function useSceneEditorSession({
   const {
     selectedModel,
     selectedText,
-    selectedSensor,
     selectedMesh,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -179,13 +178,17 @@ export function useSceneEditorSession({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
     updateSelectedValueMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setObjectLocked,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
@@ -218,7 +221,7 @@ export function useSceneEditorSession({
         commitHistoryFrom,
         selectModel,
         selectText,
-        selectSensor,
+        selectMap,
         clearSelectedModel,
         selectedIds,
         sceneInfoRef,
@@ -230,7 +233,7 @@ export function useSceneEditorSession({
       commitHistoryFrom,
       selectModel,
       selectText,
-      selectSensor,
+      selectMap,
       clearSelectedModel,
       selectedIds,
       selectAllStore,
@@ -256,10 +259,12 @@ export function useSceneEditorSession({
     selectedModelId,
     selectedObjectType,
     selectedModelLabel:
-      selectedModel?.equipName.trim() || selectedText?.content.trim() || null,
+      selectedModel?.equipName.trim() ||
+      selectedText?.content.trim() ||
+      (selectedMap ? humanizeModelPath(selectedMap.path) : null) ||
+      null,
     selectedModel,
     selectedText,
-    selectedSensor,
     selectedMesh,
     isSaving,
     isDirty,
@@ -270,7 +275,7 @@ export function useSceneEditorSession({
     redo,
     setTransformMode,
     saveCurrentScene,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -282,23 +287,24 @@ export function useSceneEditorSession({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedValueMap,
     removeSelectedModel,
     updateMultiObjectPositions,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,
-    addLidarSensor: manipulation.addLidarSensor,
-    addCameraSensor: manipulation.addCameraSensor,
-    updateSensor: manipulation.updateSensor,
-    selectPlacedSensor: manipulation.selectPlacedSensor,
-    deletePlacedSensor: manipulation.deletePlacedSensor,
     selectPlacedModel: manipulation.selectPlacedModel,
     selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
-    deleteMap: manipulation.deleteMap,
+    setSceneMap: manipulation.setSceneMap,
+    selectPlacedMap: manipulation.selectPlacedMap,
+    setEnvironmentId: manipulation.setEnvironmentId,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setObjectLocked,
     toggleModel,
     toggleText,
     selectAll: selectAllStore,

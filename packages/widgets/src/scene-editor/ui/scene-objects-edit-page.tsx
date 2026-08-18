@@ -1,8 +1,10 @@
 import {
   SCENE_MODEL_CATEGORIES,
+  isSceneStoredLocallyOnly,
   sceneModelCatalog,
   type SavedMapInfo,
   type SavedSceneInfo,
+  type SceneMapCatalogItem,
   type SceneModelCategory,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
@@ -12,31 +14,20 @@ import {
 } from '@crane/features/3d';
 import {
   AlertCircle,
-  Camera as CameraIcon,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
+  Download,
   Eye,
   EyeOff,
-  FolderClosed,
-  Layers3,
+  HardDrive,
   Loader2,
-  Map,
   PanelLeftClose,
-  PanelRightClose,
-  Radar,
+  PanelLeftOpen,
+  PanelRightOpen,
+  Save,
   Search,
-  SlidersHorizontal,
   Type,
 } from 'lucide-react';
-import {
-  startTransition,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
@@ -50,27 +41,16 @@ import {
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import {
   PaletteAssetGrid,
+  PaletteEnvironmentSection,
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
-  type VisionChannelOption,
-} from '@crane/widgets/3d';
-import {
-  SCENE_SENSOR_DRAG_TYPE,
-  SCENE_TEXT_DRAG_TYPE,
-  getPlacedObjectItems,
 } from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
-  /**
-   * 인스펙터에서 카메라/라이다 센서에 매핑할 수 있는 비전 채널 목록.
-   * app 레이어가 자기 도메인 채널(예: goliath-crane의 CAMERA_CHANNELS)을 주입한다.
-   * 미지정 시 인스펙터에 채널 매핑 UI가 표시되지 않는다.
-   */
-  visionChannels?: readonly VisionChannelOption[];
 }
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
@@ -106,18 +86,16 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-export function SceneObjectsEditPage({
-  regionId,
-  visionChannels,
-}: SceneObjectsEditPageProps) {
+export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
-  const [isDraggingText, setIsDraggingText] = useState(false);
-  const [draggingSensorType, setDraggingSensorType] = useState<
-    '' | 'lidar' | 'camera'
-  >('');
+  // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
+  // 자체를 렌더하지 않아 캔버스(flex-1)가 그만큼 넓어지고, 캔버스 모서리의
+  // 재오픈 버튼만 남는다.
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const fitAllRef = useRef<(() => void) | null>(null);
   const fitSelectedRef = useRef<(() => void) | null>(null);
@@ -125,7 +103,6 @@ export function SceneObjectsEditPage({
   const {
     sceneInfo,
     selectedIds,
-    selectedModelLabel,
     selectedModel,
     isSaving,
     isDirty,
@@ -136,7 +113,7 @@ export function SceneObjectsEditPage({
     redo,
     setTransformMode,
     saveCurrentScene,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -150,24 +127,24 @@ export function SceneObjectsEditPage({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedValueMap,
     selectedObjectType,
     removeSelectedModel,
     duplicateSelectedObject,
     addModel,
     addText,
-    addLidarSensor,
-    addCameraSensor,
-    updateSensor,
-    selectedSensor,
     selectPlacedModel,
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
-    selectPlacedSensor,
-    deletePlacedSensor,
-    deleteMap,
+    setSceneMap,
+    selectPlacedMap,
+    setEnvironmentId,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setObjectLocked,
     toggleModel,
     toggleText,
     selectAll,
@@ -197,60 +174,80 @@ export function SceneObjectsEditPage({
     });
   }, [regionId]);
 
-  // 좌측 패널은 카탈로그/배치 객체 목록이라 작업 흐름상 자주 본다 → 기본 펼침.
-  // 우측 inspector는 선택된 객체가 있을 때만 의미가 있으므로 기본 접힘 + 선택
-  // 시 자동 펼침. 선택 해제 시 자동으로 닫지는 않는다(잠깐 deselect 후 다른
-  // 객체를 선택하는 흐름에서 패널이 깜빡이는 걸 방지).
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(true);
-
-  const hasSelection = selectedIds.size > 0;
   const saveDisabled = !sceneInfo;
+  // 텍스트는 드래그 앤 드롭이 아니라 툴바 버튼으로 추가한다. 버튼에는 드롭
+  // 좌표가 없으므로 카메라 orbit target(화면 중앙이 바라보는 지점)에 놓는다.
+  const handleAddTextAtView = () => {
+    if (!sceneInfo) {
+      return;
+    }
+    const target = cameraStateRef.current?.target;
+    addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
+  };
+  // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일 저장)와
+  // 똑같이 "저장됨"으로 표시하면, 사용자는 배포된 줄 알지만 실제로는 자기
+  // 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
+  // "저장됨" 상태일 때만 고지한다 — 저장 전/저장 중에 띄우면 경고가 상시
+  // 노출돼 무뎌지고, 정작 알려야 할 순간(방금 저장했는데 이 브라우저에만
+  // 남았을 때)의 신호가 묻힌다.
+  const showLocalOnlyNotice =
+    isSceneStoredLocallyOnly() && !isSaving && !isDirty;
   const saveStatusLabel = isSaving
     ? t('monitoring:editor.statusSaving')
     : isDirty
       ? t('monitoring:editor.statusUnsaved')
-      : t('monitoring:editor.statusSaved');
+      : showLocalOnlyNotice
+        ? t('monitoring:editor.statusSavedLocalOnly')
+        : t('monitoring:editor.statusSaved');
   const saveStatusClassName = isSaving
     ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
     : isDirty
       ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
-      : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
-
-  useEffect(() => {
-    startTransition(() => {
-      setRightCollapsed(!hasSelection);
-    });
-  }, [hasSelection]);
+      : showLocalOnlyNotice
+        ? // 초록(=안전하게 보관됨)으로 칠하면 고지 문구와 색이 엇갈린다.
+          // 중립 톤으로 "저장은 됐지만 완전하지 않다"를 색으로도 전한다.
+          'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd+S는 캔버스 포커스 검사보다 먼저 처리한다. 아래 게이트에
+      // 걸리면 브라우저의 "페이지 저장" 대화상자가 그대로 뜨는데, 인스펙터에
+      // 값을 입력한 직후(=포커스가 패널에 있을 때)가 사용자가 저장을 누르는
+      // 바로 그 순간이라 가장 잘 터진다. 입력 중에도 저장은 유효한 동작이므로
+      // isEditableTarget도 통과시킨다.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (!saveDisabled && !isSaving) {
+          void saveCurrentScene();
+        }
+        return;
+      }
+
       if (isEditableTarget(event.target)) {
         return;
       }
 
-      const canvasRoot = canvasRootRef.current;
-      if (!canvasRoot) {
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const isCanvasFocused =
-        activeElement instanceof Node && canvasRoot.contains(activeElement);
-
-      if (!isCanvasFocused) {
-        return;
-      }
+      /**
+       * 단축키를 두 부류로 나눈다.
+       *
+       * - **수식키 조합**(Ctrl/Cmd+Z 등): 에디터 어디서든 동작한다. 예전에는
+       *   캔버스에 포커스가 있을 때만 먹어서, 인스펙터를 한 번 클릭하면
+       *   undo/redo까지 죽었다 — 값을 고친 직후가 되돌리고 싶은 순간인데
+       *   바로 그때 안 되는 셈이었다.
+       * - **맨 키**(Delete, R, Home, Enter): 캔버스 포커스일 때만. 패널의
+       *   버튼을 조작하다 Enter나 Delete를 누르면 객체가 지워지는 사고가
+       *   난다. 이쪽은 제약을 유지하는 게 맞다.
+       *
+       * 텍스트 입력 중(isEditableTarget)은 위에서 이미 걸렀다.
+       */
+      const hasModifier = event.ctrlKey || event.metaKey;
 
       const isUndoShortcut =
-        (event.ctrlKey || event.metaKey) &&
-        !event.shiftKey &&
-        event.key.toLowerCase() === 'z';
+        hasModifier && !event.shiftKey && event.key.toLowerCase() === 'z';
       const isRedoShortcut =
-        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') ||
-        ((event.ctrlKey || event.metaKey) &&
-          event.shiftKey &&
-          event.key.toLowerCase() === 'z');
+        (hasModifier && event.key.toLowerCase() === 'y') ||
+        (hasModifier && event.shiftKey && event.key.toLowerCase() === 'z');
 
       if (isUndoShortcut) {
         event.preventDefault();
@@ -279,11 +276,26 @@ export function SceneObjectsEditPage({
       const currentSceneInfo = sceneInfoRef.current;
       if (isSelectAllShortcut && currentSceneInfo) {
         event.preventDefault();
+        // 잠긴 모델은 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
+        // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
         const allIds = [
-          ...currentSceneInfo.models.map((m) => m.id),
+          ...currentSceneInfo.models.filter((m) => !m.locked).map((m) => m.id),
           ...(currentSceneInfo.texts ?? []).map((t) => t.id),
         ];
         selectAll(allIds);
+        return;
+      }
+
+      // 여기서부터는 맨 키 단축키다 — 캔버스에 포커스가 있을 때만 처리한다.
+      // 패널 버튼을 조작하다 Enter/Delete를 눌러 객체가 사라지면 안 된다.
+      const canvasRoot = canvasRootRef.current;
+      if (!canvasRoot) {
+        return;
+      }
+      const activeElement = document.activeElement;
+      const isCanvasFocused =
+        activeElement instanceof Node && canvasRoot.contains(activeElement);
+      if (!isCanvasFocused) {
         return;
       }
 
@@ -318,18 +330,44 @@ export function SceneObjectsEditPage({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [duplicateSelectedObject, redo, removeSelectedModel, selectAll, undo]);
+  }, [
+    duplicateSelectedObject,
+    isSaving,
+    redo,
+    removeSelectedModel,
+    saveCurrentScene,
+    saveDisabled,
+    selectAll,
+    undo,
+  ]);
 
   return (
-    <div className="bg-muted/20 flex h-full min-h-0 w-full flex-col overflow-hidden">
-      {/* 상단 영역: 캔버스 + 좌우 floating 패널 */}
-      <div className="relative min-h-0 flex-1">
-        {/* 캔버스가 부모 컨테이너 100%를 차지. 패널은 위에 떠 있다. */}
+    <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
+      {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
+      {!leftCollapsed ? (
+        <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">
+          <ProjectPalettePanel
+            items={sceneModelCatalog}
+            currentMap={sceneInfo?.maps?.[0] ?? null}
+            draggingItemId={draggingCatalogItem?.id ?? null}
+            onDragStart={setDraggingCatalogItem}
+            onDragEnd={() => setDraggingCatalogItem(null)}
+            onSelectMap={setSceneMap}
+            environmentId={sceneInfo?.environmentId}
+            onEnvironmentChange={setEnvironmentId}
+            onCollapse={() => setLeftCollapsed(true)}
+          />
+        </aside>
+      ) : null}
+
+      {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
+      <div className="relative min-h-0 min-w-0 flex-1">
         <SceneObjectsEditCanvas
           rootRef={canvasRootRef}
           cameraStateRef={cameraStateRef}
           initialCamera={initialCamera}
           sceneInfo={sceneInfo}
+          regionId={regionId}
           catalogItems={sceneModelCatalog}
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
@@ -342,12 +380,10 @@ export function SceneObjectsEditPage({
               updateSelectedMeshTransformVector(field, value, {
                 recordHistory: false,
               });
-            } else if (
-              selectedObjectType === 'sensor' &&
-              selectedSensor &&
-              (field === 'position' || field === 'rotation')
-            ) {
-              updateSensor(selectedSensor.id, { [field]: value });
+            } else if (selectedObjectType === 'map') {
+              updateSelectedMapTransformVector(field, value, {
+                recordHistory: false,
+              });
             } else {
               updateSelectedTransformVector(field, value, {
                 recordHistory: false,
@@ -357,6 +393,12 @@ export function SceneObjectsEditPage({
           onTransformCommit={(position, rotation, scale) => {
             // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
             // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+            if (selectedObjectType === 'map') {
+              commitSelectedMapTransform(position, rotation, scale, {
+                recordHistory: false,
+              });
+              return;
+            }
             commitSelectedTransform(position, rotation, scale, {
               recordHistory: false,
             });
@@ -368,116 +410,39 @@ export function SceneObjectsEditPage({
             addModel(catalogItem, position);
             setDraggingCatalogItem(null);
           }}
-          isDraggingText={isDraggingText}
-          onAddText={(position) => {
-            addText(position);
-            setIsDraggingText(false);
-          }}
-          draggingSensorType={draggingSensorType}
-          onAddLidarSensor={(position) => {
-            addLidarSensor(position);
-            setDraggingSensorType('');
-          }}
-          onAddCameraSensor={(position) => {
-            addCameraSensor(position);
-            setDraggingSensorType('');
-          }}
           showLabels={showLabels}
           onTransformInteractionStart={startTransformInteraction}
           onTransformInteractionEnd={endTransformInteraction}
           fitAllRef={fitAllRef}
           fitSelectedRef={fitSelectedRef}
           resetCameraRef={resetCameraRef}
-          inspectorOpen={!rightCollapsed}
         />
 
-        {/* 좌측 floating panel — Hierarchy: 배치된 객체 목록 */}
-        <FloatingPanel
-          side="left"
-          collapsed={leftCollapsed}
-          expandedWidth="w-[20rem]"
-          onExpand={() => setLeftCollapsed(false)}
-          onCollapse={() => setLeftCollapsed(true)}
-          railIcon={<Layers3 className="size-4" />}
-          railLabel={t('monitoring:editor.placedObjects')}
-        >
-          <HierarchyPanel
-            sceneInfo={sceneInfo}
-            selectedIds={selectedIds}
-            isSaving={isSaving}
-            onSelectPlacedModel={selectPlacedModel}
-            onDeletePlacedModel={deletePlacedModel}
-            onSelectPlacedText={selectPlacedText}
-            onDeletePlacedText={deletePlacedText}
-            onSelectPlacedSensor={selectPlacedSensor}
-            onDeletePlacedSensor={deletePlacedSensor}
-            onTogglePlacedModel={toggleModel}
-            onTogglePlacedText={toggleText}
-            onSave={() => void saveCurrentScene()}
-            onExport={() => downloadSceneInfo(regionId, sceneInfo)}
-          />
-        </FloatingPanel>
+        {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
+        {leftCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setLeftCollapsed(false)}
+            aria-label={t('monitoring:editor.expandPanel')}
+            title={t('monitoring:editor.expandPanel')}
+            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+          >
+            <PanelLeftOpen className="size-4" />
+          </button>
+        ) : null}
+        {rightCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightCollapsed(false)}
+            aria-label={t('monitoring:editor.expandPanel')}
+            title={t('monitoring:editor.expandPanel')}
+            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+          >
+            <PanelRightOpen className="size-4" />
+          </button>
+        ) : null}
 
-        {/* 우측 floating panel — Inspector. 선택 시 자동 expand. */}
-        <FloatingPanel
-          side="right"
-          collapsed={rightCollapsed}
-          expandedWidth="w-[20rem]"
-          onExpand={() => setRightCollapsed(false)}
-          onCollapse={() => setRightCollapsed(true)}
-          railIcon={<SlidersHorizontal className="size-4" />}
-          railLabel={t('monitoring:inspector.title')}
-        >
-          <SceneObjectInspector
-            selectedModel={selectedModel}
-            selectedText={selectedText}
-            selectedSensor={selectedSensor}
-            selectedMesh={selectedMesh}
-            multiSelectCount={selectedIds.size}
-            visionChannels={visionChannels}
-            allSensors={sceneInfo?.sensors}
-            onNameChange={updateSelectedName}
-            onOpacityChange={updateSelectedOpacity}
-            onTransformChange={(field, axis, value) => {
-              // 센서가 선택돼 있으면 sensor의 position/rotation을 직접 수정.
-              // 텍스트/모델/메시는 기존 핸들러로.
-              if (
-                selectedSensor &&
-                (field === 'position' || field === 'rotation')
-              ) {
-                const current =
-                  field === 'position'
-                    ? selectedSensor.position
-                    : selectedSensor.rotation;
-                const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
-                const next: [number, number, number] = [
-                  current[0],
-                  current[1],
-                  current[2],
-                ];
-                next[idx] = value;
-                updateSensor(selectedSensor.id, { [field]: next });
-                return;
-              }
-              updateSelectedTransform(field, axis, value);
-            }}
-            onTextContentChange={updateSelectedTextContent}
-            onTextColorChange={updateSelectedTextColor}
-            onTextTransformChange={updateSelectedTextTransform}
-            onMeshNameChange={updateSelectedMeshName}
-            onMeshOpacityChange={updateSelectedMeshOpacity}
-            onMeshTransformChange={updateSelectedMeshTransform}
-            onSensorChange={updateSensor}
-            onValueMapChange={updateSelectedValueMap}
-            onBackToParent={() => {
-              if (selectedMesh) {
-                selectPlacedModel(selectedMesh.modelId);
-              }
-            }}
-          />
-        </FloatingPanel>
-
-        {/* 중앙 상단 floating toolbar (기존) */}
+        {/* 중앙 상단 floating toolbar */}
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
           <div className="pointer-events-auto">
             <SceneTransformModeToggle
@@ -486,22 +451,37 @@ export function SceneObjectsEditPage({
               leadingContent={
                 <div className="flex items-center gap-2">
                   {!saveDisabled ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
-                        saveStatusClassName,
-                      )}
-                    >
-                      {isSaving ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : isDirty ? (
-                        <AlertCircle className="size-4" />
-                      ) : (
-                        <CheckCircle2 className="size-4" />
-                      )}
-                      {saveStatusLabel}
-                    </Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
+                                saveStatusClassName,
+                              )}
+                            />
+                          }
+                        >
+                          {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : isDirty ? (
+                            <AlertCircle className="size-4" />
+                          ) : showLocalOnlyNotice ? (
+                            <HardDrive className="size-4" />
+                          ) : (
+                            <CheckCircle2 className="size-4" />
+                          )}
+                          {saveStatusLabel}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {showLocalOnlyNotice
+                            ? t('monitoring:editor.statusSavedLocalOnlyHint')
+                            : saveStatusLabel}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ) : null}
                   <SceneHistoryControls
                     canUndo={canUndo}
@@ -513,6 +493,27 @@ export function SceneObjectsEditPage({
               }
               trailingContent={
                 <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={t('monitoring:editor.addText')}
+                            disabled={saveDisabled}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={handleAddTextAtView}
+                      >
+                        <Type className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('monitoring:editor.addText')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="bg-border h-4 w-px" />
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger
@@ -543,14 +544,54 @@ export function SceneObjectsEditPage({
                     </Tooltip>
                   </TooltipProvider>
                   <span className="bg-border h-4 w-px" />
-                  <span className="max-w-36 truncate text-xs font-medium">
-                    {selectedIds.size > 1
-                      ? t('monitoring:editor.multipleSelected', {
-                          count: selectedIds.size,
-                        })
-                      : selectedModelLabel ||
-                        t('monitoring:editor.noSelection')}
-                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={t('monitoring:editor.save')}
+                            disabled={saveDisabled || isSaving}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={() => void saveCurrentScene()}
+                      >
+                        {isSaving ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                      </TooltipTrigger>
+                      {/* 단축키를 툴팁에 노출한다 — 버튼만 있으면 Ctrl+S가
+                          있는지 알 길이 없어 브라우저 저장 대화상자를 먼저
+                          만나게 된다. */}
+                      <TooltipContent>
+                        {t('monitoring:editor.save')} (Ctrl+S)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="bg-border h-4 w-px" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={t('monitoring:editor.exportJson')}
+                            disabled={saveDisabled}
+                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                          />
+                        }
+                        onClick={() => downloadSceneInfo(regionId, sceneInfo)}
+                      >
+                        <Download className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('monitoring:editor.exportJson')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               }
             />
@@ -566,501 +607,306 @@ export function SceneObjectsEditPage({
         ) : null}
       </div>
 
-      {/* 하단 패널 — Project: 3D 모델 에셋 그리드 + 센서/텍스트 도구 */}
-      <BottomProjectPanel
-        items={sceneModelCatalog}
-        maps={sceneInfo?.maps ?? []}
-        draggingItemId={draggingCatalogItem?.id ?? null}
-        onDragStart={setDraggingCatalogItem}
-        onDragEnd={() => setDraggingCatalogItem(null)}
-        onTextDragStart={() => setIsDraggingText(true)}
-        onTextDragEnd={() => setIsDraggingText(false)}
-        onSensorDragStart={(kind) => setDraggingSensorType(kind)}
-        onSensorDragEnd={() => setDraggingSensorType('')}
-        onDeleteMap={deleteMap}
-      />
+      {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
+      {!rightCollapsed ? (
+        <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
+          <div className="flex min-h-0 flex-[1] flex-col">
+            <HierarchyPanel
+              sceneInfo={sceneInfo}
+              selectedIds={selectedIds}
+              onCollapse={() => setRightCollapsed(true)}
+              onSelectPlacedModel={selectPlacedModel}
+              onDeletePlacedModel={deletePlacedModel}
+              onSelectPlacedText={selectPlacedText}
+              onDeletePlacedText={deletePlacedText}
+              onTogglePlacedModel={toggleModel}
+              onTogglePlacedText={toggleText}
+              onSelectPlacedMap={selectPlacedMap}
+              onToggleLock={setObjectLocked}
+              onRenameObject={renameObject}
+            />
+          </div>
+          <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
+            <SceneObjectInspector
+              className="rounded-none bg-transparent ring-0"
+              selectedModel={selectedModel}
+              selectedText={selectedText}
+              selectedMesh={selectedMesh}
+              selectedMap={selectedMap}
+              multiSelectCount={selectedIds.size}
+              onOpacityChange={updateSelectedOpacity}
+              onTransformChange={updateSelectedTransform}
+              onTextContentChange={updateSelectedTextContent}
+              onTextColorChange={updateSelectedTextColor}
+              onTextTransformChange={updateSelectedTextTransform}
+              onMeshOpacityChange={updateSelectedMeshOpacity}
+              onMeshTransformChange={updateSelectedMeshTransform}
+              onValueMapChange={updateSelectedValueMap}
+              onMapTransformChange={updateSelectedMapTransform}
+              onBackToParent={() => {
+                if (selectedMesh) {
+                  selectPlacedModel(selectedMesh.modelId);
+                }
+              }}
+            />
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }
 
 /**
- * Floating side panel — collapsed면 화면 가장자리의 작은 rail 버튼만 보이고,
- * expanded면 카드 형태로 콘텐츠를 펼친다. 닫기 버튼은 카드 헤더 위에 absolute로
- * 얹어 자식 컴포넌트(SceneModelPalette / SceneObjectInspector)에 손대지 않는다.
- *
- * pointer-events 처리: 컨테이너 자체는 pointer-events-none으로 두고 rail/카드만
- * pointer-events-auto. 이렇게 하면 collapsed 영역의 빈 공간 위에서도 캔버스
- * OrbitControls가 정상 동작한다.
- */
-function FloatingPanel({
-  side,
-  collapsed,
-  expandedWidth,
-  onExpand,
-  onCollapse,
-  railIcon,
-  railLabel,
-  children,
-}: {
-  side: 'left' | 'right';
-  collapsed: boolean;
-  expandedWidth: string;
-  onExpand: () => void;
-  onCollapse: () => void;
-  railIcon: ReactNode;
-  railLabel: string;
-  children: ReactNode;
-}) {
-  const sideClass = side === 'left' ? 'left-3' : 'right-3';
-  // 닫기 버튼은 카드 바깥쪽 가장자리에 탭처럼 붙인다. 좌측 패널이면 카드의
-  // 오른쪽 바깥(=캔버스 쪽), 우측 패널이면 카드의 왼쪽 바깥. 카드 헤더 안의
-  // 저장/내보내기 버튼들과 겹치지 않게 한다.
-  const closeBtnEdgeClass =
-    side === 'left'
-      ? '-right-3 top-1/2 -translate-y-1/2'
-      : '-left-3 top-1/2 -translate-y-1/2';
-  const CloseIcon = side === 'left' ? PanelLeftClose : PanelRightClose;
-
-  return (
-    <div
-      className={cn(
-        // z-0: 글로벌 헤더의 드롭다운/popover보다 낮게 둔다. 패널은 캔버스 위에
-        // 떠 있기만 하면 되고(캔버스는 stacking context의 자연 흐름), 헤더에서
-        // 내려오는 popover에 가리지 않아야 한다.
-        'pointer-events-none absolute top-3 bottom-3 z-0 flex transition-[width] duration-200 ease-out',
-        sideClass,
-        collapsed ? 'w-10' : expandedWidth,
-      )}
-    >
-      {collapsed ? (
-        <button
-          type="button"
-          onClick={onExpand}
-          aria-label={railLabel}
-          title={railLabel}
-          className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-lg border shadow-sm backdrop-blur-sm transition"
-        >
-          {railIcon}
-        </button>
-      ) : (
-        <div className="pointer-events-auto relative h-full w-full">
-          {children}
-          <button
-            type="button"
-            onClick={onCollapse}
-            aria-label={railLabel}
-            title={railLabel}
-            className={cn(
-              'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground absolute z-10 flex size-6 cursor-pointer items-center justify-center rounded-md border shadow-md transition',
-              closeBtnEdgeClass,
-            )}
-          >
-            <CloseIcon className="size-3.5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * 좌측 Hierarchy 패널 — 저장/내보내기 헤더 + 배치된 객체 목록.
- * 모델 팔레트와 센서/텍스트 도구는 하단 패널로 이동했으므로 포함하지 않는다.
+ * 우측 상단 Hierarchy 패널 — 검색 헤더 + 배치된 객체 목록.
+ * 모델 팔레트는 좌측 도킹 패널(ProjectPalettePanel)이, 저장/내보내기는
+ * 중앙 상단 툴바가 담당한다.
  */
 function HierarchyPanel({
   sceneInfo,
   selectedIds,
-  isSaving,
   onSelectPlacedModel,
   onDeletePlacedModel,
   onSelectPlacedText,
   onDeletePlacedText,
-  onSelectPlacedSensor,
-  onDeletePlacedSensor,
   onTogglePlacedModel,
   onTogglePlacedText,
-  onSave,
-  onExport,
+  onSelectPlacedMap,
+  onToggleLock,
+  onRenameObject,
+  onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
-  isSaving: boolean;
+  onSelectPlacedMap: (id: string) => void;
+  onToggleLock: (id: string, locked: boolean) => void;
+  onRenameObject: (id: string, name: string) => void;
+  onCollapse: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
   onDeletePlacedText: (id: string) => void;
-  onSelectPlacedSensor: (id: string) => void;
-  onDeletePlacedSensor: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
-  onSave: () => void;
-  onExport: () => void;
 }) {
-  const { t } = useTranslation();
   const [objectSearch, setObjectSearch] = useState('');
 
-  const placedObjectCount = useMemo(() => {
-    return getPlacedObjectItems({
-      placedModels: sceneInfo?.models ?? [],
-      placedTexts: sceneInfo?.texts ?? [],
-      placedSensors: sceneInfo?.sensors ?? [],
-      objectSearch,
-      textObjectLabel: t('monitoring:editor.textObject'),
-    }).length;
-  }, [objectSearch, sceneInfo, t]);
-
   return (
-    <div className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col overflow-hidden rounded-xl border">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <PaletteHeader
         objectSearch={objectSearch}
         onObjectSearchChange={setObjectSearch}
-        placedObjectCount={placedObjectCount}
-        onSave={onSave}
-        onExport={onExport}
-        saveDisabled={!sceneInfo}
-        exportDisabled={!sceneInfo}
-        isSaving={isSaving}
+        onCollapse={onCollapse}
       />
       <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
-          placedSensors={sceneInfo?.sensors ?? []}
+          placedMaps={sceneInfo?.maps ?? []}
           objectSearch={objectSearch}
           selectedIds={selectedIds}
           onSelectPlacedModel={onSelectPlacedModel}
           onDeletePlacedModel={onDeletePlacedModel}
           onSelectPlacedText={onSelectPlacedText}
           onDeletePlacedText={onDeletePlacedText}
-          onSelectPlacedSensor={onSelectPlacedSensor}
-          onDeletePlacedSensor={onDeletePlacedSensor}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
+          onSelectPlacedMap={onSelectPlacedMap}
+          onToggleLock={onToggleLock}
+          onRenameObject={onRenameObject}
         />
       </div>
     </div>
   );
 }
 
-/**
- * 하단 Project 패널 — 탭으로 분리된 에셋/도구 영역.
- * 탭 1 "3D 모델": 드래그 가능한 모델 에셋 그리드.
- * 탭 2 "센서 / 텍스트": 텍스트·LiDAR·카메라 추가 버튼 + 지도 섹션.
- */
-const BOTTOM_PANEL_MIN_H = 80;
-const BOTTOM_PANEL_MAX_H = 480;
-const BOTTOM_PANEL_DEFAULT_H = 224;
-const BOTTOM_PANEL_COLLAPSED_H = 44;
-const DEFAULT_MODEL_CATEGORY: SceneModelCategory = 'indoor';
+const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
 
-const MODEL_CATEGORY_LABEL_KEY: Record<SceneModelCategory, string> = {
+/**
+ * Project 패널은 상단 탭(모델/맵/배경)으로 나뉜다.
+ *
+ * 맵과 배경은 모델 카테고리가 아니다 — 드래그 앤 드롭으로 배치하는 에셋이
+ * 아니라 씬에 하나뿐인 전역 설정(클릭 단일 선택)이라, 카테고리 목록에 섞으면
+ * 카탈로그·드롭 경로까지 모델처럼 다루게 된다. 그래서 모델 탭 안의 좌측
+ * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
+ * 같은 층위의 탭으로 분리한다.
+ */
+const PANEL_TABS = ['models', 'map', 'background'] as const;
+type PanelTab = (typeof PANEL_TABS)[number];
+
+const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
+  models: 'monitoring:editor.paletteTabs.models',
+  map: 'monitoring:editor.paletteTabs.map',
+  background: 'monitoring:editor.paletteTabs.background',
+};
+
+// 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
+// 빈 폴더로만 남으므로 표시에서 제외한다. domain 타입은 건드리지 않는다.
+type ModelPanelCategory = Exclude<SceneModelCategory, 'map'>;
+const MODEL_PANEL_CATEGORIES = SCENE_MODEL_CATEGORIES.filter(
+  (category): category is ModelPanelCategory => category !== 'map',
+);
+
+const MODEL_CATEGORY_LABEL_KEY: Record<ModelPanelCategory, string> = {
   indoor: 'monitoring:editor.modelCategories.indoor',
   outdoor: 'monitoring:editor.modelCategories.outdoor',
-  map: 'monitoring:editor.modelCategories.map',
   etc: 'monitoring:editor.modelCategories.etc',
 };
 
-function BottomProjectPanel({
+/**
+ * 좌측 도킹 Project 팔레트 — 상단 탭(모델/맵/배경)으로 전환하는 세로 패널.
+ * 모델 탭은 카테고리 칩 + 검색 + 드래그 가능한 에셋 그리드,
+ * 맵·배경 탭은 클릭 단일 선택 타일 그리드다.
+ */
+function ProjectPalettePanel({
   items,
-  maps,
+  currentMap,
   draggingItemId,
   onDragStart,
   onDragEnd,
-  onTextDragStart,
-  onTextDragEnd,
-  onSensorDragStart,
-  onSensorDragEnd,
-  onDeleteMap,
+  onSelectMap,
+  environmentId,
+  onEnvironmentChange,
+  onCollapse,
 }: {
   items: SceneModelCatalogItem[];
-  maps: SavedMapInfo[];
+  currentMap: SavedMapInfo | null;
+  environmentId: string | null | undefined;
+  onEnvironmentChange: (environmentId: string | null) => void;
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
-  onTextDragStart: () => void;
-  onTextDragEnd: () => void;
-  onSensorDragStart: (kind: 'lidar' | 'camera') => void;
-  onSensorDragEnd: () => void;
-  onDeleteMap: (id: string) => void;
+  onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  onCollapse: () => void;
 }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'models' | 'tools'>('models');
-  const [activeCategory, setActiveCategory] = useState<SceneModelCategory>(
+  const [activeTab, setActiveTab] = useState<PanelTab>('models');
+  const [activeCategory, setActiveCategory] = useState<ModelPanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
   const [assetSearch, setAssetSearch] = useState('');
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [panelHeight, setPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_H);
-  const dragStartY = useRef<number | null>(null);
-  const dragStartH = useRef<number>(BOTTOM_PANEL_DEFAULT_H);
-  const currentPanelHeight = isCollapsed
-    ? BOTTOM_PANEL_COLLAPSED_H
-    : panelHeight;
   const categoryCounts = useMemo(() => {
-    return SCENE_MODEL_CATEGORIES.reduce(
+    return MODEL_PANEL_CATEGORIES.reduce(
       (acc, category) => {
-        acc[category] = category === 'map'
-          ? maps.length
-          : items.filter((item) => item.category === category).length;
+        acc[category] = items.filter(
+          (item) => item.category === category,
+        ).length;
         return acc;
       },
-      {
-        indoor: 0,
-        outdoor: 0,
-        map: 0,
-        etc: 0,
-      } satisfies Record<SceneModelCategory, number>,
+      {} as Record<ModelPanelCategory, number>,
     );
-  }, [items, maps]);
+  }, [items]);
   const categoryItems = useMemo(() => {
     return items.filter((item) => item.category === activeCategory);
   }, [activeCategory, items]);
 
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    dragStartY.current = e.clientY;
-    dragStartH.current = panelHeight;
-
-    const onMouseMove = (ev: MouseEvent) => {
-      if (dragStartY.current === null) return;
-      const delta = dragStartY.current - ev.clientY;
-      const next = Math.min(
-        BOTTOM_PANEL_MAX_H,
-        Math.max(BOTTOM_PANEL_MIN_H, dragStartH.current + delta),
-      );
-      setPanelHeight(next);
-    };
-
-    const onMouseUp = () => {
-      dragStartY.current = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
-
   return (
-    <div
-      className="border-border bg-card text-card-foreground relative flex shrink-0 flex-col overflow-hidden border-t"
-      style={{ height: currentPanelHeight }}
-    >
-      {/* 리사이즈 핸들 */}
-      {!isCollapsed ? (
-        <div
-          onMouseDown={handleResizeMouseDown}
-          className="absolute inset-x-0 top-0 z-10 flex h-1 cursor-row-resize items-center justify-center"
-        />
-      ) : null}
-      {/* 탭 헤더 */}
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) + 접기 버튼 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
         <div className="flex items-center gap-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('models')}
-            className={cn(
-              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-              activeTab === 'models'
-                ? 'border-primary text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent',
-            )}
-          >
-            {t('monitoring:palette.title')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('tools')}
-            className={cn(
-              'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
-              activeTab === 'tools'
-                ? 'border-primary text-foreground'
-                : 'text-muted-foreground hover:text-foreground border-transparent',
-            )}
-          >
-            {t('monitoring:editor.sensorTextTab')}
-          </button>
+          {PANEL_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+                  isActive
+                    ? 'border-primary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground border-transparent',
+                )}
+              >
+                {t(PANEL_TAB_LABEL_KEY[tab])}
+              </button>
+            );
+          })}
         </div>
         <button
           type="button"
-          onClick={() => setIsCollapsed((prev) => !prev)}
-          className="text-muted-foreground hover:text-foreground mr-2 inline-flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors"
-          aria-label={isCollapsed ? 'Expand palette' : 'Collapse palette'}
-          title={isCollapsed ? 'Expand palette' : 'Collapse palette'}
+          onClick={onCollapse}
+          aria-label={t('monitoring:editor.collapsePanel')}
+          title={t('monitoring:editor.collapsePanel')}
+          className="text-muted-foreground hover:text-foreground mr-1 inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors"
         >
-          {isCollapsed ? (
-            <ChevronUp className="size-4" />
-          ) : (
-            <ChevronDown className="size-4" />
-          )}
+          <PanelLeftClose className="size-4" />
         </button>
       </div>
 
-      {/* 탭 콘텐츠 */}
-      <div
-        hidden={isCollapsed}
-        aria-hidden={isCollapsed}
-        className="min-h-0 flex-1 overflow-hidden"
-      >
-        <div
-          hidden={activeTab !== 'models'}
-          aria-hidden={activeTab !== 'models'}
-          className="h-full overflow-hidden px-2 pt-2 pb-1"
-        >
-          <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)] gap-0 overflow-hidden">
-            <div className="border-border/70 min-h-0 overflow-y-auto border-r pr-2">
-              <div className="text-muted-foreground px-2 pb-2 text-[10px] font-semibold tracking-[0.12em] uppercase">
-                {t('monitoring:editor.categoryLibrary')}
-              </div>
-              <div className="space-y-0.5">
-                {SCENE_MODEL_CATEGORIES.map((category) => {
-                  const isActive = activeCategory === category;
-
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setActiveCategory(category)}
+      <div className="min-h-0 flex-1 overflow-hidden p-2">
+        {activeTab !== 'models' ? (
+          <div className="h-full min-h-0 overflow-y-auto">
+            {activeTab === 'map' ? (
+              <PaletteMapSection
+                currentMap={currentMap}
+                onSelectMap={onSelectMap}
+              />
+            ) : (
+              <PaletteEnvironmentSection
+                environmentId={environmentId}
+                onChange={onEnvironmentChange}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="flex h-full min-h-0 flex-col">
+            {/* 카테고리 — 좁은 세로 패널이라 사이드 목록 대신 칩 줄로 배치 */}
+            <div className="flex shrink-0 flex-wrap gap-1 pb-2">
+              {MODEL_PANEL_CATEGORIES.map((category) => {
+                const isActive = activeCategory === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setActiveCategory(category)}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition',
+                      isActive
+                        ? 'border-primary/30 bg-primary/12 text-foreground'
+                        : 'border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                    )}
+                  >
+                    {t(MODEL_CATEGORY_LABEL_KEY[category])}
+                    <span
                       className={cn(
-                        'text-muted-foreground hover:bg-muted/70 hover:text-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition',
-                        isActive && 'bg-primary/12 text-foreground',
+                        'text-[10px]',
+                        isActive ? 'text-primary' : 'text-muted-foreground/70',
                       )}
                     >
-                      <FolderClosed
-                        className={cn(
-                          'size-3.5 shrink-0',
-                          isActive
-                            ? 'text-primary'
-                            : 'text-muted-foreground/80',
-                        )}
-                      />
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
-                        {t(MODEL_CATEGORY_LABEL_KEY[category])}
-                      </span>
-                      <Badge
-                        render={<div />}
-                        variant="outline"
-                        className={cn(
-                          'border-border bg-background/80 min-w-7 shrink-0 justify-center rounded-sm px-1.5 py-0 text-[10px]',
-                          isActive && 'border-primary/30 bg-primary/10',
-                        )}
-                      >
-                        {categoryCounts[category]}
-                      </Badge>
-                    </button>
-                  );
-                })}
-              </div>
+                      {categoryCounts[category]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-
-            <div className="flex min-h-0 flex-col overflow-hidden pl-3">
-              <div className="border-border/60 flex shrink-0 items-center justify-between gap-3 border-b pb-2">
-                <div className="min-w-0">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                    {t('monitoring:palette.title')}
-                  </p>
-                  <p className="text-foreground truncate text-[12px] font-medium">
-                    {t(MODEL_CATEGORY_LABEL_KEY[activeCategory])}
-                  </p>
-                </div>
-                {activeCategory !== 'map' ? (
-                  <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full max-w-44 min-w-0 items-center border px-2 transition-colors focus-within:ring-3">
-                    <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
-                    <Input
-                      value={assetSearch}
-                      onChange={(event) => {
-                        setAssetSearch(event.target.value);
-                      }}
-                      placeholder={t('monitoring:editor.searchModels')}
-                      className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
-                    />
-                  </div>
-                ) : null}
-              </div>
-              <div className="min-h-0 flex-1 pt-2">
-                {activeCategory === 'map' ? (
-                  maps.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {maps.map((m) => (
-                        <PaletteMapSection
-                          key={m.id}
-                          map={m}
-                          onDeleteMap={() => onDeleteMap(m.id)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-[12px]">
-                      <Map className="size-6 opacity-30" />
-                      <p>{t('monitoring:editor.noMap')}</p>
-                    </div>
-                  )
-                ) : (
-                  <PaletteAssetGrid
-                    items={categoryItems}
-                    draggingItemId={draggingItemId}
-                    onDragStart={onDragStart}
-                    onDragEnd={onDragEnd}
-                    emptyMessage={t('monitoring:editor.noModelsInCategory')}
-                    assetSearch={assetSearch}
-                    onAssetSearchChange={setAssetSearch}
-                    showToolbar={false}
-                  />
-                )}
-              </div>
+            <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 mb-2 flex h-7 w-full min-w-0 shrink-0 items-center border px-2 transition-colors focus-within:ring-3">
+              <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
+              <Input
+                value={assetSearch}
+                onChange={(event) => {
+                  setAssetSearch(event.target.value);
+                }}
+                placeholder={t('monitoring:editor.searchModels')}
+                className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
+              />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <PaletteAssetGrid
+                items={categoryItems}
+                draggingItemId={draggingItemId}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                emptyMessage={t('monitoring:editor.noModelsInCategory')}
+                assetSearch={assetSearch}
+                onAssetSearchChange={setAssetSearch}
+                showToolbar={false}
+              />
             </div>
           </div>
-        </div>
-
-        <div
-          hidden={activeTab !== 'tools'}
-          aria-hidden={activeTab !== 'tools'}
-          className="flex h-full flex-col gap-2 overflow-y-auto p-2"
-        >
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_TEXT_DRAG_TYPE, 'text');
-              event.dataTransfer.effectAllowed = 'copy';
-              onTextDragStart();
-            }}
-            onDragEnd={onTextDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <Type className="size-3" />
-            {t('monitoring:editor.addText')}
-          </div>
-
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'lidar');
-              event.dataTransfer.effectAllowed = 'copy';
-              onSensorDragStart('lidar');
-            }}
-            onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <Radar className="size-3" />
-            {t('monitoring:editor.addLidarSensor')}
-          </div>
-
-          <div
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData(SCENE_SENSOR_DRAG_TYPE, 'camera');
-              event.dataTransfer.effectAllowed = 'copy';
-              onSensorDragStart('camera');
-            }}
-            onDragEnd={onSensorDragEnd}
-            className="border-border bg-muted text-muted-foreground hover:bg-muted/80 flex w-full cursor-grab items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition active:cursor-grabbing"
-          >
-            <CameraIcon className="size-3" />
-            {t('monitoring:editor.addCameraSensor')}
-          </div>
-
-        </div>
-
+        )}
       </div>
     </div>
   );

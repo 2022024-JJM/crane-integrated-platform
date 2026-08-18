@@ -6,21 +6,25 @@ import {
   useGLTF,
 } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Box3, MOUSE, Object3D, NoToneMapping, Vector3 } from 'three';
 import {
-  CameraSensorMesh,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type RefObject,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { Box3, MOUSE, Object3D, Vector3 } from 'three';
+import {
   GltfModel,
-  LidarSensorMesh,
   SceneText,
   getMeshPath,
-  isCameraSensor,
-  isLidarSensor,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
   prefetchModelBottomOffset,
+  releaseGltfCache,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -31,6 +35,11 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SceneEnvironment,
+  SceneLighting,
+  SceneObjectBoundary,
   useIsObjectSelected,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
@@ -110,28 +119,10 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
-type SelectionAwareLidarSensorProps = Omit<
-  React.ComponentProps<typeof LidarSensorMesh>,
-  'isSelected'
->;
-
-function SelectionAwareLidarSensor(props: SelectionAwareLidarSensorProps) {
-  const isSelected = useIsObjectSelected(props.sensor.id);
-  return <LidarSensorMesh {...props} isSelected={isSelected} />;
-}
-
-type SelectionAwareCameraSensorProps = Omit<
-  React.ComponentProps<typeof CameraSensorMesh>,
-  'isSelected'
->;
-
-function SelectionAwareCameraSensor(props: SelectionAwareCameraSensorProps) {
-  const isSelected = useIsObjectSelected(props.sensor.id);
-  return <CameraSensorMesh {...props} isSelected={isSelected} />;
-}
-
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
+  /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
+  regionId: string;
   catalogItems: SceneModelCatalogItem[];
   transformMode: SceneTransformMode;
   draggingModelCatalogItem: SceneModelCatalogItem | null;
@@ -146,11 +137,6 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
-  isDraggingText?: boolean;
-  onAddText?: (position: Vector3Tuple) => void;
-  draggingSensorType?: '' | 'lidar' | 'camera';
-  onAddLidarSensor?: (position: Vector3Tuple) => void;
-  onAddCameraSensor?: (position: Vector3Tuple) => void;
   showLabels?: boolean;
   onTransformCommit?: (
     position: Vector3Tuple | null,
@@ -165,11 +151,11 @@ interface SceneObjectsEditCanvasProps {
   fitAllRef?: RefObject<(() => void) | null>;
   fitSelectedRef?: RefObject<(() => void) | null>;
   resetCameraRef?: RefObject<(() => void) | null>;
-  inspectorOpen?: boolean;
 }
 
 export function SceneObjectsEditCanvas({
   sceneInfo,
+  regionId,
   catalogItems,
   transformMode,
   draggingModelCatalogItem,
@@ -179,11 +165,6 @@ export function SceneObjectsEditCanvas({
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
-  isDraggingText = false,
-  onAddText,
-  draggingSensorType = '',
-  onAddLidarSensor,
-  onAddCameraSensor,
   showLabels = true,
   onMultiTransformCommit,
   onTransformInteractionStart,
@@ -191,8 +172,13 @@ export function SceneObjectsEditCanvas({
   fitAllRef,
   fitSelectedRef,
   resetCameraRef,
-  inspectorOpen = false,
 }: SceneObjectsEditCanvasProps) {
+  // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
+  // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
+  // 의존성에 넣지 않고 여기서 최신값을 따라간다.
+  const sceneInfoRef = useRef(sceneInfo);
+  sceneInfoRef.current = sceneInfo;
+
   // 모든 카탈로그 모델 GLB를 사전 로드하여 드래그 앤 드롭 시 Suspense 깜빡임 방지.
   // 동시에 각 모델의 unscaled bbox bottom offset도 prefetch 해두어, 드롭 직후
   // 모델 바닥이 정확히 지면(y=0)에 닿도록 한다. 사용자 scale은 드롭 시점에 곱한다.
@@ -247,6 +233,21 @@ export function SceneObjectsEditCanvas({
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
+      // 에디터를 떠나면 프리로드한 카탈로그(40개, 약 97MB)를 비운다.
+      // 단 **현재 씬이 실제로 쓰는 모델은 남긴다** — 에디터에서 나가면 보통
+      // 같은 지역의 모니터링 화면으로 가는데, 거기서 곧바로 다시 필요한
+      // 것들이라 지웠다가 다시 받으면 수십 MB를 헛되이 왕복한다.
+      // 남는 것은 "드래그 앤 드롭 편의를 위해 미리 당겨왔지만 이 씬에는
+      // 배치되지 않은" 모델들이고, 그게 해제 대상의 대부분이다.
+      const inUse = new Set([
+        ...(sceneInfoRef.current?.models ?? []).map((m) => m.path),
+        ...(sceneInfoRef.current?.maps ?? []).map((m) => m.path),
+      ]);
+      releaseGltfCache(
+        catalogItems
+          .map((item) => item.path)
+          .filter((path) => !inUse.has(path)),
+      );
     };
   }, [catalogItems]);
 
@@ -262,9 +263,7 @@ export function SceneObjectsEditCanvas({
     (state) => state.selectModel,
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
-  const selectSensor = useSceneObjectSelectionStore(
-    (state) => state.selectSensor,
-  );
+  const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
@@ -277,6 +276,25 @@ export function SceneObjectsEditCanvas({
   const modelObjectRegistryRef = useRef<Map<string, Object3D>>(new Map());
   const lastPointerEventRef = useRef<PointerEvent | MouseEvent | null>(null);
 
+  // 잠금은 씬 데이터다(SavedModelInfo/SavedMapInfo.locked). 잠금 해제된
+  // 지도만 선택/변형 대상이다. 대부분의 씬에서 빈 배열이라 아래 경로들
+  // (transform target 탐색, 마퀴 제외)이 사실상 무비용이다.
+  const unlockedMaps = useMemo(
+    () => (sceneInfo?.maps ?? []).filter((m) => m.locked === false),
+    [sceneInfo?.maps],
+  );
+  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다
+  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델도 선택 불가 규칙에
+  // 따라 제외한다.
+  const marqueeExcludedIds = useMemo(
+    () =>
+      new Set([
+        ...(sceneInfo?.maps ?? []).map((m) => m.id),
+        ...(sceneInfo?.models ?? []).filter((m) => m.locked).map((m) => m.id),
+      ]),
+    [sceneInfo?.maps, sceneInfo?.models],
+  );
+
   const {
     cameraRef,
     rendererRef,
@@ -288,13 +306,8 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
-    isDraggingText,
-    draggingSensorType,
     mapObjectId: sceneInfo?.maps?.[0]?.id ?? null,
     onAddModel,
-    onAddText,
-    onAddLidarSensor,
-    onAddCameraSensor,
   });
 
   const {
@@ -313,7 +326,7 @@ export function SceneObjectsEditCanvas({
     transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
-    sceneSensors: sceneInfo?.sensors,
+    sceneMaps: unlockedMaps,
     modelObjectRegistryRef,
     onTransformVectorChange,
     onTransformCommit,
@@ -417,19 +430,16 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
-  const handleSelectSensor = useCallback(
+  // 지도 선택 — Ctrl 다중 선택 분기가 없다. 지도는 단독 선택만 허용한다
+  // (selectMap 주석 참고). 더블클릭 drill-in도 두지 않는다 — 지형 메시는
+  // 수만 개라 자식 단위 편집이 의미가 없다.
+  const handleSelectMap = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
-      // 센서 컴포넌트는 mount 시 도메인 전역 modelObjectRegistry에 group을
-      // 등록한다. 캔버스 로컬 registryRef에는 없으므로 global fallback.
-      setSelectedObject(
-        modelObjectRegistryRef.current.get(id) ??
-          sharedModelObjectRegistry.get(id) ??
-          null,
-      );
-      selectSensor(id);
+      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+      selectMap(id);
     },
-    [dragJustEndedRef, selectSensor, setSelectedObject],
+    [dragJustEndedRef, selectMap, setSelectedObject],
   );
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
@@ -445,11 +455,8 @@ export function SceneObjectsEditCanvas({
     modelObjectRegistryRef,
     isTransformDragging,
     dragJustEndedRef,
-    isDraggingExternalItem: !!(
-      draggingModelCatalogItem ||
-      isDraggingText ||
-      draggingSensorType
-    ),
+    isDraggingExternalItem: !!draggingModelCatalogItem,
+    excludedIds: marqueeExcludedIds,
     selectAll,
     clearSelectedModel,
   });
@@ -622,10 +629,10 @@ export function SceneObjectsEditCanvas({
   }, [initialCamera, cameraStateRef, orbitControlsRef]);
 
   useEffect(() => {
-    if (!draggingModelCatalogItem && !isDraggingText) {
+    if (!draggingModelCatalogItem) {
       setPendingDropPosition(null);
     }
-  }, [draggingModelCatalogItem, isDraggingText, setPendingDropPosition]);
+  }, [draggingModelCatalogItem, setPendingDropPosition]);
 
   // Space 키를 누르는 동안 OrbitControls LEFT를 PAN으로 전환
   // (기본은 undefined = marquee 전용, Space 누르면 pan 가능)
@@ -665,12 +672,11 @@ export function SceneObjectsEditCanvas({
       onDrop={handleSceneDrop}
     >
       <Canvas
-        camera={{ position: cameraPosition }}
-        gl={{
-          toneMapping: NoToneMapping,
-          powerPreference: 'high-performance',
-          antialias: true,
-        }}
+        // 카메라 클립·gl 옵션·조명 모두 뷰어와 같은 프리셋을 쓴다. 예전에는
+        // 각자 값을 들고 있다가 어긋나(에디터 조명이 25% 밝았다) 저작 화면과
+        // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
+        camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
+        gl={SCENE_GL_OPTIONS}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
@@ -687,25 +693,42 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
-        <ambientLight intensity={2} />
-        <directionalLight position={[0, 50, 10]} color="white" intensity={5} />
+        <SceneLighting />
+        {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
+            자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
+        <Suspense fallback={null}>
+          <SceneEnvironment
+            regionId={regionId}
+            environmentId={sceneInfo?.environmentId}
+          />
+        </Suspense>
         <OrbitControls
           ref={orbitControlsRef}
           makeDefault
-          enableDamping={false}
+          // 뷰어와 같은 감쇠값 — 저작 화면과 실제 화면의 조작감이 달라지면
+          // 에디터에서 잡은 카메라 구도가 뷰어에서 다르게 느껴진다.
+          enableDamping
+          dampingFactor={0.12}
           target={cameraTarget}
           onChange={handleOrbitChange}
+          // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,
+          // 지오메트리 관통 방지, far(5000) 안쪽에서 줌 아웃 정지.
+          zoomToCursor
+          minDistance={5}
+          maxDistance={3000}
           mouseButtons={{
             LEFT: undefined,
             MIDDLE: MOUSE.ROTATE,
             RIGHT: MOUSE.PAN,
           }}
         />
-        <GizmoHelper
-          alignment="top-right"
-          margin={[inspectorOpen ? 400 : 80, 80]}
-        >
+        {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
+            40px) + 12px(중앙 툴바의 top-3와 같은 여백)로 잡아, 기즈모
+            가장자리가 툴바와 같은 간격으로 캔버스 좌하단에 붙는다. */}
+        <GizmoHelper alignment="bottom-left" margin={[52, 52]}>
           <GizmoViewport
+            // 기본 40의 2/3 크기.
+            scale={40 * (2 / 3)}
             axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"
           />
@@ -722,66 +745,83 @@ export function SceneObjectsEditCanvas({
             onObjectChange={syncSelectedObjectTransform}
           />
         ) : null}
+        {/* 지도 — 잠금(locked)이면 클릭이 선택 해제로 떨어지고(기존 동작),
+            해제하면 일반 모델과 같은 선택·드래그 대상이 된다. 잠금 상태는
+            좌측 패널 토글로 바꾼다.
+
+            잠금 여부와 무관하게 항상 SelectionAwareGltfModel을 쓴다 —
+            컴포넌트 타입을 갈아끼우면 토글할 때마다 수십~수백 MB짜리
+            지형 GLB가 unmount/remount 되어 화면이 한 번 깜빡인다.
+            차이는 클릭 핸들러(선택 vs 선택 해제)뿐이다. */}
+        {/* GLB를 로드하는 객체는 개별 경계로 감싼다 — 경로가 틀린 모델
+            하나가 캔버스 전체를 비우지 않도록. SceneObjectBoundary 주석 참고.
+            에디터는 로딩 오버레이가 없으므로 Suspense도 객체별로 분리해
+            준비된 것부터 보여준다(뷰어는 오버레이 때문에 공유 Suspense 유지). */}
         {sceneInfo?.maps?.map((m) => (
-          <GltfModel
+          <SceneObjectBoundary
             key={m.id}
-            id={m.id}
-            onSelect={handleClearSelection}
-            url={m.path}
-            isSensorOccluder={false}
-          />
+            label={`map ${m.path}`}
+            isolateSuspense
+          >
+            <SelectionAwareGltfModel
+              id={m.id}
+              url={m.path}
+              position={m.position}
+              rotation={m.rotation}
+              scale={m.scale}
+              enableRaycastBvh={false}
+              onSelect={
+                m.locked === false ? handleSelectMap : handleClearSelection
+              }
+              onObjectReady={handleModelObjectReady}
+            />
+          </SceneObjectBoundary>
         ))}
         {sceneInfo?.models.map((model) => (
-          <SelectionAwareGltfModel
+          <SceneObjectBoundary
             key={model.id}
-            id={model.id}
-            url={model.path}
-            equipName={model.equipName}
-            showLabel={showLabels}
-            opacity={model.opacity}
-            position={model.position}
-            rotation={model.rotation}
-            scale={model.scale}
-            meshOverrides={model.meshOverrides}
-            onSelect={handleSelectModel}
-            onDoubleSelect={handleDoubleSelectModel}
-            onObjectReady={handleModelObjectReady}
-          />
+            label={`model ${model.equipName || model.id} (${model.path})`}
+            isolateSuspense
+          >
+            <SelectionAwareGltfModel
+              id={model.id}
+              url={model.path}
+              equipName={model.equipName}
+              showLabel={showLabels}
+              opacity={model.opacity}
+              position={model.position}
+              rotation={model.rotation}
+              scale={model.scale}
+              meshOverrides={model.meshOverrides}
+              // 잠긴 모델은 클릭이 선택 해제로 떨어진다 — 지도 잠금과 같은
+              // 규칙. 핸들러만 갈아끼우고 컴포넌트는 유지해 GLB 리마운트를
+              // 피한다(위 지도 주석 참고).
+              onSelect={model.locked ? handleClearSelection : handleSelectModel}
+              onDoubleSelect={
+                model.locked ? undefined : handleDoubleSelectModel
+              }
+              onObjectReady={handleModelObjectReady}
+            />
+          </SceneObjectBoundary>
         ))}
+        {/* drei Text는 첫 마운트에서 폰트 preload로 suspend 한다. 경계 없이
+            두면 suspension이 Canvas 루트까지 올라가 씬 전체가 fallback으로
+            내려앉아 화면이 한 번 깜빡인다 — 첫 텍스트 추가 시 특히 눈에 띈다.
+            개별 Suspense로 격리해 폰트가 준비될 때까지 그 텍스트만 늦게 뜬다. */}
         {(sceneInfo?.texts ?? []).map((text) => (
-          <SelectionAwareSceneText
-            key={text.id}
-            id={text.id}
-            content={text.content}
-            color={text.color}
-            position={text.position}
-            rotation={text.rotation}
-            scale={text.scale}
-            onSelect={handleSelectText}
-            onObjectReady={handleModelObjectReady}
-          />
+          <Suspense key={text.id} fallback={null}>
+            <SelectionAwareSceneText
+              id={text.id}
+              content={text.content}
+              color={text.color}
+              position={text.position}
+              rotation={text.rotation}
+              scale={text.scale}
+              onSelect={handleSelectText}
+              onObjectReady={handleModelObjectReady}
+            />
+          </Suspense>
         ))}
-        {(sceneInfo?.sensors ?? []).map((sensor) => {
-          if (isLidarSensor(sensor)) {
-            return (
-              <SelectionAwareLidarSensor
-                key={sensor.id}
-                sensor={sensor}
-                onSelect={handleSelectSensor}
-              />
-            );
-          }
-          if (isCameraSensor(sensor)) {
-            return (
-              <SelectionAwareCameraSensor
-                key={sensor.id}
-                sensor={sensor}
-                onSelect={handleSelectSensor}
-              />
-            );
-          }
-          return null;
-        })}
         {pendingDropPosition ? (
           <mesh
             position={[
@@ -805,13 +845,11 @@ export function SceneObjectsEditCanvas({
         />
       )}
 
-      {(draggingModelCatalogItem || isDraggingText) && (
+      {draggingModelCatalogItem && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="bg-card/95 rounded-2xl border border-amber-500/30 px-4 py-3 text-center shadow-lg">
             <p className="text-foreground text-sm font-semibold">
-              {isDraggingText
-                ? t('monitoring:editor.addText')
-                : draggingModelCatalogItem?.label}
+              {draggingModelCatalogItem.label}
             </p>
             <p className="text-muted-foreground text-xs">
               {t('monitoring:editor.dropHint')}

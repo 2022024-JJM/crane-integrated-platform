@@ -3,10 +3,10 @@ import {
   numRound,
   parseMeshId,
   radToDeg,
+  type SavedMapInfo,
   type SavedMeshOverride,
   type SavedModelInfo,
   type SavedSceneInfo,
-  type SavedSensorInfo,
   type SavedTextInfo,
   type ValueMapItem,
   type ValueMapType,
@@ -79,7 +79,6 @@ export interface SelectedMeshInfo {
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
-  selectedSensor: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   updateSelectedMeshTransform: (
     field: SceneTransformField,
@@ -92,8 +91,7 @@ interface UseSelectedSceneObjectEditorResult {
     options?: { recordHistory?: boolean },
   ) => void;
   updateSelectedMeshOpacity: (value: number) => void;
-  updateSelectedMeshName: (name: string) => void;
-  updateSelectedName: (name: string) => void;
+  renameObject: (id: string, name: string) => void;
   updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
@@ -132,6 +130,24 @@ interface UseSelectedSceneObjectEditorResult {
     updates: Array<{ id: string; position: Vector3Tuple }>,
     options?: { recordHistory?: boolean },
   ) => void;
+  selectedMap: SavedMapInfo | null;
+  updateSelectedMapTransform: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
+  updateSelectedMapTransformVector: (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  commitSelectedMapTransform: (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  setObjectLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
 }
 
@@ -183,9 +199,9 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    if (selectedObjectType === 'sensor') {
-      const exists = (sceneInfo.sensors ?? []).some(
-        (s) => s.id === selectedModelId,
+    if (selectedObjectType === 'map') {
+      const exists = (sceneInfo.maps ?? []).some(
+        (m) => m.id === selectedModelId,
       );
       if (!exists) {
         clearSelectedModel();
@@ -201,6 +217,25 @@ export function useSelectedSceneObjectEditor({
       clearSelectedModel();
     }
   }, [clearSelectedModel, sceneInfo, selectedModelId, selectedObjectType]);
+
+  // 잠긴 객체가 선택에 남아 있으면 선택을 해제한다 — 잠금 토글 자체는
+  // setObjectLocked가 처리하지만, undo/redo로 잠금이 복원되는 경로는 씬만
+  // 바뀌므로 여기서 걸러야 기즈모·인스펙터가 함께 내려간다.
+  useEffect(() => {
+    if (!sceneInfo || selectedIds.size === 0) {
+      return;
+    }
+    const hasLockedSelection =
+      sceneInfo.models.some(
+        (m) => m.locked === true && selectedIds.has(m.id),
+      ) ||
+      (sceneInfo.maps ?? []).some(
+        (m) => m.locked !== false && selectedIds.has(m.id),
+      );
+    if (hasLockedSelection) {
+      clearSelectedModel();
+    }
+  }, [clearSelectedModel, sceneInfo, selectedIds]);
 
   const selectedModel = useMemo(
     () =>
@@ -220,13 +255,12 @@ export function useSelectedSceneObjectEditor({
     [sceneInfo?.texts, selectedModelId, selectedObjectType],
   );
 
-  const selectedSensor = useMemo(
+  const selectedMap = useMemo(
     () =>
-      selectedObjectType === 'sensor'
-        ? ((sceneInfo?.sensors ?? []).find((s) => s.id === selectedModelId) ??
-          null)
+      selectedObjectType === 'map'
+        ? ((sceneInfo?.maps ?? []).find((m) => m.id === selectedModelId) ?? null)
         : null,
-    [sceneInfo?.sensors, selectedModelId, selectedObjectType],
+    [sceneInfo?.maps, selectedModelId, selectedObjectType],
   );
 
   const selectedMesh = useMemo<SelectedMeshInfo | null>(() => {
@@ -249,25 +283,46 @@ export function useSelectedSceneObjectEditor({
     };
   }, [selectedObjectType, selectedModelId, sceneInfo]);
 
-  const updateSelectedName = (name: string) => {
+  /**
+   * id 기반 이름 변경 — 모델은 equipName, 텍스트는 content(내용이 곧
+   * 표시 이름), 지도는 name(없으면 경로 파생 이름으로 표시)을 바꾼다.
+   * 빈 이름은 무시한다.
+   */
+  const renameObject = (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+
     updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
+      if (!prev) {
         return prev;
       }
-
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
-
-          return {
-            ...model,
-            equipName: name,
-          };
-        }),
-      };
+      if (prev.models.some((model) => model.id === id)) {
+        return {
+          ...prev,
+          models: prev.models.map((model) =>
+            model.id === id ? { ...model, equipName: trimmed } : model,
+          ),
+        };
+      }
+      if ((prev.texts ?? []).some((text) => text.id === id)) {
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).map((text) =>
+            text.id === id ? { ...text, content: trimmed } : text,
+          ),
+        };
+      }
+      if ((prev.maps ?? []).some((map) => map.id === id)) {
+        return {
+          ...prev,
+          maps: (prev.maps ?? []).map((map) =>
+            map.id === id ? { ...map, name: trimmed } : map,
+          ),
+        };
+      }
+      return prev;
     });
   };
 
@@ -428,20 +483,6 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
-  const updateSelectedMeshName = (name: string) => {
-    if (!selectedMesh) return;
-    const { modelId, meshPath } = selectedMesh;
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((m) =>
-          m.id === modelId ? upsertMeshOverride(m, meshPath, { name }) : m,
-        ),
-      };
-    });
-  };
-
   const updateSelectedTextContent = (content: string) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
@@ -524,6 +565,117 @@ export function useSelectedSceneObjectEditor({
         }),
       };
     }, options);
+  };
+
+  /**
+   * 지도 transform 갱신. 모델과 달리 필드가 optional이라(기존 저장본 호환)
+   * 매 갱신에서 해당 필드만 채워 넣는다 — 나머지는 없는 채로 두어야
+   * "손대지 않은 지도"가 저장본에서도 계속 필드 없는 상태로 남는다.
+   */
+  const updateSelectedMapTransformVector = (
+    field: SceneTransformField,
+    value: Vector3Tuple,
+    options?: { recordHistory?: boolean },
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) =>
+          m.id === selectedModelId
+            ? { ...m, [field]: roundVectorValue(value) }
+            : m,
+        ),
+      };
+    }, options);
+  };
+
+  /**
+   * 인스펙터 수치 입력용 축 단위 갱신. 기존 값이 없으면(손대지 않은 지도)
+   * 렌더러 기본값에서 출발해야 인스펙터에 보이던 수치와 결과가 일치한다.
+   */
+  const updateSelectedMapTransform = (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) => {
+          if (m.id !== selectedModelId) return m;
+          const base = m[field] ?? (field === 'scale' ? [1, 1, 1] : [0, 0, 0]);
+          return {
+            ...m,
+            [field]: updateVectorValue(base, axis, numRound(value)),
+          };
+        }),
+      };
+    });
+  };
+
+  const commitSelectedMapTransform = (
+    position: Vector3Tuple | null,
+    rotation: Vector3Tuple | null,
+    scale: Vector3Tuple | null,
+    options?: { recordHistory?: boolean },
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((m) => {
+          if (m.id !== selectedModelId) return m;
+          return {
+            ...m,
+            ...(position ? { position: roundVectorValue(position) } : null),
+            ...(rotation ? { rotation: roundVectorValue(rotation) } : null),
+            ...(scale ? { scale: roundVectorValue(scale) } : null),
+          };
+        }),
+      };
+    }, options);
+  };
+
+  /**
+   * 편집 잠금 토글 — 씬 데이터에 쓴다(저장·undo·dirty 참여).
+   * 지도는 "필드 없음 = 잠김"이라 항상 명시적 boolean을 기록하고,
+   * 모델은 true일 때만 필드를 남긴다(types.ts 주석 참고).
+   * 잠글 때 선택 중이었다면 선택을 해제한다.
+   */
+  const setObjectLocked = (id: string, locked: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      if ((prev.maps ?? []).some((m) => m.id === id)) {
+        return {
+          ...prev,
+          maps: (prev.maps ?? []).map((m) =>
+            m.id === id ? { ...m, locked } : m,
+          ),
+        };
+      }
+      return {
+        ...prev,
+        models: prev.models.map((m) => {
+          if (m.id !== id) return m;
+          if (locked) return { ...m, locked: true };
+          const { locked: _removed, ...rest } = m;
+          return rest;
+        }),
+      };
+    });
+    if (locked && selectedIds.has(id)) {
+      clearSelectedModel();
+    }
   };
 
   // position/rotation/scale 3개를 단일 updateSceneInfo 호출로 처리.
@@ -623,7 +775,6 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.filter((model) => !selectedIds.has(model.id)),
         texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
-        sensors: (prev.sensors ?? []).filter((s) => !selectedIds.has(s.id)),
       };
     });
 
@@ -633,9 +784,8 @@ export function useSelectedSceneObjectEditor({
   return {
     selectedModel,
     selectedText,
-    selectedSensor,
     selectedMesh,
-    updateSelectedName,
+    renameObject,
     updateSelectedOpacity,
     updateSelectedTransform,
     updateSelectedTransformVector,
@@ -643,13 +793,17 @@ export function useSelectedSceneObjectEditor({
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
-    updateSelectedMeshName,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
     updateMultiObjectPositions,
     updateSelectedValueMap,
+    selectedMap,
+    updateSelectedMapTransform,
+    updateSelectedMapTransformVector,
+    commitSelectedMapTransform,
+    setObjectLocked,
     removeSelectedModel,
   };
 }

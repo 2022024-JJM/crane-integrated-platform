@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
+  nearestSensorLabel,
   nearestZone,
   trackSeverity,
   useCollisionGuardStore,
+  zoneDisplayDistanceM,
   type CollisionGuardZone,
   type DetectedObjectType,
   type TrackSeverity,
@@ -20,7 +22,7 @@ import {
 export interface HudTrack {
   id: string;
   type: DetectedObjectType;
-  /** 가장 가까운 센서(다리)까지의 거리 (m) */
+  /** 표시 기준 거리 (m) — 거더 끝 기준 환산값 (경계 30/70m와 같은 눈금) */
   distanceM: number;
   speedMps: number;
   severity: TrackSeverity;
@@ -58,11 +60,13 @@ function deriveSnapshot(
     return {
       id: track.id,
       type: track.type,
-      distanceM: Math.round(nearest.dist * nearest.zone.metersPerUnit),
+      // 표시 오프셋 적용 — "거더 끝 기준 N m" (경계 라벨 30/70m와 같은 눈금)
+      distanceM: Math.round(zoneDisplayDistanceM(nearest.dist, nearest.zone)),
       speedMps: Math.round(track.target.speed * 10) / 10,
       severity,
       phase: track.phase,
-      zoneLabel: nearest.zone.label,
+      // 캡슐 존은 양 끝 다리 중 가까운 센서의 라벨
+      zoneLabel: nearestSensorLabel(track.target.x, track.target.z, nearest.zone),
     };
   });
 

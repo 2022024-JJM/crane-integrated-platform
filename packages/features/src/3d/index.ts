@@ -9,10 +9,11 @@ export {
 } from './ui/collision-guard-camera-rig';
 export { CollisionGuardTopViewSync } from './ui/collision-guard-top-view-sync';
 export {
-  distanceFromZoneCenter,
+  distanceFromZone,
   nearestZone,
   trackSeverity,
   useCollisionGuardStore,
+  zoneDisplayDistanceM,
   type CollisionGuardZone,
   type DetectedObjectType,
   type DetectedTrack,
@@ -26,17 +27,29 @@ export {
 } from './model/use-collision-guard-hud';
 export { usePrefersReducedMotion } from './model/use-prefers-reduced-motion';
 export { useSceneInfoStore } from './model/use-scene-info-store';
-export type {
-  SensorFeedContext,
-  SensorFeedRenderer,
-} from './ui/sensor-billboard';
 export { Replay3dView } from './ui/replay-3d-view';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
+export { SceneEnvironment } from './ui/scene-environment';
+export { SceneObjectBoundary } from './ui/scene-object-boundary';
+export {
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SCENE_LIGHTING,
+  SceneLighting,
+} from './ui/scene-render-preset';
 export { SceneHistoryControls } from './ui/scene-history-controls';
+export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
+export { SceneViewFlightRig } from './ui/scene-view-flight-rig';
+export {
+  useSceneViewsStore,
+  SCENE_VIEWS_MAX,
+  SCENE_VIEW_NAME_MAX,
+  type SceneViewBookmark,
+} from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export {
   useSelectedSceneObjectEditor,

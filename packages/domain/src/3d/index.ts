@@ -5,7 +5,16 @@ export { createSceneText } from './lib/create-scene-text';
 export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
+  isSceneStoredLocallyOnly,
+  UnknownRegionError,
 } from './lib/scene-dev-storage';
+export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
+export {
+  markSceneRegionActive,
+  preloadGltf,
+  releaseGltfCache,
+  releaseSceneRegionAssets,
+} from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
   prefetchModelBottomOffset,
@@ -33,49 +42,26 @@ export type {
   ValueMapItem,
   ValueMapType,
 } from './model/types';
-export type {
-  CameraSensorSettings,
-  LidarSensorSettings,
-  SavedCameraSensorInfo,
-  SavedLidarSensorInfo,
-  SavedSensorInfo,
-  SensorType,
-} from './model/sensor-types';
-export { isCameraSensor, isLidarSensor } from './model/sensor-types';
 export {
-  createLidarSensor,
-  createCameraSensor,
-  normalizeLidarSettings,
-  normalizeCameraSettings,
-  clampLidarFov,
-  clampLidarSegments,
-  clampLidarPointSize,
-  clampCameraFov,
-  clampCameraGridSegments,
-  MIN_LIDAR_FOV,
-  MAX_LIDAR_FOV,
-  MIN_LIDAR_FAR,
-  MIN_LIDAR_SEGMENTS,
-  MAX_LIDAR_SEGMENTS,
-  MIN_LIDAR_POINT_SIZE,
-  MAX_LIDAR_POINT_SIZE,
-  MIN_CAMERA_FOV,
-  MAX_CAMERA_FOV,
-  MIN_CAMERA_NEAR,
-  MIN_CAMERA_GRID_SEGMENTS,
-  MAX_CAMERA_GRID_SEGMENTS,
-} from './lib/sensor-defaults';
+  sceneEnvironmentCatalog,
+  getSceneEnvironmentById,
+  type SceneEnvironmentCatalogItem,
+} from './model/scene-environment-catalog';
 export {
-  getSceneOccluders,
-  registerSceneOccluders,
-  unregisterSceneOccluders,
-} from './lib/scene-occluder-registry';
+  sceneMapCatalog,
+  type SceneMapCatalogItem,
+} from './model/scene-map-catalog';
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {
-  getDefaultSceneFileUrl,
   getSceneFileUrlByRegionId,
+  getKnownRegionIds,
+  isKnownRegionId,
 } from './model/scene-file-registry';
+export {
+  getEnvironmentFileUrlByRegionId,
+  resolveEnvironmentFileUrl,
+} from './model/scene-environment-registry';
 export { withBaseUrl } from './lib/asset-url';
 export {
   CRANE_TYPE_MODEL,
@@ -94,5 +80,3 @@ export type {
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
 export { SceneText } from './ui/scene-text';
-export { LidarSensorMesh } from './ui/lidar-sensor-mesh';
-export { CameraSensorMesh } from './ui/camera-sensor-mesh';

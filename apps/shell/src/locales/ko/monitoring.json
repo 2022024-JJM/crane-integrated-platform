@@ -5,6 +5,7 @@
     "title": "속성 편집",
     "name": "이름",
     "opacity": "투명도",
+    "transform": "트랜스폼",
     "empty": "씬에서 객체를 선택하면 속성을 편집할 수 있습니다.",
     "position": "위치",
     "rotation": "회전",
@@ -12,10 +13,7 @@
     "textContent": "내용",
     "textColor": "색상",
     "tagMapping": "태그 매핑",
-    "tagKeyPlaceholder": "태그 키 입력",
-    "visionChannel": "비전 채널",
-    "visionChannelEmpty": "(연결 안 됨)",
-    "visionChannelTaken": "이미 사용 중"
+    "tagKeyPlaceholder": "태그 키 입력"
   },
   "transform": {
     "title": "변형 모드",
@@ -29,6 +27,15 @@
     "undo": "실행 취소",
     "redo": "다시 실행"
   },
+  "sceneViews": {
+    "saveCurrent": "현재 뷰 저장",
+    "namePlaceholder": "뷰 이름",
+    "save": "저장",
+    "flyTo": "{{name}} 뷰로 이동",
+    "deleteView": "{{name}} 삭제",
+    "duplicateName": "이미 사용 중인 이름입니다",
+    "limitReached": "뷰는 최대 {{max}}개까지 저장할 수 있습니다"
+  },
   "focus": {
     "back": "돌아가기"
   },
@@ -36,7 +43,6 @@
     "model": "모델"
   },
   "palette": {
-    "title": "모델 팔레트",
     "description": "GLB 모델을 드래그해서 씬에 배치하세요.",
     "dragging": "드래그 중",
     "dragToPlace": "드래그해서 배치",
@@ -51,35 +57,42 @@
     "statusSaving": "저장 중",
     "statusUnsaved": "저장되지 않음",
     "statusSaved": "저장됨",
+    "statusSavedLocalOnly": "이 브라우저에만 저장됨",
+    "statusSavedLocalOnlyHint": "저장 서버가 없어 편집 내용이 이 브라우저에만 남습니다. 캐시를 지우거나 다른 PC·다른 사용자가 열면 보이지 않습니다. 공유하려면 내보내기로 JSON을 받아 반영하세요.",
     "placedObjects": "배치된 객체",
     "noPlacedObjects": "아직 배치된 객체가 없습니다.",
     "map": "지도",
-    "deleteMap": "지도 삭제",
+    "mapNone": "지도 없음",
+    "collapsePanel": "패널 접기",
+    "expandPanel": "패널 열기",
+    "lockObject": "편집 잠그기",
+    "unlockObject": "편집 잠금 해제",
+    "objectLocked": "편집 잠김",
     "deleteObject": "객체 삭제",
+    "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
     "keyboardShortcuts": "키보드 단축키",
     "deleteSelected": "선택 객체 삭제",
-    "noSelection": "선택 없음",
     "snapActive": "Snap 1.0",
     "hideLabels": "라벨 숨기기",
     "showLabels": "라벨 표시",
     "addText": "텍스트 추가",
-    "addLidarSensor": "라이다 추가",
-    "addCameraSensor": "카메라 추가",
-    "sensorTextTab": "센서 / 텍스트",
-    "mapTab": "지도",
-    "noMap": "등록된 지도가 없습니다.",
     "textObject": "텍스트",
     "save": "저장",
-    "categoryLibrary": "카테고리",
     "categoryAssetCount": "에셋 {{count}}개",
     "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
     "modelCategories": {
       "indoor": "내업",
       "outdoor": "외업",
-      "map": "맵",
       "etc": "기타"
     },
+    "paletteTabs": {
+      "models": "모델",
+      "map": "맵",
+      "background": "배경"
+    },
+    "environmentNone": "배경 없음",
+    "environmentUnset": "이 씬은 배경을 지정하지 않아 지역 기본 배경이 적용됩니다. 아래에서 고르면 씬에 저장됩니다.",
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
     "multipleSelected": "{{count}}개 객체 선택됨"

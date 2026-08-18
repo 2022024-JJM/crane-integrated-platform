@@ -40,6 +40,8 @@ interface ThreeSceneViewerCameraPreset {
 interface ThreeSceneViewerProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
   canvasProps?: Omit<ComponentProps<typeof Canvas>, 'camera' | 'children'>;
+  /** 카메라 near/far. 미지정 시 far 5000(지도 잘림 방지 최소값). */
+  cameraClip?: { near: number; far: number };
   children: ReactNode;
   overlay?: ReactNode;
   fullscreenOverlay?: ReactNode;
@@ -47,6 +49,9 @@ interface ThreeSceneViewerProps {
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
   fullscreenTopCenterOverlay?: ReactNode;
+  // 전체화면일 때 3D 캔버스 하단 중앙에 떠있는 슬롯. 씬 뷰 북마크 바 등.
+  // 루트가 아닌 캔버스 영역에 앵커링 — 분할 레이아웃에서도 3D 뷰 중앙에 온다.
+  fullscreenBottomCenterOverlay?: ReactNode;
   // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
   // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
@@ -62,6 +67,7 @@ export interface SceneController {
   zoomOut: () => void;
   moveToTopView: () => void;
   moveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
+  getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
 }
 
 interface SceneControlsBridgeProps {
@@ -90,6 +96,13 @@ function isWebGLSupported(): boolean {
       canvas.getContext('webgl') ||
       canvas.getContext('experimental-webgl');
     cachedWebGLSupport = Boolean(gl);
+    // 검사용 컨텍스트는 즉시 반납 — 브라우저의 동시 WebGL 컨텍스트
+    // 상한(보통 16)을 문서 수명 내내 1개 소모하지 않도록.
+    if (gl && 'getExtension' in gl) {
+      (gl as WebGLRenderingContext)
+        .getExtension('WEBGL_lose_context')
+        ?.loseContext();
+    }
   } catch {
     cachedWebGLSupport = false;
   }
@@ -165,7 +178,16 @@ function SceneControlsBridge({
       camera.up.copy(up);
       controls.target.copy(target);
       camera.lookAt(target);
+
+      // 감쇠(damping)를 잠시 끄고 update() 한다. 켠 채로 부르면 직전 드래그의
+      // 잔여 관성이 남아 있다가 이후 프레임에서 계속 적용돼, 방금 맞춘 포즈가
+      // 조금씩 흘러간다("리셋을 눌렀는데 카메라가 미끄러진다"). three-stdlib는
+      // damping이 꺼져 있을 때만 update()에서 델타를 0으로 리셋한다.
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
+
       invalidate();
       syncZoomPercent();
     },
@@ -196,7 +218,14 @@ function SceneControlsBridge({
 
       nextOffset.setLength(nextDistance);
       camera.position.copy(controls.target).add(nextOffset);
+
+      // applyCameraState와 같은 이유로 감쇠를 잠시 끄고 update() 한다 —
+      // 잔여 관성이 남으면 줌 버튼으로 맞춘 거리가 이후 프레임에서 흘러간다.
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
+
       invalidate();
       syncZoomPercent();
     },
@@ -222,6 +251,22 @@ function SceneControlsBridge({
     [applyCameraState],
   );
 
+  const getPose = useCallback((): {
+    position: Vector3Tuple;
+    target: Vector3Tuple;
+  } | null => {
+    const controls = controlsRef.current;
+
+    if (!controls) {
+      return null;
+    }
+
+    return {
+      position: camera.position.toArray() as Vector3Tuple,
+      target: controls.target.toArray() as Vector3Tuple,
+    };
+  }, [camera]);
+
   useEffect(() => {
     const controls = controlsRef.current;
 
@@ -241,6 +286,7 @@ function SceneControlsBridge({
       zoomOut,
       moveToTopView,
       moveTo,
+      getPose,
     });
 
     reset();
@@ -257,14 +303,27 @@ function SceneControlsBridge({
     zoomOut,
     moveToTopView,
     moveTo,
+    getPose,
   ]);
 
   return (
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      enableDamping={false}
+      // 관성 감쇠 — 끄면 드래그를 놓는 즉시 회전이 멈춰 조작이 뚝뚝 끊긴다.
+      // 관제 화면에서 마우스 조작은 사용자가 가장 오래 만지는 요소라 체감이 크다.
+      // dampingFactor는 drei 기본(0.05)보다 조금 높여 잔여 관성을 짧게 끊는다 —
+      // 정밀 배치 작업에서 손을 뗀 뒤에도 계속 흐르면 오히려 방해가 된다.
+      enableDamping
+      dampingFactor={0.12}
       target={cameraPreset.defaultTarget}
+      // 휠 줌을 포인터 방향으로 — 보고 싶은 지점을 조준해 줌인/줌아웃하면
+      // 타깃이 함께 이동해 회전·팬 없이도 지도 전역을 훑을 수 있다
+      zoomToCursor
+      // 줌 인 시 지오메트리 관통 방지
+      minDistance={5}
+      // 무한 줌 아웃 방지 — 지도가 점이 되기 전에 멈춘다 (camera far보다 작게)
+      maxDistance={3000}
     />
   );
 }
@@ -299,11 +358,13 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
 export function ThreeSceneViewer({
   cameraPreset,
   canvasProps,
+  cameraClip,
   children,
   overlay,
   fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
+  fullscreenBottomCenterOverlay,
   toolbarExtras,
   toolbarClassName,
   showZoomIndicator = true,
@@ -392,7 +453,15 @@ export function ThreeSceneViewer({
         <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
           <Canvas
             {...canvasProps}
-            camera={{ position: cameraPreset.defaultPosition }}
+            // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
+            // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
+            // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
+            // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
+            // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
+            camera={{
+              position: cameraPreset.defaultPosition,
+              ...(cameraClip ?? { near: 0.1, far: 5000 }),
+            }}
           >
             <SceneControlsBridge
               cameraPreset={cameraPreset}
@@ -405,6 +474,12 @@ export function ThreeSceneViewer({
           {overlay ? (
             <div className="pointer-events-none absolute inset-0 z-10">
               {overlay}
+            </div>
+          ) : null}
+
+          {isFullscreen && fullscreenBottomCenterOverlay ? (
+            <div className="pointer-events-auto absolute bottom-4 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2">
+              {fullscreenBottomCenterOverlay}
             </div>
           ) : null}
         </div>

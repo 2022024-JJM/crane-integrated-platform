@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
@@ -18,13 +18,6 @@ import {
 import { GoliathCollisionGuardHud } from './goliath-collision-hud';
 import { GoliathCollisionHelp } from './goliath-collision-help';
 import { GoliathMetricsCompact } from './goliath-metrics-compact';
-import { GoliathVisionPip } from './goliath-vision-pip';
-import { renderSensorFeed } from './sensor-feed-renderer';
-import {
-  CAMERA_CHANNELS,
-  LIDAR_CHANNELS,
-  type ExpandedView,
-} from './vision/types';
 
 const GOLIATH_BACKEND_REGION_ID = 'dock-1';
 const GOLIATH_TABLE_REGION_ID = 'dock-2';
@@ -44,32 +37,10 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
     regionId === 'goliath' ? GOLIATH_BACKEND_REGION_ID : regionId;
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(backendRegionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
-  const [expanded, setExpanded] = useState<ExpandedView>(null);
   const { crane } = useGoliathCraneData();
   // 성능 거버닝: 충돌 감지 ON 동안 DPR을 1.5로 클램프 — Retina에서
   // 프래그먼트 부하 ~44% 감소(발열 대책). 다크 스테이지라 체감 없음.
   const collisionGuardEnabled = useCollisionGuardStore((s) => s.enabled);
-
-  const handleSensorSelect = useCallback(
-    (channelId: string, sensorType: 'camera' | 'lidar') => {
-      if (sensorType === 'lidar') {
-        const lidarChannel = LIDAR_CHANNELS.find((c) => c.id === channelId);
-        setExpanded({
-          type: 'lidar',
-          sensor: lidarChannel?.sensorKey ?? 'fusion',
-        });
-        return;
-      }
-      const channel = CAMERA_CHANNELS.find((c) => c.id === channelId);
-      if (!channel) return;
-      setExpanded({ type: 'camera', id: channel.id });
-    },
-    [],
-  );
-
-  const handleFullscreenChange = useCallback((next: boolean) => {
-    if (!next) setExpanded(null);
-  }, []);
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
@@ -95,9 +66,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
                 onLoadingChange={setIs3dViewLoading}
-                onFullscreenChange={handleFullscreenChange}
-                onSensorSelect={handleSensorSelect}
-                renderSensorFeed={renderSensorFeed}
                 sceneExtras={<GoliathCollisionGuardScene />}
                 toolbarExtras={<GoliathCollisionGuardToggle />}
                 overlayExtras={
@@ -108,13 +76,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
                 }
                 // OFF일 때 [1, 4] = 기기 네이티브 DPR 그대로 (최대 4 클램프)
                 canvasDpr={collisionGuardEnabled ? [1, 1.5] : [1, 4]}
-                fullscreenTopRightOverlay={
-                  <GoliathVisionPip
-                    expanded={expanded}
-                    channels={CAMERA_CHANNELS}
-                    onClose={() => setExpanded(null)}
-                  />
-                }
               />
             </div>
           </ResizablePanel>

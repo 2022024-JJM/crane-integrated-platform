@@ -33,7 +33,10 @@ server {
         application/xml
         image/svg+xml
         font/woff
-        font/woff2;
+        font/woff2
+        model/gltf-binary
+        model/gltf+json
+        application/octet-stream;
 
     # Health check endpoint
     location = /healthz {
@@ -176,10 +179,23 @@ server {
         try_files $uri =404;
     }
 
-    # Immutable hashed assets — cache forever (only inside /crane_rnd/)
-    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json)$ {
+    # 빌드 산출물(dist/assets/)만 immutable. vite 가 내용 해시를 파일명에 넣으므로
+    # 내용이 바뀌면 URL 도 바뀐다 → 영구 캐시가 안전하다.
+    # (^~ 는 아래 정규식 location 보다 우선하므로 이 블록이 먼저 매칭된다.)
+    location ^~ /crane_rnd/assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # public/ 자산(models·maps·scenes·images·icons·drawings)은 해시 파일명이 아니다.
+    # 여기에 immutable 을 걸면 GLB 를 교체 배포해도, 씬 배치를 수정해도 기존 방문자
+    # 브라우저는 1년간 서버에 묻지 않고 옛 파일을 계속 쓴다(재검증조차 하지 않음).
+    # ETag/Last-Modified 재검증으로 둔다 — 변경이 없으면 304 만 오가므로 본문 전송은 없다.
+    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json)$ {
+        expires off;
+        add_header Cache-Control "public, no-cache" always;
         access_log off;
         try_files $uri =404;
     }

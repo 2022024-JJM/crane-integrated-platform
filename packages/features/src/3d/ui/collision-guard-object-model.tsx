@@ -47,12 +47,6 @@ interface ObjectModelSource {
 const MODEL_SOURCES: Record<DetectedObjectType, ObjectModelSource[]> = {
   person: [
     {
-      path: '/models/human.glb',
-      targetSize: 1.75,
-      sizeAxis: 'height',
-      rotationY: Math.PI / 2,
-    },
-    {
       path: '/models/man.glb',
       targetSize: 1.75,
       sizeAxis: 'height',

@@ -1,10 +1,8 @@
 import {
-  createCameraSensor,
-  createLidarSensor,
   createSceneModel,
   createSceneText,
   type SavedSceneInfo,
-  type SavedSensorInfo,
+  type SceneMapCatalogItem,
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -22,7 +20,7 @@ interface SceneManipulationDeps {
   commitHistoryFrom: (base: SavedSceneInfo | null) => void;
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
-  selectSensor: (id: string) => void;
+  selectMap: (id: string) => void;
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
@@ -35,7 +33,7 @@ export function createSceneManipulationActions({
   commitHistoryFrom,
   selectModel,
   selectText,
-  selectSensor,
+  selectMap,
   clearSelectedModel,
   selectedIds,
   sceneInfoRef,
@@ -99,7 +97,30 @@ export function createSceneManipulationActions({
     }
   };
 
-  const deleteMap = (id: string) => {
+  /**
+   * 지도 선택 — 배경(setEnvironmentId)과 같은 클릭 단일 선택.
+   * null이면 지도를 제거한다.
+   *
+   * 현재 지도가 잠겨 있으면 아무것도 하지 않는다 — 잠금은 선택·변형·삭제를
+   * 모두 막는 규칙이고, 교체는 삭제를 포함한다. UI(PaletteMapSection)도
+   * 잠금 상태에서 타일을 비활성화하지만, 여기서 한 번 더 막아야 다른
+   * 경로가 생겨도 규칙이 깨지지 않는다.
+   *
+   * 새로 고른 지도는 잠기지 않은 상태로 시작한다 — 배치(이동/회전)를 먼저
+   * 하고, 계층 목록의 자물쇠로 잠근다.
+   */
+  const setSceneMap = (catalogItem: SceneMapCatalogItem | null) => {
+    const currentMap = (sceneInfoRef.current?.maps ?? [])[0] ?? null;
+    if (currentMap && currentMap.locked !== false) {
+      return;
+    }
+    if (!catalogItem && !currentMap) {
+      return;
+    }
+    if (catalogItem && currentMap?.path === catalogItem.path) {
+      return;
+    }
+
     updateScene((prev) => {
       if (!prev) {
         return prev;
@@ -107,13 +128,35 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
-        maps: prev.maps.filter((m) => m.id !== id),
+        maps: catalogItem
+          ? [{ id: createId(), path: catalogItem.path, locked: false }]
+          : [],
       };
     });
+
+    if (currentMap && selectedIds.has(currentMap.id)) {
+      clearSelectedModel();
+    }
   };
 
   const selectPlacedModel = (id: string) => {
     selectModel(id);
+  };
+
+  const selectPlacedMap = (id: string) => {
+    selectMap(id);
+  };
+
+  /**
+   * 배경 파노라마 선택. null이면 "배경 없음"을 명시적으로 저장한다 —
+   * undefined로 지우면 region 기본 배경이 되살아나 사용자가 끌 수 없다.
+   */
+  const setEnvironmentId = (environmentId: string | null) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (prev.environmentId === environmentId) return prev;
+      return { ...prev, environmentId };
+    });
   };
 
   const selectPlacedText = (id: string) => {
@@ -126,6 +169,12 @@ export function createSceneManipulationActions({
         return prev;
       }
 
+      // 잠긴 모델은 삭제 불가 — 계층 목록은 잠긴 행의 삭제 버튼을 숨기지만,
+      // updater 안에서 한 번 더 막아야 다른 호출 경로가 생겨도 안전하다.
+      if (prev.models.some((model) => model.id === id && model.locked)) {
+        return prev;
+      }
+
       return {
         ...prev,
         models: prev.models.filter((model) => model.id !== id),
@@ -135,59 +184,6 @@ export function createSceneManipulationActions({
     if (selectedIds.has(id)) {
       clearSelectedModel();
     }
-  };
-
-  // ===== Sensor actions =====
-
-  const addLidarSensor = (position: [number, number, number]) => {
-    const next = createLidarSensor(position);
-    updateScene((prev) => {
-      if (!prev) return prev;
-      return { ...prev, sensors: [...(prev.sensors ?? []), next] };
-    });
-    selectSensor(next.id);
-  };
-
-  const addCameraSensor = (position: [number, number, number]) => {
-    const next = createCameraSensor(position);
-    updateScene((prev) => {
-      if (!prev) return prev;
-      return { ...prev, sensors: [...(prev.sensors ?? []), next] };
-    });
-    selectSensor(next.id);
-  };
-
-  const updateSensor = (
-    id: string,
-    patch: Partial<Omit<SavedSensorInfo, 'id' | 'type'>>,
-    options?: UpdateSceneOptions,
-  ) => {
-    updateScene((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        sensors: (prev.sensors ?? []).map((s) =>
-          s.id === id ? ({ ...s, ...patch } as SavedSensorInfo) : s,
-        ),
-      };
-    }, options);
-  };
-
-  const deletePlacedSensor = (id: string) => {
-    updateScene((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        sensors: (prev.sensors ?? []).filter((s) => s.id !== id),
-      };
-    });
-    if (selectedIds.has(id)) {
-      clearSelectedModel();
-    }
-  };
-
-  const selectPlacedSensor = (id: string) => {
-    selectSensor(id);
   };
 
   const startTransformInteraction = () => {
@@ -207,7 +203,6 @@ export function createSceneManipulationActions({
 
     const newModelDuplicates: typeof scene.models = [];
     const newTextDuplicates: NonNullable<typeof scene.texts> = [];
-    const newSensorDuplicates: NonNullable<typeof scene.sensors> = [];
     const newIds: string[] = [];
 
     for (const id of selectedIds) {
@@ -218,6 +213,9 @@ export function createSceneManipulationActions({
         newModelDuplicates.push({
           ...modelSource,
           id: newId,
+          // 잠긴 모델은 선택 자체가 안 되니 여기 올 수 없지만, 복제본이
+          // 잠김을 물려받는 일은 어떤 경로로도 없어야 한다.
+          locked: undefined,
           position: [
             modelSource.position[0] + 2,
             modelSource.position[1],
@@ -240,30 +238,10 @@ export function createSceneManipulationActions({
             textSource.position[2],
           ] as [number, number, number],
         });
-        continue;
-      }
-
-      const sensorSource = (scene.sensors ?? []).find((s) => s.id === id);
-      if (sensorSource) {
-        const newId = createId();
-        newIds.push(newId);
-        newSensorDuplicates.push({
-          ...sensorSource,
-          id: newId,
-          position: [
-            sensorSource.position[0] + 2,
-            sensorSource.position[1],
-            sensorSource.position[2],
-          ] as [number, number, number],
-        });
       }
     }
 
-    if (
-      newModelDuplicates.length === 0 &&
-      newTextDuplicates.length === 0 &&
-      newSensorDuplicates.length === 0
-    )
+    if (newModelDuplicates.length === 0 && newTextDuplicates.length === 0)
       return;
 
     updateScene((prev) => {
@@ -272,7 +250,6 @@ export function createSceneManipulationActions({
         ...prev,
         models: [...prev.models, ...newModelDuplicates],
         texts: [...(prev.texts ?? []), ...newTextDuplicates],
-        sensors: [...(prev.sensors ?? []), ...newSensorDuplicates],
       };
     });
 
@@ -282,12 +259,9 @@ export function createSceneManipulationActions({
   return {
     addModel,
     addText,
-    addLidarSensor,
-    addCameraSensor,
-    updateSensor,
-    deletePlacedSensor,
-    selectPlacedSensor,
-    deleteMap,
+    setSceneMap,
+    selectPlacedMap,
+    setEnvironmentId,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

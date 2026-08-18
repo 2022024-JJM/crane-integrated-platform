@@ -1,25 +1,22 @@
 import {
-  ChevronDown,
-  Cuboid,
   Eye,
   Palette,
   SlidersHorizontal,
   Tag,
   Type,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  isCameraSensor,
-  isLidarSensor,
-  type SavedCameraSensorInfo,
-  type SavedLidarSensorInfo,
+  type SavedMapInfo,
   type SavedModelInfo,
-  type SavedSensorInfo,
   type SavedTextInfo,
   type ValueMapItem,
   type ValueMapType,
 } from '@crane/domain/3d';
+import type { Vector3Tuple } from '@crane/core/types/math';
+import { cn } from '@crane/core/lib/utils';
 import {
   type AxisKey,
   PositionController,
@@ -32,28 +29,68 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
 
-/** Vision PiP 채널 정의. app 레이어가 자기 도메인의 채널 목록을 주입한다. */
-export interface VisionChannelOption {
-  id: string;
-  label: string;
-  sensorType: 'camera' | 'lidar';
+// 지도 transform은 optional이라(기존 저장본 호환) 표시용 기본값이 필요하다.
+// 렌더러가 쓰는 GltfModel 기본값과 같은 값이어야 인스펙터 수치와 화면이 일치한다.
+const DEFAULT_MAP_POSITION: Vector3Tuple = [0, 0, 0];
+const DEFAULT_MAP_ROTATION: Vector3Tuple = [0, 0, 0];
+const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
+
+type InspectorTabKey =
+  | 'transform'
+  | 'opacity'
+  | 'tagMapping'
+  | 'textContent'
+  | 'textColor';
+
+type InspectorObjectType = 'model' | 'mesh' | 'text' | 'map';
+
+const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
+  transform: SlidersHorizontal,
+  opacity: Eye,
+  tagMapping: Tag,
+  textContent: Type,
+  textColor: Palette,
+};
+
+const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
+  transform: 'monitoring:inspector.transform',
+  opacity: 'monitoring:inspector.opacity',
+  tagMapping: 'monitoring:inspector.tagMapping',
+  textContent: 'monitoring:inspector.textContent',
+  textColor: 'monitoring:inspector.textColor',
+};
+
+const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
+  model: ['transform', 'opacity', 'tagMapping'],
+  mesh: ['transform', 'opacity'],
+  text: ['textContent', 'textColor', 'transform'],
+  map: ['transform'],
+};
+
+function getTabsForType(
+  type: InspectorObjectType,
+  hasValueMap: boolean,
+): readonly InspectorTabKey[] {
+  const tabs = TABS_BY_TYPE[type];
+  // 태그 매핑은 onValueMapChange가 배선된 화면에서만 존재하는 섹션이다.
+  return type === 'model' && !hasValueMap
+    ? tabs.filter((tab) => tab !== 'tagMapping')
+    : tabs;
 }
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
-  selectedSensor?: SavedSensorInfo | null;
   selectedMesh: SelectedMeshInfo | null;
+  selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
-  /**
-   * 인스펙터의 비전 채널 드롭다운에 노출할 채널 목록. 비어있거나 미지정 시
-   * 채널 매핑 UI 자체가 표시되지 않는다.
-   */
-  visionChannels?: readonly VisionChannelOption[];
-  /** 현재 씬의 모든 센서. 다른 센서가 이미 점유한 채널을 disabled 표시하기 위해. */
-  allSensors?: readonly SavedSensorInfo[];
-  onNameChange: (name: string) => void;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
@@ -67,31 +104,29 @@ interface SceneObjectInspectorProps {
     axis: AxisKey,
     value: number,
   ) => void;
-  onMeshNameChange: (name: string) => void;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
   ) => void;
-  /** 센서 설정 변경 콜백. (id, partial settings) — discriminated union이라
-   *  서브컴포넌트 쪽에서 정확한 type별 patch를 보장한다. */
-  onSensorChange?: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
+  /** 지도 transform 변경 콜백. 미지정 시 지도 인스펙터는 읽기 전용이 된다. */
+  onMapTransformChange?: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+  ) => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
-}
-
-interface InspectorSectionProps {
-  title: string;
-  icon: ReactNode;
-  defaultOpen?: boolean;
-  children: ReactNode;
+  onValueMapChange?: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
+  /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
+  className?: string;
 }
 
 interface TransformGroupProps {
@@ -99,26 +134,15 @@ interface TransformGroupProps {
   children: ReactNode;
 }
 
-function InspectorSection({
-  title,
-  icon,
-  defaultOpen = true,
-  children,
-}: InspectorSectionProps) {
+/**
+ * 탭 콘텐츠 상단의 얇은 섹션 헤더 — 접기 없음(섹션 전환은 좌측 레일 담당).
+ * 아이콘은 레일에 이미 표시되므로 여기서는 타이틀만 둔다.
+ */
+function SectionHeader({ title }: { title: string }) {
   return (
-    <details
-      open={defaultOpen}
-      className="group border-border bg-card rounded-lg border"
-    >
-      <summary className="text-foreground flex cursor-pointer list-none items-center justify-between px-2.5 py-2 text-[12px] font-medium">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">{icon}</span>
-          <span>{title}</span>
-        </div>
-        <ChevronDown className="text-muted-foreground/60 size-3.5 transition group-open:rotate-180" />
-      </summary>
-      <div className="border-border border-t px-2.5 py-2.5">{children}</div>
-    </details>
+    <div className="text-foreground px-0.5 pb-1.5 text-[12px] font-medium">
+      {title}
+    </div>
   );
 }
 
@@ -142,9 +166,15 @@ const VALUE_MAP_GROUPS: { label: string; types: ValueMapType[] }[] = [
 ];
 
 const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
-  PX: 'X', PY: 'Y', PZ: 'Z',
-  RX: 'X', RY: 'Y', RZ: 'Z',
-  SX: 'X', SY: 'Y', SZ: 'Z',
+  PX: 'X',
+  PY: 'Y',
+  PZ: 'Z',
+  RX: 'X',
+  RY: 'Y',
+  RZ: 'Z',
+  SX: 'X',
+  SY: 'Y',
+  SZ: 'Z',
 };
 
 const POSITION_TYPES = new Set<ValueMapType>(['PX', 'PY', 'PZ']);
@@ -157,7 +187,12 @@ function TagMappingSection({
 }: {
   valueMapList: ValueMapItem[];
   craneId?: string;
-  onValueMapChange: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  onValueMapChange: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
   t: (key: string) => string;
 }) {
   const prefix = craneId ? `${craneId}:` : '';
@@ -174,10 +209,14 @@ function TagMappingSection({
   // offset 입력 중간 상태(소수점, 음수 부호 등)를 허용하기 위해 로컬 draft 관리
   const initialOffsetDrafts = () =>
     Object.fromEntries(
-      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [t, String(getOffset(t))]),
+      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [
+        t,
+        String(getOffset(t)),
+      ]),
     ) as Record<ValueMapType, string>;
 
-  const [offsetDrafts, setOffsetDrafts] = useState<Record<ValueMapType, string>>(initialOffsetDrafts);
+  const [offsetDrafts, setOffsetDrafts] =
+    useState<Record<ValueMapType, string>>(initialOffsetDrafts);
 
   // 외부에서 valueMapList가 바뀔 때(저장 후 로드 등) draft를 동기화
   useEffect(() => {
@@ -185,22 +224,24 @@ function TagMappingSection({
       PX: String(getOffset('PX')),
       PY: String(getOffset('PY')),
       PZ: String(getOffset('PZ')),
-      RX: '0', RY: '0', RZ: '0',
-      SX: '0', SY: '0', SZ: '0',
+      RX: '0',
+      RY: '0',
+      RZ: '0',
+      SX: '0',
+      SY: '0',
+      SZ: '0',
     });
     // valueMapList 참조가 바뀔 때만 동기화
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueMapList]);
 
   return (
-    <InspectorSection
-      title={t('monitoring:inspector.tagMapping')}
-      icon={<Tag className="size-4" />}
-      defaultOpen={false}
-    >
+    <div>
+      <SectionHeader title={t('monitoring:inspector.tagMapping')} />
       {craneId ? (
         <p className="text-muted-foreground mb-2 text-[10px]">
-          크레인 ID: <span className="text-foreground font-mono">{craneId}</span>
+          크레인 ID:{' '}
+          <span className="text-foreground font-mono">{craneId}</span>
         </p>
       ) : null}
       <div className="space-y-3">
@@ -221,13 +262,20 @@ function TagMappingSection({
                       </span>
                       <Input
                         value={tagCode}
-                        placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
+                        placeholder={t(
+                          'monitoring:inspector.tagKeyPlaceholder',
+                        )}
                         className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
                         onChange={(e) => {
                           const fullKey = e.target.value.trim()
                             ? `${prefix}${e.target.value.trim()}`
                             : '';
-                          onValueMapChange(type, fullKey, getScale(type), isPosition ? getOffset(type) : undefined);
+                          onValueMapChange(
+                            type,
+                            fullKey,
+                            getScale(type),
+                            isPosition ? getOffset(type) : undefined,
+                          );
                         }}
                       />
                     </div>
@@ -246,7 +294,12 @@ function TagMappingSection({
                             onChange={(e) => {
                               const s = parseFloat(e.target.value);
                               if (Number.isFinite(s)) {
-                                onValueMapChange(type, `${prefix}${tagCode}`, s, isPosition ? getOffset(type) : undefined);
+                                onValueMapChange(
+                                  type,
+                                  `${prefix}${tagCode}`,
+                                  s,
+                                  isPosition ? getOffset(type) : undefined,
+                                );
                               }
                             }}
                           />
@@ -264,10 +317,18 @@ function TagMappingSection({
                               className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
                               onChange={(e) => {
                                 const raw = e.target.value;
-                                setOffsetDrafts((prev) => ({ ...prev, [type]: raw }));
+                                setOffsetDrafts((prev) => ({
+                                  ...prev,
+                                  [type]: raw,
+                                }));
                                 const o = parseFloat(raw);
                                 if (Number.isFinite(o)) {
-                                  onValueMapChange(type, `${prefix}${tagCode}`, getScale(type), o);
+                                  onValueMapChange(
+                                    type,
+                                    `${prefix}${tagCode}`,
+                                    getScale(type),
+                                    o,
+                                  );
                                 }
                               }}
                             />
@@ -282,7 +343,7 @@ function TagMappingSection({
           </div>
         ))}
       </div>
-    </InspectorSection>
+    </div>
   );
 }
 
@@ -319,10 +380,8 @@ function TransformSection({
   const displayScale = isActive && liveScale ? liveScale : scale;
 
   return (
-    <InspectorSection
-      title={t('monitoring:transform.title')}
-      icon={<Cuboid className="size-4" />}
-    >
+    <div>
+      <SectionHeader title={t('monitoring:inspector.transform')} />
       <div className="space-y-2.5">
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
@@ -349,92 +408,89 @@ function TransformSection({
           />
         </TransformGroup>
       </div>
-    </InspectorSection>
+    </div>
+  );
+}
+
+function OpacitySection({
+  value,
+  onChange,
+  t,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div>
+      <SectionHeader title={t('monitoring:inspector.opacity')} />
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={0.1}
+          max={1}
+          step={0.1}
+          value={value}
+          className="accent-primary h-2 w-full cursor-pointer"
+          onChange={(event) => {
+            onChange(Number(event.target.value));
+          }}
+        />
+        <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
+          {value.toFixed(1)}
+        </span>
+      </div>
+    </div>
   );
 }
 
 function ModelInspectorContent({
   selectedModel,
-  selectedLabel,
-  nameDraft,
-  setNameDraft,
   selectedOpacity,
-  onNameChange,
+  activeTab,
   onOpacityChange,
   onTransformChange,
   onValueMapChange,
   t,
 }: {
   selectedModel: SavedModelInfo;
-  selectedLabel: string;
-  nameDraft: string;
-  setNameDraft: (v: string) => void;
   selectedOpacity: number;
-  onNameChange: (name: string) => void;
+  activeTab: InspectorTabKey;
   onOpacityChange: (value: number) => void;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
   ) => void;
-  onValueMapChange?: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  onValueMapChange?: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
   t: (key: string) => string;
 }) {
   return (
     <>
-      <InspectorSection
-        title={t('monitoring:inspector.name')}
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <Input
-          value={nameDraft}
-          aria-label={t('monitoring:inspector.name')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setNameDraft(nextValue);
-            onNameChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setNameDraft(selectedLabel);
-              event.currentTarget.blur();
-            }
-          }}
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={selectedModel.position}
+          rotation={selectedModel.rotation}
+          scale={selectedModel.scale}
+          onTransformChange={onTransformChange}
+          t={t}
         />
-      </InspectorSection>
+      ) : null}
 
-      <TransformSection
-        position={selectedModel.position}
-        rotation={selectedModel.rotation}
-        scale={selectedModel.scale}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
+      {activeTab === 'opacity' ? (
+        <OpacitySection
+          value={selectedOpacity}
+          onChange={onOpacityChange}
+          t={t}
+        />
+      ) : null}
 
-      <InspectorSection
-        title={t('monitoring:inspector.opacity')}
-        icon={<Eye className="size-4" />}
-      >
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.1}
-            value={selectedOpacity}
-            className="accent-primary h-2 w-full cursor-pointer"
-            onChange={(event) => {
-              onOpacityChange(Number(event.target.value));
-            }}
-          />
-          <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
-            {selectedOpacity.toFixed(1)}
-          </span>
-        </div>
-      </InspectorSection>
-
-      {onValueMapChange ? (
+      {activeTab === 'tagMapping' && onValueMapChange ? (
         <TagMappingSection
           valueMapList={selectedModel.valueMapList}
           craneId={selectedModel.craneId}
@@ -448,18 +504,14 @@ function ModelInspectorContent({
 
 function MeshInspectorContent({
   selectedMesh,
-  meshNameDraft,
-  setMeshNameDraft,
-  onMeshNameChange,
+  activeTab,
   onMeshOpacityChange,
   onMeshTransformChange,
   onBackToParent,
   t,
 }: {
   selectedMesh: SelectedMeshInfo;
-  meshNameDraft: string;
-  setMeshNameDraft: (v: string) => void;
-  onMeshNameChange: (name: string) => void;
+  activeTab: InspectorTabKey;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
@@ -490,14 +542,10 @@ function MeshInspectorContent({
   const rotation = override?.rotation ?? defaultRotation;
   const scale = override?.scale ?? defaultScale;
   const opacity = override?.opacity ?? 1;
-  // 자식 mesh의 표시 이름 우선순위: override.name → mesh segment의 마지막 이름
-  // (path 의 [idx]name 마지막 부분) → meshPath 자체.
-  const lastSegment = selectedMesh.meshPath.split('/').pop() ?? '';
-  const segmentName = /^\[\d+\](.*)$/.exec(lastSegment)?.[1] ?? lastSegment;
-  const displayName = override?.name || segmentName || selectedMesh.meshPath;
 
   return (
     <>
+      {/* 부모 복귀 버튼은 탭과 무관한 내비게이션이라 항상 상단에 둔다. */}
       <button
         type="button"
         onClick={onBackToParent}
@@ -507,57 +555,19 @@ function MeshInspectorContent({
         {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
       </button>
 
-      <InspectorSection
-        title={t('monitoring:inspector.name')}
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <Input
-          value={meshNameDraft}
-          aria-label={t('monitoring:inspector.name')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setMeshNameDraft(nextValue);
-            onMeshNameChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setMeshNameDraft(displayName);
-              event.currentTarget.blur();
-            }
-          }}
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={position}
+          rotation={rotation}
+          scale={scale}
+          onTransformChange={onMeshTransformChange}
+          t={t}
         />
-      </InspectorSection>
+      ) : null}
 
-      <TransformSection
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        onTransformChange={onMeshTransformChange}
-        t={t}
-      />
-
-      <InspectorSection
-        title={t('monitoring:inspector.opacity')}
-        icon={<Eye className="size-4" />}
-      >
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.1}
-            value={opacity}
-            className="accent-primary h-2 w-full cursor-pointer"
-            onChange={(event) => {
-              onMeshOpacityChange(Number(event.target.value));
-            }}
-          />
-          <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
-            {opacity.toFixed(1)}
-          </span>
-        </div>
-      </InspectorSection>
+      {activeTab === 'opacity' ? (
+        <OpacitySection value={opacity} onChange={onMeshOpacityChange} t={t} />
+      ) : null}
     </>
   );
 }
@@ -565,6 +575,7 @@ function MeshInspectorContent({
 function TextInspectorContent({
   selectedText,
   contentDraft,
+  activeTab,
   setContentDraft,
   onTextContentChange,
   onTextColorChange,
@@ -573,6 +584,7 @@ function TextInspectorContent({
 }: {
   selectedText: SavedTextInfo;
   contentDraft: string;
+  activeTab: InspectorTabKey;
   setContentDraft: (v: string) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
@@ -585,345 +597,269 @@ function TextInspectorContent({
 }) {
   return (
     <>
-      <InspectorSection
-        title={t('monitoring:inspector.textContent')}
-        icon={<Type className="size-4" />}
-      >
-        <Input
-          value={contentDraft}
-          aria-label={t('monitoring:inspector.textContent')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setContentDraft(nextValue);
-            onTextContentChange(nextValue);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setContentDraft(selectedText.content);
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      </InspectorSection>
-
-      <InspectorSection
-        title={t('monitoring:inspector.textColor')}
-        icon={<Palette className="size-4" />}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={selectedText.color}
-            className="border-border h-8 w-10 cursor-pointer rounded-sm border bg-transparent"
+      {activeTab === 'textContent' ? (
+        <div>
+          <SectionHeader title={t('monitoring:inspector.textContent')} />
+          <Input
+            value={contentDraft}
+            aria-label={t('monitoring:inspector.textContent')}
+            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-8 cursor-text rounded-sm px-2 text-[12px]"
             onChange={(event) => {
-              onTextColorChange(event.target.value);
+              const nextValue = event.target.value;
+              setContentDraft(nextValue);
+              onTextContentChange(nextValue);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setContentDraft(selectedText.content);
+                event.currentTarget.blur();
+              }
             }}
           />
-          <span className="text-muted-foreground text-[12px]">
-            {selectedText.color}
-          </span>
         </div>
-      </InspectorSection>
+      ) : null}
 
-      <TransformSection
-        position={selectedText.position}
-        rotation={selectedText.rotation}
-        scale={selectedText.scale}
-        onTransformChange={onTextTransformChange}
-        t={t}
-      />
+      {activeTab === 'textColor' ? (
+        <div>
+          <SectionHeader title={t('monitoring:inspector.textColor')} />
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={selectedText.color}
+              className="border-border h-8 w-10 cursor-pointer rounded-sm border bg-transparent"
+              onChange={(event) => {
+                onTextColorChange(event.target.value);
+              }}
+            />
+            <span className="text-muted-foreground text-[12px]">
+              {selectedText.color}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === 'transform' ? (
+        <TransformSection
+          position={selectedText.position}
+          rotation={selectedText.rotation}
+          scale={selectedText.scale}
+          onTransformChange={onTextTransformChange}
+          t={t}
+        />
+      ) : null}
     </>
   );
 }
 
-function VisionChannelSelect({
-  sensor,
-  onChange,
-  visionChannels,
-  allSensors,
+/**
+ * 지도 인스펙터 — transform만.
+ *
+ * 지도에는 모델의 투명도/태그 매핑에 해당하는 개념이 없다. 투명도를
+ * 낮추면 그 위 객체의 기준면이 사라져 배치 작업 자체가 불가능해진다.
+ * 그래서 편집 가능한 것은 배치(transform)뿐이고, 이름 표시/변경은
+ * 계층 목록(우클릭 메뉴)이 담당한다.
+ *
+ * 잠금 토글은 여기 두지 않는다 — 이 패널은 "지도가 선택된 상태"에서만
+ * 보이는데, 잠긴 지도는 애초에 선택될 수 없고 잠그는 순간 선택이 풀려
+ * 패널이 사라진다. 즉 여기서 잠금 버튼은 항상 "잠그기"만 표시하다가
+ * 누르면 자기 자신이 사라지는 막다른 길이다. 잠금/해제는 좌측 계층
+ * 목록의 자물쇠 버튼이 유일한 경로다(거기서는 잠긴 지도도 보인다).
+ */
+function MapInspectorContent({
+  selectedMap,
+  onTransformChange,
   t,
 }: {
-  sensor: SavedLidarSensorInfo | SavedCameraSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
+  selectedMap: SavedMapInfo;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
   ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
   t: (key: string) => string;
 }) {
-  if (!visionChannels || visionChannels.length === 0) return null;
-
-  // 같은 sensorType의 채널만 노출 — 카메라는 cam-*, 라이다는 lidar-*
-  const candidates = visionChannels.filter(
-    (c) => c.sensorType === sensor.type,
-  );
-  if (candidates.length === 0) return null;
-
-  // 다른 센서가 점유한 채널 집계 (자기 자신 제외)
-  const taken = new Set<string>();
-  for (const s of allSensors ?? []) {
-    if (s.id === sensor.id) continue;
-    if (s.channelId) taken.add(s.channelId);
-  }
-
-  const current = sensor.channelId ?? '';
-
   return (
-    <label className="flex items-center justify-between gap-2 py-1">
-      <span className="text-muted-foreground text-[11px]">
-        {t('monitoring:inspector.visionChannel')}
-      </span>
-      <select
-        value={current}
-        onChange={(e) => {
-          const next = e.target.value;
-          onChange(sensor.id, {
-            channelId: next.length > 0 ? next : undefined,
-          });
-        }}
-        className="border-border bg-muted text-foreground h-7 w-32 rounded-sm px-1.5 text-right text-[11px]"
-      >
-        <option value="">{t('monitoring:inspector.visionChannelEmpty')}</option>
-        {candidates.map((channel) => {
-          const isTaken = taken.has(channel.id);
+    <TransformSection
+      position={selectedMap.position ?? DEFAULT_MAP_POSITION}
+      rotation={selectedMap.rotation ?? DEFAULT_MAP_ROTATION}
+      scale={selectedMap.scale ?? DEFAULT_MAP_SCALE}
+      onTransformChange={onTransformChange}
+      t={t}
+    />
+  );
+}
+
+/** 좌측 세로 아이콘 레일 — 선택 타입의 섹션 탭을 나열한다. */
+function InspectorTabRail({
+  tabs,
+  active,
+  onSelect,
+  t,
+}: {
+  tabs: readonly InspectorTabKey[];
+  active: InspectorTabKey;
+  onSelect: (tab: InspectorTabKey) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <TooltipProvider>
+      <div className="border-border flex w-9 shrink-0 flex-col items-center gap-1 border-r py-2">
+        {tabs.map((tab) => {
+          const Icon = TAB_ICON[tab];
+          const label = t(TAB_LABEL_KEY[tab]);
+          const isActive = tab === active;
           return (
-            <option key={channel.id} value={channel.id} disabled={isTaken}>
-              {channel.label}
-              {isTaken
-                ? ` · ${t('monitoring:inspector.visionChannelTaken')}`
-                : ''}
-            </option>
+            <Tooltip key={tab}>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={isActive}
+                    onClick={() => onSelect(tab)}
+                    className={cn(
+                      'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+                      isActive
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  />
+                }
+              >
+                <Icon className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
           );
         })}
-      </select>
-    </label>
-  );
-}
-
-function LidarSensorInspectorContent({
-  sensor,
-  onChange,
-  onTransformChange,
-  visionChannels,
-  allSensors,
-  t,
-}: {
-  sensor: SavedLidarSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
-  onTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
-  t: (key: string) => string;
-}) {
-  return (
-    <>
-      <TransformSection
-        position={sensor.position}
-        rotation={sensor.rotation}
-        scale={[1, 1, 1]}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
-
-      <InspectorSection
-        title="LiDAR Settings"
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <div className="space-y-2">
-          <VisionChannelSelect
-            sensor={sensor}
-            onChange={onChange}
-            visionChannels={visionChannels}
-            allSensors={allSensors}
-            t={t}
-          />
-        </div>
-      </InspectorSection>
-    </>
-  );
-}
-
-function CameraSensorInspectorContent({
-  sensor,
-  onChange,
-  onTransformChange,
-  visionChannels,
-  allSensors,
-  t,
-}: {
-  sensor: SavedCameraSensorInfo;
-  onChange: (
-    id: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch: Record<string, any>,
-  ) => void;
-  onTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  visionChannels?: readonly VisionChannelOption[];
-  allSensors?: readonly SavedSensorInfo[];
-  t: (key: string) => string;
-}) {
-  return (
-    <>
-      <TransformSection
-        position={sensor.position}
-        rotation={sensor.rotation}
-        scale={[1, 1, 1]}
-        onTransformChange={onTransformChange}
-        t={t}
-      />
-
-      <InspectorSection
-        title="Camera Settings"
-        icon={<SlidersHorizontal className="size-4" />}
-      >
-        <div className="space-y-2">
-          <VisionChannelSelect
-            sensor={sensor}
-            onChange={onChange}
-            visionChannels={visionChannels}
-            allSensors={allSensors}
-            t={t}
-          />
-        </div>
-      </InspectorSection>
-    </>
+      </div>
+    </TooltipProvider>
   );
 }
 
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
-  selectedSensor = null,
   selectedMesh,
+  selectedMap = null,
   multiSelectCount = 0,
-  visionChannels,
-  allSensors,
-  onNameChange,
   onOpacityChange,
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
   onTextTransformChange,
-  onMeshNameChange,
   onMeshOpacityChange,
   onMeshTransformChange,
-  onSensorChange,
   onBackToParent,
   onValueMapChange,
+  onMapTransformChange,
+  className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
-  const selectedLabel = selectedModel?.equipName ?? '';
   const selectedOpacity = selectedModel?.opacity ?? 1;
-  const [nameDraft, setNameDraft] = useState(selectedLabel);
   const [contentDraft, setContentDraft] = useState(selectedText?.content ?? '');
-  const initialMeshName = selectedMesh?.override?.name ?? '';
-  const [meshNameDraft, setMeshNameDraft] = useState(initialMeshName);
-
-  useEffect(() => {
-    setNameDraft(selectedLabel);
-  }, [selectedLabel]);
+  const [activeTab, setActiveTab] = useState<InspectorTabKey>('transform');
 
   useEffect(() => {
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  useEffect(() => {
-    setMeshNameDraft(initialMeshName);
-  }, [initialMeshName, selectedMesh?.meshPath]);
+  // 기존 분기 순서(multi > mesh > model > text > map)와 동일하게 타입 판별.
+  const selectedType: InspectorObjectType | null =
+    multiSelectCount > 1
+      ? null
+      : selectedMesh
+        ? 'mesh'
+        : selectedModel
+          ? 'model'
+          : selectedText
+            ? 'text'
+            : selectedMap
+              ? 'map'
+              : null;
 
-  const hasSelection =
-    selectedModel ||
-    selectedText ||
-    selectedSensor ||
-    selectedMesh ||
-    multiSelectCount > 1;
+  const tabs = selectedType
+    ? getTabsForType(selectedType, Boolean(onValueMapChange))
+    : [];
+  // 타입 전환 시 같은 섹션이 있으면 유지, 없으면 첫 탭 — effect 대신 렌더 시
+  // 파생 보정이라 stale 탭이 한 프레임도 렌더되지 않는다. activeTab은 사용자의
+  // 마지막 명시적 선택으로 남아, 탭이 없는 타입을 거쳐 돌아와도 복원된다.
+  const resolvedTab = tabs.includes(activeTab)
+    ? activeTab
+    : (tabs[0] ?? 'transform');
+
+  const hasSelection = selectedType !== null || multiSelectCount > 1;
 
   return (
-    <Card className="border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
-        {multiSelectCount > 1 ? (
-          <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
-            <p className="max-w-56 text-center">
-              {t('monitoring:editor.multipleSelected', { count: multiSelectCount })}
-            </p>
-          </div>
-        ) : selectedMesh ? (
-          <MeshInspectorContent
-            selectedMesh={selectedMesh}
-            meshNameDraft={meshNameDraft}
-            setMeshNameDraft={setMeshNameDraft}
-            onMeshNameChange={onMeshNameChange}
-            onMeshOpacityChange={onMeshOpacityChange}
-            onMeshTransformChange={onMeshTransformChange}
-            onBackToParent={onBackToParent}
+    <Card
+      className={cn(
+        'border-border bg-card text-card-foreground flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0',
+        className,
+      )}
+    >
+      <CardContent className="flex min-h-0 flex-1 flex-row gap-0 overflow-hidden p-0">
+        {selectedType ? (
+          <InspectorTabRail
+            tabs={tabs}
+            active={resolvedTab}
+            onSelect={setActiveTab}
             t={t}
           />
-        ) : selectedModel ? (
-          <ModelInspectorContent
-            selectedModel={selectedModel}
-            selectedLabel={selectedLabel}
-            nameDraft={nameDraft}
-            setNameDraft={setNameDraft}
-            selectedOpacity={selectedOpacity}
-            onNameChange={onNameChange}
-            onOpacityChange={onOpacityChange}
-            onTransformChange={onTransformChange}
-            onValueMapChange={onValueMapChange}
-            t={t}
-          />
-        ) : selectedText ? (
-          <TextInspectorContent
-            selectedText={selectedText}
-            contentDraft={contentDraft}
-            setContentDraft={setContentDraft}
-            onTextContentChange={onTextContentChange}
-            onTextColorChange={onTextColorChange}
-            onTextTransformChange={onTextTransformChange}
-            t={t}
-          />
-        ) : selectedSensor && onSensorChange ? (
-          isLidarSensor(selectedSensor) ? (
-            <LidarSensorInspectorContent
-              sensor={selectedSensor}
-              onChange={onSensorChange}
-              onTransformChange={onTransformChange}
-              visionChannels={visionChannels}
-              allSensors={allSensors}
+        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 py-2">
+          {multiSelectCount > 1 ? (
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center">
+                {t('monitoring:editor.multipleSelected', {
+                  count: multiSelectCount,
+                })}
+              </p>
+            </div>
+          ) : selectedMesh ? (
+            <MeshInspectorContent
+              selectedMesh={selectedMesh}
+              activeTab={resolvedTab}
+              onMeshOpacityChange={onMeshOpacityChange}
+              onMeshTransformChange={onMeshTransformChange}
+              onBackToParent={onBackToParent}
               t={t}
             />
-          ) : isCameraSensor(selectedSensor) ? (
-            <CameraSensorInspectorContent
-              sensor={selectedSensor}
-              onChange={onSensorChange}
+          ) : selectedModel ? (
+            <ModelInspectorContent
+              selectedModel={selectedModel}
+              selectedOpacity={selectedOpacity}
+              activeTab={resolvedTab}
+              onOpacityChange={onOpacityChange}
               onTransformChange={onTransformChange}
-              visionChannels={visionChannels}
-              allSensors={allSensors}
+              onValueMapChange={onValueMapChange}
               t={t}
             />
-          ) : null
-        ) : null}
-        {!hasSelection ? (
-          <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
-            <p className="max-w-56 text-center">
-              {t('monitoring:inspector.empty')}
-            </p>
-          </div>
-        ) : null}
+          ) : selectedText ? (
+            <TextInspectorContent
+              selectedText={selectedText}
+              contentDraft={contentDraft}
+              activeTab={resolvedTab}
+              setContentDraft={setContentDraft}
+              onTextContentChange={onTextContentChange}
+              onTextColorChange={onTextColorChange}
+              onTextTransformChange={onTextTransformChange}
+              t={t}
+            />
+          ) : selectedMap ? (
+            <MapInspectorContent
+              selectedMap={selectedMap}
+              onTransformChange={onMapTransformChange ?? onTransformChange}
+              t={t}
+            />
+          ) : null}
+          {!hasSelection ? (
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center">
+                {t('monitoring:inspector.empty')}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

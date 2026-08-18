@@ -32,6 +32,7 @@
     "./molecules/scroll-area": "./src/molecules/scroll-area.tsx",
     "./molecules/select": "./src/molecules/select.tsx",
     "./molecules/popover": "./src/molecules/popover.tsx",
+    "./molecules/context-menu": "./src/molecules/context-menu.tsx",
     "./molecules/status-badge": "./src/molecules/status-badge.tsx",
     "./molecules/pagination": "./src/molecules/pagination.tsx",
     "./molecules/table": "./src/molecules/table.tsx",

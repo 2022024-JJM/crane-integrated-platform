@@ -38,7 +38,8 @@
         "warning": "Warn",
         "danger": "Danger"
       },
-      "empty": "No objects detected"
+      "empty": "No objects in detection range",
+      "scanning": "Monitoring"
     },
     "help": {
       "title": "Help",
@@ -50,6 +51,7 @@
       "arrow": "Heading · length scales with speed",
       "severityDanger": "Danger — inside danger radius",
       "severityWarning": "Warning — inside detection range",
+      "distanceBasis": "All distances are measured from the girder end.",
       "simulationNote": "Currently running on simulated data."
     }
   },

@@ -161,6 +161,17 @@ export function GoliathCollisionGuardHud() {
       <header className="flex items-center gap-1.5 border-b border-slate-700/60 px-2.5 py-1.5 text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
         <ShieldCheck className="size-3" aria-hidden />
         <span className="flex-1">{t('collisionGuard.hud.title')}</span>
+        {/* 감시 생존 신호 — 빈 목록 문구는 센서가 죽어도 똑같아서 "시스템이
+            지금 보고 있다"를 전달하지 못한다. 씬의 레이더 파장과 같은 sky로
+            묶어 중립 상태임을 유지한다(세버리티 인코딩은 행 배지 하나뿐이라는
+            이 패널의 규칙을 침범하지 않는다). */}
+        <span className="flex items-center gap-1 text-[10px] font-medium tracking-normal text-sky-300/90 normal-case">
+          <span
+            aria-hidden
+            className="size-1.5 rounded-full bg-sky-400 motion-safe:animate-pulse"
+          />
+          {t('collisionGuard.hud.scanning')}
+        </span>
       </header>
       {/* 위험 진입을 스크린리더에 알린다 — 시각 채널(붉은 링·펄스)만으로는
           전달되지 않는다. 상태가 바뀔 때만 문장이 갱신되므로 4Hz 폴링이
@@ -178,7 +189,8 @@ export function GoliathCollisionGuardHud() {
         </p>
       ) : (
         // 행 구분선은 아주 옅게 — 위험 행의 붉은 틴트/모서리 마커와
-        // 줄무늬가 경쟁하지 않아야 한다.
+        // 줄무늬가 경쟁하지 않아야 한다. 거리 기준(거더 끝) 설명은
+        // 도움말 패널이 담당한다.
         <ul className="divide-y divide-slate-700/30 py-0.5">
           {snapshot.tracks.map((track) => (
             <TrackRow key={track.id} track={track} />

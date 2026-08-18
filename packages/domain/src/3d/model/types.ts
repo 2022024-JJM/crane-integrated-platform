@@ -1,5 +1,4 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { SavedSensorInfo } from './sensor-types';
 
 export type ValueMapType =
   | 'PX'
@@ -21,12 +20,16 @@ export interface SavedSceneInfo {
   maps: SavedMapInfo[];
   models: SavedModelInfo[];
   texts?: SavedTextInfo[];
-  /**
-   * 씬에 배치된 LIDAR / Camera 센서 목록. 각 센서는 sceneInfo 저장에 함께
-   * 직렬화되어 새로고침/저장본 로드 시 그대로 복원된다.
-   */
-  sensors?: SavedSensorInfo[];
   camera?: SavedCameraInfo | null;
+  /**
+   * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
+   *
+   * - `undefined`: 씬이 배경을 지정하지 않음 → region 기본값으로 떨어진다
+   *   (scene-environment-registry). 기존 저장본이 하늘을 잃지 않게 하는 경로다.
+   * - `null`: 사용자가 "배경 없음"을 **명시적으로** 고름 → region 기본값도
+   *   적용하지 않는다. undefined와 구분되어야 배경을 끌 수 있다.
+   */
+  environmentId?: string | null;
 }
 
 export interface SavedTextInfo {
@@ -54,6 +57,13 @@ export interface SavedModelInfo {
    * 편집한 결과가 여기 누적된다.
    */
   meshOverrides?: SavedMeshOverride[];
+  /**
+   * 편집 잠금 — 씬 데이터다(저장 대상). true면 에디터에서 선택·변형·삭제가
+   * 모두 막히고, 계층 목록의 자물쇠 토글로만 풀 수 있다.
+   * 필드가 없으면 잠기지 않은 것으로 본다. true일 때만 직렬화해
+   * 기존 저장본과의 diff를 최소화한다.
+   */
+  locked?: boolean;
 }
 
 export interface SavedMeshOverride {
@@ -70,6 +80,27 @@ export interface SavedMeshOverride {
 export interface SavedMapInfo {
   id: string;
   path: string;
+  /**
+   * 표시 이름 — 없으면 path에서 파생한 이름(humanizeModelPath)을 쓴다.
+   * 기존 저장본은 필드가 없고, 목록에서 이름을 바꿀 때만 기록된다.
+   */
+  name?: string;
+  /**
+   * 지도 배치 transform. 모두 optional — 기존 저장본(맵에 transform이 없던
+   * 시절)은 필드가 없고, 그 경우 원점/무회전/등배로 렌더된다. 즉 이 필드를
+   * 건드리지 않은 씬은 이전과 픽셀 단위로 동일하다.
+   */
+  position?: Vector3Tuple;
+  rotation?: Vector3Tuple;
+  scale?: Vector3Tuple;
+  /**
+   * 편집 잠금 — 씬 데이터다(저장 대상). 모델과 달리 **필드가 없으면 잠긴
+   * 것**으로 본다: 지도는 화면 대부분을 덮는 거대 메시라 기본이 잠김이어야
+   * 다른 객체를 고르려는 클릭이 지도에 먹히지 않고, 기존 저장본(필드 없음)도
+   * 종전 UX(항상 잠김 시작) 그대로 열린다. sanitize가 명시적 boolean으로
+   * 정규화한다.
+   */
+  locked?: boolean;
 }
 
 export interface ValueMapItem {

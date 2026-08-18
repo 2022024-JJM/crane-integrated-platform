@@ -11,19 +11,13 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
-  LidarSensorMesh,
-  CameraSensorMesh,
-  isLidarSensor,
-  isCameraSensor,
   loadSceneInfoByRegionId,
+  markSceneRegionActive,
+  preloadGltf,
+  releaseSceneRegionAssets,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import {
-  BillboardHoverProvider,
-  SensorBillboard,
-  type SensorFeedRenderer,
-} from './sensor-billboard';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { useValueMapperStore } from '../model/use-value-mapper-store';
@@ -34,8 +28,7 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
-
-const noop = () => {};
+import { SceneObjectBoundary } from './scene-object-boundary';
 
 export function useSceneData(
   regionId: string,
@@ -43,6 +36,8 @@ export function useSceneData(
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  /** 이 region이 로드한 GLB 경로. cleanup에서 캐시를 비울 때 쓴다. */
+  const loadedAssetPathsRef = useRef<string[]>([]);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
@@ -55,6 +50,10 @@ export function useSceneData(
 
   useEffect(() => {
     let isMounted = true;
+    // 이 지역 화면이 올라왔음을 모듈 전역에 표시한다. 실시간↔리플레이↔에디터는
+    // 서로 다른 컴포넌트라 언마운트/마운트로 전환되므로, 컴포넌트 ref로는
+    // "같은 지역으로 이어졌다"를 알 수 없다(markSceneRegionActive 주석 참고).
+    markSceneRegionActive(regionId);
 
     const load = async () => {
       setIsLoading(true);
@@ -69,6 +68,22 @@ export function useSceneData(
 
         setSceneInfo(data);
         setSceneInfoInStore(regionId, data);
+        // 이 region이 쓰는 GLB 경로를 기억해 둔다 — cleanup에서 캐시를 비울 때
+        // 필요한데, 그 시점엔 state가 이미 초기화됐을 수 있다.
+        const assetPaths = [
+          ...(data.models ?? []).map((m) => m.path),
+          ...(data.maps ?? []).map((m) => m.path),
+        ];
+        loadedAssetPathsRef.current = assetPaths;
+
+        // 씬 JSON이 필요한 GLB 목록을 이미 알고 있으므로 곧바로 프리로드를
+        // 시작한다. 이걸 안 하면 컴포넌트가 마운트되며 하나씩 요청이 나가
+        // 직렬에 가깝게 로드된다 — 지역 진입당 14~35MB라 체감 지연이 크다.
+        // 중복 경로는 Set으로 걸러 같은 GLB를 두 번 요청하지 않는다.
+        for (const path of new Set(assetPaths)) {
+          preloadGltf(path);
+        }
+
         data.models?.forEach((modelInfo) => {
           registerFromModel(modelInfo);
         });
@@ -111,6 +126,16 @@ export function useSceneData(
       resetToOrigin();
       clearValueMapper();
       clearSceneInfoFromStore(regionId);
+      // 이 region의 GLB 캐시를 비운다. 해제하지 않으면 지역을 오갈수록
+      // 메모리가 단조 증가해 장시간 세션에서 탭이 죽는다.
+      //
+      // 단, **region이 실제로 바뀔 때만** 비운다. 이 effect는 mode(시뮬레이션
+      // ↔ 실시간 ↔ 리플레이)에도 재실행되는데, 같은 지역에서 모드만 바꿨는데
+      // 캐시를 버리면 수십 MB를 다시 받는다 — 모드 전환은 흔한 조작이라
+      // 그때마다 로딩이 걸리면 오히려 퇴보다.
+      const pathsToRelease = loadedAssetPathsRef.current;
+      loadedAssetPathsRef.current = [];
+      releaseSceneRegionAssets(regionId, pathsToRelease);
     };
   }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 
@@ -125,12 +150,6 @@ interface OutdoorWorkModelSimulationProps {
   mode?: 'simulation' | 'replay' | 'realtime';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
-  onSensorSelect?: (
-    channelId: string,
-    sensorType: 'camera' | 'lidar',
-  ) => void;
-  isFullscreen?: boolean;
-  renderSensorFeed?: SensorFeedRenderer;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -141,9 +160,6 @@ export function OutdoorWorkModelSimulation({
   mode = 'simulation',
   onMoveTo,
   onResetCamera,
-  onSensorSelect,
-  isFullscreen = false,
-  renderSensorFeed,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
@@ -186,16 +202,6 @@ export function OutdoorWorkModelSimulation({
   const models = sceneInfo?.models ?? [];
   const modelIds = useMemo(() => models.map((model) => model.id), [models]);
   const texts = sceneInfo?.texts ?? [];
-  const sensors = sceneInfo?.sensors ?? [];
-
-  const handleSensorClick = useCallback(
-    (sensorId: string) => {
-      const sensor = sensors.find((s) => s.id === sensorId);
-      if (!sensor || !sensor.channelId) return;
-      onSensorSelect?.(sensor.channelId, sensor.type);
-    },
-    [sensors, onSensorSelect],
-  );
 
   const focusStack = useObjectFocusStore((s) => s.focusStack);
 
@@ -392,8 +398,21 @@ export function OutdoorWorkModelSimulation({
 
   return (
     <>
+      {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
+          그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
       {maps.map((m) => (
-        <GltfModel key={m.id} id={m.id} url={m.path} />
+        // 지도는 지형이라 raycast BVH를 빌드하지 않는다 — 수만 개 메시에
+        // 빌드 비용만 크고 개별 클릭 대상도 아니다(model-mesh 주석 참고).
+        <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
+          <GltfModel
+            id={m.id}
+            url={m.path}
+            position={m.position}
+            rotation={m.rotation}
+            scale={m.scale}
+            enableRaycastBvh={false}
+          />
+        </SceneObjectBoundary>
       ))}
       {models.map((model) => {
         if (visibleModelIds && !visibleModelIds.has(model.id)) {
@@ -401,71 +420,28 @@ export function OutdoorWorkModelSimulation({
         }
 
         return (
-          <GltfModel
+          <SceneObjectBoundary
             key={model.id}
-            id={model.id}
-            url={model.path}
-            equipName={model.equipName}
-            opacity={model.opacity}
-            alarmSeverity={
-              model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
-            }
-            alarmHighlightMesh={alarmHighlightMesh}
-            position={model.position}
-            rotation={model.rotation}
-            scale={model.scale}
-            onSelect={handleModelClick}
-            onObjectReady={handleObjectReady}
-          />
+            label={`model ${model.equipName || model.id} (${model.path})`}
+          >
+            <GltfModel
+              id={model.id}
+              url={model.path}
+              equipName={model.equipName}
+              opacity={model.opacity}
+              alarmSeverity={
+                model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
+              }
+              alarmHighlightMesh={alarmHighlightMesh}
+              position={model.position}
+              rotation={model.rotation}
+              scale={model.scale}
+              onSelect={handleModelClick}
+              onObjectReady={handleObjectReady}
+            />
+          </SceneObjectBoundary>
         );
       })}
-      {sensors.map((sensor) => {
-        if (isLidarSensor(sensor)) {
-          return (
-            <LidarSensorMesh
-              key={sensor.id}
-              sensor={sensor}
-              isSelected={false}
-              onSelect={handleSensorClick}
-              isMonitoringMode
-            />
-          );
-        }
-        if (isCameraSensor(sensor)) {
-          return (
-            <CameraSensorMesh
-              key={sensor.id}
-              sensor={sensor}
-              isSelected={false}
-              onSelect={handleSensorClick}
-              isMonitoringMode
-            />
-          );
-        }
-        return null;
-      })}
-      {isFullscreen ? (
-        <BillboardHoverProvider>
-          {sensors.map((sensor) => {
-            if (!sensor.channelId) return null;
-            const label =
-              sensor.type === 'camera'
-                ? `CAM ${sensor.channelId.replace('cam-', '')}`
-                : 'LiDAR';
-            return (
-              <SensorBillboard
-                key={`bb-${sensor.id}`}
-                position={sensor.position}
-                channelId={sensor.channelId}
-                sensorType={sensor.type}
-                label={label}
-                onSelect={onSensorSelect ?? noop}
-                renderFeed={renderSensorFeed}
-              />
-            );
-          })}
-        </BillboardHoverProvider>
-      ) : null}
       {texts.map((text) => {
         if (visibleGroupBox) {
           const [tx] = text.position;

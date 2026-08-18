@@ -5,6 +5,7 @@
     "title": "Inspector",
     "name": "Name",
     "opacity": "Opacity",
+    "transform": "Transform",
     "empty": "Click an object in the scene to inspect its properties.",
     "position": "Position",
     "rotation": "Rotation",
@@ -12,10 +13,7 @@
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",
-    "tagKeyPlaceholder": "Enter tag key",
-    "visionChannel": "Vision Channel",
-    "visionChannelEmpty": "(unmapped)",
-    "visionChannelTaken": "in use"
+    "tagKeyPlaceholder": "Enter tag key"
   },
   "transform": {
     "title": "Transform mode",
@@ -29,6 +27,15 @@
     "undo": "Undo",
     "redo": "Redo"
   },
+  "sceneViews": {
+    "saveCurrent": "Save current view",
+    "namePlaceholder": "View name",
+    "save": "Save",
+    "flyTo": "Go to {{name}}",
+    "deleteView": "Delete {{name}}",
+    "duplicateName": "This name is already in use",
+    "limitReached": "You can save up to {{max}} views"
+  },
   "focus": {
     "back": "Back"
   },
@@ -36,7 +43,6 @@
     "model": "Model"
   },
   "palette": {
-    "title": "Model Palette",
     "description": "Drag GLB models into the scene.",
     "dragging": "Dragging",
     "dragToPlace": "Drag to place",
@@ -51,35 +57,42 @@
     "statusSaving": "Saving",
     "statusUnsaved": "Unsaved",
     "statusSaved": "Saved",
+    "statusSavedLocalOnly": "Saved to this browser only",
+    "statusSavedLocalOnlyHint": "There is no save server, so edits stay in this browser only. They disappear if you clear the cache, and other machines or users will not see them. Use Export to get the JSON and apply it.",
     "placedObjects": "Placed Objects",
     "noPlacedObjects": "No objects have been placed yet.",
     "map": "Map",
-    "deleteMap": "Delete map",
+    "mapNone": "No map",
+    "collapsePanel": "Collapse panel",
+    "expandPanel": "Expand panel",
+    "lockObject": "Lock editing",
+    "unlockObject": "Unlock editing",
+    "objectLocked": "Editing locked",
     "deleteObject": "Delete object",
+    "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",
     "keyboardShortcuts": "Keyboard shortcuts",
     "deleteSelected": "Delete selected",
-    "noSelection": "No selection",
     "snapActive": "Snap 1.0",
     "hideLabels": "Hide labels",
     "showLabels": "Show labels",
     "addText": "Add Text",
-    "addLidarSensor": "Add LiDAR",
-    "addCameraSensor": "Add Camera",
-    "sensorTextTab": "Sensors / Text",
-    "mapTab": "Map",
-    "noMap": "No map has been registered.",
     "textObject": "Text",
     "save": "Save",
-    "categoryLibrary": "Categories",
     "categoryAssetCount": "{{count}} assets",
     "noModelsInCategory": "No models in this category yet.",
     "modelCategories": {
       "indoor": "Indoor",
       "outdoor": "Outdoor",
-      "map": "Map",
       "etc": "Etc"
     },
+    "paletteTabs": {
+      "models": "Models",
+      "map": "Map",
+      "background": "Background"
+    },
+    "environmentNone": "No background",
+    "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected"

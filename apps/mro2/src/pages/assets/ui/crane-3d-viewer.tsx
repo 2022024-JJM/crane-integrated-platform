@@ -32,7 +32,9 @@ function SceneChrome() {
   return (
     <>
       <ambientLight intensity={2.5} />
-      <directionalLight position={[10, 20, 10]} intensity={3} castShadow />
+      {/* Canvas에 `shadows`를 켜지 않으므로 castShadow는 효과가 없다 — 플래그만
+          남으면 오해를 낳아 제거했다(scene-render-preset 주석 참고). */}
+      <directionalLight position={[10, 20, 10]} intensity={3} />
       <directionalLight position={[-5, 10, -5]} intensity={1} />
       <hemisphereLight args={['#b1e1ff', '#b97a20', 0.5]} />
       <gridHelper args={[60, 30, '#333355', '#222244']} />
@@ -126,7 +128,7 @@ function PartsScene({
               position={part.position}
               scale={part.scale}
               showLabel={false}
-              isSensorOccluder={false}
+              enableRaycastBvh={false}
               opacity={isDimmed ? 0.35 : 1}
               alarmSeverity={isHighlighted ? 'info' : null}
               alarmHighlightMesh={isHighlighted}
@@ -265,7 +267,7 @@ function RegionsScene({
         url={cfg.url}
         scale={cfg.scale}
         showLabel={false}
-        isSensorOccluder={false}
+        enableRaycastBvh={false}
         onSelect={handleSelect}
         onHoverStart={handleHover}
         onHoverMove={handleHover}
@@ -395,7 +397,6 @@ export function Crane3dViewer({
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -0.01, 0]}
-          receiveShadow
           onClick={(e) => {
             e.stopPropagation();
             onZoneSelect(null);

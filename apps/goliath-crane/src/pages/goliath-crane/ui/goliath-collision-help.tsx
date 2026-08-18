@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { HelpCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { COLLISION_GUARD_COLORS, useCollisionGuardStore } from '@crane/features/3d';
-import { cn } from '@crane/core/lib/utils';
+import {
+  COLLISION_GUARD_COLORS,
+  useCollisionGuardStore,
+  zoneDisplayDistanceM,
+} from '@crane/features/3d';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
 /**
@@ -64,14 +67,17 @@ export function GoliathCollisionHelp() {
 
   if (!enabled || !derived) return null;
 
-  // 실제 존 설정에서 반경을 읽는다 — 두 다리 설정이 같으므로 첫 존 기준.
+  // 실제 존 설정에서 거리를 읽는다 — 씬 라벨과 같은 기준으로 환산한다.
+  // 존이 다리별로 둘이지만 반경 설정은 공통(LEG_ZONE_BASE)이라 첫 존이면 된다.
   const zone = derived.zones[0];
-  const detectionM = Math.round(zone.radius * zone.metersPerUnit);
-  const dangerM = Math.round(zone.dangerRadius * zone.metersPerUnit);
-  const sensorLabels = derived.zones
-    .map((z) => z.label)
-    .filter(Boolean)
-    .join(' · ');
+  const detectionM = Math.round(zoneDisplayDistanceM(zone.radius, zone));
+  const dangerM = Math.round(zoneDisplayDistanceM(zone.dangerRadius, zone));
+  // 센서 라벨 — 캡슐 존은 거더 양 끝 다리(aLabel/bLabel), 원 존은 자체 라벨.
+  const sensorLabelList = zone.girder
+    ? [zone.girder.aLabel, zone.girder.bLabel]
+    : derived.zones.map((z) => z.label);
+  const sensorLabels = sensorLabelList.filter(Boolean).join(' · ');
+  const sensorBadge = sensorLabelList.find(Boolean) ?? 'L1';
 
   if (!open) {
     return (
@@ -129,7 +135,7 @@ export function GoliathCollisionHelp() {
               aria-hidden
               className="shrink-0 rounded border border-sky-400/50 bg-sky-950/70 px-1 py-px font-mono text-[9px] leading-none font-bold text-sky-300"
             >
-              {derived.zones[0]?.label ?? 'L1'}
+              {sensorBadge}
             </span>
           }
           label={t('collisionGuard.help.sensor')}
@@ -178,16 +184,14 @@ export function GoliathCollisionHelp() {
         />
       </ul>
 
-      {/* 시뮬레이션 고지 — MVP 단계임을 화면이 스스로 밝힌다. 실물 센서
-          연동 시 이 줄만 제거하면 된다. */}
-      <p
-        className={cn(
-          'border-t border-slate-700/50 px-2.5 py-1.5',
-          'text-[10px] leading-tight text-slate-400',
-        )}
-      >
-        {t('collisionGuard.help.simulationNote')}
-      </p>
+      <div className="space-y-1 border-t border-slate-700/50 px-2.5 py-1.5 text-[10px] leading-tight text-slate-400">
+        {/* 거리 기준 — HUD·씬 라벨의 "N m"가 어디서부터인지 여기서 답한다
+            (거더 끝 기준 환산 zoneDisplayDistanceM). */}
+        <p>{t('collisionGuard.help.distanceBasis')}</p>
+        {/* 시뮬레이션 고지 — MVP 단계임을 화면이 스스로 밝힌다. 실물 센서
+            연동 시 이 줄만 제거하면 된다. */}
+        <p>{t('collisionGuard.help.simulationNote')}</p>
+      </div>
     </section>
   );
 }

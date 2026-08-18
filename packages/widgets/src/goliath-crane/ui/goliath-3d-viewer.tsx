@@ -39,15 +39,15 @@ function SceneContent() {
   return (
     <>
       <ambientLight intensity={2.5} />
-      <directionalLight position={[10, 20, 10]} intensity={3} castShadow />
+      {/* 그림자는 쓰지 않는다 — Canvas에 `shadows`를 켜지 않으므로 castShadow를
+          달아도 아무 효과가 없다(플래그만 남으면 "그림자가 되는데 왜 안 보이지"로
+          오해를 낳는다). 접지 그림자는 ContactShadows로 시도했다가 지도 위에
+          어두운 반점이 생겨 걷어냈다 — scene-render-preset 주석 참고. */}
+      <directionalLight position={[10, 20, 10]} intensity={3} />
       <directionalLight position={[-5, 10, -5]} intensity={1} />
       <hemisphereLight args={['#b1e1ff', '#b97a20', 0.5]} />
       {/* Ground plane */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.01, 0]}
-        receiveShadow
-      >
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
         <planeGeometry args={[60, 60]} />
         <meshStandardMaterial color="#1a1a2e" opacity={0.3} transparent />
       </mesh>

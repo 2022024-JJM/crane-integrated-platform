@@ -58,7 +58,8 @@ interface UseSceneTransformParams {
   transformMode: SceneTransformMode;
   sceneModels: { id: string }[] | undefined;
   sceneTexts?: { id: string }[] | undefined;
-  sceneSensors?: { id: string }[] | undefined;
+  /** 잠금 해제된 지도만 넘어온다 — 잠긴 지도는 애초에 선택될 수 없다. */
+  sceneMaps?: { id: string }[] | undefined;
   modelObjectRegistryRef: React.RefObject<Map<string, Object3D>>;
   onTransformVectorChange: (
     field: SceneTransformField,
@@ -81,7 +82,7 @@ export function useSceneTransform({
   transformMode,
   sceneModels,
   sceneTexts,
-  sceneSensors,
+  sceneMaps,
   modelObjectRegistryRef,
   onTransformVectorChange,
   onTransformCommit,
@@ -271,12 +272,30 @@ export function useSceneTransform({
   ]);
 
   useEffect(() => {
-    if (!orbitControlsRef.current) {
+    const controls = orbitControlsRef.current;
+    if (!controls) {
       return;
     }
 
-    orbitControlsRef.current.enabled = !isTransformDragging;
-  }, [isTransformDragging]);
+    // 기즈모 드래그 중에는 orbit을 끈다. 이때 감쇠(damping)가 켜져 있으면
+    // 남아 있던 회전 관성이 얼어붙었다가 드래그가 끝나는 순간 되살아나,
+    // 정밀 배치를 막 끝낸 직후에 카메라가 저절로 돌아간다.
+    //
+    // 관성을 확실히 없앤다: three-stdlib는 damping이 **꺼져 있을 때만**
+    // update()에서 sphericalDelta/panOffset을 0으로 리셋한다(켜져 있으면
+    // 1-dampingFactor를 곱할 뿐이라 한 번 불러도 88%가 남는다). 그래서
+    // 잠시 껐다가 update() 한 번으로 델타를 비우고 원래 값으로 되돌린다.
+    if (isTransformDragging) {
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
+      controls.update();
+      controls.enableDamping = previousDamping;
+      controls.enabled = false;
+      return;
+    }
+
+    controls.enabled = true;
+  }, [isTransformDragging, orbitControlsRef]);
 
   useEffect(() => {
     if (!primarySelectedId) {
@@ -294,7 +313,7 @@ export function useSceneTransform({
       : (sceneModels?.some((model) => model.id === primarySelectedId) ??
           false) ||
         (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
-        (sceneSensors?.some((s) => s.id === primarySelectedId) ?? false);
+        (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
 
     if (!isSelectedPresent) {
       setSelectedObject(null);
@@ -316,7 +335,7 @@ export function useSceneTransform({
   }, [
     sceneModels,
     sceneTexts,
-    sceneSensors,
+    sceneMaps,
     primarySelectedId,
     modelObjectRegistryRef,
   ]);

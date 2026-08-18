@@ -1,5 +1,12 @@
 import { ArrowLeft, CalendarRange, ChevronDown } from 'lucide-react';
-import { Suspense, useCallback, useEffect, useRef } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -19,6 +26,13 @@ import {
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
+import { SceneEnvironment } from './scene-environment';
+import {
+  SCENE_CAMERA_CLIP,
+  SCENE_GL_OPTIONS,
+  SceneLighting,
+} from './scene-render-preset';
+import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { ReplaySearchForm } from './replay-search-form';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -77,8 +91,16 @@ export function Replay3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
+  const [sceneReady, setSceneReady] = useState(false);
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
+  // 인라인 리터럴 금지 — monitoring-3d-view의 cameraPreset 주석 참고
+  // (부모 리렌더마다 SceneControlsBridge가 reset()을 호출해 카메라가 튄다).
+  const cameraPreset = useMemo(
+    () => ({ defaultPosition: cameraPosition, defaultTarget: cameraTarget }),
+    [cameraPosition, cameraTarget],
+  );
 
   const focusOverlay =
     focusStack.length > 0 ? (
@@ -150,24 +172,16 @@ export function Replay3dView({
       className="relative h-full min-h-0 w-full bg-(--canvas-background)"
     >
       <ThreeSceneViewer
-        cameraPreset={{
-          defaultPosition: cameraPosition,
-          defaultTarget: cameraTarget,
-        }}
+        cameraPreset={cameraPreset}
+        cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
-          gl: {
-            toneMapping: 0,
-            powerPreference: 'high-performance',
-            alpha: false,
-            antialias: true,
-            stencil: false,
-            autoClear: false,
-            depth: true,
-          },
+          gl: SCENE_GL_OPTIONS,
           onPointerMissed: clearFocus,
         }}
         overlay={
           <>
+            {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
+            <SceneLoadingOverlay ready={sceneReady} />
             {focusOverlay}
             {replayControlsOverlay}
           </>
@@ -175,12 +189,16 @@ export function Replay3dView({
         toolbarClassName="top-28"
         onControllerReady={handleControllerReady}
       >
-        <ambientLight intensity={2} />
-        <directionalLight
-          position={[0, 50, 10]}
-          color={'#ffffff'}
-          intensity={4}
-        />
+        <SceneLighting />
+        {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
+            사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
+            재생을 붙잡지 않는다. */}
+        <Suspense fallback={null}>
+          <SceneEnvironment
+            regionId={regionId}
+            environmentId={sceneInfo?.environmentId}
+          />
+        </Suspense>
         <Suspense fallback={null}>
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
@@ -191,6 +209,7 @@ export function Replay3dView({
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
           />
+          <SceneReadyProbe onReady={handleSceneReady} />
         </Suspense>
       </ThreeSceneViewer>
     </div>
