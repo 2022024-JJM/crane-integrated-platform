@@ -462,12 +462,14 @@ export function SceneObjectsEditCanvas({
   });
 
   const handleClearSelection = useCallback(() => {
+    if (dragJustEndedRef.current) return;
     if (marqueeJustEndedRef.current) return;
     setSelectedObject(null);
     setIsTransformDragging(false);
     clearSelectedModel();
   }, [
     clearSelectedModel,
+    dragJustEndedRef,
     marqueeJustEndedRef,
     setIsTransformDragging,
     setSelectedObject,
