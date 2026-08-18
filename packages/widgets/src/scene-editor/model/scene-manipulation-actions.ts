@@ -105,6 +105,30 @@ export function createSceneManipulationActions({
     }
   };
 
+  const deletePlacedMap = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      // 잠긴 지도는 삭제 불가 — 지도는 "필드 없음 = 잠김"(반전 기본값)이라
+      // locked !== false 로 검사한다. 계층 목록은 잠긴 행의 삭제 버튼을
+      // 숨기지만 updater 안에서 한 번 더 막아야 다른 호출 경로에도 안전하다.
+      if ((prev.maps ?? []).some((m) => m.id === id && m.locked !== false)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).filter((m) => m.id !== id),
+      };
+    });
+
+    if (selectedIds.has(id)) {
+      clearSelectedModel();
+    }
+  };
+
   /**
    * 지도 선택 — 배경(setEnvironmentId)과 같은 클릭 단일 선택.
    * null이면 지도를 제거한다.
@@ -276,6 +300,7 @@ export function createSceneManipulationActions({
     selectPlacedText,
     deletePlacedModel,
     deletePlacedText,
+    deletePlacedMap,
     startTransformInteraction,
     endTransformInteraction,
     duplicateSelectedObject,

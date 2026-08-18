@@ -609,6 +609,9 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.map(applyUpdate),
         texts: (prev.texts ?? []).map(applyUpdate),
+        // 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중 선택에 참여한다.
+        // 터치한 필드만 병합되므로 optional transform 계약도 유지된다.
+        maps: (prev.maps ?? []).map(applyUpdate),
       };
     }, options);
   };
@@ -654,6 +657,9 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.filter((model) => !selectedIds.has(model.id)),
         texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
+        // 잠금 해제된 지도도 선택·삭제 대상이다. 지도가 없어지면 드롭
+        // raycast는 y=0 평면으로 폴백한다(use-scene-drop 참고).
+        maps: (prev.maps ?? []).filter((m) => !selectedIds.has(m.id)),
       };
     });
 

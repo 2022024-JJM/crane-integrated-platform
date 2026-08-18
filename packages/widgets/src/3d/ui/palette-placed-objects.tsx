@@ -33,7 +33,9 @@ interface PalettePlacedObjectsProps {
   onDeletePlacedText?: (id: string) => void;
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
+  onTogglePlacedMap?: (id: string) => void;
   onSelectPlacedMap?: (id: string) => void;
+  onDeletePlacedMap?: (id: string) => void;
   onToggleLock?: (id: string, locked: boolean) => void;
   onRenameObject?: (id: string, name: string) => void;
 }
@@ -50,7 +52,9 @@ export function PalettePlacedObjects({
   onDeletePlacedText,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onTogglePlacedMap,
   onSelectPlacedMap,
+  onDeletePlacedMap,
   onToggleLock,
   onRenameObject,
 }: PalettePlacedObjectsProps) {
@@ -133,16 +137,13 @@ export function PalettePlacedObjects({
               };
 
               const handleSelect = (ctrlKey: boolean) => {
-                // 지도는 다중 선택에 참여하지 않는다(항상 단독 선택).
-                if (item.type === 'map') {
-                  selectItem(item);
-                  return;
-                }
                 if (ctrlKey) {
                   if (isLocked) {
                     return;
                   }
-                  if (item.type === 'text') {
+                  if (item.type === 'map') {
+                    onTogglePlacedMap?.(item.id);
+                  } else if (item.type === 'text') {
                     onTogglePlacedText?.(item.id);
                   } else {
                     onTogglePlacedModel?.(item.id);
@@ -245,13 +246,11 @@ export function PalettePlacedObjects({
                       {item.displayName}
                     </p>
                   )}
-                  {/* 모든 행에 잠금 토글을 둔다. 삭제 버튼은
-                      모델·텍스트 행에만 두되 잠기면 숨긴다 — 잠금은
-                      선택·변형·삭제를 전부 막는 규칙이다. 지도 삭제는
-                      하단 Project 패널 Map 카테고리(카탈로그 선택)가
-                      담당한다. 편집 중에는 입력창 공간 확보를 위해 둘 다
-                      숨긴다. */}
-                  {!isMap && !isLocked && !isEditing ? (
+                  {/* 모든 행에 잠금 토글과 삭제 버튼을 두되 잠기면 삭제를
+                      숨긴다 — 잠금은 선택·변형·삭제를 전부 막는 규칙이다.
+                      지도는 Map 탭 카탈로그 해제로도 제거할 수 있다.
+                      편집 중에는 입력창 공간 확보를 위해 둘 다 숨긴다. */}
+                  {!isLocked && !isEditing ? (
                     <Button
                       type="button"
                       variant="ghost"
@@ -260,7 +259,9 @@ export function PalettePlacedObjects({
                       aria-label={t('monitoring:editor.deleteObject')}
                       onClick={(event) => {
                         event.stopPropagation();
-                        if (item.type === 'text') {
+                        if (item.type === 'map') {
+                          onDeletePlacedMap?.(item.id);
+                        } else if (item.type === 'text') {
                           onDeletePlacedText?.(item.id);
                         } else {
                           onDeletePlacedModel(item.id);

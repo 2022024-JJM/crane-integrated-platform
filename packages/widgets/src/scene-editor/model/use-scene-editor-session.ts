@@ -85,6 +85,7 @@ interface UseSceneEditorSessionResult {
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
+  deletePlacedMap: (id: string) => void;
   setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
@@ -94,6 +95,7 @@ interface UseSceneEditorSessionResult {
   >['setObjectLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
+  toggleMap: (id: string) => void;
   selectAll: (
     entries: Array<{ id: string; type: SelectedObjectType }>,
   ) => void;
@@ -145,6 +147,7 @@ export function useSceneEditorSession({
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const selectAllStore = useSceneObjectSelectionStore(
     (state) => state.selectAll,
   );
@@ -277,6 +280,7 @@ export function useSceneEditorSession({
     selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
+    deletePlacedMap: manipulation.deletePlacedMap,
     setSceneMap: manipulation.setSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
@@ -284,6 +288,7 @@ export function useSceneEditorSession({
     setObjectLocked,
     toggleModel,
     toggleText,
+    toggleMap,
     selectAll: selectAllStore,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,

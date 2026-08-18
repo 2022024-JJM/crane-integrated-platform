@@ -135,6 +135,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
+    deletePlacedMap,
     setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
@@ -142,6 +143,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setObjectLocked,
     toggleModel,
     toggleText,
+    toggleMap,
     selectAll,
     updateMultiObjectTransforms,
     startTransformInteraction,
@@ -271,8 +273,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       const currentSceneInfo = sceneInfoRef.current;
       if (isSelectAllShortcut && currentSceneInfo) {
         event.preventDefault();
-        // 잠긴 모델·텍스트는 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
-        // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
+        // 잠긴 객체는 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
+        // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일). 지도는 반전
+        // 기본값(필드 없음 = 잠김)이라 locked === false 명시 비교.
         const allEntries = [
           ...currentSceneInfo.models
             .filter((m) => !m.locked)
@@ -280,6 +283,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           ...(currentSceneInfo.texts ?? [])
             .filter((t) => !t.locked)
             .map((t) => ({ id: t.id, type: 'text' as const })),
+          ...(currentSceneInfo.maps ?? [])
+            .filter((m) => m.locked === false)
+            .map((m) => ({ id: m.id, type: 'map' as const })),
         ];
         selectAll(allEntries);
         return;
@@ -608,7 +614,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onDeletePlacedText={deletePlacedText}
               onTogglePlacedModel={toggleModel}
               onTogglePlacedText={toggleText}
+              onTogglePlacedMap={toggleMap}
               onSelectPlacedMap={selectPlacedMap}
+              onDeletePlacedMap={deletePlacedMap}
               onToggleLock={setObjectLocked}
               onRenameObject={renameObject}
             />
@@ -655,7 +663,9 @@ function HierarchyPanel({
   onDeletePlacedText,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onTogglePlacedMap,
   onSelectPlacedMap,
+  onDeletePlacedMap,
   onToggleLock,
   onRenameObject,
   onCollapse,
@@ -663,6 +673,7 @@ function HierarchyPanel({
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
   onSelectPlacedMap: (id: string) => void;
+  onDeletePlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
   onRenameObject: (id: string, name: string) => void;
   onCollapse: () => void;
@@ -672,6 +683,7 @@ function HierarchyPanel({
   onDeletePlacedText: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
+  onTogglePlacedMap: (id: string) => void;
 }) {
   const [objectSearch, setObjectSearch] = useState('');
 
@@ -695,7 +707,9 @@ function HierarchyPanel({
           onDeletePlacedText={onDeletePlacedText}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
+          onTogglePlacedMap={onTogglePlacedMap}
           onSelectPlacedMap={onSelectPlacedMap}
+          onDeletePlacedMap={onDeletePlacedMap}
           onToggleLock={onToggleLock}
           onRenameObject={onRenameObject}
         />

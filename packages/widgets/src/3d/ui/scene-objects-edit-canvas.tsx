@@ -274,6 +274,7 @@ export function SceneObjectsEditCanvas({
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const toggleMesh = useSceneObjectSelectionStore((state) => state.toggleMesh);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
@@ -288,9 +289,10 @@ export function SceneObjectsEditCanvas({
     () => (sceneInfo?.maps ?? []).filter((m) => m.locked === false),
     [sceneInfo?.maps],
   );
-  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다
-  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델·텍스트도 선택 불가
-  // 규칙에 따라 제외한다.
+  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다:
+  // 지형 AABB가 화면을 덮어 스크린 공간 교차 판정에 어떤 마퀴든 반드시
+  // 걸리기 때문이다(Ctrl 토글·Ctrl+A는 잠금 해제 시 참여). 잠긴
+  // 모델·텍스트도 선택 불가 규칙에 따라 제외한다.
   const marqueeExcludedIds = useMemo(
     () =>
       new Set([
@@ -436,16 +438,23 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
-  // 지도 선택 — Ctrl 다중 선택 분기가 없다. 지도는 단독 선택만 허용한다
-  // (selectMap 주석 참고). 더블클릭 drill-in도 두지 않는다 — 지형 메시는
-  // 수만 개라 자식 단위 편집이 의미가 없다.
+  // 지도 선택 — 잠금 해제된 지도는 Ctrl 토글로 다중 선택에 참여한다
+  // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in은 두지 않는다 —
+  // 지형 메시는 수만 개라 자식 단위 편집이 의미가 없다.
   const handleSelectMap = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
-      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
-      selectMap(id);
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleMap(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectMap(id);
+      }
     },
-    [dragJustEndedRef, selectMap, setSelectedObject],
+    [dragJustEndedRef, selectMap, toggleMap, setSelectedObject],
   );
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);

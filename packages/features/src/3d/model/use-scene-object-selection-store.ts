@@ -13,14 +13,15 @@ interface SceneObjectSelectionState {
   selectText: (id: string) => void;
   selectMesh: (meshId: string) => void;
   /**
-   * 지도 선택. 지도는 다중 선택에 참여하지 않는다 — 화면 전체를 덮는
-   * 지형이라 마퀴나 Ctrl+클릭으로 다른 객체와 함께 잡히면 그룹 드래그가
-   * 지형까지 통째로 옮겨 버린다. 항상 단독 선택이다.
+   * 지도 단독 선택(일반 클릭). 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중
+   * 선택에도 참여한다 — 단 마퀴에서는 항상 제외된다. 지형 AABB가 화면을
+   * 덮어 스크린 공간 교차 판정에 어떤 마퀴든 반드시 걸리기 때문이다.
    */
   selectMap: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMesh: (meshId: string) => void;
+  toggleMap: (id: string) => void;
   /**
    * 다중 선택 일괄 설정. 타입은 호출자가 안다 — 마퀴/Ctrl+A/복제 결과에
    * 텍스트가 섞일 수 있어 'model'로 하드코딩하면 단일 텍스트 선택이 존재
@@ -115,6 +116,23 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
             ? undefined
             : state.primarySelectedId;
         return deriveCompat(next, next.size > 0 ? 'mesh' : null, primary);
+      }),
+
+    toggleMap: (id) =>
+      set((state) => {
+        const next = new Set(state.selectedIds);
+        const isAdding = !next.has(id);
+        if (isAdding) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        const primary = isAdding
+          ? id
+          : state.primarySelectedId === id
+            ? undefined
+            : state.primarySelectedId;
+        return deriveCompat(next, next.size > 0 ? 'map' : null, primary);
       }),
 
     // 태그는 primary(첫 항목)의 타입을 쓴다 — size 1에서 정확하면 충분하다.
