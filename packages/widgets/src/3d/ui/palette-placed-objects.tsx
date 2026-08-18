@@ -251,6 +251,25 @@ export function PalettePlacedObjects({
                       하단 Project 패널 Map 카테고리(카탈로그 선택)가
                       담당한다. 편집 중에는 입력창 공간 확보를 위해 둘 다
                       숨긴다. */}
+                  {!isMap && !isLocked && !isEditing ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:bg-muted size-5 cursor-pointer rounded-sm hover:text-red-300"
+                      aria-label={t('monitoring:editor.deleteObject')}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (item.type === 'text') {
+                          onDeletePlacedText?.(item.id);
+                        } else {
+                          onDeletePlacedModel(item.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  ) : null}
                   {!isEditing ? (
                     <Button
                       type="button"
@@ -283,25 +302,6 @@ export function PalettePlacedObjects({
                       ) : (
                         <LockOpen className="size-3.5" />
                       )}
-                    </Button>
-                  ) : null}
-                  {!isMap && !isLocked && !isEditing ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:bg-muted size-5 cursor-pointer rounded-sm hover:text-red-300"
-                      aria-label={t('monitoring:editor.deleteObject')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (item.type === 'text') {
-                          onDeletePlacedText?.(item.id);
-                        } else {
-                          onDeletePlacedModel(item.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-3.5" />
                     </Button>
                   ) : null}
                 </>
