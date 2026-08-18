@@ -120,8 +120,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
     selectedText,
     selectedMesh,
     updateSelectedMeshTransform,
@@ -141,9 +139,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectPlacedMap,
     setEnvironmentId,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     toggleModel,
     toggleText,
@@ -376,16 +371,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           transformMode={transformMode}
           draggingModelCatalogItem={draggingCatalogItem}
           onTransformVectorChange={(field, value) => {
-            if (selectedObjectType === 'text') {
-              updateSelectedTextTransformVector(field, value, {
-                recordHistory: false,
-              });
-            } else if (selectedObjectType === 'mesh') {
+            // mesh는 meshOverrides 경로가 따로 있고, 모델/텍스트/지도는
+            // 통합 함수가 id로 컬렉션을 해석한다.
+            if (selectedObjectType === 'mesh') {
               updateSelectedMeshTransformVector(field, value, {
-                recordHistory: false,
-              });
-            } else if (selectedObjectType === 'map') {
-              updateSelectedMapTransformVector(field, value, {
                 recordHistory: false,
               });
             } else {
@@ -395,14 +384,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             }
           }}
           onTransformCommit={(position, rotation, scale) => {
-            // 모델 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+            // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
             // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-            if (selectedObjectType === 'map') {
-              commitSelectedMapTransform(position, rotation, scale, {
-                recordHistory: false,
-              });
-              return;
-            }
             commitSelectedTransform(position, rotation, scale, {
               recordHistory: false,
             });
@@ -642,11 +625,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onTransformChange={updateSelectedTransform}
               onTextContentChange={updateSelectedTextContent}
               onTextColorChange={updateSelectedTextColor}
-              onTextTransformChange={updateSelectedTextTransform}
               onMeshOpacityChange={updateSelectedMeshOpacity}
               onMeshTransformChange={updateSelectedMeshTransform}
               onValueMapChange={updateSelectedValueMap}
-              onMapTransformChange={updateSelectedMapTransform}
               onBackToParent={() => {
                 if (selectedMesh) {
                   selectPlacedModel(selectedMesh.modelId);

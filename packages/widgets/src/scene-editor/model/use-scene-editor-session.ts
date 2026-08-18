@@ -64,12 +64,6 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedTextTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedTextTransform'];
-  updateSelectedTextTransformVector: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedTextTransformVector'];
   updateSelectedMeshTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshTransform'];
@@ -95,15 +89,6 @@ interface UseSceneEditorSessionResult {
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
-  updateSelectedMapTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMapTransform'];
-  updateSelectedMapTransformVector: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMapTransformVector'];
-  commitSelectedMapTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['commitSelectedMapTransform'];
   setObjectLocked: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['setObjectLocked'];
@@ -182,14 +167,9 @@ export function useSceneEditorSession({
     updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
     updateMultiObjectTransforms,
     updateSelectedValueMap,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
@@ -284,8 +264,6 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
@@ -303,9 +281,6 @@ export function useSceneEditorSession({
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     toggleModel,
     toggleText,
