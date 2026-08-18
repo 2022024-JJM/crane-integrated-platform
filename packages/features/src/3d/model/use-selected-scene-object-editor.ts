@@ -234,6 +234,9 @@ export function useSelectedSceneObjectEditor({
       sceneInfo.models.some(
         (m) => m.locked === true && selectedIds.has(m.id),
       ) ||
+      (sceneInfo.texts ?? []).some(
+        (t) => t.locked === true && selectedIds.has(t.id),
+      ) ||
       (sceneInfo.maps ?? []).some(
         (m) => m.locked !== false && selectedIds.has(m.id),
       );
@@ -652,7 +655,7 @@ export function useSelectedSceneObjectEditor({
   /**
    * 편집 잠금 토글 — 씬 데이터에 쓴다(저장·undo·dirty 참여).
    * 지도는 "필드 없음 = 잠김"이라 항상 명시적 boolean을 기록하고,
-   * 모델은 true일 때만 필드를 남긴다(types.ts 주석 참고).
+   * 모델·텍스트는 true일 때만 필드를 남긴다(types.ts 주석 참고).
    * 잠글 때 선택 중이었다면 선택을 해제한다.
    */
   const setObjectLocked = (id: string, locked: boolean) => {
@@ -666,6 +669,17 @@ export function useSelectedSceneObjectEditor({
           maps: (prev.maps ?? []).map((m) =>
             m.id === id ? { ...m, locked } : m,
           ),
+        };
+      }
+      if ((prev.texts ?? []).some((t) => t.id === id)) {
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).map((t) => {
+            if (t.id !== id) return t;
+            if (locked) return { ...t, locked: true };
+            const { locked: _removed, ...rest } = t;
+            return rest;
+          }),
         };
       }
       return {

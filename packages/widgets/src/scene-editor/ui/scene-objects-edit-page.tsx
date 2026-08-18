@@ -276,11 +276,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       const currentSceneInfo = sceneInfoRef.current;
       if (isSelectAllShortcut && currentSceneInfo) {
         event.preventDefault();
-        // 잠긴 모델은 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
+        // 잠긴 모델·텍스트는 전체 선택에서도 제외한다 — 잠금은 "편집 대상에서
         // 제외"라는 하나의 규칙이다(마퀴·클릭 선택과 동일).
         const allIds = [
           ...currentSceneInfo.models.filter((m) => !m.locked).map((m) => m.id),
-          ...(currentSceneInfo.texts ?? []).map((t) => t.id),
+          ...(currentSceneInfo.texts ?? [])
+            .filter((t) => !t.locked)
+            .map((t) => t.id),
         ];
         selectAll(allIds);
         return;

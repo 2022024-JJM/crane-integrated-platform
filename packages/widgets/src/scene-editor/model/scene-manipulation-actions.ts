@@ -86,6 +86,12 @@ export function createSceneManipulationActions({
         return prev;
       }
 
+      // 잠긴 텍스트는 삭제 불가 — 계층 목록은 잠긴 행의 삭제 버튼을 숨기지만,
+      // updater 안에서 한 번 더 막아야 다른 호출 경로가 생겨도 안전하다.
+      if ((prev.texts ?? []).some((t) => t.id === id && t.locked)) {
+        return prev;
+      }
+
       return {
         ...prev,
         texts: (prev.texts ?? []).filter((t) => t.id !== id),
@@ -232,6 +238,8 @@ export function createSceneManipulationActions({
         newTextDuplicates.push({
           ...textSource,
           id: newId,
+          // 모델 복제와 같은 규칙 — 복제본이 잠김을 물려받지 않는다.
+          locked: undefined,
           position: [
             textSource.position[0] + 2,
             textSource.position[1],

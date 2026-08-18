@@ -289,15 +289,16 @@ export function SceneObjectsEditCanvas({
     [sceneInfo?.maps],
   );
   // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다
-  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델도 선택 불가 규칙에
-  // 따라 제외한다.
+  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델·텍스트도 선택 불가
+  // 규칙에 따라 제외한다.
   const marqueeExcludedIds = useMemo(
     () =>
       new Set([
         ...(sceneInfo?.maps ?? []).map((m) => m.id),
         ...(sceneInfo?.models ?? []).filter((m) => m.locked).map((m) => m.id),
+        ...(sceneInfo?.texts ?? []).filter((t) => t.locked).map((t) => t.id),
       ]),
-    [sceneInfo?.maps, sceneInfo?.models],
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
   );
 
   const {
@@ -824,7 +825,10 @@ export function SceneObjectsEditCanvas({
               position={text.position}
               rotation={text.rotation}
               scale={text.scale}
-              onSelect={handleSelectText}
+              // 잠긴 텍스트는 클릭이 선택 해제로 떨어진다 — 잠긴 모델과 같은
+              // 규칙. undefined를 넘기면 SceneText가 클릭을 삼키기만 하므로
+              // handleClearSelection을 넘겨야 빈 공간 클릭과 동일하게 동작한다.
+              onSelect={text.locked ? handleClearSelection : handleSelectText}
               onObjectReady={handleModelObjectReady}
             />
           </Suspense>

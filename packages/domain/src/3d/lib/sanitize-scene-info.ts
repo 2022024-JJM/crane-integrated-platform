@@ -159,7 +159,15 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
 
         seenIds.add(nextId);
 
-        return [{ ...text, id: nextId }];
+        return [
+          {
+            ...text,
+            id: nextId,
+            // 모델과 동일한 정규화 — true가 아닌 값은 잠기지 않은 것으로
+            // 보고, undefined는 JSON 직렬화에서 빠진다.
+            locked: text.locked === true ? true : undefined,
+          },
+        ];
       })
     : [];
 

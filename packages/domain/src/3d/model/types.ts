@@ -39,6 +39,13 @@ export interface SavedTextInfo {
   position: Vector3Tuple;
   rotation: Vector3Tuple;
   scale: Vector3Tuple;
+  /**
+   * 편집 잠금 — 씬 데이터다(저장 대상). true면 에디터에서 선택·변형·삭제가
+   * 모두 막히고, 계층 목록의 자물쇠 토글로만 풀 수 있다.
+   * 필드가 없으면 잠기지 않은 것으로 본다. true일 때만 직렬화해
+   * 기존 저장본과의 diff를 최소화한다.
+   */
+  locked?: boolean;
 }
 
 export interface SavedModelInfo {

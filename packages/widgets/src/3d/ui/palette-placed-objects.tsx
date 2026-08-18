@@ -245,13 +245,13 @@ export function PalettePlacedObjects({
                       {item.displayName}
                     </p>
                   )}
-                  {/* 지도·모델 행에는 잠금 토글을 둔다. 삭제 버튼은
+                  {/* 모든 행에 잠금 토글을 둔다. 삭제 버튼은
                       모델·텍스트 행에만 두되 잠기면 숨긴다 — 잠금은
                       선택·변형·삭제를 전부 막는 규칙이다. 지도 삭제는
                       하단 Project 패널 Map 카테고리(카탈로그 선택)가
                       담당한다. 편집 중에는 입력창 공간 확보를 위해 둘 다
                       숨긴다. */}
-                  {item.type !== 'text' && !isEditing ? (
+                  {!isEditing ? (
                     <Button
                       type="button"
                       variant="ghost"
