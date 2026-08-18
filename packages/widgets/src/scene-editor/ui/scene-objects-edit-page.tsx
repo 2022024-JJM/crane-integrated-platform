@@ -148,7 +148,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     toggleModel,
     toggleText,
     selectAll,
-    updateMultiObjectPositions,
+    updateMultiObjectTransforms,
     startTransformInteraction,
     endTransformInteraction,
     cameraStateRef,
@@ -404,7 +404,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             });
           }}
           onMultiTransformCommit={(updates) => {
-            updateMultiObjectPositions(updates, { recordHistory: false });
+            updateMultiObjectTransforms(updates, { recordHistory: false });
           }}
           onAddModel={(catalogItem, position) => {
             addModel(catalogItem, position);

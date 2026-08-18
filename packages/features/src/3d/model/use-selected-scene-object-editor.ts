@@ -126,8 +126,13 @@ interface UseSelectedSceneObjectEditorResult {
       recordHistory?: boolean;
     },
   ) => void;
-  updateMultiObjectPositions: (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+  updateMultiObjectTransforms: (
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
     options?: { recordHistory?: boolean },
   ) => void;
   selectedMap: SavedMapInfo | null;
@@ -707,29 +712,48 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
-  const updateMultiObjectPositions = (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+  const updateMultiObjectTransforms = (
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
     options?: { recordHistory?: boolean },
   ) => {
     if (updates.length === 0) return;
 
-    const updateMap = new Map(updates.map((u) => [u.id, u.position]));
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+
+    // commitSelectedTransform과 동일하게, 전달된 필드만 덮어쓴다 — 없는 필드는
+    // 기존 값 유지 (rad↔deg 역변환 오차로 인한 rotation 덮어쓰기 방지).
+    const applyUpdate = <
+      T extends {
+        id: string;
+        position?: Vector3Tuple;
+        rotation?: Vector3Tuple;
+        scale?: Vector3Tuple;
+      },
+    >(
+      item: T,
+    ): T => {
+      const u = updateMap.get(item.id);
+      if (!u) return item;
+      return {
+        ...item,
+        ...(u.position && { position: roundVectorValue(u.position) }),
+        ...(u.rotation && { rotation: roundVectorValue(u.rotation) }),
+        ...(u.scale && { scale: roundVectorValue(u.scale) }),
+      };
+    };
 
     updateSceneInfo((prev) => {
       if (!prev) return prev;
 
       return {
         ...prev,
-        models: prev.models.map((model) => {
-          const pos = updateMap.get(model.id);
-          if (!pos) return model;
-          return { ...model, position: roundVectorValue(pos) };
-        }),
-        texts: (prev.texts ?? []).map((t) => {
-          const pos = updateMap.get(t.id);
-          if (!pos) return t;
-          return { ...t, position: roundVectorValue(pos) };
-        }),
+        models: prev.models.map(applyUpdate),
+        texts: (prev.texts ?? []).map(applyUpdate),
       };
     }, options);
   };
@@ -797,7 +821,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextColor,
     updateSelectedTextTransform,
     updateSelectedTextTransformVector,
-    updateMultiObjectPositions,
+    updateMultiObjectTransforms,
     updateSelectedValueMap,
     selectedMap,
     updateSelectedMapTransform,

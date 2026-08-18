@@ -144,7 +144,12 @@ interface SceneObjectsEditCanvasProps {
     scale: Vector3Tuple | null,
   ) => void;
   onMultiTransformCommit?: (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
