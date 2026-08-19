@@ -79,6 +79,14 @@ function isHmi2Allowed(pathname: string): boolean {
   return HMI2_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+function isIndoorshopAllowed(pathname: string): boolean {
+  return pathname === '/indoorshop' || pathname.startsWith('/indoorshop/');
+}
+
+function isKeyinAllowed(pathname: string): boolean {
+  return pathname === '/keyin' || pathname.startsWith('/keyin/');
+}
+
 function ProtectedRoute() {
   const { user } = useAuth();
   const location = useLocation();
@@ -97,6 +105,12 @@ function ProtectedRoute() {
   if (role === 'hmi2' && !isHmi2Allowed(location.pathname)) {
     return <Navigate to="/hmi2" replace />;
   }
+  if (role === 'indoorshop' && !isIndoorshopAllowed(location.pathname)) {
+    return <Navigate to="/indoorshop" replace />;
+  }
+  if (role === 'keyin' && !isKeyinAllowed(location.pathname)) {
+    return <Navigate to="/keyin" replace />;
+  }
 
   return <Outlet />;
 }
@@ -107,6 +121,8 @@ function LoginGuard() {
   if (role === 'mro2') return <Navigate to="/mro2" replace />;
   if (role === 'hmi') return <Navigate to="/hmi" replace />;
   if (role === 'hmi2') return <Navigate to="/hmi2" replace />;
+  if (role === 'indoorshop') return <Navigate to="/indoorshop" replace />;
+  if (role === 'keyin') return <Navigate to="/keyin" replace />;
   if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
 }
@@ -303,6 +319,18 @@ const HmiPhillyPage = lazy(() =>
   })),
 );
 
+const IndoorshopGatheringPage = lazy(() =>
+  import('@crane/indoorshop/pages/gathering').then((m) => ({
+    default: m.GatheringPage,
+  })),
+);
+
+const IndoorshopKeyinPage = lazy(() =>
+  import('@crane/indoorshop/pages/keyin').then((m) => ({
+    default: m.KeyinPage,
+  })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -422,6 +450,22 @@ export function App() {
                 element={
                   <LazyRoute>
                     <HmiPhillyPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="indoorshop"
+                element={
+                  <LazyRoute>
+                    <IndoorshopGatheringPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="keyin"
+                element={
+                  <LazyRoute>
+                    <IndoorshopKeyinPage />
                   </LazyRoute>
                 }
               />

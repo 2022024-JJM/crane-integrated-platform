@@ -72,6 +72,7 @@ function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
     a.id === b.id &&
     a.content === b.content &&
     a.color === b.color &&
+    (a.locked ?? false) === (b.locked ?? false) &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale)

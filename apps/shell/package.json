@@ -17,6 +17,7 @@
     "@crane/features": "workspace:*",
     "@crane/goliath-crane": "workspace:*",
     "@crane/hanwha-ocean": "workspace:*",
+    "@crane/indoorshop": "workspace:*",
     "@crane/mro2": "workspace:*",
     "@crane/philly-shipyard": "workspace:*",
     "@crane/ui": "workspace:*",

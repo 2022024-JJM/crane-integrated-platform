@@ -144,7 +144,12 @@ interface SceneObjectsEditCanvasProps {
     scale: Vector3Tuple | null,
   ) => void;
   onMultiTransformCommit?: (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
@@ -269,6 +274,7 @@ export function SceneObjectsEditCanvas({
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const toggleMesh = useSceneObjectSelectionStore((state) => state.toggleMesh);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
@@ -283,16 +289,18 @@ export function SceneObjectsEditCanvas({
     () => (sceneInfo?.maps ?? []).filter((m) => m.locked === false),
     [sceneInfo?.maps],
   );
-  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다
-  // (다중 선택 불참, selectMap 주석 참고). 잠긴 모델도 선택 불가 규칙에
-  // 따라 제외한다.
+  // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다:
+  // 지형 AABB가 화면을 덮어 스크린 공간 교차 판정에 어떤 마퀴든 반드시
+  // 걸리기 때문이다(Ctrl 토글·Ctrl+A는 잠금 해제 시 참여). 잠긴
+  // 모델·텍스트도 선택 불가 규칙에 따라 제외한다.
   const marqueeExcludedIds = useMemo(
     () =>
       new Set([
         ...(sceneInfo?.maps ?? []).map((m) => m.id),
         ...(sceneInfo?.models ?? []).filter((m) => m.locked).map((m) => m.id),
+        ...(sceneInfo?.texts ?? []).filter((t) => t.locked).map((t) => t.id),
       ]),
-    [sceneInfo?.maps, sceneInfo?.models],
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
   );
 
   const {
@@ -430,19 +438,44 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
-  // 지도 선택 — Ctrl 다중 선택 분기가 없다. 지도는 단독 선택만 허용한다
-  // (selectMap 주석 참고). 더블클릭 drill-in도 두지 않는다 — 지형 메시는
-  // 수만 개라 자식 단위 편집이 의미가 없다.
+  // 지도 선택 — 잠금 해제된 지도는 Ctrl 토글로 다중 선택에 참여한다
+  // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in은 두지 않는다 —
+  // 지형 메시는 수만 개라 자식 단위 편집이 의미가 없다.
   const handleSelectMap = useCallback(
     (id: string) => {
       if (dragJustEndedRef.current) return;
-      setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
-      selectMap(id);
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleMap(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectMap(id);
+      }
     },
-    [dragJustEndedRef, selectMap, setSelectedObject],
+    [dragJustEndedRef, selectMap, toggleMap, setSelectedObject],
   );
 
   const selectAll = useSceneObjectSelectionStore((state) => state.selectAll);
+
+  // 마퀴는 레지스트리의 id만 알고 타입을 모른다. 여기서 텍스트/모델을
+  // 분류해 넘겨야 단일 텍스트 선택이 'model'로 태깅돼 존재 검증에서
+  // 풀리는 일이 없다. 지도·잠금 객체는 marqueeExcludedIds로 이미 제외.
+  const textIdSet = useMemo(
+    () => new Set((sceneInfo?.texts ?? []).map((t) => t.id)),
+    [sceneInfo?.texts],
+  );
+  const selectAllClassified = useCallback(
+    (ids: string[]) =>
+      selectAll(
+        ids.map((id) => ({
+          id,
+          type: textIdSet.has(id) ? ('text' as const) : ('model' as const),
+        })),
+      ),
+    [selectAll, textIdSet],
+  );
 
   const {
     marqueeStyle,
@@ -457,17 +490,19 @@ export function SceneObjectsEditCanvas({
     dragJustEndedRef,
     isDraggingExternalItem: !!draggingModelCatalogItem,
     excludedIds: marqueeExcludedIds,
-    selectAll,
+    selectAll: selectAllClassified,
     clearSelectedModel,
   });
 
   const handleClearSelection = useCallback(() => {
+    if (dragJustEndedRef.current) return;
     if (marqueeJustEndedRef.current) return;
     setSelectedObject(null);
     setIsTransformDragging(false);
     clearSelectedModel();
   }, [
     clearSelectedModel,
+    dragJustEndedRef,
     marqueeJustEndedRef,
     setIsTransformDragging,
     setSelectedObject,
@@ -817,7 +852,10 @@ export function SceneObjectsEditCanvas({
               position={text.position}
               rotation={text.rotation}
               scale={text.scale}
-              onSelect={handleSelectText}
+              // 잠긴 텍스트는 클릭이 선택 해제로 떨어진다 — 잠긴 모델과 같은
+              // 규칙. undefined를 넘기면 SceneText가 클릭을 삼키기만 하므로
+              // handleClearSelection을 넘겨야 빈 공간 클릭과 동일하게 동작한다.
+              onSelect={text.locked ? handleClearSelection : handleSelectText}
               onObjectReady={handleModelObjectReady}
             />
           </Suspense>

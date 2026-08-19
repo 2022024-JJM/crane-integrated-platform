@@ -11,7 +11,7 @@ export interface PlacedObjectItem {
   type: 'model' | 'text' | 'map';
   /**
    * 편집 잠금 — 씬 데이터(locked)에서 파생. 잠긴 행은 목록에서 선택되지
-   * 않고 삭제 버튼도 숨긴다. 텍스트는 잠금 대상이 아니라 undefined.
+   * 않고 삭제 버튼도 숨긴다.
    */
   locked?: boolean;
 }
@@ -52,6 +52,7 @@ export function getPlacedObjectItems({
     id: text.id,
     displayName: text.content.trim() || 'Text',
     type: 'text',
+    locked: text.locked === true,
   }));
 
   const items = [...mapItems, ...modelItems, ...textItems];

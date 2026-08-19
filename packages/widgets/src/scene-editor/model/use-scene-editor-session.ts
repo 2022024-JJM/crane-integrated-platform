@@ -64,12 +64,6 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedTextTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedTextTransform'];
-  updateSelectedTextTransformVector: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedTextTransformVector'];
   updateSelectedMeshTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedMeshTransform'];
@@ -91,28 +85,23 @@ interface UseSceneEditorSessionResult {
   selectPlacedText: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
+  deletePlacedMap: (id: string) => void;
   setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
-  updateSelectedMapTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMapTransform'];
-  updateSelectedMapTransformVector: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMapTransformVector'];
-  commitSelectedMapTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['commitSelectedMapTransform'];
   setObjectLocked: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['setObjectLocked'];
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
-  selectAll: (ids: string[]) => void;
-  updateMultiObjectPositions: ReturnType<
+  toggleMap: (id: string) => void;
+  selectAll: (
+    entries: Array<{ id: string; type: SelectedObjectType }>,
+  ) => void;
+  updateMultiObjectTransforms: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateMultiObjectPositions'];
+  >['updateMultiObjectTransforms'];
   startTransformInteraction: () => void;
   endTransformInteraction: () => void;
   cameraStateRef: React.RefObject<SavedCameraInfo | null>;
@@ -158,6 +147,7 @@ export function useSceneEditorSession({
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const selectAllStore = useSceneObjectSelectionStore(
     (state) => state.selectAll,
   );
@@ -180,14 +170,9 @@ export function useSceneEditorSession({
     updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
-    updateMultiObjectPositions,
+    updateMultiObjectTransforms,
     updateSelectedValueMap,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     removeSelectedModel,
   } = useSelectedSceneObjectEditor({
@@ -282,14 +267,12 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
     updateSelectedMeshTransform,
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
     updateSelectedValueMap,
     removeSelectedModel,
-    updateMultiObjectPositions,
+    updateMultiObjectTransforms,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,
@@ -297,16 +280,15 @@ export function useSceneEditorSession({
     selectPlacedText: manipulation.selectPlacedText,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
+    deletePlacedMap: manipulation.deletePlacedMap,
     setSceneMap: manipulation.setSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     toggleModel,
     toggleText,
+    toggleMap,
     selectAll: selectAllStore,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,

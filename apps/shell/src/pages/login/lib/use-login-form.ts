@@ -66,7 +66,11 @@ export function useLoginForm() {
               ? '/hmi'
               : role === 'hmi2'
                 ? '/hmi2'
-                : '/';
+                : role === 'indoorshop'
+                  ? '/indoorshop'
+                  : role === 'keyin'
+                    ? '/keyin'
+                    : '/';
       navigate(landing, { replace: true });
     } else {
       setError(true);

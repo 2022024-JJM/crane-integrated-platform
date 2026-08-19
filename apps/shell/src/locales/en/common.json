@@ -80,7 +80,10 @@
     "categoryCrane": "Crane",
     "hmi": "HMI",
     "hmiDashboard": "HMI Dashboard",
-    "hmiPhillyDashboard": "Anti-Collision HMI"
+    "hmiPhillyDashboard": "Anti-Collision HMI",
+    "indoorshop": "Indoor Shop",
+    "indoorshopGathering": "Data Gathering",
+    "indoorshopKeyin": "Performance Key-In"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",

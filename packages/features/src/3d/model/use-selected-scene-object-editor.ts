@@ -114,39 +114,16 @@ interface UseSelectedSceneObjectEditorResult {
   ) => void;
   updateSelectedTextContent: (content: string) => void;
   updateSelectedTextColor: (color: string) => void;
-  updateSelectedTextTransform: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  updateSelectedTextTransformVector: (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: {
-      recordHistory?: boolean;
-    },
-  ) => void;
-  updateMultiObjectPositions: (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+  updateMultiObjectTransforms: (
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
     options?: { recordHistory?: boolean },
   ) => void;
   selectedMap: SavedMapInfo | null;
-  updateSelectedMapTransform: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  updateSelectedMapTransformVector: (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: { recordHistory?: boolean },
-  ) => void;
-  commitSelectedMapTransform: (
-    position: Vector3Tuple | null,
-    rotation: Vector3Tuple | null,
-    scale: Vector3Tuple | null,
-    options?: { recordHistory?: boolean },
-  ) => void;
   setObjectLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
 }
@@ -173,16 +150,6 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    if (selectedObjectType === 'text') {
-      const exists = (sceneInfo.texts ?? []).some(
-        (t) => t.id === selectedModelId,
-      );
-      if (!exists) {
-        clearSelectedModel();
-      }
-      return;
-    }
-
     if (selectedObjectType === 'mesh') {
       // mesh ID는 `${modelId}::${meshPath}` 형식. 부모 모델이 살아있으면 유지.
       const parsed = parseMeshId(selectedModelId);
@@ -199,21 +166,14 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    if (selectedObjectType === 'map') {
-      const exists = (sceneInfo.maps ?? []).some(
-        (m) => m.id === selectedModelId,
-      );
-      if (!exists) {
-        clearSelectedModel();
-      }
-      return;
-    }
+    // model/text/map은 id가 전역 고유하므로 타입 분기 없이 세 컬렉션
+    // 어디에든 존재하면 선택을 유지한다.
+    const exists =
+      sceneInfo.models.some((m) => m.id === selectedModelId) ||
+      (sceneInfo.texts ?? []).some((t) => t.id === selectedModelId) ||
+      (sceneInfo.maps ?? []).some((m) => m.id === selectedModelId);
 
-    const isSelectedModelExists = sceneInfo.models.some(
-      (model) => model.id === selectedModelId,
-    );
-
-    if (!isSelectedModelExists) {
+    if (!exists) {
       clearSelectedModel();
     }
   }, [clearSelectedModel, sceneInfo, selectedModelId, selectedObjectType]);
@@ -228,6 +188,9 @@ export function useSelectedSceneObjectEditor({
     const hasLockedSelection =
       sceneInfo.models.some(
         (m) => m.locked === true && selectedIds.has(m.id),
+      ) ||
+      (sceneInfo.texts ?? []).some(
+        (t) => t.locked === true && selectedIds.has(t.id),
       ) ||
       (sceneInfo.maps ?? []).some(
         (m) => m.locked !== false && selectedIds.has(m.id),
@@ -348,6 +311,43 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  /**
+   * transform 편집 공통 경로 — 모델/텍스트/지도는 transform 필드 형태가
+   * 같으므로 selectedModelId가 속한 컬렉션(models → texts → maps)을 찾아
+   * patch를 병합한다(renameObject/setObjectLocked와 같은 컬렉션 해석 패턴).
+   * 지도는 transform 필드가 optional이지만 스프레드 병합은 터치한 필드만
+   * 기록하므로 "손대지 않은 필드는 저장본에서도 없는 채로 유지" 계약이
+   * 그대로 지켜진다. mesh 선택은 별도 함수(updateSelectedMesh*)가 담당한다.
+   */
+  const patchSelectedTransform = (
+    prev: SavedSceneInfo,
+    makePatch: (current: {
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }) => Partial<Record<SceneTransformField, Vector3Tuple>>,
+  ): SavedSceneInfo => {
+    const patchItem = <
+      T extends {
+        id: string;
+        position?: Vector3Tuple;
+        rotation?: Vector3Tuple;
+        scale?: Vector3Tuple;
+      },
+    >(
+      item: T,
+    ): T =>
+      item.id === selectedModelId ? { ...item, ...makePatch(item) } : item;
+
+    if (prev.models.some((m) => m.id === selectedModelId)) {
+      return { ...prev, models: prev.models.map(patchItem) };
+    }
+    if ((prev.texts ?? []).some((t) => t.id === selectedModelId)) {
+      return { ...prev, texts: (prev.texts ?? []).map(patchItem) };
+    }
+    return { ...prev, maps: (prev.maps ?? []).map(patchItem) };
+  };
+
   const updateSelectedTransform = (
     field: SceneTransformField,
     axis: AxisKey,
@@ -358,19 +358,16 @@ export function useSelectedSceneObjectEditor({
         return prev;
       }
 
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
-
-          return {
-            ...model,
-            [field]: updateVectorValue(model[field], axis, numRound(value)),
-          };
-        }),
-      };
+      return patchSelectedTransform(prev, (current) => {
+        // 기존 값이 없으면(손대지 않은 지도) 렌더러 기본값에서 출발해야
+        // 인스펙터에 보이던 수치와 결과가 일치한다.
+        const base =
+          current[field] ??
+          (field === 'scale'
+            ? ([1, 1, 1] as Vector3Tuple)
+            : ([0, 0, 0] as Vector3Tuple));
+        return { [field]: updateVectorValue(base, axis, numRound(value)) };
+      });
     });
   };
 
@@ -386,19 +383,9 @@ export function useSelectedSceneObjectEditor({
         return prev;
       }
 
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) {
-            return model;
-          }
-
-          return {
-            ...model,
-            [field]: roundVectorValue(value),
-          };
-        }),
-      };
+      return patchSelectedTransform(prev, () => ({
+        [field]: roundVectorValue(value),
+      }));
     }, options);
   };
 
@@ -513,141 +500,10 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
-  const updateSelectedTextTransform = (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        texts: (prev.texts ?? []).map((t) => {
-          if (t.id !== selectedModelId) {
-            return t;
-          }
-
-          return {
-            ...t,
-            [field]: updateVectorValue(t[field], axis, numRound(value)),
-          };
-        }),
-      };
-    });
-  };
-
-  const updateSelectedTextTransformVector = (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: {
-      recordHistory?: boolean;
-    },
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        texts: (prev.texts ?? []).map((t) => {
-          if (t.id !== selectedModelId) {
-            return t;
-          }
-
-          return {
-            ...t,
-            [field]: roundVectorValue(value),
-          };
-        }),
-      };
-    }, options);
-  };
-
-  /**
-   * 지도 transform 갱신. 모델과 달리 필드가 optional이라(기존 저장본 호환)
-   * 매 갱신에서 해당 필드만 채워 넣는다 — 나머지는 없는 채로 두어야
-   * "손대지 않은 지도"가 저장본에서도 계속 필드 없는 상태로 남는다.
-   */
-  const updateSelectedMapTransformVector = (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: { recordHistory?: boolean },
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        maps: (prev.maps ?? []).map((m) =>
-          m.id === selectedModelId
-            ? { ...m, [field]: roundVectorValue(value) }
-            : m,
-        ),
-      };
-    }, options);
-  };
-
-  /**
-   * 인스펙터 수치 입력용 축 단위 갱신. 기존 값이 없으면(손대지 않은 지도)
-   * 렌더러 기본값에서 출발해야 인스펙터에 보이던 수치와 결과가 일치한다.
-   */
-  const updateSelectedMapTransform = (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        maps: (prev.maps ?? []).map((m) => {
-          if (m.id !== selectedModelId) return m;
-          const base = m[field] ?? (field === 'scale' ? [1, 1, 1] : [0, 0, 0]);
-          return {
-            ...m,
-            [field]: updateVectorValue(base, axis, numRound(value)),
-          };
-        }),
-      };
-    });
-  };
-
-  const commitSelectedMapTransform = (
-    position: Vector3Tuple | null,
-    rotation: Vector3Tuple | null,
-    scale: Vector3Tuple | null,
-    options?: { recordHistory?: boolean },
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) return prev;
-      return {
-        ...prev,
-        maps: (prev.maps ?? []).map((m) => {
-          if (m.id !== selectedModelId) return m;
-          return {
-            ...m,
-            ...(position ? { position: roundVectorValue(position) } : null),
-            ...(rotation ? { rotation: roundVectorValue(rotation) } : null),
-            ...(scale ? { scale: roundVectorValue(scale) } : null),
-          };
-        }),
-      };
-    }, options);
-  };
-
   /**
    * 편집 잠금 토글 — 씬 데이터에 쓴다(저장·undo·dirty 참여).
    * 지도는 "필드 없음 = 잠김"이라 항상 명시적 boolean을 기록하고,
-   * 모델은 true일 때만 필드를 남긴다(types.ts 주석 참고).
+   * 모델·텍스트는 true일 때만 필드를 남긴다(types.ts 주석 참고).
    * 잠글 때 선택 중이었다면 선택을 해제한다.
    */
   const setObjectLocked = (id: string, locked: boolean) => {
@@ -661,6 +517,17 @@ export function useSelectedSceneObjectEditor({
           maps: (prev.maps ?? []).map((m) =>
             m.id === id ? { ...m, locked } : m,
           ),
+        };
+      }
+      if ((prev.texts ?? []).some((t) => t.id === id)) {
+        return {
+          ...prev,
+          texts: (prev.texts ?? []).map((t) => {
+            if (t.id !== id) return t;
+            if (locked) return { ...t, locked: true };
+            const { locked: _removed, ...rest } = t;
+            return rest;
+          }),
         };
       }
       return {
@@ -692,44 +559,59 @@ export function useSelectedSceneObjectEditor({
   ) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId) return model;
-          return {
-            ...model,
-            ...(position !== null && { position: roundVectorValue(position) }),
-            ...(rotation !== null && { rotation: roundVectorValue(rotation) }),
-            ...(scale !== null && { scale: roundVectorValue(scale) }),
-          };
-        }),
-      };
+      return patchSelectedTransform(prev, () => ({
+        ...(position !== null && { position: roundVectorValue(position) }),
+        ...(rotation !== null && { rotation: roundVectorValue(rotation) }),
+        ...(scale !== null && { scale: roundVectorValue(scale) }),
+      }));
     }, options);
   };
 
-  const updateMultiObjectPositions = (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+  const updateMultiObjectTransforms = (
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
     options?: { recordHistory?: boolean },
   ) => {
     if (updates.length === 0) return;
 
-    const updateMap = new Map(updates.map((u) => [u.id, u.position]));
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+
+    // commitSelectedTransform과 동일하게, 전달된 필드만 덮어쓴다 — 없는 필드는
+    // 기존 값 유지 (rad↔deg 역변환 오차로 인한 rotation 덮어쓰기 방지).
+    const applyUpdate = <
+      T extends {
+        id: string;
+        position?: Vector3Tuple;
+        rotation?: Vector3Tuple;
+        scale?: Vector3Tuple;
+      },
+    >(
+      item: T,
+    ): T => {
+      const u = updateMap.get(item.id);
+      if (!u) return item;
+      return {
+        ...item,
+        ...(u.position && { position: roundVectorValue(u.position) }),
+        ...(u.rotation && { rotation: roundVectorValue(u.rotation) }),
+        ...(u.scale && { scale: roundVectorValue(u.scale) }),
+      };
+    };
 
     updateSceneInfo((prev) => {
       if (!prev) return prev;
 
       return {
         ...prev,
-        models: prev.models.map((model) => {
-          const pos = updateMap.get(model.id);
-          if (!pos) return model;
-          return { ...model, position: roundVectorValue(pos) };
-        }),
-        texts: (prev.texts ?? []).map((t) => {
-          const pos = updateMap.get(t.id);
-          if (!pos) return t;
-          return { ...t, position: roundVectorValue(pos) };
-        }),
+        models: prev.models.map(applyUpdate),
+        texts: (prev.texts ?? []).map(applyUpdate),
+        // 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중 선택에 참여한다.
+        // 터치한 필드만 병합되므로 optional transform 계약도 유지된다.
+        maps: (prev.maps ?? []).map(applyUpdate),
       };
     }, options);
   };
@@ -775,6 +657,9 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.filter((model) => !selectedIds.has(model.id)),
         texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
+        // 잠금 해제된 지도도 선택·삭제 대상이다. 지도가 없어지면 드롭
+        // raycast는 y=0 평면으로 폴백한다(use-scene-drop 참고).
+        maps: (prev.maps ?? []).filter((m) => !selectedIds.has(m.id)),
       };
     });
 
@@ -795,14 +680,9 @@ export function useSelectedSceneObjectEditor({
     updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedTextTransform,
-    updateSelectedTextTransformVector,
-    updateMultiObjectPositions,
+    updateMultiObjectTransforms,
     updateSelectedValueMap,
     selectedMap,
-    updateSelectedMapTransform,
-    updateSelectedMapTransformVector,
-    commitSelectedMapTransform,
     setObjectLocked,
     removeSelectedModel,
   };

@@ -216,6 +216,11 @@ export function useMarqueeSelection({
     (e: PointerEvent) => {
       if (e.button !== 0) return;
 
+      // document 리스너라 three-stdlib의 pointerup보다 먼저 실행될 수 있다.
+      // 그 시점엔 dragJustEndedRef가 아직 false이므로, 기즈모 드래그 중이면
+      // 여기서 동기적으로 차단한다.
+      if (isTransformDraggingRef.current) return;
+
       const wasDragging = isDraggingRef.current;
       const savedRect = marqueeRectRef.current;
 

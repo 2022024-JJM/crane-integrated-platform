@@ -14,7 +14,7 @@ export function ScaleController({
     <div className="flex flex-col gap-1.5">
       {(['x', 'y', 'z'] as const).map((axis) => (
         <div key={axis} className="flex items-center gap-1.5">
-          <span className="text-muted-foreground w-4 text-[10px] font-semibold uppercase">
+          <span className="text-muted-foreground w-4 shrink-0 text-center font-mono text-[11px] uppercase">
             {axis}
           </span>
           <InputNumber

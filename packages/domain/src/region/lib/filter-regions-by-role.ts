@@ -8,7 +8,9 @@ type RegionUserRole =
   | 'mro'
   | 'mro2'
   | 'hmi'
-  | 'hmi2';
+  | 'hmi2'
+  | 'indoorshop'
+  | 'keyin';
 
 export function filterRegionsByRole(
   regions: Region[],
@@ -32,6 +34,10 @@ export function filterRegionsByRole(
     case 'hmi':
       return [];
     case 'hmi2':
+      return [];
+    case 'indoorshop':
+      return [];
+    case 'keyin':
       return [];
     default: {
       const _exhaustive: never = role;

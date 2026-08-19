@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Object3D } from 'three';
+import { Object3D, Quaternion } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import {
   numRound,
@@ -34,6 +34,17 @@ type TransformControlsWithDraggingEvent = TransformControlsImpl & {
 function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
   return values.map((value) => numRound(value)) as Vector3Tuple;
 }
+
+/** 멀티 드래그 시작 시점의 각 객체 transform 스냅샷. */
+interface DragStartTransform {
+  position: Vector3Tuple;
+  quaternion: Quaternion;
+  scale: Vector3Tuple;
+}
+
+// liveSync는 매 frame 호출되므로 임시 Quaternion을 재사용해 할당을 피한다.
+const tmpStartQuatInv = new Quaternion();
+const tmpDeltaQuat = new Quaternion();
 
 function getObjectTransformVectors(
   object: Object3D,
@@ -71,7 +82,12 @@ interface UseSceneTransformParams {
     scale: Vector3Tuple | null,
   ) => void;
   onMultiTransformCommit?: (
-    updates: Array<{ id: string; position: Vector3Tuple }>,
+    updates: Array<{
+      id: string;
+      position?: Vector3Tuple;
+      rotation?: Vector3Tuple;
+      scale?: Vector3Tuple;
+    }>,
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
@@ -101,10 +117,12 @@ export function useSceneTransform({
   const [selectedObject, setSelectedObject] = useState<Object3D | null>(null);
   const [isTransformDragging, setIsTransformDragging] = useState(false);
 
-  const dragStartPositionsRef = useRef<Map<string, Vector3Tuple>>(new Map());
+  const dragStartTransformsRef = useRef<Map<string, DragStartTransform>>(
+    new Map(),
+  );
   const dragJustEndedRef = useRef(false);
 
-  const isMultiDrag = isMultiSelection && transformMode === 'translate';
+  const isMultiDrag = isMultiSelection;
 
   /**
    * 매 frame TransformControls.onObjectChange에서 호출.
@@ -124,27 +142,66 @@ export function useSceneTransform({
     }
 
     if (isMultiDrag) {
-      // Compute delta from primary object's start position
-      const startPos = dragStartPositionsRef.current.get(primarySelectedId);
-      if (!startPos) return;
+      // Compute delta from primary object's start transform
+      const start = dragStartTransformsRef.current.get(primarySelectedId);
+      if (!start) return;
 
-      const deltaX = selectedObject.position.x - startPos[0];
-      const deltaY = selectedObject.position.y - startPos[1];
-      const deltaZ = selectedObject.position.z - startPos[2];
-
-      // Apply delta to all other selected objects' Object3D directly (visual feedback)
       const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-      for (const id of selectedIds) {
-        if (id === primarySelectedId) continue;
-        const obj = modelObjectRegistryRef.current.get(id);
-        const objStartPos = dragStartPositionsRef.current.get(id);
-        if (!obj || !objStartPos) continue;
 
-        obj.position.set(
-          objStartPos[0] + deltaX,
-          objStartPos[1] + deltaY,
-          objStartPos[2] + deltaZ,
-        );
+      if (transformMode === 'translate') {
+        const deltaX = selectedObject.position.x - start.position[0];
+        const deltaY = selectedObject.position.y - start.position[1];
+        const deltaZ = selectedObject.position.z - start.position[2];
+
+        // Apply delta to all other selected objects' Object3D directly (visual feedback)
+        for (const id of selectedIds) {
+          if (id === primarySelectedId) continue;
+          const obj = modelObjectRegistryRef.current.get(id);
+          const objStart = dragStartTransformsRef.current.get(id);
+          if (!obj || !objStart) continue;
+
+          obj.position.set(
+            objStart.position[0] + deltaX,
+            objStart.position[1] + deltaY,
+            objStart.position[2] + deltaZ,
+          );
+        }
+      } else if (transformMode === 'rotate') {
+        // 각자 자기 축 기준(individual origins): 프라이머리의 부모 프레임 회전
+        // 델타를 각 객체에 premultiply — 모두 같은 축 방향으로 제자리 회전한다.
+        tmpStartQuatInv.copy(start.quaternion).invert();
+        tmpDeltaQuat.copy(selectedObject.quaternion).multiply(tmpStartQuatInv);
+
+        for (const id of selectedIds) {
+          if (id === primarySelectedId) continue;
+          const obj = modelObjectRegistryRef.current.get(id);
+          const objStart = dragStartTransformsRef.current.get(id);
+          if (!obj || !objStart) continue;
+
+          obj.quaternion.copy(tmpDeltaQuat).multiply(objStart.quaternion);
+        }
+      } else {
+        // scale: 프라이머리의 성분별 비율을 각 객체의 시작 스케일에 곱한다.
+        // 시작 성분이 0이면 비율을 정의할 수 없으므로 1로 둔다.
+        const ratioX =
+          start.scale[0] === 0 ? 1 : selectedObject.scale.x / start.scale[0];
+        const ratioY =
+          start.scale[1] === 0 ? 1 : selectedObject.scale.y / start.scale[1];
+        const ratioZ =
+          start.scale[2] === 0 ? 1 : selectedObject.scale.z / start.scale[2];
+
+        for (const id of selectedIds) {
+          if (id === primarySelectedId) continue;
+          const obj = modelObjectRegistryRef.current.get(id);
+          const objStart = dragStartTransformsRef.current.get(id);
+          if (!obj || !objStart) continue;
+
+          obj.scale.set(
+            objStart.scale[0] * ratioX,
+            objStart.scale[1] * ratioY,
+            objStart.scale[2] * ratioZ,
+          );
+        }
       }
     }
 
@@ -156,7 +213,13 @@ export function useSceneTransform({
         nextTransform.rotation,
         nextTransform.scale,
       );
-  }, [primarySelectedId, selectedObject, isMultiDrag, modelObjectRegistryRef]);
+  }, [
+    primarySelectedId,
+    selectedObject,
+    isMultiDrag,
+    transformMode,
+    modelObjectRegistryRef,
+  ]);
 
   /**
    * mouseUp에서 단 1회 호출. selectedObject의 최종 transform을 sceneInfo로
@@ -201,49 +264,57 @@ export function useSceneTransform({
     // 드래그 진입: transient store 활성화. Inspector가 store 값을 표시하기 시작.
     useActiveTransformStore.getState().begin();
 
-    // Capture start positions of all selected objects for multi-drag
+    // Capture start transforms of all selected objects for multi-drag
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-    if (selectedIds.size > 1 && transformMode === 'translate') {
-      const startPositions = new Map<string, Vector3Tuple>();
+    if (selectedIds.size > 1) {
+      const startTransforms = new Map<string, DragStartTransform>();
       for (const id of selectedIds) {
         const obj = modelObjectRegistryRef.current.get(id);
         if (obj) {
-          startPositions.set(id, [obj.position.x, obj.position.y, obj.position.z]);
+          startTransforms.set(id, {
+            position: [obj.position.x, obj.position.y, obj.position.z],
+            quaternion: obj.quaternion.clone(),
+            scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+          });
         }
       }
-      dragStartPositionsRef.current = startPositions;
+      dragStartTransformsRef.current = startTransforms;
     }
-  }, [onTransformInteractionStart, transformMode, modelObjectRegistryRef]);
+  }, [onTransformInteractionStart, modelObjectRegistryRef]);
 
   const handleTransformMouseUp = useCallback(() => {
     if (isMultiDrag && selectedObject && primarySelectedId) {
-      // Compute final positions for all selected objects and commit
-      const startPos = dragStartPositionsRef.current.get(primarySelectedId);
-      if (startPos) {
-        const deltaX = selectedObject.position.x - startPos[0];
-        const deltaY = selectedObject.position.y - startPos[1];
-        const deltaZ = selectedObject.position.z - startPos[2];
+      // liveSync가 이미 각 Object3D를 최종 상태로 mutate했으므로 현재 값을
+      // 그대로 읽어 commit한다. commitFinal과 같은 이유로 transformMode에
+      // 해당하는 필드만 담는다 (rad↔deg 왕복 오차로 다른 필드가 덮이는 것 방지).
+      const updates: Array<{
+        id: string;
+        position?: Vector3Tuple;
+        rotation?: Vector3Tuple;
+        scale?: Vector3Tuple;
+      }> = [];
+      const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
+      for (const id of selectedIds) {
+        if (!dragStartTransformsRef.current.has(id)) continue;
+        const obj =
+          id === primarySelectedId
+            ? selectedObject
+            : modelObjectRegistryRef.current.get(id);
+        if (!obj) continue;
 
-        const updates: Array<{ id: string; position: Vector3Tuple }> = [];
-        const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-        for (const id of selectedIds) {
-          const objStartPos = dragStartPositionsRef.current.get(id);
-          if (!objStartPos) continue;
-
-          updates.push({
-            id,
-            position: [
-              objStartPos[0] + deltaX,
-              objStartPos[1] + deltaY,
-              objStartPos[2] + deltaZ,
-            ],
-          });
+        const nextTransform = getObjectTransformVectors(obj);
+        if (transformMode === 'translate') {
+          updates.push({ id, position: nextTransform.position });
+        } else if (transformMode === 'rotate') {
+          updates.push({ id, rotation: nextTransform.rotation });
+        } else {
+          updates.push({ id, scale: nextTransform.scale });
         }
-
-        onMultiTransformCommit?.(updates);
       }
 
-      dragStartPositionsRef.current.clear();
+      onMultiTransformCommit?.(updates);
+
+      dragStartTransformsRef.current.clear();
     } else {
       // single-object: 최종 transform을 sceneInfo로 commit (history 1단계 생성)
       commitFinal();
@@ -266,6 +337,8 @@ export function useSceneTransform({
     isMultiDrag,
     selectedObject,
     primarySelectedId,
+    transformMode,
+    modelObjectRegistryRef,
     onMultiTransformCommit,
     commitFinal,
     onTransformInteractionEnd,

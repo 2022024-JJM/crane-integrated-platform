@@ -99,11 +99,6 @@ interface SceneObjectInspectorProps {
   ) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
-  onTextTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
   onMeshOpacityChange: (value: number) => void;
   onMeshTransformChange: (
     field: SceneTransformField,
@@ -112,12 +107,6 @@ interface SceneObjectInspectorProps {
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
-  /** 지도 transform 변경 콜백. 미지정 시 지도 인스펙터는 읽기 전용이 된다. */
-  onMapTransformChange?: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
   onValueMapChange?: (
     type: ValueMapType,
@@ -140,7 +129,7 @@ interface TransformGroupProps {
  */
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="text-foreground px-0.5 pb-1.5 text-[12px] font-medium">
+    <div className="text-foreground pb-1.5 text-[12px] font-medium">
       {title}
     </div>
   );
@@ -148,21 +137,18 @@ function SectionHeader({ title }: { title: string }) {
 
 function TransformGroup({ title, children }: TransformGroupProps) {
   return (
-    <div className="border-border bg-muted/50 rounded-md border px-2.5 py-2">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          {title}
-        </p>
-        <span className="bg-border h-px flex-1" />
-      </div>
+    <div>
+      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
+        {title}
+      </p>
       {children}
     </div>
   );
 }
 
-const VALUE_MAP_GROUPS: { label: string; types: ValueMapType[] }[] = [
-  { label: 'Position', types: ['PX', 'PY', 'PZ'] },
-  { label: 'Rotation', types: ['RX', 'RY', 'RZ'] },
+const VALUE_MAP_GROUPS: { labelKey: string; types: ValueMapType[] }[] = [
+  { labelKey: 'monitoring:inspector.position', types: ['PX', 'PY', 'PZ'] },
+  { labelKey: 'monitoring:inspector.rotation', types: ['RX', 'RY', 'RZ'] },
 ];
 
 const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
@@ -246,9 +232,9 @@ function TagMappingSection({
       ) : null}
       <div className="space-y-3">
         {VALUE_MAP_GROUPS.map((group) => (
-          <div key={group.label}>
+          <div key={group.labelKey}>
             <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
-              {group.label}
+              {t(group.labelKey)}
             </p>
             <div className="space-y-1.5">
               {group.types.map((type) => {
@@ -382,7 +368,7 @@ function TransformSection({
   return (
     <div>
       <SectionHeader title={t('monitoring:inspector.transform')} />
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
             vec={displayPosition}
@@ -579,7 +565,7 @@ function TextInspectorContent({
   setContentDraft,
   onTextContentChange,
   onTextColorChange,
-  onTextTransformChange,
+  onTransformChange,
   t,
 }: {
   selectedText: SavedTextInfo;
@@ -588,7 +574,7 @@ function TextInspectorContent({
   setContentDraft: (v: string) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
-  onTextTransformChange: (
+  onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
@@ -643,7 +629,7 @@ function TextInspectorContent({
           position={selectedText.position}
           rotation={selectedText.rotation}
           scale={selectedText.scale}
-          onTransformChange={onTextTransformChange}
+          onTransformChange={onTransformChange}
           t={t}
         />
       ) : null}
@@ -728,7 +714,7 @@ function InspectorTabRail({
               >
                 <Icon className="size-4" />
               </TooltipTrigger>
-              <TooltipContent>{label}</TooltipContent>
+              <TooltipContent side="left">{label}</TooltipContent>
             </Tooltip>
           );
         })}
@@ -747,12 +733,10 @@ export function SceneObjectInspector({
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
-  onTextTransformChange,
   onMeshOpacityChange,
   onMeshTransformChange,
   onBackToParent,
   onValueMapChange,
-  onMapTransformChange,
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -842,13 +826,13 @@ export function SceneObjectInspector({
               setContentDraft={setContentDraft}
               onTextContentChange={onTextContentChange}
               onTextColorChange={onTextColorChange}
-              onTextTransformChange={onTextTransformChange}
+              onTransformChange={onTransformChange}
               t={t}
             />
           ) : selectedMap ? (
             <MapInspectorContent
               selectedMap={selectedMap}
-              onTransformChange={onMapTransformChange ?? onTransformChange}
+              onTransformChange={onTransformChange}
               t={t}
             />
           ) : null}

@@ -24,7 +24,9 @@ interface SceneManipulationDeps {
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
-  selectAll: (ids: string[]) => void;
+  selectAll: (
+    entries: Array<{ id: string; type: 'model' | 'text' }>,
+  ) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -86,9 +88,39 @@ export function createSceneManipulationActions({
         return prev;
       }
 
+      // 잠긴 텍스트는 삭제 불가 — 계층 목록은 잠긴 행의 삭제 버튼을 숨기지만,
+      // updater 안에서 한 번 더 막아야 다른 호출 경로가 생겨도 안전하다.
+      if ((prev.texts ?? []).some((t) => t.id === id && t.locked)) {
+        return prev;
+      }
+
       return {
         ...prev,
         texts: (prev.texts ?? []).filter((t) => t.id !== id),
+      };
+    });
+
+    if (selectedIds.has(id)) {
+      clearSelectedModel();
+    }
+  };
+
+  const deletePlacedMap = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      // 잠긴 지도는 삭제 불가 — 지도는 "필드 없음 = 잠김"(반전 기본값)이라
+      // locked !== false 로 검사한다. 계층 목록은 잠긴 행의 삭제 버튼을
+      // 숨기지만 updater 안에서 한 번 더 막아야 다른 호출 경로에도 안전하다.
+      if ((prev.maps ?? []).some((m) => m.id === id && m.locked !== false)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).filter((m) => m.id !== id),
       };
     });
 
@@ -203,13 +235,13 @@ export function createSceneManipulationActions({
 
     const newModelDuplicates: typeof scene.models = [];
     const newTextDuplicates: NonNullable<typeof scene.texts> = [];
-    const newIds: string[] = [];
+    const newEntries: Array<{ id: string; type: 'model' | 'text' }> = [];
 
     for (const id of selectedIds) {
       const modelSource = scene.models.find((m) => m.id === id);
       if (modelSource) {
         const newId = createId();
-        newIds.push(newId);
+        newEntries.push({ id: newId, type: 'model' });
         newModelDuplicates.push({
           ...modelSource,
           id: newId,
@@ -228,10 +260,12 @@ export function createSceneManipulationActions({
       const textSource = (scene.texts ?? []).find((t) => t.id === id);
       if (textSource) {
         const newId = createId();
-        newIds.push(newId);
+        newEntries.push({ id: newId, type: 'text' });
         newTextDuplicates.push({
           ...textSource,
           id: newId,
+          // 모델 복제와 같은 규칙 — 복제본이 잠김을 물려받지 않는다.
+          locked: undefined,
           position: [
             textSource.position[0] + 2,
             textSource.position[1],
@@ -253,7 +287,7 @@ export function createSceneManipulationActions({
       };
     });
 
-    selectAll(newIds);
+    selectAll(newEntries);
   };
 
   return {
@@ -266,6 +300,7 @@ export function createSceneManipulationActions({
     selectPlacedText,
     deletePlacedModel,
     deletePlacedText,
+    deletePlacedMap,
     startTransformInteraction,
     endTransformInteraction,
     duplicateSelectedObject,
