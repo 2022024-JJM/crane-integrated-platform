@@ -714,7 +714,7 @@ function InspectorTabRail({
               >
                 <Icon className="size-4" />
               </TooltipTrigger>
-              <TooltipContent>{label}</TooltipContent>
+              <TooltipContent side="left">{label}</TooltipContent>
             </Tooltip>
           );
         })}
