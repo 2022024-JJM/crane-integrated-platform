@@ -129,7 +129,7 @@ interface TransformGroupProps {
  */
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="text-foreground px-0.5 pb-1.5 text-[12px] font-medium">
+    <div className="text-foreground pb-1.5 text-[12px] font-medium">
       {title}
     </div>
   );
@@ -137,21 +137,18 @@ function SectionHeader({ title }: { title: string }) {
 
 function TransformGroup({ title, children }: TransformGroupProps) {
   return (
-    <div className="border-border bg-muted/50 rounded-md border px-2.5 py-2">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-          {title}
-        </p>
-        <span className="bg-border h-px flex-1" />
-      </div>
+    <div>
+      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
+        {title}
+      </p>
       {children}
     </div>
   );
 }
 
-const VALUE_MAP_GROUPS: { label: string; types: ValueMapType[] }[] = [
-  { label: 'Position', types: ['PX', 'PY', 'PZ'] },
-  { label: 'Rotation', types: ['RX', 'RY', 'RZ'] },
+const VALUE_MAP_GROUPS: { labelKey: string; types: ValueMapType[] }[] = [
+  { labelKey: 'monitoring:inspector.position', types: ['PX', 'PY', 'PZ'] },
+  { labelKey: 'monitoring:inspector.rotation', types: ['RX', 'RY', 'RZ'] },
 ];
 
 const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
@@ -235,9 +232,9 @@ function TagMappingSection({
       ) : null}
       <div className="space-y-3">
         {VALUE_MAP_GROUPS.map((group) => (
-          <div key={group.label}>
+          <div key={group.labelKey}>
             <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
-              {group.label}
+              {t(group.labelKey)}
             </p>
             <div className="space-y-1.5">
               {group.types.map((type) => {
@@ -371,7 +368,7 @@ function TransformSection({
   return (
     <div>
       <SectionHeader title={t('monitoring:inspector.transform')} />
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
             vec={displayPosition}
