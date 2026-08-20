@@ -1,5 +1,7 @@
 // 지도(maps/) GLB 최적화 파이프라인 (텍스처 + 머티리얼 + 지오메트리).
 //
+// 운영 절차·튜닝·문제 해결: docs/지도-GLB-최적화-파이프라인.md
+//
 // 사용법:
 //   pnpm optimize:map                    # 전체 지도
 //   pnpm optimize:map phillyshipyard.glb # 특정 파일만
