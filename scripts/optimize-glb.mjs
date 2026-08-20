@@ -48,7 +48,8 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MODELS_DIR = join(repoRoot, 'apps/shell/public/models');
 const BACKUP_DIR = join(repoRoot, 'assets-src/models');
-const CLI = join(repoRoot, 'node_modules/.bin/gltf-transform');
+// .bin 셸 심(확장자 없음)은 Windows execFileSync 에서 ENOENT — JS 엔트리를 node 로 직접 실행한다.
+const CLI = join(repoRoot, 'node_modules/@gltf-transform/cli/bin/cli.js');
 
 /**
  * 텍스처 한 변의 상한(px).
@@ -133,7 +134,7 @@ try {
       STAGES.forEach(([cmd, args], i) => {
         const isLast = i === STAGES.length - 1;
         const output = isLast ? publicPath : join(workDir, `${stem}.${i}.glb`);
-        execFileSync(CLI, [cmd, input, output, ...args], { stdio: 'pipe' });
+        execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
         input = output;
       });
     } catch (error) {

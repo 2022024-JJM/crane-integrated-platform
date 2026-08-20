@@ -29,4 +29,33 @@ pnpm optimize:glb 기존파일.glb
 cp assets-src/models/<파일> apps/shell/public/models/<파일>
 ```
 
+## goliath_crane.glb — 원점 중심 계약 (⚠️ 재반입 시 필수)
+
+충돌 감지 존·FSD 카메라·에디터 기즈모가 "GLB 원점 = 크레인 중심(다리 사이),
+거더 = 로컬 +X" 를 전제로 씬 배치 transform 에서 파생된다. Blender 에서
+**월드 좌표가 지오메트리에 베이크된 채** 내보내면 존이 원점에 그려지고 회전
+피벗이 틀어진다 (2026-08-20 발생). 재반입 시:
+
+```bash
+# 새 export 를 public 에 놓은 뒤 (베이크 여부와 무관하게 안전)
+node scripts/unbake-goliath-crane.mjs      # 원점 복원 → assets-src/ 에 저장
+pnpm optimize:glb goliath_crane.glb        # 압축 배포
+# 출력된 "씬 배치값"을 goliath.json / philly-2dock.json 에 기입
+```
+
+## maps/ (지형) — 텍스처만 수동 압축
+
+지형은 `optimize:glb` 대상이 아니다(지오메트리 양자화가 드롭 레이캐스트·z-fighting
+을 깨뜨릴 수 있음). 다만 대형 맵은 **텍스처만** 수동으로 압축한다 — 지오메트리는
+바이트 단위로 그대로 유지된다. 노멀맵은 near-lossless 를 쓴다(원본이 이미 손실
+JPEG 인 경우 lossless webp 는 오히려 커진다. phillyshipyard 실측: 8.7MB→9.6MB.
+near-lossless 는 최대 오차 1/255 로 셰이딩 얼룩 없이 7.7MB).
+
+```bash
+cp apps/shell/public/maps/<맵>.glb assets-src/maps/<맵>.glb   # 원본 백업 먼저
+gltf-transform webp <원본> <t1> --slots "{baseColorTexture,emissiveTexture}" --quality 85
+gltf-transform webp <t1> <t2> --slots "{occlusionTexture,metallicRoughnessTexture}" --lossless
+gltf-transform webp <t2> apps/shell/public/maps/<맵>.glb --slots "normalTexture" --near-lossless
+```
+
 자세한 파이프라인 설명은 `docs/GLB-압축-파이프라인-작업보고.md` 참고.
