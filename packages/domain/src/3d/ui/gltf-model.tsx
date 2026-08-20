@@ -24,8 +24,9 @@ interface GltfModelProps {
   alarmHighlightMesh?: boolean;
   meshOverrides?: SavedMeshOverride[];
   /**
-   * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. 지도(map)처럼 메시 수가
-   * 수만 개인 지형은 빌드 비용만 크므로 false로 전달.
+   * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. bbox 존 분류만 하는
+   * 자산 뷰어처럼 정밀 raycast가 필요 없는 곳만 false. 지도는 드롭/선택
+   * raycast 대상이므로 기본값(true)을 쓴다 — model-mesh.tsx 주석 참고.
    */
   enableRaycastBvh?: boolean;
   /**
@@ -81,8 +82,12 @@ export const GltfModel = memo(function GltfModel({
   onHoverMove,
   onHoverEnd,
 }: GltfModelProps) {
-  const { clone } = useClonedModel(url);
-  const labelLocalAnchor = useModelLabelLocalAnchor(clone);
+  // clone은 여기서 1회만 만들고 ModelMesh에 주입한다 — 예전엔 ModelMesh가
+  // 따로 clone을 만들어 인스턴스당 clone·computeBoundingSphere가 2회 돌았고,
+  // SelectionBox·라벨 앵커가 실제 렌더되는 트리와 다른 clone을 측정했다.
+  const clonedModel = useClonedModel(url);
+  const { clone } = clonedModel;
+  const labelLocalAnchor = useModelLabelLocalAnchor(clone, showLabel);
 
   const handleObjectReady = useCallback(
     (readyId: string, object: Object3D | null) => {
@@ -102,6 +107,7 @@ export const GltfModel = memo(function GltfModel({
       scale={scale}
       meshOverrides={meshOverrides}
       enableRaycastBvh={enableRaycastBvh}
+      clonedModel={clonedModel}
       onSelect={onSelect}
       onDoubleSelect={onDoubleSelect}
       onObjectReady={handleObjectReady}

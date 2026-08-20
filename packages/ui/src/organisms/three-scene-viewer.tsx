@@ -462,6 +462,14 @@ export function ThreeSceneViewer({
               position: cameraPreset.defaultPosition,
               ...(cameraClip ?? { near: 0.1, far: 5000 }),
             }}
+            // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
+            // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
+            // 라벨은 DOM(Html)이라 텍스트 선명도와 무관하고, MSAA(antialias)가
+            // 켜져 있어 1.5로도 엣지가 깨끗하다. 호출부가 canvasProps.dpr로
+            // 넘기면 그 값이 우선한다. features 쪽 프리셋(SCENE_DEFAULT_DPR,
+            // scene-render-preset.tsx)과 같은 값 — cameraClip처럼 이 패키지는
+            // features를 참조할 수 없어 리터럴로 둔다.
+            dpr={canvasProps?.dpr ?? [1, 1.5]}
           >
             <SceneControlsBridge
               cameraPreset={cameraPreset}

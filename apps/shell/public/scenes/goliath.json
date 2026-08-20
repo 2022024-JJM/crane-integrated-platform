@@ -2,23 +2,24 @@
   "maps": [
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
-      "path": "/maps/phillyshipyard.glb"
+      "path": "/maps/phillyshipyard.glb",
+      "locked": false
     }
   ],
   "models": [
     {
-      "id": "id-msmy80tt-yl5ajiyw",
+      "id": "id-mt0sp0ug-m1k98061",
       "equipName": "Goliath Crane",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        -70.062,
+        -2194.264,
         0,
-        92.248
+        1853.545
       ],
       "rotation": [
         0,
-        6.178,
+        5.909,
         0
       ],
       "scale": [
@@ -32,14 +33,14 @@
   "texts": [],
   "camera": {
     "position": [
-      -41.03699999999999,
-      222.858,
-      235.266
+      -2138.80230321298,
+      101.87742533849467,
+      1951.6004206503908
     ],
     "target": [
-      -111.919,
-      12,
-      60.81
+      -2341.8674081017484,
+      -343.42393712379317,
+      1482.672837842368
     ]
   },
   "environmentId": "overcast-atlantic"

@@ -25,6 +25,20 @@ import { ACESFilmicToneMapping } from 'three';
 export const SCENE_CAMERA_CLIP = { near: 0.1, far: 5000 } as const;
 
 /**
+ * 캔버스 픽셀 비율 상한.
+ *
+ * Retina(DPR 2~3)에서 네이티브로 그리면 프래그먼트 수가 1.8~4배로 늘어
+ * 지도급 씬(philly 지도 42만 삼각형)에서 프레임 예산을 다 먹는다. 1.5는
+ * 골리앗 충돌가드 모드에서 먼저 검증된 값 — 라벨은 DOM(Html)이라 텍스트
+ * 선명도와 무관하고, MSAA(antialias)가 켜져 있어 엣지도 깨끗하다.
+ *
+ * ThreeSceneViewer(@crane/ui)의 기본값도 같은 [1, 1.5]다 — 그 패키지는
+ * features를 참조할 수 없어(SCENE_CAMERA_CLIP과 같은 사정) 리터럴로 들고
+ * 있다. 여기 값을 바꾸면 three-scene-viewer.tsx의 기본값도 같이 바꿀 것.
+ */
+export const SCENE_DEFAULT_DPR = [1, 1.5] as const;
+
+/**
  * WebGLRenderer 옵션.
  *
  * toneMapping: 예전에는 NoToneMapping(0)이었다. 강한 광량과 겹쳐 하이라이트가

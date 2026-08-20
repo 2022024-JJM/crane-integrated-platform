@@ -29,8 +29,18 @@ interface ModelMeshProps {
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
   meshOverrides?: SavedMeshOverride[];
-  /** 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. 지도(지형, 수만 메시)는 false. */
+  /**
+   * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. 정밀 raycast가 필요 없는
+   * 인스턴스(bbox 존 분류만 하는 mro2/philly 자산 뷰어 등)만 false로 빌드
+   * 비용을 아낀다. 지도는 드롭/선택 raycast 대상이므로 빌드한다 — BVH 없이는
+   * 포인터 이동마다 수십만 삼각형을 브루트포스 순회한다.
+   */
   enableRaycastBvh?: boolean;
+  /**
+   * 부모(GltfModel)가 이미 만든 clone 결과. 전달되면 여기서 다시 clone하지
+   * 않는다 — useClonedModel 주석 참고.
+   */
+  clonedModel?: ClonedModel;
   onSelect?: (id: string, event?: ThreeEvent<MouseEvent>) => void;
   /**
    * 더블클릭 시 별도 호출. R3F의 onClick은 detail 카운트가 신뢰적이지 않아
@@ -61,7 +71,7 @@ interface ModelMeshProps {
  * GLTF 원본 reference 그대로이며, alarm/opacity가 활성화되는 instance에서만
  * 1회 clone하여 instance 전용으로 mutate한다.
  */
-interface MeshMaterialBinding {
+export interface MeshMaterialBinding {
   mesh: Mesh;
   /** 마운트 시점의 원본 material reference. fast-path 복원/판별에 사용. */
   original: Material | Material[];
@@ -74,17 +84,32 @@ interface MeshMaterialBinding {
  * undo/redo 시 reset 기준으로 사용한다. clone 생성 직후의 값이므로 사용자
  * mutation이 섞이지 않은 진짜 원본이 보장된다.
  */
-interface OriginalTransform {
+export interface OriginalTransform {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
   visible: boolean;
 }
 
-export function useClonedModel(url: string) {
+export interface ClonedModel {
+  clone: Object3D;
+  meshBindings: MeshMaterialBinding[];
+  originalTransforms: Map<Object3D, OriginalTransform>;
+}
+
+/**
+ * GLTF를 인스턴스 전용 트리로 clone한다. `injected`가 있으면 clone을 새로
+ * 만들지 않고 그대로 쓴다 — GltfModel이 만든 clone을 ModelMesh가 재사용해
+ * 인스턴스당 clone·computeBoundingSphere가 1회만 일어나게 하고, SelectionBox·
+ * 라벨 앵커가 실제 렌더되는 트리와 같은 객체를 측정하도록 보장한다.
+ */
+export function useClonedModel(url: string, injected?: ClonedModel): ClonedModel {
   const { scene } = useGLTF(withBaseUrl(url));
 
   return useMemo(() => {
+    if (injected) {
+      return injected;
+    }
     const nextClone = SkeletonUtils.clone(scene);
     const bindings: MeshMaterialBinding[] = [];
     const originalTransforms = new Map<Object3D, OriginalTransform>();
@@ -113,8 +138,24 @@ export function useClonedModel(url: string) {
         cloned: null,
       });
 
-      if (child.geometry) {
+      // 지오메트리는 GLTF 캐시로 인스턴스 간 공유되므로 최초 1회만 계산한다.
+      if (child.geometry && !child.geometry.boundingSphere) {
         child.geometry.computeBoundingSphere();
+      }
+
+      if (import.meta.env.DEV) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        for (const mat of materials) {
+          if ((mat as { transmission?: number }).transmission) {
+            console.warn(
+              `[3d] transmission 머티리얼 감지: ${url} / ${mat.name} — ` +
+                'three.js가 매 프레임 씬 전체를 한 번 더 렌더링합니다. ' +
+                '지도라면 pnpm optimize:map 을 돌려 제거하세요.',
+            );
+          }
+        }
       }
     });
 
@@ -123,7 +164,7 @@ export function useClonedModel(url: string) {
     fillModelBottomOffsetFromClone(url, nextClone);
 
     return { clone: nextClone, meshBindings: bindings, originalTransforms };
-  }, [scene, url]);
+  }, [scene, url, injected]);
 }
 
 /**
@@ -198,11 +239,19 @@ export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
  * 으로 라벨을 마운트하면 부모 scale/rotation/position이 자동 적용되어 라벨이
  * 모델과 함께 움직이고 회전한다. 드래그 중에도 sceneInfo state와 무관하게
  * 정확히 따라간다.
+ *
+ * `enabled=false`(라벨 없는 인스턴스 — 지도 등)면 bbox 순회를 통째로 건너뛴다.
+ * 지도급 트리(수십만 정점)에서 setFromObject + updateMatrixWorld 2회는
+ * 마운트 시 수백 ms짜리 낭비다.
  */
 export function useModelLabelLocalAnchor(
   clone: Object3D,
+  enabled = true,
 ): Vector3Tuple {
   return useMemo(() => {
+    if (!enabled) {
+      return [0, 2, 0];
+    }
     const prevPos = clone.position.clone();
     const prevRot = clone.rotation.clone();
     const prevScale = clone.scale.clone();
@@ -227,7 +276,7 @@ export function useModelLabelLocalAnchor(
     // 화면에서 적절한 거리가 된다.
     const topY = box.max.y + 0.2;
     return [cx, topY, cz];
-  }, [clone]);
+  }, [clone, enabled]);
 }
 
 export function ModelMesh({
@@ -240,6 +289,7 @@ export function ModelMesh({
   scale = [1, 1, 1],
   meshOverrides,
   enableRaycastBvh = true,
+  clonedModel,
   onSelect,
   onDoubleSelect,
   onObjectReady,
@@ -248,7 +298,7 @@ export function ModelMesh({
   onHoverEnd,
   children,
 }: ModelMeshProps) {
-  const { clone, meshBindings, originalTransforms } = useClonedModel(url);
+  const { clone, meshBindings, originalTransforms } = useClonedModel(url, clonedModel);
   const modelRef = useRef<Object3D | null>(null);
   // 이전 effect에서 override가 적용된 적이 있는 target들. 다음 effect 실행 시
   // 모두 originalTransforms로 reset한 뒤 현재 override를 다시 적용한다.
@@ -520,8 +570,10 @@ export function ModelMesh({
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
   // 없으면 기본 raycast로 폴백).
   //
-  // 지도(enableRaycastBvh=false)는 지형이라 빌드하지 않는다 — 수만 개 메시에
-  // BVH를 빌드하면 비용만 크고 개별 메시 클릭 대상도 아니다.
+  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 38개에 42만
+  // 삼각형이라 빌드는 싸고(유휴 시간 분산), 없으면 포인터 이동마다 브루트
+  // 포스 순회로 프레임이 밀린다. bbox 존 분류만 하는 자산 뷰어처럼 정밀
+  // raycast가 필요 없는 곳만 enableRaycastBvh=false로 비용을 아낀다.
   useEffect(() => {
     if (!enableRaycastBvh) return;
 

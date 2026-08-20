@@ -2,23 +2,34 @@
   "maps": [
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
-      "path": "/maps/phillyshipyard.glb"
+      "path": "/maps/phillyshipyard.glb",
+      "locked": false,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "models": [
     {
-      "id": "id-mshaouxg-byvnie5d",
+      "id": "id-mt0rhrsw-icvq0ukr",
       "equipName": "Goliath Crane",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        -60.835,
+        -2194.264,
         0,
-        177.489
+        1853.545
       ],
       "rotation": [
         0,
-        183,
+        5.909,
         0
       ],
       "scale": [
@@ -29,18 +40,18 @@
       "valueMapList": []
     },
     {
-      "id": "id-mshaqgku-n0uu1vne",
+      "id": "id-mt0riz7x-bxncy0uk",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -61.138,
+        -2204.649,
         0.112,
-        223.331
+        1884.994
       ],
       "rotation": [
         0,
-        5.735,
+        3.368,
         0
       ],
       "scale": [
@@ -51,19 +62,19 @@
       "valueMapList": []
     },
     {
-      "id": "id-mshareg6-5n6kj1i9",
+      "id": "id-mt0rka4j-lfz5p217",
       "equipName": "LLC-002",
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -80.778,
+        -2219.59,
         0.112,
-        274.674
+        1929.729
       ],
       "rotation": [
-        180,
-        -3.851,
-        180
+        -180,
+        -7.836,
+        -180
       ],
       "scale": [
         1,
@@ -76,14 +87,14 @@
   "texts": [],
   "camera": {
     "position": [
-      -17.014156963669727,
-      96.82407228077965,
-      283.7084298145273
+      -2160.9983295908755,
+      132.44540762052893,
+      1975.78447849172
     ],
     "target": [
-      -69.61675213560532,
-      32.49525805483205,
-      225.6436963420018
+      -2286.432318801986,
+      -235.5157096467283,
+      1705.748451075521
     ]
   },
   "environmentId": "overcast-atlantic"

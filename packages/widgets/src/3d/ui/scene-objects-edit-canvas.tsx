@@ -36,6 +36,7 @@ import {
   type SceneTransformField,
   type SceneTransformMode,
   SCENE_CAMERA_CLIP,
+  SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   SceneEnvironment,
   SceneLighting,
@@ -50,6 +51,9 @@ import { useMarqueeSelection } from './use-marquee-selection';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
+// R3F Canvas의 Dpr 타입이 mutable 튜플이라 프리셋(readonly)을 복사해 쓴다.
+// 모듈 레벨 상수라 렌더마다 참조가 바뀌지 않는다.
+const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
 const PRELOAD_BATCH_SIZE = 4;
 
@@ -712,6 +716,7 @@ export function SceneObjectsEditCanvas({
         // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
         camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
         gl={SCENE_GL_OPTIONS}
+        dpr={EDITOR_DPR}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
@@ -804,7 +809,11 @@ export function SceneObjectsEditCanvas({
               position={m.position}
               rotation={m.rotation}
               scale={m.scale}
-              enableRaycastBvh={false}
+              // BVH는 기본값(빌드)을 쓴다 — 지도는 클릭 선택·드롭 raycast
+              // 대상이라 BVH 없이는 포인터 이동마다 수십만 삼각형을 브루트
+              // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
+              // 마운트 시 bbox 순회를 건너뛴다.
+              showLabel={false}
               onSelect={
                 m.locked === false ? handleSelectMap : handleClearSelection
               }
