@@ -24,8 +24,9 @@
 //   - `optimize` 만능 커맨드는 절대 쓰지 않는다. join/prune 이 노드 계층을
 //     병합하는데, 이 프로젝트는 meshOverrides 의 [index]name 메쉬 경로와
 //     valueMapper 노드 바인딩이 계층에 의존하므로 씬이 조용히 깨진다.
-//   - maps/ (지형) 은 대상이 아니다. 절감 효과가 미미하고(합계 ~2MB),
-//     드롭 레이캐스트 대상이자 z-fighting 여유가 빠듯한 지오메트리라 제외.
+//   - maps/ (지형) 은 이 스크립트 대상이 아니다 — 전용 파이프라인
+//     scripts/optimize-map.mjs (`pnpm optimize:map`) 를 쓴다. 지도는 텍스처
+//     상한/손실 정책이 다르고 transmission 제거·데시메이션 스테이지가 있다.
 //   - 신규 모델 반입 시 1회 실행하면 된다 (빌드 파이프라인 아님).
 //
 // 디코더: drei useGLTF 는 meshopt 디코더를 기본 등록한다. 수동 GLTFLoader
