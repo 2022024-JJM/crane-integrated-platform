@@ -37,6 +37,7 @@ export { SceneEnvironment } from './ui/scene-environment';
 export { SceneObjectBoundary } from './ui/scene-object-boundary';
 export {
   SCENE_CAMERA_CLIP,
+  SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   SCENE_LIGHTING,
   SceneLighting,

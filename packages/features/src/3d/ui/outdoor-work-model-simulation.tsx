@@ -401,8 +401,11 @@ export function OutdoorWorkModelSimulation({
       {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
           그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
       {maps.map((m) => (
-        // 지도는 지형이라 raycast BVH를 빌드하지 않는다 — 수만 개 메시에
-        // 빌드 비용만 크고 개별 클릭 대상도 아니다(model-mesh 주석 참고).
+        // 지도도 BVH를 빌드한다(기본값) — 프리미티브 수십 개짜리 지형이라
+        // 빌드는 유휴 시간에 싸게 끝나고, 없으면 포인터 이동마다 수십만
+        // 삼각형 브루트포스 raycast가 프레임을 밀어낸다(model-mesh 주석 참고).
+        // showLabel=false: 지도는 라벨이 없으므로 마운트 시 전체 트리 bbox
+        // 순회(수십만 정점)를 건너뛴다.
         <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
           <GltfModel
             id={m.id}
@@ -410,7 +413,7 @@ export function OutdoorWorkModelSimulation({
             position={m.position}
             rotation={m.rotation}
             scale={m.scale}
-            enableRaycastBvh={false}
+            showLabel={false}
           />
         </SceneObjectBoundary>
       ))}
