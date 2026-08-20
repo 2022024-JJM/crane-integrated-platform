@@ -26,7 +26,7 @@
 //   ① resize    텍스처 최대 1024px
 //   ② webp      전 슬롯 손실 압축(q80) — 노멀/ORM 포함
 //   ③ surgery   (in-process) transmission 제거 → 단면화 → weld → simplify
-//   ④ meshopt   지오메트리 압축  ← 반드시 마지막 (텍스처 커맨드가
+//               → meshopt 압축  ← meshopt 는 반드시 마지막 (텍스처 커맨드가
 //               EXT_meshopt_compression 을 제거하므로, optimize-glb.mjs 참고)
 //
 // simplify 튜닝 노브:
@@ -36,9 +36,14 @@
 //   simplify 는 정점을 기존 표면 위로 붕괴시키므로(양자화식 스냅과 다름)
 //   드롭 레이캐스트 착지 높이가 오차 한도 안에서 보존된다.
 //
-// meshopt(④) 양자화 주의: 14bit 포지션은 2.4km 폭 지도에서 ~15cm 그리드다.
-// 도로/바닥 z-fighting 이 보이면 ④를 지도만 생략해도 된다(③까지만으로
-// 이미 지오메트리가 충분히 줄고, 나머지는 HTTP 압축이 흡수한다).
+// meshopt 양자화는 CLI 가 아니라 in-process 로 돌리고 포지션을 16bit 로
+// 고정한다(QUANTIZE_POSITION_BITS). CLI meshopt 는 기본 14bit 인데, philly
+// 지도 폭 ~2.4km 에서 14bit 는 그리드 14.6cm — 지면(3.682m)과 도로(3.782m)의
+// 의도적 10cm 높이 차가 같은 셀로 붕괴해 도로 전체가 z-fighting 으로
+// 깜빡였다(실측). 16bit 는 그리드 3.65cm 로, 이 지도의 의도적 높이 차
+// 최소값 8.8cm(Material.008 층)까지 전부 2셀 이상으로 보존된다. 정확히
+// 동일 평면인 쌍(Asphalt↔Road Lines, Dock_Floor↔Dock_Line)은 같은 입력값이
+// 같은 셀로 가므로 비트 수와 무관하게 유지된다.
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -55,8 +60,8 @@ import { fileURLToPath } from 'node:url';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { simplify, weld } from '@gltf-transform/functions';
-import { MeshoptSimplifier } from 'meshoptimizer';
+import { meshopt, simplify, weld } from '@gltf-transform/functions';
+import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MAPS_DIR = join(repoRoot, 'apps/shell/public/maps');
@@ -67,6 +72,8 @@ const MAX_TEXTURE_SIZE = 1024;
 const LOSSY_QUALITY = 80;
 const SIMPLIFY_RATIO = 0.4;
 const SIMPLIFY_ERROR = 0.0002;
+/** 헤더 주석 참고 — 14bit(기본값)는 도로-지면 10cm 오프셋을 붕괴시킨다. */
+const QUANTIZE_POSITION_BITS = 16;
 const TRANSMISSION_EXT = 'KHR_materials_transmission';
 const keepDoubleSided = process.env.KEEP_DOUBLE_SIDED === '1';
 
@@ -80,7 +87,11 @@ const keepDoubleSided = process.env.KEEP_DOUBLE_SIDED === '1';
  * - weld: 무손실 인덱스 dedup — simplify 가 프리미티브 경계를 넘어 동작하는 전제.
  */
 async function surgery(inputPath, outputPath) {
-  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  await Promise.all([MeshoptSimplifier.ready, MeshoptEncoder.ready, MeshoptDecoder.ready]);
+  // EXT_meshopt_compression 인코딩은 io.write 시점에 등록된 의존성으로 수행된다.
+  const io = new NodeIO()
+    .registerExtensions(ALL_EXTENSIONS)
+    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder });
   const doc = await io.read(inputPath);
   const root = doc.getRoot();
 
@@ -101,10 +112,10 @@ async function surgery(inputPath, outputPath) {
     if (ext.extensionName === TRANSMISSION_EXT) ext.dispose();
   }
 
-  await MeshoptSimplifier.ready;
   await doc.transform(
     weld(),
     simplify({ simplifier: MeshoptSimplifier, ratio: SIMPLIFY_RATIO, error: SIMPLIFY_ERROR }),
+    meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
   );
 
   await io.write(outputPath, doc);
@@ -145,7 +156,6 @@ try {
     try {
       const resized = join(workDir, `${file}.1.glb`);
       const webped = join(workDir, `${file}.2.glb`);
-      const operated = join(workDir, `${file}.3.glb`);
       const cliStages = [
         ['resize', backupPath, resized, '--width', String(MAX_TEXTURE_SIZE), '--height', String(MAX_TEXTURE_SIZE)],
         ['webp', resized, webped, '--quality', String(LOSSY_QUALITY)],
@@ -153,8 +163,7 @@ try {
       for (const [cmd, input, output, ...args] of cliStages) {
         execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
       }
-      await surgery(webped, operated);
-      execFileSync(process.execPath, [CLI, 'meshopt', operated, publicPath], { stdio: 'pipe' });
+      await surgery(webped, publicPath);
     } catch (error) {
       failures.push(file);
       console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);
