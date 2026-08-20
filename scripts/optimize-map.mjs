@@ -4,6 +4,7 @@
 //   pnpm optimize:map                    # 전체 지도
 //   pnpm optimize:map phillyshipyard.glb # 특정 파일만
 //   KEEP_DOUBLE_SIDED=1 pnpm optimize:map ...  # 양면 렌더링 유지(뒷면 구멍 발생 시)
+//   FORCE_MESHOPT=1 pnpm optimize:map ...      # 양자화 안전 가드 무시(아래 참고)
 //
 // optimize-glb.mjs(모델용)와 분리한 이유 — 지도는 정책이 3가지 다르다:
 //   - 텍스처 상한 1024px (모델은 2048): 200~500 유닛 거리의 배경 지형이라 충분.
@@ -36,14 +37,25 @@
 //   simplify 는 정점을 기존 표면 위로 붕괴시키므로(양자화식 스냅과 다름)
 //   드롭 레이캐스트 착지 높이가 오차 한도 안에서 보존된다.
 //
-// meshopt 양자화는 CLI 가 아니라 in-process 로 돌리고 포지션을 16bit 로
-// 고정한다(QUANTIZE_POSITION_BITS). CLI meshopt 는 기본 14bit 인데, philly
-// 지도 폭 ~2.4km 에서 14bit 는 그리드 14.6cm — 지면(3.682m)과 도로(3.782m)의
-// 의도적 10cm 높이 차가 같은 셀로 붕괴해 도로 전체가 z-fighting 으로
-// 깜빡였다(실측). 16bit 는 그리드 3.65cm 로, 이 지도의 의도적 높이 차
-// 최소값 8.8cm(Material.008 층)까지 전부 2셀 이상으로 보존된다. 정확히
-// 동일 평면인 쌍(Asphalt↔Road Lines, Dock_Floor↔Dock_Line)은 같은 입력값이
-// 같은 셀로 가므로 비트 수와 무관하게 유지된다.
+// meshopt 양자화는 CLI 가 아니라 in-process 로 돌리고, 적용 여부를 지도별
+// 실측으로 자동 판단한다(quantizationSafety 참고). 양자화 그리드는
+// "지도 최대 폭 / 65535"(16bit)라 지도가 클수록 거칠어지는데, 그리드가
+// 레이어 간 의도적 높이 차(예: 지면 위 10cm 띄운 도로)보다 거칠면 두 층이
+// 같은 셀로 붕괴해 z-fighting 이 난다. 실제 사고: CLI 기본 14bit(그리드
+// 14.6cm)가 philly 의 지면(3.682m)-도로(3.782m) 10cm 차를 붕괴시켜 도로
+// 전체가 깜빡였다. 그래서 매 실행마다 프리미티브 Y bounds 로 최소 층간
+// 높이 차(minGap)를 재고, 그리드×2 ≤ minGap 일 때만 meshopt 를 적용한다
+// (philly 실측: 그리드 3.65cm, minGap 8.8cm → 적용). 조건을 못 넘으면
+// meshopt 를 생략하고 f32 로 남긴다 — simplify 까지만으로도 대부분 절감되고
+// 나머지는 HTTP 압축이 흡수한다. FORCE_MESHOPT=1 로 가드를 무시할 수 있다
+// (작은 오프셋이 의도가 아님을 사람이 확인한 경우).
+//
+// 가드가 신경 쓰지 않아도 되는 것들:
+//   - 정확히 동일 평면인 쌍(Asphalt↔Road Lines, Dock_Floor↔Dock_Line)은
+//     같은 입력값이 같은 셀로 가므로 비트 수와 무관하게 유지된다(5mm 이내
+//     레벨은 같은 층으로 병합해 갭 계산에서 제외).
+//   - simplify 는 정점을 제거만 하고 이동시키지 않아 평면이 평면으로
+//     유지된다 — 층간 갭에 영향이 없다.
 import { execFileSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -72,10 +84,75 @@ const MAX_TEXTURE_SIZE = 1024;
 const LOSSY_QUALITY = 80;
 const SIMPLIFY_RATIO = 0.4;
 const SIMPLIFY_ERROR = 0.0002;
-/** 헤더 주석 참고 — 14bit(기본값)는 도로-지면 10cm 오프셋을 붕괴시킨다. */
+/** 헤더 주석 참고 — 14bit(CLI 기본값)는 도로-지면 10cm 오프셋을 붕괴시킨다. */
 const QUANTIZE_POSITION_BITS = 16;
+/** 이보다 가까운 Y 레벨은 "의도적 동일 평면"으로 보고 같은 층으로 병합한다. */
+const LAYER_MERGE_EPS = 0.005;
 const TRANSMISSION_EXT = 'KHR_materials_transmission';
 const keepDoubleSided = process.env.KEEP_DOUBLE_SIDED === '1';
+const forceMeshopt = process.env.FORCE_MESHOPT === '1';
+
+/**
+ * 양자화 안전성 실측 (헤더 주석 참고).
+ *
+ * grid   : 16bit 양자화 그리드 한 변(m). quantizationVolume 'mesh' 기준이라
+ *          메시가 여럿이면 가장 거친(=가장 큰 bbox) 메시의 값.
+ * minGap : "지배적 평면 레벨" 간 최소 높이 차(m). 레벨은 프리미티브 정점의
+ *          Y 히스토그램(1mm 단위)에서 그 프리미티브 정점의 20% 이상 + 32개
+ *          이상이 몰린 값 — 즉 넓은 수평 평면만 층으로 센다. z-fighting 은
+ *          넓은 평면끼리 겹칠 때만 문제라, 벽·나무 같은 입체 지오메트리의
+ *          bbox 경계가 우연히 가깝다고 가드가 오발되지 않게 하기 위함이다.
+ *          5mm 이내 레벨은 의도적 동일 평면으로 보고 병합. 층이 하나뿐이면
+ *          Infinity.
+ */
+function quantizationSafety(doc) {
+  const levels = [];
+  let grid = 0;
+  for (const mesh of doc.getRoot().listMeshes()) {
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (const prim of mesh.listPrimitives()) {
+      const position = prim.getAttribute('POSITION');
+      if (!position) continue;
+      const pMin = position.getMin([]);
+      const pMax = position.getMax([]);
+      for (let i = 0; i < 3; i++) {
+        min[i] = Math.min(min[i], pMin[i]);
+        max[i] = Math.max(max[i], pMax[i]);
+      }
+
+      // 프리미티브별 Y 히스토그램에서 지배적 평면 레벨 추출.
+      const array = position.getArray();
+      const count = position.getCount();
+      const byMm = new Map();
+      for (let v = 0; v < count; v++) {
+        const key = Math.round(array[v * 3 + 1] * 1000);
+        byMm.set(key, (byMm.get(key) ?? 0) + 1);
+      }
+      const threshold = Math.max(32, count * 0.2);
+      for (const [key, n] of byMm) {
+        if (n >= threshold) levels.push(key / 1000);
+      }
+    }
+    const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+    if (Number.isFinite(extent)) {
+      grid = Math.max(grid, extent / (2 ** QUANTIZE_POSITION_BITS - 1));
+    }
+  }
+
+  levels.sort((a, b) => a - b);
+  const merged = [];
+  for (const level of levels) {
+    if (merged.length === 0 || level - merged[merged.length - 1] > LAYER_MERGE_EPS) {
+      merged.push(level);
+    }
+  }
+  let minGap = Infinity;
+  for (let i = 1; i < merged.length; i++) {
+    minGap = Math.min(minGap, merged[i] - merged[i - 1]);
+  }
+  return { grid, minGap };
+}
 
 /**
  * ③ surgery: CLI 커맨드로는 불가능한 머티리얼/지오메트리 수술.
@@ -115,10 +192,19 @@ async function surgery(inputPath, outputPath) {
   await doc.transform(
     weld(),
     simplify({ simplifier: MeshoptSimplifier, ratio: SIMPLIFY_RATIO, error: SIMPLIFY_ERROR }),
-    meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
   );
 
+  // 양자화 자동 가드: 그리드×2 ≤ 최소 층간 높이 차일 때만 meshopt 를 적용한다.
+  const { grid, minGap } = quantizationSafety(doc);
+  const meshoptSafe = grid * 2 <= minGap;
+  if (meshoptSafe || forceMeshopt) {
+    await doc.transform(
+      meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
+    );
+  }
+
   await io.write(outputPath, doc);
+  return { grid, minGap, meshoptApplied: meshoptSafe || forceMeshopt };
 }
 
 const only = process.argv.slice(2);
@@ -152,6 +238,7 @@ try {
     }
 
     const before = statSync(backupPath).size;
+    let quantInfo = '';
 
     try {
       const resized = join(workDir, `${file}.1.glb`);
@@ -163,7 +250,16 @@ try {
       for (const [cmd, input, output, ...args] of cliStages) {
         execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
       }
-      await surgery(webped, publicPath);
+      const { grid, minGap, meshoptApplied } = await surgery(webped, publicPath);
+      const fmtCm = (m) => (Number.isFinite(m) ? `${(m * 100).toFixed(1)}cm` : '없음');
+      quantInfo = `  [그리드 ${fmtCm(grid)} / 층간 ${fmtCm(minGap)} → meshopt ${meshoptApplied ? '적용' : '생략'}]`;
+      if (!meshoptApplied) {
+        console.warn(
+          `      meshopt 생략: 그리드 ${fmtCm(grid)} × 2 > 최소 층간 높이 차 ${fmtCm(minGap)} — ` +
+            '양자화 시 z-fighting 위험. simplify 까지만 적용(f32, HTTP 압축이 일부 흡수). ' +
+            '갭이 의도가 아니라고 확인했다면 FORCE_MESHOPT=1 로 재실행.',
+        );
+      }
     } catch (error) {
       failures.push(file);
       console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);
@@ -176,7 +272,7 @@ try {
     totalBefore += before;
     totalAfter += after;
     const ratio = ((1 - after / before) * 100).toFixed(1).padStart(5);
-    console.log(`OK    ${fmtMB(before)}MB -> ${fmtMB(after)}MB  (-${ratio}%)  ${file}`);
+    console.log(`OK    ${fmtMB(before)}MB -> ${fmtMB(after)}MB  (-${ratio}%)  ${file}${quantInfo}`);
   }
 } finally {
   rmSync(workDir, { recursive: true, force: true });
