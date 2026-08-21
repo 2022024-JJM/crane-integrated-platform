@@ -11,6 +11,7 @@
  * 원본(9K/6.5K)은 MAX_TEXTURE_SIZE 8192인 GPU에서 업로드가 실패해 배경이
  * 검게 나오고, GPU 메모리도 수백 MB를 먹는다 — 원본을 직접 등록하지 말 것.
  */
+import { withBaseUrl } from '../lib/asset-url';
 import { getSceneEnvironmentById } from './scene-environment-catalog';
 
 const ENVIRONMENT_FILE_URL_BY_REGION_ID: Record<string, string> = {
@@ -19,10 +20,11 @@ const ENVIRONMENT_FILE_URL_BY_REGION_ID: Record<string, string> = {
   'philly-dock-2': 'scenes/overcast-sky-over-the-atlantic-web.exr',
 };
 
+// BASE_URL과 콘텐츠 해시(`?v=`)를 씌우는 일은 withBaseUrl 한 곳에서만 한다.
+// 카탈로그 경로는 'scenes/x.exr'(선행 슬래시 없음)이므로 매니페스트 키와
+// 맞추기 위해 앞에 '/'를 붙여 넘긴다.
 function withBase(relativeUrl: string): string {
-  // Vite가 주입한 BASE_URL (예: '/crane_rnd/') 뒤에 상대 경로를 붙인다.
-  const base = import.meta.env.BASE_URL ?? '/';
-  return `${base.endsWith('/') ? base : `${base}/`}${relativeUrl}`;
+  return withBaseUrl(`/${relativeUrl.replace(/^\//, '')}`);
 }
 
 /** 매핑이 없는 region은 null — 배경 컴포넌트가 아예 마운트하지 않는다. */

@@ -2,6 +2,21 @@
 # ${VAR} 들을 환경변수로 치환한 뒤 /etc/nginx/conf.d/default.conf 로 출력한다.
 # 따라서 운영 환경에서 IP/PORT 변경은 .env 만 수정 후 컨테이너 재시작이면 충분하다.
 
+# public/ 자산의 캐시 정책을 URL 의 `?v=` 유무로 가른다.
+#
+#   ?v=<내용해시> 가 있으면 → 내용이 바뀌면 URL 이 바뀐다 → immutable 안전.
+#                             재검증 왕복조차 없으므로 25MB GLB 재방문이 즉시 뜬다.
+#   ?v= 가 없으면          → URL 이 고정이다 → 반드시 매번 재검증(no-cache).
+#                             직접 친 주소나 매니페스트에 없는 파일이 여기 온다.
+#
+# location 안의 `if` 로는 이걸 못 한다 — if 안의 add_header 는 바깥 것을
+# 대체하지 않고 헤더를 하나 더 붙이기 때문이다. map 은 변수 하나로 값이
+# 정해지므로 Cache-Control 이 정확히 한 번만 나간다.
+map $arg_v $asset_cache_control {
+    ""      "public, no-cache";
+    default "public, max-age=31536000, immutable";
+}
+
 server {
     listen       80;
     server_name  _;
@@ -189,13 +204,24 @@ server {
         try_files $uri =404;
     }
 
-    # public/ 자산(models·maps·scenes·images·icons·drawings)은 해시 파일명이 아니다.
-    # 여기에 immutable 을 걸면 GLB 를 교체 배포해도, 씬 배치를 수정해도 기존 방문자
-    # 브라우저는 1년간 서버에 묻지 않고 옛 파일을 계속 쓴다(재검증조차 하지 않음).
-    # ETag/Last-Modified 재검증으로 둔다 — 변경이 없으면 304 만 오가므로 본문 전송은 없다.
-    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json)$ {
+    # public/ 자산(models·maps·scenes·images·icons·drawings)은 파일명에 해시가
+    # 없다. 대신 프론트가 URL 에 `?v=<내용해시>` 를 붙인다(vite-plugin-asset-hash).
+    #
+    # 그래서 캐시 정책을 쿼리 유무로 나눈다:
+    #   - ?v= 가 있으면  → 내용이 바뀌면 URL 이 바뀐다 → immutable 안전.
+    #                      재검증 요청조차 안 가므로 25MB GLB 재방문이 즉시 뜬다.
+    #   - ?v= 가 없으면  → URL 이 고정이다 → 반드시 재검증(no-cache).
+    #                      직접 입력한 주소나 매니페스트에 없는 파일이 여기 온다.
+    #
+    # $arg_v 는 쿼리스트링의 v 파라미터다. 이 분기가 없으면 둘 중 하나를 잃는다 —
+    # 전부 immutable 로 하면 해시 없는 요청이 옛 파일에 영구히 고정되고,
+    # 전부 no-cache 로 하면 해시를 붙인 의미(재검증 왕복 제거)가 사라진다.
+    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json|exr|hdr|bin|ktx2)$ {
+        # expires 는 Cache-Control 을 스스로 쓰므로 반드시 꺼야 한다.
+        # 켜 두면 아래 add_header 와 함께 Cache-Control 이 두 번 나가고,
+        # 브라우저는 둘 중 보수적인 쪽을 고르지 않는다(구현에 따라 다르다).
         expires off;
-        add_header Cache-Control "public, no-cache" always;
+        add_header Cache-Control $asset_cache_control always;
         access_log off;
         try_files $uri =404;
     }

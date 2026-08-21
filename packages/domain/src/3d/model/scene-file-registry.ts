@@ -1,3 +1,4 @@
+import { withBaseUrl } from '../lib/asset-url';
 import {
   SCENE_DIR,
   getKnownRegionIds,
@@ -14,16 +15,16 @@ import {
  * 저장하니 1dock이 덮어써지는" 사고가 났다. 모르는 region은 모른다고 답한다.
  */
 
-function withBase(relativeUrl: string): string {
-  // Vite가 주입한 BASE_URL (예: '/crane_rnd/') 뒤에 상대 경로를 붙인다.
-  const base = import.meta.env.BASE_URL ?? '/';
-  return `${base.endsWith('/') ? base : `${base}/`}${relativeUrl}`;
-}
-
-/** 미등록 region은 null. 호출부가 명시적으로 처리해야 한다. */
+/**
+ * 미등록 region은 null. 호출부가 명시적으로 처리해야 한다.
+ *
+ * withBaseUrl을 거치므로 BASE_URL과 함께 콘텐츠 해시(`?v=`)도 붙는다. 씬
+ * JSON은 GLB보다 캐시 사고가 더 나쁘다 — 모델 파일이 최신이어도 배치가
+ * 옛것이면 씬이 조용히 어긋난다.
+ */
 export function getSceneFileUrlByRegionId(regionId: string): string | null {
   const fileName = getSceneFileNameByRegionId(regionId);
-  return fileName ? withBase(`${SCENE_DIR}/${fileName}`) : null;
+  return fileName ? withBaseUrl(`/${SCENE_DIR}/${fileName}`) : null;
 }
 
 export { getKnownRegionIds, isKnownRegionId };
