@@ -62,7 +62,7 @@ export {
   getEnvironmentFileUrlByRegionId,
   resolveEnvironmentFileUrl,
 } from './model/scene-environment-registry';
-export { withBaseUrl } from './lib/asset-url';
+export { withBaseUrl, registerAssetHashManifest } from './lib/asset-url';
 export {
   CRANE_TYPE_MODEL,
   getCraneModel,

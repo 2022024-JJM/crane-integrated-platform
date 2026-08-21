@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs/promises';
+import { assetHashManifestPlugin } from './vite-plugin-asset-hash';
 import {
   SCENE_DIR,
   getKnownRegionIds,
@@ -178,7 +179,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: baseUrl,
-    plugins: [react(), tailwindcss(), devSceneSavePlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      devSceneSavePlugin(),
+      assetHashManifestPlugin(),
+    ],
     build: {
       rollupOptions: {
         output: {
