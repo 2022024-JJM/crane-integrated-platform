@@ -1,4 +1,4 @@
-import { withBaseUrl } from '../lib/asset-url';
+import { getAssetContentHash, withBaseUrl } from '../lib/asset-url';
 import {
   SCENE_DIR,
   getKnownRegionIds,
@@ -25,6 +25,18 @@ import {
 export function getSceneFileUrlByRegionId(regionId: string): string | null {
   const fileName = getSceneFileNameByRegionId(regionId);
   return fileName ? withBaseUrl(`/${SCENE_DIR}/${fileName}`) : null;
+}
+
+/**
+ * 이 region의 **배포된** 씬 JSON 콘텐츠 해시. 씬을 재배포하면 값이 바뀐다.
+ *
+ * scene-dev-storage 가 localStorage 저장본에 "어느 배포 기준으로 편집했는지"
+ * 도장을 찍고, 로드 때 현재 배포 해시와 비교해 배포가 더 새로우면 로컬
+ * 저장본을 버리는 데 쓴다. 매니페스트 미주입 환경(dev 등)에서는 null.
+ */
+export function getSceneFileVersionByRegionId(regionId: string): string | null {
+  const fileName = getSceneFileNameByRegionId(regionId);
+  return fileName ? getAssetContentHash(`/${SCENE_DIR}/${fileName}`) : null;
 }
 
 export { getKnownRegionIds, isKnownRegionId };

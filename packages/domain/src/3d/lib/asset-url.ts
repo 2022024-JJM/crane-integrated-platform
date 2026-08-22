@@ -31,6 +31,19 @@ export function registerAssetHashManifest(
 }
 
 /**
+ * public 자산의 배포된 콘텐츠 해시를 돌려준다. 매니페스트 미등록이면 null.
+ *
+ * URL 캐시 무효화(`?v=`) 외의 용도 — "지금 배포된 파일이 어느 버전인가"를
+ * 식별해야 하는 곳(예: scene-dev-storage 가 localStorage 저장본이 어느 배포
+ * 기준으로 만들어졌는지 도장 찍을 때)에서 쓴다.
+ */
+export function getAssetContentHash(rawPath: string): string | null {
+  if (!rawPath) return null;
+  const base = import.meta.env.BASE_URL ?? '/';
+  return assetHashManifest[toManifestKey(rawPath, base)] ?? null;
+}
+
+/**
  * 매니페스트 조회용 키를 만든다. 키는 public 기준 절대 경로(`/models/x.glb`)
  * 이므로, base 가 이미 붙어 있거나 쿼리·프래그먼트가 달린 입력은 벗겨낸다.
  */
