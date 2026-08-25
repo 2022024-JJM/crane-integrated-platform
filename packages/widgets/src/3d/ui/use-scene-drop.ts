@@ -133,7 +133,7 @@ export function useSceneDrop({
       if (nextPosition) {
         // 떠 있는 모델(배)은 origin이 흘수선이라 bbox 바닥을 맞추지 않고
         // origin을 수면에 놓는다. 지도 표면 높이도 무시한다 — 배는 지면이
-        // 아니라 물 위에 놓이고, 수면 아래는 잠김 패치로 흐려진다(model-mesh).
+        // 아니라 물 위에 놓인다. 수면 아래 잠김 표현은 모든 모델 공통이다(model-mesh).
         if (droppedCatalogItem.floating) {
           onAddModel(droppedCatalogItem, [
             nextPosition[0],

@@ -26,8 +26,13 @@ interface ModelMeshProps {
   url: string;
   opacity?: number;
   alarmSeverity?: AlarmHighlightSeverity | null;
-  /** 떠 있는 모델 — 수면 아래를 깊이 안개로 흐리게 한다(lib/sea-submersion.ts). */
-  floating?: boolean;
+  /**
+   * 수면 아래(y < SEA_LEVEL_Y)를 깊이 안개로 흐리게 한다(lib/sea-submersion.ts).
+   * 바다가 있는 씬의 모든 모델에 켠다 — 물 위에 있는 모델엔 시각적 변화가
+   * 없지만 slow path(머티리얼 clone)를 타게 된다. 지도는 켜지 않는다(드라이독
+   * 등 수면 아래 지형에 안개가 끼면 안 된다).
+   */
+  seaSubmersion?: boolean;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -287,7 +292,7 @@ export function ModelMesh({
   url,
   opacity = 1,
   alarmSeverity = null,
-  floating = false,
+  seaSubmersion = false,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -364,7 +369,11 @@ export function ModelMesh({
     // Fast path: opacity 100% + 알람 없음 + 잠김 없음 → mesh.material을
     // GLTF 원본 reference 그대로 두어 같은 GLTF의 모든 instance가 material을
     // 공유한다. 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
-    const needsMutation = opacity < 1 || alarmSeverity !== null || floating;
+    // seaSubmersion이 켜진 바다 씬에서는 모든 모델이 slow path다 — clone은
+    // 텍스처를 공유하고 프로그램은 customProgramCacheKey로 재사용되므로 비용은
+    // 머티리얼 객체 수 정도다.
+    const needsMutation =
+      opacity < 1 || alarmSeverity !== null || seaSubmersion;
 
     if (!needsMutation) {
       for (const binding of meshBindings) {
@@ -398,7 +407,7 @@ export function ModelMesh({
           }
         }
 
-        if (floating) {
+        if (seaSubmersion) {
           applySeaSubmersion(mat);
         } else {
           clearSeaSubmersion(mat);
@@ -407,7 +416,7 @@ export function ModelMesh({
         mat.needsUpdate = true;
       }
     }
-  }, [meshBindings, opacity, alarmSeverity, floating]);
+  }, [meshBindings, opacity, alarmSeverity, seaSubmersion]);
 
   // 인스턴스 언마운트 시 lazy clone된 material을 dispose 한다.
   useEffect(() => {

@@ -11,11 +11,11 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
-  isFloatingModelPath,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
   preloadGltf,
   releaseSceneRegionAssets,
+  resolveEnvironmentFileUrl,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -163,6 +163,10 @@ export function OutdoorWorkModelSimulation({
   onResetCamera,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
+  // 바다(EXR 배경)가 있는 씬에서만 모델의 수면 아래를 잠김 처리한다 — 바다가
+  // 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다. 지도에는 걸지 않는다.
+  const hasSea =
+    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
   // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
   useValueGeneratorRunner();
   useReplayPlayerRunner();
@@ -437,7 +441,7 @@ export function OutdoorWorkModelSimulation({
                 model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
               }
               alarmHighlightMesh={alarmHighlightMesh}
-              floating={model.floating ?? isFloatingModelPath(model.path)}
+              seaSubmersion={hasSea}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

@@ -20,12 +20,12 @@ import {
   GltfModel,
   SceneText,
   getMeshPath,
-  isFloatingModelPath,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
   prefetchModelBottomOffset,
   releaseGltfCache,
+  resolveEnvironmentFileUrl,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -183,6 +183,10 @@ export function SceneObjectsEditCanvas({
   fitSelectedRef,
   resetCameraRef,
 }: SceneObjectsEditCanvasProps) {
+  // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
+  // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
+  const hasSea =
+    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
   // 의존성에 넣지 않고 여기서 최신값을 따라간다.
@@ -753,9 +757,10 @@ export function SceneObjectsEditCanvas({
           target={cameraTarget}
           onChange={handleOrbitChange}
           // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,
-          // 지오메트리 관통 방지, far(5000) 안쪽에서 줌 아웃 정지.
+          // 확대 하한 60(three-scene-viewer.tsx MIN_CAMERA_DISTANCE와 같은 값),
+          // far 안쪽에서 줌 아웃 정지.
           zoomToCursor
-          minDistance={5}
+          minDistance={60}
           maxDistance={3000}
           mouseButtons={{
             LEFT: undefined,
@@ -834,7 +839,7 @@ export function SceneObjectsEditCanvas({
               equipName={model.equipName}
               showLabel={showLabels}
               opacity={model.opacity}
-              floating={model.floating ?? isFloatingModelPath(model.path)}
+              seaSubmersion={hasSea}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

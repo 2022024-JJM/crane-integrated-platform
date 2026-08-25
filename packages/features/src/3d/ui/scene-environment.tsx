@@ -42,10 +42,10 @@ import { createSeaSurfaceMaterial } from './sea-surface-material';
  * 사진 톤이 그대로고 원판 가장자리에 이음새가 없다. background의 하반구는
  * 원판 너머 수평선 바로 아래 얇은 띠에서만 보인다.
  *
- * 수면 아래에 잠긴 모델(floating)은 바다가 가리지 않는다 — 바다 평면은
- * 깊이를 쓰지 않아 지도의 수면 아래 지형(드라이독)을 보호하기 때문이다.
- * 대신 모델 쪽 셰이더 패치가 깊이에 따라 물 색으로 흐리게 섞는다
- * (domain lib/sea-submersion.ts).
+ * 수면 아래에 잠긴 모델은 바다가 가리지 않는다 — 바다 평면은 깊이를
+ * 쓰지 않아 지도의 수면 아래 지형(드라이독)을 보호하기 때문이다. 대신
+ * 바다가 있는 씬의 모든 모델에 셰이더 패치를 걸어 깊이에 따라 물 색으로
+ * 흐리게 섞는다(domain lib/sea-submersion.ts, GltfModel seaSubmersion).
  *
  * GroundedSkybox(EXR 하반구를 바닥 평면에 투영)는 시도했다가 뺐다. EXR의
  * 바다는 "바로 아래는 어둡고 수평선은 밝은" **시점 의존** 프레넬 그라데이션

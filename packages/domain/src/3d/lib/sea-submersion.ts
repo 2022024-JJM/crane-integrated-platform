@@ -2,8 +2,9 @@ import type { Material } from 'three';
 import { SEA_LEVEL_Y } from '../model/sea-level';
 
 /**
- * 수면 아래 잠김 패치 — 떠 있는 모델(floating)의 머티리얼에 **월드 y 기준
- * 깊이 안개**를 주입한다.
+ * 수면 아래 잠김 패치 — 바다가 있는 씬의 모델 머티리얼에 **월드 y 기준
+ * 깊이 안개**를 주입한다(model-mesh.tsx seaSubmersion). 수면 위 프래그먼트는
+ * 건드리지 않으므로 물 위 모델엔 변화가 없다.
  *
  * 물속 물체는 깊이에 따라 물 색으로 흡수·산란되어 흐려진다. 수면 근처는
  * 원래 색이 거의 그대로, 깊어질수록 물 색으로 섞여 형체만 남는다 — 색을
@@ -91,7 +92,7 @@ export function applySeaSubmersion(material: Material): void {
 }
 
 /**
- * 패치 해제 — opacity<1 등으로 clone이 유지된 채 floating만 꺼질 때 쓴다.
+ * 패치 해제 — opacity<1 등으로 clone이 유지된 채 seaSubmersion만 꺼질 때 쓴다.
  * clone 자체가 버려지는 경로(restoreOriginalMaterials)에서는 원본이 패치가
  * 없으므로 호출할 필요가 없다.
  */

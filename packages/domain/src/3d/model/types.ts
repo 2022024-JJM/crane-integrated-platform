@@ -59,14 +59,6 @@ export interface SavedModelInfo {
   scale: Vector3Tuple;
   valueMapList: ValueMapItem[];
   /**
-   * 떠 있는 모델(배) — 드롭 시 bbox 바닥 대신 origin(흘수선)을 수면
-   * (SEA_LEVEL_Y)에 놓고, 렌더 시 수면 아래를 깊이에 따라 물 색으로 흐리게
-   * 섞는다(domain lib/sea-submersion.ts). 없으면 카탈로그 항목의 floating으로
-   * 폴백한다(isFloatingModelPath). 저장본에 두는 이유: 인스턴스마다 달라질
-   * 수 있는 값이라서.
-   */
-  floating?: boolean;
-  /**
    * 자식 mesh 단위 override. 없으면 GLTF 원본 그대로 렌더한다.
    * 사용자가 더블클릭으로 특정 자식 mesh를 선택해 transform/opacity/visible/이름을
    * 편집한 결과가 여기 누적된다.
@@ -145,8 +137,10 @@ export interface SceneModelCatalogItem {
   defaultScale: Vector3Tuple;
   preview?: SceneModelPreviewPreset;
   /**
-   * 떠 있는 모델. origin이 흘수선(설계 수면)에 있다는 뜻이다 — 드롭 시
-   * bbox 바닥을 지면에 맞추는 대신 origin을 수면(SEA_LEVEL_Y)에 놓는다.
+   * 떠 있는 모델 — **배치 전용** 플래그. origin이 흘수선(설계 수면)에 있다는
+   * 뜻으로, 드롭 시 bbox 바닥을 지면에 맞추는 대신 origin을 수면(SEA_LEVEL_Y)에
+   * 놓는다. 수면 아래 잠김 표현은 이 플래그와 무관하게 바다가 있는 씬의 모든
+   * 모델에 적용된다(model-mesh.tsx seaSubmersion).
    */
   floating?: boolean;
 }

@@ -77,7 +77,14 @@ interface SceneControlsBridgeProps {
 }
 
 const ZOOM_STEP = 1.2;
-const MIN_CAMERA_DISTANCE = 1;
+/**
+ * 카메라-타깃 최소 거리. 휠 줌(OrbitControls minDistance)과 툴바 줌 버튼이
+ * 같은 값을 본다. 처음엔 5(지오메트리 관통만 방지)였는데, 크레인이 50~100m인
+ * 씬에서 트롤리 안까지 파고들어 20으로, 그래도 가깝다는 피드백으로 60으로
+ * 올렸다. 에디터(scene-objects-edit-canvas)도 같은 값을 리터럴로 든다 — 이
+ * 패키지를 참조할 수 없어서.
+ */
+const MIN_CAMERA_DISTANCE = 60;
 const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
 const TOP_VIEW_CAMERA_UP = new Vector3(0, 0, -1);
 
@@ -320,8 +327,8 @@ function SceneControlsBridge({
       // 휠 줌을 포인터 방향으로 — 보고 싶은 지점을 조준해 줌인/줌아웃하면
       // 타깃이 함께 이동해 회전·팬 없이도 지도 전역을 훑을 수 있다
       zoomToCursor
-      // 줌 인 시 지오메트리 관통 방지
-      minDistance={5}
+      // 확대 하한 — 툴바 줌 버튼과 같은 값(MIN_CAMERA_DISTANCE 주석 참고)
+      minDistance={MIN_CAMERA_DISTANCE}
       // 무한 줌 아웃 방지 — 지도가 점이 되기 전에 멈춘다 (camera far보다 작게)
       maxDistance={3000}
     />
