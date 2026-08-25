@@ -9,14 +9,7 @@
     ".": "./src/pages/index.ts",
     "./pages/gathering": "./src/pages/gathering/index.ts",
     "./pages/keyin": "./src/pages/keyin/index.ts",
-    "./shell": "./src/dashboard/shell/index.ts",
-    "./pages/inshop-dashboard": "./src/pages/inshop-dashboard/index.ts",
-    "./pages/inshop-zone-detail": "./src/pages/inshop-zone-detail/index.ts",
-    "./pages/inshop-assembly": "./src/pages/inshop-assembly/index.ts",
-    "./pages/inshop-yard": "./src/pages/inshop-yard/index.ts",
-    "./pages/inshop-settings": "./src/pages/inshop-settings/index.ts",
-    "./pages/inshop-docs": "./src/pages/inshop-docs/index.ts",
-    "./pages/inshop-not-found": "./src/pages/inshop-not-found/index.ts"
+    "./shell": "./src/dashboard/shell/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",

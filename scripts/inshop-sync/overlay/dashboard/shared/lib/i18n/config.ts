@@ -40,3 +40,10 @@ export function registerInshopLocales(): void {
 }
 
 export default i18n
+
+/*
+ * 공통 번들은 이 모듈이 로드될 때 바로 얹는다. 원본은 init 시점에 resources 로 넣었고,
+ * 공정별 조각은 app/bootstrap 이 그 위에 deep-merge 한다 — bootstrap 이 이 파일을
+ * import 하므로, 여기서 먼저 등록해 두면 순서가 원본과 같아진다.
+ */
+registerInshopLocales()

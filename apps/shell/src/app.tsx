@@ -362,56 +362,6 @@ const IndoorshopKeyinPage = lazy(() =>
 const InshopRoot = lazy(() =>
   import('@crane/indoorshop/shell').then((m) => ({ default: m.InshopRoot })),
 );
-const InshopDashboardPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-dashboard').then((m) => ({
-    default: m.InshopDashboardPage,
-  })),
-);
-const InshopZoneDetailPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-zone-detail').then((m) => ({
-    default: m.InshopZoneDetailPage,
-  })),
-);
-const InshopFactoryListPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
-    default: m.InshopFactoryListPage,
-  })),
-);
-const InshopAssemblyWorkspace = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
-    default: m.InshopAssemblyWorkspace,
-  })),
-);
-const InshopProductionCountPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
-    default: m.InshopProductionCountPage,
-  })),
-);
-const InshopYardWorkspace = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-yard').then((m) => ({
-    default: m.InshopYardWorkspace,
-  })),
-);
-const InshopSettingsPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-settings').then((m) => ({
-    default: m.InshopSettingsPage,
-  })),
-);
-const InshopDocsPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-docs').then((m) => ({
-    default: m.InshopDocsPage,
-  })),
-);
-const InshopDocViewerPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-docs').then((m) => ({
-    default: m.InshopDocViewerPage,
-  })),
-);
-const InshopNotFoundPage = lazy(() =>
-  import('@crane/indoorshop/pages/inshop-not-found').then((m) => ({
-    default: m.InshopNotFoundPage,
-  })),
-);
 
 export function App() {
   return (
@@ -551,108 +501,21 @@ export function App() {
                 }
               />
               {/*
-                내업 통합 대시보드. 원본(web-dashboard)의 라우트를 그대로 옮기되
-                `/indoorshop` 아래로 한 단계 내렸다 — 원본의 `/`·`/docs`·`/settings`
-                는 셸에서 이미 다른 모듈이 쓰고 있는 경로다.
-                기존 데이터게더링 화면은 `gathering` 으로 유지한다.
+                내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식).
+
+                공정 화면 라우트는 여기 적지 않는다 — 원본과 같이 각 공정 모듈의
+                module.ts 선언을 레지스트리가 모으고, InshopRoot 가 useRoutes 로
+                조립한다. 원본에 공정이 늘어도 sync-inshop.py 한 번이면 끝난다.
+                (`/indoorshop/gathering` 은 IT 전용이라 위에서 먼저 잡힌다.)
               */}
               <Route
-                path="indoorshop"
+                path="indoorshop/*"
                 element={
                   <LazyRoute>
                     <InshopRoot />
                   </LazyRoute>
                 }
-              >
-                <Route
-                  index
-                  element={
-                    <LazyRoute>
-                      <InshopDashboardPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="zones/assembly"
-                  element={
-                    <LazyRoute>
-                      <InshopFactoryListPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="zones/assembly/:factoryId"
-                  element={
-                    <LazyRoute>
-                      <InshopAssemblyWorkspace />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="zones/assembly/:factoryId/production"
-                  element={
-                    <LazyRoute>
-                      <InshopProductionCountPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="zones/assembly/:factoryId/:locationId"
-                  element={
-                    <LazyRoute>
-                      <InshopAssemblyWorkspace />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="zones/:zoneId"
-                  element={
-                    <LazyRoute>
-                      <InshopZoneDetailPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="logistics/yard"
-                  element={
-                    <LazyRoute>
-                      <InshopYardWorkspace />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="docs"
-                  element={
-                    <LazyRoute>
-                      <InshopDocsPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="docs/:docId"
-                  element={
-                    <LazyRoute>
-                      <InshopDocViewerPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <LazyRoute>
-                      <InshopSettingsPage />
-                    </LazyRoute>
-                  }
-                />
-                <Route
-                  path="*"
-                  element={
-                    <LazyRoute>
-                      <InshopNotFoundPage />
-                    </LazyRoute>
-                  }
-                />
-              </Route>
+              />
               <Route
                 path="keyin"
                 element={

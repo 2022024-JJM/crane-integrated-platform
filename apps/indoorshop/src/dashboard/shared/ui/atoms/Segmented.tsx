@@ -17,6 +17,12 @@ interface SegmentedProps<T extends string> {
   options: SegmentedOption<T>[]
   onChange: (value: T) => void
   size?: 'sm' | 'md'
+  /**
+   * 어떤 바탕 위에 서는가.
+   * `glass` 는 3D 뷰포트 위에 뜨는 유리 패널용 — 그 위에서는 면 색(surface)이
+   * 배경을 가려 유리가 아니게 되고, 본문 글자색은 어두운 점군에 묻힌다.
+   */
+  tone?: 'surface' | 'glass'
   className?: string
 }
 
@@ -39,19 +45,32 @@ export function Segmented<T extends string>({
   options,
   onChange,
   size = 'sm',
+  tone = 'surface',
   className,
 }: SegmentedProps<T>) {
   const { t } = useTranslation()
+  const glass = tone === 'glass'
 
   return (
     <fieldset className={cn('flex items-center gap-2', className)}>
       <legend className="sr-only">{legend}</legend>
       {!hideLegend && (
-        <span aria-hidden="true" className="text-inshop-xs font-medium text-foreground/54">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'text-inshop-xs font-medium',
+            glass ? 'text-glass-foreground/54' : 'text-foreground/54',
+          )}
+        >
           {legend}
         </span>
       )}
-      <div className="flex rounded-inshop-md border border-border p-0.5">
+      <div
+        className={cn(
+          'flex rounded-inshop-md border p-0.5',
+          glass ? 'border-glass-border/70' : 'border-border',
+        )}
+      >
         {options.map((option) => {
           const active = option.value === value
           return (
@@ -64,9 +83,16 @@ export function Segmented<T extends string>({
               onClick={() => onChange(option.value)}
               className={cn(
                 'rounded-inshop-xs font-medium whitespace-nowrap transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'focus:outline-none focus-visible:ring-2',
+                glass ? 'focus-visible:ring-glass-accent' : 'focus-visible:ring-accent',
                 segmentSize[size],
-                active ? 'bg-accent/15 text-accent' : 'text-foreground/68 hover:text-foreground',
+                glass
+                  ? active
+                    ? 'bg-glass-active text-glass-accent'
+                    : 'text-glass-foreground/63 hover:text-glass-foreground'
+                  : active
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-foreground/68 hover:text-foreground',
               )}
             >
               {t(option.labelKey)}

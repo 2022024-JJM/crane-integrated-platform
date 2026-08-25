@@ -4,15 +4,25 @@ ocean-inshop-process/web-dashboard → apps/indoorshop 이식 동기화.
 
     python scripts/sync-inshop.py [<ocean-inshop-process 경로>]
 
-원본이 갱신될 때마다 이 스크립트 하나로 다시 옮긴다. 손으로 옮기면 29개 파일
-중 한두 개를 빠뜨리는 것이 보통이라, 이식에 필요한 변환을 전부 여기 모아
-**결정적**으로 재실행한다. 단계마다 assert 를 걸어, 원본 구조가 바뀌어 변환이
-더 이상 맞지 않으면 조용히 지나가지 않고 여기서 멈춘다.
+원본이 갱신될 때마다 이 스크립트 하나로 다시 옮긴다. 손으로 옮기면 파일 몇 개를
+빠뜨리는 것이 보통이라, 이식에 필요한 변환을 전부 여기 모아 **결정적**으로
+재실행한다. 단계마다 assert 를 걸어, 원본 구조가 바뀌어 변환이 더 이상 맞지
+않으면 조용히 지나가지 않고 여기서 멈춘다.
+
+⚠️ 돌린 뒤에는 dev 서버를 재시작하고 브라우저를 하드 새로고침(Ctrl+Shift+R)해야 한다.
+   트리를 통째로 지웠다 다시 쓰므로 떠 있는 Vite 의 모듈 그래프가 옛것을 가리킨다.
+
+원본 구조 (2026-08-25 이후, 공정별 모듈 아키텍처):
+  src/app/        bootstrap.ts(모듈 등록·번역 병합) · router.tsx · i18next.d.ts
+  src/processes/  {fabrication,assembly,outfitting,painting,yard}/module.ts + i18n/api/lib/ui
+  src/shared/     model(레지스트리) · entities · features · widgets · pages · ui · lib · config · styles
+
+이식 후 위치: apps/indoorshop/src/dashboard/{app,processes,shared,assets}
 
 셸과 원본이 부딪히는 지점(왜 이 변환이 필요한지):
   - 디자인 토큰 이름 충돌 (--background/--accent/--text-*/--radius-*)  → 스코프·개명
-  - i18next 전역 싱글턴 이중 init                                    → 네임스페이스 등록
-  - '/' 루트 배포 전제의 절대 경로 (fetch, <Link>)                     → BASE_URL·/indoorshop 접두
+  - i18next 전역 싱글턴 이중 init                                    → 'inshop' 네임스페이스 등록
+  - '/' 루트 배포 전제의 절대 경로 (fetch, <Link>, module.ts 라우트)  → BASE_URL·/indoorshop 접두
   - 자체 헤더·사이드바·테마 provider                                  → 셸 것으로 대체
 """
 from __future__ import annotations
@@ -20,31 +30,30 @@ from __future__ import annotations
 import re
 import shutil
 import sys
+from pathlib import Path
 
 # Windows 콘솔(cp949)에서 한글·기호 출력이 깨지지 않도록
-sys.stdout.reconfigure(encoding='utf-8')
-sys.stderr.reconfigure(encoding='utf-8')
-from pathlib import Path
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC_REPO = Path(sys.argv[1] if len(sys.argv) > 1 else "C:/ocean-inshop-process")
 WD = SRC_REPO / "web-dashboard"
 DST = ROOT / "apps/indoorshop/src"
 DASH = DST / "dashboard"
-PAGES = DST / "pages"
 OVERLAY = ROOT / "scripts/inshop-sync/overlay"
 SHELL_PUBLIC = ROOT / "apps/shell/public"
 
-DASH_LAYERS = ("shared", "features", "entities", "widgets", "assets")
-PAGE_SLICES = ("dashboard", "zone-detail", "assembly", "yard", "settings", "docs", "not-found")
+LAYERS = ("shared", "processes", "assets")
+# app/ 은 셸 라우팅과 겹치므로 통째로 옮기지 않는다 — 필요한 두 파일만 변환해서 가져온다
+APP_FILES = ("bootstrap.ts", "i18next.d.ts")
 
 # 셸 AppLayout 이 대신하는 원본 크롬 — 옮기지 않는다 (그것만 쓰던 조각도 함께)
-DROP_DIRS = (
-    "widgets/layout-wrapper", "widgets/sidebar", "widgets/header", "widgets/footer",
-    "widgets/user-menu", "widgets/alarm-menu",
-    "features/alarm-center", "entities/alarm",
-)
+DROP_DIRS = ("shared/widgets", "shared/features/alarm-center", "shared/entities/alarm")
 DROP_FILES = ("shared/config/navigation.ts", "shared/lib/theme/ThemeProvider.tsx")
+
+# 이 앱이 소유하는 라우트 접두 — <Link>·navigate·module.ts 경로에 /indoorshop 을 붙인다
+OWNED_PREFIXES = ("/zones", "/logistics", "/docs", "/settings")
 
 
 def read(p: Path) -> str:
@@ -74,20 +83,20 @@ def step(msg: str) -> None:
 def copy_source() -> None:
     step("원본 복사 (이식 트리 초기화)")
     assert WD.is_dir(), f"web-dashboard 없음: {WD}"
+    assert (WD / "src/processes").is_dir() and (WD / "src/shared/model/processRegistry.ts").is_file(), (
+        "원본이 공정별 모듈 구조가 아님 — 이 스크립트는 2026-08-25 이후 구조를 전제로 한다"
+    )
     if DASH.exists():
         shutil.rmtree(DASH)
-    for d in PAGES.glob("inshop-*"):
+    # 예전 구조(pages/inshop-*)의 잔재가 있으면 치운다
+    for d in (DST / "pages").glob("inshop-*"):
         shutil.rmtree(d)
 
-    for layer in DASH_LAYERS:
+    for layer in LAYERS:
         shutil.copytree(WD / "src" / layer, DASH / layer)
-
-    upstream_pages = sorted(p.name for p in (WD / "src/pages").iterdir() if p.is_dir())
-    assert upstream_pages == sorted(PAGE_SLICES), (
-        f"원본 pages 구성이 바뀜: {upstream_pages}. PAGE_SLICES 와 overlay 의 index.ts 를 갱신할 것"
-    )
-    for slice_ in PAGE_SLICES:
-        shutil.copytree(WD / "src/pages" / slice_, PAGES / f"inshop-{slice_}")
+    (DASH / "app").mkdir()
+    for name in APP_FILES:
+        shutil.copy2(WD / "src/app" / name, DASH / "app" / name)
 
     for d in DROP_DIRS:
         shutil.rmtree(DASH / d)
@@ -95,7 +104,7 @@ def copy_source() -> None:
         (DASH / f).unlink()
 
     # 문서 뷰어가 읽는 마크다운 — 원본 레포의 docs/·AGENTS.md·ROUTING.md
-    content = DASH / "entities/doc/content"
+    content = DASH / "shared/entities/doc/content"
     content.mkdir()
     for md in (SRC_REPO / "docs").glob("*.md"):
         shutil.copy2(md, content / md.name)
@@ -106,15 +115,11 @@ def copy_source() -> None:
 # ── 2. import 경로 ───────────────────────────────────────────────────────────
 def target_for(spec: str) -> str:
     rest = spec[2:]
-    head, _, tail = rest.partition("/")
+    head = rest.partition("/")[0]
     if head == "dashboard":
         return f"src/{rest}"
-    if head in DASH_LAYERS:
+    if head in LAYERS:
         return f"src/dashboard/{rest}"
-    if head == "pages":
-        slice_, _, sub = tail.partition("/")
-        if slice_ in PAGE_SLICES:
-            return f"src/pages/inshop-{slice_}" + (f"/{sub}" if sub else "")
     raise SystemExit(f"@/ 별칭을 매핑할 수 없음: {spec}")
 
 
@@ -140,19 +145,19 @@ def rewrite_alias() -> None:
 
 # ── 3. i18n ─────────────────────────────────────────────────────────────────
 def rewrite_i18n() -> None:
-    step("i18n: useTranslation 셔 · ParseKeys → InshopKey")
+    step("i18n: useTranslation 셔 · ParseKeys → InshopKey · bootstrap/타입을 'inshop' 네임스페이스로")
     shim = "src/dashboard/shared/lib/i18n/useTranslation"
     keys = "src/dashboard/shared/lib/i18n/keys"
+    skip = ("i18n/useTranslation.ts", "i18n/keys.ts", "app/i18next.d.ts", "i18n/config.ts")
     n_t = n_k = 0
     for f in ts_files(DST):
-        if f.as_posix().endswith(("i18n/useTranslation.ts", "i18n/keys.ts", "i18next.d.ts", "i18n/config.ts")):
+        if f.as_posix().endswith(skip):
             continue
         s = read(f); o = s
         if "import { useTranslation } from 'react-i18next'" in s:
             s = s.replace("import { useTranslation } from 'react-i18next'",
                           f"import {{ useTranslation }} from '{rel_import(f, shim)}'")
             n_t += 1
-        # `import type { ParseKeys }`, `{ ParseKeys, TFunction }`, `{ TFunction, ParseKeys }` 전부 처리
         m = re.search(r"import type \{([^}]*)\} from 'i18next'\n", s)
         if m and "ParseKeys" in m.group(1):
             names = [x.strip() for x in m.group(1).split(",") if x.strip() and x.strip() != "ParseKeys"]
@@ -162,6 +167,25 @@ def rewrite_i18n() -> None:
             n_k += 1
         if s != o:
             write(f, s)
+
+    # 원본 app/bootstrap.ts: 모듈 등록 + 번역 병합. 병합 대상 네임스페이스만 바꾼다.
+    p = DASH / "app/bootstrap.ts"
+    s = read(p)
+    assert s.count("'translation'") == 2, "bootstrap.ts 의 addResourceBundle 형태가 바뀜"
+    s = s.replace("'translation'", "INSHOP_NS")
+    s = re.sub(r"import i18n from '([^']*i18n/config)'", r"import i18n, { INSHOP_NS } from '\1'", s, count=1)
+    assert "INSHOP_NS } from" in s
+    write(p, s)
+
+    # 원본 app/i18next.d.ts: defaultNS 는 셸 것('common')을 두고, 리소스는 'inshop' 아래로
+    p = DASH / "app/i18next.d.ts"
+    s = read(p)
+    assert "defaultNS: 'translation'\n" in s and "      translation: Resources &" in s
+    s = s.replace("    defaultNS: 'translation'\n", "")
+    s = s.replace("      translation: Resources &", "      inshop: Resources &")
+    s = s.replace(" * `t('...')` 의 키를 타입으로 묶는다.", " * `t('...')` 의 키를 타입으로 묶는다. (이식: 셸 i18next 의 'inshop' 네임스페이스에 얹는다 —\n * defaultNS 를 여기서 선언하면 셸·다른 모듈의 t() 까지 이 키 집합으로 좁혀진다.)")
+    write(p, s)
+
     bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith("i18n/useTranslation.ts")]
     assert not bad, f"react-i18next 직접 import 잔존: {bad}"
     assert not [f for f in ts_files(DST) if "ParseKeys" in read(f) and not f.as_posix().endswith("i18n/keys.ts")]
@@ -170,14 +194,14 @@ def rewrite_i18n() -> None:
 
 # ── 4. Tailwind 클래스 개명 ──────────────────────────────────────────────────
 def rewrite_classes() -> None:
-    step("충돌하는 Tailwind 스케일 개명 (text-xs..2xl, rounded-xs..lg)")
+    step("충돌하는 Tailwind 스케일 개명 (text-xs..2xl, rounded-xs..lg, font-sans)")
     n = 0
     for f in DST.rglob("*.tsx"):
         s = read(f); o = s
         s = re.sub(r"\btext-(2xl|xl|base|lg|sm|xs)\b", r"text-inshop-\1", s)
         s = re.sub(r"\brounded-(xs|sm|md|lg)\b", r"rounded-inshop-\1", s)
-        s = re.sub(r"\bfont-sans\b", "font-inshop-sans", s)
         s = re.sub(r"\brounded-([tblr]|t[lr]|b[lr])-(xs|sm|md|lg)\b", r"rounded-\1-inshop-\2", s)
+        s = re.sub(r"\bfont-sans\b", "font-inshop-sans", s)
         if s != o:
             write(f, s); n += 1
     assert not [f for f in DST.rglob("*.tsx") if "inshop-inshop" in read(f)]
@@ -185,47 +209,57 @@ def rewrite_classes() -> None:
 
 
 # ── 5. 라우트·에셋 절대 경로 ────────────────────────────────────────────────
+def _prefix(path: str) -> str:
+    return "/indoorshop" if path == "/" else "/indoorshop" + path
+
+
 def rewrite_links() -> None:
-    step("내부 링크 /indoorshop 접두 (role 가드가 밖으로 나간 경로를 되돌린다)")
-    owned = ("/zones", "/logistics", "/docs", "/settings")
+    step("내부 링크·모듈 라우트에 /indoorshop 접두 (role 가드가 밖으로 나간 경로를 되돌린다)")
     hits = 0
 
     def repl(m):
         nonlocal hits
         pre, path = m.group(1), m.group(2)
-        if path == "/" or path.startswith(owned):
+        if path == "/" or path.startswith(OWNED_PREFIXES):
             hits += 1
-            return pre + ("/indoorshop" if path == "/" else "/indoorshop" + path)
+            return pre + _prefix(path)
         return m.group(0)
 
-    for f in DST.rglob("*.tsx"):
-        if f.parts[-3:-1] in (("gathering", "ui"), ("keyin", "ui")):
-            continue
+    for f in DASH.rglob("*.tsx"):
         s = read(f)
         s2 = re.sub(r"(to=\"|to=\{`|to=\{'|navigate\('|navigate\(`)(/[^\"`']*)", repl, s)
         if s2 != s:
             write(f, s2)
-    print(f"    {hits} links")
+
+    # module.ts 의 nav.path·routes[].path — findProcessModuleByPath 가 location.pathname 과
+    # 비교하므로 여기도 접두가 있어야 ZonePlaceholderPage 가 자기 모듈을 찾는다.
+    # (InshopRoot 가 useRoutes 에 넘길 때 접두를 다시 떼어 상대 경로로 만든다.)
+    mods = list((DASH / "processes").glob("*/module.ts"))
+    assert mods, "processes/*/module.ts 가 없음"
+    for f in mods:
+        s = read(f)
+        s2 = re.sub(r"(path: ')(/[^']*)(?=')", repl, s)
+        assert s2 != s, f"{f.name}: 라우트 경로를 찾지 못함"
+        write(f, s2)
+    print(f"    {hits} paths")
 
 
 def patch_asset_paths() -> None:
     step("public 에셋 fetch 에 BASE_URL (/crane_rnd/) 씌우기")
     imp = "import { publicAsset } from '@/dashboard/shared/lib/public-asset'\n"
-    p = DASH / "entities/block-model/api/loadBlockModel.ts"
+    p = DASH / "processes/assembly/api/loadBlockModel.ts"
     s = read(p)
     assert s.count("fetch(`/models/") == 3, "loadBlockModel fetch 지점 수가 바뀜"
     s = s.replace("fetch(`/models/${key}.json`)", "fetch(publicAsset(`/models/${key}.json`))")
     s = s.replace("fetch(`/models/${key}.bin`)", "fetch(publicAsset(`/models/${key}.bin`))")
     write(p, imp + s)
 
-    p = DASH / "features/pointcloud-viewer/api/realScanAssets.ts"
-    replace_once(p, "const ASSET_BASE = '/real-scan'", "const ASSET_BASE = publicAsset('/real-scan')")
-    write(p, imp + read(p))
+    p2 = DASH / "processes/assembly/api/realScanAssets.ts"
+    replace_once(p2, "const ASSET_BASE = '/real-scan'", "const ASSET_BASE = publicAsset('/real-scan')")
+    write(p2, imp + read(p2))
 
-    # 위 두 파일에 넣은 '@/dashboard/...' 별칭을 상대 경로로 (rewrite_alias 를 한 번 더)
-    for p in (DASH / "entities/block-model/api/loadBlockModel.ts", DASH / "features/pointcloud-viewer/api/realScanAssets.ts"):
-        s = read(p)
-        write(p, re.sub(r"'(@/[^']*)'", lambda m: f"'{rel_import(p, target_for(m.group(1)))}'", s))
+    for q in (p, p2):
+        write(q, re.sub(r"'(@/[^']*)'", lambda m: f"'{rel_import(q, target_for(m.group(1)))}'", read(q)))
 
     left = [f for f in ts_files(DST) if re.search(r"fetch\(`/|fetch\('/|= '/real-scan'|'/models/", read(f))]
     assert not left, f"절대 경로 fetch 잔존: {left}"
@@ -234,7 +268,7 @@ def patch_asset_paths() -> None:
 # ── 6. 개별 패치 ─────────────────────────────────────────────────────────────
 def patch_settings() -> None:
     step("설정: 'system' 테마 항목 제거 (셸 ThemeProvider 는 light/dark 만 저장)")
-    p = PAGES / "inshop-settings/ui/SettingsPage.tsx"
+    p = DASH / "shared/pages/SettingsPage.tsx"
     s = read(p)
     m = re.search(r"      \{\n        value: 'system',.*?\n      \},\n    \]", s, re.S)
     assert m, "SettingsPage 의 system 옵션 블록을 찾지 못함"
@@ -251,7 +285,7 @@ def patch_settings() -> None:
 
 def patch_docs_registry() -> None:
     step("문서 레지스트리: 레포 밖 glob → 패키지 안 content/")
-    p = DASH / "entities/doc/api/docsRegistry.ts"
+    p = DASH / "shared/entities/doc/api/docsRegistry.ts"
     s = read(p)
     m = re.search(r"const rawDocs: Record<string, string> = \{\n  \.\.\.import\.meta\.glob\(.*?\n\}\n", s, re.S)
     assert m, "docsRegistry rawDocs glob 블록을 찾지 못함"
@@ -352,22 +386,6 @@ def patch_globals_css() -> None:
     write(p, s)
 
 
-def patch_block_list_scroller() -> None:
-    step("조립 블록 목록 스크롤러: 선택 링이 잘리지 않게 사방 여백")
-    p = PAGES / "inshop-assembly/ui/AssemblyWorkspace.tsx"
-    replace_once(
-        p,
-        "'transition-opacity xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1',",
-        """/*
-                       * 고른 카드는 ring-2 + ring-offset-2 로 바깥 4px 에 링을 그린다. overflow
-                       * 컨테이너는 padding box 밖을 잘라내므로, 여백이 없는 쪽(아래·왼쪽·위)과
-                       * 스크롤바가 차지하는 오른쪽에서 링이 끊긴다. 링만큼 사방에 여백을 주고
-                       * 같은 크기의 음수 마진으로 되돌려 보이는 위치는 그대로 둔다.
-                       */
-                      'transition-opacity xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5',""",
-    )
-
-
 def patch_fixed_viewport() -> None:
     step("FixedViewport: useEffect → useLayoutEffect (첫 페인트 전에 고정 플래그를 세운다)")
     p = DASH / "shared/lib/fixed-viewport/FixedViewport.tsx"
@@ -383,7 +401,23 @@ def patch_fixed_viewport() -> None:
     setFixed(true)""")
 
 
-# ── 7. overlay · public ──────────────────────────────────────────────────────
+def patch_block_list_scroller() -> None:
+    step("조립 블록 목록 스크롤러: 선택 링이 잘리지 않게 사방 여백")
+    p = DASH / "processes/assembly/ui/pages/AssemblyWorkspace.tsx"
+    replace_once(
+        p,
+        "'transition-opacity xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1',",
+        """/*
+                       * 고른 카드는 ring-2 + ring-offset-2 로 바깥 4px 에 링을 그린다. overflow
+                       * 컨테이너는 padding box 밖을 잘라내므로, 여백이 없는 쪽(아래·왼쪽·위)과
+                       * 스크롤바가 차지하는 오른쪽에서 링이 끊긴다. 링만큼 사방에 여백을 주고
+                       * 같은 크기의 음수 마진으로 되돌려 보이는 위치는 그대로 둔다.
+                       */
+                      'transition-opacity xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5',""",
+    )
+
+
+# ── 7. overlay · public · 검사 ───────────────────────────────────────────────
 def apply_overlay() -> None:
     step("손으로 쓴 어댑터 파일 overlay")
     for f in OVERLAY.rglob("*"):
@@ -407,7 +441,7 @@ def sync_public() -> None:
 def check_orphans() -> None:
     step("삭제한 크롬을 아직 참조하는 곳이 없는지")
     # import 지정자만 본다 — 주석에 '왜 ThemeProvider 를 뺐는가' 를 적어 둔 것까지 잡으면 안 된다
-    pat = re.compile(r"from '[^']*(?:layout-wrapper|widgets/sidebar|widgets/header|widgets/footer|user-menu|alarm-menu|alarm-center|entities/alarm|config/navigation|theme/ThemeProvider)[^']*'")
+    pat = re.compile(r"from '[^']*(?:shared/widgets|alarm-center|entities/alarm|config/navigation|theme/ThemeProvider)[^']*'")
     bad = [f for f in ts_files(DST) if pat.search(read(f))]
     assert not bad, f"삭제된 모듈 참조 잔존 — 원본이 새로 쓰기 시작했다면 DROP 목록을 재검토: {bad}"
 
@@ -428,6 +462,7 @@ def main() -> None:
     check_orphans()
     sync_public()
     print("✓ sync 완료 — 이어서: pnpm --filter @crane/shell typecheck && pnpm lint && pnpm --filter @crane/shell build")
+    print("  ⚠️ dev 서버 재시작 + 브라우저 Ctrl+Shift+R 필요 (Vite 모듈 그래프가 옛 트리를 가리킨다)")
 
 
 if __name__ == "__main__":

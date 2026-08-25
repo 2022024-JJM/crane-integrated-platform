@@ -61,6 +61,8 @@
   --color-glass-degraded: var(--glass-degraded);
   --color-glass-unhealthy: var(--glass-unhealthy);
   --color-glass-accent: var(--glass-accent);
+  --color-glass-hover: var(--glass-hover);
+  --color-glass-active: var(--glass-active);
   --color-status-healthy: var(--status-healthy);
   --color-status-degraded: var(--status-degraded);
   --color-status-unhealthy: var(--status-unhealthy);
@@ -108,7 +110,7 @@
   --viewport: #1a2129;
 
   /*
-   * 뷰포트 유리 — 3D 위에 뜨는 오버레이(좌표축·범례·라벨 카드)의 재질.
+   * 뷰포트 유리 — 3D 위에 뜨는 오버레이(도구줄·좌표축·범례·라벨 카드)의 재질.
    *
    * 바탕(--viewport)이 두 테마 모두 어둡게 고정돼 있으므로 이 유리는 테마를
    * 따라가지 않는다. 라이트 테마에서 흰 재질을 쓰면 어두운 점군 위에 흰 판이
@@ -122,6 +124,10 @@
   --glass-degraded: #f0c24a;
   --glass-unhealthy: #f87171;
   --glass-accent: #ffa347;
+  /* 유리 위 항목의 손 얹음·선택 상태 — 어두운 유리이므로 밝은 쪽으로 눌러 준다 */
+  --glass-hover: rgb(255 255 255 / 0.10);
+  --glass-active: rgb(255 255 255 / 0.18);
+  --glass-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.55);
 
   --status-healthy: #047857;    /* 5.48:1 */
   --status-degraded: #7a5b00;   /* 6.32:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
@@ -162,7 +168,7 @@
   box-shadow:
     inset 0 0 0 0.5px var(--glass-border),
     inset 0 1px 0 rgb(255 255 255 / 0.10),
-    0 10px 30px -8px rgb(0 0 0 / 0.55);
+    var(--glass-shadow);
 }
 
 /* 떠 있는 면의 그림자 — 얇은 테두리 한 겹 + 넓고 흐린 그림자 */
