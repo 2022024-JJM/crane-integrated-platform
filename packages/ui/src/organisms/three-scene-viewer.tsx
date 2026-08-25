@@ -62,7 +62,6 @@ interface ThreeSceneViewerProps {
   toolbarExtras?: ReactNode;
   // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
   toolbarClassName?: string;
-  showZoomIndicator?: boolean;
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -79,7 +78,6 @@ export interface SceneController {
 interface SceneControlsBridgeProps {
   cameraPreset: ThreeSceneViewerCameraPreset;
   onControllerChange: (controller: SceneController | null) => void;
-  onZoomPercentChange: (zoomPercent: number) => void;
 }
 
 const ZOOM_STEP = 1.2;
@@ -135,7 +133,6 @@ function toVector3([x, y, z]: Vector3Tuple) {
 function SceneControlsBridge({
   cameraPreset,
   onControllerChange,
-  onZoomPercentChange,
 }: SceneControlsBridgeProps) {
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
@@ -168,22 +165,6 @@ function SceneControlsBridge({
       topViewTarget.z,
     );
   }, [cameraPreset.topViewPosition, defaultDistance, topViewTarget]);
-
-  const syncZoomPercent = useCallback(() => {
-    const controls = controlsRef.current;
-
-    if (!controls) {
-      return;
-    }
-
-    const currentDistance = camera.position.distanceTo(controls.target);
-    const zoomPercent = Math.max(
-      1,
-      Math.round((defaultDistance / Math.max(currentDistance, 0.0001)) * 100),
-    );
-
-    onZoomPercentChange(zoomPercent);
-  }, [camera.position, defaultDistance, onZoomPercentChange]);
 
   const applyCameraState = useCallback(
     (position: Vector3, target: Vector3, up: Vector3) => {
@@ -219,9 +200,8 @@ function SceneControlsBridge({
       controls.enableDamping = previousDamping;
 
       invalidate();
-      syncZoomPercent();
     },
-    [camera, invalidate, syncZoomPercent],
+    [camera, invalidate],
   );
 
   const reset = useCallback(() => {
@@ -284,9 +264,8 @@ function SceneControlsBridge({
       controls.enableDamping = previousDamping;
 
       invalidate();
-      syncZoomPercent();
     },
-    [camera.position, invalidate, syncZoomPercent],
+    [camera.position, invalidate],
   );
 
   const zoomIn = useCallback(() => {
@@ -331,12 +310,6 @@ function SceneControlsBridge({
       return;
     }
 
-    const handleChange = () => {
-      syncZoomPercent();
-    };
-
-    controls.addEventListener('change', handleChange);
-
     onControllerChange({
       reset,
       zoomIn,
@@ -349,13 +322,11 @@ function SceneControlsBridge({
     reset();
 
     return () => {
-      controls.removeEventListener('change', handleChange);
       onControllerChange(null);
     };
   }, [
     onControllerChange,
     reset,
-    syncZoomPercent,
     zoomIn,
     zoomOut,
     moveToTopView,
@@ -427,14 +398,12 @@ export function ThreeSceneViewer({
   fullscreenBottomCenterOverlay,
   toolbarExtras,
   toolbarClassName,
-  showZoomIndicator = true,
   onControllerReady,
   onFullscreenChange,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<SceneController | null>(null);
-  const [zoomPercent, setZoomPercent] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const setController = useCallback(
@@ -534,7 +503,6 @@ export function ThreeSceneViewer({
             <SceneControlsBridge
               cameraPreset={cameraPreset}
               onControllerChange={setController}
-              onZoomPercentChange={setZoomPercent}
             />
             {children}
           </Canvas>
@@ -579,12 +547,6 @@ export function ThreeSceneViewer({
             toolbarClassName,
           )}
         >
-          {showZoomIndicator ? (
-            <div className="bg-background/85 text-foreground border-border/70 pointer-events-auto rounded-md border px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur-sm">
-              {zoomPercent}%
-            </div>
-          ) : null}
-
           <div className="pointer-events-auto flex flex-col gap-2">
             {toolbarExtras}
             <ToolbarButton
