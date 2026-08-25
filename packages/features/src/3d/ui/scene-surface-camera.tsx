@@ -46,7 +46,10 @@ import {
 const MIN_SURFACE_DISTANCE = 60;
 /** 표면에서 이만큼 이상 멀어지지 않는다 — OrbitControls maxDistance와 동일. */
 const MAX_SURFACE_DISTANCE = 3000;
-/** deltaY → 배율. 마우스 1노치(deltaY≈100)가 ×0.9(10%)가 되게 잡았다. */
+/**
+ * deltaY → 배율. 휠 위(deltaY ≈ −100) 1노치가 ×0.9(10% 줌인), 아래가 ×1.11.
+ * 부호 관례는 OrbitControls와 같다(deltaY < 0 → dollyIn).
+ */
 const ZOOM_SENSITIVITY = Math.log(1 / 0.9) / 100;
 /** 한 이벤트의 배율 상·하한 — 트랙패드 폭주 방지. */
 const ZOOM_FACTOR_MIN = 0.5;
@@ -196,7 +199,7 @@ export function SceneSurfaceCamera({
       const deltaY =
         event.deltaMode === 1 ? event.deltaY * WHEEL_LINE_PX : event.deltaY;
       const factor = clamp(
-        Math.exp(-deltaY * ZOOM_SENSITIVITY),
+        Math.exp(deltaY * ZOOM_SENSITIVITY),
         ZOOM_FACTOR_MIN,
         ZOOM_FACTOR_MAX,
       );
