@@ -78,11 +78,10 @@ interface SceneControlsBridgeProps {
 
 const ZOOM_STEP = 1.2;
 /**
- * 카메라-타깃 최소 거리. 휠 줌(OrbitControls minDistance)과 툴바 줌 버튼이
- * 같은 값을 본다. 처음엔 5(지오메트리 관통만 방지)였는데, 크레인이 50~100m인
- * 씬에서 트롤리 안까지 파고들어 20으로, 그래도 가깝다는 피드백으로 60으로
- * 올렸다. 에디터(scene-objects-edit-canvas)도 같은 값을 리터럴로 든다 — 이
- * 패키지를 참조할 수 없어서.
+ * 툴바 줌 버튼의 카메라-타깃 최소 거리. 타깃은 SceneSurfaceCamera(features)가
+ * 화면 중앙 표면에 붙여 두므로 "표면까지 60m"가 된다 — 휠 줌의 표면 최소
+ * 거리(MIN_SURFACE_DISTANCE)와 같은 값. 크레인 50~100m 씬에서 5·20은 트롤리
+ * 안까지 파고들어 60으로 올렸다.
  */
 const MIN_CAMERA_DISTANCE = 60;
 const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
@@ -324,11 +323,14 @@ function SceneControlsBridge({
       enableDamping
       dampingFactor={0.12}
       target={cameraPreset.defaultTarget}
-      // 휠 줌을 포인터 방향으로 — 보고 싶은 지점을 조준해 줌인/줌아웃하면
-      // 타깃이 함께 이동해 회전·팬 없이도 지도 전역을 훑을 수 있다
-      zoomToCursor
-      // 확대 하한 — 툴바 줌 버튼과 같은 값(MIN_CAMERA_DISTANCE 주석 참고)
-      minDistance={MIN_CAMERA_DISTANCE}
+      // 휠 줌은 features의 SceneSurfaceCamera가 맡는다 — 커서 아래 표면을
+      // 향해 표면 거리의 일정 비율씩 다가가는 구글 어스식 dolly. OrbitControls의
+      // zoomToCursor는 추상 타깃 반경 기준이라 타깃이 지하일 때 지오메트리를
+      // 뚫고 들어갔다. 그래서 여기선 줌을 끈다.
+      enableZoom={false}
+      // 회전/팬 반경 clamp만 — 표면 피벗이 60m보다 가까울 때(경사면·크레인
+      // 상부) 튕겨 나가지 않게 낮게 둔다. 확대 하한은 SceneSurfaceCamera가 지킨다.
+      minDistance={5}
       // 무한 줌 아웃 방지 — 지도가 점이 되기 전에 멈춘다 (camera far보다 작게)
       maxDistance={3000}
     />

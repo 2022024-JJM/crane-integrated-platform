@@ -42,6 +42,7 @@ import {
   SceneEnvironment,
   SceneLighting,
   SceneObjectBoundary,
+  SceneSurfaceCamera,
   useIsObjectSelected,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
@@ -739,6 +740,10 @@ export function SceneObjectsEditCanvas({
         onPointerMissed={handleClearSelection}
       >
         <SceneLighting />
+        <SceneSurfaceCamera
+          regionId={regionId}
+          environmentId={sceneInfo?.environmentId}
+        />
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
@@ -756,11 +761,11 @@ export function SceneObjectsEditCanvas({
           dampingFactor={0.12}
           target={cameraTarget}
           onChange={handleOrbitChange}
-          // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,
-          // 확대 하한 60(three-scene-viewer.tsx MIN_CAMERA_DISTANCE와 같은 값),
-          // far 안쪽에서 줌 아웃 정지.
-          zoomToCursor
-          minDistance={60}
+          // 뷰어(ThreeSceneViewer)와 동일한 규칙 — 휠 줌은 SceneSurfaceCamera
+          // (표면 기준 dolly)가 맡으므로 여기선 끈다. minDistance는 회전/팬 반경
+          // clamp일 뿐이라 낮게 둔다(표면 피벗이 가까울 때 튕기지 않게).
+          enableZoom={false}
+          minDistance={5}
           maxDistance={3000}
           mouseButtons={{
             LEFT: undefined,

@@ -1,4 +1,5 @@
 import type { Object3D } from 'three';
+import { isMeshId } from './mesh-path';
 
 /**
  * 3D 씬에 마운트된 모델 Object3D를 id로 O(1) 조회할 수 있도록 보관하는
@@ -26,6 +27,15 @@ export const modelObjectRegistry = {
   },
   get(id: string): Object3D | undefined {
     return registry.get(id);
+  },
+  /**
+   * 루트 객체(지도·모델·텍스트)만 순회한다 — 자식 mesh 항목(makeMeshId)은
+   * 루트에 포함되어 있어 레이캐스트 등에서 중복으로 잡히므로 제외한다.
+   */
+  forEachRoot(callback: (object: Object3D, id: string) => void): void {
+    for (const [id, object] of registry) {
+      if (!isMeshId(id)) callback(object, id);
+    }
   },
   clear(): void {
     registry.clear();

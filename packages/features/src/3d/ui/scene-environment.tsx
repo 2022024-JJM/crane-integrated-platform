@@ -188,8 +188,11 @@ function CameraAboveSea() {
     const dist = state.camera.position.distanceTo(controls.target);
     if (dist <= 0) return;
     const cos = (CAMERA_MIN_Y - controls.target.y) / dist;
+    // cos ≥ 1: 타깃이 반경보다 깊이 지하라 어떤 극각으로도 y≥MIN_Y를 못 만든다.
+    // 예전엔 여기서 0(정수직 위)으로 강제해 세게 확대하면 버드아이뷰로 튀었다.
+    // 회전으로 풀 수 없는 상황이니 제한을 걸지 말고 팬 백스톱에 맡긴다.
     controls.maxPolarAngle =
-      cos >= 1 ? 0 : cos <= -1 ? Math.PI : Math.acos(cos);
+      Math.abs(cos) >= 1 ? Math.PI : Math.acos(cos);
   }, -2);
 
   // 팬 백스톱: 카메라·타깃을 같은 양만큼 올려 궤도(offset)를 보존한다.
