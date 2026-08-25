@@ -79,7 +79,28 @@ function isHmi2Allowed(pathname: string): boolean {
   return HMI2_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isIndoorshopAllowed(pathname: string): boolean {
+/*
+ * 내업은 계정이 둘로 갈린다.
+ *
+ * - Indoorshop.IT  (`indoorshop`)    : 데이터 게더링 화면만
+ * - Indoorshop.OT  (`indoorshop-ot`) : 통합 대시보드 (게더링 제외)
+ *
+ * 두 역할 모두 `/indoorshop` 아래를 쓰므로 prefix 하나로는 나눌 수 없다.
+ * 각자 **자기 착지 경로**를 갖고, 상대 화면으로는 넘어가지 않는다.
+ */
+const INDOORSHOP_IT_LANDING = '/indoorshop/gathering';
+const INDOORSHOP_OT_LANDING = '/indoorshop';
+
+function isIndoorshopItAllowed(pathname: string): boolean {
+  return (
+    pathname === INDOORSHOP_IT_LANDING ||
+    pathname.startsWith(`${INDOORSHOP_IT_LANDING}/`)
+  );
+}
+
+function isIndoorshopOtAllowed(pathname: string): boolean {
+  // 게더링은 IT 전용이므로 OT 의 허용 범위에서 뺀다
+  if (isIndoorshopItAllowed(pathname)) return false;
   return pathname === '/indoorshop' || pathname.startsWith('/indoorshop/');
 }
 
@@ -105,8 +126,11 @@ function ProtectedRoute() {
   if (role === 'hmi2' && !isHmi2Allowed(location.pathname)) {
     return <Navigate to="/hmi2" replace />;
   }
-  if (role === 'indoorshop' && !isIndoorshopAllowed(location.pathname)) {
-    return <Navigate to="/indoorshop" replace />;
+  if (role === 'indoorshop' && !isIndoorshopItAllowed(location.pathname)) {
+    return <Navigate to={INDOORSHOP_IT_LANDING} replace />;
+  }
+  if (role === 'indoorshop-ot' && !isIndoorshopOtAllowed(location.pathname)) {
+    return <Navigate to={INDOORSHOP_OT_LANDING} replace />;
   }
   if (role === 'keyin' && !isKeyinAllowed(location.pathname)) {
     return <Navigate to="/keyin" replace />;
@@ -121,7 +145,10 @@ function LoginGuard() {
   if (role === 'mro2') return <Navigate to="/mro2" replace />;
   if (role === 'hmi') return <Navigate to="/hmi" replace />;
   if (role === 'hmi2') return <Navigate to="/hmi2" replace />;
-  if (role === 'indoorshop') return <Navigate to="/indoorshop" replace />;
+  if (role === 'indoorshop')
+    return <Navigate to={INDOORSHOP_IT_LANDING} replace />;
+  if (role === 'indoorshop-ot')
+    return <Navigate to={INDOORSHOP_OT_LANDING} replace />;
   if (role === 'keyin') return <Navigate to="/keyin" replace />;
   if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
@@ -331,6 +358,61 @@ const IndoorshopKeyinPage = lazy(() =>
   })),
 );
 
+/* 내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식) */
+const InshopRoot = lazy(() =>
+  import('@crane/indoorshop/shell').then((m) => ({ default: m.InshopRoot })),
+);
+const InshopDashboardPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-dashboard').then((m) => ({
+    default: m.InshopDashboardPage,
+  })),
+);
+const InshopZoneDetailPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-zone-detail').then((m) => ({
+    default: m.InshopZoneDetailPage,
+  })),
+);
+const InshopFactoryListPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
+    default: m.InshopFactoryListPage,
+  })),
+);
+const InshopAssemblyWorkspace = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
+    default: m.InshopAssemblyWorkspace,
+  })),
+);
+const InshopProductionCountPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-assembly').then((m) => ({
+    default: m.InshopProductionCountPage,
+  })),
+);
+const InshopYardWorkspace = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-yard').then((m) => ({
+    default: m.InshopYardWorkspace,
+  })),
+);
+const InshopSettingsPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-settings').then((m) => ({
+    default: m.InshopSettingsPage,
+  })),
+);
+const InshopDocsPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-docs').then((m) => ({
+    default: m.InshopDocsPage,
+  })),
+);
+const InshopDocViewerPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-docs').then((m) => ({
+    default: m.InshopDocViewerPage,
+  })),
+);
+const InshopNotFoundPage = lazy(() =>
+  import('@crane/indoorshop/pages/inshop-not-found').then((m) => ({
+    default: m.InshopNotFoundPage,
+  })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -453,14 +535,124 @@ export function App() {
                   </LazyRoute>
                 }
               />
+              {/*
+                데이터 게더링 (Indoorshop.IT 전용).
+
+                통합 대시보드(InshopRoot) 바깥의 형제 라우트다 — 다른 계정의
+                화면이고, 이식된 대시보드의 팔레트 래퍼·provider 를 거칠 이유가
+                없다.
+              */}
               <Route
-                path="indoorshop"
+                path="indoorshop/gathering"
                 element={
                   <LazyRoute>
                     <IndoorshopGatheringPage />
                   </LazyRoute>
                 }
               />
+              {/*
+                내업 통합 대시보드. 원본(web-dashboard)의 라우트를 그대로 옮기되
+                `/indoorshop` 아래로 한 단계 내렸다 — 원본의 `/`·`/docs`·`/settings`
+                는 셸에서 이미 다른 모듈이 쓰고 있는 경로다.
+                기존 데이터게더링 화면은 `gathering` 으로 유지한다.
+              */}
+              <Route
+                path="indoorshop"
+                element={
+                  <LazyRoute>
+                    <InshopRoot />
+                  </LazyRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <LazyRoute>
+                      <InshopDashboardPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="zones/assembly"
+                  element={
+                    <LazyRoute>
+                      <InshopFactoryListPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="zones/assembly/:factoryId"
+                  element={
+                    <LazyRoute>
+                      <InshopAssemblyWorkspace />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="zones/assembly/:factoryId/production"
+                  element={
+                    <LazyRoute>
+                      <InshopProductionCountPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="zones/assembly/:factoryId/:locationId"
+                  element={
+                    <LazyRoute>
+                      <InshopAssemblyWorkspace />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="zones/:zoneId"
+                  element={
+                    <LazyRoute>
+                      <InshopZoneDetailPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="logistics/yard"
+                  element={
+                    <LazyRoute>
+                      <InshopYardWorkspace />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="docs"
+                  element={
+                    <LazyRoute>
+                      <InshopDocsPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="docs/:docId"
+                  element={
+                    <LazyRoute>
+                      <InshopDocViewerPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <LazyRoute>
+                      <InshopSettingsPage />
+                    </LazyRoute>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <LazyRoute>
+                      <InshopNotFoundPage />
+                    </LazyRoute>
+                  }
+                />
+              </Route>
               <Route
                 path="keyin"
                 element={

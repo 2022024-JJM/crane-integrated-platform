@@ -1,0 +1,42 @@
+import { i18n } from '@crane/core/config/i18n'
+import { ko } from './locales/ko'
+import { en } from './locales/en'
+
+export const LANGUAGES = ['ko', 'en'] as const
+export type Language = (typeof LANGUAGES)[number]
+
+/** 언어 선택 UI 가 쓰는 이름 — **각 언어를 그 언어로** 적는다 (English 를 '영어'로 쓰지 않는다) */
+export const LANGUAGE_LABEL: Record<Language, string> = {
+  ko: '한국어',
+  en: 'English',
+}
+
+/** 날짜·시각 서식에 쓰는 로케일 */
+export const LANGUAGE_LOCALE: Record<Language, string> = {
+  ko: 'ko-KR',
+  en: 'en-US',
+}
+
+/**
+ * 내업 대시보드 문구를 셸 i18next 인스턴스에 **네임스페이스로** 얹는다.
+ *
+ * 원본은 여기서 `i18n.init()` 을 직접 불렀다. 그런데 i18next 의 기본 export 는
+ * 프로세스 전역 싱글턴이고 셸(@crane/core/config/i18n)도 같은 인스턴스를 init
+ * 한다 — 나중에 부르는 쪽이 상대의 resources·ns 설정을 통째로 덮어써서, import
+ * 순서에 따라 이 화면이든 다른 모듈이든 한쪽 번역이 키 그대로 노출된다.
+ *
+ * 그래서 init 은 셸에 맡기고 이쪽은 번들만 등록한다. 셸이 지원하는 'la' 는
+ * 원본에 리소스가 없으므로 fallbackLng('ko')가 받는다.
+ */
+export const INSHOP_NS = 'inshop'
+
+let registered = false
+
+export function registerInshopLocales(): void {
+  if (registered) return
+  registered = true
+  i18n.addResourceBundle('ko', INSHOP_NS, ko, true, true)
+  i18n.addResourceBundle('en', INSHOP_NS, en, true, true)
+}
+
+export default i18n

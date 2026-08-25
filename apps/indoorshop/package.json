@@ -8,7 +8,15 @@
   "exports": {
     ".": "./src/pages/index.ts",
     "./pages/gathering": "./src/pages/gathering/index.ts",
-    "./pages/keyin": "./src/pages/keyin/index.ts"
+    "./pages/keyin": "./src/pages/keyin/index.ts",
+    "./shell": "./src/dashboard/shell/index.ts",
+    "./pages/inshop-dashboard": "./src/pages/inshop-dashboard/index.ts",
+    "./pages/inshop-zone-detail": "./src/pages/inshop-zone-detail/index.ts",
+    "./pages/inshop-assembly": "./src/pages/inshop-assembly/index.ts",
+    "./pages/inshop-yard": "./src/pages/inshop-yard/index.ts",
+    "./pages/inshop-settings": "./src/pages/inshop-settings/index.ts",
+    "./pages/inshop-docs": "./src/pages/inshop-docs/index.ts",
+    "./pages/inshop-not-found": "./src/pages/inshop-not-found/index.ts"
   },
   "peerDependencies": {
     "react": "^19.2.0",
@@ -16,13 +24,19 @@
   },
   "dependencies": {
     "@crane/core": "workspace:*",
-    "@crane/ui": "workspace:*",
     "@crane/domain": "workspace:*",
     "@crane/features": "workspace:*",
+    "@crane/ui": "workspace:*",
     "@crane/widgets": "workspace:*",
-    "react-router-dom": "^7.13.1",
-    "react-i18next": "^16.3.5",
+    "clsx": "^2.1.1",
     "i18next": "^25.6.2",
-    "lucide-react": "^0.575.0"
+    "lucide-react": "^0.575.0",
+    "pretendard": "^1.3.9",
+    "react-i18next": "^16.3.5",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.1",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.183.2"
   }
 }

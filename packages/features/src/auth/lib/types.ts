@@ -7,6 +7,7 @@ export type UserRole =
   | 'hmi'
   | 'hmi2'
   | 'indoorshop'
+  | 'indoorshop-ot'
   | 'keyin';
 
 export interface AuthUser {

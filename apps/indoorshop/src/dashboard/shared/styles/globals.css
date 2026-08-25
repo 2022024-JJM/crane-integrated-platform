@@ -1,0 +1,233 @@
+:root {
+  /* @theme 의 text-* 계산식이 참조한다 — 셸 전역에서 항상 1 이어야 한다 */
+  --app-font-scale: 1;
+}
+
+@theme inline {
+  --font-inshop-sans: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+
+
+  /*
+   * 타이포 스케일 — PWM 의 조밀한 본문 크기에 맞춘다.
+   * 기본 스케일(xs 12 / sm 14 …)만으로는 11·13·15px 을 못 내서 임의값이 흩어졌다.
+   *
+   * 모든 단계에 `--app-font-scale` 을 곱한다 — 현장 모니터는 멀리서 보는 일이 많아
+   * 설정에서 글자를 키울 수 있어야 하는데, 단계마다 따로 키우면 위계(제목/본문/보조)가
+   * 무너진다. 배율 하나만 움직여 스케일 전체를 같은 비율로 끌어올린다.
+   */
+  --text-2xs: calc(10px * var(--app-font-scale));
+  --text-2xs--line-height: calc(14px * var(--app-font-scale));
+  --text-inshop-xs: calc(11px * var(--app-font-scale));
+  --text-inshop-xs--line-height: calc(16px * var(--app-font-scale));
+  --text-inshop-sm: calc(13px * var(--app-font-scale));
+  --text-inshop-sm--line-height: calc(18px * var(--app-font-scale));
+  --text-inshop-base: calc(15px * var(--app-font-scale));
+  --text-inshop-base--line-height: calc(22px * var(--app-font-scale));
+  --text-inshop-lg: calc(17px * var(--app-font-scale));
+  --text-inshop-lg--line-height: calc(24px * var(--app-font-scale));
+  --text-inshop-xl: calc(20px * var(--app-font-scale));
+  --text-inshop-xl--line-height: calc(28px * var(--app-font-scale));
+  --text-inshop-2xl: calc(26px * var(--app-font-scale));
+  --text-inshop-2xl--line-height: calc(32px * var(--app-font-scale));
+
+  /* 애니메이션 — v4 는 tailwind.config.ts 를 자동으로 읽지 않으므로 여기에 둔다 */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.25s ease-out;
+
+  /*
+   * 반경 — 사이드바·툴바·메뉴가 macOS 처럼 읽히도록 전반적으로 키웠다.
+   * 선택 알약(sm)과 패널(lg)의 차이가 위계를 만든다.
+   */
+  --radius-inshop-xs: 4px;
+  --radius-inshop-sm: 7px;
+  --radius-inshop-md: 10px;
+  --radius-inshop-lg: 14px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-viewport: var(--viewport);
+  --color-material: var(--material);
+  --color-material-strong: var(--material-strong);
+  --color-material-border: var(--material-border);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-glass-foreground: var(--glass-foreground);
+  --color-glass-healthy: var(--glass-healthy);
+  --color-glass-degraded: var(--glass-degraded);
+  --color-glass-unhealthy: var(--glass-unhealthy);
+  --color-glass-accent: var(--glass-accent);
+  --color-status-healthy: var(--status-healthy);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-unhealthy: var(--status-unhealthy);
+}
+
+/*
+ * 중립색은 PWM 프론트엔드(pwm-app)의 primitives 램프에서 가져온다.
+ *
+ * 강조색은 주황이다. 다만 흔한 밝은 주황(#f97316·orange-500 류)은 흰 배경에서
+ * 3.4:1 이라 글자로 못 쓴다 — 채도는 그대로 두고 명도만 내려, 대비 4.5:1 을
+ * 넘기는 선에서 **가장 밝은 주황**을 고른 값이다. 다크에서는 반대로 끌어올린다.
+ *
+ * 상태색(주의)은 강조색과 색상환에서 20° 이상 떨어뜨렸다. 둘 다 따뜻한 계열이라
+ * 붙여 두면 "강조"와 "주의"가 같은 말로 보인다.
+ */
+.inshop-root {
+  /*
+   * 글자 크기 배율 — 설정 화면이 바꾸는 값은 이것 하나뿐이다 (기본 1).
+   * @theme 의 계산식이 참조하므로 항상 정의돼 있어야 한다.
+   */
+  --app-font-scale: 1;
+
+  /* Light — coolgray 램프 */
+  --background: #f7f8fc;        /* coolgray-00 */
+  --foreground: #101321;        /* coolgray-100 */
+  --surface: #ffffff;
+  --surface-secondary: #edeff8; /* coolgray-10 */
+  --border: #d8dae8;            /* coolgray-20 */
+  --accent: #c54a0a;            /* orange-60 — 4.82:1 (흰 배경) / 4.54:1 (본문 바탕) */
+  --on-accent: #ffffff;         /* 4.82:1 */
+  /* 상태색은 예약 색이다 — accent 나 일반 강조에 재사용하지 않는다 */
+  /*
+   * 재질(material) — 사이드바·툴바·메뉴처럼 콘텐츠 위에 떠 있는 면.
+   * 반투명 + backdrop-blur 로 뒤가 비쳐야 층이 생긴다.
+   */
+  --material: rgb(255 255 255 / 0.72);
+  /*
+   * 팝오버·메뉴는 본문 **위**에 겹친다. 크롬(사이드바·툴바)과 같은 투명도를 쓰면
+   * 뒤 카드의 글자가 그대로 비쳐 읽혀 두 층의 텍스트가 섞인다.
+   */
+  --material-strong: rgb(255 255 255 / 0.94);
+  --material-border: rgb(16 19 33 / 0.08);
+
+  /* 3D 뷰포트 바탕 — 점군 채도가 살도록 두 모드 모두 어둡게 고정한다 (뷰어 배경 그라디언트의 중간값) */
+  --viewport: #1a2129;
+
+  /*
+   * 뷰포트 유리 — 3D 위에 뜨는 오버레이(좌표축·범례·라벨 카드)의 재질.
+   *
+   * 바탕(--viewport)이 두 테마 모두 어둡게 고정돼 있으므로 이 유리는 테마를
+   * 따라가지 않는다. 라이트 테마에서 흰 재질을 쓰면 어두운 점군 위에 흰 판이
+   * 떠서 층이 아니라 구멍처럼 보인다 — 어두운 유리 + 밝은 글자로 고정한다.
+   * 상태색도 같은 이유로 다크 램프 값을 쓴다 (라이트 램프는 이 위에서 안 읽힌다).
+   */
+  --glass: rgb(20 26 34 / 0.52);
+  --glass-border: rgb(255 255 255 / 0.14);
+  --glass-foreground: #eef2f7;
+  --glass-healthy: #20c997;
+  --glass-degraded: #f0c24a;
+  --glass-unhealthy: #f87171;
+  --glass-accent: #ffa347;
+
+  --status-healthy: #047857;    /* 5.48:1 */
+  --status-degraded: #7a5b00;   /* 6.32:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
+  --status-unhealthy: #bb3030;  /* red-100, 5.87:1 */
+}
+
+.dark .inshop-root,
+.inshop-root.dark {
+  /* Dark — PWM background/paper/divider */
+  --background: #1a1c20;
+  --foreground: #e6e8ec;
+  --surface: #23262c;
+  --surface-secondary: #2c2f37;
+  --border: #2f3239;
+  --accent: #ffa347;            /* orange-30 — 7.64:1 (surface 위) */
+  --on-accent: #21160c;         /* 8.93:1 — 강조 위에 얹는 따뜻한 먹 */
+  --material: rgb(30 33 39 / 0.72);
+  --material-strong: rgb(32 35 41 / 0.94);
+  --material-border: rgb(255 255 255 / 0.09);
+  --viewport: #1a2129;
+  --status-healthy: #20c997;    /* green-50, 7.12:1 */
+  --status-degraded: #f0c24a;   /* 9.04:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
+  --status-unhealthy: #f87171;  /* 5.48:1 */
+}
+
+/*
+ * 뷰포트 위에 뜨는 유리 패널.
+ *
+ * 흐림만으로는 유리가 되지 않는다 — 채도를 올려야 뒤의 색이 유리를 통과한 것처럼
+ * 살아나고(saturate), 위 모서리의 1px 하이라이트가 있어야 판에 두께가 생긴다.
+ * 테두리는 그림자에 겹쳐 넣어 레이아웃 폭에 영향을 주지 않는다.
+ */
+@utility glass-panel {
+  background: var(--glass);
+  color: var(--glass-foreground);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-border),
+    inset 0 1px 0 rgb(255 255 255 / 0.10),
+    0 10px 30px -8px rgb(0 0 0 / 0.55);
+}
+
+/* 떠 있는 면의 그림자 — 얇은 테두리 한 겹 + 넓고 흐린 그림자 */
+@utility shadow-material {
+  box-shadow:
+    0 0 0 0.5px var(--material-border),
+    0 12px 32px -8px rgb(16 19 33 / 0.18),
+    0 2px 8px -2px rgb(16 19 33 / 0.08);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/*
+ * 누를 수 있는 것은 손 모양으로.
+ *
+ * Tailwind v4 preflight 는 button 에 `cursor: default` 를 준다 (브라우저 기본을
+ * 따르자는 취지다). 그런데 이 화면은 카드·칩·세그먼트·메뉴 항목 대부분이
+ * button 이라, 그대로 두면 "눌러도 되는 곳"이 커서로 구분되지 않는다.
+ * 컴포넌트마다 유틸리티를 붙이면 새로 만드는 것에서 매번 빠지므로 base 에서
+ * 한 번에 되돌린다.
+ *
+ * - 못 누르는 것(`:disabled`, `aria-disabled`)은 제외한다.
+ * - 유틸리티 레이어가 base 보다 뒤에 오므로, `cursor-col-resize`(리사이즈 손잡이)나
+ *   `cursor-default`(동작 없는 프리뷰)처럼 컴포넌트가 지정한 커서는 그대로 이긴다.
+ */
+@layer base {
+  .inshop-root button:not(:disabled),
+  .inshop-root [role="button"]:not([aria-disabled="true"]),
+  .inshop-root summary,
+  .inshop-root select:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+
+/*
+ * 내업 대시보드 subtree 의 바탕.
+ *
+ * 원본은 `body` 에 바탕·서체를 걸었지만, 셸에서는 body 가 모든 모듈의 공유
+ * 자산이라 여기서 칠하면 다른 모듈 화면까지 이 팔레트로 바뀐다. 대신 이 앱이
+ * 차지하는 영역에만 칠한다 — 서체도 마찬가지로 (셸 전역은 IBM Plex 다).
+ */
+.inshop-root {
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/*
+ * 셸은 base 에서 `* { border-color: var(--border) }` 를 전역으로 건다(shadcn 관례).
+ * 원본은 Tailwind 기본값(currentColor)을 전제로 쓰였다 — `border-border` 를 붙인
+ * 곳만 토큰 색이고, 나머지는 글자색 테두리다. 그 전제를 이 subtree 안에서 되돌린다.
+ * base 레이어라 유틸리티(`border-border`, `border-accent`)는 그대로 이긴다.
+ */
+@layer base {
+  .inshop-root,
+  .inshop-root * {
+    border-color: currentColor;
+  }
+}

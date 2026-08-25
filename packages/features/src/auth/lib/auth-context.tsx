@@ -23,6 +23,7 @@ const ACCOUNTS: Credentials[] = [
   { id: 'crane.HMI', password: '1', role: 'hmi' },
   { id: 'crane.HMI2', password: '1', role: 'hmi2' },
   { id: 'Indoorshop.IT', password: '1', role: 'indoorshop' },
+  { id: 'Indoorshop.OT', password: '1', role: 'indoorshop-ot' },
   { id: 'Indoorshop.Keyin', password: '1', role: 'keyin' },
 ];
 

@@ -83,7 +83,18 @@
     "hmiPhillyDashboard": "Anti-Collision HMI",
     "indoorshop": "내업 공정실적",
     "indoorshopGathering": "데이터 게더링",
-    "indoorshopKeyin": "실적 Key-In"
+    "indoorshopKeyin": "실적 Key-In",
+    "indoorshopOverview": "개요",
+    "indoorshopDashboard": "통합 대시보드",
+    "indoorshopZones": "공정존",
+    "indoorshopFabrication": "가공",
+    "indoorshopAssembly": "조립",
+    "indoorshopOutfitting": "선행의장",
+    "indoorshopPainting": "선행도장",
+    "indoorshopLogistics": "물류",
+    "indoorshopYard": "야드 현황",
+    "indoorshopReference": "참고",
+    "indoorshopDocs": "문서"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",

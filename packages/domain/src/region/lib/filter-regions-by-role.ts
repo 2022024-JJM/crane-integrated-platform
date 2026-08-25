@@ -10,6 +10,7 @@ type RegionUserRole =
   | 'hmi'
   | 'hmi2'
   | 'indoorshop'
+  | 'indoorshop-ot'
   | 'keyin';
 
 export function filterRegionsByRole(
@@ -36,6 +37,8 @@ export function filterRegionsByRole(
     case 'hmi2':
       return [];
     case 'indoorshop':
+      return [];
+    case 'indoorshop-ot':
       return [];
     case 'keyin':
       return [];

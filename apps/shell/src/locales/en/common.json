@@ -83,7 +83,18 @@
     "hmiPhillyDashboard": "Anti-Collision HMI",
     "indoorshop": "Indoor Shop",
     "indoorshopGathering": "Data Gathering",
-    "indoorshopKeyin": "Performance Key-In"
+    "indoorshopKeyin": "Performance Key-In",
+    "indoorshopOverview": "Overview",
+    "indoorshopDashboard": "Integrated Dashboard",
+    "indoorshopZones": "Process Zones",
+    "indoorshopFabrication": "Fabrication",
+    "indoorshopAssembly": "Assembly",
+    "indoorshopOutfitting": "Outfitting",
+    "indoorshopPainting": "Painting",
+    "indoorshopLogistics": "Logistics",
+    "indoorshopYard": "Yard Status",
+    "indoorshopReference": "Reference",
+    "indoorshopDocs": "Documents"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",

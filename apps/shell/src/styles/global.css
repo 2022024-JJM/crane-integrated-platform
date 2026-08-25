@@ -2,6 +2,15 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import './design-token.css';
+/*
+ * 내업 대시보드(@crane/indoorshop) 테마.
+ *
+ * 컴포넌트 쪽에서 import 하면 Tailwind 엔트리와 다른 CSS 로 갈라져
+ * `@theme`·`@utility` 가 처리되지 않는다 — 토큰만 남고 `text-inshop-sm`
+ * `glass-panel` 같은 유틸리티가 아예 생성되지 않아 화면이 무스타일로 뜬다.
+ * 팔레트는 `.inshop-root` 안으로 스코프돼 있어 다른 모듈에 새지 않는다.
+ */
+@import '../../../indoorshop/src/dashboard/shared/styles/globals.css';
 
 /* 서체 — IBM Plex 계열. 산업 계측 톤을 셸 전역에 통일 (mro2와 동일 패밀리) */
 @import '@fontsource/ibm-plex-sans/400.css';
