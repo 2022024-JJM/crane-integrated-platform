@@ -37,6 +37,15 @@ interface UseScenePersistenceResult {
   saveCurrentScene: () => Promise<boolean>;
 }
 
+/** 편집 세션 시작 시 지도를 전부 잠금으로 정규화한다(loadScene 주석 참고). */
+function lockMaps(sceneInfo: SavedSceneInfo): SavedSceneInfo {
+  if (!sceneInfo.maps?.length) return sceneInfo;
+  return {
+    ...sceneInfo,
+    maps: sceneInfo.maps.map((map) => ({ ...map, locked: true })),
+  };
+}
+
 export function useScenePersistence({
   regionId,
   sceneInfo,
@@ -71,7 +80,12 @@ export function useScenePersistence({
           return;
         }
 
-        const sanitized = sanitizeSceneInfo(data);
+        // 지도는 편집 화면에 들어올 때 항상 잠금으로 시작한다. 잠금은 씬
+        // 데이터라 저장본에 locked:false가 남아 있으면 해제 상태로 열리는데,
+        // 지도는 화면 대부분을 덮는 거대 메시라 해제된 채 시작하면 다른
+        // 객체를 고르려는 클릭이 지도에 먹힌다. 세션 중 계층 목록의 자물쇠로
+        // 풀 수 있고, 그 상태를 저장해도 다음 진입 때는 다시 잠긴다.
+        const sanitized = lockMaps(sanitizeSceneInfo(data));
         replaceScene(sanitized);
         setInitialCamera(sanitized.camera ?? null);
         setSavedSceneRef(sanitized);
