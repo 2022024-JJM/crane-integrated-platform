@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Box3 } from 'three';
+import { modelObjectRegistry } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -128,9 +130,19 @@ export function Monitoring3dView({
   // 인라인 리터럴로 넘기면 부모 리렌더마다 새 객체 → SceneControlsBridge의
   // 컨트롤러 재등록 effect가 재실행되며 reset()이 사용자 카메라를 초기
   // 위치로 되돌린다(알람 배너 등 잦은 리렌더 화면에서 실제 발생).
+  // 탑뷰 fit 대상 = 지도 bounds. mapId(문자열)만 의존성에 넣어 sceneInfo
+  // 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게 한다(위 주석의 reset 문제).
+  const mapId = sceneInfo?.maps?.[0]?.id;
   const cameraPreset = useMemo(
-    () => ({ defaultPosition: cameraPosition, defaultTarget: cameraTarget }),
-    [cameraPosition, cameraTarget],
+    () => ({
+      defaultPosition: cameraPosition,
+      defaultTarget: cameraTarget,
+      getTopViewBounds: () => {
+        const map = mapId ? modelObjectRegistry.get(mapId) : undefined;
+        return map ? new Box3().setFromObject(map) : null;
+      },
+    }),
+    [cameraPosition, cameraTarget, mapId],
   );
 
   const focusOverlay =

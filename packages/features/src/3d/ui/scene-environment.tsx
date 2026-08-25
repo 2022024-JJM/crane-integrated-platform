@@ -185,6 +185,15 @@ function CameraAboveSea() {
   useFrame((state) => {
     const controls = state.controls as OrbitControlsLike | null;
     if (!controls) return;
+    // OrbitControls는 극각을 camera.up 기준으로 잰다. 탑뷰는 up을 (0,0,-1)로
+    // 바꾸므로(three-scene-viewer TOP_VIEW_CAMERA_UP) 그때는 "수직축"이 월드
+    // -Z가 되어 아래 +Y 공식이 맞지 않는다 — 타깃 위의 카메라가 phi 90°로
+    // 잡혀 매 update마다 maxPolar로 잘리며 앞으로 기울었다(줌인할수록 커짐).
+    // up이 +Y가 아니면 제한을 풀고 팬 백스톱에만 맡긴다.
+    if (Math.abs(state.camera.up.y - 1) > 1e-6) {
+      controls.maxPolarAngle = Math.PI;
+      return;
+    }
     const dist = state.camera.position.distanceTo(controls.target);
     if (dist <= 0) return;
     const cos = (CAMERA_MIN_Y - controls.target.y) / dist;

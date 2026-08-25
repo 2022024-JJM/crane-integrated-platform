@@ -133,8 +133,8 @@ interface DollyState {
   dir: Vector3;
   /** OrbitControls start~end 사이(드래그 중). 이 동안은 피벗을 옮기지 않는다. */
   interacting: boolean;
-  /** 마운트 후 첫 피벗 배치 성공 여부 — 지도 GLB 로드를 기다린다. */
-  pivotReady: boolean;
+  /** 마지막으로 본 레지스트리 크기 — 지도 GLB가 뒤늦게 로드되면 피벗을 다시 잡는다. */
+  registrySize: number;
   /** 마지막으로 우리가 놓은 타깃. 다른 코드가 타깃을 옮겼는지 판별. */
   lastPivot: Vector3;
 }
@@ -164,7 +164,7 @@ export function SceneSurfaceCamera({
     pending: 0,
     dir: new Vector3(),
     interacting: false,
-    pivotReady: false,
+    registrySize: -1,
     lastPivot: new Vector3(),
   });
 
@@ -219,8 +219,8 @@ export function SceneSurfaceCamera({
     };
   }, [gl, camera, controls]);
 
-  // 표면 피벗(구글 어스 5): 드래그 시작 시, 그리고 다른 코드(reset/top view/팬
-  // 관성)가 타깃을 옮긴 뒤.
+  // 드래그 시작 시 표면 피벗(구글 어스 5). 드래그 중(start~end)에는 매 프레임
+  // 피벗을 옮기지 않는다 — 반경이 변해 각속도가 흔들린다.
   useEffect(() => {
     if (!controls) return;
     const state = stateRef.current;
@@ -234,36 +234,37 @@ export function SceneSurfaceCamera({
     const onEnd = () => {
       state.interacting = false;
     };
-    const onChange = () => {
-      if (state.interacting || state.pending !== 0 || !controls.enabled) return;
-      // 회전 관성은 타깃을 움직이지 않으므로 여기 걸리지 않는다 — 매 프레임
-      // 피벗을 옮기면 반경이 변해 각속도가 흔들린다.
-      if (controls.target.distanceToSquared(state.lastPivot) < 1e-6) return;
-      placePivot(camera, controls, fallbackRef.current, state.lastPivot);
-    };
 
     controls.addEventListener('start', onStart);
     controls.addEventListener('end', onEnd);
-    controls.addEventListener('change', onChange);
     return () => {
       controls.removeEventListener('start', onStart);
       controls.removeEventListener('end', onEnd);
-      controls.removeEventListener('change', onChange);
     };
   }, [camera, controls]);
 
-  // 프레임: 첫 피벗 배치(지도 로드 대기) + dolly easing(구글 어스 4).
+  // 프레임: 외부 타깃 변경 감지 → 표면 피벗, dolly easing(구글 어스 4).
   useFrame((_, delta) => {
     if (!controls) return;
     const state = stateRef.current;
 
-    if (!state.pivotReady && controls.enabled) {
-      state.pivotReady = placePivot(
-        camera,
-        controls,
-        fallbackRef.current,
-        state.lastPivot,
-      );
+    // 다른 코드(reset/top view/프리셋 prop/플라이트 종료/팬 관성)가 타깃을
+    // 옮겼거나 레지스트리에 객체가 추가됐으면(지도 GLB 뒤늦은 로드) 피벗을
+    // 다시 잡는다. change 이벤트가 아니라 매 프레임 비교로 잡는 이유: 마운트
+    // 직후 컨트롤러 등록 effect의 reset()이 이 컴포넌트가 controls를 받기 전에
+    // 실행돼 이벤트를 놓치고, 지하 타깃이 남아 첫 탑뷰가 기울었다. 벡터 비교는
+    // 매 프레임, 레이캐스트는 실제로 바뀐 프레임에만 돈다.
+    if (state.pending === 0 && !state.interacting && controls.enabled) {
+      const registrySize = modelObjectRegistry.size;
+      const targetMoved =
+        controls.target.distanceToSquared(state.lastPivot) > 1e-6;
+      if (targetMoved || registrySize !== state.registrySize) {
+        if (
+          placePivot(camera, controls, fallbackRef.current, state.lastPivot)
+        ) {
+          state.registrySize = registrySize;
+        }
+      }
     }
 
     if (state.pending === 0) return;

@@ -18,7 +18,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Vector3 } from 'three';
+import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Button } from '../atoms/button';
 import {
@@ -35,6 +35,12 @@ interface ThreeSceneViewerCameraPreset {
   defaultTarget: Vector3Tuple;
   topViewPosition?: Vector3Tuple;
   topViewTarget?: Vector3Tuple;
+  /**
+   * 탑뷰가 한 화면에 담을 영역(보통 지도 bounds). 있으면 topViewPosition/
+   * Target 대신 이 박스가 세로 fov·종횡비 기준으로 꽉 차는 높이에서
+   * 정수직으로 내려다본다. 없거나 비어 있으면 기존 프리셋 경로.
+   */
+  getTopViewBounds?: () => Box3 | null;
 }
 
 interface ThreeSceneViewerProps {
@@ -86,6 +92,13 @@ const ZOOM_STEP = 1.2;
 const MIN_CAMERA_DISTANCE = 60;
 const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
 const TOP_VIEW_CAMERA_UP = new Vector3(0, 0, -1);
+/** 탑뷰 fit 여백 — 지도 가장자리가 화면 끝에 닿지 않게 8%. */
+const TOP_VIEW_PADDING = 1.08;
+/**
+ * 탑뷰 fit 높이 상한. OrbitControls maxDistance(3000)와 같은 값 — 더 높이
+ * 올리면 다음 update()에서 반경이 잘려 카메라가 튄다.
+ */
+const TOP_VIEW_MAX_DISTANCE = 3000;
 
 /**
  * 브라우저가 WebGL을 지원하는지 검사. 모듈 스코프에서 1회만 평가하고
@@ -185,6 +198,17 @@ function SceneControlsBridge({
       controls.target.copy(target);
       camera.lookAt(target);
 
+      // OrbitControls는 극각을 camera.up 기준으로 잰다. 탑뷰(up=-Z)에서는
+      // 타깃 위의 카메라가 phi 90°라, 직전 프레임에 +Y 기준으로 계산된
+      // maxPolarAngle(features CameraAboveSea)이 남아 있으면 아래 update()가
+      // 그 각도로 잘라 카메라가 기운다(타깃이 지하일수록 크게). up이 +Y가
+      // 아닌 포즈에는 극각 제한을 풀고 적용한다 — 이후 프레임은 CameraAboveSea가
+      // up≠+Y를 보고 π를 유지한다.
+      if (Math.abs(up.y - 1) > 1e-6) {
+        controls.minPolarAngle = 0;
+        controls.maxPolarAngle = Math.PI;
+      }
+
       // 감쇠(damping)를 잠시 끄고 update() 한다. 켠 채로 부르면 직전 드래그의
       // 잔여 관성이 남아 있다가 이후 프레임에서 계속 적용돼, 방금 맞춘 포즈가
       // 조금씩 흘러간다("리셋을 눌렀는데 카메라가 미끄러진다"). three-stdlib는
@@ -204,9 +228,36 @@ function SceneControlsBridge({
     applyCameraState(defaultPosition, defaultTarget, DEFAULT_CAMERA_UP);
   }, [applyCameraState, defaultPosition, defaultTarget]);
 
+  const getTopViewBounds = cameraPreset.getTopViewBounds;
   const moveToTopView = useCallback(() => {
+    const bounds = getTopViewBounds?.();
+    const perspective = camera as PerspectiveCamera;
+    if (bounds && !bounds.isEmpty() && perspective.isPerspectiveCamera) {
+      // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이. 가로는 종횡비로
+      // 환산해 둘 중 큰 쪽을 쓴다.
+      const center = bounds.getCenter(new Vector3());
+      const size = bounds.getSize(new Vector3());
+      const halfHeight = Math.max(size.z / 2, size.x / (2 * perspective.aspect));
+      const halfFov = (perspective.fov * Math.PI) / 360;
+      const distance = Math.min(
+        (halfHeight / Math.tan(halfFov)) * TOP_VIEW_PADDING,
+        TOP_VIEW_MAX_DISTANCE,
+      );
+      applyCameraState(
+        new Vector3(center.x, bounds.max.y + distance, center.z),
+        center,
+        TOP_VIEW_CAMERA_UP,
+      );
+      return;
+    }
     applyCameraState(topViewPosition, topViewTarget, TOP_VIEW_CAMERA_UP);
-  }, [applyCameraState, topViewPosition, topViewTarget]);
+  }, [
+    applyCameraState,
+    camera,
+    getTopViewBounds,
+    topViewPosition,
+    topViewTarget,
+  ]);
 
   const zoomByFactor = useCallback(
     (factor: number) => {
