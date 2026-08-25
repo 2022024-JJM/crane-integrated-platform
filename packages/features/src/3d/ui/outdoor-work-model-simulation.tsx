@@ -11,6 +11,7 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
+  isFloatingModelPath,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
   preloadGltf,
@@ -436,6 +437,7 @@ export function OutdoorWorkModelSimulation({
                 model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
               }
               alarmHighlightMesh={alarmHighlightMesh}
+              floating={model.floating ?? isFloatingModelPath(model.path)}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

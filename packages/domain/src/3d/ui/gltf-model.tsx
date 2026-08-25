@@ -22,6 +22,8 @@ interface GltfModelProps {
   showLabel?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   alarmHighlightMesh?: boolean;
+  /** 떠 있는 모델 — 수면 아래를 깊이 안개로 흐리게 한다(model-mesh.tsx). */
+  floating?: boolean;
   meshOverrides?: SavedMeshOverride[];
   /**
    * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. bbox 존 분류만 하는
@@ -65,6 +67,7 @@ export const GltfModel = memo(function GltfModel({
   url,
   equipName,
   opacity = 1,
+  floating = false,
   showLabel = true,
   alarmSeverity = null,
   alarmHighlightMesh = false,
@@ -102,6 +105,7 @@ export const GltfModel = memo(function GltfModel({
       url={url}
       opacity={opacity}
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
+      floating={floating}
       position={position}
       rotation={rotation}
       scale={scale}

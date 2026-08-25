@@ -9,6 +9,7 @@ import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
+import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
@@ -25,6 +26,8 @@ interface ModelMeshProps {
   url: string;
   opacity?: number;
   alarmSeverity?: AlarmHighlightSeverity | null;
+  /** 떠 있는 모델 — 수면 아래를 깊이 안개로 흐리게 한다(lib/sea-submersion.ts). */
+  floating?: boolean;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -284,6 +287,7 @@ export function ModelMesh({
   url,
   opacity = 1,
   alarmSeverity = null,
+  floating = false,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -357,10 +361,10 @@ export function ModelMesh({
   );
 
   useEffect(() => {
-    // Fast path: opacity 100% + 알람 없음 → mesh.material을 GLTF 원본
-    // reference 그대로 두어 같은 GLTF의 모든 instance가 material을 공유한다.
-    // 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
-    const needsMutation = opacity < 1 || alarmSeverity !== null;
+    // Fast path: opacity 100% + 알람 없음 + 잠김 없음 → mesh.material을
+    // GLTF 원본 reference 그대로 두어 같은 GLTF의 모든 instance가 material을
+    // 공유한다. 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
+    const needsMutation = opacity < 1 || alarmSeverity !== null || floating;
 
     if (!needsMutation) {
       for (const binding of meshBindings) {
@@ -394,10 +398,16 @@ export function ModelMesh({
           }
         }
 
+        if (floating) {
+          applySeaSubmersion(mat);
+        } else {
+          clearSeaSubmersion(mat);
+        }
+
         mat.needsUpdate = true;
       }
     }
-  }, [meshBindings, opacity, alarmSeverity]);
+  }, [meshBindings, opacity, alarmSeverity, floating]);
 
   // 인스턴스 언마운트 시 lazy clone된 material을 dispose 한다.
   useEffect(() => {

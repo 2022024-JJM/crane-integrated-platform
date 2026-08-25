@@ -20,6 +20,7 @@ import {
   GltfModel,
   SceneText,
   getMeshPath,
+  isFloatingModelPath,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -833,6 +834,7 @@ export function SceneObjectsEditCanvas({
               equipName={model.equipName}
               showLabel={showLabels}
               opacity={model.opacity}
+              floating={model.floating ?? isFloatingModelPath(model.path)}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

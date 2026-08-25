@@ -8,6 +8,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import {
+  SEA_LEVEL_Y,
   getModelBottomOffset,
   modelObjectRegistry,
   numRound,
@@ -130,6 +131,20 @@ export function useSceneDrop({
       }
 
       if (nextPosition) {
+        // 떠 있는 모델(배)은 origin이 흘수선이라 bbox 바닥을 맞추지 않고
+        // origin을 수면에 놓는다. 지도 표면 높이도 무시한다 — 배는 지면이
+        // 아니라 물 위에 놓이고, 수면 아래는 잠김 패치로 흐려진다(model-mesh).
+        if (droppedCatalogItem.floating) {
+          onAddModel(droppedCatalogItem, [
+            nextPosition[0],
+            SEA_LEVEL_Y,
+            nextPosition[2],
+          ]);
+          event.currentTarget.focus();
+          setPendingDropPosition(null);
+          return;
+        }
+
         // 카탈로그 모델의 origin은 모델마다 다르다(중앙/바닥/상단). unscaled
         // bottomOffset에 사용자 scale.y를 곱해 world offset으로 만들고,
         // 드롭 위치 y에 더해 모델 바닥이 정확히 지면(y=0)에 닿도록 한다.

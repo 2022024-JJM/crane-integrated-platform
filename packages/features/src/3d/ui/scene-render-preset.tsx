@@ -17,12 +17,15 @@ import { ACESFilmicToneMapping } from 'three';
  *
  * far: 기본값(1000)이면 줌 아웃 시 카메라-타깃 거리가 1000을 넘는 순간
  *   지도 중앙부터 잘려나간다. OrbitControls maxDistance(3000) + 씬 반폭보다
- *   커야 잘림이 없다.
+ *   커야 잘림이 없다. 바다 평면(scene-environment.tsx SeaSurface, 반경
+ *   40000)이 들어오면서 50000으로 올렸다 — 원판이 far에 잘리면 잘린 경계가
+ *   직선으로 드러나므로 원판 반경보다 커야 한다. 깊이 정밀도는 near가
+ *   지배하므로(0.1) far 상향의 비용은 사실상 없다.
  * near: 0.1(three 기본)을 쓴다. 에디터만 0.5를 쓰고 있었는데, near를 올리면
  *   깊이 정밀도는 좋아지지만 카메라에 바짝 붙은 지오메트리가 잘려 보인다 —
  *   뷰어와 다른 값을 쓸 이유가 없다.
  */
-export const SCENE_CAMERA_CLIP = { near: 0.1, far: 5000 } as const;
+export const SCENE_CAMERA_CLIP = { near: 0.1, far: 50000 } as const;
 
 /**
  * 캔버스 픽셀 비율 상한.

@@ -51,7 +51,11 @@ export {
   sceneMapCatalog,
   type SceneMapCatalogItem,
 } from './model/scene-map-catalog';
-export { sceneModelCatalog } from './model/scene-model-catalog';
+export {
+  sceneModelCatalog,
+  isFloatingModelPath,
+} from './model/scene-model-catalog';
+export { SEA_LEVEL_Y } from './model/sea-level';
 export { SCENE_MODEL_CATEGORIES } from './model/types';
 export {
   getSceneFileUrlByRegionId,

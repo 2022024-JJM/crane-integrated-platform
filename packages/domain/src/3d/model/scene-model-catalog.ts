@@ -68,6 +68,8 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       cameraDirection: [1.24, 0.58, 1.3],
       paddingScale: 1.32,
     },
+    // ship.glb는 origin이 흘수선(용골 -1.03, 상부 +4.63)이라 수면에 그대로 놓는다.
+    floating: true,
   },
   withDefaultPreview({
     id: 'r370',
@@ -312,3 +314,13 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     defaultScale: [1, 1, 1],
   }),
 ];
+
+/**
+ * 저장본에 `floating` 필드가 없는 모델(플래그 도입 전 저장본)을 위한 폴백 —
+ * path로 카탈로그를 찾아 floating 여부를 돌려준다. 카탈로그에 없으면 false.
+ */
+export function isFloatingModelPath(path: string): boolean {
+  return sceneModelCatalog.some(
+    (item) => item.path === path && item.floating === true,
+  );
+}
