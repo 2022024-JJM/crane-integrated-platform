@@ -51,6 +51,22 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     path: '/models/LLC_002.glb',
     defaultScale: [0.15, 0.15, 0.15],
   }),
+  // Block_001/002: 필리조선소 export 와 같은 미터 단위 원본. 루트 노드에 월드
+  // 포즈가 베이크돼 있어 scripts/unbake-root-transform.mjs 로 원점 복원 후 반입.
+  withDefaultPreview({
+    id: 'block-001',
+    label: 'Block-001',
+    category: 'outdoor',
+    path: '/models/Block_001.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'block-002',
+    label: 'Block-002',
+    category: 'outdoor',
+    path: '/models/Block_002.glb',
+    defaultScale: [1, 1, 1],
+  }),
   {
     id: 'house',
     label: 'House',

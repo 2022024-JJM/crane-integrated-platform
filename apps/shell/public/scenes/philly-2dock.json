@@ -3,7 +3,7 @@
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
       "path": "/maps/phillyshipyard.glb",
-      "locked": false,
+      "locked": true,
       "position": [
         0,
         0,
@@ -82,19 +82,63 @@
         1
       ],
       "valueMapList": []
+    },
+    {
+      "id": "beccf605-d547-4854-88e3-fc152f999a34",
+      "equipName": "Block-001",
+      "path": "/models/Block_001.glb",
+      "opacity": 1,
+      "position": [
+        -2210.905,
+        -0.559,
+        1974.962
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "valueMapList": []
+    },
+    {
+      "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
+      "equipName": "Block-002",
+      "path": "/models/Block_002.glb",
+      "opacity": 1,
+      "position": [
+        -2147.394,
+        9.905,
+        1978.442
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "valueMapList": []
     }
   ],
   "texts": [],
   "camera": {
     "position": [
-      -2160.9983295908755,
-      132.44540762052893,
-      1975.78447849172
+      -2214.203958049922,
+      49.611075936296324,
+      2069.452119233236
     ],
     "target": [
-      -2286.432318801986,
-      -235.5157096467283,
-      1705.748451075521
+      -2177.2175035006194,
+      0.12886670489483976,
+      1997.7957964445436
     ]
   },
   "environmentId": "overcast-atlantic"
