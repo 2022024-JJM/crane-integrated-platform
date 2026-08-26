@@ -70,6 +70,13 @@
     "addText": "Textum adde",
     "textObject": "Textus",
     "save": "Serva",
+    "unsavedDialog": {
+      "title": "Mutationes non servatae",
+      "description": "Haec scaena mutationes non servatas habet. Quid vis facere?",
+      "saveAndLeave": "Serva et discede",
+      "leaveWithoutSaving": "Discede sine servando",
+      "stay": "Relinque"
+    },
     "categoryAssetCount": "{{count}} exemplaria",
     "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
     "modelCategories": {

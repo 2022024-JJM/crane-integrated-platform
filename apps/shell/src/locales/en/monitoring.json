@@ -79,6 +79,13 @@
     "addText": "Add Text",
     "textObject": "Text",
     "save": "Save",
+    "unsavedDialog": {
+      "title": "Unsaved changes",
+      "description": "This scene has unsaved changes. What would you like to do?",
+      "saveAndLeave": "Save and leave",
+      "leaveWithoutSaving": "Leave without saving",
+      "stay": "Cancel"
+    },
     "categoryAssetCount": "{{count}} assets",
     "noModelsInCategory": "No models in this category yet.",
     "modelCategories": {

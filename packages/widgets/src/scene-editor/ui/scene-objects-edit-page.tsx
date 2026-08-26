@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
+import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
   PaletteEnvironmentSection,
@@ -150,6 +151,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     endTransformInteraction,
     cameraStateRef,
     initialCamera,
+    unsavedChangesPrompt,
   } = useSceneEditorSession({
     regionId,
   });
@@ -348,6 +350,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 
   return (
     <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
+      <SceneUnsavedChangesDialog
+        open={unsavedChangesPrompt.open}
+        isSaving={isSaving}
+        onSaveAndLeave={() => unsavedChangesPrompt.choose('save')}
+        onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
+        onStay={() => unsavedChangesPrompt.choose('stay')}
+      />
       {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
       {!leftCollapsed ? (
         <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">

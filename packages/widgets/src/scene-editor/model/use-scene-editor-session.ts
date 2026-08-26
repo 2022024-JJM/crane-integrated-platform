@@ -14,7 +14,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSceneHistory } from './use-scene-history';
 import { useScenePersistence } from './use-scene-persistence';
-import { useSceneUnsavedChangesGuard } from './use-scene-unsaved-changes-guard';
+import {
+  useSceneUnsavedChangesGuard,
+  type SceneUnsavedChangesPrompt,
+} from './use-scene-unsaved-changes-guard';
 import { createSceneManipulationActions } from './scene-manipulation-actions';
 
 interface UseSceneEditorSessionParams {
@@ -34,6 +37,8 @@ interface UseSceneEditorSessionResult {
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
+  /** 미저장 이탈 다이얼로그 상태. 페이지가 이걸로 다이얼로그를 렌더한다. */
+  unsavedChangesPrompt: SceneUnsavedChangesPrompt;
   canUndo: boolean;
   canRedo: boolean;
   transformMode: ReturnType<typeof useSceneTransformModeStore.getState>['mode'];
@@ -232,7 +237,7 @@ export function useSceneEditorSession({
     };
   }, [clearSelectedModel, resetTransformMode]);
 
-  useSceneUnsavedChangesGuard({
+  const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
     isDirty,
     isSaving,
     onSave: saveCurrentScene,
@@ -240,6 +245,7 @@ export function useSceneEditorSession({
 
   return {
     sceneInfo,
+    unsavedChangesPrompt,
     selectedIds,
     selectedModelId,
     selectedObjectType,

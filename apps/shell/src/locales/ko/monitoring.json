@@ -79,6 +79,13 @@
     "addText": "텍스트 추가",
     "textObject": "텍스트",
     "save": "저장",
+    "unsavedDialog": {
+      "title": "저장되지 않은 변경사항",
+      "description": "씬에 저장되지 않은 변경사항이 있습니다. 어떻게 할까요?",
+      "saveAndLeave": "저장하고 이동",
+      "leaveWithoutSaving": "저장하지 않고 이동",
+      "stay": "취소"
+    },
     "categoryAssetCount": "에셋 {{count}}개",
     "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
     "modelCategories": {
