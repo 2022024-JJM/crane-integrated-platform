@@ -10,6 +10,7 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",
+    "uniformScale": "Keep ratio",
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",

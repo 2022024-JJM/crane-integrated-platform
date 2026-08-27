@@ -10,6 +10,7 @@
     "position": "위치",
     "rotation": "회전",
     "scale": "크기",
+    "uniformScale": "비율 유지",
     "textContent": "내용",
     "textColor": "색상",
     "tagMapping": "태그 매핑",

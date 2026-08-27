@@ -1,4 +1,5 @@
 export * from './atoms/button';
+export * from './atoms/checkbox';
 export * from './atoms/badge';
 export * from './atoms/input';
 export * from './atoms/skeleton';

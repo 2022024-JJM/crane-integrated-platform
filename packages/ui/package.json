@@ -10,6 +10,7 @@
     "./atoms/app-link": "./src/atoms/app-link.tsx",
     "./atoms/badge": "./src/atoms/badge.tsx",
     "./atoms/button": "./src/atoms/button.tsx",
+    "./atoms/checkbox": "./src/atoms/checkbox.tsx",
     "./atoms/calendar": "./src/atoms/calendar.tsx",
     "./atoms/hanwha-icon": "./src/atoms/hanwha-icon.tsx",
     "./atoms/input-number": "./src/atoms/input-number.tsx",

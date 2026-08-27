@@ -27,6 +27,31 @@ function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
   return tuple.map((value) => numRound(value)) as Vector3Tuple;
 }
 
+/**
+ * axis를 value로 바꾸되 나머지 축도 같은 비율로 곱한다(인스펙터 "비율 유지").
+ * 기준 축이 0이면 비율을 정의할 수 없으므로 세 축을 value로 맞춘다.
+ */
+function scaleVectorUniformly(
+  tuple: Vector3Tuple,
+  axis: AxisKey,
+  value: number,
+): Vector3Tuple {
+  const base = tuple[AXIS_INDEX[axis]];
+  const ratio = value / base;
+  if (base === 0 || !Number.isFinite(ratio)) {
+    return [value, value, value];
+  }
+  return roundVectorValue(
+    tuple.map((v, i) => (i === AXIS_INDEX[axis] ? value : v * ratio)) as Vector3Tuple,
+  );
+}
+
+/** 인스펙터 축 단위 입력 옵션. 기즈모 경로에서는 쓰지 않는다. */
+interface AxisUpdateOptions {
+  /** scale 필드에서만 유효. 나머지 축을 같은 비율로 함께 바꾼다. */
+  uniformScale?: boolean;
+}
+
 function clampOpacity(value: number) {
   return numRound(clampToRange(value, 0.1, 1));
 }
@@ -352,6 +377,7 @@ export function useSelectedSceneObjectEditor({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: AxisUpdateOptions,
   ) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
@@ -366,7 +392,11 @@ export function useSelectedSceneObjectEditor({
           (field === 'scale'
             ? ([1, 1, 1] as Vector3Tuple)
             : ([0, 0, 0] as Vector3Tuple));
-        return { [field]: updateVectorValue(base, axis, numRound(value)) };
+        const next =
+          field === 'scale' && options?.uniformScale
+            ? scaleVectorUniformly(base, axis, numRound(value))
+            : updateVectorValue(base, axis, numRound(value));
+        return { [field]: next };
       });
     });
   };
@@ -395,6 +425,7 @@ export function useSelectedSceneObjectEditor({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: AxisUpdateOptions,
   ) => {
     if (!selectedMesh) return;
     const { modelId, meshPath, override } = selectedMesh;
@@ -424,7 +455,10 @@ export function useSelectedSceneObjectEditor({
         start = field === 'scale' ? [1, 1, 1] : [0, 0, 0];
       }
     }
-    const nextVec = updateVectorValue(start, axis, numRound(value));
+    const nextVec =
+      field === 'scale' && options?.uniformScale
+        ? scaleVectorUniformly(start, axis, numRound(value))
+        : updateVectorValue(start, axis, numRound(value));
     updateSceneInfo((prev) => {
       if (!prev) return prev;
       return {

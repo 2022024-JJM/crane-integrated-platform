@@ -10,6 +10,7 @@
     "position": "Positio",
     "rotation": "Rotatio",
     "scale": "Scala",
+    "uniformScale": "Proportio servata",
     "textContent": "Argumentum",
     "textColor": "Color",
     "tagMapping": "Designatio Tags",

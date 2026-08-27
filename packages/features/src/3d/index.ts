@@ -74,6 +74,7 @@ export {
   isMeshId,
 } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
+export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
 export { useObjectFocusStore } from './model/use-object-focus-store';
 export type {
