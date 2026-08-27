@@ -61,6 +61,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ['F'], label: 'focusSelected' },
       { keys: ['wheel'], label: 'zoom' },
       { keys: ['middleDrag'], label: 'rotate' },
+      { keys: ['Shift', 'rightDrag'], label: 'rotate' },
       { keys: ['rightDrag'], label: 'pan' },
     ],
   },
