@@ -29,7 +29,14 @@ function normalizeRect(
   const top = Math.min(a.y, b.y);
   const right = Math.max(a.x, b.x);
   const bottom = Math.max(a.y, b.y);
-  return { left, top, right, bottom, width: right - left, height: bottom - top };
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
 }
 
 function getBox3Corners(box: Box3): Vector3[] {
@@ -166,24 +173,10 @@ export function useMarqueeSelection({
   const excludedIdsRef = useRef(excludedIds);
   excludedIdsRef.current = excludedIds;
 
-  const isSpacePressedRef = useRef(false);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.code === 'Space') isSpacePressedRef.current = true; };
-    const onKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space') isSpacePressedRef.current = false; };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('keyup', onKeyUp);
-    };
-  }, []);
-
   const handlePointerDown = useCallback((e: PointerEvent) => {
     if (e.button !== 0) return;
     if (isTransformDraggingRef.current) return;
     if (isDraggingExternalItemRef.current) return;
-    if (isSpacePressedRef.current) return;
 
     startPosRef.current = { x: e.clientX, y: e.clientY };
     isDraggingRef.current = false;

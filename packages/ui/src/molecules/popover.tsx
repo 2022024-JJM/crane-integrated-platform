@@ -11,12 +11,14 @@ function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 
 interface PopoverPopupProps extends PopoverPrimitive.Popup.Props {
   align?: 'start' | 'center' | 'end';
+  side?: 'top' | 'bottom' | 'left' | 'right';
   sideOffset?: number;
 }
 
 function PopoverPopup({
   className,
   align = 'end',
+  side,
   sideOffset = 8,
   ...props
 }: PopoverPopupProps) {
@@ -24,6 +26,7 @@ function PopoverPopup({
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
         align={align}
+        side={side}
         sideOffset={sideOffset}
         className="z-9999"
       >

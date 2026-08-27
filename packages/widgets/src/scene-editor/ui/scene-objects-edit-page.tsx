@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
+import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
@@ -98,9 +99,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
-  const fitAllRef = useRef<(() => void) | null>(null);
-  const fitSelectedRef = useRef<(() => void) | null>(null);
-  const resetCameraRef = useRef<(() => void) | null>(null);
+  const focusSelectedRef = useRef<(() => void) | null>(null);
+  // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
+  // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
+  const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
   const {
     sceneInfo,
     selectedIds,
@@ -209,13 +211,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
 
   useEffect(() => {
+    // 키 판정은 전부 event.code(물리 키)로 한다 — event.key는 한글 입력
+    // 모드에서 'ㄹ'/'Process'가 와서 한/영 상태에 따라 단축키가 죽는다.
     const handleKeyDown = (event: KeyboardEvent) => {
       // Ctrl/Cmd+S는 캔버스 포커스 검사보다 먼저 처리한다. 아래 게이트에
       // 걸리면 브라우저의 "페이지 저장" 대화상자가 그대로 뜨는데, 인스펙터에
       // 값을 입력한 직후(=포커스가 패널에 있을 때)가 사용자가 저장을 누르는
       // 바로 그 순간이라 가장 잘 터진다. 입력 중에도 저장은 유효한 동작이므로
       // isEditableTarget도 통과시킨다.
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
         event.preventDefault();
         if (!saveDisabled && !isSaving) {
           void saveCurrentScene();
@@ -234,19 +238,16 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
        *   캔버스에 포커스가 있을 때만 먹어서, 인스펙터를 한 번 클릭하면
        *   undo/redo까지 죽었다 — 값을 고친 직후가 되돌리고 싶은 순간인데
        *   바로 그때 안 되는 셈이었다.
-       * - **맨 키**(Delete, R, Home, Enter): 캔버스 포커스일 때만. 패널의
-       *   버튼을 조작하다 Enter나 Delete를 누르면 객체가 지워지는 사고가
-       *   난다. 이쪽은 제약을 유지하는 게 맞다.
+       * - **맨 키**(Delete, F): 캔버스 또는 계층 패널(객체 리스트)에
+       *   포커스가 있을 때만. 인스펙터의 버튼을 조작하다 Delete를 누르면
+       *   객체가 지워지는 사고가 난다. 이쪽은 제약을 유지하는 게 맞다.
        *
        * 텍스트 입력 중(isEditableTarget)은 위에서 이미 걸렀다.
        */
       const hasModifier = event.ctrlKey || event.metaKey;
 
-      const isUndoShortcut =
-        hasModifier && !event.shiftKey && event.key.toLowerCase() === 'z';
-      const isRedoShortcut =
-        (hasModifier && event.key.toLowerCase() === 'y') ||
-        (hasModifier && event.shiftKey && event.key.toLowerCase() === 'z');
+      const isUndoShortcut = hasModifier && event.code === 'KeyZ';
+      const isRedoShortcut = hasModifier && event.code === 'KeyY';
 
       if (isUndoShortcut) {
         event.preventDefault();
@@ -260,8 +261,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      const isDuplicateShortcut =
-        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd';
+      const isDuplicateShortcut = hasModifier && event.code === 'KeyD';
 
       if (isDuplicateShortcut) {
         event.preventDefault();
@@ -269,8 +269,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      const isSelectAllShortcut =
-        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a';
+      const isSelectAllShortcut = hasModifier && event.code === 'KeyA';
 
       const currentSceneInfo = sceneInfoRef.current;
       if (isSelectAllShortcut && currentSceneInfo) {
@@ -293,39 +292,31 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
-      // 여기서부터는 맨 키 단축키다 — 캔버스에 포커스가 있을 때만 처리한다.
-      // 패널 버튼을 조작하다 Enter/Delete를 눌러 객체가 사라지면 안 된다.
-      const canvasRoot = canvasRootRef.current;
-      if (!canvasRoot) {
-        return;
-      }
+      // 여기서부터는 맨 키 단축키다 — 캔버스 또는 계층 패널에 포커스가
+      // 있을 때만 처리한다. 인스펙터 버튼을 조작하다 Delete를 눌러 객체가
+      // 사라지면 안 된다. 계층 패널의 검색·이름 변경 입력은 위의
+      // isEditableTarget이 이미 걸렀다.
       const activeElement = document.activeElement;
-      const isCanvasFocused =
-        activeElement instanceof Node && canvasRoot.contains(activeElement);
-      if (!isCanvasFocused) {
-        return;
-      }
-
-      if (event.key === 'Home') {
-        event.preventDefault();
-        fitAllRef.current?.();
+      const isInside = (root: HTMLElement | null) =>
+        root !== null &&
+        activeElement instanceof Node &&
+        root.contains(activeElement);
+      if (
+        !isInside(canvasRootRef.current) &&
+        !isInside(hierarchyRootRef.current)
+      ) {
         return;
       }
 
       const currentSelectedIds = selectedIdsRef.current;
-      if (event.key === 'Enter' && currentSelectedIds.size > 0) {
+      // F = 선택 객체로 카메라 이동(Unity·Unreal·three.js editor 공통 관례).
+      if (event.code === 'KeyF' && currentSelectedIds.size > 0) {
         event.preventDefault();
-        fitSelectedRef.current?.();
+        focusSelectedRef.current?.();
         return;
       }
 
-      if (event.key === 'r' || event.key === 'R') {
-        event.preventDefault();
-        resetCameraRef.current?.();
-        return;
-      }
-
-      if (event.key !== 'Delete' || currentSelectedIds.size === 0) {
+      if (event.code !== 'Delete' || currentSelectedIds.size === 0) {
         return;
       }
 
@@ -415,9 +406,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           showLabels={showLabels}
           onTransformInteractionStart={startTransformInteraction}
           onTransformInteractionEnd={endTransformInteraction}
-          fitAllRef={fitAllRef}
-          fitSelectedRef={fitSelectedRef}
-          resetCameraRef={resetCameraRef}
+          focusSelectedRef={focusSelectedRef}
         />
 
         {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
@@ -600,6 +589,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           </div>
         </div>
 
+        {/* 우측 하단 단축키 도움말 — 기즈모는 좌하단이라 겹치지 않는다. */}
+        <SceneShortcutsHelp />
+
         {!sceneInfo ? (
           <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
             <p className="text-muted-foreground text-sm font-medium">
@@ -612,7 +604,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
       {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
       {!rightCollapsed ? (
         <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
-          <div className="flex min-h-0 flex-[1] flex-col">
+          <div
+            ref={hierarchyRootRef}
+            className="flex min-h-0 flex-[1] flex-col"
+          >
             <HierarchyPanel
               sceneInfo={sceneInfo}
               selectedIds={selectedIds}

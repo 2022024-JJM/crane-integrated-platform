@@ -15,7 +15,7 @@ import {
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, MOUSE, Object3D, Vector3 } from 'three';
+import { Box3, MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
@@ -57,6 +57,10 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
 // 모듈 레벨 상수라 렌더마다 참조가 바뀌지 않는다.
 const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
+/** F 포커스 시 바운딩 스피어 주변 여유 비율. */
+const FOCUS_PADDING = 1.15;
+/** F 포커스 최소 거리 — OrbitControls minDistance와 같다. */
+const FOCUS_MIN_DISTANCE = 5;
 const PRELOAD_BATCH_SIZE = 4;
 
 /**
@@ -159,9 +163,8 @@ interface SceneObjectsEditCanvasProps {
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
-  fitAllRef?: RefObject<(() => void) | null>;
-  fitSelectedRef?: RefObject<(() => void) | null>;
-  resetCameraRef?: RefObject<(() => void) | null>;
+  /** 선택 객체로 카메라를 즉시 이동(F 키)하는 함수를 부모에 노출한다. */
+  focusSelectedRef?: RefObject<(() => void) | null>;
 }
 
 export function SceneObjectsEditCanvas({
@@ -180,9 +183,7 @@ export function SceneObjectsEditCanvas({
   onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
-  fitAllRef,
-  fitSelectedRef,
-  resetCameraRef,
+  focusSelectedRef,
 }: SceneObjectsEditCanvasProps) {
   // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
   // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
@@ -553,10 +554,24 @@ export function SceneObjectsEditCanvas({
       box.getCenter(center);
       box.getSize(size);
 
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const distance = maxDim * 1.0;
-
+      // 바운딩 스피어가 세로·가로 fov 중 좁은 쪽에 들어오는 거리. 예전에는
+      // 가장 긴 변 길이를 그대로 거리로 써서 fov·종횡비에 따라 잘리거나
+      // 지나치게 멀었다.
       const cam = controls.object;
+      const radius = Math.max(size.length() / 2, 1e-3);
+      let halfFov = Math.PI / 4;
+      if (cam instanceof PerspectiveCamera) {
+        const halfVertical = (cam.fov * Math.PI) / 360;
+        halfFov = Math.min(
+          halfVertical,
+          Math.atan(Math.tan(halfVertical) * cam.aspect),
+        );
+      }
+      const distance = Math.max(
+        (radius / Math.sin(halfFov)) * FOCUS_PADDING,
+        FOCUS_MIN_DISTANCE,
+      );
+
       const direction = new Vector3()
         .subVectors(cam.position, controls.target)
         .normalize();
@@ -585,14 +600,7 @@ export function SceneObjectsEditCanvas({
     [],
   );
 
-  const fitAll = useCallback(() => {
-    const objects = sceneModelIds
-      .map((id) => getSceneModelObject(id))
-      .filter((object): object is Object3D => object !== null);
-    fitToObjects(objects);
-  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
-
-  const fitSelected = useCallback(() => {
+  const focusSelected = useCallback(() => {
     const objects: Object3D[] = [];
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
     const seenModelIds = new Set<string>();
@@ -618,40 +626,11 @@ export function SceneObjectsEditCanvas({
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
 
-  const resetCamera = useCallback(() => {
-    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-    if (!controls) return;
-    const cam = controls.object;
-    cam.position.set(...cameraPosition);
-    controls.target.set(...cameraTarget);
-    controls.update();
-
-    if (cameraStateRef) {
-      cameraStateRef.current = {
-        position: [...cameraPosition],
-        target: [...cameraTarget],
-      };
-    }
-  }, [cameraPosition, cameraTarget, cameraStateRef, orbitControlsRef]);
-
   useEffect(() => {
-    if (fitAllRef) {
-      fitAllRef.current = fitAll;
+    if (focusSelectedRef) {
+      focusSelectedRef.current = focusSelected;
     }
-    if (fitSelectedRef) {
-      fitSelectedRef.current = fitSelected;
-    }
-    if (resetCameraRef) {
-      resetCameraRef.current = resetCamera;
-    }
-  }, [
-    fitAll,
-    fitAllRef,
-    fitSelected,
-    fitSelectedRef,
-    resetCamera,
-    resetCameraRef,
-  ]);
+  }, [focusSelected, focusSelectedRef]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -678,30 +657,6 @@ export function SceneObjectsEditCanvas({
       setPendingDropPosition(null);
     }
   }, [draggingModelCatalogItem, setPendingDropPosition]);
-
-  // Space 키를 누르는 동안 OrbitControls LEFT를 PAN으로 전환
-  // (기본은 undefined = marquee 전용, Space 누르면 pan 가능)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
-      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-      if (!controls) return;
-      controls.mouseButtons.LEFT = MOUSE.PAN;
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
-      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-      if (!controls) return;
-      (controls.mouseButtons as Record<string, unknown>).LEFT = undefined;
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [orbitControlsRef]);
 
   return (
     <div
