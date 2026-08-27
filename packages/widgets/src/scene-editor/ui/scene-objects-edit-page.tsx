@@ -554,11 +554,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                           <Save className="size-4" />
                         )}
                       </TooltipTrigger>
-                      {/* 단축키를 툴팁에 노출한다 — 버튼만 있으면 Ctrl+S가
-                          있는지 알 길이 없어 브라우저 저장 대화상자를 먼저
-                          만나게 된다. */}
+                      {/* 단축키는 우측 하단 도움말 팝업에서 한꺼번에 안내한다. */}
                       <TooltipContent>
-                        {t('monitoring:editor.save')} (Ctrl+S)
+                        {t('monitoring:editor.save')}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
