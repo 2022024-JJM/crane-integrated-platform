@@ -39,6 +39,7 @@ import {
   SCENE_CAMERA_CLIP,
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
+  MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneLighting,
   SceneObjectBoundary,
@@ -59,8 +60,12 @@ const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
 /** F 포커스 시 바운딩 스피어 주변 여유 비율. */
 const FOCUS_PADDING = 1.15;
-/** F 포커스 최소 거리 — OrbitControls minDistance와 같다. */
-const FOCUS_MIN_DISTANCE = 5;
+/**
+ * F 포커스 최소 거리 — SceneSurfaceCamera 휠 줌의 최소 표면 거리와 같다.
+ * 텍스트처럼 작은 객체를 더 가깝게 잡으면 첫 휠 조작에서 그 거리로 튕겨
+ * 나가므로 여기서 미리 맞춘다.
+ */
+const FOCUS_MIN_DISTANCE = MIN_SURFACE_DISTANCE;
 const PRELOAD_BATCH_SIZE = 4;
 
 /**
@@ -542,9 +547,21 @@ export function SceneObjectsEditCanvas({
       const controls = orbitControlsRef.current as OrbitControlsImpl | null;
       if (!controls || objects.length === 0) return;
 
+      // setFromObject는 조상 행렬까지 갱신한다(expandByObject는 자기 행렬만).
+      // keydown은 렌더 루프 밖이라 직전 변형이 월드 행렬에 아직 안 실렸을 수
+      // 있다 — 마퀴 판정(use-marquee-selection)과 같은 관례.
       const box = new Box3();
+      const objectBox = new Box3();
+      const worldPosition = new Vector3();
       for (const obj of objects) {
-        box.expandByObject(obj);
+        objectBox.setFromObject(obj);
+        if (objectBox.isEmpty()) {
+          // 폰트 sync 전 텍스트는 지오메트리가 비어 있다. 최소한 중심은
+          // 맞추고 거리는 FOCUS_MIN_DISTANCE로 떨어지게 둔다.
+          box.expandByPoint(obj.getWorldPosition(worldPosition));
+        } else {
+          box.union(objectBox);
+        }
       }
 
       if (box.isEmpty()) return;
@@ -576,9 +593,17 @@ export function SceneObjectsEditCanvas({
         .subVectors(cam.position, controls.target)
         .normalize();
 
+      // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance(3000)로
+      // 잘라 준다. 지도처럼 큰 객체는 뷰어 탑뷰와 같은 상한에서 멈춘다.
       cam.position.copy(center).addScaledVector(direction, distance);
       controls.target.copy(center);
+      // 감쇠를 잠시 끄고 update() 한다 — 켠 채로 부르면 직전 드래그의 잔여
+      // 관성이 이후 프레임에 계속 적용돼 방금 맞춘 포즈가 흘러간다
+      // (ThreeSceneViewer.applyCameraState와 같은 이유).
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
 
       if (cameraStateRef) {
         cameraStateRef.current = {
@@ -590,38 +615,54 @@ export function SceneObjectsEditCanvas({
     [cameraStateRef, orbitControlsRef],
   );
 
-  const sceneModelIds = useMemo(
-    () => sceneInfo?.models.map((model) => model.id) ?? [],
-    [sceneInfo?.models],
+  // 씬에 존재하는 id만 포커스 대상이다(스토어에 남은 stale 선택 방어). 지도는
+  // 잠금 여부와 무관하게 포함 — 선택돼 있기만 하면 대상이다.
+  const sceneObjectIds = useMemo(
+    () => ({
+      models: new Set(sceneInfo?.models.map((model) => model.id) ?? []),
+      texts: new Set(sceneInfo?.texts?.map((text) => text.id) ?? []),
+      maps: new Set(sceneInfo?.maps?.map((map) => map.id) ?? []),
+    }),
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
   );
 
-  const getSceneModelObject = useCallback(
-    (id: string) => modelObjectRegistryRef.current.get(id) ?? null,
-    [],
-  );
-
+  // F 포커스 — 모델·텍스트·지도·드릴인 메시 모두 대상. 조회 순서는
+  // use-scene-transform과 같다(캔버스 로컬 registry → 도메인 전역 registry;
+  // 메시는 전역에만 등록된다).
   const focusSelected = useCallback(() => {
     const objects: Object3D[] = [];
+    const seen = new Set<Object3D>();
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-    const seenModelIds = new Set<string>();
     for (const id of selectedIds) {
       const meshIdInfo = parseMeshId(id);
-      const modelId = meshIdInfo?.modelId ?? id;
+      let obj: Object3D | undefined;
 
-      if (!sceneModelIds.includes(modelId) || seenModelIds.has(modelId)) {
-        continue;
+      if (meshIdInfo) {
+        if (!sceneObjectIds.models.has(meshIdInfo.modelId)) continue;
+        // 메시가 아직 등록 전이면 부모 모델로 폴백한다.
+        obj =
+          sharedModelObjectRegistry.get(id) ??
+          modelObjectRegistryRef.current.get(meshIdInfo.modelId);
+      } else {
+        if (
+          !sceneObjectIds.models.has(id) &&
+          !sceneObjectIds.texts.has(id) &&
+          !sceneObjectIds.maps.has(id)
+        ) {
+          continue;
+        }
+        obj =
+          modelObjectRegistryRef.current.get(id) ??
+          sharedModelObjectRegistry.get(id);
       }
 
-      const obj = getSceneModelObject(modelId);
-      if (!obj) {
-        continue;
-      }
-
-      seenModelIds.add(modelId);
+      // 같은 Object3D 중복 방지(메시 폴백으로 부모가 두 번 들어오는 경우).
+      if (!obj || seen.has(obj)) continue;
+      seen.add(obj);
       objects.push(obj);
     }
     fitToObjects(objects);
-  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
+  }, [fitToObjects, sceneObjectIds]);
 
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;

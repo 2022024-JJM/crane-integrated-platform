@@ -45,7 +45,10 @@ export {
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export { SceneViewFlightRig } from './ui/scene-view-flight-rig';
-export { SceneSurfaceCamera } from './ui/scene-surface-camera';
+export {
+  MIN_SURFACE_DISTANCE,
+  SceneSurfaceCamera,
+} from './ui/scene-surface-camera';
 export {
   useSceneViewsStore,
   SCENE_VIEWS_MAX,
