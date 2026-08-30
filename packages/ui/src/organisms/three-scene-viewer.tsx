@@ -1,10 +1,10 @@
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
-  Map,
+  Binoculars,
+  House,
   Maximize2,
   Minimize2,
-  RotateCcw,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -27,7 +27,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../molecules/tooltip';
-import { cn } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 interface ThreeSceneViewerCameraPreset {
@@ -51,17 +50,15 @@ interface ThreeSceneViewerProps {
   children: ReactNode;
   overlay?: ReactNode;
   fullscreenOverlay?: ReactNode;
-  // 전체화면일 때 우측 상단(툴바 좌측 옆)에 떠있는 플로팅 슬롯. 도메인 무관.
+  // 전체화면일 때 우측 상단에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
   fullscreenTopCenterOverlay?: ReactNode;
-  // 전체화면일 때 3D 캔버스 하단 중앙에 떠있는 슬롯. 씬 뷰 북마크 바 등.
-  // 루트가 아닌 캔버스 영역에 앵커링 — 분할 레이아웃에서도 3D 뷰 중앙에 온다.
-  fullscreenBottomCenterOverlay?: ReactNode;
-  // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
+  // 좌측 하단 툴바의 맨 앞(왼쪽)에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
-  // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
-  toolbarClassName?: string;
+  // 좌측 하단 툴바의 맨 뒤(오른쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
+  // 툴바 버튼과 같은 스타일(SCENE_TOOLBAR_BUTTON_CLASS)로 맞추면 한 줄로 이어진다.
+  toolbarTrailing?: ReactNode;
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -359,6 +356,13 @@ function SceneControlsBridge({
   );
 }
 
+/**
+ * 좌측 하단 툴바 버튼의 공통 외형(글래스 outline). toolbarExtras·toolbarTrailing에
+ * 넣는 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
+ */
+export const SCENE_TOOLBAR_BUTTON_CLASS =
+  'bg-background/85 border-border/70 shadow-sm backdrop-blur-sm';
+
 interface ToolbarButtonProps {
   label: string;
   onClick: () => void;
@@ -373,7 +377,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
           <Button
             variant="outline"
             size="icon-sm"
-            className="bg-background/85 border-border/70 shadow-sm backdrop-blur-sm"
+            className={SCENE_TOOLBAR_BUTTON_CLASS}
             aria-label={label}
           />
         }
@@ -381,7 +385,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -395,9 +399,8 @@ export function ThreeSceneViewer({
   fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
-  fullscreenBottomCenterOverlay,
   toolbarExtras,
-  toolbarClassName,
+  toolbarTrailing,
   onControllerReady,
   onFullscreenChange,
 }: ThreeSceneViewerProps) {
@@ -512,12 +515,6 @@ export function ThreeSceneViewer({
               {overlay}
             </div>
           ) : null}
-
-          {isFullscreen && fullscreenBottomCenterOverlay ? (
-            <div className="pointer-events-auto absolute bottom-4 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2">
-              {fullscreenBottomCenterOverlay}
-            </div>
-          ) : null}
         </div>
 
         {/* CMMS 패널 (전체화면 시에만) */}
@@ -535,19 +532,17 @@ export function ThreeSceneViewer({
       ) : null}
 
       {isFullscreen && fullscreenTopRightOverlay ? (
-        <div className="pointer-events-auto absolute top-3 right-14 z-50">
+        <div className="pointer-events-auto absolute top-3 right-3 z-50">
           {fullscreenTopRightOverlay}
         </div>
       ) : null}
 
+      {/* 화면 조작 툴바 — 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
+          좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다.
+          북마크가 많아 폭이 넘치면 toolbarTrailing 쪽이 스크롤로 흡수한다. */}
       <TooltipProvider delay={150}>
-        <div
-          className={cn(
-            'pointer-events-none absolute top-3 right-3 z-1 flex flex-col items-end gap-2',
-            toolbarClassName,
-          )}
-        >
-          <div className="pointer-events-auto flex flex-col gap-2">
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-1 flex items-end">
+          <div className="pointer-events-auto flex max-w-full items-center gap-2">
             {toolbarExtras}
             <ToolbarButton
               label={t('common:viewer3d.zoomIn')}
@@ -571,7 +566,7 @@ export function ThreeSceneViewer({
                 controllerRef.current?.reset();
               }}
             >
-              <RotateCcw />
+              <House />
             </ToolbarButton>
             <ToolbarButton
               label={t('common:viewer3d.topView')}
@@ -579,7 +574,7 @@ export function ThreeSceneViewer({
                 controllerRef.current?.moveToTopView();
               }}
             >
-              <Map />
+              <Binoculars />
             </ToolbarButton>
             <ToolbarButton
               label={
@@ -593,6 +588,7 @@ export function ThreeSceneViewer({
             >
               {isFullscreen ? <Minimize2 /> : <Maximize2 />}
             </ToolbarButton>
+            {toolbarTrailing}
           </div>
         </div>
       </TooltipProvider>

@@ -32,8 +32,10 @@
     "saveCurrent": "Save current view",
     "namePlaceholder": "View name",
     "save": "Save",
+    "cancel": "Cancel",
     "flyTo": "Go to {{name}}",
-    "deleteView": "Delete {{name}}",
+    "delete": "Delete",
+    "deleteHint": "Right-click to delete",
     "duplicateName": "This name is already in use",
     "limitReached": "You can save up to {{max}} views"
   },

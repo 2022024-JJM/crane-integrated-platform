@@ -199,7 +199,6 @@ export function Replay3dView({
             {replayControlsOverlay}
           </>
         }
-        toolbarClassName="top-28"
         onControllerReady={handleControllerReady}
       >
         <SceneLighting />

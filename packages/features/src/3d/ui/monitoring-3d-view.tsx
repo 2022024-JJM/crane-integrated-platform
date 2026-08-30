@@ -29,7 +29,6 @@ import {
 } from './scene-render-preset';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
-import { SceneViewFlightRig } from './scene-view-flight-rig';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
@@ -191,15 +190,18 @@ export function Monitoring3dView({
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
-        fullscreenBottomCenterOverlay={
-          <SceneViewBookmarks regionId={regionId} getPose={handleGetPose} />
-        }
         toolbarExtras={toolbarExtras}
+        toolbarTrailing={
+          <SceneViewBookmarks
+            regionId={regionId}
+            getPose={handleGetPose}
+            onMoveTo={handleMoveTo}
+          />
+        }
         onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
         <SceneLighting />
-        <SceneViewFlightRig />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}

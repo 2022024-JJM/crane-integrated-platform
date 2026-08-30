@@ -8,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
+import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/organisms/three-scene-viewer';
 
 interface AlarmFullscreenToggleButtonProps {
   active: boolean;
@@ -40,10 +41,10 @@ export function AlarmFullscreenToggleButton({
             variant="outline"
             size="icon-sm"
             className={cn(
-              'relative border-border/70 shadow-sm backdrop-blur-sm',
-              active
-                ? 'bg-orange-500/20 text-orange-600 dark:text-orange-300'
-                : 'bg-background/85',
+              SCENE_TOOLBAR_BUTTON_CLASS,
+              'relative',
+              active &&
+                'bg-orange-500/20 text-orange-600 dark:text-orange-300',
             )}
             aria-label={label}
             aria-pressed={active}
@@ -61,7 +62,7 @@ export function AlarmFullscreenToggleButton({
           </span>
         ) : null}
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
 }

@@ -44,7 +44,6 @@ export {
 } from './ui/scene-render-preset';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
-export { SceneViewFlightRig } from './ui/scene-view-flight-rig';
 export {
   MIN_SURFACE_DISTANCE,
   SceneSurfaceCamera,
