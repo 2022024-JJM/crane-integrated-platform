@@ -1,5 +1,6 @@
 import { Popover as PopoverPrimitive } from '@base-ui/react';
 import { cn } from '@crane/core/lib/utils';
+import { usePortalContainer } from './portal-container';
 
 function Popover(props: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root {...props} />;
@@ -22,8 +23,10 @@ function PopoverPopup({
   sideOffset = 8,
   ...props
 }: PopoverPopupProps) {
+  const container = usePortalContainer();
+
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         align={align}
         side={side}

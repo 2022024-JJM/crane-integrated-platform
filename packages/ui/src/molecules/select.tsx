@@ -2,6 +2,7 @@ import { Select as SelectPrimitive } from '@base-ui/react';
 import { Check, ChevronDown } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
+import { usePortalContainer } from './portal-container';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Select(props: SelectPrimitive.Root.Props<any>) {
@@ -36,10 +37,14 @@ function SelectPopup({
   align = 'start',
   ...props
 }: SelectPopupProps) {
+  // 전체화면 루트가 컨테이너를 제공하면 그 안으로, 아니면 기존대로 body.
+  const portalContainer = usePortalContainer();
+
   return (
     <SelectPrimitive.Portal
       container={
-        typeof document !== 'undefined' ? document.body : undefined
+        portalContainer ??
+        (typeof document !== 'undefined' ? document.body : undefined)
       }
     >
       <SelectPrimitive.Positioner

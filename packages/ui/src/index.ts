@@ -18,6 +18,7 @@ export * from './molecules/table';
 export * from './molecules/tooltip';
 export * from './molecules/select';
 export * from './molecules/popover';
+export * from './molecules/portal-container';
 export * from './molecules/context-menu';
 export * from './molecules/scroll-area';
 export * from './molecules/resizable';
