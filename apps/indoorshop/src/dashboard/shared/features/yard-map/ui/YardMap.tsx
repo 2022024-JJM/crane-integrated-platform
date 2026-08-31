@@ -26,6 +26,15 @@ import {
   unmappedFactoryLots,
   type BayRoof,
 } from '../lib/bayGable'
+import {
+  FLAT_ROOF_LIGHT,
+  SHADOW_FILL,
+  WALL_FOOT_DARKEN,
+  isCounterClockwise,
+  shadowOffset,
+  slopeLightOf,
+  wallLightOf,
+} from '../lib/lighting'
 import { convexHull, minAreaRect, polygonArea, ringSitsOn } from '../lib/footprint'
 import { bayColor, moveColor, paletteOf } from '../lib/yardColors'
 import type { YardShop, YardShopBay } from '../model/shop'
@@ -419,12 +428,24 @@ const BUILDING_LOD_MOVING_PX = 34
  */
 const FACTORY_BRIDGE_M = 6
 
-function shadeColor(hex: string, factor: number): string {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex)
-  if (!m) return hex
-  const n = parseInt(m[1], 16)
+function shadeColor(color: string, factor: number): string {
   const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * factor)))
-  return `rgb(${ch(n >> 16)}, ${ch((n >> 8) & 0xff)}, ${ch(n & 0xff)})`
+  const hex = /^#([0-9a-f]{6})$/i.exec(color)
+  if (hex) {
+    const n = parseInt(hex[1], 16)
+    return `rgb(${ch(n >> 16)}, ${ch((n >> 8) & 0xff)}, ${ch(n & 0xff)})`
+  }
+  /* `rgb()`/`rgba()` 도 받는다 — 팔레트 색(정반·테두리)이 그 꼴이라, 여기서 걸러내면
+     그 도형만 음영 없이 납작하게 선다 */
+  const rgb = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+)\s*)?\)$/i.exec(
+    color
+  )
+  if (!rgb) return color
+  const [r, g, b] = [rgb[1], rgb[2], rgb[3]].map(Number)
+  const a = rgb[4]
+  return a === undefined
+    ? `rgb(${ch(r)}, ${ch(g)}, ${ch(b)})`
+    : `rgba(${ch(r)}, ${ch(g)}, ${ch(b)}, ${a})`
 }
 
 
@@ -1263,53 +1284,138 @@ export function YardMap({
       }
     }
 
-    /**
-     * 밑면과 윗면 사이를 옆면으로 잇고 윗면을 덮는다 — 캔버스로 세우는 유일한 방법.
-     *
-     * 옆면을 **전부** 그린다. 뒷면은 나중에 그리는 윗면이 덮으므로(건물이 제 높이보다
-     * 깊으면 언제나 그렇다) 뒷면을 골라내는 계산을 하지 않는 편이 싸고 안전하다.
-     *
-     * 다만 옆면을 **한 경로에 모아** 한 번만 칠한다. 면마다 fill/stroke 를 부르면 건물
-     * 한 채에 캔버스 호출이 7~8쌍씩 들고, 대문처럼 800채가 함께 서는 화면에서는 그것이
-     * 곧 프레임을 잡아먹는다(측정: 3D 대문 한 프레임 21ms 중 건물 세우기가 11ms).
-     *
-     * 담을 때 면의 **화면 감김을 한쪽으로 맞추는** 것은 nonzero 채움 규칙 때문이다 —
-     * 한 경로 안에서 뒷면이 앞면과 겹치는데 감김이 서로 반대면 겹친 자리가 상쇄돼
-     * 구멍으로 뚫린다. 면마다 따로 칠할 때는 없던 문제라 여기서만 맞춰 준다.
+    /*
+     * 카메라가 도는 동안에는 그러데이션을 걷는다 — 그러데이션 채움은 단색보다 훨씬 비싸서
+     * (측정: 대문 화면 끌기 한 프레임 17ms → 28ms), 움직이는 화면에서는 그 값을 치를
+     * 이유가 없다. 손을 놓는 순간의 마무리 그리기에서 제 모습으로 돌아온다
+     * (`markMoving` — 시가지 건물 LOD 가 쓰는 것과 같은 규칙이다).
      */
-    const drawPrism = (
+    const softShading = !movingRef.current
+
+    /**
+     * 벽 한 벌에 씌우는 세로 그러데이션 — 발치는 어둡고 처마는 밝다 (`WALL_FOOT_DARKEN`).
+     *
+     * 좌표는 화면 세로축만 쓴다. 고도는 화면에서 거의 위로만 올라가므로(원근 때문에 x 도
+     * 조금 밀리지만 벽 한 채 안에서는 몇 px 이다) 세로 한 축이면 충분하고, 축을 하나로
+     * 두면 같은 건물의 벽들이 **같은 자리에서 같은 밝기**가 되어 이음매가 보이지 않는다.
+     */
+    const wallPaint = (color: string, light: number, footY: number, headY: number) => {
+      if (!softShading || Math.abs(footY - headY) < 0.5) return shadeColor(color, light)
+      const g = ctx.createLinearGradient(0, footY, 0, headY)
+      g.addColorStop(0, shadeColor(color, light * WALL_FOOT_DARKEN))
+      g.addColorStop(1, shadeColor(color, light))
+      return g
+    }
+
+    /** 화면 점들의 세로 평균 — 그러데이션 축의 양 끝을 잡는 데만 쓴다 */
+    const meanY = (points: readonly ScreenPoint[]) => {
+      let sum = 0
+      for (const p of points) sum += p.sy
+      return sum / (points.length || 1)
+    }
+
+    /**
+     * 옆면 하나를 경로에 담는다 — 화면 감김을 한쪽으로 맞춰서.
+     *
+     * nonzero 채움 규칙 때문이다: 한 경로 안에서 뒷면이 앞면과 겹치는데 감김이 서로
+     * 반대면 겹친 자리가 상쇄돼 구멍으로 뚫린다.
+     */
+    const addWallFace = (
+      path: Path2D,
+      a: ScreenPoint,
+      b: ScreenPoint,
+      c: ScreenPoint,
+      d: ScreenPoint
+    ) => {
+      path.moveTo(a.sx, a.sy)
+      if ((b.sx - a.sx) * (c.sy - b.sy) - (b.sy - a.sy) * (c.sx - b.sx) >= 0) {
+        path.lineTo(b.sx, b.sy)
+        path.lineTo(c.sx, c.sy)
+        path.lineTo(d.sx, d.sy)
+      } else {
+        path.lineTo(d.sx, d.sy)
+        path.lineTo(c.sx, c.sy)
+        path.lineTo(b.sx, b.sy)
+      }
+      path.closePath()
+    }
+
+    /**
+     * 옆면을 **해가 비치는 방향으로 갈라** 담는다 — 벽마다 밝기가 다르면 모서리가 각으로
+     * 보이고, 그때 비로소 상자가 상자로 읽힌다 (`lighting.ts`).
+     *
+     * 면마다 fill 을 부르면 건물 한 채에 캔버스 호출이 8쌍씩 드는데, 밝기를 몇 단으로
+     * 양자화해 **같은 단끼리 한 경로에 모으면** 직사각형 건물은 두세 번이면 끝난다.
+     */
+    const LIGHT_STEP = 0.06
+    const litWallPaths = (
+      world: readonly LatLon[],
       base: readonly ScreenPoint[],
       top: readonly ScreenPoint[],
-      style: { wall: string; wallEdge: string; roof: string; roofEdge: string }
+      skip?: (i: number, j: number) => boolean
     ) => {
-      ctx.beginPath()
+      const ccw = isCounterClockwise(world)
+      const bins = new Map<number, { light: number; path: Path2D }>()
       for (let i = 0; i < base.length; i++) {
         const j = (i + 1) % base.length
-        const a = base[i]
-        const b = base[j]
-        const c = top[j]
-        const d = top[i]
-        ctx.moveTo(a.sx, a.sy)
-        if ((b.sx - a.sx) * (c.sy - b.sy) - (b.sy - a.sy) * (c.sx - b.sx) >= 0) {
-          ctx.lineTo(b.sx, b.sy)
-          ctx.lineTo(c.sx, c.sy)
-          ctx.lineTo(d.sx, d.sy)
-        } else {
-          ctx.lineTo(d.sx, d.sy)
-          ctx.lineTo(c.sx, c.sy)
-          ctx.lineTo(b.sx, b.sy)
+        if (skip?.(i, j)) continue
+        const light = wallLightOf(world[i], world[j], ccw)
+        const key = Math.round(light / LIGHT_STEP)
+        let bin = bins.get(key)
+        if (!bin) {
+          bin = { light: key * LIGHT_STEP, path: new Path2D() }
+          bins.set(key, bin)
         }
-        ctx.closePath()
+        addWallFace(bin.path, base[i], base[j], top[j], top[i])
       }
-      ctx.fillStyle = style.wall
-      ctx.fill()
-      ctx.strokeStyle = style.wallEdge
-      ctx.lineWidth = 0.6
-      ctx.stroke()
+      return [...bins.values()]
+    }
+
+    const drawPrism = (
+      world: readonly LatLon[],
+      base: readonly ScreenPoint[],
+      top: readonly ScreenPoint[],
+      style: { wall: string; wallEdge: string; roof: string; roofEdge: string },
+      /** 면마다 해를 따로 재는가 — 켜면 벽이 갈리고, 끄면 한 색에 그러데이션만 얹는다 */
+      lit = false
+    ) => {
+      if (lit) {
+        const footY = meanY(base)
+        const headY = meanY(top)
+        ctx.lineWidth = 0.6
+        ctx.strokeStyle = style.wallEdge
+        for (const bin of litWallPaths(world, base, top)) {
+          ctx.fillStyle = wallPaint(style.wall, bin.light, footY, headY)
+          ctx.fill(bin.path)
+          ctx.stroke(bin.path)
+        }
+      } else {
+        /*
+         * 옆면을 **전부** 그린다. 뒷면은 나중에 그리는 윗면이 덮으므로(건물이 제 높이보다
+         * 깊으면 언제나 그렇다) 뒷면을 골라내는 계산을 하지 않는 편이 싸고 안전하다.
+         *
+         * 다만 옆면을 **한 경로에 모아** 한 번만 칠한다. 면마다 fill/stroke 를 부르면 건물
+         * 한 채에 캔버스 호출이 7~8쌍씩 들고, 대문처럼 800채가 함께 서는 화면에서는 그것이
+         * 곧 프레임을 잡아먹는다(측정: 3D 대문 한 프레임 21ms 중 건물 세우기가 11ms).
+         * 그 화면에서는 면을 가르는 대신 그러데이션 한 겹으로만 부피를 말한다 — 호출 수는
+         * 그대로이고, 벽이 발치에서 어두워지는 것만으로 건물이 지면에 닿아 보인다.
+         */
+        const path = new Path2D()
+        for (let i = 0; i < base.length; i++) {
+          const j = (i + 1) % base.length
+          addWallFace(path, base[i], base[j], top[j], top[i])
+        }
+        ctx.fillStyle = style.wall
+        ctx.fill(path)
+        ctx.strokeStyle = style.wallEdge
+        ctx.lineWidth = 0.6
+        ctx.stroke(path)
+      }
 
       traceScreen(top)
       ctx.closePath()
-      ctx.fillStyle = style.roof
+      /* 평지붕은 하늘을 정면으로 본다 — 벽 중 가장 밝은 면보다도 밝아야 위아래가 갈린다 */
+      ctx.fillStyle = lit ? shadeColor(style.roof, FLAT_ROOF_LIGHT) : style.roof
       ctx.fill()
       ctx.strokeStyle = style.roofEdge
       ctx.lineWidth = 0.8
@@ -2280,10 +2386,18 @@ export function YardMap({
         }
         visible.sort((a, b) => b.depth - a.depth)
 
+        /*
+         * 시가지 건물은 **다가섰을 때만** 면마다 해를 잰다. 대문 카메라에서는 한 화면에
+         * 수백 채가 서므로 벽을 가르면 그만큼 캔버스 호출이 늘고(위 `drawPrism` 주석의
+         * 11ms), 그 크기에서는 어차피 면이 몇 px 이라 갈라도 보이지 않는다. 배율이 오르면
+         * 세우는 채수가 뷰포트 컬링으로 줄고, 그때부터 벽 하나하나가 형태를 말한다.
+         */
+        const litBuildings = view.scale >= BAY_GABLE_SCALE.massed && !movingRef.current
         for (const { ring } of visible) {
+          const world = ring.map(([lon, lat]) => ({ lat, lon }))
           const base = ring.map(([lon, lat]) => at(lat, lon))
           const top = ring.map(([lon, lat]) => at(lat, lon, RELIEF_METERS.building))
-          drawPrism(base, top, style)
+          drawPrism(world, base, top, style, litBuildings)
         }
       }
     }
@@ -2299,6 +2413,52 @@ export function YardMap({
      */
     if (tilted && parcelPrisms.length > 0) {
       /*
+       * ── 그림자 ── 세운 것이 지면에 눕는 자리.
+       *
+       * 면마다 밝기를 갈라도 건물은 여전히 **지도 위에 떠 보인다** — 물체를 지면에 못
+       * 박는 것은 그림자 하나뿐이라서다. 발자국을 해 반대쪽으로 `높이 ÷ tan(고도)` 만큼
+       * 민 것이 그 자리이며(`shadowOffset`), 발자국 자신과 함께 한 경로에 담아 **한 번만**
+       * 칠한다: 베이마다 따로 칠하면 겹친 자리가 두 배로 어두워져 공장 안에 없는 격자가
+       * 생기고, 한 경로에 감김을 맞춰 담으면 nonzero 규칙이 그것을 합집합으로 메운다.
+       */
+      const shadowShift = shadowOffset(RELIEF_METERS.parcel)
+      const shadowPath = new Path2D()
+      let shadowAlpha = 0
+      const addShadow = (polygon: readonly LatLon[], alpha: number) => {
+        if (polygon.length < 3 || !intersects(boundsOf(polygon), window_)) return
+        const ordered = isCounterClockwise(polygon) ? polygon : [...polygon].reverse()
+        /* 발자국과 밀어 놓은 복사본 둘 — 겹치므로 합치면 실루엣 하나가 된다 */
+        for (const shift of [0, 1]) {
+          for (let i = 0; i < ordered.length; i++) {
+            const p = ordered[i]
+            const s = at(p.lat + shift * shadowShift.dLat, p.lon + shift * shadowShift.dLon)
+            if (i === 0) shadowPath.moveTo(s.sx, s.sy)
+            else shadowPath.lineTo(s.sx, s.sy)
+          }
+          shadowPath.closePath()
+        }
+        if (alpha > shadowAlpha) shadowAlpha = alpha
+      }
+      for (const prism of parcelPrisms) {
+        addShadow(prism.span ? prism.span.roof.outline : prism.polygon, prism.alpha)
+      }
+      for (const podium of parcelPodiums) {
+        for (const ring of podium.rings) {
+          addShadow(
+            ring.map(([lon, lat]) => ({ lat, lon })),
+            podium.alpha
+          )
+        }
+      }
+      if (shadowAlpha > 0.02) {
+        /* 스포트라이트가 켜지는 만큼 그림자도 함께 짙어진다 — 건물만 먼저 서면 떠 보인다 */
+        ctx.globalAlpha = Math.min(1, shadowAlpha * 1.4)
+        ctx.fillStyle = SHADOW_FILL[theme]
+        ctx.fill(shadowPath)
+        ctx.globalAlpha = 1
+      }
+
+      /*
        * ── 공장 기단 ── 회색 건물 층에서 뺀 OSM 발자국을 공정색으로 낮게 세운다.
        * 스팬보다 먼저·낮게 서서, 베이 사이 틈이 허공이 아니라 **공장 바닥**으로 읽힌다.
        */
@@ -2306,16 +2466,23 @@ export function YardMap({
       for (const podium of parcelPodiums) {
         for (const ring of podium.rings) {
           if (ring.length < 3) continue
+          const world = ring.map(([lon, lat]) => ({ lat, lon }))
           const base = ring.map(([lon, lat]) => at(lat, lon))
           const top = ring.map(([lon, lat]) => at(lat, lon, podiumHeight))
           ctx.globalAlpha = podium.alpha
           /* 스팬(0.6~1.05)보다 확실히 눌러 둔다 — 베이 사이 틈이 그늘로 읽혀야 갈라 보인다 */
-          drawPrism(base, top, {
-            wall: shadeColor(podium.color, 0.2),
-            wallEdge: shadeColor(podium.color, 0.16),
-            roof: shadeColor(podium.color, 0.3),
-            roofEdge: shadeColor(podium.color, 0.52),
-          })
+          drawPrism(
+            world,
+            base,
+            top,
+            {
+              wall: shadeColor(podium.color, 0.2),
+              wallEdge: shadeColor(podium.color, 0.16),
+              roof: shadeColor(podium.color, 0.3),
+              roofEdge: shadeColor(podium.color, 0.52),
+            },
+            true
+          )
           ctx.globalAlpha = 1
         }
       }
@@ -2429,9 +2596,8 @@ export function YardMap({
         const top = prism.polygon.map((p) => at(p.lat, p.lon, height))
         /* 호버는 도색이 한 단 밝아진다 — 누를 수 있음을 색으로 말한다 */
         const lift = prism.hovered || prism.spanState?.hovered ? 1.18 : 1
-        const roofColor = shadeColor(prism.color, 0.88 * lift)
+        const roofColor = shadeColor(prism.color, 0.88 * lift * FLAT_ROOF_LIGHT)
         const roofEdge = shadeColor(prism.color, 1.22 * lift)
-        const wallColor = shadeColor(prism.color, 0.52 * lift)
         const wallEdge = shadeColor(prism.color, 0.38)
 
         /*
@@ -2483,44 +2649,33 @@ export function YardMap({
           }
 
           /* 눌린 베이는 도색이 가라앉는다 — 색만으로 "이것을 골랐다"가 되게 */
-          const face = (k: number) =>
-            shadeColor(prism.color, (pressed ? k * 0.62 : k) * lift * tint)
+          const faceK = (k: number) => (pressed ? k * 0.62 : k) * lift * tint
+          const face = (k: number) => shadeColor(prism.color, faceK(k))
 
           ctx.globalAlpha = prism.alpha
-          /* 벽 — 옆면 전부. 뒷벽은 뒤이어 그리는 지붕·앞벽이 덮는다.
-             OSM 건물(`drawPrism`)과 같은 이유로 **한 경로에 모아** 한 번만 칠하고,
-             같은 이유로 면의 화면 감김을 한쪽으로 맞춘다(겹친 자리가 뚫리지 않게) */
-          ctx.beginPath()
-          for (let i = 0; i < ground.length; i++) {
-            const j = (i + 1) % ground.length
-            /*
-             * 덩어리로 설 때 **안쪽 벽은 세우지 않는다** — 맞닿은 두 베이 사이에는 실제로
-             * 벽이 없다(한 채의 속이다). 반투명한 지붕 아래로 그 벽이 비쳐 표면에 줄로
-             * 남던 것이 이 조각들이다. 박공이 서면 골이 생겨 실제로 벽이 보이므로 그때는
-             * 그대로 세운다.
-             */
-            if (massedRoof && isSeam(roof.outline[i], roof.outline[j])) continue
-            const a = ground[i]
-            const b = ground[j]
-            const c = wallTop[j]
-            const d = wallTop[i]
-            ctx.moveTo(a.sx, a.sy)
-            if ((b.sx - a.sx) * (c.sy - b.sy) - (b.sy - a.sy) * (c.sx - b.sx) >= 0) {
-              ctx.lineTo(b.sx, b.sy)
-              ctx.lineTo(c.sx, c.sy)
-              ctx.lineTo(d.sx, d.sy)
-            } else {
-              ctx.lineTo(d.sx, d.sy)
-              ctx.lineTo(c.sx, c.sy)
-              ctx.lineTo(b.sx, b.sy)
-            }
-            ctx.closePath()
-          }
-          ctx.fillStyle = face(0.5)
-          ctx.fill()
+          /*
+           * 벽 — 옆면 전부. 뒷벽은 뒤이어 그리는 지붕·앞벽이 덮는다.
+           *
+           * 면마다 해를 따로 재고(`lighting.ts`), 같은 밝기끼리 한 경로에 모아 칠한다.
+           * 이 한 가지가 스팬을 "누운 판"에서 "선 건물"로 바꾼다 — 네 벽이 같은 색이면
+           * 모서리가 색으로 드러나지 않아, 아무리 높이 세워도 접힌 종이로 보인다.
+           *
+           * 덩어리로 설 때 **안쪽 벽은 세우지 않는다** — 맞닿은 두 베이 사이에는 실제로
+           * 벽이 없다(한 채의 속이다). 반투명한 지붕 아래로 그 벽이 비쳐 표면에 줄로
+           * 남던 것이 그 조각들이다. 박공이 서면 골이 생겨 실제로 벽이 보이므로 그때는
+           * 그대로 세운다.
+           */
+          const footY = meanY(ground)
+          const headY = meanY(wallTop)
           ctx.strokeStyle = shadeColor(prism.color, 0.34)
           ctx.lineWidth = 0.6
-          ctx.stroke()
+          for (const bin of litWallPaths(roof.outline, ground, wallTop, (i, j) =>
+            massedRoof ? isSeam(roof.outline[i], roof.outline[j]) : false
+          )) {
+            ctx.fillStyle = wallPaint(prism.color, faceK(0.5 * bin.light), footY, headY)
+            ctx.fill(bin.path)
+            ctx.stroke(bin.path)
+          }
 
           /*
            * 지붕 — 용마루로 갈린 두 면을 지번 구획으로 잘게 나눠 그린다. 구획은 같은
@@ -2549,8 +2704,55 @@ export function YardMap({
               : own.reduce((sum, item) => sum + item.midY, 0) / own.length
           })
           const nearSide = sideMeanY[1] > sideMeanY[0] ? 1 : 0
-          /* 지붕은 벽보다 조금 진하되 **여전히 비친다** — 지면이 비쳐야 채도가 눌린다 */
-          const roofAlpha = Math.min(1, prism.alpha + 0.06)
+          /*
+           * 두 지붕면의 밝기 — **해가 정한다**(그리는 순서만 카메라가 정한다).
+           *
+           * 예전에는 카메라를 향한 면을 어둡게 칠했는데, 그러면 지도를 돌려도 늘 앞면이
+           * 그늘이라 빛이 관찰자를 따라다닌다 — 도는 것이 건물처럼 보이는 이유였다. 면의
+           * 기울기(`slopeTan`)는 지금 실제로 세워진 높이에서 그대로 나오므로, 덩어리로
+           * 누워 있을 때(riseH=0)는 두 면이 저절로 같은 평지붕 밝기가 된다.
+           */
+          const cross = { x: -roof.axis.y, y: roof.axis.x }
+          const slopeTan = roof.width > 0 ? riseH / (roof.width / 2) : 0
+          const slopeLight = [
+            slopeLightOf({ x: -cross.x, y: -cross.y }, slopeTan),
+            slopeLightOf(cross, slopeTan),
+          ]
+          /**
+           * 지붕면 하나에 걸치는 결 — **처마가 어둡고 용마루가 밝다**.
+           *
+           * 벽의 발치를 눌러 둔 것과 같은 이유다: 한 면이 한 색이면 넓은 지붕은 색종이가
+           * 되고, 면 안에서 밝기가 흐르면 그 면이 **기울어 있다**는 것이 보인다. 처마 쪽이
+           * 어두운 것은 실제로도 그렇다 — 골에 가까울수록 하늘이 덜 보인다.
+           *
+           * 축은 용마루 가운데에서 처마 가운데로 긋는다(둘 다 지붕면 위의 점이라, 카메라가
+           * 어디에 있든 화면에서 그 면을 가로지른다).
+           */
+          const ridgeMid = {
+            lat: (roof.ridge[0].lat + roof.ridge[1].lat) / 2,
+            lon: (roof.ridge[0].lon + roof.ridge[1].lon) / 2,
+          }
+          const halfWidthDeg = roof.width / 2 / 111_320
+          const slopePaint = ([0, 1] as const).map((side) => {
+            if (!softShading) return face(0.88 * slopeLight[side])
+            const away = side === 1 ? 1 : -1
+            const eave = at(
+              ridgeMid.lat + away * cross.y * halfWidthDeg,
+              ridgeMid.lon + (away * cross.x * halfWidthDeg) / LON_SQUEEZE,
+              eaveH
+            )
+            const crest = at(ridgeMid.lat, ridgeMid.lon, eaveH + riseH)
+            const base = 0.88 * slopeLight[side]
+            if (Math.hypot(crest.sx - eave.sx, crest.sy - eave.sy) < 1) return face(base)
+            const g = ctx.createLinearGradient(eave.sx, eave.sy, crest.sx, crest.sy)
+            g.addColorStop(0, face(base * 0.84))
+            g.addColorStop(1, face(base * 1.08))
+            return g
+          })
+          /* 지붕은 벽보다 조금 진하되 **여전히 비친다** — 지면이 비쳐야 채도가 눌린다.
+             다만 다가가 박공이 설수록 불투명해진다: 그 거리에서 지면이 지붕을 뚫고 비치면
+             부피가 도로 사라져, 애써 세운 면들이 색유리처럼 읽힌다 */
+          const roofAlpha = Math.min(1, prism.alpha + 0.06 + 0.24 * gable)
           ctx.globalAlpha = roofAlpha
           const isNear = (item: (typeof patches)[number]) => item.patch.side === nearSide
           /*
@@ -2576,10 +2778,9 @@ export function YardMap({
               ctx.shadowColor = prism.color
               ctx.shadowBlur = 8
             }
-            /* 밝기는 지붕면(앞/뒤)만 가른다 — 베이 색조는 `face` 안에서 이미 실린다.
-               덩어리 지붕은 평평해서 앞뒤가 없다: 앞뒤 밝기 차도 박공과 함께 자란다 */
-            const slope = isNear(item) ? 0.62 : 1.02
-            ctx.fillStyle = face(0.88 + (slope - 0.88) * gable)
+            /* 밝기는 그 면이 해를 얼마나 보는가로 정한다 — 베이 색조는 `face` 안에서
+               이미 실린다. 덩어리 지붕은 평평해서 두 면이 같은 값을 받는다 */
+            ctx.fillStyle = slopePaint[item.patch.side]
             ctx.fill()
             ctx.shadowBlur = 0
             /*
@@ -2623,11 +2824,16 @@ export function YardMap({
            * 멀리서 세는 단위는 공장이다 — 그 거리에서 베이 선을 다 그으면 지붕이 격자로
            * 덮여, 한 채를 두르는 테두리가 그 안에 묻힌다. 다가가 베이 한 칸이 읽히는
            * 배율이 되어야 칸 선이 뜻을 갖는다(공장 테두리는 정확히 그 반대로 옅어진다).
+           *
+           * 선은 **어둡다** — 이 선이 놓이는 자리는 이웃 베이와 맞물린 처마, 곧 지붕의
+           * 골(谷)이다. 골은 두 지붕이 만나 하늘이 가장 안 보이는 자리라 밝을 수가 없고,
+           * 밝게 그으면 용마루(밝은 능선)와 같은 선이 되어 골과 마루가 구별되지 않는다 —
+           * 톱니가 사라지고 지붕이 줄무늬 판으로 읽히던 것이 그 때문이다.
            */
           if (gable > 0) {
             ctx.globalAlpha = Math.min(1, prism.alpha + 0.18) * gable
-            ctx.strokeStyle = shadeColor(prism.color, 0.95 * lift)
-            ctx.lineWidth = 1
+            ctx.strokeStyle = shadeColor(prism.color, 0.46 * lift)
+            ctx.lineWidth = 1.1
             traceScreen(wallTop)
             ctx.closePath()
             ctx.stroke()
@@ -2745,20 +2951,18 @@ export function YardMap({
 
         ctx.globalAlpha = prism.alpha
 
-        /* 옆면 — 전부 그린다. 뒷면은 지붕이 덮는다 (drawPrism 과 같은 이유) */
-        ctx.fillStyle = wallColor
+        /* 옆면 — 전부 그린다. 뒷면은 지붕이 덮는다 (drawPrism 과 같은 이유).
+           스팬과 마찬가지로 면마다 해를 재고 발치를 눌러, 벽이 부피를 말하게 한다 */
         ctx.strokeStyle = wallEdge
         ctx.lineWidth = 0.6
-        for (let i = 0; i < base.length; i++) {
-          const j = (i + 1) % base.length
-          ctx.beginPath()
-          ctx.moveTo(base[i].sx, base[i].sy)
-          ctx.lineTo(base[j].sx, base[j].sy)
-          ctx.lineTo(top[j].sx, top[j].sy)
-          ctx.lineTo(top[i].sx, top[i].sy)
-          ctx.closePath()
-          ctx.fill()
-          ctx.stroke()
+        {
+          const footY = meanY(base)
+          const headY = meanY(top)
+          for (const bin of litWallPaths(prism.polygon, base, top)) {
+            ctx.fillStyle = wallPaint(prism.color, 0.52 * lift * bin.light, footY, headY)
+            ctx.fill(bin.path)
+            ctx.stroke(bin.path)
+          }
         }
 
         /* 지붕 — 공정색 면 + 밝은 모서리(빛을 받는 윗날) */
@@ -2878,7 +3082,8 @@ export function YardMap({
            */
           if (massedRoof) {
             ctx.globalAlpha = Math.min(1, fence.alpha + 0.06)
-            ctx.fillStyle = shadeColor(fence.color, 0.88)
+            /* 평지붕 한 장 — 하늘을 정면으로 보므로 스팬 지붕과 같은 상수를 쓴다 */
+            ctx.fillStyle = shadeColor(fence.color, 0.88 * FLAT_ROOF_LIGHT)
             if (fence.glow > 0) {
               ctx.shadowColor = fence.color
               ctx.shadowBlur = fence.glow
@@ -3061,12 +3266,18 @@ export function YardMap({
               const base = lot.quad.map((p) => at(p.lat, p.lon))
               const top = lot.quad.map((p) => at(p.lat, p.lon, RELIEF_METERS.bay))
               ctx.globalAlpha = active ? 1 : BAY_WALL_ALPHA
-              drawPrism(base, top, {
-                wall: color,
-                wallEdge: palette.bayOutline,
-                roof: color,
-                roofEdge: palette.bayOutline,
-              })
+              drawPrism(
+                lot.quad,
+                base,
+                top,
+                {
+                  wall: color,
+                  wallEdge: palette.bayOutline,
+                  roof: color,
+                  roofEdge: palette.bayOutline,
+                },
+                true
+              )
               /* 윗면만 한 겹 눌러 옆면과 갈라 놓는다 — 단색 덩어리는 부피로 안 읽힌다 */
               ctx.globalAlpha = active ? 0.32 : BAY_ROOF_ALPHA
               traceScreen(top)

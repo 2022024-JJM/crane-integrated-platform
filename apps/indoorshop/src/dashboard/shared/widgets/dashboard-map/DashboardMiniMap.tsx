@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import { useTranslation } from '../../lib/i18n/useTranslation'
 import {
   visibleBounds,
@@ -7,6 +7,7 @@ import {
   type YardView,
 } from '../../features/yard-map'
 import { colorOfProcess, type YardParcels } from '../../entities/yard-parcels'
+import { cn } from '../../lib/utils'
 
 export interface DashboardMiniMapHandle {
   updateView: (view: YardView, viewport: Viewport) => void
@@ -16,6 +17,22 @@ interface DashboardMiniMapProps {
   extent: LatLonBounds
   parcels: YardParcels
   onNavigate: (point: { lat: number; lon: number }) => void
+  /**
+   * 지금 카메라 — **처음 한 번** 그릴 밑천이다.
+   *
+   * 이 지도는 카메라가 움직일 때만 다시 그린다(그래야 부모가 매 프레임 렌더링되지
+   * 않는다). 그래서 카메라가 멈춰 있는 동안 붙거나 다시 보이게 되면 그릴 것이 없어
+   * 검은 판이 된다 — 화면이 낮아 잠시 접어 두었다 펴는 경우가 그렇다.
+   */
+  initialCamera?: { view: YardView; viewport: Viewport } | null
+  /**
+   * 자리가 빠듯할 때(상세 카드가 열린 낮은 해상도) 쓰는 작은 몸집.
+   *
+   * 접어 버리지 않는 것은, 전체 야드에서 지금 어디를 보고 있는지가 낮은 해상도일수록
+   * 더 필요하기 때문이다 — 화면이 좁을수록 지도에 보이는 범위가 작다. 대신 몸집을
+   * 줄여 상세 카드에 높이를 내준다.
+   */
+  compact?: boolean
 }
 
 /**
@@ -23,7 +40,10 @@ interface DashboardMiniMapProps {
  * 다시 렌더링하지 않도록 카메라 위치는 imperative handle 로 받아 작은 캔버스만 갱신한다.
  */
 export const DashboardMiniMap = forwardRef<DashboardMiniMapHandle, DashboardMiniMapProps>(
-  function DashboardMiniMap({ extent, parcels, onNavigate }, ref) {
+  function DashboardMiniMap(
+    { extent, parcels, onNavigate, initialCamera = null, compact = false },
+    ref
+  ) {
     const { t } = useTranslation()
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const latestViewRef = useRef<{ view: YardView; viewport: Viewport } | null>(null)
@@ -87,6 +107,24 @@ export const DashboardMiniMap = forwardRef<DashboardMiniMapHandle, DashboardMini
       lastDrawRef.current = performance.now()
     }, [extent, parcels])
 
+    /*
+     * 캔버스가 **크기를 얻는 순간** 그린다 — 붙을 때, 그리고 접혔다 펴질 때
+     * (display:none 이면 폭이 0이라 그려 둔 것이 지워진다). 카메라가 다시 움직이기를
+     * 기다리면 그때까지 빈 판이 서 있게 된다.
+     */
+    useEffect(() => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      if (!latestViewRef.current && initialCamera) latestViewRef.current = initialCamera
+      draw()
+      if (typeof ResizeObserver === 'undefined') return
+      const observer = new ResizeObserver(() => {
+        if (canvas.clientWidth > 0 && canvas.clientHeight > 0) draw()
+      })
+      observer.observe(canvas)
+      return () => observer.disconnect()
+    }, [draw, initialCamera])
+
     useImperativeHandle(
       ref,
       () => ({
@@ -136,7 +174,14 @@ export const DashboardMiniMap = forwardRef<DashboardMiniMapHandle, DashboardMini
           }}
           className="block cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
         >
-          <canvas ref={canvasRef} className="block h-[8.5rem] w-[14rem]" />
+          <canvas
+            ref={canvasRef}
+            className={cn(
+              /* 좁은 화면에서도 몸집만 줄이고 계속 서 있는다 (max-sm 은 화면 폭이 곧 한계다) */
+              'block max-sm:h-[4.75rem] max-sm:w-[8rem]',
+              compact ? 'h-[5.5rem] w-[9.25rem]' : 'h-[8.5rem] w-[14rem]'
+            )}
+          />
         </button>
       </aside>
     )

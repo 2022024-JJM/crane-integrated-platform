@@ -25,6 +25,7 @@ import {
   type YardParcels,
 } from '../../entities/yard-parcels'
 import { useAsyncData } from '../../lib/useAsyncData'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { getProcessMapDrilldown, fetchYardMapBackdrop } from '../../model/processRegistry'
 import type { YardMapBackdrop } from '../../model/yardMapBackdrop'
 import {
@@ -610,195 +611,260 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
     [parcels]
   )
 
+  /*
+   * 패널을 지도 위에 겹칠 자리가 있는가 — 셸이 고정 뷰포트를 켜는 선(xl)과 **같은 선**을
+   * 쓴다. 그보다 좁으면 셸도 문서처럼 스크롤하는데 지도만 패널을 겹쳐 두면, 좌(상세
+   * 19rem)·우(공정존 21rem) 두 기둥이 서로 올라타 글자가 글자 위에 얹힌다.
+   * 좁은 화면에서는 패널을 지도 **아래**로 내려 페이지가 스크롤하게 둔다.
+   */
+  const wide = useMediaQuery('(min-width: 80rem)')
+  /* 세로가 빠듯한 화면(1366×768·1280×720 같은 현장 모니터) — 미니맵이 몸집을 줄인다 */
+  const shortScreen = useMediaQuery('(max-height: 900px)')
+
+  /*
+   * 좁은 화면에서 상세 카드는 지도 아래에 선다 — 지도에서 공장을 눌렀는데 카드가 화면
+   * 밖이면 누른 것이 아무 반응도 없었던 것처럼 보인다. `nearest` 라서 이미 보이는
+   * 경우에는 화면을 흔들지 않는다.
+   */
+  const stackedPanelsRef = useRef<HTMLDivElement>(null)
+  const openDetailKey = selectedBay ?? focusedFactory ?? null
+  useEffect(() => {
+    if (wide || !openDetailKey) return
+    stackedPanelsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [wide, openDetailKey])
+
+  const detailCard = selectedBayData ? (
+    <BayDetailCard
+      bay={selectedBayData}
+      locationNoun={drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')}
+      linkedLocation={bayLinks.locationOfBayId.get(selectedBayData.id) ?? null}
+      highlightedLot={spottedLot}
+      onSelectLot={setSpottedLot}
+      onHoverLot={setHoveredLotRow}
+      onBack={clearBay}
+      onClose={() => setSelection(null)}
+    />
+  ) : selectedFactoryData ? (
+    <FactoryDetailCard
+      data={selectedFactoryData}
+      locationNoun={drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')}
+      state={locationsState}
+      knownLots={knownLots}
+      selectedLocation={selectedLocation}
+      hoveredLocation={listHoveredLocation}
+      onHoverLocation={setHoveredLocation}
+      onOpenLocation={openLocation}
+      onClearLocation={clearLocation}
+      onRetry={retryLocations}
+      onClose={() => setSelection(null)}
+    />
+  ) : null
+
+  const zonePanel = (
+    <ProcessZonePanel
+      zones={zones}
+      parcels={parcels}
+      expanded={expanded}
+      onToggleExpand={toggleExpand}
+      activeProcess={focusedProcess}
+      onFocusProcess={focusProcess}
+      selectedFactory={focusedFactory}
+      onSelectFactory={selectFactory}
+      locationsState={locationsState}
+      selectedLocation={selectedLocation}
+      onOpenLocation={openLocation}
+      hoveredFactory={hoveredFactory}
+      onHoverFactory={setHoveredFactory}
+      hoveredLocation={listHoveredLocation}
+      onHoverLocation={setHoveredLocation}
+    />
+  )
+
   return (
-    <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-border bg-[#0b0f14] max-xl:h-[calc(100dvh-7rem)]">
-      {/* 지도 — 준비되면 붙는다. 그 전엔 패널이 먼저 서 있고 여기만 로딩 표시 */}
-      {data?.backdrop && parcelLayer && basemapLayers ? (
-        <YardMap
-          lots={NO_LOTS}
-          blocks={NO_BLOCKS}
-          moves={NO_MOVES}
-          plans={NO_PLANS}
-          basemapLayers={basemapLayers}
-          extent={data.backdrop.extent}
-          minScale={35_000}
-          maxScale={900_000}
-          resetSignal={resetSignal}
-          colorOfCategory={NO_CATEGORY_COLOR}
-          layers={MAP_LAYERS}
-          /* 지도 영역은 라이트 테마에서도 다크 베이스맵 — 어두운 바탕이라야 네온이 산다. */
-          mapTheme="dark"
-          viewMode="3d"
-          onViewChange={(view: YardView, viewport: Viewport) => {
-            cameraRef.current = { view, viewport }
-            miniMapRef.current?.updateView(view, viewport)
-            hudRef.current?.updateView(view, viewport)
-          }}
-          lotOpacity={0.7}
-          parcels={parcelLayer}
-          /* 대문은 공장 밀집 구역이 홈 — 선택이 없을 때도 야드 전체로 물러나지 않는다.
-           * 음수 패딩 = 범위보다 한 발 **안으로** 들어간 카메라: 외곽 공장 한둘이 살짝
-           * 잘리더라도 모델이 가깝게 서는 쪽을 대문으로 삼는다 (드래그로 언제든 나온다). */
-          initialBounds={overviewBounds}
-          initialBoundsPadding={OVERVIEW_BOUNDS_PADDING}
-          focusBounds={focusBounds ?? overviewBounds}
-          focusBoundsDuration={420}
-          focusBoundsPadding={
-            selection?.kind === 'process'
-              ? -0.04
-              : selection?.kind === 'factory'
-                ? /* 베이도 같은 여백을 쓴다 — 배율은 여백이 아니라 `bayCameraBounds` 의
-                     범위가 묶는다(베이 크기가 제각각이라 여백으로 묶으면 널뛴다) */
-                  0.12
-                : OVERVIEW_BOUNDS_PADDING
-          }
-          parcelSpotlightDuration={0}
-          navigationTarget={navigationTarget}
-          showFacilityLabels={false}
-          className="h-full w-full"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-inshop-sm text-white/45">
-          {t('dashboard.map.loading')}
-        </div>
-      )}
-
-      {/* 고른 공장의 떠 있는 이름패. key 가 공장이라, 공장을 갈아타면 떠오름이 다시 연주된다 */}
-      {hudFactory && (
-        <FactoryHudLabel
-          key={hudFactory.factory.name}
-          ref={hudRef}
-          name={hudFactory.factory.name}
-          anchor={hudFactory.factory.labelAnchor}
-          outline={hudFactory.outline}
-          color={colorOfProcess(hudFactory.factory.process)}
-          caption={
-            focusedBays.length > 0
-              ? t('dashboard.map.bayCount', { count: focusedBays.length })
-              : (hudFactory.factory.process || undefined)
-          }
-          initialCamera={cameraRef.current}
-        />
-      )}
-
-      <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(100%-24rem)] rounded-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl">
-        <div className="flex min-w-0 items-center gap-3">
-          <span aria-hidden="true" className="h-9 w-1 shrink-0 rounded-full bg-accent shadow-[0_0_12px_rgba(249,145,55,0.42)]" />
-          <div className="min-w-0">
-            <h1 className="text-inshop-xl font-bold leading-tight tracking-[-0.035em] text-white">
-              {t('dashboard.title')}
-            </h1>
-            <p className="mt-1 hidden max-w-80 truncate text-inshop-xs tracking-[-0.01em] text-white/50 sm:block">
-              {t('dashboard.subtitle')}
-            </p>
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-3">
+      {/*
+        지도 상자. 넓은 화면에서는 남은 높이를 다 쓰고(패널이 그 위에 뜬다), 좁은 화면에서는
+        아래에 선 패널이 화면 밖으로 밀리지 않도록 높이를 덜어 준다.
+      */}
+      <div className="relative min-h-0 w-full overflow-hidden rounded-xl border border-border bg-[#0b0f14] max-xl:h-[min(60vh,34rem)] max-xl:min-h-[22rem] xl:flex-1">
+        {/* 지도 — 준비되면 붙는다. 그 전엔 패널이 먼저 서 있고 여기만 로딩 표시 */}
+        {data?.backdrop && parcelLayer && basemapLayers ? (
+          <YardMap
+            lots={NO_LOTS}
+            blocks={NO_BLOCKS}
+            moves={NO_MOVES}
+            plans={NO_PLANS}
+            basemapLayers={basemapLayers}
+            extent={data.backdrop.extent}
+            minScale={35_000}
+            maxScale={900_000}
+            resetSignal={resetSignal}
+            colorOfCategory={NO_CATEGORY_COLOR}
+            layers={MAP_LAYERS}
+            /* 지도 영역은 라이트 테마에서도 다크 베이스맵 — 어두운 바탕이라야 네온이 산다. */
+            mapTheme="dark"
+            viewMode="3d"
+            onViewChange={(view: YardView, viewport: Viewport) => {
+              cameraRef.current = { view, viewport }
+              miniMapRef.current?.updateView(view, viewport)
+              hudRef.current?.updateView(view, viewport)
+            }}
+            lotOpacity={0.7}
+            parcels={parcelLayer}
+            /* 대문은 공장 밀집 구역이 홈 — 선택이 없을 때도 야드 전체로 물러나지 않는다.
+             * 음수 패딩 = 범위보다 한 발 **안으로** 들어간 카메라: 외곽 공장 한둘이 살짝
+             * 잘리더라도 모델이 가깝게 서는 쪽을 대문으로 삼는다 (드래그로 언제든 나온다). */
+            initialBounds={overviewBounds}
+            initialBoundsPadding={OVERVIEW_BOUNDS_PADDING}
+            focusBounds={focusBounds ?? overviewBounds}
+            focusBoundsDuration={420}
+            focusBoundsPadding={
+              selection?.kind === 'process'
+                ? -0.04
+                : selection?.kind === 'factory'
+                  ? /* 베이도 같은 여백을 쓴다 — 배율은 여백이 아니라 `bayCameraBounds` 의
+                       범위가 묶는다(베이 크기가 제각각이라 여백으로 묶으면 널뛴다) */
+                    0.12
+                  : OVERVIEW_BOUNDS_PADDING
+            }
+            parcelSpotlightDuration={0}
+            navigationTarget={navigationTarget}
+            showFacilityLabels={false}
+            className="h-full w-full"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-inshop-sm text-white/45">
+            {t('dashboard.map.loading')}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* 선택한 공장(또는 그 안의 베이) 상세는 공정존 탐색을 가리지 않도록 지도 왼쪽에
-          독립 배치한다. 아래 경계는 미니맵(과 그 위 3D 힌트) 바로 위 — 카드가 길어져도
-          미니맵 뒤로 넘어가지 않고, 넘치는 내용은 카드 안에서 스크롤한다.
-          베이를 고르면 같은 자리를 베이 상세가 이어받는다 — 두 카드를 나란히 세우면
-          지도를 반쯤 덮고, 어느 쪽이 지금 이야기인지도 흐려진다. */}
-      {(selectedBayData || selectedFactoryData) && (
+        {/* 고른 공장의 떠 있는 이름패. key 가 공장이라, 공장을 갈아타면 떠오름이 다시 연주된다 */}
+        {hudFactory && (
+          <FactoryHudLabel
+            key={hudFactory.factory.name}
+            ref={hudRef}
+            name={hudFactory.factory.name}
+            anchor={hudFactory.factory.labelAnchor}
+            outline={hudFactory.outline}
+            color={colorOfProcess(hudFactory.factory.process)}
+            caption={
+              focusedBays.length > 0
+                ? t('dashboard.map.bayCount', { count: focusedBays.length })
+                : (hudFactory.factory.process || undefined)
+            }
+            initialCamera={cameraRef.current}
+          />
+        )}
+
+        {/*
+         * 지도 위 오버레이는 **하나의 격자**다 — 왼쪽 기둥(제목·현 위치·상세·안내·미니맵)과
+         * 오른쪽 기둥(공정존 패널). 예전엔 이것들이 저마다 `top-[8.25rem]`·`bottom-[12.5rem]`
+         * 같은 손계산으로 떠 있어서, 화면이 짧아지면 안내문이 상세 카드 위로 올라타고 카드
+         * 내용은 줄 중간에서 잘렸다. 자리는 계산이 아니라 **흐름**이어야 한다: 격자와
+         * `gap` 이 간격을 맡고, 남는 높이는 상세 카드가 가져가며(`flex-1`), 그래도 모자라면
+         * 카드가 제 안에서 스크롤한다.
+         *
+         * 왼쪽 칸은 `minmax(0,1fr)` 이라 오른쪽 패널 자리를 결코 침범하지 않는다.
+         */}
         <div
-          key={selectedBayData ? 'bay' : 'factory'}
-          className="pointer-events-none absolute bottom-[12.5rem] left-3 top-[8.25rem] flex w-[19rem] max-w-[38vw] flex-col animate-slide-up"
+          className={cn(
+            'pointer-events-none absolute inset-3 z-10 grid gap-3',
+            wide ? 'grid-cols-[minmax(0,1fr)_21rem]' : 'grid-cols-1'
+          )}
         >
-          {selectedBayData ? (
-            <BayDetailCard
-              bay={selectedBayData}
-              locationNoun={
-                drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')
-              }
-              linkedLocation={bayLinks.locationOfBayId.get(selectedBayData.id) ?? null}
-              highlightedLot={spottedLot}
-              onSelectLot={setSpottedLot}
-              onHoverLot={setHoveredLotRow}
-              onBack={clearBay}
-              onClose={() => setSelection(null)}
-            />
-          ) : (
-            selectedFactoryData && (
-              <FactoryDetailCard
-                data={selectedFactoryData}
-                locationNoun={
-                  drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')
-                }
-                state={locationsState}
-                knownLots={knownLots}
-                selectedLocation={selectedLocation}
-                hoveredLocation={listHoveredLocation}
-                onHoverLocation={setHoveredLocation}
-                onOpenLocation={openLocation}
-                onClearLocation={clearLocation}
-                onRetry={retryLocations}
-                onClose={() => setSelection(null)}
-              />
-            )
+          <div className="flex min-h-0 min-w-0 flex-col items-start gap-2.5">
+            <div className="pointer-events-none max-w-full shrink-0 rounded-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+              <div className="flex min-w-0 items-center gap-3">
+                <span aria-hidden="true" className="h-9 w-1 shrink-0 rounded-full bg-accent shadow-[0_0_12px_rgba(249,145,55,0.42)]" />
+                <div className="min-w-0">
+                  <h1 className="truncate text-inshop-xl font-bold leading-tight tracking-[-0.035em] text-white">
+                    {t('dashboard.title')}
+                  </h1>
+                  <p className="mt-1 hidden max-w-80 truncate text-inshop-xs tracking-[-0.01em] text-white/50 sm:block">
+                    {t('dashboard.subtitle')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelection(null)
+                setNavigationTarget(null)
+                setResetSignal((value) => value + 1)
+              }}
+              className="pointer-events-auto flex h-9 shrink-0 items-center gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/90 px-3 text-inshop-xs font-medium text-white/75 shadow-lg backdrop-blur-md transition-colors hover:bg-[#151b23] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              title={t('dashboard.map.returnToCurrentLocation')}
+            >
+              <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4">
+                <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              {t('dashboard.map.currentLocation')}
+            </button>
+
+            {/* 선택한 공장(또는 그 안의 베이) 상세 — 공정존 탐색을 가리지 않도록 지도 왼쪽에
+                둔다. 베이를 고르면 같은 자리를 베이 상세가 이어받는다(두 카드를 나란히
+                세우면 지도를 반쯤 덮고, 어느 쪽이 지금 이야기인지도 흐려진다).
+                남는 높이를 전부 가져가되(`flex-1`), 넘치는 내용은 카드 안에서 스크롤한다. */}
+            {wide && detailCard && (
+              <div
+                key={selectedBayData ? 'bay' : 'factory'}
+                className="flex min-h-0 w-[19rem] max-w-full flex-1 animate-slide-up flex-col"
+              >
+                {detailCard}
+              </div>
+            )}
+
+            {/*
+             * 왼쪽 아래 — 조작 안내와 전체 야드 미니맵. 위 항목들과 한 흐름이라 어떤 높이에서도
+             * 서로 올라타지 않는다(예전의 `bottom-[10.75rem]` 손계산은 화면이 짧아지는 순간
+             * 어긋났다). 남는 높이가 없으면 자연히 아래로 붙는다.
+             */}
+            <div className="mt-auto flex min-w-0 max-w-full shrink-0 flex-col items-start gap-2.5">
+              <p className="max-w-full rounded-inshop-md bg-black/55 px-2.5 py-1 text-2xs text-white/60 backdrop-blur-sm">
+                {t('dashboard.map.hint3d')}
+              </p>
+              {data?.backdrop && parcels && (
+                <DashboardMiniMap
+                  ref={miniMapRef}
+                  extent={data.backdrop.extent}
+                  parcels={parcels}
+                  /* 다시 그릴 밑천 — 접혔다 펴져도 빈 판이 서 있지 않게 한다 */
+                  initialCamera={cameraRef.current}
+                  /* 상세 카드가 열린 낮은 해상도에서는 몸집을 줄여 카드에 높이를 내준다 */
+                  compact={Boolean(detailCard) && shortScreen}
+                  onNavigate={(point) => setNavigationTarget({ ...point })}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* 오른쪽 기둥은 공정존 탐색 전용으로 유지한다 — 넓은 화면에서만 지도 위에 선다 */}
+          {wide && (
+            <div className="scroll-thin flex min-h-0 flex-col gap-3 overflow-y-auto">
+              {zonePanel}
+            </div>
           )}
         </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => {
-          setSelection(null)
-          setNavigationTarget(null)
-          setResetSignal((value) => value + 1)
-        }}
-        className="absolute left-3 top-[5.25rem] flex h-9 items-center gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/90 px-3 text-inshop-xs font-medium text-white/75 shadow-lg backdrop-blur-md transition-colors hover:bg-[#151b23] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        title={t('dashboard.map.returnToCurrentLocation')}
-      >
-        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4">
-          <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-        {t('dashboard.map.currentLocation')}
-      </button>
-
-      {/* 오른쪽 패널은 공정존 탐색 전용으로 유지한다. */}
-      <div className="scroll-thin pointer-events-none absolute inset-y-3 right-3 flex w-[21rem] max-w-[46vw] flex-col gap-3 overflow-y-auto">
-        <ProcessZonePanel
-          zones={zones}
-          parcels={parcels}
-          expanded={expanded}
-          onToggleExpand={toggleExpand}
-          activeProcess={focusedProcess}
-          onFocusProcess={focusProcess}
-          selectedFactory={focusedFactory}
-          onSelectFactory={selectFactory}
-          locationsState={locationsState}
-          selectedLocation={selectedLocation}
-          onOpenLocation={openLocation}
-          hoveredFactory={hoveredFactory}
-          onHoverFactory={setHoveredFactory}
-          hoveredLocation={listHoveredLocation}
-          onHoverLocation={setHoveredLocation}
-        />
       </div>
 
       {/*
-       * 왼쪽 아래 기둥 — 조작 안내와 전체 야드 미니맵을 **한 흐름으로 쌓는다.**
-       * 예전엔 안내문을 `bottom-[10.75rem]` 같은 손계산으로 미니맵 위에 얹었는데, 그 값은
-       * 미니맵 높이가 조금만 바뀌어도 어긋나 둘이 딱 붙어 버린다. 간격은 계산이 아니라
-       * 간격(`gap`)이어야 한다.
-       *
-       * 기둥 자체는 클릭을 통과시키고(지도가 아래에 있다), 미니맵만 제 안에서 클릭을 받는다.
-       */}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-col items-start gap-2.5">
-        <p className="rounded-inshop-md bg-black/55 px-2.5 py-1 text-2xs text-white/60 backdrop-blur-sm">
-          {t('dashboard.map.hint3d')}
-        </p>
-        {data?.backdrop && parcels && (
-          <DashboardMiniMap
-            ref={miniMapRef}
-            extent={data.backdrop.extent}
-            parcels={parcels}
-            onNavigate={(point) => setNavigationTarget({ ...point })}
-          />
-        )}
-      </div>
+        좁은 화면 — 겹칠 자리가 없으므로 패널을 지도 아래 문서 흐름에 세운다. 지도에서 공장을
+        고르면 그 상세가 여기 열리는데, 화면 밖이면 아무 일도 없었던 것처럼 보이므로
+        스크롤로 데려온다.
+      */}
+      {!wide && (
+        <div ref={stackedPanelsRef} className="flex flex-col gap-3">
+          {detailCard && (
+            <div key={selectedBayData ? 'bay' : 'factory'} className="animate-slide-up">
+              {detailCard}
+            </div>
+          )}
+          {zonePanel}
+        </div>
+      )}
     </div>
   )
 }
@@ -1460,7 +1526,14 @@ function FactoryDetailCard({
   const { t } = useTranslation()
   const processColor = data.process ? colorOfProcess(data.process) : '#9a9890'
   const maxCategoryCount = Math.max(...data.categories.map((category) => category.count), 1)
-  /* 카드 틀은 고정 — 높이가 모자라면 안의 작업 위치 목록만 스크롤한다 */
+  /*
+   * 카드 머리(공장 이름·닫기)는 고정, 그 아래 본문은 통째로 스크롤한다.
+   *
+   * 예전에는 작업 위치 목록만 스크롤했는데, 그 위아래(요약 숫자·분류 구성)는 줄어들지
+   * 않는 블록이라 낮은 해상도(1280×720 등)에서는 카드 높이가 그 합에도 못 미쳤다.
+   * 그러면 넘친 부분이 `overflow-hidden` 에 **줄 중간에서 잘려** 잘못 그린 화면처럼
+   * 보인다. 모자란 높이는 잘라 낼 것이 아니라 스크롤로 돌려줄 것이다.
+   */
   return (
     <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
@@ -1484,14 +1557,17 @@ function FactoryDetailCard({
         </button>
       </div>
 
-      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs">
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3">
+      <div className="scroll-thin scroll-shadow-y flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
+          아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
+      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
+        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
           <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums">{data.lotCount}</dd>
+          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">{data.lotCount}</dd>
         </div>
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3">
+        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
           <dt className="text-2xs text-white/45">{t('dashboard.map.area')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums">
+          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
             {Math.round(data.area).toLocaleString()}
             <span className="ml-1 text-2xs font-normal text-white/42">m²</span>
           </dd>
@@ -1511,7 +1587,12 @@ function FactoryDetailCard({
         정반코드)를 함께 세우고, 상태는 값이 있을 때만 보조로 붙인다. 목록이 길어질 수
         있어 이 섹션만 따로 스크롤한다 — 카드가 지도를 덮지 않도록.
       */}
-      <div className="flex min-h-0 flex-col border-b border-white/8 px-3 py-3">
+      {/*
+        `shrink-0` 이 중요하다 — 이 칸은 눌러도 더 이상 줄지 않는다(안의 목록이 최소
+        높이를 갖고 있어서, 칸만 줄면 목록이 칸 밖으로 **삐져나와 아래 칸 글자 위에
+        겹쳐 그려진다**). 모자란 높이는 칸을 줄여서가 아니라 바깥 본문 스크롤로 낸다.
+      */}
+      <div className="flex shrink-0 flex-col border-b border-white/8 px-3 py-3">
         <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
           <p className="text-2xs font-medium text-white/55">
             {locationNoun}
@@ -1572,6 +1653,7 @@ function FactoryDetailCard({
           </ul>
         </div>
       )}
+      </div>
     </section>
   )
 }

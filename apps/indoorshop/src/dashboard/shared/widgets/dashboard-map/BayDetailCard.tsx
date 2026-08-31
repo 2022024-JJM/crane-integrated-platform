@@ -101,16 +101,23 @@ export function BayDetailCard({
         </button>
       </div>
 
-      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs">
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3">
+      {/*
+        머리(베이 이름·닫기)와 나가는 문은 고정, 그 사이 본문만 스크롤한다 — 낮은 해상도에서
+        카드 높이가 모자라도 줄이 중간에서 잘리지 않게 한다.
+      */}
+      <div className="scroll-thin scroll-shadow-y flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
+          아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
+      <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
+        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
           <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums">
+          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
             {bay.lots.length}
           </dd>
         </div>
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3">
+        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
           <dt className="text-2xs text-white/45">{t('dashboard.map.area')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums">
+          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
             {Math.round(bay.area).toLocaleString()}
             <span className="ml-1 text-2xs font-normal text-white/42">m²</span>
           </dd>
@@ -125,8 +132,10 @@ export function BayDetailCard({
         </div>
       </dl>
 
-      {/* 지번 목록 — 코드와 **원본 설명**을 나란히. 목록만 따로 스크롤한다 */}
-      <div className="flex min-h-0 flex-col px-3 py-3">
+      {/* 지번 목록 — 코드와 **원본 설명**을 나란히.
+          `shrink-0`: 이 칸이 눌리면 안의 목록이 칸 밖으로 삐져나와 아랫줄과 겹쳐 그려진다.
+          모자란 높이는 칸을 줄여서가 아니라 바깥 본문 스크롤로 낸다. */}
+      <div className="flex shrink-0 flex-col px-3 py-3">
         <p className="mb-2 shrink-0 px-1 text-2xs font-medium text-white/55">
           {t('dashboard.map.bayLotList')}
           <span className="ml-1.5 font-mono text-white/30">{bay.lots.length}</span>
@@ -209,6 +218,8 @@ export function BayDetailCard({
             )
           })}
         </ul>
+      </div>
+
       </div>
 
       {/* 나가는 문 — 지번이 겹치는 작업 위치가 있을 때만. 없으면 그 사정을 말한다.
