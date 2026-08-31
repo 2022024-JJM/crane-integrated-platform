@@ -32,11 +32,14 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  *   지도 중앙부터 잘려나간다. OrbitControls maxDistance(3000) + 씬 반폭보다
  *   커야 잘림이 없다. 바다 평면(scene-environment.tsx SeaSurface, 반경
  *   40000)이 들어오면서 50000으로 올렸다 — 원판이 far에 잘리면 잘린 경계가
- *   직선으로 드러나므로 원판 반경보다 커야 한다. 깊이 정밀도는 near가
- *   지배하므로(0.1) far 상향의 비용은 사실상 없다.
+ *   직선으로 드러나므로 원판 반경보다 커야 한다.
  * near: 0.1(three 기본)을 쓴다. 에디터만 0.5를 쓰고 있었는데, near를 올리면
  *   깊이 정밀도는 좋아지지만 카메라에 바짝 붙은 지오메트리가 잘려 보인다 —
  *   뷰어와 다른 값을 쓸 이유가 없다.
+ * 깊이 정밀도: 선형 깊이라면 near 0.1 기준 분해능이 거리 제곱으로 나빠져
+ *   400m부터 philly 지도의 코플레이너 레이어 간격(8.8cm)을 못 가르지만,
+ *   SCENE_GL_OPTIONS의 logarithmicDepthBuffer가 이를 대신 해결한다 — near/far는
+ *   이제 클리핑 범위로만 고르면 된다.
  */
 export const SCENE_CAMERA_CLIP = { near: 0.1, far: 50000 } as const;
 
@@ -75,6 +78,20 @@ export const SCENE_GL_OPTIONS = {
    * 나머지를 조율하기 쉽다 — 노출을 그 기준으로 삼는다.
    */
   toneMappingExposure: 1,
+  /**
+   * 지도 원거리 z-fighting 해결. philly 지도는 도로선↔아스팔트, 도크
+   * 라인↔바닥이 8.8cm 간격으로 겹쳐 쌓인 2.4km 메시라, 선형 깊이(near 0.1,
+   * 24bit)로는 카메라 400m부터 그 간격을 못 갈라 원거리 전체가 깜빡였다
+   * (분해능 ≈ z²/(near·2²⁴): 400m에서 9.5cm, 3000m에서 5.4m). 로그 깊이는
+   * 상대 정밀도라 3000m에서도 mm 단위다.
+   *
+   * 비용: three(r183)가 프래그먼트에서 gl_FragDepth를 써 early-Z가 꺼진다 —
+   * DPR 상한 1.5로 프래그먼트 예산은 이미 관리 중이라 감수한다.
+   * 제약: raw ShaderMaterial은 logdepthbuf 청크를 직접 include해야 깊이가
+   * 맞는다(sea-surface-material.ts 참고). onBeforeCompile 패치는 표준 셰이더
+   * 템플릿에 청크가 이미 있어 무관하다.
+   */
+  logarithmicDepthBuffer: true,
   powerPreference: 'high-performance',
   alpha: false,
   antialias: true,

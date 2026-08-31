@@ -43,18 +43,27 @@ export interface SeaSurfaceUniforms extends Record<string, IUniform> {
   uFadeEnd: { value: number };
 }
 
+// logdepthbuf 청크: 렌더러가 logarithmicDepthBuffer 모드라 raw ShaderMaterial도
+// 직접 include해야 깊이 테스트가 표준 머티리얼과 같은 좌표계에서 돈다.
+// (common은 logdepthbuf_vertex가 쓰는 isPerspectiveMatrix 제공. 청크 내부가
+// USE_LOGARITHMIC_DEPTH_BUFFER 가드라 옵션이 꺼진 렌더러에서도 무해하다.)
 const vertexShader = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_vertex>
+
 varying vec3 vWorldPos;
 
 void main() {
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
   vWorldPos = worldPos.xyz;
   gl_Position = projectionMatrix * viewMatrix * worldPos;
+  #include <logdepthbuf_vertex>
 }
 `;
 
 const fragmentShader = /* glsl */ `
 #include <common>
+#include <logdepthbuf_pars_fragment>
 
 uniform sampler2D tEnv;
 uniform float uTime;
@@ -146,6 +155,8 @@ vec3 waveNormal(vec2 p, float t, float rippleWeight) {
 }
 
 void main() {
+  #include <logdepthbuf_fragment>
+
   vec3 dir = normalize(vWorldPos - cameraPosition);
   float dist = distance(vWorldPos, cameraPosition);
 
