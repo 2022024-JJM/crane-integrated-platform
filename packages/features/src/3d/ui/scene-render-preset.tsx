@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
 import {
-  SCENE_SUN_POSITION_DEFAULT,
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_ELEVATION_MIN,
   modelObjectRegistry,
 } from '@crane/domain/3d';
 import type { SavedSceneInfo } from '@crane/domain/3d';
@@ -112,28 +114,6 @@ export const SCENE_LIGHTING = {
 } as const;
 
 /**
- * 태양 궤적 상수.
- *
- * 방위 규약: **월드 +X = 동, -X = 서** (SavedLightingInfo 주석 참고 — 씬에
- * 나침반·방위 데이터가 없어 축 규약으로 못박는다). sunPosition t∈[0,1]는
- * XY 평면에서 동(+X 지평선) → 남중(머리 위) → 서(-X 지평선)의 반원 호를
- * 그리고, 여기에 z 방향 틸트를 더해 궤도면을 살짝 기울인다.
- */
-/**
- * 최저 태양 고도 20°. 슬라이더 양 끝(동/서)에서 해가 지평선에 닿으면
- * 그림자가 무한정 길어지고 shadow camera가 씬을 못 덮는다. 20°면 그림자
- * 길이가 물체 높이의 ~2.75배(1/tan20°)에서 멈춘다.
- */
-const SUN_MIN_ELEVATION_RAD = Math.PI * (20 / 180);
-/**
- * 궤도면 z 틸트. 남중(t=0.5)일 때 방향이 normalize([0, 1, 0.2]) =
- * (0, 0.981, 0.196)로, 종전 고정 조명 directionalPosition [0, 50, 10]의
- * 방향과 정확히 일치한다 — lighting 필드가 없는 기존 씬의 셰이딩이 그대로
- * 유지되는 근거다. SCENE_LIGHTING.directionalPosition을 지우지 않고 두는
- * 이유이기도 하다(이 일치의 기준점).
- */
-const SUN_ORBIT_TILT_Z = 0.2;
-/**
  * shadow map 해상도. 지도 전체를 덮는 큰 반경(임계 초과)에서는 4096으로
  * 올려 텍셀 밀도를 유지한다 — 2048을 수 km에 펴면 그림자가 블록으로
  * 뭉개진다. 4096² depth 텍스처는 VRAM ~64MB로, 반경이 작을 땐 2048로
@@ -143,14 +123,30 @@ const SUN_SHADOW_MAP_SIZE = 2048;
 const SUN_SHADOW_MAP_SIZE_LARGE = 4096;
 const SUN_SHADOW_LARGE_RADIUS = 800;
 
-/** sunPosition t∈[0,1] → 정규화된 태양 방향 벡터(씬 → 태양). */
-function sunDirectionFromPosition(t: number): Vector3 {
-  const alpha = clampToRange(
-    Math.PI * clampToRange(t, 0, 1),
-    SUN_MIN_ELEVATION_RAD,
-    Math.PI - SUN_MIN_ELEVATION_RAD,
+/**
+ * 방위각·고도(도) → 태양 방향 벡터(씬 → 태양). 구성상 단위 벡터라
+ * normalize가 필요 없다.
+ *
+ * 방위 규약: **월드 +X = 동, -Z = 북**, azimuth 0=북·90=동·180=남·270=서
+ * (SavedLightingInfo 주석 참고). 기본값(az=180, el=SCENE_SUN_ELEVATION_DEFAULT)
+ * 을 넣으면 종전 고정 조명 directionalPosition [0, 50, 10]의 방향이 부동소수
+ * 오차 ~1e-16 이내로 재현된다 — lighting 필드가 없는 기존 씬의 셰이딩이
+ * 유지되는 근거이며, SCENE_LIGHTING.directionalPosition을 지우지 않고 두는
+ * 이유이기도 하다(이 일치의 기준점). 상세는 SCENE_SUN_ELEVATION_DEFAULT 주석.
+ */
+function sunDirectionFromAngles(
+  azimuthDeg: number,
+  elevationDeg: number,
+): Vector3 {
+  const az = azimuthDeg * (Math.PI / 180);
+  const el =
+    clampToRange(elevationDeg, SCENE_SUN_ELEVATION_MIN, 90) * (Math.PI / 180);
+  const cosEl = Math.cos(el);
+  return new Vector3(
+    Math.sin(az) * cosEl,
+    Math.sin(el),
+    -Math.cos(az) * cosEl,
   );
-  return new Vector3(Math.cos(alpha), Math.sin(alpha), SUN_ORBIT_TILT_Z).normalize();
 }
 
 /**
@@ -280,7 +276,7 @@ function useSunAnchor(
  * 셰이더 재컴파일은 아래 directionalLight의 castShadow가 같은 플래그에
  * 바인딩되어 있어 lights state 변경으로 자동 유발된다.
  *
- * 태양 위치(sunPosition)는 그림자가 꺼져 있어도 항상 적용된다 — 조명
+ * 태양 위치(sunAzimuth/sunElevation)는 그림자가 꺼져 있어도 항상 적용된다 — 조명
  * 방향(셰이딩)은 그림자와 무관하게 씬의 인상을 정하는 값이다.
  *
  * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
@@ -293,7 +289,8 @@ export function SceneLighting({
 } = {}) {
   const lighting = sceneInfo?.lighting;
   const shadowsEnabled = isSceneShadowEnabled(lighting);
-  const sunPosition = lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT;
+  const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
+  const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
 
   const mapCorners = useMapShadowCorners(sceneInfo);
   const { anchor, radius } = useSunAnchor(sceneInfo, mapCorners);
@@ -307,7 +304,7 @@ export function SceneLighting({
   const target = useMemo(() => new Object3D(), []);
 
   const { lightPosition, shadowFar } = useMemo(() => {
-    const dir = sunDirectionFromPosition(sunPosition);
+    const dir = sunDirectionFromAngles(sunAzimuth, sunElevation);
     // 조명은 방향만 의미 있지만 shadow camera는 위치 기준이므로 씬 반경보다
     // 충분히 멀리 둔다.
     const orbitDistance = Math.max(radius * 2.5, 300);
@@ -319,7 +316,7 @@ export function SceneLighting({
       ] as Vector3Tuple,
       shadowFar: orbitDistance + radius * 3,
     };
-  }, [sunPosition, anchor, radius]);
+  }, [sunAzimuth, sunElevation, anchor, radius]);
 
   return (
     <>

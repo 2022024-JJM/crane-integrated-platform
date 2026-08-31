@@ -56,7 +56,9 @@ export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SEA_LEVEL_Y } from './model/sea-level';
 export {
   SCENE_MODEL_CATEGORIES,
-  SCENE_SUN_POSITION_DEFAULT,
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_ELEVATION_MIN,
 } from './model/types';
 export {
   getSceneFileUrlByRegionId,

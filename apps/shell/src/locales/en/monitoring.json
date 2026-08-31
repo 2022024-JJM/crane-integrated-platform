@@ -132,6 +132,10 @@
     "lightingSunPosition": "Sun position",
     "lightingSunEast": "E",
     "lightingSunWest": "W",
+    "lightingSunNorth": "N",
+    "lightingSunSouth": "S",
+    "lightingSunAzimuth": "Azimuth",
+    "lightingSunElevation": "Elevation",
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected"

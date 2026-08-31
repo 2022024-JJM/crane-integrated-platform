@@ -121,6 +121,10 @@
     "lightingSunPosition": "Solis positio",
     "lightingSunEast": "Or.",
     "lightingSunWest": "Occ.",
+    "lightingSunNorth": "Sept.",
+    "lightingSunSouth": "Mer.",
+    "lightingSunAzimuth": "Azimuth",
+    "lightingSunElevation": "Altitudo",
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta"

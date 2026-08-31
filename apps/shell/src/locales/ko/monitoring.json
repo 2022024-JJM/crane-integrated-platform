@@ -132,6 +132,10 @@
     "lightingSunPosition": "태양 위치",
     "lightingSunEast": "동",
     "lightingSunWest": "서",
+    "lightingSunNorth": "북",
+    "lightingSunSouth": "남",
+    "lightingSunAzimuth": "방위",
+    "lightingSunElevation": "고도",
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
     "multipleSelected": "{{count}}개 객체 선택됨"

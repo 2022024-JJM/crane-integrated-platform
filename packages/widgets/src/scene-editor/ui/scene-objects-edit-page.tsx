@@ -869,11 +869,14 @@ function ProjectPalettePanel({
                 onShadowsChange={(shadows) => onLightingChange({ shadows })}
                 // 드래그 중에는 recordHistory: false — 종료 시
                 // onLightingInteractionEnd(endTransformInteraction)가 1회 커밋.
-                onSunPositionChange={(sunPosition) =>
-                  onLightingChange({ sunPosition }, { recordHistory: false })
+                onSunAngleChange={({ azimuth, elevation }) =>
+                  onLightingChange(
+                    { sunAzimuth: azimuth, sunElevation: elevation },
+                    { recordHistory: false },
+                  )
                 }
-                onSunPositionDragStart={onLightingInteractionStart}
-                onSunPositionDragEnd={onLightingInteractionEnd}
+                onSunDragStart={onLightingInteractionStart}
+                onSunDragEnd={onLightingInteractionEnd}
               />
             )}
           </div>

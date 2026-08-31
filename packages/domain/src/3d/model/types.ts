@@ -38,23 +38,43 @@ export interface SavedSceneInfo {
 }
 
 /**
- * 태양 위치 기본값(남중). sanitize·에디터 dirty 판정·UI가 같은 기준을
+ * 태양 위치 기본값·범위. sanitize·에디터 dirty 판정·UI가 같은 기준을
  * 봐야 하므로 여기서 한 번만 정의한다.
  */
-export const SCENE_SUN_POSITION_DEFAULT = 0.5;
+export const SCENE_SUN_AZIMUTH_DEFAULT = 180;
+/**
+ * 최저 태양 고도 20°. 해가 지평선에 닿으면 그림자가 무한정 길어지고
+ * shadow camera가 씬을 못 덮는다. 20°면 그림자 길이가 물체 높이의
+ * ~2.75배(1/tan20°)에서 멈춘다.
+ */
+export const SCENE_SUN_ELEVATION_MIN = 20;
+/**
+ * 기본 고도 — 레거시 고정 조명 normalize([0,1,0.2]) 방향과 일치시키는 값.
+ * az=180°·이 고도를 방향 공식(scene-render-preset.tsx)에 넣으면 부동소수
+ * 오차 ~1e-16 이내로 종전 방향이 재현되어, lighting 필드가 없는 기존 씬의
+ * 셰이딩이 변하지 않는다. 도→라디안 왕복의 sin/cos가 비트 일치함을 검증했
+ * 으므로, 이 상수 하나를 전역 공유해야 "기본값이면 필드 생략" 정규화의
+ * float 동등 비교가 성립한다 — 반올림한 리터럴로 바꾸지 말 것.
+ */
+export const SCENE_SUN_ELEVATION_DEFAULT = Math.atan2(1, 0.2) * (180 / Math.PI);
 
 export interface SavedLightingInfo {
   /** 그림자 On/Off. 필드 없음 = false (기존 저장본 하위호환). */
   shadows?: boolean;
   /**
-   * 태양 위치 0~1. 0=동(+X 지평선) → 0.5=남중(머리 위) → 1=서(-X 지평선).
-   * 필드 없음 = 0.5.
+   * 태양 방위각(도, [0,360) 나침반식). 0=북, 90=동, 180=남, 270=서.
+   * 필드 없음 = 180(남).
    *
-   * 방위 규약: **월드 +X = 동**. 씬에 나침반·방위 데이터가 없어 실제 지리
-   * 방위를 알 수 없으므로 축 규약으로 못박는다. 태양 궤적 계산은
-   * scene-render-preset.tsx가 담당한다.
+   * 방위 규약: **월드 +X = 동, -Z = 북** (패드 UI의 위쪽 = 북, 지도 관례).
+   * 씬에 나침반·방위 데이터가 없어 실제 지리 방위를 알 수 없으므로 축
+   * 규약으로 못박는다. 방향 벡터 계산은 scene-render-preset.tsx가 담당한다.
    */
-  sunPosition?: number;
+  sunAzimuth?: number;
+  /**
+   * 태양 고도(도, [SCENE_SUN_ELEVATION_MIN, 90]). 90=머리 위(그림자 최소),
+   * 낮을수록 그림자가 길어진다. 필드 없음 = SCENE_SUN_ELEVATION_DEFAULT.
+   */
+  sunElevation?: number;
 }
 
 export interface SavedTextInfo {

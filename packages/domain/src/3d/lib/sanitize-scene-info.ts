@@ -16,7 +16,11 @@ import type {
   SavedMeshOverride,
   SavedSceneInfo,
 } from '../model/types';
-import { SCENE_SUN_POSITION_DEFAULT } from '../model/types';
+import {
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_ELEVATION_MIN,
+} from '../model/types';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -192,7 +196,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     sanitized.environmentId = null;
   }
 
-  // 조명은 "기본값이면 필드 생략" 규칙이다 — 그림자 Off·태양 남중(0.5)인
+  // 조명은 "기본값이면 필드 생략" 규칙이다 — 그림자 Off·태양 기본 위치인
   // 씬은 lighting 필드 자체가 빠져 기존 저장본과 diff가 없다.
   const rawLighting = (sceneInfo as SavedSceneInfo).lighting;
   if (rawLighting && typeof rawLighting === 'object') {
@@ -200,10 +204,22 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     if (rawLighting.shadows === true) {
       lighting.shadows = true;
     }
-    if (isFiniteNumber(rawLighting.sunPosition)) {
-      const sunPosition = clampToRange(Number(rawLighting.sunPosition), 0, 1);
-      if (sunPosition !== SCENE_SUN_POSITION_DEFAULT) {
-        lighting.sunPosition = sunPosition;
+    if (isFiniteNumber(rawLighting.sunAzimuth)) {
+      // [0,360) 랩 — 360과 0이 다른 값으로 남으면 dirty 판정이 어긋난다.
+      const sunAzimuth =
+        ((Number(rawLighting.sunAzimuth) % 360) + 360) % 360;
+      if (sunAzimuth !== SCENE_SUN_AZIMUTH_DEFAULT) {
+        lighting.sunAzimuth = sunAzimuth;
+      }
+    }
+    if (isFiniteNumber(rawLighting.sunElevation)) {
+      const sunElevation = clampToRange(
+        Number(rawLighting.sunElevation),
+        SCENE_SUN_ELEVATION_MIN,
+        90,
+      );
+      if (sunElevation !== SCENE_SUN_ELEVATION_DEFAULT) {
+        lighting.sunElevation = sunElevation;
       }
     }
     if (Object.keys(lighting).length > 0) {

@@ -1,5 +1,7 @@
 import {
-  SCENE_SUN_POSITION_DEFAULT,
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_ELEVATION_MIN,
   createSceneModel,
   createSceneText,
   type SavedLightingInfo,
@@ -214,12 +216,28 @@ export function createSceneManipulationActions({
       if (merged.shadows === true) {
         normalized.shadows = true;
       }
+      // sanitize와 동일한 랩·클램프 — 여기서 안 맞추면 라이브 상태(az=360)와
+      // 로드본(az=0)이 어긋나 저장 직후에도 dirty로 남는다.
       if (
-        typeof merged.sunPosition === 'number' &&
-        Number.isFinite(merged.sunPosition) &&
-        merged.sunPosition !== SCENE_SUN_POSITION_DEFAULT
+        typeof merged.sunAzimuth === 'number' &&
+        Number.isFinite(merged.sunAzimuth)
       ) {
-        normalized.sunPosition = Math.min(1, Math.max(0, merged.sunPosition));
+        const sunAzimuth = ((merged.sunAzimuth % 360) + 360) % 360;
+        if (sunAzimuth !== SCENE_SUN_AZIMUTH_DEFAULT) {
+          normalized.sunAzimuth = sunAzimuth;
+        }
+      }
+      if (
+        typeof merged.sunElevation === 'number' &&
+        Number.isFinite(merged.sunElevation)
+      ) {
+        const sunElevation = Math.min(
+          90,
+          Math.max(SCENE_SUN_ELEVATION_MIN, merged.sunElevation),
+        );
+        if (sunElevation !== SCENE_SUN_ELEVATION_DEFAULT) {
+          normalized.sunElevation = sunElevation;
+        }
       }
 
       const nextLighting =
@@ -227,8 +245,10 @@ export function createSceneManipulationActions({
 
       if (
         (prev.lighting?.shadows ?? false) === (nextLighting?.shadows ?? false) &&
-        (prev.lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT) ===
-          (nextLighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT)
+        (prev.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) ===
+          (nextLighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) &&
+        (prev.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT) ===
+          (nextLighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT)
       ) {
         return prev;
       }
