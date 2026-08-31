@@ -419,9 +419,9 @@ export function OutdoorWorkModelSimulation({
             rotation={m.rotation}
             scale={m.scale}
             showLabel={false}
-            // 지도는 그림자를 받기만 한다 — 수십만 삼각형이 매 프레임
-            // shadow depth pass에 들어가는 비용을 피한다.
-            castShadow={false}
+            // 지도도 그림자를 드리운다(기본값) — 지도 GLB에 건물이 함께
+            // 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 수십만 삼각형
+            // depth pass 비용이 문제가 되면 여기부터 다시 끄는 것을 검토.
           />
         </SceneObjectBoundary>
       ))}

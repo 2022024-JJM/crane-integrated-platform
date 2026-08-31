@@ -34,8 +34,9 @@ interface ModelMeshProps {
    */
   seaSubmersion?: boolean;
   /**
-   * 그림자를 드리울지. 기본 true. 지도처럼 depth pass 비용이 큰 거대 메시만
-   * false로 끈다(그림자는 받기만 한다). 플래그는 Canvas `shadows`가 꺼져
+   * 그림자를 드리울지. 기본 true. 지도도 드리운다 — GLB에 건물이 함께
+   * 구워져 있어 끄면 건물 그림자가 통째로 사라진다(끄는 건 depth pass
+   * 비용이 실측으로 문제일 때만). 플래그는 Canvas `shadows`가 꺼져
    * 있으면 무비용이라 항상 설정해 두고, On/Off 토글은 renderer 레벨
    * (Canvas shadows + 조명 castShadow)이 담당한다 — scene-render-preset.tsx.
    */

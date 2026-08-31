@@ -1,6 +1,9 @@
-import { useMemo } from 'react';
-import { ACESFilmicToneMapping, Object3D, Vector3 } from 'three';
-import { SCENE_SUN_POSITION_DEFAULT } from '@crane/domain/3d';
+import { useEffect, useMemo, useState } from 'react';
+import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
+import {
+  SCENE_SUN_POSITION_DEFAULT,
+  modelObjectRegistry,
+} from '@crane/domain/3d';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { isSceneShadowEnabled } from '../lib/scene-shadow';
 import { clampToRange } from '@crane/core/lib/utils';
@@ -130,7 +133,15 @@ const SUN_MIN_ELEVATION_RAD = Math.PI * (20 / 180);
  * 이유이기도 하다(이 일치의 기준점).
  */
 const SUN_ORBIT_TILT_Z = 0.2;
+/**
+ * shadow map 해상도. 지도 전체를 덮는 큰 반경(임계 초과)에서는 4096으로
+ * 올려 텍셀 밀도를 유지한다 — 2048을 수 km에 펴면 그림자가 블록으로
+ * 뭉개진다. 4096² depth 텍스처는 VRAM ~64MB로, 반경이 작을 땐 2048로
+ * 아낀다.
+ */
 const SUN_SHADOW_MAP_SIZE = 2048;
+const SUN_SHADOW_MAP_SIZE_LARGE = 4096;
+const SUN_SHADOW_LARGE_RADIUS = 800;
 
 /** sunPosition t∈[0,1] → 정규화된 태양 방향 벡터(씬 → 태양). */
 function sunDirectionFromPosition(t: number): Vector3 {
@@ -143,22 +154,90 @@ function sunDirectionFromPosition(t: number): Vector3 {
 }
 
 /**
- * 조명 앵커·커버리지 — 씬 데이터(위치 배열)만으로 계산한다. 씬 그래프
- * traverse가 아니라 모델 수십 개짜리 배열 루프라 편집 중 재계산도 무비용.
+ * 지도 실측 bbox의 XZ 꼭짓점 — 그림자 커버리지를 지도 전체로 넓히는 근거.
  *
- * philly 씬처럼 오브젝트가 원점에서 수 km 떨어져 있어도(x≈-2200) 조명
- * target과 shadow camera가 씬을 따라가게 하는 장치다. anchor는 모델들의
- * 센트로이드(없으면 지도 위치, 그것도 없으면 원점), radius는 anchor에서
- * 가장 먼 모델까지의 수평 거리 + 여유.
+ * 지도 GLB는 position이 원점(또는 없음)이고 지오메트리가 실좌표(km 스케일)로
+ * 뻗어 있어 씬 데이터만으로는 범위를 알 수 없다. 지도 GLB에는 건물이 함께
+ * 구워져 있어, 모델 기준 반경만 쓰면 씬 외곽 건물이 shadow camera 밖으로
+ * 나가 그림자가 끊긴다.
+ *
+ * 로드 완료 시점을 구독할 방법이 없어(modelObjectRegistry는 리렌더 없는
+ * mutable Map) 0.3s 폴링으로 지도 객체를 찾고, bbox를 1회 계산하면 멈춘다.
+ * expandByObject는 mesh별 geometry.boundingBox(캐시됨)의 8모서리 변환이라
+ * 지도급 트리에서도 싸다. 지도가 로드되지 않으면(404 등) 1분 후 포기한다.
  */
-function useSunAnchor(sceneInfo: SavedSceneInfo | null | undefined) {
+function useMapShadowCorners(
+  sceneInfo: SavedSceneInfo | null | undefined,
+): Vector3Tuple[] | null {
+  const mapIdsKey = (sceneInfo?.maps ?? []).map((m) => m.id).join('|');
+  const [result, setResult] = useState<{
+    key: string;
+    corners: Vector3Tuple[];
+  } | null>(null);
+
+  useEffect(() => {
+    const mapIds = mapIdsKey.length > 0 ? mapIdsKey.split('|') : [];
+    if (mapIds.length === 0) return;
+
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (attempts > 200) {
+        clearInterval(timer);
+        return;
+      }
+
+      const box = new Box3();
+      for (const id of mapIds) {
+        const object = modelObjectRegistry.get(id);
+        if (!object) return;
+        box.expandByObject(object);
+      }
+      if (box.isEmpty()) return;
+
+      clearInterval(timer);
+      setResult({
+        key: mapIdsKey,
+        corners: [
+          [box.min.x, 0, box.min.z],
+          [box.min.x, 0, box.max.z],
+          [box.max.x, 0, box.min.z],
+          [box.max.x, 0, box.max.z],
+        ],
+      });
+    }, 300);
+
+    return () => clearInterval(timer);
+  }, [mapIdsKey]);
+
+  // key가 어긋난 결과(지도 교체 전 bbox)는 버린다 — 동기 reset 없이도
+  // stale 값이 새 씬에 적용되지 않는다.
+  return result && result.key === mapIdsKey ? result.corners : null;
+}
+
+/**
+ * 조명 앵커·커버리지. anchor는 모델 위치 + 지도 bbox 꼭짓점의 센트로이드
+ * (아무것도 없으면 원점), radius는 anchor에서 가장 먼 점까지의 수평 거리 +
+ * 여유. 배열 루프라 편집 중 재계산도 무비용이고, philly 씬처럼 오브젝트가
+ * 원점에서 수 km 떨어져 있어도(x≈-2200) 조명 target과 shadow camera가 씬을
+ * 따라간다.
+ *
+ * 지도 bbox 꼭짓점(useMapShadowCorners)이 합쳐지면 커버리지가 지도 전체로
+ * 넓어져 씬 외곽 건물도 그림자를 드리운다 — bbox 계산 전(로드 중)에는 모델
+ * 기준 반경으로 시작했다가 계산이 끝나면 한 번 넓어진다.
+ */
+function useSunAnchor(
+  sceneInfo: SavedSceneInfo | null | undefined,
+  mapCorners: Vector3Tuple[] | null,
+) {
   return useMemo(() => {
-    const points: Vector3Tuple[] =
+    const modelPoints: Vector3Tuple[] =
       sceneInfo?.models && sceneInfo.models.length > 0
         ? sceneInfo.models.map((m) => m.position)
         : (sceneInfo?.maps ?? [])
             .map((m) => m.position)
             .filter((p): p is Vector3Tuple => Array.isArray(p));
+    const points = mapCorners ? [...modelPoints, ...mapCorners] : modelPoints;
 
     if (points.length === 0) {
       return { anchor: [0, 0, 0] as Vector3Tuple, radius: 200 };
@@ -180,10 +259,11 @@ function useSunAnchor(sceneInfo: SavedSceneInfo | null | undefined) {
     }
 
     // 여유 150m: 모델 position은 origin 기준이라 실제 지오메트리가 더
-    // 뻗어 있을 수 있고, 그림자도 물체 밖으로 드리워진다.
-    const radius = clampToRange(maxDist + 150, 200, 2000);
+    // 뻗어 있을 수 있고, 그림자도 물체 밖으로 드리워진다. 상한 6000은
+    // 비정상 데이터(좌표 오염) 방어용 — 정상 지도 bbox는 그 아래다.
+    const radius = clampToRange(maxDist + 150, 200, 6000);
     return { anchor: [cx, 0, cz] as Vector3Tuple, radius };
-  }, [sceneInfo]);
+  }, [sceneInfo, mapCorners]);
 }
 
 /**
@@ -215,7 +295,12 @@ export function SceneLighting({
   const shadowsEnabled = isSceneShadowEnabled(lighting);
   const sunPosition = lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT;
 
-  const { anchor, radius } = useSunAnchor(sceneInfo);
+  const mapCorners = useMapShadowCorners(sceneInfo);
+  const { anchor, radius } = useSunAnchor(sceneInfo, mapCorners);
+  const shadowMapSize =
+    radius > SUN_SHADOW_LARGE_RADIUS
+      ? SUN_SHADOW_MAP_SIZE_LARGE
+      : SUN_SHADOW_MAP_SIZE;
 
   // 조명 target — three 기본 target은 씬에 붙어 있지 않아 원점만 바라본다.
   // primitive로 씬에 넣고 anchor에 놓아야 원점에서 먼 씬에서도 방향이 맞는다.
@@ -241,12 +326,15 @@ export function SceneLighting({
       <ambientLight intensity={SCENE_LIGHTING.ambientIntensity} />
       <primitive object={target} position={anchor} />
       <directionalLight
+        // mapSize는 shadow map 텍스처가 이미 만들어진 뒤 바꿔도 재할당되지
+        // 않는다 — 해상도 티어가 바뀌면 조명을 리마운트해 새로 만들게 한다.
+        key={shadowMapSize}
         position={lightPosition}
         target={target}
         color={SCENE_LIGHTING.directionalColor}
         intensity={SCENE_LIGHTING.directionalIntensity}
         castShadow={shadowsEnabled}
-        shadow-mapSize={[SUN_SHADOW_MAP_SIZE, SUN_SHADOW_MAP_SIZE]}
+        shadow-mapSize={[shadowMapSize, shadowMapSize]}
         // 미터 스케일 대형 메시의 shadow acne 방지. normalBias는 표면을
         // 법선 방향으로 밀어내는 값이라 미터 단위 씬에선 1 정도가 맞다.
         shadow-bias={-0.0002}

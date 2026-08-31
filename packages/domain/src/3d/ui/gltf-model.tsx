@@ -25,8 +25,7 @@ interface GltfModelProps {
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델에만(model-mesh.tsx). */
   seaSubmersion?: boolean;
   /**
-   * 그림자를 드리울지. 기본 true. 지도(수십만 삼각형)만 false — 그림자는
-   * 받기만 한다. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
+   * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
    */
   castShadow?: boolean;
   meshOverrides?: SavedMeshOverride[];

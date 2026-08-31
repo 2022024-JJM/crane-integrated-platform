@@ -823,9 +823,8 @@ export function SceneObjectsEditCanvas({
               // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
               // 마운트 시 bbox 순회를 건너뛴다.
               showLabel={false}
-              // 지도는 그림자를 받기만 한다 — 뷰어(outdoor-work-model-
-              // simulation)와 같은 규칙. 수십만 삼각형 depth pass 비용 회피.
-              castShadow={false}
+              // 지도도 그림자를 드리운다(기본값) — 뷰어(outdoor-work-model-
+              // simulation)와 같은 규칙. 지도 GLB에 건물이 포함되어 있다.
               onSelect={
                 m.locked === false ? handleSelectMap : handleClearSelection
               }
