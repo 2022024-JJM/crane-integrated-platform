@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
+import type { DirectionalLight } from 'three';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -114,14 +116,23 @@ export const SCENE_LIGHTING = {
 } as const;
 
 /**
- * shadow map 해상도. 지도 전체를 덮는 큰 반경(임계 초과)에서는 4096으로
- * 올려 텍셀 밀도를 유지한다 — 2048을 수 km에 펴면 그림자가 블록으로
- * 뭉개진다. 4096² depth 텍스처는 VRAM ~64MB로, 반경이 작을 땐 2048로
- * 아낀다.
+ * shadow map 해상도.
+ *
+ * 처음엔 씬(지도) 전체를 한 장에 펴는 고정 frustum이었고, 계단이 보여
+ * 2048→4096→8192로 해상도만 올렸지만 수 km 폭에서는 8192도 텍셀이 m급이라
+ * 계단이 남았다. 지금은 shadow camera가 **카메라 시점을 따라다니며**
+ * (SceneLighting의 useFrame) 보고 있는 영역에만 텍셀을 집중시키므로,
+ * 4096 한 장이면 어느 줌에서도 텍셀이 화면 픽셀보다 작거나 비슷하다 —
+ * 더 올릴 필요가 없고 VRAM도 64MB로 끝난다. 경계는 Canvas
+ * `shadows: 'soft'`(PCFSoftShadowMap, scene-shadow.ts)가 추가로 부드럽게
+ * 만든다.
  */
-const SUN_SHADOW_MAP_SIZE = 2048;
-const SUN_SHADOW_MAP_SIZE_LARGE = 4096;
-const SUN_SHADOW_LARGE_RADIUS = 800;
+const SUN_SHADOW_MAP_SIZE = 4096;
+/**
+ * 시점 추종 frustum의 최소 반경. 이보다 좁히면 텍셀은 더 촘촘해지지만
+ * 근접 줌에서 화면 밖 물체의 긴 그림자가 frustum을 벗어나 잘린다.
+ */
+const SUN_SHADOW_RADIUS_MIN = 150;
 
 /**
  * 방위각·고도(도) → 태양 방향 벡터(씬 → 태양). 구성상 단위 벡터라
@@ -212,15 +223,12 @@ function useMapShadowCorners(
 }
 
 /**
- * 조명 앵커·커버리지. anchor는 모델 위치 + 지도 bbox 꼭짓점의 센트로이드
- * (아무것도 없으면 원점), radius는 anchor에서 가장 먼 점까지의 수평 거리 +
- * 여유. 배열 루프라 편집 중 재계산도 무비용이고, philly 씬처럼 오브젝트가
- * 원점에서 수 km 떨어져 있어도(x≈-2200) 조명 target과 shadow camera가 씬을
- * 따라간다.
- *
- * 지도 bbox 꼭짓점(useMapShadowCorners)이 합쳐지면 커버리지가 지도 전체로
- * 넓어져 씬 외곽 건물도 그림자를 드리운다 — bbox 계산 전(로드 중)에는 모델
- * 기준 반경으로 시작했다가 계산이 끝나면 한 번 넓어진다.
+ * 조명 앵커·씬 반경. anchor는 모델 위치 + 지도 bbox 꼭짓점의 센트로이드
+ * (아무것도 없으면 원점)로 조명 target의 초기값, radius는 anchor에서 가장
+ * 먼 점까지의 수평 거리 + 여유로 시점 추종 shadow frustum(SceneLighting의
+ * useFrame)의 **상한**이다 — 줌 아웃해 씬 전체가 보일 때 frustum이 이보다
+ * 커질 필요가 없다. 배열 루프라 편집 중 재계산도 무비용이고, philly 씬처럼
+ * 오브젝트가 원점에서 수 km 떨어져 있어도(x≈-2200) 동작한다.
  */
 function useSunAnchor(
   sceneInfo: SavedSceneInfo | null | undefined,
@@ -293,56 +301,114 @@ export function SceneLighting({
   const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
 
   const mapCorners = useMapShadowCorners(sceneInfo);
-  const { anchor, radius } = useSunAnchor(sceneInfo, mapCorners);
-  const shadowMapSize =
-    radius > SUN_SHADOW_LARGE_RADIUS
-      ? SUN_SHADOW_MAP_SIZE_LARGE
-      : SUN_SHADOW_MAP_SIZE;
+  // anchor는 시점 추종 초점의 폴백으로만, radius는 frustum 상한으로 쓴다.
+  const { anchor, radius: maxRadius } = useSunAnchor(sceneInfo, mapCorners);
+
+  const sunDir = useMemo(
+    () => sunDirectionFromAngles(sunAzimuth, sunElevation),
+    [sunAzimuth, sunElevation],
+  );
 
   // 조명 target — three 기본 target은 씬에 붙어 있지 않아 원점만 바라본다.
-  // primitive로 씬에 넣고 anchor에 놓아야 원점에서 먼 씬에서도 방향이 맞는다.
+  // primitive로 씬에 넣고 매 프레임 초점으로 옮긴다.
   const target = useMemo(() => new Object3D(), []);
+  const lightRef = useRef<DirectionalLight | null>(null);
+  const scratchForward = useMemo(() => new Vector3(), []);
 
-  const { lightPosition, shadowFar } = useMemo(() => {
-    const dir = sunDirectionFromAngles(sunAzimuth, sunElevation);
-    // 조명은 방향만 의미 있지만 shadow camera는 위치 기준이므로 씬 반경보다
-    // 충분히 멀리 둔다.
-    const orbitDistance = Math.max(radius * 2.5, 300);
-    return {
-      lightPosition: [
-        anchor[0] + dir.x * orbitDistance,
-        anchor[1] + dir.y * orbitDistance,
-        anchor[2] + dir.z * orbitDistance,
-      ] as Vector3Tuple,
-      shadowFar: orbitDistance + radius * 3,
-    };
-  }, [sunAzimuth, sunElevation, anchor, radius]);
+  // 시점 추종 shadow frustum — 고정 frustum으로 씬 전체를 덮으면 텍셀이
+  // m급이라 계단이 보인다(SUN_SHADOW_MAP_SIZE 주석). 대신 카메라 시선이
+  // 지면과 만나는 점을 초점으로 frustum을 옮기고, 반경을 시거리에 비례시켜
+  // 어느 줌에서도 텍셀 크기 ≈ 화면 픽셀 크기를 유지한다(단일 캐스케이드
+  // CSM과 같은 원리). React 상태 대신 useFrame에서 ref를 직접 mutate하는
+  // 것이 이 저장소의 매-프레임 갱신 규칙이다(useFrame 내 setState 금지).
+  useFrame(({ camera }) => {
+    const light = lightRef.current;
+    if (!light) return;
+
+    // 1) 초점 = 시선과 지면(y=0)의 교점. 수평·상향 시선이면 카메라 바로
+    //    아래(폴백은 씬 앵커가 아니라 카메라 — 시점을 따라가는 게 목적).
+    camera.getWorldDirection(scratchForward);
+    let focusX = camera.position.x;
+    let focusZ = camera.position.z;
+    let viewDist = Math.abs(camera.position.y) + 50;
+    if (scratchForward.y < -1e-4) {
+      const t = -camera.position.y / scratchForward.y;
+      if (t > 0 && Number.isFinite(t)) {
+        focusX = camera.position.x + scratchForward.x * t;
+        focusZ = camera.position.z + scratchForward.z * t;
+        viewDist = t;
+      }
+    }
+
+    // 2) 반경: 시거리 비례를 2배 단계로 양자화 — 연속으로 변하면 텍셀
+    //    크기가 매 프레임 달라져 아래 스냅이 무력화되고 그림자가 일렁인다.
+    const want = clampToRange(
+      viewDist * 1.2,
+      SUN_SHADOW_RADIUS_MIN,
+      maxRadius,
+    );
+    let frustumRadius = SUN_SHADOW_RADIUS_MIN;
+    while (frustumRadius < want) frustumRadius *= 2;
+    frustumRadius = Math.min(frustumRadius, maxRadius);
+
+    // 3) 초점을 텍셀 격자에 스냅 — 카메라 팬 중 frustum이 서브텍셀로
+    //    미끄러지며 그림자 경계가 기어다니는 shimmer를 막는다.
+    const texel = (2 * frustumRadius) / SUN_SHADOW_MAP_SIZE;
+    const cx = Math.round(focusX / texel) * texel;
+    const cz = Math.round(focusZ / texel) * texel;
+
+    target.position.set(cx, 0, cz);
+    target.updateMatrixWorld();
+
+    const orbitDistance = Math.max(frustumRadius * 2.5, 300);
+    light.position.set(
+      cx + sunDir.x * orbitDistance,
+      sunDir.y * orbitDistance,
+      cz + sunDir.z * orbitDistance,
+    );
+    // acne(자기 그림자 줄무늬)와 peter-panning(그림자 들뜸)의 균형점은
+    // 텍셀 크기에 비례한다 — 반경이 프레임마다 변하므로 같이 갱신한다.
+    light.shadow.normalBias = Math.max(0.05, texel);
+
+    const shadowCamera = light.shadow.camera;
+    const shadowFar = orbitDistance + frustumRadius * 3;
+    if (shadowCamera.right !== frustumRadius || shadowCamera.far !== shadowFar) {
+      shadowCamera.left = -frustumRadius;
+      shadowCamera.right = frustumRadius;
+      shadowCamera.top = frustumRadius;
+      shadowCamera.bottom = -frustumRadius;
+      shadowCamera.near = 1;
+      shadowCamera.far = shadowFar;
+      shadowCamera.updateProjectionMatrix();
+    }
+  });
 
   return (
     <>
       <ambientLight intensity={SCENE_LIGHTING.ambientIntensity} />
       <primitive object={target} position={anchor} />
       <directionalLight
-        // mapSize는 shadow map 텍스처가 이미 만들어진 뒤 바꿔도 재할당되지
-        // 않는다 — 해상도 티어가 바뀌면 조명을 리마운트해 새로 만들게 한다.
-        key={shadowMapSize}
-        position={lightPosition}
+        ref={lightRef}
+        // position·shadow-camera 값은 useFrame이 매 프레임 덮어쓴다 —
+        // 여기 값은 첫 프레임 전의 초기값일 뿐이다.
+        position={SCENE_LIGHTING.directionalPosition}
         target={target}
         color={SCENE_LIGHTING.directionalColor}
         intensity={SCENE_LIGHTING.directionalIntensity}
         castShadow={shadowsEnabled}
-        shadow-mapSize={[shadowMapSize, shadowMapSize]}
-        // 미터 스케일 대형 메시의 shadow acne 방지. normalBias는 표면을
-        // 법선 방향으로 밀어내는 값이라 미터 단위 씬에선 1 정도가 맞다.
+        shadow-mapSize={[SUN_SHADOW_MAP_SIZE, SUN_SHADOW_MAP_SIZE]}
         shadow-bias={-0.0002}
-        shadow-normalBias={1}
       >
-        {/* args 방식은 값 변경 시 카메라를 재생성하므로 updateProjectionMatrix
-            수동 호출이 필요 없다. shadow-camera-left 같은 pierced prop은
-            갱신이 안 걸리므로 쓰지 말 것. */}
         <orthographicCamera
           attach="shadow-camera"
-          args={[-radius, radius, radius, -radius, 1, shadowFar]}
+          args={[
+            -SUN_SHADOW_RADIUS_MIN,
+            SUN_SHADOW_RADIUS_MIN,
+            SUN_SHADOW_RADIUS_MIN,
+            -SUN_SHADOW_RADIUS_MIN,
+            1,
+            1000,
+          ]}
         />
       </directionalLight>
     </>

@@ -35,7 +35,7 @@ import {
   SCENE_GL_OPTIONS,
   SceneLighting,
 } from './scene-render-preset';
-import { isSceneShadowEnabled } from '../lib/scene-shadow';
+import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { ReplaySearchForm } from './replay-search-form';
 
@@ -190,7 +190,7 @@ export function Replay3dView({
         cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           gl: SCENE_GL_OPTIONS,
-          shadows: isSceneShadowEnabled(sceneInfo?.lighting),
+          shadows: sceneCanvasShadows(sceneInfo?.lighting),
           onPointerMissed: clearFocus,
         }}
         overlay={

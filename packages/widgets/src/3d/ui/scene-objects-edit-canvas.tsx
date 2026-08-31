@@ -42,7 +42,7 @@ import {
   MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneLighting,
-  isSceneShadowEnabled,
+  sceneCanvasShadows,
   SceneObjectBoundary,
   SceneSurfaceCamera,
   useIsObjectSelected,
@@ -719,7 +719,7 @@ export function SceneObjectsEditCanvas({
         // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
         camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
         gl={SCENE_GL_OPTIONS}
-        shadows={isSceneShadowEnabled(sceneInfo?.lighting)}
+        shadows={sceneCanvasShadows(sceneInfo?.lighting)}
         dpr={EDITOR_DPR}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
