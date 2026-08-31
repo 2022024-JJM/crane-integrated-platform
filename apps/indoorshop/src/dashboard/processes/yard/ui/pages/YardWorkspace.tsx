@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import {
   busiestMoveDate,
+  colorOfCategory,
   fetchYardBlocks,
   fetchYardLots,
   lotCountsByUseType,
@@ -9,11 +10,16 @@ import {
   movesOn,
   occupiedLotCount,
   plansOn,
+  yardExtent,
 } from '../../api/yardRepository'
-import { YardMap, type YardLayers } from '../YardMap'
+import { YardMap, type YardLayers } from '../../../../shared/features/yard-map'
+import { BASEMAP_LAYERS } from '../../lib/basemapStyle'
 import { YardMapControls } from '../YardMapControls'
 import { YardMapLegend } from '../YardMapLegend'
-import { YardViewReadout } from '../YardViewReadout'
+import {
+  YardViewReadout,
+  type YardViewReadoutHandle,
+} from '../YardViewReadout'
 import { YardBlockOverlay } from '../YardBlockOverlay'
 import { YardBlockList } from '../YardBlockList'
 import { YardMoveOverlay } from '../YardMoveOverlay'
@@ -218,6 +224,8 @@ export function YardWorkspace() {
 
   const lots = useMemo(() => fetchYardLots(), [])
   const blocks = useMemo(() => fetchYardBlocks(), [])
+  /* 지도에 주입하는 야드 fixture — 지도(shared)는 옥포를 모르므로 여기서 넘긴다 */
+  const extent = useMemo(() => yardExtent(), [])
   const useTypes = useMemo(() => lotCountsByUseType(), [])
   const dates = useMemo(() => moveDates(), [])
 
@@ -271,7 +279,6 @@ export function YardWorkspace() {
   const [hoveredBayId, setHoveredBayId] = useState<string | null>(null)
   const [hoveredLot, setHoveredLot] = useState<string | null>(null)
   const [activeUseType, setActiveUseType] = useState<string | null>(null)
-  const [view, setView] = useState<YardView | null>(null)
   const [resetSignal, setResetSignal] = useState(0)
 
   /*
@@ -429,13 +436,15 @@ export function YardWorkspace() {
   }, [])
 
   /*
-   * 카메라는 매 프레임 바뀌므로 state 저장(view)과 별개로 ref 에도 남긴다 —
-   * 화면을 떠나는 순간(cleanup)의 마지막 값을 세션에 적기 위해서다.
+   * 카메라는 매 프레임 바뀐다 — state 로 들면 이 워크스페이스 전체(수백 줄 목록 포함)가
+   * 프레임마다 리렌더돼 3D 카메라 애니메이션이 끈적해진다. 좌표 상자에는 handle 로만
+   * 밀어 넣고, 세션 저장용 마지막 값은 ref 에 남긴다.
    */
   const latestView = useRef<YardView | null>(null)
+  const readoutRef = useRef<YardViewReadoutHandle>(null)
   const handleViewChange = useCallback((next: YardView) => {
     latestView.current = next
-    setView(next)
+    readoutRef.current?.update(next)
   }, [])
 
   useEffect(() => {
@@ -576,6 +585,9 @@ export function YardWorkspace() {
               blocks={blocks}
               moves={moves}
               plans={plans}
+              basemapLayers={BASEMAP_LAYERS}
+              extent={extent}
+              colorOfCategory={colorOfCategory}
               shops={shops}
               layers={neon ? NEON_LAYERS : layers}
               facilities={facilities}
@@ -666,7 +678,7 @@ export function YardWorkspace() {
               />
             )}
 
-            <YardViewReadout view={view} onGoHome={() => setResetSignal((n) => n + 1)} />
+            <YardViewReadout ref={readoutRef} onGoHome={() => setResetSignal((n) => n + 1)} />
 
             {fullscreenSupported && (
               <ViewportFullscreenButton

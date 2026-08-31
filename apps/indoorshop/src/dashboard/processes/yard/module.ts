@@ -27,4 +27,37 @@ export const yardModule: ProcessModule = {
   },
   routes: [{ path: '/indoorshop/logistics/yard', Component: YardWorkspace }],
   i18n: { ko: yardKo, en: yardEn },
+  provides: {
+    // 대시보드가 지도 위에 공정존 상태를 얹을 자리 — 야드 시설 데이터로 산출한다.
+    // 무거운 계산이 대시보드만 보는 사용자에게 실리지 않게 lazy 로 둔다.
+    facilityAnchors: () =>
+      import('./lib/facilityAnchors').then((m) => m.buildProcessFacilityAnchors()),
+    /*
+     * 야드 지도 배경 — 베이스맵(~980KB)·범위·색·시설. 대시보드·도장 등 다른 화면이
+     * YardMap 을 배경으로 쓸 때 넘길 값들. 그 무게가 필요 없는 화면에 실리지 않도록 lazy.
+     * ⚠️ 통합 임시: mapBackdrop(대시보드)·yardMapBackground(도장)이 동일 로더 — 하나로 통일 필요(아침 결정).
+     */
+    mapBackdrop: () =>
+      Promise.all([
+        import('./lib/basemapStyle'),
+        import('./api/yardRepository'),
+        import('./lib/facilities'),
+      ]).then(([basemap, repo, facilities]) => ({
+        basemapLayers: basemap.BASEMAP_LAYERS,
+        extent: repo.yardExtent(),
+        colorOfCategory: repo.colorOfCategory,
+        facilities: facilities.fetchYardFacilities(),
+      })),
+    yardMapBackground: () =>
+      Promise.all([
+        import('./lib/basemapStyle'),
+        import('./api/yardRepository'),
+        import('./lib/facilities'),
+      ]).then(([basemap, repo, facilities]) => ({
+        basemapLayers: basemap.BASEMAP_LAYERS,
+        extent: repo.yardExtent(),
+        colorOfCategory: repo.colorOfCategory,
+        facilities: facilities.fetchYardFacilities(),
+      })),
+  },
 }

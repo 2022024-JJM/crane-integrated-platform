@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { TFunction } from 'i18next'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
@@ -5,6 +6,9 @@ import type { LidarSensor, LidarSensorStatus } from '../model/lidarSensor'
 import { cn } from '../../../shared/lib/utils'
 import { useClock } from '../../../shared/lib/useClock'
 import { StatusChip } from '../../../shared/ui/atoms/StatusChip'
+import { ChevronDownIcon } from '../../../shared/ui/icons'
+import { sensorStatusCounts } from '../lib/bayStatusSummary'
+import { FRESHNESS_THRESHOLDS, heartbeatElapsedMinutes } from '../lib/freshness'
 
 interface LidarSensorStatusListProps {
   sensors: LidarSensor[]
@@ -15,6 +19,9 @@ interface LidarSensorStatusListProps {
    * 제 판(테두리·면)을 두르지 않고, 색은 유리 위에서 읽히는 `--glass-*` 램프를 쓴다.
    */
   tone?: 'surface' | 'glass'
+  className?: string
+  selectedSensorId?: string | null
+  onSelectSensor?: (sensorId: string, sensorIndex: number) => void
 }
 
 const statusConfig: Record<
@@ -39,23 +46,25 @@ const statusConfig: Record<
     glassRing: 'ring-glass-unhealthy/60',
     dim: true,
   },
+  calibrating: {
+    labelKey: 'sensors.status.calibrating',
+    ring: 'ring-sky-500/60',
+    glassRing: 'ring-sky-300/60',
+    dim: false,
+  },
 }
 
-/** "HH:MM" 을 오늘 날짜의 시각으로 읽는다 (백엔드 포맷 미확정 — mock 은 시:분만 준다) */
-function parseScanTime(value: string, now: Date): Date | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
-  if (!match) return null
-  const at = new Date(now)
-  at.setHours(Number(match[1]), Number(match[2]), 0, 0)
-  return at
-}
-
-/** 마지막 스캔 이후 경과 분. 읽을 수 없는 값이면 null */
-function elapsedMinutes(scanAt: string, now: Date): number | null {
-  const at = parseScanTime(scanAt, now)
-  if (!at) return null
-  // 미래로 찍힌 값(시계 오차·자정 넘김)은 0 분으로 본다
-  return Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60000))
+function SensorStatusIcon({ status, className }: { status: LidarSensorStatus; className?: string }) {
+  if (status === 'online') {
+    return <svg aria-hidden="true" viewBox="0 0 16 16" className={className}><path d="m4 8 2.4 2.4L12 4.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  }
+  if (status === 'calibrating') {
+    return <svg aria-hidden="true" viewBox="0 0 16 16" className={cn(className, 'animate-spin motion-reduce:animate-none')}><path d="M13 8a5 5 0 1 1-1.5-3.55M11.5 2.5v3h-3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  }
+  if (status === 'offline') {
+    return <svg aria-hidden="true" viewBox="0 0 16 16" className={className}><path d="M5.5 5.5 3 8l2.5 2.5M10.5 5.5 13 8l-2.5 2.5M2.5 2.5l11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  }
+  return <svg aria-hidden="true" viewBox="0 0 16 16" className={className}><path d="M8 2.2 14 13H2L8 2.2Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /><path d="M8 5.8v3.5M8 11.4h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
 }
 
 /**
@@ -71,18 +80,17 @@ function formatElapsed(minutes: number, t: TFunction): string {
 }
 
 /**
- * 신선도 등급.
+ * 신선도 등급 — 임계값은 lib/freshness 가 소유한다 (운영 합의 전 설정값, FR-1).
  *
  * 색은 보조 신호일 뿐이다 — 경과 시간 글자가 이미 같은 사실을 말하고 있으므로
  * 색각 이상이나 흑백 출력에서도 정보가 사라지지 않는다.
  */
-const STALE_MINUTES = 10
-const DEAD_MINUTES = 60
-
 function freshnessClass(minutes: number | null, glass: boolean): string {
   if (minutes === null) return glass ? 'text-glass-foreground/54' : 'text-foreground/54'
-  if (minutes >= DEAD_MINUTES) return glass ? 'text-glass-unhealthy' : 'text-status-unhealthy'
-  if (minutes >= STALE_MINUTES) return glass ? 'text-glass-degraded' : 'text-status-degraded'
+  if (minutes >= FRESHNESS_THRESHOLDS.deadMinutes)
+    return glass ? 'text-glass-unhealthy' : 'text-status-unhealthy'
+  if (minutes >= FRESHNESS_THRESHOLDS.staleMinutes)
+    return glass ? 'text-glass-degraded' : 'text-status-degraded'
   return glass ? 'text-glass-foreground/58' : 'text-foreground/58'
 }
 
@@ -109,133 +117,132 @@ export function LidarSensorStatusList({
   sensors,
   pointColors,
   tone = 'surface',
+  className,
+  selectedSensorId = null,
+  onSelectSensor,
 }: LidarSensorStatusListProps) {
   const { t } = useTranslation()
   const glass = tone === 'glass'
+  const [expanded, setExpanded] = useState(true)
   // 경과 표기가 굳지 않도록 30초마다 다시 계산한다
   const now = useClock(30000)
 
   if (sensors.length === 0) {
     return (
-      <p className={cn('text-inshop-sm', glass ? 'text-glass-foreground/68' : 'text-foreground/68')}>
+      <p className={cn('rounded-inshop-lg p-3 text-inshop-sm', glass ? 'glass-panel text-glass-foreground/68' : 'border border-border bg-surface text-foreground/68', className)}>
         {t('sensors.empty')}
       </p>
     )
   }
 
-  const online = sensors.filter((s) => s.status === 'online')
-  const allOnline = online.length === sensors.length
+  const counts = sensorStatusCounts(sensors)
+  const allOnline = counts.online === sensors.length
+  const statusOrder: LidarSensorStatus[] = ['online', 'calibrating', 'offline', 'error']
 
   return (
-    <div
-      className={cn(
-        'flex flex-wrap items-center gap-x-2 gap-y-1',
-        // 유리 안에서는 판을 또 두르지 않는다 — 도구줄이 이미 그 판이다
-        !glass && 'rounded-inshop-lg border border-border bg-surface px-2 py-1',
-      )}
-    >
-      <h2
-        className={cn(
-          'shrink-0 text-inshop-xs font-semibold',
-          glass ? 'text-glass-foreground/70' : 'text-foreground/70',
-        )}
-      >
-        {t('sensors.title')}
-      </h2>
-
-      <StatusChip
-        tone={allOnline ? 'good' : 'warning'}
-        label={`${online.length}/${sensors.length}`}
-        title={`${t('sensors.status.online')} ${online.length} / ${sensors.length}`}
-        className={cn(
-          'px-1.5 py-0.5 text-2xs',
-          // 상태색 램프도 유리용으로 바꾼다 — 라이트 램프는 어두운 유리에서 안 읽힌다
-          glass &&
-            (allOnline
-              ? 'bg-glass-healthy/10 text-glass-healthy'
-              : 'bg-glass-degraded/10 text-glass-degraded'),
-        )}
-      />
-
-      <span
-        aria-hidden="true"
-        className={cn('h-4 w-px shrink-0', glass ? 'bg-glass-border' : 'bg-border')}
-      />
-
+    <section data-lidar-sensor-panel className={cn('overflow-hidden rounded-inshop-lg', glass ? 'glass-panel' : 'border border-border bg-surface', className)} aria-label={t('sensors.title')}>
+      <header className={cn('flex items-center gap-2 border-b px-2.5 py-1.5', glass ? 'border-glass-border/70' : 'border-border')}>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h2 className={cn('shrink-0 text-inshop-xs font-semibold', glass ? 'text-glass-foreground/90' : 'text-foreground')}>{t('sensors.title')}</h2>
+          <span className={cn('text-2xs', glass ? 'text-glass-foreground/45' : 'text-foreground/48')}>{sensors.length}</span>
+        </div>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <div className="hidden items-center gap-2 text-2xs sm:flex">
+            {statusOrder.filter((status) => counts[status] > 0).map((status) => (
+              <span key={status} className={cn('flex items-center gap-0.5', glass ? 'text-glass-foreground/68' : 'text-foreground/62')}>
+                <SensorStatusIcon status={status} className={cn('h-3 w-3', STATUS_ICON_INK[status][glass ? 'glass' : 'surface'])} />
+                <span className="font-mono tabular-nums">{counts[status]}</span>
+                <span className="sr-only">{t(statusConfig[status].labelKey)}</span>
+              </span>
+            ))}
+          </div>
+          <StatusChip
+            tone={allOnline ? 'good' : 'warning'}
+            label={`${counts.online}/${sensors.length}`}
+            title={`${t('sensors.status.online')} ${counts.online} / ${sensors.length}`}
+            className={cn('px-1.5 py-0.5 text-2xs', glass && (allOnline ? 'bg-glass-healthy/10 text-glass-healthy' : 'bg-glass-degraded/10 text-glass-degraded'))}
+          />
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={t(expanded ? 'sensors.collapse' : 'sensors.expand')}
+            onClick={() => setExpanded((value) => !value)}
+            className={cn('grid h-6 w-6 place-items-center rounded transition-colors focus:outline-none focus-visible:ring-2', glass ? 'text-glass-foreground/55 hover:bg-white/10 hover:text-glass-foreground' : 'text-foreground/55 hover:bg-foreground/5 hover:text-foreground')}
+          >
+            <ChevronDownIcon size={14} className={cn('transition-transform', !expanded && '-rotate-90')} />
+          </button>
+        </div>
+      </header>
+      {expanded && <ul className="max-h-56 divide-y divide-border/50 overflow-y-auto px-1.5 py-1">
       {sensors.map((sensor, index) => {
         const config = statusConfig[sensor.status]
         const statusLabel = t(config.labelKey)
         const pointColor = pointColors?.[index % (pointColors.length || 1)]
-        const minutes = elapsedMinutes(sensor.lastScanAt, now)
+        const timeSource = sensor.lastHeartbeatAt ?? sensor.lastScanAt
+        const minutes = heartbeatElapsedMinutes(timeSource, now)
+        const heartbeatMinutes = sensor.lastHeartbeatAt ? minutes : null
         const failing = sensor.status !== 'online'
 
         return (
-          <span
+          <li
             key={sensor.id}
-            title={`${sensor.name} · ${statusLabel} · ${t('assembly.factoryList.summaryLastScan')} ${
-              sensor.lastScanAt
-            }${minutes === null ? '' : ` (${formatElapsed(minutes, t)})`}`}
+            title={`${sensor.name} · ${statusLabel} · Heartbeat ${
+              sensor.lastHeartbeatAt ?? '-'
+            } · ${t('sensors.lastScan')} ${sensor.lastScanAt || '-'}${minutes === null ? '' : ` (${formatElapsed(minutes, t)})`} · FOV ${sensor.diagnostics?.fovMode ?? '-'}`}
             className={cn(
-              'flex h-6 shrink-0 items-center gap-1 rounded-inshop-sm px-1.5',
-              glass ? 'bg-glass-hover' : 'bg-surface-secondary',
-              // 정상 센서는 테두리를 얻지 않는다 — 이상한 것만 눈에 걸리게
+              'rounded px-1.5 py-1',
+              glass ? 'hover:bg-white/[0.045]' : 'hover:bg-surface-secondary',
               failing && 'ring-1 ring-inset',
               failing && (glass ? config.glassRing : config.ring),
+              selectedSensorId === sensor.id && (glass ? 'ring-2 ring-glass-accent' : 'ring-2 ring-accent'),
             )}
           >
-            {pointColor && (
-              <span
-                aria-hidden="true"
-                className={cn('h-2 w-2 shrink-0 rounded-inshop-xs', config.dim && 'opacity-50')}
-                style={{ backgroundColor: pointColor }}
-              />
-            )}
-            <span
-              className={cn(
-                'font-mono text-2xs',
-                glass ? 'text-glass-foreground/50' : 'text-foreground/50',
-              )}
+            <button
+              type="button"
+              aria-pressed={selectedSensorId === sensor.id}
+              onClick={() => onSelectSensor?.(sensor.id, index)}
+              className="block w-full rounded-inshop-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-glass-accent"
             >
-              {index + 1}
-            </span>
-            <span
-              className={cn(
-                'font-mono text-inshop-xs tabular-nums',
-                failing
-                  ? glass
-                    ? 'text-glass-foreground/54'
-                    : 'text-foreground/54'
-                  : glass
-                    ? 'text-glass-foreground/85'
-                    : 'text-foreground/85',
-              )}
-            >
-              {sensor.lastScanAt}
-            </span>
-            {failing ? (
-              // 이상 센서는 경과 대신 상태를 말한다 — 그게 지금 알아야 할 사실이다
+            <div className="flex min-h-6 items-center gap-1.5">
+              {pointColor && <span aria-hidden="true" className={cn('h-2 w-2 shrink-0 rounded-inshop-xs', config.dim && 'opacity-50')} style={{ backgroundColor: pointColor }} />}
+              <SensorStatusIcon status={sensor.status} className={cn('h-3.5 w-3.5 shrink-0', STATUS_ICON_INK[sensor.status][glass ? 'glass' : 'surface'])} />
+              <span className={cn('min-w-0 flex-1 truncate font-mono text-2xs font-semibold', glass ? 'text-glass-foreground/88' : 'text-foreground/85')}>{sensor.name || `LiDAR ${index + 1}`}</span>
               <span
                 className={cn(
-                  'whitespace-nowrap text-2xs font-medium',
-                  sensor.status === 'error'
-                    ? glass
-                      ? 'text-glass-unhealthy'
-                      : 'text-status-unhealthy'
-                    : glass
-                      ? 'text-glass-foreground/68'
-                      : 'text-foreground/68',
+                  'flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[9px] leading-none tabular-nums',
+                  glass ? 'border-white/10 bg-white/[0.055]' : 'border-border bg-surface-secondary',
+                  freshnessClass(heartbeatMinutes, glass),
                 )}
               >
-                {statusLabel}
+                <svg aria-hidden="true" viewBox="0 0 16 16" className="h-2.5 w-2.5">
+                  <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M8 4.7V8l2.3 1.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {minutes === null ? '-' : formatElapsedShort(minutes, t)}
               </span>
-            ) : (
-              <span className={cn('whitespace-nowrap text-2xs', freshnessClass(minutes, glass))}>
-                {minutes === null ? t('common.none') : formatElapsedShort(minutes, t)}
-              </span>
-            )}
-          </span>
+              <span className={cn('shrink-0 text-2xs font-medium', STATUS_ICON_INK[sensor.status][glass ? 'glass' : 'surface'])}>{statusLabel}</span>
+            </div>
+            <dl className={cn('flex flex-wrap items-center gap-x-3 gap-y-0.5 pb-0.5 pl-5 text-2xs', glass ? 'text-glass-foreground/52' : 'text-foreground/52')}>
+              <div className="flex gap-1"><dt>Heartbeat</dt><dd className="font-mono tabular-nums">{sensor.lastHeartbeatAt ?? '-'}</dd></div>
+              <div className="flex gap-1"><dt>{t('sensors.lastScan')}</dt><dd className="font-mono tabular-nums">{sensor.lastScanAt ? sensor.lastScanAt.replace('T', ' ') : '-'}</dd></div>
+              <div className="flex gap-1"><dt>{t('assembly.bayPanel.scanRate')}</dt><dd className="font-mono tabular-nums">{sensor.diagnostics?.scanRatePtsPerSec !== undefined ? sensor.diagnostics.scanRatePtsPerSec.toLocaleString() : '-'}</dd></div>
+              <div className="flex gap-1"><dt>{t('assembly.bayPanel.temperature')}</dt><dd className="font-mono tabular-nums">{sensor.diagnostics?.temperatureC !== undefined ? `${sensor.diagnostics.temperatureC}°C` : '-'}</dd></div>
+              <div className="flex gap-1"><dt>{t('assembly.bayPanel.rssi')}</dt><dd className="font-mono tabular-nums">{sensor.diagnostics?.rssiDbm !== undefined ? `${sensor.diagnostics.rssiDbm}dBm` : '-'}</dd></div>
+              <div className="flex gap-1"><dt>FOV</dt><dd className="font-mono">{sensor.diagnostics?.fovMode ?? '-'}</dd></div>
+              {sensor.errorCode && <div className={cn('flex gap-1', glass ? 'text-glass-unhealthy' : 'text-status-unhealthy')}><dt>{t('assembly.bayPanel.errorCode')}</dt><dd className="font-mono">{sensor.errorCode}</dd></div>}
+            </dl>
+            </button>
+          </li>
         )
       })}
-    </div>
+      </ul>}
+    </section>
   )
+}
+
+const STATUS_ICON_INK: Record<LidarSensorStatus, { surface: string; glass: string }> = {
+  online: { surface: 'text-status-healthy', glass: 'text-glass-healthy' },
+  calibrating: { surface: 'text-sky-600', glass: 'text-sky-300' },
+  offline: { surface: 'text-foreground/54', glass: 'text-glass-foreground/54' },
+  error: { surface: 'text-status-unhealthy', glass: 'text-glass-unhealthy' },
 }

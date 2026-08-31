@@ -1,7 +1,7 @@
 # 내업 공정실적 자동수집 시스템
 # OT Server 인프라 구성 및 CI/CD 설계서
 
-**버전:** v0.8
+**버전:** v0.9
 **작성:** 이태훈 PM
 **소속:** 한화에너지 컨버전스사업부 R&D센터 솔루션개발1팀
 
@@ -56,7 +56,7 @@ Kepware/EMQX 기반 구조는 완전히 제외되었으며, 물리 서버는 아
 | Broker | 위치 | 구독처 |
 |---|---|---|
 | MQTT Broker(조립용) | OT-Server-A | Vision WS 16대(LiDAR/Vision OCR) → 조립 Agent |
-| MQTT Broker(의장용) | OT-Server-B | 선행의장1+2공장 통합 → 의장 Agent |
+| MQTT Broker(의장용) | OT-Server-B | 선행의장1·2공장 LiDAR 필드 서비스 → 의장 Agent |
 
 가공 권역은 필드 센서(LiDAR/PLC)가 없어 별도 Agent/Broker 구독 없이, 가공 실적 판별 서비스가 Legacy DB 연동으로 직접 동작한다. 도장 권역은 PLC가 Modbus로 ISL Server의 도장 Agent에 직결되며, MQTT Broker를 경유하지 않는다.
 
@@ -65,11 +65,11 @@ Kepware/EMQX 기반 구조는 완전히 제외되었으며, 물리 서버는 아
 ### 2.3 네트워크 토폴로지
 
 ```
-Vision WS x16(조립) ──publish──→ MQTT Broker(조립용) @ OT-Server-A ──→ 조립 Agent ──────────────┐
+Vision WS x16(조립) ──publish──→ MQTT Broker(조립용) @ OT-Server-A ──→ 조립 Agent ──────────────────┐
                                                                                                     │
-                       MQTT Broker(의장용) @ OT-Server-B ──→ 의장 Agent ─────────────────────────────┤
+LiDAR 필드 서비스(선행의장1+2공장) ──publish──→ MQTT Broker(의장용) @ OT-Server-B ──→ 의장 Agent ───┤
                                                                                                     │
-PLC(가스히터/제습기, 선행도장) ──Modbus 직결──────────────────────────→ ISL Server 도장 Agent ─────────┤
+PLC(가스히터/제습기, 선행도장) ──Modbus 직결──→ ISL Server 도장 Agent ──────────────────────────────┤
                                                                                                     ▼
                                                                                   실적판별 결과 ──→ ISL Server (ISL Engine)
 
@@ -85,6 +85,7 @@ Hot Data DB는 OT망 내부에 위치하며, OT-Server-A/B 모두 동일 DB 인�
 |---|---|---|
 | OT-Server-A/B → Hot Data DB | DB 포트 (예: 5432) | JDBC 연결 |
 | Vision WS 16대 → OT-Server-A | 1883 (MQTT) | MQTT(조립용, EMQX) publish |
+| 선행의장 LiDAR 필드 서비스 → OT-Server-B | 1883 (MQTT) | MQTT(의장용, EMQX) publish |
 | PLC → ISL Server | Modbus 포트 (예: 502) | Modbus 직결 |
 | OT-Server-A/B ↔ ISL Server | 실적판별 결과 전달용 포트 (확정 필요) | 실적판별 결과 OT Core 전달 |
 | ISL Server → Hot Data DB | DB 포트 | Hot DB Agent JDBC |
@@ -102,12 +103,16 @@ Hot Data DB는 OT망 내부에 위치하며, OT-Server-A/B 모두 동일 DB 인�
 
 | 권역 | 부하 특성 |
 |---|---|
-| 조립 | 최고 부하 — LiDAR 340대 + Vision WS 16대(HP OMEN 35L, RTX 5070Ti) 실시간 추론 이벤트 |
+| 조립 | 최고 부하 — LiDAR ~210대 + Vision WS 16대(HP OMEN 35L, RTX 5070Ti) 실시간 추론 이벤트 |
 | 가공 | 중간 — Legacy DB 연동 중심 |
-| 선행의장 | 중간 |
+| 선행의장 | 중간~높음 — LiDAR ~140대 기반 |
 | 선행도장 | 최저 — PLC 기반, 이벤트 빈도 낮음 |
 
 부하가 가장 큰 **조립**을 가장 가벼운 **도장**과 묶고, 중간 부하인 **가공·선행의장**을 묶음으로써, 기존 검토안(가공+조립 / 의장+도장)보다 두 서버 간 부하 편차를 줄이는 방향으로 변경되었다.
+
+> ⚠️ **선행의장 LiDAR 전환에 따른 부하 재산정 필요.** 위 페어링 근거는 선행의장이 RFID 기반(경부하)이라는 전제에서 나왔다. RFID 경로가 폐기되고 선행의장이 **LiDAR ~140대** 기반이 되면서 이 권역의 부하가 올라갔으므로, `OT-Server-B = 가공 + 선행의장` 조합이 여전히 부하 편차를 줄이는지 재검토가 필요하다. **본 문서는 배치를 바꾸지 않고 재검토 필요만 기록한다** — 실측 근거 확보 후 확정한다.
+
+> ⚠️ **LiDAR 대수 출처 불일치.** 본 절은 조립 `340대`(물리 배포 다이어그램 근거)로 적혀 있으나, 「필드 데이터 수집 메시지 설계」는 **조립 ~210대 + 의장 ~140대(합 ~350대)** 로 기술한다. 총량은 비슷하나 **권역별 배분이 다르므로** 어느 쪽이 최신인지 확인이 필요하다. 위 표는 후자 기준으로 적었다.
 
 ### 3.2 MQTT Broker 위치와의 연관성
 
@@ -406,4 +411,5 @@ DB 자격증명 등 민감 정보는 `.env` 파일에 평문으로 두지 않는
 | v0.6 | 2026-06-28 | 메시지 브로커 용어 정정 — "MQTT Broker"가 정식 명칭이며 NATS는 내부 메시징 구현체로 명확화 |
 | v0.7 | 2026-06-28 | MQTT Broker 기술 스택을 NATS → EMQX로 변경 (docker-compose 예시, 포트 체크리스트 갱신) |
 | v0.8 | 2026-06-29 | 개발환경가이드의 `src/` 디렉토리 재구조화에 맞춰 CI 경로 필터·빌드 명령 경로 동기화 |
+| v0.9 | 2026-08-25 | **RFID 경로 폐기 반영** — 선행의장 필드 디바이스가 LiDAR로 확정. §2.2 Broker 구독처에서 RFID Controller WS1/WS2 제거(의장용은 선행의장1·2공장 LiDAR 필드 서비스로 교체), §2.3 네트워크 토폴로지 재작성, §2.4 포트 체크리스트 RFID 2행 정리, §3.1 부하 특성 갱신(선행의장 LiDAR ~140대 기반). ⚠️ 서버 페어링 부하 재산정 필요·LiDAR 대수 출처 불일치 2건 기록 |
 

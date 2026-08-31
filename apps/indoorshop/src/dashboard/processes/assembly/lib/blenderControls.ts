@@ -60,8 +60,10 @@ export function bindModifierAwareButtons(
         : event.ctrlKey || event.metaKey
           ? THREE.MOUSE.DOLLY
           : THREE.MOUSE.ROTATE
-    } else if (altLeft) {
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE
+    } else if (event.button === 0) {
+      // Shift+왼쪽 = 이동 — 트랙패드·2버튼 마우스에서 오른쪽 드래그를 대신한다
+      controls.mouseButtons.LEFT =
+        event.shiftKey && !altLeft ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE
     }
   }
 

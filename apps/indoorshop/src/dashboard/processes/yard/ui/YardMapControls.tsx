@@ -6,7 +6,7 @@ import { ToggleButton } from '../../../shared/ui/atoms/ToggleButton'
 import { formatYardDate } from '../model/types'
 import type { MapThemeSetting } from '../lib/basemapStyle'
 import type { YardViewMode } from '../lib/projection'
-import type { YardLayers } from './YardMap'
+import type { YardLayers } from '../../../shared/features/yard-map'
 
 interface YardMapControlsProps {
   layers: YardLayers

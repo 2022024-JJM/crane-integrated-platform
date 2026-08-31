@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { bindViewportFocus } from '../../lib/viewportInput'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { cn } from '../../../../shared/lib/utils'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
@@ -65,9 +66,10 @@ import { createBlockLabel, createBayLabel } from '../../lib/labelCards'
 import { createBackdrop } from '../../lib/backdrop'
 import { SENSOR_POINT_COLORS } from '../../lib/bayConfig'
 import { ViewportAxisGizmo } from './ViewportAxisGizmo'
+import { WheelZoomHint } from './WheelZoomHint'
 
 /**
- * 실측 스캔 뷰어 — 조립 5공장 (실측데이터) 전용.
+ * 실측 스캔 뷰어 — GBS - 1공장 5베이 전용.
  *
  * 시뮬레이션 뷰어(`LidarPointCloudViewer`)와 달리 점군을 만들지 않는다:
  * `public/real-scan/` 의 정합 점군(bin)·점별 블록 라벨·CAD 오버레이 메쉬를 그대로 올린다.
@@ -99,6 +101,8 @@ interface RealScanViewerProps {
   highlightedBayId?: string | null
   onHoverBay?: (locationId: string | null) => void
   className?: string
+  /** 센서 카드 클릭으로 요청된 센서 인덱스와 반복 요청 식별자 */
+  sensorFocus?: { index: number; request: number } | null
 }
 
 /** 실측 점군 기본 점 크기(m) — 밀도가 높아 큰 점은 뭉개진다. 뷰포트 슬라이더로 조절 */
@@ -153,6 +157,8 @@ function createRealSensorMarker(
 ): THREE.Group {
   const group = new THREE.Group()
   const [x, y, z] = position
+  // 그룹 원점이 아니라 manifest가 준 센서 본체 위치로 카메라를 이동시킨다.
+  group.userData.focusPosition = new THREE.Vector3(x, y, z)
   const steel = new THREE.MeshLambertMaterial({ color: 0x5b6673 })
   const dark = new THREE.MeshLambertMaterial({ color: 0x232d3a })
 
@@ -357,6 +363,7 @@ export function RealScanViewer({
   highlightedBayId = null,
   onHoverBay,
   className,
+  sensorFocus = null,
 }: RealScanViewerProps) {
   const { t, i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -454,6 +461,35 @@ export function RealScanViewer({
     home: ReturnType<typeof captureHomePose>
   } | null>(null)
   const [axisView, setAxisView] = useState<AxisViewState | null>(null)
+  const [wheelHint, setWheelHint] = useState(false)
+  const wheelHintTimer = useRef(0)
+  /** axisView는 카메라 조작 중 계속 바뀐다. 같은 클릭 요청을 두 번 처리하지 않는다. */
+  const handledSensorFocusRequestRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!sensorFocus || !axisView || mode !== 'bay') return
+    if (handledSensorFocusRequestRef.current === sensorFocus.request) return
+    const api = viewApiRef.current
+    if (!api) return
+    handledSensorFocusRequestRef.current = sensorFocus.request
+    if (sensorFocus.index < 0) {
+      resetToHome(api.camera, api.controls, api.home)
+      return
+    }
+    const marker = sceneRefs.current?.sensorMarkers[sensorFocus.index]
+    if (!marker) return
+    const localFocus = marker.userData.focusPosition as THREE.Vector3 | undefined
+    if (!localFocus) return
+    const target = marker.localToWorld(localFocus.clone())
+    const direction = api.camera.position.clone().sub(api.controls.target)
+    if (direction.lengthSq() < 1e-6) direction.set(1, 0.7, 1)
+    direction.normalize()
+    api.camera.position.copy(
+      target.clone().addScaledVector(direction, Math.max(8, api.controls.minDistance))
+    )
+    api.controls.target.copy(target)
+    api.controls.update()
+  }, [sensorFocus, axisView, mode])
 
   const handleAxisSelect = useCallback((direction: ViewDirection) => {
     const api = viewApiRef.current
@@ -687,6 +723,21 @@ export function RealScanViewer({
     controls.maxDistance = 700
     applyBlenderMouseBindings(controls)
     const unbindButtons = bindModifierAwareButtons(controls, renderer.domElement)
+
+    /*
+     * 조작 포커스 (FR-6) — 시뮬레이션 뷰어와 같은 규칙: 클릭 전에는 휠을 소비하지
+     * 않아 페이지 스크롤이 걸리지 않고, 줌 한계에서는 다시 페이지로 흘려보낸다.
+     */
+    const focusApi = bindViewportFocus(controls, camera, container, {
+      onBlockedWheel: () => {
+        setWheelHint(true)
+        window.clearTimeout(wheelHintTimer.current)
+        wheelHintTimer.current = window.setTimeout(() => setWheelHint(false), 2200)
+      },
+      onFocusChange: (focused) => {
+        if (focused) setWheelHint(false)
+      },
+    })
 
     let pointerInside = false
     const markInside = () => { pointerInside = true }
@@ -1077,6 +1128,8 @@ export function RealScanViewer({
       controls.removeEventListener('change', scheduleAxisView)
       viewApiRef.current = null
       unbindButtons()
+      focusApi.dispose()
+      window.clearTimeout(wheelHintTimer.current)
       renderer.domElement.removeEventListener('pointerenter', markInside)
       renderer.domElement.removeEventListener('pointerleave', markOutside)
       window.removeEventListener('keydown', handleViewportKey)
@@ -1186,6 +1239,8 @@ export function RealScanViewer({
         onSelectDirection={handleAxisSelect}
         onGoHome={handleGoHome}
       />
+
+      {wheelHint && <WheelZoomHint />}
 
       {/* 점 크기 — 밀도·거리에 따라 적정값이 달라 사용자가 즉석에서 잡는다 */}
       <div className="absolute bottom-3 right-24 flex items-center gap-2 rounded-inshop-md glass-panel px-2.5 py-1.5">

@@ -238,8 +238,8 @@ state-machine:
 
 | 구분 | 조립(Assembly) | 도장(Painting) |
 |------|----------------|----------------|
-| 센서 | LiDAR | PLC(Modbus) |
-| 대표 이벤트 | `LIDAR_BLOCK_DETECTED` | `PLC_COIL_ON`, `PLC_COIL_OFF` |
+| 센서 | LiDAR, Vision OCR | PLC(Modbus) |
+| 대표 이벤트 | `LIDAR_BLOCK_DETECTED`, `VISION_OCR_READ` | `PLC_COIL_ON`, `PLC_COIL_OFF` |
 | 상태 | `WAITING`, `BLOCK_IN_POSITION`, `WELDING`, `DONE` | `BOOTH_ENTERED`, `SPRAYING`, `CURING`, `DONE` |
 
 ### 6.2 공통 Domain — 같은 `ProcessEvent`, 같은 엔진
@@ -248,10 +248,10 @@ state-machine:
 new ProcessEvent(
     "evt-001",
     Zone.ASSEMBLY,           // 또는 PAINTING
-    "LIDAR_BLOCK_DETECTED",  // eventType만 다름
+    "VISION_OCR_READ",       // eventType만 다름
     "WO-2026-001",
     Instant.now(),
-    Map.of("tagId", "TAG-A12", "bay", "B3")
+    Map.of("blockNo", "BLK-A12", "bay", "B3")
 );
 ```
 
@@ -284,6 +284,8 @@ states:
     name: 완료
     terminal: true
 transitions:
+  - eventType: VISION_OCR_READ
+    targetStateId: BLOCK_IN_POSITION
   - eventType: LIDAR_BLOCK_DETECTED
     targetStateId: WELDING
   - eventType: WORK_COMPLETED
@@ -327,7 +329,7 @@ transitions:
 
 | Port | 조립 | 도장 |
 |------|------|------|
-| Inbound | ISL4 Provider → LiDAR를 `ProcessEvent`로 변환 | Modbus Agent → PLC coil을 `ProcessEvent`로 변환 |
+| Inbound | ISL4 Provider → LiDAR/Vision OCR을 `ProcessEvent`로 변환 | Modbus Agent → PLC coil을 `ProcessEvent`로 변환 |
 | HotDataRepository | 조립 Hot DB 스키마 | 도장 Hot DB 스키마 |
 | LegacyDataGateway | SAP RFC 등 | Oracle 등 |
 

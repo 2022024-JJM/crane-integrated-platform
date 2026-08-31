@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import type { TFunction } from 'i18next'
+import type { InshopKey } from '../../../../shared/lib/i18n/keys'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
@@ -44,9 +45,28 @@ import {
   type ViewDirection,
 } from '../../lib/blenderControls'
 import { projectAxes, type AxisViewState } from '../../lib/axisGizmo'
-import { makeLabelObject, createBlockLabel, createBayLabel } from '../../lib/labelCards'
+import { makeLabelObject, createBlockLabel, createBayStatusLabel } from '../../lib/labelCards'
 import { createBackdrop } from '../../lib/backdrop'
+import type { FactoryLayout } from '../../api/bayLayout'
+import {
+  worstSensorStatus,
+  sensorStatusCounts,
+  bayWorkState,
+  bayStage,
+} from '../../lib/bayStatusSummary'
+import {
+  emphasisFor,
+  EMPHASIS_GEOMETRY_OPACITY,
+  EMPHASIS_LABEL_OPACITY,
+  type BaySelection,
+} from '../../lib/bayEmphasis'
+import { tweenCameraTo } from '../../lib/cameraTween'
+import { edgePlacementFor } from '../../lib/offscreenIndicator'
+import { bindViewportFocus, clampPanToBounds } from '../../lib/viewportInput'
+import { isLowGpuMode, pixelRatioFor, subscribeQualityMode } from '../../lib/qualityMode'
+import { fitDistanceForBox } from '../../lib/fitCamera'
 import { ViewportAxisGizmo } from './ViewportAxisGizmo'
+import { WheelZoomHint } from './WheelZoomHint'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import {
   splitComponents,
@@ -110,8 +130,21 @@ interface LidarPointCloudViewerProps {
   colorMode?: PointColorMode
   /** 윤곽(특징선·코너 브래킷·풋프린트) 표시 */
   showOutline?: boolean
+  /**
+   * 공장 배치 (FR-3) — 베이 좌표·크기·통로 관계의 단일 출처. 뷰어는 이 값을 그대로
+   * 그릴 뿐 배치를 스스로 정하지 않는다. 없으면 예전처럼 한 줄로 나열한다.
+   */
+  layout?: FactoryLayout | null
   onSelectBlock?: (blockId: string) => void
-  onSelectBay?: (locationId: string) => void
+  /**
+   * 공장 뷰의 지속 선택 정반 (FR-5) — 소유자는 화면(workspace)이다.
+   * 선택 대상은 100%, 동일 공정 단계는 중간, 무관한 정반은 낮은 강도로 가라앉는다.
+   */
+  selectedBayId?: string | null
+  /** 라벨 클릭(선택)·빈 공간 클릭·Esc(해제)로 선택이 바뀔 때 */
+  onBaySelect?: (locationId: string | null) => void
+  /** 이미 선택된 정반 라벨을 다시 클릭 — 정반 화면으로 들어간다 */
+  onOpenBay?: (locationId: string) => void
   /**
    * 목록에서 가리키고 있는 정반 — 3D 쪽 경계선·라벨이 같이 켜진다.
    * 목록과 3D 가 같은 정반을 말하고 있다는 것을 보여주는 유일한 연결선이다.
@@ -119,6 +152,19 @@ interface LidarPointCloudViewerProps {
   highlightedBayId?: string | null
   /** 3D 쪽 정반 라벨에 손을 얹었을 때 — 목록 쪽 강조를 같은 값으로 맞춘다 */
   onHoverBay?: (locationId: string | null) => void
+  /**
+   * 필터에 걸린 정반 (FR-9) — 숨기지 않고 강하게 가라앉힌다. 판정은 화면(workspace)이
+   * bayFilters 로 하고, 뷰어는 불투명도만 낮춘다.
+   */
+  dimmedBayIds?: ReadonlySet<string> | null
+  /**
+   * `선택 정반 맞춤` 재요청 신호 (FR-8 보조 액션) — 값이 오를 때마다 현재 선택
+   * 정반으로 카메라를 다시 맞춘다. 선택 자체는 이미 맞춤을 유발하므로, 같은 정반을
+   * 두고 카메라만 흘러갔을 때 상세 카드 버튼이 이 신호를 올린다.
+   */
+  fitRequest?: number
+  /** 센서 카드 클릭으로 요청된 센서 인덱스와 반복 요청 식별자 */
+  sensorFocus?: { index: number; request: number } | null
   /**
    * 뷰포트 크기 규칙 override.
    * 기본은 문서 안에 놓이는 고정 높이지만, 고정 화면에서는 부모 칸을 꽉 채워야 한다.
@@ -129,7 +175,34 @@ interface LidarPointCloudViewerProps {
 
 /** 탭에서 가리킨 정반의 경계선 색 — 두 모드 모두에서 바탕과 갈리는 밝은 주황 */
 const BAY_HIGHLIGHT_COLOR = 0xffa347
+
+/** 뷰포트 위 유리 버튼 공통 스타일 — 도움말 토글과 같은 결 */
+const GLASS_BUTTON_CLASS =
+  'rounded-inshop-md glass-panel px-2 py-1 text-2xs font-medium text-glass-foreground/80 transition-colors hover:bg-glass-hover hover:text-glass-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent'
+
+type LayerKey = 'floor' | 'labels' | 'blocks' | 'sensors' | 'status'
+
+/** 레이어 토글 목록 (FR-3) — 바닥/경계 · 라벨 · 블록 · 라이다 · 상태 오버레이 */
+const LAYER_OPTIONS: { key: LayerKey; labelKey: InshopKey }[] = [
+  { key: 'floor', labelKey: 'viewer.layers.floor' },
+  { key: 'labels', labelKey: 'viewer.layers.labels' },
+  { key: 'blocks', labelKey: 'viewer.layers.blocks' },
+  { key: 'sensors', labelKey: 'viewer.layers.sensors' },
+  { key: 'status', labelKey: 'viewer.layers.status' },
+]
 const POINT_SIZE = 0.16
+/** 화면 밖 표식이 가장자리에서 띄우는 여백(px) — 표식 pill 이 잘리지 않는 최소 거리 */
+const OFFSCREEN_MARGIN = 30
+
+/** 화면 밖 이상 정반 표식 하나 (FR-9) */
+interface OffscreenMark {
+  id: string
+  name: string
+  error: boolean
+  x: number
+  y: number
+  angleDeg: number
+}
 /** 공장 뷰에서 정반 간 배치 간격(폭 방향) */
 const BAY_PITCH = BAY_WIDTH + 10
 /** 공장 뷰 다운샘플 배율 */
@@ -151,6 +224,8 @@ function createSensorMarker(
   isOnline: boolean
 ): THREE.Group {
   const group = new THREE.Group()
+  // 그룹 원점은 (0,0,0)이고 실제 본체는 자식 좌표에 있으므로 포커스 좌표를 별도 보존한다.
+  group.userData.focusPosition = position.clone()
   const steel = new THREE.MeshLambertMaterial({ color: 0x5b6673 })
   const dark = new THREE.MeshLambertMaterial({ color: 0x232d3a })
   const ringColor = isOnline ? color : 0x475569
@@ -200,6 +275,28 @@ function createSensorMarker(
   }
 
   return group
+}
+
+/**
+ * 그룹 안 재질의 불투명도를 배율로 누른다 (FR-5 강조).
+ * 원래 값은 `userData.baseOpacity` 에 잡아 두고 항상 base × 배율로 계산한다 —
+ * 배율이 겹쳐 곱해져 원래 밝기를 잃는 것을 막는다. 여러 베이가 공유하는 재질
+ * (CAD 솔리드·지그)은 베이별로 다르게 누를 수 없어 `emphasisExempt` 로 제외한다.
+ */
+function setGroupEmphasis(group: THREE.Object3D, factor: number): void {
+  group.traverse((obj) => {
+    const material = (obj as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
+    if (!material) return
+    for (const mat of Array.isArray(material) ? material : [material]) {
+      if (mat.userData.emphasisExempt) continue
+      if (mat.userData.baseOpacity === undefined) {
+        mat.userData.baseOpacity = mat.opacity
+        mat.userData.baseTransparent = mat.transparent
+      }
+      mat.opacity = (mat.userData.baseOpacity as number) * factor
+      mat.transparent = factor < 1 ? true : (mat.userData.baseTransparent as boolean)
+    }
+  })
 }
 
 /**
@@ -479,10 +576,16 @@ export function LidarPointCloudViewer({
   displayMode = 'overlay',
   colorMode = 'sensor',
   showOutline = true,
+  layout = null,
   onSelectBlock,
-  onSelectBay,
+  selectedBayId = null,
+  onBaySelect,
+  onOpenBay,
   highlightedBayId = null,
   onHoverBay,
+  dimmedBayIds = null,
+  fitRequest = 0,
+  sensorFocus = null,
   className,
 }: LidarPointCloudViewerProps) {
   const { t, i18n } = useTranslation()
@@ -491,10 +594,14 @@ export function LidarPointCloudViewer({
   // 콜백은 ref로 우회해 scene 재구성 없이 최신 핸들러를 유지
   const onSelectBlockRef = useRef(onSelectBlock)
   onSelectBlockRef.current = onSelectBlock
-  const onSelectBayRef = useRef(onSelectBay)
-  onSelectBayRef.current = onSelectBay
+  const onBaySelectRef = useRef(onBaySelect)
+  onBaySelectRef.current = onBaySelect
+  const onOpenBayRef = useRef(onOpenBay)
+  onOpenBayRef.current = onOpenBay
   const onHoverBayRef = useRef(onHoverBay)
   onHoverBayRef.current = onHoverBay
+  const selectedBayIdRef = useRef(selectedBayId)
+  selectedBayIdRef.current = selectedBayId
 
   /**
    * 씬 빌드 결과 등록부.
@@ -524,8 +631,29 @@ export function LidarPointCloudViewer({
     callouts: CSS2DObject[]
     /** 베이 경계선 — 모드별 색만 바뀐다 */
     boundaries: THREE.LineSegments[]
-    /** 공장 뷰 정반별 강조 대상 — 목록 hover 와 3D 를 잇는다 */
-    bayHighlights: { locationId: string; boundary: THREE.LineSegments | null; card: HTMLElement | null }[]
+    /**
+     * 공장 뷰 정반별 시각 요소 등록부 — hover 강조, 선택/동일 공정 강조(FR-5),
+     * 레이어 토글(FR-3)이 전부 여기 등록된 것만 만진다 (geometry 재생성 없음).
+     */
+    bayVisuals: {
+      locationId: string
+      /** 표시명 — 화면 밖 표식(FR-9)이 이름으로 방향을 말한다 */
+      name: string
+      /** 이 베이의 현재 공정 단계 — 동일 stage 강조 비교 키 */
+      stage: string | null
+      group: THREE.Group
+      boundary: THREE.LineSegments | null
+      /** 라벨 래퍼(불투명도 조절)와 카드(테두리 강조) */
+      labelWrap: HTMLElement | null
+      labelCard: HTMLElement | null
+      label: CSS2DObject | null
+      statusOverlay: THREE.Mesh | null
+      error: boolean
+      /** 이상(오류·오프라인) 여부 — 화면 밖 표식 대상 */
+      failing: boolean
+    }[]
+    /** 베이 바닥 판 — 모드별 색만 바뀐다 (FR-2 바닥 면 / FR-4 깊이 표현) */
+    floors: THREE.Mesh[]
     /** 바닥 그리드 — 모드마다 밝기만 달라진다 */
     grids: THREE.LineSegments[]
     /** 모드별 배경 텍스처 캐시 (키: 위-아래 색 조합) */
@@ -542,6 +670,33 @@ export function LidarPointCloudViewer({
   const highlightRef = useRef(highlightedBayId)
   highlightRef.current = highlightedBayId
 
+  const dimmedRef = useRef(dimmedBayIds)
+  dimmedRef.current = dimmedBayIds
+
+  /** 화면 밖 이상 정반 표식 (FR-9) — 카메라가 움직일 때마다 다시 계산된다 */
+  const [offscreenMarks, setOffscreenMarks] = useState<OffscreenMark[]>([])
+  /** 씬 빌드가 만든 오버레이 재계산 함수 — 필터 변경 등 카메라 밖 요인이 이걸 부른다 */
+  const refreshOverlayRef = useRef<(() => void) | null>(null)
+
+  /** 현재 선택(베이 + 그 공정 단계) — 강조 계산의 기준 (FR-5) */
+  const selectionRef = useRef<BaySelection | null>(null)
+  /** 진행 중인 카메라 전환 — 사용자가 직접 조작을 시작하면 끊는다 */
+  const tweenCancelRef = useRef<(() => void) | null>(null)
+
+  /** 레이어 토글 (FR-3) — 바닥·라벨·블록·라이다·상태 오버레이를 독립 제어한다 */
+  const [layers, setLayers] = useState({
+    floor: true,
+    labels: true,
+    blocks: true,
+    sensors: true,
+    status: true,
+  })
+  const layersRef = useRef(layers)
+  layersRef.current = layers
+  const [layersOpen, setLayersOpen] = useState(false)
+  const [wheelHint, setWheelHint] = useState(false)
+  const wheelHintTimer = useRef(0)
+
   /**
    * 씬을 세우는 동안임을 나타내는 플래그.
    *
@@ -557,11 +712,12 @@ export function LidarPointCloudViewer({
    */
   const [buildRequest, setBuildRequest] = useState(0)
 
-  /** 기즈모가 조작할 카메라 — 씬 빌드가 끝나야 생긴다 */
+  /** 기즈모·맞춤 버튼이 조작할 카메라 — 씬 빌드가 끝나야 생긴다 */
   const viewApiRef = useRef<{
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
     home: HomePose
+    sceneBox: THREE.Box3
   } | null>(null)
   const [axisView, setAxisView] = useState<AxisViewState | null>(null)
 
@@ -578,24 +734,96 @@ export function LidarPointCloudViewer({
     resetToHome(api.camera, api.controls, api.home)
   }, [])
 
-  /** 강조된 정반의 경계선·라벨만 켠다 (geometry·재질 재생성 없음) */
-  const applyBayHighlight = useCallback(() => {
+  /** 대상 box 로 부드럽게 이동 — 보던 방향은 유지하고 거리만 맞춘다 (FR-4) */
+  const fitBoxTweened = useCallback((box: THREE.Box3, padding = 1.08) => {
+    const api = viewApiRef.current
+    if (!api || box.isEmpty()) return
+    const center = box.getCenter(new THREE.Vector3())
+    const direction = api.camera.position.clone().sub(api.controls.target)
+    if (direction.lengthSq() < 1e-6) direction.set(1, 1, 1)
+    direction.normalize()
+    const distance = Math.max(
+      fitDistanceForBox(box, direction, api.camera.fov, api.camera.aspect, padding),
+      api.controls.minDistance
+    )
+    tweenCancelRef.current?.()
+    tweenCancelRef.current = tweenCameraTo(api.camera, api.controls, {
+      position: center.clone().addScaledVector(direction, distance),
+      target: center,
+    })
+  }, [])
+
+  /** `전체 맞춤` (FR-4) */
+  const handleFitAll = useCallback(() => {
+    const api = viewApiRef.current
+    if (api) fitBoxTweened(api.sceneBox)
+  }, [fitBoxTweened])
+
+  /** `선택 베이 맞춤` (FR-4) — 선택이 없으면 버튼 자체가 뜨지 않는다 */
+  const handleFitSelected = useCallback(() => {
+    const refs = sceneRefs.current
+    const bay = refs?.bayVisuals.find((entry) => entry.locationId === selectedBayIdRef.current)
+    if (bay) fitBoxTweened(new THREE.Box3().setFromObject(bay.group), 1.3)
+  }, [fitBoxTweened])
+
+  /** `기본 시점 복원` (FR-4) — Home 과 같은 자리로 가되 부드럽게 */
+  const handleResetView = useCallback(() => {
+    const api = viewApiRef.current
+    if (!api) return
+    tweenCancelRef.current?.()
+    tweenCancelRef.current = tweenCameraTo(api.camera, api.controls, {
+      position: api.home.position,
+      target: api.home.target,
+    })
+  }, [])
+
+  /**
+   * 정반별 강조를 한 번에 계산한다 — 선택/동일 공정/무관(FR-5), 목록 hover, 오류 상태.
+   * geometry·재질 재생성 없이 불투명도·색·라벨 스타일만 만진다.
+   */
+  const applyBayEmphasis = useCallback(() => {
     const refs = sceneRefs.current
     if (!refs) return
     const palette = paletteFor(displayRef.current.displayMode)
-    const current = highlightRef.current
+    const hovered = highlightRef.current
+    const selection = selectionRef.current
 
-    for (const entry of refs.bayHighlights) {
-      const on = entry.locationId === current
-      if (entry.boundary) {
-        const material = entry.boundary.material as THREE.LineBasicMaterial
-        material.color.setHex(on ? BAY_HIGHLIGHT_COLOR : palette.boundaryColor)
-        material.opacity = on ? 1 : 0.6
+    const dimmed = dimmedRef.current
+
+    for (const bay of refs.bayVisuals) {
+      const tier = emphasisFor(bay.locationId, bay.stage, selection)
+      let geometryFactor = EMPHASIS_GEOMETRY_OPACITY[tier]
+      let labelFactor = EMPHASIS_LABEL_OPACITY[tier]
+      /* 필터에 걸린 정반(FR-9)은 무관 대상보다 더 가라앉는다 — 자리만 남긴다 */
+      if (dimmed?.has(bay.locationId)) {
+        geometryFactor = Math.min(geometryFactor, 0.1)
+        labelFactor = Math.min(labelFactor, 0.28)
       }
-      if (entry.card) {
-        // 라벨은 CSS2D(DOM)라 Tailwind 대신 토큰을 직접 쓴다
-        entry.card.style.borderColor = on ? 'var(--accent)' : ''
-        entry.card.style.boxShadow = on ? '0 0 0 2px var(--accent)' : ''
+      /* 오류 베이는 가라앉히지 않는다 — 알람이 강조·필터 문법보다 우선한다 (FR-2) */
+      if (bay.error) {
+        geometryFactor = Math.max(geometryFactor, 0.85)
+        labelFactor = Math.max(labelFactor, 0.95)
+      }
+
+      setGroupEmphasis(bay.group, geometryFactor)
+
+      const isHovered = bay.locationId === hovered
+      const isSelected = tier === 'selected'
+      if (bay.boundary) {
+        const material = bay.boundary.material as THREE.LineBasicMaterial
+        material.color.setHex(
+          isSelected || isHovered ? BAY_HIGHLIGHT_COLOR : palette.boundaryColor
+        )
+        material.opacity = isSelected ? 1 : isHovered ? 0.9 : 0.6 * geometryFactor
+      }
+      // 라벨은 CSS2D(DOM)라 Tailwind 대신 토큰을 직접 쓴다
+      if (bay.labelWrap) bay.labelWrap.style.opacity = String(labelFactor)
+      if (bay.labelCard) {
+        bay.labelCard.style.boxShadow = isSelected
+          ? '0 0 0 2px var(--glass-accent)'
+          : isHovered
+            ? '0 0 0 2px var(--accent)'
+            : ''
       }
     }
   }, [])
@@ -605,6 +833,7 @@ export function LidarPointCloudViewer({
     const refs = sceneRefs.current
     if (!refs) return
     const { displayMode: dm, colorMode: cm, showOutline: so } = displayRef.current
+    const ly = layersRef.current
     const palette: ViewPalette = paletteFor(dm)
 
     if (palette.backgroundTop === palette.background) {
@@ -641,32 +870,34 @@ export function LidarPointCloudViewer({
      * 겹쳐보기 + 진척에서는 확인된 부재의 CAD 를 감춘다.
      * 있는 부재는 점군이 이미 보여주므로, CAD 로 덮으면 대비만 흐려진다.
      */
-    const presentVisible = cadVisible && !(diffActive && dm === 'overlay')
+    const presentVisible = cadVisible && ly.blocks && !(diffActive && dm === 'overlay')
     for (const mesh of refs.cadMeshes) mesh.visible = presentVisible
 
     for (const fill of refs.diffFills) {
-      fill.visible = diffActive
+      fill.visible = diffActive && ly.blocks
       const material = fill.material as THREE.MeshLambertMaterial
       material.opacity = dm === 'cad' ? MISSING_FILL_OPACITY.cad : MISSING_FILL_OPACITY.overlay
+      material.userData.baseOpacity = material.opacity
     }
-    for (const edges of refs.diffEdges) edges.visible = diffActive
-    for (const callout of refs.callouts) callout.visible = diffActive
+    for (const edges of refs.diffEdges) edges.visible = diffActive && ly.blocks
+    for (const callout of refs.callouts) callout.visible = diffActive && ly.blocks
 
-    const pointsVisible = showsPoints(dm)
+    const pointsVisible = showsPoints(dm) && ly.blocks
     for (const group of refs.pointGroups) group.visible = pointsVisible
 
     // CAD 모드에서는 센서 마커를 숨긴다 — 도면 형상만 남겨야 도면으로 읽힌다
-    for (const marker of refs.sensorMarkers) marker.visible = dm !== 'cad'
+    for (const marker of refs.sensorMarkers) marker.visible = dm !== 'cad' && ly.sensors
 
     for (const material of refs.edgeMaterials) {
       material.color.setHex(palette.edgeColor)
       material.opacity = palette.edgeOpacity
+      material.userData.baseOpacity = palette.edgeOpacity
     }
-    for (const outline of refs.outlines) outline.visible = so
+    for (const outline of refs.outlines) outline.visible = so && ly.blocks
 
     // 인식 범위 표시선 — 밝은 CAD 배경에서는 진한 스텝을 쓴다
     for (const marker of refs.markers) {
-      marker.lines.visible = so
+      marker.lines.visible = so && ly.blocks
       const material = marker.lines.material as THREE.LineBasicMaterial
       if (dm === 'cad') {
         material.color.setHex(marker.registered ? 0x8a6d1f : 0x991b1b)
@@ -676,16 +907,29 @@ export function LidarPointCloudViewer({
     }
 
     // 핀지그와 센서는 실측 설비이지 도면 형상이 아니다
-    for (const jig of refs.jigGroups) jig.visible = dm !== 'cad'
+    for (const jig of refs.jigGroups) jig.visible = dm !== 'cad' && ly.blocks
     for (const boundary of refs.boundaries) {
+      boundary.visible = ly.floor
       ;(boundary.material as THREE.LineBasicMaterial).color.setHex(palette.boundaryColor)
     }
     for (const grid of refs.grids) {
       // 바닥은 어느 모드에서나 있어야 점이 어디에 놓였는지 읽힌다
-      grid.visible = true
+      grid.visible = ly.floor
       const material = grid.material as THREE.LineBasicMaterial
       material.color.setHex(palette.gridColor)
       material.opacity = palette.gridOpacity
+      material.userData.baseOpacity = palette.gridOpacity
+    }
+    for (const floor of refs.floors) {
+      floor.visible = ly.floor
+      // 바닥 판은 팔레트를 따라간다 — 어두운 점군 바탕에서는 강판, CAD 에서는 밝은 무채색
+      ;(floor.material as THREE.MeshLambertMaterial).color.setHex(
+        dm === 'cad' ? 0xc7ccd1 : 0x27313c
+      )
+    }
+    for (const bay of refs.bayVisuals) {
+      if (bay.label) bay.label.visible = ly.labels
+      if (bay.statusOverlay) bay.statusOverlay.visible = ly.status
     }
 
     if (pointsVisible) {
@@ -696,18 +940,72 @@ export function LidarPointCloudViewer({
       })
     }
 
-    // 경계선 색을 팔레트로 되돌린 뒤이므로, 강조는 항상 마지막에 다시 얹는다
-    applyBayHighlight()
-  }, [applyBayHighlight])
+    // 경계선·불투명도를 팔레트 기준으로 되돌린 뒤이므로, 강조는 항상 마지막에 다시 얹는다
+    applyBayEmphasis()
+  }, [applyBayEmphasis])
 
-  // 모드·규칙 전환 — 씬을 다시 만들지 않는다
+  // 모드·규칙·레이어 전환 — 씬을 다시 만들지 않는다
   useEffect(() => {
     applyDisplay()
-  }, [applyDisplay, displayMode, colorMode, showOutline])
+  }, [applyDisplay, displayMode, colorMode, showOutline, layers])
 
   useEffect(() => {
-    applyBayHighlight()
-  }, [applyBayHighlight, highlightedBayId])
+    applyBayEmphasis()
+  }, [applyBayEmphasis, highlightedBayId])
+
+  // 필터 변경 (FR-9) — 가라앉힘과 화면 밖 표식 대상이 함께 바뀐다
+  useEffect(() => {
+    applyBayEmphasis()
+    refreshOverlayRef.current?.()
+  }, [applyBayEmphasis, dimmedBayIds])
+
+  /** `선택 정반 맞춤` 재요청 (FR-8) — 카드 버튼이 신호를 올리면 카메라만 다시 맞춘다 */
+  useEffect(() => {
+    if (fitRequest > 0) handleFitSelected()
+  }, [fitRequest, handleFitSelected])
+
+  useEffect(() => {
+    if (!sensorFocus || building || mode !== 'bay') return
+    if (sensorFocus.index < 0) {
+      handleResetView()
+      return
+    }
+    const marker = sceneRefs.current?.sensorMarkers[sensorFocus.index]
+    const api = viewApiRef.current
+    if (!marker || !api) return
+    const localFocus = marker.userData.focusPosition as THREE.Vector3 | undefined
+    if (!localFocus) return
+    const target = marker.localToWorld(localFocus.clone())
+    const direction = api.camera.position.clone().sub(api.controls.target)
+    if (direction.lengthSq() < 1e-6) direction.set(1, 0.7, 1)
+    direction.normalize()
+    tweenCancelRef.current?.()
+    tweenCancelRef.current = tweenCameraTo(api.camera, api.controls, {
+      position: target.clone().addScaledVector(direction, Math.max(8, api.controls.minDistance)),
+      target,
+    })
+  }, [sensorFocus, building, mode, handleResetView])
+
+  /**
+   * 선택 변화(FR-5) — 강조를 다시 계산하고, 새로 선택된 정반에는 카메라를 부드럽게
+   * 맞춘다 (FR-3 수용 기준 3 · FR-4 `선택 베이 맞춤`). 해제 시 카메라는 그대로 둔다 —
+   * 보던 자리를 잃는 쪽이 더 어지럽다.
+   */
+  useEffect(() => {
+    if (building) return
+    const refs = sceneRefs.current
+    const api = viewApiRef.current
+    const bay = selectedBayId
+      ? refs?.bayVisuals.find((entry) => entry.locationId === selectedBayId)
+      : undefined
+    selectionRef.current =
+      selectedBayId && bay ? { bayId: selectedBayId, stage: bay.stage } : null
+    applyBayEmphasis()
+
+    if (bay && api && mode === 'factory') {
+      fitBoxTweened(new THREE.Box3().setFromObject(bay.group), 1.3)
+    }
+  }, [selectedBayId, building, mode, applyBayEmphasis, fitBoxTweened])
 
   /*
    * 빌드 예약.
@@ -723,7 +1021,7 @@ export function LidarPointCloudViewer({
     })
     return () => cancelAnimationFrame(frame)
     // 3D 라벨(CSS2D)은 씬을 세울 때 만든 DOM 이다 — 언어가 바뀌면 다시 세워야 글자가 따라온다
-  }, [mode, bays, selectedBlockId, i18n.language])
+  }, [mode, bays, selectedBlockId, layout, i18n.language])
 
   useEffect(() => {
     // 첫 요청 전 — 아직 그릴 것이 없다. 스피너만 떠 있는 상태다.
@@ -746,6 +1044,9 @@ export function LidarPointCloudViewer({
       side: THREE.DoubleSide,
     })
     const jigMaterial = new THREE.MeshLambertMaterial({ color: JIG_COLOR })
+    /* 여러 베이가 공유하는 재질 — 베이별 강조(불투명도)에서 제외한다 (setGroupEmphasis) */
+    cadMaterial.userData.emphasisExempt = true
+    jigMaterial.userData.emphasisExempt = true
 
     const refs = {
       scene,
@@ -763,11 +1064,20 @@ export function LidarPointCloudViewer({
       diffEdges: [] as THREE.LineSegments[],
       callouts: [] as CSS2DObject[],
       boundaries: [] as THREE.LineSegments[],
-      bayHighlights: [] as {
+      bayVisuals: [] as {
         locationId: string
+        name: string
+        stage: string | null
+        group: THREE.Group
         boundary: THREE.LineSegments | null
-        card: HTMLElement | null
+        labelWrap: HTMLElement | null
+        labelCard: HTMLElement | null
+        label: CSS2DObject | null
+        statusOverlay: THREE.Mesh | null
+        error: boolean
+        failing: boolean
       }[],
+      floors: [] as THREE.Mesh[],
       grids: [] as THREE.LineSegments[],
       backdrops: new Map<string, THREE.CanvasTexture>(),
       edgeMaterials: [] as THREE.LineBasicMaterial[],
@@ -776,17 +1086,25 @@ export function LidarPointCloudViewer({
     }
     sceneRefs.current = refs
 
+    /*
+     * 공장 뷰는 화각을 좁힌다 (FR-4) — 낮은 원근감이라야 원거리 베이가 과도하게
+     * 작아지지 않고, 기울인 2.5D 시점에서도 베이 경계가 왜곡 없이 읽힌다.
+     */
     const camera = new THREE.PerspectiveCamera(
-      50,
+      mode === 'factory' ? 36 : 50,
       container.clientWidth / container.clientHeight,
       0.1,
       800
     )
 
     const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+    /* 저사양 모드(FR-4)는 픽셀 밀도를 눌러 렌더 부하를 줄인다 — 도움말 패널에서 켠다 */
+    renderer.setPixelRatio(pixelRatioFor(isLowGpuMode()))
     renderer.setSize(container.clientWidth, container.clientHeight)
     container.appendChild(renderer.domElement)
+    const unsubscribeQuality = subscribeQualityMode((low) =>
+      renderer.setPixelRatio(pixelRatioFor(low))
+    )
 
     const labelRenderer = new CSS2DRenderer()
     labelRenderer.setSize(container.clientWidth, container.clientHeight)
@@ -799,8 +1117,51 @@ export function LidarPointCloudViewer({
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
     controls.maxDistance = 400
+    if (mode === 'factory') {
+      /*
+       * 2.5D 시점의 조작 한계 (FR-4·FR-6) — 지평선 아래로 뒤집히거나 바닥에 붙는
+       * 각도를 막는다. maxDistance 는 씬을 세운 뒤 장면 크기에 맞춰 다시 잡는다.
+       */
+      controls.minDistance = 15
+      controls.minPolarAngle = THREE.MathUtils.degToRad(10)
+      controls.maxPolarAngle = THREE.MathUtils.degToRad(78)
+    }
     applyBlenderMouseBindings(controls)
     const unbindButtons = bindModifierAwareButtons(controls, renderer.domElement)
+
+    /*
+     * 조작 포커스 (FR-6) — 클릭하기 전에는 휠을 소비하지 않아 페이지 스크롤이 여기
+     * 걸리지 않고, 포커스 중에도 줌 한계에 닿으면 페이지 스크롤로 흘려보낸다.
+     */
+    const focusApi = bindViewportFocus(controls, camera, container, {
+      onBlockedWheel: () => {
+        setWheelHint(true)
+        window.clearTimeout(wheelHintTimer.current)
+        wheelHintTimer.current = window.setTimeout(() => setWheelHint(false), 2200)
+      },
+      onFocusChange: (focused) => {
+        if (focused) setWheelHint(false)
+      },
+    })
+    /* 카메라 전환 중 드래그를 시작하면 전환을 끊는다 — 사용자 조작이 항상 이긴다 */
+    const cancelTweenOnPointerDown = () => tweenCancelRef.current?.()
+    container.addEventListener('pointerdown', cancelTweenOnPointerDown)
+
+    /* 빈 공간 클릭(드래그 아님) = 선택 해제 (FR-5). 라벨 클릭은 DOM 라벨이 먼저 받는다 */
+    let blankClickStart: { x: number; y: number } | null = null
+    const handleCanvasPointerDown = (event: PointerEvent) => {
+      blankClickStart = event.button === 0 ? { x: event.clientX, y: event.clientY } : null
+    }
+    const handleCanvasPointerUp = (event: PointerEvent) => {
+      if (!blankClickStart || event.button !== 0) return
+      const moved = Math.hypot(event.clientX - blankClickStart.x, event.clientY - blankClickStart.y)
+      blankClickStart = null
+      if (moved < 6 && mode === 'factory' && selectedBayIdRef.current) {
+        onBaySelectRef.current?.(null)
+      }
+    }
+    renderer.domElement.addEventListener('pointerdown', handleCanvasPointerDown)
+    renderer.domElement.addEventListener('pointerup', handleCanvasPointerUp)
 
     /*
      * 단축키는 포커스가 아니라 **커서가 올라간 뷰포트**에 적용한다.
@@ -829,11 +1190,23 @@ export function LidarPointCloudViewer({
      */
     const matchReports: ({ detection: string; parts: number } & MatchAccuracy)[] = []
 
+    /** 배치 조회 — 베이 좌표·회전은 데이터 계층(FactoryLayout)이 소유한다 (FR-3) */
+    const layoutByBay = new Map((layout?.bays ?? []).map((entry) => [entry.bayId, entry]))
+
     bays.forEach((bay, bayIndex) => {
       const bayGroup = new THREE.Group()
       /** 이 정반의 경계선 — 공장 뷰에서 목록 강조 대상으로 잡아 둔다 */
       let bayBoundary: THREE.LineSegments | null = null
-      if (mode === 'factory') bayGroup.position.x = bayIndex * BAY_PITCH
+      if (mode === 'factory') {
+        const placement = layoutByBay.get(bay.location.id)
+        if (placement) {
+          bayGroup.position.set(placement.center[0], 0, placement.center[1])
+          bayGroup.rotation.y = THREE.MathUtils.degToRad(placement.rotationDeg)
+        } else {
+          /* 배치 데이터가 없는 베이 — 예전처럼 한 줄로 나열한다 */
+          bayGroup.position.x = bayIndex * BAY_PITCH
+        }
+      }
 
       const density = mode === 'factory' ? FACTORY_DENSITY : 1
       const sensorPositions = getSensorPositions(bay.sensors.length)
@@ -944,6 +1317,21 @@ export function LidarPointCloudViewer({
         const grid = createLineSegments(createFloorGrid(BAY_WIDTH, BAY_LENGTH, 2), 0x3a4a5c, 0.35)
         refs.grids.push(grid)
         bayGroup.add(grid)
+
+        if (mode === 'factory') {
+          /*
+           * 바닥 판 (FR-2·FR-4) — 베이가 선이 아니라 **면**으로 서고, 살짝 두께를 줘
+           * 지면에서 돌출시키면 기울인 2.5D 시점에서 깊이가 읽힌다. 색은 applyDisplay
+           * 가 표시 모드 팔레트에 맞춘다.
+           */
+          const floor = new THREE.Mesh(
+            new THREE.BoxGeometry(BAY_WIDTH, 0.5, BAY_LENGTH),
+            new THREE.MeshLambertMaterial({ color: 0x27313c })
+          )
+          floor.position.y = -0.25
+          refs.floors.push(floor)
+          bayGroup.add(floor)
+        }
       }
 
       // ══ pass 2 ══ 센서별 스캔 → 점군. 블록 표면 점을 대조용으로 모은다
@@ -1148,20 +1536,72 @@ export function LidarPointCloudViewer({
       }
 
       if (mode === 'factory') {
-        const label = createBayLabel(
-          bay.location.name,
-          bay.location.workCntr,
+        const worst = worstSensorStatus(bay.sensors)
+        const stage = bayStage(bay.blocks)
+
+        /*
+         * 상태 오버레이 (FR-2) — 이상(오류·오프라인) 베이는 바닥에 상태색 막을 깔아
+         * 공장 전체 시점에서 확대 없이도 식별되게 한다 (수용 기준 2). 색만으로 전하지
+         * 않도록 라벨의 상태점·텍스트가 같은 사실을 함께 말한다.
+         */
+        let statusOverlay: THREE.Mesh | null = null
+        if (worst === 'error' || worst === 'offline') {
+          const overlayMaterial = new THREE.MeshBasicMaterial({
+            color: worst === 'error' ? 0xdc2626 : 0x64748b,
+            transparent: true,
+            opacity: worst === 'error' ? 0.14 : 0.1,
+            depthWrite: false,
+          })
+          /* 알람은 강조 문법보다 우선한다 — 무관 베이로 가라앉아도 상태막은 남는다 */
+          overlayMaterial.userData.emphasisExempt = true
+          statusOverlay = new THREE.Mesh(
+            new THREE.PlaneGeometry(BAY_WIDTH - 1, BAY_LENGTH - 1),
+            overlayMaterial
+          )
+          statusOverlay.rotation.x = -Math.PI / 2
+          statusOverlay.position.y = 0.3
+          bayGroup.add(statusOverlay)
+        }
+
+        /* 밀집 공장에서는 정상 베이 라벨을 축약한다 — 이상·선택 라벨이 우선권을 갖는다 (FR-3) */
+        const compact = bays.length > 6 && worst === 'online'
+        const label = createBayStatusLabel(
+          {
+            name: bay.location.name,
+            workCntr: bay.location.workCntr,
+            sensorStatus: worst,
+            sensorCounts: sensorStatusCounts(bay.sensors),
+            workState: bayWorkState(bay.sensors, bay.blocks),
+            blockCount: bay.blocks.length,
+            stageCode: stage,
+          },
           new THREE.Vector3(0, BAY_HEIGHT + 2, 0),
           t,
-          () => onSelectBayRef.current?.(bay.location.id),
-          (hovering) => onHoverBayRef.current?.(hovering ? bay.location.id : null)
+          () => {
+            /* 첫 클릭 = 지속 선택(강조·카메라 맞춤) · 선택된 것을 다시 클릭 = 정반 화면 진입 */
+            if (selectedBayIdRef.current === bay.location.id) {
+              onOpenBayRef.current?.(bay.location.id)
+            } else {
+              onBaySelectRef.current?.(bay.location.id)
+            }
+          },
+          (hovering) => onHoverBayRef.current?.(hovering ? bay.location.id : null),
+          compact
         )
         bayGroup.add(label)
-        refs.bayHighlights.push({
+        refs.bayVisuals.push({
           locationId: bay.location.id,
+          name: bay.location.name,
+          stage,
+          group: bayGroup,
           boundary: bayBoundary,
-          // 라벨 wrap 의 첫 자식이 실제 카드다 (createBayLabel 참조)
-          card: label.element.firstElementChild as HTMLElement | null,
+          labelWrap: label.element,
+          // 라벨 wrap 의 첫 자식이 실제 카드(button)다 (createBayStatusLabel 참조)
+          labelCard: label.element.firstElementChild as HTMLElement | null,
+          label,
+          statusOverlay,
+          error: worst === 'error',
+          failing: worst === 'error' || worst === 'offline',
         })
       }
 
@@ -1217,11 +1657,34 @@ export function LidarPointCloudViewer({
       }))
     )
 
+    /** 씬 전체 bounding box — 기본 시점·'.' 맞춤·이동 한계의 기준 */
+    const sceneBox = new THREE.Box3().setFromObject(scene)
+
     // 모드별 카메라/타겟
     if (mode === 'factory') {
-      const centerX = ((bays.length - 1) * BAY_PITCH) / 2
-      camera.position.set(centerX + 60, 58, 115)
-      controls.target.set(centerX, 2, 0)
+      /*
+       * 2.5D 기본 시점 (FR-4) — 위에서 비스듬히 내려다보는 고도 52° 에 좁은 화각을
+       * 짝지어, 공간감은 남기되 원거리 베이가 과도하게 작아지지 않게 한다.
+       * 배치(레이아웃)가 몇 열이 되든 씬 크기에서 거리를 계산하므로 항상 다 들어온다.
+       */
+      const center = sceneBox.isEmpty()
+        ? new THREE.Vector3()
+        : sceneBox.getCenter(new THREE.Vector3())
+      center.y = 2
+      const elevation = THREE.MathUtils.degToRad(52)
+      const azimuth = THREE.MathUtils.degToRad(18)
+      const direction = new THREE.Vector3(
+        Math.sin(azimuth) * Math.cos(elevation),
+        Math.sin(elevation),
+        Math.cos(azimuth) * Math.cos(elevation)
+      )
+      const distance = sceneBox.isEmpty()
+        ? 120
+        : Math.max(fitDistanceForBox(sceneBox, direction, camera.fov, camera.aspect, 1.08), 40)
+      camera.position.copy(center).addScaledVector(direction, distance)
+      controls.target.copy(center)
+      /* 줌 아웃 한계 = 전체가 다 보이는 거리의 두 배 — 그 너머의 휠은 페이지 스크롤이다 */
+      controls.maxDistance = distance * 2.2
     } else if (focusBlock) {
       const [bx, by, bz] = focusBlock.transform.position
       const { length, height } = focusBlock.dimensions
@@ -1236,8 +1699,8 @@ export function LidarPointCloudViewer({
       controls.target.set(0, 3, 0)
     }
 
-    /** 씬 전체 bounding box — '.' 키에서 선택 대상이 없을 때의 맞춤 기준 */
-    const sceneBox = new THREE.Box3().setFromObject(scene)
+    /* 타겟이 공장 밖으로 끌려 나가 장면을 잃지 않게 한다 (FR-6) */
+    const unclampPan = clampPanToBounds(controls, camera, sceneBox, 40)
 
     /*
      * 방금 잡은 시점이 이 화면의 "처음 위치"다 — Home 은 여기로 돌아온다.
@@ -1251,17 +1714,52 @@ export function LidarPointCloudViewer({
      * 갱신은 프레임당 한 번으로 묶는다 — OrbitControls 는 damping 때문에 드래그
      * 한 번에 'change' 를 수십 번 낸다. 그대로 setState 하면 React 가 그만큼 돈다.
      */
-    viewApiRef.current = { camera, controls, home }
+    viewApiRef.current = { camera, controls, home, sceneBox }
+
+    /**
+     * 화면 밖 이상 정반 표식 (FR-9) — 이상(오류·오프라인) 정반의 라벨 지점을 투영해
+     * 시야 밖이면 가장 가까운 가장자리에 방향 표식을 세운다. 필터로 가라앉힌 정반은
+     * 사용자가 스스로 치운 것이므로 표식도 내지 않는다.
+     */
+    const offscreenPoint = new THREE.Vector3()
+    const viewPoint = new THREE.Vector3()
+    const computeOffscreenMarks = (): OffscreenMark[] => {
+      if (mode !== 'factory') return []
+      // 첫 계산은 첫 렌더 전에 온다 — 투영에 쓰는 카메라 행렬을 직접 갱신해 둔다
+      camera.updateMatrixWorld()
+      const marks: OffscreenMark[] = []
+      for (const bay of refs.bayVisuals) {
+        if (!bay.failing || dimmedRef.current?.has(bay.locationId)) continue
+        // 정반 그룹은 scene 직속이라 로컬 위치가 곧 월드 위치다
+        offscreenPoint.copy(bay.group.position)
+        offscreenPoint.y += BAY_HEIGHT
+        const behind = viewPoint.copy(offscreenPoint).applyMatrix4(camera.matrixWorldInverse).z > 0
+        offscreenPoint.project(camera)
+        const placed = edgePlacementFor(
+          offscreenPoint.x,
+          offscreenPoint.y,
+          behind,
+          container.clientWidth,
+          container.clientHeight,
+          OFFSCREEN_MARGIN
+        )
+        if (placed) marks.push({ id: bay.locationId, name: bay.name, error: bay.error, ...placed })
+      }
+      return marks
+    }
+
     let axisFrame = 0
     const publishAxisView = () => {
       axisFrame = 0
       setAxisView(projectAxes(camera, controls.target))
+      setOffscreenMarks(computeOffscreenMarks())
     }
     const scheduleAxisView = () => {
       if (axisFrame) return
       axisFrame = requestAnimationFrame(publishAxisView)
     }
     controls.addEventListener('change', scheduleAxisView)
+    refreshOverlayRef.current = scheduleAxisView
     publishAxisView()
 
     const viewKeys: Record<string, [ViewDirection, ViewDirection]> = {
@@ -1272,11 +1770,26 @@ export function LidarPointCloudViewer({
     }
 
     const handleViewportKey = (event: KeyboardEvent) => {
-      if (!pointerInside) return
       // 입력 중인 필드의 키를 가로채지 않는다
       const target = event.target as HTMLElement | null
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return
 
+      if (event.key === 'Escape') {
+        /*
+         * Esc — 선택이 있으면 먼저 해제(FR-5), 없으면 조작 포커스 해제(FR-6).
+         * 다른 단축키와 달리 커서가 밖에 있어도 듣는다 — 라벨을 키보드로 눌러
+         * 선택한 사람은 커서를 뷰포트에 올려 두지 않았을 수 있다.
+         */
+        if (!pointerInside && !focusApi.isFocused() && !selectedBayIdRef.current) return
+        if (mode === 'factory' && selectedBayIdRef.current) {
+          onBaySelectRef.current?.(null)
+        } else {
+          focusApi.blur()
+        }
+        return
+      }
+
+      if (!pointerInside) return
       const pair = viewKeys[event.key]
       if (pair) {
         event.preventDefault()
@@ -1319,6 +1832,8 @@ export function LidarPointCloudViewer({
       camera.updateProjectionMatrix()
       renderer.setSize(container.clientWidth, container.clientHeight)
       labelRenderer.setSize(container.clientWidth, container.clientHeight)
+      // 뷰포트 크기가 바뀌면 가장자리 표식 자리도 다시 재야 한다
+      scheduleAxisView()
     })
     resizeObserver.observe(container)
 
@@ -1329,9 +1844,19 @@ export function LidarPointCloudViewer({
       cancelAnimationFrame(animationId)
       if (axisFrame) cancelAnimationFrame(axisFrame)
       controls.removeEventListener('change', scheduleAxisView)
+      refreshOverlayRef.current = null
       viewApiRef.current = null
       stopEdgeQueue()
       unbindButtons()
+      focusApi.dispose()
+      unclampPan()
+      unsubscribeQuality()
+      tweenCancelRef.current?.()
+      tweenCancelRef.current = null
+      window.clearTimeout(wheelHintTimer.current)
+      container.removeEventListener('pointerdown', cancelTweenOnPointerDown)
+      renderer.domElement.removeEventListener('pointerdown', handleCanvasPointerDown)
+      renderer.domElement.removeEventListener('pointerup', handleCanvasPointerUp)
       renderer.domElement.removeEventListener('pointerenter', markInside)
       renderer.domElement.removeEventListener('pointerleave', markOutside)
       window.removeEventListener('keydown', handleViewportKey)
@@ -1382,6 +1907,89 @@ export function LidarPointCloudViewer({
         onSelectDirection={handleAxisSelect}
         onGoHome={handleGoHome}
       />
+
+      {wheelHint && <WheelZoomHint />}
+
+      {/*
+        화면 밖 이상 정반 표식 (FR-9) — 이상 정반이 시야 밖으로 나가면 가장 가까운
+        가장자리에 방향 화살표가 선다. 누르면 그 정반을 선택하고 카메라가 맞춰진다.
+      */}
+      {mode === 'factory' &&
+        !building &&
+        offscreenMarks.map((mark) => (
+          <button
+            key={mark.id}
+            type="button"
+            onClick={() => onBaySelectRef.current?.(mark.id)}
+            aria-label={t('viewer.offscreen.aria', { name: mark.name })}
+            style={{ left: mark.x, top: mark.y }}
+            className={cn(
+              // 도구줄(z-10)보다 위 — 이상 알람 표식이 도구에 가려 못 누르면 존재 이유가 없다
+              'absolute z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full',
+              'glass-panel py-0.5 pl-1 pr-2 text-2xs font-medium transition-colors hover:bg-glass-hover',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent',
+              mark.error
+                ? 'text-glass-unhealthy ring-1 ring-glass-unhealthy/70'
+                : 'text-glass-foreground/85 ring-1 ring-glass-border',
+            )}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 12 12"
+              className="h-3 w-3 shrink-0"
+              style={{ transform: `rotate(${mark.angleDeg}deg)` }}
+            >
+              <path d="M2 6h6M5.5 2.8 8.8 6l-3.3 3.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="max-w-24 truncate">{mark.name}</span>
+          </button>
+        ))}
+
+      {/* 카메라 맞춤 · 레이어 토글 (FR-3·FR-4) — 공장 뷰 전용 도구 묶음.
+          아래 가운데에 둔다: 왼쪽 아래는 축 기즈모, 오른쪽 아래는 도움말 자리다 */}
+      {mode === 'factory' && !building && (
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
+          {layersOpen && (
+            <div className="flex animate-fade-in flex-col gap-1.5 rounded-inshop-lg glass-panel p-2.5">
+              {LAYER_OPTIONS.map(({ key, labelKey }) => (
+                <label
+                  key={key}
+                  className="flex cursor-pointer items-center gap-2 text-2xs text-glass-foreground/85"
+                >
+                  <input
+                    type="checkbox"
+                    checked={layers[key]}
+                    onChange={() => setLayers((state) => ({ ...state, [key]: !state[key] }))}
+                    className="h-3 w-3 accent-(--glass-accent)"
+                  />
+                  {t(labelKey)}
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={handleFitAll} className={GLASS_BUTTON_CLASS}>
+              {t('viewer.fit.all')}
+            </button>
+            {selectedBayId && (
+              <button type="button" onClick={handleFitSelected} className={GLASS_BUTTON_CLASS}>
+                {t('viewer.fit.selected')}
+              </button>
+            )}
+            <button type="button" onClick={handleResetView} className={GLASS_BUTTON_CLASS}>
+              {t('viewer.fit.home')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayersOpen((open) => !open)}
+              aria-expanded={layersOpen}
+              className={cn(GLASS_BUTTON_CLASS, layersOpen && 'text-glass-accent')}
+            >
+              {t('viewer.layers.toggle')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {building && <SpinnerOverlay label={t('viewer.building')} />}
     </div>

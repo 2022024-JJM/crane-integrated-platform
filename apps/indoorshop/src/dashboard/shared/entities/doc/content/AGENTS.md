@@ -36,15 +36,11 @@ ocean-process-system/
 │   ├── ot-pipeline-assembly/         # 조립 실적 판별 서비스
 │   ├── ot-pipeline-outfitting/       # 선행의장 실적 판별 서비스
 │   ├── ot-pipeline-painting/         # 선행도장 실적 판별 서비스
-│   ├── rfid-preprocessor/            # 태그 debounce/중복제거 전처리
-│   ├── rfid-tag-publisher/           # 전처리 결과 MQTT publish — ⚠️ 기술 스택 미확정(Java가 아닐 수 있음), settings.gradle include 목록에는 없음
 │   └── state-machine-configs/        # zone별 SM 설정 (source of truth, YAML)
 ├── web-dashboard/                    # 현황 대시보드 (React + Vite) — 아래 "웹 대시보드" 절 참조
 ├── deploy/                       # 배포 스크립트 및 docker-compose 파일
 └── docs/                         # 설계 문서 (개발환경가이드, OT 인프라 설계서 등)
 ```
-
-> **참고:** `rfid-tag-publisher`는 `src/` 안에 같이 두지만 Gradle 멀티모듈 빌드 대상은 아니다 (`settings.gradle`의 `include`에 없음 — Gradle은 거기 없는 디렉토리를 그냥 무시한다). 기술 스택이 확정되면 해당 언어의 빌드 설정을 그 디렉토리 안에 독립적으로 둔다.
 
 ## 모듈 의존성 규칙 (반드시 준수 — Agent가 가장 자주 위반하는 부분)
 
@@ -56,7 +52,7 @@ ocean-process-system/
 
 ## 모듈 내부 패키지 구조 (헥사고날 아키텍처 — 새 코드는 반드시 이 구조를 따른다)
 
-Java 모듈(`ot-core`, `ot-pipeline-*`, `rfid-preprocessor`)의 내부 패키지는 헥사고날 아키텍처를 따른다. **`domain/`은 Spring 등 프레임워크를 import하지 않는다.** 프레임워크 의존은 `infrastructure/`, `adapter/`, `config/`에만 둔다. 새 클래스를 만들 때 아래 패키지 중 어디에 속하는지 먼저 판단하고, 애매하면 사용자에게 확인한다.
+Java 모듈(`ot-core`, `ot-pipeline-*`)의 내부 패키지는 헥사고날 아키텍처를 따른다. **`domain/`은 Spring 등 프레임워크를 import하지 않는다.** 프레임워크 의존은 `infrastructure/`, `adapter/`, `config/`에만 둔다. 새 클래스를 만들 때 아래 패키지 중 어디에 속하는지 먼저 판단하고, 애매하면 사용자에게 확인한다.
 
 **ot-core** (`com.hanwha.ocean.otcore`):
 ```
@@ -85,15 +81,6 @@ config/{Zone}Application.java, config/BeanWiringConfig.java
 
 - **MQTT 어댑터를 두지 않는다.** MQTT Broker 구독은 ISL4 Agent(벤더 컴포넌트)가 처리하고, zone 모듈은 OT Core가 호출하는 Provider로만 동작한다 (위 "작업 시 주의사항"의 가공/도장 zone 규칙과 일치).
 - ⚠️ 표시된 `ProcessResultNotifier`/`{Zone}ProviderEndpoint`는 프로토콜이 미확정이므로, 포트(인터페이스)만 만들고 구현체(adapter)는 추측해서 채우지 않는다 — 사용자에게 먼저 확인한다.
-
-**rfid-preprocessor** (`com.hanwha.ocean.rfid.preprocessor`):
-```
-domain/TagDebounceRule.java
-application/port/in/PreprocessTagEventUseCase.java
-application/port/out/CleanedTagEventPublisher.java
-adapter/in/reader/, adapter/out/mqtt/
-```
-
 
 ## 웹 대시보드 (`web-dashboard/`) — 공정별 병렬 개발 규칙
 
@@ -182,9 +169,10 @@ npm run boundaries   # 모듈 경계 검사만
 ## 코딩 컨벤션
 
 - Java 코드 스타일: Spring Boot 표준 컨벤션 따름.
-- 커밋 메시지: 모듈 경로를 prefix로 표기한다. **WBS 번호는 포함하지 않는다.**
+- 커밋 메시지: `type(scope) : 설명` 형식을 사용하며, 콜론(`:`) 양쪽에 공백을 하나씩 둔다. `scope`에는 변경한 모듈명을 표기하고 **WBS 번호는 포함하지 않는다.**
   ```
-  [ot-pipeline-assembly] LiDAR 이벤트 판별 로직 추가
+  feat(ot-pipeline-assembly) : LiDAR 이벤트 판별 로직 추가
+  fix(web-dashboard) : 공정존 지도 확대 동작 수정
   ```
 - 브랜치: `main` / `develop` / `feature/{모듈}-{설명}` / `release/{모듈}-v{버전}` / `hotfix/{모듈}-{설명}`
 - 릴리즈 태그는 레포 전체가 아니라 **모듈 단위**로 생성한다 (예: `ot-pipeline-assembly-v1.2.0`).
@@ -204,6 +192,7 @@ npm run boundaries   # 모듈 경계 검사만
 ## 작업 시 주의사항
 
 - Kepware/OPC-UA/KEPServerEX 관련 코드·설정은 절대 재도입하지 않는다 (완전히 폐기된 아키텍처).
+- **RFID 경로는 폐기되었다 — 선행의장의 필드 디바이스는 LiDAR다.** RFID 수집 코드·설정을 새로 만들지 않는다.
 - 가공 zone은 LiDAR/PLC 같은 필드 센서가 없다 — Legacy DB 연동 중심으로 동작하며, MQTT Agent를 통한 구독 로직이 필요 없다.
 - 도장 zone은 PLC가 Modbus로 ISL Server에 직결되며 MQTT Broker를 경유하지 않는다 — `ot-pipeline-painting`에서 MQTT 구독 코드를 작성하지 않는다.
 - 미확정 항목(예: OT-Server↔ISL Server 결과 전달 프로토콜, 공정 태그 Provider 역할)에 의존하는 코드를 작성해야 한다면, 작업 전에 사용자에게 확인을 요청한다.

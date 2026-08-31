@@ -332,3 +332,16 @@ export function GlobeIcon({ className, size }: IconProps) {
     </Icon>
   )
 }
+
+/**
+ * 지도 위의 한 자리를 짚는 핀 — 목록의 줄과 지도의 칸이 같은 곳을 가리킬 때 쓴다.
+ * 지도 캔버스가 그 자리에 세우는 패(대 + 지번코드)의 목록 쪽 짝이다.
+ */
+export function PinIcon({ className, size }: IconProps) {
+  return (
+    <Icon className={className} size={size}>
+      <path d="M12 21c4-4.4 6-7.7 6-10.4A6 6 0 006 10.6C6 13.3 8 16.6 12 21z" />
+      <circle cx="12" cy="10.5" r="2.25" />
+    </Icon>
+  )
+}

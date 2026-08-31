@@ -1,8 +1,11 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import type { TFunction } from 'i18next'
+import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import type { LidarBlockInfo } from '../model/lidarBlock'
 import { formatDetectionId } from '../model/lidarBlock'
+import type { LidarSensorStatus } from '../model/lidarSensor'
+import type { BayWorkState, SensorStatusCounts } from './bayStatusSummary'
 
 /*
  * 뷰포트 위에 뜨는 CSS2D 라벨 카드 — 시뮬레이션 뷰어와 실측 스캔 뷰어가 같은
@@ -112,6 +115,108 @@ export function createBlockLabel(
     <div class="${dotClass}"${dotStyle}></div>
   `
   return makeLabelObject(wrap, position, onClick)
+}
+
+/** 베이 대표 상태 → 라벨 상태점·글자색·문구 (색만으로 전하지 않는다 — 상태 텍스트가 항상 붙는다) */
+const BAY_STATUS_STYLE: Record<
+  LidarSensorStatus,
+  { dot: string; ink: string; labelKey: InshopKey }
+> = {
+  online: {
+    dot: 'bg-glass-healthy',
+    ink: 'text-glass-healthy',
+    labelKey: 'sensors.status.online',
+  },
+  offline: {
+    dot: 'bg-glass-foreground/40',
+    ink: 'text-glass-foreground/63',
+    labelKey: 'sensors.status.offline',
+  },
+  error: {
+    dot: 'bg-glass-unhealthy',
+    ink: 'text-glass-unhealthy',
+    labelKey: 'sensors.status.error',
+  },
+  calibrating: {
+    dot: 'bg-glass-degraded',
+    ink: 'text-glass-degraded',
+    labelKey: 'sensors.status.calibrating',
+  },
+}
+
+export interface BayStatusLabelData {
+  name: string
+  workCntr: string
+  /** 대표 LiDAR 상태 (worstSensorStatus) — null 이면 데이터 미수신 */
+  sensorStatus: LidarSensorStatus | null
+  sensorCounts: SensorStatusCounts
+  workState: BayWorkState
+  blockCount: number
+  /** 현재 공정 단계(송선 현공정 코드) — 없으면 표시하지 않는다 */
+  stageCode: string | null
+}
+
+/**
+ * 공장 뷰 정반 라벨 — 베이명 + 대표 상태 + 현재 작업 (PRD FR-2).
+ *
+ * 카드 본체는 `<button>` 이다 — CSS2D 라벨이 3D 위 유일한 선택 수단이므로
+ * 키보드 Tab 으로도 정반을 고를 수 있어야 한다 (PRD §9 접근성).
+ * `compact` 는 밀집 공장에서 이름·상태점만 남긴다 — 선택·이상 정반 라벨이
+ * 우선권을 갖고, 나머지는 줄여 겹침을 던다 (FR-3 라벨 축약).
+ */
+export function createBayStatusLabel(
+  data: BayStatusLabelData,
+  position: THREE.Vector3,
+  t: TFunction,
+  onClick?: () => void,
+  onHover?: (hovering: boolean) => void,
+  compact = false
+): CSS2DObject {
+  const style = data.sensorStatus ? BAY_STATUS_STYLE[data.sensorStatus] : null
+  const statusText = style ? t(style.labelKey) : t('viewer.bayStatus.noData')
+  const workText =
+    data.workState === 'working'
+      ? t('viewer.bayStatus.working', { count: data.blockCount })
+      : data.workState === 'idle'
+        ? t('viewer.bayStatus.idle')
+        : t('viewer.bayStatus.noData')
+  const summary = t('viewer.bayStatus.sensorSummary', { ...data.sensorCounts })
+  const failing = data.sensorStatus === 'error' || data.sensorStatus === 'offline'
+
+  const wrap = document.createElement('div')
+  wrap.className = 'flex flex-col items-center'
+  /*
+   * 이상 정반 라벨은 항상 겹침의 맨 위로 — 밀집 구간에서 정상 라벨에 가려
+   * "문제 있는 베이"가 안 보이면 이 화면의 첫 번째 목적이 무너진다 (FR-3).
+   */
+  wrap.style.zIndex = data.sensorStatus === 'error' ? '3' : failing ? '2' : '1'
+  wrap.innerHTML = `
+    <button type="button" title="${summary}" class="flex flex-col items-stretch gap-0.5 whitespace-nowrap rounded-md glass-panel px-2 py-1 text-left transition-colors hover:bg-glass-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent${
+      data.sensorStatus === 'error' ? ' ring-1 ring-glass-unhealthy/70' : ''
+    }">
+      <span class="flex items-center gap-1.5">
+        <span aria-hidden="true" class="h-1.5 w-1.5 shrink-0 rounded-full ${style?.dot ?? 'bg-glass-foreground/30'}"></span>
+        <span class="max-w-28 truncate text-xs font-semibold text-glass-foreground">${data.name}</span>
+        <span class="font-mono text-2xs tabular-nums text-glass-foreground/63">${data.workCntr}</span>
+      </span>
+      ${
+        compact
+          ? ''
+          : `<span class="flex items-center gap-1 pl-3">
+        <span class="text-2xs font-medium ${style?.ink ?? 'text-glass-foreground/63'}">${statusText}</span>
+        <span aria-hidden="true" class="text-2xs text-glass-foreground/40">·</span>
+        <span class="text-2xs tabular-nums text-glass-foreground/75">${workText}</span>
+        ${
+          data.stageCode
+            ? `<span class="rounded bg-glass-hover px-1 font-mono text-2xs text-glass-foreground/75">${data.stageCode}</span>`
+            : ''
+        }
+      </span>`
+      }
+    </button>
+    <div class="h-2.5 w-px ${failing ? 'bg-glass-unhealthy/60' : 'bg-glass-accent/50'}"></div>
+  `
+  return makeLabelObject(wrap, position, onClick, onHover)
 }
 
 /** 공장 뷰에서 정반 위에 뜨는 라벨 카드 */

@@ -60,5 +60,12 @@ export const assemblyModule: ProcessModule = {
   provides: {
     // 야드 화면이 읽어 가는 값 — 조립 모듈을 직접 부르지 않게 레지스트리를 거친다
     factoryOverviews: () => import('./api/assemblyApi').then((m) => m.fetchFactoryOverviews()),
+    /* 전체 현황 지도의 작업 위치 드릴다운(PRD FR-3·FR-4) — 조립의 작업 위치는 베이(정반)다.
+     * 어댑터는 동적 import 라 대시보드 초기 청크에 실리지 않는다. */
+    mapDrilldown: {
+      locationNounKey: 'assembly.map.locationNoun',
+      fetchLocations: (key) =>
+        import('./api/mapDrilldown').then((m) => m.fetchAssemblyMapLocations(key)),
+    },
   },
 }

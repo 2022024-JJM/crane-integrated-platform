@@ -1,13 +1,13 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
-import { cn } from '../../../shared/lib/utils'
+import { useTranslation } from '../../../lib/i18n/useTranslation'
+import { cn } from '../../../lib/utils'
 import type { MapTheme } from '../lib/basemapStyle'
 import {
   FACILITY_LABEL_MIN_SCALE,
   FACILITY_SMALL_SECTIONS,
   type YardFacility,
-} from '../lib/facilities'
+} from '../model/facility'
 import { worldToScreen, type Viewport, type YardView } from '../lib/projection'
 
 /** 화면 밖 라벨은 그리지 않는다 — 여백은 라벨 자체 폭만큼 */

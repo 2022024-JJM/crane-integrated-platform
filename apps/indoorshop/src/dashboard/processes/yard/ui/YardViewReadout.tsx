@@ -1,9 +1,13 @@
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import { cn } from '../../../shared/lib/utils'
 import { metersPer100px, type YardView } from '../lib/projection'
 
+export interface YardViewReadoutHandle {
+  update: (view: YardView) => void
+}
+
 interface YardViewReadoutProps {
-  view: YardView | null
   onGoHome: () => void
   className?: string
 }
@@ -15,9 +19,16 @@ interface YardViewReadoutProps {
  * 같은 규칙으로 움직인다는 것을 자리로 말한다. 다만 야드는 평면이라 축 대신
  * **위경도와 축척**을 낸다: 현장이 부르는 이름이 지번이고, 지번을 못 찾을 때
  * 마지막으로 기대는 것이 좌표다 — 베이스맵과 같은 WGS84 라 지도 앱에 그대로 넣힌다.
+ *
+ * 카메라는 비행·드래그 중 **매 프레임** 바뀐다. 뷰를 워크스페이스의 state 로 받으면
+ * 이 작은 상자 때문에 화면 전체(수백 줄 목록 포함)가 프레임마다 리렌더돼 3D
+ * 애니메이션이 끈적해진다 — 그래서 뷰는 imperative handle 로 받아 여기만 다시 그린다.
  */
-export function YardViewReadout({ view, onGoHome, className }: YardViewReadoutProps) {
+export const YardViewReadout = forwardRef<YardViewReadoutHandle, YardViewReadoutProps>(
+  function YardViewReadout({ onGoHome, className }, ref) {
   const { t } = useTranslation()
+  const [view, setView] = useState<YardView | null>(null)
+  useImperativeHandle(ref, () => ({ update: setView }), [])
   if (!view) return null
 
   const meters = metersPer100px(view)
@@ -89,4 +100,5 @@ export function YardViewReadout({ view, onGoHome, className }: YardViewReadoutPr
       </button>
     </div>
   )
-}
+  }
+)

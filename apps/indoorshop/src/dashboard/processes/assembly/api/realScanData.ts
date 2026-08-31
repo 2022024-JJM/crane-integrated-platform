@@ -7,23 +7,36 @@ import {
   realGroupKeyOf,
   type RealScanManifest,
 } from './realScanAssets'
+import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
 
 /**
- * 조립 5공장 (실측데이터) — 한화에너지 PoC 실측 데이터셋(20251220_150000).
+ * GBS - 1공장 5베이 — 한화에너지 PoC 실측 데이터셋(20251220_150000).
  *
- * 다른 공장은 목업이지만 이 공장은 LiDAR 12대 실측 스캔이다. 다만 정반(베이) 마스터가
- * 없어서, 베이 계층은 라이다 **그룹**(G1 북측 / G2 중앙 / G3 남측 갠트리)으로 대신한다.
+ * 실측 스캔이 찍힌 자리는 **1공장 5베이**다. 별도 공장이 아니라 GBS 공장 자리를 이 실측
+ * 데이터셋이 차지한다 (`mockAssemblyData` 는 GBS 를 목업 대상에서 뺀다). 다른 공장은 목업이지만
+ * 이 공장은 LiDAR 12대 실측 스캔이다. 다만 정반(베이) 마스터가 없어서, 베이 계층은
+ * 라이다 **그룹**(G1 북측 / G2 중앙 / G3 남측 갠트리)으로 대신한다.
  * 점군·CAD 배치·센서 위치는 `scripts/build-real-scan-assets.py` 가 생성한
  * `public/real-scan/` 자산에서 읽는다 (bin 파일은 용량 문제로 git 미포함 — 스크립트로 재생성).
  */
 
 export const REAL_FACTORY: Factory = {
-  id: 'factory-real5',
-  name: '조립 5공장',
-  displayName: '조립 5공장 (실측데이터)',
-  assyShop: 'A35',
+  id: 'asm-gbs',
+  name: 'GBS',
+  displayName: 'GBS - 1공장 5베이',
+  assyShop: 'GBS',
   locationCount: 3,
   health: 'healthy',
+}
+
+/**
+ * GBS 정반 fixture — 라이다 그룹(G1~G3)을 GBS 1~3BAY 와 **잠정** 대응시켜, 전체 현황
+ * 지도의 지번 강조가 실측 베이에서도 이어지게 한다. 운영 정반 마스터 확정 시 재검토.
+ */
+const GBS_SPEC = ASSEMBLY_FACTORIES.find((factory) => factory.id === REAL_FACTORY.id)
+
+function gbsYardLots(bayNo: number): string[] | undefined {
+  return GBS_SPEC?.bays.find((bay) => bay.bayNo === bayNo)?.yardLots
 }
 
 /**
@@ -32,9 +45,9 @@ export const REAL_FACTORY: Factory = {
  * (`fetchRealLocations`). manifest 를 못 읽으면 이 기본값(미상)이 그대로 남는다.
  */
 export const REAL_LOCATIONS: Location[] = [
-  { id: 'real5-g1', factoryId: REAL_FACTORY.id, name: 'G1 베이', status: 'unknown', workCntr: 'G1' },
-  { id: 'real5-g2', factoryId: REAL_FACTORY.id, name: 'G2 베이', status: 'unknown', workCntr: 'G2' },
-  { id: 'real5-g3', factoryId: REAL_FACTORY.id, name: 'G3 베이', status: 'unknown', workCntr: 'G3' },
+  { id: 'real5-g1', factoryId: REAL_FACTORY.id, name: 'G1 베이', status: 'unknown', workCntr: 'G1', yardLots: gbsYardLots(1) },
+  { id: 'real5-g2', factoryId: REAL_FACTORY.id, name: 'G2 베이', status: 'unknown', workCntr: 'G2', yardLots: gbsYardLots(2) },
+  { id: 'real5-g3', factoryId: REAL_FACTORY.id, name: 'G3 베이', status: 'unknown', workCntr: 'G3', yardLots: gbsYardLots(3) },
 ]
 
 /**
@@ -70,7 +83,9 @@ export function isRealLocation(locationId: string | undefined): boolean {
 
 /** 스캔 시각 'YYYY-MM-DD HH:MM' → 화면용 'HH:MM' */
 function scanTime(manifest: RealScanManifest): string {
-  return manifest.scannedAt.split(' ')[1] ?? manifest.scannedAt
+  return manifest.scannedAt.includes('T')
+    ? manifest.scannedAt
+    : manifest.scannedAt.replace(' ', 'T')
 }
 
 export async function fetchRealLidarSensors(locationId: string): Promise<LidarSensor[]> {

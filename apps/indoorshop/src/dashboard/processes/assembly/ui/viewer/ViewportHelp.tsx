@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import type { InshopKey } from '../../../../shared/lib/i18n/keys'
 import { cn } from '../../../../shared/lib/utils'
+import { isLowGpuMode, setLowGpuMode } from '../../lib/qualityMode'
 
+/* 기본 조작(FR-6): 왼쪽 회전 · 오른쪽/Shift 이동 · 휠 줌(클릭 후) — 표도 그 순서를 따른다 */
 const MOUSE: [InshopKey, InshopKey][] = [
-  ['viewer.help.wheel', 'viewer.help.zoom'],
+  ['viewer.help.leftDrag', 'viewer.help.rotate'],
+  ['viewer.help.rightDrag', 'viewer.help.pan'],
+  ['viewer.help.shiftDrag', 'viewer.help.pan'],
+  ['viewer.help.wheel', 'viewer.help.zoomFocused'],
   ['viewer.help.middleDrag', 'viewer.help.rotate'],
-  ['viewer.help.shiftMiddle', 'viewer.help.pan'],
-  ['viewer.help.ctrlMiddle', 'viewer.help.zoom'],
-  ['viewer.help.altLeft', 'viewer.help.rotate'],
 ]
 
 /** 키 이름은 자판에 새겨진 그대로라 번역하지 않는다 — 동작 설명만 옮긴다 */
@@ -17,6 +19,7 @@ const KEYS: [string, InshopKey][] = [
   ['Ctrl + 1 / 3 / 7', 'viewer.help.opposite'],
   ['.', 'viewer.help.frameSelected'],
   ['Home', 'viewer.help.home'],
+  ['Esc', 'viewer.help.escape'],
   ['F', 'viewer.help.fullscreen'],
 ]
 
@@ -27,6 +30,13 @@ const KEYS: [string, InshopKey][] = [
 export function ViewportHelp({ className }: { className?: string }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  /* 저사양 모드(FR-4) — 값의 주인은 qualityMode(localStorage), 여기는 스위치일 뿐 */
+  const [lowGpu, setLowGpu] = useState(isLowGpuMode)
+
+  const handleLowGpuChange = (next: boolean) => {
+    setLowGpu(next)
+    setLowGpuMode(next)
+  }
 
   return (
     <div className={cn('absolute bottom-4 right-4 flex flex-col items-end gap-2', className)}>
@@ -57,6 +67,16 @@ export function ViewportHelp({ className }: { className?: string }) {
           <p className="mt-2 border-t border-glass-border/70 pt-1.5 text-2xs leading-relaxed text-glass-foreground/50">
             {t('viewer.help.note')}
           </p>
+          {/* 저사양 환경에서 렌더 품질을 낮춘다 (FR-4) — 픽셀 밀도를 눌러 프레임을 지킨다 */}
+          <label className="mt-2 flex cursor-pointer items-center gap-2 border-t border-glass-border/70 pt-2 text-2xs text-glass-foreground/75">
+            <input
+              type="checkbox"
+              checked={lowGpu}
+              onChange={(event) => handleLowGpuChange(event.target.checked)}
+              className="h-3 w-3 accent-(--glass-accent)"
+            />
+            {t('viewer.help.lowSpec')}
+          </label>
         </div>
       )}
 

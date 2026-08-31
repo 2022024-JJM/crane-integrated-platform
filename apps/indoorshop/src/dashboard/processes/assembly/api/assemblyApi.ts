@@ -22,6 +22,8 @@ import {
   mockLidarSensors,
   bayBlockAssignments,
 } from './mockAssemblyData'
+import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
+import { buildMockFactoryLayout, type FactoryLayout } from './bayLayout'
 import {
   REAL_FACTORY,
   fetchRealLocations,
@@ -47,7 +49,12 @@ function withLatency<T>(value: T): Promise<T> {
 }
 
 export function fetchFactories(): Promise<Factory[]> {
-  return withLatency([...mockFactories, REAL_FACTORY])
+  /* GBS(실측)는 fixture 의 원래 GBS 자리에 끼운다 — 실측이라고 목록 끝으로 밀리면
+   * 공장 순서가 지도·탭과 어긋난다. mockFactories 에는 GBS 가 없다(mockAssemblyData). */
+  const factories = [...mockFactories]
+  const gbsIndex = ASSEMBLY_FACTORIES.findIndex((factory) => factory.id === REAL_FACTORY.id)
+  factories.splice(gbsIndex < 0 ? factories.length : gbsIndex, 0, REAL_FACTORY)
+  return withLatency(factories)
 }
 
 export async function fetchLocations(factoryId?: string): Promise<Location[]> {
@@ -58,6 +65,16 @@ export async function fetchLocations(factoryId?: string): Promise<Location[]> {
 export function fetchLidarSensors(locationId: string): Promise<LidarSensor[]> {
   if (isRealLocation(locationId)) return fetchRealLidarSensors(locationId)
   return withLatency(mockLidarSensors.filter((sensor) => sensor.locationId === locationId))
+}
+
+/**
+ * 공장 배치(레이아웃) — 베이 경계·통로 관계의 단일 출처 (PRD FR-3).
+ * 현장 shop/bay 좌표가 확정되기 전이므로 목업 배치(`source: 'mock'`)를 내려준다.
+ * 실측 좌표 확정 시 이 함수만 실제 조회로 바꾸면 뷰어는 수정이 필요 없다.
+ */
+export async function fetchFactoryLayout(factoryId: string): Promise<FactoryLayout> {
+  const locations = await fetchLocations(factoryId)
+  return buildMockFactoryLayout(factoryId, locations)
 }
 
 /** 베이에 배정된 블록의 CAD 모델 + 정반 내 배치 transform */

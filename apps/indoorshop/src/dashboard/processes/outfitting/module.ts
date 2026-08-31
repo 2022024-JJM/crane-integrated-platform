@@ -7,12 +7,19 @@ import { outfittingEn } from './i18n/en'
 /*
  * 선행의장 모듈 선언.
  *
- * 전용 화면은 아직 없다 — 공통 '준비 중' 화면이 선다. 이 모듈이 자기 이름·라우트·
- * 문구를 직접 들고 있으므로, 실제 화면을 붙일 때 공통 파일은 열지 않아도 된다.
+ * 이 파일은 **가볍게** 유지한다 — 앱이 뜰 때 모든 모듈 선언을 한꺼번에 읽으므로,
+ * 화면은 전부 lazy 로 둬 청크를 나눈다. 의장은 블록 단위로 작업하므로(소조/중조/대조
+ * 세분 없음) 조립과 달리 일일생산량 화면을 두지 않고, 공장 목록 → 블록 워크스페이스로만
+ * 구성한다.
  */
 
-const ZonePlaceholderPage = lazy(() =>
-  import('../../shared/pages/ZonePlaceholderPage').then((m) => ({ default: m.ZonePlaceholderPage }))
+const OutfittingFactoryListPage = lazy(() =>
+  import('./ui/pages/OutfittingFactoryListPage').then((m) => ({
+    default: m.OutfittingFactoryListPage,
+  }))
+)
+const OutfittingWorkspace = lazy(() =>
+  import('./ui/pages/OutfittingWorkspace').then((m) => ({ default: m.OutfittingWorkspace }))
 )
 
 export const outfittingModule: ProcessModule = {
@@ -24,8 +31,12 @@ export const outfittingModule: ProcessModule = {
     id: 'outfitting',
     labelKey: 'outfitting.nav.label',
     icon: OutfittingIcon,
+    source: 'LiDAR',
   },
-  routes: [{ path: '/indoorshop/zones/outfitting', Component: ZonePlaceholderPage }],
+  routes: [
+    { path: '/indoorshop/zones/outfitting', Component: OutfittingFactoryListPage },
+    { path: '/indoorshop/zones/outfitting/:factoryId', Component: OutfittingWorkspace },
+  ],
   i18n: { ko: outfittingKo, en: outfittingEn },
   zone: {
     id: 'outfitting',
@@ -34,6 +45,7 @@ export const outfittingModule: ProcessModule = {
     health: 'degraded',
     processingCount: 8,
     lastUpdateKey: 'outfitting.zone.lastUpdate',
+    source: 'LiDAR',
     statusDetailKey: 'outfitting.zone.statusDetail',
     healthDetailKey: 'outfitting.zone.healthDetail',
     checks: [

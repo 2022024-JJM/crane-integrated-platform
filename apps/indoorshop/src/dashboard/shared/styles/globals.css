@@ -190,6 +190,52 @@
 }
 
 /*
+ * 전체 현황 지도의 **공장 이름패** — 지붕에 누워 있던 이름이 떠오르는 HUD.
+ *
+ * 고르기 전 이름은 캔버스가 지붕 평면에 눕혀 그린다(YardMap 의 2.5D 이름줄). 공장을
+ * 고르면 그 글씨는 사라지고 이 패가 같은 자리에서 **일어서며 떠오른다** — 누운 자세
+ * (rotateX)에서 정면으로, 지붕 높이에서 그 위로. 자세와 높이가 함께 움직여야 "누워
+ * 있던 것이 떠올랐다"로 읽힌다.
+ *
+ * 떠오름(rise)과 부유(bob)를 **다른 엘리먼트**에 나눠 건다. 한 엘리먼트에 두 애니메이션을
+ * 걸면 뒤엣것의 transform 이 앞엣것을 통째로 덮어써서, 떠오르다 말고 튄다.
+ */
+@keyframes factory-hud-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.82) rotateX(72deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0deg);
+  }
+}
+
+@keyframes factory-hud-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.factory-hud-rise {
+  transform-origin: 50% 100%;
+  animation: factory-hud-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.factory-hud-bob {
+  /* 떠오름이 끝난 뒤에 이어받는다 — 지연이 곧 rise 의 길이다 */
+  animation: factory-hud-bob 3.8s ease-in-out 620ms infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .factory-hud-rise {
+    animation: fade-in 160ms ease-out both;
+  }
+  .factory-hud-bob {
+    animation: none;
+  }
+}
+
+/*
  * 누를 수 있는 것은 손 모양으로.
  *
  * Tailwind v4 preflight 는 button 에 `cursor: default` 를 준다 (브라우저 기본을
@@ -211,6 +257,63 @@
   }
 }
 
+
+/* 전체 현황은 작은 정보가 밀집되어 있어 본문보다 조금 더 정교한 자간을 사용한다. */
+.dashboard-typography {
+  letter-spacing: -0.012em;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 강제 다크 오버레이(지도 위 유리 패널) 전용 얇은 스크롤바 — 기본(밝은) 스크롤바가
+ * 어두운 패널 위에서 튀어서, 패널 색과 같은 결의 가는 막대로 바꾼다.
+ * 전체 현황 지도 오버레이와 도장 SCADA 패널이 함께 쓴다.
+ */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 140, 160, 0.45) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(120, 140, 160, 0.45);
+}
+
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 170, 190, 0.6);
+}
+
+/*
+ * 카메라가 도는 동안에는 지도 위 유리(backdrop-blur)를 끈다.
+ *
+ * 유리 아래 캔버스가 매 프레임 바뀌면 브라우저가 블러도 매 프레임 다시 계산한다 — 넓은
+ * 패널 한 장이 지도를 그리는 것보다 비싸서, 도장 배치 화면에서 캔버스는 한 프레임 2ms
+ * 인데 화면은 21ms 씩 걸렸다(블러를 끄면 16ms). 카메라가 멈추면(160ms) 곧바로 되돌아오므로
+ * 정지 화면의 모습은 그대로다 — 움직이는 동안 패널 뒤가 조금 덜 흐릴 뿐이다.
+ *
+ * 표시는 YardMap 이 `body.camera-moving` 클래스로 켜고 끈다(React 를 거치지 않는다).
+ * 선택자가 유틸리티 클래스 이름을 보는 것은, 유리를 쓰는 자리가 여러 화면에 흩어져 있어
+ * 그것들에 공통 클래스를 새로 다는 것보다 한 줄로 끝내는 편이 어긋날 자리가 적어서다.
+ *
+ * 값을 `none` 대신 `blur(3px)` 로 낮춰 봤지만 절반밖에 못 돌려받았다(19ms) — 비용은
+ * 반경보다 **뒷배경을 한 겹 더 그리는 일** 자체에 있다. 그래서 아예 끈다: 움직이는 동안
+ * 패널 뒤로 지도가 또렷이 비치지만, 그 대가로 카메라가 60fps 로 돈다.
+ */
+/* 접두사(-webkit-)는 손으로 붙이지 않는다 — 함께 적으면 빌드의 CSS 최적화가 둘을 같은
+   속성으로 보고 하나만 남겨(측정: 프로덕션 번들에서 표준 속성이 지워졌다) 규칙이 통째로
+   빈 껍데기가 된다. 필요한 접두사는 빌드가 대상 브라우저에 맞춰 붙인다. */
+body.camera-moving [class*='backdrop-blur'] {
+  backdrop-filter: none !important;
+}
 
 /*
  * 내업 대시보드 subtree 의 바탕.

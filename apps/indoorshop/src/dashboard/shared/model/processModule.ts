@@ -3,6 +3,15 @@ import type { InshopKey } from '../lib/i18n/keys'
 import type { RouteObject } from 'react-router-dom'
 import type { Zone } from '../entities/zone/model/types'
 import type { FactoryOverview } from '../entities/factory/model/overview'
+import type {
+  BasemapLayer,
+  LatLonBounds,
+  MapTheme,
+  YardFacility,
+} from '../features/yard-map'
+import type { ProcessMapDrilldownProvider } from './processMapDrilldown'
+import type { ProcessFacilityAnchor } from './processFacilityAnchor'
+import type { YardMapBackdrop } from './yardMapBackdrop'
 
 /**
  * 공정 모듈이 앱에 자신을 알리는 형식.
@@ -29,6 +38,8 @@ export interface ProcessNavEntry {
   icon: ProcessIcon
   /** 이 공정이 실적을 수집하는 데이터 출처 (사이드바·툴바에 표기) */
   source?: string
+  /** true 면 사이드바에 표시하지 않는다 — 라우트는 살아 있고 화면 노출만 가린다 */
+  hidden?: boolean
 }
 
 /**
@@ -37,8 +48,50 @@ export interface ProcessNavEntry {
  * 공정 모듈끼리 직접 import 하지 않기 위한 통로다 — 예를 들어 야드 화면은
  * 조립 모듈을 부르지 않고 레지스트리에 "공장 현황을 내는 모듈"을 물어본다.
  */
+/**
+ * 다른 화면이 `shared/features/yard-map` 을 배경 지도로 재사용할 때 필요한 데이터.
+ *
+ * YardMap 은 fixture 를 모른다(props 로만 받는다). 야드가 아닌 화면(예: 도장 설비
+ * 배치뷰)이 같은 지도를 쓰려면 이 값들을 넘겨야 하는데, 그 화면이 야드 모듈을 직접
+ * import 하면 공정 모듈끼리 얽힌다. 그래서 야드가 이 통로로 내고, 다른 모듈은
+ * 레지스트리(`fetchYardMapBackground`)로 읽는다.
+ */
+export interface YardMapBackground {
+  basemapLayers: Record<MapTheme, BasemapLayer[]>
+  extent: LatLonBounds
+  colorOfCategory: (category: string) => string
+  facilities: YardFacility[]
+}
+
 export interface ProcessProvides {
   factoryOverviews?: () => Promise<FactoryOverview[]>
+  /**
+   * 공정존 → 지도상의 대표 시설·좌표. 야드가 41개 시설의 공정 귀속·좌표를 알아
+   * 이것을 채우고, 대시보드는 레지스트리(`fetchProcessFacilityAnchors`)로 읽는다.
+   */
+  facilityAnchors?: () => Promise<ProcessFacilityAnchor[]>
+  /**
+   * 야드 지도 배경(베이스맵·범위·색·시설). 대시보드가 지도를 배경으로 깔 때 쓰며,
+   * 무게(베이스맵 ~980KB)가 초기 번들에 실리지 않도록 야드가 lazy 로 내보낸다.
+   * 대시보드는 레지스트리(`fetchYardMapBackdrop`)로 읽는다.
+   *
+   * ⚠️ 통합 임시: 아래 `yardMapBackground` 와 동일 목적(야드 지도배경 provides). C(대시보드)·
+   *   B2(도장) 병렬 작업에서 각각 생겨 둘 다 유지 중 — 하나로 통일 필요(아침 결정사항).
+   */
+  mapBackdrop?: () => Promise<YardMapBackdrop>
+  /**
+   * 야드 맵 배경 데이터 — 다른 화면이 YardMap 을 재사용할 때 넘길 값들.
+   * 무거운 fixture 라 lazy 로 둔다(이 배경이 필요 없는 화면에까지 실리지 않게).
+   * ⚠️ 통합 임시: 위 `mapBackdrop` 와 중복 — 통일 필요.
+   */
+  yardMapBackground?: () => Promise<YardMapBackground>
+  /**
+   * 전체 현황 지도의 **작업 위치 드릴다운**(PRD FR-3) — 공정 → 공장 다음 단계인
+   * 작업 위치의 명칭·조회·상세 경로를 이 공정이 소유해 낸다. 대시보드는 레지스트리
+   * (`getProcessMapDrilldown`)로 읽으며, 내지 않는 공정은 오류가 아니라
+   * "작업 위치 상세 미제공" 으로 다뤄진다 — 계약은 **선택적**이다.
+   */
+  mapDrilldown?: ProcessMapDrilldownProvider
 }
 
 export interface ProcessModule {

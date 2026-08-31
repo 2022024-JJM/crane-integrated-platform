@@ -7,12 +7,13 @@ import { paintingEn } from './i18n/en'
 /*
  * 선행도장 모듈 선언.
  *
- * 전용 화면은 아직 없다 — 공통 '준비 중' 화면이 선다. 이 모듈이 자기 이름·라우트·
- * 문구를 직접 들고 있으므로, 실제 화면을 붙일 때 공통 파일은 열지 않아도 된다.
+ * 첫 실화면은 설비 상태 화면(PaintingWorkspace)이다. three/지도/설비 fixture 같은 무거운
+ * 의존은 화면 쪽에만 있고, 화면 자체를 lazy 로 둬서 대시보드만 보는 사용자에게 그 무게가
+ * 실리지 않게 한다(module.ts 는 가볍게 유지).
  */
 
-const ZonePlaceholderPage = lazy(() =>
-  import('../../shared/pages/ZonePlaceholderPage').then((m) => ({ default: m.ZonePlaceholderPage }))
+const PaintingWorkspace = lazy(() =>
+  import('./ui/pages/PaintingWorkspace').then((m) => ({ default: m.PaintingWorkspace }))
 )
 
 export const paintingModule: ProcessModule = {
@@ -26,7 +27,7 @@ export const paintingModule: ProcessModule = {
     icon: PaintingIcon,
     source: 'PLC · Modbus',
   },
-  routes: [{ path: '/indoorshop/zones/painting', Component: ZonePlaceholderPage }],
+  routes: [{ path: '/indoorshop/zones/painting', Component: PaintingWorkspace }],
   i18n: { ko: paintingKo, en: paintingEn },
   zone: {
     id: 'painting',

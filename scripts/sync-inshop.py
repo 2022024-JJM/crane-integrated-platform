@@ -48,8 +48,14 @@ LAYERS = ("shared", "processes", "assets")
 # app/ 은 셸 라우팅과 겹치므로 통째로 옮기지 않는다 — 필요한 두 파일만 변환해서 가져온다
 APP_FILES = ("bootstrap.ts", "i18next.d.ts")
 
-# 셸 AppLayout 이 대신하는 원본 크롬 — 옮기지 않는다 (그것만 쓰던 조각도 함께)
-DROP_DIRS = ("shared/widgets", "shared/features/alarm-center", "shared/entities/alarm")
+# 셸 AppLayout 이 대신하는 원본 크롬 — 옮기지 않는다 (그것만 쓰던 조각도 함께).
+# shared/widgets 통째가 아니라 크롬만 집어서 뺀다 — dashboard-map 처럼 화면이 쓰는
+# 위젯이 같은 디렉토리에 살기 때문이다.
+DROP_DIRS = (
+    "shared/widgets/layout-wrapper", "shared/widgets/sidebar", "shared/widgets/header",
+    "shared/widgets/footer", "shared/widgets/user-menu", "shared/widgets/alarm-menu",
+    "shared/features/alarm-center", "shared/entities/alarm",
+)
 DROP_FILES = ("shared/config/navigation.ts", "shared/lib/theme/ThemeProvider.tsx")
 
 # 이 앱이 소유하는 라우트 접두 — <Link>·navigate·module.ts 경로에 /indoorshop 을 붙인다
@@ -441,7 +447,7 @@ def sync_public() -> None:
 def check_orphans() -> None:
     step("삭제한 크롬을 아직 참조하는 곳이 없는지")
     # import 지정자만 본다 — 주석에 '왜 ThemeProvider 를 뺐는가' 를 적어 둔 것까지 잡으면 안 된다
-    pat = re.compile(r"from '[^']*(?:shared/widgets|alarm-center|entities/alarm|config/navigation|theme/ThemeProvider)[^']*'")
+    pat = re.compile(r"from '[^']*(?:widgets/(?:layout-wrapper|sidebar|header|footer|user-menu|alarm-menu)|alarm-center|entities/alarm|config/navigation|theme/ThemeProvider)[^']*'")
     bad = [f for f in ts_files(DST) if pat.search(read(f))]
     assert not bad, f"삭제된 모듈 참조 잔존 — 원본이 새로 쓰기 시작했다면 DROP 목록을 재검토: {bad}"
 

@@ -7,6 +7,8 @@ import { BayIdentityBar } from '../BayIdentityBar'
 import { DetectedBlockList } from '../block-detail/DetectedBlockList'
 import { BlockDetailOverlay } from '../block-detail/BlockDetailOverlay'
 import { LidarSensorStatusList } from '../LidarSensorStatusList'
+import { BayDetailPanel } from '../BayDetailPanel'
+import { FirstRunHint } from '../viewer/FirstRunHint'
 import { LidarPointCloudViewer } from '../viewer/LidarPointCloudViewer'
 import type { BaySceneData } from '../viewer/LidarPointCloudViewer'
 import { RealScanViewer } from '../viewer/RealScanViewer'
@@ -24,6 +26,18 @@ import {
   REAL_CAD_COLOR_MODES,
   type PointColorMode,
 } from '../../lib/colorModes'
+import {
+  worstSensorStatus,
+  bayWorkState,
+  bayStage,
+} from '../../lib/bayStatusSummary'
+import {
+  DEFAULT_BAY_FILTER,
+  bayPassesFilter,
+  type BayFilter,
+} from '../../lib/bayFilters'
+import { latestScan, isViewDelayed } from '../../lib/freshness'
+import { useClock } from '../../../../shared/lib/useClock'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { ResizeHandle } from '../../../../shared/ui/atoms/ResizeHandle'
 import { useResizablePanel } from '../../../../shared/lib/useResizablePanel'
@@ -38,7 +52,9 @@ import {
   fetchLidarSensors,
   fetchDetectedBlocks,
   fetchBayModel,
+  fetchFactoryLayout,
 } from '../../api/assemblyApi'
+import type { FactoryLayout } from '../../api/bayLayout'
 import { isRealFactory } from '../../api/realScanData'
 
 /** 실측 스캔의 기본 색상 규칙 — 이 화면이 먼저 답해야 할 질문이 "정합됐나" 이다 */
@@ -69,8 +85,40 @@ export function AssemblyWorkspace() {
 
   /** 베이 화면에서 라벨/카드 클릭으로 선택된 블록 — 선택 시 뷰어가 블록 단독 뷰로 전환 */
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  /** LiDAR 카드 클릭 시 같은 센서 재클릭도 카메라 요청으로 전달한다. */
+  const [sensorFocus, setSensorFocus] = useState<{
+    id: string | null
+    index: number
+    request: number
+  } | null>(null)
+  useEffect(() => {
+    setSensorFocus(null)
+  }, [factoryId, locationId])
+  useEffect(() => {
+    if (!sensorFocus?.id) return
+
+    const resetSensorFocus = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-lidar-sensor-panel]')) return
+      setSensorFocus((current) =>
+        current?.id ? { id: null, index: -1, request: current.request + 1 } : current
+      )
+    }
+
+    document.addEventListener('pointerdown', resetSensorFocus)
+    return () => document.removeEventListener('pointerdown', resetSensorFocus)
+  }, [sensorFocus?.id])
   /** 목록에서 가리키는 중인 정반 — 3D 뷰의 강조와 같은 값을 공유한다 */
   const [highlightedBayId, setHighlightedBayId] = useState<string | null>(null)
+  /**
+   * 공장 뷰의 지속 선택 정반 (FR-5) — 클릭 선택은 hover 와 달리 유지된다.
+   * 선택 대상은 강하게, 동일 공정 정반은 중간, 무관한 정반은 낮게 가라앉는다.
+   */
+  const [selectedBayId, setSelectedBayId] = useState<string | null>(null)
+  /** 공장 뷰 정반 필터 (FR-9) — 걸린 정반은 맵에서 가라앉고 상세 패널 목록에서 접힌다 */
+  const [bayFilter, setBayFilter] = useState<BayFilter>(DEFAULT_BAY_FILTER)
+  /** `선택 정반 맞춤` 재요청 신호 (FR-8) — 상세 카드 버튼이 올리고 뷰어가 듣는다 */
+  const [fitRequest, setFitRequest] = useState(0)
   /**
    * 뷰어 표시 상태 — 소유자는 뷰어가 아니라 이 화면이다.
    * 표시 모드가 바뀌면 색상 규칙도 함께 조정해야 하는데, 그 규칙은 뷰어가 아니라
@@ -101,6 +149,20 @@ export function AssemblyWorkspace() {
     defaultWidth: 352,
     min: 260,
     max: 640,
+    minOpposite: 420,
+  })
+
+  /* 공장 뷰의 뷰어 ↔ 상세 패널(FR-8) 폭 배분 — 정반 뷰의 목록 패널과 같은 문법 */
+  const {
+    width: panelWidth,
+    dragging: resizingPanel,
+    containerRef: factorySplitRef,
+    separatorProps: panelSeparatorProps,
+  } = useResizablePanel({
+    storageKey: 'assembly-bay-panel-width',
+    defaultWidth: 340,
+    min: 280,
+    max: 560,
     minOpposite: 420,
   })
 
@@ -173,6 +235,8 @@ export function AssemblyWorkspace() {
   }
   useEffect(() => {
     setSelectedBlockId(null)
+    setSelectedBayId(null)
+    setBayFilter(DEFAULT_BAY_FILTER)
   }, [locationId, factoryId])
 
   // 트리·정반 그리드용 기준 데이터 (공장 전체 + 위치 전체)
@@ -193,9 +257,14 @@ export function AssemblyWorkspace() {
   const { data: factoryScene, loading: factorySceneLoading } = useAsyncData(async (): Promise<{
     factoryId: string
     bays: BaySceneData[]
+    layout: FactoryLayout
   } | null> => {
     if (!factoryId || locationId) return null
-    const locations = await fetchLocations(factoryId)
+    const [locations, layout] = await Promise.all([
+      fetchLocations(factoryId),
+      // 베이 배치는 데이터 계층이 소유한다 (FR-3) — 뷰어는 받은 좌표를 그릴 뿐이다
+      fetchFactoryLayout(factoryId),
+    ])
     const bays = await Promise.all(
       locations.map(async (location) => ({
         location,
@@ -204,7 +273,7 @@ export function AssemblyWorkspace() {
         bayModel: await fetchBayModel(location.id),
       }))
     )
-    return { factoryId, bays }
+    return { factoryId, bays, layout }
   }, [factoryId, locationId])
 
   // 정반 레벨: 선택된 정반의 센서 상태 + 인식 결과
@@ -227,6 +296,37 @@ export function AssemblyWorkspace() {
   const showBaseSpinner = useDelayedFlag(baseLoading)
   const showDetailSpinner = useDelayedFlag(detailLoading)
   const showFactorySpinner = useDelayedFlag(factorySceneLoading)
+
+  // 경과 판정이 굳지 않도록 30초마다 다시 계산한다 (FR-9 데이터 지연)
+  const now = useClock(30000)
+
+  /** 필터에 걸린 정반 (FR-9) — 뷰어는 이 집합을 받아 가라앉히기만 한다 */
+  const dimmedBayIds = useMemo(() => {
+    if (!factoryScene) return null
+    const dimmed = new Set<string>()
+    for (const bay of factoryScene.bays) {
+      const sensorStatus = worstSensorStatus(bay.sensors)
+      const passes = bayPassesFilter(
+        {
+          sensorStatus,
+          workState: bayWorkState(bay.sensors, bay.blocks),
+          stage: bayStage(bay.blocks),
+        },
+        bayFilter
+      )
+      if (!passes) dimmed.add(bay.location.id)
+    }
+    return dimmed.size > 0 ? dimmed : null
+  }, [factoryScene, bayFilter])
+
+  /** 공장 전체에서 가장 신선한 수신 — `데이터 지연` 배너(FR-9)의 근거 */
+  const factoryFreshness = useMemo(
+    () => (factoryScene ? latestScan(factoryScene.bays.flatMap((bay) => bay.sensors), now) : null),
+    [factoryScene, now]
+  )
+  const factoryDelayed = factoryScene
+    ? isViewDelayed(factoryFreshness) || factoryFreshness === null
+    : false
 
   const factory = base?.factories.find((f) => f.id === factoryId)
   const factoryLocations = useMemo(
@@ -395,6 +495,7 @@ export function AssemblyWorkspace() {
                         showOutline={showOutline}
                         onSelectBlock={setSelectedBlockId}
                         className={viewerSizeClass}
+                        sensorFocus={sensorFocus}
                       />
                     ) : (
                       <LidarPointCloudViewer
@@ -407,6 +508,7 @@ export function AssemblyWorkspace() {
                         showOutline={showOutline}
                         onSelectBlock={setSelectedBlockId}
                         className={viewerSizeClass}
+                        sensorFocus={sensorFocus}
                       />
                     )}
                     {/*
@@ -433,26 +535,36 @@ export function AssemblyWorkspace() {
                         className="static max-w-none"
                       >
                         <PointCloudViewControls {...viewerControlProps} tone="glass" />
-                        {/*
-                          라이다 센서 줄 — 표시 옵션 바로 아래가 제 자리다.
-                          센서 칩의 색이 곧 점군의 점 색이라(SENSOR_POINT_COLORS),
-                          색을 고르는 줄과 그 색의 주인이 붙어 있어야 짝으로 읽힌다.
-                        */}
-                        <LidarSensorStatusList
-                          sensors={detail.sensors}
-                          pointColors={SENSOR_POINT_COLORS}
-                          tone="glass"
-                        />
                       </ViewportToolbar>
                       {selectedBlock && (
                         <BlockDetailOverlay block={selectedBlock} className="static w-64" />
                       )}
                     </div>
+                    {/* LiDAR는 조작 도구와 분리한 독립 계기판으로 오른쪽 아래에 고정한다. */}
+                    {!selectedBlock && (
+                      <LidarSensorStatusList
+                        sensors={detail.sensors}
+                        pointColors={SENSOR_POINT_COLORS}
+                        tone="glass"
+                        className="absolute bottom-4 right-4 z-10 w-80 max-w-[calc(100%-2rem)]"
+                        selectedSensorId={sensorFocus?.id}
+                        onSelectSensor={(id, index) =>
+                          setSensorFocus((current) =>
+                            current?.id === id
+                              ? { id: null, index: -1, request: current.request + 1 }
+                              : {
+                                  id,
+                                  index,
+                                  request: (current?.request ?? 0) + 1,
+                                }
+                          )
+                        }
+                      />
+                    )}
                     {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 오른쪽 위(도구 묶음 아래)로 */}
                     {!viewerOwnsLegend && (
                       <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
                     )}
-                    <ViewportHelp />
                     {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
                     {/*
                       블록을 고르면 뷰어는 그 블록만 비추고, 상세는 오른쪽 목록의
@@ -476,6 +588,7 @@ export function AssemblyWorkspace() {
                           <span className="text-glass-foreground/54">{t('viewer.backToAll')}</span>
                         </button>
                       )}
+                      <ViewportHelp className="static flex-col-reverse" />
                       {fullscreenSupported && (
                         <ViewportFullscreenButton
                           isFullscreen={isFullscreen}
@@ -536,21 +649,34 @@ export function AssemblyWorkspace() {
            * 보고 있는 것을 바꾸는 일은 3D 위에 뜬 도구가 아니라 창 자체를 갈아 끼우는
            * 일이라, 탭이 창에 붙어 있어야 그 뜻이 그대로 보인다.
            */
-          <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
-            <AssemblyLocationTabs
-              factories={base.factories}
-              locations={base.locations}
-              currentFactoryId={factory.id}
-              tone="attached"
-              parts="factories"
-              attachedColors={viewportEdge}
-              className="shrink-0"
-            />
-            <div
-              ref={viewportRef}
-              style={isFullscreen ? { background: viewportEdge.background } : undefined}
-              className="relative min-w-0 xl:min-h-0 xl:flex-1"
-            >
+          /*
+           * 뷰어(가운데) + 정반 상세 패널(FR-8, 오른쪽) — 정반 뷰의 목록 패널과 같은
+           * 분할 문법이다. 실측 공장은 지속 선택(FR-5)이 아직 없어 패널을 붙이지 않는다.
+           */
+          <div
+            ref={factorySplitRef}
+            style={{ '--panel-w': `${panelWidth}px` } as CSSProperties}
+            className="flex min-w-0 flex-col gap-6 xl:min-h-0 xl:flex-1 xl:flex-row xl:gap-0"
+          >
+            <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+              <AssemblyLocationTabs
+                factories={base.factories}
+                locations={base.locations}
+                currentFactoryId={factory.id}
+                tone="attached"
+                parts="factories"
+                attachedColors={viewportEdge}
+                className="shrink-0"
+              />
+              <div
+                ref={viewportRef}
+                style={isFullscreen ? { background: viewportEdge.background } : undefined}
+                className={cn(
+                  'relative min-w-0 xl:min-h-0 xl:flex-1',
+                  // 경계를 끄는 동안 3D 가 포인터를 가져가면 궤도가 같이 돌아간다
+                  resizingPanel && '[&_canvas]:pointer-events-none',
+                )}
+              >
               {/*
                 장면이 아직 없어도 칸과 도구줄은 자리에 남는다 — 불러오는 동안
                 공장을 못 바꾸면, 잘못 들어온 사람은 기다렸다가 다시 눌러야 한다.
@@ -578,12 +704,17 @@ export function AssemblyWorkspace() {
                   key={factoryScene.factoryId}
                   mode="factory"
                   bays={factoryScene.bays}
+                  layout={factoryScene.layout}
                   displayMode={displayMode}
                   colorMode={colorMode}
                   showOutline={showOutline}
-                  onSelectBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
+                  selectedBayId={selectedBayId}
+                  onBaySelect={setSelectedBayId}
+                  onOpenBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
                   highlightedBayId={highlightedBayId}
                   onHoverBay={setHighlightedBayId}
+                  dimmedBayIds={dimmedBayIds}
+                  fitRequest={fitRequest}
                   className={viewerSizeClass}
                 />
               )}
@@ -608,16 +739,61 @@ export function AssemblyWorkspace() {
               {factoryScene && !viewerOwnsLegend && (
                 <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
               )}
-              {factoryScene && <ViewportHelp />}
-              {fullscreenSupported && (
-                <ViewportFullscreenButton
-                  isFullscreen={isFullscreen}
-                  onToggle={toggleFullscreen}
-                  className="absolute right-4 top-4"
-                />
+              <div className="absolute right-4 top-4 z-10 flex items-start gap-2">
+                {factoryScene && <ViewportHelp className="static flex-col-reverse" />}
+                {fullscreenSupported && (
+                  <ViewportFullscreenButton
+                    isFullscreen={isFullscreen}
+                    onToggle={toggleFullscreen}
+                  />
+                )}
+              </div>
+              {/*
+                데이터 지연 (FR-9) — 마지막 값이 정상처럼 보이지 않게 뷰 전체에 알린다.
+                수신 이력 자체가 없으면 `미수신`으로 구분해 말한다 (FR-2 의 구분과 동일).
+              */}
+              {factoryDelayed && (
+                <div
+                  role="status"
+                  className="pointer-events-none absolute left-1/2 top-12 z-10 -translate-x-1/2 whitespace-nowrap rounded-inshop-md glass-panel px-2.5 py-1 text-2xs font-medium text-glass-degraded ring-1 ring-glass-degraded/50"
+                >
+                  {factoryFreshness
+                    ? t('viewer.dataDelay', { time: factoryFreshness.time })
+                    : t('viewer.dataNone')}
+                </div>
+              )}
+              {/* 첫 진입 조작 힌트 (FR-9) — 한 번만, 이후에는 `조작 ?` 도움말이 맡는다 */}
+              {factoryScene && (
+                <FirstRunHint className="absolute bottom-16 left-1/2 z-10 -translate-x-1/2" />
               )}
               {showFactorySpinner && <SpinnerOverlay label={t('viewer.loadingFusion')} />}
+              </div>
             </div>
+
+            {/* 정반 상세 패널 (FR-8) — 실측 공장은 지속 선택이 없어 패널도 없다 */}
+            {!realFactory && (
+              <>
+                <ResizeHandle
+                  {...panelSeparatorProps}
+                  dragging={resizingPanel}
+                  className="hidden xl:block"
+                />
+                <div className="flex min-w-0 flex-col xl:min-h-0 xl:w-[var(--panel-w)] xl:shrink-0">
+                  <BayDetailPanel
+                    bays={factoryScene?.bays ?? []}
+                    selectedBayId={selectedBayId}
+                    highlightedBayId={highlightedBayId}
+                    filter={bayFilter}
+                    onFilterChange={setBayFilter}
+                    onSelectBay={setSelectedBayId}
+                    onHoverBay={setHighlightedBayId}
+                    onOpenBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
+                    onFitBay={() => setFitRequest((count) => count + 1)}
+                    className="xl:min-h-0 xl:flex-1"
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
