@@ -28,6 +28,7 @@ import {
   type AssetReportKey,
 } from '../lib/build-asset-report';
 import { CraneThumb } from './crane-thumb';
+import { NewAssetModal } from './new-asset-modal';
 
 interface ActivityLine {
   key: string;
@@ -54,6 +55,7 @@ export function Mro2AssetsPage() {
   const [newLabel, setNewLabel] = useState('');
   const { year } = useMro2Year();
   const [reportOpen, setReportOpen] = useState(false);
+  const [newAssetOpen, setNewAssetOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   // 바깥 클릭으로 리포트 메뉴 닫기
@@ -224,6 +226,10 @@ export function Mro2AssetsPage() {
       <div className="min-w-0 flex-1">
         <KcSectionHeading
           right={
+            <div className="flex items-center gap-2">
+            <KcButton variant="outline" onClick={() => setNewAssetOpen(true)}>
+              <Plus size={13} /> {t('asset-management:newAsset')}
+            </KcButton>
             <div className="relative" ref={reportRef}>
             <KcButton variant="teal" onClick={() => setReportOpen((v) => !v)}>
               <FileSpreadsheet size={13} /> {t('common.assetReports')}
@@ -246,6 +252,7 @@ export function Mro2AssetsPage() {
                 ))}
               </div>
             ) : null}
+            </div>
             </div>
           }
         >
@@ -470,6 +477,9 @@ export function Mro2AssetsPage() {
           </>
         ) : null}
       </aside>
+
+      {/* 자산 추가 모달 — 조건부 마운트로 폼 상태 초기화 */}
+      {newAssetOpen ? <NewAssetModal onClose={() => setNewAssetOpen(false)} /> : null}
     </div>
   );
 }
