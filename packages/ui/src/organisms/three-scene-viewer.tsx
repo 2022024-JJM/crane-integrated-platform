@@ -1,10 +1,10 @@
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
-  Map,
+  Binoculars,
+  House,
   Maximize2,
   Minimize2,
-  RotateCcw,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -21,13 +21,13 @@ import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Button } from '../atoms/button';
+import { PortalContainerProvider } from '../molecules/portal-container';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '../molecules/tooltip';
-import { cn } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 interface ThreeSceneViewerCameraPreset {
@@ -51,17 +51,15 @@ interface ThreeSceneViewerProps {
   children: ReactNode;
   overlay?: ReactNode;
   fullscreenOverlay?: ReactNode;
-  // 전체화면일 때 우측 상단(툴바 좌측 옆)에 떠있는 플로팅 슬롯. 도메인 무관.
+  // 전체화면일 때 우측 상단에 떠있는 플로팅 슬롯. 도메인 무관.
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
   fullscreenTopCenterOverlay?: ReactNode;
-  // 전체화면일 때 3D 캔버스 하단 중앙에 떠있는 슬롯. 씬 뷰 북마크 바 등.
-  // 루트가 아닌 캔버스 영역에 앵커링 — 분할 레이아웃에서도 3D 뷰 중앙에 온다.
-  fullscreenBottomCenterOverlay?: ReactNode;
-  // 우측 툴바 상단에 외부 버튼을 주입하는 슬롯. 도메인 무관.
+  // 좌측 하단 툴바의 맨 앞(왼쪽)에 외부 버튼을 주입하는 슬롯. 도메인 무관.
   toolbarExtras?: ReactNode;
-  // 우측 툴바 컨테이너에 추가되는 클래스(top offset 등 페이지별 조정용).
-  toolbarClassName?: string;
+  // 좌측 하단 툴바의 맨 뒤(오른쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
+  // 툴바 버튼과 같은 스타일(SCENE_TOOLBAR_BUTTON_CLASS)로 맞추면 한 줄로 이어진다.
+  toolbarTrailing?: ReactNode;
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -359,6 +357,13 @@ function SceneControlsBridge({
   );
 }
 
+/**
+ * 좌측 하단 툴바 버튼의 공통 외형(글래스 outline). toolbarExtras·toolbarTrailing에
+ * 넣는 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
+ */
+export const SCENE_TOOLBAR_BUTTON_CLASS =
+  'bg-background/85 border-border/70 shadow-sm backdrop-blur-sm';
+
 interface ToolbarButtonProps {
   label: string;
   onClick: () => void;
@@ -373,7 +378,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
           <Button
             variant="outline"
             size="icon-sm"
-            className="bg-background/85 border-border/70 shadow-sm backdrop-blur-sm"
+            className={SCENE_TOOLBAR_BUTTON_CLASS}
             aria-label={label}
           />
         }
@@ -381,7 +386,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -395,9 +400,8 @@ export function ThreeSceneViewer({
   fullscreenOverlay,
   fullscreenTopRightOverlay,
   fullscreenTopCenterOverlay,
-  fullscreenBottomCenterOverlay,
   toolbarExtras,
-  toolbarClassName,
+  toolbarTrailing,
   onControllerReady,
   onFullscreenChange,
 }: ThreeSceneViewerProps) {
@@ -476,126 +480,129 @@ export function ThreeSceneViewer({
       ref={rootRef}
       className="relative h-full min-h-0 w-full overflow-hidden"
     >
-      {/* 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 레이아웃 */}
-      <div className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}>
-        {/* 3D 캔버스 영역 */}
-        <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
-          <Canvas
-            {...canvasProps}
-            // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
-            // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
-            // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
-            // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
-            // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
-            camera={{
-              position: cameraPreset.defaultPosition,
-              ...(cameraClip ?? { near: 0.1, far: 5000 }),
-            }}
-            // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
-            // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
-            // 라벨은 DOM(Html)이라 텍스트 선명도와 무관하고, MSAA(antialias)가
-            // 켜져 있어 1.5로도 엣지가 깨끗하다. 호출부가 canvasProps.dpr로
-            // 넘기면 그 값이 우선한다. features 쪽 프리셋(SCENE_DEFAULT_DPR,
-            // scene-render-preset.tsx)과 같은 값 — cameraClip처럼 이 패키지는
-            // features를 참조할 수 없어 리터럴로 둔다.
-            dpr={canvasProps?.dpr ?? [1, 1.5]}
-          >
-            <SceneControlsBridge
-              cameraPreset={cameraPreset}
-              onControllerChange={setController}
-            />
-            {children}
-          </Canvas>
+      {/* 전체화면(top layer)에서는 body 포털이 루트 위로 올라오지 못하므로
+          툴팁·팝오버·컨텍스트 메뉴·셀렉트를 루트 안에 렌더한다.
+          전체화면 여부로 컨테이너를 바꾸면(body↔root) 안 된다 — 닫히는 중인
+          팝업이 새 컨테이너로 리마운트되는데, base-ui는 리마운트되지 않는 Root에서
+          옛 요소의 퇴장 애니메이션 완료를 기다리다(useAnimationsFinished,
+          abort를 완료로 안 침) unmount를 영영 놓쳐 툴팁이 화면에 남는다.
+          평소에도 루트 안에 두면 overflow-hidden에 잘리지 않고 floating-ui가
+          루트 안쪽으로 밀어준다(프리뷰 모달 180px 높이에서도 팝오버가 들어간다). */}
+      <PortalContainerProvider container={rootRef}>
+        {/* 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 레이아웃 */}
+        <div className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}>
+          {/* 3D 캔버스 영역 */}
+          <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
+            <Canvas
+              {...canvasProps}
+              // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
+              // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
+              // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
+              // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
+              // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
+              camera={{
+                position: cameraPreset.defaultPosition,
+                ...(cameraClip ?? { near: 0.1, far: 5000 }),
+              }}
+              // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
+              // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
+              // 라벨은 DOM(Html)이라 텍스트 선명도와 무관하고, MSAA(antialias)가
+              // 켜져 있어 1.5로도 엣지가 깨끗하다. 호출부가 canvasProps.dpr로
+              // 넘기면 그 값이 우선한다. features 쪽 프리셋(SCENE_DEFAULT_DPR,
+              // scene-render-preset.tsx)과 같은 값 — cameraClip처럼 이 패키지는
+              // features를 참조할 수 없어 리터럴로 둔다.
+              dpr={canvasProps?.dpr ?? [1, 1.5]}
+            >
+              <SceneControlsBridge
+                cameraPreset={cameraPreset}
+                onControllerChange={setController}
+              />
+              {children}
+            </Canvas>
 
-          {overlay ? (
-            <div className="pointer-events-none absolute inset-0 z-10">
-              {overlay}
-            </div>
-          ) : null}
+            {overlay ? (
+              <div className="pointer-events-none absolute inset-0 z-10">
+                {overlay}
+              </div>
+            ) : null}
+          </div>
 
-          {isFullscreen && fullscreenBottomCenterOverlay ? (
-            <div className="pointer-events-auto absolute bottom-4 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2">
-              {fullscreenBottomCenterOverlay}
+          {/* CMMS 패널 (전체화면 시에만) */}
+          {showSplitPanel ? (
+            <div className="relative h-full w-1/2 shrink-0 overflow-hidden">
+              {fullscreenOverlay}
             </div>
           ) : null}
         </div>
 
-        {/* CMMS 패널 (전체화면 시에만) */}
-        {showSplitPanel ? (
-          <div className="relative h-full w-1/2 shrink-0 overflow-hidden">
-            {fullscreenOverlay}
+        {isFullscreen && fullscreenTopCenterOverlay ? (
+          <div className="pointer-events-auto absolute top-3 left-1/2 z-50 -translate-x-1/2">
+            {fullscreenTopCenterOverlay}
           </div>
         ) : null}
-      </div>
 
-      {isFullscreen && fullscreenTopCenterOverlay ? (
-        <div className="pointer-events-auto absolute top-3 left-1/2 z-50 -translate-x-1/2">
-          {fullscreenTopCenterOverlay}
-        </div>
-      ) : null}
-
-      {isFullscreen && fullscreenTopRightOverlay ? (
-        <div className="pointer-events-auto absolute top-3 right-14 z-50">
-          {fullscreenTopRightOverlay}
-        </div>
-      ) : null}
-
-      <TooltipProvider delay={150}>
-        <div
-          className={cn(
-            'pointer-events-none absolute top-3 right-3 z-1 flex flex-col items-end gap-2',
-            toolbarClassName,
-          )}
-        >
-          <div className="pointer-events-auto flex flex-col gap-2">
-            {toolbarExtras}
-            <ToolbarButton
-              label={t('common:viewer3d.zoomIn')}
-              onClick={() => {
-                controllerRef.current?.zoomIn();
-              }}
-            >
-              <ZoomIn />
-            </ToolbarButton>
-            <ToolbarButton
-              label={t('common:viewer3d.zoomOut')}
-              onClick={() => {
-                controllerRef.current?.zoomOut();
-              }}
-            >
-              <ZoomOut />
-            </ToolbarButton>
-            <ToolbarButton
-              label={t('common:viewer3d.resetView')}
-              onClick={() => {
-                controllerRef.current?.reset();
-              }}
-            >
-              <RotateCcw />
-            </ToolbarButton>
-            <ToolbarButton
-              label={t('common:viewer3d.topView')}
-              onClick={() => {
-                controllerRef.current?.moveToTopView();
-              }}
-            >
-              <Map />
-            </ToolbarButton>
-            <ToolbarButton
-              label={
-                isFullscreen
-                  ? t('common:viewer3d.exitFullscreen')
-                  : t('common:viewer3d.fullscreen')
-              }
-              onClick={() => {
-                void toggleFullscreen();
-              }}
-            >
-              {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-            </ToolbarButton>
+        {isFullscreen && fullscreenTopRightOverlay ? (
+          <div className="pointer-events-auto absolute top-3 right-3 z-50">
+            {fullscreenTopRightOverlay}
           </div>
-        </div>
-      </TooltipProvider>
+        ) : null}
+
+        {/* 화면 조작 툴바 — 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
+            좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다.
+            북마크가 많아 폭이 넘치면 toolbarTrailing 쪽이 스크롤로 흡수한다. */}
+        <TooltipProvider delay={150}>
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-1 flex items-end">
+            <div className="pointer-events-auto flex max-w-full items-center gap-2">
+              {toolbarExtras}
+              <ToolbarButton
+                label={t('common:viewer3d.zoomIn')}
+                onClick={() => {
+                  controllerRef.current?.zoomIn();
+                }}
+              >
+                <ZoomIn />
+              </ToolbarButton>
+              <ToolbarButton
+                label={t('common:viewer3d.zoomOut')}
+                onClick={() => {
+                  controllerRef.current?.zoomOut();
+                }}
+              >
+                <ZoomOut />
+              </ToolbarButton>
+              <ToolbarButton
+                label={t('common:viewer3d.resetView')}
+                onClick={() => {
+                  controllerRef.current?.reset();
+                }}
+              >
+                <House />
+              </ToolbarButton>
+              <ToolbarButton
+                label={t('common:viewer3d.topView')}
+                onClick={() => {
+                  controllerRef.current?.moveToTopView();
+                }}
+              >
+                <Binoculars />
+              </ToolbarButton>
+              <ToolbarButton
+                label={
+                  isFullscreen
+                    ? t('common:viewer3d.exitFullscreen')
+                    : t('common:viewer3d.fullscreen')
+                }
+                onClick={() => {
+                  void toggleFullscreen();
+                }}
+              >
+                {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+              </ToolbarButton>
+              {toolbarTrailing}
+            </div>
+          </div>
+        </TooltipProvider>
+      </PortalContainerProvider>
     </div>
   );
 }

@@ -25,8 +25,10 @@ import {
   type SceneTransformField,
   type SelectedMeshInfo,
   useActiveTransformStore,
+  useUniformScaleStore,
 } from '@crane/features/3d';
 import { ArrowLeft } from 'lucide-react';
+import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 import {
@@ -96,6 +98,7 @@ interface SceneObjectInspectorProps {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
@@ -104,6 +107,7 @@ interface SceneObjectInspectorProps {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
   onBackToParent: () => void;
@@ -120,6 +124,8 @@ interface SceneObjectInspectorProps {
 
 interface TransformGroupProps {
   title: string;
+  /** 제목 우측에 붙는 보조 컨트롤(예: 크기의 "비율 유지" 체크박스). */
+  action?: ReactNode;
   children: ReactNode;
 }
 
@@ -135,12 +141,15 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function TransformGroup({ title, children }: TransformGroupProps) {
+function TransformGroup({ title, action, children }: TransformGroupProps) {
   return (
     <div>
-      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
-        {title}
-      </p>
+      <div className="mb-1.5 flex items-center justify-between">
+        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+          {title}
+        </p>
+        {action}
+      </div>
       {children}
     </div>
   );
@@ -341,6 +350,7 @@ interface TransformSectionProps {
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   t: (key: string) => string;
 }
@@ -365,6 +375,11 @@ function TransformSection({
   const displayRotation = isActive && liveRotation ? liveRotation : rotation;
   const displayScale = isActive && liveScale ? liveScale : scale;
 
+  // "비율 유지"는 인스펙터 입력에만 적용된다. 기즈모 드래그는 별도의 벡터
+  // 커밋 경로를 타므로 이 플래그를 넘기지 않는다.
+  const uniformScale = useUniformScaleStore((s) => s.enabled);
+  const setUniformScale = useUniformScaleStore((s) => s.setEnabled);
+
   return (
     <div>
       <SectionHeader title={t('monitoring:inspector.transform')} />
@@ -385,11 +400,23 @@ function TransformSection({
             }}
           />
         </TransformGroup>
-        <TransformGroup title={t('monitoring:inspector.scale')}>
+        <TransformGroup
+          title={t('monitoring:inspector.scale')}
+          action={
+            <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+              <Checkbox
+                checked={uniformScale}
+                onCheckedChange={(checked) => setUniformScale(checked)}
+                className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+              />
+              {t('monitoring:inspector.uniformScale')}
+            </label>
+          }
+        >
           <ScaleController
             vec={displayScale}
             onChange={(axis, value) => {
-              onTransformChange('scale', axis, value);
+              onTransformChange('scale', axis, value, { uniformScale });
             }}
           />
         </TransformGroup>
@@ -447,6 +474,7 @@ function ModelInspectorContent({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   onValueMapChange?: (
     type: ValueMapType,
@@ -503,6 +531,7 @@ function MeshInspectorContent({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   onBackToParent: () => void;
   t: (key: string) => string;
@@ -578,6 +607,7 @@ function TextInspectorContent({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   t: (key: string) => string;
 }) {
@@ -661,6 +691,7 @@ function MapInspectorContent({
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
+    options?: { uniformScale?: boolean },
   ) => void;
   t: (key: string) => string;
 }) {

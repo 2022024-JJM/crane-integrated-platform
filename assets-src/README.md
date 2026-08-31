@@ -44,6 +44,18 @@ pnpm optimize:glb goliath_crane.glb        # 압축 배포
 # 출력된 "씬 배치값"을 goliath.json / philly-2dock.json 에 기입
 ```
 
+## 루트 노드에 월드 포즈가 베이크된 모델 (Block_001/002 등)
+
+Blender 에서 씬에 배치된 오브젝트를 그대로 내보내면 정점은 원점 중심이어도
+루트 노드 translation/rotation 에 월드 좌표가 실려 온다. 그대로 등록하면
+에디터 드롭 지점에서 수 km 떨어진 곳에 나타난다. 범용 도구로 되돌린다:
+
+```bash
+node scripts/unbake-root-transform.mjs assets-src/models/Block_001.glb   # 원점 복원
+pnpm optimize:glb Block_001.glb                                          # 압축 배포
+# 출력된 "씬 배치값"을 원래 자리에 두고 싶을 때 씬 JSON 에 기입
+```
+
 ## maps/ (지형) — 전용 파이프라인 `pnpm optimize:map`
 
 지형은 `optimize:glb` 가 아니라 **전용 파이프라인**을 쓴다 (2026-08-20 도입,

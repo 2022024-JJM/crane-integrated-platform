@@ -42,8 +42,12 @@ import {
  * 화면 중앙 표면 거리 → 타깃 거리 순으로 폴백한다.
  */
 
-/** 표면(커서 아래 지점)에서 이만큼까지만 다가간다. 크레인 50~100m 씬 기준. */
-const MIN_SURFACE_DISTANCE = 60;
+/**
+ * 표면(커서 아래 지점)에서 이만큼까지만 다가간다. 크레인 50~100m 씬 기준.
+ * 에디터 F 포커스의 최소 거리도 이 값을 쓴다 — 더 가깝게 잡으면 첫 휠에서
+ * 여기까지 튕겨 나간다.
+ */
+export const MIN_SURFACE_DISTANCE = 60;
 /** 표면에서 이만큼 이상 멀어지지 않는다 — OrbitControls maxDistance와 동일. */
 const MAX_SURFACE_DISTANCE = 3000;
 /**

@@ -1,16 +1,29 @@
-import { Check, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { KeyboardEvent } from 'react';
+import { BookmarkPlus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedCameraInfo } from '@crane/domain/3d';
+import type { Vector3Tuple } from '@crane/core/types/math';
+import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuPopup,
+  ContextMenuTrigger,
+} from '@crane/ui/molecules/context-menu';
+import {
+  Popover,
+  PopoverPopup,
+  PopoverTrigger,
+} from '@crane/ui/molecules/popover';
+import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
+import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/organisms/three-scene-viewer';
 import {
   SCENE_VIEW_NAME_MAX,
   SCENE_VIEWS_MAX,
@@ -21,28 +34,36 @@ interface SceneViewBookmarksProps {
   regionId: string;
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => SavedCameraInfo | null;
+  /** 저장된 포즈로 카메라를 즉시 옮긴다 — 리셋(원래 위치) 버튼과 같은 경로. */
+  onMoveTo: (position: Vector3Tuple, target: Vector3Tuple) => void;
 }
 
 /**
- * 전체화면 하단의 씬 뷰 북마크 바.
+ * 씬 뷰 북마크 — ThreeSceneViewer 좌측 하단 툴바의 toolbarTrailing 슬롯에
+ * 붙어 줌/리셋 버튼과 한 줄로 이어진다(같은 글래스 outline 스타일).
  *
- * 평소에는 저장된 뷰 라벨들과 `+` 버튼만 있는 조용한 글래스 칩이고,
- * `+`를 누르면 이름 입력이 인라인으로 펼쳐진다(씬 오버레이 절제 원칙).
- * 라벨 클릭 → 스토어에 비행 요청 → SceneViewFlightRig가 카메라를 옮긴다.
+ * `+` 버튼 하나만 두고, 누르면 위쪽으로 이름 입력 팝오버가 뜬다(툴바 폭이
+ * 변하지 않아 옆 버튼들이 밀리지 않는다). 저장된 뷰는 `+` 오른쪽에 이름 칩으로
+ * 나열되며 클릭하면 리셋 버튼처럼 한 번에 그 포즈로 이동한다(플라이트 애니메이션
+ * 없음). 삭제는 칩 우클릭 컨텍스트 메뉴로만 —
+ * 칩마다 X 버튼을 두면 툴바가 어수선해지고 오클릭으로 지우기 쉽다.
+ *
+ * TooltipProvider는 ThreeSceneViewer 툴바가 감싸고 있어 여기서 두지 않는다.
  */
 export function SceneViewBookmarks({
   regionId,
   getPose,
+  onMoveTo,
 }: SceneViewBookmarksProps) {
   const { t } = useTranslation();
   const views = useSceneViewsStore((s) => s.viewsByRegion[regionId]);
   const hydrate = useSceneViewsStore((s) => s.hydrate);
   const addView = useSceneViewsStore((s) => s.addView);
   const removeView = useSceneViewsStore((s) => s.removeView);
-  const requestFlight = useSceneViewsStore((s) => s.requestFlight);
 
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     hydrate(regionId);
@@ -71,119 +92,135 @@ export function SceneViewBookmarks({
     }
   };
 
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.stopPropagation();
-      saveCurrentView();
-    } else if (event.key === 'Escape') {
-      event.stopPropagation();
-      closeForm();
-    }
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    saveCurrentView();
   };
 
   return (
-    <TooltipProvider delay={150}>
-      <div className="bg-background/95 border-border/80 flex h-[34px] items-center gap-1 rounded-lg border p-px shadow-sm backdrop-blur-sm">
-        {viewList.length > 0 ? (
-          <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-            {viewList.map((view) => (
-              <div key={view.id} className="flex shrink-0 items-center">
+    <div className="flex min-w-0 items-center gap-2">
+      <Popover
+        open={isAdding}
+        onOpenChange={(open) => {
+          if (open) {
+            setIsAdding(true);
+          } else {
+            closeForm();
+          }
+        }}
+      >
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={t('monitoring:sceneViews.saveCurrent')}
+                    disabled={isAtLimit}
+                    className={SCENE_TOOLBAR_BUTTON_CLASS}
+                  />
+                }
+              />
+            }
+          >
+            <BookmarkPlus />
+          </TooltipTrigger>
+          <TooltipContent>
+            {isAtLimit
+              ? t('monitoring:sceneViews.limitReached', {
+                  max: SCENE_VIEWS_MAX,
+                })
+              : t('monitoring:sceneViews.saveCurrent')}
+          </TooltipContent>
+        </Tooltip>
+        <PopoverPopup
+          side="top"
+          align="start"
+          initialFocus={inputRef}
+          className="w-64 p-3"
+        >
+          <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
+            <p className="text-xs font-semibold">
+              {t('monitoring:sceneViews.saveCurrent')}
+            </p>
+            <Input
+              ref={inputRef}
+              value={name}
+              maxLength={SCENE_VIEW_NAME_MAX}
+              placeholder={t('monitoring:sceneViews.namePlaceholder')}
+              aria-invalid={isDuplicate || undefined}
+              onChange={(event) => setName(event.target.value)}
+              className={cn('h-8 text-xs', isDuplicate && 'text-destructive')}
+            />
+            {isDuplicate ? (
+              <p className="text-destructive text-[11px] leading-4">
+                {t('monitoring:sceneViews.duplicateName')}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={closeForm}
+              >
+                {t('monitoring:sceneViews.cancel')}
+              </Button>
+              <Button type="submit" size="sm" disabled={!canSave}>
+                {t('monitoring:sceneViews.save')}
+              </Button>
+            </div>
+          </form>
+        </PopoverPopup>
+      </Popover>
+
+      {viewList.length > 0 ? (
+        <div className="flex min-w-0 items-center gap-2 overflow-x-auto py-px">
+          {viewList.map((view) => (
+            <ContextMenu key={view.id}>
+              <ContextMenuTrigger render={<div className="flex shrink-0" />}>
                 <Tooltip>
                   <TooltipTrigger
                     render={
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="text-muted-foreground hover:text-foreground h-8 max-w-40 rounded-md px-2 text-xs"
+                        className={cn(
+                          SCENE_TOOLBAR_BUTTON_CLASS,
+                          'max-w-40 text-xs',
+                        )}
                       />
                     }
-                    onClick={() =>
-                      requestFlight({
-                        position: view.position,
-                        target: view.target,
-                      })
-                    }
+                    onClick={() => onMoveTo(view.position, view.target)}
                   >
                     <span className="truncate">{view.name}</span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {t('monitoring:sceneViews.flyTo', { name: view.name })}
+                    <span className="flex flex-col">
+                      <span>
+                        {t('monitoring:sceneViews.flyTo', { name: view.name })}
+                      </span>
+                      <span className="text-background/70">
+                        {t('monitoring:sceneViews.deleteHint')}
+                      </span>
+                    </span>
                   </TooltipContent>
                 </Tooltip>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={t('monitoring:sceneViews.deleteView', {
-                    name: view.name,
-                  })}
-                  className="text-muted-foreground -ml-1 size-5 rounded-md opacity-60 hover:opacity-100"
+              </ContextMenuTrigger>
+              <ContextMenuPopup>
+                <ContextMenuItem
+                  className="text-destructive data-[highlighted]:text-destructive"
                   onClick={() => removeView(regionId, view.id)}
                 >
-                  <X className="size-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {isAdding ? (
-          <div className="flex shrink-0 items-center gap-1">
-            <div className="border-border bg-muted focus-within:border-ring focus-within:ring-ring/50 flex h-8 items-center rounded-md border px-2 transition-colors focus-within:ring-3">
-              <Input
-                autoFocus
-                value={name}
-                maxLength={SCENE_VIEW_NAME_MAX}
-                placeholder={t('monitoring:sceneViews.namePlaceholder')}
-                aria-invalid={isDuplicate || undefined}
-                title={
-                  isDuplicate
-                    ? t('monitoring:sceneViews.duplicateName')
-                    : undefined
-                }
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={handleInputKeyDown}
-                className={`h-full w-32 border-0 bg-transparent px-0 text-xs shadow-none focus:border-0 focus:ring-0 ${
-                  isDuplicate ? 'text-destructive' : ''
-                }`}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('monitoring:sceneViews.save')}
-              disabled={!canSave}
-              className="size-8 rounded-md"
-              onClick={saveCurrentView}
-            >
-              <Check className="size-4" />
-            </Button>
-          </div>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('monitoring:sceneViews.saveCurrent')}
-                  disabled={isAtLimit}
-                  className="size-8 rounded-md"
-                />
-              }
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus className="size-4" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {isAtLimit
-                ? t('monitoring:sceneViews.limitReached', {
-                    max: SCENE_VIEWS_MAX,
-                  })
-                : t('monitoring:sceneViews.saveCurrent')}
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </TooltipProvider>
+                  {t('monitoring:sceneViews.delete')}
+                </ContextMenuItem>
+              </ContextMenuPopup>
+            </ContextMenu>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

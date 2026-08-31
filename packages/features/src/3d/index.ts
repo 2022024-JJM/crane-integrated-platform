@@ -44,8 +44,10 @@ export {
 } from './ui/scene-render-preset';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
-export { SceneViewFlightRig } from './ui/scene-view-flight-rig';
-export { SceneSurfaceCamera } from './ui/scene-surface-camera';
+export {
+  MIN_SURFACE_DISTANCE,
+  SceneSurfaceCamera,
+} from './ui/scene-surface-camera';
 export {
   useSceneViewsStore,
   SCENE_VIEWS_MAX,
@@ -74,6 +76,7 @@ export {
   isMeshId,
 } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
+export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
 export { useObjectFocusStore } from './model/use-object-focus-store';
 export type {

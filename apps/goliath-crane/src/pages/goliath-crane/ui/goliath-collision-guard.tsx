@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
+import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/organisms/three-scene-viewer';
 import { cn } from '@crane/core/lib/utils';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
@@ -52,7 +53,7 @@ export function GoliathCollisionGuardToggle() {
             aria-label={label}
             aria-pressed={enabled}
             className={cn(
-              'bg-background/85 border-border/70 shadow-sm backdrop-blur-sm',
+              SCENE_TOOLBAR_BUTTON_CLASS,
               enabled &&
                 'border-sky-500/60 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-400',
             )}
@@ -62,7 +63,7 @@ export function GoliathCollisionGuardToggle() {
       >
         <Radar />
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
 }
