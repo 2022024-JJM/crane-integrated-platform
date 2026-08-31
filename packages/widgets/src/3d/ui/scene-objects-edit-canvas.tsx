@@ -42,6 +42,7 @@ import {
   MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneLighting,
+  isSceneShadowEnabled,
   SceneObjectBoundary,
   SceneSurfaceCamera,
   useIsObjectSelected,
@@ -718,6 +719,7 @@ export function SceneObjectsEditCanvas({
         // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
         camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
         gl={SCENE_GL_OPTIONS}
+        shadows={isSceneShadowEnabled(sceneInfo?.lighting)}
         dpr={EDITOR_DPR}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
@@ -735,7 +737,7 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
-        <SceneLighting />
+        <SceneLighting sceneInfo={sceneInfo} />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
@@ -821,6 +823,9 @@ export function SceneObjectsEditCanvas({
               // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
               // 마운트 시 bbox 순회를 건너뛴다.
               showLabel={false}
+              // 지도는 그림자를 받기만 한다 — 뷰어(outdoor-work-model-
+              // simulation)와 같은 규칙. 수십만 삼각형 depth pass 비용 회피.
+              castShadow={false}
               onSelect={
                 m.locked === false ? handleSelectMap : handleClearSelection
               }

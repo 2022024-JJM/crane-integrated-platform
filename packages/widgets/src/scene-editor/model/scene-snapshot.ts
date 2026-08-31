@@ -7,7 +7,10 @@ import type {
   SavedTextInfo,
   ValueMapItem,
 } from '@crane/domain/3d';
-import { sanitizeSceneInfo } from '@crane/domain/3d';
+import {
+  SCENE_SUN_POSITION_DEFAULT,
+  sanitizeSceneInfo,
+} from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
@@ -144,6 +147,17 @@ export function isSceneInfoEqual(
   // 배경 선택도 저장 대상이라 dirty 판정에 포함한다. undefined(미지정)와
   // null(배경 없음)은 다른 상태이므로 === 로 구분한다.
   if (a.environmentId !== b.environmentId) return false;
+  // 조명은 기본값으로 정규화해 비교한다 — 필드 없음과 명시적 기본값(그림자
+  // Off, 태양 0.5)은 같은 상태다(sanitize가 기본값 필드를 생략하는 규칙과 짝).
+  if ((a.lighting?.shadows ?? false) !== (b.lighting?.shadows ?? false)) {
+    return false;
+  }
+  if (
+    (a.lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT) !==
+    (b.lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT)
+  ) {
+    return false;
+  }
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
   if (a.models.length !== b.models.length) return false;

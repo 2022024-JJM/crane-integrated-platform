@@ -419,6 +419,9 @@ export function OutdoorWorkModelSimulation({
             rotation={m.rotation}
             scale={m.scale}
             showLabel={false}
+            // 지도는 그림자를 받기만 한다 — 수십만 삼각형이 매 프레임
+            // shadow depth pass에 들어가는 비용을 피한다.
+            castShadow={false}
           />
         </SceneObjectBoundary>
       ))}

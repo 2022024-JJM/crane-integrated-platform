@@ -1,4 +1,10 @@
-import { ACESFilmicToneMapping } from 'three';
+import { useMemo } from 'react';
+import { ACESFilmicToneMapping, Object3D, Vector3 } from 'three';
+import { SCENE_SUN_POSITION_DEFAULT } from '@crane/domain/3d';
+import type { SavedSceneInfo } from '@crane/domain/3d';
+import { isSceneShadowEnabled } from '../lib/scene-shadow';
+import { clampToRange } from '@crane/core/lib/utils';
+import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
  * 씬 렌더링 공통 설정 — 에디터·모니터링·리플레이가 **같은 화면**을 그리게 하는
@@ -103,30 +109,157 @@ export const SCENE_LIGHTING = {
 } as const;
 
 /**
+ * 태양 궤적 상수.
+ *
+ * 방위 규약: **월드 +X = 동, -X = 서** (SavedLightingInfo 주석 참고 — 씬에
+ * 나침반·방위 데이터가 없어 축 규약으로 못박는다). sunPosition t∈[0,1]는
+ * XY 평면에서 동(+X 지평선) → 남중(머리 위) → 서(-X 지평선)의 반원 호를
+ * 그리고, 여기에 z 방향 틸트를 더해 궤도면을 살짝 기울인다.
+ */
+/**
+ * 최저 태양 고도 20°. 슬라이더 양 끝(동/서)에서 해가 지평선에 닿으면
+ * 그림자가 무한정 길어지고 shadow camera가 씬을 못 덮는다. 20°면 그림자
+ * 길이가 물체 높이의 ~2.75배(1/tan20°)에서 멈춘다.
+ */
+const SUN_MIN_ELEVATION_RAD = Math.PI * (20 / 180);
+/**
+ * 궤도면 z 틸트. 남중(t=0.5)일 때 방향이 normalize([0, 1, 0.2]) =
+ * (0, 0.981, 0.196)로, 종전 고정 조명 directionalPosition [0, 50, 10]의
+ * 방향과 정확히 일치한다 — lighting 필드가 없는 기존 씬의 셰이딩이 그대로
+ * 유지되는 근거다. SCENE_LIGHTING.directionalPosition을 지우지 않고 두는
+ * 이유이기도 하다(이 일치의 기준점).
+ */
+const SUN_ORBIT_TILT_Z = 0.2;
+const SUN_SHADOW_MAP_SIZE = 2048;
+
+/** sunPosition t∈[0,1] → 정규화된 태양 방향 벡터(씬 → 태양). */
+function sunDirectionFromPosition(t: number): Vector3 {
+  const alpha = clampToRange(
+    Math.PI * clampToRange(t, 0, 1),
+    SUN_MIN_ELEVATION_RAD,
+    Math.PI - SUN_MIN_ELEVATION_RAD,
+  );
+  return new Vector3(Math.cos(alpha), Math.sin(alpha), SUN_ORBIT_TILT_Z).normalize();
+}
+
+/**
+ * 조명 앵커·커버리지 — 씬 데이터(위치 배열)만으로 계산한다. 씬 그래프
+ * traverse가 아니라 모델 수십 개짜리 배열 루프라 편집 중 재계산도 무비용.
+ *
+ * philly 씬처럼 오브젝트가 원점에서 수 km 떨어져 있어도(x≈-2200) 조명
+ * target과 shadow camera가 씬을 따라가게 하는 장치다. anchor는 모델들의
+ * 센트로이드(없으면 지도 위치, 그것도 없으면 원점), radius는 anchor에서
+ * 가장 먼 모델까지의 수평 거리 + 여유.
+ */
+function useSunAnchor(sceneInfo: SavedSceneInfo | null | undefined) {
+  return useMemo(() => {
+    const points: Vector3Tuple[] =
+      sceneInfo?.models && sceneInfo.models.length > 0
+        ? sceneInfo.models.map((m) => m.position)
+        : (sceneInfo?.maps ?? [])
+            .map((m) => m.position)
+            .filter((p): p is Vector3Tuple => Array.isArray(p));
+
+    if (points.length === 0) {
+      return { anchor: [0, 0, 0] as Vector3Tuple, radius: 200 };
+    }
+
+    let cx = 0;
+    let cz = 0;
+    for (const p of points) {
+      cx += p[0];
+      cz += p[2];
+    }
+    cx /= points.length;
+    cz /= points.length;
+
+    let maxDist = 0;
+    for (const p of points) {
+      const d = Math.hypot(p[0] - cx, p[2] - cz);
+      if (d > maxDist) maxDist = d;
+    }
+
+    // 여유 150m: 모델 position은 origin 기준이라 실제 지오메트리가 더
+    // 뻗어 있을 수 있고, 그림자도 물체 밖으로 드리워진다.
+    const radius = clampToRange(maxDist + 150, 200, 2000);
+    return { anchor: [cx, 0, cz] as Vector3Tuple, radius };
+  }, [sceneInfo]);
+}
+
+/**
  * 씬 공통 조명. 세 화면이 이 컴포넌트 하나를 쓴다.
  *
- * 그림자는 쓰지 않는다. ContactShadows로 접지 그림자를 넣어 봤으나(2026-08-14)
- * 관제 화면에서는 득보다 실이 컸다 — 지도 위에 어두운 반점이 생겨 오히려
- * 지형을 읽기 어려워졌다. 실시간 shadow map은 더 비싸다(옥외 대형 씬이라
- * shadow camera 범위 튜닝이 따로 필요하고 매 프레임 비용이 든다).
+ * 그림자는 씬 설정(sceneInfo.lighting.shadows)으로 켠다 — 기본 Off.
+ * ContactShadows를 넣었다가(2026-08-14) 관제 화면에서 지도 위 어두운 반점이
+ * 지형을 읽기 어렵게 해 롤백한 이력이 있어, 전역 상시 적용 대신 씬별
+ * opt-in으로 되살렸다. 켜는 쪽은 배경 탭(palette-environment-section.tsx),
+ * Canvas의 `shadows`는 세 화면이 isSceneShadowEnabled로 판정한다.
  *
- * 그래서 각 뷰어에 남아 있던 castShadow/receiveShadow 플래그는 2026-08-14에
- * 제거했다 — Canvas에 `shadows`를 켜지 않는 한 아무 효과가 없어, 남겨두면
- * "그림자가 되는 설정인데 왜 안 보이지"라는 오해만 남긴다. 그림자를 되살리려면
- * Canvas의 `shadows`부터 켜야 하고, 그때 이 플래그들도 함께 복원해야 한다.
+ * 런타임 토글에 별도 대응 코드가 없는 근거: R3F v9은 Canvas `shadows`가
+ * 바뀌면 gl.shadowMap.enabled 갱신과 needsUpdate를 처리하고, 머티리얼
+ * 셰이더 재컴파일은 아래 directionalLight의 castShadow가 같은 플래그에
+ * 바인딩되어 있어 lights state 변경으로 자동 유발된다.
+ *
+ * 태양 위치(sunPosition)는 그림자가 꺼져 있어도 항상 적용된다 — 조명
+ * 방향(셰이딩)은 그림자와 무관하게 씬의 인상을 정하는 값이다.
  *
  * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
  * GLB가 true로 실려 올 수 있어 방어하는 코드라 성격이 다르다.
  */
-export function SceneLighting() {
+export function SceneLighting({
+  sceneInfo,
+}: {
+  sceneInfo?: SavedSceneInfo | null;
+} = {}) {
+  const lighting = sceneInfo?.lighting;
+  const shadowsEnabled = isSceneShadowEnabled(lighting);
+  const sunPosition = lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT;
+
+  const { anchor, radius } = useSunAnchor(sceneInfo);
+
+  // 조명 target — three 기본 target은 씬에 붙어 있지 않아 원점만 바라본다.
+  // primitive로 씬에 넣고 anchor에 놓아야 원점에서 먼 씬에서도 방향이 맞는다.
+  const target = useMemo(() => new Object3D(), []);
+
+  const { lightPosition, shadowFar } = useMemo(() => {
+    const dir = sunDirectionFromPosition(sunPosition);
+    // 조명은 방향만 의미 있지만 shadow camera는 위치 기준이므로 씬 반경보다
+    // 충분히 멀리 둔다.
+    const orbitDistance = Math.max(radius * 2.5, 300);
+    return {
+      lightPosition: [
+        anchor[0] + dir.x * orbitDistance,
+        anchor[1] + dir.y * orbitDistance,
+        anchor[2] + dir.z * orbitDistance,
+      ] as Vector3Tuple,
+      shadowFar: orbitDistance + radius * 3,
+    };
+  }, [sunPosition, anchor, radius]);
+
   return (
     <>
       <ambientLight intensity={SCENE_LIGHTING.ambientIntensity} />
+      <primitive object={target} position={anchor} />
       <directionalLight
-        position={SCENE_LIGHTING.directionalPosition}
+        position={lightPosition}
+        target={target}
         color={SCENE_LIGHTING.directionalColor}
         intensity={SCENE_LIGHTING.directionalIntensity}
-      />
+        castShadow={shadowsEnabled}
+        shadow-mapSize={[SUN_SHADOW_MAP_SIZE, SUN_SHADOW_MAP_SIZE]}
+        // 미터 스케일 대형 메시의 shadow acne 방지. normalBias는 표면을
+        // 법선 방향으로 밀어내는 값이라 미터 단위 씬에선 1 정도가 맞다.
+        shadow-bias={-0.0002}
+        shadow-normalBias={1}
+      >
+        {/* args 방식은 값 변경 시 카메라를 재생성하므로 updateProjectionMatrix
+            수동 호출이 필요 없다. shadow-camera-left 같은 pierced prop은
+            갱신이 안 걸리므로 쓰지 말 것. */}
+        <orthographicCamera
+          attach="shadow-camera"
+          args={[-radius, radius, radius, -radius, 1, shadowFar]}
+        />
+      </directionalLight>
     </>
   );
 }

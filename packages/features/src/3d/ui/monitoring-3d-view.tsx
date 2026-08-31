@@ -27,6 +27,7 @@ import {
   SCENE_GL_OPTIONS,
   SceneLighting,
 } from './scene-render-preset';
+import { isSceneShadowEnabled } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 
@@ -177,6 +178,7 @@ export function Monitoring3dView({
         canvasProps={{
           dpr: canvasDpr,
           gl: SCENE_GL_OPTIONS,
+          shadows: isSceneShadowEnabled(sceneInfo?.lighting),
           onPointerMissed: clearFocus,
         }}
         overlay={
@@ -201,7 +203,7 @@ export function Monitoring3dView({
         onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
-        <SceneLighting />
+        <SceneLighting sceneInfo={sceneInfo} />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}

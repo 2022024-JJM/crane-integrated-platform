@@ -127,6 +127,11 @@
     },
     "environmentNone": "배경 없음",
     "environmentUnset": "이 씬은 배경을 지정하지 않아 지역 기본 배경이 적용됩니다. 아래에서 고르면 씬에 저장됩니다.",
+    "lightingSection": "조명",
+    "lightingShadows": "그림자",
+    "lightingSunPosition": "태양 위치",
+    "lightingSunEast": "동",
+    "lightingSunWest": "서",
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
     "multipleSelected": "{{count}}개 객체 선택됨"

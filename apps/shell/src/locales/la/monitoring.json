@@ -116,6 +116,11 @@
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
+    "lightingSection": "Lumina",
+    "lightingShadows": "Umbrae",
+    "lightingSunPosition": "Solis positio",
+    "lightingSunEast": "Or.",
+    "lightingSunWest": "Occ.",
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta"

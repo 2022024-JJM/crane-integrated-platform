@@ -2,6 +2,7 @@ import {
   SCENE_MODEL_CATEGORIES,
   isSceneStoredLocallyOnly,
   sceneModelCatalog,
+  type SavedLightingInfo,
   type SavedMapInfo,
   type SavedSceneInfo,
   type SceneMapCatalogItem,
@@ -142,6 +143,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
+    setLighting,
     selectedMap,
     setObjectLocked,
     toggleModel,
@@ -360,6 +362,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
             onSelectMap={setSceneMap}
             environmentId={sceneInfo?.environmentId}
             onEnvironmentChange={setEnvironmentId}
+            lighting={sceneInfo?.lighting}
+            onLightingChange={setLighting}
+            onLightingInteractionStart={startTransformInteraction}
+            onLightingInteractionEnd={endTransformInteraction}
             onCollapse={() => setLeftCollapsed(true)}
           />
         </aside>
@@ -767,12 +773,23 @@ function ProjectPalettePanel({
   onSelectMap,
   environmentId,
   onEnvironmentChange,
+  lighting,
+  onLightingChange,
+  onLightingInteractionStart,
+  onLightingInteractionEnd,
   onCollapse,
 }: {
   items: SceneModelCatalogItem[];
   currentMap: SavedMapInfo | null;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
+  lighting: SavedLightingInfo | undefined;
+  onLightingChange: (
+    patch: Partial<SavedLightingInfo>,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  onLightingInteractionStart: () => void;
+  onLightingInteractionEnd: () => void;
   draggingItemId: string | null;
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
@@ -848,6 +865,15 @@ function ProjectPalettePanel({
               <PaletteEnvironmentSection
                 environmentId={environmentId}
                 onChange={onEnvironmentChange}
+                lighting={lighting}
+                onShadowsChange={(shadows) => onLightingChange({ shadows })}
+                // 드래그 중에는 recordHistory: false — 종료 시
+                // onLightingInteractionEnd(endTransformInteraction)가 1회 커밋.
+                onSunPositionChange={(sunPosition) =>
+                  onLightingChange({ sunPosition }, { recordHistory: false })
+                }
+                onSunPositionDragStart={onLightingInteractionStart}
+                onSunPositionDragEnd={onLightingInteractionEnd}
               />
             )}
           </div>

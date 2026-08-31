@@ -31,6 +31,7 @@ export {
 } from './lib/mesh-path';
 export type {
   SavedCameraInfo,
+  SavedLightingInfo,
   SceneModelCatalogItem,
   SceneModelCategory,
   SceneModelPreviewPreset,
@@ -53,7 +54,10 @@ export {
 } from './model/scene-map-catalog';
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SEA_LEVEL_Y } from './model/sea-level';
-export { SCENE_MODEL_CATEGORIES } from './model/types';
+export {
+  SCENE_MODEL_CATEGORIES,
+  SCENE_SUN_POSITION_DEFAULT,
+} from './model/types';
 export {
   getSceneFileUrlByRegionId,
   getKnownRegionIds,

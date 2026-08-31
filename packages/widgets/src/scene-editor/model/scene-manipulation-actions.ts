@@ -1,6 +1,8 @@
 import {
+  SCENE_SUN_POSITION_DEFAULT,
   createSceneModel,
   createSceneText,
+  type SavedLightingInfo,
   type SavedSceneInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
@@ -191,6 +193,50 @@ export function createSceneManipulationActions({
     });
   };
 
+  /**
+   * 조명 설정(그림자·태양 위치) 변경. patch를 기존 값에 merge한 뒤 기본값
+   * 필드는 제거해 정규화한다 — "필드 없음 = 기본값"이라(sanitize와 같은 규칙)
+   * 기본값으로 되돌린 씬이 저장본에 lighting 필드를 남기지 않고, 기본값으로의
+   * no-op 변경이 히스토리에 쌓이지 않는다.
+   *
+   * 슬라이더 드래그는 recordHistory: false로 호출하고 드래그 종료 시
+   * endTransformInteraction으로 1회만 커밋한다(TransformControls와 같은 패턴).
+   */
+  const setLighting = (
+    patch: Partial<SavedLightingInfo>,
+    options?: UpdateSceneOptions,
+  ) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+
+      const merged = { ...prev.lighting, ...patch };
+      const normalized: SavedLightingInfo = {};
+      if (merged.shadows === true) {
+        normalized.shadows = true;
+      }
+      if (
+        typeof merged.sunPosition === 'number' &&
+        Number.isFinite(merged.sunPosition) &&
+        merged.sunPosition !== SCENE_SUN_POSITION_DEFAULT
+      ) {
+        normalized.sunPosition = Math.min(1, Math.max(0, merged.sunPosition));
+      }
+
+      const nextLighting =
+        Object.keys(normalized).length > 0 ? normalized : undefined;
+
+      if (
+        (prev.lighting?.shadows ?? false) === (nextLighting?.shadows ?? false) &&
+        (prev.lighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT) ===
+          (nextLighting?.sunPosition ?? SCENE_SUN_POSITION_DEFAULT)
+      ) {
+        return prev;
+      }
+
+      return { ...prev, lighting: nextLighting };
+    }, options);
+  };
+
   const selectPlacedText = (id: string) => {
     selectText(id);
   };
@@ -296,6 +342,7 @@ export function createSceneManipulationActions({
     setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
+    setLighting,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

@@ -30,6 +30,31 @@ export interface SavedSceneInfo {
    *   적용하지 않는다. undefined와 구분되어야 배경을 끌 수 있다.
    */
   environmentId?: string | null;
+  /**
+   * 조명 설정 — 없으면 전부 기본값(그림자 Off, 태양 남중). 기본값 씬은
+   * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
+   */
+  lighting?: SavedLightingInfo;
+}
+
+/**
+ * 태양 위치 기본값(남중). sanitize·에디터 dirty 판정·UI가 같은 기준을
+ * 봐야 하므로 여기서 한 번만 정의한다.
+ */
+export const SCENE_SUN_POSITION_DEFAULT = 0.5;
+
+export interface SavedLightingInfo {
+  /** 그림자 On/Off. 필드 없음 = false (기존 저장본 하위호환). */
+  shadows?: boolean;
+  /**
+   * 태양 위치 0~1. 0=동(+X 지평선) → 0.5=남중(머리 위) → 1=서(-X 지평선).
+   * 필드 없음 = 0.5.
+   *
+   * 방위 규약: **월드 +X = 동**. 씬에 나침반·방위 데이터가 없어 실제 지리
+   * 방위를 알 수 없으므로 축 규약으로 못박는다. 태양 궤적 계산은
+   * scene-render-preset.tsx가 담당한다.
+   */
+  sunPosition?: number;
 }
 
 export interface SavedTextInfo {

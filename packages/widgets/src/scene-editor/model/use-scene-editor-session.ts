@@ -1,6 +1,7 @@
 import {
   humanizeModelPath,
   type SavedCameraInfo,
+  type SavedLightingInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
   type ValueMapType,
@@ -94,6 +95,10 @@ interface UseSceneEditorSessionResult {
   setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
+  setLighting: (
+    patch: Partial<SavedLightingInfo>,
+    options?: { recordHistory?: boolean },
+  ) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
   setObjectLocked: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -290,6 +295,7 @@ export function useSceneEditorSession({
     setSceneMap: manipulation.setSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
+    setLighting: manipulation.setLighting,
     selectedMap,
     setObjectLocked,
     toggleModel,

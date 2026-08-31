@@ -33,6 +33,13 @@ interface ModelMeshProps {
    * 등 수면 아래 지형에 안개가 끼면 안 된다).
    */
   seaSubmersion?: boolean;
+  /**
+   * 그림자를 드리울지. 기본 true. 지도처럼 depth pass 비용이 큰 거대 메시만
+   * false로 끈다(그림자는 받기만 한다). 플래그는 Canvas `shadows`가 꺼져
+   * 있으면 무비용이라 항상 설정해 두고, On/Off 토글은 renderer 레벨
+   * (Canvas shadows + 조명 castShadow)이 담당한다 — scene-render-preset.tsx.
+   */
+  castShadow?: boolean;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -293,6 +300,7 @@ export function ModelMesh({
   opacity = 1,
   alarmSeverity = null,
   seaSubmersion = false,
+  castShadow = true,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -417,6 +425,18 @@ export function ModelMesh({
       }
     }
   }, [meshBindings, opacity, alarmSeverity, seaSubmersion]);
+
+  // 그림자 플래그 — clone은 인스턴스 전용 트리이므로 여기서 걸어도 다른
+  // 인스턴스에 새지 않는다. useClonedModel의 useMemo에 넣지 않는 이유:
+  // injected clone 재사용 경로에서는 그 useMemo가 돌지 않고, castShadow
+  // prop 변경에도 반응해야 하기 때문.
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      child.castShadow = castShadow;
+      child.receiveShadow = true;
+    });
+  }, [clone, castShadow]);
 
   // 인스턴스 언마운트 시 lazy clone된 material을 dispose 한다.
   useEffect(() => {

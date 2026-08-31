@@ -42,6 +42,7 @@ export {
   SCENE_LIGHTING,
   SceneLighting,
 } from './ui/scene-render-preset';
+export { isSceneShadowEnabled } from './lib/scene-shadow';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export {
