@@ -4,7 +4,7 @@ import type { InspectionWO } from '@crane/domain/inspection';
 import {
   aggregateInspectionPassFail,
   aggregateMonthlyServiceMetrics,
-} from './aggregations';
+} from '../aggregations';
 
 // 집계가 읽는 필드만 채운 최소 목 (status/actualEnd/actualDate/craneId/checklistItems/result)
 function repair(partial: Partial<RepairWO>): RepairWO {

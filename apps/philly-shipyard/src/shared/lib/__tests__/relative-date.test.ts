@@ -5,7 +5,7 @@ import {
   parseLocalDate,
   parseLocalDateTime,
   toLocalDateString,
-} from './relative-date';
+} from '../relative-date';
 
 describe('parseLocalDate', () => {
   it('날짜전용 문자열을 로컬 자정으로 파싱한다 (UTC 파싱 하루 밀림 회귀)', () => {

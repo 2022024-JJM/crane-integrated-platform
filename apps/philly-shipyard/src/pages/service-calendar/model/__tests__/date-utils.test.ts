@@ -11,7 +11,7 @@ import {
   startOfDay,
   startOfMonth,
   startOfWeek,
-} from './date-utils';
+} from '../date-utils';
 
 describe('startOfWeek', () => {
   it('월요일 시작 기준으로 주의 첫날을 반환한다 (구글 캘린더와 동일)', () => {
