@@ -369,19 +369,19 @@ function SceneControlsBridge({
 }
 
 /**
- * 툴바 버튼의 공통 외형(글래스 outline). toolbarExtras·toolbarTrailing에
- * 넣는 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
+ * 툴바 버튼의 공통 외형(다크 글래스). toolbarExtras·toolbarTrailing에 넣는
+ * 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
  *
- * 배경은 두 테마 모두 거의 투명하게 두고 backdrop-blur만 남긴다. 다크에서는
- * outline variant가 이미 그렇게 보였다(--input이 white/15%라 dark:bg-input/30이
- * 사실상 투명). 라이트만 불투명한 흰 배경이라 하늘 위에 판때기처럼 떠 있었다.
- * 글자·아이콘을 검정으로 고정하는 것도 같은 이유다 — 툴바가 놓이는 3D 배경은
- * 하늘 EXR이라 테마와 무관하게 밝고, 거기에 다크 테마의 흰 글자를 얹으면
- * 오히려 읽히지 않는다. dark: 변형을 함께 적는 이유는 base variant의
- * dark:bg-input/30 이 명시도에서 앞서기 때문이다(twMerge가 같은 키로 대체한다).
+ * 동영상 플레이어 컨트롤 방식의 글래스 판을 테마에 맞는 색으로 깐다 —
+ * 라이트는 반투명 흰 + 검정 아이콘, 다크는 반투명 검정 + 흰 아이콘. 테마
+ * 토큰이나 배경 없는 반전 글자만으로는 3D 씬(하늘·지도·모델) 밝기에 따라
+ * 묻혀서, 자체 배경판 + 판과 대비되는 아이콘색 조합으로 정착했다.
+ * border-0 인 이유: 기본 클래스의 bg-clip-padding 때문에 투명 border 1px
+ * 자리가 blur 만 비치는 링으로 보였다. dark: 변형은 outline variant 의
+ * dark:bg-input/* 을 누르기 위해 명시한다.
  */
 export const SCENE_TOOLBAR_BUTTON_CLASS =
-  'border-border/70 bg-white/10 text-black shadow-sm backdrop-blur-sm hover:bg-white/25 hover:text-black aria-expanded:bg-white/25 aria-expanded:text-black dark:bg-white/10 dark:hover:bg-white/25 dark:aria-expanded:bg-white/25';
+  'border-0 bg-white/40 text-black shadow-none backdrop-blur-sm hover:bg-white/60 hover:text-black aria-expanded:bg-white/60 aria-expanded:text-black dark:bg-black/40 dark:text-white dark:hover:bg-black/60 dark:hover:text-white dark:aria-expanded:bg-black/60 dark:aria-expanded:text-white';
 
 interface ToolbarButtonProps {
   label: string;
