@@ -1,7 +1,6 @@
-import { numRound } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { InputNumber } from '@crane/ui/atoms/input-number';
-import { AXIS_INDEX } from '../model/types';
+import { displayRotationValue, formatRotation } from '../lib/format-transform';
+import { AxisVectorController } from './axis-vector-controller';
 
 export function RotationController({
   vec,
@@ -10,23 +9,14 @@ export function RotationController({
   vec: Vector3Tuple | undefined;
   onChange: (axis: 'x' | 'y' | 'z', v: number) => void;
 }) {
+  // min/max clamp 없음 — 450 같은 범위 밖 입력은 커밋 경로(applyAxisUpdate)가
+  // [0,360)으로 wrap하고, 표시도 toValue/format이 wrap한다.
   return (
-    <div className="flex flex-col gap-1.5">
-      {(['x', 'y', 'z'] as const).map((axis) => (
-        <div key={axis} className="flex items-center gap-1.5">
-          <span className="text-muted-foreground w-4 shrink-0 text-center font-mono text-[11px] uppercase">
-            {axis}
-          </span>
-          <InputNumber
-            value={vec ? numRound(vec[AXIS_INDEX[axis]]) : 0}
-            step={0.1}
-            min={-360}
-            max={360}
-            className="border-border bg-muted/50 h-7 flex-1 rounded-sm text-[12px]"
-            onChange={(v) => onChange(axis, Number(v))}
-          />
-        </div>
-      ))}
-    </div>
+    <AxisVectorController
+      vec={vec}
+      onChange={onChange}
+      format={formatRotation}
+      toValue={displayRotationValue}
+    />
   );
 }

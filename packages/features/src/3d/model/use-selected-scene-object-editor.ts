@@ -15,42 +15,13 @@ import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { clampToRange } from '@crane/core/lib/utils';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
-import { AXIS_INDEX, type AxisKey, type SceneTransformField } from './types';
-
-function updateVectorValue(tuple: Vector3Tuple, axis: AxisKey, value: number) {
-  const nextTuple = [...tuple] as Vector3Tuple;
-  nextTuple[AXIS_INDEX[axis]] = value;
-  return nextTuple;
-}
-
-function roundVectorValue(tuple: Vector3Tuple): Vector3Tuple {
-  return tuple.map((value) => numRound(value)) as Vector3Tuple;
-}
-
-/**
- * axis를 value로 바꾸되 나머지 축도 같은 비율로 곱한다(인스펙터 "비율 유지").
- * 기준 축이 0이면 비율을 정의할 수 없으므로 세 축을 value로 맞춘다.
- */
-function scaleVectorUniformly(
-  tuple: Vector3Tuple,
-  axis: AxisKey,
-  value: number,
-): Vector3Tuple {
-  const base = tuple[AXIS_INDEX[axis]];
-  const ratio = value / base;
-  if (base === 0 || !Number.isFinite(ratio)) {
-    return [value, value, value];
-  }
-  return roundVectorValue(
-    tuple.map((v, i) => (i === AXIS_INDEX[axis] ? value : v * ratio)) as Vector3Tuple,
-  );
-}
-
-/** 인스펙터 축 단위 입력 옵션. 기즈모 경로에서는 쓰지 않는다. */
-interface AxisUpdateOptions {
-  /** scale 필드에서만 유효. 나머지 축을 같은 비율로 함께 바꾼다. */
-  uniformScale?: boolean;
-}
+import type { AxisKey, SceneTransformField } from './types';
+import {
+  applyAxisUpdate,
+  roundCommittedField,
+  roundVectorValue,
+  type AxisUpdateOptions,
+} from '../lib/vector-edit';
 
 function clampOpacity(value: number) {
   return numRound(clampToRange(value, 0.1, 1));
@@ -117,7 +88,12 @@ interface UseSelectedSceneObjectEditorResult {
   ) => void;
   updateSelectedMeshOpacity: (value: number) => void;
   renameObject: (id: string, name: string) => void;
-  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  updateSelectedValueMap: (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
@@ -246,7 +222,8 @@ export function useSelectedSceneObjectEditor({
   const selectedMap = useMemo(
     () =>
       selectedObjectType === 'map'
-        ? ((sceneInfo?.maps ?? []).find((m) => m.id === selectedModelId) ?? null)
+        ? ((sceneInfo?.maps ?? []).find((m) => m.id === selectedModelId) ??
+          null)
         : null,
     [sceneInfo?.maps, selectedModelId, selectedObjectType],
   );
@@ -392,11 +369,7 @@ export function useSelectedSceneObjectEditor({
           (field === 'scale'
             ? ([1, 1, 1] as Vector3Tuple)
             : ([0, 0, 0] as Vector3Tuple));
-        const next =
-          field === 'scale' && options?.uniformScale
-            ? scaleVectorUniformly(base, axis, numRound(value))
-            : updateVectorValue(base, axis, numRound(value));
-        return { [field]: next };
+        return { [field]: applyAxisUpdate(field, base, axis, value, options) };
       });
     });
   };
@@ -414,7 +387,7 @@ export function useSelectedSceneObjectEditor({
       }
 
       return patchSelectedTransform(prev, () => ({
-        [field]: roundVectorValue(value),
+        [field]: roundCommittedField(field, value),
       }));
     }, options);
   };
@@ -455,16 +428,15 @@ export function useSelectedSceneObjectEditor({
         start = field === 'scale' ? [1, 1, 1] : [0, 0, 0];
       }
     }
-    const nextVec =
-      field === 'scale' && options?.uniformScale
-        ? scaleVectorUniformly(start, axis, numRound(value))
-        : updateVectorValue(start, axis, numRound(value));
+    const nextVec = applyAxisUpdate(field, start, axis, value, options);
     updateSceneInfo((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         models: prev.models.map((m) =>
-          m.id === modelId ? upsertMeshOverride(m, meshPath, { [field]: nextVec }) : m,
+          m.id === modelId
+            ? upsertMeshOverride(m, meshPath, { [field]: nextVec })
+            : m,
         ),
       };
     });
@@ -477,13 +449,15 @@ export function useSelectedSceneObjectEditor({
   ) => {
     if (!selectedMesh) return;
     const { modelId, meshPath } = selectedMesh;
-    const rounded = roundVectorValue(value);
+    const rounded = roundCommittedField(field, value);
     updateSceneInfo((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         models: prev.models.map((m) =>
-          m.id === modelId ? upsertMeshOverride(m, meshPath, { [field]: rounded }) : m,
+          m.id === modelId
+            ? upsertMeshOverride(m, meshPath, { [field]: rounded })
+            : m,
         ),
       };
     }, options);
@@ -595,7 +569,10 @@ export function useSelectedSceneObjectEditor({
       if (!prev || !selectedModelId) return prev;
       return patchSelectedTransform(prev, () => ({
         ...(position !== null && { position: roundVectorValue(position) }),
-        ...(rotation !== null && { rotation: roundVectorValue(rotation) }),
+        // rotation은 [0,360) 정규화까지 — UI 표시 단위와 저장값을 일치시킨다.
+        ...(rotation !== null && {
+          rotation: roundCommittedField('rotation', rotation),
+        }),
         ...(scale !== null && { scale: roundVectorValue(scale) }),
       }));
     }, options);
@@ -631,7 +608,9 @@ export function useSelectedSceneObjectEditor({
       return {
         ...item,
         ...(u.position && { position: roundVectorValue(u.position) }),
-        ...(u.rotation && { rotation: roundVectorValue(u.rotation) }),
+        ...(u.rotation && {
+          rotation: roundCommittedField('rotation', u.rotation),
+        }),
         ...(u.scale && { scale: roundVectorValue(u.scale) }),
       };
     };
@@ -650,25 +629,38 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
-  const updateSelectedValueMap = (type: ValueMapType, key: string, scale?: number, offset?: number) => {
+  const updateSelectedValueMap = (
+    type: ValueMapType,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) return prev;
       return {
         ...prev,
         models: prev.models.map((model) => {
           if (model.id !== selectedModelId) return model;
-          const filtered = model.valueMapList.filter((item) => item.type !== type);
+          const filtered = model.valueMapList.filter(
+            (item) => item.type !== type,
+          );
           if (!key.trim()) {
             return { ...model, valueMapList: filtered };
           }
-          const existing = model.valueMapList.find((item) => item.type === type);
+          const existing = model.valueMapList.find(
+            (item) => item.type === type,
+          );
           const next: ValueMapItem[] = [
             ...filtered,
             {
               type,
               key: key.trim(),
               scale: scale ?? existing?.scale ?? 1,
-              ...(offset !== undefined ? { offset } : existing?.offset !== undefined ? { offset: existing.offset } : {}),
+              ...(offset !== undefined
+                ? { offset }
+                : existing?.offset !== undefined
+                  ? { offset: existing.offset }
+                  : {}),
             },
           ];
           return { ...model, valueMapList: next };

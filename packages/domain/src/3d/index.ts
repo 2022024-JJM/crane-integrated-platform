@@ -1,4 +1,9 @@
-export { degToRad, numRound, radToDeg } from './lib/math-utils';
+export {
+  degToRad,
+  normalizeDegrees,
+  numRound,
+  radToDeg,
+} from './lib/math-utils';
 export { humanizeModelPath, normalizeModelLabel } from './lib/model-path-utils';
 export { createSceneModel } from './lib/create-scene-model';
 export { createSceneText } from './lib/create-scene-text';
@@ -70,15 +75,15 @@ export {
   resolveEnvironmentFileUrl,
 } from './model/scene-environment-registry';
 export { withBaseUrl, registerAssetHashManifest } from './lib/asset-url';
-export {
-  CRANE_TYPE_MODEL,
-  getCraneModel,
-} from './model/crane-type-model';
+export { CRANE_TYPE_MODEL, getCraneModel } from './model/crane-type-model';
 export type {
   CraneModelConfig,
   CraneModelCameraPreset,
 } from './model/crane-type-model';
-export { CRANE_ZONE_CONFIG, getCraneZoneConfig } from './model/crane-zone-config';
+export {
+  CRANE_ZONE_CONFIG,
+  getCraneZoneConfig,
+} from './model/crane-zone-config';
 export type {
   CraneZone,
   CraneZoneConfig,

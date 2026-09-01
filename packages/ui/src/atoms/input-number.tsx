@@ -12,6 +12,10 @@ interface InputNumberProps extends Omit<
   min?: number;
   max?: number;
   step?: number;
+  /** 비포커스 시 표시 문자열(단위 접미사 등). 포커스/편집 중엔 raw 숫자를 보여준다. */
+  format?: (value: number) => string;
+  /** 내부 <input>에 병합할 클래스. className은 래퍼 div로 가므로 별도 prop. */
+  inputClassName?: string;
 }
 
 function InputNumber({
@@ -20,12 +24,19 @@ function InputNumber({
   min,
   max,
   step = 1,
+  format,
   className,
+  inputClassName,
+  onFocus,
   onBlur,
   onKeyDown,
   ...props
 }: InputNumberProps) {
   const [draft, setDraft] = useState<string | null>(null);
+  // format이 있을 때만 의미 있음 — 포커스 중엔 포맷 문자열 대신 raw 숫자 편집.
+  // 포커스 시 draft는 세우지 않는다: 타이핑 없이 blur하면 지금처럼 no-op이어야
+  // 동일값 onChange로 인한 히스토리/dirty 오염이 없다.
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const clamp = useCallback(
@@ -95,20 +106,28 @@ function InputNumber({
         ref={inputRef}
         type="text"
         inputMode="decimal"
-        value={draft ?? value}
+        value={draft ?? (focused || !format ? String(value) : format(value))}
         onChange={(e) => {
           const v = e.target.value;
           if (v === '' || v === '-' || /^-?\d*\.?\d*$/.test(v)) {
             setDraft(v);
           }
         }}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
         onBlur={(e) => {
+          setFocused(false);
           if (draft !== null) commit(draft);
           onBlur?.(e);
         }}
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
-        className="min-w-0 flex-1 bg-transparent px-2.5 text-sm tabular-nums outline-none disabled:pointer-events-none disabled:opacity-50"
+        className={cn(
+          'min-w-0 flex-1 bg-transparent px-2.5 text-sm tabular-nums outline-none disabled:pointer-events-none disabled:opacity-50',
+          inputClassName,
+        )}
         {...props}
       />
       <div className="border-border flex flex-col border-l">
