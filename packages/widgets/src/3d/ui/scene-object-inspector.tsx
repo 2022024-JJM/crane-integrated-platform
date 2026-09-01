@@ -638,7 +638,7 @@ function TextInspectorContent({
       {activeTab === 'textColor' ? (
         <div>
           <SectionHeader title={t('monitoring:inspector.textColor')} />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-1.5">
             <input
               type="color"
               value={selectedText.color}
