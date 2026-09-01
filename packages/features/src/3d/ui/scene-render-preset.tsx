@@ -5,11 +5,11 @@ import type { DirectionalLight } from 'three';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
-  SCENE_SUN_ELEVATION_MIN,
   modelObjectRegistry,
 } from '@crane/domain/3d';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { isSceneShadowEnabled } from '../lib/scene-shadow';
+import { sunDirectionFromAngles } from '../lib/sun-direction';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -150,32 +150,6 @@ const SUN_SHADOW_MAP_SIZE = 4096;
  * 근접 줌에서 화면 밖 물체의 긴 그림자가 frustum을 벗어나 잘린다.
  */
 const SUN_SHADOW_RADIUS_MIN = 150;
-
-/**
- * 방위각·고도(도) → 태양 방향 벡터(씬 → 태양). 구성상 단위 벡터라
- * normalize가 필요 없다.
- *
- * 방위 규약: **월드 +X = 동, -Z = 북**, azimuth 0=북·90=동·180=남·270=서
- * (SavedLightingInfo 주석 참고). 기본값(az=180, el=SCENE_SUN_ELEVATION_DEFAULT)
- * 을 넣으면 종전 고정 조명 directionalPosition [0, 50, 10]의 방향이 부동소수
- * 오차 ~1e-16 이내로 재현된다 — lighting 필드가 없는 기존 씬의 셰이딩이
- * 유지되는 근거이며, SCENE_LIGHTING.directionalPosition을 지우지 않고 두는
- * 이유이기도 하다(이 일치의 기준점). 상세는 SCENE_SUN_ELEVATION_DEFAULT 주석.
- */
-function sunDirectionFromAngles(
-  azimuthDeg: number,
-  elevationDeg: number,
-): Vector3 {
-  const az = azimuthDeg * (Math.PI / 180);
-  const el =
-    clampToRange(elevationDeg, SCENE_SUN_ELEVATION_MIN, 90) * (Math.PI / 180);
-  const cosEl = Math.cos(el);
-  return new Vector3(
-    Math.sin(az) * cosEl,
-    Math.sin(el),
-    -Math.cos(az) * cosEl,
-  );
-}
 
 /**
  * 지도 실측 bbox의 XZ 꼭짓점 — 그림자 커버리지를 지도 전체로 넓히는 근거.

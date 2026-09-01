@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Box3 as ThreeBox3, Vector3 as ThreeVector3 } from 'three';
 import type { Box3, Vector3 } from 'three';
 import type { CraneZone } from '@crane/domain/3d';
-import { classifyPointToZone, regionToWorldBox } from './zone-hit';
+import { classifyPointToZone, regionToWorldBox } from '../zone-hit';
 
 // classifyPointToZone은 min/max/x/y/z만 읽으므로 plain object로 충분하다
 const vec = (x: number, y: number, z: number) => ({ x, y, z }) as Vector3;

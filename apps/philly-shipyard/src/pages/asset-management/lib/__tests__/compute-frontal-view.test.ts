@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh } from 'three';
-import { computeFrontalView, computeFrontalViewFromObjects } from './compute-frontal-view';
+import { computeFrontalView, computeFrontalViewFromObjects } from '../compute-frontal-view';
 
 function meshOfSize(x: number, y: number, z: number): Mesh {
   return new Mesh(new BoxGeometry(x, y, z));

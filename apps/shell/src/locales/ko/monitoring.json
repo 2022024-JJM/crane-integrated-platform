@@ -71,6 +71,7 @@
     "lockObject": "편집 잠그기",
     "unlockObject": "편집 잠금 해제",
     "objectLocked": "편집 잠김",
+    "objectUnlocked": "편집 가능",
     "deleteObject": "객체 삭제",
     "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",

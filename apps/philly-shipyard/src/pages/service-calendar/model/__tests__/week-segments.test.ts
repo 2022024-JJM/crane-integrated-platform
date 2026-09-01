@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent } from '@crane/features/calendar';
-import { buildSpanSegments, isStripEvent } from './week-segments';
+import { buildSpanSegments, isStripEvent } from '../week-segments';
 
 // 배치 로직이 읽는 필드만 채운 최소 목
 function ev(partial: Partial<CalendarEvent> & { start: Date; end: Date }): CalendarEvent {

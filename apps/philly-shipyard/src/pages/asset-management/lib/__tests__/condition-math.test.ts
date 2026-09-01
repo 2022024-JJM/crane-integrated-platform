@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CraneComponent } from '@crane/domain/asset';
-import { computeClusterCondition, buildLifeTrend } from './condition-math';
+import { computeClusterCondition, buildLifeTrend } from '../condition-math';
 
 function component(partial: Partial<CraneComponent>): CraneComponent {
   return {

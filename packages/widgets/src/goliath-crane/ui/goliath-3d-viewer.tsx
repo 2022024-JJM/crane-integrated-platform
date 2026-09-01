@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThreeSceneViewer } from '@crane/ui/organisms/three-scene-viewer';
-import { Spinner } from '@crane/ui/atoms/spinner';
 import {
   Card,
   CardContent,
