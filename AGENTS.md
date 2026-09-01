@@ -22,17 +22,32 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 |---|---|
 | `pnpm lint` | `apps/shell` 만 (`eslint .` 를 해당 디렉토리에서 실행) |
 | `pnpm typecheck` | `apps/shell` 만. 단 shell 이 import 하는 `@crane/*` 소스는 따라 들어가므로 상당 부분이 간접 검사된다 |
-| `pnpm test` | `apps/{philly-shipyard,mro2,indoorshop}` 만 |
+| `pnpm test` | `apps/{philly-shipyard,mro2,indoorshop}` + `packages/{domain,features,widgets}` |
 | `npx tsc -b` (루트) | 루트 `tsconfig.json` 의 project references 전체. 단 `apps/{crane-hmi,mro2,indoorshop}` 은 references 에 없다 |
 
-`packages/*` 는 어느 workspace 에도 `lint`/`typecheck`/`test` 스크립트가 없다. 패키지 코드만 고쳤을 때는 `npx tsc -b` 를 함께 돌려 확인한다.
+`packages/{domain,features,widgets}` 에는 `test` 스크립트가 있지만, `packages/*` 어디에도 `lint`/`typecheck` 스크립트는 없다. 패키지 코드만 고쳤을 때는 `npx tsc -b` 를 함께 돌려 확인한다.
 
 ### 테스트 현황
 
-vitest 를 사용한다. 테스트가 존재하는 곳은 `apps/{philly-shipyard,mro2,indoorshop}` 이며, 주로 `lib/`·`model/` 의 순수 함수를 대상으로 한다. `packages/*` 에는 아직 테스트 인프라가 없다.
+vitest 를 사용한다. 테스트가 존재하는 곳은 `apps/{philly-shipyard,mro2,indoorshop}` 과 `packages/{domain,features,widgets}` 이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
 - 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정)
-- 3D 관련 테스트 도입 계획은 `docs/3D-단위테스트-도입-계획.md` 참조.
+- 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
+- `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
+- R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
+- 도입 배경·범위는 `docs/3D-단위테스트-도입-계획.md` 참조.
+
+#### 테스트 작성 체크리스트 (예외·경계가 기본 범위)
+
+성공 경로만 검증한 테스트는 미완성이다. 대상 파일마다 아래를 훑고, 해당하는 항목은 반드시 케이스로 만든다.
+
+- **잘못된 입력 방어**: 결손 필드, 타입 오염(문자열 opacity, `locked: 'yes'`), `NaN`/`Infinity`, 배열 속 `null`, 구버전 포맷(legacy `map`, 봉투 이전 localStorage). 방어 로직이 있는 파일(sanitize 류)은 이게 본론이다.
+- **경계값**: 클램프의 min/max 정확값과 그 밖, 랩([0,360)), 최대 개수·깊이(북마크 12, undo 50)의 초과 1개, 빈 배열·빈 문자열·빈 씬. "경계 정확값 = 통과, +1 = 거부"를 쌍으로 검증한다.
+- **실패 경로**: fetch reject·HTTP 에러, 저장소 손상 JSON, 로더 reject. 에러 자체만이 아니라 **그 뒤의 상태**까지 본다 — 폴백이 맞는 값인지, 지우면 안 되는 데이터가 남는지(scene-dev-storage의 "fetch 성공 후에만 로컬 삭제"가 선례).
+- **no-op 경로**: 같은 내용 재설정, 없는 id 삭제, 빈 스택 undo. 값만이 아니라 **상태 참조 유지**(`toBe(before)`)까지 확인한다 — 참조가 바뀌면 불필요한 리렌더·히스토리 오염·dirty 오탐이 생긴다.
+- **수명·정리**: 훅 언마운트 시 스토어 정리, off 전환 시 잔여 상태 제거, 캐시 실패값의 영속 여부.
+- **결정론**: 타이머·`Math.random`·`useFrame`·실네트워크에 기대는 테스트 금지. delta 수동 주입, 시드 고정 PRNG, fetch/로더 mock 으로 통제한다.
+- **특성화 원칙**: 테스트 중 버그로 보이는 동작을 발견해도 구현을 고치지 않는다. 현재 동작을 그대로 고정하고 `it.todo` 또는 주석으로 보고한다 (선례: preview-render-queue 의 preset 키 `[object Object]` 충돌, use-scene-history 의 present=null 일 때 canUndo=true 이지만 undo 는 no-op).
 
 #### 테스트 파일 배치 규약
 

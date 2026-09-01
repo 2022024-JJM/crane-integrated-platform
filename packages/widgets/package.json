@@ -13,21 +13,30 @@
     "./goliath-crane": "./src/goliath-crane/index.ts",
     "./scene-editor": "./src/scene-editor/index.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "peerDependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.183.2",
-    "@react-three/fiber": "^9.5.0",
-    "@react-three/drei": "^10.7.7"
+    "three": "^0.183.2"
   },
   "dependencies": {
     "@crane/core": "workspace:*",
-    "@crane/ui": "workspace:*",
     "@crane/domain": "workspace:*",
     "@crane/features": "workspace:*",
-    "react-router-dom": "^7.13.1",
-    "lucide-react": "^0.575.0",
+    "@crane/ui": "workspace:*",
     "i18next": "^25.6.2",
-    "react-i18next": "^16.3.5"
+    "lucide-react": "^0.575.0",
+    "react-i18next": "^16.3.5",
+    "react-router-dom": "^7.13.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
   }
 }

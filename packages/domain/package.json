@@ -20,15 +20,22 @@
     "./compliance": "./src/compliance/index.ts",
     "./shared": "./src/shared/index.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "peerDependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.183.2",
-    "@react-three/fiber": "^9.5.0",
-    "@react-three/drei": "^10.7.7"
+    "three": "^0.183.2"
   },
   "dependencies": {
     "@crane/core": "workspace:*",
     "three-mesh-bvh": "^0.8.3"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
   }
 }
