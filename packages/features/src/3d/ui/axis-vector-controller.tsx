@@ -37,8 +37,10 @@ export function AxisVectorController({
             min={min}
             max={max}
             format={format}
-            inputClassName="text-center"
-            className="border-border bg-muted/50 h-7 flex-1 rounded-sm text-[12px]"
+            // InputNumber 내부 input의 text-sm(14px)을 태그 맵핑 값 입력과
+            // 같은 11px로 덮는다 (twMerge라 뒤 클래스가 이긴다)
+            inputClassName="text-center text-[11px]"
+            className="border-border bg-muted/50 h-7 flex-1 rounded-sm"
             onChange={(v) => onChange(axis, Number(v))}
           />
         </div>
