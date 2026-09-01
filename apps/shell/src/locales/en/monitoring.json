@@ -71,6 +71,7 @@
     "lockObject": "Lock editing",
     "unlockObject": "Unlock editing",
     "objectLocked": "Editing locked",
+    "objectUnlocked": "Editing unlocked",
     "deleteObject": "Delete object",
     "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",

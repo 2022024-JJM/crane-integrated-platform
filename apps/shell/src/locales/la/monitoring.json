@@ -60,6 +60,7 @@
     "lockObject": "Editionem obsera",
     "unlockObject": "Editionem resera",
     "objectLocked": "Editio obserata",
+    "objectUnlocked": "Editio reserata",
     "deleteObject": "Objectum dele",
     "renameObject": "Nomen muta",
     "nameEmptyError": "Nomen vacuum esse non potest.",

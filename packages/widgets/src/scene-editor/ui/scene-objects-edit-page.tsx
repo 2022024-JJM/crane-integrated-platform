@@ -34,6 +34,11 @@ import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@crane/ui/molecules/resizable';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -95,8 +100,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     useState<SceneModelCatalogItem | null>(null);
   const [showLabels, setShowLabels] = useState(true);
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
-  // 자체를 렌더하지 않아 캔버스(flex-1)가 그만큼 넓어지고, 캔버스 모서리의
-  // 재오픈 버튼만 남는다.
+  // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어지고, 캔버스 모서리의
+  // 재오픈 버튼만 남는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
+  // 상태다 — 접었다 펴면 기본 너비로 돌아온다.
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
@@ -342,7 +348,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   ]);
 
   return (
-    <div className="bg-muted/20 flex h-full min-h-0 w-full flex-row overflow-hidden">
+    <div className="bg-muted/20 h-full min-h-0 w-full overflow-hidden">
       <SceneUnsavedChangesDialog
         open={unsavedChangesPrompt.open}
         isSaving={isSaving}
@@ -350,309 +356,360 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
         onStay={() => unsavedChangesPrompt.choose('stay')}
       />
-      {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경) */}
-      {!leftCollapsed ? (
-        <aside className="border-border bg-card text-card-foreground flex w-[13rem] shrink-0 flex-col border-r">
-          <ProjectPalettePanel
-            items={sceneModelCatalog}
-            currentMap={sceneInfo?.maps?.[0] ?? null}
-            draggingItemId={draggingCatalogItem?.id ?? null}
-            onDragStart={setDraggingCatalogItem}
-            onDragEnd={() => setDraggingCatalogItem(null)}
-            onSelectMap={setSceneMap}
-            environmentId={sceneInfo?.environmentId}
-            onEnvironmentChange={setEnvironmentId}
-            lighting={sceneInfo?.lighting}
-            onLightingChange={setLighting}
-            onLightingInteractionStart={startTransformInteraction}
-            onLightingInteractionEnd={endTransformInteraction}
-            onCollapse={() => setLeftCollapsed(true)}
-          />
-        </aside>
-      ) : null}
-
-      {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
-      <div className="relative min-h-0 min-w-0 flex-1">
-        <SceneObjectsEditCanvas
-          rootRef={canvasRootRef}
-          cameraStateRef={cameraStateRef}
-          initialCamera={initialCamera}
-          sceneInfo={sceneInfo}
-          regionId={regionId}
-          catalogItems={sceneModelCatalog}
-          transformMode={transformMode}
-          draggingModelCatalogItem={draggingCatalogItem}
-          onTransformVectorChange={(field, value) => {
-            // mesh는 meshOverrides 경로가 따로 있고, 모델/텍스트/지도는
-            // 통합 함수가 id로 컬렉션을 해석한다.
-            if (selectedObjectType === 'mesh') {
-              updateSelectedMeshTransformVector(field, value, {
-                recordHistory: false,
-              });
-            } else {
-              updateSelectedTransformVector(field, value, {
-                recordHistory: false,
-              });
-            }
-          }}
-          onTransformCommit={(position, rotation, scale) => {
-            // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
-            // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-            commitSelectedTransform(position, rotation, scale, {
-              recordHistory: false,
-            });
-          }}
-          onMultiTransformCommit={(updates) => {
-            updateMultiObjectTransforms(updates, { recordHistory: false });
-          }}
-          onAddModel={(catalogItem, position) => {
-            addModel(catalogItem, position);
-            setDraggingCatalogItem(null);
-          }}
-          showLabels={showLabels}
-          onTransformInteractionStart={startTransformInteraction}
-          onTransformInteractionEnd={endTransformInteraction}
-          focusSelectedRef={focusSelectedRef}
-        />
-
-        {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
-        {leftCollapsed ? (
-          <button
-            type="button"
-            onClick={() => setLeftCollapsed(false)}
-            aria-label={t('monitoring:editor.expandPanel')}
-            title={t('monitoring:editor.expandPanel')}
-            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-          >
-            <PanelLeftOpen className="size-4" />
-          </button>
-        ) : null}
-        {rightCollapsed ? (
-          <button
-            type="button"
-            onClick={() => setRightCollapsed(false)}
-            aria-label={t('monitoring:editor.expandPanel')}
-            title={t('monitoring:editor.expandPanel')}
-            className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-          >
-            <PanelRightOpen className="size-4" />
-          </button>
+      <ResizablePanelGroup orientation="horizontal">
+        {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경).
+            preserve-pixel-size: 창 크기가 바뀌어도 사이드 패널은 픽셀 너비를
+            유지하고 캔버스만 늘어난다. 컬럼 경계선은 aside border 대신
+            ResizableHandle(1px)이 겸한다. */}
+        {!leftCollapsed ? (
+          <>
+            <ResizablePanel
+              id="project-palette"
+              defaultSize="13rem"
+              minSize="10rem"
+              maxSize="22rem"
+              groupResizeBehavior="preserve-pixel-size"
+            >
+              <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
+                <ProjectPalettePanel
+                  items={sceneModelCatalog}
+                  currentMap={sceneInfo?.maps?.[0] ?? null}
+                  draggingItemId={draggingCatalogItem?.id ?? null}
+                  onDragStart={setDraggingCatalogItem}
+                  onDragEnd={() => setDraggingCatalogItem(null)}
+                  onSelectMap={setSceneMap}
+                  onToggleLock={setObjectLocked}
+                  environmentId={sceneInfo?.environmentId}
+                  onEnvironmentChange={setEnvironmentId}
+                  lighting={sceneInfo?.lighting}
+                  onLightingChange={setLighting}
+                  onLightingInteractionStart={startTransformInteraction}
+                  onLightingInteractionEnd={endTransformInteraction}
+                  onCollapse={() => setLeftCollapsed(true)}
+                />
+              </aside>
+            </ResizablePanel>
+            <ResizableHandle />
+          </>
         ) : null}
 
-        {/* 중앙 상단 floating toolbar */}
-        <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
-          <div className="pointer-events-auto">
-            <SceneTransformModeToggle
-              mode={transformMode}
-              onModeChange={setTransformMode}
-              leadingContent={
-                <div className="flex items-center gap-2">
-                  {!saveDisabled ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
-                                saveStatusClassName,
-                              )}
-                            />
-                          }
-                        >
-                          {isSaving ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : isDirty ? (
-                            <AlertCircle className="size-4" />
-                          ) : showLocalOnlyNotice ? (
-                            <HardDrive className="size-4" />
-                          ) : (
-                            <CheckCircle2 className="size-4" />
-                          )}
-                          {saveStatusLabel}
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {showLocalOnlyNotice
-                            ? t('monitoring:editor.statusSavedLocalOnlyHint')
-                            : saveStatusLabel}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : null}
-                  <SceneHistoryControls
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                    onUndo={undo}
-                    onRedo={redo}
-                  />
-                </div>
-              }
-              trailingContent={
-                <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={t('monitoring:editor.addText')}
-                            disabled={saveDisabled}
-                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                          />
-                        }
-                        onClick={handleAddTextAtView}
-                      >
-                        <Type className="size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t('monitoring:editor.addText')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <span className="bg-border h-4 w-px" />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={
-                              showLabels
-                                ? t('monitoring:editor.hideLabels')
-                                : t('monitoring:editor.showLabels')
-                            }
-                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors"
-                          />
-                        }
-                        onClick={() => setShowLabels((prev) => !prev)}
-                      >
-                        {showLabels ? (
-                          <EyeOff className="size-4" />
-                        ) : (
-                          <Eye className="size-4 opacity-50" />
-                        )}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {showLabels
-                          ? t('monitoring:editor.hideLabels')
-                          : t('monitoring:editor.showLabels')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <span className="bg-border h-4 w-px" />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={t('monitoring:editor.save')}
-                            disabled={saveDisabled || isSaving}
-                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                          />
-                        }
-                        onClick={() => void saveCurrentScene()}
-                      >
-                        {isSaving ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Save className="size-4" />
-                        )}
-                      </TooltipTrigger>
-                      {/* 단축키는 우측 하단 도움말 팝업에서 한꺼번에 안내한다. */}
-                      <TooltipContent>
-                        {t('monitoring:editor.save')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <span className="bg-border h-4 w-px" />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={t('monitoring:editor.exportJson')}
-                            disabled={saveDisabled}
-                            className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                          />
-                        }
-                        onClick={() => downloadSceneInfo(regionId, sceneInfo)}
-                      >
-                        <Download className="size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t('monitoring:editor.exportJson')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              }
-            />
-          </div>
-        </div>
-
-        {/* 우측 하단 단축키 도움말 — 기즈모는 좌하단이라 겹치지 않는다. */}
-        <SceneShortcutsHelp />
-
-        {!sceneInfo ? (
-          <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-            <p className="text-muted-foreground text-sm font-medium">
-              {t('monitoring:editor.loading')}
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
-      {!rightCollapsed ? (
-        <aside className="border-border bg-card text-card-foreground flex w-[18rem] shrink-0 flex-col border-l">
-          <div
-            ref={hierarchyRootRef}
-            className="flex min-h-0 flex-[1] flex-col"
-          >
-            <HierarchyPanel
+        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
+        <ResizablePanel id="edit-canvas">
+          <div className="relative h-full min-h-0 w-full">
+            <SceneObjectsEditCanvas
+              rootRef={canvasRootRef}
+              cameraStateRef={cameraStateRef}
+              initialCamera={initialCamera}
               sceneInfo={sceneInfo}
-              selectedIds={selectedIds}
-              onCollapse={() => setRightCollapsed(true)}
-              onSelectPlacedModel={selectPlacedModel}
-              onDeletePlacedModel={deletePlacedModel}
-              onSelectPlacedText={selectPlacedText}
-              onDeletePlacedText={deletePlacedText}
-              onTogglePlacedModel={toggleModel}
-              onTogglePlacedText={toggleText}
-              onTogglePlacedMap={toggleMap}
-              onSelectPlacedMap={selectPlacedMap}
-              onDeletePlacedMap={deletePlacedMap}
-              onToggleLock={setObjectLocked}
-              onRenameObject={renameObject}
-            />
-          </div>
-          <div className="border-border flex min-h-0 flex-[2] flex-col border-t">
-            <SceneObjectInspector
-              className="rounded-none bg-transparent ring-0"
-              selectedModel={selectedModel}
-              selectedText={selectedText}
-              selectedMesh={selectedMesh}
-              selectedMap={selectedMap}
-              multiSelectCount={selectedIds.size}
-              onOpacityChange={updateSelectedOpacity}
-              onTransformChange={updateSelectedTransform}
-              onTextContentChange={updateSelectedTextContent}
-              onTextColorChange={updateSelectedTextColor}
-              onMeshOpacityChange={updateSelectedMeshOpacity}
-              onMeshTransformChange={updateSelectedMeshTransform}
-              onValueMapChange={updateSelectedValueMap}
-              onBackToParent={() => {
-                if (selectedMesh) {
-                  selectPlacedModel(selectedMesh.modelId);
+              regionId={regionId}
+              catalogItems={sceneModelCatalog}
+              transformMode={transformMode}
+              draggingModelCatalogItem={draggingCatalogItem}
+              onTransformVectorChange={(field, value) => {
+                // mesh는 meshOverrides 경로가 따로 있고, 모델/텍스트/지도는
+                // 통합 함수가 id로 컬렉션을 해석한다.
+                if (selectedObjectType === 'mesh') {
+                  updateSelectedMeshTransformVector(field, value, {
+                    recordHistory: false,
+                  });
+                } else {
+                  updateSelectedTransformVector(field, value, {
+                    recordHistory: false,
+                  });
                 }
               }}
+              onTransformCommit={(position, rotation, scale) => {
+                // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+                // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+                commitSelectedTransform(position, rotation, scale, {
+                  recordHistory: false,
+                });
+              }}
+              onMultiTransformCommit={(updates) => {
+                updateMultiObjectTransforms(updates, { recordHistory: false });
+              }}
+              onAddModel={(catalogItem, position) => {
+                addModel(catalogItem, position);
+                setDraggingCatalogItem(null);
+              }}
+              showLabels={showLabels}
+              onTransformInteractionStart={startTransformInteraction}
+              onTransformInteractionEnd={endTransformInteraction}
+              focusSelectedRef={focusSelectedRef}
             />
+
+            {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
+            {leftCollapsed ? (
+              <button
+                type="button"
+                onClick={() => setLeftCollapsed(false)}
+                aria-label={t('monitoring:editor.expandPanel')}
+                title={t('monitoring:editor.expandPanel')}
+                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+              >
+                <PanelLeftOpen className="size-4" />
+              </button>
+            ) : null}
+            {rightCollapsed ? (
+              <button
+                type="button"
+                onClick={() => setRightCollapsed(false)}
+                aria-label={t('monitoring:editor.expandPanel')}
+                title={t('monitoring:editor.expandPanel')}
+                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
+              >
+                <PanelRightOpen className="size-4" />
+              </button>
+            ) : null}
+
+            {/* 중앙 상단 floating toolbar */}
+            <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
+              <div className="pointer-events-auto">
+                <SceneTransformModeToggle
+                  mode={transformMode}
+                  onModeChange={setTransformMode}
+                  leadingContent={
+                    <div className="flex items-center gap-2">
+                      {!saveDisabled ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
+                                    saveStatusClassName,
+                                  )}
+                                />
+                              }
+                            >
+                              {isSaving ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : isDirty ? (
+                                <AlertCircle className="size-4" />
+                              ) : showLocalOnlyNotice ? (
+                                <HardDrive className="size-4" />
+                              ) : (
+                                <CheckCircle2 className="size-4" />
+                              )}
+                              {saveStatusLabel}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {showLocalOnlyNotice
+                                ? t(
+                                    'monitoring:editor.statusSavedLocalOnlyHint',
+                                  )
+                                : saveStatusLabel}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : null}
+                      <SceneHistoryControls
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        onUndo={undo}
+                        onRedo={redo}
+                      />
+                    </div>
+                  }
+                  trailingContent={
+                    <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                aria-label={t('monitoring:editor.addText')}
+                                disabled={saveDisabled}
+                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                              />
+                            }
+                            onClick={handleAddTextAtView}
+                          >
+                            <Type className="size-4" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t('monitoring:editor.addText')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="bg-border h-4 w-px" />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                aria-label={
+                                  showLabels
+                                    ? t('monitoring:editor.hideLabels')
+                                    : t('monitoring:editor.showLabels')
+                                }
+                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors"
+                              />
+                            }
+                            onClick={() => setShowLabels((prev) => !prev)}
+                          >
+                            {/* 아이콘은 다음 동작이 아니라 현재 상태를 나타낸다 —
+                            표시 중이면 Eye, 숨김이면 EyeOff. 톤은 양옆 버튼과
+                            동일하게 두고 상태 구분은 아이콘으로만 한다. */}
+                            {showLabels ? (
+                              <Eye className="size-4" />
+                            ) : (
+                              <EyeOff className="size-4" />
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {showLabels
+                              ? t('monitoring:editor.hideLabels')
+                              : t('monitoring:editor.showLabels')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="bg-border h-4 w-px" />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                aria-label={t('monitoring:editor.save')}
+                                disabled={saveDisabled || isSaving}
+                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                              />
+                            }
+                            onClick={() => void saveCurrentScene()}
+                          >
+                            {isSaving ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Save className="size-4" />
+                            )}
+                          </TooltipTrigger>
+                          {/* 단축키는 우측 하단 도움말 팝업에서 한꺼번에 안내한다. */}
+                          <TooltipContent>
+                            {t('monitoring:editor.save')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <span className="bg-border h-4 w-px" />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                aria-label={t('monitoring:editor.exportJson')}
+                                disabled={saveDisabled}
+                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
+                              />
+                            }
+                            onClick={() =>
+                              downloadSceneInfo(regionId, sceneInfo)
+                            }
+                          >
+                            <Download className="size-4" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {t('monitoring:editor.exportJson')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  }
+                />
+              </div>
+            </div>
+
+            {/* 우측 하단 단축키 도움말 — 기즈모는 좌하단이라 겹치지 않는다. */}
+            <SceneShortcutsHelp />
+
+            {!sceneInfo ? (
+              <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t('monitoring:editor.loading')}
+                </p>
+              </div>
+            ) : null}
           </div>
-        </aside>
-      ) : null}
+        </ResizablePanel>
+
+        {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
+        {!rightCollapsed ? (
+          <>
+            <ResizableHandle />
+            <ResizablePanel
+              id="hierarchy-inspector"
+              defaultSize="18rem"
+              minSize="14rem"
+              maxSize="26rem"
+              groupResizeBehavior="preserve-pixel-size"
+            >
+              <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
+                {/* Hierarchy/Inspector 사이도 드래그로 조절한다. 기본 1:2는
+                    종전 flex-[1]/flex-[2] 비율 그대로. 경계선은 border-t 대신
+                    ResizableHandle(1px)이 겸한다. */}
+                <ResizablePanelGroup orientation="vertical">
+                  <ResizablePanel
+                    id="hierarchy"
+                    defaultSize="33%"
+                    minSize="8rem"
+                  >
+                    <div
+                      ref={hierarchyRootRef}
+                      className="flex h-full min-h-0 flex-col"
+                    >
+                      <HierarchyPanel
+                        sceneInfo={sceneInfo}
+                        selectedIds={selectedIds}
+                        onCollapse={() => setRightCollapsed(true)}
+                        onSelectPlacedModel={selectPlacedModel}
+                        onDeletePlacedModel={deletePlacedModel}
+                        onSelectPlacedText={selectPlacedText}
+                        onDeletePlacedText={deletePlacedText}
+                        onTogglePlacedModel={toggleModel}
+                        onTogglePlacedText={toggleText}
+                        onTogglePlacedMap={toggleMap}
+                        onSelectPlacedMap={selectPlacedMap}
+                        onDeletePlacedMap={deletePlacedMap}
+                        onToggleLock={setObjectLocked}
+                        onRenameObject={renameObject}
+                      />
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle />
+                  <ResizablePanel id="inspector" minSize="10rem">
+                    <div className="flex h-full min-h-0 flex-col">
+                      <SceneObjectInspector
+                        className="rounded-none bg-transparent ring-0"
+                        selectedModel={selectedModel}
+                        selectedText={selectedText}
+                        selectedMesh={selectedMesh}
+                        selectedMap={selectedMap}
+                        multiSelectCount={selectedIds.size}
+                        onOpacityChange={updateSelectedOpacity}
+                        onTransformChange={updateSelectedTransform}
+                        onTextContentChange={updateSelectedTextContent}
+                        onTextColorChange={updateSelectedTextColor}
+                        onMeshOpacityChange={updateSelectedMeshOpacity}
+                        onMeshTransformChange={updateSelectedMeshTransform}
+                        onValueMapChange={updateSelectedValueMap}
+                        onBackToParent={() => {
+                          if (selectedMesh) {
+                            selectPlacedModel(selectedMesh.modelId);
+                          }
+                        }}
+                      />
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </aside>
+            </ResizablePanel>
+          </>
+        ) : null}
+      </ResizablePanelGroup>
     </div>
   );
 }
@@ -771,6 +828,7 @@ function ProjectPalettePanel({
   onDragStart,
   onDragEnd,
   onSelectMap,
+  onToggleLock,
   environmentId,
   onEnvironmentChange,
   lighting,
@@ -794,6 +852,7 @@ function ProjectPalettePanel({
   onDragStart: (item: SceneModelCatalogItem) => void;
   onDragEnd: () => void;
   onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  onToggleLock: (id: string, locked: boolean) => void;
   onCollapse: () => void;
 }) {
   const { t } = useTranslation();
@@ -860,6 +919,7 @@ function ProjectPalettePanel({
               <PaletteMapSection
                 currentMap={currentMap}
                 onSelectMap={onSelectMap}
+                onToggleLock={onToggleLock}
               />
             ) : (
               <PaletteEnvironmentSection

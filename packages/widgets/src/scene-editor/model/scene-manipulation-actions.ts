@@ -28,9 +28,7 @@ interface SceneManipulationDeps {
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
-  selectAll: (
-    entries: Array<{ id: string; type: 'model' | 'text' }>,
-  ) => void;
+  selectAll: (entries: Array<{ id: string; type: 'model' | 'text' }>) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -164,8 +162,21 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
+        // transform을 명시 저장한다 — 새 지도는 어떤 경로로 추가되든 항상
+        // 원점/무회전/등배로 시작한다는 보장을 렌더러 기본값에 맡기지 않는다.
+        // sanitize는 유효한 벡터 필드를 그대로 보존하므로 round-trip에도
+        // 값이 유지된다.
         maps: catalogItem
-          ? [{ id: createId(), path: catalogItem.path, locked: false }]
+          ? [
+              {
+                id: createId(),
+                path: catalogItem.path,
+                position: [0, 0, 0] as [number, number, number],
+                rotation: [0, 0, 0] as [number, number, number],
+                scale: [1, 1, 1] as [number, number, number],
+                locked: false,
+              },
+            ]
           : [],
       };
     });
@@ -244,7 +255,8 @@ export function createSceneManipulationActions({
         Object.keys(normalized).length > 0 ? normalized : undefined;
 
       if (
-        (prev.lighting?.shadows ?? false) === (nextLighting?.shadows ?? false) &&
+        (prev.lighting?.shadows ?? false) ===
+          (nextLighting?.shadows ?? false) &&
         (prev.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) ===
           (nextLighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) &&
         (prev.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT) ===

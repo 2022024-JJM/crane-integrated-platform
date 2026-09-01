@@ -780,6 +780,9 @@ export function SceneObjectsEditCanvas({
             scale={40 * (2 / 3)}
             axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"
+            // 방향 표시 전용 — 축 머리를 클릭해 카메라가 툭 스냅되면 배치
+            // 중인 시점을 잃는다. 클릭·호버 반응을 끈다.
+            disabled
           />
         </GizmoHelper>
         {transformTarget ? (
