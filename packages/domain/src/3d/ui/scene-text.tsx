@@ -71,19 +71,28 @@ export const SceneText = memo(function SceneText({
     height: 1,
   });
 
+  // ModelMesh와 같은 ref 패턴 — onObjectReady를 effect 의존성에 넣으면 선택
+  // 변경으로 콜백 참조가 바뀔 때마다 effect가 재발화하고, 그 cleanup이 이전
+  // 렌더의 클로저(이 텍스트가 primary였던 시점)로 `(id, null)`을 쏘아 방금
+  // 선택된 다른 객체의 TransformControls 타깃을 지워 버린다.
+  const onObjectReadyRef = useRef(onObjectReady);
+  useEffect(() => {
+    onObjectReadyRef.current = onObjectReady;
+  }, [onObjectReady]);
+
   useEffect(() => {
     const group = groupRef.current;
     if (group) {
       modelObjectRegistry.register(id, group);
     }
-    onObjectReady?.(id, group);
+    onObjectReadyRef.current?.(id, group);
     return () => {
       if (group) {
         modelObjectRegistry.unregister(id, group);
       }
-      onObjectReady?.(id, null);
+      onObjectReadyRef.current?.(id, null);
     };
-  }, [id, onObjectReady]);
+  }, [id]);
 
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
