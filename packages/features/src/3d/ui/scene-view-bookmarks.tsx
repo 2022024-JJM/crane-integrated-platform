@@ -39,15 +39,18 @@ interface SceneViewBookmarksProps {
 }
 
 /**
- * 씬 뷰 북마크 — ThreeSceneViewer 좌측 하단 툴바의 toolbarTrailing 슬롯에
- * 붙어 줌/리셋 버튼과 한 줄로 이어진다(같은 글래스 outline 스타일).
+ * 씬 뷰 북마크 — ThreeSceneViewer 툴바의 toolbarTrailing 슬롯에 붙어
+ * 카메라 조작 버튼과 한 줄로 이어진다(같은 글래스 outline 스타일).
  *
- * `+` 버튼 하나만 두고, 누르면 위쪽으로 이름 입력 팝오버가 뜬다(툴바 폭이
- * 변하지 않아 옆 버튼들이 밀리지 않는다). 저장된 뷰는 `+` 오른쪽에 이름 칩으로
- * 나열되며 클릭하면 리셋 버튼처럼 한 번에 그 포즈로 이동한다(플라이트 애니메이션
- * 없음). 삭제는 칩 우클릭 컨텍스트 메뉴로만 —
- * 칩마다 X 버튼을 두면 툴바가 어수선해지고 오클릭으로 지우기 쉽다.
+ * 순서는 "저장된 뷰 칩들 → `+`(현재 뷰 저장)" 이고, 그 오른쪽으로 원래위치·
+ * 탑뷰·확대·축소·전체화면이 이어진다. `+` 를 누르면 아래쪽으로 이름 입력
+ * 팝오버가 뜬다(툴바 폭이 변하지 않아 옆 버튼들이 밀리지 않는다). 칩을 클릭하면
+ * 리셋 버튼처럼 한 번에 그 포즈로 이동한다(플라이트 애니메이션 없음).
+ * 칩은 `+` 쪽(오른쪽)에서 왼쪽으로 쌓인다.
+ * 삭제는 칩 우클릭 컨텍스트 메뉴로만 — 칩마다 X 버튼을 두면 툴바가 어수선해지고
+ * 오클릭으로 지우기 쉽다.
  *
+ * 툴바가 화면 위쪽(top-right 배치)에 있으므로 툴팁·팝오버는 아래로 연다.
  * TooltipProvider는 ThreeSceneViewer 툴바가 감싸고 있어 여기서 두지 않는다.
  */
 export function SceneViewBookmarks({
@@ -99,6 +102,55 @@ export function SceneViewBookmarks({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
+      {viewList.length > 0 ? (
+        // flex-row-reverse — 칩이 오른쪽(`+` 버튼 쪽)에서 왼쪽으로 쌓인다.
+        // 배열은 오래된 순이라 먼저 저장한 뷰가 `+` 바로 옆에 붙고 새 뷰가
+        // 왼쪽으로 늘어난다. 넘치면 이 컨테이너가 가로 스크롤로 흡수한다.
+        <div className="flex min-w-0 flex-row-reverse items-center gap-2 overflow-x-auto py-px">
+          {viewList.map((view) => (
+            <ContextMenu key={view.id}>
+              <ContextMenuTrigger render={<div className="flex shrink-0" />}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          SCENE_TOOLBAR_BUTTON_CLASS,
+                          'max-w-40 text-xs',
+                        )}
+                      />
+                    }
+                    onClick={() => onMoveTo(view.position, view.target)}
+                  >
+                    <span className="truncate">{view.name}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <span className="flex flex-col">
+                      <span>
+                        {t('monitoring:sceneViews.flyTo', { name: view.name })}
+                      </span>
+                      <span className="text-background/70">
+                        {t('monitoring:sceneViews.deleteHint')}
+                      </span>
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </ContextMenuTrigger>
+              <ContextMenuPopup>
+                <ContextMenuItem
+                  className="text-destructive data-[highlighted]:text-destructive"
+                  onClick={() => removeView(regionId, view.id)}
+                >
+                  {t('monitoring:sceneViews.delete')}
+                </ContextMenuItem>
+              </ContextMenuPopup>
+            </ContextMenu>
+          ))}
+        </div>
+      ) : null}
+
       <Popover
         open={isAdding}
         onOpenChange={(open) => {
@@ -127,7 +179,7 @@ export function SceneViewBookmarks({
           >
             <BookmarkPlus />
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent side="bottom">
             {isAtLimit
               ? t('monitoring:sceneViews.limitReached', {
                   max: SCENE_VIEWS_MAX,
@@ -136,8 +188,8 @@ export function SceneViewBookmarks({
           </TooltipContent>
         </Tooltip>
         <PopoverPopup
-          side="top"
-          align="start"
+          side="bottom"
+          align="end"
           initialFocus={inputRef}
           className="w-64 p-3"
         >
@@ -175,52 +227,6 @@ export function SceneViewBookmarks({
           </form>
         </PopoverPopup>
       </Popover>
-
-      {viewList.length > 0 ? (
-        <div className="flex min-w-0 items-center gap-2 overflow-x-auto py-px">
-          {viewList.map((view) => (
-            <ContextMenu key={view.id}>
-              <ContextMenuTrigger render={<div className="flex shrink-0" />}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          SCENE_TOOLBAR_BUTTON_CLASS,
-                          'max-w-40 text-xs',
-                        )}
-                      />
-                    }
-                    onClick={() => onMoveTo(view.position, view.target)}
-                  >
-                    <span className="truncate">{view.name}</span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span className="flex flex-col">
-                      <span>
-                        {t('monitoring:sceneViews.flyTo', { name: view.name })}
-                      </span>
-                      <span className="text-background/70">
-                        {t('monitoring:sceneViews.deleteHint')}
-                      </span>
-                    </span>
-                  </TooltipContent>
-                </Tooltip>
-              </ContextMenuTrigger>
-              <ContextMenuPopup>
-                <ContextMenuItem
-                  className="text-destructive data-[highlighted]:text-destructive"
-                  onClick={() => removeView(regionId, view.id)}
-                >
-                  {t('monitoring:sceneViews.delete')}
-                </ContextMenuItem>
-              </ContextMenuPopup>
-            </ContextMenu>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

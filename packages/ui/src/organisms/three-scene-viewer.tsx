@@ -55,11 +55,19 @@ interface ThreeSceneViewerProps {
   fullscreenTopRightOverlay?: ReactNode;
   // 전체화면일 때 화면 상단 중앙(노치 위치)에 떠있는 슬롯. critical 알림 배너 등.
   fullscreenTopCenterOverlay?: ReactNode;
-  // 좌측 하단 툴바의 맨 앞(왼쪽)에 외부 버튼을 주입하는 슬롯. 도메인 무관.
+  // 외부 버튼을 주입하는 슬롯. 도메인 무관. 'bottom-left' 배치에서는 툴바 맨 앞,
+  // 'top-right' 배치에서는 카메라 버튼 줄 아래(다음 줄)에 놓인다 — 전체화면
+  // 알람 토글처럼 상시 버튼이 아닌 것이 카메라 조작 줄을 밀지 않게 하려는 것.
   toolbarExtras?: ReactNode;
-  // 좌측 하단 툴바의 맨 뒤(오른쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
+  // 툴바 카메라 버튼들 앞(왼쪽)에 붙는 슬롯. 씬 뷰 북마크 바 등 —
   // 툴바 버튼과 같은 스타일(SCENE_TOOLBAR_BUTTON_CLASS)로 맞추면 한 줄로 이어진다.
   toolbarTrailing?: ReactNode;
+  /**
+   * 조작 툴바 위치. 기본은 좌측 하단 한 줄. 'top-right' 는 우측 상단에
+   * 세로 스택으로 놓고, toolbarExtras 와 전체화면 우측 상단 슬롯을 그 아래
+   * 줄에 차례로 쌓는다 (실시간 3D 모니터링 화면).
+   */
+  toolbarPlacement?: 'bottom-left' | 'top-right';
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -215,7 +223,10 @@ function SceneControlsBridge({
       // 환산해 둘 중 큰 쪽을 쓴다.
       const center = bounds.getCenter(new Vector3());
       const size = bounds.getSize(new Vector3());
-      const halfHeight = Math.max(size.z / 2, size.x / (2 * perspective.aspect));
+      const halfHeight = Math.max(
+        size.z / 2,
+        size.x / (2 * perspective.aspect),
+      );
       const halfFov = (perspective.fov * Math.PI) / 360;
       const distance = Math.min(
         (halfHeight / Math.tan(halfFov)) * TOP_VIEW_PADDING,
@@ -367,10 +378,17 @@ export const SCENE_TOOLBAR_BUTTON_CLASS =
 interface ToolbarButtonProps {
   label: string;
   onClick: () => void;
+  /** 툴팁이 열리는 방향. 툴바가 화면 위쪽에 있으면 'bottom' 으로 뒤집는다. */
+  side?: 'top' | 'bottom';
   children: ReactNode;
 }
 
-function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
+function ToolbarButton({
+  label,
+  onClick,
+  side = 'top',
+  children,
+}: ToolbarButtonProps) {
   return (
     <Tooltip>
       <TooltipTrigger
@@ -386,7 +404,7 @@ function ToolbarButton({ label, onClick, children }: ToolbarButtonProps) {
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
+      <TooltipContent side={side}>{label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -402,6 +420,7 @@ export function ThreeSceneViewer({
   fullscreenTopCenterOverlay,
   toolbarExtras,
   toolbarTrailing,
+  toolbarPlacement = 'bottom-left',
   onControllerReady,
   onFullscreenChange,
 }: ThreeSceneViewerProps) {
@@ -451,6 +470,7 @@ export function ThreeSceneViewer({
   }, []);
 
   const showSplitPanel = isFullscreen && fullscreenOverlay;
+  const isTopRightToolbar = toolbarPlacement === 'top-right';
   const webglSupported = isWebGLSupported();
 
   if (!webglSupported) {
@@ -458,7 +478,7 @@ export function ThreeSceneViewer({
       <div
         ref={rootRef}
         role="alert"
-        className="relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-2 overflow-hidden bg-muted/40 p-6 text-center"
+        className="bg-muted/40 relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-2 overflow-hidden p-6 text-center"
       >
         <p className="text-sm font-semibold">
           {t('common:viewer3d.webglUnsupportedTitle', {
@@ -475,6 +495,64 @@ export function ThreeSceneViewer({
     );
   }
 
+  // 툴바 아이콘 순서: 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면.
+  // 앞(왼쪽)에는 toolbarTrailing(씬 뷰 북마크 — 저장된 뷰 칩 + 저장 버튼)이 붙어
+  // "추가한 뷰들 / 현재 뷰 저장 / 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면"이 된다.
+  const tooltipSide = isTopRightToolbar ? 'bottom' : 'top';
+  const cameraToolbarButtons = (
+    <>
+      <ToolbarButton
+        label={t('common:viewer3d.resetView')}
+        side={tooltipSide}
+        onClick={() => {
+          controllerRef.current?.reset();
+        }}
+      >
+        <House />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t('common:viewer3d.topView')}
+        side={tooltipSide}
+        onClick={() => {
+          controllerRef.current?.moveToTopView();
+        }}
+      >
+        <Binoculars />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t('common:viewer3d.zoomIn')}
+        side={tooltipSide}
+        onClick={() => {
+          controllerRef.current?.zoomIn();
+        }}
+      >
+        <ZoomIn />
+      </ToolbarButton>
+      <ToolbarButton
+        label={t('common:viewer3d.zoomOut')}
+        side={tooltipSide}
+        onClick={() => {
+          controllerRef.current?.zoomOut();
+        }}
+      >
+        <ZoomOut />
+      </ToolbarButton>
+      <ToolbarButton
+        label={
+          isFullscreen
+            ? t('common:viewer3d.exitFullscreen')
+            : t('common:viewer3d.fullscreen')
+        }
+        side={tooltipSide}
+        onClick={() => {
+          void toggleFullscreen();
+        }}
+      >
+        {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+      </ToolbarButton>
+    </>
+  );
+
   return (
     <div
       ref={rootRef}
@@ -490,9 +568,13 @@ export function ThreeSceneViewer({
           루트 안쪽으로 밀어준다(프리뷰 모달 180px 높이에서도 팝오버가 들어간다). */}
       <PortalContainerProvider container={rootRef}>
         {/* 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 레이아웃 */}
-        <div className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}>
+        <div
+          className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}
+        >
           {/* 3D 캔버스 영역 */}
-          <div className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}>
+          <div
+            className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}
+          >
             <Canvas
               {...canvasProps}
               // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
@@ -541,66 +623,53 @@ export function ThreeSceneViewer({
           </div>
         ) : null}
 
-        {isFullscreen && fullscreenTopRightOverlay ? (
-          <div className="pointer-events-auto absolute top-3 right-3 z-50">
-            {fullscreenTopRightOverlay}
-          </div>
-        ) : null}
-
-        {/* 화면 조작 툴바 — 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
-            좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다.
-            북마크가 많아 폭이 넘치면 toolbarTrailing 쪽이 스크롤로 흡수한다. */}
+        {/* 화면 조작 툴바.
+            'top-right': 우측 상단 세로 스택 — 1줄 카메라 조작, 2줄 toolbarExtras
+            (전체화면 알람 토글 등), 그 아래 전체화면 우측 상단 슬롯(알람 패널).
+            좌우 여백을 함께 잡아 두어 북마크 칩이 많아도 왼쪽 화면 밖으로
+            나가지 않고 toolbarTrailing 안쪽 스크롤이 흡수한다.
+            'bottom-left': 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
+            좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다. */}
         <TooltipProvider delay={150}>
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-1 flex items-end">
-            <div className="pointer-events-auto flex max-w-full items-center gap-2">
-              {toolbarExtras}
-              <ToolbarButton
-                label={t('common:viewer3d.zoomIn')}
-                onClick={() => {
-                  controllerRef.current?.zoomIn();
-                }}
-              >
-                <ZoomIn />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t('common:viewer3d.zoomOut')}
-                onClick={() => {
-                  controllerRef.current?.zoomOut();
-                }}
-              >
-                <ZoomOut />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t('common:viewer3d.resetView')}
-                onClick={() => {
-                  controllerRef.current?.reset();
-                }}
-              >
-                <House />
-              </ToolbarButton>
-              <ToolbarButton
-                label={t('common:viewer3d.topView')}
-                onClick={() => {
-                  controllerRef.current?.moveToTopView();
-                }}
-              >
-                <Binoculars />
-              </ToolbarButton>
-              <ToolbarButton
-                label={
-                  isFullscreen
-                    ? t('common:viewer3d.exitFullscreen')
-                    : t('common:viewer3d.fullscreen')
-                }
-                onClick={() => {
-                  void toggleFullscreen();
-                }}
-              >
-                {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-              </ToolbarButton>
-              {toolbarTrailing}
+          {isTopRightToolbar ? (
+            <div
+              className={`pointer-events-none absolute top-3 left-3 z-1 flex flex-col items-end gap-2 ${
+                // 분할 전체화면(CMMS 패널)에서는 캔버스가 왼쪽 절반이라
+                // 우측 기준을 화면 절반으로 당겨야 툴바가 패널 위로 넘어가지 않는다.
+                showSplitPanel ? 'right-[calc(50%+0.75rem)]' : 'right-3'
+              }`}
+            >
+              <div className="pointer-events-auto flex max-w-full items-center gap-2">
+                {toolbarTrailing}
+                {cameraToolbarButtons}
+              </div>
+              {toolbarExtras ? (
+                <div className="pointer-events-auto flex max-w-full items-center gap-2">
+                  {toolbarExtras}
+                </div>
+              ) : null}
+              {isFullscreen && fullscreenTopRightOverlay ? (
+                <div className="pointer-events-auto">
+                  {fullscreenTopRightOverlay}
+                </div>
+              ) : null}
             </div>
-          </div>
+          ) : (
+            <>
+              {isFullscreen && fullscreenTopRightOverlay ? (
+                <div className="pointer-events-auto absolute top-3 right-3 z-50">
+                  {fullscreenTopRightOverlay}
+                </div>
+              ) : null}
+              <div className="pointer-events-none absolute inset-x-3 bottom-3 z-1 flex items-end">
+                <div className="pointer-events-auto flex max-w-full items-center gap-2">
+                  {toolbarExtras}
+                  {toolbarTrailing}
+                  {cameraToolbarButtons}
+                </div>
+              </div>
+            </>
+          )}
         </TooltipProvider>
       </PortalContainerProvider>
     </div>

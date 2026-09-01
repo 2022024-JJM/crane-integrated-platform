@@ -19,7 +19,10 @@ import {
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
+import {
+  OutdoorWorkModelSimulation,
+  useSceneData,
+} from './outdoor-work-model-simulation';
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
 import {
@@ -193,6 +196,7 @@ export function Monitoring3dView({
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={toolbarExtras}
+        toolbarPlacement="top-right"
         toolbarTrailing={
           <SceneViewBookmarks
             regionId={regionId}

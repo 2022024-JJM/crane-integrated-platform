@@ -43,8 +43,7 @@ export function AlarmFullscreenToggleButton({
             className={cn(
               SCENE_TOOLBAR_BUTTON_CLASS,
               'relative',
-              active &&
-                'bg-orange-500/20 text-orange-600 dark:text-orange-300',
+              active && 'bg-orange-500/20 text-orange-600 dark:text-orange-300',
             )}
             aria-label={label}
             aria-pressed={active}
@@ -55,14 +54,14 @@ export function AlarmFullscreenToggleButton({
         <Bell />
         {alarmCount > 0 ? (
           <span
-            className="bg-red-500 text-[10px] font-semibold leading-none text-white absolute -top-1 -right-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full px-1"
+            className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-semibold text-white"
             aria-hidden="true"
           >
             {alarmCount > 99 ? '99+' : alarmCount}
           </span>
         ) : null}
       </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   );
 }

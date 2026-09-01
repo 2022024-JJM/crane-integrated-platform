@@ -63,7 +63,7 @@ export function GoliathCollisionGuardToggle() {
       >
         <Radar />
       </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   );
 }
