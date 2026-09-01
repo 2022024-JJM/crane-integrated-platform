@@ -2,6 +2,8 @@
 
 이 문서는 이 저장소에서 작업하는 AI Agent를 위한 운영 가이드다. 설명은 한글 중심으로 작성하되, 실제 코드에 대응하는 기술 용어와 경로명은 그대로 유지한다.
 
+에이전트 규칙의 단일 소스는 이 파일이다. 루트 `CLAUDE.md` 는 `@AGENTS.md` 한 줄짜리 포인터일 뿐이므로, 규칙을 고칠 때는 이 파일만 고친다. 코드와 이 문서가 어긋난 것을 발견하면 작업 중이라도 해당 항목을 갱신한다.
+
 ## Commands
 
 pnpm workspace + turbo 모노레포다. 패키지 매니저는 `pnpm@10.11.0` 이며 npm 을 쓰지 않는다.
@@ -27,11 +29,15 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 
 `packages/{domain,features,widgets}` 에는 `test` 스크립트가 있지만, `packages/*` 어디에도 `lint`/`typecheck` 스크립트는 없다. 패키지 코드만 고쳤을 때는 `npx tsc -b` 를 함께 돌려 확인한다.
 
+`pnpm lint` 가 `apps/shell` 안에서만 `eslint .` 를 돌리므로, 아래 **FSD Import Rules 의 ESLint 강제는 `packages/*` 와 `apps/{site}` 에서 실제로 실행되지 않는다.** 루트 `eslint.config.js` 에 규칙은 정의돼 있고 파일을 직접 지정하면 적용되지만, `pnpm lint` 경로로는 그 파일들에 도달하지 않는다. 해당 코드를 고쳤다면 루트에서 `npx eslint <고친 경로>` 로 직접 확인한다.
+
+주의: 루트 전수 검사(`npx eslint packages apps`)는 2026-09-01 기준 112건(에러 76건)이 이미 남아 있다. 대부분 react-hooks v7 컴파일러 규칙(`refs`, `set-state-in-effect`)과 `react-refresh/only-export-components` 이며 **FSD import 위반은 0건**이다. 그러니 "루트 lint 0건"을 완료 기준으로 삼지 말고, 자신이 건드린 파일만 지정해 새로 생긴 위반이 없는지 본다.
+
 ### 테스트 현황
 
 vitest 를 사용한다. 테스트가 존재하는 곳은 `apps/{philly-shipyard,mro2,indoorshop}` 과 `packages/{domain,features,widgets}` 이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
-- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정)
+- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/philly-shipyard` 와 `packages/{domain,features,widgets}` 뿐이고, `apps/{mro2,indoorshop}` 은 설정 없이 vitest 기본값으로 돈다.
 - 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
 - `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
 - R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
@@ -138,8 +144,9 @@ apps/{site}/src/pages/{page}/
 
 - 모든 route element 는 `lazy()` + `LazyRoute`(Suspense + `RouteErrorBoundary`) 로 감싼다.
 - `login` 을 제외한 전부가 `ProtectedRoute` 하위이고, 그 안에 `AppLayout` 이 있다.
-- `outdoor-work` / `indoor-work` 는 `:regionId` 와 서브라우트를 전제로 하며, 서브라우트가 없으면 `3d-monitoring` 으로 redirect 된다. 사용 중인 서브라우트는 `3d-monitoring`, `3d-viewer-edit`, `crane-status`, `work-history` 다.
-- `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를 사용하며 `outdoor-work` / `indoor-work` 양쪽이 공유한다.
+- 현장 작업 화면은 `outdoor-work` / `indoor-work` / `goliath-work` 세 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
+- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다.
+- `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를 사용하며 세 화면이 공유한다.
 - `BrowserRouter` 의 basename 은 `import.meta.env.BASE_URL` 에서 온다 (sub-path 배포 `/crane_rnd/`).
 
 ## FSD Import Rules
@@ -147,6 +154,7 @@ apps/{site}/src/pages/{page}/
 다음은 문서 권고가 아니라 `eslint.config.js` 의 `no-restricted-imports` 로 **실제 강제**되는 규칙이다.
 
 - 레이어 경계: `@crane/core`·`@crane/ui` 는 상위 레이어를 import 할 수 없고, `@crane/domain` 은 core/ui 만, `@crane/features` 는 domain/core/ui 까지, `@crane/widgets` 는 features 까지 import 할 수 있다. 어느 패키지도 `apps/*` 를 import 하지 않는다.
+- 다만 "패키지 → app" 금지 목록에 실제로 적혀 있는 app 은 `@crane/hanwha-ocean` 과 `@crane/goliath-crane` 둘뿐이다. `@crane/{philly-shipyard,mro2,indoorshop,crane-hmi,shell}` 을 패키지에서 import 하면 **ESLint 는 잡지 못한다.** 규칙 위반인 것은 같으니 손으로 지킨다.
 - Public API 강제: `@crane/{domain,features,widgets}/*/{ui,model,lib,config}/*` 형태의 deep import 는 에러다. 슬라이스의 `index.ts` public API 를 통한다.
 - 외부에서 소비되는 슬라이스는 `index.ts` 를 제공해야 한다.
 - 레이어 규칙을 우회하는 편의성 import 를 만들지 않는다.
@@ -216,7 +224,24 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 3D scene 편집 결과는 dev server 경유로 `apps/shell/public/scenes/*.json` 에 저장된다. 미들웨어는 `apps/shell/vite.config.ts` 의 `POST /__dev/scene` 이다. 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다. `packages/features/src/3d/lib/scene-shadow.ts` 가 이 원칙의 선례이고, 그 파일 주석이 이유(react-refresh 규칙)까지 설명한다.
-- GLB/씬 자산 추가 시 성능 영향을 확인한다. 배경은 `docs/3D-성능-품질게이트-계획.md` 참조.
+- region → 씬 파일 매핑의 단일 소스는 `packages/domain/src/3d/model/scene-file-map.ts` 다. 브라우저 런타임(`scene-file-registry.ts`)과 Node 컨텍스트인 `apps/shell/vite.config.ts` 의 저장 미들웨어가 **같은 표를 읽어야** 한다. 표를 복제하거나 미등록 region 을 기본 파일로 fallback 시키지 않는다 — 그 fallback 이 남의 씬을 덮어쓴 사고의 원인이었고, 지금은 양쪽 모두 `null` 을 반환한다. 파일 자체 주석에 경위가 있다.
+- GLB 자산은 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, **압축 전 원본은 `assets-src/` 에 보관**한다. 압축은 되돌릴 수 없으므로 이 디렉토리를 지우지 않는다.
+  - 신규 반입: `public/` 에 놓고 `pnpm optimize:glb <파일>` (지도는 `pnpm optimize:map`). 원본이 `assets-src/` 로 자동 백업된다.
+  - **기존 파일 교체는 순서가 반대다.** 스크립트가 백업본을 원본으로 취급하므로 새 버전을 `assets-src/` 에 먼저 넣고 실행한다. `public/` 에 덮어쓰고 실행하면 옛 백업이 새 파일을 되돌린다.
+  - Blender export 에 월드 좌표가 베이크돼 오면 `scripts/unbake-goliath-crane.mjs`(골리앗 전용) 또는 `scripts/unbake-root-transform.mjs`(범용)로 원점을 복원한 뒤 압축한다. 그냥 등록하면 존·기즈모가 수 km 어긋난다.
+  - 절차 전문은 `assets-src/README.md`, 파이프라인 상세는 `docs/지도-GLB-최적화-파이프라인.md` 와 `docs/GLB-압축-파이프라인-작업보고.md` 에 있다.
+- GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간에 미치는 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다** (2026-09-01 에 관련 작업과 계획 문서를 폐기했다).
+
+## docs/ 지도
+
+`docs/` 는 시점별 계획·작업보고 모음이라 현재 상태를 보증하지 않는다. 배경이 필요할 때만 펼친다.
+
+- `3D-단위테스트-도입-계획.md` — 3D 테스트 도입 범위·금지사항 (위 "테스트 현황" 의 출처)
+- `3D-뷰어-에디터-개선-백로그.md` — 2026-08-13 전수 감사 결과, 미착수 항목 포함
+- `GLB-압축-파이프라인-작업보고.md`, `지도-GLB-최적화-파이프라인.md` — 자산 최적화 파이프라인 상세
+- `골리앗-충돌방지-센서연동-계획.md` — 충돌 감지의 시뮬레이션 → 실물 센서 교체 계획
+- `전체-코드베이스-개선-목록.md` — 2026-07-07 시점 목록, **미착수**
+- `MRO-*`, `hmi-mvp-poc.md` — 기능별 결과 보고서
 
 ## Known Caveats
 
