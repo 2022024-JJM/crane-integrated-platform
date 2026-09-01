@@ -301,32 +301,7 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     path: '/models/gc-04/gc_04_trolly.glb',
     defaultScale: [1, 1, 1],
   }),
-  withDefaultPreview({
-    id: 'gc-04-camera',
-    label: 'GC-04 Camera',
-    category: 'etc',
-    path: '/models/gc-04/camera.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'soslab_lidar_fov_120x35',
-    label: 'SOSLAB Lidar Fov',
-    category: 'etc',
-    path: '/models/gc-04/soslab_lidar_fov_120x35.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'ouster_lidar_fov_360x90',
-    label: 'OUSTER Lidar Fov',
-    category: 'etc',
-    path: '/models/gc-04/ouster_lidar_fov_360x90.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'gc-04-point',
-    label: 'GC-04 Point',
-    category: 'etc',
-    path: '/models/gc-04/point.glb',
-    defaultScale: [1, 1, 1],
-  }),
+  // gc-04 카메라/포인트/라이다 FOV(soslab, ouster) 4종 제거 (2026-09-01):
+  // 어떤 씬도 참조하지 않았고, GLB(배포본·assets-src 원본)와 썸네일도 함께
+  // 삭제했다. 다시 필요하면 git 히스토리에서 파일부터 복구하고 재등록할 것.
 ];
