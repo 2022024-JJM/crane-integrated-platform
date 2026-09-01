@@ -1,11 +1,9 @@
 import {
   AmbientLight,
   Cache,
-  CircleGeometry,
   DirectionalLight,
   Group,
   Mesh,
-  MeshStandardMaterial,
   OrthographicCamera,
   Scene,
   WebGLRenderer,
@@ -59,6 +57,9 @@ function createRenderer(): WebGLRenderer {
   return r;
 }
 
+// 씬에는 조명만 둔다. 배경·바닥판을 씬에 구우면 PNG 가 특정 테마에 묶이므로
+// (alpha: true 렌더러 + 배경 미설정으로) 투명 PNG 를 만들고, 접지 그림자·배경은
+// 표시 측 CSS(scene-model-preview.tsx)가 테마 토큰으로 그린다.
 function createScene(): Scene {
   const s = new Scene();
 
@@ -69,20 +70,9 @@ function createScene(): Scene {
   dir1.position.set(3, 4, 2);
   s.add(dir1);
 
-  const dir2 = new DirectionalLight(0x93c5fd, 1.2);
+  const dir2 = new DirectionalLight(0xffffff, 1.2);
   dir2.position.set(-2, 2, -3);
   s.add(dir2);
-
-  const groundGeo = new CircleGeometry(2.5, 48);
-  const groundMat = new MeshStandardMaterial({
-    color: 0x0f172a,
-    roughness: 0.92,
-    metalness: 0.05,
-  });
-  const ground = new Mesh(groundGeo, groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -1.25;
-  s.add(ground);
 
   return s;
 }

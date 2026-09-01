@@ -28,7 +28,15 @@ export const ASSET_HASH_MODULE_ID = 'virtual:asset-hash-manifest';
 const RESOLVED_MODULE_ID = `\0${ASSET_HASH_MODULE_ID}`;
 
 /** 해시를 붙일 디렉터리 (public/ 기준). 번들러가 안 건드리는 것들만. */
-const HASHED_DIRS = ['models', 'maps', 'scenes', 'images', 'icons', 'drawings'];
+const HASHED_DIRS = [
+  'models',
+  'maps',
+  'scenes',
+  'images',
+  'icons',
+  'drawings',
+  'previews',
+];
 
 /** URL 길이만 늘리지 않도록 짧게 자른다. 8 hex = 32bit, 충돌은 실질적으로 무관. */
 const HASH_LENGTH = 8;

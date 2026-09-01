@@ -130,6 +130,87 @@ function devSceneSavePlugin(): Plugin {
   };
 }
 
+const DEV_PREVIEW_API_PATH = '/__dev/preview-thumbnail';
+
+// PNG 시그니처(매직 넘버). 잘못된 바디가 public/previews/ 를 오염시키지 않게
+// 최소한 "PNG 파일처럼 생겼는가"는 확인한다 (씬 저장의 isSceneInfoShaped 선례).
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+async function readRequestBodyBuffer(req: NodeJS.ReadableStream) {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of req) {
+    chunks.push(
+      typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk),
+    );
+  }
+
+  return Buffer.concat(chunks);
+}
+
+/**
+ * 모델 미리보기 썸네일 저장 미들웨어 (dev 전용).
+ *
+ * 씬 편집 페이지 모델 탭의 썸네일 생성 패널(PreviewThumbnailGeneratorPanel)이
+ * offscreen 렌더러로 만든 PNG 를 여기로 POST 하면 public/previews/<id>.png
+ * 로 저장된다. 생성물은 커밋해서 배포하고,
+ * 런타임(SceneModelPreview)은 이 파일을 먼저 시도한 뒤 없으면 offscreen
+ * 렌더로 폴백한다.
+ */
+function devPreviewSavePlugin(): Plugin {
+  return {
+    name: 'dev-preview-save-plugin',
+    configureServer(server) {
+      server.middlewares.use(DEV_PREVIEW_API_PATH, async (req, res, next) => {
+        if (req.method !== 'POST' || !req.url) {
+          next();
+          return;
+        }
+
+        const requestUrl = new URL(req.url, 'http://localhost');
+        const id = requestUrl.searchParams.get('id');
+
+        // id 가 곧 파일명이므로 경로 탈출('../', '/')이 불가능한 문자만 허용한다.
+        if (!id || !/^[a-z0-9-]+$/.test(id)) {
+          jsonResponse(res, 400, {
+            message: `Invalid preview id: "${id ?? ''}". Expected /^[a-z0-9-]+$/.`,
+          });
+          return;
+        }
+
+        try {
+          const body = await readRequestBodyBuffer(req);
+
+          if (
+            body.length < PNG_MAGIC.length ||
+            !body.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)
+          ) {
+            jsonResponse(res, 400, {
+              message: 'Invalid payload: expected a PNG binary body.',
+            });
+            return;
+          }
+
+          const previewDir = path.resolve(
+            server.config.root,
+            'public',
+            'previews',
+          );
+          await fs.mkdir(previewDir, { recursive: true });
+          await fs.writeFile(path.join(previewDir, `${id}.png`), body);
+
+          jsonResponse(res, 200, { id, bytes: body.length });
+        } catch (error) {
+          console.error('Failed to save preview thumbnail.', error);
+          jsonResponse(res, 500, {
+            message: 'Failed to save preview thumbnail.',
+          });
+        }
+      });
+    },
+  };
+}
+
 const DEFAULT_BASE_URL = '/crane_rnd/';
 
 function normalizeBaseUrl(input: string | undefined): string {
@@ -183,6 +264,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       devSceneSavePlugin(),
+      devPreviewSavePlugin(),
       assetHashManifestPlugin(),
     ],
     build: {
@@ -201,6 +283,13 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
+      watch: {
+        // devPreviewSavePlugin 이 생성 중에 public/previews/*.png 를 쓰는데,
+        // Vite 는 public/ 변경에 전체 페이지 리로드를 걸어서 저장 1장마다
+        // 생성 패널이 날아간다. 이 디렉토리는 dev 서버가 미들웨어로 직접
+        // 쓰는 산출물이므로 워처에서 제외한다 (서빙에는 영향 없음).
+        ignored: ['**/public/previews/**'],
+      },
       proxy: {
         // 프로덕션과 동일하게 sub-path(VITE_BASE_URL, 기본 /crane_rnd/) 아래
         // API/WS 를 받는다. network.ts 가 getBasePathPrefix() 로 생성하는

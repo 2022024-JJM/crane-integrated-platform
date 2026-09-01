@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   HardDrive,
+  Images,
   Loader2,
   PanelLeftClose,
   PanelLeftOpen,
@@ -53,6 +54,7 @@ import {
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
+  PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
 } from '@crane/widgets/3d';
@@ -861,6 +863,7 @@ function ProjectPalettePanel({
     DEFAULT_MODEL_CATEGORY,
   );
   const [assetSearch, setAssetSearch] = useState('');
+  const [showThumbnailGenerator, setShowThumbnailGenerator] = useState(false);
   const categoryCounts = useMemo(() => {
     return MODEL_PANEL_CATEGORIES.reduce(
       (acc, category) => {
@@ -972,28 +975,53 @@ function ProjectPalettePanel({
                 );
               })}
             </div>
-            <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 mb-2 flex h-7 w-full min-w-0 shrink-0 items-center border px-2 transition-colors focus-within:ring-3">
-              <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
-              <Input
-                value={assetSearch}
-                onChange={(event) => {
-                  setAssetSearch(event.target.value);
-                }}
-                placeholder={t('monitoring:editor.searchModels')}
-                className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
-              />
+            <div className="mb-2 flex shrink-0 items-center gap-1.5">
+              <div className="border-border bg-muted text-foreground focus-within:border-ring focus-within:ring-ring/50 flex h-7 w-full min-w-0 flex-1 items-center border px-2 transition-colors focus-within:ring-3">
+                <Search className="text-muted-foreground/50 mr-2 size-3 shrink-0" />
+                <Input
+                  value={assetSearch}
+                  onChange={(event) => {
+                    setAssetSearch(event.target.value);
+                  }}
+                  placeholder={t('monitoring:editor.searchModels')}
+                  className="placeholder:text-muted-foreground h-full flex-1 border-0 bg-transparent px-0 text-[11px] leading-none shadow-none focus:border-0 focus:ring-0"
+                />
+              </div>
+              {/* dev 전용: 아래 모델 목록을 정적 썸네일 생성 패널로 토글한다.
+                  저장 미들웨어가 dev 서버에만 있으므로 운영에는 노출하지 않는다. */}
+              {import.meta.env.DEV ? (
+                <button
+                  type="button"
+                  onClick={() => setShowThumbnailGenerator((v) => !v)}
+                  aria-pressed={showThumbnailGenerator}
+                  title="미리보기 썸네일 생성"
+                  aria-label="미리보기 썸네일 생성"
+                  className={cn(
+                    'inline-flex size-7 shrink-0 cursor-pointer items-center justify-center border transition-colors',
+                    showThumbnailGenerator
+                      ? 'border-primary/30 bg-primary/12 text-foreground'
+                      : 'border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                  )}
+                >
+                  <Images className="size-3.5" />
+                </button>
+              ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <PaletteAssetGrid
-                items={categoryItems}
-                draggingItemId={draggingItemId}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-                emptyMessage={t('monitoring:editor.noModelsInCategory')}
-                assetSearch={assetSearch}
-                onAssetSearchChange={setAssetSearch}
-                showToolbar={false}
-              />
+              {showThumbnailGenerator ? (
+                <PreviewThumbnailGeneratorPanel />
+              ) : (
+                <PaletteAssetGrid
+                  items={categoryItems}
+                  draggingItemId={draggingItemId}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  emptyMessage={t('monitoring:editor.noModelsInCategory')}
+                  assetSearch={assetSearch}
+                  onAssetSearchChange={setAssetSearch}
+                  showToolbar={false}
+                />
+              )}
             </div>
           </div>
         )}

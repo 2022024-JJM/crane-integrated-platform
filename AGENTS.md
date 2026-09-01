@@ -230,6 +230,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
   - **기존 파일 교체는 순서가 반대다.** 스크립트가 백업본을 원본으로 취급하므로 새 버전을 `assets-src/` 에 먼저 넣고 실행한다. `public/` 에 덮어쓰고 실행하면 옛 백업이 새 파일을 되돌린다.
   - Blender export 에 월드 좌표가 베이크돼 오면 `scripts/unbake-goliath-crane.mjs`(골리앗 전용) 또는 `scripts/unbake-root-transform.mjs`(범용)로 원점을 복원한 뒤 압축한다. 그냥 등록하면 존·기즈모가 수 km 어긋난다.
   - 절차 전문은 `assets-src/README.md`, 파이프라인 상세는 `docs/지도-GLB-최적화-파이프라인.md` 와 `docs/GLB-압축-파이프라인-작업보고.md` 에 있다.
+- 모델 팔레트 미리보기는 정적 썸네일(`apps/shell/public/previews/{catalogId}.png`)을 먼저 쓰고, 없으면 런타임 offscreen WebGL 렌더로 폴백한다. `sceneModelCatalog` 항목을 추가·교체하거나 미리보기 렌더 룩(`packages/widgets/src/3d/lib/offscreen-preview-renderer.ts`)을 바꾸면 dev 서버의 씬 편집 페이지 모델 탭에서 썸네일 버튼(dev 전용 토글)으로 썸네일을 재생성해 `public/previews/` 를 함께 커밋한다. 썸네일은 투명 배경 PNG 로 테마 중립이어야 한다 — 씬에 배경·바닥판을 굽지 않는다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간에 미치는 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다** (2026-09-01 에 관련 작업과 계획 문서를 폐기했다).
 
 ## docs/ 지도
