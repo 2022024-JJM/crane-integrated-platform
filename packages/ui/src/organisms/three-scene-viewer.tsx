@@ -369,11 +369,19 @@ function SceneControlsBridge({
 }
 
 /**
- * 좌측 하단 툴바 버튼의 공통 외형(글래스 outline). toolbarExtras·toolbarTrailing에
+ * 툴바 버튼의 공통 외형(글래스 outline). toolbarExtras·toolbarTrailing에
  * 넣는 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
+ *
+ * 배경은 두 테마 모두 거의 투명하게 두고 backdrop-blur만 남긴다. 다크에서는
+ * outline variant가 이미 그렇게 보였다(--input이 white/15%라 dark:bg-input/30이
+ * 사실상 투명). 라이트만 불투명한 흰 배경이라 하늘 위에 판때기처럼 떠 있었다.
+ * 글자·아이콘을 검정으로 고정하는 것도 같은 이유다 — 툴바가 놓이는 3D 배경은
+ * 하늘 EXR이라 테마와 무관하게 밝고, 거기에 다크 테마의 흰 글자를 얹으면
+ * 오히려 읽히지 않는다. dark: 변형을 함께 적는 이유는 base variant의
+ * dark:bg-input/30 이 명시도에서 앞서기 때문이다(twMerge가 같은 키로 대체한다).
  */
 export const SCENE_TOOLBAR_BUTTON_CLASS =
-  'bg-background/85 border-border/70 shadow-sm backdrop-blur-sm';
+  'border-border/70 bg-white/10 text-black shadow-sm backdrop-blur-sm hover:bg-white/25 hover:text-black aria-expanded:bg-white/25 aria-expanded:text-black dark:bg-white/10 dark:hover:bg-white/25 dark:aria-expanded:bg-white/25';
 
 interface ToolbarButtonProps {
   label: string;

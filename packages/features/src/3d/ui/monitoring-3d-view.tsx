@@ -12,8 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { Box3 } from 'three';
 import { modelObjectRegistry } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
+import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import {
+  SCENE_TOOLBAR_BUTTON_CLASS,
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
@@ -153,7 +155,10 @@ export function Monitoring3dView({
       <Button
         variant="outline"
         size="sm"
-        className="bg-background/85 border-border/70 pointer-events-auto absolute top-3 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
+        className={cn(
+          SCENE_TOOLBAR_BUTTON_CLASS,
+          'pointer-events-auto absolute top-3 left-3 gap-1.5',
+        )}
         onClick={popFocus}
       >
         <ArrowLeft className="size-4" />
