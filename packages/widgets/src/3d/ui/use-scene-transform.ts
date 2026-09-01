@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D, Quaternion } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
+import { modelObjectRegistry, parseMeshId } from '@crane/domain/3d';
 import {
-  numRound,
-  radToDeg,
-  modelObjectRegistry,
-  parseMeshId,
-} from '@crane/domain/3d';
+  getContinuousTransformVectors,
+  getObjectTransformVectors,
+} from '../lib/transform-vectors';
 import {
   useActiveTransformStore,
   useIsMultiSelection,
@@ -31,11 +30,7 @@ type TransformControlsWithDraggingEvent = TransformControlsImpl & {
   ) => void;
 };
 
-function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
-  return values.map((value) => numRound(value)) as Vector3Tuple;
-}
-
-/** 멀티 드래그 시작 시점의 각 객체 transform 스냅샷. */
+/** 드래그 시작 시점의 각 객체 transform 스냅샷. */
 interface DragStartTransform {
   position: Vector3Tuple;
   quaternion: Quaternion;
@@ -45,24 +40,6 @@ interface DragStartTransform {
 // liveSync는 매 frame 호출되므로 임시 Quaternion을 재사용해 할당을 피한다.
 const tmpStartQuatInv = new Quaternion();
 const tmpDeltaQuat = new Quaternion();
-
-function getObjectTransformVectors(
-  object: Object3D,
-): Record<SceneTransformField, Vector3Tuple> {
-  return {
-    position: toVector3Tuple([
-      object.position.x,
-      object.position.y,
-      object.position.z,
-    ]),
-    rotation: toVector3Tuple([
-      radToDeg(object.rotation.x),
-      radToDeg(object.rotation.y),
-      radToDeg(object.rotation.z),
-    ]),
-    scale: toVector3Tuple([object.scale.x, object.scale.y, object.scale.z]),
-  };
-}
 
 interface UseSceneTransformParams {
   primarySelectedId: string | null;
@@ -120,6 +97,11 @@ export function useSceneTransform({
   const dragStartTransformsRef = useRef<Map<string, DragStartTransform>>(
     new Map(),
   );
+  // 드래그 세션 동안의 오일러 연속성 기준(deg). three의 euler 추출은 y>90°
+  // 자세를 플립된 표현(x/z ±180)으로 내므로, 직전에 보정된 값을 기준으로
+  // 등가 표현 중 연속인 쪽을 고른다. 드래그가 끝나면 반드시 비운다 —
+  // stale 기준으로 다음 드래그를 보정하면 안 된다.
+  const rotationContinuityRef = useRef<Map<string, Vector3Tuple>>(new Map());
   const dragJustEndedRef = useRef(false);
 
   const isMultiDrag = isMultiSelection;
@@ -205,7 +187,14 @@ export function useSceneTransform({
       }
     }
 
-    const nextTransform = getObjectTransformVectors(selectedObject);
+    const nextTransform = getContinuousTransformVectors(
+      selectedObject,
+      rotationContinuityRef.current.get(primarySelectedId),
+    );
+    rotationContinuityRef.current.set(
+      primarySelectedId,
+      nextTransform.rotation,
+    );
     useActiveTransformStore
       .getState()
       .publish(
@@ -230,7 +219,12 @@ export function useSceneTransform({
     if (!selectedObject || !primarySelectedId) {
       return;
     }
-    const nextTransform = getObjectTransformVectors(selectedObject);
+    // liveSync가 프레임마다 갱신해 둔 연속성 기준으로 최종 euler를 보정한다
+    // (onObjectChange 없이 mouseUp만 오는 경로도 드래그 시작 seed로 보정된다).
+    const nextTransform = getContinuousTransformVectors(
+      selectedObject,
+      rotationContinuityRef.current.get(primarySelectedId),
+    );
     if (onTransformCommit) {
       // position/rotation/scale을 단일 updateSceneInfo 호출로 처리해
       // 중간 렌더 없이 sceneInfo를 1회만 변경한다.
@@ -252,7 +246,13 @@ export function useSceneTransform({
         onTransformVectorChange('scale', nextTransform.scale);
       }
     }
-  }, [onTransformCommit, onTransformVectorChange, primarySelectedId, selectedObject, transformMode]);
+  }, [
+    onTransformCommit,
+    onTransformVectorChange,
+    primarySelectedId,
+    selectedObject,
+    transformMode,
+  ]);
 
   // 기존 호출부 호환을 위한 별칭. canvas의 <TransformControls onObjectChange>가
   // 이 이름을 사용한다. Live sync(매 frame, store만)가 새 의미.
@@ -264,22 +264,27 @@ export function useSceneTransform({
     // 드래그 진입: transient store 활성화. Inspector가 store 값을 표시하기 시작.
     useActiveTransformStore.getState().begin();
 
-    // Capture start transforms of all selected objects for multi-drag
+    // 단일 선택 포함 전 선택 객체의 시작 transform을 기록한다. 멀티 드래그의
+    // 델타 기준이자, 오일러 연속성 보정의 seed(드래그 시작 euler deg)가 된다.
+    // 렌더가 저장값을 euler로 그대로 적용하므로 seed는 sceneInfo 표현과 같다.
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-    if (selectedIds.size > 1) {
-      const startTransforms = new Map<string, DragStartTransform>();
-      for (const id of selectedIds) {
-        const obj = modelObjectRegistryRef.current.get(id);
-        if (obj) {
-          startTransforms.set(id, {
-            position: [obj.position.x, obj.position.y, obj.position.z],
-            quaternion: obj.quaternion.clone(),
-            scale: [obj.scale.x, obj.scale.y, obj.scale.z],
-          });
-        }
+    const startTransforms = new Map<string, DragStartTransform>();
+    const continuityRotations = new Map<string, Vector3Tuple>();
+    for (const id of selectedIds) {
+      // 모델/텍스트는 캔버스 로컬 ref에, mesh는 도메인 전역 registry에 있다.
+      const obj =
+        modelObjectRegistryRef.current.get(id) ?? modelObjectRegistry.get(id);
+      if (obj) {
+        startTransforms.set(id, {
+          position: [obj.position.x, obj.position.y, obj.position.z],
+          quaternion: obj.quaternion.clone(),
+          scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+        });
+        continuityRotations.set(id, getObjectTransformVectors(obj).rotation);
       }
-      dragStartTransformsRef.current = startTransforms;
     }
+    dragStartTransformsRef.current = startTransforms;
+    rotationContinuityRef.current = continuityRotations;
   }, [onTransformInteractionStart, modelObjectRegistryRef]);
 
   const handleTransformMouseUp = useCallback(() => {
@@ -302,7 +307,13 @@ export function useSceneTransform({
             : modelObjectRegistryRef.current.get(id);
         if (!obj) continue;
 
-        const nextTransform = getObjectTransformVectors(obj);
+        // 세컨더리 객체는 프레임별 보정 없이 드래그 시작 seed 기준으로
+        // 1회 보정한다 — 플립 등가표현은 누적이 아니라 정확한 쌍이므로
+        // 시작 대비 어느 표현이 연속인지는 seed만으로 판정된다.
+        const nextTransform = getContinuousTransformVectors(
+          obj,
+          rotationContinuityRef.current.get(id),
+        );
         if (transformMode === 'translate') {
           updates.push({ id, position: nextTransform.position });
         } else if (transformMode === 'rotate') {
@@ -313,12 +324,14 @@ export function useSceneTransform({
       }
 
       onMultiTransformCommit?.(updates);
-
-      dragStartTransformsRef.current.clear();
     } else {
       // single-object: 최종 transform을 sceneInfo로 commit (history 1단계 생성)
       commitFinal();
     }
+
+    // 드래그 세션 종료 — 시작 스냅샷과 연속성 기준을 모두 비운다.
+    dragStartTransformsRef.current.clear();
+    rotationContinuityRef.current.clear();
 
     // 드래그 종료: transient store 해제. Inspector는 다음 frame부터 sceneInfo
     // (방금 commit된 값)를 표시한다.
@@ -437,6 +450,9 @@ export function useSceneTransform({
   useEffect(() => {
     return () => {
       useActiveTransformStore.getState().end();
+      // mouseUp 없이 selection이 바뀌는 경로에서도 드래그 세션 상태를 비운다.
+      dragStartTransformsRef.current.clear();
+      rotationContinuityRef.current.clear();
     };
   }, [selectedObject]);
 

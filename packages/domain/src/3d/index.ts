@@ -4,6 +4,7 @@ export {
   numRound,
   radToDeg,
 } from './lib/math-utils';
+export { resolveEulerContinuity } from './lib/euler-continuity';
 export { humanizeModelPath, normalizeModelLabel } from './lib/model-path-utils';
 export { createSceneModel } from './lib/create-scene-model';
 export { createSceneText } from './lib/create-scene-text';
