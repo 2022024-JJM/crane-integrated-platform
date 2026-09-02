@@ -934,9 +934,9 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) + 접기 버튼 */}
+      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로 스크롤) + 접기 버튼 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
-        <div className="flex items-center gap-0">
+        <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PANEL_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -944,9 +944,15 @@ function ProjectPalettePanel({
                 key={tab}
                 type="button"
                 aria-pressed={isActive}
-                onClick={() => setActiveTab(tab)}
+                onClick={(event) => {
+                  setActiveTab(tab);
+                  event.currentTarget.scrollIntoView({
+                    inline: 'nearest',
+                    block: 'nearest',
+                  });
+                }}
                 className={cn(
-                  'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+                  'shrink-0 cursor-pointer border-b-2 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors',
                   isActive
                     ? 'border-primary text-foreground'
                     : 'text-muted-foreground hover:text-foreground border-transparent',
