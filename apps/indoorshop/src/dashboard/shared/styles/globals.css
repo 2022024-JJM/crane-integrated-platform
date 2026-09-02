@@ -38,6 +38,9 @@
    * 반경 — 사이드바·툴바·메뉴가 macOS 처럼 읽히도록 전반적으로 키웠다.
    * 선택 알약(sm)과 패널(lg)의 차이가 위계를 만든다.
    */
+  --radius-inshop-xl: 12px;
+  --radius-inshop-2xl: 16px;
+  --radius-inshop-3xl: 24px;
   --radius-inshop-xs: 4px;
   --radius-inshop-sm: 7px;
   --radius-inshop-md: 10px;

@@ -1,7 +1,7 @@
 /**
  * 야드 지번/공장 — 단일 소스 진입점.
  *
- * 대시보드·도장 화면은 **이 파일만** import 한다. 지번 fixture(551건 폴리곤)는 무거우므로
+ * 대시보드·도장 화면은 **이 파일만** import 한다. 지번 fixture(550건 폴리곤)는 무거우므로
  * `loadYardParcels()` 가 처음 불릴 때 dynamic import 로 끌어와, 이 데이터를 안 쓰는 화면
  * (예: 야드 대시보드 첫 화면)의 번들에는 실리지 않는다. 디코딩 결과는 한 번만 만들고
  * 캐시해 공유한다 — 목록과 맵이 같은 배열을 봐야 참조 비교로 부분집합을 가릴 수 있다.
@@ -67,13 +67,27 @@ export function loadYardParcels(): Promise<YardParcels> {
         labelAnchor: { lat: anchorLat ?? 0, lon: anchorLon ?? 0 },
       })
     )
-    /* 베이 — 지도 fixture 에 실재하는 지번만 남긴다(생성기가 이미 걸렀지만 방어적으로) */
+    /* 베이 — 지도 fixture 에 실재하는 지번만 남긴다(생성기가 이미 걸렀지만 방어적으로).
+     * 베이명은 공장 안에서만 유일하므로 id 는 `{공장}#{베이}` 복합키다. */
     const known = new Set(lots.map((lot) => lot.lot))
-    const bays: YardParcelBay[] = RAW_PARCEL_BAYS.flatMap(([factory, bay, lotCodes]) => {
-      const codes = lotCodes.filter((code) => known.has(code))
-      if (codes.length === 0) return []
-      return [{ factory, bay, id: `${factory}#${bay}`, label: `${bay}BAY`, lotCodes: codes }]
-    })
+    const bays: YardParcelBay[] = RAW_PARCEL_BAYS.flatMap(
+      ([bayKey, factory, bay, process, lotCodes, hullFlat]) => {
+        const codes = lotCodes.filter((code) => known.has(code))
+        if (codes.length === 0) return []
+        return [
+          {
+            bayKey,
+            factory,
+            bay,
+            id: `${factory}#${bay}`,
+            label: `${bay}BAY`,
+            process,
+            lotCodes: codes,
+            hull: decodePolygon(hullFlat),
+          },
+        ]
+      }
+    )
 
     return { lots, factories, bays, categoryColor: colorOfParcelCategory }
   })

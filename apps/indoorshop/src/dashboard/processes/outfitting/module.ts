@@ -9,10 +9,15 @@ import { outfittingEn } from './i18n/en'
  *
  * 이 파일은 **가볍게** 유지한다 — 앱이 뜰 때 모든 모듈 선언을 한꺼번에 읽으므로,
  * 화면은 전부 lazy 로 둬 청크를 나눈다. 의장은 블록 단위로 작업하므로(소조/중조/대조
- * 세분 없음) 조립과 달리 일일생산량 화면을 두지 않고, 공장 목록 → 블록 워크스페이스로만
- * 구성한다.
+ * 세분 없음) 조립과 달리 일일생산량 화면을 두지 않는다. 진입은 맵(공장 → 베이 → 블록)이
+ * 대문이고, 기존 공장 목록은 `/list` 에 병존한다.
  */
 
+const OutfittingMapEntryPage = lazy(() =>
+  import('./ui/pages/OutfittingMapEntryPage').then((m) => ({
+    default: m.OutfittingMapEntryPage,
+  }))
+)
 const OutfittingFactoryListPage = lazy(() =>
   import('./ui/pages/OutfittingFactoryListPage').then((m) => ({
     default: m.OutfittingFactoryListPage,
@@ -34,7 +39,9 @@ export const outfittingModule: ProcessModule = {
     source: 'LiDAR',
   },
   routes: [
-    { path: '/indoorshop/zones/outfitting', Component: OutfittingFactoryListPage },
+    { path: '/indoorshop/zones/outfitting', Component: OutfittingMapEntryPage },
+    // 고정 경로가 `:factoryId` 보다 먼저 서야 한다 — 뒤에 두면 공장 하나로 잡힌다
+    { path: '/indoorshop/zones/outfitting/list', Component: OutfittingFactoryListPage },
     { path: '/indoorshop/zones/outfitting/:factoryId', Component: OutfittingWorkspace },
   ],
   i18n: { ko: outfittingKo, en: outfittingEn },

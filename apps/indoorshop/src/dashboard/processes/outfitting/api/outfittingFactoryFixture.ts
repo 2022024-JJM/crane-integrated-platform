@@ -1,7 +1,7 @@
 /*
  * 선행의장 공장 마스터 — **생성물이므로 손으로 고치지 않는다.**
  *
- * 출처: painting 지번속성.js (window.CSV_LOT_ATTR) 의 '의장' 공정 공장.
+ * 출처: painting data/lot-attributes.js (window.CSV_LOT_ATTR) 의 '의장' 공정 공장.
  * 생성: `node scripts/build-outfitting-factories-fixture.mjs` 를 다시 돌리면 이 파일을 덮어쓴다.
  *
  * 공장 7곳과 각 공장의 구역(area) 구조를 지번의 공장그룹/그룹명에서 파생했다. 의장은
@@ -38,7 +38,7 @@ export const OUTFITTING_FACTORIES: OutfittingFactorySpec[] = [
       { code: "P15B", name: "POS 1공장 5B", yardLots: ["P15B01", "P15B02", "P15B03", "P15B04"] },
       { code: "P16B", name: "POS 1공장 6BAY", yardLots: ["P16B01", "P16B02", "P16B03", "P16B04"] },
       { code: "P17B", name: "POS 1공장 7BAY", yardLots: ["P17B01", "P17B02", "P17B03", "P17B04"] },
-      { code: "POS1-M", name: "POS 1공장 본체", yardLots: ["P11E02", "P11E03", "P11E04", "P11E05", "P11E06", "P11E07", "P11W03", "P11W04", "P12B01", "P13B01"] },
+      { code: "POS1-M", name: "POS 1공장 본체", yardLots: ["P11W03", "P11W04", "P12B01", "P13B01"] },
     ],
   },
   {
@@ -88,7 +88,7 @@ export const OUTFITTING_FACTORIES: OutfittingFactorySpec[] = [
     name: "OFD조립의장 셸터",
     shopCode: "OFD",
     areas: [
-      { code: "OFD-M", name: "OFD조립의장 셸터 본체", yardLots: ["E33002"] },
+      { code: "OFD-M", name: "OFD조립의장 셸터 본체", yardLots: ["E33002", "E33002-2"] },
     ],
   },
 ]

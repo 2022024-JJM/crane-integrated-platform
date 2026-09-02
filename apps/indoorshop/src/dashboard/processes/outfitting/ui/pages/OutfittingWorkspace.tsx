@@ -26,7 +26,7 @@ function NotFoundNotice() {
     <div className="space-y-4">
       <h1 className="text-inshop-xl font-semibold text-foreground">{t('outfitting.workspace.notFound')}</h1>
       <Link
-        to="/indoorshop/zones/outfitting"
+        to="/indoorshop/zones/outfitting/list"
         className="inline-block rounded-inshop-md bg-accent px-4 py-2 text-inshop-sm font-medium text-on-accent transition-colors hover:bg-accent/80"
       >
         {t('outfitting.workspace.backToFactories')}
@@ -155,7 +155,7 @@ export function OutfittingWorkspace() {
     <div className="space-y-4">
       <div>
         <Link
-          to="/indoorshop/zones/outfitting"
+          to="/indoorshop/zones/outfitting/list"
           className="text-inshop-xs text-foreground/55 transition-colors hover:text-accent"
         >
           ← {t('outfitting.workspace.backToFactories')}

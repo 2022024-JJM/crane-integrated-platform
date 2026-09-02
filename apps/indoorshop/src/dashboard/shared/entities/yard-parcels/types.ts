@@ -63,16 +63,31 @@ export interface YardParcelFactory {
  * 폴리곤(`YardParcelLot.polygon`)을 합치면 나오므로, 좌표를 두 벌 두어 어긋나게 하지 않는다.
  */
 export interface YardParcelBay {
+  /** 원본(bays.js)의 베이ID (예: `BAY001`) — 전역 유일. 원본 추적·재생성 대조용 */
+  bayKey: string
   /** 소속 공장 이름 (`YardParcelFactory.name`) */
   factory: string
-  /** 베이 번호·기호 (예: `3`, `B10`) — 공장 안에서만 유일하다 */
+  /**
+   * 베이 번호·기호 (예: `3`, `B10`) — **공장 안에서만 유일하다**. 숫자 베이 `1`~`8`이
+   * 공장 스무 곳에 겹치고 B21·NP5·D2·T5 도 마찬가지라, 베이명 단독 색인을 만들지 말고
+   * 반드시 (factory, bay) 복합키 또는 `id`/`bayKey` 로 접근한다.
+   */
   bay: string
   /** 공장을 가로지르지 않는 식별자 — `{공장}#{베이}` */
   id: string
   /** 화면에 쓰는 이름 (예: `3BAY`) */
   label: string
+  /** 베이의 공정 (조립/도장/의장/가공) — 원본 bays.js 열 그대로 */
+  process: string
   /** 이 베이가 차지하는 지번코드 */
   lotCodes: string[]
+  /**
+   * 원본이 준 볼록 껍질(EPSG:5187 → WGS84) — **참고용**이다. 화면의 베이 도형은
+   * 지금까지처럼 소속 지번 폴리곤(`YardParcelLot.polygon`)을 합쳐 만든다(좌표 정본 한 벌).
+   * 볼록 껍질이라 오목한 스팬(NPS 3BAY 류)에서 지번선 밖으로 부풀기 때문에 도형
+   * 소스로 쓰면 안 된다.
+   */
+  hull: LatLon[]
 }
 
 /** loadYardParcels 의 반환 — 대시보드·도장이 받는 단일 묶음 */

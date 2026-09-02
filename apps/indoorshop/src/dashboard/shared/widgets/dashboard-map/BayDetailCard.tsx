@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../lib/i18n/useTranslation'
 import {
@@ -38,6 +39,8 @@ export function BayDetailCard({
   onHoverLot,
   onBack,
   onClose,
+  showLotList = true,
+  children,
 }: {
   bay: BaySummary
   /** 이 공정이 작업 위치를 부르는 말 — 공정 모듈이 준다 (PRD FR-3). 나가는 문이 있을 때만 쓴다 */
@@ -69,12 +72,25 @@ export function BayDetailCard({
   onBack: () => void
   /** 공장 선택까지 통째로 닫기 */
   onClose: () => void
+  /**
+   * 지번 표면(카운트 타일·지번 목록)을 그릴지. 총괄 대시보드는 **끈다** — 그 화면의
+   * 드릴다운은 공장→베이까지이고, 지번 단위 정보는 야드 현황의 몫이다(사용자 확정).
+   * 도장 배치도(process-map-entry)는 지번 줄이 곧 설비 자리 문맥이라 기본값(켬)을 쓴다.
+   */
+  showLotList?: boolean
+  /**
+   * 지번 목록 아래에 덧붙는 공정 몫의 본문 — 스크롤 본문 안이라 길어도 카드가 넘치지
+   * 않는다. 의장처럼 베이에서 **블록 목록**을 봐야 하는 공정이 이 자리에 꽂는다
+   * (process-map-entry 의 `bayBody` 슬롯이 여기로 흘러 들어온다). 안 주면 지금까지의
+   * 카드 그대로다.
+   */
+  children?: ReactNode
 }) {
   const { t } = useTranslation()
   const processColor = bay.process ? colorOfProcess(bay.process) : '#9a9890'
 
   return (
-    <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
 
       <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-3">
@@ -109,13 +125,15 @@ export function BayDetailCard({
       {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
           아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
       <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
-          <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
-            {bay.lots.length}
-          </dd>
-        </div>
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
+        {showLotList && (
+          <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
+            <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
+            <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
+              {bay.lots.length}
+            </dd>
+          </div>
+        )}
+        <div className={cn('rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2', !showLotList && 'col-span-2')}>
           <dt className="text-2xs text-white/45">{t('dashboard.map.area')}</dt>
           <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
             {Math.round(bay.area).toLocaleString()}
@@ -132,9 +150,10 @@ export function BayDetailCard({
         </div>
       </dl>
 
-      {/* 지번 목록 — 코드와 **원본 설명**을 나란히.
+      {/* 지번 목록 — 코드와 **원본 설명**을 나란히 (showLotList 일 때만 — 위 prop 주석).
           `shrink-0`: 이 칸이 눌리면 안의 목록이 칸 밖으로 삐져나와 아랫줄과 겹쳐 그려진다.
           모자란 높이는 칸을 줄여서가 아니라 바깥 본문 스크롤로 낸다. */}
+      {showLotList && (
       <div className="flex shrink-0 flex-col px-3 py-3">
         <p className="mb-2 shrink-0 px-1 text-2xs font-medium text-white/55">
           {t('dashboard.map.bayLotList')}
@@ -219,6 +238,12 @@ export function BayDetailCard({
           })}
         </ul>
       </div>
+      )}
+
+      {/* 공정 몫의 본문(위 children 계약) — 지번 목록과 나가는 문 사이 */}
+      {children != null && (
+        <div className="shrink-0 border-t border-white/8 px-3 py-3">{children}</div>
+      )}
 
       </div>
 

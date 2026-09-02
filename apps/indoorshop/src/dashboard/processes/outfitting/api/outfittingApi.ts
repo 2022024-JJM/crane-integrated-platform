@@ -36,6 +36,14 @@ export function fetchBlocks(factoryId: string): Promise<OutfittingBlock[]> {
   return withLatency(mockBlocks.filter((block) => block.factoryId === factoryId))
 }
 
+/**
+ * 전 공장 블록 한 번에 — 맵 진입 화면이 쓴다. 베이를 누를 때마다 fetch 하면 드릴다운이
+ * 그때그때 늦어지므로, 공장 목록 집계처럼 처음에 전부 받아 화면 안에서 거른다.
+ */
+export function fetchAllBlocks(): Promise<OutfittingBlock[]> {
+  return withLatency(mockBlocks)
+}
+
 export function fetchSensors(factoryId: string): Promise<OutfittingSensor[]> {
   return withLatency(mockSensors.filter((sensor) => sensor.factoryId === factoryId))
 }

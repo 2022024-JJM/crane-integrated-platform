@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { bindViewportFocus } from '../../lib/viewportInput'
+import { bindViewportFocus } from '../../../../shared/features/bay-viewer/lib/viewportInput'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { cn } from '../../../../shared/lib/utils'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
-import type { LidarBlockInfo } from '../../model/lidarBlock'
+import type { LidarBlockInfo } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import type { Location } from '../../../../shared/entities/location/model/types'
 import {
   loadRealScanManifest,
@@ -33,15 +33,15 @@ import {
   showsCad,
   type ViewerDisplayMode,
   type ViewPalette,
-} from '../../lib/displayModes'
+} from '../../../../shared/features/bay-viewer/lib/displayModes'
 import {
   OBJECT_COLORS,
   ELEVATION_STOPS,
   objectBlockColor,
   segmentBlockColor,
   segmentBlockHex,
-} from '../../lib/pointColorRules'
-import type { PointColorMode } from '../../lib/colorModes'
+} from '../../../../shared/features/bay-viewer/lib/pointColorRules'
+import type { PointColorMode } from '../../../../shared/features/bay-viewer/lib/colorModes'
 import {
   applyBlenderMouseBindings,
   bindModifierAwareButtons,
@@ -50,9 +50,9 @@ import {
   captureHomePose,
   resetToHome,
   type ViewDirection,
-} from '../../lib/blenderControls'
-import { projectAxes, type AxisViewState } from '../../lib/axisGizmo'
-import { createLineSegments } from '../../lib/outlineGeometry'
+} from '../../../../shared/features/bay-viewer/lib/blenderControls'
+import { projectAxes, type AxisViewState } from '../../../../shared/features/bay-viewer/lib/axisGizmo'
+import { createLineSegments } from '../../../../shared/features/bay-viewer/lib/outlineGeometry'
 import {
   createBandStripe,
   createBandFill,
@@ -62,14 +62,14 @@ import {
   createRectGrid,
   rectToBox,
 } from '../../lib/bayFootprint'
-import { createBlockLabel, createBayLabel } from '../../lib/labelCards'
-import { createBackdrop } from '../../lib/backdrop'
-import { SENSOR_POINT_COLORS } from '../../lib/bayConfig'
-import { ViewportAxisGizmo } from './ViewportAxisGizmo'
-import { WheelZoomHint } from './WheelZoomHint'
+import { createBlockLabel, createBayLabel } from '../../../../shared/features/bay-viewer/lib/labelCards'
+import { createBackdrop } from '../../../../shared/features/bay-viewer/lib/backdrop'
+import { SENSOR_POINT_COLORS } from '../../../../shared/features/bay-viewer/lib/bayConfig'
+import { ViewportAxisGizmo } from '../../../../shared/features/bay-viewer/ui/ViewportAxisGizmo'
+import { WheelZoomHint } from '../../../../shared/features/bay-viewer/ui/WheelZoomHint'
 
 /**
- * 실측 스캔 뷰어 — GBS - 1공장 5베이 전용.
+ * 실측 스캔 뷰어 — PBS 5BAY 실측(20251220 스냅샷, 호선 5510) 전용.
  *
  * 시뮬레이션 뷰어(`LidarPointCloudViewer`)와 달리 점군을 만들지 않는다:
  * `public/real-scan/` 의 정합 점군(bin)·점별 블록 라벨·CAD 오버레이 메쉬를 그대로 올린다.
@@ -84,11 +84,11 @@ import { WheelZoomHint } from './WheelZoomHint'
  */
 
 interface RealScanViewerProps {
-  /** factory: 12대 전체 정합 스캔 + 그룹 라벨 / bay: 그룹 하나 + 블록 라벨 */
+  /** factory: 12대 전체 정합 스캔 + 그룹 라벨 / bay: 정반 하나 + 블록 라벨 */
   mode: 'factory' | 'bay'
-  /** bay 모드에서만 필요 — 실측 location id (real5-g1 …) */
+  /** bay 모드에서만 필요 — 실측 location id. 그룹 접미사(-g1…)가 없으면 홀 전체(PBS 5BAY) */
   locationId?: string
-  /** factory 모드의 그룹 라벨용 — 실측 공장 소속 location 목록 */
+  /** 구획(G1~G3) 라벨용 목록 — id 끝 그룹 접미사로 manifest 밴드와 맞물린다 */
   bayLocations?: Location[]
   /** bay 모드의 인식 목록 — 라벨 카드가 신뢰도·ID 를 여기서 읽는다 */
   blocks?: LidarBlockInfo[]

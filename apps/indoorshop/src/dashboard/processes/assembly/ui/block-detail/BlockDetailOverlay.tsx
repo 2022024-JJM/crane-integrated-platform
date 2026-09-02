@@ -1,12 +1,12 @@
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { cn } from '../../../../shared/lib/utils'
-import type { LidarBlockInfo } from '../../model/lidarBlock'
+import type { LidarBlockInfo } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import {
   formatDetectionId,
   parseWstgCode,
   isSpecialSeries,
-} from '../../model/lidarBlock'
-import { detectionProgress, hasProgressData } from '../../lib/progressStatus'
+} from '../../../../shared/features/bay-viewer/model/lidarBlock'
+import { detectionProgress, hasProgressData } from '../../../../shared/features/bay-viewer/lib/progressStatus'
 
 interface BlockDetailOverlayProps {
   block: LidarBlockInfo

@@ -1,21 +1,16 @@
 import type { Factory } from '../../../shared/entities/factory/model/types'
 import type { Location } from '../../../shared/entities/location/model/types'
-import type { LidarSensor } from '../model/lidarSensor'
-import type {
-  AssemblyPlanInfo,
-  LidarBlockInfo,
-  LidarBlockTransform,
-  LidarHistoryEvent,
-  SubAssemblyStatus,
-} from '../model/lidarBlock'
-import type { BlockAssemblyEntry, LoadedBlockModel } from '../model/blockModel'
-import { loadBlockManifest, loadBlockModel } from './loadBlockModel'
-import { restExtents } from '../model/blockModel'
+import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
+import type { LidarBlockInfo } from '../../../shared/features/bay-viewer/model/lidarBlock'
+import { loadBlockManifest, loadBlockModel } from '../../../shared/features/bay-viewer/api/loadBlockModel'
+import {
+  buildBayDetections,
+  type BayModelInfo,
+} from '../../../shared/features/bay-viewer/lib/mockDetections'
 import type {
   FactoryBaySummary,
   FactoryOverview,
 } from '../../../shared/entities/factory/model/overview'
-import { BAY_WIDTH } from '../lib/bayConfig'
 import {
   mockFactories,
   mockLocations,
@@ -23,9 +18,8 @@ import {
   bayBlockAssignments,
 } from './mockAssemblyData'
 import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
-import { buildMockFactoryLayout, type FactoryLayout } from './bayLayout'
+import { buildMockFactoryLayout, buildYardFactoryLayout, type FactoryLayout } from '../../../shared/features/bay-viewer/lib/bayLayout'
 import {
-  REAL_FACTORY,
   fetchRealLocations,
   isRealLocation,
   fetchRealLidarSensors,
@@ -49,16 +43,14 @@ function withLatency<T>(value: T): Promise<T> {
 }
 
 export function fetchFactories(): Promise<Factory[]> {
-  /* GBS(실측)는 fixture 의 원래 GBS 자리에 끼운다 — 실측이라고 목록 끝으로 밀리면
-   * 공장 순서가 지도·탭과 어긋난다. mockFactories 에는 GBS 가 없다(mockAssemblyData). */
-  const factories = [...mockFactories]
-  const gbsIndex = ASSEMBLY_FACTORIES.findIndex((factory) => factory.id === REAL_FACTORY.id)
-  factories.splice(gbsIndex < 0 ? factories.length : gbsIndex, 0, REAL_FACTORY)
-  return withLatency(factories)
+  return withLatency([...mockFactories])
 }
 
 export async function fetchLocations(factoryId?: string): Promise<Location[]> {
-  const all = [...mockLocations, ...(await fetchRealLocations())]
+  /* 실측 정반(PBS 5BAY)은 목업 목록의 **같은 자리에 교체**한다 — id 규약이 같아
+   * (`asm-pbs-b5`) 순서가 그대로 유지되고, 실측이라고 목록 끝으로 밀리지 않는다. */
+  const realById = new Map((await fetchRealLocations()).map((location) => [location.id, location]))
+  const all = mockLocations.map((location) => realById.get(location.id) ?? location)
   return withLatency(factoryId ? all.filter((loc) => loc.factoryId === factoryId) : all)
 }
 
@@ -74,14 +66,17 @@ export function fetchLidarSensors(locationId: string): Promise<LidarSensor[]> {
  */
 export async function fetchFactoryLayout(factoryId: string): Promise<FactoryLayout> {
   const locations = await fetchLocations(factoryId)
-  return buildMockFactoryLayout(factoryId, locations)
+  /* 실형상(야드 fixture 파생)이 1순위 — 베이 하나라도 fixture 에 없으면 통째로 목업
+   * 폴백한다(반쪽 실형상은 반쪽 거짓말). 실연동 시 이 자리가 'surveyed' 조회로 바뀐다.
+   * 공장명은 지번 fixture 의 연결 키다 — 빌더는 공정을 모르므로 여기서 찾아 넘긴다. */
+  const factoryName = ASSEMBLY_FACTORIES.find((f) => f.id === factoryId)?.name ?? ''
+  const yard = await buildYardFactoryLayout(factoryId, factoryName, locations).catch(() => null)
+  return yard ?? buildMockFactoryLayout(factoryId, locations)
 }
 
-/** 베이에 배정된 블록의 CAD 모델 + 정반 내 배치 transform */
-export interface BayModelInfo {
-  model: LoadedBlockModel
-  placement: LidarBlockTransform
-}
+/* mock detection 생성(신뢰도·이력·분리 배치)은 조립 1/2공장 mock 문법의 단일 소스로
+ * shared bay-viewer(`lib/mockDetections`)에 승격되었다 — 시드가 같아 값은 그대로다. */
+export type { BayModelInfo } from '../../../shared/features/bay-viewer/lib/mockDetections'
 
 export async function fetchBayModel(locationId: string): Promise<BayModelInfo | null> {
   const assignment = bayBlockAssignments[locationId]
@@ -90,133 +85,11 @@ export async function fetchBayModel(locationId: string): Promise<BayModelInfo | 
   return { model, placement: assignment.placement }
 }
 
-// ── detection 파생 헬퍼 (mock — 실연동 시 인식 파이프라인 결과로 대체) ──
-
-/** 문자열 기반 결정적 의사난수 (mock 신뢰도 등 렌더링마다 값이 흔들리지 않도록) */
+/** 문자열 기반 결정적 의사난수 (mock 집계가 렌더링마다 흔들리지 않도록) */
 function hashOf(text: string): number {
   let h = 0
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
   return Math.abs(h)
-}
-
-function mockConfidence(id: string): number {
-  return 0.78 + (hashOf(id) % 18) / 100 // 0.78 ~ 0.95
-}
-
-function mockPlan(id: string): AssemblyPlanInfo {
-  const day = 10 + (hashOf(id) % 14)
-  return {
-    planStartDate: `07/${String(day).padStart(2, '0')}`,
-    planEndDate: `08/${String((day % 12) + 1).padStart(2, '0')}`,
-  }
-}
-
-/** detection의 현재 진척률(%) — mock 결정적 값 (45~94) */
-function mockProgress(id: string): number {
-  return 45 + (hashOf(`${id}-progress`) % 50)
-}
-
-/** 라이다 관측 기반 진척률이 붙은 인식 히스토리 (mock — 스캔 갱신마다 진척률 상승) */
-function mockHistory(id: string, arrivalEvent: string): LidarHistoryEvent[] {
-  const latest = mockProgress(id)
-  return [
-    { timestamp: '14:32', event: '스캔 갱신', progress: latest },
-    { timestamp: '09:10', event: '스캔 갱신', progress: Math.max(5, latest - 16) },
-    { timestamp: '07/31', event: arrivalEvent, progress: Math.max(3, latest - 33) },
-  ]
-}
-
-/**
- * 하위 구성품 작업 상태 (mock) — 상위 진척률과 정합되게 생성:
- * 진척률이 높을수록 완료된 하위 구성품 비율이 높고, 경계 근처는 작업중(진척률 보유).
- */
-function mockSubAssemblies(
-  parentId: string,
-  children: { id: string; wstgCode: string; partCount: number }[],
-  parentProgress: number
-): SubAssemblyStatus[] {
-  const n = children.length
-  return children.map((child, index) => {
-    const slot = ((index + 0.5) / n) * 100
-    const jitter = (hashOf(parentId + child.id) % 21) - 10
-    const boundary = slot + jitter
-    if (parentProgress >= boundary + 12) return { ...child, workStatus: 'completed' }
-    if (parentProgress <= boundary - 12) return { ...child, workStatus: 'not_started' }
-    const progress = Math.min(95, Math.max(5, Math.round(50 + (parentProgress - boundary) * 3)))
-    return { ...child, workStatus: 'in_progress', progress }
-  })
-}
-
-/** 조립체 id 기반의 미세한 yaw 회전 (분리 배치가 너무 정렬돼 보이지 않도록) */
-function yawQuaternion(id: string): [number, number, number, number] {
-  const angle = ((hashOf(id) % 9) - 4) * 0.025
-  return [0, +Math.sin(angle / 2).toFixed(4), 0, +Math.cos(angle / 2).toFixed(4)]
-}
-
-/**
- * 중조립품 분리 배치 — 조립 1공장의 중조들은 아직 블록으로 조립되기 전이므로
- * CAD 원위치가 아니라 정반 위에 각각 떨어뜨려 놓는다 (면적 내림차순 shelf packing).
- * 각 조립체 geometry는 viewer에서 자기 bbox 바닥 중심 기준으로 재정렬된 뒤 이 위치에 놓인다.
- */
-function layoutAssemblies(assemblies: BlockAssemblyEntry[]): Map<string, LidarBlockTransform> {
-  const GAP = 2.5
-  const usableWidth = BAY_WIDTH - 4
-
-  // 안정 안착 자세(눕힌 상태)의 footprint 기준으로 배치
-  const items = assemblies
-    .map((a) => {
-      const [w, , d] = restExtents(a)
-      return { a, w, d }
-    })
-    .sort((p, q) => q.w * q.d - p.w * p.d)
-
-  const raw = new Map<string, { x: number; z: number }>()
-  let zCursor = 0
-  let shelf: typeof items = []
-  let shelfWidth = 0
-
-  const flushShelf = () => {
-    if (shelf.length === 0) return
-    const totalWidth = shelfWidth - GAP
-    const shelfDepth = Math.max(...shelf.map((i) => i.d))
-    let x = -totalWidth / 2
-    for (const item of shelf) {
-      raw.set(item.a.id, { x: x + item.w / 2, z: zCursor + shelfDepth / 2 })
-      x += item.w + GAP
-    }
-    zCursor += shelfDepth + GAP
-    shelf = []
-    shelfWidth = 0
-  }
-
-  for (const item of items) {
-    if (shelf.length > 0 && shelfWidth + item.w > usableWidth) flushShelf()
-    shelf.push(item)
-    shelfWidth += item.w + GAP
-  }
-  flushShelf()
-
-  // 전체 배치를 정반 중앙(z=0) 기준으로 정렬 — 센서 FOV 커버리지가 가장 좋은 영역에 놓이도록
-  const totalDepth = zCursor - GAP
-  const zOffset = -totalDepth / 2
-  const placements = new Map<string, LidarBlockTransform>()
-  for (const [id, pos] of raw) {
-    placements.set(id, {
-      position: [+pos.x.toFixed(2), 0, +(pos.z + zOffset).toFixed(2)],
-      quaternion: yawQuaternion(id),
-    })
-  }
-  return placements
-}
-
-function assemblyDimensions(assembly: BlockAssemblyEntry) {
-  // 안정 안착 자세(눕힌 상태) 기준 치수
-  const [length, height, width] = restExtents(assembly)
-  return {
-    length: +length.toFixed(1),
-    width: +width.toFixed(1),
-    height: +height.toFixed(1),
-  }
 }
 
 export async function fetchDetectedBlocks(locationId: string): Promise<LidarBlockInfo[]> {
@@ -224,81 +97,8 @@ export async function fetchDetectedBlocks(locationId: string): Promise<LidarBloc
   const assignment = bayBlockAssignments[locationId]
   if (!assignment) return withLatency([])
 
-  const { model, placement } = (await fetchBayModel(locationId)) as BayModelInfo
-  const { manifest } = model
-  // MISC(블록 직부재)와 소형 부속품(브라켓급 — PCD가 유의미하게 잡히지 않음)은 인식 단위에서 제외
-  const assemblies = manifest.assemblies.filter(
-    (a) => a.id !== 'MISC' && a.vertexCount >= 1500 && a.partCount >= 4
-  )
-
-  if (assignment.unitLevel === 'block') {
-    // 조립 2공장: 대조립(블록) 단위 인식 — 블록 전체가 detection 1건
-    const detection: LidarBlockInfo = {
-      id: `${locationId}-${manifest.blkNo}`,
-      locationId,
-      projNo: manifest.projNo,
-      blkNo: manifest.blkNo,
-      assySerNo: null,
-      blockName: `대조립 블록 ${manifest.blkNo}`,
-      wstgCode: manifest.wstgCode,
-      cadRegistered: true,
-      plan: mockPlan(manifest.blkNo),
-      confidence: mockConfidence(`${manifest.projNo}-${manifest.blkNo}`),
-      dimensions: (() => {
-        // 안정 안착 자세 기준 치수 (블록 레벨 rest pose)
-        const [length, height, width] = restExtents(manifest)
-        return {
-          length: +length.toFixed(1),
-          width: +width.toFixed(1),
-          height: +height.toFixed(1),
-        }
-      })(),
-      transform: placement,
-      history: mockHistory(`${manifest.projNo}-${manifest.blkNo}`, '블록 반입 감지'),
-      modelAssemblyIds: manifest.assemblies.map((a) => a.id), // MISC 포함 전체 형상
-      subAssemblies: mockSubAssemblies(
-        `${manifest.projNo}-${manifest.blkNo}`,
-        assemblies.map((a) => ({ id: a.id, wstgCode: a.wstgCode, partCount: a.partCount })),
-        mockProgress(`${manifest.projNo}-${manifest.blkNo}`)
-      ),
-    }
-    return [detection]
-  }
-
-  // 조립 1공장: 중조립품 단위 인식 — 조립체마다 detection, 정반 위에 분리 배치
-  const placements = layoutAssemblies(assemblies)
-  return assemblies.map((assembly, index): LidarBlockInfo => {
-    const detectionId = `${locationId}-${assembly.id}`
-    return {
-      id: detectionId,
-      locationId,
-      projNo: manifest.projNo,
-      blkNo: manifest.blkNo,
-      assySerNo: assembly.id,
-      blockName: `중조립품 ${assembly.id}`,
-      wstgCode: assembly.wstgCode,
-      // 데모: 두 번째 조립체는 PCD↔CAD registering 실패 상태 (도면 미매핑 PCD 케이스)
-      cadRegistered: index !== 1,
-      plan: mockPlan(detectionId),
-      confidence: mockConfidence(detectionId),
-      dimensions: assemblyDimensions(assembly),
-      transform: placements.get(assembly.id)!,
-      // 정합 실패 시 진척률 추정 불가 — 이벤트만 남긴다
-      history:
-        index !== 1
-          ? mockHistory(detectionId, '정반 안착 감지')
-          : mockHistory(detectionId, '정반 안착 감지').map(({ timestamp, event }) => ({
-              timestamp,
-              event,
-            })),
-      modelAssemblyIds: [assembly.id],
-      subAssemblies: mockSubAssemblies(
-        detectionId,
-        assembly.children.map((c) => ({ id: c.id, wstgCode: c.wstgCode, partCount: c.partCount })),
-        mockProgress(detectionId)
-      ),
-    }
-  })
+  const bayModel = (await fetchBayModel(locationId)) as BayModelInfo
+  return buildBayDetections(locationId, bayModel, assignment.unitLevel)
 }
 
 // ── 일일 소조 생산 카운트 (mock — 실연동 시 인식 파이프라인의 완료 판정 집계로 대체) ──

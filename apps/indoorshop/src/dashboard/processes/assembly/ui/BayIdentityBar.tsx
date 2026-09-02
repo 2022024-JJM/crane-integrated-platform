@@ -1,10 +1,10 @@
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { Location } from '../../../shared/entities/location/model/types'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
-import type { LidarBlockInfo } from '../model/lidarBlock'
-import { parseWstgCode } from '../model/lidarBlock'
-import type { BlockModelManifest } from '../model/blockModel'
-import { restExtents } from '../model/blockModel'
+import type { LidarBlockInfo } from '../../../shared/features/bay-viewer/model/lidarBlock'
+import { parseWstgCode } from '../../../shared/features/bay-viewer/model/lidarBlock'
+import type { BlockModelManifest } from '../../../shared/features/bay-viewer/model/blockModel'
+import { restExtents } from '../../../shared/features/bay-viewer/model/blockModel'
 import { cn } from '../../../shared/lib/utils'
 
 interface BayIdentityBarProps {

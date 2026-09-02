@@ -32,8 +32,9 @@ import { fetchLocations } from './assemblyApi'
  * painting 원본에서 나왔기 때문이지 운영 공장 마스터가 그렇다는 뜻이 아니다 — 운영
  * 마스터가 확정되면 **이 표만** 갈아 끼운다.
  *
- * GBS 자리가 곧 실측 데이터셋(1공장 5베이)이다 — 지도 키 'GBS' 는 실측 공장(asm-gbs)으로
- * 이어지고, 베이 목록은 실측 라이다 그룹(G1~G3)이 나온다 (`realScanData.ts`).
+ * 실측 데이터셋은 PBS 5BAY 에 베이 단위로 붙어 있다 — 지도 키 'PBS' 로 들어가면
+ * 정반 목록에 실측 정반(asm-pbs-b5)이 목업 정반들과 같은 줄로 나온다 (`realScanData.ts`).
+ * GBS 는 다른 조립 공장과 같은 목업이다.
  */
 export const ASSEMBLY_FACTORY_ID_BY_MAP_KEY: Readonly<Record<string, string>> =
   Object.fromEntries(ASSEMBLY_FACTORIES.map((factory) => [factory.name, factory.id]))

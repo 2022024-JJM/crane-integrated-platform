@@ -7,7 +7,10 @@
  * 다루는 필드만 정의한다.
  */
 
-/** 도장 설비 종류 — painting 원본 `설비.js` 의 `종류` 열을 그대로 쓴다 */
+/**
+ * 도장 설비 종류 — 공용 설비 레지스트리(`shared/entities/equipment`)의 종류ID DH/GH 에
+ * 대응하는 **이름**이다. SCADA 화면·mock 이 이 문자열을 키로 쓰므로 유지한다.
+ */
 export const PAINTING_EQUIPMENT_KINDS = ['제습기', '가스히터'] as const
 export type PaintingEquipmentKind = (typeof PAINTING_EQUIPMENT_KINDS)[number]
 
@@ -25,6 +28,11 @@ export interface PaintingEquipment {
   kind: PaintingEquipmentKind
   /** 소속 도장공장 이름 (야드 공장 fixture 의 이름과 동일) */
   factory: string
+  /**
+   * 소속 베이 이름 (예: `B21`, `NP6`) — ⚠️ **공장 안에서만 유일**하다. 지도 베이와
+   * 이으려면 `{factory}#{bay}` 복합키(`YardParcelBay.id` 와 같은 규칙)를 쓴다.
+   */
+  bay: string
   /** WGS84 위도 */
   lat: number
   /** WGS84 경도 */

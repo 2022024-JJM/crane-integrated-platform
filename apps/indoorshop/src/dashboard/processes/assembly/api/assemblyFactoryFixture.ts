@@ -1,17 +1,18 @@
 /*
  * 조립 공장 마스터 — **생성물이므로 손으로 고치지 않는다.**
  *
- * 출처: painting 지번속성.js (window.CSV_LOT_ATTR) 의 '조립' 공정 공장.
+ * 출처: painting data/bays.js('조립' 공정 공장의 베이 정본) + lot-attributes.js(그룹명 보강).
  * 생성: `node scripts/build-assembly-factories-fixture.mjs` 를 다시 돌리면 이 파일을 덮어쓴다.
  *
- * 공장 7곳과 각 공장의 BAY(정반) 구조를 지번의 공장그룹/그룹명에서 파생했다. yardLots 는
- * 그 BAY 소속 지번코드로, 야드 맵이 정반을 실제 자리에 그리는 연결 키다.
+ * 공장 7곳과 각 공장의 BAY(정반) 구조. yardLots 는 그 BAY 소속 지번코드로, 야드 맵이
+ * 정반을 실제 자리에 그리는 연결 키다(지도 fixture `parcelBaysFixture.ts` 와 같은
+ * bays.js 에서 나왔으므로 정합한다). bayNo 는 **공장 안에서만** 유일하다.
  */
 
 export type AssemblyUnitLevel = 'assembly' | 'block'
 
 export interface AssemblyBaySpec {
-  /** BAY 번호 (공장그룹 코드의 숫자) */
+  /** BAY 번호 (bays.js 베이명 — 공장 안에서만 유일) */
   bayNo: number
   /** 공장그룹 코드 (예: PB1B) */
   code: string
@@ -48,7 +49,7 @@ export const ASSEMBLY_FACTORIES: AssemblyFactorySpec[] = [
   },
   {
     id: "asm-of1",
-    name: "해양제작1공장",
+    name: "조립4공장-OFD1",
     assyShop: "OF1",
     bays: [
       { bayNo: 1, code: "OF1B", groupName: "해양제작1공장 1B", unitLevel: "assembly", yardLots: ["OF1B01", "OF1B02", "OF1B03"] },
@@ -82,25 +83,25 @@ export const ASSEMBLY_FACTORIES: AssemblyFactorySpec[] = [
     name: "GBS",
     assyShop: "GBS",
     bays: [
-      { bayNo: 1, code: "GB1B", groupName: "GBS 1BAY내", unitLevel: "assembly", yardLots: ["GB1B01", "GB1B02", "GB1B03"] },
-      { bayNo: 2, code: "GB2B", groupName: "GBS 2BAY내", unitLevel: "assembly", yardLots: ["GB2B01", "GB2B02", "GB2B03"] },
-      { bayNo: 3, code: "GB3B", groupName: "GBS 3BAY내", unitLevel: "assembly", yardLots: ["GB3B01", "GB3B02", "GB3B03"] },
+      { bayNo: 1, code: "GB1B", groupName: "GBS 1BAY내", unitLevel: "assembly", yardLots: ["GB1B01", "GB1B02", "GB1B03", "GB1E01"] },
+      { bayNo: 2, code: "GB2B", groupName: "GBS 2BAY내", unitLevel: "assembly", yardLots: ["GB1E02", "GB2B01", "GB2B02", "GB2B03"] },
+      { bayNo: 3, code: "GB3B", groupName: "GBS 3BAY내", unitLevel: "assembly", yardLots: ["GB1E03", "GB3B01", "GB3B02", "GB3B03"] },
     ],
   },
   {
     id: "asm-of3",
-    name: "해양제작3공장",
+    name: "조립4공장-OFD3",
     assyShop: "OF3",
     bays: [
-      { bayNo: 1, code: "OF", groupName: "해양제작 3공장", unitLevel: "assembly", yardLots: ["OF3001", "OF3002", "OF3003"] },
+      { bayNo: 1, code: "OF30", groupName: "해양제작 3공장", unitLevel: "assembly", yardLots: ["OF3001", "OF3002", "OF3003"] },
     ],
   },
   {
     id: "asm-of2",
-    name: "해양제작2공장",
+    name: "조립4공장-OFD2",
     assyShop: "OF2",
     bays: [
-      { bayNo: 1, code: "OF", groupName: "해양제작 2공장", unitLevel: "assembly", yardLots: ["OF2001", "OF2002", "OF2003"] },
+      { bayNo: 1, code: "OF20", groupName: "해양제작 2공장", unitLevel: "assembly", yardLots: ["OF2001", "OF2002", "OF2003"] },
     ],
   },
 ]

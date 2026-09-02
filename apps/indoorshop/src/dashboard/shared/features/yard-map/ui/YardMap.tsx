@@ -174,10 +174,13 @@ export interface YardParcelLayer {
   /** 공정 → 색. `colorMode: 'process'` 일 때 쓴다 */
   processColor?: (process: string) => string
   /**
-   * 스포트라이트할 공정 — 이 공정 공장들만 네온으로 밝히고 나머지는 강하게 디밍한다
-   * (painting nav 모드). process 모드에서만 뜻이 있다. null 이면 전 공정이 네온.
+   * 스포트라이트할 공정들 — 이 공정 공장들만 네온으로 밝히고 나머지는 강하게 디밍한다
+   * (painting nav 모드). process 모드에서만 뜻이 있다. null/빈 배열이면 전 공정이 네온.
+   * 복수를 받는 것은 한 화면에 두 공정색이 공존하는 소비자(조립+CAS·PAS) 때문이다 —
+   * 대시보드처럼 하나만 스포트라이트하는 소비자는 단일 원소 배열로 주면 예전 단일
+   * `focusedProcess` 와 픽셀 단위로 같은 그림이 나온다.
    */
-  focusedProcess?: string | null
+  focusedProcesses?: readonly string[] | null
   /** focus 대상 공장 이름 — 이 공장 지번만 밝게, 나머지는 디밍. null 이면 전부 평상 밝기 */
   focusedFactory?: string | null
   /** 손이 얹힌 공장 — 이름줄·지번이 함께 밝아진다 */
@@ -1147,7 +1150,8 @@ export function YardMap({
         podium: factoryPodium,
         colorMode: parcels?.colorMode ?? 'category',
         processColor: parcels?.processColor,
-        focusedProcess: parcels?.focusedProcess ?? null,
+        /* 빈 배열은 "스포트라이트 없음"으로 정규화 — 아래 fade 활성 판정이 단순해진다 */
+        focusedProcesses: parcels?.focusedProcesses?.length ? parcels.focusedProcesses : null,
         focusedFactory: parcels?.focusedFactory ?? null,
         hoveredFactory: parcels?.hoveredFactory ?? null,
         opacity: parcels?.opacity ?? 0.55,
@@ -1172,14 +1176,15 @@ export function YardMap({
    * 지번·시설 네온, `parcels` 를 안 주는 화면)은 영향이 없다.
    */
   const parcelSpotlightActive = parcelState
-    ? parcelState.focusedFactory != null || parcelState.focusedProcess != null
+    ? parcelState.focusedFactory != null || parcelState.focusedProcesses != null
     : false
-  const parcelFadeFromRef = useRef<{ focusedFactory: string | null; focusedProcess: string | null }>(
-    {
-      focusedFactory: parcelState?.focusedFactory ?? null,
-      focusedProcess: parcelState?.focusedProcess ?? null,
-    }
-  )
+  const parcelFadeFromRef = useRef<{
+    focusedFactory: string | null
+    focusedProcesses: readonly string[] | null
+  }>({
+    focusedFactory: parcelState?.focusedFactory ?? null,
+    focusedProcesses: parcelState?.focusedProcesses ?? null,
+  })
   /** 0 = `parcelFadeFromRef` 그대로, 1 = 지금 props(도착 지점) 그대로. 정착해 있으면 항상 1 */
   const parcelFadeProgressRef = useRef(1)
 
@@ -1586,7 +1591,7 @@ export function YardMap({
         /*
          * ── 샵 네비게이션 룩 (painting 뷰어 재현) ──
          * 각 공장의 지번을 **그 공장의 공정색**으로 채우고 글로우로 피워 올린다. 공정 하나를
-         * 스포트라이트하면(focusedProcess) 그 공정 공장만 밝고 나머지는 강하게 디밍, 공장 하나를
+         * 스포트라이트하면(focusedProcesses) 그 공정 공장만 밝고 나머지는 강하게 디밍, 공장 하나를
          * 고르면(focusedFactory) 그것만 가장 강한 글로우. 무소속 지번은 옅은 배경으로만 깐다.
          * 수치는 painting 원본: 채움 선택0.5/기본0.34/디밍0.07 × opacity 1/0.8/0.12, 흰 테두리
          * 선택1.6/1.1, 글로우 0 0 3+9px, 선택 +16px.
@@ -1594,7 +1599,7 @@ export function YardMap({
         const processColor = parcels.processColor ?? (() => '#c9c4bc')
         const factoryProcess = parcels.factoryProcess
         const focusedFactory = parcels.focusedFactory
-        const focusedProcess = parcels.focusedProcess
+        const focusedProcesses = parcels.focusedProcesses
         const focusSet = focusedFactory
           ? parcels.factoryLotSet.get(focusedFactory) ?? null
           : null
@@ -1786,7 +1791,7 @@ export function YardMap({
         drawLotSpotRef = drawLotSpot
 
         /**
-         * `focusedFactory`/`focusedProcess` 조합 하나로 지번(또는 공장 이름줄) 하나의
+         * `focusedFactory`/`focusedProcesses` 조합 하나로 지번(또는 공장 이름줄) 하나의
          * on/rel/dim 을 가른다(선택 여부는 뺀다 — 'selected' halo·크기는 각자 따로 맡는다.
          * 어느 focus 에서 봐도 "그 factory 에 속했었다"는 'on' 취급한다). 'rel' 은
          * `relatedDimFactor` 를 켠 소비자가 공장까지 고른 경우에만 나온다 — 같은 공정의
@@ -1798,12 +1803,12 @@ export function YardMap({
           proc: string,
           belongsToFocused: boolean,
           ff: string | null,
-          fp: string | null
+          fp: readonly string[] | null
         ): 'on' | 'rel' | 'dim' =>
           belongsToFocused || (!fp && !ff)
             ? 'on'
             : fp
-              ? proc === fp
+              ? fp.includes(proc)
                 ? relFactor != null && ff
                   ? 'rel'
                   : 'on'
@@ -1841,7 +1846,7 @@ export function YardMap({
           const state: 'selected' | 'on' | 'rel' | 'dim' =
             focusedFactory && (focusSet?.has(lot.lot) ?? false)
               ? 'selected'
-              : classifyDim(proc, false, focusedFactory, focusedProcess)
+              : classifyDim(proc, false, focusedFactory, focusedProcesses)
 
           /*
            * 선택 공장은 확실히 "빛난다" — 공정색 헤일로(여러 패스) + 두꺼운 채움 + 두꺼운 흰
@@ -1942,7 +1947,7 @@ export function YardMap({
             ? (parcels.factoryLotSet.get(fromFocus.focusedFactory)?.has(lot.lot) ?? false)
             : false
           const a = styleOf(
-            classifyDim(proc, belongedToFromFactory, fromFocus.focusedFactory, fromFocus.focusedProcess)
+            classifyDim(proc, belongedToFromFactory, fromFocus.focusedFactory, fromFocus.focusedProcesses)
           )
           const b = styleOf(state)
           let fillA = a.fillA + (b.fillA - a.fillA) * progress
@@ -2054,7 +2059,7 @@ export function YardMap({
             const state: 'selected' | 'on' | 'rel' | 'dim' =
               focusedFactory === factory.name
                 ? 'selected'
-                : classifyDim(proc, false, focusedFactory, focusedProcess)
+                : classifyDim(proc, false, focusedFactory, focusedProcesses)
             if (state === 'dim') continue
             const hull = parcels.factoryHull.get(factory.name)
             if (!hull) continue
@@ -2103,7 +2108,7 @@ export function YardMap({
               proc,
               fromFocus.focusedFactory === factory.name,
               fromFocus.focusedFactory,
-              fromFocus.focusedProcess
+              fromFocus.focusedProcesses
             )
             const fromFill = fillOf(fromState)
             const fillA = fromFill + (fillOf(state) - fromFill) * progress
@@ -2165,7 +2170,7 @@ export function YardMap({
             const lstate: 'selected' | 'on' | 'rel' | 'dim' =
               focusedFactory && factory.name === focusedFactory
                 ? 'selected'
-                : classifyDim(fp, false, focusedFactory, focusedProcess)
+                : classifyDim(fp, false, focusedFactory, focusedProcesses)
             /*
              * 스포트라이트(공정·공장 선택) 밖의 라벨은 디밍만으로는 여전히 얼비쳐 선택 공정
              * 이름을 가리므로 결국 지운다 — 다만 **뚝 지우지 않고** 양방향으로 페이드한다.
@@ -2178,7 +2183,7 @@ export function YardMap({
               fp,
               fromFocus.focusedFactory === factory.name,
               fromFocus.focusedFactory,
-              fromFocus.focusedProcess
+              fromFocus.focusedProcesses
             )
             const labelTo = lstate === 'selected' ? 'on' : lstate
             /* 'rel' 라벨은 지우지 않고 반쯤 남긴다 — 이름이 있어야 동일 공정을 찾아간다 */
@@ -3737,7 +3742,7 @@ export function YardMap({
        버린다(의도한 "카메라 비행 안에서 묻힌다" 설계와 어긋난다). */
     const liveFocus = {
       focusedFactory: data.current.parcels?.focusedFactory ?? null,
-      focusedProcess: data.current.parcels?.focusedProcess ?? null,
+      focusedProcesses: data.current.parcels?.focusedProcesses?.length ? data.current.parcels.focusedProcesses : null,
     }
     parcelFadeProgressRef.current = 0
 

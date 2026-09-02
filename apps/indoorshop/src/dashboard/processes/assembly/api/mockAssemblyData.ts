@@ -1,7 +1,7 @@
 import type { Factory, FactoryHealth } from '../../../shared/entities/factory/model/types'
 import type { Location, LocationStatus } from '../../../shared/entities/location/model/types'
-import type { LidarBlockTransform } from '../model/lidarBlock'
-import type { LidarSensor } from '../model/lidarSensor'
+import type { LidarBlockTransform } from '../../../shared/features/bay-viewer/model/lidarBlock'
+import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
 
 /**
@@ -13,12 +13,13 @@ import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
  * 골격은 실데이터, 그 위에 얹는 계측값만 목업이다. 실연동 시 이 파일 대신 실제 조회를
  * `assemblyApi` 함수 몸통에 넣으면 되고, 공장/BAY 구조는 fixture 재생성으로 갱신한다.
  *
- * (GBS 는 목업 대상이 아니다 — GBS 자리가 곧 실측 데이터셋('1공장 5베이')이고, 그 자리는 진짜 LiDAR 실측
- * 데이터셋이 공장 째로 차지한다. `realScanData.ts` 참조.)
+ * (예외 한 칸: PBS 5BAY 는 실측 스캔이다 — 여기서도 목업 정반으로 만들어 두지만,
+ * `assemblyApi.fetchLocations` 가 그 한 칸을 실측 위치(`realScanData.REAL_LOCATION`)로
+ * **교체**한다. 한때 실측이 GBS 공장을 통째 차지했으나 실제 위치 확인으로 베이 단위
+ * 부착으로 바뀌었고, GBS 는 다른 공장과 같은 목업 공장이다.)
  */
 
-/** GBS(asm-gbs)는 실측 데이터셋(realScanData.REAL_FACTORY)이 대신하므로 목업에서 뺀다 */
-const MOCK_FACTORY_SPECS = ASSEMBLY_FACTORIES.filter((factory) => factory.id !== 'asm-gbs')
+const MOCK_FACTORY_SPECS = ASSEMBLY_FACTORIES
 
 /** 문자열 기반 결정적 의사난수 — 렌더링마다 값이 흔들리지 않도록 */
 function hashOf(text: string): number {

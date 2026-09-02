@@ -1,4 +1,4 @@
-import i18n, { INSHOP_NS } from '../shared/lib/i18n/config'
+import { addInshopBundle } from '../shared/lib/i18n/config'
 import { registerProcessModules } from '../shared/model/processRegistry'
 import { fabricationModule } from '../processes/fabrication/module'
 import { assemblyModule } from '../processes/assembly/module'
@@ -31,6 +31,6 @@ registerProcessModules(processModules)
  * deep=true 로 병합해야 공통 로케일의 같은 묶음을 지우지 않고 더한다.
  */
 for (const processModule of processModules) {
-  i18n.addResourceBundle('ko', INSHOP_NS, processModule.i18n.ko, true, true)
-  i18n.addResourceBundle('en', INSHOP_NS, processModule.i18n.en, true, true)
+  addInshopBundle('ko', processModule.i18n.ko)
+  addInshopBundle('en', processModule.i18n.en)
 }

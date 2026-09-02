@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { fitDistanceForBox } from './fitCamera'
+import { fitDistanceForBox } from '../../../shared/features/bay-viewer/lib/fitCamera'
 
 /**
  * 조립체 형상의 정적 썸네일 생성기.

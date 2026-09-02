@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LidarSensor } from '../../model/lidarSensor'
+import type { LidarSensor } from '../../../../shared/features/bay-viewer/model/lidarSensor'
 import {
   FRESHNESS_THRESHOLDS,
   elapsedMinutes,

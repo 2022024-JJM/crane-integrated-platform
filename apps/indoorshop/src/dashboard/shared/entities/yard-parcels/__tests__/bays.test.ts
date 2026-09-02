@@ -50,4 +50,25 @@ describe('야드 지번 fixture 의 베이', () => {
     /* PBS 는 본동 6 + 꺾인 별동 2 = 8 스팬. 개수가 줄면 매핑이 깨진 것이다 */
     expect(bays.filter((b) => b.factory === 'PBS')).toHaveLength(8)
   })
+
+  it('2026-09 원본 개편분이 실려 있다 — 베이 132 · B21 신설 · 느태 NP5/NP6 분할', async () => {
+    const { bays } = await loadYardParcels()
+    /* bays.js 정본 132건이 전부 살아야 한다 — 줄면 생성기가 지번·공장을 걸러낸 것 */
+    expect(bays).toHaveLength(132)
+
+    /* 1DOCK B21(보온셀터, 실측 4필지 1DW100~103) — 신설 베이 */
+    const b21 = bays.find((b) => b.id === '1DOCK 도장공장#B21')
+    expect(b21?.lotCodes.slice().sort()).toEqual(['1DW100', '1DW101', '1DW102', '1DW103'])
+
+    /* 느태 NP5 → NP5/NP6 분할 — 정반 4장씩 나뉘어야 한다 */
+    const np5 = bays.find((b) => b.id === '느태 도장공장#NP5')
+    const np6 = bays.find((b) => b.id === '느태 도장공장#NP6')
+    expect(np5?.lotCodes.slice().sort()).toEqual(['NP0201', 'NP0202', 'NP0203', 'NP0204'])
+    expect(np6?.lotCodes.slice().sort()).toEqual(['NP0211', 'NP0212', 'NP0213', 'NP0214'])
+
+    /* 베이명은 공장 안에서만 유일 — 숫자 베이가 여러 공장에 겹치므로 복합키가 강제다 */
+    const bayNames = new Set(bays.map((b) => b.bay))
+    expect(bayNames.size).toBeLessThan(bays.length)
+    expect(new Set(bays.map((b) => b.bayKey)).size).toBe(bays.length)
+  })
 })

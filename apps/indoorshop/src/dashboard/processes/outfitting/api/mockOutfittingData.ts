@@ -17,8 +17,8 @@ import { OUTFITTING_FACTORIES } from './outfittingFactoryFixture'
  * 구조는 fixture 재생성으로 갱신한다.
  */
 
-/** 문자열 기반 결정적 의사난수 */
-function hashOf(text: string): number {
+/** 문자열 기반 결정적 의사난수 — 모듈 안의 다른 mock(베이 장면 등)도 같은 해시를 쓴다 */
+export function hashOf(text: string): number {
   let h = 0
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
   return Math.abs(h)

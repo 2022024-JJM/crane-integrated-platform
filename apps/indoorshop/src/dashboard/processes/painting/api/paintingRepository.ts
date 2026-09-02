@@ -1,4 +1,4 @@
-import { PAINTING_EQUIPMENT } from './paintingEquipmentFixture'
+import { equipmentOfTypes, equipmentTypeOf } from '../../../shared/entities/equipment'
 import {
   PAINTING_EQUIPMENT_KINDS,
   type FactoryEquipmentSummary,
@@ -11,19 +11,30 @@ import { mockEquipmentStatus } from '../lib/equipmentStatusMock'
 /**
  * 선행도장 설비 데이터 접근 파사드.
  *
- * 지금은 생성된 fixture(`paintingEquipmentFixture.ts` — painting 원본을
- * `scripts/build-painting-equipment-fixture.mjs` 로 변환한 것)를 그대로 편다. 설비는
- * 87대뿐이라 모듈 로드 때 한 번만 색인해 두면 되고, 목록·맵이 같은 배열을 참조하므로
- * 필터 결과를 참조 비교로 걸러낼 수 있다.
+ * 공용 설비 엔티티(`shared/entities/equipment` — painting 원본 503대를
+ * `scripts/build-equipment-fixture.mjs` 로 변환한 것)에서 **도장 몫(DH 제습기·GH
+ * 가스히터, 86대)만 걸러** 이 모듈의 kind 문자열('제습기'/'가스히터')로 사상한다 —
+ * SCADA 화면·mock 은 그 문자열을 키로 쓰므로 손대지 않는다. 86대뿐이라 모듈 로드 때
+ * 한 번만 색인해 두면 되고, 목록·맵이 같은 배열을 참조하므로 필터 결과를 참조 비교로
+ * 걸러낼 수 있다.
  *
  * 실연동 시 이 파일의 함수 구현만 실제 조회(Hot Data DB / ISL Server Provider)로
  * 교체하면 되고, 호출부(컴포넌트)는 수정이 필요 없다. 상태값(가동/온습도 등)은 아직
  * 데이터가 없어 이 계층이 다루지 않는다 — 배치·집계용 필드만 낸다.
  */
 
-const equipment: readonly PaintingEquipment[] = PAINTING_EQUIPMENT
+/** 도장 몫의 종류ID → 이 모듈의 kind. 레지스트리 이름과 같아야 하며 어긋나면 즉시 throw */
+const PAINTING_TYPE_IDS = ['DH', 'GH'] as const
 
-/** 공장별로 미리 갈라 둔다 — 공장을 고를 때마다 87대를 훑지 않도록 */
+const equipment: readonly PaintingEquipment[] = equipmentOfTypes(PAINTING_TYPE_IDS).map((e) => {
+  const kind = equipmentTypeOf(e.typeId)?.name
+  if (kind !== '제습기' && kind !== '가스히터') {
+    throw new Error(`도장 설비 종류 매핑 실패: ${e.id} typeId=${e.typeId} name=${kind}`)
+  }
+  return { id: e.id, kind, factory: e.factory, bay: e.bay, lat: e.lat, lon: e.lon, x: e.x, y: e.y }
+})
+
+/** 공장별로 미리 갈라 둔다 — 공장을 고를 때마다 86대를 훑지 않도록 */
 const byFactory = new Map<string, PaintingEquipment[]>()
 for (const item of equipment) {
   const bucket = byFactory.get(item.factory)

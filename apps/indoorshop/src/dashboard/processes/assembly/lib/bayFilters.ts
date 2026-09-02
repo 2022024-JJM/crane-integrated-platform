@@ -1,5 +1,5 @@
-import type { LidarSensorStatus } from '../model/lidarSensor'
-import type { BayWorkState } from './bayStatusSummary'
+import type { LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
+import type { BayWorkState } from '../../../shared/features/bay-viewer/lib/bayStatusSummary'
 
 /*
  * 공장 뷰 정반 필터 (PRD FR-9) — `이상만 보기` · `미점유 숨기기` · 공정 단계 필터.

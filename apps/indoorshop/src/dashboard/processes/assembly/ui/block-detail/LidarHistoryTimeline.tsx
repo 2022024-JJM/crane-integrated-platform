@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import type { LidarHistoryEvent } from '../../model/lidarBlock'
+import type { LidarHistoryEvent } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 
 interface LidarHistoryTimelineProps {
   history: LidarHistoryEvent[]

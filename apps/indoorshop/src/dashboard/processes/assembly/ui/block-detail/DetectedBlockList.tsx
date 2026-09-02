@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import type { LidarBlockInfo } from '../../model/lidarBlock'
+import type { LidarBlockInfo } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import {
   formatDetectionId,
   parseWstgCode,
   isSpecialSeries,
-} from '../../model/lidarBlock'
-import type { LoadedBlockModel } from '../../model/blockModel'
+} from '../../../../shared/features/bay-viewer/model/lidarBlock'
+import type { LoadedBlockModel } from '../../../../shared/features/bay-viewer/model/blockModel'
 import { Card, CardContent, CardHeader } from '../../../../shared/ui/atoms/Card'
 import { StatusChip } from '../../../../shared/ui/atoms/StatusChip'
 import { cn } from '../../../../shared/lib/utils'

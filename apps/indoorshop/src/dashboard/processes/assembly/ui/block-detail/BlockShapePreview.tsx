@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import type { LoadedBlockModel } from '../../model/blockModel'
+import type { LoadedBlockModel } from '../../../../shared/features/bay-viewer/model/blockModel'
 import { useInViewport } from '../../../../shared/lib/useInViewport'
 import { cn } from '../../../../shared/lib/utils'
 import { AssemblyOrbitPreview } from './AssemblyOrbitPreview'

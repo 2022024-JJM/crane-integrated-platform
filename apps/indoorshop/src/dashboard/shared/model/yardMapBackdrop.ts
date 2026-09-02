@@ -27,4 +27,30 @@ export interface YardMapBackdrop {
   colorOfCategory: (category: string) => string
   /** 공장·샵 41곳 — 네온 외곽선 배경으로 깐다 */
   facilities: YardFacility[]
+  /**
+   * 블록 검색 색인 로더 — **첫 검색 때** 부른다(대시보드 초기 무게 불변). 야드의 블록
+   * 위치(BTS 계열)를 검색 가능한 형태로 낸다. 새 provides 를 만들지 않고 backdrop 에
+   * 얹는 이유: 검색은 이 지도 위에서만 뜻이 있고, 로더가 늘어나는 것보다 이 묶음이
+   * 넓어지는 쪽이 '통합 임시' 중복(mapBackdrop/yardMapBackground)을 더 키우지 않는다.
+   */
+  blockIndex?: () => Promise<readonly YardBackdropBlock[]>
+}
+
+/** 블록 검색 색인의 한 건 — 야드 블록 위치의 대시보드 몫 요약 */
+export interface YardBackdropBlock {
+  /** 운반 오브젝트 원문 ID (예: `5510_726_S1`) */
+  id: string
+  /** 호선 번호 */
+  projNo: string
+  /** 블록 번호 */
+  blkNo: string
+  /** WGS84 위치 */
+  lat: number
+  lon: number
+  /** 서 있는 지번코드 — 없으면 null (이동 중 등) */
+  lot: string | null
+  /** 지번의 사람 이름(원본 설명) — 위치 설명 맥락으로만 쓴다 */
+  lotLabel: string | null
+  /** 마지막 위치 갱신 (`YYYYMMDDHHMMSS`) — 없으면 null */
+  updatedAt: string | null
 }

@@ -12,7 +12,7 @@ import { extendTailwindMerge } from 'tailwind-merge'
  * 병합 결과가 나온다.
  */
 const INSHOP_TEXT_SIZES = ['inshop-xs', 'inshop-sm', 'inshop-base', 'inshop-lg', 'inshop-xl', 'inshop-2xl', '2xs']
-const INSHOP_RADII = ['inshop-xs', 'inshop-sm', 'inshop-md', 'inshop-lg']
+const INSHOP_RADII = ['inshop-xs', 'inshop-sm', 'inshop-md', 'inshop-lg', 'inshop-xl', 'inshop-2xl', 'inshop-3xl']
 
 const twMerge = extendTailwindMerge({
   extend: {

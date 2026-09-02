@@ -39,10 +39,10 @@ const parcels = (): YardParcels => ({
     },
   ],
   bays: [
-    { factory: 'PBS', bay: '1', id: 'PBS#1', label: '1BAY', lotCodes: ['PB1B01', 'PB1B02', 'PB1B03'] },
-    { factory: 'PBS', bay: '2', id: 'PBS#2', label: '2BAY', lotCodes: ['PB2B01'] },
+    { bayKey: 'BAY001', factory: 'PBS', bay: '1', id: 'PBS#1', label: '1BAY', process: '조립', lotCodes: ['PB1B01', 'PB1B02', 'PB1B03'], hull: [] },
+    { bayKey: 'BAY002', factory: 'PBS', bay: '2', id: 'PBS#2', label: '2BAY', process: '조립', lotCodes: ['PB2B01'], hull: [] },
     /* 지도 fixture 에 지번이 하나도 없는 베이 — 매핑이 앞서 나간 상태 */
-    { factory: 'PBS', bay: '9', id: 'PBS#9', label: '9BAY', lotCodes: ['PB9B01'] },
+    { bayKey: 'BAY009', factory: 'PBS', bay: '9', id: 'PBS#9', label: '9BAY', process: '조립', lotCodes: ['PB9B01'], hull: [] },
   ],
   categoryColor: colorOfParcelCategory,
 })

@@ -1,36 +1,36 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import { formatDetectionId } from '../../model/lidarBlock'
+import { formatDetectionId } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import { AssemblyLocationTabs } from '../AssemblyLocationTabs'
 import { BayIdentityBar } from '../BayIdentityBar'
 import { DetectedBlockList } from '../block-detail/DetectedBlockList'
 import { BlockDetailOverlay } from '../block-detail/BlockDetailOverlay'
 import { LidarSensorStatusList } from '../LidarSensorStatusList'
 import { BayDetailPanel } from '../BayDetailPanel'
-import { FirstRunHint } from '../viewer/FirstRunHint'
-import { LidarPointCloudViewer } from '../viewer/LidarPointCloudViewer'
-import type { BaySceneData } from '../viewer/LidarPointCloudViewer'
+import { FirstRunHint } from '../../../../shared/features/bay-viewer/ui/FirstRunHint'
+import { LidarPointCloudViewer } from '../../../../shared/features/bay-viewer/ui/LidarPointCloudViewer'
+import type { BaySceneData } from '../../../../shared/features/bay-viewer/ui/LidarPointCloudViewer'
 import { RealScanViewer } from '../viewer/RealScanViewer'
-import { SENSOR_POINT_COLORS } from '../../lib/bayConfig'
-import { PointCloudViewControls } from '../viewer/PointCloudViewControls'
-import { PointCloudLegend } from '../viewer/PointCloudLegend'
-import { ViewportHelp } from '../viewer/ViewportHelp'
-import { ViewportToolbar } from '../viewer/ViewportToolbar'
+import { SENSOR_POINT_COLORS } from '../../../../shared/features/bay-viewer/lib/bayConfig'
+import { PointCloudViewControls } from '../../../../shared/features/bay-viewer/ui/PointCloudViewControls'
+import { PointCloudLegend } from '../../../../shared/features/bay-viewer/ui/PointCloudLegend'
+import { ViewportHelp } from '../../../../shared/features/bay-viewer/ui/ViewportHelp'
+import { ViewportToolbar } from '../../../../shared/features/bay-viewer/ui/ViewportToolbar'
 import { ViewportFullscreenButton } from '../../../../shared/ui/atoms/ViewportFullscreenButton'
-import { viewportEdgeColors, type ViewerDisplayMode } from '../../lib/displayModes'
+import { viewportEdgeColors, type ViewerDisplayMode } from '../../../../shared/features/bay-viewer/lib/displayModes'
 import {
   colorModesFor,
   reconcileColorMode,
   REAL_PCD_COLOR_MODES,
   REAL_CAD_COLOR_MODES,
   type PointColorMode,
-} from '../../lib/colorModes'
+} from '../../../../shared/features/bay-viewer/lib/colorModes'
 import {
   worstSensorStatus,
   bayWorkState,
   bayStage,
-} from '../../lib/bayStatusSummary'
+} from '../../../../shared/features/bay-viewer/lib/bayStatusSummary'
 import {
   DEFAULT_BAY_FILTER,
   bayPassesFilter,
@@ -39,8 +39,6 @@ import {
 import { latestScan, isViewDelayed } from '../../lib/freshness'
 import { useClock } from '../../../../shared/lib/useClock'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
-import { ResizeHandle } from '../../../../shared/ui/atoms/ResizeHandle'
-import { useResizablePanel } from '../../../../shared/lib/useResizablePanel'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
 import { useDelayedFlag } from '../../../../shared/lib/useDelayedFlag'
 import { cn } from '../../../../shared/lib/utils'
@@ -54,11 +52,24 @@ import {
   fetchBayModel,
   fetchFactoryLayout,
 } from '../../api/assemblyApi'
-import type { FactoryLayout } from '../../api/bayLayout'
-import { isRealFactory } from '../../api/realScanData'
+import type { FactoryLayout } from '../../../../shared/features/bay-viewer/lib/bayLayout'
+import { fetchRealScanOverlay, isRealLocation, REAL_SEGMENTS } from '../../api/realScanData'
 
 /** 실측 스캔의 기본 색상 규칙 — 이 화면이 먼저 답해야 할 질문이 "정합됐나" 이다 */
 const REAL_DEFAULT_COLOR_MODE: PointColorMode = REAL_PCD_COLOR_MODES[0].value
+
+/**
+ * 워크스페이스 축 탭 — 한 화면에 섞여 있던 ②3D 뷰어 / ①센서 상태 / ③블록·실적을
+ * 표준 탭으로 가른다(P-(C) 공정층). 기본은 3D 뷰어 — 현행 주 사용성을 그대로 둔다.
+ * 각 탭은 기존 컴포넌트의 **재배치**다: 뷰어 탭은 순수 뷰어(전폭), 센서·블록은
+ * 뷰어 옆·위에 겹쳐 있던 패널들이 제 축의 전면으로 나온 것이다.
+ */
+type WorkspaceTab = 'viewer' | 'sensors' | 'blocks'
+const WORKSPACE_TABS: { key: WorkspaceTab; labelKey: 'assembly.workspace.tabViewer' | 'assembly.workspace.tabSensors' | 'assembly.workspace.tabBlocks' }[] = [
+  { key: 'viewer', labelKey: 'assembly.workspace.tabViewer' },
+  { key: 'sensors', labelKey: 'assembly.workspace.tabSensors' },
+  { key: 'blocks', labelKey: 'assembly.workspace.tabBlocks' },
+]
 
 function NotFoundNotice({ message }: { message: string }) {
   const { t } = useTranslation()
@@ -80,8 +91,15 @@ export function AssemblyWorkspace() {
   const { t } = useTranslation()
   const { factoryId, locationId } = useParams<{ factoryId: string; locationId?: string }>()
   const navigate = useNavigate()
-  /** 실측 스캔 공장인가 — 색상 규칙의 기본값·선택지가 목업과 다르다 */
-  const realFactory = isRealFactory(factoryId)
+  /** 지금 보는 정반이 실측 스캔인가(PBS 5BAY) — 색상 규칙의 기본값·선택지가 목업과 다르다.
+   * 공장 뷰는 이제 항상 목업 뷰어다: 실측은 공장이 아니라 베이 하나에 붙어 있다. */
+  const realView = isRealLocation(locationId)
+
+  /** 축 탭 — 공장·정반을 옮기면 기본(3D 뷰어)으로 돌아온다 (탭은 그 자리의 것이다) */
+  const [workTab, setWorkTab] = useState<WorkspaceTab>('viewer')
+  useEffect(() => {
+    setWorkTab('viewer')
+  }, [factoryId, locationId])
 
   /** 베이 화면에서 라벨/카드 클릭으로 선택된 블록 — 선택 시 뷰어가 블록 단독 뷰로 전환 */
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
@@ -126,45 +144,15 @@ export function AssemblyWorkspace() {
    */
   const [displayMode, setDisplayMode] = useState<ViewerDisplayMode>('overlay')
   const [colorMode, setColorMode] = useState<PointColorMode>(
-    realFactory ? REAL_DEFAULT_COLOR_MODE : 'sensor'
+    realView ? REAL_DEFAULT_COLOR_MODE : 'sensor'
   )
   const [showOutline, setShowOutline] = useState(true)
   /** CAD 모드에 들어가기 직전에 쓰던 점군 규칙 — 나올 때 되돌린다 */
   const rememberedColorMode = useRef<PointColorMode>(
-    realFactory ? REAL_DEFAULT_COLOR_MODE : 'sensor'
+    realView ? REAL_DEFAULT_COLOR_MODE : 'sensor'
   )
 
-  /*
-   * 뷰어와 인식 목록의 폭 배분.
-   * 기본값(22rem)은 카드 한 장이 줄바꿈 없이 들어가는 폭이고, 여기서부터
-   * 사용자가 끌어 조절한다 — 무엇을 넓게 볼지는 지금 하는 일이 정한다.
-   */
-  const {
-    width: listWidth,
-    dragging: resizingList,
-    containerRef: splitRef,
-    separatorProps,
-  } = useResizablePanel({
-    storageKey: 'assembly-list-width',
-    defaultWidth: 352,
-    min: 260,
-    max: 640,
-    minOpposite: 420,
-  })
-
-  /* 공장 뷰의 뷰어 ↔ 상세 패널(FR-8) 폭 배분 — 정반 뷰의 목록 패널과 같은 문법 */
-  const {
-    width: panelWidth,
-    dragging: resizingPanel,
-    containerRef: factorySplitRef,
-    separatorProps: panelSeparatorProps,
-  } = useResizablePanel({
-    storageKey: 'assembly-bay-panel-width',
-    defaultWidth: 340,
-    min: 280,
-    max: 560,
-    minOpposite: 420,
-  })
+  /* 분할 리사이저는 없다 — 축 탭 분해로 뷰어 탭이 전폭을 쓰고, 목록·패널은 제 탭에서 전면이다 */
 
   /*
    * 3D 뷰포트 전체 화면.
@@ -192,23 +180,23 @@ export function AssemblyWorkspace() {
       rememberedColorMode.current = colorMode
     }
     setColorMode((current) =>
-      reconcileColorMode(next, current, rememberedColorMode.current, realFactory)
+      reconcileColorMode(next, current, rememberedColorMode.current, realView)
     )
     setDisplayMode(next)
   }
 
   /*
-   * 실측 공장은 색상 선택지가 좁다 — 목업 공장에서 고른 규칙(객체·진척)을 들고
+   * 실측 정반은 색상 선택지가 좁다 — 목업 정반에서 고른 규칙(객체·진척)을 들고
    * 넘어오면 유효한 규칙으로 끌어내린다. 옵션 목록(아래 colorOptions)과 짝이다.
    */
   const realColorOptions = displayMode === 'cad' ? REAL_CAD_COLOR_MODES : REAL_PCD_COLOR_MODES
   /* 지금 화면에서 실제로 고를 수 있는 규칙 — 아래 정리(useEffect)와 컨트롤이 같은 목록을 본다 */
-  const colorOptions = realFactory ? realColorOptions : colorModesFor(displayMode)
+  const colorOptions = realView ? realColorOptions : colorModesFor(displayMode)
   /*
    * `CAD 정합` 규칙에서는 뷰어가 **블록별** 범례를 직접 낸다 (색이 13종이라 일반 범례로는
    * 무슨 색이 무슨 블록인지 답이 안 된다). 둘을 같이 띄우면 같은 자리에 겹친다.
    */
-  const viewerOwnsLegend = realFactory && colorMode === 'match' && displayMode !== 'cad'
+  const viewerOwnsLegend = realView && colorMode === 'match' && displayMode !== 'cad'
   /*
    * 공장을 옮기면 고를 수 있는 규칙 목록 자체가 바뀐다 — 실측 공장에서 고른 `CAD 정합`을
    * 목업 공장으로 들고 오면 어느 세그먼트도 켜지지 않은 채 범례만 그 규칙을 말한다.
@@ -269,8 +257,20 @@ export function AssemblyWorkspace() {
       locations.map(async (location) => ({
         location,
         sensors: await fetchLidarSensors(location.id),
-        blocks: await fetchDetectedBlocks(location.id),
+        /* 실측 정반(PBS 5BAY)의 블록도 그대로 싣는다 — bayModel 이 없어 뷰어가 형상을
+         * 그리지는 않지만(좌표 프레임이 달라 그리면 안 되기도 하다), 작업 판정과 건수가
+         * 이 목록에서 나와 목록·드릴다운·공장 뷰가 같은 재실 상태를 말하게 된다(R 진단).
+         * 한 정반의 인식 조회 실패(실측 자산 미생성 등)가 공장 뷰 전체를 무너뜨리지
+         * 않도록 그 정반만 빈 목록으로 둔다. */
+        blocks: await fetchDetectedBlocks(location.id).catch(() => []),
         bayModel: await fetchBayModel(location.id),
+        /* 실측 정반 판정은 조립 데이터 계층의 몫 — 뷰어(shared)는 플래그만 받는다 */
+        realScan: isRealLocation(location.id),
+        /* 실측 정반의 프리뷰 점군 — 앵커(센서 정합) 실패·자산 부재면 null 로 남아
+         * W0-2 의 빈 정반+실측 칩 폴백이 그대로 선다 */
+        realOverlay: isRealLocation(location.id)
+          ? await fetchRealScanOverlay().catch(() => null)
+          : null,
       }))
     )
     return { factoryId, bays, layout }
@@ -428,9 +428,35 @@ export function AssemblyWorkspace() {
         )}
       </div>
 
+      {/* 축 탭 — ②뷰어 / ①센서 / ③블록·실적. 공장 전환 탭(3D 상자 부착)과 역할이 다르다:
+          저것은 "무엇을 보나(공장)", 이것은 "어느 축으로 보나"다. */}
+      <div
+        role="tablist"
+        aria-label={t('assembly.workspace.tabAria')}
+        className="flex shrink-0 items-center gap-1 self-start rounded-inshop-lg border border-border bg-surface-secondary/50 p-1"
+      >
+        {WORKSPACE_TABS.map(({ key, labelKey }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={workTab === key}
+            onClick={() => setWorkTab(key)}
+            className={cn(
+              'rounded-inshop-md px-3 py-1 text-inshop-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              workTab === key
+                ? 'bg-accent text-on-accent shadow-sm'
+                : 'text-foreground/60 hover:bg-surface-secondary hover:text-foreground'
+            )}
+          >
+            {t(labelKey)}
+          </button>
+        ))}
+      </div>
+
       <div className="flex min-w-0 flex-col gap-6 xl:min-h-0 xl:flex-1 xl:gap-4">
         {selectedLocation ? (
-          // ── 정반 레벨: 센서 상태 / PCD 뷰어(+블록 선택 패널) / 인식 목록 ──
+          // ── 정반 레벨 ──
           !detail || !bayScene ? (
             /* 첫 진입 — 장면은 아직 없지만 탭과 상자는 자리에 선다 (기다리는 동안에도 갈아탈 수 있어야 한다) */
             <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
@@ -450,214 +476,9 @@ export function AssemblyWorkspace() {
                 {showDetailSpinner && <Spinner size={26} label={t('viewer.loadingDetection')} className="text-accent" />}
               </div>
             </div>
-          ) : (
-            <>
-              {/*
-                뷰어(가운데) + 인식 목록(오른쪽 패널) — 넓은 화면에서만 갈라진다.
-                폭은 CSS 변수로만 내보낸다: 좁은 화면에서는 두 칸이 위아래로 쌓이므로
-                그때는 xl 분기가 통째로 꺼져 이 값을 참조하지 않는다.
-              */}
-              <div
-                ref={splitRef}
-                style={{ '--list-w': `${listWidth}px` } as CSSProperties}
-                className="flex flex-col gap-6 xl:min-h-0 xl:flex-1 xl:flex-row xl:gap-0"
-              >
-                <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
-                  {/* 공장 전환은 여기서도 3D 상자에 붙은 탭이다 — 화면 사이를 오가도 문법이 같다 */}
-                  <AssemblyLocationTabs
-                    factories={base.factories}
-                    locations={base.locations}
-                    currentFactoryId={factory.id}
-                    tone="attached"
-                    parts="factories"
-                    attachedColors={viewportEdge}
-                    className="shrink-0"
-                  />
-                  <div
-                    ref={viewportRef}
-                    // 전체 화면에서는 이 칸이 곧 화면이다 — 지금 팔레트의 바탕을 직접 칠한다
-                    style={isFullscreen ? { background: viewportEdge.background } : undefined}
-                    className={cn(
-                      'relative xl:min-h-0 xl:flex-1',
-                      // 경계를 끄는 동안 3D 가 포인터를 가져가면 궤도가 같이 돌아간다
-                      resizingList && '[&_canvas]:pointer-events-none',
-                    )}
-                  >
-                    {realFactory ? (
-                      <RealScanViewer
-                        key={detail.locationId}
-                        mode="bay"
-                        locationId={detail.locationId}
-                        blocks={detail.blocks}
-                        selectedBlockId={selectedBlockId}
-                        displayMode={displayMode}
-                        colorMode={colorMode}
-                        showOutline={showOutline}
-                        onSelectBlock={setSelectedBlockId}
-                        className={viewerSizeClass}
-                        sensorFocus={sensorFocus}
-                      />
-                    ) : (
-                      <LidarPointCloudViewer
-                        key={detail.locationId}
-                        mode="bay"
-                        bays={bayScene}
-                        selectedBlockId={selectedBlockId}
-                        displayMode={displayMode}
-                        colorMode={colorMode}
-                        showOutline={showOutline}
-                        onSelectBlock={setSelectedBlockId}
-                        className={viewerSizeClass}
-                        sensorFocus={sensorFocus}
-                      />
-                    )}
-                    {/*
-                      왼쪽 위는 유리 도구줄(정반 전환·표시 옵션) 자리다. 블록 상세는
-                      그 **아래에 이어 붙인다** — 절대좌표 둘을 겹치면 도구줄 높이가
-                      바뀔 때마다 상세의 자리를 다시 재야 한다.
-                    */}
-                    <div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
-                      <ViewportToolbar
-                        title={t('assembly.workspace.registeredCloud')}
-                        hint={t('assembly.workspace.registeredCloudHint')}
-                        nav={
-                          <AssemblyLocationTabs
-                            factories={base.factories}
-                            locations={base.locations}
-                            currentFactoryId={factory.id}
-                            currentLocationId={selectedLocation.id}
-                            highlightedId={highlightedBayId}
-                            onHighlight={setHighlightedBayId}
-                            tone="glass"
-                            parts="bays"
-                          />
-                        }
-                        className="static max-w-none"
-                      >
-                        <PointCloudViewControls {...viewerControlProps} tone="glass" />
-                      </ViewportToolbar>
-                      {selectedBlock && (
-                        <BlockDetailOverlay block={selectedBlock} className="static w-64" />
-                      )}
-                    </div>
-                    {/* LiDAR는 조작 도구와 분리한 독립 계기판으로 오른쪽 아래에 고정한다. */}
-                    {!selectedBlock && (
-                      <LidarSensorStatusList
-                        sensors={detail.sensors}
-                        pointColors={SENSOR_POINT_COLORS}
-                        tone="glass"
-                        className="absolute bottom-4 right-4 z-10 w-80 max-w-[calc(100%-2rem)]"
-                        selectedSensorId={sensorFocus?.id}
-                        onSelectSensor={(id, index) =>
-                          setSensorFocus((current) =>
-                            current?.id === id
-                              ? { id: null, index: -1, request: current.request + 1 }
-                              : {
-                                  id,
-                                  index,
-                                  request: (current?.request ?? 0) + 1,
-                                }
-                          )
-                        }
-                      />
-                    )}
-                    {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 오른쪽 위(도구 묶음 아래)로 */}
-                    {!viewerOwnsLegend && (
-                      <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
-                    )}
-                    {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
-                    {/*
-                      블록을 고르면 뷰어는 그 블록만 비추고, 상세는 오른쪽 목록의
-                      제 카드가 맡는다 — 뷰어 위에 상세 패널을 띄우면 카드가
-                      뷰어 높이보다 길어 아래가 잘려 나간다.
-                    */}
-                    {/* 우상단 도구 묶음 — 늘어놓지 않고 한 줄로 모은다 */}
-                    <div className="absolute right-4 top-4 flex items-center gap-2">
-                      {selectedBlock && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedBlockId(null)}
-                          className={cn(
-                            'flex h-7 items-center gap-1.5 rounded-inshop-md px-2',
-                            'glass-panel text-2xs font-medium',
-                            'transition-colors hover:bg-glass-hover hover:text-glass-accent',
-                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent',
-                          )}
-                        >
-                          <span className="font-mono">{formatDetectionId(selectedBlock)}</span>
-                          <span className="text-glass-foreground/54">{t('viewer.backToAll')}</span>
-                        </button>
-                      )}
-                      <ViewportHelp className="static flex-col-reverse" />
-                      {fullscreenSupported && (
-                        <ViewportFullscreenButton
-                          isFullscreen={isFullscreen}
-                          onToggle={toggleFullscreen}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <ResizeHandle
-                  {...separatorProps}
-                  dragging={resizingList}
-                  className="hidden xl:block"
-                />
-
-                <div className="flex min-w-0 flex-col xl:min-h-0 xl:w-[var(--list-w)] xl:shrink-0">
-                  <h2 className="mb-3 shrink-0 text-inshop-base font-semibold text-foreground">
-                    {t('blocks.listTitle')}{' '}
-                    <span className="font-normal text-foreground/54">{detail.blocks.length}</span>
-                  </h2>
-                  {/* 목록만 안에서 구른다 — 뷰어와 센서 줄은 자리에 남는다 */}
-                  <div
-                    className={cn(
-                      /*
-                       * 고른 카드는 ring-2 + ring-offset-2 로 바깥 4px 에 링을 그린다. overflow
-                       * 컨테이너는 padding box 밖을 잘라내므로, 여백이 없는 쪽(아래·왼쪽·위)과
-                       * 스크롤바가 차지하는 오른쪽에서 링이 끊긴다. 링만큼 사방에 여백을 주고
-                       * 같은 크기의 음수 마진으로 되돌려 보이는 위치는 그대로 둔다.
-                       */
-                      'transition-opacity xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5',
-                      showDetailSpinner && 'opacity-50',
-                    )}
-                  >
-                    <DetectedBlockList
-                      blocks={detail.blocks}
-                      model={detail.bayModel?.model ?? null}
-                      onSelectBlock={setSelectedBlockId}
-                      selectedBlockId={selectedBlockId}
-                      className="xl:grid-cols-1"
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )
-        ) : (
-          /*
-           * ── 공장 레벨: 공장 전체 센서퓨전 뷰 ──
-           * 정반 선택은 상단 탭과 3D 라벨이 이미 맡고 있어서 목록을 따로 두지 않는다 —
-           * 같은 선택지를 세 군데 두면 화면만 좁아진다.
-           *
-           * 제목·안내·표시 옵션도 뷰어 위에 쌓지 않고 **뷰포트 안에 겹쳐** 띄운다
-           * (ViewportToolbar). 이 화면에서 세로는 곧 뷰어의 시야라, 문구 세 줄이
-           * 그대로 3D 의 높이에서 빠진다 — 3D 가 칸을 통째로 쓰게 두고 도구가 그 위에 뜬다.
-           *
-           * 공장 전환만은 예외로 밖에 둔다 — 3D 상자의 **윗모서리에 붙은 탭**이다.
-           * 보고 있는 것을 바꾸는 일은 3D 위에 뜬 도구가 아니라 창 자체를 갈아 끼우는
-           * 일이라, 탭이 창에 붙어 있어야 그 뜻이 그대로 보인다.
-           */
-          /*
-           * 뷰어(가운데) + 정반 상세 패널(FR-8, 오른쪽) — 정반 뷰의 목록 패널과 같은
-           * 분할 문법이다. 실측 공장은 지속 선택(FR-5)이 아직 없어 패널을 붙이지 않는다.
-           */
-          <div
-            ref={factorySplitRef}
-            style={{ '--panel-w': `${panelWidth}px` } as CSSProperties}
-            className="flex min-w-0 flex-col gap-6 xl:min-h-0 xl:flex-1 xl:flex-row xl:gap-0"
-          >
+          ) : workTab === 'viewer' ? (
+            /* ② 3D 뷰어 — 순수 뷰어(전폭). 센서 목록·블록 목록은 제 축의 탭으로 갔다.
+               유리 도구줄·범례·선택 블록 카드는 뷰어의 조작 부속이라 남는다. */
             <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
               <AssemblyLocationTabs
                 factories={base.factories}
@@ -670,13 +491,170 @@ export function AssemblyWorkspace() {
               />
               <div
                 ref={viewportRef}
+                // 전체 화면에서는 이 칸이 곧 화면이다 — 지금 팔레트의 바탕을 직접 칠한다
                 style={isFullscreen ? { background: viewportEdge.background } : undefined}
-                className={cn(
-                  'relative min-w-0 xl:min-h-0 xl:flex-1',
-                  // 경계를 끄는 동안 3D 가 포인터를 가져가면 궤도가 같이 돌아간다
-                  resizingPanel && '[&_canvas]:pointer-events-none',
-                )}
+                className="relative xl:min-h-0 xl:flex-1"
               >
+                {realView ? (
+                  <RealScanViewer
+                    key={detail.locationId}
+                    mode="bay"
+                    locationId={detail.locationId}
+                    bayLocations={REAL_SEGMENTS}
+                    blocks={detail.blocks}
+                    selectedBlockId={selectedBlockId}
+                    displayMode={displayMode}
+                    colorMode={colorMode}
+                    showOutline={showOutline}
+                    onSelectBlock={setSelectedBlockId}
+                    className={viewerSizeClass}
+                    sensorFocus={sensorFocus}
+                  />
+                ) : (
+                  <LidarPointCloudViewer
+                    key={detail.locationId}
+                    mode="bay"
+                    bays={bayScene}
+                    selectedBlockId={selectedBlockId}
+                    displayMode={displayMode}
+                    colorMode={colorMode}
+                    showOutline={showOutline}
+                    onSelectBlock={setSelectedBlockId}
+                    className={viewerSizeClass}
+                    sensorFocus={sensorFocus}
+                  />
+                )}
+                {/*
+                  왼쪽 위는 유리 도구줄(정반 전환·표시 옵션) 자리다. 블록 상세는
+                  그 **아래에 이어 붙인다** — 절대좌표 둘을 겹치면 도구줄 높이가
+                  바뀔 때마다 상세의 자리를 다시 재야 한다.
+                */}
+                <div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+                  <ViewportToolbar
+                    title={t('assembly.workspace.registeredCloud')}
+                    hint={t('assembly.workspace.registeredCloudHint')}
+                    nav={
+                      <AssemblyLocationTabs
+                        factories={base.factories}
+                        locations={base.locations}
+                        currentFactoryId={factory.id}
+                        currentLocationId={selectedLocation.id}
+                        highlightedId={highlightedBayId}
+                        onHighlight={setHighlightedBayId}
+                        tone="glass"
+                        parts="bays"
+                      />
+                    }
+                    className="static max-w-none"
+                  >
+                    <PointCloudViewControls {...viewerControlProps} tone="glass" />
+                  </ViewportToolbar>
+                  {selectedBlock && (
+                    <BlockDetailOverlay block={selectedBlock} className="static w-64" />
+                  )}
+                </div>
+                {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 오른쪽 위(도구 묶음 아래)로 */}
+                {!viewerOwnsLegend && (
+                  <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
+                )}
+                {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
+                {/* 우상단 도구 묶음 — 늘어놓지 않고 한 줄로 모은다 */}
+                <div className="absolute right-4 top-4 flex items-center gap-2">
+                  {selectedBlock && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBlockId(null)}
+                      className={cn(
+                        'flex h-7 items-center gap-1.5 rounded-inshop-md px-2',
+                        'glass-panel text-2xs font-medium',
+                        'transition-colors hover:bg-glass-hover hover:text-glass-accent',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent',
+                      )}
+                    >
+                      <span className="font-mono">{formatDetectionId(selectedBlock)}</span>
+                      <span className="text-glass-foreground/54">{t('viewer.backToAll')}</span>
+                    </button>
+                  )}
+                  <ViewportHelp className="static flex-col-reverse" />
+                  {fullscreenSupported && (
+                    <ViewportFullscreenButton
+                      isFullscreen={isFullscreen}
+                      onToggle={toggleFullscreen}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : workTab === 'sensors' ? (
+            /* ① 센서 상태 — 뷰어 구석의 유리 패널이 아니라 제 축의 전면이다.
+               센서를 누르면 3D 가 그 센서로 날아가야 뜻이 있으므로 뷰어 탭으로 넘긴다. */
+            <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+              <p className="shrink-0 text-inshop-xs text-foreground/55">
+                {t('assembly.workspace.sensorTabHint')}
+              </p>
+              <div className="xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">
+                <LidarSensorStatusList
+                  sensors={detail.sensors}
+                  pointColors={SENSOR_POINT_COLORS}
+                  className="max-w-xl"
+                  selectedSensorId={sensorFocus?.id}
+                  onSelectSensor={(id, index) => {
+                    setSensorFocus((current) => ({
+                      id,
+                      index,
+                      request: (current?.request ?? 0) + 1,
+                    }))
+                    setWorkTab('viewer')
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            /* ③ 블록·실적 — 인식 목록이 옆구리 패널이 아니라 전면이다. 실적의 다음
+               단계(일일 생산)는 여기서 나간다. */
+            <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+                <h2 className="text-inshop-base font-semibold text-foreground">
+                  {t('blocks.listTitle')}{' '}
+                  <span className="font-normal text-foreground/54">{detail.blocks.length}</span>
+                </h2>
+                <Link
+                  to={`/indoorshop/zones/assembly/${factory.id}/production`}
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-inshop-md border border-border px-3 text-inshop-xs font-medium text-foreground/75 transition-colors hover:border-accent/50 hover:text-accent"
+                >
+                  {t('assembly.workspace.dailyProductionLink')}
+                </Link>
+              </div>
+              <div className="xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">
+                <DetectedBlockList
+                  blocks={detail.blocks}
+                  model={detail.bayModel?.model ?? null}
+                  onSelectBlock={setSelectedBlockId}
+                  selectedBlockId={selectedBlockId}
+                />
+              </div>
+            </div>
+          )
+        ) : workTab === 'viewer' ? (
+          /*
+           * ── 공장 레벨 ② 3D 뷰어 — 공장 전체 센서퓨전, 전폭 ──
+           * 정반 선택은 상단 탭과 3D 라벨이 맡는다. 정반 상세 패널(FR-8)은 ③ 탭으로 갔다.
+           */
+          <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
+            <AssemblyLocationTabs
+              factories={base.factories}
+              locations={base.locations}
+              currentFactoryId={factory.id}
+              tone="attached"
+              parts="factories"
+              attachedColors={viewportEdge}
+              className="shrink-0"
+            />
+            <div
+              ref={viewportRef}
+              style={isFullscreen ? { background: viewportEdge.background } : undefined}
+              className="relative min-w-0 xl:min-h-0 xl:flex-1"
+            >
               {/*
                 장면이 아직 없어도 칸과 도구줄은 자리에 남는다 — 불러오는 동안
                 공장을 못 바꾸면, 잘못 들어온 사람은 기다렸다가 다시 눌러야 한다.
@@ -685,19 +663,6 @@ export function AssemblyWorkspace() {
                 <div
                   style={{ background: viewportEdge.background }}
                   className={cn('w-full rounded-inshop-lg border border-border', viewerSizeClass)}
-                />
-              ) : realFactory ? (
-                <RealScanViewer
-                  key={factoryScene.factoryId}
-                  mode="factory"
-                  bayLocations={factoryLocations}
-                  displayMode={displayMode}
-                  colorMode={colorMode}
-                  showOutline={showOutline}
-                  onSelectBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
-                  highlightedBayId={highlightedBayId}
-                  onHoverBay={setHighlightedBayId}
-                  className={viewerSizeClass}
                 />
               ) : (
                 <LidarPointCloudViewer
@@ -767,33 +732,55 @@ export function AssemblyWorkspace() {
                 <FirstRunHint className="absolute bottom-16 left-1/2 z-10 -translate-x-1/2" />
               )}
               {showFactorySpinner && <SpinnerOverlay label={t('viewer.loadingFusion')} />}
-              </div>
             </div>
-
-            {/* 정반 상세 패널 (FR-8) — 실측 공장은 지속 선택이 없어 패널도 없다 */}
-            {!realFactory && (
-              <>
-                <ResizeHandle
-                  {...panelSeparatorProps}
-                  dragging={resizingPanel}
-                  className="hidden xl:block"
-                />
-                <div className="flex min-w-0 flex-col xl:min-h-0 xl:w-[var(--panel-w)] xl:shrink-0">
-                  <BayDetailPanel
-                    bays={factoryScene?.bays ?? []}
-                    selectedBayId={selectedBayId}
-                    highlightedBayId={highlightedBayId}
-                    filter={bayFilter}
-                    onFilterChange={setBayFilter}
-                    onSelectBay={setSelectedBayId}
-                    onHoverBay={setHighlightedBayId}
-                    onOpenBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
-                    onFitBay={() => setFitRequest((count) => count + 1)}
-                    className="xl:min-h-0 xl:flex-1"
-                  />
-                </div>
-              </>
-            )}
+          </div>
+        ) : !factoryScene ? (
+          /* 센서·블록 탭도 장면 데이터가 재료다 — 오는 동안 자리만 지킨다 */
+          <div className="flex h-[50vh] items-center justify-center rounded-inshop-lg border border-border">
+            {showFactorySpinner && <Spinner size={24} className="text-accent" />}
+          </div>
+        ) : workTab === 'sensors' ? (
+          /* ① 공장 센서 상태 — 정반마다 한 장씩, 전면 격자 */
+          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+            <p className="shrink-0 text-inshop-xs text-foreground/55">
+              {t('assembly.workspace.sensorTabFactoryHint')}
+            </p>
+            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:p-1.5">
+              {factoryScene.bays.map((bay) => (
+                <section key={bay.location.id} className="rounded-inshop-lg border border-border p-3">
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <h3 className="text-inshop-sm font-semibold text-foreground">{bay.location.name}</h3>
+                    <span className="font-mono text-2xs text-foreground/50">
+                      {bay.location.workCntr}
+                    </span>
+                  </div>
+                  <LidarSensorStatusList sensors={bay.sensors} pointColors={SENSOR_POINT_COLORS} />
+                </section>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* ③ 공장 블록·실적 — 정반 상세 패널(작업 상태·필터)이 전면이다.
+             일일 생산 링크는 머리글(공장 뷰 상시)이 이미 낸다 — 같은 문을 두 번 세우지 않는다 */
+          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+            <div className="flex h-[72vh] min-h-[480px] flex-col xl:h-auto xl:min-h-0 xl:flex-1">
+              <BayDetailPanel
+                bays={factoryScene.bays}
+                selectedBayId={selectedBayId}
+                highlightedBayId={highlightedBayId}
+                filter={bayFilter}
+                onFilterChange={setBayFilter}
+                onSelectBay={setSelectedBayId}
+                onHoverBay={setHighlightedBayId}
+                onOpenBay={(locId) => navigate(`/indoorshop/zones/assembly/${factory.id}/${locId}`)}
+                onFitBay={() => {
+                  /* 맞춤은 3D 의 동작이다 — 요청을 올리고 뷰어 탭으로 넘긴다 */
+                  setFitRequest((count) => count + 1)
+                  setWorkTab('viewer')
+                }}
+                className="min-h-0 flex-1"
+              />
+            </div>
           </div>
         )}
       </div>

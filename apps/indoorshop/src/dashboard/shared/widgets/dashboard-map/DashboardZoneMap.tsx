@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../../lib/i18n/useTranslation'
 import {
   YardMap,
@@ -17,6 +17,10 @@ import {
   type YardView,
   type Viewport,
 } from '../../features/yard-map'
+import {
+  stashCameraHandoff,
+  takeCameraHandoff,
+} from '../../features/yard-map/lib/cameraHandoff'
 import {
   loadYardParcels,
   boundsOfLots,
@@ -59,8 +63,14 @@ import { useMapLocations, locationsOf, type MapLocationsState } from './useMapLo
 import { mapLinkNote } from './mapLinkNote'
 import { DashboardMiniMap, type DashboardMiniMapHandle } from './DashboardMiniMap'
 import { locationOfBay, summarizeBay } from './bayDetail'
-import { spotlitLot } from './lotSpot'
 import { BayDetailCard } from './BayDetailCard'
+import { PerformanceBadge } from './PerformanceBadge'
+import {
+  BlockSearch,
+  BlockSearchPin,
+  type BlockSearchHit,
+  type BlockSearchPinHandle,
+} from './BlockSearch'
 import {
   FactoryHudLabel,
   type FactoryHudCamera,
@@ -156,6 +166,21 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   const [navigationTarget, setNavigationTarget] = useState<{ lat: number; lon: number } | null>(null)
   const [resetSignal, setResetSignal] = useState(0)
 
+  /*
+   * 공정 맵 화면에서 넘어온 카메라 승계(1회성·TTL 3s) — 첫 렌더에서 한 번만 가져와
+   * YardMap 의 시작 화각으로 쓴다. 없으면(직접 진입·새로고침) 기존 initialBounds 폴백.
+   */
+  const handoffRef = useRef<YardView | null | undefined>(undefined)
+  if (handoffRef.current === undefined) handoffRef.current = takeCameraHandoff()
+  const handoffView = handoffRef.current
+  /*
+   * 승계로 시작한 화면은 첫 focusBounds 관찰이 "이미 본 것"으로 넘어가 카메라가 승계
+   * 화각에 머문다 — 지도가 준비된 뒤 목표 범위를 **복제**해 정체성을 바꿔 주면
+   * 거기서 제 프레이밍으로 미끄러진다(전환 글라이드). 두 번 차는 건 ResizeObserver
+   * 측정 경쟁으로 첫 발이 무시될 때의 보험이다.
+   */
+  const [glideKick, setGlideKick] = useState(0)
+
   /* 배경(베이스맵·범위)과 지번/공장 데이터를 함께 당긴다 — 둘 다 무거운 fixture(lazy) */
   const { data } = useAsyncData<Loaded>(
     () =>
@@ -173,18 +198,34 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   /* 지도에서 손이 얹힌 **베이** — 목록의 작업 위치와 id 공간이 달라 따로 든다 */
   const [hoveredBay, setHoveredBay] = useState<string | null>(null)
   /*
-   * 베이 카드의 지번 줄이 짚은 **지번 낱장**. 선택(`selection`)과 나란히 두지 않는 것은
-   * 이것이 드릴다운 단계가 아니기 때문이다 — 짚기는 지도에게 "이 칸이 어디냐"를 물을 뿐
-   * 무엇을 골랐는지를 바꾸지 않으므로, 상위 선택 전이 규칙(mapSpotlight)에 들어갈 자리가 없다.
-   * 누른 것(`spottedLot`)과 손이 얹힌 것(`hoveredLotRow`)을 따로 드는 이유는 카드와 같다:
-   * 훑어보는 동안은 미리보기가 이기고, 손을 떼면 눌러 둔 자리로 되돌아온다.
+   * 블록 검색이 고른 블록 — 선택(`selection`)과 나란히 두지 않는 것은 이것이 드릴다운
+   * 단계가 아니기 때문이다: 검색은 지도에게 "이 블록이 어디냐"를 물을 뿐 무엇을
+   * 골랐는지를 바꾸지 않으므로, 상위 선택 전이 규칙(mapSpotlight)에 들어갈 자리가 없다.
+   * 카메라는 이 값이 선택보다 우선한다(찾은 자리를 보여 주는 것이 질문의 답이므로).
    */
-  const [spottedLot, setSpottedLot] = useState<string | null>(null)
-  const [hoveredLotRow, setHoveredLotRow] = useState<string | null>(null)
+  const [searchHit, setSearchHit] = useState<BlockSearchHit | null>(null)
+  const searchPinRef = useRef<BlockSearchPinHandle>(null)
   /* 카드별 펴짐 상태(공정명 집합). 기본은 전부 접힘 — 지도가 넓게 보이는 상태에서 시작한다 */
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   const parcels = data?.parcels ?? null
   const navigate = useNavigate()
+
+  /* 승계 글라이드 발차 — 지도 데이터가 선 뒤 두 번(측정 경쟁 보험) */
+  useEffect(() => {
+    if (!handoffView || !data) return
+    const first = setTimeout(() => setGlideKick(1), 120)
+    const second = setTimeout(() => setGlideKick(2), 600)
+    return () => {
+      clearTimeout(first)
+      clearTimeout(second)
+    }
+  }, [handoffView, data])
+
+  /* 공정 화면으로 떠나는 링크가 클릭 시점의 카메라를 맡긴다 — 도착 화면이 이어받는다 */
+  const stashCamera = useCallback(() => {
+    const camera = cameraRef.current
+    if (camera) stashCameraHandoff(camera.view)
+  }, [])
 
   const focusedFactory = selection?.kind === 'factory' ? selection.name : null
 
@@ -266,6 +307,21 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   )
 
   /*
+   * `/?factory=<공장명>` 딥링크 소비 — 통합실적의 '맵에서 보기'가 이 계약으로 보낸다
+   * (도장 `?shop=` 전례). 공장 검증에 parcels 가 필요해 로드 후 **한 번만** 소비하고,
+   * 지도에 없는 이름은 조용히 무시한다(오류 화면을 세울 만큼의 사고가 아니다).
+   */
+  const [searchParams] = useSearchParams()
+  const deepLinkConsumed = useRef(false)
+  useEffect(() => {
+    if (deepLinkConsumed.current || !parcels) return
+    deepLinkConsumed.current = true
+    const name = searchParams.get('factory')
+    if (name && parcels.factories.some((f) => f.name === name)) selectFactory(name)
+  }, [parcels, searchParams, selectFactory])
+
+
+  /*
    * **목록**의 작업 위치 클릭 — 그 위치를 고르고 곧장 상세 화면으로 들어간다.
    *
    * PRD §5.3 은 "1회 클릭은 선택, 명시적 링크 또는 재활성화로 이동"을 기본안으로 두되
@@ -315,16 +371,6 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   const clearBay = useCallback(() => {
     setSelection((prev) => nextBaySelection(prev, null))
   }, [])
-
-  /*
-   * 짚기는 **그 베이 카드의 것**이다 — 베이가 바뀌거나 카드가 닫히면 남아 있을 자리가
-   * 없다. 지우는 곳을 여기 한 곳으로 모은다: 카드를 여닫는 길이 여럿(지도 클릭·← 되돌리기·
-   * 닫기·공장 전환)이라 각자 지우게 두면 한 길을 빠뜨린다.
-   */
-  useEffect(() => {
-    setSpottedLot(null)
-    setHoveredLotRow(null)
-  }, [selectedBay])
 
   /*
    * 지도 스포트라이트 — 공장을 고르면 그 공장의 **공정도 함께** 켠다 (FR-5 강조 문법).
@@ -491,6 +537,30 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
     return around ? bayCameraBounds(around, factory, BAY_CAMERA_MIN_RATIO) : factory
   }, [parcels, selection])
 
+  /* 검색으로 고른 블록의 카메라 자리 — 점 주변 ~130m 상자. 선택 카메라보다 우선한다 */
+  const searchFocus = useMemo<LatLonBounds | null>(() => {
+    if (!searchHit) return null
+    const dLat = 0.0006
+    const dLon = 0.0007
+    return {
+      minLat: searchHit.lat - dLat,
+      maxLat: searchHit.lat + dLat,
+      minLon: searchHit.lon - dLon,
+      maxLon: searchHit.lon + dLon,
+    }
+  }, [searchHit])
+
+  /*
+   * 카메라 목표 — 검색 핀 > 선택 > 대문. 승계 글라이드 kick 이 오르면 **같은 목표를
+   * 새 정체성으로** 다시 낸다: YardMap 은 focusBounds 의 참조가 바뀔 때만 굴리므로,
+   * 승계 화각에서 제 프레이밍으로 넘어가는 첫 비행이 여기서 시작된다.
+   */
+  const focusTarget = searchFocus ?? focusBounds ?? overviewBounds
+  const glidedFocusBounds = useMemo(
+    () => (glideKick > 0 && focusTarget ? { ...focusTarget } : focusTarget),
+    [glideKick, focusTarget]
+  )
+
   /*
    * 지도에 넘길 공장 목록 — **참조를 안정되게** 따로 memo 한다. 이 배열이 매번 새로 나오면
    * YardMap 이 지번 정렬·공장 껍질·베이 지붕을 통째로 다시 세운다(한 번에 30~40ms) —
@@ -529,7 +599,8 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
        * 공장 클릭이면 그 공장(selected) + 같은 공정을 스포트라이트 (FR-5) */
       colorMode: 'process',
       processColor: colorOfProcess,
-      focusedProcess: spotlight.focusedProcess,
+      /* 대시보드 스포트라이트는 언제나 공정 하나 — 단일 원소 배열이 옛 단일 값과 등가다 */
+      focusedProcesses: spotlight.focusedProcess ? [spotlight.focusedProcess] : null,
       focusedFactory: spotlight.focusedFactory,
       /* 같은 공정의 다른 공장은 절반쯤 눌린 네온 — FR-5 "동일 공정 45~60%" 중간 계층 */
       relatedDimFactor: 0.5,
@@ -543,8 +614,8 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
       /* 고른 공장 안의 칸 — 지붕 위 구분선 + 눌린 칸 강조 + 클릭/호버 */
       selectedLot: mapSelectedUnit,
       hoveredLot: mapHoveredUnit,
-      /* 베이 카드가 짚은 지번 한 장 — 훑는 동안(호버)은 미리보기가 눌러 둔 것을 잠시 덮는다 */
-      highlightedLot: spotlitLot(spottedLot, hoveredLotRow),
+      /* 블록 검색이 고른 블록이 선 지번 — 핀(점)에 자리 문맥(칸)을 더한다 */
+      highlightedLot: searchHit?.lot ?? null,
       hoveredFactory,
       /* 고른 공장의 이름은 지붕에서 일어나 떠오른다 — 캔버스는 그 자리를 비운다 */
       floatingFocusedLabel: true,
@@ -565,8 +636,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
     hoverMapUnit,
     lotGroups,
     factoryBays,
-    hoveredLotRow,
-    spottedLot,
+    searchHit,
   ])
 
   const selectedFactoryData = useMemo(() => {
@@ -638,12 +708,24 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
       bay={selectedBayData}
       locationNoun={drilldown ? t(drilldown.locationNounKey) : t('dashboard.map.locationNoun')}
       linkedLocation={bayLinks.locationOfBayId.get(selectedBayData.id) ?? null}
-      highlightedLot={spottedLot}
-      onSelectLot={setSpottedLot}
-      onHoverLot={setHoveredLotRow}
+      /* 총괄 화면은 지번 표면을 내지 않는다 — 드릴다운은 공장→베이까지, 지번은 야드 몫 */
+      showLotList={false}
       onBack={clearBay}
       onClose={() => setSelection(null)}
-    />
+    >
+      {/* 베이 카드에도 같은 절점 실적 참고 — 절점 귀속이 공장 단위 mock 이라 공장 기준 수치다 */}
+      <PerformanceBadge factory={selectedBayData.factory} className="border-b-0 px-0 py-0" />
+      {/* 이 공장 문맥 그대로 공정 화면으로 — 선택·카메라를 승계한다 (W4-6a D3) */}
+      {focusedZoneId && focusedFactory && (
+        <Link
+          to={`/indoorshop/zones/${focusedZoneId}?shop=${encodeURIComponent(focusedFactory)}`}
+          onClick={stashCamera}
+          className="inline-flex items-center gap-1 rounded-inshop-sm px-1.5 py-0.5 text-2xs font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          {t('dashboard.map.openZoneShort')} →
+        </Link>
+      )}
+    </BayDetailCard>
   ) : selectedFactoryData ? (
     <FactoryDetailCard
       data={selectedFactoryData}
@@ -677,6 +759,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
       onHoverFactory={setHoveredFactory}
       hoveredLocation={listHoveredLocation}
       onHoverLocation={setHoveredLocation}
+      onStashCamera={stashCamera}
     />
   )
 
@@ -686,7 +769,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
         지도 상자. 넓은 화면에서는 남은 높이를 다 쓰고(패널이 그 위에 뜬다), 좁은 화면에서는
         아래에 선 패널이 화면 밖으로 밀리지 않도록 높이를 덜어 준다.
       */}
-      <div className="relative min-h-0 w-full overflow-hidden rounded-xl border border-border bg-[#0b0f14] max-xl:h-[min(60vh,34rem)] max-xl:min-h-[22rem] xl:flex-1">
+      <div className="relative min-h-0 w-full overflow-hidden rounded-inshop-xl border border-border bg-[#0b0f14] max-xl:h-[min(60vh,34rem)] max-xl:min-h-[22rem] xl:flex-1">
         {/* 지도 — 준비되면 붙는다. 그 전엔 패널이 먼저 서 있고 여기만 로딩 표시 */}
         {data?.backdrop && parcelLayer && basemapLayers ? (
           <YardMap
@@ -708,6 +791,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
               cameraRef.current = { view, viewport }
               miniMapRef.current?.updateView(view, viewport)
               hudRef.current?.updateView(view, viewport)
+              searchPinRef.current?.updateView(view, viewport)
             }}
             lotOpacity={0.7}
             parcels={parcelLayer}
@@ -716,10 +800,15 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
              * 잘리더라도 모델이 가깝게 서는 쪽을 대문으로 삼는다 (드래그로 언제든 나온다). */
             initialBounds={overviewBounds}
             initialBoundsPadding={OVERVIEW_BOUNDS_PADDING}
-            focusBounds={focusBounds ?? overviewBounds}
+            /* 공정 맵에서 이어 온 화각 — 있으면 첫 프레임이 그 자리에서 시작한다 */
+            initialView={handoffView}
+            focusBounds={glidedFocusBounds}
             focusBoundsDuration={420}
             focusBoundsPadding={
-              selection?.kind === 'process'
+              searchFocus
+                ? /* 블록 핀 주변 — 이웃 지번이 함께 남을 만큼 */
+                  0.35
+                : selection?.kind === 'process'
                 ? -0.04
                 : selection?.kind === 'factory'
                   ? /* 베이도 같은 여백을 쓴다 — 배율은 여백이 아니라 `bayCameraBounds` 의
@@ -736,6 +825,16 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
           <div className="flex h-full w-full items-center justify-center text-inshop-sm text-white/45">
             {t('dashboard.map.loading')}
           </div>
+        )}
+
+        {/* 검색으로 고른 블록의 핀 — 카메라를 따라 imperative 로만 움직인다 */}
+        {searchHit && (
+          <BlockSearchPin
+            key={searchHit.id}
+            ref={searchPinRef}
+            hit={searchHit}
+            initialCamera={cameraRef.current}
+          />
         )}
 
         {/* 고른 공장의 떠 있는 이름패. key 가 공장이라, 공장을 갈아타면 떠오름이 다시 연주된다 */}
@@ -773,7 +872,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
           )}
         >
           <div className="flex min-h-0 min-w-0 flex-col items-start gap-2.5">
-            <div className="pointer-events-none max-w-full shrink-0 rounded-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+            <div className="pointer-events-none max-w-full shrink-0 rounded-inshop-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl">
               <div className="flex min-w-0 items-center gap-3">
                 <span aria-hidden="true" className="h-9 w-1 shrink-0 rounded-full bg-accent shadow-[0_0_12px_rgba(249,145,55,0.42)]" />
                 <div className="min-w-0">
@@ -787,6 +886,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
               </div>
             </div>
 
+            <div className="flex max-w-full shrink-0 flex-wrap items-start gap-2">
             <button
               type="button"
               onClick={() => {
@@ -803,6 +903,14 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
               </svg>
               {t('dashboard.map.currentLocation')}
             </button>
+            {/* 블록 검색 — 색인은 첫 사용 때 backdrop 로더에서 받는다 */}
+            <BlockSearch
+              loadIndex={data?.backdrop?.blockIndex ?? null}
+              hit={searchHit}
+              onPick={setSearchHit}
+              onClear={() => setSearchHit(null)}
+            />
+            </div>
 
             {/* 선택한 공장(또는 그 안의 베이) 상세 — 공정존 탐색을 가리지 않도록 지도 왼쪽에
                 둔다. 베이를 고르면 같은 자리를 베이 상세가 이어받는다(두 카드를 나란히
@@ -887,6 +995,7 @@ function ProcessZonePanel({
   onHoverFactory,
   hoveredLocation,
   onHoverLocation,
+  onStashCamera,
 }: {
   zones: Zone[]
   parcels: YardParcels | null
@@ -905,6 +1014,8 @@ function ProcessZonePanel({
   onHoverFactory: (name: string | null) => void
   hoveredLocation: string | null
   onHoverLocation: (id: string | null) => void
+  /** 공정 화면으로 떠나는 링크가 클릭 순간의 카메라를 승계 저장소에 맡긴다 */
+  onStashCamera: () => void
 }) {
   const { t } = useTranslation()
   return (
@@ -918,13 +1029,18 @@ function ProcessZonePanel({
       <div className="flex flex-col gap-2">
         {zones.map((zone) => {
           const process = ZONE_PROCESS[zone.id] ?? null
-          /* 그 공정의 공장 목록 — 지번 수가 많은 순. 작업 위치는 고른 공장 아래에만 편다 */
+          /* 그 공정의 공장 목록 — 큰 공장(소속 지번 많은 순 = 크기 순)이 먼저. 칩에는
+           * 베이 수를 적는다(총괄 화면의 최소 단위 — 지번 어휘는 표면에 내지 않는다) */
           const factories =
             parcels && process
               ? parcels.factories
                   .filter((f) => f.process === process)
-                  .map((f) => ({ name: f.name, lotCount: f.lotCodes.length }))
-                  .sort((a, b) => b.lotCount - a.lotCount || a.name.localeCompare(b.name))
+                  .map((f) => ({
+                    name: f.name,
+                    size: f.lotCodes.length,
+                    bayCount: parcels.bays.filter((b) => b.factory === f.name).length,
+                  }))
+                  .sort((a, b) => b.size - a.size || a.name.localeCompare(b.name))
               : []
           return (
             <ProcessZoneCard
@@ -945,6 +1061,7 @@ function ProcessZonePanel({
               onHoverFactory={onHoverFactory}
               hoveredLocation={hoveredLocation}
               onHoverLocation={onHoverLocation}
+              onStashCamera={onStashCamera}
             />
           )
         })}
@@ -976,10 +1093,11 @@ function ProcessZoneCard({
   onHoverFactory,
   hoveredLocation,
   onHoverLocation,
+  onStashCamera,
 }: {
   zone: Zone
   process: string | null
-  factories: { name: string; lotCount: number }[]
+  factories: { name: string; size: number; bayCount: number }[]
   expanded: boolean
   onToggle?: () => void
   active: boolean
@@ -993,6 +1111,7 @@ function ProcessZoneCard({
   onHoverFactory: (name: string | null) => void
   hoveredLocation: string | null
   onHoverLocation: (id: string | null) => void
+  onStashCamera: () => void
 }) {
   const { t } = useTranslation()
   const procColor = process ? colorOfProcess(process) : '#9a9890'
@@ -1177,7 +1296,9 @@ function ProcessZoneCard({
                                 }
                           }
                         >
-                          {t('dashboard.map.lotCount', { count: f.lotCount })}
+                          {f.bayCount > 0
+                            ? t('dashboard.map.bayCount', { count: f.bayCount })
+                            : t('dashboard.map.noBays')}
                         </span>
                       </button>
                       {/*
@@ -1212,8 +1333,17 @@ function ProcessZoneCard({
           )}
 
           <div className="flex justify-end px-3 py-2">
+            {/*
+             * 이 공정의 공장을 골라 둔 채 넘어가면 선택(?shop=)과 카메라(stash)를 함께
+             * 승계한다 — 공정 화면이 같은 화각·같은 공장에서 이어진다 (W4-6a D3).
+             */}
             <Link
-              to={`/indoorshop/zones/${zone.id}`}
+              to={
+                selectedFactory && factories.some((f) => f.name === selectedFactory)
+                  ? `/zones/${zone.id}?shop=${encodeURIComponent(selectedFactory)}`
+                  : `/zones/${zone.id}`
+              }
+              onClick={onStashCamera}
               className="rounded-inshop-sm px-1.5 py-0.5 text-2xs font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               {t('dashboard.map.openZoneShort')}
@@ -1535,7 +1665,7 @@ function FactoryDetailCard({
    * 보인다. 모자란 높이는 잘라 낼 것이 아니라 스크롤로 돌려줄 것이다.
    */
   return (
-    <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
       <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-4">
         <div className="min-w-0 space-y-1.5">
@@ -1561,11 +1691,8 @@ function FactoryDetailCard({
       {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
           아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
       <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
-          <dt className="text-2xs text-white/45">{t('dashboard.map.lots')}</dt>
-          <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">{data.lotCount}</dd>
-        </div>
-        <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
+        {/* 지번 수 타일은 두지 않는다 — 총괄 화면의 최소 단위는 베이다(지번은 야드 몫) */}
+        <div className="col-span-2 rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
           <dt className="text-2xs text-white/45">{t('dashboard.map.area')}</dt>
           <dd className="mt-1 text-inshop-2xl font-semibold tracking-[-0.04em] tabular-nums [@media(max-height:900px)]:text-inshop-xl">
             {Math.round(data.area).toLocaleString()}
@@ -1581,6 +1708,9 @@ function FactoryDetailCard({
           <dd className="font-medium tabular-nums text-white/86">{data.outdoor}</dd>
         </div>
       </dl>
+
+      {/* 절점 기반 실적 참고 배지 — 통합실적과 같은 원천(mock). 데이터 없는 공장은 스스로 빠진다 */}
+      <PerformanceBadge factory={data.name} />
 
       {/*
         작업 위치 섹션 (PRD §5.3) — 이 공장의 다음 선택 단계. 이름과 운영 코드(조립:

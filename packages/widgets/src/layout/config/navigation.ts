@@ -230,6 +230,12 @@ function getIndoorshopOtGroups(): NavGroup[] {
           path: '/indoorshop',
           icon: LayoutDashboard,
         },
+        // 통합실적 — 원본 내비에서 '/'(현황판)와 형제인 전역 화면
+        {
+          label: i18n.t('common:nav.indoorshopPerformance'),
+          path: '/indoorshop/performance',
+          icon: TrendingUp,
+        },
       ],
     },
     {

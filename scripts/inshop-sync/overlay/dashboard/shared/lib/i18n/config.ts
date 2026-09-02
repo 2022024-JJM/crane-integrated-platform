@@ -30,13 +30,34 @@ export const LANGUAGE_LOCALE: Record<Language, string> = {
  */
 export const INSHOP_NS = 'inshop'
 
+/*
+ * init 전에는 i18next 싱글턴에 addResourceBundle 이 아직 없다. 셸 런타임에서는
+ * initI18n 이 이 청크보다 먼저 돌지만, vitest 는 아무도 init 하지 않은 채 이
+ * 모듈을 끌어온다 — 그때는 큐에 쌓았다가 'initialized' 에서 얹는다.
+ */
+const pending: [string, object][] = []
+
+export function addInshopBundle(lng: string, resources: object): void {
+  if (i18n.isInitialized) {
+    i18n.addResourceBundle(lng, INSHOP_NS, resources, true, true)
+  } else {
+    pending.push([lng, resources])
+  }
+}
+
+i18n.on('initialized', () => {
+  for (const [lng, resources] of pending.splice(0)) {
+    i18n.addResourceBundle(lng, INSHOP_NS, resources, true, true)
+  }
+})
+
 let registered = false
 
 export function registerInshopLocales(): void {
   if (registered) return
   registered = true
-  i18n.addResourceBundle('ko', INSHOP_NS, ko, true, true)
-  i18n.addResourceBundle('en', INSHOP_NS, en, true, true)
+  addInshopBundle('ko', ko)
+  addInshopBundle('en', en)
 }
 
 export default i18n

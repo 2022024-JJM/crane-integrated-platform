@@ -7,8 +7,11 @@ import { fabricationEn } from './i18n/en'
 /*
  * 가공 모듈 선언.
  *
- * 전용 화면은 아직 없다 — 공통 '준비 중' 화면이 선다. 이 모듈이 자기 이름·라우트·
- * 문구를 직접 들고 있으므로, 실제 화면을 붙일 때 공통 파일은 열지 않아도 된다.
+ * **가공은 필드 수집이 없다(Legacy DB 전용)** — LiDAR·PLC 같은 필드 센서가 없어
+ * OT 공정존 화면(사이드바 공정존 그룹·'/' 공정존 카드)에서 제외한다(사용자 확정).
+ * 가공 실적은 통합실적(/performance) 소관이고, 지도 위 가공 공장 형상·CAS/PAS
+ * 초록은 기준정보라 그대로 남는다. 라우트(placeholder)는 직접 진입용으로 유지 —
+ * 필드 수집이 생기면 nav `hidden` 을 걷고 `zone` 카드를 되살린다.
  */
 
 const ZonePlaceholderPage = lazy(() =>
@@ -25,23 +28,10 @@ export const fabricationModule: ProcessModule = {
     labelKey: 'fabrication.nav.label',
     icon: FabricationIcon,
     source: 'Legacy DB',
+    /* 필드 수집 없음 — 사이드바에서 숨긴다 (라우트는 유지, 위 모듈 주석 참조) */
+    hidden: true,
   },
   routes: [{ path: '/indoorshop/zones/fabrication', Component: ZonePlaceholderPage }],
   i18n: { ko: fabricationKo, en: fabricationEn },
-  zone: {
-    id: 'fabrication',
-    displayNameKey: 'fabrication.zone.displayName',
-    status: 'running',
-    health: 'healthy',
-    processingCount: 15,
-    lastUpdateKey: 'fabrication.zone.lastUpdate',
-    source: 'Legacy DB',
-    statusDetailKey: 'fabrication.zone.statusDetail',
-    healthDetailKey: 'fabrication.zone.healthDetail',
-    checks: [
-      { labelKey: 'zone.checkLabel.ingest', state: 'ok', detailKey: 'fabrication.zone.ingest' },
-      { labelKey: 'zone.checkLabel.judge', state: 'ok', detailKey: 'fabrication.zone.judge' },
-      { labelKey: 'zone.checkLabel.store', state: 'ok', detailKey: 'fabrication.zone.store' },
-    ],
-  },
+  /* zone 카드 없음 — '/' 공정존 카드·지도 스포트라이트에서 빠진다 (위 모듈 주석 참조) */
 }

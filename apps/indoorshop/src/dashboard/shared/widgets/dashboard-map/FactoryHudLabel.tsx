@@ -116,7 +116,7 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
                 />
 
                 <div
-                  className="relative whitespace-nowrap rounded-xl border px-6 py-2.5 backdrop-blur-xl"
+                  className="relative whitespace-nowrap rounded-inshop-xl border px-6 py-2.5 backdrop-blur-xl"
                   style={{
                     borderColor: 'rgba(255,255,255,0.3)',
                     /* 유리 — 배경이 비쳐야 "떠 있는 판"이지 "덮은 패"가 아니다 */
@@ -129,10 +129,10 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
                   {/* 네 모서리 꺾쇠 — 계측 화면의 표식. 이름패가 아니라 조준으로 읽힌다 */}
                   {(
                     [
-                      ['-top-px -left-px', 'border-t-2 border-l-2 rounded-tl-xl'],
-                      ['-top-px -right-px', 'border-t-2 border-r-2 rounded-tr-xl'],
-                      ['-bottom-px -left-px', 'border-b-2 border-l-2 rounded-bl-xl'],
-                      ['-bottom-px -right-px', 'border-b-2 border-r-2 rounded-br-xl'],
+                      ['-top-px -left-px', 'border-t-2 border-l-2 rounded-tl-inshop-xl'],
+                      ['-top-px -right-px', 'border-t-2 border-r-2 rounded-tr-inshop-xl'],
+                      ['-bottom-px -left-px', 'border-b-2 border-l-2 rounded-bl-inshop-xl'],
+                      ['-bottom-px -right-px', 'border-b-2 border-r-2 rounded-br-inshop-xl'],
                     ] as const
                   ).map(([place, edges]) => (
                     <span

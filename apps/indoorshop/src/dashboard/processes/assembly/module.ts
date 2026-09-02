@@ -12,6 +12,9 @@ import { assemblyEn } from './i18n/en'
  * 사용자에게까지 그 무게가 실린다. 화면은 전부 lazy 로 둔다.
  */
 
+const AssemblyMapEntryPage = lazy(() =>
+  import('./ui/pages/AssemblyMapEntryPage').then((m) => ({ default: m.AssemblyMapEntryPage }))
+)
 const FactoryListPage = lazy(() =>
   import('./ui/pages/FactoryListPage').then((m) => ({ default: m.FactoryListPage }))
 )
@@ -34,7 +37,10 @@ export const assemblyModule: ProcessModule = {
     source: 'LiDAR',
   },
   routes: [
-    { path: '/indoorshop/zones/assembly', Component: FactoryListPage },
+    /* 엔트리는 맵 진입(TO-BE v2) — 기존 그리드 목록은 /list 로 병존한다.
+     * 고정 경로 `list` 는 `:factoryId` 보다 먼저 서야 한다(뒤에 두면 공장 하나로 잡힌다). */
+    { path: '/indoorshop/zones/assembly', Component: AssemblyMapEntryPage },
+    { path: '/indoorshop/zones/assembly/list', Component: FactoryListPage },
     { path: '/indoorshop/zones/assembly/:factoryId', Component: AssemblyWorkspace },
     // 고정 경로가 `:locationId` 보다 먼저 서야 한다 — 뒤에 두면 정반 하나로 잡힌다
     { path: '/indoorshop/zones/assembly/:factoryId/production', Component: ProductionCountPage },

@@ -26,7 +26,8 @@ const bay = (over: Partial<Location> = {}): Location => ({
 describe('ASSEMBLY_FACTORY_ID_BY_MAP_KEY — 지도 공장 키 → 조립 공장 ID 매핑', () => {
   it('지도 공장 이름으로 조립 공장 id 를 찾는다', () => {
     expect(ASSEMBLY_FACTORY_ID_BY_MAP_KEY['PBS']).toBe('asm-pbs')
-    expect(ASSEMBLY_FACTORY_ID_BY_MAP_KEY['해양제작1공장']).toBe('asm-of1')
+    /* 2026-09 원본 개편에서 해양제작1공장 → 조립4공장-OFD1 로 개명(데이터 정본 추종) */
+    expect(ASSEMBLY_FACTORY_ID_BY_MAP_KEY['조립4공장-OFD1']).toBe('asm-of1')
   })
 
   it('조립이 아닌 공장은 매핑에 없다 — 공장 이름을 그대로 넘기지 않는 이유', async () => {

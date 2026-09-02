@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import type { Location } from '../../../shared/entities/location/model/types'
-import type { LidarSensor, LidarSensorStatus } from '../model/lidarSensor'
-import type { LidarBlockInfo } from '../model/lidarBlock'
-import { formatDetectionId } from '../model/lidarBlock'
+import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
+import type { LidarBlockInfo } from '../../../shared/features/bay-viewer/model/lidarBlock'
+import { formatDetectionId } from '../../../shared/features/bay-viewer/model/lidarBlock'
 import {
   worstSensorStatus,
   sensorStatusCounts,
@@ -12,7 +12,7 @@ import {
   bayStage,
   type BayWorkState,
   type SensorStatusCounts,
-} from '../lib/bayStatusSummary'
+} from '../../../shared/features/bay-viewer/lib/bayStatusSummary'
 import {
   bayPassesFilter,
   isAbnormalBay,

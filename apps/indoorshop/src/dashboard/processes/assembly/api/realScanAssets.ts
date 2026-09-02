@@ -192,7 +192,12 @@ export function assertRealSceneConsistent(
   }
 }
 
-/** 실측 location id 규약 'real5-g1' → manifest 그룹 키 'g1' */
-export function realGroupKeyOf(locationId: string): RealGroupKey {
-  return locationId.split('-').pop() as RealGroupKey
+/**
+ * id 규약 `…-g1` → manifest 그룹 키 'g1'. 그룹 접미사가 아니면 null — 실측 정반
+ * (PBS 5BAY, `asm-pbs-b5`)처럼 **홀 전체**를 가리키는 id 는 그룹이 없고, 뷰어는
+ * null 을 받아 `manifest.factory`(홀 전체 장면)로 내려간다.
+ */
+export function realGroupKeyOf(locationId: string): RealGroupKey | null {
+  const key = locationId.split('-').pop()
+  return key === 'g1' || key === 'g2' || key === 'g3' ? key : null
 }

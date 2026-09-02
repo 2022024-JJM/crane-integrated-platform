@@ -47,6 +47,22 @@ export const yardModule: ProcessModule = {
         extent: repo.yardExtent(),
         colorOfCategory: repo.colorOfCategory,
         facilities: facilities.fetchYardFacilities(),
+        /* 블록 검색 색인 — 대시보드가 첫 검색 때 부른다. 데이터는 야드 화면과 같은
+         * 원천(BTS 블록 위치)이라 두 화면이 같은 자리를 말한다. 지번 이름은 위치 설명
+         * 맥락으로만 얹는다(대시보드는 지번 단위 정보를 표면에 내지 않는다). */
+        blockIndex: () =>
+          import('./api/yardRepository').then((r) =>
+            r.fetchYardBlocks().map((b) => ({
+              id: b.id,
+              projNo: b.projNo,
+              blkNo: b.blkNo,
+              lat: b.lat,
+              lon: b.lon,
+              lot: b.lot,
+              lotLabel: b.lot ? (r.findLot(b.lot)?.description ?? null) : null,
+              updatedAt: b.updatedAt,
+            }))
+          ),
       })),
     yardMapBackground: () =>
       Promise.all([

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import type { LoadedBlockModel } from '../../model/blockModel'
-import { getMergedAssemblyPositions, getRestPose } from '../../model/blockModel'
-import { fitDistanceForSphere } from '../../lib/fitCamera'
+import type { LoadedBlockModel } from '../../../../shared/features/bay-viewer/model/blockModel'
+import { getMergedAssemblyPositions, getRestPose } from '../../../../shared/features/bay-viewer/model/blockModel'
+import { fitDistanceForSphere } from '../../../../shared/features/bay-viewer/lib/fitCamera'
 import { cn } from '../../../../shared/lib/utils'
 
 interface AssemblyOrbitPreviewProps {

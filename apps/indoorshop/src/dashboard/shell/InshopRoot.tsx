@@ -32,6 +32,9 @@ const DashboardPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('../shared/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
+const PerformancePage = lazy(() =>
+  import('../shared/pages/PerformancePage').then((m) => ({ default: m.PerformancePage })),
+)
 const DocsPage = lazy(() => import('../shared/pages/DocsPage').then((m) => ({ default: m.DocsPage })))
 const DocViewerPage = lazy(() =>
   import('../shared/pages/DocViewerPage').then((m) => ({ default: m.DocViewerPage })),
@@ -111,6 +114,7 @@ function InshopFrame() {
     () => [
       { index: true, Component: DashboardPage },
       ...toRelative(getProcessRoutes()),
+      { path: 'performance', Component: PerformancePage },
       { path: 'docs', Component: DocsPage },
       { path: 'docs/:docId', Component: DocViewerPage },
       { path: 'settings', Component: SettingsPage },

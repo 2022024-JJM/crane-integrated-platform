@@ -178,9 +178,15 @@ def rewrite_i18n() -> None:
     p = DASH / "app/bootstrap.ts"
     s = read(p)
     assert s.count("'translation'") == 2, "bootstrap.ts 의 addResourceBundle 형태가 바뀜"
-    s = s.replace("'translation'", "INSHOP_NS")
-    s = re.sub(r"import i18n from '([^']*i18n/config)'", r"import i18n, { INSHOP_NS } from '\1'", s, count=1)
-    assert "INSHOP_NS } from" in s
+    # i18n.addResourceBundle 은 init 전에 부르면 없다 — 셸 런타임은 init 이 먼저지만
+    # vitest 는 아무도 init 하지 않은 채 이 모듈을 끌어오므로, 큐잉하는 addInshopBundle 로 보낸다.
+    s = re.sub(
+        r"i18n\.addResourceBundle\('(ko|en)', 'translation', ([^,]+), true, true\)",
+        r"addInshopBundle('\1', \2)",
+        s,
+    )
+    s = re.sub(r"import i18n from '([^']*i18n/config)'", r"import { addInshopBundle } from '\1'", s, count=1)
+    assert "addInshopBundle } from" in s and s.count("addInshopBundle(") == 2, "bootstrap 변환 실패"
     write(p, s)
 
     # 원본 app/i18next.d.ts: defaultNS 는 셸 것('common')을 두고, 리소스는 'inshop' 아래로
@@ -205,8 +211,8 @@ def rewrite_classes() -> None:
     for f in DST.rglob("*.tsx"):
         s = read(f); o = s
         s = re.sub(r"\btext-(2xl|xl|base|lg|sm|xs)\b", r"text-inshop-\1", s)
-        s = re.sub(r"\brounded-(xs|sm|md|lg)\b", r"rounded-inshop-\1", s)
-        s = re.sub(r"\brounded-([tblr]|t[lr]|b[lr])-(xs|sm|md|lg)\b", r"rounded-\1-inshop-\2", s)
+        s = re.sub(r"\brounded-(3xl|2xl|xl|xs|sm|md|lg)\b", r"rounded-inshop-\1", s)
+        s = re.sub(r"\brounded-([tblr]|t[lr]|b[lr])-(3xl|2xl|xl|xs|sm|md|lg)\b", r"rounded-\1-inshop-\2", s)
         s = re.sub(r"\bfont-sans\b", "font-inshop-sans", s)
         if s != o:
             write(f, s); n += 1
@@ -253,7 +259,7 @@ def rewrite_links() -> None:
 def patch_asset_paths() -> None:
     step("public 에셋 fetch 에 BASE_URL (/crane_rnd/) 씌우기")
     imp = "import { publicAsset } from '@/dashboard/shared/lib/public-asset'\n"
-    p = DASH / "processes/assembly/api/loadBlockModel.ts"
+    p = DASH / "shared/features/bay-viewer/api/loadBlockModel.ts"
     s = read(p)
     assert s.count("fetch(`/models/") == 3, "loadBlockModel fetch 지점 수가 바뀜"
     s = s.replace("fetch(`/models/${key}.json`)", "fetch(publicAsset(`/models/${key}.json`))")
@@ -338,6 +344,10 @@ def patch_globals_css() -> None:
     assert "  --font-sans: 'Pretendard Variable'" in s
     s = re.sub(r"  --font-sans: 'Pretendard Variable'[^\n]*\n  --font-mono: [^\n]*\n", "", s)
     s = re.sub(r"--radius-(xs|sm|md|lg): (\d+px);", r"--radius-inshop-\1: \2;", s)
+    # 원본은 xl 계열 radius 를 정의하지 않고 Tailwind 기본값(xl 12 / 2xl 16 / 3xl 24px)을
+    # 쓴다. 셸 shadcn 은 --radius-xl 을 --radius×1.4(=5.6px)로 재정의하므로, 개명한
+    # 이름으로 기본값을 되살린다.
+    s = s.replace("--radius-inshop-xs:", "--radius-inshop-xl: 12px;\n  --radius-inshop-2xl: 16px;\n  --radius-inshop-3xl: 24px;\n  --radius-inshop-xs:", 1)
     for st in ("xs", "sm", "base", "lg", "xl", "2xl"):
         s = s.replace(f"--text-{st}: calc(", f"--text-inshop-{st}: calc(")
         s = s.replace(f"--text-{st}--line-height: calc(", f"--text-inshop-{st}--line-height: calc(")
@@ -408,18 +418,24 @@ def patch_fixed_viewport() -> None:
 
 
 def patch_block_list_scroller() -> None:
-    step("조립 블록 목록 스크롤러: 선택 링이 잘리지 않게 사방 여백")
+    step("조립 스크롤러 3곳: 선택 링(ring-2+offset-2, 바깥 4px)이 잘리지 않게 사방 여백")
+    # overflow 컨테이너는 padding box 밖을 잘라낸다. 링만큼 사방에 p-1.5(6px)를 주고
+    # 같은 크기의 음수 마진으로 되돌려 보이는 위치는 그대로 둔다. (블록 목록·센서 상태 2곳)
     p = DASH / "processes/assembly/ui/pages/AssemblyWorkspace.tsx"
     replace_once(
         p,
-        "'transition-opacity xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1',",
-        """/*
-                       * 고른 카드는 ring-2 + ring-offset-2 로 바깥 4px 에 링을 그린다. overflow
-                       * 컨테이너는 padding box 밖을 잘라내므로, 여백이 없는 쪽(아래·왼쪽·위)과
-                       * 스크롤바가 차지하는 오른쪽에서 링이 끊긴다. 링만큼 사방에 여백을 주고
-                       * 같은 크기의 음수 마진으로 되돌려 보이는 위치는 그대로 둔다.
-                       */
-                      'transition-opacity xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5',""",
+        '"xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">',
+        '"xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
+    )
+    replace_once(
+        p,
+        '"xl:min-h-0 xl:flex-1 xl:overflow-y-auto">',
+        '"xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
+    )
+    replace_once(
+        p,
+        '"grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:pr-1">',
+        '"grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:p-1.5">',
     )
 
 

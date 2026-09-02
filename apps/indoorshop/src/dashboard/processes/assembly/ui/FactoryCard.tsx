@@ -8,6 +8,7 @@ import { LinkButton } from '../../../shared/ui/atoms/Button'
 import { HealthBadge } from '../../../shared/entities/zone/ui/HealthBadge'
 import { ChevronRightIcon } from '../../../shared/ui/icons'
 import { cn } from '../../../shared/lib/utils'
+import { isRealLocation, REAL_BAY_LABEL } from '../api/realScanData'
 
 interface FactoryCardProps {
   overview: FactoryOverview
@@ -123,10 +124,12 @@ function BayRow({ factoryId, bay }: { factoryId: string; bay: FactoryBaySummary 
         </span>
         <span className="w-10 shrink-0 font-mono text-2xs text-foreground/50">{bay.workCntr}</span>
 
-        {/* 무엇이 올라와 있는가 — 공석이면 그 사실 자체가 정보다 */}
+        {/* 무엇이 올라와 있는가 — 공석이면 그 사실 자체가 정보다. 실측 정반은 스캔 자체가 내용이다 */}
         <span className="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/68">
           {bay.projNo && bay.blkNo ? (
             `${bay.projNo}-${bay.blkNo}`
+          ) : isRealLocation(bay.locationId) ? (
+            <span className="font-inshop-sans text-accent/90">{t('assembly.factoryCard.realScanRow')}</span>
           ) : (
             <span className="font-inshop-sans text-foreground/45">{t('assembly.factoryCard.unassigned')}</span>
           )}
@@ -174,6 +177,8 @@ export function FactoryCard({ overview }: FactoryCardProps) {
   const { t } = useTranslation()
   const { factory, bays, sensorTotal, sensorOnline, sensorFault } = overview
   const unitLabelKey = UNIT_LEVEL_LABEL_KEY[overview.unitLevel]
+  /* 실측 정반(PBS 5BAY)을 품은 공장 — 카드 머리글에서 그 사실을 먼저 말한다 */
+  const hasRealBay = bays.some((bay) => isRealLocation(bay.locationId))
 
   return (
     <Card className="flex flex-col p-4">
@@ -190,6 +195,16 @@ export function FactoryCard({ overview }: FactoryCardProps) {
                   ·
                 </span>
                 <span>{t(unitLabelKey)}</span>
+              </>
+            )}
+            {hasRealBay && (
+              <>
+                <span aria-hidden="true" className="text-foreground/35">
+                  ·
+                </span>
+                <span className="rounded-inshop-sm bg-accent/12 px-1 py-px font-medium text-accent">
+                  {t('assembly.factoryCard.realScanBadge', { code: REAL_BAY_LABEL })}
+                </span>
               </>
             )}
           </p>

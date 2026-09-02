@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import type { BasemapLayer, MapTheme } from '../../../../shared/features/yard-map'
-import { loadYardParcels, type YardParcels } from '../../../../shared/entities/yard-parcels'
-import { useAsyncData } from '../../../../shared/lib/useAsyncData'
-import { fetchYardMapBackground } from '../../../../shared/model/processRegistry'
+import { useMapEntryData, useShopDeepLink } from '../../../../shared/features/process-map-entry'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { Spinner } from '../../../../shared/ui/atoms/Spinner'
 import { fetchPaintingEquipment, paintingFactories } from '../../api/paintingRepository'
 import { usePolledEquipmentStatus } from '../../lib/usePolledEquipmentStatus'
 import { PaintingYardMap } from '../PaintingYardMap'
-
-const EMPTY_BASEMAP: Record<MapTheme, BasemapLayer[]> = { dark: [], light: [] }
 
 /*
  * 선행도장 공정 화면 — 맵 중심 레이아웃.
@@ -30,7 +24,7 @@ export function PaintingWorkspace() {
   const allIds = useMemo(() => allEquipment.map((e) => e.id), [allEquipment])
   const factories = useMemo(() => paintingFactories(), [])
 
-  // 전 공장(87대) 폴링 — 요약이 공장별 가동/온라인을 세야 하고 87대뿐이라 한 번에 받아도 가볍다.
+  // 전 공장(86대) 폴링 — 요약이 공장별 가동/온라인을 세야 하고 86대뿐이라 한 번에 받아도 가볍다.
   const { byId: statusById, polledAt } = usePolledEquipmentStatus(allIds)
 
   // 신선도("…초 전")가 흐르도록 1초 시계 — 폴링(6초)과 별개
@@ -40,17 +34,9 @@ export function PaintingWorkspace() {
     return () => window.clearInterval(timer)
   }, [])
 
-  // ?shop= 딥링크 → 공장 선택 (야드가 encodeURIComponent(공장명) 로 보낸다)
-  const [searchParams] = useSearchParams()
-  const shopParam = searchParams.get('shop')
-  const [selectedFactory, setSelectedFactory] = useState(() =>
-    shopParam && factories.includes(shopParam) ? shopParam : (factories[0] ?? '')
-  )
-  /* 딥링크 없이 들어오면 대시보드처럼 도장 전체 보기로 연다 — 마운트 시점 한 번만 판단 */
-  const [initialOverview] = useState(() => !(shopParam && factories.includes(shopParam)))
-  useEffect(() => {
-    if (shopParam && factories.includes(shopParam)) setSelectedFactory(shopParam)
-  }, [shopParam, factories])
+  // ?shop= 딥링크 → 공장 선택 (야드가 encodeURIComponent(공장명) 로 보낸다).
+  // 딥링크 없이 들어오면 대시보드처럼 도장 전체 보기로 연다 — 공통 프레임의 훅이 맡는다.
+  const { selectedFactory, setSelectedFactory, initialOverview } = useShopDeepLink(factories)
 
   // 고른 설비 상세 — 공장이 바뀌면 접는다
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -58,11 +44,8 @@ export function PaintingWorkspace() {
     setSelectedId(null)
   }, [selectedFactory])
 
-  // 지번/공장 데이터 (도장 공장 폴리곤) — lazy 로 이 화면에서만 실린다
-  const { data: parcels } = useAsyncData<YardParcels>(() => loadYardParcels(), [])
-  // 베이스맵 배경 — 야드가 provides 로 낸다. 없어도 지번은 그린다(빈 베이스맵).
-  const { data: background } = useAsyncData(() => fetchYardMapBackground(), [])
-  const basemapLayers = background?.basemapLayers ?? EMPTY_BASEMAP
+  // 지번/공장(lazy)·베이스맵 배경(야드 provides) — 배경이 없어도 지번은 그린다
+  const { parcels, basemapLayers, yardExtent } = useMapEntryData()
 
   return (
     <div className="flex flex-col gap-3 xl:h-full xl:min-h-0">
@@ -89,7 +72,7 @@ export function PaintingWorkspace() {
             now={now}
             polledAt={polledAt}
             basemapLayers={basemapLayers}
-            yardExtent={background?.extent ?? null}
+            yardExtent={yardExtent}
             initialOverview={initialOverview}
             className="absolute inset-0"
           />

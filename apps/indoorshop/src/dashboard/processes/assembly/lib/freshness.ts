@@ -1,4 +1,4 @@
-import type { LidarSensor } from '../model/lidarSensor'
+import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
 
 /*
  * 데이터 신선도 (PRD FR-1 신선도 · FR-9 데이터 지연).
