@@ -1,18 +1,13 @@
-import type {
-  VirtualTagDefinition,
-  VirtualTagPattern,
-} from '../model/types';
+import type { VirtualTagDefinition, VirtualTagPattern } from '../model/types';
 
 /**
  * 가상 태그 값 계산 — 순수 함수. 러너가 틱마다 `stepVirtualTag` 를 부르고
- * 상태를 되돌려 받는다. 시간 기반 파형은 `elapsedMs` 만으로 결정되고,
- * random-walk 만 상태(직전 값·PRNG)를 쓴다. `Math.random`·`Date.now` 를 여기서
+ * 상태를 되돌려 받는다. 시간 기반 파형은 `elapsedMs` 만으로 결정되고, manual
+ * 은 슬라이더가 넣은 값을 그대로 든다. `Math.random`·`Date.now` 를 여기서
  * 부르지 않는다 — 테스트가 결정론이어야 한다.
  */
 export interface VirtualTagRuntimeState {
   value: number;
-  /** random-walk PRNG 상태(mulberry32). 다른 패턴은 시드 그대로 둔다. */
-  rng: number;
 }
 
 export function clampToTag(def: VirtualTagDefinition, value: number): number {
@@ -23,19 +18,7 @@ export function clampToTag(def: VirtualTagDefinition, value: number): number {
 export function initVirtualTagState(
   def: VirtualTagDefinition,
 ): VirtualTagRuntimeState {
-  const seed = def.pattern.kind === 'random-walk' ? def.pattern.seed : 0;
-  return { value: clampToTag(def, def.initial), rng: seed >>> 0 };
-}
-
-/** mulberry32 — 32bit 상태 하나짜리 시드 PRNG. [0,1) 과 다음 상태를 돌려준다. */
-function nextRandom(state: number): { r: number; state: number } {
-  let a = (state + 0x6d2b79f5) >>> 0;
-  let t = a;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  const r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  a = a >>> 0;
-  return { r, state: a };
+  return { value: clampToTag(def, def.initial) };
 }
 
 /** 0→1→0 삼각파(0 에서 상승 시작). */
@@ -93,25 +76,20 @@ export function stepVirtualTag(
     case 'sawtooth': {
       const period = periodOf(pattern);
       const phase = phaseForInitial(pattern.kind, normalizedInitial(def));
-      const t = ((elapsed / period + phase) % 1 + 1) % 1;
+      const t = (((elapsed / period + phase) % 1) + 1) % 1;
       const u =
         pattern.kind === 'triangle'
           ? triangle(t)
           : pattern.kind === 'sine'
             ? sineWave(t)
             : t;
-      return { value: clampToTag(def, def.min + u * range), rng: state.rng };
+      return { value: clampToTag(def, def.min + u * range) };
     }
     case 'square': {
       const period = periodOf(pattern);
       const duty = Math.min(100, Math.max(0, pattern.dutyPct ?? 50)) / 100;
-      const t = ((elapsed / period) % 1 + 1) % 1;
-      return { value: t < duty ? def.max : def.min, rng: state.rng };
-    }
-    case 'random-walk': {
-      const { r, state: rng } = nextRandom(state.rng);
-      const step = ((r * 2 - 1) * pattern.stepPct * range) / 100;
-      return { value: clampToTag(def, state.value + step), rng };
+      const t = (((elapsed / period) % 1) + 1) % 1;
+      return { value: t < duty ? def.max : def.min };
     }
     default:
       return state;
@@ -125,5 +103,5 @@ export function setVirtualTagManualValue(
   value: number,
 ): VirtualTagRuntimeState {
   const next = clampToTag(def, value);
-  return next === state.value ? state : { value: next, rng: state.rng };
+  return next === state.value ? state : { value: next };
 }

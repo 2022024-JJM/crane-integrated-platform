@@ -8,12 +8,11 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
-  VIRTUAL_TAG_STEP_PCT_DEFAULT,
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAGS_MAX,
@@ -34,6 +33,12 @@ import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+} from '@crane/ui/molecules/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -41,6 +46,14 @@ import {
   TableHeader,
   TableRow,
 } from '@crane/ui/molecules/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import { getTagKeyError, type TagKeyError } from '../lib/tag-key-validation';
+import { WaveformIcon } from './waveform-icon';
 import {
   parseVirtualTagSetJson,
   serializeVirtualTagSet,
@@ -53,39 +66,42 @@ import {
  * 값은 러너(virtualTagRuntime)가 들고 있고 표는 15Hz 폴링으로 읽는다.
  * 정의 편집은 스토어(localStorage 영속화)를 지나며, 키 중복·빈 키 같은
  * 거부는 스토어가 boolean/결과로 돌려주고 여기서는 문구만 보여 준다.
+ *
+ * 표는 table-fixed + 퍼센트 열 너비다 — auto 레이아웃이면 InputNumber 가
+ * 호버 시 스테퍼 여백(pr-5)을 얻을 때 인풋 고유 폭이 커져 열이 흔들리고,
+ * 표 폭이 줄 때 고정 폭 인풋이 든 열은 안 줄고 나머지만 줄어든다.
  */
+
+const COLUMNS = [
+  ['enabled', 'w-[4%]'],
+  ['key', 'w-[18%]'],
+  ['name', 'w-[14%]'],
+  ['unit', 'w-[7%]'],
+  ['min', 'w-[8%]'],
+  ['max', 'w-[8%]'],
+  ['pattern', 'w-[11%]'],
+  ['period', 'w-[9%]'],
+  ['value', 'w-[16%]'],
+  ['actions', 'w-[5%]'],
+] as const;
 
 const CELL_INPUT =
   'border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 w-full min-w-0 rounded-sm px-2 text-xs';
-const CELL_NUMBER_WRAPPER = 'border-border bg-muted h-7 w-full min-w-0 rounded-sm';
+const CELL_NUMBER_WRAPPER =
+  'border-border bg-muted h-7 w-full min-w-0 rounded-sm';
 const CELL_NUMBER_INPUT = 'px-2 text-xs';
-const CELL_SELECT =
-  'border-border bg-muted text-foreground h-7 w-full min-w-0 rounded-sm border px-1 text-xs';
 
 function defaultPattern(kind: VirtualTagPatternKind): VirtualTagPattern {
-  switch (kind) {
-    case 'manual':
-      return { kind };
-    case 'random-walk':
-      return { kind, stepPct: VIRTUAL_TAG_STEP_PCT_DEFAULT, seed: 1 };
-    default:
-      return { kind, periodMs: VIRTUAL_TAG_PERIOD_DEFAULT };
-  }
+  return kind === 'manual'
+    ? { kind }
+    : { kind, periodMs: VIRTUAL_TAG_PERIOD_DEFAULT };
 }
 
-function patternParam(pattern: VirtualTagPattern): number | null {
-  if (pattern.kind === 'manual') return null;
-  if (pattern.kind === 'random-walk') return pattern.stepPct;
-  return pattern.periodMs;
-}
-
-function withPatternParam(
+function withPeriod(
   pattern: VirtualTagPattern,
-  value: number,
+  periodMs: number,
 ): VirtualTagPattern {
-  if (pattern.kind === 'manual') return pattern;
-  if (pattern.kind === 'random-walk') return { ...pattern, stepPct: value };
-  return { ...pattern, periodMs: value };
+  return pattern.kind === 'manual' ? pattern : { ...pattern, periodMs };
 }
 
 function formatValue(value: number | undefined): string {
@@ -96,12 +112,15 @@ function formatValue(value: number | undefined): string {
 
 function TagRow({
   tag,
+  takenKeys,
   onUpdate,
   onDuplicate,
   onRemove,
   t,
 }: {
   tag: VirtualTagDefinition;
+  /** 전체 태그 키 — 중복 판정용. */
+  takenKeys: string[];
   onUpdate: (patch: Partial<Omit<VirtualTagDefinition, 'id'>>) => boolean;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -109,7 +128,9 @@ function TagRow({
 }) {
   // 키 입력은 비제어 — blur/Enter 에만 커밋한다(글자마다 저장·거부 문구가
   // 튀지 않게). 외부에서 키가 바뀌면 key={tag.key} 로 input 을 다시 마운트한다.
-  const [keyInvalid, setKeyInvalid] = useState(false);
+  // 거부되면 입력값을 유지한 채 툴팁을 띄우고 포커스를 돌려보내 고칠 때까지
+  // 못 나가게 한다. Escape 가 탈출구(원래 키로 복귀).
+  const [keyError, setKeyError] = useState<TagKeyError | null>(null);
 
   const value = virtualTagRuntime.getValue(tag.id);
   const manual = tag.pattern.kind === 'manual';
@@ -119,59 +140,75 @@ function TagRow({
       ? 0
       : Math.min(100, Math.max(0, ((value - tag.min) / range) * 100));
 
-  const commitKey = (input: HTMLInputElement) => {
-    if (input.value.trim() === tag.key) {
-      setKeyInvalid(false);
-      return;
+  const commitKey = (input: HTMLInputElement): boolean => {
+    const error = getTagKeyError(input.value, tag.key, takenKeys);
+    if (error === null && input.value.trim() !== tag.key) {
+      onUpdate({ key: input.value });
     }
-    const ok = onUpdate({ key: input.value });
-    setKeyInvalid(!ok);
-    if (!ok) input.value = tag.key;
+    setKeyError(error);
+    return error === null;
   };
 
   return (
     <TableRow className={cn(!tag.enabled && 'opacity-60')}>
-      <TableCell className="w-12">
+      <TableCell>
         <Switch
           checked={tag.enabled}
           onCheckedChange={(enabled) => onUpdate({ enabled })}
         />
       </TableCell>
-      <TableCell className="min-w-44">
-        <Input
-          key={tag.key}
-          defaultValue={tag.key}
-          aria-invalid={keyInvalid}
-          className={cn(
-            CELL_INPUT,
-            'font-mono',
-            keyInvalid && 'border-amber-500 text-amber-500',
-          )}
-          onBlur={(event) => commitKey(event.currentTarget)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') event.currentTarget.blur();
-            if (event.key === 'Escape') {
-              event.currentTarget.value = tag.key;
-              event.currentTarget.blur();
+      <TableCell>
+        <Tooltip open={keyError !== null}>
+          <TooltipTrigger
+            render={
+              <Input
+                key={tag.key}
+                defaultValue={tag.key}
+                aria-invalid={keyError !== null}
+                className={cn(
+                  CELL_INPUT,
+                  'font-mono',
+                  keyError !== null && 'border-amber-500 text-amber-500',
+                )}
+                onChange={() => setKeyError(null)}
+                onBlur={(event) => {
+                  const input = event.currentTarget;
+                  if (!commitKey(input)) {
+                    // blur 처리 중 focus 는 무시될 수 있어 한 틱 뒤에 되돌린다.
+                    queueMicrotask(() => input.focus());
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                  if (event.key === 'Escape') {
+                    event.currentTarget.value = tag.key;
+                    setKeyError(null);
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
             }
-          }}
-        />
+          />
+          <TooltipContent side="bottom">
+            {keyError ? t(`monitoring:virtualTags.errors.${keyError}`) : null}
+          </TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="min-w-32">
+      <TableCell>
         <Input
           value={tag.name}
           className={CELL_INPUT}
           onChange={(event) => onUpdate({ name: event.target.value })}
         />
       </TableCell>
-      <TableCell className="w-20">
+      <TableCell>
         <Input
           value={tag.unit ?? ''}
           className={CELL_INPUT}
           onChange={(event) => onUpdate({ unit: event.target.value })}
         />
       </TableCell>
-      <TableCell className="w-24">
+      <TableCell>
         <InputNumber
           value={tag.min}
           className={CELL_NUMBER_WRAPPER}
@@ -179,7 +216,7 @@ function TagRow({
           onChange={(min) => onUpdate({ min })}
         />
       </TableCell>
-      <TableCell className="w-24">
+      <TableCell>
         <InputNumber
           value={tag.max}
           className={CELL_NUMBER_WRAPPER}
@@ -187,42 +224,53 @@ function TagRow({
           onChange={(max) => onUpdate({ max })}
         />
       </TableCell>
-      <TableCell className="w-32">
-        <select
-          className={CELL_SELECT}
+      <TableCell>
+        <Select
           value={tag.pattern.kind}
-          aria-label={t('monitoring:virtualTags.columns.pattern')}
-          onChange={(event) =>
-            onUpdate({
-              pattern: defaultPattern(
-                event.target.value as VirtualTagPatternKind,
-              ),
-            })
+          onValueChange={(kind: VirtualTagPatternKind) =>
+            onUpdate({ pattern: defaultPattern(kind) })
           }
         >
-          {VIRTUAL_TAG_PATTERN_KINDS.map((kind) => (
-            <option key={kind} value={kind}>
-              {t(`monitoring:virtualTags.patterns.${kind}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            aria-label={t('monitoring:virtualTags.columns.pattern')}
+            className="bg-muted h-7 w-full min-w-0 rounded-sm px-2 text-xs font-normal"
+          >
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              <span className="truncate">
+                {t(`monitoring:virtualTags.patterns.${tag.pattern.kind}`)}
+              </span>
+              <WaveformIcon kind={tag.pattern.kind} />
+            </span>
+          </SelectTrigger>
+          <SelectPopup align="start" className="min-w-40">
+            {VIRTUAL_TAG_PATTERN_KINDS.map((kind) => (
+              <SelectItem key={kind} value={kind}>
+                <span className="flex w-full items-center justify-between gap-3">
+                  <span>{t(`monitoring:virtualTags.patterns.${kind}`)}</span>
+                  <WaveformIcon kind={kind} />
+                </span>
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </Select>
       </TableCell>
-      <TableCell className="w-28">
-        {manual ? (
+      <TableCell>
+        {tag.pattern.kind === 'manual' ? (
           <span className="text-muted-foreground text-xs">—</span>
         ) : (
           <InputNumber
-            value={patternParam(tag.pattern)}
-            step={tag.pattern.kind === 'random-walk' ? 0.5 : 100}
+            value={tag.pattern.periodMs}
+            step={100}
+            title={t('monitoring:virtualTags.periodHint')}
             className={CELL_NUMBER_WRAPPER}
             inputClassName={CELL_NUMBER_INPUT}
-            onChange={(param) =>
-              onUpdate({ pattern: withPatternParam(tag.pattern, param) })
+            onChange={(periodMs) =>
+              onUpdate({ pattern: withPeriod(tag.pattern, periodMs) })
             }
           />
         )}
       </TableCell>
-      <TableCell className="min-w-44">
+      <TableCell>
         <div className="flex items-center gap-2">
           {manual ? (
             <input
@@ -250,7 +298,7 @@ function TagRow({
           </span>
         </div>
       </TableCell>
-      <TableCell className="w-20">
+      <TableCell>
         <div className="flex items-center justify-end gap-0.5">
           <Button
             type="button"
@@ -298,6 +346,7 @@ export function VirtualTagsPage() {
   const toExport = useVirtualTagStore((s) => s.toExport);
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const takenKeys = useMemo(() => tags.map((tag) => tag.key), [tags]);
 
   useEffect(() => {
     hydrate();
@@ -449,62 +498,45 @@ export function VirtualTagsPage() {
 
       <Card className="min-h-0 flex-1 gap-0 overflow-hidden py-0">
         <CardContent className="h-full min-h-0 overflow-auto p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {(
-                  [
-                    'enabled',
-                    'key',
-                    'name',
-                    'unit',
-                    'min',
-                    'max',
-                    'pattern',
-                    'param',
-                    'value',
-                    'actions',
-                  ] as const
-                ).map((column) => (
-                  <TableHead key={column} className="text-[11px]">
-                    {t(`monitoring:virtualTags.columns.${column}`)}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tags.map((tag) => (
-                <TagRow
-                  key={tag.id}
-                  tag={tag}
-                  onUpdate={(patch) => updateTag(tag.id, patch)}
-                  onDuplicate={() => reportAdd(duplicateTag(tag.id))}
-                  onRemove={() => {
-                    if (
-                      window.confirm(
-                        t('monitoring:virtualTags.removeConfirm', {
-                          key: tag.key,
-                        }),
-                      )
-                    ) {
-                      removeTag(tag.id);
-                    }
-                  }}
-                  t={t}
-                />
-              ))}
-              {tags.length === 0 ? (
+          <TooltipProvider>
+            <Table className="w-full table-fixed">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={10}
-                    className="text-muted-foreground py-8 text-center text-xs"
-                  >
-                    {t('monitoring:virtualTags.empty')}
-                  </TableCell>
+                  {COLUMNS.map(([column, width]) => (
+                    <TableHead
+                      key={column}
+                      className={cn('text-center text-[11px]', width)}
+                    >
+                      {t(`monitoring:virtualTags.columns.${column}`)}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {tags.map((tag) => (
+                  <TagRow
+                    key={tag.id}
+                    tag={tag}
+                    takenKeys={takenKeys}
+                    onUpdate={(patch) => updateTag(tag.id, patch)}
+                    onDuplicate={() => reportAdd(duplicateTag(tag.id))}
+                    onRemove={() => removeTag(tag.id)}
+                    t={t}
+                  />
+                ))}
+                {tags.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={COLUMNS.length}
+                      className="text-muted-foreground py-8 text-center text-xs"
+                    >
+                      {t('monitoring:virtualTags.empty')}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </TooltipProvider>
         </CardContent>
       </Card>
     </div>

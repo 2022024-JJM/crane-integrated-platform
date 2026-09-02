@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseVirtualTagSetJson, serializeVirtualTagSet } from '../virtual-tag-file';
+import {
+  parseVirtualTagSetJson,
+  serializeVirtualTagSet,
+} from '../virtual-tag-file';
 
 const set = {
   version: 1 as const,
@@ -34,7 +37,11 @@ describe('virtual-tag-file', () => {
 
   it('손상 항목은 sanitize 가 버린다', () => {
     const out = parseVirtualTagSetJson(
-      JSON.stringify({ version: 1, tickMs: 'x', tags: [set.tags[0], { id: 'b' }] }),
+      JSON.stringify({
+        version: 1,
+        tickMs: 'x',
+        tags: [set.tags[0], { id: 'b' }],
+      }),
     );
     expect(out?.tickMs).toBe(100);
     expect(out?.tags.map((t) => t.id)).toEqual(['a']);

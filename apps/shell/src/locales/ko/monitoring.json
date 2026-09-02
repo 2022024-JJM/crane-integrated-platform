@@ -257,7 +257,7 @@
       "min": "최소",
       "max": "최대",
       "pattern": "패턴",
-      "param": "주기(ms) / 스텝(%)",
+      "period": "주기(ms)",
       "value": "현재값",
       "actions": ""
     },
@@ -266,12 +266,10 @@
       "triangle": "삼각파",
       "sine": "사인파",
       "sawtooth": "톱니파",
-      "square": "구형파",
-      "random-walk": "랜덤워크"
+      "square": "구형파"
     },
     "duplicate": "복제",
     "remove": "삭제",
-    "removeConfirm": "태그 \"{{key}}\" 를 삭제할까요?",
     "empty": "가상 태그가 없습니다. \"새 태그\"로 만들거나 JSON을 가져오세요.",
     "errors": {
       "invalid-key": "키는 비울 수 없고 64자 이하여야 합니다.",
@@ -282,6 +280,7 @@
     "newKey": "C_1:tag",
     "importedCount": "{{count}}개 태그를 가져왔습니다.",
     "count": "{{count}} / {{max}}",
-    "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다."
+    "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
+    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)"
   }
 }

@@ -7,7 +7,7 @@
  * 뿐 외부(씬)에서 참조하지 않는다.
  *
  * 값 변화는 `pattern` 이 정한다. manual 만 사용자가 슬라이더로 밀고, 나머지는
- * 시간의 함수(파형)거나 시드 고정 랜덤워크라 결정론적으로 재현된다.
+ * 시간의 함수(파형)라 결정론적으로 재현된다.
  */
 export type VirtualTagPattern =
   | { kind: 'manual' }
@@ -17,9 +17,7 @@ export type VirtualTagPattern =
   /** min→max 톱니. */
   | { kind: 'sawtooth'; periodMs: number }
   /** dutyPct(0~100, 기본 50) 동안 max, 나머지 min. */
-  | { kind: 'square'; periodMs: number; dutyPct?: number }
-  /** 매 틱 ±(stepPct% × 범위) 안에서 랜덤 이동. 시드 고정. */
-  | { kind: 'random-walk'; stepPct: number; seed: number };
+  | { kind: 'square'; periodMs: number; dutyPct?: number };
 
 export type VirtualTagPatternKind = VirtualTagPattern['kind'];
 
@@ -29,7 +27,6 @@ export const VIRTUAL_TAG_PATTERN_KINDS = [
   'sine',
   'sawtooth',
   'square',
-  'random-walk',
 ] as const satisfies readonly VirtualTagPatternKind[];
 
 export interface VirtualTagDefinition {
@@ -67,4 +64,3 @@ export const VIRTUAL_TAG_TICK_DEFAULT = 100;
 export const VIRTUAL_TAG_PERIOD_MIN = 100;
 export const VIRTUAL_TAG_PERIOD_MAX = 600_000;
 export const VIRTUAL_TAG_PERIOD_DEFAULT = 8_000;
-export const VIRTUAL_TAG_STEP_PCT_DEFAULT = 2;

@@ -5,7 +5,6 @@ import {
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_PERIOD_MAX,
   VIRTUAL_TAG_PERIOD_MIN,
-  VIRTUAL_TAG_STEP_PCT_DEFAULT,
   VIRTUAL_TAG_TICK_DEFAULT,
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
@@ -67,14 +66,6 @@ export function sanitizeVirtualTagPattern(raw: unknown): VirtualTagPattern {
       }
       return pattern;
     }
-    case 'random-walk':
-      return {
-        kind: 'random-walk',
-        stepPct: isFiniteNumber(p.stepPct)
-          ? clamp(p.stepPct, 0, 100)
-          : VIRTUAL_TAG_STEP_PCT_DEFAULT,
-        seed: isFiniteNumber(p.seed) ? Math.floor(p.seed) >>> 0 : 1,
-      };
   }
 }
 

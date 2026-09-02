@@ -243,7 +243,7 @@
       "min": "Min",
       "max": "Max",
       "pattern": "Forma",
-      "param": "Periodus (ms) / Gradus (%)",
+      "period": "Periodus (ms)",
       "value": "Valor",
       "actions": ""
     },
@@ -252,12 +252,10 @@
       "triangle": "Triangulum",
       "sine": "Sinus",
       "sawtooth": "Serra",
-      "square": "Quadratum",
-      "random-walk": "Ambulatio fortuita"
+      "square": "Quadratum"
     },
     "duplicate": "Duplica",
     "remove": "Dele",
-    "removeConfirm": "Tag \"{{key}}\" delere?",
     "empty": "Nulla tags ficta. \"Novum tag\" preme aut JSON importa.",
     "errors": {
       "invalid-key": "Clavis vacua esse non potest nec longior quam 64.",
@@ -268,6 +266,7 @@
     "newKey": "C_1:tag",
     "importedCount": "{{count}} tags importata.",
     "count": "{{count}} / {{max}}",
-    "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode)."
+    "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode).",
+    "periodHint": "Tempus (ms) unius cycli (min→max→min)"
   }
 }

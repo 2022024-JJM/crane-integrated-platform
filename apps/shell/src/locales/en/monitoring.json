@@ -257,7 +257,7 @@
       "min": "Min",
       "max": "Max",
       "pattern": "Pattern",
-      "param": "Period (ms) / Step (%)",
+      "period": "Period (ms)",
       "value": "Value",
       "actions": ""
     },
@@ -266,12 +266,10 @@
       "triangle": "Triangle",
       "sine": "Sine",
       "sawtooth": "Sawtooth",
-      "square": "Square",
-      "random-walk": "Random walk"
+      "square": "Square"
     },
     "duplicate": "Duplicate",
     "remove": "Remove",
-    "removeConfirm": "Remove tag \"{{key}}\"?",
     "empty": "No virtual tags. Create one with \"New tag\" or import JSON.",
     "errors": {
       "invalid-key": "Key must be non-empty and at most 64 characters.",
@@ -282,6 +280,7 @@
     "newKey": "C_1:tag",
     "importedCount": "Imported {{count}} tags.",
     "count": "{{count}} / {{max}}",
-    "keyHint": "Use the same format as real server tags (craneId:tagCode)."
+    "keyHint": "Use the same format as real server tags (craneId:tagCode).",
+    "periodHint": "Time (ms) for one cycle (min→max→min)"
   }
 }
