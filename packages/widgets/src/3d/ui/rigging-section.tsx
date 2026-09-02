@@ -26,6 +26,7 @@ import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
+import { InputNumber } from '@crane/ui/atoms/input-number';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
@@ -119,35 +120,32 @@ function NodeSelect({
   );
 }
 
+/** 네이티브 number 입력 대신 테마 스테퍼가 있는 InputNumber. 비우면 undefined. */
+const NUMBER_WRAPPER = 'border-border bg-muted h-6 w-full min-w-0 rounded-sm';
+const NUMBER_INPUT = 'px-2 text-[11px]';
+
 function NumberField({
   value,
   placeholder,
   onChange,
-  step = 'any',
+  step = 0.1,
   className,
 }: {
   value: number | undefined;
   placeholder?: string;
   onChange: (value: number | undefined) => void;
-  step?: number | 'any';
+  step?: number;
   className?: string;
 }) {
   return (
-    <Input
-      type="number"
+    <InputNumber
+      value={value ?? null}
       step={step}
-      value={value ?? ''}
       placeholder={placeholder}
-      className={cn(FIELD_INPUT, className)}
-      onChange={(event) => {
-        const raw = event.target.value;
-        if (raw.trim() === '') {
-          onChange(undefined);
-          return;
-        }
-        const parsed = parseFloat(raw);
-        if (Number.isFinite(parsed)) onChange(parsed);
-      }}
+      className={cn(NUMBER_WRAPPER, className)}
+      inputClassName={NUMBER_INPUT}
+      onChange={(next) => onChange(next)}
+      onEmpty={() => onChange(undefined)}
     />
   );
 }
@@ -331,18 +329,15 @@ function JointCard({
             )
           }
         />
-        <Input
-          type="number"
-          step={step}
+        <InputNumber
           value={Number.isFinite(value) ? Number(value.toFixed(3)) : 0}
+          step={step}
+          min={range.min}
+          max={range.max}
           disabled={locked}
-          className={cn(FIELD_INPUT, 'w-16 shrink-0 text-right tabular-nums')}
-          onChange={(event) => {
-            const parsed = parseFloat(event.target.value);
-            if (Number.isFinite(parsed)) {
-              manualJointSource.push(modelId, joint.id, parsed);
-            }
-          }}
+          className={cn(NUMBER_WRAPPER, 'w-20 shrink-0')}
+          inputClassName={cn(NUMBER_INPUT, 'text-right')}
+          onChange={(next) => manualJointSource.push(modelId, joint.id, next)}
         />
         <span className="text-muted-foreground w-6 shrink-0 text-[10px]">
           {unit}
@@ -465,6 +460,7 @@ function LinearCard({
         <NumberField
           value={constraint.factor}
           placeholder="1"
+          step={0.01}
           onChange={(factor) => onChange({ factor: factor ?? 1 })}
         />
         <span className={cn(FIELD_LABEL, 'w-auto')}>

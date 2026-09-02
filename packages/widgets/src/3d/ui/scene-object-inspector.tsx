@@ -33,6 +33,7 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
+import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Card, CardContent } from '@crane/ui/molecules/card';
 import {
   Tooltip,
@@ -92,7 +93,8 @@ function getTabsForType(
   // 태그 매핑·리깅은 콜백이 배선된 화면에서만 존재하는 섹션이다.
   return tabs.filter(
     (tab) =>
-      (tab !== 'tagMapping' || hasValueMap) && (tab !== 'rigging' || hasRigging),
+      (tab !== 'tagMapping' || hasValueMap) &&
+      (tab !== 'rigging' || hasRigging),
   );
 }
 
@@ -227,34 +229,8 @@ function TagMappingSection({
   const getOffset = (type: ValueMapType) =>
     valueMapList.find((item) => item.type === type)?.offset ?? 0;
 
-  // offset 입력 중간 상태(소수점, 음수 부호 등)를 허용하기 위해 로컬 draft 관리
-  const initialOffsetDrafts = () =>
-    Object.fromEntries(
-      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [
-        t,
-        String(getOffset(t)),
-      ]),
-    ) as Record<ValueMapType, string>;
-
-  const [offsetDrafts, setOffsetDrafts] =
-    useState<Record<ValueMapType, string>>(initialOffsetDrafts);
-
-  // 외부에서 valueMapList가 바뀔 때(저장 후 로드 등) draft를 동기화
-  useEffect(() => {
-    setOffsetDrafts({
-      PX: String(getOffset('PX')),
-      PY: String(getOffset('PY')),
-      PZ: String(getOffset('PZ')),
-      RX: '0',
-      RY: '0',
-      RZ: '0',
-      SX: '0',
-      SY: '0',
-      SZ: '0',
-    });
-    // valueMapList 참조가 바뀔 때만 동기화
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valueMapList]);
+  // 입력 중간 상태(소수점·음수 부호)는 InputNumber 가 내부 draft 로 들고
+  // blur/Enter 에만 commit 하므로 여기서 따로 관리하지 않는다.
 
   return (
     <div>
@@ -306,23 +282,20 @@ function TagMappingSection({
                           <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
                             scale
                           </span>
-                          <Input
-                            type="number"
-                            step={0.1}
+                          <InputNumber
                             value={getScale(type)}
+                            step={0.1}
                             placeholder="1"
-                            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
-                            onChange={(e) => {
-                              const s = parseFloat(e.target.value);
-                              if (Number.isFinite(s)) {
-                                onValueMapChange(
-                                  type,
-                                  `${prefix}${tagCode}`,
-                                  s,
-                                  isPosition ? getOffset(type) : undefined,
-                                );
-                              }
-                            }}
+                            className="border-border bg-muted h-6 w-full min-w-0 rounded-sm"
+                            inputClassName="px-2 text-[11px]"
+                            onChange={(s) =>
+                              onValueMapChange(
+                                type,
+                                `${prefix}${tagCode}`,
+                                s,
+                                isPosition ? getOffset(type) : undefined,
+                              )
+                            }
                           />
                         </div>
                         {isPosition ? (
@@ -330,28 +303,20 @@ function TagMappingSection({
                             <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
                               offset
                             </span>
-                            <Input
-                              type="number"
-                              step="any"
-                              value={offsetDrafts[type] ?? '0'}
+                            <InputNumber
+                              value={getOffset(type)}
+                              step={0.1}
                               placeholder="0"
-                              className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                setOffsetDrafts((prev) => ({
-                                  ...prev,
-                                  [type]: raw,
-                                }));
-                                const o = parseFloat(raw);
-                                if (Number.isFinite(o)) {
-                                  onValueMapChange(
-                                    type,
-                                    `${prefix}${tagCode}`,
-                                    getScale(type),
-                                    o,
-                                  );
-                                }
-                              }}
+                              className="border-border bg-muted h-6 w-full min-w-0 rounded-sm"
+                              inputClassName="px-2 text-[11px]"
+                              onChange={(o) =>
+                                onValueMapChange(
+                                  type,
+                                  `${prefix}${tagCode}`,
+                                  getScale(type),
+                                  o,
+                                )
+                              }
                             />
                           </div>
                         ) : null}
