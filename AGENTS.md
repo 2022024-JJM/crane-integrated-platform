@@ -181,6 +181,9 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 3D editor session/history/persistence | `packages/widgets/src/scene-editor/model/` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `scene-file-registry.ts` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
+| 리깅 스키마(관절·구속조건·바인딩) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
+| 리깅 런타임(값 저장소·드라이버) | `packages/features/src/3d/model/{rig-value-store,use-rig-driver,rig-live-readouts}.ts`, `packages/features/src/3d/lib/{apply-joint,smooth-damp}.ts` |
+| 리깅 편집 UI | `packages/widgets/src/3d/ui/rigging-section.tsx`(인스펙터 탭), `packages/widgets/src/3d/lib/model-node-tree.ts`(계층 목록 노드 트리) |
 
 ## packages/ui 구조 (Atomic Design)
 
@@ -232,6 +235,10 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
   - 절차 전문은 `assets-src/README.md`, 파이프라인 상세는 `docs/지도-GLB-최적화-파이프라인.md` 와 `docs/GLB-압축-파이프라인-작업보고.md` 에 있다.
 - 모델 팔레트 미리보기는 정적 썸네일(`apps/shell/public/previews/{catalogId}.png`)을 먼저 쓰고, 없으면 런타임 offscreen WebGL 렌더로 폴백한다. `sceneModelCatalog` 항목을 추가·교체하거나 미리보기 렌더 룩(`packages/widgets/src/3d/lib/offscreen-preview-renderer.ts`)을 바꾸면 dev 서버의 씬 편집 페이지 모델 탭에서 썸네일 버튼(dev 전용 토글)으로 썸네일을 재생성해 `public/previews/` 를 함께 커밋한다. 썸네일은 투명 배경 PNG 로 테마 중립이어야 한다 — 씬에 배경·바닥판을 굽지 않는다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간에 미치는 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다** (2026-09-01 에 관련 작업과 계획 문서를 폐기했다).
+- **리깅(관절 연동)** 은 태그 맵핑과 두 계층으로 나뉜다. 정의(`RigDefinition`: 관절 `hinge|slide` + 구속조건 `linear` = "출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로. 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다)는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 와 서버 태그 바인딩 `rigBindings` 만 가진다. 관절 값은 **항상 rest pose 기준 Δ** 이며 `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다 — `rotation.x = θ` 절대 대입은 Blender Empty 의 비항등 rest 를 파괴하므로 금지. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로다.
+  - 값 소스는 `JointValueSource` 하나로 통한다. 에디터는 `manualJointSource`(슬라이더, 씬 데이터·히스토리에 남지 않음)만 켜고, 서버 연동 단계는 `createTagBindingSource` 를 `setRigTagIngest` 에 걸어 `applyValue` 버스에서 받으면 된다(2026-09-02 기준 미연결). 모니터링 뷰에는 아직 `RigDriver` 를 두지 않았다.
+  - 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본으로 교체됐고(루트 scale 을 `unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1), 나머지 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
+  - 기즈모로 드래그 중인 노드는 드라이버가 건드리지 않는다. 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
 
 ## docs/ 지도
 

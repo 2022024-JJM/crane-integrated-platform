@@ -80,6 +80,26 @@ export {
   isMeshId,
 } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
+export { RigDriver } from './ui/rig-driver';
+export { useRigDriver } from './model/use-rig-driver';
+export {
+  createTagBindingSource,
+  makeJointAddress,
+  manualJointSource,
+  rigValueStore,
+  type JointAddress,
+  type JointValueSource,
+  type RigValueSink,
+  type SetJointValueOptions,
+  type TagBindingSource,
+  type TagBindingTarget,
+} from './model/rig-value-store';
+export {
+  rigLiveReadouts,
+  useRigLivePoll,
+  type RigModelReadout,
+} from './model/rig-live-readouts';
+export { clampJointValue } from './lib/apply-joint';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
 export { useObjectFocusStore } from './model/use-object-focus-store';

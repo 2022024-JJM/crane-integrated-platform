@@ -16,12 +16,45 @@ export {
 } from './lib/scene-dev-storage';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export {
+  sanitizeModelRig,
+  sanitizeRigDefinition,
+  sanitizeRigDefinitions,
+} from './lib/sanitize-rig';
+export {
+  getDrivenJointIds,
+  getRigJointUnit,
+  RIG_AXES,
+  RIG_CONSTRAINT_TYPES,
+  RIG_HINGE_DEFAULT_RANGE,
+  RIG_JOINT_TYPES,
+  RIG_SLIDE_DEFAULT_RANGE,
+} from './model/rig-types';
+export type {
+  RigAxis,
+  RigBinding,
+  RigConstraint,
+  RigConstraintType,
+  RigDefinition,
+  RigJoint,
+  RigJointType,
+  RigJointUnit,
+  RigLinearConstraint,
+  RigNodePath,
+} from './model/rig-types';
+export {
   markSceneRegionActive,
   preloadGltf,
   releaseGltfCache,
   releaseSceneRegionAssets,
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
+export {
+  getRestPose,
+  hasRestPose,
+  resetToRestPose,
+  seedRestPose,
+  type RestPose,
+} from './lib/rest-pose-cache';
 export {
   prefetchModelBottomOffset,
   fillModelBottomOffsetFromClone,

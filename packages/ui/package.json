@@ -40,6 +40,7 @@
     "./molecules/pagination": "./src/molecules/pagination.tsx",
     "./molecules/table": "./src/molecules/table.tsx",
     "./molecules/toggle-group": "./src/molecules/toggle-group.tsx",
+    "./molecules/tree": "./src/molecules/tree.tsx",
     "./molecules/tooltip": "./src/molecules/tooltip.tsx",
     "./organisms/app-error-boundary": "./src/organisms/app-error-boundary.tsx",
     "./organisms/app-toaster": "./src/organisms/app-toaster.tsx",

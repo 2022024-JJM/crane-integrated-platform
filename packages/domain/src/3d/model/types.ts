@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { RigBinding, RigDefinition } from './rig-types';
 
 export type ValueMapType =
   | 'PX'
@@ -35,6 +36,11 @@ export interface SavedSceneInfo {
    * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
    */
   lighting?: SavedLightingInfo;
+  /**
+   * 리그(관절·구속조건) 정의 — 자산 단위. 모델 인스턴스는 `rigId`로 가리킨다.
+   * 없으면 필드 자체가 빠져 기존 저장본과 diff가 없다. 스키마는 rig-types.ts.
+   */
+  rigs?: RigDefinition[];
 }
 
 /**
@@ -116,6 +122,10 @@ export interface SavedModelInfo {
    * 기존 저장본과의 diff를 최소화한다.
    */
   locked?: boolean;
+  /** 적용할 리그 정의 id(SavedSceneInfo.rigs). 없으면 리깅 없음. */
+  rigId?: string;
+  /** 관절 ← 서버 태그 바인딩. rigId 가 있을 때만 의미가 있다. */
+  rigBindings?: RigBinding[];
 }
 
 export interface SavedMeshOverride {

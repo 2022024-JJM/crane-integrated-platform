@@ -45,13 +45,13 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -2204.649,
-        0.112,
-        1884.994
+        -2182.047,
+        1.347,
+        1914.019
       ],
       "rotation": [
         0,
-        3.368,
+        7.2,
         0
       ],
       "scale": [
@@ -59,7 +59,8 @@
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [],
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9"
     },
     {
       "id": "id-mt0rka4j-lfz5p217",
@@ -67,21 +68,22 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -2219.59,
-        0.112,
-        1929.729
+        -2235.604,
+        1.352,
+        1968.712
       ],
       "rotation": [
-        -180,
-        -7.836,
-        -180
+        180,
+        354.4,
+        180
       ],
       "scale": [
         1,
         1,
         1
       ],
-      "valueMapList": []
+      "valueMapList": [],
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9"
     },
     {
       "id": "beccf605-d547-4854-88e3-fc152f999a34",
@@ -131,16 +133,78 @@
   "texts": [],
   "camera": {
     "position": [
-      -2132.6129668741232,
-      149.44231192254983,
-      2057.721826823907
+      -2095.6911353132327,
+      106.1382329514102,
+      1993.8254638542207
     ],
     "target": [
-      -2213.6639985978118,
-      -12.385350001125019,
-      1837.5912209212368
+      -2180.7545258525424,
+      31.06320540574371,
+      1920.0355028681195
     ]
   },
+  "rigs": [
+    {
+      "id": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "name": "LLC-002",
+      "modelPath": "/models/LLC_002.glb",
+      "joints": [
+        {
+          "id": "joint-8d326e4d",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[0]Lower_Link_01",
+          "type": "hinge",
+          "axis": "x",
+          "label": "luff",
+          "min": -32,
+          "max": 11.75
+        },
+        {
+          "id": "joint-a08bdea8",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[1]Upper_Link_01",
+          "type": "hinge",
+          "axis": "x",
+          "label": "upper1"
+        },
+        {
+          "id": "joint-b3240608",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[1]Upper_Link_01/[0]Upper_Link_02",
+          "type": "hinge",
+          "axis": "x",
+          "label": "upper2"
+        },
+        {
+          "id": "joint-bdd69fb9",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[0]Lower_Link_01/[0]Bone",
+          "type": "hinge",
+          "axis": "x",
+          "label": "bone"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "linear",
+          "id": "link-cd0f62c1",
+          "input": "joint-8d326e4d",
+          "output": "joint-a08bdea8",
+          "factor": 1.14
+        },
+        {
+          "type": "linear",
+          "id": "link-7a2a0b38",
+          "input": "joint-8d326e4d",
+          "output": "joint-b3240608",
+          "factor": -2.4
+        },
+        {
+          "type": "linear",
+          "id": "link-a62a5de9",
+          "input": "joint-8d326e4d",
+          "output": "joint-bdd69fb9",
+          "factor": -1.5
+        }
+      ]
+    }
+  ],
   "environmentId": "overcast-atlantic",
   "lighting": {
     "shadows": true,

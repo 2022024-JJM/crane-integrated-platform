@@ -138,6 +138,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedMeshTransformVector,
     updateSelectedMeshOpacity,
     updateSelectedValueMap,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
+    updateSelectedRigBinding,
+    selectPlacedNode,
     selectedObjectType,
     removeSelectedModel,
     duplicateSelectedObject,
@@ -167,6 +173,32 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useSceneEditorSession({
     regionId,
   });
+
+  // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
+  // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
+  const riggingHandlers = {
+    rigs: sceneInfo?.rigs ?? [],
+    onCreateRig: createRigForSelectedModel,
+    onAssignRig: assignRigToSelectedModel,
+    onUpdateRig: updateRig,
+    onRemoveRig: removeRig,
+    onBindingChange: updateSelectedRigBinding,
+  };
+
+  // 계층 목록의 관절 배지용 — 모델별 관절 노드 경로 집합.
+  const jointNodePathsByModel = useMemo(() => {
+    const out = new Map<string, Set<string>>();
+    const rigsById = new Map((sceneInfo?.rigs ?? []).map((r) => [r.id, r]));
+    for (const model of sceneInfo?.models ?? []) {
+      const rig = model.rigId ? rigsById.get(model.rigId) : undefined;
+      if (!rig) continue;
+      // 선형 연동의 출력도 관절이라 joints 만 훑으면 구동 노드 전부가 나온다.
+      const paths = new Set<string>();
+      for (const joint of rig.joints) paths.add(joint.node);
+      out.set(model.id, paths);
+    }
+    return out;
+  }, [sceneInfo?.models, sceneInfo?.rigs]);
 
   // 키보드 핸들러에서 최신 값을 클로저 없이 읽기 위한 ref.
   // sceneInfo, selectedIds는 자주 변경되므로 의존성 배열에 넣으면 리스너가
@@ -678,6 +710,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onDeletePlacedMap={deletePlacedMap}
                         onToggleLock={setObjectLocked}
                         onRenameObject={renameObject}
+                        onSelectNode={selectPlacedNode}
+                        jointNodePathsByModel={jointNodePathsByModel}
                       />
                     </div>
                   </ResizablePanel>
@@ -698,6 +732,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onMeshOpacityChange={updateSelectedMeshOpacity}
                         onMeshTransformChange={updateSelectedMeshTransform}
                         onValueMapChange={updateSelectedValueMap}
+                        rigging={riggingHandlers}
                         onBackToParent={() => {
                           if (selectedMesh) {
                             selectPlacedModel(selectedMesh.modelId);
@@ -735,10 +770,14 @@ function HierarchyPanel({
   onDeletePlacedMap,
   onToggleLock,
   onRenameObject,
+  onSelectNode,
+  jointNodePathsByModel,
   onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
+  onSelectNode: (modelId: string, nodePath: string) => void;
+  jointNodePathsByModel: Map<string, Set<string>>;
   onSelectPlacedMap: (id: string) => void;
   onDeletePlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
@@ -779,6 +818,8 @@ function HierarchyPanel({
           onDeletePlacedMap={onDeletePlacedMap}
           onToggleLock={onToggleLock}
           onRenameObject={onRenameObject}
+          onSelectNode={onSelectNode}
+          jointNodePathsByModel={jointNodePathsByModel}
         />
       </div>
     </div>

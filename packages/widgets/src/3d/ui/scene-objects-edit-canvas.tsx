@@ -45,6 +45,9 @@ import {
   sceneCanvasShadows,
   SceneObjectBoundary,
   SceneSurfaceCamera,
+  RigDriver,
+  manualJointSource,
+  rigValueStore,
   useIsObjectSelected,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
@@ -191,6 +194,16 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionEnd,
   focusSelectedRef,
 }: SceneObjectsEditCanvasProps) {
+  // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
+  // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
+  useEffect(() => {
+    manualJointSource.start(rigValueStore);
+    return () => {
+      manualJointSource.stop();
+      rigValueStore.reset();
+    };
+  }, []);
+
   // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
   // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
   const hasSea =
@@ -738,6 +751,7 @@ export function SceneObjectsEditCanvas({
         onPointerMissed={handleClearSelection}
       >
         <SceneLighting sceneInfo={sceneInfo} />
+        <RigDriver sceneInfo={sceneInfo} />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}

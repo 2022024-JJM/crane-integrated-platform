@@ -21,6 +21,7 @@ import {
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
 } from '../model/types';
+import { sanitizeModelRig, sanitizeRigDefinitions } from './sanitize-rig';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -73,6 +74,12 @@ function sanitizeMeshOverrides(
 
 export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const seenIds = new Set<string>();
+
+  // 리그 정의는 모델보다 먼저 — 모델의 rigId 가 존재하는 정의를 가리키는지
+  // 검사해야 하므로.
+  const safeRigs = sanitizeRigDefinitions(
+    (sceneInfo as SavedSceneInfo | undefined)?.rigs,
+  );
 
   const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })?.map;
   const rawMaps = Array.isArray(sceneInfo?.maps)
@@ -127,6 +134,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
 
         seenIds.add(nextId);
 
+        // rigId·rigBindings 는 유효할 때만 싣는다 — 둘 다 undefined 면 JSON
+        // 직렬화에서 빠져 리깅을 쓰지 않는 씬은 diff 가 없다.
+        const { rigId, rigBindings } = sanitizeModelRig(
+          model.rigId,
+          model.rigBindings,
+          safeRigs,
+        );
+
         return [
           {
             ...model,
@@ -136,6 +151,8 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             // true가 아닌 값(과거 버전이 남긴 문자열 등)은 잠기지 않은
             // 것으로 정규화한다. undefined는 JSON 직렬화에서 빠진다.
             locked: model.locked === true ? true : undefined,
+            rigId,
+            rigBindings,
           },
         ];
       })
@@ -185,6 +202,10 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     texts: safeTexts,
     camera: safeCamera,
   };
+
+  if (safeRigs) {
+    sanitized.rigs = safeRigs;
+  }
 
   // environmentId는 3-상태다(문자열=선택 / null=배경 없음 / 없음=region 기본).
   // 셋을 구분해 실어야 하므로 값이 있을 때만 넣는다 — 미지정 씬에 null을

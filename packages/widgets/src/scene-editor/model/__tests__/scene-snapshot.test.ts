@@ -247,3 +247,108 @@ describe('createSceneSnapshot', () => {
     expect(a).toBe(b);
   });
 });
+
+describe('isSceneInfoEqual — 리깅', () => {
+  const rig = (overrides: Record<string, unknown> = {}) =>
+    ({
+      id: 'rig-1',
+      name: 'R',
+      modelPath: '/models/crane.glb',
+      joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'x' }],
+      constraints: [
+        { type: 'linear', id: 'l', input: 'a', output: 'b', factor: 1.14 },
+      ],
+      ...overrides,
+    }) as unknown as SavedSceneInfo['rigs'] extends (infer R)[] | undefined
+      ? R
+      : never;
+
+  it('리그 정의 필드 없음과 빈 배열은 같은 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ rigs: [] }))).toBe(true);
+  });
+
+  it('선형 연동의 factor/offset 변경은 dirty 로 잡히고 offset 기본값 0 은 생략과 같다', () => {
+    expect(
+      isSceneInfoEqual(scene({ rigs: [rig()] }), scene({ rigs: [rig()] })),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({
+              constraints: [
+                { type: 'linear', id: 'l', input: 'a', output: 'b', factor: 2 },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({
+              constraints: [
+                {
+                  type: 'linear',
+                  id: 'l',
+                  input: 'a',
+                  output: 'b',
+                  factor: 1.14,
+                  offset: 0,
+                },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('관절 축·한계 변경과 모델 rigId/rigBindings 변경을 감지한다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({ joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'y' }] }),
+          ],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ rigId: 'rig-1' })] }),
+      ),
+    ).toBe(false);
+    // 바인딩은 jointId 기준 순서 무관
+    expect(
+      isSceneInfoEqual(
+        scene({
+          models: [
+            model({
+              rigBindings: [
+                { jointId: 'a', key: 'k1' },
+                { jointId: 'b', key: 'k2', scale: 1 },
+              ],
+            }),
+          ],
+        }),
+        scene({
+          models: [
+            model({
+              rigBindings: [
+                { jointId: 'b', key: 'k2' },
+                { jointId: 'a', key: 'k1', offset: 0 },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+});

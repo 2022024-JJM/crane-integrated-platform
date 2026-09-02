@@ -49,6 +49,19 @@ function isSameValueMapObject(a: ValueMapObject, b: ValueMapObject) {
   return a.id === b.id && a.type === b.type;
 }
 
+/**
+ * 리그 태그 소스 연결 지점. 서버 연동 단계에서 createTagBindingSource 의
+ * ingest 를 여기에 걸면 realtime/replay/generator 가 이미 부르는 applyValue 가
+ * 그대로 관절까지 흘러간다. 기본 null — 이번 단계는 수동 조작만 켠다.
+ */
+let rigTagIngest: ((key: string, value: number) => void) | null = null;
+
+export function setRigTagIngest(
+  ingest: ((key: string, value: number) => void) | null,
+): void {
+  rigTagIngest = ingest;
+}
+
 export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
   map: {},
 
@@ -141,6 +154,7 @@ export const useValueMapperStore = create<ValueMapperState>()((set, get) => ({
     }),
 
   applyValue: (key, value) => {
+    rigTagIngest?.(key, value);
     const list = get().map[key];
     if (!list) return;
 

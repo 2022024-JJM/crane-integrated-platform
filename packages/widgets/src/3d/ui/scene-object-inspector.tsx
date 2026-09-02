@@ -1,4 +1,5 @@
 import {
+  Bone,
   Eye,
   Palette,
   SlidersHorizontal,
@@ -9,12 +10,14 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  type RigDefinition,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedTextInfo,
   type ValueMapItem,
   type ValueMapType,
 } from '@crane/domain/3d';
+import { RiggingSection, type RigUpdater } from './rigging-section';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -48,6 +51,7 @@ type InspectorTabKey =
   | 'transform'
   | 'opacity'
   | 'tagMapping'
+  | 'rigging'
   | 'textContent'
   | 'textColor';
 
@@ -57,6 +61,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
   opacity: Eye,
   tagMapping: Tag,
+  rigging: Bone,
   textContent: Type,
   textColor: Palette,
 };
@@ -65,12 +70,13 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   transform: 'monitoring:inspector.transform',
   opacity: 'monitoring:inspector.opacity',
   tagMapping: 'monitoring:inspector.tagMapping',
+  rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
   textColor: 'monitoring:inspector.textColor',
 };
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
-  model: ['transform', 'opacity', 'tagMapping'],
+  model: ['transform', 'opacity', 'tagMapping', 'rigging'],
   mesh: ['transform', 'opacity'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform'],
@@ -79,12 +85,30 @@ const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
 function getTabsForType(
   type: InspectorObjectType,
   hasValueMap: boolean,
+  hasRigging: boolean,
 ): readonly InspectorTabKey[] {
   const tabs = TABS_BY_TYPE[type];
-  // 태그 매핑은 onValueMapChange가 배선된 화면에서만 존재하는 섹션이다.
-  return type === 'model' && !hasValueMap
-    ? tabs.filter((tab) => tab !== 'tagMapping')
-    : tabs;
+  if (type !== 'model') return tabs;
+  // 태그 매핑·리깅은 콜백이 배선된 화면에서만 존재하는 섹션이다.
+  return tabs.filter(
+    (tab) =>
+      (tab !== 'tagMapping' || hasValueMap) && (tab !== 'rigging' || hasRigging),
+  );
+}
+
+/** 리깅 탭 콜백 묶음 — 전부 있어야 탭이 뜬다. */
+export interface InspectorRiggingHandlers {
+  rigs: RigDefinition[];
+  onCreateRig: () => void;
+  onAssignRig: (rigId: string | null) => void;
+  onUpdateRig: (rigId: string, updater: RigUpdater) => void;
+  onRemoveRig: (rigId: string) => void;
+  onBindingChange: (
+    jointId: string,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
 }
 
 interface SceneObjectInspectorProps {
@@ -118,6 +142,8 @@ interface SceneObjectInspectorProps {
     scale?: number,
     offset?: number,
   ) => void;
+  /** 리깅 탭. 없으면 탭이 뜨지 않는다(tagMapping 과 같은 게이트). */
+  rigging?: InspectorRiggingHandlers;
   /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
   className?: string;
 }
@@ -464,6 +490,7 @@ function ModelInspectorContent({
   onOpacityChange,
   onTransformChange,
   onValueMapChange,
+  rigging,
   t,
 }: {
   selectedModel: SavedModelInfo;
@@ -482,6 +509,7 @@ function ModelInspectorContent({
     scale?: number,
     offset?: number,
   ) => void;
+  rigging?: InspectorRiggingHandlers;
   t: (key: string) => string;
 }) {
   return (
@@ -509,6 +537,19 @@ function ModelInspectorContent({
           valueMapList={selectedModel.valueMapList}
           craneId={selectedModel.craneId}
           onValueMapChange={onValueMapChange}
+          t={t}
+        />
+      ) : null}
+
+      {activeTab === 'rigging' && rigging ? (
+        <RiggingSection
+          model={selectedModel}
+          rigs={rigging.rigs}
+          onCreateRig={rigging.onCreateRig}
+          onAssignRig={rigging.onAssignRig}
+          onUpdateRig={rigging.onUpdateRig}
+          onRemoveRig={rigging.onRemoveRig}
+          onBindingChange={rigging.onBindingChange}
           t={t}
         />
       ) : null}
@@ -768,6 +809,7 @@ export function SceneObjectInspector({
   onMeshTransformChange,
   onBackToParent,
   onValueMapChange,
+  rigging,
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -794,7 +836,7 @@ export function SceneObjectInspector({
               : null;
 
   const tabs = selectedType
-    ? getTabsForType(selectedType, Boolean(onValueMapChange))
+    ? getTabsForType(selectedType, Boolean(onValueMapChange), Boolean(rigging))
     : [];
   // 타입 전환 시 같은 섹션이 있으면 유지, 없으면 첫 탭 — effect 대신 렌더 시
   // 파생 보정이라 stale 탭이 한 프레임도 렌더되지 않는다. activeTab은 사용자의
@@ -847,6 +889,7 @@ export function SceneObjectInspector({
               onOpacityChange={onOpacityChange}
               onTransformChange={onTransformChange}
               onValueMapChange={onValueMapChange}
+              rigging={rigging}
               t={t}
             />
           ) : selectedText ? (

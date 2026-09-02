@@ -3,6 +3,8 @@ import {
   numRound,
   parseMeshId,
   radToDeg,
+  type RigBinding,
+  type RigDefinition,
   type SavedMapInfo,
   type SavedMeshOverride,
   type SavedModelInfo,
@@ -13,6 +15,7 @@ import {
 } from '@crane/domain/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
 import type { AxisKey, SceneTransformField } from './types';
@@ -127,6 +130,24 @@ interface UseSelectedSceneObjectEditorResult {
   selectedMap: SavedMapInfo | null;
   setObjectLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
+  // ==== 리깅 ====
+  /** 선택 모델의 GLB 경로로 빈 리그를 만들고 곧바로 그 모델에 할당한다. */
+  createRigForSelectedModel: () => void;
+  /** null 이면 해제. 바인딩은 리그와 함께 떨어진다. */
+  assignRigToSelectedModel: (rigId: string | null) => void;
+  updateRig: (
+    rigId: string,
+    updater: (rig: RigDefinition) => RigDefinition,
+  ) => void;
+  /** 정의 삭제 + 그 리그를 쓰던 모든 모델의 rigId/rigBindings 제거. */
+  removeRig: (rigId: string) => void;
+  /** key 가 빈 문자열이면 그 관절의 바인딩을 지운다. */
+  updateSelectedRigBinding: (
+    jointId: string,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => void;
 }
 
 export function useSelectedSceneObjectEditor({
@@ -669,6 +690,121 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  // ==== 리깅 ====
+
+  /** rigId·rigBindings 를 뗀 복사본 — 필드 자체를 없애야 직렬화에서 빠진다. */
+  const stripRig = (model: SavedModelInfo): SavedModelInfo => {
+    const rest = { ...model };
+    delete rest.rigId;
+    delete rest.rigBindings;
+    return rest;
+  };
+
+  const createRigForSelectedModel = () => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      const model = prev.models.find((m) => m.id === selectedModelId);
+      if (!model) return prev;
+      const rig: RigDefinition = {
+        id: `rig-${createId()}`,
+        name: model.equipName.trim() || model.id,
+        modelPath: model.path,
+        joints: [],
+        constraints: [],
+      };
+      return {
+        ...prev,
+        rigs: [...(prev.rigs ?? []), rig],
+        models: prev.models.map((m) =>
+          m.id === selectedModelId
+            ? { ...m, rigId: rig.id, rigBindings: undefined }
+            : m,
+        ),
+      };
+    });
+  };
+
+  const assignRigToSelectedModel = (rigId: string | null) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      if (rigId !== null && !(prev.rigs ?? []).some((r) => r.id === rigId)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        models: prev.models.map((m) => {
+          if (m.id !== selectedModelId) return m;
+          if (m.rigId === (rigId ?? undefined)) return m;
+          const rest = stripRig(m);
+          return rigId === null ? rest : { ...rest, rigId };
+        }),
+      };
+    });
+  };
+
+  const updateRig = (
+    rigId: string,
+    updater: (rig: RigDefinition) => RigDefinition,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !prev.rigs?.some((r) => r.id === rigId)) return prev;
+      return {
+        ...prev,
+        rigs: prev.rigs.map((r) => (r.id === rigId ? updater(r) : r)),
+      };
+    });
+  };
+
+  const removeRig = (rigId: string) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !prev.rigs?.some((r) => r.id === rigId)) return prev;
+      const rigs = prev.rigs.filter((r) => r.id !== rigId);
+      return {
+        ...prev,
+        rigs: rigs.length > 0 ? rigs : undefined,
+        models: prev.models.map((m) =>
+          m.rigId === rigId ? stripRig(m) : m,
+        ),
+      };
+    });
+  };
+
+  const updateSelectedRigBinding = (
+    jointId: string,
+    key: string,
+    scale?: number,
+    offset?: number,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId || !model.rigId) return model;
+          const filtered = (model.rigBindings ?? []).filter(
+            (b) => b.jointId !== jointId,
+          );
+          const trimmed = key.trim();
+          if (!trimmed) {
+            return {
+              ...model,
+              rigBindings: filtered.length > 0 ? filtered : undefined,
+            };
+          }
+          const existing = model.rigBindings?.find(
+            (b) => b.jointId === jointId,
+          );
+          const binding: RigBinding = { jointId, key: trimmed };
+          const nextScale = scale ?? existing?.scale;
+          const nextOffset = offset ?? existing?.offset;
+          if (nextScale !== undefined) binding.scale = nextScale;
+          if (nextOffset !== undefined) binding.offset = nextOffset;
+          return { ...model, rigBindings: [...filtered, binding] };
+        }),
+      };
+    });
+  };
+
   const removeSelectedModel = () => {
     if (selectedIds.size === 0) {
       return;
@@ -711,5 +847,10 @@ export function useSelectedSceneObjectEditor({
     selectedMap,
     setObjectLocked,
     removeSelectedModel,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
+    updateSelectedRigBinding,
   };
 }

@@ -1,4 +1,8 @@
 import type {
+  RigBinding,
+  RigConstraint,
+  RigDefinition,
+  RigJoint,
   SavedCameraInfo,
   SavedMapInfo,
   SavedMeshOverride,
@@ -123,6 +127,89 @@ function isMeshOverrideListEqual(
   return true;
 }
 
+/** 순서 무관 비교: jointId 기준 lookup. scale/offset 은 기본값으로 정규화. */
+function isRigBindingListEqual(
+  a: RigBinding[] | undefined,
+  b: RigBinding[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  const bMap = new Map((b ?? []).map((o) => [o.jointId, o]));
+  for (const ao of a ?? []) {
+    const bo = bMap.get(ao.jointId);
+    if (!bo) return false;
+    if (
+      ao.key !== bo.key ||
+      (ao.scale ?? 1) !== (bo.scale ?? 1) ||
+      (ao.offset ?? 0) !== (bo.offset ?? 0)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isRigJointEqual(a: RigJoint, b: RigJoint): boolean {
+  return (
+    a.id === b.id &&
+    a.label === b.label &&
+    a.node === b.node &&
+    a.type === b.type &&
+    a.axis === b.axis &&
+    a.min === b.min &&
+    a.max === b.max &&
+    (a.sign ?? 1) === (b.sign ?? 1)
+  );
+}
+
+function isRigConstraintEqual(a: RigConstraint, b: RigConstraint): boolean {
+  if (a.type !== b.type || a.id !== b.id || a.label !== b.label) return false;
+  // 현재 union 은 linear 뿐이다. 타입이 늘면 여기서 분기한다.
+  return (
+    a.input === b.input &&
+    a.output === b.output &&
+    a.factor === b.factor &&
+    (a.offset ?? 0) === (b.offset ?? 0)
+  );
+}
+
+/**
+ * 리그 정의는 순서까지 비교한다 — 목록 UI 순서가 곧 저장 순서라 재정렬도
+ * 편집이다. 관절·구속조건 배열도 마찬가지.
+ */
+function isRigDefinitionListEqual(
+  a: RigDefinition[] | undefined,
+  b: RigDefinition[] | undefined,
+): boolean {
+  const aList = a ?? [];
+  const bList = b ?? [];
+  if (aList.length !== bList.length) return false;
+  for (let i = 0; i < aList.length; i++) {
+    const ar = aList[i];
+    const br = bList[i];
+    if (
+      ar.id !== br.id ||
+      ar.name !== br.name ||
+      ar.modelPath !== br.modelPath ||
+      ar.joints.length !== br.joints.length ||
+      ar.constraints.length !== br.constraints.length
+    ) {
+      return false;
+    }
+    for (let j = 0; j < ar.joints.length; j++) {
+      if (!isRigJointEqual(ar.joints[j], br.joints[j])) return false;
+    }
+    for (let j = 0; j < ar.constraints.length; j++) {
+      if (!isRigConstraintEqual(ar.constraints[j], br.constraints[j])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
   return (
     a.id === b.id &&
@@ -131,11 +218,13 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.path === b.path &&
     a.opacity === b.opacity &&
     (a.locked ?? false) === (b.locked ?? false) &&
+    a.rigId === b.rigId &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
     isValueMapListEqual(a.valueMapList, b.valueMapList) &&
-    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides)
+    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
+    isRigBindingListEqual(a.rigBindings, b.rigBindings)
   );
 }
 
@@ -168,6 +257,8 @@ export function isSceneInfoEqual(
   }
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
+  // 리그 정의 편집이 dirty/undo 에 잡혀야 저장된다.
+  if (!isRigDefinitionListEqual(a.rigs, b.rigs)) return false;
   if (a.models.length !== b.models.length) return false;
   for (let i = 0; i < a.models.length; i++) {
     if (!isModelInfoEqual(a.models[i], b.models[i])) return false;
