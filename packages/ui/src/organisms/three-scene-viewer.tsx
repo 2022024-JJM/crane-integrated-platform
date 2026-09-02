@@ -643,9 +643,12 @@ export function ThreeSceneViewer({
                 </div>
               ) : null}
 
-              {/* 독 배치의 전체화면 우측 상단 슬롯(알람 패널) — 캔버스 영역
-                    기준이라 레일이 고정되면 자동으로 안쪽으로 온다. */}
-              {isDock && isFullscreen && fullscreenTopRightOverlay ? (
+              {/* 독 배치의 우측 상단 슬롯(알람 패널). 다른 배치와 달리 전체화면
+                  여부를 가리지 않는다 — 독 배치의 목표가 전체화면과 평소의 UI 를
+                  같게 하는 것이라, 이 슬롯을 여닫는 버튼(레일의 알람 토글)이
+                  평소에도 있다. 캔버스 영역 기준이라 레일이 고정되면 자동으로
+                  안쪽으로 온다. */}
+              {isDock && fullscreenTopRightOverlay ? (
                 <div
                   className="pointer-events-auto absolute top-3 z-50"
                   style={{

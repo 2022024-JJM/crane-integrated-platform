@@ -22,7 +22,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
   const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const {
     visible: alarmOverlayVisible,
     toggle: toggleAlarmOverlay,
@@ -105,15 +104,12 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           />
         }
         toolbarExtras={
-          isFullscreen ? (
-            <AlarmFullscreenToggleButton
-              active={alarmOverlayVisible}
-              alarmCount={activeAlarmCount}
-              onToggle={toggleAlarmOverlay}
-            />
-          ) : null
+          <AlarmFullscreenToggleButton
+            active={alarmOverlayVisible}
+            alarmCount={activeAlarmCount}
+            onToggle={toggleAlarmOverlay}
+          />
         }
-        onFullscreenChange={setIsFullscreen}
         toolbarLayout="dock"
         dockPanels={dockPanels}
       />
