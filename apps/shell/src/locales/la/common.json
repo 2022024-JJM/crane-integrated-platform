@@ -358,7 +358,14 @@
     "fullscreen": "Plenus modus",
     "exitFullscreen": "Restitue fenestram",
     "badge": "Visor 3D",
-    "resizePreview": "Muta magnitudinem"
+    "resizePreview": "Muta magnitudinem",
+    "dockPin": "Fige",
+    "dockUnpin": "Solve",
+    "dockExpand": "Explica",
+    "dockCollapse": "Contrahe",
+    "dockResize": "Muta magnitudinem tabulae",
+    "dockTools": "Moderamina visus",
+    "dockPanels": "Tabulae"
   },
   "undo": "Revoca"
 }

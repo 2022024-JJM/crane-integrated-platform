@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import {
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
   useCallback,
   useEffect,
@@ -20,15 +21,26 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { Button } from '../atoms/button';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../molecules/tooltip';
+  SCENE_TOOLBAR_BUTTON_CLASS,
+  SceneToolbarButton,
+  type SceneToolbarTooltipSide,
+} from '../molecules/scene-toolbar-button';
+import { TooltipProvider } from '../molecules/tooltip';
+import {
+  SCENE_DOCK_PANEL_HANDLE_HEIGHT,
+  SCENE_DOCK_RAIL_COLUMN_WIDTH,
+  SCENE_DOCK_RAIL_HANDLE_WIDTH,
+  SceneDockPanel,
+  SceneDockRail,
+  type SceneDockState,
+  type SceneDockTab,
+} from './scene-dock';
 import type { Vector3Tuple } from '@crane/core/types/math';
+
+// 외부 버튼(알람 토글·충돌 토글·북마크)이 예전부터 이 경로에서 가져다 쓴다.
+export { SCENE_TOOLBAR_BUTTON_CLASS };
 
 interface ThreeSceneViewerCameraPreset {
   defaultPosition: Vector3Tuple;
@@ -65,9 +77,26 @@ interface ThreeSceneViewerProps {
   /**
    * 조작 툴바 위치. 기본은 좌측 하단 한 줄. 'top-right' 는 우측 상단에
    * 세로 스택으로 놓고, toolbarExtras 와 전체화면 우측 상단 슬롯을 그 아래
-   * 줄에 차례로 쌓는다 (실시간 3D 모니터링 화면).
+   * 줄에 차례로 쌓는다 (대시보드 미리보기 등). 'dock' 은 툴바를 그리지 않고
+   * 카메라 버튼·toolbarExtras·toolbarTrailing 을 우측 독 레일(dockRight)에
+   * 세로로 넣는다 (실시간 3D 모니터링 화면). 'none' 은 툴바를 아예 그리지
+   * 않는다 (대시보드 미리보기처럼 조작 없이 보기만 하는 작은 뷰).
    */
-  toolbarPlacement?: 'bottom-left' | 'top-right';
+  toolbarPlacement?: 'bottom-left' | 'top-right' | 'dock' | 'none';
+  /**
+   * 우측 독 레일 상태 ('dock' 배치에서만). 내용은 카메라 버튼 + toolbarExtras
+   * + toolbarTrailing 을 뷰어가 조립한다. 상태는 features 의 useSceneDock 이
+   * 소유하고 여기서는 그대로 넘긴다.
+   */
+  dockRight?: SceneDockState;
+  /** 하단 독 패널 ('dock' 배치에서만). 탭 배열과 고정 시 크기. */
+  dockBottom?: SceneDockState & {
+    tabs: SceneDockTab[];
+    size: number;
+    onSizeChange: (next: number) => void;
+    minSize: number;
+    maxSize: number;
+  };
   onControllerReady?: (controller: SceneController | null) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
 }
@@ -368,55 +397,6 @@ function SceneControlsBridge({
   );
 }
 
-/**
- * 툴바 버튼의 공통 외형(다크 글래스). toolbarExtras·toolbarTrailing에 넣는
- * 외부 버튼도 이 클래스를 써야 한 줄의 툴바로 보인다.
- *
- * 동영상 플레이어 컨트롤 방식의 글래스 판을 테마에 맞는 색으로 깐다 —
- * 라이트는 반투명 흰 + 검정 아이콘, 다크는 반투명 검정 + 흰 아이콘. 테마
- * 토큰이나 배경 없는 반전 글자만으로는 3D 씬(하늘·지도·모델) 밝기에 따라
- * 묻혀서, 자체 배경판 + 판과 대비되는 아이콘색 조합으로 정착했다.
- * border-0 인 이유: 기본 클래스의 bg-clip-padding 때문에 투명 border 1px
- * 자리가 blur 만 비치는 링으로 보였다. dark: 변형은 outline variant 의
- * dark:bg-input/* 을 누르기 위해 명시한다.
- */
-export const SCENE_TOOLBAR_BUTTON_CLASS =
-  'border-0 bg-white/40 text-black shadow-none backdrop-blur-sm hover:bg-white/60 hover:text-black aria-expanded:bg-white/60 aria-expanded:text-black dark:bg-black/40 dark:text-white dark:hover:bg-black/60 dark:hover:text-white dark:aria-expanded:bg-black/60 dark:aria-expanded:text-white';
-
-interface ToolbarButtonProps {
-  label: string;
-  onClick: () => void;
-  /** 툴팁이 열리는 방향. 툴바가 화면 위쪽에 있으면 'bottom' 으로 뒤집는다. */
-  side?: 'top' | 'bottom';
-  children: ReactNode;
-}
-
-function ToolbarButton({
-  label,
-  onClick,
-  side = 'top',
-  children,
-}: ToolbarButtonProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className={SCENE_TOOLBAR_BUTTON_CLASS}
-            aria-label={label}
-          />
-        }
-        onClick={onClick}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side={side}>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function ThreeSceneViewer({
   cameraPreset,
   canvasProps,
@@ -429,6 +409,8 @@ export function ThreeSceneViewer({
   toolbarExtras,
   toolbarTrailing,
   toolbarPlacement = 'bottom-left',
+  dockRight,
+  dockBottom,
   onControllerReady,
   onFullscreenChange,
 }: ThreeSceneViewerProps) {
@@ -479,6 +461,7 @@ export function ThreeSceneViewer({
 
   const showSplitPanel = isFullscreen && fullscreenOverlay;
   const isTopRightToolbar = toolbarPlacement === 'top-right';
+  const isDock = toolbarPlacement === 'dock';
   const webglSupported = isWebGLSupported();
 
   if (!webglSupported) {
@@ -506,10 +489,15 @@ export function ThreeSceneViewer({
   // 툴바 아이콘 순서: 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면.
   // 앞(왼쪽)에는 toolbarTrailing(씬 뷰 북마크 — 저장된 뷰 칩 + 저장 버튼)이 붙어
   // "추가한 뷰들 / 현재 뷰 저장 / 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면"이 된다.
-  const tooltipSide = isTopRightToolbar ? 'bottom' : 'top';
+  // 독 레일(세로)에서는 툴팁을 왼쪽으로 연다.
+  const tooltipSide: SceneToolbarTooltipSide = isDock
+    ? 'left'
+    : isTopRightToolbar
+      ? 'bottom'
+      : 'top';
   const cameraToolbarButtons = (
     <>
-      <ToolbarButton
+      <SceneToolbarButton
         label={t('common:viewer3d.resetView')}
         side={tooltipSide}
         onClick={() => {
@@ -517,8 +505,8 @@ export function ThreeSceneViewer({
         }}
       >
         <House />
-      </ToolbarButton>
-      <ToolbarButton
+      </SceneToolbarButton>
+      <SceneToolbarButton
         label={t('common:viewer3d.topView')}
         side={tooltipSide}
         onClick={() => {
@@ -526,8 +514,8 @@ export function ThreeSceneViewer({
         }}
       >
         <Binoculars />
-      </ToolbarButton>
-      <ToolbarButton
+      </SceneToolbarButton>
+      <SceneToolbarButton
         label={t('common:viewer3d.zoomIn')}
         side={tooltipSide}
         onClick={() => {
@@ -535,8 +523,8 @@ export function ThreeSceneViewer({
         }}
       >
         <ZoomIn />
-      </ToolbarButton>
-      <ToolbarButton
+      </SceneToolbarButton>
+      <SceneToolbarButton
         label={t('common:viewer3d.zoomOut')}
         side={tooltipSide}
         onClick={() => {
@@ -544,8 +532,8 @@ export function ThreeSceneViewer({
         }}
       >
         <ZoomOut />
-      </ToolbarButton>
-      <ToolbarButton
+      </SceneToolbarButton>
+      <SceneToolbarButton
         label={
           isFullscreen
             ? t('common:viewer3d.exitFullscreen')
@@ -557,9 +545,36 @@ export function ThreeSceneViewer({
         }}
       >
         {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-      </ToolbarButton>
+      </SceneToolbarButton>
     </>
   );
+
+  // 독 배치의 기하. 미고정 독은 핸들만큼 캔버스 가장자리를 덮으므로 캔버스
+  // 영역의 오버레이(충돌 도움말·알람 패널 등)가 그만큼 안쪽으로 비켜야 한다
+  // — CSS 변수 --dock-right-inset / --dock-bottom-inset 으로 알려 준다.
+  // 고정 독은 캔버스 밖 placeholder 가 자리를 차지하므로 inset 0.
+  const rightDockPinned = isDock && dockRight?.pinned === true;
+  const bottomDockPinned = isDock && dockBottom?.pinned === true;
+  const dockRightInset =
+    !isDock || !dockRight
+      ? '0px'
+      : rightDockPinned
+        ? '0px'
+        : SCENE_DOCK_RAIL_HANDLE_WIDTH;
+  const dockBottomInset =
+    !isDock || !dockBottom
+      ? '0px'
+      : bottomDockPinned
+        ? '0px'
+        : SCENE_DOCK_PANEL_HANDLE_HEIGHT;
+  // 하단 영역이 우선한다: 하단 패널은 항상 전체 폭이고, 고정된 하단 패널
+  // 위에서 레일이 끝난다. 하단이 접혀 있을 때(그립만)는 레일을 바닥까지
+  // 내린다 — 그립 띠는 투명하고 막대는 가운데에만 있어 겹쳐도 보이는 게
+  // 없고, 그립 높이만큼 띄우면 레일 열이 바닥 위에서 끊겨 잘린 듯 보인다.
+  // 미고정 하단 패널이 hover 로 펼쳐질 때는 레일을 줄이지 않고 패널이
+  // 레일을 덮는다(DOM 순서로 위에 그림) — hover 마다 레일 높이가 튀지 않게.
+  const railBottomInset =
+    bottomDockPinned && dockBottom ? `${dockBottom.size}%` : '0px';
 
   return (
     <div
@@ -575,53 +590,96 @@ export function ThreeSceneViewer({
           평소에도 루트 안에 두면 overflow-hidden에 잘리지 않고 floating-ui가
           루트 안쪽으로 밀어준다(프리뷰 모달 180px 높이에서도 팝오버가 들어간다). */}
       <PortalContainerProvider container={rootRef}>
-        {/* 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 레이아웃 */}
-        <div
-          className={showSplitPanel ? 'flex h-full w-full' : 'h-full w-full'}
-        >
-          {/* 3D 캔버스 영역 */}
-          <div
-            className={`relative ${showSplitPanel ? 'w-1/2 shrink-0' : 'h-full w-full'}`}
-          >
-            <Canvas
-              {...canvasProps}
-              // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
-              // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
-              // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
-              // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
-              // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
-              camera={{
-                position: cameraPreset.defaultPosition,
-                ...(cameraClip ?? { near: 0.1, far: 5000 }),
-              }}
-              // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
-              // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
-              // 라벨은 DOM(Html)이라 텍스트 선명도와 무관하고, MSAA(antialias)가
-              // 켜져 있어 1.5로도 엣지가 깨끗하다. 호출부가 canvasProps.dpr로
-              // 넘기면 그 값이 우선한다. features 쪽 프리셋(SCENE_DEFAULT_DPR,
-              // scene-render-preset.tsx)과 같은 값 — cameraClip처럼 이 패키지는
-              // features를 참조할 수 없어 리터럴로 둔다.
-              dpr={canvasProps?.dpr ?? [1, 1.5]}
+        {/* 도킹 프레임: [캔버스 행: [캔버스 영역][CMMS 분할][우측 독 placeholder]]
+            [하단 독 placeholder]. 우측 placeholder 가 캔버스 행 안에 있어 하단
+            영역이 항상 전체 폭이고 레일은 그 위에서 끝난다.
+            placeholder 는 고정된 독의 크기만 차지하는 빈 요소다 — 독 내용은
+            루트의 absolute 자식으로 한 곳에만 있고 CSS 로 그 자리에 겹친다.
+            Canvas 의 부모 체인은 고정 여부와 무관하게 같아야 한다(리마운트되면
+            씬이 다시 로드된다). placeholder 는 항상 형제 뒤에만 붙인다. */}
+        <div className="flex h-full w-full flex-col">
+          {/* 캔버스 행 — 전체화면 + CMMS 패널 동시 표시 시 좌우 분할 */}
+          <div className="flex min-h-0 flex-1">
+            {/* 3D 캔버스 영역 */}
+            <div
+              className={`relative h-full ${showSplitPanel ? 'w-1/2 shrink-0' : 'min-w-0 flex-1'}`}
+              style={
+                {
+                  '--dock-right-inset': dockRightInset,
+                  '--dock-bottom-inset': dockBottomInset,
+                } as CSSProperties
+              }
             >
-              <SceneControlsBridge
-                cameraPreset={cameraPreset}
-                onControllerChange={setController}
-              />
-              {children}
-            </Canvas>
+              <Canvas
+                {...canvasProps}
+                // near/far는 호출부가 넘긴 cameraClip을 쓴다. 에디터와 뷰어가
+                // 같은 값을 쓰도록 features의 SCENE_CAMERA_CLIP 하나로 모았는데,
+                // 이 패키지(@crane/ui)는 features를 참조할 수 없으므로 prop으로
+                // 받는다. 기본값은 far 5000 — 이보다 작으면 줌 아웃 시 지도
+                // 중앙부터 잘려나간다(maxDistance 3000 + 씬 반폭보다 커야 한다).
+                camera={{
+                  position: cameraPreset.defaultPosition,
+                  ...(cameraClip ?? { near: 0.1, far: 5000 }),
+                }}
+                // 픽셀 비율 상한 1.5 — Retina(DPR 2~3)에서 네이티브로 그리면
+                // 프래그먼트 수가 1.8~4배라 지도급 씬에서 프레임을 다 먹는다.
+                // 라벨은 DOM(Html)이라 텍스트 선명도와 무관하고, MSAA(antialias)가
+                // 켜져 있어 1.5로도 엣지가 깨끗하다. 호출부가 canvasProps.dpr로
+                // 넘기면 그 값이 우선한다. features 쪽 프리셋(SCENE_DEFAULT_DPR,
+                // scene-render-preset.tsx)과 같은 값 — cameraClip처럼 이 패키지는
+                // features를 참조할 수 없어 리터럴로 둔다.
+                dpr={canvasProps?.dpr ?? [1, 1.5]}
+              >
+                <SceneControlsBridge
+                  cameraPreset={cameraPreset}
+                  onControllerChange={setController}
+                />
+                {children}
+              </Canvas>
 
-            {overlay ? (
-              <div className="pointer-events-none absolute inset-0 z-10">
-                {overlay}
+              {overlay ? (
+                <div className="pointer-events-none absolute inset-0 z-10">
+                  {overlay}
+                </div>
+              ) : null}
+
+              {/* 독 배치의 전체화면 우측 상단 슬롯(알람 패널) — 캔버스 영역
+                    기준이라 레일이 고정되면 자동으로 안쪽으로 온다. */}
+              {isDock && isFullscreen && fullscreenTopRightOverlay ? (
+                <div
+                  className="pointer-events-auto absolute top-3 z-50"
+                  style={{
+                    right: 'calc(0.75rem + var(--dock-right-inset))',
+                  }}
+                >
+                  {fullscreenTopRightOverlay}
+                </div>
+              ) : null}
+            </div>
+
+            {/* CMMS 패널 (전체화면 시에만). 남는 폭을 쓴다 — 우측 독이
+                고정돼 있으면 그 폭만큼 줄어들어 행이 넘치지 않는다. */}
+            {showSplitPanel ? (
+              <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+                {fullscreenOverlay}
               </div>
+            ) : null}
+
+            {rightDockPinned ? (
+              <div
+                aria-hidden
+                className="shrink-0"
+                style={{ width: SCENE_DOCK_RAIL_COLUMN_WIDTH }}
+              />
             ) : null}
           </div>
 
-          {/* CMMS 패널 (전체화면 시에만) */}
-          {showSplitPanel ? (
-            <div className="relative h-full w-1/2 shrink-0 overflow-hidden">
-              {fullscreenOverlay}
-            </div>
+          {bottomDockPinned && dockBottom ? (
+            <div
+              aria-hidden
+              className="shrink-0"
+              style={{ height: `${dockBottom.size}%` }}
+            />
           ) : null}
         </div>
 
@@ -632,6 +690,8 @@ export function ThreeSceneViewer({
         ) : null}
 
         {/* 화면 조작 툴바.
+            'dock': 우측 독 레일 안에 세로로 — 카메라 버튼, toolbarExtras,
+            toolbarTrailing 순. 하단 독 패널은 탭 내용을 그대로 그린다.
             'top-right': 우측 상단 세로 스택 — 1줄 카메라 조작, 2줄 toolbarExtras
             (전체화면 알람 토글 등), 그 아래 전체화면 우측 상단 슬롯(알람 패널).
             좌우 여백을 함께 잡아 두어 북마크 칩이 많아도 왼쪽 화면 밖으로
@@ -639,7 +699,48 @@ export function ThreeSceneViewer({
             'bottom-left': 좌측 하단 가로 한 줄. 분할 전체화면에서도 루트의
             좌측 하단은 곧 3D 캔버스의 좌측 하단이라 캔버스 밖으로 나가지 않는다. */}
         <TooltipProvider delay={150}>
-          {isTopRightToolbar ? (
+          {toolbarPlacement === 'none' ? null : isDock ? (
+            <>
+              {dockRight ? (
+                <SceneDockRail
+                  label={dockRight.label}
+                  expanded={dockRight.expanded}
+                  pinned={dockRight.pinned}
+                  onPinnedChange={dockRight.onPinnedChange}
+                  handlers={dockRight.handlers}
+                  bottomInset={railBottomInset}
+                >
+                  {cameraToolbarButtons}
+                  {toolbarExtras ? (
+                    <>
+                      <DockRailSeparator />
+                      {toolbarExtras}
+                    </>
+                  ) : null}
+                  {toolbarTrailing ? (
+                    <>
+                      <DockRailSeparator />
+                      {toolbarTrailing}
+                    </>
+                  ) : null}
+                </SceneDockRail>
+              ) : null}
+              {dockBottom ? (
+                <SceneDockPanel
+                  label={dockBottom.label}
+                  expanded={dockBottom.expanded}
+                  pinned={dockBottom.pinned}
+                  onPinnedChange={dockBottom.onPinnedChange}
+                  handlers={dockBottom.handlers}
+                  tabs={dockBottom.tabs}
+                  size={dockBottom.size}
+                  onSizeChange={dockBottom.onSizeChange}
+                  minSize={dockBottom.minSize}
+                  maxSize={dockBottom.maxSize}
+                />
+              ) : null}
+            </>
+          ) : isTopRightToolbar ? (
             <div
               className={`pointer-events-none absolute top-3 left-3 z-1 flex flex-col items-end gap-2 ${
                 // 분할 전체화면(CMMS 패널)에서는 캔버스가 왼쪽 절반이라
@@ -681,5 +782,15 @@ export function ThreeSceneViewer({
         </TooltipProvider>
       </PortalContainerProvider>
     </div>
+  );
+}
+
+/** 독 레일 안에서 버튼 그룹을 나누는 가로 구분선. */
+function DockRailSeparator() {
+  return (
+    <span
+      aria-hidden
+      className="my-0.5 h-px w-5 shrink-0 bg-black/25 dark:bg-white/25"
+    />
   );
 }

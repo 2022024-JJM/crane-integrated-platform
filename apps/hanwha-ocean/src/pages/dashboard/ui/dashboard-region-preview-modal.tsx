@@ -322,6 +322,7 @@ export function DashboardRegionPreviewModal({
                 regionId={regionId}
                 alarmsByCraneId={alarmsByCraneId}
                 alarmHighlightMesh={regionId === 'dock-in'}
+                toolbarLayout="none"
               />
             </div>
             <button

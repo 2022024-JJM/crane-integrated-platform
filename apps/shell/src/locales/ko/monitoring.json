@@ -70,6 +70,9 @@
     "redo": "다시 실행"
   },
   "sceneViews": {
+    "add": "뷰 추가",
+    "empty": "저장한 뷰가 없습니다",
+    "title": "저장한 뷰",
     "saveCurrent": "현재 뷰 저장",
     "namePlaceholder": "뷰 이름",
     "save": "저장",

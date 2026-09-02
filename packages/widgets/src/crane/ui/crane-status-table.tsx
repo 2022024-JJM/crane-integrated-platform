@@ -41,6 +41,8 @@ interface CraneStatusTableProps {
   cranes: MonitoringLiveCrane[];
   tagDefinitionIds?: number[];
   regionId: string;
+  /** 독 패널 탭 안처럼 제목이 바깥에 이미 있을 때 헤더의 제목만 숨긴다. */
+  hideTitle?: boolean;
 }
 
 interface ColumnGroup {
@@ -134,6 +136,7 @@ export function CraneStatusTable({
   cranes,
   tagDefinitionIds,
   regionId,
+  hideTitle = false,
 }: CraneStatusTableProps) {
   const { t, i18n } = useTranslation();
   const {
@@ -180,13 +183,15 @@ export function CraneStatusTable({
 
   return (
     <div className="bg-background flex h-full min-h-0 flex-col">
-      <div className="border-b px-3 py-2">
+      <div className={cn('border-b px-3', hideTitle ? 'py-1.5' : 'py-2')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold">
-              {t('common:craneStatus.title')}
-            </h3>
-          </div>
+          {hideTitle ? null : (
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold">
+                {t('common:craneStatus.title')}
+              </h3>
+            </div>
+          )}
           <div className="ml-auto flex items-center justify-end gap-2">
             <TooltipProvider delay={150}>
               <Tooltip>

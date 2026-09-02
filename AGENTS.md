@@ -184,6 +184,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 리깅 스키마(관절·구속조건·바인딩) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
 | 리깅 런타임(값 저장소·드라이버) | `packages/features/src/3d/model/{rig-value-store,use-rig-driver,rig-live-readouts}.ts`, `packages/features/src/3d/lib/{apply-joint,smooth-damp}.ts` |
 | 리깅 편집 UI | `packages/widgets/src/3d/ui/rigging-section.tsx`(인스펙터 탭), `packages/widgets/src/3d/lib/model-node-tree.ts`(계층 목록 노드 트리) |
+| 모니터링 씬 독(dock: hover 펼침·고정 레일/패널) | 껍데기 `packages/ui/src/organisms/scene-dock.tsx`(완전 제어형, 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`), 상태·영속화 `packages/features/src/3d/model/use-scene-dock.ts` + `lib/{dock-hover-state,dock-storage}.ts`(순수 리듀서, 테스트 대상). 조립은 `Monitoring3dView` 의 `toolbarLayout="dock"` + `dockPanels` |
 
 ## packages/ui 구조 (Atomic Design)
 

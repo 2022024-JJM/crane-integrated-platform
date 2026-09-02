@@ -24,6 +24,12 @@ import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
  * 설정에서 읽어 표시한다.
  */
 
+/** 우측 하단 배치 — 독 핸들(미고정) 두께만큼 안쪽으로 비킨다. */
+const DOCK_INSET_STYLE = {
+  right: 'calc(0.75rem + var(--dock-right-inset, 0px))',
+  bottom: 'calc(0.75rem + var(--dock-bottom-inset, 0px))',
+} as const;
+
 /** 링 색 견본 — 실제 씬처럼 "면 위의 얇은 테두리"로 그린다 */
 function RingSwatch({ color, fill }: { color: string; fill?: string }) {
   return (
@@ -51,7 +57,7 @@ function HelpRow({
         {label}
       </span>
       {value ? (
-        <span className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-white">
+        <span className="shrink-0 font-mono text-[11px] font-semibold text-white tabular-nums">
           {value}
         </span>
       ) : null}
@@ -85,8 +91,11 @@ export function GoliathCollisionHelp() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('collisionGuard.help.show')}
-        // pointer-events-auto — 부모 오버레이 컨테이너가 none이라 명시 필요
-        className="pointer-events-auto absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg border border-slate-700/70 bg-slate-900/95 px-2 py-1.5 text-[11px] font-semibold text-slate-200 shadow-md backdrop-blur-sm transition-colors hover:border-slate-500 hover:text-white focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
+        // pointer-events-auto — 부모 오버레이 컨테이너가 none이라 명시 필요.
+        // 위치는 독(dock) 핸들만큼 안쪽으로 — --dock-*-inset 은 ThreeSceneViewer
+        // 캔버스 영역이 제공한다(미고정 독의 핸들 두께, 고정 시 0).
+        style={DOCK_INSET_STYLE}
+        className="pointer-events-auto absolute flex items-center gap-1.5 rounded-lg border border-slate-700/70 bg-slate-900/95 px-2 py-1.5 text-[11px] font-semibold text-slate-200 shadow-md backdrop-blur-sm transition-colors hover:border-slate-500 hover:text-white focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
       >
         <HelpCircle className="size-3.5" aria-hidden />
         {t('collisionGuard.help.title')}
@@ -97,7 +106,8 @@ export function GoliathCollisionHelp() {
   return (
     <section
       aria-label={t('collisionGuard.help.title')}
-      className="pointer-events-auto absolute right-3 bottom-3 w-64 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/95 shadow-md backdrop-blur-sm"
+      style={DOCK_INSET_STYLE}
+      className="pointer-events-auto absolute w-64 overflow-hidden rounded-lg border border-slate-700/70 bg-slate-900/95 shadow-md backdrop-blur-sm"
     >
       <header className="flex items-center gap-1.5 border-b border-slate-700/60 py-1.5 pr-1.5 pl-2.5 text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
         <HelpCircle className="size-3" aria-hidden />

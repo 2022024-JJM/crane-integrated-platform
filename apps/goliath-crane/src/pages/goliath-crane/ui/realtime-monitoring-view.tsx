@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import { useRegionActiveAlarmsByCraneId } from '@crane/features/alarm';
@@ -41,52 +41,55 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   // DPR 클램프는 ThreeSceneViewer 기본값([1, 1.5])으로 일원화됐다 — 예전엔
   // 충돌 감지 ON일 때만 이 화면에서 [1, 1.5]로 조였었다.
 
+  // 크레인 실시간 상태 테이블은 3D 뷰의 하단 독 탭으로 — 전체화면 루트 안에
+  // 있어야 전체화면에서도 보인다. 오른쪽 게이지 레일은 이번 개편 범위 밖이라
+  // 기존 가로 분할을 유지한다 (후속에 독 탭으로 흡수할 수 있다).
+  const dockPanels = useMemo(
+    () => [
+      {
+        id: 'crane-status',
+        label: t('common:craneStatus.title'),
+        content: (
+          <CraneStatusTable
+            cranes={GOLIATH_CRANES}
+            tagDefinitionIds={GOLIATH_TAG_DEFINITION_IDS}
+            regionId={GOLIATH_TABLE_REGION_ID}
+            hideTitle
+          />
+        ),
+      },
+    ],
+    [t],
+  );
+
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
       <ResizablePanel defaultSize={75} minSize={50}>
-        <ResizablePanelGroup
-          orientation="vertical"
-          className="h-full min-h-0"
-        >
-          <ResizablePanel defaultSize={55} minSize={30}>
-            <div className="relative h-full">
-              {is3dViewLoading ? (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
-                  <Spinner
-                    className="size-6 text-orange-500"
-                    aria-hidden="true"
-                  />
-                  <p className="text-sm font-medium text-white">
-                    {t('common:viewer3d.loading')}
-                  </p>
-                </div>
-              ) : null}
-              <Monitoring3dView
-                regionId={regionId}
-                alarmsByCraneId={alarmsByCraneId}
-                onLoadingChange={setIs3dViewLoading}
-                sceneExtras={<GoliathCollisionGuardScene />}
-                toolbarExtras={<GoliathCollisionGuardToggle />}
-                overlayExtras={
-                  <>
-                    <GoliathCollisionGuardHud />
-                    <GoliathCollisionHelp />
-                  </>
-                }
-              />
+        <div className="relative h-full min-h-0">
+          {is3dViewLoading ? (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
+              <Spinner className="size-6 text-orange-500" aria-hidden="true" />
+              <p className="text-sm font-medium text-white">
+                {t('common:viewer3d.loading')}
+              </p>
             </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={45} minSize={25}>
-            <CraneStatusTable
-              cranes={GOLIATH_CRANES}
-              tagDefinitionIds={GOLIATH_TAG_DEFINITION_IDS}
-              regionId={GOLIATH_TABLE_REGION_ID}
-            />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+          ) : null}
+          <Monitoring3dView
+            regionId={regionId}
+            alarmsByCraneId={alarmsByCraneId}
+            onLoadingChange={setIs3dViewLoading}
+            sceneExtras={<GoliathCollisionGuardScene />}
+            toolbarExtras={<GoliathCollisionGuardToggle />}
+            overlayExtras={
+              <>
+                <GoliathCollisionGuardHud />
+                <GoliathCollisionHelp />
+              </>
+            }
+            toolbarLayout="dock"
+            dockPanels={dockPanels}
+          />
+        </div>
       </ResizablePanel>
 
       <ResizableHandle withHandle />

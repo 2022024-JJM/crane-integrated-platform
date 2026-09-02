@@ -70,6 +70,9 @@
     "redo": "Redo"
   },
   "sceneViews": {
+    "add": "Add view",
+    "empty": "No saved views",
+    "title": "Saved views",
     "saveCurrent": "Save current view",
     "namePlaceholder": "View name",
     "save": "Save",
