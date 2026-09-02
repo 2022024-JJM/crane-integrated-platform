@@ -8,6 +8,7 @@ import { withBaseUrl } from '../lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
+import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
 import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -140,6 +141,9 @@ export function useClonedModel(url: string, injected?: ClonedModel): ClonedModel
         scale: [child.scale.x, child.scale.y, child.scale.z],
         visible: child.visible,
       });
+      // 리그 드라이버의 rest pose 도 여기서 잡는다 — clone 직후라 사용자 편집·
+      // 구동이 섞이지 않은 GLTF 원본이다(rest-pose-cache.ts 참고).
+      seedRestPose(child);
 
       if (!(child instanceof Mesh)) {
         return;
@@ -578,8 +582,8 @@ export function ModelMesh({
         modelObjectRegistry.register(id, ready);
         registeredObject = ready;
 
-        // 자식 mesh를 모두 registry에 등록한다. 더블클릭 drill-in 후
-        // TransformControls가 곧바로 mesh를 잡을 수 있도록 mount 시 1회 traverse.
+        // 자식 mesh를 모두 registry에 등록한다. 계층 목록·더블클릭 drill-in 으로
+        // 고른 노드의 바운딩 박스 대상과 F키 카메라 포커스가 여기서 찾는다.
         for (const binding of meshBindings) {
           const meshPath = getMeshPath(clone, binding.mesh);
           if (meshPath === null) continue;
@@ -587,6 +591,19 @@ export function ModelMesh({
           modelObjectRegistry.register(meshId, binding.mesh);
           registeredMeshIds.push(meshId);
         }
+        // Mesh 가 아닌 중간 노드(Group/Empty/Bone)도 같은 id 형식으로 등록한다.
+        // 리깅 관절은 대개 피벗에 놓인 Empty 라, 계층 목록에서 골랐을 때 박스를
+        // 그리려면 registry 에서 찾을 수 있어야 한다. 노드 선택은 읽기 전용이라
+        // 기즈모는 붙지 않는다. forEachRoot 는 meshId 를 제외하므로 레이캐스트·
+        // 카메라 핏에는 섞이지 않는다.
+        clone.traverse((child) => {
+          if (child === clone || child instanceof Mesh) return;
+          const nodePath = getMeshPath(clone, child);
+          if (nodePath === null) return;
+          const nodeId = makeMeshId(id, nodePath);
+          modelObjectRegistry.register(nodeId, child);
+          registeredMeshIds.push(nodeId);
+        });
       }
 
       onObjectReadyRef.current?.(id, ready);

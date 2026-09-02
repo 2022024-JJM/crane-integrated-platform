@@ -28,6 +28,7 @@ import {
   DatabaseZap,
   Boxes,
   Brush,
+  Waves,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -133,6 +134,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         label: i18n.t('common:nav.threeViewerEdit'),
         path: `${base}/3d-viewer-edit`,
         icon: SquarePen,
+      },
+      {
+        label: i18n.t('common:nav.virtualTags'),
+        path: `${base}/virtual-tags`,
+        icon: Waves,
       },
       {
         label: i18n.t('common:nav.craneStatus'),

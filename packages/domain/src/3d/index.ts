@@ -16,12 +16,65 @@ export {
 } from './lib/scene-dev-storage';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export {
+  sanitizeModelRigId,
+  sanitizeRigDefinition,
+  sanitizeRigDefinitions,
+} from './lib/sanitize-rig';
+export {
+  convertLegacyRigBindings,
+  convertLegacyValueMapList,
+  resolveModelTagMappings,
+  sanitizeTagMappings,
+} from './lib/sanitize-tag-mappings';
+export {
+  getRigOccupiedTargetKeys,
+  getTagMappingTargetKey,
+  getTagMappingUnit,
+  TAG_MAPPING_CHANNELS,
+} from './model/tag-mapping-types';
+export type {
+  TagMapping,
+  TagMappingChannel,
+  TagMappingJointTarget,
+  TagMappingNodeTarget,
+  TagMappingTarget,
+  TagMappingUnit,
+} from './model/tag-mapping-types';
+export {
+  getDrivenJointIds,
+  getRigJointUnit,
+  RIG_AXES,
+  RIG_CONSTRAINT_TYPES,
+  RIG_HINGE_DEFAULT_RANGE,
+  RIG_JOINT_TYPES,
+  RIG_SLIDE_DEFAULT_RANGE,
+} from './model/rig-types';
+export type {
+  RigAxis,
+  RigBinding,
+  RigConstraint,
+  RigConstraintType,
+  RigDefinition,
+  RigJoint,
+  RigJointType,
+  RigJointUnit,
+  RigLinearConstraint,
+  RigNodePath,
+} from './model/rig-types';
+export {
   markSceneRegionActive,
   preloadGltf,
   releaseGltfCache,
   releaseSceneRegionAssets,
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
+export {
+  getRestPose,
+  hasRestPose,
+  resetToRestPose,
+  seedRestPose,
+  type RestPose,
+} from './lib/rest-pose-cache';
 export {
   prefetchModelBottomOffset,
   fillModelBottomOffsetFromClone,

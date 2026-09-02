@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { Object3D } from 'three';
-import { modelObjectRegistry } from '@crane/domain/3d';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ReplayLiteFrame } from '@crane/domain/monitoring';
 import { useReplayPlayerStore } from '../use-replay-player-store';
-import { useValueMapperStore } from '../use-value-mapper-store';
+import { rigValueStore } from '../rig-value-store';
+import { setTagIngest, tagLiveValues } from '../tag-value-bus';
 
 /**
  * craneId의 하이픈은 태그 키에서 언더스코어로 치환된다 —
- * 'crane-1' 프레임 값이 'crane_1:X' 매핑에 적용되는 것까지 특성화한다.
+ * 'crane-1' 프레임 값이 'crane_1:X' 키로 버스에 실리는 것까지 특성화한다.
+ * 버스 소비자를 가짜로 꽂아 마지막 값을 키별로 기록한다.
  */
 function frame(x: number): ReplayLiteFrame {
   return {
@@ -28,7 +28,8 @@ function store() {
   return useReplayPlayerStore.getState();
 }
 
-let object: Object3D;
+const received = new Map<string, number>();
+const xValue = () => received.get('crane_1:X') ?? 0;
 
 beforeEach(() => {
   useReplayPlayerStore.setState({
@@ -38,22 +39,14 @@ beforeEach(() => {
     isPlaying: false,
     speedMultiplier: 1,
   });
-  useValueMapperStore.setState({ map: {} });
-  modelObjectRegistry.clear();
+  received.clear();
+  tagLiveValues.clear();
+  rigValueStore.reset();
+  setTagIngest((key, value) => received.set(key, value));
+});
 
-  object = new Object3D();
-  modelObjectRegistry.register('obj-1', object);
-  useValueMapperStore.getState().register('crane_1:X', {
-    id: 'obj-1',
-    type: 'PX',
-    scale: 1,
-    offset: 0,
-    originTransform: {
-      position: [0, 0, 0],
-      rotation: [0, 0, 0],
-      scale: [1, 1, 1],
-    },
-  });
+afterEach(() => {
+  setTagIngest(null);
 });
 
 describe('loadFrames', () => {
@@ -62,7 +55,7 @@ describe('loadFrames', () => {
 
     expect(store().frameIndex).toBe(0);
     expect(store().isPlaying).toBe(false);
-    expect(object.position.x).toBe(10);
+    expect(xValue()).toBe(10);
   });
 
   it('duration 길이가 프레임 수와 다르면 전부 기본값(5000ms)으로 채운다', () => {
@@ -75,7 +68,8 @@ describe('loadFrames', () => {
 
   it('숫자가 아닌 태그 값은 적용하지 않는다', () => {
     expect(() => store().loadFrames([frame(5)], [1000])).not.toThrow();
-    expect(object.position.x).toBe(5);
+    expect(xValue()).toBe(5);
+    expect(received.has('crane_1:NOTE')).toBe(false);
   });
 });
 
@@ -94,8 +88,8 @@ describe('빈 프레임 (예외 경계)', () => {
 
     expect(store().frameIndex).toBe(0);
     expect(store().isPlaying).toBe(false);
-    // 프레임이 없으니 매핑된 객체도 움직이지 않는다.
-    expect(object.position.x).toBe(0);
+    // 프레임이 없으니 버스에 아무 값도 실리지 않는다.
+    expect(received.size).toBe(0);
   });
 });
 
@@ -120,11 +114,11 @@ describe('seekTo / seekByFrames', () => {
     store().seekTo(99);
     expect(store().frameIndex).toBe(2);
     expect(store().isPlaying).toBe(false);
-    expect(object.position.x).toBe(20);
+    expect(xValue()).toBe(20);
 
     store().seekTo(-5);
     expect(store().frameIndex).toBe(0);
-    expect(object.position.x).toBe(0);
+    expect(xValue()).toBe(0);
   });
 
   it('seekByFrames는 현재 인덱스 기준 상대 이동', () => {
@@ -178,7 +172,7 @@ describe('tick', () => {
     store().play();
     store().tick();
     expect(store().frameIndex).toBe(1);
-    expect(object.position.x).toBe(10);
+    expect(xValue()).toBe(10);
   });
 
   it('마지막 프레임에서는 정지하고 인덱스를 유지한다', () => {
@@ -192,13 +186,16 @@ describe('tick', () => {
 });
 
 describe('reset', () => {
-  it('전부 초기화하고 매핑된 객체를 원위치로 돌린다', () => {
+  it('전부 초기화하고 값 저장소를 비워 노드가 rest 로 돌아가게 한다', () => {
     store().loadFrames([frame(50)], [1000]);
-    expect(object.position.x).toBe(50);
+    expect(xValue()).toBe(50);
+    rigValueStore.set('m/slot', 1);
+    expect(rigValueStore.size).toBe(1);
 
     store().reset();
     expect(store().frames).toEqual([]);
     expect(store().frameIndex).toBe(0);
-    expect(object.position.x).toBe(0); // originTransform으로 복귀
+    // 값 저장소가 비면 드라이버가 다음 프레임에 rest(Δ 0)를 적용한다.
+    expect(rigValueStore.size).toBe(0);
   });
 });

@@ -30,8 +30,10 @@
     "./molecules/cmms-status-badge": "./src/molecules/cmms-status-badge.tsx",
     "./molecules/cmms-badge-row": "./src/molecules/cmms-badge-row.tsx",
     "./molecules/resizable": "./src/molecules/resizable.tsx",
+    "./molecules/scene-toolbar-button": "./src/molecules/scene-toolbar-button.tsx",
     "./molecules/scroll-area": "./src/molecules/scroll-area.tsx",
     "./molecules/select": "./src/molecules/select.tsx",
+    "./molecules/combobox": "./src/molecules/combobox.tsx",
     "./molecules/popover": "./src/molecules/popover.tsx",
     "./molecules/portal-container": "./src/molecules/portal-container.tsx",
     "./molecules/alert-dialog": "./src/molecules/alert-dialog.tsx",
@@ -40,10 +42,12 @@
     "./molecules/pagination": "./src/molecules/pagination.tsx",
     "./molecules/table": "./src/molecules/table.tsx",
     "./molecules/toggle-group": "./src/molecules/toggle-group.tsx",
+    "./molecules/tree": "./src/molecules/tree.tsx",
     "./molecules/tooltip": "./src/molecules/tooltip.tsx",
     "./organisms/app-error-boundary": "./src/organisms/app-error-boundary.tsx",
     "./organisms/app-toaster": "./src/organisms/app-toaster.tsx",
     "./organisms/navigation-progress-bar": "./src/organisms/navigation-progress-bar.tsx",
+    "./organisms/scene-dock": "./src/organisms/scene-dock.tsx",
     "./organisms/three-scene-viewer": "./src/organisms/three-scene-viewer.tsx"
   },
   "peerDependencies": {

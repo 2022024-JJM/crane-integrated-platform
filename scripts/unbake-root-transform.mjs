@@ -9,7 +9,16 @@
 //
 // 사용법:
 //   node scripts/unbake-root-transform.mjs assets-src/models/Block_001.glb [...]
+//   node scripts/unbake-root-transform.mjs --fold-scale assets-src/models/LLC_002.glb
 //   pnpm optimize:glb Block_001.glb                # 이어서 압축 배포
+//
+// --fold-scale: 루트에 실린 uniform scale 을 지우는 대신 **직계 자식에 접어
+// 넣는다**(자식 translation×s, scale×s). 리깅된 Blender export 는 루트 Empty 에
+// 20.267 같은 큰 scale 을 두고 자식 mesh 에 1/s 를 두는 식으로 실제 미터를
+// 맞춰 오는데, 루트 scale 을 그냥 identity 로 만들면 모델이 s 배 작아진다.
+// uniform scale 은 회전과 가환이라 자식 rotation 은 건드리지 않아도 정확하다.
+// 이렇게 하면 루트는 identity, 자식 노드 좌표는 실제 미터가 되어 씬 배치
+// scale [1,1,1] 로 놓을 수 있고, 리그 드라이버의 scale 체인 누적도 단순해진다.
 //
 // 입력은 어느 경로든 받지만 출력은 항상 assets-src/models/<파일명> 이다 —
 // optimize:glb 가 그 백업본을 원본으로 취급하기 때문(public 에 쓰면 옛 백업이
@@ -21,9 +30,13 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 
 const OUT_DIR = 'assets-src/models';
-const inputs = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const foldScale = argv.includes('--fold-scale');
+const inputs = argv.filter((a) => !a.startsWith('--'));
 if (inputs.length === 0) {
-  console.error('사용법: node scripts/unbake-root-transform.mjs <glb 경로> [...]');
+  console.error(
+    '사용법: node scripts/unbake-root-transform.mjs [--fold-scale] <glb 경로> [...]',
+  );
   process.exit(1);
 }
 
@@ -52,7 +65,22 @@ for (const input of inputs) {
     console.log(`  ${node.getName() || '(이름 없음)'}`);
     console.log('    씬 배치값  position:', t.map(fmt));
     console.log('    씬 배치값  rotationY(도):', fmt(quatToYawDeg(r)), ' (quat', r.map(fmt), ')');
-    if (s.some((v) => Math.abs(v - 1) > 1e-6)) console.log('    scale:', s.map(fmt), '← 제거됨');
+    const hasScale = s.some((v) => Math.abs(v - 1) > 1e-6);
+    if (hasScale && foldScale) {
+      const uniform = Math.abs(s[0] - s[1]) < 1e-6 && Math.abs(s[1] - s[2]) < 1e-6;
+      if (!uniform) {
+        console.error(`    scale ${s.map(fmt)} 이 uniform 이 아니라 --fold-scale 을 적용할 수 없다.`);
+        process.exit(1);
+      }
+      const k = s[0];
+      for (const child of node.listChildren()) {
+        child.setTranslation(child.getTranslation().map((v) => v * k));
+        child.setScale(child.getScale().map((v) => v * k));
+      }
+      console.log(`    scale: ${s.map(fmt)} ← 직계 자식 ${node.listChildren().length}개에 접어 넣음`);
+    } else if (hasScale) {
+      console.log('    scale:', s.map(fmt), '← 제거됨');
+    }
     node.setTranslation([0, 0, 0]);
     node.setRotation([0, 0, 0, 1]);
     node.setScale([1, 1, 1]);

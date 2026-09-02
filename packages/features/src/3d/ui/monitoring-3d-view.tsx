@@ -19,8 +19,13 @@ import {
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
+import type { SceneDockTab } from '@crane/ui/organisms/scene-dock';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import { DOCK_SIZE_MAX, DOCK_SIZE_MIN } from '../lib/dock-storage';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { useSceneDock } from '../model/use-scene-dock';
+import { useTagBindingSource } from '../model/use-tag-binding-source';
+import { RigDriver } from './rig-driver';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -67,6 +72,19 @@ interface Monitoring3dViewProps {
    */
   canvasDpr?: number | [number, number];
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  /**
+   * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
+   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 독 — 우측 레일에 카메라
+   * 버튼·toolbarExtras·북마크, 하단 패널에 dockPanels 탭. 독은 전체화면
+   * 루트 안이라 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링 화면).
+   * 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
+   */
+  toolbarLayout?: 'top-right' | 'dock' | 'none';
+  /**
+   * 하단 독 패널의 탭들 ('dock' 배치에서만). 크레인 실시간 상태 테이블 등.
+   * 탭 내용은 접혀 있어도 마운트를 유지한다(실시간 테이블 행 상태 보존).
+   */
+  dockPanels?: SceneDockTab[];
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -85,11 +103,21 @@ export function Monitoring3dView({
   overlayExtras,
   canvasDpr,
   onFullscreenChange,
+  toolbarLayout = 'top-right',
+  dockPanels,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
+  const isDock = toolbarLayout === 'dock';
+  // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
+  // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
+  const toolsDock = useSceneDock('tools');
+  const statusDock = useSceneDock('status');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, mode);
+  // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
+  // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
+  useTagBindingSource(sceneInfo, true);
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusStack = useObjectFocusStore((s) => s.focusStack);
@@ -175,6 +203,31 @@ export function Monitoring3dView({
     );
   }
 
+  const dockRight = isDock
+    ? {
+        label: t('common:viewer3d.dockTools', { defaultValue: '화면 조작' }),
+        expanded: toolsDock.expanded,
+        pinned: toolsDock.pinned,
+        onPinnedChange: toolsDock.setPinned,
+        handlers: toolsDock.handlers,
+      }
+    : undefined;
+  const dockBottom =
+    isDock && dockPanels && dockPanels.length > 0
+      ? {
+          label: t('common:viewer3d.dockPanels', { defaultValue: '패널' }),
+          expanded: statusDock.expanded,
+          pinned: statusDock.pinned,
+          onPinnedChange: statusDock.setPinned,
+          handlers: statusDock.handlers,
+          tabs: dockPanels,
+          size: statusDock.size,
+          onSizeChange: statusDock.setSize,
+          minSize: DOCK_SIZE_MIN,
+          maxSize: DOCK_SIZE_MAX,
+        }
+      : undefined;
+
   return (
     <div
       ref={rootRef}
@@ -201,13 +254,18 @@ export function Monitoring3dView({
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={toolbarExtras}
-        toolbarPlacement="top-right"
+        toolbarPlacement={toolbarLayout}
+        dockRight={dockRight}
+        dockBottom={dockBottom}
         toolbarTrailing={
-          <SceneViewBookmarks
-            regionId={regionId}
-            getPose={handleGetPose}
-            onMoveTo={handleMoveTo}
-          />
+          toolbarLayout === 'none' ? undefined : (
+            <SceneViewBookmarks
+              regionId={regionId}
+              variant={isDock ? 'rail' : 'toolbar'}
+              getPose={handleGetPose}
+              onMoveTo={handleMoveTo}
+            />
+          )
         }
         onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
@@ -226,6 +284,7 @@ export function Monitoring3dView({
           />
         </Suspense>
         <Suspense fallback={null}>
+          <RigDriver sceneInfo={sceneInfo} />
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}

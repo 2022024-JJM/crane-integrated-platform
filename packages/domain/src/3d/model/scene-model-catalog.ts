@@ -49,7 +49,9 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     label: 'LLC-002',
     category: 'outdoor',
     path: '/models/LLC_002.glb',
-    defaultScale: [0.15, 0.15, 0.15],
+    // 리깅본(Empty 피벗 계층). 루트 scale 을 자식에 접어 넣어 실제 미터라
+    // 배치 scale 은 1 이다(assets-src/README.md, unbake --fold-scale 참고).
+    defaultScale: [1, 1, 1],
   }),
   // Block_001/002: 필리조선소 export 와 같은 미터 단위 원본. 루트 노드에 월드
   // 포즈가 베이크돼 있어 scripts/unbake-root-transform.mjs 로 원점 복원 후 반입.

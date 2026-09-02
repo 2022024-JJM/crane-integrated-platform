@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
+import { VirtualTagsPage } from '@crane/widgets/virtual-tags';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import {
   AlarmHistoryPage,
@@ -74,6 +75,7 @@ export function OutdoorWorkPage() {
       {subRoute === '3d-viewer-edit' && (
         <SceneObjectsEditPage regionId={regionId} />
       )}
+      {subRoute === 'virtual-tags' && <VirtualTagsPage />}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={

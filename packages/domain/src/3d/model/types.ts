@@ -1,5 +1,8 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { RigBinding, RigDefinition } from './rig-types';
+import type { TagMapping } from './tag-mapping-types';
 
+/** @deprecated 레거시 `valueMapList` 의 슬롯. 새 맵핑은 채널+축으로 표현한다. */
 export type ValueMapType =
   | 'PX'
   | 'PY'
@@ -35,6 +38,11 @@ export interface SavedSceneInfo {
    * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
    */
   lighting?: SavedLightingInfo;
+  /**
+   * 리그(관절·구속조건) 정의 — 자산 단위. 모델 인스턴스는 `rigId`로 가리킨다.
+   * 없으면 필드 자체가 빠져 기존 저장본과 diff가 없다. 스키마는 rig-types.ts.
+   */
+  rigs?: RigDefinition[];
 }
 
 /**
@@ -102,7 +110,17 @@ export interface SavedModelInfo {
   position: Vector3Tuple;
   rotation: Vector3Tuple;
   scale: Vector3Tuple;
-  valueMapList: ValueMapItem[];
+  /**
+   * 태그 → 트랜스폼 채널 맵핑. 없으면 필드 생략(기존 저장본과 diff 0).
+   * 스키마는 tag-mapping-types.ts. 레거시 `valueMapList`·`rigBindings` 는
+   * 로드 시 sanitize 가 이 필드로 변환하고 저장본에서는 사라진다.
+   */
+  tagMappings?: TagMapping[];
+  /**
+   * @deprecated 레거시 입력 전용. 모델 루트 6칸 고정 맵핑이었다. sanitize 가
+   * `tagMappings` 로 변환하며 출력에는 싣지 않는다.
+   */
+  valueMapList?: ValueMapItem[];
   /**
    * 자식 mesh 단위 override. 없으면 GLTF 원본 그대로 렌더한다.
    * 사용자가 더블클릭으로 특정 자식 mesh를 선택해 transform/opacity/visible/이름을
@@ -116,6 +134,13 @@ export interface SavedModelInfo {
    * 기존 저장본과의 diff를 최소화한다.
    */
   locked?: boolean;
+  /** 적용할 리그 정의 id(SavedSceneInfo.rigs). 없으면 리깅 없음. */
+  rigId?: string;
+  /**
+   * @deprecated 레거시 입력 전용. 관절 ← 태그 바인딩은 `tagMappings` 의
+   * joint 대상으로 흡수됐다. sanitize 가 변환하며 출력에는 싣지 않는다.
+   */
+  rigBindings?: RigBinding[];
 }
 
 export interface SavedMeshOverride {
@@ -155,6 +180,7 @@ export interface SavedMapInfo {
   locked?: boolean;
 }
 
+/** @deprecated 레거시 입력 전용 — sanitize-tag-mappings 가 변환한다. */
 export interface ValueMapItem {
   type: ValueMapType;
   key: string;

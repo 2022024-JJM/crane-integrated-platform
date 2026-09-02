@@ -28,7 +28,6 @@ function model(overrides: Partial<SavedModelInfo> = {}): SavedModelInfo {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    valueMapList: [],
     ...overrides,
   };
 }
@@ -152,15 +151,49 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     ).toBe(false);
   });
 
-  it('valueMapList는 scale/offset 기본값(1/0)을 채워 비교한다', () => {
+  it('tagMappings 는 id 기준 순서 무관, scale/offset 기본값(1/0)을 채워 비교한다', () => {
+    const a = {
+      id: 'm-a',
+      target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+      tagKey: 'k',
+    } as const;
+    const b = {
+      id: 'm-b',
+      target: { kind: 'joint', jointId: 'luff' },
+      tagKey: 'k2',
+    } as const;
     expect(
       isSceneInfoEqual(
-        scene({ models: [model({ valueMapList: [{ type: 'PX', key: 'k' }] })] }),
+        scene({ models: [model({ tagMappings: [a, b] })] }),
         scene({
-          models: [
-            model({ valueMapList: [{ type: 'PX', key: 'k', scale: 1, offset: 0 }] }),
-          ],
+          models: [model({ tagMappings: [{ ...b, offset: 0 }, { ...a, scale: 1 }] })],
         }),
+      ),
+    ).toBe(true);
+    // 대상(축)·태그·scale 변경은 감지
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, target: { ...a.target, axis: 'x' } }] })] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, tagKey: 'other' }] })] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, scale: 2 }] })] }),
+      ),
+    ).toBe(false);
+    // 필드 없음 ≡ 빈 배열
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: undefined })] }),
+        scene({ models: [model({ tagMappings: [] })] }),
       ),
     ).toBe(true);
   });
@@ -245,5 +278,85 @@ describe('createSceneSnapshot', () => {
     );
     expect(a).toBeTypeOf('string');
     expect(a).toBe(b);
+  });
+});
+
+describe('isSceneInfoEqual — 리깅', () => {
+  const rig = (overrides: Record<string, unknown> = {}) =>
+    ({
+      id: 'rig-1',
+      name: 'R',
+      modelPath: '/models/crane.glb',
+      joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'x' }],
+      constraints: [
+        { type: 'linear', id: 'l', input: 'a', output: 'b', factor: 1.14 },
+      ],
+      ...overrides,
+    }) as unknown as SavedSceneInfo['rigs'] extends (infer R)[] | undefined
+      ? R
+      : never;
+
+  it('리그 정의 필드 없음과 빈 배열은 같은 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ rigs: [] }))).toBe(true);
+  });
+
+  it('선형 연동의 factor/offset 변경은 dirty 로 잡히고 offset 기본값 0 은 생략과 같다', () => {
+    expect(
+      isSceneInfoEqual(scene({ rigs: [rig()] }), scene({ rigs: [rig()] })),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({
+              constraints: [
+                { type: 'linear', id: 'l', input: 'a', output: 'b', factor: 2 },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({
+              constraints: [
+                {
+                  type: 'linear',
+                  id: 'l',
+                  input: 'a',
+                  output: 'b',
+                  factor: 1.14,
+                  offset: 0,
+                },
+              ],
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('관절 축·한계 변경과 모델 rigId 변경을 감지한다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rigs: [rig()] }),
+        scene({
+          rigs: [
+            rig({ joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'y' }] }),
+          ],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ rigId: 'rig-1' })] }),
+      ),
+    ).toBe(false);
   });
 });

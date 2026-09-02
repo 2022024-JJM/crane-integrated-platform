@@ -45,6 +45,9 @@ import {
   sceneCanvasShadows,
   SceneObjectBoundary,
   SceneSurfaceCamera,
+  RigDriver,
+  manualJointSource,
+  rigValueStore,
   useIsObjectSelected,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
@@ -191,6 +194,16 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionEnd,
   focusSelectedRef,
 }: SceneObjectsEditCanvasProps) {
+  // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
+  // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
+  useEffect(() => {
+    manualJointSource.start(rigValueStore);
+    return () => {
+      manualJointSource.stop();
+      rigValueStore.reset();
+    };
+  }, []);
+
   // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
   // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
   const hasSea =
@@ -292,7 +305,6 @@ export function SceneObjectsEditCanvas({
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
   const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
-  const toggleMesh = useSceneObjectSelectionStore((state) => state.toggleMesh);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -416,9 +428,9 @@ export function SceneObjectsEditCanvas({
     (id: string, event: ThreeEvent<MouseEvent>) => {
       // R3F의 onDoubleClick은 DOM dblclick과 매핑되어 onClick의 detail 카운트
       // 보다 안정적이다. 더블클릭 시 클릭된 자식 mesh path를 계산해 drill-in.
-      const isCtrl =
-        lastPointerEventRef.current?.ctrlKey ||
-        lastPointerEventRef.current?.metaKey;
+      //
+      // 노드 선택은 읽기 전용(바운딩 박스만)이라 기즈모 대상을 세우지 않고,
+      // Ctrl 토글로 모델 멀티 선택에 섞이지도 않는다 — 항상 단일 선택.
       // event.eventObject: 핸들러가 붙은 primitive(=clone root)
       // event.object: 클릭된 가장 깊은 Mesh
       const cloneRoot = event.eventObject;
@@ -427,16 +439,9 @@ export function SceneObjectsEditCanvas({
       if (meshPath === null || meshPath === '') {
         return;
       }
-      const meshId = makeMeshId(id, meshPath);
-      const meshObject = sharedModelObjectRegistry.get(meshId) ?? null;
-      if (isCtrl) {
-        toggleMesh(meshId);
-      } else {
-        setSelectedObject(meshObject);
-        selectMesh(meshId);
-      }
+      selectMesh(makeMeshId(id, meshPath));
     },
-    [selectMesh, toggleMesh, setSelectedObject],
+    [selectMesh],
   );
 
   const handleSelectText = useCallback(
@@ -738,6 +743,7 @@ export function SceneObjectsEditCanvas({
         onPointerMissed={handleClearSelection}
       >
         <SceneLighting sceneInfo={sceneInfo} />
+        <RigDriver sceneInfo={sceneInfo} />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}

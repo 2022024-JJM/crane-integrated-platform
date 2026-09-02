@@ -95,7 +95,8 @@
     "indoorshopLogistics": "Logistics",
     "indoorshopYard": "Yard Status",
     "indoorshopReference": "Reference",
-    "indoorshopDocs": "Documents"
+    "indoorshopDocs": "Documents",
+    "virtualTags": "Virtual Tags"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",
@@ -359,7 +360,14 @@
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "badge": "3D Viewer",
-    "resizePreview": "Resize preview"
+    "resizePreview": "Resize preview",
+    "dockPin": "Pin",
+    "dockUnpin": "Unpin",
+    "dockExpand": "Expand",
+    "dockCollapse": "Collapse",
+    "dockResize": "Resize panel",
+    "dockTools": "View controls",
+    "dockPanels": "Panels"
   },
   "undo": "Undo"
 }

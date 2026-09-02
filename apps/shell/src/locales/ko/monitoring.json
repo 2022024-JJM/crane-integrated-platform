@@ -7,6 +7,7 @@
     "opacity": "투명도",
     "transform": "트랜스폼",
     "empty": "씬에서 객체를 선택하면 속성을 편집할 수 있습니다.",
+    "nodeReadOnly": "하위 노드는 편집할 수 없습니다.\n부모 모델을 선택해 편집하세요.",
     "position": "위치",
     "rotation": "회전",
     "scale": "크기",
@@ -14,7 +15,79 @@
     "textContent": "내용",
     "textColor": "색상",
     "tagMapping": "태그 매핑",
-    "tagKeyPlaceholder": "태그 키 입력"
+    "rigging": {
+      "title": "리깅",
+      "none": "리그 없음",
+      "create": "새 리그 만들기",
+      "assign": "리그 선택",
+      "deleteRig": "리그 삭제",
+      "name": "리그 이름",
+      "resetValues": "관절 값 초기화",
+      "nodesUnavailable": "모델이 아직 로드되지 않아 노드 목록을 만들 수 없습니다.",
+      "joints": "관절",
+      "addJoint": "관절 추가",
+      "removeJoint": "관절 삭제",
+      "noJoints": "관절이 없습니다. 노드를 골라 관절을 추가하세요.",
+      "constraints": "구속조건",
+      "removeConstraint": "구속조건 삭제",
+      "label": "이름",
+      "node": "노드",
+      "type": "타입",
+      "axis": "축",
+      "limits": "한계",
+      "min": "최소",
+      "max": "최대",
+      "invert": "반전",
+      "hinge": "회전",
+      "slide": "이동",
+      "unresolvedNode": "노드를 찾을 수 없음",
+      "addLinear": "선형 연동 추가",
+      "linear": "선형 연동",
+      "input": "입력 관절",
+      "output": "출력 관절",
+      "factor": "계수",
+      "offset": "오프셋",
+      "driven": "연동됨",
+      "drivenHint": "이 관절은 선형 연동이 값을 정합니다.\n슬라이더·태그 입력은 무시됩니다.",
+      "sameJoint": "입력과 출력이 같은 관절입니다.",
+      "needTwoJoints": "관절이 2개 이상이어야 연동을 추가할 수 있습니다.",
+      "selectedRig": "선택된 리그"
+    },
+    "mapping": {
+      "title": "태그 매핑",
+      "list": "맵핑",
+      "add": "맵핑 추가",
+      "remove": "맵핑 삭제",
+      "empty": "맵핑이 없습니다. 노드·타입·축을 고르고 태그를 연결하세요.",
+      "targetKind": "대상",
+      "targetNode": "노드",
+      "targetJoint": "관절",
+      "node": "노드",
+      "root": "(모델 루트)",
+      "channel": "타입",
+      "axis": "축",
+      "joint": "관절",
+      "tag": "태그",
+      "tagPlaceholder": "태그 선택",
+      "tagSearch": "키·이름 검색",
+      "tagEmpty": "가상 태그가 없습니다. 가상 태그 페이지에서 만드세요.",
+      "tagUnknown": "미등록 태그",
+      "tagMissing": "태그를 선택하세요. 저장 시 태그 없는 맵핑은 버려집니다.",
+      "scale": "scale",
+      "offset": "offset",
+      "readout": "태그 {{tag}} → 적용 {{applied}} {{unit}}",
+      "readoutIdle": "값 없음",
+      "conflictDuplicate": "앞선 맵핑이 이미 이 대상을 씁니다. 저장 시 이 항목은 버려집니다.",
+      "conflictRig": "리그 관절이 같은 노드·축을 구동합니다. 관절이 우선되어 이 맵핑은 무시됩니다.",
+      "noJoints": "할당된 리그에 관절이 없습니다.",
+      "channels": {
+        "position": "위치",
+        "rotation": "회전",
+        "scale": "크기"
+      },
+      "joinLabel": "태그 연결됨: {{tag}}",
+      "sliderLockedByTag": "시뮬레이션 재생 중 — 태그가 이 관절을 구동합니다."
+    }
   },
   "transform": {
     "title": "변형 모드",
@@ -29,6 +102,9 @@
     "redo": "다시 실행"
   },
   "sceneViews": {
+    "add": "뷰 추가",
+    "empty": "저장한 뷰가 없습니다",
+    "title": "저장한 뷰",
     "saveCurrent": "현재 뷰 저장",
     "namePlaceholder": "뷰 이름",
     "save": "저장",
@@ -124,7 +200,8 @@
     "paletteTabs": {
       "models": "모델",
       "map": "맵",
-      "background": "배경"
+      "background": "배경",
+      "tags": "태그"
     },
     "environmentNone": "배경 없음",
     "environmentUnset": "이 씬은 배경을 지정하지 않아 지역 기본 배경이 적용됩니다. 아래에서 고르면 씬에 저장됩니다.",
@@ -139,11 +216,68 @@
     "lightingSunElevation": "고도",
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
-    "multipleSelected": "{{count}}개 객체 선택됨"
+    "multipleSelected": "{{count}}개 객체 선택됨",
+    "expandNodes": "노드 펼치기",
+    "collapseNodes": "노드 접기",
+    "jointNode": "관절 노드",
+    "virtualTags": {
+      "paletteTab": "태그",
+      "play": "시뮬레이션 재생",
+      "pause": "시뮬레이션 일시정지",
+      "playing": "재생 중",
+      "paused": "정지",
+      "resetValues": "값 초기화",
+      "manage": "전체 관리",
+      "sceneTags": "이 씬이 참조하는 태그",
+      "noSceneTags": "이 씬에 태그 맵핑이 없습니다. 인스펙터의 태그 매핑 탭에서 추가하세요.",
+      "unregistered": "미등록",
+      "hint": "재생하면 가상 태그 값이 맵핑을 통해 모델을 움직입니다. 정지하면 원래 자세로 돌아갑니다."
+    }
   },
   "craneList": {
     "countAll": "{{count}}기",
     "countFiltered": "{{visible}} / {{total}}기",
     "emptyForFilter": "해당 상태의 크레인이 없습니다."
+  },
+  "virtualTags": {
+    "title": "가상 태그",
+    "subtitle": "서버 없이 태그 값을 시뮬레이션합니다. 여기서 만든 태그를 3D 편집의 태그 매핑에서 선택합니다.",
+    "play": "전체 재생",
+    "pause": "일시정지",
+    "resetValues": "값 초기화",
+    "tick": "갱신 주기(ms)",
+    "add": "새 태그",
+    "columns": {
+      "enabled": "사용",
+      "key": "키",
+      "name": "이름",
+      "unit": "단위",
+      "min": "최소",
+      "max": "최대",
+      "pattern": "패턴",
+      "period": "주기(ms)",
+      "value": "현재값",
+      "actions": ""
+    },
+    "patterns": {
+      "manual": "수동",
+      "triangle": "삼각파",
+      "sine": "사인파",
+      "sawtooth": "톱니파",
+      "square": "구형파"
+    },
+    "duplicate": "복제",
+    "remove": "삭제",
+    "empty": "가상 태그가 없습니다. \"새 태그\"로 만드세요.",
+    "errors": {
+      "invalid-key": "키는 비울 수 없고 64자 이하여야 합니다.",
+      "duplicate-key": "같은 키의 태그가 이미 있습니다.",
+      "limit": "태그는 최대 {{max}}개까지 만들 수 있습니다."
+    },
+    "newKey": "C_1:tag",
+    "count": "{{count}} / {{max}}",
+    "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
+    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
+    "save": "저장"
   }
 }

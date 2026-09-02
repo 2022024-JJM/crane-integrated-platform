@@ -390,16 +390,19 @@ export function useSceneTransform({
       return;
     }
 
-    // mesh selection: id가 `${modelId}::${meshPath}` 형식이면 부모 모델이
-    // 존재하는지를 확인하고, 객체는 도메인 registry에서 가져온다.
-    const meshIdInfo = parseMeshId(primarySelectedId);
+    // 모델 안쪽 노드(`${modelId}::${meshPath}`) 선택은 읽기 전용이다 — 바운딩
+    // 박스만 그리고 기즈모는 붙이지 않는다. 대상을 비워 두면 아래 detach
+    // effect 가 컨트롤을 뗀다.
+    if (parseMeshId(primarySelectedId)) {
+      setSelectedObject(null);
+      setIsTransformDragging(false);
+      return;
+    }
 
-    const isSelectedPresent = meshIdInfo
-      ? (sceneModels?.some((model) => model.id === meshIdInfo.modelId) ?? false)
-      : (sceneModels?.some((model) => model.id === primarySelectedId) ??
-          false) ||
-        (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
-        (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
+    const isSelectedPresent =
+      (sceneModels?.some((model) => model.id === primarySelectedId) ?? false) ||
+      (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
+      (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
 
     if (!isSelectedPresent) {
       setSelectedObject(null);
@@ -408,8 +411,7 @@ export function useSceneTransform({
       return;
     }
 
-    // 모델/텍스트는 캔버스의 로컬 ref에서, mesh는 도메인 전역 registry에서
-    // 우선 가져온다. 둘 다 fallback으로 검사.
+    // 캔버스의 로컬 ref 를 우선 쓰고 도메인 전역 registry 로 fallback 한다.
     const nextSelectedObject =
       modelObjectRegistryRef.current.get(primarySelectedId) ??
       modelObjectRegistry.get(primarySelectedId) ??

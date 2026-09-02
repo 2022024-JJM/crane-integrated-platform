@@ -7,6 +7,7 @@
     "opacity": "Opacity",
     "transform": "Transform",
     "empty": "Click an object in the scene to inspect its properties.",
+    "nodeReadOnly": "Child nodes are read-only.\nSelect the parent model to edit.",
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",
@@ -14,7 +15,79 @@
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",
-    "tagKeyPlaceholder": "Enter tag key"
+    "rigging": {
+      "title": "Rigging",
+      "none": "No rig",
+      "create": "Create rig",
+      "assign": "Select rig",
+      "deleteRig": "Delete rig",
+      "name": "Rig name",
+      "resetValues": "Reset joint values",
+      "nodesUnavailable": "The model is not loaded yet, so the node list is unavailable.",
+      "joints": "Joints",
+      "addJoint": "Add joint",
+      "removeJoint": "Remove joint",
+      "noJoints": "No joints yet. Pick a node and add a joint.",
+      "constraints": "Constraints",
+      "removeConstraint": "Remove constraint",
+      "label": "Label",
+      "node": "Node",
+      "type": "Type",
+      "axis": "Axis",
+      "limits": "Limits",
+      "min": "Min",
+      "max": "Max",
+      "invert": "Invert",
+      "hinge": "Rotate",
+      "slide": "Translate",
+      "unresolvedNode": "Node not found",
+      "addLinear": "Add linear link",
+      "linear": "Linear link",
+      "input": "Input joint",
+      "output": "Output joint",
+      "factor": "Factor",
+      "offset": "Offset",
+      "driven": "Driven",
+      "drivenHint": "A linear link sets this joint's value.\nSlider and tag input are ignored.",
+      "sameJoint": "Input and output are the same joint.",
+      "needTwoJoints": "At least two joints are needed to add a link.",
+      "selectedRig": "Selected rig"
+    },
+    "mapping": {
+      "title": "Tag Mapping",
+      "list": "Mappings",
+      "add": "Add mapping",
+      "remove": "Remove mapping",
+      "empty": "No mappings. Pick a node, type and axis, then link a tag.",
+      "targetKind": "Target",
+      "targetNode": "Node",
+      "targetJoint": "Joint",
+      "node": "Node",
+      "root": "(model root)",
+      "channel": "Type",
+      "axis": "Axis",
+      "joint": "Joint",
+      "tag": "Tag",
+      "tagPlaceholder": "Select tag",
+      "tagSearch": "Search key or name",
+      "tagEmpty": "No virtual tags. Create them on the Virtual Tags page.",
+      "tagUnknown": "Unknown tag",
+      "tagMissing": "Select a tag. Mappings without a tag are dropped on save.",
+      "scale": "scale",
+      "offset": "offset",
+      "readout": "tag {{tag}} → applied {{applied}} {{unit}}",
+      "readoutIdle": "no value",
+      "conflictDuplicate": "An earlier mapping already uses this target. This one is dropped on save.",
+      "conflictRig": "A rig joint drives the same node and axis. The joint wins; this mapping is ignored.",
+      "noJoints": "The assigned rig has no joints.",
+      "channels": {
+        "position": "Position",
+        "rotation": "Rotation",
+        "scale": "Scale"
+      },
+      "joinLabel": "Tag linked: {{tag}}",
+      "sliderLockedByTag": "Simulation is playing — a tag drives this joint."
+    }
   },
   "transform": {
     "title": "Transform mode",
@@ -29,6 +102,9 @@
     "redo": "Redo"
   },
   "sceneViews": {
+    "add": "Add view",
+    "empty": "No saved views",
+    "title": "Saved views",
     "saveCurrent": "Save current view",
     "namePlaceholder": "View name",
     "save": "Save",
@@ -124,7 +200,8 @@
     "paletteTabs": {
       "models": "Models",
       "map": "Map",
-      "background": "Background"
+      "background": "Background",
+      "tags": "Tags"
     },
     "environmentNone": "No background",
     "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
@@ -139,11 +216,68 @@
     "lightingSunElevation": "Elevation",
     "searchModels": "Search models",
     "searchObjects": "Search objects",
-    "multipleSelected": "{{count}} objects selected"
+    "multipleSelected": "{{count}} objects selected",
+    "expandNodes": "Expand nodes",
+    "collapseNodes": "Collapse nodes",
+    "jointNode": "Joint node",
+    "virtualTags": {
+      "paletteTab": "Tags",
+      "play": "Play simulation",
+      "pause": "Pause simulation",
+      "playing": "Playing",
+      "paused": "Paused",
+      "resetValues": "Reset values",
+      "manage": "Manage all",
+      "sceneTags": "Tags referenced by this scene",
+      "noSceneTags": "This scene has no tag mappings. Add one in the inspector Tag Mapping tab.",
+      "unregistered": "unregistered",
+      "hint": "While playing, virtual tag values drive models through the mappings. Pausing restores the rest pose."
+    }
   },
   "craneList": {
     "countAll": "{{count}} units",
     "countFiltered": "{{visible}} / {{total}} units",
     "emptyForFilter": "No cranes match the selected status."
+  },
+  "virtualTags": {
+    "title": "Virtual Tags",
+    "subtitle": "Simulate tag values without a server. Tags created here are selectable in the 3D editor tag mapping.",
+    "play": "Play all",
+    "pause": "Pause",
+    "resetValues": "Reset values",
+    "tick": "Tick (ms)",
+    "add": "New tag",
+    "columns": {
+      "enabled": "On",
+      "key": "Key",
+      "name": "Name",
+      "unit": "Unit",
+      "min": "Min",
+      "max": "Max",
+      "pattern": "Pattern",
+      "period": "Period (ms)",
+      "value": "Value",
+      "actions": ""
+    },
+    "patterns": {
+      "manual": "Manual",
+      "triangle": "Triangle",
+      "sine": "Sine",
+      "sawtooth": "Sawtooth",
+      "square": "Square"
+    },
+    "duplicate": "Duplicate",
+    "remove": "Remove",
+    "empty": "No virtual tags. Create one with \"New tag\".",
+    "errors": {
+      "invalid-key": "Key must be non-empty and at most 64 characters.",
+      "duplicate-key": "A tag with the same key already exists.",
+      "limit": "At most {{max}} tags can be created."
+    },
+    "newKey": "C_1:tag",
+    "count": "{{count}} / {{max}}",
+    "keyHint": "Use the same format as real server tags (craneId:tagCode).",
+    "periodHint": "Time (ms) for one cycle (min→max→min)",
+    "save": "Save"
   }
 }

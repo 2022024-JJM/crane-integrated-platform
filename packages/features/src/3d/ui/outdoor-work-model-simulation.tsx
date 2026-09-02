@@ -21,9 +21,7 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
-import { useValueMapperStore } from '../model/use-value-mapper-store';
-import { useValueGeneratorRunner } from '../model/use-value-generator-runner';
-import { useValueGeneratorStore } from '../model/use-value-generator-store';
+import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
@@ -41,10 +39,9 @@ export function useSceneData(
   const loadedAssetPathsRef = useRef<string[]>([]);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
-  const registerFromModel = useValueMapperStore((s) => s.registerFromModel);
-  const clearValueMapper = useValueMapperStore((s) => s.clear);
-  const resetToOrigin = useValueMapperStore((s) => s.resetToOrigin);
-  const startSimulation = useValueGeneratorStore((s) => s.start);
+  const loadVirtualTags = useVirtualTagStore((s) => s.load);
+  const startSimulation = useVirtualTagStore((s) => s.start);
+  const pauseSimulation = useVirtualTagStore((s) => s.pause);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
   const startRealtime = useRealtimeStore((s) => s.start);
   const stopRealtime = useRealtimeStore((s) => s.stop);
@@ -58,7 +55,6 @@ export function useSceneData(
 
     const load = async () => {
       setIsLoading(true);
-      clearValueMapper();
 
       try {
         const data: SavedSceneInfo = await loadSceneInfoByRegionId(regionId);
@@ -84,16 +80,11 @@ export function useSceneData(
         for (const path of new Set(assetPaths)) {
           preloadGltf(path);
         }
-
-        data.models?.forEach((modelInfo) => {
-          registerFromModel(modelInfo);
-        });
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        clearValueMapper();
         setSceneInfo(null);
         console.error('Failed to load monitoring scene.', error);
       } finally {
@@ -104,6 +95,8 @@ export function useSceneData(
     };
 
     if (mode === 'simulation') {
+      // 시뮬레이션 = 가상 태그 재생. 정의는 배포 파일에서 한 번 읽는다.
+      void loadVirtualTags();
       startSimulation();
       // 다른 모드에서 남은 replay 재생 상태가 useReplayPlayerRunner를 통해
       // 이 mode에서도 계속 tick하지 않도록 진입 시 항상 정리.
@@ -123,9 +116,9 @@ export function useSceneData(
       // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
       // 매 프레임 tick → applyValue를 호출, realtime/simulation의 값과 충돌.
       resetReplay();
-      // unmount 전 Object3D가 아직 registry에 있을 때 원위치 복귀
-      resetToOrigin();
-      clearValueMapper();
+      // 가상 태그 재생은 이 화면이 켠 것이므로 떠날 때 멈춘다. 노드 복귀는
+      // 드라이버(useTagBindingSource 의 reset + RigDriver 언마운트)가 한다.
+      pauseSimulation();
       clearSceneInfoFromStore(regionId);
       // 이 region의 GLB 캐시를 비운다. 해제하지 않으면 지역을 오갈수록
       // 메모리가 단조 증가해 장시간 세션에서 탭이 죽는다.
@@ -138,7 +131,7 @@ export function useSceneData(
       loadedAssetPathsRef.current = [];
       releaseSceneRegionAssets(regionId, pathsToRelease);
     };
-  }, [clearSceneInfoFromStore, clearValueMapper, mode, regionId, registerFromModel, resetReplay, resetToOrigin, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
+  }, [clearSceneInfoFromStore, loadVirtualTags, mode, pauseSimulation, regionId, resetReplay, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 
   return { sceneInfo, isLoading };
 }
@@ -167,8 +160,8 @@ export function OutdoorWorkModelSimulation({
   // 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다. 지도에는 걸지 않는다.
   const hasSea =
     resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
-  // 세 runner 모두 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화
-  useValueGeneratorRunner();
+  // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
+  // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
   useRealtimeRunner();
   useRealtimeWebSocketBridge(mode === 'realtime');

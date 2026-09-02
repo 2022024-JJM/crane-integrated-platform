@@ -280,6 +280,20 @@
     filter: invert(1);
   }
 
+  /* number 입력의 브라우저 기본 스핀 버튼 숨김 — 네이티브 컨트롤이라 테마
+     색을 따르지 않고, 좁은 입력에서 글자 영역을 가린다. 숫자 필드는
+     InputNumber(테마 스테퍼)를 쓰는 것이 원칙이고, 남은 곳의 안전망이다.
+     방향키·휠 step 은 그대로 동작한다. */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
   /* ─── Global Scrollbar Standard ─────────────────────────────────────────────
      모든 overflow-auto / overflow-scroll 영역에 동일한 스크롤바 스타일 적용.
      ScrollArea 컴포넌트와 동일한 두께(10px) 및 border 토큰 색상 사용.

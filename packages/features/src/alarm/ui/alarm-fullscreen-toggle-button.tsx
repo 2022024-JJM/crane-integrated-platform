@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@crane/core/lib/utils';
@@ -40,18 +40,16 @@ export function AlarmFullscreenToggleButton({
           <Button
             variant="outline"
             size="icon-sm"
-            className={cn(
-              SCENE_TOOLBAR_BUTTON_CLASS,
-              'relative',
-              active && 'bg-orange-500/20 text-orange-600 dark:text-orange-300',
-            )}
+            // 켜짐/꺼짐은 색이 아니라 아이콘(Bell / BellOff)으로 구분한다 —
+            // 독 레일 안에서는 버튼 배경·글자색이 평면화되어 색으로는 안 보인다.
+            className={cn(SCENE_TOOLBAR_BUTTON_CLASS, 'relative')}
             aria-label={label}
             aria-pressed={active}
           />
         }
         onClick={onToggle}
       >
-        <Bell />
+        {active ? <Bell /> : <BellOff />}
         {alarmCount > 0 ? (
           <span
             className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none font-semibold text-white"

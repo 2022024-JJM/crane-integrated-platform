@@ -12,6 +12,8 @@ import {
 import {
   SceneHistoryControls,
   SceneTransformModeToggle,
+  useTagBindingSource,
+  useVirtualTagStore,
 } from '@crane/features/3d';
 import {
   AlertCircle,
@@ -31,6 +33,7 @@ import {
 } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
@@ -54,6 +57,7 @@ import {
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
+  PaletteVirtualTagSection,
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
@@ -134,11 +138,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedTextColor,
     selectedText,
     selectedMesh,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
-    updateSelectedValueMap,
-    selectedObjectType,
+    updateSelectedTagMappings,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
+    selectPlacedNode,
     removeSelectedModel,
     duplicateSelectedObject,
     addModel,
@@ -167,6 +172,49 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useSceneEditorSession({
     regionId,
   });
+
+  // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
+  // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
+  const riggingHandlers = {
+    rigs: sceneInfo?.rigs ?? [],
+    onCreateRig: createRigForSelectedModel,
+    onAssignRig: assignRigToSelectedModel,
+    onUpdateRig: updateRig,
+    onRemoveRig: removeRig,
+  };
+  const tagMappingHandlers = {
+    rigs: sceneInfo?.rigs ?? [],
+    onUpdate: updateSelectedTagMappings,
+  };
+
+  // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 켜진 동안만
+  // 태그 값 버스가 씬 맵핑을 거쳐 값 저장소로 흐르고, 끄면 노드가 rest 로
+  // 돌아간다. 화면을 떠날 때도 멈춘다(모니터링 뷰와 같은 규칙).
+  const isSimulating = useVirtualTagStore((s) => s.isRunning);
+  const pauseSimulation = useVirtualTagStore((s) => s.pause);
+  useTagBindingSource(sceneInfo, isSimulating);
+  useEffect(() => () => pauseSimulation(), [pauseSimulation]);
+  // 관리 페이지는 편집 화면의 형제 서브라우트(…/virtual-tags).
+  const { pathname } = useLocation();
+  const virtualTagsPath = pathname.replace(
+    /\/3d-viewer-edit(?:\/.*)?$/,
+    '/virtual-tags',
+  );
+
+  // 계층 목록의 관절 배지용 — 모델별 관절 노드 경로 집합.
+  const jointNodePathsByModel = useMemo(() => {
+    const out = new Map<string, Set<string>>();
+    const rigsById = new Map((sceneInfo?.rigs ?? []).map((r) => [r.id, r]));
+    for (const model of sceneInfo?.models ?? []) {
+      const rig = model.rigId ? rigsById.get(model.rigId) : undefined;
+      if (!rig) continue;
+      // 선형 연동의 출력도 관절이라 joints 만 훑으면 구동 노드 전부가 나온다.
+      const paths = new Set<string>();
+      for (const joint of rig.joints) paths.add(joint.node);
+      out.set(model.id, paths);
+    }
+    return out;
+  }, [sceneInfo?.models, sceneInfo?.rigs]);
 
   // 키보드 핸들러에서 최신 값을 클로저 없이 읽기 위한 ref.
   // sceneInfo, selectedIds는 자주 변경되므로 의존성 배열에 넣으면 리스너가
@@ -388,6 +436,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onLightingInteractionStart={startTransformInteraction}
                   onLightingInteractionEnd={endTransformInteraction}
                   onCollapse={() => setLeftCollapsed(true)}
+                  sceneInfo={sceneInfo}
+                  virtualTagsPath={virtualTagsPath}
                 />
               </aside>
             </ResizablePanel>
@@ -408,17 +458,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               transformMode={transformMode}
               draggingModelCatalogItem={draggingCatalogItem}
               onTransformVectorChange={(field, value) => {
-                // mesh는 meshOverrides 경로가 따로 있고, 모델/텍스트/지도는
-                // 통합 함수가 id로 컬렉션을 해석한다.
-                if (selectedObjectType === 'mesh') {
-                  updateSelectedMeshTransformVector(field, value, {
-                    recordHistory: false,
-                  });
-                } else {
-                  updateSelectedTransformVector(field, value, {
-                    recordHistory: false,
-                  });
-                }
+                // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
+                // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
+                updateSelectedTransformVector(field, value, {
+                  recordHistory: false,
+                });
               }}
               onTransformCommit={(position, rotation, scale) => {
                 // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
@@ -678,6 +722,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onDeletePlacedMap={deletePlacedMap}
                         onToggleLock={setObjectLocked}
                         onRenameObject={renameObject}
+                        onSelectNode={selectPlacedNode}
+                        jointNodePathsByModel={jointNodePathsByModel}
                       />
                     </div>
                   </ResizablePanel>
@@ -695,14 +741,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onTransformChange={updateSelectedTransform}
                         onTextContentChange={updateSelectedTextContent}
                         onTextColorChange={updateSelectedTextColor}
-                        onMeshOpacityChange={updateSelectedMeshOpacity}
-                        onMeshTransformChange={updateSelectedMeshTransform}
-                        onValueMapChange={updateSelectedValueMap}
-                        onBackToParent={() => {
-                          if (selectedMesh) {
-                            selectPlacedModel(selectedMesh.modelId);
-                          }
-                        }}
+                        tagMapping={tagMappingHandlers}
+                        rigging={riggingHandlers}
                       />
                     </div>
                   </ResizablePanel>
@@ -735,10 +775,14 @@ function HierarchyPanel({
   onDeletePlacedMap,
   onToggleLock,
   onRenameObject,
+  onSelectNode,
+  jointNodePathsByModel,
   onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
+  onSelectNode: (modelId: string, nodePath: string) => void;
+  jointNodePathsByModel: Map<string, Set<string>>;
   onSelectPlacedMap: (id: string) => void;
   onDeletePlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
@@ -779,6 +823,8 @@ function HierarchyPanel({
           onDeletePlacedMap={onDeletePlacedMap}
           onToggleLock={onToggleLock}
           onRenameObject={onRenameObject}
+          onSelectNode={onSelectNode}
+          jointNodePathsByModel={jointNodePathsByModel}
         />
       </div>
     </div>
@@ -796,13 +842,14 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
  * 같은 층위의 탭으로 분리한다.
  */
-const PANEL_TABS = ['models', 'map', 'background'] as const;
+const PANEL_TABS = ['models', 'map', 'background', 'tags'] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
 const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   models: 'monitoring:editor.paletteTabs.models',
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
+  tags: 'monitoring:editor.paletteTabs.tags',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -838,9 +885,15 @@ function ProjectPalettePanel({
   onLightingInteractionStart,
   onLightingInteractionEnd,
   onCollapse,
+  sceneInfo,
+  virtualTagsPath,
 }: {
   items: SceneModelCatalogItem[];
   currentMap: SavedMapInfo | null;
+  /** 태그 탭 — 이 씬이 참조하는 태그 목록을 뽑는다. */
+  sceneInfo: SavedSceneInfo | null;
+  /** 가상 태그 관리 페이지 경로. */
+  virtualTagsPath: string;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   lighting: SavedLightingInfo | undefined;
@@ -881,9 +934,9 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭) + 접기 버튼 */}
+      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로 스크롤) + 접기 버튼 */}
       <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
-        <div className="flex items-center gap-0">
+        <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PANEL_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -891,9 +944,15 @@ function ProjectPalettePanel({
                 key={tab}
                 type="button"
                 aria-pressed={isActive}
-                onClick={() => setActiveTab(tab)}
+                onClick={(event) => {
+                  setActiveTab(tab);
+                  event.currentTarget.scrollIntoView({
+                    inline: 'nearest',
+                    block: 'nearest',
+                  });
+                }}
                 className={cn(
-                  'cursor-pointer border-b-2 px-4 py-2 text-[11px] font-medium transition-colors',
+                  'shrink-0 cursor-pointer border-b-2 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors',
                   isActive
                     ? 'border-primary text-foreground'
                     : 'text-muted-foreground hover:text-foreground border-transparent',
@@ -923,6 +982,11 @@ function ProjectPalettePanel({
                 currentMap={currentMap}
                 onSelectMap={onSelectMap}
                 onToggleLock={onToggleLock}
+              />
+            ) : activeTab === 'tags' ? (
+              <PaletteVirtualTagSection
+                sceneInfo={sceneInfo}
+                managePath={virtualTagsPath}
               />
             ) : (
               <PaletteEnvironmentSection

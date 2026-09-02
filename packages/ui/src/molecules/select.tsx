@@ -13,7 +13,16 @@ interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
   label?: string;
 }
 
-function SelectTrigger({ className, label, ...props }: SelectTriggerProps) {
+/**
+ * 표시 우선순위: children > label > 선택값 텍스트. children 은 아이콘처럼
+ * 문자열이 아닌 표시가 필요할 때 쓴다.
+ */
+function SelectTrigger({
+  className,
+  label,
+  children,
+  ...props
+}: SelectTriggerProps) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
@@ -22,7 +31,13 @@ function SelectTrigger({ className, label, ...props }: SelectTriggerProps) {
       )}
       {...props}
     >
-      {label !== undefined ? <span>{label}</span> : <SelectPrimitive.Value />}
+      {children !== undefined ? (
+        children
+      ) : label !== undefined ? (
+        <span>{label}</span>
+      ) : (
+        <SelectPrimitive.Value />
+      )}
       <ChevronDown className="text-muted-foreground size-3 shrink-0" />
     </SelectPrimitive.Trigger>
   );

@@ -95,7 +95,8 @@
     "indoorshopLogistics": "물류",
     "indoorshopYard": "야드 현황",
     "indoorshopReference": "참고",
-    "indoorshopDocs": "문서"
+    "indoorshopDocs": "문서",
+    "virtualTags": "가상 태그"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",
@@ -359,7 +360,14 @@
     "fullscreen": "전체화면",
     "exitFullscreen": "전체화면 복원",
     "badge": "3D Viewer",
-    "resizePreview": "미리보기 크기 조절"
+    "resizePreview": "미리보기 크기 조절",
+    "dockPin": "고정",
+    "dockUnpin": "고정 해제",
+    "dockExpand": "펼치기",
+    "dockCollapse": "접기",
+    "dockResize": "패널 크기 조절",
+    "dockTools": "화면 조작",
+    "dockPanels": "패널"
   },
   "undo": "실행 취소"
 }

@@ -36,6 +36,7 @@ const HASHED_DIRS = [
   'icons',
   'drawings',
   'previews',
+  'simulation',
 ];
 
 /** URL 길이만 늘리지 않도록 짧게 자른다. 8 hex = 32bit, 충돌은 실질적으로 무관. */

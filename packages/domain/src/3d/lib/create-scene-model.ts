@@ -18,6 +18,5 @@ export function createSceneModel({
     position,
     rotation: [0, 0, 0],
     scale: catalogItem.defaultScale,
-    valueMapList: [],
   };
 }

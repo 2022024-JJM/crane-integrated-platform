@@ -1,4 +1,5 @@
 import {
+  Bone,
   Eye,
   Palette,
   SlidersHorizontal,
@@ -9,12 +10,13 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  type RigDefinition,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedTextInfo,
-  type ValueMapItem,
-  type ValueMapType,
 } from '@crane/domain/3d';
+import { RiggingSection, type RigUpdater } from './rigging-section';
+import { TagMappingSection, type TagMappingsUpdater } from './tag-mapping-section';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -27,7 +29,6 @@ import {
   useActiveTransformStore,
   useUniformScaleStore,
 } from '@crane/features/3d';
-import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
 import { Card, CardContent } from '@crane/ui/molecules/card';
@@ -48,15 +49,17 @@ type InspectorTabKey =
   | 'transform'
   | 'opacity'
   | 'tagMapping'
+  | 'rigging'
   | 'textContent'
   | 'textColor';
 
-type InspectorObjectType = 'model' | 'mesh' | 'text' | 'map';
+type InspectorObjectType = 'model' | 'text' | 'map';
 
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
   opacity: Eye,
   tagMapping: Tag,
+  rigging: Bone,
   textContent: Type,
   textColor: Palette,
 };
@@ -65,31 +68,54 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   transform: 'monitoring:inspector.transform',
   opacity: 'monitoring:inspector.opacity',
   tagMapping: 'monitoring:inspector.tagMapping',
+  rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
   textColor: 'monitoring:inspector.textColor',
 };
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
-  model: ['transform', 'opacity', 'tagMapping'],
-  mesh: ['transform', 'opacity'],
+  model: ['transform', 'opacity', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform'],
 };
 
 function getTabsForType(
   type: InspectorObjectType,
-  hasValueMap: boolean,
+  hasTagMapping: boolean,
+  hasRigging: boolean,
 ): readonly InspectorTabKey[] {
   const tabs = TABS_BY_TYPE[type];
-  // 태그 매핑은 onValueMapChange가 배선된 화면에서만 존재하는 섹션이다.
-  return type === 'model' && !hasValueMap
-    ? tabs.filter((tab) => tab !== 'tagMapping')
-    : tabs;
+  if (type !== 'model') return tabs;
+  // 태그 매핑·리깅은 콜백이 배선된 화면에서만 존재하는 섹션이다.
+  return tabs.filter(
+    (tab) =>
+      (tab !== 'tagMapping' || hasTagMapping) &&
+      (tab !== 'rigging' || hasRigging),
+  );
+}
+
+/** 리깅 탭 콜백 묶음 — 전부 있어야 탭이 뜬다. */
+export interface InspectorRiggingHandlers {
+  rigs: RigDefinition[];
+  onCreateRig: () => void;
+  onAssignRig: (rigId: string | null) => void;
+  onUpdateRig: (rigId: string, updater: RigUpdater) => void;
+  onRemoveRig: (rigId: string) => void;
+}
+
+/** 태그 매핑 탭 — 관절 대상 선택에 리그 정의가 필요하다. */
+export interface InspectorTagMappingHandlers {
+  rigs: RigDefinition[];
+  onUpdate: (updater: TagMappingsUpdater) => void;
 }
 
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  /**
+   * 모델 안쪽 노드 선택. 노드는 읽기 전용이라 편집 섹션 없이 안내 문구만
+   * 보이고, 바운딩 박스는 캔버스가 그린다.
+   */
   selectedMesh: SelectedMeshInfo | null;
   selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
@@ -102,22 +128,10 @@ interface SceneObjectInspectorProps {
   ) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
-  onMeshOpacityChange: (value: number) => void;
-  onMeshTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-    options?: { uniformScale?: boolean },
-  ) => void;
-  /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
-  onBackToParent: () => void;
-  /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
-  onValueMapChange?: (
-    type: ValueMapType,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => void;
+  /** 태그 매핑 탭. 없으면 탭이 뜨지 않는다. */
+  tagMapping?: InspectorTagMappingHandlers;
+  /** 리깅 탭. 없으면 탭이 뜨지 않는다(tagMapping 과 같은 게이트). */
+  rigging?: InspectorRiggingHandlers;
   /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
   className?: string;
 }
@@ -151,193 +165,6 @@ function TransformGroup({ title, action, children }: TransformGroupProps) {
         {action}
       </div>
       {children}
-    </div>
-  );
-}
-
-const VALUE_MAP_GROUPS: { labelKey: string; types: ValueMapType[] }[] = [
-  { labelKey: 'monitoring:inspector.position', types: ['PX', 'PY', 'PZ'] },
-  { labelKey: 'monitoring:inspector.rotation', types: ['RX', 'RY', 'RZ'] },
-];
-
-const VALUE_MAP_AXIS_LABEL: Record<ValueMapType, string> = {
-  PX: 'X',
-  PY: 'Y',
-  PZ: 'Z',
-  RX: 'X',
-  RY: 'Y',
-  RZ: 'Z',
-  SX: 'X',
-  SY: 'Y',
-  SZ: 'Z',
-};
-
-const POSITION_TYPES = new Set<ValueMapType>(['PX', 'PY', 'PZ']);
-
-function TagMappingSection({
-  valueMapList,
-  craneId,
-  onValueMapChange,
-  t,
-}: {
-  valueMapList: ValueMapItem[];
-  craneId?: string;
-  onValueMapChange: (
-    type: ValueMapType,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => void;
-  t: (key: string) => string;
-}) {
-  const prefix = craneId ? `${craneId}:` : '';
-
-  const getTagCode = (type: ValueMapType) => {
-    const key = valueMapList.find((item) => item.type === type)?.key ?? '';
-    return key.startsWith(prefix) ? key.slice(prefix.length) : key;
-  };
-  const getScale = (type: ValueMapType) =>
-    valueMapList.find((item) => item.type === type)?.scale ?? 1;
-  const getOffset = (type: ValueMapType) =>
-    valueMapList.find((item) => item.type === type)?.offset ?? 0;
-
-  // offset 입력 중간 상태(소수점, 음수 부호 등)를 허용하기 위해 로컬 draft 관리
-  const initialOffsetDrafts = () =>
-    Object.fromEntries(
-      (['PX', 'PY', 'PZ'] as ValueMapType[]).map((t) => [
-        t,
-        String(getOffset(t)),
-      ]),
-    ) as Record<ValueMapType, string>;
-
-  const [offsetDrafts, setOffsetDrafts] =
-    useState<Record<ValueMapType, string>>(initialOffsetDrafts);
-
-  // 외부에서 valueMapList가 바뀔 때(저장 후 로드 등) draft를 동기화
-  useEffect(() => {
-    setOffsetDrafts({
-      PX: String(getOffset('PX')),
-      PY: String(getOffset('PY')),
-      PZ: String(getOffset('PZ')),
-      RX: '0',
-      RY: '0',
-      RZ: '0',
-      SX: '0',
-      SY: '0',
-      SZ: '0',
-    });
-    // valueMapList 참조가 바뀔 때만 동기화
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valueMapList]);
-
-  return (
-    <div>
-      <SectionHeader title={t('monitoring:inspector.tagMapping')} />
-      {craneId ? (
-        <p className="text-muted-foreground mb-2 text-[10px]">
-          크레인 ID:{' '}
-          <span className="text-foreground font-mono">{craneId}</span>
-        </p>
-      ) : null}
-      <div className="space-y-3">
-        {VALUE_MAP_GROUPS.map((group) => (
-          <div key={group.labelKey}>
-            <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
-              {t(group.labelKey)}
-            </p>
-            <div className="space-y-1.5">
-              {group.types.map((type) => {
-                const tagCode = getTagCode(type);
-                const isPosition = POSITION_TYPES.has(type);
-                return (
-                  <div key={type} className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span className="text-muted-foreground w-4 shrink-0 text-center font-mono">
-                        {VALUE_MAP_AXIS_LABEL[type]}
-                      </span>
-                      <Input
-                        value={tagCode}
-                        placeholder={t(
-                          'monitoring:inspector.tagKeyPlaceholder',
-                        )}
-                        className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-7 flex-1 rounded-sm px-2 text-[11px]"
-                        onChange={(e) => {
-                          const fullKey = e.target.value.trim()
-                            ? `${prefix}${e.target.value.trim()}`
-                            : '';
-                          onValueMapChange(
-                            type,
-                            fullKey,
-                            getScale(type),
-                            isPosition ? getOffset(type) : undefined,
-                          );
-                        }}
-                      />
-                    </div>
-                    {tagCode ? (
-                      <>
-                        <div className="ml-6 flex items-center gap-2 text-[11px]">
-                          <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
-                            scale
-                          </span>
-                          <Input
-                            type="number"
-                            step={0.1}
-                            value={getScale(type)}
-                            placeholder="1"
-                            className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
-                            onChange={(e) => {
-                              const s = parseFloat(e.target.value);
-                              if (Number.isFinite(s)) {
-                                onValueMapChange(
-                                  type,
-                                  `${prefix}${tagCode}`,
-                                  s,
-                                  isPosition ? getOffset(type) : undefined,
-                                );
-                              }
-                            }}
-                          />
-                        </div>
-                        {isPosition ? (
-                          <div className="ml-6 flex items-center gap-2 text-[11px]">
-                            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
-                              offset
-                            </span>
-                            <Input
-                              type="number"
-                              step="any"
-                              value={offsetDrafts[type] ?? '0'}
-                              placeholder="0"
-                              className="border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]"
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                setOffsetDrafts((prev) => ({
-                                  ...prev,
-                                  [type]: raw,
-                                }));
-                                const o = parseFloat(raw);
-                                if (Number.isFinite(o)) {
-                                  onValueMapChange(
-                                    type,
-                                    `${prefix}${tagCode}`,
-                                    getScale(type),
-                                    o,
-                                  );
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -463,7 +290,8 @@ function ModelInspectorContent({
   activeTab,
   onOpacityChange,
   onTransformChange,
-  onValueMapChange,
+  tagMapping,
+  rigging,
   t,
 }: {
   selectedModel: SavedModelInfo;
@@ -476,13 +304,9 @@ function ModelInspectorContent({
     value: number,
     options?: { uniformScale?: boolean },
   ) => void;
-  onValueMapChange?: (
-    type: ValueMapType,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => void;
-  t: (key: string) => string;
+  tagMapping?: InspectorTagMappingHandlers;
+  rigging?: InspectorRiggingHandlers;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
     <>
@@ -504,84 +328,25 @@ function ModelInspectorContent({
         />
       ) : null}
 
-      {activeTab === 'tagMapping' && onValueMapChange ? (
+      {activeTab === 'tagMapping' && tagMapping ? (
         <TagMappingSection
-          valueMapList={selectedModel.valueMapList}
-          craneId={selectedModel.craneId}
-          onValueMapChange={onValueMapChange}
-          t={t}
-        />
-      ) : null}
-    </>
-  );
-}
-
-function MeshInspectorContent({
-  selectedMesh,
-  activeTab,
-  onMeshOpacityChange,
-  onMeshTransformChange,
-  onBackToParent,
-  t,
-}: {
-  selectedMesh: SelectedMeshInfo;
-  activeTab: InspectorTabKey;
-  onMeshOpacityChange: (value: number) => void;
-  onMeshTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-    options?: { uniformScale?: boolean },
-  ) => void;
-  onBackToParent: () => void;
-  t: (key: string) => string;
-}) {
-  const override = selectedMesh.override;
-  // override가 없는 axis는 mesh 객체의 현재 transform을 표시(GLTF 원본 또는
-  // 마지막 적용 상태). 사용자가 첫 입력을 할 때 그 값에서 시작하기 위함.
-  const meshObj = selectedMesh.meshObject;
-  const defaultPosition: [number, number, number] = meshObj
-    ? [meshObj.position.x, meshObj.position.y, meshObj.position.z]
-    : [0, 0, 0];
-  const defaultRotation: [number, number, number] = meshObj
-    ? [
-        (meshObj.rotation.x * 180) / Math.PI,
-        (meshObj.rotation.y * 180) / Math.PI,
-        (meshObj.rotation.z * 180) / Math.PI,
-      ]
-    : [0, 0, 0];
-  const defaultScale: [number, number, number] = meshObj
-    ? [meshObj.scale.x, meshObj.scale.y, meshObj.scale.z]
-    : [1, 1, 1];
-  const position = override?.position ?? defaultPosition;
-  const rotation = override?.rotation ?? defaultRotation;
-  const scale = override?.scale ?? defaultScale;
-  const opacity = override?.opacity ?? 1;
-
-  return (
-    <>
-      {/* 부모 복귀 버튼은 탭과 무관한 내비게이션이라 항상 상단에 둔다. */}
-      <button
-        type="button"
-        onClick={onBackToParent}
-        className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 px-1 text-[11px] transition-colors"
-      >
-        <ArrowLeft className="size-3.5" />
-        {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
-      </button>
-
-      {activeTab === 'transform' ? (
-        <TransformSection
-          position={position}
-          rotation={rotation}
-          scale={scale}
-          onTransformChange={onMeshTransformChange}
+          model={selectedModel}
+          rigs={tagMapping.rigs}
+          onUpdate={tagMapping.onUpdate}
           t={t}
         />
       ) : null}
 
-      {activeTab === 'opacity' ? (
-        <OpacitySection value={opacity} onChange={onMeshOpacityChange} t={t} />
+      {activeTab === 'rigging' && rigging ? (
+        <RiggingSection
+          model={selectedModel}
+          rigs={rigging.rigs}
+          onCreateRig={rigging.onCreateRig}
+          onAssignRig={rigging.onAssignRig}
+          onUpdateRig={rigging.onUpdateRig}
+          onRemoveRig={rigging.onRemoveRig}
+          t={t}
+        />
       ) : null}
     </>
   );
@@ -764,10 +529,8 @@ export function SceneObjectInspector({
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
-  onMeshOpacityChange,
-  onMeshTransformChange,
-  onBackToParent,
-  onValueMapChange,
+  tagMapping,
+  rigging,
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -779,22 +542,21 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  // 기존 분기 순서(multi > mesh > model > text > map)와 동일하게 타입 판별.
+  // 분기 순서 multi > mesh > model > text > map. 노드(mesh)는 편집 탭이 없어
+  // 타입 null 로 두고 아래에서 안내 문구만 그린다.
   const selectedType: InspectorObjectType | null =
-    multiSelectCount > 1
+    multiSelectCount > 1 || selectedMesh
       ? null
-      : selectedMesh
-        ? 'mesh'
-        : selectedModel
-          ? 'model'
-          : selectedText
-            ? 'text'
-            : selectedMap
-              ? 'map'
-              : null;
+      : selectedModel
+        ? 'model'
+        : selectedText
+          ? 'text'
+          : selectedMap
+            ? 'map'
+            : null;
 
   const tabs = selectedType
-    ? getTabsForType(selectedType, Boolean(onValueMapChange))
+    ? getTabsForType(selectedType, Boolean(tagMapping), Boolean(rigging))
     : [];
   // 타입 전환 시 같은 섹션이 있으면 유지, 없으면 첫 탭 — effect 대신 렌더 시
   // 파생 보정이라 stale 탭이 한 프레임도 렌더되지 않는다. activeTab은 사용자의
@@ -803,7 +565,8 @@ export function SceneObjectInspector({
     ? activeTab
     : (tabs[0] ?? 'transform');
 
-  const hasSelection = selectedType !== null || multiSelectCount > 1;
+  const hasSelection =
+    selectedType !== null || selectedMesh !== null || multiSelectCount > 1;
 
   return (
     <Card
@@ -831,14 +594,11 @@ export function SceneObjectInspector({
               </p>
             </div>
           ) : selectedMesh ? (
-            <MeshInspectorContent
-              selectedMesh={selectedMesh}
-              activeTab={resolvedTab}
-              onMeshOpacityChange={onMeshOpacityChange}
-              onMeshTransformChange={onMeshTransformChange}
-              onBackToParent={onBackToParent}
-              t={t}
-            />
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center whitespace-pre-line">
+                {t('monitoring:inspector.nodeReadOnly')}
+              </p>
+            </div>
           ) : selectedModel ? (
             <ModelInspectorContent
               selectedModel={selectedModel}
@@ -846,7 +606,8 @@ export function SceneObjectInspector({
               activeTab={resolvedTab}
               onOpacityChange={onOpacityChange}
               onTransformChange={onTransformChange}
-              onValueMapChange={onValueMapChange}
+              tagMapping={tagMapping}
+              rigging={rigging}
               t={t}
             />
           ) : selectedText ? (

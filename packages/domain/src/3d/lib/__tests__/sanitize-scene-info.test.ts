@@ -113,12 +113,67 @@ describe('sanitizeSceneInfo — 모델', () => {
           model(),
           model({ id: 'no-path', path: '' }),
           model({ id: 'bad-pos', position: [0, NaN, 0] }),
-          model({ id: 'no-vml', valueMapList: undefined }),
           null,
         ],
       }),
     );
     expect(result.models.map((m) => m.id)).toEqual(['model-1']);
+  });
+
+  it('valueMapList 가 없어도 모델을 버리지 않는다 (레거시 필드는 이제 선택)', () => {
+    const result = sanitizeSceneInfo(
+      scene({ models: [model({ id: 'no-vml', valueMapList: undefined })] }),
+    );
+    expect(result.models.map((m) => m.id)).toEqual(['no-vml']);
+    expect(result.models[0]).not.toHaveProperty('valueMapList');
+  });
+
+  it('레거시 valueMapList 는 루트 tagMappings 로 변환되고 필드는 사라진다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            position: [0, 0, 5],
+            valueMapList: [
+              { type: 'PZ', key: 'C_171:tl_distance', scale: 0.1, offset: 71 },
+            ],
+          }),
+        ],
+      }),
+    );
+    const json = JSON.parse(JSON.stringify(result));
+    expect(json.models[0]).not.toHaveProperty('valueMapList');
+    expect(json.models[0].tagMappings).toEqual([
+      {
+        id: 'legacy-pz',
+        target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+        tagKey: 'C_171:tl_distance',
+        scale: 0.1,
+        offset: 66,
+      },
+    ]);
+    // 멱등: 정규화 결과를 다시 넣어도 같다.
+    expect(sanitizeSceneInfo(result)).toEqual(result);
+  });
+
+  it('tagMappings 가 있으면 레거시 valueMapList 는 무시한다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            tagMappings: [
+              {
+                id: 'm1',
+                target: { kind: 'node', node: '[0]Arm', channel: 'rotation', axis: 'x' },
+                tagKey: 'C_1:luff',
+              },
+            ],
+            valueMapList: [{ type: 'PX', key: 'ignored' }],
+          }),
+        ],
+      }),
+    );
+    expect(result.models[0].tagMappings?.map((m) => m.id)).toEqual(['m1']);
   });
 
   it('models 배열 자체가 아니면 빈 배열', () => {

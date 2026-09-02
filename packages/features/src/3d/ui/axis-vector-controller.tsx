@@ -13,6 +13,7 @@ export function AxisVectorController({
   min,
   max,
   format,
+  unit,
   toValue = numRound,
 }: {
   vec: Vector3Tuple | undefined;
@@ -21,6 +22,8 @@ export function AxisVectorController({
   max?: number;
   /** 비포커스 표시 문자열 (단위 접미사·자릿수 고정) */
   format: (v: number) => string;
+  /** 편집 중 미리보기 툴팁에 붙일 단위 (format 접미사와 같게) */
+  unit?: string;
   /** InputNumber value로 넘길 숫자 변환 (rotation은 wrap 포함) */
   toValue?: (v: number) => number;
 }) {
@@ -37,6 +40,8 @@ export function AxisVectorController({
             min={min}
             max={max}
             format={format}
+            editPreview
+            unit={unit}
             // InputNumber 내부 input의 text-sm(14px)을 태그 맵핑 값 입력과
             // 같은 11px로 덮는다 (twMerge라 뒤 클래스가 이긴다)
             inputClassName="text-center text-[11px]"

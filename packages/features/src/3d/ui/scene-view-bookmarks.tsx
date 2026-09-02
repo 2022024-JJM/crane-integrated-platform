@@ -1,6 +1,6 @@
-import { BookmarkPlus } from 'lucide-react';
+import { Bookmark, BookmarkPlus, Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedCameraInfo } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -32,6 +32,12 @@ import {
 
 interface SceneViewBookmarksProps {
   regionId: string;
+  /**
+   * 'toolbar'(기본): 가로 툴바 — 저장된 뷰 칩들 + `+` 버튼이 한 줄로 이어진다.
+   * 'rail': 우측 독 레일(세로) — 북마크 아이콘 버튼 하나만 두고, 누르면
+   * 왼쪽으로 팝오버가 열려 저장된 뷰 목록과 저장 폼을 함께 보여준다.
+   */
+  variant?: 'toolbar' | 'rail';
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => SavedCameraInfo | null;
   /** 저장된 포즈로 카메라를 즉시 옮긴다 — 리셋(원래 위치) 버튼과 같은 경로. */
@@ -55,6 +61,7 @@ interface SceneViewBookmarksProps {
  */
 export function SceneViewBookmarks({
   regionId,
+  variant = 'toolbar',
   getPose,
   onMoveTo,
 }: SceneViewBookmarksProps) {
@@ -67,6 +74,11 @@ export function SceneViewBookmarks({
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // rail 변형의 인라인 인풋 행 표시 여부. 팝오버 열림(isAdding)과는 별개다.
+  const [isEditing, setIsEditing] = useState(false);
+  // blur 와 Enter 가 같은 커밋을 부르므로 한 번만 저장되게 막는다 — Enter 로
+  // 커밋하면 인풋이 언마운트되며 blur 가 또 올 수 있다.
+  const inlineCommittedRef = useRef(false);
 
   useEffect(() => {
     hydrate(regionId);
@@ -82,6 +94,7 @@ export function SceneViewBookmarks({
 
   const closeForm = () => {
     setIsAdding(false);
+    setIsEditing(false);
     setName('');
   };
 
@@ -99,6 +112,211 @@ export function SceneViewBookmarks({
     event.preventDefault();
     saveCurrentView();
   };
+
+  const saveForm = (
+    <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
+      <p className="text-xs font-semibold">
+        {t('monitoring:sceneViews.saveCurrent')}
+      </p>
+      <Input
+        ref={inputRef}
+        value={name}
+        maxLength={SCENE_VIEW_NAME_MAX}
+        placeholder={t('monitoring:sceneViews.namePlaceholder')}
+        aria-invalid={isDuplicate || undefined}
+        disabled={isAtLimit}
+        onChange={(event) => setName(event.target.value)}
+        className={cn('h-8 text-xs', isDuplicate && 'text-destructive')}
+      />
+      {isDuplicate ? (
+        <p className="text-destructive text-[11px] leading-4">
+          {t('monitoring:sceneViews.duplicateName')}
+        </p>
+      ) : isAtLimit ? (
+        <p className="text-muted-foreground text-[11px] leading-4">
+          {t('monitoring:sceneViews.limitReached', { max: SCENE_VIEWS_MAX })}
+        </p>
+      ) : null}
+      <div className="flex justify-end gap-1.5">
+        {variant === 'toolbar' ? (
+          <Button type="button" variant="ghost" size="sm" onClick={closeForm}>
+            {t('monitoring:sceneViews.cancel')}
+          </Button>
+        ) : null}
+        <Button type="submit" size="sm" disabled={!canSave || isAtLimit}>
+          {t('monitoring:sceneViews.save')}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (variant === 'rail') {
+    const openLabel = t('monitoring:sceneViews.title', {
+      defaultValue: '저장한 뷰',
+    });
+    const addLabel = isAtLimit
+      ? t('monitoring:sceneViews.limitReached', { max: SCENE_VIEWS_MAX })
+      : t('monitoring:sceneViews.add', { defaultValue: '뷰 추가' });
+
+    const openInline = () => {
+      if (isAtLimit) {
+        return;
+      }
+      inlineCommittedRef.current = false;
+      if (isEditing) {
+        inputRef.current?.focus();
+        return;
+      }
+      setIsEditing(true);
+    };
+    const cancelInline = () => {
+      setIsEditing(false);
+      setName('');
+    };
+    // 인풋 행의 커밋 — blur 와 Enter 가 함께 부른다. 빈 이름·중복이면 저장
+    // 없이 닫는다(blur 시점엔 에러로 붙잡아 둘 수 없다). 카메라 포즈는
+    // 저장 시점에 읽는다.
+    const commitInline = () => {
+      if (inlineCommittedRef.current) {
+        return;
+      }
+      inlineCommittedRef.current = true;
+      if (canSave) {
+        const pose = getPose();
+        if (pose) {
+          addView(regionId, trimmedName, pose);
+        }
+      }
+      cancelInline();
+    };
+    const handleInlineKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitInline();
+      } else if (event.key === 'Escape') {
+        // 팝오버까지 닫히지 않게 — 인풋 행만 취소한다.
+        event.preventDefault();
+        event.stopPropagation();
+        inlineCommittedRef.current = true;
+        cancelInline();
+      }
+    };
+
+    return (
+      <Popover
+        open={isAdding}
+        onOpenChange={(open) => {
+          if (open) {
+            setIsAdding(true);
+          } else {
+            closeForm();
+          }
+        }}
+      >
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={openLabel}
+                    className={SCENE_TOOLBAR_BUTTON_CLASS}
+                  />
+                }
+              />
+            }
+          >
+            <Bookmark />
+          </TooltipTrigger>
+          <TooltipContent side="left">{openLabel}</TooltipContent>
+        </Tooltip>
+        <PopoverPopup
+          side="left"
+          align="start"
+          className="flex w-64 flex-col gap-2 p-3"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold">{openLabel}</p>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={addLabel}
+                    disabled={isAtLimit}
+                  />
+                }
+                onClick={openInline}
+              >
+                <Plus />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{addLabel}</TooltipContent>
+            </Tooltip>
+          </div>
+          {viewList.length > 0 || isEditing ? (
+            <ul className="flex max-h-56 flex-col gap-0.5 overflow-y-auto">
+              {viewList.map((view) => (
+                <li key={view.id} className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-w-0 flex-1 justify-start text-xs"
+                    onClick={() => onMoveTo(view.position, view.target)}
+                  >
+                    <span className="truncate">{view.name}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    aria-label={t('monitoring:sceneViews.delete')}
+                    onClick={() => removeView(regionId, view.id)}
+                  >
+                    <X />
+                  </Button>
+                </li>
+              ))}
+              {isEditing ? (
+                <li>
+                  {/* 목록 행과 같은 높이·모양의 인라인 인풋. 기본 테두리·포커스
+                      링은 ul 의 overflow 에 좌우·아래가 잘려 위쪽만 선으로 남으므로
+                      걷어내고 옅은 배경만 둔다. */}
+                  <Input
+                    ref={inputRef}
+                    autoFocus
+                    value={name}
+                    maxLength={SCENE_VIEW_NAME_MAX}
+                    placeholder={t('monitoring:sceneViews.namePlaceholder')}
+                    aria-label={t('monitoring:sceneViews.saveCurrent')}
+                    aria-invalid={isDuplicate || undefined}
+                    onChange={(event) => setName(event.target.value)}
+                    onKeyDown={handleInlineKeyDown}
+                    onBlur={commitInline}
+                    className={cn(
+                      'bg-muted/60 focus:bg-muted h-7 rounded-md border-0 px-2.5 text-xs focus:border-0 focus:ring-0',
+                      isDuplicate && 'text-destructive',
+                    )}
+                  />
+                </li>
+              ) : null}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-[11px] leading-4">
+              {t('monitoring:sceneViews.empty', {
+                defaultValue: '저장한 뷰가 없습니다',
+              })}
+            </p>
+          )}
+        </PopoverPopup>
+      </Popover>
+    );
+  }
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -193,38 +411,7 @@ export function SceneViewBookmarks({
           initialFocus={inputRef}
           className="w-64 p-3"
         >
-          <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-            <p className="text-xs font-semibold">
-              {t('monitoring:sceneViews.saveCurrent')}
-            </p>
-            <Input
-              ref={inputRef}
-              value={name}
-              maxLength={SCENE_VIEW_NAME_MAX}
-              placeholder={t('monitoring:sceneViews.namePlaceholder')}
-              aria-invalid={isDuplicate || undefined}
-              onChange={(event) => setName(event.target.value)}
-              className={cn('h-8 text-xs', isDuplicate && 'text-destructive')}
-            />
-            {isDuplicate ? (
-              <p className="text-destructive text-[11px] leading-4">
-                {t('monitoring:sceneViews.duplicateName')}
-              </p>
-            ) : null}
-            <div className="flex justify-end gap-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={closeForm}
-              >
-                {t('monitoring:sceneViews.cancel')}
-              </Button>
-              <Button type="submit" size="sm" disabled={!canSave}>
-                {t('monitoring:sceneViews.save')}
-              </Button>
-            </div>
-          </form>
+          {saveForm}
         </PopoverPopup>
       </Popover>
     </div>

@@ -4,9 +4,9 @@ import {
   type SavedLightingInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
-  type ValueMapType,
 } from '@crane/domain/3d';
 import {
+  makeMeshId,
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
@@ -70,16 +70,19 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedMeshTransform: ReturnType<
+  updateSelectedTagMappings: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransform'];
-  updateSelectedMeshTransformVector: ReturnType<
+  >['updateSelectedTagMappings'];
+  createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransformVector'];
-  updateSelectedMeshOpacity: ReturnType<
+  >['createRigForSelectedModel'];
+  assignRigToSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshOpacity'];
-  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  >['assignRigToSelectedModel'];
+  updateRig: ReturnType<typeof useSelectedSceneObjectEditor>['updateRig'];
+  removeRig: ReturnType<typeof useSelectedSceneObjectEditor>['removeRig'];
+  /** 계층 목록에서 GLB 서브노드(Group/Mesh)를 고른다 — 캔버스 더블클릭 drill-in 과 같은 선택. */
+  selectPlacedNode: (modelId: string, nodePath: string) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (
@@ -153,6 +156,7 @@ export function useSceneEditorSession({
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
+  const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
@@ -175,16 +179,17 @@ export function useSceneEditorSession({
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     selectedMap,
     setObjectLocked,
     removeSelectedModel,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
     updateSceneInfo: updateScene,
@@ -242,6 +247,13 @@ export function useSceneEditorSession({
     };
   }, [clearSelectedModel, resetTransformMode]);
 
+  const selectPlacedNode = useCallback(
+    (modelId: string, nodePath: string) => {
+      selectMesh(makeMeshId(modelId, nodePath));
+    },
+    [selectMesh],
+  );
+
   const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
     isDirty,
     isSaving,
@@ -278,10 +290,12 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
+    selectPlacedNode,
     removeSelectedModel,
     updateMultiObjectTransforms,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,

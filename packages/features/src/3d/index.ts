@@ -1,8 +1,5 @@
 export { Monitoring3dView } from './ui/monitoring-3d-view';
-export {
-  CollisionGuard,
-  COLLISION_GUARD_COLORS,
-} from './ui/collision-guard';
+export { CollisionGuard, COLLISION_GUARD_COLORS } from './ui/collision-guard';
 export {
   CollisionGuardCameraRig,
   type CollisionGuardCameraPose,
@@ -42,10 +39,7 @@ export {
   SCENE_LIGHTING,
   SceneLighting,
 } from './ui/scene-render-preset';
-export {
-  isSceneShadowEnabled,
-  sceneCanvasShadows,
-} from './lib/scene-shadow';
+export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
 export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export {
@@ -74,14 +68,65 @@ export {
   useIsTransformDragActive,
 } from './model/use-active-transform-store';
 // Re-export mesh-id helpers for convenience (FSD: features는 domain을 import 가능)
-export {
-  makeMeshId,
-  parseMeshId,
-  isMeshId,
-} from '@crane/domain/3d';
+export { makeMeshId, parseMeshId, isMeshId } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
+export { RigDriver } from './ui/rig-driver';
+export { useRigDriver } from './model/use-rig-driver';
+export {
+  createTagBindingSource,
+  makeJointAddress,
+  manualJointSource,
+  rigValueStore,
+  type JointAddress,
+  type JointValueSource,
+  type RigValueSink,
+  type SetJointValueOptions,
+  type TagBindingSource,
+  type TagBindingTarget,
+} from './model/rig-value-store';
+export {
+  rigLiveReadouts,
+  useRigLivePoll,
+  type RigModelReadout,
+} from './model/rig-live-readouts';
+export { clampJointValue } from './lib/apply-joint';
+export {
+  publishTagValue,
+  setTagIngest,
+  tagLiveValues,
+  type TagLiveValue,
+  type TagPublish,
+  type TagValueSource,
+} from './model/tag-value-bus';
+export { useTagBindingSource } from './model/use-tag-binding-source';
+export {
+  buildTagMappingIndex,
+  collectSceneTagKeys,
+  type TagMappingIndex,
+} from './lib/tag-mapping-index';
+export {
+  resetVirtualTagLoadState,
+  useVirtualTagStore,
+  type VirtualTagAddResult,
+  type VirtualTagDraft,
+} from './model/use-virtual-tag-store';
+export {
+  virtualTagRuntime,
+  virtualTagSource,
+} from './model/virtual-tag-runner';
+export { useTagCatalog, type TagCatalogEntry } from './model/use-tag-catalog';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
+export {
+  useSceneDock,
+  type SceneDockController,
+  type SceneDockHandlers,
+} from './model/use-scene-dock';
+export {
+  DOCK_SIZE_DEFAULT,
+  DOCK_SIZE_MAX,
+  DOCK_SIZE_MIN,
+} from './lib/dock-storage';
 export { useObjectFocusStore } from './model/use-object-focus-store';
 export type {
   AxisKey,
