@@ -30,8 +30,15 @@ export function clampDockSize(size: number): number {
   return Math.min(DOCK_SIZE_MAX, Math.max(DOCK_SIZE_MIN, size));
 }
 
+/** 저장값이 없을 때의 고정 기본값 — 처음 들어온 사용자는 도킹된 상태로 본다. */
+export const DOCK_PINNED_DEFAULT = true;
+
 export function readDockPinned(dockId: string): boolean {
-  return getStorageItem(dockStorageKey(dockId, 'pinned')) === '1';
+  const raw = getStorageItem(dockStorageKey(dockId, 'pinned'));
+  if (raw === null) {
+    return DOCK_PINNED_DEFAULT;
+  }
+  return raw === '1';
 }
 
 export function writeDockPinned(dockId: string, pinned: boolean): void {

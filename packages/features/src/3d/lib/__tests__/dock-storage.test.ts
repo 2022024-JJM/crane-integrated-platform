@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  DOCK_PINNED_DEFAULT,
   DOCK_SIZE_DEFAULT,
   DOCK_SIZE_MAX,
   DOCK_SIZE_MIN,
@@ -49,8 +50,9 @@ describe('clampDockSize', () => {
 });
 
 describe('pinned', () => {
-  it('값이 없으면 false', () => {
-    expect(readDockPinned('status')).toBe(false);
+  it('값이 없으면 기본값(고정)', () => {
+    expect(DOCK_PINNED_DEFAULT).toBe(true);
+    expect(readDockPinned('status')).toBe(DOCK_PINNED_DEFAULT);
   });
 
   it("'1' 만 true 로 읽고 그 외 문자열은 false 다", () => {
@@ -68,9 +70,9 @@ describe('pinned', () => {
   });
 
   it('독 id 별로 분리 저장된다', () => {
-    writeDockPinned('tools', true);
-    expect(readDockPinned('tools')).toBe(true);
-    expect(readDockPinned('status')).toBe(false);
+    writeDockPinned('tools', false);
+    expect(readDockPinned('tools')).toBe(false);
+    expect(readDockPinned('status')).toBe(DOCK_PINNED_DEFAULT);
   });
 
   it('storage 접근이 던져도 기본값을 돌려주고 예외를 내지 않는다', () => {
@@ -81,8 +83,8 @@ describe('pinned', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-    expect(() => writeDockPinned('status', true)).not.toThrow();
-    expect(readDockPinned('status')).toBe(false);
+    expect(() => writeDockPinned('status', false)).not.toThrow();
+    expect(readDockPinned('status')).toBe(DOCK_PINNED_DEFAULT);
     expect(readDockSize('status')).toBe(DOCK_SIZE_DEFAULT);
   });
 });

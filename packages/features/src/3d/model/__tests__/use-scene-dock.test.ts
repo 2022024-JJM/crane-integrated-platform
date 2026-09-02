@@ -27,6 +27,9 @@ function keyEvent(key: string) {
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
+  // hover 테스트는 미고정 상태를 전제한다 — 기본값은 고정이므로 명시적으로 푼다.
+  window.localStorage.setItem(PINNED_KEY, '0');
+  window.localStorage.setItem('crane:monitoring-dock:tools:pinned', '0');
 });
 
 afterEach(() => {
@@ -141,16 +144,17 @@ describe('useSceneDock — hover 타이머', () => {
 });
 
 describe('useSceneDock — pin 영속화', () => {
-  it('저장된 pin 이 없으면 접힌 채, 있으면 펼쳐진 채 시작한다', () => {
+  it("저장된 pin 이 없으면 기본값(고정·펼침)으로, '0' 이면 접힌 채 시작한다", () => {
+    window.localStorage.removeItem(PINNED_KEY);
     const cold = renderHook(() => useSceneDock('status'));
-    expect(cold.result.current.pinned).toBe(false);
-    expect(cold.result.current.expanded).toBe(false);
+    expect(cold.result.current.pinned).toBe(true);
+    expect(cold.result.current.expanded).toBe(true);
     cold.unmount();
 
-    window.localStorage.setItem(PINNED_KEY, '1');
-    const warm = renderHook(() => useSceneDock('status'));
-    expect(warm.result.current.pinned).toBe(true);
-    expect(warm.result.current.expanded).toBe(true);
+    window.localStorage.setItem(PINNED_KEY, '0');
+    const unpinned = renderHook(() => useSceneDock('status'));
+    expect(unpinned.result.current.pinned).toBe(false);
+    expect(unpinned.result.current.expanded).toBe(false);
   });
 
   it('setPinned 는 storage 에 쓰고 즉시 펼친다', () => {
@@ -190,7 +194,7 @@ describe('useSceneDock — pin 영속화', () => {
     expect(tools.result.current.pinned).toBe(false);
     expect(
       window.localStorage.getItem('crane:monitoring-dock:tools:pinned'),
-    ).toBeNull();
+    ).toBe('0');
   });
 });
 
