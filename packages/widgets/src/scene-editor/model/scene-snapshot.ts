@@ -1,5 +1,4 @@
 import type {
-  RigBinding,
   RigConstraint,
   RigDefinition,
   RigJoint,
@@ -9,8 +8,9 @@ import type {
   SavedModelInfo,
   SavedSceneInfo,
   SavedTextInfo,
-  ValueMapItem,
+  TagMapping,
 } from '@crane/domain/3d';
+import { getTagMappingTargetKey } from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -38,15 +38,30 @@ function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
-function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
+/**
+ * 순서 무관 비교: id 기준 lookup. scale/offset 은 기본값으로 정규화. 대상은
+ * 타깃 키(노드·채널·축 | 관절)로 비교해 객체 참조와 무관하게 판정한다.
+ */
+function isTagMappingListEqual(
+  a: TagMapping[] | undefined,
+  b: TagMapping[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  const bMap = new Map((b ?? []).map((m) => [m.id, m]));
+  for (const am of a ?? []) {
+    const bm = bMap.get(am.id);
+    if (!bm) return false;
     if (
-      a[i].type !== b[i].type ||
-      a[i].key !== b[i].key ||
-      (a[i].scale ?? 1) !== (b[i].scale ?? 1) ||
-      (a[i].offset ?? 0) !== (b[i].offset ?? 0)
-    ) return false;
+      am.tagKey !== bm.tagKey ||
+      getTagMappingTargetKey(am.target) !== getTagMappingTargetKey(bm.target) ||
+      (am.scale ?? 1) !== (bm.scale ?? 1) ||
+      (am.offset ?? 0) !== (bm.offset ?? 0)
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -127,30 +142,6 @@ function isMeshOverrideListEqual(
   return true;
 }
 
-/** 순서 무관 비교: jointId 기준 lookup. scale/offset 은 기본값으로 정규화. */
-function isRigBindingListEqual(
-  a: RigBinding[] | undefined,
-  b: RigBinding[] | undefined,
-): boolean {
-  const aLen = a?.length ?? 0;
-  const bLen = b?.length ?? 0;
-  if (aLen !== bLen) return false;
-  if (aLen === 0) return true;
-  const bMap = new Map((b ?? []).map((o) => [o.jointId, o]));
-  for (const ao of a ?? []) {
-    const bo = bMap.get(ao.jointId);
-    if (!bo) return false;
-    if (
-      ao.key !== bo.key ||
-      (ao.scale ?? 1) !== (bo.scale ?? 1) ||
-      (ao.offset ?? 0) !== (bo.offset ?? 0)
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function isRigJointEqual(a: RigJoint, b: RigJoint): boolean {
   return (
     a.id === b.id &&
@@ -222,9 +213,8 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
-    isValueMapListEqual(a.valueMapList, b.valueMapList) &&
-    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
-    isRigBindingListEqual(a.rigBindings, b.rigBindings)
+    isTagMappingListEqual(a.tagMappings, b.tagMappings) &&
+    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides)
   );
 }
 

@@ -16,10 +16,30 @@ export {
 } from './lib/scene-dev-storage';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export {
-  sanitizeModelRig,
+  sanitizeModelRigId,
   sanitizeRigDefinition,
   sanitizeRigDefinitions,
 } from './lib/sanitize-rig';
+export {
+  convertLegacyRigBindings,
+  convertLegacyValueMapList,
+  resolveModelTagMappings,
+  sanitizeTagMappings,
+} from './lib/sanitize-tag-mappings';
+export {
+  getRigOccupiedTargetKeys,
+  getTagMappingTargetKey,
+  getTagMappingUnit,
+  TAG_MAPPING_CHANNELS,
+} from './model/tag-mapping-types';
+export type {
+  TagMapping,
+  TagMappingChannel,
+  TagMappingJointTarget,
+  TagMappingNodeTarget,
+  TagMappingTarget,
+  TagMappingUnit,
+} from './model/tag-mapping-types';
 export {
   getDrivenJointIds,
   getRigJointUnit,

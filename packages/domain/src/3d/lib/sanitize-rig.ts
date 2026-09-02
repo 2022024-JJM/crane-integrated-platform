@@ -1,9 +1,7 @@
 import {
-  getDrivenJointIds,
   RIG_AXES,
   RIG_JOINT_TYPES,
   type RigAxis,
-  type RigBinding,
   type RigConstraint,
   type RigDefinition,
   type RigJoint,
@@ -154,41 +152,13 @@ export function sanitizeRigDefinitions(
 }
 
 /**
- * 모델 인스턴스의 rigId·rigBindings 정규화. rigId 가 rigs 에 없으면 둘 다
- * 버린다(바인딩만 남으면 가리킬 관절이 없다). 바인딩은 jointId 기준으로
- * 첫 항목만 남기고, 리그에 없는 관절·driven 관절·빈 키는 버린다.
+ * 모델 인스턴스의 rigId 정규화 — rigs 에 없는 정의를 가리키면 버린다.
+ * 관절 ← 태그 바인딩은 tagMappings(sanitize-tag-mappings) 가 맡는다.
  */
-export function sanitizeModelRig(
+export function sanitizeModelRigId(
   rawRigId: unknown,
-  rawBindings: unknown,
   rigs: RigDefinition[] | undefined,
-): { rigId?: string; rigBindings?: RigBinding[] } {
-  if (!isNonEmptyString(rawRigId)) return {};
-  const rig = rigs?.find((r) => r.id === rawRigId);
-  if (!rig) return {};
-
-  const result: { rigId?: string; rigBindings?: RigBinding[] } = {
-    rigId: rig.id,
-  };
-  if (!Array.isArray(rawBindings)) return result;
-
-  const driven = getDrivenJointIds(rig);
-  const seen = new Set<string>();
-  const bindings: RigBinding[] = [];
-  for (const item of rawBindings) {
-    if (!item || typeof item !== 'object') continue;
-    const b = item as Record<string, unknown>;
-    if (!isNonEmptyString(b.jointId) || seen.has(b.jointId)) continue;
-    if (!rig.joints.some((j) => j.id === b.jointId)) continue;
-    // driven 관절은 구속조건이 값을 정한다 — 태그를 꽂아도 매 프레임 덮인다.
-    if (driven.has(b.jointId)) continue;
-    if (typeof b.key !== 'string' || b.key.trim().length === 0) continue;
-    const binding: RigBinding = { jointId: b.jointId, key: b.key.trim() };
-    if (isFiniteNumber(b.scale)) binding.scale = b.scale;
-    if (isFiniteNumber(b.offset)) binding.offset = b.offset;
-    seen.add(binding.jointId);
-    bindings.push(binding);
-  }
-  if (bindings.length > 0) result.rigBindings = bindings;
-  return result;
+): string | undefined {
+  if (!isNonEmptyString(rawRigId)) return undefined;
+  return rigs?.some((r) => r.id === rawRigId) ? rawRigId : undefined;
 }

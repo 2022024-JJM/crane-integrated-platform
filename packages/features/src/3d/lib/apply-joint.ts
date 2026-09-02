@@ -1,20 +1,8 @@
-import { Quaternion, Vector3, type Object3D } from 'three';
-import {
-  degToRad,
-  getRestPose,
-  resetToRestPose,
-  type RigAxis,
-  type RigJoint,
-} from '@crane/domain/3d';
+import type { Object3D } from 'three';
+import { getRestPose, type RigJoint } from '@crane/domain/3d';
+import { addChannelDelta, beginNodePose } from './apply-channel';
 
-const AXES: Record<RigAxis, Vector3> = {
-  x: new Vector3(1, 0, 0),
-  y: new Vector3(0, 1, 0),
-  z: new Vector3(0, 0, 1),
-};
-
-// 프레임당 할당 0 을 위해 모듈 스코프에서 재사용.
-const _q = new Quaternion();
+export { accumulatedParentScale } from './apply-channel';
 
 /** NaN/Infinity 는 0 으로, 한계가 있으면 그 안으로 자른다. */
 export function clampJointValue(joint: RigJoint, value: number): number {
@@ -24,51 +12,30 @@ export function clampJointValue(joint: RigJoint, value: number): number {
   return v;
 }
 
-/**
- * 부모 체인의 누적 scale(x 성분) — 노드 로컬 1 단위가 월드 몇 미터인지.
- * uniform scale 을 전제한다(Blender export 가 그렇다).
- */
-export function accumulatedParentScale(node: Object3D): number {
-  let s = 1;
-  let cursor = node.parent;
-  while (cursor) {
-    s *= cursor.scale.x;
-    cursor = cursor.parent;
-  }
-  return s;
+/** 관절 값을 rest 기준 Δ 로 환산한다(클램프·sign 적용). 드라이버가 누적할 때 쓴다. */
+export function jointDelta(joint: RigJoint, value: number): number {
+  return clampJointValue(joint, value) * (joint.sign ?? 1);
+}
+
+export function jointChannel(joint: RigJoint): 'rotation' | 'position' {
+  return joint.type === 'hinge' ? 'rotation' : 'position';
 }
 
 /**
- * rest pose 기준 상대 적용.
- *
- * - hinge: 노드 **자기 로컬 축** 중심 회전 → rest 에 post-multiply. 절대 대입
- *   (`rotation.x = θ`)은 rest 가 항등이 아닌 Empty 의 원본 자세를 파괴한다.
- * - slide: **부모 프레임 축** 방향 평행이동(m). 노드 로컬 단위로 환산하기 위해
- *   부모 scale 체인을 나눈다. 갠트리 위 트롤리처럼 "부모 좌표계의 한 축을 따라
- *   미끄러지는" 것이 일반적인 쓰임이라 부모 축을 택했다.
+ * 관절 하나를 단독 적용한다 — rest 로 되돌린 뒤 Δ 를 더한다. 같은 노드에
+ * 여러 관절·맵핑이 걸리는 경우는 드라이버가 beginNodePose/addChannelDelta 로
+ * 직접 누적한다(apply-channel.ts 참고).
  */
 export function applyJoint(
   node: Object3D,
   joint: RigJoint,
   value: number,
 ): void {
-  const rest = getRestPose(node);
-  const v = clampJointValue(joint, value) * (joint.sign ?? 1);
-
-  if (joint.type === 'hinge') {
-    node.quaternion
-      .copy(rest.quaternion)
-      .multiply(_q.setFromAxisAngle(AXES[joint.axis], degToRad(v)));
-    return;
-  }
-
-  const parentScale = accumulatedParentScale(node);
-  const local = parentScale > 0 ? v / parentScale : v;
-  node.position.copy(rest.position);
-  node.position[joint.axis] += local;
+  beginNodePose(node, getRestPose(node));
+  addChannelDelta(node, jointChannel(joint), joint.axis, jointDelta(joint, value));
 }
 
 /** 관절이 비활성일 때 원본 자세로 되돌린다. */
 export function resetJointNode(node: Object3D): void {
-  resetToRestPose(node);
+  beginNodePose(node, getRestPose(node));
 }

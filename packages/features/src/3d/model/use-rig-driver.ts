@@ -1,37 +1,54 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import type { Object3D } from 'three';
+import { Euler, Quaternion, Vector3, type Object3D } from 'three';
 import {
+  degToRad,
   findMeshByPath,
+  getRestPose,
   modelObjectRegistry,
+  type RestPose,
+  type RigAxis,
   type RigConstraint,
   type RigDefinition,
   type RigJoint,
   type SavedModelInfo,
+  type TagMappingChannel,
+  type TagMappingNodeTarget,
 } from '@crane/domain/3d';
 import {
-  applyJoint,
   clampJointValue,
-  resetJointNode,
+  jointChannel,
+  jointDelta,
 } from '../lib/apply-joint';
+import { addChannelDelta, beginNodePose } from '../lib/apply-channel';
 import { rigLiveReadouts } from './rig-live-readouts';
 import { makeJointAddress, rigValueStore } from './rig-value-store';
+import { useActiveTransformStore } from './use-active-transform-store';
 
 /**
- * 리그 드라이버 — R3F Canvas 안에서 매 프레임 관절 값을 노드에 적용한다.
+ * 씬 드라이버 — R3F Canvas 안에서 매 프레임 값 저장소를 노드에 적용한다.
+ * 두 종류를 한 인스턴스에서 다룬다.
  *
- * 값의 출처(수동 슬라이더/서버 태그)는 모른다. rigValueStore 만 읽는다.
- * 모델 인스턴스마다 노드 해석 결과를 캐시하고, 리그 정의 객체가 바뀌면
- * (정의 편집은 불변 업데이트라 참조가 바뀐다) 다시 만든다. 다시 만들기 전에
+ * - 리그 관절: 저장소 값 수집 → 구속조건을 배열 순서대로 계산(앞의 출력이
+ *   뒤의 입력이 될 수 있다) → 적용. driven 관절은 계산값을 받는다.
+ * - node 태그 맵핑: 저장소 값(= offset + tag × scale, 소스가 이미 환산)을
+ *   해당 노드·채널·축에 Δ 로 적용. 모델 루트(`''`)의 rest 는 씬에 저장된
+ *   배치 transform 이다 — GLTF rest 캐시는 clone 직후(배치 전) 값이라 쓸 수 없다.
+ *
+ * 값의 출처(수동 슬라이더/태그 소스)는 모른다. rigValueStore 만 읽는다.
+ *
+ * 같은 노드에 여러 채널·축이 걸리므로 노드마다 rest 로 되돌린 뒤 Δ 를
+ * 누적한다. 같은 노드·채널·축을 맵핑과 관절이 함께 가리키면 **관절이
+ * 이긴다** — 맵핑을 먼저 넣고 관절이 같은 키를 덮는다. UI 는 이 조합을
+ * 사전에 경고한다(getRigOccupiedTargetKeys).
+ *
+ * 모델 인스턴스마다 노드 해석 결과를 캐시하고, 모델·리그 객체가 바뀌면
+ * (편집은 불변 업데이트라 참조가 바뀐다) 다시 만든다. 다시 만들기 전에
  * 이전 인스턴스가 만졌던 노드는 rest 로 되돌려, 관절을 지웠는데 노드가
  * 돌아간 채 남는 일이 없게 한다.
  *
- * 프레임 순서: 저장소 값 수집 → 구속조건을 배열 순서대로 계산(앞의 출력이
- * 뒤의 입력이 될 수 있다) → 전 관절 적용. driven 관절은 저장소 값이 아니라
- * 계산값을 받는다.
- *
- * 기즈모로 드래그 중인 노드는 건드리지 않는다 — TransformControls 와 같은
- * 노드를 두고 매 프레임 서로 덮어쓰면 점프한다.
+ * 기즈모로 루트를 드래그하는 동안은 루트 맵핑을 건너뛴다 — TransformControls
+ * 와 같은 노드를 두고 매 프레임 서로 덮어쓰면 점프한다.
  */
 
 interface JointBinding {
@@ -39,45 +56,121 @@ interface JointBinding {
   node: Object3D;
 }
 
-interface RigInstance {
-  rig: RigDefinition;
+interface MappingBinding {
+  id: string;
+  target: TagMappingNodeTarget;
+  node: Object3D;
+  isRoot: boolean;
+}
+
+interface DrivenNode {
+  node: Object3D;
+  rest: RestPose;
+  isRoot: boolean;
+}
+
+interface DriverInstance {
+  model: SavedModelInfo;
+  rig: RigDefinition | undefined;
   root: Object3D;
   joints: JointBinding[];
   /** 입력·출력 관절이 모두 해석된 구속조건만 */
   constraints: RigConstraint[];
+  mappings: MappingBinding[];
   unresolvedJoints: string[];
+  unresolvedMappings: string[];
   /** 이 인스턴스가 구동하는 노드 전부 — 해체 시 rest 로 되돌린다. */
-  drivenNodes: Set<Object3D>;
+  drivenNodes: Map<Object3D, DrivenNode>;
 }
 
-function buildInstance(root: Object3D, rig: RigDefinition): RigInstance {
+const _euler = new Euler();
+
+/** 루트의 rest = 씬 배치 transform(model-mesh 의 primitive props 와 같은 값). */
+function placementRestPose(model: SavedModelInfo): RestPose {
+  const [rx, ry, rz] = model.rotation;
+  return {
+    position: new Vector3(...model.position),
+    quaternion: new Quaternion().setFromEuler(
+      _euler.set(degToRad(rx), degToRad(ry), degToRad(rz)),
+    ),
+    scale: new Vector3(...model.scale),
+  };
+}
+
+function buildInstance(
+  root: Object3D,
+  model: SavedModelInfo,
+  rig: RigDefinition | undefined,
+): DriverInstance {
+  const drivenNodes = new Map<Object3D, DrivenNode>();
+  const track = (node: Object3D) => {
+    if (drivenNodes.has(node)) return;
+    const isRoot = node === root;
+    drivenNodes.set(node, {
+      node,
+      rest: isRoot ? placementRestPose(model) : getRestPose(node),
+      isRoot,
+    });
+  };
+
   const joints: JointBinding[] = [];
   const unresolvedJoints: string[] = [];
-  const drivenNodes = new Set<Object3D>();
   const resolvedIds = new Set<string>();
-
-  for (const joint of rig.joints) {
+  for (const joint of rig?.joints ?? []) {
     const node = findMeshByPath(root, joint.node);
     if (!node) {
       unresolvedJoints.push(joint.id);
       continue;
     }
     joints.push({ joint, node });
-    drivenNodes.add(node);
+    track(node);
     resolvedIds.add(joint.id);
   }
-
-  const constraints = rig.constraints.filter(
+  const constraints = (rig?.constraints ?? []).filter(
     (c) => resolvedIds.has(c.input) && resolvedIds.has(c.output),
   );
 
-  return { rig, root, joints, constraints, unresolvedJoints, drivenNodes };
+  const mappings: MappingBinding[] = [];
+  const unresolvedMappings: string[] = [];
+  for (const mapping of model.tagMappings ?? []) {
+    if (mapping.target.kind !== 'node') continue;
+    const node = findMeshByPath(root, mapping.target.node);
+    if (!node) {
+      unresolvedMappings.push(mapping.id);
+      continue;
+    }
+    mappings.push({
+      id: mapping.id,
+      target: mapping.target,
+      node,
+      isRoot: node === root,
+    });
+    track(node);
+  }
+
+  return {
+    model,
+    rig,
+    root,
+    joints,
+    constraints,
+    mappings,
+    unresolvedJoints,
+    unresolvedMappings,
+    drivenNodes,
+  };
 }
 
-function disposeInstance(instance: RigInstance): void {
-  for (const node of instance.drivenNodes) {
-    resetJointNode(node);
+function disposeInstance(instance: DriverInstance): void {
+  for (const { node, rest } of instance.drivenNodes.values()) {
+    beginNodePose(node, rest);
   }
+}
+
+interface ChannelEntry {
+  channel: TagMappingChannel;
+  axis: RigAxis;
+  delta: number;
 }
 
 interface UseRigDriverParams {
@@ -92,7 +185,7 @@ export function useRigDriver({
   models,
   enabled = true,
 }: UseRigDriverParams): void {
-  const instancesRef = useRef<Map<string, RigInstance>>(new Map());
+  const instancesRef = useRef<Map<string, DriverInstance>>(new Map());
   // useFrame 콜백이 렌더 사이 최신 props 를 읽기 위한 ref. 렌더 중이 아니라
   // effect 에서 갱신한다(react-hooks/refs) — 한 프레임 늦어도 무방하다.
   const paramsRef = useRef({ rigs, models, enabled });
@@ -133,26 +226,35 @@ export function useRigDriver({
 
     const rigsById = new Map((currentRigs ?? []).map((r) => [r.id, r]));
     const liveModelIds = new Set<string>();
+    const dragging = useActiveTransformStore.getState().active;
 
     for (const model of currentModels ?? []) {
       const rig = model.rigId ? rigsById.get(model.rigId) : undefined;
+      const hasNodeMappings =
+        model.tagMappings?.some((m) => m.target.kind === 'node') ?? false;
+      if (!rig && !hasNodeMappings) continue;
       const root = modelObjectRegistry.get(model.id);
-      if (!rig || !root) continue;
+      if (!root) continue;
       liveModelIds.add(model.id);
 
       let instance = instances.get(model.id);
-      if (instance && (instance.rig !== rig || instance.root !== root)) {
+      if (
+        instance &&
+        (instance.model !== model ||
+          instance.rig !== rig ||
+          instance.root !== root)
+      ) {
         // root 가 바뀐 경우(리마운트)는 옛 노드가 이미 사라졌으므로 reset 이
         // 무해하고, 정의가 바뀐 경우는 reset 이 꼭 필요하다.
         disposeInstance(instance);
         instance = undefined;
       }
       if (!instance) {
-        instance = buildInstance(root, rig);
+        instance = buildInstance(root, model, rig);
         instances.set(model.id, instance);
       }
 
-      // (1) 저장소 값 수집 — 한계 클램프까지 해 두어야 구속조건의 입력이
+      // (1) 관절 값 수집 — 한계 클램프까지 해 두어야 구속조건의 입력이
       //     화면에 실제 적용되는 값과 같다.
       const values = new Map<string, number>();
       for (const { joint } of instance.joints) {
@@ -181,19 +283,52 @@ export function useRigDriver({
         );
       }
 
-      // (3) 적용. 모델 안쪽 노드 선택은 읽기 전용(기즈모 없음)이라 드래그
-      // 중인 관절을 피할 필요가 없다.
+      // (3) 노드별 채널 누적 — 맵핑 먼저, 관절이 같은 키를 덮는다.
+      const perNode = new Map<Object3D, Map<string, ChannelEntry>>();
+      const entryFor = (node: Object3D) => {
+        let m = perNode.get(node);
+        if (!m) {
+          m = new Map();
+          perNode.set(node, m);
+        }
+        return m;
+      };
+      const mappingValues = new Map<string, number>();
+      for (const binding of instance.mappings) {
+        if (binding.isRoot && dragging) continue;
+        const d = rigValueStore.get(makeJointAddress(model.id, binding.id));
+        mappingValues.set(binding.id, d);
+        const { channel, axis } = binding.target;
+        entryFor(binding.node).set(`${channel}:${axis}`, { channel, axis, delta: d });
+      }
       for (const { joint, node } of instance.joints) {
-        applyJoint(node, joint, values.get(joint.id) ?? 0);
+        const channel = jointChannel(joint);
+        entryFor(node).set(`${channel}:${joint.axis}`, {
+          channel,
+          axis: joint.axis,
+          delta: jointDelta(joint, values.get(joint.id) ?? 0),
+        });
+      }
+
+      // (4) 적용. 드래그 중인 루트는 손대지 않는다(맵핑도 위에서 걸렀다).
+      for (const [node, entries] of perNode) {
+        const driven = instance.drivenNodes.get(node);
+        if (!driven || (driven.isRoot && dragging)) continue;
+        beginNodePose(node, driven.rest);
+        for (const { channel, axis, delta: d } of entries.values()) {
+          addChannelDelta(node, channel, axis, d);
+        }
       }
 
       rigLiveReadouts.set(model.id, {
         unresolvedJoints: instance.unresolvedJoints,
         jointValues: values,
+        unresolvedMappings: instance.unresolvedMappings,
+        mappingValues,
       });
     }
 
-    // 리그가 떨어졌거나 모델이 사라진 인스턴스 정리.
+    // 리그·맵핑이 떨어졌거나 모델이 사라진 인스턴스 정리.
     for (const [modelId, instance] of instances) {
       if (liveModelIds.has(modelId)) continue;
       disposeInstance(instance);

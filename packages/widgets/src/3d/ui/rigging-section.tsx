@@ -1,10 +1,9 @@
-import { AlertTriangle, Link2, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Link2, Plus, RotateCcw, Tag, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   getDrivenJointIds,
   getRigJointUnit,
   modelObjectRegistry,
-  RIG_AXES,
   RIG_HINGE_DEFAULT_RANGE,
   RIG_JOINT_TYPES,
   RIG_SLIDE_DEFAULT_RANGE,
@@ -19,6 +18,7 @@ import {
   rigLiveReadouts,
   rigValueStore,
   useRigLivePoll,
+  useVirtualTagStore,
   type RigModelReadout,
 } from '@crane/features/3d';
 import { createId } from '@crane/core/lib/create-id';
@@ -32,20 +32,39 @@ import {
   listModelNodeOptions,
   type ModelNodeOption,
 } from '../lib/model-node-tree';
+import {
+  FIELD_INPUT,
+  FIELD_LABEL,
+  FIELD_SELECT,
+  NUMBER_INPUT,
+  NUMBER_WRAPPER,
+} from './inspector-field-classes';
+import {
+  AxisSegment,
+  Field,
+  NodeSelect,
+  NumberField,
+  SubHeader,
+  type InspectorT,
+} from './inspector-fields';
 
 /**
  * 인스펙터 "리깅" 탭 — 컨셉 A(인스펙터 탭형).
  *
  * [리그 선택/생성] → [관절 카드: 노드·타입·축·한계·슬라이더] →
- * [선형 연동 카드: 입력 관절 × 계수 + 오프셋 → 출력 관절] → [태그 바인딩(저장만)].
+ * [선형 연동 카드: 입력 관절 × 계수 + 오프셋 → 출력 관절].
+ * 관절 ← 태그 연결은 "태그 매핑" 탭(tag-mapping-section)이 맡고, 여기서는
+ * 연결된 관절에 배지만 단다.
  *
  * 슬라이더 값은 씬 데이터가 아니다 — manualJointSource 로 값 저장소에 직행하고
  * 히스토리에도 남지 않는다. 정의 편집만 updateRig 를 거쳐 undo/redo 된다.
  * readout 은 15Hz 폴링(useRigLivePoll)으로 읽는다. 연동의 출력 관절(driven)은
- * 슬라이더가 잠기고 드라이버가 계산한 값만 보여 준다.
+ * 슬라이더가 잠기고 드라이버가 계산한 값만 보여 준다. 시뮬레이션 재생 중
+ * 태그가 꽂힌 관절도 같은 이유로 잠긴다 — 슬라이더와 태그가 같은 주소를
+ * 두고 매 틱 싸우면 손이 "안 먹는다".
  */
 
-type T = (key: string, options?: Record<string, unknown>) => string;
+type T = InspectorT;
 
 export type RigUpdater = (rig: RigDefinition) => RigDefinition;
 
@@ -56,98 +75,7 @@ export interface RiggingSectionProps {
   onAssignRig: (rigId: string | null) => void;
   onUpdateRig: (rigId: string, updater: RigUpdater) => void;
   onRemoveRig: (rigId: string) => void;
-  onBindingChange: (
-    jointId: string,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => void;
   t: T;
-}
-
-const FIELD_INPUT =
-  'border-border bg-muted text-foreground placeholder:text-muted-foreground h-6 w-full rounded-sm px-2 text-[11px]';
-const FIELD_SELECT =
-  'border-border bg-muted text-foreground h-6 w-full min-w-0 rounded-sm border px-1 text-[11px]';
-const FIELD_LABEL = 'text-muted-foreground w-14 shrink-0 text-[10px]';
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className={FIELD_LABEL}>{label}</span>
-      {children}
-    </div>
-  );
-}
-
-function NodeSelect({
-  value,
-  options,
-  onChange,
-  t,
-}: {
-  value: string;
-  options: ModelNodeOption[];
-  onChange: (path: string) => void;
-  t: T;
-}) {
-  const known = options.some((o) => o.path === value);
-  return (
-    <select
-      className={cn(FIELD_SELECT, !known && 'border-amber-500 text-amber-500')}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      title={value}
-    >
-      {!known ? (
-        <option value={value}>
-          {t('monitoring:inspector.rigging.unresolvedNode')}: {value || '—'}
-        </option>
-      ) : null}
-      {options.map((o) => (
-        <option key={o.path} value={o.path}>
-          {o.label.replace(/ /g, ' ')}
-          {o.kind === 'mesh' ? ' ▪' : ''}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-/** 네이티브 number 입력 대신 테마 스테퍼가 있는 InputNumber. 비우면 undefined. */
-const NUMBER_WRAPPER = 'border-border bg-muted h-6 w-full min-w-0 rounded-sm';
-const NUMBER_INPUT = 'px-2 text-[11px]';
-
-function NumberField({
-  value,
-  placeholder,
-  onChange,
-  step = 0.1,
-  className,
-}: {
-  value: number | undefined;
-  placeholder?: string;
-  onChange: (value: number | undefined) => void;
-  step?: number;
-  className?: string;
-}) {
-  return (
-    <InputNumber
-      value={value ?? null}
-      step={step}
-      placeholder={placeholder}
-      className={cn(NUMBER_WRAPPER, className)}
-      inputClassName={NUMBER_INPUT}
-      onChange={(next) => onChange(next)}
-      onEmpty={() => onChange(undefined)}
-    />
-  );
 }
 
 function jointRange(joint: RigJoint): { min: number; max: number } {
@@ -175,6 +103,8 @@ function JointCard({
   unresolved,
   driven,
   appliedValue,
+  taggedKey,
+  simulating,
   onChange,
   onRemove,
   t,
@@ -187,16 +117,24 @@ function JointCard({
   driven: boolean;
   /** 드라이버가 이번 프레임에 적용한 값(readout). */
   appliedValue: number | undefined;
+  /** 태그 매핑 탭에서 이 관절에 연결한 태그 키(없으면 undefined). */
+  taggedKey: string | undefined;
+  /** 시뮬레이션 재생 중 — 태그가 꽂힌 관절은 슬라이더를 잠근다. */
+  simulating: boolean;
   onChange: (patch: Partial<RigJoint>) => void;
   onRemove: () => void;
   t: T;
 }) {
   const address = makeJointAddress(modelId, joint.id);
-  const value = driven ? (appliedValue ?? 0) : rigValueStore.getTarget(address);
+  const tagDriven = taggedKey !== undefined && simulating;
+  const value =
+    driven || tagDriven
+      ? (appliedValue ?? 0)
+      : rigValueStore.getTarget(address);
   const range = jointRange(joint);
   const unit = getRigJointUnit(joint.type);
   const step = joint.type === 'hinge' ? 0.5 : 0.05;
-  const locked = unresolved || driven;
+  const locked = unresolved || driven || tagDriven;
 
   return (
     <div className="border-border bg-muted/30 space-y-1.5 rounded-md border p-2">
@@ -218,6 +156,19 @@ function JointCard({
             title={t('monitoring:inspector.rigging.drivenHint')}
           >
             <Link2 className="size-3.5" />
+          </span>
+        ) : null}
+        {taggedKey !== undefined ? (
+          <span
+            className="text-primary flex shrink-0 items-center"
+            aria-label={t('monitoring:inspector.mapping.joinLabel', {
+              tag: taggedKey,
+            })}
+            title={t('monitoring:inspector.mapping.joinLabel', {
+              tag: taggedKey,
+            })}
+          >
+            <Tag className="size-3.5" />
           </span>
         ) : null}
         {unresolved ? (
@@ -263,28 +214,11 @@ function JointCard({
             </option>
           ))}
         </select>
-        <div
-          className="flex shrink-0 gap-0.5"
-          role="group"
-          aria-label={t('monitoring:inspector.rigging.axis')}
-        >
-          {RIG_AXES.map((axis) => (
-            <button
-              key={axis}
-              type="button"
-              aria-pressed={joint.axis === axis}
-              className={cn(
-                'h-6 w-6 cursor-pointer rounded-sm border font-mono text-[11px] uppercase',
-                joint.axis === axis
-                  ? 'border-primary/50 bg-primary/15 text-foreground'
-                  : 'border-border text-muted-foreground hover:bg-muted',
-              )}
-              onClick={() => onChange({ axis })}
-            >
-              {axis}
-            </button>
-          ))}
-        </div>
+        <AxisSegment
+          value={joint.axis}
+          onChange={(axis) => onChange({ axis })}
+          label={t('monitoring:inspector.rigging.axis')}
+        />
       </div>
       <div className="flex items-center gap-2">
         <span className={FIELD_LABEL}>
@@ -346,6 +280,10 @@ function JointCard({
       {driven ? (
         <p className="text-muted-foreground text-[10px] whitespace-pre-line">
           {t('monitoring:inspector.rigging.drivenHint')}
+        </p>
+      ) : tagDriven ? (
+        <p className="text-muted-foreground text-[10px]">
+          {t('monitoring:inspector.mapping.sliderLockedByTag')}
         </p>
       ) : null}
     </div>
@@ -476,80 +414,6 @@ function LinearCard({
   );
 }
 
-function BindingRow({
-  joint,
-  binding,
-  craneId,
-  onChange,
-  t,
-}: {
-  joint: RigJoint;
-  binding: { key: string; scale?: number; offset?: number } | undefined;
-  craneId?: string;
-  onChange: (key: string, scale?: number, offset?: number) => void;
-  t: T;
-}) {
-  const prefix = craneId ? `${craneId}:` : '';
-  const key = binding?.key ?? '';
-  const tagCode = key.startsWith(prefix) ? key.slice(prefix.length) : key;
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2 text-[11px]">
-        <span
-          className="text-muted-foreground w-14 shrink-0 truncate"
-          title={joint.id}
-        >
-          {joint.label ?? joint.id}
-        </span>
-        <Input
-          value={tagCode}
-          placeholder={t('monitoring:inspector.tagKeyPlaceholder')}
-          className={FIELD_INPUT}
-          onChange={(event) => {
-            const code = event.target.value.trim();
-            onChange(
-              code ? `${prefix}${code}` : '',
-              binding?.scale,
-              binding?.offset,
-            );
-          }}
-        />
-      </div>
-      {tagCode ? (
-        <div className="ml-16 flex items-center gap-2 text-[10px]">
-          <span className="text-muted-foreground w-8 shrink-0">scale</span>
-          <NumberField
-            value={binding?.scale ?? 1}
-            onChange={(scale) => onChange(key, scale ?? 1, binding?.offset)}
-          />
-          <span className="text-muted-foreground w-8 shrink-0">offset</span>
-          <NumberField
-            value={binding?.offset ?? 0}
-            onChange={(offset) => onChange(key, binding?.scale, offset ?? 0)}
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SubHeader({
-  title,
-  action,
-}: {
-  title: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between pt-1">
-      <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-        {title}
-      </p>
-      {action}
-    </div>
-  );
-}
-
 export function RiggingSection({
   model,
   rigs,
@@ -557,10 +421,20 @@ export function RiggingSection({
   onAssignRig,
   onUpdateRig,
   onRemoveRig,
-  onBindingChange,
   t,
 }: RiggingSectionProps) {
   useRigLivePoll();
+  const simulating = useVirtualTagStore((s) => s.isRunning);
+  // 관절 id → 연결된 태그 키(태그 매핑 탭의 joint 대상).
+  const taggedByJoint = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const m of model.tagMappings ?? []) {
+      if (m.target.kind === 'joint' && m.tagKey) {
+        out.set(m.target.jointId, m.tagKey);
+      }
+    }
+    return out;
+  }, [model.tagMappings]);
 
   const rig = rigs.find((r) => r.id === model.rigId) ?? null;
   const candidates = rigs.filter((r) => r.modelPath === model.path);
@@ -769,6 +643,8 @@ export function RiggingSection({
                 }
                 driven={drivenIds.has(joint.id)}
                 appliedValue={readout?.jointValues.get(joint.id)}
+                taggedKey={taggedByJoint.get(joint.id)}
+                simulating={simulating}
                 onChange={(patch) => updateJoint(joint.id, patch)}
                 onRemove={() => removeJoint(joint.id)}
                 t={t}
@@ -817,32 +693,6 @@ export function RiggingSection({
             ))}
           </div>
 
-          {rig.joints.some((j) => !drivenIds.has(j.id)) ? (
-            <>
-              <SubHeader title={t('monitoring:inspector.rigging.bindings')} />
-              <p className="text-muted-foreground text-[10px]">
-                {t('monitoring:inspector.rigging.bindingHint')}
-              </p>
-              <div className="space-y-1.5">
-                {rig.joints
-                  .filter((joint) => !drivenIds.has(joint.id))
-                  .map((joint) => (
-                    <BindingRow
-                      key={joint.id}
-                      joint={joint}
-                      binding={model.rigBindings?.find(
-                        (b) => b.jointId === joint.id,
-                      )}
-                      craneId={model.craneId}
-                      onChange={(key, scale, offset) =>
-                        onBindingChange(joint.id, key, scale, offset)
-                      }
-                      t={t}
-                    />
-                  ))}
-              </div>
-            </>
-          ) : null}
         </>
       ) : null}
     </div>

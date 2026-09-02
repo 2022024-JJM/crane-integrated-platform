@@ -1,14 +1,12 @@
 import {
   numRound,
   parseMeshId,
-  type RigBinding,
   type RigDefinition,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedSceneInfo,
   type SavedTextInfo,
-  type ValueMapItem,
-  type ValueMapType,
+  type TagMapping,
 } from '@crane/domain/3d';
 import { useEffect, useMemo, type SetStateAction } from 'react';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -53,11 +51,13 @@ interface UseSelectedSceneObjectEditorResult {
   selectedText: SavedTextInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   renameObject: (id: string, name: string) => void;
-  updateSelectedValueMap: (
-    type: ValueMapType,
-    key: string,
-    scale?: number,
-    offset?: number,
+  /**
+   * 선택 모델의 태그 맵핑 목록을 통째로 갱신한다. 빈 배열을 돌려주면 필드가
+   * 빠진다(직렬화 diff 0). 항목 추가·삭제·필드 편집이 전부 이 한 채널을
+   * 지나므로 undo/redo·dirty 에 잡힌다.
+   */
+  updateSelectedTagMappings: (
+    updater: (mappings: TagMapping[]) => TagMapping[],
   ) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedTransform: (
@@ -95,21 +95,14 @@ interface UseSelectedSceneObjectEditorResult {
   // ==== 리깅 ====
   /** 선택 모델의 GLB 경로로 빈 리그를 만들고 곧바로 그 모델에 할당한다. */
   createRigForSelectedModel: () => void;
-  /** null 이면 해제. 바인딩은 리그와 함께 떨어진다. */
+  /** null 이면 해제. 관절 대상 맵핑은 리그와 함께 떨어진다. */
   assignRigToSelectedModel: (rigId: string | null) => void;
   updateRig: (
     rigId: string,
     updater: (rig: RigDefinition) => RigDefinition,
   ) => void;
-  /** 정의 삭제 + 그 리그를 쓰던 모든 모델의 rigId/rigBindings 제거. */
+  /** 정의 삭제 + 그 리그를 쓰던 모든 모델의 rigId·관절 맵핑 제거. */
   removeRig: (rigId: string) => void;
-  /** key 가 빈 문자열이면 그 관절의 바인딩을 지운다. */
-  updateSelectedRigBinding: (
-    jointId: string,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => void;
 }
 
 export function useSelectedSceneObjectEditor({
@@ -517,11 +510,8 @@ export function useSelectedSceneObjectEditor({
     }, options);
   };
 
-  const updateSelectedValueMap = (
-    type: ValueMapType,
-    key: string,
-    scale?: number,
-    offset?: number,
+  const updateSelectedTagMappings = (
+    updater: (mappings: TagMapping[]) => TagMapping[],
   ) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) return prev;
@@ -529,29 +519,12 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.map((model) => {
           if (model.id !== selectedModelId) return model;
-          const filtered = model.valueMapList.filter(
-            (item) => item.type !== type,
-          );
-          if (!key.trim()) {
-            return { ...model, valueMapList: filtered };
-          }
-          const existing = model.valueMapList.find(
-            (item) => item.type === type,
-          );
-          const next: ValueMapItem[] = [
-            ...filtered,
-            {
-              type,
-              key: key.trim(),
-              scale: scale ?? existing?.scale ?? 1,
-              ...(offset !== undefined
-                ? { offset }
-                : existing?.offset !== undefined
-                  ? { offset: existing.offset }
-                  : {}),
-            },
-          ];
-          return { ...model, valueMapList: next };
+          const current = model.tagMappings ?? [];
+          const next = updater(current);
+          if (next === current) return model;
+          const rest = { ...model };
+          delete rest.tagMappings;
+          return next.length > 0 ? { ...rest, tagMappings: next } : rest;
         }),
       };
     });
@@ -559,11 +532,18 @@ export function useSelectedSceneObjectEditor({
 
   // ==== 리깅 ====
 
-  /** rigId·rigBindings 를 뗀 복사본 — 필드 자체를 없애야 직렬화에서 빠진다. */
+  /**
+   * rigId 를 뗀 복사본 — 필드 자체를 없애야 직렬화에서 빠진다. 관절 대상
+   * 맵핑은 가리킬 관절이 사라지므로 함께 지운다(sanitize 도 같은 규칙).
+   */
   const stripRig = (model: SavedModelInfo): SavedModelInfo => {
     const rest = { ...model };
     delete rest.rigId;
-    delete rest.rigBindings;
+    const mappings = (model.tagMappings ?? []).filter(
+      (m) => m.target.kind !== 'joint',
+    );
+    if (mappings.length > 0) rest.tagMappings = mappings;
+    else delete rest.tagMappings;
     return rest;
   };
 
@@ -583,9 +563,7 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         rigs: [...(prev.rigs ?? []), rig],
         models: prev.models.map((m) =>
-          m.id === selectedModelId
-            ? { ...m, rigId: rig.id, rigBindings: undefined }
-            : m,
+          m.id === selectedModelId ? { ...stripRig(m), rigId: rig.id } : m,
         ),
       };
     });
@@ -636,42 +614,6 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
-  const updateSelectedRigBinding = (
-    jointId: string,
-    key: string,
-    scale?: number,
-    offset?: number,
-  ) => {
-    updateSceneInfo((prev) => {
-      if (!prev || !selectedModelId) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((model) => {
-          if (model.id !== selectedModelId || !model.rigId) return model;
-          const filtered = (model.rigBindings ?? []).filter(
-            (b) => b.jointId !== jointId,
-          );
-          const trimmed = key.trim();
-          if (!trimmed) {
-            return {
-              ...model,
-              rigBindings: filtered.length > 0 ? filtered : undefined,
-            };
-          }
-          const existing = model.rigBindings?.find(
-            (b) => b.jointId === jointId,
-          );
-          const binding: RigBinding = { jointId, key: trimmed };
-          const nextScale = scale ?? existing?.scale;
-          const nextOffset = offset ?? existing?.offset;
-          if (nextScale !== undefined) binding.scale = nextScale;
-          if (nextOffset !== undefined) binding.offset = nextOffset;
-          return { ...model, rigBindings: [...filtered, binding] };
-        }),
-      };
-    });
-  };
-
   const removeSelectedModel = () => {
     if (selectedIds.size === 0) {
       return;
@@ -707,7 +649,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     selectedMap,
     setObjectLocked,
     removeSelectedModel,
@@ -715,6 +657,5 @@ export function useSelectedSceneObjectEditor({
     assignRigToSelectedModel,
     updateRig,
     removeRig,
-    updateSelectedRigBinding,
   };
 }

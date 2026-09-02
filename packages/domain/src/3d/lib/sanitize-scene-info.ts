@@ -21,7 +21,8 @@ import {
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
 } from '../model/types';
-import { sanitizeModelRig, sanitizeRigDefinitions } from './sanitize-rig';
+import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
+import { resolveModelTagMappings } from './sanitize-tag-mappings';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -117,8 +118,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
           typeof model.equipName !== 'string' ||
           !isVector3Tuple(model.position) ||
           !isVector3Tuple(model.rotation) ||
-          !isVector3Tuple(model.scale) ||
-          !Array.isArray(model.valueMapList)
+          !isVector3Tuple(model.scale)
         ) {
           return [];
         }
@@ -134,17 +134,25 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
 
         seenIds.add(nextId);
 
-        // rigId·rigBindings 는 유효할 때만 싣는다 — 둘 다 undefined 면 JSON
-        // 직렬화에서 빠져 리깅을 쓰지 않는 씬은 diff 가 없다.
-        const { rigId, rigBindings } = sanitizeModelRig(
-          model.rigId,
-          model.rigBindings,
-          safeRigs,
-        );
+        // rigId 는 유효할 때만 싣는다 — undefined 면 JSON 직렬화에서 빠져
+        // 리깅을 쓰지 않는 씬은 diff 가 없다.
+        const rigId = sanitizeModelRigId(model.rigId, safeRigs);
+        const rig = rigId ? safeRigs?.find((r) => r.id === rigId) : undefined;
+
+        // 태그 맵핑 — 레거시 valueMapList·rigBindings 는 여기서 변환되고
+        // 출력에서 사라진다(legacy 단수 `map` → `maps` 와 같은 규칙).
+        const tagMappings = resolveModelTagMappings(model, rig);
+        const {
+          valueMapList: _legacyValueMapList,
+          rigBindings: _legacyRigBindings,
+          ...rest
+        } = model;
+        void _legacyValueMapList;
+        void _legacyRigBindings;
 
         return [
           {
-            ...model,
+            ...rest,
             id: nextId,
             opacity: clampOpacity(model.opacity),
             meshOverrides: sanitizeMeshOverrides(model.meshOverrides),
@@ -152,7 +160,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             // 것으로 정규화한다. undefined는 JSON 직렬화에서 빠진다.
             locked: model.locked === true ? true : undefined,
             rigId,
-            rigBindings,
+            tagMappings,
           },
         ];
       })

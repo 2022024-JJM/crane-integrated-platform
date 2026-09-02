@@ -33,6 +33,7 @@
     "./molecules/scene-toolbar-button": "./src/molecules/scene-toolbar-button.tsx",
     "./molecules/scroll-area": "./src/molecules/scroll-area.tsx",
     "./molecules/select": "./src/molecules/select.tsx",
+    "./molecules/combobox": "./src/molecules/combobox.tsx",
     "./molecules/popover": "./src/molecules/popover.tsx",
     "./molecules/portal-container": "./src/molecules/portal-container.tsx",
     "./molecules/alert-dialog": "./src/molecules/alert-dialog.tsx",

@@ -1,8 +1,8 @@
 import { useEffect, useReducer } from 'react';
 
 /**
- * 드라이버가 매 프레임 써 넣는 표시용 값. mutable — UI 는 useRigLivePoll 로
- * 낮은 주기 폴링해 읽는다(60fps setState 금지).
+ * 드라이버가 프레임마다 써 두는 표시용 readout. React 상태가 아니다 —
+ * rig-value-store 와 같은 이유(60fps 쓰기, 15Hz 읽기).
  */
 export interface RigModelReadout {
   /** 관절 노드 경로를 못 찾은 관절 id */
@@ -12,6 +12,10 @@ export interface RigModelReadout {
    * driven 관절은 값 저장소에 없으므로 UI 가 여기서 읽는다.
    */
   jointValues: Map<string, number>;
+  /** node 대상 태그 맵핑 중 노드 경로를 못 찾은 맵핑 id */
+  unresolvedMappings: string[];
+  /** node 대상 태그 맵핑에 이번 프레임 적용된 Δ(mapping id 기준) */
+  mappingValues: Map<string, number>;
 }
 
 const readouts = new Map<string, RigModelReadout>();
@@ -33,7 +37,7 @@ export const rigLiveReadouts = {
 
 /**
  * 표시용 폴링 틱. 반환값은 리렌더를 일으키는 카운터일 뿐이고, 호출자는
- * rigValueStore / rigLiveReadouts 를 직접 읽는다.
+ * rigValueStore / rigLiveReadouts / tagLiveValues 를 직접 읽는다.
  */
 export function useRigLivePoll(intervalMs = 66): number {
   const [tick, bump] = useReducer((n: number) => n + 1, 0);

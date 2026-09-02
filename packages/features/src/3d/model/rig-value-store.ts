@@ -150,22 +150,22 @@ class ManualJointSource implements JointValueSource {
 export const manualJointSource = new ManualJointSource();
 
 export interface TagBindingTarget {
-  modelId: string;
-  jointId: string;
+  /** 값 저장소 주소 — 관절(`${modelId}/${jointId}`) 또는 node 맵핑(`${modelId}/${mappingId}`). */
+  address: JointAddress;
   scale: number;
   offset: number;
 }
 
 export interface TagBindingSource extends JointValueSource {
-  /** 값 버스(`applyValue`)가 호출한다. 시작 전이면 무시. */
+  /** 값 버스(`publishTagValue`)가 호출한다. 시작 전이면 무시. */
   ingest(key: string, value: number): void;
 }
 
 /**
- * 태그 키 → 관절 주소 바인딩 소스. `resolve` 는 키에 꽂힌 관절 목록을 돌려준다
- * (씬의 rigBindings 에서 만든다). 적용 공식: joint = offset + value * scale.
- *
- * 이번 단계에서는 만들어 두기만 하고 start 하지 않는다.
+ * 태그 키 → 값 저장소 주소 바인딩 소스. `resolve` 는 키에 꽂힌 주소 목록을
+ * 돌려준다(씬의 tagMappings 에서 buildTagMappingIndex 가 만든다). 적용 공식:
+ * applied = offset + value * scale. 서버·시뮬 값은 프레임 사이에서 튀므로
+ * smooth 로 쓴다.
  */
 export function createTagBindingSource(
   resolve: (key: string) => readonly TagBindingTarget[],
@@ -182,11 +182,9 @@ export function createTagBindingSource(
     ingest(key, value) {
       if (!sink || !Number.isFinite(value)) return;
       for (const target of resolve(key)) {
-        sink.set(
-          makeJointAddress(target.modelId, target.jointId),
-          target.offset + value * target.scale,
-          { smooth: true },
-        );
+        sink.set(target.address, target.offset + value * target.scale, {
+          smooth: true,
+        });
       }
     },
   };

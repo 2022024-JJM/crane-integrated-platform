@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  sanitizeModelRig,
+  sanitizeModelRigId,
   sanitizeRigDefinition,
   sanitizeRigDefinitions,
 } from '../sanitize-rig';
@@ -307,61 +307,24 @@ describe('sanitizeRigDefinitions', () => {
   });
 });
 
-describe('sanitizeModelRig', () => {
+describe('sanitizeModelRigId', () => {
   const rigs = [rig()];
 
-  it('rigId 가 없거나 rigs 에 없으면 빈 객체 — 바인딩도 함께 버린다', () => {
-    expect(
-      sanitizeModelRig(undefined, [{ jointId: 'slew', key: 'k' }], rigs),
-    ).toEqual({});
-    expect(
-      sanitizeModelRig('nope', [{ jointId: 'slew', key: 'k' }], rigs),
-    ).toEqual({});
-    expect(sanitizeModelRig('rig-llc', [], undefined)).toEqual({});
+  it('rigId 가 없거나 rigs 에 없으면 undefined', () => {
+    expect(sanitizeModelRigId(undefined, rigs)).toBeUndefined();
+    expect(sanitizeModelRigId('', rigs)).toBeUndefined();
+    expect(sanitizeModelRigId('nope', rigs)).toBeUndefined();
+    expect(sanitizeModelRigId('rig-llc', undefined)).toBeUndefined();
+    expect(sanitizeModelRigId(3, rigs)).toBeUndefined();
   });
 
-  it('유효한 바인딩만 남기고 jointId 중복은 첫 항목, 빈 키·없는 관절은 버린다', () => {
-    const out = sanitizeModelRig(
-      'rig-llc',
-      [
-        { jointId: 'slew', key: ' C_1:slew ', scale: 0.1, offset: 5 },
-        { jointId: 'slew', key: 'dup' },
-        { jointId: 'luff', key: '   ' },
-        { jointId: 'ghost', key: 'k' },
-        { jointId: 'luff', key: 'C_1:luff', scale: 'x', offset: NaN },
-        null,
-      ],
-      rigs,
-    );
-    expect(out).toEqual({
-      rigId: 'rig-llc',
-      rigBindings: [
-        { jointId: 'slew', key: 'C_1:slew', scale: 0.1, offset: 5 },
-        { jointId: 'luff', key: 'C_1:luff' },
-      ],
-    });
-  });
-
-  it('driven 관절(연동 출력)에 꽂힌 바인딩은 버린다', () => {
-    expect(
-      sanitizeModelRig('rig-llc', [{ jointId: 'upper1', key: 'k' }], rigs),
-    ).toEqual({ rigId: 'rig-llc' });
-  });
-
-  it('바인딩이 전부 무효면 rigBindings 필드를 생략한다', () => {
-    expect(
-      sanitizeModelRig('rig-llc', [{ jointId: 'ghost', key: 'k' }], rigs),
-    ).toEqual({
-      rigId: 'rig-llc',
-    });
-    expect(sanitizeModelRig('rig-llc', 'not-array', rigs)).toEqual({
-      rigId: 'rig-llc',
-    });
+  it('rigs 에 있으면 그대로', () => {
+    expect(sanitizeModelRigId('rig-llc', rigs)).toBe('rig-llc');
   });
 });
 
 describe('sanitizeSceneInfo — 리그 통합', () => {
-  it('리그가 없는 씬은 rigs/rigId/rigBindings 필드가 직렬화에 나타나지 않는다', () => {
+  it('리그가 없는 씬은 rigs/rigId/tagMappings 필드가 직렬화에 나타나지 않는다', () => {
     const out = sanitizeSceneInfo({
       maps: [],
       models: [model()],
@@ -371,6 +334,8 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
     const json = JSON.parse(JSON.stringify(out));
     expect(json.models[0]).not.toHaveProperty('rigId');
     expect(json.models[0]).not.toHaveProperty('rigBindings');
+    expect(json.models[0]).not.toHaveProperty('tagMappings');
+    expect(json.models[0]).not.toHaveProperty('valueMapList');
   });
 
   it('rigId 가 가리키는 리그가 정규화에서 사라지면 모델의 rigId 도 떨어진다', () => {
@@ -388,6 +353,8 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
     expect(out).not.toHaveProperty('rigs');
     expect(out.models[0].rigId).toBeUndefined();
     expect(out.models[0].rigBindings).toBeUndefined();
+    // 관절을 가리키던 레거시 바인딩도 리그와 함께 떨어진다.
+    expect(out.models[0].tagMappings).toBeUndefined();
   });
 
   it('유효한 리그와 참조는 모델을 버리지 않고 그대로 싣는다', () => {
@@ -404,6 +371,14 @@ describe('sanitizeSceneInfo — 리그 통합', () => {
     } as unknown as SavedSceneInfo);
     expect(out.rigs).toEqual([rig()]);
     expect(out.models[0].rigId).toBe('rig-llc');
-    expect(out.models[0].rigBindings).toEqual([{ jointId: 'slew', key: 'k' }]);
+    // 레거시 rigBindings 는 joint 맵핑으로 흡수되고 필드는 사라진다.
+    expect(out.models[0].rigBindings).toBeUndefined();
+    expect(out.models[0].tagMappings).toEqual([
+      {
+        id: 'legacy-joint-slew',
+        target: { kind: 'joint', jointId: 'slew' },
+        tagKey: 'k',
+      },
+    ]);
   });
 });

@@ -15,7 +15,6 @@
     "textContent": "Argumentum",
     "textColor": "Color",
     "tagMapping": "Designatio Tags",
-    "tagKeyPlaceholder": "Clavem tag inscribe",
     "rigging": {
       "title": "Articulatio",
       "none": "Nulla articulatio",
@@ -31,8 +30,6 @@
       "noJoints": "Nullae iuncturae. Nodum elige et iuncturam adde.",
       "constraints": "Vincula",
       "removeConstraint": "Vinculum removere",
-      "bindings": "Nexus tags",
-      "bindingHint": "In gradu coniunctionis servi adhibetur. Nunc tantum servatur.",
       "label": "Titulus",
       "node": "Nodus",
       "type": "Genus",
@@ -43,7 +40,6 @@
       "invert": "Invertere",
       "hinge": "Rotatio",
       "slide": "Translatio",
-      "root": "(radix exemplaris)",
       "unresolvedNode": "Nodus non inventus",
       "addLinear": "Nexum linearem addere",
       "linear": "Nexus linearis",
@@ -56,6 +52,41 @@
       "sameJoint": "Iunctura initialis et exitus eadem est.",
       "needTwoJoints": "Saltem duae iuncturae requiruntur ut nexus addatur.",
       "selectedRig": "Articulatio electa"
+    },
+    "mapping": {
+      "title": "Designatio Tags",
+      "list": "Designationes",
+      "add": "Designationem adde",
+      "remove": "Designationem dele",
+      "empty": "Nullae designationes. Nodum, genus et axem selige, deinde tag iunge.",
+      "targetKind": "Scopus",
+      "targetNode": "Nodus",
+      "targetJoint": "Articulus",
+      "node": "Nodus",
+      "root": "(radix exemplaris)",
+      "channel": "Genus",
+      "axis": "Axis",
+      "joint": "Articulus",
+      "tag": "Tag",
+      "tagPlaceholder": "Tag selige",
+      "tagSearch": "Clavem aut nomen quaere",
+      "tagEmpty": "Nulla tags ficta. In pagina Tags Fictorum crea.",
+      "tagUnknown": "Tag ignotum",
+      "tagMissing": "Tag selige. Designationes sine tag in servando abiciuntur.",
+      "scale": "scale",
+      "offset": "offset",
+      "readout": "tag {{tag}} → applicatum {{applied}} {{unit}}",
+      "readoutIdle": "nullus valor",
+      "conflictDuplicate": "Designatio prior hunc scopum iam utitur. Haec in servando abicitur.",
+      "conflictRig": "Articulus rig eundem nodum et axem agit. Articulus praevalet; haec designatio neglegitur.",
+      "noJoints": "Rig assignatum articulos non habet.",
+      "channels": {
+        "position": "Positio",
+        "rotation": "Rotatio",
+        "scale": "Scala"
+      },
+      "joinLabel": "Tag iunctum: {{tag}}",
+      "sliderLockedByTag": "Simulatio currit — tag hunc articulum agit."
     }
   },
   "transform": {
@@ -155,7 +186,8 @@
     "paletteTabs": {
       "models": "Exempla",
       "map": "Tabula",
-      "background": "Fundus"
+      "background": "Fundus",
+      "tags": "Tags"
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
@@ -173,11 +205,69 @@
     "multipleSelected": "{{count}} objecta selecta",
     "expandNodes": "Nodos explicare",
     "collapseNodes": "Nodos plicare",
-    "jointNode": "Nodus iuncturae"
+    "jointNode": "Nodus iuncturae",
+    "virtualTags": {
+      "paletteTab": "Tags",
+      "play": "Simulationem age",
+      "pause": "Simulationem siste",
+      "playing": "Currit",
+      "paused": "Sistit",
+      "resetValues": "Valores restitue",
+      "manage": "Omnia administra",
+      "sceneTags": "Tags quibus haec scaena utitur",
+      "noSceneTags": "Haec scaena designationes tag non habet. In tabula Designatio Tags inspectoris adde.",
+      "unregistered": "non inscriptum",
+      "hint": "Dum currit, valores tags fictorum exemplaria per designationes movent. Sistendo habitus quietis redit."
+    }
   },
   "craneList": {
     "countAll": "{{count}} grues",
     "countFiltered": "{{visible}} / {{total}} grues",
     "emptyForFilter": "Nullae grues huic statui congruunt."
+  },
+  "virtualTags": {
+    "title": "Tags Ficta",
+    "subtitle": "Valores tags sine servo simula. Tags hic creata in designatione tags editoris 3D seliguntur.",
+    "play": "Omnia age",
+    "pause": "Siste",
+    "resetValues": "Valores restitue",
+    "tick": "Intervallum (ms)",
+    "import": "Importa",
+    "export": "Exporta",
+    "add": "Novum tag",
+    "columns": {
+      "enabled": "Activum",
+      "key": "Clavis",
+      "name": "Nomen",
+      "unit": "Unitas",
+      "min": "Min",
+      "max": "Max",
+      "pattern": "Forma",
+      "param": "Periodus (ms) / Gradus (%)",
+      "value": "Valor",
+      "actions": ""
+    },
+    "patterns": {
+      "manual": "Manuale",
+      "triangle": "Triangulum",
+      "sine": "Sinus",
+      "sawtooth": "Serra",
+      "square": "Quadratum",
+      "random-walk": "Ambulatio fortuita"
+    },
+    "duplicate": "Duplica",
+    "remove": "Dele",
+    "removeConfirm": "Tag \"{{key}}\" delere?",
+    "empty": "Nulla tags ficta. \"Novum tag\" preme aut JSON importa.",
+    "errors": {
+      "invalid-key": "Clavis vacua esse non potest nec longior quam 64.",
+      "duplicate-key": "Tag eadem clave iam exstat.",
+      "limit": "Ad summum {{max}} tags creari possunt.",
+      "import": "JSON legi non potuit."
+    },
+    "newKey": "C_1:tag",
+    "importedCount": "{{count}} tags importata.",
+    "count": "{{count}} / {{max}}",
+    "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode)."
   }
 }

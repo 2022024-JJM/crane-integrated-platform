@@ -11,6 +11,7 @@ import {
 import { useRigDriver } from '../use-rig-driver';
 import { rigLiveReadouts } from '../rig-live-readouts';
 import { rigValueStore } from '../rig-value-store';
+import { useActiveTransformStore } from '../use-active-transform-store';
 
 /** R3F 프레임 루프를 가로채 delta 를 수동 주입한다(use-replay-player-runner.test 와 같은 방식). */
 const captured = vi.hoisted(() => ({
@@ -75,7 +76,6 @@ function model(overrides: Partial<SavedModelInfo> = {}): SavedModelInfo {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    valueMapList: [],
     rigId: 'rig-a',
     ...overrides,
   };
@@ -370,5 +370,143 @@ describe('useRigDriver — 선형 연동', () => {
     rigValueStore.set('m1/tip', 12);
     frame();
     expect(zDeg(tip)).toBeCloseTo(12, 6);
+  });
+});
+
+describe('useRigDriver — node 태그 맵핑', () => {
+  const mapped = (
+    overrides: Partial<SavedModelInfo> = {},
+  ): SavedModelInfo =>
+    model({
+      rigId: undefined,
+      position: [10, 0, -5],
+      rotation: [0, 90, 0],
+      scale: [2, 2, 2],
+      tagMappings: [
+        {
+          id: 'root-z',
+          target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+          tagKey: 'C_1:z',
+        },
+        {
+          id: 'arm-rot',
+          target: { kind: 'node', node: '[0]Arm', channel: 'rotation', axis: 'z' },
+          tagKey: 'C_1:arm',
+        },
+        {
+          id: 'hand-scale',
+          target: { kind: 'node', node: '[0]Arm/[0]Hand', channel: 'scale', axis: 'y' },
+          tagKey: 'C_1:hand',
+        },
+      ],
+      ...overrides,
+    });
+
+  it('루트 맵핑은 씬 배치 transform 을 rest 로 삼아 Δ 를 더한다', () => {
+    const { root } = mountModel('m1');
+    renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+    frame();
+    // 값이 없으면 배치 그대로.
+    expect(root.position.toArray()).toEqual([10, 0, -5]);
+    expect(root.scale.toArray()).toEqual([2, 2, 2]);
+    expect(root.rotation.y).toBeCloseTo(Math.PI / 2, 9);
+
+    rigValueStore.set('m1/root-z', 3);
+    frame();
+    expect(root.position.z).toBeCloseTo(-2, 9);
+  });
+
+  it('내부 노드의 rotation·scale 채널이 rest 기준으로 적용된다', () => {
+    const { arm, hand } = mountModel('m1');
+    renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+    rigValueStore.set('m1/arm-rot', 30);
+    rigValueStore.set('m1/hand-scale', 0.5);
+    frame();
+    expect(zDeg(arm)).toBeCloseTo(30, 6);
+    expect(hand.scale.toArray()).toEqual([1, 1.5, 1]);
+    expect(rigLiveReadouts.get('m1')?.mappingValues.get('arm-rot')).toBe(30);
+  });
+
+  it('노드를 못 찾는 맵핑은 unresolvedMappings 에 보고한다', () => {
+    mountModel('m1');
+    renderHook(() =>
+      useRigDriver({
+        rigs: undefined,
+        models: [
+          mapped({
+            tagMappings: [
+              {
+                id: 'ghost',
+                target: { kind: 'node', node: '[9]Nope', channel: 'position', axis: 'x' },
+                tagKey: 'k',
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+    frame();
+    expect(rigLiveReadouts.get('m1')?.unresolvedMappings).toEqual(['ghost']);
+  });
+
+  it('같은 노드·채널·축을 리그 관절이 함께 가리키면 관절이 이긴다', () => {
+    const { arm } = mountModel('m1');
+    const both = mapped({ rigId: 'rig-a' });
+    renderHook(() => useRigDriver({ rigs: [rig()], models: [both] }));
+    rigValueStore.set('m1/arm-rot', 30);
+    rigValueStore.set('m1/arm', 60);
+    frame();
+    expect(zDeg(arm)).toBeCloseTo(60, 6);
+  });
+
+  it('같은 노드의 다른 축 Δ 는 서로 지우지 않는다 (맵핑 + 관절 slide)', () => {
+    const { hand } = mountModel('m1');
+    const both = mapped({
+      rigId: 'rig-a',
+      tagMappings: [
+        {
+          id: 'hand-x',
+          target: { kind: 'node', node: '[0]Arm/[0]Hand', channel: 'position', axis: 'x' },
+          tagKey: 'k',
+        },
+      ],
+    });
+    renderHook(() => useRigDriver({ rigs: [rig()], models: [both] }));
+    rigValueStore.set('m1/hand-x', 1);
+    rigValueStore.set('m1/hand', 0.5);
+    frame();
+    expect(hand.position.x).toBeCloseTo(1, 9);
+    expect(hand.position.y).toBeCloseTo(2.5, 9);
+  });
+
+  it('맵핑을 지우면(모델 참조 변경) 노드가 rest(배치)로 돌아간다', () => {
+    const { root, arm } = mountModel('m1');
+    const { rerender } = renderHook(
+      ({ models }) => useRigDriver({ rigs: undefined, models }),
+      { initialProps: { models: [mapped()] } },
+    );
+    rigValueStore.set('m1/root-z', 3);
+    rigValueStore.set('m1/arm-rot', 30);
+    frame();
+    rerender({ models: [mapped({ tagMappings: undefined })] });
+    frame();
+    expect(root.position.z).toBeCloseTo(-5, 9);
+    expect(zDeg(arm)).toBeCloseTo(0, 6);
+    expect(rigLiveReadouts.get('m1')).toBeUndefined();
+  });
+
+  it('기즈모 드래그 중에는 루트를 건드리지 않고 내부 노드만 구동한다', () => {
+    const { root, arm } = mountModel('m1');
+    renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+    rigValueStore.set('m1/root-z', 3);
+    rigValueStore.set('m1/arm-rot', 30);
+    useActiveTransformStore.getState().begin();
+    root.position.z = 100; // 기즈모가 옮긴 값
+    frame();
+    expect(root.position.z).toBe(100);
+    expect(zDeg(arm)).toBeCloseTo(30, 6);
+    useActiveTransformStore.getState().end();
+    frame();
+    expect(root.position.z).toBeCloseTo(-2, 9);
   });
 });

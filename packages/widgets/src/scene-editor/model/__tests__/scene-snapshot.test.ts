@@ -28,7 +28,6 @@ function model(overrides: Partial<SavedModelInfo> = {}): SavedModelInfo {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    valueMapList: [],
     ...overrides,
   };
 }
@@ -152,15 +151,49 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     ).toBe(false);
   });
 
-  it('valueMapList는 scale/offset 기본값(1/0)을 채워 비교한다', () => {
+  it('tagMappings 는 id 기준 순서 무관, scale/offset 기본값(1/0)을 채워 비교한다', () => {
+    const a = {
+      id: 'm-a',
+      target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+      tagKey: 'k',
+    } as const;
+    const b = {
+      id: 'm-b',
+      target: { kind: 'joint', jointId: 'luff' },
+      tagKey: 'k2',
+    } as const;
     expect(
       isSceneInfoEqual(
-        scene({ models: [model({ valueMapList: [{ type: 'PX', key: 'k' }] })] }),
+        scene({ models: [model({ tagMappings: [a, b] })] }),
         scene({
-          models: [
-            model({ valueMapList: [{ type: 'PX', key: 'k', scale: 1, offset: 0 }] }),
-          ],
+          models: [model({ tagMappings: [{ ...b, offset: 0 }, { ...a, scale: 1 }] })],
         }),
+      ),
+    ).toBe(true);
+    // 대상(축)·태그·scale 변경은 감지
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, target: { ...a.target, axis: 'x' } }] })] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, tagKey: 'other' }] })] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: [a] })] }),
+        scene({ models: [model({ tagMappings: [{ ...a, scale: 2 }] })] }),
+      ),
+    ).toBe(false);
+    // 필드 없음 ≡ 빈 배열
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ tagMappings: undefined })] }),
+        scene({ models: [model({ tagMappings: [] })] }),
       ),
     ).toBe(true);
   });
@@ -308,7 +341,7 @@ describe('isSceneInfoEqual — 리깅', () => {
     ).toBe(true);
   });
 
-  it('관절 축·한계 변경과 모델 rigId/rigBindings 변경을 감지한다', () => {
+  it('관절 축·한계 변경과 모델 rigId 변경을 감지한다', () => {
     expect(
       isSceneInfoEqual(
         scene({ rigs: [rig()] }),
@@ -325,30 +358,5 @@ describe('isSceneInfoEqual — 리깅', () => {
         scene({ models: [model({ rigId: 'rig-1' })] }),
       ),
     ).toBe(false);
-    // 바인딩은 jointId 기준 순서 무관
-    expect(
-      isSceneInfoEqual(
-        scene({
-          models: [
-            model({
-              rigBindings: [
-                { jointId: 'a', key: 'k1' },
-                { jointId: 'b', key: 'k2', scale: 1 },
-              ],
-            }),
-          ],
-        }),
-        scene({
-          models: [
-            model({
-              rigBindings: [
-                { jointId: 'b', key: 'k2' },
-                { jointId: 'a', key: 'k1', offset: 0 },
-              ],
-            }),
-          ],
-        }),
-      ),
-    ).toBe(true);
   });
 });

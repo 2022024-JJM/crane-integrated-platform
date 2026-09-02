@@ -12,6 +12,8 @@ import {
 import {
   SceneHistoryControls,
   SceneTransformModeToggle,
+  useTagBindingSource,
+  useVirtualTagStore,
 } from '@crane/features/3d';
 import {
   AlertCircle,
@@ -31,6 +33,7 @@ import {
 } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { cn } from '@crane/core/lib/utils';
 import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
@@ -54,6 +57,7 @@ import {
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
+  PaletteVirtualTagSection,
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
@@ -134,12 +138,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedTextColor,
     selectedText,
     selectedMesh,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     createRigForSelectedModel,
     assignRigToSelectedModel,
     updateRig,
     removeRig,
-    updateSelectedRigBinding,
     selectPlacedNode,
     removeSelectedModel,
     duplicateSelectedObject,
@@ -178,8 +181,25 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     onAssignRig: assignRigToSelectedModel,
     onUpdateRig: updateRig,
     onRemoveRig: removeRig,
-    onBindingChange: updateSelectedRigBinding,
   };
+  const tagMappingHandlers = {
+    rigs: sceneInfo?.rigs ?? [],
+    onUpdate: updateSelectedTagMappings,
+  };
+
+  // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 켜진 동안만
+  // 태그 값 버스가 씬 맵핑을 거쳐 값 저장소로 흐르고, 끄면 노드가 rest 로
+  // 돌아간다. 화면을 떠날 때도 멈춘다(모니터링 뷰와 같은 규칙).
+  const isSimulating = useVirtualTagStore((s) => s.isRunning);
+  const pauseSimulation = useVirtualTagStore((s) => s.pause);
+  useTagBindingSource(sceneInfo, isSimulating);
+  useEffect(() => () => pauseSimulation(), [pauseSimulation]);
+  // 관리 페이지는 편집 화면의 형제 서브라우트(…/virtual-tags).
+  const { pathname } = useLocation();
+  const virtualTagsPath = pathname.replace(
+    /\/3d-viewer-edit(?:\/.*)?$/,
+    '/virtual-tags',
+  );
 
   // 계층 목록의 관절 배지용 — 모델별 관절 노드 경로 집합.
   const jointNodePathsByModel = useMemo(() => {
@@ -416,6 +436,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onLightingInteractionStart={startTransformInteraction}
                   onLightingInteractionEnd={endTransformInteraction}
                   onCollapse={() => setLeftCollapsed(true)}
+                  sceneInfo={sceneInfo}
+                  virtualTagsPath={virtualTagsPath}
                 />
               </aside>
             </ResizablePanel>
@@ -719,7 +741,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onTransformChange={updateSelectedTransform}
                         onTextContentChange={updateSelectedTextContent}
                         onTextColorChange={updateSelectedTextColor}
-                        onValueMapChange={updateSelectedValueMap}
+                        tagMapping={tagMappingHandlers}
                         rigging={riggingHandlers}
                       />
                     </div>
@@ -820,13 +842,14 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
  * 같은 층위의 탭으로 분리한다.
  */
-const PANEL_TABS = ['models', 'map', 'background'] as const;
+const PANEL_TABS = ['models', 'map', 'background', 'tags'] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
 const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   models: 'monitoring:editor.paletteTabs.models',
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
+  tags: 'monitoring:editor.paletteTabs.tags',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -862,9 +885,15 @@ function ProjectPalettePanel({
   onLightingInteractionStart,
   onLightingInteractionEnd,
   onCollapse,
+  sceneInfo,
+  virtualTagsPath,
 }: {
   items: SceneModelCatalogItem[];
   currentMap: SavedMapInfo | null;
+  /** 태그 탭 — 이 씬이 참조하는 태그 목록을 뽑는다. */
+  sceneInfo: SavedSceneInfo | null;
+  /** 가상 태그 관리 페이지 경로. */
+  virtualTagsPath: string;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   lighting: SavedLightingInfo | undefined;
@@ -947,6 +976,11 @@ function ProjectPalettePanel({
                 currentMap={currentMap}
                 onSelectMap={onSelectMap}
                 onToggleLock={onToggleLock}
+              />
+            ) : activeTab === 'tags' ? (
+              <PaletteVirtualTagSection
+                sceneInfo={sceneInfo}
+                managePath={virtualTagsPath}
               />
             ) : (
               <PaletteEnvironmentSection

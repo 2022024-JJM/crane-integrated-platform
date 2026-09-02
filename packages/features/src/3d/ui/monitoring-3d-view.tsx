@@ -24,6 +24,8 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { DOCK_SIZE_MAX, DOCK_SIZE_MIN } from '../lib/dock-storage';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneDock } from '../model/use-scene-dock';
+import { useTagBindingSource } from '../model/use-tag-binding-source';
+import { RigDriver } from './rig-driver';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -113,6 +115,9 @@ export function Monitoring3dView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, mode);
+  // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
+  // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
+  useTagBindingSource(sceneInfo, true);
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusStack = useObjectFocusStore((s) => s.focusStack);
@@ -279,6 +284,7 @@ export function Monitoring3dView({
           />
         </Suspense>
         <Suspense fallback={null}>
+          <RigDriver sceneInfo={sceneInfo} />
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}

@@ -18,7 +18,8 @@
     "./maintenance": "./src/maintenance/index.ts",
     "./inventory": "./src/inventory/index.ts",
     "./compliance": "./src/compliance/index.ts",
-    "./shared": "./src/shared/index.ts"
+    "./shared": "./src/shared/index.ts",
+    "./virtual-tag": "./src/virtual-tag/index.ts"
   },
   "scripts": {
     "test": "vitest run"

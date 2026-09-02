@@ -94,7 +94,8 @@
     "indoorshopLogistics": "Logistics",
     "indoorshopYard": "Yard Status",
     "indoorshopReference": "Reference",
-    "indoorshopDocs": "Documents"
+    "indoorshopDocs": "Documents",
+    "virtualTags": "Virtual Tags"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",

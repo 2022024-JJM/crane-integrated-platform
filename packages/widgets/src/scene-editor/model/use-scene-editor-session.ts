@@ -4,7 +4,6 @@ import {
   type SavedLightingInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
-  type ValueMapType,
 } from '@crane/domain/3d';
 import {
   makeMeshId,
@@ -71,7 +70,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  updateSelectedTagMappings: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedTagMappings'];
   createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['createRigForSelectedModel'];
@@ -80,9 +81,6 @@ interface UseSceneEditorSessionResult {
   >['assignRigToSelectedModel'];
   updateRig: ReturnType<typeof useSelectedSceneObjectEditor>['updateRig'];
   removeRig: ReturnType<typeof useSelectedSceneObjectEditor>['removeRig'];
-  updateSelectedRigBinding: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedRigBinding'];
   /** 계층 목록에서 GLB 서브노드(Group/Mesh)를 고른다 — 캔버스 더블클릭 drill-in 과 같은 선택. */
   selectPlacedNode: (modelId: string, nodePath: string) => void;
   removeSelectedModel: () => void;
@@ -184,7 +182,7 @@ export function useSceneEditorSession({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     selectedMap,
     setObjectLocked,
     removeSelectedModel,
@@ -192,7 +190,6 @@ export function useSceneEditorSession({
     assignRigToSelectedModel,
     updateRig,
     removeRig,
-    updateSelectedRigBinding,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
     updateSceneInfo: updateScene,
@@ -293,12 +290,11 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     createRigForSelectedModel,
     assignRigToSelectedModel,
     updateRig,
     removeRig,
-    updateSelectedRigBinding,
     selectPlacedNode,
     removeSelectedModel,
     updateMultiObjectTransforms,

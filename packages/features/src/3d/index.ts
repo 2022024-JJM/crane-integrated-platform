@@ -90,6 +90,31 @@ export {
   type RigModelReadout,
 } from './model/rig-live-readouts';
 export { clampJointValue } from './lib/apply-joint';
+export {
+  publishTagValue,
+  setTagIngest,
+  tagLiveValues,
+  type TagLiveValue,
+  type TagPublish,
+  type TagValueSource,
+} from './model/tag-value-bus';
+export { useTagBindingSource } from './model/use-tag-binding-source';
+export {
+  buildTagMappingIndex,
+  collectSceneTagKeys,
+  type TagMappingIndex,
+} from './lib/tag-mapping-index';
+export {
+  useVirtualTagStore,
+  VIRTUAL_TAGS_STORAGE_KEY,
+  type VirtualTagAddResult,
+  type VirtualTagDraft,
+} from './model/use-virtual-tag-store';
+export {
+  virtualTagRuntime,
+  virtualTagSource,
+} from './model/virtual-tag-runner';
+export { useTagCatalog, type TagCatalogEntry } from './model/use-tag-catalog';
 export { useUniformScaleStore } from './model/use-uniform-scale-store';
 export { useCraneIdFromFocusedModel } from './model/use-crane-id-from-focused-model';
 export {

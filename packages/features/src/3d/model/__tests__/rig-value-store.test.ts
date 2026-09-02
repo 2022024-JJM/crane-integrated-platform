@@ -98,8 +98,8 @@ describe('createTagBindingSource', () => {
     const source = createTagBindingSource((key) =>
       key === 'C_1:luff'
         ? [
-            { modelId: 'm', jointId: 'luff', scale: 0.5, offset: -10 },
-            { modelId: 'n', jointId: 'luff', scale: 1, offset: 0 },
+            { address: 'm/luff', scale: 0.5, offset: -10 },
+            { address: 'n/luff', scale: 1, offset: 0 },
           ]
         : [],
     );

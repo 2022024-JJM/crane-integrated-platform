@@ -145,8 +145,8 @@ apps/{site}/src/pages/{page}/
 - 모든 route element 는 `lazy()` + `LazyRoute`(Suspense + `RouteErrorBoundary`) 로 감싼다.
 - `login` 을 제외한 전부가 `ProtectedRoute` 하위이고, 그 안에 `AppLayout` 이 있다.
 - 현장 작업 화면은 `outdoor-work` / `indoor-work` / `goliath-work` 세 갈래이고, 모두 `:regionId/*` 형태로 `RegionGuard` 하위에 있다. 서브라우트는 `<Route>` 가 아니라 페이지 컴포넌트 안에서 `useParams` 의 `'*'` 를 문자열 비교해 분기한다. 서브라우트가 없으면 각자 `3d-monitoring` 으로 redirect 된다.
-- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다.
-- `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를 사용하며 세 화면이 공유한다.
+- 공통 서브라우트: `3d-monitoring`, `3d-viewer-edit`, `virtual-tags`, `crane-status`, `work-history`, `alarm-history`, `3d-replay`. `goliath-work` 는 여기에 `vision`, `cabin-monitoring` 을 더 가진다.
+- `3d-viewer-edit` 는 `@crane/widgets` 의 scene editor 를, `virtual-tags` 는 `@crane/widgets/virtual-tags` 의 가상 태그 관리 페이지를 사용하며 세 화면이 공유한다. 가상 태그 목록은 region 무관 전역이다.
 - `BrowserRouter` 의 basename 은 `import.meta.env.BASE_URL` 에서 온다 (sub-path 배포 `/crane_rnd/`).
 
 ## FSD Import Rules
@@ -184,6 +184,13 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 리깅 스키마(관절·구속조건·바인딩) / 방어 | `packages/domain/src/3d/model/rig-types.ts`, `packages/domain/src/3d/lib/sanitize-rig.ts` |
 | 리깅 런타임(값 저장소·드라이버) | `packages/features/src/3d/model/{rig-value-store,use-rig-driver,rig-live-readouts}.ts`, `packages/features/src/3d/lib/{apply-joint,smooth-damp}.ts` |
 | 리깅 편집 UI | `packages/widgets/src/3d/ui/rigging-section.tsx`(인스펙터 탭), `packages/widgets/src/3d/lib/model-node-tree.ts`(계층 목록 노드 트리) |
+| 태그 맵핑 스키마 / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts` |
+| 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `lib/tag-mapping-index.ts`, `model/use-tag-binding-source.ts` |
+| 가상 태그 정의·파형·방어 | `packages/domain/src/virtual-tag/` (`model/types.ts`, `lib/{tag-pattern,sanitize-virtual-tags}.ts`) |
+| 가상 태그 스토어(localStorage `crane:virtual-tags`)·러너·카탈로그 | `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner,use-tag-catalog}.ts` |
+| 태그 맵핑 편집 UI | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`(인스펙터 탭), `tag-key-combobox.tsx`, `lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상), 팔레트 "태그" 탭 `palette-virtual-tag-section.tsx` |
+| 가상 태그 관리 페이지 | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx`, JSON 내보내기/가져오기 `lib/virtual-tag-file.ts` |
+| 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx` (base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
 | 모니터링 씬 독(dock: hover 펼침·고정 레일/패널) | 껍데기 `packages/ui/src/organisms/scene-dock.tsx`(완전 제어형, 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`), 상태·영속화 `packages/features/src/3d/model/use-scene-dock.ts` + `lib/{dock-hover-state,dock-storage}.ts`(순수 리듀서, 테스트 대상). 조립은 `Monitoring3dView` 의 `toolbarLayout="dock"` + `dockPanels` |
 
 ## packages/ui 구조 (Atomic Design)
@@ -236,8 +243,12 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
   - 절차 전문은 `assets-src/README.md`, 파이프라인 상세는 `docs/지도-GLB-최적화-파이프라인.md` 와 `docs/GLB-압축-파이프라인-작업보고.md` 에 있다.
 - 모델 팔레트 미리보기는 정적 썸네일(`apps/shell/public/previews/{catalogId}.png`)을 먼저 쓰고, 없으면 런타임 offscreen WebGL 렌더로 폴백한다. `sceneModelCatalog` 항목을 추가·교체하거나 미리보기 렌더 룩(`packages/widgets/src/3d/lib/offscreen-preview-renderer.ts`)을 바꾸면 dev 서버의 씬 편집 페이지 모델 탭에서 썸네일 버튼(dev 전용 토글)으로 썸네일을 재생성해 `public/previews/` 를 함께 커밋한다. 썸네일은 투명 배경 PNG 로 테마 중립이어야 한다 — 씬에 배경·바닥판을 굽지 않는다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간에 미치는 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다** (2026-09-01 에 관련 작업과 계획 문서를 폐기했다).
-- **리깅(관절 연동)** 은 태그 맵핑과 두 계층으로 나뉜다. 정의(`RigDefinition`: 관절 `hinge|slide` + 구속조건 `linear` = "출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로. 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다)는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 와 서버 태그 바인딩 `rigBindings` 만 가진다. 관절 값은 **항상 rest pose 기준 Δ** 이며 `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다 — `rotation.x = θ` 절대 대입은 Blender Empty 의 비항등 rest 를 파괴하므로 금지. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로다.
-  - 값 소스는 `JointValueSource` 하나로 통한다. 에디터는 `manualJointSource`(슬라이더, 씬 데이터·히스토리에 남지 않음)만 켜고, 서버 연동 단계는 `createTagBindingSource` 를 `setRigTagIngest` 에 걸어 `applyValue` 버스에서 받으면 된다(2026-09-02 기준 미연결). 모니터링 뷰에는 아직 `RigDriver` 를 두지 않았다.
+- **태그 맵핑(`tagMappings[]`)** 은 "서버(PLC) 태그 값 하나 → 트랜스폼 채널 하나" 의 목록이다(모델 인스턴스 필드). 대상은 `{kind:'node', node, channel:position|rotation|scale, axis}`(`node: ''` = 모델 루트) 또는 `{kind:'joint', jointId}`(할당된 리그의 관절) 이고, 태그는 `tagKey` 문자열(`${craneId}:${tagCode}` 공간)로만 참조한다. 적용 공식은 `offset + value × scale` 을 **rest 기준 Δ** 로 더하는 것 — 루트의 rest 는 씬 배치 transform, 내부 노드는 GLTF rest 다. 같은 대상 중복은 sanitize 가 첫 항목만 남기고(first-wins), 리그 관절이 점유한 노드·축은 드라이버가 관절을 우선한다. UI 는 둘 다 amber 로 경고한다(`tag-mapping-editor.ts`).
+  - 레거시 `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 `tagMappings` 로 변환하고 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` (테스트가 좌표 동일성을 고정). 두 필드는 타입에 `@deprecated` 입력 전용으로만 남아 있다.
+  - 값 흐름: 생산자(가상 태그 러너 / WebSocket 러너 / 리플레이) → `publishTagValue(key, v)` (`tag-value-bus.ts`, 표시용 `tagLiveValues` 캐시) → `useTagBindingSource` 가 건 `createTagBindingSource(resolve)` → `rigValueStore`(smooth) → `useRigDriver`(Canvas 안 `RigDriver`) 가 매 프레임 노드별로 rest 로 되돌린 뒤 채널 Δ 를 누적(`apply-channel.ts`). 모니터링 뷰는 항상 켜고, 에디터는 팔레트 "태그" 탭의 시뮬레이션 재생 토글이 켠다(꺼지면 값 저장소를 비워 rest 복귀). 기즈모 드래그 중엔 루트 맵핑을 건너뛴다.
+  - **가상 태그**(`@crane/domain/virtual-tag`)는 서버 없이 태그 값을 만드는 정의다(`key`·범위·`initial`·`pattern`: manual|triangle|sine|sawtooth|square|random-walk(시드 고정)). 전역 스토어 `useVirtualTagStore` 가 localStorage `crane:virtual-tags` 봉투(`{version:1,tickMs,tags}`)로 영속화하고, `virtualTagRuntime`(모듈 전역 `setInterval`, Canvas 불필요)이 틱마다 버스로 내보낸다. 모니터링 `mode='simulation'` 이 이 재생을 켠다. 콤보박스 목록은 `useTagCatalog` 하나를 본다 — 실서버가 붙으면 여기에 `getMonitoringTags()` 결과를 `source:'server'` 로 합치고 WebSocket 러너를 켜면 되며, 씬 JSON·맵핑 UI·드라이버는 무변경이다.
+- **리깅(관절 연동)** 은 정의(`RigDefinition`: 관절 `hinge|slide` + 구속조건 `linear` = "출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로. 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다)가 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 만 가진다(관절 ← 태그는 위 `tagMappings` 의 joint 대상). 관절 값은 **항상 rest pose 기준 Δ** 이며 `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다 — `rotation.x = θ` 절대 대입은 Blender Empty 의 비항등 rest 를 파괴하므로 금지. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로다.
+  - 값 소스는 `JointValueSource` 하나로 통한다. 에디터 슬라이더는 `manualJointSource`(씬 데이터·히스토리에 남지 않음), 태그는 `createTagBindingSource`(위 값 흐름). 시뮬레이션 재생 중 태그가 꽂힌 관절의 슬라이더는 잠긴다.
   - 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본으로 교체됐고(루트 scale 을 `unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1), 나머지 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
   - 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
 - **모델 안쪽 노드(계층 목록의 자식, 뷰포트 더블클릭 drill-in)는 읽기 전용**이다. 선택하면 그 노드에 맞는 바운딩 박스만 그리고, 인스펙터는 안내 문구만 보이며 기즈모는 붙지 않는다. 노드 선택은 항상 단일 선택(Ctrl 토글 없음). 박스 점은 `packages/domain/src/3d/lib/selection-bounding-box.ts` 가 마운트 대상의 로컬 좌표로 계산하고, 노드 박스는 `createPortal` 로 노드 자식에 마운트해 리그·기즈모 움직임을 씬 그래프 상속으로 따라간다(포털은 `target.uuid` key 로 재마운트해야 한다 — R3F `Portal` 이 컨테이너 교체 시 이전 노드에 붙이는 문제가 있다, 파일 주석 참고). 저장 씬의 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 새로 만들지 않는다.
@@ -251,6 +262,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - `GLB-압축-파이프라인-작업보고.md`, `지도-GLB-최적화-파이프라인.md` — 자산 최적화 파이프라인 상세
 - `골리앗-충돌방지-센서연동-계획.md` — 충돌 감지의 시뮬레이션 → 실물 센서 교체 계획
 - `전체-코드베이스-개선-목록.md` — 2026-07-07 시점 목록, **미착수**
+- `가상태그-시뮬레이션-태그맵핑-작업보고.md` — 2026-09-02 태그 맵핑 통합(`tagMappings`)·가상 태그 시뮬레이션 도입 경위와 남은 일
 - `MRO-*`, `hmi-mvp-poc.md` — 기능별 결과 보고서
 
 ## Known Caveats

@@ -94,7 +94,8 @@
     "indoorshopLogistics": "Logistics",
     "indoorshopYard": "Yard Status",
     "indoorshopReference": "Reference",
-    "indoorshopDocs": "Documents"
+    "indoorshopDocs": "Documents",
+    "virtualTags": "Tags Ficta"
   },
   "phillyDashboard": {
     "subtitle": "Accede celeriter ad menus administrationis MRO.",
