@@ -18,11 +18,11 @@ export interface TagCatalogEntry {
 }
 
 export function useTagCatalog(): TagCatalogEntry[] {
-  const hydrate = useVirtualTagStore((s) => s.hydrate);
+  const load = useVirtualTagStore((s) => s.load);
   const tags = useVirtualTagStore((s) => s.tags);
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    void load();
+  }, [load]);
   return useMemo(
     () =>
       tags.map((t) => ({

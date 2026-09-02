@@ -14,6 +14,15 @@ import {
 const DEV_SCENE_API_PATH = '/__dev/scene';
 
 /**
+ * 가상 태그 저장 미들웨어 경로·파일. 브라우저 쪽 상수는
+ * packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts 에 있다 — 그 슬라이스는
+ * import.meta 를 쓰는 모듈을 끌고 와 Node 설정 파일에서 import 할 수 없어
+ * 문자열을 여기 한 번 더 둔다. 한쪽을 바꾸면 다른 쪽도 함께 바꾼다.
+ */
+const DEV_VIRTUAL_TAGS_API_PATH = '/__dev/virtual-tags';
+const VIRTUAL_TAGS_PUBLIC_FILE = ['simulation', 'virtual-tags.json'];
+
+/**
  * region→파일 표는 도메인 패키지와 공유한다(scene-file-map). 예전에는 이
  * 파일에 표가 복붙돼 있었는데, 한쪽만 고치면 저장과 로드가 다른 파일을
  * 가리키게 되어 씬이 조용히 파괴된다.
@@ -89,7 +98,9 @@ function devSceneSavePlugin(): Plugin {
 
         const sceneFileName = getSceneFileNameByRegionId(regionId);
         if (!sceneFileName) {
-          jsonResponse(res, 400, { message: `Unknown regionId: "${regionId}"` });
+          jsonResponse(res, 400, {
+            message: `Unknown regionId: "${regionId}"`,
+          });
           return;
         }
 
@@ -126,6 +137,60 @@ function devSceneSavePlugin(): Plugin {
           });
         }
       });
+    },
+  };
+}
+
+/** 가상 태그 세트의 최소 형태 — 객체이고 tags 가 배열. 정규화는 브라우저가 한다. */
+function isVirtualTagSetShaped(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Array.isArray((value as Record<string, unknown>).tags);
+}
+
+function devVirtualTagsSavePlugin(): Plugin {
+  return {
+    name: 'dev-virtual-tags-save-plugin',
+    configureServer(server) {
+      server.middlewares.use(
+        DEV_VIRTUAL_TAGS_API_PATH,
+        async (req, res, next) => {
+          if (req.method !== 'POST') {
+            next();
+            return;
+          }
+
+          const filePath = path.resolve(
+            server.config.root,
+            'public',
+            ...VIRTUAL_TAGS_PUBLIC_FILE,
+          );
+
+          try {
+            const body = JSON.parse(await readRequestBody(req));
+            if (!isVirtualTagSetShaped(body)) {
+              jsonResponse(res, 400, {
+                message:
+                  'Invalid virtual tag payload: expected an object with a "tags" array.',
+              });
+              return;
+            }
+            await fs.mkdir(path.dirname(filePath), { recursive: true });
+            await fs.writeFile(
+              filePath,
+              `${JSON.stringify(body, null, 2)}\n`,
+              'utf8',
+            );
+            jsonResponse(res, 200, body);
+          } catch (error) {
+            console.error('Failed to save virtual tags file.', error);
+            jsonResponse(res, 500, {
+              message: 'Failed to save virtual tags file.',
+            });
+          }
+        },
+      );
     },
   };
 }
@@ -264,6 +329,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       devSceneSavePlugin(),
+      devVirtualTagsSavePlugin(),
       devPreviewSavePlugin(),
       assetHashManifestPlugin(),
     ],

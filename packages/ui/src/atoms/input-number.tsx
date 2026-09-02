@@ -8,6 +8,7 @@ import {
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../molecules/tooltip';
 
 /**
  * 숫자 입력 — 네이티브 `type="number"` 대신 쓴다.
@@ -27,6 +28,10 @@ import { cn } from '@crane/core/lib/utils';
  *   1px 작아 보인다.
  * - 마우스 휠로는 값이 바뀌지 않는다. 방향키(↑/↓) step 은 유지.
  * - 타이핑은 blur/Enter 에 commit, Escape 는 되돌린다.
+ * - `editPreview` 를 켜면 **편집 중(포커스 + 타이핑 시작)** 입력창 위에 툴팁으로
+ *   입력 문자열 전체와 단위를 크게 보여 준다. 좁은 필드(인스펙터 h-6·11px)에서
+ *   글자가 잘려 무엇을 치는지 알 수 없는 문제의 답이다. 포커스만으로는 뜨지
+ *   않고(draft 없음), 범위 밖 값이면 실제 commit 될 clamp 결과를 함께 적는다.
  */
 
 /** 누르고 있을 때 반복 시작까지의 지연·간격(ms). */
@@ -74,6 +79,24 @@ interface InputNumberProps extends Omit<
   format?: (value: number) => string;
   /** 내부 <input>에 병합할 클래스. className은 래퍼 div로 가므로 별도 prop. */
   inputClassName?: string;
+  /** 편집 중(포커스 + 입력 있음) 입력창 위에 전체 값을 툴팁으로 띄운다. 좁은 필드용. */
+  editPreview?: boolean;
+  /** 미리보기 뒤에 붙일 단위 문자열(°, m 등). editPreview 일 때만 쓰인다. */
+  unit?: string;
+}
+
+/**
+ * 편집 중 미리보기 문구. draft 는 친 그대로('' / '-' 포함) 보여 주고, 유한수인데
+ * clamp 로 값이 바뀌면 commit 될 값을 뒤에 덧붙인다.
+ */
+function previewParts(
+  draft: string,
+  clamp: (v: number) => number,
+): { typed: string; clamped: number | null } {
+  const parsed = parseFloat(draft);
+  if (!Number.isFinite(parsed)) return { typed: draft, clamped: null };
+  const clamped = clamp(parsed);
+  return { typed: draft, clamped: clamped === parsed ? null : clamped };
 }
 
 function InputNumber({
@@ -86,6 +109,8 @@ function InputNumber({
   format,
   className,
   inputClassName,
+  editPreview = false,
+  unit,
   onFocus,
   onBlur,
   onKeyDown,
@@ -197,14 +222,14 @@ function InputNumber({
   const stepButtonClassName =
     'flex cursor-pointer items-center justify-center px-1 text-white/40 transition-colors select-none hover:bg-white/5 hover:text-white/80';
 
-  return (
-    <div
-      className={cn(
-        'group border-border bg-background focus-within:border-ring focus-within:ring-ring/50 relative flex overflow-hidden rounded-lg border transition-colors focus-within:ring-3',
-        disabled && 'opacity-50',
-        className,
-      )}
-    >
+  const wrapperClassName = cn(
+    'group border-border bg-background focus-within:border-ring focus-within:ring-ring/50 relative flex overflow-hidden rounded-lg border transition-colors focus-within:ring-3',
+    disabled && 'opacity-50',
+    className,
+  );
+
+  const field = (
+    <>
       <input
         ref={inputRef}
         type="text"
@@ -272,7 +297,38 @@ function InputNumber({
           </button>
         </div>
       ) : null}
-    </div>
+    </>
+  );
+
+  if (!editPreview) {
+    return <div className={wrapperClassName}>{field}</div>;
+  }
+
+  // 제어형 open — 호버로는 열지 않고 편집 중에만 연다. Trigger 는 래퍼 div 를
+  // 그대로 앵커로 쓰고, Content 는 포털이라 overflow-hidden·스크롤 영역에
+  // 잘리지 않는다.
+  const preview = draft === null ? null : previewParts(draft, clamp);
+  return (
+    <Tooltip open={focused && preview !== null}>
+      <TooltipTrigger render={<div className={wrapperClassName} />}>
+        {field}
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        className="gap-1 px-2.5 py-1 text-sm font-medium tabular-nums"
+      >
+        <span>
+          {preview?.typed}
+          {unit}
+        </span>
+        {preview?.clamped != null ? (
+          <span className="text-background/60 font-normal">
+            → {preview.clamped}
+            {unit}
+          </span>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -246,8 +246,6 @@
     "pause": "일시정지",
     "resetValues": "값 초기화",
     "tick": "갱신 주기(ms)",
-    "import": "가져오기",
-    "export": "내보내기",
     "add": "새 태그",
     "columns": {
       "enabled": "사용",
@@ -270,17 +268,16 @@
     },
     "duplicate": "복제",
     "remove": "삭제",
-    "empty": "가상 태그가 없습니다. \"새 태그\"로 만들거나 JSON을 가져오세요.",
+    "empty": "가상 태그가 없습니다. \"새 태그\"로 만드세요.",
     "errors": {
       "invalid-key": "키는 비울 수 없고 64자 이하여야 합니다.",
       "duplicate-key": "같은 키의 태그가 이미 있습니다.",
-      "limit": "태그는 최대 {{max}}개까지 만들 수 있습니다.",
-      "import": "JSON을 읽을 수 없습니다."
+      "limit": "태그는 최대 {{max}}개까지 만들 수 있습니다."
     },
     "newKey": "C_1:tag",
-    "importedCount": "{{count}}개 태그를 가져왔습니다.",
     "count": "{{count}} / {{max}}",
     "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
-    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)"
+    "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
+    "save": "저장"
   }
 }

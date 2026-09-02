@@ -33,14 +33,14 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
 }: PaletteVirtualTagSectionProps) {
   const { t } = useTranslation();
   useRigLivePoll();
-  const hydrate = useVirtualTagStore((s) => s.hydrate);
+  const load = useVirtualTagStore((s) => s.load);
   const tags = useVirtualTagStore((s) => s.tags);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
   const start = useVirtualTagStore((s) => s.start);
   const pause = useVirtualTagStore((s) => s.pause);
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    void load();
+  }, [load]);
 
   const sceneKeys = useMemo(() => collectSceneTagKeys(sceneInfo), [sceneInfo]);
   const tagByKey = useMemo(() => new Map(tags.map((tag) => [tag.key, tag])), [tags]);

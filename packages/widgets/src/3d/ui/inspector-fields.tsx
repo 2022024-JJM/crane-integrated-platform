@@ -107,12 +107,16 @@ export function AxisSegment({
   );
 }
 
-/** 네이티브 number 입력 대신 테마 스테퍼가 있는 InputNumber. 비우면 undefined. */
+/**
+ * 네이티브 number 입력 대신 테마 스테퍼가 있는 InputNumber. 비우면 undefined.
+ * 인스펙터 필드는 전부 좁아서 편집 중 미리보기 툴팁을 항상 켠다.
+ */
 export function NumberField({
   value,
   placeholder,
   onChange,
   step = 0.1,
+  unit,
   className,
   disabled,
 }: {
@@ -120,6 +124,8 @@ export function NumberField({
   placeholder?: string;
   onChange: (value: number | undefined) => void;
   step?: number;
+  /** 편집 중 미리보기에 붙일 단위 */
+  unit?: string;
   className?: string;
   disabled?: boolean;
 }) {
@@ -129,6 +135,8 @@ export function NumberField({
       step={step}
       placeholder={placeholder}
       disabled={disabled}
+      editPreview
+      unit={unit}
       className={cn(NUMBER_WRAPPER, className)}
       inputClassName={NUMBER_INPUT}
       onChange={(next) => onChange(next)}

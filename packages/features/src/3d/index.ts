@@ -105,8 +105,8 @@ export {
   type TagMappingIndex,
 } from './lib/tag-mapping-index';
 export {
+  resetVirtualTagLoadState,
   useVirtualTagStore,
-  VIRTUAL_TAGS_STORAGE_KEY,
   type VirtualTagAddResult,
   type VirtualTagDraft,
 } from './model/use-virtual-tag-store';

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "tickMs": 100,
+  "tags": [
+    {
+      "id": "gc04-gantry-travel",
+      "key": "GC_04:gantry_position",
+      "name": "GC-04 주행(직선 이동)",
+      "unit": "m",
+      "min": 0,
+      "max": 300,
+      "initial": 0,
+      "pattern": { "kind": "triangle", "periodMs": 120000 },
+      "enabled": true
+    },
+    {
+      "id": "gc04-trolley-traverse",
+      "key": "GC_04:trolley_position",
+      "name": "GC-04 트롤리 횡행",
+      "unit": "m",
+      "min": 0,
+      "max": 150,
+      "initial": 75,
+      "pattern": { "kind": "triangle", "periodMs": 60000 },
+      "enabled": true
+    },
+    {
+      "id": "llc002-luffing",
+      "key": "LLC_002:luff_angle",
+      "name": "LLC-002 러핑 각도",
+      "unit": "deg",
+      "min": -32,
+      "max": 11.75,
+      "initial": -10,
+      "pattern": { "kind": "sine", "periodMs": 30000 },
+      "enabled": true
+    },
+    {
+      "id": "llc002-slew",
+      "key": "LLC_002:slew_angle",
+      "name": "LLC-002 상체 선회",
+      "unit": "deg",
+      "min": 0,
+      "max": 360,
+      "initial": 0,
+      "pattern": { "kind": "sawtooth", "periodMs": 90000 },
+      "enabled": true
+    },
+    {
+      "id": "llc002-gantry-travel",
+      "key": "LLC_002:gantry_position",
+      "name": "LLC-002 주행(직선 이동)",
+      "unit": "m",
+      "min": 0,
+      "max": 200,
+      "initial": 0,
+      "pattern": { "kind": "triangle", "periodMs": 90000 },
+      "enabled": true
+    }
+  ]
+}

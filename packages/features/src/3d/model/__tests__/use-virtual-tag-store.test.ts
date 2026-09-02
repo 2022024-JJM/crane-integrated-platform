@@ -1,34 +1,58 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { VIRTUAL_TAGS_MAX } from '@crane/domain/virtual-tag';
 import {
+  VIRTUAL_TAGS_MAX,
+  type VirtualTagSet,
+} from '@crane/domain/virtual-tag';
+import {
+  resetVirtualTagLoadState,
   useVirtualTagStore,
-  VIRTUAL_TAGS_STORAGE_KEY,
 } from '../use-virtual-tag-store';
 import { virtualTagRuntime } from '../virtual-tag-runner';
 import { setTagIngest, tagLiveValues } from '../tag-value-bus';
 
+/**
+ * 영속화 어댑터(virtual-tag-storage)는 도메인에서 따로 테스트한다 — 여기서는
+ * mock 으로 "무엇을 넘기고 결과를 어떻게 반영하는가" 만 본다.
+ */
+const storage = vi.hoisted(() => ({
+  load: vi.fn<() => Promise<VirtualTagSet>>(),
+  save: vi.fn<(set: VirtualTagSet) => Promise<VirtualTagSet>>(),
+}));
+
+vi.mock('@crane/domain/virtual-tag', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@crane/domain/virtual-tag')>();
+  return {
+    ...actual,
+    loadVirtualTagSet: storage.load,
+    saveVirtualTagSet: storage.save,
+  };
+});
+
 const received = new Map<string, number[]>();
+const EMPTY: VirtualTagSet = { version: 1, tickMs: 100, tags: [] };
 
 function reset() {
   useVirtualTagStore.getState().pause();
   useVirtualTagStore.setState({
     tags: [],
     tickMs: 100,
+    savedSnapshot: JSON.stringify(EMPTY),
     hydrated: false,
+    isSaving: false,
     isRunning: false,
   });
+  resetVirtualTagLoadState();
   virtualTagRuntime.syncDefinitions([]);
   // 러너는 싱글턴이라 누적 재생 시간(elapsed)이 테스트 사이에 남는다.
   virtualTagRuntime.resetValues();
   received.clear();
   tagLiveValues.clear();
-  window.localStorage.clear();
-}
-
-function stored(): unknown {
-  const raw = window.localStorage.getItem(VIRTUAL_TAGS_STORAGE_KEY);
-  return raw ? JSON.parse(raw) : null;
+  storage.load.mockReset();
+  storage.save.mockReset();
+  storage.load.mockResolvedValue(EMPTY);
+  storage.save.mockImplementation((set) => Promise.resolve(set));
 }
 
 beforeEach(() => {
@@ -50,42 +74,74 @@ afterEach(() => {
 
 const store = () => useVirtualTagStore.getState();
 
-describe('hydrate', () => {
-  it('저장소가 비면 빈 목록, 두 번 불러도 한 번만 읽는다', () => {
-    store().hydrate();
-    expect(store().tags).toEqual([]);
-    expect(store().hydrated).toBe(true);
-    window.localStorage.setItem(
-      VIRTUAL_TAGS_STORAGE_KEY,
-      JSON.stringify({ version: 1, tickMs: 50, tags: [] }),
-    );
-    store().hydrate();
-    expect(store().tickMs).toBe(100);
-  });
-
-  it('손상 JSON·손상 항목은 조용히 버리고 유효 항목만 읽는다', () => {
-    window.localStorage.setItem(VIRTUAL_TAGS_STORAGE_KEY, '{not json');
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    store().hydrate();
-    expect(store().tags).toEqual([]);
-
-    useVirtualTagStore.setState({ hydrated: false });
-    window.localStorage.setItem(
-      VIRTUAL_TAGS_STORAGE_KEY,
-      JSON.stringify({
-        version: 1,
-        tickMs: 250,
-        tags: [
-          { id: 'a', key: 'C_1:x', min: 0, max: 10, initial: 5, pattern: { kind: 'manual' }, enabled: true },
-          { id: 'b', key: '', min: 0, max: 10 },
-          'garbage',
-        ],
-      }),
-    );
-    store().hydrate();
+describe('load / save / isDirty', () => {
+  it('load 는 한 번만 읽고 스냅샷을 잡는다 — 직후는 dirty 아님', async () => {
+    const loaded: VirtualTagSet = {
+      version: 1,
+      tickMs: 250,
+      tags: [
+        {
+          id: 'a',
+          key: 'C_1:x',
+          name: '',
+          min: 0,
+          max: 10,
+          initial: 5,
+          pattern: { kind: 'manual' },
+          enabled: true,
+        },
+      ],
+    };
+    storage.load.mockResolvedValue(loaded);
+    await Promise.all([store().load(), store().load()]);
+    await store().load();
+    expect(storage.load).toHaveBeenCalledTimes(1);
     expect(store().tags.map((t) => t.id)).toEqual(['a']);
     expect(store().tickMs).toBe(250);
+    expect(store().isDirty()).toBe(false);
     expect(virtualTagRuntime.getValue('a')).toBe(5);
+  });
+
+  it('load 실패는 빈 세트로 시작하되 hydrated 를 세운다', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    storage.load.mockRejectedValue(new Error('404'));
+    await store().load();
+    expect(store().hydrated).toBe(true);
+    expect(store().tags).toEqual([]);
+  });
+
+  it('편집은 저장하지 않고 dirty 만 세운다. save 가 스냅샷을 갱신한다', async () => {
+    await store().load();
+    store().addTag({ key: 'a' });
+    expect(storage.save).not.toHaveBeenCalled();
+    expect(store().isDirty()).toBe(true);
+    expect(await store().save()).toBe(true);
+    expect(storage.save).toHaveBeenCalledWith(
+      expect.objectContaining({ version: 1, tickMs: 100 }),
+    );
+    expect(store().isDirty()).toBe(false);
+    store().setTickMs(200);
+    expect(store().isDirty()).toBe(true);
+  });
+
+  it('save 응답(정규화된 세트)을 상태에 반영한다', async () => {
+    store().addTag({ key: 'a' });
+    storage.save.mockImplementation((set) =>
+      Promise.resolve({ ...set, tickMs: 16 }),
+    );
+    await store().save();
+    expect(store().tickMs).toBe(16);
+    expect(store().isDirty()).toBe(false);
+  });
+
+  it('save 실패는 false 이고 메모리 상태·dirty 를 유지한다', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    store().addTag({ key: 'a' });
+    storage.save.mockRejectedValue(new Error('500'));
+    expect(await store().save()).toBe(false);
+    expect(store().tags).toHaveLength(1);
+    expect(store().isDirty()).toBe(true);
+    expect(store().isSaving).toBe(false);
   });
 });
 
@@ -93,12 +149,22 @@ describe('addTag / updateTag / removeTag / duplicateTag', () => {
   it('추가하면 저장되고, 빈 키·중복 키·상한 초과는 거부한다', () => {
     const ok = store().addTag({ key: ' C_1:x ', min: 0, max: 10 });
     expect(ok.ok).toBe(true);
-    expect(store().tags[0]).toMatchObject({ key: 'C_1:x', min: 0, max: 10, enabled: true });
+    expect(store().tags[0]).toMatchObject({
+      key: 'C_1:x',
+      min: 0,
+      max: 10,
+      enabled: true,
+    });
     expect(store().tags[0].pattern.kind).toBe('triangle');
-    expect((stored() as { tags: unknown[] }).tags).toHaveLength(1);
 
-    expect(store().addTag({ key: '  ' })).toEqual({ ok: false, reason: 'invalid-key' });
-    expect(store().addTag({ key: 'C_1:x' })).toEqual({ ok: false, reason: 'duplicate-key' });
+    expect(store().addTag({ key: '  ' })).toEqual({
+      ok: false,
+      reason: 'invalid-key',
+    });
+    expect(store().addTag({ key: 'C_1:x' })).toEqual({
+      ok: false,
+      reason: 'duplicate-key',
+    });
     expect(store().tags).toHaveLength(1);
   });
 
@@ -106,7 +172,10 @@ describe('addTag / updateTag / removeTag / duplicateTag', () => {
     for (let i = 0; i < VIRTUAL_TAGS_MAX; i++) {
       expect(store().addTag({ key: `k${i}` }).ok).toBe(true);
     }
-    expect(store().addTag({ key: 'one-more' })).toEqual({ ok: false, reason: 'limit' });
+    expect(store().addTag({ key: 'one-more' })).toEqual({
+      ok: false,
+      reason: 'limit',
+    });
     expect(store().tags).toHaveLength(VIRTUAL_TAGS_MAX);
   });
 
@@ -117,20 +186,32 @@ describe('addTag / updateTag / removeTag / duplicateTag', () => {
     const before = store().tags;
     expect(store().updateTag(a.id, { key: 'b', name: 'renamed' })).toBe(false);
     expect(store().tags).toBe(before);
-    expect(store().updateTag(a.id, { key: 'a', name: 'renamed', max: 50 })).toBe(true);
-    expect(store().tags[0]).toMatchObject({ key: 'a', name: 'renamed', max: 50 });
+    expect(
+      store().updateTag(a.id, { key: 'a', name: 'renamed', max: 50 }),
+    ).toBe(true);
+    expect(store().tags[0]).toMatchObject({
+      key: 'a',
+      name: 'renamed',
+      max: 50,
+    });
     expect(store().updateTag('missing', { name: 'x' })).toBe(false);
   });
 
   it('updateTag: 범위를 줄이면 런타임 값이 새 범위로 다시 잡힌다', () => {
-    const a = store().addTag({ key: 'a', min: 0, max: 100, initial: 80, pattern: { kind: 'manual' } });
+    const a = store().addTag({
+      key: 'a',
+      min: 0,
+      max: 100,
+      initial: 80,
+      pattern: { kind: 'manual' },
+    });
     if (!a.ok) throw new Error('add failed');
     expect(virtualTagRuntime.getValue(a.id)).toBe(80);
     store().updateTag(a.id, { max: 50 });
     expect(virtualTagRuntime.getValue(a.id)).toBe(50);
   });
 
-  it('removeTag: 없는 id 는 상태 참조 유지, 있으면 저장소·런타임에서도 사라진다', () => {
+  it('removeTag: 없는 id 는 상태 참조 유지, 있으면 런타임에서도 사라진다', () => {
     const a = store().addTag({ key: 'a' });
     if (!a.ok) throw new Error('add failed');
     const before = store().tags;
@@ -138,7 +219,6 @@ describe('addTag / updateTag / removeTag / duplicateTag', () => {
     expect(store().tags).toBe(before);
     store().removeTag(a.id);
     expect(store().tags).toEqual([]);
-    expect((stored() as { tags: unknown[] }).tags).toEqual([]);
     expect(virtualTagRuntime.getValue(a.id)).toBeUndefined();
   });
 
@@ -147,34 +227,35 @@ describe('addTag / updateTag / removeTag / duplicateTag', () => {
     if (!a.ok) throw new Error('add failed');
     const dup = store().duplicateTag(a.id);
     expect(dup.ok).toBe(true);
-    expect(store().tags[1]).toMatchObject({ key: 'a_2', name: 'A', min: 1, max: 9 });
+    expect(store().tags[1]).toMatchObject({
+      key: 'a_2',
+      name: 'A',
+      min: 1,
+      max: 9,
+    });
     store().duplicateTag(a.id);
     expect(store().tags[2].key).toBe('a_3');
     expect(store().duplicateTag('missing').ok).toBe(false);
   });
 
-  it('setTickMs 는 클램프하고 같은 값이면 저장하지 않는다', () => {
+  it('setTickMs 는 클램프하고 같은 값이면 상태 참조를 유지한다', () => {
     store().setTickMs(5);
     expect(store().tickMs).toBe(16);
-    window.localStorage.clear();
+    const before = useVirtualTagStore.getState();
     store().setTickMs(16);
-    expect(stored()).toBeNull();
-  });
-
-  it('replaceAll / toExport 왕복', () => {
-    store().addTag({ key: 'a' });
-    const exported = store().toExport();
-    reset();
-    store().replaceAll(exported);
-    expect(store().tags.map((t) => t.key)).toEqual(['a']);
-    store().replaceAll('garbage');
-    expect(store().tags).toEqual([]);
+    expect(useVirtualTagStore.getState()).toBe(before);
   });
 });
 
 describe('재생(runner)', () => {
   it('start 시 현재값을 즉시 내보내고, 틱마다 파형을 진행한다', () => {
-    store().addTag({ key: 'tri', min: 0, max: 100, initial: 0, pattern: { kind: 'triangle', periodMs: 1000 } });
+    store().addTag({
+      key: 'tri',
+      min: 0,
+      max: 100,
+      initial: 0,
+      pattern: { kind: 'triangle', periodMs: 1000 },
+    });
     store().addTag({ key: 'off', enabled: false });
     store().start();
     expect(store().isRunning).toBe(true);
@@ -189,7 +270,12 @@ describe('재생(runner)', () => {
   });
 
   it('pause 후에는 틱이 멈추고, 재개하면 위상이 이어진다', () => {
-    store().addTag({ key: 'saw', min: 0, max: 100, pattern: { kind: 'sawtooth', periodMs: 1000 } });
+    store().addTag({
+      key: 'saw',
+      min: 0,
+      max: 100,
+      pattern: { kind: 'sawtooth', periodMs: 1000 },
+    });
     store().start();
     vi.advanceTimersByTime(300);
     store().pause();
@@ -206,7 +292,13 @@ describe('재생(runner)', () => {
   });
 
   it('start 는 멱등이고, 정의가 바뀌면 다음 틱부터 반영된다', () => {
-    const a = store().addTag({ key: 'a', min: 0, max: 10, pattern: { kind: 'manual' }, initial: 3 });
+    const a = store().addTag({
+      key: 'a',
+      min: 0,
+      max: 10,
+      pattern: { kind: 'manual' },
+      initial: 3,
+    });
     if (!a.ok) throw new Error('add failed');
     store().start();
     store().start();
@@ -218,7 +310,12 @@ describe('재생(runner)', () => {
   });
 
   it('manual 값 설정은 재생 중이 아니어도 즉시 내보내고 클램프한다', () => {
-    const a = store().addTag({ key: 'a', min: 0, max: 10, pattern: { kind: 'manual' } });
+    const a = store().addTag({
+      key: 'a',
+      min: 0,
+      max: 10,
+      pattern: { kind: 'manual' },
+    });
     if (!a.ok) throw new Error('add failed');
     virtualTagRuntime.setManualValue(a.id, 99);
     expect(received.get('a')).toEqual([10]);
@@ -228,7 +325,12 @@ describe('재생(runner)', () => {
   });
 
   it('resetValues 는 initial 로 되돌리고 파형 위상을 0 으로', () => {
-    store().addTag({ key: 'saw', min: 0, max: 100, pattern: { kind: 'sawtooth', periodMs: 1000 } });
+    store().addTag({
+      key: 'saw',
+      min: 0,
+      max: 100,
+      pattern: { kind: 'sawtooth', periodMs: 1000 },
+    });
     store().start();
     vi.advanceTimersByTime(500);
     virtualTagRuntime.resetValues();

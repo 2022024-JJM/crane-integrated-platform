@@ -39,7 +39,7 @@ export function useSceneData(
   const loadedAssetPathsRef = useRef<string[]>([]);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
-  const hydrateVirtualTags = useVirtualTagStore((s) => s.hydrate);
+  const loadVirtualTags = useVirtualTagStore((s) => s.load);
   const startSimulation = useVirtualTagStore((s) => s.start);
   const pauseSimulation = useVirtualTagStore((s) => s.pause);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
@@ -95,8 +95,8 @@ export function useSceneData(
     };
 
     if (mode === 'simulation') {
-      // 시뮬레이션 = 가상 태그 재생. 정의는 localStorage 에서 한 번 읽는다.
-      hydrateVirtualTags();
+      // 시뮬레이션 = 가상 태그 재생. 정의는 배포 파일에서 한 번 읽는다.
+      void loadVirtualTags();
       startSimulation();
       // 다른 모드에서 남은 replay 재생 상태가 useReplayPlayerRunner를 통해
       // 이 mode에서도 계속 tick하지 않도록 진입 시 항상 정리.
@@ -131,7 +131,7 @@ export function useSceneData(
       loadedAssetPathsRef.current = [];
       releaseSceneRegionAssets(regionId, pathsToRelease);
     };
-  }, [clearSceneInfoFromStore, hydrateVirtualTags, mode, pauseSimulation, regionId, resetReplay, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
+  }, [clearSceneInfoFromStore, loadVirtualTags, mode, pauseSimulation, regionId, resetReplay, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
 
   return { sceneInfo, isLoading };
 }

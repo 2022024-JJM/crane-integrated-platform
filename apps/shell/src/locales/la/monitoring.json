@@ -232,8 +232,6 @@
     "pause": "Siste",
     "resetValues": "Valores restitue",
     "tick": "Intervallum (ms)",
-    "import": "Importa",
-    "export": "Exporta",
     "add": "Novum tag",
     "columns": {
       "enabled": "Activum",
@@ -256,17 +254,16 @@
     },
     "duplicate": "Duplica",
     "remove": "Dele",
-    "empty": "Nulla tags ficta. \"Novum tag\" preme aut JSON importa.",
+    "empty": "Nulla tags ficta. \"Novum tag\" preme.",
     "errors": {
       "invalid-key": "Clavis vacua esse non potest nec longior quam 64.",
       "duplicate-key": "Tag eadem clave iam exstat.",
-      "limit": "Ad summum {{max}} tags creari possunt.",
-      "import": "JSON legi non potuit."
+      "limit": "Ad summum {{max}} tags creari possunt."
     },
     "newKey": "C_1:tag",
-    "importedCount": "{{count}} tags importata.",
     "count": "{{count}} / {{max}}",
     "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode).",
-    "periodHint": "Tempus (ms) unius cycli (min→max→min)"
+    "periodHint": "Tempus (ms) unius cycli (min→max→min)",
+    "save": "Serva"
   }
 }

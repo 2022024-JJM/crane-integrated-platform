@@ -34,3 +34,10 @@ export {
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
 } from './lib/sanitize-virtual-tags';
+export {
+  isVirtualTagSetStoredLocallyOnly,
+  loadVirtualTagSet,
+  saveVirtualTagSet,
+  VIRTUAL_TAGS_PUBLIC_PATH,
+  VIRTUAL_TAGS_STORAGE_KEY,
+} from './lib/virtual-tag-storage';

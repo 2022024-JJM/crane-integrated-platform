@@ -16,6 +16,7 @@ export function RotationController({
       vec={vec}
       onChange={onChange}
       format={formatRotation}
+      unit="°"
       toValue={displayRotationValue}
     />
   );

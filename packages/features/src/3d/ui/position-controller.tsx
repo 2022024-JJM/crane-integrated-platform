@@ -14,6 +14,7 @@ export function PositionController({
       vec={vec}
       onChange={onChange}
       format={formatPosition}
+      unit=" m"
     />
   );
 }

@@ -1,16 +1,20 @@
 import {
+  AlertCircle,
+  CheckCircle2,
   Copy,
-  Download,
+  HardDrive,
+  Loader2,
   Pause,
   Play,
   Plus,
   RotateCcw,
+  Save,
   Trash2,
-  Upload,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  isVirtualTagSetStoredLocallyOnly,
   VIRTUAL_TAG_PATTERN_KINDS,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAG_TICK_MAX,
@@ -52,20 +56,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
+import {
+  SceneUnsavedChangesDialog,
+  useSceneUnsavedChangesGuard,
+} from '@crane/widgets/scene-editor';
 import { getTagKeyError, type TagKeyError } from '../lib/tag-key-validation';
 import { WaveformIcon } from './waveform-icon';
-import {
-  parseVirtualTagSetJson,
-  serializeVirtualTagSet,
-  VIRTUAL_TAG_FILE_NAME,
-} from '../lib/virtual-tag-file';
 
 /**
  * 가상 태그 관리 페이지 — 전역 목록의 CRUD·패턴 설정·재생.
  *
  * 값은 러너(virtualTagRuntime)가 들고 있고 표는 15Hz 폴링으로 읽는다.
- * 정의 편집은 스토어(localStorage 영속화)를 지나며, 키 중복·빈 키 같은
- * 거부는 스토어가 boolean/결과로 돌려주고 여기서는 문구만 보여 준다.
+ * 정의 편집은 스토어(메모리)를 지나고 저장 버튼이 배포 파일/localStorage 에
+ * 기록한다 — 저장 상태 배지·미저장 이탈 경고는 씬 편집과 같은 훅을 쓴다.
+ * 키 중복·빈 키 같은 거부는 스토어가 boolean/결과로 돌려주고 여기서는 문구만
+ * 보여 준다.
  *
  * 표는 table-fixed + 퍼센트 열 너비다 — auto 레이아웃이면 InputNumber 가
  * 호버 시 스테퍼 여백(pr-5)을 얻을 때 인풋 고유 폭이 커져 열이 흔들리고,
@@ -331,9 +336,12 @@ function TagRow({
 export function VirtualTagsPage() {
   const { t } = useTranslation();
   useRigLivePoll();
-  const hydrate = useVirtualTagStore((s) => s.hydrate);
+  const load = useVirtualTagStore((s) => s.load);
+  const save = useVirtualTagStore((s) => s.save);
   const tags = useVirtualTagStore((s) => s.tags);
   const tickMs = useVirtualTagStore((s) => s.tickMs);
+  const savedSnapshot = useVirtualTagStore((s) => s.savedSnapshot);
+  const isSaving = useVirtualTagStore((s) => s.isSaving);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
   const start = useVirtualTagStore((s) => s.start);
   const pause = useVirtualTagStore((s) => s.pause);
@@ -342,15 +350,52 @@ export function VirtualTagsPage() {
   const removeTag = useVirtualTagStore((s) => s.removeTag);
   const duplicateTag = useVirtualTagStore((s) => s.duplicateTag);
   const setTickMs = useVirtualTagStore((s) => s.setTickMs);
-  const replaceAll = useVirtualTagStore((s) => s.replaceAll);
-  const toExport = useVirtualTagStore((s) => s.toExport);
   const [message, setMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const takenKeys = useMemo(() => tags.map((tag) => tag.key), [tags]);
+  // dirty 는 스냅샷 비교 — 스토어의 isDirty() 는 구독이 안 되므로 여기서 파생.
+  const isDirty = useMemo(
+    () => JSON.stringify({ version: 1, tickMs, tags }) !== savedSnapshot,
+    [savedSnapshot, tags, tickMs],
+  );
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    void load();
+  }, [load]);
+
+  const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
+    isDirty,
+    isSaving,
+    onSave: save,
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
+        event.preventDefault();
+        if (isDirty && !isSaving) void save();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDirty, isSaving, save]);
+
+  // 씬 편집과 같은 규칙 — "저장됨" 일 때만 이 브라우저에만 남는다는 고지.
+  const showLocalOnlyNotice =
+    isVirtualTagSetStoredLocallyOnly() && !isSaving && !isDirty;
+  const saveStatusLabel = isSaving
+    ? t('monitoring:editor.statusSaving')
+    : isDirty
+      ? t('monitoring:editor.statusUnsaved')
+      : showLocalOnlyNotice
+        ? t('monitoring:editor.statusSavedLocalOnly')
+        : t('monitoring:editor.statusSaved');
+  const saveStatusClassName = isSaving
+    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
+    : isDirty
+      ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
+      : showLocalOnlyNotice
+        ? 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
 
   const reportAdd = (result: VirtualTagAddResult) => {
     if (result.ok) {
@@ -373,33 +418,15 @@ export function VirtualTagsPage() {
     reportAdd(addTag({ key }));
   };
 
-  const handleExport = () => {
-    const blob = new Blob([serializeVirtualTagSet(toExport())], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = VIRTUAL_TAG_FILE_NAME;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportFile = async (file: File | undefined) => {
-    if (!file) return;
-    const parsed = parseVirtualTagSetJson(await file.text());
-    if (!parsed) {
-      setMessage(t('monitoring:virtualTags.errors.import'));
-      return;
-    }
-    replaceAll(parsed);
-    setMessage(
-      t('monitoring:virtualTags.importedCount', { count: parsed.tags.length }),
-    );
-  };
-
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4">
+      <SceneUnsavedChangesDialog
+        open={unsavedChangesPrompt.open}
+        isSaving={isSaving}
+        onSaveAndLeave={() => unsavedChangesPrompt.choose('save')}
+        onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
+        onStay={() => unsavedChangesPrompt.choose('stay')}
+      />
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-foreground text-base font-semibold">
@@ -410,6 +437,45 @@ export function VirtualTagsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span
+                    className={cn(
+                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium',
+                      saveStatusClassName,
+                    )}
+                  />
+                }
+              >
+                {isSaving ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : isDirty ? (
+                  <AlertCircle className="size-3.5" />
+                ) : showLocalOnlyNotice ? (
+                  <HardDrive className="size-3.5" />
+                ) : (
+                  <CheckCircle2 className="size-3.5" />
+                )}
+                {saveStatusLabel}
+              </TooltipTrigger>
+              <TooltipContent>
+                {showLocalOnlyNotice
+                  ? t('monitoring:editor.statusSavedLocalOnlyHint')
+                  : saveStatusLabel}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!isDirty || isSaving}
+            onClick={() => void save()}
+          >
+            <Save />
+            {t('monitoring:virtualTags.save')}
+          </Button>
           <Button
             type="button"
             variant={isRunning ? 'default' : 'outline'}
@@ -433,7 +499,17 @@ export function VirtualTagsPage() {
             <RotateCcw />
             {t('monitoring:virtualTags.resetValues')}
           </Button>
-          <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+            <Plus />
+            {t('monitoring:virtualTags.add')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-[11px]">
+        <span>{t('monitoring:virtualTags.keyHint')}</span>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5">
             {t('monitoring:virtualTags.tick')}
             <InputNumber
               value={tickMs}
@@ -445,50 +521,13 @@ export function VirtualTagsPage() {
               onChange={setTickMs}
             />
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload />
-            {t('monitoring:virtualTags.import')}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(event) => {
-              void handleImportFile(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={tags.length === 0}
-            onClick={handleExport}
-          >
-            <Download />
-            {t('monitoring:virtualTags.export')}
-          </Button>
-          <Button type="button" size="sm" onClick={handleAdd}>
-            <Plus />
-            {t('monitoring:virtualTags.add')}
-          </Button>
+          <span>
+            {t('monitoring:virtualTags.count', {
+              count: tags.length,
+              max: VIRTUAL_TAGS_MAX,
+            })}
+          </span>
         </div>
-      </div>
-
-      <div className="text-muted-foreground flex items-center justify-between text-[11px]">
-        <span>{t('monitoring:virtualTags.keyHint')}</span>
-        <span>
-          {t('monitoring:virtualTags.count', {
-            count: tags.length,
-            max: VIRTUAL_TAGS_MAX,
-          })}
-        </span>
       </div>
       {message ? (
         <p className="text-[11px] text-amber-500" role="status">

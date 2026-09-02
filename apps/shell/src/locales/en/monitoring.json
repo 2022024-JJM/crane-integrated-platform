@@ -246,8 +246,6 @@
     "pause": "Pause",
     "resetValues": "Reset values",
     "tick": "Tick (ms)",
-    "import": "Import",
-    "export": "Export",
     "add": "New tag",
     "columns": {
       "enabled": "On",
@@ -270,17 +268,16 @@
     },
     "duplicate": "Duplicate",
     "remove": "Remove",
-    "empty": "No virtual tags. Create one with \"New tag\" or import JSON.",
+    "empty": "No virtual tags. Create one with \"New tag\".",
     "errors": {
       "invalid-key": "Key must be non-empty and at most 64 characters.",
       "duplicate-key": "A tag with the same key already exists.",
-      "limit": "At most {{max}} tags can be created.",
-      "import": "Could not read the JSON file."
+      "limit": "At most {{max}} tags can be created."
     },
     "newKey": "C_1:tag",
-    "importedCount": "Imported {{count}} tags.",
     "count": "{{count}} / {{max}}",
     "keyHint": "Use the same format as real server tags (craneId:tagCode).",
-    "periodHint": "Time (ms) for one cycle (min→max→min)"
+    "periodHint": "Time (ms) for one cycle (min→max→min)",
+    "save": "Save"
   }
 }

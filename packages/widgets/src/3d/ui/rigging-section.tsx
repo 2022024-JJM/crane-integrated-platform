@@ -1,4 +1,11 @@
-import { AlertTriangle, Link2, Plus, RotateCcw, Tag, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Link2,
+  Plus,
+  RotateCcw,
+  Tag,
+  Trash2,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import {
   getDrivenJointIds,
@@ -227,11 +234,13 @@ function JointCard({
         <NumberField
           value={joint.min}
           placeholder={t('monitoring:inspector.rigging.min')}
+          unit={unit}
           onChange={(min) => onChange({ min })}
         />
         <NumberField
           value={joint.max}
           placeholder={t('monitoring:inspector.rigging.max')}
+          unit={unit}
           onChange={(max) => onChange({ max })}
         />
         <label className="text-muted-foreground flex shrink-0 items-center gap-1 text-[10px]">
@@ -269,6 +278,8 @@ function JointCard({
           min={range.min}
           max={range.max}
           disabled={locked}
+          editPreview
+          unit={unit}
           className={cn(NUMBER_WRAPPER, 'w-20 shrink-0')}
           inputClassName={cn(NUMBER_INPUT, 'text-right')}
           onChange={(next) => manualJointSource.push(modelId, joint.id, next)}
@@ -692,7 +703,6 @@ export function RiggingSection({
               />
             ))}
           </div>
-
         </>
       ) : null}
     </div>
