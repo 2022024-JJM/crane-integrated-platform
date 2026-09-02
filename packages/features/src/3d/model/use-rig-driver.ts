@@ -4,7 +4,6 @@ import type { Object3D } from 'three';
 import {
   findMeshByPath,
   modelObjectRegistry,
-  parseMeshId,
   type RigConstraint,
   type RigDefinition,
   type RigJoint,
@@ -17,8 +16,6 @@ import {
 } from '../lib/apply-joint';
 import { rigLiveReadouts } from './rig-live-readouts';
 import { makeJointAddress, rigValueStore } from './rig-value-store';
-import { useActiveTransformStore } from './use-active-transform-store';
-import { useSceneObjectSelectionStore } from './use-scene-object-selection-store';
 
 /**
  * 리그 드라이버 — R3F Canvas 안에서 매 프레임 관절 값을 노드에 적용한다.
@@ -81,15 +78,6 @@ function disposeInstance(instance: RigInstance): void {
   for (const node of instance.drivenNodes) {
     resetJointNode(node);
   }
-}
-
-/** 드래그 중인 기즈모 대상이 이 모델의 서브노드면 그 경로. */
-function activeDragNodePath(modelId: string): string | null {
-  if (!useActiveTransformStore.getState().active) return null;
-  const primary = useSceneObjectSelectionStore.getState().primarySelectedId;
-  if (!primary) return null;
-  const parsed = parseMeshId(primary);
-  return parsed && parsed.modelId === modelId ? parsed.meshPath : null;
 }
 
 interface UseRigDriverParams {
@@ -193,10 +181,9 @@ export function useRigDriver({
         );
       }
 
-      // (3) 적용
-      const skipPath = activeDragNodePath(model.id);
+      // (3) 적용. 모델 안쪽 노드 선택은 읽기 전용(기즈모 없음)이라 드래그
+      // 중인 관절을 피할 필요가 없다.
       for (const { joint, node } of instance.joints) {
-        if (skipPath !== null && joint.node === skipPath) continue;
         applyJoint(node, joint, values.get(joint.id) ?? 0);
       }
 

@@ -134,9 +134,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedTextColor,
     selectedText,
     selectedMesh,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedValueMap,
     createRigForSelectedModel,
     assignRigToSelectedModel,
@@ -144,7 +141,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     removeRig,
     updateSelectedRigBinding,
     selectPlacedNode,
-    selectedObjectType,
     removeSelectedModel,
     duplicateSelectedObject,
     addModel,
@@ -440,17 +436,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               transformMode={transformMode}
               draggingModelCatalogItem={draggingCatalogItem}
               onTransformVectorChange={(field, value) => {
-                // mesh는 meshOverrides 경로가 따로 있고, 모델/텍스트/지도는
-                // 통합 함수가 id로 컬렉션을 해석한다.
-                if (selectedObjectType === 'mesh') {
-                  updateSelectedMeshTransformVector(field, value, {
-                    recordHistory: false,
-                  });
-                } else {
-                  updateSelectedTransformVector(field, value, {
-                    recordHistory: false,
-                  });
-                }
+                // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
+                // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
+                updateSelectedTransformVector(field, value, {
+                  recordHistory: false,
+                });
               }}
               onTransformCommit={(position, rotation, scale) => {
                 // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
@@ -729,15 +719,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onTransformChange={updateSelectedTransform}
                         onTextContentChange={updateSelectedTextContent}
                         onTextColorChange={updateSelectedTextColor}
-                        onMeshOpacityChange={updateSelectedMeshOpacity}
-                        onMeshTransformChange={updateSelectedMeshTransform}
                         onValueMapChange={updateSelectedValueMap}
                         rigging={riggingHandlers}
-                        onBackToParent={() => {
-                          if (selectedMesh) {
-                            selectPlacedModel(selectedMesh.modelId);
-                          }
-                        }}
                       />
                     </div>
                   </ResizablePanel>

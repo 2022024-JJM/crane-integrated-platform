@@ -582,8 +582,8 @@ export function ModelMesh({
         modelObjectRegistry.register(id, ready);
         registeredObject = ready;
 
-        // 자식 mesh를 모두 registry에 등록한다. 더블클릭 drill-in 후
-        // TransformControls가 곧바로 mesh를 잡을 수 있도록 mount 시 1회 traverse.
+        // 자식 mesh를 모두 registry에 등록한다. 계층 목록·더블클릭 drill-in 으로
+        // 고른 노드의 바운딩 박스 대상과 F키 카메라 포커스가 여기서 찾는다.
         for (const binding of meshBindings) {
           const meshPath = getMeshPath(clone, binding.mesh);
           if (meshPath === null) continue;
@@ -592,9 +592,10 @@ export function ModelMesh({
           registeredMeshIds.push(meshId);
         }
         // Mesh 가 아닌 중간 노드(Group/Empty/Bone)도 같은 id 형식으로 등록한다.
-        // 리깅 관절은 대개 피벗에 놓인 Empty 라, 계층 목록에서 골라 기즈모를
-        // 붙이려면 registry 에서 찾을 수 있어야 한다. forEachRoot 는 meshId 를
-        // 제외하므로 레이캐스트·카메라 핏에는 섞이지 않는다.
+        // 리깅 관절은 대개 피벗에 놓인 Empty 라, 계층 목록에서 골랐을 때 박스를
+        // 그리려면 registry 에서 찾을 수 있어야 한다. 노드 선택은 읽기 전용이라
+        // 기즈모는 붙지 않는다. forEachRoot 는 meshId 를 제외하므로 레이캐스트·
+        // 카메라 핏에는 섞이지 않는다.
         clone.traverse((child) => {
           if (child === clone || child instanceof Mesh) return;
           const nodePath = getMeshPath(clone, child);

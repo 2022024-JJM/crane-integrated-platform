@@ -7,6 +7,7 @@
     "opacity": "Opacity",
     "transform": "Transform",
     "empty": "Click an object in the scene to inspect its properties.",
+    "nodeReadOnly": "Child nodes are read-only.\nSelect the parent model to edit.",
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",

@@ -1,12 +1,9 @@
 import {
-  modelObjectRegistry,
   numRound,
   parseMeshId,
-  radToDeg,
   type RigBinding,
   type RigDefinition,
   type SavedMapInfo,
-  type SavedMeshOverride,
   type SavedModelInfo,
   type SavedSceneInfo,
   type SavedTextInfo,
@@ -30,28 +27,6 @@ function clampOpacity(value: number) {
   return numRound(clampToRange(value, 0.1, 1));
 }
 
-/**
- * 모델의 meshOverrides 배열에서 meshPath에 해당하는 override를
- * upsert(존재하면 patch, 없으면 새로 추가)한다. 빈 patch는 전혀 변경하지 않는다.
- */
-function upsertMeshOverride(
-  model: SavedModelInfo,
-  meshPath: string,
-  patch: Partial<Omit<SavedMeshOverride, 'meshPath'>>,
-): SavedModelInfo {
-  const existing = model.meshOverrides ?? [];
-  const idx = existing.findIndex((o) => o.meshPath === meshPath);
-  if (idx < 0) {
-    return {
-      ...model,
-      meshOverrides: [...existing, { meshPath, ...patch }],
-    };
-  }
-  const next = [...existing];
-  next[idx] = { ...next[idx], ...patch };
-  return { ...model, meshOverrides: next };
-}
-
 interface UseSelectedSceneObjectEditorParams {
   sceneInfo: SavedSceneInfo | null;
   updateSceneInfo: (
@@ -63,33 +38,20 @@ interface UseSelectedSceneObjectEditorParams {
 }
 
 /**
- * mesh가 선택된 경우의 도출 정보. selectedMesh.override는 sceneInfo에 저장된
- * override(없으면 null), selectedMesh.modelId/meshPath는 parseMeshId 결과.
+ * 모델 안쪽 노드가 선택된 경우의 도출 정보(parseMeshId 결과 + 부모 모델).
+ * 노드 선택은 읽기 전용이다 — 바운딩 박스 표시용이며 편집 API 가 없다.
+ * 저장된 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 만들지 않는다.
  */
 export interface SelectedMeshInfo {
   modelId: string;
   meshPath: string;
-  override: SavedMeshOverride | null;
   parentModel: SavedModelInfo;
-  /** 현재 mount된 mesh Object3D. Inspector가 baseline transform을 읽는다. */
-  meshObject: import('three').Object3D | null;
 }
 
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
   selectedMesh: SelectedMeshInfo | null;
-  updateSelectedMeshTransform: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-  ) => void;
-  updateSelectedMeshTransformVector: (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: { recordHistory?: boolean },
-  ) => void;
-  updateSelectedMeshOpacity: (value: number) => void;
   renameObject: (id: string, name: string) => void;
   updateSelectedValueMap: (
     type: ValueMapType,
@@ -257,16 +219,7 @@ export function useSelectedSceneObjectEditor({
     if (!parsed) return null;
     const parentModel = sceneInfo.models.find((m) => m.id === parsed.modelId);
     if (!parentModel) return null;
-    const override =
-      parentModel.meshOverrides?.find((o) => o.meshPath === parsed.meshPath) ??
-      null;
-    return {
-      modelId: parsed.modelId,
-      meshPath: parsed.meshPath,
-      override,
-      parentModel,
-      meshObject: modelObjectRegistry.get(selectedModelId) ?? null,
-    };
+    return { modelId: parsed.modelId, meshPath: parsed.meshPath, parentModel };
   }, [selectedObjectType, selectedModelId, sceneInfo]);
 
   /**
@@ -340,7 +293,7 @@ export function useSelectedSceneObjectEditor({
    * patch를 병합한다(renameObject/setObjectLocked와 같은 컬렉션 해석 패턴).
    * 지도는 transform 필드가 optional이지만 스프레드 병합은 터치한 필드만
    * 기록하므로 "손대지 않은 필드는 저장본에서도 없는 채로 유지" 계약이
-   * 그대로 지켜진다. mesh 선택은 별도 함수(updateSelectedMesh*)가 담당한다.
+   * 그대로 지켜진다. 모델 안쪽 노드 선택은 읽기 전용이라 편집 함수가 없다.
    */
   const patchSelectedTransform = (
     prev: SavedSceneInfo,
@@ -411,92 +364,6 @@ export function useSelectedSceneObjectEditor({
         [field]: roundCommittedField(field, value),
       }));
     }, options);
-  };
-
-  // ==== mesh-specific updates ====
-
-  const updateSelectedMeshTransform = (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-    options?: AxisUpdateOptions,
-  ) => {
-    if (!selectedMesh) return;
-    const { modelId, meshPath, override } = selectedMesh;
-    const overrideVec = override?.[field];
-    // 첫 axis 편집 시에는 mesh의 현재 transform(=GLTF 원본 또는 마지막 적용
-    // 상태)을 baseline으로 사용해야 한다. [0,0,0]에서 시작하면 mesh가 원점
-    // 으로 점프한다. 현재 mesh 객체를 registry에서 가져와 read한다.
-    let start: Vector3Tuple;
-    if (overrideVec) {
-      start = overrideVec;
-    } else {
-      const meshId = `${modelId}::${meshPath}`;
-      const meshObj = modelObjectRegistry.get(meshId);
-      if (meshObj) {
-        if (field === 'position') {
-          start = [meshObj.position.x, meshObj.position.y, meshObj.position.z];
-        } else if (field === 'rotation') {
-          start = [
-            radToDeg(meshObj.rotation.x),
-            radToDeg(meshObj.rotation.y),
-            radToDeg(meshObj.rotation.z),
-          ];
-        } else {
-          start = [meshObj.scale.x, meshObj.scale.y, meshObj.scale.z];
-        }
-      } else {
-        start = field === 'scale' ? [1, 1, 1] : [0, 0, 0];
-      }
-    }
-    const nextVec = applyAxisUpdate(field, start, axis, value, options);
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((m) =>
-          m.id === modelId
-            ? upsertMeshOverride(m, meshPath, { [field]: nextVec })
-            : m,
-        ),
-      };
-    });
-  };
-
-  const updateSelectedMeshTransformVector = (
-    field: SceneTransformField,
-    value: Vector3Tuple,
-    options?: { recordHistory?: boolean },
-  ) => {
-    if (!selectedMesh) return;
-    const { modelId, meshPath } = selectedMesh;
-    const rounded = roundCommittedField(field, value);
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((m) =>
-          m.id === modelId
-            ? upsertMeshOverride(m, meshPath, { [field]: rounded })
-            : m,
-        ),
-      };
-    }, options);
-  };
-
-  const updateSelectedMeshOpacity = (value: number) => {
-    if (!selectedMesh) return;
-    const { modelId, meshPath } = selectedMesh;
-    const opacity = clampOpacity(value);
-    updateSceneInfo((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        models: prev.models.map((m) =>
-          m.id === modelId ? upsertMeshOverride(m, meshPath, { opacity }) : m,
-        ),
-      };
-    });
   };
 
   const updateSelectedTextContent = (content: string) => {
@@ -837,9 +704,6 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,

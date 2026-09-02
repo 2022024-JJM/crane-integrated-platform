@@ -239,7 +239,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - **리깅(관절 연동)** 은 태그 맵핑과 두 계층으로 나뉜다. 정의(`RigDefinition`: 관절 `hinge|slide` + 구속조건 `linear` = "출력 관절 = 입력 관절 × factor + offset", 디자이너가 주는 공식 형태 그대로. 출력 관절은 driven 이 되어 슬라이더·태그를 받지 않고, 구속조건은 배열 순서대로 계산돼 체인이 된다)는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 와 서버 태그 바인딩 `rigBindings` 만 가진다. 관절 값은 **항상 rest pose 기준 Δ** 이며 `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다 — `rotation.x = θ` 절대 대입은 Blender Empty 의 비항등 rest 를 파괴하므로 금지. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로다.
   - 값 소스는 `JointValueSource` 하나로 통한다. 에디터는 `manualJointSource`(슬라이더, 씬 데이터·히스토리에 남지 않음)만 켜고, 서버 연동 단계는 `createTagBindingSource` 를 `setRigTagIngest` 에 걸어 `applyValue` 버스에서 받으면 된다(2026-09-02 기준 미연결). 모니터링 뷰에는 아직 `RigDriver` 를 두지 않았다.
   - 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본으로 교체됐고(루트 scale 을 `unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1), 나머지 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
-  - 기즈모로 드래그 중인 노드는 드라이버가 건드리지 않는다. 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
+  - 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
+- **모델 안쪽 노드(계층 목록의 자식, 뷰포트 더블클릭 drill-in)는 읽기 전용**이다. 선택하면 그 노드에 맞는 바운딩 박스만 그리고, 인스펙터는 안내 문구만 보이며 기즈모는 붙지 않는다. 노드 선택은 항상 단일 선택(Ctrl 토글 없음). 박스 점은 `packages/domain/src/3d/lib/selection-bounding-box.ts` 가 마운트 대상의 로컬 좌표로 계산하고, 노드 박스는 `createPortal` 로 노드 자식에 마운트해 리그·기즈모 움직임을 씬 그래프 상속으로 따라간다(포털은 `target.uuid` key 로 재마운트해야 한다 — R3F `Portal` 이 컨테이너 교체 시 이전 노드에 붙이는 문제가 있다, 파일 주석 참고). 저장 씬의 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 새로 만들지 않는다.
 
 ## docs/ 지도
 

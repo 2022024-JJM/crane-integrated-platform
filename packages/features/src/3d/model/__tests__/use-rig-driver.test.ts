@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
-import { Object3D, Quaternion, Vector3 } from 'three';
+import { Object3D, Quaternion } from 'three';
 import {
   modelObjectRegistry,
   seedRestPose,
@@ -11,8 +11,6 @@ import {
 import { useRigDriver } from '../use-rig-driver';
 import { rigLiveReadouts } from '../rig-live-readouts';
 import { rigValueStore } from '../rig-value-store';
-import { useActiveTransformStore } from '../use-active-transform-store';
-import { useSceneObjectSelectionStore } from '../use-scene-object-selection-store';
 
 /** R3F 프레임 루프를 가로채 delta 를 수동 주입한다(use-replay-player-runner.test 와 같은 방식). */
 const captured = vi.hoisted(() => ({
@@ -91,8 +89,6 @@ beforeEach(() => {
   rigValueStore.reset();
   rigLiveReadouts.clear();
   modelObjectRegistry.clear();
-  useActiveTransformStore.getState().end();
-  useSceneObjectSelectionStore.getState().clearSelectedModel();
 });
 
 afterEach(() => {
@@ -192,27 +188,6 @@ describe('useRigDriver — 관절', () => {
     rigValueStore.set('m1/arm', 10);
     expect(() => frame()).not.toThrow();
     expect(rigLiveReadouts.get('m1')).toBeUndefined();
-  });
-
-  it('기즈모로 드래그 중인 노드는 건드리지 않는다', () => {
-    const { arm, hand } = mountModel('m1');
-    renderHook(() => useRigDriver({ rigs: [rig()], models: [model()] }));
-    rigValueStore.set('m1/arm', 20);
-    rigValueStore.set('m1/hand', 1);
-    frame();
-
-    // 사용자가 Arm 을 기즈모로 잡고 돌리는 중
-    useSceneObjectSelectionStore.getState().selectMesh('m1::[0]Arm');
-    useActiveTransformStore.getState().begin();
-    arm.quaternion.setFromAxisAngle(new Vector3(0, 0, 1), Math.PI / 2);
-    frame();
-    expect(zDeg(arm)).toBeCloseTo(90, 6);
-    // 다른 관절은 계속 구동
-    expect(hand.position.y).toBeCloseTo(3, 9);
-
-    useActiveTransformStore.getState().end();
-    frame();
-    expect(zDeg(arm)).toBeCloseTo(20, 6);
   });
 
   it('스무딩 채널은 프레임이 지나며 목표로 수렴한다', () => {

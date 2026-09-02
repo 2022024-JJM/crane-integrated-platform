@@ -30,7 +30,6 @@ import {
   useActiveTransformStore,
   useUniformScaleStore,
 } from '@crane/features/3d';
-import { ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
 import { InputNumber } from '@crane/ui/atoms/input-number';
@@ -56,7 +55,7 @@ type InspectorTabKey =
   | 'textContent'
   | 'textColor';
 
-type InspectorObjectType = 'model' | 'mesh' | 'text' | 'map';
+type InspectorObjectType = 'model' | 'text' | 'map';
 
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
@@ -78,7 +77,6 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
   model: ['transform', 'opacity', 'tagMapping', 'rigging'],
-  mesh: ['transform', 'opacity'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform'],
 };
@@ -116,6 +114,10 @@ export interface InspectorRiggingHandlers {
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  /**
+   * 모델 안쪽 노드 선택. 노드는 읽기 전용이라 편집 섹션 없이 안내 문구만
+   * 보이고, 바운딩 박스는 캔버스가 그린다.
+   */
   selectedMesh: SelectedMeshInfo | null;
   selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
@@ -128,15 +130,6 @@ interface SceneObjectInspectorProps {
   ) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
-  onMeshOpacityChange: (value: number) => void;
-  onMeshTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-    options?: { uniformScale?: boolean },
-  ) => void;
-  /** mesh 선택을 풀고 부모 모델로 돌아가는 콜백. */
-  onBackToParent: () => void;
   /** 모델의 태그 매핑 변경 콜백. key가 빈 문자열이면 해당 type 매핑을 삭제한다. */
   onValueMapChange?: (
     type: ValueMapType,
@@ -522,77 +515,6 @@ function ModelInspectorContent({
   );
 }
 
-function MeshInspectorContent({
-  selectedMesh,
-  activeTab,
-  onMeshOpacityChange,
-  onMeshTransformChange,
-  onBackToParent,
-  t,
-}: {
-  selectedMesh: SelectedMeshInfo;
-  activeTab: InspectorTabKey;
-  onMeshOpacityChange: (value: number) => void;
-  onMeshTransformChange: (
-    field: SceneTransformField,
-    axis: AxisKey,
-    value: number,
-    options?: { uniformScale?: boolean },
-  ) => void;
-  onBackToParent: () => void;
-  t: (key: string) => string;
-}) {
-  const override = selectedMesh.override;
-  // override가 없는 axis는 mesh 객체의 현재 transform을 표시(GLTF 원본 또는
-  // 마지막 적용 상태). 사용자가 첫 입력을 할 때 그 값에서 시작하기 위함.
-  const meshObj = selectedMesh.meshObject;
-  const defaultPosition: [number, number, number] = meshObj
-    ? [meshObj.position.x, meshObj.position.y, meshObj.position.z]
-    : [0, 0, 0];
-  const defaultRotation: [number, number, number] = meshObj
-    ? [
-        (meshObj.rotation.x * 180) / Math.PI,
-        (meshObj.rotation.y * 180) / Math.PI,
-        (meshObj.rotation.z * 180) / Math.PI,
-      ]
-    : [0, 0, 0];
-  const defaultScale: [number, number, number] = meshObj
-    ? [meshObj.scale.x, meshObj.scale.y, meshObj.scale.z]
-    : [1, 1, 1];
-  const position = override?.position ?? defaultPosition;
-  const rotation = override?.rotation ?? defaultRotation;
-  const scale = override?.scale ?? defaultScale;
-  const opacity = override?.opacity ?? 1;
-
-  return (
-    <>
-      {/* 부모 복귀 버튼은 탭과 무관한 내비게이션이라 항상 상단에 둔다. */}
-      <button
-        type="button"
-        onClick={onBackToParent}
-        className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 px-1 text-[11px] transition-colors"
-      >
-        <ArrowLeft className="size-3.5" />
-        {selectedMesh.parentModel.equipName || selectedMesh.parentModel.id}
-      </button>
-
-      {activeTab === 'transform' ? (
-        <TransformSection
-          position={position}
-          rotation={rotation}
-          scale={scale}
-          onTransformChange={onMeshTransformChange}
-          t={t}
-        />
-      ) : null}
-
-      {activeTab === 'opacity' ? (
-        <OpacitySection value={opacity} onChange={onMeshOpacityChange} t={t} />
-      ) : null}
-    </>
-  );
-}
-
 function TextInspectorContent({
   selectedText,
   contentDraft,
@@ -770,9 +692,6 @@ export function SceneObjectInspector({
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
-  onMeshOpacityChange,
-  onMeshTransformChange,
-  onBackToParent,
   onValueMapChange,
   rigging,
   className,
@@ -786,19 +705,18 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  // 기존 분기 순서(multi > mesh > model > text > map)와 동일하게 타입 판별.
+  // 분기 순서 multi > mesh > model > text > map. 노드(mesh)는 편집 탭이 없어
+  // 타입 null 로 두고 아래에서 안내 문구만 그린다.
   const selectedType: InspectorObjectType | null =
-    multiSelectCount > 1
+    multiSelectCount > 1 || selectedMesh
       ? null
-      : selectedMesh
-        ? 'mesh'
-        : selectedModel
-          ? 'model'
-          : selectedText
-            ? 'text'
-            : selectedMap
-              ? 'map'
-              : null;
+      : selectedModel
+        ? 'model'
+        : selectedText
+          ? 'text'
+          : selectedMap
+            ? 'map'
+            : null;
 
   const tabs = selectedType
     ? getTabsForType(selectedType, Boolean(onValueMapChange), Boolean(rigging))
@@ -810,7 +728,8 @@ export function SceneObjectInspector({
     ? activeTab
     : (tabs[0] ?? 'transform');
 
-  const hasSelection = selectedType !== null || multiSelectCount > 1;
+  const hasSelection =
+    selectedType !== null || selectedMesh !== null || multiSelectCount > 1;
 
   return (
     <Card
@@ -838,14 +757,11 @@ export function SceneObjectInspector({
               </p>
             </div>
           ) : selectedMesh ? (
-            <MeshInspectorContent
-              selectedMesh={selectedMesh}
-              activeTab={resolvedTab}
-              onMeshOpacityChange={onMeshOpacityChange}
-              onMeshTransformChange={onMeshTransformChange}
-              onBackToParent={onBackToParent}
-              t={t}
-            />
+            <div className="border-border bg-muted/30 text-muted-foreground flex flex-1 items-center justify-center rounded-lg border border-dashed px-6 text-[12px]">
+              <p className="max-w-56 text-center whitespace-pre-line">
+                {t('monitoring:inspector.nodeReadOnly')}
+              </p>
+            </div>
           ) : selectedModel ? (
             <ModelInspectorContent
               selectedModel={selectedModel}

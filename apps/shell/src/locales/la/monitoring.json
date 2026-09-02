@@ -7,6 +7,7 @@
     "opacity": "Opacitas",
     "transform": "Transformatio",
     "empty": "Objectum in scaena preme ut proprietates eius videas.",
+    "nodeReadOnly": "Nodi filii mutari non possunt.\nExemplar parentem selige ut mutes.",
     "position": "Positio",
     "rotation": "Rotatio",
     "scale": "Scala",

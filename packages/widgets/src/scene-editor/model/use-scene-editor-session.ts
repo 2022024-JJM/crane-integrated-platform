@@ -71,15 +71,6 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedMeshTransform: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransform'];
-  updateSelectedMeshTransformVector: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransformVector'];
-  updateSelectedMeshOpacity: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshOpacity'];
   updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
   createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -190,9 +181,6 @@ export function useSceneEditorSession({
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,
@@ -305,9 +293,6 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedValueMap,
     createRigForSelectedModel,
     assignRigToSelectedModel,
