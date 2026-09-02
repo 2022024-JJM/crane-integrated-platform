@@ -29,7 +29,7 @@
       ],
       "rotation": [
         0,
-        5.909,
+        5.6,
         0
       ],
       "scale": [
@@ -37,7 +37,38 @@
         1,
         1
       ],
-      "valueMapList": []
+      "tagMappings": [
+        {
+          "id": "map-ccd940e8",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "GC_04:gantry_position"
+        },
+        {
+          "id": "map-a890d17b",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[1]Goliath_Crane_Trolley_01",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_04:trolley_position"
+        },
+        {
+          "id": "map-37300718",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[2]Goliath_Crane_Trolley_02",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_04:trolley_position_2"
+        }
+      ]
     },
     {
       "id": "id-mt0riz7x-bxncy0uk",
@@ -45,13 +76,13 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -2182.047,
+        -2181.408,
         1.347,
-        1914.019
+        1913.954
       ],
       "rotation": [
         0,
-        7.2,
+        5.6,
         0
       ],
       "scale": [
@@ -59,8 +90,37 @@
         1,
         1
       ],
-      "valueMapList": [],
-      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9"
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "tagMappings": [
+        {
+          "id": "map-60d79c04",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "LLC_002:gantry_position"
+        },
+        {
+          "id": "map-d6890e5a",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-8d326e4d"
+          },
+          "tagKey": "LLC_002:luff_angle"
+        },
+        {
+          "id": "map-d5c8438e",
+          "target": {
+            "kind": "node",
+            "node": "[0]LLC/[0]Base/[0]Link_01",
+            "channel": "rotation",
+            "axis": "y"
+          },
+          "tagKey": "LLC_002:slew_angle"
+        }
+      ]
     },
     {
       "id": "id-mt0rka4j-lfz5p217",
@@ -82,8 +142,37 @@
         1,
         1
       ],
-      "valueMapList": [],
-      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9"
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "tagMappings": [
+        {
+          "id": "map-95a058bf",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "LLC_002:gantry_position_2"
+        },
+        {
+          "id": "map-95881074",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-8d326e4d"
+          },
+          "tagKey": "LLC_002:luff_angle"
+        },
+        {
+          "id": "map-60bd1bd8",
+          "target": {
+            "kind": "node",
+            "node": "[0]LLC/[0]Base/[0]Link_01",
+            "channel": "rotation",
+            "axis": "y"
+          },
+          "tagKey": "LLC_002:slew_angle"
+        }
+      ]
     },
     {
       "id": "beccf605-d547-4854-88e3-fc152f999a34",
@@ -104,8 +193,7 @@
         1,
         1,
         1
-      ],
-      "valueMapList": []
+      ]
     },
     {
       "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
@@ -126,21 +214,20 @@
         1,
         1,
         1
-      ],
-      "valueMapList": []
+      ]
     }
   ],
   "texts": [],
   "camera": {
     "position": [
-      -2095.6911353132327,
-      106.1382329514102,
-      1993.8254638542207
+      -2080.7846191847448,
+      135.5251700675164,
+      1979.0756021238676
     ],
     "target": [
-      -2180.7545258525424,
-      31.06320540574371,
-      1920.0355028681195
+      -2186.9868968850396,
+      3.316596027995066,
+      1902.296401232078
     ]
   },
   "rigs": [

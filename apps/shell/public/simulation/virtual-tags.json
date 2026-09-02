@@ -6,56 +6,99 @@
       "id": "gc04-gantry-travel",
       "key": "GC_04:gantry_position",
       "name": "GC-04 주행(직선 이동)",
-      "unit": "m",
       "min": 0,
-      "max": 300,
+      "max": 100,
       "initial": 0,
-      "pattern": { "kind": "triangle", "periodMs": 120000 },
-      "enabled": true
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 80000
+      },
+      "enabled": true,
+      "unit": "m"
     },
     {
       "id": "gc04-trolley-traverse",
       "key": "GC_04:trolley_position",
-      "name": "GC-04 트롤리 횡행",
-      "unit": "m",
-      "min": 0,
-      "max": 150,
-      "initial": 75,
-      "pattern": { "kind": "triangle", "periodMs": 60000 },
-      "enabled": true
+      "name": "GC-04 상부 트롤리 횡행",
+      "min": -30,
+      "max": 0,
+      "initial": 0,
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 80000
+      },
+      "enabled": true,
+      "unit": "m"
     },
     {
       "id": "llc002-luffing",
       "key": "LLC_002:luff_angle",
       "name": "LLC-002 러핑 각도",
-      "unit": "deg",
       "min": -32,
       "max": 11.75,
       "initial": -10,
-      "pattern": { "kind": "sine", "periodMs": 30000 },
-      "enabled": true
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 30000
+      },
+      "enabled": true,
+      "unit": "deg"
     },
     {
       "id": "llc002-slew",
       "key": "LLC_002:slew_angle",
       "name": "LLC-002 상체 선회",
-      "unit": "deg",
       "min": 0,
       "max": 360,
       "initial": 0,
-      "pattern": { "kind": "sawtooth", "periodMs": 90000 },
-      "enabled": true
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 80000
+      },
+      "enabled": true,
+      "unit": "deg"
     },
     {
       "id": "llc002-gantry-travel",
       "key": "LLC_002:gantry_position",
       "name": "LLC-002 주행(직선 이동)",
-      "unit": "m",
       "min": 0,
-      "max": 200,
+      "max": 50,
       "initial": 0,
-      "pattern": { "kind": "triangle", "periodMs": 90000 },
-      "enabled": true
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 20000
+      },
+      "enabled": true,
+      "unit": "m"
+    },
+    {
+      "id": "12ce2409-e0e5-4db8-92b9-111a85aef267",
+      "key": "LLC_002:gantry_position_2",
+      "name": "LLC-002 주행(직선 이동)",
+      "min": -20,
+      "max": 0,
+      "initial": 0,
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 20000
+      },
+      "enabled": true,
+      "unit": "m"
+    },
+    {
+      "id": "907a7df8-4232-4c25-8dae-476beca71e95",
+      "key": "GC_04:trolley_position_2",
+      "name": "GC-04 하부 트롤리 횡행",
+      "min": -20,
+      "max": 5,
+      "initial": 0,
+      "pattern": {
+        "kind": "sine",
+        "periodMs": 80000
+      },
+      "enabled": true,
+      "unit": "m"
     }
   ]
 }
