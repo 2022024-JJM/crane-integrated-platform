@@ -39,6 +39,7 @@ import {
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -253,7 +254,18 @@ export function Monitoring3dView({
         fullscreenOverlay={fullscreenOverlay}
         fullscreenTopRightOverlay={fullscreenTopRightOverlay}
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
-        toolbarExtras={toolbarExtras}
+        toolbarExtras={
+          isDock ? (
+            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글을 붙인다
+            // (실시간 모니터링 화면 공통). 작은 뷰(top-right)에는 두지 않는다.
+            <>
+              {toolbarExtras}
+              <SceneSimulationToggle />
+            </>
+          ) : (
+            toolbarExtras
+          )
+        }
         toolbarPlacement={toolbarLayout}
         dockRight={dockRight}
         dockBottom={dockBottom}

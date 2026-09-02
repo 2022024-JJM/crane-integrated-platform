@@ -367,7 +367,9 @@
     "dockCollapse": "접기",
     "dockResize": "패널 크기 조절",
     "dockTools": "화면 조작",
-    "dockPanels": "패널"
+    "dockPanels": "패널",
+    "simulationPlay": "시뮬레이션 실행",
+    "simulationPause": "시뮬레이션 정지"
   },
   "undo": "실행 취소"
 }

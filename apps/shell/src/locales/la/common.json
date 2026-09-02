@@ -367,7 +367,9 @@
     "dockCollapse": "Contrahe",
     "dockResize": "Muta magnitudinem tabulae",
     "dockTools": "Moderamina visus",
-    "dockPanels": "Tabulae"
+    "dockPanels": "Tabulae",
+    "simulationPlay": "Simulationem age",
+    "simulationPause": "Simulationem siste"
   },
   "undo": "Revoca"
 }

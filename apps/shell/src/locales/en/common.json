@@ -367,7 +367,9 @@
     "dockCollapse": "Collapse",
     "dockResize": "Resize panel",
     "dockTools": "View controls",
-    "dockPanels": "Panels"
+    "dockPanels": "Panels",
+    "simulationPlay": "Run simulation",
+    "simulationPause": "Stop simulation"
   },
   "undo": "Undo"
 }
