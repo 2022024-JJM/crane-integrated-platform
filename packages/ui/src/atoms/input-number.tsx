@@ -32,11 +32,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../molecules/tooltip';
  *   입력 문자열 전체와 단위를 크게 보여 준다. 좁은 필드(인스펙터 h-6·11px)에서
  *   글자가 잘려 무엇을 치는지 알 수 없는 문제의 답이다. 포커스만으로는 뜨지
  *   않고(draft 없음), 범위 밖 값이면 실제 commit 될 clamp 결과를 함께 적는다.
+ *   스테퍼·방향키로 값을 바꿀 때도 뜨며, 마지막 step 뒤 잠시 후 닫힌다(스테퍼는
+ *   포커스를 옮기지 않아 blur 가 없으므로 타이머로 닫는다).
  */
 
 /** 누르고 있을 때 반복 시작까지의 지연·간격(ms). */
 const HOLD_DELAY_MS = 400;
 const HOLD_INTERVAL_MS = 60;
+/** 스테퍼·방향키 step 뒤 미리보기 툴팁을 유지하는 시간(ms). */
+const STEP_PREVIEW_MS = 1200;
 
 /** 소수 자릿수. 1e-7 같은 지수 표기도 센다. */
 function countDecimals(n: number): number {
@@ -134,6 +138,29 @@ function InputNumber({
   const holdTimeoutRef = useRef<number | null>(null);
   const holdIntervalRef = useRef<number | null>(null);
 
+  // step 직후 미리보기 툴팁을 잠시 열어 두는 상태. 매 step 마다 타이머를 다시
+  // 건다(연속 증감 중엔 계속 열려 있고, 손을 떼면 STEP_PREVIEW_MS 뒤 닫힘).
+  const [stepPreview, setStepPreview] = useState(false);
+  const stepPreviewTimerRef = useRef<number | null>(null);
+  const clearStepPreview = useCallback(() => {
+    if (stepPreviewTimerRef.current !== null) {
+      window.clearTimeout(stepPreviewTimerRef.current);
+      stepPreviewTimerRef.current = null;
+    }
+    setStepPreview(false);
+  }, []);
+  const markStep = useCallback(() => {
+    if (!editPreview) return;
+    if (stepPreviewTimerRef.current !== null) {
+      window.clearTimeout(stepPreviewTimerRef.current);
+    }
+    setStepPreview(true);
+    stepPreviewTimerRef.current = window.setTimeout(() => {
+      stepPreviewTimerRef.current = null;
+      setStepPreview(false);
+    }, STEP_PREVIEW_MS);
+  }, [editPreview]);
+
   const clamp = useCallback(
     (v: number) => {
       let result = v;
@@ -160,16 +187,20 @@ function InputNumber({
     [onChange, onEmpty, clamp],
   );
 
-  /** 한 step 적용. 한계에 막혀 값이 안 변하면 false — 반복을 멈추는 신호. */
+  /**
+   * 한 step 적용. 한계에 막혀 값이 안 변하면 false — 반복을 멈추는 신호.
+   * 한계에 막혀도 미리보기는 띄운다(지금 값이 끝값임을 보여 주려고).
+   */
   const stepBy = useCallback(
     (direction: 1 | -1): boolean => {
+      markStep();
       const next = clamp(addStep(valueRef.current, step, direction));
       if (next === valueRef.current) return false;
       valueRef.current = next;
       onChange(next);
       return true;
     },
-    [clamp, onChange, step],
+    [clamp, markStep, onChange, step],
   );
 
   const stopHold = useCallback(() => {
@@ -201,6 +232,14 @@ function InputNumber({
 
   // 언마운트 시 타이머 정리.
   useEffect(() => stopHold, [stopHold]);
+  useEffect(
+    () => () => {
+      if (stepPreviewTimerRef.current !== null) {
+        window.clearTimeout(stepPreviewTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -255,6 +294,7 @@ function InputNumber({
         }}
         onBlur={(e) => {
           setFocused(false);
+          clearStepPreview();
           if (draft !== null) commit(draft);
           onBlur?.(e);
         }}
@@ -304,12 +344,17 @@ function InputNumber({
     return <div className={wrapperClassName}>{field}</div>;
   }
 
-  // 제어형 open — 호버로는 열지 않고 편집 중에만 연다. Trigger 는 래퍼 div 를
-  // 그대로 앵커로 쓰고, Content 는 포털이라 overflow-hidden·스크롤 영역에
-  // 잘리지 않는다.
-  const preview = draft === null ? null : previewParts(draft, clamp);
+  // 제어형 open — 호버로는 열지 않고 편집 중(타이핑)·step 직후에만 연다.
+  // Trigger 는 래퍼 div 를 그대로 앵커로 쓰고, Content 는 포털이라
+  // overflow-hidden·스크롤 영역에 잘리지 않는다.
+  const preview =
+    draft !== null && focused
+      ? previewParts(draft, clamp)
+      : stepPreview && value !== null
+        ? { typed: String(value), clamped: null }
+        : null;
   return (
-    <Tooltip open={focused && preview !== null}>
+    <Tooltip open={preview !== null}>
       <TooltipTrigger render={<div className={wrapperClassName} />}>
         {field}
       </TooltipTrigger>
