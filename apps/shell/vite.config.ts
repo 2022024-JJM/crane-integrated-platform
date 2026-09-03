@@ -331,6 +331,9 @@ export default defineConfig(({ mode }) => {
       devSceneSavePlugin(),
       devVirtualTagsSavePlugin(),
       devPreviewSavePlugin(),
+      // 위 세 저장 미들웨어가 쓰는 public/ 디렉토리(scenes·simulation·previews)는
+      // 이 플러그인의 DEV_WRITTEN_DIRS 에 등록돼 있어 저장 시 전체 리로드를
+      // 보내지 않는다. 새 저장 미들웨어를 추가하면 그 목록도 함께 갱신한다.
       assetHashManifestPlugin(),
     ],
     build: {
@@ -349,13 +352,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
-      watch: {
-        // devPreviewSavePlugin 이 생성 중에 public/previews/*.png 를 쓰는데,
-        // Vite 는 public/ 변경에 전체 페이지 리로드를 걸어서 저장 1장마다
-        // 생성 패널이 날아간다. 이 디렉토리는 dev 서버가 미들웨어로 직접
-        // 쓰는 산출물이므로 워처에서 제외한다 (서빙에는 영향 없음).
-        ignored: ['**/public/previews/**'],
-      },
       proxy: {
         // 프로덕션과 동일하게 sub-path(VITE_BASE_URL, 기본 /crane_rnd/) 아래
         // API/WS 를 받는다. network.ts 가 getBasePathPrefix() 로 생성하는

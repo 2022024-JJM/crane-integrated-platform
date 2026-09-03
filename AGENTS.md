@@ -23,7 +23,7 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 | 커맨드 | 실제로 검사되는 범위 |
 |---|---|
 | `pnpm lint` | `apps/shell` 만 (`eslint .` 를 해당 디렉토리에서 실행) |
-| `pnpm typecheck` | `apps/shell` 만. 단 shell 이 import 하는 `@crane/*` 소스는 따라 들어가므로 상당 부분이 간접 검사된다 |
+| `pnpm typecheck` | `apps/shell/src` 만. 단 shell 이 import 하는 `@crane/*` 소스는 따라 들어가므로 상당 부분이 간접 검사된다. `apps/shell/vite.config.ts` 와 `vite-plugin-asset-hash.ts` 는 `src` 밖이라 빠지므로 고쳤으면 `npx tsc --noEmit ... <파일>` 또는 dev 서버 기동으로 따로 확인한다 |
 | `pnpm test` | `apps/{philly-shipyard,mro2,indoorshop}` + `packages/{domain,features,widgets}` |
 | `npx tsc -b` (루트) | 루트 `tsconfig.json` 의 project references 전체. 단 `apps/{crane-hmi,mro2,indoorshop}` 은 references 에 없다 |
 
@@ -234,6 +234,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 ### 3D 작업
 
 - 3D scene 편집 결과는 dev server 경유로 `apps/shell/public/scenes/*.json` 에 저장된다. 미들웨어는 `apps/shell/vite.config.ts` 의 `POST /__dev/scene` 이다. 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다. 가상 태그도 같은 방식으로 `POST /__dev/virtual-tags` → `public/simulation/virtual-tags.json` 에 저장되며, 경로 문자열이 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있으니 함께 바꾼다.
+- dev 미들웨어가 `public/` 에 쓰는 디렉토리(`scenes`, `simulation`, `previews`)는 `apps/shell/vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 등록돼 있어야 저장 시 전체 리로드가 나지 않는다(이 플러그인이 public 자산 변경마다 `full-reload` 를 보내는 주체다. Vite 코어는 보내지 않는다). 새 저장 미들웨어를 만들면 그 목록에 추가한다. `server.watch.ignored` 로 막지 않는다 — Vite 는 워처가 유지하는 `publicFiles` 집합에 있는 파일만 서빙해서, 무시된 디렉토리에 기동 후 생긴 파일은 재시작 전까지 404 가 된다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다. `packages/features/src/3d/lib/scene-shadow.ts` 가 이 원칙의 선례이고, 그 파일 주석이 이유(react-refresh 규칙)까지 설명한다.
 - region → 씬 파일 매핑의 단일 소스는 `packages/domain/src/3d/model/scene-file-map.ts` 다. 브라우저 런타임(`scene-file-registry.ts`)과 Node 컨텍스트인 `apps/shell/vite.config.ts` 의 저장 미들웨어가 **같은 표를 읽어야** 한다. 표를 복제하거나 미등록 region 을 기본 파일로 fallback 시키지 않는다 — 그 fallback 이 남의 씬을 덮어쓴 사고의 원인이었고, 지금은 양쪽 모두 `null` 을 반환한다. 파일 자체 주석에 경위가 있다.
 - GLB 자산은 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, **압축 전 원본은 `assets-src/` 에 보관**한다. 압축은 되돌릴 수 없으므로 이 디렉토리를 지우지 않는다.
