@@ -239,6 +239,27 @@ describe('sanitizeSceneInfo — 모델', () => {
     ]);
   });
 
+  it('labelHidden은 true만 유지하고 그 외 값·미지정은 undefined로 정규화한다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({ id: 'a', labelHidden: true }),
+          model({ id: 'b', labelHidden: 'yes' }),
+          model({ id: 'c', labelHidden: false }),
+          model({ id: 'd' }),
+        ],
+      }),
+    );
+    expect(result.models.map((m) => m.labelHidden)).toEqual([
+      true,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    // 표시 상태(기본)는 직렬화에 키가 남지 않아야 기존 저장본 diff 가 0이다.
+    expect(JSON.stringify(result.models[3])).not.toContain('labelHidden');
+  });
+
   it('meshOverrides는 meshPath 없는 항목을 버리고, 전부 무효면 필드를 생략한다', () => {
     const result = sanitizeSceneInfo(
       scene({

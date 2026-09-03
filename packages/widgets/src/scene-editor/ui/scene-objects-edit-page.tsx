@@ -19,8 +19,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
-  Eye,
-  EyeOff,
   HardDrive,
   Images,
   Loader2,
@@ -104,7 +102,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const { t } = useTranslation();
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
-  const [showLabels, setShowLabels] = useState(true);
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
   // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어지고, 캔버스 모서리의
   // 재오픈 버튼만 남는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
@@ -131,6 +128,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     saveCurrentScene,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
@@ -480,7 +478,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 addModel(catalogItem, position);
                 setDraggingCatalogItem(null);
               }}
-              showLabels={showLabels}
               onTransformInteractionStart={startTransformInteraction}
               onTransformInteractionEnd={endTransformInteraction}
               focusSelectedRef={focusSelectedRef}
@@ -580,39 +577,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                           </TooltipTrigger>
                           <TooltipContent>
                             {t('monitoring:editor.addText')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <span className="bg-border h-4 w-px" />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={
-                                  showLabels
-                                    ? t('monitoring:editor.hideLabels')
-                                    : t('monitoring:editor.showLabels')
-                                }
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors"
-                              />
-                            }
-                            onClick={() => setShowLabels((prev) => !prev)}
-                          >
-                            {/* 아이콘은 다음 동작이 아니라 현재 상태를 나타낸다 —
-                            표시 중이면 Eye, 숨김이면 EyeOff. 톤은 양옆 버튼과
-                            동일하게 두고 상태 구분은 아이콘으로만 한다. */}
-                            {showLabels ? (
-                              <Eye className="size-4" />
-                            ) : (
-                              <EyeOff className="size-4" />
-                            )}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {showLabels
-                              ? t('monitoring:editor.hideLabels')
-                              : t('monitoring:editor.showLabels')}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -740,6 +704,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         selectedMap={selectedMap}
                         multiSelectCount={selectedIds.size}
                         onOpacityChange={updateSelectedOpacity}
+                        onLabelHiddenChange={updateSelectedLabelHidden}
                         onTransformChange={updateSelectedTransform}
                         onTextContentChange={updateSelectedTextContent}
                         onTextColorChange={updateSelectedTextColor}

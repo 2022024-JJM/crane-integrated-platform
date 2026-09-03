@@ -47,7 +47,7 @@ const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
 
 type InspectorTabKey =
   | 'transform'
-  | 'opacity'
+  | 'display'
   | 'tagMapping'
   | 'rigging'
   | 'textContent'
@@ -57,7 +57,7 @@ type InspectorObjectType = 'model' | 'text' | 'map';
 
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
-  opacity: Eye,
+  display: Eye,
   tagMapping: Tag,
   rigging: Bone,
   textContent: Type,
@@ -66,7 +66,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
 
 const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   transform: 'monitoring:inspector.transform',
-  opacity: 'monitoring:inspector.opacity',
+  display: 'monitoring:inspector.display',
   tagMapping: 'monitoring:inspector.tagMapping',
   rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
@@ -74,7 +74,7 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
 };
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
-  model: ['transform', 'opacity', 'tagMapping', 'rigging'],
+  model: ['transform', 'display', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform'],
 };
@@ -120,6 +120,7 @@ interface SceneObjectInspectorProps {
   selectedMap?: SavedMapInfo | null;
   multiSelectCount?: number;
   onOpacityChange: (value: number) => void;
+  onLabelHiddenChange: (hidden: boolean) => void;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -252,33 +253,54 @@ function TransformSection({
   );
 }
 
-function OpacitySection({
-  value,
-  onChange,
+/**
+ * "표시" 탭 — 트랜스폼 탭과 같은 구조로 섹션 헤더 아래에 하위 그룹을 둔다.
+ * 저장 필드는 `labelHidden`(true=숨김)이지만 사용자에게는 "라벨 표시"
+ * 체크박스로 보여 주므로 부호 반전은 여기서만 한다.
+ */
+function DisplaySection({
+  opacity,
+  labelHidden,
+  onOpacityChange,
+  onLabelHiddenChange,
   t,
 }: {
-  value: number;
-  onChange: (value: number) => void;
+  opacity: number;
+  labelHidden: boolean;
+  onOpacityChange: (value: number) => void;
+  onLabelHiddenChange: (hidden: boolean) => void;
   t: (key: string) => string;
 }) {
   return (
     <div>
-      <SectionHeader title={t('monitoring:inspector.opacity')} />
-      <div className="flex items-center gap-3">
-        <input
-          type="range"
-          min={0.1}
-          max={1}
-          step={0.1}
-          value={value}
-          className="accent-primary h-2 w-full cursor-pointer"
-          onChange={(event) => {
-            onChange(Number(event.target.value));
-          }}
-        />
-        <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
-          {value.toFixed(1)}
-        </span>
+      <SectionHeader title={t('monitoring:inspector.display')} />
+      <div className="space-y-3">
+        <TransformGroup title={t('monitoring:inspector.opacity')}>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.1}
+              value={opacity}
+              className="accent-primary h-2 w-full cursor-pointer"
+              onChange={(event) => {
+                onOpacityChange(Number(event.target.value));
+              }}
+            />
+            <span className="text-muted-foreground w-8 text-right text-[12px] tabular-nums">
+              {opacity.toFixed(1)}
+            </span>
+          </div>
+        </TransformGroup>
+        <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+          <Checkbox
+            checked={!labelHidden}
+            onCheckedChange={(checked) => onLabelHiddenChange(!checked)}
+            className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+          />
+          {t('monitoring:inspector.showLabel')}
+        </label>
       </div>
     </div>
   );
@@ -289,6 +311,7 @@ function ModelInspectorContent({
   selectedOpacity,
   activeTab,
   onOpacityChange,
+  onLabelHiddenChange,
   onTransformChange,
   tagMapping,
   rigging,
@@ -298,6 +321,7 @@ function ModelInspectorContent({
   selectedOpacity: number;
   activeTab: InspectorTabKey;
   onOpacityChange: (value: number) => void;
+  onLabelHiddenChange: (hidden: boolean) => void;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -320,10 +344,12 @@ function ModelInspectorContent({
         />
       ) : null}
 
-      {activeTab === 'opacity' ? (
-        <OpacitySection
-          value={selectedOpacity}
-          onChange={onOpacityChange}
+      {activeTab === 'display' ? (
+        <DisplaySection
+          opacity={selectedOpacity}
+          labelHidden={selectedModel.labelHidden ?? false}
+          onOpacityChange={onOpacityChange}
+          onLabelHiddenChange={onLabelHiddenChange}
           t={t}
         />
       ) : null}
@@ -526,6 +552,7 @@ export function SceneObjectInspector({
   selectedMap = null,
   multiSelectCount = 0,
   onOpacityChange,
+  onLabelHiddenChange,
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
@@ -605,6 +632,7 @@ export function SceneObjectInspector({
               selectedOpacity={selectedOpacity}
               activeTab={resolvedTab}
               onOpacityChange={onOpacityChange}
+              onLabelHiddenChange={onLabelHiddenChange}
               onTransformChange={onTransformChange}
               tagMapping={tagMapping}
               rigging={rigging}

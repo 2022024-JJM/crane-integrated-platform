@@ -60,6 +60,7 @@ interface UseSelectedSceneObjectEditorResult {
     updater: (mappings: TagMapping[]) => TagMapping[],
   ) => void;
   updateSelectedOpacity: (value: number) => void;
+  updateSelectedLabelHidden: (hidden: boolean) => void;
   updateSelectedTransform: (
     field: SceneTransformField,
     axis: AxisKey,
@@ -274,6 +275,32 @@ export function useSelectedSceneObjectEditor({
           return {
             ...model,
             opacity: clampOpacity(value),
+          };
+        }),
+      };
+    });
+  };
+
+  /**
+   * 라벨 숨김 토글. 저장 필드는 true일 때만 남기고(locked 와 같은 규칙),
+   * 해제 시엔 키를 지워 기존 저장본과의 diff를 0으로 유지한다.
+   */
+  const updateSelectedLabelHidden = (hidden: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) {
+            return model;
+          }
+
+          return {
+            ...model,
+            labelHidden: hidden ? true : undefined,
           };
         }),
       };
@@ -643,6 +670,7 @@ export function useSelectedSceneObjectEditor({
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,

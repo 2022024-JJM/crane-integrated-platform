@@ -343,6 +343,17 @@ describe('duplicateSelectedObject', () => {
     ]);
   });
 
+  it('labelHidden 은 표시 설정이라 잠금과 달리 복제본에도 남는다 (특성화)', () => {
+    const h = createHarness(
+      scene({ models: [{ ...model, labelHidden: true }] }),
+    );
+    h.deps.selectedIds.add('m1');
+
+    h.actions.duplicateSelectedObject();
+
+    expect(h.scene!.models[1].labelHidden).toBe(true);
+  });
+
   it('선택이 없거나 대상이 씬에 없으면 no-op', () => {
     const h = createHarness(scene({ models: [model] }));
     h.actions.duplicateSelectedObject();

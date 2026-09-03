@@ -55,6 +55,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedOpacity'];
+  updateSelectedLabelHidden: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedLabelHidden'];
   updateSelectedTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTransform'];
@@ -176,6 +179,7 @@ export function useSceneEditorSession({
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
@@ -285,6 +289,7 @@ export function useSceneEditorSession({
     saveCurrentScene,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,

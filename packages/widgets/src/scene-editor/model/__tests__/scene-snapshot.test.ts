@@ -151,6 +151,21 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     ).toBe(false);
   });
 
+  it('모델 labelHidden 은 undefined 와 false 를 같게, true 는 다르게 본다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ labelHidden: false })] }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ labelHidden: true })] }),
+      ),
+    ).toBe(false);
+  });
+
   it('tagMappings 는 id 기준 순서 무관, scale/offset 기본값(1/0)을 채워 비교한다', () => {
     const a = {
       id: 'm-a',

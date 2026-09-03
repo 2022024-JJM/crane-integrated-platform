@@ -134,6 +134,13 @@ export interface SavedModelInfo {
    * 기존 저장본과의 diff를 최소화한다.
    */
   locked?: boolean;
+  /**
+   * 라벨 숨김 — 씬 데이터다(저장 대상). true면 편집·모니터링 양쪽에서
+   * equipName 라벨을 그리지 않는다. 필드가 없으면 표시로 본다.
+   * locked 와 같은 규칙으로 true일 때만 직렬화해 기존 저장본과의 diff를
+   * 최소화한다.
+   */
+  labelHidden?: boolean;
   /** 적용할 리그 정의 id(SavedSceneInfo.rigs). 없으면 리깅 없음. */
   rigId?: string;
   /**

@@ -159,6 +159,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             // true가 아닌 값(과거 버전이 남긴 문자열 등)은 잠기지 않은
             // 것으로 정규화한다. undefined는 JSON 직렬화에서 빠진다.
             locked: model.locked === true ? true : undefined,
+            labelHidden: model.labelHidden === true ? true : undefined,
             rigId,
             tagMappings,
           },

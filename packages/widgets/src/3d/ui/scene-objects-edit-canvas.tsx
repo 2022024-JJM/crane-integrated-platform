@@ -156,7 +156,6 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
-  showLabels?: boolean;
   onTransformCommit?: (
     position: Vector3Tuple | null,
     rotation: Vector3Tuple | null,
@@ -188,7 +187,6 @@ export function SceneObjectsEditCanvas({
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
-  showLabels = true,
   onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
@@ -851,7 +849,7 @@ export function SceneObjectsEditCanvas({
               id={model.id}
               url={model.path}
               equipName={model.equipName}
-              showLabel={showLabels}
+              showLabel={!model.labelHidden}
               opacity={model.opacity}
               seaSubmersion={hasSea}
               position={model.position}

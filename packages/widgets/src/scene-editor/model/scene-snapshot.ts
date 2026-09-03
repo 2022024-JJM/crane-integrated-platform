@@ -209,6 +209,7 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.path === b.path &&
     a.opacity === b.opacity &&
     (a.locked ?? false) === (b.locked ?? false) &&
+    (a.labelHidden ?? false) === (b.labelHidden ?? false) &&
     a.rigId === b.rigId &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&

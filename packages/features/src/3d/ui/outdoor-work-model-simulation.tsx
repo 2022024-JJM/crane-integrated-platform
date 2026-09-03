@@ -384,6 +384,7 @@ export function OutdoorWorkModelSimulation({
             id={model.id}
             url={model.path}
             equipName={model.equipName}
+            showLabel={!model.labelHidden}
             opacity={resolveFocusOpacity(
               model.id,
               focusedModelId,
