@@ -23,8 +23,14 @@
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
-@source '../../../../packages/*/src/**/*.tsx';
-@source '../../../../apps/*/src/**/*.tsx';
+/* 스캔 대상에 .ts 를 반드시 포함한다.
+   클래스 문자열이 컴포넌트 밖 .ts 에 사는 경우가 이 저장소에는 여럿 있다 —
+   지도 오버레이 재질(map-overlay-style.ts), 상태·식별색 팔레트의 textClass
+   (region-map-types.ts, marker-identity.ts) 등. .tsx 만 스캔하면 그 클래스들이
+   조용히 생성되지 않아 "배경 없는 backdrop-blur" 같은 반쪽 스타일이 나온다.
+   아래 utils.ts 한 줄도 같은 사고의 흔적이다. */
+@source '../../../../packages/*/src/**/*.{ts,tsx}';
+@source '../../../../apps/*/src/**/*.{ts,tsx}';
 @source '../../../../packages/core/src/lib/utils.ts';
 
 @custom-variant dark (&:is(.dark *));
