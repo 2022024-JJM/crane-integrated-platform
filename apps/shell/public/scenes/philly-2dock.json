@@ -193,7 +193,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "labelHidden": true
     },
     {
       "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
@@ -214,7 +215,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "labelHidden": true
     }
   ],
   "texts": [],
