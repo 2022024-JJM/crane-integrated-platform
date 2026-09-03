@@ -187,12 +187,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     onUpdate: updateSelectedTagMappings,
   };
 
-  // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 켜진 동안만
-  // 태그 값 버스가 씬 맵핑을 거쳐 값 저장소로 흐르고, 끄면 노드가 rest 로
-  // 돌아간다. 화면을 떠날 때도 멈춘다(모니터링 뷰와 같은 규칙).
-  const isSimulating = useVirtualTagStore((s) => s.isRunning);
+  // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 바인딩(버스 →
+  // 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는 동안 항상 켜 둔다.
+  // 일시정지는 러너 틱만 멈춰 노드가 마지막 값에서 그대로 서고, 초기값 복귀는
+  // 탭의 리셋 버튼(virtualTagRuntime.resetValues)이 맡는다. 예전엔 토글에
+  // 바인딩 on/off 를 물려 정지할 때마다 rest 로 튀었다. 화면을 떠날 때는
+  // 재생을 멈추고 바인딩 cleanup 이 값 저장소를 비운다.
   const pauseSimulation = useVirtualTagStore((s) => s.pause);
-  useTagBindingSource(sceneInfo, isSimulating);
+  useTagBindingSource(sceneInfo, true);
   useEffect(() => () => pauseSimulation(), [pauseSimulation]);
   // 관리 페이지는 편집 화면의 형제 서브라우트(…/virtual-tags).
   const { pathname } = useLocation();

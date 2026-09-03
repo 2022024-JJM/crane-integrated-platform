@@ -3,7 +3,10 @@ import { BoxGeometry, Mesh, Object3D } from 'three';
 import {
   buildModelNodeTree,
   flattenModelNodeTree,
+  getSingleSelectedNodeId,
+  getSingleSelectedObjectId,
   listModelNodeOptions,
+  listNodeAncestorPaths,
 } from '../model-node-tree';
 
 function fixture() {
@@ -95,5 +98,65 @@ describe('listModelNodeOptions', () => {
       '  Link_01',
     ]);
     expect(options[3].kind).toBe('mesh');
+  });
+});
+
+describe('listNodeAncestorPaths', () => {
+  it('자기 자신은 빼고 얕은 조상부터 나열한다', () => {
+    expect(listNodeAncestorPaths('[0]A/[1]B/[2]C')).toEqual([
+      '[0]A',
+      '[0]A/[1]B',
+    ]);
+  });
+
+  it('최상위 경로와 빈 경로는 조상이 없다', () => {
+    expect(listNodeAncestorPaths('[0]A')).toEqual([]);
+    expect(listNodeAncestorPaths('')).toEqual([]);
+  });
+
+  it('이름 없는 세그먼트도 경로 그대로 유지한다', () => {
+    expect(listNodeAncestorPaths('[0]Base/[0]Link_01/[0]')).toEqual([
+      '[0]Base',
+      '[0]Base/[0]Link_01',
+    ]);
+  });
+
+  it('조상을 펼침 집합으로 넘기면 대상 행이 보인다', () => {
+    const tree = buildModelNodeTree(fixture().root);
+    const target = '[0]Base/[0]Link_01/[0]';
+    const expanded = new Set(listNodeAncestorPaths(target));
+    expect(flattenModelNodeTree(tree, expanded).map((i) => i.path)).toContain(
+      target,
+    );
+    // 대상 자신은 펼치지 않는다.
+    expect(expanded.has(target)).toBe(false);
+  });
+});
+
+describe('getSingleSelectedNodeId', () => {
+  it('노드 id 하나만 선택됐을 때 그 id 를 돌려준다', () => {
+    expect(getSingleSelectedNodeId(new Set(['m1::[0]A/[1]B']))).toBe(
+      'm1::[0]A/[1]B',
+    );
+  });
+
+  it('빈 선택·모델 선택·복수 선택은 null', () => {
+    expect(getSingleSelectedNodeId(new Set())).toBeNull();
+    expect(getSingleSelectedNodeId(new Set(['m1']))).toBeNull();
+    expect(
+      getSingleSelectedNodeId(new Set(['m1::[0]A', 'm2::[0]A'])),
+    ).toBeNull();
+  });
+});
+
+describe('getSingleSelectedObjectId', () => {
+  it('최상위 객체 하나만 선택됐을 때 그 id 를 돌려준다', () => {
+    expect(getSingleSelectedObjectId(new Set(['m1']))).toBe('m1');
+  });
+
+  it('빈 선택·노드 선택·복수 선택은 null', () => {
+    expect(getSingleSelectedObjectId(new Set())).toBeNull();
+    expect(getSingleSelectedObjectId(new Set(['m1::[0]A']))).toBeNull();
+    expect(getSingleSelectedObjectId(new Set(['m1', 'm2']))).toBeNull();
   });
 });

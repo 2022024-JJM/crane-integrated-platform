@@ -1,12 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import {
-  Box3,
-  MathUtils,
-  Object3D,
-  PerspectiveCamera,
-  Vector3,
-} from 'three';
+import { Box3, MathUtils, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
@@ -19,7 +13,10 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { useObjectFocusStore } from '../model/use-object-focus-store';
+import {
+  useObjectFocusStore,
+  type FocusCameraPose,
+} from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
@@ -27,6 +24,7 @@ import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
+import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
 export function useSceneData(
@@ -131,7 +129,18 @@ export function useSceneData(
       loadedAssetPathsRef.current = [];
       releaseSceneRegionAssets(regionId, pathsToRelease);
     };
-  }, [clearSceneInfoFromStore, loadVirtualTags, mode, pauseSimulation, regionId, resetReplay, setSceneInfoInStore, startRealtime, startSimulation, stopRealtime]);
+  }, [
+    clearSceneInfoFromStore,
+    loadVirtualTags,
+    mode,
+    pauseSimulation,
+    regionId,
+    resetReplay,
+    setSceneInfoInStore,
+    startRealtime,
+    startSimulation,
+    stopRealtime,
+  ]);
 
   return { sceneInfo, isLoading };
 }
@@ -144,6 +153,11 @@ interface OutdoorWorkModelSimulationProps {
   mode?: 'simulation' | 'replay' | 'realtime';
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
+  /**
+   * 현재 카메라 포즈. 모델 포커스 진입 순간에 잡아 두었다가 돌아가기 때
+   * 그 시점으로 복귀한다. null 이면 해제 시 onResetCamera 로 폴백.
+   */
+  getPose?: () => FocusCameraPose | null;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -154,6 +168,7 @@ export function OutdoorWorkModelSimulation({
   mode = 'simulation',
   onMoveTo,
   onResetCamera,
+  getPose,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 바다(EXR 배경)가 있는 씬에서만 모델의 수면 아래를 잠김 처리한다 — 바다가
@@ -167,27 +182,17 @@ export function OutdoorWorkModelSimulation({
   useRealtimeWebSocketBridge(mode === 'realtime');
 
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
-  const pushFocus = useObjectFocusStore((s) => s.pushFocus);
+  const enterFocus = useObjectFocusStore((s) => s.enterFocus);
+  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
 
+  // 프레이밍(카메라 fit) 대상 조회용. 포커스 밖 모델도 마운트를 유지하고
+  // 투명하게만 만들므로, 예전처럼 언마운트 대비 박스 캐시를 둘 필요가 없다.
   const objectMapRef = useRef<Map<string, Object3D>>(new Map());
-  const boxCacheRef = useRef<Map<string, Box3>>(new Map());
-
-  const getObjectBounds = useCallback((id: string) => {
-    const object = objectMapRef.current.get(id);
-    if (object) {
-      const liveBounds = new Box3().setFromObject(object);
-      boxCacheRef.current.set(id, liveBounds);
-      return liveBounds;
-    }
-
-    return boxCacheRef.current.get(id) ?? null;
-  }, []);
 
   const handleObjectReady = useCallback(
     (id: string, object: Object3D | null) => {
       if (object) {
         objectMapRef.current.set(id, object);
-        boxCacheRef.current.set(id, new Box3().setFromObject(object));
         return;
       }
 
@@ -198,116 +203,68 @@ export function OutdoorWorkModelSimulation({
 
   const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];
-  const modelIds = useMemo(() => models.map((model) => model.id), [models]);
   const texts = sceneInfo?.texts ?? [];
-
-  const focusStack = useObjectFocusStore((s) => s.focusStack);
 
   const handleModelClick = useCallback(
     (id: string) => {
-      // If clicking from full scene (stack empty), check if this model
-      // overlaps with a larger model (e.g. crane inside a bay).
-      // If so, push the container first to enable two-level back navigation.
-      if (focusStack.length === 0) {
-        const clickedBox = getObjectBounds(id);
-
-        if (clickedBox) {
-          const clickedSize = new Vector3();
-          clickedBox.getSize(clickedSize);
-          const clickedVolume = clickedSize.x * clickedSize.y * clickedSize.z;
-
-          let bestContainer: string | null = null;
-          let bestVolume = Infinity;
-
-          for (const otherId of modelIds) {
-            if (otherId === id) {
-              continue;
-            }
-
-            const otherBox = getObjectBounds(otherId);
-            if (!otherBox) {
-              continue;
-            }
-
-            if (!otherBox.intersectsBox(clickedBox)) {
-              continue;
-            }
-
-            const otherSize = new Vector3();
-            otherBox.getSize(otherSize);
-            const otherVolume = otherSize.x * otherSize.y * otherSize.z;
-
-            // Only consider objects larger than the clicked one as containers
-            if (otherVolume > clickedVolume && otherVolume < bestVolume) {
-              bestContainer = otherId;
-              bestVolume = otherVolume;
-            }
-          }
-
-          if (bestContainer) {
-            pushFocus(bestContainer);
-            pushFocus(id);
-            return;
-          }
-        }
+      // 포커스는 1단계 — 포커스 중에는 본체·라벨 어느 경로의 클릭도 무시한다.
+      // 다른 모델을 보려면 먼저 돌아가기로 빠져나와야 한다. 스토어의
+      // enterFocus 도 no-op 이지만 여기서 먼저 끊어 getPose 호출을 아낀다.
+      if (useObjectFocusStore.getState().focusedModelId !== null) {
+        return;
       }
 
-      pushFocus(id);
+      // 돌아가기 복귀 지점 = 클릭 순간의 카메라. 아래 프레이밍 effect 가
+      // 카메라를 옮기기 전에 잡아야 하므로 렌더 전에 여기서 캡처한다.
+      enterFocus(id, getPose?.() ?? null);
     },
-    [focusStack.length, getObjectBounds, modelIds, pushFocus],
+    [enterFocus, getPose],
   );
-
-  const { visibleModelIds, visibleGroupBox } = useMemo(() => {
-    if (!focusedModelId) {
-      return { visibleModelIds: null, visibleGroupBox: null };
-    }
-
-    const focusedBox = getObjectBounds(focusedModelId);
-
-    if (!focusedBox) {
-      return {
-        visibleModelIds: new Set([focusedModelId]),
-        visibleGroupBox: null,
-      };
-    }
-
-    const result = new Set<string>();
-    const groupBox = focusedBox.clone();
-
-    for (const id of modelIds) {
-      if (id === focusedModelId) {
-        result.add(id);
-        continue;
-      }
-
-      const otherBox = getObjectBounds(id);
-      if (!otherBox) {
-        continue;
-      }
-
-      if (focusedBox.intersectsBox(otherBox)) {
-        result.add(id);
-        groupBox.union(otherBox);
-      }
-    }
-
-    return { visibleModelIds: result, visibleGroupBox: groupBox };
-  }, [focusedModelId, getObjectBounds, modelIds]);
 
   const onMoveToRef = useRef(onMoveTo);
   onMoveToRef.current = onMoveTo;
   const onResetCameraRef = useRef(onResetCamera);
   onResetCameraRef.current = onResetCamera;
 
+  // 돌아가기 카메라 복귀. exitFocus 가 포즈까지 비우므로 렌더 뒤 effect 로는
+  // 읽을 수 없고, 전이 순간의 prev 상태에서 읽는다. 포즈가 없으면(컨트롤러
+  // 미준비 상태에서 진입) 씬 기본 카메라로 리셋한다.
+  useEffect(
+    () =>
+      useObjectFocusStore.subscribe((state, prev) => {
+        if (prev.focusedModelId === null || state.focusedModelId !== null) {
+          return;
+        }
+
+        const pose = prev.returnPose;
+        if (pose) {
+          onMoveToRef.current?.(pose.position, pose.target);
+        } else {
+          onResetCameraRef.current?.();
+        }
+      }),
+    [],
+  );
+
+  // 직전 effect 실행 시점의 포커스 대상. 마운트(포커스 없음)와 해제(포커스
+  // 있음 → 없음)를 구분한다 — 해제 시 카메라는 위 subscribe 가 복귀시키므로
+  // 여기서 리셋하면 그 복귀를 덮어쓴다.
+  const prevFocusedModelIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    const prevFocusedModelId = prevFocusedModelIdRef.current;
+    prevFocusedModelIdRef.current = focusedModelId;
+
     if (!focusedModelId) {
-      onResetCameraRef.current?.();
+      if (prevFocusedModelId === null) {
+        onResetCameraRef.current?.();
+      }
       return;
     }
 
     // 포커스된 모델의 박스에만 카메라를 맞춘다. 겹치는 이웃 모델까지 합치면
     // (예: LLC 클릭 시 골리앗까지 포함) 클릭한 크레인이 화면에서 작아진다.
-    // 이웃 모델의 표시 여부는 visibleModelIds가 별도로 처리한다.
+    // 나머지 모델은 투명 처리로만 물러나고 fit 에는 들어가지 않는다.
     const focusedObject = objectMapRef.current.get(focusedModelId);
 
     if (!focusedObject) {
@@ -383,16 +340,13 @@ export function OutdoorWorkModelSimulation({
     onMoveToRef.current?.(position, target);
   }, [focusedModelId, camera]);
 
-  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
-
   useEffect(() => {
     objectMapRef.current.clear();
-    boxCacheRef.current.clear();
 
     return () => {
-      clearFocus();
+      exitFocus();
     };
-  }, [regionId, clearFocus]);
+  }, [regionId, exitFocus]);
 
   return (
     <>
@@ -418,56 +372,48 @@ export function OutdoorWorkModelSimulation({
           />
         </SceneObjectBoundary>
       ))}
-      {models.map((model) => {
-        if (visibleModelIds && !visibleModelIds.has(model.id)) {
-          return null;
-        }
-
-        return (
-          <SceneObjectBoundary
-            key={model.id}
-            label={`model ${model.equipName || model.id} (${model.path})`}
-          >
-            <GltfModel
-              id={model.id}
-              url={model.path}
-              equipName={model.equipName}
-              opacity={model.opacity}
-              alarmSeverity={
-                model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
-              }
-              alarmHighlightMesh={alarmHighlightMesh}
-              seaSubmersion={hasSea}
-              position={model.position}
-              rotation={model.rotation}
-              scale={model.scale}
-              onSelect={handleModelClick}
-              onObjectReady={handleObjectReady}
-            />
-          </SceneObjectBoundary>
-        );
-      })}
-      {texts.map((text) => {
-        if (visibleGroupBox) {
-          const [tx] = text.position;
-
-          if (tx < visibleGroupBox.min.x || tx > visibleGroupBox.max.x) {
-            return null;
-          }
-        }
-
-        return (
-          <SceneText
-            key={text.id}
-            id={text.id}
-            content={text.content}
-            color={text.color}
-            position={text.position}
-            rotation={text.rotation}
-            scale={text.scale}
+      {/* 포커스 중 나머지 모델은 언마운트하지 않고 투명(0.1)·라벨 흐림으로
+          물러난다. 흐림은 저장하지 않고 씬 opacity 에서 파생하므로 포커스가
+          풀리면 prop 이 원래 값으로 돌아가는 것이 곧 복원이다(focus-ghost.ts). */}
+      {models.map((model) => (
+        <SceneObjectBoundary
+          key={model.id}
+          label={`model ${model.equipName || model.id} (${model.path})`}
+        >
+          <GltfModel
+            id={model.id}
+            url={model.path}
+            equipName={model.equipName}
+            opacity={resolveFocusOpacity(
+              model.id,
+              focusedModelId,
+              model.opacity,
+            )}
+            labelDimmed={isFocusGhosted(model.id, focusedModelId)}
+            alarmSeverity={
+              model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
+            }
+            alarmHighlightMesh={alarmHighlightMesh}
+            seaSubmersion={hasSea}
+            position={model.position}
+            rotation={model.rotation}
+            scale={model.scale}
+            onSelect={handleModelClick}
+            onObjectReady={handleObjectReady}
           />
-        );
-      })}
+        </SceneObjectBoundary>
+      ))}
+      {texts.map((text) => (
+        <SceneText
+          key={text.id}
+          id={text.id}
+          content={text.content}
+          color={text.color}
+          position={text.position}
+          rotation={text.rotation}
+          scale={text.scale}
+        />
+      ))}
     </>
   );
 }

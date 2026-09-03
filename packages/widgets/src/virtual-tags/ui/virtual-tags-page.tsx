@@ -338,6 +338,7 @@ export function VirtualTagsPage() {
   useRigLivePoll();
   const load = useVirtualTagStore((s) => s.load);
   const save = useVirtualTagStore((s) => s.save);
+  const discard = useVirtualTagStore((s) => s.discard);
   const tags = useVirtualTagStore((s) => s.tags);
   const tickMs = useVirtualTagStore((s) => s.tickMs);
   const savedSnapshot = useVirtualTagStore((s) => s.savedSnapshot);
@@ -361,6 +362,10 @@ export function VirtualTagsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  // 스토어가 전역이라 페이지를 떠나도 편집본이 남는다. 저장하지 않고 나가면
+  // (다이얼로그의 "저장 안 함", 저장 없이 뒤로가기 등 경로 불문) 언마운트에서
+  // 마지막 저장본으로 되돌린다. 저장 후 이탈은 dirty 가 아니라 no-op.
+  useEffect(() => () => discard(), [discard]);
 
   const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
     isDirty,

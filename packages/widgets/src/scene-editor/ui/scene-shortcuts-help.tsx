@@ -29,7 +29,8 @@ interface ShortcutGroup {
 /**
  * 편집기에 실제로 바인딩된 단축키와 1:1로 유지한다 — 목록이 코드와 어긋나면
  * 없는 기능을 안내하게 된다. 바인딩 위치: scene-objects-edit-page.tsx
- * (키보드), scene-objects-edit-canvas.tsx(OrbitControls 마우스 버튼),
+ * (키보드), scene-objects-edit-canvas.tsx(OrbitControls 마우스 버튼,
+ * 더블클릭 drill-in — handleDoubleSelectModel, 잠긴 모델 제외),
  * use-marquee-selection.ts(드래그 선택).
  */
 const SHORTCUT_GROUPS: ShortcutGroup[] = [
@@ -51,6 +52,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: 'groupSelect',
     rows: [
       { keys: ['click'], label: 'select' },
+      { keys: ['doubleClick'], label: 'selectNode' },
       { keys: [MOD, 'click'], label: 'toggleSelect' },
       { keys: ['drag'], label: 'marquee' },
     ],
@@ -70,6 +72,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 /** 마우스 동작처럼 번역이 필요한 키 토큰. 나머지는 키 이름 그대로 표시. */
 const TRANSLATED_KEYS = new Set([
   'click',
+  'doubleClick',
   'drag',
   'wheel',
   'middleDrag',
@@ -82,7 +85,7 @@ const OVERLAY_BUTTON_CLASS =
 /** 캔버스 우측 하단의 단축키 도움말 버튼 + 팝업. */
 export function SceneShortcutsHelp() {
   const { t } = useTranslation();
-  const title = t('monitoring:editor.keyboardShortcuts');
+  const title = t('monitoring:editor.shortcuts.title');
 
   return (
     <Popover>

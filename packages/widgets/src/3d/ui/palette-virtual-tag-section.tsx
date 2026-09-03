@@ -43,7 +43,10 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
   }, [load]);
 
   const sceneKeys = useMemo(() => collectSceneTagKeys(sceneInfo), [sceneInfo]);
-  const tagByKey = useMemo(() => new Map(tags.map((tag) => [tag.key, tag])), [tags]);
+  const tagByKey = useMemo(
+    () => new Map(tags.map((tag) => [tag.key, tag])),
+    [tags],
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -115,7 +118,10 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
                 )}
               >
                 <div className="flex items-center gap-2 text-[11px]">
-                  <span className="min-w-0 flex-1 truncate font-mono" title={key}>
+                  <span
+                    className="min-w-0 flex-1 truncate font-mono"
+                    title={key}
+                  >
                     {key}
                   </span>
                   {!tag ? (
@@ -123,12 +129,15 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
                       {t('monitoring:editor.virtualTags.unregistered')}
                     </span>
                   ) : null}
-                  <span className="text-muted-foreground w-16 shrink-0 text-right font-mono text-[10px]">
-                    {value !== undefined && Number.isFinite(value)
-                      ? Number(value.toFixed(3))
-                      : '—'}
-                    {tag?.unit ? ` ${tag.unit}` : ''}
-                  </span>
+                </div>
+                {/* 값은 키와 같은 줄에 두지 않는다 — 자릿수가 늘면(000.000 m)
+                    고정폭을 넘겨 줄바꿈이 생겼다. 한 줄을 통째로 쓰고 우측
+                    정렬, tabular-nums 로 자릿수 변동에도 폭이 흔들리지 않게. */}
+                <div className="text-muted-foreground text-right font-mono text-[10px] whitespace-nowrap tabular-nums">
+                  {value !== undefined && Number.isFinite(value)
+                    ? Number(value.toFixed(3))
+                    : '—'}
+                  {tag?.unit ? ` ${tag.unit}` : ''}
                 </div>
                 {tag && manual ? (
                   <input
@@ -158,7 +167,8 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
                                 100,
                                 Math.max(
                                   0,
-                                  ((value - tag.min) / (tag.max - tag.min)) * 100,
+                                  ((value - tag.min) / (tag.max - tag.min)) *
+                                    100,
                                 ),
                               )
                         }%`,

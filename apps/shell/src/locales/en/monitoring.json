@@ -151,7 +151,6 @@
     "deleteObject": "Delete object",
     "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",
-    "keyboardShortcuts": "Keyboard shortcuts",
     "deleteSelected": "Delete selected",
     "snapActive": "Snap 1.0",
     "hideLabels": "Hide labels",
@@ -167,6 +166,7 @@
       "stay": "Cancel"
     },
     "shortcuts": {
+      "title": "Shortcuts",
       "groupFile": "File",
       "groupEdit": "Edit",
       "groupSelect": "Selection",
@@ -179,6 +179,8 @@
       "delete": "Delete selection",
       "click": "Click",
       "select": "Select object",
+      "doubleClick": "Double-click",
+      "selectNode": "Select node inside model",
       "toggleSelect": "Toggle selection",
       "drag": "Left drag",
       "marquee": "Marquee select",

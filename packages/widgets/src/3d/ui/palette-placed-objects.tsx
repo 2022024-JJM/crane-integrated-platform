@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import {
   makeMeshId,
   modelObjectRegistry,
+  parseMeshId,
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedTextInfo,
@@ -32,6 +33,9 @@ import { TreeRow } from '@crane/ui/molecules/tree';
 import {
   buildModelNodeTree,
   flattenModelNodeTree,
+  getSingleSelectedNodeId,
+  getSingleSelectedObjectId,
+  listNodeAncestorPaths,
   type ModelNodeTreeItem,
 } from '../lib/model-node-tree';
 import {
@@ -88,6 +92,19 @@ export function PalettePlacedObjects({
 }: PalettePlacedObjectsProps) {
   const { t } = useTranslation();
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // 객체 하나가 선택되면(캔버스 클릭 포함) 그 행까지 스크롤한다. index 배열은
+  // 방향키 이동용이라 id 로 찾는 map 을 따로 둔다 — 의존성이 id 문자열이라
+  // 기즈모 드래그로 placedModels 가 매 프레임 바뀌어도 스크롤이 튀지 않는다.
+  const itemRefsById = useRef<Map<string, HTMLDivElement>>(new Map());
+  const selectedObjectId = getSingleSelectedObjectId(selectedIds);
+  useEffect(() => {
+    const row = selectedObjectId
+      ? itemRefsById.current.get(selectedObjectId)
+      : undefined;
+    if (row && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selectedObjectId]);
 
   // 펼침 상태는 세션 상태다. 노드 트리는 펼치는 순간 registry 의 clone root
   // 에서 만든다 — 모델이 아직 마운트 전이면 빈 트리(다시 펼치면 재시도).
@@ -127,6 +144,35 @@ export function PalettePlacedObjects({
       return next;
     });
   };
+
+  // 캔버스 더블클릭 drill-in 으로 노드가 선택되면 모델 행과 조상 노드를 펼쳐
+  // 목록에서 보이게 한다. 선택이 바뀔 때 한 번만 적용하므로 이후 사용자가
+  // 접는 건 그대로 둔다. effect 안 setState(react-hooks/set-state-in-effect)
+  // 대신 렌더 중 이전 값과 비교해 조정하는 패턴을 쓴다.
+  const selectedNodeId = getSingleSelectedNodeId(selectedIds);
+  const [revealedNodeId, setRevealedNodeId] = useState<string | null>(null);
+  if (selectedNodeId !== revealedNodeId) {
+    setRevealedNodeId(selectedNodeId);
+    const parsed = selectedNodeId ? parseMeshId(selectedNodeId) : null;
+    if (parsed) {
+      const { modelId, meshPath } = parsed;
+      setExpandedModels((prev) =>
+        prev.has(modelId) ? prev : new Set(prev).add(modelId),
+      );
+      setNodeTrees((prev) => {
+        if ((prev.get(modelId)?.length ?? 0) > 0) return prev;
+        const root = modelObjectRegistry.get(modelId);
+        if (!root) return prev;
+        return new Map(prev).set(modelId, buildModelNodeTree(root));
+      });
+      const keys = listNodeAncestorPaths(meshPath).map(
+        (path) => `${modelId}::${path}`,
+      );
+      setExpandedNodes((prev) =>
+        keys.every((key) => prev.has(key)) ? prev : new Set([...prev, ...keys]),
+      );
+    }
+  }
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -223,6 +269,8 @@ export function PalettePlacedObjects({
               const rowProps = {
                 ref: (el: HTMLDivElement | null) => {
                   itemRefs.current[index] = el;
+                  if (el) itemRefsById.current.set(item.id, el);
+                  else itemRefsById.current.delete(item.id);
                 },
                 role: 'button',
                 tabIndex: 0,
@@ -241,7 +289,8 @@ export function PalettePlacedObjects({
                     itemRefs.current[next]?.focus();
                   } else if (event.key === 'ArrowUp') {
                     event.preventDefault();
-                    const prev = (index - 1 + allItems.length) % allItems.length;
+                    const prev =
+                      (index - 1 + allItems.length) % allItems.length;
                     selectItem(allItems[prev]);
                     itemRefs.current[prev]?.focus();
                   } else if (event.key === 'Enter' || event.key === ' ') {
@@ -491,6 +540,17 @@ function ModelNodeRows({
     [tree, expandedPaths],
   );
 
+  // 캔버스 drill-in 으로 고른 노드가 목록 밖에 있으면 행까지 스크롤한다.
+  // 의존성은 Set 참조가 아니라 id 문자열이라 다른 선택 변화엔 튀지 않는다.
+  const selectedNodeId = getSingleSelectedNodeId(selectedIds);
+  const selectedRowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const row = selectedRowRef.current;
+    if (row && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selectedNodeId]);
+
   if (rows.length === 0) {
     return (
       <p className="text-muted-foreground py-1 pl-8 text-[10px]">
@@ -509,6 +569,7 @@ function ModelNodeRows({
         return (
           <TreeRow
             key={nodeId}
+            ref={isSelected ? selectedRowRef : undefined}
             depth={node.depth + 1}
             hasChildren={node.children.length > 0}
             expanded={expandedPaths.has(node.path)}
