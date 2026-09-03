@@ -6,13 +6,11 @@ import {
   DOCK_CLOSE_DELAY_MS,
   DOCK_OPEN_DELAY_MS,
 } from '../../lib/dock-hover-state';
-import { DOCK_SIZE_DEFAULT, DOCK_SIZE_MAX } from '../../lib/dock-storage';
 import { useSceneDock } from '../use-scene-dock';
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
 const PINNED_KEY = 'crane:monitoring-dock:status:pinned';
-const SIZE_KEY = 'crane:monitoring-dock:status:size';
 
 function advance(ms: number) {
   act(() => {
@@ -195,39 +193,5 @@ describe('useSceneDock — pin 영속화', () => {
     expect(
       window.localStorage.getItem('crane:monitoring-dock:tools:pinned'),
     ).toBe('0');
-  });
-});
-
-describe('useSceneDock — size 영속화', () => {
-  it('저장값이 없으면 기본 크기, 있으면 그 값으로 시작한다', () => {
-    const cold = renderHook(() => useSceneDock('status'));
-    expect(cold.result.current.size).toBe(DOCK_SIZE_DEFAULT);
-    cold.unmount();
-
-    window.localStorage.setItem(SIZE_KEY, '55');
-    const warm = renderHook(() => useSceneDock('status'));
-    expect(warm.result.current.size).toBe(55);
-  });
-
-  it('setSize 는 클램프해서 저장한다', () => {
-    const { result } = renderHook(() => useSceneDock('status'));
-    act(() => result.current.setSize(DOCK_SIZE_MAX + 30));
-    expect(result.current.size).toBe(DOCK_SIZE_MAX);
-    expect(window.localStorage.getItem(SIZE_KEY)).toBe(String(DOCK_SIZE_MAX));
-  });
-
-  it('같은 크기를 다시 넣으면 storage 에 다시 쓰지 않는다', () => {
-    const { result } = renderHook(() => useSceneDock('status'));
-    act(() => result.current.setSize(50));
-    const setItem = vi.spyOn(Storage.prototype, 'setItem');
-    act(() => result.current.setSize(50));
-    expect(setItem).not.toHaveBeenCalled();
-    setItem.mockRestore();
-  });
-
-  it('NaN 은 기본값으로 떨어진다', () => {
-    const { result } = renderHook(() => useSceneDock('status'));
-    act(() => result.current.setSize(Number.NaN));
-    expect(result.current.size).toBe(DOCK_SIZE_DEFAULT);
   });
 });

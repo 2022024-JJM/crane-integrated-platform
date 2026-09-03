@@ -12,13 +12,7 @@ import {
   type DockHoverEvent,
   type DockHoverState,
 } from '../lib/dock-hover-state';
-import {
-  clampDockSize,
-  readDockPinned,
-  readDockSize,
-  writeDockPinned,
-  writeDockSize,
-} from '../lib/dock-storage';
+import { readDockPinned, writeDockPinned } from '../lib/dock-storage';
 
 /**
  * 독 껍데기(@crane/ui SceneDock*)가 호출하는 인터랙션 핸들러 묶음.
@@ -40,17 +34,14 @@ export interface SceneDockController {
   pinned: boolean;
   setPinned: (next: boolean) => void;
   togglePinned: () => void;
-  /** 도킹(pin) 시 크기(뷰어 대비 %). 오버레이 모드에서는 쓰이지 않는다. */
-  size: number;
-  setSize: (next: number) => void;
   handlers: SceneDockHandlers;
 }
 
 /**
- * 씬 독 하나의 상태(hover 펼침·고정·크기)를 소유하는 훅.
+ * 씬 독 하나의 상태(hover 펼침·고정)를 소유하는 훅.
  *
  * 상태 전이는 lib/dock-hover-state 의 순수 리듀서가, 타이머 예약은 이 훅이
- * `pendingTimer` 를 보고 한다. 고정·크기는 localStorage 에 영속화한다.
+ * `pendingTimer` 를 보고 한다. 고정 여부는 localStorage 에 영속화한다.
  * 이 훅은 Monitoring3dView 가 소유한다 — 앱 페이지에 두면 페이지 리렌더가
  * cameraPreset 참조를 흔들어 카메라가 리셋되는 사고(monitoring-3d-view.tsx
  * 주석)로 이어진다.
@@ -59,8 +50,6 @@ export function useSceneDock(dockId: string): SceneDockController {
   const [state, setState] = useState<DockHoverState>(() =>
     createDockHoverState(readDockPinned(dockId)),
   );
-  const [size, setSizeState] = useState<number>(() => readDockSize(dockId));
-
   const dispatch = useCallback((event: DockHoverEvent) => {
     setState((prev) => reduceDockHover(prev, event));
   }, []);
@@ -95,20 +84,6 @@ export function useSceneDock(dockId: string): SceneDockController {
     setPinned(!pinned);
   }, [pinned, setPinned]);
 
-  const setSize = useCallback(
-    (next: number) => {
-      const clamped = clampDockSize(next);
-      setSizeState((prev) => {
-        if (prev === clamped) {
-          return prev;
-        }
-        writeDockSize(dockId, clamped);
-        return clamped;
-      });
-    },
-    [dockId],
-  );
-
   const handlers = useMemo<SceneDockHandlers>(
     () => ({
       onPointerEnter: () => dispatch({ type: 'enter' }),
@@ -130,8 +105,6 @@ export function useSceneDock(dockId: string): SceneDockController {
     pinned,
     setPinned,
     togglePinned,
-    size,
-    setSize,
     handlers,
   };
 }

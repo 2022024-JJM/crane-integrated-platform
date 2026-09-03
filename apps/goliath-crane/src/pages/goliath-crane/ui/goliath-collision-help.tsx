@@ -27,7 +27,7 @@ import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 /** 우측 하단 배치 — 독 핸들(미고정) 두께만큼 안쪽으로 비킨다. */
 const DOCK_INSET_STYLE = {
   right: 'calc(0.75rem + var(--dock-right-inset, 0px))',
-  bottom: 'calc(0.75rem + var(--dock-bottom-inset, 0px))',
+  bottom: '0.75rem',
 } as const;
 
 /** 링 색 견본 — 실제 씬처럼 "면 위의 얇은 테두리"로 그린다 */

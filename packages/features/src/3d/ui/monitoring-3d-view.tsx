@@ -19,9 +19,7 @@ import {
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
-import type { SceneDockTab } from '@crane/ui/organisms/scene-dock';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { DOCK_SIZE_MAX, DOCK_SIZE_MIN } from '../lib/dock-storage';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
@@ -75,17 +73,12 @@ interface Monitoring3dViewProps {
   onFullscreenChange?: (isFullscreen: boolean) => void;
   /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
-   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 독 — 우측 레일에 카메라
-   * 버튼·toolbarExtras·북마크, 하단 패널에 dockPanels 탭. 독은 전체화면
-   * 루트 안이라 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링 화면).
+   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
+   * 버튼·toolbarExtras·북마크·시뮬레이션 토글. 독은 전체화면 루트 안이라
+   * 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링 화면).
    * 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
    */
   toolbarLayout?: 'top-right' | 'dock' | 'none';
-  /**
-   * 하단 독 패널의 탭들 ('dock' 배치에서만). 크레인 실시간 상태 테이블 등.
-   * 탭 내용은 접혀 있어도 마운트를 유지한다(실시간 테이블 행 상태 보존).
-   */
-  dockPanels?: SceneDockTab[];
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -105,14 +98,12 @@ export function Monitoring3dView({
   canvasDpr,
   onFullscreenChange,
   toolbarLayout = 'top-right',
-  dockPanels,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const isDock = toolbarLayout === 'dock';
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
-  const statusDock = useSceneDock('status');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, mode);
@@ -212,21 +203,6 @@ export function Monitoring3dView({
         handlers: toolsDock.handlers,
       }
     : undefined;
-  const dockBottom =
-    isDock && dockPanels && dockPanels.length > 0
-      ? {
-          label: t('common:viewer3d.dockPanels', { defaultValue: '패널' }),
-          expanded: statusDock.expanded,
-          pinned: statusDock.pinned,
-          onPinnedChange: statusDock.setPinned,
-          handlers: statusDock.handlers,
-          tabs: dockPanels,
-          size: statusDock.size,
-          onSizeChange: statusDock.setSize,
-          minSize: DOCK_SIZE_MIN,
-          maxSize: DOCK_SIZE_MAX,
-        }
-      : undefined;
 
   return (
     <div
@@ -267,7 +243,6 @@ export function Monitoring3dView({
         }
         toolbarPlacement={toolbarLayout}
         dockRight={dockRight}
-        dockBottom={dockBottom}
         toolbarTrailing={
           toolbarLayout === 'none' ? undefined : (
             <SceneViewBookmarks

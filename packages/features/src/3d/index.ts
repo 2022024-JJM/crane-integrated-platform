@@ -122,11 +122,6 @@ export {
   type SceneDockController,
   type SceneDockHandlers,
 } from './model/use-scene-dock';
-export {
-  DOCK_SIZE_DEFAULT,
-  DOCK_SIZE_MAX,
-  DOCK_SIZE_MIN,
-} from './lib/dock-storage';
 export { useObjectFocusStore } from './model/use-object-focus-store';
 export type {
   AxisKey,

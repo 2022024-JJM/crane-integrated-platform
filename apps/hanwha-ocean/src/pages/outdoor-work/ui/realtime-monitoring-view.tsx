@@ -1,7 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getCraneById, getCraneIdsByRegion } from '@crane/domain/crane';
-import type { MonitoringLiveCrane } from '@crane/domain/monitoring';
 import {
   AlarmCriticalBanner,
   AlarmFullscreenOverlay,
@@ -16,7 +14,7 @@ import {
   useObjectFocusStore,
 } from '@crane/features/3d';
 import { Spinner } from '@crane/ui/atoms/spinner';
-import { CraneCmmsDetailPanel, CraneStatusTable } from '@crane/widgets/crane';
+import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
@@ -36,19 +34,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
   const exitFocus = useObjectFocusStore((state) => state.exitFocus);
   const isCmmsOpen = craneId !== null;
-  const cranes = useMemo<MonitoringLiveCrane[]>(
-    () =>
-      getCraneIdsByRegion(regionId).map((currentCraneId) => {
-        const crane = getCraneById(currentCraneId);
-
-        return {
-          craneId: currentCraneId,
-          craneNo: crane?.craneNo ?? currentCraneId,
-          craneName: crane?.craneName,
-        };
-      }),
-    [regionId],
-  );
   const fullscreenCmmsOverlay = isCmmsOpen ? (
     <CraneCmmsDetailPanel
       key={craneId}
@@ -57,22 +42,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       onClose={exitFocus}
     />
   ) : null;
-
-  // 크레인 실시간 상태 테이블은 3D 뷰의 하단 독 탭으로 들어간다 — 뷰어의
-  // 전체화면 루트 안에 있어야 전체화면에서도 보인다. 접혀 있어도 마운트를
-  // 유지하므로(독 규칙) 실시간 행 상태가 끊기지 않는다.
-  const dockPanels = useMemo(
-    () => [
-      {
-        id: 'crane-status',
-        label: t('common:craneStatus.title'),
-        content: (
-          <CraneStatusTable cranes={cranes} regionId={regionId} hideTitle />
-        ),
-      },
-    ],
-    [cranes, regionId, t],
-  );
 
   return (
     <div className="relative h-full min-h-0">
@@ -111,7 +80,6 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           />
         }
         toolbarLayout="dock"
-        dockPanels={dockPanels}
       />
     </div>
   );
