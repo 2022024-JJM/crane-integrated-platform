@@ -5,7 +5,7 @@ import { findBlock } from '../lib/roster'
 import { zonePathOfBlock } from '../lib/roster'
 
 /**
- * "이 블록이 있는 공정 화면으로" — `/performance` → 공정 딥링크(`PerformanceLink` 의 반대편).
+ * "이 블록이 있는 공정 화면으로" — `/indoorshop/performance` → 공정 딥링크(`PerformanceLink` 의 반대편).
  *
  * 정반이 정해진 조립 블록이면 그 정반 상세까지, 아니면 그 공장을 연 맵 진입 화면까지
  * 간다(`zonePathOfBlock`). 로스터에 없는 블록이면 **아무것도 그리지 않는다** — 갈 곳이

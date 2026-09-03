@@ -115,7 +115,7 @@ describe('선택 승계 — 링크 만들기', () => {
 
   it('통합실적 경로에 붙는다', () => {
     expect(performanceLinkFor({ projNo: '2540', blocks: ['281'] })).toBe(
-      '/performance?vessel=2540&block=281'
+      '/indoorshop/performance?vessel=2540&block=281'
     )
   })
 

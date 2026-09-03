@@ -196,7 +196,7 @@ describe('selectFactory — 공장이 바뀌면 그 아래 베이 선택도 사�
 })
 
 describe('bayClickIntent — 같은 베이 재클릭 = 그 베이로 이동', () => {
-  const PATH = '/zones/assembly/asm-pbs/asm-pbs-b3'
+  const PATH = '/indoorshop/zones/assembly/asm-pbs/asm-pbs-b3'
 
   it('처음 누른 베이는 고르기만 한다 (이동 없음)', () => {
     expect(bayClickIntent({ kind: 'factory', name: 'PBS' }, 'PBS#3', PATH)).toEqual({

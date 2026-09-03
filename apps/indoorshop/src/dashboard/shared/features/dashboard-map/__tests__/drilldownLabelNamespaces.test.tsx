@@ -12,8 +12,8 @@ import { blocksAtFactory, listBlocks } from '../../../entities/vessel'
  * 검색에도 걸린다"를 잠근다. 다만 그 테스트는 배지에 넘기는 공장 이름을 **로스터에서**
  * 뽑아 쓴다(`listBlocks().map(b => b.factory)`). 실제 화면은 그렇지 않다 —
  * `DashboardZoneMap` 은 지번 fixture 에서 나온 이름을 넘긴다:
- *   · L832  `<PerformanceBadge factory={selectedBayData.factory} />`  ← parcels.bays[].factory
- *   · L1855 `<PerformanceBadge factory={data.name} />`                ← parcels.factories[].name
+ *   · L832  `<PerformanceBadge factory={selectedBayData.factory} process="조립" />`  ← parcels.bays[].factory
+ *   · L1855 `<PerformanceBadge factory={data.name} process="조립" />`                ← parcels.factories[].name
  *
  * 즉 두 이름 공간(로스터 ↔ 지번 fixture)이 문자열로 맞물려야만 배지가 선다. 한쪽만
  * 이름을 고치면 배지는 **조용히 사라지고**(배지는 데이터 없는 공장에서 스스로 빠진다)
@@ -57,7 +57,7 @@ describe('드릴다운 배지 이름 공간 (지번 fixture ↔ 로스터)', () 
     ).toBeGreaterThan(0)
 
     for (const name of mapNamesWithBlocks) {
-      const { unmount } = renderWithProviders(<PerformanceBadge factory={name} />)
+      const { unmount } = renderWithProviders(<PerformanceBadge factory={name} process="조립" />)
       /* 지도 이름을 그대로 넘겼을 때 라벨이 실제로 서는지 — 안 서면 배지가 조용히 빈 것 */
       const labels = await screen.findAllByText(/^\d+-\w+$/)
       expect(labels.length, `${name}: 지도 이름으로는 배지가 비어 있다`).toBeGreaterThan(0)

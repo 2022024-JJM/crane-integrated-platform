@@ -116,6 +116,12 @@ export const paintingEn: typeof paintingKo = {
       },
     },
     factoryStatus: {
+      tabAria: 'Select view axis',
+      tabStatus: 'Status',
+      tabView: 'Operation view',
+      tabFactory: 'Factory status',
+      factoryRail: 'Choose painting shop',
+      backToZone: 'Painting zone status',
       notFound: 'Unknown painting factory.',
       backToMap: 'Painting status',
       blockSummary: '{{total}} block(s) in shop · {{inProgress}} in progress',
@@ -128,6 +134,20 @@ export const paintingEn: typeof paintingKo = {
       btsNote: 'Location and inbound/outbound come from BTS logistics — not the ZONE mapping table. The link on each block row opens its node performance.',
       equipmentTitle: 'Equipment summary',
       openScada: 'View equipment status on the map',
+    },
+    /* Operating view (P5) — draws the air the equipment makes; intensity follows SCADA values. */
+    airView: {
+      title: 'Operating view',
+      subtitle:
+        'The air the equipment makes — heaters warm, dehumidifiers dry. Intensity follows SCADA values.',
+      legendHeat: 'Gas heater running — heat haze',
+      legendDry: 'Dehumidifier running — dry airflow',
+      legendIdle: 'Stopped — position only',
+      intensityNote: 'Density/speed = distance from setpoint (temp below, humidity above)',
+      noWebgl: '3D is unavailable here (no WebGL) — equipment status is on the layout map.',
+      empty: 'No equipment to show for this factory.',
+      bayCount: '{{count}} bays',
+      running: '{{count}} running',
     },
     zone: {
       displayName: 'Pre-painting',

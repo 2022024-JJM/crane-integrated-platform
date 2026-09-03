@@ -82,7 +82,7 @@ const location = (id: string, codes?: string[]): ProcessMapLocation => ({
   parentFacilityKey: 'PBS',
   displayName: id,
   yardLotCodes: codes,
-  detailPath: `/zones/assembly/asm-pbs/${id}`,
+  detailPath: `/indoorshop/zones/assembly/asm-pbs/${id}`,
 })
 
 describe('locationOfBay — 지도의 베이 ↔ 공정의 작업 위치를 지번으로 잇는다', () => {

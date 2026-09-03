@@ -1,28 +1,12 @@
 import { useTranslation } from '../../../lib/i18n/useTranslation'
-import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
-import type { FabStageId, FabricationSummary } from '../model/types'
-
-const STAGE_LABEL_KEY: Record<FabStageId, InshopKey> = {
-  S1: 'performance.stages.s1',
-  S2: 'performance.stages.s2',
-  S3: 'performance.stages.s3',
-  S4: 'performance.stages.s4',
-  S5: 'performance.stages.s5',
-}
-
-const STAGE_BASIS_KEY: Record<FabStageId, InshopKey> = {
-  S1: 'performance.stages.basisOf.S1',
-  S2: 'performance.stages.basisOf.S2',
-  S3: 'performance.stages.basisOf.S3',
-  S4: 'performance.stages.basisOf.S4',
-  S5: 'performance.stages.basisOf.S5',
-}
+import { FAB_STAGES_PENDING_SOURCE, type FabStageId, type FabricationSummary } from '../model/types'
+import { FAB_STAGE_BASIS_KEY, FAB_STAGE_LABEL_KEY } from './stageLabels'
 
 /**
- * 가공권역 단계 카드 5장 + 종합 카드 (IPD-S04 · 기준일 스냅샷).
+ * 가공권역 절점 카드 10장 + 종합 카드 (IPD-S04 · 기준일 스냅샷).
  *
  * D2 — 중량%를 카드의 주인공(대형 수치)으로, 진행 바·상태색으로 시인성을 만든다.
  * 표기는 정의서 §6.4 어휘 그대로: 건수/중량 이원, 진행·미도래, 분모 제외(미대상).
@@ -39,7 +23,9 @@ export function StageCards({
   const { t } = useTranslation()
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    /* 절점이 열이 되면서 6열 그리드로는 카드가 두 줄 반이 된다 — 넓은 화면에서 한 줄에
+       담기도록 열을 늘린다(카드 디자인은 그대로, 격자만). */
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-11">
       {summary.stages.map((s) => {
         const complete = s.weightRate >= 100
         const active = activeStage === s.stage
@@ -60,8 +46,10 @@ export function StageCards({
             className={cn('cursor-pointer p-3.5', active && 'border-accent/60')}
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-inshop-xs font-semibold">{t(STAGE_LABEL_KEY[s.stage])}</span>
-              {s.stage === 'S1' && (
+              <span className="text-inshop-xs font-semibold">{t(FAB_STAGE_LABEL_KEY[s.stage])}</span>
+              {/* 원천(레거시 컬럼) 확정 대기 절점 — 축은 정본이지만 근거가 아직 없다는 사실을
+                  카드가 스스로 적는다. 감추면 '다 수집되고 있다' 는 거짓말이 된다. */}
+              {FAB_STAGES_PENDING_SOURCE.includes(s.stage) && (
                 <span className="rounded bg-status-degraded/10 px-1 py-px text-[10px] text-status-degraded">
                   {t('performance.stages.s1Pending')}
                 </span>
@@ -110,7 +98,7 @@ export function StageCards({
             </div>
             <div className="mt-2 border-t border-border pt-1.5 text-[10px] leading-4 text-foreground/38">
               <div>
-                {t('performance.stages.basis')} {t(STAGE_BASIS_KEY[s.stage])}
+                {t('performance.stages.basis')} {t(FAB_STAGE_BASIS_KEY[s.stage])}
               </div>
             </div>
           </Card>

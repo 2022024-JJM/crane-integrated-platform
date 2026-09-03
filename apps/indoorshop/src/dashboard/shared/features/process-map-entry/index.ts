@@ -1,31 +1,14 @@
 /*
- * '맵 진입 공정 화면' 공통 프레임 — 맵 진입 → 공장 클릭 → 우측 오버레이 문법을 쓰는
- * 공정 화면(도장·조립·의장·CAS/PAS)의 공용 골격. 도장 배치 맵에서 공정 무관부를 승격했다.
- * 계약(무엇이 공정 몫인가)은 `model/types.ts` 의 ProcessMapEntryProps 참조.
+ * 공정 화면의 **우측 패널 공통 부품**.
+ *
+ * 원래는 '맵 진입 공정 화면'(맵 → 공장 클릭 → 우측 오버레이)의 공용 골격이었다.
+ * 그 화면들은 걷혔고(R22 — 지도 상호작용은 총괄 '/' 한 곳이 맡는다), 그때 만들어 둔
+ * **패널 부품만** 남았다: 조립·의장·도장 워크스페이스가 같은 문법의 단 토글·접이 구획·
+ * 수집 요약을 쓰고 있어서, 그 셋이 서로 다른 모양으로 갈라지지 않게 붙드는 자리다.
+ * 문구는 여전히 호출자가 번역해 넣는다(shared 는 공정 로케일 키를 모른다).
  */
-export { ProcessMapEntry } from './ui/ProcessMapEntry'
-export { MapMarkerLayer, type MapMarkerLayerHandle } from './ui/MapMarkerLayer'
-/* 우측 패널의 공통 부품 — 단 토글·접이 구획·수집 요약 본문(문구는 호출자가 번역해 넣는다) */
 export {
   CollectionSummaryBody,
-  PanelModeTabs,
   PanelSection,
   type CollectionRow,
-  type PanelModeTab,
 } from './ui/PanelParts'
-export { useMapEntryData, useShopDeepLink } from './lib/useMapEntryData'
-export {
-  demoteNonMemberLots,
-  memberExtentOf,
-  memberFactoriesOf,
-  memberProcessesOf,
-  orderFactoryNames,
-} from './lib/members'
-export type {
-  BayBodyCtx,
-  MapEntryLabels,
-  MapEntryMarker,
-  MarkerRenderCtx,
-  ProcessMapEntryHandle,
-  ProcessMapEntryProps,
-} from './model/types'

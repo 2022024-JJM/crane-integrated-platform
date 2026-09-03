@@ -1,4 +1,12 @@
-import { forwardRef, useImperativeHandle, useState, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react'
+import { useTranslation } from '../../../lib/i18n/useTranslation'
+import { cn } from '../../../lib/utils'
 import {
   RELIEF_METERS,
   worldToScreen,
@@ -72,10 +80,21 @@ interface FactoryHudLabelProps {
    * 장식이라 스크린리더에서도 걷는다(aria-hidden).
    */
   action?: ReactNode
+  /**
+   * 이름패 클릭 = 드릴인 (P1 ③). 지도 폴리곤을 누르는 것과 **같은 동작**이다 — 이름이
+   * 그 공장을 가리키는 표식인데 폴리곤만 눌리면, 가장 눈에 띄는 것이 유일하게 안 눌린다.
+   * 주지 않으면 이름 영역은 지금까지처럼 클릭을 통과시킨다(순수 표식).
+   */
+  onSelect?: () => void
 }
 
 export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabelProps>(
-  function FactoryHudLabel({ name, anchor, outline, color, caption, initialCamera, action }, ref) {
+  function FactoryHudLabel(
+    { name, anchor, outline, color, caption, initialCamera, action, onSelect },
+    ref
+  ) {
+    const { t } = useTranslation()
+    const selectHint = t('dashboard.map.hudSelectHint', { name })
     const [camera, setCamera] = useState<FactoryHudCamera | null>(initialCamera)
     useImperativeHandle(
       ref,
@@ -104,7 +123,7 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
 
     return (
       <div
-        aria-hidden={action ? undefined : 'true'}
+        aria-hidden={action || onSelect ? undefined : 'true'}
         data-hud-anchor={`${Math.round(center.sx)},${Math.round(baseY)}`}
         className="pointer-events-none absolute inset-0 overflow-hidden"
         /* 눕힌 자세(rotateX)가 원근으로 보이려면 조상에 perspective 가 있어야 한다 */
@@ -122,8 +141,27 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
                   style={{ backgroundColor: color, opacity: 0.22 }}
                 />
 
+                {/* 이름패 본체 — `onSelect` 가 있으면 **버튼**이다(P1 ③). 층 전체는 지도
+                    조작을 통과시키므로 이 조각만 포인터를 받는다 */}
                 <div
-                  className="relative whitespace-nowrap rounded-inshop-xl border px-6 py-2.5 backdrop-blur-xl"
+                  {...(onSelect
+                    ? {
+                        role: 'button' as const,
+                        tabIndex: 0,
+                        onClick: onSelect,
+                        onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return
+                          event.preventDefault()
+                          onSelect()
+                        },
+                        title: selectHint,
+                      }
+                    : {})}
+                  className={cn(
+                    'relative whitespace-nowrap rounded-inshop-xl border px-6 py-2.5 backdrop-blur-xl',
+                    onSelect &&
+                      'pointer-events-auto cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+                  )}
                   style={{
                     borderColor: 'rgba(255,255,255,0.3)',
                     /* 유리 — 배경이 비쳐야 "떠 있는 판"이지 "덮은 패"가 아니다 */

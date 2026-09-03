@@ -36,7 +36,19 @@ export function subscribeQualityMode(listener: (low: boolean) => void): () => vo
   return () => window.removeEventListener(CHANGE_EVENT, handler)
 }
 
-/** 이 모드에서 렌더러에 줄 픽셀 밀도 */
+/**
+ * 이 모드에서 렌더러에 줄 픽셀 밀도.
+ *
+ * 위(기본)에는 **상한이 있다.** `devicePixelRatio` 를 그대로 쓰면 3x·4x 화면에서
+ * 그리는 픽셀이 2.25~4배로 뛴다 — 공장 뷰는 한 장에 점 27만·삼각형 18만을 채우는
+ * 장면이라, 그 배수가 곧 프레임 시간이 된다. 2 를 넘겨 얻는 선명함은 이 장면(점군·
+ * 얇은 윤곽선)에서는 눈에 잘 띄지 않는 반면 부하는 정직하게 는다.
+ *
+ * 2x 화면(대부분의 현장 노트북·맥)에서는 값이 그대로이므로 보이는 것은 달라지지 않는다.
+ * 더 눌러야 하면 저사양 모드가 1 로 내린다.
+ */
+const MAX_PIXEL_RATIO = 2
+
 export function pixelRatioFor(low: boolean): number {
-  return low ? 1 : window.devicePixelRatio
+  return low ? 1 : Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO)
 }

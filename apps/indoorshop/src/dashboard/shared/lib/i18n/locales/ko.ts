@@ -33,8 +33,25 @@ export const ko = {
     breadcrumbNav: '현재 위치',
     breadcrumbYard: '야드',
   },
+  /* 공정존 '현황' 탭 (shared/features/equipment-status-board) */
+  equipmentBoard: {
+    summaryTotal: '설비',
+    summaryIssues: '점검 필요',
+    summaryBays: '베이',
+    collapseBirdview: '배치 접기',
+    expandBirdview: '배치 펴기',
+    factories: '공장 목록',
+    needsCheck: '점검 필요 {{count}}',
+    allHealthy: '이상 없음',
+    birdviewTitle: '설비 배치',
+    birdviewHint: '심볼을 누르면 아래 목록이 따라옵니다 · 베이를 누르면 그 구획으로',
+    birdviewEmpty: '이 공장은 표시할 설비 좌표가 없습니다',
+    empty: '표시할 설비가 없습니다.',
+  },
   /* 설비 그리드(shared/features/equipment-grid) — 세 공정이 함께 쓰는 셀 문법 */
   equipmentGrid: {
+    silentSeconds: '침묵 {{count}}초',
+    silentMinutes: '침묵 {{count}}분',
     empty: '표시할 설비가 없습니다.',
     noIssues: '이상 없는 설비뿐입니다.',
     onlyIssues: '이상만 {{count}}',
@@ -163,10 +180,13 @@ export const ko = {
     emptyGuide: '예: 7004 · 2540-281 · 222-M02 · WO- · LD-D01',
     recent: '최근 검색',
     noRecent: '호선번호·블록·ASSY·W/O·설비ID 로 찾아보세요',
+    /* 지도 위 상주 검색창이 다는 칩 — 이 창과 팔레트가 한 기능임을 자리에서 말한다 */
+    shortcutChip: '⌘K',
     groups: {
       vessel: '호선',
       block: '블록',
       assy: 'ASSY',
+      yard: '야드 위치(BTS)',
       wo: 'W/O',
       equipment: '설비',
     },
@@ -209,6 +229,11 @@ export const ko = {
   },
 
   settings: {
+      matchToleranceTitle: '실측 정합 판별 임계',
+      matchToleranceDescription: 'CAD 표면에서 몇 cm 안까지를 그 블록의 점으로 볼 것인가',
+      matchToleranceValue: '{{cm}}cm',
+      matchToleranceNote:
+        '실측 스캔 화면(조립 5번 베이)의 블록별 정합 점 수와 색이 이 값을 따릅니다. 좁게 잡으면 확실한 점만 남고, 넓게 잡으면 정합 오차가 큰 점까지 블록으로 셉니다. 스캔 자산이 더 좁은 기준으로 만들어졌다면 그 값까지만 넓혀집니다.',
     title: '설정',
     subtitle: '이 브라우저에만 저장됩니다 — 다른 사람이 보는 화면은 바뀌지 않습니다',
     themeTitle: '테마',
@@ -306,8 +331,6 @@ export const ko = {
     docsSectionDescription: '레포의 마크다운 문서를 화면에서 바로 읽습니다',
     docsAll: '전체 {{count}}건',
     map: {
-      currentLocation: '현 위치',
-      returnToCurrentLocation: '기본 지도 위치로 돌아가기',
       loading: '지도 불러오는 중…',
       hint: '공장을 누르면 상세가 열립니다 · 빈 곳을 누르면 한 단계 뒤로 갑니다',
       hint3d: '공장을 누르면 베이 · 베이를 누르면 지번 상세 · Shift 또는 오른쪽 버튼 드래그로 회전',
@@ -325,6 +348,15 @@ export const ko = {
       /* 공장 상세의 베이 목록(R14) — 행은 베이 상세의 축약판이다 */
       factoryBayList: '베이',
       factoryBayOpenHint: '{{bay}} 상세를 엽니다',
+      /* 베이 재실 (P1 ①) — 이 칸에 무엇이 올라와 있는가 */
+      bayEmpty: '재실 없음',
+      hudSelectHint: '{{name}} 을(를) 엽니다',
+      bayBlockCount: '블록 {{count}}',
+      bayAssyCount: 'ASSY {{count}}',
+      bayJustArrived: '갓 반입',
+      bayOccupants: '재실',
+      /* 기준일이 되감긴 채 총괄에 들어왔을 때의 한 줄 단서 (P1 ⑤) */
+      liveNote: '지도는 현재 기준입니다 (조회 기준일 {{date}})',
       /* 목적지(공정존)를 글자에 싣는다 — 블록 문맥의 `common.viewOnProcessMap`('공정 화면')과
          글자가 같으면서 목적지가 달라지는 사고를 막는다 (UX 감사 F-18) */
       openZoneShort: '{{name}} 화면',
@@ -366,6 +398,10 @@ export const ko = {
         refChip: '참고',
         title: '판별 기반 실적 (통합실적과 동일 원천)',
         judgedCount: '판별 {{done}}/{{total}}',
+        /* 도장 — 세는 단위가 스텝 절점이라 제목·단위를 따로 둔다 (P1 ②) */
+        titlePainting: '스텝 절점 실적 (통합실적과 동일 원천)',
+        stepCount: '스텝 {{done}}/{{total}}',
+        notePainting: '도장 스텝 절점 통과 ÷ 계획 스텝 기준 참고 수치 — 공식 실적 지표가 아닙니다. 누르면 통합실적으로 이동합니다.',
         note: '조립 판별 ÷ 계획 분모 기준 참고 수치 — 공식 실적 지표가 아닙니다. 누르면 통합실적으로 이동합니다.',
         openHint: '통합실적 화면 열기',
         blockHint: '{{block}} 을(를) 고른 채로 통합실적을 엽니다',
@@ -389,12 +425,12 @@ export const ko = {
       blockSectionYard: '야드 위치(BTS)',
       blockAssyPerfHint: '{{list}} 실적 보기 (ASSY 포커스)',
       blockSitePinHint: '{{block}} 의 통합실적을 엽니다',
-      blockSearchPlaceholder: '호선-블록 검색 · 예 7004-222',
+      blockSearchPlaceholder: '호선 · 블록 · ASSY · W/O · 설비 검색 (예 7004-222)',
       blockSearchLabel: '블록 검색',
-      /* 입력 앞 특화 칩 — 전역 Cmd+K 팔레트(모든 것)와 이 검색(블록 전용)의 분업 표시 */
-      blockSearchChip: '블록',
       blockSearchEmpty: '일치하는 블록이 없습니다',
       blockSearchNoLot: '위치 지번 정보 없음',
+      /* 호선을 고르면 그 호선 블록 전부가 지도에 선다 — 카드가 몇 블록인지 먼저 말한다 */
+      vesselBlockCount: '재공 블록 {{count}}개',
       blockSearchUpdatedAt: '위치 갱신 {{time}}',
       expandAll: '전체 펴기',
       collapseAll: '전체 접기',
@@ -520,6 +556,9 @@ export const ko = {
   /* 통합실적(/performance) — 공통 화면이므로 공정 i18n 이 아니라 여기에 둔다 */
   performance: {
     nav: { label: '통합실적' },
+    /* 진행중 항목 → 소재 정반/베이의 3D 점군 뷰 (W8-3 — 공장 현황→통합실적의 역방향) */
+    pcdView: 'PCD 뷰',
+    pcdViewHint: '{{block}} 이(가) 서 있는 정반·베이의 3D 점군 뷰로 이동합니다',
     title: '내업 공정실적 통합조회',
     subtitle: '호선·블록 단위 로우데이터 수집 현황과 절점 진척',
     baseDate: '기준일 {{date}}',
@@ -587,6 +626,10 @@ export const ko = {
       stripFab: '가공',
       stripAsm: '조립',
       stripPnt: '도장',
+      /* 절점 칸의 부가 설명 — 조립·도장은 계획일이 아니라 n/m 이 근거다 */
+      count: '{{done}}/{{total}}',
+      /* 그 권역에 설 절점이 아직 없을 때 (계획 W/O·계획 행이 하나도 없다) */
+      none: '절점 없음',
     },
     rails: {
       fabrication: '가공',
@@ -596,6 +639,9 @@ export const ko = {
       paintingActive: '도장',
       /* 의장도 카드가 선다 — '절점 없음' 은 각주가 아니라 카드가 스스로 말한다(W7-11) */
       outfitting: '의장',
+      /* 레일은 낱말 넷이 나란히 설 뿐이라, 보이지 않는 사람에게는 그 넷이 무엇인지
+         말해 주는 것이 없었다 — 차례가 뜻인 줄(R32)이므로 이름에 그 사실을 적는다 */
+      aria: '공정 진행 순서 (가공 → 조립 → 의장 → 도장)',
       paintingNote: '스텝 S/P·T/UP·FINAL ↔ 도장 순번 매핑 확정 대기',
       assemblyNote: 'WO↔어셈블리 매핑 규칙 확정 대기',
     },
@@ -704,18 +750,23 @@ export const ko = {
       title: '가공권역 단계별 실적률',
       snapshot: '기준일 스냅샷',
       /*
-       * 절점 이름은 **실제 가공 흐름**의 낱말을 쓴다 (W7-6D, 사용자 확정).
-       * 흐름: 강재 입고 → 1·2차 선별 → 강재 불출 → 전처리 → 절단 → 사상 → 팔레트 편성 → 최종 불출.
-       * 그중 **수집 절점은 다섯**이다 — 선별·전처리·최종 불출은 원천에 완료 근거가 없어
-       * 절점이 서지 않는다(`nodeNote` 가 그 사실을 화면에 적는다).
-       * ⚠️ S2 는 '강재 불출' 이다. 정의서는 `전처리(불출)` 로 적었지만 판별 근거 필드가
-       *    `강재불출.불출일자` 이고, 실제 흐름에서도 불출이 전처리보다 앞선다.
+       * 절점 이름은 **실제 가공 흐름**의 낱말을 쓴다 (W7-6D → R33, 사용자 확정).
+       * 정본 10절점: 강재 입고 → 1차 선별 → 2차 선별 → 강재 불출 → 전처리 → 절단 →
+       * 사상 → 팔레트 편성 → 변성 → 최종 불출.
+       * ⚠️ S4 는 '강재 불출' 이다. 정의서는 `전처리(불출)` 로 적었지만 판별 근거 필드가
+       *    `강재불출.불출일자` 이고, 실제 흐름에서도 불출이 전처리(S5)보다 앞선다 — 별개 절점이다.
+       * 원천(레거시 컬럼)이 아직 확정되지 않은 절점은 카드가 '원천 확정 대기' 배지를 세운다.
        */
-      s1: 'S1 강재 반입',
-      s2: 'S2 강재 불출',
-      s3: 'S3 절단',
-      s4: 'S4 사상',
-      s5: 'S5 팔레트 편성',
+      s1: 'S1 강재 입고',
+      s2: 'S2 1차 선별',
+      s3: 'S3 2차 선별',
+      s4: 'S4 강재 불출',
+      s5: 'S5 전처리',
+      s6: 'S6 절단',
+      s7: 'S7 사상',
+      s8: 'S8 팔레트 편성',
+      s9: 'S9 변성',
+      s10: 'S10 최종 불출',
       counts: '건수 {{done}}/{{target}}',
       weightRate: '중량%',
       primary: '주지표',
@@ -725,15 +776,20 @@ export const ko = {
       basis: '근거',
       sources: '원천',
       overall: '종합(중량가중)',
-      overallNote: '5단계 중량 실적률 평균',
-      nodeNote: '가공 흐름 9단계 중 원천에 완료 근거가 있는 5절점만 셉니다 — 선별·전처리·최종 불출은 절점이 아닙니다',
+      overallNote: '10절점 중량 실적률 평균',
+      nodeNote: '가공 정본 10절점을 모두 셉니다 — 선별·전처리·변성·최종 불출은 원천(레거시 컬럼) 확정 대기이며 그 절점에 배지로 적습니다',
       s1Pending: '원천 확정 대기',
       basisOf: {
         S1: '③ 부재종합.강재반입일',
-        S2: '① 강재불출.불출일+시각',
-        S3: '③ 절단완료 · ② 플래그',
-        S4: '③ 사상일 · ④ 모듬상태',
-        S5: '③④ 모듬 · ⑤ 선별',
+        S2: '원천 확정 대기',
+        S3: '원천 확정 대기',
+        S4: '① 강재불출.불출일+시각',
+        S5: '원천 확정 대기',
+        S6: '③ 절단완료 · ② 플래그',
+        S7: '③ 사상일 · ④ 모듬상태',
+        S8: '③④ 모듬 · ⑤ 선별',
+        S9: '원천 확정 대기',
+        S10: '원천 확정 대기',
       },
     },
     grid: {
@@ -845,7 +901,7 @@ export const ko = {
     dataDelay: '데이터 지연 — 마지막 수신 {{time}}',
     dataNone: '데이터 미수신 — 수신 이력이 없습니다',
     firstRun: {
-      hint: 'Shift 또는 오른쪽 버튼 드래그로 회전 · 왼쪽 드래그로 이동 · 클릭 후 휠 줌 · 정반 라벨 클릭으로 선택',
+      hint: '왼쪽 드래그로 회전 · 오른쪽 또는 Shift 드래그로 이동 · 클릭 후 휠 줌 · 정반 라벨 클릭으로 선택',
       more: '자세한 조작은 오른쪽 아래 [조작 ?]',
       dismiss: '조작 힌트 닫기',
     },
@@ -917,6 +973,37 @@ export const ko = {
     pcdCluster: 'PCD 클러스터',
     unregistered: '미정합',
     backToAll: '전체 보기',
+  },
+  tour: {
+    aria: '화면 안내 투어',
+    progress: '{{current}} / {{total}}',
+    next: '다음',
+    back: '이전',
+    skip: '건너뛰기',
+    done: '완료',
+    restart: '화면 안내 다시 보기',
+    dashboard: {
+      map: {
+        title: '야드 지도에서 파고들기',
+        body: '공장을 누르면 확대되며 이름패가 떠오릅니다. 베이까지 누르면 상세가 열리고, 빈 곳 클릭이나 ESC 로 한 단계씩 되돌아옵니다.',
+      },
+      blockSearch: {
+        title: '블록 검색',
+        body: '호선-블록(예 7004-222)으로 블록이 선 자리를 지도에서 바로 찾습니다.',
+      },
+      globalSearch: {
+        title: '통합 검색 (Cmd+K)',
+        body: '어느 화면에서든 Cmd+K(또는 이 버튼)로 호선·블록·공장·설비를 한 번에 찾아 그 자리로 이동합니다.',
+      },
+      alarms: {
+        title: '알람',
+        body: '수집·판별에서 올라온 알람이 여기 모입니다. 항목을 누르면 그 현장으로 바로 이동합니다.',
+      },
+      performance: {
+        title: '통합실적으로 가는 길',
+        body: '공정 실적(절점·판별)은 통합실적 화면에서 조회합니다. 지도의 실적 배지에서도 바로 건너갈 수 있습니다.',
+      },
+    },
   },
 }
 

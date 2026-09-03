@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { LOCATION_STATUS_META, type Location } from '../../../entities/location/model/types'
+import { useWorkspaceTabCarry } from '../../../lib/useWorkspaceTab'
 import { cn } from '../../../lib/utils'
 import { StatusDot } from '../../../ui/atoms/StatusDot'
 
@@ -99,6 +100,12 @@ export function LocationTabs({
   className,
 }: LocationTabsProps) {
   const { t } = useTranslation()
+  /*
+   * 이 줄의 링크는 전부 **화면 안 이동**이다 — 같은 워크스페이스 안에서 공장·정반만
+   * 갈아탄다. 그래서 지금 서 있는 축(`?tab=`)을 그대로 싣는다(R30): 3D 뷰어에서 정반을
+   * 눌렀는데 도착 화면이 현황으로 서면, 방금 한 조작의 결과를 못 보게 된다.
+   */
+  const carryTab = useWorkspaceTabCarry()
   const bays = locations.filter((location) => location.factoryId === currentFactoryId)
   const glass = tone === 'glass'
   const attached = tone === 'attached'
@@ -135,7 +142,7 @@ export function LocationTabs({
           return (
             <Link
               key={factory.id}
-              to={routing.factoryHref(factory.id)}
+              to={carryTab(routing.factoryHref(factory.id))}
               aria-current={isCurrent ? 'page' : undefined}
               /* 붙은 탭의 색은 3D 상자의 윗변에서 온다 — 클래스가 아니라 팔레트가 정한다 */
               style={
@@ -191,7 +198,7 @@ export function LocationTabs({
         )}
       >
         <Link
-          to={routing.factoryHref(currentFactoryId)}
+          to={carryTab(routing.factoryHref(currentFactoryId))}
           aria-current={currentLocationId ? undefined : 'page'}
           className={cn(
             'flex h-6 shrink-0 items-center rounded-inshop-sm px-2 text-inshop-xs transition-colors',
@@ -221,7 +228,7 @@ export function LocationTabs({
           return (
             <Link
               key={bay.id}
-              to={routing.bayHref(currentFactoryId, bay.id)}
+              to={carryTab(routing.bayHref(currentFactoryId, bay.id))}
               onMouseEnter={() => onHighlight?.(bay.id)}
               onMouseLeave={() => onHighlight?.(null)}
               onFocus={() => onHighlight?.(bay.id)}

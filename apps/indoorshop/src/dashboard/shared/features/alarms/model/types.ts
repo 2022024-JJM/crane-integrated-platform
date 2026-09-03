@@ -11,6 +11,7 @@
  * 번역 리소스에 묶이지 않게 하기 위해서다.
  */
 import type { InshopKey } from '../../../lib/i18n/keys'
+import { byThenKey } from '../../../lib/stableOrder'
 
 /**
  * 심각도 2단 — 이만하면 충분하다(과설계 금지).
@@ -48,8 +49,18 @@ export const RAIL_SEVERITY_ORDER: Record<RailSeverity, number> = {
   warning: 1,
 }
 
-export function byRailSeverityThenTime(a: RailAlarm, b: RailAlarm): number {
-  const severity = RAIL_SEVERITY_ORDER[a.severity] - RAIL_SEVERITY_ORDER[b.severity]
-  if (severity !== 0) return severity
-  return b.occurredAt.localeCompare(a.occurredAt)
-}
+/*
+ * 심각도 → 최근 발생 → **알람 id**.
+ *
+ * 마지막 id 단계가 요점이다: 같은 심각도·같은 시각의 알람들(폴링 한 틱에서 함께 태어난
+ * 것들)은 앞의 둘로 동률이라, 남겨 두면 그 구간의 순서가 틱마다 흔들린다 — 누르려던
+ * 줄이 손 밑에서 빠져나간다.
+ */
+export const byRailSeverityThenTime = byThenKey(
+  (a: RailAlarm, b: RailAlarm): number => {
+    const severity = RAIL_SEVERITY_ORDER[a.severity] - RAIL_SEVERITY_ORDER[b.severity]
+    if (severity !== 0) return severity
+    return b.occurredAt.localeCompare(a.occurredAt)
+  },
+  (alarm) => alarm.id
+)

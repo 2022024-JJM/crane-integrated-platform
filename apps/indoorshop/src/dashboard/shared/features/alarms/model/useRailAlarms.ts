@@ -24,6 +24,7 @@ import {
 } from '../../performance/api/performanceApi'
 import { fetchFactoryOverviews } from '../../../model/processRegistry'
 import { drilldownHref } from '../../../lib/drilldownUrl'
+import { withEquipmentFocus } from '../../../lib/equipmentFocus'
 import { useAsyncData } from '../../../lib/useAsyncData'
 import { useClock } from '../../../lib/useClock'
 import type { Alarm } from '../../../entities/alarm/model/types'
@@ -112,12 +113,17 @@ export function useRailAlarms(): RailAlarmsState {
       deriveEquipmentAlarms(snapshot, (equipment) => {
         const zone = zoneOfFactory.get(equipment.factory)
         if (!zone) return null
-        /* 드릴다운 URL 계약 — 베이 id 는 `{공장}#{베이}` (drilldownUrl.ts) */
-        return drilldownHref(`/zones/${zone}`, '', {
-          process: null,
-          factory: equipment.factory,
-          bay: equipment.bay ? `${equipment.factory}#${equipment.bay}` : null,
-        })
+        /* 드릴다운 URL 계약 — 베이 id 는 `{공장}#{베이}` (drilldownUrl.ts).
+           **누구 때문에 왔는지도 함께 싣는다**(`?equip=`) — 도착 화면이 접는 규칙에
+           가려 당사자를 못 세우는 일이 없게 (equipmentFocus.ts) */
+        return withEquipmentFocus(
+          drilldownHref(`/indoorshop/zones/${zone}`, '', {
+            process: null,
+            factory: equipment.factory,
+            bay: equipment.bay ? `${equipment.factory}#${equipment.bay}` : null,
+          }),
+          equipment.id
+        )
       }),
     [snapshot, zoneOfFactory]
   )
@@ -152,7 +158,7 @@ export function useRailAlarms(): RailAlarmsState {
           zone: 'assembly',
           minutesSinceLast: latest ? minutesSinceHHMM(latest, now) : null,
           lastLabel: latest,
-          href: '/zones/assembly',
+          href: '/indoorshop/zones/assembly',
         },
       ],
       { nowIso: now.toISOString() }

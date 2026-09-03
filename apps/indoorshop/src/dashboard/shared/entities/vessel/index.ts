@@ -10,6 +10,7 @@
 export type {
   AssemblyBerth,
   AssyPlacement,
+  AssyScanFact,
   AssyTier,
   BlockOption,
   BlockSite,
@@ -32,6 +33,13 @@ export {
 export { YARD_PROCESS_OF_ZONE } from './model/types'
 export { PAINTING_FACTORIES } from './model/roster'
 export {
+  assyNoOfScanMesh,
+  scanConfidenceOf,
+  scanMeshNameOf,
+  surfaceMatchPctOf,
+} from './lib/scan'
+export {
+  assyTreeOf,
   blockAtBay,
   blockKey,
   blockOptionsOfVessel,
@@ -46,6 +54,9 @@ export {
   listBlocks,
   listVessels,
   zonePathOfBlock,
+  PCD_BLOCK_PARAM,
+  pcdHrefOfAssy,
+  pcdHrefOfOutfittingBlock,
 } from './lib/roster'
 export type { BlockSelection } from './lib/blockSelection'
 export {

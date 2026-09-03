@@ -5,6 +5,7 @@ import { factoryOutlineRings } from '../lib/factoryOutline'
 import { cn } from '../../../lib/utils'
 import { CAMERA_FLY_MS, CAMERA_NUDGE_MS } from '../../../lib/cameraMotion'
 import { dragActionOf } from '../../../lib/mapInteraction'
+import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { SEA_COLOR, type BasemapLayer, type MapTheme, type Ring } from '../lib/basemapStyle'
 import {
   BAY_GABLE_SCALE,
@@ -4338,6 +4339,21 @@ export function YardMap({
     }
   }, [draw, publishView, clampViewScale, zoomWithinScaleRange])
 
+  /*
+   * ESC = 선택 해제 — **커서 위치와 무관하게** 듣는다 (문서 레벨).
+   * 확대·회전 같은 조작 키는 "지금 보고 있는 것"에 거는 것이라 아래처럼 hover 로 묶지만,
+   * ESC 는 "여기서 나가겠다"는 전역 의사표시다. hover 로 묶어 두면 딥링크로 막 연 화면에서
+   * 첫 ESC 가 먹지 않는다(커서가 아직 지도 위를 지난 적이 없다).
+   */
+  useEscapeKey(
+    useCallback(() => {
+      handlers.current.onSelectBlock?.(null)
+      handlers.current.onSelectMove?.(null)
+      handlers.current.onSelectBay?.(null)
+      handlers.current.onSelectFacility?.(null)
+    }, [])
+  )
+
   // 키보드 — 커서가 맵 위에 있을 때만 (뷰포트 단축키와 같은 규칙)
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -4350,12 +4366,6 @@ export function YardMap({
         viewRef.current = clampViewScale({ ...viewRef.current, scale: clampScale(viewRef.current.scale * step) })
       } else if (event.key === '-' || event.key === '_') {
         viewRef.current = clampViewScale({ ...viewRef.current, scale: clampScale(viewRef.current.scale / step) })
-      } else if (event.key === 'Escape') {
-        handlers.current.onSelectBlock?.(null)
-        handlers.current.onSelectMove?.(null)
-        handlers.current.onSelectBay?.(null)
-        handlers.current.onSelectFacility?.(null)
-        return
       } else {
         return
       }

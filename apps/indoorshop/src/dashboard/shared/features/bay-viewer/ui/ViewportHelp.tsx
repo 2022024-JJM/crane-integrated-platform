@@ -3,15 +3,32 @@ import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
 import { isLowGpuMode, setLowGpuMode } from '../lib/qualityMode'
+import { dragActionOf, type DragAction, type DragModifiers } from '../../../lib/mapInteraction'
 
-/* 기본 조작 — 지도 화면과 같은 문법(shared/lib/mapInteraction): 왼쪽 이동 ·
-   오른쪽/Shift 회전 · 휠 줌(클릭 후). 표도 그 순서를 따른다 */
+/** 동작 → 그 동작을 부르는 말 */
+const ACTION_LABEL: Record<DragAction, InshopKey> = {
+  pan: 'viewer.help.pan',
+  rotate: 'viewer.help.rotate',
+  zoom: 'viewer.help.zoomFocused',
+}
+
+/*
+ * 기본 조작 표 — **문법에서 직접 만든다**(`shared/lib/mapInteraction`, 면은 `viewer`).
+ *
+ * 예전에는 표를 손으로 적어 뒀다. 그러면 배치를 바꿀 때 안내가 남아 거짓말을 하고,
+ * 그 거짓말은 "왼쪽이 회전이라더니 이동하네" 하고 손이 먼저 알아챈다. 이제 안내와
+ * 실제 배치가 같은 함수를 보므로 어긋날 수가 없다.
+ */
+const viewerAction = (button: number, modifiers: DragModifiers = {}): InshopKey =>
+  ACTION_LABEL[dragActionOf(button, modifiers, 'viewer')]
+
 const MOUSE: [InshopKey, InshopKey][] = [
-  ['viewer.help.leftDrag', 'viewer.help.pan'],
-  ['viewer.help.rightDrag', 'viewer.help.rotate'],
-  ['viewer.help.shiftDrag', 'viewer.help.rotate'],
+  ['viewer.help.leftDrag', viewerAction(0)],
+  ['viewer.help.rightDrag', viewerAction(2)],
+  ['viewer.help.shiftDrag', viewerAction(0, { shiftKey: true })],
+  /* 휠은 버튼이 아니라 배치표 밖이다 — 클릭 후에만 켜지는 사정까지 문구가 담는다 */
   ['viewer.help.wheel', 'viewer.help.zoomFocused'],
-  ['viewer.help.middleDrag', 'viewer.help.rotate'],
+  ['viewer.help.middleDrag', viewerAction(1)],
 ]
 
 /** 키 이름은 자판에 새겨진 그대로라 번역하지 않는다 — 동작 설명만 옮긴다 */

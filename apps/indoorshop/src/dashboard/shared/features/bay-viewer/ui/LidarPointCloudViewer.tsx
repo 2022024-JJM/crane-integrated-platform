@@ -8,6 +8,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRe
 import { disposeRenderer, disposeScene } from '../lib/disposeScene'
 import { startRenderLoop } from '../lib/renderLoop'
 import { cn } from '../../../lib/utils'
+import { useEscapeKey } from '../../../lib/useEscapeKey'
 import type { LidarBlockInfo } from '../model/lidarBlock'
 import { formatDetectionId } from '../model/lidarBlock'
 import type { LidarSensor } from '../model/lidarSensor'
@@ -68,7 +69,13 @@ import { edgePlacementFor } from '../lib/offscreenIndicator'
 import { bindViewportFocus, clampPanToBounds } from '../lib/viewportInput'
 import { isLowGpuMode, pixelRatioFor, subscribeQualityMode } from '../lib/qualityMode'
 import { fitDistanceForBox } from '../lib/fitCamera'
-import { ViewportAxisGizmo } from './ViewportAxisGizmo'
+import {
+  LiveAxisGizmo,
+  LiveOffscreenMarks,
+  NO_OFFSCREEN_MARKS,
+  type OffscreenMark,
+} from './LiveViewportOverlay'
+import { createViewportOverlayStore } from '../lib/viewportOverlayStore'
 import { WheelZoomHint } from './WheelZoomHint'
 import { SpinnerOverlay } from '../../../ui/atoms/Spinner'
 import {
@@ -209,15 +216,6 @@ const POINT_SIZE = 0.16
 /** 화면 밖 표식이 가장자리에서 띄우는 여백(px) — 표식 pill 이 잘리지 않는 최소 거리 */
 const OFFSCREEN_MARGIN = 30
 
-/** 화면 밖 이상 정반 표식 하나 (FR-9) */
-interface OffscreenMark {
-  id: string
-  name: string
-  error: boolean
-  x: number
-  y: number
-  angleDeg: number
-}
 /** 공장 뷰에서 정반 간 배치 간격(폭 방향) */
 const BAY_PITCH = BAY_WIDTH + 10
 /** 공장 뷰 다운샘플 배율 */
@@ -617,6 +615,30 @@ export function LidarPointCloudViewer({
   onHoverBayRef.current = onHoverBay
   const selectedBayIdRef = useRef(selectedBayId)
   selectedBayIdRef.current = selectedBayId
+  /* 조작 포커스 핸들 — 문서 레벨 ESC 가 이펙트 밖에서 부를 수 있게 밖으로 낸다 */
+  const focusApiRef = useRef<ReturnType<typeof bindViewportFocus> | null>(null)
+
+  /*
+   * ESC — 선택이 있으면 먼저 해제(FR-5), 없으면 조작 포커스 해제(FR-6).
+   *
+   * **커서·포커스 조건을 걸지 않는다.** 예전에는 "커서가 뷰포트 위에 있거나 이미 무언가를
+   * 골랐을 때"만 들었는데, 그러면 딥링크로 막 연 화면에서 첫 ESC 가 죽는다 — 아직 아무
+   * 데도 클릭하지 않았고 커서도 지나간 적이 없다. 문서 레벨에서 받되, 풀 것이 하나도
+   * 없으면 `false` 로 흘려보내 바깥 단계(드릴다운 ESC 등)가 이어받게 한다.
+   */
+  useEscapeKey(
+    useCallback(() => {
+      if (mode === 'factory' && selectedBayIdRef.current) {
+        onBaySelectRef.current?.(null)
+        return true
+      }
+      if (focusApiRef.current?.isFocused()) {
+        focusApiRef.current.blur()
+        return true
+      }
+      return false
+    }, [mode])
+  )
 
   /**
    * 씬 빌드 결과 등록부.
@@ -689,7 +711,14 @@ export function LidarPointCloudViewer({
   dimmedRef.current = dimmedBayIds
 
   /** 화면 밖 이상 정반 표식 (FR-9) — 카메라가 움직일 때마다 다시 계산된다 */
-  const [offscreenMarks, setOffscreenMarks] = useState<OffscreenMark[]>([])
+  /*
+   * 기즈모·화면 밖 표식은 카메라 속도로 바뀐다 — React 상태에 담으면 그 속도가 곧
+   * 뷰어 전체의 리렌더가 된다. 상태 밖 저장소에 두고 잎 컴포넌트만 구독한다
+   * (`lib/viewportOverlayStore` 주석 참조).
+   */
+  const marksStore = useRef(
+    createViewportOverlayStore<readonly OffscreenMark[]>(NO_OFFSCREEN_MARKS)
+  ).current
   /** 씬 빌드가 만든 오버레이 재계산 함수 — 필터 변경 등 카메라 밖 요인이 이걸 부른다 */
   const refreshOverlayRef = useRef<(() => void) | null>(null)
   /*
@@ -742,7 +771,7 @@ export function LidarPointCloudViewer({
     home: HomePose
     sceneBox: THREE.Box3
   } | null>(null)
-  const [axisView, setAxisView] = useState<AxisViewState | null>(null)
+  const axisStore = useRef(createViewportOverlayStore<AxisViewState | null>(null)).current
 
   const handleAxisSelect = useCallback((direction: ViewDirection) => {
     const api = viewApiRef.current
@@ -1045,10 +1074,28 @@ export function LidarPointCloudViewer({
    */
   useEffect(() => {
     setBuilding(true)
+    let done = false
+    const build = () => {
+      if (done) return
+      done = true
+      setBuildRequest((request) => request + 1)
+    }
     let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => setBuildRequest((request) => request + 1))
+      frame = requestAnimationFrame(build)
     })
-    return () => cancelAnimationFrame(frame)
+    /*
+     * ⚠️ rAF 폴백 — **rAF 가 한 번도 발화하지 않는 환경이 있다.** 백그라운드·가려진 탭,
+     * 일부 VDI/원격데스크톱, 절전 모드가 그렇다. 그런 곳에서는 이 게이트가 영원히 안
+     * 열려 씬이 만들어지지 않고 화면이 스피너인 채로 멈춘다(W9-0 진단 §4에서 재현 —
+     * 같은 조건에서 실측 뷰어는 rAF 게이트가 없어 정상이라, 목업 뷰어만 공백이었다).
+     * 스피너를 먼저 그리려는 지연은 두 프레임이면 충분하므로, 그보다 넉넉한 시간이
+     * 지나도 rAF 가 오지 않으면 타이머가 대신 연다. 먼저 온 쪽이 이기고 한 번만 연다.
+     */
+    const timer = window.setTimeout(build, 120)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+    }
     // 3D 라벨(CSS2D)은 씬을 세울 때 만든 DOM 이다 — 언어가 바뀌면 다시 세워야 글자가 따라온다
   }, [mode, bays, selectedBlockId, layout, i18n.language])
 
@@ -1173,6 +1220,7 @@ export function LidarPointCloudViewer({
         if (focused) setWheelHint(false)
       },
     })
+    focusApiRef.current = focusApi
     /* 카메라 전환 중 드래그를 시작하면 전환을 끊는다 — 사용자 조작이 항상 이긴다 */
     const cancelTweenOnPointerDown = () => tweenCancelRef.current?.()
     container.addEventListener('pointerdown', cancelTweenOnPointerDown)
@@ -1863,8 +1911,10 @@ export function LidarPointCloudViewer({
     let axisFrame = 0
     const publishAxisView = () => {
       axisFrame = 0
-      setAxisView(projectAxes(camera, controls.target))
-      setOffscreenMarks(computeOffscreenMarks())
+      axisStore.publish(projectAxes(camera, controls.target))
+      const marks = computeOffscreenMarks()
+      /* 표식이 없는 프레임은 **같은 빈 배열**을 낸다 — 매번 새 배열이면 잎이 헛돈다 */
+      marksStore.publish(marks.length === 0 ? NO_OFFSCREEN_MARKS : marks)
     }
     const scheduleAxisView = () => {
       if (axisFrame) return
@@ -1886,22 +1936,9 @@ export function LidarPointCloudViewer({
       const target = event.target as HTMLElement | null
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return
 
-      if (event.key === 'Escape') {
-        /*
-         * Esc — 선택이 있으면 먼저 해제(FR-5), 없으면 조작 포커스 해제(FR-6).
-         * 다른 단축키와 달리 커서가 밖에 있어도 듣는다 — 라벨을 키보드로 눌러
-         * 선택한 사람은 커서를 뷰포트에 올려 두지 않았을 수 있다.
-         */
-        if (!pointerInside && !focusApi.isFocused() && !selectedBayIdRef.current) return
-        /* 이 ESC 는 뷰어가 소비한다(선택/포커스 해제) — 같은 키의 다른 청취자를 멈춘다 */
-        event.preventDefault()
-        if (mode === 'factory' && selectedBayIdRef.current) {
-          onBaySelectRef.current?.(null)
-        } else {
-          focusApi.blur()
-        }
-        return
-      }
+      /* ESC 는 여기서 듣지 않는다 — 아래 `useEscapeKey` 가 문서 레벨에서 받는다.
+         커서·포커스 조건에 묶여 있던 탓에 딥링크로 막 연 화면의 첫 ESC 가 죽었다. */
+      if (event.key === 'Escape') return
 
       if (!pointerInside) return
       const pair = viewKeys[event.key]
@@ -1946,6 +1983,16 @@ export function LidarPointCloudViewer({
     })
     requestRenderRef.current = loop.requestRender
 
+    /*
+     * 손이 닿아 있는 동안은 유휴 판정을 끈다 — 드래그 중에도 카메라가 안 움직이는
+     * 프레임이 있고(각도 한계에 걸리거나 포인터가 잠시 멎은 순간), 그 프레임을 건너뛰면
+     * 손보다 화면이 한 박자 늦는다. `end` 뒤에는 유예가 다시 열려 관성이 끝까지 그려진다.
+     */
+    const beginInteract = () => loop.setInteracting(true)
+    const endInteract = () => loop.setInteracting(false)
+    controls.addEventListener('start', beginInteract)
+    controls.addEventListener('end', endInteract)
+
     const resizeObserver = new ResizeObserver(() => {
       camera.aspect = container.clientWidth / container.clientHeight
       camera.updateProjectionMatrix()
@@ -1964,11 +2011,14 @@ export function LidarPointCloudViewer({
       loop.stop()
       requestRenderRef.current = null
       if (axisFrame) cancelAnimationFrame(axisFrame)
+      controls.removeEventListener('start', beginInteract)
+      controls.removeEventListener('end', endInteract)
       controls.removeEventListener('change', scheduleAxisView)
       refreshOverlayRef.current = null
       viewApiRef.current = null
       stopEdgeQueue()
       unbindButtons()
+      focusApiRef.current = null
       focusApi.dispose()
       unclampPan()
       unsubscribeQuality()
@@ -2015,8 +2065,8 @@ export function LidarPointCloudViewer({
     >
       <div ref={containerRef} className="absolute inset-0" />
 
-      <ViewportAxisGizmo
-        view={axisView}
+      <LiveAxisGizmo
+        store={axisStore}
         onSelectDirection={handleAxisSelect}
         onGoHome={handleGoHome}
       />
@@ -2024,39 +2074,15 @@ export function LidarPointCloudViewer({
       {wheelHint && <WheelZoomHint />}
 
       {/*
-        화면 밖 이상 정반 표식 (FR-9) — 이상 정반이 시야 밖으로 나가면 가장 가까운
-        가장자리에 방향 화살표가 선다. 누르면 그 정반을 선택하고 카메라가 맞춰진다.
+        화면 밖 이상 정반 표식 (FR-9) — 카메라를 따라 매 프레임 자리가 바뀌므로
+        저장소를 구독하는 잎에 맡긴다(뷰어 본체는 이 때문에 리렌더되지 않는다).
       */}
-      {mode === 'factory' &&
-        !building &&
-        offscreenMarks.map((mark) => (
-          <button
-            key={mark.id}
-            type="button"
-            onClick={() => onBaySelectRef.current?.(mark.id)}
-            aria-label={t('viewer.offscreen.aria', { name: mark.name })}
-            style={{ left: mark.x, top: mark.y }}
-            className={cn(
-              // 도구줄(z-10)보다 위 — 이상 알람 표식이 도구에 가려 못 누르면 존재 이유가 없다
-              'absolute z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full',
-              'glass-panel py-0.5 pl-1 pr-2 text-2xs font-medium transition-colors hover:bg-glass-hover',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent',
-              mark.error
-                ? 'text-glass-unhealthy ring-1 ring-glass-unhealthy/70'
-                : 'text-glass-foreground/85 ring-1 ring-glass-border',
-            )}
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 12 12"
-              className="h-3 w-3 shrink-0"
-              style={{ transform: `rotate(${mark.angleDeg}deg)` }}
-            >
-              <path d="M2 6h6M5.5 2.8 8.8 6l-3.3 3.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="max-w-24 truncate">{mark.name}</span>
-          </button>
-        ))}
+      {mode === 'factory' && !building && (
+        <LiveOffscreenMarks
+          store={marksStore}
+          onSelect={(id) => onBaySelectRef.current?.(id)}
+        />
+      )}
 
       {/* 카메라 맞춤 · 레이어 토글 (FR-3·FR-4) — 공장 뷰 전용 도구 묶음.
           아래 가운데에 둔다: 왼쪽 아래는 축 기즈모, 오른쪽 아래는 도움말 자리다 */}

@@ -28,7 +28,7 @@ function assy(over: Partial<JudgingAssy> = {}): JudgingAssy {
     recognizedQty: 5,
     reqQty: 8,
     mapBay: '6',
-    href: '/performance?vessel=7004&block=222&assy=7004-222-M02',
+    href: '/indoorshop/performance?vessel=7004&block=222&assy=7004-222-M02',
     ...over,
   }
 }
@@ -37,7 +37,7 @@ describe('줄이 통합실적으로 가는 문이다', () => {
   it('줄 전체가 그 ASSY 를 지목한 링크다', () => {
     renderWithProviders(<JudgingAssyList assys={[assy()]} />)
     const link = screen.getByRole('link')
-    expect(link).toHaveAttribute('href', '/performance?vessel=7004&block=222&assy=7004-222-M02')
+    expect(link).toHaveAttribute('href', '/indoorshop/performance?vessel=7004&block=222&assy=7004-222-M02')
     expect(link).toHaveTextContent('7004-222-M02')
   })
 
@@ -45,15 +45,15 @@ describe('줄이 통합실적으로 가는 문이다', () => {
     renderWithProviders(
       <JudgingAssyList
         assys={[
-          assy({ assyNo: 'A-1', href: '/performance?vessel=1&block=2&assy=A-1' }),
-          assy({ assyNo: 'A-2', href: '/performance?vessel=1&block=2&assy=A-2' }),
+          assy({ assyNo: 'A-1', href: '/indoorshop/performance?vessel=1&block=2&assy=A-1' }),
+          assy({ assyNo: 'A-2', href: '/indoorshop/performance?vessel=1&block=2&assy=A-2' }),
         ]}
       />
     )
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
     expect(hrefs).toEqual([
-      '/performance?vessel=1&block=2&assy=A-1',
-      '/performance?vessel=1&block=2&assy=A-2',
+      '/indoorshop/performance?vessel=1&block=2&assy=A-1',
+      '/indoorshop/performance?vessel=1&block=2&assy=A-2',
     ])
   })
 })

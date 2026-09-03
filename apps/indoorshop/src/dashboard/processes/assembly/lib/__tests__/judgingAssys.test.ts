@@ -143,7 +143,7 @@ describe('딥링크 — 같은 번호로 그대로 이어진다', () => {
     for (const factoryId of FACTORY_IDS) {
       for (const row of await judgingAssysAt(factoryId, TODAY)) {
         const url = new URL(row.href, 'https://x')
-        expect(url.pathname).toBe('/performance')
+        expect(url.pathname).toBe('/indoorshop/performance')
         expect(url.searchParams.get('vessel')).toBe(row.projNo)
         expect(url.searchParams.get('block')).toBe(row.blockNo)
         expect(url.searchParams.get('assy')).toBe(row.assyNo)

@@ -11,6 +11,7 @@
  * **순수 함수다** — `now` 를 인자로 받아 시계를 직접 읽지 않는다(테스트·재현 가능). 시계는
  * 호출부(repository/훅)가 주입한다.
  */
+import { plannedIssueOf } from '../../../shared/entities/equipment/statusMock'
 import type { PaintingEquipment, PaintingEquipmentKind } from '../model/equipment'
 import type { ModbusLink, PaintingEquipmentStatus } from '../model/equipmentStatus'
 
@@ -67,17 +68,20 @@ export function mockEquipmentStatus(
   const actualRaw = operatingMode ? setpoint + wobble : idle + wobble * 0.4
   const actualValue = Math.round(actualRaw * 10) / 10
 
-  // 통신 상태: 대부분 OK. 30초 창마다 해시로 뽑힌 소수 설비만 TIMEOUT/CRC 로 흔들린다.
+  /*
+   * 통신·고장은 **앱 전체의 이상 명단**(shared/entities/equipment)이 정한다 (R27).
+   *
+   * 예전에는 여기서 창(30초·90초)마다 주사위를 굴렸다 — 86대에 굴리면 늘 열 몇 대가
+   * 흔들려, 도장 화면은 언제 봐도 통신 오류가 서너 건이었다. 아픈 설비를 고르는 일은
+   * 화면마다 따로 할 일이 아니다: 여기서 또 굴리면 "전체 이상 몇 대"라는 약속이 깨진다.
+   */
+  const issue = plannedIssueOf(equipment.id)
+  const modbusLink: ModbusLink =
+    issue === 'error' ? 'CRC_ERROR' : issue === 'offline' ? 'TIMEOUT' : 'OK'
+  /* 고장 코드는 오류로 뽑힌 설비에만 — 코드 값 자체는 설비마다 고정(결정론) */
+  const faultCode = issue === 'error' ? 100 + (seed % 40) : 0
+  /* 통신이 끊긴 설비의 '마지막 성공'은 30초 창 시작쯤 — 신선도가 stale 로 넘어가 보인다 */
   const linkWindow = Math.floor(now / 30_000)
-  const linkDraw = unit(seed ^ linkWindow, 7)
-  let modbusLink: ModbusLink = 'OK'
-  if (linkDraw > 0.94) modbusLink = 'TIMEOUT'
-  else if (linkDraw > 0.9) modbusLink = 'CRC_ERROR'
-
-  // fault: 대부분 0. 90초 창마다 극소수 설비만 코드가 뜬다.
-  const faultWindow = Math.floor(now / 90_000)
-  const faultDraw = unit(seed ^ (faultWindow * 31), 11)
-  const faultCode = faultDraw > 0.95 ? 100 + (seed % 40) : 0
 
   // 당일 누적 가동시간(분): 자정부터 흐른 시간에 설비별 가동률을 곱한 계산값(≈).
   const minutesToday = ((now % 86_400_000) / 60_000) * (0.55 + unit(seed, 5) * 0.4)

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
 import type { StatusMeaning } from '../../../ui/statusPalette'
@@ -8,7 +8,8 @@ import type { EquipmentCell } from '../model/cell'
 
 /**
  * 그리드가 **함께 가야 하는 넷**을 실제로 하는가 (설비관제 레퍼런스 §3.6).
- * 이 중 상태순 정렬과 정상 감쇄가 빠지면 그리드 전환은 이득보다 손해다.
+ * 이 중 상태순 정렬과 정상/이상의 톤 차이가 빠지면 그리드 전환은 이득보다 손해다.
+ * (정상 램프의 색은 R18 로 초록으로 되돌렸다 — 무채는 "꺼졌다"로 읽혔다.)
  */
 const cell = (
   id: string,
@@ -51,14 +52,27 @@ describe('설비 그리드 — 상태순 정렬', () => {
   })
 })
 
-describe('설비 그리드 — 정상 감쇄', () => {
-  it('정상 셀에만 감쇄 표시가 붙는다 — 색은 이상 전용이다', () => {
+describe('설비 그리드 — 정상은 조용한 초록 (R18)', () => {
+  it('정상 램프는 초록이다 — 돌고 있는 설비가 꺼진 것처럼 보이면 안 된다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P01', 'done')]} />)
+    const lamp = screen.getByLabelText('링크')
+    expect(lamp.className).toContain('status-healthy')
+    /* 다만 글로우·맥동은 없다 — 색은 있고 강조는 없다 */
+    expect(lamp.className).not.toMatch(/animate-|shadow-/)
+  })
+
+  it('이상 램프는 낮추지 않는다 — 정상이 색을 되찾아도 먼저 눈에 드는 쪽은 이상이다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P02', 'error')]} />)
+    expect(screen.getByLabelText('링크').className).toContain('status-unhealthy')
+  })
+
+  it('정상 셀에만 물러남 표시가 붙는다', () => {
     renderWithProviders(<EquipmentGrid cells={CELLS} />)
     const attenuated = cellButtons().filter((b) => b.dataset.attenuated === 'true')
     expect(attenuated.map((b) => b.getAttribute('aria-label'))).toEqual(['LD-P01', 'LD-P03'])
   })
 
-  it('이상 셀은 감쇄하지 않는다', () => {
+  it('이상 셀은 물러나지 않는다', () => {
     renderWithProviders(<EquipmentGrid cells={CELLS} />)
     const issues = cellButtons().filter((b) => b.dataset.issue === 'true')
     expect(issues.map((b) => b.getAttribute('aria-label'))).toEqual(['LD-P02', 'LD-P04'])
@@ -153,5 +167,120 @@ describe('설비 그리드 — 접근성', () => {
     renderWithProviders(<EquipmentGrid cells={CELLS} />)
     const list = screen.getByRole('list')
     expect(within(list).getAllByRole('listitem')).toHaveLength(CELLS.length)
+  })
+})
+
+/*
+ * 실시간감 (R19) — 값이 흐르고, 바뀌면 깜빡이고, 안 오면 그렇다고 말한다.
+ *
+ * 이 셋이 없으면 화면은 마지막으로 받은 값을 영원히 적어 두고, 조작자는 "지금 것인가"를
+ * 먼저 의심하게 된다. 그 의심이 한 번 들면 화면이 말하는 나머지도 못 믿게 된다.
+ */
+describe('설비 그리드 — 실시간감', () => {
+  const NOW = 1_756_000_000_000
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function live(at: number | undefined, text = '방금') {
+    return [cell('LD-L01', 'done', { metric: { text, meaning: 'done', at } })]
+  }
+
+  it('수신 시각이 오래되면 그 자리가 침묵을 말한다 (마지막 값을 그대로 적지 않는다)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+    const { rerender } = renderWithProviders(
+      <EquipmentGrid cells={live(NOW)} showControls={false} />
+    )
+    expect(document.querySelector('[data-silent="true"]')).toBeNull()
+
+    /* 2분 침묵 — 임계(90초)를 넘는다 */
+    act(() => {
+      vi.setSystemTime(NOW + 120_000)
+      vi.advanceTimersByTime(1000)
+    })
+    rerender(<EquipmentGrid cells={live(NOW)} showControls={false} />)
+
+    const metric = document.querySelector('[data-silent="true"]')
+    expect(metric).not.toBeNull()
+    expect(metric?.textContent).toContain('침묵')
+  })
+
+  it('수신 시각이 없는 셀은 시계를 켜지 않는다 (설정값·대수까지 흐르게 하지 않는다)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+    renderWithProviders(<EquipmentGrid cells={live(undefined, '3/3')} showControls={false} />)
+    act(() => {
+      vi.setSystemTime(NOW + 600_000)
+      vi.advanceTimersByTime(5000)
+    })
+    expect(document.querySelector('[data-silent="true"]')).toBeNull()
+    expect(screen.getByText('3/3')).toBeInTheDocument()
+  })
+
+  it('값이 바뀐 순간 짧게 밝아진다 — 수백 칸 중 무엇이 움직였는지는 변화로만 안다', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+    const { rerender } = renderWithProviders(
+      <EquipmentGrid cells={live(NOW, '방금')} showControls={false} />
+    )
+    expect(document.querySelector('[data-flash="true"]')).toBeNull()
+
+    rerender(<EquipmentGrid cells={live(NOW, '1분 전')} showControls={false} />)
+    expect(document.querySelector('[data-flash="true"]')).not.toBeNull()
+
+    /* 깜빡임은 곧 가라앉는다 — 계속 밝으면 그건 강조가 아니라 배경이다 */
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(document.querySelector('[data-flash="true"]')).toBeNull()
+  })
+})
+
+/*
+ * 밖에서 들어온 선택은 **시야로 데려온다** (R29 링킹).
+ *
+ * 버드뷰에서 심볼을 눌렀는데 그 칸이 스크롤 밖에 있으면, 화면은 아무 일도 안 한 것처럼
+ * 보인다. 붙어 있는 머리 밑으로 숨지 않도록 비켜설 자리(`--board-head`)도 함께 둔다.
+ */
+describe('설비 그리드 — 밖에서 온 선택을 시야로', () => {
+  const CALLS: { el: Element; opts: unknown }[] = []
+  const original = Element.prototype.scrollIntoView
+
+  beforeEach(() => {
+    CALLS.length = 0
+    Element.prototype.scrollIntoView = function (this: Element, opts?: unknown) {
+      CALLS.push({ el: this, opts })
+    } as typeof Element.prototype.scrollIntoView
+  })
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original
+  })
+
+  it('제어된 선택이 바뀌면 그 칸을 데려온다', () => {
+    const { rerender } = renderWithProviders(
+      <EquipmentGrid cells={CELLS} showControls={false} selectedId={null} onSelect={() => {}} />
+    )
+    expect(CALLS).toHaveLength(0)
+
+    rerender(
+      <EquipmentGrid cells={CELLS} showControls={false} selectedId="LD-P03" onSelect={() => {}} />
+    )
+    expect(CALLS).toHaveLength(1)
+    expect(CALLS[0].el.textContent).toContain('LD-P03')
+  })
+
+  it('안에서 고른 것은 데려오지 않는다 — 이미 보고 있는 칸이다', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<EquipmentGrid cells={CELLS} showControls={false} />)
+    await user.click(screen.getByRole('button', { name: 'LD-P01' }))
+    expect(CALLS).toHaveLength(0)
+  })
+
+  it('칸마다 붙어 있는 머리만큼의 여백을 둔다', () => {
+    renderWithProviders(<EquipmentGrid cells={CELLS} showControls={false} />)
+    const item = screen.getByRole('list').querySelector('li')!
+    expect(item.getAttribute('style')).toContain('--board-head')
   })
 })

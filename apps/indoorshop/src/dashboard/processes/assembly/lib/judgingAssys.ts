@@ -92,7 +92,7 @@ export async function judgingAssysAt(
         reqQty: assy.reqQty,
         mapBay: placement.mapBay,
         /* 링크 재료도 우리가 짜지 않는다 — 딥링크 문법은 엔티티가 소유한다 */
-        href: assyFocusLinkFor([assy.assyNo]) ?? '/performance',
+        href: assyFocusLinkFor([assy.assyNo]) ?? '/indoorshop/performance',
       })
     }
   }

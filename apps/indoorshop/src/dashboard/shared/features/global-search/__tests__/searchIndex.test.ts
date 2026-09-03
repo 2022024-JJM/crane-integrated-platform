@@ -4,19 +4,23 @@ import {
   searchAssys,
   searchBlocks,
   searchEquipment,
+  mapFocusHref,
   searchGlobal,
   searchVessels,
   searchWos,
 } from '../lib/searchIndex'
 import { woEntriesOf } from '../lib/woIndex'
 import {
+  blocksOfVessel,
   findBlock,
   listBlocks,
   parseSelectionParams,
-  performanceLinkFor,
   selectionOfBlock,
 } from '../../../entities/vessel'
 import { parseDrilldown } from '../../../lib/drilldownUrl'
+import { searchYardBlocks } from '../lib/searchIndex'
+import { parseMapFocus } from '../lib/mapFocus'
+import type { YardBackdropBlock } from '../../../model/yardMapBackdrop'
 
 /*
  * 통합 검색의 규칙 — 그리고 **나가는 링크가 기존 계약으로 되읽히는가**.
@@ -33,11 +37,17 @@ const BASE_DATE = '2026-09-03'
 const queryOf = (href: string) => new URLSearchParams(href.split('?')[1] ?? '')
 
 describe('호선 검색', () => {
-  it('호선번호 부분일치 → 통합실적 호선 전체 조회(?vessel=)로 되읽힌다', () => {
+  it('호선번호 부분일치 → **총괄 지도**로 가고, 그 호선 블록 전부가 대상이 된다', () => {
     const hits = searchVessels('7004')
     expect(hits).toHaveLength(1)
     expect(hits[0].title).toBe('7004호')
+    /* 행선지는 지도('/') — 호선의 답은 실적 표가 아니라 자리들의 분포다 */
+    expect(hits[0].href.startsWith('/?')).toBe(true)
     expect(parseSelectionParams(queryOf(hits[0].href))).toEqual({ projNo: '7004', blocks: [] })
+
+    const focus = parseMapFocus(queryOf(hits[0].href), null)
+    expect(focus?.kind).toBe('vessel')
+    expect(focus?.blocks.length).toBe(blocksOfVessel('7004').length)
   })
 
   it('선종으로도 걸린다 — LNGC 를 치면 LNGC 호선들', () => {
@@ -52,16 +62,21 @@ describe('호선 검색', () => {
 })
 
 describe('블록 검색', () => {
-  it('블록키 질의 → 그 블록의 통합실적(performanceLinkFor)과 같은 링크', () => {
+  it('블록키 질의 → **총괄 지도**에 그 블록의 자리 (선택 계약 철자 그대로)', () => {
     const hits = searchBlocks('2540-281')
     expect(hits.length).toBeGreaterThan(0)
     const block = findBlock('2540', '281')
     expect(block).not.toBeNull()
-    expect(hits[0].href).toBe(performanceLinkFor(selectionOfBlock(block!)))
+    expect(hits[0].href).toBe(mapFocusHref(selectionOfBlock(block!)))
+    expect(hits[0].href.startsWith('/?')).toBe(true)
     expect(parseSelectionParams(queryOf(hits[0].href))).toEqual({
       projNo: '2540',
       blocks: ['281'],
     })
+
+    const focus = parseMapFocus(queryOf(hits[0].href), null)
+    expect(focus?.kind).toBe('block')
+    expect(focus?.blocks.map((b) => b.blockNo)).toEqual(['281'])
   })
 
   it('구분자 표기가 달라도 같은 블록이 나온다 (2540_281 · 2540 281)', () => {
@@ -78,12 +93,13 @@ describe('ASSY 검색', () => {
     .flatMap((block) => (block.assyUnits ?? []).map((unit) => ({ block, unit })))
     .find((entry) => entry.unit.assyNo)!
 
-  it('ASSY_NO 가 단서인 질의 → ?assy= 포커스 딥링크로 되읽힌다', () => {
+  it('ASSY_NO 가 단서인 질의 → **총괄 지도**의 ?assy= 포커스로 되읽힌다', () => {
     /* 블록키가 아닌 꼬리(STRC+SER)로 찾는다 — ASSY 가 실제 단서인 상황 */
     const tail = anyAssy.unit.assyNo.split('-').slice(1).join('-')
     const hits = searchAssys(tail)
     const hit = hits.find((h) => h.title === anyAssy.unit.assyNo)
     expect(hit).toBeDefined()
+    expect(hit!.href.startsWith('/?')).toBe(true)
     const parsed = parseSelectionParams(queryOf(hit!.href))
     expect(parsed?.projNo).toBe(anyAssy.block.projNo)
     expect(parsed?.blocks).toEqual([anyAssy.block.blockNo])
@@ -104,11 +120,12 @@ describe('W/O 검색', () => {
     expect(entries.every((entry) => /^WO-\d{5}$/.test(entry.woNo))).toBe(true)
   })
 
-  it('W/O 번호 → 그 블록의 통합실적으로 되읽힌다', () => {
+  it('W/O 번호 → **통합실적**으로 되읽힌다 (W/O 는 자리가 아니라 실적 축의 이름이다)', () => {
     const entry = entries[0]
     const hits = searchWos(entry.woNo, entries)
     expect(hits.length).toBeGreaterThan(0)
     const hit = hits.find((h) => h.title === entry.woNo)!
+    expect(hit.href.startsWith('/indoorshop/performance?')).toBe(true)
     expect(parseSelectionParams(queryOf(hit.href))).toEqual({
       projNo: entry.projNo,
       blocks: [entry.blockNo],
@@ -145,7 +162,7 @@ describe('설비 검색', () => {
     const hits = searchEquipment('LD-D01', ctx)
     expect(hits.length).toBeGreaterThan(0)
     const hit = hits[0]
-    expect(hit.href.startsWith('/zones/assembly?')).toBe(true)
+    expect(hit.href.startsWith('/indoorshop/zones/assembly?')).toBe(true)
     expect(parseDrilldown(queryOf(hit.href))).toEqual({
       process: null,
       factory: '3DS',
@@ -168,21 +185,74 @@ describe('설비 검색', () => {
   it('도장 설비(EQ*)는 도장 맵으로 간다', () => {
     const hits = searchEquipment('EQ001', ctx)
     expect(hits.length).toBe(1)
-    expect(hits[0].href.startsWith('/zones/painting?')).toBe(true)
+    expect(hits[0].href.startsWith('/indoorshop/zones/painting?')).toBe(true)
     expect(parseDrilldown(queryOf(hits[0].href)).factory).toBe('1DOCK 도장공장')
   })
 })
 
-describe('통합 검색', () => {
-  const sources = { wos: woEntriesOf(BASE_DATE), equipment: null }
+describe('야드 실측 위치(BTS) 검색', () => {
+  /* 로스터가 **모르는** 블록이라야 이 색인의 존재 이유가 검증된다 — 5510은 P6에서
+     로스터에 편입돼(실측 5BAY) 더는 이 표본이 될 수 없다. 9910은 가상 호선이다. */
+  const yardIndex: YardBackdropBlock[] = [
+    {
+      id: '9910_726_S1',
+      projNo: '9910',
+      blkNo: '726',
+      lat: 34.89,
+      lon: 128.68,
+      lot: 'PB5B01',
+      lotLabel: 'PBS 5 BAY 남쪽-01',
+      updatedAt: '20260903141500',
+    },
+  ]
 
-  it('그룹 순서는 호선 → 블록 → ASSY → W/O → 설비', () => {
+  it('원문 ID·호선-블록 어느 쪽으로도 걸린다 (로스터와 같은 질의 정규화)', () => {
+    /* 사람이 치는 표기(`5510-726`·`5510 726`)와 원문 ID(`_` 구분)가 같은 것으로 걸려야
+       한다 — 구분자 차이로 검색이 안 되면 기능이 없는 것과 같다 (옛 filterBlockIndex 계약) */
+    for (const q of ['9910_726', '9910-726', '9910 726', '726']) {
+      expect(searchYardBlocks(q, yardIndex).map((hit) => hit.id)).toContain('yard:9910_726_S1')
+    }
+  })
+
+  it('빈 질의·색인 없음은 빈 결과 — 색인 전체를 쏟아내지 않는다', () => {
+    expect(searchYardBlocks('  ', yardIndex)).toEqual([])
+    expect(searchYardBlocks('9910', null)).toEqual([])
+  })
+
+  it('limit 을 넘지 않는다', () => {
+    const two = [...yardIndex, { ...yardIndex[0], id: '9910_727', blkNo: '727' }]
+    expect(searchYardBlocks('9910', two, 1)).toHaveLength(1)
+  })
+
+  it('행선지는 블록과 **같은 철자** — 지도가 로스터에서 못 찾으면 이 색인으로 물러난다', () => {
+    const hit = searchYardBlocks('9910-726', yardIndex)[0]
+    expect(hit.href.startsWith('/?')).toBe(true)
+    /* 로스터가 모르는 호선이라 선택 계약은 null 이다 — 그래서 2단 해석이 필요하다 */
+    expect(parseSelectionParams(queryOf(hit.href))).toBeNull()
+
+    const focus = parseMapFocus(queryOf(hit.href), yardIndex)
+    expect(focus?.kind).toBe('yard')
+    expect(focus?.yard?.id).toBe('9910_726_S1')
+    expect(focus?.label).toBe('9910-726')
+  })
+
+  it('색인이 아직 안 왔으면 그 자리는 포커스가 없다 — 틀린 자리를 먼저 찍지 않는다', () => {
+    const hit = searchYardBlocks('9910-726', yardIndex)[0]
+    expect(parseMapFocus(queryOf(hit.href), null)).toBeNull()
+  })
+})
+
+describe('통합 검색', () => {
+  const sources = { wos: woEntriesOf(BASE_DATE), equipment: null, yard: null }
+
+  it('그룹 순서는 호선 → 블록 → ASSY → 야드 → W/O → 설비', () => {
     const hits = searchGlobal('7004', sources)
     const order = [...new Set(hits.map((hit) => hit.group))]
     const canonical: readonly (typeof order)[number][] = [
       'vessel',
       'block',
       'assy',
+      'yard',
       'wo',
       'equipment',
     ]

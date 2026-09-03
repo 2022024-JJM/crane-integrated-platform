@@ -14,7 +14,7 @@ describe('ZoneJumpButton', () => {
     renderWithProviders(<ZoneJumpButton process="조립" factory="GBS" onStash={onStash} />)
     const link = screen.getByRole('link', { name: /조립 공정 화면 열기/ })
     /* 값은 안정 슬러그(F-30) */
-    expect(link).toHaveAttribute('href', '/zones/assembly?factory=asm-gbs')
+    expect(link).toHaveAttribute('href', '/indoorshop/zones/assembly?factory=asm-gbs')
 
     await userEvent.setup().click(link)
     expect(onStash).toHaveBeenCalledOnce()

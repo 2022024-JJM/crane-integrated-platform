@@ -151,10 +151,10 @@ describe('ASSY 딥링크 — `?assy=` 로 바로 진입·포커스', () => {
 
   it('링크 생성 — 호선·블록·ASSY 를 한 URL 에 싣는다', () => {
     expect(assyFocusLinkFor(['7004-222-M02'])).toBe(
-      '/performance?vessel=7004&block=222&assy=7004-222-M02'
+      '/indoorshop/performance?vessel=7004&block=222&assy=7004-222-M02'
     )
     expect(assyFocusLinkFor(['7004-222-S03', '7004-222-S04'])).toBe(
-      '/performance?vessel=7004&block=222&assy=7004-222-S03%2C7004-222-S04'
+      '/indoorshop/performance?vessel=7004&block=222&assy=7004-222-S03%2C7004-222-S04'
     )
     expect(assyFocusLinkFor(['9999-000-G01'])).toBeNull()
     expect(assyFocusLinkFor([])).toBeNull()

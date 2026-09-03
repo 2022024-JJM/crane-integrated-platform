@@ -9,7 +9,8 @@
  *  - 값은 전부 **결정론적 해시**로 생성한다 (레포 관례 — 렌더링마다 흔들리지 않는다).
  *  - 부재 모집단을 절점 모델(FabPart)로 만들고 IPD-S04 상태 규칙 — 선행 단계 완료 후
  *    진행, `미대상` 분모 제외 — 을 생성 단계에서 실제로 지킨다. 화면 계약의 일부다.
- *  - S1·S4·S5 이벤트는 **일자만** 낸다 (L3 판정 — 원천에 시각 없음. 표기 수준의 계약).
+ *  - 원천에 시각이 없는 절점은 **일자만** 낸다 — 정본 10절점에서 시각이 있는 것은
+ *    S4(강재 불출)·S6(절단) 둘뿐이다 (L3 판정. 표기 수준의 계약).
  *  - 블록 재공 목록의 범위 규칙(월간계획 4주 창 vs 전체 재공)은 ⚠️ 미확정 — mock 은
  *    호선당 고정 목록으로 대신한다.
  */
@@ -20,10 +21,10 @@ import {
   type AssyMatch,
   type AssyTier,
   type AssyWo,
-  type AssyWoKind,
   type BlockOption,
   type BlockSummary,
   type CollectionEvent,
+  ASSY_WO_ORDER,
   type EventDetail,
   type EventInstant,
   type FabPart,
@@ -41,9 +42,12 @@ import {
 } from '../model/types'
 import {
   PAINTING_FACTORIES,
+  type AssyScanFact,
+  assyTreeOf,
   blockOptionsOfVessel,
   findBlock,
   listVessels,
+  surfaceMatchPctOf,
 } from '../../../entities/vessel'
 import { PAINTING_STEP_MAPPING } from './paintingStepMapping'
 import { generateDailyProgress, latestBatchDate, latestProgressOf } from './dailyProgress'
@@ -52,6 +56,8 @@ import { clampEventsToWindow } from '../lib/eventWindow'
 import {
   aggregateStages,
   buildPaintingSteps,
+  paintingStripNodes,
+  rollupAssyWoNodes,
   countPaintingConfirmed,
   countPaintingDone,
   deriveNodeProgress,
@@ -142,12 +148,19 @@ export function generateParts(
     const h = hashOf(`${seed}-${pid}`)
     const weightKg = 280 + (h % 2300)
     const excluded: Partial<Record<FabStageId, boolean>> = {
-      S4: h % 11 === 3, // 사상 불요 부재
-      S5: h % 13 === 5, // 팔레트 편성 없이 직송
+      S7: h % 11 === 3, // 사상 불요 부재
+      S8: h % 13 === 5, // 팔레트 편성 없이 직송
+      S9: h % 7 === 2, // 평판 부재 — 변성(성형) 대상이 아니다
     }
     const applicable = FAB_STAGES.filter((s) => !excluded[s])
-    // 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다
-    const levelToday = Math.min(applicable.length, Math.floor((h % 100) / 14))
+    /* 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다.
+       나누는 값은 절점 수에 따라 늘어난다(`len+2`): 5절점일 때 100/7≈14 로 종전과 같고,
+       10절점이면 100/12≈8 이 되어 사다리가 길어져도 '끝까지 간 부재' 비율이 유지된다.
+       고정 14 로 두면 10절점에서 수위가 7 을 넘지 못해 뒤쪽 세 절점이 영영 안 닫힌다. */
+    const levelToday = Math.min(
+      applicable.length,
+      Math.floor((h % 100) / Math.floor(100 / (applicable.length + 2)))
+    )
     /* 절점 하나를 지나는 데 걸리는 날 — 부재마다 2~4일. 기준일이 그만큼 전이면 한 칸 뒤 */
     const level = forced
       ? applicable.length
@@ -226,7 +239,7 @@ function matchWorkOrders(input: {
       w < doneWos ? 'done' : w === inProgressWo ? 'inProgress' : 'notStarted'
     return {
       woNo: `WO-${String(hashOf(`${assyNo}-wo-${w}`) % 90000).padStart(5, '0')}`,
-      kind: WO_KIND_ORDER[w % WO_KIND_ORDER.length],
+      kind: ASSY_WO_ORDER[w % ASSY_WO_ORDER.length],
       status,
       actualDate: status === 'done' ? addDays(baseDate, -(hashOf(`${assyNo}-ad-${w}`) % 6)) : null,
     }
@@ -268,6 +281,147 @@ function paintingLifecycleShiftDays(projNo: string, blockNo: string): number {
   return 7 + (hashOf(`${projNo}-${blockNo}-life`) % 4)
 }
 
+/* ── ASSY 골격 — **구성의 정본은 로스터**, 모르는 블록만 합성 (R34) ──────────
+ *
+ * 예전에는 이 파일이 언제나 계층을 해시로 지어냈다. 로스터는 급(G/M/S)만 아는 평평한
+ * 명단이었으므로 같은 블록의 구성이 두 곳에서 따로 만들어졌고, 지도가 아는 것과 실적
+ * 카드가 그리는 트리의 근거가 달랐다 — 사용자가 "실제 블록 구성처럼 안 읽힌다"고 짚은
+ * 자리다. 이제 로스터가 부모 링크까지 들고 있으므로 **그것이 있으면 그대로 쓴다.**
+ */
+
+/** 급 → ASSY_STRC_CODE — mock 표현. 실코드 체계는 YDEH050M 확인 후 교체한다 */
+const TIER_STRC: Record<AssyTier, string> = { grand: 'G', mid: 'M', sub: 'S' }
+
+/** mock 조합식의 일련번호 꼬리(`G01`) — 실채번(`FR103C`)과 가르는 판별식 */
+const MOCK_SER_TAIL = /^[GMS]\d{2}$/
+
+/**
+ * 골격 노드 하나 — **구성만** 든다(누가 누구에 들어가나). 판별 수치·매칭은 아래에서 얹는다.
+ * 구성과 실적을 한 덩어리로 만들면 로스터에서 온 구성인지 합성인지 구분이 사라진다.
+ */
+interface AssyNode {
+  assyNo: string
+  strcCode: string
+  serNo: string
+  tier: AssyTier
+  parent: string | null
+  depth: number
+  /** 실측 스캔이 이 덩이를 정합했다 — 로스터가 아는 실측 블록만 */
+  scan?: AssyScanFact
+}
+
+/** 로스터 BOM 트리 → 골격. 로스터가 구성을 모르는 블록이면 null */
+function rosterAssyNodes(projNo: string, blockNo: string): AssyNode[] | null {
+  const tree = assyTreeOf(projNo, blockNo)
+  if (!tree) return null
+  const prefix = `${projNo}-${blockNo}-`
+  const parentOf = new Map(tree.map((unit) => [unit.assyNo, unit.parentAssyNo]))
+  /* 깊이는 부모 사슬을 세어 낸다 — 로스터가 적는 것은 귀속이지 깊이가 아니다.
+     순환·고아는 여기서 0(루트)으로 떨어지고 `findAssyViolations` 가 그 사정을 잡는다 */
+  const depthOf = (assyNo: string, seen: ReadonlySet<string> = new Set()): number => {
+    const parent = parentOf.get(assyNo)
+    if (parent == null || seen.has(assyNo) || !parentOf.has(parent)) return 0
+    return 1 + depthOf(parent, new Set(seen).add(assyNo))
+  }
+  return tree.map((unit) => {
+    /* 실측 블록은 데이터셋의 실채번(`FR103C`)을 그대로 쓴다 — 조합식은 실채번이 없을
+       때의 mock 규약이라, 있으면 실채번이 이긴다(그래야 두 화면이 같은 이름을 부른다) */
+    const tail = unit.assyNo.startsWith(prefix) ? unit.assyNo.slice(prefix.length) : unit.assyNo
+    return {
+      assyNo: unit.assyNo,
+      strcCode: TIER_STRC[unit.tier],
+      serNo: MOCK_SER_TAIL.test(tail) ? tail.slice(1) : tail,
+      tier: unit.tier,
+      parent: unit.parentAssyNo,
+      depth: depthOf(unit.assyNo),
+      scan: unit.scan,
+    }
+  })
+}
+
+/**
+ * 합성 골격 — 로스터가 구성을 모르는 블록만. 대조 루트 1~2 → 각 루트 아래 중조 1~2 →
+ * 나머지는 소조로 중조에 배분한다. 목록은 **pre-order**(대조 → 그 자식들)다.
+ *
+ * 채번은 로스터와 같은 **급별 일련번호**(`G01`·`M01`·`S01`…)다 — 한 화면에서 로스터
+ * 블록과 합성 블록이 나란히 서므로 채번 문법이 갈리면 같은 종류의 것을 다르게 부르는
+ * 셈이 된다.
+ */
+function synthAssyNodes(projNo: string, blockNo: string): AssyNode[] {
+  const seed = `${projNo}-${blockNo}`
+  const count = 4 + (hashOf(`${seed}-assy`) % 8)
+  const nodes: AssyNode[] = []
+  const serial: Record<AssyTier, number> = { grand: 0, mid: 0, sub: 0 }
+  const add = (tier: AssyTier, parent: AssyNode | null): AssyNode => {
+    serial[tier] += 1
+    const strcCode = TIER_STRC[tier]
+    const serNo = String(serial[tier]).padStart(2, '0')
+    const node: AssyNode = {
+      assyNo: `${projNo}-${blockNo}-${strcCode}${serNo}`,
+      strcCode,
+      serNo,
+      tier,
+      parent: parent == null ? null : parent.assyNo,
+      depth: parent == null ? 0 : parent.depth + 1,
+    }
+    nodes.push(node)
+    return node
+  }
+  const rootCount = count >= 6 && hashOf(`${seed}-roots`) % 2 === 1 ? 2 : 1
+  const baseSize = Math.floor(count / rootCount)
+  for (let r = 0; r < rootCount; r++) {
+    const size = r === 0 ? count - baseSize * (rootCount - 1) : baseSize
+    const root = add('grand', null)
+    const rest = size - 1
+    if (rest <= 0) continue
+    const midCount = Math.min(rest, 1 + (hashOf(`${seed}-mids-${r}`) % 2))
+    const subTotal = rest - midCount
+    for (let m = 0; m < midCount; m++) {
+      const mid = add('mid', root)
+      const subN = Math.floor(subTotal / midCount) + (m < subTotal % midCount ? 1 : 0)
+      for (let s = 0; s < subN; s++) add('sub', mid)
+    }
+  }
+  return nodes
+}
+
+/** 이 블록의 ASSY 골격 — 로스터가 알면 로스터, 모르면 합성 */
+function assyNodesOf(projNo: string, blockNo: string): AssyNode[] {
+  return rosterAssyNodes(projNo, blockNo) ?? synthAssyNodes(projNo, blockNo)
+}
+
+/**
+ * post-order 완료 순위 — 소조 → 그 중조 → … → 대조 (하위부터 조립되는 순서).
+ * 인덱스별 순위를 낸다. 부모가 목록에 없는 노드는 루트로 본다(고아도 사라지지 않게).
+ */
+function postOrderRanks(nodes: readonly AssyNode[]): number[] {
+  const indexOf = new Map(nodes.map((node, i) => [node.assyNo, i]))
+  const children = new Map<number, number[]>()
+  const roots: number[] = []
+  nodes.forEach((node, i) => {
+    const parent = node.parent == null ? undefined : indexOf.get(node.parent)
+    if (parent == null) roots.push(i)
+    else {
+      const list = children.get(parent)
+      if (list) list.push(i)
+      else children.set(parent, [i])
+    }
+  })
+  const ranks = new Array<number>(nodes.length).fill(0)
+  let rank = 0
+  const seen = new Set<number>()
+  const walk = (i: number) => {
+    if (seen.has(i)) return
+    seen.add(i)
+    for (const child of children.get(i) ?? []) walk(child)
+    ranks[i] = rank++
+  }
+  for (const root of roots) walk(root)
+  /* 순환에 갇힌 노드도 순위를 받아야 목록에서 사라지지 않는다 */
+  nodes.forEach((_, i) => walk(i))
+  return ranks
+}
+
 /**
  * **블록의 조립 진척은 그 블록이 지금 서 있는 공정이 정한다** (W6-2, 사용자 지적).
  *
@@ -306,27 +460,40 @@ function assemblyLevelAt(
   blockNo: string,
   baseDate: string
 ): {
+  nodes: readonly AssyNode[]
   count: number
   level: number
+  scannedCount: number
   allDone: boolean
   moved: boolean
   stage: ReturnType<typeof assemblyStageOf>
 } {
   const seed = `${projNo}-${blockNo}`
-  const count = 4 + (hashOf(`${seed}-assy`) % 8)
+  /* 구성의 정본은 로스터다 — 몇 덩이인지도 거기서 나온다(R34) */
+  const nodes = assyNodesOf(projNo, blockNo)
+  const count = nodes.length
   const stage = assemblyStageOf(projNo, blockNo)
+  /* 실측 블록 — **수위를 해시가 아니라 스캔이 정한다**(R31). 정합된 덩이만큼 붙어 있고,
+     그 위(아직 안 붙은 상위)가 지금 작업 중인 자리다 */
+  const scannedCount = nodes.filter((node) => node.scan).length
   const rawLevel = Math.min(
     count,
     Math.floor((hashOf(`${seed}-asm-lv`) % 100) / (100 / (count + 1)))
   )
   const levelToday =
-    stage.force === 'complete' ? count : stage.force === 'notStarted' ? 0 : rawLevel
+    scannedCount > 0
+      ? scannedCount
+      : stage.force === 'complete'
+        ? count
+        : stage.force === 'notStarted'
+          ? 0
+          : rawLevel
   /* 과거 기준일이면 그만큼 되감는다 — ASSY 하나를 붙이는 데 3~7일 */
   const level = rewoundLevel(levelToday, rewindDaysOf(baseDate), 3 + (hashOf(`${seed}-asm-cad`) % 5))
   const allDone = level >= count
   const moved =
     allDone && (stage.moved === 'yes' || (stage.moved === 'auto' && hashOf(`${seed}-insp`) % 3 !== 1))
-  return { count, level, allDone, moved, stage }
+  return { nodes, count, level, scannedCount, allDone, moved, stage }
 }
 
 /**
@@ -351,84 +518,40 @@ function fabricationForcedAt(projNo: string, blockNo: string, baseDate: string):
   return assemblyLevelAt(projNo, blockNo, baseDate).allDone
 }
 
-/** 급 → ASSY_STRC_CODE — mock 표현. 실코드 체계는 YDEH050M 확인 후 교체한다 */
-const TIER_STRC: Record<AssyTier, string> = { grand: 'G', mid: 'M', sub: 'S' }
-/** ASSY 아래 W/O 의 작업 순서 — 취부 → 용접 → 사상 */
-const WO_KIND_ORDER: readonly AssyWoKind[] = ['fit', 'weld', 'grind']
-
 /**
  * 블록 1개의 ASSY 목록을 결정론적으로 생성한다 — **계층 트리**(사용자 확정: 대조>
  * 중조>소조는 절점이 아니라 ASSY 계층 관계다. YDEH040M 부모추적의 mock 대응).
  *
- * 트리 골격: 대조 루트 1~2 → 각 루트 아래 중조 1~2 → 나머지는 소조로 중조에 배분.
- * 목록은 **pre-order**(대조 → 그 자식들)로 배열돼 화면이 그대로 계층 순서로 그린다.
- * 진행은 **post-order 수위**로 판정한다 — 하위(소조)부터 완료되고 부모는 자식 전량
- * 완료 후에만 완료되므로, 부모 완료·자식 미완료가 구조적으로 없다.
+ * **구성은 여기서 정하지 않는다** (R34) — 로스터가 아는 블록은 그 BOM 트리를 그대로
+ * 쓰고(`rosterAssyNodes`), 모르는 블록만 합성한다(`synthAssyNodes`). 이 함수가 하는 일은
+ * 그 골격 위에 **판별 수치와 매칭을 얹는 것**뿐이다.
  *
- * ASSY_NO 는 조합식 `PROJ-BLK-STRC+SER`(급이 STRC 로 드러난다). 인식 카운트
- * (countedQty)는 OT 소관이라 W/O 상태에서 파생만 한다(화면이 'OT 가동 후' 단서).
+ * 목록 순서는 골격이 준 순서(pre-order — 대조 → 그 자식들)이고, 진행은 **post-order
+ * 수위**로 판정한다: 하위(소조)부터 완료되고 부모는 자식 전량 완료 후에만 완료되므로
+ * 부모 완료·자식 미완료가 구조적으로 없다.
+ *
+ * **실측 블록은 수위를 스캔이 정한다** (R31): 데이터셋이 정합한 덩이가 판별 완료이고,
+ * 그 바로 위(아직 안 붙은 상위)가 지금 붙고 있는 자리다. 그래야 통합실적의 판별 수치가
+ * 실측 뷰의 인식 결과와 같은 말을 한다.
  */
 export function generateAssyUnits(projNo: string, blockNo: string, baseDate: string): AssemblySummary {
   const seed = `${projNo}-${blockNo}`
-  /* 수위·전량완료·검사장 이동은 `assemblyLevelAt` 한 곳에서 나온다 — 가공 게이트가 같은
-     답을 읽어야 두 권역이 어느 기준일에서도 어긋나지 않는다(W7-6F) */
-  const { count, level, stage } = assemblyLevelAt(projNo, blockNo, baseDate)
-  const started = stage.force === 'notStarted' ? false : hashOf(`${seed}-asm-st`) % 4 !== 0
+  /* 골격·수위·전량완료·검사장 이동은 `assemblyLevelAt` 한 곳에서 나온다 — 가공 게이트가
+     같은 답을 읽어야 두 권역이 어느 기준일에서도 어긋나지 않는다(W7-6F) */
+  const { nodes, count, level, scannedCount, stage } = assemblyLevelAt(projNo, blockNo, baseDate)
+  /* 실측 블록은 착수 여부를 흔들지 않는다 — 정합된 덩이가 이미 서 있으므로 착수했다 */
+  const started =
+    scannedCount > 0 ? true : stage.force === 'notStarted' ? false : hashOf(`${seed}-asm-st`) % 4 !== 0
 
   /* 도장 단계 블록만 조립 시간축을 과거로 민다 — 그 외 블록은 shift 0 이라 종전 그대로다 */
   const lifeShift = paintingLifecycleShiftDays(projNo, blockNo)
   /* 조립 실적(판별일·W/O 실적일)의 기준 — 검사장 이동보다 하루 이상 앞선다 */
   const asmBase = lifeShift > 0 ? addDays(baseDate, -(lifeShift + 1)) : baseDate
 
-  /* ── 트리 골격 (pre-order 로 쌓는다: 루트 → 중조 → 그 소조들 → 다음 중조 …) ── */
-  interface Skel {
-    tier: AssyTier
-    parent: number | null
-    children: number[]
-  }
-  const skel: Skel[] = []
-  const addNode = (tier: AssyTier, parent: number | null): number => {
-    const idx = skel.length
-    skel.push({ tier, parent, children: [] })
-    if (parent != null) skel[parent].children.push(idx)
-    return idx
-  }
-  const rootCount = count >= 6 && hashOf(`${seed}-roots`) % 2 === 1 ? 2 : 1
-  const baseSize = Math.floor(count / rootCount)
-  for (let r = 0; r < rootCount; r++) {
-    const size = r === 0 ? count - baseSize * (rootCount - 1) : baseSize
-    const rootIdx = addNode('grand', null)
-    const rest = size - 1
-    if (rest <= 0) continue
-    const midCount = Math.min(rest, 1 + (hashOf(`${seed}-mids-${r}`) % 2))
-    const subTotal = rest - midCount
-    for (let m = 0; m < midCount; m++) {
-      const midIdx = addNode('mid', rootIdx)
-      const subN = Math.floor(subTotal / midCount) + (m < subTotal % midCount ? 1 : 0)
-      for (let s = 0; s < subN; s++) addNode('sub', midIdx)
-    }
-  }
+  const postRank = postOrderRanks(nodes)
 
-  /* post-order 완료 순위 — 소조 → 그 중조 → … → 대조 (하위부터 조립되는 순서) */
-  const postRank = new Array<number>(skel.length).fill(0)
-  let rank = 0
-  const post = (i: number) => {
-    for (const c of skel[i].children) post(c)
-    postRank[i] = rank++
-  }
-  skel.forEach((node, i) => {
-    if (node.parent == null) post(i)
-  })
-
-  const assyNos: string[] = []
-  const depths: number[] = []
-  const assys: AssyRaw[] = skel.map((node, i) => {
-    const serNo = String(i + 1).padStart(2, '0')
-    const strcCode = TIER_STRC[node.tier]
-    const assyNo = `${projNo}-${blockNo}-${strcCode}${serNo}`
-    assyNos.push(assyNo)
-    const depth = node.parent == null ? 0 : depths[node.parent] + 1
-    depths.push(depth)
+  const assys: AssyRaw[] = nodes.map((node, i) => {
+    const { assyNo } = node
     /* 계획 분모 — 레거시 기준정보(REQ_QTY). 비율의 분모일 뿐 기준 축이 아니다 */
     const reqQty = 4 + (hashOf(`${assyNo}-req`) % 9)
 
@@ -456,11 +579,11 @@ export function generateAssyUnits(projNo: string, blockNo: string, baseDate: str
 
     return {
       assyNo,
-      strcCode,
-      serNo,
+      strcCode: node.strcCode,
+      serNo: node.serNo,
       tier: node.tier,
-      parentAssyNo: node.parent == null ? null : assyNos[node.parent],
-      depth,
+      parentAssyNo: node.parent,
+      depth: node.depth,
       reqQty,
       recognizedQty,
       judgedDate,
@@ -802,7 +925,6 @@ const addDays = (base: string, days: number): string => {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
-/** 절점별 계획일 — 기준일 주변으로 결정론 배치 (S1 과거 ~ S5 미래) */
 /**
  * 절점별 계획일 — **계획도 그 블록이 서 있는 공정을 따른다** (W7-7-1).
  *
@@ -812,10 +934,27 @@ const addDays = (base: string, days: number): string => {
  *
  * 그래서 **가공을 이미 지난 블록**(공정 순서 게이트와 같은 원천 — `fabricationForcedAt`)은
  * 계획 사다리를 통째로 과거로 민다. 그 블록의 가공 계획은 실제로 지난 일이다.
- * 밀어 내는 양(`PAST_PLAN_SHIFT_DAYS`)은 사다리의 마지막 절점(S5, 기준일 +4~+6일)이
- * 확실히 과거에 놓이도록 잡는다.
+ * 밀어 내는 양(`PAST_PLAN_SHIFT_DAYS`)은 사다리의 마지막 절점(S10, 기준일 +5~+7일)이
+ * 확실히 과거에 놓이도록 잡는다 — 절점이 열로 늘면서 사다리도 길어졌으므로 함께 늘렸다.
  */
-const PAST_PLAN_SHIFT_DAYS = 8
+const PAST_PLAN_SHIFT_DAYS = 12
+
+/**
+ * 절점별 계획일의 기준일 대비 오프셋(일) — 정본 10절점 사다리. 강재 입고가 가장 과거,
+ * 최종 불출이 가장 미래다. 여기에 절점별 지터(0~2일)가 더해진다.
+ */
+const PLAN_OFFSET_DAYS: Record<FabStageId, number> = {
+  S1: -9,
+  S2: -8,
+  S3: -7,
+  S4: -5,
+  S5: -4,
+  S6: -2,
+  S7: 0,
+  S8: 2,
+  S9: 3,
+  S10: 5,
+}
 
 export function planDatesOf(
   projNo: string,
@@ -826,13 +965,11 @@ export function planDatesOf(
   const jitter = (stage: FabStageId) => hashOf(`${seed}-plan-${stage}`) % 3
   /* 가공을 지난 블록이면 계획도 과거다 — 실적(게이트)과 같은 사실에서 파생한다 */
   const shift = fabricationForcedAt(projNo, blockNo, baseDate) ? -PAST_PLAN_SHIFT_DAYS : 0
-  return {
-    S1: addDays(baseDate, shift - 6 + jitter('S1')),
-    S2: addDays(baseDate, shift - 3 + jitter('S2')),
-    S3: addDays(baseDate, shift - 1 + jitter('S3')),
-    S4: addDays(baseDate, shift + 1 + jitter('S4')),
-    S5: addDays(baseDate, shift + 4 + jitter('S5')),
+  const dates = {} as Record<FabStageId, string>
+  for (const stage of FAB_STAGES) {
+    dates[stage] = addDays(baseDate, shift + PLAN_OFFSET_DAYS[stage] + jitter(stage))
   }
+  return dates
 }
 
 export async function fetchBlockSummary(
@@ -862,7 +999,11 @@ export async function fetchBlockSummary(
     woTotal: assembly.woTotal,
     woDone: assembly.woDone,
     inspectionMoved: assembly.inspectionMoved,
+    /* 조립 절점(취부→용접→사상) — 헤더의 요약 축. ASSY 트리는 본문에서 따로 선다 */
+    asmNodes: rollupAssyWoNodes(assembly),
     pntDone: painting.doneSteps,
+    /* 도장 스텝을 가공·조립과 같은 스트립 문법으로 — 분모는 존재 기반(steps.length)이다 */
+    pntNodes: paintingStripNodes(painting.steps),
     pntPhase: painting.phase,
     lastReceivedAt: `0${6 + (hashOf(`${seed}-rx`) % 4)}:${String(hashOf(`${seed}-rxm`) % 60).padStart(2, '0')}`,
     progress,
@@ -879,16 +1020,28 @@ export async function fetchFabricationStages(
 
 /* ── 수집 이벤트 그리드 (IPD-S01) ───────────────────────────── */
 
-/** 가공 단계 → 관리번호 형식·원천 라벨 (정의서 §6.2·§6.4 표 그대로 — 4형식 한정) */
+/**
+ * 가공 절점 → 관리번호 형식·원천 라벨 (정의서 §6.2·§6.4 표 그대로 — 4형식 한정).
+ *
+ * **시각(`hasTime`)은 원천에 있을 때만 true 다.** 정본 10절점에서 그런 절점은
+ * S4(강재 불출 — `불출일+시각`)와 S6(절단 — `절단완료일시`) 둘뿐이고, 나머지 여덟은
+ * 일자만이다. 원천 컬럼이 아직 확정되지 않은 절점(`FAB_STAGES_PENDING_SOURCE`)은
+ * 원천 라벨을 '—' 로 두고 화면이 '원천 확정 대기' 배지를 세운다 — 없는 근거를 지어내지 않는다.
+ */
 const STAGE_META: Record<
   FabStageId,
   { mgmtType: 'MAT' | 'DWG' | 'PC' | 'PLT'; sources: string; hasTime: boolean; unit: string }
 > = {
   S1: { mgmtType: 'MAT', sources: '③', hasTime: false, unit: '강재(Roll)' },
-  S2: { mgmtType: 'MAT', sources: '①', hasTime: true, unit: '강재(Roll)' },
-  S3: { mgmtType: 'DWG', sources: '③②', hasTime: true, unit: '도면' },
-  S4: { mgmtType: 'PC', sources: '③④', hasTime: false, unit: '부재' },
-  S5: { mgmtType: 'PLT', sources: '③④⑤', hasTime: false, unit: '팔레트' },
+  S2: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S3: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S4: { mgmtType: 'MAT', sources: '①', hasTime: true, unit: '강재(Roll)' },
+  S5: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S6: { mgmtType: 'DWG', sources: '③②', hasTime: true, unit: '도면' },
+  S7: { mgmtType: 'PC', sources: '③④', hasTime: false, unit: '부재' },
+  S8: { mgmtType: 'PLT', sources: '③④⑤', hasTime: false, unit: '팔레트' },
+  S9: { mgmtType: 'PC', sources: '—', hasTime: false, unit: '부재' },
+  S10: { mgmtType: 'PLT', sources: '—', hasTime: false, unit: '팔레트' },
 }
 
 function mgmtNoOf(stage: FabStageId, projNo: string, blockNo: string, i: number): string {
@@ -905,7 +1058,7 @@ function mgmtNoOf(stage: FabStageId, projNo: string, blockNo: string, i: number)
   }
 }
 
-/** 시각 유무는 STAGE_META.hasTime 계약을 따른다 — S1·S4·S5 는 일자만 */
+/** 시각 유무는 STAGE_META.hasTime 계약을 따른다 — S4(불출)·S6(절단) 만 시각이 있다 */
 function instantOf(seed: string, baseDate: string, hasTime: boolean): EventInstant {
   const h = hashOf(seed)
   const date = addDays(baseDate, -(h % 3))
@@ -972,6 +1125,9 @@ function fabEventsOf(projNo: string, blockNo: string, baseDate: string): Collect
 function asmEventsOf(projNo: string, blockNo: string, baseDate: string): CollectionEvent[] {
   const factory = findBlock(projNo, blockNo)?.factory
   const summary = generateAssyUnits(projNo, blockNo, baseDate)
+  /* 실측 정합 사실 — 판별 행의 원천 문구가 실측 뷰와 **같은 값**을 말하게 하는 재료.
+     표면일치 환산은 엔티티가 소유한다(두 화면이 각자 환산하면 같은 덩이가 다른 %가 된다) */
+  const scanOf = new Map((assyTreeOf(projNo, blockNo) ?? []).map((unit) => [unit.assyNo, unit.scan]))
   /* 도장 단계 블록은 조립 시간축이 과거로 밀려 있다 — 이벤트 행도 같은 축을 써야
      카드('판별 08-21')와 그리드('판별 09-03')가 다른 말을 하지 않는다 */
   const lifeShift = paintingLifecycleShiftDays(projNo, blockNo)
@@ -1016,8 +1172,15 @@ function asmEventsOf(projNo: string, blockNo: string, baseDate: string): Collect
     /* ① 판별 이벤트 — **우리 수집의 원천 행**. 관리번호는 ASSY_NO 이고 원천은 정반
        LiDAR 다. 인식이 있었던 ASSY 만 선다(수집된 것만 그리드에 오른다). */
     if (assy.recognizedQty > 0) {
+      const scan = scanOf.get(assy.assyNo)
       push(`${assy.assyNo}-judge`, 'asmJudged', assy.judged === 'complete' ? 'done' : 'inProgress',
-        assy.assyNo, { hasTime: true, mgmtNoType: 'ASSY', sources: 'LiDAR 판별' })
+        assy.assyNo, {
+          hasTime: true,
+          mgmtNoType: 'ASSY',
+          /* 실측 정합 덩이는 그 사실과 표면일치를 그대로 적는다 — 실측 뷰의 상세 카드가
+             읽는 값과 같은 숫자라야 화면을 옮겨도 같은 이야기가 이어진다 (R31) */
+          sources: scan ? `LiDAR 실측 정합 · 표면일치 ${surfaceMatchPctOf(scan)}%` : 'LiDAR 판별',
+        })
     }
     /* ② 매칭된 W/O — 판별 행에 붙는 **참고 행**이다. 불일치 ASSY 는 붙은 W/O 가 없어
        여기서 아무 행도 나오지 않는다(그 사정은 조립 카드의 노티 배지가 말한다). */
@@ -1216,13 +1379,22 @@ export async function fetchEventDetail(event: CollectionEvent): Promise<EventDet
   }
 
   const meta = STAGE_META[event.stage as FabStageId]
+  /* 원천 확정 대기 절점(S2·S3·S5·S9·S10)은 레거시 컬럼을 지어내지 않는다 —
+     대상·일자만 적고 그 사정을 KV 로 남긴다. */
+  const pendingEntries = (unitLabel: string) => [
+    { label: unitLabel, value: event.mgmtNo },
+    { label: '완료일', value: fmt(event.completed) },
+    { label: '판별 근거', value: '원천 확정 대기' },
+  ]
   const entriesByStage: Record<FabStageId, { label: string; value: string }[]> = {
     S1: [
       { label: '고유번호', value: `ST-${1000 + (h % 9000)}` },
       { label: '중량(kg)', value: String(800 + (h % 2000)) },
       { label: '강재반입일', value: fmt(event.completed) },
     ],
-    S2: [
+    S2: pendingEntries('강재 고유번호'),
+    S3: pendingEntries('강재 고유번호'),
+    S4: [
       { label: '고유번호', value: `ST-${1000 + (h % 9000)}` },
       { label: 'Roll No.', value: `R-${100 + (h % 900)}` },
       { label: '재질', value: h % 2 === 0 ? 'AH36' : 'A' },
@@ -1230,23 +1402,26 @@ export async function fetchEventDetail(event: CollectionEvent): Promise<EventDet
       { label: '중량(kg)', value: String(800 + (h % 2000)) },
       { label: '불출일·시각', value: fmt(event.completed) },
     ],
-    S3: [
+    S5: pendingEntries('강재 고유번호'),
+    S6: [
       { label: '도면번호', value: event.mgmtNo },
       { label: '절단장비', value: `NC-${1 + (h % 6)}` },
       { label: '절단완료일시', value: fmt(event.completed) },
       { label: '계획/지시/실적 수량', value: `${20 + (h % 9)} / ${20 + (h % 9)} / ${14 + (h % 9)}` },
     ],
-    S4: [
+    S7: [
       { label: '부재번호', value: event.mgmtNo },
       { label: '사상완료일', value: fmt(event.completed) },
       { label: '모듬상태', value: event.status === 'done' ? '모듬 완료' : '진행' },
     ],
-    S5: [
+    S8: [
       { label: '팔레트 번호', value: event.mgmtNo },
       { label: '구성 부재 수', value: String(4 + (h % 14)) },
       { label: '합계 중량(kg)', value: String(3000 + (h % 9000)) },
       { label: '할당 상태', value: event.status === 'done' ? '완료' : '대기' },
     ],
+    S9: pendingEntries('부재번호'),
+    S10: pendingEntries('팔레트 번호'),
   }
   return { eventId: event.id, unit: meta.unit, entries: entriesByStage[event.stage as FabStageId] }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -9,6 +9,7 @@ import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { cn } from '../../../../shared/lib/utils'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
+import { useMatchToleranceCm } from '../../../../shared/lib/matchTolerance'
 import type { LidarBlockInfo } from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import type { Location } from '../../../../shared/entities/location/model/types'
 import {
@@ -17,6 +18,8 @@ import {
   loadRealCloud,
   loadRealLabels,
   loadRealShade,
+  loadRealDeviations,
+  deviationCutoff,
   assertRealSceneConsistent,
   realGroupKeyOf,
   FLOOR,
@@ -54,6 +57,7 @@ import {
   type ViewDirection,
 } from '../../../../shared/features/bay-viewer/lib/blenderControls'
 import { projectAxes, type AxisViewState } from '../../../../shared/features/bay-viewer/lib/axisGizmo'
+import { isLowGpuMode, pixelRatioFor } from '../../../../shared/features/bay-viewer/lib/qualityMode'
 import { createLineSegments } from '../../../../shared/features/bay-viewer/lib/outlineGeometry'
 import {
   createBandStripe,
@@ -67,7 +71,8 @@ import {
 import { createBlockLabel, createBayLabel } from '../../../../shared/features/bay-viewer/lib/labelCards'
 import { createBackdrop } from '../../../../shared/features/bay-viewer/lib/backdrop'
 import { SENSOR_POINT_COLORS } from '../../../../shared/features/bay-viewer/lib/bayConfig'
-import { ViewportAxisGizmo } from '../../../../shared/features/bay-viewer/ui/ViewportAxisGizmo'
+import { LiveAxisGizmo } from '../../../../shared/features/bay-viewer/ui/LiveViewportOverlay'
+import { createViewportOverlayStore } from '../../../../shared/features/bay-viewer/lib/viewportOverlayStore'
 import { WheelZoomHint } from '../../../../shared/features/bay-viewer/ui/WheelZoomHint'
 
 /**
@@ -207,6 +212,8 @@ interface RealCloud {
   fixedLabel: number | null
   /** 점별 의사 반사강도 (0..255) — 색상 규칙과 무관하게 곱해 명암을 준다 */
   shade: Uint8Array | null
+  /** 점별 CAD 표면 편차 (0..255, 255=미일치) — 임계 슬라이더가 이 값으로 재판정한다 */
+  dev: Uint8Array | null
 }
 
 const ELEVATION = ELEVATION_STOPS.map((hex) => new THREE.Color(hex))
@@ -256,10 +263,27 @@ function elevationColor(t: number, out: THREE.Color): THREE.Color {
  *    (`CAD 정합` 규칙만 팔레트 색 대신 자기 회색으로 누른다 — 아래 주석 참조).
  *  - 점별 음영을 곱한다. 이 데이터셋은 intensity 가 전부 0 이라 안 곱하면 색면이 된다.
  */
+/**
+ * 점 색을 다시 칠한다 — 색상 규칙 전환과 **임계 슬라이더**가 같은 경로를 쓴다.
+ *
+ * 색상 속성은 `Uint8` 정규화다(P6). Float32 로 두면 235만 점에서 26.9MB 를 매번 GPU 로
+ * 올려야 하고, 임계를 드래그하면 그 업로드가 프레임마다 반복된다 — Uint8 은 6.7MB 로
+ * 4분의 1이다. 색의 정밀도는 8비트면 충분하다(어차피 화면이 8비트다).
+ *
+ * `cutoff` 는 편차 컷오프다. 라벨은 자산 생성 시점(30cm)의 것이므로, 더 빡빡한 임계를
+ * 고르면 라벨이 있어도 편차가 넘는 점이 생긴다 — 그 점은 미정합으로 칠한다.
+ */
 function applyRealPointColors(
   clouds: RealCloud[],
   mode: PointColorMode,
-  ctx: { sensorColors: string[]; minY: number; maxY: number; floorColor: number }
+  ctx: {
+    sensorColors: string[]
+    minY: number
+    maxY: number
+    floorColor: number
+    /** 편차 컷오프 (0..255). 라벨이 있어도 이 값을 넘으면 미정합으로 본다 */
+    cutoff: number
+  }
 ): void {
   const base = new THREE.Color()
   const floor = new THREE.Color(ctx.floorColor)
@@ -272,11 +296,12 @@ function applyRealPointColors(
     const count = position.count
 
     let attr = geometry.getAttribute('color') as THREE.BufferAttribute | undefined
-    if (!attr || attr.count !== count) {
-      attr = new THREE.BufferAttribute(new Float32Array(count * 3), 3)
+    if (!attr || attr.count !== count || !(attr.array instanceof Uint8Array)) {
+      /* 정규화 Uint8 — 0..255 가 셰이더에서 0..1 로 읽힌다 (P6) */
+      attr = new THREE.BufferAttribute(new Uint8Array(count * 3), 3, true)
       geometry.setAttribute('color', attr)
     }
-    const colors = attr.array as Float32Array
+    const colors = attr.array as Uint8Array
 
     const flat: THREE.Color | null =
       mode === 'sensor'
@@ -286,7 +311,12 @@ function applyRealPointColors(
           : PLAIN_POINT_COLOR
 
     for (let i = 0; i < count; i++) {
-      const label = cloud.fixedLabel ?? cloud.labels?.[i] ?? UNLABELED
+      const labelled = cloud.fixedLabel ?? cloud.labels?.[i] ?? UNLABELED
+      /* 임계 재판정 — 라벨은 자산의 30cm 기준이고, 화면 임계는 그보다 빡빡할 수 있다 */
+      const label =
+        labelled !== FLOOR && labelled !== UNLABELED && cloud.dev && cloud.dev[i] > ctx.cutoff
+          ? UNLABELED
+          : labelled
       if (mode === 'match') {
         /*
          * CAD 정합 규칙: 색은 **정합된 실측점**만 갖는다.
@@ -309,9 +339,9 @@ function applyRealPointColors(
       const shade = cloud.shade
         ? SHADE_FLOOR + ((1 - SHADE_FLOOR) * cloud.shade[i]) / 255
         : 1
-      colors[i * 3] = base.r * shade
-      colors[i * 3 + 1] = base.g * shade
-      colors[i * 3 + 2] = base.b * shade
+      colors[i * 3] = base.r * shade * 255
+      colors[i * 3 + 1] = base.g * shade * 255
+      colors[i * 3 + 2] = base.b * shade * 255
     }
     attr.needsUpdate = true
   }
@@ -324,7 +354,20 @@ function applyRealPointColors(
  * (CAD 표면에 붙었지만 그 뒤 바닥으로 넘어간 점이 있다 — 실측 g3 에서 약 1,500점).
  * 범례가 색을 설명하는 표인 이상 숫자는 화면과 같아야 하므로 라벨에서 직접 센다.
  */
-function countByLabel(labels: Uint8Array, blockCount: number) {
+/**
+ * 라벨 분포 — 범례의 블록별 점 수·미정합·바닥.
+ *
+ * `cutoff` 는 임계 슬라이더가 정한 편차 컷오프다. 라벨은 자산 생성 시점의 허용오차
+ * (30cm)로 붙어 있으므로, 그보다 빡빡한 임계를 고르면 **라벨은 있으나 편차가 넘는 점**이
+ * 생긴다 — 그 점들은 미정합으로 센다. 화면의 색 규칙과 같은 판정을 써야 범례 숫자와
+ * 눈에 보이는 색이 어긋나지 않는다.
+ */
+function countByLabel(
+  labels: Uint8Array,
+  blockCount: number,
+  dev?: Uint8Array | null,
+  cutoff = 255
+) {
   const blocks = new Uint32Array(blockCount)
   let floor = 0
   let unmatched = 0
@@ -332,7 +375,10 @@ function countByLabel(labels: Uint8Array, blockCount: number) {
     const label = labels[i]
     if (label === FLOOR) floor++
     else if (label === UNLABELED) unmatched++
-    else if (label < blockCount) blocks[label]++
+    else if (label < blockCount) {
+      if (dev && dev[i] > cutoff) unmatched++
+      else blocks[label]++
+    }
   }
   return { blocks, floor, unmatched }
 }
@@ -343,7 +389,8 @@ interface LoadedRealScene {
   cloud: Float32Array
   labels: Uint8Array
   shade: Uint8Array
-  counts: ReturnType<typeof countByLabel>
+  /** 점별 CAD 표면 편차 — 임계 재판정의 재료 (자산에 이미 있던 값을 이제 읽는다) */
+  dev: Uint8Array
   meshes: RealCadMesh[]
   /** 홀 크롭 상자 — 카메라가 담을 높이 상한 */
   hall: { min: [number, number, number]; max: [number, number, number] }
@@ -381,20 +428,21 @@ export function RealScanViewer({
     const manifest = await loadRealScanManifest()
     const groupKey = mode === 'bay' ? realGroupKeyOf(locationId!) : null
     const meta = groupKey ? manifest.groups[groupKey] : manifest.factory
-    const [cloud, labels, shade, meshes] = await Promise.all([
+    const [cloud, labels, shade, dev, meshes] = await Promise.all([
       loadRealCloud(meta),
       loadRealLabels(meta),
       loadRealShade(meta),
+      loadRealDeviations(meta),
       loadRealCadMeshes(),
     ])
-    assertRealSceneConsistent(meta, cloud, labels, shade)
+    assertRealSceneConsistent(meta, cloud, labels, shade, dev)
     return {
       key: groupKey ?? 'factory',
       meta,
       cloud,
       labels,
       shade,
-      counts: countByLabel(labels, meta.blocks.length),
+      dev,
       meshes,
       hall: manifest.hall,
       bays: groupKey
@@ -405,6 +453,29 @@ export function RealScanViewer({
           })),
     }
   }, [mode, locationId])
+
+  /**
+   * CAD 표면 일치 임계(cm) — **설정 화면이 임자다**(R23). 뷰어는 구독만 한다.
+   * 바뀌면 색만 다시 칠한다(점별 편차가 자산에 있어 재계산이 없고, geometry 도 그대로다).
+   */
+  const settingToleranceCm = useMatchToleranceCm()
+
+  /** 자산이 생성된 허용오차(cm) — 편차 bin 의 양자화 기준이자 넓힐 수 있는 한계 */
+  const assetToleranceCm = scene3d ? Math.round(scene3d.meta.segmentation.toleranceM * 100) : null
+  /*
+   * 실제 적용값 — 설정값을 **자산 한계로 한 번 더 조인다**. 설정은 60cm 까지 열려 있지만
+   * 더 좁은 기준으로 만들어진 자산에서는 그 위가 전부 '미일치' 로 잘려 있어, 넓혀도
+   * 아무 일이 없으면서 범례만 거짓 숫자를 말하게 된다.
+   */
+  const activeToleranceCm =
+    assetToleranceCm == null ? settingToleranceCm : Math.min(settingToleranceCm, assetToleranceCm)
+  const cutoff = scene3d ? deviationCutoff(activeToleranceCm / 100, scene3d.meta) : 255
+
+  /** 임계를 반영한 범례 수치 — 색 규칙과 같은 판정을 써야 숫자와 화면이 어긋나지 않는다 */
+  const counts = useMemo(
+    () => (scene3d ? countByLabel(scene3d.labels, scene3d.meta.blocks.length, scene3d.dev, cutoff) : null),
+    [scene3d, cutoff]
+  )
 
   /** 모드·규칙 전환이 재사용하는 씬 등록부 — geometry 재생성 없이 재질·색만 바꾼다 */
   const sceneRefs = useRef<{
@@ -443,8 +514,8 @@ export function RealScanViewer({
     maxY: number
   } | null>(null)
 
-  const displayRef = useRef({ displayMode, colorMode, showOutline })
-  displayRef.current = { displayMode, colorMode, showOutline }
+  const displayRef = useRef({ displayMode, colorMode, showOutline, cutoff })
+  displayRef.current = { displayMode, colorMode, showOutline, cutoff }
   const highlightRef = useRef(highlightedBayId)
   highlightRef.current = highlightedBayId
 
@@ -465,14 +536,24 @@ export function RealScanViewer({
   } | null>(null)
   /* 장면을 고친 쪽이 "한 장 더 그려 달라"고 말하는 통로 — 루프는 카메라만 본다 */
   const requestRenderRef = useRef<(() => void) | null>(null)
-  const [axisView, setAxisView] = useState<AxisViewState | null>(null)
+  /*
+   * 기즈모는 카메라 속도로 바뀐다 — React 상태에 담으면 그 속도가 곧 이 뷰어 전체의
+   * 리렌더가 된다(`shared/features/bay-viewer/lib/viewportOverlayStore` 주석 참조).
+   */
+  const axisStore = useRef(createViewportOverlayStore<AxisViewState | null>(null)).current
+  /**
+   * 씬이 서서 카메라 API 가 준비됐는가. 예전에는 `axisView` 가 null 이 아닌 것으로
+   * 이 사실을 대신 읽었는데, 그 값이 상태에서 빠지면서 계기를 따로 세운다 —
+   * 한 번만 켜지므로 아래 센서 포커스 이펙트가 카메라 속도로 다시 돌지 않는다.
+   */
+  const [sceneReady, setSceneReady] = useState(false)
   const [wheelHint, setWheelHint] = useState(false)
   const wheelHintTimer = useRef(0)
   /** axisView는 카메라 조작 중 계속 바뀐다. 같은 클릭 요청을 두 번 처리하지 않는다. */
   const handledSensorFocusRequestRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!sensorFocus || !axisView || mode !== 'bay') return
+    if (!sensorFocus || !sceneReady || mode !== 'bay') return
     if (handledSensorFocusRequestRef.current === sensorFocus.request) return
     const api = viewApiRef.current
     if (!api) return
@@ -494,7 +575,7 @@ export function RealScanViewer({
     )
     api.controls.target.copy(target)
     api.controls.update()
-  }, [sensorFocus, axisView, mode])
+  }, [sensorFocus, sceneReady, mode])
 
   const handleAxisSelect = useCallback((direction: ViewDirection) => {
     const api = viewApiRef.current
@@ -527,7 +608,7 @@ export function RealScanViewer({
   const applyDisplay = useCallback(() => {
     const refs = sceneRefs.current
     if (!refs) return
-    const { displayMode: dm, colorMode: cm, showOutline: so } = displayRef.current
+    const { displayMode: dm, colorMode: cm, showOutline: so, cutoff: cut } = displayRef.current
     const palette: ViewPalette = paletteFor(dm)
 
     if (palette.backgroundTop === palette.background) {
@@ -549,8 +630,14 @@ export function RealScanViewer({
     refs.dir.intensity = palette.dirIntensity
 
     /*
-     * 단독 뷰의 CAD 는 실측 점군과 비교하는 본체다 — 표시 모드가 `점군`이어도 세우고,
-     * 겹쳐보기의 흐린 투명도(0.2)로는 점군에 묻히므로 하한을 보장한다.
+     * CAD 불투명도.
+     *
+     * ⚠️ 예전에는 단독 뷰에서 표시 모드를 무시하고 CAD 를 **강제로** 세웠다("단독 뷰의
+     * CAD 는 비교 대상 본체다"). 의도는 옳았지만 그 대가로 `점군` 토글이 단독 뷰에서
+     * 아무 일도 하지 않았다 — 두 모드의 렌더가 픽셀 단위로 같았다(W9-0 진단 B1).
+     * 지금은 **표시 모드가 언제나 이긴다**. 비교용 CAD 가 필요하면 `점군` 대신
+     * `겹쳐보기`를 고르면 되고, 단독 뷰에서는 그 겹쳐보기의 CAD 를 진하게 세워
+     * (FOCUS_CAD_MIN_OPACITY) 점군에 묻히지 않게 한다.
      */
     const cadOpacity =
       dm === 'cad'
@@ -582,7 +669,8 @@ export function RealScanViewer({
       paint.material.opacity = palette.edgeOpacity * 0.9
     }
 
-    const cadVisible = showsCad(dm) || refs.focusView
+    /* 표시 모드만이 CAD 가시성을 정한다 — 단독 뷰라고 예외를 두지 않는다(P1) */
+    const cadVisible = showsCad(dm)
     for (const mesh of refs.cadMeshes) mesh.visible = cadVisible
 
     const pointsVisible = showsPoints(dm)
@@ -596,7 +684,12 @@ export function RealScanViewer({
       material.color.setHex(tintCadByBlock ? blockEdgeColor(blockIndex) : palette.edgeColor)
       material.opacity = palette.edgeOpacity
     })
-    for (const outline of refs.outlines) outline.visible = so && cadVisible
+    /*
+     * 윤곽(P2) — CAD 가시성에 매달지 않는다. 윤곽은 **형상의 모서리**를 읽는 보조선이라
+     * 점군만 보는 중에도 켜고 끌 수 있어야 한다(예전에는 `so && cadVisible` 이라
+     * 점군 모드에서 토글이 죽어 있었다). 판단은 사용자의 `윤곽 표시` 하나로 끝낸다.
+     */
+    for (const outline of refs.outlines) outline.visible = so
 
     for (const grid of refs.grids) {
       const material = grid.material as THREE.LineBasicMaterial
@@ -612,6 +705,7 @@ export function RealScanViewer({
         minY: refs.minY,
         maxY: refs.maxY,
         floorColor: palette.floorPointColor,
+        cutoff: cut,
       })
     }
 
@@ -623,7 +717,7 @@ export function RealScanViewer({
 
   useEffect(() => {
     applyDisplay()
-  }, [applyDisplay, displayMode, colorMode, showOutline])
+  }, [applyDisplay, displayMode, colorMode, showOutline, cutoff])
 
   useEffect(() => {
     applyBayHighlight()
@@ -633,7 +727,7 @@ export function RealScanViewer({
     const container = containerRef.current
     if (!container || !scene3d) return
 
-    const { meta, cloud, labels, shade, meshes, hall, bays } = scene3d
+    const { meta, cloud, labels, shade, dev, meshes, hall, bays } = scene3d
     const scene = new THREE.Scene()
     // 원경을 배경색으로 녹인다 — 100m 홀에서 앞뒤가 같은 밝기면 깊이가 안 읽힌다
     scene.fog = new THREE.Fog(0x12171d, 60, 260)
@@ -692,7 +786,15 @@ export function RealScanViewer({
        * 공장 전체 뷰는 카메라가 100m 밖이라 겹쳐보기 기본 투명도(0.2)로는 블록이
        * 배경에 녹는다 — 개관 뷰에서만 하한을 올린다 (베이 뷰는 팔레트 그대로).
        */
-      overviewCadMinOpacity: mode === 'factory' ? 0.4 : 0,
+      /*
+       * 겹쳐보기 CAD 불투명도 하한(P3).
+       *
+       * 팔레트의 겹쳐보기 값(0.2)은 235만 점 위에서 거의 보이지 않아, `점군`으로 CAD 를
+       * 꺼도 화면이 그대로였다(뷰포트 픽셀 3.5%만 변함 — W9-0 진단 B3). 두 모드가 한눈에
+       * 갈리도록 하한을 올린다. 공장 뷰는 카메라가 100m 밖이라 더 진해야 한다.
+       * ⚠️ 단독 뷰는 여기가 아니라 `FOCUS_CAD_MIN_OPACITY` 가 정한다.
+       */
+      overviewCadMinOpacity: mode === 'factory' ? 0.62 : 0.36,
       sensorMarkers: [] as THREE.Object3D[],
       bayPaints: [] as {
         locationId: string | null
@@ -714,7 +816,8 @@ export function RealScanViewer({
       1200
     )
     const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+    /* 픽셀 밀도 상한은 점군 뷰어와 같은 규칙을 쓴다 (shared 의 `pixelRatioFor` 주석) */
+    renderer.setPixelRatio(pixelRatioFor(isLowGpuMode()))
     renderer.setSize(container.clientWidth, container.clientHeight)
     container.appendChild(renderer.domElement)
 
@@ -761,6 +864,7 @@ export function RealScanViewer({
       let geometry: THREE.BufferGeometry
       let cloudLabels: Uint8Array | null
       let cloudShade: Uint8Array | null
+      let cloudDev: Uint8Array | null
       let fixedLabel: number | null
       if (selectedPlacement) {
         /*
@@ -769,10 +873,12 @@ export function RealScanViewer({
          */
         const picked: number[] = []
         const pickedShade: number[] = []
+        const pickedDev: number[] = []
         for (let i = range.start; i < range.start + range.count; i++) {
           if (labels[i] === selectedIndex) {
             picked.push(cloud[i * 3], cloud[i * 3 + 1], cloud[i * 3 + 2])
             pickedShade.push(shade[i])
+            pickedDev.push(dev[i])
           }
         }
         if (picked.length === 0) return
@@ -780,6 +886,7 @@ export function RealScanViewer({
         geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(picked), 3))
         cloudLabels = null
         cloudShade = new Uint8Array(pickedShade)
+        cloudDev = new Uint8Array(pickedDev)
         fixedLabel = selectedIndex
       } else {
         geometry = new THREE.BufferGeometry()
@@ -787,6 +894,7 @@ export function RealScanViewer({
         geometry.setAttribute('position', new THREE.BufferAttribute(slice, 3))
         cloudLabels = labels.subarray(range.start, range.start + range.count)
         cloudShade = shade.subarray(range.start, range.start + range.count)
+        cloudDev = dev.subarray(range.start, range.start + range.count)
         fixedLabel = null
       }
       const points = new THREE.Points(geometry, pointMaterial)
@@ -797,6 +905,7 @@ export function RealScanViewer({
         labels: cloudLabels,
         fixedLabel,
         shade: cloudShade,
+        dev: cloudDev,
       })
     })
 
@@ -1075,7 +1184,7 @@ export function RealScanViewer({
     let axisFrame = 0
     const publishAxisView = () => {
       axisFrame = 0
-      setAxisView(projectAxes(camera, controls.target))
+      axisStore.publish(projectAxes(camera, controls.target))
     }
     const scheduleAxisView = () => {
       if (axisFrame) return
@@ -1083,6 +1192,7 @@ export function RealScanViewer({
     }
     controls.addEventListener('change', scheduleAxisView)
     publishAxisView()
+    setSceneReady(true)
 
     const viewKeys: Record<string, [ViewDirection, ViewDirection]> = {
       '1': ['front', 'back'],
@@ -1123,6 +1233,12 @@ export function RealScanViewer({
     })
     requestRenderRef.current = loop.requestRender
 
+    /* 손이 닿아 있는 동안은 유휴 판정을 끈다 (lib/renderLoop 의 `setInteracting` 주석) */
+    const beginInteract = () => loop.setInteracting(true)
+    const endInteract = () => loop.setInteracting(false)
+    controls.addEventListener('start', beginInteract)
+    controls.addEventListener('end', endInteract)
+
     const resizeObserver = new ResizeObserver(() => {
       camera.aspect = container.clientWidth / container.clientHeight
       camera.updateProjectionMatrix()
@@ -1136,6 +1252,8 @@ export function RealScanViewer({
       loop.stop()
       requestRenderRef.current = null
       if (axisFrame) cancelAnimationFrame(axisFrame)
+      controls.removeEventListener('start', beginInteract)
+      controls.removeEventListener('end', endInteract)
       controls.removeEventListener('change', scheduleAxisView)
       viewApiRef.current = null
       unbindButtons()
@@ -1164,17 +1282,18 @@ export function RealScanViewer({
    * 색이 13종이면 "무슨 색이 무슨 블록인지"를 화면 안에서 답해주지 않는 한 색을 입힌
    * 의미가 없다. 일치 점수까지 같이 내면 정합이 얼마나 잡혔는지도 한눈에 읽힌다.
    */
+  /* 범례 수치는 **지금 임계**로 다시 센 것이다 — 슬라이더를 움직이면 숫자도 따라 움직인다 */
   const segmentLegend =
-    scene3d && colorMode === 'match' && showsPoints(displayMode)
+    scene3d && counts && colorMode === 'match' && showsPoints(displayMode)
       ? {
           rows: scene3d.meta.blocks.map((placement, index) => ({
             name: placement.name,
             hex: segmentBlockHex(index),
-            matched: scene3d.counts.blocks[index] ?? 0,
+            matched: counts.blocks[index] ?? 0,
           })),
-          unmatched: scene3d.counts.unmatched,
-          floor: scene3d.counts.floor,
-          toleranceCm: Math.round(scene3d.meta.segmentation.toleranceM * 100),
+          unmatched: counts.unmatched,
+          floor: counts.floor,
+          toleranceCm: activeToleranceCm,
         }
       : null
 
@@ -1240,15 +1359,18 @@ export function RealScanViewer({
         </div>
       )}
 
-      <ViewportAxisGizmo
-        view={axisView}
+      <LiveAxisGizmo
+        store={axisStore}
         onSelectDirection={handleAxisSelect}
         onGoHome={handleGoHome}
       />
 
       {wheelHint && <WheelZoomHint />}
 
-      {/* 점 크기 — 밀도·거리에 따라 적정값이 달라 사용자가 즉석에서 잡는다 */}
+      {/* 점 크기 — 밀도·거리에 따라 적정값이 달라 사용자가 즉석에서 잡는다.
+          ⚠️ 점군이 보이는 모드에서만 세운다(P4) — 도면 모드에서는 조작해도 바뀔 점이
+          없어, 남겨 두면 "고장난 손잡이"가 된다. */}
+      {showsPoints(displayMode) && (
       <div className="absolute bottom-3 right-24 flex items-center gap-2 rounded-inshop-md glass-panel px-2.5 py-1.5">
         <label htmlFor="real-scan-point-size" className="whitespace-nowrap text-2xs text-glass-foreground/63">
           {t('viewer.pointSize')}
@@ -1267,6 +1389,7 @@ export function RealScanViewer({
           {pointSize.toFixed(3)}
         </span>
       </div>
+      )}
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center">

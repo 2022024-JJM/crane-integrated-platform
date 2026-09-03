@@ -9,7 +9,8 @@
  *
  * ⚠️ 여기서 만드는 것은 **상태뿐**이다. 대수·좌표·소속·페어는 전부 실데이터(도면 유도)다.
  */
-import { EQUIPMENT_PANELS, equipmentOfPanel, pairIdOf, yardEquipmentOf } from './index'
+import { EQUIPMENT_PANELS, YARD_EQUIPMENT, equipmentOfPanel, pairIdOf, yardEquipmentOf } from './index'
+import { factorySlugOf } from '../../lib/factorySlugs'
 import type { EquipmentPanel, YardEquipment } from './types'
 import {
   panelHealthOf,
@@ -42,15 +43,99 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 /** pan 은 회전축이라 범위를 벗어나면 잘라내지 않고 감는다(-180~180) */
 const wrapPan = (deg: number) => ((((deg + 180) % 360) + 360) % 360) - 180
 
-/**
- * 링크 상태 — 대부분 online, 드물게 offline, 더 드물게 error.
- * 조립 맵 진입의 `mockLidarStatus` 와 같은 분포 감각(대부분 정상)을 맞춘다.
+/* ── 아픈 설비는 드물다 (R27) ────────────────────────────────────
+ *
+ * 예전에는 설비마다 주사위를 굴렸다 — 8~12% 확률로 offline/error. 841대에 굴리면
+ * 100대 가까이가 아프고, 화면은 **맨날 아픈 공장**이 된다(의장 31/290). 현장의 설비는
+ * 그렇게 아프지 않다: 대부분의 날에 문제는 손에 꼽고, 그 몇 건이 눈에 띄어야 한다.
+ *
+ * 그래서 확률을 낮추는 대신 **명단을 짠다.** 확률을 낮추면 몇 대가 아플지는 해시 운에
+ * 달리고(공정 하나가 통째로 멀쩡해질 수도 있다), 시연에서 알람 레일·이상 정렬을 보여 줄
+ * 이야기가 사라진다. 명단은 그 둘을 함께 지킨다 — 총량이 정확하고, 공정마다 최소 한 건이
+ * 남는다. 뽑는 방법은 여전히 결정론(설비 ID 해시 순)이라 화면을 다시 열어도 같은 설비다.
+ *
+ * 정상 = 전체의 99% 이상. 알람 건수·요약 스트립·공장 뱃지는 여기서 파생되므로 함께 내려간다.
  */
-function mockLink(seed: number, salt: number): LinkState {
-  const u = unit(seed, salt)
-  if (u > 0.97) return 'error'
-  if (u > 0.92) return 'offline'
-  return 'online'
+
+/** 계획된 이상 — 없으면 정상이다 */
+export type PlannedIssue = 'error' | 'offline'
+
+/** 공정 한 곳의 몫 — 이야기가 서는 최소 단위(오류 한 건 + 통신 끊김 한두 건) */
+interface IssueQuota {
+  error: number
+  offline: number
+}
+
+/**
+ * 공정별 배정.
+ *
+ * 조립이 하나 더 많은 것은 설비가 그만큼 많아서다(337대의 라이다가 조립·의장에 걸쳐 있다).
+ * 합계는 오류 3 · 통신 끊김 4 — 전체 841대의 0.8%다.
+ * 가공(CAS·PAS)은 조립 화면에 서므로 조립 몫에 함께 든다.
+ */
+const ISSUE_QUOTA: Record<string, IssueQuota> = {
+  asm: { error: 1, offline: 2 },
+  ofit: { error: 1, offline: 1 },
+  pnt: { error: 1, offline: 1 },
+}
+
+/** 공장 → 공정 키. 슬러그 앞자리가 곧 공정이다(`shared/lib/factorySlugs`) */
+function zoneKeyOf(factory: string): string {
+  const slug = factorySlugOf(factory) ?? ''
+  const head = slug.split('-')[0]
+  /* 가공 설비(CAS·PAS)는 조립 화면에 서므로 조립과 한 몫으로 센다 */
+  return head === 'fab' ? 'asm' : head
+}
+
+/** 명단을 한 번만 짓는다 — 설비 목록은 고정 데이터라 결과도 고정이다 */
+function buildIssuePlan(): ReadonlyMap<string, PlannedIssue> {
+  const byZone = new Map<string, YardEquipment[]>()
+  for (const equipment of YARD_EQUIPMENT) {
+    const zone = zoneKeyOf(equipment.factory)
+    if (!ISSUE_QUOTA[zone]) continue
+    const bucket = byZone.get(zone)
+    if (bucket) bucket.push(equipment)
+    else byZone.set(zone, [equipment])
+  }
+
+  const plan = new Map<string, PlannedIssue>()
+  for (const [zone, candidates] of byZone) {
+    const quota = ISSUE_QUOTA[zone]
+    /* 해시 순 — 이름 순이면 늘 앞 번호만 아프고, 무작위면 새로 고칠 때마다 달라진다 */
+    const ordered = [...candidates].sort(
+      (a, b) => hashOf(`${a.id}#issue`) - hashOf(`${b.id}#issue`) || a.id.localeCompare(b.id)
+    )
+    ordered.slice(0, quota.error).forEach((e) => plan.set(e.id, 'error'))
+    ordered
+      .slice(quota.error, quota.error + quota.offline)
+      .forEach((e) => plan.set(e.id, 'offline'))
+  }
+  return plan
+}
+
+let issuePlan: ReadonlyMap<string, PlannedIssue> | null = null
+
+/**
+ * 이 설비가 오늘 아픈가 — 아니면 `null`(정상).
+ *
+ * 상태를 만드는 모든 자리가 이 한 곳에 묻는다: 라이다·틸팅·Edge PC·캐비닛은 물론
+ * 도장 SCADA(제습기·가스히터)의 통신·고장까지. 두 곳에서 각자 주사위를 굴리면 "전체
+ * 이상 몇 대"라는 약속이 지켜지지 않는다.
+ */
+export function plannedIssueOf(id: string): PlannedIssue | null {
+  issuePlan ??= buildIssuePlan()
+  return issuePlan.get(id) ?? null
+}
+
+/** 명단 전체 — 계약 테스트와 진단용 */
+export function plannedIssues(): ReadonlyMap<string, PlannedIssue> {
+  issuePlan ??= buildIssuePlan()
+  return issuePlan
+}
+
+/** 링크 상태 — 명단에 없으면 정상이다 */
+function plannedLink(id: string): LinkState {
+  return plannedIssueOf(id) ?? 'online'
 }
 
 const SW_VERSIONS = ['1.4.2', '1.4.3', '1.5.0'] as const
@@ -63,7 +148,7 @@ const SW_VERSIONS = ['1.4.2', '1.4.3', '1.5.0'] as const
  */
 export function mockEdgePcStatus(equipment: YardEquipment, now: number): EdgePcStatus {
   const seed = hashOf(equipment.id)
-  const link = mockLink(seed, 1)
+  const link = plannedLink(equipment.id)
   const phase = unit(seed, 2) * Math.PI * 2
   const wave = Math.sin(now / 180_000 + phase) // ~3분 주기
 
@@ -103,7 +188,7 @@ export function mockEdgePcStatus(equipment: YardEquipment, now: number): EdgePcS
  */
 export function mockTiltStatus(equipment: YardEquipment, now: number): TiltModuleStatus {
   const seed = hashOf(equipment.id)
-  const link = mockLink(seed, 21)
+  const link = plannedLink(equipment.id)
   const cycle = unit(seed, 22)
   // ~7분 주기로 잠깐(약 12%) 틸팅 구간에 들어간다
   const moving = link === 'online' && ((now / 420_000 + cycle) % 1) < 0.12
@@ -141,7 +226,9 @@ export function mockTiltStatus(equipment: YardEquipment, now: number): TiltModul
  * 시각에 의존하지 않는다 — 링크는 설비마다 고정된 개성이고, 시간에 따라 흔들리는 것은
  * 모드·자원 지표 쪽이다. 그래서 `now` 를 받지 않는다(호출부가 시계를 들 필요가 없다).
  *
- * ⚠️ 판넬(`PNL`)의 '링크'는 캐비닛 종합 판정을 접은 값이다 — 정지=offline, 주의=error.
+ * ⚠️ 판넬(`PNL`)의 '링크'는 **그 판 자신에 닿는가**만 본다 — 소속 설비가 아픈 것은
+ *    그 설비 쪽에서 이미 세었으므로, 여기서 또 세면 한 사실이 두 대로 불어난다(R27).
+ *    "이 판 아래 몇 대가 이상"은 캐비닛 상세(`memberFaulty`·`health`)가 말한다.
  */
 export function equipmentLinkOf(equipment: YardEquipment): LinkState {
   if (equipment.typeId === 'TILT') return mockTiltStatus(equipment, 0).link
@@ -149,25 +236,21 @@ export function equipmentLinkOf(equipment: YardEquipment): LinkState {
   if (equipment.typeId === 'PNL') {
     const panel = EQUIPMENT_PANELS.find((p) => p.id === equipment.id)
     if (!panel) return 'offline'
-    const health = mockPanelStatus(panel, 0).health
-    return health === 'down' ? 'offline' : health === 'degraded' ? 'error' : 'online'
+    const status = mockPanelStatus(panel, 0)
+    if (!status.powered || status.uplink === 'offline') return 'offline'
+    return status.uplink === 'error' ? 'error' : 'online'
   }
   return lidarLink(equipment.id)
 }
 
 /**
- * 라이다·그 밖의 설비 링크 — 조립·의장 두 화면이 이미 쓰던 규칙 그대로다
- * (대부분 온라인, 29의 배수는 오류, 13의 배수는 오프라인). 두 공정이 같은 라이다에
- * 같은 답을 하도록 규칙을 여기 한 곳에 둔다.
+ * 라이다·그 밖의 설비 링크.
+ *
+ * 예전에는 여기서 제 규칙(29의 배수는 오류, 13의 배수는 오프라인)을 굴렸다 — 337대의
+ * 라이다에 그 규칙을 굴리면 40대 가까이가 아프다. 지금은 명단 한 곳에 묻는다(R27).
  */
 function lidarLink(id: string): LinkState {
-  let h = 0
-  const text = `${id}-status`
-  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) | 0
-  const abs = Math.abs(h)
-  if (abs % 29 === 0) return 'error'
-  if (abs % 13 === 0) return 'offline'
-  return 'online'
+  return plannedLink(id)
 }
 
 /**
@@ -190,9 +273,10 @@ function memberLink(equipment: YardEquipment, now: number): LinkState {
 }
 
 export function mockPanelStatus(panel: EquipmentPanel, now: number): EquipmentPanelStatus {
-  const seed = hashOf(panel.id)
-  const powered = unit(seed, 41) > 0.03
-  const uplink = powered ? mockLink(seed, 42) : 'offline'
+  /* 캐비닛도 명단을 따른다 — 전원이 죽는 것은 그 판이 오늘의 오류로 뽑혔을 때뿐이다 */
+  const issue = plannedIssueOf(panel.id)
+  const powered = issue !== 'error'
+  const uplink = powered ? plannedLink(panel.id) : 'offline'
   const members = equipmentOfPanel(panel.id)
 
   const faulty =

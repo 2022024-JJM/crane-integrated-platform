@@ -27,7 +27,7 @@ const YESTERDAY = shiftDate(TODAY, -1)
 /** 조회까지 끝난 화면 — 딥링크로 들어가면 조회 버튼을 누르지 않아도 결과가 선다 */
 async function renderQueried(search = '') {
   const result = renderWithProviders(<PerformancePage />, {
-    route: `/performance?vessel=7004&block=222${search}`,
+    route: `/indoorshop/performance?vessel=7004&block=222${search}`,
   })
   await screen.findByText('가공권역 단계별 실적률')
   return result
@@ -139,5 +139,51 @@ describe('초기화', () => {
 
     await waitFor(() => expect(screen.getByLabelText('날짜')).toHaveValue(TODAY))
     expect(screen.getByRole('button', { name: '오늘' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+/**
+ * **생애주기 순서** — 가공 → 조립 → 의장 → 도장 (R32).
+ *
+ * 한 블록이 실제로 지나는 차례다. 이 화면은 공정을 세 번 나열한다(조회 조건 바의 세그먼트,
+ * 절점 카드의 섹션, 그 위의 공정 레일) — 차례가 서로 다르면 읽는 사람은 그 차이를 뜻으로
+ * 읽는다("왜 여기서는 도장이 의장보다 먼저지?"). 레일만 도장 → 의장 이었다.
+ *
+ * 셋을 한 검사에 묶는 이유가 그것이다: 한 곳만 고치면 나머지 둘과 다시 어긋난다.
+ */
+describe('공정 나열 — 생애주기 순서 (R32)', () => {
+  const LIFECYCLE = ['가공', '조립', '의장', '도장']
+
+  it('공정 레일이 가공 → 조립 → 의장 → 도장 으로 선다', async () => {
+    await renderQueried()
+    const rail = screen.getByRole('list', { name: /공정 진행 순서/ })
+    expect(
+      screen.getAllByRole('listitem').filter((chip) => rail.contains(chip)).map((chip) => chip.textContent)
+    ).toEqual(LIFECYCLE)
+  })
+
+  it('조회 조건 바의 공정 세그먼트도 같은 차례다', async () => {
+    await renderQueried()
+    const options = screen
+      .getAllByRole('radio')
+      .map((option) => option.textContent)
+      .filter((label): label is string => label !== null)
+    expect(options).toEqual(['전체', ...LIFECYCLE])
+  })
+
+  it('절점 카드 섹션도 같은 차례로 내려간다', async () => {
+    await renderQueried()
+    const titles = [
+      '가공권역 단계별 실적률',
+      '조립 — 블록·ASSY 실적',
+      '의장 — 블록 판별',
+      '도장 — 스텝 절점',
+    ]
+    const positions = titles.map((title) => {
+      const heading = screen.getByText(title)
+      return [...document.querySelectorAll('h2, h3')].indexOf(heading.closest('h2, h3')!)
+    })
+    expect(positions.every((at) => at >= 0)).toBe(true)
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
   })
 })

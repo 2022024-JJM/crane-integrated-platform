@@ -4,7 +4,8 @@ import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
 import { Card } from '../../../ui/atoms/Card'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
-import { performanceLinkFor } from '../../../entities/vessel'
+import { pcdHrefOfOutfittingBlock, performanceLinkFor } from '../../../entities/vessel'
+import { AxisIcon } from '../../../ui/icons'
 import type { AssyMatchState } from '../model/types'
 import type { OutfittingOverall, OutfittingRow } from '../api/outfittingPerformance'
 
@@ -72,12 +73,15 @@ const MATCH_CLASS: Record<AssyMatchState, string> = {
 
 function BlockRow({ row, active }: { row: OutfittingRow; active: boolean }) {
   const { t } = useTranslation()
+  /* 진행중 줄 → 소재 베이의 PCD 뷰 (W8-3). 소재(공장·베이)를 모르면 문을 세우지 않는다.
+   * 줄 전체가 통합실적 링크라 그 안에 넣을 수 없다 — 옆자리(형제)로 세운다. */
+  const pcdHref = row.status === 'in_progress' ? pcdHrefOfOutfittingBlock(row.projNo, row.blockNo) : null
   return (
-    <li>
+    <li className="flex items-center gap-1">
       <Link
         to={performanceLinkFor({ projNo: row.projNo, blocks: [row.blockNo] })}
         className={cn(
-          'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-inshop-md px-2 py-1.5 transition-colors',
+          'flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded-inshop-md px-2 py-1.5 transition-colors',
           'hover:bg-surface-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
           active && 'bg-surface-secondary'
         )}
@@ -123,6 +127,20 @@ function BlockRow({ row, active }: { row: OutfittingRow; active: boolean }) {
           →
         </span>
       </Link>
+      {pcdHref && (
+        <Link
+          to={pcdHref}
+          title={t('performance.pcdViewHint', { block: row.key })}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-1',
+            'text-[10px] font-medium text-foreground/60 transition-colors',
+            'hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/70'
+          )}
+        >
+          <AxisIcon size={10} />
+          {t('performance.pcdView')}
+        </Link>
+      )}
     </li>
   )
 }

@@ -50,7 +50,7 @@ export function getProcessZones(): Zone[] {
   return registered.flatMap((module) => (module.zone ? [module.zone] : []))
 }
 
-/** 경로로 담당 모듈 찾기 — `/zones/assembly/factory-a/a-1` 같은 드릴다운도 조상 경로로 잡힌다 */
+/** 경로로 담당 모듈 찾기 — `/indoorshop/zones/assembly/factory-a/a-1` 같은 드릴다운도 조상 경로로 잡힌다 */
 export function findProcessModuleByPath(pathname: string): ProcessModule | undefined {
   return registered.find(
     (module) => pathname === module.nav.path || pathname.startsWith(`${module.nav.path}/`)

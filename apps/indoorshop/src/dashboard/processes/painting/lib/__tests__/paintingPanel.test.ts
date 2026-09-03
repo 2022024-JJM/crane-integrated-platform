@@ -62,12 +62,12 @@ describe('도장 공장 ↔ 라우트 id', () => {
 
   it('도장 5공장 모두 자기 현황 화면으로 간다 (조립·의장과 같은 경로 문법)', () => {
     for (const factory of ROSTER_PAINTING_FACTORIES) {
-      expect(paintingFactoryStatusHref(factory)).toMatch(/^\/zones\/painting\/[a-z0-9-]+$/)
+      expect(paintingFactoryStatusHref(factory)).toMatch(/^\/indoorshop\/zones\/painting\/[a-z0-9-]+$/)
     }
   })
 
   it('맵으로 돌아가는 길은 드릴다운 URL 계약 — 값은 안정 슬러그(F-30)다', () => {
-    expect(paintingMapPath('1DOCK 도장공장')).toBe('/zones/painting?factory=pnt-1dock')
+    expect(paintingMapPath('1DOCK 도장공장')).toBe('/indoorshop/zones/painting?factory=pnt-1dock')
   })
 
   it('한글 공장명을 경로에 싣지 않는다 — 이름이 바뀌어도 주소가 살아 있어야 한다', () => {

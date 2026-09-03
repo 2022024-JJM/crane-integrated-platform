@@ -65,6 +65,11 @@ export interface StatusStyle {
   glassInk: string
   /** 같은 자리의 채움 */
   glassFill: string
+  /**
+   * 유리 위 카드의 **테두리** — 카드 한 장이 통째로 상태를 말해야 하는 자리.
+   * (지도 우측 공장 카드처럼 펴 보기 전에도 이상이 보여야 하는 것들)
+   */
+  glassBorder: string
 }
 
 export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
@@ -75,6 +80,7 @@ export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
     border: 'border-status-healthy/40',
     glassInk: 'text-glass-healthy',
     glassFill: 'bg-glass-healthy',
+    glassBorder: 'border-glass-healthy/55',
   },
   inProgress: {
     chip: 'bg-status-progress/10 text-status-progress',
@@ -83,6 +89,7 @@ export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
     border: 'border-status-progress/40',
     glassInk: 'text-glass-progress',
     glassFill: 'bg-glass-progress',
+    glassBorder: 'border-glass-progress/55',
   },
   warning: {
     chip: 'bg-status-degraded/10 text-status-degraded',
@@ -91,6 +98,7 @@ export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
     border: 'border-status-degraded/40',
     glassInk: 'text-glass-degraded',
     glassFill: 'bg-glass-degraded',
+    glassBorder: 'border-glass-degraded/60',
   },
   error: {
     chip: 'bg-status-unhealthy/10 text-status-unhealthy',
@@ -99,6 +107,7 @@ export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
     border: 'border-status-unhealthy/40',
     glassInk: 'text-glass-unhealthy',
     glassFill: 'bg-glass-unhealthy',
+    glassBorder: 'border-glass-unhealthy/70',
   },
   idle: {
     /* 중립은 상태색이 아니다 — 뜻이 없다는 뜻이라 본문 잉크를 옅게 쓴다 */
@@ -108,6 +117,7 @@ export const STATUS_STYLE: Record<StatusMeaning, StatusStyle> = {
     border: 'border-border',
     glassInk: 'text-glass-foreground/55',
     glassFill: 'bg-glass-foreground/30',
+    glassBorder: 'border-white/10',
   },
 }
 
@@ -138,48 +148,61 @@ export const STATUS_HEX: Record<'light' | 'dark', Record<StatusMeaning, string>>
 /** 지도 위 유리·강제 다크 오버레이가 쓰는 색 — 두 테마 모두 어두운 바탕이라 다크 램프 고정 */
 export const GLASS_STATUS_HEX: Record<StatusMeaning, string> = STATUS_HEX.dark
 
-/* ── 정상 감쇄 (HPI · ISA-101) ─────────────────────────────────
+/* ── 정상은 초록, 다만 조용하게 (R18 · 사용자 확정) ────────────
  *
- * 칸이 많아질수록 **정상에 색을 쓰지 않는 것**이 결정적이 된다. 337칸이 초록이면
- * 초록은 배경이 되고, 그 안의 붉은 칸 하나를 눈으로 찾을 수 없다. ISA-101 이
- * "색은 이상 전용" 이라 말하는 이유가 이것이다(설비관제 레퍼런스 §3.3).
+ * 한때 정상 램프에서 색을 아예 뺐다(무채 점등). 칸이 수백 개인 화면에서 "색은 이상
+ * 전용"이라는 ISA-101 의 논리를 그대로 따른 것인데, 현장에서는 그 화면이 **꺼져 있는
+ * 것처럼** 읽혔다 — 라이다가 돌고 있는데 회색이면 "정상"이 아니라 "죽었다"로 보인다.
+ * 설비 화면에서 초록 점등은 배색이 아니라 **가동 중이라는 신호 그 자체**다.
  *
- * 그래서 설비 그리드처럼 **한 화면에 수십~수백 칸**이 서는 자리는 이 감쇄 톤을 쓴다:
- *  - 정상 = 무채색 점등(연회색). "켜져 있다"는 사실만 말하고 눈을 끌지 않는다.
- *  - 이상 = 상태색 그대로. 드물기 때문에 눈에 띈다.
+ * 그래서 정상은 초록으로 되돌리되, 이상을 덮지 않도록 **소리를 낮춘다**:
+ *  - 정상 = 차분한 초록 점등. 글로우도 애니메이션도 없다. 색은 있고 강조는 없다.
+ *  - 이상 = 밝은 빨강 + 강조(테두리·정렬 우선). 드물기 때문에 여전히 먼저 눈에 든다.
+ *  - 대기·미수집 = 무채. 이쪽은 원래 뜻이 없는 상태라 색을 줄 이유가 없다.
  *
- * ⚠️ 감쇄는 **정상·대기에만** 적용한다. 주의·이상에 쓰면 경보를 지우는 것이 된다.
- * ⚠️ 모양 부호(`STATUS_SHAPE`)는 감쇄해도 그대로다 — 색을 뺀 자리를 모양이 받친다.
+ * ⚠️ 낮추는 것은 **정상·대기에만**. 주의·이상에 쓰면 경보를 지우는 것이 된다.
+ * ⚠️ 모양 부호(`STATUS_SHAPE`)는 톤과 무관하게 그대로다.
  */
 
-/** 감쇄가 정당한 뜻인가 — 정상·대기만 */
+/** 톤을 낮춰도 되는 뜻인가 — 정상·대기만 */
 export function isAttenuable(meaning: StatusMeaning): boolean {
   return meaning === 'done' || meaning === 'idle'
 }
 
-/** 감쇄 톤 — 색 대신 밝기만 남긴 램프·글씨 */
-export interface AttenuatedStyle {
-  /** 램프 채움 (무채) */
+/** 낮춘 톤 — 램프 채움과 글씨 한 쌍 */
+export interface CalmStyle {
   fill: string
-  /** 글씨 (무채) */
   ink: string
-  /** 어두운 유리 위 */
   glassFill: string
   glassInk: string
 }
 
-export const STATUS_ATTENUATED: AttenuatedStyle = {
-  fill: 'bg-foreground/30',
-  ink: 'text-foreground/55',
-  glassFill: 'bg-glass-foreground/35',
-  glassInk: 'text-glass-foreground/55',
+/**
+ * 칸이 많은 화면에서 쓰는 조용한 톤.
+ *
+ * 정상은 **초록을 유지한 채 채도를 낮춘다**(알파). 대기는 무채 그대로 — 두 상태가
+ * 색으로 갈려야 "돌고 있다"와 "아직 아니다"가 구분된다.
+ */
+export const STATUS_CALM: Record<'done' | 'idle', CalmStyle> = {
+  done: {
+    fill: 'bg-status-healthy/70',
+    ink: 'text-status-healthy/85',
+    glassFill: 'bg-glass-healthy/70',
+    glassInk: 'text-glass-healthy/85',
+  },
+  idle: {
+    fill: 'bg-foreground/30',
+    ink: 'text-foreground/55',
+    glassFill: 'bg-glass-foreground/35',
+    glassInk: 'text-glass-foreground/55',
+  },
 }
 
 /**
- * 그리드 셀이 실제로 쓸 색 — 감쇄 규칙을 한 곳에서 적용한다.
+ * 그리드 셀이 실제로 쓸 색 — 톤 규칙을 한 곳에서 적용한다.
  *
- * `dense`(칸이 많은 화면)면 정상·대기를 무채로 낮추고, 주의·이상은 그대로 둔다.
- * 낱개 카드처럼 칸이 적은 자리는 `dense: false` 로 기존 색을 그대로 쓴다.
+ * `dense`(칸이 많은 화면)면 정상·대기의 소리를 낮추고, 주의·이상은 그대로 둔다.
+ * 낱개 카드처럼 칸이 적은 자리는 `dense: false` 로 제 색을 그대로 쓴다.
  */
 export function lampStyle(
   meaning: StatusMeaning,
@@ -187,9 +210,10 @@ export function lampStyle(
 ): { fill: string; ink: string } {
   const { dense = false, glass = false } = options
   if (dense && isAttenuable(meaning)) {
+    const calm = STATUS_CALM[meaning as 'done' | 'idle']
     return glass
-      ? { fill: STATUS_ATTENUATED.glassFill, ink: STATUS_ATTENUATED.glassInk }
-      : { fill: STATUS_ATTENUATED.fill, ink: STATUS_ATTENUATED.ink }
+      ? { fill: calm.glassFill, ink: calm.glassInk }
+      : { fill: calm.fill, ink: calm.ink }
   }
   const style = STATUS_STYLE[meaning]
   return glass

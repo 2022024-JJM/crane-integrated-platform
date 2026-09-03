@@ -41,7 +41,7 @@ function fabFullyDone(projNo: string, blockNo: string, baseDate: string): boolea
 }
 
 describe('의장 이상 단계 블록 — 가공은 이미 끝나 있다', () => {
-  it('오늘 기준: 의장·도장 블록의 가공 S1~S5 가 전부 완료다', () => {
+  it('오늘 기준: 의장·도장 블록의 가공 S1~S10 이 전부 완료다', () => {
     const violations: string[] = []
     for (const zone of ['outfitting', 'painting'] as const) {
       for (const block of blocksInZone(zone)) {
@@ -155,7 +155,7 @@ describe('되감기에서도 단조롭다 — 가공이 과거로 갈수록 늘�
       let previous = Number.POSITIVE_INFINITY
       for (const daysBack of [0, 5, 12, 25, 50]) {
         const parts = generateParts(projNo, blockNo, shiftDate(TODAY, -daysBack))
-        const done = parts.filter((p) => p.statuses.S3 === 'done').length
+        const done = parts.filter((p) => p.statuses.S6 === 'done').length
         expect(`${projNo}-${blockNo} ${daysBack}일전`).toBe(`${projNo}-${blockNo} ${daysBack}일전`)
         expect(done).toBeLessThanOrEqual(previous)
         previous = done

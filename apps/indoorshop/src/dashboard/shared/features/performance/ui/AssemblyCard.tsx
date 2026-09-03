@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
+import { Link } from 'react-router-dom'
 import { cn } from '../../../lib/utils'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { ChevronDownIcon } from '../../../ui/icons'
 import { assyTreeOrder } from '../model/aggregate'
 import type { AssemblySummary, AssyMatch, AssyUnit, AssyWo } from '../model/types'
+import { pcdHrefOfAssy } from '../../../entities/vessel'
+import { AxisIcon } from '../../../ui/icons'
 
 /*
  * 조립 — **블록-ASSY 계층** 카드. 기준 축은 **우리 판별(자동수집)** 이고, 레거시 W/O 는
@@ -169,6 +172,31 @@ function MatchBlock({ match }: { match: AssyMatch }) {
 }
 
 /** ASSY 한 줄 — 판별이 척추, W/O 는 아래 참고 블록. 깊이만큼 트리 라인을 붙인다 */
+/**
+ * 진행중 줄 → 소재 정반의 PCD 뷰 (W8-3) — 공장 현황→통합실적의 역방향 다리.
+ * 소재(로스터 ASSY 자리·블록 정반)를 모르면 세우지 않는다 — 지어내지 않는다.
+ */
+function PcdViewLink({ assyNo, block }: { assyNo: string; block: string }) {
+  const { t } = useTranslation()
+  const href = pcdHrefOfAssy(assyNo)
+  if (!href) return null
+  return (
+    <Link
+      to={href}
+      title={t('performance.pcdViewHint', { block })}
+      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-0.5',
+        'text-[10px] font-medium text-foreground/60 transition-colors',
+        'hover:border-accent/50 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/70'
+      )}
+    >
+      <AxisIcon size={10} />
+      {t('performance.pcdView')}
+    </Link>
+  )
+}
+
 function AssyRow({
   assy,
   focused,
@@ -219,6 +247,8 @@ function AssyRow({
         >
           {t(JUDGE_KEY[assy.judged])}
         </span>
+        {/* 진행중(미완료)만 — 완료된 덩이는 자리가 곧 비워질 것이라 문을 세우지 않는다 */}
+        {!assy.done && <PcdViewLink assyNo={assy.assyNo} block={assy.assyNo} />}
       </div>
 
       {/* 판별 인식 — 분자가 우리 수집, 분모는 계획(REQ_QTY)이라 라벨이 그 사실을 적는다 */}

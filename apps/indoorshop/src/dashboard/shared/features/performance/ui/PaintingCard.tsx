@@ -101,7 +101,7 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
             </span>
             {summary.phase === 'inShop' && summary.factory && (
               <Link
-                to={drilldownHref('/zones/painting', '', { ...YARD_DRILLDOWN, factory: summary.factory })}
+                to={drilldownHref('/indoorshop/zones/painting', '', { ...YARD_DRILLDOWN, factory: summary.factory })}
                 className="inline-flex items-center gap-1 rounded-inshop-md border border-border px-1.5 py-0.5 text-[11px] text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
               >
                 <PinIcon size={11} />

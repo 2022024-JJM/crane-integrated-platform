@@ -16,6 +16,7 @@ import {
   zonePathOfBlock,
 } from '../lib/roster'
 import { sitesOfBlock } from '../lib/sites'
+import type { AssyTier } from '../model/types'
 
 /**
  * 로스터의 계약 — 이 우주가 하나로 남아 있는지. 여기가 깨지면 화면끼리 이어지지 않는다.
@@ -48,7 +49,7 @@ describe('호선·블록 로스터 — 단일 우주 불변식', () => {
     expect(new Set(bays).size).toBe(bays.length)
   })
 
-  it('정반 id 는 그 공장 id 로 시작한다 (딥링크 `/zones/assembly/{factoryId}/{bayId}` 계약)', () => {
+  it('정반 id 는 그 공장 id 로 시작한다 (딥링크 `/indoorshop/zones/assembly/{factoryId}/{bayId}` 계약)', () => {
     for (const block of listBlocks()) {
       if (!block.berth) continue
       expect(block.berth.bayId.startsWith(`${block.berth.factoryId}-b`)).toBe(true)
@@ -113,6 +114,93 @@ describe('로스터 ↔ 야드 지도 fixture', () => {
         expect(bays.has(`${site.factory}#${site.mapBay}`), `${block.projNo}-${block.blockNo}: ${site.id}`).toBe(true)
       }
     }
+  })
+
+  /* ── ASSY BOM 트리 (R34) — 구성의 정본이 여기로 온 이상, 여기서 깨지면 통합실적
+     카드의 트리가 통째로 깨진다. 생성기는 이 목록을 그대로 쓴다. ── */
+
+  it('부모 ASSY 는 같은 블록의 목록 안에 있다 (고아 노드 금지)', () => {
+    for (const block of listBlocks()) {
+      const known = new Set((block.assyUnits ?? []).map((u) => u.assyNo))
+      for (const unit of block.assyUnits ?? []) {
+        if (unit.parentAssyNo == null) continue
+        expect(known.has(unit.parentAssyNo), `${unit.assyNo} → ${unit.parentAssyNo}`).toBe(true)
+      }
+    }
+  })
+
+  it('귀속은 급을 거스르지 않는다 — 소조는 중조·대조에, 중조는 대조에 들어간다', () => {
+    const rank: Record<AssyTier, number> = { sub: 0, mid: 1, grand: 2 }
+    for (const block of listBlocks()) {
+      const byNo = new Map((block.assyUnits ?? []).map((u) => [u.assyNo, u]))
+      for (const unit of block.assyUnits ?? []) {
+        if (unit.parentAssyNo == null) {
+          /* 루트는 대조다 — 소조가 블록의 꼭대기에 서면 그 위가 없다는 뜻이 된다 */
+          expect(unit.tier, unit.assyNo).toBe('grand')
+          continue
+        }
+        const parent = byNo.get(unit.parentAssyNo)!
+        expect(rank[parent.tier] > rank[unit.tier], `${unit.assyNo} ⊂ ${parent.assyNo}`).toBe(true)
+      }
+    }
+  })
+
+  it('부모 사슬에 순환이 없고 대조 루트가 블록당 1~3개다 (실제 블록 구성의 폭)', () => {
+    for (const block of listBlocks()) {
+      const units = block.assyUnits
+      if (!units) continue
+      const byNo = new Map(units.map((u) => [u.assyNo, u]))
+      for (const unit of units) {
+        const seen = new Set<string>()
+        let cursor: string | null = unit.assyNo
+        while (cursor != null) {
+          expect(seen.has(cursor), `${unit.assyNo} 사슬에 순환`).toBe(false)
+          seen.add(cursor)
+          cursor = byNo.get(cursor)?.parentAssyNo ?? null
+        }
+      }
+      const roots = units.filter((u) => u.parentAssyNo == null)
+      expect(roots.length, `${block.projNo}-${block.blockNo}`).toBeGreaterThanOrEqual(1)
+      expect(roots.length, `${block.projNo}-${block.blockNo}`).toBeLessThanOrEqual(3)
+    }
+  })
+
+  it('중조에는 하위가 있거나(소조를 받는다) 스스로 정합된 덩이다 — 빈 중간 마디를 두지 않는다', () => {
+    for (const block of listBlocks()) {
+      const units = block.assyUnits
+      if (!units) continue
+      const hasChild = new Set(units.map((u) => u.parentAssyNo).filter((p): p is string => p != null))
+      for (const unit of units) {
+        if (unit.tier !== 'mid') continue
+        expect(hasChild.has(unit.assyNo) || unit.scan != null, unit.assyNo).toBe(true)
+      }
+    }
+  })
+
+  /*
+   * **정합된 덩이는 트리의 아래쪽에 모여 있다** (R31) — 조립은 하위부터 붙으므로,
+   * 부모가 정합됐는데 그 자식이 아직 안 정합됐을 수 없다. 이 성질이 깨지면 통합실적의
+   * 수위(post-order) 계산과 실측 정합 집합이 갈라져 "판별 완료 = 정합" 계약이 깨진다.
+   */
+  it('정합된 ASSY 의 하위는 전부 정합돼 있다 (하위부터 붙는 순서)', () => {
+    for (const block of listBlocks()) {
+      const units = block.assyUnits
+      if (!units?.some((u) => u.scan)) continue
+      const scanned = new Set(units.filter((u) => u.scan).map((u) => u.assyNo))
+      for (const unit of units) {
+        if (unit.parentAssyNo == null || !scanned.has(unit.parentAssyNo)) continue
+        expect(scanned.has(unit.assyNo), `${unit.parentAssyNo} 는 정합, ${unit.assyNo} 는 미정합`).toBe(true)
+      }
+    }
+  })
+
+  it('실측 세 블록이 전부 정식 시민이다 — 13덩이가 로스터에 있다 (R31)', () => {
+    const scanned = listBlocks()
+      .filter((b) => b.projNo === '5510')
+      .flatMap((b) => (b.assyUnits ?? []).filter((u) => u.scan))
+    expect(scanned).toHaveLength(13)
+    /* 실측 ASSY 의 자리는 실측 베이 하나다 — PCD 뷰 문이 그리로 착지한다 */
+    for (const unit of scanned) expect(unit.berth?.bayId).toBe('asm-pbs-b5')
   })
 
   it('ASSY 소재 공장도 전부 지도 공장이다', async () => {
@@ -187,14 +275,14 @@ describe('공정 화면 경로 — 통합실적 → 공정 딥링크', () => {
   it('정반이 정해진 블록은 그 정반 상세까지 간다', () => {
     const block = blocksWithCadModel()[0]
     expect(zonePathOfBlock(block)).toBe(
-      `/zones/assembly/${block.berth!.factoryId}/${block.berth!.bayId}`
+      `/indoorshop/zones/assembly/${block.berth!.factoryId}/${block.berth!.bayId}`
     )
   })
 
   it('정반이 없으면 그 공장을 연 맵 진입 화면으로 — 드릴다운 계약, 값은 안정 슬러그(F-30)', () => {
     const block = blocksInZone('outfitting')[0]
     const path = zonePathOfBlock(block)
-    expect(path.startsWith('/zones/outfitting?factory=')).toBe(true)
+    expect(path.startsWith('/indoorshop/zones/outfitting?factory=')).toBe(true)
     /* 값을 계약 파서로 되읽으면 그 공장이 나온다 — 표기(슬러그/이름)와 무관한 검증 */
     expect(parseDrilldown(path.split('?')[1]).factory).toBe(block.factory)
   })

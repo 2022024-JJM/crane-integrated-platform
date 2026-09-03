@@ -175,6 +175,10 @@ export default defineConfig([
       'react-hooks/use-memo': 'warn',
       // HMR 갱신 단위에만 영향 — 원본(oxlint)에는 없는 규칙이라 이식 코드가 걸린다
       'react-refresh/only-export-components': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/globals': 'warn',
+      // 원본 테스트의 미사용 선언까지 이식이 막을 일은 아니다 — 보이게만 둔다
+      '@typescript-eslint/no-unused-vars': 'warn',
       // 원본이 확장 대비 별칭(interface X extends Y {})을 의도적으로 쓴다
       '@typescript-eslint/no-empty-object-type': 'warn',
     },

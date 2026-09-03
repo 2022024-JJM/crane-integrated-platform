@@ -69,7 +69,29 @@ export function BayIdentityBar({ location, blocks, manifest, className }: BayIde
   const { t } = useTranslation()
   const status = LOCATION_STATUS_META[location.status]
   const statusLabel = t(status.labelKey)
-  const assigned = Boolean(location.projNo && location.blkNo)
+
+  /*
+   * 호선·블록의 신원 — **정반 배정이 있으면 그것, 없으면 인식된 블록에서 읽는다.**
+   *
+   * 목업 정반은 배정이 곧 신원이라 예전처럼 `location.projNo/blkNo` 를 쓴다. 실측 정반
+   * (PBS 5BAY)에는 mock 배정이 없고(로스터 주석 참조) 대신 스캔이 정합한 13개 조립품이
+   * 호선·블록을 실어 온다 — 그걸 읽지 않으면 화면이 '—' 만 내놓는다(W9-0 진단 #1·#2).
+   *
+   * ⚠️ **한 정반에 블록이 여럿일 수 있다.** 실측 5BAY 에는 553·726·736 셋이 함께 서
+   * 있다. 하나만 골라 적으면 나머지 둘이 화면에서 사라지므로 `553 외 2` 로 말하고,
+   * 통합실적 링크에도 셋을 다 실어 보낸다.
+   */
+  const uniq = (values: (string | undefined)[]) => [...new Set(values.filter(Boolean) as string[])]
+  const projNos = location.projNo ? [location.projNo] : uniq(blocks.map((b) => b.projNo))
+  const blkNos = location.blkNo ? [location.blkNo] : uniq(blocks.map((b) => b.blkNo))
+  const assigned = projNos.length > 0 && blkNos.length > 0
+  /** `553` 또는 `553 외 2` — 값이 여럿일 때만 꼬리를 붙인다 */
+  const summarize = (values: string[]) =>
+    values.length === 0
+      ? t('common.none')
+      : values.length === 1
+        ? values[0]
+        : t('assembly.bayIdentity.andMore', { first: values[0], rest: values.length - 1 })
 
   // 인식 단위 — 중·소조립 단위면 assySerNo 가 붙고, 대조립(블록) 단위면 없다
   const unitLabel = blocks.length
@@ -92,10 +114,14 @@ export function BayIdentityBar({ location, blocks, manifest, className }: BayIde
       />
       <IdentityPill
         label={t('assembly.bayIdentity.projNo')}
-        value={location.projNo ?? t('common.none')} code="PROJ_NO" muted={!assigned} />
+        value={summarize(projNos)}
+        code="PROJ_NO"
+        muted={!assigned}
+        hint={projNos.length > 1 ? projNos.join(' · ') : undefined}
+      />
       <IdentityPill
         label={t('assembly.bayIdentity.block')}
-        value={location.blkNo ?? t('common.none')}
+        value={summarize(blkNos)}
         code="BLK_NO"
         muted={!assigned}
         detail={
@@ -136,9 +162,7 @@ export function BayIdentityBar({ location, blocks, manifest, className }: BayIde
 
       {/* 이 정반의 블록을 통합실적에서 — 호선·블록을 실어 보내므로 도착해서 다시 고르지
           않는다. 배정이 없는 정반에는 보낼 블록도 없다. */}
-      {assigned && (
-        <PerformanceLink projNo={location.projNo!} blockNo={location.blkNo!} />
-      )}
+      {assigned && <PerformanceLink projNo={projNos[0]} blockNo={blkNos} />}
 
       {unmatched > 0 && (
         <span

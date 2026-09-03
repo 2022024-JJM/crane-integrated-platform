@@ -26,5 +26,5 @@ export function zoneJumpHref(process: string | null, factory: string): string | 
   if (!process) return null
   const zoneId = ZONES_WITH_MAP_ENTRY[process]
   if (!zoneId) return null
-  return drilldownHref(`/zones/${zoneId}`, '', { ...YARD_DRILLDOWN, factory })
+  return drilldownHref(`/indoorshop/zones/${zoneId}`, '', { ...YARD_DRILLDOWN, factory })
 }

@@ -14,11 +14,6 @@ import { outfittingEn } from './i18n/en'
  * 맵 진입 화면 머리의 링크로 이어진다(사이드바 항목은 공정당 하나뿐이라 늘리지 않는다).
  */
 
-const OutfittingMapEntryPage = lazy(() =>
-  import('./ui/pages/OutfittingMapEntryPage').then((m) => ({
-    default: m.OutfittingMapEntryPage,
-  }))
-)
 const OutfittingFactoryListPage = lazy(() =>
   import('./ui/pages/OutfittingFactoryListPage').then((m) => ({
     default: m.OutfittingFactoryListPage,
@@ -45,32 +40,24 @@ export const outfittingModule: ProcessModule = {
     source: 'LiDAR',
   },
   routes: [
-    { path: '/indoorshop/zones/outfitting', Component: OutfittingMapEntryPage },
+    /* 엔트리는 **워크스페이스**다 (R22) — 맵 진입 화면을 걷었다. 공장 없이 들어오면
+     * 워크스페이스가 `?factory=`(총괄 점프)나 첫 공장을 편다. */
+    { path: '/indoorshop/zones/outfitting', Component: OutfittingWorkspace },
     // 고정 경로가 `:factoryId` 보다 먼저 서야 한다 — 뒤에 두면 공장 하나로 잡힌다
     { path: '/indoorshop/zones/outfitting/list', Component: OutfittingFactoryListPage },
     { path: '/indoorshop/zones/outfitting/equipment', Component: OutfittingEquipmentStatusPage },
     { path: '/indoorshop/zones/outfitting/:factoryId', Component: OutfittingWorkspace },
-    /* 베이 레벨 — 조립의 `/zones/assembly/:factoryId/:locationId` 와 같은 규약 (W7-10) */
+    /* 베이 레벨 — 조립의 `/indoorshop/zones/assembly/:factoryId/:locationId` 와 같은 규약 (W7-10) */
     { path: '/indoorshop/zones/outfitting/:factoryId/:locationId', Component: OutfittingWorkspace },
   ],
   i18n: { ko: outfittingKo, en: outfittingEn },
   provides: {
     /* 통합실적 의장 레일이 읽어 간다 — 공장 화면과 **같은 값**이어야 하므로 원천이 하나다.
      * shared 가 의장 모듈을 직접 부를 수 없어 레지스트리를 거친다(W7-11). */
+    /* 사상은 `api/wipBlocks` 한 곳에 있다 — 공장 화면의 '진행중 판별' 구획도 같은 함수를
+       지난다(W8-4). 여기 인라인으로 두면 소비자가 둘이 된 순간 복사본이 갈린다. */
     outfittingBlocks: (baseDate) =>
-      import('./api/mockOutfittingData').then((m) =>
-        m.outfittingBlocksAt(baseDate).map((block) => ({
-          projNo: block.projNo,
-          blockNo: block.blkNo,
-          factoryId: block.factoryId,
-          areaName: block.areaName,
-          wstgCode: block.wstgCode,
-          /* 화면이 '진척' 이라 부르던 값이 곧 라이다 판별률이다 — 이름만 축에 맞춘다 */
-          judgedRate: block.progress,
-          status: block.status,
-          justArrived: block.justArrived,
-        }))
-      ),
+      import('./api/wipBlocks').then((m) => m.outfittingWipBlocksAt(baseDate)),
   },
   zone: {
     id: 'outfitting',

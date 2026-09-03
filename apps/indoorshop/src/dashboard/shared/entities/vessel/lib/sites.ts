@@ -21,9 +21,9 @@ import { drilldownHref, YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 
 /** 자리 하나의 공정 화면 경로 — 정반이 정해졌으면 정반 상세까지, 아니면 그 공장을 연 맵 */
 function pathOf(zone: ProcessZone, factory: string, berth?: AssyPlacement['berth']): string {
-  if (berth) return `/zones/assembly/${berth.factoryId}/${berth.bayId}`
+  if (berth) return `/indoorshop/zones/assembly/${berth.factoryId}/${berth.bayId}`
   /* 드릴다운 계약으로 적는다 — 값은 안정 슬러그(F-30), 옛 `?shop=`·이름 값은 읽기 전용 */
-  return drilldownHref(`/zones/${zone}`, '', { ...YARD_DRILLDOWN, factory })
+  return drilldownHref(`/indoorshop/zones/${zone}`, '', { ...YARD_DRILLDOWN, factory })
 }
 
 function siteId(zone: ProcessZone, factory: string, mapBay?: string): string {

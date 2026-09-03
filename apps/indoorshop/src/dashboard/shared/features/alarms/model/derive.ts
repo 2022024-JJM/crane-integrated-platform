@@ -48,7 +48,7 @@ export function deriveMismatchAlarms(
         messageParams: { block: `${block.projNo}-${block.blockNo}`, assy: assy.assyNo },
         source: assy.assyNo,
         /* 통합실적의 기존 딥링크 계약 — ?assy= 는 그 ASSY 가 든 블록을 조회·강조한다 */
-        href: `/performance?vessel=${encodeURIComponent(block.projNo)}&block=${encodeURIComponent(block.blockNo)}&assy=${encodeURIComponent(assy.assyNo)}`,
+        href: `/indoorshop/performance?vessel=${encodeURIComponent(block.projNo)}&block=${encodeURIComponent(block.blockNo)}&assy=${encodeURIComponent(assy.assyNo)}`,
         occurredAt: `${assy.judgedDate ?? baseDate}T00:00:00`,
       })
     }
@@ -199,7 +199,7 @@ export function derivePaintingBatchAlarm(input: {
     messageKey: 'alarms.rail.batch.message',
     messageParams: { date: latestActlDate, lag },
     source: 'YPWG413M',
-    href: '/performance',
+    href: '/indoorshop/performance',
     occurredAt: `${latestActlDate}T00:00:00`,
   }
 }

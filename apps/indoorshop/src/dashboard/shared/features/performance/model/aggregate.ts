@@ -4,17 +4,20 @@
  * IPD 정의서 §6.4·§8.5 규칙을 그대로 구현한다:
  *  - `미대상`(excluded) 부재는 그 단계의 건수·중량 **분모에서 제외**한다.
  *  - 실적률(건수%) = 완료 건수 ÷ 대상 건수, 실적률(중량%) = 완료 중량 ÷ 대상 중량 ★주지표.
- *  - 종합(중량가중) = 5단계 중량 실적률의 평균. (⚠️ 표기-산식 정합은 정의서 §8.5 미확정
+ *  - 종합(중량가중) = **10절점** 중량 실적률의 평균. (⚠️ 표기-산식 정합은 정의서 §8.5 미확정
  *    항목 — 정의서가 확정한 산식이 이것뿐이므로 이것만 쓴다. 임의 개선 금지.)
  *  - 대상이 0이면 실적률은 0으로 처리한다 (§8.5 예외 규칙).
  */
 import {
+  ASSY_WO_ORDER,
   FAB_STAGES,
   PAINTING_STEPS,
   type AssemblySummary,
   type AssyMatch,
   type AssyUnit,
+  type AssyWoNode,
   type BlockNodeProgress,
+  type PaintingNode,
   type FabPart,
   type FabStageId,
   type FabricationSummary,
@@ -335,6 +338,65 @@ export function findAssyViolations(summary: AssemblySummary): string[] {
   if (summary.inspectionMoved && summary.assyDone !== summary.assyTotal)
     violations.push('inspection-before-done')
   return violations
+}
+
+/**
+ * **조립 절점 롤업** (R33) — 블록 전체 W/O 를 작업 종류(취부→용접→사상)로 접는다.
+ *
+ * 조립에는 절점 스트립이 없었다. ASSY 트리는 "어느 덩이가 얼마나 됐나"를 말하지만
+ * "블록이 어느 작업 단계까지 왔나"는 말하지 못한다 — 가공·도장 옆에 세워 두면 조립만
+ * 축이 없어 세 권역을 같은 눈으로 읽을 수 없다. W/O 에는 이미 작업 순서가 있으므로
+ * (`ASSY_WO_ORDER`), 그것을 블록 레벨로 롤업해 헤더의 요약 축으로 쓴다.
+ *
+ * 규칙은 `AssyWoNode` 주석에 적힌 계약 그대로다:
+ *  - 통과 = 그 종류 W/O **전량 완료** (가공 절점의 '대상 전량 완료' 와 같은 문법)
+ *  - 진행중 = 미통과 + 완료·착수가 하나라도 있음
+ *  - 계획 W/O 0 인 종류는 **목록에서 빠진다** (도장 스텝의 존재 기반 규칙과 같다)
+ *
+ * 매칭 불일치(`unmatched`) ASSY 는 붙은 W/O 자체가 없어 자연히 분모에 들어오지 않는다 —
+ * 완료 처리 금지(ASM-F10)는 ASSY 축이 따로 잡으므로 여기서 다시 세지 않는다.
+ */
+export function rollupAssyWoNodes(summary: AssemblySummary): AssyWoNode[] {
+  return ASSY_WO_ORDER.flatMap((kind): AssyWoNode[] => {
+    let totalWos = 0
+    let doneWos = 0
+    let startedWos = 0
+    for (const unit of summary.assys) {
+      for (const wo of unit.match.wos) {
+        if (wo.kind !== kind) continue
+        totalWos += 1
+        if (wo.status === 'done') doneWos += 1
+        else if (wo.status === 'inProgress') startedWos += 1
+      }
+    }
+    /* 계획이 없는 종류는 이 블록에 없는 절점이다 — 분모에 세우지 않는다 */
+    if (totalWos === 0) return []
+    const passed = doneWos >= totalWos
+    return [
+      {
+        kind,
+        status: passed ? 'passed' : doneWos > 0 || startedWos > 0 ? 'inProgress' : 'notDue',
+        doneWos,
+        totalWos,
+      },
+    ]
+  })
+}
+
+/**
+ * **도장 절점 스트립** (R33 정렬) — 존재 기반 스텝을 가공·조립과 같은 스트립 문법으로 옮긴다.
+ *
+ * 스텝 정의는 건드리지 않는다. `buildPaintingSteps` 가 이미 존재 기반으로 접어 둔 결과를
+ * 그대로 읽어 상태 낱말만 절점 어휘(`passed`/`inProgress`/`notDue`)로 맞춘다 — 헤더가
+ * 세 권역을 한 눈에 읽히게 하려는 표기 정렬이지 집계가 아니다.
+ */
+export function paintingStripNodes(steps: readonly PaintingStepState[]): PaintingNode[] {
+  return steps.map((step) => ({
+    step: step.step,
+    status: step.status === 'done' ? 'passed' : step.status,
+    doneRows: step.doneRows,
+    plannedRows: step.plannedRows,
+  }))
 }
 
 /**

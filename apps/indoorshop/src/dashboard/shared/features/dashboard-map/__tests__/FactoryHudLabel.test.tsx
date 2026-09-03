@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { act, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
 import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
 import { worldToScreen, type Viewport, type YardView } from '../../yard-map'
@@ -83,7 +84,7 @@ describe('FactoryHudLabel — 인씬 앵커', () => {
       <ZoneJumpButton process="조립" factory="GBS" onStash={vi.fn()} />,
     )
     const link = screen.getByRole('link', { name: /조립 공정 화면 열기/ })
-    expect(link).toHaveAttribute('href', '/zones/assembly?factory=asm-gbs')
+    expect(link).toHaveAttribute('href', '/indoorshop/zones/assembly?factory=asm-gbs')
     /* 층 루트는 지도 조작을 통과시키고(pointer-events-none), 문 래퍼만 받는다 */
     const root = container.firstElementChild as HTMLElement
     expect(root.className).toContain('pointer-events-none')
@@ -96,5 +97,54 @@ describe('FactoryHudLabel — 인씬 앵커', () => {
     const { container } = renderHud()
     expect(container.querySelector('a')).toBeNull()
     expect((container.firstElementChild as HTMLElement).getAttribute('aria-hidden')).toBe('true')
+  })
+})
+
+describe('이름패 클릭 = 드릴인 (P1 ③)', () => {
+  function renderSelectable(onSelect: () => void) {
+    return renderWithProviders(
+      <FactoryHudLabel
+        name="GBS"
+        anchor={ANCHOR}
+        outline={OUTLINE}
+        color="#3987e5"
+        caption="조립"
+        initialCamera={{ view: view(), viewport: VIEWPORT }}
+        onSelect={onSelect}
+      />,
+    )
+  }
+
+  it('이름 영역이 버튼이 되고, 누르면 그 공장을 연다 — 폴리곤 클릭과 같은 동작', async () => {
+    const onSelect = vi.fn()
+    renderSelectable(onSelect)
+    await userEvent.setup().click(screen.getByRole('button', { name: /GBS/ }))
+    expect(onSelect).toHaveBeenCalledOnce()
+  })
+
+  it('키보드로도 열린다 — Enter·Space', async () => {
+    const onSelect = vi.fn()
+    renderSelectable(onSelect)
+    const plate = screen.getByRole('button', { name: /GBS/ })
+    plate.focus()
+    await userEvent.setup().keyboard('{Enter}')
+    expect(onSelect).toHaveBeenCalledTimes(1)
+    await userEvent.setup().keyboard(' ')
+    expect(onSelect).toHaveBeenCalledTimes(2)
+  })
+
+  it('이름 영역만 포인터를 받는다 — 층은 지도 조작을 통과시킨다', () => {
+    const { container } = renderSelectable(() => {})
+    const root = container.firstElementChild as HTMLElement
+    expect(root.className).toContain('pointer-events-none')
+    expect(root.getAttribute('aria-hidden')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: /GBS/ }).closest('.pointer-events-auto'),
+    ).not.toBeNull()
+  })
+
+  it('onSelect 를 안 주면 버튼이 아니다 — 순수 표식으로 남는다', () => {
+    renderHud()
+    expect(screen.queryByRole('button', { name: /GBS/ })).toBeNull()
   })
 })

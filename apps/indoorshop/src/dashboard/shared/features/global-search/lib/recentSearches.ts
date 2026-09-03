@@ -1,3 +1,4 @@
+import type { ProcessZone } from '../../../entities/vessel'
 import type { SearchGroup } from './searchIndex'
 
 /*
@@ -14,6 +15,8 @@ export interface RecentSearch {
   title: string
   subtitle: string | null
   href: string
+  /** 공정 단계 — 결과 줄과 같은 공정색 칩을 최근 검색에서도 세운다 */
+  zone?: ProcessZone
 }
 
 export const RECENT_LIMIT = 3
@@ -28,7 +31,7 @@ function safeStorage(): Storage | null {
   }
 }
 
-const GROUPS: readonly string[] = ['vessel', 'block', 'assy', 'wo', 'equipment']
+const GROUPS: readonly string[] = ['vessel', 'block', 'assy', 'yard', 'wo', 'equipment']
 
 /** 저장돼 있던 값이 지금 모양인지 — 낡은/깨진 항목은 버린다(빈 목록이 오류보다 낫다) */
 function isRecentSearch(value: unknown): value is RecentSearch {

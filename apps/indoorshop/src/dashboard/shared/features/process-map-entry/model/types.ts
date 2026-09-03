@@ -6,6 +6,7 @@ import type {
   YardParcels,
 } from '../../../entities/yard-parcels'
 import type { BaySummary } from '../../dashboard-map/lib/bayDetail'
+import type { StatusMeaning } from '../../../ui/statusPalette'
 
 /*
  * '맵 진입 공정 화면' 공통 프레임의 계약.
@@ -108,6 +109,18 @@ export interface ProcessMapEntryProps<M extends MapEntryMarker = MapEntryMarker>
   detailOverlay?: ReactNode
   /** 우측 공장 카드 요약 줄의 우측 콘텐츠(집계·상태점) */
   factorySummary?: (factory: string) => ReactNode
+  /**
+   * 카드 **테두리**가 말할 상태 — 이상이면 카드 한 장이 통째로 그렇다고 말한다.
+   *
+   * 카드 테두리는 프레임 소유라, 공정이 아무리 제 본문에 이상을 그려도 **펴 보기 전에는**
+   * 보이지 않았다(W6-6 이월 — 도장 공장 카드). 그렇다고 프레임이 이상을 판정할 수는
+   * 없다 — 무엇이 이상인지는 공정마다 다르다. 그래서 판정은 공정이 하고 프레임은
+   * 그 뜻을 테두리로 옮기기만 한다.
+   *
+   * 주지 않거나 `null` 이면 지금까지의 중립 테두리 그대로다(조립·의장 회귀 0).
+   * 좌측 공정색 막대는 상태와 무관하게 남는다 — 소속(공정)과 처지(상태)는 다른 축이다.
+   */
+  factoryTone?: (factory: string) => StatusMeaning | null
   /** 우측 공장 카드의 펼침 본문 */
   factoryBody?: (factory: string) => ReactNode
   /** 우측 패널 제목 아래 자리 — 조립의 ①센서/②수집 2단 토글이 여기 꽂힌다 */

@@ -4,15 +4,11 @@ import {
   buildFactoryStatusSnapshot,
   equipmentLinkOf,
 } from '../../../../shared/entities/equipment'
-import { symbolOfType } from '../../../../shared/entities/equipment/ui/EquipmentSymbol'
-import { OUTFITTING_DEVICE_KINDS } from '../../model/equipment'
 import {
-  OUTFITTING_MARKER_TYPES,
   deviceCountsByKind,
   devicesOfBay,
   isDeviceFailing,
   outfittingDevices,
-  outfittingEquipmentMarkers,
   outfittingFactoryNames,
   tiltDetailOf,
   tiltModeCountsOf,
@@ -30,53 +26,7 @@ const FACTORIES = outfittingFactoryNames()
 /* 틸팅 상세는 이제 상태 스냅샷에서 나온다 — 파생 계산이 원천을 직접 부르지 않는다 */
 const snapOf = (factory: string) => buildFactoryStatusSnapshot(factory, NOW)
 
-describe('의장 설비 마커', () => {
-  it('마커 종류는 의장 설비 네 종류와 같다', () => {
-    expect([...OUTFITTING_MARKER_TYPES]).toEqual([...OUTFITTING_DEVICE_KINDS])
-  })
-
-  it('고른 종류만·의장 공장만 마커가 된다', () => {
-    const markers = outfittingEquipmentMarkers(FACTORIES, ['LIDAR', 'EDGE', 'PNL'])
-    const names = new Set(FACTORIES)
-    expect(markers.every((m) => names.has(m.factory))).toBe(true)
-    expect(new Set(markers.map((m) => m.typeId))).toEqual(new Set(['LIDAR', 'EDGE', 'PNL']))
-  })
-
-  it('종류를 하나도 안 고르면 마커가 없다 — 빈 선택을 전체로 되돌리지 않는다', () => {
-    expect(outfittingEquipmentMarkers(FACTORIES, [])).toEqual([])
-  })
-
-  it('마커 수 = 그 종류의 실제 설비 대수 (290대 전량이 지도에 설 수 있다)', () => {
-    const all = outfittingEquipmentMarkers(FACTORIES, [...OUTFITTING_MARKER_TYPES])
-    const expected = FACTORIES.reduce((sum, f) => sum + outfittingDevices(f).length, 0)
-    expect(all).toHaveLength(expected)
-    expect(expected).toBe(290)
-  })
-
-  it('마커 상태는 목록과 같은 배열에서 나온다 — 지도와 목록이 갈리지 않는다', () => {
-    const markers = outfittingEquipmentMarkers(FACTORIES, [...OUTFITTING_MARKER_TYPES])
-    const statusOf = new Map(
-      FACTORIES.flatMap((f) => outfittingDevices(f)).map((d) => [d.id, d.status])
-    )
-    for (const m of markers) expect(m.status).toBe(statusOf.get(m.id))
-  })
-
-  it('좌표·소속 판넬은 설비 엔티티의 실값이다 — 마커가 자리를 지어내지 않는다', () => {
-    const byId = new Map(YARD_EQUIPMENT.map((e) => [e.id, e]))
-    for (const m of outfittingEquipmentMarkers(FACTORIES, [...OUTFITTING_MARKER_TYPES])) {
-      const entity = byId.get(m.id)!
-      expect(entity).toBeDefined()
-      expect(m.lat).toBe(entity.lat)
-      expect(m.lon).toBe(entity.lon)
-      expect(m.panelId).toBe(entity.panelId)
-    }
-  })
-
-  it('종류마다 심볼이 다르다 — 지도에서 구분되어야 한다', () => {
-    const symbols = OUTFITTING_MARKER_TYPES.map(symbolOfType)
-    expect(new Set(symbols).size).toBe(symbols.length)
-  })
-
+describe('의장 설비 목록 — 베이·종류별 집계', () => {
   it('베이 드릴다운은 그 베이의 설비만 낸다', () => {
     const factory = FACTORIES[0]
     const bay = outfittingDevices(factory).find((d) => d.bay && d.bay !== '-')!.bay

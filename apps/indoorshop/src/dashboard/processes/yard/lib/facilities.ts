@@ -17,7 +17,7 @@ import {
  * 타입 계약(`YardFacility`/`FacilityProcess`)과 순수 판정(`facilityContains`)은
  * `shared/features/yard-map` 이 소유하고, 여기서는 그것을 다시 내보내(re-export) 야드
  * 모듈 안의 기존 참조를 그대로 둔다. 이 파일이 더하는 것은 **옥포 야드의 실제 공정 목록**
- * (`FACILITY_PROCESSES` — 화면 경로 `/zones/...` 를 아는 것은 shared 가 아니라 여기다)과
+ * (`FACILITY_PROCESSES` — 화면 경로 `/indoorshop/zones/...` 를 아는 것은 shared 가 아니라 여기다)과
  * fixture(`facilityFixture`)에서 41개 샵을 편 마스터다.
  *
  * 공정 이름은 번역하지 않는다 — 지번 갈래와 같은 규칙이다. 화면에서 본 말을 현장에서
@@ -35,25 +35,25 @@ export const FACILITY_PROCESSES: readonly FacilityProcess[] = [
   {
     key: 'assembly',
     label: '조립',
-    zonePath: '/zones/assembly',
+    zonePath: '/indoorshop/zones/assembly',
     color: { dark: '#4da3ff', light: '#2a78d6' },
   },
   {
     key: 'painting',
     label: '도장',
-    zonePath: '/zones/painting',
+    zonePath: '/indoorshop/zones/painting',
     color: { dark: '#f783ac', light: '#e87ba4' },
   },
   {
     key: 'outfitting',
     label: '의장',
-    zonePath: '/zones/outfitting',
+    zonePath: '/indoorshop/zones/outfitting',
     color: { dark: '#ff8a5c', light: '#eb6834' },
   },
   {
     key: 'fabrication',
     label: '가공',
-    zonePath: '/zones/fabrication',
+    zonePath: '/indoorshop/zones/fabrication',
     color: { dark: '#2dd4a7', light: '#1baf7a' },
   },
   {

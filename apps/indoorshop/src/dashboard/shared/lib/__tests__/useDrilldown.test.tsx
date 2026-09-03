@@ -25,7 +25,7 @@ function useHarness() {
 describe('useDrilldown — URL 이 원본', () => {
   it('URL 을 읽는다 (옛 철자 shop= 포함)', () => {
     const { result } = renderHook(useHarness, {
-      wrapper: wrapperAt('/zones/assembly?shop=GBS&bay=GBS%233BAY'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?shop=GBS&bay=GBS%233BAY'),
     })
     expect(result.current.drill.factory).toBe('GBS')
     expect(result.current.drill.bay).toBe('GBS#3BAY')
@@ -34,7 +34,7 @@ describe('useDrilldown — URL 이 원본', () => {
 
   it('go 가 주소를 바꾸고, 다른 쿼리는 그대로 남는다', () => {
     const { result } = renderHook(useHarness, {
-      wrapper: wrapperAt('/zones/assembly?assy=X&date=2026-09-03'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?assy=X&date=2026-09-03'),
     })
     act(() => result.current.drill.go({ factory: 'GBS' }))
     const params = new URLSearchParams(result.current.location.search)
@@ -45,7 +45,7 @@ describe('useDrilldown — URL 이 원본', () => {
   })
 
   it('드릴다운이 히스토리를 쌓는다 — 뒤로가기가 드릴아웃이다', () => {
-    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/zones/assembly') })
+    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/indoorshop/zones/assembly') })
 
     act(() => result.current.drill.go({ factory: 'GBS' }))
     act(() => result.current.drill.go({ bay: 'GBS#3BAY' }))
@@ -62,7 +62,7 @@ describe('useDrilldown — URL 이 원본', () => {
 
   it('up 은 한 단계 위로 — 앞으로 쌓으므로(push) 잘못 나왔으면 뒤로가기로 되돌아간다', () => {
     const { result } = renderHook(useHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS&bay=GBS%233BAY'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS&bay=GBS%233BAY'),
     })
     act(() => result.current.drill.up())
     expect(result.current.drill.bay).toBeNull()
@@ -73,14 +73,14 @@ describe('useDrilldown — URL 이 원본', () => {
   })
 
   it('최상위에서 up 은 아무 일도 하지 않는다 — 히스토리도 쌓지 않는다', () => {
-    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/zones/assembly') })
+    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/indoorshop/zones/assembly') })
     const before = result.current.location.key
     act(() => result.current.drill.up())
     expect(result.current.location.key).toBe(before)
   })
 
   it('같은 자리로의 set 은 히스토리를 쌓지 않는다 — 뒤로가기가 제자리걸음이 되지 않게', () => {
-    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/zones/assembly?factory=GBS') })
+    const { result } = renderHook(useHarness, { wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS') })
     const before = result.current.location.key
     act(() => result.current.drill.go({ factory: 'GBS' }))
     expect(result.current.location.key).toBe(before)
@@ -88,7 +88,7 @@ describe('useDrilldown — URL 이 원본', () => {
 
   it('reset 은 최상위로 — 자기 키만 지우고 남의 쿼리는 남긴다', () => {
     const { result } = renderHook(useHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS&bay=GBS%233BAY&assy=X'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS&bay=GBS%233BAY&assy=X'),
     })
     act(() => result.current.drill.reset())
     expect(result.current.location.search).toBe('?assy=X')
@@ -96,11 +96,11 @@ describe('useDrilldown — URL 이 원본', () => {
 
   it('hrefFor 가 링크 주소를 낸다 — 브레드크럼 조각이 진짜 <a> 로 선다', () => {
     const { result } = renderHook(useHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS&bay=GBS%233BAY'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS&bay=GBS%233BAY'),
     })
     /* 값은 안정 슬러그(F-30) — 화면 상태는 이름(GBS), 주소는 asm-gbs */
     expect(result.current.drill.hrefFor({ process: null, factory: 'GBS', bay: null })).toBe(
-      '/zones/assembly?factory=asm-gbs',
+      '/indoorshop/zones/assembly?factory=asm-gbs',
     )
   })
 })
@@ -114,7 +114,7 @@ describe('useDrilldownEscape — ESC 는 한 단계 위', () => {
 
   it('ESC 가 베이를 걷는다', () => {
     const { result } = renderHook(useEscHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS&bay=GBS%233BAY'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS&bay=GBS%233BAY'),
     })
     act(() => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
@@ -127,7 +127,7 @@ describe('useDrilldownEscape — ESC 는 한 단계 위', () => {
     const input = document.createElement('input')
     document.body.appendChild(input)
     const { result } = renderHook(useEscHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS'),
     })
     act(() => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
@@ -138,7 +138,7 @@ describe('useDrilldownEscape — ESC 는 한 단계 위', () => {
 
   it('이미 처리된(ESC 로 닫힌 모달 등) 이벤트는 건드리지 않는다', () => {
     const { result } = renderHook(useEscHarness, {
-      wrapper: wrapperAt('/zones/assembly?factory=GBS'),
+      wrapper: wrapperAt('/indoorshop/zones/assembly?factory=GBS'),
     })
     act(() => {
       const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })

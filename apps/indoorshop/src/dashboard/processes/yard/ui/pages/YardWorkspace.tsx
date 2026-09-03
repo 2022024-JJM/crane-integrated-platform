@@ -122,8 +122,8 @@ function readViewMode(): YardViewMode {
  * 야드에서 조립 화면으로 가는 두 길 — 경로 규칙은 이 화면이 안다.
  * 맵(feature)은 라우팅을 모른 채 "누르면 여기로"만 전달받는다.
  */
-const shopHref = (shop: YardShop) => `/zones/assembly/${shop.factoryId}`
-const bayHref = (bay: YardShopBay) => `/zones/assembly/${bay.factoryId}/${bay.locationId}`
+const shopHref = (shop: YardShop) => `/indoorshop/zones/assembly/${shop.factoryId}`
+const bayHref = (bay: YardShopBay) => `/indoorshop/zones/assembly/${bay.factoryId}/${bay.locationId}`
 
 /**
  * 공장·샵 → 공정 화면 경로. 고른 공장을 쿼리(`?factory=`)로 넘겨, 공정 화면이 그 공장

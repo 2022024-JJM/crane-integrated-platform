@@ -5,6 +5,7 @@ import { useFixedViewport } from '../shared/lib/fixed-viewport/useFixedViewport'
 import { FontScaleProvider } from '../shared/lib/font-scale/FontScaleProvider'
 import { getProcessRoutes } from '../shared/model/processRegistry'
 import { GlobalSearch } from '../shared/features/global-search'
+import { TourController } from '../shared/features/tour'
 import { Spinner } from '../shared/ui/atoms/Spinner'
 import { useTranslation } from '../shared/lib/i18n/useTranslation'
 import { cn } from '../shared/lib/utils'
@@ -138,6 +139,13 @@ function InshopFrame() {
         (원본 헤더의 검색 버튼은 셸 공용 헤더라 옮기지 않는다 — 단축키로 연다.)
       */}
       <GlobalSearch />
+      {/*
+        첫 사용 투어(코치마크) — 원본은 LayoutWrapper 에 마운트. 앵커(data-tour)가
+        셸 크롬에 있던 스텝(전역 검색 버튼·알람·사이드바 실적)은 스포트라이트 없이
+        중앙 말풍선으로 뜬다(TourOverlay 의 결손 폴백). 재실행 버튼(?)은 원본 헤더
+        것이라 없다 — 자동 1회 노출만 동작한다.
+      */}
+      <TourController />
       <Suspense fallback={<RouteFallback />}>{element}</Suspense>
     </div>
   )

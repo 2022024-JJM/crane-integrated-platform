@@ -114,8 +114,9 @@ describe('② 역행 금지 — 과거 스냅샷이 오늘보다 앞서지 않�
     const longAgo = shiftDate(TODAY, -60)
     for (const [projNo, blockNo] of BLOCKS) {
       const summary = aggregateStages(generateParts(projNo, blockNo, longAgo))
-      const s5 = summary.stages.find((s) => s.stage === 'S5')!
-      expect(s5.doneCount).toBe(0)
+      /* 사다리의 마지막 절점 — 그날 이 블록은 최종 불출까지 간 부재가 하나도 없었다 */
+      const last = summary.stages.find((s) => s.stage === 'S10')!
+      expect(last.doneCount).toBe(0)
     }
   })
 })

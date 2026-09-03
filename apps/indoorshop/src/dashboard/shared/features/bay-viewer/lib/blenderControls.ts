@@ -4,19 +4,20 @@ import { fitDistanceForBox } from './fitCamera'
 import { dragActionOf, type DragAction } from '../../../lib/mapInteraction'
 
 /**
- * 뷰포트 조작 — **지도 화면과 같은 드래그 문법** (`shared/lib/mapInteraction` 단일 소스).
+ * 뷰포트 조작 — 문법의 답은 `shared/lib/mapInteraction` 한 곳이 낸다(면: `viewer`).
  *
  * 마우스:
- *  - 왼쪽 드래그    이동(pan)          — 지도의 "끌어서 이동"과 같은 손
- *  - 오른쪽 드래그  궤도 회전(orbit)   — 지도의 "오른쪽 버튼 드래그로 회전"과 같은 손
- *  - Shift+드래그   궤도 회전          — 트랙패드·2버튼 마우스 대응(지도와 동일)
- *  - Alt+왼쪽      궤도 회전           — Blender 3버튼 에뮬레이션 습관 보존
- *  - 가운데 드래그  궤도 회전 (Shift+가운데 이동, Ctrl+가운데 줌 — Blender 잔존 문법)
+ *  - 왼쪽 드래그    궤도 회전(orbit)   — 점군을 볼 때의 1차 동작은 돌려 보기다
+ *  - 오른쪽 드래그  이동(pan)
+ *  - Shift+왼쪽     이동               — 트랙패드·2버튼 마우스의 두 번째 손
+ *  - Alt+왼쪽       이동
+ *  - 가운데 드래그  궤도 회전 (Shift+가운데 이동, Ctrl+가운데 줌 — Blender 문법 보존)
  *  - 휠            줌
  *
- * 한때 왼쪽=회전·오른쪽=이동(Blender 기본)이었는데, 같은 야드를 보는 지도 화면과
- * 좌우가 뒤집혀 화면을 넘어갈 때마다 손이 배신당했다(UX 감사 A4). 지도의 학습을
- * 기준으로 통일한다 — 지도는 "끌어서 이동"이 1차 동작이라 왼쪽을 빼앗을 수 없다.
+ * 한때 지도와 똑같이 왼쪽=이동으로 맞췄다(UX 감사 A4). 두 화면의 손을 하나로 만들려는
+ * 시도였는데, 뷰어에서는 그 배치가 손에 붙지 않는다는 피드백을 받았다 — 뷰어 계열이
+ * 전부 왼쪽을 궤도 회전에 쓰기 때문이다. 지금은 면마다 1차 동작을 따르되, "오른쪽·Shift
+ * 는 왼쪽의 반대 축"이라는 규칙은 두 면이 공유한다(mapInteraction 주석 참조).
  *
  * 키보드(커서가 뷰포트 위에 있을 때 — Blender 도 커서가 놓인 영역에 적용한다):
  *  - 1 / 3 / 7     정면 / 우측 / 평면. Ctrl 조합이면 반대편
@@ -46,12 +47,12 @@ const MOUSE_OF: Record<DragAction, THREE.MOUSE> = {
   zoom: THREE.MOUSE.DOLLY,
 }
 
-/** OrbitControls 의 마우스 버튼 배치를 전 화면 공통 문법에 맞춘다 */
+/** OrbitControls 의 마우스 버튼 배치를 뷰어 문법에 맞춘다 */
 export function applyBlenderMouseBindings(controls: OrbitControls): void {
   controls.mouseButtons = {
-    LEFT: MOUSE_OF[dragActionOf(0)],
-    MIDDLE: MOUSE_OF[dragActionOf(1)],
-    RIGHT: MOUSE_OF[dragActionOf(2)],
+    LEFT: MOUSE_OF[dragActionOf(0, {}, 'viewer')],
+    MIDDLE: MOUSE_OF[dragActionOf(1, {}, 'viewer')],
+    RIGHT: MOUSE_OF[dragActionOf(2, {}, 'viewer')],
   }
 }
 
@@ -65,7 +66,7 @@ export function bindModifierAwareButtons(
 ): () => void {
   const handlePointerDown = (event: PointerEvent) => {
     /* 이 조합이 무슨 동작인가 — 답은 전 화면 공통 문법 하나뿐이다 */
-    const action = MOUSE_OF[dragActionOf(event.button, event)]
+    const action = MOUSE_OF[dragActionOf(event.button, event, 'viewer')]
     if (event.button === 1) controls.mouseButtons.MIDDLE = action
     else if (event.button === 0) controls.mouseButtons.LEFT = action
   }

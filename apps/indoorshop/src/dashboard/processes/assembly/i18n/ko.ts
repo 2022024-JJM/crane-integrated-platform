@@ -75,20 +75,6 @@ export const assemblyKo = {
       title: '조립 공정 현황',
       subtitle:
         '야드 지도에서 조립 공장(파랑)과 CAS·PAS 라인(가공 초록)을 고르고, 베이를 눌러 정반으로 들어갑니다.',
-      listLink: '목록 보기',
-      panelTitle: '조립 공장 · 라인',
-      viewAll: '조립 전체 보기',
-      viewAllHint: '조립·CAS/PAS 전체가 보이는 자리로 돌아갑니다',
-      expand: '공장 카드 펼치기',
-      collapse: '공장 카드 접기',
-      viewOnMap: '지도에서 이 공장 보기',
-      modeLabel: '보기 전환',
-      modeEquipment: '① 설비 상태',
-      modeCollection: '② 수집 현황',
-      markerTypesLabel: '지도에 세울 설비 종류',
-      tiltToggleHint: '틸팅은 페어 라이다에서 1.7m 떨어져 섭니다 — 켜면 두 점이 겹쳐 보입니다.',
-      lidarCount: 'LiDAR {{count}}대',
-      issueCount: '점검 필요 {{count}}대',
       noCollection:
         '레거시 실적 수집 없음 — 모드B 라인 카운팅(가공 라인) 연동이 확정되면 이 자리에 수집 현황이 섭니다.',
       bayHeading: '{{bay}}BAY',
@@ -98,24 +84,13 @@ export const assemblyKo = {
         judgedToday: '오늘 판별',
         judgedTodayValue: '{{count}}건',
         lastScan: '최근 수집',
-        openFactory: '공장 현황 보기',
       },
       bayCard: {
-        sensors: '라이다',
-        block: '배정 블록',
-        realHint: '실측 스캔 정반 — 진입해 확인',
-        openBay: '정반 현황 열기',
-        openReal: '실측 뷰어로 진입',
       },
       sensorCard: {
-        back: '센서 선택 해제',
-        place: '{{factory}} · {{bay}}BAY — 위치는 설비 엔티티 실좌표',
       },
       legend: {
         lidar: 'LiDAR (설비 엔티티 실좌표 · 상태는 mock)',
-        equipment: '위치·대수는 도면 유도 실데이터 · 상태는 mock',
-        casPas: 'CAS·PAS 는 가공 소속 — 초록 네온',
-        hint: '공장 → 베이 → 센서 순으로 누르기 · Shift 또는 오른쪽 버튼 드래그로 회전',
       },
     },
     /* ③설비 단 · 마커 상세가 쓰는 설비 낱말 — 상태는 mock, 대수·소속은 실데이터다 */
@@ -151,10 +126,7 @@ export const assemblyKo = {
         '정지 판넬 {{count}}대 — 라이다 {{pairs}}쌍이 함께 눈이 멉니다. 전원·업링크부터 확인하세요.',
       tiltNote:
         '틸팅 {{count}}대는 라이다 {{lidar}}대와 1:1 페어라 따로 세우지 않습니다 — 개별 상태는 지도에서 라이다를 눌러 확인합니다.',
-      pairTilt: '페어 틸팅',
       tiltMode: { idle: '대기', tilting: '틸팅중', error: '에러' },
-      movingToTarget: '목표 도달 전',
-      hostPanel: '소속 판넬',
     },
     /* 전체 현황 지도의 작업 위치 드릴다운이 쓰는 이 공정의 명칭 (PRD FR-3 locationNounKey) */
     map: {
@@ -231,14 +203,17 @@ export const assemblyKo = {
       note: '줄을 누르면 그 ASSY 를 지목한 통합실적으로 갑니다. 수치는 통합실적과 같은 원천입니다.',
       tier: { grand: '대조', mid: '중조', sub: '소조' },
     },
+    /* 현황 탭 — 공용 설비 현황 보드의 조립 문구 */
+    status: {
+      unassignedBay: '베이 미배정',
+      toMapEntry: '전체 공장 지도로',
+    },
     workspace: {
       backToFactories: '← 공장 목록으로 돌아가기',
       tabAria: '화면 축 선택',
       tabViewer: '3D 뷰어',
-      tabSensors: '센서 상태',
+      tabStatus: '현황',
       tabBlocks: '블록·실적',
-      sensorTabHint: '센서를 누르면 3D 뷰어가 그 센서 자리로 이동합니다.',
-      sensorTabFactoryHint: '정반별 라이다 상태 — 상세 조작은 3D 뷰어 탭에서.',
       unknownFactory: '존재하지 않는 공장입니다',
       unknownLocation: '존재하지 않는 위치입니다',
       bayTitle: '{{name}} 라이다 판별 현황',
@@ -280,6 +255,7 @@ export const assemblyKo = {
       legendTitle: '범례',
     },
     bayIdentity: {
+      andMore: '{{first}} 외 {{rest}}',
       bay: '정반',
       projNo: '호선',
       block: '블록',

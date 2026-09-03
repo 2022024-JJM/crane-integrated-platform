@@ -110,6 +110,13 @@ export const paintingKo = {
       },
     },
     factoryStatus: {
+      tabAria: '화면 축 선택',
+      tabStatus: '현황',
+      tabView: '가동 뷰',
+      tabFactory: '공장 현황',
+      /* 공장 레일 — 맵 진입 화면을 대신해 공장을 갈아타는 자리 (R22) */
+      factoryRail: '도장공장 고르기',
+      backToZone: '선행도장 공정 현황',
       notFound: '알 수 없는 도장공장입니다.',
       backToMap: '선행도장 공정 현황',
       blockSummary: '재공 {{total}}블록 · 진행 중 {{inProgress}}',
@@ -122,6 +129,22 @@ export const paintingKo = {
       btsNote: '위치·반입/반출은 BTS 물류 기반입니다 — ZONE 대응표에 의존하지 않습니다. 블록 줄의 링크로 그 블록의 절점 실적(통합실적)까지 이어집니다.',
       equipmentTitle: '설비 요약',
       openScada: '지도에서 설비 상태 보기',
+    },
+    /*
+     * 가동 뷰(P5) — 점군 대신 장비가 만드는 공기를 그리는 3D.
+     * 세기는 SCADA 값을 따라간다(규칙은 `lib/airEffect`).
+     */
+    airView: {
+      title: '가동 뷰',
+      subtitle: '설비가 만드는 공기 — 히터는 데우고 제습기는 말린다. 세기가 SCADA 값을 따라갑니다.',
+      legendHeat: '가스히터 가동 — 열 헤이즈',
+      legendDry: '제습기 가동 — 제습 기류',
+      legendIdle: '정지 — 자리만 남김',
+      intensityNote: '진하기·속도 = 목표와의 차이 (온도 미달·습도 초과)',
+      noWebgl: '이 환경에서는 3D 를 그릴 수 없습니다 (WebGL 없음) — 설비 상태는 배치 지도에서 볼 수 있습니다.',
+      empty: '이 공장에 표시할 설비가 없습니다.',
+      bayCount: '{{count}}개 베이',
+      running: '가동 {{count}}',
     },
     zone: {
       displayName: '선행도장 공정',

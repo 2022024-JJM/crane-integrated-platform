@@ -47,7 +47,7 @@ describe('toMapLocation — 조립 Location → 공통 작업 위치 (FR-4 변�
       locationCode: 'PB3B',
       statusLabelKey: 'location.status.occupied',
       yardLotCodes: ['PB3B01'],
-      detailPath: '/zones/assembly/asm-pbs/asm-pbs-b3',
+      detailPath: '/indoorshop/zones/assembly/asm-pbs/asm-pbs-b3',
     })
   })
 
@@ -95,7 +95,7 @@ describe('fetchAssemblyMapLocations — 지도 공장 하나의 베이(정반) �
 
   it('공장 현황 경로를 함께 낸다 — 대시보드가 URL 을 조합하지 않도록 (FR-3)', async () => {
     const result = await fetchAssemblyMapLocations('PBS')
-    expect(result.kind === 'ok' && result.facilityPath).toBe('/zones/assembly/asm-pbs')
+    expect(result.kind === 'ok' && result.facilityPath).toBe('/indoorshop/zones/assembly/asm-pbs')
   })
 
   it('모든 위치가 부모 공장 키와 자기 상세 경로를 들고 온다', async () => {
@@ -104,7 +104,7 @@ describe('fetchAssemblyMapLocations — 지도 공장 하나의 베이(정반) �
     if (result.kind !== 'ok') return
     for (const location of result.locations) {
       expect(location.parentFacilityKey).toBe('NPS')
-      expect(location.detailPath).toBe(`/zones/assembly/asm-nps/${location.id}`)
+      expect(location.detailPath).toBe(`/indoorshop/zones/assembly/asm-nps/${location.id}`)
     }
   })
 })

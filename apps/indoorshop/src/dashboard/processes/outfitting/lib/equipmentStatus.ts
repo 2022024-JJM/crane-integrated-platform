@@ -7,7 +7,6 @@ import {
   type TiltMode,
   type TiltModuleStatus,
 } from '../../../shared/entities/equipment'
-import type { MapEntryMarker } from '../../../shared/features/process-map-entry'
 import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { OUTFITTING_FACTORIES } from '../api/outfittingFactoryFixture'
 import {
@@ -195,56 +194,8 @@ export function deviceKindName(kind: OutfittingDeviceKind): string | null {
 /** 지도·목록이 세우는 종류 — `OUTFITTING_DEVICE_KINDS` 와 같은 넷 */
 export const OUTFITTING_MARKER_TYPES = OUTFITTING_DEVICE_KINDS
 
-/** 맵 마커로 세울 설비 한 대 — 프레임 마커 계약 + 종류·상태 */
-export interface OutfittingEquipmentMarker extends MapEntryMarker {
-  typeId: OutfittingDeviceKind
-  bay: string
-  /** 이 설비가 물린 캐비닛 ID (없으면 빈 문자열) */
-  panelId: string
-  status: LidarSensorStatus
-}
-
 /** 설비ID → 엔티티 (좌표를 붙일 때 쓴다) */
 const entityById = new Map(YARD_EQUIPMENT.map((e) => [e.id, e]))
-
-/**
- * 주인공 공장들의 설비 마커.
- *
- * 목록(`outfittingDevices`)과 **같은 배열에서** 만든다 — 지도가 자기 상태를 따로 계산하면
- * 같은 설비가 지도에서는 온라인, 목록에서는 오류가 되는 날이 온다.
- *
- * ⚠️ 목업 자리(placeholder)는 좌표가 없다 — 마커로 세우지 않는다(지도에 없는 자리를
- *    지어내지 않는다). 이관이 끝난 지금은 해당 없음이지만 규칙으로 남긴다.
- * ⚠️ 틸팅은 페어 라이다에서 1.7m 떨어져 서므로 기본 표시에서 빼는 것이 읽기 좋다 —
- *    켜고 끄는 판단은 화면이 한다(이 함수는 달라는 종류만 준다).
- */
-export function outfittingEquipmentMarkers(
-  factories: readonly string[],
-  typeIds: readonly string[]
-): OutfittingEquipmentMarker[] {
-  const wanted = new Set(typeIds)
-  const markers: OutfittingEquipmentMarker[] = []
-  for (const factory of factories) {
-    for (const device of outfittingDevices(factory)) {
-      if (!wanted.has(device.kind)) continue
-      const entity = entityById.get(device.id)
-      if (!entity || device.placeholder) continue
-      markers.push({
-        id: device.id,
-        typeId: device.kind,
-        factory: device.factory,
-        bay: device.bay,
-        panelId: entity.panelId,
-        lat: entity.lat,
-        lon: entity.lon,
-        status: device.status,
-        title: `${device.id} · ${equipmentTypeOf(device.kind)?.name ?? device.kind} · ${device.factory}${device.bay && device.bay !== '-' ? ` ${device.bay}BAY` : ''}`,
-        ariaLabel: `${device.id} ${equipmentTypeOf(device.kind)?.name ?? device.kind}`,
-      })
-    }
-  }
-  return markers
-}
 
 /** 한 베이(공장 내 베이명)의 설비 — 베이 드릴다운 카드가 그 범위만 센다 */
 export function devicesOfBay(factory: string, bayNo: string): OutfittingDevice[] {
@@ -388,5 +339,5 @@ export function outfittingCollectionRows(overview: {
 /** 수집 현황에서 공장 현황으로 나가는 경로 — 짝이 없으면 null */
 export function outfittingFactoryStatusHref(factory: string): string | null {
   const spec = OUTFITTING_FACTORIES.find((f) => f.name === factory)
-  return spec ? `/zones/outfitting/${spec.id}` : null
+  return spec ? `/indoorshop/zones/outfitting/${spec.id}` : null
 }

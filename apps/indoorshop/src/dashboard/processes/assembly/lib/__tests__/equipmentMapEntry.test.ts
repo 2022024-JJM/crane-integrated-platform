@@ -2,16 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   EQUIPMENT_PANELS,
   buildFactoryStatusSnapshot,
-  equipmentTypeOf,
 } from '../../../../shared/entities/equipment'
-import { symbolOfType } from '../../../../shared/entities/equipment/ui/EquipmentSymbol'
 import {
-  ASSEMBLY_EQUIPMENT_TYPES,
-  assemblyEquipmentMarkers,
   assemblyMapFactoryNames,
   edgePcsOf,
   equipmentCountsOf,
-  equipmentColorOf,
   equipmentState,
   panelsWithStatus,
   tiltModeCounts,
@@ -32,64 +27,6 @@ const FACTORIES = assemblyMapFactoryNames()
 /* 상태는 이제 **스냅샷으로 주입**한다 — 파생 계산은 원천을 직접 부르지 않는다.
    동기 빌더를 쓰는 것은 의도한 것이다: 규칙 검증에 Promise 를 끼울 이유가 없다. */
 const snapOf = (factory: string) => buildFactoryStatusSnapshot(factory, NOW)
-
-describe('설비 마커', () => {
-  it('고른 종류만·주인공 공장만 마커가 된다', () => {
-    const markers = assemblyEquipmentMarkers(FACTORIES, ['LIDAR', 'EDGE', 'PNL'])
-    const names = new Set(FACTORIES)
-    expect(markers.every((m) => names.has(m.factory))).toBe(true)
-    expect(new Set(markers.map((m) => m.typeId))).toEqual(new Set(['LIDAR', 'EDGE', 'PNL']))
-  })
-
-  it('마커 수 = 그 종류의 실제 설비 대수 — 지어내거나 빠뜨리지 않는다', () => {
-    for (const typeId of ASSEMBLY_EQUIPMENT_TYPES) {
-      const expected = YARD_EQUIPMENT.filter(
-        (e) => e.typeId === typeId && FACTORIES.includes(e.factory)
-      ).length
-      expect(assemblyEquipmentMarkers(FACTORIES, [typeId])).toHaveLength(expected)
-    }
-  })
-
-  it('종류를 하나도 안 고르면 마커가 없다 — 빈 선택을 전체로 되돌리지 않는다', () => {
-    expect(assemblyEquipmentMarkers(FACTORIES, [])).toEqual([])
-  })
-
-  it('마커는 자기가 물린 캐비닛을 안다 (라이다 → 판넬 상세로 잇는 실)', () => {
-    const lidars = assemblyEquipmentMarkers(FACTORIES, ['LIDAR'])
-    expect(lidars.length).toBeGreaterThan(0)
-    for (const m of lidars) {
-      expect(YARD_EQUIPMENT.find((e) => e.id === m.id)?.panelId).toBe(m.panelId)
-    }
-  })
-
-  it('종류 심볼·색은 레지스트리가 정한다 — 화면이 새로 지어내지 않는다', () => {
-    for (const typeId of ASSEMBLY_EQUIPMENT_TYPES) {
-      const type = equipmentTypeOf(typeId)!
-      expect(equipmentColorOf(typeId)).toBe(type.color)
-      expect(symbolOfType(typeId)).toBe(type.symbol)
-    }
-  })
-
-  it('종류마다 심볼이 서로 다르다 — 지도에서 구분되어야 한다', () => {
-    const symbols = ASSEMBLY_EQUIPMENT_TYPES.map(symbolOfType)
-    expect(new Set(symbols).size).toBe(symbols.length)
-  })
-
-  it('상태는 결정론이다 — 같은 시각이면 같은 그림', () => {
-    const first = assemblyEquipmentMarkers(FACTORIES, ['LIDAR', 'EDGE', 'PNL'])
-    const again = assemblyEquipmentMarkers(FACTORIES, ['LIDAR', 'EDGE', 'PNL'])
-    expect(again.map((m) => m.state)).toEqual(first.map((m) => m.state))
-  })
-
-  it('판넬 마커 상태는 캐비닛 판정을 따른다 (정지 → offline · 주의 → error)', () => {
-    const panels = assemblyEquipmentMarkers(FACTORIES, ['PNL'])
-    for (const m of panels) {
-      const e = YARD_EQUIPMENT.find((x) => x.id === m.id)!
-      expect(m.state).toBe(equipmentState(e))
-      expect(['online', 'offline', 'error']).toContain(m.state)
-    }
-  })
-})
 
 describe('공장별 설비 인벤토리', () => {
   it('종류별 대수가 설비 엔티티와 일치한다', () => {

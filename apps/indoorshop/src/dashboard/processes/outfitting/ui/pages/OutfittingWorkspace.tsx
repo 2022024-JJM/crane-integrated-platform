@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
-import { formatDetectionId } from '../../../../shared/features/bay-viewer/model/lidarBlock'
+import {
+  detectionForBlockKey,
+  formatDetectionId,
+} from '../../../../shared/features/bay-viewer/model/lidarBlock'
 import { LidarPointCloudViewer } from '../../../../shared/features/bay-viewer/ui/LidarPointCloudViewer'
 import { PointCloudViewControls } from '../../../../shared/features/bay-viewer/ui/PointCloudViewControls'
 import { PointCloudLegend } from '../../../../shared/features/bay-viewer/ui/PointCloudLegend'
@@ -19,22 +22,22 @@ import {
   reconcileColorMode,
   type PointColorMode,
 } from '../../../../shared/features/bay-viewer/lib/colorModes'
-import type {
-  LidarSensor,
-  LidarSensorStatus,
-} from '../../../../shared/features/bay-viewer/model/lidarSensor'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
 import { useDelayedFlag } from '../../../../shared/lib/useDelayedFlag'
-import { performanceLinkFor } from '../../../../shared/entities/vessel'
+import { PCD_BLOCK_PARAM, performanceLinkFor } from '../../../../shared/entities/vessel'
+import { useWorkspaceTab, useWorkspaceTabCarry } from '../../../../shared/lib/useWorkspaceTab'
 import { HealthBadge } from '../../../../shared/entities/zone/ui/HealthBadge'
 import { Spinner, SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { useBaseDate } from '../../../../shared/lib/useBaseDate'
+import { judgingBlocksOfFactory } from '../../api/wipBlocks'
+import { JudgingBlockList } from '../JudgingBlockList'
 import { cn } from '../../../../shared/lib/utils'
-import type { InshopKey } from '../../../../shared/lib/i18n/keys'
+import { resolveZoneFactoryId } from '../../../../shared/lib/zoneEntryFactory'
 import { OUTFITTING_STATUS_META, type OutfittingBlock } from '../../model/block'
 import { fetchFactories } from '../../api/outfittingApi'
+import { OutfittingStatusTab } from '../OutfittingStatusTab'
 import {
   fetchOutfittingBayDetail,
   fetchOutfittingFactoryScene,
@@ -52,25 +55,21 @@ import {
  * (blockUnitContract). 그래서 조립의 정반·소조 축이 서던 자리에 베이·블록 단위 인식이
  * 선다. 판정·점군 밀도는 `outfittingBayScene`(W7-6E·W7-7-4 계약)이 지킨다.
  */
-type WorkspaceTab = 'viewer' | 'sensors' | 'blocks'
+type WorkspaceTab = 'status' | 'viewer' | 'blocks'
 const WORKSPACE_TABS: {
   key: WorkspaceTab
   labelKey:
+    | 'outfitting.workspace.tabStatus'
     | 'outfitting.workspace.tabViewer'
-    | 'outfitting.workspace.tabSensors'
     | 'outfitting.workspace.tabBlocks'
 }[] = [
+  { key: 'status', labelKey: 'outfitting.workspace.tabStatus' },
   { key: 'viewer', labelKey: 'outfitting.workspace.tabViewer' },
-  { key: 'sensors', labelKey: 'outfitting.workspace.tabSensors' },
   { key: 'blocks', labelKey: 'outfitting.workspace.tabBlocks' },
 ]
+/** URL 이 실어 온 착지 탭을 이 화면의 축으로 알아보는 목록 (R28 — 조립과 같은 규칙) */
+const WORKSPACE_TAB_KEYS = WORKSPACE_TABS.map((tab) => tab.key)
 
-const SENSOR_ROW_META: Record<LidarSensorStatus, { labelKey: InshopKey; dot: string }> = {
-  online: { labelKey: 'outfitting.sensorStatus.online', dot: 'bg-status-healthy' },
-  offline: { labelKey: 'outfitting.sensorStatus.offline', dot: 'bg-foreground/30' },
-  error: { labelKey: 'outfitting.sensorStatus.error', dot: 'bg-status-unhealthy' },
-  calibrating: { labelKey: 'outfitting.sensorStatus.calibrating', dot: 'bg-status-degraded' },
-}
 
 function NotFoundNotice({ message }: { message: string }) {
   const { t } = useTranslation()
@@ -134,79 +133,46 @@ function BlockRow({ block }: { block: OutfittingBlock }) {
   )
 }
 
-/** 센서 한 줄 — 문서형 리스트 시절의 LiDAR 목록 문법 그대로 (센서 상태 탭의 알맹이) */
-function SensorRow({ sensor }: { sensor: LidarSensor }) {
-  const meta = SENSOR_ROW_META[sensor.status]
-  return (
-    <li className="flex items-center gap-2 px-1 py-1 text-inshop-xs">
-      <span aria-hidden="true" className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta.dot)} />
-      <span className="w-20 shrink-0 truncate font-mono text-2xs text-foreground">
-        {sensor.name}
-      </span>
-      <span className="min-w-0 flex-1" />
-      <span className="shrink-0 font-mono text-2xs text-foreground/45">{sensor.lastScanAt}</span>
-    </li>
-  )
-}
-
-/** 베이별 센서 카드 — 조립 공장 센서 탭(정반마다 한 장)과 같은 격자 문법 */
-function BaySensorSection({
-  name,
-  workCntr,
-  sensors,
-}: {
-  name: string
-  workCntr: string
-  sensors: LidarSensor[]
-}) {
-  const { t } = useTranslation()
-  const online = sensors.filter((sensor) => sensor.status === 'online').length
-  return (
-    <section className="rounded-inshop-lg border border-border p-3">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="text-inshop-sm font-semibold text-foreground">{name}</h3>
-        <span className="flex items-baseline gap-2">
-          <span
-            className={cn(
-              'font-mono text-inshop-xs tabular-nums',
-              online < sensors.length ? 'text-status-degraded' : 'text-status-healthy'
-            )}
-          >
-            {online}/{sensors.length}
-          </span>
-          <span className="font-mono text-2xs text-foreground/50">{workCntr}</span>
-        </span>
-      </div>
-      <ul className="space-y-0.5">
-        {sensors.map((sensor) => (
-          <SensorRow key={sensor.id} sensor={sensor} />
-        ))}
-        {sensors.length === 0 && (
-          <li className="px-1 py-2 text-2xs text-foreground/45">{t('common.none')}</li>
-        )}
-      </ul>
-    </section>
-  )
-}
 
 export function OutfittingWorkspace() {
   const { t } = useTranslation()
-  const { factoryId, locationId } = useParams<{ factoryId: string; locationId?: string }>()
+  const { factoryId: routeFactoryId, locationId } = useParams<{
+    factoryId: string
+    locationId?: string
+  }>()
   const navigate = useNavigate()
 
-  /** 축 탭 — 공장·베이를 옮기면 기본(3D 뷰어)으로 돌아온다 (조립과 같은 규칙) */
-  const [workTab, setWorkTab] = useState<WorkspaceTab>('viewer')
+  /* 진입 URL — 착지 탭(`?tab=`)과 선택 승계(`?block=`)를 여기서 한 번만 읽는다 */
+  const [searchParams] = useSearchParams()
+
+  /*
+   * 축 탭 — **공장을 옮길 때만** 기본(현황)으로 돌아온다 (조립과 같은 규칙).
+   * 베이 이동까지 초기화하면 3D 에서 베이를 눌러 들어간 사람이 현황으로 튕겨 나온다.
+   *
+   * URL 이 착지 탭을 말하면 그 말이 먼저다 (R28) — 통합실적의 'PCD 뷰' 가 3D 에 내려서는
+   * 길이다. 진입 때 한 번만 읽는다(선택 승계와 같은 규칙).
+   */
+  const { tab: workTab, setTab: setWorkTab } = useWorkspaceTab(WORKSPACE_TAB_KEYS, 'status')
+  /* 화면 안 이동은 보던 축을 유지한다 (R30 — 조립 워크스페이스와 같은 규칙) */
+  const carryTab = useWorkspaceTabCarry()
+  /* 첫 렌더에서는 초기화하지 않는다 — 그러면 URL 이 실어 온 착지 탭을 마운트 직후 덮는다 */
+  const lastFactoryRef = useRef(routeFactoryId)
   useEffect(() => {
-    setWorkTab('viewer')
-  }, [factoryId, locationId])
+    if (lastFactoryRef.current === routeFactoryId) return
+    lastFactoryRef.current = routeFactoryId
+    setWorkTab('status')
+  }, [routeFactoryId, setWorkTab])
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  /* 선택 승계 (W8-3) — 통합실적 'PCD 뷰' 의 `?block={proj}-{blk}`. 진입 때 한 번만 읽는다
+   * (조립 워크스페이스와 같은 규칙). */
+  const handoffBlockRef = useRef<string | null>(searchParams.get(PCD_BLOCK_PARAM))
   const [highlightedBayId, setHighlightedBayId] = useState<string | null>(null)
   const [selectedBayId, setSelectedBayId] = useState<string | null>(null)
   useEffect(() => {
     setSelectedBlockId(null)
     setSelectedBayId(null)
-  }, [factoryId, locationId])
+  }, [routeFactoryId, locationId])
 
   /* 뷰어 표시 상태 — 소유자는 이 화면이다 (조립 워크스페이스와 같은 규칙) */
   const [displayMode, setDisplayMode] = useState<ViewerDisplayMode>('overlay')
@@ -252,6 +218,16 @@ export function OutfittingWorkspace() {
   /* ── 데이터 — 공장 목록·베이 목록·장면 (조립의 base/factoryScene/detail 과 같은 골격) ── */
   const { baseDate } = useBaseDate()
   const { data: factories } = useAsyncData(() => fetchFactories(), [])
+
+  /*
+   * 펼 공장 — 경로에 없으면 `?factory=`(총괄 점프), 그것도 없으면 첫 공장 (R22).
+   * `/indoorshop/zones/outfitting` 의 대문이 맵 진입에서 이 워크스페이스로 바뀌면서 공장 없이
+   * 들어오는 길이 생겼다. 규칙은 세 공정이 함께 쓰는 한 자리(zoneEntryFactory)에 있다.
+   */
+  const factoryId = resolveZoneFactoryId(factories ?? [], {
+    factoryId: routeFactoryId,
+    search: searchParams,
+  })
   const { data: locations, loading: locationsLoading } = useAsyncData(
     () => fetchOutfittingLocations(factoryId ?? '', baseDate),
     [factoryId, baseDate]
@@ -271,6 +247,14 @@ export function OutfittingWorkspace() {
     [factoryId, locationId, baseDate]
   )
 
+  /* 승계 소비 — 베이 장면이 오면 그 블록의 detection 을 선택하고 승계는 끝난다 */
+  useEffect(() => {
+    if (!handoffBlockRef.current || !bayDetail) return
+    const match = detectionForBlockKey(bayDetail.scene.blocks, handoffBlockRef.current)
+    handoffBlockRef.current = null
+    if (match) setSelectedBlockId(match.id)
+  }, [bayDetail])
+
   const showFactorySpinner = useDelayedFlag(factorySceneLoading)
   const showDetailSpinner = useDelayedFlag(bayDetailLoading)
 
@@ -285,8 +269,8 @@ export function OutfittingWorkspace() {
     [factories]
   )
   const routing: LocationTabsRouting = {
-    factoryHref: (id) => `/zones/outfitting/${id}`,
-    bayHref: (id, bayId) => `/zones/outfitting/${id}/${bayId}`,
+    factoryHref: (id) => `/indoorshop/zones/outfitting/${id}`,
+    bayHref: (id, bayId) => `/indoorshop/zones/outfitting/${id}/${bayId}`,
     navLabel: t('outfitting.tabs.label'),
     allLabel: t('outfitting.tabs.all'),
     bayTitle: (name, code) => t('outfitting.tabs.bayTitle', { name, code }),
@@ -307,13 +291,23 @@ export function OutfittingWorkspace() {
   }, [locationId, bayDetail, factoryScene])
   const allBlocks = useMemo(() => blocksByBay.flatMap((entry) => entry.blocks), [blocksByBay])
 
+  /*
+   * 진행중 판별 — 통합실적 의장 카드와 **같은 함수**를 지난다(`api/wipBlocks`).
+   * 화면이 가진 `allBlocks` 로 다시 거르지 않는 이유는, 그러면 두 화면의 필터가 각자
+   * 살아 언젠가 갈리기 때문이다. 셈은 한 곳에서만 한다(W8-4).
+   */
+  const judgingBlocks = useMemo(
+    () => judgingBlocksOfFactory(factoryId ?? '', baseDate),
+    [factoryId, baseDate]
+  )
+
   const bayScenes = locationId
     ? bayDetail
       ? [bayDetail.scene]
       : null
     : (factoryScene?.bays ?? null)
 
-  if (factories && factoryId && !factory) {
+  if (factories && routeFactoryId && !factory) {
     return <NotFoundNotice message={t('outfitting.workspace.notFound')} />
   }
   if (!factory || !locations) {
@@ -334,18 +328,11 @@ export function OutfittingWorkspace() {
       ? bayScenes.flatMap((scene) => scene.blocks).find((block) => block.id === selectedBlockId)
       : undefined
 
-  const locationTabs = (
-    <LocationTabs
-      factories={tabFactories}
-      locations={locations}
-      routing={routing}
-      currentFactoryId={factory.id}
-      tone="attached"
-      parts="factories"
-      attachedColors={viewportEdge}
-      className="shrink-0"
-    />
-  )
+  /*
+   * 공장 전환 탭바는 없앴다 (P4). 공장을 고르는 곳은 ① 현황 탭의 왼쪽 공장 목록 하나뿐이고,
+   * 거기서 고르면 URL 이 바뀌어 세 탭이 같은 공장을 본다 — 선택지가 두 군데 있으면
+   * 어느 쪽이 진짜인지 화면이 말해 주지 못한다. 베이 알약(아래)은 공장 안의 이동이라 남는다.
+   */
   const bayPills = (
     <LocationTabs
       factories={tabFactories}
@@ -386,11 +373,12 @@ export function OutfittingWorkspace() {
         </div>
       </div>
 
-      {/* 축 탭 — ②뷰어 / ①센서 / ③블록·실적 (조립과 같은 프레임) */}
+      {/* 축 탭 — ①현황 / ②3D 뷰어 / ③블록·실적 (조립과 같은 프레임) */}
       <div
         role="tablist"
         aria-label={t('outfitting.workspace.tabAria')}
-        className="flex shrink-0 items-center gap-1 self-start rounded-inshop-lg border border-border bg-surface-secondary/50 p-1"
+        /* 탭줄도 아래 판과 한 몸이다 — 줄만 밝으면 같은 반전이 작게 되풀이된다 */
+        className="viewport-surface flex shrink-0 items-center gap-1 self-start rounded-inshop-lg border border-border bg-surface-secondary p-1"
       >
         {WORKSPACE_TABS.map(({ key, labelKey }) => (
           <button
@@ -411,11 +399,14 @@ export function OutfittingWorkspace() {
         ))}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-6 xl:min-h-0 xl:flex-1 xl:gap-4">
+      {/*
+        탭 본문 — ①현황·②뷰어·③블록이 **같은 어두운 판** 위에 선다(감사 A10).
+        토큰만 바꾸는 판이라 마크업·레이아웃은 그대로다.
+      */}
+      <div className="viewport-surface flex min-w-0 flex-col gap-6 rounded-inshop-lg xl:min-h-0 xl:flex-1 xl:gap-4">
         {workTab === 'viewer' ? (
           /* ② 3D 뷰어 — 공장 전체(전 베이 센서퓨전) 또는 베이 하나. 전폭 */
           <div className="flex min-w-0 flex-col xl:min-h-0 xl:flex-1">
-            {locationTabs}
             <div
               ref={viewportRef}
               style={isFullscreen ? { background: viewportEdge.background } : undefined}
@@ -449,7 +440,7 @@ export function OutfittingWorkspace() {
                   showOutline={showOutline}
                   selectedBayId={selectedBayId}
                   onBaySelect={setSelectedBayId}
-                  onOpenBay={(locId) => navigate(`/indoorshop/zones/outfitting/${factory.id}/${locId}`)}
+                  onOpenBay={(locId) => navigate(carryTab(`/indoorshop/zones/outfitting/${factory.id}/${locId}`))}
                   highlightedBayId={highlightedBayId}
                   onHoverBay={setHighlightedBayId}
                   className={viewerSizeClass}
@@ -502,30 +493,22 @@ export function OutfittingWorkspace() {
               )}
             </div>
           </div>
-        ) : workTab === 'sensors' ? (
-          /* ① 센서 상태 — 문서형 리스트의 LiDAR 목록이 제 축의 전면으로 (베이마다 한 장) */
-          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
-            <p className="shrink-0 text-inshop-xs text-foreground/55">
-              {t('outfitting.workspace.sensorTabHint')}
-            </p>
-            {!bayScenes ? (
-              <div className="flex h-[50vh] items-center justify-center rounded-inshop-lg border border-border">
-                {(locationId ? showDetailSpinner : showFactorySpinner) && (
-                  <Spinner size={24} className="text-accent" />
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:pr-1">
-                {bayScenes.map((scene) => (
-                  <BaySensorSection
-                    key={scene.location.id}
-                    name={scene.location.name}
-                    workCntr={scene.location.workCntr}
-                    sensors={scene.sensors}
-                  />
-                ))}
-              </div>
-            )}
+        ) : workTab === 'status' ? (
+          /*
+           * ① 현황 — 공장 목록 + 버드뷰 + 설비 그리드(P4). 공용 보드를 그대로 쓴다.
+           *
+           * 예전 '센서 상태' 탭이 하던 일(그 공장의 설비 목록)은 이 보드의 아래쪽 그리드가
+           * 그대로 한다. 위에 버드뷰가 붙어 "그게 어느 자리인가" 까지 한 화면에서 답한다.
+           * 공장 선택은 보드의 왼쪽 목록이 쥔다 — 그래서 이 화면의 공장 탭바는 없앴다.
+           */
+          <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+            <OutfittingStatusTab
+              selectedFactory={factory.name}
+              onSelectFactory={(next) => {
+                const spec = factories?.find((entry) => entry.name === next)
+                if (spec) navigate(`/indoorshop/zones/outfitting/${spec.id}`)
+              }}
+            />
           </div>
         ) : (
           /* ③ 블록·실적 — 문서형 리스트의 블록 현황이 제 축의 전면으로 (딥링크 유지) */
@@ -537,6 +520,8 @@ export function OutfittingWorkspace() {
               </h2>
               <p className="text-inshop-xs text-foreground/55">{t('outfitting.workspace.blocksTabHint')}</p>
             </div>
+            {/* 판별 렌즈의 요약 — 아래 목록(전체)과 답하는 질문이 다르다(W8-4) */}
+            <JudgingBlockList blocks={judgingBlocks} className="shrink-0" />
             {allBlocks.length === 0 ? (
               <p className="rounded-inshop-lg border border-border px-2 py-6 text-center text-inshop-sm text-foreground/45">
                 {t(

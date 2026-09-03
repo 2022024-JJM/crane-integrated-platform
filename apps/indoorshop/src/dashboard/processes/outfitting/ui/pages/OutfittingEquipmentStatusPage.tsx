@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { cn } from '../../../../shared/lib/utils'
 import { Button } from '../../../../shared/ui/atoms/Button'
@@ -22,6 +22,7 @@ import {
   outfittingFactoryNames,
 } from '../../lib/equipmentStatus'
 import { OutfittingDeviceStatusList } from '../OutfittingDeviceStatusList'
+import { outfittingFactoryByName } from '../../lib/bayBlocks'
 
 /*
  * 선행의장 설비 상태.
@@ -123,7 +124,19 @@ export function OutfittingEquipmentStatusPage() {
   const { t } = useTranslation()
   const factories = useMemo(() => outfittingFactoryNames(), [])
   const summaries = useMemo(() => factories.map(deviceSummaryOf), [factories])
-  const [selectedFactory, setSelectedFactory] = useState(() => factories[0] ?? '')
+  /*
+   * 고른 공장은 **URL 이 쥔다**(`?shop=`) — 워크스페이스 센서 탭에서 이 화면으로 넘어올 때
+   * 그 공장이 열려 있어야 하고(W8-5 상호 링크), 야드·지도의 `?shop=` 규약과도 같은 열쇠다.
+   */
+  const [params, setParams] = useSearchParams()
+  const fromUrl = params.get('shop')
+  const selectedFactory =
+    fromUrl && factories.includes(fromUrl) ? fromUrl : (factories[0] ?? '')
+  const setSelectedFactory = (factory: string) => {
+    const next = new URLSearchParams(params)
+    next.set('shop', factory)
+    setParams(next, { replace: true })
+  }
 
   const selectedSummary = summaries.find((s) => s.factory === selectedFactory) ?? null
   /* 설비 배치 도면 — 의장 7공장은 모두 260903 도면집에 있다(도장 공장만 없다) */
@@ -134,6 +147,8 @@ export function OutfittingEquipmentStatusPage() {
     [selectedFactory]
   )
   const anyPlaceholder = summaries.some((summary) => summary.placeholder)
+  /* 공장 이름 → 워크스페이스 경로의 공장 id (지도 이름과 id 는 fixture 가 잇는다) */
+  const workspaceId = outfittingFactoryByName(selectedFactory)?.id ?? null
 
   return (
     <div className="space-y-5">
@@ -240,6 +255,16 @@ export function OutfittingEquipmentStatusPage() {
                   <span className="text-2xs text-foreground/55">
                     {t('outfitting.equipment.bayCount', { count: bays.size })}
                   </span>
+                  {/* 반대 방향 문 — 이 공장의 워크스페이스로(W8-5 역할 분리: 여기는 전 공장
+                      관제, 저기는 그 공장 작업 화면). 공장 id 를 아는 쪽이 여기라 여기서 낸다 */}
+                  {workspaceId && (
+                    <Link
+                      to={`/indoorshop/zones/outfitting/${workspaceId}`}
+                      className="rounded-inshop-md border border-border px-2 py-1 text-2xs font-medium text-foreground/75 transition-colors hover:bg-foreground/5 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {t('outfitting.workspace.toWorkspace')}
+                    </Link>
+                  )}
                   {/* 배치 도면 — 이 공장의 도면이 도면집에 있을 때만 문을 낸다 */}
                   {drawing && (
                     <button

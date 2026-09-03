@@ -137,7 +137,7 @@ describe('수집 현황 — 두 공정이 같은 세 줄과 나가는 문', () =
 
 describe('공장 현황으로 나가는 경로', () => {
   it('조립 공장은 자기 현황 화면으로 간다', () => {
-    expect(factoryStatusHref('PBS')).toBe('/zones/assembly/asm-pbs')
+    expect(factoryStatusHref('PBS')).toBe('/indoorshop/zones/assembly/asm-pbs')
   })
 
   it('조립 API 에 없는 CAS·PAS 는 문을 내지 않는다 — 안 열리는 문을 두지 않는다', () => {
@@ -147,7 +147,7 @@ describe('공장 현황으로 나가는 경로', () => {
 
   it('의장 7공장은 모두 자기 현황 화면으로 간다', () => {
     for (const factory of outfittingFactoryNames()) {
-      expect(outfittingFactoryStatusHref(factory)).toMatch(/^\/zones\/outfitting\/[a-z0-9-]+$/)
+      expect(outfittingFactoryStatusHref(factory)).toMatch(/^\/indoorshop\/zones\/outfitting\/[a-z0-9-]+$/)
     }
     expect(outfittingFactoryStatusHref('없는공장')).toBeNull()
   })

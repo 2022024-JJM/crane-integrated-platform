@@ -27,7 +27,8 @@ import { paintingCells } from '../lib/equipmentCells'
  * ── 색 규약 (감사 P2 — 값 색의 뜻이 정의돼 있지 않다는 지적) ──
  * 상태 램프는 앱 상태 팔레트의 다크 램프를 그대로 쓴다: 초록=정상, 앰버=주의, 빨강=이상,
  * 소등=값 없음. 그리고 **색 단독으로 말하지 않는다** — 램프마다 모양이 다르고(StatusDot)
- * 손을 얹으면 상태 이름이 뜬다.
+ * 손을 얹으면 상태 이름이 뜬다. 빛(글로우)은 이상에만 준다 — 켜진 램프가 전부 빛나면
+ * 진짜 경보가 그 빛 속에 묻힌다(R18).
  * 리드아웃(수치)의 색은 상태가 아니라 **값의 종류**를 뜻한다:
  *   청록(CYAN) = 설정값(SP)·환경 측정값(온습도) · 초록 = 가동 중인 설비의 실측값(PV)
  *   흐린 회색(TXT_DIM) = 값 없음 또는 정지 중이라 읽을 뜻이 없는 값
@@ -62,7 +63,8 @@ const LED_OFF = '#2a3947'
 
 /**
  * 상태 칩 — LED 점 + 사람이 읽는 말 한 단어. 상세의 램프열을 한 줄로 접는 컴팩트 표현.
- * 켜지면(lit) 점이 빛나고 글자가 서고, alarm 이면 칩이 붉게 맥동한다.
+ * 켜지면(lit) 점에 색이 들고 글자가 서고, alarm 이면 칩이 붉게 맥동하며 점이 빛난다
+ * (정상 점등은 빛나지 않는다 — R18).
  */
 function StatusPill({
   color,
@@ -88,7 +90,15 @@ function StatusPill({
         className="h-1.5 w-1.5 shrink-0 rounded-full"
         style={{
           background: dot,
-          boxShadow: lit ? `0 0 5px ${color}, 0 0 2px ${color}` : 'inset 0 0 2px rgba(0,0,0,0.7)',
+          /*
+           * 글로우는 **이상에만**(R18). 정상 점등은 색으로 충분하고, 켜진 램프가 전부
+           * 빛나면 진짜 경보가 그 빛 속에 묻힌다.
+           */
+          boxShadow: alarm
+            ? `0 0 6px ${color}, 0 0 2px ${color}`
+            : lit
+              ? 'none'
+              : 'inset 0 0 2px rgba(0,0,0,0.7)',
         }}
       />
       <span

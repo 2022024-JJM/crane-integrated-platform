@@ -8,10 +8,15 @@ import { nowDate } from '../../../lib/now'
 /*
  * 실적률 참고 배지 — 총괄('/') 드릴다운의 공장 상세·베이 카드에 붙는 절점 기반 실적.
  *
+ * **그 공장 공정의 실적만 낸다** (P1 ②). 예전에는 어느 공장을 눌러도 조립 판별 실적을
+ * 붙였다 — 도장공장을 열어 놓고 조립 인식률을 읽는 화면은, 숫자가 맞아도 거짓말이다.
+ * 지금은 공정이 결정한다: 조립 공장 = 조립 판별, 도장공장 = 도장 스텝. 그 밖의 공정
+ * (의장·가공)은 이 자리에 낼 절점 원천이 아직 없으므로 **배지를 세우지 않는다** —
+ * 없는 숫자를 남의 공정 것으로 채우지 않는다.
+ *
  * "공장-베이 레벨에서 어떤 작업이 되고 있는지"를 보는 자리이므로, 그 공장에 배정된
- * 블록들의 **조립 판별 실적(인식/계획)** 을 통합실적(/performance)과 **같은 원천**
- * (performanceApi mock)에서 읽어 같은 숫자를 보여 준다 — 여기서 새 mock 을 만들지
- * 않는다. IPD 원칙(참고 수치)대로 '참고' 단서를 달고, 누르면 통합실적 화면으로
+ * 블록들의 실적을 통합실적(/performance)과 **같은 원천**(performanceApi mock)에서
+ * 읽어 같은 숫자를 보여 준다 — 여기서 새 mock 을 만들지 않는다. IPD 원칙(참고 수치)대로 '참고' 단서를 달고, 누르면 통합실적 화면으로
  * 나간다(호선은 아직 못 정하므로 화면만 이동 — /performance 는 조회 조건을 제 필터로
  * 고른다).
  *
@@ -28,10 +33,18 @@ import { nowDate } from '../../../lib/now'
 interface BlockPerfRow {
   projNo: string
   blockNo: string
-  /** 판별 인식 수량 / 계획 분모(참고) — 통합실적 조립 카드의 주지표와 같은 값 */
+  /** 완료분 / 분모(참고) — 조립은 판별 인식 수량, 도장은 통과한 스텝 수 */
   recognizedQty: number
   reqQtyTotal: number
   rate: number
+}
+
+/** 이 배지가 실적을 낼 수 있는 공정 — 그 밖은 배지를 세우지 않는다 (P1 ②) */
+const BADGE_PROCESSES = ['조립', '도장'] as const
+export type BadgeProcess = (typeof BADGE_PROCESSES)[number]
+
+export function hasPerformanceBadge(process: string | null | undefined): process is BadgeProcess {
+  return process != null && (BADGE_PROCESSES as readonly string[]).includes(process)
 }
 
 interface FactoryPerf {
@@ -87,12 +100,57 @@ async function loadFactoryPerf(factory: string): Promise<FactoryPerf | null> {
   }
 }
 
+/**
+ * 도장공장 하나의 **스텝 절점** — 통과한 스텝 / 계획된 스텝. 조립의 '인식/계획'과 같은
+ * 자리에 도장의 같은 성격 값을 놓는다(공정마다 세는 단위가 다르므로 수치는 다르다).
+ */
+async function loadPaintingPerf(factory: string): Promise<FactoryPerf | null> {
+  const [api, roster] = await Promise.all([
+    import('../../performance/api/performanceApi'),
+    import('../../../entities/vessel'),
+  ])
+  const baseDate = todayString()
+  const blocks = roster.blocksAtFactory(factory).filter((b) => b.zone === 'painting')
+  if (blocks.length === 0) return null
+
+  const rows: BlockPerfRow[] = []
+  for (const block of blocks) {
+    const summary = await api.fetchPaintingSummary(block.projNo, block.blockNo, baseDate)
+    const total = summary.steps.length
+    if (total === 0) continue
+    rows.push({
+      projNo: block.projNo,
+      blockNo: block.blockNo,
+      recognizedQty: summary.doneSteps,
+      reqQtyTotal: total,
+      rate: Math.round((summary.doneSteps / total) * 100),
+    })
+  }
+  if (rows.length === 0) return null
+
+  const recognizedQty = rows.reduce((sum, row) => sum + row.recognizedQty, 0)
+  const reqQtyTotal = rows.reduce((sum, row) => sum + row.reqQtyTotal, 0)
+  return {
+    rows,
+    recognizedQty,
+    reqQtyTotal,
+    rate: reqQtyTotal > 0 ? Math.round((recognizedQty / reqQtyTotal) * 100) : 0,
+  }
+}
+
 export function PerformanceBadge({
   factory,
+  process,
   className,
 }: {
   /** 지도 공장 키(`YardParcelFactory.name`) — 통합실적 mock 의 블록 factory 와 같은 체계 */
   factory: string
+  /**
+   * 그 공장의 공정 — **어떤 실적을 낼지 정하는 값**(P1 ②). 배지를 낼 수 없는 공정이면
+   * 아무것도 그리지 않는다. 주지 않으면 그리지 않는다: 공정을 모르는 자리에 남의
+   * 공정 실적을 기본값으로 붙이는 사고를 계약에서 막는다.
+   */
+  process: string | null
   className?: string
 }) {
   const { t } = useTranslation()
@@ -101,26 +159,38 @@ export function PerformanceBadge({
   useEffect(() => {
     let alive = true
     setPerf(null)
-    loadFactoryPerf(factory).then((next) => {
+    if (!hasPerformanceBadge(process)) return
+    const load = process === '도장' ? loadPaintingPerf : loadFactoryPerf
+    load(factory).then((next) => {
       if (alive) setPerf(next)
     })
     return () => {
       alive = false
     }
-  }, [factory])
+  }, [factory, process])
 
   /* 블록이 많아도 카드가 길어지지 않게 — 완료율 낮은 순으로 넷까지만 (지금 mock 은 ≤4) */
   const rows = useMemo(() => (perf ? [...perf.rows].sort((a, b) => a.rate - b.rate).slice(0, 4) : []), [perf])
 
-  /* 로딩 중이거나 절점 데이터가 없는 공장 — 배지를 세우지 않는다 */
-  if (!perf) return null
+  /* 배지를 낼 수 없는 공정, 로딩 중, 또는 절점 데이터가 없는 공장 — 세우지 않는다 */
+  if (!hasPerformanceBadge(process) || !perf) return null
+
+  /* 제목·단위 문구는 공정이 정한다 — 도장 카드에 '판별' 이라 적히지 않게 */
+  const titleKey =
+    process === '도장' ? 'dashboard.map.perfBadge.titlePainting' : 'dashboard.map.perfBadge.title'
+  const countKey =
+    process === '도장'
+      ? 'dashboard.map.perfBadge.stepCount'
+      : 'dashboard.map.perfBadge.judgedCount'
+  const noteKey =
+    process === '도장' ? 'dashboard.map.perfBadge.notePainting' : 'dashboard.map.perfBadge.note'
 
   return (
     <div className={cn('shrink-0 border-b border-white/8 px-3 py-3', className)}>
       <div className="rounded-inshop-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
         {/* 종합 — 화면만 연다(공장에 여러 호선이 섞여 조회 조건 하나로 말할 수 없다) */}
         <Link
-          to="/performance"
+          to="/indoorshop/performance"
           title={t('dashboard.map.perfBadge.openHint')}
           className="block rounded-inshop-md transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
@@ -128,9 +198,7 @@ export function PerformanceBadge({
             <span className="rounded border border-white/18 bg-white/8 px-1.5 py-px text-2xs font-bold text-white/70">
               {t('dashboard.map.perfBadge.refChip')}
             </span>
-            <span className="text-2xs font-medium text-white/55">
-              {t('dashboard.map.perfBadge.title')}
-            </span>
+            <span className="text-2xs font-medium text-white/55">{t(titleKey)}</span>
             <span aria-hidden="true" className="ml-auto text-2xs text-white/40">
               →
             </span>
@@ -142,10 +210,7 @@ export function PerformanceBadge({
               <span className="ml-0.5 text-inshop-xs font-normal text-white/45">%</span>
             </span>
             <span className="font-mono text-2xs tabular-nums text-white/55">
-              {t('dashboard.map.perfBadge.judgedCount', {
-              done: perf.recognizedQty,
-              total: perf.reqQtyTotal,
-            })}
+              {t(countKey, { done: perf.recognizedQty, total: perf.reqQtyTotal })}
             </span>
           </div>
           {/* 종합 막대 — 색 단독으로 뜻을 나르지 않는다(위 %·건수가 본문) */}
@@ -184,7 +249,7 @@ export function PerformanceBadge({
         </ul>
 
         <p className="mt-2 text-2xs leading-snug text-white/38">
-          {t('dashboard.map.perfBadge.note')}
+          {t(noteKey)}
         </p>
       </div>
     </div>

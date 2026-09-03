@@ -9,6 +9,7 @@ import {
   type LinkState,
   type YardEquipment,
 } from '../../../shared/entities/equipment'
+import type { StatusMeaning } from '../../../shared/ui/statusPalette'
 
 /*
  * 도장 공장의 **설비 인벤토리** — SCADA 자산(DH/GH) 밖의 것까지 한 자리에서 센다.
@@ -62,6 +63,13 @@ export interface PaintingFactoryInventory {
   transferredUnits: PaintingTransferredUnit[]
   /** 이상(오프라인·오류·판넬 down)인 이관 설비 수 — 카드 테두리의 근거 */
   transferredIssues: number
+  /**
+   * 그중 **끊긴 것**(판넬 down · 링크 offline)의 수.
+   *
+   * 목록 줄은 이미 둘을 갈라 그린다(끊김=붉은 테, 흔들림=앰버 테). 카드 테두리도 같은
+   * 두 단계를 써야 접힌 카드와 펴 본 목록이 다른 말을 하지 않는다 — 그 갈래가 이 값이다.
+   */
+  transferredDown: number
 }
 
 /** 공장별로 미리 갈라 둔다 — 공장을 고를 때마다 841대를 훑지 않도록 */
@@ -100,6 +108,7 @@ export function paintingInventoryOf(
   const items = byFactory.get(factory) ?? []
   const transferredUnits: PaintingTransferredUnit[] = []
   let transferredIssues = 0
+  let transferredDown = 0
 
   for (const typeId of PAINTING_TRANSFERRED_TYPE_IDS) {
     for (const item of items) {
@@ -110,6 +119,8 @@ export function paintingInventoryOf(
       /* 캐비닛은 자기 종합 판정(status.health)이 정본이다 — 여기서 다시 세지 않는다 */
       const bad = panelStatus ? panelStatus.health !== 'healthy' : link !== 'online'
       if (bad) transferredIssues += 1
+      /* 줄 렌더(`TransferredRow`)의 `down` 과 같은 판정 — 두 곳이 어긋나면 안 된다 */
+      if (panelStatus ? panelStatus.health === 'down' : link === 'offline') transferredDown += 1
       transferredUnits.push({
         equipment: item,
         typeName: equipmentTypeOf(item.typeId)?.name ?? item.typeId,
@@ -130,7 +141,33 @@ export function paintingInventoryOf(
     transferredTotal: transferred.reduce((sum, row) => sum + row.count, 0),
     transferredUnits,
     transferredIssues,
+    transferredDown,
   }
+}
+
+/**
+ * 공장 한 곳의 **처지 한 마디** — 카드 테두리와 접힌 줄의 상태점이 함께 보는 값.
+ *
+ * 두 단계로 가르는 이유는 목록 줄이 이미 그렇게 그리고 있어서다(`TransferredRow`):
+ * 끊김(FAULT·판넬 down·offline)은 이상, 링크 흔들림은 주의. 접힌 카드가 펴 본 목록과
+ * 다른 말을 하면 사용자는 어느 쪽이 맞는지 물어야 한다.
+ *
+ * 아무 일도 없으면 `null` 이다 — '정상'이라는 색을 굳이 테두리로 말하지 않는다
+ * (모든 카드가 색을 얻으면 색이 아무것도 가리키지 못한다).
+ */
+export function paintingFactoryTone(counts: {
+  /** SCADA 설비 중 FAULT 코드가 선 대수 */
+  faults: number
+  /** SCADA 설비 중 링크가 끊겼거나 FAULT 인 대수 */
+  issues: number
+  /** 이관 설비 중 끊긴 대수 */
+  transferredDown: number
+  /** 이관 설비 중 이상(끊김+흔들림) 대수 */
+  transferredIssues: number
+}): StatusMeaning | null {
+  if (counts.faults > 0 || counts.transferredDown > 0) return 'error'
+  if (counts.issues > 0 || counts.transferredIssues > 0) return 'warning'
+  return null
 }
 
 /* ══ 설비 상태 단의 구성 (W6-6) ══════════════════════════════════

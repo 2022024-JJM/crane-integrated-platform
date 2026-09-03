@@ -7,6 +7,8 @@ import {
   STATUS_SHAPE,
   STATUS_STYLE,
   type StatusMeaning,
+  isAttenuable,
+  lampStyle,
 } from '../statusPalette'
 
 /*
@@ -98,6 +100,48 @@ describe('상태 팔레트 — 의미가 색을 정한다', () => {
         expect(value).not.toContain('accent')
       }
     }
+  })
+})
+
+/*
+ * ── 정상은 초록, 다만 조용하게 (R18) ──
+ *
+ * 한때 정상 램프에서 색을 뺐다가(무채) 화면이 꺼진 것처럼 읽혀 되돌렸다. 되돌린 것이
+ * 다시 무채로 돌아가지 않도록, 그리고 "조용하게"가 "이상까지 조용하게"로 번지지 않도록
+ * 두 방향을 함께 못 박는다.
+ */
+describe('램프 톤 — 정상은 초록을 지킨다', () => {
+  it('칸이 많은 화면에서도 정상은 초록이다 — 무채로 돌아가지 않는다', () => {
+    const dense = lampStyle('done', { dense: true })
+    expect(dense.fill).toContain('status-healthy')
+    expect(dense.ink).toContain('status-healthy')
+    /* 유리(어두운 오버레이) 위에서도 같다 */
+    expect(lampStyle('done', { dense: true, glass: true }).fill).toContain('glass-healthy')
+  })
+
+  it('다만 소리는 낮춘다 — 낱개 카드(dense 아님)의 정상보다 옅다', () => {
+    const calm = lampStyle('done', { dense: true }).fill
+    const full = lampStyle('done').fill
+    expect(calm).not.toBe(full)
+    /* 알파를 얹어 낮춘 것이지 다른 색을 고른 것이 아니다 */
+    expect(calm.startsWith(full)).toBe(true)
+  })
+
+  it('대기·미수집은 무채 그대로 — 돌고 있는 것과 아직 아닌 것이 색으로 갈린다', () => {
+    const idle = lampStyle('idle', { dense: true })
+    expect(idle.fill).not.toContain('status-')
+    expect(idle.fill).not.toBe(lampStyle('done', { dense: true }).fill)
+  })
+
+  it('주의·이상은 낮추지 않는다 — 경보를 지우는 일이 된다', () => {
+    for (const meaning of ['warning', 'error'] as const) {
+      expect(isAttenuable(meaning)).toBe(false)
+      expect(lampStyle(meaning, { dense: true })).toEqual(lampStyle(meaning))
+    }
+  })
+
+  it('이상은 밝은 빨강 그대로다 — 정상이 색을 되찾아도 먼저 눈에 드는 쪽은 이상이다', () => {
+    expect(lampStyle('error', { dense: true }).fill).toBe(STATUS_STYLE.error.fill)
   })
 })
 

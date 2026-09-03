@@ -1,21 +1,20 @@
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
-import type { BaySummary } from '../lib/bayDetail'
+import type { BayOccupancy } from '../lib/bayOccupancy'
 
 /*
- * 공장 상세의 베이 목록 (R14) — 드릴인한 공장의 본문.
+ * 공장 상세의 베이 목록 — 각 행은 그 베이의 **재실 요약**이다 (P1 ①).
  *
- * 각 행은 베이 상세(BayDetailCard)의 축약판이다: 면적·옥내·옥외 — 상세가 보여주는
- * 항목의 부분집합을 **같은 어휘(i18n 키)·같은 원천(summarizeBay)** 으로 요약한다
- * (`lib/factoryBayRows` 의 계약). 행을 누르면 그 베이로 드릴인한다(기존 URL 문법) —
- * 공장→베이가 같은 정보 위계의 줌 단계로 읽히게.
+ * 예전에는 면적·옥내외를 적었다. 지번 대장에서 온 그 숫자는 어느 날 봐도 같아서, 매일
+ * 보는 화면에서 아무 말도 하지 않았다. 지금 적는 것은 "이 칸에 무엇이 올라와 있는가" —
+ * 베이를 눌러 열리는 상세(BayOccupantList)의 축약판이고, 원천도 그와 같다.
  */
 export function FactoryBayList({
   bays,
   onOpenBay,
   onHoverBay,
 }: {
-  bays: readonly BaySummary[]
+  bays: readonly BayOccupancy[]
   /** 행 클릭 = 그 베이로 드릴인 (`?bay=` — 지도의 베이 클릭과 같은 계단) */
   onOpenBay: (bayId: string) => void
   /** 행 호버 — 지도의 그 베이 칸이 함께 밝아진다. 벗어나면 null */
@@ -30,33 +29,38 @@ export function FactoryBayList({
         {t('dashboard.map.factoryBayList')}
         <span className="ml-1.5 font-mono text-white/30">{bays.length}</span>
       </p>
-      <ul
-        className="space-y-1"
-        onMouseLeave={onHoverBay ? () => onHoverBay(null) : undefined}
-      >
+      <ul className="space-y-1" onMouseLeave={onHoverBay ? () => onHoverBay(null) : undefined}>
         {bays.map((bay) => (
-          <li key={bay.id}>
+          <li key={bay.bayId}>
             <button
               type="button"
-              onClick={() => onOpenBay(bay.id)}
-              onMouseEnter={onHoverBay ? () => onHoverBay(bay.id) : undefined}
+              onClick={() => onOpenBay(bay.bayId)}
+              onMouseEnter={onHoverBay ? () => onHoverBay(bay.bayId) : undefined}
               title={t('dashboard.map.factoryBayOpenHint', { bay: bay.label })}
               className={cn(
                 'flex w-full items-baseline gap-2 rounded-inshop-md px-2 py-1.5 text-left transition-colors',
                 'hover:bg-white/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70'
               )}
             >
-              <span className="min-w-0 flex-1 truncate text-inshop-xs font-medium text-white/88">
-                {bay.label}
-              </span>
-              {/* 축약 요약 — 베이 상세와 같은 어휘·같은 값 (factoryBayRows 계약) */}
-              <span className="shrink-0 text-2xs tabular-nums text-white/48">
-                {t('dashboard.map.area')} {Math.round(bay.area).toLocaleString()} m²
-              </span>
-              <span className="shrink-0 text-2xs tabular-nums text-white/48">
-                {t('dashboard.map.indoor')} {bay.indoor} · {t('dashboard.map.outdoor')}{' '}
-                {bay.outdoor}
-              </span>
+              <span className="shrink-0 text-inshop-xs font-medium text-white/88">{bay.label}</span>
+
+              {bay.blockCount === 0 ? (
+                <span className="min-w-0 flex-1 truncate text-2xs text-white/35">
+                  {t('dashboard.map.bayEmpty')}
+                </span>
+              ) : (
+                <>
+                  {/* 무엇이 서 있는지 — 이름을 먼저, 세는 수는 뒤에 */}
+                  <span className="min-w-0 flex-1 truncate font-mono text-2xs text-white/58">
+                    {bay.occupants.map((o) => o.key).join(' · ')}
+                  </span>
+                  <span className="shrink-0 text-2xs tabular-nums text-white/45">
+                    {t('dashboard.map.bayBlockCount', { count: bay.blockCount })}
+                    {bay.assyCount > 0 &&
+                      ` · ${t('dashboard.map.bayAssyCount', { count: bay.assyCount })}`}
+                  </span>
+                </>
+              )}
               <span aria-hidden="true" className="shrink-0 text-white/35">
                 ›
               </span>

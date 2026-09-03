@@ -60,7 +60,7 @@ describe('deriveMismatchAlarms', () => {
     const assy = withUnmatched.assys.find((a) => a.match.state === 'unmatched')!
     const alarm = alarms.find((a) => a.source === assy.assyNo)!
     expect(alarm.href).toBe(
-      `/performance?vessel=${withUnmatched.projNo}&block=${withUnmatched.blockNo}&assy=${assy.assyNo}`
+      `/indoorshop/performance?vessel=${withUnmatched.projNo}&block=${withUnmatched.blockNo}&assy=${assy.assyNo}`
     )
     expect(alarm.severity).toBe('warning')
     expect(alarm.kind).toBe('mismatch')
@@ -136,8 +136,8 @@ describe('deriveEquipmentAlarms', () => {
   })
 
   it('딥링크 해석기가 주는 경로를 그대로 싣는다 — 모르는 공장은 null(링크 없는 알람)', () => {
-    const linked = deriveEquipmentAlarms(snapshot, (e) => `/zones/test?factory=${e.factory}`)
-    for (const alarm of linked) expect(alarm.href).toMatch(/^\/zones\/test\?factory=/)
+    const linked = deriveEquipmentAlarms(snapshot, (e) => `/indoorshop/zones/test?factory=${e.factory}`)
+    for (const alarm of linked) expect(alarm.href).toMatch(/^\/indoorshop\/zones\/test\?factory=/)
   })
 })
 
@@ -155,7 +155,7 @@ describe('derivePaintingBatchAlarm', () => {
     const d4 = derivePaintingBatchAlarm({ baseDate: BASE_DATE, latestActlDate: '2026-08-30' })
     expect(d4?.severity).toBe('critical')
     expect(d4?.titleParams?.lag).toBe(4)
-    expect(d4?.href).toBe('/performance')
+    expect(d4?.href).toBe('/indoorshop/performance')
   })
 
   it('등록분이 아예 없으면 알람이 아니다 — 근거 없는 판정을 지어내지 않는다', () => {
@@ -175,7 +175,7 @@ describe('deriveCollectionGapAlarms', () => {
 
   it('임계 안이면 조용하다', () => {
     const alarms = deriveCollectionGapAlarms(
-      [{ zone: 'assembly', minutesSinceLast: COLLECTION_GAP_THRESHOLD_MINUTES - 1, lastLabel: '14:00', href: '/zones/assembly' }],
+      [{ zone: 'assembly', minutesSinceLast: COLLECTION_GAP_THRESHOLD_MINUTES - 1, lastLabel: '14:00', href: '/indoorshop/zones/assembly' }],
       { nowIso: NOW_ISO }
     )
     expect(alarms).toEqual([])
@@ -183,13 +183,13 @@ describe('deriveCollectionGapAlarms', () => {
 
   it('임계를 넘으면 warning — 공정 화면으로 나가는 문이 실린다', () => {
     const alarms = deriveCollectionGapAlarms(
-      [{ zone: 'assembly', minutesSinceLast: COLLECTION_GAP_THRESHOLD_MINUTES, lastLabel: '09:00', href: '/zones/assembly' }],
+      [{ zone: 'assembly', minutesSinceLast: COLLECTION_GAP_THRESHOLD_MINUTES, lastLabel: '09:00', href: '/indoorshop/zones/assembly' }],
       { nowIso: NOW_ISO }
     )
     expect(alarms).toHaveLength(1)
     expect(alarms[0].severity).toBe('warning')
     expect(alarms[0].id).toBe('gap:assembly')
-    expect(alarms[0].href).toBe('/zones/assembly')
+    expect(alarms[0].href).toBe('/indoorshop/zones/assembly')
   })
 
   it('수집 이력이 없으면 공백이 아니다 — 근거 없는 판정을 지어내지 않는다', () => {

@@ -5,8 +5,9 @@ import { cn } from '../../../lib/utils'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
-import type { BlockSummary } from '../model/types'
-import { NodeStrip } from './NodeStrip'
+import type { AssyWoNode, BlockSummary, PaintingNode, ProcessNode } from '../model/types'
+import { NodeStrip, type StripNode } from './NodeStrip'
+import { FAB_STAGE_LABEL_KEY } from './stageLabels'
 
 /**
  * 블록 헤더 카드 — D2(카드·큰 수치·상태색 중심)의 앵커.
@@ -32,8 +33,37 @@ export function BlockHeaderCard({
 }) {
   const { t } = useTranslation()
   const { progress } = summary
-  /** 지연 배지는 가공 절점 기준 — 조립은 절점이 아니라 ASSY·W/O 요약 줄이 따로 말한다 */
+  /** 지연 배지는 가공 절점 기준 — 절점별 계획일이 있는 권역이 가공뿐이라 그렇다 */
   const delayedTotal = progress.delayedCount
+
+  /* ── 세 권역의 절점을 **같은 스트립 문법**으로 편다 (R33) ──────────────────
+     가공은 계획일이 근거고, 조립·도장은 n/m(완료/계획)이 근거다. 어느 쪽이든
+     "어느 절점까지 왔는가" 한 줄로 읽히는 것이 이 축의 쓸모다. */
+  const fabNode = (node: ProcessNode): StripNode => ({
+    key: node.stage,
+    short: node.stage,
+    name: t(FAB_STAGE_LABEL_KEY[node.stage]),
+    passed: node.passed,
+    inProgress: node.inProgress,
+    delayed: node.delayed,
+    note: t('performance.nodes.plan', { date: node.planDate }),
+  })
+  const asmNode = (node: AssyWoNode): StripNode => ({
+    key: node.kind,
+    short: t(`performance.asm.woKind.${node.kind}` as const),
+    name: t(`performance.asm.woKind.${node.kind}` as const),
+    passed: node.status === 'passed',
+    inProgress: node.status === 'inProgress',
+    note: t('performance.nodes.count', { done: node.doneWos, total: node.totalWos }),
+  })
+  const pntNode = (node: PaintingNode): StripNode => ({
+    key: node.step,
+    short: t(`performance.pnt.step.${node.step}` as const),
+    name: t(`performance.pnt.step.${node.step}` as const),
+    passed: node.status === 'passed',
+    inProgress: node.status === 'inProgress',
+    note: t('performance.nodes.count', { done: node.doneRows, total: node.plannedRows }),
+  })
 
   return (
     <Card
@@ -105,13 +135,15 @@ export function BlockHeaderCard({
         </div>
       </div>
 
-      {/* 가공 절점 스트립 + 조립 ASSY·W/O 요약 줄 — 조립은 절점이 아니라 블록-ASSY 레벨 */}
+      {/* 세 권역의 절점 스트립 — 가공(S1~S10) · 조립(취부→용접→사상) · 도장(S/P→T/UP→FINAL).
+          조립의 ASSY·검사장 요약은 절점 아래 한 줄로 따라붙는다(트리는 본문 카드 몫이다). */}
       <div className="mt-3 flex flex-col gap-1">
-        <NodeStrip label={t('performance.nodes.stripFab')} nodes={progress.nodes} />
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="w-8 shrink-0 text-[10px] text-foreground/45">
-            {t('performance.nodes.stripAsm')}
-          </span>
+        <NodeStrip label={t('performance.nodes.stripFab')} nodes={progress.nodes.map(fabNode)} />
+        <NodeStrip
+          label={t('performance.nodes.stripAsm')}
+          nodes={summary.asmNodes.map(asmNode)}
+        />
+        <div className="flex flex-wrap items-center gap-1.5 pl-[38px] text-[11px]">
           <span className="rounded bg-surface-secondary px-1.5 py-0.5 tabular-nums text-foreground/70">
             {t('performance.header.assyProgress', {
               done: summary.assyDone,
@@ -180,13 +212,15 @@ export function BlockHeaderCard({
             </span>
           )}
         </div>
-        {/* 도장 요약 줄 — 스텝(진짜 순차 절점) 진척 + BTS 국면 (가공·조립과 같은 문법) */}
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="w-8 shrink-0 text-[10px] text-foreground/45">
-            {t('performance.nodes.stripPnt')}
-          </span>
+        {/* 도장 절점 스트립 — 스텝이 곧 절점이다. **분모는 존재 기반**(그 블록에 계획된
+            스텝 수)이라 3 으로 고정하지 않는다. 그 옆에 BTS 국면 칩이 붙는다. */}
+        <NodeStrip label={t('performance.nodes.stripPnt')} nodes={summary.pntNodes.map(pntNode)} />
+        <div className="flex flex-wrap items-center gap-1.5 pl-[38px] text-[11px]">
           <span className="rounded bg-surface-secondary px-1.5 py-0.5 tabular-nums text-foreground/70">
-            {t('performance.header.pntProgress', { done: summary.pntDone, total: 3 })}
+            {t('performance.header.pntProgress', {
+              done: summary.pntDone,
+              total: summary.pntNodes.length,
+            })}
           </span>
           <span
             className={cn(

@@ -29,7 +29,7 @@ describe('드릴다운 실적 배지 라벨 = 로스터 (표기≠검색 재발 
     expect(factoriesWithBlocks.length).toBeGreaterThan(0)
 
     for (const factory of factoriesWithBlocks) {
-      const { container, unmount } = renderWithProviders(<PerformanceBadge factory={factory} />)
+      const { container, unmount } = renderWithProviders(<PerformanceBadge factory={factory} process="조립" />)
 
       /* 배지는 performanceApi 를 늦게 실어 온다 — 첫 라벨이 설 때까지 기다린다 */
       await screen.findAllByText(BLOCK_LABEL)
@@ -69,7 +69,7 @@ describe('드릴다운 실적 배지 라벨 = 로스터 (표기≠검색 재발 
           .map((block) => `${block.projNo}-${block.blockNo}`)
       )
 
-      const { container, unmount } = renderWithProviders(<PerformanceBadge factory={factory} />)
+      const { container, unmount } = renderWithProviders(<PerformanceBadge factory={factory} process="조립" />)
       await screen.findAllByText(BLOCK_LABEL)
 
       const labels = [...container.querySelectorAll('span')]

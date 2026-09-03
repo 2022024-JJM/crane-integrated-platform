@@ -26,8 +26,8 @@ interface AssemblyLocationTabsProps {
 export function AssemblyLocationTabs({ factories, ...rest }: AssemblyLocationTabsProps) {
   const { t } = useTranslation()
   const routing: LocationTabsRouting = {
-    factoryHref: (factoryId) => `/zones/assembly/${factoryId}`,
-    bayHref: (factoryId, bayId) => `/zones/assembly/${factoryId}/${bayId}`,
+    factoryHref: (factoryId) => `/indoorshop/zones/assembly/${factoryId}`,
+    bayHref: (factoryId, bayId) => `/indoorshop/zones/assembly/${factoryId}/${bayId}`,
     navLabel: t('assembly.tabs.label'),
     allLabel: t('assembly.tabs.all'),
     bayTitle: (name, code) => t('assembly.tabs.bayTitle', { name, code }),

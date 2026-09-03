@@ -47,6 +47,7 @@ export function BayDetailCard({
   onBack,
   onClose,
   showLotList = true,
+  showMetrics = true,
   children,
 }: {
   bay: BaySummary
@@ -85,6 +86,12 @@ export function BayDetailCard({
    * 도장 배치도(process-map-entry)는 지번 줄이 곧 설비 자리 문맥이라 기본값(켬)을 쓴다.
    */
   showLotList?: boolean
+  /**
+   * 지번 대장에서 온 **기준정보**(면적·옥내외)를 낼지. 총괄('/')은 끈다 — 어느 날 봐도
+   * 같은 숫자라, 매일 보는 화면에서는 자리만 차지하고 재실(지금 무엇이 올라와 있는가)을
+   * 밀어낸다(P1 ①). 공정 화면은 지번 문맥이 필요하므로 켠 채로 둔다.
+   */
+  showMetrics?: boolean
   /**
    * 지번 목록 아래에 덧붙는 공정 몫의 본문 — 스크롤 본문 안이라 길어도 카드가 넘치지
    * 않는다. 의장처럼 베이에서 **블록 목록**을 봐야 하는 공정이 이 자리에 꽂는다
@@ -132,6 +139,7 @@ export function BayDetailCard({
       <div className="scroll-thin scroll-shadow-y flex min-h-0 flex-1 flex-col overflow-y-auto">
       {/* 세로가 빠듯한 화면(≤900px)에서는 이 요약 칸이 여백과 숫자를 한 단계 줄여
           아래 목록에 줄을 내준다 — 스크롤로 밀어내기 전에 먼저 자리를 만든다 */}
+      {showMetrics && (
       <dl className="grid shrink-0 grid-cols-2 gap-2 border-y border-white/8 bg-white/[0.018] p-3 text-inshop-xs [@media(max-height:900px)]:gap-1.5 [@media(max-height:900px)]:p-2">
         {showLotList && (
           <div className="rounded-inshop-lg border border-white/8 bg-white/[0.035] p-3 [@media(max-height:900px)]:p-2">
@@ -157,6 +165,7 @@ export function BayDetailCard({
           <dd className="font-medium tabular-nums text-white/86">{bay.outdoor}</dd>
         </div>
       </dl>
+      )}
 
       {/* 지번 목록 — 코드와 **원본 설명**을 나란히 (showLotList 일 때만 — 위 prop 주석).
           `shrink-0`: 이 칸이 눌리면 안의 목록이 칸 밖으로 삐져나와 아랫줄과 겹쳐 그려진다.

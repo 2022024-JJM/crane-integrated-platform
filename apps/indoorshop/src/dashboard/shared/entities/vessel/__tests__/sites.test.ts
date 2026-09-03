@@ -39,7 +39,7 @@ describe('블록 자리 — 조립 중 (ASSY 분산)', () => {
     const sites = sitesOfBlock(scattered)
     expect(new Set(sites.map((s) => s.id)).size).toBe(sites.length)
     const nps = sites.find((s) => s.factory === 'NPS')!
-    expect(nps.assys.map((a) => a.assyNo)).toEqual(['7004-222-S03', '7004-222-S04'])
+    expect(nps.assys.map((a) => a.assyNo)).toEqual(['7004-222-S01', '7004-222-S02'])
   })
 
   it('모든 ASSY 가 어느 자리엔가 실린다 (묶다가 흘리지 않는다)', () => {
@@ -58,10 +58,10 @@ describe('블록 자리 — 조립 중 (ASSY 분산)', () => {
 
   it('정반이 정해진 ASSY 자리는 그 정반 상세로, 아니면 그 공장을 연 맵으로', () => {
     const sites = sitesOfBlock(scattered)
-    expect(sites.find((s) => s.factory === 'NPS')!.path).toBe('/zones/assembly/asm-nps/asm-nps-b1')
+    expect(sites.find((s) => s.factory === 'NPS')!.path).toBe('/indoorshop/zones/assembly/asm-nps/asm-nps-b1')
     /* 값은 안정 슬러그(F-30) — asm-of1 이 조립4공장-OFD1 의 표 등재 슬러그다 */
     expect(sites.find((s) => s.factory === '조립4공장-OFD1')!.path).toBe(
-      '/zones/assembly?factory=asm-of1'
+      '/indoorshop/zones/assembly?factory=asm-of1'
     )
   })
 })
@@ -82,7 +82,7 @@ describe('블록 자리 — 의장·도장 중', () => {
       expect(sites).toHaveLength(1)
       expect(sites[0].zone).toBe('painting')
       expect(sites[0].factory).toBe(block.factory)
-      expect(sites[0].path.startsWith('/zones/painting?factory=')).toBe(true)
+      expect(sites[0].path.startsWith('/indoorshop/zones/painting?factory=')).toBe(true)
       expect(parseDrilldown(sites[0].path.split('?')[1]).factory).toBe(block.factory)
     }
   })

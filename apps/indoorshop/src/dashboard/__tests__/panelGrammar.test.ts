@@ -47,39 +47,6 @@ describe('공정 화면 제목', () => {
   })
 })
 
-describe('우측 패널 2단 문법 — 조립·의장이 같아야 한다', () => {
-  it('두 공정 모두 [설비 상태 | 수집 현황] 두 단을 선언한다', () => {
-    for (const entry of [assemblyKo.assembly.mapEntry, outfittingKo.outfitting.mapEntry]) {
-      expect(entry.modeEquipment).toContain('설비')
-      expect(entry.modeCollection).toContain('수집')
-      expect(entry.modeLabel).toBeTruthy()
-    }
-    for (const entry of [assemblyEn.assembly.mapEntry, outfittingEn.outfitting.mapEntry]) {
-      expect(entry.modeEquipment.toLowerCase()).toContain('equipment')
-      expect(entry.modeCollection.toLowerCase()).toContain('collection')
-    }
-  })
-
-  it('두 공정의 수집 현황이 같은 항목을 묻는다 — 수집·완료·최근 수집·나가는 문', () => {
-    for (const collection of [
-      assemblyKo.assembly.mapEntry.collection,
-      outfittingKo.outfitting.mapEntry.collection,
-    ]) {
-      expect(collection.lastScan).toBe('최근 수집')
-      expect(collection.openFactory).toBe('공장 현황 보기')
-      /* '감지' 는 용어 사전에서 걷어냈다(W7-6D) — 첫 줄은 '수집 블록' 으로 통일 */
-      expect(collection.detected).toContain('수집')
-    }
-  })
-
-  it('두 공정 모두 마커 종류 토글과 틸팅 안내를 갖는다', () => {
-    for (const entry of [assemblyKo.assembly.mapEntry, outfittingKo.outfitting.mapEntry]) {
-      expect(entry.markerTypesLabel).toBeTruthy()
-      expect(entry.tiltToggleHint).toContain('1.7m')
-    }
-  })
-})
-
 describe('걷어낸 옛 문법이 되살아나지 않는다', () => {
   it('의장 맵 진입에 블록 작업 상태(작업중/대기) 낱말이 남아 있지 않다', () => {
     const serialized = JSON.stringify(outfittingKo.outfitting.mapEntry)

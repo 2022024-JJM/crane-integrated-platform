@@ -195,6 +195,28 @@ export async function loadRealShade(meta: RealSceneMeta): Promise<Uint8Array> {
 }
 
 /**
+ * 점별 CAD 표면 편차 — cloud 와 같은 순서의 Uint8 배열.
+ *
+ * 값은 `거리 / segmentation.toleranceM × 255` 로 양자화돼 있고 **255 = 미일치**다.
+ * 이 배열이 있으면 화면에서 임계를 낮출 때 **최근접 재계산이 필요 없다** — 바이트 비교
+ * 한 번으로 끝난다(생성은 `scripts/build-real-scan-assets.py` 의 KD-tree, 빌드 타임).
+ *
+ * ⚠️ 그래서 **낮추는 방향만** 가능하다. 자산의 `toleranceM`(현 0.30m)보다 큰 임계는
+ * 이 배열에 정보가 없어(전부 255 로 잘려 있다) 스크립트 재실행이 필요하다.
+ */
+export async function loadRealDeviations(meta: RealSceneMeta): Promise<Uint8Array> {
+  const res = await fetch(`${ASSET_BASE}/${meta.deviations}`)
+  if (!res.ok) throw new Error(`실측 편차 로드 실패: ${meta.deviations} (HTTP ${res.status})`)
+  return new Uint8Array(await res.arrayBuffer())
+}
+
+/** 임계(m) → `deviations` 바이트 컷오프. 자산 허용오차를 넘는 값은 255(전량 통과)로 saturate */
+export function deviationCutoff(toleranceM: number, meta: RealSceneMeta): number {
+  const ratio = toleranceM / meta.segmentation.toleranceM
+  return Math.max(0, Math.min(255, Math.round(ratio * 255)))
+}
+
+/**
  * 자산 4종(점군·라벨·편차·음영)이 **같은 변환 실행본**인지 검사한다.
  *
  * bin 은 점 순서로만 이어져 있어 길이가 어긋나도 뷰어는 아무 에러 없이 그린다 —
@@ -207,7 +229,8 @@ export function assertRealSceneConsistent(
   meta: RealSceneMeta,
   cloud: Float32Array,
   labels: Uint8Array,
-  shade: Uint8Array
+  shade: Uint8Array,
+  deviations?: Uint8Array
 ): void {
   const cloudPoints = cloud.length / 3
   const mismatches: string[] = []
@@ -219,6 +242,9 @@ export function assertRealSceneConsistent(
   }
   if (shade.length !== cloudPoints) {
     mismatches.push(`${meta.shade} ${shade.length} ≠ 점 수 ${cloudPoints}`)
+  }
+  if (deviations && deviations.length !== cloudPoints) {
+    mismatches.push(`${meta.deviations} ${deviations.length} ≠ 점 수 ${cloudPoints}`)
   }
   const rangeEnd = meta.ranges.reduce((end, range) => Math.max(end, range.start + range.count), 0)
   if (rangeEnd !== cloudPoints) {

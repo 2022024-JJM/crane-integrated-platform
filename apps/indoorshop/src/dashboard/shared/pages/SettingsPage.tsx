@@ -7,6 +7,13 @@ import {
   FONT_SCALE_OPTIONS,
   FONT_SCALE_VALUES,
 } from '../lib/font-scale/storage'
+import {
+  MATCH_TOLERANCE_MAX_CM,
+  MATCH_TOLERANCE_MIN_CM,
+  MATCH_TOLERANCE_STEP_CM,
+  setMatchToleranceCm,
+  useMatchToleranceCm,
+} from '../lib/matchTolerance'
 import { Card, CardContent, CardHeader } from '../ui/atoms/Card'
 import { Button } from '../ui/atoms/Button'
 import { SunIcon, MoonIcon, TextSizeIcon, GlobeIcon } from '../ui/icons'
@@ -68,6 +75,7 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
   const { fontScale, setFontScale } = useFontScale()
+  const matchToleranceCm = useMatchToleranceCm()
 
   const themeOptions: { value: Theme; label: string; description: string; icon: React.ReactNode }[] =
     [
@@ -213,6 +221,48 @@ export function SettingsPage() {
               />
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/*
+        실측 정합 판정 임계 — 뷰어의 조작이 아니라 **판정 기준**이라 여기 있다(R23).
+        같은 스캔을 5cm 로 보는 사람과 60cm 로 보는 사람은 다른 수치를 읽으므로, 화면마다
+        따로 잡는 손잡이가 아니라 한 번 정해 두고 쓰는 값이어야 한다.
+      */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-inshop-base font-semibold text-foreground">
+            {t('settings.matchToleranceTitle')}
+          </h2>
+          <p className="mt-0.5 text-inshop-xs text-foreground/58">
+            {t('settings.matchToleranceDescription')}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <input
+              id="settings-match-tolerance"
+              type="range"
+              min={MATCH_TOLERANCE_MIN_CM}
+              max={MATCH_TOLERANCE_MAX_CM}
+              step={MATCH_TOLERANCE_STEP_CM}
+              value={matchToleranceCm}
+              onChange={(event) => setMatchToleranceCm(Number(event.target.value))}
+              aria-label={t('settings.matchToleranceTitle')}
+              aria-valuetext={t('settings.matchToleranceValue', { cm: matchToleranceCm })}
+              className="min-w-0 flex-1 accent-[var(--accent)]"
+            />
+            <span className="w-16 shrink-0 text-right font-mono text-inshop-lg font-semibold tabular-nums text-foreground">
+              {t('settings.matchToleranceValue', { cm: matchToleranceCm })}
+            </span>
+          </div>
+          <div className="mt-1 flex justify-between font-mono text-2xs text-foreground/45">
+            <span>{t('settings.matchToleranceValue', { cm: MATCH_TOLERANCE_MIN_CM })}</span>
+            <span>{t('settings.matchToleranceValue', { cm: MATCH_TOLERANCE_MAX_CM })}</span>
+          </div>
+          <p className="mt-3 text-inshop-xs leading-relaxed text-foreground/58">
+            {t('settings.matchToleranceNote')}
+          </p>
         </CardContent>
       </Card>
 

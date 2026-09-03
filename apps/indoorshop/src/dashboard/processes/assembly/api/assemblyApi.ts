@@ -26,6 +26,8 @@ import {
   fetchRealLidarSensors,
   fetchRealDetectedBlocks,
 } from './realScanData'
+import { loadRealBlockModel } from './realBlockModel'
+import type { LoadedBlockModel } from '../../../shared/features/bay-viewer/model/blockModel'
 
 /**
  * 조립 모니터링 데이터 API.
@@ -100,6 +102,22 @@ export async function fetchBayModel(locationId: string): Promise<BayModelInfo | 
   if (!assignment) return withLatency(null)
   const model = await loadBlockModel(assignment.projNo, assignment.blkNo)
   return { model, placement: assignment.placement }
+}
+
+/**
+ * 상세 카드의 **형상 미리보기 모델** — 목업은 정반에 배정된 블록 모델, 실측은 스캔 자산의
+ * CAD 메시로 편 모델(`loadRealBlockModel`)이다.
+ *
+ * `fetchBayModel` 과 갈라 두는 이유: 그쪽은 3D **베이 뷰어**가 형상을 정반 좌표에 놓을 때
+ * 쓰는 값이라, 좌표 프레임이 다른 실측 메시를 거기 얹으면 형상이 엉뚱한 자리에 선다.
+ * 미리보기는 제자리 회전만 하므로 프레임과 무관하다 — 그래서 실측도 같은 미리보기를
+ * 가질 수 있다(예전에는 이 통로가 없어 실측 카드만 미리보기가 빠져 있었다).
+ */
+export async function fetchBlockPreviewModel(
+  locationId: string
+): Promise<LoadedBlockModel | null> {
+  if (isRealLocation(locationId)) return loadRealBlockModel().catch(() => null)
+  return (await fetchBayModel(locationId))?.model ?? null
 }
 
 /** 문자열 기반 결정적 의사난수 (mock 집계가 렌더링마다 흔들리지 않도록) */

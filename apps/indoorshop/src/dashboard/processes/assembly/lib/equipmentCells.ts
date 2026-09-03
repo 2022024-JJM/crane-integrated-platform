@@ -37,6 +37,13 @@ export function meaningOfLink(link: LinkState): StatusMeaning {
   return 'warning'
 }
 
+/** 링크 3분류의 우리말 — 캐비닛 대표값 자리에 그대로 선다 */
+const LINK_TEXT: Record<LinkState, string> = {
+  online: '온라인',
+  offline: '오프라인',
+  error: '통신 오류',
+}
+
 /** 틸팅 모드 → 상태 의미 — 대기·틸팅중은 이상이 아니다 */
 function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning {
   if (mode === 'error') return 'error'
@@ -44,18 +51,29 @@ function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning {
   return 'done'
 }
 
-/** 신선도 문구 — 이상이면 수치 자리가 사유를 말한다 */
-function metricOf(link: LinkState, freshText: string): EquipmentCell['metric'] {
-  if (link === 'offline') return { text: '오프라인', meaning: 'warning' }
-  if (link === 'error') return { text: '통신 오류', meaning: 'error' }
-  return { text: freshText, meaning: 'done' }
+/**
+ * 신선도 문구 — 이상이면 수치 자리가 사유를 말한다.
+ *
+ * `at`(마지막 수신 시각)을 넘기면 셀이 경과를 **스스로 흘린다**(R19 실시간감) — 이 값이
+ * 없으면 화면은 멈춘 문구만 보여 주고, 멈춘 것인지 조용한 것인지 구분되지 않는다.
+ */
+function metricOf(link: LinkState, freshText: string, at?: number): EquipmentCell['metric'] {
+  if (link === 'offline') return { text: '오프라인', meaning: 'warning', at }
+  if (link === 'error') return { text: '통신 오류', meaning: 'error', at }
+  return { text: freshText, meaning: 'done', at }
 }
 
 /** 라이다-틸팅 페어 한 칸 */
 export function lidarPairCell(
   lidar: YardEquipment,
   snapshot: EquipmentStatusSnapshot,
-  options: { freshText: string; group?: string; detail?: (tilt: TiltModuleStatus | null) => ReactNode }
+  options: {
+    freshText: string
+    /** 마지막 스캔/하트비트 시각 — 주면 셀이 경과를 흘린다 */
+    at?: number
+    group?: string
+    detail?: (tilt: TiltModuleStatus | null) => ReactNode
+  }
 ): EquipmentCell {
   const tilt = pairOf(lidar)
   const tiltStatus = tilt ? tiltStatusIn(snapshot, tilt.id) : null
@@ -77,11 +95,21 @@ export function lidarPairCell(
     },
   ]
 
-  /* 틸팅이 대기가 아닐 때만 한 줄 — 대기 상태의 337칸에 각도를 적으면 그게 소음이다 */
-  const note =
-    tiltStatus && (tiltStatus.mode !== 'idle' || !tiltStatus.atTarget)
-      ? `${tiltStatus.mode === 'error' ? '틸팅 에러' : '틸팅중'} ${tiltStatus.panDeg}°/${tiltStatus.tiltDeg}°`
-      : undefined
+  /*
+   * R19 — 종류별 **대표값이 한눈에**. 틸팅의 대표값은 각도이므로 대기 상태에서도 적는다:
+   * 각도를 보려고 클릭해야 한다면 그 화면은 각도를 보여 주지 않는 것과 같다.
+   * 목표와 어긋나 있을 때만 목표를 덧붙이고, 모드가 대기가 아닐 때만 모드를 덧붙인다 —
+   * 늘 서는 줄이므로 덧붙는 말은 이상할 때만 붙어야 눈에 띈다.
+   */
+  const note = tiltStatus
+    ? [
+        `${tiltStatus.panDeg}°/${tiltStatus.tiltDeg}°`,
+        tiltStatus.atTarget ? '' : `→ ${tiltStatus.targetPanDeg}°/${tiltStatus.targetTiltDeg}°`,
+        tiltStatus.mode === 'error' ? '에러' : tiltStatus.mode === 'tilting' ? '틸팅중' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : undefined
 
   return {
     id: lidar.id,
@@ -89,7 +117,7 @@ export function lidarPairCell(
     label: lidar.id,
     group: options.group,
     lamps,
-    metric: metricOf(lidarLink, options.freshText),
+    metric: metricOf(lidarLink, options.freshText, options.at),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
     note,
     detail: options.detail?.(tiltStatus),
@@ -111,10 +139,13 @@ export function edgePcCell(
       value: status.collector,
     },
   ]
-  /* 임계를 넘은 자원만 한 줄로 — Zabbix Thresholds 방식(정상값에는 색도 글자도 쓰지 않는다) */
-  const hot: string[] = []
+  /*
+   * R19 — Edge PC 의 대표값은 **온도·CPU** 다. 이 둘은 임계 아래에서도 적는다(열이
+   * 올라가는 중인지 아닌지는 넘고 나서 알면 늦다). 임계를 넘은 나머지 자원은 뒤에
+   * 덧붙는다 — Zabbix Thresholds 방식으로, 정상값에는 색을 쓰지 않는다.
+   */
+  const hot: string[] = [`${status.temperatureC}°C`, `CPU ${status.cpuPercent}%`]
   if (status.diskPercent > 85) hot.push(`DISK ${status.diskPercent}%`)
-  if (status.cpuPercent > 85) hot.push(`CPU ${status.cpuPercent}%`)
   if (Math.abs(status.ntpOffsetMs) > 200) hot.push(`NTP ${status.ntpOffsetMs}ms`)
   if (status.collectorRestarts > 0) hot.push(`재시작 ${status.collectorRestarts}`)
 
@@ -123,9 +154,9 @@ export function edgePcCell(
     typeId: 'EDGE',
     label: equipment.id,
     lamps,
-    metric: metricOf(status.link, options.freshText),
+    metric: metricOf(status.link, options.freshText, status.lastHeartbeatAt),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
-    note: hot.length > 0 ? hot.join(' · ') : undefined,
+    note: hot.join(' · '),
     trend: options.trend,
     detail: options.detail?.(status),
   }
@@ -153,12 +184,47 @@ export function panelCell(input: {
     typeId: input.typeId,
     label: input.id,
     lamps,
+    /* R19 — 캐비닛의 대표값은 **업링크**다. 전원이 살아도 업링크가 끊기면 그 안의
+       설비가 통째로 말이 없어진다. 대수는 아래 줄로 내린다. */
     metric: {
-      text: `${input.memberOnline}/${input.memberTotal}`,
-      meaning: faulty > 0 ? 'warning' : 'done',
+      text: LINK_TEXT[input.uplink],
+      meaning: meaningOfLink(input.uplink),
     },
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
-    note: input.lidarPairs > 0 ? `라이다 ${input.lidarPairs}쌍` : undefined,
+    note: [`소속 ${input.memberOnline}/${input.memberTotal}`, input.lidarPairs > 0 ? `라이다 ${input.lidarPairs}쌍` : '']
+      .filter(Boolean)
+      .join(' · '),
     detail: input.detail,
+  }
+}
+
+/**
+ * 짝 잃은 틸팅 한 칸.
+ *
+ * 도면대로면 틸팅은 늘 라이다와 한 자리에 서므로 이 칸은 서지 않는다. 그래도 만드는
+ * 이유는, 페어가 깨진 데이터가 들어왔을 때 그 설비가 **조용히 사라지지 않게** 하려는
+ * 것이다 — 버드뷰는 짝 없는 틸팅을 제 점으로 찍으므로, 그리드에 칸이 없으면 점을 눌러도
+ * 따라올 셀이 없다(링킹이 끊긴다).
+ */
+export function tiltCell(
+  equipment: YardEquipment,
+  status: TiltModuleStatus | null,
+  options: { freshText: string; group?: string }
+): EquipmentCell {
+  const link = status?.link ?? 'offline'
+  const lamps: EquipmentLamp[] = [
+    { label: '링크', meaning: meaningOfLink(link), value: link },
+    { label: '틸팅', meaning: status ? meaningOfTiltMode(status.mode) : 'idle', value: status?.mode },
+    { label: '페어', meaning: 'warning', value: '없음' },
+  ]
+  return {
+    id: equipment.id,
+    typeId: 'TILT',
+    label: equipment.id,
+    group: options.group,
+    lamps,
+    metric: metricOf(link, options.freshText, status?.lastMovedAt),
+    severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
+    note: status ? `${status.panDeg}°/${status.tiltDeg}°` : undefined,
   }
 }

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
 import { GlobalSearch } from '../ui/GlobalSearch'
+import { todayString, woEntriesOf } from '../lib/woIndex'
 
 /*
  * 통합 검색 팔레트 — 화면 계약: 열림(단축키), 검색, 키보드 이동, 그리고 **이동 URL**.
@@ -59,25 +60,36 @@ describe('통합 검색 팔레트', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  it('호선 검색 → Enter → 통합실적 호선 조회로 이동하고 닫힌다', async () => {
+  it('호선 검색 → Enter → **총괄 지도**로 이동하고(그 호선 블록 전부) 닫힌다', async () => {
     setup()
     await openPalette()
     await userEvent.type(screen.getByRole('combobox'), '7004')
     await screen.findByText('7004호')
     await userEvent.keyboard('{Enter}')
-    expect(screen.getByTestId('location').textContent).toBe('/performance?vessel=7004')
+    /* 행선지는 결과 타입이 정한다 — 호선의 답은 실적 표가 아니라 자리들의 분포다 */
+    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004')
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('↓ 로 다음 결과(블록)로 옮겨 Enter — 블록 딥링크로 간다', async () => {
+  it('블록 결과 → Enter → **총괄 지도**로 이동해 그 블록의 마커를 세운다', async () => {
     setup()
     await openPalette()
     await userEvent.type(screen.getByRole('combobox'), '7004-222')
     await screen.findByText('7004-222')
-    /* 첫 줄은 호선(7004) — 한 칸 내리면 블록 7004-222 */
-    await userEvent.keyboard('{ArrowDown}{Enter}')
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004&block=222')
+  })
+
+  it('W/O 결과만 통합실적으로 간다 — 자리가 아니라 실적 축의 이름이라서', async () => {
+    setup()
+    await openPalette()
+    const wo = woEntriesOf(todayString())[0]
+    await userEvent.type(screen.getByRole('combobox'), wo.woNo)
+    await screen.findByText(wo.woNo)
+    /* 첫 줄이 W/O 가 아닐 수 있으니(숫자가 블록에도 걸린다) 그 줄을 직접 누른다 */
+    await userEvent.click(screen.getByText(wo.woNo))
     expect(screen.getByTestId('location').textContent).toBe(
-      '/performance?vessel=7004&block=222'
+      `/indoorshop/performance?vessel=${wo.projNo}&block=${wo.blockNo}`
     )
   })
 
@@ -90,7 +102,7 @@ describe('통합 검색 팔레트', () => {
     await userEvent.click(option)
     expect(screen.getByTestId('location').textContent).toBe(
       /* 값은 안정 슬러그·베이 조각 (F-30) — 도착 화면이 계약 파서로 3DS#1 로 되읽는다 */
-      '/zones/assembly?factory=asm-3ds&bay=1'
+      '/indoorshop/zones/assembly?factory=asm-3ds&bay=1'
     )
   })
 
@@ -112,6 +124,6 @@ describe('통합 검색 팔레트', () => {
     await screen.findByText('최근 검색')
     /* 최근 항목도 같은 키보드 문법 — Enter 로 바로 되돌아간다 */
     await userEvent.keyboard('{Enter}')
-    expect(screen.getByTestId('location').textContent).toBe('/performance?vessel=7004')
+    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004')
   })
 })

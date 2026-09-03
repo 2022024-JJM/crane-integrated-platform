@@ -64,8 +64,11 @@ function mockHistory(id: string, arrivalEvent: string, override?: number): Lidar
 /**
  * 하위 구성품 작업 상태 (mock) — 상위 진척률과 정합되게 생성:
  * 진척률이 높을수록 완료된 하위 구성품 비율이 높고, 경계 근처는 작업중(진척률 보유).
+ *
+ * **실측 베이도 이 함수를 쓴다**(`realScanData`) — 상태 분포 규칙이 갈리면 같은 진척률의
+ * 두 블록이 화면에서 다른 구성 상태를 보이고, 그러면 나란히 놓고 읽을 수 없다.
  */
-function mockSubAssemblies(
+export function mockSubAssemblies(
   parentId: string,
   children: { id: string; wstgCode: string; partCount: number }[],
   parentProgress: number

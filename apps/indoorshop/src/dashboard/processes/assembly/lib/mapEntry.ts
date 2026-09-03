@@ -16,7 +16,6 @@ import {
   type TiltModuleStatus,
   type YardEquipment,
 } from '../../../shared/entities/equipment'
-import type { MapEntryMarker } from '../../../shared/features/process-map-entry'
 import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { layoutDrawingOf } from '../../../shared/entities/equipment/layoutDrawings'
 import { ASSEMBLY_FACTORIES } from '../api/assemblyFactoryFixture'
@@ -116,6 +115,24 @@ export function toLidarSensor(e: YardEquipment): LidarSensor {
   }
 }
 
+/**
+ * 공장 요약 — '현황' 보드 왼쪽 목록의 접힌 줄(설비 **전 종류**).
+ *
+ * 페어를 이룬 틸팅은 세지 않는다 — 라이다가 그 한 몫을 대표한다(레퍼런스 §3.4).
+ * 그리드의 칸 수와 이 대수가 어긋나면 목록이 거짓말을 하게 된다.
+ */
+export function equipmentSummaryOf(factory: string): { total: number; issues: number } {
+  let total = 0
+  let issues = 0
+  for (const e of YARD_EQUIPMENT) {
+    if (e.factory !== factory) continue
+    if (e.typeId === 'TILT' && pairIdOf(e)) continue
+    total += 1
+    if (equipmentLinkOf(e) !== 'online') issues += 1
+  }
+  return { total, issues }
+}
+
 /** 공장 요약 — 카드 접힌 줄에 쓰는 대수·이상 집계 (실좌표 기반 대수) */
 export function lidarSummaryOf(factory: string): { total: number; issues: number } {
   let total = 0
@@ -140,15 +157,6 @@ export function lidarSummaryOf(factory: string): { total: number; issues: number
 export const ASSEMBLY_EQUIPMENT_TYPES = ['LIDAR', 'TILT', 'EDGE', 'PNL'] as const
 export type AssemblyEquipmentTypeId = (typeof ASSEMBLY_EQUIPMENT_TYPES)[number]
 
-/** 맵 마커로 세울 설비 한 대 — 종류를 실어 심볼·색을 레지스트리에서 찾는다 */
-export interface AssemblyEquipmentMarker extends MapEntryMarker {
-  typeId: string
-  bay: string
-  panelId: string
-  /** 링크 상태 3분류 — 종류가 달라도 마커 표현은 이 축 하나로 통일한다 */
-  state: LidarSensorStatus
-}
-
 /** 종류 표시색 — 설비 종류 레지스트리의 색을 단일 소스로 쓴다 */
 export function equipmentColorOf(typeId: string): string {
   return equipmentTypeOf(typeId)?.color ?? '#7a8794'
@@ -168,35 +176,6 @@ export function lidarColor(): string {
  */
 export function equipmentState(e: YardEquipment): LidarSensorStatus {
   return equipmentLinkOf(e)
-}
-
-/**
- * 주인공 공장들의 설비 마커.
- *
- * ⚠️ 틸팅은 페어 라이다에서 1.7m 떨어져 선다 — 기본으로 함께 켜면 지도에서 두 점이
- * 겹쳐 읽히지 않는다. 그래서 **종류를 인자로 받아** 화면이 켜고 끄게 한다(기본값은
- * 라이다·Edge PC·판넬). 틸팅 상태는 라이다 마커 상세에서 페어로 읽힌다.
- */
-export function assemblyEquipmentMarkers(
-  factoryNames: readonly string[],
-  typeIds: readonly string[]
-): AssemblyEquipmentMarker[] {
-  const names = new Set(factoryNames)
-  const wanted = new Set(typeIds)
-  return YARD_EQUIPMENT.filter((e) => wanted.has(e.typeId) && names.has(e.factory)).map(
-    (e): AssemblyEquipmentMarker => ({
-      id: e.id,
-      typeId: e.typeId,
-      factory: e.factory,
-      bay: e.bay,
-      panelId: e.panelId,
-      lat: e.lat,
-      lon: e.lon,
-      state: equipmentState(e),
-      title: `${e.id} · ${equipmentTypeOf(e.typeId)?.name ?? e.typeId} · ${e.factory}${e.bay ? ` ${e.bay}BAY` : ''}`,
-      ariaLabel: `${e.id} ${equipmentTypeOf(e.typeId)?.name ?? e.typeId}`,
-    })
-  )
 }
 
 /** 공장 하나의 종류별 대수 — 패널 머리줄의 인벤토리 요약 */
@@ -381,7 +360,7 @@ export interface CollectionRowSpec {
 /**
  * ②수집 현황의 줄과 나가는 문.
  *
- * 값 계산과 라우팅 대상을 한 곳에 둔다 — 화면이 `/zones/assembly/${id}` 를 손으로 짜면
+ * 값 계산과 라우팅 대상을 한 곳에 둔다 — 화면이 `/indoorshop/zones/assembly/${id}` 를 손으로 짜면
  * 공장 id 가 없는 경우(CAS/PAS)에 안 열리는 문이 생긴다.
  */
 export function collectionRowsOf(overview: {
@@ -408,5 +387,5 @@ export function collectionRowsOf(overview: {
 /** 수집 현황에서 공장 현황으로 나가는 경로 — 짝이 없는 공장(CAS/PAS)은 null */
 export function factoryStatusHref(mapKey: string): string | null {
   const id = assemblyFactoryIdOf(mapKey)
-  return id ? `/zones/assembly/${id}` : null
+  return id ? `/indoorshop/zones/assembly/${id}` : null
 }

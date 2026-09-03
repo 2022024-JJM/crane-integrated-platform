@@ -1,79 +1,35 @@
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
+import { Link } from 'react-router-dom'
 import {
   PerformanceLink,
   assyFocusLinkFor,
   isBlockInTransition,
-  matchedAssyNos,
-  searchRosterBlocks,
   sitesOfBlock,
   YARD_PROCESS_OF_ZONE,
   type RosterBlock,
 } from '../../../entities/vessel'
-import { Link } from 'react-router-dom'
 import { colorOfProcess } from '../../../entities/yard-parcels'
 import { worldToScreen, type Viewport, type YardView } from '../../yard-map'
+import type { MapFocus } from '../../global-search'
 import type { LocatedSite } from '../lib/blockSites'
-import type { YardBackdropBlock } from '../../../model/yardMapBackdrop'
 import { DraggableCard } from '../../../ui/atoms/DraggableCard'
-import { cn } from '../../../lib/utils'
-import { CloseIcon, PinIcon, SearchIcon } from '../../../ui/icons'
+import { CloseIcon, PinIcon } from '../../../ui/icons'
 
 /**
- * 총괄 지도 위 **블록 검색** — 블록(호선-블록)을 찾으면 지도가 그 자리로 날아간다.
+ * 총괄 지도가 **검색으로 고른 대상을 보여 주는 자리** — 카드와 마커.
  *
- * 색인은 backdrop 의 `blockIndex` 로더에서 **첫 검색 때** 한 번만 받는다(대시보드 초기
- * 무게 불변 — 야드 블록 669건은 지도 배경 청크와 같은 원천이다). 검색은 부분일치다:
- * `5510`(호선), `726`(블록), `5510-726`, 원문 ID 어느 쪽으로도 걸린다.
+ * 검색 자체는 여기 없다. 예전에는 이 파일이 입력창·자기 색인(로스터 + 야드 BTS)·자기
+ * 키보드·자기 줄 그리기를 전부 들고 있었고, 그래서 Cmd+K 팔레트와 같은 글자에 다른 답을
+ * 했다(야드 블록은 이쪽만 알았다). 지금 검색은 `shared/features/global-search` 하나이고
+ * 지도 위 입력창은 그 모듈의 임베드 변형(`SearchField`)이다 — 여기 남은 것은 **고른 뒤에
+ * 지도가 하는 일**뿐이다.
  *
- * 색인이 **둘**이다:
- *  - **재공 블록(로스터)** — 지금 만들어지고 있는 블록. 생애 단계를 알기 때문에 지도에
- *    단계별 자리(조립 중이면 ASSY 가 흩어진 여러 자리)를 찍고, 가공 중이면 위치 대신
- *    "추적 없음"을 말한다. 누르면 그 블록의 통합실적으로 나간다.
- *  - **야드 위치(BTS)** — 운반 실적이 남긴 좌표. 점 하나뿐이지만 실측이라, 로스터가
- *    모르는 블록도 여기서 찾힌다. 지금까지의 동작 그대로다.
- *
- * 재공 블록을 위에 세운다 — 사람이 "이 블록 어디 있어요"라고 물을 때 알고 싶은 것은
- * 대개 지금 어느 공정 어느 공장에 있느냐이지 마지막 운반 좌표가 아니다.
- *
- * ASSY_NO 검색은 **로스터 쪽만** 된다 — 야드 색인에는 ASSY 열이 없다(생기면 그때 는다).
+ * 무엇을 비추는지는 **주소**가 정한다(`MapFocus` — `?vessel=&block=&assy=`). 그래서
+ * 팔레트에서 고른 블록도 총괄로 이동해 같은 마커를 세우고, 새로고침·링크 공유에도
+ * 그 표시가 살아 있다.
  */
-
-/** 재공 블록 — 생애 단계를 알아 지도에 자리를 여럿 찍을 수 있다 */
-export interface RosterSearchHit {
-  kind: 'roster'
-  id: string
-  projNo: string
-  blkNo: string
-  block: RosterBlock
-  /** 질의에 걸린 ASSY — 결과 줄이 "왜 나왔나"를 말할 수 있게 */
-  matchedAssys: string[]
-}
-
-/** 야드 실측 위치 — 운반 실적이 남긴 점 하나 */
-export interface YardSearchHit {
-  kind: 'yard'
-  id: string
-  projNo: string
-  blkNo: string
-  yard: YardBackdropBlock
-}
-
-/** 검색 결과 한 건 — 재공 블록(로스터)이거나 야드 실측 위치다 */
-export type BlockSearchHit = RosterSearchHit | YardSearchHit
-
-/** 공정존 → 그 공정의 색. 지도가 공장 지번을 칠하는 색과 같은 함수에서 온다 */
-function zoneColor(zone: RosterBlock['zone']): string {
-  return colorOfProcess(YARD_PROCESS_OF_ZONE[zone])
-}
 
 const STAGE_KEY: Record<RosterBlock['zone'], InshopKey> = {
   fabrication: 'dashboard.map.blockStage.fabrication',
@@ -82,50 +38,9 @@ const STAGE_KEY: Record<RosterBlock['zone'], InshopKey> = {
   painting: 'dashboard.map.blockStage.painting',
 }
 
-function rosterHit(block: RosterBlock, query: string): RosterSearchHit {
-  return {
-    kind: 'roster',
-    id: `roster:${block.projNo}-${block.blockNo}`,
-    projNo: block.projNo,
-    blkNo: block.blockNo,
-    block,
-    matchedAssys: matchedAssyNos(block, query),
-  }
-}
-
-function yardHit(block: YardBackdropBlock): YardSearchHit {
-  return { kind: 'yard', id: `yard:${block.id}`, projNo: block.projNo, blkNo: block.blkNo, yard: block }
-}
-
-/** 자리 요약 한 줄 — `PBS 1BAY` · `PBS 1BAY 외 3곳` · 가공 중이면 추적 없음 */
-function siteSummaryOf(block: RosterBlock): { placeKey: InshopKey; place: string; count: number } | null {
-  const sites = sitesOfBlock(block)
-  if (sites.length === 0) return null
-  const first = sites[0]
-  const place = first.mapBay ? `${first.factory} ${first.mapBay}BAY` : first.factory
-  return sites.length === 1
-    ? { placeKey: 'dashboard.map.blockSiteOne', place, count: 0 }
-    : { placeKey: 'dashboard.map.blockSiteMore', place, count: sites.length - 1 }
-}
-
-/** 색인 걸러내기 — 순수 함수(테스트 대상). 질의 정규화: 공백·대소문자 무시, `-`↔`_` 동일 취급 */
-export function filterBlockIndex(
-  index: readonly YardBackdropBlock[],
-  query: string,
-  limit = 12
-): YardBackdropBlock[] {
-  const q = query.trim().toLowerCase().replace(/[-_\s]+/g, '_')
-  if (!q) return []
-  const hits: YardBackdropBlock[] = []
-  for (const block of index) {
-    const idNorm = block.id.toLowerCase().replace(/[-_\s]+/g, '_')
-    const pair = `${block.projNo}_${block.blkNo}`.toLowerCase()
-    if (idNorm.includes(q) || pair.includes(q)) {
-      hits.push(block)
-      if (hits.length >= limit) break
-    }
-  }
-  return hits
+/** 공정존 → 그 공정의 색. 지도가 공장 지번을 칠하는 색과 같은 함수에서 온다 */
+function zoneColor(zone: RosterBlock['zone']): string {
+  return colorOfProcess(YARD_PROCESS_OF_ZONE[zone])
 }
 
 /** `YYYYMMDDHHMMSS` → `MM-DD HH:mm` (형식이 아니면 원문 그대로) */
@@ -134,278 +49,93 @@ function formatUpdatedAt(raw: string | null): string | null {
   return `${raw.slice(4, 6)}-${raw.slice(6, 8)} ${raw.slice(8, 10)}:${raw.slice(10, 12)}`
 }
 
-export function BlockSearch({
-  loadIndex,
-  hit,
-  onPick,
-  onClear,
-  className,
-}: {
-  /** 색인 로더 — backdrop 이 아직이면 null (인풋은 비활성) */
-  loadIndex: (() => Promise<readonly YardBackdropBlock[]>) | null
-  /** 지금 지도에 표시 중인 블록 — 카드로 보여 주고, 닫으면 onClear */
-  hit: BlockSearchHit | null
-  onPick: (hit: BlockSearchHit) => void
-  onClear: () => void
-  className?: string
-}) {
+/**
+ * 지금 지도가 무엇을 비추고 있는지 말하는 카드 — 그리고 거기서 나가는 문.
+ *
+ * 호선을 고르면 그 호선 블록 전부가 대상이라 카드도 목록으로 선다(블록 하나면 종전처럼
+ * 단계·자리·실적을 편다). 닫으면 주소에서 표시만 걷힌다.
+ */
+export function MapFocusCard({ focus, onClear }: { focus: MapFocus; onClear: () => void }) {
   const { t } = useTranslation()
-  const [query, setQuery] = useState('')
-  const [index, setIndex] = useState<readonly YardBackdropBlock[] | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [open, setOpen] = useState(false)
-  /** 입력 폭 확장의 근거 — 포커스 중이거나 글자가 남아 있으면 편 채로 둔다 */
-  const [focused, setFocused] = useState(false)
-  const loadOnce = useRef(false)
 
-  /* 색인은 첫 입력/포커스 때 한 번만 — 그 전의 '/' 는 지금까지와 같은 무게다 */
-  const ensureIndex = () => {
-    if (loadOnce.current || !loadIndex) return
-    loadOnce.current = true
-    setLoading(true)
-    loadIndex()
-      .then(setIndex)
-      .catch(() => {
-        loadOnce.current = false // 실패하면 다음 시도에서 다시 부른다
-      })
-      .finally(() => setLoading(false))
-  }
-
-  /* 재공 블록(로스터)이 먼저, 야드 실측 위치가 뒤. 로스터는 정적이라 색인 로딩을
-     기다리지 않는다 — 입력하자마자 재공 블록이 뜬다. */
-  const rosterResults = useMemo(
-    () => (query ? searchRosterBlocks(query, 8).map((block) => rosterHit(block, query)) : []),
-    [query]
-  )
-  const yardResults = useMemo(
-    () => (index && query ? filterBlockIndex(index, query, 8).map(yardHit) : []),
-    [index, query]
-  )
-  const results = useMemo(
-    () => [...rosterResults, ...yardResults],
-    [rosterResults, yardResults]
-  )
-
-  /* 바깥 클릭으로 드롭다운을 접는다 */
-  const rootRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const close = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [])
-
-  const pick = (next: BlockSearchHit) => {
-    onPick(next)
-    setOpen(false)
-    setQuery('')
-  }
-
-  /*
-   * 존재감 (UX 감사 — "못 찾는 수준"):
-   *  - 쉬고 있을 때도 강조색 돋보기 + 블록 특화 라벨 칩이 "여기가 블록 검색"임을 말한다.
-   *    칩은 Cmd+K 팔레트의 그룹 칩과 같은 문법이라, 전역 팔레트(모든 것)와 이 검색
-   *    (블록 특화)의 관계가 중복이 아니라 분업으로 읽힌다.
-   *  - 포커스하면 입력이 옆으로 **펴진다** — 예시가 든 플레이스홀더가 다 보이고,
-   *    강조색 링이 지도 위 다른 카드들과 위계를 가른다. 글자가 남아 있으면 편 채로
-   *    둔다(입력 중 폭이 줄면 글자가 밀린다).
-   *  - 색은 전부 기존 토큰/맵 글라스 관용구다 — 새 팔레트 값을 만들지 않는다.
-   */
   return (
-    <div ref={rootRef} className={cn('pointer-events-auto relative', className)}>
-      <div
-        className={cn(
-          'flex h-10 items-center gap-2 rounded-inshop-lg border bg-[#0b0e12]/92 px-3 shadow-lg backdrop-blur-md',
-          'transition-colors',
-          focused
-            ? 'border-accent/60 ring-2 ring-accent/35'
-            : 'border-white/15 hover:border-white/28'
-        )}
-      >
-        <SearchIcon size={15} className="shrink-0 text-accent" />
-        <span className="shrink-0 rounded border border-white/16 px-1 py-px text-[10px] font-medium text-white/62">
-          {t('dashboard.map.blockSearchChip')}
-        </span>
-        <input
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setOpen(true)
-            ensureIndex()
-          }}
-          onFocus={() => {
-            setFocused(true)
-            if (query) setOpen(true)
-            ensureIndex()
-          }}
-          onBlur={() => setFocused(false)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && results.length > 0) pick(results[0])
-            if (event.key === 'Escape') setOpen(false)
-          }}
-          placeholder={t('dashboard.map.blockSearchPlaceholder')}
-          aria-label={t('dashboard.map.blockSearchLabel')}
-          data-expanded={focused || query.length > 0}
-          className={cn(
-            'bg-transparent text-inshop-xs text-white placeholder:text-white/45 focus:outline-none',
-            'transition-[width] duration-200',
-            focused || query ? 'w-64' : 'w-40'
-          )}
-        />
-      </div>
+    <DraggableCard
+      cardKey="block-search-hit"
+      className="mt-2 flex w-80 max-w-full items-start gap-2 rounded-inshop-lg border border-white/15 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md"
+    >
+      <PinIcon size={14} className="mt-0.5 shrink-0 text-accent" />
+      <div className="min-w-0 flex-1">
+        <p className="font-mono text-inshop-sm font-semibold text-white">{focus.label}</p>
 
-      {/* 결과 드롭다운 — 최대 12건. 색인이 크지 않아(수백 건) 클라이언트 필터로 충분하다 */}
-      {open && query && (
-        <DraggableCard
-          cardKey="block-search-results"
-          className="absolute left-0 top-11 z-20 w-80 overflow-hidden rounded-inshop-lg border border-white/15 bg-[#0b0e12]/95 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl"
-        >
-          {/* 몇 건인지 적는 줄 — 결과 목록의 손잡이를 겸한다(목록 자체는 스크롤이 제 일) */}
-          <div
-            data-drag-handle
-            className="flex items-center justify-between border-b border-white/8 px-2.5 py-1.5 text-2xs text-white/42"
-          >
-            <span>{t('dashboard.map.blockSearchLabel')}</span>
-            <span className="tabular-nums">{t('common.count', { count: results.length })}</span>
-          </div>
-        <ul className="scroll-thin max-h-72 overflow-y-auto p-1">
-          {loading && (
-            <li className="px-2.5 py-2 text-2xs text-white/45">{t('common.loading')}</li>
-          )}
-          {!loading && results.length === 0 && (
-            <li className="px-2.5 py-2 text-2xs text-white/45">
-              {t('dashboard.map.blockSearchEmpty')}
-            </li>
-          )}
-
-          {/* 재공 블록 — 생애 단계를 아는 쪽. 단계 배지와 자리 요약을 함께 낸다 */}
-          {rosterResults.length > 0 && (
-            <li className="px-2.5 pb-1 pt-1.5 text-2xs font-medium text-white/35">
-              {t('dashboard.map.blockSectionRoster')}
-            </li>
-          )}
-          {rosterResults.map((row) => {
-            const summary = siteSummaryOf(row.block)
-            return (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  onClick={() => pick(row)}
-                  className="flex w-full flex-col gap-0.5 rounded-inshop-md px-2.5 py-1.5 text-left transition-colors hover:bg-white/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                >
-                  <span className="flex w-full items-center gap-2">
-                    <span className="shrink-0 font-mono text-inshop-xs font-medium text-white">
-                      {row.projNo}-{row.blkNo}
-                    </span>
-                    {/*
-                     * 어느 공정에 있는가 — 지도·공정존 패널이 공정색으로 말하는 것을
-                     * 검색 결과에서만 무채색으로 버렸었다(감사 F-11). 같은 문법으로
-                     * 좌측 색 막대를 얹는다. 색은 상태가 아니라 **공정**을 뜻하므로
-                     * 상태 팔레트가 아니라 공정색(colorOfProcess)에서 온다.
-                     */}
-                    <span
-                      className="flex shrink-0 items-center gap-1 rounded border border-white/16 py-px pl-0.5 pr-1 text-[10px] text-white/70"
-                      style={{ boxShadow: `inset 2px 0 0 ${zoneColor(row.block.zone)}` }}
-                    >
-                      <span className="pl-1">{t(STAGE_KEY[row.block.zone])}</span>
-                    </span>
-                    {isBlockInTransition(row.block) && (
-                      <span
-                        title={t('dashboard.map.blockTransitionHint')}
-                        className="shrink-0 rounded border border-accent/45 px-1 py-px text-[10px] text-accent"
-                      >
-                        {t('dashboard.map.blockTransition')}
-                      </span>
-                    )}
-                  </span>
-                  <span className="w-full truncate text-2xs text-white/50">
-                    {summary
-                      ? t(summary.placeKey, { place: summary.place, count: summary.count })
-                      : t('dashboard.map.blockNoTracking')}
-                    {row.matchedAssys.length > 0 && (
-                      <span className="ml-1.5 font-mono text-white/38">
-                        {t('dashboard.map.blockMatchedAssy', {
-                          list: row.matchedAssys.slice(0, 2).join(', '),
-                        })}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-
-          {/* 야드 실측 위치 — 로스터가 모르는 블록도 여기서 찾힌다 */}
-          {yardResults.length > 0 && (
-            <li className="px-2.5 pb-1 pt-1.5 text-2xs font-medium text-white/35">
-              {t('dashboard.map.blockSectionYard')}
-            </li>
-          )}
-          {yardResults.map((row) => (
-            <li key={row.id}>
-              <button
-                type="button"
-                onClick={() => pick(row)}
-                className="flex w-full items-center gap-2 rounded-inshop-md px-2.5 py-1.5 text-left transition-colors hover:bg-white/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-              >
-                <span className="shrink-0 font-mono text-inshop-xs font-medium text-white">
-                  {row.projNo}-{row.blkNo}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-2xs text-white/50">
-                  {row.yard.lotLabel ?? t('dashboard.map.blockSearchNoLot')}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        </DraggableCard>
-      )}
-
-      {/* 고른 블록 카드 — 무엇을 보고 있는지와 나가는 문. 재공 블록은 단계·자리·실적까지,
-          야드 위치는 지금까지처럼 좌표 맥락만 (아는 것만 말한다). */}
-      {hit && (
-        <DraggableCard
-          cardKey="block-search-hit"
-          className="mt-2 flex w-80 max-w-full items-start gap-2 rounded-inshop-lg border border-white/15 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md"
-        >
-          <PinIcon size={14} className="mt-0.5 shrink-0 text-accent" />
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-inshop-sm font-semibold text-white">
-              {hit.projNo}-{hit.blkNo}
+        {focus.kind === 'vessel' ? (
+          <VesselFocusBody focus={focus} />
+        ) : focus.yard ? (
+          <>
+            <p className="mt-0.5 truncate text-2xs text-white/60">
+              {focus.yard.lotLabel ?? t('dashboard.map.blockSearchNoLot')}
             </p>
-
-            {hit.kind === 'roster' ? (
-              <BlockHitBody hit={hit} />
-            ) : (
-              <>
-                <p className="mt-0.5 truncate text-2xs text-white/60">
-                  {hit.yard.lotLabel ?? t('dashboard.map.blockSearchNoLot')}
-                </p>
-                {formatUpdatedAt(hit.yard.updatedAt) && (
-                  <p className="mt-0.5 text-2xs text-white/40">
-                    {t('dashboard.map.blockSearchUpdatedAt', {
-                      time: formatUpdatedAt(hit.yard.updatedAt),
-                    })}
-                  </p>
-                )}
-              </>
+            {formatUpdatedAt(focus.yard.updatedAt) && (
+              <p className="mt-0.5 text-2xs text-white/40">
+                {t('dashboard.map.blockSearchUpdatedAt', {
+                  time: formatUpdatedAt(focus.yard.updatedAt),
+                })}
+              </p>
             )}
-          </div>
-          <button
-            type="button"
-            onClick={onClear}
-            aria-label={t('dashboard.map.close')}
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-inshop-md text-white/45 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          >
-            <CloseIcon size={13} />
-          </button>
-        </DraggableCard>
-      )}
-    </div>
+          </>
+        ) : (
+          focus.blocks[0] && <BlockFocusBody block={focus.blocks[0]} />
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={t('dashboard.map.close')}
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-inshop-md text-white/45 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+      >
+        <CloseIcon size={13} />
+      </button>
+    </DraggableCard>
   )
 }
 
+/**
+ * 호선 전체 카드 — "이 호선이 지금 어디까지 왔나".
+ *
+ * 블록 하나하나의 자리를 다 적으면 카드가 지도를 덮는다. 대신 **단계별 몇 블록**인지로
+ * 접고, 줄을 누르면 그 블록으로 좁혀 들어간다(마커는 이미 전부 서 있다).
+ */
+function VesselFocusBody({ focus }: { focus: MapFocus }) {
+  const { t } = useTranslation()
+  const byZone = new Map<RosterBlock['zone'], RosterBlock[]>()
+  for (const block of focus.blocks) {
+    const list = byZone.get(block.zone)
+    if (list) list.push(block)
+    else byZone.set(block.zone, [block])
+  }
+
+  return (
+    <>
+      <p className="mt-0.5 text-2xs text-white/50">
+        {t('dashboard.map.vesselBlockCount', { count: focus.blocks.length })}
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {[...byZone.entries()].map(([zone, blocks]) => (
+          <li key={zone} className="flex items-baseline gap-1.5 text-2xs text-white/62">
+            <span
+              className="shrink-0 rounded border border-white/16 py-px pl-1.5 pr-1 text-[10px] text-white/70"
+              style={{ boxShadow: `inset 2px 0 0 ${zoneColor(zone)}` }}
+            >
+              {t(STAGE_KEY[zone])}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-mono text-white/55">
+              {blocks.map((block) => block.blockNo).join(' · ')}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
 
 /**
  * 재공 블록 카드 본문 — 단계, 자리, 그리고 실적으로 나가는 문.
@@ -415,9 +145,9 @@ export function BlockSearch({
  * 그 구분이 화면을 믿을 수 있게 만든다. 위치가 없어도 절점 실적은 있으므로 실적 링크는
  * 그대로 선다.
  */
-function BlockHitBody({ hit }: { hit: RosterSearchHit }) {
+function BlockFocusBody({ block }: { block: RosterBlock }) {
   const { t } = useTranslation()
-  const sites = sitesOfBlock(hit.block)
+  const sites = sitesOfBlock(block)
   const assyTotal = sites.reduce((sum, site) => sum + site.assys.length, 0)
 
   return (
@@ -427,11 +157,11 @@ function BlockHitBody({ hit }: { hit: RosterSearchHit }) {
             남는 것이 이 카드라서, 색 문법이 여기서 끊기면 지적된 자리가 그대로 남는다 */}
         <span
           className="rounded border border-white/16 py-px pl-1.5 pr-1 text-[10px] text-white/70"
-          style={{ boxShadow: `inset 2px 0 0 ${zoneColor(hit.block.zone)}` }}
+          style={{ boxShadow: `inset 2px 0 0 ${zoneColor(block.zone)}` }}
         >
-          {t(STAGE_KEY[hit.block.zone])}
+          {t(STAGE_KEY[block.zone])}
         </span>
-        {isBlockInTransition(hit.block) && (
+        {isBlockInTransition(block) && (
           <span
             title={t('dashboard.map.blockTransitionHint')}
             className="rounded border border-accent/45 px-1 py-px text-[10px] text-accent"
@@ -508,8 +238,8 @@ function BlockHitBody({ hit }: { hit: RosterSearchHit }) {
 
       <div className="mt-2">
         <PerformanceLink
-          projNo={hit.projNo}
-          blockNo={hit.blkNo}
+          projNo={block.projNo}
+          blockNo={block.blockNo}
           tone="onDark"
           className="py-1"
         />
@@ -548,17 +278,25 @@ function screenPoint(
  * (`pointer-events-none`) 마커 알맹이만 받는다 — 지도 드래그를 마커가 막지 않게.
  *
  * 자리가 없는 블록(가공 중)은 아무것도 그리지 않는다. 그 사정은 검색 카드가 말한다.
+ *
+ * 자리마다 **제 이름과 제 링크**를 달고 온다 — 호선을 고르면 여러 블록의 자리가 한꺼번에
+ * 서므로(생애주기 마커), 마커 하나가 어느 블록의 것인지 이름으로 말해야 한다.
  */
+/** 지도에 서는 자리 하나 — 어느 블록의 것인지(이름·링크)를 자기가 안다 */
+export interface FocusPin extends LocatedSite {
+  /** 마커에 적는 이름 (`7004-222`) */
+  label: string
+  /** 이 자리를 눌렀을 때 가는 곳 (그 블록의 통합실적) */
+  to: string
+}
+
 export const BlockSitePins = forwardRef<
   BlockSearchPinHandle,
   {
-    /** 무엇의 자리인가 — 마커 라벨과 실적 링크의 주인 */
-    label: string
-    to: string
-    sites: readonly LocatedSite[]
+    sites: readonly FocusPin[]
     initialCamera: { view: YardView; viewport: Viewport } | null
   }
->(function BlockSitePins({ label, to, sites, initialCamera }, ref) {
+>(function BlockSitePins({ sites, initialCamera }, ref) {
   const { t } = useTranslation()
   const [camera, setCamera] = useState(initialCamera)
   useImperativeHandle(
@@ -580,13 +318,13 @@ export const BlockSitePins = forwardRef<
         return (
           <Link
             key={site.id}
-            to={assyLink ?? to}
+            to={assyLink ?? site.to}
             title={
               site.assys.length > 0
                 ? t('dashboard.map.blockAssyPerfHint', {
                     list: site.assys.map((a) => a.assyNo).join(', '),
                   })
-                : t('dashboard.map.blockSitePinHint', { block: label })
+                : t('dashboard.map.blockSitePinHint', { block: site.label })
             }
             className="pointer-events-auto absolute -translate-x-1/2 -translate-y-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             style={{ left: point.sx, top: point.sy }}
@@ -596,7 +334,7 @@ export const BlockSitePins = forwardRef<
                 className="max-w-40 truncate rounded-inshop-md border bg-[#0b0e12]/92 px-1.5 py-0.5 font-mono text-2xs font-semibold text-white shadow-lg"
                 style={{ borderColor: `${color}99`, boxShadow: `0 0 14px ${color}55` }}
               >
-                {label}
+                {site.label}
                 {site.mapBay && <span className="ml-1 text-white/55">{site.mapBay}BAY</span>}
               </span>
               {/* ASSY 이름 — 여러 자리로 흩어진 블록에서 "여기 있는 게 무엇인지"를 말한다.

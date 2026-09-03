@@ -8,7 +8,7 @@
  * 그 목록을 읽어 각자의 표현(정반 배치·진척·절점 실적)만 얹는다.
  */
 
-/** 공정존 — `ProcessModule.id` 와 같은 키 (`/zones/{zone}` 경로의 그 이름) */
+/** 공정존 — `ProcessModule.id` 와 같은 키 (`/indoorshop/zones/{zone}` 경로의 그 이름) */
 export type ProcessZone = 'fabrication' | 'assembly' | 'outfitting' | 'painting'
 
 /**
@@ -36,7 +36,7 @@ export interface Vessel {
  * 조립 정반 배치 — 이 블록이 어느 공장 어느 정반에 놓여 있는가.
  *
  * `bayId` 는 조립 mock 의 정반 id 규약(`{factoryId}-b{bayNo}`)과 같은 값이다 —
- * 대시보드 베이 카드 ↔ 통합실적 블록을 잇는 연결 키이자 `/zones/assembly/{factoryId}/{bayId}`
+ * 대시보드 베이 카드 ↔ 통합실적 블록을 잇는 연결 키이자 `/indoorshop/zones/assembly/{factoryId}/{bayId}`
  * 딥링크의 재료다. 두 값을 따로 두는 것은 문자열에서 잘라 쓰지 않기 위함이다.
  */
 export interface AssemblyBerth {
@@ -80,13 +80,39 @@ export interface AssyPlacement {
   mapBay?: string
   /** 조립 정반이면 그 정반 (정반 상세 딥링크의 재료) */
   berth?: { factoryId: string; bayId: string }
+  /**
+   * **부모 ASSY_NO — 이 목록을 평평한 명단이 아니라 BOM 트리로 만드는 한 줄** (R34).
+   *
+   * 소조는 중조에, 중조는 대조에 들어간다(YDEH040M 부모추적, PRDT_PART_NO→CMPT_PART_NO).
+   * 대조 루트는 null 이다. 예전에는 로스터가 급(G/M/S)만 적고 귀속을 적지 않아, 통합실적
+   * 생성기가 같은 블록의 계층을 **해시로 따로 합성**했다 — 지도가 아는 구성과 실적 카드가
+   * 그리는 트리가 서로 다른 근거에서 나오는 상태였다. 이제 귀속도 여기 적히고, 생성기는
+   * 로스터에 트리가 있으면 **그대로 쓴다**(없는 블록만 합성 폴백).
+   */
+  parentAssyNo: string | null
+  /**
+   * **실측 스캔이 이 덩이를 정합했다** — 인식 사실(신원)이지 실적이 아니다.
+   *
+   * 로스터는 "무엇이 어디에 있나"를 적고 진척은 통합실적이 낸다(연계 매트릭스 원칙).
+   * 정합 여부와 표면 정합 오차는 그 사이에 있는 값이라 여기 둔다 — 스캔이 관측한
+   * **신원 확인 결과**이고, 통합실적은 이 사실 위에 판별 수치를 얹는다. 원천은 실측
+   * 데이터셋(`public/real-scan/manifest.json`)이고, shared 는 processes 를 import 할 수
+   * 없으므로 값을 옮겨 적되 **조립 쪽 parity 테스트가 데이터셋과 대조해 잠근다.**
+   */
+  scan?: AssyScanFact
+}
+
+/** 실측 스캔이 이 ASSY 를 정합한 결과 — 데이터셋 원천, parity 테스트가 잠근다 */
+export interface AssyScanFact {
+  /** 표면 정합 오차(cm) — manifest `blocks[].fitErrorCm` 그대로 */
+  fitErrorCm: number
 }
 
 /**
  * 블록 1개 — 이 우주의 원자.
  *
  * `factory` 는 **지금 이 블록이 서 있는 공장의 지도 공장명**이다. 야드 지도 공장 키와
- * 같은 체계라서 그대로 `/?factory=` · `/zones/{zone}?shop=` 딥링크에 실린다 —
+ * 같은 체계라서 그대로 `/?factory=` · `/indoorshop/zones/{zone}?shop=` 딥링크에 실린다 —
  * 새 이름 체계를 만들지 않는다(딥링크 계약).
  */
 export interface RosterBlock {
@@ -105,6 +131,15 @@ export interface RosterBlock {
    * 정반(`berth`)이 있는 블록은 그 정반 번호와 같아야 한다(불변식 테스트가 지킨다).
    */
   mapBay?: string
+  /**
+   * BTS(블록 추적)가 찍은 야드 좌표 — **도장 재실의 정본**.
+   *
+   * 도장공장에는 베이명을 적어 주는 사람이 없다. BTS 는 반입 지점의 좌표만 남기므로,
+   * 화면이 그 점을 베이 기하에 떨어뜨려(point-in-bay) 어느 칸인지 유도한다
+   * (`shared/features/dashboard-map/lib/bayOccupancy`). 손으로 붙인 베이명을 정본으로
+   * 삼으면 좌표와 이름이 언젠가 어긋나고, 어느 쪽이 사실인지 화면만 보고는 모른다.
+   */
+  bts?: { lat: number; lon: number }
   /**
    * ASSY 단위 소재 — **있으면 이쪽이 지도 위치의 정본**이다(블록 자리 대신 이 자리들을
    * 찍는다). 조립 중인 블록이 여러 공장에 흩어져 있는 상태를 이걸로 말한다.

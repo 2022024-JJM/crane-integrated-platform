@@ -19,7 +19,7 @@ import { fetchLocations } from './assemblyApi'
  * | `locationCode` | `Location.workCntr` | 정반코드(`JIG_CODE`) — 있을 때만 |
  * | 상태 | `Location.status` | 기존 enum 의 번역 키로 (`LOCATION_STATUS_META`) |
  * | `yardLotCodes` | `Location.yardLots` | 선택적 — 없으면 지도 강조 없음 |
- * | `detailPath` | 기존 라우트 | `/zones/assembly/{factoryId}/{locationId}` |
+ * | `detailPath` | 기존 라우트 | `/indoorshop/zones/assembly/{factoryId}/{locationId}` |
  *
  * 변환은 **조립 안에서만** 한다 — `shared` 는 조립의 `Location` 을 모른다(PRD §8).
  */
@@ -41,12 +41,12 @@ export const ASSEMBLY_FACTORY_ID_BY_MAP_KEY: Readonly<Record<string, string>> =
 
 /** 조립 공장 현황(공장 전체 정반) 경로 */
 function facilityPathOf(factoryId: string): string {
-  return `/zones/assembly/${factoryId}`
+  return `/indoorshop/zones/assembly/${factoryId}`
 }
 
 /** 조립 정반현황 경로 — 기존 라우트를 그대로 쓴다(새 상세 화면을 만들지 않는다) */
 function detailPathOf(factoryId: string, locationId: string): string {
-  return `/zones/assembly/${factoryId}/${locationId}`
+  return `/indoorshop/zones/assembly/${factoryId}/${locationId}`
 }
 
 /** 조립 `Location` 한 건 → 공통 작업 위치 */

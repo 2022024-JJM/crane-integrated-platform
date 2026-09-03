@@ -64,7 +64,7 @@ DROP_FILES = (
 )
 
 # 이 앱이 소유하는 라우트 접두 — <Link>·navigate·module.ts 경로에 /indoorshop 을 붙인다
-OWNED_PREFIXES = ("/zones", "/logistics", "/docs", "/settings")
+OWNED_PREFIXES = ("/zones", "/logistics", "/docs", "/settings", "/performance")
 
 
 def read(p: Path) -> str:
@@ -261,16 +261,28 @@ def rewrite_links() -> None:
         if s2 != s:
             write(f, s2)
 
-    # module.ts 의 nav.path·routes[].path — findProcessModuleByPath 가 location.pathname 과
-    # 비교하므로 여기도 접두가 있어야 ZonePlaceholderPage 가 자기 모듈을 찾는다.
-    # (InshopRoot 가 useRoutes 에 넘길 때 접두를 다시 떼어 상대 경로로 만든다.)
+    # 소유 경로를 **문자열 리터럴로 조립하는 곳 전부** — 링크 속성만 바꾸면
+    # zoneEntryFactory·searchIndex·workspaceTabUrl 처럼 경로를 만들어 돌려주는
+    # 헬퍼가 빠져, 그 링크가 /indoorshop 밖으로 나가 role 가드에 튕긴다.
+    # 테스트 리터럴도 같은 규칙을 타야 기대값이 구현과 같은 말을 쓴다.
+    # '/performance' 는 하위 경로가 라우트에 없다 — '/performance/blocks' 같은 **API 하위
+    # 경로**와 이름이 겹치므로, slash 가 따라오는 형태는 라우트가 아니라고 본다.
+    lit = re.compile(r"(['\"`])/((?:zones|logistics|docs|settings)(?=[/?'\"`$])|performance(?=[?'\"`$]))")
+    n_lit = 0
+    for f in ts_files(DST):
+        s = read(f)
+        s2 = lit.sub(r"\1/indoorshop/\2", s)
+        if s2 != s:
+            write(f, s2); n_lit += 1
+    print(f"    리터럴 {n_lit} files")
+
+    # module.ts 의 nav.path·routes[].path 는 위 리터럴 패스가 함께 접두한다 —
+    # findProcessModuleByPath 가 location.pathname 과 비교하므로 접두가 있어야 하고,
+    # InshopRoot 가 useRoutes 에 넘길 때 접두를 다시 떼어 상대 경로로 만든다.
     mods = list((DASH / "processes").glob("*/module.ts"))
     assert mods, "processes/*/module.ts 가 없음"
     for f in mods:
-        s = read(f)
-        s2 = re.sub(r"(path: ')(/[^']*)(?=')", repl, s)
-        assert s2 != s, f"{f.name}: 라우트 경로를 찾지 못함"
-        write(f, s2)
+        assert "path: '/indoorshop/" in read(f), f"{f.name}: 라우트 접두 누락 — 리터럴 패스 규칙 재검토"
     print(f"    {hits} paths")
 
 
@@ -455,25 +467,66 @@ export function renderWithProviders(""", 1)
 
 
 def patch_test_paths() -> None:
-    step("파일 실물을 읽는 테스트 2건: 이식 후 경로·선택자 보정")
-    # statusPalette — cwd 기준 CSS 경로와, 스코프 변환된 블록 선택자
+    step("파일 실물을 읽는 테스트들: 이식 후 경로·선택자 보정 (일반 규칙)")
+    import posixpath
+
+    tests = [f for f in ts_files(DST) if f.name.endswith((".test.ts", ".test.tsx"))]
+    n_pub = n_src = 0
+    for f in tests:
+        s = read(f); o = s
+        # (1) public 에셋 상대경로 — 에셋은 apps/shell/public 에 있다. `../` 개수는 파일마다
+        #     다르므로 각 파일 위치에서 다시 계산한다. resolve()·new URL() 두 형태 모두 잡힌다.
+        frm = posixpath.dirname(f.relative_to(ROOT).as_posix())
+
+        def repl(m):
+            target = f"apps/shell/public/{m.group(2)}"
+            return posixpath.relpath(target, frm)
+
+        s2 = re.sub(r"((?:\.\./)+)public/(real-scan|models)", repl, s)
+        if s2 != s:
+            s = s2; n_pub += 1
+        # (2) cwd(apps/indoorshop) 기준으로 소스 실물을 읽는 계약 테스트 — 뿌리가 한 단계 깊어졌다
+        s2 = s.replace("readFileSync('src/shared/", "readFileSync('src/dashboard/shared/")
+        if s2 != s:
+            s = s2; n_src += 1
+        if s != o:
+            write(f, s)
+
+    # (3) 트리 전체를 보는 계약 테스트(__tests__)의 경로 문자열 상수
+    for f in (DASH / "__tests__").glob("*.test.ts"):
+        s = read(f)
+        s = s.replace("'src/shared/", "'src/dashboard/shared/").replace("'src/processes/", "'src/dashboard/processes/")
+        s = s.replace("const SRC = 'src'", "const SRC = 'src/dashboard'")
+        write(f, s)
+
+    # (3b) 테스트의 **정규식 리터럴** 속 소유 경로 — 문자열 패스((1)의 리터럴 접두)가
+    #      /^\/zones\/…/ 형태는 못 건드려서, 빌더 출력(접두됨)과 기대(비접두)가 갈린다.
+    rex = re.compile(r"(\^\\/)(zones|logistics|docs|settings|performance)")
+    for f in tests:
+        s = read(f)
+        s2 = rex.sub(r"^\\/indoorshop\\/\2", s)
+        if s2 != s:
+            write(f, s2)
+
+    # (3c) href 를 '/' 로 쪼개 세그먼트 번호로 읽는 테스트 — 접두로 인덱스가 한 칸 민다.
+    #      기대 리터럴과의 혼선을 피해, 쪼개기 직전에 접두만 벗긴다.
+    p = DASH / "processes/assembly/api/__tests__/pcdLanding.test.ts"
+    replace_once(p, "href.split('/')[4]", "href.replace('/indoorshop', '').split('/')[4]")
+    p = DASH / "processes/outfitting/api/__tests__/workspaceScene.test.ts"
+    replace_once(p, "const [, , , factoryId, tail] = href.split('/')",
+                 "const [, , , factoryId, tail] = href.replace('/indoorshop', '').split('/')")
+
+    # (4) statusPalette — 스코프 변환된 블록 선택자 (경로는 위 (2)가 처리)
     p = DASH / "shared/ui/__tests__/statusPalette.test.ts"
-    replace_once(p, "readFileSync('src/shared/styles/globals.css', 'utf8')",
-                 "readFileSync('src/dashboard/shared/styles/globals.css', 'utf8')")
     replace_once(p, "CSS.indexOf(block === 'root' ? ':root {' : '.dark {')",
                  "CSS.indexOf(block === 'root' ? '.inshop-root {' : '.dark .inshop-root,')")
-    # bayScenePointCloud — public 에셋이 셸로 옮겨졌다
-    p = DASH / "processes/outfitting/api/__tests__/bayScenePointCloud.test.ts"
-    replace_once(p, "resolve(__dirname, '../../../../../public/models')",
-                 "resolve(__dirname, '../../../../../../../shell/public/models')")
-    # noDirectClock — 스캔 뿌리와 예외 경로가 이식 위치(src/dashboard)를 따른다
-    p = DASH / "__tests__/noDirectClock.test.ts"
-    replace_once(p, "const SRC = 'src'", "const SRC = 'src/dashboard'")
-    replace_once(p, "['src/shared/lib/now.ts',", "['src/dashboard/shared/lib/now.ts',")
-    # sensorNameContract — 실측 에셋이 셸 public 에 있다
-    p = DASH / "__tests__/sensorNameContract.test.ts"
-    replace_once(p, "new URL(`../../public/real-scan/${path}`, import.meta.url)",
-                 "new URL(`../../../../shell/public/real-scan/${path}`, import.meta.url)")
+
+    # (5) 설정 테스트 — 원본 ThemeProvider 는 버리는 파일이라 셸 것으로 감싼다 (useTheme 브리지와 같은 원리)
+    p = DASH / "shared/pages/__tests__/SettingsMatchTolerance.test.tsx"
+    if p.exists():
+        replace_once(p, "await import('../../lib/theme/ThemeProvider')",
+                     "await import('@crane/core/lib/theme-context')")
+    print(f"    public 경로 {n_pub} files, src 실물 {n_src} files")
 
 
 def patch_fixed_viewport() -> None:
@@ -498,18 +551,13 @@ def patch_block_list_scroller() -> None:
     p = DASH / "processes/assembly/ui/pages/AssemblyWorkspace.tsx"
     replace_once(
         p,
-        '"xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">',
-        '"xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
+        '"flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">',
+        '"flex min-w-0 flex-col gap-3 xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
     )
     replace_once(
         p,
-        '"xl:min-h-0 xl:flex-1 xl:overflow-y-auto">',
-        '"xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
-    )
-    replace_once(
-        p,
-        '"grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:pr-1">',
-        '"grid gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto xl:p-1.5">',
+        '<div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">',
+        '<div className="xl:-m-1.5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:p-1.5">',
     )
 
 

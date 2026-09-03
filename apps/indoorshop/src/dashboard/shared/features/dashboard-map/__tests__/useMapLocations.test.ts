@@ -63,7 +63,7 @@ describe('locationsOf — 조회가 끝났을 때만 목록', () => {
         id: 'asm-pbs-b3',
         parentFacilityKey: 'PBS',
         displayName: '3번 베이',
-        detailPath: '/zones/assembly/asm-pbs/asm-pbs-b3',
+        detailPath: '/indoorshop/zones/assembly/asm-pbs/asm-pbs-b3',
       },
     ]
     expect(locationsOf({ kind: 'ready', facilityPath: null, locations })).toBe(locations)

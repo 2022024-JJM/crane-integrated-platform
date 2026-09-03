@@ -30,7 +30,7 @@ export interface ProcessMapLocation {
   statusLabelKey?: InshopKey
   /** 이 위치가 차지하는 야드 지번 코드. 없으면 지도에서 강조할 자리가 없다 */
   yardLotCodes?: string[]
-  /** 이 위치의 상세 화면 경로 (조립: `/zones/assembly/{factoryId}/{locationId}`) */
+  /** 이 위치의 상세 화면 경로 (조립: `/indoorshop/zones/assembly/{factoryId}/{locationId}`) */
   detailPath: string
 }
 

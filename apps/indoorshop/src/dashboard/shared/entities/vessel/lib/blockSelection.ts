@@ -9,7 +9,7 @@ import type { RosterBlock } from '../model/types'
  *  1. **딥링크** `?vessel=7004&block=222,310` — 링크를 누르는 쪽이 무엇을 보고 있었는지
  *     URL 에 적는다. 북마크·새 탭·새로고침에도 살아 있는 **계약**이며, 야드·대시보드가
  *     이미 쓰는 `?shop=`·`?factory=` 문법과 같은 자리에 붙는다.
- *  2. **직전 선택(sticky)** — 사이드바로 그냥 `/performance` 를 눌러 들어오는 것처럼
+ *  2. **직전 선택(sticky)** — 사이드바로 그냥 `/indoorshop/performance` 를 눌러 들어오는 것처럼
  *     링크에 조건을 실을 수 없는 경로를 위해, 마지막으로 조회한 선택을 한 칸 기억한다.
  *
  * 우선순위는 **URL > 직전 선택 > 없음**. URL 이 있으면 그것이 사용자의 명시적 의사다.
@@ -140,7 +140,7 @@ export function assyFocusLinkFor(assyNos: readonly string[]): string | null {
 
 /** 통합실적 딥링크 — 대시보드·공정 화면이 "이 블록의 실적 보기"로 나가는 자리 */
 export function performanceLinkFor(selection: BlockSelection): string {
-  return `/performance?${selectionQuery(selection)}`
+  return `/indoorshop/performance?${selectionQuery(selection)}`
 }
 
 /** 로스터 블록 하나를 그대로 선택으로 (공정 화면 → 통합실적 링크의 재료) */

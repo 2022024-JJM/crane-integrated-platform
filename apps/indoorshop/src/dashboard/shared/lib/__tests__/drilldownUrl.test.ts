@@ -184,13 +184,13 @@ describe('writeDrilldown — 자기 키만 건드린다', () => {
 describe('drilldownSearch · drilldownHref', () => {
   it('남는 것이 없으면 `?` 를 달지 않는다', () => {
     expect(drilldownSearch('?factory=GBS', YARD_DRILLDOWN)).toBe('')
-    expect(drilldownHref('/zones/assembly', '?factory=GBS', YARD_DRILLDOWN)).toBe('/zones/assembly')
+    expect(drilldownHref('/indoorshop/zones/assembly', '?factory=GBS', YARD_DRILLDOWN)).toBe('/indoorshop/zones/assembly')
   })
 
   it('경로 + 쿼리를 그대로 링크에 넣을 수 있다 — 공장은 슬러그, 베이는 조각만', () => {
     expect(
-      drilldownHref('/zones/assembly', '', { process: null, factory: 'GBS', bay: 'GBS#3BAY' }),
-    ).toBe('/zones/assembly?factory=asm-gbs&bay=3BAY')
+      drilldownHref('/indoorshop/zones/assembly', '', { process: null, factory: 'GBS', bay: 'GBS#3BAY' }),
+    ).toBe('/indoorshop/zones/assembly?factory=asm-gbs&bay=3BAY')
   })
 })
 

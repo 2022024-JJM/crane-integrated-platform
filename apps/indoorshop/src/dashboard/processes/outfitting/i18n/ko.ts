@@ -30,54 +30,26 @@ export const outfittingKo = {
       error: '오류',
     },
     mapEntry: {
-      issueCount: '점검 필요 {{count}}대',
-      deviceCount: '설비 {{count}}대',
-      modeLabel: '보기 전환',
-      modeEquipment: '① 설비 상태',
-      modeCollection: '② 수집 현황',
       collection: {
         detected: '수집 블록',
         detectedValue: '{{count}}/{{total}}개 블록',
         doneToday: '작업 완료',
         doneTodayValue: '{{count}}건',
         lastScan: '최근 수집',
-        openFactory: '공장 현황 보기',
       },
       title: '선행의장 공정 현황',
-      subtitle: '의장 공장 지번 위 블록 작업 현황 — 공장을 고르고 베이를 눌러 블록을 봅니다.',
-      equipmentLink: '설비 상태',
-      listLink: '공장 목록',
-      factoriesTitle: '의장 공장',
-      viewAll: '의장 전체 보기',
-      viewAllHint: '의장 공장 전체가 보이는 자리로 돌아갑니다',
-      viewOnMap: '지도에서 이 공장 보기',
-      expand: '펴기',
-      collapse: '접기',
       blockDetail: '블록 상세',
-      markerTypesLabel: '지도에 세울 설비 종류',
-      tiltToggleHint: '틸팅은 페어 라이다에서 1.7m 떨어져 섭니다 — 켜면 두 점이 겹쳐 보입니다.',
-      markerNote: '위치·대수는 도면 유도 실데이터 · 상태는 mock',
       deviceCard: {
-        back: '설비 선택 해제',
-        place: '{{factory}} · {{bay}}BAY — 위치는 설비 엔티티 실좌표',
-        hostPanel: '소속 판넬',
       },
       bay: {
-        equipmentTitle: '이 베이의 설비',
-        noEquipment: '이 베이에 등록된 설비가 없습니다.',
-        blocksTitle: '이 베이의 블록',
         noBlocks: '이 베이에 배정된 블록이 없습니다.',
       },
       viewer: {
-        open: '베이 3D 뷰 (모의)',
         title: '{{factory}} · {{bay}}',
         hint: '조립 베이 뷰와 같은 문법의 모의 장면입니다',
         close: '3D 뷰 닫기',
         mockChip: '모의 데이터 — 의장 실측 점군·실좌표 연동 전',
-        rowHint: '이 베이의 3D 뷰 열기',
       },
-      hint3d: '공장 → 베이 → 블록 순으로 누르기 · Shift 또는 오른쪽 버튼 드래그로 회전',
-      mockNote: '블록 상태·진척은 실연동 전 모의 데이터입니다',
     },
     factoryList: {
       title: '선행의장 공정 — 공장 목록',
@@ -111,7 +83,6 @@ export const outfittingKo = {
       kindLabel: '종류',
       bayLabel: '베이',
       tilt: {
-        paired: '틸팅 {{count}}대 포함 (페어 한 칸)',
         allIdle: '전부 대기',
         note: '틸팅 {{count}}대는 라이다 {{lidar}}대와 1:1 페어입니다 — 펼치면 한 대씩 모드·각도가 보입니다.',
         mode: '모드',
@@ -165,7 +136,19 @@ export const outfittingKo = {
       placeholderNote:
         '일부 공장은 설비 도면 이관이 아직 닿지 않아 구역 골격 위에 자리만 잡아 둔 목업입니다 — 설비 엔티티에 실좌표 행이 들어오면 같은 화면이 실데이터로 채워집니다. 상태·Heartbeat 는 실연동 전 모의값입니다.',
     },
+    /*
+     * 진행중 판별 (W8-4) — 판별 렌즈의 요약 구획.
+     * 아래 블록 목록(전체)과 역할이 다르다: 여기는 '지금 무엇이 돌고 있나' 하나에 답한다.
+     */
+    judging: {
+      title: '진행중 판별',
+      basis: '블록 단위 판별 % (계층 없음)',
+      empty: '이 공장에서 진행 중인 판별이 없습니다 — 완료·대기 블록은 아래 목록에 있습니다.',
+      note: '줄을 누르면 그 블록의 통합실적으로 갑니다. 수치는 통합실적 의장 카드와 같은 원천입니다.',
+    },
     workspace: {
+      toEquipmentConsole: '전체 설비 관제로',
+      toWorkspace: '워크스페이스로',
       backToFactories: '공장 목록',
       notFound: '해당 공장을 찾을 수 없습니다.',
       unknownLocation: '존재하지 않는 베이입니다',
@@ -178,7 +161,7 @@ export const outfittingKo = {
       /* ── 워크스페이스 축 탭 (W7-10 — 조립과 같은 문법) ── */
       tabAria: '화면 축 선택',
       tabViewer: '3D 뷰어',
-      tabSensors: '센서 상태',
+      tabStatus: '현황',
       tabBlocks: '블록·실적',
       factoryTitle: '{{name}} 베이 현황',
       bayTitle: '{{name}} 라이다 판별 현황',
@@ -186,7 +169,6 @@ export const outfittingKo = {
       factoryFusionHint: '베이 라벨 클릭 = 선택·강조 · 선택한 베이 다시 클릭 = 이동 · Esc = 해제',
       registeredCloud: '정합 점군',
       registeredCloudHint: '블록 라벨을 클릭하면 그 블록만 남습니다',
-      sensorTabHint: '베이별 라이다 상태 — 상세 조작은 3D 뷰어 탭에서.',
       sensorBayCount: '{{count}}대',
       blocksTabHint: '줄을 누르면 그 블록의 통합실적으로 갑니다.',
     },

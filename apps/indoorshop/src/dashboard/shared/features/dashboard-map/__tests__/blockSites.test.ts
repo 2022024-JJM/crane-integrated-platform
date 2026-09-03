@@ -11,7 +11,7 @@ const site = (over: Partial<Parameters<typeof locateSite>[1]> = {}) => ({
   factory: 'PBS',
   mapBay: '1',
   assys: [],
-  path: '/zones/assembly',
+  path: '/indoorshop/zones/assembly',
   ...over,
 })
 

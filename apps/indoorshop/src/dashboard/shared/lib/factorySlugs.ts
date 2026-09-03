@@ -6,7 +6,7 @@
  * 전부 죽는다(도장 factoryRoutes 주석이 경고하던 그 사고). 값을 안정 슬러그로 바꾼다.
  *
  * 슬러그는 **각 공정 모듈이 이미 라우트 경로에 쓰는 id 를 그대로** 쓴다 —
- * `/zones/assembly/asm-gbs`(조립) · `ofit-pos1`(의장) · `pnt-1dock`(도장). 경로 조각과
+ * `/indoorshop/zones/assembly/asm-gbs`(조립) · `ofit-pos1`(의장) · `pnt-1dock`(도장). 경로 조각과
  * 쿼리 값이 같은 어휘라야 주소를 읽는 사람이 한 체계만 배우면 된다. 그 id 가 없는
  * 가공·야드 공장은 여기서 같은 문법(fab-*)으로 채번한다.
  *

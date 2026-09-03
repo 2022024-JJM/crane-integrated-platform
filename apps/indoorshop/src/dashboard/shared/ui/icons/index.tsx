@@ -352,6 +352,22 @@ export function GlobeIcon({ className, size }: IconProps) {
  * 지도 위의 한 자리를 짚는 핀 — 목록의 줄과 지도의 칸이 같은 곳을 가리킬 때 쓴다.
  * 지도 캔버스가 그 자리에 세우는 패(대 + 지번코드)의 목록 쪽 짝이다.
  */
+export function HelpIcon({ className, size }: IconProps) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" width={size ?? 16} height={size ?? 16} className={className}>
+      <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M6.2 6.2a1.8 1.8 0 1 1 2.6 1.7c-.5.3-.8.6-.8 1.2v.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="11.4" r="0.9" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function PinIcon({ className, size }: IconProps) {
   return (
     <Icon className={className} size={size}>

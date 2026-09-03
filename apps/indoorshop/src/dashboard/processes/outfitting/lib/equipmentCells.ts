@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { StatusMeaning } from '../../../shared/ui/statusPalette'
 import { worstMeaning, type EquipmentCell, type EquipmentLamp } from '../../../shared/features/equipment-grid'
-import type { TiltModuleStatus } from '../../../shared/entities/equipment'
+import type { EdgePcStatus, TiltModuleStatus } from '../../../shared/entities/equipment'
 import type { OutfittingDevice } from '../model/equipment'
 
 /*
@@ -29,17 +29,25 @@ function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning {
 }
 
 /** 이상이면 수치 자리가 사유를 말한다 — "왜"를 툴팁이 아니라 셀 안에 */
-function metricOf(device: OutfittingDevice, freshText: string): EquipmentCell['metric'] {
+function metricOf(
+  device: OutfittingDevice,
+  freshText: string,
+  at?: number
+): EquipmentCell['metric'] {
   if (device.status === 'offline') return { text: '오프라인', meaning: 'warning' }
   if (device.status === 'error') return { text: '통신 오류', meaning: 'error' }
-  return { text: freshText, meaning: 'done' }
+  return { text: freshText, meaning: 'done', at }
 }
 
 export interface OutfittingCellOptions {
   /** 신선도 문구 — 화면이 시계를 들고 만든다(이 함수는 시각을 모른다) */
   freshTextOf: (device: OutfittingDevice) => string
+  /** 이 값을 마지막으로 받은 시각(epoch) — 주면 셀이 경과를 스스로 흘린다(R19) */
+  freshAtOf?: (device: OutfittingDevice) => number | undefined
   /** 이 틸팅의 상세 상태 — 페어 램프·부기의 재료 */
   tiltOf: (device: OutfittingDevice) => TiltModuleStatus | null
+  /** Edge PC 상태 — 대표 특성값(온도·CPU)의 재료 (R19) */
+  edgeOf?: (device: OutfittingDevice) => EdgePcStatus | null
   detailOf?: (device: OutfittingDevice, tilt: TiltModuleStatus | null) => ReactNode
 }
 
@@ -85,13 +93,17 @@ export function outfittingCells(
         label: device.id,
         group: device.bay,
         lamps,
-        metric: metricOf(device, options.freshTextOf(device)),
+        metric: metricOf(device, options.freshTextOf(device), options.freshAtOf?.(device)),
         severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
-        /* 대기가 아닐 때만 한 줄 — 클릭 없이 보이되, 대기 337칸에 각도를 적지 않는다 */
-        note:
-          tilt && (tilt.mode !== 'idle' || !tilt.atTarget)
-            ? `${tilt.mode === 'error' ? '틸팅 에러' : '틸팅중'} ${tilt.panDeg}°/${tilt.tiltDeg}°`
-            : undefined,
+        /*
+         * R19 — **틸팅의 대표 특성값은 현재 각도**다. 클릭 없이 첫눈에 보여야 하므로 늘
+         * 적고, 목표에 못 갔을 때만 목표를 덧붙인다(도달했으면 목표는 현재와 같은 말이다).
+         */
+        note: tilt
+          ? `${tilt.panDeg}°/${tilt.tiltDeg}°${
+              tilt.atTarget ? '' : ` → ${tilt.targetPanDeg}°/${tilt.targetTiltDeg}°`
+            }${tilt.mode === 'error' ? ' 에러' : tilt.mode === 'tilting' ? ' 틸팅중' : ''}`
+          : undefined,
         detail: options.detailOf?.(device, tilt),
       })
       continue
@@ -103,14 +115,17 @@ export function outfittingCells(
       { label: '수집', meaning: device.kind === 'EDGE' ? STATUS_MEANING[device.status] : 'idle' },
       { label: '이상', meaning: device.status === 'online' ? 'done' : 'error' },
     ]
+    const edge = device.kind === 'EDGE' ? (options.edgeOf?.(device) ?? null) : null
     cells.push({
       id: device.id,
       typeId: device.kind,
       label: device.id,
       group: device.bay,
       lamps,
-      metric: metricOf(device, options.freshTextOf(device)),
+      metric: metricOf(device, options.freshTextOf(device), options.freshAtOf?.(device)),
       severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
+      /* R19 — Edge PC 의 대표 특성값은 온도·CPU 다(자원이 곧 그 판의 형편이다) */
+      note: edge ? `${edge.temperatureC}°C · CPU ${edge.cpuPercent}%` : undefined,
       detail: options.detailOf?.(device, null),
     })
   }

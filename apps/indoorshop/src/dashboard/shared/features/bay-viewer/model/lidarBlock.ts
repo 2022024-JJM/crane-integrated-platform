@@ -79,6 +79,20 @@ export function formatDetectionId(block: LidarBlockInfo): string {
   return block.assySerNo ? `${block.blkNo}-${block.assySerNo}` : `BLK ${block.blkNo}`
 }
 
+/**
+ * 선택 승계 (W8-3) — `?block={projNo}-{blkNo}` 로 도착한 화면이 그 블록의 첫 detection 을
+ * 고른다. 블록 단위 정반은 정확히 그 한 건이고, 중조 분해 정반은 같은 블록의 여러 조각
+ * 중 첫 번째다(승계 단위가 블록이라 조각까지는 특정하지 않는다). 없으면 null — 승계는
+ * 조용히 접히고 화면은 전체 뷰로 선다.
+ */
+export function detectionForBlockKey(
+  blocks: readonly LidarBlockInfo[],
+  key: string | null | undefined
+): LidarBlockInfo | null {
+  if (!key) return null
+  return blocks.find((block) => `${block.projNo}-${block.blkNo}` === key) ?? null
+}
+
 /** 송선기호(WSTG_CODE) 4자리를 현공정/다음공정으로 분해 */
 export function parseWstgCode(wstgCode: string): { current: string; next: string } {
   return { current: wstgCode.slice(0, 2), next: wstgCode.slice(2, 4) }

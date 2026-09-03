@@ -39,6 +39,7 @@ vi.mock('../../../../shared/features/bay-viewer/api/loadBlockModel', () => ({
 
 const { fetchOutfittingFactoryScene, fetchOutfittingLocations, fetchOutfittingBayDetail } =
   await import('../outfittingWorkspace')
+const { listBlocks, pcdHrefOfOutfittingBlock } = await import('../../../../shared/entities/vessel')
 const { OUTFITTING_FACTORIES } = await import('../outfittingFactoryFixture')
 const { mockBlocks } = await import('../mockOutfittingData')
 const { areasByBay, blocksOfBay } = await import('../../lib/bayBlocks')
@@ -101,6 +102,30 @@ describe('의장 공장 장면 — 전 베이가 한 장면에 선다', () => {
         expect(detection.subAssemblies).toBeUndefined()
       }
     }
+  })
+
+  it('통합실적 PCD 링크의 착지 베이가 전부 실존하고, 그 장면에 그 블록이 선다 (W8-3)', async () => {
+    let checked = 0
+    for (const block of listBlocks()) {
+      const href = pcdHrefOfOutfittingBlock(block.projNo, block.blockNo)
+      if (!href) continue
+      const [, , , factoryId, tail] = href.replace('/indoorshop', '').split('/')
+      const locationId = tail.split('?')[0]
+      const locations = await fetchOutfittingLocations(factoryId)
+      expect(
+        locations.some((location) => location.id === locationId),
+        `${block.projNo}-${block.blockNo} → ${locationId}`
+      ).toBe(true)
+      /* 착지 장면의 인식이 곧 그 블록이다 — 선택 승계(?block=)가 실제로 잡힌다 */
+      const detail = await fetchOutfittingBayDetail(factoryId, locationId)
+      expect(detail, locationId).not.toBeNull()
+      expect(
+        detail!.blocks.some((entry) => entry.projNo === block.projNo && entry.blkNo === block.blockNo),
+        `${block.projNo}-${block.blockNo} 가 ${locationId} 장면에 없다`
+      ).toBe(true)
+      checked += 1
+    }
+    expect(checked).toBeGreaterThan(0)
   })
 
   it('베이 상세 — 장면과 로스터 블록이 함께 오고, location 은 목록의 것과 같다', async () => {

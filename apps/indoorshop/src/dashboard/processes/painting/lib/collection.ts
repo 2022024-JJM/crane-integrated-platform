@@ -255,5 +255,5 @@ export function paintingCollectionRows(
 /** 수집 현황에서 공장 현황으로 나가는 경로 — 짝이 없는 공장은 null */
 export function paintingFactoryStatusHref(factory: string): string | null {
   const id = paintingFactoryIdOf(factory)
-  return id ? `/zones/painting/${id}` : null
+  return id ? `/indoorshop/zones/painting/${id}` : null
 }

@@ -3,7 +3,8 @@
  *
  * 핵심 원칙 — **%는 수집 절점(節點) 기반으로만 만든다** (사용자 확정 D3).
  * 임의 합성 산식(계획·실적을 지어내는 롤업)은 두지 않는다. 각 공정의 절점:
- *   가공 = S1 반입 → S2 불출 → S3 절단 → S4 사상 → S5 팔레트편성 (1차 구현)
+ *   가공 = S1 강재 입고 → S2 1차 선별 → S3 2차 선별 → S4 강재 불출 → S5 전처리 →
+ *          S6 절단 → S7 사상 → S8 팔레트 편성 → S9 변성 → S10 최종 불출 (**정본 10절점**)
  *   조립 = A1 소조 → A2 중조 → A3 대조 → A4 검사장(G9G9) — 절점 % 는 **절점 귀속
  *          W/O 완료 n/m** 만 쓴다(L3 ✅ 항목). A4 통과의 근거는 BTS 검사장 이동
  *          (= 조립종료 절점, dataflow 근거)이다. '완성도(형상 %)'는 OT 자동수집
@@ -12,10 +13,52 @@
  *   의장 = **절점 없음** (설치 인식 단건 수집뿐 — 화면에 그대로 명시한다)
  */
 
-/** 가공권역 5단계 절점 */
-export type FabStageId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5'
+/**
+ * 가공권역 **정본 10절점** (사용자 확정 — R33).
+ *
+ * 흐름 그대로다: 강재 입고 → 1차 선별 → 2차 선별 → **강재 불출** → 전처리 → 절단 →
+ * 사상 → 팔레트(편성) → 변성 → 최종 불출.
+ *
+ * 이전 구현은 이 축의 축약본(5절점 — 반입·불출·절단·사상·팔레트)이었다. 축약의 근거는
+ * "선별·전처리·최종 불출은 원천에 완료 근거가 없다" 였는데, **절점 축과 원천 확정 여부는
+ * 다른 문제**다 — 축은 공정이 정하고, 원천은 뒤따라 붙는다. 그래서 축을 정본으로 세우고,
+ * 근거가 아직 없는 절점은 화면이 '원천 확정 대기' 로 그 사정을 적는다(`stagePendingSource`).
+ *
+ * ⚠️ **S4 는 '강재 불출'** 이다. 정의서의 `전처리(불출)` 표기와 달리 판별 근거 필드가
+ * `강재불출.불출일자` 이고, 실제 흐름에서도 불출이 전처리(S5)보다 앞선다 — 둘은 별개 절점이다.
+ */
+export type FabStageId =
+  | 'S1'
+  | 'S2'
+  | 'S3'
+  | 'S4'
+  | 'S5'
+  | 'S6'
+  | 'S7'
+  | 'S8'
+  | 'S9'
+  | 'S10'
 
-export const FAB_STAGES: readonly FabStageId[] = ['S1', 'S2', 'S3', 'S4', 'S5']
+export const FAB_STAGES: readonly FabStageId[] = [
+  'S1',
+  'S2',
+  'S3',
+  'S4',
+  'S5',
+  'S6',
+  'S7',
+  'S8',
+  'S9',
+  'S10',
+]
+
+/**
+ * 원천(레거시 컬럼)이 아직 확정되지 않은 절점 — 화면이 '원천 확정 대기' 배지를 세운다.
+ *
+ * 절점 축은 정본이지만 판별 근거 필드가 확정된 것은 다섯(S1·S4·S6·S7·S8)뿐이다. 이 사실을
+ * 감추면 화면이 "다 수집되고 있다" 는 거짓말을 한다 — 그래서 타입 옆에 함께 둔다.
+ */
+export const FAB_STAGES_PENDING_SOURCE: readonly FabStageId[] = ['S2', 'S3', 'S5', 'S9', 'S10']
 
 /**
  * 조립은 절점(소조/중조/대조)이 아니라 **블록-ASSY 레벨**로 관리한다 (사용자 확정).
@@ -212,7 +255,7 @@ export interface StageAggregate {
 
 export interface FabricationSummary {
   stages: StageAggregate[]
-  /** 가공권역 종합 = 5단계 중량 실적률의 평균 (정의서 §8.5 산식 그대로) */
+  /** 가공권역 종합 = **10절점** 중량 실적률의 평균 (정의서 §8.5 산식 그대로) */
   overallWeightRate: number
 }
 
@@ -229,7 +272,7 @@ export interface ProcessNode {
   delayed: boolean
 }
 
-/** 블록 헤더의 절점 진척 — 가공(S1~S5) 절점에서만 파생. 조립은 ASSY·W/O 요약으로 따로 선다 */
+/** 블록 헤더의 절점 진척 — 가공(S1~S10) 절점에서만 파생. 조립 절점은 `AssyWoNode` 로 따로 선다 */
 export interface BlockNodeProgress {
   nodes: ProcessNode[]
   /** 실적% = 가공권역 종합 중량가중 (절점 실적의 종합) */
@@ -241,6 +284,15 @@ export interface BlockNodeProgress {
 
 /** 조립 W/O 의 실작업 종류 — ASSY 아래 1:N 으로 붙는다 (취부/용접/사상) */
 export type AssyWoKind = 'fit' | 'weld' | 'grind'
+
+/**
+ * 조립 **절점 축** — 작업 순서 취부 → 용접 → 사상 (사용자 확정 R33).
+ *
+ * ASSY 계층(대조/중조/소조)은 절점이 아니지만, ASSY 아래 W/O 의 **작업 순서**는 절점이다.
+ * 블록 헤더는 이 축으로 "블록이 어느 작업 단계까지 왔는가"를 한 줄로 요약한다.
+ * (트리 카드는 여전히 ASSY 축이다 — 절점은 헤더 요약, 트리는 본문.)
+ */
+export const ASSY_WO_ORDER: readonly AssyWoKind[] = ['fit', 'weld', 'grind']
 
 export type AssyWoStatus = 'done' | 'inProgress' | 'notStarted'
 
@@ -388,6 +440,49 @@ export interface AssemblySummary {
   inspectionDate: string | null
 }
 
+/**
+ * 절점 스트립 한 칸의 상태 — **가공·조립·도장이 같은 문법을 쓴다**.
+ * (가공만 여기에 `delayed` 가 얹힌다 — 절점별 계획일이 있는 권역은 가공뿐이다.)
+ */
+export type NodeStatus = 'passed' | 'inProgress' | 'notDue'
+
+/**
+ * 조립 절점 한 칸 — **블록 전체 W/O 를 작업 종류로 롤업**한 요약 축 (R33).
+ *
+ * 판정 규칙(계약):
+ *  - 분모(`totalWos`)는 그 블록의 모든 ASSY 에 붙은 그 종류의 W/O 전부다.
+ *  - **통과 = 그 종류 W/O 전량 완료.** 임의 임계 없음(가공 절점과 같은 규칙).
+ *  - **진행중 = 미통과 + 완료·착수 W/O 가 하나라도 있음.**
+ *  - 그 밖은 미도래.
+ *  - 계획 W/O 가 0 인 종류는 **그 블록에 없는 절점**이라 스트립에서 빠진다 —
+ *    도장 스텝의 존재 기반 규칙과 같다(없는 절점을 분모에 세우면 영영 못 채운다).
+ *
+ * 절점 간 **단조성은 강제하지 않는다.** 블록 안의 ASSY 들이 서로 다른 단계에 있는 것이
+ * 정상이라(어떤 ASSY 는 용접 중, 다른 ASSY 는 아직 취부) 롤업 축에서 뒤 절점이 앞 절점보다
+ * 앞설 수 있다. 그 사실을 감추는 것이 더 큰 거짓말이다.
+ */
+export interface AssyWoNode {
+  kind: AssyWoKind
+  status: NodeStatus
+  /** 완료 W/O 수 — 분자 */
+  doneWos: number
+  /** 붙은 W/O 수 — 분모 (0 이면 이 절점은 목록에 담기지 않는다) */
+  totalWos: number
+}
+
+/**
+ * 도장 절점 한 칸 — 존재 기반 스텝(`PaintingStepState`)을 **가공·조립과 같은 스트립
+ * 문법**으로 옮긴 것 (R33 정렬). 스텝 정의 자체는 바꾸지 않는다 — 표기만 맞춘다.
+ */
+export interface PaintingNode {
+  step: PaintingStepId
+  status: NodeStatus
+  /** 완료 계획 행 — 분자 */
+  doneRows: number
+  /** 계획 행 — 분모 */
+  plannedRows: number
+}
+
 /** 블록 헤더 카드 */
 export interface BlockSummary {
   projNo: string
@@ -409,8 +504,15 @@ export interface BlockSummary {
   unmatchedCount: number
   /** 검사장 이동(BTS, 조립종료) 여부 — 블록 레벨 사실 */
   inspectionMoved: boolean
-  /** 도장 스텝 완료 수(0~3) — 헤더의 도장 요약 줄이 쓴다 */
+  /**
+   * 조립 절점(취부→용접→사상) 롤업 — 헤더의 조립 스트립이 그린다.
+   * **존재 기반**이라 계획 W/O 가 없는 종류는 빠진다(길이가 곧 분모다).
+   */
+  asmNodes: AssyWoNode[]
+  /** 도장 스텝 완료 수 — 분모는 `pntNodes.length`(존재 기반)다. 3 으로 고정되지 않는다 */
   pntDone: number
+  /** 도장 절점(S/P→T/UP→FINAL) — 헤더의 도장 스트립이 그린다 (존재 기반) */
+  pntNodes: PaintingNode[]
   /** 도장 국면(BTS 물류 기준) — 헤더 칩 */
   pntPhase: PaintingPhase
   /** HH:mm — 최근 수신 시각 */
@@ -429,12 +531,14 @@ export type MgmtNoType = 'MAT' | 'DWG' | 'PC' | 'PLT' | 'ASSY' | 'WO'
 export type AsmEventKind = 'asmJudged' | 'woStart' | 'woDone' | 'btsIn' | 'btsOut'
 
 /**
- * 수집 시각 — S1·S4·S5 는 원천에 **일자만 존재**하므로 time 이 없다.
- * (L3 판정 — 시각 표기는 계약 위반이라 타입으로 막는다)
+ * 수집 시각 — **원천에 시각이 없는 절점은 일자만** 낸다 (L3 판정. 시각 표기는 계약
+ * 위반이라 타입으로 막는다). 정본 10절점에서 시각이 있는 절점은 **S4 강재 불출**
+ * (`강재불출.불출일+시각`)과 **S6 절단**(`절단완료일시`) 둘뿐이고, 나머지 여덟은 일자만이다.
+ * 절점 재편(R33) 전의 'S1·S4·S5 는 일자만' 규칙과 같은 원칙을 새 축으로 옮긴 것이다.
  */
 export interface EventInstant {
   date: string
-  /** HH:mm — S2·S3 만 존재 */
+  /** HH:mm — S4(강재 불출)·S6(절단) 만 존재 */
   time?: string
 }
 
@@ -445,7 +549,7 @@ export type PntEventKind = 'stepStart' | 'stepDone'
 export interface CollectionEvent {
   id: string
   blockNo: string
-  /** 가공은 절점(S1~S5), 조립은 'ASM', 도장은 'PNT' — 하위 단계 표기는 쓰지 않는다 */
+  /** 가공은 절점(S1~S10), 조립은 'ASM', 도장은 'PNT' — 하위 단계 표기는 쓰지 않는다 */
   stage: FabStageId | AsmGridStage | PntGridStage
   /** 조립·도장 행에만 — 이벤트 종류 라벨 (단계 셀에 병기) */
   kind?: AsmEventKind | PntEventKind

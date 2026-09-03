@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import type { Location } from '../../../shared/entities/location/model/types'
@@ -23,6 +23,8 @@ import {
 import { latestScan, type LatestScan } from '../../../shared/features/bay-viewer/lib/freshness'
 import { useAxisNow } from '../../../shared/lib/useBaseDate'
 import { cn } from '../../../shared/lib/utils'
+import { byThenKey } from '../../../shared/lib/stableOrder'
+import { useFrozenOrder } from '../../../shared/lib/useFrozenOrder'
 
 /*
  * 공장 뷰 상세 카드 (PRD FR-8) + 정반 선택 목록 · 필터 · 범례 (FR-9).
@@ -83,13 +85,21 @@ const SENSOR_ORDER: Record<LidarSensorStatus, number> = {
   online: 3,
 }
 
-function compareSensors(a: LidarSensor, b: LidarSensor): number {
-  const byStatus = SENSOR_ORDER[a.status] - SENSOR_ORDER[b.status]
-  if (byStatus !== 0) return byStatus
-  const aHeartbeat = a.lastHeartbeatAt ?? ''
-  const bHeartbeat = b.lastHeartbeatAt ?? ''
-  return bHeartbeat.localeCompare(aHeartbeat)
-}
+/*
+ * 상태 → 최근 하트비트 → **ID**.
+ *
+ * 마지막 ID 단계가 요점이다: 앞의 둘이 같은 줄들(흔한 경우다 — 같은 상태·같은 분 단위
+ * 하트비트)은 동률이라, 그것을 남겨 두면 그 구간의 순서가 폴링 틱마다 입력 배열을 따라
+ * 흔들린다. 그때 누르려던 줄이 손 밑에서 빠져나간다.
+ */
+const compareSensors = byThenKey(
+  (a: LidarSensor, b: LidarSensor): number => {
+    const byStatus = SENSOR_ORDER[a.status] - SENSOR_ORDER[b.status]
+    if (byStatus !== 0) return byStatus
+    return (b.lastHeartbeatAt ?? '').localeCompare(a.lastHeartbeatAt ?? '')
+  },
+  (sensor) => sensor.id
+)
 
 interface BaySummary {
   id: string
@@ -163,6 +173,22 @@ export function BayDetailPanel({
   const visible = summaries.filter((s) => s.passesFilter)
   const hiddenCount = summaries.length - visible.length
   const selected = selectedBayId ? summaries.find((s) => s.id === selectedBayId) : undefined
+
+  /*
+   * 정렬한 센서 목록 — **손이 얹혀 있는 동안에는 자리를 얼린다** (실시간 재정렬 고정).
+   * 값(상태·하트비트)은 계속 갱신되고 순서만 멈춘다: 읽는 숫자가 낡지 않으면서
+   * 누르려던 줄이 손 밑에서 빠져나가지 않는다.
+   */
+  const sensorId = useCallback((sensor: LidarSensor) => sensor.id, [])
+  const abnormalSorted = useMemo(
+    () => (selected?.sensors ?? []).filter((s) => s.status !== 'online').sort(compareSensors),
+    [selected]
+  )
+  const allSorted = useMemo(() => [...(selected?.sensors ?? [])].sort(compareSensors), [selected])
+  const abnormalOrder = useFrozenOrder(abnormalSorted, sensorId)
+  const allSensorOrder = useFrozenOrder(allSorted, sensorId)
+  const abnormalSensors = abnormalOrder.items
+  const allSensors = allSensorOrder.items
 
   const workText = (s: BaySummary) =>
     s.workState === 'working'
@@ -389,12 +415,10 @@ export function BayDetailPanel({
                   .join(' · ')}
               </p>
               {(() => {
-                const abnormal = selected.sensors
-                  .filter((sensor) => sensor.status !== 'online')
-                  .sort(compareSensors)
-                if (abnormal.length === 0) return null
+                if (abnormalSensors.length === 0) return null
+                const abnormal = abnormalSensors
                 return (
-                  <ul className="mt-1.5 space-y-1">
+                  <ul className="mt-1.5 space-y-1" {...abnormalOrder.handlers}>
                     {abnormal.map((sensor) => (
                       <li
                         key={sensor.id}
@@ -444,10 +468,8 @@ export function BayDetailPanel({
               {devicesOpen && (
                 <>
                   {selected.sensors.length > 0 ? (
-                    <ul className="mt-1.5 space-y-0.5">
-                      {[...selected.sensors]
-                        .sort(compareSensors)
-                        .map((sensor) => (
+                    <ul className="mt-1.5 space-y-0.5" {...allSensorOrder.handlers}>
+                      {allSensors.map((sensor) => (
                           <li
                             key={sensor.id}
                             className={cn(

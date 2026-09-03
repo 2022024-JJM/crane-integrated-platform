@@ -31,7 +31,7 @@ export interface ProcessFacilityRef {
 
 /** 공정존 하나가 지도에서 서는 자리 */
 export interface ProcessFacilityAnchor {
-  /** 공정 화면 경로 (예: `/zones/assembly`) — 대시보드가 존·상태와 잇는 키 */
+  /** 공정 화면 경로 (예: `/indoorshop/zones/assembly`) — 대시보드가 존·상태와 잇는 키 */
   zonePath: string
   /** 공정 식별자 (assembly/painting/outfitting/fabrication) */
   processKey: string

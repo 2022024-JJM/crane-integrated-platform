@@ -61,13 +61,20 @@ import { nowDate } from '../lib/now'
 
 const REFRESH_SECONDS = 5
 
-/** 공정 레일 — 가공·조립이 산다. 준비중·절점 없음을 화면에 명시한다(D3). */
+/**
+ * 공정 레일 — 네 공정이 모두 산다. 준비중·절점 없음을 화면에 명시한다(D3).
+ *
+ * 순서는 **블록의 생애주기 정본**이다: 가공 → 조립 → 의장 → 도장 (R32). 한 블록이
+ * 실제로 지나는 차례이고, 아래 절점 카드·조회 조건 바(`FilterBar`)의 공정 세그먼트가
+ * 쓰는 순서와 같다 — 한 화면에서 공정을 세 번 나열하는데 차례가 서로 다르면, 읽는 사람은
+ * 그 차이를 뜻으로 읽는다(왜 여기서는 도장이 먼저지?).
+ */
 const PROCESS_RAILS = [
   { id: 'fabrication', labelKey: 'performance.rails.fabrication', noteKey: null },
   { id: 'assembly', labelKey: 'performance.rails.assemblyActive', noteKey: null },
-  { id: 'painting', labelKey: 'performance.rails.paintingActive', noteKey: null },
   /* 의장도 이제 카드가 선다 — '절점 없음' 은 각주가 아니라 카드가 스스로 말한다(W7-11) */
   { id: 'outfitting', labelKey: 'performance.rails.outfitting', noteKey: null },
+  { id: 'painting', labelKey: 'performance.rails.paintingActive', noteKey: null },
 ] as const
 
 /**
@@ -442,11 +449,17 @@ export function PerformancePage() {
                   </span>
                 )}
               </SectionHeading>
-              {/* 후속 공정 레일 — 준비중/절점 없음을 자리로 명시 */}
-              <div className="flex items-center gap-1.5">
+              {/* 후속 공정 레일 — 준비중/절점 없음을 자리로 명시. 차례가 곧 뜻이라(R32)
+                  이름표에 그 차례를 적어 둔다 — 낱말 넷만 들리는 사람에게도 순서가 남게 */}
+              <div
+                role="list"
+                aria-label={t('performance.rails.aria')}
+                className="flex items-center gap-1.5"
+              >
                 {PROCESS_RAILS.map((rail) => (
                   <span
                     key={rail.id}
+                    role="listitem"
                     title={rail.noteKey ? t(rail.noteKey) : undefined}
                     className={cn(
                       'rounded-inshop-md border px-2 py-1 text-[11px]',
@@ -488,6 +501,25 @@ export function PerformancePage() {
             {assembly && <AssemblyCard summary={assembly} focusAssys={focusAssys} />}
           </section>
 
+          {/* 의장 절점 — **없다.** 절점을 지어내지 않고 블록 판별 %만 세운다 (W7-11) */}
+          <section>
+            <div className="mb-2">
+              <SectionHeading description={t('performance.ofit.basisNote')}>
+                {t('performance.ofit.title')}
+                {activeBlock && (
+                  <span className="ml-1.5 text-inshop-sm font-normal text-foreground/50 tabular-nums">
+                    {query.projNo}-{activeBlock}
+                  </span>
+                )}
+              </SectionHeading>
+            </div>
+            <OutfittingCard
+              rows={outfittingRows}
+              overall={overallOf(outfittingRows)}
+              activeBlock={activeBlock}
+            />
+          </section>
+
           {/* 도장 스텝 절점 — 스텝 축 유도 근거 단서는 카드가 단다 (W3-2 · W5-8) */}
           <section>
             <div className="mb-2">
@@ -519,25 +551,6 @@ export function PerformancePage() {
                 description={t('performance.pnt.noPlanNote')}
               />
             )}
-          </section>
-
-          {/* 의장 절점 — **없다.** 절점을 지어내지 않고 블록 판별 %만 세운다 (W7-11) */}
-          <section>
-            <div className="mb-2">
-              <SectionHeading description={t('performance.ofit.basisNote')}>
-                {t('performance.ofit.title')}
-                {activeBlock && (
-                  <span className="ml-1.5 text-inshop-sm font-normal text-foreground/50 tabular-nums">
-                    {query.projNo}-{activeBlock}
-                  </span>
-                )}
-              </SectionHeading>
-            </div>
-            <OutfittingCard
-              rows={outfittingRows}
-              overall={overallOf(outfittingRows)}
-              activeBlock={activeBlock}
-            />
           </section>
 
           <EventsSection

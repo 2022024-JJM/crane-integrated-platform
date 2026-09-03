@@ -31,15 +31,20 @@ function row(over: Partial<OutfittingRow> = {}): OutfittingRow {
 describe('블록 줄', () => {
   it('줄 전체가 그 블록의 통합실적으로 가는 문이다', () => {
     renderWithProviders(<OutfittingCard rows={[row()]} overall={overallOf([row()])} />)
-    const link = screen.getByRole('link')
-    expect(link).toHaveAttribute('href', '/performance?vessel=7004&block=530')
+    /* 진행중 줄에는 PCD 뷰 문(W8-3)도 서므로 실적 문을 href 로 짚는다 */
+    const link = screen
+      .getAllByRole('link')
+      .find((el) => el.getAttribute('href')?.startsWith('/indoorshop/performance'))!
+    expect(link).toHaveAttribute('href', '/indoorshop/performance?vessel=7004&block=530')
     expect(link).toHaveTextContent('7004-530')
   })
 
   it('블록번호·구역·송선기호·상태·판별 %를 한 줄에 낸다', () => {
     renderWithProviders(<OutfittingCard rows={[row()]} overall={overallOf([row()])} />)
     /* 종합 게이지에도 같은 수가 서므로(한 블록의 평균은 그 블록이다) 줄 안에서만 찾는다 */
-    const link = screen.getByRole('link')
+    const link = screen
+      .getAllByRole('link')
+      .find((el) => el.getAttribute('href')?.startsWith('/indoorshop/performance'))!
     for (const text of ['7004-530', '조립의장 1공장 BOS 1', 'E11', '작업중', '59']) {
       expect(link).toHaveTextContent(text)
     }
@@ -63,8 +68,13 @@ describe('블록 줄', () => {
     renderWithProviders(
       <OutfittingCard rows={rows} overall={overallOf(rows)} activeBlock="534" />
     )
-    /* 링크는 둘 다 서고, 고른 쪽만 배경이 바뀐다(값이 아니라 표시의 문제라 클래스로 본다) */
-    expect(screen.getAllByRole('link')).toHaveLength(2)
+    /* 실적 문은 둘 다 서고, 고른 쪽만 배경이 바뀐다(값이 아니라 표시의 문제라 클래스로 본다).
+       진행중 줄에는 PCD 뷰 문(W8-3)이 따로 서므로 실적 문만 센다 */
+    expect(
+      screen
+        .getAllByRole('link')
+        .filter((el) => el.getAttribute('href')?.startsWith('/indoorshop/performance'))
+    ).toHaveLength(2)
   })
 })
 

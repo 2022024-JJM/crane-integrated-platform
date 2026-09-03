@@ -1,5 +1,4 @@
 import {
-  assyFocusLinkFor,
   listBlocks,
   listVessels,
   matchedAssyNos,
@@ -7,11 +6,14 @@ import {
   performanceLinkFor,
   searchRosterBlocks,
   selectionOfBlock,
+  selectionQuery,
   YARD_PROCESS_OF_ZONE,
+  type BlockSelection,
   type ProcessZone,
 } from '../../../entities/vessel'
 import { equipmentTypeOf, YARD_EQUIPMENT } from '../../../entities/equipment'
 import { drilldownHref, YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
+import type { YardBackdropBlock } from '../../../model/yardMapBackdrop'
 import type { WoEntry } from './woIndex'
 
 /*
@@ -26,16 +28,49 @@ import type { WoEntry } from './woIndex'
  * 순수 함수만 둔다 — React 도 저장소도 모른다. 팔레트(ui/)는 이 결과를 그리기만 한다.
  */
 
-/** 결과 그룹 — 팔레트가 이 순서대로 단을 세운다 (사람이 찾는 빈도 순: 호선·블록이 먼저) */
-export type SearchGroup = 'vessel' | 'block' | 'assy' | 'wo' | 'equipment'
+/**
+ * 결과 그룹 — 목록이 이 순서대로 단을 세운다 (사람이 찾는 빈도 순: 호선·블록이 먼저).
+ * `yard` 는 로스터가 모르는 **BTS 실측 위치**다 — 재공 블록 뒤에 선다(감사 이전부터의 순서).
+ */
+export type SearchGroup = 'vessel' | 'block' | 'assy' | 'yard' | 'wo' | 'equipment'
 
 export const SEARCH_GROUPS: readonly SearchGroup[] = [
   'vessel',
   'block',
   'assy',
+  'yard',
   'wo',
   'equipment',
 ]
+
+/* ── 행선지 규칙 ────────────────────────────────────────────────
+ *
+ * **행선지는 결과 타입이 정한다 — 어디서 검색했는지는 관여하지 않는다.**
+ * 팔레트(Cmd+K)에서 고르든 대시보드 지도 위 검색창에서 고르든 같은 결과는 같은 곳으로
+ * 간다. 진입점마다 행선지가 다르면 사용자는 "어디서 찾았는지"까지 기억해야 한다.
+ *
+ * | 타입 | 가는 곳 | 왜 |
+ * |---|---|---|
+ * | `wo` | 통합실적 | W/O 는 위치가 아니라 **실적 축**의 이름이다 |
+ * | `vessel` | 총괄 지도 — 그 호선 블록 **전부** | "이 호선 지금 어디까지 왔나"의 답은 자리들의 분포다 |
+ * | `block` · `assy` · `yard` | 총괄 지도 — 그 블록/덩이의 자리 | "이거 어디 있어요"의 답 |
+ * | `equipment` | 그 공정 맵의 공장·베이 | 설비는 공정 화면의 대상이다 |
+ *
+ * 주소 문법은 전부 **기존 계약**이다 — 지도는 선택 계약(`?vessel=&block=&assy=`)을
+ * 총괄 경로에 실어 쓰고(통합실적이 쓰던 그 철자 그대로), 공정 맵은 `drilldownHref`.
+ */
+
+/** 총괄 지도(자리를 보여 주는 화면) — 블록·ASSY·호선·야드 결과의 행선지 */
+export const MAP_PATH = '/'
+
+/**
+ * 지도에 자리를 표시하는 주소. **새 문법을 만들지 않는다** — 통합실적이 쓰는 선택 계약
+ * (`selectionQuery`)을 총괄 경로에 그대로 싣는다. 그래서 `/indoorshop/performance` 와 `/` 가 같은
+ * 조회 조건을 같은 철자로 말하고, 두 화면 사이를 오갈 때 조건이 살아 있다.
+ */
+export function mapFocusHref(selection: BlockSelection): string {
+  return `${MAP_PATH}?${selectionQuery(selection)}`
+}
 
 export interface SearchHit {
   /** 목록 key + aria-activedescendant 재료 — 그룹 안에서 유일 */
@@ -45,8 +80,14 @@ export interface SearchHit {
   title: string
   /** 부가 맥락 — 데이터 어휘(공정 이름·공장·베이)로만 짓는다 (번역 대상이 아닌 고유명) */
   subtitle: string | null
-  /** 이동 주소 — 기존 계약이 찍은 것 그대로 */
+  /** 이동 주소 — 행선지 규칙(아래)이 정한다 */
   href: string
+  /**
+   * 지금 어느 공정에 있는가 — 있으면 줄에 **공정색 단계 칩**이 선다(감사 F-11: 지도·
+   * 공정존 패널이 공정색으로 말하는 것을 검색에서만 무채색으로 버리지 않는다).
+   * 단계를 모르는 결과(W/O·설비·BTS 좌표)는 비운다 — 모르는 것을 색으로 단정하지 않는다.
+   */
+  zone?: ProcessZone
 }
 
 /** 그룹당 상한 — 팔레트 한 화면에 다섯 그룹이 다 서도 스크롤이 짧게 끝나는 크기 */
@@ -54,7 +95,7 @@ const GROUP_LIMIT = 6
 
 /* ── 호선 ─────────────────────────────────────────────────────── */
 
-/** 호선번호(또는 선종) 부분일치 → 통합실적 '호선 전체' 조회 */
+/** 호선번호(또는 선종) 부분일치 → **총괄 지도에 그 호선 블록 전부** (생애주기 마커) */
 export function searchVessels(query: string, limit = GROUP_LIMIT): SearchHit[] {
   const q = normalizeBlockQuery(query)
   if (!q) return []
@@ -66,7 +107,8 @@ export function searchVessels(query: string, limit = GROUP_LIMIT): SearchHit[] {
       group: 'vessel',
       title: `${vessel.projNo}호`,
       subtitle: vessel.shipType,
-      href: performanceLinkFor({ projNo: vessel.projNo, blocks: [] }),
+      /* 블록을 비워 보내면 지도가 '그 호선 전부'로 읽는다 (선택 계약의 규칙 그대로) */
+      href: mapFocusHref({ projNo: vessel.projNo, blocks: [] }),
     })
     if (hits.length >= limit) break
   }
@@ -75,14 +117,15 @@ export function searchVessels(query: string, limit = GROUP_LIMIT): SearchHit[] {
 
 /* ── 블록 ─────────────────────────────────────────────────────── */
 
-/** 로스터 블록 검색(기존 색인 재사용) → 그 블록의 통합실적 */
+/** 로스터 블록 검색(같은 색인) → **총괄 지도에 그 블록의 자리** */
 export function searchBlocks(query: string, limit = GROUP_LIMIT): SearchHit[] {
   return searchRosterBlocks(query, limit).map((block) => ({
     id: `block:${block.projNo}-${block.blockNo}`,
     group: 'block',
     title: `${block.projNo}-${block.blockNo}`,
     subtitle: `${YARD_PROCESS_OF_ZONE[block.zone]} · ${block.factory}`,
-    href: performanceLinkFor(selectionOfBlock(block)),
+    href: mapFocusHref(selectionOfBlock(block)),
+    zone: block.zone,
   }))
 }
 
@@ -90,15 +133,13 @@ export function searchBlocks(query: string, limit = GROUP_LIMIT): SearchHit[] {
 
 /**
  * ASSY_NO 가 **실제 단서였던** 검색 — `matchedAssyNos` 의 규칙 그대로, 블록키로 이미
- * 걸린 질의에는 ASSY 를 내밀지 않는다(그건 블록 그룹의 몫이다). 링크는 그 ASSY 로
- * 포커스된 통합실적(`?assy=` 딥링크)이다.
+ * 걸린 질의에는 ASSY 를 내밀지 않는다(그건 블록 그룹의 몫이다). 행선지는 그 ASSY 로
+ * 포커스된 **총괄 지도**다(`?assy=` — 선택 계약이 조합식에서 호선·블록을 풀어 낸다).
  */
 export function searchAssys(query: string, limit = GROUP_LIMIT): SearchHit[] {
   const hits: SearchHit[] = []
   for (const block of listBlocks()) {
     for (const assyNo of matchedAssyNos(block, query)) {
-      const href = assyFocusLinkFor([assyNo])
-      if (!href) continue /* 로스터가 모르는 조합이면 갈 곳이 없다 — 내지 않는다 */
       const placement = block.assyUnits?.find((unit) => unit.assyNo === assyNo)
       hits.push({
         id: `assy:${assyNo}`,
@@ -107,7 +148,13 @@ export function searchAssys(query: string, limit = GROUP_LIMIT): SearchHit[] {
         subtitle: placement
           ? `${block.projNo}-${block.blockNo} · ${placement.factory}`
           : `${block.projNo}-${block.blockNo}`,
-        href,
+        href: mapFocusHref({
+          projNo: block.projNo,
+          blocks: [block.blockNo],
+          assys: [assyNo],
+        }),
+        /* ASSY 자리의 공정이 블록 단계와 다를 수 있다 — 자리의 것을 따른다 */
+        zone: placement?.zone ?? block.zone,
       })
       if (hits.length >= limit) return hits
     }
@@ -115,9 +162,47 @@ export function searchAssys(query: string, limit = GROUP_LIMIT): SearchHit[] {
   return hits
 }
 
+/* ── 야드 실측 위치 (BTS) ───────────────────────────────────── */
+
+/**
+ * 운반 실적이 남긴 좌표 색인 — **로스터가 모르는 블록도 여기서 찾힌다.**
+ *
+ * 예전에는 대시보드 검색창만 이 색인을 들고 있어서(자체 필터 포함), 팔레트로 같은 글자를
+ * 치면 "없다"는 답이 왔다 — 한 앱이 같은 질의에 두 답을 하는 상태였다. 색인을 이 모듈로
+ * 올려 두 진입점이 같은 것을 본다.
+ *
+ * 질의 정규화는 로스터 검색과 **같은 규칙**(`normalizeBlockQuery`)이다 — 두 색인이 한
+ * 입력창을 나눠 쓰므로 규칙이 갈리면 같은 글자에 다른 결과가 나온다.
+ */
+export function searchYardBlocks(
+  query: string,
+  index: readonly YardBackdropBlock[] | null,
+  limit = GROUP_LIMIT
+): SearchHit[] {
+  const q = normalizeBlockQuery(query)
+  if (!q || !index) return []
+  const hits: SearchHit[] = []
+  for (const block of index) {
+    const id = normalizeBlockQuery(block.id)
+    const pair = normalizeBlockQuery(`${block.projNo}-${block.blkNo}`)
+    if (!id.includes(q) && !pair.includes(q)) continue
+    hits.push({
+      id: `yard:${block.id}`,
+      group: 'yard',
+      title: `${block.projNo}-${block.blkNo}`,
+      subtitle: block.lotLabel,
+      /* 로스터 블록과 **같은 철자**로 보낸다 — 지도가 로스터에서 못 찾으면 이 색인으로
+         물러나 그 점을 찍는다(mapFocus 의 2단 해석). 야드 전용 파라미터를 새로 만들지 않는다 */
+      href: mapFocusHref({ projNo: block.projNo, blocks: [block.blkNo] }),
+    })
+    if (hits.length >= limit) break
+  }
+  return hits
+}
+
 /* ── W/O ──────────────────────────────────────────────────────── */
 
-/** W/O 번호 부분일치 → 그 블록의 통합실적 (색인은 woIndex 가 만들어 온다) */
+/** W/O 번호 부분일치 → **통합실적** (W/O 는 자리가 아니라 실적 축의 이름이다) */
 export function searchWos(
   query: string,
   entries: readonly WoEntry[],
@@ -214,7 +299,7 @@ export function searchEquipment(
       group: 'equipment',
       title: equipment.id,
       subtitle: typeName ? `${typeName} · ${place}` : place,
-      href: drilldownHref(`/zones/${zone}`, '', {
+      href: drilldownHref(`/indoorshop/zones/${zone}`, '', {
         ...YARD_DRILLDOWN,
         factory: equipment.factory,
         bay,
@@ -227,16 +312,29 @@ export function searchEquipment(
 
 /* ── 통합 ─────────────────────────────────────────────────────── */
 
-/** 다섯 그룹을 한 번에 — 그룹 순서는 SEARCH_GROUPS, 각 그룹 상한 GROUP_LIMIT */
-export function searchGlobal(
-  query: string,
-  sources: { wos: readonly WoEntry[]; equipment: EquipmentSearchCtx | null }
-): SearchHit[] {
+/**
+ * 검색이 읽는 원천 한 벌 — **두 진입점이 같은 것을 본다.**
+ *
+ * 정적인 것(로스터·설비 목록)은 모듈이 직접 읽고, 비동기로 오는 셋만 여기로 받는다.
+ * 아직 안 온 원천은 그 그룹만 비고 나머지는 그대로 선다(검색이 로딩을 기다리지 않는다).
+ */
+export interface SearchSources {
+  /** W/O 색인 (기준일별) */
+  wos: readonly WoEntry[]
+  /** 설비 → 공정 맵 문맥 (지번 로드 후) */
+  equipment: EquipmentSearchCtx | null
+  /** 야드 BTS 위치 색인 (배경 로드 후) */
+  yard: readonly YardBackdropBlock[] | null
+}
+
+/** 여섯 그룹을 한 번에 — 그룹 순서는 SEARCH_GROUPS, 각 그룹 상한 GROUP_LIMIT */
+export function searchGlobal(query: string, sources: SearchSources): SearchHit[] {
   if (!normalizeBlockQuery(query)) return []
   return [
     ...searchVessels(query),
     ...searchBlocks(query),
     ...searchAssys(query),
+    ...searchYardBlocks(query, sources.yard),
     ...searchWos(query, sources.wos),
     ...searchEquipment(query, sources.equipment),
   ]

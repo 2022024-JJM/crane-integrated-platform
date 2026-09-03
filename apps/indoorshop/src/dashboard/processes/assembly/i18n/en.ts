@@ -77,20 +77,6 @@ export const assemblyEn: typeof assemblyKo = {
       title: 'Assembly status',
       subtitle:
         'Pick an assembly shop (blue) or CAS·PAS line (fabrication green) on the yard map, then drill into a bay.',
-      listLink: 'List view',
-      panelTitle: 'Assembly shops · lines',
-      viewAll: 'View all assembly',
-      viewAllHint: 'Return to the overview showing assembly and CAS/PAS',
-      expand: 'Expand shop card',
-      collapse: 'Collapse shop card',
-      viewOnMap: 'Focus this shop on the map',
-      modeLabel: 'Switch view',
-      modeEquipment: '① Equipment',
-      modeCollection: '② Collection',
-      markerTypesLabel: 'Equipment types shown on the map',
-      tiltToggleHint: 'A tilt module stands 1.7 m from its paired LiDAR — turning it on overlaps the two dots.',
-      lidarCount: '{{count}} LiDAR',
-      issueCount: '{{count}} need attention',
       noCollection:
         'No legacy collection yet — Mode-B line counting for fabrication lines will fill this panel once confirmed.',
       bayHeading: 'BAY {{bay}}',
@@ -100,24 +86,13 @@ export const assemblyEn: typeof assemblyKo = {
         judgedToday: 'Judged today',
         judgedTodayValue: '{{count}}',
         lastScan: 'Last collection',
-        openFactory: 'Open shop status',
       },
       bayCard: {
-        sensors: 'LiDAR',
-        block: 'Assigned block',
-        realHint: 'Real-scan bay — enter to inspect',
-        openBay: 'Open bay status',
-        openReal: 'Enter real-scan viewer',
       },
       sensorCard: {
-        back: 'Deselect sensor',
-        place: '{{factory}} · BAY {{bay}} — position from equipment entity',
       },
       legend: {
         lidar: 'LiDAR (real coordinates · mock status)',
-        equipment: 'Positions and counts are real (from drawings) · status is mock',
-        casPas: 'CAS·PAS belong to fabrication — green neon',
-        hint: 'Click shop → bay → sensor · Shift or right-drag to orbit',
       },
     },
     /* Wording for the ③ Equipment pane and marker detail — status is mock, counts are real */
@@ -153,10 +128,7 @@ export const assemblyEn: typeof assemblyKo = {
         '{{count}} panel(s) down — {{pairs}} LiDAR pairs go blind with them. Check power and uplink first.',
       tiltNote:
         '{{count}} tilt modules pair 1:1 with {{lidar}} LiDARs, so they are not listed separately — click a LiDAR on the map for its tilt status.',
-      pairTilt: 'Paired tilt',
       tiltMode: { idle: 'Idle', tilting: 'Tilting', error: 'Error' },
-      movingToTarget: 'Moving to target',
-      hostPanel: 'Host panel',
     },
     /* Noun this zone uses for a work location in the overview map drill-down (PRD FR-3) */
     map: {
@@ -230,14 +202,16 @@ export const assemblyEn: typeof assemblyKo = {
       note: 'Click a row to open Performance focused on that ASSY. Same source as the Performance cards.',
       tier: { grand: 'Grand', mid: 'Mid', sub: 'Sub' },
     },
+    status: {
+      unassignedBay: 'Unassigned bay',
+      toMapEntry: 'All-factory map',
+    },
     workspace: {
       backToFactories: '← Back to the factory list',
       tabAria: 'View axis',
       tabViewer: '3D viewer',
-      tabSensors: 'Sensor status',
+      tabStatus: 'Status',
       tabBlocks: 'Blocks & output',
-      sensorTabHint: 'Click a sensor to fly the 3D viewer to it.',
-      sensorTabFactoryHint: 'LiDAR status per bay — controls live in the 3D viewer tab.',
       unknownFactory: 'No such factory',
       unknownLocation: 'No such location',
       bayTitle: '{{name}} — LiDAR judgements',
@@ -279,6 +253,7 @@ export const assemblyEn: typeof assemblyKo = {
       legendTitle: 'Legend',
     },
     bayIdentity: {
+      andMore: '{{first}} +{{rest}}',
       bay: 'Bay',
       projNo: 'Hull',
       block: 'Block',

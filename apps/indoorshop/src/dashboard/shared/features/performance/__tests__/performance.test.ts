@@ -46,11 +46,11 @@ describe('가공 절점 집계 (IPD-S04 규칙)', () => {
   it('미대상 부재는 건수·중량 분모에서 모두 제외된다', () => {
     const agg = aggregateStage(
       [
-        part('a', 100, { S4: 'done' }),
-        part('b', 300, { S4: 'excluded' }),
-        part('c', 100, { S4: 'notDue' }),
+        part('a', 100, { S7: 'done' }),
+        part('b', 300, { S7: 'excluded' }),
+        part('c', 100, { S7: 'notDue' }),
       ],
-      'S4'
+      'S7'
     )
     expect(agg.targetCount).toBe(2)
     expect(agg.excludedCount).toBe(1)
@@ -60,20 +60,22 @@ describe('가공 절점 집계 (IPD-S04 규칙)', () => {
   })
 
   it('대상이 0이면 실적률은 0으로 처리한다 (§8.5 예외 규칙)', () => {
-    const agg = aggregateStage([part('a', 100, { S5: 'excluded' })], 'S5')
+    const agg = aggregateStage([part('a', 100, { S8: 'excluded' })], 'S8')
     expect(agg.targetCount).toBe(0)
     expect(agg.countRate).toBe(0)
     expect(agg.weightRate).toBe(0)
   })
 
-  it('종합(중량가중)은 5단계 중량 실적률의 평균이다 — 정의서 확정 산식 외 합성 금지', () => {
-    const parts = [
-      part('a', 100, { S1: 'done', S2: 'done', S3: 'done', S4: 'done', S5: 'done' }),
-      part('b', 100, { S1: 'done' }),
-    ]
+  it('종합(중량가중)은 10절점 중량 실적률의 평균이다 — 정의서 확정 산식 외 합성 금지', () => {
+    const allDone = Object.fromEntries(FAB_STAGES.map((s) => [s, 'done'])) as Record<
+      FabStageId,
+      StageStatus
+    >
+    const parts = [part('a', 100, allDone), part('b', 100, { S1: 'done' })]
     const summary = aggregateStages(parts)
-    // S1 100% + S2~S5 각 50% → (100+50*4)/5 = 60
-    expect(summary.overallWeightRate).toBe(60)
+    // S1 100% + S2~S10 각 50% → (100 + 50*9)/10 = 55
+    expect(summary.stages).toHaveLength(10)
+    expect(summary.overallWeightRate).toBe(55)
   })
 })
 
@@ -82,22 +84,46 @@ describe('절점 파생 (D3 — 계획·실적 모두 절점에서만)', () => {
     part('a', 100, { S1: 'done', S2: 'done', S3: 'inProgress' }),
     part('b', 100, { S1: 'done', S2: 'done' }),
   ])
-  const plans = { S1: '2026-08-28', S2: '2026-08-31', S3: '2026-09-01', S4: '2026-09-04', S5: '2026-09-07' }
+  /* S1~S3 은 기준일(09-03) 이전 도래, S4~S10 은 미도래 */
+  const plans = {
+    S1: '2026-08-28',
+    S2: '2026-08-31',
+    S3: '2026-09-01',
+    S4: '2026-09-04',
+    S5: '2026-09-05',
+    S6: '2026-09-06',
+    S7: '2026-09-07',
+    S8: '2026-09-08',
+    S9: '2026-09-09',
+    S10: '2026-09-10',
+  }
   const progress = deriveNodeProgress(summary, plans, BASE)
 
-  it('절점 통과 = 대상 부재 전량 완료', () => {
-    expect(progress.nodes.map((n) => n.passed)).toEqual([true, true, false, false, false])
+  it('절점 통과 = 대상 부재 전량 완료 — 축은 정본 10절점이다', () => {
+    expect(progress.nodes.map((n) => n.stage)).toEqual([...FAB_STAGES])
+    expect(progress.nodes.map((n) => n.passed)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
   })
 
   it('지연 = 계획일 도래 후 미통과 절점 (미래 계획일은 지연이 아니다)', () => {
-    // S3 계획 09-01(도래·미통과) → 지연 1건. S4·S5 는 미도래
+    // S3 계획 09-01(도래·미통과) → 지연 1건. S4~S10 은 미도래
     expect(progress.delayedCount).toBe(1)
     expect(progress.nodes[2].delayed).toBe(true)
     expect(progress.nodes[3].delayed).toBe(false)
   })
 
   it('계획% = 계획일 도래 절점 비율, 실적% = 종합 중량가중 — 합성 산식 없음', () => {
-    expect(progress.planRate).toBe(60) // S1~S3 도래 / 5
+    expect(progress.planRate).toBe(30) // S1~S3 도래 / 10
     expect(progress.actualRate).toBe(summary.overallWeightRate)
   })
 })
@@ -122,12 +148,12 @@ describe('mock 생성기 — 결정론·상태 규칙 준수', () => {
 })
 
 describe('수집 이벤트 그리드 계약', () => {
-  it('S1·S4·S5 는 일자만, S2·S3 만 시각을 갖는다 (L3 표기 수준 계약)', async () => {
+  it('원천에 시각이 없는 절점은 일자만 — S4(불출)·S6(절단) 만 시각을 갖는다 (L3 계약)', async () => {
     // 조립 행의 시각 계약은 별도 describe — 여기는 가공 행만 본다
     const rows = await fetchCollectionEvents('7004', ['222', '310'], 'fabrication', BASE)
     expect(rows.length).toBeGreaterThan(0)
     for (const row of rows) {
-      const dateOnly = row.stage === 'S1' || row.stage === 'S4' || row.stage === 'S5'
+      const dateOnly = row.stage !== 'S4' && row.stage !== 'S6'
       for (const instant of [row.occurred, row.completed]) {
         if (!instant) continue
         if (dateOnly) expect(instant.time).toBeUndefined()
@@ -138,7 +164,18 @@ describe('수집 이벤트 그리드 계약', () => {
 
   it('관리번호 형식이 단계별 4형식(MAT/DWG/PC/PLT)을 따른다', async () => {
     const rows = await fetchCollectionEvents('7004', ['222'], 'fabrication', BASE)
-    const typeByStage = { S1: 'MAT', S2: 'MAT', S3: 'DWG', S4: 'PC', S5: 'PLT' }
+    const typeByStage: Record<FabStageId, string> = {
+      S1: 'MAT',
+      S2: 'MAT',
+      S3: 'MAT',
+      S4: 'MAT',
+      S5: 'MAT',
+      S6: 'DWG',
+      S7: 'PC',
+      S8: 'PLT',
+      S9: 'PC',
+      S10: 'PLT',
+    }
     for (const row of rows) expect(row.mgmtNoType).toBe(typeByStage[row.stage as FabStageId])
   })
 

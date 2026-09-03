@@ -1,5 +1,7 @@
 import type { Location } from '../../../shared/entities/location/model/types'
 import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
+import { mockSubAssemblies } from '../../../shared/features/bay-viewer/lib/mockDetections'
+import { realBlockParts, realWstgCode } from './realBlockFacts'
 import type { LidarBlockInfo } from '../../../shared/features/bay-viewer/model/lidarBlock'
 import {
   loadRealScanManifest,
@@ -20,6 +22,14 @@ import type {
   RealScanSensorPlacement,
 } from '../../../shared/features/bay-viewer/model/realOverlay'
 import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
+import {
+  assyNoOfScanMesh,
+  findBlock,
+  scanConfidenceOf,
+  type AssyTier,
+} from '../../../shared/entities/vessel'
+import { fetchAssemblySummary } from '../../../shared/features/performance/api/performanceApi'
+import { todayString } from '../../../shared/features/performance/lib/baseDate'
 
 /**
  * PBS 5BAY 실측 — 한화에너지 PoC 실측 데이터셋 (20251220 스냅샷, 호선 5510).
@@ -111,9 +121,23 @@ export async function fetchRealLidarSensors(locationId: string): Promise<LidarSe
     id: `${locationId}-${sensor.name}`,
     locationId,
     name: sensor.name,
-    status: 'online',
+    /*
+     * ⚠️ mock — 데이터셋에는 장비 헬스가 없다(스캔 결과만 있다). 예전에는 12대를 전부
+     * `online` 으로 못박아, 화면의 상태 축이 실측 베이에서만 죽어 있었다(W9-0 진단 #26:
+     * 목업 5/6 vs 실측 12/12). 목업과 같은 결정론 문법으로 소수만 이상을 준다 —
+     * 실연동 시 이 한 줄이 실제 헬스 조회로 바뀐다.
+     */
+    status: mockSensorStatus(sensor.name),
     lastScanAt: scanTime(manifest),
   }))
+}
+
+/** 센서 상태 mock — 대부분 온라인, 결정론적으로 소수만 오프라인/오류 (목업과 같은 분포) */
+function mockSensorStatus(name: string): LidarSensor['status'] {
+  const roll = hashOf(`${name}-real-health`) % 100
+  if (roll < 8) return 'offline'
+  if (roll < 14) return 'error'
+  return 'online'
 }
 
 /** '5510_726_FR84A' → 호선 5510 / 블록 726 / 조립번호 FR84A */
@@ -122,36 +146,141 @@ function parseBlockName(name: string): { projNo: string; blkNo: string; assySerN
   return { projNo, blkNo, assySerNo: rest.length > 0 ? rest.join('_') : null }
 }
 
-/** 정합 오차(cm) → 신뢰도 — 실측치가 없으면 표시용 하한 */
-function confidenceFromFitError(fitErrorCm: number | undefined): number {
-  if (fitErrorCm == null) return 0.8
-  return Math.max(0.55, Math.min(0.99, 1 - fitErrorCm / 100))
+/**
+ * 문자열 결정론 해시 — 목업 데이터(`mockAssemblyData`)와 같은 문법.
+ * 실측이 못 주는 축(진척·계획·센서 상태)을 채울 때만 쓴다. 같은 블록은 늘 같은 값이다.
+ */
+function hashOf(text: string): number {
+  let h = 0
+  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+/**
+ * ⚠️ **여기부터 세 함수는 mock 이다** — 실측 스캔이 아직 못 주는 축을 목업과 같은 문법으로
+ * 채운다(W9-0 계획 P10, D2 확정). 스캔은 "지금 이 형상이 거기 있다" 까지만 말하고,
+ * 진척률·월간실행계획·센서 헬스는 다른 계통(판별 파이프라인·MES·장비 관리)의 값이라
+ * 데이터셋에 존재하지 않는다. 그 축들이 비어 있으면 화면의 진척 바·계획 줄이 통째로
+ * 사라져 실측 베이만 다른 문법이 된다 — 목업 베이와 나란히 놓고 비교할 수 없다.
+ *
+ * 실연동 시 이 세 함수만 실제 조회로 갈아끼우면 되고, 화면은 손대지 않는다.
+ */
+
+/** 월간실행계획 기간 — 스캔일 기준 앞뒤로 벌린다(계획은 스캔보다 먼저 서고 나중에 끝난다) */
+function mockRealPlan(seed: string, scannedAt: string): { planStartDate: string; planEndDate: string } {
+  const day = (offset: number) => {
+    const d = new Date(`${scannedAt.slice(0, 10)}T00:00:00`)
+    d.setDate(d.getDate() + offset)
+    return d.toISOString().slice(0, 10)
+  }
+  const lead = 12 + (hashOf(`${seed}-plan-lead`) % 20)
+  const span = 18 + (hashOf(`${seed}-plan-span`) % 24)
+  return { planStartDate: day(-lead), planEndDate: day(-lead + span) }
+}
+
+/* 정합 오차(cm) → 표면일치는 **엔티티가 소유한다**(`scanConfidenceOf`) — 통합실적의
+   판별 이벤트가 같은 값을 적어야 하는데, 여기서 따로 환산하면 두 화면이 같은 덩이를
+   두고 다른 %를 말한다 (R31). */
+
+/** 급 → 화면 낱말 — 목업 detection 과 같은 어휘(대조립 블록 / 중조립품 / 소조립품) */
+const TIER_NOUN: Record<AssyTier, string> = {
+  grand: '대조립 블록',
+  mid: '중조립품',
+  sub: '소조립품',
+}
+
+/**
+ * **정합된 덩이의 신원·진척은 로스터와 통합실적에서 온다** (R31).
+ *
+ * 스캔이 주는 것은 형상과 정합 오차뿐이다. 이 덩이가 몇 급인지(대·중·소), 얼마나 됐는지는
+ * 기준정보·판별 실적의 값이라 데이터셋에 없다. 예전에는 그 둘을 여기서 각각 지어냈고
+ * (`assySerNo` 유무로 급을 추정, 진척은 해시 45~94), 그래서 같은 덩이를 두고 실측 뷰는
+ * '중조립품 68%', 통합실적은 '대조 100%' 를 말했다 — 사용자가 "숫자가 어긋난다"고 짚은
+ * 자리다. 이제 급은 **로스터**가, 진척은 **통합실적의 판별 실적**이 낸다.
+ *
+ * 로스터에 없는 덩이(데이터셋이 갱신됐는데 로스터가 아직 모르는 경우)는 종전 추정으로
+ * 물러선다 — 화면이 비지 않게 하되, parity 테스트가 그 어긋남을 따로 잡는다.
+ */
+function rosterFactsOf(
+  meshName: string,
+  assySerNo: string | null,
+  blkNo: string
+): { tier: AssyTier | null; label: string } {
+  const [projNo] = meshName.split('_')
+  const assyNo = assyNoOfScanMesh(meshName)
+  const unit = findBlock(projNo, blkNo)?.assyUnits?.find((u) => u.assyNo === assyNo)
+  if (!unit) return { tier: null, label: assySerNo ? `중조립품 ${assySerNo}` : `대조립 블록 ${blkNo}` }
+  return { tier: unit.tier, label: `${TIER_NOUN[unit.tier]} ${assySerNo ?? blkNo}` }
 }
 
 /** 5BAY 실측 인식 블록 — 홀 전체(manifest.factory)의 정합 블록을 낸다 */
 export async function fetchRealDetectedBlocks(locationId: string): Promise<LidarBlockInfo[]> {
   const manifest = await loadRealScanManifest()
+  /* 진척은 여기서 만들지 않는다 — 통합실적이 이 덩이에 대해 내는 판별률을 그대로 읽는다.
+     블록별로 한 번만 부르고 ASSY_NO 로 찾아 쓴다(덩이마다 부르면 같은 계산을 반복한다) */
+  const baseDate = todayString()
+  const summaries = new Map<string, Awaited<ReturnType<typeof fetchAssemblySummary>>>()
+  for (const block of manifest.factory.blocks) {
+    const [projNo, blkNo] = block.name.split('_')
+    const key = `${projNo}-${blkNo}`
+    if (!summaries.has(key)) summaries.set(key, await fetchAssemblySummary(projNo, blkNo, baseDate))
+  }
   return manifest.factory.blocks.map((block): LidarBlockInfo => {
     const { projNo, blkNo, assySerNo } = parseBlockName(block.name)
+    const seed = block.name
+    const assyNo = assyNoOfScanMesh(block.name)
+    const facts = rosterFactsOf(block.name, assySerNo, blkNo)
+    /* 판별률(=진척률)의 원천은 통합실적 한 곳. 그 목록에 없으면 0 이 아니라 표시 하한을
+       쓰지 않는다 — 없는 것은 없는 것이고, parity 테스트가 그 사정을 잡는다 */
+    const progress =
+      summaries.get(`${projNo}-${blkNo}`)?.assys.find((a) => a.assyNo === assyNo)?.selfRate ?? 0
+    const scanned = scanTime(manifest)
     return {
       id: `${locationId}-${block.name}`,
       locationId,
       projNo,
       blkNo,
       assySerNo,
-      blockName: `실측 정합 블록 ${block.name}`,
-      // 실측 데이터셋에는 송선기호가 없다 — 미상 표기
-      wstgCode: '----',
+      /* 목업과 같은 낱말로 부른다 — 같은 화면에서 두 베이를 오갈 때 이름 문법이 갈리면
+         같은 종류의 것을 다르게 부르는 셈이 된다('실측' 여부는 카드의 실측 칩이 말한다).
+         급은 로스터가 정한다 — 통합실적 트리가 부르는 급과 같아야 한다 */
+      blockName: facts.label,
+      /* 스캔에는 송선기호가 없다 — 레거시 기준정보의 값이라 결정론 mock 으로 채운다.
+         '----' 로 두면 상세 카드의 송선 줄만 실측에서 뜻 없는 문자열이 된다 */
+      wstgCode: realWstgCode(block.name),
       cadRegistered: true,
-      plan: null,
-      confidence: confidenceFromFitError(block.fitErrorCm),
+      /* 계획은 스캔이 못 주는 축이다 — mock 으로 채운다(P10 · 위 주석).
+         진척은 더 이상 mock 이 아니다 — 통합실적의 판별 실적이 곧 이 값이다 */
+      plan: mockRealPlan(seed, manifest.scannedAt),
+      confidence: scanConfidenceOf(block.fitErrorCm),
       dimensions: {
         length: block.dims[0],
         width: block.dims[1],
         height: block.dims[2],
       },
       transform: { position: block.center, quaternion: [0, 0, 0, 1] },
-      history: [{ timestamp: scanTime(manifest), event: '스캔 취득 (LiDAR 12대 정합)' }],
+      /*
+       * 히스토리 — 첫 줄은 **실측 사실**(그 시각에 12대로 정합했다)이고, 그 앞의 두 줄은
+       * 진척 추이 mock 이다. 목업 베이가 진척 바를 세우는 근거가 이 배열이라, 실측만
+       * 비워 두면 같은 화면에서 진척 축이 사라진다.
+       */
+      history: [
+        { timestamp: scanned, event: '스캔 취득 (LiDAR 12대 정합)', progress },
+        { timestamp: '09:10', event: '스캔 갱신', progress: Math.max(5, progress - 14) },
+        { timestamp: '07/31', event: '정반 안착 감지', progress: Math.max(3, progress - 31) },
+      ],
+      /*
+       * 형상 미리보기의 재료 — 실측 CAD 메시 모델(`loadRealBlockModel`)의 조립체 id 가
+       * 블록 이름 그대로라 이 한 줄이면 360° 회전 미리보기가 이 블록만 그린다.
+       * 이게 없으면 목록 카드에서 미리보기가 통째로 빠진다(목업만 돌아가는 상태).
+       */
+      modelAssemblyIds: [block.name],
+      /*
+       * 하위 구성 — 자산에 노드 트리가 없어 결정론 mock 이다(진단 §5). 상태 분포는
+       * **목업과 같은 함수**(`mockSubAssemblies`)가 정한다 — 규칙이 갈리면 같은 진척률의
+       * 두 블록이 다른 구성 상태를 보여 나란히 읽을 수 없다.
+       */
+      subAssemblies: mockSubAssemblies(seed, realBlockParts(block.name), progress),
     }
   })
 }
