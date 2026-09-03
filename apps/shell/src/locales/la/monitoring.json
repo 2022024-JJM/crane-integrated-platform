@@ -137,7 +137,6 @@
     "deleteObject": "Objectum dele",
     "renameObject": "Nomen muta",
     "nameEmptyError": "Nomen vacuum esse non potest.",
-    "keyboardShortcuts": "Compendia clavium",
     "deleteSelected": "Selectum dele",
     "snapActive": "Snap 1.0",
     "hideLabels": "Titulos absconde",
@@ -153,6 +152,7 @@
       "stay": "Relinque"
     },
     "shortcuts": {
+      "title": "Compendia",
       "groupFile": "Fasciculus",
       "groupEdit": "Recensere",
       "groupSelect": "Selectio",
@@ -165,6 +165,8 @@
       "delete": "Selecta dele",
       "click": "Clic",
       "select": "Obiectum selige",
+      "doubleClick": "Clic duplex",
+      "selectNode": "Nodum intra exemplar selige",
       "toggleSelect": "Selectionem verte",
       "drag": "Trahe sinistro",
       "marquee": "Selectio regionis",

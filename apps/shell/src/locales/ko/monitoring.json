@@ -151,7 +151,6 @@
     "deleteObject": "객체 삭제",
     "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
-    "keyboardShortcuts": "키보드 단축키",
     "deleteSelected": "선택 객체 삭제",
     "snapActive": "Snap 1.0",
     "hideLabels": "라벨 숨기기",
@@ -167,6 +166,7 @@
       "stay": "취소"
     },
     "shortcuts": {
+      "title": "단축키",
       "groupFile": "파일",
       "groupEdit": "편집",
       "groupSelect": "선택",
@@ -179,6 +179,8 @@
       "delete": "선택 객체 삭제",
       "click": "클릭",
       "select": "객체 선택",
+      "doubleClick": "더블클릭",
+      "selectNode": "모델 내부 노드 선택",
       "toggleSelect": "선택 토글",
       "drag": "좌클릭 드래그",
       "marquee": "범위 선택",
