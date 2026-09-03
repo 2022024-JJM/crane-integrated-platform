@@ -31,6 +31,7 @@ const STATUS_CLASS: Record<StageStatus, string> = {
 
 const KIND_KEY: Record<AsmEventKind | PntEventKind, InshopKey> = {
   woStart: 'performance.grid.kind.woStart',
+  asmJudged: 'performance.grid.kind.asmJudged',
   woDone: 'performance.grid.kind.woDone',
   btsIn: 'performance.grid.kind.btsIn',
   btsOut: 'performance.grid.kind.btsOut',

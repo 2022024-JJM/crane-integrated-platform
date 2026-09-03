@@ -203,7 +203,7 @@ interface ProcessMapDrilldownProvider {
 
 ## 8. 아키텍처 경계
 
-- `DashboardPage`와 `shared/widgets/dashboard-map`은 `@/processes/**`를 import하지 않는다.
+- `DashboardPage`와 `shared/features/dashboard-map`은 `@/processes/**`를 import하지 않는다.
 - 조립 변환 코드, 조립 명칭, 조립 상세 경로 생성은 `processes/assembly` 안에 둔다.
 - 공정 모듈이 제공하는 값은 `ProcessModule.provides`와 `shared/model/processRegistry`를 통해 읽는다.
 - 공정 모듈 간 직접 import를 금지한다.
@@ -302,7 +302,7 @@ interface ProcessMapDrilldownProvider {
 
 - `AGENTS.md`: 웹 모듈 경계, 라우트·번역 소유권, 모듈 레지스트리 규칙
 - `web-dashboard/src/shared/pages/DashboardPage.tsx`: 현재 제목 영역과 대시보드 진입점
-- `web-dashboard/src/shared/widgets/dashboard-map/DashboardZoneMap.tsx`: 현 공정/공장 선택, 지도 스포트라이트, 공장 상세
+- `web-dashboard/src/shared/features/dashboard-map/ui/DashboardZoneMap.tsx`: 현 공정/공장 선택, 지도 스포트라이트, 공장 상세
 - `web-dashboard/src/shared/model/processModule.ts`: 선택적 모듈 제공 계약
 - `web-dashboard/src/shared/model/processRegistry.ts`: 공통 화면의 모듈 데이터 접근 경계
 - `web-dashboard/src/processes/assembly/module.ts`: 조립 라우트 및 동적 import

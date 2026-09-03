@@ -12,6 +12,7 @@ import {
 import {
   FAB_STAGES,
   PAINTING_STEPS,
+  type AssyMatch,
   type AssyWo,
   type FabPart,
   type FabStageId,
@@ -159,13 +160,14 @@ const wo = (woNo: string, kind: AssyWo['kind'], status: AssyWo['status']): AssyW
 const assy = (
   assyNo: string,
   reqQty: number,
-  countedQty: number,
+  recognizedQty: number,
   wos: AssyWo[],
-  tree: { parent?: string | null; depth?: number } = {}
+  tree: { parent?: string | null; depth?: number; match?: Partial<AssyMatch> } = {}
 ): AssyRaw => {
   const [, , tail] = assyNo.split('-')
   const strcCode = tail[0]
   const tier = strcCode === 'G' ? 'grand' : strcCode === 'M' ? 'mid' : 'sub'
+  const state = tree.match?.state ?? 'matched'
   return {
     assyNo,
     strcCode,
@@ -174,44 +176,159 @@ const assy = (
     parentAssyNo: tree.parent ?? null,
     depth: tree.depth ?? (tree.parent ? 1 : 0),
     reqQty,
-    countedQty,
-    wos,
+    recognizedQty,
+    judgedDate: recognizedQty > 0 ? '2026-09-01' : null,
+    match: {
+      state,
+      wos: state === 'unmatched' ? [] : wos,
+      flag: tree.match?.flag ?? null,
+      poolLabel: tree.match?.poolLabel ?? 'YPWG411M (하루치)',
+    },
   }
 }
 
-describe('블록-ASSY 집계 (ASSY 기준 추적 · W/O 완료 기준)', () => {
+/**
+ * **기준 축 반전 (사용자 확정)** — 조립 실적의 뼈대는 우리 판별(자동수집)이고, 레거시
+ * W/O 는 그 위에 붙는 참고다. 예전 계약(`ASSY 완료 = 귀속 W/O 전량 완료`)을 뒤집은
+ * 자리라, 그 방향이 되돌아가지 않도록 여기서 잠근다.
+ */
+describe('블록-ASSY 집계 — 판별이 기준, W/O 는 참고', () => {
   const sample = [
     assy('7004-310-S01', 6, 6, [wo('WO-00001', 'fit', 'done'), wo('WO-00002', 'weld', 'done')]),
     assy('7004-310-M02', 8, 3, [wo('WO-00003', 'fit', 'done'), wo('WO-00004', 'weld', 'inProgress')]),
     assy('7004-310-G03', 5, 0, [wo('WO-00005', 'fit', 'notStarted')]),
   ]
 
-  it('ASSY 완료 = 귀속 W/O 전량 완료 — 종합은 W/O 합계뿐(합성 산식 없음)', () => {
+  it('판별 완료 = 인식 수량이 계획 분모를 채움 (W/O 상태와 무관)', () => {
     const summary = summarizeAssemblyBlock(sample, { moved: false, date: null })
-    expect(summary.assys.map((u) => u.done)).toEqual([true, false, false])
-    expect(summary.assyDone).toBe(1)
-    expect(summary.assyTotal).toBe(3)
+    expect(summary.assys.map((u) => u.judged)).toEqual(['complete', 'partial', 'none'])
+    expect(summary.assyJudged).toBe(1)
+  })
+
+  it('종합 실적률 = 판별 인식 합 ÷ 계획 분모 합 (W/O 완료율이 아니다)', () => {
+    const summary = summarizeAssemblyBlock(sample, { moved: false, date: null })
+    expect(summary.recognizedQty).toBe(9)
+    expect(summary.reqQtyTotal).toBe(19)
+    expect(summary.judgedRate).toBe(47.4)
+    /* W/O 는 참고로 따로 남는다 — 두 수가 서로를 대신하지 않는다 */
     expect(summary.woDone).toBe(3)
     expect(summary.woTotal).toBe(5)
-    expect(summary.overallRate).toBe(60)
+    expect(summary.woRate).toBe(60)
   })
 
-  it('검사장 이동은 블록 레벨 사실 — moved=false 면 날짜도 싣지 않는다', () => {
-    const summary = summarizeAssemblyBlock(sample, { moved: false, date: '2026-09-01' })
-    expect(summary.inspectionMoved).toBe(false)
-    expect(summary.inspectionDate).toBeNull()
+  it('W/O 를 다 채워도 인식이 없으면 완료가 아니다 — 축이 뒤집혔다는 증거', () => {
+    const woDoneButNotRecognized = [
+      assy('7004-310-S01', 6, 0, [wo('WO-1', 'fit', 'done'), wo('WO-2', 'weld', 'done')]),
+    ]
+    const summary = summarizeAssemblyBlock(woDoneButNotRecognized, { moved: false, date: null })
+    expect(summary.woRate).toBe(100)
+    expect(summary.assys[0].judged).toBe('none')
+    expect(summary.assys[0].done).toBe(false)
+    expect(summary.assyDone).toBe(0)
   })
 
-  it('정합 검증기 — 카운트>분모·완료-카운트 불일치·완료 전 검사장 이동을 잡는다', () => {
+  it('인식이 다 됐으면 W/O 가 덜 완료여도 판별은 완료다 (참고가 기준을 막지 않는다)', () => {
+    const summary = summarizeAssemblyBlock(
+      [assy('7004-310-S01', 4, 4, [wo('WO-1', 'fit', 'done'), wo('WO-2', 'weld', 'notStarted')])],
+      { moved: false, date: null }
+    )
+    expect(summary.assys[0].judged).toBe('complete')
+    expect(summary.assys[0].done).toBe(true)
+  })
+})
+
+describe('매칭 캐스케이드 — 불일치는 완료 처리 금지 (ASM-F10)', () => {
+  const unmatched = (assyNo: string, tree = {}) =>
+    assy(assyNo, 4, 4, [wo('WO-X', 'fit', 'done')], { ...tree, match: { state: 'unmatched' } })
+
+  it('불일치면 판별이 끝나도 완료가 아니고 완료 보류로 남는다', () => {
+    const summary = summarizeAssemblyBlock([unmatched('7004-310-S01')], { moved: false, date: null })
+    const unit = summary.assys[0]
+    expect(unit.judged).toBe('complete')
+    expect(unit.done).toBe(false)
+    expect(unit.blockedByMatch).toBe(true)
+    expect(summary.assyJudged).toBe(1)
+    expect(summary.assyDone).toBe(0)
+    expect(summary.match.unmatched).toBe(1)
+  })
+
+  it('불일치에는 붙은 W/O 가 없다 — 레거시에 대상이 없다는 사실을 데이터로도 지킨다', () => {
+    const summary = summarizeAssemblyBlock([unmatched('7004-310-S01')], { moved: false, date: null })
+    expect(summary.assys[0].match.wos).toEqual([])
+    expect(summary.assys[0].woTotal).toBe(0)
+  })
+
+  it('완료 보류는 위로 번진다 — 소조가 막히면 그 중조·대조도 닫히지 않는다', () => {
+    const g = assy('7004-310-G01', 4, 4, [wo('WO-1', 'fit', 'done')])
+    const m = assy('7004-310-M02', 4, 4, [wo('WO-2', 'fit', 'done')], { parent: g.assyNo, depth: 1 })
+    const s = unmatched('7004-310-S03', { parent: m.assyNo, depth: 2 })
+    const summary = summarizeAssemblyBlock([g, m, s], { moved: false, date: null })
+    expect(summary.assys.map((u) => u.done)).toEqual([false, false, false])
+    /* 위쪽 둘은 매칭 문제가 아니라 자식 때문에 막힌 것 — 판별 자체는 셋 다 완료다 */
+    expect(summary.assyJudged).toBe(3)
+    expect(summary.match.unmatched).toBe(1)
+  })
+
+  it('매칭 분포를 그대로 센다 (카드 범례의 원천)', () => {
+    const summary = summarizeAssemblyBlock(
+      [
+        assy('7004-310-S01', 4, 4, [wo('WO-1', 'fit', 'done')]),
+        assy('7004-310-S02', 4, 4, [wo('WO-2', 'fit', 'done')], {
+          match: { state: 'fallback', flag: 'early' },
+        }),
+        unmatched('7004-310-S03'),
+      ],
+      { moved: false, date: null }
+    )
+    expect(summary.match).toEqual({ matched: 1, fallback: 1, unmatched: 1 })
+  })
+
+  it('검사장 이동은 완료 확정 전량이어야 한다 — 불일치가 남으면 블록이 안 닫힌다', () => {
+    const summary = summarizeAssemblyBlock([unmatched('7004-310-S01')], {
+      moved: true,
+      date: '2026-09-01',
+    })
+    expect(findAssyViolations(summary)).toContain('inspection-before-done')
+  })
+})
+
+describe('정합 검증기 — 판별 축의 규칙', () => {
+  it('인식 수량이 분모를 넘으면 잡는다', () => {
     const bad = summarizeAssemblyBlock(
       [assy('7004-310-S01', 4, 5, [wo('WO-00001', 'fit', 'done')])],
       { moved: true, date: '2026-09-01' }
     )
-    const violations = findAssyViolations(bad)
-    expect(violations).toContain('7004-310-S01:count>req')
-    expect(violations).toContain('7004-310-S01:done-count')
-    // ASSY 전량 완료(1/1)라 inspection 위반은 없다
-    expect(violations).not.toContain('inspection-before-done')
+    expect(findAssyViolations(bad)).toContain('7004-310-S01:count>req')
+  })
+
+  it('불일치에 W/O 가 붙어 있으면 상태와 데이터가 어긋난 것이다', () => {
+    const raw = assy('7004-310-S01', 4, 4, [], {})
+    const broken = summarizeAssemblyBlock(
+      [{ ...raw, match: { ...raw.match, state: 'unmatched', wos: [wo('WO-1', 'fit', 'done')] } }],
+      { moved: false, date: null }
+    )
+    expect(findAssyViolations(broken)).toContain('7004-310-S01:unmatched-has-wo')
+    /* `done-unmatched` 는 집계를 거치면 나올 수 없다(불일치는 done 이 안 된다) —
+       실연동 데이터가 그 조합을 들고 올 때를 위한 방어 규칙이라 여기서는 안 잡힌다 */
+    expect(findAssyViolations(broken)).not.toContain('7004-310-S01:done-unmatched')
+  })
+
+  it('폴백이 아닌데 선행/지연 표식이 붙으면 잡는다', () => {
+    const raw = assy('7004-310-S01', 4, 4, [wo('WO-1', 'fit', 'done')])
+    const broken = summarizeAssemblyBlock(
+      [{ ...raw, match: { ...raw.match, flag: 'early' } }],
+      { moved: false, date: null }
+    )
+    expect(findAssyViolations(broken)).toContain('7004-310-S01:flag-without-fallback')
+  })
+
+  it('검사장 이동은 블록 레벨 사실 — moved=false 면 날짜도 싣지 않는다', () => {
+    const summary = summarizeAssemblyBlock(
+      [assy('7004-310-S01', 4, 4, [wo('WO-1', 'fit', 'done')])],
+      { moved: false, date: '2026-09-01' }
+    )
+    expect(summary.inspectionMoved).toBe(false)
+    expect(summary.inspectionDate).toBeNull()
   })
 })
 
@@ -238,10 +355,35 @@ describe('조립 mock 생성기 — 결정론·조합식·파생 규칙', () => 
     }
   })
 
-  it('W/O 없이 완료된 ASSY 가 없다 (done ⇒ 귀속 W/O 존재)', () => {
+  it('완료 확정 ASSY 는 판별 완료이고 매칭이 불일치가 아니다 (완료의 필요조건)', () => {
     for (const [proj, block] of SAMPLES) {
       for (const u of generateAssyUnits(proj, block, BASE).assys) {
-        if (u.done) expect(u.woTotal).toBeGreaterThan(0)
+        if (!u.done) continue
+        expect(u.judged).toBe('complete')
+        expect(u.match.state).not.toBe('unmatched')
+        expect(u.woTotal).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('W/O 상태는 판별에서 파생된다 — 인식 완료 ASSY 의 W/O 는 전량 완료', () => {
+    for (const [proj, block] of SAMPLES) {
+      for (const u of generateAssyUnits(proj, block, BASE).assys) {
+        if (u.judged !== 'complete' || u.match.state === 'unmatched') continue
+        expect(u.woDone).toBe(u.woTotal)
+      }
+      /* 반대로 인식이 없으면 완료된 W/O 도 없다 (W/O 가 앞서 가지 않는다) */
+      for (const u of generateAssyUnits(proj, block, BASE).assys) {
+        if (u.recognizedQty === 0) expect(u.woDone).toBe(0)
+      }
+    }
+  })
+
+  it('폴백 매칭에만 선행/지연 표식이 붙는다 (ASM-F09)', () => {
+    for (const [proj, block] of SAMPLES) {
+      for (const u of generateAssyUnits(proj, block, BASE).assys) {
+        if (u.match.state === 'fallback') expect(u.match.flag).not.toBeNull()
+        else expect(u.match.flag).toBeNull()
       }
     }
   })
@@ -318,15 +460,45 @@ describe('조립 이벤트 행 계약', () => {
     expect(allRows.length).toBe(asmRows.length + fabRows.length + pntRows.length)
   })
 
-  it('W/O 행은 일자만, BTS 행은 일시 — 관리번호는 WO/ASSY 형식', async () => {
+  /**
+   * 관리번호·시각 형식이 **원천을 그대로 드러내는지**. 판별 행은 우리 수집(LiDAR)이라
+   * ASSY_NO 를 달고 시각이 있고, W/O 행은 레거시 작업지시라 W/O 번호에 일자만 있다 —
+   * 두 원천이 한 그리드에 섞여도 어느 쪽에서 온 행인지 형식으로 구분된다.
+   */
+  it('판별·BTS 행은 ASSY 키+일시, W/O 행은 W/O 키+일자만', async () => {
     const rows = await fetchCollectionEvents('7004', ['222', '310', '415', '521'], 'assembly', BASE)
+    const timed = ['btsIn', 'btsOut', 'asmJudged']
     for (const row of rows) {
-      const isBts = row.kind === 'btsIn' || row.kind === 'btsOut'
-      expect(row.mgmtNoType).toBe(isBts ? 'ASSY' : 'WO')
+      const hasTime = timed.includes(row.kind ?? '')
+      expect(row.mgmtNoType).toBe(hasTime ? 'ASSY' : 'WO')
       for (const instant of [row.occurred, row.completed]) {
         if (!instant) continue
-        if (isBts) expect(instant.time).toBeDefined()
+        if (hasTime) expect(instant.time).toBeDefined()
         else expect(instant.time).toBeUndefined()
+      }
+    }
+  })
+
+  it('판별 행이 원천 — 인식이 있는 ASSY 마다 판별 행이 하나씩 선다', async () => {
+    const rows = await fetchCollectionEvents('7004', ['222'], 'assembly', BASE)
+    const summary = await fetchAssemblySummary('7004', '222', BASE)
+    const judged = rows.filter((r) => r.kind === 'asmJudged')
+    expect(judged.map((r) => r.mgmtNo).sort()).toEqual(
+      summary.assys.filter((a) => a.recognizedQty > 0).map((a) => a.assyNo).sort()
+    )
+  })
+
+  it('불일치 ASSY 는 W/O 참고 행을 내지 않는다 — 붙은 W/O 가 없기 때문이다', async () => {
+    for (const block of ['222', '310', '415', '521']) {
+      const summary = await fetchAssemblySummary('7004', block, BASE)
+      const rows = await fetchCollectionEvents('7004', [block], 'assembly', BASE)
+      const woNos = new Set(rows.filter((r) => r.mgmtNoType === 'WO').map((r) => r.mgmtNo))
+      for (const assyUnit of summary.assys) {
+        if (assyUnit.match.state !== 'unmatched') continue
+        expect(assyUnit.match.wos).toEqual([])
+        /* 판별 행은 서지만(우리가 인식했으니) W/O 행은 없다 */
+        expect(rows.some((r) => r.kind === 'asmJudged' && r.mgmtNo === assyUnit.assyNo)).toBe(true)
+        for (const no of woNos) expect(no).not.toBe(assyUnit.assyNo)
       }
     }
   })
@@ -436,12 +608,13 @@ describe('도장 스텝 mock — 게이트·순차·확정·BTS 귀속', () => {
     }
   })
 
-  it('스텝↔레거시 키 매핑은 잠정 상수 한 곳 — 3스텝이 순서대로 정의돼 있다', () => {
+  it('스텝↔레거시 키 매핑은 상수 한 곳 — 3스텝이 순서대로 정의돼 있다', () => {
+    /* 유도 규칙 자체의 검증은 paintingStepMapping.test.ts 가 맡는다 */
     expect(PAINTING_STEPS).toEqual(['SP', 'TUP', 'FINAL'])
     for (const step of PAINTING_STEPS) {
       const key = PAINTING_STEP_MAPPING[step]
       expect(key.pntWorkKind.length).toBeGreaterThan(0)
-      expect(key.pntSeq.length).toBeGreaterThan(0)
+      expect(key.elmtItemCodes.length).toBeGreaterThan(0)
     }
   })
 

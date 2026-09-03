@@ -27,25 +27,25 @@ import {
   colorOfProcess,
   type YardParcelFactory,
 } from '../../../entities/yard-parcels'
-import { restyleDarkBasemap } from '../../../widgets/dashboard-map/darkMapRestyle'
+import { restyleDarkBasemap } from '../../dashboard-map/lib/darkMapRestyle'
 import {
   bayCameraBounds,
   factoryCameraBoundsOf,
   overviewCameraBounds,
   OVERVIEW_BOUNDS_PADDING,
-} from '../../../widgets/dashboard-map/overviewCamera'
+} from '../../dashboard-map/lib/overviewCamera'
 import {
   DashboardMiniMap,
   type DashboardMiniMapHandle,
-} from '../../../widgets/dashboard-map/DashboardMiniMap'
-import { summarizeBay } from '../../../widgets/dashboard-map/bayDetail'
-import { BayDetailCard } from '../../../widgets/dashboard-map/BayDetailCard'
-import { spotlitLot } from '../../../widgets/dashboard-map/lotSpot'
+} from '../../dashboard-map/ui/DashboardMiniMap'
+import { summarizeBay } from '../../dashboard-map/lib/bayDetail'
+import { BayDetailCard } from '../../dashboard-map/ui/BayDetailCard'
+import { spotlitLot } from '../../dashboard-map/lib/lotSpot'
 import {
   FactoryHudLabel,
   type FactoryHudCamera,
   type FactoryHudLabelHandle,
-} from '../../../widgets/dashboard-map/FactoryHudLabel'
+} from '../../dashboard-map/ui/FactoryHudLabel'
 import { ChevronDownIcon } from '../../../ui/icons'
 import { cn } from '../../../lib/utils'
 import type {
@@ -91,6 +91,9 @@ const ENTRY_LAYERS: YardLayers = {
 }
 
 const DIM = '#000'
+
+/** 마커를 내지 않는 공정이 받는 빈 마커 목록 — 참조가 고정이라 매 렌더 다시 그리지 않는다 */
+const NO_MARKERS = [] as const
 
 /**
  * 베이를 골랐을 때 화면에 담을 **공장 범위의 최소 비율** — 확대 배율의 상한이다.
@@ -512,11 +515,14 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
         />
       )}
 
-      {/* 카메라를 따라가는 층(마커·공장 라벨) — 뷰는 handle 로만 들어온다 */}
-      {markers && markers.length > 0 && renderMarker && (
+      {/* ── 카메라를 따라가는 층(마커 + 공장 이름 라벨) — 뷰는 handle 로만 들어온다.
+           **마커가 아니라 공장이 있으면 선다.** 이름패가 이 층에 살기 때문에, 마커를
+           예전처럼 조건에 걸면 마커 없는 공정(선행의장 — LiDAR 실좌표 미수령)은 공장
+           이름까지 함께 사라진다. 마커는 층 안에서 renderMarker 가 있을 때만 그린다 ── */}
+      {memberFactories.length > 0 && (
         <MapMarkerLayer
           ref={markerLayerRef}
-          markers={markers}
+          markers={markers ?? NO_MARKERS}
           selectedMarkerId={selectedMarkerId}
           onSelectMarker={onSelectMarker ?? (() => {})}
           renderMarker={renderMarker}

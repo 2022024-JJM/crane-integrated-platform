@@ -1226,16 +1226,31 @@ export function LidarPointCloudViewer({
       const bayL = placement?.size[1] ?? BAY_LENGTH
 
       const density = mode === 'factory' ? FACTORY_DENSITY : 1
+      /* 실측 정반(PBS 5BAY) — 이 뷰어는 목업 시뮬레이터라 실측 **점군**을 지어낼 수 없다.
+       * 합성 바닥 스캔·블록 히트를 만들면 실측 센서 명의의 가짜 데이터가 되므로(R 진단)
+       * 만들지 않는다. 점군은 아래에서 realOverlay(진짜 점군)로 올린다. */
+      const realScan = bay.realScan ?? false
       /* 센서 자리 — 설비 엔티티 실좌표(도면 이식)가 있으면 그것, 없으면 절차 배치.
        * 상태 목록(bay.sensors)이 실좌표보다 많으면 남는 항목은 마커 없이 남는다
        * (아래 `if (!position) return` — 자리를 지어내지 않는다). */
       const sensorPositions = placement?.sensorPoints?.length
         ? placement.sensorPoints.map(([sx, sz]) => new THREE.Vector3(sx, SENSOR_POLE_HEIGHT, sz))
         : getSensorPositions(bay.sensors.length, bayW, bayL)
-      /* 실측 정반(PBS 5BAY) — 이 뷰어는 목업 시뮬레이터라 실측을 그릴 수 없다.
-       * 절차 배치 마커·합성 바닥 스캔을 만들면 실측 센서 명의의 가짜 데이터가 되므로
-       * (R 진단) 만들지 않는다. 자리는 라벨의 실측 칩과 '진입해 확인' 줄이 대신 말한다. */
-      const realScan = bay.realScan ?? false
+      /*
+       * 실측 정반의 센서 자리는 **오버레이가 준 실측 좌표**다 — 점군과 같은 변환을 탄
+       * 값이라 마커가 점군과 어긋날 여지가 없고, 높이도 실측(5~7m)이라 목업 폴(15m)과
+       * 한눈에 갈린다. 도면 이식값(placement.sensorPoints)을 쓰지 않는 이유는
+       * realOverlay 계약 주석 참조 — 실측 12대와 도면 12대는 다른 장비 집합이다.
+       * 이름(장비 IP)으로 맞춘다: 두 목록의 순서를 가정하지 않는다.
+       */
+      const realSensorPositions = new Map<string, THREE.Vector3>(
+        (bay.realOverlay?.sensors ?? []).map((sensor) => [
+          sensor.name,
+          new THREE.Vector3(...sensor.position),
+        ])
+      )
+      const positionOfSensor = (sensor: LidarSensor, index: number) =>
+        realScan ? realSensorPositions.get(sensor.name) : sensorPositions[index]
       const bayModel = bay.bayModel ?? null
       const visibleBlocks = focusBlock ? [focusBlock] : bay.blocks
 
@@ -1415,17 +1430,23 @@ export function LidarPointCloudViewer({
       }
 
       bay.sensors.forEach((sensor, index) => {
-        if (realScan) return // 실측 정반 — 가짜 마커·합성 스캔 생략 (위 주석)
-        const position = sensorPositions[index]
+        const position = positionOfSensor(sensor, index)
         if (!position) return
 
         const color = SENSOR_POINT_COLORS[index % SENSOR_POINT_COLORS.length]
         const isOnline = sensor.status === 'online'
         if (!focusBlock) {
-          const marker = createSensorMarker(position, SENSOR_TARGET, color, isOnline)
+          /* 방향 콘 — 목업은 정반 중앙을 겨눈다(합성 스캔이 실제로 그렇게 쏜다).
+           * 실측 센서는 갠트리에 매달려 제 아래를 훑으므로 그 자리 바닥을 겨눈다:
+           * 100m 떨어진 베이 중앙을 가리키면 화면이 없는 조준을 말하게 된다. */
+          const target = realScan ? new THREE.Vector3(position.x, 0, position.z) : SENSOR_TARGET
+          const marker = createSensorMarker(position, target, color, isOnline)
           refs.sensorMarkers.push(marker)
           bayGroup.add(marker)
         }
+        /* 실측 정반은 마커까지다 — 아래 합성 스캔은 목업 시뮬레이션이라 실측에
+         * 얹으면 가짜 데이터가 된다(위 주석). 점군은 realOverlay 가 이미 올렸다. */
+        if (realScan) return
         if (!isOnline) return
 
         if (!focusBlock) {
@@ -1455,9 +1476,9 @@ export function LidarPointCloudViewer({
 
       // ══ pass 3 ══ 공간 해시 → 부재별 대조 → CAD mesh(확인/미확인) · diff 윤곽 · 콜아웃
       const onlineSensors: MatchSensor[] = bay.sensors
-        .map((sensor, index) => ({ sensor, position: sensorPositions[index] }))
+        .map((sensor, index) => ({ sensor, position: positionOfSensor(sensor, index) }))
         .filter((s) => s.sensor.status === 'online' && s.position)
-        .map((s) => ({ position: s.position, target: SENSOR_TARGET }))
+        .map((s) => ({ position: s.position!, target: SENSOR_TARGET }))
 
       prepared.forEach((entry, detectionIndex) => {
         if (!entry || !entry.block.cadRegistered) return

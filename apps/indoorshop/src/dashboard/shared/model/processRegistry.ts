@@ -4,12 +4,7 @@ import type { FactoryOverview } from '../entities/factory/model/overview'
 import type { ProcessMapDrilldownProvider } from './processMapDrilldown'
 import type { ProcessFacilityAnchor } from './processFacilityAnchor'
 import type { YardMapBackdrop } from './yardMapBackdrop'
-import type {
-  ProcessModule,
-  ProcessNavEntry,
-  ProcessNavGroupId,
-  YardMapBackground,
-} from './processModule'
+import type { ProcessModule, ProcessNavEntry, ProcessNavGroupId } from './processModule'
 
 /*
  * 공정 모듈 레지스트리.
@@ -91,25 +86,12 @@ export async function fetchProcessFacilityAnchors(): Promise<ProcessFacilityAnch
  *
  * 대시보드가 지도를 배경으로 깔 때, 야드 모듈을 직접 import 하지 않기 위한 통로다.
  * 배경은 하나뿐이므로 처음 내는 모듈의 것을 쓴다 (지금은 야드). 아무 모듈도 내지
- * 않으면 `null` 이고, 대시보드는 그것을 지도 없이 카드만 뜨는 정상 상태로 다뤄야 한다.
- * ⚠️ 통합 임시: fetchYardMapBackground 와 동일 목적 — 하나로 통일 필요(아침 결정).
+ * 않으면 `null` 이고, 부르는 쪽은 그것을 지도 없이 카드·목록만 뜨는 정상 상태로 다뤄야
+ * 한다. 야드 지도 배경을 읽는 길은 이 함수 하나뿐이다.
  */
 export async function fetchYardMapBackdrop(): Promise<YardMapBackdrop | null> {
   const provide = registered.find((module) => module.provides?.mapBackdrop)?.provides
     ?.mapBackdrop
-  return provide ? provide() : null
-}
-
-/**
- * 야드 맵을 배경으로 쓰려는 화면에게 배경 데이터를 내는 모듈(야드)에게 물어본다.
- *
- * 도장 설비 배치뷰가 야드 모듈을 직접 import 하지 않기 위한 통로다. 배경을 내는 모듈이
- * 없으면 `null` 이다 — 부르는 쪽이 그 상태(지도 없이 목록만)를 정상으로 다뤄야 한다.
- * ⚠️ 통합 임시: fetchYardMapBackdrop 와 중복 — 통일 필요.
- */
-export async function fetchYardMapBackground(): Promise<YardMapBackground | null> {
-  const provide = registered.find((module) => module.provides?.yardMapBackground)?.provides
-    ?.yardMapBackground
   return provide ? provide() : null
 }
 

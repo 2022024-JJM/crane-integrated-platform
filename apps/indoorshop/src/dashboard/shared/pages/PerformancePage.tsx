@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from '../lib/i18n/useTranslation'
+import {
+  clearSelection,
+  rememberSelection,
+  resolveEntrySelection,
+} from '../entities/vessel'
 import { cn } from '../lib/utils'
 import { Button } from '../ui/atoms/Button'
 import { ToggleButton } from '../ui/atoms/ToggleButton'
@@ -53,25 +59,43 @@ function todayString(): string {
  *
  * '/'(OT 현황판)와 형제인 전역 화면이다 — P-(C) 이층형의 ③(실적 조회) 축.
  * 데이터는 performanceApi 파사드만 경유한다(실연동 시 IPD-IF01 로 교체).
+ *
+ * **진입 선택 승계** — `?vessel=7004&block=222,310` 딥링크가 있으면 그 조건으로,
+ * 없으면 직전에 조회한 조건으로 열고 곧바로 조회까지 끝낸다. 대시보드에서 블록을 보다가
+ * 넘어와 놓고 호선·블록을 처음부터 다시 고르는 일을 없앤다(`entities/vessel` 계약).
+ * 사용자가 화면에서 '초기화'를 누르면 그 기억도 함께 지운다 — 다음에 들어올 때
+ * 지웠던 조건이 되살아나면 초기화가 거짓말이 된다.
+ *
+ * **ASSY 포커스** — `?assy=7004-222-M02`(여럿이면 콤마)로 들어오면 그 ASSY 가 든 블록을
+ * 조회하고 조립 트리에서 그 줄을 강조·스크롤한다(W6-2). 지도 ASSY 마커가 이 링크로
+ * 나가므로, 지도에서 본 덩이를 실적 화면에서 그대로 이어 본다.
  */
 export function PerformancePage() {
   const { t } = useTranslation()
   const baseDate = useMemo(todayString, [])
+  const [searchParams] = useSearchParams()
+  /* 진입 시점에 한 번만 읽는다 — 이후 필터 조작이 URL 에 되밀려 조회를 되돌리지 않도록 */
+  const entry = useRef<ReturnType<typeof resolveEntrySelection>>(undefined)
+  if (entry.current === undefined) entry.current = resolveEntrySelection(searchParams)
 
   const [vessels, setVessels] = useState<Vessel[]>([])
-  const [vessel, setVessel] = useState('')
+  const [vessel, setVessel] = useState(entry.current?.projNo ?? '')
   const [blockOptions, setBlockOptions] = useState<BlockOption[]>([])
-  const [selectedBlocks, setSelectedBlocks] = useState<string[]>([])
+  const [selectedBlocks, setSelectedBlocks] = useState<string[]>(entry.current?.blocks ?? [])
   const [process, setProcess] = useState<ProcessFilter>('all')
 
   /** 조회 버튼으로 굳힌 조건 — 필터를 만져도 결과는 다시 조회하기 전까지 유지 */
-  const [query, setQuery] = useState<{ projNo: string; blocks: string[]; process: ProcessFilter } | null>(null)
+  const [query, setQuery] = useState<{ projNo: string; blocks: string[]; process: ProcessFilter } | null>(
+    entry.current ? { projNo: entry.current.projNo, blocks: entry.current.blocks, process: 'all' } : null
+  )
   const [summaries, setSummaries] = useState<BlockSummary[]>([])
   const [activeBlock, setActiveBlock] = useState<string | null>(null)
   const [stages, setStages] = useState<FabricationSummary | null>(null)
   const [assembly, setAssembly] = useState<AssemblySummary | null>(null)
   const [painting, setPainting] = useState<PaintingSummary | null>(null)
   const [activeStage, setActiveStage] = useState<FabStageId | null>(null)
+  /** 진입 링크가 지목한 ASSY — 조립 카드가 강조·스크롤한다. 블록을 바꾸면 풀린다 */
+  const [focusAssys, setFocusAssys] = useState<string[]>(entry.current?.assys ?? [])
   const [events, setEvents] = useState<CollectionEvent[]>([])
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
@@ -109,6 +133,16 @@ export function PerformancePage() {
     [baseDate]
   )
 
+  /* 승계받은 조건으로 곧바로 조회까지 — 조회 버튼을 다시 누르게 하지 않는다.
+   * 딥링크로 들어온 조건도 남긴다 — 여기서 공정 화면에 다녀와 사이드바로 돌아왔을 때
+   * 조회 버튼을 눌렀을 때와 다르게 동작하면 승계가 반쪽이 된다. */
+  useEffect(() => {
+    const initial = entry.current
+    if (!initial) return
+    rememberSelection(initial)
+    void runQuery(initial.projNo, initial.blocks, 'all')
+  }, [runQuery])
+
   useEffect(() => {
     if (!query || !activeBlock) {
       setStages(null)
@@ -145,10 +179,16 @@ export function PerformancePage() {
     if (!vessel) return
     const next = { projNo: vessel, blocks: selectedBlocks, process }
     setQuery(next)
+    /* 사용자가 조건을 새로 굳혔다 — 링크가 지목했던 ASSY 포커스는 여기서 놓는다 */
+    setFocusAssys([])
+    /* 다음에 이 화면으로 돌아올 때(사이드바 진입 등) 되살릴 조건 — 공정 필터는 싣지 않는다.
+     * 승계 계약은 '무엇을 보고 있었나'(호선·블록)이지 조회 옵션까지가 아니다. */
+    rememberSelection({ projNo: next.projNo, blocks: next.blocks })
     void runQuery(next.projNo, next.blocks, next.process)
   }
 
   const handleReset = () => {
+    clearSelection()
     setVessel('')
     setSelectedBlocks([])
     setProcess('all')
@@ -159,6 +199,7 @@ export function PerformancePage() {
     setAssembly(null)
     setActiveBlock(null)
     setActiveStage(null)
+    setFocusAssys([])
   }
 
   /* 내보내기 스텁(D5) — 현재 그리드 행을 CSV 로. ⚠️ 대상 범위·형식은 정의서 미확정 */
@@ -255,7 +296,11 @@ export function PerformancePage() {
                 key={summary.blockNo}
                 summary={summary}
                 active={activeBlock === summary.blockNo}
-                onSelect={() => setActiveBlock(summary.blockNo)}
+                onSelect={() => {
+                  setActiveBlock(summary.blockNo)
+                  /* 다른 블록으로 넘어가면 지목 강조는 그 블록의 것이 아니다 */
+                  if (summary.blockNo !== activeBlock) setFocusAssys([])
+                }}
               />
             ))}
           </div>
@@ -311,10 +356,10 @@ export function PerformancePage() {
                 )}
               </SectionHeading>
             </div>
-            {assembly && <AssemblyCard summary={assembly} />}
+            {assembly && <AssemblyCard summary={assembly} focusAssys={focusAssys} />}
           </section>
 
-          {/* 도장 스텝 절점 — 추정 명세(SE12 검증 전) 단서는 카드가 단다 (W3-2) */}
+          {/* 도장 스텝 절점 — 스텝 축 유도 근거 단서는 카드가 단다 (W3-2 · W5-8) */}
           <section>
             <div className="mb-2">
               <SectionHeading description={t('performance.pnt.basis')}>

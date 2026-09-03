@@ -13,6 +13,10 @@ import type { ReactNode } from 'react'
 /*
  * ── 카메라를 따라가는 DOM 층 (마커 + 공장 이름 라벨) — 공정 무관 골격 ──
  *
+ * **공장 이름 라벨은 마커와 함께 여기 산다.** 그래서 이 층은 마커를 내지 않는 공정
+ * (선행의장 — LiDAR 실좌표 도면 미수령)에서도 서야 한다. 마커가 없으면 마커 층만
+ * 비고 이름패는 그대로 뜬다.
+ *
  * 카메라는 비행·드래그 중 **매 프레임** 바뀐다. 뷰를 프레임의 state 로 들면 프레임마다
  * 우측 패널·상세 오버레이까지 통째로 리렌더돼 애니메이션이 뚝뚝 끊긴다. 그래서 뷰는 이
  * 층만 아는 상태로 내리고, 지도는 imperative handle 로 밀어 넣는다 — 미니맵과 같은 결이다.
@@ -35,10 +39,12 @@ export interface MapMarkerLayerHandle {
 }
 
 interface MapMarkerLayerProps<M extends MapEntryMarker> {
+  /** 이 공정의 마커 — 없는 공정(실좌표 미수령 등)은 빈 배열로 온다 */
   markers: readonly M[]
   selectedMarkerId: string | null
   onSelectMarker: (id: string | null) => void
-  renderMarker: (marker: M, ctx: MarkerRenderCtx) => ReactNode
+  /** 마커 생김새(공정 몫). 마커를 내지 않는 공정은 주지 않는다 — 이름 라벨만 선다 */
+  renderMarker?: (marker: M, ctx: MarkerRenderCtx) => ReactNode
   selectedFactory: string
   inOverview: boolean
   hoveredFactory: string | null
@@ -121,36 +127,37 @@ function MapMarkerLayerInner<M extends MapEntryMarker>(
           마커는 **공장을 골라 드릴인한 뒤에만** 누를 수 있다 — 전체 보기·타 공장 마커는
           클릭 투과라, 그 자리를 누르면 지도가 받아 그 공장 선택(또는 전체 보기 복귀)이 된다 */}
       <div className="pointer-events-none absolute inset-0">
-        {markers.map((item) => {
-          const selected = item.id === selectedMarkerId
-          const selectable = !inOverview && item.factory === selectedFactory
-          const dim = !inOverview && !selectable
-          return (
-            <button
-              key={item.id}
-              ref={(node) => {
-                if (node) markerNodes.current.set(item.id, node)
-                else markerNodes.current.delete(item.id)
-              }}
-              type="button"
-              onClick={() => onSelectMarker(item.id)}
-              tabIndex={selectable ? 0 : -1}
-              title={item.title}
-              aria-label={item.ariaLabel ?? item.id}
-              className={cn(
-                'absolute left-0 top-0 flex h-7 w-7 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                selectable ? 'pointer-events-auto' : 'pointer-events-none',
-                /* 전체 보기 — 마커는 지면에 깔린 배경: 작고 흐리게 물러난다 */
-                inOverview ? 'opacity-60' : dim && 'opacity-45',
-                selected && 'z-10'
-              )}
-              /* 자리는 place() 가 transform 으로 넣는다 — 첫 프레임 전에는 숨겨 둔다 */
-              style={{ visibility: 'hidden', willChange: 'transform' }}
-            >
-              {renderMarker(item, { selected, selectable, inOverview })}
-            </button>
-          )
-        })}
+        {renderMarker &&
+          markers.map((item) => {
+            const selected = item.id === selectedMarkerId
+            const selectable = !inOverview && item.factory === selectedFactory
+            const dim = !inOverview && !selectable
+            return (
+              <button
+                key={item.id}
+                ref={(node) => {
+                  if (node) markerNodes.current.set(item.id, node)
+                  else markerNodes.current.delete(item.id)
+                }}
+                type="button"
+                onClick={() => onSelectMarker(item.id)}
+                tabIndex={selectable ? 0 : -1}
+                title={item.title}
+                aria-label={item.ariaLabel ?? item.id}
+                className={cn(
+                  'absolute left-0 top-0 flex h-7 w-7 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                  selectable ? 'pointer-events-auto' : 'pointer-events-none',
+                  /* 전체 보기 — 마커는 지면에 깔린 배경: 작고 흐리게 물러난다 */
+                  inOverview ? 'opacity-60' : dim && 'opacity-45',
+                  selected && 'z-10'
+                )}
+                /* 자리는 place() 가 transform 으로 넣는다 — 첫 프레임 전에는 숨겨 둔다 */
+                style={{ visibility: 'hidden', willChange: 'transform' }}
+              >
+                {renderMarker(item, { selected, selectable, inOverview })}
+              </button>
+            )
+          })}
       </div>
 
       {/* ── 공장 이름 라벨 — 마커 **위** 층: 이름이 항상 제일 위에 남는다. 클릭은 투과해

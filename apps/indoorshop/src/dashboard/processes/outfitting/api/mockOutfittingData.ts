@@ -5,13 +5,16 @@ import type {
   OutfittingSensor,
   OutfittingSensorStatus,
 } from '../model/block'
+import { blocksAtOutfittingFactory } from '../../../shared/entities/vessel'
 import { OUTFITTING_FACTORIES } from './outfittingFactoryFixture'
 
 /**
  * 선행의장 mock 데이터 (블록 중심).
  *
  * 공장 7곳과 구역 골격은 painting 야드 지번 데이터에서 파생한 실데이터
- * (`outfittingFactoryFixture.ts`)다. 그 위에 얹는 블록·상태·센서는 실측 파이프라인이
+ * (`outfittingFactoryFixture.ts`)이고, **어느 블록이 어느 구역에 있는지는 로스터**
+ * (`shared/entities/vessel`)가 정한다 — 의장에서 본 블록이 통합실적·대시보드에서도
+ * 같은 이름으로 나오게 하는 연결점이다. 그 위에 얹는 상태·진척·센서만 실측 파이프라인이
  * 아직 없어 **해시 결정론 mock** 으로 채운다 — 렌더링마다 값이 흔들리지 않는다.
  * 실연동 시 이 파일 대신 실제 조회를 `outfittingApi` 함수 몸통에 넣으면 되고, 공장/구역
  * 구조는 fixture 재생성으로 갱신한다.
@@ -24,7 +27,6 @@ export function hashOf(text: string): number {
   return Math.abs(h)
 }
 
-const PROJ_POOL = ['5510', '5511', '2698', '2712', '8104', '2731']
 const WSTG_POOL = ['E11', 'E12', 'E21', 'U21', 'U22', 'D31', 'D32', 'P41']
 
 /** 스캔 시각 — 결정론적 13:00~15:59 */
@@ -56,34 +58,45 @@ export const mockFactories: Factory[] = OUTFITTING_FACTORIES.map((factory): Fact
 })
 
 /**
- * 블록 — 구역마다 지번 수에 비례해 1~3개 생성. 블록이 곧 작업 단위다.
+ * 블록 — **로스터가 정한 것만** 선다 (`shared/entities/vessel`).
+ *
+ * 전에는 구역마다 지번 수에 비례해 1~3개를 즉석에서 지어냈다. 그 호선번호(5510·2698…)와
+ * 블록번호는 이 화면 밖 어디에도 없어서, 의장에서 본 블록을 통합실적에서 조회할 수도
+ * 대시보드에서 찾을 수도 없었다. 지금은 로스터의 의장 배정(`outfitting.areaCode`)이
+ * 곧 이 목록이고, 여기서 만드는 것은 진척·상태·스캔시각뿐이다 — 실측 파이프라인이
+ * 아직 없는 값들만 mock 이다.
+ *
+ * 시드는 `projNo-blockNo` — 자리(구역 인덱스)가 아니라 **블록의 신원**이다. 로스터에서
+ * 블록의 구역이 바뀌어도 그 블록의 진척은 따라간다.
  */
-export const mockBlocks: OutfittingBlock[] = OUTFITTING_FACTORIES.flatMap((factory) =>
-  factory.areas.flatMap((area) => {
-    const count = Math.min(3, Math.max(1, Math.ceil(area.yardLots.length / 2)))
-    return Array.from({ length: count }, (_, i): OutfittingBlock => {
-      const seed = `${factory.id}-${area.code}-${i}`
-      const h = hashOf(seed)
-      /* 진척: 12%는 대기(0~12), 18%는 완료(100), 나머지는 진행중(20~95) */
-      const bucket = h % 100
-      const progress =
-        bucket < 12 ? h % 13 : bucket >= 82 ? 100 : 20 + (hashOf(`${seed}-p`) % 76)
-      const blkNo = `${100 + (h % 800)}`
-      return {
+export const mockBlocks: OutfittingBlock[] = OUTFITTING_FACTORIES.flatMap((factory) => {
+  const areaOf = new Map(factory.areas.map((area) => [area.code, area]))
+  return blocksAtOutfittingFactory(factory.id).flatMap((block, i): OutfittingBlock[] => {
+    const area = areaOf.get(block.outfitting!.areaCode)
+    /* 로스터가 가리키는 구역이 fixture 에 없으면 그 블록은 세우지 않는다 —
+     * 없는 자리에 그리느니 빠지는 편이 낫다(공장 뷰와 어긋나지 않게). */
+    if (!area) return []
+    const seed = `${block.projNo}-${block.blockNo}`
+    const h = hashOf(seed)
+    /* 진척: 12%는 대기(0~12), 18%는 완료(100), 나머지는 진행중(20~95) */
+    const bucket = h % 100
+    const progress = bucket < 12 ? h % 13 : bucket >= 82 ? 100 : 20 + (hashOf(`${seed}-p`) % 76)
+    return [
+      {
         id: `${factory.id}-b${String(i + 1).padStart(2, '0')}-${area.code.toLowerCase()}`,
         factoryId: factory.id,
         areaCode: area.code,
         areaName: area.name,
-        projNo: PROJ_POOL[h % PROJ_POOL.length],
-        blkNo,
+        projNo: block.projNo,
+        blkNo: block.blockNo,
         wstgCode: WSTG_POOL[hashOf(`${seed}-w`) % WSTG_POOL.length],
         status: statusOf(progress),
         progress,
         lastScanAt: scanTimeOf(seed),
-      }
-    })
+      },
+    ]
   })
-)
+})
 
 /**
  * LiDAR 센서 — 구역마다 1~2대. 대부분 online, 결정론적으로 소수만 offline/error.

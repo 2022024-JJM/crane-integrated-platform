@@ -8,7 +8,7 @@ import { useClock } from '../../../shared/lib/useClock'
 import { StatusChip } from '../../../shared/ui/atoms/StatusChip'
 import { ChevronDownIcon } from '../../../shared/ui/icons'
 import { sensorStatusCounts } from '../../../shared/features/bay-viewer/lib/bayStatusSummary'
-import { FRESHNESS_THRESHOLDS, heartbeatElapsedMinutes } from '../lib/freshness'
+import { FRESHNESS_THRESHOLDS, heartbeatElapsedMinutes } from '../../../shared/features/bay-viewer/lib/freshness'
 
 interface LidarSensorStatusListProps {
   sensors: LidarSensor[]
@@ -80,7 +80,7 @@ function formatElapsed(minutes: number, t: TFunction): string {
 }
 
 /**
- * 신선도 등급 — 임계값은 lib/freshness 가 소유한다 (운영 합의 전 설정값, FR-1).
+ * 신선도 등급 — 임계값은 shared/features/bay-viewer/lib/freshness 가 소유한다 (운영 합의 전 설정값, FR-1).
  *
  * 색은 보조 신호일 뿐이다 — 경과 시간 글자가 이미 같은 사실을 말하고 있으므로
  * 색각 이상이나 흑백 출력에서도 정보가 사라지지 않는다.

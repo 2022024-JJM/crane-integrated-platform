@@ -1,4 +1,5 @@
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { PerformanceLink } from '../../../shared/entities/vessel'
 import type { Location } from '../../../shared/entities/location/model/types'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
 import type { LidarBlockInfo } from '../../../shared/features/bay-viewer/model/lidarBlock'
@@ -131,6 +132,12 @@ export function BayIdentityBar({ location, blocks, manifest, className }: BayIde
           </span>
           {t('assembly.bayIdentity.countUnit')}
         </span>
+      )}
+
+      {/* 이 정반의 블록을 통합실적에서 — 호선·블록을 실어 보내므로 도착해서 다시 고르지
+          않는다. 배정이 없는 정반에는 보낼 블록도 없다. */}
+      {assigned && (
+        <PerformanceLink projNo={location.projNo!} blockNo={location.blkNo!} />
       )}
 
       {unmatched > 0 && (

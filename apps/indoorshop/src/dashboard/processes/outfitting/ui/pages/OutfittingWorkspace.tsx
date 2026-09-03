@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
+import { PerformanceLink } from '../../../../shared/entities/vessel'
 import type { InshopKey } from '../../../../shared/lib/i18n/keys'
 import {
   OUTFITTING_STATUS_META,
@@ -61,6 +62,8 @@ function BlockRow({ block }: { block: OutfittingBlock }) {
       <span className="w-11 shrink-0 text-right font-mono text-2xs text-foreground/45">
         {block.lastScanAt}
       </span>
+      {/* 이 블록의 절점 실적으로 — 로스터가 한 우주라 같은 번호로 그대로 조회된다 */}
+      <PerformanceLink projNo={block.projNo} blockNo={block.blkNo} />
     </li>
   )
 }

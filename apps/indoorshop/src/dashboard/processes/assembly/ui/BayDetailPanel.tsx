@@ -20,7 +20,7 @@ import {
   DEFAULT_BAY_FILTER,
   type BayFilter,
 } from '../lib/bayFilters'
-import { latestScan, type LatestScan } from '../lib/freshness'
+import { latestScan, type LatestScan } from '../../../shared/features/bay-viewer/lib/freshness'
 import { useClock } from '../../../shared/lib/useClock'
 import { cn } from '../../../shared/lib/utils'
 

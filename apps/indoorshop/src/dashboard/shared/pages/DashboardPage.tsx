@@ -10,7 +10,7 @@ import { FixedViewport } from '../lib/fixed-viewport/FixedViewport'
  * 전에는 아래 Suspense 폴백이 **공정존 카드(ZoneGrid)를 먼저** 보여 준다.
  */
 const DashboardZoneMap = lazy(() =>
-  import('../widgets/dashboard-map/DashboardZoneMap').then((m) => ({
+  import('../features/dashboard-map/ui/DashboardZoneMap').then((m) => ({
     default: m.DashboardZoneMap,
   }))
 )

@@ -14,7 +14,8 @@ import { OutfittingMapEntry } from '../OutfittingMapEntry'
  *
  * 의장 7공장을 지번 폴리곤 위 주황 네온으로 세우는 큰 지도가 화면 주 영역이다. 공장을
  * 고르면 베이로 갈라지고, 베이를 누르면 그 베이의 **블록 목록**이 카드에 선다(의장은
- * 블록이 작업 단위다). 기존 공장 목록은 `/zones/outfitting/list` 에 병존한다.
+ * 블록이 작업 단위다). 기존 공장 목록은 `/zones/outfitting/list`, 설비 상태는
+ * `/zones/outfitting/equipment` 에 병존하며 둘 다 머리의 링크로 나간다.
  *
  * 딥링크: 야드/대시보드에서 의장 공장을 누르면 `?shop=<공장명>` 으로 온다 — 그 공장을
  * 자동으로 골라 지도가 그 공장으로 날아간다.
@@ -49,6 +50,12 @@ export function OutfittingMapEntryPage() {
         <h1 className="text-inshop-lg font-semibold text-foreground">{t('outfitting.mapEntry.title')}</h1>
         <div className="flex items-center gap-3">
           <p className="text-inshop-xs text-foreground/55">{t('outfitting.mapEntry.subtitle')}</p>
+          <Link
+            to="/indoorshop/zones/outfitting/equipment"
+            className="shrink-0 rounded-inshop-md border border-border px-2.5 py-1 text-inshop-xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground"
+          >
+            {t('outfitting.mapEntry.equipmentLink')}
+          </Link>
           <Link
             to="/indoorshop/zones/outfitting/list"
             className="shrink-0 rounded-inshop-md border border-border px-2.5 py-1 text-inshop-xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground"

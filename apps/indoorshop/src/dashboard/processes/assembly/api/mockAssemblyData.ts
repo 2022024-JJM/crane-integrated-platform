@@ -2,7 +2,8 @@ import type { Factory, FactoryHealth } from '../../../shared/entities/factory/mo
 import type { Location, LocationStatus } from '../../../shared/entities/location/model/types'
 import type { LidarBlockTransform } from '../../../shared/features/bay-viewer/model/lidarBlock'
 import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
-import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
+import { blocksWithCadModel } from '../../../shared/entities/vessel'
+import { ASSEMBLY_FACTORIES, type AssemblyUnitLevel } from './assemblyFactoryFixture'
 
 /**
  * 조립 공장 마스터 (mock 뼈대 + 실데이터 구조).
@@ -34,54 +35,52 @@ function locationId(factoryId: string, bayNo: number): string {
 }
 
 /**
- * 베이별 실제 블록 모델 배정 (public/models/의 FBX 전처리 산출물과 대응).
- *  - placement: 블록 로컬 좌표(바닥 중심 원점)를 정반 좌표계에 놓는 transform
- *  - unitLevel: 'assembly' = 중조립품 단위 인식 / 'block' = 대조립 단위
+ * 베이별 블록 배정 — **어느 블록이 어느 정반에 있는지는 로스터가 정한다**
+ * (`shared/entities/vessel`). 여기서는 그 배정에 3D 배치(placement)만 얹는다.
  *
- * CAD 모델이 있는 데모 베이만 배정한다 — 나머지 베이는 공석/미상이라 형상이 없다.
- * 배정 베이의 unitLevel 은 그 베이의 파생 unitLevel(대조=block)과 일치시킨다:
- *  - PBS 1·2·4 BAY (소/중조) → 중조립품 데모 3종
- *  - NPS 2·3 BAY (대조)      → 대조립 블록 데모 2종
+ * 배치를 로스터에 두지 않는 이유: position/quaternion 은 이 뷰어의 좌표계 사정이지
+ * 우주의 사실이 아니다. 반대로 호선·블록번호를 여기서 만들면 통합실적·의장이 모르는
+ * 블록이 되어 화면끼리 이어지지 않는다(이 파일이 로스터를 읽게 된 이유).
+ *
+ * `placement` 가 없는 정반은 원점에 그대로 놓는다 — CAD 가 붙는 정반은 지금 다섯이고
+ * 전부 아래에 적혀 있다.
  */
 export interface BayBlockAssignment {
   projNo: string
   blkNo: string
   placement: LidarBlockTransform
-  unitLevel: 'assembly' | 'block'
+  unitLevel: AssemblyUnitLevel
 }
 
-export const bayBlockAssignments: Record<string, BayBlockAssignment> = {
-  'asm-pbs-b1': {
-    projNo: '2540',
-    blkNo: '281',
-    placement: { position: [0, 0, -4], quaternion: [0, 0.06, 0, 0.998] },
-    unitLevel: 'assembly',
-  },
-  'asm-pbs-b2': {
-    projNo: '2543',
-    blkNo: '642',
-    placement: { position: [1, 0, 3], quaternion: [0, -0.05, 0, 0.999] },
-    unitLevel: 'assembly',
-  },
-  'asm-pbs-b4': {
-    projNo: '2570',
-    blkNo: '153',
-    placement: { position: [0, 0, 2], quaternion: [0, 0, 0, 1] },
-    unitLevel: 'assembly',
-  },
-  'asm-nps-b2': {
-    projNo: '4391',
-    blkNo: '154',
-    placement: { position: [-1, 0, -2], quaternion: [0, 0.09, 0, 0.996] },
-    unitLevel: 'block',
-  },
-  'asm-nps-b3': {
-    projNo: '4392',
-    blkNo: '133',
-    placement: { position: [0, 0, 4], quaternion: [0, -0.07, 0, 0.998] },
-    unitLevel: 'block',
-  },
+/** 정반별 3D 배치 — 블록 로컬 좌표(바닥 중심 원점)를 정반 좌표계에 놓는 transform */
+const BAY_PLACEMENTS: Record<string, LidarBlockTransform> = {
+  'asm-pbs-b1': { position: [0, 0, -4], quaternion: [0, 0.06, 0, 0.998] },
+  'asm-pbs-b2': { position: [1, 0, 3], quaternion: [0, -0.05, 0, 0.999] },
+  'asm-pbs-b4': { position: [0, 0, 2], quaternion: [0, 0, 0, 1] },
+  'asm-nps-b2': { position: [-1, 0, -2], quaternion: [0, 0.09, 0, 0.996] },
+  'asm-nps-b3': { position: [0, 0, 4], quaternion: [0, -0.07, 0, 0.998] },
 }
+
+const ORIGIN_PLACEMENT: LidarBlockTransform = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] }
+
+/**
+ * CAD 형상이 있는 로스터 블록만 정반에 앉힌다 — 형상 없는 블록을 배정하면 뷰어가
+ * 빈 정반을 '재실'로 보여 공장 뷰와 베이 뷰가 어긋난다.
+ */
+export const bayBlockAssignments: Record<string, BayBlockAssignment> = Object.fromEntries(
+  blocksWithCadModel().map((block) => {
+    const berth = block.berth!
+    return [
+      berth.bayId,
+      {
+        projNo: block.projNo,
+        blkNo: block.blockNo,
+        placement: BAY_PLACEMENTS[berth.bayId] ?? ORIGIN_PLACEMENT,
+        unitLevel: berth.unitLevel,
+      } satisfies BayBlockAssignment,
+    ]
+  })
+)
 
 /**
  * 베이 상태 — CAD 모델이 배정된 베이는 '재실'(occupied). 나머지는 결정론적으로

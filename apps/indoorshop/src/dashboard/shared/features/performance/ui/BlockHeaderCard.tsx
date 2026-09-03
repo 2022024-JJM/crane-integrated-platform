@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
+import { ProcessMapLink } from '../../../entities/vessel'
 import { cn } from '../../../lib/utils'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
@@ -12,7 +13,9 @@ import { NodeStrip } from './NodeStrip'
  * 계획%·실적%는 **절점 기반**임을 라벨로 병기한다(D3) — 실적% = 가공 절점 종합
  * (중량가중), 계획% = 절점 계획일 도래 비율. 합성 산식으로 오독되지 않게 한다.
  *
- * '맵에서 보기'(D4) — 대시보드 야드 맵에 이 블록의 조립 공장 포커스 딥링크.
+ * '맵에서 보기'(D4) — 대시보드 야드 맵에 이 블록의 조립 공장 포커스 딥링크. 그 옆의
+ * '공정 화면'은 이 블록이 실제로 서 있는 자리(정반이 정해졌으면 그 정반 상세)까지
+ * 데려간다 — 로스터가 블록의 위치를 알기에 붙일 수 있는 링크다.
  */
 export function BlockHeaderCard({
   summary,
@@ -49,21 +52,26 @@ export function BlockHeaderCard({
             {summary.projNo}-{summary.blockNo}
           </div>
           <div className="mt-0.5 text-inshop-xs text-foreground/60">
-            {summary.factory} · WO {summary.woTotal} ·{' '}
-            {t('performance.header.assy')} {t('performance.header.assyCount', { count: summary.assyCount })}
+            {summary.factory} · {t('performance.header.assy')}{' '}
+            {t('performance.header.assyCount', { count: summary.assyCount })}
           </div>
         </div>
-        <Link
-          to={`/?factory=${encodeURIComponent(summary.factory)}`}
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex shrink-0 items-center gap-1 rounded-inshop-md border border-border px-2 py-1 text-inshop-xs text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
-        >
-          <PinIcon size={13} />
-          {t('performance.header.viewOnMap')}
-        </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Link
+            to={`/?factory=${encodeURIComponent(summary.factory)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex shrink-0 items-center gap-1 rounded-inshop-md border border-border px-2 py-1 text-inshop-xs text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
+          >
+            <PinIcon size={13} />
+            {t('performance.header.viewOnMap')}
+          </Link>
+          <ProcessMapLink projNo={summary.projNo} blockNo={summary.blockNo} />
+        </div>
       </div>
 
-      {/* 큰 수치 3종 — 계획/실적은 절점 기준 표기를 라벨에 붙인다 */}
+      {/* 큰 수치 3종 — 계획/실적은 절점 기준, 조립은 **판별 기준**임을 라벨에 붙인다.
+          예전 셋째 칸은 'WO 완료'였다 — 레거시 작업지시를 주지표 자리에 두면 조립 카드가
+          뒤집은 축과 헤더가 서로 다른 이야기를 한다. */}
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="rounded-inshop-md bg-surface-secondary/50 px-3 py-2">
           <div className="text-[11px] text-foreground/55">
@@ -82,10 +90,13 @@ export function BlockHeaderCard({
           </div>
         </div>
         <div className="rounded-inshop-md bg-surface-secondary/50 px-3 py-2">
-          <div className="text-[11px] text-foreground/55">{t('performance.header.wo')}</div>
+          <div className="text-[11px] text-foreground/55">
+            {t('performance.header.judged')}{' '}
+            <span className="text-foreground/40">({t('performance.header.judgedBasis')})</span>
+          </div>
           <div className="text-inshop-2xl font-semibold tabular-nums">
-            {summary.woDone}
-            <span className="text-inshop-sm text-foreground/45">/{summary.woTotal}</span>
+            {summary.recognizedQty}
+            <span className="text-inshop-sm text-foreground/45">/{summary.reqQtyTotal}</span>
           </div>
         </div>
       </div>
@@ -104,8 +115,23 @@ export function BlockHeaderCard({
             })}
           </span>
           <span className="rounded bg-surface-secondary px-1.5 py-0.5 tabular-nums text-foreground/70">
+            {t('performance.header.judgedProgress', {
+              done: summary.assyJudged,
+              total: summary.assyCount,
+            })}
+          </span>
+          {/* W/O 는 참고 — 라벨에 그렇게 적고 색도 눌러 둔다 */}
+          <span className="rounded bg-surface-secondary px-1.5 py-0.5 tabular-nums text-foreground/45">
             {t('performance.header.woProgress', { done: summary.woDone, total: summary.woTotal })}
           </span>
+          {summary.unmatchedCount > 0 && (
+            <span
+              title={t('performance.header.unmatchedTitle')}
+              className="rounded bg-status-unhealthy/10 px-1.5 py-0.5 font-medium tabular-nums text-status-unhealthy"
+            >
+              {t('performance.header.unmatched', { count: summary.unmatchedCount })}
+            </span>
+          )}
           <span
             className={cn(
               'rounded px-1.5 py-0.5 font-medium',

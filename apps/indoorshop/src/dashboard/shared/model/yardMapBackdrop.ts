@@ -30,8 +30,8 @@ export interface YardMapBackdrop {
   /**
    * 블록 검색 색인 로더 — **첫 검색 때** 부른다(대시보드 초기 무게 불변). 야드의 블록
    * 위치(BTS 계열)를 검색 가능한 형태로 낸다. 새 provides 를 만들지 않고 backdrop 에
-   * 얹는 이유: 검색은 이 지도 위에서만 뜻이 있고, 로더가 늘어나는 것보다 이 묶음이
-   * 넓어지는 쪽이 '통합 임시' 중복(mapBackdrop/yardMapBackground)을 더 키우지 않는다.
+   * 얹는 이유: 검색은 이 지도 위에서만 뜻이 있고, 배경 로더를 늘리면 예전처럼 같은
+   * 목적의 provides 가 다시 갈라진다 — 배경은 `mapBackdrop` 하나로 둔다.
    */
   blockIndex?: () => Promise<readonly YardBackdropBlock[]>
 }

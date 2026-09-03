@@ -5,7 +5,9 @@ import {
   displayToBayLocal,
   fitAffineWgsToMeters,
   fitRigid2D,
+  fitWallAxis,
   obbFrame,
+  wallToBayLocal,
   type Pt2,
 } from '../lib/realScanAnchor'
 
@@ -113,5 +115,107 @@ describe('obbFrame · displayToBayLocal', () => {
     const alongEpsg = { x: 500 + frame.axis.x * 10, y: 900 + frame.axis.y * 10 }
     const along = displayToBayLocal({ rigid, frame }, alongEpsg.x - 500, alongEpsg.y - 900)
     expect(Math.abs(Math.abs(along.y) - 10)).toBeLessThan(1e-6)
+  })
+})
+
+/**
+ * 벽선 앵커 — 합성 홀로 회전·횡방향 복원을 검증한다.
+ *
+ * 합성 홀은 실측이 가진 함정을 그대로 담는다: 장변 벽 2개 말고도 **더 촘촘하지만 짧은**
+ * 내부 구조(갠트리 레일)가 있고, 슬랩 밖(바닥·천장) 점이 섞여 있다. 봉우리 세기로 고르면
+ * 레일을 벽으로 잡으므로, `fitWallAxis` 는 **장축 방향 연장**으로 골라야 한다.
+ */
+describe('fitWallAxis', () => {
+  const HALL_ANGLE_DEG = 12
+  const HALL_HALF_LENGTH = 60
+  const HALL_HALF_WIDTH = 20
+  const END_WALL_ALONG = 55
+
+  /** (along, across, height) 를 각도·병진을 태워 display xyz 평탄배열로 굽는다 */
+  function buildHall(): Float32Array {
+    const noise = rng(4242)
+    const theta = (HALL_ANGLE_DEG * Math.PI) / 180
+    const c = Math.cos(theta)
+    const s = Math.sin(theta)
+    const out: number[] = []
+    const push = (along: number, across: number, height: number) => {
+      const a = along + (noise() - 0.5) * 0.1
+      const b = across + (noise() - 0.5) * 0.1
+      out.push(a * c - b * s + 300, height, a * s + b * c - 120)
+    }
+    /* 장변 벽 2개 — 홀 전장에 걸쳐 성기게 */
+    for (let i = 0; i < 1500; i++) {
+      const along = -HALL_HALF_LENGTH + (i / 1499) * 2 * HALL_HALF_LENGTH
+      push(along, -HALL_HALF_WIDTH, 1.5 + noise() * 4)
+      push(along, HALL_HALF_WIDTH, 1.5 + noise() * 4)
+    }
+    /* 갠트리 레일 — 짧지만 벽보다 촘촘하다(연장 기준이 아니면 여기에 걸린다) */
+    for (let i = 0; i < 5000; i++) {
+      push(-15 + (i / 4999) * 30, -8, 2 + noise() * 3)
+    }
+    /* 북단 끝벽 — 홀 폭을 가로지르는 선 */
+    for (let i = 0; i < 900; i++) {
+      push(END_WALL_ALONG, -HALL_HALF_WIDTH + (i / 899) * 2 * HALL_HALF_WIDTH, 1.5 + noise() * 5)
+    }
+    /* 슬랩 밖 — 바닥과 천장 트러스. 걸러지지 않으면 벽선이 흔들린다 */
+    for (let i = 0; i < 4000; i++) {
+      push((noise() - 0.5) * 120, (noise() - 0.5) * 40, noise() * 0.5)
+      push((noise() - 0.5) * 120, (noise() - 0.5) * 40, 9 + noise())
+    }
+    return Float32Array.from(out)
+  }
+
+  it('짧고 촘촘한 내부 구조가 아니라 **가장 길게 이어지는 평행 두 선**을 벽으로 잡는다', () => {
+    const frame = fitWallAxis(buildHall())!
+    expect(frame).not.toBeNull()
+    expect((frame.angle * 180) / Math.PI).toBeCloseTo(HALL_ANGLE_DEG, 1)
+    expect(frame.innerWidth).toBeCloseTo(2 * HALL_HALF_WIDTH, 1)
+    /* 두 벽은 평행해야 한다 — 이 값이 게이트의 자기검증 항목이다 */
+    expect((frame.angleSpread * 180) / Math.PI).toBeLessThan(0.5)
+    /* 레일(across=-8)을 잡았다면 폭이 12m 로 나온다 */
+    expect(Math.abs(frame.walls[0].offset - frame.walls[1].offset)).toBeGreaterThan(30)
+    for (const wall of frame.walls) expect(wall.residual).toBeLessThan(0.2)
+  })
+
+  it('장축 끝의 끝벽을 찾는다 — 종방향 앵커의 근거', () => {
+    const frame = fitWallAxis(buildHall())!
+    const [, high] = frame.endWalls
+    expect(high).not.toBeNull()
+    /* 끝벽의 장축 좌표는 프레임 원점(=display 원점 투영)까지 포함하므로 상대 비교로 본다 */
+    const zero = wallToBayLocal(
+      { angle: frame.angle, lateralOrigin: frame.center, longitudinalOffset: 0 },
+      300,
+      -120
+    )
+    expect(high! - zero.y).toBeCloseTo(END_WALL_ALONG, 0)
+  })
+
+  it('벽이 한 줄뿐이면(이격 미달) 프레임을 세우지 않는다', () => {
+    const noise = rng(77)
+    const out: number[] = []
+    for (let i = 0; i < 4000; i++) out.push(-60 + (i / 3999) * 120, 2 + noise() * 4, noise() * 0.2)
+    expect(fitWallAxis(Float32Array.from(out))).toBeNull()
+  })
+
+  it('점이 너무 적으면 null', () => {
+    expect(fitWallAxis(new Float32Array([0, 2, 0, 1, 2, 1]))).toBeNull()
+  })
+})
+
+describe('wallToBayLocal', () => {
+  it('장축 방향 이동은 베이 로컬 z, 수직 방향 이동은 베이 로컬 x 로 떨어진다', () => {
+    const angle = (37 * Math.PI) / 180
+    const anchor = { angle, lateralOrigin: 4, longitudinalOffset: 25 }
+    const origin = wallToBayLocal(anchor, 0, 0)
+    expect(origin.x).toBeCloseTo(-4, 9)
+    expect(origin.y).toBeCloseTo(25, 9)
+    /* 장축 +10m */
+    const along = wallToBayLocal(anchor, 10 * Math.cos(angle), 10 * Math.sin(angle))
+    expect(along.y - origin.y).toBeCloseTo(10, 9)
+    expect(along.x - origin.x).toBeCloseTo(0, 9)
+    /* 수직 +10m */
+    const across = wallToBayLocal(anchor, -10 * Math.sin(angle), 10 * Math.cos(angle))
+    expect(across.x - origin.x).toBeCloseTo(10, 9)
+    expect(across.y - origin.y).toBeCloseTo(0, 9)
   })
 })

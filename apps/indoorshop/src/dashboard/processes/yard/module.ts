@@ -33,9 +33,8 @@ export const yardModule: ProcessModule = {
     facilityAnchors: () =>
       import('./lib/facilityAnchors').then((m) => m.buildProcessFacilityAnchors()),
     /*
-     * 야드 지도 배경 — 베이스맵(~980KB)·범위·색·시설. 대시보드·도장 등 다른 화면이
-     * YardMap 을 배경으로 쓸 때 넘길 값들. 그 무게가 필요 없는 화면에 실리지 않도록 lazy.
-     * ⚠️ 통합 임시: mapBackdrop(대시보드)·yardMapBackground(도장)이 동일 로더 — 하나로 통일 필요(아침 결정).
+     * 야드 지도 배경 — 베이스맵(~980KB)·범위·색·시설. 대시보드·공정 맵 진입 등 야드 지도를
+     * 배경으로 쓰는 화면 전부가 이 하나를 읽는다. 그 무게가 필요 없는 화면에 실리지 않도록 lazy.
      */
     mapBackdrop: () =>
       Promise.all([
@@ -63,17 +62,6 @@ export const yardModule: ProcessModule = {
               updatedAt: b.updatedAt,
             }))
           ),
-      })),
-    yardMapBackground: () =>
-      Promise.all([
-        import('./lib/basemapStyle'),
-        import('./api/yardRepository'),
-        import('./lib/facilities'),
-      ]).then(([basemap, repo, facilities]) => ({
-        basemapLayers: basemap.BASEMAP_LAYERS,
-        extent: repo.yardExtent(),
-        colorOfCategory: repo.colorOfCategory,
-        facilities: facilities.fetchYardFacilities(),
       })),
   },
 }

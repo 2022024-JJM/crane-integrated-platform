@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import type { BasemapLayer, MapTheme } from '../../yard-map'
 import { loadYardParcels, type YardParcels } from '../../../entities/yard-parcels'
 import { useAsyncData } from '../../../lib/useAsyncData'
-import { fetchYardMapBackground } from '../../../model/processRegistry'
+import { fetchYardMapBackdrop } from '../../../model/processRegistry'
 
 const EMPTY_BASEMAP: Record<MapTheme, BasemapLayer[]> = { dark: [], light: [] }
 
@@ -15,7 +15,7 @@ const EMPTY_BASEMAP: Record<MapTheme, BasemapLayer[]> = { dark: [], light: [] }
  */
 export function useMapEntryData() {
   const { data: parcels } = useAsyncData<YardParcels>(() => loadYardParcels(), [])
-  const { data: background } = useAsyncData(() => fetchYardMapBackground(), [])
+  const { data: background } = useAsyncData(() => fetchYardMapBackdrop(), [])
   return {
     parcels: parcels ?? null,
     basemapLayers: background?.basemapLayers ?? EMPTY_BASEMAP,

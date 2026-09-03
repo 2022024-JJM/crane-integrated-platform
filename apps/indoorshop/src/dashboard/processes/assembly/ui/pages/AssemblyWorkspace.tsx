@@ -36,7 +36,7 @@ import {
   bayPassesFilter,
   type BayFilter,
 } from '../../lib/bayFilters'
-import { latestScan, isViewDelayed } from '../../lib/freshness'
+import { latestScan, isViewDelayed } from '../../../../shared/features/bay-viewer/lib/freshness'
 import { useClock } from '../../../../shared/lib/useClock'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
@@ -266,8 +266,8 @@ export function AssemblyWorkspace() {
         bayModel: await fetchBayModel(location.id),
         /* 실측 정반 판정은 조립 데이터 계층의 몫 — 뷰어(shared)는 플래그만 받는다 */
         realScan: isRealLocation(location.id),
-        /* 실측 정반의 프리뷰 점군 — 앵커(센서 정합) 실패·자산 부재면 null 로 남아
-         * W0-2 의 빈 정반+실측 칩 폴백이 그대로 선다 */
+        /* 실측 정반의 프리뷰 점군 + 실측 센서 자리 — 앵커(벽선) 게이트 미통과·자산
+         * 부재면 null 로 남아 W0-2 의 빈 정반+실측 칩 폴백이 그대로 선다 */
         realOverlay: isRealLocation(location.id)
           ? await fetchRealScanOverlay().catch(() => null)
           : null,

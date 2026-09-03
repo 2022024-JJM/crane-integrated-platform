@@ -5,7 +5,7 @@ import type {
   YardParcelLot,
   YardParcels,
 } from '../../../entities/yard-parcels'
-import type { BaySummary } from '../../../widgets/dashboard-map/bayDetail'
+import type { BaySummary } from '../../dashboard-map/lib/bayDetail'
 
 /*
  * '맵 진입 공정 화면' 공통 프레임의 계약.

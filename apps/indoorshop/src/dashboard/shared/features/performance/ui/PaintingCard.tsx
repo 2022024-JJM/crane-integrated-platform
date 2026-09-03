@@ -7,13 +7,24 @@ import { PinIcon } from '../../../ui/icons'
 import type { PaintingStepId, PaintingSummary } from '../model/types'
 
 /*
- * 도장 — 스텝 절점 카드 (W3-2). 도장은 조립과 달리 **스텝이 진짜 순차 절점**이다:
+ * 도장 — 스텝 절점 카드 (W3-2 · W5-8). 도장은 조립과 달리 **스텝이 진짜 순차 절점**이다:
  * S/P → T/UP → FINAL. 근거는 도장 3테이블 구조(YPWP720M 계획 → YPWP710M 일일 실적 →
- * YPWG221M 확정 'B' 관문) — 단 명세는 **추정(SE12 검증 전)**이라 카드가 단서를 단다.
+ * YPWG221M 확정 'B' 관문)이며, 이 명세는 **SE12 검증으로 확정**됐다. 스텝 축은
+ * YPWP720M 실데이터 3,996행에서 유도했고(ELMT_ITEM_CODE), 카드가 그 근거를 단서로 단다.
  *
  * 블록 위치는 BTS 물류 기반(반입/반출·도장공장 지번 경유 — 게이트 결정: ZONE 대응표
  * 불신)이라 요약 줄이 "지금 어느 도장공장에 있는가"를 말하고, '맵에서 보기'가 그
- * 공장으로 딥링크한다. 스텝↔레거시 키 매핑은 paintingStepMapping.ts 한 곳(잠정)이다.
+ * 공장으로 딥링크한다. 스텝↔레거시 키 매핑은 paintingStepMapping.ts 한 곳이다.
+ *
+ * **스텝 수도 스텝의 분모도 블록마다 다르다**(존재 기반, 사용자 확정 2026-09-03):
+ * 스프레이는 1~6회로 갈리고 RE-S/P 는 이벤트성이라 없는 블록이 있다. 그래서 카드는
+ * 고정 3칸이 아니라 `summary.steps` 길이만큼 서고, 각 칸이 '완료 행 / 계획 행'과 그
+ * 블록의 실제 요소코드 구성을 그대로 낸다 — 부분 완료를 완료로 읽지 않기 위해서다.
+ *
+ * **진행 중 스텝은 여기에 일일공정률 기반 %를 하나 더 낸다**(W5-9). 행 완료/미완료만으로는
+ * "얼마나 됐는지"를 말할 수 없어서인데, 그 값은 YPWG413M(하루 1회 일괄 등록)에서 오므로
+ * 언제나 **어제 등록분 기준**이다 — 지금 이 순간으로 오해하지 않도록 날짜를 함께 낸다.
+ * 완료·미착수 스텝은 종전 표시 그대로 둔다 (% 는 참고 수치이지 완료 판정이 아니다).
  */
 
 const STEP_NAME_KEY: Record<PaintingStepId, InshopKey> = {
@@ -95,16 +106,29 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
         </div>
         <div className="ml-auto max-w-72 text-[10px] leading-4 text-foreground/45">
           {t('performance.pnt.provisionalNote')}
+          <div>{t('performance.pnt.existenceNote')}</div>
           <div>{t('performance.pnt.btsBasisNote')}</div>
         </div>
       </Card>
 
-      {/* ── 스텝 절점 카드 3장 — 순차 통과 (S/P → T/UP → FINAL) ── */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      {/* ── 스텝 절점 카드 — 그 블록에 계획된 스텝만, 순차 통과 ── */}
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-3',
+          summary.steps.length === 1 ? 'md:grid-cols-1' : summary.steps.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'
+        )}
+      >
         {summary.steps.map((step) => (
           <Card key={step.step} className={cn('p-3.5', step.status === 'notDue' && 'opacity-75')}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-inshop-sm font-semibold">{t(STEP_NAME_KEY[step.step])}</span>
+              <span className="text-inshop-sm font-semibold">
+                {t(STEP_NAME_KEY[step.step])}
+                {step.elmtItemCodes.length > 1 && (
+                  <span className="ml-1 text-[10px] font-normal text-foreground/45">
+                    ×{step.elmtItemCodes.length}
+                  </span>
+                )}
+              </span>
               <span
                 className={cn(
                   'rounded px-1.5 py-0.5 text-[10px] font-medium',
@@ -113,6 +137,29 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
               >
                 {t(STATUS_KEY[step.status])}
               </span>
+            </div>
+
+            {/* 존재 기반 분모 — 계획 행 전량이 차야 완료다 */}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-inshop-sm font-semibold tabular-nums">
+                {step.doneRows}
+                <span className="text-[11px] font-normal text-foreground/45">
+                  /{step.plannedRows}
+                </span>
+              </span>
+              <span className="text-[10px] text-foreground/45">{t('performance.pnt.rows')}</span>
+              <span className="ml-auto font-mono text-[10px] text-foreground/40">
+                {step.elmtItemCodes.join('·')}
+              </span>
+            </div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-secondary">
+              <div
+                className={cn(
+                  'h-full rounded-full',
+                  step.status === 'done' ? 'bg-status-healthy' : 'bg-accent'
+                )}
+                style={{ width: `${(step.doneRows / Math.max(1, step.plannedRows)) * 100}%` }}
+              />
             </div>
 
             <div className="mt-2.5 flex flex-col gap-1 text-[11px] tabular-nums text-foreground/60">
@@ -129,6 +176,25 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
                 <span>{step.endDate ?? '—'}</span>
               </div>
             </div>
+
+            {/* 진행 중 스텝만 — 일일공정률(YPWG413M) 기반 참고 % 와 그 등록일 */}
+            {step.status === 'inProgress' && (
+              <div className="mt-2 rounded bg-surface-secondary/60 px-2 py-1.5">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-inshop-sm font-semibold tabular-nums text-accent">
+                    {step.progressPct}%
+                  </span>
+                  <span className="text-[10px] text-foreground/50">
+                    {t('performance.pnt.dailyRate')}
+                  </span>
+                </div>
+                <div className="mt-0.5 text-[10px] leading-3 text-foreground/45">
+                  {step.progressAsOf
+                    ? t('performance.pnt.dailyRateAsOf', { date: step.progressAsOf })
+                    : t('performance.pnt.dailyRateNone')}
+                </div>
+              </div>
+            )}
 
             {/* 확정 관문(YPWG221M 'B') — 완료여도 확정 대기일 수 있는 사실을 그대로 낸다 */}
             <div className="mt-2.5 border-t border-border pt-2">
