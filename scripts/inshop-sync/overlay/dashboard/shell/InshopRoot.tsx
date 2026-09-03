@@ -4,6 +4,7 @@ import { FixedViewportProvider } from '../shared/lib/fixed-viewport/FixedViewpor
 import { useFixedViewport } from '../shared/lib/fixed-viewport/useFixedViewport'
 import { FontScaleProvider } from '../shared/lib/font-scale/FontScaleProvider'
 import { getProcessRoutes } from '../shared/model/processRegistry'
+import { GlobalSearch } from '../shared/features/global-search'
 import { Spinner } from '../shared/ui/atoms/Spinner'
 import { useTranslation } from '../shared/lib/i18n/useTranslation'
 import { cn } from '../shared/lib/utils'
@@ -131,6 +132,12 @@ function InshopFrame() {
         fixed && 'flex flex-col xl:h-full xl:min-h-0 xl:overflow-hidden xl:py-5',
       )}
     >
+      {/*
+        통합 검색(Cmd+K). 원본은 LayoutWrapper 에 한 번 마운트했다 — 그 크롬은
+        셸 AppLayout 이 대신하므로 같은 역할의 이 뿌리에 한 번 마운트한다.
+        (원본 헤더의 검색 버튼은 셸 공용 헤더라 옮기지 않는다 — 단축키로 연다.)
+      */}
+      <GlobalSearch />
       <Suspense fallback={<RouteFallback />}>{element}</Suspense>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { useMapEntryData, useShopDeepLink } from '../../../../shared/features/process-map-entry'
@@ -33,8 +33,14 @@ export function OutfittingMapEntryPage() {
   // 지번/공장(lazy)·베이스맵 배경(야드 provides) — 배경이 없어도 지번은 그린다
   const { parcels, basemapLayers, yardExtent } = useMapEntryData()
 
+  /* 집계가 실패했을 때 **같은 요청만** 다시 건다 — 화면 새로고침이 아니라(states 계약) */
+  const [overviewRetry, setOverviewRetry] = useState(0)
   // 목록 화면과 같은 집계(카드 요약·본문) + 전 공장 블록(베이 카드의 블록 목록)
-  const { data: overviews } = useAsyncData(() => fetchFactoryOverviews(), [])
+  const {
+    data: overviews,
+    loading: overviewsLoading,
+    error: overviewsError,
+  } = useAsyncData(() => fetchFactoryOverviews(), [overviewRetry])
   const { data: blocks } = useAsyncData(() => fetchAllBlocks(), [])
 
   const overviewByName = useMemo(
@@ -73,6 +79,9 @@ export function OutfittingMapEntryPage() {
             selectedFactory={selectedFactory}
             onSelectFactory={setSelectedFactory}
             overviewByName={overviewByName}
+            overviewsLoading={overviewsLoading}
+            overviewsError={overviewsError}
+            onRetryOverviews={() => setOverviewRetry((count) => count + 1)}
             blocks={blocks ?? []}
             basemapLayers={basemapLayers}
             yardExtent={yardExtent}

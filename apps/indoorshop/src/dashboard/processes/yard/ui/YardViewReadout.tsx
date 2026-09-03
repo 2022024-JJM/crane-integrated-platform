@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { DraggableCard } from '../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../shared/lib/utils'
 import { metersPer100px, type YardView } from '../lib/projection'
 
@@ -34,7 +35,8 @@ export const YardViewReadout = forwardRef<YardViewReadoutHandle, YardViewReadout
   const meters = metersPer100px(view)
 
   return (
-    <div
+    <DraggableCard
+      cardKey="readout"
       className={cn(
         'absolute bottom-3 left-3 w-fit overflow-hidden rounded-inshop-lg glass-panel',
         className,
@@ -98,7 +100,7 @@ export const YardViewReadout = forwardRef<YardViewReadoutHandle, YardViewReadout
         </svg>
         {t('yard.readout.fit')}
       </button>
-    </div>
+    </DraggableCard>
   )
   }
 )

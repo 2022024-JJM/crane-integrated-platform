@@ -27,6 +27,55 @@ export const ko = {
     viewPerformanceHint: '{{block}} 을(를) 통합실적 화면에서 조회합니다',
     viewOnProcessMap: '공정 화면',
     viewOnProcessMapHint: '{{block}} 이(가) 있는 공정 화면으로 이동합니다',
+    /* 지도 위 오버레이 카드를 끌어 옮길 때 뜨는 안내 — 되돌리는 법을 같이 적는다 */
+    dragCardHint: '머리글을 잡아 옮길 수 있습니다 (더블클릭하면 제자리로)',
+    /* 드릴다운 자취 — `야드 › 공정 › 공장 › 베이`. 첫 조각은 총괄('/')로 나가는 문 */
+    breadcrumbNav: '현재 위치',
+    breadcrumbYard: '야드',
+  },
+  /*
+   * 상태 UX 3종(shared/ui/states) — 로딩·빈 상태·실패의 공통 낱말.
+   *
+   * 화면마다 "데이터 없음"을 제 문구로 적으면 같은 상태가 매번 달리 읽힌다. 원인별로
+   * 갈라 둔 것도 그래서다 — 조건 때문인지, 수집이 안 닿은 것인지, 오늘 배치가 아직
+   * 안 온 것인지에 따라 사용자가 할 일이 다르다.
+   */
+  states: {
+    loading: '불러오는 중',
+    empty: {
+      none: {
+        title: '표시할 내용이 없습니다',
+        description: '이 자리에 해당하는 항목이 아직 없습니다.',
+      },
+      filtered: {
+        title: '조건에 맞는 항목이 없습니다',
+        description: '고른 조건을 넓히면 결과가 나올 수 있습니다.',
+      },
+      notCollected: {
+        title: '아직 수집된 값이 없습니다',
+        description: '이 자리는 수집 경로가 아직 닿지 않았습니다 — 값이 들어오면 채워집니다.',
+      },
+      batchPending: {
+        title: '오늘 배치가 아직 도착하지 않았습니다',
+        description: '레거시 일괄 등록(하루 1회)이 끝나면 값이 채워집니다.',
+        lastArrived: '마지막 반영 {{date}} · 오늘 치는 일괄 등록 후에 들어옵니다',
+      },
+    },
+    error: {
+      title: '데이터를 불러오지 못했습니다',
+      description: '연결이 끊겼거나 응답이 늦습니다. 잠시 뒤 다시 시도해 주세요.',
+      retry: '다시 시도',
+      lastSuccess: '마지막 성공 {{time}}',
+      neverSucceeded: '아직 한 번도 불러오지 못했습니다',
+    },
+  },
+  /* 도면 뷰어(shared/features/drawing-viewer) — 공정 무관 문구 */
+  drawing: {
+    open: '도면 보기',
+    openHint: '{{factory}} 설비 배치 도면을 엽니다',
+    fit: '전체 맞춤',
+    hint: '휠로 확대·축소 · 끌어서 이동 · 더블클릭 또는 0 키로 전체 맞춤 · Esc 로 닫기',
+    none: '이 공장은 배치 도면이 없습니다',
   },
 
   app: {
@@ -74,6 +123,25 @@ export const ko = {
   header: {
     realtime: '실시간 수집',
     realtimeTitle: '수집 파이프라인 정상 — 센서 데이터가 계속 들어오는 중',
+  },
+
+  /* 통합 검색 팔레트 (shared/features/global-search) */
+  globalSearch: {
+    title: '통합 검색',
+    open: '통합 검색 (Ctrl/⌘+K)',
+    placeholder: '호선 · 블록 · ASSY · W/O · 설비ID 검색',
+    hint: '↑↓ 이동 · Enter 열기 · Esc 닫기',
+    empty: '‘{{query}}’ 에 걸리는 호선·블록·ASSY·W/O·설비가 없습니다',
+    emptyGuide: '예: 7004 · 2540-281 · 222-M02 · WO- · LD-D01',
+    recent: '최근 검색',
+    noRecent: '호선번호·블록·ASSY·W/O·설비ID 로 찾아보세요',
+    groups: {
+      vessel: '호선',
+      block: '블록',
+      assy: 'ASSY',
+      wo: 'W/O',
+      equipment: '설비',
+    },
   },
 
   account: {
@@ -134,20 +202,18 @@ export const ko = {
   },
 
   alarms: {
-    title: '알림',
-    aria: '알림 {{count}}건',
-    ariaEmpty: '알림',
-    listLabel: '알림 목록',
-    unreadCount: '안 읽은 알림 {{count}}건',
-    allRead: '모두 확인했습니다',
-    markAllRead: '모두 읽음',
-    dismiss: '{{title}} 알림 지우기',
-    empty: '알림이 없습니다',
-    emptyFiltered: '이 조건에 맞는 알림이 없습니다',
+    title: '알람',
+    aria: '알람 {{count}}건',
+    ariaEmpty: '알람',
+    listLabel: '알람 목록',
+    countSummary: '위험 {{critical}} · 주의 {{warning}}',
+    allClear: '활성 알람이 없습니다',
+    dismiss: '{{title}} 알람 지우기',
+    empty: '알람이 없습니다',
+    emptyFiltered: '이 조건에 맞는 알람이 없습니다',
     emptyHint: '수집 파이프라인이 조용하다는 뜻입니다',
     filters: {
       all: '전체',
-      unread: '안 읽음',
       critical: '위험',
       warning: '주의',
     },
@@ -156,26 +222,45 @@ export const ko = {
       warning: '주의',
       info: '정보',
     },
-    items: {
-      'alm-1042': {
-        title: '선행의장 리더 2번 응답 없음',
-        message: '3분째 태그 이벤트가 들어오지 않습니다. 리더 전원·네트워크를 확인하세요.',
+    /* 통합 알람 레일(W7-1) — 판정 규칙(shared/features/alarms)이 쓰는 문구.
+       원천 데이터에서 파생되므로 블록·설비 이름은 파라미터로 들어온다 */
+    rail: {
+      mismatch: {
+        title: '매칭 불일치 — 대상 W/O 없음',
+        message:
+          '{{block}} {{assy}}: 판별 실적은 있으나 레거시 W/O 가 없습니다 (노티 대상 · 완료 처리 금지)',
       },
-      'alm-1041': {
-        title: '조립 A공장 3번 정반 라이다 정합률 저하',
-        message: '정합률 68% — 기준(80%) 아래입니다. 점군 겹침 구간을 확인하세요.',
+      tiltMotor: {
+        title: '틸팅모듈 모터 알람',
+        message: '{{id}} 알람 코드 {{code}} — 페어 라이다 {{lidar}}가 엉뚱한 곳을 봅니다',
       },
-      'alm-1040': {
-        title: 'Hot Data DB 쓰기 지연 증가',
-        message: '평균 커밋 지연 480ms (기준 200ms). 적재는 계속되고 있습니다.',
+      edgeDown: {
+        title: 'Edge PC 수집 서비스 중단',
+        message: '{{id}} 수집 컨테이너가 내려갔습니다 (재시작 {{restarts}}회) — 물린 설비 수집이 멈춥니다',
       },
-      'alm-1039': {
-        title: '선행도장 Modbus 세션 재연결됨',
-        message: 'PLC 연결이 한 차례 끊겼다가 12초 만에 복구되었습니다.',
+      edgeOffline: {
+        title: 'Edge PC 오프라인',
+        message: '{{id}} 하트비트가 {{minutes}}분째 없습니다',
       },
-      'alm-1038': {
-        title: '가공 Legacy DB 야간 배치 동기화 완료',
-        message: '실적 1,284건을 통합했습니다. 누락 0건.',
+      panelDown: {
+        title: '캐비닛 정지',
+        message: '{{id}} 전원·업링크 정지 — 소속 설비 {{count}}대가 함께 눈이 멉니다',
+      },
+      panelUplink: {
+        title: '캐비닛 업링크 오류',
+        message: '{{id}} 스위치 허브 링크가 불안정합니다',
+      },
+      linkError: {
+        title: '설비 통신 오류',
+        message: '{{id}} ({{type}}) 응답 오류 — 수집이 끊겼을 수 있습니다',
+      },
+      batch: {
+        title: '도장 일일실적 D+{{lag}} 미등록',
+        message: 'YPWG413M 최신 실적일 {{date}} — 하루 1회 일괄 등록이 {{lag}}일째 없습니다',
+      },
+      gap: {
+        title: '수집 이벤트 공백',
+        message: '{{zone}} 최근 수집 {{time}} 이후 {{minutes}}분째 새 수집이 없습니다',
       },
     },
   },
@@ -395,6 +480,15 @@ export const ko = {
     title: '내업 공정실적 통합조회',
     subtitle: '호선·블록 단위 로우데이터 수집 현황과 절점 진척',
     baseDate: '기준일 {{date}}',
+    /* 기준일 시간축(W7-2) — 별도 화면 없이 이 화면 안에서 조회 조건으로 다룬다 */
+    dateRange: {
+      label: '기준일',
+      today: '오늘',
+      yesterday: '어제',
+      last7: '지난 7일',
+      pick: '날짜',
+      window: '{{from}} ~ {{to}}',
+    },
     autoRefresh: '자동갱신 {{seconds}}s',
     exportCsv: '내보내기',
     mockNote: '실연동 전 모의 데이터 — 절점 모델 기반 결정론 생성',
@@ -465,6 +559,10 @@ export const ko = {
     asm: {
       title: '조립 — 블록·ASSY 실적',
       woBasis: '기준은 판별(자동수집) — W/O 는 매칭된 참고입니다',
+      trendTitle: '일자별 인식',
+      trendAria: '일자별 판별 건수 추이',
+      trendUnit: '건',
+      trendTotal: '{{count}}건',
       gridStage: '조립',
       judgedRate: '판별 실적',
       judgedRateNote: '판별 인식 ÷ 계획 분모(REQ_QTY, 참고) — 계획이 아니라 우리 수집이 기준입니다',
@@ -517,8 +615,13 @@ export const ko = {
       wo: 'W/O',
       rows: '계획 행 완료',
       dailyRate: '일일공정률 (참고)',
+      dailyRateTrend: '일일공정률 추이',
       dailyRateAsOf: '{{date}} 등록분 기준 — 하루 1회 일괄',
       dailyRateNone: '일일공정률 미등록 — 완료 행만 반영(면적 가중)',
+      /* 도장 절점 구획이 비었을 때 — 계획 자체가 없는 것과 못 불러온 것을 가른다 */
+      noPlan: '이 블록에는 도장 계획이 없습니다',
+      noPlanNote: '도장 계획(YPWP720M)에 이 블록의 행이 없습니다 — 아직 도장 대상이 아니거나 계획 등록 전입니다.',
+      loadFailed: '도장 실적을 불러오지 못했습니다',
       startDate: '착수 (SD_ACTL)',
       endDate: '완료 (FD_ACTL)',
       confirmedChip: "확정('B') 통과",

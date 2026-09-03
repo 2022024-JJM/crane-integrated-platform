@@ -30,6 +30,7 @@ import {
   type FabStageId,
   type MgmtNoType,
   PAINTING_STEPS,
+  type PaintingProgressPoint,
   type PaintingProgressRow,
   type PaintingStepPlan,
   type PaintingSummary,
@@ -46,6 +47,8 @@ import {
 } from '../../../entities/vessel'
 import { PAINTING_STEP_MAPPING } from './paintingStepMapping'
 import { generateDailyProgress, latestBatchDate, latestProgressOf } from './dailyProgress'
+import { daysBetween, todayString, type DateWindow } from '../lib/baseDate'
+import { clampEventsToWindow } from '../lib/eventWindow'
 import {
   aggregateStages,
   buildPaintingSteps,
@@ -61,6 +64,31 @@ function hashOf(text: string): number {
   let h = 0
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
   return Math.abs(h)
+}
+
+/* ── 기준일 되감기 (W7-2) ────────────────────────────────────────
+ *
+ * 이 더미의 절점·ASSY·스텝에는 **개별 통과 일자가 없다.** 원천(가공 부재·조립 판별·도장
+ * 계획 행)에 그 일자가 없거나 아직 확정되지 않았기 때문이다. 그래서 과거 기준일을 표현할
+ * 방법은 하나뿐이다 — '그날엔 여기까지였다'.
+ *
+ * 단위마다 절점 하나를 지나는 데 걸리는 날을 결정론으로 정해 두고, 기준일이 며칠 전인지로
+ * 나눠 그만큼 수위를 내린다. 세 권역이 **같은 함수를 쓰는 것이 중요하다** — 한쪽만 되감으면
+ * "가공 0% 인데 조립 완료" 같은, 어느 날에도 있을 수 없는 화면이 나온다.
+ *
+ * 성질:
+ *  · 기준일이 오늘이면 되감기 0 — 지금까지의 값과 완전히 같다(기존 호출부 무변경).
+ *  · 과거로 갈수록 단조 감소 — 어제가 오늘보다 앞서는 일이 없다.
+ *  · 미래 기준일(음수)은 0 으로 접는다(화면이 이미 막지만 여기서도 접는다).
+ */
+function rewindDaysOf(baseDate: string): number {
+  return Math.max(0, daysBetween(baseDate, todayString()))
+}
+
+/** 오늘 수위 → 기준일 수위. `daysPerStep` 은 단위 하나가 절점 하나를 지나는 데 걸리는 날 */
+function rewoundLevel(levelToday: number, daysBack: number, daysPerStep: number): number {
+  if (daysBack <= 0) return levelToday
+  return Math.max(0, levelToday - Math.floor(daysBack / Math.max(1, daysPerStep)))
 }
 
 /* ── 호선·블록 목록 ─────────────────────────────────────────── */
@@ -89,10 +117,23 @@ export async function fetchBlocks(projNo: string): Promise<BlockOption[]> {
  * L 앞은 완료 / L 자리는 진행중·미도래 / L 뒤는 미도래로 채운다 — 선행 단계
  * 미완료 부재가 후행 단계에 착수하는 일이 구조적으로 없다(IPD-S04 규칙).
  * `미대상`은 일부 부재의 S4(사상 불요)·S5(직송)에만 발생시킨다.
+ *
+ * **기준일을 과거로 돌리면 수위도 그만큼 되돌아간다** (W7-2). 가공 부재에는 절점 일자가
+ * 없어서(원천에 없다) 여기서 만들 수 있는 시간 표현은 '그날엔 여기까지였다' 하나뿐이다.
+ * 부재마다 절점 하나를 지나는 데 걸리는 날(2~4일)을 결정론으로 정해 두고, 기준일이
+ * 며칠 전인지로 나눠 그만큼 수위를 내린다. 성질 셋:
+ *  · 기준일이 오늘이면 **되돌림이 0** — 지금까지의 값과 완전히 같다(기존 호출부 무변경).
+ *  · 과거로 갈수록 진척이 **단조 감소** — 어제가 오늘보다 앞서는 일이 없다.
+ *  · 미래 기준일은 오지 않는다(화면이 막는다). 와도 되돌림 0 으로 접는다.
  */
-export function generateParts(projNo: string, blockNo: string): FabPart[] {
+export function generateParts(
+  projNo: string,
+  blockNo: string,
+  baseDate: string = todayString()
+): FabPart[] {
   const seed = `${projNo}-${blockNo}`
   const count = 34 + (hashOf(`${seed}-n`) % 27) // 34~60건
+  const daysBack = rewindDaysOf(baseDate)
   const parts: FabPart[] = []
   for (let i = 0; i < count; i++) {
     const pid = `${blockNo}-P${String(i + 1).padStart(3, '0')}`
@@ -104,7 +145,9 @@ export function generateParts(projNo: string, blockNo: string): FabPart[] {
     }
     const applicable = FAB_STAGES.filter((s) => !excluded[s])
     // 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다
-    const level = Math.min(applicable.length, Math.floor((h % 100) / 14))
+    const levelToday = Math.min(applicable.length, Math.floor((h % 100) / 14))
+    /* 절점 하나를 지나는 데 걸리는 날 — 부재마다 2~4일. 기준일이 그만큼 전이면 한 칸 뒤 */
+    const level = rewoundLevel(levelToday, daysBack, 2 + (h % 3))
     const started = h % 3 !== 0 // 수위 자리 단계의 착수 여부
 
     const statuses = {} as Record<FabStageId, StageStatus>
@@ -270,7 +313,12 @@ export function generateAssyUnits(projNo: string, blockNo: string, baseDate: str
     count,
     Math.floor((hashOf(`${seed}-asm-lv`) % 100) / (100 / (count + 1)))
   )
-  const level = stage.force === 'complete' ? count : stage.force === 'notStarted' ? 0 : rawLevel
+  const levelToday =
+    stage.force === 'complete' ? count : stage.force === 'notStarted' ? 0 : rawLevel
+  /* 과거 기준일이면 그만큼 되감는다 — ASSY 하나를 붙이는 데 3~7일. 되감겨 전량 완료가
+     아니게 되면 검사장 이동(`allDone` 아래)도 저절로 풀린다: 조립이 안 끝났는데 검사장에
+     가 있을 수는 없다. */
+  const level = rewoundLevel(levelToday, rewindDaysOf(baseDate), 3 + (hashOf(`${seed}-asm-cad`) % 5))
   const started = stage.force === 'notStarted' ? false : hashOf(`${seed}-asm-st`) % 4 !== 0
 
   /* 도장 단계 블록만 조립 시간축을 과거로 민다 — 그 외 블록은 shift 0 이라 종전 그대로다 */
@@ -468,7 +516,17 @@ export function generatePaintingSteps(
    * 로스터 밖 블록(합성 시드)만 종전처럼 검사장 이동으로 판단한다.
    */
   const rosterZone = findBlock(projNo, blockNo)?.zone
-  const paintedIn = rosterZone === undefined ? assembly.inspectionMoved : rosterZone === 'painting'
+  /*
+   * 게이트는 **둘 다** 참이라야 한다 — 로스터가 이 블록을 도장으로 적었고(어느 권역인가),
+   * 그리고 그 시점에 조립이 실제로 끝나 검사장으로 나갔는가(언제부터인가).
+   *
+   * 로스터만 보면 과거 기준일에서 "가공 0%·조립 미완인데 도장 중" 이 된다 — 로스터는
+   * **오늘**의 사실이지 그날의 사실이 아니기 때문이다. 조립종료를 함께 물으면 되감긴
+   * 기준일에서 도장도 같이 '반입 전' 으로 돌아간다(공정 순서 정합).
+   * 오늘 기준에서는 도장 권역 블록의 조립이 항상 완료라 종전과 값이 같다.
+   */
+  const inZone = rosterZone === undefined ? true : rosterZone === 'painting'
+  const paintedIn = inZone && assembly.inspectionMoved
 
   const shape = paintingPlanShape(seed)
 
@@ -517,7 +575,11 @@ export function generatePaintingSteps(
     planned: number,
     doneRows: number,
     startDate: string | null
-  ): { rows: PaintingProgressRow[]; asOf: string | null } | null => {
+  ): {
+    rows: PaintingProgressRow[]
+    asOf: string | null
+    history: PaintingProgressPoint[]
+  } | null => {
     if (planned <= 0 || doneRows >= planned) return null // 전량 완료는 정의상 100%
     const stepSeed = `${seed}-${step}-413m`
     /* 진행 중 행 하나가 대표로 413M 에 등록돼 있다고 본다 — 하루 1회 일괄 등록분 */
@@ -541,7 +603,13 @@ export function generatePaintingSteps(
       const pct = i < doneRows ? 100 : i === doneRows && latest != null ? latest.rate : 0
       rows.push({ areaSqm: area, progressPct: pct })
     }
-    return { rows, asOf: latest?.asOf ?? null }
+    /* 이력을 버리지 않고 함께 낸다 (W7-2) — 카드가 '지금 몇 %' 말고 '어떻게 올라왔나'를
+       말하려면 최신 한 점이 아니라 그 앞의 며칠이 필요하다. 만드는 곳은 여기 하나다. */
+    const history: PaintingProgressPoint[] = daily.map((row) => ({
+      date: row.actlDate,
+      rate: row.dlyPrgsRate,
+    }))
+    return { rows, asOf: latest?.asOf ?? null, history }
   }
 
   const planOf = (
@@ -558,6 +626,7 @@ export function generatePaintingSteps(
       ...fields,
       progressRows: progress?.rows,
       progressAsOf: progress?.asOf ?? null,
+      progressHistory: progress?.history ?? [],
     }
   }
 
@@ -591,11 +660,17 @@ export function generatePaintingSteps(
   /* 도장에 **갓 반입된** 블록은 반입만 찍히고 스텝은 아직이다 — 일일공정률도 없다 */
   const justArrivedPainting = inPaintingRoster && rosterBlock?.justArrived === true
   const rawLevel = hashOf(`${seed}-lv`) % (presentSteps.length + 1)
-  const level = justArrivedPainting
+  const levelToday = justArrivedPainting
     ? 0
     : inPaintingRoster
       ? Math.min(rawLevel, presentSteps.length - 1)
       : rawLevel
+  /* 과거 기준일이면 되감는다 — 스텝 하나가 4~8일. 가공·조립과 같은 잣대를 쓴다 */
+  const level = rewoundLevel(
+    levelToday,
+    rewindDaysOf(baseDate),
+    4 + (hashOf(`${seed}-pnt-cad`) % 5)
+  )
   const started = justArrivedPainting ? false : inPaintingRoster || hashOf(`${seed}-st`) % 4 !== 0
 
   /*
@@ -700,7 +775,7 @@ export async function fetchBlockSummary(
 ): Promise<BlockSummary> {
   const seed = `${projNo}-${blockNo}`
   const block = findBlock(projNo, blockNo)
-  const summary = aggregateStages(generateParts(projNo, blockNo))
+  const summary = aggregateStages(generateParts(projNo, blockNo, baseDate))
   const assembly = await fetchAssemblySummary(projNo, blockNo, baseDate)
   const painting = generatePaintingSteps(projNo, blockNo, baseDate)
   const progress = deriveNodeProgress(summary, planDatesOf(projNo, blockNo, baseDate), baseDate)
@@ -727,8 +802,12 @@ export async function fetchBlockSummary(
   }
 }
 
-export async function fetchFabricationStages(projNo: string, blockNo: string) {
-  return aggregateStages(generateParts(projNo, blockNo))
+export async function fetchFabricationStages(
+  projNo: string,
+  blockNo: string,
+  baseDate: string = todayString()
+) {
+  return aggregateStages(generateParts(projNo, blockNo, baseDate))
 }
 
 /* ── 수집 이벤트 그리드 (IPD-S01) ───────────────────────────── */
@@ -787,7 +866,9 @@ function completedAfter(occurred: EventInstant, seed: string, hasTime: boolean):
 
 function fabEventsOf(projNo: string, blockNo: string, baseDate: string): CollectionEvent[] {
   const rows: CollectionEvent[] = []
-  const parts = generateParts(projNo, blockNo)
+  /* 그리드 행의 상태는 카드와 **같은 모집단**에서 온다 — 기준일을 넘기지 않으면
+     "카드는 S3 진행중인데 그리드는 S3 완료" 같은 어긋남이 난다 */
+  const parts = generateParts(projNo, blockNo, baseDate)
   const n = 9 + (hashOf(`${projNo}-${blockNo}-ev`) % 5)
   for (let i = 0; i < n; i++) {
     const stage = FAB_STAGES[hashOf(`${projNo}-${blockNo}-st-${i}`) % FAB_STAGES.length]
@@ -970,11 +1051,22 @@ function pntEventsOf(projNo: string, blockNo: string, baseDate: string): Collect
   return rows
 }
 
+/**
+ * 수집 이벤트 그리드의 행.
+ *
+ * **조회 창**(W7-2) — 기본은 기준일 하루다. `window` 를 주면 그 창으로 자른다:
+ * 창 뒤(기준일 이후)에 일어난 행은 서지 않고, 창 안에서 시작해 창 뒤에 끝나는 행은
+ * 완료를 지운 채 진행 중으로 선다. 규칙은 `lib/eventWindow` 한 곳에 있다.
+ *
+ * 창을 주지 않으면 `{ from: baseDate, to: baseDate }` 로 서므로 **기존 호출부는
+ * 무변경**이고, 지금까지처럼 기준일 하루만 나온다.
+ */
 export async function fetchCollectionEvents(
   projNo: string,
   blockNos: readonly string[],
   filter: ProcessFilter,
-  baseDate: string
+  baseDate: string,
+  window?: DateWindow
 ): Promise<CollectionEvent[]> {
   // 의장 이벤트는 아직 범위 밖 — 해당 필터에서는 빈 목록(화면이 안내한다)
   if (filter === 'outfitting') return []
@@ -985,8 +1077,12 @@ export async function fetchCollectionEvents(
     if (filter === 'all' || filter === 'assembly') rows.push(...asmEventsOf(projNo, blockNo, baseDate))
     if (filter === 'all' || filter === 'painting') rows.push(...pntEventsOf(projNo, blockNo, baseDate))
   }
+  /* 조립 이벤트는 도장 단계 블록에서 시간축이 과거로 밀려 있다(생애주기 정합) —
+     그 행들까지 하루 창에 가두면 도장 블록의 조립 이력이 통째로 사라진다. 그래서
+     기본 창은 '기준일까지'로 열어 두고(시작 없음), 사용자가 창을 좁히면 그때 자른다. */
+  const clamp = window ?? { from: '0000-01-01', to: baseDate }
   // 단계 → 블록 순 정렬 (정의서 §8.2 — 블록·단계 순 정렬의 화면 적용)
-  return rows.sort(
+  return clampEventsToWindow(rows, clamp).sort(
     (a, b) => a.blockNo.localeCompare(b.blockNo) || a.stage.localeCompare(b.stage)
   )
 }

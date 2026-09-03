@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { parseDrilldown } from '../../../../shared/lib/drilldownUrl'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { OutfittingFactoryGrid } from '../OutfittingFactoryGrid'
 import type { OutfittingFactoryOverview } from '../../model/block'
@@ -74,8 +75,9 @@ export function OutfittingFactoryListPage() {
   const navigate = useNavigate()
   const { data: overviews, loading, error } = useAsyncData(() => fetchFactoryOverviews(), [])
 
+  /* 공장 딥링크 — 새 철자 `?factory=` 와 옛 철자 `?shop=` 을 같은 계약으로 읽는다 */
   const [searchParams] = useSearchParams()
-  const shopParam = searchParams.get('shop')
+  const shopParam = parseDrilldown(searchParams).factory
   useEffect(() => {
     if (!shopParam || !overviews) return
     const match = overviews.find((o) => o.factory.name === shopParam)

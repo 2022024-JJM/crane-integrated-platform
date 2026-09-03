@@ -23,6 +23,7 @@ import { colorOfProcess } from '../../../entities/yard-parcels'
 import { worldToScreen, type Viewport, type YardView } from '../../yard-map'
 import type { LocatedSite } from '../lib/blockSites'
 import type { YardBackdropBlock } from '../../../model/yardMapBackdrop'
+import { DraggableCard } from '../../../ui/atoms/DraggableCard'
 import { cn } from '../../../lib/utils'
 import { CloseIcon, PinIcon } from '../../../ui/icons'
 
@@ -224,7 +225,19 @@ export function BlockSearch({
 
       {/* 결과 드롭다운 — 최대 12건. 색인이 크지 않아(수백 건) 클라이언트 필터로 충분하다 */}
       {open && query && (
-        <ul className="scroll-thin absolute left-0 top-10 z-20 max-h-72 w-72 overflow-y-auto rounded-inshop-lg border border-white/12 bg-[#0b0e12]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <DraggableCard
+          cardKey="block-search-results"
+          className="absolute left-0 top-10 z-20 w-72 overflow-hidden rounded-inshop-lg border border-white/12 bg-[#0b0e12]/95 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+        >
+          {/* 몇 건인지 적는 줄 — 결과 목록의 손잡이를 겸한다(목록 자체는 스크롤이 제 일) */}
+          <div
+            data-drag-handle
+            className="flex items-center justify-between border-b border-white/8 px-2.5 py-1.5 text-2xs text-white/42"
+          >
+            <span>{t('dashboard.map.blockSearchLabel')}</span>
+            <span className="tabular-nums">{t('common.count', { count: results.length })}</span>
+          </div>
+        <ul className="scroll-thin max-h-72 overflow-y-auto p-1">
           {loading && (
             <li className="px-2.5 py-2 text-2xs text-white/45">{t('common.loading')}</li>
           )}
@@ -305,12 +318,16 @@ export function BlockSearch({
             </li>
           ))}
         </ul>
+        </DraggableCard>
       )}
 
       {/* 고른 블록 카드 — 무엇을 보고 있는지와 나가는 문. 재공 블록은 단계·자리·실적까지,
           야드 위치는 지금까지처럼 좌표 맥락만 (아는 것만 말한다). */}
       {hit && (
-        <div className="mt-2 flex w-72 max-w-full items-start gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md">
+        <DraggableCard
+          cardKey="block-search-hit"
+          className="mt-2 flex w-72 max-w-full items-start gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md"
+        >
           <PinIcon size={14} className="mt-0.5 shrink-0 text-accent" />
           <div className="min-w-0 flex-1">
             <p className="font-mono text-inshop-sm font-semibold text-white">
@@ -342,7 +359,7 @@ export function BlockSearch({
           >
             <CloseIcon size={13} />
           </button>
-        </div>
+        </DraggableCard>
       )}
     </div>
   )

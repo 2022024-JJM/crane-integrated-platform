@@ -190,10 +190,10 @@ describe('공정 화면 경로 — 통합실적 → 공정 딥링크', () => {
     )
   })
 
-  it('정반이 없으면 그 공장을 연 맵 진입 화면으로 (`?shop=` 기존 문법)', () => {
+  it('정반이 없으면 그 공장을 연 맵 진입 화면으로 (드릴다운 `?factory=` 계약)', () => {
     const block = blocksInZone('outfitting')[0]
     expect(zonePathOfBlock(block)).toBe(
-      `/zones/outfitting?shop=${encodeURIComponent(block.factory)}`
+      `/zones/outfitting?factory=${encodeURIComponent(block.factory)}`
     )
   })
 

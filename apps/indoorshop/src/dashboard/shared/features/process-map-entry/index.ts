@@ -5,6 +5,14 @@
  */
 export { ProcessMapEntry } from './ui/ProcessMapEntry'
 export { MapMarkerLayer, type MapMarkerLayerHandle } from './ui/MapMarkerLayer'
+/* 우측 패널의 공통 부품 — 단 토글·접이 구획·수집 요약 본문(문구는 호출자가 번역해 넣는다) */
+export {
+  CollectionSummaryBody,
+  PanelModeTabs,
+  PanelSection,
+  type CollectionRow,
+  type PanelModeTab,
+} from './ui/PanelParts'
 export { useMapEntryData, useShopDeepLink } from './lib/useMapEntryData'
 export {
   demoteNonMemberLots,

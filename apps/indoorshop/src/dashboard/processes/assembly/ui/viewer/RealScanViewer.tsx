@@ -3,6 +3,8 @@ import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { bindViewportFocus } from '../../../../shared/features/bay-viewer/lib/viewportInput'
+import { disposeRenderer, disposeScene } from '../../../../shared/features/bay-viewer/lib/disposeScene'
+import { startRenderLoop } from '../../../../shared/features/bay-viewer/lib/renderLoop'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { cn } from '../../../../shared/lib/utils'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
@@ -453,6 +455,7 @@ export function RealScanViewer({
   useEffect(() => {
     const refs = sceneRefs.current
     if (refs) refs.pointMaterial.size = pointSize
+    requestRenderRef.current?.()
   }, [pointSize])
 
   const viewApiRef = useRef<{
@@ -460,6 +463,8 @@ export function RealScanViewer({
     controls: OrbitControls
     home: ReturnType<typeof captureHomePose>
   } | null>(null)
+  /* 장면을 고친 쪽이 "한 장 더 그려 달라"고 말하는 통로 — 루프는 카메라만 본다 */
+  const requestRenderRef = useRef<(() => void) | null>(null)
   const [axisView, setAxisView] = useState<AxisViewState | null>(null)
   const [wheelHint, setWheelHint] = useState(false)
   const wheelHintTimer = useRef(0)
@@ -611,6 +616,9 @@ export function RealScanViewer({
     }
 
     applyBayHighlight()
+
+    /* 재질·가시성만 바꿔도 한 장은 다시 그려야 보인다(루프는 카메라만 본다) */
+    requestRenderRef.current?.()
   }, [applyBayHighlight])
 
   useEffect(() => {
@@ -1105,25 +1113,28 @@ export function RealScanViewer({
 
     applyDisplay()
 
-    let animationId: number
-    function animate() {
-      animationId = requestAnimationFrame(animate)
-      controls.update()
-      renderer.render(scene, camera)
-      labelRenderer.render(scene, camera)
-    }
-    animate()
+    /* 그리기 루프 — 정지 화면과 숨은 탭에서는 쉰다(점군 뷰어와 같은 규칙, lib/renderLoop) */
+    const loop = startRenderLoop({
+      controls,
+      render: () => {
+        renderer.render(scene, camera)
+        labelRenderer.render(scene, camera)
+      },
+    })
+    requestRenderRef.current = loop.requestRender
 
     const resizeObserver = new ResizeObserver(() => {
       camera.aspect = container.clientWidth / container.clientHeight
       camera.updateProjectionMatrix()
       renderer.setSize(container.clientWidth, container.clientHeight)
       labelRenderer.setSize(container.clientWidth, container.clientHeight)
+      requestRenderRef.current?.()
     })
     resizeObserver.observe(container)
 
     return () => {
-      cancelAnimationFrame(animationId)
+      loop.stop()
+      requestRenderRef.current = null
       if (axisFrame) cancelAnimationFrame(axisFrame)
       controls.removeEventListener('change', scheduleAxisView)
       viewApiRef.current = null
@@ -1137,18 +1148,13 @@ export function RealScanViewer({
       controls.dispose()
       sceneRefs.current = null
 
-      scene.traverse((obj) => {
-        if (obj instanceof THREE.Points || obj instanceof THREE.Mesh || obj instanceof THREE.Line) {
-          obj.geometry.dispose()
-          const material = obj.material
-          if (Array.isArray(material)) material.forEach((m) => m.dispose())
-          else material.dispose()
-        }
-      })
+      /* GPU 자원 해제는 shared 의 `disposeScene`/`disposeRenderer` 가 한다 — 텍스처·비(非)
+         Mesh 객체·WebGL 컨텍스트를 손으로 쓴 traverse 가 놓치고 있었다(점군 뷰어와 같은 규칙) */
       for (const backdrop of refs.backdrops.values()) backdrop.dispose()
-      renderer.dispose()
-      container.removeChild(renderer.domElement)
-      container.removeChild(labelRenderer.domElement)
+      refs.backdrops.clear()
+      disposeScene(scene)
+      disposeRenderer(renderer)
+      labelRenderer.domElement.parentNode?.removeChild(labelRenderer.domElement)
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- 씬 입력은 scene3d(로드 결과)·라벨 대상·선택·언어뿐이다: 콜백·표시 상태는 ref 로 우회해 재빌드를 막는다
   }, [scene3d, blocks, bayLocations, selectedBlockId, i18n.language])

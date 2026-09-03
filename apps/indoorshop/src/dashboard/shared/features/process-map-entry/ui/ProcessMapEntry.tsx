@@ -47,6 +47,14 @@ import {
   type FactoryHudLabelHandle,
 } from '../../dashboard-map/ui/FactoryHudLabel'
 import { ChevronDownIcon } from '../../../ui/icons'
+import { DraggableCard } from '../../../ui/atoms/DraggableCard'
+import {
+  DrilldownBreadcrumb,
+  type BreadcrumbStep,
+} from '../../../ui/atoms/DrilldownBreadcrumb'
+import { useDrilldown } from '../../../lib/useDrilldown'
+import { useDrilldownEscape } from '../../../lib/useDrilldownEscape'
+import { YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 import { cn } from '../../../lib/utils'
 import type {
   MapEntryMarker,
@@ -180,8 +188,15 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   }, [handoffView])
   const [viewport, setViewport] = useState<Viewport>({ width: 0, height: 0 })
   const [hoveredFactory, setHoveredFactory] = useState<string | null>(null)
-  /* 고른/얹힌 베이 — 드릴인한 공장 안에서만 뜻이 있다 (id 는 `{공장}#{베이}`) */
-  const [selectedBay, setSelectedBay] = useState<string | null>(null)
+  /*
+   * 고른 베이 — **URL 이 원본**이다(`?bay=`). 화면 안 state 였을 때는 새로고침이 베이를
+   * 잃었고 링크로 자리를 건넬 수 없었다. 규칙은 `shared/lib/drilldownUrl` 참조.
+   *
+   * 전체 보기에서는 베이가 설 자리가 없으므로(공장 안의 칸이다) 쿼리에 남아 있어도
+   * 없는 것으로 읽는다 — 표현할 수 없는 상태를 들고 있지 않는다.
+   */
+  const drill = useDrilldown()
+  const selectedBay = initialOverview ? null : drill.bay
   const [hoveredBay, setHoveredBay] = useState<string | null>(null)
   /* 베이 카드가 짚은 지번 낱장 — 누른 것과 손 얹힌 것을 따로 들어 미리보기가 이긴다 */
   const [spottedLot, setSpottedLot] = useState<string | null>(null)
@@ -236,12 +251,28 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   )
 
   /*
-   * 전체 보기 요청 — 누를 때마다 **새 객체**를 넣어, 드래그로 나갔더라도 다시 맞춰지게
-   * 한다. 공장을 고르면 null 로 접힌다. 초기 상태도 전체 보기(딥링크 진입만 예외).
+   * 전체 보기인가 — **URL 이 말한다**(`?factory=` 가 없으면 전체 보기). 부모가 이 화면의
+   * 공장 목록으로 한 번 검증한 값이 `initialOverview` 로 들어온다(이름은 옛 계약이지만
+   * 값은 마운트 뒤에도 URL 을 따라간다) — 그래서 브라우저 뒤로가기가 곧 드릴아웃이다.
    */
-  const [overviewRequest, setOverviewRequest] = useState<LatLonBounds | null>(() =>
-    initialOverview ? overviewBounds : null
+  const inOverview = initialOverview
+
+  /*
+   * '전체 보기' 버튼을 **다시** 누를 때의 재비행 표. 이미 전체 보기라 URL 이 그대로면
+   * 카메라도 그대로일 텐데, 그사이 손으로 지도를 끌어 다른 데를 보고 있을 수 있다.
+   * 이 수가 오르면 같은 범위를 **새 객체**로 내어 카메라가 제자리를 다시 맞춘다.
+   */
+  const [overviewNonce, setOverviewNonce] = useState(0)
+  const overviewTarget = useMemo<LatLonBounds>(
+    () => ({ ...overviewBounds }),
+    /* nonce 는 값이 아니라 정체성을 갈아 끼우는 손잡이다 */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [overviewBounds, overviewNonce]
   )
+
+  /* 첫 프레임의 카메라 판단은 마운트 때 한 번 굳힌다 — YardMap 의 initialBounds 는
+     마운트 전용이라, 뒤에 URL 이 바뀌었다고 이 값이 흔들릴 이유가 없다 */
+  const mountOverviewRef = useRef(initialOverview)
   /* 우측 패널에서 펴져 있는 공장 카드 — 대시보드 공정존 카드처럼 한 번에 하나만 편다 */
   const [expandedFactory, setExpandedFactory] = useState<string | null>(() =>
     initialOverview ? null : selectedFactory
@@ -267,7 +298,7 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   )
 
   /* 카메라 목표 — 전체 보기 > 고른 베이 > 고른 공장 순으로 좁혀 들어간다 */
-  const cameraBounds = overviewRequest ?? bayExtent ?? factoryExtent
+  const cameraBounds = inOverview ? overviewTarget : (bayExtent ?? factoryExtent)
   /*
    * 승계 글라이드 — kick 이 오르면 같은 목표를 새 정체성으로 다시 낸다. YardMap 은
    * focusBounds 참조가 바뀔 때만 굴리고 마운트 첫 관찰은 넘기므로, 승계 화각에서
@@ -281,10 +312,9 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   /* 공장 선택(지도·카드 공통) — 전체 보기를 접고 그 공장으로 날아가며, 그 카드를 편다 */
   const selectFactory = useCallback(
     (name: string) => {
-      setOverviewRequest(null)
       setExpandedFactory(name)
-      setSelectedBay(null)
       setHoveredBay(null)
+      /* 베이는 URL 이 턴다 — 공장이 바뀌면 그 아래는 뜻을 잃는다(narrowDrilldown) */
       onSelectFactory(name)
     },
     [onSelectFactory]
@@ -293,37 +323,41 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   /* 지도의 베이 클릭 — 고르기까지. 재클릭은 접기. 좌상단 자리는 하나라 상세는 접는다 */
   const selectBay = useCallback(
     (id: string) => {
-      setSelectedBay((prev) => (prev === id ? null : id))
+      drill.go({ bay: drill.bay === id ? null : id })
       onSelectMarker?.(null)
     },
-    [onSelectMarker]
+    [drill, onSelectMarker]
   )
 
   /* 원 위치 — 버튼·지도의 빈 곳 클릭이 같은 동작: 대문 자리로 나가며 전부 닫는다 */
   const returnToOverview = useCallback(() => {
     setNavigationTarget(null)
     setExpandedFactory(null)
-    setSelectedBay(null)
     setHoveredBay(null)
     onSelectMarker?.(null)
-    setOverviewRequest({ ...overviewBounds })
-  }, [overviewBounds, onSelectMarker])
+    /* 이미 전체 보기여서 URL 이 그대로여도 카메라는 제자리를 다시 맞춘다 */
+    setOverviewNonce((n) => n + 1)
+    onSelectFactory(null)
+  }, [onSelectFactory, onSelectMarker])
 
   useImperativeHandle(handleRef, () => ({ returnToOverview }), [returnToOverview])
 
-  /* 밖에서 온 공장 변경(마운트 후 딥링크 등)도 카메라·카드가 따라가게 하는 뒷받침 */
-  const prevFactoryRef = useRef(selectedFactory)
+  /*
+   * URL 이 밖에서 바뀌었을 때(뒤로가기·브레드크럼·딥링크) 카드가 따라가게 하는 뒷받침.
+   * 카메라는 `cameraBounds` 가 이미 URL 파생이라 손댈 것이 없다 — 여기서는 URL 에 담지
+   * 않는 곁가지(펴 둔 카드·호버)만 맞춘다.
+   */
+  const prevFactoryRef = useRef<string | null>(inOverview ? null : selectedFactory)
   useEffect(() => {
-    if (prevFactoryRef.current === selectedFactory) return
-    prevFactoryRef.current = selectedFactory
-    setOverviewRequest(null)
-    setExpandedFactory(selectedFactory)
-    setSelectedBay(null)
+    const next = inOverview ? null : selectedFactory
+    if (prevFactoryRef.current === next) return
+    prevFactoryRef.current = next
+    setExpandedFactory(next)
     setHoveredBay(null)
-  }, [selectedFactory])
+  }, [inOverview, selectedFactory])
 
-  /* 전체 보기 중인가 — 마커 상호작용·카드 활성 표시가 이 플래그로 갈린다 */
-  const inOverview = overviewRequest != null
+  /* ESC = 한 단계 위 (베이 → 공장 → 야드). 글자를 치는 중이면 삼킨다 */
+  useDrilldownEscape(drill.up)
 
   /* 주인공 공장의 베이 스팬 — 공장을 베이마다 한 채로 세우는 근거(전체 현황과 같은 자료) */
   const memberBays = useMemo<YardParcelBaySpan[]>(() => {
@@ -430,6 +464,53 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
   )
 
   /*
+   * 드릴다운 자취 — `야드 › 조립 › GBS › 3BAY`.
+   *
+   * 상태를 새로 들지 않는다: 조각은 전부 지금 URL 에서 나오고, 누르면 그 단계의 주소로
+   * 갈 뿐이다. 그래서 브라우저 뒤로가기와 이 줄이 어긋날 수가 없다.
+   *
+   * 첫 조각 '야드'는 이 화면 밖(총괄 '/')으로 나가는 문이라 프레임이 문구를 지어낼 수
+   * 없다 — 문구가 안 들어오면 줄을 세우지 않는다(프레임은 t() 를 모른다는 계약).
+   */
+  const breadcrumbSteps = useMemo<BreadcrumbStep[]>(() => {
+    const yardLabel = labels.breadcrumbYard
+    if (!yardLabel) return []
+    const steps: BreadcrumbStep[] = [{ key: 'yard', label: yardLabel, href: '/' }]
+
+    /* 공정 이름은 문구가 없으면 지번 데이터가 부르는 이름을 쓴다(번역이 아니라 고유명사) */
+    const processLabel = labels.breadcrumbProcess ?? focusedProcesses[0] ?? ''
+    if (processLabel) {
+      steps.push({
+        key: 'process',
+        label: processLabel,
+        /* 이 화면의 전체 보기 = 공정 단계. 지금 거기면 링크가 아니다 */
+        href: inOverview ? null : drill.hrefFor(YARD_DRILLDOWN),
+      })
+    }
+    if (!inOverview && selectedFactory) {
+      steps.push({
+        key: 'factory',
+        label: selectedFactory,
+        href: selectedBayData
+          ? drill.hrefFor({ ...YARD_DRILLDOWN, factory: selectedFactory })
+          : null,
+      })
+    }
+    if (selectedBayData) {
+      steps.push({ key: 'bay', label: selectedBayData.label, href: null })
+    }
+    return steps
+  }, [
+    labels.breadcrumbYard,
+    labels.breadcrumbProcess,
+    focusedProcesses,
+    inOverview,
+    selectedFactory,
+    selectedBayData,
+    drill,
+  ])
+
+  /*
    * 떠 있는 이름패가 설 자리 — 가로는 고른 공장의 지번 centroid, 세로는 그 공장 실루엣
    * 위다. 베이까지 내려가면 이름패는 물러난다 — 그 단계의 주인공은 지붕에 새겨진 베이
    * 이름이고, 공장 이름은 베이 카드의 머리가 이어받는다(대시보드와 같은 규칙).
@@ -472,15 +553,15 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
         layers={ENTRY_LAYERS}
         parcels={parcelLayer}
         /* 처음은 대시보드 전체 현황과 같은 대문 — 딥링크 진입만 그 공장을 바로 맞춘다 */
-        initialBounds={initialOverview ? overviewBounds : factoryExtent}
-        initialBoundsPadding={initialOverview ? OVERVIEW_BOUNDS_PADDING : 0.12}
+        initialBounds={mountOverviewRef.current ? overviewBounds : factoryExtent}
+        initialBoundsPadding={mountOverviewRef.current ? OVERVIEW_BOUNDS_PADDING : 0.12}
         /* 총괄에서 이어 온 화각 — 있으면 첫 프레임이 그 자리에서 시작한다 */
         initialView={handoffView}
         focusBounds={glidedCameraBounds}
         focusBoundsDuration={420}
-        focusBoundsPadding={overviewRequest ? OVERVIEW_BOUNDS_PADDING : 0.12}
+        focusBoundsPadding={inOverview ? OVERVIEW_BOUNDS_PADDING : 0.12}
         /* 전체 보기는 "원위치" — 회전해 둔 방위도 대문 방향(북쪽 0°)으로 함께 되돌린다 */
-        focusBoundsBearing={overviewRequest ? 0 : null}
+        focusBoundsBearing={inOverview ? 0 : null}
         navigationTarget={navigationTarget}
         showFacilityLabels={false}
         mapTheme="dark"
@@ -556,29 +637,48 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
           {labels.viewAll}
         </button>
 
+        {/* 범례 — 잡아 옮길 수 있어야 하므로 포인터를 받는다(예전엔 통과시켰다) */}
         {legend != null && (
-          <div className="pointer-events-none flex flex-col gap-1 rounded-inshop-md bg-surface/85 px-2.5 py-2 text-2xs text-foreground/75 backdrop-blur-sm">
+          <DraggableCard
+            cardKey="legend"
+            className="pointer-events-auto flex flex-col gap-1 rounded-inshop-md bg-surface/85 px-2.5 py-2 text-2xs text-foreground/75 backdrop-blur-sm"
+          >
             {legend}
-          </div>
+          </DraggableCard>
         )}
 
-        {/* 야드 전체 미니맵 — 대시보드와 같은 전술 지도. 클릭하면 그 자리로 이동한다 */}
-        <DashboardMiniMap
-          ref={miniMapRef}
-          extent={yardExtent ?? entryExtent}
-          parcels={parcels}
-          onNavigate={(point) => setNavigationTarget({ ...point })}
-        />
+        {/* 야드 전체 미니맵 — 대시보드와 같은 전술 지도. 클릭하면 그 자리로 이동한다.
+            판(캔버스)은 클릭이 제 일이라 손잡이가 아니다 — 머리글 줄을 잡아 옮긴다 */}
+        <DraggableCard cardKey="minimap" className="pointer-events-auto">
+          <DashboardMiniMap
+            ref={miniMapRef}
+            extent={yardExtent ?? entryExtent}
+            parcels={parcels}
+            onNavigate={(point) => setNavigationTarget({ ...point })}
+          />
+        </DraggableCard>
       </div>
 
       {/* ── 좌상단: 지금 고른 한 가지 — 공정 상세(detailOverlay) 또는 지도에서 누른
            **베이**의 지번 구성. 두 카드를 나란히 세우면 지도를 반쯤 덮고 어느 쪽이 지금
            이야기인지도 흐려지므로 한 자리를 번갈아 쓴다(대시보드와 같다). 공정 상세는
            베이보다 안쪽 단계라 위에 덮이고, 닫으면 베이로 되돌아온다 ── */}
+      <div className="pointer-events-none absolute left-3 top-3 z-20 flex max-h-[max(45%,calc(100%-23rem))] w-[min(94vw,360px)] flex-col items-start gap-2">
+        {/* 자취는 **고정**이다 — 지금 어디인지 말하는 줄이 카드와 함께 떠다니면
+            "여기가 어디인가"를 매번 다시 찾아야 한다 */}
+        {breadcrumbSteps.length > 0 && (
+          <DrilldownBreadcrumb
+            steps={breadcrumbSteps}
+            label={labels.breadcrumbLabel ?? labels.breadcrumbYard ?? ''}
+            className="pointer-events-auto shrink-0"
+          />
+        )}
+
       {(detailOverlay != null || selectedBayData) && (
-        <div
+        <DraggableCard
           key={detailOverlay != null ? 'detail' : 'bay'}
-          className="pointer-events-auto absolute left-3 top-3 z-20 flex max-h-[max(45%,calc(100%-23rem))] w-[min(94vw,360px)] flex-col"
+          cardKey="detail"
+          className="pointer-events-auto flex min-h-0 w-full flex-1 flex-col"
         >
           {detailOverlay != null
             ? detailOverlay
@@ -590,20 +690,25 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
                   highlightedLot={spottedLot}
                   onSelectLot={setSpottedLot}
                   onHoverLot={setHoveredLotRow}
-                  onBack={() => setSelectedBay(null)}
+                  onBack={() => drill.go({ bay: null })}
                   onClose={returnToOverview}
                 >
                   {bayBody?.({ bay: selectedBayData, factory: selectedBayData.factory })}
                 </BayDetailCard>
               )}
-        </div>
+        </DraggableCard>
       )}
+      </div>
 
       {/* ── 우측 패널: 공장 접이식 카드 (대시보드 공정존 패널과 같은 문법).
            패널 전체가 화면보다 길어지면 제목은 남고 카드 목록만 스크롤한다 ── */}
-      <div className="pointer-events-none absolute inset-y-3 right-3 z-10 flex w-[min(94vw,384px)] flex-col">
+      <DraggableCard
+        cardKey="factory-panel"
+        className="pointer-events-none absolute inset-y-3 right-3 z-10 flex w-[min(94vw,384px)] flex-col"
+      >
         <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-lg border border-white/12 bg-black/75 p-2.5 backdrop-blur-md">
-          <div className="mb-2 flex shrink-0 items-center px-0.5">
+          {/* 제목 줄이 이 패널의 손잡이 — 안쪽 목록은 스크롤이 제 일이라 잡히지 않는다 */}
+          <div data-drag-handle className="mb-2 flex shrink-0 items-center px-0.5">
             <h2 className="text-inshop-xs font-semibold tracking-[-0.01em] text-white/55">
               {labels.panelTitle}
             </h2>
@@ -668,7 +773,7 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
             })}
           </div>
         </section>
-      </div>
+      </DraggableCard>
     </div>
   )
 }

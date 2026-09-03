@@ -92,9 +92,9 @@ export function blocksWithCadModel(): RosterBlock[] {
  * 그 블록이 서 있는 공정 화면 경로.
  *
  * 정반이 정해진 조립 블록은 정반 상세까지, 그렇지 않으면 그 공장을 연 맵 진입 화면까지
- * 간다 (`?shop=` — 야드·대시보드가 이미 쓰는 딥링크 문법 그대로).
+ * 간다 (`?factory=` — 드릴다운 URL 계약, `shared/lib/drilldownUrl`).
  */
 export function zonePathOfBlock(block: RosterBlock): string {
   if (block.berth) return `/zones/assembly/${block.berth.factoryId}/${block.berth.bayId}`
-  return `/zones/${block.zone}?shop=${encodeURIComponent(block.factory)}`
+  return `/zones/${block.zone}?factory=${encodeURIComponent(block.factory)}`
 }

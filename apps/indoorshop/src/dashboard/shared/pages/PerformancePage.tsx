@@ -30,12 +30,25 @@ import type {
   ProcessFilter,
   Vessel,
 } from '../features/performance/model/types'
+import {
+  DATE_PARAMS,
+  dateParamsOf,
+  defaultSelection,
+  parseDateParams,
+  todayString,
+  windowOf,
+  type BaseDateSelection,
+} from '../features/performance/lib/baseDate'
+import { judgedTrendOf } from '../features/performance/lib/judgedTrend'
+import { BaseDateControl } from '../features/performance/ui/BaseDateControl'
+import { JudgedTrendTile } from '../features/performance/ui/JudgedTrendTile'
 import { FilterBar } from '../features/performance/ui/FilterBar'
 import { BlockHeaderCard } from '../features/performance/ui/BlockHeaderCard'
 import { StageCards } from '../features/performance/ui/StageCards'
 import { AssemblyCard } from '../features/performance/ui/AssemblyCard'
 import { PaintingCard } from '../features/performance/ui/PaintingCard'
 import { EventsSection } from '../features/performance/ui/EventsSection'
+import { CardSkeleton, EmptyState, ErrorState } from '../ui/states'
 
 const REFRESH_SECONDS = 5
 
@@ -46,13 +59,6 @@ const PROCESS_RAILS = [
   { id: 'painting', labelKey: 'performance.rails.paintingActive', noteKey: null },
   { id: 'outfitting', labelKey: 'performance.rails.outfitting', noteKey: 'performance.rails.outfittingNote' },
 ] as const
-
-function todayString(): string {
-  const d = new Date()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${mm}-${dd}`
-}
 
 /**
  * 통합실적 — 내업 공정실적 통합조회 (IPD-S01/S02/S04 골격 + D2 카드 강조).
@@ -72,8 +78,19 @@ function todayString(): string {
  */
 export function PerformancePage() {
   const { t } = useTranslation()
-  const baseDate = useMemo(todayString, [])
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  /* 오늘은 마운트 때 한 번 굳힌다 — 매 렌더 `new Date()` 를 부르면 기준일 비교가
+     렌더마다 새 값이 되어 조회 이펙트가 계속 다시 돈다 */
+  const today = useMemo(() => todayString(), [])
+  /**
+   * 시간축(W7-2) — 기준일과 조회 창. `?date=`·`?span=` 딥링크로도 들어온다.
+   * 이 값 하나가 카드·그리드·추이의 **집계 기준**으로 함께 흐른다.
+   */
+  const [dateSelection, setDateSelection] = useState<BaseDateSelection>(() =>
+    parseDateParams(searchParams, todayString())
+  )
+  const baseDate = dateSelection.date
+  const dateWindow = useMemo(() => windowOf(dateSelection), [dateSelection])
   /* 진입 시점에 한 번만 읽는다 — 이후 필터 조작이 URL 에 되밀려 조회를 되돌리지 않도록 */
   const entry = useRef<ReturnType<typeof resolveEntrySelection>>(undefined)
   if (entry.current === undefined) entry.current = resolveEntrySelection(searchParams)
@@ -96,6 +113,22 @@ export function PerformancePage() {
   const [activeStage, setActiveStage] = useState<FabStageId | null>(null)
   /** 진입 링크가 지목한 ASSY — 조립 카드가 강조·스크롤한다. 블록을 바꾸면 풀린다 */
   const [focusAssys, setFocusAssys] = useState<string[]>(entry.current?.assys ?? [])
+  /*
+   * 절점 상세(가공·조립·도장)의 로딩/실패 채널.
+   *
+   * 지금까지는 `painting && <PaintingCard/>` 처럼 **값이 있으면 그리고 없으면 아무것도
+   * 안 그리는** 자리였다. 그러면 불러오는 중인지, 계획이 없는 블록인지, 못 불러온
+   * 것인지가 모두 '빈 화면' 하나로 뭉개진다 — 셋을 갈라 말한다(shared/ui/states 계약:
+   * 실패 > 로딩 > 빈 상태).
+   */
+  const [detail, setDetail] = useState<{ loading: boolean; error: Error | null }>({
+    loading: false,
+    error: null,
+  })
+  /** 마지막으로 상세를 받아 낸 시각 — 실패 화면이 "그럼 이 값은 언제 것인가"를 답한다 */
+  const [detailLoadedAt, setDetailLoadedAt] = useState<string | null>(null)
+  /** 재시도 — 같은 조건으로 상세만 다시 건다(화면 새로고침이 아니라) */
+  const [detailRetry, setDetailRetry] = useState(0)
   const [events, setEvents] = useState<CollectionEvent[]>([])
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
@@ -121,7 +154,8 @@ export function PerformancePage() {
       const targetBlocks = blocks.length > 0 ? blocks : (await fetchBlocks(projNo)).map((b) => b.blockNo)
       const [nextSummaries, nextEvents] = await Promise.all([
         Promise.all(targetBlocks.map((b) => fetchBlockSummary(projNo, b, baseDate))),
-        fetchCollectionEvents(projNo, targetBlocks, processFilter, baseDate),
+        /* 창을 함께 넘긴다 — 기준일 이후 행은 seam 에서 잘린다(그날 화면에 없던 일) */
+        fetchCollectionEvents(projNo, targetBlocks, processFilter, baseDate, dateWindow),
       ])
       setSummaries(nextSummaries)
       setEvents(nextEvents)
@@ -130,41 +164,76 @@ export function PerformancePage() {
       )
       setRefreshedAt(new Date().toTimeString().slice(0, 8))
     },
-    [baseDate]
+    [baseDate, dateWindow]
   )
 
   /* 승계받은 조건으로 곧바로 조회까지 — 조회 버튼을 다시 누르게 하지 않는다.
    * 딥링크로 들어온 조건도 남긴다 — 여기서 공정 화면에 다녀와 사이드바로 돌아왔을 때
-   * 조회 버튼을 눌렀을 때와 다르게 동작하면 승계가 반쪽이 된다. */
+   * 조회 버튼을 눌렀을 때와 다르게 동작하면 승계가 반쪽이 된다.
+   *
+   * ⚠️ **딱 한 번만 돈다.** `runQuery` 는 기준일이 바뀌면 새 함수가 되는데, 이 이펙트가
+   * 그때마다 다시 돌면 **진입 당시 조건**으로 조회를 한 번 더 쏜다 — 아래 기준일 이펙트가
+   * 곧바로 현재 조건으로 덮어쓰기는 하지만, 두 조회의 도착 순서에 결과가 걸리는 모양을
+   * 남길 이유가 없다. 승계는 진입 때 한 번이고, 이후 재조회는 아래가 **현재 조건 그대로**
+   * 맡는다. */
+  const entryRan = useRef(false)
   useEffect(() => {
     const initial = entry.current
-    if (!initial) return
+    if (!initial || entryRan.current) return
+    entryRan.current = true
     rememberSelection(initial)
     void runQuery(initial.projNo, initial.blocks, 'all')
   }, [runQuery])
+
+  /* 기준일·조회 창이 바뀌면 **지금 조건 그대로** 다시 조회한다 — 시간축은 조회 조건이지
+   * 다른 화면이 아니므로, 날짜를 옮겼다고 사용자가 조회 버튼을 다시 누를 이유가 없다. */
+  const dateRef = useRef(baseDate)
+  const spanRef = useRef(dateSelection.spanDays)
+  useEffect(() => {
+    if (dateRef.current === baseDate && spanRef.current === dateSelection.spanDays) return
+    dateRef.current = baseDate
+    spanRef.current = dateSelection.spanDays
+    if (!query) return
+    void runQuery(query.projNo, query.blocks, query.process)
+  }, [baseDate, dateSelection.spanDays, query, runQuery])
 
   useEffect(() => {
     if (!query || !activeBlock) {
       setStages(null)
       setAssembly(null)
       setPainting(null)
+      setDetail({ loading: false, error: null })
       return
     }
     let cancelled = false
+    setDetail({ loading: true, error: null })
     Promise.all([
-      fetchFabricationStages(query.projNo, activeBlock),
+      fetchFabricationStages(query.projNo, activeBlock, baseDate),
       fetchAssemblySummary(query.projNo, activeBlock, baseDate),
       fetchPaintingSummary(query.projNo, activeBlock, baseDate),
-    ]).then(([fab, asm, pnt]) => {
-      if (cancelled) return
-      setStages(fab)
-      setAssembly(asm)
-      setPainting(pnt)
-    })
+    ]).then(
+      ([fab, asm, pnt]) => {
+        if (cancelled) return
+        setStages(fab)
+        setAssembly(asm)
+        setPainting(pnt)
+        setDetail({ loading: false, error: null })
+        setDetailLoadedAt(new Date().toISOString())
+      },
+      (error: unknown) => {
+        if (cancelled) return
+        /* 실패하면 낡은 값을 계속 보여주지 않는다 — 오류는 오류로 낸다 */
+        setPainting(null)
+        setDetail({
+          loading: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        })
+      }
+    )
     return () => {
       cancelled = true
     }
-  }, [query, activeBlock, baseDate])
+  }, [query, activeBlock, baseDate, detailRetry])
 
   /* 자동갱신 스텁(D5) — 정의서 기본 5초. mock 재조회이므로 값은 안정적이다. */
   useEffect(() => {
@@ -174,6 +243,29 @@ export function PerformancePage() {
     }, REFRESH_SECONDS * 1000)
     return () => clearInterval(timer)
   }, [autoRefresh, query, runQuery])
+
+  /**
+   * 기준일 변경 — 상태와 URL 을 함께 옮긴다.
+   *
+   * URL 에 되비추는 이유는 딥링크 문법의 일관성이다: `?vessel=`·`?block=` 으로 지금 보는
+   * 조건을 남에게 보낼 수 있는데 기준일만 못 실으면, 받은 사람은 다른 날의 화면을 본다.
+   * 기본값(오늘 하루)이면 파라미터를 **지운다** — 오늘 날짜가 박힌 링크는 내일 거짓이 된다.
+   */
+  const handleDateChange = (next: BaseDateSelection) => {
+    setDateSelection(next)
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        params.delete(DATE_PARAMS.date)
+        params.delete(DATE_PARAMS.span)
+        for (const [key, value] of Object.entries(dateParamsOf(next, today))) {
+          params.set(key, value)
+        }
+        return params
+      },
+      { replace: true }
+    )
+  }
 
   const handleSearch = () => {
     if (!vessel) return
@@ -189,6 +281,8 @@ export function PerformancePage() {
 
   const handleReset = () => {
     clearSelection()
+    /* 시간축도 함께 초기화한다 — '초기화' 를 눌렀는데 지난주를 보고 있으면 거짓말이다 */
+    handleDateChange(defaultSelection(today))
     setVessel('')
     setSelectedBlocks([])
     setProcess('all')
@@ -229,6 +323,9 @@ export function PerformancePage() {
   }
 
   const filteredEvents = activeStage ? events.filter((e) => e.stage === activeStage) : events
+  /* 추이는 **단계 필터를 타지 않는다** — 그 필터는 그리드에서 한 단계만 보려는 것이지
+     "조립 수집이 언제 들어왔나"라는 질문을 바꾸는 것이 아니다 */
+  const judgedTrend = useMemo(() => judgedTrendOf(events, dateWindow), [events, dateWindow])
   const pendingProcess =
     query !== null &&
     query.process !== 'all' &&
@@ -250,9 +347,17 @@ export function PerformancePage() {
         <div>
           <h1 className="text-inshop-lg font-semibold">{t('performance.title')}</h1>
           <p className="mt-0.5 text-inshop-xs text-foreground/55">
-            {t('performance.subtitle')} · {t('performance.baseDate', { date: baseDate })}
+            {t('performance.subtitle')}
             {refreshedAt && <span className="ml-1 text-foreground/40">({refreshedAt})</span>}
           </p>
+          {/* 기준일은 부제에 적어 두는 값이 아니라 **조작하는 조건**이다 — 컨트롤이 지금
+              고른 날을 스스로 말하므로 위에서 같은 말을 되풀이하지 않는다 */}
+          <BaseDateControl
+            selection={dateSelection}
+            onChange={handleDateChange}
+            today={today}
+            className="mt-1.5"
+          />
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded bg-status-degraded/10 px-2 py-1 text-[11px] text-status-degraded">
@@ -346,7 +451,7 @@ export function PerformancePage() {
 
           {/* 조립 절점 — W/O 완료 기준 (완성도는 OT 가동 후 자리 문구만) */}
           <section>
-            <div className="mb-2">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <SectionHeading description={t('performance.asm.woBasis')}>
                 {t('performance.asm.title')}
                 {activeBlock && (
@@ -355,6 +460,8 @@ export function PerformancePage() {
                   </span>
                 )}
               </SectionHeading>
+              {/* 일자별 인식 추이 — 누적 수치가 지우는 '언제'를 되살린다 */}
+              <JudgedTrendTile trend={judgedTrend} />
             </div>
             {assembly && <AssemblyCard summary={assembly} focusAssys={focusAssys} />}
           </section>
@@ -371,10 +478,33 @@ export function PerformancePage() {
                 )}
               </SectionHeading>
             </div>
-            {painting && <PaintingCard summary={painting} />}
+            {/* 실패 > 로딩 > 빈 상태 — 셋 중 무엇인지 화면이 먼저 말한다 */}
+            {detail.error ? (
+              <ErrorState
+                error={detail.error}
+                title={t('performance.pnt.loadFailed')}
+                onRetry={() => setDetailRetry((count) => count + 1)}
+                lastSuccessAt={detailLoadedAt}
+              />
+            ) : detail.loading ? (
+              <CardSkeleton label={t('states.loading')} rows={4} />
+            ) : painting ? (
+              <PaintingCard summary={painting} />
+            ) : (
+              <EmptyState
+                reason="none"
+                title={t('performance.pnt.noPlan')}
+                description={t('performance.pnt.noPlanNote')}
+              />
+            )}
           </section>
 
-          <EventsSection events={filteredEvents} pendingProcess={pendingProcess} scopeKey={scopeKey} />
+          <EventsSection
+            events={filteredEvents}
+            pendingProcess={pendingProcess}
+            scopeKey={scopeKey}
+            window={dateWindow}
+          />
         </>
       )}
 

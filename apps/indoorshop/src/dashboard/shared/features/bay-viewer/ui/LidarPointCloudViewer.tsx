@@ -5,6 +5,8 @@ import type { InshopKey } from '../../../lib/i18n/keys'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { disposeRenderer, disposeScene } from '../lib/disposeScene'
+import { startRenderLoop } from '../lib/renderLoop'
 import { cn } from '../../../lib/utils'
 import type { LidarBlockInfo } from '../model/lidarBlock'
 import { formatDetectionId } from '../model/lidarBlock'
@@ -690,6 +692,14 @@ export function LidarPointCloudViewer({
   const [offscreenMarks, setOffscreenMarks] = useState<OffscreenMark[]>([])
   /** 씬 빌드가 만든 오버레이 재계산 함수 — 필터 변경 등 카메라 밖 요인이 이걸 부른다 */
   const refreshOverlayRef = useRef<(() => void) | null>(null)
+  /*
+   * 장면을 고친 쪽이 "한 장 더 그려 달라"고 말하는 통로.
+   *
+   * 그리기 루프는 카메라가 멈추면 쉰다(`lib/renderLoop`). 재질 색·가시성처럼 카메라와
+   * 무관한 변경은 루프가 알 수 없으므로 여기로 알린다 — 빠뜨리면 그 변경이 다음 카메라
+   * 조작 때까지 화면에 안 나타난다.
+   */
+  const requestRenderRef = useRef<(() => void) | null>(null)
 
   /** 현재 선택(베이 + 그 공정 단계) — 강조 계산의 기준 (FR-5) */
   const selectionRef = useRef<BaySelection | null>(null)
@@ -839,6 +849,9 @@ export function LidarPointCloudViewer({
             : ''
       }
     }
+
+    /* 색·불투명도만 바꿨어도 한 장은 다시 그려야 보인다(루프는 카메라만 본다) */
+    requestRenderRef.current?.()
   }, [])
 
   /** 재질·가시성·색만 갱신한다 (geometry 유지) */
@@ -955,6 +968,9 @@ export function LidarPointCloudViewer({
 
     // 경계선·불투명도를 팔레트 기준으로 되돌린 뒤이므로, 강조는 항상 마지막에 다시 얹는다
     applyBayEmphasis()
+
+    /* 재질·가시성을 바꿨으면 한 장 더 — 카메라가 멈춰 있어도 반영되게 */
+    requestRenderRef.current?.()
   }, [applyBayEmphasis])
 
   // 모드·규칙·레이어 전환 — 씬을 다시 만들지 않는다
@@ -1115,9 +1131,10 @@ export function LidarPointCloudViewer({
     renderer.setPixelRatio(pixelRatioFor(isLowGpuMode()))
     renderer.setSize(container.clientWidth, container.clientHeight)
     container.appendChild(renderer.domElement)
-    const unsubscribeQuality = subscribeQualityMode((low) =>
+    const unsubscribeQuality = subscribeQualityMode((low) => {
       renderer.setPixelRatio(pixelRatioFor(low))
-    )
+      requestRenderRef.current?.()
+    })
 
     const labelRenderer = new CSS2DRenderer()
     labelRenderer.setSize(container.clientWidth, container.clientHeight)
@@ -1913,14 +1930,19 @@ export function LidarPointCloudViewer({
     }
     window.addEventListener('keydown', handleViewportKey)
 
-    let animationId: number
-    function animate() {
-      animationId = requestAnimationFrame(animate)
-      controls.update()
-      renderer.render(scene, camera)
-      labelRenderer.render(scene, camera)
-    }
-    animate()
+    /*
+     * 그리기 루프 — 카메라가 멈추고 아무 요청도 없으면 쉬고, 탭이 숨으면 아예 멈춘다.
+     * 예전에는 정지 화면도 탭 뒤의 화면도 초당 60장씩 그렸다. 규칙과 검증은
+     * `lib/renderLoop` 에 있다(화면의 모습은 바뀌지 않는다).
+     */
+    const loop = startRenderLoop({
+      controls,
+      render: () => {
+        renderer.render(scene, camera)
+        labelRenderer.render(scene, camera)
+      },
+    })
+    requestRenderRef.current = loop.requestRender
 
     const resizeObserver = new ResizeObserver(() => {
       camera.aspect = container.clientWidth / container.clientHeight
@@ -1929,6 +1951,7 @@ export function LidarPointCloudViewer({
       labelRenderer.setSize(container.clientWidth, container.clientHeight)
       // 뷰포트 크기가 바뀌면 가장자리 표식 자리도 다시 재야 한다
       scheduleAxisView()
+      requestRenderRef.current?.()
     })
     resizeObserver.observe(container)
 
@@ -1936,7 +1959,8 @@ export function LidarPointCloudViewer({
     setBuilding(false)
 
     return () => {
-      cancelAnimationFrame(animationId)
+      loop.stop()
+      requestRenderRef.current = null
       if (axisFrame) cancelAnimationFrame(axisFrame)
       controls.removeEventListener('change', scheduleAxisView)
       refreshOverlayRef.current = null
@@ -1959,26 +1983,18 @@ export function LidarPointCloudViewer({
       controls.dispose()
       sceneRefs.current = null
 
-      scene.traverse((obj) => {
-        if (
-          obj instanceof THREE.Points ||
-          obj instanceof THREE.Mesh ||
-          obj instanceof THREE.Line
-        ) {
-          obj.geometry.dispose()
-          const material = obj.material
-          if (Array.isArray(material)) {
-            material.forEach((m) => m.dispose())
-          } else {
-            material.dispose()
-          }
-        }
-      })
-
+      /*
+       * GPU 자원 해제는 `lib/disposeScene` 이 한다 — 손으로 쓴 traverse 는 재질이 쥔
+       * **텍스처**와 Mesh/Points/Line 이 아닌 객체를 놓치고 있었고, 렌더러는 dispose 만으론
+       * WebGL 컨텍스트를 돌려주지 않았다(열고 닫기를 반복하면 한도를 넘어 다른 뷰어가
+       * 검게 변한다). 규칙을 한 곳에 모아 두면 테스트가 "10회 반복 후 평평"을 지킨다.
+       */
       for (const backdrop of refs.backdrops.values()) backdrop.dispose()
-      renderer.dispose()
-      container.removeChild(renderer.domElement)
-      container.removeChild(labelRenderer.domElement)
+      refs.backdrops.clear()
+      disposeScene(scene)
+      disposeRenderer(renderer)
+      /* CSS2D 라벨은 GPU 자원이 아니라 DOM 이다 — 렌더러 요소째 떼어 낸다 */
+      labelRenderer.domElement.parentNode?.removeChild(labelRenderer.domElement)
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- 입력(mode·bays·선택 블록)은 buildRequest 를 통해서만 들어온다: 스피너를 먼저 그리려고 한 프레임 늦춘 것이라 여기 직접 담으면 지연이 사라진다
   }, [buildRequest])

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { disposeRenderer, disposeScene } from '../../../../shared/features/bay-viewer/lib/disposeScene'
+import { startRenderLoop } from '../../../../shared/features/bay-viewer/lib/renderLoop'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { LoadedBlockModel } from '../../../../shared/features/bay-viewer/model/blockModel'
 import { getMergedAssemblyPositions, getRestPose } from '../../../../shared/features/bay-viewer/model/blockModel'
@@ -178,37 +180,58 @@ export function AssemblyOrbitPreview({
      * 큰 점군 뷰어가 프레임을 뺏기지 않는다. (rAF 는 계속 돌지만 하는 일이 없다)
      */
     let onScreen = true
+
+    /* 가시성(화면 안 + 탭 앞)을 한 소스로 묶어 루프에 넘긴다 */
+    const visibilityListeners = new Set<() => void>()
+    const notifyVisibility = () => {
+      for (const listener of visibilityListeners) listener()
+    }
     const visibilityObserver =
       typeof IntersectionObserver === 'undefined'
         ? null
         : new IntersectionObserver(([entry]) => {
             onScreen = entry.isIntersecting
+            /* 화면 안으로 들어오면 루프를 깨우고, 나가면 재운다 */
+            notifyVisibility()
           })
     visibilityObserver?.observe(container)
 
-    let animationId: number
-    function animate() {
-      animationId = requestAnimationFrame(animate)
-      if (!onScreen) return
-      controls.update()
-      renderer.render(scene, camera)
-    }
-    animate()
+    /*
+     * 그리기 루프 — 화면 밖이거나 탭이 숨으면 **프레임 예약 자체를** 끊는다.
+     * 예전에는 rAF 는 계속 돌면서 그리기만 건너뛰었다: 카드가 수십 장 열려 있으면
+     * 그 수만큼의 빈 콜백이 매 프레임 깨어난다. 두 조건을 한 가시성 소스로 묶는다.
+     */
+    const loop = startRenderLoop({
+      controls,
+      render: () => renderer.render(scene, camera),
+      visibility: {
+        isHidden: () => !onScreen || (typeof document !== 'undefined' && document.hidden),
+        subscribe: (listener) => {
+          visibilityListeners.add(listener)
+          const onDocChange = () => listener()
+          document.addEventListener('visibilitychange', onDocChange)
+          return () => {
+            visibilityListeners.delete(listener)
+            document.removeEventListener('visibilitychange', onDocChange)
+          }
+        },
+      },
+    })
 
     return () => {
       resizeObserver.disconnect()
       visibilityObserver?.disconnect()
-      cancelAnimationFrame(animationId)
+      loop.stop()
       clearTimeout(resumeTimer)
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('pointerup', handlePointerUp)
       renderer.domElement.removeEventListener('wheel', handleWheel)
       renderer.domElement.removeEventListener('dblclick', handleDoubleClick)
       controls.dispose()
-      geometry.dispose()
-      material.dispose()
-      renderer.dispose()
-      container.removeChild(renderer.domElement)
+      /* 자원 해제는 shared 규칙 하나로 — 텍스처와 WebGL 컨텍스트까지 함께 놓는다.
+         이 미리보기는 블록 카드마다 열리고 닫혀 반복 횟수가 제일 많은 뷰어다 */
+      disposeScene(scene)
+      disposeRenderer(renderer)
     }
   }, [model, assemblyIds, interactive])
 

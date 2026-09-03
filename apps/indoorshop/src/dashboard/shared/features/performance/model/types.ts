@@ -73,6 +73,19 @@ export interface PaintingProgressRow {
   progressPct: number
 }
 
+/**
+ * 일일공정률(YPWG413M) 이력의 한 점 — 등록일과 그날의 누적 공정률.
+ *
+ * 카드가 진행 중 스텝의 **추이**를 그릴 때 쓴다. 등록이 하루 1회 일괄이라 점 사이는
+ * 하루 간격이고, 가장 최근 점이 곧 `progressAsOf`·`progressPct` 의 근거다.
+ */
+export interface PaintingProgressPoint {
+  /** ACTL_DATE */
+  date: string
+  /** DLY_PRGS_RATE (누적, 0~100) */
+  rate: number
+}
+
 export interface PaintingStepPlan {
   step: PaintingStepId
   /** 이 블록에서 이 스텝을 이루는 요소코드 — S/P 는 S1~S6 중 실제 계획된 것만 */
@@ -96,6 +109,11 @@ export interface PaintingStepPlan {
   progressRows?: readonly PaintingProgressRow[]
   /** 이 스텝 % 의 근거가 된 `YPWG413M` 최신 `ACTL_DATE` — 하루 1회 일괄이라 보통 '어제' */
   progressAsOf?: string | null
+  /**
+   * 일일공정률 이력 — 오래된 날부터. 진행 중 스텝에만 재료가 있고, 413M 등록 전이면 빈다.
+   * 카드의 미니 추이선이 이 배열을 그린다(없으면 선을 세우지 않는다).
+   */
+  progressHistory?: readonly PaintingProgressPoint[]
 }
 
 export interface PaintingStepState {
@@ -116,6 +134,11 @@ export interface PaintingStepState {
   progressPct: number
   /** 그 % 를 만든 `YPWG413M` 최신 등록일 — 없으면 null(413M 등록 전) */
   progressAsOf: string | null
+  /**
+   * 일일공정률 이력 — 오래된 날부터, 단조 증가. 점이 둘 미만이면 추이가 아니므로
+   * 화면은 선을 세우지 않는다(한 점짜리 '추이'는 추이가 아니다).
+   */
+  progressHistory: readonly PaintingProgressPoint[]
   /** SD_ACTL — 착수일 (미착수면 null) */
   startDate: string | null
   /** FD_ACTL — 완료일 (전량 완료 전에는 null) */

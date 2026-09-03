@@ -12,6 +12,7 @@
  * 켠다 — 고른 공장은 가장 진하게('selected'), 같은 공정의 다른 공장은 네온('on')으로
  * 남아 "동일 공정이 어디인지" 보이고, 무관 공정만 가라앉는다('dim').
  */
+import { YARD_DRILLDOWN, type DrilldownState } from '../../../lib/drilldownUrl'
 
 /**
  * 대시보드 지도의 선택.
@@ -143,4 +144,37 @@ export function bayClickIntent(
     return { kind: 'open', path: detailPath }
   }
   return { kind: 'select', selection: selectBay(selection, bayId) }
+}
+
+/* ── 선택 ↔ URL ────────────────────────────────────────────────────────── */
+
+/**
+ * 선택을 URL 드릴다운으로 옮긴다 — 총괄 지도의 자리를 주소로 말하게 하는 다리.
+ *
+ * `location`(목록에서 고른 작업 위치)은 싣지 않는다. 그것을 고르는 동작은 곧장 공정
+ * 상세 화면으로 나가는 동작이라(`openLocation`) 총괄 화면에 남을 자리가 아니고,
+ * 주소에 얹으면 브레드크럼이 표현할 수 없는 다섯째 조각이 생긴다.
+ */
+export function drilldownOfSelection(selection: DashboardMapSelection): DrilldownState {
+  if (!selection) return { ...YARD_DRILLDOWN }
+  if (selection.kind === 'process') {
+    return { process: selection.process, factory: null, bay: null }
+  }
+  return { process: null, factory: selection.name, bay: selection.bay ?? null }
+}
+
+/**
+ * URL 드릴다운을 선택으로 되읽는다 — 뒤로가기·새로고침·링크 진입이 모두 이 길로 온다.
+ *
+ * `location` 은 URL 에 없으므로 화면이 들고 있는 값을 그대로 얹어 준다(위 주석 참조).
+ */
+export function selectionOfDrilldown(
+  state: DrilldownState,
+  location: string | null = null
+): DashboardMapSelection {
+  if (state.factory) {
+    return { kind: 'factory', name: state.factory, bay: state.bay, location }
+  }
+  if (state.process) return { kind: 'process', process: state.process }
+  return null
 }

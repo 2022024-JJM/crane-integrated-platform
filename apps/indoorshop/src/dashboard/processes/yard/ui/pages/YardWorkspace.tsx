@@ -61,6 +61,7 @@ import { ResizeHandle } from '../../../../shared/ui/atoms/ResizeHandle'
 import { Segmented, type SegmentedOption } from '../../../../shared/ui/atoms/Segmented'
 import { useResizablePanel } from '../../../../shared/lib/useResizablePanel'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
+import { DraggableCard } from '../../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../../shared/lib/utils'
 
 /** 필터 칩에 낼 용도 수 — 나머지는 접는다 (칩이 줄바꿈되면 필터가 아니라 벽이다) */
@@ -123,13 +124,14 @@ const shopHref = (shop: YardShop) => `/zones/assembly/${shop.factoryId}`
 const bayHref = (bay: YardShopBay) => `/zones/assembly/${bay.factoryId}/${bay.locationId}`
 
 /**
- * 공장·샵 → 공정 화면 경로. 고른 공장을 쿼리(`?shop=`)로 넘겨, 공정 화면이 그 공장
- * 기준으로 열릴 수 있게 한다 (요청 문서의 `/zones/assembly?shop=PBS` 규칙).
+ * 공장·샵 → 공정 화면 경로. 고른 공장을 쿼리(`?factory=`)로 넘겨, 공정 화면이 그 공장
+ * 기준으로 열릴 수 있게 한다 (드릴다운 URL 계약 — `shared/lib/drilldownUrl`.
+ * 옛 철자 `?shop=` 도 계속 읽히지만 새 링크는 새 철자로 낸다).
  * 화면이 없는 공정(전처리·미지정)은 null — 카드가 이동 대신 그 사실을 말한다.
  */
 const facilityHref = (facility: YardFacility) =>
   facility.process.zonePath
-    ? `${facility.process.zonePath}?shop=${encodeURIComponent(facility.name)}`
+    ? `${facility.process.zonePath}?factory=${encodeURIComponent(facility.name)}`
     : null
 
 /**
@@ -688,9 +690,13 @@ export function YardWorkspace() {
               />
             )}
 
-            <p className="pointer-events-none absolute bottom-3 right-3 rounded-inshop-md glass-panel px-2 py-1 text-2xs text-glass-foreground/63">
+            {/* 조작 안내 — 잡아 옮길 수 있어야 하므로 포인터를 받는다(예전엔 통과시켰다) */}
+            <DraggableCard
+              cardKey="hint"
+              className="pointer-events-auto absolute bottom-3 right-3 rounded-inshop-md glass-panel px-2 py-1 text-2xs text-glass-foreground/63"
+            >
               {t(neon ? 'yard.facility.hint' : viewMode === '3d' ? 'yard.hint3d' : 'yard.hint')}
-            </p>
+            </DraggableCard>
           </div>
         </div>
 

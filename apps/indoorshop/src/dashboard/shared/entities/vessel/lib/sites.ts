@@ -21,7 +21,8 @@ import type { AssyPlacement, BlockSite, ProcessZone, RosterBlock } from '../mode
 /** 자리 하나의 공정 화면 경로 — 정반이 정해졌으면 정반 상세까지, 아니면 그 공장을 연 맵 */
 function pathOf(zone: ProcessZone, factory: string, berth?: AssyPlacement['berth']): string {
   if (berth) return `/zones/assembly/${berth.factoryId}/${berth.bayId}`
-  return `/zones/${zone}?shop=${encodeURIComponent(factory)}`
+  /* 새 링크는 드릴다운 계약의 새 철자 — 옛 `?shop=` 은 읽기 전용으로 남는다 */
+  return `/zones/${zone}?factory=${encodeURIComponent(factory)}`
 }
 
 function siteId(zone: ProcessZone, factory: string, mapBay?: string): string {

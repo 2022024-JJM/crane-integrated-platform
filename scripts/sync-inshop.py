@@ -54,9 +54,14 @@ APP_FILES = ("bootstrap.ts", "i18next.d.ts")
 DROP_DIRS = (
     "shared/widgets/layout-wrapper", "shared/widgets/sidebar", "shared/widgets/header",
     "shared/widgets/footer", "shared/widgets/user-menu", "shared/widgets/alarm-menu",
-    "shared/features/alarm-center", "shared/entities/alarm",
 )
-DROP_FILES = ("shared/config/navigation.ts", "shared/lib/theme/ThemeProvider.tsx")
+DROP_FILES = (
+    "shared/config/navigation.ts",
+    "shared/lib/theme/ThemeProvider.tsx",
+    # 알람 레일 위젯(shared/widgets/alarm-menu)은 버리는 크롬이다 — 그 위젯을 그리는
+    # 테스트만 함께 뺀다. 판정 규칙·entities/alarm 과 derive 테스트는 그대로 옮긴다.
+    "shared/features/alarms/__tests__/AlarmMenu.test.tsx",
+)
 
 # 이 앱이 소유하는 라우트 접두 — <Link>·navigate·module.ts 경로에 /indoorshop 을 붙인다
 OWNED_PREFIXES = ("/zones", "/logistics", "/docs", "/settings")
@@ -198,9 +203,11 @@ def rewrite_i18n() -> None:
     s = s.replace(" * `t('...')` 의 키를 타입으로 묶는다.", " * `t('...')` 의 키를 타입으로 묶는다. (이식: 셸 i18next 의 'inshop' 네임스페이스에 얹는다 —\n * defaultNS 를 여기서 선언하면 셸·다른 모듈의 t() 까지 이 키 집합으로 좁혀진다.)")
     write(p, s)
 
-    bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith("i18n/useTranslation.ts")]
+    # 테스트 헬퍼는 I18nextProvider·initReactI18next 를 직접 써야 한다 — 예외
+    bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith(("i18n/useTranslation.ts", "testing/renderWithProviders.tsx"))]
     assert not bad, f"react-i18next 직접 import 잔존: {bad}"
-    assert not [f for f in ts_files(DST) if "ParseKeys" in read(f) and not f.as_posix().endswith("i18n/keys.ts")]
+    # 주석에 든 단어까지 잡으면 안 된다 — import 구문의 ParseKeys 만 검사한다
+    assert not [f for f in ts_files(DST) if re.search(r"import type \{[^}]*\bParseKeys\b", read(f)) and not f.as_posix().endswith("i18n/keys.ts")]
     print(f"    useTranslation {n_t} files, ParseKeys {n_k} files")
 
 
@@ -273,7 +280,8 @@ def patch_asset_paths() -> None:
     for q in (p, p2):
         write(q, re.sub(r"'(@/[^']*)'", lambda m: f"'{rel_import(q, target_for(m.group(1)))}'", read(q)))
 
-    left = [f for f in ts_files(DST) if re.search(r"fetch\(`/|fetch\('/|= '/real-scan'|'/models/", read(f))]
+    # public 에셋 경로만 본다 — 서버 API 경로('/api')는 별개 관심사고, 주석 속 예시까지 잡으면 안 된다
+    left = [f for f in ts_files(DST) if re.search(r"fetch\([`']/(?:real-scan|models)\b|= '/real-scan'", read(f))]
     assert not left, f"절대 경로 fetch 잔존: {left}"
 
 
@@ -402,6 +410,38 @@ def patch_globals_css() -> None:
     write(p, s)
 
 
+def patch_test_helper() -> None:
+    step("renderWithProviders: vitest 에서 i18n 을 초기화 (셸 런타임은 initI18n 이 대신한다)")
+    p = DASH / "shared/lib/testing/renderWithProviders.tsx"
+    replace_once(p, "import { I18nextProvider } from 'react-i18next'",
+                 "import { I18nextProvider, initReactI18next } from 'react-i18next'")
+    s = read(p)
+    m = re.search(r"import i18n from '(\S*i18n/config)'", s)
+    assert m, "renderWithProviders 의 i18n import 를 찾지 못함"
+    s = s.replace(m.group(0), f"import i18n, {{ INSHOP_NS }} from '{m.group(1)}'\n"
+                              "// 공정 번역 조각까지 큐에 올린다 — 아래 init 의 'initialized' 에서 한꺼번에 얹힌다\n"
+                              "import '../../../app/bootstrap'", 1)
+    s = s.replace("export function renderWithProviders(", """/*
+ * (이식) 원본 config 은 스스로 init 했지만, 이식본은 셸의 initI18n 에 얹혀 산다 —
+ * vitest 에는 그게 없으므로 여기서 초기화한다. config·bootstrap 이 큐에 쌓아 둔
+ * 번들(공통·공정)은 'initialized' 리스너가 이때 한꺼번에 얹는다.
+ */
+if (!i18n.isInitialized) {
+  void i18n.use(initReactI18next).init({
+    lng: 'ko',
+    fallbackLng: 'ko',
+    defaultNS: INSHOP_NS,
+    ns: [INSHOP_NS],
+    resources: {},
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  })
+}
+
+export function renderWithProviders(""", 1)
+    write(p, s)
+
+
 def patch_fixed_viewport() -> None:
     step("FixedViewport: useEffect → useLayoutEffect (첫 페인트 전에 고정 플래그를 세운다)")
     p = DASH / "shared/lib/fixed-viewport/FixedViewport.tsx"
@@ -463,7 +503,7 @@ def sync_public() -> None:
 def check_orphans() -> None:
     step("삭제한 크롬을 아직 참조하는 곳이 없는지")
     # import 지정자만 본다 — 주석에 '왜 ThemeProvider 를 뺐는가' 를 적어 둔 것까지 잡으면 안 된다
-    pat = re.compile(r"from '[^']*(?:widgets/(?:layout-wrapper|sidebar|header|footer|user-menu|alarm-menu)|alarm-center|entities/alarm|config/navigation|theme/ThemeProvider)[^']*'")
+    pat = re.compile(r"from '[^']*(?:widgets/(?:layout-wrapper|sidebar|header|footer|user-menu|alarm-menu)|alarm-center|config/navigation|theme/ThemeProvider)[^']*'")
     bad = [f for f in ts_files(DST) if pat.search(read(f))]
     assert not bad, f"삭제된 모듈 참조 잔존 — 원본이 새로 쓰기 시작했다면 DROP 목록을 재검토: {bad}"
 
@@ -477,6 +517,7 @@ def main() -> None:
     rewrite_links()
     patch_asset_paths()
     patch_settings()
+    patch_test_helper()
     patch_docs_registry()
     patch_globals_css()
     patch_fixed_viewport()

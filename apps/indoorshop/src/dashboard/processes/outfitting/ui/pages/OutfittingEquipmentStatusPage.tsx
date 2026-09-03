@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { cn } from '../../../../shared/lib/utils'
+import { Button } from '../../../../shared/ui/atoms/Button'
 import { StatusChip } from '../../../../shared/ui/atoms/StatusChip'
+import { EmptyState } from '../../../../shared/ui/states'
+import {
+  LAYOUT_DRAWING_REVISION,
+  layoutDrawingOf,
+} from '../../../../shared/entities/equipment/layoutDrawings'
+import { DrawingViewerModal } from '../../../../shared/features/drawing-viewer'
 import {
   OUTFITTING_DEVICE_KINDS,
   OUTFITTING_DEVICE_META,
@@ -119,6 +126,9 @@ export function OutfittingEquipmentStatusPage() {
   const [selectedFactory, setSelectedFactory] = useState(() => factories[0] ?? '')
 
   const selectedSummary = summaries.find((s) => s.factory === selectedFactory) ?? null
+  /* 설비 배치 도면 — 의장 7공장은 모두 260903 도면집에 있다(도장 공장만 없다) */
+  const [drawingOpen, setDrawingOpen] = useState(false)
+  const drawing = selectedFactory ? layoutDrawingOf(selectedFactory) : null
   const bays = useMemo(
     () => devicesByBay(selectedFactory ? outfittingDevices(selectedFactory) : []),
     [selectedFactory]
@@ -226,9 +236,22 @@ export function OutfittingEquipmentStatusPage() {
             <div className="rounded-inshop-lg border border-border bg-surface px-3 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-inshop-sm font-semibold text-foreground">{selectedSummary.factory}</h2>
-                <span className="text-2xs text-foreground/55">
-                  {t('outfitting.equipment.bayCount', { count: bays.size })}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xs text-foreground/55">
+                    {t('outfitting.equipment.bayCount', { count: bays.size })}
+                  </span>
+                  {/* 배치 도면 — 이 공장의 도면이 도면집에 있을 때만 문을 낸다 */}
+                  {drawing && (
+                    <button
+                      type="button"
+                      onClick={() => setDrawingOpen(true)}
+                      title={t('drawing.openHint', { factory: drawing.title })}
+                      className="rounded-inshop-md border border-border px-2 py-1 text-2xs font-medium text-foreground/75 transition-colors hover:bg-foreground/5 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {t('drawing.open')}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-2">
                 <KindBreakdown summary={selectedSummary} />
@@ -236,9 +259,22 @@ export function OutfittingEquipmentStatusPage() {
             </div>
           )}
           {bays.size === 0 ? (
-            <p className="rounded-inshop-lg border border-dashed border-border px-3 py-8 text-center text-inshop-sm text-foreground/55">
-              {t('outfitting.equipment.empty')}
-            </p>
+            /*
+             * 설비가 없다는 사실만으로는 사용자가 할 일을 모른다 — 왜 없는지(도면 이관
+             * 미도달)와 그래도 열어 볼 수 있는 것(배치 도면)을 함께 낸다.
+             */
+            <EmptyState
+              reason="notCollected"
+              title={t('outfitting.equipment.empty')}
+              description={t('outfitting.equipment.emptyNote')}
+              action={
+                drawing && (
+                  <Button size="sm" onClick={() => setDrawingOpen(true)}>
+                    {t('drawing.open')}
+                  </Button>
+                )
+              }
+            />
           ) : (
             <div className="grid gap-3 xl:grid-cols-2">
               {[...bays.entries()].map(([bay, devices]) => (
@@ -256,6 +292,17 @@ export function OutfittingEquipmentStatusPage() {
           )}
         </div>
       </div>
+
+      {drawing && drawingOpen && (
+        <DrawingViewerModal
+          src={drawing.src}
+          title={drawing.title}
+          subtitle={`${drawing.drawingNo} · ${LAYOUT_DRAWING_REVISION} · p.${drawing.page}`}
+          width={drawing.width}
+          height={drawing.height}
+          onClose={() => setDrawingOpen(false)}
+        />
+      )}
     </div>
   )
 }

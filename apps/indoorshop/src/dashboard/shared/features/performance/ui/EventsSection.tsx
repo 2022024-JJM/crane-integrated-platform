@@ -6,6 +6,7 @@ import { cn } from '../../../lib/utils'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
 import { fetchEventDetail } from '../api/performanceApi'
+import type { DateWindow } from '../lib/baseDate'
 import type {
   AsmEventKind,
   PntEventKind,
@@ -54,12 +55,18 @@ export function EventsSection({
   events,
   pendingProcess,
   scopeKey,
+  window,
 }: {
   events: CollectionEvent[]
   /** 의장·도장 필터 — 아직 범위 밖이라 준비중 안내를 낸다 */
   pendingProcess: boolean
   /** 그리드 부제 — 현재 필터가 담는 이벤트 범위 (가공/조립/가공·조립) */
   scopeKey: InshopKey
+  /**
+   * 지금 보고 있는 **날짜 범위** (W7-2). 그리드는 예전에 '오늘' 고정이라 적을 것이 없었지만,
+   * 기준일을 옮길 수 있게 된 뒤로는 이걸 적지 않으면 행이 늘거나 줄어도 왜 그런지 알 수 없다.
+   */
+  window: DateWindow
 }) {
   const { t } = useTranslation()
   /* 조립 'ASM'/도장 'PNT' 행의 단계 셀은 공정명 하나 — 하위 단계·스텝 이름은 옆의
@@ -94,7 +101,13 @@ export function EventsSection({
           <div className="text-inshop-sm font-semibold">
             {t('performance.grid.title')}{' '}
             <span className="font-normal text-foreground/50">
-              · {t(scopeKey)} · {t('performance.grid.rows', { count: events.length })}
+              · {t(scopeKey)} ·{' '}
+              <span className="tabular-nums">
+                {window.from === window.to
+                  ? window.to
+                  : t('performance.dateRange.window', { from: window.from, to: window.to })}
+              </span>{' '}
+              · {t('performance.grid.rows', { count: events.length })}
             </span>
           </div>
           <div className="text-[11px] text-foreground/45">{t('performance.grid.legend')}</div>

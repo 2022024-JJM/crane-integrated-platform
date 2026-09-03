@@ -30,7 +30,20 @@ export const outfittingEn: typeof outfittingKo = {
       error: 'Error',
     },
     mapEntry: {
-      title: 'Pre-outfitting layout',
+      issueCount: '{{count}} need attention',
+      deviceCount: '{{count}} devices',
+      modeLabel: 'Switch panel view',
+      modeEquipment: '① Equipment',
+      modeCollection: '② Collection',
+      collection: {
+        detected: 'Detected blocks',
+        detectedValue: '{{count}}/{{total}} blocks',
+        doneToday: 'Completed',
+        doneTodayValue: '{{count}}',
+        lastScan: 'Last collected',
+        openFactory: 'Open shop status',
+      },
+      title: 'Pre-outfitting status',
       subtitle:
         'Block work status on outfitting factory parcels — pick a factory, then a bay for its blocks.',
       equipmentLink: 'Equipment status',
@@ -41,9 +54,18 @@ export const outfittingEn: typeof outfittingKo = {
       viewOnMap: 'View this factory on the map',
       expand: 'Expand',
       collapse: 'Collapse',
-      summary: { running: 'in progress' },
       blockDetail: 'Block detail',
+      markerTypesLabel: 'Equipment types shown on the map',
+      tiltToggleHint: 'A tilt module stands 1.7 m from its paired LiDAR — turning it on overlaps the two dots.',
+      markerNote: 'Positions and counts are real (from drawings) · status is mock',
+      deviceCard: {
+        back: 'Clear selection',
+        place: '{{factory}} · BAY {{bay}} — position from equipment entity',
+        hostPanel: 'Host panel',
+      },
       bay: {
+        equipmentTitle: 'Equipment in this bay',
+        noEquipment: 'No equipment registered in this bay.',
         blocksTitle: 'Blocks in this bay',
         noBlocks: 'No blocks assigned to this bay.',
       },
@@ -87,6 +109,16 @@ export const outfittingEn: typeof outfittingKo = {
       factoryView: 'Factory view',
     },
     equipment: {
+      tilt: {
+        allIdle: 'All idle',
+        note: '{{count}} tilt modules pair 1:1 with {{lidar}} LiDARs — expand for per-unit mode and angles.',
+        mode: 'Mode',
+        modeValue: { idle: 'Idle', tilting: 'Tilting', error: 'Error' },
+        angle: 'pan/tilt',
+        target: 'Target',
+        pair: 'Pair',
+        alarm: 'Motor alarm',
+      },
       title: 'Pre-outfitting equipment status',
       subtitle:
         'LiDAR, tilt modules, edge PCs and network panels across the outfitting shops — pick a factory, then drill into a bay.',
@@ -125,7 +157,8 @@ export const outfittingEn: typeof outfittingKo = {
       bayCount: '{{count}} bays',
       bayHeading: 'BAY {{bay}}',
       unassignedBay: 'Unassigned',
-      empty: 'No equipment registered for this factory.',
+      empty: 'No equipment registered for this factory',
+      emptyNote: 'The equipment drawing handover has not reached this factory yet — the same area fills once surveyed rows arrive.',
       placeholderShort: 'placeholder',
       placeholderNote:
         'Some factories have no surveyed equipment rows yet, so placeholders are laid out over the area skeleton — the same screen fills with real data once the equipment entity receives them. Status and heartbeat are mock values until the pipeline is live.',

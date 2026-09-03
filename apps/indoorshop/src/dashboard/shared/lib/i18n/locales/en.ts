@@ -28,6 +28,47 @@ export const en: Resources = {
     viewPerformanceHint: 'Open {{block}} in the integrated performance view',
     viewOnProcessMap: 'Process view',
     viewOnProcessMapHint: 'Go to the process screen where {{block}} sits',
+    dragCardHint: 'Drag the header to move this card (double-click to reset)',
+    breadcrumbNav: 'Current location',
+    breadcrumbYard: 'Yard',
+  },
+  /* Loading / empty / error states (shared/ui/states) — shared wording for the three */
+  states: {
+    loading: 'Loading',
+    empty: {
+      none: {
+        title: 'Nothing to show',
+        description: 'There are no items for this area yet.',
+      },
+      filtered: {
+        title: 'No items match the filter',
+        description: 'Widening the selected conditions may return results.',
+      },
+      notCollected: {
+        title: 'No data collected yet',
+        description: 'Collection has not reached this area yet — values appear once they arrive.',
+      },
+      batchPending: {
+        title: "Today's batch has not arrived yet",
+        description: 'Values appear once the legacy daily batch registration completes.',
+        lastArrived: 'Last update {{date}} · today\'s values arrive after the daily batch',
+      },
+    },
+    error: {
+      title: 'Failed to load data',
+      description: 'The connection dropped or the response is slow. Please try again shortly.',
+      retry: 'Retry',
+      lastSuccess: 'Last success {{time}}',
+      neverSucceeded: 'Has not loaded successfully yet',
+    },
+  },
+  /* Drawing viewer (shared/features/drawing-viewer) — zone-agnostic wording */
+  drawing: {
+    open: 'View drawing',
+    openHint: 'Open the equipment layout drawing for {{factory}}',
+    fit: 'Fit',
+    hint: 'Wheel to zoom · drag to pan · double-click or press 0 to fit · Esc to close',
+    none: 'No layout drawing for this shop',
   },
 
   app: {
@@ -75,6 +116,25 @@ export const en: Resources = {
   header: {
     realtime: 'Live collection',
     realtimeTitle: 'Collection pipeline healthy — sensor data is still arriving',
+  },
+
+  /* 통합 검색 팔레트 (shared/features/global-search) */
+  globalSearch: {
+    title: 'Global search',
+    open: 'Global search (Ctrl/⌘+K)',
+    placeholder: 'Search vessel · block · ASSY · W/O · equipment ID',
+    hint: '↑↓ to move · Enter to open · Esc to close',
+    empty: 'No vessel, block, ASSY, W/O, or equipment matches ‘{{query}}’',
+    emptyGuide: 'e.g. 7004 · 2540-281 · 222-M02 · WO- · LD-D01',
+    recent: 'Recent searches',
+    noRecent: 'Search by vessel no., block, ASSY, W/O, or equipment ID',
+    groups: {
+      vessel: 'Vessel',
+      block: 'Block',
+      assy: 'ASSY',
+      wo: 'W/O',
+      equipment: 'Equipment',
+    },
   },
 
   account: {
@@ -135,20 +195,18 @@ export const en: Resources = {
   },
 
   alarms: {
-    title: 'Alerts',
-    aria: '{{count}} alerts',
-    ariaEmpty: 'Alerts',
-    listLabel: 'Alert list',
-    unreadCount: '{{count}} unread',
-    allRead: 'All caught up',
-    markAllRead: 'Mark all read',
-    dismiss: 'Dismiss alert: {{title}}',
-    empty: 'No alerts',
-    emptyFiltered: 'No alerts match this filter',
-    emptyHint: 'That means the collection pipeline is quiet',
+    title: 'Alarms',
+    aria: '{{count}} alarms',
+    ariaEmpty: 'Alarms',
+    listLabel: 'Alarm list',
+    countSummary: '{{critical}} critical · {{warning}} warning',
+    allClear: 'No active alarms',
+    dismiss: 'Dismiss alarm {{title}}',
+    empty: 'No alarms',
+    emptyFiltered: 'No alarms match this filter',
+    emptyHint: 'The collection pipeline is quiet',
     filters: {
       all: 'All',
-      unread: 'Unread',
       critical: 'Critical',
       warning: 'Warning',
     },
@@ -157,26 +215,43 @@ export const en: Resources = {
       warning: 'Warning',
       info: 'Info',
     },
-    items: {
-      'alm-1042': {
-        title: 'Pre-outfitting reader #2 not responding',
-        message: 'No tag events for 3 minutes. Check the reader power and network.',
+    rail: {
+      mismatch: {
+        title: 'Match mismatch — no target W/O',
+        message:
+          '{{block}} {{assy}}: recognized output exists but no legacy W/O (notify target · completion blocked)',
       },
-      'alm-1041': {
-        title: 'Assembly Shop A bay 3 — LiDAR registration rate dropped',
-        message: 'Registration 68%, below the 80% threshold. Inspect the point cloud overlap.',
+      tiltMotor: {
+        title: 'Tilt module motor alarm',
+        message: '{{id}} alarm code {{code}} — paired LiDAR {{lidar}} is looking the wrong way',
       },
-      'alm-1040': {
-        title: 'Hot Data DB write latency rising',
-        message: 'Average commit latency 480 ms (threshold 200 ms). Writes are still going through.',
+      edgeDown: {
+        title: 'Edge PC collector down',
+        message: '{{id}} collector container exited ({{restarts}} restarts) — attached devices stop collecting',
       },
-      'alm-1039': {
-        title: 'Pre-painting Modbus session reconnected',
-        message: 'The PLC link dropped once and recovered after 12 seconds.',
+      edgeOffline: {
+        title: 'Edge PC offline',
+        message: 'No heartbeat from {{id}} for {{minutes}} min',
       },
-      'alm-1038': {
-        title: 'Fabrication legacy DB nightly sync finished',
-        message: '1,284 records merged. Nothing missing.',
+      panelDown: {
+        title: 'Cabinet down',
+        message: '{{id}} power/uplink down — {{count}} attached devices are blind',
+      },
+      panelUplink: {
+        title: 'Cabinet uplink error',
+        message: '{{id}} switch-hub link is unstable',
+      },
+      linkError: {
+        title: 'Equipment link error',
+        message: '{{id}} ({{type}}) not responding — collection may be interrupted',
+      },
+      batch: {
+        title: 'Painting daily batch D+{{lag}} missing',
+        message: 'Latest YPWG413M date {{date}} — the once-daily batch has been missing for {{lag}} days',
+      },
+      gap: {
+        title: 'Collection event gap',
+        message: 'No new {{zone}} collection for {{minutes}} min since {{time}}',
       },
     },
   },
@@ -395,6 +470,15 @@ export const en: Resources = {
     title: 'Integrated In-shop Performance',
     subtitle: 'Raw collection status and node progress by vessel and block',
     baseDate: 'As of {{date}}',
+    /* Base-date time axis (W7-2) — a query condition inside this screen, not a separate one */
+    dateRange: {
+      label: 'Base date',
+      today: 'Today',
+      yesterday: 'Yesterday',
+      last7: 'Last 7 days',
+      pick: 'Date',
+      window: '{{from}} – {{to}}',
+    },
     autoRefresh: 'Auto refresh {{seconds}}s',
     exportCsv: 'Export',
     mockNote: 'Mock data before live integration — deterministic, node-model based',
@@ -465,6 +549,10 @@ export const en: Resources = {
     asm: {
       title: 'Assembly — block · ASSY',
       woBasis: 'Judgement (auto-collection) is the basis — W/O is a matched reference',
+      trendTitle: 'Daily recognition',
+      trendAria: 'Daily judgement count trend',
+      trendUnit: '',
+      trendTotal: '{{count}}',
       gridStage: 'ASM',
       judgedRate: 'Judged progress',
       judgedRateNote: 'Recognized ÷ planned denominator (REQ_QTY, reference) — our collection is the basis, not the plan',
@@ -517,8 +605,12 @@ export const en: Resources = {
       wo: 'W/O',
       rows: 'planned rows done',
       dailyRate: 'daily progress rate (reference)',
+      dailyRateTrend: 'Daily progress trend',
       dailyRateAsOf: 'As of the {{date}} batch — posted once a day',
       dailyRateNone: 'No daily rate posted — completed rows only (area-weighted)',
+      noPlan: 'No painting plan for this block',
+      noPlanNote: 'The painting plan (YPWP720M) has no rows for this block — it is not a painting target yet, or the plan is not registered.',
+      loadFailed: 'Could not load painting performance',
       startDate: 'Start (SD_ACTL)',
       endDate: 'Finish (FD_ACTL)',
       confirmedChip: "Confirmed ('B')",

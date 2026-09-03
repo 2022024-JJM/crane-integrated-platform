@@ -1,14 +1,18 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
 import type { FactoryBaySummary, FactoryOverview } from '../../../shared/entities/factory/model/overview'
 import { Card, CardContent, CardFooter, CardHeader } from '../../../shared/ui/atoms/Card'
-import { LinkButton } from '../../../shared/ui/atoms/Button'
+import { Button, LinkButton } from '../../../shared/ui/atoms/Button'
 import { HealthBadge } from '../../../shared/entities/zone/ui/HealthBadge'
 import { ChevronRightIcon } from '../../../shared/ui/icons'
 import { cn } from '../../../shared/lib/utils'
 import { isRealLocation, REAL_BAY_LABEL } from '../api/realScanData'
+import { LAYOUT_DRAWING_REVISION } from '../../../shared/entities/equipment/layoutDrawings'
+import { DrawingViewerModal } from '../../../shared/features/drawing-viewer'
+import { layoutDrawingOfFactoryId } from '../lib/mapEntry'
 
 interface FactoryCardProps {
   overview: FactoryOverview
@@ -177,6 +181,9 @@ export function FactoryCard({ overview }: FactoryCardProps) {
   const { t } = useTranslation()
   const { factory, bays, sensorTotal, sensorOnline, sensorFault } = overview
   const unitLabelKey = UNIT_LEVEL_LABEL_KEY[overview.unitLevel]
+  /* 설비 배치 도면 — 없는 공장(도장)에는 버튼을 세우지 않는다 */
+  const [drawingOpen, setDrawingOpen] = useState(false)
+  const drawing = layoutDrawingOfFactoryId(factory.id)
   /* 실측 정반(PBS 5BAY)을 품은 공장 — 카드 머리글에서 그 사실을 먼저 말한다 */
   const hasRealBay = bays.some((bay) => isRealLocation(bay.locationId))
 
@@ -266,7 +273,27 @@ export function FactoryCard({ overview }: FactoryCardProps) {
         <LinkButton to={`/indoorshop/zones/assembly/${factory.id}/production`} size="sm" variant="ghost">
           {t('assembly.factoryCard.dailyProduction')}
         </LinkButton>
+        {drawing && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDrawingOpen(true)}
+            title={t('drawing.openHint', { factory: drawing.title })}
+          >
+            {t('drawing.open')}
+          </Button>
+        )}
       </CardFooter>
+      {drawing && drawingOpen && (
+        <DrawingViewerModal
+          src={drawing.src}
+          title={drawing.title}
+          subtitle={`${drawing.drawingNo} · ${LAYOUT_DRAWING_REVISION} · p.${drawing.page}`}
+          width={drawing.width}
+          height={drawing.height}
+          onClose={() => setDrawingOpen(false)}
+        />
+      )}
     </Card>
   )
 }

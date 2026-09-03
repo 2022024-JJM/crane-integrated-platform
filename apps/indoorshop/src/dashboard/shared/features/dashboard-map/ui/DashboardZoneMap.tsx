@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import {
   YardMap,
@@ -42,11 +42,21 @@ import {
 import { StatusBadge } from '../../../entities/zone/ui/StatusBadge'
 import { HealthBadge } from '../../../entities/zone/ui/HealthBadge'
 import { ChevronDownIcon, CloseIcon } from '../../../ui/icons'
+import { DraggableCard } from '../../../ui/atoms/DraggableCard'
+import {
+  DrilldownBreadcrumb,
+  type BreadcrumbStep,
+} from '../../../ui/atoms/DrilldownBreadcrumb'
+import { useDrilldown } from '../../../lib/useDrilldown'
+import { useDrilldownEscape } from '../../../lib/useDrilldownEscape'
+import { YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 import { cn } from '../../../lib/utils'
 import type { ProcessMapLocation } from '../../../model/processMapDrilldown'
 import {
   bayClickIntent,
   mapSpotlight,
+  drilldownOfSelection,
+  selectionOfDrilldown,
   selectBay as nextBaySelection,
   selectFactory as nextFactorySelection,
   selectLocation as nextLocationSelection,
@@ -193,7 +203,33 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
     []
   )
 
-  const [selection, setSelection] = useState<Selection>(null)
+  /*
+   * 선택은 **URL 이 원본**이다 — `?process=` `?factory=` `?bay=`
+   * (규칙은 `shared/lib/drilldownUrl`). 화면 안 state 였을 때는 새로고침이 자리를
+   * 잃었고, 뒤로가기가 드릴아웃이 아니라 **이전 화면**으로 나갔다.
+   *
+   * 무엇이 무엇을 끄는가(같은 것 재클릭 = 해제, 공정 갈아타면 그 아래가 사라진다)는
+   * 여전히 `mapSpotlight` 의 전이 함수가 정한다 — 여기서는 그 결과를 주소로 옮길 뿐이다.
+   *
+   * 작업 위치(`location`)만은 주소에 싣지 않는다: 그것을 고르는 동작은 곧장 공정 상세로
+   * 나가는 동작이라 총괄 화면에 남을 자리가 아니다(`drilldownOfSelection` 주석).
+   */
+  const drill = useDrilldown()
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+  const selection = useMemo<Selection>(
+    () => selectionOfDrilldown(drill, selectedLocationId),
+    [drill, selectedLocationId]
+  )
+
+  /** 전이 함수가 낸 다음 선택을 주소에 적는다 — 화면이 드릴다운 state 를 따로 들지 않게 */
+  const applySelection = useCallback(
+    (next: Selection) => {
+      setSelectedLocationId(next?.kind === 'factory' ? (next.location ?? null) : null)
+      drill.set(drilldownOfSelection(next))
+    },
+    [drill]
+  )
+
   const [hoveredFactory, setHoveredFactory] = useState<string | null>(null)
   /* 고른 공장 안에서 손이 얹힌 작업 위치 — 지도 칸이 살짝 밝아진다(누를 수 있음) */
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null)
@@ -296,7 +332,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   /* 공장 선택 = 지도/목록 공통 동작. 그 공장의 공정 카드를 펴 목록에서 선택이 보이게 한다 */
   const selectFactory = useCallback(
     (name: string | null) => {
-      setSelection((prev) => nextFactorySelection(prev, name))
+      applySelection(nextFactorySelection(selection, name))
       /* 공장이 바뀌면 이전 공장의 위치 호버가 남지 않게 지운다 (선택은 전이 함수가 지운다) */
       setHoveredLocation(null)
       setHoveredBay(null)
@@ -305,22 +341,26 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
         if (p) expandProcess(p)
       }
     },
-    [processOfFactory, expandProcess]
+    [applySelection, selection, processOfFactory, expandProcess]
   )
 
   /*
-   * `/?factory=<공장명>` 딥링크 소비 — 통합실적의 '맵에서 보기'가 이 계약으로 보낸다
-   * (도장 `?shop=` 전례). 공장 검증에 parcels 가 필요해 로드 후 **한 번만** 소비하고,
-   * 지도에 없는 이름은 조용히 무시한다(오류 화면을 세울 만큼의 사고가 아니다).
+   * `/?factory=<공장명>` 딥링크는 **따로 소비하지 않는다** — 그 쿼리가 곧 선택이기
+   * 때문이다(위 `selection`). 예전에는 마운트 뒤 한 번 베껴 오는 effect 가 있었는데,
+   * 그러면 같은 사실을 두 곳(주소와 state)이 들고 있어 뒤로가기가 둘을 어긋나게 했다.
+   *
+   * 지도에 없는 공장 이름이 와도 조용히 둔다: 카드는 그 이름으로 열리고 카메라만 못
+   * 움직인다 — 오류 화면을 세울 만큼의 사고가 아니다(기존 동작 유지).
    */
-  const [searchParams] = useSearchParams()
-  const deepLinkConsumed = useRef(false)
+
+  /* 공장을 갈아타면 이전 공장의 작업 위치는 뜻을 잃는다 — 뒤로가기로 온 변화도 포함 */
+  const drilledFactory = drill.factory
   useEffect(() => {
-    if (deepLinkConsumed.current || !parcels) return
-    deepLinkConsumed.current = true
-    const name = searchParams.get('factory')
-    if (name && parcels.factories.some((f) => f.name === name)) selectFactory(name)
-  }, [parcels, searchParams, selectFactory])
+    setSelectedLocationId(null)
+  }, [drilledFactory])
+
+  /* ESC = 한 단계 위 (베이 → 공장/공정 → 야드). 글자를 치는 중이면 삼킨다 */
+  useDrilldownEscape(drill.up)
 
 
   /*
@@ -341,24 +381,24 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   const openLocation = useCallback(
     (locationId: string) => {
       const location = locationById.get(locationId)
-      setSelection((prev) => nextLocationSelection(prev, locationId))
+      applySelection(nextLocationSelection(selection, locationId))
       if (location) navigate(location.detailPath)
     },
-    [locationById, navigate]
+    [applySelection, selection, locationById, navigate]
   )
 
   /* 상세 카드의 해제 버튼 — 이동 없이 위치 선택만 푼다 */
   const clearLocation = useCallback(() => {
-    setSelection((prev) => nextLocationSelection(prev, null))
-  }, [])
+    applySelection(nextLocationSelection(selection, null))
+  }, [applySelection, selection])
 
   /* 공정 카드 헤더 클릭 = 스포트라이트 토글. 켤 때는 그 카드도 펴 준다(상세·목록이 바로 보이게) */
   const focusProcess = useCallback(
     (process: string) => {
-      setSelection((prev) => nextProcessSelection(prev, process))
+      applySelection(nextProcessSelection(selection, process))
       expandProcess(process)
     },
-    [expandProcess]
+    [applySelection, selection, expandProcess]
   )
 
   const toggleExpand = useCallback((process: string) => {
@@ -371,8 +411,8 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
 
   /* 베이 상세의 "← 공장 이름" — 베이 선택만 풀고 공장 요약으로 돌아온다 */
   const clearBay = useCallback(() => {
-    setSelection((prev) => nextBaySelection(prev, null))
-  }, [])
+    applySelection(nextBaySelection(selection, null))
+  }, [applySelection, selection])
 
   /*
    * 지도 스포트라이트 — 공장을 고르면 그 공장의 **공정도 함께** 켠다 (FR-5 강조 문법).
@@ -506,9 +546,9 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
         bayLinks.locationOfBayId.get(id)?.detailPath ?? null
       )
       if (intent.kind === 'open') navigate(intent.path)
-      else setSelection(intent.selection)
+      else applySelection(intent.selection)
     },
-    [mapUnitIsBay, openLocation, selection, bayLinks, navigate]
+    [mapUnitIsBay, openLocation, applySelection, selection, bayLinks, navigate]
   )
 
   const hoverMapUnit = useCallback(
@@ -675,6 +715,57 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
   )
 
   /*
+   * 드릴다운 자취 — `야드 › 조립 › GBS › 3BAY`.
+   *
+   * 상태를 새로 들지 않는다: 조각은 전부 지금 URL 에서 나오고, 누르면 그 단계의 주소로
+   * 갈 뿐이다. 그래서 브라우저 뒤로가기와 이 줄이 어긋날 수가 없다.
+   *
+   * 총괄은 야드 전체를 보는 화면이라 '야드'가 곧 이 화면의 무선택 상태다 — 공정 화면의
+   * 자취에서 첫 조각이 여기('/')를 가리키는 것과 같은 계단을 잇는다.
+   */
+  const breadcrumbSteps = useMemo<BreadcrumbStep[]>(() => {
+    const atYard = selection == null
+    const steps: BreadcrumbStep[] = [
+      {
+        key: 'yard',
+        label: t('common.breadcrumbYard'),
+        href: atYard ? null : drill.hrefFor(YARD_DRILLDOWN),
+      },
+    ]
+
+    const process =
+      selection?.kind === 'process'
+        ? selection.process
+        : selection?.kind === 'factory'
+          ? processOfFactory(selection.name)
+          : null
+    if (process) {
+      steps.push({
+        key: 'process',
+        label: process,
+        /* 공정 단계에 서 있으면 링크가 아니다 — 지금 자리를 가리키는 링크는 거짓말이다 */
+        href:
+          selection?.kind === 'process'
+            ? null
+            : drill.hrefFor({ ...YARD_DRILLDOWN, process }),
+      })
+    }
+    if (selection?.kind === 'factory') {
+      steps.push({
+        key: 'factory',
+        label: selection.name,
+        href: selectedBayData
+          ? drill.hrefFor({ ...YARD_DRILLDOWN, factory: selection.name })
+          : null,
+      })
+      if (selectedBayData) {
+        steps.push({ key: 'bay', label: selectedBayData.label, href: null })
+      }
+    }
+    return steps
+  }, [t, drill, selection, processOfFactory, selectedBayData])
+
+  /*
    * 떠 있는 이름패가 설 자리 — 가로는 고른 공장의 지번 centroid, 세로는 그 공장 **실루엣
    * 위**다. 실루엣을 재려면 소속 지번의 꼭짓점이 필요하므로 여기서 함께 모아 넘긴다.
    */
@@ -735,7 +826,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
       /* 총괄 화면은 지번 표면을 내지 않는다 — 드릴다운은 공장→베이까지, 지번은 야드 몫 */
       showLotList={false}
       onBack={clearBay}
-      onClose={() => setSelection(null)}
+      onClose={() => applySelection(null)}
     >
       {/* 베이 카드에도 같은 절점 실적 참고 — 절점 귀속이 공장 단위 mock 이라 공장 기준 수치다 */}
       <PerformanceBadge factory={selectedBayData.factory} className="border-b-0 px-0 py-0" />
@@ -762,7 +853,7 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
       onOpenLocation={openLocation}
       onClearLocation={clearLocation}
       onRetry={retryLocations}
-      onClose={() => setSelection(null)}
+      onClose={() => applySelection(null)}
     />
   ) : null
 
@@ -899,7 +990,19 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
           )}
         >
           <div className="flex min-h-0 min-w-0 flex-col items-start gap-2.5">
-            <div className="pointer-events-none max-w-full shrink-0 rounded-inshop-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+            {/* 자취는 **고정**이다 — 지금 어디인지 말하는 줄이 카드와 함께 떠다니면
+                "여기가 어디인가"를 매번 다시 찾아야 한다 */}
+            <DrilldownBreadcrumb
+              steps={breadcrumbSteps}
+              label={t('common.breadcrumbNav')}
+              className="pointer-events-auto shrink-0"
+            />
+
+            {/* 제목패 — 잡아 옮길 수 있어야 하므로 포인터를 받는다(예전엔 통과시켰다) */}
+            <DraggableCard
+              cardKey="title"
+              className="pointer-events-auto max-w-full shrink-0 rounded-inshop-xl border border-white/10 bg-[#0b0f14]/82 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl"
+            >
               <div className="flex min-w-0 items-center gap-3">
                 <span aria-hidden="true" className="h-9 w-1 shrink-0 rounded-full bg-accent shadow-[0_0_12px_rgba(249,145,55,0.42)]" />
                 <div className="min-w-0">
@@ -911,13 +1014,13 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
                   </p>
                 </div>
               </div>
-            </div>
+            </DraggableCard>
 
             <div className="flex max-w-full shrink-0 flex-wrap items-start gap-2">
             <button
               type="button"
               onClick={() => {
-                setSelection(null)
+                applySelection(null)
                 setNavigationTarget(null)
                 setResetSignal((value) => value + 1)
               }}
@@ -944,12 +1047,13 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
                 세우면 지도를 반쯤 덮고, 어느 쪽이 지금 이야기인지도 흐려진다).
                 남는 높이를 전부 가져가되(`flex-1`), 넘치는 내용은 카드 안에서 스크롤한다. */}
             {wide && detailCard && (
-              <div
+              <DraggableCard
                 key={selectedBayData ? 'bay' : 'factory'}
-                className="flex min-h-0 w-[19rem] max-w-full flex-1 animate-slide-up flex-col"
+                cardKey="detail"
+                className="pointer-events-auto flex min-h-0 w-[19rem] max-w-full flex-1 animate-slide-up flex-col"
               >
                 {detailCard}
-              </div>
+              </DraggableCard>
             )}
 
             {/*
@@ -958,10 +1062,14 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
              * 어긋났다). 남는 높이가 없으면 자연히 아래로 붙는다.
              */}
             <div className="mt-auto flex min-w-0 max-w-full shrink-0 flex-col items-start gap-2.5">
-              <p className="max-w-full rounded-inshop-md bg-black/55 px-2.5 py-1 text-2xs text-white/60 backdrop-blur-sm">
+              <DraggableCard
+                cardKey="hint"
+                className="pointer-events-auto max-w-full rounded-inshop-md bg-black/55 px-2.5 py-1 text-2xs text-white/60 backdrop-blur-sm"
+              >
                 {t('dashboard.map.hint3d')}
-              </p>
+              </DraggableCard>
               {data?.backdrop && parcels && (
+                <DraggableCard cardKey="minimap" className="pointer-events-auto">
                 <DashboardMiniMap
                   ref={miniMapRef}
                   extent={data.backdrop.extent}
@@ -972,15 +1080,20 @@ export function DashboardZoneMap({ zones }: DashboardZoneMapProps) {
                   compact={Boolean(detailCard) && shortScreen}
                   onNavigate={(point) => setNavigationTarget({ ...point })}
                 />
+                </DraggableCard>
               )}
             </div>
           </div>
 
           {/* 오른쪽 기둥은 공정존 탐색 전용으로 유지한다 — 넓은 화면에서만 지도 위에 선다 */}
           {wide && (
-            <div className="scroll-thin flex min-h-0 flex-col gap-3 overflow-y-auto">
-              {zonePanel}
-            </div>
+            /* 옮기는 손잡이는 패널 제목 줄(ProcessZonePanel 의 data-drag-handle) —
+               스크롤 상자를 안쪽에 두어 목록을 굴리는 손과 부딪히지 않게 한다 */
+            <DraggableCard cardKey="zone-panel" className="pointer-events-none flex min-h-0 flex-col">
+              <div className="scroll-thin flex min-h-0 flex-col gap-3 overflow-y-auto">
+                {zonePanel}
+              </div>
+            </DraggableCard>
           )}
         </div>
       </div>
@@ -1047,7 +1160,8 @@ function ProcessZonePanel({
   const { t } = useTranslation()
   return (
     <section className="pointer-events-auto rounded-inshop-lg border border-white/12 bg-black/75 p-2.5 backdrop-blur-md">
-      <div className="mb-2 flex items-center px-0.5">
+      {/* 제목 줄이 이 패널의 손잡이 — 지도 위에서 잡아 옮길 수 있다 */}
+      <div data-drag-handle className="mb-2 flex items-center px-0.5">
         {/* 한글에 uppercase 는 무의미하다 — 크기 대신 자간·명도 한 단으로 구획 제목을 만든다 */}
         <h2 className="text-inshop-xs font-semibold tracking-[-0.01em] text-white/55">
           {t('dashboard.map.zonesTitle')}
@@ -1694,7 +1808,8 @@ function FactoryDetailCard({
   return (
     <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
-      <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-4">
+      {/* 머리글이 이 카드의 드래그 손잡이 — 아래 본문은 스크롤이 제 일이라 잡히지 않는다 */}
+      <div data-drag-handle className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-4">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 text-2xs font-medium text-white/52">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: processColor }} />

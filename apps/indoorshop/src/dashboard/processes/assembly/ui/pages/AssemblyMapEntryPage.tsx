@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
+import type { InshopKey } from '../../../../shared/lib/i18n/keys'
 import {
+  CollectionSummaryBody,
+  PanelModeTabs,
   ProcessMapEntry,
   useMapEntryData,
   useShopDeepLink,
@@ -16,18 +19,25 @@ import { cn } from '../../../../shared/lib/utils'
 import type { FactoryOverview } from '../../../../shared/entities/factory/model/overview'
 import { fetchFactoryOverviews } from '../../api/assemblyApi'
 import { LidarSensorStatusList } from '../LidarSensorStatusList'
+import { EquipmentInventoryPanel } from '../EquipmentInventoryPanel'
+import { useFactoryEquipmentStatus } from '../../../../shared/entities/equipment/useEquipmentStatus'
+import { equipmentTypeOf } from '../../../../shared/entities/equipment'
+import { EquipmentGlyph, symbolOfType } from '../../../../shared/entities/equipment/ui/EquipmentSymbol'
 import {
+  ASSEMBLY_EQUIPMENT_TYPES,
+  assemblyEquipmentMarkers,
   assemblyFactoryIdOf,
-  assemblyLidarMarkers,
   assemblyLocationIdOfBay,
+  collectionRowsOf,
+  factoryStatusHref,
   assemblyMapFactoryNames,
+  equipmentColorOf,
   isFabricationLine,
   isRealScanBay,
-  lidarColor,
-  lidarsByBay,
   lidarSummaryOf,
+  tiltOfLidar,
   toLidarSensor,
-  type AssemblyLidarMarker,
+  type AssemblyEquipmentMarker,
 } from '../../lib/mapEntry'
 
 /*
@@ -38,7 +48,9 @@ import {
  * 속이지 않는다). 마커는 설비 엔티티의 LiDAR 실좌표·실대수이고 상태만 결정론 mock 이다.
  *
  * 우측 패널은 조립 몫의 **2단**이다(panelHeaderExtra + factoryBody):
- *  ① 센서 상태 — 공장별 베이·센서 목록(기존 LidarSensorStatusList 문법 재사용)
+ *  ① 설비 상태 — 그 공장의 설비 전부를 종류 구획으로(라이다는 베이별). 라이다도 설비라
+ *     예전의 '센서 상태'와 '설비'를 한 단으로 합쳤다(W6-5) — 같은 공장의 장비를 두 군데서
+ *     따로 세면 "뭐가 몇 대 있고 지금 몇 대가 이상인가"를 한 번에 볼 수 없다.
  *  ② 수집 현황 — 감지 블록·오늘 판별·최근 수집(기존 assemblyApi mock 집계).
  *     CAS/PAS 는 수집이 아직 없다 — 모드B 라인 카운팅 예정임을 문구로 말한다.
  *
@@ -47,20 +59,43 @@ import {
  * 달고 진입해 확인하게 한다. 기존 공장 목록(그리드)은 /zones/assembly/list 로 병존한다.
  */
 
-type PanelMode = 'sensors' | 'collection'
+type PanelMode = 'equipment' | 'collection'
 
-const LIDAR_COLOR = lidarColor()
+const LIDAR_COLOR = equipmentColorOf('LIDAR')
 
-/** 상태 → 마커 표현 — 온라인은 라이다색 채움, 오프라인은 꺼짐, 오류는 붉은 링 펄스 */
-function markerLook(status: AssemblyLidarMarker['status']) {
-  if (status === 'error')
+/**
+ * 지도에 세울 종류의 기본값 — 라이다·Edge PC·Network Panel.
+ *
+ * ⚠️ 틸팅은 기본으로 끈다. 페어 라이다에서 **1.7m** 떨어져 서기 때문에 함께 켜면 두 점이
+ * 겹쳐 어느 쪽을 눌렀는지 알 수 없다. 틸팅 상태는 라이다 마커 상세에서 페어로 읽히고,
+ * 그래도 지도에서 보고 싶으면 아래 종류 토글로 켠다.
+ */
+const DEFAULT_MARKER_TYPES: string[] = ['LIDAR', 'EDGE', 'PNL']
+
+/** 패널 안의 '더 볼 곳' 문 — 수집 요약 본문이 라우터를 모르게 렌더 함수로 넘긴다 */
+function PanelLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="mt-1 flex items-center justify-between rounded-inshop-md px-2 py-1.5 text-2xs font-medium text-white/75 transition-colors hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+      style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14)' }}
+    >
+      <span>{label}</span>
+      <span aria-hidden="true">→</span>
+    </Link>
+  )
+}
+
+/** 상태 → 마커 표현 — 온라인은 종류색 채움, 오프라인은 꺼짐, 오류는 붉은 링 펄스 */
+function markerLook(state: AssemblyEquipmentMarker['state'], color: string) {
+  if (state === 'error')
     return { fill: 'rgba(9,14,20,0.85)', border: '#ff5252', glow: '0 0 0 2px #ff5252', pulse: true, dim: false }
-  if (status === 'offline')
-    return { fill: 'rgba(9,14,20,0.85)', border: LIDAR_COLOR, glow: '0 1px 3px rgba(0,0,0,0.5)', pulse: false, dim: true }
+  if (state === 'offline')
+    return { fill: 'rgba(9,14,20,0.85)', border: color, glow: '0 1px 3px rgba(0,0,0,0.5)', pulse: false, dim: true }
   return {
-    fill: `linear-gradient(180deg, ${LIDAR_COLOR} 0%, #4a35a5 100%)`,
+    fill: color,
     border: 'rgba(255,255,255,0.4)',
-    glow: `0 0 10px ${LIDAR_COLOR}b3`,
+    glow: `0 0 10px ${color}b3`,
     pulse: false,
     dim: false,
   }
@@ -74,9 +109,13 @@ export function AssemblyMapEntryPage() {
   const { selectedFactory, setSelectedFactory, initialOverview } = useShopDeepLink(factoryNames)
 
   /* 우측 패널의 단 — 조립 모듈 소유 state. 프레임은 이 토글의 존재를 모른다 */
-  const [panelMode, setPanelMode] = useState<PanelMode>('sensors')
+  const [panelMode, setPanelMode] = useState<PanelMode>('equipment')
 
-  const markers = useMemo(() => assemblyLidarMarkers(factoryNames), [factoryNames])
+  const [markerTypes, setMarkerTypes] = useState<string[]>(DEFAULT_MARKER_TYPES)
+  const markers = useMemo(
+    () => assemblyEquipmentMarkers(factoryNames, markerTypes),
+    [factoryNames, markerTypes]
+  )
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
   useEffect(() => {
     setSelectedMarkerId(null)
@@ -84,6 +123,9 @@ export function AssemblyMapEntryPage() {
   const selectedMarker = selectedMarkerId
     ? (markers.find((m) => m.id === selectedMarkerId) ?? null)
     : null
+  /* 마커 상세가 페어 틸팅의 각·모드를 말하려면 그 공장의 상태 스냅샷이 필요하다.
+     우측 목록과 같은 스토어를 보므로 폴링이 두 번 돌지는 않는다. */
+  const { snapshot: selectedStatus } = useFactoryEquipmentStatus(selectedMarker?.factory ?? '')
 
   /* 수집 현황(②)·베이 블록 요약의 원천 — 기존 목록 화면과 같은 집계 mock 을 그대로 쓴다 */
   const { data: overviews } = useAsyncData<FactoryOverview[]>(() => fetchFactoryOverviews(), [])
@@ -104,43 +146,59 @@ export function AssemblyMapEntryPage() {
       collapse: t('assembly.mapEntry.collapse'),
       viewOnMap: t('assembly.mapEntry.viewOnMap'),
       bayCount: (n) => t('dashboard.map.bayCount', { count: n }),
+      breadcrumbLabel: t('common.breadcrumbNav'),
+      breadcrumbYard: t('common.breadcrumbYard'),
+      breadcrumbProcess: t('assembly.nav.label'),
     }),
     [t]
   )
 
+  /*
+   * 마커 글리프 — **종류 심볼**을 그대로 쓴다. 색만 다른 점 여럿을 세우면 지도에서
+   * 라이다·Edge PC·판넬이 구분되지 않는다(색각 이상에서는 아예 같은 점이다).
+   * 캐비닛(판넬·Edge PC)은 라이다보다 한 급 크게 세운다 — 아래를 거느리는 쪽이다.
+   */
   const renderMarker = useMemo(
     () =>
-      function AssemblyLidarGlyph(m: AssemblyLidarMarker, ctx: MarkerRenderCtx) {
-        const look = markerLook(m.status)
+      function AssemblyEquipmentGlyph(m: AssemblyEquipmentMarker, ctx: MarkerRenderCtx) {
+        const color = equipmentColorOf(m.typeId)
+        const look = markerLook(m.state, color)
+        const cabinet = m.typeId === 'PNL' || m.typeId === 'EDGE'
+        const size = ctx.inOverview ? (cabinet ? 12 : 10) : cabinet ? 19 : 16
         return (
           <span
             className={cn(
-              'flex items-center justify-center rounded-full border transition-transform duration-150',
-              ctx.inOverview ? 'h-[10px] w-[10px]' : 'h-[16px] w-[16px]',
+              'flex items-center justify-center border transition-transform duration-150',
+              cabinet ? 'rounded-[4px]' : 'rounded-full',
               ctx.selected ? 'scale-125' : !ctx.inOverview && 'hover:scale-110',
               look.pulse && 'animate-pulse'
             )}
             style={{
+              width: size,
+              height: size,
               background: look.fill,
               borderColor: look.border,
-              opacity: look.dim ? 0.4 : 1,
-              boxShadow: [look.glow, ctx.selected ? `0 0 0 3px ${LIDAR_COLOR}59` : null]
+              color: look.dim ? color : '#fff',
+              opacity: look.dim ? 0.45 : 1,
+              boxShadow: [look.glow, ctx.selected ? `0 0 0 3px ${color}59` : null]
                 .filter(Boolean)
                 .join(', '),
             }}
           >
-            {/* 라이다 픽토그램 — 회전 스캔을 뜻하는 부챗살 점 */}
-            <svg aria-hidden="true" viewBox="0 0 12 12" width={ctx.inOverview ? 6 : 9} height={ctx.inOverview ? 6 : 9}>
-              <circle cx="6" cy="7" r="1.6" fill="currentColor" color="#fff" />
-              <path d="M2.5 4.5A4.6 4.6 0 0 1 9.5 4.5" fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
+            <EquipmentGlyph symbol={symbolOfType(m.typeId)} size={Math.round(size * 0.62)} />
           </span>
         )
       },
     []
   )
 
-  /* 좌상단 상세 — 고른 LiDAR 한 대의 상태 카드 (베이 카드와 같은 한 자리를 쓴다) */
+  /*
+   * 좌상단 상세 — 고른 설비 한 대. 라이다는 기존 센서 카드 문법을 그대로 쓰고, 그 아래
+   * **페어 틸팅**을 한 줄 붙인다(라이다가 지금 어디를 보고 있는지는 틸팅이 안다).
+   * 라이다가 아닌 종류는 설비 목록과 같은 낱말로 요약한다.
+   */
+  const selectedTilt =
+    selectedMarker?.typeId === 'LIDAR' ? tiltOfLidar(selectedMarker.id, selectedStatus) : null
   const detailOverlay = selectedMarker ? (
     <section className="pointer-events-auto flex flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: LIDAR_COLOR }} />
@@ -160,16 +218,49 @@ export function AssemblyMapEntryPage() {
         </div>
       </div>
       <div className="border-t border-white/8 px-4 py-3">
-        <LidarSensorStatusList sensors={[toLidarSensor({
-          id: selectedMarker.id,
-          typeId: 'LIDAR',
-          factory: selectedMarker.factory,
-          bay: selectedMarker.bay,
-          lat: selectedMarker.lat,
-          lon: selectedMarker.lon,
-          x: 0,
-          y: 0,
-        })]} />
+        {selectedMarker.typeId === 'LIDAR' ? (
+          <LidarSensorStatusList sensors={[toLidarSensor({
+            id: selectedMarker.id,
+            typeId: 'LIDAR',
+            factory: selectedMarker.factory,
+            bay: selectedMarker.bay,
+            panelId: selectedMarker.panelId,
+            lat: selectedMarker.lat,
+            lon: selectedMarker.lon,
+            x: 0,
+            y: 0,
+          })]} />
+        ) : (
+          <p className="flex items-center gap-1.5 text-inshop-xs text-white/70">
+            <span className="font-medium">
+              {equipmentTypeOf(selectedMarker.typeId)?.name ?? selectedMarker.typeId}
+            </span>
+            <span aria-hidden="true" className="text-white/30">·</span>
+            <span className={cn(selectedMarker.state === 'online' ? 'text-status-healthy' : 'text-status-unhealthy')}>
+              {t(`assembly.equipment.link.${selectedMarker.state === 'calibrating' ? 'online' : selectedMarker.state}`)}
+            </span>
+          </p>
+        )}
+        {selectedTilt && (
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-white/55">
+            <span className="font-medium text-white/72">{t('assembly.equipment.pairTilt')}</span>
+            <span className="font-mono text-white/80">{selectedTilt.id}</span>
+            <span>{t(`assembly.equipment.tiltMode.${selectedTilt.mode}`)}</span>
+            <span className="font-mono tabular-nums">
+              pan {selectedTilt.panDeg}° / tilt {selectedTilt.tiltDeg}°
+            </span>
+            {!selectedTilt.atTarget && (
+              <span className="text-status-degraded">{t('assembly.equipment.movingToTarget')}</span>
+            )}
+          </p>
+        )}
+        {/* 이 설비가 물린 캐비닛 — 여기가 죽으면 이 설비도 같이 죽는다 */}
+        {selectedMarker.panelId && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-2xs text-white/45">
+            <span>{t('assembly.equipment.hostPanel')}</span>
+            <span className="font-mono text-white/70">{selectedMarker.panelId}</span>
+          </p>
+        )}
         <p className="mt-2 text-2xs text-white/45">
           {t('assembly.mapEntry.sensorCard.place', {
             factory: selectedMarker.factory,
@@ -182,31 +273,49 @@ export function AssemblyMapEntryPage() {
 
   /* ── 우측 패널 2단 토글 — 조립 몫 (panelHeaderExtra 슬롯) ── */
   const panelHeaderExtra = (
-    <div
-      role="tablist"
-      aria-label={t('assembly.mapEntry.modeLabel')}
-      className="flex gap-1 rounded-inshop-md border border-white/10 bg-white/[0.03] p-1"
-    >
-      {(
-        [
-          ['sensors', t('assembly.mapEntry.modeSensors')],
-          ['collection', t('assembly.mapEntry.modeCollection')],
-        ] as const
-      ).map(([mode, label]) => (
-        <button
-          key={mode}
-          type="button"
-          role="tab"
-          aria-selected={panelMode === mode}
-          onClick={() => setPanelMode(mode)}
-          className={cn(
-            'flex-1 rounded px-2 py-1 text-2xs font-bold tracking-[-0.01em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
-            panelMode === mode ? 'bg-white/14 text-white' : 'text-white/50 hover:text-white/80'
-          )}
-        >
-          {label}
-        </button>
-      ))}
+    <div className="flex flex-col gap-1.5">
+      <PanelModeTabs<PanelMode>
+        tabs={[
+          { id: 'equipment', label: t('assembly.mapEntry.modeEquipment') },
+          { id: 'collection', label: t('assembly.mapEntry.modeCollection') },
+        ]}
+        value={panelMode}
+        onChange={setPanelMode}
+        ariaLabel={t('assembly.mapEntry.modeLabel')}
+      />
+      {/* 지도에 세울 종류 — 틸팅은 라이다와 겹쳐 서므로 기본은 꺼 둔다 */}
+      <div className="flex flex-wrap items-center gap-1" aria-label={t('assembly.mapEntry.markerTypesLabel')}>
+        {ASSEMBLY_EQUIPMENT_TYPES.map((typeId) => {
+          const on = markerTypes.includes(typeId)
+          const color = equipmentColorOf(typeId)
+          return (
+            <button
+              key={typeId}
+              type="button"
+              aria-pressed={on}
+              onClick={() =>
+                setMarkerTypes((prev) =>
+                  prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]
+                )
+              }
+              title={
+                typeId === 'TILT' ? t('assembly.mapEntry.tiltToggleHint') : undefined
+              }
+              className={cn(
+                'flex items-center gap-1 rounded border px-1.5 py-0.5 text-2xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+                on ? 'text-white' : 'text-white/40 hover:text-white/70'
+              )}
+              style={{
+                borderColor: on ? color : 'rgba(255,255,255,0.12)',
+                background: on ? `${color}26` : 'transparent',
+              }}
+            >
+              <EquipmentGlyph symbol={symbolOfType(typeId)} size={10} />
+              {equipmentTypeOf(typeId)?.name ?? typeId}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 
@@ -229,23 +338,9 @@ export function AssemblyMapEntryPage() {
   }
 
   const factoryBody = (factory: string) => {
-    if (panelMode === 'sensors') {
-      const bays = lidarsByBay(factory)
-      if (bays.size === 0)
-        return <p className="px-3 py-3 text-2xs text-white/45">{t('assembly.mapEntry.noSensors')}</p>
-      return (
-        <div className="flex flex-col gap-2 px-2 py-2">
-          {[...bays.entries()].map(([bay, list]) => (
-            <div key={bay}>
-              <p className="mb-1 px-1 text-2xs font-semibold text-white/55">
-                {t('assembly.mapEntry.bayHeading', { bay })}
-                <span className="ml-1.5 font-mono text-white/35">{list.length}</span>
-              </p>
-              <LidarSensorStatusList sensors={list.map(toLidarSensor)} />
-            </div>
-          ))}
-        </div>
-      )
+    /* ① 설비 상태 — 라이다·틸팅·Edge PC·캐비닛을 한 목록 체계로 */
+    if (panelMode === 'equipment') {
+      return <EquipmentInventoryPanel factory={factory} />
     }
     /* ② 수집 현황 — CAS/PAS 는 아직 수집이 없다(모드B 라인 카운팅 자리) */
     if (isFabricationLine(factory)) {
@@ -258,44 +353,24 @@ export function AssemblyMapEntryPage() {
     const overview = overviewOf(factory)
     if (!overview)
       return <p className="px-3 py-3 text-2xs text-white/45">{t('common.loading')}</p>
-    const detectedBays = overview.bays.filter((b) => b.projNo != null)
-    const factoryId = assemblyFactoryIdOf(factory)
+    /* 줄 구성·값·나가는 경로는 lib 이 정한다 — 규칙이 UI 안에 있으면 검증할 수 없다 */
+    const href = factoryStatusHref(factory)
     return (
-      <div className="flex flex-col gap-1.5 px-3 py-2.5 text-inshop-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-white/50">{t('assembly.mapEntry.collection.detected')}</span>
-          <span className="font-mono tabular-nums text-white/90">
-            {t('assembly.mapEntry.collection.detectedValue', { count: detectedBays.length })}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-white/50">{t('assembly.mapEntry.collection.judgedToday')}</span>
-          <span className="font-mono tabular-nums text-white/90">
-            {t('assembly.mapEntry.collection.judgedTodayValue', { count: overview.todayCount })}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-white/50">{t('assembly.mapEntry.collection.lastScan')}</span>
-          <span className="font-mono tabular-nums text-white/90">
-            {/* 실측 정반은 ISO 시각을 준다 — 목업(HH:MM)과 같은 낱말로 줄인다 */}
-            {overview.lastScanAt
-              ? overview.lastScanAt.includes('T')
-                ? overview.lastScanAt.slice(11, 16)
-                : overview.lastScanAt
-              : '—'}
-          </span>
-        </div>
-        {factoryId && (
-          <Link
-            to={`/indoorshop/zones/assembly/${factoryId}`}
-            className="mt-1 flex items-center justify-between rounded-inshop-md px-2 py-1.5 text-2xs font-medium text-white/75 transition-colors hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14)' }}
-          >
-            <span>{t('assembly.mapEntry.collection.openFactory')}</span>
-            <span aria-hidden="true">→</span>
-          </Link>
-        )}
-      </div>
+      <CollectionSummaryBody
+        rows={collectionRowsOf(overview).map((row) => ({
+          label: t(row.labelKey as InshopKey),
+          value: row.value,
+        }))}
+        link={
+          href
+            ? {
+                to: href,
+                label: t('assembly.mapEntry.collection.openFactory'),
+                render: (to, label) => <PanelLink to={to} label={label} />,
+              }
+            : undefined
+        }
+      />
     )
   }
 
@@ -375,7 +450,7 @@ export function AssemblyMapEntryPage() {
 
       <div className="relative min-h-[70vh] xl:min-h-0 xl:flex-1">
         {parcels ? (
-          <ProcessMapEntry<AssemblyLidarMarker>
+          <ProcessMapEntry<AssemblyEquipmentMarker>
             parcels={parcels}
             factoryNames={factoryNames}
             basemapLayers={basemapLayers}
@@ -394,14 +469,28 @@ export function AssemblyMapEntryPage() {
             bayBody={bayBody}
             legend={
               <>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-3 w-3 rounded-full border border-white/40"
-                    style={{ background: `linear-gradient(180deg, ${LIDAR_COLOR} 0%, #4a35a5 100%)` }}
-                  />
-                  {t('assembly.mapEntry.legend.lidar')}
-                </span>
+                {/* 범례는 지금 켜 둔 종류만 — 지도에 없는 그림을 설명하지 않는다 */}
+                {ASSEMBLY_EQUIPMENT_TYPES.filter((id) => markerTypes.includes(id)).map((typeId) => {
+                  const cabinet = typeId === 'PNL' || typeId === 'EDGE'
+                  return (
+                    <span key={typeId} className="flex items-center gap-1.5">
+                      <span
+                        className={cn(
+                          'inline-flex h-3.5 w-3.5 items-center justify-center border border-white/40 text-white',
+                          cabinet ? 'rounded-[3px]' : 'rounded-full'
+                        )}
+                        style={{ background: equipmentColorOf(typeId) }}
+                      >
+                        <EquipmentGlyph symbol={symbolOfType(typeId)} size={9} />
+                      </span>
+                      {equipmentTypeOf(typeId)?.name ?? typeId}
+                    </span>
+                  )
+                })}
                 <span className="mt-0.5 text-foreground/45">
+                  {t('assembly.mapEntry.legend.equipment')}
+                </span>
+                <span className="text-foreground/45">
                   {t('assembly.mapEntry.legend.casPas')}
                 </span>
                 <span className="text-foreground/45">{t('assembly.mapEntry.legend.hint')}</span>

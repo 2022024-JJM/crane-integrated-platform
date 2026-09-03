@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { DraggableCard } from '../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../shared/lib/utils'
 import { lotCategories } from '../api/yardRepository'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
@@ -34,9 +35,10 @@ export function YardMapLegend({
   const palette = paletteOf(mapTheme)
 
   return (
-    <div
+    <DraggableCard
+      cardKey="legend"
       className={cn(
-        'pointer-events-none absolute left-3 top-3 rounded-inshop-lg glass-panel px-2.5 py-1.5',
+        'pointer-events-auto absolute left-3 top-3 rounded-inshop-lg glass-panel px-2.5 py-1.5',
         className,
       )}
     >
@@ -108,7 +110,7 @@ export function YardMapLegend({
           </ul>
         </div>
       )}
-    </div>
+    </DraggableCard>
   )
 }
 

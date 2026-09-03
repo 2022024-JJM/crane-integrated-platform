@@ -7,13 +7,21 @@ import { paintingEn } from './i18n/en'
 /*
  * 선행도장 모듈 선언.
  *
- * 첫 실화면은 설비 상태 화면(PaintingWorkspace)이다. three/지도/설비 fixture 같은 무거운
- * 의존은 화면 쪽에만 있고, 화면 자체를 lazy 로 둬서 대시보드만 보는 사용자에게 그 무게가
- * 실리지 않게 한다(module.ts 는 가볍게 유지).
+ * 진입은 맵(PaintingWorkspace)이 대문이고, 공장 카드에서 그 공장의 **공장 현황**
+ * (`/zones/painting/{factoryId}`)으로 건너간다 — 조립·의장의 `공장 카드 → 워크스페이스` 와
+ * 같은 이동 문법이다(사이드바 항목은 공정당 하나뿐이라 늘리지 않는다).
+ *
+ * three/지도/설비 fixture 같은 무거운 의존은 화면 쪽에만 있고, 화면 자체를 lazy 로 둬서
+ * 대시보드만 보는 사용자에게 그 무게가 실리지 않게 한다(module.ts 는 가볍게 유지).
  */
 
 const PaintingWorkspace = lazy(() =>
   import('./ui/pages/PaintingWorkspace').then((m) => ({ default: m.PaintingWorkspace }))
+)
+const PaintingFactoryStatusPage = lazy(() =>
+  import('./ui/pages/PaintingFactoryStatusPage').then((m) => ({
+    default: m.PaintingFactoryStatusPage,
+  }))
 )
 
 export const paintingModule: ProcessModule = {
@@ -27,7 +35,10 @@ export const paintingModule: ProcessModule = {
     icon: PaintingIcon,
     source: 'PLC · Modbus',
   },
-  routes: [{ path: '/indoorshop/zones/painting', Component: PaintingWorkspace }],
+  routes: [
+    { path: '/indoorshop/zones/painting', Component: PaintingWorkspace },
+    { path: '/indoorshop/zones/painting/:factoryId', Component: PaintingFactoryStatusPage },
+  ],
   i18n: { ko: paintingKo, en: paintingEn },
   zone: {
     id: 'painting',

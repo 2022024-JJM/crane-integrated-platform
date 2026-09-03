@@ -4,6 +4,8 @@ import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
+import { Sparkline } from '../../../ui/atoms/Sparkline'
+import { BatchPendingState } from '../../../ui/states' 
 import type { PaintingStepId, PaintingSummary } from '../model/types'
 
 /*
@@ -91,7 +93,7 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
             </span>
             {summary.phase === 'inShop' && summary.factory && (
               <Link
-                to={`/indoorshop/zones/painting?shop=${encodeURIComponent(summary.factory)}`}
+                to={`/indoorshop/zones/painting?factory=${encodeURIComponent(summary.factory)}`}
                 className="inline-flex items-center gap-1 rounded-inshop-md border border-border px-1.5 py-0.5 text-[11px] text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
               >
                 <PinIcon size={11} />
@@ -177,22 +179,50 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
               </div>
             </div>
 
-            {/* 진행 중 스텝만 — 일일공정률(YPWG413M) 기반 참고 % 와 그 등록일 */}
+            {/* 진행 중 스텝만 — 일일공정률(YPWG413M) 기반 참고 % 와 그 등록일.
+                옆에 **며칠치 추이**를 함께 낸다(W7-2): 하루 1회 일괄 등록이라 최신 한 점만
+                보면 "60%" 가 어제 60 에서 온 것인지 사흘째 60 인지(=멈췄는지) 알 수 없다.
+                이력이 없거나 한 점뿐인 스텝은 그림을 세우지 않는다 — Sparkline 이 접는다. */}
             {step.status === 'inProgress' && (
-              <div className="mt-2 rounded bg-surface-secondary/60 px-2 py-1.5">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-inshop-sm font-semibold tabular-nums text-accent">
-                    {step.progressPct}%
-                  </span>
-                  <span className="text-[10px] text-foreground/50">
-                    {t('performance.pnt.dailyRate')}
-                  </span>
+              <div className="mt-2 flex flex-col gap-1.5">
+                <div className="rounded bg-surface-secondary/60 px-2 py-1.5">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-inshop-sm font-semibold tabular-nums text-accent">
+                      {step.progressPct}%
+                    </span>
+                    <span className="text-[10px] text-foreground/50">
+                      {t('performance.pnt.dailyRate')}
+                    </span>
+                    <Sparkline
+                      points={(step.progressHistory ?? []).map((point) => ({
+                        label: point.date,
+                        value: point.rate,
+                      }))}
+                      /* 척도가 정해진 그림 — 최대값에 맞춰 늘이면 58→62 가 바닥에서
+                         천장까지로 보인다 */
+                      max={100}
+                      unit="%"
+                      ariaLabel={t('performance.pnt.dailyRateTrend')}
+                      className="ml-auto text-accent"
+                    />
+                  </div>
+                  {step.progressAsOf && (
+                    <div className="mt-0.5 text-[10px] leading-3 text-foreground/45">
+                      {t('performance.pnt.dailyRateAsOf', { date: step.progressAsOf })}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-0.5 text-[10px] leading-3 text-foreground/45">
-                  {step.progressAsOf
-                    ? t('performance.pnt.dailyRateAsOf', { date: step.progressAsOf })
-                    : t('performance.pnt.dailyRateNone')}
-                </div>
+                {/*
+                 * 오늘 치 일괄 등록이 아직 안 온 스텝 — 값이 **없는 게 아니라 물러선**
+                 * 상태다(완료 행 기준). 한 줄 각주로 흘리면 사용자가 위의 % 를 일일공정률로
+                 * 읽으므로, 공용 빈 상태로 세워 "왜 이 값인가"를 먼저 말하게 한다.
+                 */}
+                {!step.progressAsOf && (
+                  <BatchPendingState
+                    asOf={null}
+                    description={t('performance.pnt.dailyRateNone')}
+                  />
+                )}
               </div>
             )}
 

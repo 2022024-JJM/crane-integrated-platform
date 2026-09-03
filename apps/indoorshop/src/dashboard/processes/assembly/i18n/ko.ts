@@ -72,7 +72,7 @@ export const assemblyKo = {
     nav: { label: '조립' },
     /* 맵 진입 화면 (AssemblyMapEntryPage) — process-map-entry 프레임에 주입하는 문구 */
     mapEntry: {
-      title: '조립 공정 — 맵 진입',
+      title: '조립 공정 현황',
       subtitle:
         '야드 지도에서 조립 공장(파랑)과 CAS·PAS 라인(가공 초록)을 고르고, 베이를 눌러 정반으로 들어갑니다.',
       listLink: '목록 보기',
@@ -83,11 +83,12 @@ export const assemblyKo = {
       collapse: '공장 카드 접기',
       viewOnMap: '지도에서 이 공장 보기',
       modeLabel: '패널 표시 전환',
-      modeSensors: '① 센서 상태',
+      modeEquipment: '① 설비 상태',
       modeCollection: '② 수집 현황',
+      markerTypesLabel: '지도에 세울 설비 종류',
+      tiltToggleHint: '틸팅은 페어 라이다에서 1.7m 떨어져 섭니다 — 켜면 두 점이 겹쳐 보입니다.',
       lidarCount: 'LiDAR {{count}}대',
       issueCount: '점검 필요 {{count}}대',
-      noSensors: '이 공장에 등록된 LiDAR 가 없습니다.',
       noCollection:
         '레거시 실적 수집 없음 — 모드B 라인 카운팅(가공 라인) 연동이 확정되면 이 자리에 수집 현황이 섭니다.',
       bayHeading: '{{bay}}BAY',
@@ -112,9 +113,45 @@ export const assemblyKo = {
       },
       legend: {
         lidar: 'LiDAR (설비 엔티티 실좌표 · 상태는 mock)',
+        equipment: '위치·대수는 도면 유도 실데이터 · 상태는 mock',
         casPas: 'CAS·PAS 는 가공 소속 — 초록 네온',
         hint: '공장 → 베이 → 센서 순으로 누르기 · 우클릭 드래그로 회전',
       },
+    },
+    /* ③설비 단 · 마커 상세가 쓰는 설비 낱말 — 상태는 mock, 대수·소속은 실데이터다 */
+    equipment: {
+      lidarHeading: '라이다',
+      pairLidar: '페어 라이다',
+      tiltHeading: '틸팅모듈',
+      tiltTarget: '목표',
+      motorAlarm: '모터 알람',
+      tiltAllIdle: '전부 대기',
+      empty: '이 공장에 등록된 설비가 없습니다.',
+      panelsHeading: '캐비닛 (Network Panel)',
+      edgeHeading: 'Edge PC',
+      panelHealth: { healthy: '정상', degraded: '주의', down: '정지' },
+      power: '전원',
+      powerOn: '인가',
+      powerOff: '차단',
+      uplink: '업링크',
+      link: { online: '온라인', offline: '오프라인', error: '오류' },
+      members: '소속',
+      impact: '영향',
+      pairCount: '라이다 {{count}}쌍',
+      coversBays: '담당',
+      temp: '온도',
+      collector: '수집',
+      collectorState: { running: '가동', restarting: '재기동', exited: '종료' },
+      connected: '연결',
+      disconnected: '끊김',
+      downWarning:
+        '정지 판넬 {{count}}대 — 라이다 {{pairs}}쌍이 함께 눈이 멉니다. 전원·업링크부터 확인하세요.',
+      tiltNote:
+        '틸팅 {{count}}대는 라이다 {{lidar}}대와 1:1 페어라 따로 세우지 않습니다 — 개별 상태는 지도에서 라이다를 눌러 확인합니다.',
+      pairTilt: '페어 틸팅',
+      tiltMode: { idle: '대기', tilting: '틸팅중', error: '에러' },
+      movingToTarget: '목표 도달 전',
+      hostPanel: '소속 판넬',
     },
     /* 전체 현황 지도의 작업 위치 드릴다운이 쓰는 이 공정의 명칭 (PRD FR-3 locationNounKey) */
     map: {

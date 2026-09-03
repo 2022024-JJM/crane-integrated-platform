@@ -42,6 +42,14 @@ export interface YardEquipment {
   factory: string
   /** 소속 베이 이름 — 공장 내 유일. 빈 문자열 = 미지정/옥외 */
   bay: string
+  /**
+   * 이 설비가 물린 **캐비닛의 설비ID** (`PNL-*` Network Panel 또는 `ED-*` Edge PC).
+   * 빈 문자열 = 캐비닛에 물리지 않음 — 캐비닛 자신과 도장 설비(EQ*)가 그렇다.
+   *
+   * ⚠️ 캐비닛과 소속 설비의 **베이는 다를 수 있다** — 캐비닛 한 대가 여러 베이의 설비를
+   * 담당하는 것이 정상 배치다. 같은 것은 공장뿐이다(생성기가 강제한다).
+   */
+  panelId: string
   /** WGS84 위도 */
   lat: number
   /** WGS84 경도 */
@@ -50,4 +58,36 @@ export interface YardEquipment {
   x: number
   /** 원본 EPSG:5187 northing (Y) */
   y: number
+}
+
+/**
+ * 캐비닛(패널) 한 대 — Network Panel(`PNL-*`) 또는 Edge PC(`ED-*`).
+ *
+ * 원본에 별도 표가 있는 것이 아니라 설비 목록의 `panelId` 참조를 뒤집어 만든 **파생
+ * 엔티티**다. 캐비닛을 일급으로 두는 이유는 하나다 — "이 판넬이 죽으면 라이다 몇 대가
+ * 같이 죽는가"를 화면이 매번 다시 세지 않게 하려고. 그 집계가 `memberIds`/`memberCountByType`.
+ *
+ * ⚠️ `bay` 는 **캐비닛 자신이 선 베이**이지 담당 범위가 아니다 — 담당 베이는 `memberBays`.
+ */
+export interface EquipmentPanel {
+  /** 캐비닛 설비ID (`PNL-D1`·`ED-F11` …) — `YardEquipment.id` 와 같은 값 */
+  id: string
+  /** 캐비닛 종류 — 두 갈래뿐이다 */
+  kind: 'network-panel' | 'edge-pc'
+  /** 종류ID (`PNL` | `EDGE`) — 심볼·색을 레지스트리에서 찾을 때 쓴다 */
+  typeId: string
+  /** 소속 공장 — 소속 설비와 항상 같다 */
+  factory: string
+  /** 캐비닛이 선 베이 (담당 범위가 아니다) */
+  bay: string
+  /** WGS84 위도 */
+  lat: number
+  /** WGS84 경도 */
+  lon: number
+  /** 이 캐비닛에 물린 설비ID — 원본 순서 그대로 */
+  memberIds: readonly string[]
+  /** 소속 설비의 종류별 대수 (`{ LIDAR: 9, TILT: 9 }`) — 영향 범위 문구의 근거 */
+  memberCountByType: Readonly<Record<string, number>>
+  /** 소속 설비가 걸친 베이 이름들(정렬) — 캐비닛 자신의 베이와 다를 수 있다 */
+  memberBays: readonly string[]
 }

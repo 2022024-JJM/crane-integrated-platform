@@ -340,6 +340,38 @@ body.camera-moving [class*='backdrop-blur'] {
 }
 
 /*
+ * 잡아 옮길 수 있는 지도 오버레이 카드 (`shared/ui/atoms/DraggableCard`).
+ *
+ * 전부 `:where()` 로 감싸 **명시도 0** 으로 둔다 — 카드 안쪽 요소가 제 커서 유틸리티
+ * (`cursor-crosshair` 같은)를 들고 있으면 언제나 그쪽이 이긴다. 여기 규칙은 아무것도
+ * 말하지 않은 요소에만 스며든다.
+ */
+:where(.drag-card) {
+  cursor: grab;
+}
+
+:where(.drag-card) :where(button, a, summary, label, [role='button'], [role='tab']) {
+  cursor: pointer;
+}
+
+:where(.drag-card) :where(input, textarea, [contenteditable='true']) {
+  cursor: text;
+}
+
+/* 안쪽에 스크롤 영역이 있어 카드 전체에 touch-action 을 걸지 못한 카드 — 손잡이만 건다 */
+:where(.drag-card) [data-drag-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* 끄는 동안에는 카드 위 어디에 손이 있든 같은 커서 — 손이 카드를 쥐고 있다는 신호 */
+.drag-card[data-dragging='true'],
+.drag-card[data-dragging='true'] * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/*
  * 내업 대시보드 subtree 의 바탕.
  *
  * 원본은 `body` 에 바탕·서체를 걸었지만, 셸에서는 body 가 모든 모듈의 공유

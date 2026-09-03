@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { DraggableCard } from '../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../shared/lib/utils'
 import { ChevronRightIcon, CloseIcon } from '../../../shared/ui/icons'
 import type { MapTheme } from '../lib/basemapStyle'
@@ -48,13 +49,14 @@ export function YardFacilityOverlay({
   ]
 
   return (
-    <div
+    <DraggableCard
+      cardKey="facility"
       className={cn(
         'absolute left-3 top-3 w-64 animate-fade-in overflow-hidden rounded-inshop-lg glass-panel',
         className,
       )}
     >
-      <div className="flex items-center gap-2 border-b border-glass-border/70 px-2.5 py-2">
+      <div data-drag-handle className="flex items-center gap-2 border-b border-glass-border/70 px-2.5 py-2">
         {/* 점이 곧 범례다 — 맵의 발광색과 같은 색이 "이 갈래"라고 말한다 */}
         <span
           aria-hidden="true"
@@ -167,6 +169,6 @@ export function YardFacilityOverlay({
           {t('yard.facility.noRoute')}
         </p>
       )}
-    </div>
+    </DraggableCard>
   )
 }

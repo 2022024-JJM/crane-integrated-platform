@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { DraggableCard } from '../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../shared/lib/utils'
 import { CloseIcon } from '../../../shared/ui/icons'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
@@ -72,13 +73,14 @@ export function YardShopOverlay({
   ]
 
   return (
-    <div
+    <DraggableCard
+      cardKey="shop"
       className={cn(
         'absolute left-3 top-3 w-64 animate-fade-in overflow-hidden rounded-inshop-lg glass-panel',
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-glass-border/70 px-2.5 py-2">
+      <div data-drag-handle className="flex items-center gap-1.5 border-b border-glass-border/70 px-2.5 py-2">
         <span
           aria-hidden="true"
           className="h-2 w-2 shrink-0 rounded-full"
@@ -146,6 +148,6 @@ export function YardShopOverlay({
           {t('yard.shop.detail.openShop')}
         </Link>
       </div>
-    </div>
+    </DraggableCard>
   )
 }

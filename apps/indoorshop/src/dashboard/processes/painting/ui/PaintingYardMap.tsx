@@ -1,17 +1,23 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { BasemapLayer, LatLonBounds, MapTheme } from '../../../shared/features/yard-map'
 import type { YardParcels } from '../../../shared/entities/yard-parcels'
 import {
+  PanelModeTabs,
   ProcessMapEntry,
   type MapEntryLabels,
   type MapEntryMarker,
   type MarkerRenderCtx,
 } from '../../../shared/features/process-map-entry'
 import { cn } from '../../../shared/lib/utils'
+import { paintingCollectionOf, todayString } from '../lib/collection'
+import { useFactoriesEquipmentStatus } from '../../../shared/entities/equipment/useEquipmentStatus'
+import { paintingInventoryOf } from '../lib/equipmentInventory'
+import { PaintingCollectionBody } from './PaintingCollectionBody'
+import { PaintingEquipmentPanel } from './PaintingEquipmentPanel'
 import type { PaintingEquipment } from '../model/equipment'
 import { type PaintingEquipmentStatus } from '../model/equipmentStatus'
-import { ScadaModuleDetail, ScadaRackBody } from './scada'
+import { ScadaModuleDetail } from './scada'
 import {
   DEHUMIDIFIER,
   DEHUMIDIFIER_DEEP,
@@ -30,7 +36,18 @@ import {
  * 설비(제습기·가스히터) 마커의 생김새와 상태 표현, 공장 카드의 SCADA 요약·랙 본문,
  * 설비 SCADA 상세, 범례, 그리고 도장 문구(i18n 은 여기서 끝낸다 — 프레임은 t() 를
  * 모른다).
+ *
+ * 우측 패널은 조립·의장과 **같은 2단 토글**이다(panelHeaderExtra 슬롯):
+ *  ① 설비 상태 — SCADA 자산(제습기·가스히터 86대)의 가동·온습도 랙에, 설비 마스터가
+ *     데려오는 **이관 설비**(판넬·Edge PC·PLC·허브)를 같은 카드 안에 이어 붙인다.
+ *  ② 수집 현황 — 이 공장에 BTS 로 귀속된 블록의 W/O·스텝 절점·일일공정률. 산식은
+ *     통합실적(`shared/features/performance`)의 것을 그대로 읽는다(중복 구현 금지).
+ *
+ * 카드에서 '공장 현황 보기'로 나가면 그 공장의 현황 화면(`/zones/painting/{id}`)이 선다 —
+ * 조립의 공장 카드 → 워크스페이스와 같은 이동 문법이다.
  */
+
+type PanelMode = 'equipment' | 'collection'
 
 const PAINTING_PROCESS = '도장'
 
@@ -50,7 +67,8 @@ interface PaintingYardMapProps {
   parcels: YardParcels
   factories: string[]
   selectedFactory: string
-  onSelectFactory: (factory: string) => void
+  /** `null` = 전체 보기로 나간다 (프레임의 드릴다운 URL 계약) */
+  onSelectFactory: (factory: string | null) => void
   equipment: readonly PaintingEquipment[]
   statusById: Map<string, PaintingEquipmentStatus>
   selectedId: string | null
@@ -181,8 +199,49 @@ export function PaintingYardMap({
       collapse: t('painting.workspace.collapse'),
       viewOnMap: t('painting.workspace.viewOnMap'),
       bayCount: (n) => t('dashboard.map.bayCount', { count: n }),
+      breadcrumbLabel: t('common.breadcrumbNav'),
+      breadcrumbYard: t('common.breadcrumbYard'),
+      breadcrumbProcess: t('painting.nav.label'),
     }),
     [t]
+  )
+
+  /* ── 우측 패널 2단 — 도장 몫의 state. 프레임은 이 토글의 존재를 모른다 ── */
+  const [panelMode, setPanelMode] = useState<PanelMode>('equipment')
+
+  /*
+   * 수집 현황 집계 — 기준일(오늘) 하루치라 **하루에 한 번만** 세면 된다. 이 화면은 SCADA
+   * 시계(now, 1초) 때문에 매초 다시 그리므로, 기준일을 마운트 때 한 번 굳혀 두지 않으면
+   * 매초 40여 블록의 스텝 실적을 다시 생성하게 된다.
+   */
+  const [baseDate] = useState(() => todayString())
+  const collectionByFactory = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof paintingCollectionOf>>()
+    for (const factory of factories) map.set(factory, paintingCollectionOf(factory, baseDate))
+    return map
+  }, [factories, baseDate])
+
+  /* 이관 설비 상태는 공용 설비 계약에서 **구독**한다 — SCADA 폴링(제습기·가스히터)과는
+     계약이 다르므로 한 통에 담지 않는다. 스냅샷이 바뀔 때만 다시 센다(매초가 아니다). */
+  const { snapshot: equipmentStatus } = useFactoriesEquipmentStatus(factories)
+  const inventoryByFactory = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof paintingInventoryOf>>()
+    for (const factory of factories) {
+      map.set(factory, paintingInventoryOf(factory, equipmentStatus))
+    }
+    return map
+  }, [factories, equipmentStatus])
+
+  const panelHeaderExtra = (
+    <PanelModeTabs<PanelMode>
+      tabs={[
+        { id: 'equipment', label: t('painting.mapEntry.modeEquipment') },
+        { id: 'collection', label: t('painting.mapEntry.modeCollection') },
+      ]}
+      value={panelMode}
+      onChange={setPanelMode}
+      ariaLabel={t('painting.mapEntry.modeLabel')}
+    />
   )
 
   return (
@@ -210,21 +269,45 @@ export function PaintingYardMap({
           />
         ) : undefined
       }
+      panelHeaderExtra={panelHeaderExtra}
+      /* 요약 한 줄은 **지금 보고 있는 단**을 말한다 — 설비 단이면 가동 n/n, 수집 단이면
+         절점 n/n. 카드를 펴지 않고도 토글이 무엇을 바꿨는지 읽히게 하려는 것이다. */
       factorySummary={(factory) => {
+        if (panelMode === 'collection') {
+          const collection = collectionByFactory.get(factory)
+          const inProgress = collection?.inProgressBlocks ?? 0
+          return (
+            <>
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 shrink-0 rounded-full',
+                  inProgress > 0 ? 'bg-accent' : 'bg-white/25'
+                )}
+                title={t('painting.mapEntry.collection.inProgressBlocks', { count: inProgress })}
+              />
+              <span className="ml-auto shrink-0 font-mono text-2xs tabular-nums text-white/55">
+                {collection?.stepsDone ?? 0}/{collection?.stepsTotal ?? 0}{' '}
+                {t('painting.mapEntry.collection.stepsUnit')}
+              </span>
+            </>
+          )
+        }
         const stats = statsByFactory.get(factory) ?? {
           operating: 0,
           online: 0,
           issues: 0,
           total: 0,
         }
+        const transferredIssues = inventoryByFactory.get(factory)?.transferredIssues ?? 0
+        const issues = stats.issues + transferredIssues
         return (
           <>
             <span
               className={cn(
                 'h-1.5 w-1.5 shrink-0 rounded-full',
-                stats.issues > 0 ? 'bg-status-degraded' : 'bg-status-healthy'
+                issues > 0 ? 'bg-status-degraded' : 'bg-status-healthy'
               )}
-              title={`${stats.issues} ${t('painting.workspace.summary.issues')}`}
+              title={`${issues} ${t('painting.workspace.summary.issues')}`}
             />
             <span className="ml-auto shrink-0 font-mono text-2xs tabular-nums text-white/55">
               {stats.operating}/{stats.total} {t('painting.workspace.summary.running')}
@@ -232,15 +315,25 @@ export function PaintingYardMap({
           </>
         )
       }}
-      factoryBody={(factory) => (
-        <ScadaRackBody
-          equipment={equipmentByFactory.get(factory) ?? []}
-          statusById={statusById}
-          selectedId={selectedId}
-          polledAt={polledAt}
-          onSelect={onSelectEquipment}
-        />
-      )}
+      factoryBody={(factory) => {
+        /* ② 수집 현황 — 이 공장에 BTS 로 귀속된 블록의 스텝 절점·일일공정률 */
+        if (panelMode === 'collection') {
+          const collection = collectionByFactory.get(factory)
+          if (!collection) return null
+          return <PaintingCollectionBody collection={collection} />
+        }
+        /* ① 설비 상태 — SCADA 자산과 이관 설비를 한 목록 체계로 (조립·의장과 같은 겉테) */
+        return (
+          <PaintingEquipmentPanel
+            factory={factory}
+            equipment={equipmentByFactory.get(factory) ?? []}
+            statusById={statusById}
+            selectedId={selectedId}
+            polledAt={polledAt}
+            onSelect={onSelectEquipment}
+          />
+        )
+      }}
       legend={
         <>
           <span className="flex items-center gap-1.5">

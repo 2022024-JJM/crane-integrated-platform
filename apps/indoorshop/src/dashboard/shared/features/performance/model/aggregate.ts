@@ -447,6 +447,8 @@ export function buildPaintingSteps(plans: readonly PaintingStepPlan[]): Painting
         doneRows,
         progressPct,
         progressAsOf: plan.progressAsOf ?? null,
+        /* 이력은 그대로 흘려보낸다 — 여기서 자르거나 채우지 않는다(없으면 없는 것이다) */
+        progressHistory: plan.progressHistory ?? [],
         startDate: plan.startDate,
         /* 전량 완료가 아니면 완료일을 세우지 않는다 — 부분 완료를 완료로 읽지 않기 위해 */
         endDate: status === 'done' ? plan.endDate : null,

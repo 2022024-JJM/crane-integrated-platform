@@ -59,7 +59,7 @@ describe('블록 자리 — 조립 중 (ASSY 분산)', () => {
     const sites = sitesOfBlock(scattered)
     expect(sites.find((s) => s.factory === 'NPS')!.path).toBe('/zones/assembly/asm-nps/asm-nps-b1')
     expect(sites.find((s) => s.factory === '조립4공장-OFD1')!.path).toBe(
-      `/zones/assembly?shop=${encodeURIComponent('조립4공장-OFD1')}`
+      `/zones/assembly?factory=${encodeURIComponent('조립4공장-OFD1')}`
     )
   })
 })
@@ -80,7 +80,7 @@ describe('블록 자리 — 의장·도장 중', () => {
       expect(sites).toHaveLength(1)
       expect(sites[0].zone).toBe('painting')
       expect(sites[0].factory).toBe(block.factory)
-      expect(sites[0].path).toBe(`/zones/painting?shop=${encodeURIComponent(block.factory)}`)
+      expect(sites[0].path).toBe(`/zones/painting?factory=${encodeURIComponent(block.factory)}`)
     }
   })
 })

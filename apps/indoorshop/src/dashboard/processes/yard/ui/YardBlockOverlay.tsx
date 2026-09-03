@@ -1,4 +1,5 @@
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { DraggableCard } from '../../../shared/ui/atoms/DraggableCard'
 import { cn } from '../../../shared/lib/utils'
 import { CloseIcon } from '../../../shared/ui/icons'
 import { findLot } from '../api/yardRepository'
@@ -38,13 +39,14 @@ export function YardBlockOverlay({ block, onClose, className }: YardBlockOverlay
   ]
 
   return (
-    <div
+    <DraggableCard
+      cardKey="block"
       className={cn(
         'absolute left-3 top-3 w-64 animate-fade-in overflow-hidden rounded-inshop-lg glass-panel',
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-glass-border/70 px-2.5 py-2">
+      <div data-drag-handle className="flex items-center gap-1.5 border-b border-glass-border/70 px-2.5 py-2">
         <span className="font-mono text-inshop-xs font-semibold text-glass-accent">{block.id}</span>
         <span className="min-w-0 flex-1" />
         <button
@@ -84,6 +86,6 @@ export function YardBlockOverlay({ block, onClose, className }: YardBlockOverlay
           ))}
         </tbody>
       </table>
-    </div>
+    </DraggableCard>
   )
 }

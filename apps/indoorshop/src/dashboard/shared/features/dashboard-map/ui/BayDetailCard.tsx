@@ -100,7 +100,8 @@ export function BayDetailCard({
     <section className="pointer-events-auto flex max-h-full min-h-0 flex-col overflow-hidden rounded-inshop-xl border border-white/12 bg-[#0b0e12]/95 text-white shadow-[0_18px_48px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: processColor }} />
 
-      <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-3">
+      {/* 머리글이 이 카드의 드래그 손잡이 — 아래 본문은 스크롤이 제 일이라 잡히지 않는다 */}
+      <div data-drag-handle className="flex shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-3">
         <div className="min-w-0 space-y-1">
           <button
             type="button"

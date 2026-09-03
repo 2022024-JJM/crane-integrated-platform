@@ -50,6 +50,14 @@ export interface MapEntryLabels {
   viewOnMap: string
   /** 드릴인한 공장 이름패 캡션 — 베이 수. 없으면 캡션을 생략한다 */
   bayCount?: (n: number) => string
+
+  /* ── 브레드크럼(`야드 › 공정 › 공장 › 베이`) — 세 조각이 다 있어야 줄을 세운다 ── */
+  /** nav 의 접근성 이름 */
+  breadcrumbLabel?: string
+  /** 첫 조각 — 총괄('/')로 나가는 문 */
+  breadcrumbYard?: string
+  /** 둘째 조각 — 이 화면(공정)의 이름. 없으면 지번 데이터의 공정명을 쓴다 */
+  breadcrumbProcess?: string
 }
 
 /** 베이 카드에 덧붙일 공정 몫의 본문을 만들 때 프레임이 건네는 문맥 */
@@ -80,7 +88,12 @@ export interface ProcessMapEntryProps<M extends MapEntryMarker = MapEntryMarker>
 
   /* ── 선택 상태 (부모 소유 — 딥링크와 결선) ── */
   selectedFactory: string
-  onSelectFactory: (factory: string) => void
+  /**
+   * 공장 선택. `null` 은 **전체 보기로 나간다**는 뜻이다 — 드릴다운을 URL 로 올린 뒤로
+   * 이 콜백이 그 쿼리를 쓰는 유일한 자리라(`useShopDeepLink`), 나가는 길도 여기를 지나야
+   * 한 파라미터에 쓰는 손이 둘이 되지 않는다.
+   */
+  onSelectFactory: (factory: string | null) => void
   /** true 면 처음을 전체 보기로 연다 (딥링크 `?shop=` 진입은 false 로 그 공장을 연다) */
   initialOverview?: boolean
 

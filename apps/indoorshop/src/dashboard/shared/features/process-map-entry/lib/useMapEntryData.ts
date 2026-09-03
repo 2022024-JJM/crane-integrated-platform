@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useCallback } from 'react'
 import type { BasemapLayer, MapTheme } from '../../yard-map'
 import { loadYardParcels, type YardParcels } from '../../../entities/yard-parcels'
 import { useAsyncData } from '../../../lib/useAsyncData'
 import { fetchYardMapBackdrop } from '../../../model/processRegistry'
+import { useDrilldown } from '../../../lib/useDrilldown'
 
 const EMPTY_BASEMAP: Record<MapTheme, BasemapLayer[]> = { dark: [], light: [] }
 
@@ -24,21 +24,34 @@ export function useMapEntryData() {
 }
 
 /**
- * `?shop=<공장명>` 딥링크 — 야드/대시보드에서 공장을 누르면 이 쿼리로 온다.
+ * 드릴인한 공장을 **URL 에서** 읽고 쓴다 — `?factory=<공장명>` (옛 철자 `?shop=` 도 읽는다).
  *
- * 딥링크가 유효하면 그 공장을 골라 지도가 거기서 시작하고, 없으면 첫 공장을 든 채
- * **전체 보기**로 연다(대시보드처럼 야드 전경이 대문). `initialOverview` 는 마운트 시점
- * 한 번만 판단한다 — 이후의 쿼리 변경은 선택만 따라간다.
+ * 예전에는 이 값이 화면 안 useState 였고 쿼리는 마운트 때 한 번 베껴 오는 씨앗이었다.
+ * 그래서 새로고침은 대문으로 돌아갔고, 뒤로가기는 드릴아웃이 아니라 **이전 화면**으로
+ * 나갔다. 이제 URL 이 원본이다 — 자리를 링크로 건넬 수 있고, 드릴인이 히스토리를 쌓아
+ * (push) 뒤로가기가 곧 드릴아웃이 된다. 규칙은 `shared/lib/drilldownUrl` 참조.
+ *
+ * 쿼리에 없거나 이 화면의 공장이 아니면 **전체 보기**로 연다(대시보드처럼 야드 전경이
+ * 대문). 그때도 `selectedFactory` 는 첫 공장을 들고 있는데, 카드·범위 계산이 이름 하나를
+ * 늘 필요로 하기 때문이다 — "전체 보기인가"는 `initialOverview`/URL 이 말한다.
+ *
+ * 이 화면에서 `?factory=` 를 쓰는 손은 여기 하나뿐이다(프레임의 '전체 보기'도
+ * `onSelectFactory(null)` 로 여기를 지난다) — 한 파라미터에 쓰는 손이 둘이면 어느 쪽이
+ * 이겼는지 화면만 보고는 알 수 없게 된다.
  */
 export function useShopDeepLink(factories: readonly string[]) {
-  const [searchParams] = useSearchParams()
-  const shopParam = searchParams.get('shop')
-  const [selectedFactory, setSelectedFactory] = useState(() =>
-    shopParam && factories.includes(shopParam) ? shopParam : (factories[0] ?? '')
+  const drill = useDrilldown()
+  const urlFactory = drill.factory && factories.includes(drill.factory) ? drill.factory : null
+
+  const setSelectedFactory = useCallback(
+    (name: string | null) => drill.go({ factory: name }),
+    [drill]
   )
-  const [initialOverview] = useState(() => !(shopParam && factories.includes(shopParam)))
-  useEffect(() => {
-    if (shopParam && factories.includes(shopParam)) setSelectedFactory(shopParam)
-  }, [shopParam, factories])
-  return { selectedFactory, setSelectedFactory, initialOverview }
+
+  return {
+    selectedFactory: urlFactory ?? factories[0] ?? '',
+    setSelectedFactory,
+    /** 지금 전체 보기인가 — 이름은 옛 계약을 지키지만 값은 마운트 뒤에도 URL 을 따라간다 */
+    initialOverview: urlFactory == null,
+  }
 }

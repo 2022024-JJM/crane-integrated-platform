@@ -1,6 +1,24 @@
-import { YARD_EQUIPMENT, equipmentTypeOf, type YardEquipment } from '../../../shared/entities/equipment'
+import {
+  EQUIPMENT_PANELS,
+  YARD_EQUIPMENT,
+  edgePcStatusIn,
+  equipmentLinkOf,
+  equipmentOfPanel,
+  equipmentTypeOf,
+  pairIdOf,
+  panelStatusIn,
+  tiltStatusIn,
+  type EdgePcStatus,
+  type EquipmentPanel,
+  type EquipmentPanelStatus,
+  type EquipmentStatusSnapshot,
+  type TiltMode,
+  type TiltModuleStatus,
+  type YardEquipment,
+} from '../../../shared/entities/equipment'
 import type { MapEntryMarker } from '../../../shared/features/process-map-entry'
 import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
+import { layoutDrawingOf } from '../../../shared/entities/equipment/layoutDrawings'
 import { ASSEMBLY_FACTORIES } from '../api/assemblyFactoryFixture'
 import { ASSEMBLY_FACTORY_ID_BY_MAP_KEY } from '../api/mapDrilldown'
 import { REAL_LOCATION_ID } from '../api/realScanData'
@@ -73,34 +91,6 @@ export function mockScanTime(id: string): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-/** 맵 마커로 세울 LiDAR 한 대 — 프레임 마커 계약 + 상태 */
-export interface AssemblyLidarMarker extends MapEntryMarker {
-  bay: string
-  status: LidarSensorStatus
-}
-
-/** 라이다 표시색 — 설비 종류 레지스트리의 색을 단일 소스로 쓴다 */
-export function lidarColor(): string {
-  return equipmentTypeOf('LIDAR')?.color ?? '#6a4fd0'
-}
-
-/** 주인공 공장들의 LiDAR 실좌표 마커 (설비 엔티티 기준 — 대수도 좌표도 실데이터) */
-export function assemblyLidarMarkers(factoryNames: readonly string[]): AssemblyLidarMarker[] {
-  const names = new Set(factoryNames)
-  return YARD_EQUIPMENT.filter((e) => e.typeId === 'LIDAR' && names.has(e.factory)).map(
-    (e): AssemblyLidarMarker => ({
-      id: e.id,
-      factory: e.factory,
-      bay: e.bay,
-      lat: e.lat,
-      lon: e.lon,
-      status: mockLidarStatus(e.id),
-      title: `${e.id} · ${e.factory} ${e.bay}BAY`,
-      ariaLabel: `${e.id} LiDAR`,
-    })
-  )
-}
-
 /** 공장 하나의 LiDAR 를 베이별로 묶는다 — 우측 패널 ①센서 상태의 골격 */
 export function lidarsByBay(factory: string): Map<string, YardEquipment[]> {
   const map = new Map<string, YardEquipment[]>()
@@ -136,4 +126,287 @@ export function lidarSummaryOf(factory: string): { total: number; issues: number
     if (mockLidarStatus(e.id) !== 'online') issues += 1
   }
   return { total, issues }
+}
+
+
+/* ══ 설비 인벤토리 · 상태 (조립 화면 몫의 파생) ══════════════════
+ *
+ * 라이다만 보던 화면을 260903 교체판 도면의 **전 종류**로 넓힌다. 데이터는 공용 설비
+ * 엔티티(실좌표·실대수)이고, 상태는 여전히 mock 이다 — 어느 쪽이 실데이터인지 헷갈리지
+ * 않도록 이 파일에서 그 경계를 지킨다.
+ */
+
+/** 지도·목록이 세우는 종류 — 조립 권역에 실재하는 것만 (도장 DH/GH 는 도장 화면 몫) */
+export const ASSEMBLY_EQUIPMENT_TYPES = ['LIDAR', 'TILT', 'EDGE', 'PNL'] as const
+export type AssemblyEquipmentTypeId = (typeof ASSEMBLY_EQUIPMENT_TYPES)[number]
+
+/** 맵 마커로 세울 설비 한 대 — 종류를 실어 심볼·색을 레지스트리에서 찾는다 */
+export interface AssemblyEquipmentMarker extends MapEntryMarker {
+  typeId: string
+  bay: string
+  panelId: string
+  /** 링크 상태 3분류 — 종류가 달라도 마커 표현은 이 축 하나로 통일한다 */
+  state: LidarSensorStatus
+}
+
+/** 종류 표시색 — 설비 종류 레지스트리의 색을 단일 소스로 쓴다 */
+export function equipmentColorOf(typeId: string): string {
+  return equipmentTypeOf(typeId)?.color ?? '#7a8794'
+}
+
+/** 라이다 표시색 — 기존 호출부(범례·마커) 호환 */
+export function lidarColor(): string {
+  return equipmentColorOf('LIDAR')
+}
+
+/**
+ * 설비 한 대의 표시 상태 — 종류별 상태 계약을 마커 한 축(online/offline/error)으로 접는다.
+ *
+ * 마커는 "지금 눈이 살아 있나"만 말한다. 각도·CPU 같은 종류 고유값은 목록·상세의 몫이다.
+ * 규칙 자체는 **shared 의 `equipmentLinkOf` 한 곳**에 있다 — 조립 지도와 의장 목록이 같은
+ * 설비에 다른 답을 하지 않도록.
+ */
+export function equipmentState(e: YardEquipment): LidarSensorStatus {
+  return equipmentLinkOf(e)
+}
+
+/**
+ * 주인공 공장들의 설비 마커.
+ *
+ * ⚠️ 틸팅은 페어 라이다에서 1.7m 떨어져 선다 — 기본으로 함께 켜면 지도에서 두 점이
+ * 겹쳐 읽히지 않는다. 그래서 **종류를 인자로 받아** 화면이 켜고 끄게 한다(기본값은
+ * 라이다·Edge PC·판넬). 틸팅 상태는 라이다 마커 상세에서 페어로 읽힌다.
+ */
+export function assemblyEquipmentMarkers(
+  factoryNames: readonly string[],
+  typeIds: readonly string[]
+): AssemblyEquipmentMarker[] {
+  const names = new Set(factoryNames)
+  const wanted = new Set(typeIds)
+  return YARD_EQUIPMENT.filter((e) => wanted.has(e.typeId) && names.has(e.factory)).map(
+    (e): AssemblyEquipmentMarker => ({
+      id: e.id,
+      typeId: e.typeId,
+      factory: e.factory,
+      bay: e.bay,
+      panelId: e.panelId,
+      lat: e.lat,
+      lon: e.lon,
+      state: equipmentState(e),
+      title: `${e.id} · ${equipmentTypeOf(e.typeId)?.name ?? e.typeId} · ${e.factory}${e.bay ? ` ${e.bay}BAY` : ''}`,
+      ariaLabel: `${e.id} ${equipmentTypeOf(e.typeId)?.name ?? e.typeId}`,
+    })
+  )
+}
+
+/** 공장 하나의 종류별 대수 — 패널 머리줄의 인벤토리 요약 */
+export function equipmentCountsOf(factory: string): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const e of YARD_EQUIPMENT) {
+    if (e.factory !== factory) continue
+    counts[e.typeId] = (counts[e.typeId] ?? 0) + 1
+  }
+  return counts
+}
+
+/** 공장 하나의 캐비닛 + 상태 + 소속 설비 — ③설비 단이 그리는 골격 */
+export interface PanelWithStatus {
+  panel: EquipmentPanel
+  status: EquipmentPanelStatus
+  members: YardEquipment[]
+}
+
+/**
+ * 캐비닛 구획에 서는 것은 **Network Panel 뿐**이다.
+ *
+ * `panelsWithStatus` 는 Edge PC 까지 포함한다(둘 다 소속 설비를 거느리는 캐비닛이라
+ * 영향 집계·경고는 둘을 함께 봐야 한다). 하지만 목록에서는 Edge PC 가 제 구획을 따로
+ * 갖게 됐으므로, 여기서 걸러 내지 않으면 한 대가 두 구획에 겹쳐 선다.
+ */
+export function networkPanelsOf(
+  factory: string,
+  status: EquipmentStatusSnapshot
+): PanelWithStatus[] {
+  return panelsWithStatus(factory, status).filter((entry) => entry.panel.kind === 'network-panel')
+}
+
+/**
+ * ⚠️ **스냅샷에 없는 캐비닛은 목록에 서지 않는다.**
+ *
+ * 상태가 아직 안 온 판을 "정상"으로 그리면 화면이 모르는 것을 아는 척하게 된다. 대신
+ * 화면은 스냅샷이 오기 전까지 로딩 자리를 세운다(공용 상태 UI, W7-3b) — 그것이 이 계약을
+ * 비동기로 바꾼 이유다.
+ */
+export function panelsWithStatus(
+  factory: string,
+  snapshot: EquipmentStatusSnapshot
+): PanelWithStatus[] {
+  return EQUIPMENT_PANELS.filter((p) => p.factory === factory)
+    .flatMap((panel) => {
+      const status = panelStatusIn(snapshot, panel.id)
+      return status ? [{ panel, status, members: equipmentOfPanel(panel.id) }] : []
+    })
+    .sort((a, b) => a.panel.id.localeCompare(b.panel.id, undefined, { numeric: true }))
+}
+
+/** Edge PC 한 대 + 상태 — 목록이 자원·서비스 지표까지 함께 낸다 */
+export interface EdgePcWithStatus {
+  equipment: YardEquipment
+  status: EdgePcStatus
+}
+
+export function edgePcsOf(
+  factory: string,
+  snapshot: EquipmentStatusSnapshot
+): EdgePcWithStatus[] {
+  return YARD_EQUIPMENT.filter((e) => e.typeId === 'EDGE' && e.factory === factory)
+    .flatMap((equipment) => {
+      const status = edgePcStatusIn(snapshot, equipment.id)
+      return status ? [{ equipment, status }] : []
+    })
+    .sort((a, b) => a.equipment.id.localeCompare(b.equipment.id, undefined, { numeric: true }))
+}
+
+/** 라이다 한 대의 페어 틸팅 상태 — 마커 상세가 "이 라이다가 지금 어디를 보나"를 말할 때 */
+export function tiltOfLidar(
+  lidarId: string,
+  snapshot: EquipmentStatusSnapshot
+): TiltModuleStatus | null {
+  const lidar = YARD_EQUIPMENT.find((e) => e.id === lidarId)
+  if (!lidar) return null
+  const tiltId = pairIdOf(lidar)
+  return tiltId ? tiltStatusIn(snapshot, tiltId) : null
+}
+
+/**
+ * 조립 Factory.id → 그 공장의 설비 배치 도면.
+ *
+ * 공장 목록(그리드) 화면은 지도 공장 키가 아니라 조립 `Factory.id`(`asm-pbs`)를 들고
+ * 있어서, 도면을 찾으려면 한 번 되짚어야 한다. 그 되짚기를 화면마다 쓰지 않도록 여기 둔다.
+ */
+export function layoutDrawingOfFactoryId(factoryId: string) {
+  const name = ASSEMBLY_FACTORIES.find((f) => f.id === factoryId)?.name
+  return name ? layoutDrawingOf(name) : null
+}
+
+/** 틸팅 한 대 + 상태 — ③설비 단의 틸팅 목록이 각도·모드까지 함께 낸다 */
+export interface TiltWithStatus {
+  equipment: YardEquipment
+  status: TiltModuleStatus
+}
+
+/**
+ * 공장 하나의 틸팅모듈 + 개별 상태.
+ *
+ * 페어 라이다와 같은 자리에 서므로 목록에서는 접어 두지만(기본 접힘), 펼치면 한 대씩
+ * 모드·현재/목표 각·페어·모터 알람까지 보인다 — 틸팅이 목표에 못 가면 그 라이다는
+ * 엉뚱한 곳을 본다. 요약만으로는 그 사실이 드러나지 않는다.
+ */
+export function tiltsOf(
+  factory: string,
+  snapshot: EquipmentStatusSnapshot
+): TiltWithStatus[] {
+  return YARD_EQUIPMENT.filter((e) => e.typeId === 'TILT' && e.factory === factory)
+    .flatMap((equipment) => {
+      const status = tiltStatusIn(snapshot, equipment.id)
+      return status ? [{ equipment, status }] : []
+    })
+    .sort((a, b) => a.equipment.id.localeCompare(b.equipment.id, undefined, { numeric: true }))
+}
+
+/** 틸팅 모드별 대수 — 접힌 줄이 "지금 몇 대가 움직이고 몇 대가 에러인가"를 말한다 */
+export function tiltModeCounts(tilts: readonly TiltWithStatus[]): Record<TiltMode, number> {
+  const counts: Record<TiltMode, number> = { idle: 0, tilting: 0, error: 0 }
+  for (const t of tilts) counts[t.status.mode] += 1
+  return counts
+}
+
+/* ══ 우측 패널의 구성 (W6-5) ═════════════════════════════════════
+ *
+ * "어떤 구획이 어떤 순서로 서고, 각 구획에 무엇이 몇 개 들어가는가"를 컴포넌트 밖으로
+ * 꺼낸다. 이 레포의 다른 파생 계산과 같은 이유다 — **규칙이 UI 안에 있으면 검증할 수
+ * 없다.** 화면을 띄워 눈으로 세는 대신 여기를 테스트한다.
+ *
+ * 문구는 담지 않는다(키만) — 번역은 컴포넌트가 t() 로 끝낸다.
+ */
+
+/** 설비 상태 단의 구획 하나 */
+export interface EquipmentSection {
+  /** 종류ID — 구획 제목·심볼의 근거 */
+  typeId: AssemblyEquipmentTypeId
+  /** 이 구획에 든 설비 수 */
+  count: number
+  /** 접어 두는 구획인가 (틸팅은 라이다와 1:1 이라 펼치면 목록이 두 배가 된다) */
+  collapsible: boolean
+  /** 베이별로 나뉘는 구획인가 (라이다만 — 정반 단위로 보는 눈이 이미 그렇게 굳었다) */
+  groups?: { bay: string; ids: string[] }[]
+}
+
+/**
+ * 설비 상태 단의 구획 — **관측(라이다 → 틸팅) 먼저, 수집·네트워크(Edge PC → 캐비닛) 나중**.
+ * 의장 화면과 같은 순서다: 두 화면을 오갈 때 눈이 다시 적응하지 않아도 된다.
+ * 대수가 0인 종류는 구획 자체를 만들지 않는다(빈 제목만 남는 자리를 두지 않는다).
+ */
+export function equipmentSectionsOf(factory: string): EquipmentSection[] {
+  const counts = equipmentCountsOf(factory)
+  const sections: EquipmentSection[] = []
+
+  const bays = lidarsByBay(factory)
+  if (bays.size > 0) {
+    sections.push({
+      typeId: 'LIDAR',
+      count: counts.LIDAR ?? 0,
+      collapsible: false,
+      groups: [...bays.entries()].map(([bay, list]) => ({ bay, ids: list.map((e) => e.id) })),
+    })
+  }
+  if ((counts.TILT ?? 0) > 0)
+    sections.push({ typeId: 'TILT', count: counts.TILT, collapsible: true })
+  if ((counts.EDGE ?? 0) > 0)
+    sections.push({ typeId: 'EDGE', count: counts.EDGE, collapsible: false })
+  const panelCount = EQUIPMENT_PANELS.filter(
+    (p) => p.factory === factory && p.kind === 'network-panel'
+  ).length
+  if (panelCount > 0) sections.push({ typeId: 'PNL', count: panelCount, collapsible: false })
+
+  return sections
+}
+
+/** 수집 현황 한 줄 — 라벨은 번역 키, 값은 이미 센 결과 */
+export interface CollectionRowSpec {
+  labelKey: string
+  value: string
+}
+
+/**
+ * ②수집 현황의 줄과 나가는 문.
+ *
+ * 값 계산과 라우팅 대상을 한 곳에 둔다 — 화면이 `/zones/assembly/${id}` 를 손으로 짜면
+ * 공장 id 가 없는 경우(CAS/PAS)에 안 열리는 문이 생긴다.
+ */
+export function collectionRowsOf(overview: {
+  bays: readonly { projNo?: string }[]
+  todayCount: number
+  lastScanAt?: string
+}): CollectionRowSpec[] {
+  const detected = overview.bays.filter((b) => b.projNo != null).length
+  return [
+    { labelKey: 'assembly.mapEntry.collection.detected', value: String(detected) },
+    { labelKey: 'assembly.mapEntry.collection.judgedToday', value: String(overview.todayCount) },
+    {
+      labelKey: 'assembly.mapEntry.collection.lastScan',
+      /* 실측 정반은 ISO 시각을 준다 — 목업(HH:MM)과 같은 낱말로 줄인다 */
+      value: overview.lastScanAt
+        ? overview.lastScanAt.includes('T')
+          ? overview.lastScanAt.slice(11, 16)
+          : overview.lastScanAt
+        : '—',
+    },
+  ]
+}
+
+/** 수집 현황에서 공장 현황으로 나가는 경로 — 짝이 없는 공장(CAS/PAS)은 null */
+export function factoryStatusHref(mapKey: string): string | null {
+  const id = assemblyFactoryIdOf(mapKey)
+  return id ? `/zones/assembly/${id}` : null
 }

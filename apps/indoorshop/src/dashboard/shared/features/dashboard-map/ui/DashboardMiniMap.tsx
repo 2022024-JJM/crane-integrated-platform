@@ -6,8 +6,14 @@ import {
   type Viewport,
   type YardView,
 } from '../../yard-map'
-import { colorOfProcess, type YardParcels } from '../../../entities/yard-parcels'
+import { type YardParcels } from '../../../entities/yard-parcels'
 import { cn } from '../../../lib/utils'
+import {
+  createMinimapBaseCache,
+  drawMinimapBase,
+  minimapProjection,
+  type Minimal2DContext,
+} from '../lib/minimapBase'
 
 export interface DashboardMiniMapHandle {
   updateView: (view: YardView, viewport: Viewport) => void
@@ -50,6 +56,27 @@ export const DashboardMiniMap = forwardRef<DashboardMiniMapHandle, DashboardMini
     const frameRef = useRef(0)
     const lastDrawRef = useRef(0)
 
+    /*
+     * 바탕(배경 + 지번 폴리곤) 캐시.
+     *
+     * 카메라가 움직일 때마다 지번 수백 장을 처음부터 다시 그리고 있었다 — 정작 매 프레임
+     * 바뀌는 것은 지금 보는 범위를 나타내는 **사각형 하나**뿐이다. 바탕을 화면 밖 캔버스에
+     * 한 번 그려 두고 매 프레임에는 복사만 한다. 그리는 결과는 같다(`lib/minimapBase`).
+     *
+     * 2D 컨텍스트가 없는 환경(테스트 등)에서는 캐시가 `null` 을 주고, 그때는 예전처럼
+     * 바탕을 직접 그린다 — 성능 장치가 없다고 화면이 비면 안 된다.
+     */
+    const baseCacheRef = useRef(
+      createMinimapBaseCache<HTMLCanvasElement>((width, height) => {
+        if (typeof document === 'undefined') return null
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        return ctx ? { canvas, ctx: ctx as unknown as Minimal2DContext } : null
+      })
+    )
+
     const draw = useCallback(() => {
       frameRef.current = 0
       const canvas = canvasRef.current
@@ -67,38 +94,26 @@ export const DashboardMiniMap = forwardRef<DashboardMiniMapHandle, DashboardMini
 
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, width, height)
-      ctx.fillStyle = '#071018'
-      ctx.fillRect(0, 0, width, height)
 
       const pad = 8
-      const spanLon = Math.max(0.000001, extent.maxLon - extent.minLon)
-      const spanLat = Math.max(0.000001, extent.maxLat - extent.minLat)
-      const x = (lon: number) => pad + ((lon - extent.minLon) / spanLon) * (width - pad * 2)
-      const y = (lat: number) => pad + ((extent.maxLat - lat) / spanLat) * (height - pad * 2)
-
-      for (const lot of parcels.lots) {
-        if (lot.polygon.length < 3 || !lot.factory) continue
-        ctx.beginPath()
-        lot.polygon.forEach((point, index) => {
-          const px = x(point.lon)
-          const py = y(point.lat)
-          if (index === 0) ctx.moveTo(px, py)
-          else ctx.lineTo(px, py)
-        })
-        ctx.closePath()
-        ctx.fillStyle = lot.process ? colorOfProcess(lot.process) : '#53616c'
-        ctx.globalAlpha = 0.7
-        ctx.fill()
+      const baseInput = { extent, lots: parcels.lots, width, height, dpr, pad }
+      const base = baseCacheRef.current.surfaceFor(baseInput)
+      if (base) {
+        /* 바탕은 복사 한 번 — 지번 폴리곤을 다시 훑지 않는다 */
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(base, 0, 0)
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      } else {
+        drawMinimapBase(ctx as unknown as Minimal2DContext, baseInput)
       }
-      ctx.globalAlpha = 1
 
+      const project = minimapProjection({ extent, width, height, pad })
       const bounds = visibleBounds(latest.view, latest.viewport)
-      const left = Math.max(pad, Math.min(width - pad, x(bounds.minLon)))
-      const right = Math.max(pad, Math.min(width - pad, x(bounds.maxLon)))
-      const top = Math.max(pad, Math.min(height - pad, y(bounds.maxLat)))
-      const bottom = Math.max(pad, Math.min(height - pad, y(bounds.minLat)))
+      const left = Math.max(pad, Math.min(width - pad, project.x(bounds.minLon)))
+      const right = Math.max(pad, Math.min(width - pad, project.x(bounds.maxLon)))
+      const top = Math.max(pad, Math.min(height - pad, project.y(bounds.maxLat)))
+      const bottom = Math.max(pad, Math.min(height - pad, project.y(bounds.minLat)))
       ctx.fillStyle = 'rgba(255,255,255,0.08)'
       ctx.fillRect(left, top, Math.max(3, right - left), Math.max(3, bottom - top))
       ctx.strokeStyle = 'rgba(255,255,255,0.95)'

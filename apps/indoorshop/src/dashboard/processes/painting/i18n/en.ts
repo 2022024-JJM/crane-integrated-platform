@@ -10,7 +10,7 @@ export const paintingEn: typeof paintingKo = {
   painting: {
     nav: { label: 'Pre-painting' },
     workspace: {
-      title: 'Painting Layout',
+      title: 'Painting status',
       subtitle:
         'Equipment layout and running state over painting factory parcels — pick a factory or click equipment for detail.',
       selectHint: 'Click equipment on the map to open its detail',
@@ -83,6 +83,48 @@ export const paintingEn: typeof paintingKo = {
       noSignal: 'No signal',
       secondsAgo: '{{count}}s ago',
       stale: 'stale',
+    },
+    mapEntry: {
+      modeLabel: 'Panel mode',
+      modeEquipment: '① Equipment',
+      modeCollection: '② Collection',
+      collection: {
+        detected: 'Detected blocks',
+        wo: 'W/O',
+        steps: 'Step nodes',
+        dailyRate: 'Daily progress',
+        lastScan: 'Last collection',
+        openFactory: 'Open factory status',
+        noBlocks: 'No blocks are assigned to this painting factory yet — they appear once BTS records an inbound move.',
+        activeStep: 'Active',
+        noActiveStep: 'No step in progress',
+        stepsUnit: 'nodes',
+        inProgressBlocks: '{{count}} block(s) in progress',
+      },
+      equipment: {
+        scadaHeading: 'SCADA equipment',
+        members: 'Members',
+        empty: 'No equipment is registered for this factory.',
+        noTransferred:
+          'Transferred equipment (panels, Edge PCs, PLCs, hubs) is not deployed to painting factories yet.',
+        issueCount: '{{count}} with issues',
+        issueWarning:
+          '{{count}} transferred unit(s) in trouble — the equipment behind them can go blind too.',
+      },
+    },
+    factoryStatus: {
+      notFound: 'Unknown painting factory.',
+      backToMap: 'Painting status',
+      blockSummary: '{{total}} block(s) in shop · {{inProgress}} in progress',
+      stepSummary: 'Steps done {{done}}/{{total}}',
+      stepProgressTitle: 'Step progress (S/P → T/UP → FINAL)',
+      stepNotPlanned: 'No block in this factory plans this step',
+      stepInProgress: '{{count}} block(s) in progress',
+      blockListTitle: 'Blocks (BTS attribution)',
+      noBlocks: 'No blocks are assigned to this painting factory.',
+      btsNote: 'Location and inbound/outbound come from BTS logistics — not the ZONE mapping table.',
+      equipmentTitle: 'Equipment summary',
+      openScada: 'View equipment status on the map',
     },
     zone: {
       displayName: 'Pre-painting',
