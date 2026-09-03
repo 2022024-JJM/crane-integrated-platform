@@ -121,9 +121,8 @@ export function Monitoring3dView({
   useTagBindingSource(sceneInfo, true);
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
-  const focusStack = useObjectFocusStore((s) => s.focusStack);
-  const popFocus = useObjectFocusStore((s) => s.popFocus);
-  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -180,7 +179,7 @@ export function Monitoring3dView({
   );
 
   const focusOverlay =
-    focusStack.length > 0 ? (
+    focusedModelId !== null ? (
       <Button
         variant="outline"
         size="sm"
@@ -188,7 +187,7 @@ export function Monitoring3dView({
           SCENE_TOOLBAR_BUTTON_CLASS,
           'pointer-events-auto absolute top-3 left-3 gap-1.5',
         )}
-        onClick={popFocus}
+        onClick={exitFocus}
       >
         <ArrowLeft className="size-4" />
         {t('monitoring:focus.back')}
@@ -241,7 +240,7 @@ export function Monitoring3dView({
           dpr: canvasDpr,
           gl: SCENE_GL_OPTIONS,
           shadows: sceneCanvasShadows(sceneInfo?.lighting),
-          onPointerMissed: clearFocus,
+          onPointerMissed: exitFocus,
         }}
         overlay={
           <>
@@ -305,6 +304,7 @@ export function Monitoring3dView({
             mode={mode}
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
+            getPose={handleGetPose}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />

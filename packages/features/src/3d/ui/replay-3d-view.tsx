@@ -26,7 +26,10 @@ import {
   type MonitoringReplayUiState,
 } from '@crane/domain/monitoring';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
+import {
+  OutdoorWorkModelSimulation,
+  useSceneData,
+} from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
@@ -69,9 +72,8 @@ export function Replay3dView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, 'replay');
-  const focusStack = useObjectFocusStore((s) => s.focusStack);
-  const popFocus = useObjectFocusStore((s) => s.popFocus);
-  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -95,6 +97,11 @@ export function Replay3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
+  const handleGetPose = useCallback(
+    () => sceneControllerRef.current?.getPose() ?? null,
+    [],
+  );
+
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
@@ -117,12 +124,12 @@ export function Replay3dView({
   );
 
   const focusOverlay =
-    focusStack.length > 0 ? (
+    focusedModelId !== null ? (
       <Button
         variant="outline"
         size="sm"
         className="bg-background/85 border-border/70 pointer-events-auto absolute top-16 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
-        onClick={popFocus}
+        onClick={exitFocus}
       >
         <ArrowLeft className="size-4" />
         {t('monitoring:focus.back')}
@@ -133,11 +140,7 @@ export function Replay3dView({
     <Popover>
       <PopoverTrigger
         render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 px-2.5"
-          >
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
             <CalendarRange className="size-4" />
             <span className="font-mono text-xs">
               {formatRangeButtonLabel(search.viewingFrom, search.viewingTo)}
@@ -191,7 +194,7 @@ export function Replay3dView({
         canvasProps={{
           gl: SCENE_GL_OPTIONS,
           shadows: sceneCanvasShadows(sceneInfo?.lighting),
-          onPointerMissed: clearFocus,
+          onPointerMissed: exitFocus,
         }}
         overlay={
           <>
@@ -226,6 +229,7 @@ export function Replay3dView({
             mode="replay"
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
+            getPose={handleGetPose}
           />
           <SceneReadyProbe onReady={handleSceneReady} />
         </Suspense>

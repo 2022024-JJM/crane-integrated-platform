@@ -34,7 +34,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
     useCriticalAlarmBanner(regionId);
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
-  const clearFocus = useObjectFocusStore((state) => state.clearFocus);
+  const exitFocus = useObjectFocusStore((state) => state.exitFocus);
   const isCmmsOpen = craneId !== null;
   const cranes = useMemo<MonitoringLiveCrane[]>(
     () =>
@@ -54,7 +54,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
       key={craneId}
       craneId={craneId}
       craneName={craneName ?? craneId}
-      onClose={clearFocus}
+      onClose={exitFocus}
     />
   ) : null;
 
