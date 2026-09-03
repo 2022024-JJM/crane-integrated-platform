@@ -609,6 +609,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         >
                           <Magnet className="size-4" />
                         </ToolbarIconButton>
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.grid')}
+                          pressed={showGrid}
+                          disabled={saveDisabled}
+                          onClick={toggleGrid}
+                        >
+                          <Grid3x3 className="size-4" />
+                        </ToolbarIconButton>
                         <span className={TOOLBAR_DIVIDER_CLASS} />
                         <ToolbarIconButton
                           label={t('common:viewer3d.resetView')}
@@ -623,14 +631,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                           onClick={() => cameraActionsRef.current?.topView()}
                         >
                           <Binoculars className="size-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.grid')}
-                          pressed={showGrid}
-                          disabled={saveDisabled}
-                          onClick={toggleGrid}
-                        >
-                          <Grid3x3 className="size-4" />
                         </ToolbarIconButton>
                         <span className={TOOLBAR_DIVIDER_CLASS} />
                         <ToolbarIconButton

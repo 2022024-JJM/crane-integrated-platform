@@ -36,12 +36,15 @@ import {
 
 /** 격자 3단계. cell.size 는 기즈모 이동 스냅(SCENE_TRANSFORM_SNAP.translation=1)과 같아야 한다. */
 export const GROUND_GRID_LEVELS = {
-  cell: { size: 1, thickness: 1, color: '#7a7a7a' },
-  section: { size: 10, thickness: 1, color: '#a3a3a3' },
-  major: { size: 100, thickness: 1, color: '#c8c8c8' },
+  cell: { size: 1, thickness: 1, color: '#545454' },
+  section: { size: 10, thickness: 1, color: '#5e5e5e' },
+  major: { size: 100, thickness: 1, color: '#6a6a6a' },
 } as const;
-/** 선 전체 투명도. 1 = 불투명 — 단계 구분은 두께가 아니라 색으로만 한다. */
-export const GROUND_GRID_OPACITY = 1;
+/**
+ * 선 전체 투명도. 블렌더 기본 테마의 격자(중간 회색 #545454, 알파 0.5)를
+ * 따른다 — 배경에 섞여 은은하게 보이고, 단계 구분은 두께가 아니라 색으로만.
+ */
+export const GROUND_GRID_OPACITY = 0.5;
 /** 평면 반경(m). 카메라 XZ 를 중심으로 깔리며 far(50000) 안에 들어온다. */
 export const GROUND_GRID_HALF_EXTENT = 6000;
 export const GROUND_GRID_PLANE_SIZE = GROUND_GRID_HALF_EXTENT * 2;
