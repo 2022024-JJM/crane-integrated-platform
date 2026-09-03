@@ -15,12 +15,15 @@
       "craneCount": "Grues",
       "openDetails": "Singula regionis aperire",
       "close": "Singula regionis claudere",
-      "siteKicker": "Sedes",
-      "regionKicker": "Regio",
-      "cranes": "Grues"
+      "cranes": "Grues",
+      "siteCategory": "Sedes",
+      "regionCategory": "Regio",
+      "enterRegion": "Monitorium vivum aperire"
     },
-    "world": {
-      "returnToWorld": "Conspectus mundi"
+    "breadcrumb": {
+      "global": "Orbis",
+      "backToGlobal": "Ad conspectum orbis redire",
+      "ariaLabel": "Locus tabulae"
     },
     "site": {
       "enter": "Sedem ingredi",
@@ -30,6 +33,13 @@
       "map": "Tabula",
       "satellite": "Satelles",
       "toggleAriaLabel": "Conspectus tabulae"
+    },
+    "zoom": {
+      "in": "Amplificare",
+      "out": "Minuere",
+      "ariaLabel": "Amplificatio tabulae",
+      "sliderAriaLabel": "Regula amplificationis",
+      "reset": "Tabulam restituere"
     },
     "kpi": {
       "sites": "Sedes",

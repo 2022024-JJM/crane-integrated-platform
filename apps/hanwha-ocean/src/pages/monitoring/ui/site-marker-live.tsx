@@ -5,19 +5,30 @@ import {
   AdvancedMarkerAnchorPoint,
 } from '@vis.gl/react-google-maps';
 import type { Site } from '@crane/domain/region';
+import type { BasemapTone } from '../model/region-map-types';
+import { useHoverIntent } from '../model/use-hover-intent';
+import { useSiteRealtimeStats } from '../model/use-site-realtime-stats';
 import { useSiteRealtimeStatus } from '../model/use-site-realtime-status';
 import { SiteMarker } from './site-marker';
 import { SiteMarkerHoverCard } from './site-marker-hover-card';
 
 interface LiveSiteMarkerProps {
   site: Site;
+  basemap: BasemapTone;
   onEnter: () => void;
 }
 
-export function LiveSiteMarker({ site, onEnter }: LiveSiteMarkerProps) {
+export function LiveSiteMarker({
+  site,
+  basemap,
+  onEnter,
+}: LiveSiteMarkerProps) {
   const { t } = useTranslation();
   const status = useSiteRealtimeStatus(site);
+  // 마커 배지와 hover 카드가 같은 수치를 보도록 여기서 한 번만 집계한다.
+  const stats = useSiteRealtimeStats(site);
   const [hovered, setHovered] = useState(false);
+  const { onPointerEnter, onPointerLeave } = useHoverIntent(setHovered);
 
   return (
     <AdvancedMarker
@@ -25,16 +36,24 @@ export function LiveSiteMarker({ site, onEnter }: LiveSiteMarkerProps) {
       title={t(site.displayNameKey)}
       zIndex={hovered ? 25 : 20}
       clickable
-      // 박스(핀 38x52) 가로 중앙 + 세로 하단(꼬리 끝)이 좌표가 되도록 anchor 지정.
+      // 마커 박스의 아래 가장자리가 좌표 — 그 위에 측량 표식 중심이 맞춰진다.
       anchorPoint={AdvancedMarkerAnchorPoint.BOTTOM_CENTER}
       onClick={onEnter}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={onPointerEnter}
+      onMouseLeave={onPointerLeave}
     >
-      <SiteMarkerHoverCard site={site} status={status} visible={hovered} />
+      <SiteMarkerHoverCard
+        site={site}
+        status={status}
+        stats={stats}
+        visible={hovered}
+      />
       <SiteMarker
         site={site}
         status={status}
+        basemap={basemap}
+        warningCount={stats.warning}
+        criticalCount={stats.critical}
         active={hovered}
         onActivate={onEnter}
       />

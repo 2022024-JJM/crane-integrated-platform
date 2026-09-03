@@ -241,6 +241,61 @@
   }
 }
 
+/* 지도 오버레이 등장 — 판이 아래에서 제자리로 올라온다.
+   HUD 시절의 ops-* 애니메이션을 대신한다. 초점이 잡히는 blur() 연출도
+   있었지만, 이 키프레임은 마커 하나하나에도 붙어서 지도를 열 때마다 수십 개의
+   backdrop 합성이 동시에 돌았다. 등장은 위치와 불투명도만으로 충분하다. */
+@keyframes map-panel-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 지도 마커 부유 — 네임택이 지면 위에서 아주 느리게 오르내린다.
+   진폭 3px 은 좌표 표식 중심 원의 반지름보다 작다. 그래서 리더 스템의 아래
+   끝이 늘 그 원 안에 머물고, 스템 길이를 건드리지 않아도 선이 끊어져 보이지
+   않는다. */
+@keyframes map-marker-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* 판의 그림자. 부모(부유 그룹)의 이동을 반대 위상으로 상쇄해 자기는 지면에
+   머물고, 대신 넓어지며 옅어진다. 그림자가 판을 따라 같이 움직이면 물체가
+   뜨는 게 아니라 화면이 통째로 흔들려 보인다. */
+@keyframes map-marker-float-shadow {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    opacity: 0.46;
+    transform: translateY(3px) scaleX(1.16);
+  }
+}
+
+@keyframes map-crumb-reveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes lidar-sweep {
   0% {
     transform: translateY(0%);
