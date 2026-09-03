@@ -97,6 +97,11 @@
       "translate": "Translate",
       "rotate": "Rotate",
       "scale": "Scale"
+    },
+    "space": {
+      "title": "Transform space",
+      "local": "Local",
+      "world": "World"
     }
   },
   "history": {
@@ -154,7 +159,9 @@
     "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",
     "deleteSelected": "Delete selected",
-    "snapActive": "Snap 1.0",
+    "snap": "Snap (1 m · 15° · 0.1)",
+    "grid": "Ground grid",
+    "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
     "textObject": "Text",
     "save": "Save",

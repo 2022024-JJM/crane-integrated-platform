@@ -97,6 +97,11 @@
       "translate": "이동",
       "rotate": "회전",
       "scale": "크기"
+    },
+    "space": {
+      "title": "변형 기준 축",
+      "local": "로컬 축",
+      "world": "월드 축"
     }
   },
   "history": {
@@ -154,7 +159,9 @@
     "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
     "deleteSelected": "선택 객체 삭제",
-    "snapActive": "Snap 1.0",
+    "snap": "스냅 (1m · 15° · 0.1)",
+    "grid": "바닥 격자",
+    "duplicateSelected": "선택 객체 복제",
     "addText": "텍스트 추가",
     "textObject": "텍스트",
     "save": "저장",

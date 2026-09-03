@@ -1,6 +1,5 @@
 import {
   SCENE_MODEL_CATEGORIES,
-  isSceneStoredLocallyOnly,
   sceneModelCatalog,
   type SavedLightingInfo,
   type SavedMapInfo,
@@ -12,28 +11,40 @@ import {
 import {
   SceneHistoryControls,
   SceneTransformModeToggle,
+  SceneTransformSpaceToggle,
+  useSceneEditorViewStore,
   useTagBindingSource,
   useVirtualTagStore,
 } from '@crane/features/3d';
 import {
-  AlertCircle,
-  CheckCircle2,
+  Binoculars,
+  Copy,
   Download,
-  HardDrive,
+  Grid3x3,
+  House,
   Images,
   Loader2,
+  Magnet,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightOpen,
   Save,
   Search,
+  Trash2,
   Type,
 } from 'lucide-react';
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  startTransition,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@crane/core/lib/utils';
-import { Badge } from '@crane/ui/atoms/badge';
+import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import {
   ResizableHandle,
@@ -43,7 +54,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
@@ -59,10 +69,59 @@ import {
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
+  type SceneEditorCameraActions,
 } from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
+}
+
+// 상단 도구 모음의 필·버튼 — SceneHistoryControls / SceneTransformModeToggle
+// 과 같은 치수라 나란히 놓아도 높이가 맞는다.
+const TOOLBAR_PILL_CLASS =
+  'bg-background/95 border-border/80 flex h-[34px] items-center gap-1 rounded-lg border p-px shadow-sm backdrop-blur-sm';
+const TOOLBAR_BUTTON_CLASS =
+  'text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-8 rounded-md';
+const TOOLBAR_DIVIDER_CLASS = 'bg-border mx-0.5 h-4 w-px';
+
+interface ToolbarIconButtonProps {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** 토글 버튼의 현재 상태(aria-pressed). */
+  pressed?: boolean;
+  className?: string;
+  children: ReactNode;
+}
+
+function ToolbarIconButton({
+  label,
+  onClick,
+  disabled,
+  pressed,
+  className,
+  children,
+}: ToolbarIconButtonProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={label}
+            aria-pressed={pressed}
+            disabled={disabled}
+            className={cn(TOOLBAR_BUTTON_CLASS, className)}
+          />
+        }
+        onClick={onClick}
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
@@ -110,6 +169,17 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const focusSelectedRef = useRef<(() => void) | null>(null);
+  const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
+  const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
+  const transformSpace = useSceneEditorViewStore(
+    (state) => state.transformSpace,
+  );
+  const showGrid = useSceneEditorViewStore((state) => state.showGrid);
+  const toggleSnap = useSceneEditorViewStore((state) => state.toggleSnap);
+  const setTransformSpace = useSceneEditorViewStore(
+    (state) => state.setTransformSpace,
+  );
+  const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -243,30 +313,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     const target = cameraStateRef.current?.target;
     addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
   };
-  // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일 저장)와
-  // 똑같이 "저장됨"으로 표시하면, 사용자는 배포된 줄 알지만 실제로는 자기
-  // 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
-  // "저장됨" 상태일 때만 고지한다 — 저장 전/저장 중에 띄우면 경고가 상시
-  // 노출돼 무뎌지고, 정작 알려야 할 순간(방금 저장했는데 이 브라우저에만
-  // 남았을 때)의 신호가 묻힌다.
-  const showLocalOnlyNotice =
-    isSceneStoredLocallyOnly() && !isSaving && !isDirty;
-  const saveStatusLabel = isSaving
-    ? t('monitoring:editor.statusSaving')
-    : isDirty
-      ? t('monitoring:editor.statusUnsaved')
-      : showLocalOnlyNotice
-        ? t('monitoring:editor.statusSavedLocalOnly')
-        : t('monitoring:editor.statusSaved');
-  const saveStatusClassName = isSaving
-    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
-    : isDirty
-      ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
-      : showLocalOnlyNotice
-        ? // 초록(=안전하게 보관됨)으로 칠하면 고지 문구와 색이 엇갈린다.
-          // 중립 톤으로 "저장은 됐지만 완전하지 않다"를 색으로도 전한다.
-          'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
-        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
+  // 크기 모드는 three TransformControls 가 축 기준을 local 로 강제한다 —
+  // 토글을 잠그고 표시도 local 로 맞춘다.
+  const isScaleMode = transformMode === 'scale';
+  const hasSelection = selectedIds.size > 0;
 
   useEffect(() => {
     // 키 판정은 전부 event.code(물리 키)로 한다 — event.key는 한글 입력
@@ -481,6 +531,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               onTransformInteractionStart={startTransformInteraction}
               onTransformInteractionEnd={endTransformInteraction}
               focusSelectedRef={focusSelectedRef}
+              cameraActionsRef={cameraActionsRef}
+              snapEnabled={snapEnabled}
+              transformSpace={transformSpace}
+              showGrid={showGrid}
             />
 
             {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
@@ -515,120 +569,112 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onModeChange={setTransformMode}
                   leadingContent={
                     <div className="flex items-center gap-2">
-                      {!saveDisabled ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
-                                    saveStatusClassName,
-                                  )}
-                                />
-                              }
-                            >
-                              {isSaving ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : isDirty ? (
-                                <AlertCircle className="size-4" />
-                              ) : showLocalOnlyNotice ? (
-                                <HardDrive className="size-4" />
-                              ) : (
-                                <CheckCircle2 className="size-4" />
-                              )}
-                              {saveStatusLabel}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {showLocalOnlyNotice
-                                ? t(
-                                    'monitoring:editor.statusSavedLocalOnlyHint',
-                                  )
-                                : saveStatusLabel}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : null}
                       <SceneHistoryControls
                         canUndo={canUndo}
                         canRedo={canRedo}
                         onUndo={undo}
                         onRedo={redo}
                       />
+                      <div className={TOOLBAR_PILL_CLASS}>
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.duplicateSelected')}
+                          disabled={!hasSelection}
+                          onClick={duplicateSelectedObject}
+                        >
+                          <Copy className="size-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.deleteSelected')}
+                          disabled={!hasSelection}
+                          onClick={removeSelectedModel}
+                        >
+                          <Trash2 className="size-4" />
+                        </ToolbarIconButton>
+                      </div>
                     </div>
                   }
                   trailingContent={
-                    <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.addText')}
-                                disabled={saveDisabled}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={handleAddTextAtView}
-                          >
-                            <Type className="size-4" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('monitoring:editor.addText')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <span className="bg-border h-4 w-px" />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.save')}
-                                disabled={saveDisabled || isSaving}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={() => void saveCurrentScene()}
-                          >
-                            {isSaving ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Save className="size-4" />
-                            )}
-                          </TooltipTrigger>
-                          {/* 단축키는 우측 하단 도움말 팝업에서 한꺼번에 안내한다. */}
-                          <TooltipContent>
-                            {t('monitoring:editor.save')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <span className="bg-border h-4 w-px" />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.exportJson')}
-                                disabled={saveDisabled}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={() =>
-                              downloadSceneInfo(regionId, sceneInfo)
-                            }
-                          >
-                            <Download className="size-4" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('monitoring:editor.exportJson')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                    <div className="flex items-center gap-2">
+                      <SceneTransformSpaceToggle
+                        space={isScaleMode ? 'local' : transformSpace}
+                        onSpaceChange={setTransformSpace}
+                        disabled={isScaleMode}
+                      />
+                      <div className={TOOLBAR_PILL_CLASS}>
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.snap')}
+                          pressed={snapEnabled}
+                          disabled={saveDisabled}
+                          onClick={toggleSnap}
+                        >
+                          <Magnet className="size-4" />
+                        </ToolbarIconButton>
+                        <span className={TOOLBAR_DIVIDER_CLASS} />
+                        <ToolbarIconButton
+                          label={t('common:viewer3d.resetView')}
+                          disabled={saveDisabled}
+                          onClick={() => cameraActionsRef.current?.resetView()}
+                        >
+                          <House className="size-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          label={t('common:viewer3d.topView')}
+                          disabled={saveDisabled}
+                          onClick={() => cameraActionsRef.current?.topView()}
+                        >
+                          <Binoculars className="size-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.grid')}
+                          pressed={showGrid}
+                          disabled={saveDisabled}
+                          onClick={toggleGrid}
+                        >
+                          <Grid3x3 className="size-4" />
+                        </ToolbarIconButton>
+                        <span className={TOOLBAR_DIVIDER_CLASS} />
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.addText')}
+                          disabled={saveDisabled}
+                          onClick={handleAddTextAtView}
+                        >
+                          <Type className="size-4" />
+                        </ToolbarIconButton>
+                        <span className={TOOLBAR_DIVIDER_CLASS} />
+                        {/* 저장 상태는 버튼 자체가 나타낸다 — 미저장이면 붉은 점과
+                            진한 아이콘, 저장되면 흐린 아이콘. 저장 직후 확인은
+                            성공 토스트가 맡는다(운영의 "이 브라우저에만" 고지도
+                            거기서). 단축키는 우측 하단 도움말 팝업에서 안내한다. */}
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.save')}
+                          disabled={saveDisabled || isSaving}
+                          className={cn(
+                            'relative',
+                            isDirty && 'text-foreground',
+                          )}
+                          onClick={() => void saveCurrentScene()}
+                        >
+                          {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Save className="size-4" />
+                          )}
+                          {isDirty && !isSaving ? (
+                            <span
+                              aria-hidden
+                              className="absolute top-1 right-1 size-1.5 rounded-full bg-red-500"
+                            />
+                          ) : null}
+                        </ToolbarIconButton>
+                        <span className={TOOLBAR_DIVIDER_CLASS} />
+                        <ToolbarIconButton
+                          label={t('monitoring:editor.exportJson')}
+                          disabled={saveDisabled}
+                          onClick={() => downloadSceneInfo(regionId, sceneInfo)}
+                        >
+                          <Download className="size-4" />
+                        </ToolbarIconButton>
+                      </div>
                     </div>
                   }
                 />

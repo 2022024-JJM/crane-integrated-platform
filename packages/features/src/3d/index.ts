@@ -53,6 +53,11 @@ export {
   type SceneViewBookmark,
 } from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
+export { SceneTransformSpaceToggle } from './ui/scene-transform-space-toggle';
+export {
+  SCENE_TRANSFORM_SNAP,
+  useSceneEditorViewStore,
+} from './model/use-scene-editor-view-store';
 export {
   useSelectedSceneObjectEditor,
   type SelectedMeshInfo,
@@ -127,4 +132,5 @@ export type {
   AxisKey,
   SceneTransformField,
   SceneTransformMode,
+  SceneTransformSpace,
 } from './model/types';

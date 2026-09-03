@@ -36,7 +36,9 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
   type SceneTransformMode,
+  type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
+  SCENE_TRANSFORM_SNAP,
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   MIN_SURFACE_DISTANCE,
@@ -55,6 +57,13 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 import { useMarqueeSelection } from './use-marquee-selection';
+import {
+  computeTopViewFallbackPose,
+  computeTopViewPose,
+  type CameraPose,
+} from '../lib/top-view-pose';
+import { collectWorldBounds } from '../lib/world-bounds';
+import { EditorGroundGrid } from './editor-ground-grid';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
@@ -138,6 +147,14 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
+/** 도구 모음의 카메라 버튼이 호출하는 액션(focusSelectedRef 와 같은 방식). */
+export interface SceneEditorCameraActions {
+  /** 마지막으로 로드/저장된 카메라(없으면 편집기 기본 시점)로 복귀. */
+  resetView: () => void;
+  /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
+  topView: () => void;
+}
+
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
   /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
@@ -173,6 +190,14 @@ interface SceneObjectsEditCanvasProps {
   onTransformInteractionEnd?: () => void;
   /** 선택 객체로 카메라를 즉시 이동(F 키)하는 함수를 부모에 노출한다. */
   focusSelectedRef?: RefObject<(() => void) | null>;
+  /** 초기 시점/탑뷰 액션을 부모에 노출한다. */
+  cameraActionsRef?: RefObject<SceneEditorCameraActions | null>;
+  /** 기즈모 스냅(SCENE_TRANSFORM_SNAP 단위) 적용 여부. */
+  snapEnabled: boolean;
+  /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
+  transformSpace: SceneTransformSpace;
+  /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
+  showGrid: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -191,6 +216,10 @@ export function SceneObjectsEditCanvas({
   onTransformInteractionStart,
   onTransformInteractionEnd,
   focusSelectedRef,
+  cameraActionsRef,
+  snapEnabled,
+  transformSpace,
+  showGrid,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -551,24 +580,8 @@ export function SceneObjectsEditCanvas({
       const controls = orbitControlsRef.current as OrbitControlsImpl | null;
       if (!controls || objects.length === 0) return;
 
-      // setFromObject는 조상 행렬까지 갱신한다(expandByObject는 자기 행렬만).
-      // keydown은 렌더 루프 밖이라 직전 변형이 월드 행렬에 아직 안 실렸을 수
-      // 있다 — 마퀴 판정(use-marquee-selection)과 같은 관례.
-      const box = new Box3();
-      const objectBox = new Box3();
-      const worldPosition = new Vector3();
-      for (const obj of objects) {
-        objectBox.setFromObject(obj);
-        if (objectBox.isEmpty()) {
-          // 폰트 sync 전 텍스트는 지오메트리가 비어 있다. 최소한 중심은
-          // 맞추고 거리는 FOCUS_MIN_DISTANCE로 떨어지게 둔다.
-          box.expandByPoint(obj.getWorldPosition(worldPosition));
-        } else {
-          box.union(objectBox);
-        }
-      }
-
-      if (box.isEmpty()) return;
+      const box = collectWorldBounds(objects);
+      if (!box) return;
 
       const center = new Vector3();
       const size = new Vector3();
@@ -676,6 +689,71 @@ export function SceneObjectsEditCanvas({
       focusSelectedRef.current = focusSelected;
     }
   }, [focusSelected, focusSelectedRef]);
+
+  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 lib/top-view-pose 가 하고 여기서는
+  // OrbitControls 에 적용만 한다(감쇠 처리는 fitToObjects 와 같은 이유).
+  const applyCameraPose = useCallback(
+    (pose: CameraPose) => {
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls) return;
+      const cam = controls.object;
+      cam.position.set(...pose.position);
+      controls.target.set(...pose.target);
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
+      controls.update();
+      controls.enableDamping = previousDamping;
+
+      if (cameraStateRef) {
+        cameraStateRef.current = {
+          position: [...pose.position],
+          target: [...pose.target],
+        };
+      }
+    },
+    [cameraStateRef, orbitControlsRef],
+  );
+
+  // initialCamera 는 저장 후에도 갱신되므로 "마지막으로 로드/저장된 시점"이다.
+  const resetView = useCallback(() => {
+    applyCameraPose({ position: cameraPosition, target: cameraTarget });
+  }, [applyCameraPose, cameraPosition, cameraTarget]);
+
+  // 바운즈 우선순위: 지도 → 배치된 객체 전체 → (아무것도 없으면) 현재 거리를
+  // 유지한 채 타깃 바로 위. 지도 GLB 가 아직 로드 전이면 박스가 비어 있어
+  // 객체 전체로 내려간다.
+  const topView = useCallback(() => {
+    const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+    if (!controls) return;
+    const registry = modelObjectRegistryRef.current;
+    const mapId = sceneInfo?.maps?.[0]?.id;
+    const mapObject = mapId ? registry.get(mapId) : undefined;
+    let bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
+    if (!bounds || bounds.isEmpty()) {
+      bounds = collectWorldBounds([...registry.values()]);
+    }
+
+    const cam = controls.object;
+    let pose: CameraPose | null = null;
+    if (bounds && cam instanceof PerspectiveCamera) {
+      pose = computeTopViewPose(bounds, cam.aspect, cam.fov, {
+        minDistance: FOCUS_MIN_DISTANCE,
+      });
+    }
+    if (!pose) {
+      pose = computeTopViewFallbackPose(
+        [cam.position.x, cam.position.y, cam.position.z],
+        [controls.target.x, controls.target.y, controls.target.z],
+      );
+    }
+    applyCameraPose(pose);
+  }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
+
+  useEffect(() => {
+    if (cameraActionsRef) {
+      cameraActionsRef.current = { resetView, topView };
+    }
+  }, [cameraActionsRef, resetView, topView]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -789,13 +867,20 @@ export function SceneObjectsEditCanvas({
             disabled
           />
         </GizmoHelper>
+        {/* 바닥 격자 — 높이·범위 규칙은 EditorGroundGrid 주석 참고. */}
+        {showGrid ? <EditorGroundGrid /> : null}
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
             ref={transformControlsRef}
             object={transformTarget}
             mode={transformMode}
-            space="local"
+            space={transformSpace}
+            translationSnap={
+              snapEnabled ? SCENE_TRANSFORM_SNAP.translation : null
+            }
+            rotationSnap={snapEnabled ? SCENE_TRANSFORM_SNAP.rotation : null}
+            scaleSnap={snapEnabled ? SCENE_TRANSFORM_SNAP.scale : null}
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}
             onObjectChange={syncSelectedObjectTransform}

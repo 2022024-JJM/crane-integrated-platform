@@ -9,10 +9,13 @@ import { useScenePersistence } from '../use-scene-persistence';
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
 /** 저장·로드 어댑터만 대체한다 — sanitize 등 나머지 도메인은 실물을 쓴다. */
-const { loadMock, saveMock, toastMock } = vi.hoisted(() => ({
+const { loadMock, saveMock, localOnlyMock, toastMock } = vi.hoisted(() => ({
   loadMock: vi.fn<(regionId: string) => Promise<SavedSceneInfo>>(),
   saveMock:
-    vi.fn<(regionId: string, scene: SavedSceneInfo) => Promise<SavedSceneInfo>>(),
+    vi.fn<
+      (regionId: string, scene: SavedSceneInfo) => Promise<SavedSceneInfo>
+    >(),
+  localOnlyMock: vi.fn<() => boolean>(() => false),
   toastMock: { success: vi.fn(), error: vi.fn() },
 }));
 
@@ -22,10 +25,15 @@ vi.mock('@crane/domain/3d', async (importOriginal) => {
     ...actual,
     loadSceneInfoByRegionId: loadMock,
     saveSceneInfoByRegionId: saveMock,
+    isSceneStoredLocallyOnly: localOnlyMock,
   };
 });
 
 vi.mock('sonner', () => ({ toast: toastMock }));
+// 토스트 문구는 키로 검증한다 — 실제 번역은 shell 의 locale JSON 몫이다.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
 const CAMERA: SavedCameraInfo = {
   position: [10, 20, 30],
@@ -60,6 +68,7 @@ function setup(getCameraState?: () => SavedCameraInfo | null) {
 }
 
 beforeEach(() => {
+  localOnlyMock.mockReturnValue(false);
   loadMock.mockResolvedValue(storedScene());
   // dev 미들웨어처럼 저장한 씬을 그대로 돌려준다.
   saveMock.mockImplementation((_regionId, scene) => Promise.resolve(scene));
@@ -74,7 +83,9 @@ describe('로드', () => {
   it('로드된 씬은 정규화 + 지도 전체 잠금으로 세션을 시작한다', async () => {
     const { result } = setup();
 
-    await waitFor(() => expect(result.current.history.sceneInfo).not.toBeNull());
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
 
     const loaded = result.current.history.sceneInfo!;
     // 저장본에 locked: false가 남아 있어도 세션은 항상 잠금으로 연다.
@@ -97,7 +108,9 @@ describe('로드', () => {
 describe('dirty 판정', () => {
   it('편집하면 dirty, 같은 내용으로 되돌리는 updateScene은 참조 유지로 clean', async () => {
     const { result } = setup();
-    await waitFor(() => expect(result.current.history.sceneInfo).not.toBeNull());
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
 
     act(() =>
       result.current.history.updateScene((prev) => ({
@@ -119,7 +132,9 @@ describe('저장', () => {
       position: [1, 1, 1],
       target: [2, 2, 2],
     }));
-    await waitFor(() => expect(result.current.history.sceneInfo).not.toBeNull());
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
 
     act(() =>
       result.current.history.updateScene((prev) => ({
@@ -139,14 +154,40 @@ describe('저장', () => {
     expect(regionId).toBe('dock-1');
     expect(sentScene.environmentId).toBe('env-2');
     // getCameraState의 현재 카메라가 로드 카메라를 대체한다.
-    expect(sentScene.camera).toEqual({ position: [1, 1, 1], target: [2, 2, 2] });
+    expect(sentScene.camera).toEqual({
+      position: [1, 1, 1],
+      target: [2, 2, 2],
+    });
 
     expect(result.current.persistence.isDirty).toBe(false);
     expect(result.current.persistence.initialCamera).toEqual({
       position: [1, 1, 1],
       target: [2, 2, 2],
     });
-    expect(toastMock.success).toHaveBeenCalled();
+    // dev(파일 저장)는 단순 "저장됨".
+    expect(toastMock.success).toHaveBeenCalledWith(
+      'monitoring:editor.statusSaved',
+    );
+  });
+
+  it('운영(localStorage 전용) 저장은 "이 브라우저에만" 고지 + 힌트를 토스트로 알린다', async () => {
+    localOnlyMock.mockReturnValue(true);
+    const { result } = setup();
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
+
+    let saved = false;
+    await act(async () => {
+      saved = await result.current.persistence.saveCurrentScene();
+    });
+
+    expect(saved).toBe(true);
+    expect(toastMock.success).toHaveBeenCalledTimes(1);
+    expect(toastMock.success).toHaveBeenCalledWith(
+      'monitoring:editor.statusSavedLocalOnly',
+      { description: 'monitoring:editor.statusSavedLocalOnlyHint' },
+    );
   });
 
   it('씬이 없으면 저장하지 않고 false', async () => {
@@ -164,7 +205,9 @@ describe('저장', () => {
   it('저장 실패: UnknownRegionError는 메시지를 그대로 알리고 false', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { result } = setup();
-    await waitFor(() => expect(result.current.history.sceneInfo).not.toBeNull());
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
     saveMock.mockRejectedValue(new UnknownRegionError('dock-x'));
 
     let saved = true;
@@ -182,7 +225,9 @@ describe('저장', () => {
   it('일반 저장 실패는 Retry 액션이 달린 toast를 띄운다', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { result } = setup();
-    await waitFor(() => expect(result.current.history.sceneInfo).not.toBeNull());
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
     saveMock.mockRejectedValue(new Error('network'));
 
     await act(async () => {
