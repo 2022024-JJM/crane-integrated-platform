@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SetStateAction,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   isSceneStoredLocallyOnly,
@@ -52,6 +58,13 @@ export function useScenePersistence({
   getCameraState,
 }: UseScenePersistenceParams): UseScenePersistenceResult {
   const { t } = useTranslation();
+  // 로드 effect 는 regionId 가 바뀔 때만 다시 돌아야 한다. t 를 deps 에 넣으면
+  // 언어를 바꿀 때마다 씬을 다시 읽어 편집 중인 내용이 날아가므로, 실패
+  // 토스트 문구만 ref 로 최신 t 를 읽는다.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const [isSaving, setIsSaving] = useState(false);
   // 마지막으로 저장된 sceneInfo의 참조. sceneInfo는 모든 mutation에서
   // 새 객체로 교체되므로 참조 비교만으로 dirty 판단이 가능하다.
@@ -95,7 +108,7 @@ export function useScenePersistence({
           toast.error(
             error instanceof UnknownRegionError
               ? error.message
-              : 'Failed to load scene.',
+              : tRef.current('monitoring:editor.loadFailed'),
           );
         }
       }
@@ -169,9 +182,9 @@ export function useScenePersistence({
         toast.error(error.message);
         return false;
       }
-      toast.error('Failed to save scene.', {
+      toast.error(t('monitoring:editor.saveFailed'), {
         action: {
-          label: 'Retry',
+          label: t('monitoring:editor.retry'),
           onClick: () => {
             void saveCurrentScene();
           },

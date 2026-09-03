@@ -236,7 +236,7 @@ describe('저장', () => {
 
     const lastErrorCall = toastMock.error.mock.calls.at(-1);
     expect(lastErrorCall?.[1]).toMatchObject({
-      action: expect.objectContaining({ label: 'Retry' }),
+      action: expect.objectContaining({ label: 'monitoring:editor.retry' }),
     });
     errorSpy.mockRestore();
   });

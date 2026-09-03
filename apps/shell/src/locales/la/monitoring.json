@@ -126,8 +126,9 @@
     "loading": "Editor scaenae oneratur...",
     "exportJson": "JSON Exporta",
     "dropHint": "In scaenam depone ut exemplar ponatur",
-    "statusSaving": "Servatur",
-    "statusUnsaved": "Non servatum",
+    "loadFailed": "Scaena onerari non potuit.",
+    "saveFailed": "Scaena servari non potuit.",
+    "retry": "Iterum conare",
     "statusSaved": "Servatum",
     "statusSavedLocalOnly": "In hoc navigatro tantum servatum",
     "statusSavedLocalOnlyHint": "Servus servandi deest, ergo mutationes in hoc navigatro tantum manent. Si cella purgatur, pereunt; alii computatri vel usores eas non videbunt. Ad communicandum, JSON per exportationem accipe.",
@@ -284,6 +285,7 @@
     "count": "{{count}} / {{max}}",
     "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode).",
     "periodHint": "Tempus (ms) unius cycli (min→max→min)",
-    "save": "Serva"
+    "save": "Serva",
+    "saveFailed": "Signa virtualia servari non potuerunt."
   }
 }

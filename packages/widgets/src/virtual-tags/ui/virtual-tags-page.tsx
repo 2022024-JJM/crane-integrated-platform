@@ -1,8 +1,5 @@
 import {
-  AlertCircle,
-  CheckCircle2,
   Copy,
-  HardDrive,
   Loader2,
   Pause,
   Play,
@@ -11,8 +8,9 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   isVirtualTagSetStoredLocallyOnly,
   VIRTUAL_TAG_PATTERN_KINDS,
@@ -68,7 +66,8 @@ import { WaveformIcon } from './waveform-icon';
  *
  * 값은 러너(virtualTagRuntime)가 들고 있고 표는 15Hz 폴링으로 읽는다.
  * 정의 편집은 스토어(메모리)를 지나고 저장 버튼이 배포 파일/localStorage 에
- * 기록한다 — 저장 상태 배지·미저장 이탈 경고는 씬 편집과 같은 훅을 쓴다.
+ * 기록한다 — 저장 상태는 씬 편집과 같이 저장 버튼의 점(미저장)·스피너(저장
+ * 중)로 나타내고 결과는 토스트로 알리며, 미저장 이탈 경고는 같은 훅을 쓴다.
  * 키 중복·빈 키 같은 거부는 스토어가 boolean/결과로 돌려주고 여기서는 문구만
  * 보여 준다.
  *
@@ -367,40 +366,56 @@ export function VirtualTagsPage() {
   // 마지막 저장본으로 되돌린다. 저장 후 이탈은 dirty 가 아니라 no-op.
   useEffect(() => () => discard(), [discard]);
 
+  // 저장 결과는 씬 편집(use-scene-persistence)과 같은 토스트로 알린다. 스토어
+  // save() 는 boolean 만 돌려주므로 여기서 감싼다 — 운영(localStorage 전용)
+  // 저장은 "이 브라우저에만" 고지를 함께 띄운다. 실패 토스트의 재시도는
+  // 자기 자신을 다시 부르는데, 선언 전 참조를 react-hooks 규칙이 막으므로
+  // ref 를 거친다.
+  const handleSaveRef = useRef<() => Promise<boolean>>(() =>
+    Promise.resolve(false),
+  );
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    const ok = await save();
+    if (ok) {
+      if (isVirtualTagSetStoredLocallyOnly()) {
+        toast.success(t('monitoring:editor.statusSavedLocalOnly'), {
+          description: t('monitoring:editor.statusSavedLocalOnlyHint'),
+        });
+      } else {
+        toast.success(t('monitoring:editor.statusSaved'));
+      }
+      return true;
+    }
+    toast.error(t('monitoring:virtualTags.saveFailed'), {
+      action: {
+        label: t('monitoring:editor.retry'),
+        onClick: () => {
+          void handleSaveRef.current();
+        },
+      },
+    });
+    return false;
+  }, [save, t]);
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
+
   const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
     isDirty,
     isSaving,
-    onSave: save,
+    onSave: handleSave,
   });
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
         event.preventDefault();
-        if (isDirty && !isSaving) void save();
+        if (isDirty && !isSaving) void handleSave();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDirty, isSaving, save]);
-
-  // 씬 편집과 같은 규칙 — "저장됨" 일 때만 이 브라우저에만 남는다는 고지.
-  const showLocalOnlyNotice =
-    isVirtualTagSetStoredLocallyOnly() && !isSaving && !isDirty;
-  const saveStatusLabel = isSaving
-    ? t('monitoring:editor.statusSaving')
-    : isDirty
-      ? t('monitoring:editor.statusUnsaved')
-      : showLocalOnlyNotice
-        ? t('monitoring:editor.statusSavedLocalOnly')
-        : t('monitoring:editor.statusSaved');
-  const saveStatusClassName = isSaving
-    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
-    : isDirty
-      ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
-      : showLocalOnlyNotice
-        ? 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
-        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
+  }, [handleSave, isDirty, isSaving]);
 
   const reportAdd = (result: VirtualTagAddResult) => {
     if (result.ok) {
@@ -442,44 +457,30 @@ export function VirtualTagsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span
-                    className={cn(
-                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium',
-                      saveStatusClassName,
-                    )}
-                  />
-                }
-              >
-                {isSaving ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : isDirty ? (
-                  <AlertCircle className="size-3.5" />
-                ) : showLocalOnlyNotice ? (
-                  <HardDrive className="size-3.5" />
-                ) : (
-                  <CheckCircle2 className="size-3.5" />
-                )}
-                {saveStatusLabel}
-              </TooltipTrigger>
-              <TooltipContent>
-                {showLocalOnlyNotice
-                  ? t('monitoring:editor.statusSavedLocalOnlyHint')
-                  : saveStatusLabel}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* 저장 상태는 버튼 자체가 나타낸다 — 씬 편집 헤더 바와 같은 규칙.
+              미저장이면 붉은 점과 진한 글자, 저장되면 흐린 글자, 저장 중엔
+              스피너. 저장 직후 확인은 handleSave 의 토스트가 맡는다. 점은
+              글자와 겹치지 않게 테두리 우상단 모서리에 걸친다(아이콘 전용인
+              헤더 바 버튼과 달리 글자가 있어 안쪽에 두면 가린다). */}
           <Button
             type="button"
+            variant="outline"
             size="sm"
-            disabled={!isDirty || isSaving}
-            onClick={() => void save()}
+            disabled={isSaving}
+            className={cn(
+              'relative',
+              isDirty ? 'text-foreground' : 'text-muted-foreground',
+            )}
+            onClick={() => void handleSave()}
           >
-            <Save />
+            {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
             {t('monitoring:virtualTags.save')}
+            {isDirty && !isSaving ? (
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-red-500"
+              />
+            ) : null}
           </Button>
           <Button
             type="button"

@@ -140,8 +140,9 @@
     "loading": "Loading scene editor...",
     "exportJson": "Export JSON",
     "dropHint": "Drop on the scene to place the model",
-    "statusSaving": "Saving",
-    "statusUnsaved": "Unsaved",
+    "loadFailed": "Failed to load scene.",
+    "saveFailed": "Failed to save scene.",
+    "retry": "Retry",
     "statusSaved": "Saved",
     "statusSavedLocalOnly": "Saved to this browser only",
     "statusSavedLocalOnlyHint": "There is no save server, so edits stay in this browser only. They disappear if you clear the cache, and other machines or users will not see them. Use Export to get the JSON and apply it.",
@@ -298,6 +299,7 @@
     "count": "{{count}} / {{max}}",
     "keyHint": "Use the same format as real server tags (craneId:tagCode).",
     "periodHint": "Time (ms) for one cycle (min→max→min)",
-    "save": "Save"
+    "save": "Save",
+    "saveFailed": "Failed to save virtual tags."
   }
 }
