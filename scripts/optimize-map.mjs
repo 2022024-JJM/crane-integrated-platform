@@ -9,7 +9,9 @@
 //   FORCE_MESHOPT=1 pnpm optimize:map ...      # 양자화 안전 가드 무시(아래 참고)
 //
 // optimize-glb.mjs(모델용)와 분리한 이유 — 지도는 정책이 3가지 다르다:
-//   - 텍스처 상한 1024px (모델은 2048): 200~500 유닛 거리의 배경 지형이라 충분.
+//   - 텍스처 상한 2048px (모델과 동일): 도입 당시 1024 였으나 2026-09-04
+//     phillyshipyard 재반입본이 지면 전체를 4096px 베이크 1장(unlit, 타일링
+//     없음)으로 바꿔 와서 1024 로는 2.4km/1024 ≈ 2.3m/px 로 흐려져 올렸다.
 //   - 노멀/ORM도 손실 압축 (모델은 무손실): 원거리에서 셰이딩 얼룩이 비가시.
 //   - 머티리얼/지오메트리 수술 스테이지 존재: transmission 제거, 단면화,
 //     weld+simplify 데시메이션. 지도 씬 항목은 meshOverrides/valueMapper 를
@@ -26,7 +28,7 @@
 // 새 지도를 반입할 때는 assets-src/maps/<파일> 에 넣고 실행할 것.
 //
 // 파이프라인 (순서가 중요하다):
-//   ① resize    텍스처 최대 1024px
+//   ① resize    텍스처 최대 2048px
 //   ② webp      전 슬롯 손실 압축(q80) — 노멀/ORM 포함
 //   ③ surgery   (in-process) transmission 제거 → 단면화 → weld → simplify
 //               → meshopt 압축  ← meshopt 는 반드시 마지막 (텍스처 커맨드가
@@ -82,7 +84,7 @@ const MAPS_DIR = join(repoRoot, 'apps/shell/public/maps');
 const BACKUP_DIR = join(repoRoot, 'assets-src/maps');
 const CLI = join(repoRoot, 'node_modules/@gltf-transform/cli/bin/cli.js');
 
-const MAX_TEXTURE_SIZE = 1024;
+const MAX_TEXTURE_SIZE = 2048;
 const LOSSY_QUALITY = 80;
 const SIMPLIFY_RATIO = 0.4;
 const SIMPLIFY_ERROR = 0.0002;

@@ -54,7 +54,7 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 
 | 단계 | 처리 | 내용 |
 |---|---|---|
-| ① resize | CLI | 텍스처 최대 **1024px** (모델은 2048 — 지도는 200~500 유닛 거리의 배경이라 충분) |
+| ① resize | CLI | 텍스처 최대 **2048px** (도입 당시 1024 — 2026-09-04 phillyshipyard 재반입본이 지면을 4096px 베이크 1장(타일링 없음)으로 바꿔 와서 1024 로는 약 2.3m/px 로 흐려져 상향) |
 | ② webp | CLI | **전 슬롯 손실 압축 q80** — 노멀/ORM 포함 (모델은 무손실 — 원거리 지형은 셰이딩 얼룩이 비가시) |
 | ③ surgery | in-process | transmission 제거 → 단면화 → weld → simplify → **양자화 안전 가드** → meshopt |
 
@@ -107,7 +107,7 @@ philly 검증값: 그리드 3.65cm, minGap 8.7cm(3.5945m 층 ↔ 3.6823m 지면 
 |---|---|---|
 | `SIMPLIFY_RATIO` | 0.4 | 삼각형 감소 목표. 더 줄이려면 낮춘다 |
 | `SIMPLIFY_ERROR` | 0.0002 | bbox 대각 상대 오차(philly 기준 최대 편차 ~0.6m). 감소가 부족하면 0.001 까지 |
-| `MAX_TEXTURE_SIZE` / `LOSSY_QUALITY` | 1024 / 80 | 텍스처 상한·품질 |
+| `MAX_TEXTURE_SIZE` / `LOSSY_QUALITY` | 2048 / 80 | 텍스처 상한·품질 |
 | `KEEP_DOUBLE_SIDED=1` | off | 단면화로 뒷면 구멍이 보일 때 양면 유지 |
 | `FORCE_MESHOPT=1` | off | 양자화 가드 무시 — 감지된 작은 층간 갭이 의도가 아님을 사람이 확인한 경우만 |
 

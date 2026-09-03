@@ -59,7 +59,7 @@ pnpm optimize:glb Block_001.glb                                          # 압�
 ## maps/ (지형) — 전용 파이프라인 `pnpm optimize:map`
 
 지형은 `optimize:glb` 가 아니라 **전용 파이프라인**을 쓴다 (2026-08-20 도입,
-그 전의 "텍스처만 수동 압축" 절차를 대체). 텍스처 상한 1024px·노멀/ORM 손실
+그 전의 "텍스처만 수동 압축" 절차를 대체). 텍스처 상한 2048px·노멀/ORM 손실
 압축에 더해, transmission 제거·단면화·데시메이션·양자화 안전 가드(층간 높이 차
 실측으로 z-fighting 위험 시 meshopt 자동 생략)까지 처리한다. 백업·멱등·교체
 관례는 `optimize:glb` 와 동일하다:
@@ -73,6 +73,12 @@ pnpm optimize:map 새지도.glb              # 원본이 assets-src/maps/ 로 �
 cp 새버전.glb assets-src/maps/기존파일.glb
 pnpm optimize:map 기존파일.glb
 ```
+
+`phillyshipyard.glb` 는 2026-09-04 반입본(`Philly Yard_20260903`)부터 **루트 노드가
+원점(0,0,0) 기준**이다. 그 전 버전은 루트 노드에 (-1552, -3.5, 1801) 오프셋이
+실려 있었고 씬 배치가 그 좌표를 전제로 했으므로, 교체 시 씬의 크레인·블록·카메라를
+에디터에서 다시 놓아야 했다. 재반입 시에도 원점 기준으로 받는다 — 옛 오프셋을
+복원하지 말 것.
 
 소형 지도(okpo·1dock·plane)는 대상이 아니다 — 절감 효과가 없고 unlit 플레인은
 단면화가 오히려 위험하다. 자세한 단계·안전 가드·문제 해결은
