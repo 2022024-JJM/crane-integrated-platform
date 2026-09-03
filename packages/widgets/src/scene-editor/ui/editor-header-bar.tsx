@@ -379,17 +379,19 @@ function SnapSplitButton({
         >
           <ChevronDown className="size-3" />
         </PopoverTrigger>
-        <PopoverPopup side="bottom" align="end" className="w-64 p-3">
+        <PopoverPopup side="bottom" align="end" className="w-72 p-3">
           <p className="text-foreground mb-2 text-sm font-semibold">
             {settingsLabel}
           </p>
           <div className="flex flex-col gap-2">
+            {/* 라벨은 고정 폭, 세그먼트는 남은 폭을 전부 차지하고 그 안에서
+                버튼이 균등 분배된다 — 세 줄의 세그먼트 폭이 옵션 수(3·3·2)와
+                무관하게 같아 세로로 정렬돼 보인다. */}
             {SNAP_CHANNEL_ROWS.map(({ channel, labelKey, format }) => (
-              <div
-                key={channel}
-                className="flex items-center justify-between gap-3 text-xs"
-              >
-                <span className="text-muted-foreground">{t(labelKey)}</span>
+              <div key={channel} className="flex items-center gap-3 text-xs">
+                <span className="text-muted-foreground w-14 shrink-0">
+                  {t(labelKey)}
+                </span>
                 <ToggleGroup
                   value={[String(step[channel])]}
                   onValueChange={(values) => {
@@ -403,13 +405,13 @@ function SnapSplitButton({
                   variant="outline"
                   size="sm"
                   aria-label={t(labelKey)}
-                  className="h-7"
+                  className="h-7 w-auto flex-1"
                 >
                   {SCENE_SNAP_STEP_OPTIONS[channel].map((option) => (
                     <ToggleGroupItem
                       key={option}
                       value={String(option)}
-                      className="text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground h-full min-w-0 px-2 text-[11px] font-medium tabular-nums"
+                      className="text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground h-full min-w-0 flex-1 basis-0 px-2 text-[11px] font-medium tabular-nums"
                     >
                       {format(option)}
                     </ToggleGroupItem>
