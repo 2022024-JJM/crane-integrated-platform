@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { Euler, Quaternion, Vector3, type Object3D } from 'three';
 import {
+  capturePose,
   degToRad,
   findMeshByPath,
   getRestPose,
@@ -15,11 +16,7 @@ import {
   type TagMappingChannel,
   type TagMappingNodeTarget,
 } from '@crane/domain/3d';
-import {
-  clampJointValue,
-  jointChannel,
-  jointDelta,
-} from '../lib/apply-joint';
+import { clampJointValue, jointChannel, jointDelta } from '../lib/apply-joint';
 import { addChannelDelta, beginNodePose } from '../lib/apply-channel';
 import { rigLiveReadouts } from './rig-live-readouts';
 import { makeJointAddress, rigValueStore } from './rig-value-store';
@@ -49,6 +46,15 @@ import { useActiveTransformStore } from './use-active-transform-store';
  *
  * 기즈모로 루트를 드래그하는 동안은 루트 맵핑을 건너뛴다 — TransformControls
  * 와 같은 노드를 두고 매 프레임 서로 덮어쓰면 점프한다.
+ *
+ * 드래그가 끝나는 프레임(handoff)에는 기즈모가 옮긴 루트의 rest 를 그 루트의
+ * **현재 자세**로 다시 잡는다. 커밋된 새 배치값은 React 렌더 + passive effect
+ * 를 거쳐야 `models` 로 들어오는데 그 사이 프레임에서 옛 rest 로 되돌리면
+ * 모델이 이전 위치로 한 번 튀었다가 돌아온다. 현재 자세는 커밋 경로
+ * (use-scene-transform commitFinal)가 방금 읽어 저장한 값과 같으므로 새
+ * 배치값이 도착해 인스턴스를 다시 만들어도 화면이 바뀌지 않는다. 기즈모가
+ * 건드리지 않은 루트(드라이버가 마지막으로 적용한 자세 그대로인 것)는 rest 를
+ * 유지한다 — 그것까지 다시 잡으면 Δ 가 rest 에 흡수된다.
  */
 
 interface JointBinding {
@@ -67,6 +73,32 @@ interface DrivenNode {
   node: Object3D;
   rest: RestPose;
   isRoot: boolean;
+  /**
+   * 루트 전용 — 드라이버가 마지막으로 적용한 자세(rest + Δ). 드래그 종료
+   * 프레임에 현재 자세와 다르면 기즈모가 옮긴 것이므로 rest 를 다시 잡는다.
+   */
+  lastApplied?: RestPose;
+}
+
+function isAtPose(node: Object3D, pose: RestPose): boolean {
+  return (
+    node.position.equals(pose.position) &&
+    node.quaternion.equals(pose.quaternion) &&
+    node.scale.equals(pose.scale)
+  );
+}
+
+/**
+ * 기즈모 handoff — 루트가 드라이버가 마지막으로 둔 자세와 다르면(기즈모가
+ * 옮겼거나, 커밋된 새 배치값이 primitive prop 으로 먼저 적용됐거나) 현재
+ * 자세를 새 rest 로 잡는다. 아직 한 번도 적용한 적이 없으면 루트는 배치
+ * 그대로(Δ 미적용)이므로 현재 자세가 곧 배치값이다.
+ */
+function reanchorRootIfMoved(instance: DriverInstance): void {
+  const driven = instance.drivenNodes.get(instance.root);
+  if (!driven) return;
+  if (driven.lastApplied && isAtPose(driven.node, driven.lastApplied)) return;
+  driven.rest = capturePose(driven.node);
 }
 
 interface DriverInstance {
@@ -187,8 +219,12 @@ export function useRigDriver({
 }: UseRigDriverParams): void {
   const instancesRef = useRef<Map<string, DriverInstance>>(new Map());
   // useFrame 콜백이 렌더 사이 최신 props 를 읽기 위한 ref. 렌더 중이 아니라
-  // effect 에서 갱신한다(react-hooks/refs) — 한 프레임 늦어도 무방하다.
+  // effect 에서 갱신한다(react-hooks/refs). 한 프레임 늦게 도착하는데, 기즈모
+  // 커밋 직후의 루트 rest 는 이 지연에 기대지 않고 handoff 프레임에 따로
+  // 다시 잡는다(reanchorRootIfMoved) — 그 외에는 한 프레임 지연이 무방하다.
   const paramsRef = useRef({ rigs, models, enabled });
+  // 기즈모 드래그 종료(true→false) 감지용. useFrame 콜백 안에서만 읽고 쓴다.
+  const prevDraggingRef = useRef(false);
   useEffect(() => {
     paramsRef.current = { rigs, models, enabled };
   }, [rigs, models, enabled]);
@@ -227,6 +263,8 @@ export function useRigDriver({
     const rigsById = new Map((currentRigs ?? []).map((r) => [r.id, r]));
     const liveModelIds = new Set<string>();
     const dragging = useActiveTransformStore.getState().active;
+    const dragEnded = prevDraggingRef.current && !dragging;
+    prevDraggingRef.current = dragging;
 
     for (const model of currentModels ?? []) {
       const rig = model.rigId ? rigsById.get(model.rigId) : undefined;
@@ -252,6 +290,9 @@ export function useRigDriver({
       if (!instance) {
         instance = buildInstance(root, model, rig);
         instances.set(model.id, instance);
+      } else if (dragEnded) {
+        // 새 배치값이 이미 도착해 위에서 다시 만든 인스턴스는 rest 가 최신이다.
+        reanchorRootIfMoved(instance);
       }
 
       // (1) 관절 값 수집 — 한계 클램프까지 해 두어야 구속조건의 입력이
@@ -299,7 +340,11 @@ export function useRigDriver({
         const d = rigValueStore.get(makeJointAddress(model.id, binding.id));
         mappingValues.set(binding.id, d);
         const { channel, axis } = binding.target;
-        entryFor(binding.node).set(`${channel}:${axis}`, { channel, axis, delta: d });
+        entryFor(binding.node).set(`${channel}:${axis}`, {
+          channel,
+          axis,
+          delta: d,
+        });
       }
       for (const { joint, node } of instance.joints) {
         const channel = jointChannel(joint);
@@ -317,6 +362,15 @@ export function useRigDriver({
         beginNodePose(node, driven.rest);
         for (const { channel, axis, delta: d } of entries.values()) {
           addChannelDelta(node, channel, axis, d);
+        }
+        if (driven.isRoot) {
+          if (driven.lastApplied) {
+            driven.lastApplied.position.copy(node.position);
+            driven.lastApplied.quaternion.copy(node.quaternion);
+            driven.lastApplied.scale.copy(node.scale);
+          } else {
+            driven.lastApplied = capturePose(node);
+          }
         }
       }
 

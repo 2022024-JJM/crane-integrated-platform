@@ -194,7 +194,10 @@ interface SceneObjectsEditCanvasProps {
   cameraActionsRef?: RefObject<SceneEditorCameraActions | null>;
   /** 기즈모 스냅 적용 여부. */
   snapEnabled: boolean;
-  /** 기즈모 스냅 단위(이동 m · 회전 rad · 크기). 켜져 있을 때만 쓴다. */
+  /**
+   * 기즈모 스냅 단위(이동 m · 회전 rad · 크기). 켜져 있을 때만 쓴다. 저장값
+   * (부모 프레임·도·배율) 기준 격자다 — transformSpace 는 축 방향만 정한다.
+   */
   snapStep: SceneSnapStep;
   /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
   transformSpace: SceneTransformSpace;
@@ -400,6 +403,8 @@ export function SceneObjectsEditCanvas({
     onMultiTransformCommit,
     onTransformInteractionStart,
     onTransformInteractionEnd,
+    snapEnabled,
+    snapStep,
   });
 
   const handleModelObjectReady = useCallback(
@@ -880,9 +885,9 @@ export function SceneObjectsEditCanvas({
             object={transformTarget}
             mode={transformMode}
             space={transformSpace}
-            translationSnap={snapEnabled ? snapStep.translation : null}
-            rotationSnap={snapEnabled ? snapStep.rotation : null}
-            scaleSnap={snapEnabled ? snapStep.scale : null}
+            // 스냅은 three 에 맡기지 않는다 — local 공간에서 격자가 객체의
+            // 회전 프레임에 놓여 저장값이 격자를 벗어난다. useSceneTransform 의
+            // liveSync 가 저장값(부모 프레임) 기준으로 스냅한다(snap-transform).
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}
             onObjectChange={syncSelectedObjectTransform}

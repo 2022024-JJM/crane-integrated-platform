@@ -98,6 +98,12 @@ export {
 } from './model/rig-live-readouts';
 export { clampJointValue } from './lib/apply-joint';
 export {
+  snapChangedAxes,
+  snapStepFor,
+  snapToStep,
+  stepOnGrid,
+} from './lib/snap-transform';
+export {
   publishTagValue,
   setTagIngest,
   tagLiveValues,

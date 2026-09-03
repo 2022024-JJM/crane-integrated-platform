@@ -8,6 +8,7 @@ import {
   scaleVectorUniformly,
   updateVectorValue,
 } from '../vector-edit';
+import { stepOnGrid } from '../snap-transform';
 
 describe('updateVectorValue', () => {
   it.each([
@@ -145,6 +146,33 @@ describe('applyAxisUpdate', () => {
     expect(
       applyAxisUpdate('position', [2, 4, 6], 'x', 4, { uniformScale: true }),
     ).toEqual([4, 4, 6]);
+  });
+});
+
+describe('applyAxisUpdate × 인스펙터 스냅 스텝', () => {
+  // 인스펙터 스테퍼는 stepOnGrid 로 격자값을 만들고 applyAxisUpdate 로 커밋한다.
+  // 격자값이 커밋 반올림·정규화에 의해 다시 격자를 벗어나면 안 된다.
+  it('15° 격자 352.6 → ▲ 360 은 커밋되며 0 으로 정규화된다', () => {
+    const next = stepOnGrid(352.6, 15, 1);
+    expect(next).toBe(360);
+    expect(applyAxisUpdate('rotation', [0, 352.6, 0], 'y', next)).toEqual([
+      0, 0, 0,
+    ]);
+  });
+
+  it('1m 격자 -2209.316 → ▲ -2209 는 그대로 커밋된다', () => {
+    const next = stepOnGrid(-2209.316, 1, 1);
+    expect(
+      applyAxisUpdate('position', [-2209.316, 0.35, 1916.872], 'x', next),
+    ).toEqual([-2209, 0.35, 1916.872]);
+  });
+
+  it('0.1 격자 스케일 1.234 → ▼ 1.2 는 3자리 반올림과 충돌하지 않는다', () => {
+    const next = stepOnGrid(1.234, 0.1, -1);
+    expect(next).toBe(1.2);
+    expect(applyAxisUpdate('scale', [1.234, 1, 1], 'x', next)).toEqual([
+      1.2, 1, 1,
+    ]);
   });
 });
 

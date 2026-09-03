@@ -16,7 +16,10 @@ import {
   type SavedTextInfo,
 } from '@crane/domain/3d';
 import { RiggingSection, type RigUpdater } from './rigging-section';
-import { TagMappingSection, type TagMappingsUpdater } from './tag-mapping-section';
+import {
+  TagMappingSection,
+  type TagMappingsUpdater,
+} from './tag-mapping-section';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -26,7 +29,10 @@ import {
   ScaleController,
   type SceneTransformField,
   type SelectedMeshInfo,
+  snapStepFor,
+  stepOnGrid,
   useActiveTransformStore,
+  useSceneEditorViewStore,
   useUniformScaleStore,
 } from '@crane/features/3d';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
@@ -208,6 +214,15 @@ function TransformSection({
   const uniformScale = useUniformScaleStore((s) => s.enabled);
   const setUniformScale = useUniformScaleStore((s) => s.setEnabled);
 
+  // 스냅이 켜져 있으면 스테퍼(▲▼·방향키)가 기즈모와 같은 격자 위를 움직인다
+  // — 격자 밖 값(-2209.316)은 먼저 격자로 가고(-2209) 그 다음부터 한 칸씩.
+  // 직접 타이핑한 값은 스냅하지 않는다. 꺼져 있으면 기본 0.1 델타.
+  const snapEnabled = useSceneEditorViewStore((s) => s.snapEnabled);
+  const snapStep = useSceneEditorViewStore((s) => s.snapStep);
+  const stepFor = (field: SceneTransformField) =>
+    snapEnabled ? snapStepFor(field, snapStep) : undefined;
+  const stepValue = snapEnabled ? stepOnGrid : undefined;
+
   return (
     <div>
       <SectionHeader title={t('monitoring:inspector.transform')} />
@@ -215,6 +230,8 @@ function TransformSection({
         <TransformGroup title={t('monitoring:inspector.position')}>
           <PositionController
             vec={displayPosition}
+            step={stepFor('position')}
+            stepValue={stepValue}
             onChange={(axis, value) => {
               onTransformChange('position', axis, value);
             }}
@@ -223,6 +240,8 @@ function TransformSection({
         <TransformGroup title={t('monitoring:inspector.rotation')}>
           <RotationController
             vec={displayRotation}
+            step={stepFor('rotation')}
+            stepValue={stepValue}
             onChange={(axis, value) => {
               onTransformChange('rotation', axis, value);
             }}
@@ -243,6 +262,8 @@ function TransformSection({
         >
           <ScaleController
             vec={displayScale}
+            step={stepFor('scale')}
+            stepValue={stepValue}
             onChange={(axis, value) => {
               onTransformChange('scale', axis, value, { uniformScale });
             }}

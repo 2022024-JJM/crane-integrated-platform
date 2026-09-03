@@ -5,14 +5,22 @@ import { AxisVectorController } from './axis-vector-controller';
 export function PositionController({
   vec,
   onChange,
+  step,
+  stepValue,
 }: {
   vec: Vector3Tuple | undefined;
   onChange: (axis: 'x' | 'y' | 'z', v: number) => void;
+  /** 스테퍼 한 칸(스냅 단위). 없으면 기본 델타. */
+  step?: number;
+  /** 스테퍼 계산 전략 — 스냅 격자 이동. */
+  stepValue?: (value: number, step: number, direction: 1 | -1) => number;
 }) {
   return (
     <AxisVectorController
       vec={vec}
       onChange={onChange}
+      step={step}
+      stepValue={stepValue}
       format={formatPosition}
       unit=" m"
     />
