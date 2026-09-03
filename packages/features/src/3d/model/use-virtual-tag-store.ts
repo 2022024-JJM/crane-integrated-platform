@@ -56,6 +56,12 @@ interface VirtualTagState {
   /** 저장. 성공 true. 실패는 console.error 후 false — 메모리 상태는 유지. */
   save: () => Promise<boolean>;
   isDirty: () => boolean;
+  /**
+   * 미저장 편집을 마지막 저장(또는 로드) 스냅샷으로 되돌린다. 스토어가
+   * 전역이라 관리 페이지를 떠나도 편집본이 남는데, "저장하지 않고 나가기"
+   * 는 이 호출로 완성된다. 러너 정의도 함께 되돌린다. dirty 아니면 no-op.
+   */
+  discard: () => void;
   addTag: (draft: VirtualTagDraft) => VirtualTagAddResult;
   /** 키 변경은 유일성을 검사한다(중복이면 false, 나머지 필드는 적용 안 함). */
   updateTag: (
@@ -142,6 +148,14 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
   },
 
   isDirty: () => snapshotOf(get()) !== get().savedSnapshot,
+
+  discard: () => {
+    if (!get().isDirty()) return;
+    // 스냅샷은 이 스토어가 toSet 으로 직렬화한 것이라 그대로 믿는다.
+    const saved = JSON.parse(get().savedSnapshot) as VirtualTagSet;
+    set({ tags: saved.tags, tickMs: saved.tickMs });
+    virtualTagRuntime.syncDefinitions(saved.tags);
+  },
 
   addTag: (draft) => {
     const key = normalizeVirtualTagKey(draft.key);

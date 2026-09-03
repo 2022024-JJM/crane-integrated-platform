@@ -339,3 +339,87 @@ describe('재생(runner)', () => {
     expect(virtualTagRuntime.getValueByKey('saw')).toBeCloseTo(10, 6);
   });
 });
+
+describe('discard', () => {
+  it('추가·틱 변경을 마지막 저장 스냅샷으로 되돌리고 러너 정의도 지운다', async () => {
+    await store().load();
+    const result = store().addTag({ key: 'GC_04:gantry', initial: 7 });
+    expect(result.ok).toBe(true);
+    store().setTickMs(250);
+    expect(store().isDirty()).toBe(true);
+    expect(virtualTagRuntime.getValueByKey('GC_04:gantry')).toBe(7);
+
+    store().discard();
+
+    expect(store().tags).toEqual([]);
+    expect(store().tickMs).toBe(100);
+    expect(store().isDirty()).toBe(false);
+    expect(virtualTagRuntime.getValueByKey('GC_04:gantry')).toBeUndefined();
+  });
+
+  it('저장된 태그를 수정·삭제한 뒤 discard 하면 저장본과 러너 값이 돌아온다', async () => {
+    const loaded: VirtualTagSet = {
+      version: 1,
+      tickMs: 100,
+      tags: [
+        {
+          id: 'a',
+          key: 'GC_04:a',
+          name: 'A',
+          min: 0,
+          max: 10,
+          initial: 3,
+          pattern: { kind: 'manual' },
+          enabled: true,
+        },
+        {
+          id: 'b',
+          key: 'GC_04:b',
+          name: 'B',
+          min: 0,
+          max: 10,
+          initial: 5,
+          pattern: { kind: 'manual' },
+          enabled: true,
+        },
+      ],
+    };
+    storage.load.mockResolvedValue(loaded);
+    await store().load();
+    expect(store().updateTag('a', { initial: 9, key: 'GC_04:renamed' })).toBe(
+      true,
+    );
+    store().removeTag('b');
+    expect(store().tags).toHaveLength(1);
+
+    store().discard();
+
+    expect(store().tags).toEqual(loaded.tags);
+    expect(store().isDirty()).toBe(false);
+    expect(virtualTagRuntime.getValueByKey('GC_04:a')).toBe(3);
+    expect(virtualTagRuntime.getValueByKey('GC_04:b')).toBe(5);
+    expect(virtualTagRuntime.getValueByKey('GC_04:renamed')).toBeUndefined();
+  });
+
+  it('dirty 아니면 no-op — tags 참조를 유지한다', async () => {
+    await store().load();
+    const before = store().tags;
+    store().discard();
+    expect(store().tags).toBe(before);
+  });
+
+  it('save 실패 뒤 discard 하면 편집본이 아니라 마지막 성공 저장본으로 돌아간다', async () => {
+    await store().load();
+    store().addTag({ key: 'GC_04:x' });
+    storage.save.mockRejectedValueOnce(new Error('offline'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await store().save()).toBe(false);
+    spy.mockRestore();
+    expect(store().isDirty()).toBe(true);
+
+    store().discard();
+
+    expect(store().tags).toEqual([]);
+    expect(store().isDirty()).toBe(false);
+  });
+});
