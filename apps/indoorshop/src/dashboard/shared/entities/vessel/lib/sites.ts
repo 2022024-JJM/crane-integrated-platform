@@ -1,4 +1,5 @@
 import type { AssyPlacement, BlockSite, ProcessZone, RosterBlock } from '../model/types'
+import { drilldownHref, YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 
 /**
  * 블록이 지금 서 있는 **자리들** — 지도 마커의 근거.
@@ -21,8 +22,8 @@ import type { AssyPlacement, BlockSite, ProcessZone, RosterBlock } from '../mode
 /** 자리 하나의 공정 화면 경로 — 정반이 정해졌으면 정반 상세까지, 아니면 그 공장을 연 맵 */
 function pathOf(zone: ProcessZone, factory: string, berth?: AssyPlacement['berth']): string {
   if (berth) return `/zones/assembly/${berth.factoryId}/${berth.bayId}`
-  /* 새 링크는 드릴다운 계약의 새 철자 — 옛 `?shop=` 은 읽기 전용으로 남는다 */
-  return `/zones/${zone}?factory=${encodeURIComponent(factory)}`
+  /* 드릴다운 계약으로 적는다 — 값은 안정 슬러그(F-30), 옛 `?shop=`·이름 값은 읽기 전용 */
+  return drilldownHref(`/zones/${zone}`, '', { ...YARD_DRILLDOWN, factory })
 }
 
 function siteId(zone: ProcessZone, factory: string, mapBay?: string): string {

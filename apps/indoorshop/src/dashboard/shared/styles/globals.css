@@ -61,12 +61,14 @@
   --color-glass-border: var(--glass-border);
   --color-glass-foreground: var(--glass-foreground);
   --color-glass-healthy: var(--glass-healthy);
+  --color-glass-progress: var(--glass-progress);
   --color-glass-degraded: var(--glass-degraded);
   --color-glass-unhealthy: var(--glass-unhealthy);
   --color-glass-accent: var(--glass-accent);
   --color-glass-hover: var(--glass-hover);
   --color-glass-active: var(--glass-active);
   --color-status-healthy: var(--status-healthy);
+  --color-status-progress: var(--status-progress);
   --color-status-degraded: var(--status-degraded);
   --color-status-unhealthy: var(--status-unhealthy);
 }
@@ -124,6 +126,7 @@
   --glass-border: rgb(255 255 255 / 0.14);
   --glass-foreground: #eef2f7;
   --glass-healthy: #20c997;
+  --glass-progress: #7ab8ff;
   --glass-degraded: #f0c24a;
   --glass-unhealthy: #f87171;
   --glass-accent: #ffa347;
@@ -133,6 +136,12 @@
   --glass-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.55);
 
   --status-healthy: #047857;    /* 5.48:1 */
+  /*
+   * 진행중 — **빨강·주황이 아니다.** 돌고 있는 일에 경보색을 주면 화면이 상시 경보가
+   * 되고 진짜 이상이 묻힌다(감사 F-7). 조립 공정색(#2a78d6)과 이웃한 파랑이지만,
+   * 공정색은 지도·좌측 바에만 서고 상태색은 칩·점·바에만 서서 자리로 갈린다.
+   */
+  --status-progress: #1a5fb4;   /* 6.29:1 (흰 배경) / 5.48:1 (보조 바탕) */
   --status-degraded: #7a5b00;   /* 6.32:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
   --status-unhealthy: #bb3030;  /* red-100, 5.87:1 */
 }
@@ -152,6 +161,7 @@
   --material-border: rgb(255 255 255 / 0.09);
   --viewport: #1a2129;
   --status-healthy: #20c997;    /* green-50, 7.12:1 */
+  --status-progress: #7ab8ff;   /* 7.31:1 (surface 위) */
   --status-degraded: #f0c24a;   /* 9.04:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
   --status-unhealthy: #f87171;  /* 5.48:1 */
 }

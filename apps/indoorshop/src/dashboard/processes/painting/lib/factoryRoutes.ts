@@ -1,4 +1,5 @@
 import { PAINTING_FACTORIES } from '../../../shared/entities/vessel'
+import { drilldownHref, YARD_DRILLDOWN } from '../../../shared/lib/drilldownUrl'
 
 /*
  * 도장 공장 ↔ 라우트 id.
@@ -46,8 +47,8 @@ export function paintingFactoryNameOf(id: string): string | null {
 
 /** 맵 진입으로 돌아가되 그 공장을 연 채로 — 공장 현황 화면의 '뒤로' */
 export function paintingMapPath(factory: string): string {
-  /* 새 링크는 새 철자 — 옛 `?shop=` 은 읽기 전용으로 남는다(drilldownUrl 계약) */
-  return `/zones/painting?factory=${encodeURIComponent(factory)}`
+  /* 드릴다운 계약으로 적는다 — 값은 안정 슬러그(F-30, 이 파일 상단 경고의 해소) */
+  return drilldownHref('/zones/painting', '', { ...YARD_DRILLDOWN, factory })
 }
 
 /** 로스터가 아는 도장 공장 전체 — 라우트 표의 정합성 검사 기준 */

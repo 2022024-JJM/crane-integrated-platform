@@ -1,4 +1,5 @@
 import { BLOCKS, VESSELS } from '../model/roster'
+import { drilldownHref, YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 import type { BlockOption, ProcessZone, RosterBlock, Vessel } from '../model/types'
 
 /**
@@ -69,9 +70,20 @@ export function blocksAtAssemblyFactory(factoryId: string): RosterBlock[] {
   return BLOCKS.filter((b) => b.berth?.factoryId === factoryId)
 }
 
-/** 의장 공장 1곳의 블록 */
+/**
+ * 의장 공장 1곳의 **재공** 블록.
+ *
+ * ⚠️ 배정(`outfitting`)만 보지 않고 **지금 서 있는 공정**(`zone`)까지 본다 (W7-6F).
+ * '재공' 은 지금 그 공장에서 작업 중이라는 뜻이라, 도장으로 넘어간 블록이 의장 목록에
+ * 남아 있으면 그 블록은 두 공정에 동시에 서 있는 것이 된다 — 공정 순서(가공 → 조립 →
+ * 의장 → 도장)가 화면에서 깨지는 자리다.
+ *
+ * 지금은 두 조건이 늘 함께 참이다(로스터 계약: 배정이 있으면 zone 도 의장 —
+ * `__tests__/roster.test.ts`). 그래도 여기서 한 번 더 거르는 이유는, 나중에 배정을
+ * **거쳐 간 이력**으로 쓰기 시작하는 순간 이 목록이 조용히 틀려지기 때문이다.
+ */
 export function blocksAtOutfittingFactory(factoryId: string): RosterBlock[] {
-  return BLOCKS.filter((b) => b.outfitting?.factoryId === factoryId)
+  return BLOCKS.filter((b) => b.zone === 'outfitting' && b.outfitting?.factoryId === factoryId)
 }
 
 /** 정반 하나에 놓인 블록 — 대시보드 베이 카드 ↔ 통합실적 블록의 연결 키 */
@@ -96,5 +108,5 @@ export function blocksWithCadModel(): RosterBlock[] {
  */
 export function zonePathOfBlock(block: RosterBlock): string {
   if (block.berth) return `/zones/assembly/${block.berth.factoryId}/${block.berth.bayId}`
-  return `/zones/${block.zone}?factory=${encodeURIComponent(block.factory)}`
+  return drilldownHref(`/zones/${block.zone}`, '', { ...YARD_DRILLDOWN, factory: block.factory })
 }

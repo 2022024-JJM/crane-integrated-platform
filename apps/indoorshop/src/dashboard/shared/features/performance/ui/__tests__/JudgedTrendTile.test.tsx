@@ -51,7 +51,7 @@ describe('창이 하루일 때', () => {
 
   it('그래도 그날의 건수는 말한다 — 그림이 없다고 값까지 사라지지 않는다', () => {
     renderWithProviders(<JudgedTrendTile trend={[{ date: '2026-09-03', count: 5 }]} />)
-    expect(screen.getByText('일자별 인식')).toBeInTheDocument()
+    expect(screen.getByText('일자별 판별')).toBeInTheDocument()
     expect(screen.getByText('5건')).toBeInTheDocument()
   })
 })

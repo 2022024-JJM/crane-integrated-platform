@@ -3,6 +3,7 @@ import {
   generateAssyUnits,
   generatePaintingSteps,
 } from '../../performance/api/performanceApi'
+import { nowDate } from '../../../lib/now'
 
 /*
  * W/O 번호 → 블록 색인 — "이 작업지시가 어느 블록 것인가"를 거꾸로 찾는다.
@@ -28,7 +29,7 @@ export interface WoEntry {
 }
 
 /** 통합실적 화면과 같은 기준일 문법 (PerformancePage 의 것과 동일 — 로컬 자정 기준) */
-export function todayString(now: Date = new Date()): string {
+export function todayString(now: Date = nowDate()): string {
   const mm = String(now.getMonth() + 1).padStart(2, '0')
   const dd = String(now.getDate()).padStart(2, '0')
   return `${now.getFullYear()}-${mm}-${dd}`

@@ -1,6 +1,7 @@
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import type { ProcessNode } from '../model/types'
 
 /**
@@ -18,19 +19,20 @@ export function NodeStrip({ nodes, label }: { nodes: ProcessNode[]; label?: stri
     if (node.passed)
       return {
         labelKey: 'performance.nodes.passed',
-        className: 'border-status-healthy/50 bg-status-healthy/15 text-status-healthy',
+        className: `border-status-healthy/50 bg-status-healthy/15 ${STATUS_STYLE.done.ink}`,
         mark: '✓',
       }
     if (node.delayed)
       return {
         labelKey: 'performance.nodes.delayed',
-        className: 'border-status-unhealthy/60 bg-status-unhealthy/10 text-status-unhealthy',
+        className: `border-status-unhealthy/60 ${STATUS_STYLE.error.chip}`,
         mark: '!',
       }
     if (node.inProgress)
       return {
         labelKey: 'performance.nodes.inProgress',
-        className: 'border-accent/50 bg-accent/10 text-accent',
+        /* 진행중은 강조색이 아니라 상태 팔레트의 파랑 (감사 F-7) */
+        className: `border-status-progress/50 ${STATUS_STYLE.inProgress.chip}`,
         mark: '…',
       }
     return {

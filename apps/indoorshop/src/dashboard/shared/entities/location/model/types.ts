@@ -1,4 +1,5 @@
 import type { InshopKey } from '../../../lib/i18n/keys'
+import { STATUS_STYLE, type StatusMeaning } from '../../../ui/statusPalette'
 export type LocationStatus = 'occupied' | 'empty' | 'unknown'
 
 /**
@@ -26,22 +27,35 @@ export interface Location {
 }
 
 /**
- * 정반 상태의 단일 표현 — 라벨·점 색을 한 곳에서만 정한다.
- * 탭·공장 카드 등 여러 화면이 같은 상태를 다르게 부르지 않도록.
+ * 정반 상태의 단일 표현 — 라벨·색·모양을 한 곳에서만 정한다.
+ * 탭·공장 카드·야드 범례가 같은 상태를 다르게 부르거나 다르게 칠하지 않도록.
+ *
+ * 색은 여기서 고르지 않고 **의미**(`meaning`)만 고른다 — 실제 색은 상태 팔레트가 준다.
+ * 재실(블록이 올라와 작업이 도는 중)은 `inProgress` 다. 예전에는 초록이라 통합실적의
+ * 완료(초록)와 같은 색이었고, 그래서 "일이 도는 중"과 "다 됐다"가 화면을 건너면서
+ * 뒤집혔다(감사 F-6). 미확인은 센서가 봐야 하는데 못 본 것이라 주의(앰버)로 남기고,
+ * 공석은 뜻이 없는 상태라 중립이다 — 회색 둘(미확인·공석)이 겹치지 않도록.
  */
 export const LOCATION_STATUS_META: Record<
   LocationStatus,
-  { labelKey: InshopKey; dot: string; ink: string }
+  { labelKey: InshopKey; meaning: StatusMeaning; dot: string; ink: string }
 > = {
   occupied: {
     labelKey: 'location.status.occupied',
-    dot: 'bg-status-healthy',
-    ink: 'text-status-healthy',
+    meaning: 'inProgress',
+    dot: STATUS_STYLE.inProgress.fill,
+    ink: STATUS_STYLE.inProgress.ink,
   },
-  empty: { labelKey: 'location.status.empty', dot: 'bg-foreground/25', ink: 'text-foreground/54' },
+  empty: {
+    labelKey: 'location.status.empty',
+    meaning: 'idle',
+    dot: STATUS_STYLE.idle.fill,
+    ink: STATUS_STYLE.idle.ink,
+  },
   unknown: {
     labelKey: 'location.status.unknown',
-    dot: 'bg-status-degraded',
-    ink: 'text-status-degraded',
+    meaning: 'warning',
+    dot: STATUS_STYLE.warning.fill,
+    ink: STATUS_STYLE.warning.ink,
   },
 }

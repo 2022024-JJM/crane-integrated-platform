@@ -62,7 +62,9 @@ import { Segmented, type SegmentedOption } from '../../../../shared/ui/atoms/Seg
 import { useResizablePanel } from '../../../../shared/lib/useResizablePanel'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
 import { DraggableCard } from '../../../../shared/ui/atoms/DraggableCard'
+import { drilldownHref, YARD_DRILLDOWN } from '../../../../shared/lib/drilldownUrl'
 import { cn } from '../../../../shared/lib/utils'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /** 필터 칩에 낼 용도 수 — 나머지는 접는다 (칩이 줄바꿈되면 필터가 아니라 벽이다) */
 const VISIBLE_USE_TYPES = 6
@@ -131,7 +133,7 @@ const bayHref = (bay: YardShopBay) => `/zones/assembly/${bay.factoryId}/${bay.lo
  */
 const facilityHref = (facility: YardFacility) =>
   facility.process.zonePath
-    ? `${facility.process.zonePath}?factory=${encodeURIComponent(facility.name)}`
+    ? drilldownHref(facility.process.zonePath, '', { ...YARD_DRILLDOWN, factory: facility.name })
     : null
 
 /**
@@ -236,7 +238,9 @@ export function YardWorkspace() {
    * 늦게 와도 맵은 이미 서 있고 공장 레이어만 나중에 얹힌다 — 야드를 보는 일이
    * 조립 데이터를 기다릴 이유가 없다.
    */
-  const { data: overviews } = useAsyncData(() => fetchFactoryOverviews(), [])
+  /* 기준일 — `?date=` 를 따라온다. 지도 위 정반과 옆 목록이 같은 날을 말하게 */
+  const { baseDate } = useBaseDate()
+  const { data: overviews } = useAsyncData(() => fetchFactoryOverviews(baseDate), [baseDate])
   const shops = useMemo(
     () => (overviews ? buildYardShops(toMonitoredShops(overviews)) : []),
     [overviews],

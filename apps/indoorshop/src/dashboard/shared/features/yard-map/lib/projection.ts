@@ -241,12 +241,10 @@ export function fitView(
 }
 
 /**
- * 부드러운 카메라 글라이드의 이징 — 시작과 끝이 느리고 가운데가 빠르다.
- * 대시보드가 공정존으로 날아갈 때(0.7s)와 같은, 레퍼런스 뷰어의 `flyTo` 느낌을 낸다.
+ * 부드러운 카메라 글라이드의 이징 — 정본은 `shared/lib/cameraMotion`(리듬 단일 소스).
+ * 이 모듈의 기존 소비자를 위해 같은 이름으로 재수출만 한다.
  */
-export function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
-}
+export { easeInOutCubic } from '../../../lib/cameraMotion'
 
 /**
  * 두 뷰 사이를 보간한다 — 카메라를 순간이동시키지 않고 굴려서 옮길 때 쓴다.

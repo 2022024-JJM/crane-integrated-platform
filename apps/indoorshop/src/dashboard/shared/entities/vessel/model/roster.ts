@@ -99,7 +99,7 @@ const SCATTER_283: readonly AssyPlacement[] = [
 ]
 
 /**
- * 2543-642 — **조립 후반**. 대부분이 대조 정반(PBS 2BAY)에 합쳐졌고, 아직 안 붙은 소조
+ * 2543-642 — **조립 후반**. 대부분이 대조 정반(PBS 6BAY)에 합쳐졌고, 아직 안 붙은 소조
  * 둘만 소조 공장에 남아 있다. 흩어짐이 좁아진 상태라 "곧 검사장으로 나간다"가 자리로
  * 읽힌다.
  *
@@ -109,10 +109,10 @@ const SCATTER_283: readonly AssyPlacement[] = [
  * 도장 작업이 돌 수도 없다. 흩어짐은 조립 단계 안에서만 말한다(그건 실제로 그렇다).
  */
 const SCATTER_642: readonly AssyPlacement[] = [
-  asm('2543-642-G01', 'grand', 'PBS', '2', ['asm-pbs', 2]),
-  asm('2543-642-M02', 'mid', 'PBS', '2', ['asm-pbs', 2]),
-  asm('2543-642-G05', 'grand', 'PBS', '2', ['asm-pbs', 2]),
-  asm('2543-642-M06', 'mid', 'PBS', '2', ['asm-pbs', 2]),
+  asm('2543-642-G01', 'grand', 'PBS', '6', ['asm-pbs', 6]),
+  asm('2543-642-M02', 'mid', 'PBS', '6', ['asm-pbs', 6]),
+  asm('2543-642-G05', 'grand', 'PBS', '6', ['asm-pbs', 6]),
+  asm('2543-642-M06', 'mid', 'PBS', '6', ['asm-pbs', 6]),
   asm('2543-642-S03', 'sub', 'NPS', '1', ['asm-nps', 1]),
   asm('2543-642-S04', 'sub', 'NPS', '1', ['asm-nps', 1]),
   asm('2543-642-S07', 'sub', 'GBS', '3', ['asm-gbs', 3]),
@@ -127,13 +127,14 @@ const SCATTER_642: readonly AssyPlacement[] = [
  * 뷰어가 빈 정반을 '재실'로 보여 공장 뷰와 어긋난다.
  */
 export const BLOCKS: readonly RosterBlock[] = [
-  /* ── 2540 (CAD: 281 @ PBS 1BAY) ── */
-  { projNo: '2540', blockNo: '281', zone: 'assembly', factory: 'PBS', mapBay: '1', berth: berth('asm-pbs', 1, 'assembly', true) },
+  /* ── 2540 (CAD: 281 @ PBS 8BAY — 라이다 9대 권역. 1~3BAY 는 도면상 라이다가 없어
+     시연 헤드라인 블록을 앉히지 않는다) ── */
+  { projNo: '2540', blockNo: '281', zone: 'assembly', factory: 'PBS', mapBay: '8', berth: berth('asm-pbs', 8, 'assembly', true) },
   { projNo: '2540', blockNo: '283', zone: 'assembly', factory: 'PBS', mapBay: '3', assyUnits: SCATTER_283 },
   { projNo: '2540', blockNo: '286', zone: 'outfitting', factory: 'POS 1공장', mapBay: '1', outfitting: { factoryId: 'ofit-pos1', areaCode: 'P11B' } },
 
-  /* ── 2543 (CAD: 642 @ PBS 2BAY) ── */
-  { projNo: '2543', blockNo: '642', zone: 'assembly', factory: 'PBS', mapBay: '2', berth: berth('asm-pbs', 2, 'assembly', true), assyUnits: SCATTER_642 },
+  /* ── 2543 (CAD: 642 @ PBS 6BAY — 라이다 12대 권역, 같은 이유) ── */
+  { projNo: '2543', blockNo: '642', zone: 'assembly', factory: 'PBS', mapBay: '6', berth: berth('asm-pbs', 6, 'assembly', true), assyUnits: SCATTER_642 },
   { projNo: '2543', blockNo: '645', zone: 'assembly', factory: '3DS', mapBay: '2' },
   { projNo: '2543', blockNo: '648', zone: 'outfitting', factory: 'POS 1공장', mapBay: '4', outfitting: { factoryId: 'ofit-pos1', areaCode: 'P14B' } },
 

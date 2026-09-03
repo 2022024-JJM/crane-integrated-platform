@@ -37,13 +37,16 @@ import {
   type BayFilter,
 } from '../../lib/bayFilters'
 import { latestScan, isViewDelayed } from '../../../../shared/features/bay-viewer/lib/freshness'
-import { useClock } from '../../../../shared/lib/useClock'
+import { useAxisNow } from '../../../../shared/lib/useBaseDate'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useFullscreen } from '../../../../shared/lib/useFullscreen'
 import { useDelayedFlag } from '../../../../shared/lib/useDelayedFlag'
 import { cn } from '../../../../shared/lib/utils'
 import { Spinner, SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
+import { judgingAssysAt } from '../../lib/judgingAssys'
+import { JudgingAssyList } from '../JudgingAssyList'
+import { todayString } from '../../../../shared/features/performance/lib/baseDate'
 import {
   fetchFactories,
   fetchLocations,
@@ -277,6 +280,16 @@ export function AssemblyWorkspace() {
   }, [factoryId, locationId])
 
   // 정반 레벨: 선택된 정반의 센서 상태 + 인식 결과
+  /*
+   * 이 공장에서 지금 판별 중인 ASSY (W7-7-5) — 소재는 로스터, 실적은 통합실적에서 온다.
+   * 기준일은 마운트 때 한 번 굳힌다(매 렌더 새 날짜를 만들면 조회가 계속 다시 돈다).
+   */
+  const [judgingBaseDate] = useState(() => todayString())
+  const { data: judgingAssys, loading: judgingLoading } = useAsyncData(
+    () => judgingAssysAt(factoryId ?? '', judgingBaseDate),
+    [factoryId, judgingBaseDate]
+  )
+
   const { data: detail, loading: detailLoading } = useAsyncData(
     () =>
       locationId
@@ -298,7 +311,7 @@ export function AssemblyWorkspace() {
   const showFactorySpinner = useDelayedFlag(factorySceneLoading)
 
   // 경과 판정이 굳지 않도록 30초마다 다시 계산한다 (FR-9 데이터 지연)
-  const now = useClock(30000)
+  const now = useAxisNow(30000)
 
   /** 필터에 걸린 정반 (FR-9) — 뷰어는 이 집합을 받아 가라앉히기만 한다 */
   const dimmedBayIds = useMemo(() => {
@@ -763,6 +776,13 @@ export function AssemblyWorkspace() {
           /* ③ 공장 블록·실적 — 정반 상세 패널(작업 상태·필터)이 전면이다.
              일일 생산 링크는 머리글(공장 뷰 상시)이 이미 낸다 — 같은 문을 두 번 세우지 않는다 */
           <div className="flex min-w-0 flex-col gap-3 xl:min-h-0 xl:flex-1">
+            {/* 이 공장에서 지금 붙이고 있는 것 — 정반이 '무엇이 서 있나' 라면 이건 '무엇이
+                만들어지고 있나' 다. 완료분은 떠났으므로 여기 없는 것이 맞다(W7-7-5). */}
+            <JudgingAssyList
+              assys={judgingAssys ?? null}
+              loading={judgingLoading}
+              className="shrink-0"
+            />
             <div className="flex h-[72vh] min-h-[480px] flex-col xl:h-auto xl:min-h-0 xl:flex-1">
               <BayDetailPanel
                 bays={factoryScene.bays}

@@ -1,16 +1,22 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { fitDistanceForBox } from './fitCamera'
+import { dragActionOf, type DragAction } from '../../../lib/mapInteraction'
 
 /**
- * Blender 방식 뷰포트 조작.
+ * 뷰포트 조작 — **지도 화면과 같은 드래그 문법** (`shared/lib/mapInteraction` 단일 소스).
  *
  * 마우스:
+ *  - 왼쪽 드래그    이동(pan)          — 지도의 "끌어서 이동"과 같은 손
+ *  - 오른쪽 드래그  궤도 회전(orbit)   — 지도의 "오른쪽 버튼 드래그로 회전"과 같은 손
+ *  - Shift+드래그   궤도 회전          — 트랙패드·2버튼 마우스 대응(지도와 동일)
+ *  - Alt+왼쪽      궤도 회전           — Blender 3버튼 에뮬레이션 습관 보존
+ *  - 가운데 드래그  궤도 회전 (Shift+가운데 이동, Ctrl+가운데 줌 — Blender 잔존 문법)
  *  - 휠            줌
- *  - 가운데 드래그  궤도 회전(orbit)
- *  - Shift+가운데  평행 이동(pan)
- *  - Ctrl+가운데   줌
- *  - Alt+왼쪽      궤도 회전 (Blender 의 "3버튼 마우스 에뮬레이션" — 트랙패드 대응)
+ *
+ * 한때 왼쪽=회전·오른쪽=이동(Blender 기본)이었는데, 같은 야드를 보는 지도 화면과
+ * 좌우가 뒤집혀 화면을 넘어갈 때마다 손이 배신당했다(UX 감사 A4). 지도의 학습을
+ * 기준으로 통일한다 — 지도는 "끌어서 이동"이 1차 동작이라 왼쪽을 빼앗을 수 없다.
  *
  * 키보드(커서가 뷰포트 위에 있을 때 — Blender 도 커서가 놓인 영역에 적용한다):
  *  - 1 / 3 / 7     정면 / 우측 / 평면. Ctrl 조합이면 반대편
@@ -33,12 +39,19 @@ const DIRECTIONS: Record<ViewDirection, THREE.Vector3> = {
   bottom: new THREE.Vector3(0, -1, 0),
 }
 
-/** OrbitControls 의 마우스 버튼 배치를 Blender 에 맞춘다 */
+/** 동작 이름 → OrbitControls 상수 — 문법의 답은 mapInteraction 이 낸다 */
+const MOUSE_OF: Record<DragAction, THREE.MOUSE> = {
+  pan: THREE.MOUSE.PAN,
+  rotate: THREE.MOUSE.ROTATE,
+  zoom: THREE.MOUSE.DOLLY,
+}
+
+/** OrbitControls 의 마우스 버튼 배치를 전 화면 공통 문법에 맞춘다 */
 export function applyBlenderMouseBindings(controls: OrbitControls): void {
   controls.mouseButtons = {
-    LEFT: THREE.MOUSE.ROTATE,
-    MIDDLE: THREE.MOUSE.ROTATE,
-    RIGHT: THREE.MOUSE.PAN,
+    LEFT: MOUSE_OF[dragActionOf(0)],
+    MIDDLE: MOUSE_OF[dragActionOf(1)],
+    RIGHT: MOUSE_OF[dragActionOf(2)],
   }
 }
 
@@ -51,20 +64,10 @@ export function bindModifierAwareButtons(
   domElement: HTMLElement
 ): () => void {
   const handlePointerDown = (event: PointerEvent) => {
-    const middle = event.button === 1
-    const altLeft = event.button === 0 && event.altKey
-
-    if (middle) {
-      controls.mouseButtons.MIDDLE = event.shiftKey
-        ? THREE.MOUSE.PAN
-        : event.ctrlKey || event.metaKey
-          ? THREE.MOUSE.DOLLY
-          : THREE.MOUSE.ROTATE
-    } else if (event.button === 0) {
-      // Shift+왼쪽 = 이동 — 트랙패드·2버튼 마우스에서 오른쪽 드래그를 대신한다
-      controls.mouseButtons.LEFT =
-        event.shiftKey && !altLeft ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE
-    }
+    /* 이 조합이 무슨 동작인가 — 답은 전 화면 공통 문법 하나뿐이다 */
+    const action = MOUSE_OF[dragActionOf(event.button, event)]
+    if (event.button === 1) controls.mouseButtons.MIDDLE = action
+    else if (event.button === 0) controls.mouseButtons.LEFT = action
   }
 
   // 가운데 버튼 드래그가 브라우저의 오토스크롤로 새지 않게 막는다

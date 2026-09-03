@@ -15,13 +15,14 @@ import {
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { Spinner } from '../../../../shared/ui/atoms/Spinner'
+import { CheckIcon } from '../../../../shared/ui/icons'
 import { cn } from '../../../../shared/lib/utils'
 import type { FactoryOverview } from '../../../../shared/entities/factory/model/overview'
 import { fetchFactoryOverviews } from '../../api/assemblyApi'
 import { LidarSensorStatusList } from '../LidarSensorStatusList'
 import { EquipmentInventoryPanel } from '../EquipmentInventoryPanel'
 import { useFactoryEquipmentStatus } from '../../../../shared/entities/equipment/useEquipmentStatus'
-import { equipmentTypeOf } from '../../../../shared/entities/equipment'
+import { useEquipmentTypeLabel } from '../../../../shared/entities/equipment/ui/useEquipmentTypeLabel'
 import { EquipmentGlyph, symbolOfType } from '../../../../shared/entities/equipment/ui/EquipmentSymbol'
 import {
   ASSEMBLY_EQUIPMENT_TYPES,
@@ -39,6 +40,7 @@ import {
   toLidarSensor,
   type AssemblyEquipmentMarker,
 } from '../../lib/mapEntry'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /*
  * 조립 공정 엔트리 — '맵 진입' 화면 (process-map-entry 프레임의 소비자).
@@ -103,6 +105,8 @@ function markerLook(state: AssemblyEquipmentMarker['state'], color: string) {
 
 export function AssemblyMapEntryPage() {
   const { t } = useTranslation()
+  /* 설비 종류의 화면 이름 — 레지스트리(도면 이름) 대신 라벨 층을 지난다 */
+  const typeLabelOf = useEquipmentTypeLabel()
   const { parcels, basemapLayers, yardExtent } = useMapEntryData()
 
   const factoryNames = useMemo(() => assemblyMapFactoryNames(), [])
@@ -128,7 +132,11 @@ export function AssemblyMapEntryPage() {
   const { snapshot: selectedStatus } = useFactoryEquipmentStatus(selectedMarker?.factory ?? '')
 
   /* 수집 현황(②)·베이 블록 요약의 원천 — 기존 목록 화면과 같은 집계 mock 을 그대로 쓴다 */
-  const { data: overviews } = useAsyncData<FactoryOverview[]>(() => fetchFactoryOverviews(), [])
+  const { baseDate } = useBaseDate()
+  const { data: overviews } = useAsyncData<FactoryOverview[]>(
+    () => fetchFactoryOverviews(baseDate),
+    [baseDate]
+  )
   const overviewOf = useMemo(() => {
     const byId = new Map((overviews ?? []).map((o) => [o.factory.id, o]))
     return (mapKey: string): FactoryOverview | null => {
@@ -233,7 +241,7 @@ export function AssemblyMapEntryPage() {
         ) : (
           <p className="flex items-center gap-1.5 text-inshop-xs text-white/70">
             <span className="font-medium">
-              {equipmentTypeOf(selectedMarker.typeId)?.name ?? selectedMarker.typeId}
+              {typeLabelOf(selectedMarker.typeId)}
             </span>
             <span aria-hidden="true" className="text-white/30">·</span>
             <span className={cn(selectedMarker.state === 'online' ? 'text-status-healthy' : 'text-status-unhealthy')}>
@@ -301,17 +309,26 @@ export function AssemblyMapEntryPage() {
               title={
                 typeId === 'TILT' ? t('assembly.mapEntry.tiltToggleHint') : undefined
               }
+              /*
+               * 켜짐/꺼짐이 **가는 테두리 하나로만** 갈렸다 — 3m 밖에서는 어느 층이
+               * 켜져 있는지 알 수 없었다(감사 A3). 켜진 칩은 체크 + 진한 채움,
+               * 꺼진 칩은 글리프까지 함께 감쇄해 두 상태를 형태로도 가른다.
+               */
               className={cn(
                 'flex items-center gap-1 rounded border px-1.5 py-0.5 text-2xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
-                on ? 'text-white' : 'text-white/40 hover:text-white/70'
+                on ? 'font-medium text-white' : 'text-white/40 opacity-60 hover:opacity-100 hover:text-white/70'
               )}
               style={{
                 borderColor: on ? color : 'rgba(255,255,255,0.12)',
-                background: on ? `${color}26` : 'transparent',
+                background: on ? `${color}59` : 'transparent',
               }}
             >
-              <EquipmentGlyph symbol={symbolOfType(typeId)} size={10} />
-              {equipmentTypeOf(typeId)?.name ?? typeId}
+              {on ? (
+                <CheckIcon size={9} className="shrink-0" />
+              ) : (
+                <EquipmentGlyph symbol={symbolOfType(typeId)} size={10} />
+              )}
+              {typeLabelOf(typeId)}
             </button>
           )
         })}
@@ -483,7 +500,7 @@ export function AssemblyMapEntryPage() {
                       >
                         <EquipmentGlyph symbol={symbolOfType(typeId)} size={9} />
                       </span>
-                      {equipmentTypeOf(typeId)?.name ?? typeId}
+                      {typeLabelOf(typeId)}
                     </span>
                   )
                 })}

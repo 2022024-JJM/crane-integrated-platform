@@ -7,6 +7,7 @@ import {
   type PaintingSummary,
 } from '../../../shared/features/performance/model/types'
 import { paintingFactoryIdOf } from './factoryRoutes'
+import { nowDate } from '../../../shared/lib/now'
 
 /*
  * 도장 '수집 현황' 집계 — **화면이 소비할 모양으로 접기만** 한다.
@@ -150,7 +151,7 @@ export function paintingCollectionOf(
  *
  * `toISOString()` 을 쓰지 않는다(UTC 로 밀려 한국 시간 오전에는 어제가 나온다).
  */
-export function todayString(now: Date = new Date()): string {
+export function todayString(now: Date = nowDate()): string {
   const mm = String(now.getMonth() + 1).padStart(2, '0')
   const dd = String(now.getDate()).padStart(2, '0')
   return `${now.getFullYear()}-${mm}-${dd}`

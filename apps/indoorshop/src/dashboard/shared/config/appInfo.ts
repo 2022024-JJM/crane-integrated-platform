@@ -1,3 +1,4 @@
+import { nowDate } from '../lib/now'
 /**
  * 애플리케이션 메타 정보 — 단일 출처.
  * 계정 메뉴·설정 화면·푸터가 같은 값을 보게 해서 버전이 어긋나지 않게 한다.
@@ -19,6 +20,6 @@ export const APP_VERSION_LABEL = `v${APP_INFO.version}`
  * 첫 해와 올해가 같으면 한 해만 쓴다 — "2025–2025" 는 사람이 쓰지 않는 표기다.
  */
 export function copyrightYears(): string {
-  const current = new Date().getFullYear()
+  const current = nowDate().getFullYear()
   return current > APP_INFO.since ? `${APP_INFO.since}–${current}` : String(APP_INFO.since)
 }

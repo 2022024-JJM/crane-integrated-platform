@@ -3,6 +3,7 @@ import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import { CollectionSummaryBody } from '../../../shared/features/process-map-entry'
 import { cn } from '../../../shared/lib/utils'
+import { STATUS_STYLE } from '../../../shared/ui/statusPalette'
 import type { PaintingStepId } from '../../../shared/features/performance/model/types'
 import {
   paintingCollectionRows,
@@ -37,10 +38,11 @@ const PHASE_KEY = {
   shippedOut: 'performance.pnt.phase.shippedOut',
 } as const
 
+/* 유리(어두운 오버레이) 위라 상태색도 유리 램프를 쓴다 — 라이트 토큰은 여기서 묻힌다 */
 const PHASE_INK = {
   beforeIn: 'text-white/45',
-  inShop: 'text-accent',
-  shippedOut: 'text-status-healthy',
+  inShop: STATUS_STYLE.inProgress.glassInk,
+  shippedOut: STATUS_STYLE.done.glassInk,
 } as const
 
 /** 패널 안의 '더 볼 곳' 문 — 요약 본문이 라우터를 모르게 렌더 함수로 넘긴다(조립과 동일) */
@@ -85,7 +87,9 @@ function BlockRow({ block }: { block: PaintingBlockCollection }) {
           <>
             <div className="flex gap-1">
               <dt>{t('painting.mapEntry.collection.activeStep')}</dt>
-              <dd className="font-mono text-accent">{t(STEP_NAME_KEY[activeStep.step])}</dd>
+              <dd className={cn('font-mono', STATUS_STYLE.inProgress.glassInk)}>
+                {t(STEP_NAME_KEY[activeStep.step])}
+              </dd>
             </div>
             <div className="flex gap-1">
               <dt>{t('performance.pnt.rows')}</dt>

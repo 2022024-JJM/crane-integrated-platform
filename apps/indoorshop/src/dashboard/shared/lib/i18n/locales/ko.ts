@@ -33,6 +33,14 @@ export const ko = {
     breadcrumbNav: '현재 위치',
     breadcrumbYard: '야드',
   },
+  /* 설비 그리드(shared/features/equipment-grid) — 세 공정이 함께 쓰는 셀 문법 */
+  equipmentGrid: {
+    empty: '표시할 설비가 없습니다.',
+    noIssues: '이상 없는 설비뿐입니다.',
+    onlyIssues: '이상만 {{count}}',
+    densityRoomy: '넓게',
+    densityCompact: '촘촘히',
+  },
   /*
    * 상태 UX 3종(shared/ui/states) — 로딩·빈 상태·실패의 공통 낱말.
    *
@@ -70,6 +78,26 @@ export const ko = {
     },
   },
   /* 도면 뷰어(shared/features/drawing-viewer) — 공정 무관 문구 */
+  /*
+   * 설비 종류의 **화면 이름** (W7-6D) — 레지스트리(도면 이름)와 화면 라벨을 잇는 자리.
+   *
+   * 도면은 `Network Panel`, 현장은 '판넬' 이라 부른다. 데이터는 도면 이름을 지키고
+   * (도면 대조의 근거이자 생성물), 화면은 여기 이름만 쓴다. 두 이름이 필요하다는 사실을
+   * 없애는 대신 **어느 쪽을 어디서 쓰는지**를 한 자리에 적어 둔다.
+   * 매핑은 `shared/entities/equipment/ui/typeLabel.ts`.
+   */
+  equipment: {
+    type: {
+      PNL: '판넬',
+      EDGE: 'Edge PC',
+      HUB: '스위치 허브',
+      PLC: 'PLC 제어반',
+      CONV: 'RS485 컨버터',
+      VCAM: '비전 카메라',
+      RFID: 'RFID 리더',
+    },
+  },
+
   drawing: {
     open: '도면 보기',
     openHint: '{{factory}} 설비 배치 도면을 엽니다',
@@ -192,9 +220,13 @@ export const ko = {
     languageGroupLabel: '언어 선택',
     resetToDefault: '기본으로',
     preview: '미리보기',
-    previewTitle: '조립 공정 · A공장 3정반',
-    previewLine: '라이다 4대 정상 · 인식된 블록 12건 · 마지막 수집 2분 전',
-    previewCode: 'WORK_CNTR A-03 · PROJ 2451 · BLK S12P',
+    /* 미리보기 표본도 실재하는 이름을 쓴다 — 유령 공장('A공장')·유령 호선이 화면에
+       남아 있으면 데모에서 진짜 이름 체계를 흐린다 (감사 F-19 잔재 정리).
+       PBS 7번 정반(PB7B)의 7004-310 은 로스터·공장 fixture 에 실재하는 조합이다 */
+    previewTitle: '조립 공정 · PBS 7번 정반',
+    previewLine: '라이다 4대 정상 · 판별된 블록 12건 · 마지막 수집 2분 전',
+    previewCode: 'WORK_CNTR PB7B · PROJ 7004 · BLK 310',
+
     infoTitle: '정보',
     infoApp: '애플리케이션',
     infoVersion: '버전',
@@ -243,11 +275,11 @@ export const ko = {
         message: '{{id}} 하트비트가 {{minutes}}분째 없습니다',
       },
       panelDown: {
-        title: '캐비닛 정지',
+        title: '판넬 정지',
         message: '{{id}} 전원·업링크 정지 — 소속 설비 {{count}}대가 함께 눈이 멉니다',
       },
       panelUplink: {
-        title: '캐비닛 업링크 오류',
+        title: '판넬 업링크 오류',
         message: '{{id}} 스위치 허브 링크가 불안정합니다',
       },
       linkError: {
@@ -277,7 +309,7 @@ export const ko = {
       currentLocation: '현 위치',
       returnToCurrentLocation: '기본 지도 위치로 돌아가기',
       loading: '지도 불러오는 중…',
-      hint: '공장을 누르면 상세가 열립니다 · 빈 곳을 누르면 닫힙니다',
+      hint: '공장을 누르면 상세가 열립니다 · 빈 곳을 누르면 한 단계 뒤로 갑니다',
       hint3d: '공장을 누르면 베이 · 베이를 누르면 지번 상세 · Shift 또는 오른쪽 버튼 드래그로 회전',
       viewModeLegend: '보기 방식',
       view2d: '2D',
@@ -288,7 +320,14 @@ export const ko = {
       processing: '처리 {{n}}건',
       zonesTitle: '공정존',
       openZone: '{{name}} 공정 화면 열기',
-      openZoneShort: '공정 화면',
+      /* 공장 이름패의 꼬리 캡션 — 지금 무엇을 확대해 보고 있는가 */
+      focusedFactory: '지금 보고 있는 공장',
+      /* 공장 상세의 베이 목록(R14) — 행은 베이 상세의 축약판이다 */
+      factoryBayList: '베이',
+      factoryBayOpenHint: '{{bay}} 상세를 엽니다',
+      /* 목적지(공정존)를 글자에 싣는다 — 블록 문맥의 `common.viewOnProcessMap`('공정 화면')과
+         글자가 같으면서 목적지가 달라지는 사고를 막는다 (UX 감사 F-18) */
+      openZoneShort: '{{name}} 화면',
       viewOnMap: '지도에서 이 공정 보기',
       factoryOnMap: '지도에서 이 공장 보기',
       process: '공정',
@@ -326,8 +365,8 @@ export const ko = {
       perfBadge: {
         refChip: '참고',
         title: '판별 기반 실적 (통합실적과 동일 원천)',
-        judgedCount: '판별 {{done}}/{{total}} 인식',
-        note: '조립 판별 인식 ÷ 계획 분모 기준 참고 수치 — 공식 실적 지표가 아닙니다. 누르면 통합실적으로 이동합니다.',
+        judgedCount: '판별 {{done}}/{{total}}',
+        note: '조립 판별 ÷ 계획 분모 기준 참고 수치 — 공식 실적 지표가 아닙니다. 누르면 통합실적으로 이동합니다.',
         openHint: '통합실적 화면 열기',
         blockHint: '{{block}} 을(를) 고른 채로 통합실적을 엽니다',
       },
@@ -350,8 +389,10 @@ export const ko = {
       blockSectionYard: '야드 위치(BTS)',
       blockAssyPerfHint: '{{list}} 실적 보기 (ASSY 포커스)',
       blockSitePinHint: '{{block}} 의 통합실적을 엽니다',
-      blockSearchPlaceholder: '블록 검색 (호선-블록)',
+      blockSearchPlaceholder: '호선-블록 검색 · 예 7004-222',
       blockSearchLabel: '블록 검색',
+      /* 입력 앞 특화 칩 — 전역 Cmd+K 팔레트(모든 것)와 이 검색(블록 전용)의 분업 표시 */
+      blockSearchChip: '블록',
       blockSearchEmpty: '일치하는 블록이 없습니다',
       blockSearchNoLot: '위치 지번 정보 없음',
       blockSearchUpdatedAt: '위치 갱신 {{time}}',
@@ -435,7 +476,9 @@ export const ko = {
     subtitle: '레포에 들어 있는 설계·규약 문서 {{count}}건을 화면 안에서 바로 읽습니다',
     search: '문서 검색',
     searchPlaceholder: '문서 제목·내용 요약으로 찾기',
-    noMatch: '"{{query}}" 와(과) 맞는 문서가 없습니다',
+    noMatch: '‘{{query}}’ 에 맞는 문서가 없습니다',
+    /* 검색어 없이 목록 자체가 비었을 때 — 빈 검색어를 문구에 싣지 않는다 (감사 F-28) */
+    empty: '등록된 문서가 없습니다',
     countBadge: '{{count}}건',
     list: '문서 목록',
     toc: '목차',
@@ -514,7 +557,7 @@ export const ko = {
     },
     header: {
       judged: '조립 판별',
-      judgedBasis: '인식/계획',
+      judgedBasis: '판별/계획',
       assy: '어셈블리',
       assyCount: '{{count}}개',
       lastReceived: '최근 수신',
@@ -529,7 +572,7 @@ export const ko = {
       woProgress: 'W/O {{done}}/{{total}} (참고)',
       judgedProgress: '판별 {{done}}/{{total}}',
       unmatched: '매칭 불일치 {{count}}',
-      unmatchedTitle: '인식 O / 레거시 X — 완료 처리 금지, 노티 대상',
+      unmatchedTitle: '판별 O / 레거시 X — 완료 처리 금지, 노티 대상',
       pntProgress: '스텝 {{done}}/{{total}}',
       inspectionMoved: '검사장 이동',
       inspectionPending: '검사장 미이동',
@@ -551,27 +594,27 @@ export const ko = {
       assembly: '조립 · 준비중',
       assemblyActive: '조립',
       paintingActive: '도장',
-      outfitting: '의장 · 절점 없음',
+      /* 의장도 카드가 선다 — '절점 없음' 은 각주가 아니라 카드가 스스로 말한다(W7-11) */
+      outfitting: '의장',
       paintingNote: '스텝 S/P·T/UP·FINAL ↔ 도장 순번 매핑 확정 대기',
       assemblyNote: 'WO↔어셈블리 매핑 규칙 확정 대기',
-      outfittingNote: '의장은 수집 절점이 없습니다 — 설치 인식 단건 수집만 존재',
     },
     asm: {
       title: '조립 — 블록·ASSY 실적',
       woBasis: '기준은 판별(자동수집) — W/O 는 매칭된 참고입니다',
-      trendTitle: '일자별 인식',
+      trendTitle: '일자별 판별',
       trendAria: '일자별 판별 건수 추이',
       trendUnit: '건',
       trendTotal: '{{count}}건',
       gridStage: '조립',
       judgedRate: '판별 실적',
-      judgedRateNote: '판별 인식 ÷ 계획 분모(REQ_QTY, 참고) — 계획이 아니라 우리 수집이 기준입니다',
+      judgedRateNote: '판별 ÷ 계획 분모(REQ_QTY, 참고) — 계획이 아니라 우리 수집이 기준입니다',
       assyJudged: 'ASSY 판별 완료',
       assyDone: '완료 확정',
       assyDoneNote: '판별 완료 중 매칭이 막지 않은 것 — 불일치는 완료 처리 금지(ASM-F10)',
-      counting: '판별 인식 (분모 계획 REQ_QTY · 참고)',
-      countingPending: '인식 실값은 OT 자동수집 가동 후 — 지금은 결정론 목업',
-      judgeStatus: { complete: '판별 완료', partial: '부분 인식', none: '미인식' },
+      counting: '판별 (분모 계획 REQ_QTY · 참고)',
+      countingPending: '판별 실값은 OT 자동수집 가동 후 — 지금은 결정론 목업',
+      judgeStatus: { complete: '판별 완료', partial: '부분 판별', none: '미판별' },
       blocked: '완료 보류',
       blockedNote: '판별은 끝났으나 매칭 불일치로 완료 처리가 금지된 상태입니다',
       matchLegend: '매칭 (참고)',
@@ -579,7 +622,7 @@ export const ko = {
       matchStateNote: {
         matched: '하루치 확정 W/O 풀에서 매칭 (YPWG411M)',
         fallback: '하루치에 없어 4주치 계획 풀로 확대해 매칭 (YPWS210V · 송선 변환)',
-        unmatched: '인식 O / 레거시 X — 완료 처리 금지, 누락 노티 대상 (ASM-F10)',
+        unmatched: '판별 O / 레거시 X — 완료 처리 금지, 누락 노티 대상 (ASM-F10)',
       },
       matchFlag: { early: '선행', late: '지연' },
       matchFlagNote: '폴백 매칭 실적의 선행/지연 표식 (ASM-F09)',
@@ -591,7 +634,7 @@ export const ko = {
       treeExpand: '대조 그룹 펼치기',
       treeCollapse: '대조 그룹 접기',
       hierarchyNote: '대조>중조>소조는 절점이 아니라 ASSY 계층(부모추적) — 나열도 그 순서다',
-      selfRateNote: 'ASSY 단독 실적률 = 판별 인식 ÷ 계획(REQ_QTY)',
+      selfRateNote: 'ASSY 단독 실적률 = 판별 ÷ 계획(REQ_QTY)',
       rollupRate: '자기+하위 {{count}}건',
       assyFocus: '지목한 ASSY',
       woKind: { fit: '취부', weld: '용접', grind: '사상' },
@@ -637,14 +680,42 @@ export const ko = {
         shippedOut: '반출 완료',
       },
     },
+    /*
+     * 의장 레일(W7-11) — 절점이 없는 공정의 카드.
+     * 종합은 **블록 단순 평균**이다: 의장 블록에는 가중치로 쓸 물량(중량·면적)이 데이터에
+     * 없고, 없는 가중치를 지어내면 그게 정의서가 금지한 임의 합성 산식이 된다.
+     */
+    ofit: {
+      title: '의장 — 블록 판별',
+      basisNote: '라이다 기반 블록 진척 · 절점 없음 (설치 판별 단건 수집)',
+      overall: '종합 판별',
+      blocks: '진행 중 / 재공',
+      listTitle: '재공 블록',
+      basis: '블록 단위 판별 % (계층 없음)',
+      empty: '이 조회 조건에 의장 재공 블록이 없습니다.',
+      noNodeNote: '의장은 통과 절점이 없습니다 — 단계 분해 없이 블록 진척만 셉니다.',
+      meanNote: '종합은 블록 {{count}}개의 단순 평균입니다 (가중할 물량 데이터 없음).',
+      status: { waiting: '대기', inProgress: '작업중', completed: '완료' },
+      justArrived: '막 반입',
+      headerLabel: '의장',
+      headerNone: '의장 재공 아님',
+    },
     stages: {
       title: '가공권역 단계별 실적률',
       snapshot: '기준일 스냅샷',
-      s1: 'S1 강재반입',
-      s2: 'S2 불출',
+      /*
+       * 절점 이름은 **실제 가공 흐름**의 낱말을 쓴다 (W7-6D, 사용자 확정).
+       * 흐름: 강재 입고 → 1·2차 선별 → 강재 불출 → 전처리 → 절단 → 사상 → 팔레트 편성 → 최종 불출.
+       * 그중 **수집 절점은 다섯**이다 — 선별·전처리·최종 불출은 원천에 완료 근거가 없어
+       * 절점이 서지 않는다(`nodeNote` 가 그 사실을 화면에 적는다).
+       * ⚠️ S2 는 '강재 불출' 이다. 정의서는 `전처리(불출)` 로 적었지만 판별 근거 필드가
+       *    `강재불출.불출일자` 이고, 실제 흐름에서도 불출이 전처리보다 앞선다.
+       */
+      s1: 'S1 강재 반입',
+      s2: 'S2 강재 불출',
       s3: 'S3 절단',
       s4: 'S4 사상',
-      s5: 'S5 팔레트편성',
+      s5: 'S5 팔레트 편성',
       counts: '건수 {{done}}/{{target}}',
       weightRate: '중량%',
       primary: '주지표',
@@ -655,6 +726,7 @@ export const ko = {
       sources: '원천',
       overall: '종합(중량가중)',
       overallNote: '5단계 중량 실적률 평균',
+      nodeNote: '가공 흐름 9단계 중 원천에 완료 근거가 있는 5절점만 셉니다 — 선별·전처리·최종 불출은 절점이 아닙니다',
       s1Pending: '원천 확정 대기',
       basisOf: {
         S1: '③ 부재종합.강재반입일',
@@ -686,7 +758,7 @@ export const ko = {
       viewShop: '맵에서 보기',
       viewBayTitle: '{{shop}} 맵에서 보기 (공장 포커스)',
       kind: {
-        asmJudged: 'ASSY 판별(인식)',
+        asmJudged: 'ASSY 판별',
         woStart: 'W/O 착수',
         woDone: 'W/O 완료',
         btsIn: 'BTS 반입',
@@ -723,7 +795,7 @@ export const ko = {
     missingCallout: '미확인 {{count}}개 · {{percent}}%',
     bayLabel: '정반 {{code}}',
     resizeHandle: '드래그해서 폭 조절 · 더블클릭하면 기본 폭',
-    loadingDetection: '인식 데이터 불러오는 중',
+    loadingDetection: '판별 데이터 불러오는 중',
     loadingFusion: '센서퓨전 데이터 불러오는 중',
     loadingRealScan: '실측 점군 불러오는 중',
     pointSize: '점 크기',
@@ -745,7 +817,7 @@ export const ko = {
       height: '높이',
       heightDescription: '형상·적치 상태 판독',
       object: '객체',
-      objectDescription: '인식 결과 검수',
+      objectDescription: '판별 결과 검수',
       match: 'CAD 정합',
       matchDescription: 'CAD 표면에 붙은 실측점만 색으로, 나머지는 흰색·회색',
       progress: '진척',
@@ -773,7 +845,7 @@ export const ko = {
     dataDelay: '데이터 지연 — 마지막 수신 {{time}}',
     dataNone: '데이터 미수신 — 수신 이력이 없습니다',
     firstRun: {
-      hint: '왼쪽 드래그 회전 · 클릭 후 휠 줌 · 정반 라벨 클릭으로 선택',
+      hint: 'Shift 또는 오른쪽 버튼 드래그로 회전 · 왼쪽 드래그로 이동 · 클릭 후 휠 줌 · 정반 라벨 클릭으로 선택',
       more: '자세한 조작은 오른쪽 아래 [조작 ?]',
       dismiss: '조작 힌트 닫기',
     },
@@ -794,7 +866,7 @@ export const ko = {
       height: '높이',
       lowToHigh: '낮음 → 높음',
       object: '객체',
-      floor: '정반 바닥',
+      floor: '베이 바닥',
       jig: '핀지그',
       registeredBlock: '정합 블록',
       unregisteredCluster: '미정합 클러스터',

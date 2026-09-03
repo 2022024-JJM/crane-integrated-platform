@@ -5,16 +5,17 @@ import type { InshopKey } from '../../../../shared/lib/i18n/keys'
 import { PerformanceLink } from '../../../../shared/entities/vessel'
 import { EquipmentSymbolChip } from '../../../../shared/entities/equipment/ui/EquipmentSymbol'
 import { cn } from '../../../../shared/lib/utils'
+import { STATUS_STYLE } from '../../../../shared/ui/statusPalette'
 import type { PaintingStepId } from '../../../../shared/features/performance/model/types'
 import {
   paintingCollectionOf,
   paintingStepRollup,
-  todayString,
   type PaintingBlockCollection,
 } from '../../lib/collection'
 import { useFactoryEquipmentStatus } from '../../../../shared/entities/equipment/useEquipmentStatus'
 import { paintingInventoryOf } from '../../lib/equipmentInventory'
 import { paintingFactoryNameOf, paintingMapPath } from '../../lib/factoryRoutes'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /*
  * 선행도장 **공장 현황** — 맵 진입의 공장 카드에서 들어오는 화면.
@@ -47,10 +48,14 @@ const PHASE_KEY = {
   shippedOut: 'performance.pnt.phase.shippedOut',
 } as const
 
+/*
+ * 국면 잉크 — 색은 상태 팔레트가 준다(감사 P4).
+ * '도장중'이 강조색이라 3m 밖에서 오류로 읽혔다. 도는 것은 파랑, 다 나간 것은 초록.
+ */
 const PHASE_INK = {
-  beforeIn: 'text-foreground/45',
-  inShop: 'text-accent',
-  shippedOut: 'text-status-healthy',
+  beforeIn: STATUS_STYLE.idle.ink,
+  inShop: STATUS_STYLE.inProgress.ink,
+  shippedOut: STATUS_STYLE.done.ink,
 } as const
 
 function NotFoundNotice() {
@@ -91,7 +96,7 @@ function BlockRow({ block }: { block: PaintingBlockCollection }) {
           <span
             className={cn(
               'block h-full rounded-full',
-              activeStep ? 'bg-accent' : 'bg-status-healthy'
+              activeStep ? STATUS_STYLE.inProgress.fill : STATUS_STYLE.done.fill
             )}
             style={{
               width: `${
@@ -122,7 +127,8 @@ export function PaintingFactoryStatusPage() {
   /* 이관 설비 상태는 공용 설비 계약에서 구독한다 — 공장을 못 찾은 경우에도 훅은 부른다
      (조건부 훅 금지). 빈 문자열이면 빈 스냅샷이 온다. */
   const { snapshot } = useFactoryEquipmentStatus(factory ?? '')
-  const baseDate = useMemo(() => todayString(), [])
+  /* 기준일 — `?date=` 를 따라온다 */
+  const { baseDate } = useBaseDate()
 
   const collection = useMemo(
     () => (factory ? paintingCollectionOf(factory, baseDate) : null),
@@ -175,12 +181,16 @@ export function PaintingFactoryStatusPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {rollup.map((row) => (
             <div key={row.step} className="rounded-inshop-md bg-surface-secondary/40 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-inshop-xs font-semibold text-foreground">
+              {/* 이 카드가 답하는 것은 '몇 개 통과했나' 하나다 — 그 수를 스텝 이름보다
+                  크게 세운다(3m 판독). 분모는 같은 줄에 작게 붙여 분자와 가르고,
+                  스텝 이름은 그 위에 라벨 크기로 물러선다. 자리는 그대로다. */}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-foreground/55">
                   {t(STEP_NAME_KEY[row.step])}
                 </span>
-                <span className="font-mono text-inshop-xs tabular-nums text-foreground/68">
-                  {row.done}/{row.blocks}
+                <span className="font-mono text-inshop-2xl font-semibold tabular-nums text-foreground">
+                  {row.done}
+                  <span className="text-inshop-sm font-normal text-foreground/45">/{row.blocks}</span>
                 </span>
               </div>
               {row.blocks === 0 ? (

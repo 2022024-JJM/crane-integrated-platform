@@ -13,7 +13,9 @@ import {
   type MarkerRenderCtx,
 } from '../../../shared/features/process-map-entry'
 import { equipmentTypeOf } from '../../../shared/entities/equipment'
+import { useEquipmentTypeLabel } from '../../../shared/entities/equipment/ui/useEquipmentTypeLabel'
 import { EquipmentGlyph, symbolOfType } from '../../../shared/entities/equipment/ui/EquipmentSymbol'
+import { CheckIcon } from '../../../shared/ui/icons'
 import { cn } from '../../../shared/lib/utils'
 import { useFactoryEquipmentStatus } from '../../../shared/entities/equipment/useEquipmentStatus'
 import type { OutfittingBlock, OutfittingFactoryOverview } from '../model/block'
@@ -78,6 +80,8 @@ interface ViewerTarget {
   factory: string
   bayNo: string
   bayLabel: string
+  /** 이 베이의 로스터 블록 — 뷰어의 인식 대상 신원 */
+  blocks: OutfittingBlock[]
 }
 
 /**
@@ -239,6 +243,21 @@ function FactoryEquipmentBody({
         <PanelSection
           title={t(OUTFITTING_DEVICE_META.LIDAR.labelKey)}
           count={counts.LIDAR}
+          summary={
+            <span className="flex items-center gap-2 text-white/45">
+              <span>{t('outfitting.equipment.tilt.paired', { count: counts.TILT })}</span>
+              {tiltModes.tilting > 0 && (
+                <span className="text-sky-300">
+                  {t('outfitting.equipment.tilt.modeValue.tilting')} {tiltModes.tilting}
+                </span>
+              )}
+              {tiltModes.error > 0 && (
+                <span className="text-status-unhealthy">
+                  {t('outfitting.equipment.tilt.modeValue.error')} {tiltModes.error}
+                </span>
+              )}
+            </span>
+          }
         >
           <div className="flex flex-col gap-2">
             {orderedBays.map(([bay, list]) => (
@@ -256,47 +275,8 @@ function FactoryEquipmentBody({
         </PanelSection>
       )}
 
-      {counts.TILT > 0 && (
-        <PanelSection
-          title={t(OUTFITTING_DEVICE_META.TILT.labelKey)}
-          count={counts.TILT}
-          collapsible
-          defaultOpen={false}
-          summary={
-            <span className="flex items-center gap-2">
-              {tiltModes.tilting > 0 && (
-                <span className="text-sky-300">
-                  {t('outfitting.equipment.tilt.modeValue.tilting')} {tiltModes.tilting}
-                </span>
-              )}
-              {tiltModes.error > 0 && (
-                <span className="text-status-unhealthy">
-                  {t('outfitting.equipment.tilt.modeValue.error')} {tiltModes.error}
-                </span>
-              )}
-              {tiltModes.tilting === 0 && tiltModes.error === 0 && (
-                <span className="text-white/40">{t('outfitting.equipment.tilt.allIdle')}</span>
-              )}
-            </span>
-          }
-          collapsedBody={
-            <p className="px-1 pb-0.5 text-2xs leading-relaxed text-white/45">
-              {t('outfitting.equipment.tilt.note', {
-                count: counts.TILT,
-                lidar: counts.LIDAR,
-              })}
-            </p>
-          }
-        >
-          <div className="max-h-72 overflow-y-auto">
-            <OutfittingDeviceStatusList
-              devices={ofKind('TILT')}
-              title={t(OUTFITTING_DEVICE_META.TILT.labelKey)}
-            />
-          </div>
-        </PanelSection>
-      )}
-
+      {/* 틸팅은 라이다 셀 안에서 페어로 선다(674칸 금지 · 레퍼런스 §3.4) —
+          별도 구획을 두지 않는다. 대수와 모드 요약은 라이다 구획 머리가 말한다 */}
       {counts.EDGE > 0 && (
         <PanelSection title={t(OUTFITTING_DEVICE_META.EDGE.labelKey)} count={counts.EDGE}>
           <OutfittingDeviceStatusList
@@ -362,6 +342,8 @@ export function OutfittingMapEntry({
   className,
 }: OutfittingMapEntryProps) {
   const { t } = useTranslation()
+  /* 설비 종류의 화면 이름 — 레지스트리(도면 이름) 대신 라벨 층을 지난다 */
+  const typeLabelOf = useEquipmentTypeLabel()
 
   /* 베이 3D 뷰 — 공장이 바뀌면 닫는다(도장의 설비 상세와 같은 규칙) */
   const [viewerTarget, setViewerTarget] = useState<ViewerTarget | null>(null)
@@ -475,16 +457,21 @@ export function OutfittingMapEntry({
               )
             }
             title={kind === 'TILT' ? t('outfitting.mapEntry.tiltToggleHint') : undefined}
+            /* 켜짐은 체크+진한 채움, 꺼짐은 감쇄 — 조립 레이어 칩과 같은 규칙(감사 A3) */
             className={cn(
               'flex items-center gap-1 rounded border px-1.5 py-0.5 text-2xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
-              on ? 'text-white' : 'text-white/40 hover:text-white/70'
+              on ? 'font-medium text-white' : 'text-white/40 opacity-60 hover:text-white/70 hover:opacity-100'
             )}
             style={{
               borderColor: on ? color : 'rgba(255,255,255,0.12)',
-              background: on ? `${color}26` : 'transparent',
+              background: on ? `${color}59` : 'transparent',
             }}
           >
-            <EquipmentGlyph symbol={symbolOfType(kind)} size={10} />
+            {on ? (
+              <CheckIcon size={9} className="shrink-0" />
+            ) : (
+              <EquipmentGlyph symbol={symbolOfType(kind)} size={10} />
+            )}
             {t(OUTFITTING_DEVICE_META[kind].labelKey)}
           </button>
           )
@@ -525,7 +512,7 @@ export function OutfittingMapEntry({
           {/* 목록 컴포넌트를 한 대짜리로 재사용 — 지도와 목록이 같은 말을 하도록 */}
           <OutfittingDeviceStatusList
             devices={[selectedDevice]}
-            title={equipmentTypeOf(selectedMarker.typeId)?.name ?? selectedMarker.typeId}
+            title={typeLabelOf(selectedMarker.typeId)}
           />
           {selectedMarker.panelId && (
             <p className="mt-1.5 flex items-center gap-1.5 text-2xs text-white/45">
@@ -634,7 +621,7 @@ export function OutfittingMapEntry({
         /* 베이 번호 — 복합키 `{공장}#{베이}` 의 뒷조각. 3D 장면·실형상 빌더의 연결 키다 */
         const bayNo = bay.id.split('#').pop() ?? bay.label
         const openViewer = () =>
-          setViewerTarget({ factory: bay.factory, bayNo, bayLabel: bay.label })
+          setViewerTarget({ factory: bay.factory, bayNo, bayLabel: bay.label, blocks: bayBlocks })
         const bayDevices = devicesOfBay(bay.factory, bayNo)
         const lastScan = bayBlocks.map((block) => block.lastScanAt).sort().at(-1)
         return (
@@ -744,6 +731,7 @@ export function OutfittingMapEntry({
           factory={viewerTarget.factory}
           bayNo={viewerTarget.bayNo}
           bayLabel={viewerTarget.bayLabel}
+          bayBlocks={viewerTarget.blocks}
           onClose={() => setViewerTarget(null)}
           className="absolute inset-0 z-30"
         />

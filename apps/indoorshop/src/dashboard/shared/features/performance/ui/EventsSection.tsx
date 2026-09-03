@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
 import { fetchEventDetail } from '../api/performanceApi'
@@ -23,10 +24,15 @@ const STATUS_KEY: Record<StageStatus, InshopKey> = {
   excluded: 'performance.status.excluded',
 }
 
+/*
+   * 상태 칩 색 — 팔레트가 정한다(감사 F-7).
+   * 예전에는 `진행중` 이 강조색(주황)이라 바로 옆 `확인 필요`(빨강)와 한 덩어리로
+   * 읽혔다. 정상적으로 돌고 있는 수십 건이 오류처럼 눈에 들어와 상시 오경보였다.
+   */
 const STATUS_CLASS: Record<StageStatus, string> = {
-  done: 'bg-status-healthy/10 text-status-healthy',
-  inProgress: 'bg-accent/10 text-accent',
-  notDue: 'bg-surface-secondary text-foreground/55',
+  done: STATUS_STYLE.done.chip,
+  inProgress: STATUS_STYLE.inProgress.chip,
+  notDue: STATUS_STYLE.idle.chip,
   excluded: 'bg-surface-secondary text-foreground/45',
 }
 

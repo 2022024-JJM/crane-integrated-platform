@@ -8,6 +8,7 @@ import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { fetchAllBlocks, fetchFactoryOverviews } from '../../api/outfittingApi'
 import { OUTFITTING_FACTORIES } from '../../api/outfittingFactoryFixture'
 import { OutfittingMapEntry } from '../OutfittingMapEntry'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /*
  * 선행의장 공정 화면 — 맵 중심 레이아웃 (도장과 같은 3단 진입: 맵 → 공장 → 베이).
@@ -33,6 +34,8 @@ export function OutfittingMapEntryPage() {
   // 지번/공장(lazy)·베이스맵 배경(야드 provides) — 배경이 없어도 지번은 그린다
   const { parcels, basemapLayers, yardExtent } = useMapEntryData()
 
+  /* 기준일 — `?date=` 를 따라온다. 통합실적에서 되감고 넘어오면 진척·집계가 그날 것이다 */
+  const { baseDate } = useBaseDate()
   /* 집계가 실패했을 때 **같은 요청만** 다시 건다 — 화면 새로고침이 아니라(states 계약) */
   const [overviewRetry, setOverviewRetry] = useState(0)
   // 목록 화면과 같은 집계(카드 요약·본문) + 전 공장 블록(베이 카드의 블록 목록)
@@ -40,8 +43,8 @@ export function OutfittingMapEntryPage() {
     data: overviews,
     loading: overviewsLoading,
     error: overviewsError,
-  } = useAsyncData(() => fetchFactoryOverviews(), [overviewRetry])
-  const { data: blocks } = useAsyncData(() => fetchAllBlocks(), [])
+  } = useAsyncData(() => fetchFactoryOverviews(baseDate), [overviewRetry, baseDate])
+  const { data: blocks } = useAsyncData(() => fetchAllBlocks(baseDate), [baseDate])
 
   const overviewByName = useMemo(
     () => new Map((overviews ?? []).map((overview) => [overview.factory.name, overview])),

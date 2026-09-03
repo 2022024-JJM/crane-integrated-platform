@@ -5,6 +5,7 @@ import { renderWithProviders } from '../../../lib/testing/renderWithProviders'
 import type { BasemapLayer, MapTheme } from '../../yard-map'
 import type { YardParcelLot, YardParcels } from '../../../entities/yard-parcels'
 import { ProcessMapEntry } from '../ui/ProcessMapEntry'
+import { useShopDeepLink } from '../lib/useMapEntryData'
 import type { MapEntryLabels } from '../model/types'
 
 /*
@@ -17,8 +18,26 @@ import type { MapEntryLabels } from '../model/types'
  */
 vi.mock('../../yard-map', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../yard-map')>()),
-  YardMap: ({ className }: { className?: string }) => (
-    <div data-testid="yard-map" className={className} />
+  /* 지도 갈음 — 프레임이 지번 층에 배선한 클릭(공장/배경/베이)을 버튼으로 노출해,
+     "배경 오클릭 = 한 단계 후퇴" 같은 조작 계약을 캔버스 없이 검증한다 */
+  YardMap: ({
+    className,
+    parcels,
+  }: {
+    className?: string
+    parcels?: {
+      onSelectFactory?: (name: string | null) => void
+      onSelectLot?: (id: string) => void
+    }
+  }) => (
+    <div data-testid="yard-map" className={className}>
+      <button type="button" onClick={() => parcels?.onSelectFactory?.(null)}>
+        지도 배경
+      </button>
+      <button type="button" onClick={() => parcels?.onSelectLot?.('조립1공장#A')}>
+        지도 베이 A
+      </button>
+    </div>
   ),
 }))
 
@@ -79,24 +98,32 @@ const labels: MapEntryLabels = {
   breadcrumbProcess: '조립',
 }
 
+const FACTORY_NAMES = ['조립1공장', '조립2공장'] as const
+
+/** 실제 소비자(조립·의장·도장 페이지)와 같은 배선 — 공장 선택·전체 보기가 URL 을 따른다 */
+function Harness(over: Partial<Parameters<typeof ProcessMapEntry>[0]>) {
+  const { selectedFactory, setSelectedFactory, initialOverview } = useShopDeepLink(FACTORY_NAMES)
+  return (
+    <div style={{ width: 1280, height: 720 }}>
+      <ProcessMapEntry
+        parcels={parcels()}
+        factoryNames={FACTORY_NAMES}
+        basemapLayers={BASEMAP}
+        selectedFactory={selectedFactory}
+        onSelectFactory={setSelectedFactory}
+        initialOverview={initialOverview}
+        labels={labels}
+        {...over}
+      />
+    </div>
+  )
+}
+
 function renderEntry(
   over: Partial<Parameters<typeof ProcessMapEntry>[0]> = {},
   route = '/zones/assembly?factory=%EC%A1%B0%EB%A6%BD1%EA%B3%B5%EC%9E%A5',
 ) {
-  return renderWithProviders(
-    <div style={{ width: 1280, height: 720 }}>
-      <ProcessMapEntry
-        parcels={parcels()}
-        factoryNames={['조립1공장', '조립2공장']}
-        basemapLayers={BASEMAP}
-        selectedFactory="조립1공장"
-        onSelectFactory={() => {}}
-        labels={labels}
-        {...over}
-      />
-    </div>,
-    { route },
-  )
+  return renderWithProviders(<Harness {...over} />, { route })
 }
 
 /** 우측 공장 목록 패널 — 제목으로 찾는다 */
@@ -193,5 +220,68 @@ describe('ProcessMapEntry 브레드크럼 — URL 의 표현', () => {
       '/zones/assembly?factory=%EC%A1%B0%EB%A6%BD1%EA%B3%B5%EC%9E%A5',
     )
     expect(within(nav).getByText('A베이')).toHaveAttribute('aria-current', 'page')
+  })
+})
+
+
+describe('배경 오클릭 = 한 단계만 뒤로 (UX 감사 O1)', () => {
+  const BAY_URL =
+    '/zones/assembly?factory=%EC%A1%B0%EB%A6%BD1%EA%B3%B5%EC%9E%A5&bay=%EC%A1%B0%EB%A6%BD1%EA%B3%B5%EC%9E%A5%23A'
+
+  /** 지금 주소 — MemoryRouter 안이라 window.location 대신 브레드크럼의 링크 유무로 읽는다 */
+  function bayCardVisible() {
+    return screen.queryByRole('heading', { name: 'A베이' }) != null
+  }
+
+  it('베이까지 내려간 상태에서 배경 클릭 — 베이만 걷고 공장은 남는다', async () => {
+    renderEntry({}, BAY_URL)
+    expect(bayCardVisible()).toBe(true)
+
+    await userEvent.setup().click(screen.getByRole('button', { name: '지도 배경' }))
+    /* 베이 카드는 닫혔지만 공장 단계는 그대로 — 전체 리셋이 아니다 */
+    expect(bayCardVisible()).toBe(false)
+    const nav = screen.getByRole('navigation', { name: '현재 위치' })
+    expect(within(nav).getByText('조립1공장')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('배경을 한 번 더 클릭 — 그제야 공장이 걷히고 전체 보기(공정 단계)로', async () => {
+    renderEntry({}, BAY_URL)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '지도 배경' }))
+    await user.click(screen.getByRole('button', { name: '지도 배경' }))
+    const nav = screen.getByRole('navigation', { name: '현재 위치' })
+    expect(within(nav).getByText('조립')).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).queryByText('조립1공장')).toBeNull()
+  })
+
+  it('베이 카드에서 지번을 짚어 두었다면 배경 클릭은 그 짚기부터 걷는다 — 베이는 남는다', async () => {
+    renderEntry({}, BAY_URL)
+    const user = userEvent.setup()
+    /* 베이 카드의 지번 줄을 눌러 짚는다 (BayDetailCard onSelectLot → spottedLot) */
+    await user.click(screen.getByText('설명 AL1'))
+
+    await user.click(screen.getByRole('button', { name: '지도 배경' }))
+    /* 첫 클릭은 지번 짚기만 걷는다 — 베이 카드가 아직 서 있다 */
+    expect(bayCardVisible()).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: '지도 배경' }))
+    expect(bayCardVisible()).toBe(false)
+  })
+
+  it('지도 베이 클릭 = 선택, 같은 베이 재클릭 = 해제 (기존 문법 유지)', async () => {
+    renderEntry()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '지도 베이 A' }))
+    expect(bayCardVisible()).toBe(true)
+    await user.click(screen.getByRole('button', { name: '지도 베이 A' }))
+    expect(bayCardVisible()).toBe(false)
+  })
+
+  it('ESC 도 같은 계단을 쓴다 — 베이에서 ESC 한 번이면 공장, 전체 리셋이 아니다', async () => {
+    renderEntry({}, BAY_URL)
+    await userEvent.setup().keyboard('{Escape}')
+    expect(bayCardVisible()).toBe(false)
+    const nav = screen.getByRole('navigation', { name: '현재 위치' })
+    expect(within(nav).getByText('조립1공장')).toHaveAttribute('aria-current', 'page')
   })
 })

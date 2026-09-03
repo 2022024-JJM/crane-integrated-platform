@@ -49,12 +49,19 @@ export function useDrilldown(): DrilldownApi {
 
   const set = useCallback(
     (next: DrilldownState) => {
-      const href = drilldownHref(pathname, searchParams, next)
-      /* 같은 자리로의 이동은 히스토리에 쌓지 않는다 — 뒤로가기가 제자리걸음이 된다 */
-      if (href === `${pathname}${searchParams.toString() ? `?${searchParams}` : ''}`) return
-      void navigate(href)
+      /* 같은 자리로의 이동은 히스토리에 쌓지 않는다 — 뒤로가기가 제자리걸음이 된다.
+         비교는 문자열이 아니라 **상태**다: 낡은 링크(한글 이름 값)로 들어온 화면에서
+         같은 자리를 다시 고른 것이 "슬러그로 갈아 적기" push 가 되면 안 된다 */
+      if (
+        next.process === state.process &&
+        next.factory === state.factory &&
+        next.bay === state.bay
+      ) {
+        return
+      }
+      void navigate(drilldownHref(pathname, searchParams, next))
     },
-    [navigate, pathname, searchParams],
+    [navigate, pathname, searchParams, state],
   )
 
   const go = useCallback(

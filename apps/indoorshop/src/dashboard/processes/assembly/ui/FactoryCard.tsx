@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
+import { useCollectionDay } from '../lib/useCollectionDay'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import { LOCATION_STATUS_META } from '../../../shared/entities/location/model/types'
 import type { FactoryBaySummary, FactoryOverview } from '../../../shared/entities/factory/model/overview'
@@ -105,6 +106,8 @@ function OccupancyBar({ overview }: { overview: FactoryOverview }) {
 /** 정반 한 줄 — 여기서 바로 그 정반의 3D 화면으로 들어간다 */
 function BayRow({ factoryId, bay }: { factoryId: string; bay: FactoryBaySummary }) {
   const { t } = useTranslation()
+  /* 수치가 어느 날 것인가 — 기준일과 다르면 라벨이 날짜를 박는다 (W7-7-5) */
+  const collectionDay = useCollectionDay()
   const meta = LOCATION_STATUS_META[bay.status]
   const sensorFault = bay.sensorTotal - bay.sensorOnline
 
@@ -154,7 +157,11 @@ function BayRow({ factoryId, bay }: { factoryId: string; bay: FactoryBaySummary 
 
         <span
           className="w-10 shrink-0 text-right text-2xs tabular-nums text-foreground/63"
-          title={t('assembly.factoryCard.todayCountTitle')}
+          title={
+            collectionDay.followsBaseDate
+              ? t('assembly.factoryCard.todayCountTitle')
+              : t('assembly.factoryCard.doneCountTitleOn', { date: collectionDay.dataDate })
+          }
         >
           {bay.todayCount > 0
             ? t('assembly.factoryCard.todayCountValue', { count: bay.todayCount })

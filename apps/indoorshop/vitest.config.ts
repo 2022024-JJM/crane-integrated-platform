@@ -27,6 +27,13 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/**/*.test.tsx'],
           setupFiles: ['./src/dashboard/shared/lib/testing/setupDom.ts'],
+          /*
+           * (이식) 직렬로 돌린다. 모노레포에서는 워커가 원본 단독 레포보다 무거워,
+           * 병렬이면 CPU 경합으로 waitFor 류가 간헐적으로 시간 초과된다 — 같은
+           * 스위트가 직렬에서는 전량 통과함을 확인했다. dom 은 200여 건이라
+           * 직렬 비용이 작다. (upstream 도 병렬에서 같은 부류의 flake 가 있다.)
+           */
+          fileParallelism: false,
         },
       },
     ],

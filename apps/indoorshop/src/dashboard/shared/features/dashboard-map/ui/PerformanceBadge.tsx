@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { performanceLinkFor } from '../../../entities/vessel'
 import { cn } from '../../../lib/utils'
+import { nowDate } from '../../../lib/now'
 
 /*
  * 실적률 참고 배지 — 총괄('/') 드릴다운의 공장 상세·베이 카드에 붙는 절점 기반 실적.
@@ -42,7 +43,7 @@ interface FactoryPerf {
 
 /** 통합실적 화면과 같은 기준일 규칙 — 같은 날 같은 숫자가 나오게 한다 */
 function todayString(): string {
-  const d = new Date()
+  const d = nowDate()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`

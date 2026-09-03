@@ -21,7 +21,7 @@ import {
   type BayFilter,
 } from '../lib/bayFilters'
 import { latestScan, type LatestScan } from '../../../shared/features/bay-viewer/lib/freshness'
-import { useClock } from '../../../shared/lib/useClock'
+import { useAxisNow } from '../../../shared/lib/useBaseDate'
 import { cn } from '../../../shared/lib/utils'
 
 /*
@@ -121,7 +121,7 @@ export function BayDetailPanel({
 }: BayDetailPanelProps) {
   const { t } = useTranslation()
   // 경과 표기가 굳지 않도록 30초마다 다시 계산한다
-  const now = useClock(30000)
+  const now = useAxisNow(30000)
   /** 펼침 영역 (FR-8 §4) — 기본은 접혀 있고, 정반을 바꿔도 펼침 상태는 유지한다 */
   const [devicesOpen, setDevicesOpen] = useState(false)
 

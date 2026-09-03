@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { nowDate } from './now'
 
 /**
  * 일정 주기로 갱신되는 현재 시각을 돌려준다.
@@ -7,10 +8,10 @@ import { useEffect, useState } from 'react'
  * 오해를 부른다. 이 훅은 실제로 흘러가는 시계를 제공한다.
  */
 export function useClock(intervalMs = 1000): Date {
-  const [now, setNow] = useState(() => new Date())
+  const [now, setNow] = useState(() => nowDate())
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), intervalMs)
+    const timer = window.setInterval(() => setNow(nowDate()), intervalMs)
     return () => window.clearInterval(timer)
   }, [intervalMs])
 

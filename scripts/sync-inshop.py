@@ -109,6 +109,10 @@ def copy_source() -> None:
     for name in APP_FILES:
         shutil.copy2(WD / "src/app" / name, DASH / "app" / name)
 
+    # 최상위 교차 계약 테스트 (src/__tests__) — 레이어가 아니라 트리 전체를 보는 검증
+    if (WD / "src/__tests__").is_dir():
+        shutil.copytree(WD / "src/__tests__", DASH / "__tests__")
+
     for d in DROP_DIRS:
         shutil.rmtree(DASH / d)
     for f in DROP_FILES:
@@ -204,6 +208,13 @@ def rewrite_i18n() -> None:
     write(p, s)
 
     # 테스트 헬퍼는 I18nextProvider·initReactI18next 를 직접 써야 한다 — 예외
+    # 테스트·헬퍼가 직접 부르는 addResourceBundle 도 'inshop' 네임스페이스로 —
+    # 컴포넌트는 useTranslation('inshop') 을 보므로 'translation' 에 얹으면 키가 그대로 노출된다.
+    for f in ts_files(DST):
+        s = read(f)
+        if "addResourceBundle(" in s and "'translation'" in s and not f.as_posix().endswith("app/bootstrap.ts"):
+            write(f, re.sub(r"(addResourceBundle\('(?:ko|en)', )'translation'", r"\1'inshop'", s))
+
     bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith(("i18n/useTranslation.ts", "testing/renderWithProviders.tsx"))]
     assert not bad, f"react-i18next 직접 import 잔존: {bad}"
     # 주석에 든 단어까지 잡으면 안 된다 — import 구문의 ParseKeys 만 검사한다
@@ -418,9 +429,10 @@ def patch_test_helper() -> None:
     s = read(p)
     m = re.search(r"import i18n from '(\S*i18n/config)'", s)
     assert m, "renderWithProviders 의 i18n import 를 찾지 못함"
-    s = s.replace(m.group(0), f"import i18n, {{ INSHOP_NS }} from '{m.group(1)}'\n"
-                              "// 공정 번역 조각까지 큐에 올린다 — 아래 init 의 'initialized' 에서 한꺼번에 얹힌다\n"
-                              "import '../../../app/bootstrap'", 1)
+    # bootstrap 을 여기서 import 하면 안 된다 — 레지스트리가 채워진 채로 모든 테스트가
+    # 돌게 되는데, upstream 테스트는 "모듈 없음"이 기본이고 필요한 파일만 스스로 얹는다
+    # (PerformancePage 테스트가 실모듈 레일을 타서 깨진 사고의 원인).
+    s = s.replace(m.group(0), f"import i18n, {{ INSHOP_NS }} from '{m.group(1)}'", 1)
     s = s.replace("export function renderWithProviders(", """/*
  * (이식) 원본 config 은 스스로 init 했지만, 이식본은 셸의 initI18n 에 얹혀 산다 —
  * vitest 에는 그게 없으므로 여기서 초기화한다. config·bootstrap 이 큐에 쌓아 둔
@@ -440,6 +452,28 @@ if (!i18n.isInitialized) {
 
 export function renderWithProviders(""", 1)
     write(p, s)
+
+
+def patch_test_paths() -> None:
+    step("파일 실물을 읽는 테스트 2건: 이식 후 경로·선택자 보정")
+    # statusPalette — cwd 기준 CSS 경로와, 스코프 변환된 블록 선택자
+    p = DASH / "shared/ui/__tests__/statusPalette.test.ts"
+    replace_once(p, "readFileSync('src/shared/styles/globals.css', 'utf8')",
+                 "readFileSync('src/dashboard/shared/styles/globals.css', 'utf8')")
+    replace_once(p, "CSS.indexOf(block === 'root' ? ':root {' : '.dark {')",
+                 "CSS.indexOf(block === 'root' ? '.inshop-root {' : '.dark .inshop-root,')")
+    # bayScenePointCloud — public 에셋이 셸로 옮겨졌다
+    p = DASH / "processes/outfitting/api/__tests__/bayScenePointCloud.test.ts"
+    replace_once(p, "resolve(__dirname, '../../../../../public/models')",
+                 "resolve(__dirname, '../../../../../../../shell/public/models')")
+    # noDirectClock — 스캔 뿌리와 예외 경로가 이식 위치(src/dashboard)를 따른다
+    p = DASH / "__tests__/noDirectClock.test.ts"
+    replace_once(p, "const SRC = 'src'", "const SRC = 'src/dashboard'")
+    replace_once(p, "['src/shared/lib/now.ts',", "['src/dashboard/shared/lib/now.ts',")
+    # sensorNameContract — 실측 에셋이 셸 public 에 있다
+    p = DASH / "__tests__/sensorNameContract.test.ts"
+    replace_once(p, "new URL(`../../public/real-scan/${path}`, import.meta.url)",
+                 "new URL(`../../../../shell/public/real-scan/${path}`, import.meta.url)")
 
 
 def patch_fixed_viewport() -> None:
@@ -518,6 +552,7 @@ def main() -> None:
     patch_asset_paths()
     patch_settings()
     patch_test_helper()
+    patch_test_paths()
     patch_docs_registry()
     patch_globals_css()
     patch_fixed_viewport()

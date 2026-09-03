@@ -66,10 +66,8 @@ describe('도장 공장 ↔ 라우트 id', () => {
     }
   })
 
-  it('맵으로 돌아가는 길은 드릴다운 URL 계약(`?factory=`)이다 — 옛 `?shop=` 은 읽기 전용', () => {
-    expect(paintingMapPath('1DOCK 도장공장')).toBe(
-      `/zones/painting?factory=${encodeURIComponent('1DOCK 도장공장')}`
-    )
+  it('맵으로 돌아가는 길은 드릴다운 URL 계약 — 값은 안정 슬러그(F-30)다', () => {
+    expect(paintingMapPath('1DOCK 도장공장')).toBe('/zones/painting?factory=pnt-1dock')
   })
 
   it('한글 공장명을 경로에 싣지 않는다 — 이름이 바뀌어도 주소가 살아 있어야 한다', () => {

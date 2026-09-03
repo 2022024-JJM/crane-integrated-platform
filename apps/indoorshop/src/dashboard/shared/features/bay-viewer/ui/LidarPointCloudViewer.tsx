@@ -1893,6 +1893,8 @@ export function LidarPointCloudViewer({
          * 선택한 사람은 커서를 뷰포트에 올려 두지 않았을 수 있다.
          */
         if (!pointerInside && !focusApi.isFocused() && !selectedBayIdRef.current) return
+        /* 이 ESC 는 뷰어가 소비한다(선택/포커스 해제) — 같은 키의 다른 청취자를 멈춘다 */
+        event.preventDefault()
         if (mode === 'factory' && selectedBayIdRef.current) {
           onBaySelectRef.current?.(null)
         } else {

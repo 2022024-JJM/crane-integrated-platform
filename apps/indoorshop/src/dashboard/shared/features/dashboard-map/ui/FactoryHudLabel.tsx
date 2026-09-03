@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useState } from 'react'
+import { forwardRef, useImperativeHandle, useState, type ReactNode } from 'react'
 import {
   RELIEF_METERS,
   worldToScreen,
@@ -66,10 +66,16 @@ interface FactoryHudLabelProps {
    * 오지 않았다 — 부모가 마지막으로 받아 둔 값을 넘겨 첫 프레임부터 제자리에 서게 한다.
    */
   initialCamera: FactoryHudCamera | null
+  /**
+   * 패 바로 밑에 붙는 행동(R11 — '공정 화면으로' 나가는 문). 층 전체는 지도 조작을
+   * 통과시키므로(pointer-events-none), 이 슬롯만 클릭을 받는다. 없으면 층은 순수
+   * 장식이라 스크린리더에서도 걷는다(aria-hidden).
+   */
+  action?: ReactNode
 }
 
 export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabelProps>(
-  function FactoryHudLabel({ name, anchor, outline, color, caption, initialCamera }, ref) {
+  function FactoryHudLabel({ name, anchor, outline, color, caption, initialCamera, action }, ref) {
     const [camera, setCamera] = useState<FactoryHudCamera | null>(initialCamera)
     useImperativeHandle(
       ref,
@@ -98,7 +104,8 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
 
     return (
       <div
-        aria-hidden="true"
+        aria-hidden={action ? undefined : 'true'}
+        data-hud-anchor={`${Math.round(center.sx)},${Math.round(baseY)}`}
         className="pointer-events-none absolute inset-0 overflow-hidden"
         /* 눕힌 자세(rotateX)가 원근으로 보이려면 조상에 perspective 가 있어야 한다 */
         style={{ perspective: '900px' }}
@@ -164,6 +171,10 @@ export const FactoryHudLabel = forwardRef<FactoryHudLabelHandle, FactoryHudLabel
                     </span>
                   )}
                 </div>
+
+                {/* 나가는 문 — 패와 함께 떠다니되, 클릭은 이 조각만 받는다(R11).
+                    크기는 화면 고정(줌 비례 없음) — 패와 같은 규칙이다 */}
+                {action && <div className="pointer-events-auto mt-2">{action}</div>}
               </div>
             </div>
           </div>

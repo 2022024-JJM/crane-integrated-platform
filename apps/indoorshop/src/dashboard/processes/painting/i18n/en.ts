@@ -22,6 +22,9 @@ export const paintingEn: typeof paintingKo = {
         issues: 'issues',
       },
       scada: {
+        pending: 'Awaiting data',
+        runtime: 'Runtime',
+        bay: 'Bay',
         summary: 'Equipment summary',
         modules: 'Equipment modules',
         registers: 'Registers',
@@ -85,11 +88,11 @@ export const paintingEn: typeof paintingKo = {
       stale: 'stale',
     },
     mapEntry: {
-      modeLabel: 'Panel mode',
+      modeLabel: 'Switch view',
       modeEquipment: '① Equipment',
       modeCollection: '② Collection',
       collection: {
-        detected: 'Detected blocks',
+        detected: 'Collected blocks',
         wo: 'W/O',
         steps: 'Step nodes',
         dailyRate: 'Daily progress',
@@ -122,7 +125,7 @@ export const paintingEn: typeof paintingKo = {
       stepInProgress: '{{count}} block(s) in progress',
       blockListTitle: 'Blocks (BTS attribution)',
       noBlocks: 'No blocks are assigned to this painting factory.',
-      btsNote: 'Location and inbound/outbound come from BTS logistics — not the ZONE mapping table.',
+      btsNote: 'Location and inbound/outbound come from BTS logistics — not the ZONE mapping table. The link on each block row opens its node performance.',
       equipmentTitle: 'Equipment summary',
       openScada: 'View equipment status on the map',
     },

@@ -50,8 +50,28 @@ export const outfittingModule: ProcessModule = {
     { path: '/indoorshop/zones/outfitting/list', Component: OutfittingFactoryListPage },
     { path: '/indoorshop/zones/outfitting/equipment', Component: OutfittingEquipmentStatusPage },
     { path: '/indoorshop/zones/outfitting/:factoryId', Component: OutfittingWorkspace },
+    /* 베이 레벨 — 조립의 `/zones/assembly/:factoryId/:locationId` 와 같은 규약 (W7-10) */
+    { path: '/indoorshop/zones/outfitting/:factoryId/:locationId', Component: OutfittingWorkspace },
   ],
   i18n: { ko: outfittingKo, en: outfittingEn },
+  provides: {
+    /* 통합실적 의장 레일이 읽어 간다 — 공장 화면과 **같은 값**이어야 하므로 원천이 하나다.
+     * shared 가 의장 모듈을 직접 부를 수 없어 레지스트리를 거친다(W7-11). */
+    outfittingBlocks: (baseDate) =>
+      import('./api/mockOutfittingData').then((m) =>
+        m.outfittingBlocksAt(baseDate).map((block) => ({
+          projNo: block.projNo,
+          blockNo: block.blkNo,
+          factoryId: block.factoryId,
+          areaName: block.areaName,
+          wstgCode: block.wstgCode,
+          /* 화면이 '진척' 이라 부르던 값이 곧 라이다 판별률이다 — 이름만 축에 맞춘다 */
+          judgedRate: block.progress,
+          status: block.status,
+          justArrived: block.justArrived,
+        }))
+      ),
+  },
   zone: {
     id: 'outfitting',
     displayNameKey: 'outfitting.zone.displayName',

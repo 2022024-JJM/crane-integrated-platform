@@ -20,14 +20,19 @@ import { useAsyncData } from '../../../shared/lib/useAsyncData'
 import { cn } from '../../../shared/lib/utils'
 import { CloseIcon } from '../../../shared/ui/icons'
 import { fetchOutfittingBayScene } from '../api/outfittingBayScene'
+import type { OutfittingBlock } from '../model/block'
 
 /*
  * 의장 베이 3D 뷰 — 조립 베이 뷰어(shared bay-viewer)의 의장 소비자.
  *
- * 맵의 베이 드릴에서 열리는 전면 오버레이다. 점군·정반·블록·유리 도구줄·범례·도움말이
+ * 맵의 베이 드릴에서 열리는 전면 오버레이다. 점군·베이·블록·유리 도구줄·범례·도움말이
  * 전부 조립 베이 화면과 같은 부품(shared)이고, 이 파일이 들고 있는 것은 **의장 몫**뿐이다:
  * mock 장면 소스(`fetchOutfittingBayScene`), 표시 상태 소유, 닫기. 실측 점군이 오면
  * 장면 소스만 실측 조회로 바뀐다(조립 PBS 5BAY 와 같은 이음새).
+ *
+ * ⚠️ **뷰어 문법은 조립, 데이터는 의장이다.** 의장은 블록 하나가 작업 단위이고 그 아래
+ * 계층(소조·중조·ASSY)이 없으므로, 여기 서는 인식 대상은 언제나 로스터 블록 1건이다 —
+ * 선택 칩도 `BLK {블록번호}` 로 읽힌다(`formatDetectionId`).
  */
 
 interface OutfittingBayViewerProps {
@@ -35,6 +40,8 @@ interface OutfittingBayViewerProps {
   /** 지번 fixture 의 베이 번호(공장 내 유일)와 화면 라벨 */
   bayNo: string
   bayLabel: string
+  /** 이 베이의 로스터 블록 — 뷰어에 서는 인식 대상의 신원이 여기서 나온다 */
+  bayBlocks: readonly OutfittingBlock[]
   onClose: () => void
   className?: string
 }
@@ -43,14 +50,15 @@ export function OutfittingBayViewer({
   factory,
   bayNo,
   bayLabel,
+  bayBlocks,
   onClose,
   className,
 }: OutfittingBayViewerProps) {
   const { t } = useTranslation()
 
   const { data: bayScene, loading } = useAsyncData(
-    () => fetchOutfittingBayScene(factory, bayNo, bayLabel),
-    [factory, bayNo, bayLabel]
+    () => fetchOutfittingBayScene(factory, bayNo, bayLabel, bayBlocks),
+    [factory, bayNo, bayLabel, bayBlocks]
   )
 
   /* 표시 상태 — 조립 워크스페이스와 같은 규칙: 소유자는 뷰어가 아니라 이 화면이다 */

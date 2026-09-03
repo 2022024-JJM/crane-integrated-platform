@@ -6,6 +6,7 @@ import {
 } from '../../../shared/entities/equipment/ui/EquipmentSymbol'
 import { useFactoryEquipmentStatus } from '../../../shared/entities/equipment/useEquipmentStatus'
 import { cn } from '../../../shared/lib/utils'
+import { useEquipmentTypeLabel } from '../../../shared/entities/equipment/ui/useEquipmentTypeLabel'
 import type { PaintingEquipment } from '../model/equipment'
 import type { PaintingEquipmentStatus } from '../model/equipmentStatus'
 import {
@@ -15,6 +16,7 @@ import {
   type PaintingTransferredUnit,
 } from '../lib/equipmentInventory'
 import { ScadaRackBody } from './scada'
+import { paintingPvTrend } from '../lib/equipmentCells'
 
 /*
  * ① 설비 상태 단 — 공장 하나의 **설비 전부**를 한 목록 체계로 (W6-6).
@@ -128,6 +130,8 @@ export function PaintingEquipmentPanel({
   onSelect: (id: string) => void
 }) {
   const { t } = useTranslation()
+  /* 설비 종류의 화면 이름 — 레지스트리(도면 이름) 대신 라벨 층을 지난다 */
+  const typeLabelOf = useEquipmentTypeLabel()
   const { snapshot } = useFactoryEquipmentStatus(factory)
   /* 구획 순서·대수는 lib 이 정한다 — 조립·의장과 같은 규칙임을 테스트가 지킨다 */
   const sections = paintingEquipmentSections(factory)
@@ -139,6 +143,10 @@ export function PaintingEquipmentPanel({
 
   const scadaSections = sections.filter((s) => PAINTING_SCADA_TYPE_IDS.includes(s.typeId))
   const scadaCount = scadaSections.reduce((sum, s) => sum + s.count, 0)
+  /* 실측값 추이 — 같은 생성기를 과거 시각으로 되감은 값. 그리드가 이상·선택 셀에만 그린다 */
+  const pvTrends = polledAt
+    ? new Map(equipment.map((item) => [item.id, paintingPvTrend(item, polledAt)]))
+    : undefined
   const transferredSections = sections.filter((s) => !PAINTING_SCADA_TYPE_IDS.includes(s.typeId))
 
   return (
@@ -167,6 +175,7 @@ export function PaintingEquipmentPanel({
             selectedId={selectedId}
             polledAt={polledAt}
             onSelect={onSelect}
+            trendById={pvTrends}
           />
         </PanelSection>
       )}
@@ -179,7 +188,7 @@ export function PaintingEquipmentPanel({
         return (
           <PanelSection
             key={section.typeId}
-            title={units[0]?.typeName ?? section.typeId}
+            title={typeLabelOf(section.typeId)}
             count={section.count}
           >
             <ul className="flex flex-col gap-0.5">

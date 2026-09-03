@@ -1,10 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
+import { useCollectionDay } from '../../lib/useCollectionDay'
 import { cn } from '../../../../shared/lib/utils'
 import { Card, CardContent, CardHeader } from '../../../../shared/ui/atoms/Card'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { fetchFactories, fetchDailyProduction } from '../../api/assemblyApi'
 import type { BayDailyProduction } from '../../api/assemblyApi'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 function StatTile({ label, value, unit }: { label: string; value: number | string; unit?: string }) {
   return (
@@ -60,17 +62,21 @@ function WeeklyBars({ daily }: { daily: BayDailyProduction['daily'] }) {
 
 export function ProductionCountPage() {
   const { t } = useTranslation()
+  /* 수치가 어느 날 것인가 — 기준일과 다르면 라벨이 날짜를 박는다 (W7-7-5) */
+  const collectionDay = useCollectionDay()
   const { factoryId } = useParams<{ factoryId: string }>()
+  /* 기준일 — `?date=` 를 따라온다. 통합실적에서 사흘 전을 보다 넘어오면 이 화면도 그날을 센다 */
+  const { baseDate } = useBaseDate()
 
   const { data, loading, error } = useAsyncData(
     () =>
-      Promise.all([fetchFactories(), fetchDailyProduction(factoryId ?? '')]).then(
+      Promise.all([fetchFactories(), fetchDailyProduction(factoryId ?? '', baseDate)]).then(
         ([factories, production]) => ({
           factory: factories.find((f) => f.id === factoryId) ?? null,
           production,
         })
       ),
-    [factoryId]
+    [factoryId, baseDate]
   )
 
   if (loading) return <p className="text-foreground/68">{t('assembly.production.loading')}</p>
@@ -118,12 +124,21 @@ export function ProductionCountPage() {
         <p className="mt-1 font-mono text-inshop-sm text-foreground/68">
           {t('assembly.production.subtitle', { shop: factory.assyShop })}
         </p>
+        {!collectionDay.followsBaseDate && (
+          <p className="mt-1 text-inshop-xs text-status-degraded">
+            {t('assembly.production.notFollowingBaseDate', { date: collectionDay.dataDate })}
+          </p>
+        )}
       </div>
 
       {/* 요약 스탯 타일 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          label={t('assembly.production.todayDone')}
+          label={
+            collectionDay.followsBaseDate
+              ? t('assembly.production.todayDone')
+              : t('assembly.production.doneOn', { date: collectionDay.dataDate })
+          }
           value={todayTotal}
           unit={t('assembly.production.unit')}
         />

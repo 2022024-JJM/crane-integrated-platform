@@ -7,6 +7,7 @@ import {
 } from '../model/equipment'
 import type { PaintingEquipmentStatus } from '../model/equipmentStatus'
 import { mockEquipmentStatus } from '../lib/equipmentStatusMock'
+import { nowMs } from '../../../shared/lib/now'
 
 /**
  * 선행도장 설비 데이터 접근 파사드.
@@ -101,7 +102,7 @@ export function equipmentCountByKind(): Record<PaintingEquipmentKind, number> {
 /** 설비 여러 대의 현재 상태를 한 번에 (없는 ID 는 건너뛴다). `now` 는 주입받는다 */
 export async function fetchEquipmentStatus(
   ids: readonly string[],
-  now: number = Date.now()
+  now: number = nowMs()
 ): Promise<PaintingEquipmentStatus[]> {
   const statuses: PaintingEquipmentStatus[] = []
   for (const id of ids) {
@@ -114,7 +115,7 @@ export async function fetchEquipmentStatus(
 /** 특정 공장 전체 설비의 현재 상태 */
 export async function fetchStatusByFactory(
   factory: string,
-  now: number = Date.now()
+  now: number = nowMs()
 ): Promise<PaintingEquipmentStatus[]> {
   const items = byFactory.get(factory) ?? []
   return items.map((item) => mockEquipmentStatus(item, now))

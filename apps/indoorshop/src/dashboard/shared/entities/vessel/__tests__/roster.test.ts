@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { parseDrilldown } from '../../../lib/drilldownUrl'
 import { loadYardParcels } from '../../yard-parcels'
 import {
   blockAtBay,
@@ -190,11 +191,12 @@ describe('공정 화면 경로 — 통합실적 → 공정 딥링크', () => {
     )
   })
 
-  it('정반이 없으면 그 공장을 연 맵 진입 화면으로 (드릴다운 `?factory=` 계약)', () => {
+  it('정반이 없으면 그 공장을 연 맵 진입 화면으로 — 드릴다운 계약, 값은 안정 슬러그(F-30)', () => {
     const block = blocksInZone('outfitting')[0]
-    expect(zonePathOfBlock(block)).toBe(
-      `/zones/outfitting?factory=${encodeURIComponent(block.factory)}`
-    )
+    const path = zonePathOfBlock(block)
+    expect(path.startsWith('/zones/outfitting?factory=')).toBe(true)
+    /* 값을 계약 파서로 되읽으면 그 공장이 나온다 — 표기(슬러그/이름)와 무관한 검증 */
+    expect(parseDrilldown(path.split('?')[1]).factory).toBe(block.factory)
   })
 
   it('공장명의 한글·공백이 인코딩된다 (URL 이 깨지지 않는다)', () => {

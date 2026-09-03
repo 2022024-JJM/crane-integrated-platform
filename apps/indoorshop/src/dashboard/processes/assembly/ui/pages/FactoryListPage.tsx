@@ -5,10 +5,14 @@ import { Spinner } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { fetchFactoryOverviews } from '../../api/assemblyApi'
 import { cn } from '../../../../shared/lib/utils'
+import { useCollectionDay } from '../../lib/useCollectionDay'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /** 공장 전체를 가로지르는 한 줄 요약 — 개별 카드로 내려가기 전의 전제 */
 function OverallSummary({ overviews }: { overviews: FactoryOverview[] }) {
+  const collectionDay = useCollectionDay()
   const { t } = useTranslation()
+  /* 수치가 어느 날 것인가 — 기준일과 다르면 라벨이 날짜를 박는다 (W7-7-5) */
   const bayCount = overviews.reduce((sum, o) => sum + o.bays.length, 0)
   const occupied = overviews.reduce((sum, o) => sum + o.occupiedCount, 0)
   const sensorTotal = overviews.reduce((sum, o) => sum + o.sensorTotal, 0)
@@ -38,7 +42,9 @@ function OverallSummary({ overviews }: { overviews: FactoryOverview[] }) {
       tone: sensorFault > 0 ? 'text-status-degraded' : 'text-status-healthy',
     },
     {
-      label: t('assembly.factoryList.summaryToday'),
+      label: collectionDay.followsBaseDate
+        ? t('assembly.factoryList.summaryToday')
+        : t('assembly.factoryList.summaryDoneOn', { date: collectionDay.dataDate }),
       value: t('assembly.factoryList.summaryTodayValue', { count: todayCount }),
     },
     {
@@ -65,7 +71,13 @@ function OverallSummary({ overviews }: { overviews: FactoryOverview[] }) {
 
 export function FactoryListPage() {
   const { t } = useTranslation()
-  const { data: overviews, loading, error } = useAsyncData(() => fetchFactoryOverviews(), [])
+  /* 기준일 — `?date=` 를 따라온다(집계도 그날 기준으로 선다) */
+  const { baseDate } = useBaseDate()
+  const {
+    data: overviews,
+    loading,
+    error,
+  } = useAsyncData(() => fetchFactoryOverviews(baseDate), [baseDate])
 
   return (
     /*

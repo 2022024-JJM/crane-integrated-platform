@@ -4,7 +4,12 @@ import type { FactoryOverview } from '../entities/factory/model/overview'
 import type { ProcessMapDrilldownProvider } from './processMapDrilldown'
 import type { ProcessFacilityAnchor } from './processFacilityAnchor'
 import type { YardMapBackdrop } from './yardMapBackdrop'
-import type { ProcessModule, ProcessNavEntry, ProcessNavGroupId } from './processModule'
+import type {
+  OutfittingWipBlock,
+  ProcessModule,
+  ProcessNavEntry,
+  ProcessNavGroupId,
+} from './processModule'
 
 /*
  * 공정 모듈 레지스트리.
@@ -58,11 +63,11 @@ export function findProcessModuleByPath(pathname: string): ProcessModule | undef
  * 야드 화면이 조립 모듈을 직접 import 하지 않기 위한 통로다. 아직 아무 모듈도
  * 내지 않으면 빈 배열이다 — 부르는 쪽이 그것을 정상 상태로 다뤄야 한다.
  */
-export async function fetchFactoryOverviews(): Promise<FactoryOverview[]> {
+export async function fetchFactoryOverviews(baseDate?: string): Promise<FactoryOverview[]> {
   const providers = registered.flatMap((module) =>
     module.provides?.factoryOverviews ? [module.provides.factoryOverviews] : []
   )
-  const results = await Promise.all(providers.map((provide) => provide()))
+  const results = await Promise.all(providers.map((provide) => provide(baseDate)))
   return results.flat()
 }
 
@@ -78,6 +83,21 @@ export async function fetchProcessFacilityAnchors(): Promise<ProcessFacilityAnch
     module.provides?.facilityAnchors ? [module.provides.facilityAnchors] : []
   )
   const results = await Promise.all(providers.map((provide) => provide()))
+  return results.flat()
+}
+
+/**
+ * 의장 재공 블록을 내는 모듈에게 물어본다 (W7-11).
+ *
+ * 통합실적의 의장 레일이 쓰는 통로다 — 의장 모듈을 직접 import 하지 않으면서도 **의장
+ * 공장 화면과 같은 값**을 읽는다. 아무 모듈도 내지 않으면 빈 배열이고, 화면은 그때
+ * "의장 재공이 없다" 로 선다(오류가 아니다).
+ */
+export async function fetchOutfittingWipBlocks(baseDate?: string): Promise<OutfittingWipBlock[]> {
+  const providers = registered.flatMap((module) =>
+    module.provides?.outfittingBlocks ? [module.provides.outfittingBlocks] : []
+  )
+  const results = await Promise.all(providers.map((provide) => provide(baseDate)))
   return results.flat()
 }
 

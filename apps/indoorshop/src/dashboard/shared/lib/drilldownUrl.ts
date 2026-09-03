@@ -26,6 +26,8 @@
  * 여기 함수들은 자기 키만 건드리고 나머지는 그대로 실어 나른다.
  */
 
+import { factoryNameOfSlug, factorySlugOf } from './factorySlugs'
+
 /** 드릴다운이 쓰는 쿼리 키 — 화면에서 문자열을 손으로 적지 않게 한다 */
 export const DRILLDOWN_PARAM = {
   process: 'process',
@@ -73,12 +75,19 @@ function toParams(source: URLSearchParams | string): URLSearchParams {
  */
 export function parseDrilldown(source: URLSearchParams | string): DrilldownState {
   const params = toParams(source)
-  const factory =
+  const rawFactory =
     clean(params.get(DRILLDOWN_PARAM.factory)) ?? clean(params.get(LEGACY_FACTORY_PARAM))
+  /* 값은 슬러그가 정본(F-30) — 슬러그가 아니면 낡은 링크의 한글 이름으로 읽는다(호환) */
+  const factory = rawFactory ? (factoryNameOfSlug(rawFactory) ?? rawFactory) : null
+
+  const rawBay = factory ? clean(params.get(DRILLDOWN_PARAM.bay)) : null
+  /* 베이 값은 `{베이}` 조각만 싣는다(공장은 이미 URL 에 있다). 낡은 링크의
+     `{공장}#{베이}` 전체 id 도 그대로 읽는다 — '#' 유무로 갈린다 */
+  const bay = rawBay == null ? null : rawBay.includes('#') ? rawBay : `${factory}#${rawBay}`
   return {
     process: clean(params.get(DRILLDOWN_PARAM.process)),
     factory,
-    bay: factory ? clean(params.get(DRILLDOWN_PARAM.bay)) : null,
+    bay,
   }
 }
 
@@ -151,10 +160,19 @@ export function writeDrilldown(
 ): URLSearchParams {
   const next = new URLSearchParams(toParams(source))
   next.delete(LEGACY_FACTORY_PARAM)
+
+  /* 공장은 안정 슬러그로 적는다(F-30) — 표에 없는 이름만 이름 그대로 남는다 */
+  const factoryValue = state.factory ? (factorySlugOf(state.factory) ?? state.factory) : null
+  /* 베이는 공장 뒤의 조각만 — `{공장}#{베이}` 에서 공장은 이미 `factory=` 가 말한다 */
+  const bayValue =
+    state.bay && state.factory && state.bay.startsWith(`${state.factory}#`)
+      ? state.bay.slice(state.factory.length + 1)
+      : state.bay
+
   for (const [key, value] of [
     [DRILLDOWN_PARAM.process, state.process],
-    [DRILLDOWN_PARAM.factory, state.factory],
-    [DRILLDOWN_PARAM.bay, state.bay],
+    [DRILLDOWN_PARAM.factory, factoryValue],
+    [DRILLDOWN_PARAM.bay, bayValue],
   ] as const) {
     if (value) next.set(key, value)
     else next.delete(key)

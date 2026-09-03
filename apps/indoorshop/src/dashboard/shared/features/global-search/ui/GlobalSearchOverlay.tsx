@@ -12,12 +12,13 @@ import {
   type SearchGroup,
   type SearchHit,
 } from '../lib/searchIndex'
-import { todayString, woEntriesOf } from '../lib/woIndex'
+import { woEntriesOf } from '../lib/woIndex'
 import {
   readRecentSearches,
   rememberRecentSearch,
   type RecentSearch,
 } from '../lib/recentSearches'
+import { useBaseDate } from '../../../lib/useBaseDate'
 
 /*
  * 통합 검색 팔레트 — 입력 하나로 호선·블록·ASSY·W/O·설비를 가로질러 찾고,
@@ -55,7 +56,8 @@ export function GlobalSearchOverlay({ onClose }: { onClose: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null)
 
   /* 기준일 — 통합실적과 같은 날을 봐야 W/O 번호가 화면과 일치한다 */
-  const baseDate = useMemo(() => todayString(), [])
+  /* 기준일 — `?date=` 를 따라온다. 되감은 화면에서 검색하면 그날의 W/O 를 찾는다 */
+  const { baseDate } = useBaseDate()
 
   /* 설비 검색 문맥(공장→공정 맵, 실재 베이) — 지번 로더는 비동기·캐시 공유 */
   useEffect(() => {

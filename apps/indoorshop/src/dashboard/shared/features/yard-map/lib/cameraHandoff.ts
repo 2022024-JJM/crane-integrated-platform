@@ -15,6 +15,7 @@
  *    히스토리에 낡은 카메라가 남는 부작용을 피한다).
  */
 import type { YardView } from './projection'
+import { nowMs } from '../../../lib/now'
 
 const TTL_MS = 3_000
 /** StrictMode 이중 렌더 허용 창 — 이 안의 연속 take 는 같은 값을 본다 */
@@ -24,7 +25,7 @@ let slot: { view: YardView; at: number } | null = null
 let lastTaken: { view: YardView; at: number } | null = null
 
 /** 떠나는 화면이 링크 클릭 시점의 카메라를 맡긴다 */
-export function stashCameraHandoff(view: YardView, now: number = Date.now()): void {
+export function stashCameraHandoff(view: YardView, now: number = nowMs()): void {
   slot = { view: { ...view }, at: now }
 }
 
@@ -32,7 +33,7 @@ export function stashCameraHandoff(view: YardView, now: number = Date.now()): vo
  * 도착 화면이 맡겨진 카메라를 가져간다 — TTL 안이면 값, 아니면 null.
  * 가져가면 비워진다(1회성 — REREAD_MS 창의 재호출만 예외).
  */
-export function takeCameraHandoff(now: number = Date.now()): YardView | null {
+export function takeCameraHandoff(now: number = nowMs()): YardView | null {
   if (slot) {
     const { view, at } = slot
     slot = null

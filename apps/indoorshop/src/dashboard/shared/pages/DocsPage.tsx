@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from '../lib/i18n/useTranslation'
 import { listDocGroups } from '../entities/doc/api/docsRegistry'
 import { Card, SectionHeading } from '../ui/atoms/Card'
+import { EmptyState } from '../ui/states'
 import { DocsIcon, SearchIcon } from '../ui/icons'
 import { cn } from '../lib/utils'
 
@@ -60,10 +61,16 @@ export function DocsPage() {
         />
       </label>
 
+      {/*
+        빈 상태 두 갈래 — "검색이 못 찾은 것"과 "원래 아무것도 없는 것"은 다른 사정이다.
+        빈 검색어를 그대로 문구에 실으면 `"" 와(과) 맞는…` 이 된다 (UX 감사 F-28).
+      */}
       {filtered.length === 0 ? (
-        <p className="py-12 text-center text-inshop-sm text-foreground/58">
-          {t('docs.noMatch', { query })}
-        </p>
+        query.trim() ? (
+          <EmptyState reason="filtered" title={t('docs.noMatch', { query: query.trim() })} />
+        ) : (
+          <EmptyState title={t('docs.empty')} description={null} />
+        )
       ) : (
         filtered.map((group) => (
           <section key={group.titleKey}>

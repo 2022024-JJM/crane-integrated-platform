@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
+import { useEscapeClaim } from '../../../lib/escapeClaims'
 
 /*
  * 도면 뷰어 — 큰 이미지 한 장을 줌·팬으로 뜯어보는 모달.
@@ -72,6 +73,9 @@ export function DrawingViewerModal({
     return () => observer.disconnect()
   }, [fitToStage])
 
+  /* 떠 있는 동안 ESC 우선권을 쥔다 — 지도의 드릴다운 ESC 보다 모달 닫기가 먼저다 */
+  useEscapeClaim(true)
+
   /* 열리면 닫기 버튼으로 포커스를 옮긴다 — 키보드 사용자가 모달 안에서 시작하도록 */
   useEffect(() => {
     closeRef.current?.focus()
@@ -80,6 +84,8 @@ export function DrawingViewerModal({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        /* 이 ESC 는 모달 닫기로 소비됐다 — 뒤의 드릴다운 ESC 가 같이 움직이지 않게 */
+        e.preventDefault()
         onClose()
         return
       }

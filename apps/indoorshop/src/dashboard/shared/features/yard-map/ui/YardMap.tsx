@@ -3,6 +3,8 @@ import type { LatLon, LatLonBounds, YardBlock, YardLot, YardMove, YardPlan } fro
 import { boundsOf, mergeBounds, quadContains } from '../model/types'
 import { factoryOutlineRings } from '../lib/factoryOutline'
 import { cn } from '../../../lib/utils'
+import { CAMERA_FLY_MS, CAMERA_NUDGE_MS } from '../../../lib/cameraMotion'
+import { dragActionOf } from '../../../lib/mapInteraction'
 import { SEA_COLOR, type BasemapLayer, type MapTheme, type Ring } from '../lib/basemapStyle'
 import {
   BAY_GABLE_SCALE,
@@ -576,7 +578,7 @@ export function YardMap({
   focusFacilityName = null,
   showFacilityLabels = true,
   focusBounds = null,
-  focusBoundsDuration = 700,
+  focusBoundsDuration = CAMERA_FLY_MS,
   focusBoundsPadding = 0.35,
   focusBoundsBearing = null,
   parcelSpotlightDuration = SPOTLIGHT_DURATION,
@@ -3797,24 +3799,67 @@ export function YardMap({
     if (!focusBlockId || viewportRef.current.width === 0) return
     const target = data.current.blocks.find((b) => b.id === focusBlockId)
     if (!target) return
-    viewRef.current = {
-      ...viewRef.current,
+    /* 목록 클릭 = 비행 — 공장 포커스와 같은 리듬(위 focusFacilityName 주석 참조) */
+    const from = viewRef.current
+    const to = {
+      ...from,
       centerLat: target.lat,
       centerLon: target.lon,
-      scale: Math.max(viewRef.current.scale, 600_000),
+      scale: Math.max(from.scale, 600_000),
     }
-    publishView()
-    draw()
+    const settle = () => {
+      viewRef.current = to
+      publishView()
+      draw()
+    }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      settle()
+      return
+    }
+    let frame = 0
+    const start = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / CAMERA_FLY_MS)
+      viewRef.current = lerpView(from, to, easeInOutCubic(t))
+      publishView()
+      draw()
+      if (t < 1) frame = requestAnimationFrame(step)
+      else settle()
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
   }, [focusBlockId, draw, publishView])
 
-  // 목록에서 고른 공장 — 이웃 공장과의 관계가 남을 만큼 여백을 두고 맞춘다
+  /* 목록에서 고른 공장 — 이웃 공장과의 관계가 남을 만큼 여백을 두고 **날아가** 맞춘다.
+     예전엔 즉시 점프라, 같은 목록 클릭이 대시보드에서는 비행이고 야드에서는 순간이동이었다
+     (UX 감사 — 야드만 비행 부재). 리듬은 cameraMotion 단일 소스를 쓴다. */
   useEffect(() => {
     if (!focusFacilityName || viewportRef.current.width === 0) return
     const target = data.current.facilities.find((f) => f.name === focusFacilityName)
     if (!target) return
-    viewRef.current = clampViewScale(fitView(target.bounds, viewportRef.current, 0.32, viewRef.current))
-    publishView()
-    draw()
+    const to = clampViewScale(fitView(target.bounds, viewportRef.current, 0.32, viewRef.current))
+    const from = viewRef.current
+    const settle = () => {
+      viewRef.current = to
+      publishView()
+      draw()
+    }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      settle()
+      return
+    }
+    let frame = 0
+    const start = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / CAMERA_FLY_MS)
+      viewRef.current = lerpView(from, to, easeInOutCubic(t))
+      publishView()
+      draw()
+      if (t < 1) frame = requestAnimationFrame(step)
+      else settle()
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
   }, [focusFacilityName, draw, publishView, clampViewScale])
 
   /*
@@ -3919,7 +3964,7 @@ export function YardMap({
     let frame = 0
     const start = performance.now()
     const step = (now: number) => {
-      const t = Math.min(1, (now - start) / 320)
+      const t = Math.min(1, (now - start) / CAMERA_NUDGE_MS)
       viewRef.current = lerpView(from, target, easeInOutCubic(t))
       publishView()
       draw()
@@ -4117,9 +4162,10 @@ export function YardMap({
       return { sx: event.clientX - rect.left, sy: event.clientY - rect.top }
     }
 
-    /** 돌리기는 기울어져 있을 때만 뜻이 있다 — 평면을 돌리면 북쪽만 잃는다 */
+    /** 돌리기는 기울어져 있을 때만 뜻이 있다 — 평면을 돌리면 북쪽만 잃는다.
+        어떤 손이 돌리기인가는 전 화면 공통 문법(mapInteraction)이 정한다 */
     const wantsOrbit = (event: PointerEvent) =>
-      viewRef.current.pitch > 0 && (event.button === 2 || event.shiftKey)
+      viewRef.current.pitch > 0 && dragActionOf(event.button, event) === 'rotate'
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 && event.button !== 2) return

@@ -8,6 +8,7 @@ import { Spinner } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
 import { fetchFactoryOverviews } from '../../api/outfittingApi'
 import { cn } from '../../../../shared/lib/utils'
+import { useBaseDate } from '../../../../shared/lib/useBaseDate'
 
 /** 공장 전체를 가로지르는 한 줄 요약 */
 function OverallSummary({ overviews }: { overviews: OutfittingFactoryOverview[] }) {
@@ -73,7 +74,13 @@ function OverallSummary({ overviews }: { overviews: OutfittingFactoryOverview[] 
 export function OutfittingFactoryListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { data: overviews, loading, error } = useAsyncData(() => fetchFactoryOverviews(), [])
+  /* 기준일 — `?date=` 를 따라온다(집계도 그날 기준으로 선다) */
+  const { baseDate } = useBaseDate()
+  const {
+    data: overviews,
+    loading,
+    error,
+  } = useAsyncData(() => fetchFactoryOverviews(baseDate), [baseDate])
 
   /* 공장 딥링크 — 새 철자 `?factory=` 와 옛 철자 `?shop=` 을 같은 계약으로 읽는다 */
   const [searchParams] = useSearchParams()

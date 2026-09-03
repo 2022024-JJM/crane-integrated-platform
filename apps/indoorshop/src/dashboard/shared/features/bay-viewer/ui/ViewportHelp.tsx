@@ -4,11 +4,12 @@ import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
 import { isLowGpuMode, setLowGpuMode } from '../lib/qualityMode'
 
-/* 기본 조작(FR-6): 왼쪽 회전 · 오른쪽/Shift 이동 · 휠 줌(클릭 후) — 표도 그 순서를 따른다 */
+/* 기본 조작 — 지도 화면과 같은 문법(shared/lib/mapInteraction): 왼쪽 이동 ·
+   오른쪽/Shift 회전 · 휠 줌(클릭 후). 표도 그 순서를 따른다 */
 const MOUSE: [InshopKey, InshopKey][] = [
-  ['viewer.help.leftDrag', 'viewer.help.rotate'],
-  ['viewer.help.rightDrag', 'viewer.help.pan'],
-  ['viewer.help.shiftDrag', 'viewer.help.pan'],
+  ['viewer.help.leftDrag', 'viewer.help.pan'],
+  ['viewer.help.rightDrag', 'viewer.help.rotate'],
+  ['viewer.help.shiftDrag', 'viewer.help.rotate'],
   ['viewer.help.wheel', 'viewer.help.zoomFocused'],
   ['viewer.help.middleDrag', 'viewer.help.rotate'],
 ]

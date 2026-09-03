@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next'
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { cn } from '../../../shared/lib/utils'
-import { useClock } from '../../../shared/lib/useClock'
+import { useAxisNow } from '../../../shared/lib/useBaseDate'
 import { StatusChip } from '../../../shared/ui/atoms/StatusChip'
 import { ChevronDownIcon } from '../../../shared/ui/icons'
 import { sensorStatusCounts } from '../../../shared/features/bay-viewer/lib/bayStatusSummary'
@@ -125,7 +125,7 @@ export function LidarSensorStatusList({
   const glass = tone === 'glass'
   const [expanded, setExpanded] = useState(true)
   // 경과 표기가 굳지 않도록 30초마다 다시 계산한다
-  const now = useClock(30000)
+  const now = useAxisNow(30000)
 
   if (sensors.length === 0) {
     return (

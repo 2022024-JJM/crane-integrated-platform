@@ -38,6 +38,7 @@ import type {
   LinkState,
   TiltModuleStatus,
 } from './status'
+import { nowMs } from '../../lib/now'
 
 /**
  * 한 시각의 설비 상태 스냅샷.
@@ -147,7 +148,7 @@ export function buildFactoryStatusSnapshot(
 /** 설비 여러 대의 현재 상태 스냅샷. `now` 는 주입받는다(테스트가 시계에 묶이지 않도록) */
 export async function fetchEquipmentStatuses(
   ids: readonly string[],
-  now: number = Date.now()
+  now: number = nowMs()
 ): Promise<EquipmentStatusSnapshot> {
   return buildEquipmentStatusSnapshot(ids, now)
 }
@@ -155,7 +156,7 @@ export async function fetchEquipmentStatuses(
 /** 한 공장 전체 설비의 현재 상태 스냅샷 */
 export async function fetchFactoryEquipmentStatuses(
   factory: string,
-  now: number = Date.now()
+  now: number = nowMs()
 ): Promise<EquipmentStatusSnapshot> {
   return buildEquipmentStatusSnapshot(equipmentIdsOfFactory(factory), now)
 }

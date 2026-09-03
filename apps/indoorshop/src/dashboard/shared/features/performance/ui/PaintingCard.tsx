@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
+import { drilldownHref, YARD_DRILLDOWN } from '../../../lib/drilldownUrl'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
 import { Sparkline } from '../../../ui/atoms/Sparkline'
@@ -42,9 +44,9 @@ const STATUS_KEY: Record<'done' | 'inProgress' | 'notDue', InshopKey> = {
 }
 
 const STATUS_CLASS: Record<'done' | 'inProgress' | 'notDue', string> = {
-  done: 'bg-status-healthy/10 text-status-healthy',
-  inProgress: 'bg-accent/10 text-accent',
-  notDue: 'bg-surface-secondary text-foreground/55',
+  done: STATUS_STYLE.done.chip,
+  inProgress: STATUS_STYLE.inProgress.chip,
+  notDue: STATUS_STYLE.idle.chip,
 }
 
 const PHASE_KEY: Record<PaintingSummary['phase'], InshopKey> = {
@@ -69,7 +71,12 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
         </div>
         <div>
           <div className="text-[11px] text-foreground/55">{t('performance.pnt.confirmed')}</div>
-          <div className="text-inshop-2xl font-semibold tabular-nums text-accent">
+          {/*
+           * 색을 주지 않는다(감사 F-10) — 바로 왼쪽 `스텝 완료 0/3` 의 0 은 검정인데
+           * 여기 0 만 강조색이면 같은 값이 30px 사이에서 두 뜻으로 읽힌다. 확정 여부는
+           * 아래 스텝 카드의 확정 칩이 상태색으로 말한다.
+           */}
+          <div className="text-inshop-2xl font-semibold tabular-nums">
             {summary.confirmedSteps}
             <span className="text-inshop-sm text-foreground/45">/{summary.doneSteps}</span>
           </div>
@@ -80,11 +87,12 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
             <span
               className={cn(
                 'rounded px-2 py-0.5 text-inshop-xs font-medium',
+                /* 도장공장 재실 = 진행중(파랑), 반출 완료 = 완료(초록), 반입 전 = 대기(중립) */
                 summary.phase === 'inShop'
-                  ? 'bg-accent/10 text-accent'
+                  ? STATUS_STYLE.inProgress.chip
                   : summary.phase === 'shippedOut'
-                    ? 'bg-status-healthy/10 text-status-healthy'
-                    : 'bg-surface-secondary text-foreground/55'
+                    ? STATUS_STYLE.done.chip
+                    : STATUS_STYLE.idle.chip
               )}
             >
               {summary.phase === 'inShop' && summary.factory
@@ -93,7 +101,7 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
             </span>
             {summary.phase === 'inShop' && summary.factory && (
               <Link
-                to={`/indoorshop/zones/painting?factory=${encodeURIComponent(summary.factory)}`}
+                to={drilldownHref('/zones/painting', '', { ...YARD_DRILLDOWN, factory: summary.factory })}
                 className="inline-flex items-center gap-1 rounded-inshop-md border border-border px-1.5 py-0.5 text-[11px] text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
               >
                 <PinIcon size={11} />
@@ -158,7 +166,7 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
               <div
                 className={cn(
                   'h-full rounded-full',
-                  step.status === 'done' ? 'bg-status-healthy' : 'bg-accent'
+                  step.status === 'done' ? STATUS_STYLE.done.fill : STATUS_STYLE.inProgress.fill
                 )}
                 style={{ width: `${(step.doneRows / Math.max(1, step.plannedRows)) * 100}%` }}
               />
@@ -187,7 +195,13 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
               <div className="mt-2 flex flex-col gap-1.5">
                 <div className="rounded bg-surface-secondary/60 px-2 py-1.5">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-inshop-sm font-semibold tabular-nums text-accent">
+                    {/* 진행 중 스텝의 수치 — 상태색(진행중 파랑). 강조색은 상태를 뜻하지 않는다 */}
+                    <span
+                      className={cn(
+                        'text-inshop-sm font-semibold tabular-nums',
+                        STATUS_STYLE.inProgress.ink
+                      )}
+                    >
                       {step.progressPct}%
                     </span>
                     <span className="text-[10px] text-foreground/50">
@@ -203,7 +217,7 @@ export function PaintingCard({ summary }: { summary: PaintingSummary }) {
                       max={100}
                       unit="%"
                       ariaLabel={t('performance.pnt.dailyRateTrend')}
-                      className="ml-auto text-accent"
+                      className={cn('ml-auto', STATUS_STYLE.inProgress.ink)}
                     />
                   </div>
                   {step.progressAsOf && (

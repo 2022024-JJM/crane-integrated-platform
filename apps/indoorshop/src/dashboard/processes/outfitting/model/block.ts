@@ -1,5 +1,6 @@
 import type { InshopKey } from '../../../shared/lib/i18n/keys'
 import type { Factory } from '../../../shared/entities/factory/model/types'
+import { STATUS_STYLE, type StatusMeaning } from '../../../shared/ui/statusPalette'
 
 /**
  * 선행의장 도메인 모델 — **블록 단위**.
@@ -12,25 +13,34 @@ import type { Factory } from '../../../shared/entities/factory/model/types'
 /** 블록 작업 상태 */
 export type OutfittingBlockStatus = 'in_progress' | 'completed' | 'waiting'
 
-/** 상태 표현의 단일 출처 — 라벨·점 색을 한 곳에서만 정한다 */
+/**
+ * 상태 표현의 단일 출처 — 라벨·색·모양을 한 곳에서만 정한다.
+ *
+ * 색은 고르지 않고 **의미**만 고른다(상태 팔레트가 색을 준다). 예전에는 작업중이
+ * 초록, 완료가 강조색이라 3m 밖에서 **완료 블록이 장애처럼** 읽혔다(감사 O3 — 앱의
+ * 다른 곳에서 그 계열은 오류·점검이다). 다 된 것은 초록, 도는 것은 파랑이다.
+ */
 export const OUTFITTING_STATUS_META: Record<
   OutfittingBlockStatus,
-  { labelKey: InshopKey; dot: string; ink: string }
+  { labelKey: InshopKey; meaning: StatusMeaning; dot: string; ink: string }
 > = {
   in_progress: {
     labelKey: 'outfitting.blockStatus.inProgress',
-    dot: 'bg-status-healthy',
-    ink: 'text-status-healthy',
+    meaning: 'inProgress',
+    dot: STATUS_STYLE.inProgress.fill,
+    ink: STATUS_STYLE.inProgress.ink,
   },
   completed: {
     labelKey: 'outfitting.blockStatus.completed',
-    dot: 'bg-accent',
-    ink: 'text-accent',
+    meaning: 'done',
+    dot: STATUS_STYLE.done.fill,
+    ink: STATUS_STYLE.done.ink,
   },
   waiting: {
     labelKey: 'outfitting.blockStatus.waiting',
-    dot: 'bg-foreground/25',
-    ink: 'text-foreground/54',
+    meaning: 'idle',
+    dot: STATUS_STYLE.idle.fill,
+    ink: STATUS_STYLE.idle.ink,
   },
 }
 
@@ -49,6 +59,13 @@ export interface OutfittingBlock {
   /** 송선기호 (WSTG) — 의장 블록의 계열 */
   wstgCode: string
   status: OutfittingBlockStatus
+  /**
+   * 조립을 막 끝내고 검사장을 거쳐 **어제 들어온** 블록인가 (로스터 `justArrived`).
+   *
+   * 상태만으로는 '대기' 인데, 그 대기가 "아직 손도 안 댐" 인지 "어제 막 들어와서 이제부터"
+   * 인지가 갈린다 — 뒤엣것은 정상이고 앞엣것은 확인 대상이다. 그 둘을 화면이 가르게 한다.
+   */
+  justArrived: boolean
   /** 진척률(%) */
   progress: number
   /** 마지막 스캔 시각 (HH:MM) */

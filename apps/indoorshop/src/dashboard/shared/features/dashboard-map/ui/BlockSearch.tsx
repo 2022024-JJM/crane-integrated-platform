@@ -25,7 +25,7 @@ import type { LocatedSite } from '../lib/blockSites'
 import type { YardBackdropBlock } from '../../../model/yardMapBackdrop'
 import { DraggableCard } from '../../../ui/atoms/DraggableCard'
 import { cn } from '../../../lib/utils'
-import { CloseIcon, PinIcon } from '../../../ui/icons'
+import { CloseIcon, PinIcon, SearchIcon } from '../../../ui/icons'
 
 /**
  * 총괄 지도 위 **블록 검색** — 블록(호선-블록)을 찾으면 지도가 그 자리로 날아간다.
@@ -69,6 +69,11 @@ export interface YardSearchHit {
 
 /** 검색 결과 한 건 — 재공 블록(로스터)이거나 야드 실측 위치다 */
 export type BlockSearchHit = RosterSearchHit | YardSearchHit
+
+/** 공정존 → 그 공정의 색. 지도가 공장 지번을 칠하는 색과 같은 함수에서 온다 */
+function zoneColor(zone: RosterBlock['zone']): string {
+  return colorOfProcess(YARD_PROCESS_OF_ZONE[zone])
+}
 
 const STAGE_KEY: Record<RosterBlock['zone'], InshopKey> = {
   fabrication: 'dashboard.map.blockStage.fabrication',
@@ -149,6 +154,8 @@ export function BlockSearch({
   const [index, setIndex] = useState<readonly YardBackdropBlock[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  /** 입력 폭 확장의 근거 — 포커스 중이거나 글자가 남아 있으면 편 채로 둔다 */
+  const [focused, setFocused] = useState(false)
   const loadOnce = useRef(false)
 
   /* 색인은 첫 입력/포커스 때 한 번만 — 그 전의 '/' 는 지금까지와 같은 무게다 */
@@ -195,13 +202,31 @@ export function BlockSearch({
     setQuery('')
   }
 
+  /*
+   * 존재감 (UX 감사 — "못 찾는 수준"):
+   *  - 쉬고 있을 때도 강조색 돋보기 + 블록 특화 라벨 칩이 "여기가 블록 검색"임을 말한다.
+   *    칩은 Cmd+K 팔레트의 그룹 칩과 같은 문법이라, 전역 팔레트(모든 것)와 이 검색
+   *    (블록 특화)의 관계가 중복이 아니라 분업으로 읽힌다.
+   *  - 포커스하면 입력이 옆으로 **펴진다** — 예시가 든 플레이스홀더가 다 보이고,
+   *    강조색 링이 지도 위 다른 카드들과 위계를 가른다. 글자가 남아 있으면 편 채로
+   *    둔다(입력 중 폭이 줄면 글자가 밀린다).
+   *  - 색은 전부 기존 토큰/맵 글라스 관용구다 — 새 팔레트 값을 만들지 않는다.
+   */
   return (
     <div ref={rootRef} className={cn('pointer-events-auto relative', className)}>
-      <div className="flex h-9 items-center gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/90 px-3 shadow-lg backdrop-blur-md focus-within:ring-2 focus-within:ring-white/50">
-        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-white/45">
-          <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M10.5 10.5 14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+      <div
+        className={cn(
+          'flex h-10 items-center gap-2 rounded-inshop-lg border bg-[#0b0e12]/92 px-3 shadow-lg backdrop-blur-md',
+          'transition-colors',
+          focused
+            ? 'border-accent/60 ring-2 ring-accent/35'
+            : 'border-white/15 hover:border-white/28'
+        )}
+      >
+        <SearchIcon size={15} className="shrink-0 text-accent" />
+        <span className="shrink-0 rounded border border-white/16 px-1 py-px text-[10px] font-medium text-white/62">
+          {t('dashboard.map.blockSearchChip')}
+        </span>
         <input
           value={query}
           onChange={(event) => {
@@ -210,16 +235,23 @@ export function BlockSearch({
             ensureIndex()
           }}
           onFocus={() => {
+            setFocused(true)
             if (query) setOpen(true)
             ensureIndex()
           }}
+          onBlur={() => setFocused(false)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && results.length > 0) pick(results[0])
             if (event.key === 'Escape') setOpen(false)
           }}
           placeholder={t('dashboard.map.blockSearchPlaceholder')}
           aria-label={t('dashboard.map.blockSearchLabel')}
-          className="w-44 bg-transparent text-inshop-xs text-white placeholder:text-white/40 focus:outline-none"
+          data-expanded={focused || query.length > 0}
+          className={cn(
+            'bg-transparent text-inshop-xs text-white placeholder:text-white/45 focus:outline-none',
+            'transition-[width] duration-200',
+            focused || query ? 'w-64' : 'w-40'
+          )}
         />
       </div>
 
@@ -227,7 +259,7 @@ export function BlockSearch({
       {open && query && (
         <DraggableCard
           cardKey="block-search-results"
-          className="absolute left-0 top-10 z-20 w-72 overflow-hidden rounded-inshop-lg border border-white/12 bg-[#0b0e12]/95 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+          className="absolute left-0 top-11 z-20 w-80 overflow-hidden rounded-inshop-lg border border-white/15 bg-[#0b0e12]/95 shadow-[0_18px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl"
         >
           {/* 몇 건인지 적는 줄 — 결과 목록의 손잡이를 겸한다(목록 자체는 스크롤이 제 일) */}
           <div
@@ -266,8 +298,17 @@ export function BlockSearch({
                     <span className="shrink-0 font-mono text-inshop-xs font-medium text-white">
                       {row.projNo}-{row.blkNo}
                     </span>
-                    <span className="shrink-0 rounded border border-white/16 px-1 py-px text-[10px] text-white/62">
-                      {t(STAGE_KEY[row.block.zone])}
+                    {/*
+                     * 어느 공정에 있는가 — 지도·공정존 패널이 공정색으로 말하는 것을
+                     * 검색 결과에서만 무채색으로 버렸었다(감사 F-11). 같은 문법으로
+                     * 좌측 색 막대를 얹는다. 색은 상태가 아니라 **공정**을 뜻하므로
+                     * 상태 팔레트가 아니라 공정색(colorOfProcess)에서 온다.
+                     */}
+                    <span
+                      className="flex shrink-0 items-center gap-1 rounded border border-white/16 py-px pl-0.5 pr-1 text-[10px] text-white/70"
+                      style={{ boxShadow: `inset 2px 0 0 ${zoneColor(row.block.zone)}` }}
+                    >
+                      <span className="pl-1">{t(STAGE_KEY[row.block.zone])}</span>
                     </span>
                     {isBlockInTransition(row.block) && (
                       <span
@@ -326,7 +367,7 @@ export function BlockSearch({
       {hit && (
         <DraggableCard
           cardKey="block-search-hit"
-          className="mt-2 flex w-72 max-w-full items-start gap-2 rounded-inshop-lg border border-white/12 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md"
+          className="mt-2 flex w-80 max-w-full items-start gap-2 rounded-inshop-lg border border-white/15 bg-[#0b0e12]/92 p-3 shadow-lg backdrop-blur-md"
         >
           <PinIcon size={14} className="mt-0.5 shrink-0 text-accent" />
           <div className="min-w-0 flex-1">
@@ -382,7 +423,12 @@ function BlockHitBody({ hit }: { hit: RosterSearchHit }) {
   return (
     <>
       <p className="mt-1 flex flex-wrap items-center gap-1">
-        <span className="rounded border border-white/16 px-1 py-px text-[10px] text-white/62">
+        {/* 드롭다운 결과 줄과 같은 공정색 좌막대(F-11) — 고른 순간 드롭다운은 사라지고
+            남는 것이 이 카드라서, 색 문법이 여기서 끊기면 지적된 자리가 그대로 남는다 */}
+        <span
+          className="rounded border border-white/16 py-px pl-1.5 pr-1 text-[10px] text-white/70"
+          style={{ boxShadow: `inset 2px 0 0 ${zoneColor(hit.block.zone)}` }}
+        >
           {t(STAGE_KEY[hit.block.zone])}
         </span>
         {isBlockInTransition(hit.block) && (

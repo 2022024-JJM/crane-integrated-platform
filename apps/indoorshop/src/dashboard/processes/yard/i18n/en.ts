@@ -13,7 +13,7 @@ export const yardEn: typeof yardKo = {
     summary: '{{lots}} yard lots · {{blocks}} blocks · {{occupied}} lots occupied',
     summaryShops: '{{shops}} monitored assembly shops · {{bays}} bays',
     hint: 'Drag to pan · scroll to zoom · click a block, route or bay for details · click a factory for the process view',
-    hint3d: 'Drag to pan · scroll to zoom · shift-drag to orbit · click a block, route or bay for details · click a factory for the process view',
+    hint3d: 'Drag to pan · scroll to zoom · Shift or right-drag to orbit · click a block, route or bay for details · click a factory for the process view',
     filter: {
       all: 'All',
     },

@@ -1,3 +1,4 @@
+import { nowMs } from '../../../lib/now'
 /**
  * 3D 뷰어의 **그리기 루프** — 놀 때는 쉬고, 안 보일 때는 멈춘다.
  *
@@ -71,7 +72,7 @@ export function startRenderLoop(options: RenderLoopOptions): RenderLoopHandle {
     controls,
     render,
     graceMs = 400,
-    now = () => Date.now(),
+    now = nowMs,
     requestFrame = (cb) => requestAnimationFrame(cb),
     cancelFrame = (handle) => cancelAnimationFrame(handle),
     visibility = documentVisibility(),

@@ -3,6 +3,7 @@ import type { Location, LocationStatus } from '../../../shared/entities/location
 import type { LidarBlockTransform } from '../../../shared/features/bay-viewer/model/lidarBlock'
 import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { blocksWithCadModel } from '../../../shared/entities/vessel'
+import { YARD_EQUIPMENT, equipmentLinkOf } from '../../../shared/entities/equipment'
 import { ASSEMBLY_FACTORIES, type AssemblyUnitLevel } from './assemblyFactoryFixture'
 
 /**
@@ -54,8 +55,10 @@ export interface BayBlockAssignment {
 
 /** 정반별 3D 배치 — 블록 로컬 좌표(바닥 중심 원점)를 정반 좌표계에 놓는 transform */
 const BAY_PLACEMENTS: Record<string, LidarBlockTransform> = {
-  'asm-pbs-b1': { position: [0, 0, -4], quaternion: [0, 0.06, 0, 0.998] },
-  'asm-pbs-b2': { position: [1, 0, 3], quaternion: [0, -0.05, 0, 0.999] },
+  /* 2540-281·2543-642 의 정반 — 라이다가 실재하는 베이(8·6BAY)로 이동 (R9 시연:
+     1~3BAY 는 도면상 라이다 0대라 헤드라인 CAD 블록이 '센서 없음'으로 보였다) */
+  'asm-pbs-b8': { position: [0, 0, -4], quaternion: [0, 0.06, 0, 0.998] },
+  'asm-pbs-b6': { position: [1, 0, 3], quaternion: [0, -0.05, 0, 0.999] },
   'asm-pbs-b4': { position: [0, 0, 2], quaternion: [0, 0, 0, 1] },
   'asm-nps-b2': { position: [-1, 0, -2], quaternion: [0, 0.09, 0, 0.996] },
   'asm-nps-b3': { position: [0, 0, 4], quaternion: [0, -0.07, 0, 0.998] },
@@ -126,38 +129,50 @@ export const mockLocations: Location[] = MOCK_FACTORY_SPECS.flatMap((factory) =>
   })
 )
 
-/** 스캔 시각 — 결정론적 (13:00~15:59 범위의 HH:MM) */
+/** 스캔 시각 — 결정론적 (13:00~15:59 범위의 HH:MM). 시드는 **설비 ID** 다 */
 function scanTimeOf(id: string): string {
   const h = 13 + (hashOf(`${id}-scan-h`) % 3)
   const m = hashOf(`${id}-scan-m`) % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-/** 베이별 센서 수 — 재실(CAD 배정) 베이는 8대(장변 4×2), 나머지는 6대(3×2) */
-function sensorCount(id: string): number {
-  return bayBlockAssignments[id] ? 8 : 6
+/** 조립 공장 id → 지도 공장 이름 — 설비 엔티티가 공장을 이름으로 부른다 */
+const factoryNameById = new Map(MOCK_FACTORY_SPECS.map((factory) => [factory.id, factory.name]))
+
+/** 정반 id(`{공장id}-b{베이번호}`) → 베이 번호 */
+function bayNoOf(locationId: string): string {
+  return locationId.split('-b').at(-1) ?? ''
 }
 
 /**
- * 상태 데모용 결정론적 고장 — 배정 베이 중 첫째는 센서 3 offline, 둘째는 센서 1 error.
- * (목록 화면의 '점검 필요 센서' 집계가 항상 같은 값을 보이도록 고정한다.)
+ * 정반의 LiDAR — **도면에서 이관된 실제 설비**를 쓴다.
+ *
+ * 예전에는 정반마다 `센서 1~8` 을 지어냈다(148대). 그런데 같은 조립 화면의 설비 상태 단과
+ * 지도 마커는 이미 이관된 `LD-P01` 을 이름으로 부른다 — 한 라이다가 왼쪽 지도에서는
+ * `LD-P01`, 오른쪽 정반 카드에서는 `센서 3` 이면 그 둘이 같은 것인지 화면을 오가며 다시
+ * 판단해야 한다(`.work/연계매트릭스.md` Top4). 원천을 설비 엔티티 하나로 모은다.
+ *
+ * 상태도 같은 출처(`equipmentLinkOf`)를 따른다 — 예전의 '데모용 고정 고장'(첫 배정 정반의
+ * 3번 센서 offline 등)은 그 설비의 실제 판정과 어긋나므로 함께 걷어냈다.
+ *
+ * 도면이 닿지 않은 베이는 **빈 목록**이다. 없는 센서를 지어내 대수를 채우지 않는다 —
+ * 0대는 "여기엔 아직 라이다가 없다"는 사실이고, 그 자체가 정보다.
  */
-const assignedIds = Object.keys(bayBlockAssignments)
-const sensorOverrides: Record<string, Partial<LidarSensor>> = {
-  [`${assignedIds[0]}-s3`]: { status: 'offline' },
-  [`${assignedIds[1]}-s1`]: { status: 'error' },
-}
-
-export const mockLidarSensors: LidarSensor[] = mockLocations.flatMap((location) =>
-  Array.from({ length: sensorCount(location.id) }, (_, i): LidarSensor => {
-    const id = `${location.id}-s${i + 1}`
-    return {
-      id,
+export const mockLidarSensors: LidarSensor[] = mockLocations.flatMap((location) => {
+  const factoryName = factoryNameById.get(location.factoryId)
+  if (!factoryName) return []
+  const bayNo = bayNoOf(location.id)
+  return YARD_EQUIPMENT.filter(
+    (equipment) =>
+      equipment.typeId === 'LIDAR' && equipment.factory === factoryName && equipment.bay === bayNo
+  ).map(
+    (equipment): LidarSensor => ({
+      id: equipment.id,
       locationId: location.id,
-      name: `센서 ${i + 1}`,
-      status: 'online',
-      lastScanAt: scanTimeOf(location.id),
-      ...sensorOverrides[id],
-    }
-  })
-)
+      /* 이름 = 설비ID. 화면마다 다른 별명을 붙이지 않는다 */
+      name: equipment.id,
+      status: equipmentLinkOf(equipment),
+      lastScanAt: scanTimeOf(equipment.id),
+    })
+  )
+})

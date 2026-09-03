@@ -86,6 +86,31 @@ export function buildMockFactoryLayout(factoryId: string, locations: Location[])
 
 const METERS_PER_DEGREE = 111_320
 
+/** 볼록 껍질 (Andrew monotone chain) — 이어 붙지 않는 지번 묶음의 외곽 갈음 */
+function convexOutline(points: readonly { lat: number; lon: number }[]): { lat: number; lon: number }[] | null {
+  if (points.length < 3) return null
+  const sorted = [...points].sort((a, b) => a.lon - b.lon || a.lat - b.lat)
+  const cross = (
+    o: { lat: number; lon: number },
+    a: { lat: number; lon: number },
+    b: { lat: number; lon: number }
+  ) => (a.lon - o.lon) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lon - o.lon)
+  const lower: { lat: number; lon: number }[] = []
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0)
+      lower.pop()
+    lower.push(p)
+  }
+  const upper: { lat: number; lon: number }[] = []
+  for (const p of [...sorted].reverse()) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0)
+      upper.pop()
+    upper.push(p)
+  }
+  const hull = [...lower.slice(0, -1), ...upper.slice(0, -1)]
+  return hull.length >= 3 ? hull : null
+}
+
 /** 각도를 (-π/2, π/2] 로 접는다 — 축(axis)에는 앞뒤가 없다 */
 const foldAxisAngle = (rad: number) => {
   let a = rad % Math.PI
@@ -130,7 +155,9 @@ export async function buildYardFactoryLayout(
   const parcels = await loadYardParcels()
   const lotPolygon = new Map(parcels.lots.map((lot) => [lot.lot, lot.polygon]))
 
-  /* 베이별 외곽(WGS84) — 하나라도 못 만들면 실형상 포기(위 주석) */
+  /* 베이별 외곽(WGS84) — 하나라도 못 만들면 실형상 포기(위 주석).
+   * 지번이 서로 떨어져 있어(별동 쉘터) 경계가 이어 붙지 않으면 볼록 껍질로 갈음한다 —
+   * bayGable 의 자체 폴백(`outlineOf ?? convexHull`)과 같은 규칙이다. */
   const outlines: { location: Location; bayNo: number; outline: { lat: number; lon: number }[] }[] = []
   for (const location of locations) {
     const bayNo = Number(location.id.split('-b').pop())
@@ -141,7 +168,8 @@ export async function buildYardFactoryLayout(
     const polys = bay.lotCodes
       .map((code) => lotPolygon.get(code))
       .filter((poly): poly is NonNullable<typeof poly> => poly != null)
-    const outline = polys.length > 0 ? outlineOf(polys) : null
+    const outline =
+      polys.length > 0 ? (outlineOf(polys) ?? convexOutline(polys.flat())) : null
     if (!outline || outline.length < 3) return null
     outlines.push({ location, bayNo, outline })
   }

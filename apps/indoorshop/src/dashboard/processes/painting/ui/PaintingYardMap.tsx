@@ -10,7 +10,8 @@ import {
   type MarkerRenderCtx,
 } from '../../../shared/features/process-map-entry'
 import { cn } from '../../../shared/lib/utils'
-import { paintingCollectionOf, todayString } from '../lib/collection'
+import { STATUS_STYLE } from '../../../shared/ui/statusPalette'
+import { paintingCollectionOf } from '../lib/collection'
 import { useFactoriesEquipmentStatus } from '../../../shared/entities/equipment/useEquipmentStatus'
 import { paintingInventoryOf } from '../lib/equipmentInventory'
 import { PaintingCollectionBody } from './PaintingCollectionBody'
@@ -26,6 +27,7 @@ import {
   GAS_HEATER,
   GAS_HEATER_DEEP,
 } from './equipmentIcon'
+import { useBaseDate } from '../../../shared/lib/useBaseDate'
 
 /*
  * 도장 공정 배치 맵 — '맵 진입 공정 화면' 공통 프레임(process-map-entry)의 소비자.
@@ -214,7 +216,8 @@ export function PaintingYardMap({
    * 시계(now, 1초) 때문에 매초 다시 그리므로, 기준일을 마운트 때 한 번 굳혀 두지 않으면
    * 매초 40여 블록의 스텝 실적을 다시 생성하게 된다.
    */
-  const [baseDate] = useState(() => todayString())
+  /* 기준일 — `?date=` 를 따라온다(예전에는 마운트 시점의 오늘로 굳었다) */
+  const { baseDate } = useBaseDate()
   const collectionByFactory = useMemo(() => {
     const map = new Map<string, ReturnType<typeof paintingCollectionOf>>()
     for (const factory of factories) map.set(factory, paintingCollectionOf(factory, baseDate))
@@ -281,7 +284,7 @@ export function PaintingYardMap({
               <span
                 className={cn(
                   'h-1.5 w-1.5 shrink-0 rounded-full',
-                  inProgress > 0 ? 'bg-accent' : 'bg-white/25'
+                  inProgress > 0 ? STATUS_STYLE.inProgress.glassFill : 'bg-white/25'
                 )}
                 title={t('painting.mapEntry.collection.inProgressBlocks', { count: inProgress })}
               />

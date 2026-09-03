@@ -18,6 +18,7 @@ import {
   bayBlockAssignments,
 } from './mockAssemblyData'
 import { ASSEMBLY_FACTORIES } from './assemblyFactoryFixture'
+import { shiftDate, todayString } from '../../../shared/lib/timeAxis'
 import { buildMockFactoryLayout, buildYardFactoryLayout, type FactoryLayout } from '../../../shared/features/bay-viewer/lib/bayLayout'
 import {
   fetchRealLocations,
@@ -54,9 +55,25 @@ export async function fetchLocations(factoryId?: string): Promise<Location[]> {
   return withLatency(factoryId ? all.filter((loc) => loc.factoryId === factoryId) : all)
 }
 
-export function fetchLidarSensors(locationId: string): Promise<LidarSensor[]> {
-  if (isRealLocation(locationId)) return fetchRealLidarSensors(locationId)
-  return withLatency(mockLidarSensors.filter((sensor) => sensor.locationId === locationId))
+/**
+ * 정반의 LiDAR.
+ *
+ * 목업 정반은 **이관된 설비 엔티티**가 원천이다(`mockLidarSensors` — 이름이 곧 설비ID).
+ * 실측 정반(PBS 5BAY)만 예외로 실측 자산의 센서를 낸다 — 그 이름은 지어낸 것이 아니라
+ * 스캐너의 실제 주소(IP)다. 자산을 못 읽는 환경에서는 같은 베이의 설비 목록으로 물러난다:
+ * 목록이 통째로 비는 것보다 낫고, 물러난 값도 지어낸 이름이 아니다.
+ */
+export async function fetchLidarSensors(locationId: string): Promise<LidarSensor[]> {
+  const fromEquipment = () =>
+    withLatency(mockLidarSensors.filter((sensor) => sensor.locationId === locationId))
+  if (isRealLocation(locationId)) {
+    try {
+      return await fetchRealLidarSensors(locationId)
+    } catch {
+      return fromEquipment()
+    }
+  }
+  return fromEquipment()
 }
 
 /**
@@ -127,12 +144,18 @@ export interface BayDailyProduction {
 const COMPLETION_TIMES = ['09:12', '10:45', '13:28', '15:05', '16:40']
 
 /**
- * 오늘 완료 판정된 조립품 내역 — 해당 베이 블록의 실제 조립체에서 추출.
+ * **기준일에** 완료 판정된 조립품 내역 — 해당 베이 블록의 실제 조립체에서 추출.
  *
  * 매니페스트만 읽는다(geometry 불필요). 생산 현황·공장 목록이 같은 함수를 쓰므로
- * 두 화면의 "오늘 n건"이 어긋나지 않는다.
+ * 두 화면의 "그날 n건"이 어긋나지 않는다.
+ *
+ * 기준일이 시드에 들어간다 — 되감으면 그날의 건수가 나와야지, 어제를 보는데 오늘 수가
+ * 그대로 서 있으면 화면이 거짓말이 된다(연계 매트릭스 §2.3).
  */
-async function fetchTodayCompletions(locationId: string): Promise<CompletedItem[]> {
+async function fetchDayCompletions(
+  locationId: string,
+  baseDate: string
+): Promise<CompletedItem[]> {
   const assignment = bayBlockAssignments[locationId]
   if (!assignment) return []
 
@@ -142,7 +165,7 @@ async function fetchTodayCompletions(locationId: string): Promise<CompletedItem[
   )
   if (eligible.length === 0) return []
 
-  const count = Math.min(eligible.length, 1 + (hashOf(`${locationId}-today-prod`) % 4))
+  const count = Math.min(eligible.length, 1 + (hashOf(`${locationId}-${baseDate}-prod`) % 4))
   const start = hashOf(`${locationId}-pick`) % eligible.length
   return Array.from({ length: count }, (_, i) => {
     const assembly = eligible[(start + i) % eligible.length]
@@ -154,25 +177,34 @@ async function fetchTodayCompletions(locationId: string): Promise<CompletedItem[
   })
 }
 
-/** 공장 내 베이별 일일 소조립품 완료 수 + 내역 (최근 7일) */
-export async function fetchDailyProduction(factoryId: string): Promise<BayDailyProduction[]> {
+/**
+ * 공장 내 베이별 일일 소조립품 완료 수 + 내역 (기준일까지 최근 7일).
+ *
+ * **기준일을 인자로 받는다.** 예전에는 여기서 `new Date()` 를 직접 불러서, 통합실적이
+ * `?date=` 로 사흘 전을 말하는 동안 이 화면만 오늘을 말했다(연계 매트릭스 §2.3 · 3위).
+ * 기본값은 오늘이라 기준일을 넘기지 않는 호출부는 지금까지와 똑같이 돈다.
+ */
+export async function fetchDailyProduction(
+  factoryId: string,
+  baseDate: string = todayString()
+): Promise<BayDailyProduction[]> {
   const locations = await fetchLocations(factoryId)
-  const today = new Date()
 
   return Promise.all(
     locations.map(async (location) => {
       const assignment = bayBlockAssignments[location.id]
-      const todayItems = await fetchTodayCompletions(location.id)
+      const todayItems = await fetchDayCompletions(location.id, baseDate)
 
       const daily = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(today)
-        d.setDate(d.getDate() - (6 - i))
-        const label = `${d.getMonth() + 1}/${d.getDate()}`
+        /* 기준일이 창의 끝 — 그 앞 6일이 왼쪽에 선다 (통합실적의 조회 창과 같은 문법) */
+        const date = shiftDate(baseDate, -(6 - i))
+        const [, month, day] = date.split('-')
+        const label = `${Number(month)}/${Number(day)}`
         const isToday = i === 6
         const count = isToday
           ? todayItems.length
           : assignment
-            ? 1 + (hashOf(`${location.id}-${label}-prod`) % 6)
+            ? 1 + (hashOf(`${location.id}-${date}-prod`) % 6)
             : 0
         return { label, count }
       })
@@ -213,7 +245,9 @@ function summarizeUnitLevel(bays: FactoryBaySummary[]): FactoryOverview['unitLev
  * 카드마다 따로 fetch 하면 공장 수만큼 요청이 늘고 카드가 제각기 늦게 채워진다 —
  * 목록은 한 번에 서야 하므로 여기서 베이·센서·완료 판정을 미리 합쳐 내려준다.
  */
-export async function fetchFactoryOverviews(): Promise<FactoryOverview[]> {
+export async function fetchFactoryOverviews(
+  baseDate: string = todayString()
+): Promise<FactoryOverview[]> {
   const [factories, locations] = await Promise.all([fetchFactories(), fetchLocations()])
 
   return Promise.all(
@@ -226,7 +260,7 @@ export async function fetchFactoryOverviews(): Promise<FactoryOverview[]> {
             fetchLidarSensors(location.id),
             // 목록 화면은 완료 건수 하나 때문에 통째로 무너지면 안 된다 —
             // 매니페스트를 못 읽으면 그 정반만 0건으로 두고 나머지를 세운다
-            fetchTodayCompletions(location.id).catch(() => []),
+            fetchDayCompletions(location.id, baseDate).catch(() => []),
           ])
           return {
             locationId: location.id,

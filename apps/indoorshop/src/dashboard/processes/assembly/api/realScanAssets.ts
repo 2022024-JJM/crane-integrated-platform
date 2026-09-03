@@ -111,23 +111,63 @@ export interface RealCadMesh {
 
 const ASSET_BASE = publicAsset('/real-scan')
 
-async function fetchJson<T>(path: string): Promise<T> {
+/**
+ * 실측 자산을 가져오는 통로 — **바꿔 끼울 수 있게 한 겹 둔다.**
+ *
+ * 이 자산들은 `public/real-scan/` 에 있고 상대 경로 `fetch` 로 온다. 브라우저에서는
+ * 그것으로 충분하지만, **노드(테스트)에는 상대 경로를 풀 기준이 없어** `fetch` 가
+ * TypeError 로 죽는다. 그 바람에 이 로더를 거치는 조립 집계(`fetchFactoryOverviews`)는
+ * 노드에서 아예 실행되지 않았고, 화면 수치를 코드로 검증할 길이 없었다
+ * (`.work/연계매트릭스.md` §5 가 남긴 제약).
+ *
+ * 그래서 통로를 주입 가능하게 연다. 기본은 지금까지와 같은 상대 경로 fetch 이고,
+ * 테스트는 파일에서 읽는 통로를 끼운다 — **제품 동작은 그대로**다.
+ */
+export type RealScanAssetFetcher = (path: string) => Promise<unknown>
+
+const defaultFetcher: RealScanAssetFetcher = async (path) => {
   const res = await fetch(`${ASSET_BASE}/${path}`)
   if (!res.ok) throw new Error(`실측 스캔 자산 로드 실패: ${path} (HTTP ${res.status})`)
-  return res.json() as Promise<T>
+  return res.json()
+}
+
+let assetFetcher: RealScanAssetFetcher = defaultFetcher
+
+/**
+ * 자산 통로를 바꾼다(테스트 전용). `null` 이면 기본(상대 경로 fetch)으로 되돌린다.
+ * 통로를 바꾸면 이미 받아 둔 캐시도 함께 버린다 — 다른 자산을 보면서 옛 결과를 쓰면 안 된다.
+ */
+export function setRealScanAssetFetcher(next: RealScanAssetFetcher | null): void {
+  assetFetcher = next ?? defaultFetcher
+  manifestPromise = null
+  meshesPromise = null
+}
+
+async function fetchJson<T>(path: string): Promise<T> {
+  return (await assetFetcher(path)) as T
 }
 
 let manifestPromise: Promise<RealScanManifest> | null = null
 export function loadRealScanManifest(): Promise<RealScanManifest> {
-  manifestPromise ??= fetchJson<RealScanManifest>('manifest.json')
+  /*
+   * 실패한 약속을 캐시에 남기지 않는다 — 한 번 실패하면 그 프로세스 내내 같은 오류를
+   * 되돌려 주고, 통로를 갈아 끼워도 소용이 없어진다.
+   */
+  manifestPromise ??= fetchJson<RealScanManifest>('manifest.json').catch((error) => {
+    manifestPromise = null
+    throw error
+  })
   return manifestPromise
 }
 
 let meshesPromise: Promise<RealCadMesh[]> | null = null
 export function loadRealCadMeshes(): Promise<RealCadMesh[]> {
-  meshesPromise ??= fetchJson<{ instances: RealCadMesh[] }>('cad_meshes.json').then(
-    (d) => d.instances
-  )
+  meshesPromise ??= fetchJson<{ instances: RealCadMesh[] }>('cad_meshes.json')
+    .then((d) => d.instances)
+    .catch((error) => {
+      meshesPromise = null
+      throw error
+    })
   return meshesPromise
 }
 

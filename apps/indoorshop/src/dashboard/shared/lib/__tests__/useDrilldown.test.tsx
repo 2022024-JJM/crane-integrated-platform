@@ -38,7 +38,8 @@ describe('useDrilldown — URL 이 원본', () => {
     })
     act(() => result.current.drill.go({ factory: 'GBS' }))
     const params = new URLSearchParams(result.current.location.search)
-    expect(params.get('factory')).toBe('GBS')
+    /* 값은 안정 슬러그(F-30) */
+    expect(params.get('factory')).toBe('asm-gbs')
     expect(params.get('assy')).toBe('X')
     expect(params.get('date')).toBe('2026-09-03')
   })
@@ -97,8 +98,9 @@ describe('useDrilldown — URL 이 원본', () => {
     const { result } = renderHook(useHarness, {
       wrapper: wrapperAt('/zones/assembly?factory=GBS&bay=GBS%233BAY'),
     })
+    /* 값은 안정 슬러그(F-30) — 화면 상태는 이름(GBS), 주소는 asm-gbs */
     expect(result.current.drill.hrefFor({ process: null, factory: 'GBS', bay: null })).toBe(
-      '/zones/assembly?factory=GBS',
+      '/zones/assembly?factory=asm-gbs',
     )
   })
 })

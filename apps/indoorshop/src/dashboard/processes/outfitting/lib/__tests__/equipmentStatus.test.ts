@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { YARD_EQUIPMENT } from '../../../../shared/entities/equipment'
 import { OUTFITTING_FACTORIES } from '../../api/outfittingFactoryFixture'
-import { mockSensors } from '../../api/mockOutfittingData'
 import { OUTFITTING_DEVICE_KINDS } from '../../model/equipment'
 import {
   deviceSummaryOf,
@@ -54,14 +53,15 @@ describe('outfittingDevices', () => {
     expect(devices.filter((d) => d.kind === 'PNL')).toHaveLength(1)
   })
 
-  it('목업 라이다는 공장 뷰의 센서 mock 과 같은 대수·같은 상태를 말한다', () => {
+  it('목업 자리 폴백이 없다 — 설비가 닿지 않은 공장은 빈 목록이다', () => {
+    /*
+     * 예전에는 엔티티가 비면 `{구역}-L1` 목업을 세웠다. 그 폴백이 두 번째 이름 우주의
+     * 씨앗이었으므로 걷어냈다(W7-7-3) — 이제 목록은 설비 엔티티에서만 나온다.
+     */
     for (const spec of OUTFITTING_FACTORIES) {
-      if (entityCountOf(spec.name) > 0) continue
-      const sensors = mockSensors.filter((sensor) => sensor.factoryId === spec.id)
-      const lidars = outfittingDevices(spec.name).filter((d) => d.kind === 'LIDAR')
-      expect(lidars.map((d) => d.id).sort()).toEqual(sensors.map((s) => s.name).sort())
-      const statusOf = new Map(lidars.map((d) => [d.id, d.status]))
-      for (const sensor of sensors) expect(statusOf.get(sensor.name)).toBe(sensor.status)
+      const devices = outfittingDevices(spec.name)
+      expect(devices.length).toBe(entityCountOf(spec.name))
+      expect(devices.every((device) => !device.placeholder)).toBe(true)
     }
   })
 

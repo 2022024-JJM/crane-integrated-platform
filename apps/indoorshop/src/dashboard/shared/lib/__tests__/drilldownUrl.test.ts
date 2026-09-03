@@ -59,6 +59,24 @@ describe('parseDrilldown', () => {
   it('URLSearchParams 객체도 그대로 받는다', () => {
     expect(parseDrilldown(new URLSearchParams({ factory: 'GBS' })).factory).toBe('GBS')
   })
+
+  it('슬러그 값이 정본 — 이름으로 되읽는다 (F-30)', () => {
+    expect(parseDrilldown('?factory=asm-gbs').factory).toBe('GBS')
+    expect(parseDrilldown('?factory=pnt-1dock').factory).toBe('1DOCK 도장공장')
+    expect(parseDrilldown(`?${LEGACY_FACTORY_PARAM}=ofit-pos1`).factory).toBe('POS 1공장')
+  })
+
+  it('낡은 링크(한글 이름 값)도 계속 읽힌다 — 읽기 호환', () => {
+    expect(parseDrilldown('?factory=%EC%A1%B0%EB%A6%BD4%EA%B3%B5%EC%9E%A5-OFD1').factory).toBe(
+      '조립4공장-OFD1',
+    )
+  })
+
+  it('베이는 조각만 싣고 전체 id 로 되읽는다 — 낡은 전체 id 값도 그대로 읽힌다', () => {
+    expect(parseDrilldown('?factory=asm-gbs&bay=3BAY').bay).toBe('GBS#3BAY')
+    /* 낡은 링크 — `{공장}#{베이}` 전체가 실려 있어도 그대로 */
+    expect(parseDrilldown('?factory=GBS&bay=GBS%233BAY').bay).toBe('GBS#3BAY')
+  })
 })
 
 describe('drilldownLevel · isTopDrilldown', () => {
@@ -140,7 +158,8 @@ describe('writeDrilldown — 자기 키만 건드린다', () => {
     expect(next.get('block')).toBe('A11')
     expect(next.get('assy')).toBe('X')
     expect(next.get('date')).toBe('2026-09-03')
-    expect(next.get(DRILLDOWN_PARAM.factory)).toBe('GBS')
+    /* 값은 안정 슬러그(F-30) — 한글/원 이름이 아니라 asm-gbs 가 실린다 */
+    expect(next.get(DRILLDOWN_PARAM.factory)).toBe('asm-gbs')
   })
 
   it('비운 단계의 키는 지운다 — 빈 값이 남지 않게', () => {
@@ -152,7 +171,7 @@ describe('writeDrilldown — 자기 키만 건드린다', () => {
   it('옛 철자는 쓸 때 정규화한다 — 한 자리에 두 철자를 남기지 않는다', () => {
     const next = writeDrilldown(`?${LEGACY_FACTORY_PARAM}=GBS`, { ...YARD_DRILLDOWN, factory: 'NPS' })
     expect(next.has(LEGACY_FACTORY_PARAM)).toBe(false)
-    expect(next.get(DRILLDOWN_PARAM.factory)).toBe('NPS')
+    expect(next.get(DRILLDOWN_PARAM.factory)).toBe('asm-nps')
   })
 
   it('원본 파라미터를 건드리지 않는다 (새 객체를 낸다)', () => {
@@ -168,10 +187,10 @@ describe('drilldownSearch · drilldownHref', () => {
     expect(drilldownHref('/zones/assembly', '?factory=GBS', YARD_DRILLDOWN)).toBe('/zones/assembly')
   })
 
-  it('경로 + 쿼리를 그대로 링크에 넣을 수 있다', () => {
+  it('경로 + 쿼리를 그대로 링크에 넣을 수 있다 — 공장은 슬러그, 베이는 조각만', () => {
     expect(
       drilldownHref('/zones/assembly', '', { process: null, factory: 'GBS', bay: 'GBS#3BAY' }),
-    ).toBe('/zones/assembly?factory=GBS&bay=GBS%233BAY')
+    ).toBe('/zones/assembly?factory=asm-gbs&bay=3BAY')
   })
 })
 

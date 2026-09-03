@@ -89,7 +89,8 @@ describe('통합 검색 팔레트', () => {
     const option = await screen.findByText('LD-D01')
     await userEvent.click(option)
     expect(screen.getByTestId('location').textContent).toBe(
-      '/zones/assembly?factory=3DS&bay=3DS%231'
+      /* 값은 안정 슬러그·베이 조각 (F-30) — 도착 화면이 계약 파서로 3DS#1 로 되읽는다 */
+      '/zones/assembly?factory=asm-3ds&bay=1'
     )
   })
 

@@ -134,6 +134,8 @@ export function generateParts(
   const seed = `${projNo}-${blockNo}`
   const count = 34 + (hashOf(`${seed}-n`) % 27) // 34~60건
   const daysBack = rewindDaysOf(baseDate)
+  /* 이 블록이 기준일에 조립을 끝냈다면 가공은 그 전에 끝나 있었다 — 공정 순서 게이트 */
+  const forced = fabricationForcedAt(projNo, blockNo, baseDate)
   const parts: FabPart[] = []
   for (let i = 0; i < count; i++) {
     const pid = `${blockNo}-P${String(i + 1).padStart(3, '0')}`
@@ -147,7 +149,9 @@ export function generateParts(
     // 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다
     const levelToday = Math.min(applicable.length, Math.floor((h % 100) / 14))
     /* 절점 하나를 지나는 데 걸리는 날 — 부재마다 2~4일. 기준일이 그만큼 전이면 한 칸 뒤 */
-    const level = rewoundLevel(levelToday, daysBack, 2 + (h % 3))
+    const level = forced
+      ? applicable.length
+      : rewoundLevel(levelToday, daysBack, 2 + (h % 3))
     const started = h % 3 !== 0 // 수위 자리 단계의 착수 여부
 
     const statuses = {} as Record<FabStageId, StageStatus>
@@ -286,6 +290,67 @@ function assemblyStageOf(
   return { force: 'none', moved: 'no' } // 조립 중 — 이동했으면 조립이 끝난 것이다
 }
 
+/**
+ * **기준일 D 에 이 블록의 조립이 끝나 있었는가** (W7-6F).
+ *
+ * 조립 생성기 안에만 있던 수위 계산을 밖으로 뽑는다. 가공 쪽에서도 같은 답이 필요해졌기
+ * 때문인데(아래 `fabricationForcedAt`), 두 곳이 각자 세면 되감기 속도가 달라 어느 과거
+ * 날짜에서 서로 어긋난다 — 조립은 끝났는데 가공은 진행 중인 창이 생긴다. 답을 내는 곳은
+ * 하나여야 한다.
+ *
+ * 반환값은 조립 카드가 쓰는 것과 **같은 수치**다: 몇 개 중 몇 개(`count`/`level`), 전량
+ * 완료인가(`allDone`), 검사장으로 나갔는가(`moved`).
+ */
+function assemblyLevelAt(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): {
+  count: number
+  level: number
+  allDone: boolean
+  moved: boolean
+  stage: ReturnType<typeof assemblyStageOf>
+} {
+  const seed = `${projNo}-${blockNo}`
+  const count = 4 + (hashOf(`${seed}-assy`) % 8)
+  const stage = assemblyStageOf(projNo, blockNo)
+  const rawLevel = Math.min(
+    count,
+    Math.floor((hashOf(`${seed}-asm-lv`) % 100) / (100 / (count + 1)))
+  )
+  const levelToday =
+    stage.force === 'complete' ? count : stage.force === 'notStarted' ? 0 : rawLevel
+  /* 과거 기준일이면 그만큼 되감는다 — ASSY 하나를 붙이는 데 3~7일 */
+  const level = rewoundLevel(levelToday, rewindDaysOf(baseDate), 3 + (hashOf(`${seed}-asm-cad`) % 5))
+  const allDone = level >= count
+  const moved =
+    allDone && (stage.moved === 'yes' || (stage.moved === 'auto' && hashOf(`${seed}-insp`) % 3 !== 1))
+  return { count, level, allDone, moved, stage }
+}
+
+/**
+ * **가공 판별의 수위도 그 블록이 서 있는 공정이 정한다** (W7-6F, 사용자 확정).
+ *
+ * 상식이다 — 블록이 선행의장 공장에 서 있다면 가공은 이미 끝났다. 부재를 다 자르지도
+ * 않고 조립을 마쳐 의장으로 넘어갈 수는 없다. 그런데 더미는 가공 수위를 해시로만 뽑아서
+ * 의장·도장 공장의 블록이 '가공 62%' 로 나왔고, 같은 블록을 두고 화면 셋이 서로 다른
+ * 이야기를 했다.
+ *
+ * 게이트를 **로스터 권역**(의장이면 100%)에 걸지 않고 **조립 전량 완료**에 거는 이유는
+ * 되감기다. 권역은 오늘의 사실이라 과거 기준일에서는 참이 아니고, 가공(부재 2~4일)과
+ * 조립(ASSY 3~7일)은 되감기 속도가 달라서 오늘만 보고 걸면 어느 과거 날짜에 "조립은
+ * 끝났는데 가공은 진행 중" 인 창이 열린다. `allDone` 에 걸면 사슬이 통째로 함께 되감긴다:
+ *
+ *   가공 100% → 조립 전량 완료 → 검사장 이동 → 의장·도장
+ *
+ * **겹침은 그대로 둔다.** 조립 진행 중(전량 완료 전)인 블록은 가공이 미완일 수 있다 —
+ * 부재가 순차로 올라오는 동안 앞선 부재로 조립을 시작하는 것이 정상이기 때문이다.
+ */
+function fabricationForcedAt(projNo: string, blockNo: string, baseDate: string): boolean {
+  return assemblyLevelAt(projNo, blockNo, baseDate).allDone
+}
+
 /** 급 → ASSY_STRC_CODE — mock 표현. 실코드 체계는 YDEH050M 확인 후 교체한다 */
 const TIER_STRC: Record<AssyTier, string> = { grand: 'G', mid: 'M', sub: 'S' }
 /** ASSY 아래 W/O 의 작업 순서 — 취부 → 용접 → 사상 */
@@ -305,20 +370,9 @@ const WO_KIND_ORDER: readonly AssyWoKind[] = ['fit', 'weld', 'grind']
  */
 export function generateAssyUnits(projNo: string, blockNo: string, baseDate: string): AssemblySummary {
   const seed = `${projNo}-${blockNo}`
-  /* ASSY 수 — 헤더 카드의 어셈블리 수와 같은 식(같은 해시)이라 두 화면이 같은 수를 말한다 */
-  const count = 4 + (hashOf(`${seed}-assy`) % 8)
-  /* 수위는 블록이 서 있는 공정이 먼저 정한다 (공정 순서 정합 — assemblyStageOf) */
-  const stage = assemblyStageOf(projNo, blockNo)
-  const rawLevel = Math.min(
-    count,
-    Math.floor((hashOf(`${seed}-asm-lv`) % 100) / (100 / (count + 1)))
-  )
-  const levelToday =
-    stage.force === 'complete' ? count : stage.force === 'notStarted' ? 0 : rawLevel
-  /* 과거 기준일이면 그만큼 되감는다 — ASSY 하나를 붙이는 데 3~7일. 되감겨 전량 완료가
-     아니게 되면 검사장 이동(`allDone` 아래)도 저절로 풀린다: 조립이 안 끝났는데 검사장에
-     가 있을 수는 없다. */
-  const level = rewoundLevel(levelToday, rewindDaysOf(baseDate), 3 + (hashOf(`${seed}-asm-cad`) % 5))
+  /* 수위·전량완료·검사장 이동은 `assemblyLevelAt` 한 곳에서 나온다 — 가공 게이트가 같은
+     답을 읽어야 두 권역이 어느 기준일에서도 어긋나지 않는다(W7-6F) */
+  const { count, level, stage } = assemblyLevelAt(projNo, blockNo, baseDate)
   const started = stage.force === 'notStarted' ? false : hashOf(`${seed}-asm-st`) % 4 !== 0
 
   /* 도장 단계 블록만 조립 시간축을 과거로 민다 — 그 외 블록은 shift 0 이라 종전 그대로다 */
@@ -414,12 +468,9 @@ export function generateAssyUnits(projNo: string, blockNo: string, baseDate: str
     }
   })
 
-  /* 검사장 이동(BTS 반출 = 조립종료) — 블록 레벨 사실: ASSY 전량 완료 후에만 */
-  const allDone = level >= count
-  /* 검사장 이동 = 조립 종료. 의장·도장에 서 있으면 이미 이동한 것이고, 조립 중이면
-     아직이다 — 어느 쪽이든 ASSY 전량 완료가 선행 조건이다(findAssyViolations 규칙). */
-  const moved =
-    allDone && (stage.moved === 'yes' || (stage.moved === 'auto' && hashOf(`${seed}-insp`) % 3 !== 1))
+  /* 검사장 이동(BTS 반출 = 조립종료) — 블록 레벨 사실: ASSY 전량 완료 후에만.
+     판정은 위 `assemblyLevelAt` 이 이미 했다(같은 규칙을 두 번 적지 않는다). */
+  const { moved } = assemblyLevelAt(projNo, blockNo, baseDate)
   /* 도장 단계면 검사장 이동이 기준일 -7~-10일(갓 반입이면 -2일). 의장에 갓 넘어왔으면
      '어제 이동' 이라야 전이가 전이로 읽힌다. */
   const justArrived = findBlock(projNo, blockNo)?.justArrived === true
@@ -752,6 +803,20 @@ const addDays = (base: string, days: number): string => {
 }
 
 /** 절점별 계획일 — 기준일 주변으로 결정론 배치 (S1 과거 ~ S5 미래) */
+/**
+ * 절점별 계획일 — **계획도 그 블록이 서 있는 공정을 따른다** (W7-7-1).
+ *
+ * 계획 사다리를 늘 기준일 언저리(-6 ~ +6일)에 깔면, 몇 주 전에 가공을 마치고 도장에 가
+ * 있는 블록도 "S5 계획일이 모레" 가 된다. 그러면 헤더 카드가 계획 40% · 실적 100% 라고
+ * 말한다 — 2.5배 초과 달성처럼 읽히지만 사실은 계획이 그 블록을 못 따라간 것뿐이다.
+ *
+ * 그래서 **가공을 이미 지난 블록**(공정 순서 게이트와 같은 원천 — `fabricationForcedAt`)은
+ * 계획 사다리를 통째로 과거로 민다. 그 블록의 가공 계획은 실제로 지난 일이다.
+ * 밀어 내는 양(`PAST_PLAN_SHIFT_DAYS`)은 사다리의 마지막 절점(S5, 기준일 +4~+6일)이
+ * 확실히 과거에 놓이도록 잡는다.
+ */
+const PAST_PLAN_SHIFT_DAYS = 8
+
 export function planDatesOf(
   projNo: string,
   blockNo: string,
@@ -759,12 +824,14 @@ export function planDatesOf(
 ): Record<FabStageId, string> {
   const seed = `${projNo}-${blockNo}`
   const jitter = (stage: FabStageId) => hashOf(`${seed}-plan-${stage}`) % 3
+  /* 가공을 지난 블록이면 계획도 과거다 — 실적(게이트)과 같은 사실에서 파생한다 */
+  const shift = fabricationForcedAt(projNo, blockNo, baseDate) ? -PAST_PLAN_SHIFT_DAYS : 0
   return {
-    S1: addDays(baseDate, -6 + jitter('S1')),
-    S2: addDays(baseDate, -3 + jitter('S2')),
-    S3: addDays(baseDate, -1 + jitter('S3')),
-    S4: addDays(baseDate, 1 + jitter('S4')),
-    S5: addDays(baseDate, 4 + jitter('S5')),
+    S1: addDays(baseDate, shift - 6 + jitter('S1')),
+    S2: addDays(baseDate, shift - 3 + jitter('S2')),
+    S3: addDays(baseDate, shift - 1 + jitter('S3')),
+    S4: addDays(baseDate, shift + 1 + jitter('S4')),
+    S5: addDays(baseDate, shift + 4 + jitter('S5')),
   }
 }
 

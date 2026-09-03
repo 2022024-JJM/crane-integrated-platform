@@ -43,7 +43,12 @@ export interface ProcessNavEntry {
  * 조립 모듈을 부르지 않고 레지스트리에 "공장 현황을 내는 모듈"을 물어본다.
  */
 export interface ProcessProvides {
-  factoryOverviews?: () => Promise<FactoryOverview[]>
+  /**
+   * 공장 현황 집계. **기준일을 받는다** — 주지 않으면 오늘이라 기존 호출부는 그대로다.
+   * 야드가 `?date=` 로 되감긴 화면을 보고 있으면 그 날짜가 여기로 흘러들어야, 지도 위
+   * 정반과 옆 목록이 같은 날을 말한다(연계 매트릭스 §2.3).
+   */
+  factoryOverviews?: (baseDate?: string) => Promise<FactoryOverview[]>
   /**
    * 공정존 → 지도상의 대표 시설·좌표. 야드가 41개 시설의 공정 귀속·좌표를 알아
    * 이것을 채우고, 대시보드는 레지스트리(`fetchProcessFacilityAnchors`)로 읽는다.
@@ -64,6 +69,42 @@ export interface ProcessProvides {
    * "작업 위치 상세 미제공" 으로 다뤄진다 — 계약은 **선택적**이다.
    */
   mapDrilldown?: ProcessMapDrilldownProvider
+  /**
+   * 의장 **재공 블록**과 그 판별 진척 — 통합실적의 의장 레일이 읽어 간다(W7-11).
+   *
+   * 통합실적은 shared 라 공정 모듈을 부를 수 없다. 그런데 의장 카드가 쓸 수치는
+   * **의장 공장 화면이 쓰는 바로 그 값**이어야 한다(연계 매트릭스 원칙 — 화면마다 제
+   * 해시로 진척을 지어내면 같은 블록이 두 숫자를 갖는다). 그래서 의장이 내고 통합실적이
+   * 레지스트리로 읽는다.
+   *
+   * 기준일을 받는다 — 통합실적이 되감긴 날을 보고 있으면 의장 줄도 그 날이어야 한다.
+   */
+  outfittingBlocks?: (baseDate?: string) => Promise<OutfittingWipBlock[]>
+}
+
+/**
+ * 의장 재공 블록 한 장 — **공정 모듈과 shared 사이의 계약**.
+ *
+ * 의장 모듈의 `OutfittingBlock` 을 그대로 쓰지 않는 이유는 shared 가 공정 타입을 알게
+ * 되기 때문이다. 여기 있는 것은 통합실적이 실제로 읽는 필드뿐이고, 문자열 유니온은
+ * 데이터이지 모듈 의존이 아니다.
+ *
+ * ⚠️ **블록 단위다.** 의장에는 조립 같은 계층이 없다 — 그 어휘가 흘러들지 않게 필드
+ * 이름에서부터 막는다(`processes/outfitting/__tests__/noAssemblyHierarchy`).
+ */
+export interface OutfittingWipBlock {
+  projNo: string
+  blockNo: string
+  factoryId: string
+  /** 놓인 구역 이름 */
+  areaName: string
+  /** 송선기호 */
+  wstgCode: string
+  /** 라이다 기반 판별 진척(%) — 의장의 유일한 축 */
+  judgedRate: number
+  status: 'waiting' | 'in_progress' | 'completed'
+  /** 조립을 막 끝내고 어제 들어왔는가 */
+  justArrived: boolean
 }
 
 export interface ProcessModule {

@@ -47,8 +47,17 @@ import { BlockHeaderCard } from '../features/performance/ui/BlockHeaderCard'
 import { StageCards } from '../features/performance/ui/StageCards'
 import { AssemblyCard } from '../features/performance/ui/AssemblyCard'
 import { PaintingCard } from '../features/performance/ui/PaintingCard'
+import { OutfittingCard } from '../features/performance/ui/OutfittingCard'
+import {
+  fetchOutfittingRows,
+  overallOf,
+  rowOfBlock,
+  rowsOfQuery,
+  type OutfittingRow,
+} from '../features/performance/api/outfittingPerformance'
 import { EventsSection } from '../features/performance/ui/EventsSection'
 import { CardSkeleton, EmptyState, ErrorState } from '../ui/states'
+import { nowDate } from '../lib/now'
 
 const REFRESH_SECONDS = 5
 
@@ -57,7 +66,8 @@ const PROCESS_RAILS = [
   { id: 'fabrication', labelKey: 'performance.rails.fabrication', noteKey: null },
   { id: 'assembly', labelKey: 'performance.rails.assemblyActive', noteKey: null },
   { id: 'painting', labelKey: 'performance.rails.paintingActive', noteKey: null },
-  { id: 'outfitting', labelKey: 'performance.rails.outfitting', noteKey: 'performance.rails.outfittingNote' },
+  /* 의장도 이제 카드가 선다 — '절점 없음' 은 각주가 아니라 카드가 스스로 말한다(W7-11) */
+  { id: 'outfitting', labelKey: 'performance.rails.outfitting', noteKey: null },
 ] as const
 
 /**
@@ -130,6 +140,8 @@ export function PerformancePage() {
   /** 재시도 — 같은 조건으로 상세만 다시 건다(화면 새로고침이 아니라) */
   const [detailRetry, setDetailRetry] = useState(0)
   const [events, setEvents] = useState<CollectionEvent[]>([])
+  /* 의장 레일 — 절점이 없어 블록 줄이 곧 카드다. 값은 의장 공장 화면과 같은 원천이다 */
+  const [outfittingRows, setOutfittingRows] = useState<OutfittingRow[]>([])
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
 
@@ -152,17 +164,20 @@ export function PerformancePage() {
   const runQuery = useCallback(
     async (projNo: string, blocks: string[], processFilter: ProcessFilter) => {
       const targetBlocks = blocks.length > 0 ? blocks : (await fetchBlocks(projNo)).map((b) => b.blockNo)
-      const [nextSummaries, nextEvents] = await Promise.all([
+      const [nextSummaries, nextEvents, nextOutfitting] = await Promise.all([
         Promise.all(targetBlocks.map((b) => fetchBlockSummary(projNo, b, baseDate))),
         /* 창을 함께 넘긴다 — 기준일 이후 행은 seam 에서 잘린다(그날 화면에 없던 일) */
         fetchCollectionEvents(projNo, targetBlocks, processFilter, baseDate, dateWindow),
+        /* 의장은 레지스트리를 거쳐 읽는다 — shared 가 공정 모듈을 부를 수 없다 */
+        fetchOutfittingRows(baseDate),
       ])
       setSummaries(nextSummaries)
       setEvents(nextEvents)
+      setOutfittingRows(rowsOfQuery(nextOutfitting, projNo, targetBlocks))
       setActiveBlock((prev) =>
         prev && targetBlocks.includes(prev) ? prev : (targetBlocks[0] ?? null)
       )
-      setRefreshedAt(new Date().toTimeString().slice(0, 8))
+      setRefreshedAt(nowDate().toTimeString().slice(0, 8))
     },
     [baseDate, dateWindow]
   )
@@ -218,7 +233,7 @@ export function PerformancePage() {
         setAssembly(asm)
         setPainting(pnt)
         setDetail({ loading: false, error: null })
-        setDetailLoadedAt(new Date().toISOString())
+        setDetailLoadedAt(nowDate().toISOString())
       },
       (error: unknown) => {
         if (cancelled) return
@@ -400,6 +415,8 @@ export function PerformancePage() {
               <BlockHeaderCard
                 key={summary.blockNo}
                 summary={summary}
+                /* 의장 줄 — 그 블록이 의장 재공일 때만 채워진다 */
+                outfitting={rowOfBlock(outfittingRows, summary.projNo, summary.blockNo)}
                 active={activeBlock === summary.blockNo}
                 onSelect={() => {
                   setActiveBlock(summary.blockNo)
@@ -412,7 +429,12 @@ export function PerformancePage() {
 
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <SectionHeading description={t('performance.stages.snapshot')}>
+              {/* 절점이 다섯인 이유를 제목 옆에서 한 번만 말한다 — 실제 가공 흐름은 아홉
+                  단계이고, 그중 원천에 완료 근거가 있는 다섯만 절점으로 선다(W7-6D).
+                  안내를 새로 세우지 않고 기존 설명 줄에 실어 총량을 늘리지 않는다. */}
+              <SectionHeading
+                description={`${t('performance.stages.snapshot')} · ${t('performance.stages.nodeNote')}`}
+              >
                 {t('performance.stages.title')}
                 {activeBlock && (
                   <span className="ml-1.5 text-inshop-sm font-normal text-foreground/50 tabular-nums">
@@ -497,6 +519,25 @@ export function PerformancePage() {
                 description={t('performance.pnt.noPlanNote')}
               />
             )}
+          </section>
+
+          {/* 의장 절점 — **없다.** 절점을 지어내지 않고 블록 판별 %만 세운다 (W7-11) */}
+          <section>
+            <div className="mb-2">
+              <SectionHeading description={t('performance.ofit.basisNote')}>
+                {t('performance.ofit.title')}
+                {activeBlock && (
+                  <span className="ml-1.5 text-inshop-sm font-normal text-foreground/50 tabular-nums">
+                    {query.projNo}-{activeBlock}
+                  </span>
+                )}
+              </SectionHeading>
+            </div>
+            <OutfittingCard
+              rows={outfittingRows}
+              overall={overallOf(outfittingRows)}
+              activeBlock={activeBlock}
+            />
           </section>
 
           <EventsSection

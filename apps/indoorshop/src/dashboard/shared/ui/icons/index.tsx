@@ -156,6 +156,21 @@ export function StatusGoodIcon({ className, size }: IconProps) {
   )
 }
 
+/**
+ * 진행중 — 도는 시계.
+ *
+ * 완료(체크)·이상(엑스)과 **모양으로** 갈려야 한다. 색만으로 가르면 색각 이상에서
+ * 세 상태가 한 덩어리가 된다(상태 팔레트의 색 단독 금지 규칙).
+ */
+export function StatusProgressIcon({ className, size }: IconProps) {
+  return (
+    <Icon className={className} size={size}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3 2" />
+    </Icon>
+  )
+}
+
 export function StatusWarningIcon({ className, size }: IconProps) {
   return (
     <Icon className={className} size={size}>

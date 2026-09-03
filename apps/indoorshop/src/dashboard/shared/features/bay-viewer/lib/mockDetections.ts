@@ -52,8 +52,8 @@ function mockProgress(id: string): number {
 }
 
 /** 라이다 관측 기반 진척률이 붙은 인식 히스토리 (mock — 스캔 갱신마다 진척률 상승) */
-function mockHistory(id: string, arrivalEvent: string): LidarHistoryEvent[] {
-  const latest = mockProgress(id)
+function mockHistory(id: string, arrivalEvent: string, override?: number): LidarHistoryEvent[] {
+  const latest = override ?? mockProgress(id)
   return [
     { timestamp: '14:32', event: '스캔 갱신', progress: latest },
     { timestamp: '09:10', event: '스캔 갱신', progress: Math.max(5, latest - 16) },
@@ -154,10 +154,33 @@ function assemblyDimensions(assembly: BlockAssemblyEntry) {
   }
 }
 
-/** 공정이 끼어드는 명칭 몫 — 생략하면 조립 문구(대조립 블록/중조립품) 그대로 */
+/**
+ * 공정이 끼어드는 몫 — 생략하면 조립 문구·조립 규칙 그대로다.
+ *
+ * 조립과 의장은 **인식 단위의 계층이 다르다**: 조립은 블록 아래 중조·소조가 있지만
+ * 의장은 **블록 하나가 곧 작업 단위**이고 그 아래 계층이 없다. 그 차이를 뷰어가 아니라
+ * 여기서 받는다 — 뷰어는 detection 목록만 그리면 되고, 무엇이 detection 인지는 공정이 정한다.
+ */
 export interface DetectionLabels {
   blockName?: (blkNo: string) => string
   assemblyName?: (assemblyId: string) => string
+  /**
+   * 인식 단위의 **신원**을 CAD 매니페스트 대신 밖에서 준다.
+   *
+   * 데모 CAD 모델은 형상일 뿐이라 그 안의 호선·블록번호는 그 모델의 것이다. 의장처럼
+   * 자기 로스터가 "이 베이에 어느 블록이 있다"를 이미 아는 공정은 그 신원을 여기로 넣어
+   * 화면 어디서나 같은 번호로 읽히게 한다.
+   */
+  identity?: { projNo: string; blkNo: string; wstgCode: string }
+  /**
+   * 하위 구성(소조) 목록을 붙일 것인가. **기본은 붙인다**(조립).
+   *
+   * 의장은 `false` — 소조/중조 계층이 존재하지 않으므로 없는 것을 지어내면 화면이 조립을
+   * 흉내내게 된다. 진척률은 하위 구성 대신 인식 히스토리로 읽힌다(`detectionProgress`).
+   */
+  subAssemblies?: boolean
+  /** 히스토리 진척률의 기준(%) — 없으면 해시 mock. 공정이 이미 진척을 알면 그것을 쓴다 */
+  progress?: number
 }
 
 /**
@@ -178,18 +201,24 @@ export function buildBayDetections(
   )
 
   if (unitLevel === 'block') {
-    // 대조립(블록) 단위 인식 — 블록 전체가 detection 1건
-    const detection: LidarBlockInfo = {
-      id: `${locationId}-${manifest.blkNo}`,
-      locationId,
+    /* 신원 — 밖에서 주면 그것을, 아니면 CAD 매니페스트의 것을 쓴다 */
+    const identity = labels?.identity ?? {
       projNo: manifest.projNo,
       blkNo: manifest.blkNo,
-      assySerNo: null,
-      blockName: labels?.blockName?.(manifest.blkNo) ?? `대조립 블록 ${manifest.blkNo}`,
       wstgCode: manifest.wstgCode,
+    }
+    // 블록 단위 인식 — 블록 전체가 detection 1건
+    const detection: LidarBlockInfo = {
+      id: `${locationId}-${identity.blkNo}`,
+      locationId,
+      projNo: identity.projNo,
+      blkNo: identity.blkNo,
+      assySerNo: null,
+      blockName: labels?.blockName?.(identity.blkNo) ?? `대조립 블록 ${identity.blkNo}`,
+      wstgCode: identity.wstgCode,
       cadRegistered: true,
-      plan: mockPlan(manifest.blkNo),
-      confidence: mockConfidence(`${manifest.projNo}-${manifest.blkNo}`),
+      plan: mockPlan(identity.blkNo),
+      confidence: mockConfidence(`${identity.projNo}-${identity.blkNo}`),
       dimensions: (() => {
         // 안정 안착 자세 기준 치수 (블록 레벨 rest pose)
         const [length, height, width] = restExtents(manifest)
@@ -200,13 +229,21 @@ export function buildBayDetections(
         }
       })(),
       transform: placement,
-      history: mockHistory(`${manifest.projNo}-${manifest.blkNo}`, '블록 반입 감지'),
-      modelAssemblyIds: manifest.assemblies.map((a) => a.id), // MISC 포함 전체 형상
-      subAssemblies: mockSubAssemblies(
-        `${manifest.projNo}-${manifest.blkNo}`,
-        assemblies.map((a) => ({ id: a.id, wstgCode: a.wstgCode, partCount: a.partCount })),
-        mockProgress(`${manifest.projNo}-${manifest.blkNo}`)
+      history: mockHistory(
+        `${identity.projNo}-${identity.blkNo}`,
+        '블록 반입 감지',
+        labels?.progress
       ),
+      modelAssemblyIds: manifest.assemblies.map((a) => a.id), // MISC 포함 전체 형상
+      /* 계층이 없는 공정(의장)은 하위 구성을 만들지 않는다 — 없는 것을 지어내지 않는다 */
+      subAssemblies:
+        labels?.subAssemblies === false
+          ? undefined
+          : mockSubAssemblies(
+              `${identity.projNo}-${identity.blkNo}`,
+              assemblies.map((a) => ({ id: a.id, wstgCode: a.wstgCode, partCount: a.partCount })),
+              mockProgress(`${identity.projNo}-${identity.blkNo}`)
+            ),
     }
     return [detection]
   }

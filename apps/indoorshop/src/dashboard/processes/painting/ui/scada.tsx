@@ -8,6 +8,10 @@ import {
   type PaintingEquipmentStatus,
 } from '../model/equipmentStatus'
 import { EquipmentChip, equipmentColor } from './equipmentIcon'
+import { STATUS_HEX } from '../../../shared/ui/statusPalette'
+import { cn } from '../../../shared/lib/utils'
+import { EquipmentGrid } from '../../../shared/features/equipment-grid'
+import { paintingCells } from '../lib/equipmentCells'
 
 /*
  * ── 도장 설비의 산업 SCADA 'PLC 랙 패널' 룩 ──
@@ -19,12 +23,20 @@ import { EquipmentChip, equipmentColor } from './equipmentIcon'
  * 색은 앱 테마와 무관하게 **고정 다크 인더스트리얼**로 둔다 — 이 패널은 강제 다크 맵 위에
  * 떠서 항상 어두워야 SCADA 감성과 LED 대비가 산다(맵과 같은 규칙). LED 는 폴링 상태값을
  * 그대로 반영하므로 값이 바뀌면 램프가 함께 점등/소등된다.
+ *
+ * ── 색 규약 (감사 P2 — 값 색의 뜻이 정의돼 있지 않다는 지적) ──
+ * 상태 램프는 앱 상태 팔레트의 다크 램프를 그대로 쓴다: 초록=정상, 앰버=주의, 빨강=이상,
+ * 소등=값 없음. 그리고 **색 단독으로 말하지 않는다** — 램프마다 모양이 다르고(StatusDot)
+ * 손을 얹으면 상태 이름이 뜬다.
+ * 리드아웃(수치)의 색은 상태가 아니라 **값의 종류**를 뜻한다:
+ *   청록(CYAN) = 설정값(SP)·환경 측정값(온습도) · 초록 = 가동 중인 설비의 실측값(PV)
+ *   흐린 회색(TXT_DIM) = 값 없음 또는 정지 중이라 읽을 뜻이 없는 값
+ * 즉 초록 PV 는 "정상"이 아니라 "지금 돌면서 낸 값"이다 — 이상 여부는 FAULT 램프가 말한다.
  */
 
 // ── 인더스트리얼 팔레트 ──
 const PANEL_BG = '#0b1016'
 const SECTION_BG = '#0e141c'
-const CARD_BG = '#0d131a'
 const INSET_BG = '#070b0f'
 const STEEL = '#232f3c'
 const STEEL_SOFT = 'rgba(255,255,255,0.06)'
@@ -32,58 +44,21 @@ const AMBER = '#e6a63c'
 const CYAN = '#4fc3dd'
 const TXT = '#c2cdd8'
 const TXT_DIM = '#79848f'
-const LED_GREEN = '#28d081'
-const LED_RED = '#f24b4b'
-const LED_AMBER = '#f0a92e'
+/*
+ * LED 색은 **앱의 상태 팔레트를 그대로** 쓴다(다크 램프).
+ * 이 패널만 제 색을 고르면 같은 이상이 SCADA 에서는 다른 빨강이 되고, 화면을 오갈 때
+ * 눈이 다시 적응해야 한다. 산업 패널 느낌은 배색이 아니라 바탕·테두리·모노스페이스가 낸다.
+ */
+const LED_GREEN = STATUS_HEX.dark.done
+const LED_RED = STATUS_HEX.dark.error
+const LED_AMBER = STATUS_HEX.dark.warning
 const LED_OFF = '#2a3947'
 
-type LedState = 'on' | 'off' | 'warn' | 'alarm'
 
-function ledColor(state: LedState): string {
-  return state === 'on'
-    ? LED_GREEN
-    : state === 'alarm'
-      ? LED_RED
-      : state === 'warn'
-        ? LED_AMBER
-        : LED_OFF
-}
 
-/** 상태 LED 램프 한 개 (라벨 우측) */
-function Led({ label, state }: { label: string; state: LedState }) {
-  const color = ledColor(state)
-  const lit = state !== 'off'
-  return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{
-          background: color,
-          border: `1px solid ${lit ? color : '#37434f'}`,
-          boxShadow: lit
-            ? `0 0 5px ${color}, 0 0 2px ${color}`
-            : 'inset 0 0 2px rgba(0,0,0,0.7)',
-        }}
-      />
-      <span
-        className="font-mono text-[9px] font-medium tracking-wider"
-        style={{ color: lit ? TXT : TXT_DIM }}
-      >
-        {label}
-      </span>
-    </div>
-  )
-}
 
-/** LED 상태 산출 — 폴링 상태값 → 램프 (없으면 통신 두절로 본다) */
-function ledStates(status: PaintingEquipmentStatus | undefined) {
-  const link = status ? linkState(status.modbusLink) : 'offline'
-  return {
-    run: (status?.operatingMode ? 'on' : 'off') as LedState,
-    link: (link === 'online' ? 'on' : link === 'error' ? 'alarm' : 'warn') as LedState,
-    fault: ((status?.faultCode ?? 0) !== 0 ? 'alarm' : 'off') as LedState,
-  }
-}
+
+
 
 /**
  * 상태 칩 — LED 점 + 사람이 읽는 말 한 단어. 상세의 램프열을 한 줄로 접는 컴팩트 표현.
@@ -136,45 +111,7 @@ function kindLabelKey(kind: PaintingEquipmentKind) {
     : ('painting.workspace.legend.dehumidifier' as const)
 }
 
-/** ID 슬롯 칩 — 랙 슬롯 번호 자리 */
-function SlotChip({ id }: { id: string }) {
-  return (
-    <span
-      className="rounded-[3px] px-1 py-px font-mono text-[9px] font-semibold tracking-wider"
-      style={{ background: '#17212c', color: AMBER, border: `1px solid ${STEEL}` }}
-    >
-      {id}
-    </span>
-  )
-}
 
-/** SP/PV 미니 디지털 리드아웃 (LCD 인셋) */
-function Readout({
-  label,
-  value,
-  unit,
-  tone = TXT,
-}: {
-  label: string
-  value: string
-  unit?: string
-  tone?: string
-}) {
-  return (
-    <div
-      className="flex items-center justify-between gap-1 rounded-[3px] px-1.5 py-[3px]"
-      style={{ background: INSET_BG, border: `1px solid ${STEEL}` }}
-    >
-      <span className="font-mono text-[8px] font-semibold tracking-wider" style={{ color: TXT_DIM }}>
-        {label}
-      </span>
-      <span className="font-mono text-[10px] font-semibold tabular-nums" style={{ color: tone }}>
-        {value}
-        {unit && <span style={{ color: TXT_DIM }}> {unit}</span>}
-      </span>
-    </div>
-  )
-}
 
 /** 섹션 타이틀 바 (랙 섹션 헤더) */
 function SectionHeader({
@@ -255,89 +192,82 @@ function MetricsTable({
   )
 }
 
-// ── 모듈 카드 (목록 항목) ──
-function ModuleCard({
-  item,
-  status,
-  selected,
-  onSelect,
-}: {
-  item: PaintingEquipment
-  status: PaintingEquipmentStatus | undefined
-  selected: boolean
-  onSelect: (id: string) => void
-}) {
-  const { t } = useTranslation()
-  const led = ledStates(status)
-  const unit = statusUnit(item.kind)
-  const color = equipmentColor(item.kind)
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(item.id)}
-      className="flex flex-col gap-1.5 rounded-[4px] p-1.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
-      style={{
-        background: CARD_BG,
-        border: `1px solid ${selected ? color : STEEL}`,
-        boxShadow: selected ? `0 0 0 1px ${color}, 0 0 8px ${color}44` : undefined,
-      }}
-    >
-      {/* 지도 마커와 같은 칩 + 종류 이름 — "지도의 저 마커 = 이 카드"가 바로 이어진다 */}
-      <div className="flex items-center gap-1">
-        <EquipmentChip kind={item.kind} size={16} />
-        <span
-          className="min-w-0 truncate font-mono text-[9px] font-semibold tracking-wider"
-          style={{ color }}
-        >
-          {t(kindLabelKey(item.kind))}
-        </span>
-        <span className="ml-auto shrink-0">
-          <SlotChip id={item.id} />
-        </span>
-      </div>
-      {/* LED 세 줄 → 한 줄 스트립 — 카드 높이가 줄어 그리드에 더 많은 모듈이 들어온다 */}
-      <div
-        className="flex items-center justify-between gap-1 rounded-[3px] px-1.5 py-1"
-        style={{ background: '#0a0f15' }}
-      >
-        <Led label="RUN" state={led.run} />
-        <Led label="LINK" state={led.link} />
-        <Led label="FAULT" state={led.fault} />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Readout
-          label="SP"
-          value={status ? String(status.setpoint) : '--'}
-          unit={unit}
-          tone={CYAN}
-        />
-        <Readout
-          label="PV"
-          value={status ? String(status.actualValue) : '--'}
-          unit={unit}
-          tone={status?.operatingMode ? LED_GREEN : TXT_DIM}
-        />
-      </div>
-    </button>
-  )
-}
 
 /**
  * 랙 본문 (요약 지표 + 모듈 그리드) — 공장 카드가 펴질 때 그 안에 들어가는 내용물.
  * 바깥 프레임(카드/패널)은 호출부가 두르므로 여기는 SCADA 속살만 그린다.
  */
+/**
+ * 펼침 상세 — 셀을 골랐을 때만 서는 값들.
+ *
+ * 예전 카드가 늘 보여 주던 `SP`(설정값)·가동시간·fault 코드가 이 자리로 왔다. 압축 셀은
+ * `PV` 한 줄만 든다(레퍼런스 §3.4) — 정상 86칸에 설정값까지 적으면 그게 배경이 된다.
+ */
+function ScadaCellDetail({
+  item,
+  status,
+}: {
+  item: PaintingEquipment
+  status: PaintingEquipmentStatus | undefined
+}) {
+  const { t } = useTranslation()
+  if (!status) {
+    return (
+      <p className="text-[10px] text-glass-foreground/45">{t('painting.workspace.scada.pending')}</p>
+    )
+  }
+  const unit = statusUnit(item.kind)
+  const hours = Math.floor(status.runtimeMinutesToday / 60)
+  const minutes = status.runtimeMinutesToday % 60
+  return (
+    <dl className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-glass-foreground/55">
+      <div className="flex gap-1">
+        <dt>SP</dt>
+        <dd className="font-mono tabular-nums text-glass-foreground/72">{status.setpoint}{unit}</dd>
+      </div>
+      <div className="flex gap-1">
+        <dt>PV</dt>
+        <dd className="font-mono tabular-nums text-glass-foreground/72">{status.actualValue}{unit}</dd>
+      </div>
+      <div className="flex gap-1">
+        <dt>{t('painting.workspace.scada.runtime')}</dt>
+        <dd className="font-mono tabular-nums text-glass-foreground/72">{hours}h {minutes}m</dd>
+      </div>
+      <div className="flex gap-1">
+        <dt>LINK</dt>
+        <dd className={cn('font-mono', status.modbusLink === 'OK' ? 'text-foreground/72' : 'text-status-unhealthy')}>
+          {status.modbusLink}
+        </dd>
+      </div>
+      {status.faultCode !== 0 && (
+        <div className="flex gap-1 text-glass-unhealthy">
+          <dt>FAULT</dt>
+          <dd className="font-mono tabular-nums">{status.faultCode}</dd>
+        </div>
+      )}
+      <div className="flex gap-1">
+        <dt>{t('painting.workspace.scada.bay')}</dt>
+        <dd className="font-mono text-glass-foreground/72">{item.bay || '-'}</dd>
+      </div>
+    </dl>
+  )
+}
+
 export function ScadaRackBody({
   equipment,
   statusById,
   selectedId,
   polledAt,
   onSelect,
+  trendById,
 }: {
   equipment: readonly PaintingEquipment[]
   statusById: Map<string, PaintingEquipmentStatus>
   selectedId: string | null
   polledAt: number | null
   onSelect: (id: string) => void
+  /** 설비별 실측값 추이 — 이상·선택 셀에만 그려진다(없으면 그리지 않는다) */
+  trendById?: Map<string, readonly { label: string; value: number }[]>
 }) {
   const { t } = useTranslation()
   /* 설비 모듈 종류 탭 — 전체/제습기/가스히터. 카드가 접히면 언마운트라 상태도 초기화된다 */
@@ -448,21 +378,29 @@ export function ScadaRackBody({
         })}
       </div>
 
-      {/* 스크롤은 바깥 공장 패널이 한 줄로 맡는다 — 여기서 또 말면 스크롤바가 겹으로 생긴다 */}
+      {/*
+        모듈 본문 — **세 공정이 공유하는 압축 셀**(R13 · 레퍼런스 §3.4).
+        예전 카드는 LED 3 + `SP`/`PV` 두 줄이라 조립·의장 셀보다 컸다. 권고대로 `PV` 한 줄만
+        셀에 남기고 `SP`·가동시간·fault 는 셀을 골랐을 때 편다 — SCADA 의 겉테(요약표·종류
+        탭·강철 배색)는 그대로다. 스크롤은 바깥 공장 패널이 맡는다.
+      */}
       <div className="p-2">
-        <div className="grid grid-cols-2 gap-1.5">
-          {equipment
-            .filter((item) => kindFilter === 'all' || item.kind === kindFilter)
-            .map((item) => (
-              <ModuleCard
-                key={item.id}
-                item={item}
-                status={statusById.get(item.id)}
-                selected={item.id === selectedId}
-                onSelect={onSelect}
-              />
-            ))}
-        </div>
+        <EquipmentGrid
+          cells={paintingCells(
+            equipment.filter((item) => kindFilter === 'all' || item.kind === kindFilter),
+            {
+              statusOf: (item) => statusById.get(item.id),
+              pendingText: t('painting.workspace.scada.pending'),
+              trendOf: (item) => trendById?.get(item.id),
+              detailOf: (item, status) => <ScadaCellDetail item={item} status={status} />,
+            }
+          )}
+          selectedId={selectedId}
+          onSelect={(id) => onSelect(id ?? '')}
+          showControls={false}
+          /* 랙은 늘 어두운 강철 판 위다(테마와 무관) — 유리 램프를 쓴다 */
+          tone="glass"
+        />
       </div>
     </div>
   )

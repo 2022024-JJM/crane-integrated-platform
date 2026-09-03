@@ -6,6 +6,7 @@ import { Spinner } from '../../../../shared/ui/atoms/Spinner'
 import { fetchPaintingEquipment, paintingFactories } from '../../api/paintingRepository'
 import { usePolledEquipmentStatus } from '../../lib/usePolledEquipmentStatus'
 import { PaintingYardMap } from '../PaintingYardMap'
+import { nowMs } from '../../../../shared/lib/now'
 
 /*
  * 선행도장 공정 화면 — 맵 중심 레이아웃.
@@ -28,9 +29,9 @@ export function PaintingWorkspace() {
   const { byId: statusById, polledAt } = usePolledEquipmentStatus(allIds)
 
   // 신선도("…초 전")가 흐르도록 1초 시계 — 폴링(6초)과 별개
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(() => nowMs())
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    const timer = window.setInterval(() => setNow(nowMs()), 1000)
     return () => window.clearInterval(timer)
   }, [])
 

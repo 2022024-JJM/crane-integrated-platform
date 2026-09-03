@@ -1,4 +1,5 @@
 import type { MapTheme } from './basemapStyle'
+import { STATUS_HEX } from '../../../ui/statusPalette'
 
 /**
  * 야드 맵에서 지번이 아닌 것들의 색.
@@ -66,15 +67,17 @@ export const YARD_PALETTES: Record<MapTheme, YardPalette> = {
     shopHull: 'rgba(238, 242, 247, 0.92)',
     /* 어두운 바탕에서는 더 어둡게 눌러야 지번 색이 가라앉는다 */
     shopPlate: 'rgba(6, 10, 15, 0.62)',
-    /* 뷰포트 유리(glass-*)의 상태색과 같은 값 — 3D 화면과 맵이 같은 상태를 같은 색으로 말한다 */
-    bayOccupied: '#20c997',
-    bayUnknown: '#f0c24a',
+    /* 상태 팔레트(STATUS_HEX.dark)와 같은 값 — 3D 화면·목록·맵이 같은 상태를 같은 색으로 말한다.
+     * 재실은 **작업이 도는 중**이라 진행중(파랑)이다. 예전에는 초록이라 통합실적의
+     * 완료(초록)와 같은 색이었고, 화면을 건너면 뜻이 뒤집혔다(감사 F-6). */
+    bayOccupied: STATUS_HEX.dark.inProgress,
+    bayUnknown: STATUS_HEX.dark.warning,
     /*
      * 아래 두 색은 **불투명하다** — 옅게 깔지 여부는 그리는 쪽(globalAlpha)이 정한다.
      * 색에도 알파를 넣으면 두 알파가 곱해져서, 값을 만질 때마다 결과를 예측할 수 없다.
      * 공석은 뜻이 없는 색이어야 하므로 중립 회색이다 (상태색을 재사용하지 않는다).
      */
-    bayEmpty: '#9aa7b4',
+    bayEmpty: STATUS_HEX.dark.idle,
     bayOutline: 'rgb(10, 14, 19)',
     /* 어두운 바탕 위라 명도를 높였다 */
     moves: ['#ff6b6b', '#4dabf7', '#b197fc', '#38d9a9', '#ffd43b', '#748ffc', '#f783ac', '#63e6be'],
@@ -95,11 +98,12 @@ export const YARD_PALETTES: Record<MapTheme, YardPalette> = {
     shopPlate: 'rgba(32, 39, 48, 0.2)',
     /*
      * 밝은 지도 위에서는 앱의 라이트 상태색을 그대로 쓸 수 없다 — 주의색(#7a5b00)은
-     * 베이지 건물 위에서 흙색으로 묻힌다. 색상(hue)은 유지하고 채도만 올렸다.
+     * 베이지 건물 위에서 흙색으로 묻힌다. **색상(hue)은 팔레트를 따르고 채도만** 올린다.
+     * 재실이 파랑인 이유는 다크와 같다(감사 F-6 — 작업중은 어디서나 파랑).
      */
-    bayOccupied: '#047857',
+    bayOccupied: STATUS_HEX.light.inProgress,
     bayUnknown: '#a9760a',
-    bayEmpty: '#5b6672',
+    bayEmpty: STATUS_HEX.light.idle,
     bayOutline: 'rgb(255, 255, 255)',
     /* 밝은 바탕 위라 채도를 올리고 명도를 낮췄다 — 레퍼런스 뷰어의 배색이다 */
     moves: ['#e34948', '#2a78d6', '#8e5fa8', '#0e8088', '#d98a1f', '#454fa0', '#c2185b', '#00796b'],

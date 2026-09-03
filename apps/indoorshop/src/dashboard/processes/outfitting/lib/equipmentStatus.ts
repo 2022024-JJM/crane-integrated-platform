@@ -10,7 +10,6 @@ import {
 import type { MapEntryMarker } from '../../../shared/features/process-map-entry'
 import type { LidarSensor, LidarSensorStatus } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { OUTFITTING_FACTORIES } from '../api/outfittingFactoryFixture'
-import { mockSensors } from '../api/mockOutfittingData'
 import {
   OUTFITTING_DEVICE_KINDS,
   type OutfittingDevice,
@@ -113,51 +112,14 @@ function entityDevicesOf(factory: string): OutfittingDevice[] {
 }
 
 /**
- * 목업 자리 — 구역(area) 골격 위에 도면과 같은 **모양**만 세운다.
+ * 공장 한 곳의 설비 — **이관된 설비 엔티티가 전부**다.
  *
- * 라이다는 지어내지 않고 **공장 뷰가 이미 쓰는 센서 mock**(`mockOutfittingData`)을 그대로
- * 읽는다 — 한 공장이 공장 뷰에서는 10/14, 설비 상태에서는 13/14 라고 말하면 어느 쪽을
- * 믿어야 하는지 알 수 없다. 그 위에 도면상 라이다와 쌍으로 서는 틸팅모듈을 짝지어
- * 세우고, 공장마다 Edge PC·네트워크 판넬을 한 대씩 둔다.
- *
- * 대수를 실제로 아는 척하지 않으려고 베이 자리에는 도면 베이 번호가 아니라 **구역
- * 코드**를 넣는다.
- */
-function placeholderDevicesOf(factory: string): OutfittingDevice[] {
-  const spec = OUTFITTING_FACTORIES.find((f) => f.name === factory)
-  if (!spec) return []
-  const codeOfArea = new Map(spec.areas.map((area) => [area.name, area.code]))
-  const devices: OutfittingDevice[] = []
-  for (const sensor of mockSensors) {
-    if (sensor.factoryId !== spec.id) continue
-    const bay = codeOfArea.get(sensor.areaName) ?? sensor.areaName
-    devices.push({
-      id: sensor.name,
-      kind: 'LIDAR',
-      factory,
-      bay,
-      status: sensor.status,
-      lastHeartbeatAt: mockHeartbeatAt(sensor.id),
-      lastScanAt: sensor.lastScanAt,
-      placeholder: true,
-    })
-    // 틸팅은 라이다의 짝 — 신원을 이어 붙여(`…-L1` → `…-T1`) 같은 자리에 세운다
-    devices.push(deviceOf(sensor.name.replace(/-L(\d+)$/, '-T$1'), 'TILT', factory, bay, true))
-  }
-  devices.push(deviceOf(`EDGE-${spec.shopCode}`, 'EDGE', factory, '-', true))
-  devices.push(deviceOf(`PNL-${spec.shopCode}`, 'PNL', factory, '-', true))
-  return devices
-}
-
-/**
- * 공장 한 곳의 설비 — 엔티티 우선, 없으면 목업 자리.
- *
- * 섞지 않는다: 엔티티에 한 대라도 있으면 그 공장은 실데이터 공장으로 보고 목업을
- * 얹지 않는다(반쯤 진짜인 목록이 제일 읽기 어렵다).
+ * 예전에는 엔티티가 비면 구역 골격 위에 목업 자리를 세웠다(`{구역}-L1`). 그 폴백이 곧
+ * 두 번째 이름 우주의 씨앗이었으므로 걷어냈다 — 도면이 닿지 않은 공장은 빈 목록이고,
+ * 화면은 "없다"고 말한다(`.work/연계매트릭스.md` Top4).
  */
 export function outfittingDevices(factory: string): OutfittingDevice[] {
-  const fromEntity = entityDevicesOf(factory)
-  return fromEntity.length > 0 ? fromEntity : placeholderDevicesOf(factory)
+  return entityDevicesOf(factory)
 }
 
 /** 베이(또는 구역)별로 묶는다 — 드릴다운 목록의 골격. 번호 순 정렬 */

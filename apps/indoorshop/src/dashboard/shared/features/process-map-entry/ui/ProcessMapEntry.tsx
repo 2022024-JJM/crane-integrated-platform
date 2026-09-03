@@ -329,7 +329,9 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
     [drill, onSelectMarker]
   )
 
-  /* 원 위치 — 버튼·지도의 빈 곳 클릭이 같은 동작: 대문 자리로 나가며 전부 닫는다 */
+  /* 원 위치 — '전체 보기' 버튼 전용: 대문 자리로 나가며 전부 닫는다.
+     지도의 빈 곳 클릭은 이 길로 오지 않는다(아래 stepBack — 오클릭 한 번이 쌓아 둔
+     선택 전부를 무너뜨리면 안 된다, UX 감사 O1). */
   const returnToOverview = useCallback(() => {
     setNavigationTarget(null)
     setExpandedFactory(null)
@@ -339,6 +341,25 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
     setOverviewNonce((n) => n + 1)
     onSelectFactory(null)
   }, [onSelectFactory, onSelectMarker])
+
+  /*
+   * 한 단계만 뒤로 — 지번 짚기 → 베이 → 공장 → 전체 보기 순으로 **한 칸씩** 올라온다.
+   * 배경 오클릭과 ESC 가 같은 계단을 쓴다(같은 제스처 = 같은 의미). 이미 전체 보기면
+   * 카메라만 제자리로 다시 맞춘다 — 물러날 것이 없을 때의 빈 곳 클릭은 "다시 정렬"이다.
+   */
+  const stepBack = useCallback(() => {
+    if (spottedLot) {
+      setSpottedLot(null)
+      return
+    }
+    if (inOverview) {
+      setNavigationTarget(null)
+      setOverviewNonce((n) => n + 1)
+      return
+    }
+    onSelectMarker?.(null)
+    drill.up()
+  }, [spottedLot, inOverview, drill, onSelectMarker])
 
   useImperativeHandle(handleRef, () => ({ returnToOverview }), [returnToOverview])
 
@@ -356,8 +377,8 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
     setHoveredBay(null)
   }, [inOverview, selectedFactory])
 
-  /* ESC = 한 단계 위 (베이 → 공장 → 야드). 글자를 치는 중이면 삼킨다 */
-  useDrilldownEscape(drill.up)
+  /* ESC = 한 단계 위 (지번 → 베이 → 공장 → 야드). 글자를 치는 중이면 삼킨다 */
+  useDrilldownEscape(stepBack)
 
   /* 주인공 공장의 베이 스팬 — 공장을 베이마다 한 채로 세우는 근거(전체 현황과 같은 자료) */
   const memberBays = useMemo<YardParcelBaySpan[]>(() => {
@@ -417,8 +438,8 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
       highlightedLot: spotlitLot(spottedLot, hoveredLotRow),
       /* 이름은 캔버스가 아니라 마커 위 DOM 층이 그린다 — 캔버스에 그리면 마커에 가려진다 */
       showLabels: false,
-      /* 공장 밖(빈 야드·타 공정) 클릭은 null 로 온다 — 원 위치(전체 보기)로 나간다 */
-      onSelectFactory: (name) => (name ? selectFactory(name) : returnToOverview()),
+      /* 공장 밖(빈 야드·타 공정) 클릭은 null 로 온다 = **한 단계만** 뒤로 — 전체 리셋은 '전체 보기' 버튼의 몫 */
+      onSelectFactory: (name) => (name ? selectFactory(name) : stepBack()),
       onHoverFactory: setHoveredFactory,
       onSelectLot: selectBay,
       onHoverLot: setHoveredBay,
@@ -432,7 +453,7 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
       selectedFactory,
       hoveredFactory,
       selectFactory,
-      returnToOverview,
+      stepBack,
       memberBays,
       lotGroups,
       selectedBay,
@@ -558,7 +579,6 @@ function ProcessMapEntryInner<M extends MapEntryMarker>(
         /* 총괄에서 이어 온 화각 — 있으면 첫 프레임이 그 자리에서 시작한다 */
         initialView={handoffView}
         focusBounds={glidedCameraBounds}
-        focusBoundsDuration={420}
         focusBoundsPadding={inOverview ? OVERVIEW_BOUNDS_PADDING : 0.12}
         /* 전체 보기는 "원위치" — 회전해 둔 방위도 대문 방향(북쪽 0°)으로 함께 되돌린다 */
         focusBoundsBearing={inOverview ? 0 : null}

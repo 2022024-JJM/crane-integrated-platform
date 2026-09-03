@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { hasEscapeClaims } from './escapeClaims'
 
 /*
  * ESC = 한 단계 위 (베이 → 공장 → 야드).
@@ -29,6 +30,9 @@ export function useDrilldownEscape(up: () => void, enabled = true): void {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       if (isTypingTarget(event.target)) return
+      /* 위에 오버레이(모달·메뉴·드로어)가 떠 있으면 ESC 는 그쪽 몫 — 한 번에 한 동작.
+         defaultPrevented 는 리스너 순서에 따라 늦게 올 수 있어 장부(escapeClaims)로 본다 */
+      if (hasEscapeClaims()) return
       up()
     }
     document.addEventListener('keydown', onKeyDown)

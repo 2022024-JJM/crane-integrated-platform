@@ -1,5 +1,6 @@
 import type { InshopKey } from '../../../lib/i18n/keys'
 import type { ChipTone } from '../../../ui/atoms/StatusChip'
+import { STATUS_STYLE, type StatusMeaning } from '../../../ui/statusPalette'
 
 /** 서비스가 **돌고 있는가** — 프로세스 자체의 상태 */
 export type ZoneStatus = 'running' | 'stopped' | 'error'
@@ -88,8 +89,23 @@ export const ZONE_HEALTH_META: Record<
   },
 }
 
-export const ZONE_CHECK_META: Record<ZoneCheckState, { dotClass: string; labelKey: InshopKey }> = {
-  ok: { dotClass: 'bg-status-healthy', labelKey: 'zone.checkState.ok' },
-  warn: { dotClass: 'bg-status-degraded', labelKey: 'zone.checkState.warn' },
-  fail: { dotClass: 'bg-status-unhealthy', labelKey: 'zone.checkState.fail' },
+/**
+ * 점검 항목의 표시 — 색이 아니라 **의미**를 들고 다닌다.
+ * 점 하나로 말하는 자리라 색 단독이 되기 쉬워서, 그리는 쪽은 `StatusDot` 으로
+ * 모양까지 함께 낸다(감사 F-8 — 한 행에 색 채널이 여럿 겹쳐 뜻이 흐려졌다).
+ */
+export const ZONE_CHECK_META: Record<
+  ZoneCheckState,
+  { meaning: StatusMeaning; dotClass: string; labelKey: InshopKey }
+> = {
+  ok: { meaning: 'done', dotClass: STATUS_STYLE.done.fill, labelKey: 'zone.checkState.ok' },
+  warn: { meaning: 'warning', dotClass: STATUS_STYLE.warning.fill, labelKey: 'zone.checkState.warn' },
+  fail: { meaning: 'error', dotClass: STATUS_STYLE.error.fill, labelKey: 'zone.checkState.fail' },
+}
+
+/** 건전성 → 상태 의미 (지도 패널의 점이 모양까지 쓰도록) */
+export const ZONE_HEALTH_MEANING: Record<ZoneHealth, StatusMeaning> = {
+  healthy: 'done',
+  degraded: 'warning',
+  unhealthy: 'error',
 }

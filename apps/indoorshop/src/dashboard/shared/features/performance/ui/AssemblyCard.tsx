@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { ChevronDownIcon } from '../../../ui/icons'
 import { assyTreeOrder } from '../model/aggregate'
@@ -44,8 +45,8 @@ const WO_STATUS_KEY: Record<AssyWo['status'], InshopKey> = {
 }
 
 const WO_STATUS_CLASS: Record<AssyWo['status'], string> = {
-  done: 'bg-status-healthy/10 text-status-healthy',
-  inProgress: 'bg-accent/10 text-accent',
+  done: STATUS_STYLE.done.chip,
+  inProgress: STATUS_STYLE.inProgress.chip,
   notStarted: 'bg-surface-secondary text-foreground/50',
 }
 
@@ -70,8 +71,9 @@ const JUDGE_KEY: Record<AssyUnit['judged'], InshopKey> = {
 }
 
 const JUDGE_CLASS: Record<AssyUnit['judged'], string> = {
-  complete: 'bg-status-healthy/10 text-status-healthy',
-  partial: 'bg-accent/10 text-accent',
+  complete: STATUS_STYLE.done.chip,
+  /* 부분 판별은 '아직 도는 중'이다 — 강조색을 쓰면 확인 필요(빨강)와 한 덩어리가 된다 */
+  partial: STATUS_STYLE.inProgress.chip,
   none: 'bg-surface-secondary text-foreground/50',
 }
 
@@ -94,8 +96,9 @@ const MATCH_NOTE_KEY: Record<AssyMatch['state'], InshopKey> = {
  */
 const MATCH_CLASS: Record<AssyMatch['state'], string> = {
   matched: 'border border-border text-foreground/55',
-  fallback: 'border border-accent/45 text-accent',
-  unmatched: 'border border-status-unhealthy/50 bg-status-unhealthy/10 text-status-unhealthy',
+  /* 대체 매칭은 '확인이 필요한' 것이지 강조가 아니다 — 주의색(앰버)을 테두리로만 */
+  fallback: `border border-status-degraded/50 ${STATUS_STYLE.warning.ink}`,
+  unmatched: `border border-status-unhealthy/50 ${STATUS_STYLE.error.chip}`,
 }
 
 const FLAG_KEY: Record<NonNullable<AssyMatch['flag']>, InshopKey> = {
@@ -258,10 +261,10 @@ function AssyRow({
           className={cn(
             'h-full rounded-full',
             assy.blockedByMatch
-              ? 'bg-status-unhealthy'
+              ? STATUS_STYLE.error.fill
               : assy.done
-                ? 'bg-status-healthy'
-                : 'bg-accent'
+                ? STATUS_STYLE.done.fill
+                : STATUS_STYLE.inProgress.fill
           )}
           style={{
             width: `${assy.reqQty === 0 ? 0 : Math.min(100, (assy.recognizedQty / assy.reqQty) * 100)}%`,

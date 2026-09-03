@@ -1,6 +1,7 @@
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import type { FabStageId, FabricationSummary } from '../model/types'
 
@@ -84,23 +85,30 @@ export function StageCards({
               role="img"
               aria-label={`${t('performance.stages.weightRate')} ${s.weightRate}%`}
             >
+              {/* 바는 한 규칙만 쓴다(감사 F-9) — 값에 따른 상태색: 다 차면 완료, 아니면 진행중 */}
               <div
-                className={cn('h-full rounded-full', complete ? 'bg-status-healthy' : 'bg-accent')}
+                className={cn(
+                  'h-full rounded-full',
+                  complete ? STATUS_STYLE.done.fill : STATUS_STYLE.inProgress.fill
+                )}
                 style={{ width: `${Math.min(100, s.weightRate)}%` }}
               />
             </div>
 
-            <div className="mt-2 text-[11px] tabular-nums text-foreground/60">
+            {/* 카드 아랫단이 평평했다 — 건수·진행·미도래·근거가 전부 같은 크기·같은 농도라
+                무엇이 먼저 읽혀야 하는지 없었다. 건수는 중량%의 짝이므로 한 급 올리고,
+                진행·미도래는 보조로 내린다(크기·굵기·농도만 — 자리는 그대로). */}
+            <div className="mt-2 text-inshop-xs font-medium tabular-nums text-foreground/75">
               {t('performance.stages.counts', { done: s.doneCount, target: s.targetCount })}
             </div>
-            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] tabular-nums text-foreground/50">
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] tabular-nums text-foreground/45">
               <span>{t('performance.stages.inProgress', { count: s.inProgressCount })}</span>
               <span>{t('performance.stages.notDue', { count: s.notDueCount })}</span>
               {s.excludedCount > 0 && (
                 <span>{t('performance.stages.excluded', { count: s.excludedCount })}</span>
               )}
             </div>
-            <div className="mt-2 border-t border-border pt-1.5 text-[10px] leading-4 text-foreground/45">
+            <div className="mt-2 border-t border-border pt-1.5 text-[10px] leading-4 text-foreground/38">
               <div>
                 {t('performance.stages.basis')} {t(STAGE_BASIS_KEY[s.stage])}
               </div>

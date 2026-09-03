@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next'
 import type { InshopKey } from '../../../lib/i18n/keys'
 import type { ChipTone } from '../../../ui/atoms/StatusChip'
+import { STATUS_STYLE, type StatusMeaning } from '../../../ui/statusPalette'
 
 export type AlarmSeverity = 'critical' | 'warning' | 'info'
 
@@ -40,29 +41,32 @@ export function alarmText(
 }
 
 /*
- * 색 클래스는 여기서 **문자열 상수로** 완성해 둔다.
- * `text-status-${severity}` 처럼 조립하면 Tailwind 가 정적 스캔에서 찾지 못해
- * 빌드 결과에 그 클래스가 아예 없다.
+ * 색은 상태 팔레트에서 받는다 — 심각도도 결국 "이상/주의/그 밖"이라 다른 화면의
+ * 같은 뜻과 같은 색이어야 한다. (클래스는 팔레트가 **문자열 상수로** 들고 있다.
+ * `text-status-${severity}` 처럼 조립하면 Tailwind 정적 스캔이 못 찾아 빌드에서 사라진다.)
  */
 export const ALARM_SEVERITY_META: Record<
   AlarmSeverity,
-  { labelKey: InshopKey; tone: ChipTone; dotClass: string; textClass: string }
+  { labelKey: InshopKey; tone: ChipTone; meaning: StatusMeaning; dotClass: string; textClass: string }
 > = {
   critical: {
     labelKey: 'alarms.severity.critical',
     tone: 'critical',
-    dotClass: 'bg-status-unhealthy',
-    textClass: 'text-status-unhealthy',
+    meaning: 'error',
+    dotClass: STATUS_STYLE.error.fill,
+    textClass: STATUS_STYLE.error.ink,
   },
   warning: {
     labelKey: 'alarms.severity.warning',
     tone: 'warning',
-    dotClass: 'bg-status-degraded',
-    textClass: 'text-status-degraded',
+    meaning: 'warning',
+    dotClass: STATUS_STYLE.warning.fill,
+    textClass: STATUS_STYLE.warning.ink,
   },
   info: {
     labelKey: 'alarms.severity.info',
     tone: 'neutral',
+    meaning: 'idle',
     dotClass: 'bg-foreground/30',
     textClass: 'text-foreground/45',
   },

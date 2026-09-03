@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { ProcessMapLink } from '../../../entities/vessel'
 import { cn } from '../../../lib/utils'
+import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
 import type { BlockSummary } from '../model/types'
@@ -21,10 +22,13 @@ export function BlockHeaderCard({
   summary,
   active,
   onSelect,
+  outfitting = null,
 }: {
   summary: BlockSummary
   active: boolean
   onSelect: () => void
+  /** 이 블록의 의장 줄 — 의장 재공이 아니면 null (W7-11) */
+  outfitting?: { judgedRate: number; justArrived: boolean } | null
 }) {
   const { t } = useTranslation()
   const { progress } = summary
@@ -145,6 +149,37 @@ export function BlockHeaderCard({
               : t('performance.header.inspectionPending')}
           </span>
         </div>
+        {/* 의장 줄 — **절점이 없다.** 스트립 대신 블록 판별 % 하나가 선다(W7-11).
+            의장 재공이 아닌 블록은 그 사실만 적는다 — 0% 로 적으면 '안 됐다' 로 읽힌다. */}
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="w-8 shrink-0 text-[10px] text-foreground/45">
+            {t('performance.ofit.headerLabel')}
+          </span>
+          {outfitting ? (
+            <>
+              <span className="rounded bg-surface-secondary px-1.5 py-0.5 font-medium tabular-nums text-foreground/70">
+                {Math.round(outfitting.judgedRate)}%
+              </span>
+              <span className="min-w-[4rem] flex-1">
+                <span className="block h-1.5 overflow-hidden rounded-full bg-surface-secondary">
+                  <span
+                    className="block h-full rounded-full bg-status-progress"
+                    style={{ width: `${Math.min(100, outfitting.judgedRate)}%` }}
+                  />
+                </span>
+              </span>
+              {outfitting.justArrived && (
+                <span className="rounded bg-accent/10 px-1.5 py-0.5 font-medium text-accent">
+                  {t('performance.ofit.justArrived')}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="rounded bg-surface-secondary px-1.5 py-0.5 text-foreground/45">
+              {t('performance.ofit.headerNone')}
+            </span>
+          )}
+        </div>
         {/* 도장 요약 줄 — 스텝(진짜 순차 절점) 진척 + BTS 국면 (가공·조립과 같은 문법) */}
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
           <span className="w-8 shrink-0 text-[10px] text-foreground/45">
@@ -156,10 +191,11 @@ export function BlockHeaderCard({
           <span
             className={cn(
               'rounded px-1.5 py-0.5 font-medium',
+              /* 재실은 진행중(파랑) — 도장 카드·공장 현황과 같은 뜻 같은 색 */
               summary.pntPhase === 'shippedOut'
-                ? 'bg-status-healthy/10 text-status-healthy'
+                ? STATUS_STYLE.done.chip
                 : summary.pntPhase === 'inShop'
-                  ? 'bg-accent/10 text-accent'
+                  ? STATUS_STYLE.inProgress.chip
                   : 'bg-surface-secondary text-foreground/50'
             )}
           >

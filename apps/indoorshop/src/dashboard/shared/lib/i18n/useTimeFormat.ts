@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from './useTranslation'
 import { useLanguage } from './useLanguage'
+import { nowDate } from '../now'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -48,7 +49,7 @@ export function useTimeFormat(): TimeFormat {
   )
 
   const relative = useCallback(
-    (iso: string, now: Date = new Date()) => {
+    (iso: string, now: Date = nowDate()) => {
       const target = new Date(iso)
       const diff = now.getTime() - target.getTime()
 

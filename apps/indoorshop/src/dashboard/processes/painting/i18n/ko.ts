@@ -19,6 +19,9 @@ export const paintingKo = {
         issues: '이상',
       },
       scada: {
+        pending: '수신 대기',
+        runtime: '가동시간',
+        bay: '베이',
         summary: '설비 요약',
         modules: '설비 모듈',
         registers: '레지스터',
@@ -81,11 +84,11 @@ export const paintingKo = {
       stale: '지연',
     },
     mapEntry: {
-      modeLabel: '패널 단',
+      modeLabel: '보기 전환',
       modeEquipment: '① 설비 상태',
       modeCollection: '② 수집 현황',
       collection: {
-        detected: '감지 블록',
+        detected: '수집 블록',
         wo: 'W/O',
         steps: '스텝 절점',
         dailyRate: '일일공정률',
@@ -116,7 +119,7 @@ export const paintingKo = {
       stepInProgress: '진행 중 {{count}}블록',
       blockListTitle: '블록 목록 (BTS 귀속)',
       noBlocks: '이 도장공장에 귀속된 재공 블록이 없습니다.',
-      btsNote: '위치·반입/반출은 BTS 물류 기반입니다 — ZONE 대응표에 의존하지 않습니다.',
+      btsNote: '위치·반입/반출은 BTS 물류 기반입니다 — ZONE 대응표에 의존하지 않습니다. 블록 줄의 링크로 그 블록의 절점 실적(통합실적)까지 이어집니다.',
       equipmentTitle: '설비 요약',
       openScada: '지도에서 설비 상태 보기',
     },

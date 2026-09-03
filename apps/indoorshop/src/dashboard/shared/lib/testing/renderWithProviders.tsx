@@ -3,8 +3,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react'
 import i18n, { INSHOP_NS } from '../i18n/config'
-// 공정 번역 조각까지 큐에 올린다 — 아래 init 의 'initialized' 에서 한꺼번에 얹힌다
-import '../../../app/bootstrap'
 
 /*
  * 화면 테스트의 공통 껍데기.
