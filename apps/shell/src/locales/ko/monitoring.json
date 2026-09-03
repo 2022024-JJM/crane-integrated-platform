@@ -100,8 +100,8 @@
     },
     "space": {
       "title": "변형 기준 축",
-      "local": "로컬 축",
-      "world": "월드 축"
+      "local": "로컬",
+      "world": "월드"
     }
   },
   "history": {
@@ -159,12 +159,19 @@
     "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
     "deleteSelected": "선택 객체 삭제",
-    "snap": "스냅 (1m · 15° · 0.1)",
+    "snap": "스냅",
+    "snapSettings": "스냅 단위",
+    "snapTranslation": "이동",
+    "snapRotation": "회전",
+    "snapScale": "크기",
     "grid": "바닥 격자",
     "duplicateSelected": "선택 객체 복제",
     "addText": "텍스트 추가",
     "textObject": "텍스트",
     "save": "저장",
+    "headerBar": "도구 모음",
+    "toolDock": "도구",
+    "selectionActions": "선택 객체",
     "unsavedDialog": {
       "title": "저장되지 않은 변경사항",
       "description": "씬에 저장되지 않은 변경사항이 있습니다. 어떻게 할까요?",
@@ -175,10 +182,14 @@
     "shortcuts": {
       "title": "단축키",
       "groupFile": "파일",
+      "groupTools": "도구",
       "groupEdit": "편집",
       "groupSelect": "선택",
       "groupCamera": "카메라",
       "save": "저장",
+      "toolTranslate": "이동",
+      "toolRotate": "회전",
+      "toolScale": "크기",
       "undo": "실행 취소",
       "redo": "다시 실행",
       "duplicate": "선택 객체 복제",

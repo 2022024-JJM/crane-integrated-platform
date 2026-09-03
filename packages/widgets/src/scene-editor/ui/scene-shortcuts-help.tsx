@@ -1,18 +1,12 @@
 import { Keyboard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Kbd } from '@crane/ui/atoms/kbd';
 import {
   Popover,
   PopoverPopup,
   PopoverTrigger,
 } from '@crane/ui/molecules/popover';
-
-// 수식키 표기 — Mac에서는 Ctrl 대신 ⌘가 실제로 동작하는 키다
-// (핸들러가 ctrlKey || metaKey를 받는다). 모듈 상수라 렌더마다 재계산되지 않는다.
-const MOD =
-  typeof navigator !== 'undefined' &&
-  /Mac|iPhone|iPad/.test(navigator.platform ?? '')
-    ? '⌘'
-    : 'Ctrl';
+import { SHORTCUT_MOD as MOD } from '../lib/shortcut-modifier';
 
 interface ShortcutRow {
   /** 키 조합. 각 항목이 <kbd> 하나가 된다. */
@@ -31,12 +25,21 @@ interface ShortcutGroup {
  * 없는 기능을 안내하게 된다. 바인딩 위치: scene-objects-edit-page.tsx
  * (키보드), scene-objects-edit-canvas.tsx(OrbitControls 마우스 버튼,
  * 더블클릭 drill-in — handleDoubleSelectModel, 잠긴 모델 제외),
- * use-marquee-selection.ts(드래그 선택).
+ * use-marquee-selection.ts(드래그 선택). 도구 모음 툴팁의 Kbd 병기
+ * (editor-header-bar, editor-selection-bar)도 같은 표다.
  */
 const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: 'groupFile',
     rows: [{ keys: [MOD, 'S'], label: 'save' }],
+  },
+  {
+    title: 'groupTools',
+    rows: [
+      { keys: ['W'], label: 'toolTranslate' },
+      { keys: ['E'], label: 'toolRotate' },
+      { keys: ['R'], label: 'toolScale' },
+    ],
   },
   {
     title: 'groupEdit',
@@ -79,6 +82,15 @@ const TRANSLATED_KEYS = new Set([
   'rightDrag',
 ]);
 
+/**
+ * 팝업 두 칸 배치 — 왼쪽은 키보드 위주(파일·도구·편집), 오른쪽은 마우스
+ * 위주(선택·카메라). 그룹 이름으로 SHORTCUT_GROUPS 에서 찾는다.
+ */
+const SHORTCUT_COLUMNS: string[][] = [
+  ['groupFile', 'groupTools', 'groupEdit'],
+  ['groupSelect', 'groupCamera'],
+];
+
 const OVERLAY_BUTTON_CLASS =
   'border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground data-popup-open:text-foreground absolute right-3 bottom-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition';
 
@@ -101,41 +113,60 @@ export function SceneShortcutsHelp() {
       >
         <Keyboard className="size-4" />
       </PopoverTrigger>
-      <PopoverPopup side="top" align="end" className="w-72 p-3">
+      <PopoverPopup side="top" align="end" className="w-fit p-3">
         <p className="text-foreground mb-2 text-sm font-semibold">{title}</p>
-        <div className="flex flex-col gap-3">
-          {SHORTCUT_GROUPS.map((group) => (
-            <section key={group.title}>
-              <h3 className="text-muted-foreground mb-1 text-[11px] font-medium tracking-[0.04em] uppercase">
-                {t(`monitoring:editor.shortcuts.${group.title}`)}
-              </h3>
-              <ul className="flex flex-col gap-1">
-                {group.rows.map((row) => (
-                  <li
-                    key={`${row.label}-${row.keys.join('+')}`}
-                    className="flex items-center justify-between gap-3 text-xs"
-                  >
-                    <span className="text-foreground">
-                      {t(`monitoring:editor.shortcuts.${row.label}`)}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1">
-                      {row.keys.map((key, index) => (
-                        <span key={key} className="flex items-center gap-1">
-                          {index > 0 ? (
-                            <span className="text-muted-foreground">+</span>
-                          ) : null}
-                          <kbd className="bg-muted border-border text-foreground rounded border px-1.5 py-0.5 font-mono text-[11px] leading-none">
-                            {TRANSLATED_KEYS.has(key)
-                              ? t(`monitoring:editor.shortcuts.${key}`)
-                              : key}
-                          </kbd>
-                        </span>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+        <div className="flex items-stretch gap-4">
+          {SHORTCUT_COLUMNS.map((titles, columnIndex) => (
+            <div key={titles[0]} className="contents">
+              {columnIndex > 0 ? (
+                <span aria-hidden className="bg-border w-px self-stretch" />
+              ) : null}
+              <div className="flex w-60 flex-col gap-3">
+                {titles
+                  .map((groupTitle) =>
+                    SHORTCUT_GROUPS.find((g) => g.title === groupTitle),
+                  )
+                  .filter((group) => group !== undefined)
+                  .map((group) => (
+                    <section key={group.title}>
+                      <h3 className="text-muted-foreground mb-1 text-[11px] font-medium tracking-[0.04em] uppercase">
+                        {t(`monitoring:editor.shortcuts.${group.title}`)}
+                      </h3>
+                      <ul className="flex flex-col gap-1">
+                        {group.rows.map((row) => (
+                          <li
+                            key={`${row.label}-${row.keys.join('+')}`}
+                            className="flex items-center justify-between gap-3 text-xs"
+                          >
+                            <span className="text-foreground">
+                              {t(`monitoring:editor.shortcuts.${row.label}`)}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {row.keys.map((key, index) => (
+                                <span
+                                  key={key}
+                                  className="flex items-center gap-1"
+                                >
+                                  {index > 0 ? (
+                                    <span className="text-muted-foreground">
+                                      +
+                                    </span>
+                                  ) : null}
+                                  <Kbd>
+                                    {TRANSLATED_KEYS.has(key)
+                                      ? t(`monitoring:editor.shortcuts.${key}`)
+                                      : key}
+                                  </Kbd>
+                                </span>
+                              ))}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+              </div>
+            </div>
           ))}
         </div>
       </PopoverPopup>

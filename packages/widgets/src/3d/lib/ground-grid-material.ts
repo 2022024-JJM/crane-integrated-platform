@@ -34,7 +34,12 @@ import {
  *   ES 3.00 에서 에러다.
  */
 
-/** 격자 3단계. cell.size 는 기즈모 이동 스냅(SCENE_TRANSFORM_SNAP.translation=1)과 같아야 한다. */
+/**
+ * 격자 3단계. cell.size 는 **기본** 이동 스냅(SCENE_TRANSFORM_SNAP.translation
+ * = 1m)과 같다. 사용자가 스냅 단위를 0.1/0.25m 로 바꿔도 격자는 따라가지
+ * 않는다 — 방향·축척 보조가 목적이고, 0.1m 격자는 대형 지도에서 무아레가
+ * 생긴다.
+ */
 export const GROUND_GRID_LEVELS = {
   cell: { size: 1, thickness: 1, color: '#545454' },
   section: { size: 10, thickness: 1, color: '#5e5e5e' },

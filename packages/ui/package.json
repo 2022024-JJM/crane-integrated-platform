@@ -15,6 +15,7 @@
     "./atoms/hanwha-icon": "./src/atoms/hanwha-icon.tsx",
     "./atoms/input-number": "./src/atoms/input-number.tsx",
     "./atoms/input": "./src/atoms/input.tsx",
+    "./atoms/kbd": "./src/atoms/kbd.tsx",
     "./atoms/separator": "./src/atoms/separator.tsx",
     "./atoms/skeleton": "./src/atoms/skeleton.tsx",
     "./atoms/spinner": "./src/atoms/spinner.tsx",

@@ -35,10 +35,10 @@ import type { ThreeEvent } from '@react-three/fiber';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
+  type SceneSnapStep,
   type SceneTransformMode,
   type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
-  SCENE_TRANSFORM_SNAP,
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   MIN_SURFACE_DISTANCE,
@@ -192,8 +192,10 @@ interface SceneObjectsEditCanvasProps {
   focusSelectedRef?: RefObject<(() => void) | null>;
   /** 초기 시점/탑뷰 액션을 부모에 노출한다. */
   cameraActionsRef?: RefObject<SceneEditorCameraActions | null>;
-  /** 기즈모 스냅(SCENE_TRANSFORM_SNAP 단위) 적용 여부. */
+  /** 기즈모 스냅 적용 여부. */
   snapEnabled: boolean;
+  /** 기즈모 스냅 단위(이동 m · 회전 rad · 크기). 켜져 있을 때만 쓴다. */
+  snapStep: SceneSnapStep;
   /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
   transformSpace: SceneTransformSpace;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
@@ -218,6 +220,7 @@ export function SceneObjectsEditCanvas({
   focusSelectedRef,
   cameraActionsRef,
   snapEnabled,
+  snapStep,
   transformSpace,
   showGrid,
 }: SceneObjectsEditCanvasProps) {
@@ -854,9 +857,10 @@ export function SceneObjectsEditCanvas({
           }}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
-            40px) + 12px(중앙 툴바의 top-3와 같은 여백)로 잡아, 기즈모
-            가장자리가 툴바와 같은 간격으로 캔버스 좌하단에 붙는다. */}
-        <GizmoHelper alignment="bottom-left" margin={[52, 52]}>
+            27px) + 12px(오버레이들의 top-3/right-3 와 같은 여백) + 여유로
+            52px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
+            내비게이션 기즈모 위치). */}
+        <GizmoHelper alignment="top-right" margin={[52, 52]}>
           <GizmoViewport
             // 기본 40의 2/3 크기.
             scale={40 * (2 / 3)}
@@ -876,11 +880,9 @@ export function SceneObjectsEditCanvas({
             object={transformTarget}
             mode={transformMode}
             space={transformSpace}
-            translationSnap={
-              snapEnabled ? SCENE_TRANSFORM_SNAP.translation : null
-            }
-            rotationSnap={snapEnabled ? SCENE_TRANSFORM_SNAP.rotation : null}
-            scaleSnap={snapEnabled ? SCENE_TRANSFORM_SNAP.scale : null}
+            translationSnap={snapEnabled ? snapStep.translation : null}
+            rotationSnap={snapEnabled ? snapStep.rotation : null}
+            scaleSnap={snapEnabled ? snapStep.scale : null}
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}
             onObjectChange={syncSelectedObjectTransform}

@@ -40,7 +40,6 @@ export {
   SceneLighting,
 } from './ui/scene-render-preset';
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
-export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export {
   MIN_SURFACE_DISTANCE,
@@ -53,10 +52,13 @@ export {
   type SceneViewBookmark,
 } from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
-export { SceneTransformSpaceToggle } from './ui/scene-transform-space-toggle';
+export { SceneTransformSpaceSelect } from './ui/scene-transform-space-select';
 export {
+  SCENE_SNAP_STEP_OPTIONS,
   SCENE_TRANSFORM_SNAP,
   useSceneEditorViewStore,
+  type SceneSnapChannel,
+  type SceneSnapStep,
 } from './model/use-scene-editor-view-store';
 export {
   useSelectedSceneObjectEditor,

@@ -9,54 +9,25 @@ import {
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
-  SceneHistoryControls,
-  SceneTransformModeToggle,
-  SceneTransformSpaceToggle,
   useSceneEditorViewStore,
   useTagBindingSource,
   useVirtualTagStore,
+  type SceneTransformMode,
 } from '@crane/features/3d';
-import {
-  Binoculars,
-  Copy,
-  Download,
-  Grid3x3,
-  House,
-  Images,
-  Loader2,
-  Magnet,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightOpen,
-  Save,
-  Search,
-  Trash2,
-  Type,
-} from 'lucide-react';
-import {
-  startTransition,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { Images, Search } from 'lucide-react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@crane/core/lib/utils';
-import { Button } from '@crane/ui/atoms/button';
 import { Input } from '@crane/ui/atoms/input';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
+import { EditorHeaderBar } from './editor-header-bar';
+import { EditorSelectionBar } from './editor-selection-bar';
 import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
@@ -76,53 +47,15 @@ interface SceneObjectsEditPageProps {
   regionId: string;
 }
 
-// 상단 도구 모음의 필·버튼 — SceneHistoryControls / SceneTransformModeToggle
-// 과 같은 치수라 나란히 놓아도 높이가 맞는다.
-const TOOLBAR_PILL_CLASS =
-  'bg-background/95 border-border/80 flex h-[34px] items-center gap-1 rounded-lg border p-px shadow-sm backdrop-blur-sm';
-const TOOLBAR_BUTTON_CLASS =
-  'text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground size-8 rounded-md';
-const TOOLBAR_DIVIDER_CLASS = 'bg-border mx-0.5 h-4 w-px';
-
-interface ToolbarIconButtonProps {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  /** 토글 버튼의 현재 상태(aria-pressed). */
-  pressed?: boolean;
-  className?: string;
-  children: ReactNode;
-}
-
-function ToolbarIconButton({
-  label,
-  onClick,
-  disabled,
-  pressed,
-  className,
-  children,
-}: ToolbarIconButtonProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={label}
-            aria-pressed={pressed}
-            disabled={disabled}
-            className={cn(TOOLBAR_BUTTON_CLASS, className)}
-          />
-        }
-        onClick={onClick}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
+/**
+ * 도구 모음의 모달 도구 단축키(Unity·Unreal 계열). 헤더 바 툴팁과 단축키
+ * 도움말에 같은 키가 병기된다 — 바꾸면 세 곳을 함께 맞춘다.
+ */
+const TRANSFORM_MODE_BY_KEY_CODE: Record<string, SceneTransformMode> = {
+  KeyW: 'translate',
+  KeyE: 'rotate',
+  KeyR: 'scale',
+};
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
   if (!sceneInfo) {
@@ -162,8 +95,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
-  // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어지고, 캔버스 모서리의
-  // 재오픈 버튼만 남는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
+  // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어진다. 접기/펼치기는 헤더
+  // 바 양끝의 고정 토글이 맡는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
   // 상태다 — 접었다 펴면 기본 너비로 돌아온다.
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -171,6 +104,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const focusSelectedRef = useRef<(() => void) | null>(null);
   const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
   const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
+  const snapStep = useSceneEditorViewStore((state) => state.snapStep);
+  const setSnapStep = useSceneEditorViewStore((state) => state.setSnapStep);
   const transformSpace = useSceneEditorViewStore(
     (state) => state.transformSpace,
   );
@@ -416,6 +351,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
+      // W/E/R = 이동/회전/크기(Unity·Unreal 계열). 선택이 없어도 모드는
+      // 바뀐다 — 다음 선택에 바로 적용되는 게 자연스럽다.
+      const nextMode = TRANSFORM_MODE_BY_KEY_CODE[event.code];
+      if (nextMode) {
+        event.preventDefault();
+        setTransformMode(nextMode);
+        return;
+      }
+
       const currentSelectedIds = selectedIdsRef.current;
       // F = 선택 객체로 카메라 이동(Unity·Unreal·three.js editor 공통 관례).
       if (event.code === 'KeyF' && currentSelectedIds.size > 0) {
@@ -444,6 +388,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     saveCurrentScene,
     saveDisabled,
     selectAll,
+    setTransformMode,
     undo,
   ]);
 
@@ -485,7 +430,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onLightingChange={setLighting}
                   onLightingInteractionStart={startTransformInteraction}
                   onLightingInteractionEnd={endTransformInteraction}
-                  onCollapse={() => setLeftCollapsed(true)}
                   sceneInfo={sceneInfo}
                   virtualTagsPath={virtualTagsPath}
                 />
@@ -495,202 +439,102 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           </>
         ) : null}
 
-        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
+        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조.
+            뷰포트 위 헤더 바는 캔버스 바깥의 크롬이고, 뷰포트 안에는 선택
+            컨텍스트 바(하단 중앙)·도움말(우하단)·축 기즈모(우상단)만 띄운다. 뷰포트 중앙 상단은 가장 중요한 시야라
+            어떤 UI 도 두지 않는다. */}
         <ResizablePanel id="edit-canvas">
-          <div className="relative h-full min-h-0 w-full">
-            <SceneObjectsEditCanvas
-              rootRef={canvasRootRef}
-              cameraStateRef={cameraStateRef}
-              initialCamera={initialCamera}
-              sceneInfo={sceneInfo}
-              regionId={regionId}
-              catalogItems={sceneModelCatalog}
-              transformMode={transformMode}
-              draggingModelCatalogItem={draggingCatalogItem}
-              onTransformVectorChange={(field, value) => {
-                // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
-                // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
-                updateSelectedTransformVector(field, value, {
-                  recordHistory: false,
-                });
-              }}
-              onTransformCommit={(position, rotation, scale) => {
-                // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
-                // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-                commitSelectedTransform(position, rotation, scale, {
-                  recordHistory: false,
-                });
-              }}
-              onMultiTransformCommit={(updates) => {
-                updateMultiObjectTransforms(updates, { recordHistory: false });
-              }}
-              onAddModel={(catalogItem, position) => {
-                addModel(catalogItem, position);
-                setDraggingCatalogItem(null);
-              }}
-              onTransformInteractionStart={startTransformInteraction}
-              onTransformInteractionEnd={endTransformInteraction}
-              focusSelectedRef={focusSelectedRef}
-              cameraActionsRef={cameraActionsRef}
+          <div className="flex h-full min-h-0 flex-col">
+            <EditorHeaderBar
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+              saveDisabled={saveDisabled}
+              isSaving={isSaving}
+              isDirty={isDirty}
+              onSave={() => void saveCurrentScene()}
+              onExport={() => downloadSceneInfo(regionId, sceneInfo)}
+              mode={transformMode}
+              onModeChange={setTransformMode}
+              onAddText={handleAddTextAtView}
+              transformSpace={isScaleMode ? 'local' : transformSpace}
+              onTransformSpaceChange={setTransformSpace}
+              transformSpaceDisabled={isScaleMode}
               snapEnabled={snapEnabled}
-              transformSpace={transformSpace}
+              snapStep={snapStep}
+              onToggleSnap={toggleSnap}
+              onSnapStepChange={setSnapStep}
               showGrid={showGrid}
+              onToggleGrid={toggleGrid}
+              onResetView={() => cameraActionsRef.current?.resetView()}
+              onTopView={() => cameraActionsRef.current?.topView()}
+              sceneDisabled={saveDisabled}
+              leftPanelCollapsed={leftCollapsed}
+              onToggleLeftPanel={() => setLeftCollapsed((v) => !v)}
+              rightPanelCollapsed={rightCollapsed}
+              onToggleRightPanel={() => setRightCollapsed((v) => !v)}
             />
+            <div className="relative min-h-0 flex-1">
+              <SceneObjectsEditCanvas
+                rootRef={canvasRootRef}
+                cameraStateRef={cameraStateRef}
+                initialCamera={initialCamera}
+                sceneInfo={sceneInfo}
+                regionId={regionId}
+                catalogItems={sceneModelCatalog}
+                transformMode={transformMode}
+                draggingModelCatalogItem={draggingCatalogItem}
+                onTransformVectorChange={(field, value) => {
+                  // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
+                  // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
+                  updateSelectedTransformVector(field, value, {
+                    recordHistory: false,
+                  });
+                }}
+                onTransformCommit={(position, rotation, scale) => {
+                  // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+                  // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+                  commitSelectedTransform(position, rotation, scale, {
+                    recordHistory: false,
+                  });
+                }}
+                onMultiTransformCommit={(updates) => {
+                  updateMultiObjectTransforms(updates, {
+                    recordHistory: false,
+                  });
+                }}
+                onAddModel={(catalogItem, position) => {
+                  addModel(catalogItem, position);
+                  setDraggingCatalogItem(null);
+                }}
+                onTransformInteractionStart={startTransformInteraction}
+                onTransformInteractionEnd={endTransformInteraction}
+                focusSelectedRef={focusSelectedRef}
+                cameraActionsRef={cameraActionsRef}
+                snapEnabled={snapEnabled}
+                snapStep={snapStep}
+                transformSpace={transformSpace}
+                showGrid={showGrid}
+              />
 
-            {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
-            {leftCollapsed ? (
-              <button
-                type="button"
-                onClick={() => setLeftCollapsed(false)}
-                aria-label={t('monitoring:editor.expandPanel')}
-                title={t('monitoring:editor.expandPanel')}
-                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-              >
-                <PanelLeftOpen className="size-4" />
-              </button>
-            ) : null}
-            {rightCollapsed ? (
-              <button
-                type="button"
-                onClick={() => setRightCollapsed(false)}
-                aria-label={t('monitoring:editor.expandPanel')}
-                title={t('monitoring:editor.expandPanel')}
-                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-              >
-                <PanelRightOpen className="size-4" />
-              </button>
-            ) : null}
+              <EditorSelectionBar
+                hasSelection={hasSelection}
+                onDuplicate={duplicateSelectedObject}
+                onDelete={removeSelectedModel}
+              />
+              {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
+                  겹치지 않는다. */}
+              <SceneShortcutsHelp />
 
-            {/* 중앙 상단 floating toolbar */}
-            <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
-              <div className="pointer-events-auto">
-                <SceneTransformModeToggle
-                  mode={transformMode}
-                  onModeChange={setTransformMode}
-                  leadingContent={
-                    <div className="flex items-center gap-2">
-                      <SceneHistoryControls
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        onUndo={undo}
-                        onRedo={redo}
-                      />
-                      <div className={TOOLBAR_PILL_CLASS}>
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.duplicateSelected')}
-                          disabled={!hasSelection}
-                          onClick={duplicateSelectedObject}
-                        >
-                          <Copy className="size-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.deleteSelected')}
-                          disabled={!hasSelection}
-                          onClick={removeSelectedModel}
-                        >
-                          <Trash2 className="size-4" />
-                        </ToolbarIconButton>
-                      </div>
-                    </div>
-                  }
-                  trailingContent={
-                    <div className="flex items-center gap-2">
-                      <SceneTransformSpaceToggle
-                        space={isScaleMode ? 'local' : transformSpace}
-                        onSpaceChange={setTransformSpace}
-                        disabled={isScaleMode}
-                      />
-                      <div className={TOOLBAR_PILL_CLASS}>
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.snap')}
-                          pressed={snapEnabled}
-                          disabled={saveDisabled}
-                          onClick={toggleSnap}
-                        >
-                          <Magnet className="size-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.grid')}
-                          pressed={showGrid}
-                          disabled={saveDisabled}
-                          onClick={toggleGrid}
-                        >
-                          <Grid3x3 className="size-4" />
-                        </ToolbarIconButton>
-                        <span className={TOOLBAR_DIVIDER_CLASS} />
-                        <ToolbarIconButton
-                          label={t('common:viewer3d.resetView')}
-                          disabled={saveDisabled}
-                          onClick={() => cameraActionsRef.current?.resetView()}
-                        >
-                          <House className="size-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          label={t('common:viewer3d.topView')}
-                          disabled={saveDisabled}
-                          onClick={() => cameraActionsRef.current?.topView()}
-                        >
-                          <Binoculars className="size-4" />
-                        </ToolbarIconButton>
-                        <span className={TOOLBAR_DIVIDER_CLASS} />
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.addText')}
-                          disabled={saveDisabled}
-                          onClick={handleAddTextAtView}
-                        >
-                          <Type className="size-4" />
-                        </ToolbarIconButton>
-                        <span className={TOOLBAR_DIVIDER_CLASS} />
-                        {/* 저장 상태는 버튼 자체가 나타낸다 — 미저장이면 붉은 점과
-                            진한 아이콘, 저장되면 흐린 아이콘. 저장 직후 확인은
-                            성공 토스트가 맡는다(운영의 "이 브라우저에만" 고지도
-                            거기서). 단축키는 우측 하단 도움말 팝업에서 안내한다. */}
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.save')}
-                          disabled={saveDisabled || isSaving}
-                          className={cn(
-                            'relative',
-                            isDirty && 'text-foreground',
-                          )}
-                          onClick={() => void saveCurrentScene()}
-                        >
-                          {isSaving ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Save className="size-4" />
-                          )}
-                          {isDirty && !isSaving ? (
-                            <span
-                              aria-hidden
-                              className="absolute top-1 right-1 size-1.5 rounded-full bg-red-500"
-                            />
-                          ) : null}
-                        </ToolbarIconButton>
-                        <span className={TOOLBAR_DIVIDER_CLASS} />
-                        <ToolbarIconButton
-                          label={t('monitoring:editor.exportJson')}
-                          disabled={saveDisabled}
-                          onClick={() => downloadSceneInfo(regionId, sceneInfo)}
-                        >
-                          <Download className="size-4" />
-                        </ToolbarIconButton>
-                      </div>
-                    </div>
-                  }
-                />
-              </div>
+              {!sceneInfo ? (
+                <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
+                  <p className="text-muted-foreground text-sm font-medium">
+                    {t('monitoring:editor.loading')}
+                  </p>
+                </div>
+              ) : null}
             </div>
-
-            {/* 우측 하단 단축키 도움말 — 기즈모는 좌하단이라 겹치지 않는다. */}
-            <SceneShortcutsHelp />
-
-            {!sceneInfo ? (
-              <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-                <p className="text-muted-foreground text-sm font-medium">
-                  {t('monitoring:editor.loading')}
-                </p>
-              </div>
-            ) : null}
           </div>
         </ResizablePanel>
 
@@ -722,7 +566,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                       <HierarchyPanel
                         sceneInfo={sceneInfo}
                         selectedIds={selectedIds}
-                        onCollapse={() => setRightCollapsed(true)}
                         onSelectPlacedModel={selectPlacedModel}
                         onDeletePlacedModel={deletePlacedModel}
                         onSelectPlacedText={selectPlacedText}
@@ -772,7 +615,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 /**
  * 우측 상단 Hierarchy 패널 — 검색 헤더 + 배치된 객체 목록.
  * 모델 팔레트는 좌측 도킹 패널(ProjectPalettePanel)이, 저장/내보내기는
- * 중앙 상단 툴바가 담당한다.
+ * 뷰포트 위 헤더 바(EditorHeaderBar)가 담당한다.
  */
 function HierarchyPanel({
   sceneInfo,
@@ -790,7 +633,6 @@ function HierarchyPanel({
   onRenameObject,
   onSelectNode,
   jointNodePathsByModel,
-  onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
@@ -800,7 +642,6 @@ function HierarchyPanel({
   onDeletePlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
   onRenameObject: (id: string, name: string) => void;
-  onCollapse: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
@@ -816,7 +657,6 @@ function HierarchyPanel({
       <PaletteHeader
         objectSearch={objectSearch}
         onObjectSearchChange={setObjectSearch}
-        onCollapse={onCollapse}
       />
       <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
@@ -897,7 +737,6 @@ function ProjectPalettePanel({
   onLightingChange,
   onLightingInteractionStart,
   onLightingInteractionEnd,
-  onCollapse,
   sceneInfo,
   virtualTagsPath,
 }: {
@@ -921,7 +760,6 @@ function ProjectPalettePanel({
   onDragEnd: () => void;
   onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
   onToggleLock: (id: string, locked: boolean) => void;
-  onCollapse: () => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -947,8 +785,9 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로 스크롤) + 접기 버튼 */}
-      <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
+      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로
+          스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다. */}
+      <div className="border-border flex shrink-0 items-center border-b pt-1">
         <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PANEL_TABS.map((tab) => {
             const isActive = activeTab === tab;
@@ -976,15 +815,6 @@ function ProjectPalettePanel({
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={onCollapse}
-          aria-label={t('monitoring:editor.collapsePanel')}
-          title={t('monitoring:editor.collapsePanel')}
-          className="text-muted-foreground hover:text-foreground mr-1 inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors"
-        >
-          <PanelLeftClose className="size-4" />
-        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden p-2">

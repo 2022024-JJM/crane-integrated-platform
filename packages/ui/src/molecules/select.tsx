@@ -9,9 +9,24 @@ function Select(props: SelectPrimitive.Root.Props<any>) {
   return <SelectPrimitive.Root {...props} />;
 }
 
+type SelectTriggerVariant = 'default' | 'ghost';
+
 interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
   label?: string;
+  /**
+   * `default` 는 테두리 있는 입력 필드 모양. `ghost` 는 도구 모음의 고스트
+   * 아이콘 버튼(`Button variant="ghost"`)과 같은 언어 — 테두리·배경 없이
+   * 텍스트만 두고 hover·열림 시에만 `bg-muted` 가 뜬다. 색·hover 값은
+   * 버튼 ghost variant 와 같은 토큰을 쓴다.
+   */
+  variant?: SelectTriggerVariant;
 }
+
+const SELECT_TRIGGER_VARIANT_CLASS: Record<SelectTriggerVariant, string> = {
+  default: 'border-border bg-background hover:bg-muted',
+  ghost:
+    'border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground dark:hover:bg-muted/50',
+};
 
 /**
  * 표시 우선순위: children > label > 선택값 텍스트. children 은 아이콘처럼
@@ -20,13 +35,15 @@ interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
 function SelectTrigger({
   className,
   label,
+  variant = 'default',
   children,
   ...props
 }: SelectTriggerProps) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+        'focus-visible:border-ring focus-visible:ring-ring/50 flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+        SELECT_TRIGGER_VARIANT_CLASS[variant],
         className,
       )}
       {...props}
@@ -38,7 +55,13 @@ function SelectTrigger({
       ) : (
         <SelectPrimitive.Value />
       )}
-      <ChevronDown className="text-muted-foreground size-3 shrink-0" />
+      {/* ghost 는 부모 글자색을 따라 hover 시 라벨과 함께 진해진다. */}
+      <ChevronDown
+        className={cn(
+          'size-3 shrink-0',
+          variant === 'ghost' ? 'text-current' : 'text-muted-foreground',
+        )}
+      />
     </SelectPrimitive.Trigger>
   );
 }
