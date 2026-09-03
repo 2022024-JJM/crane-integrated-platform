@@ -1,5 +1,5 @@
 import { useGLTF } from '@react-three/drei';
-import { withBaseUrl } from './asset-url';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
 
 /**
  * GLTF 캐시 해제 — region을 떠날 때 그 씬이 쓰던 GLB만 골라 비운다.

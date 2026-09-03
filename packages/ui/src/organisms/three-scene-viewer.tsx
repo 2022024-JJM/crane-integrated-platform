@@ -23,7 +23,6 @@ import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
-  SCENE_TOOLBAR_BUTTON_CLASS,
   SceneToolbarButton,
   type SceneToolbarTooltipSide,
 } from '../molecules/scene-toolbar-button';
@@ -39,8 +38,10 @@ import {
 } from './scene-dock';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
-// 외부 버튼(알람 토글·충돌 토글·북마크)이 예전부터 이 경로에서 가져다 쓴다.
-export { SCENE_TOOLBAR_BUTTON_CLASS };
+// SCENE_TOOLBAR_BUTTON_CLASS 는 여기서 re-export 하지 않는다. 이 파일은
+// three·drei·fiber 를 정적으로 끌어오므로, 상수 하나 때문에 이 경로를 import 한
+// 버튼(알람 토글 등)이 로그인 화면까지 3D 런타임을 실었다. 상수는
+// `@crane/ui/molecules/scene-toolbar-button` 에서 가져온다.
 
 interface ThreeSceneViewerCameraPreset {
   defaultPosition: Vector3Tuple;

@@ -11,7 +11,7 @@
  * 원본(9K/6.5K)은 MAX_TEXTURE_SIZE 8192인 GPU에서 업로드가 실패해 배경이
  * 검게 나오고, GPU 메모리도 수백 MB를 먹는다 — 원본을 직접 등록하지 말 것.
  */
-import { withBaseUrl } from '../lib/asset-url';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { getSceneEnvironmentById } from './scene-environment-catalog';
 
 const ENVIRONMENT_FILE_URL_BY_REGION_ID: Record<string, string> = {
@@ -28,7 +28,9 @@ function withBase(relativeUrl: string): string {
 }
 
 /** 매핑이 없는 region은 null — 배경 컴포넌트가 아예 마운트하지 않는다. */
-export function getEnvironmentFileUrlByRegionId(regionId: string): string | null {
+export function getEnvironmentFileUrlByRegionId(
+  regionId: string,
+): string | null {
   const relativeUrl = ENVIRONMENT_FILE_URL_BY_REGION_ID[regionId];
   return relativeUrl ? withBase(relativeUrl) : null;
 }

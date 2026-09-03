@@ -1,4 +1,4 @@
-import { getAssetContentHash, withBaseUrl } from '../lib/asset-url';
+import { getAssetContentHash, withBaseUrl } from '@crane/core/lib/asset-url';
 import {
   SCENE_DIR,
   getKnownRegionIds,

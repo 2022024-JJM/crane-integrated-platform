@@ -14,8 +14,8 @@ import { modelObjectRegistry } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
+import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
 import {
-  SCENE_TOOLBAR_BUTTON_CLASS,
   ThreeSceneViewer,
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';

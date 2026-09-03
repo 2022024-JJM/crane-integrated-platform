@@ -7,7 +7,7 @@ import {
   VIRTUAL_TAGS_PUBLIC_PATH,
   VIRTUAL_TAGS_STORAGE_KEY,
 } from '../virtual-tag-storage';
-import { registerAssetHashManifest } from '../../../3d/lib/asset-url';
+import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
 import type { VirtualTagSet } from '../../model/types';
 
 function set(key = 'C_1:x'): VirtualTagSet {

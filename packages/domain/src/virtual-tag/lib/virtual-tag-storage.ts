@@ -1,4 +1,4 @@
-import { getAssetContentHash, withBaseUrl } from '../../3d/lib/asset-url';
+import { getAssetContentHash, withBaseUrl } from '@crane/core/lib/asset-url';
 import type { VirtualTagSet } from '../model/types';
 import { sanitizeVirtualTagSet } from './sanitize-virtual-tags';
 

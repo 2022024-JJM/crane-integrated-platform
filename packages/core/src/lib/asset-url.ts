@@ -17,8 +17,12 @@
  */
 
 /**
- * 앱(shell)이 빌드 타임 매니페스트를 주입한다. 도메인 패키지는 특정 앱의
+ * 앱(shell)이 빌드 타임 매니페스트를 주입한다. 패키지는 특정 앱의
  * 가상 모듈을 import 할 수 없으므로(의존 방향이 뒤집힌다) 등록 방식을 쓴다.
+ *
+ * 이 파일은 의존성이 없어야 한다 — shell 의 main.tsx 가 정적으로 import 하므로
+ * 여기서 무언가를 끌어오면 그대로 첫 화면 로딩과 HMR 전파 범위에 들어간다.
+ * (예전에 domain/3d 배럴에 있을 때 three·drei 가 로그인 화면에 실렸다.)
  * 주입 전이거나 매니페스트에 없는 경로는 해시 없이 동작한다 — 캐시 무효화가
  * 안 될 뿐, 경로는 항상 유효하다.
  */
@@ -90,7 +94,8 @@ function appendVersion(url: string, hash: string): string {
 export function withBaseUrl(rawPath: string): string {
   if (!rawPath) return rawPath;
   if (/^(https?:)?\/\//i.test(rawPath)) return rawPath;
-  if (rawPath.startsWith('blob:') || rawPath.startsWith('data:')) return rawPath;
+  if (rawPath.startsWith('blob:') || rawPath.startsWith('data:'))
+    return rawPath;
 
   const base = import.meta.env.BASE_URL ?? '/';
 

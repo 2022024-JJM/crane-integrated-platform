@@ -1,10 +1,18 @@
 import { useGLTF } from '@react-three/drei';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box3, BufferGeometry, Color, Material, Mesh, Object3D, Vector3 } from 'three';
+import {
+  Box3,
+  BufferGeometry,
+  Color,
+  Material,
+  Mesh,
+  Object3D,
+  Vector3,
+} from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import '../lib/bvh-setup';
-import { withBaseUrl } from '../lib/asset-url';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
@@ -120,7 +128,10 @@ export interface ClonedModel {
  * 인스턴스당 clone·computeBoundingSphere가 1회만 일어나게 하고, SelectionBox·
  * 라벨 앵커가 실제 렌더되는 트리와 같은 객체를 측정하도록 보장한다.
  */
-export function useClonedModel(url: string, injected?: ClonedModel): ClonedModel {
+export function useClonedModel(
+  url: string,
+  injected?: ClonedModel,
+): ClonedModel {
   const { scene } = useGLTF(withBaseUrl(url));
 
   return useMemo(() => {
@@ -320,7 +331,10 @@ export function ModelMesh({
   onHoverEnd,
   children,
 }: ModelMeshProps) {
-  const { clone, meshBindings, originalTransforms } = useClonedModel(url, clonedModel);
+  const { clone, meshBindings, originalTransforms } = useClonedModel(
+    url,
+    clonedModel,
+  );
   const modelRef = useRef<Object3D | null>(null);
   // 이전 effect에서 override가 적용된 적이 있는 target들. 다음 effect 실행 시
   // 모두 originalTransforms로 reset한 뒤 현재 override를 다시 적용한다.
@@ -480,11 +494,7 @@ export function ModelMesh({
         original.rotation[1],
         original.rotation[2],
       );
-      target.scale.set(
-        original.scale[0],
-        original.scale[1],
-        original.scale[2],
-      );
+      target.scale.set(original.scale[0], original.scale[1], original.scale[2]);
       target.visible = original.visible;
     }
     touched.clear();

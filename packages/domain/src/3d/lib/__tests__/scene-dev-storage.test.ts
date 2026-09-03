@@ -6,7 +6,7 @@ import {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
 } from '../scene-dev-storage';
-import { registerAssetHashManifest } from '../asset-url';
+import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
 import type { SavedSceneInfo } from '../../model/types';
 
 /**
@@ -121,7 +121,9 @@ describe('운영 환경 (localStorage)', () => {
 
     expect(result).toEqual(scene('mine'));
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) as string)).toEqual({
+    expect(
+      JSON.parse(window.localStorage.getItem(STORAGE_KEY) as string),
+    ).toEqual({
       baseVersion: 'hash-v1',
       sceneInfo: scene('mine'),
     });

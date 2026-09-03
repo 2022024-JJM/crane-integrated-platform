@@ -1,7 +1,7 @@
 import { Box3, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { withBaseUrl } from './asset-url';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
 
 /**
  * GLTF url 단위로 모델의 unscaled bottom offset을 캐시한다.

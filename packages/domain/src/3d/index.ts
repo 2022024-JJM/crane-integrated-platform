@@ -128,7 +128,10 @@ export {
   getEnvironmentFileUrlByRegionId,
   resolveEnvironmentFileUrl,
 } from './model/scene-environment-registry';
-export { withBaseUrl, registerAssetHashManifest } from './lib/asset-url';
+export {
+  withBaseUrl,
+  registerAssetHashManifest,
+} from '@crane/core/lib/asset-url';
 export { getModelPreviewAssetPath } from './lib/preview-asset-path';
 export { CRANE_TYPE_MODEL, getCraneModel } from './model/crane-type-model';
 export type {

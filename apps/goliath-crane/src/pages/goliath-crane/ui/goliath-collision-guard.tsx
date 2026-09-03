@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
-import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/organisms/three-scene-viewer';
+import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
 import { cn } from '@crane/core/lib/utils';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 

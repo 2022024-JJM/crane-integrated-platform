@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import './design-token.css';
@@ -23,9 +23,23 @@
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
-@source '../../../../packages/*/src/**/*.tsx';
-@source '../../../../apps/*/src/**/*.tsx';
-@source '../../../../packages/core/src/lib/utils.ts';
+/*
+ * Tailwind 소스 범위.
+ *
+ * 위 `source(none)` 은 자동 소스 탐지를 끈다. 자동 탐지는 Vite root(apps/shell)
+ * 전체를 훑는데 public/models·maps 의 .glb 는 제외 목록에 없어 수십 MB 를 텍스트로
+ * 읽었고, 그것만으로 콜드스타트 CSS 스캔이 50초 가까이 걸렸다. 클래스가 있는
+ * 곳은 아래 소스 코드뿐이므로 명시 목록만 쓴다.
+ *
+ * .ts 도 포함한다 — tone.ts, status-colors.ts, kc.ts 처럼 클래스 문자열만 가진
+ * 순수 모듈이 있고, .tsx 만 스캔하던 동안 그 클래스(bg-lime-400 등)가 CSS 에서
+ * 빠져 있었다. 대형 fixture 와 테스트는 후보 추출 비용만 크고 클래스가 없어 뺀다.
+ * `@source not` 의 디렉터리 패턴은 끝에 `/**` 를 붙이면 제외되지 않는다.
+ */
+@source '../../../../packages/*/src/**/*.{ts,tsx}';
+@source '../../../../apps/*/src/**/*.{ts,tsx}';
+@source not '../../../../**/__tests__';
+@source not '../../../../apps/indoorshop/src/**/*Fixture.ts';
 
 @custom-variant dark (&:is(.dark *));
 
