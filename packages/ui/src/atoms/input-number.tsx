@@ -79,6 +79,12 @@ interface InputNumberProps extends Omit<
   min?: number;
   max?: number;
   step?: number;
+  /**
+   * 스테퍼·방향키 한 칸의 계산을 바꾼다. 기본은 `value ± step` 델타. 스냅
+   * 격자처럼 "step 의 배수 위로 이동" 이 필요한 호출자가 주입한다(로직은
+   * 호출자 계층에 두어 테스트한다). 반환값은 min/max 로 clamp 된다.
+   */
+  stepValue?: (value: number, step: number, direction: 1 | -1) => number;
   /** 비포커스 시 표시 문자열(단위 접미사 등). 포커스/편집 중엔 raw 숫자를 보여준다. */
   format?: (value: number) => string;
   /** 내부 <input>에 병합할 클래스. className은 래퍼 div로 가므로 별도 prop. */
@@ -110,6 +116,7 @@ function InputNumber({
   min,
   max,
   step = 1,
+  stepValue,
   format,
   className,
   inputClassName,
@@ -194,13 +201,17 @@ function InputNumber({
   const stepBy = useCallback(
     (direction: 1 | -1): boolean => {
       markStep();
-      const next = clamp(addStep(valueRef.current, step, direction));
+      const next = clamp(
+        stepValue
+          ? stepValue(valueRef.current, step, direction)
+          : addStep(valueRef.current, step, direction),
+      );
       if (next === valueRef.current) return false;
       valueRef.current = next;
       onChange(next);
       return true;
     },
-    [clamp, markStep, onChange, step],
+    [clamp, markStep, onChange, step, stepValue],
   );
 
   const stopHold = useCallback(() => {

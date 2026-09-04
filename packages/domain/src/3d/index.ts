@@ -69,6 +69,7 @@ export {
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
+  capturePose,
   getRestPose,
   hasRestPose,
   resetToRestPose,

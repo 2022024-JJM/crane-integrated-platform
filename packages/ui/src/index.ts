@@ -2,6 +2,7 @@ export * from './atoms/button';
 export * from './atoms/checkbox';
 export * from './atoms/badge';
 export * from './atoms/input';
+export * from './atoms/kbd';
 export * from './atoms/skeleton';
 export * from './atoms/spinner';
 export * from './atoms/separator';

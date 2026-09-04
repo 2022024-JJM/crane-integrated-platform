@@ -80,4 +80,26 @@ describe('getContinuousTransformVectors', () => {
     expect(resolved.position).toEqual([1, 2, 3]);
     expect(resolved.scale).toEqual([2, 2, 2]);
   });
+
+  // 스냅 경로(use-scene-transform readSnappedTransform)는 격자로 옮긴 deg 를
+  // object.rotation.set 으로 되써 넣고 다음 프레임에 다시 읽는다 — 되쓴 값이
+  // 그대로 돌아와야 스냅이 프레임마다 흔들리지 않는다.
+  it('격자로 되쓴 rotation 을 다음 읽기에서 그대로 돌려준다 (yaw>90 플립 포함)', () => {
+    for (const snapped of [
+      [0, 30, 0],
+      [0, 360, 0],
+      [0, 105, 0],
+      [15, 90, -45],
+    ] as const) {
+      const obj = makeObject([snapped[0], snapped[1], snapped[2]]);
+      const resolved = getContinuousTransformVectors(obj, [
+        snapped[0],
+        snapped[1],
+        snapped[2],
+      ]);
+      expect(resolved.rotation[0]).toBeCloseTo(snapped[0], 3);
+      expect(resolved.rotation[1]).toBeCloseTo(snapped[1], 3);
+      expect(resolved.rotation[2]).toBeCloseTo(snapped[2], 3);
+    }
+  });
 });

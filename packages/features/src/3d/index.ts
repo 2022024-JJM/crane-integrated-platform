@@ -40,7 +40,6 @@ export {
   SceneLighting,
 } from './ui/scene-render-preset';
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
-export { SceneHistoryControls } from './ui/scene-history-controls';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export {
   MIN_SURFACE_DISTANCE,
@@ -53,6 +52,14 @@ export {
   type SceneViewBookmark,
 } from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
+export { SceneTransformSpaceSelect } from './ui/scene-transform-space-select';
+export {
+  SCENE_SNAP_STEP_OPTIONS,
+  SCENE_TRANSFORM_SNAP,
+  useSceneEditorViewStore,
+  type SceneSnapChannel,
+  type SceneSnapStep,
+} from './model/use-scene-editor-view-store';
 export {
   useSelectedSceneObjectEditor,
   type SelectedMeshInfo,
@@ -91,6 +98,12 @@ export {
 } from './model/rig-live-readouts';
 export { clampJointValue } from './lib/apply-joint';
 export {
+  snapChangedAxes,
+  snapStepFor,
+  snapToStep,
+  stepOnGrid,
+} from './lib/snap-transform';
+export {
   publishTagValue,
   setTagIngest,
   tagLiveValues,
@@ -127,4 +140,5 @@ export type {
   AxisKey,
   SceneTransformField,
   SceneTransformMode,
+  SceneTransformSpace,
 } from './model/types';

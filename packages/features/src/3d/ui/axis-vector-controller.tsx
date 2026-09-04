@@ -3,6 +3,9 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { InputNumber } from '@crane/ui/atoms/input-number';
 import { AXIS_INDEX, type AxisKey } from '../model/types';
 
+/** 스냅이 꺼져 있을 때의 스테퍼 한 칸(델타). */
+const DEFAULT_STEP = 0.1;
+
 /**
  * position/rotation/scale 컨트롤러 공통 골격. 슬라이스 내부 전용이며
  * index.ts로 export하지 않는다 — 외부는 세 컨트롤러 이름을 쓴다.
@@ -15,6 +18,8 @@ export function AxisVectorController({
   format,
   unit,
   toValue = numRound,
+  step = DEFAULT_STEP,
+  stepValue,
 }: {
   vec: Vector3Tuple | undefined;
   onChange: (axis: AxisKey, v: number) => void;
@@ -26,6 +31,10 @@ export function AxisVectorController({
   unit?: string;
   /** InputNumber value로 넘길 숫자 변환 (rotation은 wrap 포함) */
   toValue?: (v: number) => number;
+  /** 스테퍼 한 칸. 스냅이 켜지면 인스펙터가 격자 단위를 넘긴다. */
+  step?: number;
+  /** 스테퍼 계산 전략(InputNumber stepValue). 스냅 격자 이동용. */
+  stepValue?: (value: number, step: number, direction: 1 | -1) => number;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -36,7 +45,8 @@ export function AxisVectorController({
           </span>
           <InputNumber
             value={vec ? toValue(vec[AXIS_INDEX[axis]]) : 0}
-            step={0.1}
+            step={step}
+            stepValue={stepValue}
             min={min}
             max={max}
             format={format}

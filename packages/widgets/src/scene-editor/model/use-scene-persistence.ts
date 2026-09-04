@@ -1,10 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type SetStateAction,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
+  isSceneStoredLocallyOnly,
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
   UnknownRegionError,
@@ -54,6 +57,14 @@ export function useScenePersistence({
   onLoadReset,
   getCameraState,
 }: UseScenePersistenceParams): UseScenePersistenceResult {
+  const { t } = useTranslation();
+  // 로드 effect 는 regionId 가 바뀔 때만 다시 돌아야 한다. t 를 deps 에 넣으면
+  // 언어를 바꿀 때마다 씬을 다시 읽어 편집 중인 내용이 날아가므로, 실패
+  // 토스트 문구만 ref 로 최신 t 를 읽는다.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const [isSaving, setIsSaving] = useState(false);
   // 마지막으로 저장된 sceneInfo의 참조. sceneInfo는 모든 mutation에서
   // 새 객체로 교체되므로 참조 비교만으로 dirty 판단이 가능하다.
@@ -97,7 +108,7 @@ export function useScenePersistence({
           toast.error(
             error instanceof UnknownRegionError
               ? error.message
-              : 'Failed to load scene.',
+              : tRef.current('monitoring:editor.loadFailed'),
           );
         }
       }
@@ -147,9 +158,22 @@ export function useScenePersistence({
       // updateScene이 present를 유지할지(내용 동일) 교체할지를 같은 기준으로
       // 판정해, 실제로 present가 될 객체를 기준선으로 삼는다.
       setSavedSceneRef(
-        isSceneInfoEqual(sceneInfo, savedSceneInfo) ? sceneInfo : savedSceneInfo,
+        isSceneInfoEqual(sceneInfo, savedSceneInfo)
+          ? sceneInfo
+          : savedSceneInfo,
       );
-      toast.success('Scene saved.');
+      // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일
+      // 저장)와 똑같이 "저장됨"이라고만 하면 사용자는 배포된 줄 알지만 실제로는
+      // 자기 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
+      // 상시 배지 대신 저장에 성공한 바로 그 순간의 토스트로만 알린다 —
+      // 늘 떠 있으면 경고가 무뎌지고, 정작 알려야 할 순간의 신호가 묻힌다.
+      if (isSceneStoredLocallyOnly()) {
+        toast.success(t('monitoring:editor.statusSavedLocalOnly'), {
+          description: t('monitoring:editor.statusSavedLocalOnlyHint'),
+        });
+      } else {
+        toast.success(t('monitoring:editor.statusSaved'));
+      }
       return true;
     } catch (error) {
       console.error('Failed to save scene info.', error);
@@ -158,9 +182,9 @@ export function useScenePersistence({
         toast.error(error.message);
         return false;
       }
-      toast.error('Failed to save scene.', {
+      toast.error(t('monitoring:editor.saveFailed'), {
         action: {
-          label: 'Retry',
+          label: t('monitoring:editor.retry'),
           onClick: () => {
             void saveCurrentScene();
           },
@@ -170,7 +194,7 @@ export function useScenePersistence({
     } finally {
       setIsSaving(false);
     }
-  }, [getCameraState, isSaving, regionId, sceneInfo, updateScene]);
+  }, [getCameraState, isSaving, regionId, sceneInfo, t, updateScene]);
 
   return {
     isDirty,

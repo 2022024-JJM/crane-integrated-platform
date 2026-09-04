@@ -1,6 +1,5 @@
 import {
   SCENE_MODEL_CATEGORIES,
-  isSceneStoredLocallyOnly,
   sceneModelCatalog,
   type SavedLightingInfo,
   type SavedMapInfo,
@@ -10,43 +9,25 @@ import {
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
-  SceneHistoryControls,
-  SceneTransformModeToggle,
+  useSceneEditorViewStore,
   useTagBindingSource,
   useVirtualTagStore,
+  type SceneTransformMode,
 } from '@crane/features/3d';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Download,
-  HardDrive,
-  Images,
-  Loader2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightOpen,
-  Save,
-  Search,
-  Type,
-} from 'lucide-react';
+import { Images, Search } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@crane/core/lib/utils';
-import { Badge } from '@crane/ui/atoms/badge';
 import { Input } from '@crane/ui/atoms/input';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@crane/ui/molecules/tooltip';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
+import { EditorHeaderBar } from './editor-header-bar';
+import { EditorSelectionBar } from './editor-selection-bar';
 import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
@@ -59,11 +40,22 @@ import {
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
+  type SceneEditorCameraActions,
 } from '@crane/widgets/3d';
 
 interface SceneObjectsEditPageProps {
   regionId: string;
 }
+
+/**
+ * 도구 모음의 모달 도구 단축키(Unity·Unreal 계열). 헤더 바 툴팁과 단축키
+ * 도움말에 같은 키가 병기된다 — 바꾸면 세 곳을 함께 맞춘다.
+ */
+const TRANSFORM_MODE_BY_KEY_CODE: Record<string, SceneTransformMode> = {
+  KeyW: 'translate',
+  KeyE: 'rotate',
+  KeyR: 'scale',
+};
 
 function downloadSceneInfo(regionId: string, sceneInfo: SavedSceneInfo | null) {
   if (!sceneInfo) {
@@ -103,13 +95,26 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [draggingCatalogItem, setDraggingCatalogItem] =
     useState<SceneModelCatalogItem | null>(null);
   // 패널 접힘은 세션 상태다 — 새로고침하면 다시 펼쳐진다. 접힌 쪽은 컬럼
-  // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어지고, 캔버스 모서리의
-  // 재오픈 버튼만 남는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
+  // 자체를 렌더하지 않아 캔버스 패널이 그만큼 넓어진다. 접기/펼치기는 헤더
+  // 바 양끝의 고정 토글이 맡는다. 드래그로 조절한 패널 너비도 마찬가지로 세션
   // 상태다 — 접었다 펴면 기본 너비로 돌아온다.
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
   const focusSelectedRef = useRef<(() => void) | null>(null);
+  const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
+  const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
+  const snapStep = useSceneEditorViewStore((state) => state.snapStep);
+  const setSnapStep = useSceneEditorViewStore((state) => state.setSnapStep);
+  const transformSpace = useSceneEditorViewStore(
+    (state) => state.transformSpace,
+  );
+  const showGrid = useSceneEditorViewStore((state) => state.showGrid);
+  const toggleSnap = useSceneEditorViewStore((state) => state.toggleSnap);
+  const setTransformSpace = useSceneEditorViewStore(
+    (state) => state.setTransformSpace,
+  );
+  const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -243,30 +248,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     const target = cameraStateRef.current?.target;
     addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
   };
-  // 운영 빌드에는 저장 백엔드가 없어 localStorage에만 남는다. dev(파일 저장)와
-  // 똑같이 "저장됨"으로 표시하면, 사용자는 배포된 줄 알지만 실제로는 자기
-  // 브라우저에만 있다 — 캐시를 지우거나 다른 PC에서 열면 사라진다.
-  // "저장됨" 상태일 때만 고지한다 — 저장 전/저장 중에 띄우면 경고가 상시
-  // 노출돼 무뎌지고, 정작 알려야 할 순간(방금 저장했는데 이 브라우저에만
-  // 남았을 때)의 신호가 묻힌다.
-  const showLocalOnlyNotice =
-    isSceneStoredLocallyOnly() && !isSaving && !isDirty;
-  const saveStatusLabel = isSaving
-    ? t('monitoring:editor.statusSaving')
-    : isDirty
-      ? t('monitoring:editor.statusUnsaved')
-      : showLocalOnlyNotice
-        ? t('monitoring:editor.statusSavedLocalOnly')
-        : t('monitoring:editor.statusSaved');
-  const saveStatusClassName = isSaving
-    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
-    : isDirty
-      ? 'border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-100'
-      : showLocalOnlyNotice
-        ? // 초록(=안전하게 보관됨)으로 칠하면 고지 문구와 색이 엇갈린다.
-          // 중립 톤으로 "저장은 됐지만 완전하지 않다"를 색으로도 전한다.
-          'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
-        : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100';
+  // 크기 모드는 three TransformControls 가 축 기준을 local 로 강제한다 —
+  // 토글을 잠그고 표시도 local 로 맞춘다.
+  const isScaleMode = transformMode === 'scale';
+  const hasSelection = selectedIds.size > 0;
 
   useEffect(() => {
     // 키 판정은 전부 event.code(물리 키)로 한다 — event.key는 한글 입력
@@ -366,6 +351,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         return;
       }
 
+      // W/E/R = 이동/회전/크기(Unity·Unreal 계열). 선택이 없어도 모드는
+      // 바뀐다 — 다음 선택에 바로 적용되는 게 자연스럽다.
+      const nextMode = TRANSFORM_MODE_BY_KEY_CODE[event.code];
+      if (nextMode) {
+        event.preventDefault();
+        setTransformMode(nextMode);
+        return;
+      }
+
       const currentSelectedIds = selectedIdsRef.current;
       // F = 선택 객체로 카메라 이동(Unity·Unreal·three.js editor 공통 관례).
       if (event.code === 'KeyF' && currentSelectedIds.size > 0) {
@@ -394,6 +388,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     saveCurrentScene,
     saveDisabled,
     selectAll,
+    setTransformMode,
     undo,
   ]);
 
@@ -435,7 +430,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onLightingChange={setLighting}
                   onLightingInteractionStart={startTransformInteraction}
                   onLightingInteractionEnd={endTransformInteraction}
-                  onCollapse={() => setLeftCollapsed(true)}
                   sceneInfo={sceneInfo}
                   virtualTagsPath={virtualTagsPath}
                 />
@@ -445,206 +439,102 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           </>
         ) : null}
 
-        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조 */}
+        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조.
+            뷰포트 위 헤더 바는 캔버스 바깥의 크롬이고, 뷰포트 안에는 선택
+            컨텍스트 바(하단 중앙)·도움말(우하단)·축 기즈모(우상단)만 띄운다. 뷰포트 중앙 상단은 가장 중요한 시야라
+            어떤 UI 도 두지 않는다. */}
         <ResizablePanel id="edit-canvas">
-          <div className="relative h-full min-h-0 w-full">
-            <SceneObjectsEditCanvas
-              rootRef={canvasRootRef}
-              cameraStateRef={cameraStateRef}
-              initialCamera={initialCamera}
-              sceneInfo={sceneInfo}
-              regionId={regionId}
-              catalogItems={sceneModelCatalog}
-              transformMode={transformMode}
-              draggingModelCatalogItem={draggingCatalogItem}
-              onTransformVectorChange={(field, value) => {
-                // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
-                // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
-                updateSelectedTransformVector(field, value, {
-                  recordHistory: false,
-                });
-              }}
-              onTransformCommit={(position, rotation, scale) => {
-                // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
-                // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-                commitSelectedTransform(position, rotation, scale, {
-                  recordHistory: false,
-                });
-              }}
-              onMultiTransformCommit={(updates) => {
-                updateMultiObjectTransforms(updates, { recordHistory: false });
-              }}
-              onAddModel={(catalogItem, position) => {
-                addModel(catalogItem, position);
-                setDraggingCatalogItem(null);
-              }}
-              onTransformInteractionStart={startTransformInteraction}
-              onTransformInteractionEnd={endTransformInteraction}
-              focusSelectedRef={focusSelectedRef}
+          <div className="flex h-full min-h-0 flex-col">
+            <EditorHeaderBar
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+              saveDisabled={saveDisabled}
+              isSaving={isSaving}
+              isDirty={isDirty}
+              onSave={() => void saveCurrentScene()}
+              onExport={() => downloadSceneInfo(regionId, sceneInfo)}
+              mode={transformMode}
+              onModeChange={setTransformMode}
+              onAddText={handleAddTextAtView}
+              transformSpace={isScaleMode ? 'local' : transformSpace}
+              onTransformSpaceChange={setTransformSpace}
+              transformSpaceDisabled={isScaleMode}
+              snapEnabled={snapEnabled}
+              snapStep={snapStep}
+              onToggleSnap={toggleSnap}
+              onSnapStepChange={setSnapStep}
+              showGrid={showGrid}
+              onToggleGrid={toggleGrid}
+              onResetView={() => cameraActionsRef.current?.resetView()}
+              onTopView={() => cameraActionsRef.current?.topView()}
+              sceneDisabled={saveDisabled}
+              leftPanelCollapsed={leftCollapsed}
+              onToggleLeftPanel={() => setLeftCollapsed((v) => !v)}
+              rightPanelCollapsed={rightCollapsed}
+              onToggleRightPanel={() => setRightCollapsed((v) => !v)}
             />
+            <div className="relative min-h-0 flex-1">
+              <SceneObjectsEditCanvas
+                rootRef={canvasRootRef}
+                cameraStateRef={cameraStateRef}
+                initialCamera={initialCamera}
+                sceneInfo={sceneInfo}
+                regionId={regionId}
+                catalogItems={sceneModelCatalog}
+                transformMode={transformMode}
+                draggingModelCatalogItem={draggingCatalogItem}
+                onTransformVectorChange={(field, value) => {
+                  // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
+                  // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
+                  updateSelectedTransformVector(field, value, {
+                    recordHistory: false,
+                  });
+                }}
+                onTransformCommit={(position, rotation, scale) => {
+                  // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+                  // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+                  commitSelectedTransform(position, rotation, scale, {
+                    recordHistory: false,
+                  });
+                }}
+                onMultiTransformCommit={(updates) => {
+                  updateMultiObjectTransforms(updates, {
+                    recordHistory: false,
+                  });
+                }}
+                onAddModel={(catalogItem, position) => {
+                  addModel(catalogItem, position);
+                  setDraggingCatalogItem(null);
+                }}
+                onTransformInteractionStart={startTransformInteraction}
+                onTransformInteractionEnd={endTransformInteraction}
+                focusSelectedRef={focusSelectedRef}
+                cameraActionsRef={cameraActionsRef}
+                snapEnabled={snapEnabled}
+                snapStep={snapStep}
+                transformSpace={transformSpace}
+                showGrid={showGrid}
+              />
 
-            {/* 접힌 패널의 재오픈 버튼 — 접힌 쪽 캔버스 모서리에만 남는다. */}
-            {leftCollapsed ? (
-              <button
-                type="button"
-                onClick={() => setLeftCollapsed(false)}
-                aria-label={t('monitoring:editor.expandPanel')}
-                title={t('monitoring:editor.expandPanel')}
-                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 left-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-              >
-                <PanelLeftOpen className="size-4" />
-              </button>
-            ) : null}
-            {rightCollapsed ? (
-              <button
-                type="button"
-                onClick={() => setRightCollapsed(false)}
-                aria-label={t('monitoring:editor.expandPanel')}
-                title={t('monitoring:editor.expandPanel')}
-                className="border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground absolute top-3 right-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition"
-              >
-                <PanelRightOpen className="size-4" />
-              </button>
-            ) : null}
+              <EditorSelectionBar
+                hasSelection={hasSelection}
+                onDuplicate={duplicateSelectedObject}
+                onDelete={removeSelectedModel}
+              />
+              {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
+                  겹치지 않는다. */}
+              <SceneShortcutsHelp />
 
-            {/* 중앙 상단 floating toolbar */}
-            <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2">
-              <div className="pointer-events-auto">
-                <SceneTransformModeToggle
-                  mode={transformMode}
-                  onModeChange={setTransformMode}
-                  leadingContent={
-                    <div className="flex items-center gap-2">
-                      {!saveDisabled ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'h-8 rounded-sm border px-1.5 text-[12px] font-medium tracking-[0.02em]',
-                                    saveStatusClassName,
-                                  )}
-                                />
-                              }
-                            >
-                              {isSaving ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : isDirty ? (
-                                <AlertCircle className="size-4" />
-                              ) : showLocalOnlyNotice ? (
-                                <HardDrive className="size-4" />
-                              ) : (
-                                <CheckCircle2 className="size-4" />
-                              )}
-                              {saveStatusLabel}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {showLocalOnlyNotice
-                                ? t(
-                                    'monitoring:editor.statusSavedLocalOnlyHint',
-                                  )
-                                : saveStatusLabel}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : null}
-                      <SceneHistoryControls
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        onUndo={undo}
-                        onRedo={redo}
-                      />
-                    </div>
-                  }
-                  trailingContent={
-                    <div className="bg-background/95 border-border/80 flex h-8.5 items-center gap-2 rounded-lg border px-3 shadow-sm backdrop-blur-sm">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.addText')}
-                                disabled={saveDisabled}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={handleAddTextAtView}
-                          >
-                            <Type className="size-4" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('monitoring:editor.addText')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <span className="bg-border h-4 w-px" />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.save')}
-                                disabled={saveDisabled || isSaving}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={() => void saveCurrentScene()}
-                          >
-                            {isSaving ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Save className="size-4" />
-                            )}
-                          </TooltipTrigger>
-                          {/* 단축키는 우측 하단 도움말 팝업에서 한꺼번에 안내한다. */}
-                          <TooltipContent>
-                            {t('monitoring:editor.save')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <span className="bg-border h-4 w-px" />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={t('monitoring:editor.exportJson')}
-                                disabled={saveDisabled}
-                                className="text-muted-foreground hover:text-foreground flex h-full cursor-pointer items-center justify-center transition-colors disabled:cursor-default disabled:opacity-40"
-                              />
-                            }
-                            onClick={() =>
-                              downloadSceneInfo(regionId, sceneInfo)
-                            }
-                          >
-                            <Download className="size-4" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('monitoring:editor.exportJson')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  }
-                />
-              </div>
+              {!sceneInfo ? (
+                <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
+                  <p className="text-muted-foreground text-sm font-medium">
+                    {t('monitoring:editor.loading')}
+                  </p>
+                </div>
+              ) : null}
             </div>
-
-            {/* 우측 하단 단축키 도움말 — 기즈모는 좌하단이라 겹치지 않는다. */}
-            <SceneShortcutsHelp />
-
-            {!sceneInfo ? (
-              <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-                <p className="text-muted-foreground text-sm font-medium">
-                  {t('monitoring:editor.loading')}
-                </p>
-              </div>
-            ) : null}
           </div>
         </ResizablePanel>
 
@@ -676,7 +566,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                       <HierarchyPanel
                         sceneInfo={sceneInfo}
                         selectedIds={selectedIds}
-                        onCollapse={() => setRightCollapsed(true)}
                         onSelectPlacedModel={selectPlacedModel}
                         onDeletePlacedModel={deletePlacedModel}
                         onSelectPlacedText={selectPlacedText}
@@ -726,7 +615,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 /**
  * 우측 상단 Hierarchy 패널 — 검색 헤더 + 배치된 객체 목록.
  * 모델 팔레트는 좌측 도킹 패널(ProjectPalettePanel)이, 저장/내보내기는
- * 중앙 상단 툴바가 담당한다.
+ * 뷰포트 위 헤더 바(EditorHeaderBar)가 담당한다.
  */
 function HierarchyPanel({
   sceneInfo,
@@ -744,7 +633,6 @@ function HierarchyPanel({
   onRenameObject,
   onSelectNode,
   jointNodePathsByModel,
-  onCollapse,
 }: {
   sceneInfo: SavedSceneInfo | null;
   selectedIds: Set<string>;
@@ -754,7 +642,6 @@ function HierarchyPanel({
   onDeletePlacedMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
   onRenameObject: (id: string, name: string) => void;
-  onCollapse: () => void;
   onSelectPlacedModel: (id: string) => void;
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
@@ -770,7 +657,6 @@ function HierarchyPanel({
       <PaletteHeader
         objectSearch={objectSearch}
         onObjectSearchChange={setObjectSearch}
-        onCollapse={onCollapse}
       />
       <div className="flex min-h-0 flex-1 flex-col">
         <PalettePlacedObjects
@@ -851,7 +737,6 @@ function ProjectPalettePanel({
   onLightingChange,
   onLightingInteractionStart,
   onLightingInteractionEnd,
-  onCollapse,
   sceneInfo,
   virtualTagsPath,
 }: {
@@ -875,7 +760,6 @@ function ProjectPalettePanel({
   onDragEnd: () => void;
   onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
   onToggleLock: (id: string, locked: boolean) => void;
-  onCollapse: () => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -901,8 +785,9 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로 스크롤) + 접기 버튼 */}
-      <div className="border-border flex shrink-0 items-center justify-between border-b pt-1">
+      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로
+          스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다. */}
+      <div className="border-border flex shrink-0 items-center border-b pt-1">
         <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PANEL_TABS.map((tab) => {
             const isActive = activeTab === tab;
@@ -930,15 +815,6 @@ function ProjectPalettePanel({
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={onCollapse}
-          aria-label={t('monitoring:editor.collapsePanel')}
-          title={t('monitoring:editor.collapsePanel')}
-          className="text-muted-foreground hover:text-foreground mr-1 inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors"
-        >
-          <PanelLeftClose className="size-4" />
-        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden p-2">

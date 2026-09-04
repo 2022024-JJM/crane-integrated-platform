@@ -22,7 +22,8 @@ export interface RestPose {
 
 const cache = new WeakMap<Object3D, RestPose>();
 
-function capture(node: Object3D): RestPose {
+/** 현재 자세를 복사한다. 캐시에는 넣지 않는다 — 리그 드라이버가 기즈모 handoff 시 루트 rest 를 다시 잡을 때 쓴다. */
+export function capturePose(node: Object3D): RestPose {
   return {
     position: node.position.clone(),
     quaternion: node.quaternion.clone(),
@@ -33,7 +34,7 @@ function capture(node: Object3D): RestPose {
 /** 이미 있으면 덮어쓰지 않는다 — 재마운트 시 구동된 자세가 rest 가 되는 것을 막는다. */
 export function seedRestPose(node: Object3D): void {
   if (!cache.has(node)) {
-    cache.set(node, capture(node));
+    cache.set(node, capturePose(node));
   }
 }
 
@@ -45,7 +46,7 @@ export function hasRestPose(node: Object3D): boolean {
 export function getRestPose(node: Object3D): RestPose {
   let pose = cache.get(node);
   if (!pose) {
-    pose = capture(node);
+    pose = capturePose(node);
     cache.set(node, pose);
   }
   return pose;

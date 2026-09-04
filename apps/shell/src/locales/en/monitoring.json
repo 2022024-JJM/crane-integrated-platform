@@ -97,6 +97,11 @@
       "translate": "Translate",
       "rotate": "Rotate",
       "scale": "Scale"
+    },
+    "space": {
+      "title": "Transform space",
+      "local": "Local",
+      "world": "World"
     }
   },
   "history": {
@@ -135,8 +140,9 @@
     "loading": "Loading scene editor...",
     "exportJson": "Export JSON",
     "dropHint": "Drop on the scene to place the model",
-    "statusSaving": "Saving",
-    "statusUnsaved": "Unsaved",
+    "loadFailed": "Failed to load scene.",
+    "saveFailed": "Failed to save scene.",
+    "retry": "Retry",
     "statusSaved": "Saved",
     "statusSavedLocalOnly": "Saved to this browser only",
     "statusSavedLocalOnlyHint": "There is no save server, so edits stay in this browser only. They disappear if you clear the cache, and other machines or users will not see them. Use Export to get the JSON and apply it.",
@@ -154,10 +160,19 @@
     "renameObject": "Rename",
     "nameEmptyError": "Name cannot be empty.",
     "deleteSelected": "Delete selected",
-    "snapActive": "Snap 1.0",
+    "snap": "Snap",
+    "snapSettings": "Snap increments",
+    "snapTranslation": "Move",
+    "snapRotation": "Rotate",
+    "snapScale": "Scale",
+    "grid": "Ground grid",
+    "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
     "textObject": "Text",
     "save": "Save",
+    "headerBar": "Toolbar",
+    "toolDock": "Tools",
+    "selectionActions": "Selection",
     "unsavedDialog": {
       "title": "Unsaved changes",
       "description": "This scene has unsaved changes. What would you like to do?",
@@ -168,10 +183,14 @@
     "shortcuts": {
       "title": "Shortcuts",
       "groupFile": "File",
+      "groupTools": "Tools",
       "groupEdit": "Edit",
       "groupSelect": "Selection",
       "groupCamera": "Camera",
       "save": "Save",
+      "toolTranslate": "Translate",
+      "toolRotate": "Rotate",
+      "toolScale": "Scale",
       "undo": "Undo",
       "redo": "Redo",
       "duplicate": "Duplicate selection",
@@ -280,6 +299,7 @@
     "count": "{{count}} / {{max}}",
     "keyHint": "Use the same format as real server tags (craneId:tagCode).",
     "periodHint": "Time (ms) for one cycle (min→max→min)",
-    "save": "Save"
+    "save": "Save",
+    "saveFailed": "Failed to save virtual tags."
   }
 }

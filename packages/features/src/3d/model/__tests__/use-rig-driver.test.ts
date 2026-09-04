@@ -89,6 +89,8 @@ beforeEach(() => {
   rigValueStore.reset();
   rigLiveReadouts.clear();
   modelObjectRegistry.clear();
+  // 드래그 플래그는 모듈 전역 스토어라 테스트 사이에 남는다.
+  useActiveTransformStore.getState().end();
 });
 
 afterEach(() => {
@@ -374,9 +376,7 @@ describe('useRigDriver — 선형 연동', () => {
 });
 
 describe('useRigDriver — node 태그 맵핑', () => {
-  const mapped = (
-    overrides: Partial<SavedModelInfo> = {},
-  ): SavedModelInfo =>
+  const mapped = (overrides: Partial<SavedModelInfo> = {}): SavedModelInfo =>
     model({
       rigId: undefined,
       position: [10, 0, -5],
@@ -390,12 +390,22 @@ describe('useRigDriver — node 태그 맵핑', () => {
         },
         {
           id: 'arm-rot',
-          target: { kind: 'node', node: '[0]Arm', channel: 'rotation', axis: 'z' },
+          target: {
+            kind: 'node',
+            node: '[0]Arm',
+            channel: 'rotation',
+            axis: 'z',
+          },
           tagKey: 'C_1:arm',
         },
         {
           id: 'hand-scale',
-          target: { kind: 'node', node: '[0]Arm/[0]Hand', channel: 'scale', axis: 'y' },
+          target: {
+            kind: 'node',
+            node: '[0]Arm/[0]Hand',
+            channel: 'scale',
+            axis: 'y',
+          },
           tagKey: 'C_1:hand',
         },
       ],
@@ -437,7 +447,12 @@ describe('useRigDriver — node 태그 맵핑', () => {
             tagMappings: [
               {
                 id: 'ghost',
-                target: { kind: 'node', node: '[9]Nope', channel: 'position', axis: 'x' },
+                target: {
+                  kind: 'node',
+                  node: '[9]Nope',
+                  channel: 'position',
+                  axis: 'x',
+                },
                 tagKey: 'k',
               },
             ],
@@ -466,7 +481,12 @@ describe('useRigDriver — node 태그 맵핑', () => {
       tagMappings: [
         {
           id: 'hand-x',
-          target: { kind: 'node', node: '[0]Arm/[0]Hand', channel: 'position', axis: 'x' },
+          target: {
+            kind: 'node',
+            node: '[0]Arm/[0]Hand',
+            channel: 'position',
+            axis: 'x',
+          },
           tagKey: 'k',
         },
       ],
@@ -500,13 +520,132 @@ describe('useRigDriver — node 태그 맵핑', () => {
     renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
     rigValueStore.set('m1/root-z', 3);
     rigValueStore.set('m1/arm-rot', 30);
+    frame();
+    expect(root.position.z).toBeCloseTo(-2, 9);
     useActiveTransformStore.getState().begin();
     root.position.z = 100; // 기즈모가 옮긴 값
     frame();
     expect(root.position.z).toBe(100);
     expect(zDeg(arm)).toBeCloseTo(30, 6);
-    useActiveTransformStore.getState().end();
-    frame();
-    expect(root.position.z).toBeCloseTo(-2, 9);
+  });
+
+  describe('기즈모 handoff — 드래그 종료 프레임의 루트 rest', () => {
+    it('기즈모가 옮긴 루트는 종료 직후 프레임부터 새 자세를 rest 로 쓴다 (옛 배치로 튀는 프레임 없음)', () => {
+      const { root } = mountModel('m1');
+      const { rerender } = renderHook(
+        ({ models }) => useRigDriver({ rigs: undefined, models }),
+        { initialProps: { models: [mapped()] } },
+      );
+      rigValueStore.set('m1/root-z', 3);
+      frame();
+      expect(root.position.z).toBeCloseTo(-2, 9);
+
+      useActiveTransformStore.getState().begin();
+      // 기즈모는 현재 자세(rest -5 + Δ 3 = -2)에서 출발해 100 까지 끌었다.
+      root.position.z = 100;
+      frame();
+      // 커밋(React setState)은 아직 models 에 도착하지 않은 채 end() 만 먼저 온다.
+      useActiveTransformStore.getState().end();
+      frame();
+      // 옛 rest(-5)+Δ = -2 로 되돌리는 프레임이 없어야 한다.
+      expect(root.position.z).toBeCloseTo(103, 9);
+
+      // 커밋된 새 배치값이 한 프레임 뒤에 도착해도 화면이 바뀌지 않는다.
+      rerender({ models: [mapped({ position: [10, 0, 100] })] });
+      frame();
+      expect(root.position.z).toBeCloseTo(103, 9);
+    });
+
+    it('기즈모가 건드리지 않은 루트 맵핑 모델은 rest 를 유지한다 (Δ 가 rest 에 흡수되지 않음)', () => {
+      const { root: r1 } = mountModel('m1');
+      const { root: r2 } = mountModel('m2');
+      renderHook(() =>
+        useRigDriver({
+          rigs: undefined,
+          models: [mapped(), mapped({ id: 'm2' })],
+        }),
+      );
+      rigValueStore.set('m1/root-z', 3);
+      rigValueStore.set('m2/root-z', 3);
+      frame();
+      expect(r2.position.z).toBeCloseTo(-2, 9);
+
+      useActiveTransformStore.getState().begin();
+      r1.position.z = 100; // m1 만 드래그
+      frame();
+      useActiveTransformStore.getState().end();
+      frame();
+      frame();
+      expect(r1.position.z).toBeCloseTo(103, 9);
+      // m2 의 rest 가 -2 로 다시 잡혔다면 -2+3 = 1 이 됐을 것이다.
+      expect(r2.position.z).toBeCloseTo(-2, 9);
+    });
+
+    it('움직이지 않고 놓아도(클릭) rest 와 자세가 그대로다', () => {
+      const { root } = mountModel('m1');
+      renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+      rigValueStore.set('m1/root-z', 3);
+      frame();
+      useActiveTransformStore.getState().begin();
+      frame();
+      useActiveTransformStore.getState().end();
+      frame();
+      frame();
+      expect(root.position.z).toBeCloseTo(-2, 9);
+    });
+
+    it('한 번도 적용하기 전(첫 프레임이 드래그)에는 현재 자세를 배치값으로 본다', () => {
+      const { root } = mountModel('m1');
+      renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+      rigValueStore.set('m1/root-z', 3);
+      useActiveTransformStore.getState().begin();
+      root.position.z = 100;
+      frame();
+      useActiveTransformStore.getState().end();
+      frame();
+      expect(root.position.z).toBeCloseTo(103, 9);
+    });
+
+    it('루트 맵핑이 없는 모델은 handoff 에서 아무 것도 하지 않는다', () => {
+      const { root, arm } = mountModel('m1');
+      renderHook(() =>
+        useRigDriver({
+          rigs: undefined,
+          models: [
+            mapped({
+              tagMappings: [
+                {
+                  id: 'arm-rot',
+                  target: {
+                    kind: 'node',
+                    node: '[0]Arm',
+                    channel: 'rotation',
+                    axis: 'z',
+                  },
+                  tagKey: 'C_1:arm',
+                },
+              ],
+            }),
+          ],
+        }),
+      );
+      rigValueStore.set('m1/arm-rot', 30);
+      frame();
+      useActiveTransformStore.getState().begin();
+      root.position.z = 100;
+      frame();
+      useActiveTransformStore.getState().end();
+      frame();
+      expect(root.position.z).toBe(100);
+      expect(zDeg(arm)).toBeCloseTo(30, 6);
+    });
+
+    // 드래그 시작 자세가 rest+Δ 라서 기즈모가 읽는 절대값에 Δ 가 섞인다.
+    // 커밋 경로(use-scene-transform commitFinal)가 그 절대값을 배치값으로
+    // 저장하므로 드래그마다 Δ 만큼 저장값이 밀리고, 다음 프레임에 Δ 가 한 번
+    // 더 더해져 모델이 Δ 만큼 더 가 있다(위 테스트의 103 = 100 + 3). 별건.
+    it.todo(
+      'Δ≠0 상태에서 드래그하면 커밋된 배치값에 Δ 가 흡수된다 (handoff 에서 Δ 를 벗겨야 함)',
+    );
   });
 });

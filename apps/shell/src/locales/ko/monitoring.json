@@ -97,6 +97,11 @@
       "translate": "이동",
       "rotate": "회전",
       "scale": "크기"
+    },
+    "space": {
+      "title": "변형 기준 축",
+      "local": "로컬",
+      "world": "월드"
     }
   },
   "history": {
@@ -135,8 +140,9 @@
     "loading": "씬 편집기를 불러오는 중입니다...",
     "exportJson": "JSON 내보내기",
     "dropHint": "씬 위에 놓으면 모델이 배치됩니다",
-    "statusSaving": "저장 중",
-    "statusUnsaved": "저장되지 않음",
+    "loadFailed": "씬을 불러오지 못했습니다.",
+    "saveFailed": "씬을 저장하지 못했습니다.",
+    "retry": "다시 시도",
     "statusSaved": "저장됨",
     "statusSavedLocalOnly": "이 브라우저에만 저장됨",
     "statusSavedLocalOnlyHint": "저장 서버가 없어 편집 내용이 이 브라우저에만 남습니다. 캐시를 지우거나 다른 PC·다른 사용자가 열면 보이지 않습니다. 공유하려면 내보내기로 JSON을 받아 반영하세요.",
@@ -154,10 +160,19 @@
     "renameObject": "이름 변경",
     "nameEmptyError": "이름을 입력해 주세요.",
     "deleteSelected": "선택 객체 삭제",
-    "snapActive": "Snap 1.0",
+    "snap": "스냅",
+    "snapSettings": "스냅 단위",
+    "snapTranslation": "이동",
+    "snapRotation": "회전",
+    "snapScale": "크기",
+    "grid": "바닥 격자",
+    "duplicateSelected": "선택 객체 복제",
     "addText": "텍스트 추가",
     "textObject": "텍스트",
     "save": "저장",
+    "headerBar": "도구 모음",
+    "toolDock": "도구",
+    "selectionActions": "선택 객체",
     "unsavedDialog": {
       "title": "저장되지 않은 변경사항",
       "description": "씬에 저장되지 않은 변경사항이 있습니다. 어떻게 할까요?",
@@ -168,10 +183,14 @@
     "shortcuts": {
       "title": "단축키",
       "groupFile": "파일",
+      "groupTools": "도구",
       "groupEdit": "편집",
       "groupSelect": "선택",
       "groupCamera": "카메라",
       "save": "저장",
+      "toolTranslate": "이동",
+      "toolRotate": "회전",
+      "toolScale": "크기",
       "undo": "실행 취소",
       "redo": "다시 실행",
       "duplicate": "선택 객체 복제",
@@ -280,6 +299,7 @@
     "count": "{{count}} / {{max}}",
     "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
     "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
-    "save": "저장"
+    "save": "저장",
+    "saveFailed": "가상 태그를 저장하지 못했습니다."
   }
 }

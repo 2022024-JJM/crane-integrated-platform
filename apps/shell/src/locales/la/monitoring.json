@@ -97,6 +97,11 @@
       "translate": "Translatio",
       "rotate": "Rotatio",
       "scale": "Scala"
+    },
+    "space": {
+      "title": "Spatium transformationis",
+      "local": "Locale",
+      "world": "Mundanum"
     }
   },
   "history": {
@@ -121,8 +126,9 @@
     "loading": "Editor scaenae oneratur...",
     "exportJson": "JSON Exporta",
     "dropHint": "In scaenam depone ut exemplar ponatur",
-    "statusSaving": "Servatur",
-    "statusUnsaved": "Non servatum",
+    "loadFailed": "Scaena onerari non potuit.",
+    "saveFailed": "Scaena servari non potuit.",
+    "retry": "Iterum conare",
     "statusSaved": "Servatum",
     "statusSavedLocalOnly": "In hoc navigatro tantum servatum",
     "statusSavedLocalOnlyHint": "Servus servandi deest, ergo mutationes in hoc navigatro tantum manent. Si cella purgatur, pereunt; alii computatri vel usores eas non videbunt. Ad communicandum, JSON per exportationem accipe.",
@@ -140,10 +146,19 @@
     "renameObject": "Nomen muta",
     "nameEmptyError": "Nomen vacuum esse non potest.",
     "deleteSelected": "Selectum dele",
-    "snapActive": "Snap 1.0",
+    "snap": "Adhaesio",
+    "snapSettings": "Gradus adhaesionis",
+    "snapTranslation": "Translatio",
+    "snapRotation": "Rotatio",
+    "snapScale": "Scala",
+    "grid": "Crates soli",
+    "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
     "textObject": "Textus",
     "save": "Serva",
+    "headerBar": "Instrumentorum series",
+    "toolDock": "Instrumenta",
+    "selectionActions": "Selecta",
     "unsavedDialog": {
       "title": "Mutationes non servatae",
       "description": "Haec scaena mutationes non servatas habet. Quid vis facere?",
@@ -154,10 +169,14 @@
     "shortcuts": {
       "title": "Compendia",
       "groupFile": "Fasciculus",
+      "groupTools": "Instrumenta",
       "groupEdit": "Recensere",
       "groupSelect": "Selectio",
       "groupCamera": "Camera",
       "save": "Serva",
+      "toolTranslate": "Translatio",
+      "toolRotate": "Rotatio",
+      "toolScale": "Scala",
       "undo": "Retracta",
       "redo": "Iterum fac",
       "duplicate": "Selecta duplica",
@@ -266,6 +285,7 @@
     "count": "{{count}} / {{max}}",
     "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode).",
     "periodHint": "Tempus (ms) unius cycli (min→max→min)",
-    "save": "Serva"
+    "save": "Serva",
+    "saveFailed": "Signa virtualia servari non potuerunt."
   }
 }
