@@ -132,12 +132,12 @@ function WoRow({ w, small }: { w: WoRowVM; small?: boolean }) {
             ? { background: '#5CA627', color: '#fff', border: '2px solid #5CA627' }
             : {
                 background: '#fff',
-                color: '#2F8F5B',
-                border: '2px solid #9CC98A',
+                color: '#8A93A6',
+                border: '2px solid #D5DAE2',
               }),
         }}
       >
-        {w.done ? '✓ 완료' : '완료'}
+        {w.done ? '✓ 완료' : '미완료'}
       </div>
     </div>
   );
