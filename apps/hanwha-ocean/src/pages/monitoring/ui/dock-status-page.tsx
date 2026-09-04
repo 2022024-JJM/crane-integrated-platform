@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { filterRegionsByRole, getRegionsBySiteType } from '@crane/domain/region';
+import {
+  filterRegionsByRole,
+  getRegionsBySiteType,
+} from '@crane/domain/region';
 import { useAuth } from '@crane/features/auth';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { RegionCard } from './region-card';
@@ -14,7 +17,7 @@ export function DockStatusPage() {
   );
 
   return (
-    <div className="flex flex-col h-full space-y-6 p-6 overflow-hidden">
+    <div className="flex h-full flex-col space-y-6 overflow-hidden p-6">
       <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">
           {t('monitoring-overview:dockStatus.title')}

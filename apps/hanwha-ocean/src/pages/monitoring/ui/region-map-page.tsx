@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity, Radar, ShieldAlert } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import { useAllSitesRealtimeSummary } from '../model/use-all-sites-realtime-summary';
+import { GlassSurface } from './glass-surface';
 import { RegionMap } from './region-map';
 
 type OperationalStatus = 'nominal' | 'caution' | 'alert';
@@ -13,157 +14,122 @@ export function RegionMapPage() {
   const clock = useUtcClock();
 
   const status: OperationalStatus =
-    summary.critical > 0 ? 'alert' : summary.warning > 0 ? 'caution' : 'nominal';
+    summary.critical > 0
+      ? 'alert'
+      : summary.warning > 0
+        ? 'caution'
+        : 'nominal';
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden p-6">
       <RegionMap />
 
-      {/* ────── Top tape: mission identity + live UTC clock ────── */}
+      {/*
+        좌하단 판독부 — 화면에서 유일한 수치 블록.
+        예전에는 상단 중앙에 "Crane Ops / Global Fleet Map · 시각" 테이프가
+        따로 떠 있었지만, 앞 절반은 화면이 바뀌어도 늘 같은 글자였고 위치는
+        지도의 브레드크럼이 더 정확히 말해 준다. 남는 정보인 UTC 시각만
+        이 판독부의 첫 칸으로 들어와, 판독은 여기 한 곳으로 모인다.
+      */}
       <div
-        className={cn(
-          'pointer-events-none absolute top-6 left-1/2 z-30 -translate-x-1/2',
-          'flex items-center gap-3 px-4 py-2',
-          'border-border/60 bg-background/55 rounded-full border backdrop-blur-md',
-          'font-sans text-xs font-semibold tracking-[0.16em] uppercase',
-          'shadow-[0_0_0_1px_color-mix(in_oklab,var(--background)_55%,transparent)]',
-        )}
-        style={{ animation: 'ops-brief-reveal 600ms ease-out both' }}
+        className="pointer-events-none absolute bottom-8 left-28 z-30"
+        style={{ animation: 'map-panel-reveal 600ms ease-out 180ms both' }}
       >
-        <StatusDot status={status} />
-        <span className="text-muted-foreground">Crane Ops</span>
-        <span className="text-border">/</span>
-        <span className="text-foreground">Global Fleet Map</span>
-        <span className="text-border">·</span>
-        <span className="text-foreground/90 tabular-nums">{clock}</span>
-        <span className="text-muted-foreground/70">UTC</span>
-      </div>
-
-      {/* ────── Bottom-left: Operations Brief (KPI module) ────── */}
-      <div
-        className="pointer-events-none absolute bottom-7 left-28 z-40"
-        style={{ animation: 'ops-brief-reveal 700ms ease-out 120ms both' }}
-      >
-        <OpsBriefPanel status={status}>
-          <OpsMetric
-            icon={<Radar className="size-4" strokeWidth={1.6} />}
-            label={t('monitoring-overview:map.kpi.sites', {
-              defaultValue: 'Sites',
-            })}
-            value={summary.sitesCount}
-            tone="neutral"
-          />
-          <OpsDivider />
-          <OpsMetric
-            icon={<Activity className="size-4" strokeWidth={1.6} />}
-            label={t('monitoring-overview:map.kpi.warning', {
-              defaultValue: 'Warning',
-            })}
-            value={summary.warning}
-            tone="warning"
-          />
-          <OpsDivider />
-          <OpsMetric
-            icon={<ShieldAlert className="size-4" strokeWidth={1.6} />}
-            label={t('monitoring-overview:map.kpi.critical', {
-              defaultValue: 'Critical',
-            })}
-            value={summary.critical}
-            tone="critical"
-          />
-        </OpsBriefPanel>
+        <GlassSurface sheen className="pointer-events-auto">
+          <div className="flex items-stretch">
+            <OpsClock status={status} time={clock} />
+            <OpsDivider className="hidden md:block" />
+            <OpsMetric
+              icon={<Radar className="size-[18px]" strokeWidth={1.75} />}
+              label={t('monitoring-overview:map.kpi.sites')}
+              value={summary.sitesCount}
+              tone="neutral"
+            />
+            <OpsDivider />
+            <OpsMetric
+              icon={<Activity className="size-[18px]" strokeWidth={1.75} />}
+              label={t('monitoring-overview:map.kpi.warning')}
+              value={summary.warning}
+              tone="warning"
+            />
+            <OpsDivider />
+            <OpsMetric
+              icon={<ShieldAlert className="size-[18px]" strokeWidth={1.75} />}
+              label={t('monitoring-overview:map.kpi.critical')}
+              value={summary.critical}
+              tone="critical"
+            />
+          </div>
+        </GlassSurface>
       </div>
     </div>
   );
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Operations Brief: bracket-cornered HUD frame
- * ────────────────────────────────────────────────────────────────────────── */
-
-function OpsBriefPanel({
-  status,
-  children,
-}: {
-  status: OperationalStatus;
-  children: ReactNode;
-}) {
-  const cornerTone =
-    status === 'alert'
-      ? 'text-red-400'
-      : status === 'caution'
-      ? 'text-amber-300'
-      : 'text-foreground/60';
-  const cornerPulse = status !== 'nominal';
-
+/**
+ * 칸 사이 구분 — 유리판을 가르는 헤어라인 하나.
+ * 이전의 점선 테두리는 HUD 코스튬의 일부였고, 판을 조각내 보이게 했다.
+ */
+function OpsDivider({ className }: { className?: string }) {
   return (
-    <div className="pointer-events-auto relative">
-      {/* HUD corner brackets */}
-      <CornerBracket
-        position="tl"
-        className={cn(cornerTone, cornerPulse && 'animate-[ops-bracket-pulse_1.6s_ease-in-out_infinite]')}
-      />
-      <CornerBracket
-        position="tr"
-        className={cn(cornerTone, cornerPulse && 'animate-[ops-bracket-pulse_1.6s_ease-in-out_infinite]')}
-      />
-      <CornerBracket
-        position="bl"
-        className={cn(cornerTone, cornerPulse && 'animate-[ops-bracket-pulse_1.6s_ease-in-out_infinite]')}
-      />
-      <CornerBracket
-        position="br"
-        className={cn(cornerTone, cornerPulse && 'animate-[ops-bracket-pulse_1.6s_ease-in-out_infinite]')}
-      />
-
-      {/* Panel body */}
-      <div
-        className={cn(
-          'relative flex items-stretch',
-          'border-border/50 bg-background/55 rounded-sm border backdrop-blur-xl',
-          'shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6),inset_0_1px_0_color-mix(in_oklab,var(--foreground)_8%,transparent)]',
-        )}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-type CornerPosition = 'tl' | 'tr' | 'bl' | 'br';
-
-const CORNER_BRACKET_CLASS: Record<CornerPosition, string> = {
-  tl: '-top-1 -left-1 border-t border-l',
-  tr: '-top-1 -right-1 border-t border-r',
-  bl: '-bottom-1 -left-1 border-b border-l',
-  br: '-bottom-1 -right-1 border-b border-r',
-};
-
-function CornerBracket({
-  position,
-  className,
-}: {
-  position: CornerPosition;
-  className?: string;
-}) {
-  return (
-    <span
+    <div
       aria-hidden
       className={cn(
-        'pointer-events-none absolute size-3 border-current opacity-90',
-        CORNER_BRACKET_CLASS[position],
+        'my-3.5 w-px self-stretch bg-black/[0.10] dark:bg-white/[0.12]',
         className,
       )}
     />
   );
 }
 
-function OpsDivider() {
+/**
+ * 판독부의 첫 칸 — 운영 상태등 + UTC 시각.
+ *
+ * 상태는 왼쪽 점 하나가 나른다. 예전에는 패널 네 귀퉁이의 브래킷이 색을
+ * 바꾸고 깜빡이며 같은 말을 했는데, 정작 시선이 가는 곳은 숫자라 아무도
+ * 귀퉁이를 보지 않았다. 점을 값 옆에 두면 같은 정보가 읽히는 자리에 온다.
+ */
+function OpsClock({
+  status,
+  time,
+}: {
+  status: OperationalStatus;
+  time: string;
+}) {
+  const dotTone =
+    status === 'alert'
+      ? 'bg-red-500'
+      : status === 'caution'
+        ? 'bg-amber-500'
+        : 'bg-emerald-500';
+
   return (
-    <div
-      aria-hidden
-      className="border-border/40 my-2 w-px self-stretch border-l border-dashed"
-    />
+    <div className="relative hidden items-center gap-3.5 px-5 py-3.5 md:flex">
+      <span
+        aria-hidden
+        className="relative flex size-2.5 shrink-0 items-center justify-center"
+      >
+        {status !== 'nominal' ? (
+          <span
+            className={cn(
+              'absolute top-1/2 left-1/2 size-2 rounded-full opacity-40',
+              dotTone,
+              'animate-[region-map-ripple_2s_ease-out_infinite]',
+            )}
+          />
+        ) : null}
+        <span className={cn('relative size-2 rounded-full', dotTone)} />
+      </span>
+
+      <div className="flex flex-col items-start gap-1.5">
+        <span className="text-foreground/55 text-[12px] leading-none font-medium">
+          UTC
+        </span>
+        <span className="text-foreground text-[26px] leading-none font-semibold tabular-nums">
+          {time}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -183,42 +149,34 @@ function OpsMetric({
   const toneText =
     tone === 'warning'
       ? active
-        ? 'text-amber-300'
-        : 'text-muted-foreground'
+        ? 'text-amber-600 dark:text-amber-300'
+        : 'text-foreground/35'
       : tone === 'critical'
-      ? active
-        ? 'text-red-300'
-        : 'text-muted-foreground'
-      : 'text-foreground';
-
-  const toneBar =
-    tone === 'warning'
-      ? active
-        ? 'bg-amber-400 shadow-[0_0_10px_rgb(251_191_36/0.7)]'
-        : 'bg-muted-foreground/30'
-      : tone === 'critical'
-      ? active
-        ? 'bg-red-400 shadow-[0_0_10px_rgb(248_113_113/0.75)]'
-        : 'bg-muted-foreground/30'
-      : 'bg-foreground/40';
+        ? active
+          ? 'text-red-600 dark:text-red-300'
+          : 'text-foreground/35'
+        : 'text-foreground';
 
   return (
-    <div className="relative flex items-center gap-3 px-4 py-2.5">
-      {/* Left status bar */}
+    <div className="relative flex items-center gap-3.5 px-5 py-3.5">
       <span
-        aria-hidden
-        className={cn('absolute top-2.5 bottom-2.5 left-0 w-0.5 rounded-full', toneBar)}
-      />
+        className={cn('shrink-0', active ? toneText : 'text-foreground/40')}
+      >
+        {icon}
+      </span>
 
-      <span className={cn('shrink-0 opacity-85', toneText)}>{icon}</span>
-
-      <div className="flex flex-col items-start leading-tight">
-        <span className="text-muted-foreground/90 font-sans text-[11px] font-semibold tracking-[0.16em] uppercase">
+      <div className="flex flex-col items-start gap-1.5">
+        {/*
+          라벨은 세 언어(ko/en/la)를 모두 담는다. 이전의
+          `uppercase tracking-[0.16em]` 는 한글에서 uppercase 가 무효인 채
+          자간만 벌려 "사 이 트" 처럼 흩어졌다.
+        */}
+        <span className="text-foreground/55 text-[12px] leading-none font-medium">
           {label}
         </span>
         <span
           className={cn(
-            'font-sans text-2xl font-bold tabular-nums',
+            'text-[26px] leading-none font-semibold tabular-nums',
             toneText,
           )}
         >
@@ -226,35 +184,6 @@ function OpsMetric({
         </span>
       </div>
     </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Top tape pieces
- * ────────────────────────────────────────────────────────────────────────── */
-
-function StatusDot({ status }: { status: OperationalStatus }) {
-  const tone =
-    status === 'alert'
-      ? 'bg-red-400 shadow-[0_0_10px_rgb(248_113_113/0.8)]'
-      : status === 'caution'
-      ? 'bg-amber-400 shadow-[0_0_10px_rgb(251_191_36/0.8)]'
-      : 'bg-emerald-400 shadow-[0_0_10px_rgb(52_211_153/0.7)]';
-
-  return (
-    <span className="relative inline-flex items-center">
-      <span className={cn('size-1.5 rounded-full', tone)} />
-      {status !== 'nominal' ? (
-        <span
-          aria-hidden
-          className={cn(
-            'absolute inset-0 rounded-full',
-            tone,
-            'animate-[ops-bracket-pulse_1.4s_ease-in-out_infinite]',
-          )}
-        />
-      ) : null}
-    </span>
   );
 }
 
