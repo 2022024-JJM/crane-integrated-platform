@@ -89,6 +89,19 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     // ship.glb는 origin이 흘수선(용골 -1.03, 상부 +4.63)이라 수면에 그대로 놓는다.
     floating: true,
   },
+  {
+    id: 'hanwha-ocean-lngc-174k',
+    label: 'LNGC 174K',
+    category: 'outdoor',
+    path: '/models/hanwha-ocean-lngc-174k.glb',
+    // 미터 단위 실척(전장 ~300m). origin이 용골 바닥(Y=0)·선체 중심이라
+    // floating 없이 기본 드롭(bbox 바닥 = 지면)으로 배치한다.
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.24, 0.58, 1.3],
+      paddingScale: 1.32,
+    },
+  },
   withDefaultPreview({
     id: 'r370',
     label: 'R370',
