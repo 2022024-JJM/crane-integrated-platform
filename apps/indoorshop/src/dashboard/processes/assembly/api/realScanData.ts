@@ -1,3 +1,4 @@
+import { publicAsset } from '../../../shared/lib/public-asset'
 import type { Location } from '../../../shared/entities/location/model/types'
 import type { LidarSensor } from '../../../shared/features/bay-viewer/model/lidarSensor'
 import { mockSubAssemblies } from '../../../shared/features/bay-viewer/lib/mockDetections'
@@ -340,7 +341,7 @@ const PREVIEW_SHADE = '/real-scan/factory_preview_shade.bin'
 export type { RealScanOverlay } from '../../../shared/features/bay-viewer/model/realOverlay'
 
 async function fetchPreviewBin(path: string): Promise<ArrayBuffer> {
-  const res = await fetch(path)
+  const res = await fetch(publicAsset(path))
   if (!res.ok) throw new Error(`실측 프리뷰 로드 실패: ${path} (HTTP ${res.status})`)
   return res.arrayBuffer()
 }
