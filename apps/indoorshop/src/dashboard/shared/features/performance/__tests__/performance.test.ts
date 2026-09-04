@@ -148,12 +148,12 @@ describe('mock 생성기 — 결정론·상태 규칙 준수', () => {
 })
 
 describe('수집 이벤트 그리드 계약', () => {
-  it('원천에 시각이 없는 절점은 일자만 — S4(불출)·S6(절단) 만 시각을 갖는다 (L3 계약)', async () => {
+  it('원천에 시각이 없는 절점은 일자만 — S4(불출)·S7(절단) 만 시각을 갖는다 (L3 계약)', async () => {
     // 조립 행의 시각 계약은 별도 describe — 여기는 가공 행만 본다
     const rows = await fetchCollectionEvents('7004', ['222', '310'], 'fabrication', BASE)
     expect(rows.length).toBeGreaterThan(0)
     for (const row of rows) {
-      const dateOnly = row.stage !== 'S4' && row.stage !== 'S6'
+      const dateOnly = row.stage !== 'S4' && row.stage !== 'S7'
       for (const instant of [row.occurred, row.completed]) {
         if (!instant) continue
         if (dateOnly) expect(instant.time).toBeUndefined()
@@ -170,10 +170,10 @@ describe('수집 이벤트 그리드 계약', () => {
       S3: 'MAT',
       S4: 'MAT',
       S5: 'MAT',
-      S6: 'DWG',
-      S7: 'PC',
-      S8: 'PLT',
-      S9: 'PC',
+      S6: 'MAT',
+      S7: 'DWG',
+      S8: 'PC',
+      S9: 'PLT',
       S10: 'PLT',
     }
     for (const row of rows) expect(row.mgmtNoType).toBe(typeByStage[row.stage as FabStageId])

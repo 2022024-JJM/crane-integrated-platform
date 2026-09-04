@@ -146,22 +146,17 @@ export function OutfittingWorkspace() {
   const [searchParams] = useSearchParams()
 
   /*
-   * 축 탭 — **공장을 옮길 때만** 기본(현황)으로 돌아온다 (조립과 같은 규칙).
-   * 베이 이동까지 초기화하면 3D 에서 베이를 눌러 들어간 사람이 현황으로 튕겨 나온다.
+   * 축 탭 — 지금 서 있는 축은 주소가 말한다 (R28·R30, 조립 워크스페이스와 같은 규칙).
    *
-   * URL 이 착지 탭을 말하면 그 말이 먼저다 (R28) — 통합실적의 'PCD 뷰' 가 3D 에 내려서는
-   * 길이다. 진입 때 한 번만 읽는다(선택 승계와 같은 규칙).
+   * "공장이 바뀌면 기본 탭으로" 라는 리셋 이펙트는 없앴다 — 축이 화면 안 state 이던
+   * 시절의 잔재이고, 승계가 생긴 뒤로는 실어 온 축을 마운트 직후 덮는 일만 했다
+   * (대문 `/indoorshop/zones/outfitting` 에서 베이로 들어가면 공장이 `없음 → ofit-*` 로 바뀐 것이
+   * 되어 `?tab=viewer` 가 그 자리에서 status 로 되돌려졌다). 이 화면에 없는 축이 실려
+   * 와도 `WORKSPACE_TAB_KEYS` 검사가 기본 탭으로 접으므로 되돌릴 사본이 없다.
    */
   const { tab: workTab, setTab: setWorkTab } = useWorkspaceTab(WORKSPACE_TAB_KEYS, 'status')
   /* 화면 안 이동은 보던 축을 유지한다 (R30 — 조립 워크스페이스와 같은 규칙) */
   const carryTab = useWorkspaceTabCarry()
-  /* 첫 렌더에서는 초기화하지 않는다 — 그러면 URL 이 실어 온 착지 탭을 마운트 직후 덮는다 */
-  const lastFactoryRef = useRef(routeFactoryId)
-  useEffect(() => {
-    if (lastFactoryRef.current === routeFactoryId) return
-    lastFactoryRef.current = routeFactoryId
-    setWorkTab('status')
-  }, [routeFactoryId, setWorkTab])
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   /* 선택 승계 (W8-3) — 통합실적 'PCD 뷰' 의 `?block={proj}-{blk}`. 진입 때 한 번만 읽는다

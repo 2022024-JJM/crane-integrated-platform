@@ -7,6 +7,7 @@ import {
   type PaintingSummary,
 } from '../../../shared/features/performance/model/types'
 import { paintingFactoryIdOf } from './factoryRoutes'
+import type { BayOccupant } from './bayScene'
 import { nowDate } from '../../../shared/lib/now'
 
 /*
@@ -97,6 +98,30 @@ export function collectBlock(block: RosterBlock, baseDate: string): PaintingBloc
 /** 이 공장에 서 있는 도장 재공 블록 — 로스터 순서 그대로 */
 export function paintingBlocksAt(factory: string): RosterBlock[] {
   return blocksAtFactory(factory).filter((b) => b.zone === 'painting')
+}
+
+/**
+ * 베이별 **재실 블록** — 가동 뷰의 3D 라벨이 "이 베이에 무엇이 서 있는가"를 말하는 근거.
+ *
+ * 귀속은 로스터의 `mapBay` 다(BTS 물류 기반 — ZONE 대응표가 아니다, 위 `btsNote` 와 같은
+ * 계약). 자리를 못 적은 블록은 어느 베이에도 세우지 않는다 — 공장에는 있지만 어느 면인지
+ * 모르는 것이 사실이고, 아무 베이에나 세우면 화면이 모르는 것을 아는 척한다.
+ */
+export function paintingOccupantsByBay(factory: string): Map<string, BayOccupant[]> {
+  const byBay = new Map<string, BayOccupant[]>()
+  for (const block of paintingBlocksAt(factory)) {
+    if (!block.mapBay) continue
+    const occupant: BayOccupant = {
+      key: `${block.projNo}-${block.blockNo}`,
+      projNo: block.projNo,
+      blockNo: block.blockNo,
+      justArrived: block.justArrived === true,
+    }
+    const bucket = byBay.get(block.mapBay)
+    if (bucket) bucket.push(occupant)
+    else byBay.set(block.mapBay, [occupant])
+  }
+  return byBay
 }
 
 /** 공장 한 곳의 수집 현황 */

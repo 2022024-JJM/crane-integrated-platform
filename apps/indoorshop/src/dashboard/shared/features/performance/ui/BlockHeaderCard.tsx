@@ -5,7 +5,13 @@ import { cn } from '../../../lib/utils'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
 import { PinIcon } from '../../../ui/icons'
-import type { AssyWoNode, BlockSummary, PaintingNode, ProcessNode } from '../model/types'
+import {
+  FAB_STAGE_GROUP,
+  type AssyWoNode,
+  type BlockSummary,
+  type PaintingNode,
+  type ProcessNode,
+} from '../model/types'
 import { NodeStrip, type StripNode } from './NodeStrip'
 import { FAB_STAGE_LABEL_KEY } from './stageLabels'
 
@@ -47,6 +53,8 @@ export function BlockHeaderCard({
     inProgress: node.inProgress,
     delayed: node.delayed,
     note: t('performance.nodes.plan', { date: node.planDate }),
+    /* 적치(S1~S4) / 가공(S5~S10) — 스트립이 이 값이 바뀌는 자리를 갈라 준다 (R39) */
+    group: t(`performance.stages.group.${FAB_STAGE_GROUP[node.stage]}` as const),
   })
   const asmNode = (node: AssyWoNode): StripNode => ({
     key: node.kind,

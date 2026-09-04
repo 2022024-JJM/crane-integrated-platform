@@ -1,3 +1,4 @@
+import { initReactI18next } from 'react-i18next'
 import { i18n } from '@crane/core/config/i18n'
 import { ko } from './locales/ko'
 import { en } from './locales/en'
@@ -68,3 +69,23 @@ export default i18n
  * import 하므로, 여기서 먼저 등록해 두면 순서가 원본과 같아진다.
  */
 registerInshopLocales()
+
+/**
+ * 테스트 전용 init.
+ *
+ * 셸 런타임은 initI18n 이 먼저 돌지만 vitest 에는 아무도 없다. renderWithProviders
+ * 뿐 아니라 addProcessMessages 를 모듈 최상위에서 부르는 테스트도 있어, init 을
+ * 한 곳에서 보장한다. 런타임에서는 isInitialized 가 참이라 아무 일도 하지 않는다.
+ */
+export function initI18nForTests(): void {
+  if (i18n.isInitialized) return
+  void i18n.use(initReactI18next).init({
+    lng: 'ko',
+    fallbackLng: 'ko',
+    defaultNS: INSHOP_NS,
+    ns: [INSHOP_NS],
+    resources: {},
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  })
+}

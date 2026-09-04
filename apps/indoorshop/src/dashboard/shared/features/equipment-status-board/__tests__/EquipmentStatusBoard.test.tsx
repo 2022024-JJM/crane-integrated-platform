@@ -107,11 +107,11 @@ describe('EquipmentStatusBoard', () => {
     const user = userEvent.setup()
     const { container } = renderBoard()
 
-    /* 고르기 전에는 어느 점에도 강조 링이 없다 */
-    expect(container.querySelectorAll('circle[stroke-width="2"]').length).toBe(0)
+    /* 고르기 전에는 어느 점에도 강조 링이 없다 (링의 도형은 계약이 아니다 — 있고 없음이다) */
+    expect(container.querySelectorAll('[data-point] [stroke-width="2"]').length).toBe(0)
 
     await user.click(screen.getByRole('button', { name: /LD-A/ }))
-    const ring = container.querySelector('[data-point="LD-A"] circle[stroke-width="2"]')
+    const ring = container.querySelector('[data-point="LD-A"] [stroke-width="2"]')
     expect(ring).not.toBeNull()
   })
 

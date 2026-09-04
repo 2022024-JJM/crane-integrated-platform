@@ -132,6 +132,8 @@ describe('베이 모드 — 가동 중인 설비의 종류가 정한다', () => 
     y: 0,
     running,
     intensity: running ? 0.5 : 0,
+    value: running ? 20 : null,
+    setpoint: running ? 24 : null,
   })
 
   it('히터만 돌면 heating', () => {

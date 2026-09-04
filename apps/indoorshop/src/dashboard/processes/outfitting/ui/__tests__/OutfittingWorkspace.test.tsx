@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes } from 'react-router-dom'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
@@ -68,10 +68,14 @@ function renderWorkspace(path: string) {
   return renderWithProviders(
     <>
       <Routes>
+        {/* 공장 없는 대문(R22) — 이 길로 들어오면 워크스페이스가 첫 공장을 편다 */}
+        <Route path="/indoorshop/zones/outfitting" element={<OutfittingWorkspace />} />
         <Route path="/indoorshop/zones/outfitting/:factoryId" element={<OutfittingWorkspace />} />
         <Route path="/indoorshop/zones/outfitting/:factoryId/:locationId" element={<OutfittingWorkspace />} />
         <Route path="/indoorshop/performance" element={<div data-testid="performance-page" />} />
       </Routes>
+      {/* 밖에서 들어오는 링크의 대역 — 글로벌 검색·로스터가 다른 공장의 3D 를 가리킬 때 */}
+      <Link to="/indoorshop/zones/outfitting/ofit-bos1?tab=viewer">다른 공장 3D</Link>
       <Here />
     </>,
     { route: path }
@@ -254,5 +258,42 @@ describe('OutfittingWorkspace — 뷰어 안 드릴은 축을 승계한다 (R30)
     /* 베이 → 공장 복귀 ('전체') — 되돌아와도 보던 축에 선다 */
     await user.click(await screen.findByRole('link', { name: '전체' }))
     expect(here()).toBe(`/indoorshop/zones/outfitting/ofit-pos1?${WORKSPACE_TAB_PARAM}=viewer`)
+  })
+})
+
+/**
+ * 승계의 구멍 — **공장이 바뀌는 이동**에서도 축은 남아야 한다 (R30 재보고, 조립과 같은 규칙).
+ *
+ * 도착 화면에 "공장이 바뀌면 기본 탭으로" 라는 리셋 이펙트가 남아 있었다. 대문
+ * (`/indoorshop/zones/outfitting`, 경로에 공장이 없다)에서 베이로 들어가면 공장이 `없음 → ofit-*`
+ * 으로 바뀐 것이 되어, 실어 온 `?tab=viewer` 가 마운트 직후 status 로 덮였다.
+ */
+describe('OutfittingWorkspace — 공장이 바뀌어도 축은 남는다 (R30)', () => {
+  it('대문(공장 없는 경로)의 3D 에서 베이로 들어가도 3D 그대로다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/outfitting')
+    await openViewer(user)
+
+    const [drill] = await screen.findAllByRole('button', { name: /^드릴 / })
+    await user.click(drill)
+
+    await waitFor(() => expect(here()).toMatch(/\/zones\/outfitting\/[^/]+\/[^?]+/))
+    expect(tabOf(here())).toBe('viewer')
+    expect(screen.getByRole('tab', { name: '3D 뷰어' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('다른 공장을 가리키는 링크(`?tab=viewer`)도 제 도착지에 선다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1')
+    await screen.findByRole('tablist', { name: '화면 축 선택' })
+
+    await user.click(screen.getByRole('link', { name: '다른 공장 3D' }))
+
+    await waitFor(() => expect(here()).toContain('/indoorshop/zones/outfitting/ofit-bos1'))
+    expect(await screen.findByRole('tab', { name: '3D 뷰어' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(tabOf(here())).toBe('viewer')
   })
 })

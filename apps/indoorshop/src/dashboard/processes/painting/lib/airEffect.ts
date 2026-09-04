@@ -77,12 +77,37 @@ export function streakIntensityOf(status: PaintingEquipmentStatus | undefined): 
 export interface AirUnit {
   id: string
   kind: PaintingEquipment['kind']
-  /** 원본 EPSG:5187 좌표 — 베이 안의 상대 위치를 재는 데 쓴다 */
+  /**
+   * 원본 EPSG:5187 좌표.
+   *
+   * ⚠️ **베이 안 배치의 근거가 아니다.** 도면이 준 좌표는 베이마다 한 구석에 몰려 있어
+   * (58m 베이 안에서 8m 뭉치) 자리로 쓸 수 없다 — 베이 안 자리는 `lib/bayStations` 의
+   * 관례 규칙이 정한다. 여기 남기는 것은 검증·재변환·소속 확인용이다.
+   */
   x: number
   y: number
   running: boolean
   /** 이 설비 몫의 세기(0~1) — 히터는 헤이즈, 제습기는 기류 */
   intensity: number
+  /** 실측값 — 값을 못 받았거나 통신이 끊겼으면 null (라벨이 '—' 로 적는다) */
+  value: number | null
+  /** 설정값 — 위와 같은 조건 */
+  setpoint: number | null
+}
+
+/**
+ * 베이 하나의 **환경 수치** — 라벨이 화면에 적는 값.
+ *
+ * 히터가 온도를, 제습기가 습도를 말한다(단위는 종류가 정한다 — `statusUnit`).
+ * **통신이 살아 있는 설비만** 센다: 끊긴 설비가 마지막으로 보낸 값을 지금 값으로 적으면
+ * 화면이 오래된 숫자를 현재로 위장한다. 셀 것이 없으면 null 이고, 라벨은 그 자리를
+ * 비운다(0 으로 적지 않는다).
+ */
+export interface BayEnv {
+  tempC: number | null
+  tempSetpoint: number | null
+  humidityRh: number | null
+  humiditySetpoint: number | null
 }
 
 /** 베이 하나의 대기 */
@@ -95,8 +120,22 @@ export interface BayAirState {
   /** 베이의 제습 기류 세기 — 가동 중인 제습기들의 평균 */
   streakIntensity: number
   units: AirUnit[]
-  /** 설비가 차지하는 범위(EPSG:5187) — 베이 볼륨의 바닥 */
+  /** 지금 공기를 만들고 있는 설비 수 — 라벨의 '가동 n/m' 분자 */
+  runningCount: number
+  /** 이 베이의 환경 수치 — 3D 라벨이 적는 값 */
+  env: BayEnv
+  /** 설비가 차지하는 범위(EPSG:5187) — 소속 확인·검증용 (배치의 근거가 아니다) */
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
+}
+
+/** 통신이 살아 있는 설비들의 평균 — 하나도 없으면 null (0 으로 적지 않는다) */
+function meanOfLive(
+  units: readonly AirUnit[],
+  pick: (unit: AirUnit) => number | null
+): number | null {
+  const values = units.map(pick).filter((value): value is number => value != null)
+  if (values.length === 0) return null
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
 }
 
 /** 가동 중인 것들의 평균 — 하나도 없으면 0 */
@@ -142,6 +181,8 @@ export function bayAirStatesOf(
       const units: AirUnit[] = items.map((item) => {
         const status = statusById.get(item.id)
         const running = isMakingAir(status)
+        /* 통신이 끊긴 값은 지금 값이 아니다 — 라벨에 올리지 않는다(위 `BayEnv` 주석) */
+        const live = status && linkState(status.modbusLink) === 'online' ? status : undefined
         return {
           id: item.id,
           kind: item.kind,
@@ -150,6 +191,8 @@ export function bayAirStatesOf(
           running,
           intensity:
             item.kind === '가스히터' ? hazeIntensityOf(status) : streakIntensityOf(status),
+          value: live ? live.actualValue : null,
+          setpoint: live ? live.setpoint : null,
         }
       })
       const heaters = units.filter((unit) => unit.kind === '가스히터')
@@ -160,6 +203,13 @@ export function bayAirStatesOf(
         hazeIntensity: meanOfRunning(heaters),
         streakIntensity: meanOfRunning(dehumidifiers),
         units,
+        runningCount: units.filter((unit) => unit.running).length,
+        env: {
+          tempC: meanOfLive(heaters, (unit) => unit.value),
+          tempSetpoint: meanOfLive(heaters, (unit) => unit.setpoint),
+          humidityRh: meanOfLive(dehumidifiers, (unit) => unit.value),
+          humiditySetpoint: meanOfLive(dehumidifiers, (unit) => unit.setpoint),
+        },
         bounds: {
           minX: Math.min(...items.map((i) => i.x)),
           maxX: Math.max(...items.map((i) => i.x)),

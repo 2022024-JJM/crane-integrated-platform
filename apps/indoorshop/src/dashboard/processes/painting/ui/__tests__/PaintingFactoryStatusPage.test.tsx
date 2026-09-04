@@ -3,7 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../../../shared/lib/testing/renderWithProviders'
-import type { BayAirState } from '../../lib/airEffect'
+import type { BayScene } from '../../lib/bayScene'
 
 /*
  * 가동 뷰의 3D 는 WebGL 이 필요하다 — jsdom 에서는 골격만 세운다. 여기서 보는 것은 그림이
@@ -11,11 +11,16 @@ import type { BayAirState } from '../../lib/airEffect'
  * (뷰어 자신의 껍데기 계약은 `PaintingAirViewer.test.tsx` 가 본다.)
  */
 vi.mock('../PaintingAirViewer', () => ({
-  PaintingAirViewer: (props: { bays: BayAirState[] }) => (
+  PaintingAirViewer: (props: { scene: BayScene }) => (
     <div
       data-testid="air-viewer"
-      data-bays={props.bays.length}
-      data-bay-names={props.bays.map((bay) => bay.bay).join(',')}
+      data-bays={props.scene.activeBays}
+      data-all-bays={props.scene.bayCount}
+      data-source={props.scene.source}
+      data-bay-names={props.scene.items
+        .filter((item) => item.air)
+        .map((item) => item.bay)
+        .join(',')}
     />
   ),
 }))
@@ -82,6 +87,9 @@ describe('PaintingFactoryStatusPage — 축 탭', () => {
     const dock = await screen.findByTestId('air-viewer')
     expect(dock.dataset.bays).toBe('15')
     expect(dock.dataset.bayNames).toContain('B1')
+    /* 바닥은 실형상이고, 설비가 없는 면까지 함께 선다 (R38) */
+    expect(dock.dataset.source).toBe('yard-fixture')
+    expect(Number(dock.dataset.allBays)).toBeGreaterThan(15)
     unmount()
 
     renderPage('/indoorshop/zones/painting/pnt-neutae')

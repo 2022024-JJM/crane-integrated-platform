@@ -155,7 +155,7 @@ describe('되감기에서도 단조롭다 — 가공이 과거로 갈수록 늘�
       let previous = Number.POSITIVE_INFINITY
       for (const daysBack of [0, 5, 12, 25, 50]) {
         const parts = generateParts(projNo, blockNo, shiftDate(TODAY, -daysBack))
-        const done = parts.filter((p) => p.statuses.S6 === 'done').length
+        const done = parts.filter((p) => p.statuses.S7 === 'done').length
         expect(`${projNo}-${blockNo} ${daysBack}일전`).toBe(`${projNo}-${blockNo} ${daysBack}일전`)
         expect(done).toBeLessThanOrEqual(previous)
         previous = done

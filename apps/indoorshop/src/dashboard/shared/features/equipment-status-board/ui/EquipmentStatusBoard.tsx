@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
 import { StatusChip } from '../../../ui/atoms/StatusChip'
+import { Segmented } from '../../../ui/atoms/Segmented'
+import {
+  setEquipmentBoardMode,
+  useEquipmentBoardMode,
+  type EquipmentBoardMode,
+} from '../../../lib/equipmentBoardMode'
 import { EquipmentGrid, isIssueCell, type EquipmentCell } from '../../equipment-grid'
 import {
   EquipmentBirdview,
   type BirdviewBay,
+  type BirdviewCard,
   type BirdviewPoint,
 } from '../../equipment-birdview'
 
@@ -17,6 +24,12 @@ import {
  *    두지 않는다: 고르는 자리가 둘이면 지금 무엇을 보는지가 흐려진다.
  *  ⓑ 위 **버드뷰** — 설비가 **어느 자리**에 있는가. 목록이 답하지 못하는 유일한 질문이다.
  *  ⓒ 아래 **설비 그리드** — 무엇이 몇 대고 어느 것이 이상인가(W7-9 그리드 그대로).
+ *
+ * 자리 배분은 **보는 사람이 고른다**(R40 — `shared/lib/equipmentBoardMode`):
+ *  · **절반절반** — 그림과 목록이 함께 선다(기본). 두 층이 서로를 가리키며 일한다.
+ *  · **배치 전용** — 그림이 화면을 다 쓴다. 배치를 읽는 동안 목록은 자리만 차지하고,
+ *    좁은 그림에서는 칸 이름조차 지워져 "어느 자리냐"에 답하지 못한다.
+ * 목록 전용은 두지 않는다 — 배치를 접는 손잡이가 이미 그 몫을 한다.
  *
  * 위쪽 셋(요약 스트립·버드뷰)은 **붙어 있고**, 아래 그리드만 흐른다(R29). 스크롤을 내려
  * 5BAY 를 보는 동안에도 "어디" 를 답하는 그림이 화면에 남아 있어야 두 층이 함께 일한다 —
@@ -89,6 +102,11 @@ export function EquipmentStatusBoard({
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   /* 배치 그림 접기 — 낮은 화면에서 그림이 목록을 다 덮을 때의 탈출구(R29) */
   const [birdviewOpen, setBirdviewOpen] = useState(true)
+  /* 보기 모드는 새로고침·공장 이동을 넘어 남는다 — 화면 상태가 아니라 보는 방식이다 */
+  const mode = useEquipmentBoardMode()
+  const birdviewOnly = mode === 'birdview'
+  /* 배치 전용에서는 그림이 곧 화면이라 접는 손잡이가 설 자리가 없다 */
+  const birdviewShown = birdviewOnly || birdviewOpen
   /*
    * 붙어 있는 머리의 **실제 높이**를 CSS 변수로 내린다.
    *
@@ -108,7 +126,7 @@ export function EquipmentStatusBoard({
     const observer = new ResizeObserver(sync)
     observer.observe(head)
     return () => observer.disconnect()
-  }, [birdviewOpen])
+  }, [birdviewShown])
 
   /* 공장이 바뀌면 가리키던 것을 놓는다 — 다른 공장의 설비를 계속 가리킬 수는 없다.
      밖에서 초점이 들어와 있으면 그것을 가리킨 채로 선다(알람 딥링크의 당사자) */
@@ -119,6 +137,41 @@ export function EquipmentStatusBoard({
   }, [selectedFactory, focusEquipmentId])
 
   const linkedId = selectedId ?? hoveredId
+
+  /*
+   * ⓔ 버드뷰 태그에 실을 관제 정보 (R36).
+   *
+   * 값을 여기서 **셀에서 꺼내** 넘긴다. 버드뷰가 스스로 상태를 다시 계산하면 같은 설비가
+   * 그림과 목록에서 다른 말을 하게 되고, 한 번 어긋난 화면은 둘 다 못 믿게 만든다.
+   * 셀은 이미 종류별 대표값(라이다 각도·엣지PC 온도·판넬 소속, R19)을 `note` 에,
+   * 최근 신호를 `metric` 에 들고 있으므로 태그가 새로 알아낼 것은 없다 — 옮기기만 한다.
+   */
+  const cellIndex = useMemo(() => {
+    const index = new Map<string, { cell: EquipmentCell; group: BoardGroup }>()
+    for (const group of groups) {
+      for (const cell of group.cells) index.set(cell.id, { cell, group })
+    }
+    return index
+  }, [groups])
+
+  const cardOf = useCallback(
+    (id: string): BirdviewCard | null => {
+      const found = cellIndex.get(id)
+      if (!found) return null
+      const { cell, group } = found
+      return {
+        place: `${selectedFactory} · ${group.title}`,
+        lamps: cell.lamps.map((lamp) => ({
+          label: lamp.label,
+          meaning: lamp.meaning,
+          value: lamp.value,
+        })),
+        note: cell.note,
+        metric: { text: cell.metric.text, meaning: cell.metric.meaning },
+      }
+    },
+    [cellIndex, selectedFactory]
+  )
 
   /* 요약 스트립 — 아래에 흐르는 것의 합계다. 그리드가 스크롤로 사라져도 이 줄은 남는다 */
   const cells = groups.flatMap((group) => group.cells)
@@ -204,20 +257,35 @@ export function EquipmentStatusBoard({
             <SummaryStat label={t('equipmentBoard.summaryBays')} value={String(groups.length)} />
             <div className="ml-auto flex items-center gap-2">
               {headerExtra}
-              <button
-                type="button"
-                aria-expanded={birdviewOpen}
-                onClick={() => setBirdviewOpen((open) => !open)}
-                className="shrink-0 rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {birdviewOpen
-                  ? t('equipmentBoard.collapseBirdview')
-                  : t('equipmentBoard.expandBirdview')}
-              </button>
+              {/* 자리 배분 — 그림을 크게 볼 것인가, 목록과 나눌 것인가 (R40) */}
+              <Segmented<EquipmentBoardMode>
+                legend={t('equipmentBoard.modeLegend')}
+                hideLegend
+                value={mode}
+                onChange={setEquipmentBoardMode}
+                options={[
+                  { value: 'split', labelKey: 'equipmentBoard.modeSplit' },
+                  { value: 'birdview', labelKey: 'equipmentBoard.modeBirdview' },
+                ]}
+                className="shrink-0"
+              />
+              {/* 접기는 절반절반에서만 뜻이 있다 — 배치 전용에서 접으면 빈 화면이 남는다 */}
+              {!birdviewOnly && (
+                <button
+                  type="button"
+                  aria-expanded={birdviewOpen}
+                  onClick={() => setBirdviewOpen((open) => !open)}
+                  className="shrink-0 rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {birdviewOpen
+                    ? t('equipmentBoard.collapseBirdview')
+                    : t('equipmentBoard.expandBirdview')}
+                </button>
+              )}
             </div>
           </div>
 
-          {birdviewOpen && (
+          {birdviewShown && (
             <section className="rounded-inshop-lg border border-border bg-surface p-2">
               <div className="mb-1 flex items-center justify-between gap-2 px-1">
                 <h3 className="text-inshop-xs font-semibold text-foreground">
@@ -230,20 +298,42 @@ export function EquipmentStatusBoard({
               <EquipmentBirdview
                 bays={bays}
                 points={points}
-                selectedId={linkedId}
+                /*
+                 * 그림에는 **고른 것**만 준다(호버를 접어 넣지 않는다). 접어서 주면
+                 * 심볼을 누르는 순간 그것이 이미 '고른 것'으로 보여 클릭이 해제로 뒤집히고,
+                 * 손을 떼면 아무것도 안 고른 상태가 된다 — 눌러도 고정되지 않는다.
+                 * 호버는 따로 넘기고, 둘을 합치는 일은 그림 안쪽에서 한다.
+                 */
+                selectedId={selectedId}
                 onSelectPoint={setSelectedId}
                 hoveredId={hoveredId}
                 onHoverPoint={setHoveredId}
                 onSelectBay={setActiveGroup}
                 activeGroupKey={activeGroup}
+                cardOf={cardOf}
                 emptyLabel={t('equipmentBoard.birdviewEmpty')}
-                className="h-[24vh] max-h-[260px] min-h-[150px] w-full"
+                /*
+                 * 배치 전용은 **뷰포트를 기준으로** 키운다 — 그릇이 커지면 투영이 그만큼
+                 * 크게 그리므로(1 단위 = 1px) 칸 이름과 심볼이 같이 자란다.
+                 */
+                className={cn(
+                  'w-full',
+                  birdviewOnly
+                    ? 'h-[64vh] min-h-[360px]'
+                    : 'h-[30vh] max-h-[320px] min-h-[170px]'
+                )}
               />
             </section>
           )}
         </div>
 
-        {/* ⓒ 베이별 그리드 — 버드뷰에서 고른 베이가 있으면 그 구획을 먼저 세운다 */}
+        {/*
+          ⓒ 베이별 그리드 — 버드뷰에서 고른 베이가 있으면 그 구획을 먼저 세운다.
+          배치 전용 모드에서는 세우지 않는다(그 모드의 뜻이 "그림에 자리를 다 준다"이므로,
+          목록을 접어 두는 게 아니라 아예 안 그린다 — 스크롤 아래 숨겨 두면 그림이 그만큼
+          작아지고 모드를 고른 이유가 사라진다).
+        */}
+        {!birdviewOnly && (
         <div className="flex min-w-0 flex-col gap-3">
           {groups.length === 0 ? (
             <p className="rounded-inshop-lg border border-dashed border-border px-3 py-8 text-center text-inshop-sm text-foreground/55">
@@ -273,6 +363,7 @@ export function EquipmentStatusBoard({
             ))
           )}
         </div>
+        )}
       </div>
     </div>
   )

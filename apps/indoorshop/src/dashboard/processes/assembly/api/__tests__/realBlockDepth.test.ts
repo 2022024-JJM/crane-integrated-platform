@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { findBlock, listBlocks, performanceLinkFor } from '../../../../shared/entities/vessel'
+import {
+  sensorStatusCounts,
+  worstSensorStatus,
+} from '../../../../shared/features/bay-viewer/lib/bayStatusSummary'
 
 /* manifest 는 fetch 자산이라 노드에서는 디스크로 갈음한다 (내용은 실제 산출물 그대로) */
 const ASSETS = resolve(__dirname, '../../../../../../../shell/public/real-scan')
@@ -67,11 +71,36 @@ describe('실측 인식 블록 — 목업과 같은 축을 갖춘다', () => {
   })
 })
 
-describe('실측 센서 — 상태 축이 살아 있다', () => {
-  it('12대 전부 online 으로 못박혀 있지 않다 (P10 — 목업은 오류를 섞는다)', async () => {
+/**
+ * **실측 베이는 조용하다** (사용자 확정 R43 — "그냥 정상으로 가면 안됨???").
+ *
+ * 이 describe 는 한때 정반대를 잠갔다: "12대 전부 online 으로 못박혀 있지 않다"
+ * (P10 — 상태 축이 실측 베이에서만 죽어 있다는 W9-0 진단 #26 을 메우려던 계약).
+ * 그 계약이 실제로 만든 것은 **상시 거짓 경보**였다 — 헬스가 결정론 해시라 12대 중
+ * 이상이 늘 같은 자리에 박혔고, 베이 대표 상태는 최악 센서 롤업이라 공장 전체 뷰의
+ * 5BAY 가 영구히 '오류' 라벨 + 빨간 틴트로 섰다. 데이터셋에 없는 사실을 지어낸 값이
+ * 화면에서 진짜 경보와 구별되지 않았던 것이다.
+ *
+ * 상태 축은 목업 베이의 결정론 이슈 명단(R27)이 이미 살려 두고 있으므로, 실측 쪽은
+ * 조용한 편이 옳다. 방향이 뒤집힌 자리라 되돌아가지 않게 여기서 다시 못 박는다.
+ */
+describe('실측 센서 — 전부 정상 (R43)', () => {
+  it('12대 전부 online 이다 — 실측 데이터셋에 없는 이상을 지어내지 않는다', async () => {
     const sensors = await fetchRealLidarSensors(REAL_LOCATION_ID)
     expect(sensors).toHaveLength(12)
-    expect(new Set(sensors.map((s) => s.status)).size).toBeGreaterThan(1)
+    expect(sensors.filter((s) => s.status !== 'online')).toEqual([])
+  })
+
+  it('베이 롤업 상태가 오류·오프라인이 아니다 — 공장 전체 뷰 라벨·틴트의 근거', async () => {
+    const sensors = await fetchRealLidarSensors(REAL_LOCATION_ID)
+    /* 라벨·틴트가 보는 값 그대로 — 최악 센서 롤업 한 곳에서만 판정한다 */
+    expect(worstSensorStatus(sensors)).toBe('online')
+    expect(sensorStatusCounts(sensors)).toEqual({
+      online: 12,
+      calibrating: 0,
+      offline: 0,
+      error: 0,
+    })
   })
 
   it('결정론 — 같은 센서는 늘 같은 상태', async () => {

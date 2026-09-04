@@ -2,7 +2,14 @@ import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
 import { STATUS_STYLE } from '../../../ui/statusPalette'
 import { Card } from '../../../ui/atoms/Card'
-import { FAB_STAGES_PENDING_SOURCE, type FabStageId, type FabricationSummary } from '../model/types'
+import {
+  FAB_STAGE_GROUP,
+  FAB_STAGES_PENDING_SOURCE,
+  fabStagesOfGroup,
+  type FabStageGroup,
+  type FabStageId,
+  type FabricationSummary,
+} from '../model/types'
 import { FAB_STAGE_BASIS_KEY, FAB_STAGE_LABEL_KEY } from './stageLabels'
 
 /**
@@ -22,14 +29,44 @@ export function StageCards({
 }) {
   const { t } = useTranslation()
 
+  /**
+   * 묶음 머리 — 한 줄을 통째로 차지해(`col-span-full`) 격자 안에서 줄을 가른다.
+   * 카드 열을 따로 나누지 않고 같은 격자에 머리만 끼워 넣는 것이라, 카드 크기·정렬이
+   * 종전 그대로다(디자인 재설계 없이 '어디부터 가공인지' 만 읽히게 한다 — R39).
+   */
+  const groupHeader = (group: FabStageGroup) => {
+    const stages = fabStagesOfGroup(group)
+    return (
+      <div key={`head-${group}`} className="col-span-full flex items-center gap-2 pt-0.5">
+        <span className="text-[11px] font-semibold text-foreground/60">
+          {t(`performance.stages.group.${group}` as const)}
+        </span>
+        <span className="text-[10px] tabular-nums text-foreground/38">
+          {t('performance.stages.groupRange', {
+            from: stages[0],
+            to: stages[stages.length - 1],
+          })}
+        </span>
+        <span className="h-px flex-1 bg-border" aria-hidden />
+      </div>
+    )
+  }
+
   return (
     /* 절점이 열이 되면서 6열 그리드로는 카드가 두 줄 반이 된다 — 넓은 화면에서 한 줄에
        담기도록 열을 늘린다(카드 디자인은 그대로, 격자만). */
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-11">
-      {summary.stages.map((s) => {
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
+      {summary.stages.flatMap((s, i) => {
         const complete = s.weightRate >= 100
         const active = activeStage === s.stage
-        return (
+        /* 묶음이 바뀌는 자리(첫 절점 포함)에 머리를 세운다 */
+        const previous = summary.stages[i - 1]
+        const head =
+          previous === undefined || FAB_STAGE_GROUP[previous.stage] !== FAB_STAGE_GROUP[s.stage]
+            ? [groupHeader(FAB_STAGE_GROUP[s.stage])]
+            : []
+        return [
+          ...head,
           <Card
             key={s.stage}
             interactive
@@ -101,8 +138,8 @@ export function StageCards({
                 {t('performance.stages.basis')} {t(FAB_STAGE_BASIS_KEY[s.stage])}
               </div>
             </div>
-          </Card>
-        )
+          </Card>,
+        ]
       })}
 
       <Card className="flex flex-col justify-center bg-surface-secondary/40 p-3.5">

@@ -1,4 +1,4 @@
-import i18n from '../i18n/config'
+import i18n, { initI18nForTests } from '../i18n/config'
 
 /*
  * 공정 문구 조각을 테스트 i18n 에 얹는다.
@@ -19,6 +19,7 @@ import i18n from '../i18n/config'
  *  의존으로 읽어서, 예시 한 줄 때문에 shared 가 공정을 아는 것으로 잡힌다.)
  */
 export function addProcessMessages(ko: object, en?: object): void {
+  initI18nForTests()
   i18n.addResourceBundle('ko', 'inshop', ko, /* deep */ true, /* overwrite */ true)
   if (en) i18n.addResourceBundle('en', 'inshop', en, true, true)
 }

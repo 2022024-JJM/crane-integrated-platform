@@ -10,7 +10,7 @@
  *  - 부재 모집단을 절점 모델(FabPart)로 만들고 IPD-S04 상태 규칙 — 선행 단계 완료 후
  *    진행, `미대상` 분모 제외 — 을 생성 단계에서 실제로 지킨다. 화면 계약의 일부다.
  *  - 원천에 시각이 없는 절점은 **일자만** 낸다 — 정본 10절점에서 시각이 있는 것은
- *    S4(강재 불출)·S6(절단) 둘뿐이다 (L3 판정. 표기 수준의 계약).
+ *    S4(강재 불출)·S7(절단) 둘뿐이다 (L3 판정. 표기 수준의 계약).
  *  - 블록 재공 목록의 범위 규칙(월간계획 4주 창 vs 전체 재공)은 ⚠️ 미확정 — mock 은
  *    호선당 고정 목록으로 대신한다.
  */
@@ -122,7 +122,7 @@ export async function fetchBlocks(projNo: string): Promise<BlockOption[]> {
  * 부재마다 진행 수위 L(적용 단계 기준 완료 개수)을 두고, 적용 단계 순서로
  * L 앞은 완료 / L 자리는 진행중·미도래 / L 뒤는 미도래로 채운다 — 선행 단계
  * 미완료 부재가 후행 단계에 착수하는 일이 구조적으로 없다(IPD-S04 규칙).
- * `미대상`은 일부 부재의 S4(사상 불요)·S5(직송)에만 발생시킨다.
+ * `미대상`은 일부 부재의 S8(사상 불요)·S9(모둠 없이 직송)에만 발생시킨다.
  *
  * **기준일을 과거로 돌리면 수위도 그만큼 되돌아간다** (W7-2). 가공 부재에는 절점 일자가
  * 없어서(원천에 없다) 여기서 만들 수 있는 시간 표현은 '그날엔 여기까지였다' 하나뿐이다.
@@ -148,9 +148,8 @@ export function generateParts(
     const h = hashOf(`${seed}-${pid}`)
     const weightKg = 280 + (h % 2300)
     const excluded: Partial<Record<FabStageId, boolean>> = {
-      S7: h % 11 === 3, // 사상 불요 부재
-      S8: h % 13 === 5, // 팔레트 편성 없이 직송
-      S9: h % 7 === 2, // 평판 부재 — 변성(성형) 대상이 아니다
+      S8: h % 11 === 3, // 사상 불요 부재
+      S9: h % 13 === 5, // 모둠에 묶지 않고 직송되는 부재
     }
     const applicable = FAB_STAGES.filter((s) => !excluded[s])
     /* 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다.
@@ -942,16 +941,21 @@ const PAST_PLAN_SHIFT_DAYS = 12
 /**
  * 절점별 계획일의 기준일 대비 오프셋(일) — 정본 10절점 사다리. 강재 입고가 가장 과거,
  * 최종 불출이 가장 미래다. 여기에 절점별 지터(0~2일)가 더해진다.
+ *
+ * 적치(S1~S4)와 가공(S5~S10) 경계는 지터를 먹어도 뒤집히지 않게 간격을 벌려 둔다 —
+ * 계획에서도 "불출 다음이 가공 입고" 라는 단계 순서가 지켜져야 하기 때문이다 (R39).
  */
 const PLAN_OFFSET_DAYS: Record<FabStageId, number> = {
+  /* 적치 */
   S1: -9,
   S2: -8,
   S3: -7,
-  S4: -5,
+  S4: -6,
+  /* 가공 — 단계 경계라 지터(0~2일)를 먹어도 적치의 끝을 앞지르지 않게 두 칸 띄운다 */
   S5: -4,
-  S6: -2,
-  S7: 0,
-  S8: 2,
+  S6: -3,
+  S7: -1,
+  S8: 1,
   S9: 3,
   S10: 5,
 }
@@ -1024,7 +1028,7 @@ export async function fetchFabricationStages(
  * 가공 절점 → 관리번호 형식·원천 라벨 (정의서 §6.2·§6.4 표 그대로 — 4형식 한정).
  *
  * **시각(`hasTime`)은 원천에 있을 때만 true 다.** 정본 10절점에서 그런 절점은
- * S4(강재 불출 — `불출일+시각`)와 S6(절단 — `절단완료일시`) 둘뿐이고, 나머지 여덟은
+ * S4(강재 불출 — `불출일+시각`)와 S7(절단 — `절단완료일시`) 둘뿐이고, 나머지 여덟은
  * 일자만이다. 원천 컬럼이 아직 확정되지 않은 절점(`FAB_STAGES_PENDING_SOURCE`)은
  * 원천 라벨을 '—' 로 두고 화면이 '원천 확정 대기' 배지를 세운다 — 없는 근거를 지어내지 않는다.
  */
@@ -1032,16 +1036,21 @@ const STAGE_META: Record<
   FabStageId,
   { mgmtType: 'MAT' | 'DWG' | 'PC' | 'PLT'; sources: string; hasTime: boolean; unit: string }
 > = {
+  /* ── 적치 (S1~S4) — 강재 단위 ── */
   S1: { mgmtType: 'MAT', sources: '③', hasTime: false, unit: '강재(Roll)' },
   S2: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
   S3: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
   S4: { mgmtType: 'MAT', sources: '①', hasTime: true, unit: '강재(Roll)' },
+  /* ── 가공 (S5~S10) ── */
   S5: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
-  S6: { mgmtType: 'DWG', sources: '③②', hasTime: true, unit: '도면' },
-  S7: { mgmtType: 'PC', sources: '③④', hasTime: false, unit: '부재' },
-  S8: { mgmtType: 'PLT', sources: '③④⑤', hasTime: false, unit: '팔레트' },
-  S9: { mgmtType: 'PC', sources: '—', hasTime: false, unit: '부재' },
-  S10: { mgmtType: 'PLT', sources: '—', hasTime: false, unit: '팔레트' },
+  S6: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S7: { mgmtType: 'DWG', sources: '③②', hasTime: true, unit: '도면' },
+  S8: { mgmtType: 'PC', sources: '③④', hasTime: false, unit: '부재' },
+  /* 모둠선별·최종 불출의 관리 단위는 모둠이다. 형식 코드는 정의서 §6.2 의 4형식 그대로
+     `PLT` 를 쓰되(코드 체계는 정의서 소관), **표기 낱말은 현업 어휘 '모둠'** 을 쓴다 —
+     R39 에서 '팔레트 편성' 이 '모둠선별' 로 정정됐으므로 단위 이름도 함께 따라간다. */
+  S9: { mgmtType: 'PLT', sources: '③④⑤', hasTime: false, unit: '모둠' },
+  S10: { mgmtType: 'PLT', sources: '—', hasTime: false, unit: '모둠' },
 }
 
 function mgmtNoOf(stage: FabStageId, projNo: string, blockNo: string, i: number): string {
@@ -1058,7 +1067,7 @@ function mgmtNoOf(stage: FabStageId, projNo: string, blockNo: string, i: number)
   }
 }
 
-/** 시각 유무는 STAGE_META.hasTime 계약을 따른다 — S4(불출)·S6(절단) 만 시각이 있다 */
+/** 시각 유무는 STAGE_META.hasTime 계약을 따른다 — S4(불출)·S7(절단) 만 시각이 있다 */
 function instantOf(seed: string, baseDate: string, hasTime: boolean): EventInstant {
   const h = hashOf(seed)
   const date = addDays(baseDate, -(h % 3))
@@ -1379,7 +1388,7 @@ export async function fetchEventDetail(event: CollectionEvent): Promise<EventDet
   }
 
   const meta = STAGE_META[event.stage as FabStageId]
-  /* 원천 확정 대기 절점(S2·S3·S5·S9·S10)은 레거시 컬럼을 지어내지 않는다 —
+  /* 원천 확정 대기 절점(S2·S3·S5·S6·S10)은 레거시 컬럼을 지어내지 않는다 —
      대상·일자만 적고 그 사정을 KV 로 남긴다. */
   const pendingEntries = (unitLabel: string) => [
     { label: unitLabel, value: event.mgmtNo },
@@ -1394,6 +1403,7 @@ export async function fetchEventDetail(event: CollectionEvent): Promise<EventDet
     ],
     S2: pendingEntries('강재 고유번호'),
     S3: pendingEntries('강재 고유번호'),
+    /* S4 강재 불출 — 적치의 마지막 절점. 불출일에 시각이 붙는 둘 중 하나다 */
     S4: [
       { label: '고유번호', value: `ST-${1000 + (h % 9000)}` },
       { label: 'Roll No.', value: `R-${100 + (h % 900)}` },
@@ -1402,26 +1412,27 @@ export async function fetchEventDetail(event: CollectionEvent): Promise<EventDet
       { label: '중량(kg)', value: String(800 + (h % 2000)) },
       { label: '불출일·시각', value: fmt(event.completed) },
     ],
+    /* S5 가공 입고 — 적치에서 가공으로 넘어오는 절점. 신설이라 원천이 아직 없다 */
     S5: pendingEntries('강재 고유번호'),
-    S6: [
+    S6: pendingEntries('강재 고유번호'),
+    S7: [
       { label: '도면번호', value: event.mgmtNo },
       { label: '절단장비', value: `NC-${1 + (h % 6)}` },
       { label: '절단완료일시', value: fmt(event.completed) },
       { label: '계획/지시/실적 수량', value: `${20 + (h % 9)} / ${20 + (h % 9)} / ${14 + (h % 9)}` },
     ],
-    S7: [
+    S8: [
       { label: '부재번호', value: event.mgmtNo },
       { label: '사상완료일', value: fmt(event.completed) },
       { label: '모듬상태', value: event.status === 'done' ? '모듬 완료' : '진행' },
     ],
-    S8: [
-      { label: '팔레트 번호', value: event.mgmtNo },
+    S9: [
+      { label: '모둠 번호', value: event.mgmtNo },
       { label: '구성 부재 수', value: String(4 + (h % 14)) },
       { label: '합계 중량(kg)', value: String(3000 + (h % 9000)) },
-      { label: '할당 상태', value: event.status === 'done' ? '완료' : '대기' },
+      { label: '선별 상태', value: event.status === 'done' ? '완료' : '대기' },
     ],
-    S9: pendingEntries('부재번호'),
-    S10: pendingEntries('팔레트 번호'),
+    S10: pendingEntries('모둠 번호'),
   }
   return { eventId: event.id, unit: meta.unit, entries: entriesByStage[event.stage as FabStageId] }
 }

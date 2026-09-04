@@ -118,15 +118,17 @@ export function AssemblyWorkspace() {
   const [searchParams] = useSearchParams()
 
   /*
-   * 축 탭 — **공장을 옮길 때만** 기본(현황)으로 돌아온다.
+   * 축 탭 — **지금 어느 축에 서 있는지는 주소가 말한다**(R28·R30, `useWorkspaceTab`).
    *
-   * 정반까지 함께 초기화하면, 3D 에서 정반을 눌러 들어간 사람이 그 순간 현황 탭으로
-   * 튕겨 나온다 — 방금 한 조작의 결과를 못 보게 되는 셈이다. 정반 이동은 같은 자리
-   * 안의 이동이므로 보던 축을 그대로 둔다.
+   * 예전에는 여기에 "공장이 바뀌면 기본 탭으로" 라는 리셋 이펙트가 하나 더 있었다. 축이
+   * 화면 안 state 이던 시절, 공장을 갈아탈 때 이전 공장의 자리를 털어 내려고 둔 것이다.
+   * 축이 주소로 올라간 뒤로 그 이펙트는 **승계를 되돌리는 일만** 했다 — 대문
+   * (`/indoorshop/zones/assembly`, 경로에 공장이 없다)에서 정반으로 들어가면 공장이 `없음 → asm-*`
+   * 로 바뀐 것이 되어, 방금 실어 온 `?tab=viewer` 를 마운트 직후 status 로 덮었다.
+   * 사용자가 두 번 겪은 "3D 에서 정반 눌렀는데 현황으로 서 있다"가 정확히 그것이다.
    *
-   * 다만 **URL 이 착지 탭을 말하면 그 말이 먼저다**(R28) — 통합실적의 'PCD 뷰' 는
-   * 3D 를 가리키는 문이므로 기본 탭이 아니라 링크가 도착지를 정해야 한다. 진입 때 한 번만
-   * 읽으므로 이후 탭 조작은 그대로 화면의 몫이다(URL 이 선택을 되돌리지 않는다).
+   * 없앨 수 있는 이유는 주소가 원본이기 때문이다: 실려 온 값이 이 화면에 없는 축이면
+   * `WORKSPACE_TAB_KEYS` 검사가 이미 기본 탭으로 접는다. 되돌릴 화면 안 사본이 없다.
    */
   const { tab: workTab, setTab: setWorkTab } = useWorkspaceTab(WORKSPACE_TAB_KEYS, 'status')
   /*
@@ -134,13 +136,6 @@ export function AssemblyWorkspace() {
    * 두고 가면 도착 화면이 기본 탭(현황)으로 서서, 방금 한 조작의 결과를 못 보게 된다.
    */
   const carryTab = useWorkspaceTabCarry()
-  /* 첫 렌더에서는 초기화하지 않는다 — 그러면 URL 이 실어 온 착지 탭을 마운트 직후 덮는다 */
-  const lastFactoryRef = useRef(routeFactoryId)
-  useEffect(() => {
-    if (lastFactoryRef.current === routeFactoryId) return
-    lastFactoryRef.current = routeFactoryId
-    setWorkTab('status')
-  }, [routeFactoryId, setWorkTab])
 
   /** 베이 화면에서 라벨/카드 클릭으로 선택된 블록 — 선택 시 뷰어가 블록 단독 뷰로 전환 */
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)

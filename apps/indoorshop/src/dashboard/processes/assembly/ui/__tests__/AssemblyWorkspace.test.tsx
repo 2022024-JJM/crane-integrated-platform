@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes } from 'react-router-dom'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
@@ -80,9 +80,14 @@ function renderWorkspace(path: string) {
   return renderWithProviders(
     <>
       <Routes>
+        {/* 공장 없는 대문(R22) — 이 길로 들어오면 워크스페이스가 첫 공장을 편다 */}
+        <Route path="/indoorshop/zones/assembly" element={<AssemblyWorkspace />} />
         <Route path="/indoorshop/zones/assembly/:factoryId" element={<AssemblyWorkspace />} />
         <Route path="/indoorshop/zones/assembly/:factoryId/:locationId" element={<AssemblyWorkspace />} />
       </Routes>
+      {/* 밖에서 들어오는 링크의 대역 — 글로벌 검색·로스터가 다른 공장의 3D 를 가리킬 때
+          그 이동이 워크스페이스를 새로 세우지 않는다는 사실까지 그대로 재현한다 */}
+      <Link to="/indoorshop/zones/assembly/asm-gbs?tab=viewer">다른 공장 3D</Link>
       <Here />
     </>,
     { route: path }
@@ -216,6 +221,56 @@ describe('AssemblyWorkspace — 뷰어 안 드릴은 축을 승계한다 (R30)',
     expect(tabOf(here())).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: '3D 뷰어' }))
+    expect(tabOf(here())).toBe('viewer')
+  })
+})
+
+/**
+ * 승계의 구멍 — **공장이 바뀌는 이동**에서도 축은 남아야 한다 (R30 재보고).
+ *
+ * W11-A 의 승계는 `?tab=` 을 제대로 실어 보냈는데, 도착한 화면이 그것을 마운트 직후
+ * 덮고 있었다: "공장이 바뀌면 기본 탭으로" 라는 리셋 이펙트가 남아 있었기 때문이다.
+ * 대문(`/indoorshop/zones/assembly`, 경로에 공장이 없다)에서 정반으로 들어가면 공장이
+ * `없음 → asm-*` 로 **바뀐 것**이 되어, 실어 온 `?tab=viewer` 가 그 자리에서 status 로
+ * 되돌려졌다 — 사용자가 두 번 겪은 그 증상이다.
+ *
+ * 리셋 이펙트는 URL 이 원본이 되기 전 시대의 잔재다(`useWorkspaceTab`). 지금은 주소가
+ * 지금 축을 말하고, 그 화면에 없는 축이 실려 와도 `allowed` 검사가 기본 탭으로 접는다 —
+ * 화면 안 state 를 따로 되돌릴 이유가 없다.
+ */
+describe('AssemblyWorkspace — 공장이 바뀌어도 축은 남는다 (R30)', () => {
+  it('대문(공장 없는 경로)의 3D 에서 정반으로 들어가도 3D 그대로다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/assembly')
+    await screen.findByRole('tablist', { name: '화면 축 선택' })
+
+    await user.click(screen.getByRole('tab', { name: '3D 뷰어' }))
+    const [drill] = await screen.findAllByRole('button', { name: /^드릴 / })
+    await user.click(drill)
+
+    await waitFor(() => expect(here()).toMatch(/\/zones\/assembly\/[^/]+\/[^?]+/))
+    expect(tabOf(here())).toBe('viewer')
+    expect(screen.getByRole('tab', { name: '3D 뷰어' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('다른 공장을 가리키는 링크(`?tab=viewer`)도 제 도착지에 선다', async () => {
+    /*
+     * 글로벌 검색(⌘K)·로스터의 'PCD 뷰' 는 **지금 보고 있는 공장과 다른 공장**을 가리킬 수
+     * 있다. 그 이동은 화면을 새로 세우지 않고 경로의 공장만 갈아 끼우므로, 리셋 이펙트가
+     * 남아 있으면 링크가 말한 도착지(3D)가 도착 직후 현황으로 뒤집힌다 — R28 의 약속
+     * ("링크가 제 도착지를 말한다")이 공장 전환을 겸하는 순간에만 깨지는 자리였다.
+     */
+    const user = userEvent.setup()
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs')
+    await screen.findByRole('tablist', { name: '화면 축 선택' })
+
+    await user.click(screen.getByRole('link', { name: '다른 공장 3D' }))
+
+    await waitFor(() => expect(here()).toContain('/indoorshop/zones/assembly/asm-gbs'))
+    expect(await screen.findByRole('tab', { name: '3D 뷰어' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
     expect(tabOf(here())).toBe('viewer')
   })
 })

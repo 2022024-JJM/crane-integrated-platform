@@ -215,7 +215,7 @@ def rewrite_i18n() -> None:
         if "addResourceBundle(" in s and "'translation'" in s and not f.as_posix().endswith("app/bootstrap.ts"):
             write(f, re.sub(r"(addResourceBundle\('(?:ko|en)', )'translation'", r"\1'inshop'", s))
 
-    bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith(("i18n/useTranslation.ts", "testing/renderWithProviders.tsx"))]
+    bad = [f for f in ts_files(DST) if "from 'react-i18next'" in read(f) and not f.as_posix().endswith(("i18n/useTranslation.ts", "i18n/config.ts", "testing/renderWithProviders.tsx"))]
     assert not bad, f"react-i18next 직접 import 잔존: {bad}"
     # 주석에 든 단어까지 잡으면 안 된다 — import 구문의 ParseKeys 만 검사한다
     assert not [f for f in ts_files(DST) if re.search(r"import type \{[^}]*\bParseKeys\b", read(f)) and not f.as_posix().endswith("i18n/keys.ts")]
@@ -435,6 +435,17 @@ def patch_globals_css() -> None:
 
 def patch_test_helper() -> None:
     step("renderWithProviders: vitest 에서 i18n 을 초기화 (셸 런타임은 initI18n 이 대신한다)")
+    # addProcessMessages 를 모듈 최상위에서 부르는 테스트(bayLabel 등)는 provider 헬퍼를
+    # 거치지 않는다 — 번들을 얹기 전에 init 을 보장한다 (overlay config 의 initI18nForTests).
+    q = DASH / "shared/lib/testing/processMessages.ts"
+    t = read(q)
+    m2 = re.search(r"import i18n from '(\S*i18n/config)'", t)
+    assert m2, "processMessages 의 i18n import 를 찾지 못함"
+    t = t.replace(m2.group(0), f"import i18n, {{ initI18nForTests }} from '{m2.group(1)}'", 1)
+    assert "export function addProcessMessages(ko: object, en?: object): void {" in t
+    t = t.replace("export function addProcessMessages(ko: object, en?: object): void {",
+                  "export function addProcessMessages(ko: object, en?: object): void {\n  initI18nForTests()", 1)
+    write(q, t)
     p = DASH / "shared/lib/testing/renderWithProviders.tsx"
     replace_once(p, "import { I18nextProvider } from 'react-i18next'",
                  "import { I18nextProvider, initReactI18next } from 'react-i18next'")

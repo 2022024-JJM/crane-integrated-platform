@@ -9,6 +9,9 @@ import {
   ASSY_WO_ORDER,
   FAB_STAGES,
   FAB_STAGES_PENDING_SOURCE,
+  FAB_STAGE_GROUP,
+  FAB_STAGE_GROUPS,
+  fabStagesOfGroup,
   type AssyWo,
   type PaintingStepState,
 } from '../model/types'
@@ -27,6 +30,9 @@ import { listBlocks } from '../../../entities/vessel'
  * 사용자가 절점을 딱 정해 주었다: 가공은 정본 10절점, 조립은 W/O 작업 순서(취부→용접→
  * 사상), 도장은 기확정 스텝(S/P·T/UP·FINAL). 의장은 절점이 없다(% 유지).
  *
+ * **R39 정정** — 실창 검토로 가공 축이 다시 잡혔다: '가공 입고' 신설(적치↔가공 경계),
+ * '팔레트 편성' → '모둠선별', '변성' 제거. 그리고 S4 까지가 적치, 그 다음이 가공이다.
+ *
  * 축은 화면 세 곳(헤더 스트립·절점 카드·이벤트 그리드)이 함께 쓰는 뼈대라, 어느 한 곳만
  * 손질하면 같은 블록을 두고 서로 다른 이야기를 한다. 여기서 축 자체를 못 박는다.
  */
@@ -39,10 +45,25 @@ describe('가공 — 정본 10절점 (사용자 원문 순서 그대로)', () =>
 
   it('원천 확정 대기 절점은 축 안에 있다 — 축에서 빼는 것이 아니라 사정을 적는 것이다', () => {
     for (const stage of FAB_STAGES_PENDING_SOURCE) expect(FAB_STAGES).toContain(stage)
-    /* 근거가 확정된 다섯(S1·S4·S6·S7·S8)은 대기 목록에 없다 */
-    for (const confirmed of ['S1', 'S4', 'S6', 'S7', 'S8'] as const) {
+    /* 근거가 확정된 다섯(강재 입고·강재 불출·절단·사상·모둠선별)은 대기 목록에 없다.
+       R39 로 번호가 밀렸어도 근거는 절점을 따라간다 — 구 S6·S7·S8 이 새 S7·S8·S9 다. */
+    for (const confirmed of ['S1', 'S4', 'S7', 'S8', 'S9'] as const) {
       expect(FAB_STAGES_PENDING_SOURCE).not.toContain(confirmed)
     }
+    /* 신설된 '가공 입고'(S5)는 아직 근거가 없다 */
+    expect(FAB_STAGES_PENDING_SOURCE).toContain('S5')
+  })
+
+  it('축은 적치(S1~S4)와 가공(S5~S10) 두 묶음으로 갈린다 — 경계는 강재 불출 다음이다', () => {
+    expect(fabStagesOfGroup('stack')).toEqual(['S1', 'S2', 'S3', 'S4'])
+    expect(fabStagesOfGroup('fab')).toEqual(['S5', 'S6', 'S7', 'S8', 'S9', 'S10'])
+    /* 묶음은 축 순서를 자르기만 한다 — 앞뒤로 섞이지 않는다 */
+    const order = FAB_STAGES.map((s) => FAB_STAGE_GROUP[s])
+    expect(order.indexOf('fab')).toBe(order.lastIndexOf('stack') + 1)
+    expect(FAB_STAGE_GROUPS).toEqual(['stack', 'fab'])
+    expect(fabStagesOfGroup('stack').length + fabStagesOfGroup('fab').length).toBe(
+      FAB_STAGES.length
+    )
   })
 
   it('부재 모집단이 열 절점을 모두 채운다 — 빠진 칸이 없다', () => {
@@ -57,11 +78,12 @@ describe('가공 — 정본 10절점 (사용자 원문 순서 그대로)', () =>
       const where = `${block.projNo}-${block.blockNo}`
       /* 지터(0~2일)가 있어 이웃끼리는 뒤집힐 수 있으므로 양 끝을 본다 */
       expect(plans.S10 > plans.S1, where).toBe(true)
-      expect(plans.S6 > plans.S1, where).toBe(true)
+      /* 적치의 끝(S4)보다 가공의 시작(S5)이 뒤에 온다 — 단계 경계가 계획에도 있다 */
+      expect(plans.S5 >= plans.S4, where).toBe(true)
     }
   })
 
-  it('시각은 원천에 있는 절점에만 — S4(강재 불출)·S6(절단) 둘뿐이다', async () => {
+  it('시각은 원천에 있는 절점에만 — S4(강재 불출)·S7(절단) 둘뿐이다', async () => {
     const rows = await fetchCollectionEvents('7004', ['222', '310', '118'], 'fabrication', BASE)
     const seen = new Set<string>()
     for (const row of rows) {
@@ -70,7 +92,7 @@ describe('가공 — 정본 10절점 (사용자 원문 순서 그대로)', () =>
         if (instant.time !== undefined) seen.add(String(row.stage))
       }
     }
-    for (const stage of seen) expect(['S4', 'S6']).toContain(stage)
+    for (const stage of seen) expect(['S4', 'S7']).toContain(stage)
   })
 })
 

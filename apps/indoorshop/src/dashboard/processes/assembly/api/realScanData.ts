@@ -122,22 +122,22 @@ export async function fetchRealLidarSensors(locationId: string): Promise<LidarSe
     locationId,
     name: sensor.name,
     /*
-     * ⚠️ mock — 데이터셋에는 장비 헬스가 없다(스캔 결과만 있다). 예전에는 12대를 전부
-     * `online` 으로 못박아, 화면의 상태 축이 실측 베이에서만 죽어 있었다(W9-0 진단 #26:
-     * 목업 5/6 vs 실측 12/12). 목업과 같은 결정론 문법으로 소수만 이상을 준다 —
-     * 실연동 시 이 한 줄이 실제 헬스 조회로 바뀐다.
+     * ⚠️ mock — 데이터셋에는 장비 헬스가 없다(스캔 결과만 있다). **실측 12대는 전부
+     * 정상으로 둔다** (사용자 확정 R43 — "그냥 정상으로 가면 안됨???").
+     *
+     * 한때 여기서 해시로 8% offline · 6% error 를 굴렸다. 상태 축이 실측 베이에서만
+     * 죽어 있다는 진단(W9-0 #26)을 메우려던 것인데, 결정론 해시라 12대 중 이상이
+     * 늘 같은 자리에 박혔고 — 베이 대표 상태는 최악 센서 롤업(`worstSensorStatus`)이라 —
+     * 공장 전체 뷰의 5BAY 가 **영구히 '오류' 라벨 + 빨간 틴트**로 섰다. 실측 데이터셋에
+     * 없는 사실을 지어내 화면이 상시 거짓 경보를 낸 셈이다.
+     *
+     * 이상 연출은 목업 베이의 결정론 이슈 명단(R27)이 이미 담당한다 — 상태 축은 거기서
+     * 살아 있으므로 **실측 베이는 조용해야 한다.** 실연동 시 이 한 줄이 실제 헬스 조회로
+     * 바뀐다(그때는 진짜 이상이 진짜로 뜬다).
      */
-    status: mockSensorStatus(sensor.name),
+    status: 'online',
     lastScanAt: scanTime(manifest),
   }))
-}
-
-/** 센서 상태 mock — 대부분 온라인, 결정론적으로 소수만 오프라인/오류 (목업과 같은 분포) */
-function mockSensorStatus(name: string): LidarSensor['status'] {
-  const roll = hashOf(`${name}-real-health`) % 100
-  if (roll < 8) return 'offline'
-  if (roll < 14) return 'error'
-  return 'online'
 }
 
 /** '5510_726_FR84A' → 호선 5510 / 블록 726 / 조립번호 FR84A */

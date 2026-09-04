@@ -26,6 +26,11 @@ export interface StripNode {
   delayed?: boolean
   /** 근거 한 줄 — 계획일 또는 n/m */
   note?: string
+  /**
+   * 이 절점이 속한 **큰 묶음**의 라벨 (가공의 적치/가공 — R39). 값이 바뀌는 자리에
+   * 구분선과 라벨이 선다. 묶음이 없는 권역(조립·도장)은 비워 두면 종전 그대로 그려진다.
+   */
+  group?: string
 }
 
 /**
@@ -38,6 +43,9 @@ export interface StripNode {
  * **줄바꿈**으로 받는다(`flex-wrap`) — 잘라 내면 뒤쪽 절점이 화면에서 사라지고,
  * 가로 스크롤은 헤더 카드에 어울리지 않는다. 이음선은 줄 첫 칸에서 뜨지 않도록
  * 칸 안쪽에 붙여 그린다.
+ *
+ * `group` 이 바뀌는 자리에는 이음선 대신 **세로 구분선 + 묶음 라벨**이 선다 (R39 —
+ * 가공의 적치/가공). 칩 문법은 그대로 두고 사이만 갈라 놓는 것이라 재설계가 아니다.
  */
 export function NodeStrip({ nodes, label }: { nodes: StripNode[]; label?: string }) {
   const { t } = useTranslation()
@@ -89,19 +97,30 @@ export function NodeStrip({ nodes, label }: { nodes: StripNode[]; label?: string
         >
           {nodes.map((node, i) => {
             const state = stateOf(node)
+            const groupStart = node.group != null && node.group !== nodes[i - 1]?.group
             return (
               <li key={node.key} className="flex items-center gap-1">
-                {i > 0 && <span className="h-px w-2 bg-border" aria-hidden />}
+                {groupStart ? (
+                  <span className="flex items-center gap-1">
+                    {i > 0 && <span className="mx-0.5 h-3.5 w-px bg-border" aria-hidden />}
+                    <span className="text-[10px] font-medium text-foreground/45">{node.group}</span>
+                  </span>
+                ) : (
+                  i > 0 && <span className="h-px w-2 bg-border" aria-hidden />
+                )}
                 <span
                   className={cn(
                     'inline-flex items-center gap-1 rounded-inshop-md border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
                     state.className
                   )}
-                  title={[node.name, t(state.labelKey), node.note].filter(Boolean).join(' · ')}
+                  title={[node.group, node.name, t(state.labelKey), node.note]
+                    .filter(Boolean)
+                    .join(' · ')}
                 >
                   <span aria-hidden>{state.mark}</span>
                   {node.short}
                   <span className="sr-only">
+                    {node.group ? `${node.group} ` : ''}
                     {node.name} {t(state.labelKey)}
                   </span>
                 </span>
