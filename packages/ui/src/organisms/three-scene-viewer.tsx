@@ -16,11 +16,11 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
   SceneToolbarButton,
@@ -88,7 +88,6 @@ interface ThreeSceneViewerProps {
    */
   dockRight?: SceneDockState;
   onControllerReady?: (controller: SceneController | null) => void;
-  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 export interface SceneController {
@@ -401,12 +400,17 @@ export function ThreeSceneViewer({
   toolbarPlacement = 'bottom-left',
   dockRight,
   onControllerReady,
-  onFullscreenChange,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  // 전체화면 루트 = 뷰어 루트. 같은 ref 가 아래 PortalContainerProvider 의
+  // 컨테이너다 — 전체화면 중에도 툴팁·팝오버가 루트 안에 렌더된다.
+  const {
+    rootRef,
+    isFullscreen,
+    supported: fullscreenSupported,
+    toggleFullscreen,
+  } = useFullscreen<HTMLDivElement>();
   const controllerRef = useRef<SceneController | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const setController = useCallback(
     (controller: SceneController | null) => {
@@ -415,38 +419,6 @@ export function ThreeSceneViewer({
     },
     [onControllerReady],
   );
-
-  const toggleFullscreen = useCallback(async () => {
-    const root = rootRef.current;
-
-    if (!root) {
-      return;
-    }
-
-    if (document.fullscreenElement === root) {
-      await document.exitFullscreen();
-      return;
-    }
-
-    await root.requestFullscreen();
-  }, []);
-
-  const onFullscreenChangeRef = useRef(onFullscreenChange);
-  onFullscreenChangeRef.current = onFullscreenChange;
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const next = document.fullscreenElement === rootRef.current;
-      setIsFullscreen(next);
-      onFullscreenChangeRef.current?.(next);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
 
   const showSplitPanel = isFullscreen && fullscreenOverlay;
   const isTopRightToolbar = toolbarPlacement === 'top-right';
@@ -522,19 +494,19 @@ export function ThreeSceneViewer({
       >
         <ZoomOut />
       </SceneToolbarButton>
-      <SceneToolbarButton
-        label={
-          isFullscreen
-            ? t('common:viewer3d.exitFullscreen')
-            : t('common:viewer3d.fullscreen')
-        }
-        side={tooltipSide}
-        onClick={() => {
-          void toggleFullscreen();
-        }}
-      >
-        {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-      </SceneToolbarButton>
+      {fullscreenSupported ? (
+        <SceneToolbarButton
+          label={
+            isFullscreen
+              ? t('common:viewer3d.exitFullscreen')
+              : t('common:viewer3d.fullscreen')
+          }
+          side={tooltipSide}
+          onClick={toggleFullscreen}
+        >
+          {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+        </SceneToolbarButton>
+      ) : null}
     </>
   );
 

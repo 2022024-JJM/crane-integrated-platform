@@ -70,7 +70,6 @@ interface Monitoring3dViewProps {
    * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기기 기본값.
    */
   canvasDpr?: number | [number, number];
-  onFullscreenChange?: (isFullscreen: boolean) => void;
   /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
    * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
@@ -96,7 +95,6 @@ export function Monitoring3dView({
   sceneExtras,
   overlayExtras,
   canvasDpr,
-  onFullscreenChange,
   toolbarLayout = 'top-right',
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
@@ -118,13 +116,6 @@ export function Monitoring3dView({
   useEffect(() => {
     onLoadingChange?.(isLoading);
   }, [isLoading, onLoadingChange]);
-
-  const handleFullscreenChange = useCallback(
-    (next: boolean) => {
-      onFullscreenChange?.(next);
-    },
-    [onFullscreenChange],
-  );
 
   const handleControllerReady = useCallback(
     (controller: SceneController | null) => {
@@ -253,7 +244,6 @@ export function Monitoring3dView({
             />
           )
         }
-        onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
         <SceneLighting sceneInfo={sceneInfo} />
