@@ -18,6 +18,7 @@ import { Images, Search } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
 import {
@@ -25,6 +26,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
+import { PortalContainerProvider } from '@crane/ui/molecules/portal-container';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import { EditorHeaderBar } from './editor-header-bar';
 import { EditorSelectionBar } from './editor-selection-bar';
@@ -101,6 +103,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
+  // 전체화면 루트는 페이지 루트 — 패널·헤더 바까지 함께 올린다. 그 안의
+  // 포털(툴팁·팝오버·셀렉트·다이얼로그)은 PortalContainerProvider 로
+  // 루트 안에 렌더해야 전체화면 top layer 에 가려지지 않는다.
+  const {
+    rootRef: pageRootRef,
+    isFullscreen,
+    supported: fullscreenSupported,
+    toggleFullscreen,
+  } = useFullscreen<HTMLDivElement>();
   const focusSelectedRef = useRef<(() => void) | null>(null);
   const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
   const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
@@ -393,222 +404,230 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   ]);
 
   return (
-    <div className="bg-muted/20 h-full min-h-0 w-full overflow-hidden">
-      <SceneUnsavedChangesDialog
-        open={unsavedChangesPrompt.open}
-        isSaving={isSaving}
-        onSaveAndLeave={() => unsavedChangesPrompt.choose('save')}
-        onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
-        onStay={() => unsavedChangesPrompt.choose('stay')}
-      />
-      <ResizablePanelGroup orientation="horizontal">
-        {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경).
+    <PortalContainerProvider container={pageRootRef}>
+      <div
+        ref={pageRootRef}
+        className="bg-muted/20 h-full min-h-0 w-full overflow-hidden"
+      >
+        <SceneUnsavedChangesDialog
+          open={unsavedChangesPrompt.open}
+          isSaving={isSaving}
+          onSaveAndLeave={() => unsavedChangesPrompt.choose('save')}
+          onLeaveWithoutSaving={() => unsavedChangesPrompt.choose('discard')}
+          onStay={() => unsavedChangesPrompt.choose('stay')}
+        />
+        <ResizablePanelGroup orientation="horizontal">
+          {/* 좌측 도킹 패널 — Project: 에셋 팔레트(모델/맵/배경).
             preserve-pixel-size: 창 크기가 바뀌어도 사이드 패널은 픽셀 너비를
             유지하고 캔버스만 늘어난다. 컬럼 경계선은 aside border 대신
             ResizableHandle(1px)이 겸한다. */}
-        {!leftCollapsed ? (
-          <>
-            <ResizablePanel
-              id="project-palette"
-              defaultSize="13rem"
-              minSize="10rem"
-              maxSize="22rem"
-              groupResizeBehavior="preserve-pixel-size"
-            >
-              <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
-                <ProjectPalettePanel
-                  items={sceneModelCatalog}
-                  currentMap={sceneInfo?.maps?.[0] ?? null}
-                  draggingItemId={draggingCatalogItem?.id ?? null}
-                  onDragStart={setDraggingCatalogItem}
-                  onDragEnd={() => setDraggingCatalogItem(null)}
-                  onSelectMap={setSceneMap}
-                  onToggleLock={setObjectLocked}
-                  environmentId={sceneInfo?.environmentId}
-                  onEnvironmentChange={setEnvironmentId}
-                  lighting={sceneInfo?.lighting}
-                  onLightingChange={setLighting}
-                  onLightingInteractionStart={startTransformInteraction}
-                  onLightingInteractionEnd={endTransformInteraction}
-                  sceneInfo={sceneInfo}
-                  virtualTagsPath={virtualTagsPath}
-                />
-              </aside>
-            </ResizablePanel>
-            <ResizableHandle />
-          </>
-        ) : null}
+          {!leftCollapsed ? (
+            <>
+              <ResizablePanel
+                id="project-palette"
+                defaultSize="13rem"
+                minSize="10rem"
+                maxSize="22rem"
+                groupResizeBehavior="preserve-pixel-size"
+              >
+                <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
+                  <ProjectPalettePanel
+                    items={sceneModelCatalog}
+                    currentMap={sceneInfo?.maps?.[0] ?? null}
+                    draggingItemId={draggingCatalogItem?.id ?? null}
+                    onDragStart={setDraggingCatalogItem}
+                    onDragEnd={() => setDraggingCatalogItem(null)}
+                    onSelectMap={setSceneMap}
+                    onToggleLock={setObjectLocked}
+                    environmentId={sceneInfo?.environmentId}
+                    onEnvironmentChange={setEnvironmentId}
+                    lighting={sceneInfo?.lighting}
+                    onLightingChange={setLighting}
+                    onLightingInteractionStart={startTransformInteraction}
+                    onLightingInteractionEnd={endTransformInteraction}
+                    sceneInfo={sceneInfo}
+                    virtualTagsPath={virtualTagsPath}
+                  />
+                </aside>
+              </ResizablePanel>
+              <ResizableHandle />
+            </>
+          ) : null}
 
-        {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조.
+          {/* 중앙 캔버스 — 패널이 캔버스를 덮지 않는 도킹 워크벤치 구조.
             뷰포트 위 헤더 바는 캔버스 바깥의 크롬이고, 뷰포트 안에는 선택
             컨텍스트 바(하단 중앙)·도움말(우하단)·축 기즈모(우상단)만 띄운다. 뷰포트 중앙 상단은 가장 중요한 시야라
             어떤 UI 도 두지 않는다. */}
-        <ResizablePanel id="edit-canvas">
-          <div className="flex h-full min-h-0 flex-col">
-            <EditorHeaderBar
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={undo}
-              onRedo={redo}
-              saveDisabled={saveDisabled}
-              isSaving={isSaving}
-              isDirty={isDirty}
-              onSave={() => void saveCurrentScene()}
-              onExport={() => downloadSceneInfo(regionId, sceneInfo)}
-              mode={transformMode}
-              onModeChange={setTransformMode}
-              onAddText={handleAddTextAtView}
-              transformSpace={isScaleMode ? 'local' : transformSpace}
-              onTransformSpaceChange={setTransformSpace}
-              transformSpaceDisabled={isScaleMode}
-              snapEnabled={snapEnabled}
-              snapStep={snapStep}
-              onToggleSnap={toggleSnap}
-              onSnapStepChange={setSnapStep}
-              showGrid={showGrid}
-              onToggleGrid={toggleGrid}
-              onResetView={() => cameraActionsRef.current?.resetView()}
-              onTopView={() => cameraActionsRef.current?.topView()}
-              sceneDisabled={saveDisabled}
-              leftPanelCollapsed={leftCollapsed}
-              onToggleLeftPanel={() => setLeftCollapsed((v) => !v)}
-              rightPanelCollapsed={rightCollapsed}
-              onToggleRightPanel={() => setRightCollapsed((v) => !v)}
-            />
-            <div className="relative min-h-0 flex-1">
-              <SceneObjectsEditCanvas
-                rootRef={canvasRootRef}
-                cameraStateRef={cameraStateRef}
-                initialCamera={initialCamera}
-                sceneInfo={sceneInfo}
-                regionId={regionId}
-                catalogItems={sceneModelCatalog}
-                transformMode={transformMode}
-                draggingModelCatalogItem={draggingCatalogItem}
-                onTransformVectorChange={(field, value) => {
-                  // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
-                  // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
-                  updateSelectedTransformVector(field, value, {
-                    recordHistory: false,
-                  });
-                }}
-                onTransformCommit={(position, rotation, scale) => {
-                  // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
-                  // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
-                  commitSelectedTransform(position, rotation, scale, {
-                    recordHistory: false,
-                  });
-                }}
-                onMultiTransformCommit={(updates) => {
-                  updateMultiObjectTransforms(updates, {
-                    recordHistory: false,
-                  });
-                }}
-                onAddModel={(catalogItem, position) => {
-                  addModel(catalogItem, position);
-                  setDraggingCatalogItem(null);
-                }}
-                onTransformInteractionStart={startTransformInteraction}
-                onTransformInteractionEnd={endTransformInteraction}
-                focusSelectedRef={focusSelectedRef}
-                cameraActionsRef={cameraActionsRef}
+          <ResizablePanel id="edit-canvas">
+            <div className="flex h-full min-h-0 flex-col">
+              <EditorHeaderBar
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={undo}
+                onRedo={redo}
+                saveDisabled={saveDisabled}
+                isSaving={isSaving}
+                isDirty={isDirty}
+                onSave={() => void saveCurrentScene()}
+                onExport={() => downloadSceneInfo(regionId, sceneInfo)}
+                mode={transformMode}
+                onModeChange={setTransformMode}
+                onAddText={handleAddTextAtView}
+                transformSpace={isScaleMode ? 'local' : transformSpace}
+                onTransformSpaceChange={setTransformSpace}
+                transformSpaceDisabled={isScaleMode}
                 snapEnabled={snapEnabled}
                 snapStep={snapStep}
-                transformSpace={transformSpace}
+                onToggleSnap={toggleSnap}
+                onSnapStepChange={setSnapStep}
                 showGrid={showGrid}
+                onToggleGrid={toggleGrid}
+                onResetView={() => cameraActionsRef.current?.resetView()}
+                onTopView={() => cameraActionsRef.current?.topView()}
+                sceneDisabled={saveDisabled}
+                leftPanelCollapsed={leftCollapsed}
+                onToggleLeftPanel={() => setLeftCollapsed((v) => !v)}
+                rightPanelCollapsed={rightCollapsed}
+                onToggleRightPanel={() => setRightCollapsed((v) => !v)}
+                isFullscreen={isFullscreen}
+                fullscreenSupported={fullscreenSupported}
+                onToggleFullscreen={toggleFullscreen}
               />
+              <div className="relative min-h-0 flex-1">
+                <SceneObjectsEditCanvas
+                  rootRef={canvasRootRef}
+                  cameraStateRef={cameraStateRef}
+                  initialCamera={initialCamera}
+                  sceneInfo={sceneInfo}
+                  regionId={regionId}
+                  catalogItems={sceneModelCatalog}
+                  transformMode={transformMode}
+                  draggingModelCatalogItem={draggingCatalogItem}
+                  onTransformVectorChange={(field, value) => {
+                    // 모델/텍스트/지도는 통합 함수가 id로 컬렉션을 해석한다.
+                    // 모델 안쪽 노드는 읽기 전용이라 기즈모가 붙지 않는다.
+                    updateSelectedTransformVector(field, value, {
+                      recordHistory: false,
+                    });
+                  }}
+                  onTransformCommit={(position, rotation, scale) => {
+                    // 드래그 완료 시 position/rotation/scale을 단일 updateSceneInfo로
+                    // commit해 중간 렌더를 없애고 selectedObject 리셋 버그를 방지한다.
+                    commitSelectedTransform(position, rotation, scale, {
+                      recordHistory: false,
+                    });
+                  }}
+                  onMultiTransformCommit={(updates) => {
+                    updateMultiObjectTransforms(updates, {
+                      recordHistory: false,
+                    });
+                  }}
+                  onAddModel={(catalogItem, position) => {
+                    addModel(catalogItem, position);
+                    setDraggingCatalogItem(null);
+                  }}
+                  onTransformInteractionStart={startTransformInteraction}
+                  onTransformInteractionEnd={endTransformInteraction}
+                  focusSelectedRef={focusSelectedRef}
+                  cameraActionsRef={cameraActionsRef}
+                  snapEnabled={snapEnabled}
+                  snapStep={snapStep}
+                  transformSpace={transformSpace}
+                  showGrid={showGrid}
+                />
 
-              <EditorSelectionBar
-                hasSelection={hasSelection}
-                onDuplicate={duplicateSelectedObject}
-                onDelete={removeSelectedModel}
-              />
-              {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
+                <EditorSelectionBar
+                  hasSelection={hasSelection}
+                  onDuplicate={duplicateSelectedObject}
+                  onDelete={removeSelectedModel}
+                />
+                {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
                   겹치지 않는다. */}
-              <SceneShortcutsHelp />
+                <SceneShortcutsHelp />
 
-              {!sceneInfo ? (
-                <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-                  <p className="text-muted-foreground text-sm font-medium">
-                    {t('monitoring:editor.loading')}
-                  </p>
-                </div>
-              ) : null}
+                {!sceneInfo ? (
+                  <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
+                    <p className="text-muted-foreground text-sm font-medium">
+                      {t('monitoring:editor.loading')}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        </ResizablePanel>
+          </ResizablePanel>
 
-        {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
-        {!rightCollapsed ? (
-          <>
-            <ResizableHandle />
-            <ResizablePanel
-              id="hierarchy-inspector"
-              defaultSize="18rem"
-              minSize="14rem"
-              maxSize="26rem"
-              groupResizeBehavior="preserve-pixel-size"
-            >
-              <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
-                {/* Hierarchy/Inspector 사이도 드래그로 조절한다. 기본 1:2는
+          {/* 우측 도킹 컬럼 — 상단 Hierarchy(1) + 하단 Inspector(2) */}
+          {!rightCollapsed ? (
+            <>
+              <ResizableHandle />
+              <ResizablePanel
+                id="hierarchy-inspector"
+                defaultSize="18rem"
+                minSize="14rem"
+                maxSize="26rem"
+                groupResizeBehavior="preserve-pixel-size"
+              >
+                <aside className="bg-card text-card-foreground flex h-full min-h-0 flex-col">
+                  {/* Hierarchy/Inspector 사이도 드래그로 조절한다. 기본 1:2는
                     종전 flex-[1]/flex-[2] 비율 그대로. 경계선은 border-t 대신
                     ResizableHandle(1px)이 겸한다. */}
-                <ResizablePanelGroup orientation="vertical">
-                  <ResizablePanel
-                    id="hierarchy"
-                    defaultSize="33%"
-                    minSize="8rem"
-                  >
-                    <div
-                      ref={hierarchyRootRef}
-                      className="flex h-full min-h-0 flex-col"
+                  <ResizablePanelGroup orientation="vertical">
+                    <ResizablePanel
+                      id="hierarchy"
+                      defaultSize="33%"
+                      minSize="8rem"
                     >
-                      <HierarchyPanel
-                        sceneInfo={sceneInfo}
-                        selectedIds={selectedIds}
-                        onSelectPlacedModel={selectPlacedModel}
-                        onDeletePlacedModel={deletePlacedModel}
-                        onSelectPlacedText={selectPlacedText}
-                        onDeletePlacedText={deletePlacedText}
-                        onTogglePlacedModel={toggleModel}
-                        onTogglePlacedText={toggleText}
-                        onTogglePlacedMap={toggleMap}
-                        onSelectPlacedMap={selectPlacedMap}
-                        onDeletePlacedMap={deletePlacedMap}
-                        onToggleLock={setObjectLocked}
-                        onRenameObject={renameObject}
-                        onSelectNode={selectPlacedNode}
-                        jointNodePathsByModel={jointNodePathsByModel}
-                      />
-                    </div>
-                  </ResizablePanel>
-                  <ResizableHandle />
-                  <ResizablePanel id="inspector" minSize="10rem">
-                    <div className="flex h-full min-h-0 flex-col">
-                      <SceneObjectInspector
-                        className="rounded-none bg-transparent ring-0"
-                        selectedModel={selectedModel}
-                        selectedText={selectedText}
-                        selectedMesh={selectedMesh}
-                        selectedMap={selectedMap}
-                        multiSelectCount={selectedIds.size}
-                        onOpacityChange={updateSelectedOpacity}
-                        onLabelHiddenChange={updateSelectedLabelHidden}
-                        onTransformChange={updateSelectedTransform}
-                        onTextContentChange={updateSelectedTextContent}
-                        onTextColorChange={updateSelectedTextColor}
-                        tagMapping={tagMappingHandlers}
-                        rigging={riggingHandlers}
-                      />
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              </aside>
-            </ResizablePanel>
-          </>
-        ) : null}
-      </ResizablePanelGroup>
-    </div>
+                      <div
+                        ref={hierarchyRootRef}
+                        className="flex h-full min-h-0 flex-col"
+                      >
+                        <HierarchyPanel
+                          sceneInfo={sceneInfo}
+                          selectedIds={selectedIds}
+                          onSelectPlacedModel={selectPlacedModel}
+                          onDeletePlacedModel={deletePlacedModel}
+                          onSelectPlacedText={selectPlacedText}
+                          onDeletePlacedText={deletePlacedText}
+                          onTogglePlacedModel={toggleModel}
+                          onTogglePlacedText={toggleText}
+                          onTogglePlacedMap={toggleMap}
+                          onSelectPlacedMap={selectPlacedMap}
+                          onDeletePlacedMap={deletePlacedMap}
+                          onToggleLock={setObjectLocked}
+                          onRenameObject={renameObject}
+                          onSelectNode={selectPlacedNode}
+                          jointNodePathsByModel={jointNodePathsByModel}
+                        />
+                      </div>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel id="inspector" minSize="10rem">
+                      <div className="flex h-full min-h-0 flex-col">
+                        <SceneObjectInspector
+                          className="rounded-none bg-transparent ring-0"
+                          selectedModel={selectedModel}
+                          selectedText={selectedText}
+                          selectedMesh={selectedMesh}
+                          selectedMap={selectedMap}
+                          multiSelectCount={selectedIds.size}
+                          onOpacityChange={updateSelectedOpacity}
+                          onLabelHiddenChange={updateSelectedLabelHidden}
+                          onTransformChange={updateSelectedTransform}
+                          onTextContentChange={updateSelectedTextContent}
+                          onTextColorChange={updateSelectedTextColor}
+                          tagMapping={tagMappingHandlers}
+                          rigging={riggingHandlers}
+                        />
+                      </div>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                </aside>
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
+      </div>
+    </PortalContainerProvider>
   );
 }
 

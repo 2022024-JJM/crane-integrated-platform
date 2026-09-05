@@ -28,6 +28,7 @@
     "./lib/safe-storage": "./src/lib/safe-storage.ts",
     "./lib/asset-url": "./src/lib/asset-url.ts",
     "./lib/use-section-collapse-group": "./src/lib/use-section-collapse-group.ts",
+    "./lib/use-fullscreen": "./src/lib/use-fullscreen.ts",
     "./lib/export-csv": "./src/lib/export-csv.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
@@ -49,6 +50,13 @@
     "sonner": "^2.0.3"
   },
   "devDependencies": {
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
+  },
+  "scripts": {
+    "test": "vitest run"
   }
 }

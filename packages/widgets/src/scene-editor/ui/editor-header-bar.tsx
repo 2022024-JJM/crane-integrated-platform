@@ -15,6 +15,8 @@ import {
   House,
   Loader2,
   Magnet,
+  Maximize2,
+  Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -87,6 +89,11 @@ interface EditorHeaderBarProps {
   onToggleLeftPanel: () => void;
   rightPanelCollapsed: boolean;
   onToggleRightPanel: () => void;
+  // 전체화면 — 편집 페이지 루트를 Fullscreen API 로 올린다
+  isFullscreen: boolean;
+  /** Fullscreen API 를 못 쓰는 환경(iframe 정책 등)이면 버튼을 숨긴다. */
+  fullscreenSupported: boolean;
+  onToggleFullscreen: () => void;
 }
 
 /**
@@ -96,7 +103,7 @@ interface EditorHeaderBarProps {
  * - 좌측: 씬 전체·파일에 작용하는 문서 동작(실행취소·다시실행 | 저장·내보내기)
  * - 중앙: 모달 도구(이동/회전/크기) · 좌표계(로컬/월드) | 스냅 · 격자 · 홈 ·
  *   탑뷰 | 텍스트 추가
- * - 우측: 우측 패널 토글
+ * - 우측: 전체화면 · 우측 패널 토글
  *
  * 그룹 사이는 간격으로만 나누고, 구분선은 "기즈모(도구·좌표계) | 스냅·보기 |
  * 생성(텍스트)" 소분류 경계에만 쓴다. 활성 표현은 성격별로 다르다 — 모달 도구는 배경 채움,
@@ -135,6 +142,9 @@ export function EditorHeaderBar({
   onToggleLeftPanel,
   rightPanelCollapsed,
   onToggleRightPanel,
+  isFullscreen,
+  fullscreenSupported,
+  onToggleFullscreen,
 }: EditorHeaderBarProps) {
   const { t } = useTranslation();
 
@@ -279,8 +289,26 @@ export function EditorHeaderBar({
           </EditorToolbarButton>
         </div>
 
-        {/* 우측 — 우측 패널 토글 */}
+        {/* 우측 — 전체화면 · 우측 패널 토글. 전체화면은 페이지 루트 전체를
+            올리므로 이 버튼이 전체화면 안에서도 남아 복원 경로가 된다. */}
         <div className="flex items-center gap-2">
+          {fullscreenSupported ? (
+            <EditorToolbarButton
+              label={t(
+                isFullscreen
+                  ? 'common:viewer3d.exitFullscreen'
+                  : 'common:viewer3d.fullscreen',
+              )}
+              side="bottom"
+              onClick={onToggleFullscreen}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="size-4" />
+              ) : (
+                <Maximize2 className="size-4" />
+              )}
+            </EditorToolbarButton>
+          ) : null}
           <EditorToolbarButton
             label={t(
               rightPanelCollapsed
