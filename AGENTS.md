@@ -191,6 +191,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 태그 맵핑 편집 UI | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`(인스펙터 탭), `tag-key-combobox.tsx`, `lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상), 팔레트 "태그" 탭 `palette-virtual-tag-section.tsx` |
 | 가상 태그 관리 페이지 | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx` |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx` (base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
+| 전체화면(Fullscreen API) | 훅 `packages/core/src/lib/use-fullscreen.ts`(3D 뷰어·편집 페이지 공용). 전체화면 루트 밖 DOM 은 top layer 에 가려지므로 base-ui 포털은 `PortalContainerProvider` 로 루트 안에 렌더한다. sonner 토스트는 포털이 아니라 이 장치가 안 닿는다 — 편집기는 루트 안에 `<AppToaster id>` 를 하나 더 두고 `packages/widgets/src/scene-editor/lib/editor-toast.ts` 의 `editorToastOptions()` 로 전체화면 중 토스트만 그쪽으로 보낸다. 편집기에서 토스트를 새로 띄우면 이 옵션을 붙인다 |
 | 모니터링 씬 독(dock: hover 펼침·고정 우측 레일) | 껍데기 `packages/ui/src/organisms/scene-dock.tsx`(`SceneDockRail`, 완전 제어형, 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`), 상태·영속화 `packages/features/src/3d/model/use-scene-dock.ts` + `lib/{dock-hover-state,dock-storage}.ts`(순수 리듀서·pin 영속화, 테스트 대상). 조립은 `Monitoring3dView` 의 `toolbarLayout="dock"`. 하단 독 패널(크레인 실시간 상태 테이블)은 2026-09-03 에 제거됐다 |
 
 ## packages/ui 구조 (Atomic Design)

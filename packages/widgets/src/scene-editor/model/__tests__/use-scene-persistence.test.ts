@@ -167,7 +167,33 @@ describe('저장', () => {
     // dev(파일 저장)는 단순 "저장됨".
     expect(toastMock.success).toHaveBeenCalledWith(
       'monitoring:editor.statusSaved',
+      {},
     );
+  });
+
+  it('전체화면 중 저장 토스트는 편집 루트 안 Toaster 로 라우팅된다', async () => {
+    Object.defineProperty(document, 'fullscreenElement', {
+      configurable: true,
+      get: () => document.body,
+    });
+    try {
+      const { result } = setup();
+      await waitFor(() =>
+        expect(result.current.history.sceneInfo).not.toBeNull(),
+      );
+      await act(async () => {
+        await result.current.persistence.saveCurrentScene();
+      });
+      expect(toastMock.success).toHaveBeenCalledWith(
+        'monitoring:editor.statusSaved',
+        { toasterId: 'scene-editor' },
+      );
+    } finally {
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        get: () => null,
+      });
+    }
   });
 
   it('운영(localStorage 전용) 저장은 "이 브라우저에만" 고지 + 힌트를 토스트로 알린다', async () => {
@@ -188,6 +214,8 @@ describe('저장', () => {
       'monitoring:editor.statusSavedLocalOnly',
       { description: 'monitoring:editor.statusSavedLocalOnlyHint' },
     );
+    // 비전체화면 — toasterId 가 붙지 않아야 전역 Toaster 가 그린다.
+    expect(toastMock.success.mock.calls[0][1]).not.toHaveProperty('toasterId');
   });
 
   it('씬이 없으면 저장하지 않고 false', async () => {
