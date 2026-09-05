@@ -21,6 +21,10 @@ import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
+import {
+  computeTopViewPose,
+  ensureTopViewTilt,
+} from '@crane/core/lib/top-view-pose';
 import { PortalContainerProvider } from '../molecules/portal-container';
 import {
   SceneToolbarButton,
@@ -48,7 +52,8 @@ interface ThreeSceneViewerCameraPreset {
   /**
    * 탑뷰가 한 화면에 담을 영역(보통 지도 bounds). 있으면 topViewPosition/
    * Target 대신 이 박스가 세로 fov·종횡비 기준으로 꽉 차는 높이에서
-   * 정수직으로 내려다본다. 없거나 비어 있으면 기존 프리셋 경로.
+   * 정수직에 가깝게(미세 tilt, @crane/core top-view-pose) 내려다본다.
+   * 없거나 비어 있으면 기존 프리셋 경로.
    */
   getTopViewBounds?: () => Box3 | null;
 }
@@ -112,15 +117,6 @@ const ZOOM_STEP = 1.2;
  * 안까지 파고들어 60으로 올렸다.
  */
 const MIN_CAMERA_DISTANCE = 60;
-const DEFAULT_CAMERA_UP = new Vector3(0, 1, 0);
-const TOP_VIEW_CAMERA_UP = new Vector3(0, 0, -1);
-/** 탑뷰 fit 여백 — 지도 가장자리가 화면 끝에 닿지 않게 8%. */
-const TOP_VIEW_PADDING = 1.08;
-/**
- * 탑뷰 fit 높이 상한. OrbitControls maxDistance(3000)와 같은 값 — 더 높이
- * 올리면 다음 update()에서 반경이 잘려 카메라가 튄다.
- */
-const TOP_VIEW_MAX_DISTANCE = 3000;
 
 /**
  * 브라우저가 WebGL을 지원하는지 검사. 모듈 스코프에서 1회만 평가하고
@@ -162,57 +158,41 @@ function SceneControlsBridge({
   const invalidate = useThree((state) => state.invalidate);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
-  const defaultPosition = useMemo(
-    () => toVector3(cameraPreset.defaultPosition),
-    [cameraPreset.defaultPosition],
-  );
-  const defaultTarget = useMemo(
-    () => toVector3(cameraPreset.defaultTarget),
-    [cameraPreset.defaultTarget],
-  );
+  const { defaultPosition, defaultTarget } = cameraPreset;
   const defaultDistance = useMemo(() => {
-    const distance = defaultPosition.distanceTo(defaultTarget);
+    const distance = toVector3(defaultPosition).distanceTo(
+      toVector3(defaultTarget),
+    );
     return distance > 0 ? distance : 1;
   }, [defaultPosition, defaultTarget]);
-  const topViewTarget = useMemo(
-    () => toVector3(cameraPreset.topViewTarget ?? cameraPreset.defaultTarget),
-    [cameraPreset.defaultTarget, cameraPreset.topViewTarget],
+  const topViewTarget = cameraPreset.topViewTarget ?? defaultTarget;
+  // 프리셋 폴백은 타깃 정확히 위(정수직)다. 정규 tilt 는 applyCameraState 의
+  // ensureTopViewTilt 가 붙인다.
+  const topViewPosition = useMemo<Vector3Tuple>(
+    () =>
+      cameraPreset.topViewPosition ?? [
+        topViewTarget[0],
+        topViewTarget[1] + defaultDistance,
+        topViewTarget[2],
+      ],
+    [cameraPreset.topViewPosition, defaultDistance, topViewTarget],
   );
-  const topViewPosition = useMemo(() => {
-    if (cameraPreset.topViewPosition) {
-      return toVector3(cameraPreset.topViewPosition);
-    }
 
-    return new Vector3(
-      topViewTarget.x,
-      topViewTarget.y + defaultDistance,
-      topViewTarget.z,
-    );
-  }, [cameraPreset.topViewPosition, defaultDistance, topViewTarget]);
-
+  // 카메라 up 은 항상 +Y(three 기본)다. 탑뷰도 up 을 바꾸지 않고 카메라를
+  // 미세하게 기울여 만든다 — 이유는 @crane/core top-view-pose 의 TOP_VIEW_TILT
+  // 주석. 정수직 포즈(사이트 프리셋·옛 북마크)는 ensureTopViewTilt 로
+  // 같은 정규 포즈로 바꿔 lookAt 이 퇴화하지 않게 한다.
   const applyCameraState = useCallback(
-    (position: Vector3, target: Vector3, up: Vector3) => {
+    (position: Vector3Tuple, target: Vector3Tuple) => {
       const controls = controlsRef.current;
 
       if (!controls) {
         return;
       }
 
-      camera.position.copy(position);
-      camera.up.copy(up);
-      controls.target.copy(target);
-      camera.lookAt(target);
-
-      // OrbitControls는 극각을 camera.up 기준으로 잰다. 탑뷰(up=-Z)에서는
-      // 타깃 위의 카메라가 phi 90°라, 직전 프레임에 +Y 기준으로 계산된
-      // maxPolarAngle(features CameraAboveSea)이 남아 있으면 아래 update()가
-      // 그 각도로 잘라 카메라가 기운다(타깃이 지하일수록 크게). up이 +Y가
-      // 아닌 포즈에는 극각 제한을 풀고 적용한다 — 이후 프레임은 CameraAboveSea가
-      // up≠+Y를 보고 π를 유지한다.
-      if (Math.abs(up.y - 1) > 1e-6) {
-        controls.minPolarAngle = 0;
-        controls.maxPolarAngle = Math.PI;
-      }
+      camera.position.fromArray(ensureTopViewTilt(position, target));
+      controls.target.fromArray(target);
+      camera.lookAt(controls.target);
 
       // 감쇠(damping)를 잠시 끄고 update() 한다. 켠 채로 부르면 직전 드래그의
       // 잔여 관성이 남아 있다가 이후 프레임에서 계속 적용돼, 방금 맞춘 포즈가
@@ -229,35 +209,23 @@ function SceneControlsBridge({
   );
 
   const reset = useCallback(() => {
-    applyCameraState(defaultPosition, defaultTarget, DEFAULT_CAMERA_UP);
+    applyCameraState(defaultPosition, defaultTarget);
   }, [applyCameraState, defaultPosition, defaultTarget]);
 
   const getTopViewBounds = cameraPreset.getTopViewBounds;
   const moveToTopView = useCallback(() => {
     const bounds = getTopViewBounds?.();
     const perspective = camera as PerspectiveCamera;
-    if (bounds && !bounds.isEmpty() && perspective.isPerspectiveCamera) {
-      // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이. 가로는 종횡비로
-      // 환산해 둘 중 큰 쪽을 쓴다.
-      const center = bounds.getCenter(new Vector3());
-      const size = bounds.getSize(new Vector3());
-      const halfHeight = Math.max(
-        size.z / 2,
-        size.x / (2 * perspective.aspect),
-      );
-      const halfFov = (perspective.fov * Math.PI) / 360;
-      const distance = Math.min(
-        (halfHeight / Math.tan(halfFov)) * TOP_VIEW_PADDING,
-        TOP_VIEW_MAX_DISTANCE,
-      );
-      applyCameraState(
-        new Vector3(center.x, bounds.max.y + distance, center.z),
-        center,
-        TOP_VIEW_CAMERA_UP,
-      );
+    // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이(편집기와 같은 함수).
+    const pose =
+      bounds && perspective.isPerspectiveCamera
+        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov)
+        : null;
+    if (pose) {
+      applyCameraState(pose.position, pose.target);
       return;
     }
-    applyCameraState(topViewPosition, topViewTarget, TOP_VIEW_CAMERA_UP);
+    applyCameraState(topViewPosition, topViewTarget);
   }, [
     applyCameraState,
     camera,
@@ -305,11 +273,7 @@ function SceneControlsBridge({
 
   const moveTo = useCallback(
     (position: Vector3Tuple, target: Vector3Tuple) => {
-      applyCameraState(
-        toVector3(position),
-        toVector3(target),
-        DEFAULT_CAMERA_UP,
-      );
+      applyCameraState(position, target);
     },
     [applyCameraState],
   );

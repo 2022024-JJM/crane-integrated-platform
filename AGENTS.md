@@ -177,6 +177,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 테마 / 사이드바 / 헤더 표시 옵션 | `packages/core/src/lib/{theme,sidebar,header-display-settings}-context.tsx` |
 | 네비게이션 구성 | `packages/widgets/src/layout/config/navigation.ts` |
 | 공용 3D viewer shell | `packages/ui/src/organisms/three-scene-viewer.tsx` |
+| 탑뷰 포즈 계산(정수직 회피 tilt, 뷰어·편집기 공용) | `packages/core/src/lib/top-view-pose.ts` (`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
 | 3D 런타임 상태(Zustand) | `packages/features/src/3d/model/` |
 | 3D editor session/history/persistence | `packages/widgets/src/scene-editor/model/` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `scene-file-registry.ts` |
@@ -236,6 +237,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 3D scene 편집 결과는 dev server 경유로 `apps/shell/public/scenes/*.json` 에 저장된다. 미들웨어는 `apps/shell/vite.config.ts` 의 `POST /__dev/scene` 이다. 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다. 가상 태그도 같은 방식으로 `POST /__dev/virtual-tags` → `public/simulation/virtual-tags.json` 에 저장되며, 경로 문자열이 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있으니 함께 바꾼다.
 - dev 미들웨어가 `public/` 에 쓰는 디렉토리(`scenes`, `simulation`, `previews`)는 `apps/shell/vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 등록돼 있어야 저장 시 전체 리로드가 나지 않는다(이 플러그인이 public 자산 변경마다 `full-reload` 를 보내는 주체다. Vite 코어는 보내지 않는다). 새 저장 미들웨어를 만들면 그 목록에 추가한다. `server.watch.ignored` 로 막지 않는다 — Vite 는 워처가 유지하는 `publicFiles` 집합에 있는 파일만 서빙해서, 무시된 디렉토리에 기동 후 생긴 파일은 재시작 전까지 404 가 된다.
+- **카메라 `up` 은 항상 +Y 로 두고, 탑뷰는 `packages/core/src/lib/top-view-pose.ts` 의 미세 tilt(`TOP_VIEW_TILT`)로 만든다.** 탑뷰용으로 `camera.up` 을 바꾸면 OrbitControls 극점이 틀어져 회전이 어색하고, `{position, target}` 만 저장하는 포즈(포커스 복귀·북마크·`SavedCameraInfo`)가 up 을 되살릴 수 없어 복원 시 화면이 돌아간다. up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 뷰어 `applyCameraState` 는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다(사이트 프리셋 `topViewPosition: [0,30,0]`·옛 북마크 방어). 2026-09-05 에 뷰어의 `up=(0,0,-1)` 탑뷰를 이 방식으로 통일했다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다. `packages/features/src/3d/lib/scene-shadow.ts` 가 이 원칙의 선례이고, 그 파일 주석이 이유(react-refresh 규칙)까지 설명한다.
 - **기즈모 스냅은 three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 에 맡기지 않는다.** local 공간에서는 격자가 객체의 회전 프레임에 놓여 yaw 로 돌아간 모델의 X·Z 저장값이 격자를 벗어나고, world 회전은 델타 기준이라 시작 소수점이 남는다. 스냅은 `packages/features/src/3d/lib/snap-transform.ts` 의 순수 함수가 **저장값(부모 프레임 위치 m · 오일러 도 · 배율)** 기준으로 하며, 기즈모 경로(`use-scene-transform.ts` liveSync — 드래그 시작 대비 변한 축만)와 인스펙터 스테퍼(`InputNumber` 의 `stepValue` 에 `stepOnGrid` 주입)가 같은 함수를 쓴다. 직접 타이핑한 값은 스냅하지 않는다.
 - 루트 태그 맵핑이 있는 모델은 기즈모 드래그가 끝나는 프레임에 `use-rig-driver.ts` 가 루트 rest 를 **현재 자세**로 다시 잡는다(handoff, `reanchorRootIfMoved`). 커밋된 새 배치값은 React 렌더 + passive effect 를 거쳐야 드라이버에 도착하므로, 그 전 프레임에 옛 rest 로 되돌리면 모델이 이전 위치로 한 번 튄다. 드라이버가 마지막으로 적용한 자세 그대로인 루트(기즈모가 안 건드린 것)는 rest 를 유지한다. 드래그 시작 자세가 rest+Δ 라 커밋값에 Δ 가 흡수되는 문제는 별건으로 남아 있다(`use-rig-driver.test.ts` 의 `it.todo`).

@@ -61,7 +61,7 @@ import {
   computeTopViewFallbackPose,
   computeTopViewPose,
   type CameraPose,
-} from '../lib/top-view-pose';
+} from '@crane/core/lib/top-view-pose';
 import { collectWorldBounds } from '../lib/world-bounds';
 import { EditorGroundGrid } from './editor-ground-grid';
 
@@ -698,7 +698,7 @@ export function SceneObjectsEditCanvas({
     }
   }, [focusSelected, focusSelectedRef]);
 
-  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 lib/top-view-pose 가 하고 여기서는
+  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 @crane/core 의 top-view-pose 가 하고 여기서는
   // OrbitControls 에 적용만 한다(감쇠 처리는 fitToObjects 와 같은 이유).
   const applyCameraPose = useCallback(
     (pose: CameraPose) => {

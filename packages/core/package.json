@@ -30,6 +30,7 @@
     "./lib/use-section-collapse-group": "./src/lib/use-section-collapse-group.ts",
     "./lib/use-fullscreen": "./src/lib/use-fullscreen.ts",
     "./lib/export-csv": "./src/lib/export-csv.ts",
+    "./lib/top-view-pose": "./src/lib/top-view-pose.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
     "./types/navigation": "./src/types/navigation.ts",
