@@ -786,9 +786,11 @@ function ProjectPalettePanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로
-          스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다. */}
-      <div className="border-border flex shrink-0 items-center border-b pt-1">
-        <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다.
+          높이 h-9 는 캔버스 위 EditorHeaderBar·우측 PaletteHeader 와 같은
+          값 — 세 컬럼 하단선을 한 줄에 맞춘다. */}
+      <div className="border-border flex h-9 shrink-0 items-stretch border-b">
+        <div className="flex min-w-0 flex-1 items-stretch gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {PANEL_TABS.map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -804,7 +806,7 @@ function ProjectPalettePanel({
                   });
                 }}
                 className={cn(
-                  'shrink-0 cursor-pointer border-b-2 px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors',
+                  'flex h-full shrink-0 cursor-pointer items-center border-b-2 px-3 text-[11px] font-medium whitespace-nowrap transition-colors',
                   isActive
                     ? 'border-primary text-foreground'
                     : 'text-muted-foreground hover:text-foreground border-transparent',

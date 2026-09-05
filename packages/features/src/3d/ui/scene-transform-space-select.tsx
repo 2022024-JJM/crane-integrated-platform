@@ -47,12 +47,12 @@ export function SceneTransformSpaceSelect({
       }}
       disabled={disabled}
     >
-      {/* 도구 모음의 고스트 아이콘 버튼과 같은 높이(h-8)·언어(ghost). */}
+      {/* 도구 모음의 고스트 아이콘 버튼과 같은 높이(h-7)·언어(ghost). */}
       <SelectTrigger
         variant="ghost"
         aria-label={t('monitoring:transform.space.title')}
         label={t(`monitoring:transform.space.${space}`)}
-        className={cn('h-8 rounded-md px-2', className)}
+        className={cn('h-7 rounded-md px-2', className)}
       />
       <SelectPopup align="end">
         {TRANSFORM_SPACES.map((transformSpace) => (
