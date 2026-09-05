@@ -21,14 +21,11 @@ import { useLocation } from 'react-router-dom';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
-import { AppToaster } from '@crane/ui/organisms/app-toaster';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
-import { PortalContainerProvider } from '@crane/ui/molecules/portal-container';
-import { SCENE_EDITOR_TOASTER_ID } from '../lib/editor-toast';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import { EditorHeaderBar } from './editor-header-bar';
 import { EditorSelectionBar } from './editor-selection-bar';
@@ -105,17 +102,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
-  // 전체화면 루트는 페이지 루트 — 패널·헤더 바까지 함께 올린다. 그 안의
-  // 포털(툴팁·팝오버·셀렉트·다이얼로그)은 PortalContainerProvider 로
-  // 루트 안에 렌더해야 전체화면 top layer 에 가려지지 않는다. sonner 는
-  // 포털이 아니라 이 Provider 가 못 잡는다 — 루트 안에 두 번째 Toaster 를
-  // 두고 전체화면 중 토스트만 그쪽으로 보낸다(lib/editor-toast.ts).
+  // 전체화면은 문서 전체를 올린다 — AppLayout 이 헤더·사이드바를
+  // 숨기면 이 페이지가 화면을 채운다. 포털·토스트는 손댈 것 없다
+  // (useFullscreen 주석).
   const {
-    rootRef: pageRootRef,
     isFullscreen,
     supported: fullscreenSupported,
     toggleFullscreen,
-  } = useFullscreen<HTMLDivElement>();
+  } = useFullscreen();
   const focusSelectedRef = useRef<(() => void) | null>(null);
   const cameraActionsRef = useRef<SceneEditorCameraActions | null>(null);
   const snapEnabled = useSceneEditorViewStore((state) => state.snapEnabled);
@@ -408,12 +402,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   ]);
 
   return (
-    <PortalContainerProvider container={pageRootRef}>
-      <div
-        ref={pageRootRef}
-        className="bg-muted/20 h-full min-h-0 w-full overflow-hidden"
-      >
-        <AppToaster id={SCENE_EDITOR_TOASTER_ID} />
+    <div className="bg-muted/20 h-full min-h-0 w-full overflow-hidden">
         <SceneUnsavedChangesDialog
           open={unsavedChangesPrompt.open}
           isSaving={isSaving}
@@ -632,7 +621,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           ) : null}
         </ResizablePanelGroup>
       </div>
-    </PortalContainerProvider>
   );
 }
 

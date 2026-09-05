@@ -15,7 +15,6 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import { toast } from 'sonner';
-import { editorToastOptions } from '../lib/editor-toast';
 import { isSceneInfoEqual, sanitizeSceneInfo } from './scene-snapshot';
 
 interface UpdateSceneOptions {
@@ -110,7 +109,6 @@ export function useScenePersistence({
             error instanceof UnknownRegionError
               ? error.message
               : tRef.current('monitoring:editor.loadFailed'),
-            editorToastOptions(),
           );
         }
       }
@@ -171,22 +169,20 @@ export function useScenePersistence({
       // 늘 떠 있으면 경고가 무뎌지고, 정작 알려야 할 순간의 신호가 묻힌다.
       if (isSceneStoredLocallyOnly()) {
         toast.success(t('monitoring:editor.statusSavedLocalOnly'), {
-          ...editorToastOptions(),
           description: t('monitoring:editor.statusSavedLocalOnlyHint'),
         });
       } else {
-        toast.success(t('monitoring:editor.statusSaved'), editorToastOptions());
+        toast.success(t('monitoring:editor.statusSaved'));
       }
       return true;
     } catch (error) {
       console.error('Failed to save scene info.', error);
       // 미등록 region은 재시도해도 결과가 같다 — 원인을 밝히고 Retry는 뺀다.
       if (error instanceof UnknownRegionError) {
-        toast.error(error.message, editorToastOptions());
+        toast.error(error.message);
         return false;
       }
       toast.error(t('monitoring:editor.saveFailed'), {
-        ...editorToastOptions(),
         action: {
           label: t('monitoring:editor.retry'),
           onClick: () => {

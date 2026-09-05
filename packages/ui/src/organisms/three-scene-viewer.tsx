@@ -366,14 +366,14 @@ export function ThreeSceneViewer({
   onControllerReady,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
-  // 전체화면 루트 = 뷰어 루트. 같은 ref 가 아래 PortalContainerProvider 의
-  // 컨테이너다 — 전체화면 중에도 툴팁·팝오버가 루트 안에 렌더된다.
+  // 전체화면은 문서 전체를 올린다(useFullscreen 주석). 이 뷰어가
+  // 켠 동안은 루트를 fixed inset-0 으로 띄워 페이지의 나머지를 덮는다.
   const {
-    rootRef,
     isFullscreen,
     supported: fullscreenSupported,
     toggleFullscreen,
-  } = useFullscreen<HTMLDivElement>();
+  } = useFullscreen();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<SceneController | null>(null);
 
   const setController = useCallback(
@@ -489,16 +489,21 @@ export function ThreeSceneViewer({
   return (
     <div
       ref={rootRef}
-      className="relative h-full min-h-0 w-full overflow-hidden"
+      className={
+        isFullscreen
+          ? // 전체화면 — 페이지 슬롯을 떠나 뷰포트를 채운다. z 는 base-ui 포털
+            // (z-9999)·토스트보다 낮게.
+            'bg-background fixed inset-0 z-50 overflow-hidden'
+          : 'relative h-full min-h-0 w-full overflow-hidden'
+      }
     >
-      {/* 전체화면(top layer)에서는 body 포털이 루트 위로 올라오지 못하므로
-          툴팁·팝오버·컨텍스트 메뉴·셀렉트를 루트 안에 렌더한다.
-          전체화면 여부로 컨테이너를 바꾸면(body↔root) 안 된다 — 닫히는 중인
-          팝업이 새 컨테이너로 리마운트되는데, base-ui는 리마운트되지 않는 Root에서
-          옛 요소의 퇴장 애니메이션 완료를 기다리다(useAnimationsFinished,
-          abort를 완료로 안 침) unmount를 영영 놓쳐 툴팁이 화면에 남는다.
-          평소에도 루트 안에 두면 overflow-hidden에 잘리지 않고 floating-ui가
-          루트 안쪽으로 밀어준다(프리뷰 모달 180px 높이에서도 팝오버가 들어간다). */}
+      {/* 툴팁·팝오버·컨텍스트 메뉴·셀렉트를 루트 안에 렌더한다 — overflow-hidden
+          에 잘리지 않고 floating-ui가 루트 안쪽으로 밀어준다(프리뷰 모달 180px
+          높이에서도 팝오버가 들어간다). 컨테이너를 도중에 바꾸면(body↔root)
+          안 된다 — 닫히는 중인 팝업이 새 컨테이너로 리마운트되는데, base-ui는
+          리마운트되지 않는 Root에서 옛 요소의 퇴장 애니메이션 완료를
+          기다리다(useAnimationsFinished, abort를 완료로 안 침) unmount를 영영
+          놓쳐 툴팁이 화면에 남는다. */}
       <PortalContainerProvider container={rootRef}>
         {/* 도킹 프레임: [캔버스 행: [캔버스 영역][CMMS 분할][우측 독 placeholder]].
             placeholder 는 고정된 독의 크기만 차지하는 빈 요소다 — 독 내용은
