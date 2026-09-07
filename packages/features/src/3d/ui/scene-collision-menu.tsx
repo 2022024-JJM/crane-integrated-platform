@@ -79,7 +79,7 @@ export function SceneCollisionMenu({
           {historyCount > 0 ? (
             <span
               aria-hidden
-              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[9px] leading-none font-bold text-white"
+              className="ring-background absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[9px] leading-none font-bold text-white tabular-nums ring-2"
             >
               {historyCount}
             </span>
