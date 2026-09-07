@@ -80,8 +80,11 @@ export { useSceneTransformModeStore } from './model/use-scene-transform-mode-sto
 export { RigDriver } from './ui/rig-driver';
 export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
-export { SceneCollisionOverlay } from './ui/scene-collision-overlay';
-export { SceneCollisionToggle } from './ui/scene-collision-toggle';
+export { SceneCollisionMenu } from './ui/scene-collision-menu';
+export {
+  SceneCollisionPanel,
+  type SceneCollisionRunner,
+} from './ui/scene-collision-panel';
 export {
   useSceneCollisionStore,
   type SceneCollisionActiveMode,

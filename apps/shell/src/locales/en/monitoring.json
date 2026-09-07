@@ -176,7 +176,9 @@
       "clearHistory": "Clear history",
       "viewContact": "View contact",
       "deselect": "Deselect",
-      "selectedHint": "Click a record to pause the simulation and return to that pose. Press ▶ to resume where it stopped."
+      "selectedHint": "Click a record to pause the simulation and return to that pose. Press ▶ to resume where it stopped.",
+      "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
+      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -316,11 +318,6 @@
     "saveFailed": "Failed to save virtual tags."
   },
   "sceneCollision": {
-    "title": "Collision detected",
-    "pausedNote": "The simulation has been paused. Press ▶ to resume where it stopped.",
-    "root": "(model root)",
-    "contact": "Contact point (approx.)",
-    "deselect": "Deselect",
-    "viewContact": "View contact"
+    "contact": "Contact point (approx.)"
   }
 }

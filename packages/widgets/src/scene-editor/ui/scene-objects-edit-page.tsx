@@ -9,6 +9,7 @@ import {
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
+  SceneCollisionPanel,
   useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
@@ -34,7 +35,6 @@ import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
-  PaletteCollisionSection,
   PaletteEnvironmentSection,
   PaletteHeader,
   PaletteMapSection,
@@ -866,7 +866,10 @@ function ProjectPalettePanel({
                 managePath={virtualTagsPath}
               />
             ) : activeTab === 'collision' ? (
-              <PaletteCollisionSection onViewCollision={onViewCollision} />
+              <SceneCollisionPanel
+                runner="simulation"
+                onViewCollision={onViewCollision}
+              />
             ) : (
               <PaletteEnvironmentSection
                 environmentId={environmentId}

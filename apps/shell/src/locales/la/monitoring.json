@@ -162,7 +162,9 @@
       "clearHistory": "Memoriam dele",
       "viewContact": "Punctum collisionis vide",
       "deselect": "Selectionem tolle",
-      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat. ▶ preme ut ubi stetit pergat."
+      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat. ▶ preme ut ubi stetit pergat.",
+      "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
+      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
     },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
@@ -302,11 +304,6 @@
     "saveFailed": "Signa virtualia servari non potuerunt."
   },
   "sceneCollision": {
-    "title": "Collisio detecta",
-    "pausedNote": "Simulatio sistitur. ▶ preme ut ubi stetit pergat.",
-    "root": "(radix exempli)",
-    "contact": "Punctum contactus (proximum)",
-    "deselect": "Selectionem tolle",
-    "viewContact": "Punctum collisionis vide"
+    "contact": "Punctum contactus (proximum)"
   }
 }

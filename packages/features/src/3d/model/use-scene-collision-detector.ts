@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { SCAN_BUDGET_MS, SCAN_INTERVAL_MS } from '../lib/scene-collision-pairs';
 import { rigValueStore } from './rig-value-store';
+import { holdRunners } from './scene-collision-hold';
 import { buildCollisionRecord } from './scene-collision-record';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
 import { useActiveTransformStore } from './use-active-transform-store';
@@ -22,10 +23,12 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
  *
  * 충돌을 받으면 기록을 남기고 그 쌍을 억제(메쉬가 떨어질 때까지 재보고
  * 없음)한 채 감시를 계속한다. 모드에 따라 달라지는 것은 화면 쪽뿐이다.
- * - 충돌 시 정지: 러너 정지 → 값 저장소 freeze(스무딩 잔여 수렴 차단) →
- *   박스 고정(pin). ▶ 재생(isRunning false→true)이 resume 으로 고정을 푼다 —
- *   러너는 경과 시간을 보존하므로 멈춘 지점에서 이어진다. 정지 중 기즈모로
- *   떼었다 다시 붙여도 새 충돌로 기록된다.
+ * - 충돌 시 정지: 러너 정지(가상 태그 pause + 실시간 화면 반영 보류,
+ *   scene-collision-hold) → 값 저장소 freeze(스무딩 잔여 수렴 차단) → 박스
+ *   고정(pin). ▶ 재생(isRunning false→true)·재개·오버레이 X 가 resume 으로
+ *   고정을 푼다 — 가상 태그 러너는 경과 시간을 보존하므로 멈춘 지점에서
+ *   이어지고, 실시간은 다음 수신 값부터 따라간다. 정지 중 기즈모로 떼었다
+ *   다시 붙여도 새 충돌로 기록된다.
  * - 정지 안 함: 박스는 FLASH_MS 동안만.
  */
 export function useSceneCollisionDetector({
@@ -84,7 +87,7 @@ export function useSceneCollisionDetector({
     // 다시 붙인 충돌(기즈모·재생)이 보고되지 않는다. 억제는 메쉬가 떨어지면 풀린다.
     sceneCollisionRuntime.suppress(hit.key);
     if (store.pauseOnCollision) {
-      useVirtualTagStore.getState().pause();
+      holdRunners();
       rigValueStore.freeze();
       store.pin(record.id);
     } else {

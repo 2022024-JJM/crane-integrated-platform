@@ -7,6 +7,7 @@ import {
   useSceneCollisionStore,
   type SceneCollisionRecord,
 } from '../use-scene-collision-store';
+import { useRealtimeStore } from '../use-realtime-store';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
 
 function record(
@@ -32,6 +33,7 @@ function reset(enabled = true) {
     activeRecordId: null,
     activeMode: null,
   });
+  useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
 }
 
 let runtimePhase: 'idle' | 'halted' | 'scanning' = 'halted';
@@ -173,6 +175,8 @@ describe('selectRecord / resume', () => {
     useSceneCollisionStore.getState().pushRecord(record(1, values));
     useSceneCollisionStore.getState().selectRecord(1);
     expect(calls).toEqual(['suppress:a|b', 'restore', 'pause']);
+    // 실시간은 화면 반영 보류 — 다음 프레임에 복원이 덮어써지지 않는다.
+    expect(useRealtimeStore.getState().held).toBe(true);
     expect(sceneCollisionRuntime.halt).not.toHaveBeenCalled();
     expect(rigValueStore.restore).toHaveBeenCalledWith(values);
     expect(useSceneCollisionStore.getState()).toMatchObject({
@@ -195,6 +199,7 @@ describe('selectRecord / resume', () => {
     useSceneCollisionStore.getState().selectRecord(1);
     expect(sceneCollisionRuntime.arm).toHaveBeenCalledTimes(1);
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
   });
 
   it('resume 은 enabled 이고 런타임이 halted 일 때만 arm 하고, active 가 없으면 참조 유지', () => {
@@ -228,5 +233,55 @@ describe('selectRecord / resume', () => {
     const idle = useSceneCollisionStore.getState();
     idle.clear();
     expect(useSceneCollisionStore.getState()).toBe(idle);
+  });
+});
+
+describe('실시간 화면 반영 보류(held) 해제 경로', () => {
+  function pinWithHold(): void {
+    const s = useSceneCollisionStore.getState();
+    s.pushRecord(record(1));
+    s.selectRecord(1);
+    expect(useRealtimeStore.getState().held).toBe(true);
+  }
+
+  it.each([
+    ['resume', () => useSceneCollisionStore.getState().resume()],
+    ['clearActive', () => useSceneCollisionStore.getState().clearActive()],
+    ['clearHistory', () => useSceneCollisionStore.getState().clearHistory()],
+    ['clear', () => useSceneCollisionStore.getState().clear()],
+    [
+      'setEnabled(false)',
+      () => useSceneCollisionStore.getState().setEnabled(false),
+    ],
+  ])('%s 는 pinned 을 풀며 실시간 보류도 푼다', (_name, release) => {
+    pinWithHold();
+    release();
+    expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
+  });
+
+  it('setEnabled(true) 와 같은 값 재설정은 보류를 건드리지 않는다', () => {
+    pinWithHold();
+    useSceneCollisionStore.getState().setEnabled(true); // 같은 값
+    expect(useRealtimeStore.getState().held).toBe(true);
+    useSceneCollisionStore.getState().setPauseOnCollision(false);
+    expect(useRealtimeStore.getState().held).toBe(true);
+  });
+
+  it('pin / flash 자체는 보류를 만들지 않는다(검사기가 hold 를 부른다)', () => {
+    const s = useSceneCollisionStore.getState();
+    s.pushRecord(record(1));
+    s.pin(1);
+    expect(useRealtimeStore.getState().held).toBe(false);
+    s.flash(1);
+    vi.advanceTimersByTime(FLASH_MS);
+    expect(useRealtimeStore.getState().held).toBe(false);
+  });
+
+  it('보류가 없는 상태에서 해제 경로를 밟아도 실시간 상태 참조가 유지된다', () => {
+    const before = useRealtimeStore.getState();
+    useSceneCollisionStore.getState().resume();
+    useSceneCollisionStore.getState().clear();
+    expect(useRealtimeStore.getState()).toBe(before);
   });
 });

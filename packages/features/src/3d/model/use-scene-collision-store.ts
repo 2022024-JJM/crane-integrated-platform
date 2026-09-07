@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { FLASH_MS, HISTORY_MAX } from '../lib/scene-collision-pairs';
 import { rigValueStore } from './rig-value-store';
+import { holdRunners, releaseRunners } from './scene-collision-hold';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
-import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
  * 씬 객체 충돌 감지의 React 상태 — 세션 전용(씬 데이터·localStorage 아님).
- * `enabled`·`pauseOnCollision` 은 모니터링(simulation)·에디터가 공유한다.
+ * `enabled`·`pauseOnCollision` 은 모니터링(시뮬레이션·실시간)·에디터가 공유한다.
  *
  * 프레임 루프(scene-collision-runtime)는 여기에 쓰지 않는다. 검사기 훅이
  * 충돌을 받았을 때 기록을 한 번 넣고(`pushRecord`) 정지 모드면 `pin`,
@@ -18,9 +18,13 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
  * 모델이 리마운트돼도 유효하다. `values` 는 충돌 순간 씬 전체 자세
  * (rigValueStore 스냅샷)라 기록을 클릭하면 그 시점으로 돌아간다.
  *
- * 정지·복원 상태(pinned)를 푸는 것은 ▶ 재생이다 — 검사기가 러너의
- * isRunning false→true 전이에서 `resume()` 을 불러 재무장한다. 러너는
- * pause 로 경과 시간을 보존하므로 재생은 멈춘 지점에서 이어진다.
+ * 정지·복원 상태(pinned)를 만들 때 값 생산자를 멈추는 것은 scene-collision-hold
+ * 다(가상 태그 pause + 실시간 화면 반영 보류). pinned 을 떠나는 모든 경로
+ * (`resume`·`clearActive`·`clearHistory`·`clear`·`setEnabled(false)`)가
+ * 실시간 보류를 풀어, 실시간 화면에서 X·재개·기록 초기화 뒤에 보류가 남지
+ * 않는다. 가상 태그는 ▶ 재생이 켠다 — 검사기가 러너의 isRunning false→true
+ * 전이에서 `resume()` 을 불러 재무장하고, 러너는 pause 로 경과 시간을
+ * 보존하므로 재생은 멈춘 지점에서 이어진다.
  */
 
 export interface SceneCollisionRecordParty {
@@ -91,8 +95,18 @@ function cancelFlash(): void {
 
 const INACTIVE = { activeRecordId: null, activeMode: null } as const;
 
-export const useSceneCollisionStore = create<SceneCollisionState>()(
-  (set, get) => ({
+export const useSceneCollisionStore = create<SceneCollisionState>()((
+  set,
+  get,
+) => {
+  /** pinned/flash 해제의 공통 경로 — 타이머 취소, 실시간 보류 해제, 박스 제거. */
+  const deactivate = (): void => {
+    cancelFlash();
+    releaseRunners();
+    if (get().activeRecordId !== null) set(INACTIVE);
+  };
+
+  return {
     enabled: false,
     pauseOnCollision: true,
     history: [],
@@ -103,7 +117,10 @@ export const useSceneCollisionStore = create<SceneCollisionState>()(
 
     setEnabled: (enabled) => {
       if (enabled === get().enabled) return;
-      if (!enabled) cancelFlash();
+      if (!enabled) {
+        cancelFlash();
+        releaseRunners();
+      }
       set(enabled ? { enabled } : { enabled, ...INACTIVE });
     },
 
@@ -149,35 +166,29 @@ export const useSceneCollisionStore = create<SceneCollisionState>()(
       // 않는다. 런타임은 멈추지 않는다(다른 쌍·이후 조작은 계속 감시).
       sceneCollisionRuntime.suppress(record.pairKey);
       rigValueStore.restore(record.values);
-      useVirtualTagStore.getState().pause();
+      holdRunners();
       state.pin(id);
     },
 
     resume: () => {
-      cancelFlash();
       // 정지돼 있던 런타임만 다시 무장한다 — 검사기가 없어(idle) 멈춘 것은 그
       // 검사기의 effect 가 마운트될 때 스스로 arm 한다.
       if (get().enabled && sceneCollisionRuntime.currentPhase === 'halted') {
         sceneCollisionRuntime.arm();
       }
-      if (get().activeRecordId !== null) set(INACTIVE);
+      deactivate();
     },
 
-    clearActive: () => {
-      cancelFlash();
-      if (get().activeRecordId !== null) set(INACTIVE);
-    },
+    clearActive: () => deactivate(),
 
     clearHistory: () => {
       cancelFlash();
+      releaseRunners();
       const state = get();
       if (state.history.length === 0 && state.activeRecordId === null) return;
       set({ history: [], ...INACTIVE });
     },
 
-    clear: () => {
-      cancelFlash();
-      if (get().activeRecordId !== null) set(INACTIVE);
-    },
-  }),
-);
+    clear: () => deactivate(),
+  };
+});

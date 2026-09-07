@@ -32,8 +32,7 @@ import {
 import { RigDriver } from './rig-driver';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
-import { SceneCollisionOverlay } from './scene-collision-overlay';
-import { SceneCollisionToggle } from './scene-collision-toggle';
+import { SceneCollisionMenu } from './scene-collision-menu';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -122,8 +121,10 @@ export function Monitoring3dView({
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const exitFocus = useObjectFocusStore((s) => s.exitFocus);
-  // 충돌 감지는 가상 태그 시뮬레이션 전용 — 실시간·리플레이는 정지시킬 수 없다.
-  const isSimulation = mode === 'simulation';
+  // 충돌 감지는 시뮬레이션·실시간에서 켠다. 실시간 정지는 화면 반영 보류
+  // (scene-collision-hold)다. 리플레이는 기록 재생이라 정지·복원 대상이 아니다.
+  const collisionActive = mode !== 'replay';
+  const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   useEffect(() => {
@@ -241,9 +242,6 @@ export function Monitoring3dView({
             {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
             <SceneLoadingOverlay ready={sceneReady} />
             {focusOverlay}
-            {isSimulation ? (
-              <SceneCollisionOverlay onViewContact={handleViewCollision} />
-            ) : null}
             {overlayExtras}
           </>
         }
@@ -252,12 +250,18 @@ export function Monitoring3dView({
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={
           isDock ? (
-            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글을 붙인다
-            // (실시간 모니터링 화면 공통). 작은 뷰(top-right)에는 두지 않는다.
+            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글과 충돌
+            // 감지 팝업을 붙인다(실시간 모니터링 화면 공통). 작은 뷰(top-right)
+            // 에는 두지 않는다.
             <>
               {toolbarExtras}
               <SceneSimulationToggle />
-              {isSimulation ? <SceneCollisionToggle /> : null}
+              {collisionActive ? (
+                <SceneCollisionMenu
+                  runner={collisionRunner}
+                  onViewCollision={handleViewCollision}
+                />
+              ) : null}
             </>
           ) : (
             toolbarExtras
@@ -294,7 +298,7 @@ export function Monitoring3dView({
           <RigDriver sceneInfo={sceneInfo} />
           {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
               실행되므로 노드가 움직인 뒤 검사한다. */}
-          {isSimulation ? (
+          {collisionActive ? (
             <SceneCollisionDetector
               sceneInfo={sceneInfo}
               enabled={collisionEnabled}

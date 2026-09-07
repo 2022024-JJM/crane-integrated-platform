@@ -300,8 +300,7 @@
     "dockTools": "Moderamina visus",
     "simulationPlay": "Simulationem age",
     "simulationPause": "Simulationem siste",
-    "collisionOn": "Collisionis detectionem accende",
-    "collisionOff": "Collisionis detectionem exstingue",
+    "collisionMenu": "Collisionis detectio",
     "collisionBvhHint": "Inspectio accurata paucis secundis post exempla onerata parata est."
   },
   "undo": "Revoca"

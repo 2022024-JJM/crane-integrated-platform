@@ -20,6 +20,7 @@ import { sceneCollisionRuntime } from '../scene-collision-runtime';
 import { useActiveTransformStore } from '../use-active-transform-store';
 import { useSceneCollisionDetector } from '../use-scene-collision-detector';
 import { useSceneCollisionStore } from '../use-scene-collision-store';
+import { useRealtimeStore } from '../use-realtime-store';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
 
 /** R3F 프레임 루프를 가로챈다(use-rig-driver.test 와 같은 방식). */
@@ -99,6 +100,7 @@ beforeEach(() => {
     activeMode: null,
   });
   useVirtualTagStore.setState({ isRunning: true });
+  useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
   useActiveTransformStore.getState().end();
   captured.frameCallback = null;
 });
@@ -171,6 +173,8 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
       activeMode: 'pinned',
     });
     expect(pause).toHaveBeenCalledTimes(1);
+    // 실시간(WebSocket)은 화면 반영을 보류한다.
+    expect(useRealtimeStore.getState().held).toBe(true);
     // 런타임은 멈추지 않고 그 쌍만 억제된다.
     expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
     expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(true);
@@ -265,6 +269,7 @@ describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
     expect(state.history).toHaveLength(1);
     expect(state.activeMode).toBe('flash');
     expect(pause).not.toHaveBeenCalled();
+    expect(useRealtimeStore.getState().held).toBe(false);
     expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
 
     moveX(a, 4.7);
@@ -300,6 +305,7 @@ describe('useSceneCollisionDetector — 수명', () => {
       values: [],
     });
     useSceneCollisionStore.getState().pin(7);
+    useRealtimeStore.getState().hold();
     const { rerender, unmount } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useSceneCollisionDetector({ sceneInfo: scene([]), enabled }),
@@ -309,6 +315,8 @@ describe('useSceneCollisionDetector — 수명', () => {
     rerender({ enabled: false });
     expect(disarm).toHaveBeenCalledTimes(1);
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    // 실시간 보류가 검사기 없이 남지 않는다.
+    expect(useRealtimeStore.getState().held).toBe(false);
     expect(useSceneCollisionStore.getState().history).toHaveLength(1);
     rerender({ enabled: true });
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');

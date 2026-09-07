@@ -300,8 +300,7 @@
     "dockTools": "View controls",
     "simulationPlay": "Run simulation",
     "simulationPause": "Stop simulation",
-    "collisionOn": "Enable collision detection",
-    "collisionOff": "Disable collision detection",
+    "collisionMenu": "Collision detection",
     "collisionBvhHint": "Precise checks become available a few seconds after models load."
   },
   "undo": "Undo"
