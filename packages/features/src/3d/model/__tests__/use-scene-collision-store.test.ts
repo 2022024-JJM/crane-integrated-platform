@@ -45,6 +45,7 @@ beforeEach(() => {
   );
   vi.spyOn(sceneCollisionRuntime, 'arm').mockImplementation(() => {});
   vi.spyOn(sceneCollisionRuntime, 'halt').mockImplementation(() => {});
+  vi.spyOn(sceneCollisionRuntime, 'suppress').mockImplementation(() => {});
   vi.spyOn(rigValueStore, 'restore').mockImplementation(() => {});
   useVirtualTagStore.setState({ isRunning: true });
 });
@@ -154,10 +155,10 @@ describe('pin / flash', () => {
 });
 
 describe('selectRecord / resume', () => {
-  it('기록 클릭은 런타임 정지 → 값 복원 → 러너 정지 → pin 순서로 진행한다', () => {
+  it('기록 클릭은 쌍 억제 → 값 복원 → 러너 정지 → pin 순서로 진행하고 런타임을 멈추지 않는다', () => {
     const calls: string[] = [];
-    vi.mocked(sceneCollisionRuntime.halt).mockImplementation(() => {
-      calls.push('halt');
+    vi.mocked(sceneCollisionRuntime.suppress).mockImplementation((key) => {
+      calls.push(`suppress:${key}`);
     });
     vi.mocked(rigValueStore.restore).mockImplementation(() => {
       calls.push('restore');
@@ -171,7 +172,8 @@ describe('selectRecord / resume', () => {
     const values: Array<[string, number]> = [['a/j', 3]];
     useSceneCollisionStore.getState().pushRecord(record(1, values));
     useSceneCollisionStore.getState().selectRecord(1);
-    expect(calls).toEqual(['halt', 'restore', 'pause']);
+    expect(calls).toEqual(['suppress:a|b', 'restore', 'pause']);
+    expect(sceneCollisionRuntime.halt).not.toHaveBeenCalled();
     expect(rigValueStore.restore).toHaveBeenCalledWith(values);
     expect(useSceneCollisionStore.getState()).toMatchObject({
       activeRecordId: 1,
@@ -183,7 +185,7 @@ describe('selectRecord / resume', () => {
     const before = useSceneCollisionStore.getState();
     before.selectRecord(42);
     expect(useSceneCollisionStore.getState()).toBe(before);
-    expect(sceneCollisionRuntime.halt).not.toHaveBeenCalled();
+    expect(sceneCollisionRuntime.suppress).not.toHaveBeenCalled();
   });
 
   it('이미 고정된 같은 기록을 다시 클릭하면 resume — active 해제 + 정지된 런타임 재무장', () => {

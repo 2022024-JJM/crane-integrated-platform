@@ -142,7 +142,7 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
 });
 
 describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
-  it('기록 → 런타임 halt → 러너 정지 → freeze → pin, 이후 스캔은 조용하다', () => {
+  it('기록 → 쌍 억제 → 러너 정지 → freeze → pin, 감시는 계속되며 같은 자세면 조용하다', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
     const pause = vi.fn(() =>
@@ -171,7 +171,9 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
       activeMode: 'pinned',
     });
     expect(pause).toHaveBeenCalledTimes(1);
-    expect(sceneCollisionRuntime.currentPhase).toBe('halted');
+    // 런타임은 멈추지 않고 그 쌍만 억제된다.
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(true);
     for (let i = 0; i < 30; i += 1) rigValueStore.step(1 / 60);
     expect(rigValueStore.get('a/j')).toBe(midway);
 
@@ -180,7 +182,7 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     expect(useSceneCollisionStore.getState()).toBe(state);
   });
 
-  it('▶ 재생(isRunning false→true)이 resume 을 불러 재무장하고, 같은 방향이 아닌 전이는 무시한다', () => {
+  it('정지된 채 기즈모로 떼었다가 다시 붙이면 두 번째 기록이 쌓이고 pin 이 옮겨간다', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
     useVirtualTagStore.setState({
@@ -195,7 +197,39 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     scan();
     moveX(a, 4.6);
     scan();
-    expect(sceneCollisionRuntime.currentPhase).toBe('halted');
+    const first = useSceneCollisionStore.getState().history[0];
+    expect(useSceneCollisionStore.getState().activeRecordId).toBe(first.id);
+
+    moveX(a, 0); // 떼어 놓음 — 억제 해제
+    scan();
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(false);
+    moveX(a, 4.6); // 다시 붙임
+    scan();
+    const state = useSceneCollisionStore.getState();
+    expect(state.history).toHaveLength(2);
+    expect(state.history[0].id).not.toBe(first.id);
+    expect(state).toMatchObject({
+      activeRecordId: state.history[0].id,
+      activeMode: 'pinned',
+    });
+  });
+
+  it('▶ 재생(isRunning false→true)이 resume 을 불러 고정을 풀고, 같은 방향이 아닌 전이는 무시한다', () => {
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    useVirtualTagStore.setState({
+      pause: () => useVirtualTagStore.setState({ isRunning: false }),
+    });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+      }),
+    );
+    scan();
+    moveX(a, 4.6);
+    scan();
+    expect(useSceneCollisionStore.getState().activeMode).toBe('pinned');
     const resume = vi.spyOn(useSceneCollisionStore.getState(), 'resume');
     useSceneCollisionStore.setState({ resume });
 
@@ -203,7 +237,8 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     expect(resume).not.toHaveBeenCalled();
     act(() => useVirtualTagStore.setState({ isRunning: true })); // false→true
     expect(resume).toHaveBeenCalledTimes(1);
-    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    // 런타임은 멈춘 적이 없으니 그대로 scanning, 고정만 풀린다.
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
     act(() => useVirtualTagStore.setState({ isRunning: true })); // true→true
     expect(resume).toHaveBeenCalledTimes(1);

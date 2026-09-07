@@ -7,7 +7,7 @@ import {
   type Object3D,
 } from 'three';
 import { OBB } from 'three/examples/jsm/math/OBB.js';
-import type { MeshBVH } from 'three-mesh-bvh';
+import type { HitPointInfo, MeshBVH } from 'three-mesh-bvh';
 
 /**
  * 씬 객체 충돌 감지의 기하 프리미티브 — 3단계(AABB → OBB → 삼각형) 각각의
@@ -28,6 +28,8 @@ type BvhGeometry = BufferGeometry & { boundsTree?: MeshBVH };
 const _obbA = new OBB();
 const _obbB = new OBB();
 const _toA = new Matrix4();
+const _hitA = {} as HitPointInfo;
+const _hitB = {} as HitPointInfo;
 const _boxA = new Box3();
 const _boxB = new Box3();
 const _center = new Vector3();
@@ -79,14 +81,20 @@ export function meshWorldBox(mesh: Mesh, target: Box3): Box3 {
  * 두 메쉬의 월드 OBB(로컬 박스 × matrixWorld)가 겹치는지 — SAT 15축은
  * three OBB 가 내장한다. AABB 는 겹치지만 회전한 긴 붐처럼 실제로는 떨어진
  * 쌍을 삼각형 단계 전에 걸러 BVH 호출을 크게 줄인다.
+ *
+ * `margin` 을 주면 b 의 OBB 를 각 축으로 그만큼 부풀려 판정한다 — 억제 해제
+ * 히스테리시스용. 간격이 정확히 margin 이면 닿은 것(겹침)으로 본다.
+ * (three `intersectsOBB` 의 epsilon 인자는 회전 행렬 절댓값에 더하는 수치
+ * 안정용이라 거리 여유로 쓸 수 없다.)
  */
-export function meshObbsIntersect(a: Mesh, b: Mesh): boolean {
+export function meshObbsIntersect(a: Mesh, b: Mesh, margin = 0): boolean {
   const ga = a.geometry as BufferGeometry;
   const gb = b.geometry as BufferGeometry;
   if (!ga.boundingBox) ga.computeBoundingBox();
   if (!gb.boundingBox) gb.computeBoundingBox();
   _obbA.fromBox3(ga.boundingBox as Box3).applyMatrix4(a.matrixWorld);
   _obbB.fromBox3(gb.boundingBox as Box3).applyMatrix4(b.matrixWorld);
+  if (Number.isFinite(margin) && margin > 0) _obbB.halfSize.addScalar(margin);
   return _obbA.intersectsOBB(_obbB);
 }
 
@@ -111,6 +119,44 @@ export function meshesIntersectExact(a: Mesh, b: Mesh): boolean | null {
   // 지오메트리를 BVH(A) 로컬 프레임으로 보내는 행렬이다.
   _toA.copy(a.matrixWorld).invert().multiply(b.matrixWorld);
   return ga.boundsTree.intersectsGeometry(gb, _toA);
+}
+
+/**
+ * 두 메쉬의 삼각형 사이 최단 거리가 `maxDistance` **이하**인지(정확값 포함).
+ * 억제 해제의 마지막 단계 — 단일 메쉬 크레인처럼 OBB 가 실루엣 전체를 감싸
+ * 두 OBB 가 계속 겹쳐도, 삼각형끼리 떨어졌으면 "분리" 로 봐야 재충돌이
+ * 다시 보고된다. 속이 빈 트러스 안에 상대가 들어와 있는 경우도 같다.
+ *
+ * three-mesh-bvh `closestPointToGeometry` 에 maxThreshold 를 주면 그 거리
+ * 안의 노드 쌍만 탐색하고 없으면 null 로 곧바로 끝난다 — 관통 판정
+ * (intersectsGeometry)과 비슷한 비용. 양쪽 BVH 가 필요하며 없으면 null.
+ */
+export function meshesWithinDistance(
+  a: Mesh,
+  b: Mesh,
+  maxDistance: number,
+): boolean | null {
+  const ga = a.geometry as BvhGeometry;
+  const gb = b.geometry as BvhGeometry;
+  if (!ga.boundsTree || !gb.boundsTree) return null;
+  const limit =
+    Number.isFinite(maxDistance) && maxDistance > 0 ? maxDistance : 0;
+  _toA.copy(a.matrixWorld).invert().multiply(b.matrixWorld);
+  // maxThreshold 는 탐색 가지치기용일 뿐 결과를 걸러 주지 않는다 — 한계 밖의
+  // 최근접점도 그대로 돌려주므로 거리는 직접 비교한다(정확값 포함). 가지치기가
+  // `dist < maxThreshold` 라 정확값이 잘리지 않게 한 ulp 더 준다.
+  const threshold = limit + Math.max(limit, 1) * Number.EPSILON * 4;
+  const hit = ga.boundsTree.closestPointToGeometry(
+    gb,
+    _toA,
+    _hitA,
+    _hitB,
+    0,
+    threshold,
+  );
+  // 1.05 - 1 = 0.050000000000000044 같은 부동소수 잡음이 경계 정확값을
+  // "넘김" 으로 뒤집지 않게 상대 허용치를 둔다.
+  return hit !== null && hit.distance <= limit + Math.max(limit, 1) * 1e-9;
 }
 
 /**

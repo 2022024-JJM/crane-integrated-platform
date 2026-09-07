@@ -235,6 +235,103 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     expect(rt.tick(50, 100)?.key).toBe('a|b');
   });
 
+  it('모델 AABB 가 계속 겹쳐 있어도 메쉬가 떨어지면 억제가 풀리고, 다시 붙이면 새 hit', () => {
+    const rt = makeRuntime();
+    // a = 길이 10 짜리 모델(x=0 과 x=10 에 큐브 둘). 모델 AABB 는 -0.5~10.5.
+    const a = mountModel('a', 0);
+    const far = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    far.name = 'Far';
+    far.position.x = 10;
+    (far.geometry as BvhGeometry).boundsTree = new MeshBVH(far.geometry);
+    a.root.add(far);
+    a.root.updateMatrixWorld(true);
+    const b = mountModel('b', 5); // 모델 AABB 안이지만 어느 메쉬와도 4 떨어짐
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    expect(settle(rt)).toBeNull();
+    expect(rt.suppressedKeys.size).toBe(0);
+
+    moveTo(b.root, 0.5);
+    const hit = rt.tick(10, 100);
+    expect(hit?.key).toBe('a|b');
+    rt.suppress('a|b');
+
+    // 메쉬는 떨어졌지만 모델 AABB 는 여전히 겹친다 → 그래도 해제.
+    moveTo(b.root, 5);
+    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+
+    moveTo(b.root, 9.6); // 다른 메쉬(Far)에 붙임
+    expect(
+      rt.tick(30, 100)?.a.nodePath ?? rt.tick(31, 100)?.b.nodePath,
+    ).toBeDefined();
+  });
+
+  it('메쉬 AABB 는 겹치지만 OBB 가 안 겹치면(회전 판) 떨어진 것으로 본다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    a.body.geometry = new BoxGeometry(4, 1, 0.1);
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt); // 겹침 → 기준선 억제
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+
+    // 판을 45° 돌리고 b 를 판의 AABB 안이지만 판 밖(수직 방향 1.7)으로.
+    a.root.rotation.y = Math.PI / 4;
+    a.root.updateMatrixWorld(true);
+    const b = modelObjectRegistry.get('b') as Object3D;
+    b.position.set(1.2, 0, 1.2);
+    b.updateMatrixWorld(true);
+    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
+  it('OBB 는 계속 겹쳐도(큰 상자 안으로 들어간 작은 상자) 삼각형이 떨어지면 억제가 풀린다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    a.body.geometry = new BoxGeometry(4, 4, 4);
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    const b = mountModel('b', 10);
+    b.body.geometry = new BoxGeometry(0.5, 0.5, 0.5);
+    (b.body.geometry as BvhGeometry).boundsTree = new MeshBVH(b.body.geometry);
+    rt.sync([model('a'), model('b', 10)]);
+    rt.arm();
+    settle(rt);
+
+    moveTo(b.root, 2); // 큰 상자의 면(x=2)을 관통
+    expect(rt.tick(10, 100)?.key).toBe('a|b');
+    rt.suppress('a|b');
+
+    moveTo(b.root, 0); // 상자 안쪽 — OBB·AABB 는 겹치지만 면과 1.75 떨어짐
+    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+
+    moveTo(b.root, 2); // 다시 면을 관통 → 새 hit
+    expect(rt.tick(30, 100)?.key).toBe('a|b');
+  });
+
+  it('BVH 가 없는 메쉬 쌍은 OBB 가 겹치는 동안 억제를 유지한다(보수적)', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0, { bvh: false });
+    a.body.geometry = new BoxGeometry(4, 4, 4);
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt);
+    rt.suppress('a|b');
+    const b = modelObjectRegistry.get('b') as Object3D;
+    b.position.x = 0;
+    b.updateMatrixWorld(true);
+    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    b.position.x = 10;
+    b.updateMatrixWorld(true);
+    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
   it('disarm 은 억제 집합까지 비운다', () => {
     const rt = makeRuntime();
     mountModel('a', 0);

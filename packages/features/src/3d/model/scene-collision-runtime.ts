@@ -1,10 +1,10 @@
 import { Box3, Vector3, type Mesh, type Object3D } from 'three';
 import {
   approxContactPoint,
-  boxesSeparated,
   collectCollidableMeshes,
   getMeshPath,
   meshesIntersectExact,
+  meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
   modelObjectRegistry,
@@ -44,8 +44,10 @@ import {
  *
  * 기준선(baseline): `arm()` 직후 첫 스캔에서 이미 겹친 쌍은 보고하지 않고
  * 억제한다 — 에디터에서 겹쳐 놓은 모델 때문에 켜자마자 정지되면 안 된다.
- * 억제(무정지 모드의 보고 뒤 포함)는 두 모델 AABB 가 SEPARATION_MARGIN 보다
- * 떨어지면 풀린다. 그래서 붙은 채로 오래 겹쳐 있어도 기록은 한 번만 남는다.
+ * 억제(보고 뒤 포함)는 두 모델의 **메쉬**가 전부 떨어지면 풀린다
+ * (meshPairsSeparated — AABB 에 SEPARATION_MARGIN 히스테리시스, OBB 로 확인).
+ * 그래서 붙은 채로 오래 겹쳐 있어도 기록은 한 번만 남고, 떨어졌다 다시
+ * 붙으면 새로 보고된다.
  *
  * BVH 는 여기서 빌드하지 않는다(collision-volumes 주석). 없는 메쉬 쌍은
  * 건너뛰고 BVH_RETRY_MS 뒤 다시 본다.
@@ -108,6 +110,7 @@ const _size = new Vector3();
 const _contact = new Vector3();
 const _candA: MeshEntry[] = [];
 const _candB: MeshEntry[] = [];
+const _marginBox = new Box3();
 
 function defaultClock(): number {
   return performance.now();
@@ -188,9 +191,9 @@ export class SceneCollisionRuntime {
   }
 
   /**
-   * 정지. tick 은 arm() 전까지 아무것도 하지 않는다. 충돌을 받은 호출자가
-   * "충돌 시 정지" 모드일 때, 그리고 기록을 클릭해 옛 자세를 복원할 때 부른다
-   * — 복원된 자세는 대개 겹쳐 있어 감시를 계속하면 곧바로 다시 보고된다.
+   * 정지. tick 은 arm() 전까지 아무것도 하지 않는다. 충돌·기록 복원은 이제
+   * 이것을 쓰지 않는다 — 그 쌍만 억제하고 감시를 계속해야 떼었다 다시 붙인
+   * 충돌이 보고된다. 외부 정지가 필요할 때를 위해 남겨 둔다.
    */
   halt(): void {
     this.phase = 'halted';
@@ -248,7 +251,7 @@ export class SceneCollisionRuntime {
       const job = pending[i];
 
       if (job.state === 'suppressed') {
-        if (boxesSeparated(job.a.box, job.b.box, SEPARATION_MARGIN)) {
+        if (this.meshPairsSeparated(job)) {
           this.suppressed.delete(job.key);
           job.state = 'untested';
         }
@@ -295,6 +298,42 @@ export class SceneCollisionRuntime {
 
   private hitMeshA: MeshEntry | null = null;
   private hitMeshB: MeshEntry | null = null;
+
+  /**
+   * 억제 해제 판정 — **메쉬 단위**로 떨어졌는지. 모델 전체 AABB 는 크레인처럼
+   * 길고 큰 모델끼리 붐이 상대 위를 지나는 동안 계속 겹쳐 있어, 그것을
+   * 기준으로 하면 메쉬는 떨어졌는데도 억제가 영영 풀리지 않는다(재충돌 미보고).
+   * 후보 메쉬 쌍 중 하나라도 "AABB 를 SEPARATION_MARGIN 만큼 넓혀도 겹치고,
+   * 같은 margin 으로 부풀린 OBB 도 교차하고, 삼각형 최단 거리까지 margin
+   * 이하" 면 아직 붙은 것이다. 카탈로그 크레인은 대부분 단일 메쉬라 OBB 가
+   * 실루엣 전체를 감싸 두 OBB 가 늘 겹치므로 삼각형 단계가 최종 판정이다.
+   * margin 이 경계 떨림을 막는 히스테리시스다.
+   */
+  private meshPairsSeparated(job: PairJob): boolean {
+    _marginBox.copy(job.b.box).expandByScalar(SEPARATION_MARGIN);
+    if (!job.a.box.intersectsBox(_marginBox)) return true;
+    _candA.length = 0;
+    _candB.length = 0;
+    for (const m of job.a.meshes) {
+      if (m.box.intersectsBox(_marginBox)) _candA.push(m);
+    }
+    _marginBox.copy(job.a.box).expandByScalar(SEPARATION_MARGIN);
+    for (const m of job.b.meshes) {
+      if (m.box.intersectsBox(_marginBox)) _candB.push(m);
+    }
+    for (const ma of _candA) {
+      _marginBox.copy(ma.box).expandByScalar(SEPARATION_MARGIN);
+      for (const mb of _candB) {
+        if (!_marginBox.intersectsBox(mb.box)) continue;
+        if (!meshObbsIntersect(ma.mesh, mb.mesh, SEPARATION_MARGIN)) continue;
+        // OBB 는 실루엣 전체를 감싸므로(단일 메쉬 크레인) 삼각형 거리로 확정한다.
+        // BVH 가 아직 없으면 보수적으로 "붙음" — 빌드되면 다음 dirty 틱에 다시 본다.
+        const near = meshesWithinDistance(ma.mesh, mb.mesh, SEPARATION_MARGIN);
+        if (near === null || near) return false;
+      }
+    }
+    return true;
+  }
 
   /** 모델 AABB 가 겹친 쌍의 메쉬 단위 검사. 'hit' 이면 hitMeshA/B 가 채워진다. */
   private testPair(job: PairJob): 'hit' | 'clear' | 'no-bvh' {

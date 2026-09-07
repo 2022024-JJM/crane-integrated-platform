@@ -17,6 +17,7 @@ import {
   hasBoundsTree,
   isCollidableMesh,
   meshesIntersectExact,
+  meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
 } from '../collision-volumes';
@@ -100,6 +101,20 @@ describe('meshObbsIntersect', () => {
     ).toBe(false);
   });
 
+  it('margin 을 주면 그만큼 떨어진 쌍도 겹친 것으로 본다(간격 = margin 은 겹침, 그보다 크면 분리)', () => {
+    const a = placed(cube(), [0, 0, 0]);
+    expect(meshObbsIntersect(a, placed(cube(), [1.05, 0, 0]))).toBe(false);
+    expect(meshObbsIntersect(a, placed(cube(), [1.05, 0, 0]), 0.05)).toBe(true);
+    expect(meshObbsIntersect(a, placed(cube(), [1.06, 0, 0]), 0.05)).toBe(
+      false,
+    );
+    // 음수·NaN margin 은 0 으로 본다.
+    expect(meshObbsIntersect(a, placed(cube(), [1.05, 0, 0]), -1)).toBe(false);
+    expect(meshObbsIntersect(a, placed(cube(), [1.05, 0, 0]), Number.NaN)).toBe(
+      false,
+    );
+  });
+
   it('45° 회전한 얇은 판 — AABB 는 겹치지만 OBB 는 겹치지 않는다', () => {
     // 길이 4, 두께 0.1 판을 Y축 +45° 회전하면 판은 x = -z 대각선에 놓인다.
     // AABB 는 ±1.45 로 부풀어 (1.2, 0, 1.2) 의 작은 큐브와 겹치지만, 그 점은
@@ -156,6 +171,54 @@ describe('meshesIntersectExact', () => {
     expect(meshesIntersectExact(a, b)).toBe(false);
     const c = withBvh(placed(cube(0.1), [0.08, 0, 0]));
     expect(meshesIntersectExact(a, c)).toBe(true);
+  });
+});
+
+describe('meshesWithinDistance', () => {
+  it('삼각형 최단 거리가 한계 이하면 true(정확값 포함), 넘으면 false', () => {
+    const a = withBvh(placed(cube(), [0, 0, 0]));
+    expect(
+      meshesWithinDistance(a, withBvh(placed(cube(), [1.03, 0, 0])), 0.05),
+    ).toBe(true);
+    expect(
+      meshesWithinDistance(a, withBvh(placed(cube(), [1.05, 0, 0])), 0.05),
+    ).toBe(true);
+    expect(
+      meshesWithinDistance(a, withBvh(placed(cube(), [1.06, 0, 0])), 0.05),
+    ).toBe(false);
+    // 관통 중이면 거리 0 → true
+    expect(
+      meshesWithinDistance(a, withBvh(placed(cube(), [0.5, 0, 0])), 0.05),
+    ).toBe(true);
+  });
+
+  it('OBB·AABB 는 겹치지만 삼각형은 먼 배치(큰 상자 안의 작은 상자, 회전 판)는 false', () => {
+    const big = withBvh(placed(cube(4), [0, 0, 0]));
+    const inside = withBvh(placed(cube(0.5), [0, 0, 0]));
+    expect(meshObbsIntersect(big, inside)).toBe(true);
+    expect(meshesWithinDistance(big, inside, 0.05)).toBe(false);
+
+    const plank = new Mesh(new BoxGeometry(4, 1, 0.1), new MeshBasicMaterial());
+    withBvh(placed(plank, [0, 0, 0], Math.PI / 4));
+    const small = withBvh(placed(cube(0.4), [1.2, 0, 1.2]));
+    expect(meshesWithinDistance(plank, small, 0.05)).toBe(false);
+  });
+
+  it('한쪽이라도 BVH 가 없으면 null, 한계가 0·음수·NaN 이면 접촉(거리 0)만 true', () => {
+    const a = withBvh(placed(cube(), [0, 0, 0]));
+    expect(
+      meshesWithinDistance(a, placed(cube(), [0.5, 0, 0]), 0.05),
+    ).toBeNull();
+    const touching = withBvh(placed(cube(), [1, 0, 0]));
+    expect(meshesWithinDistance(a, touching, 0)).toBe(true);
+    expect(meshesWithinDistance(a, touching, -1)).toBe(true);
+    expect(
+      meshesWithinDistance(
+        a,
+        withBvh(placed(cube(), [1.001, 0, 0])),
+        Number.NaN,
+      ),
+    ).toBe(false);
   });
 });
 

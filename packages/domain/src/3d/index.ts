@@ -75,6 +75,7 @@ export {
   hasBoundsTree,
   isCollidableMesh,
   meshesIntersectExact,
+  meshesWithinDistance,
   meshObbsIntersect,
   meshWorldBox,
 } from './lib/collision-volumes';

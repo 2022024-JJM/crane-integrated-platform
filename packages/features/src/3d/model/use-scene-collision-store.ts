@@ -66,11 +66,11 @@ interface SceneCollisionState {
   /** 무정지 모드 충돌 — FLASH_MS 뒤 자동으로 지운다. 새 flash 가 이전 타이머를 취소. */
   flash: (id: number) => void;
   /**
-   * 기록 클릭. 런타임 정지 → 값 저장소를 그 시점으로 복원 → 러너 정지 → pin.
+   * 기록 클릭. 그 쌍 억제 → 값 저장소를 그 시점으로 복원 → 러너 정지 → pin.
    * 이미 고정된 같은 기록을 다시 클릭하면 resume 과 같다. 없는 id 는 no-op.
    */
   selectRecord: (id: number) => void;
-  /** pinned/flash 해제 + 정지돼 있던 런타임 재무장. 검사기가 ▶ 전이에서 부른다. */
+  /** pinned/flash 해제(+ 외부에서 halt 된 런타임이면 재무장). 검사기가 ▶ 전이에서 부른다. */
   resume: () => void;
   /** 박스만 지운다(런타임 무변경). */
   clearActive: () => void;
@@ -145,8 +145,9 @@ export const useSceneCollisionStore = create<SceneCollisionState>()(
         state.resume();
         return;
       }
-      // 순서: 런타임을 먼저 멈춰야 복원된(겹친) 자세가 새 충돌로 보고되지 않는다.
-      sceneCollisionRuntime.halt();
+      // 복원된 자세는 그 쌍이 겹친 상태다 — 먼저 억제해야 새 충돌로 보고되지
+      // 않는다. 런타임은 멈추지 않는다(다른 쌍·이후 조작은 계속 감시).
+      sceneCollisionRuntime.suppress(record.pairKey);
       rigValueStore.restore(record.values);
       useVirtualTagStore.getState().pause();
       state.pin(id);

@@ -20,12 +20,13 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
  * 기즈모 드래그 중엔 건너뛴다 — 드래그 종료 프레임에 행렬이 바뀌어 다음
  * 스캔에서 검사된다.
  *
- * 충돌을 받으면 기록을 남기고, 모드에 따라 갈린다.
- * - 충돌 시 정지: 런타임 halt → 러너 정지 → 값 저장소 freeze(스무딩 잔여
- *   수렴 차단) → 박스 고정(pin). ▶ 재생(isRunning false→true)이 resume 으로
- *   재무장한다 — 러너는 경과 시간을 보존하므로 멈춘 지점에서 이어진다.
- * - 정지 안 함: 그 쌍만 억제(분리될 때까지 재보고 없음)하고 계속 감시,
- *   박스는 FLASH_MS 동안만.
+ * 충돌을 받으면 기록을 남기고 그 쌍을 억제(메쉬가 떨어질 때까지 재보고
+ * 없음)한 채 감시를 계속한다. 모드에 따라 달라지는 것은 화면 쪽뿐이다.
+ * - 충돌 시 정지: 러너 정지 → 값 저장소 freeze(스무딩 잔여 수렴 차단) →
+ *   박스 고정(pin). ▶ 재생(isRunning false→true)이 resume 으로 고정을 푼다 —
+ *   러너는 경과 시간을 보존하므로 멈춘 지점에서 이어진다. 정지 중 기즈모로
+ *   떼었다 다시 붙여도 새 충돌로 기록된다.
+ * - 정지 안 함: 박스는 FLASH_MS 동안만.
  */
 export function useSceneCollisionDetector({
   sceneInfo,
@@ -79,13 +80,14 @@ export function useSceneCollisionDetector({
     const store = useSceneCollisionStore.getState();
     const record = buildCollisionRecord(hit);
     store.pushRecord(record);
+    // 어느 모드든 그 쌍만 억제하고 감시는 계속한다 — 런타임을 멈추면 떼었다
+    // 다시 붙인 충돌(기즈모·재생)이 보고되지 않는다. 억제는 메쉬가 떨어지면 풀린다.
+    sceneCollisionRuntime.suppress(hit.key);
     if (store.pauseOnCollision) {
-      sceneCollisionRuntime.halt();
       useVirtualTagStore.getState().pause();
       rigValueStore.freeze();
       store.pin(record.id);
     } else {
-      sceneCollisionRuntime.suppress(hit.key);
       store.flash(record.id);
     }
   });
