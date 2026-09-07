@@ -51,6 +51,11 @@ APP_FILES = ("bootstrap.ts", "i18next.d.ts")
 # 셸 AppLayout 이 대신하는 원본 크롬 — 옮기지 않는다 (그것만 쓰던 조각도 함께).
 # shared/widgets 통째가 아니라 크롬만 집어서 뺀다 — dashboard-map 처럼 화면이 쓰는
 # 위젯이 같은 디렉토리에 살기 때문이다.
+#
+# ⚠️ alarm-menu(종 아이콘)는 **껍데기만** 버린다. 판정 규칙(shared/features/alarms)과
+#    entities/alarm 은 그대로 오고, overlay 의 `shell/InshopAlarmFeed.tsx` 가 그 결과를
+#    셸 헤더의 알람 벨(@crane/features/alarm 의 외부 알람 통로)에 실어 보낸다 —
+#    벨이 둘이면 "지금 뭔가 잘못됐나"의 답이 두 군데로 갈린다.
 DROP_DIRS = (
     "shared/widgets/layout-wrapper", "shared/widgets/sidebar", "shared/widgets/header",
     "shared/widgets/footer", "shared/widgets/user-menu", "shared/widgets/alarm-menu",

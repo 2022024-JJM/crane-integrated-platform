@@ -5,6 +5,7 @@ import { useFixedViewport } from '../shared/lib/fixed-viewport/useFixedViewport'
 import { FontScaleProvider } from '../shared/lib/font-scale/FontScaleProvider'
 import { getProcessRoutes } from '../shared/model/processRegistry'
 import { GlobalSearch } from '../shared/features/global-search'
+import { InshopAlarmFeed } from './InshopAlarmFeed'
 import { TourController } from '../shared/features/tour'
 import { Spinner } from '../shared/ui/atoms/Spinner'
 import { useTranslation } from '../shared/lib/i18n/useTranslation'
@@ -139,6 +140,12 @@ function InshopFrame() {
         (원본 헤더의 검색 버튼은 셸 공용 헤더라 옮기지 않는다 — 단축키로 연다.)
       */}
       <GlobalSearch />
+      {/*
+        통합 알람 레일 — 원본은 자체 헤더에 종 아이콘을 세웠다. 여기서는 셸 헤더의
+        알람 벨에 실어 보내고(InshopAlarmFeed), 이 뿌리는 그 공급자를 한 번 마운트만
+        한다. 벨이 둘이면 "지금 뭔가 잘못됐나"의 답이 두 군데로 갈린다.
+      */}
+      <InshopAlarmFeed />
       {/*
         첫 사용 투어(코치마크) — 원본은 LayoutWrapper 에 마운트. 앵커(data-tour)가
         셸 크롬에 있던 스텝(전역 검색 버튼·알람·사이드바 실적)은 스포트라이트 없이
