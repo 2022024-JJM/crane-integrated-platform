@@ -96,10 +96,11 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
    대부분 절감되고 나머지는 HTTP gzip 이 흡수한다. 판단 근거는 항상 로그에 남는다:
 
 ```
-OK  61.79MB -> 7.55MB (-87.8%)  phillyshipyard.glb  [그리드 3.6cm / 층간 8.7cm → meshopt 적용]
+OK  70.99MB -> 7.66MB (-89.2%)  phillyshipyard.glb  [그리드 3.6cm / 층간 8.7cm → meshopt 적용]
 ```
 
-philly 검증값: 그리드 3.65cm, minGap 8.7cm(3.5945m 층 ↔ 3.6823m 지면 상단) → 적용.
+philly 검증값(2026-09-07 V4 반입본): 그리드 3.65cm, minGap 8.7cm(3.5945m 층 ↔ 3.6823m 지면 상단) → 적용.
+삼각형 60.9만 → 42.7만.
 
 ## 5. 튜닝 노브 (스크립트 상수 / env)
 
