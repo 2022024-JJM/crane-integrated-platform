@@ -1,6 +1,9 @@
-import type { Object3D } from 'three';
+import { Object3D } from 'three';
 import { numRound, radToDeg, resolveEulerContinuity } from '@crane/domain/3d';
-import type { SceneTransformField } from '@crane/features/3d';
+import {
+  readRootPlacement,
+  type SceneTransformField,
+} from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
@@ -51,4 +54,24 @@ export function getContinuousTransformVectors(
       resolveEulerContinuity(prevRotationDeg, vectors.rotation),
     ),
   };
+}
+
+// 배치 자세를 임시로 담는 스크래치 — quaternion 을 복사하면 three 가 rotation
+// (euler)을 같이 맞춰 주므로 기존 euler 읽기 경로를 그대로 쓴다.
+const placementScratch = new Object3D();
+
+/**
+ * 모델 루트의 **배치값**(씬에 저장하는 값)을 읽는다 — 화면 자세에서 태그 Δ 를
+ * 벗긴 것(features readRootPlacement). 기즈모는 `배치 + Δ` 자세 위에서
+ * 조작하므로 커밋·스냅·인스펙터 표시가 이 함수를 써야 Δ 가 저장값에 흡수되지
+ * 않는다. readout 이 없는 객체(텍스트·지도·루트 맵핑 없는 모델)는
+ * getContinuousTransformVectors 와 같다.
+ */
+export function getPlacementTransformVectors(
+  modelId: string,
+  object: Object3D,
+  prevRotationDeg?: Vector3Tuple,
+): Record<SceneTransformField, Vector3Tuple> {
+  readRootPlacement(modelId, object, placementScratch);
+  return getContinuousTransformVectors(placementScratch, prevRotationDeg);
 }

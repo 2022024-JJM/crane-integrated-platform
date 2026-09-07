@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from 'react';
+import type { ChannelDelta } from '../lib/strip-channel-delta';
 
 /**
  * 드라이버가 프레임마다 써 두는 표시용 readout. React 상태가 아니다 —
@@ -16,6 +17,12 @@ export interface RigModelReadout {
   unresolvedMappings: string[];
   /** node 대상 태그 맵핑에 이번 프레임 적용된 Δ(mapping id 기준) */
   mappingValues: Map<string, number>;
+  /**
+   * 모델 루트에 **마지막으로 적용된** 채널 Δ(적용 순서). 기즈모 드래그 중엔
+   * 루트를 건드리지 않으므로 드래그 직전 값이 남는다 — 커밋·스냅이 화면
+   * 자세에서 이 Δ 를 벗겨 배치값을 얻는다(root-placement.ts).
+   */
+  rootDeltas: ReadonlyArray<ChannelDelta>;
 }
 
 const readouts = new Map<string, RigModelReadout>();

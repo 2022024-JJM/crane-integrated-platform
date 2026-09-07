@@ -547,13 +547,14 @@ describe('useRigDriver — node 태그 맵핑', () => {
       // 커밋(React setState)은 아직 models 에 도착하지 않은 채 end() 만 먼저 온다.
       useActiveTransformStore.getState().end();
       frame();
-      // 옛 rest(-5)+Δ = -2 로 되돌리는 프레임이 없어야 한다.
-      expect(root.position.z).toBeCloseTo(103, 9);
+      // 옛 rest(-5)+Δ = -2 로 되돌리는 프레임도, Δ 가 한 번 더 더해진 103 도
+      // 없어야 한다 — handoff 가 현재 자세에서 Δ 를 벗겨 rest(97)로 잡는다.
+      expect(root.position.z).toBeCloseTo(100, 9);
 
-      // 커밋된 새 배치값이 한 프레임 뒤에 도착해도 화면이 바뀌지 않는다.
-      rerender({ models: [mapped({ position: [10, 0, 100] })] });
+      // 커밋 경로도 같은 Δ 를 벗겨 배치값 97 을 저장한다. 도착해도 화면 불변.
+      rerender({ models: [mapped({ position: [10, 0, 97] })] });
       frame();
-      expect(root.position.z).toBeCloseTo(103, 9);
+      expect(root.position.z).toBeCloseTo(100, 9);
     });
 
     it('기즈모가 건드리지 않은 루트 맵핑 모델은 rest 를 유지한다 (Δ 가 rest 에 흡수되지 않음)', () => {
@@ -576,7 +577,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
       useActiveTransformStore.getState().end();
       frame();
       frame();
-      expect(r1.position.z).toBeCloseTo(103, 9);
+      expect(r1.position.z).toBeCloseTo(100, 9);
       // m2 의 rest 가 -2 로 다시 잡혔다면 -2+3 = 1 이 됐을 것이다.
       expect(r2.position.z).toBeCloseTo(-2, 9);
     });
@@ -594,7 +595,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
       expect(root.position.z).toBeCloseTo(-2, 9);
     });
 
-    it('한 번도 적용하기 전(첫 프레임이 드래그)에는 현재 자세를 배치값으로 본다', () => {
+    it('한 번도 적용하기 전(첫 프레임이 드래그)에는 현재 자세에 Δ 가 없으므로 그대로 배치값으로 본다', () => {
       const { root } = mountModel('m1');
       renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
       rigValueStore.set('m1/root-z', 3);
@@ -603,6 +604,7 @@ describe('useRigDriver — node 태그 맵핑', () => {
       frame();
       useActiveTransformStore.getState().end();
       frame();
+      // 벗길 Δ 가 없으니 rest=100, 이어서 Δ 3 이 처음으로 더해진다.
       expect(root.position.z).toBeCloseTo(103, 9);
     });
 
@@ -640,12 +642,55 @@ describe('useRigDriver — node 태그 맵핑', () => {
       expect(zDeg(arm)).toBeCloseTo(30, 6);
     });
 
-    // 드래그 시작 자세가 rest+Δ 라서 기즈모가 읽는 절대값에 Δ 가 섞인다.
-    // 커밋 경로(use-scene-transform commitFinal)가 그 절대값을 배치값으로
-    // 저장하므로 드래그마다 Δ 만큼 저장값이 밀리고, 다음 프레임에 Δ 가 한 번
-    // 더 더해져 모델이 Δ 만큼 더 가 있다(위 테스트의 103 = 100 + 3). 별건.
-    it.todo(
-      'Δ≠0 상태에서 드래그하면 커밋된 배치값에 Δ 가 흡수된다 (handoff 에서 Δ 를 벗겨야 함)',
-    );
+    it('readout.rootDeltas 는 루트에 마지막으로 적용한 Δ 이고, 드래그 중 값이 바뀌어도 드래그 직전 값을 유지한다', () => {
+      const { root } = mountModel('m1');
+      renderHook(() => useRigDriver({ rigs: undefined, models: [mapped()] }));
+      rigValueStore.set('m1/root-z', 3);
+      frame();
+      expect(rigLiveReadouts.get('m1')?.rootDeltas).toEqual([
+        { channel: 'position', axis: 'z', delta: 3 },
+      ]);
+
+      useActiveTransformStore.getState().begin();
+      rigValueStore.set('m1/root-z', 8); // 드래그 중 태그값 변화
+      root.position.z = 100;
+      frame();
+      expect(rigLiveReadouts.get('m1')?.rootDeltas).toEqual([
+        { channel: 'position', axis: 'z', delta: 3 },
+      ]);
+      // 드래그 중에도 mappingValues 는 살아 있다(팔레트 표시용).
+      expect(rigLiveReadouts.get('m1')?.mappingValues.get('root-z')).toBe(8);
+
+      useActiveTransformStore.getState().end();
+      frame();
+      // handoff 는 드래그 직전 Δ(3)를 벗겨 rest=97 로 잡고, 새 Δ(8)를 더한다.
+      expect(root.position.z).toBeCloseTo(105, 9);
+      expect(rigLiveReadouts.get('m1')?.rootDeltas).toEqual([
+        { channel: 'position', axis: 'z', delta: 8 },
+      ]);
+    });
+
+    it('회전만 커밋하는 드래그에서 위치가 Δ 만큼 튀는 프레임이 없다', () => {
+      const { root } = mountModel('m1');
+      const { rerender } = renderHook(
+        ({ models }) => useRigDriver({ rigs: undefined, models }),
+        { initialProps: { models: [mapped()] } },
+      );
+      rigValueStore.set('m1/root-z', 3);
+      frame();
+      const zBefore = root.position.z; // -2
+
+      useActiveTransformStore.getState().begin();
+      root.rotation.y = Math.PI / 4; // 회전 기즈모만
+      frame();
+      useActiveTransformStore.getState().end();
+      frame(); // handoff 프레임 — 예전엔 여기서 z 가 -2+3 = 1 로 한 번 튀었다.
+      expect(root.position.z).toBeCloseTo(zBefore, 9);
+      expect(root.rotation.y).toBeCloseTo(Math.PI / 4, 9);
+
+      rerender({ models: [mapped({ rotation: [0, 45, 0] })] });
+      frame();
+      expect(root.position.z).toBeCloseTo(zBefore, 9);
+    });
   });
 });

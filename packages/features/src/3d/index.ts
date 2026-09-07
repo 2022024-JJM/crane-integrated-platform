@@ -120,6 +120,12 @@ export {
   useRigLivePoll,
   type RigModelReadout,
 } from './model/rig-live-readouts';
+export { readRootPlacement, writeRootPlacement } from './model/root-placement';
+export {
+  stripChannelDeltas,
+  type ChannelDelta,
+  type ChannelPose,
+} from './lib/strip-channel-delta';
 export { clampJointValue } from './lib/apply-joint';
 export {
   snapChangedAxes,

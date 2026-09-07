@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { MathUtils, Object3D, Quaternion, Vector3 } from 'three';
+import { rigLiveReadouts } from '@crane/features/3d';
 import {
   getContinuousTransformVectors,
   getObjectTransformVectors,
+  getPlacementTransformVectors,
 } from '../transform-vectors';
 
 function makeObject(rotationDeg: [number, number, number]): Object3D {
@@ -101,5 +103,60 @@ describe('getContinuousTransformVectors', () => {
       expect(resolved.rotation[1]).toBeCloseTo(snapped[1], 3);
       expect(resolved.rotation[2]).toBeCloseTo(snapped[2], 3);
     }
+  });
+});
+
+describe('getPlacementTransformVectors', () => {
+  afterEach(() => {
+    rigLiveReadouts.clear();
+  });
+
+  it('readout 이 없으면 절대 자세와 같다', () => {
+    const obj = makeObject([0, 30, 0]);
+    obj.position.set(1, 2, 3);
+    expect(getPlacementTransformVectors('none', obj)).toEqual(
+      getContinuousTransformVectors(obj, undefined),
+    );
+  });
+
+  it('루트 Δ 를 벗긴 배치값을 돌려주고 원본 객체는 건드리지 않는다', () => {
+    rigLiveReadouts.set('m1', {
+      unresolvedJoints: [],
+      jointValues: new Map(),
+      unresolvedMappings: [],
+      mappingValues: new Map(),
+      rootDeltas: [
+        { channel: 'position', axis: 'z', delta: 3 },
+        { channel: 'rotation', axis: 'y', delta: 40 },
+      ],
+    });
+    const obj = makeObject([0, 70, 0]); // 배치 yaw 30 + Δ 40
+    obj.position.set(10, 0, -2); // 배치 z -5 + Δ 3
+    const vectors = getPlacementTransformVectors('m1', obj);
+    expect(vectors.position).toEqual([10, 0, -5]);
+    expect(vectors.rotation[1]).toBeCloseTo(30, 3);
+    expect(obj.position.z).toBe(-2);
+    expect(MathUtils.radToDeg(obj.rotation.y)).toBeCloseTo(70, 6);
+  });
+
+  it('오일러 연속성 seed 를 배치 자세에 적용한다', () => {
+    rigLiveReadouts.set('m1', {
+      unresolvedJoints: [],
+      jointValues: new Map(),
+      unresolvedMappings: [],
+      mappingValues: new Map(),
+      rootDeltas: [{ channel: 'rotation', axis: 'y', delta: 20 }],
+    });
+    // 배치 yaw 95 (+ Δ 20 = 115) → raw euler 는 플립 표현이지만 seed(0,85,0) 기준으로 95 로 온다.
+    const obj = makeObject([0, 85, 0]);
+    obj.quaternion.premultiply(
+      new Quaternion().setFromAxisAngle(
+        new Vector3(0, 1, 0),
+        MathUtils.degToRad(30),
+      ),
+    );
+    const vectors = getPlacementTransformVectors('m1', obj, [0, 85, 0]);
+    expect(vectors.rotation[1]).toBeCloseTo(95, 3);
+    expect(Math.abs(vectors.rotation[0])).toBeLessThan(1e-6);
   });
 });
