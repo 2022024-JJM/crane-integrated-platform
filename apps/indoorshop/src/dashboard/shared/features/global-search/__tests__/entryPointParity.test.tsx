@@ -93,7 +93,7 @@ describe('두 진입점은 한 기능이다', () => {
     await userEvent.click(await screen.findByText('7004-222'))
     const fromField = screen.getByTestId('location').textContent
 
-    expect(fromPalette).toBe('/?vessel=7004&block=222')
+    expect(fromPalette).toBe('/indoorshop?vessel=7004&block=222')
     expect(fromField).toBe(fromPalette)
   })
 
@@ -111,6 +111,6 @@ describe('두 진입점은 한 기능이다', () => {
     await userEvent.click(await within(dialog).findByText('7004-222'))
 
     /* 통합실적에 서 있다가 블록을 골라도 지도로 나간다(경로가 바뀐다) */
-    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004&block=222')
+    expect(screen.getByTestId('location').textContent).toBe('/indoorshop?vessel=7004&block=222')
   })
 })

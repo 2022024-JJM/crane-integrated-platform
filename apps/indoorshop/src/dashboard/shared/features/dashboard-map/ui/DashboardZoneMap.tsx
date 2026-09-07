@@ -1046,7 +1046,7 @@ export function DashboardZoneMap() {
             {mapFocus && (
               <MapFocusCard
                 focus={mapFocus}
-                onClear={() => void navigate(`/${clearMapFocusSearch(searchParams)}`)}
+                onClear={() => void navigate(`/indoorshop${clearMapFocusSearch(searchParams)}`)}
               />
             )}
 

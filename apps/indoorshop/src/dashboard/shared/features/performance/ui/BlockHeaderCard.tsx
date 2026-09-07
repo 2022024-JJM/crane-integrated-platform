@@ -100,7 +100,7 @@ export function BlockHeaderCard({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Link
-            to={`/?factory=${encodeURIComponent(summary.factory)}`}
+            to={`/indoorshop?factory=${encodeURIComponent(summary.factory)}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex shrink-0 items-center gap-1 rounded-inshop-md border border-border px-2 py-1 text-inshop-xs text-foreground/70 transition-colors hover:border-accent/50 hover:text-accent"
           >

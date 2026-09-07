@@ -61,11 +61,11 @@ export const SEARCH_GROUPS: readonly SearchGroup[] = [
  */
 
 /** 총괄 지도(자리를 보여 주는 화면) — 블록·ASSY·호선·야드 결과의 행선지 */
-export const MAP_PATH = '/'
+export const MAP_PATH = '/indoorshop'
 
 /**
  * 지도에 자리를 표시하는 주소. **새 문법을 만들지 않는다** — 통합실적이 쓰는 선택 계약
- * (`selectionQuery`)을 총괄 경로에 그대로 싣는다. 그래서 `/indoorshop/performance` 와 `/` 가 같은
+ * (`selectionQuery`)을 총괄 경로에 그대로 싣는다. 그래서 `/indoorshop/performance` 와 `/indoorshop` 이 같은
  * 조회 조건을 같은 철자로 말하고, 두 화면 사이를 오갈 때 조건이 살아 있다.
  */
 export function mapFocusHref(selection: BlockSelection): string {

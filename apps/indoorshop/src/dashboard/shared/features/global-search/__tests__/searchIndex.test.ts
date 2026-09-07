@@ -42,7 +42,7 @@ describe('호선 검색', () => {
     expect(hits).toHaveLength(1)
     expect(hits[0].title).toBe('7004호')
     /* 행선지는 지도('/') — 호선의 답은 실적 표가 아니라 자리들의 분포다 */
-    expect(hits[0].href.startsWith('/?')).toBe(true)
+    expect(hits[0].href.startsWith('/indoorshop?')).toBe(true)
     expect(parseSelectionParams(queryOf(hits[0].href))).toEqual({ projNo: '7004', blocks: [] })
 
     const focus = parseMapFocus(queryOf(hits[0].href), null)
@@ -68,7 +68,7 @@ describe('블록 검색', () => {
     const block = findBlock('2540', '281')
     expect(block).not.toBeNull()
     expect(hits[0].href).toBe(mapFocusHref(selectionOfBlock(block!)))
-    expect(hits[0].href.startsWith('/?')).toBe(true)
+    expect(hits[0].href.startsWith('/indoorshop?')).toBe(true)
     expect(parseSelectionParams(queryOf(hits[0].href))).toEqual({
       projNo: '2540',
       blocks: ['281'],
@@ -99,7 +99,7 @@ describe('ASSY 검색', () => {
     const hits = searchAssys(tail)
     const hit = hits.find((h) => h.title === anyAssy.unit.assyNo)
     expect(hit).toBeDefined()
-    expect(hit!.href.startsWith('/?')).toBe(true)
+    expect(hit!.href.startsWith('/indoorshop?')).toBe(true)
     const parsed = parseSelectionParams(queryOf(hit!.href))
     expect(parsed?.projNo).toBe(anyAssy.block.projNo)
     expect(parsed?.blocks).toEqual([anyAssy.block.blockNo])
@@ -226,7 +226,7 @@ describe('야드 실측 위치(BTS) 검색', () => {
 
   it('행선지는 블록과 **같은 철자** — 지도가 로스터에서 못 찾으면 이 색인으로 물러난다', () => {
     const hit = searchYardBlocks('9910-726', yardIndex)[0]
-    expect(hit.href.startsWith('/?')).toBe(true)
+    expect(hit.href.startsWith('/indoorshop?')).toBe(true)
     /* 로스터가 모르는 호선이라 선택 계약은 null 이다 — 그래서 2단 해석이 필요하다 */
     expect(parseSelectionParams(queryOf(hit.href))).toBeNull()
 

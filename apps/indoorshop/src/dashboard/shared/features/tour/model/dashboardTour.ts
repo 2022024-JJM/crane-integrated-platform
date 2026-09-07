@@ -8,7 +8,7 @@ import type { TourDefinition } from './types'
  */
 export const DASHBOARD_TOUR: TourDefinition = {
   id: 'dashboard',
-  startPath: '/',
+  startPath: '/indoorshop',
   steps: [
     {
       id: 'map',

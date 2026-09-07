@@ -67,7 +67,7 @@ describe('통합 검색 팔레트', () => {
     await screen.findByText('7004호')
     await userEvent.keyboard('{Enter}')
     /* 행선지는 결과 타입이 정한다 — 호선의 답은 실적 표가 아니라 자리들의 분포다 */
-    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004')
+    expect(screen.getByTestId('location').textContent).toBe('/indoorshop?vessel=7004')
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -77,7 +77,7 @@ describe('통합 검색 팔레트', () => {
     await userEvent.type(screen.getByRole('combobox'), '7004-222')
     await screen.findByText('7004-222')
     await userEvent.keyboard('{Enter}')
-    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004&block=222')
+    expect(screen.getByTestId('location').textContent).toBe('/indoorshop?vessel=7004&block=222')
   })
 
   it('W/O 결과만 통합실적으로 간다 — 자리가 아니라 실적 축의 이름이라서', async () => {
@@ -124,6 +124,6 @@ describe('통합 검색 팔레트', () => {
     await screen.findByText('최근 검색')
     /* 최근 항목도 같은 키보드 문법 — Enter 로 바로 되돌아간다 */
     await userEvent.keyboard('{Enter}')
-    expect(screen.getByTestId('location').textContent).toBe('/?vessel=7004')
+    expect(screen.getByTestId('location').textContent).toBe('/indoorshop?vessel=7004')
   })
 })

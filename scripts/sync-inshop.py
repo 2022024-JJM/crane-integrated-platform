@@ -286,6 +286,60 @@ def rewrite_links() -> None:
     print(f"    {hits} paths")
 
 
+def rewrite_root_paths() -> None:
+    """
+    총괄 대시보드('/')로 가는 경로 — 이름 있는 접두 규칙이 못 잡는 나머지.
+
+    `rewrite_links` 의 리터럴 규칙은 `/zones` `/performance` 처럼 **이름이 있는** 경로만
+    본다. 그런데 원본에서 총괄 지도는 뿌리 그 자체(`'/'`)라, 그 규칙을 통째로 빠져나가
+    셸의 루트(다른 사이트의 대문)로 나가 버린다. Cmd+K 로 블록을 골랐을 때 지도가 아니라
+    셸 홈으로 튀고, 그래서 찾은 블록의 베이 영역이 지도에 서지 않던 것이 이 경우다.
+
+    뿌리 경로는 손에 꼽으므로 정규식으로 훑지 않고 **하나씩 지목해 바꾼다** — `'/'` 는
+    앱 어디에나 있는 글자(경로 조립·split·주석)라, 규칙으로 잡으면 애먼 것까지 걸린다.
+    각 치환은 정확히 1회여야 하고, 원본이 바뀌어 안 맞으면 여기서 멈춘다.
+    """
+    step("총괄 지도('/') 경로에 /indoorshop 접두")
+    # (1) 검색 결과의 행선지 — mapFocusHref 가 이 상수로 `/{...}?vessel=&block=&assy=` 를 만든다
+    p = DASH / "shared/features/global-search/lib/searchIndex.ts"
+    replace_once(p, "export const MAP_PATH = '/'", "export const MAP_PATH = '/indoorshop'")
+    replace_once(p, "그래서 `/indoorshop/performance` 와 `/` 가 같은",
+                 "그래서 `/indoorshop/performance` 와 `/indoorshop` 이 같은")
+
+    # (2) 지도의 '검색 표시 지우기' — 남은 쿼리만 다시 실어 제자리에 머문다
+    replace_once(
+        DASH / "shared/features/dashboard-map/ui/DashboardZoneMap.tsx",
+        "navigate(`/${clearMapFocusSearch(searchParams)}`)",
+        "navigate(`/indoorshop${clearMapFocusSearch(searchParams)}`)",
+    )
+
+    # (3) 통합실적 블록 헤더 → 총괄 지도의 그 공장
+    replace_once(
+        DASH / "shared/features/performance/ui/BlockHeaderCard.tsx",
+        "to={`/?factory=", "to={`/indoorshop?factory=",
+    )
+
+    # (4) 첫 사용 투어의 시작 화면 — pathname 과 문자열 비교라 접두가 없으면 영영 안 뜬다
+    replace_once(DASH / "shared/features/tour/model/dashboardTour.ts",
+                 "startPath: '/',", "startPath: '/indoorshop',")
+
+    # (5) 위 계약을 검증하는 테스트의 기대 리터럴 — 구현과 같은 말을 써야 한다.
+    #     `/?vessel=` 은 검색 딥링크의 철자 그 자체이므로 이 조합으로만 잡는다
+    #     (useBaseDate 테스트의 `route: '/?date=…'` 같은 남의 쿼리는 건드리지 않는다).
+    n = 0
+    for f in ts_files(DST):
+        if not f.name.endswith((".test.ts", ".test.tsx")):
+            continue
+        s = read(f)
+        s2 = s.replace("'/?vessel=", "'/indoorshop?vessel=").replace("startsWith('/?')", "startsWith('/indoorshop?')")
+        if s2 != s:
+            write(f, s2); n += 1
+    print(f"    테스트 기대 {n} files")
+
+    left = [f for f in ts_files(DST) if "MAP_PATH = '/'" in read(f)]
+    assert not left, f"뿌리 경로 잔존: {left}"
+
+
 def patch_asset_paths() -> None:
     step("public 에셋 fetch 에 BASE_URL (/crane_rnd/) 씌우기")
     imp = "import { publicAsset } from '@/dashboard/shared/lib/public-asset'\n"
@@ -608,6 +662,7 @@ def main() -> None:
     rewrite_i18n()
     rewrite_classes()
     rewrite_links()
+    rewrite_root_paths()
     patch_asset_paths()
     patch_settings()
     patch_test_helper()
