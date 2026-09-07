@@ -41,6 +41,7 @@ export function SceneCollisionMenu({
   const { t } = useTranslation();
   const enabled = useSceneCollisionStore((s) => s.enabled);
   const activeMode = useSceneCollisionStore((s) => s.activeMode);
+  const historyCount = useSceneCollisionStore((s) => s.history.length);
   const collided = activeMode === 'pinned';
   const label = t('common:viewer3d.collisionMenu', {
     defaultValue: '충돌 감지',
@@ -60,11 +61,12 @@ export function SceneCollisionMenu({
                   aria-pressed={enabled}
                   className={cn(
                     SCENE_TOOLBAR_BUTTON_CLASS,
+                    'relative',
                     enabled &&
                       !collided &&
                       'border-amber-500/60 bg-amber-500/15 text-amber-600 hover:bg-amber-500/25 dark:text-amber-400',
                     collided &&
-                      'border-red-500/60 bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400',
+                      'animate-pulse border-red-500/60 bg-red-500/15 text-red-600 hover:bg-red-500/25 motion-reduce:animate-none dark:text-red-400',
                   )}
                 />
               }
@@ -72,6 +74,16 @@ export function SceneCollisionMenu({
           }
         >
           <AlertTriangle />
+          {/* 충돌 기록 수 배지 — 독이 접혀 있다 펼쳐졌을 때 "몇 건 쌓였는지"가
+              hover·클릭 없이 보이게 한다. */}
+          {historyCount > 0 ? (
+            <span
+              aria-hidden
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[9px] leading-none font-bold text-white"
+            >
+              {historyCount}
+            </span>
+          ) : null}
         </TooltipTrigger>
         <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>

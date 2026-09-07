@@ -30,6 +30,7 @@ import {
   resolveRecordNodes,
 } from '../lib/scene-collision-pairs';
 import { RigDriver } from './rig-driver';
+import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
@@ -242,6 +243,13 @@ export function Monitoring3dView({
             {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
             <SceneLoadingOverlay ready={sceneReady} />
             {focusOverlay}
+            {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
+            {collisionActive ? (
+              <SceneCollisionAlertOverlay
+                runner={collisionRunner}
+                onViewCollision={handleViewCollision}
+              />
+            ) : null}
             {overlayExtras}
           </>
         }

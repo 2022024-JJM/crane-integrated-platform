@@ -304,6 +304,11 @@
     "saveFailed": "Signa virtualia servari non potuerunt."
   },
   "sceneCollision": {
-    "contact": "Punctum contactus (proximum)"
+    "contact": "Punctum contactus (proximum)",
+    "alertTitle": "Collisio detecta",
+    "pausedTitle": "Collisio — simulatio stetit",
+    "pausedTitleRealtime": "Collisio — imago viva retinetur",
+    "resume": "Perge",
+    "resumeRealtime": "Ad novissima redi"
   }
 }

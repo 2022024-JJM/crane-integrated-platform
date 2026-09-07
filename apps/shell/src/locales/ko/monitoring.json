@@ -318,6 +318,11 @@
     "saveFailed": "가상 태그를 저장하지 못했습니다."
   },
   "sceneCollision": {
-    "contact": "접촉 지점(근사)"
+    "contact": "접촉 지점(근사)",
+    "alertTitle": "충돌 감지",
+    "pausedTitle": "충돌 — 시뮬레이션 정지됨",
+    "pausedTitleRealtime": "충돌 — 화면 반영 보류 중",
+    "resume": "이어서 재생",
+    "resumeRealtime": "최신 값 복귀"
   }
 }
