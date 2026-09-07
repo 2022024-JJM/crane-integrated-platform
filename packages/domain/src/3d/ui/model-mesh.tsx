@@ -637,7 +637,7 @@ export function ModelMesh({
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
   // 없으면 기본 raycast로 폴백).
   //
-  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 38개에 42만
+  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 41개에 43만
   // 삼각형이라 빌드는 싸고(유휴 시간 분산), 없으면 포인터 이동마다 브루트
   // 포스 순회로 프레임이 밀린다. bbox 존 분류만 하는 자산 뷰어처럼 정밀
   // raycast가 필요 없는 곳만 enableRaycastBvh=false로 비용을 아낀다.

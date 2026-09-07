@@ -299,7 +299,9 @@
     "dockCollapse": "Collapse",
     "dockTools": "View controls",
     "simulationPlay": "Run simulation",
-    "simulationPause": "Stop simulation"
+    "simulationPause": "Stop simulation",
+    "collisionMenu": "Collision detection",
+    "collisionBvhHint": "Precise checks become available a few seconds after models load."
   },
   "undo": "Undo"
 }

@@ -1,5 +1,6 @@
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react';
 import { cn } from '@crane/core/lib/utils';
+import { usePortalContainer } from './portal-container';
 
 function AlertDialog(props: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root {...props} />;
@@ -13,13 +14,17 @@ function AlertDialogTrigger(props: AlertDialogPrimitive.Trigger.Props) {
  * Portal + Backdrop + Popup 을 한 번에 렌더한다.
  * AlertDialog 는 백드롭 클릭으로 닫히지 않으므로(Base UI 기본), 닫는 경로는
  * 명시적 버튼(`AlertDialogClose` 또는 onOpenChange)과 ESC 뿐이다.
+ * 포털 컨테이너는 팝오버·툴팁과 같은 규약(`usePortalContainer`)을 따라
+ * 전체화면 루트 안에서도 보인다.
  */
 function AlertDialogPopup({
   className,
   ...props
 }: AlertDialogPrimitive.Popup.Props) {
+  const container = usePortalContainer();
+
   return (
-    <AlertDialogPrimitive.Portal>
+    <AlertDialogPrimitive.Portal container={container}>
       <AlertDialogPrimitive.Backdrop
         className={cn(
           'fixed inset-0 z-9999 bg-black/50 transition-opacity duration-150',

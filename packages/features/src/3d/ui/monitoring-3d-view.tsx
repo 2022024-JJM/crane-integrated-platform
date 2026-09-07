@@ -21,9 +21,18 @@ import {
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
+import {
+  collisionViewRadius,
+  computeCollisionViewPose,
+  resolveRecordNodes,
+} from '../lib/scene-collision-pairs';
 import { RigDriver } from './rig-driver';
+import { SceneCollisionDetector } from './scene-collision-detector';
+import { SceneCollisionHighlight } from './scene-collision-highlight';
+import { SceneCollisionMenu } from './scene-collision-menu';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -70,7 +79,6 @@ interface Monitoring3dViewProps {
    * 상태에 따라 바꿔야 안정적으로 반영된다. undefined면 기기 기본값.
    */
   canvasDpr?: number | [number, number];
-  onFullscreenChange?: (isFullscreen: boolean) => void;
   /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
    * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
@@ -96,7 +104,6 @@ export function Monitoring3dView({
   sceneExtras,
   overlayExtras,
   canvasDpr,
-  onFullscreenChange,
   toolbarLayout = 'top-right',
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
@@ -114,17 +121,15 @@ export function Monitoring3dView({
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const exitFocus = useObjectFocusStore((s) => s.exitFocus);
+  // 충돌 감지는 시뮬레이션·실시간에서 켠다. 실시간 정지는 화면 반영 보류
+  // (scene-collision-hold)다. 리플레이는 기록 재생이라 정지·복원 대상이 아니다.
+  const collisionActive = mode !== 'replay';
+  const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
+  const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
   }, [isLoading, onLoadingChange]);
-
-  const handleFullscreenChange = useCallback(
-    (next: boolean) => {
-      onFullscreenChange?.(next);
-    },
-    [onFullscreenChange],
-  );
 
   const handleControllerReady = useCallback(
     (controller: SceneController | null) => {
@@ -148,6 +153,20 @@ export function Monitoring3dView({
     () => sceneControllerRef.current?.getPose() ?? null,
     [],
   );
+
+  // "충돌 지점 보기" — 접촉점을 타깃으로, 현재 시선 방향을 유지한 채 두 노드가
+  // 들어오는 거리로 물러난다(수치 계산은 lib/scene-collision-pairs).
+  const handleViewCollision = useCallback(() => {
+    const { history, activeRecordId } = useSceneCollisionStore.getState();
+    const record = history.find((r) => r.id === activeRecordId);
+    if (!record) return;
+    const pose = computeCollisionViewPose(
+      record.contactPoint,
+      collisionViewRadius(resolveRecordNodes([record.a, record.b])),
+      sceneControllerRef.current?.getPose() ?? null,
+    );
+    sceneControllerRef.current?.moveTo(pose.position, pose.target);
+  }, []);
 
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
@@ -231,11 +250,18 @@ export function Monitoring3dView({
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={
           isDock ? (
-            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글을 붙인다
-            // (실시간 모니터링 화면 공통). 작은 뷰(top-right)에는 두지 않는다.
+            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글과 충돌
+            // 감지 팝업을 붙인다(실시간 모니터링 화면 공통). 작은 뷰(top-right)
+            // 에는 두지 않는다.
             <>
               {toolbarExtras}
               <SceneSimulationToggle />
+              {collisionActive ? (
+                <SceneCollisionMenu
+                  runner={collisionRunner}
+                  onViewCollision={handleViewCollision}
+                />
+              ) : null}
             </>
           ) : (
             toolbarExtras
@@ -253,7 +279,6 @@ export function Monitoring3dView({
             />
           )
         }
-        onFullscreenChange={handleFullscreenChange}
         onControllerReady={handleControllerReady}
       >
         <SceneLighting sceneInfo={sceneInfo} />
@@ -271,6 +296,15 @@ export function Monitoring3dView({
         </Suspense>
         <Suspense fallback={null}>
           <RigDriver sceneInfo={sceneInfo} />
+          {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
+              실행되므로 노드가 움직인 뒤 검사한다. */}
+          {collisionActive ? (
+            <SceneCollisionDetector
+              sceneInfo={sceneInfo}
+              enabled={collisionEnabled}
+            />
+          ) : null}
+          <SceneCollisionHighlight />
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}

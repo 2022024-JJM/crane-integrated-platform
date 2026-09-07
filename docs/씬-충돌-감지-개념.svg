@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="850" viewBox="0 0 1240 850" font-family="'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1240" height="850" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="40" y="52" font-size="26" font-weight="700" fill="#0f172a">씬 객체 충돌 감지 — 무엇을 "충돌"로 보는가</text>
+  <text x="40" y="80" font-size="14" fill="#475569">대상: 씬에 배치된 모델 인스턴스 ↔ 모델 인스턴스 (같은 모델 내부 부품끼리·지도는 제외) · 판정: 거리 임계값이 아니라 기하학적 관통</text>
+
+  <!-- ===== 3단계 파이프라인 ===== -->
+  <text x="40" y="122" font-size="16" font-weight="700" fill="#0f172a">① 3단계 판정 — 앞 단계가 대부분의 쌍을 걸러 비싼 검사는 실제로 닿을 법한 메쉬 쌍에만 닿는다</text>
+
+  <!-- 단계 1: 모델 AABB -->
+  <g transform="translate(40,140)">
+    <rect width="340" height="250" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="0" y="0" width="340" height="40" rx="12" fill="#e2e8f0"/>
+    <rect x="0" y="20" width="340" height="20" fill="#e2e8f0"/>
+    <text x="16" y="27" font-size="15" font-weight="700" fill="#0f172a">1단계 · 모델 AABB</text>
+    <text x="330" y="27" font-size="12" text-anchor="end" fill="#475569">싸다 · 매 스캔</text>
+    <!-- 그림: 두 모델의 축정렬 박스, 떨어짐 -->
+    <rect x="30" y="70" width="110" height="80" fill="#dbeafe" stroke="#2563eb" stroke-dasharray="6 4" stroke-width="2"/>
+    <rect x="200" y="90" width="110" height="80" fill="#dcfce7" stroke="#16a34a" stroke-dasharray="6 4" stroke-width="2"/>
+    <!-- 모델 실루엣 -->
+    <path d="M45,140 h20 v-45 h35 v-12 h20 v12 h-15 v45 h20" fill="none" stroke="#1d4ed8" stroke-width="3"/>
+    <path d="M215,160 h25 v-40 h30 v-15 h20 v15 h-12 v40 h20" fill="none" stroke="#15803d" stroke-width="3"/>
+    <text x="30" y="200" font-size="13" fill="#0f172a">두 모델의 월드 축정렬 박스가</text>
+    <text x="30" y="220" font-size="13" fill="#0f172a">겹치지 않으면 → 여기서 끝 (대부분)</text>
+    <text x="30" y="240" font-size="12" fill="#475569">겹치면 메쉬 단위로 내려간다</text>
+  </g>
+
+  <path d="M385,265 L425,265" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="405" y="252" font-size="11" text-anchor="middle" fill="#475569">겹침</text>
+
+  <!-- 단계 2: 메쉬 OBB -->
+  <g transform="translate(430,140)">
+    <rect width="340" height="250" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="0" y="0" width="340" height="40" rx="12" fill="#e2e8f0"/>
+    <rect x="0" y="20" width="340" height="20" fill="#e2e8f0"/>
+    <text x="16" y="27" font-size="15" font-weight="700" fill="#0f172a">2단계 · 메쉬 OBB (SAT)</text>
+    <text x="330" y="27" font-size="12" text-anchor="end" fill="#475569">회전 반영 박스</text>
+    <!-- 회전한 긴 붐: AABB(점선)는 겹치지만 OBB(실선)는 안 겹침 -->
+    <rect x="40" y="60" width="150" height="120" fill="none" stroke="#2563eb" stroke-dasharray="6 4" stroke-width="1.5"/>
+    <g transform="translate(115,120) rotate(-40)">
+      <rect x="-75" y="-12" width="150" height="24" fill="#dbeafe" stroke="#1d4ed8" stroke-width="3"/>
+    </g>
+    <!-- 작은 상대 메쉬: AABB 안, 붐 밖 -->
+    <rect x="150" y="150" width="26" height="26" fill="#dcfce7" stroke="#15803d" stroke-width="3"/>
+    <text x="205" y="80" font-size="12" fill="#2563eb">점선 = AABB (겹침)</text>
+    <text x="205" y="98" font-size="12" fill="#1d4ed8">실선 = OBB (안 겹침)</text>
+    <text x="30" y="200" font-size="13" fill="#0f172a">45° 돌아간 긴 붐처럼 AABB 만 부푼</text>
+    <text x="30" y="220" font-size="13" fill="#0f172a">경우를 걸러 BVH 호출을 크게 줄인다</text>
+    <text x="30" y="240" font-size="12" fill="#475569">15축 분리축 판정 (three OBB 내장)</text>
+  </g>
+
+  <path d="M775,265 L815,265" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="795" y="252" font-size="11" text-anchor="middle" fill="#475569">겹침</text>
+
+  <!-- 단계 3: 삼각형 BVH -->
+  <g transform="translate(820,140)">
+    <rect width="380" height="250" rx="12" fill="#ffffff" stroke="#fca5a5"/>
+    <rect x="0" y="0" width="380" height="40" rx="12" fill="#fee2e2"/>
+    <rect x="0" y="20" width="380" height="20" fill="#fee2e2"/>
+    <text x="16" y="27" font-size="15" font-weight="700" fill="#991b1b">3단계 · 삼각형 정밀 (three-mesh-bvh)</text>
+    <text x="370" y="27" font-size="12" text-anchor="end" fill="#991b1b">이것이 "충돌"</text>
+    <!-- 두 메쉬 관통 -->
+    <g transform="translate(60,70)">
+      <polygon points="0,90 40,20 90,60 110,0 150,80 100,110 40,120" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2.5"/>
+      <polygon points="120,40 200,30 230,90 180,130 110,110" fill="#dcfce7" fill-opacity="0.85" stroke="#15803d" stroke-width="2.5"/>
+      <!-- 교차 영역 강조 -->
+      <polygon points="120,40 150,80 110,110 100,110" fill="#fecaca" stroke="#dc2626" stroke-width="2.5"/>
+      <line x1="130" y1="78" x2="215" y2="20" stroke="#dc2626" stroke-width="1.5" marker-start="url(#arrow-red)"/>
+      <text x="220" y="18" font-size="12" fill="#dc2626">삼각형끼리 실제 교차</text>
+      <text x="220" y="34" font-size="11" fill="#dc2626">= 접촉점(근사)·보고</text>
+    </g>
+    <text x="30" y="200" font-size="13" fill="#0f172a">OBB 까지 통과한 메쉬 쌍만 intersectsGeometry.</text>
+    <text x="30" y="220" font-size="13" fill="#0f172a">양쪽 메쉬에 BVH 가 있어야 판정 — 없으면 1초 뒤 재시도</text>
+    <text x="30" y="240" font-size="12" fill="#475569">(모델 로드 직후 유휴 시간에 빌드되는 동안)</text>
+  </g>
+
+  <!-- 결과 -->
+  <path d="M1010,395 L1010,430" stroke="#dc2626" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+  <g transform="translate(820,432)">
+    <rect width="380" height="56" rx="10" fill="#dc2626"/>
+    <text x="190" y="24" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">충돌 → 시뮬레이션 정지 + 값 저장소 freeze</text>
+    <text x="190" y="44" font-size="12" fill="#fee2e2" text-anchor="middle">첫 충돌 한 쌍만 보고 · 오버레이 패널 + 빨간 박스 · 태그값·관절값 스냅샷</text>
+  </g>
+
+  <!-- ===== 언제 검사하나 ===== -->
+  <g transform="translate(40,420)">
+    <rect width="740" height="150" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="16" y="28" font-size="16" font-weight="700" fill="#0f172a">② 언제 검사하나 — 움직인 것만</text>
+    <!-- 타임라인 -->
+    <line x1="30" y1="70" x2="700" y2="70" stroke="#94a3b8" stroke-width="2"/>
+    <g fill="#475569" font-size="11" text-anchor="middle">
+      <circle cx="80" cy="70" r="6" fill="#2563eb"/>
+      <circle cx="230" cy="70" r="6" fill="#94a3b8"/>
+      <circle cx="380" cy="70" r="6" fill="#2563eb"/>
+      <circle cx="530" cy="70" r="6" fill="#94a3b8"/>
+      <circle cx="680" cy="70" r="6" fill="#2563eb"/>
+      <text x="155" y="60">50 ms</text>
+      <text x="305" y="60">50 ms</text>
+      <text x="455" y="60">50 ms</text>
+      <text x="605" y="60">50 ms</text>
+      <text x="80" y="92">검사</text>
+      <text x="230" y="92">건너뜀</text>
+      <text x="380" y="92">검사</text>
+      <text x="530" y="92">건너뜀</text>
+      <text x="680" y="92">검사</text>
+    </g>
+    <text x="30" y="118" font-size="12.5" fill="#0f172a">• 메쉬의 matrixWorld 가 지난 검사 때와 달라진 모델이 낀 쌍만 다시 본다 — 리그·태그 맵핑·기즈모 어느 원인이든 잡히고, 안 움직인 쌍은 비용 0</text>
+    <text x="30" y="138" font-size="12.5" fill="#0f172a">• 틱당 3 ms 예산: 쌍 사이에서만 재고 넘치면 다음 틱으로 이월 · 기즈모 드래그 중엔 스캔 안 함 · 모니터링은 시뮬레이션 모드에서만</text>
+  </g>
+
+  <!-- ===== 억제 ===== -->
+  <g transform="translate(40,590)">
+    <rect width="1160" height="220" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="16" y="28" font-size="16" font-weight="700" fill="#0f172a">③ 보고하지 않는 경우 — 기준선과 억제 (깜빡임 방지 히스테리시스)</text>
+
+    <!-- 상태 A: 켠 순간 이미 겹침 -->
+    <g transform="translate(30,50)">
+      <rect x="0" y="20" width="70" height="50" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <rect x="45" y="35" width="70" height="50" fill="#dcfce7" fill-opacity="0.85" stroke="#15803d" stroke-width="2"/>
+      <text x="58" y="112" font-size="12" text-anchor="middle" fill="#0f172a">켠 순간 이미 겹침</text>
+      <text x="58" y="128" font-size="11" text-anchor="middle" fill="#64748b">(에디터에서 겹쳐 둔 모델)</text>
+    </g>
+    <path d="M175,100 L215,100" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 억제 상태 -->
+    <g transform="translate(220,50)">
+      <rect width="150" height="70" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+      <text x="75" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#92400e">억제 (suppressed)</text>
+      <text x="75" y="52" font-size="12" text-anchor="middle" fill="#92400e">보고하지 않음</text>
+      <text x="75" y="-6" font-size="11" text-anchor="middle" fill="#64748b">오버레이 "닫기"도 이 상태로</text>
+    </g>
+    <path d="M375,85 L415,85" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="395" y="72" font-size="11" text-anchor="middle" fill="#475569">분리</text>
+
+    <!-- 분리 판정 -->
+    <g transform="translate(420,50)">
+      <rect x="0" y="20" width="70" height="50" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <rect x="110" y="20" width="70" height="50" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <line x1="70" y1="45" x2="110" y2="45" stroke="#dc2626" stroke-width="2" marker-start="url(#arrow-red)" marker-end="url(#arrow-red)"/>
+      <text x="90" y="16" font-size="12" text-anchor="middle" fill="#dc2626">간격 &gt; 0.05 unit</text>
+      <text x="90" y="98" font-size="12" text-anchor="middle" fill="#0f172a">AABB 가 margin 보다 떨어지면 해제</text>
+      <text x="90" y="114" font-size="11" text-anchor="middle" fill="#64748b">정확히 0.05 는 아직 붙은 것으로 본다</text>
+    </g>
+    <path d="M610,85 L650,85" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- 감시 -->
+    <g transform="translate(655,50)">
+      <rect width="130" height="70" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+      <text x="65" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#166534">감시 (scanning)</text>
+      <text x="65" y="52" font-size="12" text-anchor="middle" fill="#166534">다시 관통하면 보고</text>
+    </g>
+    <path d="M790,85 L830,85" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow-red)"/>
+    <text x="810" y="72" font-size="11" text-anchor="middle" fill="#dc2626">관통</text>
+
+    <!-- 충돌 -->
+    <g transform="translate(835,50)">
+      <rect width="130" height="70" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+      <text x="65" y="30" font-size="14" font-weight="700" text-anchor="middle" fill="#991b1b">충돌 (collided)</text>
+      <text x="65" y="52" font-size="12" text-anchor="middle" fill="#991b1b">정지 · 패널 · 빨간 박스</text>
+    </g>
+    <path d="M900,125 C900,200 330,200 295,125" stroke="#d97706" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="6 4"/>
+    <text x="600" y="205" font-size="12" text-anchor="middle" fill="#92400e">닫기 / 초기화 → 그 쌍은 억제된 채 재무장 (재생은 사용자가 ▶)</text>
+
+    <text x="990" y="75" font-size="12" fill="#0f172a">접촉점 = 두 메쉬 AABB</text>
+    <text x="990" y="93" font-size="12" fill="#0f172a">교집합의 중심 (근사값)</text>
+  </g>
+</svg>

@@ -24,10 +24,10 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 |---|---|
 | `pnpm lint` | `apps/shell` 만 (`eslint .` 를 해당 디렉토리에서 실행) |
 | `pnpm typecheck` | `apps/shell/src` 만. 단 shell 이 import 하는 `@crane/*` 소스는 따라 들어가므로 상당 부분이 간접 검사된다. `apps/shell/vite.config.ts` 와 `vite-plugin-asset-hash.ts` 는 `src` 밖이라 빠지므로 고쳤으면 `npx tsc --noEmit ... <파일>` 또는 dev 서버 기동으로 따로 확인한다 |
-| `pnpm test` | `apps/{philly-shipyard,mro2,indoorshop}` + `packages/{domain,features,widgets}` |
+| `pnpm test` | `apps/{philly-shipyard,mro2,indoorshop}` + `packages/{core,domain,features,widgets}` |
 | `npx tsc -b` (루트) | 루트 `tsconfig.json` 의 project references 전체. 단 `apps/{crane-hmi,mro2,indoorshop}` 은 references 에 없다 |
 
-`packages/{domain,features,widgets}` 에는 `test` 스크립트가 있지만, `packages/*` 어디에도 `lint`/`typecheck` 스크립트는 없다. 패키지 코드만 고쳤을 때는 `npx tsc -b` 를 함께 돌려 확인한다.
+`packages/{core,domain,features,widgets}` 에는 `test` 스크립트가 있지만, `packages/*` 어디에도 `lint`/`typecheck` 스크립트는 없다. 패키지 코드만 고쳤을 때는 `npx tsc -b` 를 함께 돌려 확인한다.
 
 `pnpm lint` 가 `apps/shell` 안에서만 `eslint .` 를 돌리므로, 아래 **FSD Import Rules 의 ESLint 강제는 `packages/*` 와 `apps/{site}` 에서 실제로 실행되지 않는다.** 루트 `eslint.config.js` 에 규칙은 정의돼 있고 파일을 직접 지정하면 적용되지만, `pnpm lint` 경로로는 그 파일들에 도달하지 않는다. 해당 코드를 고쳤다면 루트에서 `npx eslint <고친 경로>` 로 직접 확인한다.
 
@@ -35,9 +35,9 @@ turbo task 는 각 workspace 의 `package.json` scripts 에만 물린다. 현재
 
 ### 테스트 현황
 
-vitest 를 사용한다. 테스트가 존재하는 곳은 `apps/{philly-shipyard,mro2,indoorshop}` 과 `packages/{domain,features,widgets}` 이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
+vitest 를 사용한다. 테스트가 존재하는 곳은 `apps/{philly-shipyard,mro2,indoorshop}` 과 `packages/{core,domain,features,widgets}` 이며, `lib/`·`model/` 의 순수 함수·스토어·훅을 대상으로 한다. 3D 편집(scene-editor)·모니터링(features/3d)·도메인 헬퍼(domain/3d/lib)는 특성화 테스트로 덮여 있다.
 
-- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/philly-shipyard` 와 `packages/{domain,features,widgets}` 뿐이고, `apps/{mro2,indoorshop}` 은 설정 없이 vitest 기본값으로 돈다.
+- 설정 선례: `apps/philly-shipyard/vitest.config.ts` (`environment: 'node'`, `include: ['src/**/*.test.ts']`, `setupFiles` 로 타임존 고정). `vitest.config.ts` 가 있는 곳은 `apps/philly-shipyard` 와 `packages/{core,domain,features,widgets}` 뿐이고(`core` 는 three 가 없어 `setupFiles` 도 없다), `apps/{mro2,indoorshop}` 은 설정 없이 vitest 기본값으로 돈다.
 - 패키지 공통 규칙: 기본 환경은 node. DOM·localStorage·React 훅이 필요한 파일에만 `// @vitest-environment jsdom` 을 붙인다 (jsdom 전역 설정 금지). 훅 테스트는 `@testing-library/react` 의 `renderHook` 을 쓴다.
 - `packages/{features,widgets}` 의 `src/test-setup.ts` 는 jsdom 캔버스 스텁이다 — three/examples 모듈(lottie 등)이 로드 시점에 2D 컨텍스트를 요구해서 없으면 jsdom 테스트의 모듈 로드가 깨진다.
 - R3F `useFrame` 훅(리플레이 러너, 충돌 가드 시뮬레이션)은 `@react-three/fiber` 를 mock 해 콜백을 잡아 두고 delta 를 수동 주입해 결정론적으로 돌린다. 시뮬레이션의 Math.random 은 시드 고정 PRNG 로 대체한다.
@@ -177,6 +177,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 테마 / 사이드바 / 헤더 표시 옵션 | `packages/core/src/lib/{theme,sidebar,header-display-settings}-context.tsx` |
 | 네비게이션 구성 | `packages/widgets/src/layout/config/navigation.ts` |
 | 공용 3D viewer shell | `packages/ui/src/organisms/three-scene-viewer.tsx` |
+| 탑뷰 포즈 계산(정수직 회피 tilt, 뷰어·편집기 공용) | `packages/core/src/lib/top-view-pose.ts` (`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
 | 3D 런타임 상태(Zustand) | `packages/features/src/3d/model/` |
 | 3D editor session/history/persistence | `packages/widgets/src/scene-editor/model/` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `scene-file-registry.ts` |
@@ -191,6 +192,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 태그 맵핑 편집 UI | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`(인스펙터 탭), `tag-key-combobox.tsx`, `lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상), 팔레트 "태그" 탭 `palette-virtual-tag-section.tsx` |
 | 가상 태그 관리 페이지 | `packages/widgets/src/virtual-tags/ui/virtual-tags-page.tsx` |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx` (base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
+| 전체화면(Fullscreen API) | 훅 `packages/core/src/lib/use-fullscreen.ts`(3D 뷰어·편집 페이지 공용, zustand 전역 상태). 요소 하나가 아니라 **문서 전체**를 `requestFullscreen` 하고 `AppLayout` 이 `useIsFullscreenActive()` 로 헤더·사이드바를 숨긴다 — top layer 밖에 남는 DOM 이 없어 body 포털·전역 Toaster 를 따로 챙길 필요가 없다(요소 단위 전체화면 시절엔 `PortalContainerProvider` 와 두 번째 Toaster 가 필요했다). 페이지 일부인 뷰어(`ThreeSceneViewer`)는 `isFullscreen` 일 때 자기 루트를 `fixed inset-0 z-50` 으로 띄운다. 주인(toggle 을 부른 인스턴스)만 `isFullscreen` 이 true 고, 주인이 언마운트되면 전체화면을 끝낸다 |
+| 씬 객체 충돌 감지(시뮬레이션·실시간 모니터링과 에디터, 모델↔모델 관통 감지. 골리앗 LiDAR 근접 존인 collision guard 와는 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`(AABB→OBB→three-mesh-bvh 삼각형, BVH 는 여기서만 접근·빌드 안 함), 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`(React 밖 싱글턴, 메쉬 matrixWorld 변화 기반 dirty 쌍만 검사, 기준선·억제·시간 예산. hit 을 돌려줄 뿐 스스로 멈추지 않는다), 스토어 `model/use-scene-collision-store.ts`(세션 전용 전역: on/off·충돌 시 정지 여부·기록 최대 10개·활성 기록. 기록 클릭 = `rigValueStore.restore(스냅샷)` + 러너 정지, ▶ 재생이 `resume` 으로 재무장), 훅 `model/use-scene-collision-detector.ts`(**`RigDriver` 바로 다음에 마운트** — 같은 priority useFrame 은 마운트 순. 어느 모드든 그 쌍만 억제한 채 감시 계속 — 정지 모드는 러너 pause+freeze+pin, 무정지는 3초 박스. 억제 해제는 모델 AABB 가 아니라 **메쉬 단위**(AABB+margin → OBB → 삼각형 최단 거리 `meshesWithinDistance`)라, 단일 메쉬 크레인처럼 OBB 가 늘 겹치는 모델도 삼각형이 0.05 unit 이상 떨어지면 재보고된다), 편집 UI 는 `packages/features/src/3d/ui/scene-collision-panel.tsx`(감지 on/off·충돌 시 정지·기록 10개·초기화) 하나를 에디터 팔레트 "충돌" 탭과 모니터링 독 `AlertTriangle` 팝업 `ui/scene-collision-menu.tsx`(감지 켜짐 amber·정지 중 red)이 공유한다(충돌 시 캔버스 위 오버레이 패널은 2026-09-07 에 제거, 씬 안 빨간 박스·경고 표지 `scene-collision-highlight.tsx` 만 남음). 모니터링은 시뮬레이션·실시간 모드에서 켜지고 리플레이는 제외. 값 생산자 정지는 `model/scene-collision-hold.ts` 한 곳 — 가상 태그는 pause, 실시간(WebSocket)은 `useRealtimeStore.hold()` 로 **화면 반영만 보류**(러너가 수신 값을 drain 만 하고 버림, 장비는 계속 움직임)하며 pinned 을 떠나는 모든 스토어 경로(resume·clearActive·clearHistory·clear·setEnabled(false))가 release 한다. 패널은 `runner='realtime'` 이면 실시간 문구를 보이고, 정지 해제는 고정된 기록 행 재클릭(`selectRecord` → `resume`)이다(독 ▶ 도 풀지만 실시간에선 가상 태그 러너를 켜는 부작용이 있어 안내하지 않는다). 상수 `lib/scene-collision-pairs.ts` |
 | 모니터링 씬 독(dock: hover 펼침·고정 우측 레일) | 껍데기 `packages/ui/src/organisms/scene-dock.tsx`(`SceneDockRail`, 완전 제어형, 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`), 상태·영속화 `packages/features/src/3d/model/use-scene-dock.ts` + `lib/{dock-hover-state,dock-storage}.ts`(순수 리듀서·pin 영속화, 테스트 대상). 조립은 `Monitoring3dView` 의 `toolbarLayout="dock"`. 하단 독 패널(크레인 실시간 상태 테이블)은 2026-09-03 에 제거됐다 |
 
 ## packages/ui 구조 (Atomic Design)
@@ -235,9 +238,10 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 3D scene 편집 결과는 dev server 경유로 `apps/shell/public/scenes/*.json` 에 저장된다. 미들웨어는 `apps/shell/vite.config.ts` 의 `POST /__dev/scene` 이다. 관련 수정 시 scene registry 와 public asset 경로를 함께 확인한다. 가상 태그도 같은 방식으로 `POST /__dev/virtual-tags` → `public/simulation/virtual-tags.json` 에 저장되며, 경로 문자열이 `vite.config.ts` 와 `virtual-tag-storage.ts` 두 곳에 있으니 함께 바꾼다.
 - dev 미들웨어가 `public/` 에 쓰는 디렉토리(`scenes`, `simulation`, `previews`)는 `apps/shell/vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 등록돼 있어야 저장 시 전체 리로드가 나지 않는다(이 플러그인이 public 자산 변경마다 `full-reload` 를 보내는 주체다. Vite 코어는 보내지 않는다). 새 저장 미들웨어를 만들면 그 목록에 추가한다. `server.watch.ignored` 로 막지 않는다 — Vite 는 워처가 유지하는 `publicFiles` 집합에 있는 파일만 서빙해서, 무시된 디렉토리에 기동 후 생긴 파일은 재시작 전까지 404 가 된다.
+- **카메라 `up` 은 항상 +Y 로 두고, 탑뷰는 `packages/core/src/lib/top-view-pose.ts` 의 미세 tilt(`TOP_VIEW_TILT`)로 만든다.** 탑뷰용으로 `camera.up` 을 바꾸면 OrbitControls 극점이 틀어져 회전이 어색하고, `{position, target}` 만 저장하는 포즈(포커스 복귀·북마크·`SavedCameraInfo`)가 up 을 되살릴 수 없어 복원 시 화면이 돌아간다. up=+Y 인 채 타깃 정확히 위에 서면 `lookAt` 이 퇴화해 roll 이 부동소수 노이즈로 정해지므로, 뷰어 `applyCameraState` 는 들어오는 모든 포즈를 `ensureTopViewTilt` 로 정규화한다(사이트 프리셋 `topViewPosition: [0,30,0]`·옛 북마크 방어). 2026-09-05 에 뷰어의 `up=(0,0,-1)` 탑뷰를 이 방식으로 통일했다.
 - **`ui/*.tsx` 안에서 수치 계산을 하지 않는다.** 좌표 변환·프레이밍·판정 로직은 같은 슬라이스의 `lib/` 로 빼서 테스트 가능하게 유지한다. `packages/features/src/3d/lib/scene-shadow.ts` 가 이 원칙의 선례이고, 그 파일 주석이 이유(react-refresh 규칙)까지 설명한다.
 - **기즈모 스냅은 three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 에 맡기지 않는다.** local 공간에서는 격자가 객체의 회전 프레임에 놓여 yaw 로 돌아간 모델의 X·Z 저장값이 격자를 벗어나고, world 회전은 델타 기준이라 시작 소수점이 남는다. 스냅은 `packages/features/src/3d/lib/snap-transform.ts` 의 순수 함수가 **저장값(부모 프레임 위치 m · 오일러 도 · 배율)** 기준으로 하며, 기즈모 경로(`use-scene-transform.ts` liveSync — 드래그 시작 대비 변한 축만)와 인스펙터 스테퍼(`InputNumber` 의 `stepValue` 에 `stepOnGrid` 주입)가 같은 함수를 쓴다. 직접 타이핑한 값은 스냅하지 않는다.
-- 루트 태그 맵핑이 있는 모델은 기즈모 드래그가 끝나는 프레임에 `use-rig-driver.ts` 가 루트 rest 를 **현재 자세**로 다시 잡는다(handoff, `reanchorRootIfMoved`). 커밋된 새 배치값은 React 렌더 + passive effect 를 거쳐야 드라이버에 도착하므로, 그 전 프레임에 옛 rest 로 되돌리면 모델이 이전 위치로 한 번 튄다. 드라이버가 마지막으로 적용한 자세 그대로인 루트(기즈모가 안 건드린 것)는 rest 를 유지한다. 드래그 시작 자세가 rest+Δ 라 커밋값에 Δ 가 흡수되는 문제는 별건으로 남아 있다(`use-rig-driver.test.ts` 의 `it.todo`).
+- 루트 태그 맵핑이 있는 모델은 기즈모 드래그가 끝나는 프레임에 `use-rig-driver.ts` 가 루트 rest 를 **현재 자세**로 다시 잡는다(handoff, `reanchorRootIfMoved`). 커밋된 새 배치값은 React 렌더 + passive effect 를 거쳐야 드라이버에 도착하므로, 그 전 프레임에 옛 rest 로 되돌리면 모델이 이전 위치로 한 번 튄다. 드라이버가 마지막으로 적용한 자세 그대로인 루트(기즈모가 안 건드린 것)는 rest 를 유지한다. 기즈모가 잡는 자세는 rest+Δ 이므로 handoff 와 커밋(`use-scene-transform.ts`)·스냅은 드라이버가 readout 에 남긴 `rootDeltas`(루트에 마지막으로 적용한 Δ, 드래그 중엔 드래그 직전 값)를 벗겨 배치값을 얻는다(`lib/strip-channel-delta.ts`, `model/root-placement.ts`). 그대로 저장하면 Δ 가 한 번 더 더해져 모델이 Δ 만큼 더 가서 멈춘다(2026-09-07 수정).
 - region → 씬 파일 매핑의 단일 소스는 `packages/domain/src/3d/model/scene-file-map.ts` 다. 브라우저 런타임(`scene-file-registry.ts`)과 Node 컨텍스트인 `apps/shell/vite.config.ts` 의 저장 미들웨어가 **같은 표를 읽어야** 한다. 표를 복제하거나 미등록 region 을 기본 파일로 fallback 시키지 않는다 — 그 fallback 이 남의 씬을 덮어쓴 사고의 원인이었고, 지금은 양쪽 모두 `null` 을 반환한다. 파일 자체 주석에 경위가 있다.
 - GLB 자산은 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, **압축 전 원본은 `assets-src/` 에 보관**한다. 압축은 되돌릴 수 없으므로 이 디렉토리를 지우지 않는다.
   - 신규 반입: `public/` 에 놓고 `pnpm optimize:glb <파일>` (지도는 `pnpm optimize:map`). 원본이 `assets-src/` 로 자동 백업된다.

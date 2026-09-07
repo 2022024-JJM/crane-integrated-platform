@@ -2,14 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D, Quaternion } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import { degToRad, modelObjectRegistry, parseMeshId } from '@crane/domain/3d';
+import { getPlacementTransformVectors } from '../lib/transform-vectors';
 import {
-  getContinuousTransformVectors,
-  getObjectTransformVectors,
-} from '../lib/transform-vectors';
-import {
+  readRootPlacement,
   snapChangedAxes,
   snapStepFor,
   useActiveTransformStore,
+  writeRootPlacement,
   useIsMultiSelection,
   useSceneObjectSelectionStore,
   type SceneSnapStep,
@@ -51,6 +50,8 @@ interface DragStartTransform {
 // liveSync는 매 frame 호출되므로 임시 Quaternion을 재사용해 할당을 피한다.
 const tmpStartQuatInv = new Quaternion();
 const tmpDeltaQuat = new Quaternion();
+// 스냅 되쓰기용 배치 자세 스크래치(readRootPlacement → 격자 → writeRootPlacement).
+const snapPose = new Object3D();
 
 interface UseSceneTransformParams {
   primarySelectedId: string | null;
@@ -129,23 +130,26 @@ export function useSceneTransform({
       : 0;
 
   /**
-   * Object3D 의 현재 transform 을 sceneInfo 표현으로 읽고, 스냅이 켜져 있으면
-   * 드래그 시작 대비 **변한 축만** 격자로 옮긴 뒤 Object3D 에 되써 넣는다.
-   * 격자는 저장값(부모 프레임 위치 · 오일러 deg · 배율) 위에 놓인다 —
-   * three 의 `translationSnap` 은 local 공간에서 객체의 회전 프레임에 격자를
-   * 놓아 yaw 로 돌아간 모델의 X·Z 저장값이 정수가 되지 않았다(snap-transform
-   * 주석 참고). TransformControls 는 pointermove 마다 start+offset 으로 다시
-   * 계산하므로 되써 넣어도 누적 오차가 없다.
+   * Object3D 의 현재 transform 을 sceneInfo 표현(**배치값**, 태그 Δ 를 벗긴 것)
+   * 으로 읽고, 스냅이 켜져 있으면 드래그 시작 대비 **변한 축만** 격자로 옮긴
+   * 뒤 Δ 를 다시 더해 Object3D 에 되써 넣는다. 격자는 저장값(부모 프레임 위치 ·
+   * 오일러 deg · 배율) 위에 놓인다 — three 의 `translationSnap` 은 local
+   * 공간에서 객체의 회전 프레임에 격자를 놓아 yaw 로 돌아간 모델의 X·Z
+   * 저장값이 정수가 되지 않았다(snap-transform 주석 참고). TransformControls
+   * 는 pointermove 마다 start+offset 으로 다시 계산하므로 되써 넣어도 누적
+   * 오차가 없다.
    */
   const readSnappedTransform = useCallback(
     (
+      id: string,
       obj: Object3D,
       start: DragStartTransform | undefined,
       prevRotationDeg: Vector3Tuple | undefined,
     ): Record<SceneTransformField, Vector3Tuple> => {
-      const vectors = getContinuousTransformVectors(obj, prevRotationDeg);
+      const vectors = getPlacementTransformVectors(id, obj, prevRotationDeg);
       if (snapStepValue <= 0 || !start) return vectors;
 
+      let next = vectors;
       if (transformMode === 'translate') {
         const position = snapChangedAxes(
           start.position,
@@ -153,32 +157,41 @@ export function useSceneTransform({
           snapStepValue,
         );
         if (position === vectors.position) return vectors;
-        obj.position.set(position[0], position[1], position[2]);
-        return { ...vectors, position };
-      }
-      if (transformMode === 'rotate') {
+        next = { ...vectors, position };
+      } else if (transformMode === 'rotate') {
         const rotation = snapChangedAxes(
           start.rotationDeg,
           vectors.rotation,
           snapStepValue,
         );
         if (rotation === vectors.rotation) return vectors;
-        obj.rotation.set(
-          degToRad(rotation[0]),
-          degToRad(rotation[1]),
-          degToRad(rotation[2]),
-        );
-        return { ...vectors, rotation };
+        next = { ...vectors, rotation };
+      } else {
+        // scale: 격자 0 은 행렬을 망가뜨리므로 three 와 같이 한 칸으로 올린다.
+        const scale = snapChangedAxes(
+          start.scale,
+          vectors.scale,
+          snapStepValue,
+        ).map((v) => (v === 0 ? snapStepValue : v)) as Vector3Tuple;
+        if (scale.every((v, i) => v === vectors.scale[i])) return vectors;
+        next = { ...vectors, scale };
       }
-      // scale: 격자 0 은 행렬을 망가뜨리므로 three 와 같이 한 칸으로 올린다.
-      const scale = snapChangedAxes(
-        start.scale,
-        vectors.scale,
-        snapStepValue,
-      ).map((v) => (v === 0 ? snapStepValue : v)) as Vector3Tuple;
-      if (scale.every((v, i) => v === vectors.scale[i])) return vectors;
-      obj.scale.set(scale[0], scale[1], scale[2]);
-      return { ...vectors, scale };
+
+      // 스냅한 채널만 배치 자세에 반영하고 Δ 를 다시 더해 화면 자세로.
+      readRootPlacement(id, obj, snapPose);
+      if (transformMode === 'translate') {
+        snapPose.position.set(...next.position);
+      } else if (transformMode === 'rotate') {
+        snapPose.rotation.set(
+          degToRad(next.rotation[0]),
+          degToRad(next.rotation[1]),
+          degToRad(next.rotation[2]),
+        );
+      } else {
+        snapPose.scale.set(...next.scale);
+      }
+      writeRootPlacement(id, obj, snapPose);
+      return next;
     },
     [snapStepValue, transformMode],
   );
@@ -204,6 +217,7 @@ export function useSceneTransform({
     // 프라이머리를 먼저 스냅해야 세컨더리가 받는 델타도 격자 기준이 된다.
     const start = dragStartTransformsRef.current.get(primarySelectedId);
     const nextTransform = readSnappedTransform(
+      primarySelectedId,
       selectedObject,
       start,
       rotationContinuityRef.current.get(primarySelectedId),
@@ -235,6 +249,7 @@ export function useSceneTransform({
           );
           // 시작이 격자 밖이던 세컨더리도 각자 자기 시작값 기준으로 격자에 올린다.
           readSnappedTransform(
+            id,
             obj,
             objStart,
             rotationContinuityRef.current.get(id),
@@ -254,6 +269,7 @@ export function useSceneTransform({
 
           obj.quaternion.copy(tmpDeltaQuat).multiply(objStart.quaternion);
           readSnappedTransform(
+            id,
             obj,
             objStart,
             rotationContinuityRef.current.get(id),
@@ -281,6 +297,7 @@ export function useSceneTransform({
             objStart.scale[2] * ratioZ,
           );
           readSnappedTransform(
+            id,
             obj,
             objStart,
             rotationContinuityRef.current.get(id),
@@ -316,7 +333,10 @@ export function useSceneTransform({
     }
     // liveSync가 프레임마다 갱신해 둔 연속성 기준으로 최종 euler를 보정한다
     // (onObjectChange 없이 mouseUp만 오는 경로도 드래그 시작 seed로 보정된다).
-    const nextTransform = getContinuousTransformVectors(
+    // 배치값(태그 Δ 를 벗긴 값)으로 저장한다 — 절대 자세를 저장하면 드라이버가
+    // Δ 를 한 번 더 더해 모델이 Δ 만큼 더 가서 멈춘다.
+    const nextTransform = getPlacementTransformVectors(
+      primarySelectedId,
       selectedObject,
       rotationContinuityRef.current.get(primarySelectedId),
     );
@@ -361,7 +381,9 @@ export function useSceneTransform({
 
     // 단일 선택 포함 전 선택 객체의 시작 transform을 기록한다. 멀티 드래그의
     // 델타 기준이자, 오일러 연속성 보정의 seed(드래그 시작 euler deg)가 된다.
-    // 렌더가 저장값을 euler로 그대로 적용하므로 seed는 sceneInfo 표현과 같다.
+    // 위치·오일러·크기는 배치값(태그 Δ 를 벗긴 것)으로 둔다 — 스냅의 "변한 축"
+    // 비교 기준이 커밋값과 같아야 한다. quaternion 은 절대 자세 그대로다:
+    // 멀티 드래그 회전 델타 `current ∘ start⁻¹` 에서 Δ 가 상쇄되기 때문.
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
     const startTransforms = new Map<string, DragStartTransform>();
     const continuityRotations = new Map<string, Vector3Tuple>();
@@ -370,14 +392,14 @@ export function useSceneTransform({
       const obj =
         modelObjectRegistryRef.current.get(id) ?? modelObjectRegistry.get(id);
       if (obj) {
-        const rotationDeg = getObjectTransformVectors(obj).rotation;
+        const placement = getPlacementTransformVectors(id, obj);
         startTransforms.set(id, {
-          position: [obj.position.x, obj.position.y, obj.position.z],
+          position: placement.position,
           quaternion: obj.quaternion.clone(),
-          rotationDeg,
-          scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+          rotationDeg: placement.rotation,
+          scale: placement.scale,
         });
-        continuityRotations.set(id, rotationDeg);
+        continuityRotations.set(id, placement.rotation);
       }
     }
     dragStartTransformsRef.current = startTransforms;
@@ -407,7 +429,8 @@ export function useSceneTransform({
         // 세컨더리 객체는 프레임별 보정 없이 드래그 시작 seed 기준으로
         // 1회 보정한다 — 플립 등가표현은 누적이 아니라 정확한 쌍이므로
         // 시작 대비 어느 표현이 연속인지는 seed만으로 판정된다.
-        const nextTransform = getContinuousTransformVectors(
+        const nextTransform = getPlacementTransformVectors(
+          id,
           obj,
           rotationContinuityRef.current.get(id),
         );

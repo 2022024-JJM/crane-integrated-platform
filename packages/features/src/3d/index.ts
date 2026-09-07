@@ -78,6 +78,33 @@ export {
 export { makeMeshId, parseMeshId, isMeshId } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export { RigDriver } from './ui/rig-driver';
+export { SceneCollisionDetector } from './ui/scene-collision-detector';
+export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
+export { SceneCollisionMenu } from './ui/scene-collision-menu';
+export {
+  SceneCollisionPanel,
+  type SceneCollisionRunner,
+} from './ui/scene-collision-panel';
+export {
+  useSceneCollisionStore,
+  type SceneCollisionActiveMode,
+  type SceneCollisionRecord,
+  type SceneCollisionRecordParty,
+} from './model/use-scene-collision-store';
+export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export {
+  sceneCollisionRuntime,
+  type SceneCollisionRuntimePhase,
+} from './model/scene-collision-runtime';
+export {
+  collisionViewRadius,
+  computeCollisionViewPose,
+  FLASH_MS as SCENE_COLLISION_FLASH_MS,
+  HISTORY_MAX as SCENE_COLLISION_HISTORY_MAX,
+  resolveRecordNodes,
+  type CollisionCameraPose,
+  type CollisionRecordNodeRef,
+} from './lib/scene-collision-pairs';
 export { useRigDriver } from './model/use-rig-driver';
 export {
   createTagBindingSource,
@@ -96,6 +123,12 @@ export {
   useRigLivePoll,
   type RigModelReadout,
 } from './model/rig-live-readouts';
+export { readRootPlacement, writeRootPlacement } from './model/root-placement';
+export {
+  stripChannelDeltas,
+  type ChannelDelta,
+  type ChannelPose,
+} from './lib/strip-channel-delta';
 export { clampJointValue } from './lib/apply-joint';
 export {
   snapChangedAxes,

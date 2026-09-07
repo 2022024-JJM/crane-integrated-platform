@@ -185,23 +185,16 @@ function CameraAboveSea() {
   useFrame((state) => {
     const controls = state.controls as OrbitControlsLike | null;
     if (!controls) return;
-    // OrbitControls는 극각을 camera.up 기준으로 잰다. 탑뷰는 up을 (0,0,-1)로
-    // 바꾸므로(three-scene-viewer TOP_VIEW_CAMERA_UP) 그때는 "수직축"이 월드
-    // -Z가 되어 아래 +Y 공식이 맞지 않는다 — 타깃 위의 카메라가 phi 90°로
-    // 잡혀 매 update마다 maxPolar로 잘리며 앞으로 기울었다(줌인할수록 커짐).
-    // up이 +Y가 아니면 제한을 풀고 팬 백스톱에만 맡긴다.
-    if (Math.abs(state.camera.up.y - 1) > 1e-6) {
-      controls.maxPolarAngle = Math.PI;
-      return;
-    }
+    // 카메라 up 은 항상 +Y 다(뷰어 탑뷰는 up 을 바꾸지 않고 미세 tilt 로
+    // 만든다 — @crane/core top-view-pose). 그래서 극각 공식이 늘 성립하고
+    // 탑뷰(phi≈1e-3)는 어떤 상한에도 잘리지 않는다.
     const dist = state.camera.position.distanceTo(controls.target);
     if (dist <= 0) return;
     const cos = (CAMERA_MIN_Y - controls.target.y) / dist;
     // cos ≥ 1: 타깃이 반경보다 깊이 지하라 어떤 극각으로도 y≥MIN_Y를 못 만든다.
     // 예전엔 여기서 0(정수직 위)으로 강제해 세게 확대하면 버드아이뷰로 튀었다.
     // 회전으로 풀 수 없는 상황이니 제한을 걸지 말고 팬 백스톱에 맡긴다.
-    controls.maxPolarAngle =
-      Math.abs(cos) >= 1 ? Math.PI : Math.acos(cos);
+    controls.maxPolarAngle = Math.abs(cos) >= 1 ? Math.PI : Math.acos(cos);
   }, -2);
 
   // 팬 백스톱: 카메라·타깃을 같은 양만큼 올려 궤도(offset)를 보존한다.
@@ -222,10 +215,7 @@ function EnvironmentBackground({ url }: { url: string }) {
   const texture = useLoader(EXRLoader, url);
   const scene = useThree((s) => s.scene);
 
-  useEffect(
-    () => applyEquirectBackground(scene, texture),
-    [scene, texture],
-  );
+  useEffect(() => applyEquirectBackground(scene, texture), [scene, texture]);
 
   return (
     <>

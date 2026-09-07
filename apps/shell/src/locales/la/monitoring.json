@@ -152,6 +152,20 @@
     "snapRotation": "Rotatio",
     "snapScale": "Scala",
     "grid": "Crates soli",
+    "collision": {
+      "enable": "Collisionis detectio",
+      "pauseOnCollision": "In collisione siste",
+      "pauseHint": "Si exstinctum, simulatio pergit et solum memoria servatur.",
+      "history": "Collisionum memoria",
+      "historyLimit": "novissimae {{max}}",
+      "empty": "Nulla collisio adhuc notata.",
+      "clearHistory": "Memoriam dele",
+      "viewContact": "Punctum collisionis vide",
+      "deselect": "Selectionem tolle",
+      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat. ▶ preme ut ubi stetit pergat.",
+      "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
+      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
+    },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
     "textObject": "Textus",
@@ -208,7 +222,8 @@
       "models": "Exempla",
       "map": "Tabula",
       "background": "Fundus",
-      "tags": "Tags"
+      "tags": "Tags",
+      "collision": "Collisio"
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
@@ -287,5 +302,8 @@
     "periodHint": "Tempus (ms) unius cycli (min→max→min)",
     "save": "Serva",
     "saveFailed": "Signa virtualia servari non potuerunt."
+  },
+  "sceneCollision": {
+    "contact": "Punctum contactus (proximum)"
   }
 }

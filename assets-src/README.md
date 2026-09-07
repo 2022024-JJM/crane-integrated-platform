@@ -80,6 +80,20 @@ pnpm optimize:map 기존파일.glb
 에디터에서 다시 놓아야 했다. 재반입 시에도 원점 기준으로 받는다 — 옛 오프셋을
 복원하지 말 것.
 
+2026-09-07 V4 반입본(`Philly V4.glb`)은 루트 노드에 (-263, -3.5, 31) 오프셋이
+실려 왔다. 정점 좌표 범위는 20260903 본과 완전히 같았으므로 루트 오프셋만 지워
+반입했고 씬 재배치는 없었다. 지도의 루트 오프셋은 범용 언베이크 도구로 지운다 —
+출력 위치가 `assets-src/models/` 로 고정돼 있어 지도는 `mv` 로 옮긴다:
+
+```bash
+node scripts/unbake-root-transform.mjs "새지도.glb"     # → assets-src/models/새지도.glb
+mv "assets-src/models/새지도.glb" assets-src/maps/phillyshipyard.glb
+pnpm optimize:map phillyshipyard.glb
+```
+
+지면 머티리얼도 V4 부터 unlit 베이크 1장이 아니라 lit PBR 3장(base/MR/normal,
+각 4096 → 2048 webp)이다. 조명(환경 프리셋)에 따라 지면 밝기가 달라진다.
+
 소형 지도(okpo·1dock·plane)는 대상이 아니다 — 절감 효과가 없고 unlit 플레인은
 단면화가 오히려 위험하다. 자세한 단계·안전 가드·문제 해결은
 `docs/지도-GLB-최적화-파이프라인.md` 참고. 모델 파이프라인 설명은

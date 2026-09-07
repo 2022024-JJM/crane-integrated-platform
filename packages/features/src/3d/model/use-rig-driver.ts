@@ -8,16 +8,22 @@ import {
   getRestPose,
   modelObjectRegistry,
   type RestPose,
-  type RigAxis,
   type RigConstraint,
   type RigDefinition,
   type RigJoint,
   type SavedModelInfo,
-  type TagMappingChannel,
   type TagMappingNodeTarget,
 } from '@crane/domain/3d';
 import { clampJointValue, jointChannel, jointDelta } from '../lib/apply-joint';
-import { addChannelDelta, beginNodePose } from '../lib/apply-channel';
+import {
+  accumulatedParentScale,
+  addChannelDelta,
+  beginNodePose,
+} from '../lib/apply-channel';
+import {
+  stripChannelDeltas,
+  type ChannelDelta,
+} from '../lib/strip-channel-delta';
 import { rigLiveReadouts } from './rig-live-readouts';
 import { makeJointAddress, rigValueStore } from './rig-value-store';
 import { useActiveTransformStore } from './use-active-transform-store';
@@ -48,13 +54,19 @@ import { useActiveTransformStore } from './use-active-transform-store';
  * 와 같은 노드를 두고 매 프레임 서로 덮어쓰면 점프한다.
  *
  * 드래그가 끝나는 프레임(handoff)에는 기즈모가 옮긴 루트의 rest 를 그 루트의
- * **현재 자세**로 다시 잡는다. 커밋된 새 배치값은 React 렌더 + passive effect
- * 를 거쳐야 `models` 로 들어오는데 그 사이 프레임에서 옛 rest 로 되돌리면
- * 모델이 이전 위치로 한 번 튀었다가 돌아온다. 현재 자세는 커밋 경로
- * (use-scene-transform commitFinal)가 방금 읽어 저장한 값과 같으므로 새
- * 배치값이 도착해 인스턴스를 다시 만들어도 화면이 바뀌지 않는다. 기즈모가
- * 건드리지 않은 루트(드라이버가 마지막으로 적용한 자세 그대로인 것)는 rest 를
- * 유지한다 — 그것까지 다시 잡으면 Δ 가 rest 에 흡수된다.
+ * **현재 자세에서 Δ 를 벗긴 값**으로 다시 잡는다. 커밋된 새 배치값은 React
+ * 렌더 + passive effect 를 거쳐야 `models` 로 들어오는데 그 사이 프레임에서
+ * 옛 rest 로 되돌리면 모델이 이전 위치로 한 번 튀었다가 돌아온다. 기즈모가
+ * 잡은 자세는 `rest + Δ` 이므로 Δ 를 벗겨야 한다 — 그대로 rest 로 삼으면
+ * 이어서 Δ 가 한 번 더 더해져 Δ 만큼 튄다(회전·크기 커밋 뒤 잠깐 다른
+ * 위치에 보였다 돌아오던 증상). 커밋 경로(use-scene-transform)도 같은 Δ
+ * (readout 의 rootDeltas)를 벗겨 저장하므로, 새 배치값이 도착해 인스턴스를
+ * 다시 만들어도 화면이 바뀌지 않는다. 기즈모가 건드리지 않은 루트(드라이버가
+ * 마지막으로 적용한 자세 그대로인 것)는 rest 를 유지한다.
+ *
+ * 드래그 **도중** 태그값이 계속 바뀌면(재생 중 드래그) 손을 뗀 순간의 Δ 가
+ * 드래그 시작 때와 달라 그 차이만큼 이동한다 — 정지 상태 편집이 주 경로라
+ * 허용한다.
  */
 
 interface JointBinding {
@@ -78,6 +90,8 @@ interface DrivenNode {
    * 프레임에 현재 자세와 다르면 기즈모가 옮긴 것이므로 rest 를 다시 잡는다.
    */
   lastApplied?: RestPose;
+  /** 루트 전용 — lastApplied 를 만들 때 더한 Δ 목록(적용 순서). handoff 가 벗긴다. */
+  lastAppliedDeltas?: ChannelDelta[];
 }
 
 function isAtPose(node: Object3D, pose: RestPose): boolean {
@@ -99,6 +113,14 @@ function reanchorRootIfMoved(instance: DriverInstance): void {
   if (!driven) return;
   if (driven.lastApplied && isAtPose(driven.node, driven.lastApplied)) return;
   driven.rest = capturePose(driven.node);
+  // 한 번도 적용하기 전이면 자세에 Δ 가 섞여 있지 않다 — 벗길 것도 없다.
+  if (driven.lastAppliedDeltas) {
+    stripChannelDeltas(
+      driven.rest,
+      driven.lastAppliedDeltas,
+      accumulatedParentScale(driven.node),
+    );
+  }
 }
 
 interface DriverInstance {
@@ -199,11 +221,9 @@ function disposeInstance(instance: DriverInstance): void {
   }
 }
 
-interface ChannelEntry {
-  channel: TagMappingChannel;
-  axis: RigAxis;
-  delta: number;
-}
+type ChannelEntry = ChannelDelta;
+
+const EMPTY_DELTAS: ReadonlyArray<ChannelDelta> = [];
 
 interface UseRigDriverParams {
   rigs: RigDefinition[] | undefined;
@@ -334,9 +354,10 @@ export function useRigDriver({
         }
         return m;
       };
+      // 드래그 중에도 루트 엔트리는 계산한다(적용만 건너뛴다) — readout 의
+      // mappingValues 가 드래그 중에 비지 않게.
       const mappingValues = new Map<string, number>();
       for (const binding of instance.mappings) {
-        if (binding.isRoot && dragging) continue;
         const d = rigValueStore.get(makeJointAddress(model.id, binding.id));
         mappingValues.set(binding.id, d);
         const { channel, axis } = binding.target;
@@ -355,7 +376,8 @@ export function useRigDriver({
         });
       }
 
-      // (4) 적용. 드래그 중인 루트는 손대지 않는다(맵핑도 위에서 걸렀다).
+      // (4) 적용. 드래그 중인 루트는 손대지 않는다 — lastApplied·Δ 도 드래그
+      //     직전 값으로 남아 handoff·커밋이 그것을 벗긴다.
       for (const [node, entries] of perNode) {
         const driven = instance.drivenNodes.get(node);
         if (!driven || (driven.isRoot && dragging)) continue;
@@ -371,6 +393,10 @@ export function useRigDriver({
           } else {
             driven.lastApplied = capturePose(node);
           }
+          // 엔트리 객체는 이 프레임에 새로 만든 것이라 그대로 보관해도 된다.
+          const list = (driven.lastAppliedDeltas ??= []);
+          list.length = 0;
+          for (const entry of entries.values()) list.push(entry);
         }
       }
 
@@ -379,6 +405,9 @@ export function useRigDriver({
         jointValues: values,
         unresolvedMappings: instance.unresolvedMappings,
         mappingValues,
+        rootDeltas:
+          instance.drivenNodes.get(instance.root)?.lastAppliedDeltas ??
+          EMPTY_DELTAS,
       });
     }
 

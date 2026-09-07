@@ -30,8 +30,10 @@ interface EditorToolbarButtonProps {
   children: ReactNode;
 }
 
+// 상자 크기는 Button size="icon-sm"(size-7 = 28px) 그대로 쓴다 — 헤더 바
+// (h-9) 안 이웃 컨트롤(모드 토글·좌표계·스냅)도 같은 28px 에 맞춰져 있다.
 const BASE_CLASS =
-  'text-muted-foreground hover:text-foreground relative size-8 rounded-md';
+  'text-muted-foreground hover:text-foreground relative rounded-md';
 
 const TOGGLE_CLASS =
   'aria-pressed:text-foreground after:absolute after:bottom-0.5 after:left-1/2 after:size-1 after:-translate-x-1/2 after:rounded-full after:bg-transparent aria-pressed:after:bg-primary';

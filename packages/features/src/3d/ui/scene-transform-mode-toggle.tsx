@@ -39,7 +39,9 @@ const MODE_ITEM_CLASS =
   // 모양을 만든다 — Button 은 `border border-transparent bg-clip-padding`
   // 이라 배경이 1px 안쪽으로 그려지고 다크 hover 는 `bg-muted/50` 인데
   // toggleVariants 는 둘 다 없어 hover·선택 배경이 한 둘레 크고 진했다.
-  'text-muted-foreground hover:text-foreground dark:hover:bg-muted/50 size-8 rounded-md border border-transparent bg-clip-padding p-0 active:translate-y-px aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary aria-pressed:hover:text-primary-foreground dark:aria-pressed:hover:bg-primary';
+  // `min-w-7` 은 toggleVariants 기본 size 의 `min-w-8` 을 덮기 위한 것 —
+  // `size-7` 은 h/w 만 이겨서 min-w 가 남으면 폭만 32px 로 벌어진다.
+  'text-muted-foreground hover:text-foreground dark:hover:bg-muted/50 size-7 min-w-7 rounded-md border border-transparent bg-clip-padding p-0 active:translate-y-px aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary aria-pressed:hover:text-primary-foreground dark:aria-pressed:hover:bg-primary';
 
 function isSceneTransformMode(value: string): value is SceneTransformMode {
   return TRANSFORM_MODES.includes(value as SceneTransformMode);

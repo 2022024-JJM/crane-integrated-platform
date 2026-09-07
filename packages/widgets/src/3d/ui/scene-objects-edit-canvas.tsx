@@ -48,9 +48,13 @@ import {
   SceneObjectBoundary,
   SceneSurfaceCamera,
   RigDriver,
+  SceneCollisionDetector,
+  SceneCollisionHighlight,
   manualJointSource,
+  resolveRecordNodes,
   rigValueStore,
   useIsObjectSelected,
+  useSceneCollisionStore,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -61,7 +65,7 @@ import {
   computeTopViewFallbackPose,
   computeTopViewPose,
   type CameraPose,
-} from '../lib/top-view-pose';
+} from '@crane/core/lib/top-view-pose';
 import { collectWorldBounds } from '../lib/world-bounds';
 import { EditorGroundGrid } from './editor-ground-grid';
 
@@ -153,6 +157,8 @@ export interface SceneEditorCameraActions {
   resetView: () => void;
   /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
   topView: () => void;
+  /** 활성 충돌 기록의 두 노드가 화면에 들어오도록 카메라를 맞춘다. 기록이 없으면 no-op. */
+  focusCollision: () => void;
 }
 
 interface SceneObjectsEditCanvasProps {
@@ -203,6 +209,8 @@ interface SceneObjectsEditCanvasProps {
   transformSpace: SceneTransformSpace;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
+  /** 씬 객체 충돌 감지(시뮬레이션 정지·보고) 활성 여부. */
+  collisionEnabled: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -226,6 +234,7 @@ export function SceneObjectsEditCanvas({
   snapStep,
   transformSpace,
   showGrid,
+  collisionEnabled,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -698,7 +707,7 @@ export function SceneObjectsEditCanvas({
     }
   }, [focusSelected, focusSelectedRef]);
 
-  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 lib/top-view-pose 가 하고 여기서는
+  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 @crane/core 의 top-view-pose 가 하고 여기서는
   // OrbitControls 에 적용만 한다(감쇠 처리는 fitToObjects 와 같은 이유).
   const applyCameraPose = useCallback(
     (pose: CameraPose) => {
@@ -757,11 +766,18 @@ export function SceneObjectsEditCanvas({
     applyCameraPose(pose);
   }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
 
+  const focusCollision = useCallback(() => {
+    const { history, activeRecordId } = useSceneCollisionStore.getState();
+    const record = history.find((r) => r.id === activeRecordId);
+    if (!record) return;
+    fitToObjects(resolveRecordNodes([record.a, record.b]));
+  }, [fitToObjects]);
+
   useEffect(() => {
     if (cameraActionsRef) {
-      cameraActionsRef.current = { resetView, topView };
+      cameraActionsRef.current = { resetView, topView, focusCollision };
     }
-  }, [cameraActionsRef, resetView, topView]);
+  }, [cameraActionsRef, focusCollision, resetView, topView]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -828,6 +844,12 @@ export function SceneObjectsEditCanvas({
       >
         <SceneLighting sceneInfo={sceneInfo} />
         <RigDriver sceneInfo={sceneInfo} />
+        {/* 드라이버 바로 다음 — useFrame 실행 순서(마운트 순) 때문에 여기. */}
+        <SceneCollisionDetector
+          sceneInfo={sceneInfo}
+          enabled={collisionEnabled}
+        />
+        <SceneCollisionHighlight />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
