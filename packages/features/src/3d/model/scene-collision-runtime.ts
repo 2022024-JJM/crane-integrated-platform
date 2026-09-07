@@ -44,7 +44,8 @@ import {
  *
  * 기준선(baseline): `arm()` 직후 첫 스캔에서 이미 겹친 쌍은 보고하지 않고
  * 억제한다 — 에디터에서 겹쳐 놓은 모델 때문에 켜자마자 정지되면 안 된다.
- * 억제(닫기 포함)는 두 모델 AABB 가 SEPARATION_MARGIN 보다 떨어지면 풀린다.
+ * 억제(무정지 모드의 보고 뒤 포함)는 두 모델 AABB 가 SEPARATION_MARGIN 보다
+ * 떨어지면 풀린다. 그래서 붙은 채로 오래 겹쳐 있어도 기록은 한 번만 남는다.
  *
  * BVH 는 여기서 빌드하지 않는다(collision-volumes 주석). 없는 메쉬 쌍은
  * 건너뛰고 BVH_RETRY_MS 뒤 다시 본다.
@@ -186,7 +187,11 @@ export class SceneCollisionRuntime {
     this.lastTickMs = 0;
   }
 
-  /** 충돌 보고 후 정지. tick 은 arm() 전까지 아무것도 하지 않는다. */
+  /**
+   * 정지. tick 은 arm() 전까지 아무것도 하지 않는다. 충돌을 받은 호출자가
+   * "충돌 시 정지" 모드일 때, 그리고 기록을 클릭해 옛 자세를 복원할 때 부른다
+   * — 복원된 자세는 대개 겹쳐 있어 감시를 계속하면 곧바로 다시 보고된다.
+   */
   halt(): void {
     this.phase = 'halted';
     this.resetQueue();
@@ -202,7 +207,10 @@ export class SceneCollisionRuntime {
   /**
    * 한 스캔. `now` 는 호출자의 시계(performance.now) — BVH 재시도 시각에
    * 쓰고, 예산 측정은 생성자에 주입된 clock 으로 한다(테스트 결정론).
-   * 첫 충돌을 찾으면 halted 로 전환하고 hit 을 돌려준다.
+   *
+   * 첫 충돌을 찾으면 그 자리에서 hit 을 돌려준다. **스스로 멈추지 않는다** —
+   * 남은 쌍은 다음 tick 으로 재큐되고, 정지할지(halt) 그 쌍만 억제하고
+   * 계속 볼지(suppress)는 호출자가 정한다.
    */
   tick(now: number, budgetMs: number): SceneCollisionHit | null {
     if (this.phase === 'idle' || this.phase === 'halted') return null;
@@ -262,8 +270,8 @@ export class SceneCollisionRuntime {
           job.state = 'suppressed';
           continue;
         }
-        this.phase = 'halted';
-        this.resetQueue();
+        for (let j = i + 1; j < pending.length; j += 1)
+          this.enqueue(pending[j]);
         this.lastTickMs = this.clock() - t0;
         return this.buildHit(job);
       }

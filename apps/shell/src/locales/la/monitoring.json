@@ -152,7 +152,18 @@
     "snapRotation": "Rotatio",
     "snapScale": "Scala",
     "grid": "Crates soli",
-    "collision": "Collisionis detectio",
+    "collision": {
+      "enable": "Collisionis detectio",
+      "pauseOnCollision": "In collisione siste",
+      "pauseHint": "Si exstinctum, simulatio pergit et solum memoria servatur.",
+      "history": "Collisionum memoria",
+      "historyLimit": "novissimae {{max}}",
+      "empty": "Nulla collisio adhuc notata.",
+      "clearHistory": "Memoriam dele",
+      "viewContact": "Punctum collisionis vide",
+      "deselect": "Selectionem tolle",
+      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat. ▶ preme ut ubi stetit pergat."
+    },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
     "textObject": "Textus",
@@ -209,7 +220,8 @@
       "models": "Exempla",
       "map": "Tabula",
       "background": "Fundus",
-      "tags": "Tags"
+      "tags": "Tags",
+      "collision": "Collisio"
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
@@ -291,15 +303,10 @@
   },
   "sceneCollision": {
     "title": "Collisio detecta",
-    "pausedNote": "Simulatio sistitur.",
+    "pausedNote": "Simulatio sistitur. ▶ preme ut ubi stetit pergat.",
     "root": "(radix exempli)",
     "contact": "Punctum contactus (proximum)",
-    "joint": "Articulus",
-    "noTags": "Nullae tesserae agentes",
-    "dismiss": "Claude",
-    "dismissHint": "Hoc par non iterum nuntiabitur donec separentur.",
-    "reset": "Restitue",
-    "resetHint": "Tesseras virtuales ad valores initiales restitue et rursus vigila.",
+    "deselect": "Selectionem tolle",
     "viewContact": "Punctum collisionis vide"
   }
 }

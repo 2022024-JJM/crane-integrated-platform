@@ -48,6 +48,41 @@ describe('rigValueStore', () => {
     expect(rigValueStore.get('m/j')).toBeCloseTo(20, 1);
   });
 
+  it('snapshot 은 현재값(스무딩 중이면 중간값) 목록이고, restore 는 그 자세로 즉시 돌아간다', () => {
+    rigValueStore.set('m/a', 5);
+    rigValueStore.set('m/b', 0);
+    rigValueStore.set('m/b', 10, { smooth: true, smoothTime: 0.2 });
+    for (let i = 0; i < 6; i++) rigValueStore.step(1 / 60);
+    const midway = rigValueStore.get('m/b');
+    const snap = rigValueStore.snapshot();
+    expect(snap).toEqual([
+      ['m/a', 5],
+      ['m/b', midway],
+    ]);
+
+    // 계속 진행해 값이 바뀐 뒤 복원 → 스냅샷 값으로, 스무딩 없이.
+    for (let i = 0; i < 60; i++) rigValueStore.step(1 / 60);
+    expect(rigValueStore.get('m/b')).not.toBe(midway);
+    rigValueStore.set('m/c', 7); // 스냅샷 뒤에 생긴 채널
+    rigValueStore.restore(snap);
+    expect(rigValueStore.get('m/a')).toBe(5);
+    expect(rigValueStore.get('m/b')).toBe(midway);
+    expect(rigValueStore.getTarget('m/b')).toBe(midway);
+    expect(rigValueStore.has('m/c')).toBe(false);
+    for (let i = 0; i < 30; i++) rigValueStore.step(1 / 60);
+    expect(rigValueStore.get('m/b')).toBe(midway);
+  });
+
+  it('빈 스냅샷 restore 는 reset 과 같고, 스냅샷 배열은 저장소와 분리된 복사본이다', () => {
+    rigValueStore.set('m/a', 1);
+    const snap = rigValueStore.snapshot();
+    rigValueStore.restore([]);
+    expect(rigValueStore.size).toBe(0);
+    rigValueStore.restore(snap);
+    expect(rigValueStore.get('m/a')).toBe(1);
+    expect(rigValueStore.snapshot()).not.toBe(snap);
+  });
+
   it('freeze 는 빈 저장소·정착한 채널에서 no-op 이다', () => {
     rigValueStore.freeze();
     expect(rigValueStore.size).toBe(0);

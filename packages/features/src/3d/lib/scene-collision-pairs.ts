@@ -1,4 +1,5 @@
 import { Box3, Vector3, type Matrix4, type Object3D } from 'three';
+import { makeMeshId, modelObjectRegistry } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
@@ -21,6 +22,35 @@ export const BVH_RETRY_MS = 1000;
 export const SEPARATION_MARGIN = 0.05;
 /** 이보다 작은 월드 크기의 메쉬(볼트·라벨 앵커 등)는 검사에서 뺀다 — 씬 unit. */
 export const MIN_MESH_EXTENT = 0.01;
+/** 충돌 기록 보관 개수 — 초과하면 가장 오래된 것부터 버린다. */
+export const HISTORY_MAX = 10;
+/** 무정지 모드에서 빨간 박스를 보여 주는 시간. */
+export const FLASH_MS = 3000;
+
+/** 충돌 기록이 가리키는 노드 — Object3D 참조 대신 id·경로로 남긴다. */
+export interface CollisionRecordNodeRef {
+  modelId: string;
+  /** 모델 루트 기준 mesh-path. 루트 자체면 ''. */
+  nodePath: string;
+}
+
+/**
+ * 기록의 노드 참조를 지금 마운트된 Object3D 로 해석한다. ModelMesh 가 자식
+ * 노드도 `makeMeshId` 로 registry 에 등록하므로 O(1) 조회다. 리마운트·언마운트
+ * 로 없어진 노드는 빠진다(기록은 남고 박스만 안 그려진다).
+ */
+export function resolveRecordNodes(
+  refs: ReadonlyArray<CollisionRecordNodeRef>,
+): Object3D[] {
+  const out: Object3D[] = [];
+  for (const ref of refs) {
+    const node = modelObjectRegistry.get(
+      ref.nodePath ? makeMeshId(ref.modelId, ref.nodePath) : ref.modelId,
+    );
+    if (node) out.push(node);
+  }
+  return out;
+}
 
 /** 순서 무관 쌍 키. */
 export function pairKey(a: string, b: string): string {

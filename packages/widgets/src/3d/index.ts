@@ -11,6 +11,7 @@ export { PalettePlacedObjects } from './ui/palette-placed-objects';
 export { PaletteMapSection } from './ui/palette-map-section';
 export { PaletteEnvironmentSection } from './ui/palette-environment-section';
 export { PaletteVirtualTagSection } from './ui/palette-virtual-tag-section';
+export { PaletteCollisionSection } from './ui/palette-collision-section';
 export { TagKeyCombobox } from './ui/tag-key-combobox';
 export {
   getPlacedObjectItems,

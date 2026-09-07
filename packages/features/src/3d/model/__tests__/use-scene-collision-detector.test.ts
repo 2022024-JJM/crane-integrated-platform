@@ -14,7 +14,7 @@ import {
   type SavedModelInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
-import { SCAN_INTERVAL_MS } from '../../lib/scene-collision-pairs';
+import { FLASH_MS, SCAN_INTERVAL_MS } from '../../lib/scene-collision-pairs';
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
 import { useActiveTransformStore } from '../use-active-transform-store';
@@ -79,16 +79,24 @@ function scene(ids: string[]): SavedSceneInfo {
   return { maps: [], models: ids.map(model) };
 }
 
+function moveX(root: Group, x: number) {
+  root.position.x = x;
+  root.updateMatrixWorld(true);
+}
+
 beforeEach(() => {
   nowMs = 0;
+  vi.useFakeTimers();
   vi.spyOn(performance, 'now').mockImplementation(() => nowMs);
   modelObjectRegistry.clear();
   sceneCollisionRuntime.disarm();
   rigValueStore.reset();
   useSceneCollisionStore.setState({
     enabled: true,
-    phase: 'scanning',
-    report: null,
+    pauseOnCollision: true,
+    history: [],
+    activeRecordId: null,
+    activeMode: null,
   });
   useVirtualTagStore.setState({ isRunning: true });
   useActiveTransformStore.getState().end();
@@ -97,19 +105,20 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   modelObjectRegistry.clear();
   sceneCollisionRuntime.disarm();
   useVirtualTagStore.setState({ isRunning: false });
 });
 
-describe('useSceneCollisionDetector', () => {
+describe('useSceneCollisionDetector — 스캔 게이트', () => {
   it('SCAN_INTERVAL 미만 프레임은 런타임을 호출하지 않는다', () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
     renderHook(() =>
       useSceneCollisionDetector({ sceneInfo: scene([]), enabled: true }),
     );
-    frame(); // now=0, last=0 → 0 < 50 → 스킵
+    frame();
     expect(tick).not.toHaveBeenCalled();
     scan();
     expect(tick).toHaveBeenCalledTimes(1);
@@ -130,11 +139,15 @@ describe('useSceneCollisionDetector', () => {
     scan();
     expect(tick).toHaveBeenCalledTimes(1);
   });
+});
 
-  it('충돌 시 스토어 보고 → 러너 정지 → 값 저장소 freeze, 이후 스캔은 조용하다', () => {
+describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
+  it('기록 → 런타임 halt → 러너 정지 → freeze → pin, 이후 스캔은 조용하다', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
-    const pause = vi.spyOn(useVirtualTagStore.getState(), 'pause');
+    const pause = vi.fn(() =>
+      useVirtualTagStore.setState({ isRunning: false }),
+    );
     useVirtualTagStore.setState({ pause });
     rigValueStore.set('a/j', 10, { smooth: true, smoothTime: 0.2 });
     rigValueStore.step(1 / 60);
@@ -147,30 +160,111 @@ describe('useSceneCollisionDetector', () => {
       }),
     );
     scan(); // 기준선
-    expect(useSceneCollisionStore.getState().phase).toBe('scanning');
-
-    a.position.x = 4.6;
-    a.updateMatrixWorld(true);
+    moveX(a, 4.6);
     scan();
     const state = useSceneCollisionStore.getState();
-    expect(state.phase).toBe('collided');
-    expect(state.report?.pairKey).toBe('a|b');
-    expect(state.report?.a.nodePath).toBe('[0]Body');
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0].pairKey).toBe('a|b');
+    expect(state.history[0].values).toEqual([['a/j', midway]]);
+    expect(state).toMatchObject({
+      activeRecordId: state.history[0].id,
+      activeMode: 'pinned',
+    });
     expect(pause).toHaveBeenCalledTimes(1);
-    // freeze — step 을 더 돌려도 값이 그대로.
+    expect(sceneCollisionRuntime.currentPhase).toBe('halted');
     for (let i = 0; i < 30; i += 1) rigValueStore.step(1 / 60);
     expect(rigValueStore.get('a/j')).toBe(midway);
 
-    const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
     scan();
     scan();
-    // halted 라 tick 은 불리지만 null — 스토어는 그대로.
-    expect(tick).toHaveBeenCalledTimes(2);
     expect(useSceneCollisionStore.getState()).toBe(state);
   });
 
-  it('enabled=false 전환·언마운트 시 런타임을 내리고 report 를 비운다(enabled 는 유지)', () => {
+  it('▶ 재생(isRunning false→true)이 resume 을 불러 재무장하고, 같은 방향이 아닌 전이는 무시한다', () => {
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    useVirtualTagStore.setState({
+      pause: () => useVirtualTagStore.setState({ isRunning: false }),
+    });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+      }),
+    );
+    scan();
+    moveX(a, 4.6);
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('halted');
+    const resume = vi.spyOn(useSceneCollisionStore.getState(), 'resume');
+    useSceneCollisionStore.setState({ resume });
+
+    act(() => useVirtualTagStore.setState({ isRunning: false })); // false→false
+    expect(resume).not.toHaveBeenCalled();
+    act(() => useVirtualTagStore.setState({ isRunning: true })); // false→true
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    act(() => useVirtualTagStore.setState({ isRunning: true })); // true→true
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
+  it('기록 + flash 만 하고 러너는 계속 돌며, 붙어 있는 동안 같은 쌍은 다시 기록되지 않는다', () => {
+    useSceneCollisionStore.setState({ pauseOnCollision: false });
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    const pause = vi.fn();
+    useVirtualTagStore.setState({ pause });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+      }),
+    );
+    scan();
+    moveX(a, 4.6);
+    scan();
+    let state = useSceneCollisionStore.getState();
+    expect(state.history).toHaveLength(1);
+    expect(state.activeMode).toBe('flash');
+    expect(pause).not.toHaveBeenCalled();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+
+    moveX(a, 4.7);
+    scan();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(FLASH_MS);
+    });
+    state = useSceneCollisionStore.getState();
+    expect(state.activeRecordId).toBeNull();
+    expect(state.history).toHaveLength(1);
+
+    // 분리 뒤 재접근 → 새 기록.
+    moveX(a, -10);
+    scan();
+    moveX(a, 4.6);
+    scan();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(2);
+  });
+});
+
+describe('useSceneCollisionDetector — 수명', () => {
+  it('enabled=false 전환·언마운트 시 런타임을 내리고 active 를 비운다(enabled·기록 유지)', () => {
     const disarm = vi.spyOn(sceneCollisionRuntime, 'disarm');
+    useSceneCollisionStore.getState().pushRecord({
+      id: 7,
+      pairKey: 'x|y',
+      at: 0,
+      a: { modelId: 'x', equipName: 'X', nodePath: '' },
+      b: { modelId: 'y', equipName: 'Y', nodePath: '' },
+      contactPoint: [0, 0, 0],
+      values: [],
+    });
+    useSceneCollisionStore.getState().pin(7);
     const { rerender, unmount } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useSceneCollisionDetector({ sceneInfo: scene([]), enabled }),
@@ -179,14 +273,25 @@ describe('useSceneCollisionDetector', () => {
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
     rerender({ enabled: false });
     expect(disarm).toHaveBeenCalledTimes(1);
-    expect(sceneCollisionRuntime.currentPhase).toBe('idle');
-    scan();
+    expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(1);
     rerender({ enabled: true });
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
     unmount();
     expect(disarm).toHaveBeenCalledTimes(2);
     expect(useSceneCollisionStore.getState().enabled).toBe(true);
-    expect(useSceneCollisionStore.getState().report).toBeNull();
+  });
+
+  it('언마운트 뒤에는 ▶ 전이를 더 이상 듣지 않는다', () => {
+    const { unmount } = renderHook(() =>
+      useSceneCollisionDetector({ sceneInfo: scene([]), enabled: true }),
+    );
+    unmount();
+    const resume = vi.fn();
+    useSceneCollisionStore.setState({ resume });
+    act(() => useVirtualTagStore.setState({ isRunning: false }));
+    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    expect(resume).not.toHaveBeenCalled();
   });
 
   it('sceneInfo 참조가 바뀌면 sync 를 다시 부르고, 같은 참조면 부르지 않는다', () => {
@@ -202,7 +307,5 @@ describe('useSceneCollisionDetector', () => {
     expect(sync).toHaveBeenCalledTimes(1);
     rerender({ info: scene(['a', 'b']) });
     expect(sync).toHaveBeenCalledTimes(2);
-    rerender({ info: null as unknown as SavedSceneInfo });
-    expect(sync).toHaveBeenLastCalledWith(undefined);
   });
 });

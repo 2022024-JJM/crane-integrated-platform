@@ -87,7 +87,7 @@ describe('SceneCollisionRuntime — 기본 흐름', () => {
     expect(rt.currentPhase).toBe('idle');
   });
 
-  it('떨어진 두 모델은 기준선 뒤 scanning 이 되고, 접근해 관통하면 hit 을 돌려주며 halted 가 된다', () => {
+  it('떨어진 두 모델은 기준선 뒤 scanning 이 되고, 접근해 관통하면 hit 을 돌려준다 — 정지는 halt() 를 불러야 한다', () => {
     const rt = makeRuntime();
     const a = mountModel('a', 0);
     mountModel('b', 5);
@@ -106,8 +106,62 @@ describe('SceneCollisionRuntime — 기본 흐름', () => {
     expect(hit?.b.mesh).toBeInstanceOf(Mesh);
     // 접촉점 근사 = AABB 교집합 중심 x ∈ [4.5, 5] → 4.75
     expect(hit?.contact[0]).toBeCloseTo(4.75);
-    expect(rt.currentPhase).toBe('halted');
+    // 스스로 멈추지 않는다 — 같은 자세면 다음 tick 엔 변화가 없어 조용하다.
+    expect(rt.currentPhase).toBe('scanning');
     expect(rt.tick(20, 100)).toBeNull();
+    rt.halt();
+    expect(rt.currentPhase).toBe('halted');
+    moveTo(a.root, 4.4);
+    expect(rt.tick(30, 100)).toBeNull();
+  });
+
+  it('무정지 흐름 — hit 뒤 suppress 하면 붙어 있는 동안 재보고 없이 계속 감시하고, 분리 뒤 재접근하면 새 hit', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    const c = mountModel('c', 20);
+    rt.sync([model('a'), model('b', 5), model('c', 20)]);
+    rt.arm();
+    settle(rt);
+    moveTo(a.root, 4.5);
+    const hit = rt.tick(10, 100);
+    expect(hit?.key).toBe('a|b');
+    rt.suppress(hit!.key);
+    // 더 파고들어도 보고 없음, 다른 쌍은 여전히 감시된다.
+    moveTo(a.root, 4.7);
+    expect(rt.tick(20, 100)).toBeNull();
+    // c 를 a(4.2~5.2)에는 닿고 b(4.5~5.5)에는 안 닿는 3.8 로.
+    moveTo(c.root, 3.8);
+    expect(rt.tick(30, 100)?.key).toBe('a|c');
+    rt.suppress('a|c');
+    // a 가 멀리 빠졌다가 b 에 다시 닿으면 새 hit.
+    moveTo(a.root, -10);
+    expect(rt.tick(40, 100)).toBeNull();
+    moveTo(a.root, 4.6);
+    expect(rt.tick(50, 100)?.key).toBe('a|b');
+  });
+
+  it('hit 이 난 tick 에 큐에 남아 있던 다른 쌍은 다음 tick 에 검사된다', () => {
+    clockNow = 0;
+    const advancing = vi.fn(() => (clockNow += 1));
+    const rt = new SceneCollisionRuntime(advancing);
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    mountModel('c', 10);
+    rt.sync([model('a'), model('b', 5), model('c', 10)]);
+    rt.arm();
+    for (let i = 0; i < 5; i += 1) rt.tick(i, 100);
+    expect(rt.currentPhase).toBe('scanning');
+    // a 를 b·c 모두와 겹치게(a-b, a-c 두 쌍이 같은 tick 에 큐에 든다).
+    a.body.geometry = new BoxGeometry(12, 1, 1);
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    moveTo(a.root, 7);
+    const first = rt.tick(10, 100);
+    expect(first).not.toBeNull();
+    rt.suppress(first!.key);
+    const second = rt.tick(11, 100);
+    expect(second).not.toBeNull();
+    expect(second!.key).not.toBe(first!.key);
   });
 
   it('AABB 만 겹치고 OBB·삼각형은 안 닿는 회전 배치는 보고하지 않는다', () => {
@@ -164,6 +218,7 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
     moveTo(a.root, 4.5);
     expect(rt.tick(10, 100)).not.toBeNull();
 
+    rt.halt();
     rt.suppress('a|b');
     rt.suppress('nope|x');
     rt.arm();

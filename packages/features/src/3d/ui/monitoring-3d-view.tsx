@@ -27,6 +27,7 @@ import { useTagBindingSource } from '../model/use-tag-binding-source';
 import {
   collisionViewRadius,
   computeCollisionViewPose,
+  resolveRecordNodes,
 } from '../lib/scene-collision-pairs';
 import { RigDriver } from './rig-driver';
 import { SceneCollisionDetector } from './scene-collision-detector';
@@ -155,11 +156,12 @@ export function Monitoring3dView({
   // "충돌 지점 보기" — 접촉점을 타깃으로, 현재 시선 방향을 유지한 채 두 노드가
   // 들어오는 거리로 물러난다(수치 계산은 lib/scene-collision-pairs).
   const handleViewCollision = useCallback(() => {
-    const report = useSceneCollisionStore.getState().report;
-    if (!report) return;
+    const { history, activeRecordId } = useSceneCollisionStore.getState();
+    const record = history.find((r) => r.id === activeRecordId);
+    if (!record) return;
     const pose = computeCollisionViewPose(
-      report.contactPoint,
-      collisionViewRadius([report.a.node, report.b.node]),
+      record.contactPoint,
+      collisionViewRadius(resolveRecordNodes([record.a, record.b])),
       sceneControllerRef.current?.getPose() ?? null,
     );
     sceneControllerRef.current?.moveTo(pose.position, pose.target);

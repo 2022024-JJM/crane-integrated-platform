@@ -23,7 +23,6 @@ import {
   PanelRightOpen,
   Redo2,
   Save,
-  ShieldAlert,
   Type,
   Undo2,
 } from 'lucide-react';
@@ -81,9 +80,6 @@ interface EditorHeaderBarProps {
   // 보기
   showGrid: boolean;
   onToggleGrid: () => void;
-  /** 씬 객체 충돌 감지 — 시뮬레이션 재생 중 관통을 감지해 정지·보고한다. */
-  collisionEnabled: boolean;
-  onToggleCollision: () => void;
   onResetView: () => void;
   onTopView: () => void;
   /** 씬이 로드되기 전 — 도구·설정·보기 전부 잠근다. */
@@ -139,8 +135,6 @@ export function EditorHeaderBar({
   onSnapStepChange,
   showGrid,
   onToggleGrid,
-  collisionEnabled,
-  onToggleCollision,
   onResetView,
   onTopView,
   sceneDisabled,
@@ -267,16 +261,6 @@ export function EditorHeaderBar({
             onClick={onToggleGrid}
           >
             <Grid3x3 className="size-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            label={t('monitoring:editor.collision')}
-            kind="toggle"
-            pressed={collisionEnabled}
-            side="bottom"
-            disabled={sceneDisabled}
-            onClick={onToggleCollision}
-          >
-            <ShieldAlert className="size-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
             label={t('common:viewer3d.resetView')}

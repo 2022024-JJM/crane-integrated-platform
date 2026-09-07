@@ -51,6 +51,7 @@ import {
   SceneCollisionDetector,
   SceneCollisionHighlight,
   manualJointSource,
+  resolveRecordNodes,
   rigValueStore,
   useIsObjectSelected,
   useSceneCollisionStore,
@@ -156,7 +157,7 @@ export interface SceneEditorCameraActions {
   resetView: () => void;
   /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
   topView: () => void;
-  /** 충돌 보고의 두 노드가 화면에 들어오도록 카메라를 맞춘다. 보고가 없으면 no-op. */
+  /** 활성 충돌 기록의 두 노드가 화면에 들어오도록 카메라를 맞춘다. 기록이 없으면 no-op. */
   focusCollision: () => void;
 }
 
@@ -766,9 +767,10 @@ export function SceneObjectsEditCanvas({
   }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
 
   const focusCollision = useCallback(() => {
-    const report = useSceneCollisionStore.getState().report;
-    if (!report) return;
-    fitToObjects([report.a.node, report.b.node]);
+    const { history, activeRecordId } = useSceneCollisionStore.getState();
+    const record = history.find((r) => r.id === activeRecordId);
+    if (!record) return;
+    fitToObjects(resolveRecordNodes([record.a, record.b]));
   }, [fitToObjects]);
 
   useEffect(() => {

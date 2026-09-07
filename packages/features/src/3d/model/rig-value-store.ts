@@ -114,6 +114,26 @@ class RigValueStoreImpl implements RigValueSink {
     }
   }
 
+  /**
+   * 현재값(스무딩 적용 후) 전체 스냅샷 — 충돌 기록이 "그 순간의 씬 자세"를
+   * 보관하는 데 쓴다. target 이 아니라 value 다: 화면에 보이던 자세가 기준.
+   */
+  snapshot(): Array<[JointAddress, number]> {
+    const out: Array<[JointAddress, number]> = [];
+    for (const [address, ch] of this.channels) out.push([address, ch.value]);
+    return out;
+  }
+
+  /**
+   * 스냅샷으로 되돌린다. 먼저 비우므로 스냅샷에 없던 채널(그 뒤 생긴 맵핑)은
+   * rest 로 간다. 스무딩 없이 즉시 대입 — 기록을 클릭했을 때 그 자세가 바로
+   * 보여야 한다. NaN 은 set 이 0 으로 방어한다.
+   */
+  restore(entries: ReadonlyArray<readonly [JointAddress, number]>): void {
+    this.reset();
+    for (const [address, value] of entries) this.set(address, value);
+  }
+
   /** 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0. */
   step(dt: number): void {
     for (const ch of this.channels.values()) {

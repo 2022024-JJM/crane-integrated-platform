@@ -20,9 +20,9 @@ import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 export function SceneCollisionToggle() {
   const { t } = useTranslation();
   const enabled = useSceneCollisionStore((s) => s.enabled);
-  const phase = useSceneCollisionStore((s) => s.phase);
+  const activeMode = useSceneCollisionStore((s) => s.activeMode);
   const toggle = useSceneCollisionStore((s) => s.toggle);
-  const collided = phase === 'collided';
+  const collided = activeMode === 'pinned';
 
   const label = enabled
     ? t('common:viewer3d.collisionOff', { defaultValue: '충돌 감지 끄기' })

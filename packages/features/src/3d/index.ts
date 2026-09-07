@@ -84,10 +84,9 @@ export { SceneCollisionOverlay } from './ui/scene-collision-overlay';
 export { SceneCollisionToggle } from './ui/scene-collision-toggle';
 export {
   useSceneCollisionStore,
-  type SceneCollisionNodeRef,
-  type SceneCollisionPhase,
-  type SceneCollisionReport,
-  type SceneCollisionTagValue,
+  type SceneCollisionActiveMode,
+  type SceneCollisionRecord,
+  type SceneCollisionRecordParty,
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
 export {
@@ -97,7 +96,11 @@ export {
 export {
   collisionViewRadius,
   computeCollisionViewPose,
+  FLASH_MS as SCENE_COLLISION_FLASH_MS,
+  HISTORY_MAX as SCENE_COLLISION_HISTORY_MAX,
+  resolveRecordNodes,
   type CollisionCameraPose,
+  type CollisionRecordNodeRef,
 } from './lib/scene-collision-pairs';
 export { useRigDriver } from './model/use-rig-driver';
 export {

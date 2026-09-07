@@ -1,24 +1,36 @@
-import { Crosshair, RotateCcw, X } from 'lucide-react';
+import { Crosshair, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { numRound } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import {
   useSceneCollisionStore,
-  type SceneCollisionNodeRef,
+  type SceneCollisionRecord,
+  type SceneCollisionRecordParty,
 } from '../model/use-scene-collision-store';
 
 interface SceneCollisionOverlayProps {
-  /** "충돌 지점 보기" — 카메라 이동은 호출자가(뷰어 moveTo / 에디터 fit). 없으면 버튼을 숨긴다. */
+  /** "충돌 지점 보기" — 카메라 이동은 호출자가. 없으면 버튼을 숨긴다. */
   onViewContact?: () => void;
   /** 위치 클래스(absolute 기준). 기본은 상단 중앙. */
   className?: string;
 }
 
+function selectPinnedRecord(state: {
+  history: SceneCollisionRecord[];
+  activeRecordId: number | null;
+  activeMode: 'pinned' | 'flash' | null;
+}): SceneCollisionRecord | null {
+  if (state.activeMode !== 'pinned' || state.activeRecordId === null) {
+    return null;
+  }
+  return state.history.find((r) => r.id === state.activeRecordId) ?? null;
+}
+
 /**
- * 충돌 보고 패널 — Canvas 위 DOM 오버레이. report 가 없으면 아무것도 그리지
- * 않는다(감시 중 상태는 토글 버튼이 나타낸다). 값은 report 의 충돌 순간
- * 스냅샷이라 폴링이 없다.
+ * 충돌 정지 패널 — 좌측 패널이 없는 **모니터링 화면용** Canvas 위 DOM
+ * 오버레이(편집기는 팔레트 "충돌" 탭이 같은 역할을 한다). 정지·복원(pinned)
+ * 상태에서만 뜨고, 무정지 모드의 3초 박스에는 뜨지 않는다.
  *
  * 부모 오버레이 컨테이너가 pointer-events-none 이므로 루트에 pointer-events-auto.
  */
@@ -27,13 +39,12 @@ export function SceneCollisionOverlay({
   className,
 }: SceneCollisionOverlayProps) {
   const { t } = useTranslation();
-  const report = useSceneCollisionStore((s) => s.report);
-  const dismiss = useSceneCollisionStore((s) => s.dismiss);
-  const resetAndRearm = useSceneCollisionStore((s) => s.resetAndRearm);
+  const record = useSceneCollisionStore(selectPinnedRecord);
+  const resume = useSceneCollisionStore((s) => s.resume);
 
-  if (!report) return null;
+  if (!record) return null;
 
-  const [cx, cy, cz] = report.contactPoint;
+  const [cx, cy, cz] = record.contactPoint;
 
   return (
     <section
@@ -57,27 +68,26 @@ export function SceneCollisionOverlay({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={t('monitoring:sceneCollision.dismiss')}
-          title={t('monitoring:sceneCollision.dismissHint')}
-          onClick={dismiss}
+          aria-label={t('monitoring:sceneCollision.deselect')}
+          title={t('monitoring:sceneCollision.deselect')}
+          onClick={resume}
         >
           <X className="size-3.5" />
         </Button>
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <CollisionPartyCard party={report.a} />
-        <CollisionPartyCard party={report.b} />
+        <CollisionPartyCard party={record.a} />
+        <CollisionPartyCard party={record.b} />
       </div>
 
-      <p className="text-muted-foreground mt-2 text-[10px]">
-        {t('monitoring:sceneCollision.contact')}{' '}
-        <span className="font-mono tabular-nums">
-          ({numRound(cx, 2)}, {numRound(cy, 2)}, {numRound(cz, 2)})
-        </span>
-      </p>
-
-      <div className="mt-2 flex items-center justify-end gap-1.5">
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-[10px]">
+          {t('monitoring:sceneCollision.contact')}{' '}
+          <span className="font-mono tabular-nums">
+            ({numRound(cx, 2)}, {numRound(cy, 2)}, {numRound(cz, 2)})
+          </span>
+        </p>
         {onViewContact ? (
           <Button
             type="button"
@@ -90,33 +100,12 @@ export function SceneCollisionOverlay({
             {t('monitoring:sceneCollision.viewContact')}
           </Button>
         ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1.5 text-[11px]"
-          title={t('monitoring:sceneCollision.resetHint')}
-          onClick={resetAndRearm}
-        >
-          <RotateCcw className="size-3.5" />
-          {t('monitoring:sceneCollision.reset')}
-        </Button>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          className="h-7 text-[11px]"
-          title={t('monitoring:sceneCollision.dismissHint')}
-          onClick={dismiss}
-        >
-          {t('monitoring:sceneCollision.dismiss')}
-        </Button>
       </div>
     </section>
   );
 }
 
-function CollisionPartyCard({ party }: { party: SceneCollisionNodeRef }) {
+function CollisionPartyCard({ party }: { party: SceneCollisionRecordParty }) {
   const { t } = useTranslation();
   return (
     <div className="border-border bg-muted/30 min-w-0 rounded-md border p-2">
@@ -129,44 +118,6 @@ function CollisionPartyCard({ party }: { party: SceneCollisionNodeRef }) {
       >
         {party.nodePath || t('monitoring:sceneCollision.root')}
       </p>
-      {party.tags.length > 0 ? (
-        <ul className="mt-1 space-y-0.5">
-          {party.tags.map((tag) => (
-            <li
-              key={tag.tagKey}
-              className="flex items-baseline justify-between gap-2 text-[10px]"
-            >
-              <span className="text-muted-foreground min-w-0 truncate font-mono">
-                {tag.tagKey}
-              </span>
-              <span className="shrink-0 font-mono tabular-nums">
-                {tag.value === null ? '—' : numRound(tag.value, 3)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-muted-foreground mt-1 text-[10px]">
-          {t('monitoring:sceneCollision.noTags')}
-        </p>
-      )}
-      {party.jointValues.length > 0 ? (
-        <ul className="mt-1 space-y-0.5">
-          {party.jointValues.map((joint) => (
-            <li
-              key={joint.jointId}
-              className="flex items-baseline justify-between gap-2 text-[10px]"
-            >
-              <span className="text-muted-foreground min-w-0 truncate">
-                {t('monitoring:sceneCollision.joint')} {joint.jointId}
-              </span>
-              <span className="shrink-0 font-mono tabular-nums">
-                {numRound(joint.value, 2)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </div>
   );
 }

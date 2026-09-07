@@ -9,7 +9,6 @@ import {
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
-  SceneCollisionOverlay,
   useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
@@ -35,6 +34,7 @@ import { SceneShortcutsHelp } from './scene-shortcuts-help';
 import { SceneUnsavedChangesDialog } from './scene-unsaved-changes-dialog';
 import {
   PaletteAssetGrid,
+  PaletteCollisionSection,
   PaletteEnvironmentSection,
   PaletteHeader,
   PaletteMapSection,
@@ -126,10 +126,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     (state) => state.setTransformSpace,
   );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
-  // 충돌 감지 토글은 모니터링과 공유하는 세션 상태(useSceneCollisionStore).
-  // 캔버스는 스토어를 직접 구독하지 않고 prop 으로 받는다(showGrid 와 같은 규칙).
+  // 충돌 감지 on/off 는 팔레트 "충돌" 탭이 조작하는 전역 세션 상태
+  // (useSceneCollisionStore, 모니터링과 공유). 캔버스는 스토어를 직접 구독하지
+  // 않고 prop 으로 받는다(showGrid 와 같은 규칙).
   const collisionEnabled = useSceneCollisionStore((state) => state.enabled);
-  const toggleCollision = useSceneCollisionStore((state) => state.toggle);
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -447,6 +447,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                     onLightingInteractionEnd={endTransformInteraction}
                     sceneInfo={sceneInfo}
                     virtualTagsPath={virtualTagsPath}
+                    onViewCollision={() =>
+                      cameraActionsRef.current?.focusCollision()
+                    }
                   />
                 </aside>
               </ResizablePanel>
@@ -482,8 +485,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 onSnapStepChange={setSnapStep}
                 showGrid={showGrid}
                 onToggleGrid={toggleGrid}
-                collisionEnabled={collisionEnabled}
-                onToggleCollision={toggleCollision}
                 onResetView={() => cameraActionsRef.current?.resetView()}
                 onTopView={() => cameraActionsRef.current?.topView()}
                 sceneDisabled={saveDisabled}
@@ -537,14 +538,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   transformSpace={transformSpace}
                   showGrid={showGrid}
                   collisionEnabled={collisionEnabled}
-                />
-
-                {/* 충돌 보고 패널 — 상단 중앙. 선택 컨텍스트 바(하단 중앙)·
-                    도움말(우하단)·축 기즈모(우상단)와 겹치지 않는다. */}
-                <SceneCollisionOverlay
-                  onViewContact={() =>
-                    cameraActionsRef.current?.focusCollision()
-                  }
                 />
 
                 <EditorSelectionBar
@@ -724,7 +717,13 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
  * 같은 층위의 탭으로 분리한다.
  */
-const PANEL_TABS = ['models', 'map', 'background', 'tags'] as const;
+const PANEL_TABS = [
+  'models',
+  'map',
+  'background',
+  'tags',
+  'collision',
+] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
 const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
@@ -732,6 +731,7 @@ const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
   tags: 'monitoring:editor.paletteTabs.tags',
+  collision: 'monitoring:editor.paletteTabs.collision',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -768,6 +768,7 @@ function ProjectPalettePanel({
   onLightingInteractionEnd,
   sceneInfo,
   virtualTagsPath,
+  onViewCollision,
 }: {
   items: SceneModelCatalogItem[];
   currentMap: SavedMapInfo | null;
@@ -775,6 +776,8 @@ function ProjectPalettePanel({
   sceneInfo: SavedSceneInfo | null;
   /** 가상 태그 관리 페이지 경로. */
   virtualTagsPath: string;
+  /** 충돌 탭 — 선택된 기록의 두 노드로 카메라를 맞춘다. */
+  onViewCollision: () => void;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   lighting: SavedLightingInfo | undefined;
@@ -814,7 +817,7 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경/태그 (언더라인 탭, 패널보다 넓어지면 가로
+      {/* 탭 헤더 — 모델/맵/배경/태그/충돌 (언더라인 탭, 패널보다 넓어지면 가로
           스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다.
           높이 h-9 는 캔버스 위 EditorHeaderBar·우측 PaletteHeader 와 같은
           값 — 세 컬럼 하단선을 한 줄에 맞춘다. */}
@@ -862,6 +865,8 @@ function ProjectPalettePanel({
                 sceneInfo={sceneInfo}
                 managePath={virtualTagsPath}
               />
+            ) : activeTab === 'collision' ? (
+              <PaletteCollisionSection onViewCollision={onViewCollision} />
             ) : (
               <PaletteEnvironmentSection
                 environmentId={environmentId}
