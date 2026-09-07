@@ -299,7 +299,10 @@
     "dockCollapse": "Contrahe",
     "dockTools": "Moderamina visus",
     "simulationPlay": "Simulationem age",
-    "simulationPause": "Simulationem siste"
+    "simulationPause": "Simulationem siste",
+    "collisionOn": "Collisionis detectionem accende",
+    "collisionOff": "Collisionis detectionem exstingue",
+    "collisionBvhHint": "Inspectio accurata paucis secundis post exempla onerata parata est."
   },
   "undo": "Revoca"
 }

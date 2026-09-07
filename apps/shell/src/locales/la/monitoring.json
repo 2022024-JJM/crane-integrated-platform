@@ -152,6 +152,7 @@
     "snapRotation": "Rotatio",
     "snapScale": "Scala",
     "grid": "Crates soli",
+    "collision": "Collisionis detectio",
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
     "textObject": "Textus",
@@ -287,5 +288,18 @@
     "periodHint": "Tempus (ms) unius cycli (min→max→min)",
     "save": "Serva",
     "saveFailed": "Signa virtualia servari non potuerunt."
+  },
+  "sceneCollision": {
+    "title": "Collisio detecta",
+    "pausedNote": "Simulatio sistitur.",
+    "root": "(radix exempli)",
+    "contact": "Punctum contactus (proximum)",
+    "joint": "Articulus",
+    "noTags": "Nullae tesserae agentes",
+    "dismiss": "Claude",
+    "dismissHint": "Hoc par non iterum nuntiabitur donec separentur.",
+    "reset": "Restitue",
+    "resetHint": "Tesseras virtuales ad valores initiales restitue et rursus vigila.",
+    "viewContact": "Punctum collisionis vide"
   }
 }

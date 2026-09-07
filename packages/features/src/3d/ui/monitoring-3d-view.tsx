@@ -21,9 +21,18 @@ import {
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
+import {
+  collisionViewRadius,
+  computeCollisionViewPose,
+} from '../lib/scene-collision-pairs';
 import { RigDriver } from './rig-driver';
+import { SceneCollisionDetector } from './scene-collision-detector';
+import { SceneCollisionHighlight } from './scene-collision-highlight';
+import { SceneCollisionOverlay } from './scene-collision-overlay';
+import { SceneCollisionToggle } from './scene-collision-toggle';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -112,6 +121,9 @@ export function Monitoring3dView({
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const exitFocus = useObjectFocusStore((s) => s.exitFocus);
+  // 충돌 감지는 가상 태그 시뮬레이션 전용 — 실시간·리플레이는 정지시킬 수 없다.
+  const isSimulation = mode === 'simulation';
+  const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -139,6 +151,19 @@ export function Monitoring3dView({
     () => sceneControllerRef.current?.getPose() ?? null,
     [],
   );
+
+  // "충돌 지점 보기" — 접촉점을 타깃으로, 현재 시선 방향을 유지한 채 두 노드가
+  // 들어오는 거리로 물러난다(수치 계산은 lib/scene-collision-pairs).
+  const handleViewCollision = useCallback(() => {
+    const report = useSceneCollisionStore.getState().report;
+    if (!report) return;
+    const pose = computeCollisionViewPose(
+      report.contactPoint,
+      collisionViewRadius([report.a.node, report.b.node]),
+      sceneControllerRef.current?.getPose() ?? null,
+    );
+    sceneControllerRef.current?.moveTo(pose.position, pose.target);
+  }, []);
 
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
@@ -214,6 +239,9 @@ export function Monitoring3dView({
             {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
             <SceneLoadingOverlay ready={sceneReady} />
             {focusOverlay}
+            {isSimulation ? (
+              <SceneCollisionOverlay onViewContact={handleViewCollision} />
+            ) : null}
             {overlayExtras}
           </>
         }
@@ -227,6 +255,7 @@ export function Monitoring3dView({
             <>
               {toolbarExtras}
               <SceneSimulationToggle />
+              {isSimulation ? <SceneCollisionToggle /> : null}
             </>
           ) : (
             toolbarExtras
@@ -261,6 +290,15 @@ export function Monitoring3dView({
         </Suspense>
         <Suspense fallback={null}>
           <RigDriver sceneInfo={sceneInfo} />
+          {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
+              실행되므로 노드가 움직인 뒤 검사한다. */}
+          {isSimulation ? (
+            <SceneCollisionDetector
+              sceneInfo={sceneInfo}
+              enabled={collisionEnabled}
+            />
+          ) : null}
+          <SceneCollisionHighlight />
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}

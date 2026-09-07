@@ -69,6 +69,20 @@ export {
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
 export {
+  approxContactPoint,
+  boxesSeparated,
+  collectCollidableMeshes,
+  hasBoundsTree,
+  isCollidableMesh,
+  meshesIntersectExact,
+  meshObbsIntersect,
+  meshWorldBox,
+} from './lib/collision-volumes';
+export {
+  COLLISION_LINE_COLOR,
+  COLLISION_LINE_WIDTH,
+} from './lib/selection-style';
+export {
   capturePose,
   getRestPose,
   hasRestPose,
@@ -150,4 +164,5 @@ export type {
   CraneZoneRegion,
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
+export { ModelSelectionBox } from './ui/model-selection-box';
 export { SceneText } from './ui/scene-text';

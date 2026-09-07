@@ -9,6 +9,8 @@ import {
   type SceneModelCatalogItem,
 } from '@crane/domain/3d';
 import {
+  SceneCollisionOverlay,
+  useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
   useVirtualTagStore,
@@ -124,6 +126,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     (state) => state.setTransformSpace,
   );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
+  // 충돌 감지 토글은 모니터링과 공유하는 세션 상태(useSceneCollisionStore).
+  // 캔버스는 스토어를 직접 구독하지 않고 prop 으로 받는다(showGrid 와 같은 규칙).
+  const collisionEnabled = useSceneCollisionStore((state) => state.enabled);
+  const toggleCollision = useSceneCollisionStore((state) => state.toggle);
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -476,6 +482,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 onSnapStepChange={setSnapStep}
                 showGrid={showGrid}
                 onToggleGrid={toggleGrid}
+                collisionEnabled={collisionEnabled}
+                onToggleCollision={toggleCollision}
                 onResetView={() => cameraActionsRef.current?.resetView()}
                 onTopView={() => cameraActionsRef.current?.topView()}
                 sceneDisabled={saveDisabled}
@@ -528,6 +536,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   snapStep={snapStep}
                   transformSpace={transformSpace}
                   showGrid={showGrid}
+                  collisionEnabled={collisionEnabled}
+                />
+
+                {/* 충돌 보고 패널 — 상단 중앙. 선택 컨텍스트 바(하단 중앙)·
+                    도움말(우하단)·축 기즈모(우상단)와 겹치지 않는다. */}
+                <SceneCollisionOverlay
+                  onViewContact={() =>
+                    cameraActionsRef.current?.focusCollision()
+                  }
                 />
 
                 <EditorSelectionBar

@@ -30,6 +30,33 @@ describe('rigValueStore', () => {
     expect(rigValueStore.get('m/j')).toBe(0);
   });
 
+  it('freeze 는 스무딩 중인 채널을 현재값에서 멈추고, 이후 set 은 다시 동작한다', () => {
+    rigValueStore.set('m/j', 0);
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.2 });
+    for (let i = 0; i < 6; i++) rigValueStore.step(1 / 60);
+    const midway = rigValueStore.get('m/j');
+    expect(midway).toBeGreaterThan(0);
+    expect(midway).toBeLessThan(10);
+
+    rigValueStore.freeze();
+    expect(rigValueStore.getTarget('m/j')).toBe(midway);
+    for (let i = 0; i < 60; i++) rigValueStore.step(1 / 60);
+    expect(rigValueStore.get('m/j')).toBe(midway);
+
+    rigValueStore.set('m/j', 20, { smooth: true, smoothTime: 0.2 });
+    for (let i = 0; i < 90; i++) rigValueStore.step(1 / 60);
+    expect(rigValueStore.get('m/j')).toBeCloseTo(20, 1);
+  });
+
+  it('freeze 는 빈 저장소·정착한 채널에서 no-op 이다', () => {
+    rigValueStore.freeze();
+    expect(rigValueStore.size).toBe(0);
+    rigValueStore.set('m/j', 5);
+    rigValueStore.freeze();
+    expect(rigValueStore.get('m/j')).toBe(5);
+    expect(rigValueStore.getTarget('m/j')).toBe(5);
+  });
+
   it('smooth set 은 목표만 바꾸고 step 으로 수렴한다', () => {
     rigValueStore.set('m/j', 0);
     rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.2 });

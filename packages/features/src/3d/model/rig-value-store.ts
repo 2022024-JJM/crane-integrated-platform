@@ -101,6 +101,19 @@ class RigValueStoreImpl implements RigValueSink {
     }
   }
 
+  /**
+   * 모든 채널을 현재값에서 멈춘다(target=value, 속도 0). 충돌 감지가
+   * 시뮬레이션을 정지시킬 때 쓴다 — pause 는 러너 틱만 멈추므로 스무딩이
+   * 0.35s 더 target 으로 수렴해 정지 뒤에도 노드가 조금 더 파고든다.
+   * 이후 새 set 은 정상 동작한다.
+   */
+  freeze(): void {
+    for (const ch of this.channels.values()) {
+      ch.target = ch.value;
+      ch.velocity = 0;
+    }
+  }
+
   /** 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0. */
   step(dt: number): void {
     for (const ch of this.channels.values()) {

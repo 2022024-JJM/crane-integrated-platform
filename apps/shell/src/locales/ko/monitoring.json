@@ -166,6 +166,7 @@
     "snapRotation": "회전",
     "snapScale": "크기",
     "grid": "바닥 격자",
+    "collision": "충돌 감지",
     "duplicateSelected": "선택 객체 복제",
     "addText": "텍스트 추가",
     "textObject": "텍스트",
@@ -301,5 +302,18 @@
     "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
     "save": "저장",
     "saveFailed": "가상 태그를 저장하지 못했습니다."
+  },
+  "sceneCollision": {
+    "title": "충돌 감지됨",
+    "pausedNote": "시뮬레이션이 정지되었습니다.",
+    "root": "(모델 루트)",
+    "contact": "접촉 지점(근사)",
+    "joint": "관절",
+    "noTags": "구동 태그 없음",
+    "dismiss": "닫기",
+    "dismissHint": "이 쌍은 떨어질 때까지 다시 알리지 않습니다.",
+    "reset": "초기화",
+    "resetHint": "가상 태그를 초기값으로 되돌리고 다시 감시합니다.",
+    "viewContact": "충돌 지점 보기"
   }
 }

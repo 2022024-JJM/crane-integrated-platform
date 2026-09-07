@@ -166,6 +166,7 @@
     "snapRotation": "Rotate",
     "snapScale": "Scale",
     "grid": "Ground grid",
+    "collision": "Collision detection",
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
     "textObject": "Text",
@@ -301,5 +302,18 @@
     "periodHint": "Time (ms) for one cycle (min→max→min)",
     "save": "Save",
     "saveFailed": "Failed to save virtual tags."
+  },
+  "sceneCollision": {
+    "title": "Collision detected",
+    "pausedNote": "The simulation has been paused.",
+    "root": "(model root)",
+    "contact": "Contact point (approx.)",
+    "joint": "Joint",
+    "noTags": "No driving tags",
+    "dismiss": "Dismiss",
+    "dismissHint": "This pair will not be reported again until they separate.",
+    "reset": "Reset",
+    "resetHint": "Reset virtual tags to their initial values and resume watching.",
+    "viewContact": "View contact"
   }
 }

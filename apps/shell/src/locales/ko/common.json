@@ -299,7 +299,10 @@
     "dockCollapse": "접기",
     "dockTools": "화면 조작",
     "simulationPlay": "시뮬레이션 실행",
-    "simulationPause": "시뮬레이션 정지"
+    "simulationPause": "시뮬레이션 정지",
+    "collisionOn": "충돌 감지 켜기",
+    "collisionOff": "충돌 감지 끄기",
+    "collisionBvhHint": "정밀 검사는 모델 로드 직후 몇 초간 준비됩니다."
   },
   "undo": "실행 취소"
 }

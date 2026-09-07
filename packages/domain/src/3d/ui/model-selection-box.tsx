@@ -17,6 +17,10 @@ interface ModelSelectionBoxProps {
    * 라인이 노드 자식으로 마운트돼 노드의 움직임(리그 드라이버 등)을 따라간다.
    */
   target?: Object3D | null;
+  /** 선 색. 기본은 선택(노랑). 충돌 하이라이트는 COLLISION_LINE_COLOR 를 넘긴다. */
+  color?: string;
+  /** 선 두께(screen px). 기본은 SELECTION_LINE_WIDTH. */
+  lineWidth?: number;
 }
 
 const noRaycast = () => null;
@@ -44,6 +48,8 @@ export function ModelSelectionBox({
   clone,
   isSelected,
   target,
+  color = SELECTION_LINE_COLOR,
+  lineWidth = SELECTION_LINE_WIDTH,
 }: ModelSelectionBoxProps) {
   const mountTarget = target ?? clone;
   const points = useMemo(() => {
@@ -64,8 +70,8 @@ export function ModelSelectionBox({
     <Line
       segments
       points={points}
-      color={SELECTION_LINE_COLOR}
-      lineWidth={SELECTION_LINE_WIDTH}
+      color={color}
+      lineWidth={lineWidth}
       depthTest={false}
       renderOrder={1}
       raycast={noRaycast}

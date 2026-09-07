@@ -78,6 +78,27 @@ export {
 export { makeMeshId, parseMeshId, isMeshId } from '@crane/domain/3d';
 export { useSceneTransformModeStore } from './model/use-scene-transform-mode-store';
 export { RigDriver } from './ui/rig-driver';
+export { SceneCollisionDetector } from './ui/scene-collision-detector';
+export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
+export { SceneCollisionOverlay } from './ui/scene-collision-overlay';
+export { SceneCollisionToggle } from './ui/scene-collision-toggle';
+export {
+  useSceneCollisionStore,
+  type SceneCollisionNodeRef,
+  type SceneCollisionPhase,
+  type SceneCollisionReport,
+  type SceneCollisionTagValue,
+} from './model/use-scene-collision-store';
+export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export {
+  sceneCollisionRuntime,
+  type SceneCollisionRuntimePhase,
+} from './model/scene-collision-runtime';
+export {
+  collisionViewRadius,
+  computeCollisionViewPose,
+  type CollisionCameraPose,
+} from './lib/scene-collision-pairs';
 export { useRigDriver } from './model/use-rig-driver';
 export {
   createTagBindingSource,
