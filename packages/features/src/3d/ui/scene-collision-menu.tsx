@@ -66,7 +66,7 @@ export function SceneCollisionMenu({
                       !collided &&
                       'border-amber-500/60 bg-amber-500/15 text-amber-600 hover:bg-amber-500/25 dark:text-amber-400',
                     collided &&
-                      'animate-pulse border-red-500/60 bg-red-500/15 text-red-600 hover:bg-red-500/25 motion-reduce:animate-none dark:text-red-400',
+                      'border-red-500/60 bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400',
                   )}
                 />
               }

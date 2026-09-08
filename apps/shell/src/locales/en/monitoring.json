@@ -321,7 +321,6 @@
     "contact": "Contact point (approx.)",
     "alertTitle": "Collision detected",
     "pausedTitle": "Collision — simulation paused",
-    "pausedTitleRealtime": "Collision — live view held",
     "resume": "Resume",
     "resumeRealtime": "Catch up to latest"
   }

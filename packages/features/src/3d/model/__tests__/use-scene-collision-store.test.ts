@@ -59,6 +59,20 @@ afterEach(() => {
   useVirtualTagStore.setState({ isRunning: false });
 });
 
+describe('초기값', () => {
+  it('모듈 초기 상태는 감지 ON·충돌 시 정지 ON·기록 없음이다', () => {
+    // beforeEach 의 reset 이 현재 상태를 덮어쓰므로 zustand 가 보관한
+    // 초기 상태를 본다(vi.resetModules 는 three 까지 재평가해 경고를 낸다).
+    expect(useSceneCollisionStore.getInitialState()).toMatchObject({
+      enabled: true,
+      pauseOnCollision: true,
+      history: [],
+      activeRecordId: null,
+      activeMode: null,
+    });
+  });
+});
+
 describe('토글', () => {
   it('toggle 은 enabled 를 뒤집고, 끄면 active 만 지우고 기록은 남긴다', () => {
     const s = useSceneCollisionStore.getState();

@@ -12,11 +12,15 @@ import type { SceneCollisionRunner } from './scene-collision-panel';
  *
  * 씬 안 표시(빨간 박스·접촉 표지)만으로는 카메라가 다른 곳을 보고 있을 때
  * 관제자가 충돌을 놓친다. 여기서는 카메라와 무관하게 보이는 두 가지를 그린다.
- * - 가장자리 펄스 프레임: 주변 시야에서도 걸리는 붉은 테두리. 조작을 막지
- *   않도록 pointer-events-none.
+ * - 가장자리 비네트: 캔버스 네 변에서 안쪽으로 옅어지는 붉은 그라데이션.
+ *   주변 시야에서도 걸리면서 시선은 씬 중앙으로 모이게 한다(실선 테두리는
+ *   가장자리로 시선을 끌어 2026-09-08 에 교체). 은은하게 맥동하고
+ *   motion-reduce 면 정적. 조작을 막지 않도록 pointer-events-none.
  * - 상단 중앙 배너: 어떤 장비끼리·언제 충돌했는지와 즉시 행동 버튼
  *   ([충돌 지점 보기], 정지 중이면 [재개]). 색 단독 인코딩을 피하려고
- *   색 + 펄스 모션 + 텍스트를 함께 쓴다(motion-reduce 시 모션 제거).
+ *   색 + 비네트 + 텍스트를 함께 쓴다. 아이콘은 깜빡이지 않는다.
+ *   실시간 정지("화면 반영 보류")는 제목에 드러내지 않고 [최신 값 복귀]
+ *   버튼만 둔다 — 시뮬레이션 정지만 제목이 바뀐다.
  *
  * 2026-09-07 에 제거된 캔버스 위 "오버레이 패널"(감지 설정·기록 조작이 든
  * 컨트롤 패널)과는 역할이 다르다 — 이것은 경보 전용이고, 설정·기록은 그대로
@@ -45,13 +49,11 @@ export function SceneCollisionAlertOverlay({
 
   const isRealtime = runner === 'realtime';
   const pinned = activeMode === 'pinned';
-  const title = pinned
-    ? t(
-        isRealtime
-          ? 'monitoring:sceneCollision.pausedTitleRealtime'
-          : 'monitoring:sceneCollision.pausedTitle',
-      )
-    : t('monitoring:sceneCollision.alertTitle');
+  const title = t(
+    pinned && !isRealtime
+      ? 'monitoring:sceneCollision.pausedTitle'
+      : 'monitoring:sceneCollision.alertTitle',
+  );
   const resumeLabel = t(
     isRealtime
       ? 'monitoring:sceneCollision.resumeRealtime'
@@ -72,20 +74,19 @@ export function SceneCollisionAlertOverlay({
 
   return (
     <>
-      {/* 가장자리 펄스 프레임 — 캔버스 전체 테두리라 카메라가 어디를 보든 걸린다. */}
+      {/* 가장자리 비네트 — 캔버스 전체에 걸려 카메라가 어디를 보든 보인다.
+          inset box-shadow 라 네 변 모두 같은 농도로 안쪽으로 옅어진다
+          (radial-gradient 는 타원이라 모서리만 진해진다). */}
       <div
         aria-hidden
-        className="absolute inset-0 animate-pulse ring-4 ring-red-500/70 ring-inset motion-reduce:animate-none"
+        className="absolute inset-0 animate-pulse shadow-[inset_0_0_120px_32px_rgba(239,68,68,0.6)] motion-reduce:animate-none"
       />
       <div
         role="alert"
         aria-live="assertive"
         className="animate-in slide-in-from-top-4 fade-in-0 pointer-events-auto absolute top-3 left-1/2 flex w-fit max-w-[min(90%,32rem)] -translate-x-1/2 items-center gap-3 rounded-lg border-2 border-red-500/70 bg-red-600/95 px-4 py-2.5 text-white shadow-2xl backdrop-blur-sm duration-300 motion-reduce:animate-none"
       >
-        <AlertTriangle
-          className="size-6 shrink-0 animate-pulse motion-reduce:animate-none"
-          aria-hidden="true"
-        />
+        <AlertTriangle className="size-6 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold tracking-wide uppercase opacity-90">
             {title}

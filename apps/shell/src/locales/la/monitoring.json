@@ -307,7 +307,6 @@
     "contact": "Punctum contactus (proximum)",
     "alertTitle": "Collisio detecta",
     "pausedTitle": "Collisio — simulatio stetit",
-    "pausedTitleRealtime": "Collisio — imago viva retinetur",
     "resume": "Perge",
     "resumeRealtime": "Ad novissima redi"
   }
