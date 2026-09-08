@@ -12,6 +12,7 @@ import {
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import {
+  BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
   copyMatrix,
   matrixChanged,
@@ -42,8 +43,15 @@ import {
  *    다음 틱으로 재큐. job 하나는 끝까지 돌려 매 틱 최소 한 쌍은 완료된다.
  *    `lastTickMs` 로 초과가 관측되면 메쉬 쌍 커서 이월을 도입한다.
  *
- * 기준선(baseline): `arm()` 직후 첫 스캔에서 이미 겹친 쌍은 보고하지 않고
- * 억제한다 — 에디터에서 겹쳐 놓은 모델 때문에 켜자마자 정지되면 안 된다.
+ * 기준선(baseline): 이 단계에서 발견된 겹침은 보고하지 않고 억제한다 —
+ * 에디터에서 겹쳐 놓은 모델 때문에 켜자마자 정지되면 안 된다. 기준선은
+ * `arm()` 1회가 아니라 **시뮬레이션 이외의 움직임이 들어올 때마다** 다시
+ * 잡힌다: 검사기가 스캔을 멈췄다 재개할 때(러너 재생·기즈모 드래그 종료)
+ * `rebaseline()`, 모델 항목이 새로 만들어질 때(첫 마운트·리마운트·참조 교체)
+ * tick 내부에서 자동. baseline 은 큐가 비고 BASELINE_SETTLE_MS 안정화 창이
+ * 지나야 scanning 이 된다(matrixWorld 1프레임 지연·스무딩 흡수, 상수 주석).
+ * 그래서 창 안에서 시뮬레이션이 만든 겹침도 그 쌍이 분리될 때까지 보고되지
+ * 않는다 — 허용된 부작용이다.
  * 억제(보고 뒤 포함)는 두 모델의 **메쉬**가 전부 떨어지면 풀린다
  * (meshPairsSeparated — AABB 에 SEPARATION_MARGIN 히스테리시스, OBB 로 확인).
  * 그래서 붙은 채로 오래 겹쳐 있어도 기록은 한 번만 남고, 떨어졌다 다시
@@ -124,6 +132,10 @@ export class SceneCollisionRuntime {
   private readonly suppressed = new Set<string>();
   private queue: PairJob[] = [];
   private phase: SceneCollisionRuntimePhase = 'idle';
+  /** 안정화 창 종료 시각(호출자 시계 `now` 기준). 이 전엔 scanning 으로 넘어가지 않는다. */
+  private settleUntil = 0;
+  /** arm/rebaseline 은 `now` 를 모른다 — 다음 tick 이 창을 확정한다. */
+  private settleFromNextTick = false;
   /** 마지막 tick 의 소요 시간(ms) — 예산 초과 관측용. */
   lastTickMs = 0;
 
@@ -170,6 +182,7 @@ export class SceneCollisionRuntime {
   /** 감시 시작(기준선부터). 억제 집합은 유지한다 — 닫기 뒤 재무장에 쓴다. */
   arm(): void {
     this.phase = 'baseline';
+    this.settleFromNextTick = true;
     for (const entry of this.entries.values()) {
       this.markAllDirty(entry);
     }
@@ -182,6 +195,7 @@ export class SceneCollisionRuntime {
   /** 감시 중단·정리. 억제 집합도 비운다 — 다시 켜면 새 기준선을 잡는다. */
   disarm(): void {
     this.phase = 'idle';
+    this.resetSettle();
     this.suppressed.clear();
     this.entries.clear();
     this.pairs = [];
@@ -197,7 +211,23 @@ export class SceneCollisionRuntime {
    */
   halt(): void {
     this.phase = 'halted';
+    this.resetSettle();
     this.resetQueue();
+  }
+
+  /**
+   * 기준선을 다시 잡는다 — 지금 자세에서 겹친 쌍은 보고 대신 억제하고, 다음
+   * tick 부터 BASELINE_SETTLE_MS 안정화 창이 열린다. 검사기가 스캔을 멈췄다
+   * 재개할 때(러너 재생·드래그 종료)와 기록 복원이 부르고, 새 모델 항목은
+   * tick 이 스스로 부른다. 모든 메쉬를 dirty 로 만들지 않는다 — 변화 감지가
+   * 움직인 메쉬만 찾으므로 비용은 움직인 쌍만큼이다. 억제 집합·BVH 재시도
+   * 시각도 건드리지 않는다. baseline 중 다시 불리면 창이 연장된다(순차
+   * 마운트 의도). idle/halted 에선 no-op — 무장 여부는 arm/disarm 이 정한다.
+   */
+  rebaseline(): void {
+    if (this.phase === 'idle' || this.phase === 'halted') return;
+    this.phase = 'baseline';
+    this.settleFromNextTick = true;
   }
 
   /** 닫기 — 이 쌍은 분리될 때까지 보고하지 않는다. 없는 키는 no-op. */
@@ -219,7 +249,16 @@ export class SceneCollisionRuntime {
     if (this.phase === 'idle' || this.phase === 'halted') return null;
     const t0 = this.clock();
 
-    if (this.resolvePending()) this.rebuildPairs();
+    if (this.resolvePending()) {
+      this.rebuildPairs();
+      this.rebaseline();
+    }
+    // 창은 같은 tick 에서 확정된다 — 종료 조건이 같은 now 로는 참이 되지 않아
+    // 최소 다음 tick 까지 baseline 이 유지된다.
+    if (this.settleFromNextTick) {
+      this.settleUntil = now + BASELINE_SETTLE_MS;
+      this.settleFromNextTick = false;
+    }
 
     // A. 변화 감지 — 메쉬 matrixWorld 비교. 바뀐 메쉬만 박스를 다시 잰다.
     for (const entry of this.entries.values()) {
@@ -287,7 +326,11 @@ export class SceneCollisionRuntime {
       job.state = 'clear';
     }
 
-    if (this.phase === 'baseline' && this.queue.length === 0) {
+    if (
+      this.phase === 'baseline' &&
+      this.queue.length === 0 &&
+      now >= this.settleUntil
+    ) {
       this.phase = 'scanning';
     }
     this.lastTickMs = this.clock() - t0;
@@ -498,6 +541,11 @@ export class SceneCollisionRuntime {
   private resetQueue(): void {
     for (const job of this.queue) job.queued = false;
     this.queue = [];
+  }
+
+  private resetSettle(): void {
+    this.settleUntil = 0;
+    this.settleFromNextTick = false;
   }
 }
 

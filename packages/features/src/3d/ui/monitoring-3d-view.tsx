@@ -325,6 +325,7 @@ export function Monitoring3dView({
             <SceneCollisionDetector
               sceneInfo={sceneInfo}
               enabled={collisionEnabled}
+              runner={collisionRunner}
             />
           ) : null}
           <SceneCollisionHighlight />

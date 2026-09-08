@@ -81,10 +81,8 @@ export { RigDriver } from './ui/rig-driver';
 export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
 export { SceneCollisionMenu } from './ui/scene-collision-menu';
-export {
-  SceneCollisionPanel,
-  type SceneCollisionRunner,
-} from './ui/scene-collision-panel';
+export { SceneCollisionPanel } from './ui/scene-collision-panel';
+export { type SceneCollisionRunner } from './model/scene-collision-hold';
 export {
   useSceneCollisionStore,
   type SceneCollisionActiveMode,

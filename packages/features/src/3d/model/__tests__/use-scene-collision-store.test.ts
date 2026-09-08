@@ -49,6 +49,7 @@ beforeEach(() => {
   vi.spyOn(sceneCollisionRuntime, 'arm').mockImplementation(() => {});
   vi.spyOn(sceneCollisionRuntime, 'halt').mockImplementation(() => {});
   vi.spyOn(sceneCollisionRuntime, 'suppress').mockImplementation(() => {});
+  vi.spyOn(sceneCollisionRuntime, 'rebaseline').mockImplementation(() => {});
   vi.spyOn(rigValueStore, 'restore').mockImplementation(() => {});
   useVirtualTagStore.setState({ isRunning: true });
 });
@@ -172,13 +173,16 @@ describe('pin / flash', () => {
 });
 
 describe('selectRecord / resume', () => {
-  it('기록 클릭은 쌍 억제 → 값 복원 → 러너 정지 → pin 순서로 진행하고 런타임을 멈추지 않는다', () => {
+  it('기록 클릭은 쌍 억제 → 값 복원 → 재기준선 → 러너 정지 → pin 순서로 진행하고 런타임을 멈추지 않는다', () => {
     const calls: string[] = [];
     vi.mocked(sceneCollisionRuntime.suppress).mockImplementation((key) => {
       calls.push(`suppress:${key}`);
     });
     vi.mocked(rigValueStore.restore).mockImplementation(() => {
       calls.push('restore');
+    });
+    vi.mocked(sceneCollisionRuntime.rebaseline).mockImplementation(() => {
+      calls.push('rebaseline');
     });
     useVirtualTagStore.setState({
       pause: () => {
@@ -189,7 +193,7 @@ describe('selectRecord / resume', () => {
     const values: Array<[string, number]> = [['a/j', 3]];
     useSceneCollisionStore.getState().pushRecord(record(1, values));
     useSceneCollisionStore.getState().selectRecord(1);
-    expect(calls).toEqual(['suppress:a|b', 'restore', 'pause']);
+    expect(calls).toEqual(['suppress:a|b', 'restore', 'rebaseline', 'pause']);
     // 실시간은 화면 반영 보류 — 다음 프레임에 복원이 덮어써지지 않는다.
     expect(useRealtimeStore.getState().held).toBe(true);
     expect(sceneCollisionRuntime.halt).not.toHaveBeenCalled();
@@ -205,6 +209,7 @@ describe('selectRecord / resume', () => {
     before.selectRecord(42);
     expect(useSceneCollisionStore.getState()).toBe(before);
     expect(sceneCollisionRuntime.suppress).not.toHaveBeenCalled();
+    expect(sceneCollisionRuntime.rebaseline).not.toHaveBeenCalled();
   });
 
   it('이미 고정된 같은 기록을 다시 클릭하면 resume — active 해제 + 정지된 런타임 재무장', () => {

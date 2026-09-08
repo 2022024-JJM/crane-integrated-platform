@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
-import type { SceneCollisionRunner } from './scene-collision-panel';
+import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 
 /**
  * 충돌 경보 오버레이 — 활성 충돌 기록(pinned·flash)이 있는 동안 캔버스 위에

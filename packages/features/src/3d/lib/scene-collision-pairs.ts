@@ -15,6 +15,19 @@ export const SCAN_BUDGET_MS = 3;
 /** BVH 가 아직 없는 메쉬 쌍을 다시 볼 때까지의 대기. ModelMesh 가 유휴 시간에 빌드한다. */
 export const BVH_RETRY_MS = 1000;
 /**
+ * 기준선(baseline) 안정화 창 — 스캔 재개·새 모델 항목·기록 복원으로 기준선을
+ * 다시 잡은 뒤, 큐가 비어도 이 시간이 지나야 scanning 으로 넘어간다. 그 동안
+ * 발견된 겹침은 보고 대신 억제된다(시뮬레이션 이외의 움직임 흡수).
+ * 두 가지를 덮는다.
+ * - 기존 항목의 참조 교체(인스펙터 편집·undo): matrixWorld 는 useFrame 뒤
+ *   gl.render 가 갱신하므로 커밋 직후 첫 tick 은 옛 행렬을 읽는다. 창이 없으면
+ *   큐가 즉시 비어 scanning 이 되고 다음 tick 이 새 행렬을 움직임으로 보고한다.
+ * - rigValueStore 스무딩(임계감쇠, DEFAULT_SMOOTH_TIME 0.35s): 재생 시작·새
+ *   모델 마운트 직후 rest → 태그값으로 이동한다. 1s ≈ 0.35 × 3 이면 잔여 ≈ 2%.
+ * BVH_RETRY_MS 와 값이 같지만 무관하다.
+ */
+export const BASELINE_SETTLE_MS = 1000;
+/**
  * 억제(기준선·닫기) 해제에 필요한 분리 간격 — 씬 unit. 씬마다 metersPerUnit
  * 이 달라(okpo 지도 11.7 m/unit) m 로 두지 않는다. 경계 떨림 방지용
  * 히스테리시스는 이 하나로 충분하다.

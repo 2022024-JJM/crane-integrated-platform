@@ -13,11 +13,9 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
+import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
-import {
-  SceneCollisionPanel,
-  type SceneCollisionRunner,
-} from './scene-collision-panel';
+import { SceneCollisionPanel } from './scene-collision-panel';
 
 interface SceneCollisionMenuProps {
   onViewCollision: () => void;

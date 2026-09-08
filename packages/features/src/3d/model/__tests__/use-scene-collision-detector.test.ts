@@ -15,6 +15,7 @@ import {
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import {
+  BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
   FLASH_MS,
   SCAN_INTERVAL_MS,
@@ -54,6 +55,13 @@ function frame() {
 function scan() {
   nowMs += SCAN_INTERVAL_MS;
   frame();
+}
+
+/** 기준선 완료 — 첫 스캔이 안정화 창을 열고, 창이 끝난 뒤 한 번 더 스캔. */
+function settle() {
+  scan();
+  nowMs += BASELINE_SETTLE_MS;
+  scan();
 }
 
 function mountModel(id: string, x: number) {
@@ -123,7 +131,11 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
   it('SCAN_INTERVAL 미만 프레임은 런타임을 호출하지 않는다', () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
     renderHook(() =>
-      useSceneCollisionDetector({ sceneInfo: scene([]), enabled: true }),
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'simulation',
+      }),
     );
     frame();
     expect(tick).not.toHaveBeenCalled();
@@ -134,17 +146,117 @@ describe('useSceneCollisionDetector — 스캔 게이트', () => {
     expect(tick).toHaveBeenCalledTimes(1);
   });
 
-  it('기즈모 드래그 중엔 스캔을 건너뛴다', () => {
+  it('기즈모 드래그 중엔 스캔을 건너뛰고, 종료 뒤 첫 프레임에 재기준선을 잡는다', () => {
     const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
+    const rebaseline = vi.spyOn(sceneCollisionRuntime, 'rebaseline');
     renderHook(() =>
-      useSceneCollisionDetector({ sceneInfo: scene([]), enabled: true }),
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'simulation',
+      }),
     );
+    scan();
+    expect(rebaseline).toHaveBeenCalledTimes(1); // 마운트 후 첫 게이트 열림
     useActiveTransformStore.getState().begin();
     scan();
-    expect(tick).not.toHaveBeenCalled();
+    expect(tick).toHaveBeenCalledTimes(1);
     useActiveTransformStore.getState().end();
     scan();
+    expect(tick).toHaveBeenCalledTimes(2);
+    expect(rebaseline).toHaveBeenCalledTimes(2);
+    // 계속 열려 있는 동안엔 다시 잡지 않는다(전이에서만).
+    scan();
+    scan();
+    expect(rebaseline).toHaveBeenCalledTimes(2);
+  });
+
+  it('러너가 정지 중이면 스캔하지 않고, 재생 전이 첫 프레임에 재기준선 뒤 스캔한다', () => {
+    const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
+    const rebaseline = vi.spyOn(sceneCollisionRuntime, 'rebaseline');
+    useVirtualTagStore.setState({ isRunning: false });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'simulation',
+      }),
+    );
+    scan();
+    scan();
+    expect(tick).not.toHaveBeenCalled();
+    expect(rebaseline).not.toHaveBeenCalled();
+    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    scan();
+    expect(rebaseline).toHaveBeenCalledTimes(1);
     expect(tick).toHaveBeenCalledTimes(1);
+    act(() => useVirtualTagStore.setState({ isRunning: false }));
+    scan();
+    expect(tick).toHaveBeenCalledTimes(1);
+  });
+
+  it("runner='realtime' 은 실시간 러너의 isRunning 만 보고, 보류(held) 중에도 스캔한다", () => {
+    const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
+    useVirtualTagStore.setState({ isRunning: false });
+    useRealtimeStore.setState({ isRunning: true, held: true });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'realtime',
+      }),
+    );
+    scan();
+    expect(tick).toHaveBeenCalledTimes(1);
+    useRealtimeStore.setState({ isRunning: false });
+    scan();
+    expect(tick).toHaveBeenCalledTimes(1);
+  });
+
+  it("runner='simulation' 은 실시간 러너가 돌아도 가상 태그가 정지면 스캔하지 않는다", () => {
+    const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
+    useVirtualTagStore.setState({ isRunning: false });
+    useRealtimeStore.setState({ isRunning: true });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'simulation',
+      }),
+    );
+    scan();
+    expect(tick).not.toHaveBeenCalled();
+  });
+
+  it('드래그로 겹쳐 놓은 쌍은 기록되지 않고 억제되며, 창 뒤 시뮬레이션이 떼었다 붙이면 기록된다', () => {
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+        runner: 'simulation',
+      }),
+    );
+    settle();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    useActiveTransformStore.getState().begin();
+    moveX(a, 4.6);
+    scan();
+    useActiveTransformStore.getState().end();
+    scan();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(0);
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(true);
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    nowMs += BASELINE_SETTLE_MS;
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    moveX(a, -10);
+    scan();
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(false);
+    moveX(a, 4.6);
+    scan();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(1);
   });
 });
 
@@ -164,9 +276,10 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
-    scan(); // 기준선
+    settle(); // 기준선
     moveX(a, 4.6);
     scan();
     const state = useSceneCollisionStore.getState();
@@ -186,12 +299,15 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     for (let i = 0; i < 30; i += 1) rigValueStore.step(1 / 60);
     expect(rigValueStore.get('a/j')).toBe(midway);
 
+    // 러너가 멈췄으므로 스캔도 멈춘다 — 스토어 참조 불변.
+    const tick = vi.spyOn(sceneCollisionRuntime, 'tick');
     scan();
     scan();
+    expect(tick).not.toHaveBeenCalled();
     expect(useSceneCollisionStore.getState()).toBe(state);
   });
 
-  it('정지된 채 기즈모로 떼었다가 다시 붙이면 두 번째 기록이 쌓이고 pin 이 옮겨간다', () => {
+  it('정지 중 기즈모로 떼었다 붙여도 기록되지 않고, ▶ 뒤 겹친 채면 억제되며 시뮬레이션이 떼었다 붙여야 두 번째 기록', () => {
     const a = mountModel('a', 0);
     mountModel('b', 5);
     useVirtualTagStore.setState({
@@ -201,18 +317,39 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
-    scan();
+    settle();
     moveX(a, 4.6);
     scan();
     const first = useSceneCollisionStore.getState().history[0];
     expect(useSceneCollisionStore.getState().activeRecordId).toBe(first.id);
+    expect(useVirtualTagStore.getState().isRunning).toBe(false);
 
-    moveX(a, 0); // 떼어 놓음 — 억제 해제
+    moveX(a, 0); // 정지 중 떼어 놓음 — 스캔이 없어 억제도 그대로
+    scan();
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(true);
+    moveX(a, 4.7); // 다시 붙임 — 기록 없음
+    scan();
+    expect(useSceneCollisionStore.getState().history).toHaveLength(1);
+
+    // ▶ — 고정은 풀리고, 겹친 채 재개된 쌍은 재기준선이 조용히 넘긴다.
+    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    expect(useSceneCollisionStore.getState().history).toHaveLength(1);
+    expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(true);
+    nowMs += BASELINE_SETTLE_MS;
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+
+    // 시뮬레이션이 떼었다 다시 붙이면 새 기록 + pin 이동.
+    moveX(a, -10);
     scan();
     expect(sceneCollisionRuntime.suppressedKeys.has('a|b')).toBe(false);
-    moveX(a, 4.6); // 다시 붙임
+    moveX(a, 4.6);
     scan();
     const state = useSceneCollisionStore.getState();
     expect(state.history).toHaveLength(2);
@@ -233,9 +370,10 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
-    scan();
+    settle();
     moveX(a, 4.6);
     scan();
     expect(useSceneCollisionStore.getState().activeMode).toBe('pinned');
@@ -246,9 +384,12 @@ describe('useSceneCollisionDetector — 충돌 시 정지 모드', () => {
     expect(resume).not.toHaveBeenCalled();
     act(() => useVirtualTagStore.setState({ isRunning: true })); // false→true
     expect(resume).toHaveBeenCalledTimes(1);
-    // 런타임은 멈춘 적이 없으니 그대로 scanning, 고정만 풀린다.
+    // 런타임은 멈춘 적이 없어 resume 은 arm 하지 않고 고정만 푼다. 재기준선은
+    // 다음 프레임에 검사기가 잡는다.
     expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    frame();
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
     act(() => useVirtualTagStore.setState({ isRunning: true })); // true→true
     expect(resume).toHaveBeenCalledTimes(1);
   });
@@ -265,9 +406,10 @@ describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
-    scan();
+    settle();
     moveX(a, 4.6);
     scan();
     let state = useSceneCollisionStore.getState();
@@ -313,7 +455,11 @@ describe('useSceneCollisionDetector — 수명', () => {
     useRealtimeStore.getState().hold();
     const { rerender, unmount } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
-        useSceneCollisionDetector({ sceneInfo: scene([]), enabled }),
+        useSceneCollisionDetector({
+          sceneInfo: scene([]),
+          enabled,
+          runner: 'simulation',
+        }),
       { initialProps: { enabled: true } },
     );
     expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
@@ -332,7 +478,11 @@ describe('useSceneCollisionDetector — 수명', () => {
 
   it('언마운트 뒤에는 ▶ 전이를 더 이상 듣지 않는다', () => {
     const { unmount } = renderHook(() =>
-      useSceneCollisionDetector({ sceneInfo: scene([]), enabled: true }),
+      useSceneCollisionDetector({
+        sceneInfo: scene([]),
+        enabled: true,
+        runner: 'simulation',
+      }),
     );
     unmount();
     const resume = vi.fn();
@@ -347,7 +497,11 @@ describe('useSceneCollisionDetector — 수명', () => {
     const first = scene(['a']);
     const { rerender } = renderHook(
       ({ info }: { info: SavedSceneInfo }) =>
-        useSceneCollisionDetector({ sceneInfo: info, enabled: true }),
+        useSceneCollisionDetector({
+          sceneInfo: info,
+          enabled: true,
+          runner: 'simulation',
+        }),
       { initialProps: { info: first } },
     );
     expect(sync).toHaveBeenCalledTimes(1);
@@ -359,18 +513,66 @@ describe('useSceneCollisionDetector — 수명', () => {
 });
 
 describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () => {
-  it('무장 직후 true, 첫 스캔에서 기준선이 끝나면 false', () => {
+  it('러너 정지 중엔 무장해도 false, 재생 첫 스캔에 true, 안정화 창이 끝나면 false', () => {
+    mountModel('a', 0);
+    mountModel('b', 5);
+    useVirtualTagStore.setState({ isRunning: false });
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+        runner: 'simulation',
+      }),
+    );
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    scan();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    scan();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    // 창 안의 스캔은 값이 같아 스토어 참조를 흔들지 않는다.
+    const before = useSceneCollisionStore.getState();
+    scan();
+    expect(useSceneCollisionStore.getState()).toBe(before);
+    nowMs += BASELINE_SETTLE_MS;
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+  });
+
+  it('러너 정지·드래그 시작 전이에서 즉시 false 로 내리고(phase 는 baseline 유지), 재개하면 새 창으로 다시 true', () => {
     mountModel('a', 0);
     mountModel('b', 5);
     renderHook(() =>
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
-    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
     scan();
-    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    act(() => useVirtualTagStore.setState({ isRunning: false }));
+    frame();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    const before = useSceneCollisionStore.getState();
+    frame();
+    expect(useSceneCollisionStore.getState()).toBe(before);
+
+    act(() => useVirtualTagStore.setState({ isRunning: true }));
+    scan();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    useActiveTransformStore.getState().begin();
+    frame();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    useActiveTransformStore.getState().end();
+    nowMs += BASELINE_SETTLE_MS; // 옛 창은 지났지만 재개가 새 창을 연다
+    scan();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    nowMs += BASELINE_SETTLE_MS;
+    scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
   });
 
@@ -384,6 +586,7 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
       useSceneCollisionDetector({
         sceneInfo: scene(['a', 'b']),
         enabled: true,
+        runner: 'simulation',
       }),
     );
     scan();
@@ -396,7 +599,8 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     expect(useSceneCollisionStore.getState()).toBe(before);
 
     geometry.boundsTree = new MeshBVH(geometry);
-    nowMs += BVH_RETRY_MS;
+    // 재시도 대기와 안정화 창은 독립이다 — 둘 다 지나야 scanning.
+    nowMs += Math.max(BVH_RETRY_MS, BASELINE_SETTLE_MS);
     scan();
     expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
@@ -408,7 +612,11 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     delete (a.children[0] as Mesh).geometry.boundsTree;
     const { rerender, unmount } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
-        useSceneCollisionDetector({ sceneInfo: scene(['a', 'b']), enabled }),
+        useSceneCollisionDetector({
+          sceneInfo: scene(['a', 'b']),
+          enabled,
+          runner: 'simulation',
+        }),
       { initialProps: { enabled: true } },
     );
     scan();
@@ -416,6 +624,9 @@ describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () =
     rerender({ enabled: false });
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
     rerender({ enabled: true });
+    // 무장만으로는 올리지 않는다 — 첫 스캔이 올린다.
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    scan();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
     unmount();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(false);

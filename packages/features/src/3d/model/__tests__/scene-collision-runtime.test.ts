@@ -11,6 +11,7 @@ import { MeshBVH } from 'three-mesh-bvh';
 import { modelObjectRegistry, type SavedModelInfo } from '@crane/domain/3d';
 import { SceneCollisionRuntime } from '../scene-collision-runtime';
 import {
+  BASELINE_SETTLE_MS,
   BVH_RETRY_MS,
   SEPARATION_MARGIN,
 } from '../../lib/scene-collision-pairs';
@@ -60,10 +61,16 @@ function makeRuntime() {
   return new SceneCollisionRuntime(clock);
 }
 
-/** 예산 안에서 큐가 빌 때까지 반복(기준선 완료 등). */
+/**
+ * 기준선 완료 — 첫 tick(now) 이 안정화 창을 열고(settleUntil = now + MS),
+ * 창이 끝난 시각부터 큐가 빌 때까지 반복한다. 처음부터 now + MS 로 tick 하면
+ * 창이 그 시각 기준으로 열려 영영 scanning 이 되지 않는다.
+ */
 function settle(rt: SceneCollisionRuntime, now = 0, ticks = 5) {
-  let hit = null;
-  for (let i = 0; i < ticks && hit === null; i += 1) hit = rt.tick(now, 100);
+  let hit = rt.tick(now, 100);
+  for (let i = 0; i < ticks && hit === null; i += 1) {
+    hit = rt.tick(now + BASELINE_SETTLE_MS + i, 100);
+  }
   return hit;
 }
 
@@ -150,7 +157,7 @@ describe('SceneCollisionRuntime — 기본 흐름', () => {
     mountModel('c', 10);
     rt.sync([model('a'), model('b', 5), model('c', 10)]);
     rt.arm();
-    for (let i = 0; i < 5; i += 1) rt.tick(i, 100);
+    settle(rt);
     expect(rt.currentPhase).toBe('scanning');
     // a 를 b·c 모두와 겹치게(a-b, a-c 두 쌍이 같은 tick 에 큐에 든다).
     a.body.geometry = new BoxGeometry(12, 1, 1);
@@ -347,6 +354,129 @@ describe('SceneCollisionRuntime — 기준선·억제', () => {
   });
 });
 
+describe('SceneCollisionRuntime — 재기준선·안정화 창', () => {
+  it('큐가 비어도 settleUntil 전엔 baseline 이고 정확히 settleUntil 에서 scanning 이다', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 5);
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    expect(rt.tick(100, 100)).toBeNull(); // 창 열림: settleUntil = 100 + MS
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(100 + BASELINE_SETTLE_MS - 1, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(100 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+  });
+
+  it('rebaseline 은 scanning 을 baseline 으로 되돌리고, 창 안의 겹침은 억제하며 창 뒤 떼었다 붙이면 hit', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    settle(rt);
+    expect(rt.currentPhase).toBe('scanning');
+
+    rt.rebaseline();
+    expect(rt.currentPhase).toBe('baseline');
+    moveTo(a.root, 4.6); // 정지 중 기즈모로 겹쳐 놓은 것에 해당
+    expect(rt.tick(2000, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(2000 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+
+    moveTo(a.root, -10);
+    expect(rt.tick(2010 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+    moveTo(a.root, 4.6);
+    expect(rt.tick(2020 + BASELINE_SETTLE_MS, 100)?.key).toBe('a|b');
+  });
+
+  it('rebaseline 은 idle/halted 에선 no-op 이고 억제 집합·BVH 재시도 시각을 건드리지 않는다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0, { bvh: false });
+    mountModel('b', 5);
+    mountModel('c', 20);
+    rt.sync([model('a'), model('b', 5), model('c', 20)]);
+    rt.rebaseline();
+    expect(rt.currentPhase).toBe('idle');
+    rt.arm();
+    rt.halt();
+    rt.rebaseline();
+    expect(rt.currentPhase).toBe('halted');
+    expect(rt.tick(0, 100)).toBeNull();
+
+    rt.arm();
+    settle(rt);
+    rt.suppress('b|c');
+    moveTo(a.root, 4.5); // BVH 없음 → 재시도 시각 = 100 + BVH_RETRY_MS
+    expect(rt.tick(100 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    rt.rebaseline();
+    expect(rt.suppressedKeys.has('b|c')).toBe(true);
+    // 재시도 시각 전엔 여전히 검사하지 않는다(재기준선이 재시도를 앞당기지 않음).
+    const bvh = new MeshBVH(a.body.geometry);
+    (a.body.geometry as BvhGeometry).boundsTree = bvh;
+    const spy = vi.spyOn(bvh, 'intersectsGeometry');
+    expect(
+      rt.tick(100 + BASELINE_SETTLE_MS + BVH_RETRY_MS - 1, 100),
+    ).toBeNull();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('baseline 중 rebaseline·새 항목 합류는 창을 연장한다', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    rt.sync([model('a'), model('b', 10), model('c', 20)]);
+    rt.arm();
+    expect(rt.tick(0, 100)).toBeNull(); // settleUntil = MS
+    rt.rebaseline();
+    expect(rt.tick(500, 100)).toBeNull(); // settleUntil = 500 + MS
+    expect(rt.tick(BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    mountModel('b', 10); // 순차 마운트 — 합류 tick 부터 다시 MS
+    expect(rt.tick(500 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(1000 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(1500 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+  });
+
+  it('재기준선은 움직이지 않은 쌍을 다시 검사하지 않는다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt);
+    const bvh = (a.body.geometry as BvhGeometry).boundsTree as MeshBVH;
+    const spy = vi.spyOn(bvh, 'intersectsGeometry');
+    rt.rebaseline();
+    settle(rt, 5000);
+    expect(spy).not.toHaveBeenCalled();
+    expect(rt.currentPhase).toBe('scanning');
+  });
+
+  it('halt 뒤 arm 은 새 창을 연다', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 5);
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    settle(rt);
+    rt.rebaseline(); // 다음 tick 에 창을 열 예정이었으나
+    rt.halt(); // halt 가 지운다
+    rt.arm();
+    expect(rt.tick(5000, 100)).toBeNull();
+    expect(rt.tick(5000 + BASELINE_SETTLE_MS - 1, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.tick(5000 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+  });
+});
+
 describe('SceneCollisionRuntime — 비용 절감', () => {
   it('움직임이 없는 쌍은 기준선 뒤 삼각형 검사가 0회다', () => {
     const rt = makeRuntime();
@@ -403,8 +533,8 @@ describe('SceneCollisionRuntime — 비용 절감', () => {
     rtBudget.arm();
     expect(rtBudget.tick(0, 0)).toBeNull();
     expect(rtBudget.currentPhase).toBe('baseline'); // 아직 큐가 남았다
-    rtBudget.tick(1, 0);
-    rtBudget.tick(2, 0);
+    rtBudget.tick(BASELINE_SETTLE_MS, 0);
+    rtBudget.tick(BASELINE_SETTLE_MS + 1, 0);
     expect(rtBudget.currentPhase).toBe('scanning');
     expect(rtBudget.lastTickMs).toBeGreaterThan(0);
   });
@@ -420,9 +550,10 @@ describe('SceneCollisionRuntime — 비용 절감', () => {
     rt.sync(models);
     rt.arm();
     rt.tick(0, 0); // 첫 job(a-b)만 처리, a-c·b-c 는 큐에 남음
-    // 편집으로 b 의 참조가 바뀜 → 쌍 재생성.
+    // 편집으로 b 의 참조가 바뀜 → 쌍 재생성 + 재기준선(창이 이 tick 부터 다시).
     rt.sync([models[0], model('b', 10), models[2]]);
-    for (let i = 1; i < 6; i += 1) rt.tick(i, 0);
+    rt.tick(1, 0);
+    for (let i = 0; i < 6; i += 1) rt.tick(1 + BASELINE_SETTLE_MS + i, 0);
     expect(rt.currentPhase).toBe('scanning');
     expect(rt.suppressedKeys.has('a|c')).toBe(true);
     void a;
@@ -454,10 +585,19 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     rt.arm();
     settle(rt);
     expect(rt.currentPhase).toBe('scanning');
-    mountModel('b', 0.5); // 늦게 마운트 — 이미 겹친 자리
-    // 기준선은 끝났으므로 새 쌍은 즉시 검사돼 보고된다(에디터에서 겹친 곳에 드롭한 경우).
-    expect(rt.tick(10, 100)?.key).toBe('a|b');
-    void a;
+    mountModel('b', 0.5); // 늦게 마운트 — 이미 겹친 자리(로딩 배치·드롭)
+    // 새 항목은 기준선으로 들어간다 — 보고 대신 억제, 창이 열린다.
+    expect(rt.tick(10, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    expect(rt.tick(10 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+    // 시뮬레이션이 떼었다 다시 붙이면 보고.
+    moveTo(a.root, -10);
+    expect(rt.tick(20 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+    moveTo(a.root, 0.2);
+    expect(rt.tick(30 + BASELINE_SETTLE_MS, 100)?.key).toBe('a|b');
   });
 
   it('리마운트(root 교체)된 모델은 항목을 다시 만든다', () => {
@@ -469,11 +609,19 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     settle(rt);
     modelObjectRegistry.unregister('a', a.root);
     expect(rt.tick(10, 100)).toBeNull();
-    mountModel('a', 4.5); // 새 root 가 겹친 자리에
-    expect(rt.tick(20, 100)?.key).toBe('a|b');
+    const again = mountModel('a', 4.5); // 새 root 가 겹친 자리에 → 기준선 억제
+    expect(rt.tick(20, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('baseline');
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    expect(rt.tick(20 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+    moveTo(again.root, 0);
+    expect(rt.tick(30 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    moveTo(again.root, 4.6);
+    expect(rt.tick(40 + BASELINE_SETTLE_MS, 100)?.key).toBe('a|b');
   });
 
-  it('sync 에서 사라진 모델의 쌍은 검사되지 않고, 참조가 바뀐 모델은 메쉬를 다시 모은다', () => {
+  it('sync 에서 사라진 모델의 쌍은 검사되지 않고, 참조가 바뀐 모델은 메쉬를 다시 모아 기준선에 넣는다', () => {
     const rt = makeRuntime();
     const a = mountModel('a', 0);
     mountModel('b', 5);
@@ -488,9 +636,16 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     a.body.visible = false;
     rt.sync([model('a'), model('b', 5)]);
     expect(settle(rt, 20)).toBeNull();
+    // 다시 보이게 + 참조 갱신 → 겹친 채 다시 모인 메쉬는 편집으로 취급해 억제.
     a.body.visible = true;
     rt.sync([model('a'), model('b', 5)]);
-    expect(settle(rt, 30)?.key).toBe('a|b');
+    expect(settle(rt, 30)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+    moveTo(a.root, 0);
+    expect(rt.tick(40 + BASELINE_SETTLE_MS, 100)).toBeNull();
+    moveTo(a.root, 4.5);
+    expect(rt.tick(50 + BASELINE_SETTLE_MS, 100)?.key).toBe('a|b');
   });
 
   it('충돌 메쉬가 없는 모델(빈 root)·모델 1개·0개는 조용히 지나간다', () => {

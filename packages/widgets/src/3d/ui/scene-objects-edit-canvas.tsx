@@ -857,6 +857,7 @@ export function SceneObjectsEditCanvas({
         <SceneCollisionDetector
           sceneInfo={sceneInfo}
           enabled={collisionEnabled}
+          runner="simulation"
         />
         <SceneCollisionHighlight />
         <SceneSurfaceCamera

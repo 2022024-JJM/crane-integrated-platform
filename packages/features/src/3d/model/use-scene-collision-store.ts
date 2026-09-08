@@ -63,10 +63,12 @@ interface SceneCollisionState {
   activeRecordId: number | null;
   activeMode: SceneCollisionActiveMode | null;
   /**
-   * 런타임이 기준선(baseline) 단계인지 — 무장 직후 모든 쌍을 한 번 검사해
-   * 이미 겹친 쌍을 억제하는 동안 true. BVH 가 아직 없는 쌍은 재시도되므로
-   * 모델 로드 직후 몇 초간 유지된다. 검사기만 갱신하며 화면(SceneWarmupIndicator)
-   * 이 "충돌 감지 기준선 계산 중" 으로 보여 준다.
+   * 런타임이 기준선(baseline) 단계인지 — 겹친 쌍을 보고 대신 억제하며 안정화
+   * 창(BASELINE_SETTLE_MS)을 기다리는 동안 true. BVH 가 아직 없는 쌍은
+   * 재시도되므로 모델 로드 직후 몇 초간 유지된다. **스캔 중일 때만** true 다 —
+   * 러너 정지·기즈모 드래그로 스캔이 멈추면 검사기가 false 로 내린다(phase 는
+   * baseline 인 채 남고 재개 시 새 창). 검사기만 갱신하며 화면
+   * (SceneWarmupIndicator)이 "충돌 감지 기준선 계산 중" 으로 보여 준다.
    */
   baselinePending: boolean;
   toggle: () => void;
@@ -79,8 +81,9 @@ interface SceneCollisionState {
   /** 무정지 모드 충돌 — FLASH_MS 뒤 자동으로 지운다. 새 flash 가 이전 타이머를 취소. */
   flash: (id: number) => void;
   /**
-   * 기록 클릭. 그 쌍 억제 → 값 저장소를 그 시점으로 복원 → 러너 정지 → pin.
-   * 이미 고정된 같은 기록을 다시 클릭하면 resume 과 같다. 없는 id 는 no-op.
+   * 기록 클릭. 그 쌍 억제 → 값 저장소를 그 시점으로 복원 → 재기준선 → 러너
+   * 정지 → pin. 이미 고정된 같은 기록을 다시 클릭하면 resume 과 같다. 없는
+   * id 는 no-op.
    */
   selectRecord: (id: number) => void;
   /** pinned/flash 해제(+ 외부에서 halt 된 런타임이면 재무장). 검사기가 ▶ 전이에서 부른다. */
@@ -178,6 +181,11 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
       // 않는다. 런타임은 멈추지 않는다(다른 쌍·이후 조작은 계속 감시).
       sceneCollisionRuntime.suppress(record.pairKey);
       rigValueStore.restore(record.values);
+      // 복원 자세에서 겹친 *다른* 쌍도 기준선으로 흡수한다. 시뮬레이션 러너는
+      // 정지 중 스캔이 없어 무해하고 ▶ 의 재기준선이 다시 덮는다. 실시간은
+      // 보류 중에도 스캔이 돌아 이것이 필요하며, 안정화 창 안에 release 하면
+      // 최신 값으로 튀는 점프도 함께 흡수된다.
+      sceneCollisionRuntime.rebaseline();
       holdRunners();
       state.pin(id);
     },

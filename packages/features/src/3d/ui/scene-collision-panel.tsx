@@ -5,13 +5,11 @@ import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Switch } from '@crane/ui/atoms/switch';
 import { HISTORY_MAX } from '../lib/scene-collision-pairs';
+import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 import {
   useSceneCollisionStore,
   type SceneCollisionRecord,
 } from '../model/use-scene-collision-store';
-
-/** 정지 대상 값 생산자 — 안내 문구·재개 버튼이 갈린다(scene-collision-hold). */
-export type SceneCollisionRunner = 'simulation' | 'realtime';
 
 interface SceneCollisionPanelProps {
   /** 선택된 기록의 접촉점으로 카메라를 맞춘다(카메라 이동은 호출자가). */
