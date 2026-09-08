@@ -51,10 +51,13 @@ export function useSceneCollisionDetector({
     enabledRef.current = enabled;
     if (!enabled) return;
     sceneCollisionRuntime.arm();
+    useSceneCollisionStore.getState().setBaselinePending(true);
     return () => {
       enabledRef.current = false;
       sceneCollisionRuntime.disarm();
-      useSceneCollisionStore.getState().clear();
+      const store = useSceneCollisionStore.getState();
+      store.clear();
+      store.setBaselinePending(false);
     };
   }, [enabled]);
 
@@ -78,6 +81,11 @@ export function useSceneCollisionDetector({
     lastScanRef.current = now;
 
     const hit = sceneCollisionRuntime.tick(now, SCAN_BUDGET_MS);
+    // 기준선 완료(baseline → scanning)를 화면에 알린다. 스토어 쓰기는 값이
+    // 바뀔 때만 — 매 스캔마다 set 하면 구독자가 헛되이 리렌더된다.
+    useSceneCollisionStore
+      .getState()
+      .setBaselinePending(sceneCollisionRuntime.currentPhase === 'baseline');
     if (!hit) return;
 
     const store = useSceneCollisionStore.getState();

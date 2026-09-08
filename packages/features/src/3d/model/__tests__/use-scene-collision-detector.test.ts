@@ -14,7 +14,11 @@ import {
   type SavedModelInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
-import { FLASH_MS, SCAN_INTERVAL_MS } from '../../lib/scene-collision-pairs';
+import {
+  BVH_RETRY_MS,
+  FLASH_MS,
+  SCAN_INTERVAL_MS,
+} from '../../lib/scene-collision-pairs';
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
 import { useActiveTransformStore } from '../use-active-transform-store';
@@ -98,6 +102,7 @@ beforeEach(() => {
     history: [],
     activeRecordId: null,
     activeMode: null,
+    baselinePending: false,
   });
   useVirtualTagStore.setState({ isRunning: true });
   useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
@@ -350,5 +355,69 @@ describe('useSceneCollisionDetector — 수명', () => {
     expect(sync).toHaveBeenCalledTimes(1);
     rerender({ info: scene(['a', 'b']) });
     expect(sync).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('useSceneCollisionDetector — 기준선 신호(baselinePending)', () => {
+  it('무장 직후 true, 첫 스캔에서 기준선이 끝나면 false', () => {
+    mountModel('a', 0);
+    mountModel('b', 5);
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+      }),
+    );
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+  });
+
+  it('BVH 가 없어 재시도 중인 쌍이 있으면 기준선이 유지되고, BVH 가 생기면 풀린다', () => {
+    const a = mountModel('a', 0);
+    mountModel('b', 0.5); // 겹침 → 정밀 검사 필요
+    const body = a.children[0] as Mesh;
+    const geometry = body.geometry as BvhGeometry;
+    delete geometry.boundsTree;
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+      }),
+    );
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('baseline');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+
+    // 변화 없는 스캔은 스토어 참조를 흔들지 않는다.
+    const before = useSceneCollisionStore.getState();
+    scan();
+    expect(useSceneCollisionStore.getState()).toBe(before);
+
+    geometry.boundsTree = new MeshBVH(geometry);
+    nowMs += BVH_RETRY_MS;
+    scan();
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+  });
+
+  it('enabled=false 전환·언마운트 시 false 로 돌아간다', () => {
+    const a = mountModel('a', 0);
+    mountModel('b', 0.5);
+    delete (a.children[0] as Mesh).geometry.boundsTree;
+    const { rerender, unmount } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useSceneCollisionDetector({ sceneInfo: scene(['a', 'b']), enabled }),
+      { initialProps: { enabled: true } },
+    );
+    scan();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    rerender({ enabled: false });
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    rerender({ enabled: true });
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+    unmount();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
   });
 });

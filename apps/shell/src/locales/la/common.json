@@ -303,7 +303,12 @@
     "simulationPlay": "Simulationem age",
     "simulationPause": "Simulationem siste",
     "collisionMenu": "Collisionis detectio",
-    "collisionBvhHint": "Inspectio accurata paucis secundis post exempla onerata parata est."
+    "collisionBvhHint": "Inspectio accurata paucis secundis post exempla onerata parata est.",
+    "warmup": {
+      "bvh": "Detectio clicci paratur ({{done}}/{{total}})",
+      "collision": "Linea basis collisionis computatur",
+      "assets": "Exempla onerantur ({{loaded}}/{{total}})"
+    }
   },
   "undo": "Revoca"
 }

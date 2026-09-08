@@ -19,7 +19,9 @@ import { cn } from '@crane/core/lib/utils';
  *    안 돌아도 이 신호로 즉시 걷힌다.
  *  - 로더 idle(`!active`) — EXR 등 씬 밖 Suspense의 에셋까지 끝났다는 뜻.
  * 짧은 유예(grace)를 둬 배치 사이 순간적인 idle에 일찍 걷히지 않는다.
- * 한 번 걷히면 이후 로드(충돌감지 워밍업 등)에는 다시 덮지 않는다.
+ * 한 번 걷히면 이후 로드(충돌감지 워밍업 등)에는 다시 덮지 않는다. 걷힌 뒤의
+ * 후처리(BVH 빌드·충돌 기준선)는 SceneWarmupIndicator 가 좌측 상단에 비차단으로
+ * 표시한다.
  */
 const DISMISS_GRACE_MS = 300;
 const FADE_OUT_MS = 500;

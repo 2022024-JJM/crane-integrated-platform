@@ -62,6 +62,13 @@ interface SceneCollisionState {
   /** 빨간 박스 대상 기록. */
   activeRecordId: number | null;
   activeMode: SceneCollisionActiveMode | null;
+  /**
+   * 런타임이 기준선(baseline) 단계인지 — 무장 직후 모든 쌍을 한 번 검사해
+   * 이미 겹친 쌍을 억제하는 동안 true. BVH 가 아직 없는 쌍은 재시도되므로
+   * 모델 로드 직후 몇 초간 유지된다. 검사기만 갱신하며 화면(SceneWarmupIndicator)
+   * 이 "충돌 감지 기준선 계산 중" 으로 보여 준다.
+   */
+  baselinePending: boolean;
   toggle: () => void;
   setEnabled: (enabled: boolean) => void;
   setPauseOnCollision: (pause: boolean) => void;
@@ -84,6 +91,8 @@ interface SceneCollisionState {
   clearHistory: () => void;
   /** 검사기 언마운트 — active 만 해제, 기록은 유지. */
   clear: () => void;
+  /** 검사기만 호출 — 런타임 phase 가 baseline 을 드나들 때. */
+  setBaselinePending: (pending: boolean) => void;
 }
 
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -114,6 +123,7 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
     history: [],
     activeRecordId: null,
     activeMode: null,
+    baselinePending: false,
 
     toggle: () => get().setEnabled(!get().enabled),
 
@@ -192,5 +202,10 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
     },
 
     clear: () => deactivate(),
+
+    setBaselinePending: (pending) => {
+      if (pending === get().baselinePending) return;
+      set({ baselinePending: pending });
+    },
   };
 });

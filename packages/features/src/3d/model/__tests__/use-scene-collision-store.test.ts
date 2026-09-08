@@ -32,6 +32,7 @@ function reset(enabled = true) {
     history: [],
     activeRecordId: null,
     activeMode: null,
+    baselinePending: false,
   });
   useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
 }
@@ -297,5 +298,22 @@ describe('실시간 화면 반영 보류(held) 해제 경로', () => {
     useSceneCollisionStore.getState().resume();
     useSceneCollisionStore.getState().clear();
     expect(useRealtimeStore.getState()).toBe(before);
+  });
+});
+
+describe('baselinePending', () => {
+  it('기본 false 이고 같은 값 재설정은 상태 참조를 유지한다', () => {
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(false);
+    const before = useSceneCollisionStore.getState();
+    useSceneCollisionStore.getState().setBaselinePending(false);
+    expect(useSceneCollisionStore.getState()).toBe(before);
+    useSceneCollisionStore.getState().setBaselinePending(true);
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+  });
+
+  it('clear(검사기 언마운트)는 baselinePending 을 건드리지 않는다 — 검사기가 직접 내린다', () => {
+    useSceneCollisionStore.getState().setBaselinePending(true);
+    useSceneCollisionStore.getState().clear();
+    expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
   });
 });

@@ -1,17 +1,10 @@
 import { useGLTF } from '@react-three/drei';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  Box3,
-  BufferGeometry,
-  Color,
-  Material,
-  Mesh,
-  Object3D,
-  Vector3,
-} from 'three';
+import { Box3, Color, Material, Mesh, Object3D, Vector3 } from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import '../lib/bvh-setup';
+import { bvhBuildQueue } from '../lib/bvh-build-queue';
 import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
@@ -635,56 +628,16 @@ export function ModelMesh({
 
   // 각 geometry에 BVH(boundsTree)를 빌드해 클릭 hit-test raycast를 가속한다.
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
-  // 없으면 기본 raycast로 폴백).
-  //
-  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 41개에 43만
-  // 삼각형이라 빌드는 싸고(유휴 시간 분산), 없으면 포인터 이동마다 브루트
-  // 포스 순회로 프레임이 밀린다. bbox 존 분류만 하는 자산 뷰어처럼 정밀
-  // raycast가 필요 없는 곳만 enableRaycastBvh=false로 비용을 아낀다.
+  // 없으면 기본 raycast로 폴백). 빌드는 전역 큐가 유휴 시간에 나눠 한다 —
+  // 지도 포함 이유, 언마운트 시 BVH 를 버리지 않는 이유는 bvh-build-queue 주석.
+  // bbox 존 분류만 하는 자산 뷰어처럼 정밀 raycast가 필요 없는 곳만
+  // enableRaycastBvh=false로 비용을 아낀다.
   useEffect(() => {
     if (!enableRaycastBvh) return;
-
-    // BVH 빌드는 유휴 시간으로 분산한다 — mount 시 동기 일괄 빌드는
-    // 10만 삼각형급 메시 하나에 수백 ms라, 모델 수만큼 곱해지면 첫 진입이
-    // 초 단위로 멈춘다(로딩 직후 버벅임의 주범). 한 콜백에 한 메시씩
-    // 빌드해 프레임 사이로 흩뿌린다. 지오메트리는 GLTF 캐시 공유라 같은
-    // 모델의 다른 인스턴스가 이미 빌드했으면 그대로 재사용된다.
-    const pending = meshBindings.map((binding) => binding.mesh);
-    const supportsIdle = typeof requestIdleCallback !== 'undefined';
-    let scheduledId: number | null = null;
-    const buildNext = () => {
-      scheduledId = null;
-      const mesh = pending.shift();
-      if (!mesh) return;
-      const geometry = mesh.geometry as BufferGeometry & {
-        boundsTree?: unknown;
-        computeBoundsTree?: () => void;
-      };
-      if (!geometry.boundsTree && geometry.computeBoundsTree) {
-        geometry.computeBoundsTree();
-      }
-      if (pending.length > 0) {
-        scheduledId = supportsIdle
-          ? requestIdleCallback(buildNext, { timeout: 500 })
-          : window.setTimeout(buildNext, 0);
-      }
-    };
-    scheduledId = supportsIdle
-      ? requestIdleCallback(buildNext, { timeout: 500 })
-      : window.setTimeout(buildNext, 0);
-
+    const meshes = meshBindings.map((binding) => binding.mesh);
+    bvhBuildQueue.enqueue(meshes);
     return () => {
-      if (scheduledId !== null) {
-        if (supportsIdle) {
-          cancelIdleCallback(scheduledId);
-        } else {
-          clearTimeout(scheduledId);
-        }
-      }
-      // BVH는 여기서 끊지 않는다 — 지오메트리가 GLTF 캐시 공유라, 같은 GLB의
-      // 다른 인스턴스(예: 씬에 2개 배치된 LLC-002)가 아직 살아 있으면 그쪽
-      // raycast가 느려진다. 해제는 region을 떠나며 캐시를 비울 때 한다
-      // (releaseGltfCache).
+      bvhBuildQueue.cancel(meshes);
     };
   }, [meshBindings, enableRaycastBvh]);
 

@@ -68,6 +68,12 @@ export {
   releaseSceneRegionAssets,
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
+export { bvhBuildQueue, createBvhBuildQueue } from './lib/bvh-build-queue';
+export type {
+  BvhBuildQueue,
+  BvhBuildScheduler,
+  BvhBuildSnapshot,
+} from './lib/bvh-build-queue';
 export {
   approxContactPoint,
   boxesSeparated,

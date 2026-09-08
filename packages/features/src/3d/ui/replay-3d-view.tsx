@@ -40,6 +40,7 @@ import {
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { SceneWarmupIndicator } from './scene-warmup-indicator';
 import { ReplaySearchForm } from './replay-search-form';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
@@ -123,18 +124,23 @@ export function Replay3dView({
     [cameraPosition, cameraTarget, mapId],
   );
 
-  const focusOverlay =
-    focusedModelId !== null ? (
-      <Button
-        variant="outline"
-        size="sm"
-        className="bg-background/85 border-border/70 pointer-events-auto absolute top-16 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
-        onClick={exitFocus}
-      >
-        <ArrowLeft className="size-4" />
-        {t('monitoring:focus.back')}
-      </Button>
-    ) : null;
+  // 좌측 상단 열(재생 컨트롤 바 아래) — 포커스 복귀 버튼 위, 후처리 상태 아래.
+  const topLeftOverlay = (
+    <div className="pointer-events-none absolute top-16 left-3 flex flex-col items-start gap-2">
+      {focusedModelId !== null ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-background/85 border-border/70 pointer-events-auto gap-1.5 shadow-sm backdrop-blur-sm"
+          onClick={exitFocus}
+        >
+          <ArrowLeft className="size-4" />
+          {t('monitoring:focus.back')}
+        </Button>
+      ) : null}
+      <SceneWarmupIndicator />
+    </div>
+  );
 
   const searchSlot = search ? (
     <Popover>
@@ -200,7 +206,7 @@ export function Replay3dView({
           <>
             {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
             <SceneLoadingOverlay ready={sceneReady} />
-            {focusOverlay}
+            {topLeftOverlay}
             {replayControlsOverlay}
           </>
         }

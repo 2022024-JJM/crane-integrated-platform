@@ -10,6 +10,7 @@ import {
 } from '@crane/domain/3d';
 import {
   SceneCollisionPanel,
+  SceneWarmupIndicator,
   useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
@@ -563,6 +564,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
                   겹치지 않는다. */}
               <SceneShortcutsHelp />
+              {/* 좌측 상단 후처리 상태(BVH 빌드·충돌 기준선·카탈로그 로드) —
+                  우상단 축 기즈모·하단 바와 겹치지 않는다. 비차단이다. */}
+              <div className="pointer-events-none absolute top-3 left-3 z-10">
+                <SceneWarmupIndicator />
+              </div>
 
               {!sceneInfo ? (
                 <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">

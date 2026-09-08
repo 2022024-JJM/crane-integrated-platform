@@ -47,6 +47,7 @@ import {
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { SceneWarmupIndicator } from './scene-warmup-indicator';
 import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 
@@ -198,21 +199,26 @@ export function Monitoring3dView({
     [cameraPosition, cameraTarget, mapId],
   );
 
-  const focusOverlay =
-    focusedModelId !== null ? (
-      <Button
-        variant="outline"
-        size="sm"
-        className={cn(
-          SCENE_TOOLBAR_BUTTON_CLASS,
-          'pointer-events-auto absolute top-3 left-3 gap-1.5',
-        )}
-        onClick={exitFocus}
-      >
-        <ArrowLeft className="size-4" />
-        {t('monitoring:focus.back')}
-      </Button>
-    ) : null;
+  // 좌측 상단 열 — 포커스 복귀 버튼 위, 후처리 상태(BVH 빌드 등) 아래.
+  const topLeftOverlay = (
+    <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
+      {focusedModelId !== null ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            SCENE_TOOLBAR_BUTTON_CLASS,
+            'pointer-events-auto gap-1.5',
+          )}
+          onClick={exitFocus}
+        >
+          <ArrowLeft className="size-4" />
+          {t('monitoring:focus.back')}
+        </Button>
+      ) : null}
+      <SceneWarmupIndicator />
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -251,7 +257,7 @@ export function Monitoring3dView({
           <>
             {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
             <SceneLoadingOverlay ready={sceneReady} />
-            {focusOverlay}
+            {topLeftOverlay}
             {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
             {collisionActive ? (
               <SceneCollisionAlertOverlay

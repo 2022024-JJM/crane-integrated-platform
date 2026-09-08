@@ -92,6 +92,12 @@ export {
   type SceneCollisionRecordParty,
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
+export { useSceneWarmupStep } from './model/use-scene-warmup-step';
+export {
+  selectSceneWarmupStep,
+  type SceneWarmupStep,
+} from './lib/scene-warmup-step';
 export {
   sceneCollisionRuntime,
   type SceneCollisionRuntimePhase,
