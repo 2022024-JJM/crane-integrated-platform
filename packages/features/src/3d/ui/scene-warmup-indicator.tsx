@@ -33,7 +33,7 @@ export function SceneWarmupIndicator({ className }: { className?: string }) {
       role="status"
       aria-live="polite"
       className={cn(
-        'bg-background/85 border-border/70 text-muted-foreground pointer-events-none flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium tabular-nums shadow-sm backdrop-blur-sm',
+        'text-muted-foreground pointer-events-none flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium tabular-nums',
         className,
       )}
     >
