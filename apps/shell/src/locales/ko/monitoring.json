@@ -98,10 +98,19 @@
       "rotate": "회전",
       "scale": "크기"
     },
+    "pivotMenu": {
+      "trigger": "피벗",
+      "title": "피벗 기준"
+    },
     "space": {
-      "title": "변형 기준 축",
+      "title": "좌표축",
       "local": "로컬",
       "world": "월드"
+    },
+    "pivot": {
+      "title": "원점",
+      "individual": "개별",
+      "primary": "마지막 선택"
     }
   },
   "history": {
@@ -149,7 +158,9 @@
     "placedObjects": "배치된 객체",
     "noPlacedObjects": "아직 배치된 객체가 없습니다.",
     "map": "지도",
-    "mapNone": "지도 없음",
+    "mapAdd": "지도 추가",
+    "mapRemove": "지도 제거",
+    "mapLockedHint": "잠긴 지도 — 제거하려면 잠금을 해제하세요",
     "collapsePanel": "패널 접기",
     "expandPanel": "패널 열기",
     "lockObject": "편집 잠그기",

@@ -98,10 +98,19 @@
       "rotate": "Rotatio",
       "scale": "Scala"
     },
+    "pivotMenu": {
+      "trigger": "Cardo",
+      "title": "Ratio cardinis"
+    },
     "space": {
-      "title": "Spatium transformationis",
+      "title": "Axes",
       "local": "Locale",
       "world": "Mundanum"
+    },
+    "pivot": {
+      "title": "Origo",
+      "individual": "Singulae",
+      "primary": "Ultimum selectum"
     }
   },
   "history": {
@@ -135,7 +144,9 @@
     "placedObjects": "Objecta Posita",
     "noPlacedObjects": "Nulla objecta adhuc posita sunt.",
     "map": "Tabula",
-    "mapNone": "Nulla tabula",
+    "mapAdd": "Tabulam adde",
+    "mapRemove": "Tabulam remove",
+    "mapLockedHint": "Tabula obserata — ad removendum resera",
     "collapsePanel": "Tabulam claude",
     "expandPanel": "Tabulam aperi",
     "lockObject": "Editionem obsera",

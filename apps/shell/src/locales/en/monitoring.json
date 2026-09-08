@@ -98,10 +98,19 @@
       "rotate": "Rotate",
       "scale": "Scale"
     },
+    "pivotMenu": {
+      "trigger": "Pivot",
+      "title": "Pivot settings"
+    },
     "space": {
-      "title": "Transform space",
+      "title": "Axes",
       "local": "Local",
       "world": "World"
+    },
+    "pivot": {
+      "title": "Origin",
+      "individual": "Individual",
+      "primary": "Last selected"
     }
   },
   "history": {
@@ -149,7 +158,9 @@
     "placedObjects": "Placed Objects",
     "noPlacedObjects": "No objects have been placed yet.",
     "map": "Map",
-    "mapNone": "No map",
+    "mapAdd": "Add map",
+    "mapRemove": "Remove map",
+    "mapLockedHint": "Locked map — unlock to remove",
     "collapsePanel": "Collapse panel",
     "expandPanel": "Expand panel",
     "lockObject": "Lock editing",

@@ -26,6 +26,7 @@ import {
   prefetchModelBottomOffset,
   releaseGltfCache,
   resolveEnvironmentFileUrl,
+  resolveGroundMap,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -37,6 +38,7 @@ import {
   type SceneTransformField,
   type SceneSnapStep,
   type SceneTransformMode,
+  type SceneTransformPivot,
   type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
   SCENE_DEFAULT_DPR,
@@ -210,6 +212,8 @@ interface SceneObjectsEditCanvasProps {
   snapStep: SceneSnapStep;
   /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
   transformSpace: SceneTransformSpace;
+  /** 다중 선택 회전·크기 기준점. useSceneTransform 의 세컨더리 전파가 본다. */
+  transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
   /** 씬 객체 충돌 감지(시뮬레이션 정지·보고) 활성 여부. */
@@ -236,6 +240,7 @@ export function SceneObjectsEditCanvas({
   snapEnabled,
   snapStep,
   transformSpace,
+  transformPivot,
   showGrid,
   collisionEnabled,
 }: SceneObjectsEditCanvasProps) {
@@ -388,7 +393,7 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
-    mapObjectId: sceneInfo?.maps?.[0]?.id ?? null,
+    mapObjectId: resolveGroundMap(sceneInfo?.maps)?.id ?? null,
     onAddModel,
   });
 
@@ -417,6 +422,7 @@ export function SceneObjectsEditCanvas({
     onTransformInteractionEnd,
     snapEnabled,
     snapStep,
+    transformPivot,
   });
 
   const handleModelObjectReady = useCallback(
@@ -746,7 +752,7 @@ export function SceneObjectsEditCanvas({
     const controls = orbitControlsRef.current as OrbitControlsImpl | null;
     if (!controls) return;
     const registry = modelObjectRegistryRef.current;
-    const mapId = sceneInfo?.maps?.[0]?.id;
+    const mapId = resolveGroundMap(sceneInfo?.maps)?.id;
     const mapObject = mapId ? registry.get(mapId) : undefined;
     let bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
     if (!bounds || bounds.isEmpty()) {

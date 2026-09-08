@@ -23,6 +23,7 @@ beforeEach(() => {
     snapEnabled: false,
     snapStep: SCENE_TRANSFORM_SNAP,
     transformSpace: 'local',
+    transformPivot: 'individual',
     showGrid: false,
   });
 });
@@ -71,6 +72,21 @@ describe('useSceneEditorViewStore — 토글', () => {
   it('같은 축을 다시 설정하면 no-op — 상태 참조 유지', () => {
     const before = store.getState();
     store.getState().setTransformSpace('local');
+    expect(store.getState()).toBe(before);
+  });
+
+  it('변형 기준점은 개별 원점이 기본이고 primary ↔ individual 을 오간다', () => {
+    expect(store.getState().transformPivot).toBe('individual');
+    store.getState().setTransformPivot('primary');
+    expect(store.getState().transformPivot).toBe('primary');
+    expect(store.getState().transformSpace).toBe('local');
+    store.getState().setTransformPivot('individual');
+    expect(store.getState().transformPivot).toBe('individual');
+  });
+
+  it('같은 기준점을 다시 설정하면 no-op — 상태 참조 유지', () => {
+    const before = store.getState();
+    store.getState().setTransformPivot('individual');
     expect(store.getState()).toBe(before);
   });
 

@@ -1,7 +1,28 @@
 {
   "maps": [
     {
-      "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
+      "id": "8d3d484d-103b-435b-b5a2-2254c67274cd",
+      "path": "/maps/philly-terrain.glb",
+      "locked": true,
+      "position": [
+        858.135,
+        3.482,
+        -765.266
+      ],
+      "rotation": [
+        0,
+        354.4,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "name": "Philly Terrain"
+    },
+    {
+      "id": "ec6ef723-1ecb-4647-8a62-cd483015d3fe",
       "path": "/maps/phillyshipyard.glb",
       "locked": true,
       "position": [
@@ -11,35 +32,15 @@
       ],
       "rotation": [
         0,
-        354.5,
+        354.4,
         0
       ],
       "scale": [
         1,
         1,
         1
-      ]
-    },
-    {
-      "id": "eb5a0d16-0b72-4722-9a15-098aede43d2f",
-      "path": "/maps/philly-terrain.glb",
-      "name": "Philly Terrain",
-      "locked": true,
-      "position": [
-        855.96,
-        3.482,
-        -767.71
       ],
-      "rotation": [
-        0,
-        354.5,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ]
+      "name": "Philly Shipyard"
     }
   ],
   "models": [
@@ -49,7 +50,7 @@
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        -644.407,
+        -643.707,
         4.25,
         93.25
       ],
@@ -102,9 +103,9 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -637.485,
+        -636.885,
         4.5,
-        153.75
+        104.323
       ],
       "rotation": [
         0,
@@ -154,9 +155,9 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -696.402,
-        4.5,
-        208.5
+        -696.002,
+        4.9,
+        159.073
       ],
       "rotation": [
         180,
@@ -250,33 +251,34 @@
       "path": "/models/hanwha-ocean-lngc-174k.glb",
       "opacity": 1,
       "position": [
-        -797.797,
+        -800.318,
         0.001,
-        140.547
+        140.538
       ],
       "rotation": [
-        0,
-        90,
-        0
+        180,
+        90.2,
+        180
       ],
       "scale": [
         1,
         1,
         1
-      ]
+      ],
+      "labelHidden": true
     }
   ],
   "texts": [],
   "camera": {
     "position": [
-      -564.4571079742583,
-      130.44897268117697,
-      240.11390698822495
+      -560.7405045483179,
+      96.71888792126143,
+      240.77681423352763
     ],
     "target": [
-      -763.9320681111058,
-      -27.959682843452327,
-      4.9921504673040715
+      -636.6541360248121,
+      30.1972185757211,
+      109.26637863872324
     ]
   },
   "rigs": [

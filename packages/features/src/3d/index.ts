@@ -52,7 +52,7 @@ export {
   type SceneViewBookmark,
 } from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
-export { SceneTransformSpaceSelect } from './ui/scene-transform-space-select';
+export { SceneTransformPivotMenu } from './ui/scene-transform-pivot-menu';
 export {
   SCENE_SNAP_STEP_OPTIONS,
   SCENE_TRANSFORM_SNAP,
@@ -173,5 +173,6 @@ export type {
   AxisKey,
   SceneTransformField,
   SceneTransformMode,
+  SceneTransformPivot,
   SceneTransformSpace,
 } from './model/types';

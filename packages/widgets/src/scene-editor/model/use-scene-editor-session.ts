@@ -49,9 +49,7 @@ interface UseSceneEditorSessionResult {
     typeof useSceneTransformModeStore.getState
   >['setMode'];
   saveCurrentScene: () => Promise<boolean>;
-  renameObject: ReturnType<
-    typeof useSelectedSceneObjectEditor
-  >['renameObject'];
+  renameObject: ReturnType<typeof useSelectedSceneObjectEditor>['renameObject'];
   updateSelectedOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedOpacity'];
@@ -98,7 +96,7 @@ interface UseSceneEditorSessionResult {
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
   deletePlacedMap: (id: string) => void;
-  setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  addSceneMap: (catalogItem: SceneMapCatalogItem) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
   setLighting: (
@@ -112,9 +110,7 @@ interface UseSceneEditorSessionResult {
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMap: (id: string) => void;
-  selectAll: (
-    entries: Array<{ id: string; type: SelectedObjectType }>,
-  ) => void;
+  selectAll: (entries: Array<{ id: string; type: SelectedObjectType }>) => void;
   updateMultiObjectTransforms: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateMultiObjectTransforms'];
@@ -311,7 +307,7 @@ export function useSceneEditorSession({
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
     deletePlacedMap: manipulation.deletePlacedMap,
-    setSceneMap: manipulation.setSceneMap,
+    addSceneMap: manipulation.addSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
     setLighting: manipulation.setLighting,

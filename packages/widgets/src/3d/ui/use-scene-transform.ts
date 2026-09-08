@@ -3,6 +3,7 @@ import { Object3D, Quaternion } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import { degToRad, modelObjectRegistry, parseMeshId } from '@crane/domain/3d';
 import { getPlacementTransformVectors } from '../lib/transform-vectors';
+import { orbitAroundPivot, scaleAboutPivot } from '../lib/pivot-transform';
 import {
   readRootPlacement,
   snapChangedAxes,
@@ -14,6 +15,7 @@ import {
   type SceneSnapStep,
   type SceneTransformField,
   type SceneTransformMode,
+  type SceneTransformPivot,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -52,6 +54,8 @@ const tmpStartQuatInv = new Quaternion();
 const tmpDeltaQuat = new Quaternion();
 // 스냅 되쓰기용 배치 자세 스크래치(readRootPlacement → 격자 → writeRootPlacement).
 const snapPose = new Object3D();
+// 피벗 변형에서 세컨더리 위치를 배치 프레임으로 써넣을 때의 스크래치.
+const pivotPose = new Object3D();
 
 interface UseSceneTransformParams {
   primarySelectedId: string | null;
@@ -83,6 +87,11 @@ interface UseSceneTransformParams {
   /** 기즈모 스냅. 켜져 있으면 liveSync 가 저장값(부모 프레임) 기준 격자로 옮긴다. */
   snapEnabled?: boolean;
   snapStep?: SceneSnapStep;
+  /**
+   * 다중 선택 회전·크기의 기준점. `primary` 면 프라이머리 배치 위치를 피벗으로
+   * 세컨더리 위치를 궤도 이동시켜 선택 전체가 강체처럼 움직인다.
+   */
+  transformPivot?: SceneTransformPivot;
 }
 
 export function useSceneTransform({
@@ -99,6 +108,7 @@ export function useSceneTransform({
   onTransformInteractionEnd,
   snapEnabled = false,
   snapStep,
+  transformPivot = 'individual',
 }: UseSceneTransformParams) {
   // selectedIds 자체를 구독하면 어떤 객체 하나만 선택해도 Set 참조가 바뀌며
   // 이 hook을 사용하는 캔버스 전체가 리렌더된다. 대신 boolean(다중 여부)만
@@ -197,6 +207,21 @@ export function useSceneTransform({
   );
 
   /**
+   * 세컨더리의 **배치** 위치를 써넣는다 — 루트 위치 태그 맵핑 Δ 가 있는 모델은
+   * Object3D.position 이 rest+Δ 라 직접 대입하면 Δ 가 저장값에 흡수된다.
+   * readSnappedTransform 의 되쓰기와 같은 경로(readRootPlacement → 수정 →
+   * writeRootPlacement)를 쓴다.
+   */
+  const writePlacementPosition = useCallback(
+    (id: string, obj: Object3D, position: Vector3Tuple) => {
+      readRootPlacement(id, obj, pivotPose);
+      pivotPose.position.set(position[0], position[1], position[2]);
+      writeRootPlacement(id, obj, pivotPose);
+    },
+    [],
+  );
+
+  /**
    * 매 frame TransformControls.onObjectChange에서 호출.
    *
    * **sceneInfo write 절대 없음.** Object3D는 TransformControls가 이미 mutate
@@ -256,10 +281,15 @@ export function useSceneTransform({
           );
         }
       } else if (transformMode === 'rotate') {
-        // 각자 자기 축 기준(individual origins): 프라이머리의 부모 프레임 회전
-        // 델타를 각 객체에 premultiply — 모두 같은 축 방향으로 제자리 회전한다.
+        // 프라이머리의 부모 프레임 회전 델타를 각 객체에 premultiply 하면 모두
+        // 같은 축 방향으로 돈다. 피벗이 individual 이면 여기서 끝(제자리
+        // 회전). primary 면 위치까지 프라이머리 시작 배치 위치를 중심으로
+        // 궤도 이동시켜 선택 전체가 강체처럼 돈다 — 이때 세컨더리는 개별
+        // 스냅하지 않는다. 프라이머리가 먼저 스냅돼 델타가 이미 격자
+        // 기준이고, 각자 오일러 격자에 올리면 강체성이 깨진다.
         tmpStartQuatInv.copy(start.quaternion).invert();
         tmpDeltaQuat.copy(selectedObject.quaternion).multiply(tmpStartQuatInv);
+        const orbitPivot = transformPivot === 'primary';
 
         for (const id of selectedIds) {
           if (id === primarySelectedId) continue;
@@ -268,6 +298,14 @@ export function useSceneTransform({
           if (!obj || !objStart) continue;
 
           obj.quaternion.copy(tmpDeltaQuat).multiply(objStart.quaternion);
+          if (orbitPivot) {
+            writePlacementPosition(
+              id,
+              obj,
+              orbitAroundPivot(objStart.position, start.position, tmpDeltaQuat),
+            );
+            continue;
+          }
           readSnappedTransform(
             id,
             obj,
@@ -284,6 +322,9 @@ export function useSceneTransform({
           start.scale[1] === 0 ? 1 : selectedObject.scale.y / start.scale[1];
         const ratioZ =
           start.scale[2] === 0 ? 1 : selectedObject.scale.z / start.scale[2];
+        // primary 피벗이면 위치도 같은 비율로 벌린다(회전 분기와 같은 이유로
+        // 세컨더리 개별 스냅은 건너뛴다).
+        const scalePivot = transformPivot === 'primary';
 
         for (const id of selectedIds) {
           if (id === primarySelectedId) continue;
@@ -296,6 +337,18 @@ export function useSceneTransform({
             objStart.scale[1] * ratioY,
             objStart.scale[2] * ratioZ,
           );
+          if (scalePivot) {
+            writePlacementPosition(
+              id,
+              obj,
+              scaleAboutPivot(objStart.position, start.position, [
+                ratioX,
+                ratioY,
+                ratioZ,
+              ]),
+            );
+            continue;
+          }
           readSnappedTransform(
             id,
             obj,
@@ -318,8 +371,10 @@ export function useSceneTransform({
     selectedObject,
     isMultiDrag,
     transformMode,
+    transformPivot,
     modelObjectRegistryRef,
     readSnappedTransform,
+    writePlacementPosition,
   ]);
 
   /**
@@ -411,6 +466,10 @@ export function useSceneTransform({
       // liveSync가 이미 각 Object3D를 최종 상태로 mutate했으므로 현재 값을
       // 그대로 읽어 commit한다. commitFinal과 같은 이유로 transformMode에
       // 해당하는 필드만 담는다 (rad↔deg 왕복 오차로 다른 필드가 덮이는 것 방지).
+      // 예외: primary 피벗의 회전·크기는 세컨더리 위치가 실제로 바뀌므로
+      // position 도 함께 담는다. 프라이머리는 위치 불변이라 제외한다.
+      const orbitedSecondary =
+        transformPivot === 'primary' && transformMode !== 'translate';
       const updates: Array<{
         id: string;
         position?: Vector3Tuple;
@@ -434,12 +493,21 @@ export function useSceneTransform({
           obj,
           rotationContinuityRef.current.get(id),
         );
+        const orbited = orbitedSecondary && id !== primarySelectedId;
         if (transformMode === 'translate') {
           updates.push({ id, position: nextTransform.position });
         } else if (transformMode === 'rotate') {
-          updates.push({ id, rotation: nextTransform.rotation });
+          updates.push({
+            id,
+            rotation: nextTransform.rotation,
+            ...(orbited && { position: nextTransform.position }),
+          });
         } else {
-          updates.push({ id, scale: nextTransform.scale });
+          updates.push({
+            id,
+            scale: nextTransform.scale,
+            ...(orbited && { position: nextTransform.position }),
+          });
         }
       }
 
@@ -471,6 +539,7 @@ export function useSceneTransform({
     selectedObject,
     primarySelectedId,
     transformMode,
+    transformPivot,
     modelObjectRegistryRef,
     onMultiTransformCommit,
     commitFinal,

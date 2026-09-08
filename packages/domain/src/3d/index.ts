@@ -97,6 +97,7 @@ export {
   getModelBottomOffset,
 } from './lib/model-bottom-offset-cache';
 export { raycastMapSurfaceY } from './lib/map-surface-raycast';
+export { resolveGroundMap } from './lib/resolve-ground-map';
 export {
   makeMeshId,
   parseMeshId,
@@ -125,7 +126,9 @@ export {
 } from './model/scene-environment-catalog';
 export {
   sceneMapCatalog,
+  getSceneMapCatalogItemByPath,
   type SceneMapCatalogItem,
+  type SceneMapKind,
 } from './model/scene-map-catalog';
 export { sceneModelCatalog } from './model/scene-model-catalog';
 export { SEA_LEVEL_Y } from './model/sea-level';

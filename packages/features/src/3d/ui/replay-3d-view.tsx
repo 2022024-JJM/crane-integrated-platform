@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3 } from 'three';
-import { modelObjectRegistry } from '@crane/domain/3d';
+import { modelObjectRegistry, resolveGroundMap } from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
   Popover,
@@ -110,7 +110,7 @@ export function Replay3dView({
   // (부모 리렌더마다 SceneControlsBridge가 reset()을 호출해 카메라가 튄다).
   // 탑뷰 fit 대상 = 지도 bounds. mapId(문자열)만 의존성에 넣어 sceneInfo
   // 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게 한다(위 주석의 reset 문제).
-  const mapId = sceneInfo?.maps?.[0]?.id;
+  const mapId = resolveGroundMap(sceneInfo?.maps)?.id;
   const cameraPreset = useMemo(
     () => ({
       defaultPosition: cameraPosition,
