@@ -306,6 +306,7 @@
     "collisionBvhHint": "정밀 검사는 모델 로드 직후 몇 초간 준비됩니다.",
     "warmup": {
       "bvh": "클릭 판정 준비 중 ({{done}}/{{total}})",
+      "outline": "외곽선 준비 중 ({{done}}/{{total}})",
       "collision": "충돌 감지 기준선 계산 중",
       "assets": "모델 불러오는 중 ({{loaded}}/{{total}})"
     }

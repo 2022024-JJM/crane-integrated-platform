@@ -7,6 +7,7 @@ import {
 function input(overrides: Partial<SceneWarmupInput> = {}): SceneWarmupInput {
   return {
     bvh: { pending: 0, done: 0, total: 0 },
+    outline: { pending: 0, done: 0, total: 0 },
     collisionBaselinePending: false,
     assetsActive: false,
     assetsLoaded: 0,
@@ -25,11 +26,40 @@ describe('selectSceneWarmupStep — 우선순위', () => {
       selectSceneWarmupStep(
         input({
           bvh: { pending: 2, done: 3, total: 5 },
+          outline: { pending: 4, done: 0, total: 4 },
           collisionBaselinePending: true,
           assetsActive: true,
         }),
       ),
     ).toEqual({ kind: 'bvh', done: 3, total: 5 });
+  });
+
+  it('BVH 가 끝나고 외곽선 사본이 남아 있으면 충돌·에셋보다 먼저다', () => {
+    expect(
+      selectSceneWarmupStep(
+        input({
+          outline: { pending: 1, done: 3, total: 4 },
+          collisionBaselinePending: true,
+          assetsActive: true,
+        }),
+      ),
+    ).toEqual({ kind: 'outline', done: 3, total: 4 });
+  });
+
+  it('외곽선 pending 이 0 이하·NaN 이면 다음 단계로 넘어간다', () => {
+    expect(
+      selectSceneWarmupStep(
+        input({
+          outline: { pending: 0, done: 4, total: 4 },
+          collisionBaselinePending: true,
+        }),
+      ),
+    ).toEqual({ kind: 'collision' });
+    expect(
+      selectSceneWarmupStep(
+        input({ outline: { pending: Number.NaN, done: 1, total: 1 } }),
+      ),
+    ).toBeNull();
   });
 
   it('BVH 가 끝나면 충돌 기준선이 에셋보다 먼저다', () => {
@@ -67,6 +97,11 @@ describe('selectSceneWarmupStep — 수치 방어', () => {
         input({ bvh: { pending: 1, done: 2.9, total: Number.NaN } }),
       ),
     ).toEqual({ kind: 'bvh', done: 2, total: 0 });
+    expect(
+      selectSceneWarmupStep(
+        input({ outline: { pending: 1, done: -2, total: 3.7 } }),
+      ),
+    ).toEqual({ kind: 'outline', done: 0, total: 3 });
     expect(
       selectSceneWarmupStep(
         input({

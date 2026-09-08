@@ -62,6 +62,12 @@ interface GltfModelProps {
    */
   selectionStyle?: 'box' | 'outline';
   /**
+   * 실루엣 테두리용 스무딩 사본을 워밍업 큐에서 미리 만들지(ModelMesh 로
+   * 전달). 기본 false. 테두리가 그려질 수 있는 모델 — 에디터의 모델, 충돌
+   * 감지가 도는 모니터링의 모델 — 만 켠다. 지도에는 켜지 않는다.
+   */
+  prepareOutline?: boolean;
+  /**
    * 자식 mesh가 선택된 경우 그 mesh 객체. ModelSelectionBox가 이 mesh의
    * bbox만으로 selection box를 그리도록 한다. null이면 모델 전체 박스.
    */
@@ -102,6 +108,7 @@ export const GltfModel = memo(function GltfModel({
   onDoubleSelect,
   isSelected = false,
   selectionStyle = 'box',
+  prepareOutline = false,
   selectedMeshTarget = null,
   enableRaycastBvh = true,
   onObjectReady,
@@ -142,6 +149,7 @@ export const GltfModel = memo(function GltfModel({
       scale={scale}
       meshOverrides={meshOverrides}
       enableRaycastBvh={enableRaycastBvh}
+      prepareOutline={prepareOutline}
       clonedModel={clonedModel}
       onSelect={onSelect}
       onDoubleSelect={onDoubleSelect}

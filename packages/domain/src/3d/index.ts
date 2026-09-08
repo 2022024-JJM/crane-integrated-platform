@@ -70,6 +70,8 @@ export {
 export { modelObjectRegistry } from './lib/model-object-registry';
 export { bvhBuildQueue, createBvhBuildQueue } from './lib/bvh-build-queue';
 export type {
+  BvhBuildCounts,
+  BvhBuildOptions,
   BvhBuildQueue,
   BvhBuildScheduler,
   BvhBuildSnapshot,
@@ -176,6 +178,7 @@ export type {
 export { GltfModel } from './ui/gltf-model';
 export { ModelSelectionBox } from './ui/model-selection-box';
 export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';
+export { SilhouetteOutlineWarmup } from './ui/silhouette-outline-warmup';
 export {
   SILHOUETTE_OUTLINE_PX,
   outlineOffsetFactor,

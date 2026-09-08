@@ -7,7 +7,8 @@ import { useSceneWarmupStep } from '../model/use-scene-warmup-step';
  * 로딩 뒤 후처리 상태 — 캔버스 좌측 상단에 스피너 + "…준비 중" 한 줄.
  *
  * 모델이 뜬 뒤에도 몇 초간 버벅이는 동안 무엇을 계산하는지 보여 준다
- * (BVH 빌드 → 충돌 기준선 → 에셋 로드, 단계 선택은 lib/scene-warmup-step).
+ * (BVH 빌드 → 외곽선 사본 → 충돌 기준선 → 에셋 로드, 단계 선택은
+ * lib/scene-warmup-step).
  * 조작을 막지 않는다(pointer-events-none) — 초기 로딩 오버레이와 달리
  * 사용자가 기다릴 필요는 없고, 지금 느린 이유를 알려 주는 표시다.
  * 모니터링·리플레이·편집 화면이 같이 쓴다. 위치(absolute)는 부모가 정한다 —
@@ -21,12 +22,17 @@ export function SceneWarmupIndicator({ className }: { className?: string }) {
   const label =
     step.kind === 'bvh'
       ? t('common:viewer3d.warmup.bvh', { done: step.done, total: step.total })
-      : step.kind === 'collision'
-        ? t('common:viewer3d.warmup.collision')
-        : t('common:viewer3d.warmup.assets', {
-            loaded: step.loaded,
+      : step.kind === 'outline'
+        ? t('common:viewer3d.warmup.outline', {
+            done: step.done,
             total: step.total,
-          });
+          })
+        : step.kind === 'collision'
+          ? t('common:viewer3d.warmup.collision')
+          : t('common:viewer3d.warmup.assets', {
+              loaded: step.loaded,
+              total: step.total,
+            });
 
   return (
     <div

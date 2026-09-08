@@ -170,6 +170,12 @@ interface OutdoorWorkModelSimulationProps {
    * 그 시점으로 복귀한다. null 이면 해제 시 onResetCamera 로 폴백.
    */
   getPose?: () => FocusCameraPose | null;
+  /**
+   * 모델의 실루엣 테두리 사본을 워밍업 큐에서 미리 만들지(GltfModel 로
+   * 전달). 충돌 하이라이트가 그려질 수 있는 모니터링만 켠다 — 리플레이는
+   * 충돌 감지가 없다. 지도에는 켜지 않는다.
+   */
+  prepareOutline?: boolean;
 }
 
 export function OutdoorWorkModelSimulation({
@@ -181,6 +187,7 @@ export function OutdoorWorkModelSimulation({
   onMoveTo,
   onResetCamera,
   getPose,
+  prepareOutline = false,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 바다(EXR 배경)가 있는 씬에서만 모델의 수면 아래를 잠김 처리한다 — 바다가
@@ -408,6 +415,7 @@ export function OutdoorWorkModelSimulation({
             }
             alarmHighlightMesh={alarmHighlightMesh}
             seaSubmersion={hasSea}
+            prepareOutline={prepareOutline}
             position={model.position}
             rotation={model.rotation}
             scale={model.scale}

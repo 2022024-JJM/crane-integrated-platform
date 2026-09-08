@@ -55,6 +55,13 @@ interface ModelMeshProps {
    */
   enableRaycastBvh?: boolean;
   /**
+   * 실루엣 테두리(ObjectSilhouetteOutline)용 스무딩 노멀 사본을 로딩 뒤 워밍업
+   * 큐에서 미리 만들지. 기본 false. 테두리가 실제로 그려질 수 있는 캔버스
+   * (스텐실 켜진 에디터·모니터링)의 **모델**만 켠다 — 지도는 넣지 않는다
+   * (bvh-build-queue 주석). 안 켜도 동작은 같고 첫 표시가 그만큼 늦을 뿐이다.
+   */
+  prepareOutline?: boolean;
+  /**
    * 부모(GltfModel)가 이미 만든 clone 결과. 전달되면 여기서 다시 clone하지
    * 않는다 — useClonedModel 주석 참고.
    */
@@ -315,6 +322,7 @@ export function ModelMesh({
   scale = [1, 1, 1],
   meshOverrides,
   enableRaycastBvh = true,
+  prepareOutline = false,
   clonedModel,
   onSelect,
   onDoubleSelect,
@@ -631,15 +639,17 @@ export function ModelMesh({
   // 없으면 기본 raycast로 폴백). 빌드는 전역 큐가 유휴 시간에 나눠 한다 —
   // 지도 포함 이유, 언마운트 시 BVH 를 버리지 않는 이유는 bvh-build-queue 주석.
   // bbox 존 분류만 하는 자산 뷰어처럼 정밀 raycast가 필요 없는 곳만
-  // enableRaycastBvh=false로 비용을 아낀다.
+  // enableRaycastBvh=false로 비용을 아낀다. prepareOutline 은 같은 큐에
+  // 실루엣 테두리용 사본 작업을 더 넣는다(BVH 뒤에 돈다).
   useEffect(() => {
-    if (!enableRaycastBvh) return;
+    if (!enableRaycastBvh && !prepareOutline) return;
     const meshes = meshBindings.map((binding) => binding.mesh);
-    bvhBuildQueue.enqueue(meshes);
+    const options = { bvh: enableRaycastBvh, outline: prepareOutline };
+    bvhBuildQueue.enqueue(meshes, options);
     return () => {
-      bvhBuildQueue.cancel(meshes);
+      bvhBuildQueue.cancel(meshes, options);
     };
-  }, [meshBindings, enableRaycastBvh]);
+  }, [meshBindings, enableRaycastBvh, prepareOutline]);
 
   // primitive 자체에 prop transform을 적용하면 React가 매 렌더에서 clone의
   // position/rotation/scale을 덮어쓴다. value-mapper가 매 tick `object.position`

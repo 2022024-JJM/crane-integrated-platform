@@ -10,7 +10,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3 } from 'three';
-import { modelObjectRegistry, resolveGroundMap } from '@crane/domain/3d';
+import {
+  SilhouetteOutlineWarmup,
+  modelObjectRegistry,
+  resolveGroundMap,
+} from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
@@ -329,6 +333,8 @@ export function Monitoring3dView({
             />
           ) : null}
           <SceneCollisionHighlight />
+          {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍 — 감지가 도는 모드만. */}
+          {collisionActive ? <SilhouetteOutlineWarmup /> : null}
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}
@@ -338,6 +344,7 @@ export function Monitoring3dView({
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
             getPose={handleGetPose}
+            prepareOutline={collisionActive}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />

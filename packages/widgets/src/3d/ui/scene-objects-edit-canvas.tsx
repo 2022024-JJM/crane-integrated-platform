@@ -19,6 +19,7 @@ import { Box3, MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
+  SilhouetteOutlineWarmup,
   getMeshPath,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
@@ -860,6 +861,9 @@ export function SceneObjectsEditCanvas({
           runner="simulation"
         />
         <SceneCollisionHighlight />
+        {/* 선택·충돌 테두리(실루엣) 셰이더 프리워밍 — 사본은 아래 모델의
+            prepareOutline 이 워밍업 큐에 넣는다. */}
+        <SilhouetteOutlineWarmup />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
@@ -980,6 +984,9 @@ export function SceneObjectsEditCanvas({
               rotation={model.rotation}
               scale={model.scale}
               meshOverrides={model.meshOverrides}
+              // 선택 실루엣 테두리 사본을 로딩 뒤 미리 만든다 — 지도는 제외
+              // (지형은 135만 삼각형, bvh-build-queue 주석).
+              prepareOutline
               // 잠긴 모델은 클릭이 선택 해제로 떨어진다 — 지도 잠금과 같은
               // 규칙. 핸들러만 갈아끼우고 컴포넌트는 유지해 GLB 리마운트를
               // 피한다(위 지도 주석 참고).

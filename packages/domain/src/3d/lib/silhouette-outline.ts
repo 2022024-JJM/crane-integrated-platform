@@ -133,7 +133,19 @@ const silhouetteMaskMaterial = new MeshBasicMaterial({
  */
 const smoothedGeometryCache = new WeakMap<BufferGeometry, BufferGeometry>();
 
-function getSmoothedOutlineGeometry(source: BufferGeometry): BufferGeometry {
+/** 스무딩 사본이 이미 있는지 — 워밍업 큐가 중복 작업을 거를 때 쓴다. */
+export function hasSilhouetteOutlineGeometry(source: BufferGeometry): boolean {
+  return smoothedGeometryCache.has(source);
+}
+
+/**
+ * 스무딩 사본을 만들어 두기만 한다(있으면 no-op). 첫 선택·첫 충돌 때 100~200ms
+ * 짜리 동기 계산이 프레임을 세우지 않도록 `bvhBuildQueue` 가 로딩 뒤 슬라이스로
+ * 미리 부른다. 반환값은 헐 생성이 그대로 쓰는 캐시 항목이다.
+ */
+export function warmSilhouetteOutlineGeometry(
+  source: BufferGeometry,
+): BufferGeometry {
   const cached = smoothedGeometryCache.get(source);
   if (cached) return cached;
   // creaseAngle=π — 모든 엣지를 스무딩해 정점당 평균 노멀 하나를 만든다.
@@ -206,7 +218,10 @@ export function createSilhouetteOutlineHull(
   target: Mesh,
   material: ShaderMaterial,
 ): Mesh {
-  const hull = new Mesh(getSmoothedOutlineGeometry(target.geometry), material);
+  const hull = new Mesh(
+    warmSilhouetteOutlineGeometry(target.geometry),
+    material,
+  );
   detachOverlayMesh(hull);
   hull.renderOrder = OUTLINE_RENDER_ORDER;
   hull.name = 'silhouette-outline';
