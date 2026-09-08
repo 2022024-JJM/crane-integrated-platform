@@ -28,6 +28,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@crane/ui/molecules/resizable';
+import { hasDuplicableSelection } from '../lib/duplicable-selection';
 import { useSceneEditorSession } from '../model/use-scene-editor-session';
 import { EditorHeaderBar } from './editor-header-bar';
 import { EditorSelectionBar } from './editor-selection-bar';
@@ -276,6 +277,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // 토글을 잠그고 표시도 local 로 맞춘다.
   const isScaleMode = transformMode === 'scale';
   const hasSelection = selectedIds.size > 0;
+  const canDuplicate = useMemo(
+    () => hasDuplicableSelection(selectedIds, sceneInfo),
+    [selectedIds, sceneInfo],
+  );
 
   useEffect(() => {
     // 키 판정은 전부 event.code(물리 키)로 한다 — event.key는 한글 입력
@@ -555,6 +560,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
 
               <EditorSelectionBar
                 hasSelection={hasSelection}
+                canDuplicate={canDuplicate}
                 onDuplicate={duplicateSelectedObject}
                 onDelete={removeSelectedModel}
               />
