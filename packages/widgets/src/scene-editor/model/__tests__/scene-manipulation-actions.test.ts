@@ -23,6 +23,15 @@ const catalogMap: SceneMapCatalogItem = {
   id: 'map-okpo',
   label: 'Okpo',
   path: '/maps/okpo.glb',
+  kind: 'ground',
+};
+
+const catalogContextMap: SceneMapCatalogItem = {
+  id: 'map-terrain',
+  label: 'Terrain',
+  path: '/maps/terrain.glb',
+  kind: 'context',
+  defaultPosition: [10, 2, -5],
 };
 
 function scene(overrides: Partial<SavedSceneInfo> = {}): SavedSceneInfo {
@@ -185,54 +194,73 @@ describe('삭제 — 잠금 방어', () => {
   });
 });
 
-describe('setSceneMap', () => {
-  it('새 지도는 명시적 원점 transform + 잠금 해제 상태로 교체된다', () => {
-    const h = createHarness(
-      scene({ maps: [{ id: 'old', path: '/old.glb', locked: false }] }),
-    );
-    h.actions.setSceneMap(catalogMap);
+describe('addSceneMap', () => {
+  it('빈 씬에 명시적 원점 transform + 잠금 해제 + 라벨 이름으로 추가하고 선택한다', () => {
+    const h = createHarness();
+    h.actions.addSceneMap(catalogMap);
 
     expect(h.scene?.maps).toHaveLength(1);
     expect(h.scene?.maps[0]).toMatchObject({
       path: '/maps/okpo.glb',
+      name: 'Okpo',
       position: [0, 0, 0],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
       locked: false,
     });
+    expect(h.deps.selectMap).toHaveBeenCalledWith(h.scene?.maps[0].id);
   });
 
-  it('현재 지도가 잠겨 있으면(기본값 포함) 교체·제거 모두 no-op', () => {
-    const h = createHarness(scene({ maps: [{ id: 'm', path: '/m.glb' }] }));
-    h.actions.setSceneMap(catalogMap);
-    expect(h.scene?.maps[0].path).toBe('/m.glb');
-    h.actions.setSceneMap(null);
-    expect(h.scene?.maps).toHaveLength(1);
-    expect(h.deps.updateScene).not.toHaveBeenCalled();
-  });
-
-  it('같은 path로의 교체는 no-op', () => {
-    const h = createHarness(
-      scene({ maps: [{ id: 'm', path: '/maps/okpo.glb', locked: false }] }),
-    );
-    h.actions.setSceneMap(catalogMap);
-    expect(h.deps.updateScene).not.toHaveBeenCalled();
-  });
-
-  it('null이면 지도를 제거하고, 선택 중이었다면 선택 해제', () => {
-    const h = createHarness(
-      scene({ maps: [{ id: 'm', path: '/m.glb', locked: false }] }),
-    );
-    h.deps.selectedIds.add('m');
-    h.actions.setSceneMap(null);
-    expect(h.scene?.maps).toHaveLength(0);
-    expect(h.deps.clearSelectedModel).toHaveBeenCalled();
-  });
-
-  it('지도가 없는데 null이면 no-op', () => {
+  it('카탈로그 defaultPosition 이 있으면 그 값으로 놓인다', () => {
     const h = createHarness();
-    h.actions.setSceneMap(null);
+    h.actions.addSceneMap(catalogContextMap);
+    expect(h.scene?.maps[0].position).toEqual([10, 2, -5]);
+    expect(h.scene?.maps[0].rotation).toEqual([0, 0, 0]);
+  });
+
+  it('잠긴 기존 지도(필드 없음) 뒤에 append — 기존 항목은 참조·순서·잠금 유지', () => {
+    const ground = { id: 'g', path: '/maps/okpo.glb' };
+    const h = createHarness(scene({ maps: [ground] }));
+    h.actions.addSceneMap(catalogContextMap);
+
+    expect(h.scene?.maps).toHaveLength(2);
+    expect(h.scene?.maps[0]).toBe(ground);
+    expect(h.scene?.maps[0].locked).toBeUndefined();
+    expect(h.scene?.maps[1].path).toBe('/maps/terrain.glb');
+  });
+
+  it('같은 path 가 이미 있으면(잠겨 있어도) no-op', () => {
+    const before = scene({ maps: [{ id: 'm', path: '/maps/okpo.glb' }] });
+    const h = createHarness(before);
+    h.actions.addSceneMap(catalogMap);
     expect(h.deps.updateScene).not.toHaveBeenCalled();
+    expect(h.deps.selectMap).not.toHaveBeenCalled();
+    expect(h.scene).toBe(before);
+
+    const unlocked = scene({
+      maps: [{ id: 'm', path: '/maps/okpo.glb', locked: false }],
+    });
+    const h2 = createHarness(unlocked);
+    h2.actions.addSceneMap(catalogMap);
+    expect(h2.deps.updateScene).not.toHaveBeenCalled();
+  });
+
+  it('씬이 null 이면 null 그대로', () => {
+    const h = createHarness(null);
+    h.actions.addSceneMap(catalogMap);
+    expect(h.scene).toBeNull();
+  });
+
+  it('서로 다른 항목을 이어 추가하면 삽입 순서를 지키고 id 가 다르다', () => {
+    const h = createHarness();
+    h.actions.addSceneMap(catalogMap);
+    h.actions.addSceneMap(catalogContextMap);
+    const maps = h.scene?.maps ?? [];
+    expect(maps.map((m) => m.path)).toEqual([
+      '/maps/okpo.glb',
+      '/maps/terrain.glb',
+    ]);
+    expect(maps[0].id).not.toBe(maps[1].id);
   });
 });
 
@@ -273,7 +301,9 @@ describe('setLighting', () => {
   it('고도는 [MIN, 90]로 클램프한다', () => {
     const h = createHarness();
     h.actions.setLighting({ sunElevation: 5 });
-    expect(h.scene?.lighting).toEqual({ sunElevation: SCENE_SUN_ELEVATION_MIN });
+    expect(h.scene?.lighting).toEqual({
+      sunElevation: SCENE_SUN_ELEVATION_MIN,
+    });
 
     h.actions.setLighting({ sunElevation: SCENE_SUN_ELEVATION_DEFAULT });
     expect(h.scene?.lighting).toBeUndefined();

@@ -26,6 +26,7 @@ import {
   prefetchModelBottomOffset,
   releaseGltfCache,
   resolveEnvironmentFileUrl,
+  resolveGroundMap,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -385,7 +386,7 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
-    mapObjectId: sceneInfo?.maps?.[0]?.id ?? null,
+    mapObjectId: resolveGroundMap(sceneInfo?.maps)?.id ?? null,
     onAddModel,
   });
 
@@ -743,7 +744,7 @@ export function SceneObjectsEditCanvas({
     const controls = orbitControlsRef.current as OrbitControlsImpl | null;
     if (!controls) return;
     const registry = modelObjectRegistryRef.current;
-    const mapId = sceneInfo?.maps?.[0]?.id;
+    const mapId = resolveGroundMap(sceneInfo?.maps)?.id;
     const mapObject = mapId ? registry.get(mapId) : undefined;
     let bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
     if (!bounds || bounds.isEmpty()) {

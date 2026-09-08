@@ -132,29 +132,27 @@ export function createSceneManipulationActions({
   };
 
   /**
-   * 지도 선택 — 배경(setEnvironmentId)과 같은 클릭 단일 선택.
-   * null이면 지도를 제거한다.
+   * 지도 추가 — 팔레트 "맵" 탭의 타일 클릭. 배경(setEnvironmentId)과 달리 단일
+   * 선택이 아니라 append 다: 씬에는 지도가 여러 장 놓일 수 있고(조선소 +
+   * 주변 지형), 제거는 deletePlacedMap 이 맡는다. 바닥 지도 판정은 배열
+   * 순서가 아니라 카탈로그 kind(resolveGroundMap)라 뒤에 붙여도 무방하다.
    *
-   * 현재 지도가 잠겨 있으면 아무것도 하지 않는다 — 잠금은 선택·변형·삭제를
-   * 모두 막는 규칙이고, 교체는 삭제를 포함한다. UI(PaletteMapSection)도
-   * 잠금 상태에서 타일을 비활성화하지만, 여기서 한 번 더 막아야 다른
-   * 경로가 생겨도 규칙이 깨지지 않는다.
+   * 같은 경로가 이미 있으면(잠김 여부 무관) 아무것도 하지 않는다 — 팔레트는
+   * 경로당 한 장만 관리하며, UI 도 배치된 타일을 "추가" 로 다루지 않지만
+   * 여기서 한 번 더 막아야 다른 경로가 생겨도 중복이 안 생긴다.
    *
-   * 새로 고른 지도는 잠기지 않은 상태로 시작한다 — 배치(이동/회전)를 먼저
-   * 하고, 계층 목록의 자물쇠로 잠근다.
+   * 새 지도는 잠기지 않은 상태로 시작하고 곧바로 선택한다(addModel 과 같은
+   * 규약) — 기즈모가 바로 붙어 배치를 먼저 하고, 계층 목록·타일의 자물쇠로
+   * 잠근다. position 은 카탈로그 defaultPosition(주변 지형의 조선소 기준
+   * 오프셋)이 있으면 그 값, 없으면 원점이다.
    */
-  const setSceneMap = (catalogItem: SceneMapCatalogItem | null) => {
-    const currentMap = (sceneInfoRef.current?.maps ?? [])[0] ?? null;
-    if (currentMap && currentMap.locked !== false) {
-      return;
-    }
-    if (!catalogItem && !currentMap) {
-      return;
-    }
-    if (catalogItem && currentMap?.path === catalogItem.path) {
+  const addSceneMap = (catalogItem: SceneMapCatalogItem) => {
+    const maps = sceneInfoRef.current?.maps ?? [];
+    if (maps.some((m) => m.path === catalogItem.path)) {
       return;
     }
 
+    const id = createId();
     updateScene((prev) => {
       if (!prev) {
         return prev;
@@ -163,27 +161,25 @@ export function createSceneManipulationActions({
       return {
         ...prev,
         // transform을 명시 저장한다 — 새 지도는 어떤 경로로 추가되든 항상
-        // 원점/무회전/등배로 시작한다는 보장을 렌더러 기본값에 맡기지 않는다.
-        // sanitize는 유효한 벡터 필드를 그대로 보존하므로 round-trip에도
-        // 값이 유지된다.
-        maps: catalogItem
-          ? [
-              {
-                id: createId(),
-                path: catalogItem.path,
-                position: [0, 0, 0] as [number, number, number],
-                rotation: [0, 0, 0] as [number, number, number],
-                scale: [1, 1, 1] as [number, number, number],
-                locked: false,
-              },
-            ]
-          : [],
+        // 정해진 배치/무회전/등배로 시작한다는 보장을 렌더러 기본값에 맡기지
+        // 않는다. sanitize는 유효한 벡터 필드를 그대로 보존하므로 round-trip
+        // 에도 값이 유지된다.
+        maps: [
+          ...(prev.maps ?? []),
+          {
+            id,
+            path: catalogItem.path,
+            name: catalogItem.label,
+            position: catalogItem.defaultPosition ?? [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1],
+            locked: false,
+          },
+        ],
       };
     });
 
-    if (currentMap && selectedIds.has(currentMap.id)) {
-      clearSelectedModel();
-    }
+    selectMap(id);
   };
 
   const selectPlacedModel = (id: string) => {
@@ -371,7 +367,7 @@ export function createSceneManipulationActions({
   return {
     addModel,
     addText,
-    setSceneMap,
+    addSceneMap,
     selectPlacedMap,
     setEnvironmentId,
     setLighting,

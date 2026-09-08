@@ -1,150 +1,163 @@
-import { Ban, Check, Lock, LockOpen, Map } from 'lucide-react';
+import { Check, Lock, LockOpen, Map } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  sceneMapCatalog,
-  type SavedMapInfo,
-  type SceneMapCatalogItem,
-} from '@crane/domain/3d';
+import type { SavedMapInfo, SceneMapCatalogItem } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
+import {
+  getMapPaletteTiles,
+  type MapPaletteTile,
+} from '../lib/map-palette-tiles';
 
 interface PaletteMapSectionProps {
-  /** 씬의 현재 지도(maps[0]). 없으면 null. */
-  currentMap: SavedMapInfo | null;
-  /** 카탈로그 항목 선택(교체) 또는 null(지도 없음). */
-  onSelectMap: (catalogItem: SceneMapCatalogItem | null) => void;
+  /** 씬에 놓인 지도 전체. 배치·잠금 표시는 경로 매칭으로 한다. */
+  maps: SavedMapInfo[];
+  /** 카탈로그 항목을 씬에 append(addSceneMap). */
+  onAddMap: (catalogItem: SceneMapCatalogItem) => void;
+  /** 놓인 지도 제거 — 계층 목록의 삭제와 같은 액션(deletePlacedMap). */
+  onRemoveMap: (id: string) => void;
   /** 잠금 토글 — 계층 목록의 자물쇠 버튼과 같은 액션(setObjectLocked). */
   onToggleLock: (id: string, locked: boolean) => void;
 }
 
 /**
- * 지도 선택 — Project 패널의 Map 카테고리. 배경(PaletteEnvironmentSection)과
- * 같은 클릭 단일 선택이다: 카탈로그(sceneMapCatalog)에서 하나를 고르면 씬의
- * 지도가 교체되고, "지도 없음"을 고르면 제거된다. 씬에는 지도가 최대 1장
- * 이라는 전제(드롭 raycast 바닥면 등)를 이 UI가 보장한다.
+ * 지도 추가/제거 — Project 패널의 Map 카테고리. 배경(PaletteEnvironmentSection)
+ * 과 달리 단일 선택이 아니다: 씬에는 지도가 여러 장 놓일 수 있고(조선소 +
+ * 주변 지형), 타일은 그 한 장의 토글이다 — 안 놓인 타일 클릭 = 추가, 놓인
+ * (잠금 해제) 타일 클릭 = 제거. 배치·잠금 상태 파생은 getMapPaletteTiles.
  *
- * 현재 지도가 잠겨 있으면 전체를 비활성화한다 — 잠금은 선택·변형·삭제를
- * 모두 막는 규칙이고 교체는 삭제를 포함한다. 잠금 상태 배너는 지도가 있는
- * 동안 항상 남는다 — 해제 시에만 보이면 다시 잠글 방법이 사라진다. 배너의
- * 자물쇠 버튼은 계층 목록의 자물쇠와 같은 액션(setObjectLocked)이다 —
- * 지도를 바꾸려고 이 탭에 온 사용자가 우측 패널까지 오가지 않아도 된다.
+ * 잠긴 지도의 타일은 체크·자물쇠만 보이고 클릭을 무시한다 — 잠금은 선택·변형·
+ * 삭제를 모두 막는 규칙이다. 타일마다 자물쇠 버튼을 두어(계층 목록과 같은
+ * setObjectLocked) 지도를 바꾸려고 이 탭에 온 사용자가 우측 패널까지 오가지
+ * 않아도 된다. 저장본을 다시 열면 lockMaps 가 전 지도를 잠그므로 새로 추가한
+ * 지도도 재진입 후엔 잠겨 있다(의도된 동작).
+ *
+ * 타일과 자물쇠는 둘 다 button 이라 중첩하지 않고 형제로 둔다(자물쇠는 절대
+ * 배치). button 안의 button 은 유효하지 않은 HTML 이고 React 가 경고한다.
  */
 export const PaletteMapSection = memo(function PaletteMapSection({
-  currentMap,
-  onSelectMap,
+  maps,
+  onAddMap,
+  onRemoveMap,
   onToggleLock,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
-  const isLocked = currentMap != null && currentMap.locked !== false;
+  const tiles = getMapPaletteTiles(maps);
+
+  const handleTileClick = ({ item, placed, locked }: MapPaletteTile) => {
+    if (!placed) {
+      onAddMap(item);
+      return;
+    }
+    if (locked) {
+      return;
+    }
+    onRemoveMap(placed.id);
+  };
 
   return (
-    <div className="flex flex-col gap-2">
-      {currentMap ? (
-        <div className="text-muted-foreground border-border bg-muted/40 flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] leading-snug">
-          <span className="min-w-0 flex-1 truncate">
-            {isLocked
-              ? t('monitoring:editor.objectLocked')
-              : t('monitoring:editor.objectUnlocked')}
-          </span>
-          {/* 계층 목록의 자물쇠 버튼과 같은 규칙 — 아이콘·색은 현재 상태를,
-              aria-label은 누르면 일어날 동작을 나타낸다. */}
-          <button
-            type="button"
-            aria-pressed={isLocked}
-            aria-label={
-              isLocked
-                ? t('monitoring:editor.unlockObject')
-                : t('monitoring:editor.lockObject')
-            }
-            title={
-              isLocked
-                ? t('monitoring:editor.unlockObject')
-                : t('monitoring:editor.lockObject')
-            }
-            onClick={() => onToggleLock(currentMap.id, !isLocked)}
-            className={cn(
-              'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm transition-colors',
-              isLocked
-                ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                : 'text-amber-500 hover:bg-amber-500/15 hover:text-amber-400',
-            )}
-          >
-            {isLocked ? (
-              <Lock className="size-3.5" />
-            ) : (
-              <LockOpen className="size-3.5" />
-            )}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2">
+      {tiles.map((tile) => (
         <MapTile
-          label={t('monitoring:editor.mapNone')}
-          isSelected={currentMap === null}
-          disabled={isLocked}
-          onSelect={() => onSelectMap(null)}
-          icon={<Ban className="text-muted-foreground size-5" />}
+          key={tile.item.id}
+          label={tile.item.label}
+          placed={tile.placed !== null}
+          locked={tile.locked}
+          title={
+            !tile.placed
+              ? t('monitoring:editor.mapAdd')
+              : tile.locked
+                ? t('monitoring:editor.mapLockedHint')
+                : t('monitoring:editor.mapRemove')
+          }
+          lockLabel={
+            tile.locked
+              ? t('monitoring:editor.unlockObject')
+              : t('monitoring:editor.lockObject')
+          }
+          onClick={() => handleTileClick(tile)}
+          onToggleLock={
+            tile.placed
+              ? () => onToggleLock(tile.placed!.id, !tile.locked)
+              : undefined
+          }
         />
-        {sceneMapCatalog.map((item) => (
-          <MapTile
-            key={item.id}
-            label={item.label}
-            isSelected={currentMap?.path === item.path}
-            disabled={isLocked}
-            onSelect={() => onSelectMap(item)}
-            icon={<Map className="text-muted-foreground size-5" />}
-          />
-        ))}
-      </div>
+      ))}
     </div>
   );
 });
 
 function MapTile({
   label,
-  isSelected,
-  disabled,
-  onSelect,
-  icon,
+  placed,
+  locked,
+  title,
+  lockLabel,
+  onClick,
+  onToggleLock,
 }: {
   label: string;
-  isSelected: boolean;
-  disabled: boolean;
-  onSelect: () => void;
-  icon: React.ReactNode;
+  placed: boolean;
+  locked: boolean;
+  title: string;
+  lockLabel: string;
+  onClick: () => void;
+  /** 놓인 지도에만 있다. 없으면 자물쇠 버튼을 그리지 않는다. */
+  onToggleLock?: () => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={isSelected}
-      disabled={disabled}
-      onClick={onSelect}
-      className={cn(
-        'group relative flex flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
-        disabled ? 'cursor-default opacity-50' : 'cursor-pointer',
-        isSelected
-          ? 'border-primary/50 bg-primary/10'
-          : cn(
-              'border-border bg-card',
-              !disabled && 'hover:border-border hover:bg-muted/60',
-            ),
-      )}
-    >
-      {isSelected ? (
-        <span className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full">
-          <Check className="size-2.5" />
-        </span>
-      ) : null}
-      {icon}
-      <span
+    <div className="relative">
+      <button
+        type="button"
+        aria-pressed={placed}
+        aria-disabled={locked || undefined}
+        title={title}
+        onClick={onClick}
         className={cn(
-          'w-full truncate text-center text-[11px] font-medium',
-          isSelected ? 'text-foreground' : 'text-muted-foreground',
+          'group relative flex w-full flex-col items-center gap-1.5 rounded-md border px-2 py-3 transition',
+          locked ? 'cursor-default' : 'cursor-pointer',
+          placed
+            ? 'border-primary/50 bg-primary/10'
+            : 'border-border bg-card hover:border-border hover:bg-muted/60',
         )}
       >
-        {label}
-      </span>
-    </button>
+        {placed ? (
+          <span className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full">
+            <Check className="size-2.5" />
+          </span>
+        ) : null}
+        <Map className="text-muted-foreground size-5" />
+        <span
+          className={cn(
+            'w-full truncate text-center text-[11px] font-medium',
+            placed ? 'text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          {label}
+        </span>
+      </button>
+      {onToggleLock ? (
+        // 계층 목록의 자물쇠 버튼과 같은 규칙 — 아이콘·색은 현재 상태를,
+        // aria-label은 누르면 일어날 동작을 나타낸다.
+        <button
+          type="button"
+          aria-pressed={locked}
+          aria-label={lockLabel}
+          title={lockLabel}
+          onClick={onToggleLock}
+          className={cn(
+            'absolute top-1.5 left-1.5 flex size-5 cursor-pointer items-center justify-center rounded-sm transition-colors',
+            locked
+              ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              : 'text-amber-500 hover:bg-amber-500/15 hover:text-amber-400',
+          )}
+        >
+          {locked ? (
+            <Lock className="size-3.5" />
+          ) : (
+            <LockOpen className="size-3.5" />
+          )}
+        </button>
+      ) : null}
+    </div>
   );
 }
