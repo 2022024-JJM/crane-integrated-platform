@@ -36,7 +36,7 @@
       "name": "LLC-002 러핑 각도",
       "min": -32,
       "max": 11.75,
-      "initial": -10,
+      "initial": 0,
       "pattern": {
         "kind": "sine",
         "periodMs": 30000
