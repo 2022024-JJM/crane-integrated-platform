@@ -56,27 +56,15 @@ export function SceneCollisionHighlight() {
       <group position={record.contactPoint}>
         {/* 라벨(zIndexRange [5,0])보다 앞에 온다 — 겹치면 경고가 위. */}
         <Html center zIndexRange={[6, 0]}>
-          <div className="pointer-events-none flex flex-col items-center gap-1.5">
-            <div className="relative">
-              {/* 접촉점에서 퍼지는 레이더 핑 — 정지 화면에서도 "여기"가
-                  단번에 잡힌다. motion-reduce 에선 정지 링으로 남는다. */}
-              <span
-                aria-hidden
-                className="absolute top-1/2 left-1/2 size-14 -translate-x-1/2 -translate-y-1/2 animate-[collision-ping_1.6s_ease-out_infinite] rounded-full border-2 border-red-500/70 motion-reduce:animate-none"
-              />
-              {/* 심장박동(크기 펄스) — opacity 펄스는 표지가 반투명해져
-                  오히려 안 보인다. */}
-              <div className="animate-[collision-sign-pulse_1.2s_ease-in-out_infinite] motion-reduce:animate-none">
-                <WarningSign label={t('monitoring:sceneCollision.contact')} />
-              </div>
+          <div className="pointer-events-none flex flex-col items-center gap-1">
+            <div className="animate-pulse motion-reduce:animate-none">
+              <WarningSign label={t('monitoring:sceneCollision.contact')} />
             </div>
             {/* 어떤 장비끼리인지 접촉 지점에서 바로 읽히게 — 팝업을 열지
-                않아도 되는 1차 정보. 배너와 같은 다크 글래스 시각 언어. */}
-            <p className="rounded-md border border-red-500/40 bg-slate-950/80 px-2 py-1 text-[11px] leading-tight font-semibold whitespace-nowrap text-white shadow-lg backdrop-blur-sm">
+                않아도 되는 1차 정보. */}
+            <p className="rounded bg-red-600/90 px-1.5 py-0.5 text-[11px] leading-tight font-semibold whitespace-nowrap text-white shadow">
               {record.a.equipName || record.a.modelId}
-              <span aria-hidden className="mx-1.5 font-normal text-red-400">
-                ↔
-              </span>
+              <span className="mx-1 font-normal opacity-80">↔</span>
               {record.b.equipName || record.b.modelId}
             </p>
           </div>

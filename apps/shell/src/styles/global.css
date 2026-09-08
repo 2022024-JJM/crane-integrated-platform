@@ -330,56 +330,6 @@
   }
 }
 
-/* 씬 충돌 경보(scene-collision-alert-overlay) — 캔버스 가장자리 비네트 호흡.
-   링 전체를 깜빡이는(animate-pulse) 대신 밝기가 부드럽게 오르내려 주변
-   시야에는 걸리되 눈을 찌르지 않는다. */
-@keyframes collision-vignette-breathe {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* 충돌 접촉 표지·경보 배너 아이콘의 확산 링(레이더 핑). transform 이 아니라
-   개별 scale 속성을 쓴다 — Tailwind v4 의 translate-* 유틸리티(개별 translate
-   속성)와 충돌하지 않게. */
-@keyframes collision-ping {
-  0% {
-    scale: 1;
-    opacity: 0.8;
-  }
-  100% {
-    scale: 1.9;
-    opacity: 0;
-  }
-}
-
-/* 충돌 접촉 경고 표지의 심장박동 — 크기만 살짝 오르내린다.
-   opacity 펄스는 표지가 반투명해져 오히려 시인성이 떨어진다. */
-@keyframes collision-sign-pulse {
-  0%,
-  100% {
-    scale: 1;
-  }
-  50% {
-    scale: 1.09;
-  }
-}
-
-/* 무정지(flash) 충돌 배너의 잔여 시간 바 — FLASH_MS 동안 왼쪽 기준으로
-   줄어든다. duration 은 상수와 묶이도록 인라인 style 로 준다. */
-@keyframes collision-flash-drain {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
