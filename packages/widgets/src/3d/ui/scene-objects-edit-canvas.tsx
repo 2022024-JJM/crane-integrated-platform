@@ -38,6 +38,7 @@ import {
   type SceneTransformField,
   type SceneSnapStep,
   type SceneTransformMode,
+  type SceneTransformPivot,
   type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
   SCENE_DEFAULT_DPR,
@@ -208,6 +209,8 @@ interface SceneObjectsEditCanvasProps {
   snapStep: SceneSnapStep;
   /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
   transformSpace: SceneTransformSpace;
+  /** 다중 선택 회전·크기 기준점. useSceneTransform 의 세컨더리 전파가 본다. */
+  transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
   /** 씬 객체 충돌 감지(시뮬레이션 정지·보고) 활성 여부. */
@@ -234,6 +237,7 @@ export function SceneObjectsEditCanvas({
   snapEnabled,
   snapStep,
   transformSpace,
+  transformPivot,
   showGrid,
   collisionEnabled,
 }: SceneObjectsEditCanvasProps) {
@@ -415,6 +419,7 @@ export function SceneObjectsEditCanvas({
     onTransformInteractionEnd,
     snapEnabled,
     snapStep,
+    transformPivot,
   });
 
   const handleModelObjectReady = useCallback(

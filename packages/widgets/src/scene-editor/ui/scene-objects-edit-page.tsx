@@ -128,6 +128,12 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const setTransformSpace = useSceneEditorViewStore(
     (state) => state.setTransformSpace,
   );
+  const transformPivot = useSceneEditorViewStore(
+    (state) => state.transformPivot,
+  );
+  const setTransformPivot = useSceneEditorViewStore(
+    (state) => state.setTransformPivot,
+  );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
   // 충돌 감지 on/off 는 팔레트 "충돌" 탭이 조작하는 전역 세션 상태
   // (useSceneCollisionStore, 모니터링과 공유). 캔버스는 스토어를 직접 구독하지
@@ -483,6 +489,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               transformSpace={isScaleMode ? 'local' : transformSpace}
               onTransformSpaceChange={setTransformSpace}
               transformSpaceDisabled={isScaleMode}
+              transformPivot={transformPivot}
+              onTransformPivotChange={setTransformPivot}
               snapEnabled={snapEnabled}
               snapStep={snapStep}
               onToggleSnap={toggleSnap}
@@ -540,6 +548,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 snapEnabled={snapEnabled}
                 snapStep={snapStep}
                 transformSpace={transformSpace}
+                transformPivot={transformPivot}
                 showGrid={showGrid}
                 collisionEnabled={collisionEnabled}
               />

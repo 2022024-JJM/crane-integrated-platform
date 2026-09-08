@@ -102,6 +102,11 @@
       "title": "Transform space",
       "local": "Local",
       "world": "World"
+    },
+    "pivot": {
+      "title": "Transform pivot",
+      "individual": "Individual origins",
+      "primary": "Active origin"
     }
   },
   "history": {

@@ -5,7 +5,7 @@ import {
   type SceneSnapChannel,
   type SceneSnapStep,
 } from '../lib/snap-storage';
-import type { SceneTransformSpace } from './types';
+import type { SceneTransformPivot, SceneTransformSpace } from './types';
 
 export {
   SCENE_TRANSFORM_SNAP,
@@ -25,11 +25,14 @@ interface SceneEditorViewState {
   snapStep: SceneSnapStep;
   /** 기즈모 축 기준. scale 모드는 three 가 강제로 local 을 쓴다. */
   transformSpace: SceneTransformSpace;
+  /** 다중 선택 회전·크기의 기준점. 기본은 각자 자기 원점. */
+  transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
   toggleSnap: () => void;
   setSnapStep: (channel: SceneSnapChannel, value: number) => void;
   setTransformSpace: (space: SceneTransformSpace) => void;
+  setTransformPivot: (pivot: SceneTransformPivot) => void;
   toggleGrid: () => void;
 }
 
@@ -46,6 +49,7 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
     snapEnabled: false,
     snapStep: readSnapStep(),
     transformSpace: 'local',
+    transformPivot: 'individual',
     showGrid: false,
     toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
     setSnapStep: (channel, value) => {
@@ -60,6 +64,10 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
     setTransformSpace: (space) =>
       set((state) =>
         state.transformSpace === space ? state : { transformSpace: space },
+      ),
+    setTransformPivot: (pivot) =>
+      set((state) =>
+        state.transformPivot === pivot ? state : { transformPivot: pivot },
       ),
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   }),

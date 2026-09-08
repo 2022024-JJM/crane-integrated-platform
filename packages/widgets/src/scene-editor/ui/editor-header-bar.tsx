@@ -1,10 +1,12 @@
 import {
   SceneTransformModeToggle,
+  SceneTransformPivotSelect,
   SceneTransformSpaceSelect,
   SCENE_SNAP_STEP_OPTIONS,
   type SceneSnapChannel,
   type SceneSnapStep,
   type SceneTransformMode,
+  type SceneTransformPivot,
   type SceneTransformSpace,
 } from '@crane/features/3d';
 import {
@@ -73,6 +75,9 @@ interface EditorHeaderBarProps {
   onTransformSpaceChange: (space: SceneTransformSpace) => void;
   /** scale 모드처럼 three 가 축 기준을 강제하는 동안 잠근다. */
   transformSpaceDisabled: boolean;
+  /** 다중 선택 회전·크기 기준점(개별 원점/기준 원점). */
+  transformPivot: SceneTransformPivot;
+  onTransformPivotChange: (pivot: SceneTransformPivot) => void;
   snapEnabled: boolean;
   snapStep: SceneSnapStep;
   onToggleSnap: () => void;
@@ -129,6 +134,8 @@ export function EditorHeaderBar({
   transformSpace,
   onTransformSpaceChange,
   transformSpaceDisabled,
+  transformPivot,
+  onTransformPivotChange,
   snapEnabled,
   snapStep,
   onToggleSnap,
@@ -227,7 +234,7 @@ export function EditorHeaderBar({
           </div>
         </div>
 
-        {/* 중앙 — 모달 도구 · 좌표계 | 스냅 · 격자 · 홈 · 탑뷰 | 텍스트 */}
+        {/* 중앙 — 모달 도구 · 좌표계 · 기준점 | 스냅 · 격자 · 홈 · 탑뷰 | 텍스트 */}
         <div
           role="group"
           aria-label={t('monitoring:editor.toolDock')}
@@ -243,6 +250,11 @@ export function EditorHeaderBar({
             space={transformSpace}
             onSpaceChange={onTransformSpaceChange}
             disabled={transformSpaceDisabled || sceneDisabled}
+          />
+          <SceneTransformPivotSelect
+            pivot={transformPivot}
+            onPivotChange={onTransformPivotChange}
+            disabled={sceneDisabled}
           />
           <span aria-hidden className={EDITOR_TOOLBAR_DIVIDER_CLASS} />
           <SnapSplitButton

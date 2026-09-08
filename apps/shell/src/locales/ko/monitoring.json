@@ -102,6 +102,11 @@
       "title": "변형 기준 축",
       "local": "로컬",
       "world": "월드"
+    },
+    "pivot": {
+      "title": "변형 기준점",
+      "individual": "개별 원점",
+      "primary": "기준 원점"
     }
   },
   "history": {

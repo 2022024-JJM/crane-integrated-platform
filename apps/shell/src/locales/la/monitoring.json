@@ -102,6 +102,11 @@
       "title": "Spatium transformationis",
       "local": "Locale",
       "world": "Mundanum"
+    },
+    "pivot": {
+      "title": "Punctum transformationis",
+      "individual": "Origines singulae",
+      "primary": "Origo activa"
     }
   },
   "history": {
