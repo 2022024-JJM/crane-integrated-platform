@@ -15,7 +15,7 @@ import {
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, MOUSE, Object3D, Vector3 } from 'three';
+import { Box3, MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
@@ -25,6 +25,7 @@ import {
   parseMeshId,
   prefetchModelBottomOffset,
   releaseGltfCache,
+  resolveEnvironmentFileUrl,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -34,20 +35,39 @@ import type { ThreeEvent } from '@react-three/fiber';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import {
   type SceneTransformField,
+  type SceneSnapStep,
   type SceneTransformMode,
+  type SceneTransformSpace,
   SCENE_CAMERA_CLIP,
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
+  MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneLighting,
+  sceneCanvasShadows,
   SceneObjectBoundary,
+  SceneSurfaceCamera,
+  RigDriver,
+  SceneCollisionDetector,
+  SceneCollisionHighlight,
+  manualJointSource,
+  resolveRecordNodes,
+  rigValueStore,
   useIsObjectSelected,
+  useSceneCollisionStore,
   useSceneObjectSelectionStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 import { useMarqueeSelection } from './use-marquee-selection';
+import {
+  computeTopViewFallbackPose,
+  computeTopViewPose,
+  type CameraPose,
+} from '@crane/core/lib/top-view-pose';
+import { collectWorldBounds } from '../lib/world-bounds';
+import { EditorGroundGrid } from './editor-ground-grid';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [0, 50, 50];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
@@ -55,6 +75,14 @@ const DEFAULT_CAMERA_TARGET: Vector3Tuple = [0, 0, 0];
 // 모듈 레벨 상수라 렌더마다 참조가 바뀌지 않는다.
 const EDITOR_DPR: [number, number] = [...SCENE_DEFAULT_DPR];
 const INITIAL_PRELOAD_COUNT = 6;
+/** F 포커스 시 바운딩 스피어 주변 여유 비율. */
+const FOCUS_PADDING = 1.15;
+/**
+ * F 포커스 최소 거리 — SceneSurfaceCamera 휠 줌의 최소 표면 거리와 같다.
+ * 텍스트처럼 작은 객체를 더 가깝게 잡으면 첫 휠 조작에서 그 거리로 튕겨
+ * 나가므로 여기서 미리 맞춘다.
+ */
+const FOCUS_MIN_DISTANCE = MIN_SURFACE_DISTANCE;
 const PRELOAD_BATCH_SIZE = 4;
 
 /**
@@ -123,6 +151,16 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
+/** 도구 모음의 카메라 버튼이 호출하는 액션(focusSelectedRef 와 같은 방식). */
+export interface SceneEditorCameraActions {
+  /** 마지막으로 로드/저장된 카메라(없으면 편집기 기본 시점)로 복귀. */
+  resetView: () => void;
+  /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
+  topView: () => void;
+  /** 활성 충돌 기록의 두 노드가 화면에 들어오도록 카메라를 맞춘다. 기록이 없으면 no-op. */
+  focusCollision: () => void;
+}
+
 interface SceneObjectsEditCanvasProps {
   sceneInfo: SavedSceneInfo | null;
   /** 배경 파노라마 fallback 해석에 쓴다 (씬이 배경을 지정하지 않은 경우). */
@@ -141,7 +179,6 @@ interface SceneObjectsEditCanvasProps {
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
   ) => void;
-  showLabels?: boolean;
   onTransformCommit?: (
     position: Vector3Tuple | null,
     rotation: Vector3Tuple | null,
@@ -157,9 +194,23 @@ interface SceneObjectsEditCanvasProps {
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
-  fitAllRef?: RefObject<(() => void) | null>;
-  fitSelectedRef?: RefObject<(() => void) | null>;
-  resetCameraRef?: RefObject<(() => void) | null>;
+  /** 선택 객체로 카메라를 즉시 이동(F 키)하는 함수를 부모에 노출한다. */
+  focusSelectedRef?: RefObject<(() => void) | null>;
+  /** 초기 시점/탑뷰 액션을 부모에 노출한다. */
+  cameraActionsRef?: RefObject<SceneEditorCameraActions | null>;
+  /** 기즈모 스냅 적용 여부. */
+  snapEnabled: boolean;
+  /**
+   * 기즈모 스냅 단위(이동 m · 회전 rad · 크기). 켜져 있을 때만 쓴다. 저장값
+   * (부모 프레임·도·배율) 기준 격자다 — transformSpace 는 축 방향만 정한다.
+   */
+  snapStep: SceneSnapStep;
+  /** 기즈모 축 기준. scale 모드는 three 가 local 을 강제한다. */
+  transformSpace: SceneTransformSpace;
+  /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
+  showGrid: boolean;
+  /** 씬 객체 충돌 감지(시뮬레이션 정지·보고) 활성 여부. */
+  collisionEnabled: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -174,14 +225,31 @@ export function SceneObjectsEditCanvas({
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
-  showLabels = true,
   onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
-  fitAllRef,
-  fitSelectedRef,
-  resetCameraRef,
+  focusSelectedRef,
+  cameraActionsRef,
+  snapEnabled,
+  snapStep,
+  transformSpace,
+  showGrid,
+  collisionEnabled,
 }: SceneObjectsEditCanvasProps) {
+  // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
+  // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
+  useEffect(() => {
+    manualJointSource.start(rigValueStore);
+    return () => {
+      manualJointSource.stop();
+      rigValueStore.reset();
+    };
+  }, []);
+
+  // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
+  // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
+  const hasSea =
+    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
   // 의존성에 넣지 않고 여기서 최신값을 따라간다.
@@ -279,7 +347,6 @@ export function SceneObjectsEditCanvas({
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
   const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
-  const toggleMesh = useSceneObjectSelectionStore((state) => state.toggleMesh);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
   );
@@ -345,6 +412,8 @@ export function SceneObjectsEditCanvas({
     onMultiTransformCommit,
     onTransformInteractionStart,
     onTransformInteractionEnd,
+    snapEnabled,
+    snapStep,
   });
 
   const handleModelObjectReady = useCallback(
@@ -403,9 +472,9 @@ export function SceneObjectsEditCanvas({
     (id: string, event: ThreeEvent<MouseEvent>) => {
       // R3F의 onDoubleClick은 DOM dblclick과 매핑되어 onClick의 detail 카운트
       // 보다 안정적이다. 더블클릭 시 클릭된 자식 mesh path를 계산해 drill-in.
-      const isCtrl =
-        lastPointerEventRef.current?.ctrlKey ||
-        lastPointerEventRef.current?.metaKey;
+      //
+      // 노드 선택은 읽기 전용(바운딩 박스만)이라 기즈모 대상을 세우지 않고,
+      // Ctrl 토글로 모델 멀티 선택에 섞이지도 않는다 — 항상 단일 선택.
       // event.eventObject: 핸들러가 붙은 primitive(=clone root)
       // event.object: 클릭된 가장 깊은 Mesh
       const cloneRoot = event.eventObject;
@@ -414,16 +483,9 @@ export function SceneObjectsEditCanvas({
       if (meshPath === null || meshPath === '') {
         return;
       }
-      const meshId = makeMeshId(id, meshPath);
-      const meshObject = sharedModelObjectRegistry.get(meshId) ?? null;
-      if (isCtrl) {
-        toggleMesh(meshId);
-      } else {
-        setSelectedObject(meshObject);
-        selectMesh(meshId);
-      }
+      selectMesh(makeMeshId(id, meshPath));
     },
-    [selectMesh, toggleMesh, setSelectedObject],
+    [selectMesh],
   );
 
   const handleSelectText = useCallback(
@@ -535,29 +597,47 @@ export function SceneObjectsEditCanvas({
       const controls = orbitControlsRef.current as OrbitControlsImpl | null;
       if (!controls || objects.length === 0) return;
 
-      const box = new Box3();
-      for (const obj of objects) {
-        box.expandByObject(obj);
-      }
-
-      if (box.isEmpty()) return;
+      const box = collectWorldBounds(objects);
+      if (!box) return;
 
       const center = new Vector3();
       const size = new Vector3();
       box.getCenter(center);
       box.getSize(size);
 
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const distance = maxDim * 1.0;
-
+      // 바운딩 스피어가 세로·가로 fov 중 좁은 쪽에 들어오는 거리. 예전에는
+      // 가장 긴 변 길이를 그대로 거리로 써서 fov·종횡비에 따라 잘리거나
+      // 지나치게 멀었다.
       const cam = controls.object;
+      const radius = Math.max(size.length() / 2, 1e-3);
+      let halfFov = Math.PI / 4;
+      if (cam instanceof PerspectiveCamera) {
+        const halfVertical = (cam.fov * Math.PI) / 360;
+        halfFov = Math.min(
+          halfVertical,
+          Math.atan(Math.tan(halfVertical) * cam.aspect),
+        );
+      }
+      const distance = Math.max(
+        (radius / Math.sin(halfFov)) * FOCUS_PADDING,
+        FOCUS_MIN_DISTANCE,
+      );
+
       const direction = new Vector3()
         .subVectors(cam.position, controls.target)
         .normalize();
 
+      // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance(3000)로
+      // 잘라 준다. 지도처럼 큰 객체는 뷰어 탑뷰와 같은 상한에서 멈춘다.
       cam.position.copy(center).addScaledVector(direction, distance);
       controls.target.copy(center);
+      // 감쇠를 잠시 끄고 update() 한다 — 켠 채로 부르면 직전 드래그의 잔여
+      // 관성이 이후 프레임에 계속 적용돼 방금 맞춘 포즈가 흘러간다
+      // (ThreeSceneViewer.applyCameraState와 같은 이유).
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
       controls.update();
+      controls.enableDamping = previousDamping;
 
       if (cameraStateRef) {
         cameraStateRef.current = {
@@ -569,83 +649,135 @@ export function SceneObjectsEditCanvas({
     [cameraStateRef, orbitControlsRef],
   );
 
-  const sceneModelIds = useMemo(
-    () => sceneInfo?.models.map((model) => model.id) ?? [],
-    [sceneInfo?.models],
+  // 씬에 존재하는 id만 포커스 대상이다(스토어에 남은 stale 선택 방어). 지도는
+  // 잠금 여부와 무관하게 포함 — 선택돼 있기만 하면 대상이다.
+  const sceneObjectIds = useMemo(
+    () => ({
+      models: new Set(sceneInfo?.models.map((model) => model.id) ?? []),
+      texts: new Set(sceneInfo?.texts?.map((text) => text.id) ?? []),
+      maps: new Set(sceneInfo?.maps?.map((map) => map.id) ?? []),
+    }),
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
   );
 
-  const getSceneModelObject = useCallback(
-    (id: string) => modelObjectRegistryRef.current.get(id) ?? null,
-    [],
-  );
-
-  const fitAll = useCallback(() => {
-    const objects = sceneModelIds
-      .map((id) => getSceneModelObject(id))
-      .filter((object): object is Object3D => object !== null);
-    fitToObjects(objects);
-  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
-
-  const fitSelected = useCallback(() => {
+  // F 포커스 — 모델·텍스트·지도·드릴인 메시 모두 대상. 조회 순서는
+  // use-scene-transform과 같다(캔버스 로컬 registry → 도메인 전역 registry;
+  // 메시는 전역에만 등록된다).
+  const focusSelected = useCallback(() => {
     const objects: Object3D[] = [];
+    const seen = new Set<Object3D>();
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-    const seenModelIds = new Set<string>();
     for (const id of selectedIds) {
       const meshIdInfo = parseMeshId(id);
-      const modelId = meshIdInfo?.modelId ?? id;
+      let obj: Object3D | undefined;
 
-      if (!sceneModelIds.includes(modelId) || seenModelIds.has(modelId)) {
-        continue;
+      if (meshIdInfo) {
+        if (!sceneObjectIds.models.has(meshIdInfo.modelId)) continue;
+        // 메시가 아직 등록 전이면 부모 모델로 폴백한다.
+        obj =
+          sharedModelObjectRegistry.get(id) ??
+          modelObjectRegistryRef.current.get(meshIdInfo.modelId);
+      } else {
+        if (
+          !sceneObjectIds.models.has(id) &&
+          !sceneObjectIds.texts.has(id) &&
+          !sceneObjectIds.maps.has(id)
+        ) {
+          continue;
+        }
+        obj =
+          modelObjectRegistryRef.current.get(id) ??
+          sharedModelObjectRegistry.get(id);
       }
 
-      const obj = getSceneModelObject(modelId);
-      if (!obj) {
-        continue;
-      }
-
-      seenModelIds.add(modelId);
+      // 같은 Object3D 중복 방지(메시 폴백으로 부모가 두 번 들어오는 경우).
+      if (!obj || seen.has(obj)) continue;
+      seen.add(obj);
       objects.push(obj);
     }
     fitToObjects(objects);
-  }, [fitToObjects, getSceneModelObject, sceneModelIds]);
+  }, [fitToObjects, sceneObjectIds]);
 
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
 
-  const resetCamera = useCallback(() => {
+  useEffect(() => {
+    if (focusSelectedRef) {
+      focusSelectedRef.current = focusSelected;
+    }
+  }, [focusSelected, focusSelectedRef]);
+
+  // 도구 모음의 초기 시점/탑뷰. 포즈 계산은 @crane/core 의 top-view-pose 가 하고 여기서는
+  // OrbitControls 에 적용만 한다(감쇠 처리는 fitToObjects 와 같은 이유).
+  const applyCameraPose = useCallback(
+    (pose: CameraPose) => {
+      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
+      if (!controls) return;
+      const cam = controls.object;
+      cam.position.set(...pose.position);
+      controls.target.set(...pose.target);
+      const previousDamping = controls.enableDamping;
+      controls.enableDamping = false;
+      controls.update();
+      controls.enableDamping = previousDamping;
+
+      if (cameraStateRef) {
+        cameraStateRef.current = {
+          position: [...pose.position],
+          target: [...pose.target],
+        };
+      }
+    },
+    [cameraStateRef, orbitControlsRef],
+  );
+
+  // initialCamera 는 저장 후에도 갱신되므로 "마지막으로 로드/저장된 시점"이다.
+  const resetView = useCallback(() => {
+    applyCameraPose({ position: cameraPosition, target: cameraTarget });
+  }, [applyCameraPose, cameraPosition, cameraTarget]);
+
+  // 바운즈 우선순위: 지도 → 배치된 객체 전체 → (아무것도 없으면) 현재 거리를
+  // 유지한 채 타깃 바로 위. 지도 GLB 가 아직 로드 전이면 박스가 비어 있어
+  // 객체 전체로 내려간다.
+  const topView = useCallback(() => {
     const controls = orbitControlsRef.current as OrbitControlsImpl | null;
     if (!controls) return;
-    const cam = controls.object;
-    cam.position.set(...cameraPosition);
-    controls.target.set(...cameraTarget);
-    controls.update();
-
-    if (cameraStateRef) {
-      cameraStateRef.current = {
-        position: [...cameraPosition],
-        target: [...cameraTarget],
-      };
+    const registry = modelObjectRegistryRef.current;
+    const mapId = sceneInfo?.maps?.[0]?.id;
+    const mapObject = mapId ? registry.get(mapId) : undefined;
+    let bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
+    if (!bounds || bounds.isEmpty()) {
+      bounds = collectWorldBounds([...registry.values()]);
     }
-  }, [cameraPosition, cameraTarget, cameraStateRef, orbitControlsRef]);
+
+    const cam = controls.object;
+    let pose: CameraPose | null = null;
+    if (bounds && cam instanceof PerspectiveCamera) {
+      pose = computeTopViewPose(bounds, cam.aspect, cam.fov, {
+        minDistance: FOCUS_MIN_DISTANCE,
+      });
+    }
+    if (!pose) {
+      pose = computeTopViewFallbackPose(
+        [cam.position.x, cam.position.y, cam.position.z],
+        [controls.target.x, controls.target.y, controls.target.z],
+      );
+    }
+    applyCameraPose(pose);
+  }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
+
+  const focusCollision = useCallback(() => {
+    const { history, activeRecordId } = useSceneCollisionStore.getState();
+    const record = history.find((r) => r.id === activeRecordId);
+    if (!record) return;
+    fitToObjects(resolveRecordNodes([record.a, record.b]));
+  }, [fitToObjects]);
 
   useEffect(() => {
-    if (fitAllRef) {
-      fitAllRef.current = fitAll;
+    if (cameraActionsRef) {
+      cameraActionsRef.current = { resetView, topView, focusCollision };
     }
-    if (fitSelectedRef) {
-      fitSelectedRef.current = fitSelected;
-    }
-    if (resetCameraRef) {
-      resetCameraRef.current = resetCamera;
-    }
-  }, [
-    fitAll,
-    fitAllRef,
-    fitSelected,
-    fitSelectedRef,
-    resetCamera,
-    resetCameraRef,
-  ]);
+  }, [cameraActionsRef, focusCollision, resetView, topView]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -673,30 +805,6 @@ export function SceneObjectsEditCanvas({
     }
   }, [draggingModelCatalogItem, setPendingDropPosition]);
 
-  // Space 키를 누르는 동안 OrbitControls LEFT를 PAN으로 전환
-  // (기본은 undefined = marquee 전용, Space 누르면 pan 가능)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
-      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-      if (!controls) return;
-      controls.mouseButtons.LEFT = MOUSE.PAN;
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
-      const controls = orbitControlsRef.current as OrbitControlsImpl | null;
-      if (!controls) return;
-      (controls.mouseButtons as Record<string, unknown>).LEFT = undefined;
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [orbitControlsRef]);
-
   return (
     <div
       ref={combinedRootRef}
@@ -716,6 +824,7 @@ export function SceneObjectsEditCanvas({
         // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
         camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
         gl={SCENE_GL_OPTIONS}
+        shadows={sceneCanvasShadows(sceneInfo?.lighting)}
         dpr={EDITOR_DPR}
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
@@ -733,7 +842,18 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
-        <SceneLighting />
+        <SceneLighting sceneInfo={sceneInfo} />
+        <RigDriver sceneInfo={sceneInfo} />
+        {/* 드라이버 바로 다음 — useFrame 실행 순서(마운트 순) 때문에 여기. */}
+        <SceneCollisionDetector
+          sceneInfo={sceneInfo}
+          enabled={collisionEnabled}
+        />
+        <SceneCollisionHighlight />
+        <SceneSurfaceCamera
+          regionId={regionId}
+          environmentId={sceneInfo?.environmentId}
+        />
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
@@ -751,9 +871,10 @@ export function SceneObjectsEditCanvas({
           dampingFactor={0.12}
           target={cameraTarget}
           onChange={handleOrbitChange}
-          // 뷰어(ThreeSceneViewer)와 동일한 줌 규칙 — 포인터 방향 줌,
-          // 지오메트리 관통 방지, far(5000) 안쪽에서 줌 아웃 정지.
-          zoomToCursor
+          // 뷰어(ThreeSceneViewer)와 동일한 규칙 — 휠 줌은 SceneSurfaceCamera
+          // (표면 기준 dolly)가 맡으므로 여기선 끈다. minDistance는 회전/팬 반경
+          // clamp일 뿐이라 낮게 둔다(표면 피벗이 가까울 때 튕기지 않게).
+          enableZoom={false}
           minDistance={5}
           maxDistance={3000}
           mouseButtons={{
@@ -763,23 +884,32 @@ export function SceneObjectsEditCanvas({
           }}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
-            40px) + 12px(중앙 툴바의 top-3와 같은 여백)로 잡아, 기즈모
-            가장자리가 툴바와 같은 간격으로 캔버스 좌하단에 붙는다. */}
-        <GizmoHelper alignment="bottom-left" margin={[52, 52]}>
+            27px) + 12px(오버레이들의 top-3/right-3 와 같은 여백) + 여유로
+            52px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
+            내비게이션 기즈모 위치). */}
+        <GizmoHelper alignment="top-right" margin={[52, 52]}>
           <GizmoViewport
             // 기본 40의 2/3 크기.
             scale={40 * (2 / 3)}
             axisColors={['#ff0000', '#00ff00', '#0000ff']}
             labelColor="white"
+            // 방향 표시 전용 — 축 머리를 클릭해 카메라가 툭 스냅되면 배치
+            // 중인 시점을 잃는다. 클릭·호버 반응을 끈다.
+            disabled
           />
         </GizmoHelper>
+        {/* 바닥 격자 — 높이·범위 규칙은 EditorGroundGrid 주석 참고. */}
+        {showGrid ? <EditorGroundGrid /> : null}
         {transformTarget ? (
           <TransformControls
             key={transformTarget.uuid}
             ref={transformControlsRef}
             object={transformTarget}
             mode={transformMode}
-            space="local"
+            space={transformSpace}
+            // 스냅은 three 에 맡기지 않는다 — local 공간에서 격자가 객체의
+            // 회전 프레임에 놓여 저장값이 격자를 벗어난다. useSceneTransform 의
+            // liveSync 가 저장값(부모 프레임) 기준으로 스냅한다(snap-transform).
             onMouseDown={handleTransformMouseDown}
             onMouseUp={handleTransformMouseUp}
             onObjectChange={syncSelectedObjectTransform}
@@ -814,6 +944,8 @@ export function SceneObjectsEditCanvas({
               // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
               // 마운트 시 bbox 순회를 건너뛴다.
               showLabel={false}
+              // 지도도 그림자를 드리운다(기본값) — 뷰어(outdoor-work-model-
+              // simulation)와 같은 규칙. 지도 GLB에 건물이 포함되어 있다.
               onSelect={
                 m.locked === false ? handleSelectMap : handleClearSelection
               }
@@ -831,8 +963,9 @@ export function SceneObjectsEditCanvas({
               id={model.id}
               url={model.path}
               equipName={model.equipName}
-              showLabel={showLabels}
+              showLabel={!model.labelHidden}
               opacity={model.opacity}
+              seaSubmersion={hasSea}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

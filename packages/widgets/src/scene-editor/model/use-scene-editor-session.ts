@@ -1,11 +1,12 @@
 import {
   humanizeModelPath,
   type SavedCameraInfo,
+  type SavedLightingInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
-  type ValueMapType,
 } from '@crane/domain/3d';
 import {
+  makeMeshId,
   useSelectedSceneObjectEditor,
   useSceneObjectSelectionStore,
   useSceneTransformModeStore,
@@ -14,7 +15,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSceneHistory } from './use-scene-history';
 import { useScenePersistence } from './use-scene-persistence';
-import { useSceneUnsavedChangesGuard } from './use-scene-unsaved-changes-guard';
+import {
+  useSceneUnsavedChangesGuard,
+  type SceneUnsavedChangesPrompt,
+} from './use-scene-unsaved-changes-guard';
 import { createSceneManipulationActions } from './scene-manipulation-actions';
 
 interface UseSceneEditorSessionParams {
@@ -34,6 +38,8 @@ interface UseSceneEditorSessionResult {
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
+  /** 미저장 이탈 다이얼로그 상태. 페이지가 이걸로 다이얼로그를 렌더한다. */
+  unsavedChangesPrompt: SceneUnsavedChangesPrompt;
   canUndo: boolean;
   canRedo: boolean;
   transformMode: ReturnType<typeof useSceneTransformModeStore.getState>['mode'];
@@ -49,6 +55,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedOpacity: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedOpacity'];
+  updateSelectedLabelHidden: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedLabelHidden'];
   updateSelectedTransform: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTransform'];
@@ -64,16 +73,19 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
-  updateSelectedMeshTransform: ReturnType<
+  updateSelectedTagMappings: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransform'];
-  updateSelectedMeshTransformVector: ReturnType<
+  >['updateSelectedTagMappings'];
+  createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshTransformVector'];
-  updateSelectedMeshOpacity: ReturnType<
+  >['createRigForSelectedModel'];
+  assignRigToSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
-  >['updateSelectedMeshOpacity'];
-  updateSelectedValueMap: (type: ValueMapType, key: string, scale?: number, offset?: number) => void;
+  >['assignRigToSelectedModel'];
+  updateRig: ReturnType<typeof useSelectedSceneObjectEditor>['updateRig'];
+  removeRig: ReturnType<typeof useSelectedSceneObjectEditor>['removeRig'];
+  /** 계층 목록에서 GLB 서브노드(Group/Mesh)를 고른다 — 캔버스 더블클릭 drill-in 과 같은 선택. */
+  selectPlacedNode: (modelId: string, nodePath: string) => void;
   removeSelectedModel: () => void;
   duplicateSelectedObject: () => void;
   addModel: (
@@ -89,6 +101,10 @@ interface UseSceneEditorSessionResult {
   setSceneMap: (catalogItem: SceneMapCatalogItem | null) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
+  setLighting: (
+    patch: Partial<SavedLightingInfo>,
+    options?: { recordHistory?: boolean },
+  ) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
   setObjectLocked: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -143,6 +159,7 @@ export function useSceneEditorSession({
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
+  const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
@@ -162,19 +179,21 @@ export function useSceneEditorSession({
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateMultiObjectTransforms,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
     selectedMap,
     setObjectLocked,
     removeSelectedModel,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
   } = useSelectedSceneObjectEditor({
     sceneInfo,
     updateSceneInfo: updateScene,
@@ -232,7 +251,14 @@ export function useSceneEditorSession({
     };
   }, [clearSelectedModel, resetTransformMode]);
 
-  useSceneUnsavedChangesGuard({
+  const selectPlacedNode = useCallback(
+    (modelId: string, nodePath: string) => {
+      selectMesh(makeMeshId(modelId, nodePath));
+    },
+    [selectMesh],
+  );
+
+  const { unsavedChangesPrompt } = useSceneUnsavedChangesGuard({
     isDirty,
     isSaving,
     onSave: saveCurrentScene,
@@ -240,6 +266,7 @@ export function useSceneEditorSession({
 
   return {
     sceneInfo,
+    unsavedChangesPrompt,
     selectedIds,
     selectedModelId,
     selectedObjectType,
@@ -262,15 +289,18 @@ export function useSceneEditorSession({
     saveCurrentScene,
     renameObject,
     updateSelectedOpacity,
+    updateSelectedLabelHidden,
     updateSelectedTransform,
     updateSelectedTransformVector,
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
-    updateSelectedMeshTransform,
-    updateSelectedMeshTransformVector,
-    updateSelectedMeshOpacity,
-    updateSelectedValueMap,
+    updateSelectedTagMappings,
+    createRigForSelectedModel,
+    assignRigToSelectedModel,
+    updateRig,
+    removeRig,
+    selectPlacedNode,
     removeSelectedModel,
     updateMultiObjectTransforms,
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
@@ -284,6 +314,7 @@ export function useSceneEditorSession({
     setSceneMap: manipulation.setSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
+    setLighting: manipulation.setLighting,
     selectedMap,
     setObjectLocked,
     toggleModel,

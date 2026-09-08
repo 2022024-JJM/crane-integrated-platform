@@ -14,6 +14,15 @@ import {
 const DEV_SCENE_API_PATH = '/__dev/scene';
 
 /**
+ * 가상 태그 저장 미들웨어 경로·파일. 브라우저 쪽 상수는
+ * packages/domain/src/virtual-tag/lib/virtual-tag-storage.ts 에 있다 — 그 슬라이스는
+ * import.meta 를 쓰는 모듈을 끌고 와 Node 설정 파일에서 import 할 수 없어
+ * 문자열을 여기 한 번 더 둔다. 한쪽을 바꾸면 다른 쪽도 함께 바꾼다.
+ */
+const DEV_VIRTUAL_TAGS_API_PATH = '/__dev/virtual-tags';
+const VIRTUAL_TAGS_PUBLIC_FILE = ['simulation', 'virtual-tags.json'];
+
+/**
  * region→파일 표는 도메인 패키지와 공유한다(scene-file-map). 예전에는 이
  * 파일에 표가 복붙돼 있었는데, 한쪽만 고치면 저장과 로드가 다른 파일을
  * 가리키게 되어 씬이 조용히 파괴된다.
@@ -89,7 +98,9 @@ function devSceneSavePlugin(): Plugin {
 
         const sceneFileName = getSceneFileNameByRegionId(regionId);
         if (!sceneFileName) {
-          jsonResponse(res, 400, { message: `Unknown regionId: "${regionId}"` });
+          jsonResponse(res, 400, {
+            message: `Unknown regionId: "${regionId}"`,
+          });
           return;
         }
 
@@ -123,6 +134,141 @@ function devSceneSavePlugin(): Plugin {
           console.error('Failed to save scene file.', error);
           jsonResponse(res, 500, {
             message: 'Failed to save scene file.',
+          });
+        }
+      });
+    },
+  };
+}
+
+/** 가상 태그 세트의 최소 형태 — 객체이고 tags 가 배열. 정규화는 브라우저가 한다. */
+function isVirtualTagSetShaped(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Array.isArray((value as Record<string, unknown>).tags);
+}
+
+function devVirtualTagsSavePlugin(): Plugin {
+  return {
+    name: 'dev-virtual-tags-save-plugin',
+    configureServer(server) {
+      server.middlewares.use(
+        DEV_VIRTUAL_TAGS_API_PATH,
+        async (req, res, next) => {
+          if (req.method !== 'POST') {
+            next();
+            return;
+          }
+
+          const filePath = path.resolve(
+            server.config.root,
+            'public',
+            ...VIRTUAL_TAGS_PUBLIC_FILE,
+          );
+
+          try {
+            const body = JSON.parse(await readRequestBody(req));
+            if (!isVirtualTagSetShaped(body)) {
+              jsonResponse(res, 400, {
+                message:
+                  'Invalid virtual tag payload: expected an object with a "tags" array.',
+              });
+              return;
+            }
+            await fs.mkdir(path.dirname(filePath), { recursive: true });
+            await fs.writeFile(
+              filePath,
+              `${JSON.stringify(body, null, 2)}\n`,
+              'utf8',
+            );
+            jsonResponse(res, 200, body);
+          } catch (error) {
+            console.error('Failed to save virtual tags file.', error);
+            jsonResponse(res, 500, {
+              message: 'Failed to save virtual tags file.',
+            });
+          }
+        },
+      );
+    },
+  };
+}
+
+const DEV_PREVIEW_API_PATH = '/__dev/preview-thumbnail';
+
+// PNG 시그니처(매직 넘버). 잘못된 바디가 public/previews/ 를 오염시키지 않게
+// 최소한 "PNG 파일처럼 생겼는가"는 확인한다 (씬 저장의 isSceneInfoShaped 선례).
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+async function readRequestBodyBuffer(req: NodeJS.ReadableStream) {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of req) {
+    chunks.push(
+      typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk),
+    );
+  }
+
+  return Buffer.concat(chunks);
+}
+
+/**
+ * 모델 미리보기 썸네일 저장 미들웨어 (dev 전용).
+ *
+ * 씬 편집 페이지 모델 탭의 썸네일 생성 패널(PreviewThumbnailGeneratorPanel)이
+ * offscreen 렌더러로 만든 PNG 를 여기로 POST 하면 public/previews/<id>.png
+ * 로 저장된다. 생성물은 커밋해서 배포하고,
+ * 런타임(SceneModelPreview)은 이 파일을 먼저 시도한 뒤 없으면 offscreen
+ * 렌더로 폴백한다.
+ */
+function devPreviewSavePlugin(): Plugin {
+  return {
+    name: 'dev-preview-save-plugin',
+    configureServer(server) {
+      server.middlewares.use(DEV_PREVIEW_API_PATH, async (req, res, next) => {
+        if (req.method !== 'POST' || !req.url) {
+          next();
+          return;
+        }
+
+        const requestUrl = new URL(req.url, 'http://localhost');
+        const id = requestUrl.searchParams.get('id');
+
+        // id 가 곧 파일명이므로 경로 탈출('../', '/')이 불가능한 문자만 허용한다.
+        if (!id || !/^[a-z0-9-]+$/.test(id)) {
+          jsonResponse(res, 400, {
+            message: `Invalid preview id: "${id ?? ''}". Expected /^[a-z0-9-]+$/.`,
+          });
+          return;
+        }
+
+        try {
+          const body = await readRequestBodyBuffer(req);
+
+          if (
+            body.length < PNG_MAGIC.length ||
+            !body.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)
+          ) {
+            jsonResponse(res, 400, {
+              message: 'Invalid payload: expected a PNG binary body.',
+            });
+            return;
+          }
+
+          const previewDir = path.resolve(
+            server.config.root,
+            'public',
+            'previews',
+          );
+          await fs.mkdir(previewDir, { recursive: true });
+          await fs.writeFile(path.join(previewDir, `${id}.png`), body);
+
+          jsonResponse(res, 200, { id, bytes: body.length });
+        } catch (error) {
+          console.error('Failed to save preview thumbnail.', error);
+          jsonResponse(res, 500, {
+            message: 'Failed to save preview thumbnail.',
           });
         }
       });
@@ -183,6 +329,11 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       devSceneSavePlugin(),
+      devVirtualTagsSavePlugin(),
+      devPreviewSavePlugin(),
+      // 위 세 저장 미들웨어가 쓰는 public/ 디렉토리(scenes·simulation·previews)는
+      // 이 플러그인의 DEV_WRITTEN_DIRS 에 등록돼 있어 저장 시 전체 리로드를
+      // 보내지 않는다. 새 저장 미들웨어를 추가하면 그 목록도 함께 갱신한다.
       assetHashManifestPlugin(),
     ],
     build: {

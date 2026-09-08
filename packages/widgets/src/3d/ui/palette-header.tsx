@@ -14,6 +14,7 @@ interface PaletteHeaderProps {
 /**
  * Hierarchy 패널 헤더 — 접기 버튼 + 배치 객체 검색.
  * 저장/내보내기는 씬 전역 동작이라 중앙 상단 툴바가 담당한다.
+ * 높이 h-9 는 그 툴바(EditorHeaderBar)·좌측 팔레트 탭 헤더와 같은 값이다.
  */
 export const PaletteHeader = memo(function PaletteHeader({
   objectSearch = '',
@@ -24,8 +25,8 @@ export const PaletteHeader = memo(function PaletteHeader({
   const controlClassName = 'h-6 rounded-sm';
 
   return (
-    <CardHeader className="border-border border-b border-b-0 px-2.5 py-2">
-      <div className="flex items-center gap-2">
+    <CardHeader className="border-border flex h-9 items-center border-b border-b-0 px-2.5 py-0">
+      <div className="flex w-full items-center gap-2">
         {onCollapse ? (
           <button
             type="button"

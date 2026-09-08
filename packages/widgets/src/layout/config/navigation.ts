@@ -26,6 +26,9 @@ import {
   Cctv,
   FileText,
   DatabaseZap,
+  Boxes,
+  Brush,
+  Waves,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -133,6 +136,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         icon: SquarePen,
       },
       {
+        label: i18n.t('common:nav.virtualTags'),
+        path: `${base}/virtual-tags`,
+        icon: Waves,
+      },
+      {
         label: i18n.t('common:nav.craneStatus'),
         path: `${base}/crane-status`,
         icon: List,
@@ -203,17 +211,85 @@ function getHmi2Group(): NavGroup {
   };
 }
 
-function getIndoorshopGroup(): NavGroup {
+/** Indoorshop.IT — 데이터 게더링 전용 */
+function getIndoorshopItGroup(): NavGroup {
   return {
     title: i18n.t('common:nav.indoorshop'),
     items: [
       {
         label: i18n.t('common:nav.indoorshopGathering'),
-        path: '/indoorshop',
+        path: '/indoorshop/gathering',
         icon: DatabaseZap,
       },
     ],
   };
+}
+
+/** Indoorshop.OT — 통합 대시보드 (게더링은 IT 계정 몫이라 여기 없다) */
+function getIndoorshopOtGroups(): NavGroup[] {
+  return [
+    {
+      title: i18n.t('common:nav.indoorshopOverview'),
+      items: [
+        {
+          label: i18n.t('common:nav.indoorshopDashboard'),
+          path: '/indoorshop',
+          icon: LayoutDashboard,
+        },
+        // 통합실적 — 원본 내비에서 '/'(현황판)와 형제인 전역 화면
+        {
+          label: i18n.t('common:nav.indoorshopPerformance'),
+          path: '/indoorshop/performance',
+          icon: TrendingUp,
+        },
+      ],
+    },
+    {
+      title: i18n.t('common:nav.indoorshopZones'),
+      items: [
+        {
+          label: i18n.t('common:nav.indoorshopFabrication'),
+          path: '/indoorshop/zones/fabrication',
+          icon: Layers,
+        },
+        {
+          label: i18n.t('common:nav.indoorshopAssembly'),
+          path: '/indoorshop/zones/assembly',
+          icon: Boxes,
+        },
+        {
+          label: i18n.t('common:nav.indoorshopOutfitting'),
+          path: '/indoorshop/zones/outfitting',
+          icon: Wrench,
+        },
+        {
+          label: i18n.t('common:nav.indoorshopPainting'),
+          path: '/indoorshop/zones/painting',
+          icon: Brush,
+        },
+      ],
+    },
+    {
+      title: i18n.t('common:nav.indoorshopLogistics'),
+      items: [
+        {
+          label: i18n.t('common:nav.indoorshopYard'),
+          path: '/indoorshop/logistics/yard',
+          icon: Map,
+        },
+      ],
+    },
+    {
+      title: i18n.t('common:nav.indoorshopReference'),
+      items: [
+        {
+          label: i18n.t('common:nav.indoorshopDocs'),
+          path: '/indoorshop/docs',
+          icon: FileText,
+        },
+      ],
+    },
+  ];
 }
 
 function getKeyinGroup(): NavGroup {
@@ -365,6 +441,7 @@ const ALLOWED_SYSTEM_PREFIXES: Record<UserRole, string[]> = {
   hmi: [],
   hmi2: [],
   indoorshop: [],
+  'indoorshop-ot': [],
   keyin: [],
 };
 
@@ -393,9 +470,14 @@ export function getNavigationConfig(
     return [getHmi2Group()].filter((g) => g.items.length > 0);
   }
 
-  // indoorshop: 내업 데이터게더링 그룹만 노출
+  // indoorshop(IT): 데이터 게더링만
   if (role === 'indoorshop') {
-    return [getIndoorshopGroup()].filter((g) => g.items.length > 0);
+    return [getIndoorshopItGroup()].filter((g) => g.items.length > 0);
+  }
+
+  // indoorshop-ot(OT): 내업 통합 대시보드
+  if (role === 'indoorshop-ot') {
+    return getIndoorshopOtGroups().filter((g) => g.items.length > 0);
   }
 
   // keyin: 내업 실적 Key-In 그룹만 노출

@@ -22,11 +22,35 @@ type StatusFilter = 'RUN' | 'FAULT' | 'STOP';
 
 const FILTER_CONFIG: Record<
   StatusFilter,
-  { label: string; color: string; bg: string; activeBg: string; activeText: string }
+  {
+    label: string;
+    color: string;
+    bg: string;
+    activeBg: string;
+    activeText: string;
+  }
 > = {
-  RUN:   { label: 'RUN',   color: 'text-emerald-400', bg: 'bg-emerald-500/10', activeBg: 'bg-emerald-500', activeText: 'text-white' },
-  FAULT: { label: 'FAULT', color: 'text-red-400',     bg: 'bg-red-500/10',     activeBg: 'bg-red-500',     activeText: 'text-white' },
-  STOP:  { label: 'STOP',  color: 'text-yellow-400',  bg: 'bg-yellow-500/10',  activeBg: 'bg-yellow-500',  activeText: 'text-black' },
+  RUN: {
+    label: 'RUN',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    activeBg: 'bg-emerald-500',
+    activeText: 'text-white',
+  },
+  FAULT: {
+    label: 'FAULT',
+    color: 'text-red-400',
+    bg: 'bg-red-500/10',
+    activeBg: 'bg-red-500',
+    activeText: 'text-white',
+  },
+  STOP: {
+    label: 'STOP',
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-500/10',
+    activeBg: 'bg-yellow-500',
+    activeText: 'text-black',
+  },
 };
 
 export function RegionCmmsPage() {
@@ -38,7 +62,9 @@ export function RegionCmmsPage() {
     user?.role ?? 'philly',
   );
 
-  const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(new Set());
+  const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(
+    new Set(),
+  );
   const regionIds = useMemo(() => regions.map((r) => r.id), [regions]);
   const collapseGroup = useSectionCollapseGroup({
     storagePrefix: 'crane-section-collapsed',
@@ -71,8 +97,8 @@ export function RegionCmmsPage() {
   }, [regions]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-3 shrink-0">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="shrink-0 px-6 pt-6 pb-3">
         <h1 className="text-2xl font-bold tracking-tight">
           {t('monitoring-overview:cmms.title')}
         </h1>
@@ -81,8 +107,8 @@ export function RegionCmmsPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 px-6 py-3 border-y border-border bg-background/80 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
+      <div className="border-border bg-background/80 flex shrink-0 items-center gap-3 border-y px-6 py-3 backdrop-blur-sm">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           {(['RUN', 'FAULT', 'STOP'] as StatusFilter[]).map((f) => {
             const cfg = FILTER_CONFIG[f];
             const isActive = statusFilters.has(f);
@@ -92,15 +118,20 @@ export function RegionCmmsPage() {
                 type="button"
                 onClick={() => toggleFilter(f)}
                 className={[
-                  'inline-flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer',
+                  'inline-flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-[11px] font-bold tracking-wider transition-all',
                   isActive
                     ? `${cfg.activeBg} ${cfg.activeText} shadow-sm`
                     : `${cfg.bg} ${cfg.color} hover:brightness-110`,
                 ].join(' ')}
               >
-                <span className="size-1.5 rounded-full" style={{ backgroundColor: 'currentColor' }} />
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: 'currentColor' }}
+                />
                 {cfg.label}
-                <span className={`tabular-nums font-mono ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                <span
+                  className={`font-mono tabular-nums ${isActive ? 'opacity-80' : 'opacity-60'}`}
+                >
                   {counts[f]}
                 </span>
               </button>
@@ -108,12 +139,13 @@ export function RegionCmmsPage() {
           })}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {allCollapsed
-            ? <ChevronsDownUp className="size-3.5 text-muted-foreground" />
-            : <ChevronsUpDown className="size-3.5 text-muted-foreground" />
-          }
-          <span className="text-[11px] text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-2">
+          {allCollapsed ? (
+            <ChevronsDownUp className="text-muted-foreground size-3.5" />
+          ) : (
+            <ChevronsUpDown className="text-muted-foreground size-3.5" />
+          )}
+          <span className="text-muted-foreground text-[11px]">
             {allCollapsed
               ? t('monitoring-overview:cmms.allCollapsed')
               : t('monitoring-overview:cmms.allExpanded')}
@@ -126,7 +158,7 @@ export function RegionCmmsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6 p-6 overflow-auto flex-1">
+      <div className="flex flex-1 flex-col gap-6 overflow-auto p-6">
         {regions.map((region) => (
           <CraneListSection
             key={region.id}

@@ -1,6 +1,10 @@
 import {
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_ELEVATION_MIN,
   createSceneModel,
   createSceneText,
+  type SavedLightingInfo,
   type SavedSceneInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
@@ -24,9 +28,7 @@ interface SceneManipulationDeps {
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
-  selectAll: (
-    entries: Array<{ id: string; type: 'model' | 'text' }>,
-  ) => void;
+  selectAll: (entries: Array<{ id: string; type: 'model' | 'text' }>) => void;
   transformHistoryBaseRef: MutableRefObject<SavedSceneInfo | null>;
 }
 
@@ -160,8 +162,21 @@ export function createSceneManipulationActions({
 
       return {
         ...prev,
+        // transform을 명시 저장한다 — 새 지도는 어떤 경로로 추가되든 항상
+        // 원점/무회전/등배로 시작한다는 보장을 렌더러 기본값에 맡기지 않는다.
+        // sanitize는 유효한 벡터 필드를 그대로 보존하므로 round-trip에도
+        // 값이 유지된다.
         maps: catalogItem
-          ? [{ id: createId(), path: catalogItem.path, locked: false }]
+          ? [
+              {
+                id: createId(),
+                path: catalogItem.path,
+                position: [0, 0, 0] as [number, number, number],
+                rotation: [0, 0, 0] as [number, number, number],
+                scale: [1, 1, 1] as [number, number, number],
+                locked: false,
+              },
+            ]
           : [],
       };
     });
@@ -189,6 +204,69 @@ export function createSceneManipulationActions({
       if (prev.environmentId === environmentId) return prev;
       return { ...prev, environmentId };
     });
+  };
+
+  /**
+   * 조명 설정(그림자·태양 위치) 변경. patch를 기존 값에 merge한 뒤 기본값
+   * 필드는 제거해 정규화한다 — "필드 없음 = 기본값"이라(sanitize와 같은 규칙)
+   * 기본값으로 되돌린 씬이 저장본에 lighting 필드를 남기지 않고, 기본값으로의
+   * no-op 변경이 히스토리에 쌓이지 않는다.
+   *
+   * 슬라이더 드래그는 recordHistory: false로 호출하고 드래그 종료 시
+   * endTransformInteraction으로 1회만 커밋한다(TransformControls와 같은 패턴).
+   */
+  const setLighting = (
+    patch: Partial<SavedLightingInfo>,
+    options?: UpdateSceneOptions,
+  ) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+
+      const merged = { ...prev.lighting, ...patch };
+      const normalized: SavedLightingInfo = {};
+      if (merged.shadows === true) {
+        normalized.shadows = true;
+      }
+      // sanitize와 동일한 랩·클램프 — 여기서 안 맞추면 라이브 상태(az=360)와
+      // 로드본(az=0)이 어긋나 저장 직후에도 dirty로 남는다.
+      if (
+        typeof merged.sunAzimuth === 'number' &&
+        Number.isFinite(merged.sunAzimuth)
+      ) {
+        const sunAzimuth = ((merged.sunAzimuth % 360) + 360) % 360;
+        if (sunAzimuth !== SCENE_SUN_AZIMUTH_DEFAULT) {
+          normalized.sunAzimuth = sunAzimuth;
+        }
+      }
+      if (
+        typeof merged.sunElevation === 'number' &&
+        Number.isFinite(merged.sunElevation)
+      ) {
+        const sunElevation = Math.min(
+          90,
+          Math.max(SCENE_SUN_ELEVATION_MIN, merged.sunElevation),
+        );
+        if (sunElevation !== SCENE_SUN_ELEVATION_DEFAULT) {
+          normalized.sunElevation = sunElevation;
+        }
+      }
+
+      const nextLighting =
+        Object.keys(normalized).length > 0 ? normalized : undefined;
+
+      if (
+        (prev.lighting?.shadows ?? false) ===
+          (nextLighting?.shadows ?? false) &&
+        (prev.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) ===
+          (nextLighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) &&
+        (prev.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT) ===
+          (nextLighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT)
+      ) {
+        return prev;
+      }
+
+      return { ...prev, lighting: nextLighting };
+    }, options);
   };
 
   const selectPlacedText = (id: string) => {
@@ -296,6 +374,7 @@ export function createSceneManipulationActions({
     setSceneMap,
     selectPlacedMap,
     setEnvironmentId,
+    setLighting,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

@@ -42,6 +42,12 @@ interface ModelLabelProps {
    */
   localAnchor: Vector3Tuple;
   alarmSeverity?: AlarmHighlightSeverity | null;
+  /**
+   * 흐림 표시. 모니터링 포커스 중 포커스 밖 모델의 라벨 — 모델 본체가
+   * 투명해지는 것과 맞춰 라벨도 흐리게 하고 포인터 이벤트를 끊는다(클릭·
+   * hover 콜백 미부착). 라벨은 DOM 이라 material 투명도의 영향을 받지 않는다.
+   */
+  dimmed?: boolean;
   onSelect?: (id: string, event?: never) => void;
   onHoverStart?: (id: string, clientX: number, clientY: number) => void;
   onHoverMove?: (id: string, clientX: number, clientY: number) => void;
@@ -53,6 +59,7 @@ export function ModelLabel({
   equipName,
   localAnchor,
   alarmSeverity = null,
+  dimmed = false,
   onSelect,
   onHoverStart,
   onHoverMove,
@@ -114,26 +121,42 @@ export function ModelLabel({
       <Html center zIndexRange={[5, 0]}>
         <div
           ref={divRef}
-          className={`cursor-pointer rounded px-1 py-px font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/60 text-white'}`}
+          className={`rounded px-1 py-px font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/60 text-white'} ${dimmed ? 'pointer-events-none opacity-30' : 'cursor-pointer'}`}
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
-          onPointerEnter={(event) => {
-            event.stopPropagation();
-            onHoverStart?.(id, event.clientX, event.clientY);
-          }}
-          onPointerMove={(event) => {
-            event.stopPropagation();
-            onHoverMove?.(id, event.clientX, event.clientY);
-          }}
-          onPointerLeave={(event) => {
-            event.stopPropagation();
-            onHoverEnd?.(id);
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect?.(id);
-          }}
+          onPointerEnter={
+            dimmed
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onHoverStart?.(id, event.clientX, event.clientY);
+                }
+          }
+          onPointerMove={
+            dimmed
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onHoverMove?.(id, event.clientX, event.clientY);
+                }
+          }
+          onPointerLeave={
+            dimmed
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onHoverEnd?.(id);
+                }
+          }
+          onClick={
+            dimmed
+              ? undefined
+              : (event) => {
+                  event.stopPropagation();
+                  onSelect?.(id);
+                }
+          }
         >
           {equipName}
         </div>

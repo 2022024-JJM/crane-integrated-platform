@@ -1,14 +1,24 @@
 import { useGLTF } from '@react-three/drei';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box3, BufferGeometry, Color, Material, Mesh, Object3D, Vector3 } from 'three';
+import {
+  Box3,
+  BufferGeometry,
+  Color,
+  Material,
+  Mesh,
+  Object3D,
+  Vector3,
+} from 'three';
 import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import '../lib/bvh-setup';
-import { withBaseUrl } from '../lib/asset-url';
+import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
 import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
+import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
+import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
@@ -25,6 +35,21 @@ interface ModelMeshProps {
   url: string;
   opacity?: number;
   alarmSeverity?: AlarmHighlightSeverity | null;
+  /**
+   * 수면 아래(y < SEA_LEVEL_Y)를 깊이 안개로 흐리게 한다(lib/sea-submersion.ts).
+   * 바다가 있는 씬의 모든 모델에 켠다 — 물 위에 있는 모델엔 시각적 변화가
+   * 없지만 slow path(머티리얼 clone)를 타게 된다. 지도는 켜지 않는다(드라이독
+   * 등 수면 아래 지형에 안개가 끼면 안 된다).
+   */
+  seaSubmersion?: boolean;
+  /**
+   * 그림자를 드리울지. 기본 true. 지도도 드리운다 — GLB에 건물이 함께
+   * 구워져 있어 끄면 건물 그림자가 통째로 사라진다(끄는 건 depth pass
+   * 비용이 실측으로 문제일 때만). 플래그는 Canvas `shadows`가 꺼져
+   * 있으면 무비용이라 항상 설정해 두고, On/Off 토글은 renderer 레벨
+   * (Canvas shadows + 조명 castShadow)이 담당한다 — scene-render-preset.tsx.
+   */
+  castShadow?: boolean;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -103,7 +128,10 @@ export interface ClonedModel {
  * 인스턴스당 clone·computeBoundingSphere가 1회만 일어나게 하고, SelectionBox·
  * 라벨 앵커가 실제 렌더되는 트리와 같은 객체를 측정하도록 보장한다.
  */
-export function useClonedModel(url: string, injected?: ClonedModel): ClonedModel {
+export function useClonedModel(
+  url: string,
+  injected?: ClonedModel,
+): ClonedModel {
   const { scene } = useGLTF(withBaseUrl(url));
 
   return useMemo(() => {
@@ -124,6 +152,9 @@ export function useClonedModel(url: string, injected?: ClonedModel): ClonedModel
         scale: [child.scale.x, child.scale.y, child.scale.z],
         visible: child.visible,
       });
+      // 리그 드라이버의 rest pose 도 여기서 잡는다 — clone 직후라 사용자 편집·
+      // 구동이 섞이지 않은 GLTF 원본이다(rest-pose-cache.ts 참고).
+      seedRestPose(child);
 
       if (!(child instanceof Mesh)) {
         return;
@@ -284,6 +315,8 @@ export function ModelMesh({
   url,
   opacity = 1,
   alarmSeverity = null,
+  seaSubmersion = false,
+  castShadow = true,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -298,7 +331,10 @@ export function ModelMesh({
   onHoverEnd,
   children,
 }: ModelMeshProps) {
-  const { clone, meshBindings, originalTransforms } = useClonedModel(url, clonedModel);
+  const { clone, meshBindings, originalTransforms } = useClonedModel(
+    url,
+    clonedModel,
+  );
   const modelRef = useRef<Object3D | null>(null);
   // 이전 effect에서 override가 적용된 적이 있는 target들. 다음 effect 실행 시
   // 모두 originalTransforms로 reset한 뒤 현재 override를 다시 적용한다.
@@ -357,10 +393,14 @@ export function ModelMesh({
   );
 
   useEffect(() => {
-    // Fast path: opacity 100% + 알람 없음 → mesh.material을 GLTF 원본
-    // reference 그대로 두어 같은 GLTF의 모든 instance가 material을 공유한다.
-    // 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
-    const needsMutation = opacity < 1 || alarmSeverity !== null;
+    // Fast path: opacity 100% + 알람 없음 + 잠김 없음 → mesh.material을
+    // GLTF 원본 reference 그대로 두어 같은 GLTF의 모든 instance가 material을
+    // 공유한다. 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
+    // seaSubmersion이 켜진 바다 씬에서는 모든 모델이 slow path다 — clone은
+    // 텍스처를 공유하고 프로그램은 customProgramCacheKey로 재사용되므로 비용은
+    // 머티리얼 객체 수 정도다.
+    const needsMutation =
+      opacity < 1 || alarmSeverity !== null || seaSubmersion;
 
     if (!needsMutation) {
       for (const binding of meshBindings) {
@@ -394,10 +434,28 @@ export function ModelMesh({
           }
         }
 
+        if (seaSubmersion) {
+          applySeaSubmersion(mat);
+        } else {
+          clearSeaSubmersion(mat);
+        }
+
         mat.needsUpdate = true;
       }
     }
-  }, [meshBindings, opacity, alarmSeverity]);
+  }, [meshBindings, opacity, alarmSeverity, seaSubmersion]);
+
+  // 그림자 플래그 — clone은 인스턴스 전용 트리이므로 여기서 걸어도 다른
+  // 인스턴스에 새지 않는다. useClonedModel의 useMemo에 넣지 않는 이유:
+  // injected clone 재사용 경로에서는 그 useMemo가 돌지 않고, castShadow
+  // prop 변경에도 반응해야 하기 때문.
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      child.castShadow = castShadow;
+      child.receiveShadow = true;
+    });
+  }, [clone, castShadow]);
 
   // 인스턴스 언마운트 시 lazy clone된 material을 dispose 한다.
   useEffect(() => {
@@ -436,11 +494,7 @@ export function ModelMesh({
         original.rotation[1],
         original.rotation[2],
       );
-      target.scale.set(
-        original.scale[0],
-        original.scale[1],
-        original.scale[2],
-      );
+      target.scale.set(original.scale[0], original.scale[1], original.scale[2]);
       target.visible = original.visible;
     }
     touched.clear();
@@ -538,8 +592,8 @@ export function ModelMesh({
         modelObjectRegistry.register(id, ready);
         registeredObject = ready;
 
-        // 자식 mesh를 모두 registry에 등록한다. 더블클릭 drill-in 후
-        // TransformControls가 곧바로 mesh를 잡을 수 있도록 mount 시 1회 traverse.
+        // 자식 mesh를 모두 registry에 등록한다. 계층 목록·더블클릭 drill-in 으로
+        // 고른 노드의 바운딩 박스 대상과 F키 카메라 포커스가 여기서 찾는다.
         for (const binding of meshBindings) {
           const meshPath = getMeshPath(clone, binding.mesh);
           if (meshPath === null) continue;
@@ -547,6 +601,19 @@ export function ModelMesh({
           modelObjectRegistry.register(meshId, binding.mesh);
           registeredMeshIds.push(meshId);
         }
+        // Mesh 가 아닌 중간 노드(Group/Empty/Bone)도 같은 id 형식으로 등록한다.
+        // 리깅 관절은 대개 피벗에 놓인 Empty 라, 계층 목록에서 골랐을 때 박스를
+        // 그리려면 registry 에서 찾을 수 있어야 한다. 노드 선택은 읽기 전용이라
+        // 기즈모는 붙지 않는다. forEachRoot 는 meshId 를 제외하므로 레이캐스트·
+        // 카메라 핏에는 섞이지 않는다.
+        clone.traverse((child) => {
+          if (child === clone || child instanceof Mesh) return;
+          const nodePath = getMeshPath(clone, child);
+          if (nodePath === null) return;
+          const nodeId = makeMeshId(id, nodePath);
+          modelObjectRegistry.register(nodeId, child);
+          registeredMeshIds.push(nodeId);
+        });
       }
 
       onObjectReadyRef.current?.(id, ready);
@@ -570,7 +637,7 @@ export function ModelMesh({
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
   // 없으면 기본 raycast로 폴백).
   //
-  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 38개에 42만
+  // 지도도 빌드 대상이다 — phillyshipyard 지도는 프리미티브 41개에 43만
   // 삼각형이라 빌드는 싸고(유휴 시간 분산), 없으면 포인터 이동마다 브루트
   // 포스 순회로 프레임이 밀린다. bbox 존 분류만 하는 자산 뷰어처럼 정밀
   // raycast가 필요 없는 곳만 enableRaycastBvh=false로 비용을 아낀다.

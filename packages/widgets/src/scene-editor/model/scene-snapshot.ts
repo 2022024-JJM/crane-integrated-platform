@@ -1,13 +1,21 @@
 import type {
+  RigConstraint,
+  RigDefinition,
+  RigJoint,
   SavedCameraInfo,
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
   SavedSceneInfo,
   SavedTextInfo,
-  ValueMapItem,
+  TagMapping,
 } from '@crane/domain/3d';
-import { sanitizeSceneInfo } from '@crane/domain/3d';
+import { getTagMappingTargetKey } from '@crane/domain/3d';
+import {
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  sanitizeSceneInfo,
+} from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
@@ -30,15 +38,30 @@ function isVector3TupleEqual(a: Vector3Tuple, b: Vector3Tuple): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
-function isValueMapListEqual(a: ValueMapItem[], b: ValueMapItem[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
+/**
+ * 순서 무관 비교: id 기준 lookup. scale/offset 은 기본값으로 정규화. 대상은
+ * 타깃 키(노드·채널·축 | 관절)로 비교해 객체 참조와 무관하게 판정한다.
+ */
+function isTagMappingListEqual(
+  a: TagMapping[] | undefined,
+  b: TagMapping[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  const bMap = new Map((b ?? []).map((m) => [m.id, m]));
+  for (const am of a ?? []) {
+    const bm = bMap.get(am.id);
+    if (!bm) return false;
     if (
-      a[i].type !== b[i].type ||
-      a[i].key !== b[i].key ||
-      (a[i].scale ?? 1) !== (b[i].scale ?? 1) ||
-      (a[i].offset ?? 0) !== (b[i].offset ?? 0)
-    ) return false;
+      am.tagKey !== bm.tagKey ||
+      getTagMappingTargetKey(am.target) !== getTagMappingTargetKey(bm.target) ||
+      (am.scale ?? 1) !== (bm.scale ?? 1) ||
+      (am.offset ?? 0) !== (bm.offset ?? 0)
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -119,6 +142,65 @@ function isMeshOverrideListEqual(
   return true;
 }
 
+function isRigJointEqual(a: RigJoint, b: RigJoint): boolean {
+  return (
+    a.id === b.id &&
+    a.label === b.label &&
+    a.node === b.node &&
+    a.type === b.type &&
+    a.axis === b.axis &&
+    a.min === b.min &&
+    a.max === b.max &&
+    (a.sign ?? 1) === (b.sign ?? 1)
+  );
+}
+
+function isRigConstraintEqual(a: RigConstraint, b: RigConstraint): boolean {
+  if (a.type !== b.type || a.id !== b.id || a.label !== b.label) return false;
+  // 현재 union 은 linear 뿐이다. 타입이 늘면 여기서 분기한다.
+  return (
+    a.input === b.input &&
+    a.output === b.output &&
+    a.factor === b.factor &&
+    (a.offset ?? 0) === (b.offset ?? 0)
+  );
+}
+
+/**
+ * 리그 정의는 순서까지 비교한다 — 목록 UI 순서가 곧 저장 순서라 재정렬도
+ * 편집이다. 관절·구속조건 배열도 마찬가지.
+ */
+function isRigDefinitionListEqual(
+  a: RigDefinition[] | undefined,
+  b: RigDefinition[] | undefined,
+): boolean {
+  const aList = a ?? [];
+  const bList = b ?? [];
+  if (aList.length !== bList.length) return false;
+  for (let i = 0; i < aList.length; i++) {
+    const ar = aList[i];
+    const br = bList[i];
+    if (
+      ar.id !== br.id ||
+      ar.name !== br.name ||
+      ar.modelPath !== br.modelPath ||
+      ar.joints.length !== br.joints.length ||
+      ar.constraints.length !== br.constraints.length
+    ) {
+      return false;
+    }
+    for (let j = 0; j < ar.joints.length; j++) {
+      if (!isRigJointEqual(ar.joints[j], br.joints[j])) return false;
+    }
+    for (let j = 0; j < ar.constraints.length; j++) {
+      if (!isRigConstraintEqual(ar.constraints[j], br.constraints[j])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
   return (
     a.id === b.id &&
@@ -127,10 +209,12 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     a.path === b.path &&
     a.opacity === b.opacity &&
     (a.locked ?? false) === (b.locked ?? false) &&
+    (a.labelHidden ?? false) === (b.labelHidden ?? false) &&
+    a.rigId === b.rigId &&
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
-    isValueMapListEqual(a.valueMapList, b.valueMapList) &&
+    isTagMappingListEqual(a.tagMappings, b.tagMappings) &&
     isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides)
   );
 }
@@ -144,8 +228,28 @@ export function isSceneInfoEqual(
   // 배경 선택도 저장 대상이라 dirty 판정에 포함한다. undefined(미지정)와
   // null(배경 없음)은 다른 상태이므로 === 로 구분한다.
   if (a.environmentId !== b.environmentId) return false;
+  // 조명은 기본값으로 정규화해 비교한다 — 필드 없음과 명시적 기본값(그림자
+  // Off, 태양 기본 위치)은 같은 상태다(sanitize가 기본값 필드를 생략하는
+  // 규칙과 짝).
+  if ((a.lighting?.shadows ?? false) !== (b.lighting?.shadows ?? false)) {
+    return false;
+  }
+  if (
+    (a.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) !==
+    (b.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT)
+  ) {
+    return false;
+  }
+  if (
+    (a.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT) !==
+    (b.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT)
+  ) {
+    return false;
+  }
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
+  // 리그 정의 편집이 dirty/undo 에 잡혀야 저장된다.
+  if (!isRigDefinitionListEqual(a.rigs, b.rigs)) return false;
   if (a.models.length !== b.models.length) return false;
   for (let i = 0; i < a.models.length; i++) {
     if (!isModelInfoEqual(a.models[i], b.models[i])) return false;

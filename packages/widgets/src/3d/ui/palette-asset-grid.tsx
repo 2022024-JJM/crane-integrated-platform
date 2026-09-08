@@ -145,6 +145,7 @@ export const PaletteAssetGrid = memo(function PaletteAssetGrid({
                     path={item.path}
                     label={item.label}
                     preview={item.preview}
+                    previewAssetId={item.id}
                     overlayLabel={item.label}
                     overlayHint={t('monitoring:palette.dragToPlace')}
                     showOverlay={isDragging}

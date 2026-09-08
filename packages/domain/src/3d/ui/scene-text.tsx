@@ -1,9 +1,13 @@
-import { Text } from '@react-three/drei';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { Line, Text } from '@react-three/drei';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
+import {
+  SELECTION_LINE_COLOR,
+  SELECTION_LINE_WIDTH,
+} from '../lib/selection-style';
 
 interface SceneTextProps {
   id: string;
@@ -17,6 +21,8 @@ interface SceneTextProps {
   onObjectReady?: (id: string, object: Group | null) => void;
 }
 
+const noRaycast = () => null;
+
 function TextSelectionOutline({
   width,
   height,
@@ -24,34 +30,27 @@ function TextSelectionOutline({
   width: number;
   height: number;
 }) {
-  const hw = width / 2 + 0.3;
-  const hh = height / 2 + 0.3;
-
-  const positions = new Float32Array([
-    -hw,
-    -hh,
-    0,
-    hw,
-    -hh,
-    0,
-    hw,
-    hh,
-    0,
-    -hw,
-    hh,
-    0,
-    -hw,
-    -hh,
-    0,
-  ]);
+  // drei <Line>은 points 참조가 바뀌면 geometry를 다시 만들므로 memo.
+  const points = useMemo<Vector3Tuple[]>(() => {
+    const hw = width / 2 + 0.3;
+    const hh = height / 2 + 0.3;
+    return [
+      [-hw, -hh, 0],
+      [hw, -hh, 0],
+      [hw, hh, 0],
+      [-hw, hh, 0],
+      [-hw, -hh, 0],
+    ];
+  }, [width, height]);
 
   return (
-    <line>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <lineBasicMaterial color="#ffff00" depthTest={false} />
-    </line>
+    <Line
+      points={points}
+      color={SELECTION_LINE_COLOR}
+      lineWidth={SELECTION_LINE_WIDTH}
+      depthTest={false}
+      raycast={noRaycast}
+    />
   );
 }
 
@@ -72,19 +71,28 @@ export const SceneText = memo(function SceneText({
     height: 1,
   });
 
+  // ModelMesh와 같은 ref 패턴 — onObjectReady를 effect 의존성에 넣으면 선택
+  // 변경으로 콜백 참조가 바뀔 때마다 effect가 재발화하고, 그 cleanup이 이전
+  // 렌더의 클로저(이 텍스트가 primary였던 시점)로 `(id, null)`을 쏘아 방금
+  // 선택된 다른 객체의 TransformControls 타깃을 지워 버린다.
+  const onObjectReadyRef = useRef(onObjectReady);
+  useEffect(() => {
+    onObjectReadyRef.current = onObjectReady;
+  }, [onObjectReady]);
+
   useEffect(() => {
     const group = groupRef.current;
     if (group) {
       modelObjectRegistry.register(id, group);
     }
-    onObjectReady?.(id, group);
+    onObjectReadyRef.current?.(id, group);
     return () => {
       if (group) {
         modelObjectRegistry.unregister(id, group);
       }
-      onObjectReady?.(id, null);
+      onObjectReadyRef.current?.(id, null);
     };
-  }, [id, onObjectReady]);
+  }, [id]);
 
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {

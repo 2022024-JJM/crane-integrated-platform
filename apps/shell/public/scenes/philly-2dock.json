@@ -3,10 +3,15 @@
     {
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
       "path": "/maps/phillyshipyard.glb",
-      "locked": false,
+      "locked": true,
       "position": [
         0,
         0,
+        0
+      ],
+      "rotation": [
+        0,
+        354.5,
         0
       ],
       "scale": [
@@ -23,13 +28,13 @@
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
-        -2194.264,
-        0,
-        1853.545
+        -644.407,
+        4.25,
+        93.25
       ],
       "rotation": [
         0,
-        5.909,
+        0,
         0
       ],
       "scale": [
@@ -37,7 +42,38 @@
         1,
         1
       ],
-      "valueMapList": []
+      "tagMappings": [
+        {
+          "id": "map-ccd940e8",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "GC_04:gantry_position"
+        },
+        {
+          "id": "map-a890d17b",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[1]Goliath_Crane_Trolley_01",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_04:trolley_position"
+        },
+        {
+          "id": "map-37300718",
+          "target": {
+            "kind": "node",
+            "node": "[0]Goliath/[2]Goliath_Crane_Trolley_02",
+            "channel": "position",
+            "axis": "x"
+          },
+          "tagKey": "GC_04:trolley_position_2"
+        }
+      ]
     },
     {
       "id": "id-mt0riz7x-bxncy0uk",
@@ -45,13 +81,13 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -2204.649,
-        0.112,
-        1884.994
+        -637.485,
+        4.5,
+        153.75
       ],
       "rotation": [
         0,
-        3.368,
+        0,
         0
       ],
       "scale": [
@@ -59,7 +95,37 @@
         1,
         1
       ],
-      "valueMapList": []
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "tagMappings": [
+        {
+          "id": "map-60d79c04",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "LLC_002:gantry_position"
+        },
+        {
+          "id": "map-d6890e5a",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-8d326e4d"
+          },
+          "tagKey": "LLC_002:luff_angle"
+        },
+        {
+          "id": "map-d5c8438e",
+          "target": {
+            "kind": "node",
+            "node": "[0]LLC/[0]Base/[0]Link_01",
+            "channel": "rotation",
+            "axis": "y"
+          },
+          "tagKey": "LLC_002:slew_angle"
+        }
+      ]
     },
     {
       "id": "id-mt0rka4j-lfz5p217",
@@ -67,35 +133,197 @@
       "path": "/models/LLC_002.glb",
       "opacity": 1,
       "position": [
-        -2219.59,
-        0.112,
-        1929.729
+        -696.402,
+        4.5,
+        208.5
       ],
       "rotation": [
-        -180,
-        -7.836,
-        -180
+        180,
+        0,
+        180
       ],
       "scale": [
         1,
         1,
         1
       ],
-      "valueMapList": []
+      "rigId": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "tagMappings": [
+        {
+          "id": "map-95a058bf",
+          "target": {
+            "kind": "node",
+            "node": "",
+            "channel": "position",
+            "axis": "z"
+          },
+          "tagKey": "LLC_002:gantry_position_2"
+        },
+        {
+          "id": "map-95881074",
+          "target": {
+            "kind": "joint",
+            "jointId": "joint-8d326e4d"
+          },
+          "tagKey": "LLC_002:luff_angle"
+        },
+        {
+          "id": "map-60bd1bd8",
+          "target": {
+            "kind": "node",
+            "node": "[0]LLC/[0]Base/[0]Link_01",
+            "channel": "rotation",
+            "axis": "y"
+          },
+          "tagKey": "LLC_002:slew_angle"
+        }
+      ]
+    },
+    {
+      "id": "beccf605-d547-4854-88e3-fc152f999a34",
+      "equipName": "Block-001",
+      "path": "/models/Block_001.glb",
+      "opacity": 1,
+      "position": [
+        -665.612,
+        6,
+        156.5
+      ],
+      "rotation": [
+        180,
+        0,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "labelHidden": true
+    },
+    {
+      "id": "94c0e51c-40fb-4859-8818-efdd24f6ac77",
+      "equipName": "Block-002",
+      "path": "/models/Block_002.glb",
+      "opacity": 1,
+      "position": [
+        -606.772,
+        13.5,
+        207.188
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.002
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "labelHidden": true
+    },
+    {
+      "id": "id-mtmb9z6j-83ld4mwc",
+      "equipName": "LNGC 174K",
+      "path": "/models/hanwha-ocean-lngc-174k.glb",
+      "opacity": 1,
+      "position": [
+        -797.797,
+        0.001,
+        140.547
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "texts": [],
   "camera": {
     "position": [
-      -2160.9983295908755,
-      132.44540762052893,
-      1975.78447849172
+      -564.4571079742583,
+      130.44897268117697,
+      240.11390698822495
     ],
     "target": [
-      -2286.432318801986,
-      -235.5157096467283,
-      1705.748451075521
+      -763.9320681111058,
+      -27.959682843452327,
+      4.9921504673040715
     ]
   },
-  "environmentId": "overcast-atlantic"
+  "rigs": [
+    {
+      "id": "rig-2b9f7a6d-ffec-4da2-849e-c7ec1375a6c9",
+      "name": "LLC-002",
+      "modelPath": "/models/LLC_002.glb",
+      "joints": [
+        {
+          "id": "joint-8d326e4d",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[0]Lower_Link_01",
+          "type": "hinge",
+          "axis": "x",
+          "label": "luff",
+          "min": -32,
+          "max": 11.75
+        },
+        {
+          "id": "joint-a08bdea8",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[1]Upper_Link_01",
+          "type": "hinge",
+          "axis": "x",
+          "label": "upper1"
+        },
+        {
+          "id": "joint-b3240608",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[1]Upper_Link_01/[0]Upper_Link_02",
+          "type": "hinge",
+          "axis": "x",
+          "label": "upper2"
+        },
+        {
+          "id": "joint-bdd69fb9",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[0]Lower_Link_01/[0]Bone",
+          "type": "hinge",
+          "axis": "x",
+          "label": "bone"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "linear",
+          "id": "link-cd0f62c1",
+          "input": "joint-8d326e4d",
+          "output": "joint-a08bdea8",
+          "factor": 1.14
+        },
+        {
+          "type": "linear",
+          "id": "link-7a2a0b38",
+          "input": "joint-8d326e4d",
+          "output": "joint-b3240608",
+          "factor": -2.4
+        },
+        {
+          "type": "linear",
+          "id": "link-a62a5de9",
+          "input": "joint-8d326e4d",
+          "output": "joint-bdd69fb9",
+          "factor": -1.5
+        }
+      ]
+    }
+  ],
+  "environmentId": "overcast-atlantic",
+  "lighting": {
+    "shadows": true,
+    "sunAzimuth": 138.4220985145796,
+    "sunElevation": 34.46202509353292
+  }
 }

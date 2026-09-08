@@ -52,10 +52,13 @@ export interface CraneZoneConfig {
 }
 
 // ─── 골리앗/갠트리: body/trolley 분리 파트 + body 서브 존 ──────────────────
-// goliath_crane.glb(통짜)를 지오메트리 연결 요소 기준으로 분리한 파트 파일:
+// goliath_crane.glb(통짜)를 원본 노드 이름 기준으로 분리한 파트 파일:
 //   - goliath_crane_body.glb    거더·다리·주행부 (트롤리 제외 전체)
-//   - goliath_crane_trolley.glb 거더 상부 트롤리 어셈블리
+//   - goliath_crane_trolley.glb 트롤리 어셈블리 + 로프·후크
 // 두 파일 모두 원본 좌표계를 유지하므로 position [0,0,0]으로 정확히 조립된다.
+// ⚠️ 파트 파일은 scripts/split-goliath-parts.mjs 로만 생성한다. 손으로 자르면
+// 원본과 어긋나 3D 탭에서만 형상이 달라진다 — 종전 파트는 언베이크 이전
+// 모델에서 잘려 로프·후크(8,256 삼각형)가 통째로 빠져 있었다.
 // 트롤리는 실제 메시 단위 hover/클릭/하이라이트, 나머지 구역은 body 바운딩박스
 // 기준 정규화 영역(subRegionsOf)으로 분류. 스케일 0.1은 실측 미터 모델
 // (스팬 ~130m)을 뷰어 그리드에 맞춘 값 (CRANE_TYPE_MODEL.goliath와 동일).

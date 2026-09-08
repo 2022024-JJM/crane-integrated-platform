@@ -1,0 +1,1438 @@
+/**
+ * 통합실적 데이터 접근 파사드 — 이 화면의 **유일한 데이터 seam**.
+ *
+ * 실연동 시 「통합 실적 조회 Rest Server」(IPD-IF01) 호출로 이 함수 몸통만 교체하며,
+ * 호출부(컴포넌트)는 수정하지 않는다. 대시보드는 Hot DB·레거시 원천에 직접 붙지
+ * 않는다 (IPD 정의서 §2 — Rest Server 단일 진입점).
+ *
+ * mock 규칙 (실연동 전):
+ *  - 값은 전부 **결정론적 해시**로 생성한다 (레포 관례 — 렌더링마다 흔들리지 않는다).
+ *  - 부재 모집단을 절점 모델(FabPart)로 만들고 IPD-S04 상태 규칙 — 선행 단계 완료 후
+ *    진행, `미대상` 분모 제외 — 을 생성 단계에서 실제로 지킨다. 화면 계약의 일부다.
+ *  - 원천에 시각이 없는 절점은 **일자만** 낸다 — 정본 10절점에서 시각이 있는 것은
+ *    S4(강재 불출)·S7(절단) 둘뿐이다 (L3 판정. 표기 수준의 계약).
+ *  - 블록 재공 목록의 범위 규칙(월간계획 4주 창 vs 전체 재공)은 ⚠️ 미확정 — mock 은
+ *    호선당 고정 목록으로 대신한다.
+ */
+import {
+  FAB_STAGES,
+  type AsmEventKind,
+  type AssemblySummary,
+  type AssyMatch,
+  type AssyTier,
+  type AssyWo,
+  type BlockOption,
+  type BlockSummary,
+  type CollectionEvent,
+  ASSY_WO_ORDER,
+  type EventDetail,
+  type EventInstant,
+  type FabPart,
+  type FabStageId,
+  type MgmtNoType,
+  PAINTING_STEPS,
+  type PaintingProgressPoint,
+  type PaintingProgressRow,
+  type PaintingStepPlan,
+  type PaintingSummary,
+  type PntEventKind,
+  type ProcessFilter,
+  type StageStatus,
+  type Vessel,
+} from '../model/types'
+import {
+  PAINTING_FACTORIES,
+  type AssyScanFact,
+  assyTreeOf,
+  blockOptionsOfVessel,
+  findBlock,
+  listVessels,
+  surfaceMatchPctOf,
+} from '../../../entities/vessel'
+import { PAINTING_STEP_MAPPING } from './paintingStepMapping'
+import { generateDailyProgress, latestBatchDate, latestProgressOf } from './dailyProgress'
+import { daysBetween, todayString, type DateWindow } from '../lib/baseDate'
+import { clampEventsToWindow } from '../lib/eventWindow'
+import {
+  aggregateStages,
+  buildPaintingSteps,
+  paintingStripNodes,
+  rollupAssyWoNodes,
+  countPaintingConfirmed,
+  countPaintingDone,
+  deriveNodeProgress,
+  summarizeAssemblyBlock,
+  type AssyRaw,
+} from '../model/aggregate'
+
+/** 문자열 기반 결정적 의사난수 (조립 assemblyApi 와 같은 문법) */
+function hashOf(text: string): number {
+  let h = 0
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+/* ── 기준일 되감기 (W7-2) ────────────────────────────────────────
+ *
+ * 이 더미의 절점·ASSY·스텝에는 **개별 통과 일자가 없다.** 원천(가공 부재·조립 판별·도장
+ * 계획 행)에 그 일자가 없거나 아직 확정되지 않았기 때문이다. 그래서 과거 기준일을 표현할
+ * 방법은 하나뿐이다 — '그날엔 여기까지였다'.
+ *
+ * 단위마다 절점 하나를 지나는 데 걸리는 날을 결정론으로 정해 두고, 기준일이 며칠 전인지로
+ * 나눠 그만큼 수위를 내린다. 세 권역이 **같은 함수를 쓰는 것이 중요하다** — 한쪽만 되감으면
+ * "가공 0% 인데 조립 완료" 같은, 어느 날에도 있을 수 없는 화면이 나온다.
+ *
+ * 성질:
+ *  · 기준일이 오늘이면 되감기 0 — 지금까지의 값과 완전히 같다(기존 호출부 무변경).
+ *  · 과거로 갈수록 단조 감소 — 어제가 오늘보다 앞서는 일이 없다.
+ *  · 미래 기준일(음수)은 0 으로 접는다(화면이 이미 막지만 여기서도 접는다).
+ */
+function rewindDaysOf(baseDate: string): number {
+  return Math.max(0, daysBetween(baseDate, todayString()))
+}
+
+/** 오늘 수위 → 기준일 수위. `daysPerStep` 은 단위 하나가 절점 하나를 지나는 데 걸리는 날 */
+function rewoundLevel(levelToday: number, daysBack: number, daysPerStep: number): number {
+  if (daysBack <= 0) return levelToday
+  return Math.max(0, levelToday - Math.floor(daysBack / Math.max(1, daysPerStep)))
+}
+
+/* ── 호선·블록 목록 ─────────────────────────────────────────── */
+
+/**
+ * 호선·블록은 **여기서 만들지 않는다** — 대시보드·조립·의장과 같은 로스터
+ * (`shared/entities/vessel`)를 읽는다. 화면마다 제 호선 목록을 두던 시절에는 통합실적의
+ * 블록이 다른 화면 어디에도 없어서, 화면을 옮기면 조회 조건을 처음부터 다시 골라야 했다.
+ * 공장 라벨도 로스터가 지도 공장명 체계로 들고 있으므로 `?factory=`·`?shop=` 딥링크에
+ * 그대로 실린다.
+ */
+export async function fetchVessels(): Promise<Vessel[]> {
+  return listVessels()
+}
+
+export async function fetchBlocks(projNo: string): Promise<BlockOption[]> {
+  return blockOptionsOfVessel(projNo)
+}
+
+/* ── 부재 모집단 (절점 모델) ────────────────────────────────── */
+
+/**
+ * 블록 1개의 부재 모집단을 결정론적으로 생성한다.
+ *
+ * 부재마다 진행 수위 L(적용 단계 기준 완료 개수)을 두고, 적용 단계 순서로
+ * L 앞은 완료 / L 자리는 진행중·미도래 / L 뒤는 미도래로 채운다 — 선행 단계
+ * 미완료 부재가 후행 단계에 착수하는 일이 구조적으로 없다(IPD-S04 규칙).
+ * `미대상`은 일부 부재의 S8(사상 불요)·S9(모둠 없이 직송)에만 발생시킨다.
+ *
+ * **기준일을 과거로 돌리면 수위도 그만큼 되돌아간다** (W7-2). 가공 부재에는 절점 일자가
+ * 없어서(원천에 없다) 여기서 만들 수 있는 시간 표현은 '그날엔 여기까지였다' 하나뿐이다.
+ * 부재마다 절점 하나를 지나는 데 걸리는 날(2~4일)을 결정론으로 정해 두고, 기준일이
+ * 며칠 전인지로 나눠 그만큼 수위를 내린다. 성질 셋:
+ *  · 기준일이 오늘이면 **되돌림이 0** — 지금까지의 값과 완전히 같다(기존 호출부 무변경).
+ *  · 과거로 갈수록 진척이 **단조 감소** — 어제가 오늘보다 앞서는 일이 없다.
+ *  · 미래 기준일은 오지 않는다(화면이 막는다). 와도 되돌림 0 으로 접는다.
+ */
+export function generateParts(
+  projNo: string,
+  blockNo: string,
+  baseDate: string = todayString()
+): FabPart[] {
+  const seed = `${projNo}-${blockNo}`
+  const count = 34 + (hashOf(`${seed}-n`) % 27) // 34~60건
+  const daysBack = rewindDaysOf(baseDate)
+  /* 이 블록이 기준일에 조립을 끝냈다면 가공은 그 전에 끝나 있었다 — 공정 순서 게이트 */
+  const forced = fabricationForcedAt(projNo, blockNo, baseDate)
+  const parts: FabPart[] = []
+  for (let i = 0; i < count; i++) {
+    const pid = `${blockNo}-P${String(i + 1).padStart(3, '0')}`
+    const h = hashOf(`${seed}-${pid}`)
+    const weightKg = 280 + (h % 2300)
+    const excluded: Partial<Record<FabStageId, boolean>> = {
+      S8: h % 11 === 3, // 사상 불요 부재
+      S9: h % 13 === 5, // 모둠에 묶지 않고 직송되는 부재
+    }
+    const applicable = FAB_STAGES.filter((s) => !excluded[s])
+    /* 앞 단계일수록 완료가 많게 — 수위 분포를 앞으로 기울인다.
+       나누는 값은 절점 수에 따라 늘어난다(`len+2`): 5절점일 때 100/7≈14 로 종전과 같고,
+       10절점이면 100/12≈8 이 되어 사다리가 길어져도 '끝까지 간 부재' 비율이 유지된다.
+       고정 14 로 두면 10절점에서 수위가 7 을 넘지 못해 뒤쪽 세 절점이 영영 안 닫힌다. */
+    const levelToday = Math.min(
+      applicable.length,
+      Math.floor((h % 100) / Math.floor(100 / (applicable.length + 2)))
+    )
+    /* 절점 하나를 지나는 데 걸리는 날 — 부재마다 2~4일. 기준일이 그만큼 전이면 한 칸 뒤 */
+    const level = forced
+      ? applicable.length
+      : rewoundLevel(levelToday, daysBack, 2 + (h % 3))
+    const started = h % 3 !== 0 // 수위 자리 단계의 착수 여부
+
+    const statuses = {} as Record<FabStageId, StageStatus>
+    let idx = 0
+    for (const stage of FAB_STAGES) {
+      if (excluded[stage]) {
+        statuses[stage] = 'excluded'
+        continue
+      }
+      statuses[stage] = idx < level ? 'done' : idx === level && started ? 'inProgress' : 'notDue'
+      idx += 1
+    }
+    parts.push({ partNo: pid, weightKg, statuses })
+  }
+  return parts
+}
+
+/* ── 조립 절점 (W/O 귀속) ───────────────────────────────────── */
+
+/**
+ * 블록 1개의 조립 절점별 W/O 귀속을 결정론 생성한다.
+ *
+ * 진행 수위 L(적용 절점 기준 통과 개수)을 두어 L 앞 절점은 전량 완료, L 자리는
+ * 부분 완료(진행중), L 뒤는 미도래 — 선행 절점 미통과 상태에서 후행 절점 W/O 가
+ * 착수되는 일이 구조적으로 없다. `미대상`은 중조 생략 블록의 A2 에만 발생시킨다
+ * (소형 블록이 소조→대조로 직행하는 경우 — 분모 제외 규칙의 조립 표본).
+ */
+/**
+ * 매칭 캐스케이드 (ASM-F04) — **판별된 실적에 레거시 W/O 를 찾아 붙인다.**
+ *
+ * ① 하루치 확정 풀(YPWG411M) → ② 4주치 계획 풀(YPWS210V, 송선 5규칙 변환) → ③ 불일치 노티.
+ * 분포는 결정론 해시로 고정한다 — 화면이 셋을 다 보여 줘야 하므로 셋이 다 나와야 한다.
+ *
+ * W/O 상태는 **판별 결과에서 파생**한다(반대가 아니다): 인식이 끝난 ASSY 의 W/O 는 완료로,
+ * 부분 인식이면 앞의 것만 완료·다음 것이 진행중으로 붙는다. 폴백은 하루치 확정에 없던
+ * 계획이라, 인식이 이미 끝났으면 **선행**(계획보다 먼저 만들어짐), 아직이면 **지연**이다
+ * (ASM-F09). 불일치는 붙일 W/O 자체가 없다 — 그래서 빈 배열이고 완료가 금지된다(ASM-F10).
+ */
+function matchWorkOrders(input: {
+  assyNo: string
+  recognizedQty: number
+  reqQty: number
+  baseDate: string
+  allowUnmatched: boolean
+}): AssyMatch {
+  const { assyNo, recognizedQty, reqQty, baseDate, allowUnmatched } = input
+  const complete = reqQty > 0 && recognizedQty >= reqQty
+
+  /* 인식이 아직 없으면 붙일 실적이 없다 — 캐스케이드를 돌리지 않고 계획 W/O 만 세워 둔다 */
+  const roll = hashOf(`${assyNo}-match`) % 100
+  const state: AssyMatch['state'] =
+    recognizedQty > 0 && allowUnmatched && roll < 8
+      ? 'unmatched' // 8% — 인식 O / 레거시 X
+      : roll < 26
+        ? 'fallback' // 18% — 하루치에 없어 4주 계획으로 확대해 찾음
+        : 'matched'
+
+  if (state === 'unmatched') {
+    return { state, wos: [], flag: null, poolLabel: 'YPWG411M / YPWS210V' }
+  }
+
+  const woCount = 2 + (hashOf(`${assyNo}-won`) % 2) // 취부·용접(+사상)
+  /* 완료된 W/O 수 — 인식 진척을 그대로 옮긴다(판별이 원천, W/O 는 그 표현) */
+  const doneWos = complete
+    ? woCount
+    : recognizedQty > 0
+      ? Math.min(woCount - 1, Math.floor((recognizedQty / Math.max(1, reqQty)) * woCount))
+      : 0
+  const inProgressWo = !complete && recognizedQty > 0 ? doneWos : -1
+  const wos: AssyWo[] = Array.from({ length: woCount }, (_, w): AssyWo => {
+    const status: AssyWo['status'] =
+      w < doneWos ? 'done' : w === inProgressWo ? 'inProgress' : 'notStarted'
+    return {
+      woNo: `WO-${String(hashOf(`${assyNo}-wo-${w}`) % 90000).padStart(5, '0')}`,
+      kind: ASSY_WO_ORDER[w % ASSY_WO_ORDER.length],
+      status,
+      actualDate: status === 'done' ? addDays(baseDate, -(hashOf(`${assyNo}-ad-${w}`) % 6)) : null,
+    }
+  })
+
+  return {
+    state,
+    wos,
+    flag: state === 'fallback' ? (complete ? 'early' : 'late') : null,
+    poolLabel: state === 'fallback' ? 'YPWS210V (4주 창)' : 'YPWG411M (하루치)',
+  }
+}
+
+/**
+ * **도장 단계 블록의 생애주기 시간 이동** (W5-9).
+ *
+ * 도장 n일차 블록이면 조립은 그 전에 끝난 게 생애주기 정합이다. 그런데 더미는 모든
+ * 블록의 조립 완료·검사장 이동을 기준일 언저리(-0~2일)에 두어, 도장 재공 블록조차
+ * "어제 조립 끝나고 오늘 도장 중" 이 된다. 그러면 도장 이력을 놓을 과거 구간이 없어
+ * 일일공정률(YPWG413M, 하루 1회 일괄)이 영영 등록될 수 없다.
+ *
+ * 그래서 **로스터가 도장 단계로 적은 블록만** 조립 판별일·W/O 실적일·검사장 이동일을
+ * 기준일 -7~-10일로 민다. **조립 단계·의장 단계 블록의 날짜는 건드리지 않는다** — 그
+ * 블록들은 지금 진행 중인 게 맞고, 화면도 그렇게 읽혀야 한다.
+ *
+ * 전이 블록(2543-642 — 대조 G01 만 도장으로 넘어감)은 **제외한다.** 그 블록은 조립이
+ * 아직 안 끝나 도장 카드가 블록 레벨에서 '반입 전' 이라 이동시켜도 일일공정률이 설 자리가
+ * 없고, 대신 지금 조립 중인 나머지 ASSY 의 날짜만 과거로 밀려 조립 카드가 거짓말을 한다.
+ *
+ * 도장에 **막 넘어온**(`justArrived`) 블록은 예외다 — 반입이 최근이어야 '갓 들어옴'이
+ * 되므로 2일만 민다.
+ *
+ * @returns 0 (이동 없음) 또는 2 (갓 반입) 또는 7~10 (도장 재공)
+ */
+function paintingLifecycleShiftDays(projNo: string, blockNo: string): number {
+  const block = findBlock(projNo, blockNo)
+  if (block?.zone !== 'painting') return 0
+  if (block.justArrived) return 2
+  return 7 + (hashOf(`${projNo}-${blockNo}-life`) % 4)
+}
+
+/* ── ASSY 골격 — **구성의 정본은 로스터**, 모르는 블록만 합성 (R34) ──────────
+ *
+ * 예전에는 이 파일이 언제나 계층을 해시로 지어냈다. 로스터는 급(G/M/S)만 아는 평평한
+ * 명단이었으므로 같은 블록의 구성이 두 곳에서 따로 만들어졌고, 지도가 아는 것과 실적
+ * 카드가 그리는 트리의 근거가 달랐다 — 사용자가 "실제 블록 구성처럼 안 읽힌다"고 짚은
+ * 자리다. 이제 로스터가 부모 링크까지 들고 있으므로 **그것이 있으면 그대로 쓴다.**
+ */
+
+/** 급 → ASSY_STRC_CODE — mock 표현. 실코드 체계는 YDEH050M 확인 후 교체한다 */
+const TIER_STRC: Record<AssyTier, string> = { grand: 'G', mid: 'M', sub: 'S' }
+
+/** mock 조합식의 일련번호 꼬리(`G01`) — 실채번(`FR103C`)과 가르는 판별식 */
+const MOCK_SER_TAIL = /^[GMS]\d{2}$/
+
+/**
+ * 골격 노드 하나 — **구성만** 든다(누가 누구에 들어가나). 판별 수치·매칭은 아래에서 얹는다.
+ * 구성과 실적을 한 덩어리로 만들면 로스터에서 온 구성인지 합성인지 구분이 사라진다.
+ */
+interface AssyNode {
+  assyNo: string
+  strcCode: string
+  serNo: string
+  tier: AssyTier
+  parent: string | null
+  depth: number
+  /** 실측 스캔이 이 덩이를 정합했다 — 로스터가 아는 실측 블록만 */
+  scan?: AssyScanFact
+}
+
+/** 로스터 BOM 트리 → 골격. 로스터가 구성을 모르는 블록이면 null */
+function rosterAssyNodes(projNo: string, blockNo: string): AssyNode[] | null {
+  const tree = assyTreeOf(projNo, blockNo)
+  if (!tree) return null
+  const prefix = `${projNo}-${blockNo}-`
+  const parentOf = new Map(tree.map((unit) => [unit.assyNo, unit.parentAssyNo]))
+  /* 깊이는 부모 사슬을 세어 낸다 — 로스터가 적는 것은 귀속이지 깊이가 아니다.
+     순환·고아는 여기서 0(루트)으로 떨어지고 `findAssyViolations` 가 그 사정을 잡는다 */
+  const depthOf = (assyNo: string, seen: ReadonlySet<string> = new Set()): number => {
+    const parent = parentOf.get(assyNo)
+    if (parent == null || seen.has(assyNo) || !parentOf.has(parent)) return 0
+    return 1 + depthOf(parent, new Set(seen).add(assyNo))
+  }
+  return tree.map((unit) => {
+    /* 실측 블록은 데이터셋의 실채번(`FR103C`)을 그대로 쓴다 — 조합식은 실채번이 없을
+       때의 mock 규약이라, 있으면 실채번이 이긴다(그래야 두 화면이 같은 이름을 부른다) */
+    const tail = unit.assyNo.startsWith(prefix) ? unit.assyNo.slice(prefix.length) : unit.assyNo
+    return {
+      assyNo: unit.assyNo,
+      strcCode: TIER_STRC[unit.tier],
+      serNo: MOCK_SER_TAIL.test(tail) ? tail.slice(1) : tail,
+      tier: unit.tier,
+      parent: unit.parentAssyNo,
+      depth: depthOf(unit.assyNo),
+      scan: unit.scan,
+    }
+  })
+}
+
+/**
+ * 합성 골격 — 로스터가 구성을 모르는 블록만. 대조 루트 1~2 → 각 루트 아래 중조 1~2 →
+ * 나머지는 소조로 중조에 배분한다. 목록은 **pre-order**(대조 → 그 자식들)다.
+ *
+ * 채번은 로스터와 같은 **급별 일련번호**(`G01`·`M01`·`S01`…)다 — 한 화면에서 로스터
+ * 블록과 합성 블록이 나란히 서므로 채번 문법이 갈리면 같은 종류의 것을 다르게 부르는
+ * 셈이 된다.
+ */
+function synthAssyNodes(projNo: string, blockNo: string): AssyNode[] {
+  const seed = `${projNo}-${blockNo}`
+  const count = 4 + (hashOf(`${seed}-assy`) % 8)
+  const nodes: AssyNode[] = []
+  const serial: Record<AssyTier, number> = { grand: 0, mid: 0, sub: 0 }
+  const add = (tier: AssyTier, parent: AssyNode | null): AssyNode => {
+    serial[tier] += 1
+    const strcCode = TIER_STRC[tier]
+    const serNo = String(serial[tier]).padStart(2, '0')
+    const node: AssyNode = {
+      assyNo: `${projNo}-${blockNo}-${strcCode}${serNo}`,
+      strcCode,
+      serNo,
+      tier,
+      parent: parent == null ? null : parent.assyNo,
+      depth: parent == null ? 0 : parent.depth + 1,
+    }
+    nodes.push(node)
+    return node
+  }
+  const rootCount = count >= 6 && hashOf(`${seed}-roots`) % 2 === 1 ? 2 : 1
+  const baseSize = Math.floor(count / rootCount)
+  for (let r = 0; r < rootCount; r++) {
+    const size = r === 0 ? count - baseSize * (rootCount - 1) : baseSize
+    const root = add('grand', null)
+    const rest = size - 1
+    if (rest <= 0) continue
+    const midCount = Math.min(rest, 1 + (hashOf(`${seed}-mids-${r}`) % 2))
+    const subTotal = rest - midCount
+    for (let m = 0; m < midCount; m++) {
+      const mid = add('mid', root)
+      const subN = Math.floor(subTotal / midCount) + (m < subTotal % midCount ? 1 : 0)
+      for (let s = 0; s < subN; s++) add('sub', mid)
+    }
+  }
+  return nodes
+}
+
+/** 이 블록의 ASSY 골격 — 로스터가 알면 로스터, 모르면 합성 */
+function assyNodesOf(projNo: string, blockNo: string): AssyNode[] {
+  return rosterAssyNodes(projNo, blockNo) ?? synthAssyNodes(projNo, blockNo)
+}
+
+/**
+ * post-order 완료 순위 — 소조 → 그 중조 → … → 대조 (하위부터 조립되는 순서).
+ * 인덱스별 순위를 낸다. 부모가 목록에 없는 노드는 루트로 본다(고아도 사라지지 않게).
+ */
+function postOrderRanks(nodes: readonly AssyNode[]): number[] {
+  const indexOf = new Map(nodes.map((node, i) => [node.assyNo, i]))
+  const children = new Map<number, number[]>()
+  const roots: number[] = []
+  nodes.forEach((node, i) => {
+    const parent = node.parent == null ? undefined : indexOf.get(node.parent)
+    if (parent == null) roots.push(i)
+    else {
+      const list = children.get(parent)
+      if (list) list.push(i)
+      else children.set(parent, [i])
+    }
+  })
+  const ranks = new Array<number>(nodes.length).fill(0)
+  let rank = 0
+  const seen = new Set<number>()
+  const walk = (i: number) => {
+    if (seen.has(i)) return
+    seen.add(i)
+    for (const child of children.get(i) ?? []) walk(child)
+    ranks[i] = rank++
+  }
+  for (const root of roots) walk(root)
+  /* 순환에 갇힌 노드도 순위를 받아야 목록에서 사라지지 않는다 */
+  nodes.forEach((_, i) => walk(i))
+  return ranks
+}
+
+/**
+ * **블록의 조립 진척은 그 블록이 지금 서 있는 공정이 정한다** (W6-2, 사용자 지적).
+ *
+ * 공정 순서는 가공 → 조립 → 의장 → 도장이다. 그런데 더미는 조립 수위를 해시로만 뽑아,
+ * 의장 공장에 서 있는 블록이 '조립 0/6' 이거나 조립 중인 블록이 '도장 중' 으로 나왔다.
+ * 순서를 아는 로스터가 있으니 그 단계에 맞춰 진척을 정한다:
+ *
+ *  - 가공 중  → 조립 **착수 전** (인식 0)
+ *  - 조립 중  → 진행 중 (수위 랜덤). 아직 **검사장 이동 없음** — 이동했으면 조립이 끝난 것이다
+ *  - 의장·도장 중 → 조립 **전량 완료 + 검사장 이동 완료** (그러지 않고는 그 공정에 있을 수 없다)
+ */
+function assemblyStageOf(
+  projNo: string,
+  blockNo: string
+): { force: 'none' | 'notStarted' | 'complete'; moved: 'yes' | 'no' | 'auto' } {
+  const zone = findBlock(projNo, blockNo)?.zone
+  if (zone === undefined) return { force: 'none', moved: 'auto' } // 로스터 밖 — 합성 시드
+  if (zone === 'fabrication') return { force: 'notStarted', moved: 'no' }
+  if (zone === 'outfitting' || zone === 'painting') return { force: 'complete', moved: 'yes' }
+  return { force: 'none', moved: 'no' } // 조립 중 — 이동했으면 조립이 끝난 것이다
+}
+
+/**
+ * **기준일 D 에 이 블록의 조립이 끝나 있었는가** (W7-6F).
+ *
+ * 조립 생성기 안에만 있던 수위 계산을 밖으로 뽑는다. 가공 쪽에서도 같은 답이 필요해졌기
+ * 때문인데(아래 `fabricationForcedAt`), 두 곳이 각자 세면 되감기 속도가 달라 어느 과거
+ * 날짜에서 서로 어긋난다 — 조립은 끝났는데 가공은 진행 중인 창이 생긴다. 답을 내는 곳은
+ * 하나여야 한다.
+ *
+ * 반환값은 조립 카드가 쓰는 것과 **같은 수치**다: 몇 개 중 몇 개(`count`/`level`), 전량
+ * 완료인가(`allDone`), 검사장으로 나갔는가(`moved`).
+ */
+function assemblyLevelAt(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): {
+  nodes: readonly AssyNode[]
+  count: number
+  level: number
+  scannedCount: number
+  allDone: boolean
+  moved: boolean
+  stage: ReturnType<typeof assemblyStageOf>
+} {
+  const seed = `${projNo}-${blockNo}`
+  /* 구성의 정본은 로스터다 — 몇 덩이인지도 거기서 나온다(R34) */
+  const nodes = assyNodesOf(projNo, blockNo)
+  const count = nodes.length
+  const stage = assemblyStageOf(projNo, blockNo)
+  /* 실측 블록 — **수위를 해시가 아니라 스캔이 정한다**(R31). 정합된 덩이만큼 붙어 있고,
+     그 위(아직 안 붙은 상위)가 지금 작업 중인 자리다 */
+  const scannedCount = nodes.filter((node) => node.scan).length
+  const rawLevel = Math.min(
+    count,
+    Math.floor((hashOf(`${seed}-asm-lv`) % 100) / (100 / (count + 1)))
+  )
+  const levelToday =
+    scannedCount > 0
+      ? scannedCount
+      : stage.force === 'complete'
+        ? count
+        : stage.force === 'notStarted'
+          ? 0
+          : rawLevel
+  /* 과거 기준일이면 그만큼 되감는다 — ASSY 하나를 붙이는 데 3~7일 */
+  const level = rewoundLevel(levelToday, rewindDaysOf(baseDate), 3 + (hashOf(`${seed}-asm-cad`) % 5))
+  const allDone = level >= count
+  const moved =
+    allDone && (stage.moved === 'yes' || (stage.moved === 'auto' && hashOf(`${seed}-insp`) % 3 !== 1))
+  return { nodes, count, level, scannedCount, allDone, moved, stage }
+}
+
+/**
+ * **가공 판별의 수위도 그 블록이 서 있는 공정이 정한다** (W7-6F, 사용자 확정).
+ *
+ * 상식이다 — 블록이 선행의장 공장에 서 있다면 가공은 이미 끝났다. 부재를 다 자르지도
+ * 않고 조립을 마쳐 의장으로 넘어갈 수는 없다. 그런데 더미는 가공 수위를 해시로만 뽑아서
+ * 의장·도장 공장의 블록이 '가공 62%' 로 나왔고, 같은 블록을 두고 화면 셋이 서로 다른
+ * 이야기를 했다.
+ *
+ * 게이트를 **로스터 권역**(의장이면 100%)에 걸지 않고 **조립 전량 완료**에 거는 이유는
+ * 되감기다. 권역은 오늘의 사실이라 과거 기준일에서는 참이 아니고, 가공(부재 2~4일)과
+ * 조립(ASSY 3~7일)은 되감기 속도가 달라서 오늘만 보고 걸면 어느 과거 날짜에 "조립은
+ * 끝났는데 가공은 진행 중" 인 창이 열린다. `allDone` 에 걸면 사슬이 통째로 함께 되감긴다:
+ *
+ *   가공 100% → 조립 전량 완료 → 검사장 이동 → 의장·도장
+ *
+ * **겹침은 그대로 둔다.** 조립 진행 중(전량 완료 전)인 블록은 가공이 미완일 수 있다 —
+ * 부재가 순차로 올라오는 동안 앞선 부재로 조립을 시작하는 것이 정상이기 때문이다.
+ */
+function fabricationForcedAt(projNo: string, blockNo: string, baseDate: string): boolean {
+  return assemblyLevelAt(projNo, blockNo, baseDate).allDone
+}
+
+/**
+ * 블록 1개의 ASSY 목록을 결정론적으로 생성한다 — **계층 트리**(사용자 확정: 대조>
+ * 중조>소조는 절점이 아니라 ASSY 계층 관계다. YDEH040M 부모추적의 mock 대응).
+ *
+ * **구성은 여기서 정하지 않는다** (R34) — 로스터가 아는 블록은 그 BOM 트리를 그대로
+ * 쓰고(`rosterAssyNodes`), 모르는 블록만 합성한다(`synthAssyNodes`). 이 함수가 하는 일은
+ * 그 골격 위에 **판별 수치와 매칭을 얹는 것**뿐이다.
+ *
+ * 목록 순서는 골격이 준 순서(pre-order — 대조 → 그 자식들)이고, 진행은 **post-order
+ * 수위**로 판정한다: 하위(소조)부터 완료되고 부모는 자식 전량 완료 후에만 완료되므로
+ * 부모 완료·자식 미완료가 구조적으로 없다.
+ *
+ * **실측 블록은 수위를 스캔이 정한다** (R31): 데이터셋이 정합한 덩이가 판별 완료이고,
+ * 그 바로 위(아직 안 붙은 상위)가 지금 붙고 있는 자리다. 그래야 통합실적의 판별 수치가
+ * 실측 뷰의 인식 결과와 같은 말을 한다.
+ */
+export function generateAssyUnits(projNo: string, blockNo: string, baseDate: string): AssemblySummary {
+  const seed = `${projNo}-${blockNo}`
+  /* 골격·수위·전량완료·검사장 이동은 `assemblyLevelAt` 한 곳에서 나온다 — 가공 게이트가
+     같은 답을 읽어야 두 권역이 어느 기준일에서도 어긋나지 않는다(W7-6F) */
+  const { nodes, count, level, scannedCount, stage } = assemblyLevelAt(projNo, blockNo, baseDate)
+  /* 실측 블록은 착수 여부를 흔들지 않는다 — 정합된 덩이가 이미 서 있으므로 착수했다 */
+  const started =
+    scannedCount > 0 ? true : stage.force === 'notStarted' ? false : hashOf(`${seed}-asm-st`) % 4 !== 0
+
+  /* 도장 단계 블록만 조립 시간축을 과거로 민다 — 그 외 블록은 shift 0 이라 종전 그대로다 */
+  const lifeShift = paintingLifecycleShiftDays(projNo, blockNo)
+  /* 조립 실적(판별일·W/O 실적일)의 기준 — 검사장 이동보다 하루 이상 앞선다 */
+  const asmBase = lifeShift > 0 ? addDays(baseDate, -(lifeShift + 1)) : baseDate
+
+  const postRank = postOrderRanks(nodes)
+
+  const assys: AssyRaw[] = nodes.map((node, i) => {
+    const { assyNo } = node
+    /* 계획 분모 — 레거시 기준정보(REQ_QTY). 비율의 분모일 뿐 기준 축이 아니다 */
+    const reqQty = 4 + (hashOf(`${assyNo}-req`) % 9)
+
+    /* ── ① 판별(자동수집) — 이 ASSY 의 기준 축. 여기서 먼저 정해진다 ── */
+    const r = postRank[i]
+    const recognizedQty =
+      r < level
+        ? reqQty // 수위 앞 — 인식 완료
+        : r === level && started
+          ? 1 + (hashOf(`${assyNo}-rec`) % Math.max(1, reqQty - 1)) // 수위 자리 — 부분 인식
+          : 0 // 뒤 — 아직 인식 없음
+    const judgedDate =
+      recognizedQty > 0 ? addDays(asmBase, -(hashOf(`${assyNo}-jd`) % 6)) : null
+
+    /* ── ② 매칭 캐스케이드 — 판별된 실적에 레거시 W/O 를 찾아 붙인다 ── */
+    const match = matchWorkOrders({
+      assyNo,
+      recognizedQty,
+      reqQty,
+      baseDate: asmBase,
+      /* 블록이 전량 인식 완료면 불일치를 내지 않는다 — 불일치가 남아 있으면 완료 처리가
+         금지돼 블록이 닫히지 않으므로, 닫힌 블록에 미해결 불일치가 있을 수 없다 */
+      allowUnmatched: level < count,
+    })
+
+    return {
+      assyNo,
+      strcCode: node.strcCode,
+      serNo: node.serNo,
+      tier: node.tier,
+      parentAssyNo: node.parent,
+      depth: node.depth,
+      reqQty,
+      recognizedQty,
+      judgedDate,
+      match,
+    }
+  })
+
+  /* 검사장 이동(BTS 반출 = 조립종료) — 블록 레벨 사실: ASSY 전량 완료 후에만.
+     판정은 위 `assemblyLevelAt` 이 이미 했다(같은 규칙을 두 번 적지 않는다). */
+  const { moved } = assemblyLevelAt(projNo, blockNo, baseDate)
+  /* 도장 단계면 검사장 이동이 기준일 -7~-10일(갓 반입이면 -2일). 의장에 갓 넘어왔으면
+     '어제 이동' 이라야 전이가 전이로 읽힌다. */
+  const justArrived = findBlock(projNo, blockNo)?.justArrived === true
+  const inspectionDate =
+    lifeShift > 0
+      ? addDays(baseDate, -lifeShift)
+      : justArrived
+        ? addDays(baseDate, -1)
+        : addDays(baseDate, -(hashOf(`${seed}-insp-d`) % 3))
+  return summarizeAssemblyBlock(assys, { moved, date: moved ? inspectionDate : null })
+}
+
+export async function fetchAssemblySummary(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): Promise<AssemblySummary> {
+  return generateAssyUnits(projNo, blockNo, baseDate)
+}
+
+/* ── 도장 (W3-2 · W5-8) — 스텝이 곧 절점: S/P → T/UP → FINAL (존재 기반) ─────────── */
+
+/**
+ * 블록 하나의 도장 스텝 **계획 구성**을 결정론적으로 뽑는다 — 실데이터 20블록의 관측
+ * 분포를 그대로 흉내낸다(dataflow §3.3).
+ *  - 스프레이 회차: 1~6 가변 (관측 1회 3 · 2회 2 · 3회 4 · 4회 9 · 5회 1 · 6회 1)
+ *  - T/UP: `U1` 은 항상, `U2` 는 15/20, RE-S/P(`R0`)는 **이벤트성** — 없는 블록도 만든다
+ *  - 계획 행 수: 회차 × 존 × 내외로 흩어져 한 스텝이 수십 행이 된다
+ * 계획 행이 0 인 스텝은 계획 자체를 만들지 않는다 — 존재 기반 집계의 입력이다.
+ */
+function paintingPlanShape(seed: string) {
+  /* 관측 분포를 누적 가중으로 옮긴 표 — 20블록 기준 */
+  const ROUND_WEIGHTS = [3, 2, 4, 9, 1, 1]
+  const pick = hashOf(`${seed}-rounds`) % 20
+  let acc = 0
+  let rounds = 1
+  for (let i = 0; i < ROUND_WEIGHTS.length; i += 1) {
+    acc += ROUND_WEIGHTS[i]
+    if (pick < acc) {
+      rounds = i + 1
+      break
+    }
+  }
+  const zones = 1 + (hashOf(`${seed}-zones`) % 6) // 존 수 — 행 분산의 주범
+  const sides = hashOf(`${seed}-sides`) % 3 === 0 ? 1 : 2 // 내외(I/O)
+  const hasU2 = hashOf(`${seed}-u2`) % 4 !== 0 // 15/20 ≈ 3/4
+  const hasR0 = hashOf(`${seed}-r0`) % 8 !== 0 // 이벤트성 — 대부분 있으나 없는 블록도 있다
+  return { rounds, zones, sides, hasU2, hasR0 }
+}
+
+
+
+/**
+ * 도장 BTS 귀속 공장 — 로스터가 '도장 중'으로 적어 둔 블록은 그 공장, 아니면 결정론 추첨.
+ *
+ * 로스터에 적힌 블록은 지도에도 그 공장에 마커가 선다 — 두 화면이 같은 공장을 말해야
+ * 한다(같은 블록을 두고 지도는 느태, 카드는 텍사코라 하면 어느 쪽도 못 믿는다).
+ */
+function rosterPaintingFactory(projNo: string, blockNo: string, seed: string): string {
+  const block = findBlock(projNo, blockNo)
+  if (block?.zone === 'painting') return block.factory
+  return PAINTING_FACTORIES[hashOf(`${seed}-fac`) % PAINTING_FACTORIES.length]
+}
+
+/**
+ * 블록 1개의 도장 스텝 실적을 결정론적으로 생성한다.
+ *
+ * 게이트: 조립종료(BTS 검사장 이동) **후에만** 도장이 시작된다 — 조립 mock 의
+ * inspectionMoved 를 그대로 물려받아 두 카드가 한 이야기를 한다. 스텝은 진짜 순차
+ * 절점이라 수위 모델(L 앞 완료 / L 자리 진행 / 뒤 미도래)이 곧 규칙이다.
+ *
+ * **존재 기반**(사용자 확정 2026-09-03): 스텝 개수도 스텝의 분모도 블록의 계획이 정한다.
+ * 여기서는 계획(`PaintingStepPlan`)까지만 만들고, 상태 판정은 model/aggregate.ts 의
+ * `buildPaintingSteps` 가 한다 — 실연동도 같은 함수를 쓰게 하려는 것이다.
+ *
+ * 필드 대응(SE12 검증 완료 명세 · 스텝 축은 YPWP720M 실데이터 유도):
+ *  - 스텝 키: PAINTING_STEP_MAPPING(paintingStepMapping.ts) 경유 — 하드코딩 금지.
+ *    스텝 축은 PNT_SEQ 가 아니라 ELMT_ITEM_CODE 다(S/P=S1~S6 · T/UP=U1·U2·R0 · FINAL=Q0)
+ *  - W/O·착완일: YPWP720M(블록×공종×차수)·SD/FD_ACTL
+ *  - 확정: YPWG221M CNFM_INDC='B' 관문 — done 이어도 확정 대기일 수 있다
+ *  - 위치: BTS 물류(반입/반출) 기반 — ZONE 대응표에 의존하지 않는다(게이트 결정)
+ */
+export function generatePaintingSteps(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): PaintingSummary {
+  const seed = `${projNo}-${blockNo}-pnt`
+  const assembly = generateAssyUnits(projNo, blockNo, baseDate)
+
+  /*
+   * **도장 반입 여부는 로스터 단계가 정한다** (W6-2). 검사장 이동만으로 게이트를 잡으면
+   * 의장 공장에 서 있는 블록도 '도장 중' 이 된다 — 의장은 도장 앞 공정이라 아직 반입 전이다.
+   * 로스터 밖 블록(합성 시드)만 종전처럼 검사장 이동으로 판단한다.
+   */
+  const rosterZone = findBlock(projNo, blockNo)?.zone
+  /*
+   * 게이트는 **둘 다** 참이라야 한다 — 로스터가 이 블록을 도장으로 적었고(어느 권역인가),
+   * 그리고 그 시점에 조립이 실제로 끝나 검사장으로 나갔는가(언제부터인가).
+   *
+   * 로스터만 보면 과거 기준일에서 "가공 0%·조립 미완인데 도장 중" 이 된다 — 로스터는
+   * **오늘**의 사실이지 그날의 사실이 아니기 때문이다. 조립종료를 함께 물으면 되감긴
+   * 기준일에서 도장도 같이 '반입 전' 으로 돌아간다(공정 순서 정합).
+   * 오늘 기준에서는 도장 권역 블록의 조립이 항상 완료라 종전과 값이 같다.
+   */
+  const inZone = rosterZone === undefined ? true : rosterZone === 'painting'
+  const paintedIn = inZone && assembly.inspectionMoved
+
+  const shape = paintingPlanShape(seed)
+
+  /** 이 블록이 실제로 계획한 요소코드 — 스텝별 가변 구성의 근원 */
+  const codesOf = (step: (typeof PAINTING_STEPS)[number]): string[] => {
+    const all = PAINTING_STEP_MAPPING[step].elmtItemCodes
+    if (step === 'SP') return all.slice(0, shape.rounds) as string[]
+    if (step === 'TUP') {
+      return all.filter(
+        (c) => c === 'U1' || (c === 'U2' && shape.hasU2) || (c === 'R0' && shape.hasR0)
+      ) as string[]
+    }
+    return [...all]
+  }
+
+  const woOf = (step: (typeof PAINTING_STEPS)[number]) => {
+    /* W/O 채번 seed 에 매핑 키를 태운다 — 매핑이 바뀌면 mock 도 그 키를 따라간다.
+       실데이터의 W/O 는 스텝 1:1 이 아니라 한 건이 1~3 스텝을 덮지만(dataflow §3.3),
+       더미는 스텝별 1건으로 단순화한다 — 절점 카드가 보여주는 축이 스텝이기 때문이다. */
+    const key = PAINTING_STEP_MAPPING[step]
+    const seedKey = `${key.pntWorkKind}${key.elmtItemCodes.join('')}`
+    return `WO-${String(hashOf(`${seed}-${seedKey}`) % 90000).padStart(5, '0')}`
+  }
+
+  /** 계획 행 수 — 회차 × 존 × 내외. 계획은 반입 전에도 이미 서 있다 */
+  const plannedRowsOf = (step: (typeof PAINTING_STEPS)[number]) => {
+    const codes = codesOf(step)
+    if (codes.length === 0) return 0
+    return codes.length * shape.zones * shape.sides
+  }
+
+  /**
+   * 계획 행의 작업면적(`WORK_PLC_AREA`) — 실데이터 분포(0.6~2,768㎡, 중앙값 40.4)를
+   * 흉내낸다. 진행률 가중치라 행마다 갈려야 의미가 있다.
+   */
+  const areaOf = (step: (typeof PAINTING_STEPS)[number], row: number) =>
+    Math.round((4 + (hashOf(`${seed}-${step}-area-${row}`) % 1200) / 10) * 10) / 10
+
+  /**
+   * 스텝의 진행률 재료를 만든다 — 완료 행 100%, 진행 중 행은 `YPWG413M` 최신
+   * `DLY_PRGS_RATE`, 미착수 행 0%. 413M 이력이 없으면 `null` 을 돌려 집계가 행 완료율로
+   * 물러서게 한다.
+   */
+  const progressOf = (
+    step: (typeof PAINTING_STEPS)[number],
+    planned: number,
+    doneRows: number,
+    startDate: string | null
+  ): {
+    rows: PaintingProgressRow[]
+    asOf: string | null
+    history: PaintingProgressPoint[]
+  } | null => {
+    if (planned <= 0 || doneRows >= planned) return null // 전량 완료는 정의상 100%
+    const stepSeed = `${seed}-${step}-413m`
+    /* 진행 중 행 하나가 대표로 413M 에 등록돼 있다고 본다 — 하루 1회 일괄 등록분 */
+    const inFlight = doneRows < planned && startDate != null
+    const target = inFlight ? 30 + (hashOf(`${stepSeed}-tg`) % 60) : 0
+    const daily = inFlight
+      ? generateDailyProgress({
+          workOrdNo: woOf(step),
+          baseDate,
+          targetRate: target,
+          startDate,
+          seed: stepSeed,
+        })
+      : []
+    const latest = latestProgressOf(daily)
+    if (latest == null && doneRows === 0) return null // 413M 등록 전 — 재료 없음
+    const rows: PaintingProgressRow[] = []
+    for (let i = 0; i < planned; i += 1) {
+      const area = areaOf(step, i)
+      /* 앞쪽 행부터 완료된 것으로 둔다 — 완료 100, 진행 중 한 행만 413M 값, 나머지 0 */
+      const pct = i < doneRows ? 100 : i === doneRows && latest != null ? latest.rate : 0
+      rows.push({ areaSqm: area, progressPct: pct })
+    }
+    /* 이력을 버리지 않고 함께 낸다 (W7-2) — 카드가 '지금 몇 %' 말고 '어떻게 올라왔나'를
+       말하려면 최신 한 점이 아니라 그 앞의 며칠이 필요하다. 만드는 곳은 여기 하나다. */
+    const history: PaintingProgressPoint[] = daily.map((row) => ({
+      date: row.actlDate,
+      rate: row.dlyPrgsRate,
+    }))
+    return { rows, asOf: latest?.asOf ?? null, history }
+  }
+
+  const planOf = (
+    step: (typeof PAINTING_STEPS)[number],
+    fields: Pick<PaintingStepPlan, 'doneRows' | 'startDate' | 'endDate' | 'confirmed'>
+  ): PaintingStepPlan => {
+    const planned = plannedRowsOf(step)
+    const progress = progressOf(step, planned, fields.doneRows, fields.startDate)
+    return {
+      step,
+      elmtItemCodes: codesOf(step),
+      plannedRows: planned,
+      woNo: woOf(step),
+      ...fields,
+      progressRows: progress?.rows,
+      progressAsOf: progress?.asOf ?? null,
+      progressHistory: progress?.history ?? [],
+    }
+  }
+
+  const presentSteps = PAINTING_STEPS.filter((step) => plannedRowsOf(step) > 0)
+
+  if (!paintedIn) {
+    /* 반입 전 — 계획은 이미 있으나 실적 행이 하나도 없다 (분모만 있고 분자 0) */
+    const steps = buildPaintingSteps(
+      presentSteps.map((step) =>
+        planOf(step, { doneRows: 0, startDate: null, endDate: null, confirmed: false })
+      )
+    )
+    return {
+      steps,
+      doneSteps: 0,
+      confirmedSteps: 0,
+      phase: 'beforeIn',
+      factory: null,
+      btsInDate: null,
+      btsOutDate: null,
+    }
+  }
+
+  /* 검사장 이동일 이후의 시간대에 스텝을 배치한다 — 조립 뒤에 도장이 오는 시간 질서 */
+  const inDate = addDays(assembly.inspectionDate ?? baseDate, 1)
+  /* 수위 — 분모가 존재 기반이라 스텝 **개수**를 따라간다 (3 고정이 아니다).
+     로스터가 '도장 재공' 으로 적은 블록은 말 그대로 진행 중이다 — 전 스텝 완료로 두면
+     진행 중 스텝이 없어 일일공정률이 설 자리가 없으므로 수위를 한 칸 아래로 묶는다. */
+  const rosterBlock = findBlock(projNo, blockNo)
+  const inPaintingRoster = rosterBlock?.zone === 'painting'
+  /* 도장에 **갓 반입된** 블록은 반입만 찍히고 스텝은 아직이다 — 일일공정률도 없다 */
+  const justArrivedPainting = inPaintingRoster && rosterBlock?.justArrived === true
+  const rawLevel = hashOf(`${seed}-lv`) % (presentSteps.length + 1)
+  const levelToday = justArrivedPainting
+    ? 0
+    : inPaintingRoster
+      ? Math.min(rawLevel, presentSteps.length - 1)
+      : rawLevel
+  /* 과거 기준일이면 되감는다 — 스텝 하나가 4~8일. 가공·조립과 같은 잣대를 쓴다 */
+  const level = rewoundLevel(
+    levelToday,
+    rewindDaysOf(baseDate),
+    4 + (hashOf(`${seed}-pnt-cad`) % 5)
+  )
+  const started = justArrivedPainting ? false : inPaintingRoster || hashOf(`${seed}-st`) % 4 !== 0
+
+  /*
+   * 사다리를 **배치 기준일(어제)에서 거꾸로** 깐다 — 이미 '통과'·'진행중'인 스텝에
+   * 아직 오지 않은 날짜를 주면 카드가 앞뒤가 안 맞는 말을 하고(기준일 09-03 인데 완료일
+   * 09-08), 일일공정률(YPWG413M)도 영영 등록될 수 없다. 반입일보다 앞서지는 않게 막는다.
+   */
+  const batchDay = latestBatchDate(baseDate)
+  const laterOf = (a: string, b: string) => (a >= b ? a : b)
+  const earlierOf = (a: string, b: string) => (a <= b ? a : b)
+  /** 스텝 i 의 착수일 — 진행 중 스텝(i=level)이 배치 기준일 3일 전, 앞 스텝일수록 과거로.
+      3일을 띄우는 이유: 하루 1회 일괄이라 진행 중 W/O 에는 며칠치 일일공정률이 쌓여
+      있어야 정상이고, 하루 전 착수로 두면 이력이 1~2일치밖에 안 깔린다. */
+  const startOf = (i: number) => laterOf(inDate, addDays(batchDay, -3 - 2 * (level - i)))
+
+  const plans = presentSteps.map((step, i): PaintingStepPlan => {
+    const stepSeed = `${seed}-${step}`
+    const planned = plannedRowsOf(step)
+    if (i < level) {
+      /* 전량 완료 — 계획 행을 전부 채워야 스텝 완료다 */
+      const startDate = startOf(i)
+      const endDate = laterOf(
+        startDate,
+        earlierOf(batchDay, addDays(startDate, 1 + (hashOf(`${stepSeed}-fd`) % 2)))
+      )
+      return planOf(step, {
+        doneRows: planned,
+        startDate,
+        endDate,
+        confirmed: hashOf(`${stepSeed}-cnfm`) % 4 !== 1, // 일부는 확정(B) 대기
+      })
+    }
+    if (i === level && started && level < presentSteps.length) {
+      /* 부분 완료 — 계획 행 일부만 찍혔다. 전량이 아니므로 완료가 아니다 */
+      const doneRows = planned > 1 ? 1 + (hashOf(`${stepSeed}-dr`) % (planned - 1)) : 0
+      return planOf(step, {
+        doneRows,
+        startDate: startOf(i),
+        endDate: null,
+        confirmed: false,
+      })
+    }
+    return planOf(step, { doneRows: 0, startDate: null, endDate: null, confirmed: false })
+  })
+
+  const steps = buildPaintingSteps(plans)
+  const doneSteps = countPaintingDone(steps)
+  const allDone = steps.length > 0 && doneSteps === steps.length
+  const shippedOut = allDone && hashOf(`${seed}-out`) % 2 === 0
+  return {
+    steps,
+    doneSteps,
+    confirmedSteps: countPaintingConfirmed(steps),
+    phase: shippedOut ? 'shippedOut' : 'inShop',
+    /* BTS 귀속 공장 — 로스터가 이 블록을 '도장 중'이라 적어 두었으면 **그 공장이 정본**
+     * 이다. 여기서 해시로 따로 고르면 지도의 도장 마커와 이 카드가 다른 공장을 말한다. */
+    factory: shippedOut ? null : rosterPaintingFactory(projNo, blockNo, seed),
+    btsInDate: inDate,
+    btsOutDate: shippedOut ? addDays(steps[steps.length - 1].endDate ?? inDate, 1) : null,
+  }
+}
+
+export async function fetchPaintingSummary(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): Promise<PaintingSummary> {
+  return generatePaintingSteps(projNo, blockNo, baseDate)
+}
+
+/* ── 블록 요약(헤더 카드) ───────────────────────────────────── */
+
+const addDays = (base: string, days: number): string => {
+  const d = new Date(`${base}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+/**
+ * 절점별 계획일 — **계획도 그 블록이 서 있는 공정을 따른다** (W7-7-1).
+ *
+ * 계획 사다리를 늘 기준일 언저리(-6 ~ +6일)에 깔면, 몇 주 전에 가공을 마치고 도장에 가
+ * 있는 블록도 "S5 계획일이 모레" 가 된다. 그러면 헤더 카드가 계획 40% · 실적 100% 라고
+ * 말한다 — 2.5배 초과 달성처럼 읽히지만 사실은 계획이 그 블록을 못 따라간 것뿐이다.
+ *
+ * 그래서 **가공을 이미 지난 블록**(공정 순서 게이트와 같은 원천 — `fabricationForcedAt`)은
+ * 계획 사다리를 통째로 과거로 민다. 그 블록의 가공 계획은 실제로 지난 일이다.
+ * 밀어 내는 양(`PAST_PLAN_SHIFT_DAYS`)은 사다리의 마지막 절점(S10, 기준일 +5~+7일)이
+ * 확실히 과거에 놓이도록 잡는다 — 절점이 열로 늘면서 사다리도 길어졌으므로 함께 늘렸다.
+ */
+const PAST_PLAN_SHIFT_DAYS = 12
+
+/**
+ * 절점별 계획일의 기준일 대비 오프셋(일) — 정본 10절점 사다리. 강재 입고가 가장 과거,
+ * 최종 불출이 가장 미래다. 여기에 절점별 지터(0~2일)가 더해진다.
+ *
+ * 적치(S1~S4)와 가공(S5~S10) 경계는 지터를 먹어도 뒤집히지 않게 간격을 벌려 둔다 —
+ * 계획에서도 "불출 다음이 가공 입고" 라는 단계 순서가 지켜져야 하기 때문이다 (R39).
+ */
+const PLAN_OFFSET_DAYS: Record<FabStageId, number> = {
+  /* 적치 */
+  S1: -9,
+  S2: -8,
+  S3: -7,
+  S4: -6,
+  /* 가공 — 단계 경계라 지터(0~2일)를 먹어도 적치의 끝을 앞지르지 않게 두 칸 띄운다 */
+  S5: -4,
+  S6: -3,
+  S7: -1,
+  S8: 1,
+  S9: 3,
+  S10: 5,
+}
+
+export function planDatesOf(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): Record<FabStageId, string> {
+  const seed = `${projNo}-${blockNo}`
+  const jitter = (stage: FabStageId) => hashOf(`${seed}-plan-${stage}`) % 3
+  /* 가공을 지난 블록이면 계획도 과거다 — 실적(게이트)과 같은 사실에서 파생한다 */
+  const shift = fabricationForcedAt(projNo, blockNo, baseDate) ? -PAST_PLAN_SHIFT_DAYS : 0
+  const dates = {} as Record<FabStageId, string>
+  for (const stage of FAB_STAGES) {
+    dates[stage] = addDays(baseDate, shift + PLAN_OFFSET_DAYS[stage] + jitter(stage))
+  }
+  return dates
+}
+
+export async function fetchBlockSummary(
+  projNo: string,
+  blockNo: string,
+  baseDate: string
+): Promise<BlockSummary> {
+  const seed = `${projNo}-${blockNo}`
+  const block = findBlock(projNo, blockNo)
+  const summary = aggregateStages(generateParts(projNo, blockNo, baseDate))
+  const assembly = await fetchAssemblySummary(projNo, blockNo, baseDate)
+  const painting = generatePaintingSteps(projNo, blockNo, baseDate)
+  const progress = deriveNodeProgress(summary, planDatesOf(projNo, blockNo, baseDate), baseDate)
+  return {
+    projNo,
+    blockNo,
+    factory: block?.factory ?? '—',
+    // 헤더 수치 = 조립(블록-ASSY) 집계와 같은 원천 — 두 카드가 같은 수를 말한다.
+    // 주지표는 판별(인식/계획)이고 W/O 는 참고로만 따라온다.
+    assyCount: assembly.assyTotal,
+    assyDone: assembly.assyDone,
+    assyJudged: assembly.assyJudged,
+    recognizedQty: assembly.recognizedQty,
+    reqQtyTotal: assembly.reqQtyTotal,
+    judgedRate: assembly.judgedRate,
+    unmatchedCount: assembly.match.unmatched,
+    woTotal: assembly.woTotal,
+    woDone: assembly.woDone,
+    inspectionMoved: assembly.inspectionMoved,
+    /* 조립 절점(취부→용접→사상) — 헤더의 요약 축. ASSY 트리는 본문에서 따로 선다 */
+    asmNodes: rollupAssyWoNodes(assembly),
+    pntDone: painting.doneSteps,
+    /* 도장 스텝을 가공·조립과 같은 스트립 문법으로 — 분모는 존재 기반(steps.length)이다 */
+    pntNodes: paintingStripNodes(painting.steps),
+    pntPhase: painting.phase,
+    lastReceivedAt: `0${6 + (hashOf(`${seed}-rx`) % 4)}:${String(hashOf(`${seed}-rxm`) % 60).padStart(2, '0')}`,
+    progress,
+  }
+}
+
+export async function fetchFabricationStages(
+  projNo: string,
+  blockNo: string,
+  baseDate: string = todayString()
+) {
+  return aggregateStages(generateParts(projNo, blockNo, baseDate))
+}
+
+/* ── 수집 이벤트 그리드 (IPD-S01) ───────────────────────────── */
+
+/**
+ * 가공 절점 → 관리번호 형식·원천 라벨 (정의서 §6.2·§6.4 표 그대로 — 4형식 한정).
+ *
+ * **시각(`hasTime`)은 원천에 있을 때만 true 다.** 정본 10절점에서 그런 절점은
+ * S4(강재 불출 — `불출일+시각`)와 S7(절단 — `절단완료일시`) 둘뿐이고, 나머지 여덟은
+ * 일자만이다. 원천 컬럼이 아직 확정되지 않은 절점(`FAB_STAGES_PENDING_SOURCE`)은
+ * 원천 라벨을 '—' 로 두고 화면이 '원천 확정 대기' 배지를 세운다 — 없는 근거를 지어내지 않는다.
+ */
+const STAGE_META: Record<
+  FabStageId,
+  { mgmtType: 'MAT' | 'DWG' | 'PC' | 'PLT'; sources: string; hasTime: boolean; unit: string }
+> = {
+  /* ── 적치 (S1~S4) — 강재 단위 ── */
+  S1: { mgmtType: 'MAT', sources: '③', hasTime: false, unit: '강재(Roll)' },
+  S2: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S3: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S4: { mgmtType: 'MAT', sources: '①', hasTime: true, unit: '강재(Roll)' },
+  /* ── 가공 (S5~S10) ── */
+  S5: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S6: { mgmtType: 'MAT', sources: '—', hasTime: false, unit: '강재(Roll)' },
+  S7: { mgmtType: 'DWG', sources: '③②', hasTime: true, unit: '도면' },
+  S8: { mgmtType: 'PC', sources: '③④', hasTime: false, unit: '부재' },
+  /* 모둠선별·최종 불출의 관리 단위는 모둠이다. 형식 코드는 정의서 §6.2 의 4형식 그대로
+     `PLT` 를 쓰되(코드 체계는 정의서 소관), **표기 낱말은 현업 어휘 '모둠'** 을 쓴다 —
+     R39 에서 '팔레트 편성' 이 '모둠선별' 로 정정됐으므로 단위 이름도 함께 따라간다. */
+  S9: { mgmtType: 'PLT', sources: '③④⑤', hasTime: false, unit: '모둠' },
+  S10: { mgmtType: 'PLT', sources: '—', hasTime: false, unit: '모둠' },
+}
+
+function mgmtNoOf(stage: FabStageId, projNo: string, blockNo: string, i: number): string {
+  const n = hashOf(`${projNo}-${blockNo}-mg-${stage}-${i}`)
+  switch (STAGE_META[stage].mgmtType) {
+    case 'MAT':
+      return `${1000 + (n % 900)}-${String(n % 10000).padStart(4, '0')}`
+    case 'DWG':
+      return `${projNo}-C${String(n % 900).padStart(3, '0')}`
+    case 'PC':
+      return `${blockNo}-F${String(n % 90).padStart(2, '0')}`
+    case 'PLT':
+      return `P-${String(n % 9000).padStart(4, '0')}`
+  }
+}
+
+/** 시각 유무는 STAGE_META.hasTime 계약을 따른다 — S4(불출)·S7(절단) 만 시각이 있다 */
+function instantOf(seed: string, baseDate: string, hasTime: boolean): EventInstant {
+  const h = hashOf(seed)
+  const date = addDays(baseDate, -(h % 3))
+  if (!hasTime) return { date }
+  return { date, time: `${String(7 + (h % 11)).padStart(2, '0')}:${String(h % 60).padStart(2, '0')}` }
+}
+
+/** 완료(수신)는 발생보다 앞설 수 없다 — 발생 시점을 기준으로 뒤쪽에 놓는다 */
+function completedAfter(occurred: EventInstant, seed: string, hasTime: boolean): EventInstant {
+  const h = hashOf(seed)
+  const date = addDays(occurred.date, h % 2)
+  if (!hasTime) return { date }
+  const occurredMinutes = occurred.time
+    ? Number(occurred.time.slice(0, 2)) * 60 + Number(occurred.time.slice(3))
+    : 7 * 60
+  const minutes =
+    date === occurred.date
+      ? Math.min(occurredMinutes + 20 + (h % 300), 23 * 60 + 59)
+      : 7 * 60 + (h % 660)
+  return {
+    date,
+    time: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`,
+  }
+}
+
+function fabEventsOf(projNo: string, blockNo: string, baseDate: string): CollectionEvent[] {
+  const rows: CollectionEvent[] = []
+  /* 그리드 행의 상태는 카드와 **같은 모집단**에서 온다 — 기준일을 넘기지 않으면
+     "카드는 S3 진행중인데 그리드는 S3 완료" 같은 어긋남이 난다 */
+  const parts = generateParts(projNo, blockNo, baseDate)
+  const n = 9 + (hashOf(`${projNo}-${blockNo}-ev`) % 5)
+  for (let i = 0; i < n; i++) {
+    const stage = FAB_STAGES[hashOf(`${projNo}-${blockNo}-st-${i}`) % FAB_STAGES.length]
+    const meta = STAGE_META[stage]
+    const part = parts[hashOf(`${projNo}-${blockNo}-pt-${i}`) % parts.length]
+    let status = part.statuses[stage]
+    if (status === 'excluded') status = 'notDue' // 미대상 부재는 이벤트 행으로 내지 않는다
+    const seed = `${projNo}-${blockNo}-${stage}-${i}`
+    const occurred = status === 'notDue' ? null : instantOf(`${seed}-oc`, baseDate, meta.hasTime)
+    rows.push({
+      id: `${blockNo}-${stage}-${i}`,
+      blockNo,
+      stage,
+      mgmtNoType: meta.mgmtType,
+      mgmtNo: mgmtNoOf(stage, projNo, blockNo, i),
+      occurred,
+      completed:
+        status === 'done' && occurred ? completedAfter(occurred, `${seed}-cp`, meta.hasTime) : null,
+      status,
+      sources: meta.sources,
+      flagged: status !== 'notDue' && hashOf(`${seed}-flag`) % 17 === 4,
+    })
+  }
+  return rows
+}
+
+/**
+ * 조립 이벤트 행 — **판별(LiDAR 형상·수량 인식)이 원천 행**이고, 매칭된 W/O 착수·완료
+ * (작업지시, **일자만**)가 그 위의 참고 행이다. 여기에 BTS 반입·반출(운반 실적,
+ * 일자+시각)이 블록 레벨로 붙는다. 단계 셀은 소조/중조/대조가 아니라 단일 'ASM'(조립) —
+ * 관리번호가 ASSY_NO(조합식)·W/O 번호로 대상을 말한다. BTS 반출 = 검사장 이동 = **조립종료**라
+ * ASSY 전량 완료 블록에서만 나온다. 조립 행은 베이 소속이 있으므로 `mapShop` 을 싣는다.
+ */
+function asmEventsOf(projNo: string, blockNo: string, baseDate: string): CollectionEvent[] {
+  const factory = findBlock(projNo, blockNo)?.factory
+  const summary = generateAssyUnits(projNo, blockNo, baseDate)
+  /* 실측 정합 사실 — 판별 행의 원천 문구가 실측 뷰와 **같은 값**을 말하게 하는 재료.
+     표면일치 환산은 엔티티가 소유한다(두 화면이 각자 환산하면 같은 덩이가 다른 %가 된다) */
+  const scanOf = new Map((assyTreeOf(projNo, blockNo) ?? []).map((unit) => [unit.assyNo, unit.scan]))
+  /* 도장 단계 블록은 조립 시간축이 과거로 밀려 있다 — 이벤트 행도 같은 축을 써야
+     카드('판별 08-21')와 그리드('판별 09-03')가 다른 말을 하지 않는다 */
+  const lifeShift = paintingLifecycleShiftDays(projNo, blockNo)
+  const eventBase = lifeShift > 0 ? addDays(baseDate, -(lifeShift + 1)) : baseDate
+  const rows: CollectionEvent[] = []
+  const push = (
+    id: string,
+    kind: AsmEventKind,
+    status: StageStatus,
+    mgmtNo: string,
+    opts: { hasTime: boolean; mgmtNoType: MgmtNoType; sources: string }
+  ) => {
+    const seed = `${projNo}-${blockNo}-${id}`
+    const occurred = status === 'notDue' ? null : instantOf(`${seed}-oc`, eventBase, opts.hasTime)
+    rows.push({
+      id: `${blockNo}-${id}`,
+      blockNo,
+      stage: 'ASM',
+      kind,
+      mgmtNoType: opts.mgmtNoType,
+      mgmtNo,
+      occurred,
+      completed:
+        status === 'done' && occurred ? completedAfter(occurred, `${seed}-cp`, opts.hasTime) : null,
+      status,
+      sources: opts.sources,
+      flagged: status !== 'notDue' && hashOf(`${seed}-flag`) % 19 === 6,
+      mapShop: factory,
+    })
+  }
+
+  const anyStarted = summary.assys.some((a) => a.recognizedQty > 0)
+  if (anyStarted) {
+    // 공장 반입(BTS) — 조립 착수의 전제. 운반 대상은 블록('호선_블록' — BTS 키 형식)
+    push('btsin', 'btsIn', 'done', `${projNo}_${blockNo}`, {
+      hasTime: true,
+      mgmtNoType: 'ASSY',
+      sources: 'BTS',
+    })
+  }
+  for (const assy of summary.assys) {
+    /* ① 판별 이벤트 — **우리 수집의 원천 행**. 관리번호는 ASSY_NO 이고 원천은 정반
+       LiDAR 다. 인식이 있었던 ASSY 만 선다(수집된 것만 그리드에 오른다). */
+    if (assy.recognizedQty > 0) {
+      const scan = scanOf.get(assy.assyNo)
+      push(`${assy.assyNo}-judge`, 'asmJudged', assy.judged === 'complete' ? 'done' : 'inProgress',
+        assy.assyNo, {
+          hasTime: true,
+          mgmtNoType: 'ASSY',
+          /* 실측 정합 덩이는 그 사실과 표면일치를 그대로 적는다 — 실측 뷰의 상세 카드가
+             읽는 값과 같은 숫자라야 화면을 옮겨도 같은 이야기가 이어진다 (R31) */
+          sources: scan ? `LiDAR 실측 정합 · 표면일치 ${surfaceMatchPctOf(scan)}%` : 'LiDAR 판별',
+        })
+    }
+    /* ② 매칭된 W/O — 판별 행에 붙는 **참고 행**이다. 불일치 ASSY 는 붙은 W/O 가 없어
+       여기서 아무 행도 나오지 않는다(그 사정은 조립 카드의 노티 배지가 말한다). */
+    let doneRows = 0
+    for (const wo of assy.match.wos) {
+      if (wo.status === 'done' && doneRows < 2) {
+        doneRows += 1
+        push(`${assy.assyNo}-${wo.woNo}-d`, 'woDone', 'done', wo.woNo, {
+          hasTime: false,
+          mgmtNoType: 'WO',
+          sources: assy.match.state === 'fallback' ? 'W/O (4주 폴백)' : 'W/O',
+        })
+      } else if (wo.status === 'inProgress') {
+        push(`${assy.assyNo}-${wo.woNo}-s`, 'woStart', 'inProgress', wo.woNo, {
+          hasTime: false,
+          mgmtNoType: 'WO',
+          sources: assy.match.state === 'fallback' ? 'W/O (4주 폴백)' : 'W/O',
+        })
+      }
+    }
+  }
+  if (summary.inspectionMoved) {
+    // 검사장(G9G9) 이동 = 조립종료 (dataflow 근거 — 블록 레벨 사실)
+    push('btsout', 'btsOut', 'done', `${projNo}_${blockNo}`, {
+      hasTime: true,
+      mgmtNoType: 'ASSY',
+      sources: 'BTS',
+    })
+  }
+  return rows
+}
+
+/**
+ * 도장 이벤트 행 — 스텝 W/O 착수·완료(YPWP710M 일일 실적 계열, **일자만**) + BTS
+ * 반입·반출(운반 실적, 일자+시각). 관리번호는 W/O 번호·`호선_블록`(BTS 키). 단계
+ * 셀은 'PNT'(도장) 하나 — 스텝 이름은 이벤트 종류·드릴다운이 말한다. 딥링크는
+ * 도장 맵(/zones/painting?shop=)으로 나간다 — BTS 귀속 공장.
+ */
+function pntEventsOf(projNo: string, blockNo: string, baseDate: string): CollectionEvent[] {
+  const summary = generatePaintingSteps(projNo, blockNo, baseDate)
+  if (summary.phase === 'beforeIn') return [] // 반입 전 — 수집된 것이 없다
+  const rows: CollectionEvent[] = []
+  const push = (
+    id: string,
+    kind: AsmEventKind | PntEventKind,
+    status: StageStatus,
+    mgmtNo: string,
+    occurred: EventInstant | null,
+    completed: EventInstant | null,
+    opts: { mgmtNoType: MgmtNoType; sources: string }
+  ) => {
+    rows.push({
+      id: `${blockNo}-pnt-${id}`,
+      blockNo,
+      stage: 'PNT',
+      kind,
+      mgmtNoType: opts.mgmtNoType,
+      mgmtNo,
+      occurred,
+      completed,
+      status,
+      sources: opts.sources,
+      flagged: status !== 'notDue' && hashOf(`${projNo}-${blockNo}-pnt-${id}-flag`) % 23 === 7,
+      mapShop: summary.factory ?? undefined,
+      mapShopProcess: 'painting',
+    })
+  }
+  const timeOf = (seedKey: string) => {
+    const h = hashOf(`${projNo}-${blockNo}-${seedKey}`)
+    return `${String(7 + (h % 11)).padStart(2, '0')}:${String(h % 60).padStart(2, '0')}`
+  }
+  if (summary.btsInDate) {
+    /* BTS 이동은 한 시점 — 발생=완료(운반 완료 시각) */
+    const at = { date: summary.btsInDate, time: timeOf('btsin-t') }
+    push('btsin', 'btsIn', 'done', `${projNo}_${blockNo}`, at, at, {
+      mgmtNoType: 'ASSY',
+      sources: 'BTS',
+    })
+  }
+  for (const step of summary.steps) {
+    if (step.status === 'done' && step.startDate && step.endDate) {
+      push(`${step.step}-d`, 'stepDone', 'done', step.woNo,
+        { date: step.startDate }, { date: step.endDate },
+        { mgmtNoType: 'WO', sources: 'W/O' })
+    } else if (step.status === 'inProgress' && step.startDate) {
+      push(`${step.step}-s`, 'stepStart', 'inProgress', step.woNo,
+        { date: step.startDate }, null,
+        { mgmtNoType: 'WO', sources: 'W/O' })
+    }
+  }
+  if (summary.btsOutDate) {
+    const at = { date: summary.btsOutDate, time: timeOf('btsout-t') }
+    push('btsout', 'btsOut', 'done', `${projNo}_${blockNo}`, at, at, {
+      mgmtNoType: 'ASSY',
+      sources: 'BTS',
+    })
+  }
+  return rows
+}
+
+/**
+ * 수집 이벤트 그리드의 행.
+ *
+ * **조회 창**(W7-2) — 기본은 기준일 하루다. `window` 를 주면 그 창으로 자른다:
+ * 창 뒤(기준일 이후)에 일어난 행은 서지 않고, 창 안에서 시작해 창 뒤에 끝나는 행은
+ * 완료를 지운 채 진행 중으로 선다. 규칙은 `lib/eventWindow` 한 곳에 있다.
+ *
+ * 창을 주지 않으면 `{ from: baseDate, to: baseDate }` 로 서므로 **기존 호출부는
+ * 무변경**이고, 지금까지처럼 기준일 하루만 나온다.
+ */
+export async function fetchCollectionEvents(
+  projNo: string,
+  blockNos: readonly string[],
+  filter: ProcessFilter,
+  baseDate: string,
+  window?: DateWindow
+): Promise<CollectionEvent[]> {
+  // 의장 이벤트는 아직 범위 밖 — 해당 필터에서는 빈 목록(화면이 안내한다)
+  if (filter === 'outfitting') return []
+
+  const rows: CollectionEvent[] = []
+  for (const blockNo of blockNos) {
+    if (filter === 'all' || filter === 'fabrication') rows.push(...fabEventsOf(projNo, blockNo, baseDate))
+    if (filter === 'all' || filter === 'assembly') rows.push(...asmEventsOf(projNo, blockNo, baseDate))
+    if (filter === 'all' || filter === 'painting') rows.push(...pntEventsOf(projNo, blockNo, baseDate))
+  }
+  /* 조립 이벤트는 도장 단계 블록에서 시간축이 과거로 밀려 있다(생애주기 정합) —
+     그 행들까지 하루 창에 가두면 도장 블록의 조립 이력이 통째로 사라진다. 그래서
+     기본 창은 '기준일까지'로 열어 두고(시작 없음), 사용자가 창을 좁히면 그때 자른다. */
+  const clamp = window ?? { from: '0000-01-01', to: baseDate }
+  // 단계 → 블록 순 정렬 (정의서 §8.2 — 블록·단계 순 정렬의 화면 적용)
+  return clampEventsToWindow(rows, clamp).sort(
+    (a, b) => a.blockNo.localeCompare(b.blockNo) || a.stage.localeCompare(b.stage)
+  )
+}
+
+/* ── 드릴다운 KV (IPD-S02) ─────────────────────────────────── */
+
+/** 원천 화면별 주요 항목 (정의서 §6.2 항목명 그대로 — 임의 명명 금지) */
+export async function fetchEventDetail(event: CollectionEvent): Promise<EventDetail> {
+  const h = hashOf(`${event.id}-kv`)
+  const fmt = (v: EventInstant | null) => (v ? `${v.date}${v.time ? ` ${v.time}` : ''}` : '—')
+
+  // 조립·도장 행 — W/O(작업지시)·BTS(운반) 원천의 항목·값
+  if (event.kind) {
+    const pnt = event.stage === 'PNT'
+    if (event.kind === 'btsIn' || event.kind === 'btsOut') {
+      return {
+        eventId: event.id,
+        unit: '블록(운반)',
+        entries: [
+          { label: '운반 대상', value: event.mgmtNo },
+          {
+            label: '구간',
+            value: pnt
+              ? event.kind === 'btsIn'
+                ? '검사장(G9G9) → 도장공장'
+                : '도장공장 → 후속 공정'
+              : event.kind === 'btsIn'
+                ? '적치장 → 조립공장'
+                : '조립공장 → 검사장(G9G9)',
+          },
+          { label: '이동 일시', value: fmt(event.completed ?? event.occurred) },
+          { label: '운반 순번', value: String(1 + (h % 40)) },
+        ],
+      }
+    }
+    if (event.kind === 'stepDone' || event.kind === 'stepStart') {
+      // 도장 스텝 W/O — YPWP720M(계획)·YPWP710M(일일 실적)·YPWG221M(확정) 계열
+      return {
+        eventId: event.id,
+        unit: '작업지시(W/O · 도장)',
+        entries: [
+          { label: '작업지시 No', value: event.mgmtNo },
+          { label: '상태', value: event.status === 'done' ? '완료(W)' : '진행(S)' },
+          { label: '착수일 (SD_ACTL)', value: fmt(event.occurred) },
+          { label: '완료일 (FD_ACTL)', value: fmt(event.completed) },
+          {
+            label: '확정(YPWG221M)',
+            value: event.status === 'done' ? (h % 4 !== 1 ? "확정('B')" : '확정 대기') : '—',
+          },
+        ],
+      }
+    }
+    return {
+      eventId: event.id,
+      unit: '작업지시(W/O)',
+      entries: [
+        { label: '작업지시 No', value: event.mgmtNo },
+        { label: '상태', value: event.status === 'done' ? '완료(W)' : '진행(S)' },
+        { label: '착수일', value: fmt(event.occurred) },
+        { label: '완료일', value: fmt(event.completed) },
+        { label: '계획 물량', value: String(4 + (h % 20)) },
+      ],
+    }
+  }
+
+  const meta = STAGE_META[event.stage as FabStageId]
+  /* 원천 확정 대기 절점(S2·S3·S5·S6·S10)은 레거시 컬럼을 지어내지 않는다 —
+     대상·일자만 적고 그 사정을 KV 로 남긴다. */
+  const pendingEntries = (unitLabel: string) => [
+    { label: unitLabel, value: event.mgmtNo },
+    { label: '완료일', value: fmt(event.completed) },
+    { label: '판별 근거', value: '원천 확정 대기' },
+  ]
+  const entriesByStage: Record<FabStageId, { label: string; value: string }[]> = {
+    S1: [
+      { label: '고유번호', value: `ST-${1000 + (h % 9000)}` },
+      { label: '중량(kg)', value: String(800 + (h % 2000)) },
+      { label: '강재반입일', value: fmt(event.completed) },
+    ],
+    S2: pendingEntries('강재 고유번호'),
+    S3: pendingEntries('강재 고유번호'),
+    /* S4 강재 불출 — 적치의 마지막 절점. 불출일에 시각이 붙는 둘 중 하나다 */
+    S4: [
+      { label: '고유번호', value: `ST-${1000 + (h % 9000)}` },
+      { label: 'Roll No.', value: `R-${100 + (h % 900)}` },
+      { label: '재질', value: h % 2 === 0 ? 'AH36' : 'A' },
+      { label: '두께', value: `${8 + (h % 18)}mm` },
+      { label: '중량(kg)', value: String(800 + (h % 2000)) },
+      { label: '불출일·시각', value: fmt(event.completed) },
+    ],
+    /* S5 가공 입고 — 적치에서 가공으로 넘어오는 절점. 신설이라 원천이 아직 없다 */
+    S5: pendingEntries('강재 고유번호'),
+    S6: pendingEntries('강재 고유번호'),
+    S7: [
+      { label: '도면번호', value: event.mgmtNo },
+      { label: '절단장비', value: `NC-${1 + (h % 6)}` },
+      { label: '절단완료일시', value: fmt(event.completed) },
+      { label: '계획/지시/실적 수량', value: `${20 + (h % 9)} / ${20 + (h % 9)} / ${14 + (h % 9)}` },
+    ],
+    S8: [
+      { label: '부재번호', value: event.mgmtNo },
+      { label: '사상완료일', value: fmt(event.completed) },
+      { label: '모듬상태', value: event.status === 'done' ? '모듬 완료' : '진행' },
+    ],
+    S9: [
+      { label: '모둠 번호', value: event.mgmtNo },
+      { label: '구성 부재 수', value: String(4 + (h % 14)) },
+      { label: '합계 중량(kg)', value: String(3000 + (h % 9000)) },
+      { label: '선별 상태', value: event.status === 'done' ? '완료' : '대기' },
+    ],
+    S10: pendingEntries('모둠 번호'),
+  }
+  return { eventId: event.id, unit: meta.unit, entries: entriesByStage[event.stage as FabStageId] }
+}

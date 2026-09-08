@@ -15,12 +15,15 @@
       "craneCount": "Cranes",
       "openDetails": "Open region details",
       "close": "Close region details",
-      "siteKicker": "Site",
-      "regionKicker": "Region",
-      "cranes": "Cranes"
+      "cranes": "Cranes",
+      "siteCategory": "Site",
+      "regionCategory": "Region",
+      "enterRegion": "Open live monitoring"
     },
-    "world": {
-      "returnToWorld": "World view"
+    "breadcrumb": {
+      "global": "Global",
+      "backToGlobal": "Back to global view",
+      "ariaLabel": "Map location"
     },
     "site": {
       "enter": "Enter site",
@@ -30,6 +33,13 @@
       "map": "Map",
       "satellite": "Satellite",
       "toggleAriaLabel": "Map view"
+    },
+    "zoom": {
+      "in": "Zoom in",
+      "out": "Zoom out",
+      "ariaLabel": "Map zoom",
+      "sliderAriaLabel": "Map zoom slider",
+      "reset": "Reset map view"
     },
     "kpi": {
       "sites": "Sites",

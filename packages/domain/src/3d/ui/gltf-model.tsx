@@ -20,8 +20,20 @@ interface GltfModelProps {
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
   showLabel?: boolean;
+  /**
+   * 라벨 흐림 + 포인터 차단. 모니터링 포커스 중 포커스 밖 모델에 opacity 와
+   * 함께 준다 — opacity 만으로는 라벨(DOM)이 또렷하고 클릭도 되기 때문.
+   * 모델 자체의 반투명(opacity < 1)과는 무관하므로 별도 prop 이다.
+   */
+  labelDimmed?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   alarmHighlightMesh?: boolean;
+  /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델에만(model-mesh.tsx). */
+  seaSubmersion?: boolean;
+  /**
+   * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
+   */
+  castShadow?: boolean;
   meshOverrides?: SavedMeshOverride[];
   /**
    * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. bbox 존 분류만 하는
@@ -65,7 +77,10 @@ export const GltfModel = memo(function GltfModel({
   url,
   equipName,
   opacity = 1,
+  seaSubmersion = false,
+  castShadow = true,
   showLabel = true,
+  labelDimmed = false,
   alarmSeverity = null,
   alarmHighlightMesh = false,
   position = [0, 0, 0],
@@ -102,6 +117,8 @@ export const GltfModel = memo(function GltfModel({
       url={url}
       opacity={opacity}
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
+      seaSubmersion={seaSubmersion}
+      castShadow={castShadow}
       position={position}
       rotation={rotation}
       scale={scale}
@@ -126,6 +143,7 @@ export const GltfModel = memo(function GltfModel({
           equipName={equipName}
           localAnchor={labelLocalAnchor}
           alarmSeverity={alarmSeverity}
+          dimmed={labelDimmed}
           onSelect={onSelect}
           onHoverStart={onHoverStart}
           onHoverMove={onHoverMove}

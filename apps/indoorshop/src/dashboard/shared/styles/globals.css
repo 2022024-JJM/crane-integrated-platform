@@ -1,0 +1,457 @@
+:root {
+  /* @theme 의 text-* 계산식이 참조한다 — 셸 전역에서 항상 1 이어야 한다 */
+  --app-font-scale: 1;
+}
+
+@theme inline {
+  --font-inshop-sans: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+
+
+  /*
+   * 타이포 스케일 — PWM 의 조밀한 본문 크기에 맞춘다.
+   * 기본 스케일(xs 12 / sm 14 …)만으로는 11·13·15px 을 못 내서 임의값이 흩어졌다.
+   *
+   * 모든 단계에 `--app-font-scale` 을 곱한다 — 현장 모니터는 멀리서 보는 일이 많아
+   * 설정에서 글자를 키울 수 있어야 하는데, 단계마다 따로 키우면 위계(제목/본문/보조)가
+   * 무너진다. 배율 하나만 움직여 스케일 전체를 같은 비율로 끌어올린다.
+   */
+  --text-2xs: calc(10px * var(--app-font-scale));
+  --text-2xs--line-height: calc(14px * var(--app-font-scale));
+  --text-inshop-xs: calc(11px * var(--app-font-scale));
+  --text-inshop-xs--line-height: calc(16px * var(--app-font-scale));
+  --text-inshop-sm: calc(13px * var(--app-font-scale));
+  --text-inshop-sm--line-height: calc(18px * var(--app-font-scale));
+  --text-inshop-base: calc(15px * var(--app-font-scale));
+  --text-inshop-base--line-height: calc(22px * var(--app-font-scale));
+  --text-inshop-lg: calc(17px * var(--app-font-scale));
+  --text-inshop-lg--line-height: calc(24px * var(--app-font-scale));
+  --text-inshop-xl: calc(20px * var(--app-font-scale));
+  --text-inshop-xl--line-height: calc(28px * var(--app-font-scale));
+  --text-inshop-2xl: calc(26px * var(--app-font-scale));
+  --text-inshop-2xl--line-height: calc(32px * var(--app-font-scale));
+
+  /* 애니메이션 — v4 는 tailwind.config.ts 를 자동으로 읽지 않으므로 여기에 둔다 */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.25s ease-out;
+
+  /*
+   * 반경 — 사이드바·툴바·메뉴가 macOS 처럼 읽히도록 전반적으로 키웠다.
+   * 선택 알약(sm)과 패널(lg)의 차이가 위계를 만든다.
+   */
+  --radius-inshop-xl: 12px;
+  --radius-inshop-2xl: 16px;
+  --radius-inshop-3xl: 24px;
+  --radius-inshop-xs: 4px;
+  --radius-inshop-sm: 7px;
+  --radius-inshop-md: 10px;
+  --radius-inshop-lg: 14px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-viewport: var(--viewport);
+  --color-material: var(--material);
+  --color-material-strong: var(--material-strong);
+  --color-material-border: var(--material-border);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-glass-foreground: var(--glass-foreground);
+  --color-glass-healthy: var(--glass-healthy);
+  --color-glass-progress: var(--glass-progress);
+  --color-glass-degraded: var(--glass-degraded);
+  --color-glass-unhealthy: var(--glass-unhealthy);
+  --color-glass-accent: var(--glass-accent);
+  --color-glass-hover: var(--glass-hover);
+  --color-glass-active: var(--glass-active);
+  --color-status-healthy: var(--status-healthy);
+  --color-status-progress: var(--status-progress);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-unhealthy: var(--status-unhealthy);
+}
+
+/*
+ * 중립색은 PWM 프론트엔드(pwm-app)의 primitives 램프에서 가져온다.
+ *
+ * 강조색은 주황이다. 다만 흔한 밝은 주황(#f97316·orange-500 류)은 흰 배경에서
+ * 3.4:1 이라 글자로 못 쓴다 — 채도는 그대로 두고 명도만 내려, 대비 4.5:1 을
+ * 넘기는 선에서 **가장 밝은 주황**을 고른 값이다. 다크에서는 반대로 끌어올린다.
+ *
+ * 상태색(주의)은 강조색과 색상환에서 20° 이상 떨어뜨렸다. 둘 다 따뜻한 계열이라
+ * 붙여 두면 "강조"와 "주의"가 같은 말로 보인다.
+ */
+.inshop-root {
+  /*
+   * 글자 크기 배율 — 설정 화면이 바꾸는 값은 이것 하나뿐이다 (기본 1).
+   * @theme 의 계산식이 참조하므로 항상 정의돼 있어야 한다.
+   */
+  --app-font-scale: 1;
+
+  /* Light — coolgray 램프 */
+  --background: #f7f8fc;        /* coolgray-00 */
+  --foreground: #101321;        /* coolgray-100 */
+  --surface: #ffffff;
+  --surface-secondary: #edeff8; /* coolgray-10 */
+  --border: #d8dae8;            /* coolgray-20 */
+  --accent: #c54a0a;            /* orange-60 — 4.82:1 (흰 배경) / 4.54:1 (본문 바탕) */
+  --on-accent: #ffffff;         /* 4.82:1 */
+  /* 상태색은 예약 색이다 — accent 나 일반 강조에 재사용하지 않는다 */
+  /*
+   * 재질(material) — 사이드바·툴바·메뉴처럼 콘텐츠 위에 떠 있는 면.
+   * 반투명 + backdrop-blur 로 뒤가 비쳐야 층이 생긴다.
+   */
+  --material: rgb(255 255 255 / 0.72);
+  /*
+   * 팝오버·메뉴는 본문 **위**에 겹친다. 크롬(사이드바·툴바)과 같은 투명도를 쓰면
+   * 뒤 카드의 글자가 그대로 비쳐 읽혀 두 층의 텍스트가 섞인다.
+   */
+  --material-strong: rgb(255 255 255 / 0.94);
+  --material-border: rgb(16 19 33 / 0.08);
+
+  /* 3D 뷰포트 바탕 — 점군 채도가 살도록 두 모드 모두 어둡게 고정한다 (뷰어 배경 그라디언트의 중간값) */
+  --viewport: #1a2129;
+
+  /*
+   * 뷰포트 유리 — 3D 위에 뜨는 오버레이(도구줄·좌표축·범례·라벨 카드)의 재질.
+   *
+   * 바탕(--viewport)이 두 테마 모두 어둡게 고정돼 있으므로 이 유리는 테마를
+   * 따라가지 않는다. 라이트 테마에서 흰 재질을 쓰면 어두운 점군 위에 흰 판이
+   * 떠서 층이 아니라 구멍처럼 보인다 — 어두운 유리 + 밝은 글자로 고정한다.
+   * 상태색도 같은 이유로 다크 램프 값을 쓴다 (라이트 램프는 이 위에서 안 읽힌다).
+   */
+  --glass: rgb(20 26 34 / 0.52);
+  --glass-border: rgb(255 255 255 / 0.14);
+  --glass-foreground: #eef2f7;
+  --glass-healthy: #20c997;
+  --glass-progress: #7ab8ff;
+  --glass-degraded: #f0c24a;
+  --glass-unhealthy: #f87171;
+  --glass-accent: #ffa347;
+  /* 유리 위 항목의 손 얹음·선택 상태 — 어두운 유리이므로 밝은 쪽으로 눌러 준다 */
+  --glass-hover: rgb(255 255 255 / 0.10);
+  --glass-active: rgb(255 255 255 / 0.18);
+  --glass-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.55);
+
+  --status-healthy: #047857;    /* 5.48:1 */
+  /*
+   * 진행중 — **빨강·주황이 아니다.** 돌고 있는 일에 경보색을 주면 화면이 상시 경보가
+   * 되고 진짜 이상이 묻힌다(감사 F-7). 조립 공정색(#2a78d6)과 이웃한 파랑이지만,
+   * 공정색은 지도·좌측 바에만 서고 상태색은 칩·점·바에만 서서 자리로 갈린다.
+   */
+  --status-progress: #1a5fb4;   /* 6.29:1 (흰 배경) / 5.48:1 (보조 바탕) */
+  --status-degraded: #7a5b00;   /* 6.32:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
+  --status-unhealthy: #bb3030;  /* red-100, 5.87:1 */
+}
+
+.dark .inshop-root,
+.inshop-root.dark {
+  /* Dark — PWM background/paper/divider */
+  --background: #1a1c20;
+  --foreground: #e6e8ec;
+  --surface: #23262c;
+  --surface-secondary: #2c2f37;
+  --border: #2f3239;
+  --accent: #ffa347;            /* orange-30 — 7.64:1 (surface 위) */
+  --on-accent: #21160c;         /* 8.93:1 — 강조 위에 얹는 따뜻한 먹 */
+  --material: rgb(30 33 39 / 0.72);
+  --material-strong: rgb(32 35 41 / 0.94);
+  --material-border: rgb(255 255 255 / 0.09);
+  --viewport: #1a2129;
+  --status-healthy: #20c997;    /* green-50, 7.12:1 */
+  --status-progress: #7ab8ff;   /* 7.31:1 (surface 위) */
+  --status-degraded: #f0c24a;   /* 9.04:1 — 강조(구리)와 갈리도록 노랑 쪽으로 */
+  --status-unhealthy: #f87171;  /* 5.48:1 */
+}
+
+/*
+ * 뷰포트 위에 뜨는 유리 패널.
+ *
+ * 흐림만으로는 유리가 되지 않는다 — 채도를 올려야 뒤의 색이 유리를 통과한 것처럼
+ * 살아나고(saturate), 위 모서리의 1px 하이라이트가 있어야 판에 두께가 생긴다.
+ * 테두리는 그림자에 겹쳐 넣어 레이아웃 폭에 영향을 주지 않는다.
+ */
+@utility glass-panel {
+  background: var(--glass);
+  color: var(--glass-foreground);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-border),
+    inset 0 1px 0 rgb(255 255 255 / 0.10),
+    var(--glass-shadow);
+}
+
+/*
+ * ── 뷰포트 표면 — 3D 뷰어 옆에 서는 UI 가 같은 어둠 위에 서게 하는 판 ──
+ *
+ * 조립·의장 워크스페이스는 한 탭줄 아래 ②3D 뷰어·①센서·③블록을 나란히 둔다. 그런데
+ * 뷰어만 어둡고 나머지 두 탭은 흰 종이라, 탭을 옮길 때마다 **같은 화면 안에서 명암이
+ * 뒤집혔다**(UX 감사 A10). 눈이 매번 다시 적응해야 하고, 3D 옆의 목록이 다른 앱처럼 읽힌다.
+ *
+ * 고치는 방법은 컴포넌트를 다시 칠하는 것이 아니라 **바탕 토큰을 갈아 끼우는 것**이다.
+ * 이 아래의 컴포넌트는 전부 `bg-surface`·`text-foreground` 같은 토큰으로 그려지므로,
+ * 여기서 그 토큰만 다크 램프로 바꾸면 자기가 어디에 서 있는지 몰라도 어두운 판에 맞게
+ * 선다 — 마크업도 레이아웃도 그대로다. 다크 테마에서는 값이 원래와 같아 아무 일도 없다.
+ */
+@utility viewport-surface {
+  /*
+   * 갈아 끼우는 것은 `--color-*` 쪽이다. 유틸리티(`bg-surface` 등)가 실제로 읽는 이름이
+   * 그것이고, 원본(`--surface`)은 `:root` 에서 이미 값으로 굳어 자식이 바꿔도 소용없다
+   * (커스텀 속성은 선언된 그 자리에서 값이 정해진다 — 그래서 테마 전환도 `.dark` 가
+   * 루트에 서는 것이다). 원본도 함께 바꿔 두는 건 인라인 style 로 읽는 자리 때문이다.
+   */
+  --color-background: var(--viewport);
+  --color-foreground: #e6e8ec;
+  --color-surface: #23262c;
+  --color-surface-secondary: #2c2f37;
+  --color-border: #2f3239;
+  --color-accent: #ffa347;
+  --color-on-accent: #21160c;
+  --color-material: rgb(30 33 39 / 0.72);
+  --color-material-strong: rgb(32 35 41 / 0.94);
+  --color-material-border: rgb(255 255 255 / 0.09);
+  /* 상태색도 함께 — 라이트 램프(짙은 초록·팥색)는 어두운 판 위에서 읽히지 않는다 */
+  --color-status-healthy: #20c997;
+  --color-status-progress: #7ab8ff;
+  --color-status-degraded: #f0c24a;
+  --color-status-unhealthy: #f87171;
+
+  --background: var(--viewport);
+  --foreground: #e6e8ec;
+  --surface: #23262c;
+  --surface-secondary: #2c2f37;
+  --border: #2f3239;
+  --status-healthy: #20c997;
+  --status-progress: #7ab8ff;
+  --status-degraded: #f0c24a;
+  --status-unhealthy: #f87171;
+
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* 떠 있는 면의 그림자 — 얇은 테두리 한 겹 + 넓고 흐린 그림자 */
+@utility shadow-material {
+  box-shadow:
+    0 0 0 0.5px var(--material-border),
+    0 12px 32px -8px rgb(16 19 33 / 0.18),
+    0 2px 8px -2px rgb(16 19 33 / 0.08);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/*
+ * 전체 현황 지도의 **공장 이름패** — 지붕에 누워 있던 이름이 떠오르는 HUD.
+ *
+ * 고르기 전 이름은 캔버스가 지붕 평면에 눕혀 그린다(YardMap 의 2.5D 이름줄). 공장을
+ * 고르면 그 글씨는 사라지고 이 패가 같은 자리에서 **일어서며 떠오른다** — 누운 자세
+ * (rotateX)에서 정면으로, 지붕 높이에서 그 위로. 자세와 높이가 함께 움직여야 "누워
+ * 있던 것이 떠올랐다"로 읽힌다.
+ *
+ * 떠오름(rise)과 부유(bob)를 **다른 엘리먼트**에 나눠 건다. 한 엘리먼트에 두 애니메이션을
+ * 걸면 뒤엣것의 transform 이 앞엣것을 통째로 덮어써서, 떠오르다 말고 튄다.
+ */
+@keyframes factory-hud-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.82) rotateX(72deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0deg);
+  }
+}
+
+@keyframes factory-hud-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.factory-hud-rise {
+  transform-origin: 50% 100%;
+  animation: factory-hud-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.factory-hud-bob {
+  /* 떠오름이 끝난 뒤에 이어받는다 — 지연이 곧 rise 의 길이다 */
+  animation: factory-hud-bob 3.8s ease-in-out 620ms infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .factory-hud-rise {
+    animation: fade-in 160ms ease-out both;
+  }
+  .factory-hud-bob {
+    animation: none;
+  }
+}
+
+/*
+ * 누를 수 있는 것은 손 모양으로.
+ *
+ * Tailwind v4 preflight 는 button 에 `cursor: default` 를 준다 (브라우저 기본을
+ * 따르자는 취지다). 그런데 이 화면은 카드·칩·세그먼트·메뉴 항목 대부분이
+ * button 이라, 그대로 두면 "눌러도 되는 곳"이 커서로 구분되지 않는다.
+ * 컴포넌트마다 유틸리티를 붙이면 새로 만드는 것에서 매번 빠지므로 base 에서
+ * 한 번에 되돌린다.
+ *
+ * - 못 누르는 것(`:disabled`, `aria-disabled`)은 제외한다.
+ * - 유틸리티 레이어가 base 보다 뒤에 오므로, `cursor-col-resize`(리사이즈 손잡이)나
+ *   `cursor-default`(동작 없는 프리뷰)처럼 컴포넌트가 지정한 커서는 그대로 이긴다.
+ */
+@layer base {
+  .inshop-root button:not(:disabled),
+  .inshop-root [role="button"]:not([aria-disabled="true"]),
+  .inshop-root summary,
+  .inshop-root select:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+
+/* 전체 현황은 작은 정보가 밀집되어 있어 본문보다 조금 더 정교한 자간을 사용한다. */
+.dashboard-typography {
+  letter-spacing: -0.012em;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 강제 다크 오버레이(지도 위 유리 패널) 전용 얇은 스크롤바 — 기본(밝은) 스크롤바가
+ * 어두운 패널 위에서 튀어서, 패널 색과 같은 결의 가는 막대로 바꾼다.
+ * 전체 현황 지도 오버레이와 도장 SCADA 패널이 함께 쓴다.
+ */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 140, 160, 0.45) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(120, 140, 160, 0.45);
+}
+
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 170, 190, 0.6);
+}
+
+/*
+ * 스크롤 그늘 — **넘칠 때만** 위/아래 가장자리에 지는 그림자.
+ *
+ * 자리가 모자라 마지막 줄이 반쯤 걸리면, 그것이 "더 있다"인지 "잘못 그렸다"인지
+ * 화면만 보고는 알 수 없다. 그늘이 그 한 마디를 대신한다.
+ *
+ * 원리: 바탕색 덮개 두 장은 내용과 함께 움직이고(`local`), 그늘 두 장은 상자에 붙어
+ * 있다(`scroll`). 끝에 닿으면 덮개가 그늘 위로 올라와 지워 주고, 아직 남았으면
+ * 덮개가 비켜나 그늘이 드러난다. 자바스크립트가 필요 없다.
+ *
+ * `--scroll-shadow-bg` 로 덮개 색을 그 상자의 바탕색에 맞춘다 (기본은 지도 위 카드).
+ */
+.scroll-shadow-y {
+  --scroll-shadow-bg: #0b0e12;
+  background:
+    linear-gradient(var(--scroll-shadow-bg) 40%, rgba(0, 0, 0, 0)) top / 100% 16px no-repeat local,
+    linear-gradient(rgba(0, 0, 0, 0), var(--scroll-shadow-bg) 60%) bottom / 100% 16px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0)) top / 100% 9px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0)) bottom / 100% 9px no-repeat scroll;
+}
+
+/*
+ * 카메라가 도는 동안에는 지도 위 유리(backdrop-blur)를 끈다.
+ *
+ * 유리 아래 캔버스가 매 프레임 바뀌면 브라우저가 블러도 매 프레임 다시 계산한다 — 넓은
+ * 패널 한 장이 지도를 그리는 것보다 비싸서, 도장 배치 화면에서 캔버스는 한 프레임 2ms
+ * 인데 화면은 21ms 씩 걸렸다(블러를 끄면 16ms). 카메라가 멈추면(160ms) 곧바로 되돌아오므로
+ * 정지 화면의 모습은 그대로다 — 움직이는 동안 패널 뒤가 조금 덜 흐릴 뿐이다.
+ *
+ * 표시는 YardMap 이 `body.camera-moving` 클래스로 켜고 끈다(React 를 거치지 않는다).
+ * 선택자가 유틸리티 클래스 이름을 보는 것은, 유리를 쓰는 자리가 여러 화면에 흩어져 있어
+ * 그것들에 공통 클래스를 새로 다는 것보다 한 줄로 끝내는 편이 어긋날 자리가 적어서다.
+ *
+ * 값을 `none` 대신 `blur(3px)` 로 낮춰 봤지만 절반밖에 못 돌려받았다(19ms) — 비용은
+ * 반경보다 **뒷배경을 한 겹 더 그리는 일** 자체에 있다. 그래서 아예 끈다: 움직이는 동안
+ * 패널 뒤로 지도가 또렷이 비치지만, 그 대가로 카메라가 60fps 로 돈다.
+ */
+/* 접두사(-webkit-)는 손으로 붙이지 않는다 — 함께 적으면 빌드의 CSS 최적화가 둘을 같은
+   속성으로 보고 하나만 남겨(측정: 프로덕션 번들에서 표준 속성이 지워졌다) 규칙이 통째로
+   빈 껍데기가 된다. 필요한 접두사는 빌드가 대상 브라우저에 맞춰 붙인다. */
+body.camera-moving [class*='backdrop-blur'] {
+  backdrop-filter: none !important;
+}
+
+/*
+ * 잡아 옮길 수 있는 지도 오버레이 카드 (`shared/ui/atoms/DraggableCard`).
+ *
+ * 전부 `:where()` 로 감싸 **명시도 0** 으로 둔다 — 카드 안쪽 요소가 제 커서 유틸리티
+ * (`cursor-crosshair` 같은)를 들고 있으면 언제나 그쪽이 이긴다. 여기 규칙은 아무것도
+ * 말하지 않은 요소에만 스며든다.
+ */
+:where(.drag-card) {
+  cursor: grab;
+}
+
+:where(.drag-card) :where(button, a, summary, label, [role='button'], [role='tab']) {
+  cursor: pointer;
+}
+
+:where(.drag-card) :where(input, textarea, [contenteditable='true']) {
+  cursor: text;
+}
+
+/* 안쪽에 스크롤 영역이 있어 카드 전체에 touch-action 을 걸지 못한 카드 — 손잡이만 건다 */
+:where(.drag-card) [data-drag-handle] {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* 끄는 동안에는 카드 위 어디에 손이 있든 같은 커서 — 손이 카드를 쥐고 있다는 신호 */
+.drag-card[data-dragging='true'],
+.drag-card[data-dragging='true'] * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/*
+ * 내업 대시보드 subtree 의 바탕.
+ *
+ * 원본은 `body` 에 바탕·서체를 걸었지만, 셸에서는 body 가 모든 모듈의 공유
+ * 자산이라 여기서 칠하면 다른 모듈 화면까지 이 팔레트로 바뀐다. 대신 이 앱이
+ * 차지하는 영역에만 칠한다 — 서체도 마찬가지로 (셸 전역은 IBM Plex 다).
+ */
+.inshop-root {
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/*
+ * 셸은 base 에서 `* { border-color: var(--border) }` 를 전역으로 건다(shadcn 관례).
+ * 원본은 Tailwind 기본값(currentColor)을 전제로 쓰였다 — `border-border` 를 붙인
+ * 곳만 토큰 색이고, 나머지는 글자색 테두리다. 그 전제를 이 subtree 안에서 되돌린다.
+ * base 레이어라 유틸리티(`border-border`, `border-accent`)는 그대로 이긴다.
+ */
+@layer base {
+  .inshop-root,
+  .inshop-root * {
+    border-color: currentColor;
+  }
+}

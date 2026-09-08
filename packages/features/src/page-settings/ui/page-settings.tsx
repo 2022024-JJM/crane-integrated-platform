@@ -32,6 +32,7 @@ type AccountRole =
   | 'hmi'
   | 'hmi2'
   | 'indoorshop'
+  | 'indoorshop-ot'
   | 'keyin';
 
 const ROLE_LABEL: Record<AccountRole, string> = {
@@ -42,7 +43,8 @@ const ROLE_LABEL: Record<AccountRole, string> = {
   mro2: 'MRO2',
   hmi: 'HMI',
   hmi2: 'HMI2',
-  indoorshop: 'Indoorshop',
+  indoorshop: 'Indoorshop IT',
+  'indoorshop-ot': 'Indoorshop OT',
   keyin: 'Key-In',
 };
 
@@ -55,6 +57,7 @@ const ROLE_BADGE_CLASS: Record<AccountRole, string> = {
   hmi: 'bg-cyan-500/15 text-cyan-400',
   hmi2: 'bg-cyan-500/15 text-cyan-400',
   indoorshop: 'bg-orange-500/15 text-orange-400',
+  'indoorshop-ot': 'bg-teal-500/15 text-teal-400',
   keyin: 'bg-orange-500/15 text-orange-400',
 };
 

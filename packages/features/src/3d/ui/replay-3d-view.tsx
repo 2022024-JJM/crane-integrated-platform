@@ -8,6 +8,8 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Box3 } from 'three';
+import { modelObjectRegistry } from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
   Popover,
@@ -24,14 +26,19 @@ import {
   type MonitoringReplayUiState,
 } from '@crane/domain/monitoring';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { OutdoorWorkModelSimulation, useSceneData } from './outdoor-work-model-simulation';
+import {
+  OutdoorWorkModelSimulation,
+  useSceneData,
+} from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
+import { SceneSurfaceCamera } from './scene-surface-camera';
 import {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,
   SceneLighting,
 } from './scene-render-preset';
+import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { ReplaySearchForm } from './replay-search-form';
 
@@ -65,9 +72,8 @@ export function Replay3dView({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
   const { sceneInfo, isLoading } = useSceneData(regionId, 'replay');
-  const focusStack = useObjectFocusStore((s) => s.focusStack);
-  const popFocus = useObjectFocusStore((s) => s.popFocus);
-  const clearFocus = useObjectFocusStore((s) => s.clearFocus);
+  const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
+  const exitFocus = useObjectFocusStore((s) => s.exitFocus);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -91,24 +97,39 @@ export function Replay3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
+  const handleGetPose = useCallback(
+    () => sceneControllerRef.current?.getPose() ?? null,
+    [],
+  );
+
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
   // 인라인 리터럴 금지 — monitoring-3d-view의 cameraPreset 주석 참고
   // (부모 리렌더마다 SceneControlsBridge가 reset()을 호출해 카메라가 튄다).
+  // 탑뷰 fit 대상 = 지도 bounds. mapId(문자열)만 의존성에 넣어 sceneInfo
+  // 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게 한다(위 주석의 reset 문제).
+  const mapId = sceneInfo?.maps?.[0]?.id;
   const cameraPreset = useMemo(
-    () => ({ defaultPosition: cameraPosition, defaultTarget: cameraTarget }),
-    [cameraPosition, cameraTarget],
+    () => ({
+      defaultPosition: cameraPosition,
+      defaultTarget: cameraTarget,
+      getTopViewBounds: () => {
+        const map = mapId ? modelObjectRegistry.get(mapId) : undefined;
+        return map ? new Box3().setFromObject(map) : null;
+      },
+    }),
+    [cameraPosition, cameraTarget, mapId],
   );
 
   const focusOverlay =
-    focusStack.length > 0 ? (
+    focusedModelId !== null ? (
       <Button
         variant="outline"
         size="sm"
         className="bg-background/85 border-border/70 pointer-events-auto absolute top-16 left-3 gap-1.5 shadow-sm backdrop-blur-sm"
-        onClick={popFocus}
+        onClick={exitFocus}
       >
         <ArrowLeft className="size-4" />
         {t('monitoring:focus.back')}
@@ -119,11 +140,7 @@ export function Replay3dView({
     <Popover>
       <PopoverTrigger
         render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 px-2.5"
-          >
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5">
             <CalendarRange className="size-4" />
             <span className="font-mono text-xs">
               {formatRangeButtonLabel(search.viewingFrom, search.viewingTo)}
@@ -176,7 +193,8 @@ export function Replay3dView({
         cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           gl: SCENE_GL_OPTIONS,
-          onPointerMissed: clearFocus,
+          shadows: sceneCanvasShadows(sceneInfo?.lighting),
+          onPointerMissed: exitFocus,
         }}
         overlay={
           <>
@@ -186,10 +204,13 @@ export function Replay3dView({
             {replayControlsOverlay}
           </>
         }
-        toolbarClassName="top-28"
         onControllerReady={handleControllerReady}
       >
-        <SceneLighting />
+        <SceneLighting sceneInfo={sceneInfo} />
+        <SceneSurfaceCamera
+          regionId={regionId}
+          environmentId={sceneInfo?.environmentId}
+        />
         {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
             사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
             재생을 붙잡지 않는다. */}
@@ -208,6 +229,7 @@ export function Replay3dView({
             mode="replay"
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
+            getPose={handleGetPose}
           />
           <SceneReadyProbe onReady={handleSceneReady} />
         </Suspense>

@@ -11,6 +11,10 @@ interface SceneObjectSelectionState {
   selectedObjectType: SelectedObjectType | null;
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
+  /**
+   * 모델 안쪽 노드(`${modelId}::${meshPath}`) 단독 선택. 노드는 읽기 전용
+   * (바운딩 박스만)이라 토글 액션이 없고 멀티 선택에 섞이지 않는다.
+   */
   selectMesh: (meshId: string) => void;
   /**
    * 지도 단독 선택(일반 클릭). 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중
@@ -20,7 +24,6 @@ interface SceneObjectSelectionState {
   selectMap: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
-  toggleMesh: (meshId: string) => void;
   toggleMap: (id: string) => void;
   /**
    * 다중 선택 일괄 설정. 타입은 호출자가 안다 — 마퀴/Ctrl+A/복제 결과에
@@ -99,23 +102,6 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
             ? undefined
             : state.primarySelectedId;
         return deriveCompat(next, next.size > 0 ? 'text' : null, primary);
-      }),
-
-    toggleMesh: (meshId) =>
-      set((state) => {
-        const next = new Set(state.selectedIds);
-        const isAdding = !next.has(meshId);
-        if (isAdding) {
-          next.add(meshId);
-        } else {
-          next.delete(meshId);
-        }
-        const primary = isAdding
-          ? meshId
-          : state.primarySelectedId === meshId
-            ? undefined
-            : state.primarySelectedId;
-        return deriveCompat(next, next.size > 0 ? 'mesh' : null, primary);
       }),
 
     toggleMap: (id) =>

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ReplayLiteFrame } from '@crane/domain/monitoring';
-import { useValueMapperStore } from './use-value-mapper-store';
+import { rigValueStore } from './rig-value-store';
+import { publishTagValue } from './tag-value-bus';
 
 const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
 
@@ -8,8 +9,6 @@ function applyReplayFrame(frame: ReplayLiteFrame | undefined) {
   if (!frame) {
     return;
   }
-
-  const applyValue = useValueMapperStore.getState().applyValue;
 
   for (const crane of frame.cranes) {
     const craneId = crane.craneId.replace(/-/g, '_');
@@ -19,7 +18,7 @@ function applyReplayFrame(frame: ReplayLiteFrame | undefined) {
         continue;
       }
 
-      applyValue(`${craneId}:${tagCode}`, value);
+      publishTagValue(`${craneId}:${tagCode}`, value);
     }
   }
 }
@@ -80,7 +79,7 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
   speedMultiplier: 1,
 
   loadFrames: (frames, frameDurationsMs) => {
-    useValueMapperStore.getState().resetToOrigin();
+    rigValueStore.reset();
 
     const normalizedDurations =
       frameDurationsMs.length === frames.length
@@ -104,7 +103,7 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
     const { frames } = get();
     const clamped = Math.max(0, Math.min(index, frames.length - 1));
 
-    useValueMapperStore.getState().resetToOrigin();
+    rigValueStore.reset();
     set({ frameIndex: clamped, isPlaying: false });
     applyReplayFrame(frames[clamped]);
   },
@@ -136,7 +135,7 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
   },
 
   reset: () => {
-    useValueMapperStore.getState().resetToOrigin();
+    rigValueStore.reset();
     set({
       frames: [],
       frameDurationsMs: [],

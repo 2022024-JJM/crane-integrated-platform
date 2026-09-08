@@ -49,7 +49,25 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     label: 'LLC-002',
     category: 'outdoor',
     path: '/models/LLC_002.glb',
-    defaultScale: [0.15, 0.15, 0.15],
+    // 리깅본(Empty 피벗 계층). 루트 scale 을 자식에 접어 넣어 실제 미터라
+    // 배치 scale 은 1 이다(assets-src/README.md, unbake --fold-scale 참고).
+    defaultScale: [1, 1, 1],
+  }),
+  // Block_001/002: 필리조선소 export 와 같은 미터 단위 원본. 루트 노드에 월드
+  // 포즈가 베이크돼 있어 scripts/unbake-root-transform.mjs 로 원점 복원 후 반입.
+  withDefaultPreview({
+    id: 'block-001',
+    label: 'Block-001',
+    category: 'outdoor',
+    path: '/models/Block_001.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'block-002',
+    label: 'Block-002',
+    category: 'outdoor',
+    path: '/models/Block_002.glb',
+    defaultScale: [1, 1, 1],
   }),
   {
     id: 'house',
@@ -63,6 +81,21 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     label: 'Ship',
     category: 'outdoor',
     path: '/models/ship.glb',
+    defaultScale: [1, 1, 1],
+    preview: {
+      cameraDirection: [1.24, 0.58, 1.3],
+      paddingScale: 1.32,
+    },
+    // ship.glb는 origin이 흘수선(용골 -1.03, 상부 +4.63)이라 수면에 그대로 놓는다.
+    floating: true,
+  },
+  {
+    id: 'hanwha-ocean-lngc-174k',
+    label: 'LNGC 174K',
+    category: 'outdoor',
+    path: '/models/hanwha-ocean-lngc-174k.glb',
+    // 미터 단위 실척(전장 ~300m). origin이 용골 바닥(Y=0)·선체 중심이라
+    // floating 없이 기본 드롭(bbox 바닥 = 지면)으로 배치한다.
     defaultScale: [1, 1, 1],
     preview: {
       cameraDirection: [1.24, 0.58, 1.3],
@@ -283,32 +316,7 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     path: '/models/gc-04/gc_04_trolly.glb',
     defaultScale: [1, 1, 1],
   }),
-  withDefaultPreview({
-    id: 'gc-04-camera',
-    label: 'GC-04 Camera',
-    category: 'etc',
-    path: '/models/gc-04/camera.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'soslab_lidar_fov_120x35',
-    label: 'SOSLAB Lidar Fov',
-    category: 'etc',
-    path: '/models/gc-04/soslab_lidar_fov_120x35.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'ouster_lidar_fov_360x90',
-    label: 'OUSTER Lidar Fov',
-    category: 'etc',
-    path: '/models/gc-04/ouster_lidar_fov_360x90.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'gc-04-point',
-    label: 'GC-04 Point',
-    category: 'etc',
-    path: '/models/gc-04/point.glb',
-    defaultScale: [1, 1, 1],
-  }),
+  // gc-04 카메라/포인트/라이다 FOV(soslab, ouster) 4종 제거 (2026-09-01):
+  // 어떤 씬도 참조하지 않았고, GLB(배포본·assets-src 원본)와 썸네일도 함께
+  // 삭제했다. 다시 필요하면 git 히스토리에서 파일부터 복구하고 재등록할 것.
 ];

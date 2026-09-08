@@ -1,0 +1,65 @@
+import { numRound } from '@crane/domain/3d';
+import type { Vector3Tuple } from '@crane/core/types/math';
+import { InputNumber } from '@crane/ui/atoms/input-number';
+import { AXIS_INDEX, type AxisKey } from '../model/types';
+
+/** 스냅이 꺼져 있을 때의 스테퍼 한 칸(델타). */
+const DEFAULT_STEP = 0.1;
+
+/**
+ * position/rotation/scale 컨트롤러 공통 골격. 슬라이스 내부 전용이며
+ * index.ts로 export하지 않는다 — 외부는 세 컨트롤러 이름을 쓴다.
+ */
+export function AxisVectorController({
+  vec,
+  onChange,
+  min,
+  max,
+  format,
+  unit,
+  toValue = numRound,
+  step = DEFAULT_STEP,
+  stepValue,
+}: {
+  vec: Vector3Tuple | undefined;
+  onChange: (axis: AxisKey, v: number) => void;
+  min?: number;
+  max?: number;
+  /** 비포커스 표시 문자열 (단위 접미사·자릿수 고정) */
+  format: (v: number) => string;
+  /** 편집 중 미리보기 툴팁에 붙일 단위 (format 접미사와 같게) */
+  unit?: string;
+  /** InputNumber value로 넘길 숫자 변환 (rotation은 wrap 포함) */
+  toValue?: (v: number) => number;
+  /** 스테퍼 한 칸. 스냅이 켜지면 인스펙터가 격자 단위를 넘긴다. */
+  step?: number;
+  /** 스테퍼 계산 전략(InputNumber stepValue). 스냅 격자 이동용. */
+  stepValue?: (value: number, step: number, direction: 1 | -1) => number;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {(['x', 'y', 'z'] as const).map((axis) => (
+        <div key={axis} className="flex items-center gap-1.5">
+          <span className="text-muted-foreground w-4 shrink-0 text-center font-mono text-[11px] uppercase">
+            {axis}
+          </span>
+          <InputNumber
+            value={vec ? toValue(vec[AXIS_INDEX[axis]]) : 0}
+            step={step}
+            stepValue={stepValue}
+            min={min}
+            max={max}
+            format={format}
+            editPreview
+            unit={unit}
+            // InputNumber 내부 input의 text-sm(14px)을 태그 맵핑 값 입력과
+            // 같은 11px로 덮는다 (twMerge라 뒤 클래스가 이긴다)
+            inputClassName="text-center text-[11px]"
+            className="border-border bg-muted/50 h-7 flex-1 rounded-sm"
+            onChange={(v) => onChange(axis, Number(v))}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}

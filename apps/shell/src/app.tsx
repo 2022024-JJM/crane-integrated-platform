@@ -79,7 +79,28 @@ function isHmi2Allowed(pathname: string): boolean {
   return HMI2_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isIndoorshopAllowed(pathname: string): boolean {
+/*
+ * 내업은 계정이 둘로 갈린다.
+ *
+ * - Indoorshop.IT  (`indoorshop`)    : 데이터 게더링 화면만
+ * - Indoorshop.OT  (`indoorshop-ot`) : 통합 대시보드 (게더링 제외)
+ *
+ * 두 역할 모두 `/indoorshop` 아래를 쓰므로 prefix 하나로는 나눌 수 없다.
+ * 각자 **자기 착지 경로**를 갖고, 상대 화면으로는 넘어가지 않는다.
+ */
+const INDOORSHOP_IT_LANDING = '/indoorshop/gathering';
+const INDOORSHOP_OT_LANDING = '/indoorshop';
+
+function isIndoorshopItAllowed(pathname: string): boolean {
+  return (
+    pathname === INDOORSHOP_IT_LANDING ||
+    pathname.startsWith(`${INDOORSHOP_IT_LANDING}/`)
+  );
+}
+
+function isIndoorshopOtAllowed(pathname: string): boolean {
+  // 게더링은 IT 전용이므로 OT 의 허용 범위에서 뺀다
+  if (isIndoorshopItAllowed(pathname)) return false;
   return pathname === '/indoorshop' || pathname.startsWith('/indoorshop/');
 }
 
@@ -105,8 +126,11 @@ function ProtectedRoute() {
   if (role === 'hmi2' && !isHmi2Allowed(location.pathname)) {
     return <Navigate to="/hmi2" replace />;
   }
-  if (role === 'indoorshop' && !isIndoorshopAllowed(location.pathname)) {
-    return <Navigate to="/indoorshop" replace />;
+  if (role === 'indoorshop' && !isIndoorshopItAllowed(location.pathname)) {
+    return <Navigate to={INDOORSHOP_IT_LANDING} replace />;
+  }
+  if (role === 'indoorshop-ot' && !isIndoorshopOtAllowed(location.pathname)) {
+    return <Navigate to={INDOORSHOP_OT_LANDING} replace />;
   }
   if (role === 'keyin' && !isKeyinAllowed(location.pathname)) {
     return <Navigate to="/keyin" replace />;
@@ -121,7 +145,10 @@ function LoginGuard() {
   if (role === 'mro2') return <Navigate to="/mro2" replace />;
   if (role === 'hmi') return <Navigate to="/hmi" replace />;
   if (role === 'hmi2') return <Navigate to="/hmi2" replace />;
-  if (role === 'indoorshop') return <Navigate to="/indoorshop" replace />;
+  if (role === 'indoorshop')
+    return <Navigate to={INDOORSHOP_IT_LANDING} replace />;
+  if (role === 'indoorshop-ot')
+    return <Navigate to={INDOORSHOP_OT_LANDING} replace />;
   if (role === 'keyin') return <Navigate to="/keyin" replace />;
   if (role) return <Navigate to="/" replace />;
   return <LoginPage />;
@@ -331,6 +358,11 @@ const IndoorshopKeyinPage = lazy(() =>
   })),
 );
 
+/* 내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식) */
+const InshopRoot = lazy(() =>
+  import('@crane/indoorshop/shell').then((m) => ({ default: m.InshopRoot })),
+);
+
 export function App() {
   return (
     <AuthProvider>
@@ -453,11 +485,34 @@ export function App() {
                   </LazyRoute>
                 }
               />
+              {/*
+                데이터 게더링 (Indoorshop.IT 전용).
+
+                통합 대시보드(InshopRoot) 바깥의 형제 라우트다 — 다른 계정의
+                화면이고, 이식된 대시보드의 팔레트 래퍼·provider 를 거칠 이유가
+                없다.
+              */}
               <Route
-                path="indoorshop"
+                path="indoorshop/gathering"
                 element={
                   <LazyRoute>
                     <IndoorshopGatheringPage />
+                  </LazyRoute>
+                }
+              />
+              {/*
+                내업 통합 대시보드 (ocean-inshop-process/web-dashboard 이식).
+
+                공정 화면 라우트는 여기 적지 않는다 — 원본과 같이 각 공정 모듈의
+                module.ts 선언을 레지스트리가 모으고, InshopRoot 가 useRoutes 로
+                조립한다. 원본에 공정이 늘어도 sync-inshop.py 한 번이면 끝난다.
+                (`/indoorshop/gathering` 은 IT 전용이라 위에서 먼저 잡힌다.)
+              */}
+              <Route
+                path="indoorshop/*"
+                element={
+                  <LazyRoute>
+                    <InshopRoot />
                   </LazyRoute>
                 }
               />

@@ -1,7 +1,16 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import './design-token.css';
+/*
+ * 내업 대시보드(@crane/indoorshop) 테마.
+ *
+ * 컴포넌트 쪽에서 import 하면 Tailwind 엔트리와 다른 CSS 로 갈라져
+ * `@theme`·`@utility` 가 처리되지 않는다 — 토큰만 남고 `text-inshop-sm`
+ * `glass-panel` 같은 유틸리티가 아예 생성되지 않아 화면이 무스타일로 뜬다.
+ * 팔레트는 `.inshop-root` 안으로 스코프돼 있어 다른 모듈에 새지 않는다.
+ */
+@import '../../../indoorshop/src/dashboard/shared/styles/globals.css';
 
 /* 서체 — IBM Plex 계열. 산업 계측 톤을 셸 전역에 통일 (mro2와 동일 패밀리) */
 @import '@fontsource/ibm-plex-sans/400.css';
@@ -14,9 +23,26 @@
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
-@source '../../../../packages/*/src/**/*.tsx';
-@source '../../../../apps/*/src/**/*.tsx';
-@source '../../../../packages/core/src/lib/utils.ts';
+/*
+ * Tailwind 소스 범위.
+ *
+ * 위 `source(none)` 은 자동 소스 탐지를 끈다. 자동 탐지는 Vite root(apps/shell)
+ * 전체를 훑는데 public/models·maps 의 .glb 는 제외 목록에 없어 수십 MB 를 텍스트로
+ * 읽었고, 그것만으로 콜드스타트 CSS 스캔이 50초 가까이 걸렸다. 클래스가 있는
+ * 곳은 아래 소스 코드뿐이므로 명시 목록만 쓴다.
+ *
+ * .ts 도 반드시 포함한다 — tone.ts, status-colors.ts, kc.ts 처럼 클래스 문자열만
+ * 가진 순수 모듈이 있고, 지도 오버레이 재질(map-overlay-style.ts)·상태·식별색
+ * 팔레트의 textClass(region-map-types.ts, marker-identity.ts)도 같은 경우다.
+ * .tsx 만 스캔하던 동안 그 클래스(bg-lime-400 등)가 CSS 에서 조용히 빠져
+ * "배경 없는 backdrop-blur" 같은 반쪽 스타일이 나왔다.
+ * 대형 fixture 와 테스트는 후보 추출 비용만 크고 클래스가 없어 뺀다.
+ * `@source not` 의 디렉터리 패턴은 끝에 `/**` 를 붙이면 제외되지 않는다.
+ */
+@source '../../../../packages/*/src/**/*.{ts,tsx}';
+@source '../../../../apps/*/src/**/*.{ts,tsx}';
+@source not '../../../../**/__tests__';
+@source not '../../../../apps/indoorshop/src/**/*Fixture.ts';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -39,26 +65,26 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: #FF9900;
-  --chart-2: #05EC8B;
-  --chart-3: #49C1CE;
-  --chart-4: #70B9FC;
-  --chart-5: #F66969;
-  --chart-6: #FFF386;
-  --chart-7: #0E7E97;
+  --chart-1: #ff9900;
+  --chart-2: #05ec8b;
+  --chart-3: #49c1ce;
+  --chart-4: #70b9fc;
+  --chart-5: #f66969;
+  --chart-6: #fff386;
+  --chart-7: #0e7e97;
   --chart-8: #463086;
-  --chart-9: #9860ED;
-  --chart-10: #B12547;
-  --chart-11: #D362AD;
-  --chart-12: #E1B6F5;
-  --chart-13: #0C717C;
+  --chart-9: #9860ed;
+  --chart-10: #b12547;
+  --chart-11: #d362ad;
+  --chart-12: #e1b6f5;
+  --chart-13: #0c717c;
   --chart-14: #374575;
-  --chart-15: #FFCC7E;
-  --chart-16: #DF813C;
-  --chart-17: #B2280A;
-  --chart-18: #FDFF92;
-  --chart-19: #00D67C;
-  --chart-20: #2695E5;
+  --chart-15: #ffcc7e;
+  --chart-16: #df813c;
+  --chart-17: #b2280a;
+  --chart-18: #fdff92;
+  --chart-19: #00d67c;
+  --chart-20: #2695e5;
   --radius: 0.25rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -89,26 +115,26 @@
   --border: oklch(1 0 0 / 22%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: #FF9900;
-  --chart-2: #05EC8B;
-  --chart-3: #49C1CE;
-  --chart-4: #70B9FC;
-  --chart-5: #F66969;
-  --chart-6: #FFF386;
-  --chart-7: #0E7E97;
+  --chart-1: #ff9900;
+  --chart-2: #05ec8b;
+  --chart-3: #49c1ce;
+  --chart-4: #70b9fc;
+  --chart-5: #f66969;
+  --chart-6: #fff386;
+  --chart-7: #0e7e97;
   --chart-8: #463086;
-  --chart-9: #9860ED;
-  --chart-10: #B12547;
-  --chart-11: #D362AD;
-  --chart-12: #E1B6F5;
-  --chart-13: #0C717C;
+  --chart-9: #9860ed;
+  --chart-10: #b12547;
+  --chart-11: #d362ad;
+  --chart-12: #e1b6f5;
+  --chart-13: #0c717c;
   --chart-14: #374575;
-  --chart-15: #FFCC7E;
-  --chart-16: #DF813C;
-  --chart-17: #B2280A;
-  --chart-18: #FDFF92;
-  --chart-19: #00D67C;
-  --chart-20: #2695E5;
+  --chart-15: #ffcc7e;
+  --chart-16: #df813c;
+  --chart-17: #b2280a;
+  --chart-18: #fdff92;
+  --chart-19: #00d67c;
+  --chart-20: #2695e5;
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -125,8 +151,8 @@
     'IBM Plex Sans', 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo',
     'Malgun Gothic', sans-serif;
   --font-condensed:
-    'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Pretendard Variable', Pretendard,
-    'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Pretendard Variable',
+    Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -226,6 +252,61 @@
   }
 }
 
+/* 지도 오버레이 등장 — 판이 아래에서 제자리로 올라온다.
+   HUD 시절의 ops-* 애니메이션을 대신한다. 초점이 잡히는 blur() 연출도
+   있었지만, 이 키프레임은 마커 하나하나에도 붙어서 지도를 열 때마다 수십 개의
+   backdrop 합성이 동시에 돌았다. 등장은 위치와 불투명도만으로 충분하다. */
+@keyframes map-panel-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 지도 마커 부유 — 네임택이 지면 위에서 아주 느리게 오르내린다.
+   진폭 3px 은 좌표 표식 중심 원의 반지름보다 작다. 그래서 리더 스템의 아래
+   끝이 늘 그 원 안에 머물고, 스템 길이를 건드리지 않아도 선이 끊어져 보이지
+   않는다. */
+@keyframes map-marker-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* 판의 그림자. 부모(부유 그룹)의 이동을 반대 위상으로 상쇄해 자기는 지면에
+   머물고, 대신 넓어지며 옅어진다. 그림자가 판을 따라 같이 움직이면 물체가
+   뜨는 게 아니라 화면이 통째로 흔들려 보인다. */
+@keyframes map-marker-float-shadow {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    opacity: 0.46;
+    transform: translateY(3px) scaleX(1.16);
+  }
+}
+
+@keyframes map-crumb-reveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes lidar-sweep {
   0% {
     transform: translateY(0%);
@@ -269,6 +350,20 @@
   }
   .dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
     filter: invert(1);
+  }
+
+  /* number 입력의 브라우저 기본 스핀 버튼 숨김 — 네이티브 컨트롤이라 테마
+     색을 따르지 않고, 좁은 입력에서 글자 영역을 가린다. 숫자 필드는
+     InputNumber(테마 스테퍼)를 쓰는 것이 원칙이고, 남은 곳의 안전망이다.
+     방향키·휠 step 은 그대로 동작한다. */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
   }
 
   /* ─── Global Scrollbar Standard ─────────────────────────────────────────────

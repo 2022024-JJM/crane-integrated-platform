@@ -20,10 +20,16 @@ interface PreviewState {
   sourceKey: string;
 }
 
+/**
+ * @param enabled false 면 observer·렌더 큐를 아예 시작하지 않는다.
+ *   정적 썸네일이 유효한 동안 런타임 WebGL 비용을 0 으로 만들기 위한 게이트.
+ *   (훅 호출 자체는 조건부일 수 없으므로 내부에서 gate 한다.)
+ */
 export function useOffscreenPreview(
   path: string,
   preset: SceneModelPreviewPreset | undefined,
   containerRef: RefObject<HTMLElement | null>,
+  enabled = true,
 ): OffscreenPreviewResult {
   const previewSourceKey = [path, preset ?? 'default'].join('|');
   const [previewState, setPreviewState] = useState<PreviewState>({
@@ -46,6 +52,8 @@ export function useOffscreenPreview(
 
   // Intersection observer: trigger render when visible
   useEffect(() => {
+    if (!enabled) return;
+
     const element = containerRef.current;
     if (!element) return;
 
@@ -128,7 +136,7 @@ export function useOffscreenPreview(
     return () => {
       observer.disconnect();
     };
-  }, [containerRef, path, preset, previewSourceKey]);
+  }, [containerRef, enabled, path, preset, previewSourceKey]);
 
   // Cancel in-flight render on unmount
   useEffect(() => {

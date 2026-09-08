@@ -23,13 +23,6 @@ export interface SceneViewBookmark {
   createdAt: number;
 }
 
-interface SceneViewFlightRequest {
-  // 단조 증가 카운터 — 같은 북마크를 다시 눌러도 새 비행이 성립한다.
-  flightId: number;
-  position: Vector3Tuple;
-  target: Vector3Tuple;
-}
-
 interface SceneViewPose {
   position: Vector3Tuple;
   target: Vector3Tuple;
@@ -38,12 +31,9 @@ interface SceneViewPose {
 interface SceneViewsState {
   viewsByRegion: Record<string, SceneViewBookmark[]>;
   hydratedRegions: Record<string, true>;
-  activeFlight: SceneViewFlightRequest | null;
   hydrate: (regionId: string) => void;
   addView: (regionId: string, name: string, pose: SceneViewPose) => boolean;
   removeView: (regionId: string, viewId: string) => void;
-  requestFlight: (pose: SceneViewPose) => void;
-  clearFlight: () => void;
 }
 
 const storageKey = (regionId: string) => `crane:scene-views:${regionId}`;
@@ -78,12 +68,9 @@ function sanitizeStoredViews(raw: unknown): SceneViewBookmark[] {
     .slice(0, SCENE_VIEWS_MAX);
 }
 
-let flightCounter = 0;
-
 export const useSceneViewsStore = create<SceneViewsState>()((set, get) => ({
   viewsByRegion: {},
   hydratedRegions: {},
-  activeFlight: null,
 
   hydrate: (regionId) => {
     if (get().hydratedRegions[regionId]) {
@@ -150,17 +137,4 @@ export const useSceneViewsStore = create<SceneViewsState>()((set, get) => ({
     }));
     setStorageJson(storageKey(regionId), nextViews);
   },
-
-  requestFlight: (pose) => {
-    flightCounter += 1;
-    set({
-      activeFlight: {
-        flightId: flightCounter,
-        position: pose.position,
-        target: pose.target,
-      },
-    });
-  },
-
-  clearFlight: () => set({ activeFlight: null }),
 }));

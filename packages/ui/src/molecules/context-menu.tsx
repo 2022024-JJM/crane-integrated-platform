@@ -1,5 +1,6 @@
 import { ContextMenu as ContextMenuPrimitive } from '@base-ui/react';
 import { cn } from '@crane/core/lib/utils';
+import { usePortalContainer } from './portal-container';
 
 function ContextMenu(props: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root {...props} />;
@@ -13,8 +14,10 @@ function ContextMenuPopup({
   className,
   ...props
 }: ContextMenuPrimitive.Popup.Props) {
+  const container = usePortalContainer();
+
   return (
-    <ContextMenuPrimitive.Portal>
+    <ContextMenuPrimitive.Portal container={container}>
       <ContextMenuPrimitive.Positioner className="z-9999">
         <ContextMenuPrimitive.Popup
           className={cn(

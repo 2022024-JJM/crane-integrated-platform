@@ -1,4 +1,17 @@
-import { ACESFilmicToneMapping } from 'three';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
+import type { DirectionalLight } from 'three';
+import {
+  SCENE_SUN_AZIMUTH_DEFAULT,
+  SCENE_SUN_ELEVATION_DEFAULT,
+  modelObjectRegistry,
+} from '@crane/domain/3d';
+import type { SavedSceneInfo } from '@crane/domain/3d';
+import { isSceneShadowEnabled } from '../lib/scene-shadow';
+import { sunDirectionFromAngles } from '../lib/sun-direction';
+import { clampToRange } from '@crane/core/lib/utils';
+import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
  * 씬 렌더링 공통 설정 — 에디터·모니터링·리플레이가 **같은 화면**을 그리게 하는
@@ -17,12 +30,18 @@ import { ACESFilmicToneMapping } from 'three';
  *
  * far: 기본값(1000)이면 줌 아웃 시 카메라-타깃 거리가 1000을 넘는 순간
  *   지도 중앙부터 잘려나간다. OrbitControls maxDistance(3000) + 씬 반폭보다
- *   커야 잘림이 없다.
+ *   커야 잘림이 없다. 바다 평면(scene-environment.tsx SeaSurface, 반경
+ *   40000)이 들어오면서 50000으로 올렸다 — 원판이 far에 잘리면 잘린 경계가
+ *   직선으로 드러나므로 원판 반경보다 커야 한다.
  * near: 0.1(three 기본)을 쓴다. 에디터만 0.5를 쓰고 있었는데, near를 올리면
  *   깊이 정밀도는 좋아지지만 카메라에 바짝 붙은 지오메트리가 잘려 보인다 —
  *   뷰어와 다른 값을 쓸 이유가 없다.
+ * 깊이 정밀도: 선형 깊이라면 near 0.1 기준 분해능이 거리 제곱으로 나빠져
+ *   400m부터 philly 지도의 코플레이너 레이어 간격(8.8cm)을 못 가르지만,
+ *   SCENE_GL_OPTIONS의 logarithmicDepthBuffer가 이를 대신 해결한다 — near/far는
+ *   이제 클리핑 범위로만 고르면 된다.
  */
-export const SCENE_CAMERA_CLIP = { near: 0.1, far: 5000 } as const;
+export const SCENE_CAMERA_CLIP = { near: 0.1, far: 50000 } as const;
 
 /**
  * 캔버스 픽셀 비율 상한.
@@ -59,6 +78,20 @@ export const SCENE_GL_OPTIONS = {
    * 나머지를 조율하기 쉽다 — 노출을 그 기준으로 삼는다.
    */
   toneMappingExposure: 1,
+  /**
+   * 지도 원거리 z-fighting 해결. philly 지도는 도로선↔아스팔트, 도크
+   * 라인↔바닥이 8.8cm 간격으로 겹쳐 쌓인 2.4km 메시라, 선형 깊이(near 0.1,
+   * 24bit)로는 카메라 400m부터 그 간격을 못 갈라 원거리 전체가 깜빡였다
+   * (분해능 ≈ z²/(near·2²⁴): 400m에서 9.5cm, 3000m에서 5.4m). 로그 깊이는
+   * 상대 정밀도라 3000m에서도 mm 단위다.
+   *
+   * 비용: three(r183)가 프래그먼트에서 gl_FragDepth를 써 early-Z가 꺼진다 —
+   * DPR 상한 1.5로 프래그먼트 예산은 이미 관리 중이라 감수한다.
+   * 제약: raw ShaderMaterial은 logdepthbuf 청크를 직접 include해야 깊이가
+   * 맞는다(sea-surface-material.ts 참고). onBeforeCompile 패치는 표준 셰이더
+   * 템플릿에 청크가 이미 있어 무관하다.
+   */
+  logarithmicDepthBuffer: true,
   powerPreference: 'high-performance',
   alpha: false,
   antialias: true,
@@ -100,30 +133,275 @@ export const SCENE_LIGHTING = {
 } as const;
 
 /**
+ * shadow map 해상도.
+ *
+ * 처음엔 씬(지도) 전체를 한 장에 펴는 고정 frustum이었고, 계단이 보여
+ * 2048→4096→8192로 해상도만 올렸지만 수 km 폭에서는 8192도 텍셀이 m급이라
+ * 계단이 남았다. 지금은 shadow camera가 **카메라 시점을 따라다니며**
+ * (SceneLighting의 useFrame) 보고 있는 영역에만 텍셀을 집중시키므로,
+ * 4096 한 장이면 어느 줌에서도 텍셀이 화면 픽셀보다 작거나 비슷하다 —
+ * 더 올릴 필요가 없고 VRAM도 64MB로 끝난다. 경계는 Canvas
+ * `shadows: 'soft'`(PCFSoftShadowMap, scene-shadow.ts)가 추가로 부드럽게
+ * 만든다.
+ */
+const SUN_SHADOW_MAP_SIZE = 4096;
+/**
+ * 시점 추종 frustum의 최소 반경. 이보다 좁히면 텍셀은 더 촘촘해지지만
+ * 근접 줌에서 화면 밖 물체의 긴 그림자가 frustum을 벗어나 잘린다.
+ */
+const SUN_SHADOW_RADIUS_MIN = 150;
+
+/**
+ * 지도 실측 bbox의 XZ 꼭짓점 — 그림자 커버리지를 지도 전체로 넓히는 근거.
+ *
+ * 지도 GLB는 position이 원점(또는 없음)이고 지오메트리가 실좌표(km 스케일)로
+ * 뻗어 있어 씬 데이터만으로는 범위를 알 수 없다. 지도 GLB에는 건물이 함께
+ * 구워져 있어, 모델 기준 반경만 쓰면 씬 외곽 건물이 shadow camera 밖으로
+ * 나가 그림자가 끊긴다.
+ *
+ * 로드 완료 시점을 구독할 방법이 없어(modelObjectRegistry는 리렌더 없는
+ * mutable Map) 0.3s 폴링으로 지도 객체를 찾고, bbox를 1회 계산하면 멈춘다.
+ * expandByObject는 mesh별 geometry.boundingBox(캐시됨)의 8모서리 변환이라
+ * 지도급 트리에서도 싸다. 지도가 로드되지 않으면(404 등) 1분 후 포기한다.
+ */
+function useMapShadowCorners(
+  sceneInfo: SavedSceneInfo | null | undefined,
+): Vector3Tuple[] | null {
+  const mapIdsKey = (sceneInfo?.maps ?? []).map((m) => m.id).join('|');
+  const [result, setResult] = useState<{
+    key: string;
+    corners: Vector3Tuple[];
+  } | null>(null);
+
+  useEffect(() => {
+    const mapIds = mapIdsKey.length > 0 ? mapIdsKey.split('|') : [];
+    if (mapIds.length === 0) return;
+
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (attempts > 200) {
+        clearInterval(timer);
+        return;
+      }
+
+      const box = new Box3();
+      for (const id of mapIds) {
+        const object = modelObjectRegistry.get(id);
+        if (!object) return;
+        box.expandByObject(object);
+      }
+      if (box.isEmpty()) return;
+
+      clearInterval(timer);
+      setResult({
+        key: mapIdsKey,
+        corners: [
+          [box.min.x, 0, box.min.z],
+          [box.min.x, 0, box.max.z],
+          [box.max.x, 0, box.min.z],
+          [box.max.x, 0, box.max.z],
+        ],
+      });
+    }, 300);
+
+    return () => clearInterval(timer);
+  }, [mapIdsKey]);
+
+  // key가 어긋난 결과(지도 교체 전 bbox)는 버린다 — 동기 reset 없이도
+  // stale 값이 새 씬에 적용되지 않는다.
+  return result && result.key === mapIdsKey ? result.corners : null;
+}
+
+/**
+ * 조명 앵커·씬 반경. anchor는 모델 위치 + 지도 bbox 꼭짓점의 센트로이드
+ * (아무것도 없으면 원점)로 조명 target의 초기값, radius는 anchor에서 가장
+ * 먼 점까지의 수평 거리 + 여유로 시점 추종 shadow frustum(SceneLighting의
+ * useFrame)의 **상한**이다 — 줌 아웃해 씬 전체가 보일 때 frustum이 이보다
+ * 커질 필요가 없다. 배열 루프라 편집 중 재계산도 무비용이고, philly 씬처럼
+ * 오브젝트가 원점에서 수 km 떨어져 있어도(x≈-2200) 동작한다.
+ */
+function useSunAnchor(
+  sceneInfo: SavedSceneInfo | null | undefined,
+  mapCorners: Vector3Tuple[] | null,
+) {
+  return useMemo(() => {
+    const modelPoints: Vector3Tuple[] =
+      sceneInfo?.models && sceneInfo.models.length > 0
+        ? sceneInfo.models.map((m) => m.position)
+        : (sceneInfo?.maps ?? [])
+            .map((m) => m.position)
+            .filter((p): p is Vector3Tuple => Array.isArray(p));
+    const points = mapCorners ? [...modelPoints, ...mapCorners] : modelPoints;
+
+    if (points.length === 0) {
+      return { anchor: [0, 0, 0] as Vector3Tuple, radius: 200 };
+    }
+
+    let cx = 0;
+    let cz = 0;
+    for (const p of points) {
+      cx += p[0];
+      cz += p[2];
+    }
+    cx /= points.length;
+    cz /= points.length;
+
+    let maxDist = 0;
+    for (const p of points) {
+      const d = Math.hypot(p[0] - cx, p[2] - cz);
+      if (d > maxDist) maxDist = d;
+    }
+
+    // 여유 150m: 모델 position은 origin 기준이라 실제 지오메트리가 더
+    // 뻗어 있을 수 있고, 그림자도 물체 밖으로 드리워진다. 상한 6000은
+    // 비정상 데이터(좌표 오염) 방어용 — 정상 지도 bbox는 그 아래다.
+    const radius = clampToRange(maxDist + 150, 200, 6000);
+    return { anchor: [cx, 0, cz] as Vector3Tuple, radius };
+  }, [sceneInfo, mapCorners]);
+}
+
+/**
  * 씬 공통 조명. 세 화면이 이 컴포넌트 하나를 쓴다.
  *
- * 그림자는 쓰지 않는다. ContactShadows로 접지 그림자를 넣어 봤으나(2026-08-14)
- * 관제 화면에서는 득보다 실이 컸다 — 지도 위에 어두운 반점이 생겨 오히려
- * 지형을 읽기 어려워졌다. 실시간 shadow map은 더 비싸다(옥외 대형 씬이라
- * shadow camera 범위 튜닝이 따로 필요하고 매 프레임 비용이 든다).
+ * 그림자는 씬 설정(sceneInfo.lighting.shadows)으로 켠다 — 기본 Off.
+ * ContactShadows를 넣었다가(2026-08-14) 관제 화면에서 지도 위 어두운 반점이
+ * 지형을 읽기 어렵게 해 롤백한 이력이 있어, 전역 상시 적용 대신 씬별
+ * opt-in으로 되살렸다. 켜는 쪽은 배경 탭(palette-environment-section.tsx),
+ * Canvas의 `shadows`는 세 화면이 isSceneShadowEnabled로 판정한다.
  *
- * 그래서 각 뷰어에 남아 있던 castShadow/receiveShadow 플래그는 2026-08-14에
- * 제거했다 — Canvas에 `shadows`를 켜지 않는 한 아무 효과가 없어, 남겨두면
- * "그림자가 되는 설정인데 왜 안 보이지"라는 오해만 남긴다. 그림자를 되살리려면
- * Canvas의 `shadows`부터 켜야 하고, 그때 이 플래그들도 함께 복원해야 한다.
+ * 런타임 토글에 별도 대응 코드가 없는 근거: R3F v9은 Canvas `shadows`가
+ * 바뀌면 gl.shadowMap.enabled 갱신과 needsUpdate를 처리하고, 머티리얼
+ * 셰이더 재컴파일은 아래 directionalLight의 castShadow가 같은 플래그에
+ * 바인딩되어 있어 lights state 변경으로 자동 유발된다.
+ *
+ * 태양 위치(sunAzimuth/sunElevation)는 그림자가 꺼져 있어도 항상 적용된다 — 조명
+ * 방향(셰이딩)은 그림자와 무관하게 씬의 인상을 정하는 값이다.
  *
  * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
  * GLB가 true로 실려 올 수 있어 방어하는 코드라 성격이 다르다.
  */
-export function SceneLighting() {
+export function SceneLighting({
+  sceneInfo,
+}: {
+  sceneInfo?: SavedSceneInfo | null;
+} = {}) {
+  const lighting = sceneInfo?.lighting;
+  const shadowsEnabled = isSceneShadowEnabled(lighting);
+  const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
+  const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
+
+  const mapCorners = useMapShadowCorners(sceneInfo);
+  // anchor는 시점 추종 초점의 폴백으로만, radius는 frustum 상한으로 쓴다.
+  const { anchor, radius: maxRadius } = useSunAnchor(sceneInfo, mapCorners);
+
+  const sunDir = useMemo(
+    () => sunDirectionFromAngles(sunAzimuth, sunElevation),
+    [sunAzimuth, sunElevation],
+  );
+
+  // 조명 target — three 기본 target은 씬에 붙어 있지 않아 원점만 바라본다.
+  // primitive로 씬에 넣고 매 프레임 초점으로 옮긴다.
+  const target = useMemo(() => new Object3D(), []);
+  const lightRef = useRef<DirectionalLight | null>(null);
+  const scratchForward = useMemo(() => new Vector3(), []);
+
+  // 시점 추종 shadow frustum — 고정 frustum으로 씬 전체를 덮으면 텍셀이
+  // m급이라 계단이 보인다(SUN_SHADOW_MAP_SIZE 주석). 대신 카메라 시선이
+  // 지면과 만나는 점을 초점으로 frustum을 옮기고, 반경을 시거리에 비례시켜
+  // 어느 줌에서도 텍셀 크기 ≈ 화면 픽셀 크기를 유지한다(단일 캐스케이드
+  // CSM과 같은 원리). React 상태 대신 useFrame에서 ref를 직접 mutate하는
+  // 것이 이 저장소의 매-프레임 갱신 규칙이다(useFrame 내 setState 금지).
+  useFrame(({ camera }) => {
+    const light = lightRef.current;
+    if (!light) return;
+
+    // 1) 초점 = 시선과 지면(y=0)의 교점. 수평·상향 시선이면 카메라 바로
+    //    아래(폴백은 씬 앵커가 아니라 카메라 — 시점을 따라가는 게 목적).
+    camera.getWorldDirection(scratchForward);
+    let focusX = camera.position.x;
+    let focusZ = camera.position.z;
+    let viewDist = Math.abs(camera.position.y) + 50;
+    if (scratchForward.y < -1e-4) {
+      const t = -camera.position.y / scratchForward.y;
+      if (t > 0 && Number.isFinite(t)) {
+        focusX = camera.position.x + scratchForward.x * t;
+        focusZ = camera.position.z + scratchForward.z * t;
+        viewDist = t;
+      }
+    }
+
+    // 2) 반경: 시거리 비례를 2배 단계로 양자화 — 연속으로 변하면 텍셀
+    //    크기가 매 프레임 달라져 아래 스냅이 무력화되고 그림자가 일렁인다.
+    const want = clampToRange(
+      viewDist * 1.2,
+      SUN_SHADOW_RADIUS_MIN,
+      maxRadius,
+    );
+    let frustumRadius = SUN_SHADOW_RADIUS_MIN;
+    while (frustumRadius < want) frustumRadius *= 2;
+    frustumRadius = Math.min(frustumRadius, maxRadius);
+
+    // 3) 초점을 텍셀 격자에 스냅 — 카메라 팬 중 frustum이 서브텍셀로
+    //    미끄러지며 그림자 경계가 기어다니는 shimmer를 막는다.
+    const texel = (2 * frustumRadius) / SUN_SHADOW_MAP_SIZE;
+    const cx = Math.round(focusX / texel) * texel;
+    const cz = Math.round(focusZ / texel) * texel;
+
+    target.position.set(cx, 0, cz);
+    target.updateMatrixWorld();
+
+    const orbitDistance = Math.max(frustumRadius * 2.5, 300);
+    light.position.set(
+      cx + sunDir.x * orbitDistance,
+      sunDir.y * orbitDistance,
+      cz + sunDir.z * orbitDistance,
+    );
+    // acne(자기 그림자 줄무늬)와 peter-panning(그림자 들뜸)의 균형점은
+    // 텍셀 크기에 비례한다 — 반경이 프레임마다 변하므로 같이 갱신한다.
+    light.shadow.normalBias = Math.max(0.05, texel);
+
+    const shadowCamera = light.shadow.camera;
+    const shadowFar = orbitDistance + frustumRadius * 3;
+    if (shadowCamera.right !== frustumRadius || shadowCamera.far !== shadowFar) {
+      shadowCamera.left = -frustumRadius;
+      shadowCamera.right = frustumRadius;
+      shadowCamera.top = frustumRadius;
+      shadowCamera.bottom = -frustumRadius;
+      shadowCamera.near = 1;
+      shadowCamera.far = shadowFar;
+      shadowCamera.updateProjectionMatrix();
+    }
+  });
+
   return (
     <>
       <ambientLight intensity={SCENE_LIGHTING.ambientIntensity} />
+      <primitive object={target} position={anchor} />
       <directionalLight
+        ref={lightRef}
+        // position·shadow-camera 값은 useFrame이 매 프레임 덮어쓴다 —
+        // 여기 값은 첫 프레임 전의 초기값일 뿐이다.
         position={SCENE_LIGHTING.directionalPosition}
+        target={target}
         color={SCENE_LIGHTING.directionalColor}
         intensity={SCENE_LIGHTING.directionalIntensity}
-      />
+        castShadow={shadowsEnabled}
+        shadow-mapSize={[SUN_SHADOW_MAP_SIZE, SUN_SHADOW_MAP_SIZE]}
+        shadow-bias={-0.0002}
+      >
+        <orthographicCamera
+          attach="shadow-camera"
+          args={[
+            -SUN_SHADOW_RADIUS_MIN,
+            SUN_SHADOW_RADIUS_MIN,
+            SUN_SHADOW_RADIUS_MIN,
+            -SUN_SHADOW_RADIUS_MIN,
+            1,
+            1000,
+          ]}
+        />
+      </directionalLight>
     </>
   );
 }

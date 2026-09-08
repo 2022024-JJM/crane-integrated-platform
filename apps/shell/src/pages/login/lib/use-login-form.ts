@@ -67,10 +67,12 @@ export function useLoginForm() {
               : role === 'hmi2'
                 ? '/hmi2'
                 : role === 'indoorshop'
-                  ? '/indoorshop'
-                  : role === 'keyin'
-                    ? '/keyin'
-                    : '/';
+                  ? '/indoorshop/gathering'
+                  : role === 'indoorshop-ot'
+                    ? '/indoorshop'
+                    : role === 'keyin'
+                      ? '/keyin'
+                      : '/';
       navigate(landing, { replace: true });
     } else {
       setError(true);

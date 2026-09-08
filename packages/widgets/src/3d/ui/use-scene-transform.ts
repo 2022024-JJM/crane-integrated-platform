@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Object3D, Quaternion } from 'three';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
+import { degToRad, modelObjectRegistry, parseMeshId } from '@crane/domain/3d';
+import { getPlacementTransformVectors } from '../lib/transform-vectors';
 import {
-  numRound,
-  radToDeg,
-  modelObjectRegistry,
-  parseMeshId,
-} from '@crane/domain/3d';
-import {
+  readRootPlacement,
+  snapChangedAxes,
+  snapStepFor,
   useActiveTransformStore,
+  writeRootPlacement,
   useIsMultiSelection,
   useSceneObjectSelectionStore,
+  type SceneSnapStep,
   type SceneTransformField,
   type SceneTransformMode,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
+
+const FIELD_OF_MODE: Record<SceneTransformMode, SceneTransformField> = {
+  translate: 'position',
+  rotate: 'rotation',
+  scale: 'scale',
+};
 
 interface TransformChangeEvent extends Event {
   value?: boolean;
@@ -31,38 +38,20 @@ type TransformControlsWithDraggingEvent = TransformControlsImpl & {
   ) => void;
 };
 
-function toVector3Tuple(values: [number, number, number]): Vector3Tuple {
-  return values.map((value) => numRound(value)) as Vector3Tuple;
-}
-
-/** 멀티 드래그 시작 시점의 각 객체 transform 스냅샷. */
+/** 드래그 시작 시점의 각 객체 transform 스냅샷. */
 interface DragStartTransform {
   position: Vector3Tuple;
   quaternion: Quaternion;
+  /** 시작 오일러(deg, sceneInfo 표현). 스냅의 "변한 축" 판정 기준. */
+  rotationDeg: Vector3Tuple;
   scale: Vector3Tuple;
 }
 
 // liveSync는 매 frame 호출되므로 임시 Quaternion을 재사용해 할당을 피한다.
 const tmpStartQuatInv = new Quaternion();
 const tmpDeltaQuat = new Quaternion();
-
-function getObjectTransformVectors(
-  object: Object3D,
-): Record<SceneTransformField, Vector3Tuple> {
-  return {
-    position: toVector3Tuple([
-      object.position.x,
-      object.position.y,
-      object.position.z,
-    ]),
-    rotation: toVector3Tuple([
-      radToDeg(object.rotation.x),
-      radToDeg(object.rotation.y),
-      radToDeg(object.rotation.z),
-    ]),
-    scale: toVector3Tuple([object.scale.x, object.scale.y, object.scale.z]),
-  };
-}
+// 스냅 되쓰기용 배치 자세 스크래치(readRootPlacement → 격자 → writeRootPlacement).
+const snapPose = new Object3D();
 
 interface UseSceneTransformParams {
   primarySelectedId: string | null;
@@ -91,6 +80,9 @@ interface UseSceneTransformParams {
   ) => void;
   onTransformInteractionStart?: () => void;
   onTransformInteractionEnd?: () => void;
+  /** 기즈모 스냅. 켜져 있으면 liveSync 가 저장값(부모 프레임) 기준 격자로 옮긴다. */
+  snapEnabled?: boolean;
+  snapStep?: SceneSnapStep;
 }
 
 export function useSceneTransform({
@@ -105,6 +97,8 @@ export function useSceneTransform({
   onMultiTransformCommit,
   onTransformInteractionStart,
   onTransformInteractionEnd,
+  snapEnabled = false,
+  snapStep,
 }: UseSceneTransformParams) {
   // selectedIds 자체를 구독하면 어떤 객체 하나만 선택해도 Set 참조가 바뀌며
   // 이 hook을 사용하는 캔버스 전체가 리렌더된다. 대신 boolean(다중 여부)만
@@ -120,16 +114,95 @@ export function useSceneTransform({
   const dragStartTransformsRef = useRef<Map<string, DragStartTransform>>(
     new Map(),
   );
+  // 드래그 세션 동안의 오일러 연속성 기준(deg). three의 euler 추출은 y>90°
+  // 자세를 플립된 표현(x/z ±180)으로 내므로, 직전에 보정된 값을 기준으로
+  // 등가 표현 중 연속인 쪽을 고른다. 드래그가 끝나면 반드시 비운다 —
+  // stale 기준으로 다음 드래그를 보정하면 안 된다.
+  const rotationContinuityRef = useRef<Map<string, Vector3Tuple>>(new Map());
   const dragJustEndedRef = useRef(false);
 
   const isMultiDrag = isMultiSelection;
+
+  // 현재 모드 채널의 스냅 단위(저장값 단위: m · deg · 배율). 0 이면 스냅 없음.
+  const snapStepValue =
+    snapEnabled && snapStep
+      ? snapStepFor(FIELD_OF_MODE[transformMode], snapStep)
+      : 0;
+
+  /**
+   * Object3D 의 현재 transform 을 sceneInfo 표현(**배치값**, 태그 Δ 를 벗긴 것)
+   * 으로 읽고, 스냅이 켜져 있으면 드래그 시작 대비 **변한 축만** 격자로 옮긴
+   * 뒤 Δ 를 다시 더해 Object3D 에 되써 넣는다. 격자는 저장값(부모 프레임 위치 ·
+   * 오일러 deg · 배율) 위에 놓인다 — three 의 `translationSnap` 은 local
+   * 공간에서 객체의 회전 프레임에 격자를 놓아 yaw 로 돌아간 모델의 X·Z
+   * 저장값이 정수가 되지 않았다(snap-transform 주석 참고). TransformControls
+   * 는 pointermove 마다 start+offset 으로 다시 계산하므로 되써 넣어도 누적
+   * 오차가 없다.
+   */
+  const readSnappedTransform = useCallback(
+    (
+      id: string,
+      obj: Object3D,
+      start: DragStartTransform | undefined,
+      prevRotationDeg: Vector3Tuple | undefined,
+    ): Record<SceneTransformField, Vector3Tuple> => {
+      const vectors = getPlacementTransformVectors(id, obj, prevRotationDeg);
+      if (snapStepValue <= 0 || !start) return vectors;
+
+      let next = vectors;
+      if (transformMode === 'translate') {
+        const position = snapChangedAxes(
+          start.position,
+          vectors.position,
+          snapStepValue,
+        );
+        if (position === vectors.position) return vectors;
+        next = { ...vectors, position };
+      } else if (transformMode === 'rotate') {
+        const rotation = snapChangedAxes(
+          start.rotationDeg,
+          vectors.rotation,
+          snapStepValue,
+        );
+        if (rotation === vectors.rotation) return vectors;
+        next = { ...vectors, rotation };
+      } else {
+        // scale: 격자 0 은 행렬을 망가뜨리므로 three 와 같이 한 칸으로 올린다.
+        const scale = snapChangedAxes(
+          start.scale,
+          vectors.scale,
+          snapStepValue,
+        ).map((v) => (v === 0 ? snapStepValue : v)) as Vector3Tuple;
+        if (scale.every((v, i) => v === vectors.scale[i])) return vectors;
+        next = { ...vectors, scale };
+      }
+
+      // 스냅한 채널만 배치 자세에 반영하고 Δ 를 다시 더해 화면 자세로.
+      readRootPlacement(id, obj, snapPose);
+      if (transformMode === 'translate') {
+        snapPose.position.set(...next.position);
+      } else if (transformMode === 'rotate') {
+        snapPose.rotation.set(
+          degToRad(next.rotation[0]),
+          degToRad(next.rotation[1]),
+          degToRad(next.rotation[2]),
+        );
+      } else {
+        snapPose.scale.set(...next.scale);
+      }
+      writeRootPlacement(id, obj, snapPose);
+      return next;
+    },
+    [snapStepValue, transformMode],
+  );
 
   /**
    * 매 frame TransformControls.onObjectChange에서 호출.
    *
    * **sceneInfo write 절대 없음.** Object3D는 TransformControls가 이미 mutate
-   * 했고, 우리는 그 결과를 transient store로 publish만 한다 (Inspector 표시용).
-   * Multi-drag일 경우 다른 선택 객체들의 Object3D만 직접 mutate (시각 피드백).
+   * 했고, 우리는 그 결과를 (스냅 적용 후) transient store로 publish만 한다
+   * (Inspector 표시용). Multi-drag일 경우 다른 선택 객체들의 Object3D만 직접
+   * mutate (시각 피드백).
    *
    * sceneInfo가 매 frame 안 변하므로:
    *  - ModelMesh meshOverrides effect 재실행 없음 → scale 폭주 없음
@@ -141,11 +214,20 @@ export function useSceneTransform({
       return;
     }
 
-    if (isMultiDrag) {
-      // Compute delta from primary object's start transform
-      const start = dragStartTransformsRef.current.get(primarySelectedId);
-      if (!start) return;
+    // 프라이머리를 먼저 스냅해야 세컨더리가 받는 델타도 격자 기준이 된다.
+    const start = dragStartTransformsRef.current.get(primarySelectedId);
+    const nextTransform = readSnappedTransform(
+      primarySelectedId,
+      selectedObject,
+      start,
+      rotationContinuityRef.current.get(primarySelectedId),
+    );
+    rotationContinuityRef.current.set(
+      primarySelectedId,
+      nextTransform.rotation,
+    );
 
+    if (isMultiDrag && start) {
       const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
 
       if (transformMode === 'translate') {
@@ -165,6 +247,13 @@ export function useSceneTransform({
             objStart.position[1] + deltaY,
             objStart.position[2] + deltaZ,
           );
+          // 시작이 격자 밖이던 세컨더리도 각자 자기 시작값 기준으로 격자에 올린다.
+          readSnappedTransform(
+            id,
+            obj,
+            objStart,
+            rotationContinuityRef.current.get(id),
+          );
         }
       } else if (transformMode === 'rotate') {
         // 각자 자기 축 기준(individual origins): 프라이머리의 부모 프레임 회전
@@ -179,6 +268,12 @@ export function useSceneTransform({
           if (!obj || !objStart) continue;
 
           obj.quaternion.copy(tmpDeltaQuat).multiply(objStart.quaternion);
+          readSnappedTransform(
+            id,
+            obj,
+            objStart,
+            rotationContinuityRef.current.get(id),
+          );
         }
       } else {
         // scale: 프라이머리의 성분별 비율을 각 객체의 시작 스케일에 곱한다.
@@ -201,11 +296,16 @@ export function useSceneTransform({
             objStart.scale[1] * ratioY,
             objStart.scale[2] * ratioZ,
           );
+          readSnappedTransform(
+            id,
+            obj,
+            objStart,
+            rotationContinuityRef.current.get(id),
+          );
         }
       }
     }
 
-    const nextTransform = getObjectTransformVectors(selectedObject);
     useActiveTransformStore
       .getState()
       .publish(
@@ -219,6 +319,7 @@ export function useSceneTransform({
     isMultiDrag,
     transformMode,
     modelObjectRegistryRef,
+    readSnappedTransform,
   ]);
 
   /**
@@ -230,7 +331,15 @@ export function useSceneTransform({
     if (!selectedObject || !primarySelectedId) {
       return;
     }
-    const nextTransform = getObjectTransformVectors(selectedObject);
+    // liveSync가 프레임마다 갱신해 둔 연속성 기준으로 최종 euler를 보정한다
+    // (onObjectChange 없이 mouseUp만 오는 경로도 드래그 시작 seed로 보정된다).
+    // 배치값(태그 Δ 를 벗긴 값)으로 저장한다 — 절대 자세를 저장하면 드라이버가
+    // Δ 를 한 번 더 더해 모델이 Δ 만큼 더 가서 멈춘다.
+    const nextTransform = getPlacementTransformVectors(
+      primarySelectedId,
+      selectedObject,
+      rotationContinuityRef.current.get(primarySelectedId),
+    );
     if (onTransformCommit) {
       // position/rotation/scale을 단일 updateSceneInfo 호출로 처리해
       // 중간 렌더 없이 sceneInfo를 1회만 변경한다.
@@ -252,7 +361,13 @@ export function useSceneTransform({
         onTransformVectorChange('scale', nextTransform.scale);
       }
     }
-  }, [onTransformCommit, onTransformVectorChange, primarySelectedId, selectedObject, transformMode]);
+  }, [
+    onTransformCommit,
+    onTransformVectorChange,
+    primarySelectedId,
+    selectedObject,
+    transformMode,
+  ]);
 
   // 기존 호출부 호환을 위한 별칭. canvas의 <TransformControls onObjectChange>가
   // 이 이름을 사용한다. Live sync(매 frame, store만)가 새 의미.
@@ -264,22 +379,31 @@ export function useSceneTransform({
     // 드래그 진입: transient store 활성화. Inspector가 store 값을 표시하기 시작.
     useActiveTransformStore.getState().begin();
 
-    // Capture start transforms of all selected objects for multi-drag
+    // 단일 선택 포함 전 선택 객체의 시작 transform을 기록한다. 멀티 드래그의
+    // 델타 기준이자, 오일러 연속성 보정의 seed(드래그 시작 euler deg)가 된다.
+    // 위치·오일러·크기는 배치값(태그 Δ 를 벗긴 것)으로 둔다 — 스냅의 "변한 축"
+    // 비교 기준이 커밋값과 같아야 한다. quaternion 은 절대 자세 그대로다:
+    // 멀티 드래그 회전 델타 `current ∘ start⁻¹` 에서 Δ 가 상쇄되기 때문.
     const selectedIds = useSceneObjectSelectionStore.getState().selectedIds;
-    if (selectedIds.size > 1) {
-      const startTransforms = new Map<string, DragStartTransform>();
-      for (const id of selectedIds) {
-        const obj = modelObjectRegistryRef.current.get(id);
-        if (obj) {
-          startTransforms.set(id, {
-            position: [obj.position.x, obj.position.y, obj.position.z],
-            quaternion: obj.quaternion.clone(),
-            scale: [obj.scale.x, obj.scale.y, obj.scale.z],
-          });
-        }
+    const startTransforms = new Map<string, DragStartTransform>();
+    const continuityRotations = new Map<string, Vector3Tuple>();
+    for (const id of selectedIds) {
+      // 모델/텍스트는 캔버스 로컬 ref에, mesh는 도메인 전역 registry에 있다.
+      const obj =
+        modelObjectRegistryRef.current.get(id) ?? modelObjectRegistry.get(id);
+      if (obj) {
+        const placement = getPlacementTransformVectors(id, obj);
+        startTransforms.set(id, {
+          position: placement.position,
+          quaternion: obj.quaternion.clone(),
+          rotationDeg: placement.rotation,
+          scale: placement.scale,
+        });
+        continuityRotations.set(id, placement.rotation);
       }
-      dragStartTransformsRef.current = startTransforms;
     }
+    dragStartTransformsRef.current = startTransforms;
+    rotationContinuityRef.current = continuityRotations;
   }, [onTransformInteractionStart, modelObjectRegistryRef]);
 
   const handleTransformMouseUp = useCallback(() => {
@@ -302,7 +426,14 @@ export function useSceneTransform({
             : modelObjectRegistryRef.current.get(id);
         if (!obj) continue;
 
-        const nextTransform = getObjectTransformVectors(obj);
+        // 세컨더리 객체는 프레임별 보정 없이 드래그 시작 seed 기준으로
+        // 1회 보정한다 — 플립 등가표현은 누적이 아니라 정확한 쌍이므로
+        // 시작 대비 어느 표현이 연속인지는 seed만으로 판정된다.
+        const nextTransform = getPlacementTransformVectors(
+          id,
+          obj,
+          rotationContinuityRef.current.get(id),
+        );
         if (transformMode === 'translate') {
           updates.push({ id, position: nextTransform.position });
         } else if (transformMode === 'rotate') {
@@ -313,12 +444,14 @@ export function useSceneTransform({
       }
 
       onMultiTransformCommit?.(updates);
-
-      dragStartTransformsRef.current.clear();
     } else {
       // single-object: 최종 transform을 sceneInfo로 commit (history 1단계 생성)
       commitFinal();
     }
+
+    // 드래그 세션 종료 — 시작 스냅샷과 연속성 기준을 모두 비운다.
+    dragStartTransformsRef.current.clear();
+    rotationContinuityRef.current.clear();
 
     // 드래그 종료: transient store 해제. Inspector는 다음 frame부터 sceneInfo
     // (방금 commit된 값)를 표시한다.
@@ -377,16 +510,19 @@ export function useSceneTransform({
       return;
     }
 
-    // mesh selection: id가 `${modelId}::${meshPath}` 형식이면 부모 모델이
-    // 존재하는지를 확인하고, 객체는 도메인 registry에서 가져온다.
-    const meshIdInfo = parseMeshId(primarySelectedId);
+    // 모델 안쪽 노드(`${modelId}::${meshPath}`) 선택은 읽기 전용이다 — 바운딩
+    // 박스만 그리고 기즈모는 붙이지 않는다. 대상을 비워 두면 아래 detach
+    // effect 가 컨트롤을 뗀다.
+    if (parseMeshId(primarySelectedId)) {
+      setSelectedObject(null);
+      setIsTransformDragging(false);
+      return;
+    }
 
-    const isSelectedPresent = meshIdInfo
-      ? (sceneModels?.some((model) => model.id === meshIdInfo.modelId) ?? false)
-      : (sceneModels?.some((model) => model.id === primarySelectedId) ??
-          false) ||
-        (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
-        (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
+    const isSelectedPresent =
+      (sceneModels?.some((model) => model.id === primarySelectedId) ?? false) ||
+      (sceneTexts?.some((t) => t.id === primarySelectedId) ?? false) ||
+      (sceneMaps?.some((m) => m.id === primarySelectedId) ?? false);
 
     if (!isSelectedPresent) {
       setSelectedObject(null);
@@ -395,8 +531,7 @@ export function useSceneTransform({
       return;
     }
 
-    // 모델/텍스트는 캔버스의 로컬 ref에서, mesh는 도메인 전역 registry에서
-    // 우선 가져온다. 둘 다 fallback으로 검사.
+    // 캔버스의 로컬 ref 를 우선 쓰고 도메인 전역 registry 로 fallback 한다.
     const nextSelectedObject =
       modelObjectRegistryRef.current.get(primarySelectedId) ??
       modelObjectRegistry.get(primarySelectedId) ??
@@ -437,6 +572,9 @@ export function useSceneTransform({
   useEffect(() => {
     return () => {
       useActiveTransformStore.getState().end();
+      // mouseUp 없이 selection이 바뀌는 경로에서도 드래그 세션 상태를 비운다.
+      dragStartTransformsRef.current.clear();
+      rotationContinuityRef.current.clear();
     };
   }, [selectedObject]);
 

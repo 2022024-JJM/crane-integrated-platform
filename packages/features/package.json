@@ -24,19 +24,28 @@
     "./history": "./src/history/index.ts",
     "./risk": "./src/risk/index.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "peerDependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.183.2",
-    "@react-three/fiber": "^9.5.0",
-    "@react-three/drei": "^10.7.7"
+    "three": "^0.183.2"
   },
   "dependencies": {
     "@crane/core": "workspace:*",
-    "@crane/ui": "workspace:*",
     "@crane/domain": "workspace:*",
-    "zustand": "^5.0.11",
+    "@crane/ui": "workspace:*",
+    "@tanstack/react-query": "^5.95.2",
     "lucide-react": "^0.575.0",
-    "@tanstack/react-query": "^5.95.2"
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
   }
 }

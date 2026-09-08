@@ -1,6 +1,7 @@
 import {
   getKnownRegionIds,
   getSceneFileUrlByRegionId,
+  getSceneFileVersionByRegionId,
   isKnownRegionId,
 } from '../model/scene-file-registry';
 import type { SavedSceneInfo } from '../model/types';
@@ -67,14 +68,59 @@ async function loadSceneInfoFromUrl(url: string) {
   return (await response.json()) as SavedSceneInfo;
 }
 
-function loadSceneInfoFromLocalStorage(regionId: string): SavedSceneInfo | null {
+/**
+ * localStorage 저장 포맷. 씬 데이터를 그대로 넣지 않고, "어느 배포본을
+ * 기준으로 편집했는지"(baseVersion = 배포된 씬 JSON 의 콘텐츠 해시)를 함께
+ * 봉투에 싼다.
+ *
+ * 왜: 운영 로드는 localStorage 를 배포 파일보다 우선하는데, 도장이 없으면
+ * 한 번이라도 저장한 브라우저는 **이후 어떤 배포도 영원히 보지 못한다**.
+ * "모델을 교체 배포했는데 사용자가 캐시(사이트 데이터)를 지워야만 새 씬이
+ * 보인다"던 장애의 실제 원인이 HTTP 캐시가 아니라 이 우선순위였다.
+ * baseVersion 이 현재 배포 해시와 다르면 배포가 더 새로운 것이므로 로컬
+ * 저장본을 버린다.
+ */
+interface StoredSceneEnvelope {
+  baseVersion: string | null;
+  sceneInfo: SavedSceneInfo;
+}
+
+function isStoredSceneEnvelope(value: unknown): value is StoredSceneEnvelope {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'sceneInfo' in value &&
+    'baseVersion' in value
+  );
+}
+
+interface StoredSceneRecord {
+  sceneInfo: SavedSceneInfo;
+  /**
+   * true = 현재 배포된 씬 JSON 기준으로 저장된 것 — 그대로 써도 된다.
+   * false = 배포가 그 후에 바뀌었거나(해시 불일치) 봉투 이전 포맷 —
+   *         배포본 로드가 성공하면 폐기해야 한다.
+   */
+  isCurrent: boolean;
+}
+
+/**
+ * localStorage 저장본을 **삭제 없이** 읽고 신선도만 판정한다. 삭제는
+ * loadSceneInfoByRegionId 가 배포본 fetch 에 **성공한 뒤에만** 수행한다 —
+ * 먼저 지우면 fetch 실패(일시 장애·404) 시 로컬 씬까지 잃고 관제 화면이
+ * 빈 에러로 끝난다. stale 로컬이라도 빈 화면보다는 낫다.
+ */
+function readSceneRecordFromLocalStorage(
+  regionId: string,
+): StoredSceneRecord | null {
   if (!isBrowser()) return null;
 
   const raw = window.localStorage.getItem(buildLocalStorageKey(regionId));
   if (!raw) return null;
 
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as SavedSceneInfo;
+    parsed = JSON.parse(raw);
   } catch (error) {
     console.warn(
       `[scene-storage] Failed to parse localStorage entry for region "${regionId}". Falling back to default.`,
@@ -82,6 +128,22 @@ function loadSceneInfoFromLocalStorage(regionId: string): SavedSceneInfo | null 
     );
     return null;
   }
+
+  // 봉투 이전 포맷(씬 객체가 그대로 저장됨)은 어느 배포 기준인지 알 수
+  // 없으므로 전부 stale 로 간주한다. 다음 배포본 로드 성공 한 번으로 현장
+  // 브라우저들의 "영원히 고정된 옛 씬"이 일괄 정리된다.
+  if (!isStoredSceneEnvelope(parsed)) {
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    return { sceneInfo: parsed as SavedSceneInfo, isCurrent: false };
+  }
+
+  // 배포된 씬 JSON 이 저장 당시와 달라졌으면 배포본이 이긴다. 로컬 편집을
+  // 남겨 두면 사용자는 계속 옛 배치를 보면서 "배포가 반영 안 된다"고 느낀다.
+  const currentVersion = getSceneFileVersionByRegionId(regionId);
+  return {
+    sceneInfo: parsed.sceneInfo,
+    isCurrent: parsed.baseVersion === currentVersion,
+  };
 }
 
 function saveSceneInfoToLocalStorage(
@@ -92,9 +154,13 @@ function saveSceneInfoToLocalStorage(
     throw new Error('localStorage is not available in this environment.');
   }
 
+  const envelope: StoredSceneEnvelope = {
+    baseVersion: getSceneFileVersionByRegionId(regionId),
+    sceneInfo,
+  };
   window.localStorage.setItem(
     buildLocalStorageKey(regionId),
-    JSON.stringify(sceneInfo),
+    JSON.stringify(envelope),
   );
 }
 
@@ -119,10 +185,11 @@ export class UnknownRegionError extends Error {
  * 떴다(sanitize-scene-info 주석 참고).
  */
 export async function loadSceneInfoByRegionId(regionId: string) {
-  // 운영: 사용자가 편집해 둔 localStorage 값이 있으면 우선 사용.
-  if (!isDevEnv()) {
-    const cached = loadSceneInfoFromLocalStorage(regionId);
-    if (cached) return sanitizeSceneInfo(cached);
+  // 운영: 사용자가 편집해 둔 localStorage 값이 **현재 배포 기준이면** 우선
+  // 사용. stale(배포가 그 후 바뀜/구포맷)이면 배포본을 먼저 시도한다.
+  const stored = isDevEnv() ? null : readSceneRecordFromLocalStorage(regionId);
+  if (stored?.isCurrent) {
+    return sanitizeSceneInfo(stored.sceneInfo);
   }
 
   const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
@@ -134,8 +201,28 @@ export async function loadSceneInfoByRegionId(regionId: string) {
     throw new UnknownRegionError(regionId);
   }
 
-  // 파일이 404여도 다른 지역 파일로 대체하지 않는다 — 같은 이유다.
-  return sanitizeSceneInfo(await loadSceneInfoFromUrl(sceneFileUrl));
+  try {
+    // 파일이 404여도 다른 지역 파일로 대체하지 않는다 — 같은 이유다.
+    const deployed = sanitizeSceneInfo(await loadSceneInfoFromUrl(sceneFileUrl));
+
+    // stale 로컬 저장본은 배포본 로드가 **성공한 뒤에만** 지운다. 먼저
+    // 지우면 일시 장애로 fetch 가 실패했을 때 로컬 씬까지 잃는다.
+    if (stored && isBrowser()) {
+      window.localStorage.removeItem(buildLocalStorageKey(regionId));
+    }
+    return deployed;
+  } catch (error) {
+    // 배포본 로드 실패 시 stale 로컬이라도 보여준다 — 관제 화면에서 옛
+    // 배치가 빈 에러 화면보다 낫다. 다음 로드에서 다시 배포본을 시도한다.
+    if (stored) {
+      console.warn(
+        `[scene-storage] Failed to load deployed scene for region "${regionId}". Falling back to stale local copy.`,
+        error,
+      );
+      return sanitizeSceneInfo(stored.sceneInfo);
+    }
+    throw error;
+  }
 }
 
 export async function saveSceneInfoByRegionId(

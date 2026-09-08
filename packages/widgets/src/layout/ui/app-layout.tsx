@@ -11,6 +11,7 @@ import { NavigationProgressProvider } from '@crane/core/lib/navigation-progress-
 import { SidebarProvider, useSidebar } from '@crane/core/lib/sidebar-context';
 import { SiteTypeProvider } from '@crane/core/lib/site-type-context';
 import { ThemeProvider } from '@crane/core/lib/theme-context';
+import { useIsFullscreenActive } from '@crane/core/lib/use-fullscreen';
 import { useNavigationProgress } from '@crane/core/lib/use-navigation-progress';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import { AppToaster } from '@crane/ui/organisms/app-toaster';
@@ -78,6 +79,23 @@ function SidebarDrawerCloseSync() {
   return null;
 }
 
+/**
+ * 헤더·사이드바는 전체화면(`useFullscreen`, 문서 전체를 올린다) 중에는
+ * 렌더하지 않아 <main> 이 화면을 채운다 — 편집 페이지처럼 페이지를 채우는 화면은
+ * 이것만으로 전체화면이 되고, 페이지 일부인 뷰어는 스스로 fixed inset-0
+ * 으로 뜬다. Toaster 와 body 포털은 문서 전체가 top layer 에 있으므로 따로
+ * 손댈 것이 없다.
+ */
+function AppHeaderHiddenInFullscreen() {
+  const fullscreen = useIsFullscreenActive();
+  return fullscreen ? null : <AppHeader />;
+}
+
+function AppSidebarHiddenInFullscreen() {
+  const fullscreen = useIsFullscreenActive();
+  return fullscreen ? null : <AppSidebar />;
+}
+
 export function AppLayout() {
   return (
     <ThemeProvider>
@@ -90,9 +108,9 @@ export function AppLayout() {
               <SidebarDrawerCloseSync />
               <NavigationProgressBar />
               <div className="flex h-screen flex-col overflow-hidden">
-                <AppHeader />
+                <AppHeaderHiddenInFullscreen />
                 <div className="flex min-h-0 flex-1">
-                  <AppSidebar />
+                  <AppSidebarHiddenInFullscreen />
                   <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
                     <ScrollArea className="h-full">
                       <Outlet />
