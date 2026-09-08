@@ -303,7 +303,6 @@
     "simulationPlay": "Run simulation",
     "simulationPause": "Stop simulation",
     "collisionMenu": "Collision detection",
-    "collisionBvhHint": "Precise checks become available a few seconds after models load.",
     "warmup": {
       "bvh": "Preparing click detection ({{done}}/{{total}})",
       "outline": "Preparing outlines ({{done}}/{{total}})",

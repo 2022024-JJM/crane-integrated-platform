@@ -70,13 +70,12 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           aria-label={t('monitoring:editor.collision.pauseOnCollision')}
         />
       </label>
-      <p className="text-muted-foreground text-[10px] leading-snug">
+      <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
         {t(
           isRealtime
             ? 'monitoring:editor.collision.pauseHintRealtime'
             : 'monitoring:editor.collision.pauseHint',
-        )}{' '}
-        {t('common:viewer3d.collisionBvhHint')}
+        )}
       </p>
 
       <div className="flex items-center justify-between pt-1">
@@ -84,6 +83,7 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           {t('monitoring:editor.collision.history')}{' '}
           <span className="font-normal tracking-normal normal-case">
             {t('monitoring:editor.collision.historyLimit', {
+              current: history.length,
               max: HISTORY_MAX,
             })}
           </span>

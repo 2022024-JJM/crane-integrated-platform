@@ -166,14 +166,14 @@
     "collision": {
       "enable": "Collisionis detectio",
       "pauseOnCollision": "In collisione siste",
-      "pauseHint": "Si exstinctum, simulatio pergit et solum memoria servatur.",
+      "pauseHint": "Detectio tantum dum simulatio currit operatur.\nSi sistere in collisione exstinctum est, simulatio pergit et solum memoria servatur.",
       "history": "Collisionum memoria",
-      "historyLimit": "novissimae {{max}}",
+      "historyLimit": "({{current}}/{{max}})",
       "empty": "Nulla collisio adhuc notata.",
       "clearHistory": "Memoriam dele",
       "viewContact": "Punctum collisionis vide",
       "deselect": "Selectionem tolle",
-      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat. ▶ preme ut ubi stetit pergat.",
+      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat.",
       "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
       "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
     },
@@ -264,7 +264,7 @@
       "sceneTags": "Tags quibus haec scaena utitur",
       "noSceneTags": "Haec scaena designationes tag non habet. In tabula Designatio Tags inspectoris adde.",
       "unregistered": "non inscriptum",
-      "hint": "Dum currit, valores tags fictorum exemplaria per designationes movent. Sistendo habitus quietis redit."
+      "hint": "Dum currit, valores tags fictorum exemplaria per designationes movent."
     }
   },
   "craneList": {

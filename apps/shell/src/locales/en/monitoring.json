@@ -180,14 +180,14 @@
     "collision": {
       "enable": "Collision detection",
       "pauseOnCollision": "Pause on collision",
-      "pauseHint": "When off, the simulation keeps running and only the record is kept.",
+      "pauseHint": "Detection runs only while the simulation is playing.\nWhen pause on collision is off, the simulation keeps running and only the record is kept.",
       "history": "Collision history",
-      "historyLimit": "last {{max}}",
+      "historyLimit": "({{current}}/{{max}})",
       "empty": "No collisions recorded yet.",
       "clearHistory": "Clear history",
       "viewContact": "View contact",
       "deselect": "Deselect",
-      "selectedHint": "Click a record to pause the simulation and return to that pose. Press ▶ to resume where it stopped.",
+      "selectedHint": "Click a record to pause the simulation and return to that pose.",
       "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
       "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
     },
@@ -278,7 +278,7 @@
       "sceneTags": "Tags referenced by this scene",
       "noSceneTags": "This scene has no tag mappings. Add one in the inspector Tag Mapping tab.",
       "unregistered": "unregistered",
-      "hint": "While playing, virtual tag values drive models through the mappings. Pausing restores the rest pose."
+      "hint": "While playing, virtual tag values drive models through the mappings."
     }
   },
   "craneList": {
