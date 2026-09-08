@@ -27,9 +27,19 @@ import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-brid
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
+export interface UseSceneDataOptions {
+  /**
+   * `mode='simulation'` 진입 시 가상 태그 재생을 바로 켤지. 기본 true(모니터링
+   * 화면). 대시보드 3D 미리보기처럼 ▶ 토글이 없는 작은 뷰는 false 로 두어
+   * 정지 상태로 열고, 화면을 떠날 때의 pause 는 값과 무관하게 수행한다.
+   */
+  autoStartSimulation?: boolean;
+}
+
 export function useSceneData(
   regionId: string,
   mode: 'simulation' | 'replay' | 'realtime' = 'simulation',
+  { autoStartSimulation = true }: UseSceneDataOptions = {},
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +105,8 @@ export function useSceneData(
     if (mode === 'simulation') {
       // 시뮬레이션 = 가상 태그 재생. 정의는 배포 파일에서 한 번 읽는다.
       void loadVirtualTags();
-      startSimulation();
+      // 자동 재생을 끈 뷰(대시보드 3D 미리보기)는 정지 상태로 연다.
+      if (autoStartSimulation) startSimulation();
       // 다른 모드에서 남은 replay 재생 상태가 useReplayPlayerRunner를 통해
       // 이 mode에서도 계속 tick하지 않도록 진입 시 항상 정리.
       resetReplay();
@@ -130,6 +141,7 @@ export function useSceneData(
       releaseSceneRegionAssets(regionId, pathsToRelease);
     };
   }, [
+    autoStartSimulation,
     clearSceneInfoFromStore,
     loadVirtualTags,
     mode,

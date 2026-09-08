@@ -58,6 +58,12 @@ interface Monitoring3dViewProps {
   alarmsByCraneId?: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
   mode?: 'simulation' | 'replay' | 'realtime';
+  /**
+   * `mode='simulation'` 일 때 진입 즉시 가상 태그 재생을 켤지. 기본 true.
+   * 독 ▶ 토글이 없는 뷰(대시보드 3D 미리보기 모달)는 false 로 두어 정지
+   * 상태로 연다.
+   */
+  autoStartSimulation?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
   fullscreenOverlay?: ReactNode;
   fullscreenTopRightOverlay?: ReactNode;
@@ -97,6 +103,7 @@ export function Monitoring3dView({
   alarmsByCraneId = EMPTY_ALARMS,
   alarmHighlightMesh = false,
   mode = 'simulation',
+  autoStartSimulation = true,
   onLoadingChange,
   fullscreenOverlay,
   fullscreenTopRightOverlay,
@@ -114,7 +121,9 @@ export function Monitoring3dView({
   const toolsDock = useSceneDock('tools');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sceneControllerRef = useRef<SceneController | null>(null);
-  const { sceneInfo, isLoading } = useSceneData(regionId, mode);
+  const { sceneInfo, isLoading } = useSceneData(regionId, mode, {
+    autoStartSimulation,
+  });
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
