@@ -115,6 +115,12 @@ cp assets-src/maps/philly-terrain.glb apps/shell/public/maps/philly-terrain.glb
 FORCE_MESHOPT=1 pnpm optimize:map philly-terrain.glb   # 167MB → 14.8MB, 삼각형 245만 → 182만
 ```
 
+같은 날 2차 전달본 `Terrain2.glb`(174MB) 로 교체했다. 루트 오프셋·XZ 정점 범위가
+1차와 동일해 배치값은 그대로이고, Y −325m 까지 내려가던 프리미티브 1개가 빠져
+(30 → 29, 삼각형 245만 → 241만) 압축 결과는 165.5MB → 14.6MB, 삼각형 178만이다.
+재전달본도 위 절차 그대로 돌리면 되며, 시작 전에 루트 오프셋과 bbox 가 이전과
+같은지 먼저 비교해 배치값 유지 여부를 판단한다.
+
 - `FORCE_MESHOPT=1` 인 이유: 폭 18.9km 라 16bit 그리드가 28.8cm 인데 도로(Y 0.3)·
   숲(0.1)·지면 평면(0) 층간이 10cm 라 가드가 생략한다. 그 평면층들은 2~57m 기복의
   지형 overlay 아래 묻혀 있어 z-fighting 이 보이지 않고, 건물·지형은 도시 스케일에서
