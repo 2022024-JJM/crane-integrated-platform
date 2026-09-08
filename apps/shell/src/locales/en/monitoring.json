@@ -98,15 +98,19 @@
       "rotate": "Rotate",
       "scale": "Scale"
     },
+    "pivotMenu": {
+      "trigger": "Pivot",
+      "title": "Pivot settings"
+    },
     "space": {
-      "title": "Transform space",
+      "title": "Axes",
       "local": "Local",
       "world": "World"
     },
     "pivot": {
-      "title": "Transform pivot",
-      "individual": "Individual origins",
-      "primary": "Active origin"
+      "title": "Origin",
+      "individual": "Individual",
+      "primary": "Last selected"
     }
   },
   "history": {

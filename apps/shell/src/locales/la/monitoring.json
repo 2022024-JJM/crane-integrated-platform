@@ -98,15 +98,19 @@
       "rotate": "Rotatio",
       "scale": "Scala"
     },
+    "pivotMenu": {
+      "trigger": "Cardo",
+      "title": "Ratio cardinis"
+    },
     "space": {
-      "title": "Spatium transformationis",
+      "title": "Axes",
       "local": "Locale",
       "world": "Mundanum"
     },
     "pivot": {
-      "title": "Punctum transformationis",
-      "individual": "Origines singulae",
-      "primary": "Origo activa"
+      "title": "Origo",
+      "individual": "Singulae",
+      "primary": "Ultimum selectum"
     }
   },
   "history": {

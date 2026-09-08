@@ -273,9 +273,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     const target = cameraStateRef.current?.target;
     addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
   };
-  // 크기 모드는 three TransformControls 가 축 기준을 local 로 강제한다 —
-  // 토글을 잠그고 표시도 local 로 맞춘다.
-  const isScaleMode = transformMode === 'scale';
   const hasSelection = selectedIds.size > 0;
   const canDuplicate = useMemo(
     () => hasDuplicableSelection(selectedIds, sceneInfo),
@@ -491,9 +488,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               mode={transformMode}
               onModeChange={setTransformMode}
               onAddText={handleAddTextAtView}
-              transformSpace={isScaleMode ? 'local' : transformSpace}
+              transformSpace={transformSpace}
               onTransformSpaceChange={setTransformSpace}
-              transformSpaceDisabled={isScaleMode}
               transformPivot={transformPivot}
               onTransformPivotChange={setTransformPivot}
               snapEnabled={snapEnabled}

@@ -1,7 +1,6 @@
 import {
   SceneTransformModeToggle,
-  SceneTransformPivotSelect,
-  SceneTransformSpaceSelect,
+  SceneTransformPivotMenu,
   SCENE_SNAP_STEP_OPTIONS,
   type SceneSnapChannel,
   type SceneSnapStep,
@@ -73,9 +72,7 @@ interface EditorHeaderBarProps {
   // 도구 동작 설정
   transformSpace: SceneTransformSpace;
   onTransformSpaceChange: (space: SceneTransformSpace) => void;
-  /** scale 모드처럼 three 가 축 기준을 강제하는 동안 잠근다. */
-  transformSpaceDisabled: boolean;
-  /** 다중 선택 회전·크기 기준점(개별 원점/기준 원점). */
+  /** 다중 선택 회전·크기 원점(개별/마지막 선택). */
   transformPivot: SceneTransformPivot;
   onTransformPivotChange: (pivot: SceneTransformPivot) => void;
   snapEnabled: boolean;
@@ -106,11 +103,11 @@ interface EditorHeaderBarProps {
  * 크롬이라 캡슐·그림자가 없다. 기능 수가 적어 도구·보기까지 한 줄에 둔다.
  *
  * - 좌측: 씬 전체·파일에 작용하는 문서 동작(실행취소·다시실행 | 저장·내보내기)
- * - 중앙: 모달 도구(이동/회전/크기) · 좌표계(로컬/월드) | 스냅 · 격자 · 홈 ·
- *   탑뷰 | 텍스트 추가
+ * - 중앙: 모달 도구(이동/회전/크기) · 피벗(좌표축·원점 팝업) | 스냅 · 격자 ·
+ *   홈 · 탑뷰 | 텍스트 추가
  * - 우측: 전체화면 · 우측 패널 토글
  *
- * 그룹 사이는 간격으로만 나누고, 구분선은 "기즈모(도구·좌표계) | 스냅·보기 |
+ * 그룹 사이는 간격으로만 나누고, 구분선은 "기즈모(도구·피벗) | 스냅·보기 |
  * 생성(텍스트)" 소분류 경계에만 쓴다. 활성 표현은 성격별로 다르다 — 모달 도구는 배경 채움,
  * 상태 토글(스냅·격자)은 하단 점, 액션은 눌림 피드백만.
  *
@@ -133,7 +130,6 @@ export function EditorHeaderBar({
   onAddText,
   transformSpace,
   onTransformSpaceChange,
-  transformSpaceDisabled,
   transformPivot,
   onTransformPivotChange,
   snapEnabled,
@@ -234,7 +230,7 @@ export function EditorHeaderBar({
           </div>
         </div>
 
-        {/* 중앙 — 모달 도구 · 좌표계 · 기준점 | 스냅 · 격자 · 홈 · 탑뷰 | 텍스트 */}
+        {/* 중앙 — 모달 도구 · 피벗(좌표축·원점) | 스냅 · 격자 · 홈 · 탑뷰 | 텍스트 */}
         <div
           role="group"
           aria-label={t('monitoring:editor.toolDock')}
@@ -246,12 +242,9 @@ export function EditorHeaderBar({
             shortcuts={MODE_SHORTCUTS}
             tooltipSide="bottom"
           />
-          <SceneTransformSpaceSelect
+          <SceneTransformPivotMenu
             space={transformSpace}
             onSpaceChange={onTransformSpaceChange}
-            disabled={transformSpaceDisabled || sceneDisabled}
-          />
-          <SceneTransformPivotSelect
             pivot={transformPivot}
             onPivotChange={onTransformPivotChange}
             disabled={sceneDisabled}
