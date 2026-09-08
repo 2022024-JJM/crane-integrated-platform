@@ -29,6 +29,8 @@
     "siteWeather": "Geoje",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS",
+    "brandIndoorshopPrimary": "HANWHA OCEANUS",
+    "brandIndoorshopAccent": "Effectus Officinae Interioris",
     "siteType": "Genus Loci"
   },
   "siteType": {

@@ -29,6 +29,8 @@
     "siteWeather": "거제",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS",
+    "brandIndoorshopPrimary": "한화오션",
+    "brandIndoorshopAccent": "내업공정 실적",
     "siteType": "사이트 유형"
   },
   "siteType": {

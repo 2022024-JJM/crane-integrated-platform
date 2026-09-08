@@ -29,6 +29,8 @@
     "siteWeather": "Geoje",
     "brandPrimary": "CRANE",
     "brandAccent": "OPS",
+    "brandIndoorshopPrimary": "HANWHA OCEAN",
+    "brandIndoorshopAccent": "Indoor Shop Performance",
     "siteType": "Site Type"
   },
   "siteType": {
