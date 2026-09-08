@@ -58,7 +58,8 @@ interface GltfModelProps {
    * **캔버스에 스텐실 버퍼가 있어야 한다**(SCENE_GL_OPTIONS.stencil: true).
    * 스텐실 없는 캔버스(mro2·philly 존 뷰어 등)에서 켜면 헐이 모델을 통째로
    * 덮으므로 기본값을 바꾸지 않는다 — 씬 에디터만 'outline'을 넘긴다.
-   * 자식 mesh 선택(selectedMeshTarget)은 읽기 전용 표시라 항상 박스다.
+   * 자식 노드 선택(selectedMeshTarget)도 같은 실루엣으로 두르되 대상만 그
+   * 노드 서브트리로 좁힌다 — 노드가 읽기 전용인 것과 표시 방식은 무관하다.
    */
   selectionStyle?: 'box' | 'outline';
   /**
@@ -68,8 +69,8 @@ interface GltfModelProps {
    */
   prepareOutline?: boolean;
   /**
-   * 자식 mesh가 선택된 경우 그 mesh 객체. ModelSelectionBox가 이 mesh의
-   * bbox만으로 selection box를 그리도록 한다. null이면 모델 전체 박스.
+   * 자식 노드가 선택된 경우 그 노드 객체. 선택 표시(실루엣 테두리 또는
+   * 바운딩 박스)의 대상을 이 노드 서브트리로 좁힌다. null이면 모델 전체.
    */
   selectedMeshTarget?: Object3D | null;
   onObjectReady?: (id: string, object: Object3D | null) => void;
@@ -122,12 +123,17 @@ export const GltfModel = memo(function GltfModel({
   const clonedModel = useClonedModel(url);
   const { clone } = clonedModel;
   const labelLocalAnchor = useModelLabelLocalAnchor(clone, showLabel);
-  const outlineObjects = useMemo(() => [clone], [clone]);
+  // 선택 표시 대상 — 자식 노드가 선택됐으면 그 노드, 아니면 모델 루트.
+  // ObjectSilhouetteOutline 은 내부에서 node.uuid 를 key 로 인스턴스를 새로
+  // 만들므로 대상이 바뀌어도 포털 컨테이너가 교체되지 않는다. 여기서 다시
+  // key 를 주면 공유 ShaderMaterial 만 재생성돼 손해다.
+  const outlineTarget = selectedMeshTarget ?? clone;
+  const outlineObjects = useMemo(() => [outlineTarget], [outlineTarget]);
 
-  // 모델 전체 선택을 실루엣 테두리로 그리는 경우 — 자식 mesh 선택은 읽기
-  // 전용 표시라 outline 스타일이어도 박스를 유지한다(prop 주석 참고).
+  // 모델 전체든 자식 노드든 실루엣 테두리로 그린다. 박스는 스텐실이 없어
+  // 'box' 를 넘기는 캔버스(지도·모니터링·존 뷰어) 몫이다(prop 주석 참고).
   const useOutline =
-    selectionStyle === 'outline' && isSelected && !selectedMeshTarget;
+    selectionStyle === 'outline' && (isSelected || Boolean(selectedMeshTarget));
 
   const handleObjectReady = useCallback(
     (readyId: string, object: Object3D | null) => {
