@@ -207,15 +207,31 @@ describe('wallToBayLocal', () => {
     const angle = (37 * Math.PI) / 180
     const anchor = { angle, lateralOrigin: 4, longitudinalOffset: 25 }
     const origin = wallToBayLocal(anchor, 0, 0)
-    expect(origin.x).toBeCloseTo(-4, 9)
+    /* 벽 중심선(횡좌표 4)이 x=0 으로 오므로 display 원점은 그 반대편 4m 자리다 */
+    expect(origin.x).toBeCloseTo(4, 9)
     expect(origin.y).toBeCloseTo(25, 9)
     /* 장축 +10m */
     const along = wallToBayLocal(anchor, 10 * Math.cos(angle), 10 * Math.sin(angle))
     expect(along.y - origin.y).toBeCloseTo(10, 9)
     expect(along.x - origin.x).toBeCloseTo(0, 9)
-    /* 수직 +10m */
+    /* 왼수직 +10m — 폭 방향으로 10m 떨어지되 **부호는 뒤집힌다**(아래 손방향 검사) */
     const across = wallToBayLocal(anchor, -10 * Math.sin(angle), 10 * Math.cos(angle))
-    expect(across.x - origin.x).toBeCloseTo(10, 9)
+    expect(across.x - origin.x).toBeCloseTo(-10, 9)
     expect(across.y - origin.y).toBeCloseTo(0, 9)
+  })
+
+  /*
+   * **손방향을 바꾸지 않는다** — display 프레임(베이 진입 뷰가 그리는 좌표)과 베이 로컬
+   * (공장 전체 뷰가 그리는 좌표)은 둘 다 three(y-up) 장면 좌표다. 이 변환에 반사가 섞이면
+   * 같은 홀이 두 화면에서 거울상으로 서고, 지도에서 외운 배치가 진입 뷰에서 통하지 않는다.
+   * 실제로 그랬다 — 공장 뷰의 5BAY 만 블록들이 반대편 벽에 붙어 있었다.
+   */
+  it('회전만 한다 — 행렬식이 +1 이다(거울상 금지)', () => {
+    const anchor = { angle: (-23 * Math.PI) / 180, lateralOrigin: 3.5, longitudinalOffset: -12 }
+    const o = wallToBayLocal(anchor, 0, 0)
+    const ex = wallToBayLocal(anchor, 1, 0)
+    const ez = wallToBayLocal(anchor, 0, 1)
+    const det = (ex.x - o.x) * (ez.y - o.y) - (ex.y - o.y) * (ez.x - o.x)
+    expect(det).toBeCloseTo(1, 9)
   })
 })

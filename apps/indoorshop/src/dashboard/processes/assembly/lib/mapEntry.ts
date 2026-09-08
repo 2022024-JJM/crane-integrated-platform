@@ -60,6 +60,19 @@ export function assemblyLocationIdOfBay(bayId: string): string | null {
   return `${factoryId}-b${bayNo}`
 }
 
+/**
+ * 조립 location id (`asm-pbs-b5`) → **설비 베이 키**(`5`).
+ *
+ * 설비 fixture 의 `bay`·야드 지번의 `bay`·현황 보드의 구획 키가 모두 이 어휘를 쓴다 —
+ * 정반 하나를 보다가 '현황' 으로 건너올 때 그 자리를 이어 주는 것이 이 값이다.
+ * 규약(`{factoryId}-b{bayNo}`) 밖이면 null 이다(억지로 잘라 내지 않는다).
+ */
+export function assemblyBayKeyOfLocationId(factoryId: string, locationId: string): string | null {
+  const prefix = `${factoryId}-b`
+  if (!locationId.startsWith(prefix)) return null
+  return locationId.slice(prefix.length) || null
+}
+
 export function isRealScanBay(bayId: string): boolean {
   return assemblyLocationIdOfBay(bayId) === REAL_LOCATION_ID
 }
@@ -81,6 +94,52 @@ export function mockLidarStatus(id: string): LidarSensorStatus {
   if (h % 29 === 0) return 'error'
   if (h % 13 === 0) return 'offline'
   return 'online'
+}
+
+/**
+ * 라이다 스캔 주기 — 한 바퀴 도는 데 걸리는 시간.
+ *
+ * 실계측이 아니라 **화면이 살아 있게 하는 눈금**이다: 값이 이 주기마다 새로 서야 셀의
+ * 경과가 실제로 흐르고, 새 값이 왔을 때 깜빡인다(R19). 실연동 시 이 상수는 사라지고
+ * 마지막 수신 시각이 그대로 온다.
+ */
+export const SCAN_PERIOD_MS = 60_000
+
+/**
+ * 마지막 스캔 시각 (epoch ms) — 벽시계 문자열을 대신하는 값.
+ *
+ * 예전에는 `13:02` 같은 **고정된 벽시계**를 셀에 적었다. 그 표기는 337칸을 훑는 사람에게
+ * 매번 지금 시각과의 뺄셈을 시킨다 — `15:31` 과 `13:02` 이 똑같이 정상으로 보이고,
+ * 에폭이 없어 그리드의 흐름·침묵 판정(R19)도 켜지지 않았다.
+ *
+ * 그래서 설비마다 다른 **위상**을 주고 주기에 맞춰 값이 새로 서게 한다. 결정론이라
+ * 화면을 다시 열어도 같은 리듬이고, `now` 를 인자로 받아 이 함수 자체는 순수하다.
+ */
+export function mockScanAt(id: string, now: number): number {
+  const phase = hashOf(`${id}-scan-phase`) % SCAN_PERIOD_MS
+  return Math.floor((now - phase) / SCAN_PERIOD_MS) * SCAN_PERIOD_MS + phase
+}
+
+/**
+ * 끊긴 설비의 마지막 수신 시각 (epoch ms).
+ *
+ * 시(hour) 경계에 못 박는다 — `now` 에서 일정 시간을 빼는 방식이면 렌더할 때마다 값이
+ * 되살아나 "5분째 끊김"이 영원히 5분이 된다. 경계에 고정하면 한 시간 동안 자리를 지키고
+ * 그 안에서 경과가 자연히 늘어난다(5분 ~ 65분).
+ */
+export function mockDownSince(id: string, now: number): number {
+  const hourStart = Math.floor(now / 3_600_000) * 3_600_000
+  return hourStart - (hashOf(`${id}-down`) % 4) * 900_000 - 300_000
+}
+
+/**
+ * 설비 한 대의 '마지막 신호' 시각 — 링크 상태에 따라 근거가 갈린다.
+ *
+ * 살아 있으면 마지막 스캔, 끊겼으면 끊기기 직전의 수신이다. 둘을 한 함수로 두는 이유는
+ * 화면이 "무엇의 시각인가"를 매번 고르지 않게 하려는 것이다.
+ */
+export function mockLastSignalAt(id: string, link: string, now: number): number {
+  return link === 'online' ? mockScanAt(id, now) : mockDownSince(id, now)
 }
 
 /** 스캔 시각 — 결정론적 (13:00~15:59, mockAssemblyData.scanTimeOf 와 같은 규칙) */

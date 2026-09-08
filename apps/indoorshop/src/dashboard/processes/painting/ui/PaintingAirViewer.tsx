@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
@@ -121,9 +121,15 @@ function seedsOf(item: BaySceneItem, kind: '가스히터' | '제습기'): { x: n
 export interface PaintingAirViewerProps {
   scene: BayScene
   className?: string
+  /**
+   * 오른쪽 위 도구 묶음에 함께 세울 것 — 전체 화면 버튼처럼 **뷰어 밖이 쥐고 있는**
+   * 조작이 들어온다. 자리를 슬롯으로 낸 이유는, 밖에서 따로 절대배치하면 도움말 버튼과
+   * 같은 좌표를 두 곳에서 재게 되어 한쪽만 옮겨도 둘이 겹치기 때문이다.
+   */
+  topRight?: ReactNode
 }
 
-export function PaintingAirViewer({ scene, className }: PaintingAirViewerProps) {
+export function PaintingAirViewer({ scene, className, topRight }: PaintingAirViewerProps) {
   const { t, i18n } = useTranslation()
   /**
    * **세기는 매초 바뀌고 구조는 안 바뀐다.**
@@ -696,7 +702,7 @@ export function PaintingAirViewer({ scene, className }: PaintingAirViewerProps) 
       )}
 
       {/* 공장 한 줄 요약 — 이 화면이 몇 면을 세웠고 몇 대가 도는지 */}
-      <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-0.5 rounded-inshop-md bg-black/55 px-2.5 py-2 text-2xs text-white/75 backdrop-blur-sm">
+      <div className="pointer-events-none absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] flex flex-col gap-0.5 rounded-inshop-md bg-black/55 px-2.5 py-2 text-2xs text-white/75 backdrop-blur-sm">
         <span className="font-medium text-white/90">
           {t('painting.airView.bayCount', { count: scene.bayCount })} ·{' '}
           {t('painting.airView.unitCount', { count: unitTotal })}
@@ -713,7 +719,7 @@ export function PaintingAirViewer({ scene, className }: PaintingAirViewerProps) 
 
       {/* 범례 — 무엇이 무엇인지 색만으로 말하지 않는다 */}
       {/* 왼쪽 아래는 축 기즈모의 자리다(shared 규약) — 범례는 오른쪽으로 비켜 세운다 */}
-      <div className="pointer-events-none absolute bottom-3 right-3 flex flex-col gap-1 rounded-inshop-md bg-black/55 px-2.5 py-2 text-2xs text-white/70 backdrop-blur-sm">
+      <div className="pointer-events-none absolute bottom-[var(--vp-inset,1rem)] right-[var(--vp-inset,1rem)] flex flex-col gap-1 rounded-inshop-md bg-black/55 px-2.5 py-2 text-2xs text-white/70 backdrop-blur-sm">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: GAS_HEATER }} />
           {t('painting.airView.legendHeat')}
@@ -729,8 +735,9 @@ export function PaintingAirViewer({ scene, className }: PaintingAirViewerProps) 
         <span className="mt-0.5 text-white/45">{t('painting.airView.intensityNote')}</span>
       </div>
 
-      <div className="absolute right-3 top-3 z-10">
+      <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start gap-2">
         <ViewportHelp className="static flex-col-reverse" />
+        {topRight}
       </div>
       {/* 기즈모는 카메라가 있을 때만 뜻이 있다 */}
       {!webglFailed && (

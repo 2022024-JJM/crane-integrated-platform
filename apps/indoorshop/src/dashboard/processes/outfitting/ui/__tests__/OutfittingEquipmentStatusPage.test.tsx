@@ -29,24 +29,31 @@ describe('의장 설비 관제 화면', () => {
     renderWithProviders(<OutfittingEquipmentStatusPage />, {
       route: `/indoorshop/zones/outfitting/equipment?shop=${encodeURIComponent('두모 선행의장 2공장')}`,
     })
-    expect(
-      screen.getByRole('heading', { level: 2, name: '두모 선행의장 2공장' })
-    ).toBeInTheDocument()
+    /* 고른 공장은 왼쪽 목록에서 눌린 채로 선다 (공용 보드의 표시) */
+    expect(screen.getByRole('button', { name: /두모 선행의장 2공장/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
   })
 
   it('모르는 공장 이름이 오면 첫 공장으로 선다 — 빈 화면을 두지 않는다', () => {
     renderWithProviders(<OutfittingEquipmentStatusPage />, {
       route: '/indoorshop/zones/outfitting/equipment?shop=없는공장',
     })
-    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument()
+    const pressed = screen
+      .getAllByRole('button', { pressed: true })
+      .filter((button) => button.textContent?.includes('공장'))
+    expect(pressed).toHaveLength(1)
+    expect(pressed[0].textContent).toContain('POS 1공장')
   })
 
-  it("고른 공장의 '워크스페이스로' 문이 그 공장 경로로 열린다 (반대 방향 링크)", () => {
+  it('나가는 문은 고른 공장의 워크스페이스로 열린다 (반대 방향 링크)', () => {
     renderWithProviders(<OutfittingEquipmentStatusPage />, {
       route: `/indoorshop/zones/outfitting/equipment?shop=${encodeURIComponent('POS 1공장')}`,
     })
-    const link = screen.getByRole('link', { name: '워크스페이스로' })
-    expect(link.getAttribute('href')).toBe('/indoorshop/zones/outfitting/ofit-pos1')
+    /* 워크스페이스와 같은 되돌아가기 칩이다 — 툴팁이 어디로 나가는지를 말한다 */
+    const back = screen.getByTitle(/공장으로 돌아가기/)
+    expect(back.getAttribute('href')).toBe('/indoorshop/zones/outfitting/ofit-pos1')
   })
 
   it('본문은 관제 화면과 같은 설비 그리드다 — 워크스페이스 탭과 같은 컴포넌트', () => {

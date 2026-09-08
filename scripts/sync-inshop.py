@@ -132,6 +132,23 @@ def copy_source() -> None:
     shutil.copy2(WD / "ROUTING.md", content / "ROUTING.md")
 
 
+def patch_import_specifier_assertions() -> None:
+    """
+    소스 텍스트 속 **import 지정자**를 문자열로 검사하는 계약 테스트 (rewrite_alias 앞).
+
+    `rewrite_alias` 는 `'@/...'` 리터럴을 **그 파일 위치 기준** 상대 경로로 바꾼다. 그런데
+    이 기대값은 검사 대상 파일(`processes/{zone}/ui/pages/`)이 쓰는 지정자라, 테스트 파일
+    (`__tests__/`) 위치로 계산되면 서로 다른 경로가 되어 늘 어긋난다. 별칭이 없는 모노레포
+    에서는 앞부분이 파일마다 다르므로 모듈 **꼬리**로 검사한다.
+    """
+    step("import 지정자 계약 테스트: 별칭 경로 → 모듈 꼬리 검사")
+    replace_once(
+        DASH / "__tests__/viewportFrame.test.ts",
+        """expect(read(path)).toContain("from '@/shared/ui/atoms/BackLink'")""",
+        r"""expect(read(path)).toMatch(/from '[^']*\/shared\/ui\/atoms\/BackLink'/)""",
+    )
+
+
 # ── 2. import 경로 ───────────────────────────────────────────────────────────
 def target_for(spec: str) -> str:
     rest = spec[2:]
@@ -286,8 +303,14 @@ def rewrite_links() -> None:
     # InshopRoot 가 useRoutes 에 넘길 때 접두를 다시 떼어 상대 경로로 만든다.
     mods = list((DASH / "processes").glob("*/module.ts"))
     assert mods, "processes/*/module.ts 가 없음"
+    # 모듈이 내는 경로는 **하나도 빠짐없이** 접두돼야 한다. 하나라도 새면 InshopRoot 의
+    # toRelative 가 그 라우트에서 던져 내업 화면 전체가 뜨지 않는다 — "적어도 하나" 검사는
+    # 라우트가 여럿인 모듈에서 새는 하나를 놓친다.
     for f in mods:
-        assert "path: '/indoorshop/" in read(f), f"{f.name}: 라우트 접두 누락 — 리터럴 패스 규칙 재검토"
+        paths = re.findall(r"path: '([^']*)'", read(f))
+        assert paths, f"{f.name}: nav.path·routes[].path 를 찾지 못함 — module.ts 형태가 바뀜"
+        stray = [x for x in paths if not x.startswith("/indoorshop/")]
+        assert not stray, f"{f.name}: 라우트 접두 누락 {stray} — 리터럴 패스 규칙(OWNED_PREFIXES) 재검토"
     print(f"    {hits} paths")
 
 
@@ -341,6 +364,15 @@ def rewrite_root_paths() -> None:
             write(f, s2); n += 1
     print(f"    테스트 기대 {n} files")
 
+    # (6) 투어 테스트의 기본 라우트 — (4) 에서 startPath 를 접두했으므로 harness 도 같은
+    #     화면에 서야 한다. 그러지 않으면 TourController 가 시작 화면을 못 알아봐 말풍선이
+    #     영영 안 뜨고, 자동 1회·스텝 진행·ESC 까지 여섯 건이 한꺼번에 무너진다.
+    replace_once(
+        DASH / "shared/features/tour/__tests__/tour.test.tsx",
+        "function renderTour(storage: TourStorage, route = '/')",
+        "function renderTour(storage: TourStorage, route = '/indoorshop')",
+    )
+
     left = [f for f in ts_files(DST) if "MAP_PATH = '/'" in read(f)]
     assert not left, f"뿌리 경로 잔존: {left}"
 
@@ -359,12 +391,34 @@ def patch_asset_paths() -> None:
     replace_once(p2, "const ASSET_BASE = '/real-scan'", "const ASSET_BASE = publicAsset('/real-scan')")
     write(p2, imp + read(p2))
 
-    for q in (p, p2):
+    # 공장 전체 현황 3D 의 실측 오버레이 — 프리뷰 bin 네 장(점군·음영·라벨·편차)의 경로를
+    # 모듈 상수로 들고 있다가 한 함수에서 fetch 한다. 인자가 **변수**라 아래 잔존 검사의
+    # 정규식(리터럴 fetch)에 걸리지 않아, 예전에 손으로 고쳤다가 sync 재실행에 되돌아간
+    # 자리다(54d4837). 여기서 감싸 둔다 — 빠지면 넷이 함께 404 → SPA fallback(HTML)을
+    # 바이너리로 읽고, 호출부 catch 가 삼켜 **오류 없이 빈 정반**으로 떨어진다.
+    p3 = DASH / "processes/assembly/api/realScanData.ts"
+    replace_once(p3, "  const res = await fetch(path)", "  const res = await fetch(publicAsset(path))")
+    write(p3, imp + read(p3))
+
+    for q in (p, p2, p3):
         write(q, re.sub(r"'(@/[^']*)'", lambda m: f"'{rel_import(q, target_for(m.group(1)))}'", read(q)))
 
     # public 에셋 경로만 본다 — 서버 API 경로('/api')는 별개 관심사고, 주석 속 예시까지 잡으면 안 된다
     left = [f for f in ts_files(DST) if re.search(r"fetch\([`']/(?:real-scan|models)\b|= '/real-scan'", read(f))]
     assert not left, f"절대 경로 fetch 잔존: {left}"
+
+    # 위 검사는 **fetch 호출 모양**만 본다. 경로를 상수로 빼 두고 나중에 부르면 통과하므로,
+    # 자산 디렉토리 리터럴을 가진 파일은 publicAsset 을 거치는지 한 번 더 본다 — 원본이
+    # 새 자산을 들여올 때 이 클래스가 조용히 다시 새는 것을 막는 그물이다.
+    # (테스트는 Node 에서 파일을 직접 읽으므로 제외한다.)
+    ASSET_DIR_LITERAL = re.compile(r"""['"`]/(?:real-scan|models|drawings|previews)/""")
+    unwrapped = [
+        f for f in ts_files(DST)
+        if not f.name.endswith((".test.ts", ".test.tsx"))
+        and ASSET_DIR_LITERAL.search(read(f))
+        and "publicAsset" not in read(f)
+    ]
+    assert not unwrapped, f"public 자산 절대 경로가 publicAsset 을 안 거침: {unwrapped}"
 
 
 # ── 6. 개별 패치 ─────────────────────────────────────────────────────────────
@@ -541,7 +595,7 @@ def patch_test_paths() -> None:
     import posixpath
 
     tests = [f for f in ts_files(DST) if f.name.endswith((".test.ts", ".test.tsx"))]
-    n_pub = n_src = 0
+    n_pub = n_src = n_cwd = 0
     for f in tests:
         s = read(f); o = s
         # (1) public 에셋 상대경로 — 에셋은 apps/shell/public 에 있다. `../` 개수는 파일마다
@@ -555,6 +609,12 @@ def patch_test_paths() -> None:
         s2 = re.sub(r"((?:\.\./)+)public/(real-scan|models)", repl, s)
         if s2 != s:
             s = s2; n_pub += 1
+        # (1b) cwd(apps/indoorshop) 기준으로 적은 에셋 디렉토리 — `../` 로 시작하지 않아 (1)
+        #      의 규칙을 빠져나간다. 원본은 web-dashboard 가 곧 cwd 라 `public/real-scan` 이
+        #      맞았지만, 여기서는 에셋이 이웃 패키지(apps/shell/public)로 옮겨 앉았다.
+        s2 = re.sub(r"(['\"`])public/(real-scan|models)", r"\1../shell/public/\2", s)
+        if s2 != s:
+            s = s2; n_cwd += 1
         # (2) cwd(apps/indoorshop) 기준으로 소스 실물을 읽는 계약 테스트 — 뿌리가 한 단계 깊어졌다
         s2 = s.replace("readFileSync('src/shared/", "readFileSync('src/dashboard/shared/")
         if s2 != s:
@@ -596,7 +656,10 @@ def patch_test_paths() -> None:
     if p.exists():
         replace_once(p, "await import('../../lib/theme/ThemeProvider')",
                      "await import('@crane/core/lib/theme-context')")
-    print(f"    public 경로 {n_pub} files, src 실물 {n_src} files")
+    # cwd 기준 에셋 경로가 남아 있으면 테스트가 없는 디렉토리를 읽는다 — 여기서 멈춘다
+    left = [f for f in tests if re.search(r"(?<![./])(['\"`])public/(real-scan|models)", read(f))]
+    assert not left, f"cwd 기준 public 경로 잔존: {left}"
+    print(f"    public 경로 {n_pub} files, cwd 기준 {n_cwd} files, src 실물 {n_src} files")
 
 
 def patch_fixed_viewport() -> None:
@@ -649,6 +712,12 @@ def sync_public() -> None:
     shutil.copytree(src_rs, dst_rs)
     for f in (WD / "public/models").iterdir():
         shutil.copy2(f, SHELL_PUBLIC / "models" / f.name)
+    # 설비 배치 도면(entities/equipment/layoutDrawings 가 BASE_URL 로 부른다) — real-scan 과
+    # 같이 원본이 통째로 소유하는 디렉토리라 미러한다. 셸에는 이 이름의 자산이 따로 없다.
+    src_dw, dst_dw = WD / "public/drawings", SHELL_PUBLIC / "drawings"
+    if dst_dw.exists():
+        shutil.rmtree(dst_dw)
+    shutil.copytree(src_dw, dst_dw)
     shutil.copy2(WD / "public/icons.svg", SHELL_PUBLIC / "icons.svg")
 
 
@@ -661,8 +730,15 @@ def check_orphans() -> None:
 
 
 def main() -> None:
+    # 시작 전에 dev 서버를 멈춘다. copy_source 가 트리를 지웠다 **변환 전 원본**을 먼저
+    # 쓰기 때문에, 그 몇 초 사이 Vite 가 그것을 HMR 로 브라우저에 실어 보낸다. 그 상태의
+    # module.ts 는 접두가 없어 InshopRoot 의 toRelative 가 던진다 —
+    #   `내업 라우트는 /indoorshop 아래여야 합니다 ...: /zones/fabrication`
+    # 변환이 끝나도 그 브라우저 탭은 깨진 채 남는다(에러 경계가 이미 섰다).
+    print("⚠️ dev 서버를 멈추고 돌린다 — 변환 도중 상태가 HMR 로 실려 라우트 오류로 굳는다")
     copy_source()
     apply_overlay()  # 변환·검사보다 먼저 — 검사는 최종 트리를 봐야 한다
+    patch_import_specifier_assertions()  # rewrite_alias 앞 — 기대값이 '@/' 인 채여야 한다
     rewrite_alias()
     rewrite_i18n()
     rewrite_classes()
@@ -680,6 +756,7 @@ def main() -> None:
     sync_public()
     print("✓ sync 완료 — 이어서: pnpm --filter @crane/shell typecheck && pnpm lint && pnpm --filter @crane/shell build")
     print("  ⚠️ dev 서버 재시작 + 브라우저 Ctrl+Shift+R 필요 (Vite 모듈 그래프가 옛 트리를 가리킨다)")
+    print("     라우트 오류(/zones/fabrication 접두 누락)가 보이면 그것도 옛 그래프다 — 재시작으로 사라진다")
 
 
 if __name__ == "__main__":

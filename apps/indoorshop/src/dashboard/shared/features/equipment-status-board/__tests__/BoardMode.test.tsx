@@ -91,10 +91,13 @@ describe('현황 보드 보기 모드 (R40)', () => {
   it('그림이 더 큰 자리를 얻는다 — 모드를 고른 이유가 그것이다', async () => {
     const user = userEvent.setup()
     const { container } = renderBoard()
-    const half = container.querySelector('svg[role="img"]')!.parentElement!.className
+    /* svg 의 부모는 그림 상자(frame)이고, 높이를 든 것은 그 위 버드뷰 루트다 */
+    const heightClassOf = () =>
+      container.querySelector('svg[role="img"]')!.parentElement!.parentElement!.className
+    const half = heightClassOf()
 
     await user.click(screen.getByRole('radio', { name: '배치 전용' }))
-    const full = container.querySelector('svg[role="img"]')!.parentElement!.className
+    const full = heightClassOf()
 
     expect(half).toContain('30vh')
     expect(full).toContain('64vh')

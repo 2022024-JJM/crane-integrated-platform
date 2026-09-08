@@ -6,8 +6,10 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { disposeRenderer, disposeScene } from '../lib/disposeScene'
+import { planViewDirection } from '../lib/viewpoint'
 import { startRenderLoop } from '../lib/renderLoop'
 import { cn } from '../../../lib/utils'
+import { useMatchToleranceCm } from '../../../lib/matchTolerance'
 import { useEscapeKey } from '../../../lib/useEscapeKey'
 import type { LidarBlockInfo } from '../model/lidarBlock'
 import { formatDetectionId } from '../model/lidarBlock'
@@ -33,9 +35,30 @@ import {
 } from '../lib/displayModes'
 import {
   applyPointColors,
+  segmentBlockColor,
   type ColorableCloud,
   type PointKind,
 } from '../lib/pointColorRules'
+/*
+ * 실측 라벨의 경계값 — 0..n 은 블록 인덱스, 254 는 바닥, 255 는 미정합.
+ * 자산 로더(`processes/assembly/api/realScanAssets`)가 소유한 규약이지만 `shared` 는
+ * 공정을 모르므로 여기서 같은 값을 이름으로만 다시 적는다 (오버레이 계약의 일부다).
+ */
+const REAL_FLOOR = 254
+const REAL_UNLABELED = 255
+
+/**
+ * 화면 임계(cm) → 편차 컷오프(0..255).
+ *
+ * 라벨은 자산 생성 시점의 허용오차(`overlay.toleranceM`)로 붙어 있고, 편차 배열은 그
+ * 오차를 255 로 놓고 양자화한 값이다. 베이 진입 뷰(`RealScanViewer.deviationCutoff`)와
+ * **같은 식**이어야 두 화면이 같은 덩이를 같은 크기로 말한다 — 식이 갈리면 그 순간
+ * 다시 어긋난다.
+ */
+function realDeviationCutoff(toleranceM: number, assetToleranceM: number): number {
+  if (!(assetToleranceM > 0)) return 255
+  return Math.max(0, Math.min(255, Math.round((toleranceM / assetToleranceM) * 255)))
+}
 import type { PointColorMode } from '../lib/colorModes'
 import {
   applyBlenderMouseBindings,
@@ -185,6 +208,15 @@ interface LidarPointCloudViewerProps {
    * 두고 카메라만 흘러갔을 때 상세 카드 버튼이 이 신호를 올린다.
    */
   fitRequest?: number
+  /**
+   * `전체보기` 재요청 신호 — 값이 오를 때마다 카메라를 **전 베이**로 물린다.
+   *
+   * 예전에는 이 일을 아래 가운데 `전체 맞춤` 버튼이 했다. 그런데 3D 에서 물러나는
+   * 손잡이가 도구줄(나가는 문)과 화면 아래(맞춤)로 갈려 있어서, 한 화면에 '전체' 라는
+   * 낱말이 셋이 되고 그중 하나만 화면을 떠났다 — 어느 것이 무엇인지 눌러 봐야 알았다.
+   * 이제 물러나기는 도구줄 한 자리로 모으고, 아래 줄에서는 그 버튼을 걷었다.
+   */
+  fitAllRequest?: number
   /** 센서 카드 클릭으로 요청된 센서 인덱스와 반복 요청 식별자 */
   sensorFocus?: { index: number; request: number } | null
   /**
@@ -598,10 +630,13 @@ export function LidarPointCloudViewer({
   onHoverBay,
   dimmedBayIds = null,
   fitRequest = 0,
+  fitAllRequest = 0,
   sensorFocus = null,
   className,
 }: LidarPointCloudViewerProps) {
   const { t, i18n } = useTranslation()
+  /* 실측 오버레이의 임계 재판정 — 베이 진입 뷰와 같은 설정값을 읽는다(두 화면 같은 크기) */
+  const toleranceCm = useMatchToleranceCm()
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 콜백은 ref로 우회해 scene 재구성 없이 최신 핸들러를 유지
@@ -1023,6 +1058,10 @@ export function LidarPointCloudViewer({
   }, [fitRequest, handleFitSelected])
 
   useEffect(() => {
+    if (fitAllRequest > 0) handleFitAll()
+  }, [fitAllRequest, handleFitAll])
+
+  useEffect(() => {
     if (!sensorFocus || building || mode !== 'bay') return
     if (sensorFocus.index < 0) {
       handleResetView()
@@ -1097,7 +1136,8 @@ export function LidarPointCloudViewer({
       window.clearTimeout(timer)
     }
     // 3D 라벨(CSS2D)은 씬을 세울 때 만든 DOM 이다 — 언어가 바뀌면 다시 세워야 글자가 따라온다
-  }, [mode, bays, selectedBlockId, layout, i18n.language])
+    /* 임계가 바뀌면 실측 오버레이의 블록 색이 달라진다 — 씬을 다시 세워 따라가게 한다 */
+  }, [mode, bays, selectedBlockId, layout, i18n.language, toleranceCm])
 
   useEffect(() => {
     // 첫 요청 전 — 아직 그릴 것이 없다. 스피너만 떠 있는 상태다.
@@ -1470,14 +1510,40 @@ export function LidarPointCloudViewer({
         prepared.map(() => [])
 
       /* 실측 정반 — 합성 대신 **진짜 점군**(프리뷰, 데이터 유도 앵커)을 올린다.
-       * 색은 의사 반사강도만 입힌 단색 계열 — 목업 센서색 규칙(pass 2)과 섞이지 않게
-       * refs.clouds 에 등록하지 않는다(색상 규칙 순회가 건드리지 않는 별도 층).
-       * pointGroup 에 넣어 점군 레이어 토글은 함께 따른다. */
+       * 목업 센서색 규칙(pass 2)과 섞이지 않게 refs.clouds 에 등록하지 않는다
+       * (색상 규칙 순회가 건드리지 않는 별도 층). pointGroup 에 넣어 점군 레이어
+       * 토글은 함께 따른다. */
       if (realScan && bay.realOverlay) {
         const overlay = bay.realOverlay
         const count = overlay.positions.length / 3
         const colors = new Float32Array(count * 3)
+        /*
+         * **정합된 블록은 여기서도 색을 얻는다** — 베이 진입 뷰와 같은 팔레트로.
+         *
+         * 예전에는 음영 단색뿐이라, 라벨은 '블록 13건' 이라 적혀 있는데 화면의 5BAY 는
+         * 회백색 덩어리 하나였다. 옆 정반들은 목업 블록을 색으로 세우고 있으니 진짜
+         * 데이터를 가진 정반만 아무것도 인식 못 한 것처럼 읽혔고, 들어가면 갑자기 13개가
+         * 색으로 서 있어 두 화면이 다른 말을 했다. 라벨을 프리뷰에 함께 실어 그 간극을 없앤다.
+         *
+         * 바닥(254)·미정합(255)은 종전 음영 단색 그대로다 — 블록이 그 위로 떠야 한다.
+         */
+        const blockColor = new THREE.Color()
+        /* 임계 재판정 — 라벨은 자산 임계(현 0.6m)의 것이고 화면 임계는 그보다 빡빡하다.
+           이것을 빼면 공장 뷰가 베이 뷰보다 14% 더 많은 점을 블록색으로 칠한다. */
+        const cutoff = realDeviationCutoff(toleranceCm / 100, overlay.toleranceM)
         for (let i = 0; i < count; i++) {
+          const labelled = overlay.labels ? overlay.labels[i] : REAL_UNLABELED
+          const label =
+            labelled < REAL_FLOOR && overlay.dev && overlay.dev[i] > cutoff
+              ? REAL_UNLABELED
+              : labelled
+          if (label < REAL_FLOOR) {
+            blockColor.copy(segmentBlockColor(label))
+            colors[i * 3] = blockColor.r
+            colors[i * 3 + 1] = blockColor.g
+            colors[i * 3 + 2] = blockColor.b
+            continue
+          }
           const shade = overlay.shade ? overlay.shade[i] / 255 : 0.55
           const v = 0.28 + shade * 0.6
           colors[i * 3] = v
@@ -1831,13 +1897,8 @@ export function LidarPointCloudViewer({
         ? new THREE.Vector3()
         : sceneBox.getCenter(new THREE.Vector3())
       center.y = 2
-      const elevation = THREE.MathUtils.degToRad(52)
-      const azimuth = THREE.MathUtils.degToRad(18)
-      const direction = new THREE.Vector3(
-        Math.sin(azimuth) * Math.cos(elevation),
-        Math.sin(elevation),
-        Math.cos(azimuth) * Math.cos(elevation)
-      )
+      /* 도면 자세 + 약간의 기울임 — 세 장면이 한 상수를 쓴다(`lib/viewpoint`) */
+      const direction = planViewDirection()
       const distance = sceneBox.isEmpty()
         ? 120
         : Math.max(fitDistanceForBox(sceneBox, direction, camera.fov, camera.aspect, 1.08), 40)
@@ -1855,8 +1916,23 @@ export function LidarPointCloudViewer({
         bz + length * 1.4
       )
     } else {
-      camera.position.set(38, 32, 66)
-      controls.target.set(0, 3, 0)
+      /*
+       * 정반 — 도면(현황 탭의 설비 배치)에서 곧장 건너온 자리다.
+       *
+       * 예전에는 좌표를 손으로 박아 두었다(38, 32, 66 — 고도 21°). 두 가지가 어긋났다:
+       * 정반 크기가 달라도 늘 같은 거리라 큰 정반은 잘리고 작은 정반은 멀었고, 각이
+       * 낮아 방금 위에서 내려다보던 도면과 이어지지 않았다. 이제 각은 공유하고 거리는
+       * 씬 크기에서 구한다 — 어떤 정반이든 다 들어오면서 같은 각으로 선다.
+       */
+      const center = sceneBox.isEmpty()
+        ? new THREE.Vector3(0, 3, 0)
+        : sceneBox.getCenter(new THREE.Vector3())
+      const direction = planViewDirection()
+      const distance = sceneBox.isEmpty()
+        ? 80
+        : Math.max(fitDistanceForBox(sceneBox, direction, camera.fov, camera.aspect, 1.1), 30)
+      camera.position.copy(center).addScaledVector(direction, distance)
+      controls.target.copy(center)
     }
 
     /* 타겟이 공장 밖으로 끌려 나가 장면을 잃지 않게 한다 (FR-6) */
@@ -2087,7 +2163,7 @@ export function LidarPointCloudViewer({
       {/* 카메라 맞춤 · 레이어 토글 (FR-3·FR-4) — 공장 뷰 전용 도구 묶음.
           아래 가운데에 둔다: 왼쪽 아래는 축 기즈모, 오른쪽 아래는 도움말 자리다 */}
       {mode === 'factory' && !building && (
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
+        <div className="absolute bottom-[var(--vp-inset,1rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
           {layersOpen && (
             <div className="flex animate-fade-in flex-col gap-1.5 rounded-inshop-lg glass-panel p-2.5">
               {LAYER_OPTIONS.map(({ key, labelKey }) => (
@@ -2107,9 +2183,7 @@ export function LidarPointCloudViewer({
             </div>
           )}
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={handleFitAll} className={GLASS_BUTTON_CLASS}>
-              {t('viewer.fit.all')}
-            </button>
+            {/* `전체 맞춤` 은 도구줄의 `전체보기` 로 옮겼다 — 물러나는 손잡이는 한 자리다 */}
             {selectedBayId && (
               <button type="button" onClick={handleFitSelected} className={GLASS_BUTTON_CLASS}>
                 {t('viewer.fit.selected')}

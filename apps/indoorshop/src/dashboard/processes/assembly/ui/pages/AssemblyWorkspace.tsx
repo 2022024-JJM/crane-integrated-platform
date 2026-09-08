@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import {
   detectionForBlockKey,
   formatDetectionId,
 } from '../../../../shared/features/bay-viewer/model/lidarBlock'
+import { useDrilldownEscape } from '../../../../shared/lib/useDrilldownEscape'
 import { AssemblyLocationTabs } from '../AssemblyLocationTabs'
 import { BayIdentityBar } from '../BayIdentityBar'
 import { AssemblyStatusTab } from '../AssemblyStatusTab'
@@ -19,6 +20,7 @@ import { PointCloudViewControls } from '../../../../shared/features/bay-viewer/u
 import { PointCloudLegend } from '../../../../shared/features/bay-viewer/ui/PointCloudLegend'
 import { ViewportHelp } from '../../../../shared/features/bay-viewer/ui/ViewportHelp'
 import { ViewportToolbar } from '../../../../shared/features/bay-viewer/ui/ViewportToolbar'
+import { BackAction, BackLink } from '../../../../shared/ui/atoms/BackLink'
 import { ViewportFullscreenButton } from '../../../../shared/ui/atoms/ViewportFullscreenButton'
 import { viewportEdgeColors, type ViewerDisplayMode } from '../../../../shared/features/bay-viewer/lib/displayModes'
 import {
@@ -63,6 +65,7 @@ import {
 } from '../../api/assemblyApi'
 import type { FactoryLayout } from '../../../../shared/features/bay-viewer/lib/bayLayout'
 import { fetchRealScanOverlay, isRealLocation, REAL_SEGMENTS } from '../../api/realScanData'
+import { assemblyBayKeyOfLocationId } from '../../lib/mapEntry'
 
 /** 실측 스캔의 기본 색상 규칙 — 이 화면이 먼저 답해야 할 질문이 "정합됐나" 이다 */
 const REAL_DEFAULT_COLOR_MODE: PointColorMode = REAL_PCD_COLOR_MODES[0].value
@@ -166,6 +169,9 @@ export function AssemblyWorkspace() {
     document.addEventListener('pointerdown', resetSensorFocus)
     return () => document.removeEventListener('pointerdown', resetSensorFocus)
   }, [sensorFocus?.id])
+  /* `전체보기` — 화면을 떠나지 않고 카메라만 전 베이로 물린다(공장 뷰 전용) */
+  const [fitAllRequest, setFitAllRequest] = useState(0)
+
   /** 목록에서 가리키는 중인 정반 — 3D 뷰의 강조와 같은 값을 공유한다 */
   const [highlightedBayId, setHighlightedBayId] = useState<string | null>(null)
   /**
@@ -423,6 +429,19 @@ export function AssemblyWorkspace() {
     ? factoryLocations.find((loc) => loc.id === locationId)
     : undefined
 
+  /*
+   * ESC = **한 단계 위** (정반 → 공장).
+   *
+   * 3D 에서 정반 라벨을 눌러 들어오면 나오는 길이 브라우저 뒤로가기 하나뿐이었다.
+   * 뷰어가 ESC 를 먼저 듣지만, 풀 것(고른 정반·초점)이 없으면 소비하지 않고 넘기므로
+   * (`useEscapeKey` 의 계약) 여기 도착한 ESC 는 "이 화면에서 나가겠다" 는 뜻이다.
+   * 머리글의 뒤로 링크와 **같은 계단**을 쓴다 — 두 길이 다른 곳으로 가면 안 된다.
+   */
+  const upToFactory = useCallback(() => {
+    navigate(carryTab(`/indoorshop/zones/assembly/${factoryId}`))
+  }, [navigate, carryTab, factoryId])
+  useDrilldownEscape(upToFactory, Boolean(selectedLocation))
+
   /**
    * 그려진 장면은 URL 이 아니라 **불러온 데이터**를 따른다.
    * 새 정반을 부르는 동안에도 이전 장면이 그대로 서 있어야 화면이 깜박이지 않는다.
@@ -466,6 +485,22 @@ export function AssemblyWorkspace() {
   const selectedBlock =
     selectedBlockId && detail ? detail.blocks.find((b) => b.id === selectedBlockId) : undefined
 
+  /*
+   * 나가는 문 하나 — 머리글 칩과 전체 화면의 유리 칩이 **같은 목적지**를 쓴다.
+   * 목적지를 두 곳에서 따로 지으면 한쪽만 고쳐져 두 문이 다른 데로 나가는 날이 온다.
+   */
+  const backLink = selectedLocation
+    ? {
+        to: carryTab(`/indoorshop/zones/assembly/${factory.id}`),
+        label: factory.displayName,
+        title: t('assembly.workspace.backToFactory', { name: factory.displayName }),
+      }
+    : {
+        to: '/indoorshop/zones/assembly/list',
+        label: t('assembly.workspace.factoryListLabel'),
+        title: t('assembly.workspace.backToFactoryList'),
+      }
+
   return (
     /*
      * 이 화면은 문서가 아니라 계기판이다 — 넓은 화면에서는 뷰포트에 딱 맞춰 고정하고,
@@ -482,11 +517,29 @@ export function AssemblyWorkspace() {
         세 곳에서 같은 말을 하면 그만큼 뷰어 높이만 줄어든다.
       */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <h1 className="min-w-0 truncate text-inshop-lg font-semibold text-foreground">
-          {selectedLocation
-            ? t('assembly.workspace.bayTitle', { name: selectedLocation.name })
-            : t('assembly.workspace.factoryTitle', { name: factory.displayName })}
-        </h1>
+        <div className="flex min-w-0 items-center gap-2">
+          {/*
+            한 계단 위로 **나오는 문**.
+
+            3D 에서 정반 라벨을 누르면 한 단계 들어오는데, 나오는 길은 브라우저 뒤로가기
+            하나뿐이었다 — 화면 안에서 들어왔으면 화면 안에 나오는 길이 있어야 하고,
+            그 길이 안 보이면 조작자는 들어가기를 주저한다. 정반에서는 공장으로,
+            공장에서는 공장 목록으로 — 계단은 한 칸씩만 오른다. 공장 뷰에도 이 문이
+            필요한 이유는 같다: 전체 현황 지도에서 공장으로 바로 들어오는 길이 있는데
+            (`mapDrilldown`), 그 쪽으로 들어온 사람에게는 여기가 곧 첫 화면이다.
+
+            진짜 `<a>` 다(브레드크럼과 같은 이유) — 가운데 클릭으로 새 탭에 열고 주소를
+            복사해 건넬 수 있어야 "자리를 공유한다" 가 성립한다. 보던 축은 그대로 들고
+            간다(`carryTab`): 3D 에서 들어왔으면 3D 로 나가야 방금 한 조작이 이어진다.
+            같은 계단을 ESC 도 오른다(아래 `useDrilldownEscape`).
+          */}
+          <BackLink to={backLink.to} label={backLink.label} title={backLink.title} />
+          <h1 className="min-w-0 truncate text-inshop-lg font-semibold text-foreground">
+            {selectedLocation
+              ? t('assembly.workspace.bayTitle', { name: selectedLocation.name })
+              : t('assembly.workspace.factoryTitle', { name: factory.displayName })}
+          </h1>
+        </div>
 
         {/*
           정반·호선·블록은 이 화면의 좌표다 — 값만 이어 붙이면 어느 숫자가 무엇인지
@@ -566,6 +619,16 @@ export function AssemblyWorkspace() {
                 const spec = base.factories.find((entry) => entry.name === next)
                 if (spec) navigate(`/indoorshop/zones/assembly/${spec.id}`)
               }}
+              /*
+               * 정반에서 건너왔으면 그 베이를 골라 둔 채로 선다.
+               *
+               * 이 탭은 공장 전체를 펴지만, 5번 베이를 보다가 '현황' 을 누른 사람에게
+               * 전 베이가 똑같이 서 있으면 자기 자리를 **목록에서 다시 찾아야** 한다 —
+               * 화면을 옮긴 대가를 사용자가 치르는 셈이다. 배치 그림은 그 칸을 강조하고
+               * 목록은 그 구획을 맨 앞에 세운다(칸을 직접 누른 것과 같은 상태).
+               */
+              focusBay={assemblyBayKeyOfLocationId(factory.id, selectedLocation?.id ?? '')}
+              className="xl:min-h-0 xl:flex-1"
             />
           </div>
         ) : selectedLocation ? (
@@ -588,7 +651,7 @@ export function AssemblyWorkspace() {
                 ref={viewportRef}
                 // 전체 화면에서는 이 칸이 곧 화면이다 — 지금 팔레트의 바탕을 직접 칠한다
                 style={isFullscreen ? { background: viewportEdge.background } : undefined}
-                className="relative xl:min-h-0 xl:flex-1"
+                className="viewport-frame relative xl:min-h-0 xl:flex-1"
               >
                 {realView ? (
                   <RealScanViewer
@@ -624,7 +687,7 @@ export function AssemblyWorkspace() {
                   그 **아래에 이어 붙인다** — 절대좌표 둘을 겹치면 도구줄 높이가
                   바뀔 때마다 상세의 자리를 다시 재야 한다.
                 */}
-                <div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+                <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
                   <ViewportToolbar
                     title={t('assembly.workspace.registeredCloud')}
                     hint={t('assembly.workspace.registeredCloudHint')}
@@ -641,6 +704,14 @@ export function AssemblyWorkspace() {
                       />
                     }
                     className="static max-w-none"
+                    back={
+                      <BackLink
+                        to={backLink.to}
+                        label={backLink.label}
+                        title={backLink.title}
+                        tone="glass"
+                      />
+                    }
                   >
                     <PointCloudViewControls {...viewerControlProps} tone="glass" />
                   </ViewportToolbar>
@@ -650,11 +721,14 @@ export function AssemblyWorkspace() {
                 </div>
                 {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 오른쪽 위(도구 묶음 아래)로 */}
                 {!viewerOwnsLegend && (
-                  <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
+                  <PointCloudLegend
+                    colorMode={colorMode}
+                    className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
+                  />
                 )}
                 {showDetailSpinner && <SpinnerOverlay label={t('viewer.loadingDetection')} />}
                 {/* 우상단 도구 묶음 — 늘어놓지 않고 한 줄로 모은다 */}
-                <div className="absolute right-4 top-4 flex items-center gap-2">
+                <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] flex items-center gap-2">
                   {selectedBlock && (
                     <button
                       type="button"
@@ -715,7 +789,7 @@ export function AssemblyWorkspace() {
             <div
               ref={viewportRef}
               style={isFullscreen ? { background: viewportEdge.background } : undefined}
-              className="relative min-w-0 xl:min-h-0 xl:flex-1"
+              className="viewport-frame relative min-w-0 xl:min-h-0 xl:flex-1"
             >
               {/*
                 장면이 아직 없어도 칸과 도구줄은 자리에 남는다 — 불러오는 동안
@@ -742,31 +816,54 @@ export function AssemblyWorkspace() {
                   onHoverBay={setHighlightedBayId}
                   dimmedBayIds={dimmedBayIds}
                   fitRequest={fitRequest}
+                  fitAllRequest={fitAllRequest}
                   className={viewerSizeClass}
                 />
               )}
-              <ViewportToolbar
-                title={t('assembly.workspace.factoryFusion')}
-                hint={t('assembly.workspace.factoryFusionHint')}
-                nav={
-                  <AssemblyLocationTabs
-                    factories={base.factories}
-                    locations={base.locations}
-                    currentFactoryId={factory.id}
-                    highlightedId={highlightedBayId}
-                    onHighlight={setHighlightedBayId}
-                    tone="glass"
-                    parts="bays"
-                  />
-                }
-              >
-                <PointCloudViewControls {...viewerControlProps} tone="glass" />
-              </ViewportToolbar>
+              {/*
+                왼쪽 위 묶음 — 정반 뷰와 **같은 구조**다(나가는 문 → 도구줄). 두 화면이
+                같은 자리에 같은 순서로 서야, 들어가고 나오는 동안 눈이 다시 적응하지 않는다.
+              */}
+              <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+                <ViewportToolbar
+                  title={t('assembly.workspace.factoryFusion')}
+                  hint={t('assembly.workspace.factoryFusionHint')}
+                  nav={
+                    <AssemblyLocationTabs
+                      factories={base.factories}
+                      locations={base.locations}
+                      currentFactoryId={factory.id}
+                      highlightedId={highlightedBayId}
+                      onHighlight={setHighlightedBayId}
+                      tone="glass"
+                      parts="bays"
+                    />
+                  }
+                  className="static max-w-none"
+                  /*
+                   * 공장 뷰의 물러나기는 **카메라**다 — 화면을 떠나지 않는다.
+                   * 여기가 이미 이 공장의 '전체' 이므로, 한 계단 더 나가는 문(공장 목록)은
+                   * 머리글 칩이 맡는다. 3D 안의 손잡이는 3D 안에서 끝난다.
+                   */
+                  back={
+                    <BackAction
+                      label={t('viewer.fit.all')}
+                      title={t('viewer.fit.allHint')}
+                      onClick={() => setFitAllRequest((count) => count + 1)}
+                    />
+                  }
+                >
+                  <PointCloudViewControls {...viewerControlProps} tone="glass" />
+                </ViewportToolbar>
+              </div>
               {/* 왼쪽 위는 도구줄이 쓴다 — 범례는 전체 화면 버튼 아래로 비켜 세운다 */}
               {factoryScene && !viewerOwnsLegend && (
-                <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
+                <PointCloudLegend
+                  colorMode={colorMode}
+                  className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
+                />
               )}
-              <div className="absolute right-4 top-4 z-10 flex items-start gap-2">
+              <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start gap-2">
                 {factoryScene && <ViewportHelp className="static flex-col-reverse" />}
                 {fullscreenSupported && (
                   <ViewportFullscreenButton
@@ -791,7 +888,7 @@ export function AssemblyWorkspace() {
               )}
               {/* 첫 진입 조작 힌트 (FR-9) — 한 번만, 이후에는 `조작 ?` 도움말이 맡는다 */}
               {factoryScene && (
-                <FirstRunHint className="absolute bottom-16 left-1/2 z-10 -translate-x-1/2" />
+                <FirstRunHint className="absolute bottom-[calc(var(--vp-inset,1rem)+3rem)] left-1/2 z-10 -translate-x-1/2" />
               )}
               {showFactorySpinner && <SpinnerOverlay label={t('viewer.loadingFusion')} />}
             </div>

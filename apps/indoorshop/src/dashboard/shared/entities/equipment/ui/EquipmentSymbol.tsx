@@ -1,4 +1,5 @@
 import { equipmentTypeOf } from '..'
+import { equipmentTypeColorOf } from './typeColor'
 import { cn } from '../../../lib/utils'
 
 /*
@@ -126,9 +127,16 @@ export function symbolOfType(typeId: string): EquipmentSymbolName {
   return type ? symbolNameOf(type.symbol) : FALLBACK
 }
 
-/** 종류ID → 표시색 (레지스트리가 단일 소스 — 화면에서 색을 새로 정하지 않는다) */
+/**
+ * 종류ID → 표시색.
+ *
+ * 레지스트리 색을 그대로 내지 않고 **표시색 층**(`typeColor.ts`)을 지난다 — 이름이
+ * `typeLabel.ts` 를 지나는 것과 같은 이유다. 레지스트리 값은 도면 대조용 생성물이라
+ * 손댈 수 없는데, 그중 캐비닛·Edge PC 는 화면에서 서로 안 갈리고 어두운 바탕에 잠긴다.
+ * 화면이 여기 한 곳만 부르므로 지도 심볼·목록 칩·범례가 늘 같은 색으로 선다.
+ */
 export function colorOfType(typeId: string): string {
-  return equipmentTypeOf(typeId)?.color ?? '#7a8794'
+  return equipmentTypeColorOf(typeId)
 }
 
 /** 글리프만 — 색은 부모가 준다 */

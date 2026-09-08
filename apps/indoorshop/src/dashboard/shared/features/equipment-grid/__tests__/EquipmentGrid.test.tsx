@@ -284,3 +284,76 @@ describe('설비 그리드 — 밖에서 온 선택을 시야로', () => {
     expect(item.getAttribute('style')).toContain('--board-head')
   })
 })
+
+/*
+ * ── 램프 대신 그림, 그리고 이름 붙은 램프 ──
+ *
+ * 익명 점 셋은 순서를 아는 사람만 읽는다. 그런데 그 순서는 종류마다 다르다 —
+ * 라이다 [링크·틸팅], Edge PC [링크·MQTT·수집], 캐비닛 [전원·업링크·소속].
+ * 그래서 둘을 연다: 뜻이 본래 그림인 값은 **그림**으로, 여러 종류가 섞이는 목록에서는
+ * **이름 붙은 램프**로. 둘 다 옵트인이라 지금까지의 화면은 그대로다.
+ */
+describe('설비 그리드 — 램프 자리의 그림', () => {
+  it('그림을 주면 램프 점 대신 그것이 선다 (같은 사실을 두 번 말하지 않는다)', () => {
+    renderWithProviders(
+      <EquipmentGrid
+        cells={[cell('LD-P01', 'done', { figure: <span data-testid="dial">조준</span> })]}
+        showControls={false}
+      />
+    )
+    expect(screen.getByTestId('dial')).toBeInTheDocument()
+    expect(screen.queryByLabelText('링크')).not.toBeInTheDocument()
+  })
+
+  it('그림이 없으면 지금까지 그대로 점이 선다 — 의장·도장 셀은 손대지 않는다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P01', 'done')]} showControls={false} />)
+    expect(screen.getByLabelText('링크')).toBeInTheDocument()
+  })
+})
+
+describe('설비 그리드 — 이름 붙은 램프', () => {
+  it('켜면 점 앞에 그 램프가 무엇인지 적힌다', () => {
+    renderWithProviders(
+      <EquipmentGrid cells={[cell('LD-P01', 'done')]} showControls={false} namedLamps />
+    )
+    const lamp = screen.getByLabelText('링크')
+    expect(lamp.textContent).toContain('링크')
+  })
+
+  it('기본은 꺼져 있다 — 한 종류만 수십 칸 서는 목록에서는 이름이 소음이다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P01', 'done')]} showControls={false} />)
+    expect(screen.getByLabelText('링크').textContent).toBe('')
+  })
+})
+
+/*
+ * ── 정상은 조용하다 (R18 을 수치와 테두리까지) ──
+ *
+ * 한 칸에 색을 가진 것이 넷이면(종류칩·램프·그림·신선도) 수십 칸이 늘어섰을 때 그 색들은
+ * 아무것도 나르지 않으면서 진짜 이상과 자리를 다툰다. 그래서 정상 자리에서 색과 윤곽을
+ * 걷어 내고, 이상에만 남긴다 — 눈이 갈 곳이 하나면 훑기가 성립한다.
+ */
+describe('설비 그리드 — 정상은 조용하다', () => {
+  it('정상 신선도는 무채다 — 신선도는 상태가 아니다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P01', 'done')]} showControls={false} />)
+    expect(screen.getByText('4분 전').className).not.toMatch(/status-/)
+  })
+
+  it('이상이면 수치 자리가 색을 얻는다 — 그 자리가 곧 사유다', () => {
+    renderWithProviders(<EquipmentGrid cells={[cell('LD-P02', 'error')]} showControls={false} />)
+    expect(screen.getByText('오프라인 19분').className).toMatch(/status-unhealthy/)
+  })
+
+  it('정상 칸은 테두리를 두르지 않는다 — 상자 격자를 만들지 않는다', () => {
+    renderWithProviders(<EquipmentGrid cells={CELLS} showControls={false} />)
+    const normal = cellButtons().filter((b) => b.dataset.issue === 'false')
+    for (const button of normal) expect(button.className).toContain('border-transparent')
+  })
+
+  it('이상 칸만 테두리를 얻는다', () => {
+    renderWithProviders(<EquipmentGrid cells={CELLS} showControls={false} />)
+    const issues = cellButtons().filter((b) => b.dataset.issue === 'true')
+    expect(issues.length).toBeGreaterThan(0)
+    for (const button of issues) expect(button.className).toContain('border-status-unhealthy')
+  })
+})

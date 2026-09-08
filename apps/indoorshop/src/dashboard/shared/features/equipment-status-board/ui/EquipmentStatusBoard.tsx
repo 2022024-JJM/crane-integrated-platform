@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../../lib/i18n/useTranslation'
 import { cn } from '../../../lib/utils'
+import { useMediaQuery } from '../../../lib/useMediaQuery'
+import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { StatusChip } from '../../../ui/atoms/StatusChip'
 import { Segmented } from '../../../ui/atoms/Segmented'
 import {
@@ -71,6 +73,27 @@ export interface EquipmentStatusBoardProps {
   bays: readonly BirdviewBay[]
   points: readonly BirdviewPoint[]
   groups: readonly BoardGroup[]
+  /**
+   * 그리드 램프에 이름을 붙일 것인가 — 한 구획에 여러 **종류**가 섞여 서는 화면만.
+   *
+   * 종류마다 램프 셋의 뜻이 다르므로(라이다 [링크·틸팅], Edge PC [링크·MQTT·수집],
+   * 캐비닛 [전원·업링크·소속]) 익명 점으로는 순서를 아는 사람만 읽는다.
+   */
+  namedLamps?: boolean
+  /**
+   * 버드뷰 심볼을 **종류색**으로 그릴 것인가 — 목록의 종류 칩과 같은 색이 되고, 그림
+   * 아래에 누를 수 있는 범례가 선다. 여러 종류가 한 그림에 섞여 서는 공장만 켠다.
+   */
+  colorByType?: boolean
+  /**
+   * 넓은 화면에서 배치 그림과 목록을 **나란히** 세울 것인가.
+   *
+   * 위아래로 쌓으면 그림을 키운 만큼 목록이 화면 밖으로 밀린다 — 그림을 크게 보려고
+   * 키웠는데 그 대가를 목록이 치르는 셈이다. 나란히 두면 둘 다 제 크기로 서고, '절반절반'
+   * 이라는 이름이 비로소 그 뜻이 된다. 좁은 화면에서는 지금까지처럼 쌓는다(가로로 나누면
+   * 두 쪽 다 못 읽는 폭이 된다).
+   */
+  sideBySide?: boolean
   /** 공장 목록 위에 덧붙는 것 (도면 보기 등) */
   factoryAside?: React.ReactNode
   /** 버드뷰 위 오른쪽 (링크 등) */
@@ -80,6 +103,18 @@ export interface EquipmentStatusBoardProps {
    * 그 칸을 골라 둔 상태로 세우고 시야로 데려온다(`EquipmentGrid` 의 링킹과 같은 길).
    */
   focusEquipmentId?: string | null
+  /**
+   * 밖에서 데려온 **초점 구획**(베이) — 그 베이를 고른 채로 세운다.
+   *
+   * 5번 베이를 보다가 '현황' 으로 건너오면, 화면은 공장 전체를 펴면서도 방금까지 보던
+   * 자리를 잃지 않아야 한다. 예전에는 전 베이가 똑같이 서서, 들어온 사람이 목록에서
+   * 자기 베이를 **다시 찾아야** 했다 — 화면을 옮긴 대가를 사용자가 치르는 셈이다.
+   *
+   * 값은 `BoardGroup.key`(= 버드뷰 베이의 `groupKey`)와 같은 어휘다. 클릭으로 고른
+   * 것과 **같은 상태**로 들어가므로, 그림은 그 칸을 강조하고 목록은 그 구획을 맨 앞에
+   * 세운다. 들어온 뒤에는 보통 선택처럼 다룬다 — 다른 칸을 누르거나 ESC 로 풀 수 있다.
+   */
+  focusGroupKey?: string | null
   className?: string
 }
 
@@ -90,23 +125,39 @@ export function EquipmentStatusBoard({
   bays,
   points,
   groups,
+  namedLamps = false,
+  colorByType = false,
+  sideBySide = false,
   factoryAside,
   headerExtra,
   focusEquipmentId = null,
+  focusGroupKey = null,
   className,
 }: EquipmentStatusBoardProps) {
   const { t } = useTranslation()
   /* 선택·호버는 **여기**가 쥔다 — 두 층이 같은 값을 봐야 링킹이 성립한다 */
   const [selectedId, setSelectedId] = useState<string | null>(focusEquipmentId)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [activeGroup, setActiveGroup] = useState<string | null>(null)
+  const [activeGroup, setActiveGroup] = useState<string | null>(focusGroupKey)
   /* 배치 그림 접기 — 낮은 화면에서 그림이 목록을 다 덮을 때의 탈출구(R29) */
   const [birdviewOpen, setBirdviewOpen] = useState(true)
   /* 보기 모드는 새로고침·공장 이동을 넘어 남는다 — 화면 상태가 아니라 보는 방식이다 */
   const mode = useEquipmentBoardMode()
   const birdviewOnly = mode === 'birdview'
+  /*
+   * 나란히 세울 만큼 넓은가 — 클래스만으로는 표현할 수 없다. 붙어 있는 머리의 여백
+   * (`--board-head`)과 그림 높이가 배치에 따라 통째로 달라지기 때문이다.
+   */
+  const wide = useMediaQuery('(min-width: 1280px)')
   /* 배치 전용에서는 그림이 곧 화면이라 접는 손잡이가 설 자리가 없다 */
   const birdviewShown = birdviewOnly || birdviewOpen
+  /*
+   * 두 열로 세우는가 — 넓은 화면에서 **그림이 서 있을 때만**.
+   *
+   * 접었는데도 두 열을 유지하면 왼쪽이 빈 칸으로 남고 목록은 반쪽 폭에 갇힌다. 접기의
+   * 뜻은 "그림 대신 목록을 보겠다" 이므로, 접는 순간 목록이 폭을 통째로 받아야 한다.
+   */
+  const columns = sideBySide && wide && !birdviewOnly && birdviewShown
   /*
    * 붙어 있는 머리의 **실제 높이**를 CSS 변수로 내린다.
    *
@@ -120,21 +171,37 @@ export function EquipmentStatusBoard({
     const head = headRef.current
     const root = rootRef.current
     if (!head || !root) return
-    const sync = () => root.style.setProperty('--board-head', `${head.offsetHeight + 8}px`)
+    /* 나란히 세운 배치에서는 머리가 목록 위에 떠 있지 않다 — 비켜설 자리도 없다 */
+    const sync = () =>
+      root.style.setProperty('--board-head', columns ? '8px' : `${head.offsetHeight + 8}px`)
     sync()
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(sync)
     observer.observe(head)
     return () => observer.disconnect()
-  }, [birdviewShown])
+  }, [birdviewShown, columns])
 
   /* 공장이 바뀌면 가리키던 것을 놓는다 — 다른 공장의 설비를 계속 가리킬 수는 없다.
      밖에서 초점이 들어와 있으면 그것을 가리킨 채로 선다(알람 딥링크의 당사자) */
   useEffect(() => {
     setSelectedId(focusEquipmentId)
     setHoveredId(null)
+    /* 밖에서 데려온 초점 구획이 있으면 그것을 고른 채로 다시 선다 (베이 → 현황 승계) */
+    setActiveGroup(focusGroupKey)
+  }, [selectedFactory, focusEquipmentId, focusGroupKey])
+
+  /*
+   * ESC — 고른 것을 놓는다.
+   *
+   * 클릭으로 고르면 그림은 태그를 세우고 목록은 상세를 편다. 그 상태를 푸는 길이 "그
+   * 심볼·그 칸을 다시 정확히 누르기" 하나뿐이면 화면이 붙잡힌 것처럼 느껴진다 —
+   * 그림의 빈 바닥, 그리고 이 ESC 가 그 매듭을 푼다.
+   */
+  useEscapeKey(() => {
+    if (selectedId === null && activeGroup === null) return false
+    setSelectedId(null)
     setActiveGroup(null)
-  }, [selectedFactory, focusEquipmentId])
+  })
 
   const linkedId = selectedId ?? hoveredId
 
@@ -180,10 +247,26 @@ export function EquipmentStatusBoard({
   return (
     <div
       ref={rootRef}
-      className={cn('grid gap-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]', className)}
+      className={cn(
+        'grid gap-4 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
+        /*
+         * 두 열로 서면 보드가 **그릇을 그대로 채우고** 목록만 안에서 흐른다.
+         *
+         * 붙임(sticky)으로도 그림은 제자리에 서지만, 붙기 전까지 여백만큼 한 번 밀려
+         * 올라간다 — 스크롤을 굴릴 때마다 도면이 흠칫하는 그 움직임이 "고정되지 않았다"로
+         * 읽힌다. 아예 스크롤될 것을 목록 열에만 주면 그림은 처음부터 끝까지 한 자리다.
+         */
+        columns && 'lg:h-full lg:min-h-0',
+        className
+      )}
     >
       {/* ⓐ 공장 목록 — 접힌 줄에 대수·이상이 이미 보여 열지 않고도 훑는다 */}
-      <div className="flex flex-col gap-2 self-start lg:sticky lg:top-0">
+      <div
+        className={cn(
+          'flex flex-col gap-2 self-start lg:sticky lg:top-0',
+          columns && 'lg:min-h-0 lg:self-stretch lg:overflow-y-auto lg:pr-1'
+        )}
+      >
         <ul className="flex flex-col gap-1.5" aria-label={t('equipmentBoard.factories')}>
           {factories.map((factory) => {
             const selected = factory.name === selectedFactory
@@ -235,7 +318,14 @@ export function EquipmentStatusBoard({
         {factoryAside}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-3">
+      <div
+        className={cn(
+          'min-w-0 gap-3',
+          columns
+            ? 'grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch'
+            : 'flex flex-col'
+        )}
+      >
         {/*
           ⓑ 요약 스트립 + 버드뷰 — **여기까지가 붙어 있는 자리**다(R29).
           바탕을 깔아 두는 이유는 아래 그리드가 이 밑으로 흘러 지나가기 때문이다 —
@@ -244,7 +334,11 @@ export function EquipmentStatusBoard({
         <div
           ref={headRef}
           data-sticky-head="true"
-          className="sticky top-0 z-20 -mx-1 flex flex-col gap-2 bg-surface-secondary/95 px-1 pb-2 pt-1 backdrop-blur-sm"
+          className={cn(
+            'z-20 -mx-1 flex flex-col gap-2 bg-surface-secondary/95 px-1 pb-2 pt-1 backdrop-blur-sm',
+            /* 쌓았을 때만 붙인다 — 두 열에서는 흐르는 것이 목록뿐이라 붙일 것이 없다 */
+            columns ? 'min-h-0' : 'sticky top-0'
+          )}
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-inshop-lg border border-border bg-surface px-3 py-1.5">
             <span className="text-inshop-sm font-semibold text-foreground">{selectedFactory}</span>
@@ -286,8 +380,13 @@ export function EquipmentStatusBoard({
           </div>
 
           {birdviewShown && (
-            <section className="rounded-inshop-lg border border-border bg-surface p-2">
-              <div className="mb-1 flex items-center justify-between gap-2 px-1">
+            <section
+              className={cn(
+                'rounded-inshop-lg border border-border bg-surface p-2',
+                columns && 'flex min-h-0 flex-1 flex-col'
+              )}
+            >
+              <div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
                 <h3 className="text-inshop-xs font-semibold text-foreground">
                   {t('equipmentBoard.birdviewTitle')}
                 </h3>
@@ -308,20 +407,27 @@ export function EquipmentStatusBoard({
                 onSelectPoint={setSelectedId}
                 hoveredId={hoveredId}
                 onHoverPoint={setHoveredId}
-                onSelectBay={setActiveGroup}
+                onSelectBay={(groupKey) => {
+                  /* 초점이 설비에서 칸으로 옮겨 갔다 — 잡고 있던 설비는 놓는다 */
+                  setSelectedId(null)
+                  setActiveGroup(groupKey)
+                }}
                 activeGroupKey={activeGroup}
                 cardOf={cardOf}
+                colorByType={colorByType}
                 emptyLabel={t('equipmentBoard.birdviewEmpty')}
                 /*
                  * 배치 전용은 **뷰포트를 기준으로** 키운다 — 그릇이 커지면 투영이 그만큼
                  * 크게 그리므로(1 단위 = 1px) 칸 이름과 심볼이 같이 자란다.
                  */
-                className={cn(
-                  'w-full',
-                  birdviewOnly
-                    ? 'h-[64vh] min-h-[360px]'
-                    : 'h-[30vh] max-h-[320px] min-h-[170px]'
-                )}
+                /*
+                 * 그릇이 곧 배율이다 — 투영이 이 상자에 도면을 맞추므로(1 단위 = 1px)
+                 * 상자를 키우면 베이도 설비 줄도 그만큼 커진다. 절반절반에서 30vh 는
+                 * 너무 낮아 넓은 화면에서 그림이 가운데 손바닥만 하게 남았다(좌우는
+                 * 레터박스로 버려진다 — 도면은 비율을 지켜야 하므로 늘릴 수 없다).
+                 * 범례가 한 줄 서므로 그만큼(28px) 더한다 — 그림이 그 몫을 뺏기지 않게.
+                 */
+                className={cn('w-full', birdviewHeight(birdviewOnly, colorByType, columns))}
               />
             </section>
           )}
@@ -334,7 +440,13 @@ export function EquipmentStatusBoard({
           작아지고 모드를 고른 이유가 사라진다).
         */}
         {!birdviewOnly && (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div
+          className={cn(
+            'flex min-w-0 flex-col gap-3',
+            /* 흐르는 것은 여기뿐이다 — 그림은 옆에서 한 자리를 지킨다 */
+            columns && 'min-h-0 overflow-y-auto pr-1'
+          )}
+        >
           {groups.length === 0 ? (
             <p className="rounded-inshop-lg border border-dashed border-border px-3 py-8 text-center text-inshop-sm text-foreground/55">
               {t('equipmentBoard.empty')}
@@ -349,13 +461,27 @@ export function EquipmentStatusBoard({
                   activeGroup === group.key ? 'border-accent' : 'border-border'
                 )}
               >
-                <div className="mb-1 flex items-center gap-2 px-1">
-                  <h4 className="text-inshop-xs font-semibold text-foreground">{group.title}</h4>
-                  <span className="text-2xs text-foreground/45">{group.cells.length}</span>
+                {/*
+                  구획 머리 — **그 칸 전체의 판정을 여기서 끝낸다.**
+                  대수만 적혀 있으면 "이 베이가 괜찮은가"를 알려고 아래 셀 여덟 개를
+                  일일이 훑어야 한다. 목록이 길어질수록 그 훑기가 전부이고, 머리 한 줄이
+                  답하면 훑을 이유가 있는 구획만 훑게 된다.
+                */}
+                <div className="mb-1.5 flex items-center gap-2 px-1">
+                  <h4 className="text-inshop-sm font-semibold tracking-tight text-foreground">
+                    {group.title}
+                  </h4>
+                  <span className="font-mono text-2xs tabular-nums text-foreground/45">
+                    {group.cells.length}
+                  </span>
+                  <span className="ml-auto">
+                    <GroupVerdict cells={group.cells} />
+                  </span>
                 </div>
                 <EquipmentGrid
                   cells={group.cells}
                   showControls={false}
+                  namedLamps={namedLamps}
                   selectedId={linkedId}
                   onSelect={setSelectedId}
                 />
@@ -366,6 +492,54 @@ export function EquipmentStatusBoard({
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * 배치 그림의 높이 — **그릇이 곧 배율이다.**
+ *
+ * 투영이 도면을 이 상자에 맞추고 1 뷰박스 단위 = 1px 이므로, 상자를 키우면 베이도 설비
+ * 줄도 그만큼 커진다. 좌우로 늘릴 수는 없다 — 도면은 비율을 지켜야 하고, 넓고 낮은
+ * 상자에서 남는 좌우는 레터박스로 버려진다. 그래서 **높이가 곧 크기**다.
+ *
+ * 종류색을 켠 화면만 키운다. 범례가 한 줄(1.75rem) 서므로 그 몫을 높이에 **더해** 둔다 —
+ * 빼지 않는 이유는 범례 때문에 그림이 작아지면 색을 넣은 값을 그림 크기로 치르는 셈이라서다.
+ * 켜지 않은 화면(의장·도장)은 지금까지의 크기 그대로 — 배치가 흔들리지 않는다.
+ */
+function birdviewHeight(
+  birdviewOnly: boolean,
+  colorByType: boolean,
+  columns: boolean
+): string {
+  if (birdviewOnly) {
+    return colorByType ? 'h-[calc(64vh+1.75rem)] min-h-[388px]' : 'h-[64vh] min-h-[360px]'
+  }
+  /* 나란히 세우면 높이를 **열이 정한다** — 그릇을 채우므로 vh 를 따로 셀 것이 없다 */
+  if (columns) return 'min-h-0 flex-1'
+  return colorByType
+    ? 'h-[calc(46vh+1.75rem)] max-h-[508px] min-h-[308px]'
+    : 'h-[30vh] max-h-[320px] min-h-[170px]'
+}
+
+/**
+ * 구획 하나의 판정 — 이상이 없으면 조용히, 있으면 몇 건인지.
+ *
+ * '이상 없음' 을 굳이 적는 이유는 **없다는 사실도 답**이기 때문이다. 아무 표시가 없으면
+ * 그것이 "정상" 인지 "아직 안 읽어 봤다" 인지 구분되지 않는다(공장 목록의 접힌 줄이
+ * 같은 이유로 그 문구를 낸다). 다만 색은 쓰지 않는다 — 정상은 조용해야 한다.
+ */
+function GroupVerdict({ cells }: { cells: readonly EquipmentCell[] }) {
+  const { t } = useTranslation()
+  const issues = cells.filter(isIssueCell).length
+  if (issues === 0) {
+    return <span className="text-2xs text-foreground/40">{t('equipmentBoard.allHealthy')}</span>
+  }
+  return (
+    <StatusChip
+      tone="warning"
+      label={t('equipmentBoard.needsCheck', { count: issues })}
+      className="px-1.5 py-0.5 text-2xs"
+    />
   )
 }
 

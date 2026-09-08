@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from '../../../shared/lib/i18n/useTranslation'
 import { Link } from 'react-router-dom'
 import { useAsyncData } from '../../../shared/lib/useAsyncData'
@@ -39,10 +39,30 @@ function meaningOfLink(link: string | null): StatusMeaning {
 export function OutfittingStatusTab({
   selectedFactory,
   onSelectFactory,
+  headerExtra,
+  factoryAside,
+  focusBay = null,
+  className,
 }: {
   /** 지금 보고 있는 공장 — 탭 사이에서 공유되는 선택 */
   selectedFactory: string
   onSelectFactory: (factory: string) => void
+  /**
+   * 베이를 골라 들어와 있을 때 그 베이 키 — 보드가 그 구획을 고른 채로 선다.
+   * 공장 전체를 펴 놓되 방금까지 보던 자리는 잃지 않는다 (조립과 같은 승계).
+   */
+  focusBay?: string | null
+  /** 바깥이 정하는 자리 — 뷰포트에 맞춘 화면에서 남는 높이를 받는다 */
+  className?: string
+  /**
+   * 버드뷰 위 오른쪽에 서는 문 — 기본은 '전체 설비 관제로'.
+   *
+   * 설비 관제 화면(`/indoorshop/zones/outfitting/equipment`)이 이 보드를 그대로 쓰는데, 거기서
+   * 자기 자신으로 가는 문을 낼 수는 없다. 그래서 그 자리를 밖에서 갈아 끼운다.
+   */
+  headerExtra?: ReactNode
+  /** 공장 목록 위에 덧붙는 것 — 설비 관제 화면의 '도면 보기' */
+  factoryAside?: ReactNode
 }) {
   const { t } = useTranslation()
   const typeLabelOf = useEquipmentTypeLabel()
@@ -119,13 +139,30 @@ export function OutfittingStatusTab({
       bays={bays}
       points={points}
       groups={groups}
+      /* 아래 세 가지는 조립 현황 탭과 같은 이유로 켠다 — 같은 화면 문법을 쓰는 이상
+         한 공정에서만 꺼져 있을 근거가 없다(의장도 한 베이에 네 종류가 섞여 선다).
+
+         · namedLamps  — 라이다[링크·틸팅] / Edge PC[링크·MQTT·수집] / 캐비닛[전원·업링크·소속]
+                         은 램프 셋의 뜻이 서로 다르다. 익명 점이면 순서를 아는 사람만 읽는다.
+         · colorByType — 네 종류가 한 배치도에 섞여 서므로, 종류색과 범례가 없으면 12px 판
+                         안의 글리프 하나로 넷을 갈라야 한다.
+         · sideBySide  — 위아래로 쌓으면 배치를 키운 대가를 목록이 치른다. */
+      namedLamps
+      colorByType
+      sideBySide
+      factoryAside={factoryAside}
+      /* 베이에서 건너왔으면 그 구획을 골라 둔 채로 (베이 → 현황 승계) */
+      focusGroupKey={focusBay}
+      className={className}
       headerExtra={
-        <Link
-          to={`/indoorshop/zones/outfitting/equipment?shop=${encodeURIComponent(selectedFactory)}`}
-          className="shrink-0 rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground"
-        >
-          {t('outfitting.workspace.toEquipmentConsole')}
-        </Link>
+        headerExtra ?? (
+          <Link
+            to={`/indoorshop/zones/outfitting/equipment?shop=${encodeURIComponent(selectedFactory)}`}
+            className="shrink-0 rounded-inshop-md border border-border px-2 py-0.5 text-2xs text-foreground/68 transition-colors hover:bg-surface-secondary hover:text-foreground"
+          >
+            {t('outfitting.workspace.toEquipmentConsole')}
+          </Link>
+        )
       }
     />
   )

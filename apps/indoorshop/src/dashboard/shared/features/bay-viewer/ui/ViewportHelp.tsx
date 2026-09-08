@@ -57,7 +57,7 @@ export function ViewportHelp({ className }: { className?: string }) {
   }
 
   return (
-    <div className={cn('absolute bottom-4 right-4 flex flex-col items-end gap-2', className)}>
+    <div className={cn('absolute bottom-[var(--vp-inset,1rem)] right-[var(--vp-inset,1rem)] flex flex-col items-end gap-2', className)}>
       {open && (
         <div className="w-60 animate-fade-in rounded-inshop-lg glass-panel p-2.5">
           <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-glass-foreground/54">

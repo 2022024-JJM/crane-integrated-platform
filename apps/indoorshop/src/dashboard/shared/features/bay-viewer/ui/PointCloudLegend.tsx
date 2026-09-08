@@ -75,7 +75,7 @@ export function PointCloudLegend({ colorMode, className }: PointCloudLegendProps
   return (
     <div
       className={cn(
-        'pointer-events-none absolute left-4 top-4 rounded-inshop-lg',
+        'pointer-events-none absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] rounded-inshop-lg',
         'glass-panel px-2.5 py-1.5',
         className,
       )}

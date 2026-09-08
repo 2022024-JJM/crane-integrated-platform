@@ -210,6 +210,9 @@ export const assemblyKo = {
     },
     workspace: {
       backToFactories: '← 공장 목록으로 돌아가기',
+      backToFactory: '{{name}} 공장으로 돌아가기 (Esc)',
+      factoryListLabel: '공장 목록',
+      backToFactoryList: '조립 공장 목록으로 돌아가기',
       tabAria: '화면 축 선택',
       tabViewer: '3D 뷰어',
       tabStatus: '현황',

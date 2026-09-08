@@ -250,6 +250,12 @@ export interface YardParcelLayer {
    * 누운 글씨와 떠 있는 패가 같은 이름을 두 번 말하며 겹친다. 나머지 공장은 그대로다.
    */
   floatingFocusedLabel?: boolean
+  /**
+   * 위와 같은 규칙을 **고른 베이**에 적용한다 — 베이까지 내려간 화면(총괄 대시보드)이
+   * 그 베이 위에 떠 있는 패를 세우므로, 지붕 용마루에 누운 베이 이름은 캔버스에서 뺀다.
+   * 안 주면 지금까지처럼 고른 베이의 이름이 지붕에 새겨진다(도장 배치도).
+   */
+  floatingSelectedBayLabel?: boolean
   onSelectFactory?: (name: string | null) => void
   onHoverFactory?: (name: string | null) => void
   /** 스포트라이트한 공장 안의 베이(지번) 클릭 — 그 공장 소속 지번을 눌렀을 때만 온다 */
@@ -1166,6 +1172,7 @@ export function YardMap({
         highlightedLot: parcels?.highlightedLot ?? null,
         showLabels: parcels?.showLabels ?? true,
         floatingFocusedLabel: parcels?.floatingFocusedLabel ?? false,
+        floatingSelectedBayLabel: parcels?.floatingSelectedBayLabel ?? false,
       }
     : null
 
@@ -2940,7 +2947,14 @@ export function YardMap({
            * 고른 베이는 길이와 무관하게 언제나 붙인다: 무엇을 골랐는지가 지도 위에서
            * 끝나야 하고, 짧다고 이름이 사라지면 고른 것만 이름이 없는 꼴이 된다.
            * 이름 없는 토막(label='')은 넘긴다 — 이름은 베이의 가장 큰 토막이 갖는다. */
-          if (prism.kind === 'selected' && prism.progress > 0.02 && prism.span.label) {
+          if (
+            prism.kind === 'selected' &&
+            prism.progress > 0.02 &&
+            prism.span.label &&
+            /* 떠 있는 패가 이름을 맡은 화면에서는 지붕에 또 새기지 않는다 —
+               누운 글씨와 뜬 패가 같은 이름을 두 번 말한다 */
+            !parcels?.floatingSelectedBayLabel
+          ) {
             const ridgeLen = Math.hypot(ridge[1].sx - ridge[0].sx, ridge[1].sy - ridge[0].sy)
             if (ridgeLen > 46 || pressed) {
               spanLabels.push({

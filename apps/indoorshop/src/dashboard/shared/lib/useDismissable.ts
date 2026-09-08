@@ -12,7 +12,12 @@ export function useDismissable(
   containerRef: RefObject<HTMLElement | null>,
   onDismiss: () => void,
   /** 닫은 뒤 포커스를 돌려줄 트리거 */
-  triggerRef?: RefObject<HTMLElement | null>
+  triggerRef?: RefObject<HTMLElement | null>,
+  /**
+   * 포털로 나간 패널 — DOM 상 `containerRef` 의 자손이 아니므로 따로 알려 준다.
+   * 이게 없으면 메뉴 안을 누르는 것이 '바깥 클릭'으로 읽혀 메뉴가 닫힌다.
+   */
+  panelRef?: RefObject<HTMLElement | null>
 ): void {
   /* 열려 있는 동안 ESC 우선권을 쥔다 — 리스너 순서와 무관하게 드릴다운 ESC 를 멈춘다 */
   useEscapeClaim(open)
@@ -20,7 +25,10 @@ export function useDismissable(
     if (!open) return
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) onDismiss()
+      const target = event.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (panelRef?.current?.contains(target)) return
+      onDismiss()
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -37,5 +45,5 @@ export function useDismissable(
       document.removeEventListener('mousedown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, containerRef, onDismiss, triggerRef])
+  }, [open, containerRef, onDismiss, triggerRef, panelRef])
 }

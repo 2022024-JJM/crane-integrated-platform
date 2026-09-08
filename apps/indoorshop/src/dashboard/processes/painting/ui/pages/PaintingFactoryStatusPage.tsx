@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom' 
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { FixedViewport } from '../../../../shared/lib/fixed-viewport/FixedViewport'
 import { useTranslation } from '../../../../shared/lib/i18n/useTranslation'
 import { resolveZoneFactoryId } from '../../../../shared/lib/zoneEntryFactory'
 import type { InshopKey } from '../../../../shared/lib/i18n/keys'
@@ -193,8 +194,16 @@ export function PaintingFactoryStatusPage() {
   if (!factory || !collection || !inventory) return <NotFoundNotice />
 
   return (
-    <div className="space-y-4">
-      <div>
+    /*
+     * 이 화면은 문서가 아니라 계기판이다 — 조립·의장 워크스페이스와 같은 골격으로,
+     * 넓은 화면에서는 뷰포트에 딱 맞춰 고정하고 넘치는 목록은 페이지가 아니라 각 패널이
+     * 안에서 흐른다. 예전에는 페이지째 흘러서, 설비 그리드를 훑는 동안 '어느 자리인가'를
+     * 답하는 배치 그림이 위로 밀려 사라졌다 — 그러면 그때부터는 그냥 긴 목록이다.
+     */
+    <div className="flex flex-col gap-4 xl:h-full xl:min-h-0 xl:gap-3">
+      <FixedViewport />
+
+      <div className="shrink-0">
         {/* 공장 레일 — 이 공정의 공장을 여기서 갈아탄다 (R22: 맵 진입 화면을 대신한다) */}
         <nav aria-label={t('painting.factoryStatus.factoryRail')} className="flex flex-wrap gap-1">
           {factories.map((entry) => (
@@ -240,7 +249,8 @@ export function PaintingFactoryStatusPage() {
       <div
         role="tablist"
         aria-label={t('painting.factoryStatus.tabAria')}
-        className="sticky top-0 z-30 flex w-fit shrink-0 items-center gap-1 rounded-inshop-lg border border-border bg-surface-secondary p-1"
+        /* 붙임(sticky)은 페이지가 흐르던 시절의 것이다 — 이제 흐르는 것은 아래 판 안쪽뿐이다 */
+        className="viewport-surface flex w-fit shrink-0 items-center gap-1 rounded-inshop-lg border border-border bg-surface-secondary p-1"
       >
         {FACTORY_TABS.map(({ key, labelKey }) => (
           <button
@@ -261,9 +271,19 @@ export function PaintingFactoryStatusPage() {
         ))}
       </div>
 
+      {/*
+        탭 본문 — ①현황·②가동 뷰·③공장 현황이 **같은 어두운 판** 위에 선다(감사 A10).
+        3D(가동 뷰)만 어둡고 나머지가 흰 종이면 탭을 옮길 때마다 같은 화면 안에서 명암이
+        뒤집힌다. 조립·의장 워크스페이스가 쓰는 판을 그대로 쓴다 — 토큰만 바꾸는 판이라
+        아래 컴포넌트의 마크업·레이아웃은 그대로다.
+      */}
+      <div className="viewport-surface flex min-w-0 flex-col gap-4 rounded-inshop-lg p-3 xl:min-h-0 xl:flex-1">
       {tab === 'status' ? (
-        /* ① 현황 — 공장 목록 + 버드뷰 + 베이별 설비 그리드 (공용 보드) */
+        /* ① 현황 — 공장 목록 + 버드뷰 + 베이별 설비 그리드 (공용 보드).
+           보드가 남는 높이를 통째로 받고 **목록만 그 안에서 흐른다** — 배치 그림은
+           스크롤을 굴려도 제자리에 남아야 두 층이 함께 일한다(R29). */
         <PaintingStatusTab
+          className="xl:min-h-0 xl:flex-1"
           selectedFactory={factory}
           onSelectFactory={(next) => {
             const id = paintingFactoryIdOf(next)
@@ -282,7 +302,8 @@ export function PaintingFactoryStatusPage() {
           <PaintingAirTab factory={factory} />
         </Suspense>
       ) : (
-        <>
+        /* ③ 공장 현황 — 문서형 카드라 여기만 스스로 흐른다 */
+        <div className="flex min-w-0 flex-col gap-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
           {/* ── 스텝 진행 — 절점 축. 계획한 블록이 없는 스텝은 자리를 비우고 그렇다고 말한다 ── */}
           <section className="rounded-inshop-lg border border-border bg-surface p-3">
             <h2 className="mb-2 text-inshop-sm font-semibold text-foreground">
@@ -381,8 +402,9 @@ export function PaintingFactoryStatusPage() {
               )}
             </aside>
           </div>
-        </>
+        </div>
       )}
+      </div>
     </div>
   )
 }

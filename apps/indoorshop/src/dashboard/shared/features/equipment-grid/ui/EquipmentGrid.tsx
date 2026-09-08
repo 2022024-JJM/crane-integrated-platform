@@ -96,22 +96,37 @@ function LiveMetric({
   )
 }
 
-/** 램프 한 개 — 색과 **모양**을 함께 낸다(색 단독 금지) */
-function Lamp({
+/**
+ * 램프 한 개 — 색과 **모양**을 함께 낸다(색 단독 금지).
+ *
+ * `named` 면 점 앞에 그 램프가 무엇인지 적는다. 점만 세우면 순서를 아는 사람만 읽을 수
+ * 있는데, 그 순서는 종류마다 다르다(라이다 [링크·틸팅], Edge PC [링크·MQTT·수집],
+ * 캐비닛 [전원·업링크·소속]). 라이다처럼 한 베이에 수십 칸이 서는 종류라면 이름을
+ * 반복하는 쪽이 소음이지만, 한두 칸뿐인 종류에서는 익명 점이 그냥 못 읽히는 그림이다.
+ * 그래서 이름을 낼지는 **화면이** 고른다(`EquipmentGrid` 의 `namedLamps`).
+ *
+ * 공정 모듈이 자기 `figure` 안에서 같은 램프를 세울 수 있도록 내보낸다 — 램프를 그리는
+ * 곳이 둘이 되면 같은 상태가 화면마다 다른 모양이 된다.
+ */
+export function CellLamp({
   lamp,
-  dense,
-  glass,
+  dense = true,
+  glass = false,
+  named = false,
 }: {
   lamp: EquipmentLamp
-  dense: boolean
-  glass: boolean
+  dense?: boolean
+  glass?: boolean
+  named?: boolean
 }) {
   const { fill } = lampStyle(lamp.meaning, { dense, glass })
   const shape = STATUS_SHAPE[lamp.meaning]
-  return (
+  const title = lamp.value ? `${lamp.label} · ${lamp.value}` : lamp.label
+  const dot = (
     <span
-      title={lamp.value ? `${lamp.label} · ${lamp.value}` : lamp.label}
-      aria-label={lamp.value ? `${lamp.label} ${lamp.value}` : lamp.label}
+      aria-hidden={named ? true : undefined}
+      aria-label={named ? undefined : `${lamp.label} ${lamp.value ?? ''}`.trim()}
+      title={named ? undefined : title}
       className={cn(
         'inline-block h-2 w-2 shrink-0',
         fill,
@@ -123,23 +138,62 @@ function Lamp({
       )}
     />
   )
+  if (!named) return dot
+  return (
+    <span
+      title={title}
+      aria-label={`${lamp.label} ${lamp.value ?? ''}`.trim()}
+      className={cn(
+        /* 9px 라벨이라 잉크를 아끼면 못 읽는다 — /50 은 4.2:1 로 기준(4.5:1) 아래다 */
+        'inline-flex shrink-0 items-center gap-0.5 text-[9px] leading-none',
+        glass ? 'text-glass-foreground/62' : 'text-foreground/62'
+      )}
+    >
+      {lamp.label}
+      {dot}
+      {/* 수량은 색이 말하지 못한다 — 그런 램프만 값을 화면에 적는다 */}
+      {lamp.showValue && lamp.value && (
+        <span
+          className={cn(
+            'font-mono tabular-nums',
+            glass ? 'text-glass-foreground/72' : 'text-foreground/72'
+          )}
+        >
+          {lamp.value}
+        </span>
+      )}
+    </span>
+  )
 }
 
 function CellBody({
   cell,
   dense,
   glass,
+  namedLamps,
   selected,
   silentLabel,
 }: {
   cell: EquipmentCell
   dense: boolean
   glass: boolean
+  namedLamps: boolean
   selected: boolean
   silentLabel: (seconds: number) => string
 }) {
   const issue = isIssueCell(cell)
-  const metric = lampStyle(cell.metric.meaning, { dense, glass })
+  /*
+   * 신선도의 잉크 — **정상은 무채다.**
+   *
+   * 예전에는 정상 신선도까지 상태 초록으로 적었다. 그런데 신선도는 상태가 아니라
+   * 곁들이는 사실이고, 57칸이 전부 초록으로 적히면 그 초록은 아무것도 나르지 않으면서
+   * 진짜 상태 초록(램프)과 자리를 다툰다. 이상일 때는 이 자리가 곧 사유이므로(“오프라인
+   * · 21분 전”) 그때만 색을 얻는다 — R18 이 램프에 적용한 규칙을 수치에도 그대로.
+   */
+  const metric =
+    cell.metric.meaning === 'done'
+      ? { ink: glass ? 'text-glass-foreground/55' : 'text-foreground/55' }
+      : lampStyle(cell.metric.meaning, { dense, glass })
   return (
     <>
       <div className="flex min-w-0 items-center gap-1.5">
@@ -161,13 +215,28 @@ function CellBody({
         />
       </div>
       <div className="mt-1 flex items-center gap-1">
-        {cell.lamps.map((lamp) => (
-          <Lamp key={lamp.label} lamp={lamp} dense={dense} glass={glass} />
-        ))}
+        {/*
+          그림이 있으면 램프 점은 서지 않는다 — 조준 다이얼처럼 **뜻이 그림인** 값은
+          점 세 개보다 그 자체가 잘 읽히고, 둘을 겹쳐 세우면 줄만 좁아진다.
+          (`lamps` 는 여전히 셀에 남아 지도 카드·보조기술이 읽는다 — 모델 주석 참조)
+        */}
+        {cell.figure ??
+          cell.lamps.map((lamp) => (
+            <CellLamp
+              key={lamp.label}
+              lamp={lamp}
+              dense={dense}
+              glass={glass}
+              named={namedLamps}
+            />
+          ))}
         {cell.note && (
           <span
+            /* 좁은 칸에서는 잘린다 — 잘린 자리에서 전문을 볼 길을 남긴다 */
+            title={typeof cell.note === 'string' ? cell.note : undefined}
+            /* 값이 바뀌는 자리다(틸팅 중 각도) — 등폭이 아니면 글자가 좌우로 흔들린다 */
             className={cn(
-              'ml-1 min-w-0 flex-1 truncate text-[10px]',
+              'ml-1 min-w-0 flex-1 truncate text-[10px] tabular-nums',
               glass ? 'text-glass-foreground/55' : 'text-foreground/55'
             )}
           >
@@ -194,6 +263,13 @@ export interface EquipmentGridProps {
   /** 필터·밀도 토글을 낼 것인가 (좁은 패널은 바깥에 이미 토글이 많다) */
   showControls?: boolean
   /**
+   * 램프에 이름을 붙일 것인가 — 기본은 붙이지 않는다(지금까지의 모양).
+   *
+   * 종류마다 램프 셋의 뜻이 다르므로, 한 화면에 여러 종류가 섞여 서는 목록에서는
+   * 익명 점이 읽히지 않는다. 반대로 한 종류만 수십 칸 서는 목록에서는 이름이 소음이다.
+   */
+  namedLamps?: boolean
+  /**
    * 선택을 밖에서 쥘 때 — 지도처럼 **다른 층과 선택을 공유하는** 화면이 쓴다.
    * 주지 않으면 그리드가 스스로 들고 있는다(대부분의 목록).
    */
@@ -213,6 +289,7 @@ export function EquipmentGrid({
   tone = 'surface',
   density: initialDensity = 'compact',
   showControls = true,
+  namedLamps = false,
   selectedId: controlledSelectedId,
   onSelect,
   className,
@@ -357,11 +434,19 @@ export function EquipmentGrid({
                   data-attenuated={!issue ? 'true' : 'false'}
                   className={cn(
                     'w-full rounded-inshop-md border px-1.5 py-1 text-left transition-colors focus:outline-none focus-visible:ring-2',
+                    /*
+                     * 정상 칸은 **테두리를 두르지 않는다.**
+                     *
+                     * 수십 칸이 저마다 윤곽을 가지면 화면은 내용이 아니라 상자 격자로
+                     * 읽히고, 정작 하나뿐인 붉은 테두리가 그 격자 속의 또 하나가 된다.
+                     * 옅은 바탕만으로도 칸은 칸으로 읽히고, 그때 테두리는 **이상 전용
+                     * 부호**가 되어 훑는 눈이 곧장 그리로 간다.
+                     */
                     glass
-                      ? 'border-white/10 hover:bg-white/[0.05]'
-                      : 'border-border hover:bg-surface-secondary',
+                      ? 'border-transparent bg-white/[0.035] hover:bg-white/[0.08]'
+                      : 'border-transparent bg-surface-secondary/60 hover:bg-surface-secondary',
                     /* 이상만 테두리를 얻는다 — 눈이 갈 곳은 거기 하나면 된다 */
-                    issue && 'border-status-unhealthy/45 bg-status-unhealthy/[0.06]',
+                    issue && 'border-status-unhealthy/50 bg-status-unhealthy/[0.07]',
                     /* 선택은 '이상' 이 아니라 '지금 보는 것' 이라 다른 축(강조 테두리) */
                     selected && 'ring-2 ring-accent',
                     /* 정상 칸은 한 걸음 물러난다 — 색은 그대로 두고 존재감만 낮춘다(R18) */
@@ -372,6 +457,7 @@ export function EquipmentGrid({
                     cell={cell}
                     dense={dense}
                     glass={glass}
+                    namedLamps={namedLamps}
                     selected={selected}
                     silentLabel={silentLabel}
                   />

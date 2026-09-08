@@ -45,22 +45,67 @@ const LINK_TEXT: Record<LinkState, string> = {
 }
 
 /** 틸팅 모드 → 상태 의미 — 대기·틸팅중은 이상이 아니다 */
-function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning {
+export function meaningOfTiltMode(mode: TiltModuleStatus['mode']): StatusMeaning {
   if (mode === 'error') return 'error'
   if (mode === 'tilting') return 'inProgress'
   return 'done'
 }
 
+/** 틸팅 모드의 우리말 — 셀 부기와 보조기술이 같은 말을 쓰도록 한 곳에서 정한다 */
+export const TILT_MODE_TEXT: Record<TiltModuleStatus['mode'], string> = {
+  idle: '대기',
+  tilting: '틸팅중',
+  error: '에러',
+}
+
 /**
- * 신선도 문구 — 이상이면 수치 자리가 사유를 말한다.
+ * 신선도 문구 — 이상이면 수치 자리가 **사유와 기간**을 함께 말한다.
  *
  * `at`(마지막 수신 시각)을 넘기면 셀이 경과를 **스스로 흘린다**(R19 실시간감) — 이 값이
  * 없으면 화면은 멈춘 문구만 보여 주고, 멈춘 것인지 조용한 것인지 구분되지 않는다.
+ *
+ * 다만 **이상 칸에는 `at` 을 넘기지 않는다.** 그리드의 침묵 판정(90초)이 사유를 덮어
+ * "침묵 21분"으로 바꿔 버리는데, 오프라인과 통신 오류는 침묵과 다른 사정이다. 대신
+ * 기간을 문구에 붙여 두어 얼마나 그랬는지는 그대로 읽히게 한다.
  */
 function metricOf(link: LinkState, freshText: string, at?: number): EquipmentCell['metric'] {
-  if (link === 'offline') return { text: '오프라인', meaning: 'warning', at }
-  if (link === 'error') return { text: '통신 오류', meaning: 'error', at }
+  if (link === 'offline') return { text: `오프라인 · ${freshText}`, meaning: 'warning' }
+  if (link === 'error') return { text: `통신 오류 · ${freshText}`, meaning: 'error' }
   return { text: freshText, meaning: 'done', at }
+}
+
+/**
+ * 라이다 조준 자세의 부기 — **이름 붙은 각도**.
+ *
+ * 예전에는 `-80°/-9°` 였다. 부호 붙은 숫자 두 개는 무엇의 값인지 말하지 않아, 규칙을
+ * 이미 아는 사람에게만 읽혔다. `pan`·`tilt` 를 적는 데 드는 폭은 20px 남짓이고
+ * (셀은 그만큼 남는다), 그 대가로 아무 설명 없이 읽히는 줄이 된다.
+ *
+ * 조준 **방향** 자체는 이 문구가 아니라 옆에 서는 다이얼이 그린다 — 여기 숫자는
+ * 그림이 답하지 못하는 "정확히 몇 도인가"의 몫이다.
+ */
+export function aimNote(tilt: TiltModuleStatus): string {
+  /*
+   * 모드 낱말은 **다른 것이 말하지 못할 때만** 붙는다. 목표 화살표가 이미 서 있으면
+   * '틸팅중'은 같은 사실의 되풀이고, 좁은 칸에서는 그 되풀이 때문에 진짜 값이 잘린다.
+   * 에러만은 늘 적는다 — 색은 못 읽는 경로가 있고, 그 자리에 낱말이 없으면 사유가 없다.
+   */
+  const mode =
+    tilt.mode === 'error' || (tilt.mode === 'tilting' && tilt.atTarget)
+      ? TILT_MODE_TEXT[tilt.mode]
+      : ''
+  /*
+   * 각도는 **정수로 적는다.** 틸팅 중에만 소수가 붙어(`106.5°`) 열이 들쭉날쭉해지는데,
+   * 훑는 눈에 0.5° 는 아무 뜻도 아니다. 정확한 값이 필요한 사람은 칸을 열면 되고
+   * (`TiltDetail` 은 원값을 그대로 적는다), 그 사이 폭은 목표 각이 쓴다.
+   */
+  return [
+    `pan ${Math.round(tilt.panDeg)}° · tilt ${Math.round(tilt.tiltDeg)}°`,
+    tilt.atTarget ? '' : `→ ${Math.round(tilt.targetPanDeg)}°/${Math.round(tilt.targetTiltDeg)}°`,
+    mode,
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 /** 라이다-틸팅 페어 한 칸 */
@@ -72,26 +117,34 @@ export function lidarPairCell(
     /** 마지막 스캔/하트비트 시각 — 주면 셀이 경과를 흘린다 */
     at?: number
     group?: string
+    /** 램프 자리에 세울 그림 — 링크 램프 + 조준 다이얼 (`ui/cellVitals`) */
+    figureOf?: (tilt: TiltModuleStatus | null, link: LinkState) => ReactNode
     detail?: (tilt: TiltModuleStatus | null) => ReactNode
   }
 ): EquipmentCell {
   const tilt = pairOf(lidar)
   const tiltStatus = tilt ? tiltStatusIn(snapshot, tilt.id) : null
   const lidarLink = linkIn(snapshot, lidar.id) ?? 'offline'
+  const motorAlarm = (tiltStatus?.motorAlarm ?? 0) > 0
 
+  /*
+   * 램프는 **둘**이다. 예전의 셋째('이상')는 앞의 둘을 접은 값이라 새로 말하는 것이
+   * 없었고, 이상이면 셀 테두리와 정렬 순서가 이미 그 사실을 말한다 — 한 사실을 세 군데서
+   * 말하면 눈은 어느 것도 안 읽는다. 모터 알람은 틸팅 램프에 접어 넣는다(틸팅의 사정이다).
+   *
+   * 화면에는 이 점들 대신 `figure`(링크 램프 + 조준 다이얼)가 서지만, 배열은 그대로
+   * 채워 둔다 — 지도 카드와 보조기술이 이 배열을 읽는다(`EquipmentCell.figure` 주석).
+   */
   const lamps: EquipmentLamp[] = [
     { label: '링크', meaning: meaningOfLink(lidarLink), value: lidarLink },
     {
       label: '틸팅',
-      meaning: tiltStatus ? meaningOfTiltMode(tiltStatus.mode) : 'idle',
-      value: tiltStatus?.mode,
-    },
-    {
-      label: '이상',
-      meaning:
-        lidarLink !== 'online' || tiltStatus?.mode === 'error' || (tiltStatus?.motorAlarm ?? 0) > 0
-          ? 'error'
-          : 'done',
+      meaning: motorAlarm
+        ? 'error'
+        : tiltStatus
+          ? meaningOfTiltMode(tiltStatus.mode)
+          : 'idle',
+      value: tiltStatus ? TILT_MODE_TEXT[tiltStatus.mode] : '짝 없음',
     },
   ]
 
@@ -101,15 +154,7 @@ export function lidarPairCell(
    * 목표와 어긋나 있을 때만 목표를 덧붙이고, 모드가 대기가 아닐 때만 모드를 덧붙인다 —
    * 늘 서는 줄이므로 덧붙는 말은 이상할 때만 붙어야 눈에 띈다.
    */
-  const note = tiltStatus
-    ? [
-        `${tiltStatus.panDeg}°/${tiltStatus.tiltDeg}°`,
-        tiltStatus.atTarget ? '' : `→ ${tiltStatus.targetPanDeg}°/${tiltStatus.targetTiltDeg}°`,
-        tiltStatus.mode === 'error' ? '에러' : tiltStatus.mode === 'tilting' ? '틸팅중' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : undefined
+  const note = tiltStatus ? aimNote(tiltStatus) : undefined
 
   return {
     id: lidar.id,
@@ -119,6 +164,7 @@ export function lidarPairCell(
     lamps,
     metric: metricOf(lidarLink, options.freshText, options.at),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
+    figure: options.figureOf?.(tiltStatus, lidarLink),
     note,
     detail: options.detail?.(tiltStatus),
   }
@@ -128,7 +174,13 @@ export function lidarPairCell(
 export function edgePcCell(
   equipment: YardEquipment,
   status: EdgePcStatus,
-  options: { freshText: string; detail?: (status: EdgePcStatus) => ReactNode; trend?: readonly { label: string; value: number }[] }
+  options: {
+    freshText: string
+    /** 램프 자리에 세울 그림 — 칸에 세울 램프를 공정이 골라 넘긴다 (`ui/cellVitals`) */
+    figureOf?: (lamps: readonly EquipmentLamp[], status: EdgePcStatus) => ReactNode
+    detail?: (status: EdgePcStatus) => ReactNode
+    trend?: readonly { label: string; value: number }[]
+  }
 ): EquipmentCell {
   const lamps: EquipmentLamp[] = [
     { label: '링크', meaning: meaningOfLink(status.link), value: status.link },
@@ -156,6 +208,7 @@ export function edgePcCell(
     lamps,
     metric: metricOf(status.link, options.freshText, status.lastHeartbeatAt),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
+    figure: options.figureOf?.(lamps, status),
     note: hot.join(' · '),
     trend: options.trend,
     detail: options.detail?.(status),
@@ -171,13 +224,24 @@ export function panelCell(input: {
   memberOnline: number
   memberTotal: number
   lidarPairs: number
+  figureOf?: (lamps: readonly EquipmentLamp[]) => ReactNode
   detail?: ReactNode
 }): EquipmentCell {
   const faulty = input.memberTotal - input.memberOnline
+  /*
+   * 램프는 **둘**이다 — 업링크는 이 셀의 대표값이라 수치 자리에 이미 낱말로 서 있다
+   * (`온라인`·`통신 오류`). 같은 사실을 램프로 한 번 더 세우면 좁은 칸에서 그 되풀이가
+   * 영향 범위(`라이다 5쌍`)를 밀어낸다. 판정에는 그대로 접어 넣는다.
+   */
   const lamps: EquipmentLamp[] = [
     { label: '전원', meaning: input.powered ? 'done' : 'error' },
-    { label: '업링크', meaning: meaningOfLink(input.uplink), value: input.uplink },
-    { label: '소속', meaning: faulty > 0 ? 'warning' : 'done', value: `${input.memberOnline}/${input.memberTotal}` },
+    {
+      label: '소속',
+      meaning: faulty > 0 ? 'warning' : 'done',
+      value: `${input.memberOnline}/${input.memberTotal}`,
+      /* 램프 색은 "몇 대가 빠졌나"를 말하지 못한다 — 이 램프는 수량이 곧 정보다 */
+      showValue: true,
+    },
   ]
   return {
     id: input.id,
@@ -190,10 +254,10 @@ export function panelCell(input: {
       text: LINK_TEXT[input.uplink],
       meaning: meaningOfLink(input.uplink),
     },
-    severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
-    note: [`소속 ${input.memberOnline}/${input.memberTotal}`, input.lidarPairs > 0 ? `라이다 ${input.lidarPairs}쌍` : '']
-      .filter(Boolean)
-      .join(' · '),
+    severity: worstMeaning([...lamps.map((lamp) => lamp.meaning), meaningOfLink(input.uplink)]),
+    figure: input.figureOf?.(lamps),
+    /* 소속 대수는 이미 램프가 이름과 함께 말한다 — 부기에는 **영향 범위**만 남긴다 */
+    note: input.lidarPairs > 0 ? `라이다 ${input.lidarPairs}쌍` : undefined,
     detail: input.detail,
   }
 }
@@ -209,12 +273,21 @@ export function panelCell(input: {
 export function tiltCell(
   equipment: YardEquipment,
   status: TiltModuleStatus | null,
-  options: { freshText: string; group?: string }
+  options: {
+    freshText: string
+    group?: string
+    figureOf?: (tilt: TiltModuleStatus | null, link: LinkState) => ReactNode
+    detail?: ReactNode
+  }
 ): EquipmentCell {
   const link = status?.link ?? 'offline'
   const lamps: EquipmentLamp[] = [
     { label: '링크', meaning: meaningOfLink(link), value: link },
-    { label: '틸팅', meaning: status ? meaningOfTiltMode(status.mode) : 'idle', value: status?.mode },
+    {
+      label: '틸팅',
+      meaning: status ? meaningOfTiltMode(status.mode) : 'idle',
+      value: status ? TILT_MODE_TEXT[status.mode] : undefined,
+    },
     { label: '페어', meaning: 'warning', value: '없음' },
   ]
   return {
@@ -225,6 +298,9 @@ export function tiltCell(
     lamps,
     metric: metricOf(link, options.freshText, status?.lastMovedAt),
     severity: worstMeaning(lamps.map((lamp) => lamp.meaning)),
-    note: status ? `${status.panDeg}°/${status.tiltDeg}°` : undefined,
+    figure: options.figureOf?.(status, link),
+    /* 짝 잃은 틸팅이라는 사실이 각도보다 먼저다 — 각도는 그 뒤에 붙는다 */
+    note: ['짝 없음', status ? aimNote(status) : ''].filter(Boolean).join(' · '),
+    detail: options.detail,
   }
 }

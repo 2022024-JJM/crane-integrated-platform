@@ -10,6 +10,7 @@ import { loadYardParcels } from '../../../shared/entities/yard-parcels'
 import {
   YARD_EQUIPMENT,
   edgePcStatusIn,
+  equipmentPanelOf,
   linkIn,
   pairIdOf,
   panelStatusIn,
@@ -22,7 +23,7 @@ import type { StatusMeaning } from '../../../shared/ui/statusPalette'
 import { birdviewBaysOf, birdviewPointsOf } from '../../../shared/features/equipment-birdview'
 import { EquipmentStatusBoard, type BoardGroup } from '../../../shared/features/equipment-status-board'
 import { ASSEMBLY_FACTORIES } from '../api/assemblyFactoryFixture'
-import { equipmentSummaryOf, mockScanTime } from '../lib/mapEntry'
+import { equipmentSummaryOf, mockLastSignalAt } from '../lib/mapEntry'
 import {
   edgePcCell,
   lidarPairCell,
@@ -30,6 +31,8 @@ import {
   panelCell,
   tiltCell,
 } from '../lib/equipmentCells'
+import { LampVitals, LidarVitals } from './cellVitals'
+import { EdgeDetail, PanelDetail, TiltDetail } from './cellDetails'
 
 /*
  * 조립 '현황' 탭 — 공용 설비 현황 보드(`equipment-status-board`)의 조립 소비자.
@@ -65,13 +68,43 @@ function gridEquipmentOf(factory: string, focusId: string | null): YardEquipment
   )
 }
 
+/*
+ * 한 베이 안에서의 **종류 순서** — 관측(라이다·틸팅) 먼저, 그 뒤 수집·네트워크.
+ *
+ * 예전에는 설비ID 순이라 `ED-P2` 가 `LD-P17` 과 `LD-P07` 사이에 끼어 섰다. 종류가
+ * 바뀌면 셀이 말하는 값의 문법도 통째로 바뀌는데(각도 / 온도·CPU / 소속 대수), 그것이
+ * 한 줄 안에서 번갈아 나오면 눈이 훑는 리듬을 못 만든다. 종류로 묶어 두면 같은 문법이
+ * 이어지고, 이상 정렬(그리드가 하는 안정 정렬)은 이 순서를 그대로 물려받는다.
+ *
+ * 의장 화면·설비 인벤토리 패널의 구획 순서와 같다 — 화면을 옮겨 다녀도 눈이 다시
+ * 적응하지 않아도 된다.
+ */
+const TYPE_ORDER = ['LIDAR', 'TILT', 'EDGE', 'PNL'] as const
+
+function typeRank(typeId: string): number {
+  const index = (TYPE_ORDER as readonly string[]).indexOf(typeId)
+  return index === -1 ? TYPE_ORDER.length : index
+}
+
 export function AssemblyStatusTab({
   selectedFactory,
   onSelectFactory,
+  focusBay = null,
+  className,
 }: {
   /** 지금 보고 있는 공장 이름 — 탭 사이에서 공유되는 선택 */
   selectedFactory: string
   onSelectFactory: (factory: string) => void
+  /**
+   * 정반을 골라 들어와 있을 때 그 베이 키(`5`) — 보드가 그 구획을 고른 채로 선다.
+   *
+   * 이 탭은 정반을 골라 들어와 있어도 **공장 전체**를 보여 준다(여기서 묻는 것은 "이
+   * 공장에 무엇이 몇 대 있고 어디가 이상인가" 이므로). 그렇다고 방금까지 보던 자리를
+   * 잃을 이유는 없다 — 공장을 펴 놓되 그 베이는 골라 둔다.
+   */
+  focusBay?: string | null
+  /** 바깥이 정하는 자리 — 뷰포트에 맞춘 화면에서 남는 높이를 받는다 */
+  className?: string
 }) {
   const { t } = useTranslation()
   const typeLabelOf = useEquipmentTypeLabel()
@@ -112,16 +145,30 @@ export function AssemblyStatusTab({
             : t('assembly.mapEntry.bayHeading', { bay }),
         cells: list
           .slice()
-          .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+          .sort(
+            (a, b) =>
+              typeRank(a.typeId) - typeRank(b.typeId) ||
+              a.id.localeCompare(b.id, undefined, { numeric: true })
+          )
           .map((equipment) => {
+            /*
+             * 셀을 고르면 **상세가 펴진다**. 예전에는 이 화면의 셀만 상세가 비어 있어,
+             * 눌러도 테두리만 생기고 아무 말이 없었다 — 같은 설비를 지도 진입 패널에서
+             * 열면 나오던 값들이다(`ui/cellDetails`). 두 화면이 같은 것을 말해야 한다.
+             */
             if (equipment.typeId === 'EDGE') {
               const status = edgePcStatusIn(snapshot, equipment.id)
               return status
-                ? edgePcCell(equipment, status, { freshText: elapsedText(status.lastHeartbeatAt, now.getTime()) })
+                ? edgePcCell(equipment, status, {
+                    freshText: elapsedText(status.lastHeartbeatAt, now.getTime()),
+                    figureOf: (lamps) => <LampVitals lamps={lamps} />,
+                    detail: (edge) => <EdgeDetail status={edge} />,
+                  })
                 : null
             }
             if (equipment.typeId === 'PNL') {
               const status = panelStatusIn(snapshot, equipment.id)
+              const panel = equipmentPanelOf(equipment.id)
               return status
                 ? panelCell({
                     id: equipment.id,
@@ -131,20 +178,35 @@ export function AssemblyStatusTab({
                     memberOnline: status.memberOnline,
                     memberTotal: status.memberTotal,
                     lidarPairs: status.lidarPairs,
+                    figureOf: (lamps) => <LampVitals lamps={lamps} />,
+                    detail: panel ? <PanelDetail entry={{ panel, status }} /> : undefined,
                   })
                 : null
             }
+            /*
+             * 라이다·틸팅의 신선도는 **에폭**이다(`mockLastSignalAt`). 예전에는 벽시계
+             * 문자열(`13:02`)이라 그리드의 흐름·침묵 판정이 켜지지 않았고, 보는 사람이
+             * 칸마다 지금 시각과의 뺄셈을 해야 했다.
+             */
+            const link = linkIn(snapshot, equipment.id) ?? 'offline'
+            const at = mockLastSignalAt(equipment.id, link, now.getTime())
+            const freshText = elapsedText(at, now.getTime())
+
             if (equipment.typeId === 'TILT') {
-              return tiltCell(equipment, tiltStatusIn(snapshot, equipment.id), {
-                freshText: mockScanTime(equipment.id),
+              const tilt = tiltStatusIn(snapshot, equipment.id)
+              return tiltCell(equipment, tilt, {
+                freshText,
                 group: bay,
+                figureOf: (status, tiltLink) => <LidarVitals link={tiltLink} tilt={status} />,
+                detail: <TiltDetail tilt={tilt} />,
               })
             }
-            /* 라이다의 신선도는 아직 벽시계 문자열(`13:02`)이다 — 에폭이 아니므로
-               경과를 흘리게 하지 않는다(가짜 에폭을 실으면 침묵 판정이 거짓말을 한다) */
             return lidarPairCell(equipment, snapshot, {
-              freshText: mockScanTime(equipment.id),
+              freshText,
+              at,
               group: bay,
+              figureOf: (tilt, lidarLink) => <LidarVitals link={lidarLink} tilt={tilt} />,
+              detail: (tilt) => <TiltDetail tilt={tilt} />,
             })
           })
           .filter((cell): cell is NonNullable<typeof cell> => cell !== null),
@@ -182,8 +244,19 @@ export function AssemblyStatusTab({
       bays={bays}
       points={points}
       groups={groups}
+      /* 한 베이에 라이다·Edge PC·캐비닛이 섞여 서므로 램프에 이름을 붙인다 —
+         종류마다 램프 셋의 뜻이 달라 익명 점으로는 순서를 아는 사람만 읽는다 */
+      namedLamps
+      /* 라이다·틸팅·Edge PC·캐비닛이 한 배치도에 섞여 선다 — 종류색과 범례가 없으면
+         12px 판 안의 8px 글리프 하나로 넷을 갈라야 한다(갈리지 않는다) */
+      colorByType
+      /* 배치를 키운 대가를 목록이 치르지 않게 — 넓은 화면에서는 둘을 나란히 세운다 */
+      sideBySide
       /* 알람에서 넘어온 당사자를 골라 둔 채로 세운다 (equipmentFocus.ts) */
       focusEquipmentId={focusEquipmentId}
+      /* 정반에서 건너왔으면 그 베이를 골라 둔 채로 (베이 → 현황 승계) */
+      focusGroupKey={focusBay}
+      className={className}
       headerExtra={
         <Link
           to="/indoorshop/zones/assembly"

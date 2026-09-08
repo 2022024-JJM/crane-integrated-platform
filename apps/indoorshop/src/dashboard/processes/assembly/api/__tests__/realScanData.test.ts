@@ -111,8 +111,11 @@ describe('buildRealScanAnchor — 벽선 앵커', () => {
     const a = MEASURED.angle
     const at = (offset: number) =>
       wallToBayLocal(built.anchor, -offset * Math.sin(a), offset * Math.cos(a)).x
-    expect(at(MEASURED.walls[0].offset)).toBeCloseTo(-MEASURED.innerWidth / 2, 6)
-    expect(at(MEASURED.walls[1].offset)).toBeCloseTo(MEASURED.innerWidth / 2, 6)
+    /* 부호가 뒤집혀 나오는 것이 정상이다 — 변환이 회전(행렬식 +1)이라 왼수직이 -x 로 간다.
+       중요한 것은 두 벽이 중심선 양쪽 ±폭/2 에 갈라 서는 것이고, 어느 쪽이 +x 인가는
+       손방향이 정한다(`realScanAnchor.wallToBayLocal`). */
+    expect(at(MEASURED.walls[0].offset)).toBeCloseTo(MEASURED.innerWidth / 2, 6)
+    expect(at(MEASURED.walls[1].offset)).toBeCloseTo(-MEASURED.innerWidth / 2, 6)
   })
 
   it('갠트리 북측이 -장축 쪽이면 프레임을 뒤집고 반대편 끝벽을 쓴다', () => {

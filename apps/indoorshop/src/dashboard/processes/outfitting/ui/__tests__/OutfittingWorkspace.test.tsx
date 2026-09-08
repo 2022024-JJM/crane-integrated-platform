@@ -297,3 +297,33 @@ describe('OutfittingWorkspace — 공장이 바뀌어도 축은 남는다 (R30)'
     expect(tabOf(here())).toBe('viewer')
   })
 })
+
+/**
+ * **한 계단 위로 나가는 문** — 조립 워크스페이스와 같은 규칙이다(같은 프레임, 같은 문법).
+ * 베이에서는 그 공장으로, 공장에서는 공장 목록으로. 화면 안에서 들어왔으면 화면 안에
+ * 나오는 길이 있어야 하고, 그 길이 안 보이면 조작자는 들어가기를 주저한다.
+ */
+describe('OutfittingWorkspace — 나가는 문', () => {
+  /* 문은 두 자리에 선다(머리글 · 3D 도구줄) — 어느 쪽을 눌러도 같은 데로 가야 한다 */
+  const doors = async (pattern: RegExp) =>
+    (await screen.findAllByTitle(pattern)).map((el) => el.getAttribute('href'))
+
+  it('공장 뷰에서 나가는 문은 머리글 하나 — 3D 안의 물러나기는 카메라다', async () => {
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1?tab=viewer')
+
+    const hrefs = await doors(/공장 목록으로 돌아가기/)
+    expect(hrefs).toEqual(['/indoorshop/zones/outfitting/list'])
+
+    /* 도구줄의 `전체보기` 는 링크가 아니다 — 눌러도 화면을 떠나지 않는다 */
+    const fitAll = await screen.findByRole('button', { name: '전체보기' })
+    expect(fitAll.tagName).toBe('BUTTON')
+  })
+
+  it('베이 뷰에서는 한 칸만 오른다 — 보던 축을 들고 그 공장으로', async () => {
+    renderWorkspace('/indoorshop/zones/outfitting/ofit-pos1/ofit-pos1-b1?tab=viewer')
+
+    const hrefs = await doors(/공장으로 돌아가기/)
+    expect(hrefs.length).toBeGreaterThan(1)
+    expect(new Set(hrefs)).toEqual(new Set(['/indoorshop/zones/outfitting/ofit-pos1?tab=viewer']))
+  })
+})

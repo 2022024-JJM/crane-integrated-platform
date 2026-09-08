@@ -7,6 +7,9 @@ import { buildBayScene } from '../lib/bayScene'
 import { loadPaintingFloorPlan, type PaintingFloorPlan } from '../lib/floorPlan'
 import { paintingOccupantsByBay } from '../lib/collection'
 import { PaintingAirViewer } from './PaintingAirViewer'
+import { ViewportFullscreenButton } from '../../../shared/ui/atoms/ViewportFullscreenButton'
+import { useFullscreen } from '../../../shared/lib/useFullscreen'
+import { cn } from '../../../shared/lib/utils'
 
 /*
  * 공장 현황의 **가동 뷰 탭** — 뷰어에 먹일 재료를 모으는 자리 (R24 · R38).
@@ -30,6 +33,19 @@ import { PaintingAirViewer } from './PaintingAirViewer'
  */
 export function PaintingAirTab({ factory }: { factory: string }) {
   const { t } = useTranslation()
+  /*
+   * 전체 화면 — 조립·의장 3D 와 같은 손잡이다(`f` 키 포함). 이 화면에서 세로는 곧 시야이고,
+   * 공장 하나가 베이 수십 면이라 페이지 안 72vh 로는 한 면이 손톱만 하게 남는다.
+   *
+   * `viewport-frame` 은 가장자리 오버레이(요약·범례·도움말·기즈모)의 여백을 정하는 액자다 —
+   * 전체 화면에서 그 여백이 커져 도구가 모니터 모서리에 붙지 않는다.
+   */
+  const {
+    ref: viewportRef,
+    isFullscreen,
+    toggle: toggleFullscreen,
+    supported: fullscreenSupported,
+  } = useFullscreen<HTMLDivElement>()
 
   const equipment = useMemo(() => fetchEquipmentByFactory(factory), [factory])
   const ids = useMemo(() => equipment.map((item) => item.id), [equipment])
@@ -82,9 +98,23 @@ export function PaintingAirTab({ factory }: { factory: string }) {
       <p className="text-2xs leading-relaxed text-foreground/45">
         {t('painting.airView.subtitle')}
       </p>
-      <div className="relative h-[72vh] min-h-[480px]">
+      <div
+        ref={viewportRef}
+        className={cn(
+          'viewport-frame relative',
+          isFullscreen ? 'h-full bg-[#0a0e13]' : 'h-[72vh] min-h-[480px]'
+        )}
+      >
         {scene ? (
-          <PaintingAirViewer scene={scene} className="absolute inset-0" />
+          <PaintingAirViewer
+            scene={scene}
+            className="absolute inset-0"
+            topRight={
+              fullscreenSupported ? (
+                <ViewportFullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />
+              ) : null
+            }
+          />
         ) : (
           <div
             role="status"

@@ -46,7 +46,7 @@ function Targets() {
   )
 }
 
-function renderTour(storage: TourStorage, route = '/') {
+function renderTour(storage: TourStorage, route = '/indoorshop') {
   const result = renderWithProviders(
     <div>
       <Targets />

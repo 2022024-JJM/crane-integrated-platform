@@ -28,7 +28,7 @@ export function PaintingBayDetail({
 
   return (
     <aside
-      className="absolute left-3 top-20 z-10 flex max-h-[70%] w-64 flex-col gap-2 overflow-y-auto rounded-inshop-md bg-black/70 px-3 py-2.5 text-2xs text-white/80 backdrop-blur-sm"
+      className="absolute left-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+4.25rem)] z-10 flex max-h-[70%] w-64 flex-col gap-2 overflow-y-auto rounded-inshop-md bg-black/70 px-3 py-2.5 text-2xs text-white/80 backdrop-blur-sm"
       aria-label={t('painting.airView.bayDetailTitle', { bay: item.label })}
     >
       <header className="flex items-start justify-between gap-2">

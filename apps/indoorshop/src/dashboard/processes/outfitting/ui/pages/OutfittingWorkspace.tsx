@@ -10,6 +10,7 @@ import { PointCloudViewControls } from '../../../../shared/features/bay-viewer/u
 import { PointCloudLegend } from '../../../../shared/features/bay-viewer/ui/PointCloudLegend'
 import { ViewportHelp } from '../../../../shared/features/bay-viewer/ui/ViewportHelp'
 import { ViewportToolbar } from '../../../../shared/features/bay-viewer/ui/ViewportToolbar'
+import { BackAction, BackLink } from '../../../../shared/ui/atoms/BackLink'
 import { FirstRunHint } from '../../../../shared/features/bay-viewer/ui/FirstRunHint'
 import { LocationTabs, type LocationTabsRouting } from '../../../../shared/features/bay-viewer/ui/LocationTabs'
 import { ViewportFullscreenButton } from '../../../../shared/ui/atoms/ViewportFullscreenButton'
@@ -42,6 +43,7 @@ import {
   fetchOutfittingBayDetail,
   fetchOutfittingFactoryScene,
   fetchOutfittingLocations,
+  bayNoOfLocationId,
 } from '../../api/outfittingWorkspace'
 
 /*
@@ -157,6 +159,9 @@ export function OutfittingWorkspace() {
   const { tab: workTab, setTab: setWorkTab } = useWorkspaceTab(WORKSPACE_TAB_KEYS, 'status')
   /* 화면 안 이동은 보던 축을 유지한다 (R30 — 조립 워크스페이스와 같은 규칙) */
   const carryTab = useWorkspaceTabCarry()
+
+  /* `전체보기` — 화면을 떠나지 않고 카메라만 전 베이로 물린다(공장 뷰 전용) */
+  const [fitAllRequest, setFitAllRequest] = useState(0)
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   /* 선택 승계 (W8-3) — 통합실적 'PCD 뷰' 의 `?block={proj}-{blk}`. 진입 때 한 번만 읽는다
@@ -328,6 +333,22 @@ export function OutfittingWorkspace() {
    * 거기서 고르면 URL 이 바뀌어 세 탭이 같은 공장을 본다 — 선택지가 두 군데 있으면
    * 어느 쪽이 진짜인지 화면이 말해 주지 못한다. 베이 알약(아래)은 공장 안의 이동이라 남는다.
    */
+  /*
+   * 나가는 문 하나 — 머리글 칩과 전체 화면의 유리 칩이 **같은 목적지**를 쓴다.
+   * 목적지를 두 곳에서 따로 지으면 한쪽만 고쳐져 두 문이 다른 데로 나가는 날이 온다.
+   */
+  const backLink = selectedLocation
+    ? {
+        to: carryTab(`/indoorshop/zones/outfitting/${factory.id}`),
+        label: factory.displayName,
+        title: t('outfitting.workspace.backToFactory', { name: factory.displayName }),
+      }
+    : {
+        to: '/indoorshop/zones/outfitting/list',
+        label: t('outfitting.workspace.factoryListLabel'),
+        title: t('outfitting.workspace.backToFactoryList'),
+      }
+
   const bayPills = (
     <LocationTabs
       factories={tabFactories}
@@ -346,13 +367,19 @@ export function OutfittingWorkspace() {
     <div className="flex flex-col gap-5 xl:h-full xl:min-h-0 xl:gap-3">
       <FixedViewport />
 
-      {/* 머리글 한 줄 — 제목(좌) + 식별 정보(우). 조립 워크스페이스와 같은 문법 */}
+      {/* 머리글 한 줄 — 나가는 문 + 제목(좌) + 식별 정보(우). 조립 워크스페이스와 같은 문법 */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <h1 className="min-w-0 truncate text-inshop-lg font-semibold text-foreground">
-          {selectedLocation
-            ? t('outfitting.workspace.bayTitle', { name: selectedLocation.name })
-            : t('outfitting.workspace.factoryTitle', { name: factory.displayName })}
-        </h1>
+        <div className="flex min-w-0 items-center gap-2">
+          {/* 한 계단 위로 — 베이에서는 공장으로, 공장에서는 공장 목록으로 (조립과 같은 규칙).
+              진짜 `<a>` 다: 가운데 클릭으로 새 탭에 열고 주소를 복사해 건넬 수 있어야 한다.
+              보던 축은 그대로 들고 간다(`carryTab`). */}
+          <BackLink to={backLink.to} label={backLink.label} title={backLink.title} />
+          <h1 className="min-w-0 truncate text-inshop-lg font-semibold text-foreground">
+            {selectedLocation
+              ? t('outfitting.workspace.bayTitle', { name: selectedLocation.name })
+              : t('outfitting.workspace.factoryTitle', { name: factory.displayName })}
+          </h1>
+        </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           <span className="font-mono text-inshop-xs text-foreground/55">
             {t('outfitting.factoryCard.shop', { code: factory.assyShop })}
@@ -405,7 +432,7 @@ export function OutfittingWorkspace() {
             <div
               ref={viewportRef}
               style={isFullscreen ? { background: viewportEdge.background } : undefined}
-              className="relative min-w-0 xl:min-h-0 xl:flex-1"
+              className="viewport-frame relative min-w-0 xl:min-h-0 xl:flex-1"
             >
               {!bayScenes ? (
                 <div
@@ -438,26 +465,56 @@ export function OutfittingWorkspace() {
                   onOpenBay={(locId) => navigate(carryTab(`/indoorshop/zones/outfitting/${factory.id}/${locId}`))}
                   highlightedBayId={highlightedBayId}
                   onHoverBay={setHighlightedBayId}
+                  fitAllRequest={fitAllRequest}
                   className={viewerSizeClass}
                 />
               )}
-              <ViewportToolbar
-                title={
-                  locationId
-                    ? t('outfitting.workspace.registeredCloud')
-                    : t('outfitting.workspace.factoryFusion')
-                }
-                hint={
-                  locationId
-                    ? t('outfitting.workspace.registeredCloudHint')
-                    : t('outfitting.workspace.factoryFusionHint')
-                }
-                nav={bayPills}
-              >
-                <PointCloudViewControls {...viewerControlProps} tone="glass" />
-              </ViewportToolbar>
-              <PointCloudLegend colorMode={colorMode} className="left-auto right-4 top-14" />
-              <div className="absolute right-4 top-4 z-10 flex items-start gap-2">
+              {/* 왼쪽 위 묶음 — 조립 워크스페이스와 **같은 구조**다(나가는 문 → 도구줄) */}
+              <div className="absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex max-w-[calc(100%-5rem)] flex-col items-start gap-2">
+                <ViewportToolbar
+                  title={
+                    locationId
+                      ? t('outfitting.workspace.registeredCloud')
+                      : t('outfitting.workspace.factoryFusion')
+                  }
+                  hint={
+                    locationId
+                      ? t('outfitting.workspace.registeredCloudHint')
+                      : t('outfitting.workspace.factoryFusionHint')
+                  }
+                  nav={bayPills}
+                  className="static max-w-none"
+                  /*
+                   * 물러나기는 **서 있는 층에 따라 다르다** (조립과 같은 규칙):
+                   *  · 베이에 들어와 있으면 → 그 공장으로 **나가는 문**
+                   *  · 공장 뷰에 있으면 → 여기가 이미 '전체' 이므로 **카메라만** 물린다
+                   *    (한 계단 더 나가는 문은 머리글 칩이 맡는다)
+                   */
+                  back={
+                    locationId ? (
+                      <BackLink
+                        to={backLink.to}
+                        label={backLink.label}
+                        title={backLink.title}
+                        tone="glass"
+                      />
+                    ) : (
+                      <BackAction
+                        label={t('viewer.fit.all')}
+                        title={t('viewer.fit.allHint')}
+                        onClick={() => setFitAllRequest((count) => count + 1)}
+                      />
+                    )
+                  }
+                >
+                  <PointCloudViewControls {...viewerControlProps} tone="glass" />
+                </ViewportToolbar>
+              </div>
+              <PointCloudLegend
+                colorMode={colorMode}
+                className="left-auto right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2.5rem)]"
+              />
+              <div className="absolute right-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 flex items-start gap-2">
                 {selectedBlock && (
                   <button
                     type="button"
@@ -479,7 +536,7 @@ export function OutfittingWorkspace() {
                 )}
               </div>
               {bayScenes && !locationId && (
-                <FirstRunHint className="absolute bottom-16 left-1/2 z-10 -translate-x-1/2" />
+                <FirstRunHint className="absolute bottom-[calc(var(--vp-inset,1rem)+3rem)] left-1/2 z-10 -translate-x-1/2" />
               )}
               {(locationId ? showDetailSpinner : showFactorySpinner) && (
                 <SpinnerOverlay
@@ -503,6 +560,9 @@ export function OutfittingWorkspace() {
                 const spec = factories?.find((entry) => entry.name === next)
                 if (spec) navigate(`/indoorshop/zones/outfitting/${spec.id}`)
               }}
+              /* 베이에서 건너왔으면 그 구획을 골라 둔 채로 (조립과 같은 승계) */
+              focusBay={locationId ? bayNoOfLocationId(factory.id, locationId) : null}
+              className="xl:min-h-0 xl:flex-1"
             />
           </div>
         ) : (

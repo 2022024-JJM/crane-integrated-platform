@@ -34,9 +34,12 @@ function isIssue(status: PaintingEquipmentStatus): boolean {
 export function PaintingStatusTab({
   selectedFactory,
   onSelectFactory,
+  className,
 }: {
   selectedFactory: string
   onSelectFactory: (factory: string) => void
+  /** 바깥이 정하는 자리 — 뷰포트에 맞춘 화면에서 남는 높이를 받는다 */
+  className?: string
 }) {
   const { t } = useTranslation()
   const typeLabelOf = useEquipmentTypeLabel()
@@ -136,6 +139,12 @@ export function PaintingStatusTab({
       bays={bays}
       points={points}
       groups={groups}
+      /* 조립·의장 현황 탭과 같은 옵션 — 히터와 제습기가 한 베이에 섞여 서고(종류색·이름표),
+         배치를 키운 대가를 목록이 치르지 않게 넓은 화면에서는 나란히 세운다 */
+      namedLamps
+      colorByType
+      sideBySide
+      className={className}
     />
   )
 }

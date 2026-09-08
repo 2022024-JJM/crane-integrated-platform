@@ -863,6 +863,7 @@ export const en: Resources = {
     },
     fit: {
       all: 'Fit all',
+      allHint: 'Pull the camera back until the whole shop fits (stays on this screen)',
       selected: 'Fit selected bay',
       home: 'Default view',
     },

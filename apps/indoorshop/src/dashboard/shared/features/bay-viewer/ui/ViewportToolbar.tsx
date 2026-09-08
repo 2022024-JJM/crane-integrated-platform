@@ -11,6 +11,18 @@ interface ViewportToolbarProps {
    * (공장 전환은 3D 상자 **위에 붙은 탭**이 맡는다 — AssemblyLocationTabs 의 `attached`.)
    */
   nav?: ReactNode
+  /**
+   * **나가는 문** — 표시 옵션 줄 끝에 선다.
+   *
+   * 전에는 전체 화면일 때만 도구줄 위에 띄웠다(페이지에는 머리글 칩이 있으니 같은 문을
+   * 두 번 세우지 않으려고). 그런데 3D 에 들어와 있는 사람의 눈은 **뷰포트 안**에 있고,
+   * 머리글은 화면 위쪽 다른 구역이라 거기 문이 있다는 것을 못 찾았다 — 실제로 "왜 자꾸
+   * 뒤로가기를 안 만들어 주냐" 는 말을 들은 자리다.
+   *
+   * 그래서 조건을 걷고 도구줄 안에 상시로 세운다. 손이 이미 표시·색상 손잡이를 만지고
+   * 있는 줄이라, 나가는 것도 같은 줄에서 끝난다.
+   */
+  back?: ReactNode
   children?: ReactNode
   className?: string
 }
@@ -27,12 +39,12 @@ interface ViewportToolbarProps {
  * 왼쪽 위에 붙이면 판은 오른쪽으로만 자라고, 범례는 오른쪽 위로 한 번만 비키면 된다
  * (그 자리는 실측 뷰어가 블록 상세를 띄울 때 이미 쓰던 자리와 같다).
  */
-export function ViewportToolbar({ title, hint, nav, children, className }: ViewportToolbarProps) {
+export function ViewportToolbar({ title, hint, nav, back, children, className }: ViewportToolbarProps) {
   return (
     <div
       className={cn(
         // 폭은 오른쪽 위 도구(전체 화면 버튼)를 침범하지 않을 만큼까지만
-        'absolute left-4 top-4 z-10 max-w-[calc(100%-5rem)]',
+        'absolute left-[var(--vp-inset,1rem)] top-[var(--vp-inset,1rem)] z-10 max-w-[calc(100%-5rem)]',
         'flex flex-col gap-2 rounded-inshop-lg glass-panel px-3 py-2',
         className,
       )}
@@ -44,7 +56,13 @@ export function ViewportToolbar({ title, hint, nav, children, className }: Viewp
         </h2>
         {hint && <p className="text-2xs text-glass-foreground/54">{hint}</p>}
       </div>
-      {children}
+      {(children || back) && (
+        /* 표시 옵션과 나가는 문이 한 줄에 선다 — 문은 줄 끝, 손잡이들 뒤에 */
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {children}
+          {back}
+        </div>
+      )}
     </div>
   )
 }

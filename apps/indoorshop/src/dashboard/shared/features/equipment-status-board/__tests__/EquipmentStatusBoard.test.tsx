@@ -61,9 +61,10 @@ const POINTS: BirdviewPoint[] = [
   },
 ]
 
-function renderBoard() {
+function renderBoard(props: { focusGroupKey?: string | null } = {}) {
   return renderWithProviders(
     <EquipmentStatusBoard
+      {...props}
       factories={[
         { name: 'PBS', total: 2, issues: 1 },
         { name: 'OFD', total: 0, issues: 0 },
@@ -139,6 +140,30 @@ describe('EquipmentStatusBoard', () => {
     expect(titlesAfter).toEqual(['2 BAY', '1 BAY'])
   })
 
+  /*
+   * **들어올 때 자리를 이어받는다** — 5번 베이를 보다가 '현황' 으로 건너온 경우.
+   *
+   * 이 화면은 공장 전체를 펴지만, 전 베이가 똑같이 서 있으면 들어온 사람이 자기 자리를
+   * 목록에서 다시 찾아야 한다. 밖에서 실어 온 구획은 **칸을 직접 누른 것과 같은 상태**로
+   * 들어가야 하므로(그림 강조 + 목록 맨 앞), 두 층 모두를 여기서 못 박는다.
+   */
+  it('초점 구획을 실어 주면 그 베이를 고른 채로 선다 (베이 → 현황 승계)', () => {
+    const { container } = renderBoard({ focusGroupKey: '2' })
+
+    /* 목록은 그 구획을 맨 앞에 세우고 */
+    const titles = [...container.querySelectorAll('[data-group] h4')].map((h) => h.textContent)
+    expect(titles).toEqual(['2 BAY', '1 BAY'])
+    /* 그림은 그 칸을 고른 것으로 표시한다 (칸을 직접 누른 것과 같은 상태) */
+    expect(container.querySelector('[data-bay="2"]')?.getAttribute('data-active')).toBe('true')
+    expect(container.querySelector('[data-bay="1"]')?.getAttribute('data-active')).not.toBe('true')
+  })
+
+  it('초점 구획이 없으면 지금까지처럼 순서대로 선다', () => {
+    const { container } = renderBoard()
+    const titles = [...container.querySelectorAll('[data-group] h4')].map((h) => h.textContent)
+    expect(titles).toEqual(['1 BAY', '2 BAY'])
+  })
+
   it('버드뷰가 이상 설비를 더 크게 그린다 — 정상 위에 얹혀야 눈에 든다', () => {
     const { container } = renderBoard()
     const drawn = [...container.querySelectorAll('[data-point]')].map((g) => g.getAttribute('data-severity'))
@@ -209,5 +234,51 @@ describe('orderGroups', () => {
 
   it('고른 것이 없으면 원래 순서다', () => {
     expect(orderGroups(groups, null).map((g) => g.key)).toEqual(['a', 'b', 'c'])
+  })
+})
+
+/*
+ * 구획 머리가 **그 칸 전체의 판정을 끝낸다.**
+ *
+ * 대수만 적혀 있으면 "이 베이가 괜찮은가"를 알려고 아래 셀을 일일이 훑어야 한다. 목록이
+ * 길어질수록 그 훑기가 전부이고, 머리 한 줄이 답하면 훑을 이유가 있는 구획만 훑게 된다.
+ */
+describe('현황 보드 — 구획 머리의 판정', () => {
+  it('이상이 없으면 그 사실을 적는다 — 아무 표시도 없으면 안 읽어 본 것과 구분되지 않는다', () => {
+    renderBoard()
+    const healthy = screen.getByRole('heading', { name: '1 BAY' }).parentElement!
+    expect(healthy.textContent).toContain('이상 없음')
+  })
+
+  it('이상이 있으면 몇 건인지 머리에서 말한다', () => {
+    renderBoard()
+    const faulty = screen.getByRole('heading', { name: '2 BAY' }).parentElement!
+    expect(faulty.textContent).toContain('점검 필요 1')
+  })
+})
+
+/*
+ * ESC 로 놓는다 — 고른 것을 푸는 길이 "그 칸을 다시 정확히 누르기" 하나뿐이면
+ * 화면이 붙잡힌 것처럼 느껴진다.
+ */
+describe('현황 보드 — 고른 것을 놓는 길', () => {
+  /* 목록 쪽에서 고른다 — 그림 심볼을 누르면 커서가 그 위에 남아 호버 링킹이 이어지는데,
+     그건 놓지 못한 것이 아니라 가리키고 있는 것이다(그 동작은 그대로 두어야 한다) */
+  it('ESC 를 누르면 선택이 풀린다', async () => {
+    const user = userEvent.setup()
+    renderBoard()
+    await user.click(screen.getByRole('button', { name: /LD-B/ }))
+    expect(screen.getByRole('button', { name: /LD-B/ })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: /LD-B/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('베이를 누르면 쥐고 있던 설비를 놓는다 — 초점이 칸으로 옮겨 간 것이다', async () => {
+    const user = userEvent.setup()
+    const { container } = renderBoard()
+    await user.click(screen.getByRole('button', { name: /LD-B/ }))
+    await user.click(container.querySelector('[data-bay="1"]')!)
+    expect(screen.getByRole('button', { name: /LD-B/ })).toHaveAttribute('aria-pressed', 'false')
   })
 })

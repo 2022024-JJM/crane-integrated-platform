@@ -72,7 +72,9 @@ import { useMapLocations, locationsOf, type MapLocationsState } from '../lib/use
 import { mapLinkNote } from '../lib/mapLinkNote'
 import { DashboardMiniMap, type DashboardMiniMapHandle } from './DashboardMiniMap'
 import { locationOfBay, summarizeBay } from '../lib/bayDetail'
+import { bayHudTarget } from '../lib/bayHud'
 import { BayDetailCard } from './BayDetailCard'
+import { BayJumpButton } from './BayJumpButton'
 import { PerformanceBadge } from './PerformanceBadge'
 import {
   BlockSitePins,
@@ -690,6 +692,8 @@ export function DashboardZoneMap() {
       hoveredFactory,
       /* 고른 공장의 이름은 지붕에서 일어나 떠오른다 — 캔버스는 그 자리를 비운다 */
       floatingFocusedLabel: true,
+      /* 베이도 같다 — 고르면 그 이름이 지붕에서 일어나 패로 뜬다(FactoryHudLabel) */
+      floatingSelectedBayLabel: true,
       /* 빈 곳 클릭은 null 로 온다 = **한 단계만** 뒤로 — 전체 리셋은 '현 위치' 버튼의 몫 */
       onSelectFactory: (name: string | null) => (name ? selectFactory(name) : stepBack()),
       onHoverFactory: setHoveredFactory,
@@ -815,6 +819,20 @@ export function DashboardZoneMap() {
     )
     return { factory, outline }
   }, [parcels, focusedFactory, selectedBay])
+
+  /*
+   * 베이까지 내려갔을 때의 이름패 — 공장 패가 물러난 자리를 그 베이가 잇는다.
+   *
+   * 공장에서 하던 것과 **같은 동작**이다: 지붕에 누워 있던 이름이 일어서 뜨고, 그 밑에
+   * 다음 걸음(그 베이의 작업 위치 상세)으로 나가는 문이 붙는다. 지도에서 칸을 눌렀는데
+   * 들어가는 문은 왼쪽 카드에서 찾아야 했던 것을, 누른 자리에서 끝나게 하는 것이다.
+   */
+  const hudBay = useMemo(
+    () => (parcels && selectedBay ? bayHudTarget(parcels, selectedBay) : null),
+    [parcels, selectedBay]
+  )
+  /* 이 베이로 들어가는 문의 목적지 — 지번이 겹치는 작업 위치. 짝이 없으면 문은 서지 않는다 */
+  const hudBayLocation = hudBay ? (bayLinks.locationOfBayId.get(hudBay.id) ?? null) : null
 
   /*
    * 지도 fixture 에 실제로 존재하는 지번만 골라 낸다 — 연결 키는 있는데 지도에 그 지번이
@@ -992,6 +1010,32 @@ export function DashboardZoneMap() {
                 factory={hudFactory.factory.name}
                 onStash={stashCamera}
               />
+            }
+          />
+        )}
+
+        {/* 고른 베이의 떠 있는 이름패 — 공장 패와 같은 층·같은 몸짓. 둘은 동시에 서지
+            않는다(공장 패는 베이를 고르면 물러난다) */}
+        {hudBay && (
+          <FactoryHudLabel
+            key={hudBay.id}
+            ref={hudRef}
+            name={hudBay.name}
+            anchor={hudBay.anchor}
+            outline={hudBay.outline}
+            color={hudBay.process ? colorOfProcess(hudBay.process) : '#9a9890'}
+            /* 공장 이름은 패가 물러났으므로 여기서 문맥을 잇는다 — 어느 공장의 몇 베이인가 */
+            caption={hudBay.process ? `${hudBay.factory} · ${hudBay.process}` : hudBay.factory}
+            initialCamera={cameraRef.current}
+            /* 패 클릭 = 지도에서 이 베이를 한 번 더 누르는 것과 같다(bayClickIntent 'open') —
+               갈 곳이 없으면 누를 수 없는 표식으로 남는다 */
+            onSelect={
+              hudBayLocation ? () => navigate(hudBayLocation.detailPath) : undefined
+            }
+            action={
+              hudBayLocation ? (
+                <BayJumpButton process={hudBay.process} location={hudBayLocation} />
+              ) : undefined
             }
           />
         )}

@@ -107,8 +107,14 @@
   /*
    * 팝오버·메뉴는 본문 **위**에 겹친다. 크롬(사이드바·툴바)과 같은 투명도를 쓰면
    * 뒤 카드의 글자가 그대로 비쳐 읽혀 두 층의 텍스트가 섞인다.
+   *
+   * 그래서 **불투명**이다. 한때 0.94 로 아주 살짝 비치게 두었는데, 그 6% 로도 뒤
+   * 툴바의 글자가 메뉴 항목 위에 유령처럼 읽혔다 — backdrop-blur 가 그것을 흐려
+   * 주리라 기대할 수 없기 때문이다: 헤더가 이미 backdrop-filter 를 걸어 그 안의
+   * 메뉴에게는 헤더가 backdrop root 다. 즉 메뉴의 blur 는 헤더 뒤 본문에 닿지
+   * 않는다. 비치게 두려면 흐릴 수 있어야 하고, 흐릴 수 없으면 가려야 한다.
    */
-  --material-strong: rgb(255 255 255 / 0.94);
+  --material-strong: rgb(255 255 255);
   --material-border: rgb(16 19 33 / 0.08);
 
   /* 3D 뷰포트 바탕 — 점군 채도가 살도록 두 모드 모두 어둡게 고정한다 (뷰어 배경 그라디언트의 중간값) */
@@ -157,7 +163,7 @@
   --accent: #ffa347;            /* orange-30 — 7.64:1 (surface 위) */
   --on-accent: #21160c;         /* 8.93:1 — 강조 위에 얹는 따뜻한 먹 */
   --material: rgb(30 33 39 / 0.72);
-  --material-strong: rgb(32 35 41 / 0.94);
+  --material-strong: rgb(32 35 41);
   --material-border: rgb(255 255 255 / 0.09);
   --viewport: #1a2129;
   --status-healthy: #20c997;    /* green-50, 7.12:1 */
@@ -211,7 +217,8 @@
   --color-accent: #ffa347;
   --color-on-accent: #21160c;
   --color-material: rgb(30 33 39 / 0.72);
-  --color-material-strong: rgb(32 35 41 / 0.94);
+  /* 팝오버는 여기서도 불투명 — 이유는 :root 의 같은 이름 주석 참조 */
+  --color-material-strong: rgb(32 35 41);
   --color-material-border: rgb(255 255 255 / 0.09);
   /* 상태색도 함께 — 라이트 램프(짙은 초록·팥색)는 어두운 판 위에서 읽히지 않는다 */
   --color-status-healthy: #20c997;
@@ -231,6 +238,81 @@
 
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+
+/*
+ * ── 눌리는 것 — 손가락 밑에서 실제로 내려앉는 조작 ──
+ *
+ * 색만 바뀌는 버튼은 "눌렸다"가 아니라 "가리키고 있다"로 읽힌다. 계기판은 장갑 낀 손으로
+ * 만지는 화면이라, 눌린 순간에 **면이 내려앉고 그림자가 접혀야** 손이 그것을 안다.
+ *
+ * 세 겹으로 만든다 — 1px 내려앉기(자리), 아주 약한 축소(면이 멀어짐), 그림자 접기(높이).
+ * 셋 다 100ms 안쪽이라 끌리지 않고, 손을 떼면 제자리로 돌아온다. 값을 크게 잡으면
+ * 버튼이 튀어 장난스러워지므로, 여기 숫자는 "느껴지되 보이지는 않는" 선이다.
+ *
+ * 움직임을 줄여 달라고 한 사람에게는 색·그림자만 남긴다 — 눌림은 여전히 읽히고,
+ * 화면이 흔들리지 않는다.
+ */
+@utility pressable {
+  transition:
+    transform 100ms cubic-bezier(0.2, 0, 0.2, 1),
+    box-shadow 100ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+
+  &:active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &:active {
+      transform: none;
+      transition:
+        box-shadow 100ms ease,
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease;
+    }
+  }
+}
+
+/*
+ * 유리 조작의 눌림 — `glass-panel` 의 그림자를 **접어** 판이 가라앉게 한다.
+ * 위쪽 하이라이트를 끄고 안쪽 그늘을 넣는 것이 요점이다: 빛이 위에서 온다는 전제에서
+ * 하이라이트가 사라지면 그 면은 아래로 들어간 것으로 읽힌다.
+ */
+@utility glass-pressable {
+  &:active {
+    box-shadow:
+      inset 0 0 0 0.5px var(--glass-border),
+      inset 0 1px 3px rgb(0 0 0 / 0.28);
+  }
+}
+
+/*
+ * ── 3D 뷰포트 액자 — 가장자리 오버레이의 여백을 한 곳에서 정한다 ──
+ *
+ * 페이지 안에서 볼 때 뷰포트는 본문 여백만큼 이미 안쪽으로 들어와 있어서, 도구줄이
+ * 뷰포트 안쪽 16px 에 붙어도 화면 모서리와는 넉넉히 떨어져 보인다. 전체 화면으로 키우면
+ * 그 바깥 여백이 통째로 사라져 **같은 16px 이 모니터 모서리에 딱 붙는다** — 도구줄·범례·
+ * 전체화면 버튼이 베젤에 닿아, 방금까지 보던 그림과 다른 화면처럼 읽힌다.
+ *
+ * 그래서 여백을 값이 아니라 변수로 내고, 전체 화면인 동안에만 키운다. 오버레이는 자기가
+ * 어느 모드에 있는지 모른 채 이 변수만 읽으므로(`left-[var(--vp-inset,1rem)]`) 위·아래·
+ * 좌·우가 한꺼번에 따라온다. 변수를 내지 않는 화면에서는 각자의 기본값 1rem 이 남는다.
+ */
+@utility viewport-frame {
+  --vp-inset: 1rem;
+
+  &:fullscreen {
+    --vp-inset: 2rem;
+  }
+  /* Safari 계열 — 선택자를 모르면 규칙 하나만 버려지도록 따로 쓴다 */
+  &:-webkit-full-screen {
+    --vp-inset: 2rem;
+  }
 }
 
 /* 떠 있는 면의 그림자 — 얇은 테두리 한 겹 + 넓고 흐린 그림자 */

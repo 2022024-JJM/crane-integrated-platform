@@ -49,7 +49,7 @@ export function ViewportAxisGizmo({
   return (
     <div
       className={cn(
-        'absolute bottom-4 left-4 w-fit overflow-hidden rounded-inshop-lg glass-panel',
+        'absolute bottom-[var(--vp-inset,1rem)] left-[var(--vp-inset,1rem)] w-fit overflow-hidden rounded-inshop-lg glass-panel',
         className,
       )}
       role="group"

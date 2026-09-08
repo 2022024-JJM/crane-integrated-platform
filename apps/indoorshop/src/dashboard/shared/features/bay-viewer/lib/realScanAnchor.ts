@@ -669,25 +669,41 @@ export function fitWallAxis(points: Float32Array, options: WallAxisOptions = {})
 /**
  * 벽선 앵커 — display 수평점을 베이 로컬 평면으로 옮기는 매개변수.
  *
- * `displayToBayLocal`(강체 경로)과 **같은 출력 규약**이다: `x` = 베이 폭 방향,
+ * 출력 축은 `displayToBayLocal`(강체 경로)과 같다: `x` = 베이 폭 방향,
  * `y` = 베이 길이 방향(뷰어의 로컬 z). 회전·횡방향은 벽선이 주고, 종방향(`longitudinalOffset`)
- * 은 이 계층이 알 수 없어 소비 쪽이 규칙으로 채운다.
+ * 은 이 계층이 알 수 없어 소비 쪽이 규칙으로 채운다. 다만 **폭 방향의 부호 규약은 다르다** —
+ * 이유는 `wallToBayLocal` 주석 참조(출발 프레임이 지도냐 장면이냐).
  */
 export interface WallAnchor {
   /** display 수평면에서 베이 +길이 방향을 가리키는 각(rad) — 앞뒤가 정해진 값이다 */
   angle: number
-  /** 이 값이 베이 로컬 x = 0 이 된다 (벽 중심선) */
+  /** 벽 중심선의 횡방향 좌표 — 이 자리가 베이 로컬 x = 0 이 된다 */
   lateralOrigin: number
   /** 베이 로컬 z = (장축 좌표) + 이 값 */
   longitudinalOffset: number
 }
 
-/** display 수평점(x,z) → 베이 로컬 평면. 높이(y)는 양쪽 다 바닥 0 이라 호출 쪽이 그대로 둔다. */
+/**
+ * display 수평점(x,z) → 베이 로컬 평면. 높이(y)는 양쪽 다 바닥 0 이라 호출 쪽이 그대로 둔다.
+ *
+ * **회전만 한다(행렬식 +1) — 뒤집지 않는다.** 두 프레임 모두 뷰어가 그대로 그리는
+ * three(y-up) 장면 좌표이기 때문이다: display 프레임은 베이 진입 뷰(`RealScanViewer`)가,
+ * 베이 로컬은 공장 전체 뷰가 각각 화면에 올린다. 장면 → 장면 변환에 반사가 섞이면
+ * **같은 홀이 두 화면에서 좌우 거울상으로 선다** — 5번 베이를 눌러 들어가는 순간 블록들이
+ * 반대편 벽으로 옮겨 앉아, 지도에서 외운 배치가 진입 뷰에서 통하지 않는다.
+ *
+ * 한때 `displayToBayLocal`(강체 경로)의 마지막 줄을 그대로 옮겨 와 `x` 를 왼수직
+ * `(-sin, cos)` 성분으로 잡았다. 그쪽에서 뒤집는 것이 맞는 이유는 출발 프레임이 다르기
+ * 때문이다 — 저기는 **지도 프레임**(동=+x, 북=+y)에서 출발하므로 그 한 번의 반사가 곧
+ * '위에서 내려다본 그림'을 만든다(`bayLayout.toLocal` 과 같은 자리). 여기는 이미 장면
+ * 프레임에서 출발하니 그 반사가 한 번 더 걸린 셈이었다.
+ */
 export function wallToBayLocal(anchor: WallAnchor, dx: number, dz: number): Pt2 {
   const c = Math.cos(anchor.angle)
   const s = Math.sin(anchor.angle)
   return {
-    x: -dx * s + dz * c - anchor.lateralOrigin,
+    /* 오른수직 (sin, -cos) 성분 — 장축(+z)과 짝지어 행렬식 +1 이 되는 쪽이다 */
+    x: dx * s - dz * c + anchor.lateralOrigin,
     y: dx * c + dz * s + anchor.longitudinalOffset,
   }
 }

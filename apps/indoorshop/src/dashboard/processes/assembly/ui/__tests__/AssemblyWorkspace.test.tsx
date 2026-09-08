@@ -274,3 +274,41 @@ describe('AssemblyWorkspace — 공장이 바뀌어도 축은 남는다 (R30)', 
     expect(tabOf(here())).toBe('viewer')
   })
 })
+
+/**
+ * **한 계단 위로 나가는 문** — 어느 층에 서 있든 화면 안에 나오는 길이 있어야 한다.
+ *
+ * 정반에는 이 문이 있었지만 공장 뷰에는 없었다. 전체 현황 지도에서 공장으로 바로
+ * 들어오는 길이 있어(`mapDrilldown`) 그 쪽으로 온 사람에게는 여기가 첫 화면인데,
+ * 나가는 길은 브라우저 뒤로가기 하나뿐이었다.
+ */
+describe('AssemblyWorkspace — 나가는 문', () => {
+  /* 문은 두 자리에 선다(머리글 · 3D 도구줄). 어느 쪽을 눌러도 같은 데로 가야 한다 —
+     둘을 한 값(`backLink`)에서 짓는 이유다. 툴팁으로 집는 것은 도구줄 칩이 3D 안에
+     있어 이름만으로는 베이 알약과 섞이기 때문이다. */
+  const doors = async (pattern: RegExp) =>
+    (await screen.findAllByTitle(pattern)).map((el) => el.getAttribute('href'))
+
+  it('공장 뷰에서 나가는 문은 머리글 하나 — 3D 안의 물러나기는 카메라다', async () => {
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs?tab=viewer')
+
+    /* 여기가 이미 이 공장의 '전체' 라, 한 계단 더 나가는 문은 머리글에만 선다 */
+    const hrefs = await doors(/공장 목록으로 돌아가기/)
+    expect(hrefs).toEqual(['/indoorshop/zones/assembly/list'])
+
+    /* 도구줄의 `전체보기` 는 링크가 아니다 — 눌러도 화면을 떠나지 않는다 */
+    const fitAll = await screen.findByRole('button', { name: '전체보기' })
+    expect(fitAll.tagName).toBe('BUTTON')
+    await userEvent.setup().click(fitAll)
+    expect(here()).toContain('/indoorshop/zones/assembly/asm-pbs')
+  })
+
+  it('정반 뷰에서는 한 칸만 오른다 — 목록이 아니라 그 공장으로', async () => {
+    renderWorkspace('/indoorshop/zones/assembly/asm-pbs/asm-pbs-b1?tab=viewer')
+
+    const hrefs = await doors(/공장으로 돌아가기/)
+    expect(hrefs.length).toBeGreaterThan(1)
+    /* 보던 축(3D)을 그대로 들고 간다 — 나가서 현황에 서면 방금 한 조작이 끊긴다 */
+    expect(new Set(hrefs)).toEqual(new Set(['/indoorshop/zones/assembly/asm-pbs?tab=viewer']))
+  })
+})

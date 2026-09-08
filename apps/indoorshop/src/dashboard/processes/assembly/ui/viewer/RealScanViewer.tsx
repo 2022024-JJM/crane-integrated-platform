@@ -5,7 +5,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { bindViewportFocus } from '../../../../shared/features/bay-viewer/lib/viewportInput'
 import { disposeRenderer, disposeScene } from '../../../../shared/features/bay-viewer/lib/disposeScene'
 import { startRenderLoop } from '../../../../shared/features/bay-viewer/lib/renderLoop'
+import {
+  orbitDirectionAt,
+  planAlignedAzimuth,
+  planViewDirection,
+} from '../../../../shared/features/bay-viewer/lib/viewpoint'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { loadRealScanDisplayAxis } from '../../api/realScanData'
 import { cn } from '../../../../shared/lib/utils'
 import { SpinnerOverlay } from '../../../../shared/ui/atoms/Spinner'
 import { useAsyncData } from '../../../../shared/lib/useAsyncData'
@@ -396,6 +402,11 @@ interface LoadedRealScene {
   hall: { min: [number, number, number]; max: [number, number, number] }
   /** 그릴 베이 구획 — 공장 뷰는 셋 다, 베이 뷰는 자기 것 하나 */
   bays: { key: RealGroupKey; band: RealBayBand }[]
+  /**
+   * 실측 홀의 장축(display 프레임 `[x, z]`) — 카메라가 공장 뷰와 같은 자세로 서는 근거.
+   * 자산이 없는 환경에서는 null 이고, 그때는 모델 규약(+Z)을 그대로 믿는다.
+   */
+  displayAxis: readonly [number, number] | null
 }
 
 export function RealScanViewer({
@@ -428,12 +439,14 @@ export function RealScanViewer({
     const manifest = await loadRealScanManifest()
     const groupKey = mode === 'bay' ? realGroupKeyOf(locationId!) : null
     const meta = groupKey ? manifest.groups[groupKey] : manifest.factory
-    const [cloud, labels, shade, dev, meshes] = await Promise.all([
+    const [cloud, labels, shade, dev, meshes, displayAxis] = await Promise.all([
       loadRealCloud(meta),
       loadRealLabels(meta),
       loadRealShade(meta),
       loadRealDeviations(meta),
       loadRealCadMeshes(),
+      /* 홀 장축 — 카메라가 공장 뷰와 같은 자세로 서기 위한 근거(아래 시점 계산) */
+      loadRealScanDisplayAxis(),
     ])
     assertRealSceneConsistent(meta, cloud, labels, shade, dev)
     return {
@@ -444,6 +457,7 @@ export function RealScanViewer({
       shade,
       dev,
       meshes,
+      displayAxis,
       hall: manifest.hall,
       bays: groupKey
         ? [{ key: groupKey, band: manifest.bays[groupKey] }]
@@ -1165,12 +1179,32 @@ export function RealScanViewer({
     const focusCenter = focusBox.getCenter(new THREE.Vector3())
     const focusSize = focusBox.getSize(new THREE.Vector3())
     const spread = Math.max(focusSize.x, focusSize.z)
-    // 정면에서 살짝 비스듬히 내려다보는 각 — 갠트리 열과 구획이 한 화면에 들어온다
-    camera.position.set(
-      focusCenter.x + spread * 0.18,
-      focusCenter.y + spread * 0.45,
-      focusCenter.z + spread * 0.78
-    )
+    /*
+     * 각은 **도면에서 이어받는다**(`bay-viewer/lib/viewpoint`).
+     *
+     * 예전에는 이 자리에 제 비율(0.18/0.45/0.78 — 고도 29°)을 따로 적어 두어, 현황 탭의
+     * 배치도에서 건너오면 장면이 갑자기 낮은 각에서 시작했다. 방금 위에서 내려다보던
+     * 그림과 이어지지 않으면 눈이 처음부터 다시 자리를 찾는다 — 세 장면이 한 각을 쓰는
+     * 이유가 그것이다. 거리는 여기서 정한다(홀 크기는 장면마다 다르다).
+     */
+    /*
+     * 자세도 **공장 뷰에서 이어받는다.**
+     *
+     * 공장 전체 뷰는 실측 점군을 베이 로컬로 돌려서 그리는데(`fetchRealScanOverlay`),
+     * 이 화면은 display 프레임을 그대로 그린다. 두 카메라가 같은 방위 상수를 써도
+     * 그리는 내용의 각이 다르므로, 5번 베이를 눌러 들어가는 순간 홀이 통째로 돌아앉아
+     * 보였다 — 사용자가 "반전된 느낌" 이라 부른 자리다.
+     *
+     * 좌표를 또 돌리지 않고(점군·센서 마커·CAD 정합은 제 프레임이 맞다) **카메라만**
+     * 홀 장축에 맞춰 돌린다. 장축을 못 구한 환경(자산 미생성)에서는 모델 규약(+Z)을
+     * 그대로 믿는 종전 값으로 선다.
+     */
+    const viewDirection = scene3d.displayAxis
+      ? orbitDirectionAt(planAlignedAzimuth(scene3d.displayAxis))
+      : planViewDirection()
+    camera.position
+      .copy(focusCenter)
+      .addScaledVector(viewDirection, Math.max(spread * 0.9, 1))
     controls.target.copy(focusCenter)
     frameBox(camera, controls, focusBox)
     // 안개 범위를 프레이밍 거리에 맞춘다 — 홀 크기가 달라도 원경만 정확히 녹는다
@@ -1311,7 +1345,8 @@ export function RealScanViewer({
           className={cn(
             'pointer-events-none absolute max-h-[60%] overflow-hidden rounded-inshop-lg glass-panel px-2.5 py-1.5',
             // 왼쪽 위는 어느 화면에서나 유리 도구줄(ViewportToolbar) 자리다 — 늘 오른쪽으로 비킨다
-            'right-3 top-12'
+            // (오른쪽 위 도구 묶음 한 줄 아래 — 가장자리 여백은 뷰포트 액자가 정한다)
+            'right-[var(--vp-inset,1rem)] top-[calc(var(--vp-inset,1rem)+2rem)]'
           )}
         >
           <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-glass-foreground/54">
@@ -1371,7 +1406,7 @@ export function RealScanViewer({
           ⚠️ 점군이 보이는 모드에서만 세운다(P4) — 도면 모드에서는 조작해도 바뀔 점이
           없어, 남겨 두면 "고장난 손잡이"가 된다. */}
       {showsPoints(displayMode) && (
-      <div className="absolute bottom-3 right-24 flex items-center gap-2 rounded-inshop-md glass-panel px-2.5 py-1.5">
+      <div className="absolute bottom-[var(--vp-inset,1rem)] right-[calc(var(--vp-inset,1rem)+5rem)] flex items-center gap-2 rounded-inshop-md glass-panel px-2.5 py-1.5">
         <label htmlFor="real-scan-point-size" className="whitespace-nowrap text-2xs text-glass-foreground/63">
           {t('viewer.pointSize')}
         </label>

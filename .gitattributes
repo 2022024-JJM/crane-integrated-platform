@@ -1,0 +1,9 @@
+# 실측 점군·모델 바이너리 자산은 바이트 그대로다.
+#
+# core.autocrlf=true 인 Windows 개발 환경에서 git 이 이 파일들을 텍스트로 오인하면
+# (첫 8KB 안에 NUL 이 없으면 그렇게 본다) 체크아웃 때 LF 가 CRLF 로 부풀어
+# Float32/Uint8 배열이 통째로 어긋난다 — 점군이 엉뚱한 자리에 서거나 로더가 길이
+# 검사에서 걸린다. 원본(ocean-inshop-process/web-dashboard/.gitattributes)이 같은
+# 이유로 두고 있는 규칙이며, 이식 자산이 apps/shell/public/real-scan 으로 옮겨
+# 앉았으므로 이 레포에도 필요하다.
+*.bin binary

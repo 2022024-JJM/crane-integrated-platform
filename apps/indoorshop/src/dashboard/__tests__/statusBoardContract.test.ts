@@ -148,7 +148,8 @@ describe('R19 — 종류별 대표값', () => {
     })
     expect(idle, '대기 중인 페어가 fixture 에 있어야 한다').toBeDefined()
     const cell = lidarPairCell(idle!, snapshot, { freshText: '방금' })
-    expect(cell.note).toMatch(/-?\d+°\/-?\d+°/)
+    /* 각도에는 **이름이 붙는다** — `-80°/-9°` 는 규칙을 아는 사람에게만 읽혔다 */
+    expect(cell.note).toMatch(/pan -?\d+° · tilt -?\d+°/)
   })
 
   it('라이다 — 목표와 어긋나 있으면 목표가 함께 선다', () => {
@@ -183,8 +184,16 @@ describe('R19 — 종류별 대표값', () => {
       lidarPairs: status.lidarPairs,
     })
     expect(['온라인', '오프라인', '통신 오류']).toContain(cell.metric.text)
-    /* 대수는 사라지지 않고 아래 줄로 내려간다 */
-    expect(cell.note).toContain(`소속 ${status.memberOnline}/${status.memberTotal}`)
+    /* 업링크가 수치 자리에 낱말로 서 있으므로 램프로 한 번 더 세우지 않는다 —
+       다만 판정에는 접어 넣는다(램프에 없다고 이상이 사라지면 안 된다) */
+    expect(cell.lamps.map((lamp) => lamp.label)).toEqual(['전원', '소속'])
+    if (status.uplink !== 'online') expect(cell.severity).not.toBe('done')
+    /* 대수는 사라지지 않는다 — 이름 붙은 '소속' 램프가 그 자리를 맡고(중복 제거),
+       부기에는 판이 끊겼을 때의 **영향 범위**만 남는다 */
+    expect(cell.lamps.find((lamp) => lamp.label === '소속')?.value).toBe(
+      `${status.memberOnline}/${status.memberTotal}`
+    )
+    if (status.lidarPairs > 0) expect(cell.note).toContain(`라이다 ${status.lidarPairs}쌍`)
   })
 
   it('셀의 핵심 수치는 마지막 수신 시각을 함께 싣는다 (경과가 스스로 흐르도록)', () => {

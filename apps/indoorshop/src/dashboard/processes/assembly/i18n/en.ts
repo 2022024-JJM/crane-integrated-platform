@@ -208,6 +208,9 @@ export const assemblyEn: typeof assemblyKo = {
     },
     workspace: {
       backToFactories: '← Back to the factory list',
+      backToFactory: 'Back to {{name}} (Esc)',
+      factoryListLabel: 'Factories',
+      backToFactoryList: 'Back to the assembly factory list',
       tabAria: 'View axis',
       tabViewer: '3D viewer',
       tabStatus: 'Status',

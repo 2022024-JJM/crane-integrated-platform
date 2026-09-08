@@ -336,6 +336,11 @@ const LONGITUDINAL_ANCHOR: { kind: 'north-end' } | { kind: 'measured'; offsetM: 
 /** 프리뷰 자산 — scripts/build-real-scan-preview.mjs 생성물 (factory.bin 다운샘플) */
 const PREVIEW_CLOUD = '/real-scan/factory_preview.bin'
 const PREVIEW_SHADE = '/real-scan/factory_preview_shade.bin'
+/* 점별 블록 라벨 — 공장 전체 뷰의 5BAY 가 인식 블록을 **색으로** 말하게 하는 재료.
+   없던 시절에는 회백색 덩어리 하나로 서서, '블록 13건' 이라 적힌 라벨과 화면이 어긋났다. */
+const PREVIEW_LABELS = '/real-scan/factory_preview_labels.bin'
+/* 점별 CAD 표면 편차 — 라벨을 화면 임계로 다시 판정하는 재료(두 화면이 같은 크기를 말하게) */
+const PREVIEW_DEV = '/real-scan/factory_preview_dev.bin'
 
 /* 오버레이 데이터 모양은 뷰어 계약(shared bay-viewer)이 소유한다 — 여기서는 재수출만 */
 export type { RealScanOverlay } from '../../../shared/features/bay-viewer/model/realOverlay'
@@ -435,19 +440,49 @@ let overlayPromise: Promise<RealScanOverlay | null> | null = null
  * 그 구간은 `LONGITUDINAL_ANCHOR` 규칙이 정한다 — 북단 정렬로 확정됐고(2026-09-03),
  * 채택 근거와 measured 교체 경로는 그 주석에 있다.
  */
+/**
+ * 실측 홀의 **장축 방향**(display 프레임의 수평면 단위벡터 `[x, z]`) — 없으면 null.
+ *
+ * 왜 밖으로 내는가: 공장 전체 뷰는 점군을 베이 로컬로 **돌려서** 그리고(아래 오버레이),
+ * 베이 뷰는 display 프레임을 그대로 그린다. 두 화면의 카메라는 같은 방위 상수를 쓰지만
+ * 그리는 **내용의 각이 다르므로**, 5번 베이를 눌러 들어가는 순간 홀이 통째로 돌아앉는다 —
+ * 방금 본 그림과 지금 그림이 이어지지 않아 "반전됐다"로 읽힌다.
+ *
+ * 좌표를 또 한 번 돌리지 않고 **카메라만** 그만큼 돌려 맞추는 것이 이 값의 쓸모다.
+ * 점군·센서 마커·CAD 정합은 제 프레임 그대로 남고, 화면에 서는 자세만 공장 뷰와 같아진다.
+ */
+export async function loadRealScanDisplayAxis(): Promise<readonly [number, number] | null> {
+  const wall = await loadRealScanWallFrame()
+  return wall ? [Math.cos(wall.angle), Math.sin(wall.angle)] : null
+}
+
+/** 프리뷰 점군에서 유도한 벽선 프레임 — 오버레이와 장축이 **같은 계산 하나**를 쓴다 */
+let wallFramePromise: Promise<ReturnType<typeof fitWallAxis>> | null = null
+function loadRealScanWallFrame(): Promise<ReturnType<typeof fitWallAxis>> {
+  wallFramePromise ??= fetchPreviewBin(PREVIEW_CLOUD)
+    .then((buf) => fitWallAxis(new Float32Array(buf)))
+    .catch(() => {
+      wallFramePromise = null // 일시 실패(자산 미생성 등)는 다음 시도에서 다시
+      return null
+    })
+  return wallFramePromise
+}
+
 export async function fetchRealScanOverlay(): Promise<RealScanOverlay | null> {
   overlayPromise ??= (async () => {
-    const [manifest, bay, cloudBuf, shadeBuf] = await Promise.all([
+    const [manifest, bay, wall, cloudBuf, shadeBuf, labelBuf, devBuf] = await Promise.all([
       loadRealScanManifest(),
       loadRealBayDimensions(),
+      loadRealScanWallFrame(),
       fetchPreviewBin(PREVIEW_CLOUD),
       fetchPreviewBin(PREVIEW_SHADE).catch(() => null),
+      fetchPreviewBin(PREVIEW_LABELS).catch(() => null),
+      fetchPreviewBin(PREVIEW_DEV).catch(() => null),
     ])
     if (!bay) return null
+    if (!wall) return null
 
     const src = new Float32Array(cloudBuf)
-    const wall = fitWallAxis(src)
-    if (!wall) return null
 
     const sensorsOf = (group: 'g1' | 'g3') =>
       manifest.factory.sensors.filter((s) => s.group === group).map((s) => s.position)
@@ -483,7 +518,21 @@ export async function fetchRealScanOverlay(): Promise<RealScanOverlay | null> {
       return { name: sensor.name, position: [local.x, sensor.position[1], local.y] }
     })
     const shade = shadeBuf && shadeBuf.byteLength === count ? new Uint8Array(shadeBuf) : null
-    return { positions, shade, sensors, innerWidth: wall.innerWidth, widthRatio }
+    /* 길이가 어긋나면 **버린다** — 어긋난 라벨로 칠하면 엉뚱한 점이 블록색을 얻는다.
+       (자산 재생성 중 한쪽만 갱신된 경우가 그렇다. 그때는 음영 단색으로 물러선다.) */
+    const labels = labelBuf && labelBuf.byteLength === count ? new Uint8Array(labelBuf) : null
+    const dev = devBuf && devBuf.byteLength === count ? new Uint8Array(devBuf) : null
+    return {
+      positions,
+      shade,
+      labels,
+      blockNames: manifest.factory.blocks.map((block) => block.name),
+      dev,
+      toleranceM: manifest.factory.segmentation.toleranceM,
+      sensors,
+      innerWidth: wall.innerWidth,
+      widthRatio,
+    }
   })().catch(() => {
     overlayPromise = null // 일시 실패(자산 미생성 등)는 다음 시도에서 다시
     return null

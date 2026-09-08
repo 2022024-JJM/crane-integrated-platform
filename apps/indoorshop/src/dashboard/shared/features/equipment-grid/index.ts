@@ -3,7 +3,7 @@
  * 요약 스트립·구획은 각 화면이 그대로 들고, 그 안쪽 본문만 이 그리드로 바꾼다(하이브리드).
  * 근거: `.work/설비관제_레퍼런스.md` §3.
  */
-export { EquipmentGrid, worstMeaning, type EquipmentGridProps } from './ui/EquipmentGrid'
+export { CellLamp, EquipmentGrid, worstMeaning, type EquipmentGridProps } from './ui/EquipmentGrid'
 export {
   arrangeCells,
   countCells,

@@ -42,13 +42,33 @@ describe('조립 — 라이다+틸팅은 한 칸', () => {
     expect(cells.length).toBeLessThan(lidarCount + tiltCount)
   })
 
-  it('페어 셀의 램프는 [링크 / 틸팅 / 이상] 셋이다 — 틸팅은 둘째 램프가 말한다', () => {
+  /*
+   * 램프는 **둘**이다. 셋째('이상')는 앞의 둘을 접은 값이라 새로 말하는 것이 없었고,
+   * 이상이면 셀 테두리와 정렬 순서가 이미 그 사실을 말한다 — 한 사실을 세 군데서
+   * 말하면 눈은 어느 것도 안 읽는다.
+   */
+  it('페어 셀의 램프는 [링크 / 틸팅] 둘이다 — 틸팅은 둘째 램프가 말한다', () => {
     const snapshot = snapshotOf(FACTORY)
     const lidar = [...lidarsByBay(FACTORY).values()].flat()[0]
     const cell = lidarPairCell(lidar, snapshot, { freshText: '방금' })
-    expect(cell.lamps.map((lamp) => lamp.label)).toEqual(['링크', '틸팅', '이상'])
+    expect(cell.lamps.map((lamp) => lamp.label)).toEqual(['링크', '틸팅'])
     expect(cell.typeId).toBe('LIDAR')
     expect(cell.label).toBe(lidar.id)
+  })
+
+  /*
+   * 화면에는 점 대신 그림(링크 램프 + 조준 다이얼)이 서지만, `lamps` 배열은 그대로
+   * 채워 둔다 — 지도 카드(`BirdviewCard`)와 보조기술이 그 배열을 읽는다.
+   */
+  it('그림을 줘도 램프 배열은 남는다 — 지도 카드가 그것을 읽는다', () => {
+    const snapshot = snapshotOf(FACTORY)
+    const lidar = [...lidarsByBay(FACTORY).values()].flat()[0]
+    const cell = lidarPairCell(lidar, snapshot, {
+      freshText: '방금',
+      figureOf: () => 'DIAL',
+    })
+    expect(cell.figure).toBe('DIAL')
+    expect(cell.lamps).toHaveLength(2)
   })
 
   it('셀 판정은 램프 중 가장 나쁜 것을 접는다 — 정렬이 그 값을 쓴다', () => {

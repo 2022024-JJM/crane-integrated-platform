@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { cn } from '../../../lib/utils'
+import { useEscapeKey } from '../../../lib/useEscapeKey'
 import { STATUS_SHAPE, STATUS_STYLE, type StatusMeaning, type StatusShape } from '../../../ui/statusPalette'
-import { EquipmentGlyph, symbolOfType } from '../../../entities/equipment/ui/EquipmentSymbol'
+import {
+  EquipmentGlyph,
+  EquipmentSymbolChip,
+  colorOfType,
+  symbolOfType,
+} from '../../../entities/equipment/ui/EquipmentSymbol'
+import { useEquipmentTypeLabel } from '../../../entities/equipment/ui/useEquipmentTypeLabel'
 import type { LatLon } from '../../../entities/yard-parcels'
 import { fitProjection, pathOf } from '../lib/projection'
 import { birdviewRotationOf } from '../lib/orientation'
@@ -72,27 +79,59 @@ function StatusMark({ shape, x, y, r }: { shape: StatusShape; x: number; y: numb
 }
 
 /**
- * 심볼 한 개 — **바탕색 판 + 그리드와 같은 글리프**.
+ * 심볼 한 개 — **판 + 그리드와 같은 글리프**.
  *
  * 판을 까는 이유는 두 겹 규칙과 같다: 베이 선 위에 놓인 글리프는 선과 뒤엉켜 그림이
  * 아니라 얼룩이 된다. 판이 있으면 어디에 놓여도 심볼이 심볼로 읽히고, 판이 격자에
  * 줄지어 서면 그 자체가 도면의 기호열처럼 보인다.
+ *
+ * ── 종류색 (`colored`) ──
+ * 무채로만 그리면 57개의 판이 똑같은 회색 상자가 되고, 종류는 12px 판 안의 8px 글리프
+ * 하나에 걸린다 — 그 크기에서 라이다와 캐비닛은 구분되지 않는다. 그런데 이 앱에는 이미
+ * 종류색 문법이 있다: 목록의 `EquipmentSymbolChip`(종류색 판 + 흰 글리프)이다. 지도가
+ * 그 문법을 안 쓰고 있어서, 그 칩의 주석이 약속한 **"지도의 저 표시 = 목록의 이 줄"이
+ * 정작 성립하지 않았다.** 그래서 같은 칩을 그대로 그린다 — 새 어휘를 만드는 것이 아니라
+ * 이미 있던 것을 지도까지 잇는다.
+ *
+ * 색이 상태를 덮지 않는가: 덮지 않는다. **자리가 다르다.** 종류색은 판(무엇인가)이고
+ * 상태색은 어깨의 부호(지금 어떤가)다 — `statusPalette` 가 공정색과 상태색을 가르는
+ * 방식과 같다. 게다가 정상은 여전히 물러나고(투명도), 이상만 한 치수 크게 서며 상태색
+ * 배지를 얻는다. 이상은 전체의 1% 미만이라 색이 늘어도 먼저 눈에 드는 쪽은 그대로다.
  */
-function BirdviewSymbol({ typeId, x, y, size }: { typeId: string; x: number; y: number; size: number }) {
+function BirdviewSymbol({
+  typeId,
+  x,
+  y,
+  size,
+  colored,
+}: {
+  typeId: string
+  x: number
+  y: number
+  size: number
+  colored: boolean
+}) {
   const half = size / 2
   const glyph = Math.round(size * 0.66)
+  const color = colorOfType(typeId)
   return (
     <g transform={`translate(${x - half} ${y - half})`}>
       <rect
         width={size}
         height={size}
         rx={size * 0.22}
-        fill="var(--color-surface)"
-        stroke="currentColor"
-        strokeOpacity={0.45}
+        /* 색은 여기서 고르지 않는다 — 표시색 층(`ui/typeColor`)이 바탕·글리프와의
+           대비까지 감안해 정해 둔 값이고, 목록 칩이 쓰는 것과 같은 값이다 */
+        fill={colored ? color : 'var(--color-surface)'}
+        /* 흰 테두리는 어두운 종류색 판이 어두운 바탕에 잠기지 않게 한다(칩과 같은 규칙) */
+        stroke={colored ? 'rgba(255,255,255,0.42)' : 'currentColor'}
+        strokeOpacity={colored ? 1 : 0.45}
         strokeWidth={1}
       />
-      <g transform={`translate(${(size - glyph) / 2} ${(size - glyph) / 2})`}>
+      <g
+        transform={`translate(${(size - glyph) / 2} ${(size - glyph) / 2})`}
+        color={colored ? '#fff' : undefined}
+      >
         <EquipmentGlyph symbol={symbolOfType(typeId)} size={glyph} />
       </g>
     </g>
@@ -118,24 +157,115 @@ export interface EquipmentBirdviewProps {
   cardOf?: (id: string) => BirdviewCard | null
   /** 어두운 바탕(지도 오버레이) 위인가 */
   tone?: 'surface' | 'glass'
+  /**
+   * 종류색으로 그릴 것인가 — 심볼 판이 목록의 종류 칩과 같은 색이 되고, 아래에 **범례**가
+   * 선다. 기본은 지금까지 그대로(무채).
+   *
+   * 켤 자리: 한 그림에 **여러 종류**가 섞여 서는 공장(조립 — 라이다·틸팅·Edge PC·캐비닛).
+   * 끌 자리: 사실상 한 종류만 서는 그림. 거기서는 색이 아무것도 가르지 않고 소음만 된다.
+   */
+  colorByType?: boolean
   className?: string
   /** 빈 상태 문구 (좌표가 없는 공장) */
   emptyLabel: string
 }
 
+/**
+ * 범례 — **읽는 법이자 찾는 손잡이**.
+ *
+ * 색을 넣으면 범례는 선택이 아니라 의무다: 보라가 라이다라는 것을 아는 길이 화면에 없으면
+ * 색은 장식이 된다. 그런데 범례를 이왕 세울 바에는 **누를 수 있어야** 한다 — 이 그림 앞에
+ * 선 사람의 다음 질문은 대개 "그래서 판넬이 어디 있나" 이고, 그 답은 목록이 아니라
+ * 나머지를 지운 그림이다. 한 번 더 누르면 원래대로 돌아온다.
+ *
+ * 대수를 함께 적는 이유는 범례가 곧 요약이기 때문이다 — 종류별 대수를 보려고 다른 곳을
+ * 찾아가지 않아도 된다.
+ */
+function BirdviewLegend({
+  points,
+  isolated,
+  onIsolate,
+  glass,
+}: {
+  points: readonly BirdviewPoint[]
+  isolated: string | null
+  onIsolate: (typeId: string | null) => void
+  glass: boolean
+}) {
+  const labelOf = useEquipmentTypeLabel()
+  /* 있는 종류만, 많은 순으로 — 없는 종류를 적으면 범례가 그림을 설명하지 않는다 */
+  const entries = useMemo(() => {
+    const counts = new Map<string, { total: number; issues: number }>()
+    for (const point of points) {
+      const bucket = counts.get(point.typeId) ?? { total: 0, issues: 0 }
+      bucket.total += 1
+      if (isIssue(point.severity)) bucket.issues += 1
+      counts.set(point.typeId, bucket)
+    }
+    return [...counts.entries()].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0]))
+  }, [points])
+
+  if (entries.length === 0) return null
+
+  return (
+    <ul className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1">
+      {entries.map(([typeId, count]) => {
+        const on = isolated === typeId
+        return (
+          <li key={typeId}>
+            <button
+              type="button"
+              aria-pressed={on}
+              onClick={() => onIsolate(on ? null : typeId)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-inshop-md px-1.5 py-1 text-2xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                on
+                  ? glass
+                    ? 'bg-white/12 text-glass-foreground'
+                    : 'bg-surface-secondary text-foreground'
+                  : glass
+                    ? 'text-glass-foreground/62 hover:bg-white/8'
+                    : 'text-foreground/62 hover:bg-surface-secondary',
+                /* 하나를 고르면 나머지는 물러난다 — 그림이 하는 일과 같게 */
+                isolated && !on && 'opacity-50'
+              )}
+            >
+              <EquipmentSymbolChip typeId={typeId} size={13} />
+              <span>{labelOf(typeId)}</span>
+              <span className="font-mono tabular-nums opacity-70">{count.total}</span>
+              {count.issues > 0 && (
+                <span className="flex items-center gap-0.5 font-mono tabular-nums text-status-degraded">
+                  <svg width={7} height={7} viewBox="-4 -4 8 8" aria-hidden="true">
+                    <StatusMark shape={STATUS_SHAPE.warning} x={0} y={0} r={3.2} />
+                  </svg>
+                  {count.issues}
+                </span>
+              )}
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 /** 그릇을 재기 전에 쓰는 기본 뷰박스 — 서버·테스트처럼 크기를 알 수 없는 곳의 값 */
 const FALLBACK_VIEW = { width: 1000, height: 420 }
-/** 베이 이름을 적을 최소 칸 길이(px) — 이보다 짧으면 글자가 서로 겹친다 */
-const LABEL_MIN_PX = 34
-/** 같은 판정의 폭 — 베이는 대개 가늘고 길어서 두 축에 같은 잣대를 대면 다 지워진다 */
-const LABEL_MIN_HEIGHT_PX = 15
-/** 심볼 판 한 변 — 정상은 물러나고 이상은 한 치수 크다(크기도 위계를 진다) */
-const SYMBOL_NORMAL = 12
-const SYMBOL_ISSUE = 14
-/** 두 심볼 중심의 최소 간격 = 배치 격자의 눈금 */
-const MIN_GAP = 15
+/**
+ * 심볼 판 한 변 — 정상은 물러나고 이상은 한 치수 크다(크기도 위계를 진다).
+ *
+ * 12px 이었다. 그 크기에서는 판 안의 글리프가 8px 라 종류가 갈리지 않았고, 종류색을
+ * 넣어도 색 조각으로만 보였다 — 도면이라기보다 점 뿌리기였다. 목록의 종류 칩(14px)과
+ * 같은 치수로 올려 두 층이 같은 그림으로 읽히게 한다.
+ */
+const SYMBOL_NORMAL = 15
+const SYMBOL_ISSUE = 17
+/** 두 심볼 중심의 최소 간격 = 배치 격자의 눈금. 판이 커진 만큼 함께 벌린다 */
+const MIN_GAP = 19
 /** 이 위쪽에 선 설비는 태그를 아래로 편다 — 카드 한 장이 들어갈 높이 */
 const TAG_FLIP_Y = 150
+/** 베이 번호패가 칸 밖으로 떨어지는 거리 */
+const TAG_OUT = 13
 
 export function EquipmentBirdview({
   bays,
@@ -148,10 +278,25 @@ export function EquipmentBirdview({
   activeGroupKey = null,
   cardOf,
   tone = 'surface',
+  colorByType = false,
   className,
   emptyLabel,
 }: EquipmentBirdviewProps) {
   const glass = tone === 'glass'
+  /* 범례에서 고른 종류 — 그림이 그 종류만 남긴다("판넬이 어디 있나") */
+  const [isolatedType, setIsolatedType] = useState<string | null>(null)
+  /*
+   * ESC — 키보드로 들어온 사람에게도 놓는 길이 있어야 한다.
+   *
+   * 여기서는 **범례 고름만** 푼다. 고른 설비는 목록과 함께 쥐고 있는 값이라 보드가 푼다 —
+   * 아무것도 안 잡고 있으면 `false` 를 돌려 그쪽으로 넘긴다(한 번에 한 동작).
+   */
+  useEscapeKey(() => {
+    if (isolatedType === null) return false
+    setIsolatedType(null)
+  })
+  /* 그림자 필터의 id — 한 화면에 버드뷰가 둘 서도 서로의 필터를 훔치지 않게 */
+  const shadowId = `birdview-shadow-${useId().replace(/[:]/g, '')}`
   /*
    * 뷰박스를 **그릇 크기에 맞춘다** — 그래야 1 뷰박스 단위 = 1 화면 픽셀이 된다.
    *
@@ -161,9 +306,10 @@ export function EquipmentBirdview({
    * 그릇을 재서 맞추면 심볼 크기·간격을 **픽셀로** 정할 수 있다(그리드 칩과 같은 치수).
    */
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const frameRef = useRef<HTMLDivElement | null>(null)
   const [view, setView] = useState(FALLBACK_VIEW)
   useEffect(() => {
-    const node = rootRef.current
+    const node = frameRef.current
     if (!node || typeof ResizeObserver === 'undefined') return
     const sync = () => {
       const width = Math.round(node.clientWidth)
@@ -238,92 +384,64 @@ export function EquipmentBirdview({
 
   /* 무채 잉크 — 외곽·베이·이름·정상 심볼이 함께 쓴다(도면의 선은 색을 갖지 않는다) */
   const chrome = glass ? 'text-white' : 'text-foreground'
+
+  /*
+   * 베이 이름의 자리 — **설비보다 나중에 그리려고** 미리 뽑아 둔다.
+   *
+   * 예전에는 베이 층 안에서 함께 그렸고, 그래서 설비가 많은 칸에서는 이름이 심볼 판 밑에
+   * 깔려 아예 보이지 않았다(PBS 의 5·6·7 번 베이가 그랬다). 판은 불투명하므로 밑에 깔면
+   * 없는 것과 같다 — 그런데 "지금 몇 번 베이를 보고 있나"는 이 그림의 첫 번째 질문이다.
+   *
+   * 그렇다고 맨 위로 올리지는 않는다. 이름이 이상 배지를 덮으면 그건 더 나쁜 교환이다.
+   * 자리는 **정상 설비 위, 이상 설비 아래** — 집이 순서로 뜻을 나르는 이 그림의 규칙(R25-1)
+   * 그대로다. 글자 뒤 바탕색 테두리(두 겹 규칙)가 심볼 위에서도 글자를 끊기지 않게 한다.
+   */
+  const bayLabels = bays.flatMap((bay) => {
+    const isActive = activeGroupKey === bay.groupKey
+    const frame = bayFrameOf(bay.hull.map((point) => projection.project(point)))
+    if (!frame) return []
+    /*
+     * 번호패는 칸 **밖, 장변의 끝**에 단다.
+     *
+     * 안쪽에 두었더니 설비 줄 한가운데에 앉았다 — 배치가 줄로 서는 그림에서 칸 안쪽은
+     * 전부 설비의 자리라 이름이 놓일 빈 자리가 없다. 밖으로 빼면 어떤 칸이든 규칙이
+     * 하나가 되고("칸 왼쪽 끝의 패가 그 칸의 번호"), 도면의 행 번호처럼 한 줄로 늘어서
+     * 눈이 위아래로 훑을 수 있다. 좁은 칸만 예외로 두던 규칙도 사라진다.
+     *
+     * 두 끝 중 **화면 왼쪽·위**를 고른다 — 패가 칸마다 다른 쪽에 붙으면 규칙이 아니다.
+     */
+    const ends = [
+      { x: frame.cx + frame.ux * (frame.halfU + TAG_OUT), y: frame.cy + frame.uy * (frame.halfU + TAG_OUT) },
+      { x: frame.cx - frame.ux * (frame.halfU + TAG_OUT), y: frame.cy - frame.uy * (frame.halfU + TAG_OUT) },
+    ]
+    /* 두 끝 중 **왼쪽 위**에 가까운 쪽 — 가로 칸이면 왼쪽, 세로 칸이면 위가 뽑힌다.
+       칸이 비스듬해도 규칙이 흔들리지 않도록 한 잣대(x+y)로 고른다 */
+    const near = ends[0].x + ends[0].y <= ends[1].x + ends[1].y ? ends[0] : ends[1]
+    const half = (bay.label.length * 7 + 13) / 2
+    return [
+      {
+        id: bay.id,
+        label: bay.label,
+        isActive,
+        /* 가장자리 칸의 패가 그림 밖으로 나가지 않게 — 안 보이는 이름은 없는 이름이다 */
+        x: Math.min(Math.max(near.x, half + 2), view.width - half - 2),
+        y: Math.min(Math.max(near.y, 10), view.height - 10),
+      },
+    ]
+  })
   const active = selectedId ?? hoveredId
   /* 태그는 **고른 것**을 따라간다 — 알람 딥링크(?equip=)로 들어와도 카드가 서 있다 */
   const tagged = points.find((point) => point.id === active) ?? null
   const tagAt = tagged ? (placed.get(tagged.id) ?? projection.project(tagged.position)) : null
   const card = tagged && cardOf ? cardOf(tagged.id) : null
 
-  return (
-    <div ref={rootRef} className={cn('relative', className)}>
-      <svg
-        viewBox={`0 0 ${view.width} ${view.height}`}
-        preserveAspectRatio="xMidYMid meet"
-        className={cn('h-full w-full', chrome)}
-        role="img"
-        aria-label={emptyLabel}
-      >
-        {/* ① 베이 — 이 그림의 주인공이자 유일한 뼈대다 (R41) */}
-        {bays.map((bay) => {
-          const isActive = activeGroupKey === bay.groupKey
-          /*
-           * 이름은 **들어갈 자리가 있을 때만** 적는다. 도장 공장처럼 작은 칸이 촘촘히
-           * 붙은 곳에서는 이름이 서로 겹쳐 글자 더미가 되고, 그러면 이름이 있는 편이
-           * 없는 편보다 읽기 어려워진다. 고른 베이만은 좁아도 적는다(지금 보는 칸이므로).
-           */
-          const projected = bay.hull.map((point) => projection.project(point))
-          /*
-           * 이름은 **베이 자신의 축**을 기준으로 놓는다. 화면 축의 경계상자를 쓰면 비스듬한
-           * 베이에서 이름이 칸 밖 모서리로 달아나 어느 칸의 이름인지 알 수 없게 된다.
-           * 자리는 칸 가운데가 아니라 단변 쪽 벽 — 가운데는 설비 줄이 지나가는 자리다.
-           */
-          const frame = bayFrameOf(projected)
-          const roomy =
-            frame !== null &&
-            frame.halfU * 2 >= LABEL_MIN_PX &&
-            frame.halfV * 2 >= LABEL_MIN_HEIGHT_PX
-          const anchor =
-            frame && (roomy || isActive)
-              ? {
-                  x: frame.cx + frame.vx * (frame.halfV - 6),
-                  y: frame.cy + frame.vy * (frame.halfV - 6),
-                }
-              : null
-          const d = pathOf(bay.hull, projection)
-          return (
-            <g key={bay.id} className="transition-opacity duration-200">
-              <path
-                data-bay={bay.groupKey}
-                d={d}
-                className="cursor-pointer"
-                fill="currentColor"
-                fillOpacity={isActive ? 0.09 : 0.018}
-                stroke="currentColor"
-                strokeWidth={isActive ? 1.8 : 0.9}
-                strokeOpacity={isActive ? 0.5 : 0.24}
-                strokeLinejoin="miter"
-                onClick={() => onSelectBay?.(bay.groupKey)}
-              />
-              {anchor && (
-                <text
-                  x={anchor.x}
-                  y={anchor.y}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  /* 글자 뒤에 바탕색 테두리를 깔아 베이 선 위에서도 끊기지 않게 한다 */
-                  stroke="var(--color-surface)"
-                  strokeWidth={3}
-                  strokeLinejoin="round"
-                  paintOrder="stroke"
-                  fill="currentColor"
-                  fillOpacity={isActive ? 0.75 : 0.42}
-                  className="pointer-events-none select-none font-mono text-[10px] font-semibold tracking-[0.12em]"
-                >
-                  {bay.label}
-                </text>
-              )}
-            </g>
-          )
-        })}
-
-        {/* ② 설비 — 이상이 위에 오도록 정상을 먼저 그린다 */}
-        {[...points]
-          .sort((a, b) => Number(isIssue(a.severity)) - Number(isIssue(b.severity)))
-          .map((point) => {
+  /** 설비 한 점 — 정상 층과 이상 층이 같은 그림을 쓴다(층만 다르다) */
+  const renderPoint = (point: BirdviewPoint) => {
             const { x, y } = placed.get(point.id) ?? projection.project(point.position)
             const isActivePoint = point.id === active
             const issue = isIssue(point.severity)
             const size = issue ? SYMBOL_ISSUE : SYMBOL_NORMAL
+            const dimmedByType = isolatedType !== null && point.typeId !== isolatedType
             return (
               <g
                 key={point.id}
@@ -338,8 +456,17 @@ export function EquipmentBirdview({
                    */
                   chrome,
                   isActivePoint ? 'opacity-100' : issue ? 'opacity-95' : 'opacity-60',
-                  /* 하나를 가리키면 나머지는 물러난다 — 튕기지 않고 물린다 */
-                  active && !isActivePoint && 'opacity-30'
+                  /*
+                   * 하나를 가리키면 나머지는 물러난다 — 다만 **읽을 수는 있게**.
+                   * 30% 까지 죽였더니 고른 순간 도면이 꺼진 것처럼 보여, 선택이 도움이
+                   * 아니라 갇힘으로 느껴졌다. 물러나되 배치는 계속 읽혀야 한다.
+                   */
+                  active && !isActivePoint && 'opacity-50',
+                  /*
+                   * 범례로 종류를 고르면 나머지는 더 깊이 물러난다. 지우지는 않는다 —
+                   * 사라지면 "그 자리에 아무것도 없다"로 읽히고, 도면에서 그것은 거짓말이다.
+                   */
+                  dimmedByType && 'opacity-[0.12]'
                 )}
                 onMouseEnter={() => onHoverPoint(point.id)}
                 onMouseLeave={() => onHoverPoint(null)}
@@ -358,7 +485,13 @@ export function EquipmentBirdview({
                     opacity={0.8}
                   />
                 )}
-                <BirdviewSymbol typeId={point.typeId} x={x} y={y} size={size} />
+                <BirdviewSymbol
+                  typeId={point.typeId}
+                  x={x}
+                  y={y}
+                  size={size}
+                  colored={colorByType}
+                />
                 {/*
                   이상만 상태색을 얻는다 — 심볼 어깨에 얹힌 작은 부호 하나.
                   색과 **모양**을 함께 내므로 색각 이상에서도 살아남는다.
@@ -383,7 +516,141 @@ export function EquipmentBirdview({
                 <circle cx={x} cy={y} r={MIN_GAP / 2} fill="transparent" />
               </g>
             )
-          })}
+  }
+
+  return (
+    <div ref={rootRef} className={cn('flex flex-col', className)}>
+      <div ref={frameRef} className="relative min-h-0 flex-1">
+      <svg
+        viewBox={`0 0 ${view.width} ${view.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        className={cn('h-full w-full', chrome)}
+        role="img"
+        aria-label={emptyLabel}
+      >
+        {/*
+          설비는 바닥 **위에 놓인다.**
+          평평하게 그리면 판이 바닥 무늬처럼 읽혀 "칸 위에 장비가 서 있다"는 관계가
+          사라진다 — 그림이 배치도가 아니라 색 격자가 되는 지점이다. 아주 얕은 그림자
+          하나면 층이 갈리고, 그 순간 베이는 바닥이고 심볼은 물건이 된다. 장식이 아니라
+          **층을 말하는 최소한**이라 흐림도 치우침도 1px 대다.
+        */}
+        <defs>
+          <filter id={shadowId} x="-30%" y="-30%" width="160%" height="170%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.1" floodColor="#000" floodOpacity="0.5" />
+          </filter>
+        </defs>
+
+        {/*
+          빈 바닥 — **놓는 자리**.
+          고른 설비는 태그를 세우고 나머지를 물러나게 하는데, 놓는 길이 "그 심볼을 다시
+          정확히 누르기" 하나뿐이면 화면이 붙잡힌 것처럼 느껴진다(15px 짜리 판을 다시
+          겨눠야 한다). 지도에서 빈 곳을 누르는 것은 어디서나 '선택 해제'의 뜻이므로
+          그 관례를 그대로 둔다. 맨 밑에 깔아 두어 베이·심볼의 클릭을 가로채지 않는다.
+        */}
+        <rect
+          x={0}
+          y={0}
+          width={view.width}
+          height={view.height}
+          fill="transparent"
+          onClick={() => {
+            onSelectPoint(null)
+            setIsolatedType(null)
+          }}
+        />
+        {/*
+          ① 베이 — 이 그림의 주인공이자 유일한 뼈대다 (R41).
+
+          바닥을 **번갈아** 깐다. 베이는 벽을 맞대고 붙어 있어서 같은 농도로 칠하면 여러
+          칸이 한 덩어리로 보이고, 실제로 그렇게 읽혔다 — 선 하나로 갈린 큰 방 하나.
+          도면이 인접한 실을 다른 해치로 구분하는 것과 같은 이유이고, 여기서는 해치 대신
+          농도를 쓴다(선을 더 그으면 설비 줄과 뒤엉킨다). 차이는 3% 남짓이라 눈에 띄는
+          것은 '경계'뿐이고 칸 자체는 여전히 조용하다.
+        */}
+        {bays.map((bay, index) => {
+          const isActive = activeGroupKey === bay.groupKey
+          return (
+            <path
+              key={bay.id}
+              data-bay={bay.groupKey}
+              /* 고른 칸을 화면이 스스로 말한다 — 강조는 굵기·농도로만 나타나 눈 밖에서는
+                 확인할 길이 없고, 밖에서 실어 온 초점(베이 → 현황 승계)도 이 값으로 본다 */
+              data-active={isActive ? 'true' : undefined}
+              data-band={index % 2 === 0 ? 'even' : 'odd'}
+              d={pathOf(bay.hull, projection)}
+              className="cursor-pointer transition-[fill-opacity,stroke-opacity] duration-200"
+              fill="currentColor"
+              fillOpacity={isActive ? 0.11 : index % 2 === 0 ? 0.07 : 0.014}
+              stroke="currentColor"
+              strokeWidth={isActive ? 1.8 : 1}
+              strokeOpacity={isActive ? 0.6 : 0.34}
+              strokeLinejoin="miter"
+              onClick={() => onSelectBay?.(bay.groupKey)}
+            />
+          )
+        })}
+
+        {/*
+          ② 설비 — **그리는 순서가 곧 의미 순서다**(R25-1).
+          정상 → 베이 이름 → 이상. 이름을 정상 판 밑에 깔면 설비가 많은 칸에서는 아예
+          보이지 않는데("지금 몇 번 베이인가"는 이 그림의 첫 질문이다), 그렇다고 맨 위로
+          올리면 이상 배지를 덮는다. 그래서 그 사이에 세운다.
+        */}
+        <g filter={`url(#${shadowId})`}>
+          {points.filter((point) => !isIssue(point.severity)).map(renderPoint)}
+        </g>
+
+        {/*
+          ③ 베이 번호패 — 정상 설비 위, 이상 설비 아래.
+
+          맨 글자로 띄워 두었을 때는 설비 판과 섞여 "저 숫자가 베이 번호인지 어느 설비의
+          값인지" 가 갈리지 않았다. 도면이 실(室) 번호를 다는 방식대로 **패에 얹는다** —
+          바탕색 판 위의 숫자는 어디에 놓여도 번호로 읽히고, 판이 벽에 붙어 서면 그 자체가
+          "이 칸의 이름" 이라는 뜻이 된다. 고른 칸은 강조색 테두리를 얻어 지금 보는 구획이
+          목록과 같은 낱말로 말해진다.
+        */}
+        {bayLabels.map((label) => {
+          const width = label.label.length * 7 + 13
+          return (
+            <g
+              key={label.id}
+              data-bay-tag={label.label}
+              className={cn(
+                'pointer-events-none select-none transition-opacity duration-200',
+                label.isActive ? 'opacity-100' : 'opacity-80'
+              )}
+            >
+              <rect
+                x={label.x - width / 2}
+                y={label.y - 8}
+                width={width}
+                height={16}
+                rx={3}
+                fill="var(--color-surface)"
+                stroke={label.isActive ? 'var(--color-accent)' : 'currentColor'}
+                strokeOpacity={label.isActive ? 0.9 : 0.34}
+                strokeWidth={label.isActive ? 1.4 : 1}
+              />
+              <text
+                x={label.x}
+                y={label.y + 0.5}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="currentColor"
+                fillOpacity={label.isActive ? 0.95 : 0.72}
+                className="font-mono text-[11px] font-semibold tracking-[0.1em]"
+              >
+                {label.label}
+              </text>
+            </g>
+          )
+        })}
+
+        {/* ④ 이상 설비 — 무엇보다 위에 남는다 */}
+        <g filter={`url(#${shadowId})`}>
+          {points.filter((point) => isIssue(point.severity)).map(renderPoint)}
+        </g>
       </svg>
 
       {tagged && tagAt && (
@@ -460,6 +727,17 @@ export function EquipmentBirdview({
             </>
           )}
         </div>
+      )}
+      </div>
+
+      {/* 색을 넣었으면 읽는 법을 함께 낸다 — 범례 없는 색은 장식이다 */}
+      {colorByType && (
+        <BirdviewLegend
+          points={points}
+          isolated={isolatedType}
+          onIsolate={setIsolatedType}
+          glass={glass}
+        />
       )}
     </div>
   )
