@@ -11,7 +11,7 @@
       "initial": 0,
       "pattern": {
         "kind": "sine",
-        "periodMs": 80000
+        "periodMs": 40000
       },
       "enabled": true,
       "unit": "m"
@@ -25,7 +25,7 @@
       "initial": 0,
       "pattern": {
         "kind": "sine",
-        "periodMs": 80000
+        "periodMs": 40000
       },
       "enabled": true,
       "unit": "m"
@@ -53,7 +53,7 @@
       "initial": 0,
       "pattern": {
         "kind": "sine",
-        "periodMs": 80000
+        "periodMs": 40000
       },
       "enabled": true,
       "unit": "deg"
@@ -95,7 +95,7 @@
       "initial": 0,
       "pattern": {
         "kind": "sine",
-        "periodMs": 80000
+        "periodMs": 40000
       },
       "enabled": true,
       "unit": "m"
