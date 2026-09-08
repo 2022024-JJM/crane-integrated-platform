@@ -17,10 +17,13 @@ import type { SceneCollisionRunner } from '../model/scene-collision-hold';
  *   가장자리로 시선을 끌어 2026-09-08 에 교체). 은은하게 맥동하고
  *   motion-reduce 면 정적. 조작을 막지 않도록 pointer-events-none.
  * - 상단 중앙 배너: 어떤 장비끼리·언제 충돌했는지와 즉시 행동 버튼
- *   ([충돌 지점 보기], 정지 중이면 [재개]). 색 단독 인코딩을 피하려고
+ *   ([충돌 지점 보기], 정지 중이면 [이어서 재생]). 색 단독 인코딩을 피하려고
  *   색 + 비네트 + 텍스트를 함께 쓴다. 아이콘은 깜빡이지 않는다.
- *   실시간 정지("화면 반영 보류")는 제목에 드러내지 않고 [최신 값 복귀]
- *   버튼만 둔다 — 시뮬레이션 정지만 제목이 바뀐다.
+ *   실시간 정지("화면 반영 보류")는 제목에 드러내지 않는다 — 시뮬레이션
+ *   정지만 제목이 바뀐다. 재개 버튼은 두 모드 모두 가상 태그 러너 재생
+ *   (독 ▶ 와 동일)이다 — 실시간 페이지에서도 값은 독 ▶ 가 켠 시뮬레이션이
+ *   만들므로, 보류만 풀던 옛 [최신 값 복귀]는 눌러도 아무것도 움직이지
+ *   않았다(2026-09-08 통일).
  *
  * 2026-09-07 에 제거된 캔버스 위 "오버레이 패널"(감지 설정·기록 조작이 든
  * 컨트롤 패널)과는 역할이 다르다 — 이것은 경보 전용이고, 설정·기록은 그대로
@@ -40,7 +43,6 @@ export function SceneCollisionAlertOverlay({
   const history = useSceneCollisionStore((s) => s.history);
   const activeRecordId = useSceneCollisionStore((s) => s.activeRecordId);
   const activeMode = useSceneCollisionStore((s) => s.activeMode);
-  const resume = useSceneCollisionStore((s) => s.resume);
   const loadVirtualTags = useVirtualTagStore((s) => s.load);
   const startVirtualTags = useVirtualTagStore((s) => s.start);
 
@@ -54,20 +56,12 @@ export function SceneCollisionAlertOverlay({
       ? 'monitoring:sceneCollision.pausedTitle'
       : 'monitoring:sceneCollision.alertTitle',
   );
-  const resumeLabel = t(
-    isRealtime
-      ? 'monitoring:sceneCollision.resumeRealtime'
-      : 'monitoring:sceneCollision.resume',
-  );
+  const resumeLabel = t('monitoring:sceneCollision.resume');
 
-  // 재개: 가상 태그는 러너 재생이 해제 경로(▶ 전이를 검사기가 받아 resume),
-  // 실시간은 스토어 resume 이 화면 반영 보류를 푼다 — 독 ▶·기록 재클릭과
-  // 같은 동작을 배너에서 한 번에 제공할 뿐 새 해제 경로를 만들지 않는다.
+  // 재개 = 독 ▶ 와 같은 경로. 러너 isRunning false→true 전이를 검사기가 받아
+  // 스토어 resume 을 부르고, 그 안에서 실시간 화면 반영 보류도 풀린다
+  // (releaseRunners) — 새 해제 경로를 만들지 않는다.
   const handleResume = () => {
-    if (isRealtime) {
-      resume();
-      return;
-    }
     void loadVirtualTags();
     startVirtualTags();
   };
