@@ -54,7 +54,9 @@
 // (philly 실측: 그리드 3.65cm, minGap 8.8cm → 적용). 조건을 못 넘으면
 // meshopt 를 생략하고 f32 로 남긴다 — simplify 까지만으로도 대부분 절감되고
 // 나머지는 HTTP 압축이 흡수한다. FORCE_MESHOPT=1 로 가드를 무시할 수 있다
-// (작은 오프셋이 의도가 아님을 사람이 확인한 경우).
+// (작은 오프셋이 의도가 아님을 사람이 확인한 경우, 또는 그 평면층이 화면에
+// 안 보이는 경우 — philly-terrain.glb(폭 18.9km, 그리드 28.8cm)는 도로·숲
+// 평면이 지형 overlay 아래 묻혀 있어 우회했다. assets-src/README.md 참고).
 //
 // 가드가 신경 쓰지 않아도 되는 것들:
 //   - 정확히 동일 평면인 쌍(Asphalt↔Road Lines, Dock_Floor↔Dock_Line)은

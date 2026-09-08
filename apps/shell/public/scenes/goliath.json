@@ -4,6 +4,27 @@
       "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
       "path": "/maps/phillyshipyard.glb",
       "locked": true
+    },
+    {
+      "id": "23d79877-a196-4fed-b868-0099ca8a885a",
+      "path": "/maps/philly-terrain.glb",
+      "name": "Philly Terrain",
+      "locked": true,
+      "position": [
+        778.43,
+        3.482,
+        -846.212
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     }
   ],
   "models": [
