@@ -120,7 +120,15 @@ function getSelectedMeshIdForModel(
   return primarySelectedId;
 }
 
-function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
+function SelectionAwareGltfModel({
+  // 에디터 캔버스는 SCENE_GL_OPTIONS(stencil: true)를 쓰므로 충돌 하이라이트와
+  // 같은 일체형 실루엣 테두리로 선택을 표시할 수 있다 — 모델의 기본값. 지도는
+  // 'box' 를 넘긴다: 수 km 짜리 지형을 실루엣으로 두르면 화면 가장자리 전체가
+  // 테두리가 되어 선택 표시로 읽히지 않고, 헐이 지형 메시(수십만~백만 삼각형)를
+  // 매 프레임 두 번 더 그린다.
+  selectionStyle = 'outline',
+  ...props
+}: SelectionAwareGltfModelProps) {
   const isSelected = useIsObjectSelected(props.id);
   // 이 모델 안의 자식 mesh가 선택되어 있으면 그 mesh 객체를 selection box
   // target으로 넘긴다. selectedObjectType이 'mesh'이고 primarySelectedId가
@@ -139,9 +147,7 @@ function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
     <GltfModel
       {...props}
       isSelected={isSelected}
-      // 에디터 캔버스는 SCENE_GL_OPTIONS(stencil: true)를 쓰므로 충돌
-      // 하이라이트와 같은 일체형 실루엣 테두리로 선택을 표시할 수 있다.
-      selectionStyle="outline"
+      selectionStyle={selectionStyle}
       selectedMeshTarget={selectedMeshTarget}
     />
   );
@@ -953,6 +959,8 @@ export function SceneObjectsEditCanvas({
               position={m.position}
               rotation={m.rotation}
               scale={m.scale}
+              // 지도 선택은 바운딩 박스로 표시한다(래퍼 주석 참고).
+              selectionStyle="box"
               // BVH는 기본값(빌드)을 쓴다 — 지도는 클릭 선택·드롭 raycast
               // 대상이라 BVH 없이는 포인터 이동마다 수십만 삼각형을 브루트
               // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
