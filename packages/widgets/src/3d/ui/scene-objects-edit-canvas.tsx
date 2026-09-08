@@ -136,6 +136,9 @@ function SelectionAwareGltfModel(props: SelectionAwareGltfModelProps) {
     <GltfModel
       {...props}
       isSelected={isSelected}
+      // 에디터 캔버스는 SCENE_GL_OPTIONS(stencil: true)를 쓰므로 충돌
+      // 하이라이트와 같은 일체형 실루엣 테두리로 선택을 표시할 수 있다.
+      selectionStyle="outline"
       selectedMeshTarget={selectedMeshTarget}
     />
   );

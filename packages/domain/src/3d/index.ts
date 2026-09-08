@@ -166,4 +166,9 @@ export type {
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
 export { ModelSelectionBox } from './ui/model-selection-box';
+export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';
+export {
+  SILHOUETTE_OUTLINE_PX,
+  outlineOffsetFactor,
+} from './lib/silhouette-outline';
 export { SceneText } from './ui/scene-text';

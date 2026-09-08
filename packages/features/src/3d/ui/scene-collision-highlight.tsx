@@ -3,8 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   COLLISION_LINE_COLOR,
-  COLLISION_LINE_WIDTH,
-  ModelSelectionBox,
+  ObjectSilhouetteOutline,
 } from '@crane/domain/3d';
 import { resolveRecordNodes } from '../lib/scene-collision-pairs';
 import {
@@ -21,13 +20,14 @@ function selectActiveRecord(state: {
 }
 
 /**
- * 활성 충돌 기록을 씬에 표시한다 — 두 노드의 빨간 박스 + 접촉점의 노란 경고
- * 배지. Canvas 안에 둔다.
+ * 활성 충돌 기록을 씬에 표시한다 — 두 노드의 일체형 빨간 실루엣 테두리 +
+ * 접촉점의 노란 경고 배지. Canvas 안에 둔다.
  *
- * - 박스: `ModelSelectionBox` 에 `target` 을 주면 그 노드에 포털로 붙어 노드의
- *   움직임을 씬 그래프 상속으로 따라간다(선택 박스와 같은 구조, 색만 다르다).
- *   노드는 기록의 id·경로를 registry 에서 해석한다 — 리마운트된 모델도 찾고,
- *   없어진 노드는 건너뛴다.
+ * - 테두리: `ObjectSilhouetteOutline`(@crane/domain/3d — 에디터 선택 표시와
+ *   같은 구현, 스텐실 마스크 + 인플레이션 헐)에 두 노드를 함께 넘겨 합집합
+ *   실루엣 하나로 두른다. 예전의 AABB 빨간 박스는 "영역 전체"를 둘러 실제
+ *   어느 장비가 부딪혔는지 형태로 안 읽혔다. 노드는 기록의 id·경로를
+ *   registry 에서 해석한다 — 리마운트된 모델도 찾고, 없어진 노드는 건너뛴다.
  * - 경고 배지: 기록의 접촉점(월드 좌표, 충돌 순간 고정값)에 drei `Html` 로
  *   띄운다. 노드에 붙이지 않는 이유 — 접촉점은 그 순간의 월드 좌표라 이후
  *   노드가 움직여도 "어디서 부딪혔는지"를 가리켜야 한다. 화면 크기 고정,
@@ -36,23 +36,27 @@ function selectActiveRecord(state: {
 export function SceneCollisionHighlight() {
   const { t } = useTranslation();
   const record = useSceneCollisionStore(selectActiveRecord);
+  // 테두리는 충돌 메시가 아니라 **장비 전체**(모델 루트)에 씌운다 — 부딪힌
+  // 부품 하나만 두르면 멀리서 어느 장비인지 안 읽힌다. nodePath 를 '' 로
+  // 비워 registry 에서 모델 루트를 해석한다.
   const nodes = useMemo(
-    () => (record ? resolveRecordNodes([record.a, record.b]) : []),
+    () =>
+      record
+        ? resolveRecordNodes([
+            { ...record.a, nodePath: '' },
+            { ...record.b, nodePath: '' },
+          ])
+        : [],
     [record],
   );
   if (!record) return null;
   return (
     <>
-      {nodes.map((node) => (
-        <ModelSelectionBox
-          key={`${record.id}:${node.uuid}`}
-          clone={node}
-          target={node}
-          isSelected
-          color={COLLISION_LINE_COLOR}
-          lineWidth={COLLISION_LINE_WIDTH}
-        />
-      ))}
+      <ObjectSilhouetteOutline
+        key={record.id}
+        objects={nodes}
+        color={COLLISION_LINE_COLOR}
+      />
       <group position={record.contactPoint}>
         {/* 라벨(zIndexRange [5,0])보다 앞에 온다 — 겹치면 경고가 위. */}
         <Html center zIndexRange={[6, 0]}>

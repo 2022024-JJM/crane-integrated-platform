@@ -95,7 +95,13 @@ export const SCENE_GL_OPTIONS = {
   powerPreference: 'high-performance',
   alpha: false,
   antialias: true,
-  stencil: false,
+  /**
+   * 충돌 하이라이트·에디터 선택의 일체형 실루엣 테두리가 스텐실 마스크를
+   * 쓴다 — 대상 모델들의 화면 발자국을 스텐실에 찍고 부풀린 헐을 그 밖에서만
+   * 그려 내부 경계선을 지운다(@crane/domain/3d silhouette-outline.ts). 비용은
+   * depth 와 패킹되는 8bit 버퍼뿐이다.
+   */
+  stencil: true,
   depth: true,
 } as const;
 

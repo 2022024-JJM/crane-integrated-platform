@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -9,6 +9,8 @@ import {
 } from './model-mesh';
 import { ModelLabel, type AlarmHighlightSeverity } from './model-label';
 import { ModelSelectionBox } from './model-selection-box';
+import { ObjectSilhouetteOutline } from './object-silhouette-outline';
+import { SELECTION_LINE_COLOR } from '../lib/selection-style';
 import type { SavedMeshOverride } from '../model/types';
 
 interface GltfModelProps {
@@ -51,6 +53,15 @@ interface GltfModelProps {
   onDoubleSelect?: (id: string, event: ThreeEvent<MouseEvent>) => void;
   isSelected?: boolean;
   /**
+   * 모델 전체 선택 표시 방식. 기본 'box'(AABB 라인). 'outline'은 충돌
+   * 하이라이트와 같은 일체형 실루엣 테두리(ObjectSilhouetteOutline)로,
+   * **캔버스에 스텐실 버퍼가 있어야 한다**(SCENE_GL_OPTIONS.stencil: true).
+   * 스텐실 없는 캔버스(mro2·philly 존 뷰어 등)에서 켜면 헐이 모델을 통째로
+   * 덮으므로 기본값을 바꾸지 않는다 — 씬 에디터만 'outline'을 넘긴다.
+   * 자식 mesh 선택(selectedMeshTarget)은 읽기 전용 표시라 항상 박스다.
+   */
+  selectionStyle?: 'box' | 'outline';
+  /**
    * 자식 mesh가 선택된 경우 그 mesh 객체. ModelSelectionBox가 이 mesh의
    * bbox만으로 selection box를 그리도록 한다. null이면 모델 전체 박스.
    */
@@ -90,6 +101,7 @@ export const GltfModel = memo(function GltfModel({
   onSelect,
   onDoubleSelect,
   isSelected = false,
+  selectionStyle = 'box',
   selectedMeshTarget = null,
   enableRaycastBvh = true,
   onObjectReady,
@@ -103,6 +115,12 @@ export const GltfModel = memo(function GltfModel({
   const clonedModel = useClonedModel(url);
   const { clone } = clonedModel;
   const labelLocalAnchor = useModelLabelLocalAnchor(clone, showLabel);
+  const outlineObjects = useMemo(() => [clone], [clone]);
+
+  // 모델 전체 선택을 실루엣 테두리로 그리는 경우 — 자식 mesh 선택은 읽기
+  // 전용 표시라 outline 스타일이어도 박스를 유지한다(prop 주석 참고).
+  const useOutline =
+    selectionStyle === 'outline' && isSelected && !selectedMeshTarget;
 
   const handleObjectReady = useCallback(
     (readyId: string, object: Object3D | null) => {
@@ -132,11 +150,18 @@ export const GltfModel = memo(function GltfModel({
       onHoverMove={onHoverMove}
       onHoverEnd={onHoverEnd}
     >
-      <ModelSelectionBox
-        clone={clone}
-        isSelected={isSelected || Boolean(selectedMeshTarget)}
-        target={selectedMeshTarget}
-      />
+      {useOutline ? (
+        <ObjectSilhouetteOutline
+          objects={outlineObjects}
+          color={SELECTION_LINE_COLOR}
+        />
+      ) : (
+        <ModelSelectionBox
+          clone={clone}
+          isSelected={isSelected || Boolean(selectedMeshTarget)}
+          target={selectedMeshTarget}
+        />
+      )}
       {showLabel ? (
         <ModelLabel
           id={id}
