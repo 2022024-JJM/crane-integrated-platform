@@ -17,6 +17,9 @@
     "textContent": "Content",
     "textColor": "Color",
     "tagMapping": "Tag Mapping",
+    "camera": "Camera",
+    "cameraBounds": "Limit camera to this map",
+    "cameraBoundsHint": "The camera stays within the checked maps.\nWith none checked, all maps count.",
     "rigging": {
       "title": "Rigging",
       "none": "No rig",

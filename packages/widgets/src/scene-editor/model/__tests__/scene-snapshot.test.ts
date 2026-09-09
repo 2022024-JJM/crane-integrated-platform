@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  SavedModelInfo,
-  SavedSceneInfo,
-} from '@crane/domain/3d';
+import type { SavedModelInfo, SavedSceneInfo } from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -43,16 +40,24 @@ describe('isSceneInfoEqual — 기본', () => {
 
   it('내용이 같은 다른 객체는 true (구조 비교)', () => {
     expect(
-      isSceneInfoEqual(scene({ models: [model()] }), scene({ models: [model()] })),
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model()] }),
+      ),
     ).toBe(true);
   });
 });
 
 describe('isSceneInfoEqual — environmentId 3-상태', () => {
   it('undefined(미지정)와 null(배경 없음)은 다른 상태다', () => {
-    expect(isSceneInfoEqual(scene(), scene({ environmentId: null }))).toBe(false);
+    expect(isSceneInfoEqual(scene(), scene({ environmentId: null }))).toBe(
+      false,
+    );
     expect(
-      isSceneInfoEqual(scene({ environmentId: 'sky' }), scene({ environmentId: 'sky' })),
+      isSceneInfoEqual(
+        scene({ environmentId: 'sky' }),
+        scene({ environmentId: 'sky' }),
+      ),
     ).toBe(true);
   });
 });
@@ -74,9 +79,9 @@ describe('isSceneInfoEqual — 조명 기본값 정규화', () => {
   });
 
   it('그림자·태양 위치 변경은 dirty로 잡힌다', () => {
-    expect(isSceneInfoEqual(scene(), scene({ lighting: { shadows: true } }))).toBe(
-      false,
-    );
+    expect(
+      isSceneInfoEqual(scene(), scene({ lighting: { shadows: true } })),
+    ).toBe(false);
     expect(
       isSceneInfoEqual(scene(), scene({ lighting: { sunAzimuth: 90 } })),
     ).toBe(false);
@@ -117,6 +122,21 @@ describe('isSceneInfoEqual — 지도', () => {
         scene({ maps: [{ ...map, name: 'Dock' }] }),
       ),
     ).toBe(false);
+  });
+
+  it('카메라 영역 제한 토글은 dirty — 없음과 false 는 같은 상태', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ maps: [map] }),
+        scene({ maps: [{ ...map, cameraBounds: true }] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ maps: [map] }),
+        scene({ maps: [{ ...map, cameraBounds: false }] }),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -181,7 +201,14 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
       isSceneInfoEqual(
         scene({ models: [model({ tagMappings: [a, b] })] }),
         scene({
-          models: [model({ tagMappings: [{ ...b, offset: 0 }, { ...a, scale: 1 }] })],
+          models: [
+            model({
+              tagMappings: [
+                { ...b, offset: 0 },
+                { ...a, scale: 1 },
+              ],
+            }),
+          ],
         }),
       ),
     ).toBe(true);
@@ -189,13 +216,21 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     expect(
       isSceneInfoEqual(
         scene({ models: [model({ tagMappings: [a] })] }),
-        scene({ models: [model({ tagMappings: [{ ...a, target: { ...a.target, axis: 'x' } }] })] }),
+        scene({
+          models: [
+            model({
+              tagMappings: [{ ...a, target: { ...a.target, axis: 'x' } }],
+            }),
+          ],
+        }),
       ),
     ).toBe(false);
     expect(
       isSceneInfoEqual(
         scene({ models: [model({ tagMappings: [a] })] }),
-        scene({ models: [model({ tagMappings: [{ ...a, tagKey: 'other' }] })] }),
+        scene({
+          models: [model({ tagMappings: [{ ...a, tagKey: 'other' }] })],
+        }),
       ),
     ).toBe(false);
     expect(
@@ -225,7 +260,9 @@ describe('isSceneInfoEqual — 모델·텍스트', () => {
     expect(
       isSceneInfoEqual(
         scene({ models: [model({ meshOverrides: [o1] })] }),
-        scene({ models: [model({ meshOverrides: [{ ...o1, opacity: 0.9 }] })] }),
+        scene({
+          models: [model({ meshOverrides: [{ ...o1, opacity: 0.9 }] })],
+        }),
       ),
     ).toBe(false);
   });
@@ -289,7 +326,9 @@ describe('createSceneSnapshot', () => {
     // 기본값 조명은 sanitize가 필드를 생략하므로 두 씬의 스냅샷이 일치한다.
     const a = createSceneSnapshot(scene());
     const b = createSceneSnapshot(
-      scene({ lighting: { shadows: false, sunAzimuth: SCENE_SUN_AZIMUTH_DEFAULT } }),
+      scene({
+        lighting: { shadows: false, sunAzimuth: SCENE_SUN_AZIMUTH_DEFAULT },
+      }),
     );
     expect(a).toBeTypeOf('string');
     expect(a).toBe(b);
@@ -362,7 +401,9 @@ describe('isSceneInfoEqual — 리깅', () => {
         scene({ rigs: [rig()] }),
         scene({
           rigs: [
-            rig({ joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'y' }] }),
+            rig({
+              joints: [{ id: 'a', node: '[0]A', type: 'hinge', axis: 'y' }],
+            }),
           ],
         }),
       ),

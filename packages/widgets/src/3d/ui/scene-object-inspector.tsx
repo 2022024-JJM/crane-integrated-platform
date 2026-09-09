@@ -1,5 +1,6 @@
 import {
   Bone,
+  Camera,
   Eye,
   Palette,
   SlidersHorizontal,
@@ -57,7 +58,8 @@ type InspectorTabKey =
   | 'tagMapping'
   | 'rigging'
   | 'textContent'
-  | 'textColor';
+  | 'textColor'
+  | 'camera';
 
 type InspectorObjectType = 'model' | 'text' | 'map';
 
@@ -68,6 +70,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   rigging: Bone,
   textContent: Type,
   textColor: Palette,
+  camera: Camera,
 };
 
 const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
@@ -77,12 +80,13 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
   textColor: 'monitoring:inspector.textColor',
+  camera: 'monitoring:inspector.camera',
 };
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
   model: ['transform', 'display', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
-  map: ['transform'],
+  map: ['transform', 'camera'],
 };
 
 function getTabsForType(
@@ -135,6 +139,8 @@ interface SceneObjectInspectorProps {
   ) => void;
   onTextContentChange: (content: string) => void;
   onTextColorChange: (color: string) => void;
+  /** 지도 카메라 탭 — "카메라 영역 제한"(cameraBounds) 토글. */
+  onMapCameraBoundsChange?: (enabled: boolean) => void;
   /** 태그 매핑 탭. 없으면 탭이 뜨지 않는다. */
   tagMapping?: InspectorTagMappingHandlers;
   /** 리깅 탭. 없으면 탭이 뜨지 않는다(tagMapping 과 같은 게이트). */
@@ -480,12 +486,13 @@ function TextInspectorContent({
 }
 
 /**
- * 지도 인스펙터 — transform만.
+ * 지도 인스펙터 — transform 과 카메라 탭.
  *
  * 지도에는 모델의 투명도/태그 매핑에 해당하는 개념이 없다. 투명도를
  * 낮추면 그 위 객체의 기준면이 사라져 배치 작업 자체가 불가능해진다.
- * 그래서 편집 가능한 것은 배치(transform)뿐이고, 이름 표시/변경은
- * 계층 목록(우클릭 메뉴)이 담당한다.
+ * 편집 가능한 것은 배치(transform)와 "카메라 영역 제한"(cameraBounds —
+ * 체크한 지도들의 합집합이 카메라 이동 범위·탑뷰·최대 높이의 기준)뿐이고,
+ * 이름 표시/변경은 계층 목록(우클릭 메뉴)이 담당한다.
  *
  * 잠금 토글은 여기 두지 않는다 — 이 패널은 "지도가 선택된 상태"에서만
  * 보이는데, 잠긴 지도는 애초에 선택될 수 없고 잠그는 순간 선택이 풀려
@@ -495,18 +502,42 @@ function TextInspectorContent({
  */
 function MapInspectorContent({
   selectedMap,
+  activeTab,
   onTransformChange,
+  onCameraBoundsChange,
   t,
 }: {
   selectedMap: SavedMapInfo;
+  activeTab: InspectorTabKey;
   onTransformChange: (
     field: SceneTransformField,
     axis: AxisKey,
     value: number,
     options?: { uniformScale?: boolean },
   ) => void;
+  onCameraBoundsChange?: (enabled: boolean) => void;
   t: (key: string) => string;
 }) {
+  if (activeTab === 'camera') {
+    return (
+      <div>
+        <SectionHeader title={t('monitoring:inspector.camera')} />
+        <div className="space-y-2">
+          <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+            <Checkbox
+              checked={selectedMap.cameraBounds === true}
+              onCheckedChange={(checked) => onCameraBoundsChange?.(checked)}
+              className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+            />
+            {t('monitoring:inspector.cameraBounds')}
+          </label>
+          <p className="text-muted-foreground text-[10px] leading-relaxed whitespace-pre-line">
+            {t('monitoring:inspector.cameraBoundsHint')}
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <TransformSection
       position={selectedMap.position ?? DEFAULT_MAP_POSITION}
@@ -577,6 +608,7 @@ export function SceneObjectInspector({
   onTransformChange,
   onTextContentChange,
   onTextColorChange,
+  onMapCameraBoundsChange,
   tagMapping,
   rigging,
   className,
@@ -673,7 +705,9 @@ export function SceneObjectInspector({
           ) : selectedMap ? (
             <MapInspectorContent
               selectedMap={selectedMap}
+              activeTab={resolvedTab}
               onTransformChange={onTransformChange}
+              onCameraBoundsChange={onMapCameraBoundsChange}
               t={t}
             />
           ) : null}

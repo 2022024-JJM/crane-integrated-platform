@@ -15,11 +15,12 @@ import {
   type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3, MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
+import { MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
   GltfModel,
   SceneText,
   SilhouetteOutlineWarmup,
+  collectCameraBoundsBox,
   getMeshPath,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
@@ -644,8 +645,9 @@ export function SceneObjectsEditCanvas({
         .subVectors(cam.position, controls.target)
         .normalize();
 
-      // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance(3000)로
-      // 잘라 준다. 지도처럼 큰 객체는 뷰어 탑뷰와 같은 상한에서 멈춘다.
+      // 거리 상한은 두지 않는다 — update()가 OrbitControls maxDistance
+      // (SceneCameraLimits 가 지도 크기로 정한 값)로 잘라 준다. 지도처럼 큰
+      // 객체는 뷰어 탑뷰와 같은 상한에서 멈춘다.
       cam.position.copy(center).addScaledVector(direction, distance);
       controls.target.copy(center);
       // 감쇠를 잠시 끄고 update() 한다 — 켠 채로 부르면 직전 드래그의 잔여
@@ -753,17 +755,18 @@ export function SceneObjectsEditCanvas({
     applyCameraPose({ position: cameraPosition, target: cameraTarget });
   }, [applyCameraPose, cameraPosition, cameraTarget]);
 
-  // 바운즈 우선순위: 지도 → 배치된 객체 전체 → (아무것도 없으면) 현재 거리를
-  // 유지한 채 타깃 바로 위. 지도 GLB 가 아직 로드 전이면 박스가 비어 있어
-  // 객체 전체로 내려간다.
+  // 바운즈 우선순위: 카메라 영역 제한에 체크된 지도들의 합집합(없으면 모든
+  // 지도 — 뷰어·SceneCameraLimits 와 같은 기준) → 배치된 객체 전체 →
+  // (아무것도 없으면) 현재 거리를 유지한 채 타깃 바로 위. 지도 GLB 가 아직
+  // 로드 전이면 박스가 비어 있어 객체 전체로 내려간다.
   const topView = useCallback(() => {
     const controls = orbitControlsRef.current as OrbitControlsImpl | null;
     if (!controls) return;
     const registry = modelObjectRegistryRef.current;
-    const mapId = resolveGroundMap(sceneInfo?.maps)?.id;
-    const mapObject = mapId ? registry.get(mapId) : undefined;
-    let bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
-    if (!bounds || bounds.isEmpty()) {
+    let bounds = collectCameraBoundsBox(sceneInfo?.maps, (id) =>
+      registry.get(id),
+    );
+    if (!bounds) {
       bounds = collectWorldBounds([...registry.values()]);
     }
 
@@ -905,8 +908,9 @@ export function SceneObjectsEditCanvas({
           // clamp일 뿐이라 낮게 둔다(표면 피벗이 가까울 때 튕기지 않게).
           enableZoom={false}
           minDistance={5}
-          // 초기값 — SceneCameraLimits 가 지도 크기로 매 프레임 갱신한다.
-          maxDistance={3000}
+          // 초기값(features CAMERA_MAX_DISTANCE 와 같은 값) — SceneCameraLimits
+          // 가 지도 크기로 매 프레임 갱신한다.
+          maxDistance={30000}
           mouseButtons={{
             LEFT: undefined,
             MIDDLE: MOUSE.ROTATE,

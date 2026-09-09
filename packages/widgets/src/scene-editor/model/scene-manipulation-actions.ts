@@ -144,7 +144,9 @@ export function createSceneManipulationActions({
    * 새 지도는 잠기지 않은 상태로 시작하고 곧바로 선택한다(addModel 과 같은
    * 규약) — 기즈모가 바로 붙어 배치를 먼저 하고, 계층 목록·타일의 자물쇠로
    * 잠근다. position 은 카탈로그 defaultPosition(주변 지형의 조선소 기준
-   * 오프셋)이 있으면 그 값, 없으면 원점이다.
+   * 오프셋)이 있으면 그 값, 없으면 원점이다. ground 지도는 카메라 영역 제한
+   * (cameraBounds)에 체크된 채 들어간다 — 기존 씬 파일의 초기 기록과 같은
+   * 규칙이고, 카탈로그 kind 를 카메라 제한이 보는 건 이 추가 시점 한 번뿐이다.
    */
   const addSceneMap = (catalogItem: SceneMapCatalogItem) => {
     const maps = sceneInfoRef.current?.maps ?? [];
@@ -174,6 +176,7 @@ export function createSceneManipulationActions({
             rotation: [0, 0, 0],
             scale: [1, 1, 1],
             locked: false,
+            ...(catalogItem.kind === 'ground' ? { cameraBounds: true } : {}),
           },
         ],
       };

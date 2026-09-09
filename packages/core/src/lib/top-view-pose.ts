@@ -2,8 +2,13 @@ import type { Vector3Tuple } from '../types/math';
 
 /** 뷰어(ThreeSceneViewer.moveToTopView)·편집기 공용 탑뷰 fit 여백. */
 export const TOP_VIEW_PADDING = 1.08;
-/** 뷰어·편집기 OrbitControls maxDistance 와 같은 상한. */
-export const TOP_VIEW_MAX_DISTANCE = 3000;
+/**
+ * 탑뷰 거리 상한 — features CAMERA_MAX_DISTANCE(최대 궤도 반경 상한)와 같은
+ * 값. 3000 이던 것을 30000 으로 올렸다(2026-09-09) — 폭 18.9km 주변 지형을
+ * 카메라 기준 지도로 체크하면 3000 에선 탑뷰에 다 안 들어왔다. 카메라 far
+ * (SCENE_CAMERA_CLIP 50000)와 바다 원판 반경(40000) 안이어야 한다.
+ */
+export const TOP_VIEW_MAX_DISTANCE = 30000;
 /**
  * 정수직 회피용 미세 기울기(거리 대비 비율).
  *

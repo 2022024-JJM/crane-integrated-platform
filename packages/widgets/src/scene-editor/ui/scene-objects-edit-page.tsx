@@ -187,6 +187,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setEnvironmentId,
     setLighting,
     selectedMap,
+    updateSelectedMapCameraBounds,
     setObjectLocked,
     toggleModel,
     toggleText,
@@ -640,6 +641,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onTransformChange={updateSelectedTransform}
                         onTextContentChange={updateSelectedTextContent}
                         onTextColorChange={updateSelectedTextColor}
+                        onMapCameraBoundsChange={updateSelectedMapCameraBounds}
                         tagMapping={tagMappingHandlers}
                         rigging={riggingHandlers}
                       />

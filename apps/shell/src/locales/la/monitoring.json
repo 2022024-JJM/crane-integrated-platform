@@ -17,6 +17,9 @@
     "textContent": "Argumentum",
     "textColor": "Color",
     "tagMapping": "Designatio Tags",
+    "camera": "Camera",
+    "cameraBounds": "Cameram intra hanc tabulam tene",
+    "cameraBoundsHint": "Camera intra tabulas selectas manet.\nNulla selecta: omnes tabulae valent.",
     "rigging": {
       "title": "Articulatio",
       "none": "Nulla articulatio",

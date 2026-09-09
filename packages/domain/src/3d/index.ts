@@ -107,6 +107,11 @@ export {
 export { raycastMapSurfaceY } from './lib/map-surface-raycast';
 export { resolveGroundMap } from './lib/resolve-ground-map';
 export {
+  collectCameraBoundsBox,
+  resolveCameraBoundsMaps,
+  unionObjectBounds,
+} from './lib/camera-bounds-maps';
+export {
   makeMeshId,
   parseMeshId,
   isMeshId,

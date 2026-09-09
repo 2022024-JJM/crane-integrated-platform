@@ -51,9 +51,7 @@ function clampOpacity(value: unknown) {
   return clampToRange(Number(value), 0.1, 1);
 }
 
-function sanitizeMeshOverrides(
-  raw: unknown,
-): SavedMeshOverride[] | undefined {
+function sanitizeMeshOverrides(raw: unknown): SavedMeshOverride[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const out: SavedMeshOverride[] = [];
   for (const item of raw) {
@@ -61,8 +59,10 @@ function sanitizeMeshOverrides(
     const o = item as Record<string, unknown>;
     if (typeof o.meshPath !== 'string' || o.meshPath.length === 0) continue;
     const sanitized: SavedMeshOverride = { meshPath: o.meshPath };
-    if (isVector3Tuple(o.position)) sanitized.position = o.position as Vector3Tuple;
-    if (isVector3Tuple(o.rotation)) sanitized.rotation = o.rotation as Vector3Tuple;
+    if (isVector3Tuple(o.position))
+      sanitized.position = o.position as Vector3Tuple;
+    if (isVector3Tuple(o.rotation))
+      sanitized.rotation = o.rotation as Vector3Tuple;
     if (isVector3Tuple(o.scale)) sanitized.scale = o.scale as Vector3Tuple;
     if (isFiniteNumber(o.opacity))
       sanitized.opacity = clampToRange(Number(o.opacity), 0.1, 1);
@@ -82,7 +82,8 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     (sceneInfo as SavedSceneInfo | undefined)?.rigs,
   );
 
-  const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })?.map;
+  const legacyMap = (sceneInfo as unknown as { map?: SavedMapInfo | null })
+    ?.map;
   const rawMaps = Array.isArray(sceneInfo?.maps)
     ? sceneInfo.maps
     : legacyMap
@@ -96,10 +97,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     // 이었으므로 화면 동작이 달라지지 않는다.
     const safeMap: SavedMapInfo = {
       id:
-        typeof m.id === 'string' && m.id.length > 0 ? m.id : createSceneModelId(),
+        typeof m.id === 'string' && m.id.length > 0
+          ? m.id
+          : createSceneModelId(),
       path: typeof m.path === 'string' && m.path.length > 0 ? m.path : '',
       locked: m.locked !== false,
     };
+    // 카메라 영역 제한은 옵트인 — true 만 남긴다(모델 locked 과 같은 규칙).
+    if (m.cameraBounds === true) safeMap.cameraBounds = true;
     if (isVector3Tuple(m.position)) safeMap.position = m.position;
     if (isVector3Tuple(m.rotation)) safeMap.rotation = m.rotation;
     if (isVector3Tuple(m.scale)) safeMap.scale = m.scale;
@@ -236,8 +241,7 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     }
     if (isFiniteNumber(rawLighting.sunAzimuth)) {
       // [0,360) 랩 — 360과 0이 다른 값으로 남으면 dirty 판정이 어긋난다.
-      const sunAzimuth =
-        ((Number(rawLighting.sunAzimuth) % 360) + 360) % 360;
+      const sunAzimuth = ((Number(rawLighting.sunAzimuth) % 360) + 360) % 360;
       if (sunAzimuth !== SCENE_SUN_AZIMUTH_DEFAULT) {
         lighting.sunAzimuth = sunAzimuth;
       }

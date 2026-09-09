@@ -27,17 +27,25 @@ export const CAMERA_GROUND_CLEARANCE = 5;
  */
 export const CAMERA_MAX_POLAR_ANGLE = (75 * Math.PI) / 180;
 /**
- * 최대 궤도 반경 = 지도 탑뷰 fit 거리 × 이 배수. 1 미만이라 탑뷰에서도 지도
- * 전체가 아니라 이 비율만큼만 화면에 든다 — 처음 1.5 로 두었더니 지도 밖이
- * 넓게 보여 절반으로 줄였다(2026-09-09).
+ * 최대 궤도 반경 = 지도 탑뷰 fit 거리 × 이 배수. 1.0 이라 탑뷰가 곧 가장 먼
+ * 시점이다 — 휠로 그보다 멀어지지 않는다. 1.5(지도 밖이 넓게 보임) → 0.75
+ * (탑뷰에 지도가 다 안 들어옴) 를 거쳐 탑뷰 높이에 맞췄다(2026-09-09).
  */
-export const CAMERA_MAX_DISTANCE_RATIO = 0.75;
+export const CAMERA_MAX_DISTANCE_RATIO = 1.0;
 /**
- * 최대 궤도 반경의 상한이자 지도가 없을 때의 값. 뷰어(ThreeSceneViewer)·
- * 에디터 OrbitControls 의 초기 maxDistance, core TOP_VIEW_MAX_DISTANCE 와
- * 같은 값 — ui 는 features 를 import 할 수 없어 리터럴이 중복돼 있다.
+ * 최대 궤도 반경의 상한이자 지도가 없을 때의 값. core TOP_VIEW_MAX_DISTANCE
+ * 와 같은 값이고 에디터 OrbitControls 의 초기 maxDistance 리터럴도 이 값이다
+ * (widgets 는 features 를 import 할 수 있지만 JSX 리터럴로 둔 관례). 뷰어
+ * (ThreeSceneViewer, @crane/ui)의 초기값은 3000 으로 남겨 둔다 —
+ * SceneCameraLimits 가 없는 작은 뷰어(far 5000)의 안전값이고, 세 화면에선
+ * SceneCameraLimits 가 첫 프레임에 덮어쓴다.
+ *
+ * 3000 → 30000(2026-09-09): 폭 18.9km 주변 지형을 기준 지도로 체크하면
+ * 3000 에선 탑뷰에 다 안 들어왔다. 카메라 far 50000·바다 원판 40000 안이다
+ * — 30000m 높이 탑뷰에서 원판 가장자리까지가 정확히 50000 이라 그 끝만
+ * far 에 닿는데, 파도 페이드가 10000 에서 배경색으로 수렴해 티가 안 난다.
  */
-export const CAMERA_MAX_DISTANCE = 3000;
+export const CAMERA_MAX_DISTANCE = 30000;
 
 function isEmptyBounds(bounds: BoundsLike): boolean {
   return (

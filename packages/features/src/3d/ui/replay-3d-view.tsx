@@ -8,8 +8,11 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box3 } from 'three';
-import { modelObjectRegistry, resolveGroundMap } from '@crane/domain/3d';
+import {
+  modelObjectRegistry,
+  resolveCameraBoundsMaps,
+  unionObjectBounds,
+} from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
   Popover,
@@ -110,19 +113,27 @@ export function Replay3dView({
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
   // 인라인 리터럴 금지 — monitoring-3d-view의 cameraPreset 주석 참고
   // (부모 리렌더마다 SceneControlsBridge가 reset()을 호출해 카메라가 튄다).
-  // 탑뷰 fit 대상 = 지도 bounds. mapId(문자열)만 의존성에 넣어 sceneInfo
-  // 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게 한다(위 주석의 reset 문제).
-  const mapId = resolveGroundMap(sceneInfo?.maps)?.id;
+  // 탑뷰 fit 대상 = 카메라 영역 제한에 체크된 지도들의 합집합(없으면 모든
+  // 지도) — SceneCameraLimits 와 같은 기준. id 목록을 이어 붙인 문자열만
+  // 의존성에 넣어 sceneInfo 객체가 갱신돼도 cameraPreset 참조가 바뀌지 않게
+  // 한다(위 주석의 reset 문제). 객체는 버튼을 누르는 시점에 레지스트리에서
+  // 읽으므로 로드 타이밍과 무관하다.
+  const cameraBoundsKey = resolveCameraBoundsMaps(sceneInfo?.maps)
+    .map((m) => m.id)
+    .join('|');
   const cameraPreset = useMemo(
     () => ({
       defaultPosition: cameraPosition,
       defaultTarget: cameraTarget,
-      getTopViewBounds: () => {
-        const map = mapId ? modelObjectRegistry.get(mapId) : undefined;
-        return map ? new Box3().setFromObject(map) : null;
-      },
+      getTopViewBounds: () =>
+        unionObjectBounds(
+          cameraBoundsKey
+            .split('|')
+            .filter(Boolean)
+            .map((id) => modelObjectRegistry.get(id)),
+        ),
     }),
-    [cameraPosition, cameraTarget, mapId],
+    [cameraPosition, cameraTarget, cameraBoundsKey],
   );
 
   // 좌측 상단 열(재생 컨트롤 바 아래) — 포커스 복귀 버튼 위, 후처리 상태 아래.

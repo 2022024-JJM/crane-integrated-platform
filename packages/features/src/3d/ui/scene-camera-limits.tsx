@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
-  Box3,
   PerspectiveCamera,
   Vector3,
+  type Box3,
   type Camera,
   type Object3D,
 } from 'three';
@@ -11,7 +11,8 @@ import {
   SEA_LEVEL_Y,
   modelObjectRegistry,
   raycastMapSurfaceY,
-  resolveGroundMap,
+  resolveCameraBoundsMaps,
+  unionObjectBounds,
   type SavedMapInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
@@ -39,14 +40,17 @@ import {
  *    못 막으니 아래 3 의 방식으로 막는다. EXR 배경 유무와 무관하게 모든 씬에
  *    적용한다(옛 CameraAboveSea 흡수). 극각엔 고정 상한(CAMERA_MAX_POLAR_ANGLE)
  *    도 함께 건다. minPolarAngle 은 0(정수직 탑뷰 허용).
- * 2. 이동 범위: **카메라**(타깃이 아니라) XZ 를 바닥 지도(resolveGroundMap)
- *    bounds 안에 둔다. 여유·여백 비율은 두지 않는다 — 지도가 작업 구역보다
- *    훨씬 넓은 씬에서 어느 쪽으로 두든 의미가 어긋났다. 타깃 기준이 아닌
+ * 2. 이동 범위: **카메라**(타깃이 아니라) XZ 를 기준 지도들의 월드 AABB
+ *    합집합 안에 둔다. 기준 지도는 인스펙터 카메라 탭에서 체크한 것들이고
+ *    (resolveCameraBoundsMaps), 체크가 없으면 씬의 모든 지도다. 여유·여백
+ *    비율은 두지 않는다 — 지도가 작업 구역보다 훨씬 넓은 씬에서 어느 쪽으로
+ *    두든 의미가 어긋났다. 타깃 기준이 아닌
  *    이유 — SceneSurfaceCamera 가 드래그 시작마다 타깃을 화면 중앙 표면점
  *    (컨텍스트 지형·바다 포함, 지도 밖 수 km 가능)으로 옮기므로, 타깃을 되밀면
  *    드래그마다 카메라가 km 단위로 튄다.
- * 3. 최대 궤도 반경: 지도 탑뷰 fit 거리 × CAMERA_MAX_DISTANCE_RATIO 를
- *    controls.maxDistance 에 쓴다(지도 없으면 3000). OrbitControls 의 반경
+ * 3. 최대 궤도 반경: 같은 합집합의 탑뷰 fit 거리 × CAMERA_MAX_DISTANCE_RATIO
+ *    (1.0 — 탑뷰가 곧 가장 먼 시점)를 controls.maxDistance 에 쓴다(지도
+ *    없으면 CAMERA_MAX_DISTANCE). OrbitControls 의 반경
  *    clamp, SceneSurfaceCamera 의 휠 dolly 상한·표면 피벗 거리 cap, 뷰어·
  *    에디터 탑뷰 높이가 이 값을 함께 읽는다.
  *
@@ -72,11 +76,12 @@ import {
  * controls.enabled 로 게이트하지 않는다. 기즈모 드래그 중엔 카메라가 정지라
  * no-op 이고, 충돌가드 비행은 매 프레임 절대값 대입이라 싸우지 않는다.
  *
- * 지도 bounds 캐시는 (resolveGroundMap 항목 참조, 레지스트리 객체 참조,
- * camera.aspect) 셋 중 하나가 바뀐 프레임에만 다시 계산한다 — 지도 추가·
- * 삭제·교체, 기즈모 커밋(항목 참조 변경), 레지스트리 재등록, 리사이즈를
- * 전부 덮고 폴링이 없다. 로드 전·지도 없는 씬(dock-in)은 bounds 가 null 이라
- * 이동·반경 제한이 없고 바닥(해수면)만 걸린다.
+ * 합집합 bounds 캐시는 (sceneInfo.maps 배열 참조 → 기준 지도 목록, 기준
+ * 지도별 레지스트리 객체 참조, camera.aspect) 중 하나가 바뀐 프레임에만 다시
+ * 계산한다 — 지도 추가·삭제·교체·체크 토글·기즈모 커밋(배열·항목 참조 변경),
+ * 레지스트리 등록(지도가 순차 로드돼도 등록되는 프레임에 합집합이 넓어진다),
+ * 리사이즈를 전부 덮고 폴링이 없다. 로드 전·지도 없는 씬(dock-in)은 bounds
+ * 가 null 이라 이동·반경 제한이 없고 바닥(해수면)만 걸린다.
  *
  * 알려진 한계(v1): 카메라가 지도 경계선 위까지는 갈 수 있으므로 그 자리에서
  * 바깥을 보면 지도 밖이 조금 보인다 — 극각 상한이 그 시선을 눕지 못하게 막는
@@ -93,8 +98,12 @@ interface OrbitControlsLike {
 }
 
 interface LimitCache {
-  mapInfo: SavedMapInfo | null;
-  mapObject: Object3D | null;
+  /** 마지막으로 본 sceneInfo.maps 배열 참조 — 바뀌면 기준 지도를 다시 고른다. */
+  maps: SavedMapInfo[] | null | undefined;
+  boundsMaps: readonly SavedMapInfo[];
+  /** 현재 bounds 를 만든 기준 지도 목록·객체 — 참조 비교로 무효화. */
+  usedBoundsMaps: readonly SavedMapInfo[] | null;
+  boundsObjects: (Object3D | undefined)[];
   aspect: number;
   bounds: Box3 | null;
   /** 마지막으로 잰 바닥 y 와 그때의 카메라 XZ. */
@@ -156,8 +165,10 @@ export function SceneCameraLimits({
   }, [sceneInfo]);
 
   const cacheRef = useRef<LimitCache>({
-    mapInfo: null,
-    mapObject: null,
+    maps: null,
+    boundsMaps: [],
+    usedBoundsMaps: null,
+    boundsObjects: [],
     aspect: NaN,
     bounds: null,
     floorY: SEA_LEVEL_Y,
@@ -212,21 +223,35 @@ export function SceneCameraLimits({
     const cache = cacheRef.current;
     const maps = sceneInfoRef.current?.maps;
 
-    const mapInfo = resolveGroundMap(maps) ?? null;
-    const mapObject = mapInfo
-      ? (modelObjectRegistry.get(mapInfo.id) ?? null)
-      : null;
+    // 기준 지도 목록은 maps 배열 참조가 바뀐 프레임에만 다시 고른다.
+    if (maps !== cache.maps) {
+      cache.maps = maps;
+      cache.boundsMaps = resolveCameraBoundsMaps(maps);
+    }
+    const boundsMaps = cache.boundsMaps;
     const { aspect, fov } = perspectiveOf(camera);
-    if (
-      mapInfo !== cache.mapInfo ||
-      mapObject !== cache.mapObject ||
-      aspect !== cache.aspect
-    ) {
-      cache.mapInfo = mapInfo;
-      cache.mapObject = mapObject;
+    let stale =
+      boundsMaps !== cache.usedBoundsMaps ||
+      aspect !== cache.aspect ||
+      boundsMaps.length !== cache.boundsObjects.length;
+    if (!stale) {
+      // 레지스트리 객체 참조 비교 — 지도 GLB 가 등록되는 프레임을 잡는다.
+      for (let i = 0; i < boundsMaps.length; i++) {
+        if (
+          modelObjectRegistry.get(boundsMaps[i].id) !== cache.boundsObjects[i]
+        ) {
+          stale = true;
+          break;
+        }
+      }
+    }
+    if (stale) {
+      cache.usedBoundsMaps = boundsMaps;
       cache.aspect = aspect;
-      const bounds = mapObject ? new Box3().setFromObject(mapObject) : null;
-      cache.bounds = bounds && !bounds.isEmpty() ? bounds : null;
+      cache.boundsObjects = boundsMaps.map((m) =>
+        modelObjectRegistry.get(m.id),
+      );
+      cache.bounds = unionObjectBounds(cache.boundsObjects);
       controls.maxDistance = maxDistanceForBounds(cache.bounds, aspect, fov);
       // 지도가 바뀌면 바닥도 다시 잰다.
       cache.floorX = NaN;

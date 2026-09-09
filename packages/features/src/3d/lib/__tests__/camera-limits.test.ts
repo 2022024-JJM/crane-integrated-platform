@@ -154,11 +154,10 @@ describe('maxDistanceForBounds', () => {
     expect(max).toBeLessThan(CAMERA_MAX_DISTANCE);
   });
 
-  it('거대 지도도 상한(3000)을 넘지 않는다 — fit 이 탑뷰 상한에서 잘린다', () => {
-    const max = maxDistanceForBounds(box(20_000, 10, 20_000), 1, FOV);
-    expect(max).toBeLessThanOrEqual(CAMERA_MAX_DISTANCE);
-    // 탑뷰 fit 거리(3000 + 반높이 5, 미세 tilt 로 mm 단위 오차) × 배수
-    expect(max).toBeCloseTo((3000 + 5) * CAMERA_MAX_DISTANCE_RATIO, 2);
+  it('거대 지도는 상한에 잘린다 — fit × 1.0 이 상한을 넘는 크기', () => {
+    expect(maxDistanceForBounds(box(200_000, 10, 200_000), 1, FOV)).toBe(
+      CAMERA_MAX_DISTANCE,
+    );
   });
 
   it('가로로 넓은 지도는 aspect 가 작을수록 상한이 커진다', () => {

@@ -25,7 +25,6 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  */
 export { sanitizeSceneInfo };
 
-
 export function createSceneSnapshot(sceneInfo: SavedSceneInfo | null) {
   if (!sceneInfo) {
     return null;
@@ -82,9 +81,15 @@ function isMapsInfoEqual(a: SavedMapInfo[], b: SavedMapInfo[]): boolean {
     // 잠금은 씬 데이터다 — 토글이 dirty/undo에 잡혀야 저장된다.
     // 지도는 필드 없음 = 잠김(types.ts 주석 참고).
     if ((a[i].locked !== false) !== (b[i].locked !== false)) return false;
+    // 카메라 영역 제한은 true 만 남는 옵트인 — undefined 와 false 는 같은 상태.
+    if ((a[i].cameraBounds === true) !== (b[i].cameraBounds === true)) {
+      return false;
+    }
     // transform은 비교해야 지도 이동이 dirty로 잡힌다.
-    if (!isOptionalVector3TupleEqual(a[i].position, b[i].position)) return false;
-    if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation)) return false;
+    if (!isOptionalVector3TupleEqual(a[i].position, b[i].position))
+      return false;
+    if (!isOptionalVector3TupleEqual(a[i].rotation, b[i].rotation))
+      return false;
     if (!isOptionalVector3TupleEqual(a[i].scale, b[i].scale)) return false;
   }
   return true;

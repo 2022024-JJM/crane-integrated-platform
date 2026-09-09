@@ -104,6 +104,9 @@ interface UseSceneEditorSessionResult {
     options?: { recordHistory?: boolean },
   ) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
+  updateSelectedMapCameraBounds: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedMapCameraBounds'];
   setObjectLocked: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['setObjectLocked'];
@@ -184,6 +187,7 @@ export function useSceneEditorSession({
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     selectedMap,
+    updateSelectedMapCameraBounds,
     setObjectLocked,
     removeSelectedModel,
     createRigForSelectedModel,
@@ -312,6 +316,7 @@ export function useSceneEditorSession({
     setEnvironmentId: manipulation.setEnvironmentId,
     setLighting: manipulation.setLighting,
     selectedMap,
+    updateSelectedMapCameraBounds,
     setObjectLocked,
     toggleModel,
     toggleText,

@@ -7,11 +7,14 @@
  * 그 지도 한 장만 append(addSceneMap) 하거나 제거(deletePlacedMap) 한다.
  * 같은 경로는 팔레트에서 한 장만 놓인다.
  *
- * `kind` 가 지도의 역할을 정한다. 드롭 raycast 바닥면·탑뷰 bounds 는 씬의
- * **첫 ground 지도**를 기준으로 하고(resolveGroundMap — 배열 순서가 아니라
- * 이 표의 kind 로 판정, ground 가 없으면 maps[0] 폴백), context 지도(philly-
- * terrain 같은 주변 지형)는 렌더·잠금·이동·계층 목록에만 참여한다. 폭 수 km
- * 짜리 지형이 탑뷰 프레이밍을 잡아먹지 않게 하려는 구분이다.
+ * `kind` 가 지도의 역할을 정한다. 드롭 raycast 바닥면은 씬의 **첫 ground
+ * 지도**를 기준으로 하고(resolveGroundMap — 배열 순서가 아니라 이 표의 kind
+ * 로 판정, ground 가 없으면 maps[0] 폴백), context 지도(philly-terrain 같은
+ * 주변 지형)는 렌더·잠금·이동·계층 목록에만 참여한다. 카메라 이동 범위·
+ * 탑뷰 bounds 는 kind 가 아니라 씬 데이터 `SavedMapInfo.cameraBounds`
+ * (인스펙터 카메라 탭 체크)가 정한다 — 팔레트로 ground 지도를 추가하면
+ * addSceneMap 이 체크된 상태로 넣어 준다. 폭 수 km 짜리 지형이 탑뷰
+ * 프레이밍을 잡아먹지 않게 하려는 구분이다.
  *
  * `defaultPosition` 은 팔레트로 추가할 때의 초기 배치다. philly-terrain 의 값은
  * goliath.json 기준(조선소 지도 원점·무회전)이며 디자이너 Blender 씬의 조선소

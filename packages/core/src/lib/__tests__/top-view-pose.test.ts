@@ -118,8 +118,8 @@ describe('computeTopViewPose — 옵션·클램프', () => {
     );
   });
 
-  it('거리 상한: 정확히 3000 이 되는 박스는 통과, 더 크면 3000 으로 잘린다', () => {
-    // halfHeight/tan(30°)·1.08 = 3000 이 되는 z 크기.
+  it('거리 상한: 정확히 상한이 되는 박스는 통과, 더 크면 상한으로 잘린다', () => {
+    // halfHeight/tan(30°)·1.08 = TOP_VIEW_MAX_DISTANCE 가 되는 z 크기.
     const limitZ =
       2 *
       ((TOP_VIEW_MAX_DISTANCE / TOP_VIEW_PADDING) *
@@ -129,7 +129,7 @@ describe('computeTopViewPose — 옵션·클램프', () => {
 
     const over = computeTopViewPose(box(1, 2, limitZ + 1), 1, FOV)!;
     expect(over.position[1] - 1).toBe(TOP_VIEW_MAX_DISTANCE);
-    const huge = computeTopViewPose(box(100000, 2, 100000), 1, FOV)!;
+    const huge = computeTopViewPose(box(1_000_000, 2, 1_000_000), 1, FOV)!;
     expect(huge.position[1] - 1).toBe(TOP_VIEW_MAX_DISTANCE);
   });
 

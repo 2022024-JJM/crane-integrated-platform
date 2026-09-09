@@ -41,7 +41,10 @@ describe('sanitizeSceneInfo — 지도(maps)', () => {
 
     const result = sanitizeSceneInfo(legacy);
     expect(result.maps).toHaveLength(1);
-    expect(result.maps[0]).toMatchObject({ id: 'map-1', path: '/maps/okpo.glb' });
+    expect(result.maps[0]).toMatchObject({
+      id: 'map-1',
+      path: '/maps/okpo.glb',
+    });
   });
 
   it('locked 필드 없음 = 잠김으로 정규화한다 (locked: false만 해제)', () => {
@@ -57,10 +60,25 @@ describe('sanitizeSceneInfo — 지도(maps)', () => {
     expect(result.maps.map((m) => m.locked)).toEqual([true, false, true]);
   });
 
-  it('id/path가 비면 id는 새로 발급, path는 빈 문자열', () => {
+  it('cameraBounds 는 true 만 남긴다 (false·문자열·없음은 필드 제거)', () => {
     const result = sanitizeSceneInfo(
-      scene({ maps: [{ id: '', path: 42 }] }),
+      scene({
+        maps: [
+          { id: 'a', path: '/a.glb', cameraBounds: true },
+          { id: 'b', path: '/b.glb', cameraBounds: false },
+          { id: 'c', path: '/c.glb', cameraBounds: 'yes' },
+          { id: 'd', path: '/d.glb' },
+        ],
+      }),
     );
+    expect(result.maps[0].cameraBounds).toBe(true);
+    expect(result.maps[1]).not.toHaveProperty('cameraBounds');
+    expect(result.maps[2]).not.toHaveProperty('cameraBounds');
+    expect(result.maps[3]).not.toHaveProperty('cameraBounds');
+  });
+
+  it('id/path가 비면 id는 새로 발급, path는 빈 문자열', () => {
+    const result = sanitizeSceneInfo(scene({ maps: [{ id: '', path: 42 }] }));
     expect(result.maps[0].id).not.toBe('');
     expect(result.maps[0].path).toBe('');
   });
@@ -164,7 +182,12 @@ describe('sanitizeSceneInfo — 모델', () => {
             tagMappings: [
               {
                 id: 'm1',
-                target: { kind: 'node', node: '[0]Arm', channel: 'rotation', axis: 'x' },
+                target: {
+                  kind: 'node',
+                  node: '[0]Arm',
+                  channel: 'rotation',
+                  axis: 'x',
+                },
                 tagKey: 'C_1:luff',
               },
             ],
@@ -323,12 +346,12 @@ describe('sanitizeSceneInfo — 카메라', () => {
 
 describe('sanitizeSceneInfo — environmentId (3-상태)', () => {
   it('문자열은 유지, null(배경 없음)도 유지, 미지정/빈 문자열은 필드 생략', () => {
-    expect(sanitizeSceneInfo(scene({ environmentId: 'sky-1' })).environmentId).toBe(
-      'sky-1',
-    );
-    expect(sanitizeSceneInfo(scene({ environmentId: null })).environmentId).toBe(
-      null,
-    );
+    expect(
+      sanitizeSceneInfo(scene({ environmentId: 'sky-1' })).environmentId,
+    ).toBe('sky-1');
+    expect(
+      sanitizeSceneInfo(scene({ environmentId: null })).environmentId,
+    ).toBe(null);
     expect(sanitizeSceneInfo(scene())).not.toHaveProperty('environmentId');
     expect(sanitizeSceneInfo(scene({ environmentId: '' }))).not.toHaveProperty(
       'environmentId',

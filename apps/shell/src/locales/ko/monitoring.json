@@ -17,6 +17,9 @@
     "textContent": "내용",
     "textColor": "색상",
     "tagMapping": "태그 매핑",
+    "camera": "카메라",
+    "cameraBounds": "카메라 영역 제한",
+    "cameraBoundsHint": "체크한 지도들의 범위 안에서만 카메라가 움직입니다.\n하나도 없으면 모든 지도 기준입니다.",
     "rigging": {
       "title": "리깅",
       "none": "리그 없음",

@@ -366,8 +366,10 @@ function SceneControlsBridge({
       // 회전/팬 반경 clamp만 — 표면 피벗이 60m보다 가까울 때(경사면·크레인
       // 상부) 튕겨 나가지 않게 낮게 둔다. 확대 하한은 SceneSurfaceCamera가 지킨다.
       minDistance={5}
-      // 무한 줌 아웃 방지 상한(camera far보다 작게). 초기값이며, features 의
-      // SceneCameraLimits 가 마운트된 화면에선 지도 크기로 매 프레임 갱신한다.
+      // 무한 줌 아웃 방지 상한(camera far보다 작게). SceneCameraLimits 가 없는
+      // 작은 뷰어(far 기본 5000)의 안전값이며, features 의 SceneCameraLimits
+      // 가 마운트된 화면에선 첫 프레임부터 지도 크기(상한 CAMERA_MAX_DISTANCE
+      // 30000)로 덮어쓴다.
       maxDistance={3000}
     />
   );

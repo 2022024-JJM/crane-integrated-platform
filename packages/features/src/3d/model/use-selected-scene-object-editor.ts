@@ -91,6 +91,8 @@ interface UseSelectedSceneObjectEditorResult {
     options?: { recordHistory?: boolean },
   ) => void;
   selectedMap: SavedMapInfo | null;
+  /** 선택 지도의 "카메라 영역 제한"(cameraBounds) 토글. */
+  updateSelectedMapCameraBounds: (enabled: boolean) => void;
   setObjectLocked: (id: string, locked: boolean) => void;
   removeSelectedModel: () => void;
   // ==== 리깅 ====
@@ -303,6 +305,29 @@ export function useSelectedSceneObjectEditor({
             labelHidden: hidden ? true : undefined,
           };
         }),
+      };
+    });
+  };
+
+  /**
+   * 선택 지도의 "카메라 영역 제한" 토글. 저장 필드는 true 일 때만 남기고
+   * 해제 시엔 키를 지운다(labelHidden 과 같은 규칙 — 기존 저장본과 diff 0).
+   * 잠금(setObjectLocked)과 달리 선택을 풀지 않는다 — 풀면 체크하는 순간
+   * 인스펙터가 사라진다.
+   */
+  const updateSelectedMapCameraBounds = (enabled: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        maps: (prev.maps ?? []).map((map) =>
+          map.id === selectedModelId
+            ? { ...map, cameraBounds: enabled ? true : undefined }
+            : map,
+        ),
       };
     });
   };
@@ -634,9 +659,7 @@ export function useSelectedSceneObjectEditor({
       return {
         ...prev,
         rigs: rigs.length > 0 ? rigs : undefined,
-        models: prev.models.map((m) =>
-          m.rigId === rigId ? stripRig(m) : m,
-        ),
+        models: prev.models.map((m) => (m.rigId === rigId ? stripRig(m) : m)),
       };
     });
   };
@@ -679,6 +702,7 @@ export function useSelectedSceneObjectEditor({
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     selectedMap,
+    updateSelectedMapCameraBounds,
     setObjectLocked,
     removeSelectedModel,
     createRigForSelectedModel,

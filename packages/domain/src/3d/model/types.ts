@@ -185,6 +185,14 @@ export interface SavedMapInfo {
    * 정규화한다.
    */
   locked?: boolean;
+  /**
+   * 카메라 이동 범위(XZ)·탑뷰 fit·최대 궤도 반경의 기준 지도인지. 여러 장이면
+   * 월드 AABB 합집합. **필드 없음 = 미참여**(옵트인, 모델 locked 과 같은
+   * true-only 관례 — 지도 locked 의 "없음 = 잠김" 과는 반대). 체크된 지도가
+   * 하나도 없는 씬은 모든 지도 합집합으로 폴백한다(resolveCameraBoundsMaps).
+   * 인스펙터 카메라 탭의 체크박스가 켜고 끄며, sanitize 는 true 일 때만 남긴다.
+   */
+  cameraBounds?: boolean;
 }
 
 /** @deprecated 레거시 입력 전용 — sanitize-tag-mappings 가 변환한다. */
