@@ -13,7 +13,8 @@
     "dev:shell": "pnpm --filter @crane/shell dev",
     "new-site": "node scripts/new-site.mjs",
     "optimize:glb": "node scripts/optimize-glb.mjs",
-    "optimize:map": "node scripts/optimize-map.mjs"
+    "optimize:map": "node scripts/optimize-map.mjs",
+    "perf:scene": "node scripts/scene-perf-report.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -27,6 +28,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "ktx2-encoder": "^0.6.0",
     "meshoptimizer": "~1.0.1",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
