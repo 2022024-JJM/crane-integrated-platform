@@ -37,13 +37,17 @@ import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
 import { SceneCameraLimits } from './scene-camera-limits';
+import { SceneTerrainLod } from './scene-terrain-lod';
 import {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,
+  SCENE_RAYCASTER_OPTIONS,
   SceneLighting,
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { ScenePerfHud } from './scene-perf-hud';
+import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
 import { ReplaySearchForm } from './replay-search-form';
 
@@ -211,6 +215,8 @@ export function Replay3dView({
         cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           gl: SCENE_GL_OPTIONS,
+          // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
+          raycaster: SCENE_RAYCASTER_OPTIONS,
           shadows: sceneCanvasShadows(sceneInfo?.lighting),
           onPointerMissed: exitFocus,
         }}
@@ -220,6 +226,9 @@ export function Replay3dView({
             <SceneLoadingOverlay ready={sceneReady} />
             {topLeftOverlay}
             {replayControlsOverlay}
+            {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
+                일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다. */}
+            <ScenePerfHud />
           </>
         }
         onControllerReady={handleControllerReady}
@@ -232,6 +241,8 @@ export function Replay3dView({
         {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
         <SceneCameraLimits sceneInfo={sceneInfo} />
+        {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 이 프레임의 최종 시점 기준. */}
+        <SceneTerrainLod />
         {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
             사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
             재생을 붙잡지 않는다. */}
@@ -253,6 +264,7 @@ export function Replay3dView({
             getPose={handleGetPose}
           />
           <SceneReadyProbe onReady={handleSceneReady} />
+          <ScenePerfProbe />
         </Suspense>
       </ThreeSceneViewer>
     </div>

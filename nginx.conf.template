@@ -216,7 +216,12 @@ server {
     # $arg_v 는 쿼리스트링의 v 파라미터다. 이 분기가 없으면 둘 중 하나를 잃는다 —
     # 전부 immutable 로 하면 해시 없는 요청이 옛 파일에 영구히 고정되고,
     # 전부 no-cache 로 하면 해시를 붙인 의미(재검증 왕복 제거)가 사라진다.
-    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json|exr|hdr|bin|ktx2)$ {
+    # wasm: KTX2 트랜스코더(public/basis/r<REVISION>/) — 확장자 목록에 없으면
+    # SPA 폴백 location 으로 떨어져 Cache-Control 이 아예 안 나가고, 브라우저
+    # 휴리스틱 캐시가 임의 기간 옛 wasm 을 내주게 된다(js 트랜스코더와 버전
+    # 불일치 → KTX2 디코드 실패). 경로에 three REVISION 이 들어가 갱신 시
+    # URL 이 바뀌므로 ?v= 없이 no-cache 재검증이면 충분하다.
+    location ~* ^/crane_rnd/.+\.(?:js|css|woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif|webp|avif|glb|gltf|json|exr|hdr|bin|ktx2|wasm)$ {
         # expires 는 Cache-Control 을 스스로 쓰므로 반드시 꺼야 한다.
         # 켜 두면 아래 add_header 와 함께 Cache-Control 이 두 번 나가고,
         # 브라우저는 둘 중 보수적인 쪽을 고르지 않는다(구현에 따라 다르다).

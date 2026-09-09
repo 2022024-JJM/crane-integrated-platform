@@ -1,6 +1,11 @@
 import { Raycaster, Vector3, type Object3D } from 'three';
 
 const sharedRay = new Raycaster();
+// 아래에서 hits[0](최상단 표면)만 쓰므로 BVH raycast 를 첫 히트에서 조기
+// 종료시킨다(three-mesh-bvh 가 읽는 플래그, bvh-setup). 수직 레이는 겹겹이
+// 쌓인 지도 레이어(도로선·아스팔트·바닥)를 전부 관통하는데, 기본값이면
+// 그 교차를 모두 수집한 뒤 버리게 된다.
+sharedRay.firstHitOnly = true;
 const downDir = new Vector3(0, -1, 0);
 const origin = new Vector3();
 

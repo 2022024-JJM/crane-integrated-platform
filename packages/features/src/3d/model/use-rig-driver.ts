@@ -6,6 +6,7 @@ import {
   degToRad,
   findMeshByPath,
   getRestPose,
+  invalidateShadows,
   modelObjectRegistry,
   type RestPose,
   type RigConstraint,
@@ -219,6 +220,12 @@ function disposeInstance(instance: DriverInstance): void {
   for (const { node, rest } of instance.drivenNodes.values()) {
     beginNodePose(node, rest);
   }
+  // 노드가 rest 로 점프했다 — 값 저장소는 그대로라(set/reset 없음) 다른
+  // 깔때기가 발화하지 않는 유일한 이동 경로다. 정지 상태에서 관절·맵핑
+  // 정의를 지우거나 고칠 때(undo/redo 포함) 그림자가 4초 안전망까지 낡은
+  // 자세로 남지 않게 여기서 직접 무효화한다. 재생성(buildInstance 뒤 첫
+  // 적용)도 같은 프레임의 (4) 적용 단계가 자세를 바꾸므로 함께 커버된다.
+  invalidateShadows();
 }
 
 type ChannelEntry = ChannelDelta;

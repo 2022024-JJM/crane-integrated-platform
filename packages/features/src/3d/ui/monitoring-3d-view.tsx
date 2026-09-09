@@ -13,6 +13,7 @@ import {
   SilhouetteOutlineWarmup,
   modelObjectRegistry,
   resolveCameraBoundsMaps,
+  resolveEnvironmentFileUrl,
   unionObjectBounds,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -45,13 +46,17 @@ import {
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
 import { SceneCameraLimits } from './scene-camera-limits';
+import { SceneTerrainLod } from './scene-terrain-lod';
 import {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,
+  SCENE_RAYCASTER_OPTIONS,
   SceneLighting,
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { ScenePerfHud } from './scene-perf-hud';
+import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
 import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
@@ -93,6 +98,17 @@ interface Monitoring3dViewProps {
    */
   canvasDpr?: number | [number, number];
   /**
+   * R3F 프레임루프 모드. 기본 undefined(= 'always', 매 프레임 렌더).
+   * 'demand' 는 invalidate() 가 불린 프레임만 렌더한다 — **로드 후 완전
+   * 정지가 보장되는 뷰만** 켠다(대시보드 3D 미리보기 모달: autoStart
+   * Simulation=false). 재생 중 모니터링·realtime(WS 수신이 useFrame 드레인에
+   * 기댐)에는 켜지 말 것 — 화면이 다음 조작까지 낡은 프레임에 머문다.
+   * 바다 씬(파도 uTime 상시 애니메이션)은 호출부가 몰라도 되게 아래에서
+   * 씬의 environment 유무로 자동 무시된다 — goliath/philly 씬을 이 모달로
+   * 열면 파도가 얼어붙는 품질 저하가 있었다.
+   */
+  frameloop?: 'always' | 'demand';
+  /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
    * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
    * 버튼·toolbarExtras·북마크·시뮬레이션 토글. 독은 전체화면 루트 안이라
@@ -118,6 +134,7 @@ export function Monitoring3dView({
   sceneExtras,
   overlayExtras,
   canvasDpr,
+  frameloop,
   toolbarLayout = 'top-right',
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
@@ -130,6 +147,15 @@ export function Monitoring3dView({
   const { sceneInfo, isLoading } = useSceneData(regionId, mode, {
     autoStartSimulation,
   });
+  // 바다(EXR 배경) 씬은 파도가 상시 애니메이션이라 demand 로 돌리면 물이
+  // 사진처럼 얼어붙는다 — 호출부의 demand 요청을 씬 데이터 기준으로 무시한다
+  // (frameloop prop 주석). isLoading 동안은 sceneInfo 가 없어 캔버스도 아직
+  // 없으므로 판정 시점 문제가 없다.
+  const effectiveFrameloop =
+    frameloop === 'demand' &&
+    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null
+      ? undefined
+      : frameloop;
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
@@ -262,7 +288,10 @@ export function Monitoring3dView({
         cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           dpr: canvasDpr,
+          frameloop: effectiveFrameloop,
           gl: SCENE_GL_OPTIONS,
+          // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
+          raycaster: SCENE_RAYCASTER_OPTIONS,
           shadows: sceneCanvasShadows(sceneInfo?.lighting),
           onPointerMissed: exitFocus,
         }}
@@ -279,6 +308,9 @@ export function Monitoring3dView({
               />
             ) : null}
             {overlayExtras}
+            {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
+                일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다. */}
+            <ScenePerfHud />
           </>
         }
         fullscreenOverlay={fullscreenOverlay}
@@ -325,6 +357,8 @@ export function Monitoring3dView({
         {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
         <SceneCameraLimits sceneInfo={sceneInfo} />
+        {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 이 프레임의 최종 시점 기준. */}
+        <SceneTerrainLod />
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>
@@ -360,6 +394,7 @@ export function Monitoring3dView({
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />
+          <ScenePerfProbe />
         </Suspense>
       </ThreeSceneViewer>
     </div>

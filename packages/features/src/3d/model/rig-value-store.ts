@@ -1,3 +1,4 @@
+import { invalidateShadows } from '@crane/domain/3d';
 import { smoothDampStep, type SmoothDampState } from '../lib/smooth-damp';
 
 /**
@@ -50,9 +51,27 @@ export interface JointValueSource {
 interface Channel extends SmoothDampState {
   target: number;
   smoothTime: number;
+  /** 마지막 그림자 무효화 이후 누적 |이동량| — step 의 epsilon 판정용. */
+  shadowDrift: number;
 }
 
 const DEFAULT_SMOOTH_TIME = 0.35;
+
+/**
+ * 스무딩의 "실제로 움직였다" 판정 임계(m·deg·배율 공통) — **누적** 이동량 기준.
+ *
+ * smoothDampStep 은 target 에 수학적으로 영원히 정확 도달하지 않아(지수 수렴,
+ * 실측 고정점 ~1e-14) `value === target` 만으로는 무효화가 끝나지 않는다.
+ * per-step 변화량만 보면 안 된다 — 느린 파형 추종은 프레임당 이동이 sub-mm
+ * 라 임계를 영영 안 넘는데 누적으로는 초당 수 cm 를 가서, 그림자가 안전망
+ * 주기(4s)만큼 계단식으로 지연된다(실측: 재생 중 shadow pass 가 거의 안 돎).
+ * 그래서 채널마다 마지막 무효화 이후 |이동량|을 누적하고, 어느 채널이든
+ * EPS 를 넘으면 무효화 + 전 채널 누적 리셋(그 프레임의 shadow 렌더가 모든
+ * 채널의 현재 자세를 담으므로). 정착 후 잔여 누적은 유한(지수 수렴)이라
+ * 무효화는 저절로 멈추고, 최종 오차는 EPS(1mm·0.001°) — 최소 텍셀 7.3cm
+ * 보다 훨씬 작아 비가시.
+ */
+const SHADOW_STEP_EPS = 1e-3;
 
 class RigValueStoreImpl implements RigValueSink {
   private readonly channels = new Map<JointAddress, Channel>();
@@ -65,8 +84,15 @@ class RigValueStoreImpl implements RigValueSink {
     const v = Number.isFinite(value) ? value : 0;
     const smooth = options?.smooth === true;
     let ch = this.channels.get(address);
+    const previous = ch?.value;
     if (!ch) {
-      ch = { value: smooth ? 0 : v, velocity: 0, target: v, smoothTime: 0 };
+      ch = {
+        value: smooth ? 0 : v,
+        velocity: 0,
+        target: v,
+        smoothTime: 0,
+        shadowDrift: 0,
+      };
       this.channels.set(address, ch);
     }
     ch.target = v;
@@ -74,6 +100,12 @@ class RigValueStoreImpl implements RigValueSink {
     if (!smooth) {
       ch.value = v;
       ch.velocity = 0;
+      // 즉시 대입으로 화면 값이 실제로 바뀌는 순간만 그림자 무효화 — 슬라이더·
+      // 기록 복원 경로. smooth 는 여기서 target 만 바뀌고 실제 이동은 step 이
+      // 하므로 step 쪽 판정에 맡긴다(신규 채널의 value 는 0 = rest 로 시작).
+      if (previous !== v && !(previous === undefined && v === 0)) {
+        invalidateShadows();
+      }
     }
   }
 
@@ -92,13 +124,23 @@ class RigValueStoreImpl implements RigValueSink {
 
   reset(modelId?: string): void {
     if (modelId === undefined) {
-      this.channels.clear();
+      // 채널이 지워지면 드라이버가 다음 프레임에 노드를 rest 로 되돌린다 —
+      // 화면이 바뀌므로 그림자도 무효화한다(빈 상태 reset 은 no-op).
+      if (this.channels.size > 0) {
+        this.channels.clear();
+        invalidateShadows();
+      }
       return;
     }
     const prefix = `${modelId}/`;
+    let removed = false;
     for (const key of this.channels.keys()) {
-      if (key.startsWith(prefix)) this.channels.delete(key);
+      if (key.startsWith(prefix)) {
+        this.channels.delete(key);
+        removed = true;
+      }
     }
+    if (removed) invalidateShadows();
   }
 
   /**
@@ -134,11 +176,25 @@ class RigValueStoreImpl implements RigValueSink {
     for (const [address, value] of entries) this.set(address, value);
   }
 
-  /** 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0. */
+  /**
+   * 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0.
+   * 누적 이동량이 SHADOW_STEP_EPS 를 넘는 채널이 생기면 그림자를 무효화한다
+   * (임계 주석 참고) — 재생 중엔 이동 속도에 비례한 주기로, 값이 정착하면
+   * 자동으로 멈춘다.
+   */
   step(dt: number): void {
+    let moved = false;
     for (const ch of this.channels.values()) {
       if (ch.smoothTime <= 0 || ch.value === ch.target) continue;
+      const before = ch.value;
       smoothDampStep(ch, ch.target, ch.smoothTime, dt);
+      ch.shadowDrift += Math.abs(ch.value - before);
+      if (ch.shadowDrift > SHADOW_STEP_EPS) moved = true;
+    }
+    if (moved) {
+      invalidateShadows();
+      // 이번 프레임의 shadow 렌더가 모든 채널의 현재 자세를 담는다.
+      for (const ch of this.channels.values()) ch.shadowDrift = 0;
     }
   }
 

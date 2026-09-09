@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { invalidateShadows } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 /**
@@ -34,10 +35,17 @@ export const useActiveTransformStore = create<ActiveTransformState>()((set) => (
   scale: null,
   begin: () =>
     set({ active: true, position: null, rotation: null, scale: null }),
-  publish: (position, rotation, scale) =>
-    set({ active: true, position, rotation, scale }),
-  end: () =>
-    set({ active: false, position: null, rotation: null, scale: null }),
+  publish: (position, rotation, scale) => {
+    // 기즈모가 Object3D 를 실제로 움직인 프레임 — 온디맨드 shadow map 을
+    // 그 프레임만 다시 그리게 한다(shadow-invalidation 주석의 깔때기 2).
+    invalidateShadows();
+    set({ active: true, position, rotation, scale });
+  },
+  end: () => {
+    // 드래그 종료 프레임의 handoff(드라이버 rest 재앵커)도 그림자에 실린다.
+    invalidateShadows();
+    set({ active: false, position: null, rotation: null, scale: null });
+  },
 }));
 
 /** 드래그 진행 여부만 boolean으로 구독한다. */

@@ -5,6 +5,7 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
   SceneText,
+  getSceneMapCatalogItemByPath,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
   preloadGltf,
@@ -371,26 +372,39 @@ export function OutdoorWorkModelSimulation({
     <>
       {/* GLB 로드 객체는 개별 경계로 감싼다 — 하나가 404여도 나머지 씬은
           그대로 보인다. 관제 화면에서 모델 하나 때문에 전체가 비면 안 된다. */}
-      {maps.map((m) => (
-        // 지도도 BVH를 빌드한다(기본값) — 프리미티브 수십 개짜리 지형이라
-        // 빌드는 유휴 시간에 싸게 끝나고, 없으면 포인터 이동마다 수십만
-        // 삼각형 브루트포스 raycast가 프레임을 밀어낸다(model-mesh 주석 참고).
-        // showLabel=false: 지도는 라벨이 없으므로 마운트 시 전체 트리 bbox
-        // 순회(수십만 정점)를 건너뛴다.
-        <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
-          <GltfModel
-            id={m.id}
-            url={m.path}
-            position={m.position}
-            rotation={m.rotation}
-            scale={m.scale}
-            showLabel={false}
-            // 지도도 그림자를 드리운다(기본값) — 지도 GLB에 건물이 함께
-            // 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 수십만 삼각형
-            // depth pass 비용이 문제가 되면 여기부터 다시 끄는 것을 검토.
-          />
-        </SceneObjectBoundary>
-      ))}
+      {maps.map((m) => {
+        // 컨텍스트 지형(카탈로그 kind === 'context', philly-terrain 등)은
+        // 그림자 시스템에서 뺀다 — shadow map 은 매 프레임 다시 그려지는데
+        // 178만 삼각형 지형이 depth pass 의 대부분을 차지했고(실측: philly
+        // 씬 shadow pass 의 ~78%), 작업 구역 밖 도시 건물 그림자는 관제
+        // 줌에서 보이지 않는다. 받는 쪽(receiveShadow)도 끈다 — 모델은 전부
+        // 작업 구역(ground 지도) 안이라 이 지형 위에 떨어질 그림자가 없는데
+        // 화면 큰 면적에서 PCF 9탭 샘플링만 하게 된다. 에디터도 같은 규칙
+        // (scene-objects-edit-canvas.tsx) — 저작 화면과 실제 화면이 같아야 한다.
+        const isContextMap =
+          getSceneMapCatalogItemByPath(m.path)?.kind === 'context';
+        return (
+          // 지도도 BVH를 빌드한다(기본값) — 프리미티브 수십 개짜리 지형이라
+          // 빌드는 유휴 시간에 싸게 끝나고, 없으면 포인터 이동마다 수십만
+          // 삼각형 브루트포스 raycast가 프레임을 밀어낸다(model-mesh 주석 참고).
+          // showLabel=false: 지도는 라벨이 없으므로 마운트 시 전체 트리 bbox
+          // 순회(수십만 정점)를 건너뛴다.
+          <SceneObjectBoundary key={m.id} label={`map ${m.path}`}>
+            <GltfModel
+              id={m.id}
+              url={m.path}
+              position={m.position}
+              rotation={m.rotation}
+              scale={m.scale}
+              showLabel={false}
+              // ground 지도는 그림자를 드리운다(기본값) — GLB에 건물이 함께
+              // 구워져 있어 끄면 건물 그림자가 통째로 사라진다.
+              castShadow={!isContextMap}
+              receiveShadow={!isContextMap}
+            />
+          </SceneObjectBoundary>
+        );
+      })}
       {/* 포커스 중 나머지 모델은 언마운트하지 않고 투명(0.1)·라벨 흐림으로
           물러난다. 흐림은 저장하지 않고 씬 opacity 에서 파생하므로 포커스가
           풀리면 prop 이 원래 값으로 돌아가는 것이 곧 복원이다(focus-ghost.ts). */}

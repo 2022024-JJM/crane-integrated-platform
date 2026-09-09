@@ -36,6 +36,8 @@ interface GltfModelProps {
    * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
    */
   castShadow?: boolean;
+  /** 그림자를 받을지. 기본 true. 컨텍스트 지형만 false — model-mesh.tsx 주석. */
+  receiveShadow?: boolean;
   meshOverrides?: SavedMeshOverride[];
   /**
    * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. bbox 존 분류만 하는
@@ -97,6 +99,7 @@ export const GltfModel = memo(function GltfModel({
   opacity = 1,
   seaSubmersion = false,
   castShadow = true,
+  receiveShadow = true,
   showLabel = true,
   labelDimmed = false,
   alarmSeverity = null,
@@ -150,6 +153,7 @@ export const GltfModel = memo(function GltfModel({
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
       seaSubmersion={seaSubmersion}
       castShadow={castShadow}
+      receiveShadow={receiveShadow}
       position={position}
       rotation={rotation}
       scale={scale}

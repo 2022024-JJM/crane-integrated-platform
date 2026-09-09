@@ -37,6 +37,7 @@ export {
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
   SCENE_LIGHTING,
+  SCENE_RAYCASTER_OPTIONS,
   SceneLighting,
 } from './ui/scene-render-preset';
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
@@ -46,6 +47,7 @@ export {
   SceneSurfaceCamera,
 } from './ui/scene-surface-camera';
 export { SceneCameraLimits } from './ui/scene-camera-limits';
+export { SceneTerrainLod } from './ui/scene-terrain-lod';
 export {
   useSceneViewsStore,
   SCENE_VIEWS_MAX,
@@ -92,6 +94,8 @@ export {
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
+export { ScenePerfHud } from './ui/scene-perf-hud';
+export { ScenePerfProbe } from './ui/scene-perf-probe';
 export { useSceneWarmupStep } from './model/use-scene-warmup-step';
 export {
   selectSceneWarmupStep,

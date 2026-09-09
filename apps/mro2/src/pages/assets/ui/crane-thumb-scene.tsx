@@ -2,7 +2,11 @@ import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { Box3, Group, Vector3 } from 'three';
-import { getCraneModel, withBaseUrl } from '@crane/domain/3d';
+import {
+  extendGltfLoaderWithKtx2,
+  getCraneModel,
+  withBaseUrl,
+} from '@crane/domain/3d';
 import type { CraneType } from '@crane/domain/asset';
 
 const THUMB_FOV_DEG = 30;
@@ -12,7 +16,8 @@ const THUMB_MARGIN = 1.18;
 /** 썸네일용 크레인 모델 — 원점 기준 자동 프레이밍, 정면 고정(회전 없음) */
 function ThumbModel({ craneType }: { craneType: CraneType }) {
   const cfg = getCraneModel(craneType);
-  const gltf = useGLTF(withBaseUrl(cfg.url));
+  // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(@crane/domain/3d).
+  const gltf = useGLTF(withBaseUrl(cfg.url), true, true, extendGltfLoaderWithKtx2);
   const clone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const innerRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);

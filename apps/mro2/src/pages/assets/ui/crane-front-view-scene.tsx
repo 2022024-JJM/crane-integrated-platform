@@ -2,7 +2,11 @@ import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { Box3, Group, Vector3 } from 'three';
-import { getCraneModel, withBaseUrl } from '@crane/domain/3d';
+import {
+  extendGltfLoaderWithKtx2,
+  getCraneModel,
+  withBaseUrl,
+} from '@crane/domain/3d';
 import type { CraneType } from '@crane/domain/asset';
 import { ASPECT_ESTIMATE, computeFrontalViewFromBox } from '../lib/compute-frontal-view';
 
@@ -13,7 +17,8 @@ const FRONT_FOV_DEG = 75;
 /** 자산 정보용 정면 뷰 모델 — 회전 없이 정면 고정, 바운딩박스 기준 자동 프레이밍 */
 function FrontModel({ craneType }: { craneType: CraneType }) {
   const cfg = getCraneModel(craneType);
-  const gltf = useGLTF(withBaseUrl(cfg.url));
+  // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(@crane/domain/3d).
+  const gltf = useGLTF(withBaseUrl(cfg.url), true, true, extendGltfLoaderWithKtx2);
   const clone = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   const innerRef = useRef<Group>(null);
   const camera = useThree((s) => s.camera);

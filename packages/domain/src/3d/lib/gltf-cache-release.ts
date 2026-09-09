@@ -1,5 +1,6 @@
 import { useGLTF } from '@react-three/drei';
 import { withBaseUrl } from '@crane/core/lib/asset-url';
+import { extendGltfLoaderWithKtx2 } from './ktx2-loader';
 
 /**
  * GLTF 캐시 해제 — region을 떠날 때 그 씬이 쓰던 GLB만 골라 비운다.
@@ -38,7 +39,9 @@ import { withBaseUrl } from '@crane/core/lib/asset-url';
  */
 export function preloadGltf(path: string) {
   try {
-    useGLTF.preload(withBaseUrl(path));
+    // 4번째 인자: KTX2 디코드 배선 — 실제 로드(useGLTF)와 같은 로더 구성을
+    // 써야 한다(lib/ktx2-loader.ts 주석).
+    useGLTF.preload(withBaseUrl(path), true, true, extendGltfLoaderWithKtx2);
   } catch {
     // 프리로드 실패는 치명적이지 않다 — 실제 마운트 시 다시 시도된다.
   }

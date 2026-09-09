@@ -1,14 +1,22 @@
 import { Mesh, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { withBaseUrl } from '@crane/domain/3d';
+import { extendGltfLoaderWithKtx2, withBaseUrl } from '@crane/domain/3d';
 
 const GLTF_CACHE_MAX_SIZE = 50;
 
 // GLB들이 EXT_meshopt_compression으로 압축되어 있어 디코더가 필수다.
 // drei useGLTF는 기본으로 meshopt 디코더를 붙이지만, 이 로더는 별도 인스턴스라 직접 배선한다.
+// KTX2 는 첫 로드 때 건다 — 지원 검사가 WebGL 컨텍스트를 잠깐 만들어서
+// 모듈 로드 시점엔 피한다(model-bottom-offset-cache 와 같은 이유, 멱등).
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
+let ktx2Wired = false;
+function ensureKtx2Wired(): void {
+  if (ktx2Wired) return;
+  ktx2Wired = true;
+  extendGltfLoaderWithKtx2(loader);
+}
 const gltfCache = new Map<string, Object3D>();
 
 function disposeObject3D(obj: Object3D): void {
@@ -55,6 +63,7 @@ export function loadGltfScene(path: string): Promise<Object3D> {
     return Promise.resolve(cached);
   }
 
+  ensureKtx2Wired();
   return new Promise<Object3D>((resolve, reject) => {
     loader.load(
       withBaseUrl(path),

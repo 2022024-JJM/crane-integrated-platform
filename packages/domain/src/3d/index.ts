@@ -68,6 +68,12 @@ export {
   releaseSceneRegionAssets,
 } from './lib/gltf-cache-release';
 export { modelObjectRegistry } from './lib/model-object-registry';
+export { extendGltfLoaderWithKtx2 } from './lib/ktx2-loader';
+export {
+  invalidateShadows,
+  registerShadowRenderer,
+  unregisterShadowRenderer,
+} from './lib/shadow-invalidation';
 export { bvhBuildQueue, createBvhBuildQueue } from './lib/bvh-build-queue';
 export type {
   BvhBuildCounts,

@@ -21,7 +21,9 @@ import {
   SceneText,
   SilhouetteOutlineWarmup,
   collectCameraBoundsBox,
+  extendGltfLoaderWithKtx2,
   getMeshPath,
+  getSceneMapCatalogItemByPath,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
@@ -45,6 +47,7 @@ import {
   SCENE_CAMERA_CLIP,
   SCENE_DEFAULT_DPR,
   SCENE_GL_OPTIONS,
+  SCENE_RAYCASTER_OPTIONS,
   MIN_SURFACE_DISTANCE,
   SceneEnvironment,
   SceneLighting,
@@ -55,6 +58,9 @@ import {
   SceneCollisionDetector,
   SceneCameraLimits,
   SceneCollisionHighlight,
+  ScenePerfHud,
+  ScenePerfProbe,
+  SceneTerrainLod,
   manualJointSource,
   resolveRecordNodes,
   rigValueStore,
@@ -284,7 +290,8 @@ export function SceneObjectsEditCanvas({
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     const preloadItem = (item: SceneModelCatalogItem) => {
-      useGLTF.preload(withBaseUrl(item.path));
+      // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
+      useGLTF.preload(withBaseUrl(item.path), true, true, extendGltfLoaderWithKtx2);
       void prefetchModelBottomOffset(item.path);
     };
 
@@ -849,6 +856,8 @@ export function SceneObjectsEditCanvas({
         // 실제 화면이 달랐다 — scene-render-preset 주석 참고.
         camera={{ position: cameraPosition, ...SCENE_CAMERA_CLIP }}
         gl={SCENE_GL_OPTIONS}
+        // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
+        raycaster={SCENE_RAYCASTER_OPTIONS}
         shadows={sceneCanvasShadows(sceneInfo?.lighting)}
         dpr={EDITOR_DPR}
         onCreated={({ camera, gl }) => {
@@ -886,6 +895,8 @@ export function SceneObjectsEditCanvas({
         {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다(뷰어와 같은 제한). */}
         <SceneCameraLimits sceneInfo={sceneInfo} />
+        {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 뷰어와 같은 화면 원칙. */}
+        <SceneTerrainLod />
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
@@ -961,34 +972,42 @@ export function SceneObjectsEditCanvas({
             하나가 캔버스 전체를 비우지 않도록. SceneObjectBoundary 주석 참고.
             에디터는 로딩 오버레이가 없으므로 Suspense도 객체별로 분리해
             준비된 것부터 보여준다(뷰어는 오버레이 때문에 공유 Suspense 유지). */}
-        {sceneInfo?.maps?.map((m) => (
-          <SceneObjectBoundary
-            key={m.id}
-            label={`map ${m.path}`}
-            isolateSuspense
-          >
-            <SelectionAwareGltfModel
-              id={m.id}
-              url={m.path}
-              position={m.position}
-              rotation={m.rotation}
-              scale={m.scale}
-              // 지도 선택은 바운딩 박스로 표시한다(래퍼 주석 참고).
-              selectionStyle="box"
-              // BVH는 기본값(빌드)을 쓴다 — 지도는 클릭 선택·드롭 raycast
-              // 대상이라 BVH 없이는 포인터 이동마다 수십만 삼각형을 브루트
-              // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
-              // 마운트 시 bbox 순회를 건너뛴다.
-              showLabel={false}
-              // 지도도 그림자를 드리운다(기본값) — 뷰어(outdoor-work-model-
-              // simulation)와 같은 규칙. 지도 GLB에 건물이 포함되어 있다.
-              onSelect={
-                m.locked === false ? handleSelectMap : handleClearSelection
-              }
-              onObjectReady={handleModelObjectReady}
-            />
-          </SceneObjectBoundary>
-        ))}
+        {sceneInfo?.maps?.map((m) => {
+          // 컨텍스트 지형은 그림자 시스템에서 뺀다 — 뷰어(outdoor-work-model-
+          // simulation)와 같은 규칙·같은 이유(178만 삼각형 shadow depth pass).
+          // 저작 화면과 실제 화면이 같아야 하므로 한쪽만 손대지 말 것.
+          const isContextMap =
+            getSceneMapCatalogItemByPath(m.path)?.kind === 'context';
+          return (
+            <SceneObjectBoundary
+              key={m.id}
+              label={`map ${m.path}`}
+              isolateSuspense
+            >
+              <SelectionAwareGltfModel
+                id={m.id}
+                url={m.path}
+                position={m.position}
+                rotation={m.rotation}
+                scale={m.scale}
+                // 지도 선택은 바운딩 박스로 표시한다(래퍼 주석 참고).
+                selectionStyle="box"
+                // BVH는 기본값(빌드)을 쓴다 — 지도는 클릭 선택·드롭 raycast
+                // 대상이라 BVH 없이는 포인터 이동마다 수십만 삼각형을 브루트
+                // 포스 순회한다(model-mesh 주석 참고). 라벨은 지도에 없으므로
+                // 마운트 시 bbox 순회를 건너뛴다.
+                showLabel={false}
+                // ground 지도는 그림자를 드리운다(기본값) — GLB에 건물 포함.
+                castShadow={!isContextMap}
+                receiveShadow={!isContextMap}
+                onSelect={
+                  m.locked === false ? handleSelectMap : handleClearSelection
+                }
+                onObjectReady={handleModelObjectReady}
+              />
+            </SceneObjectBoundary>
+          );
+        })}
         {sceneInfo?.models.map((model) => (
           <SceneObjectBoundary
             key={model.id}
@@ -1054,7 +1073,13 @@ export function SceneObjectsEditCanvas({
             <meshBasicMaterial color="#f59e0b" transparent opacity={0.92} />
           </mesh>
         ) : null}
+        {/* dev 전용 성능 HUD 기록자 — localStorage crane:perf-hud='1' 일 때만
+            기록한다. 표시는 아래 캔버스 컨테이너의 ScenePerfHud. */}
+        <ScenePerfProbe />
       </Canvas>
+
+      {/* dev 전용 성능 HUD — 모니터링 뷰와 같은 좌하단(bottom-3 left-3). */}
+      <ScenePerfHud />
 
       {isMarqueeActive && (
         <div

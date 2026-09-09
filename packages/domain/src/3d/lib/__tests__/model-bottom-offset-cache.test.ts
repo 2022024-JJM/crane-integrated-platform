@@ -15,6 +15,7 @@ const { loadAsyncMock } = vi.hoisted(() => ({
 vi.mock('three/examples/jsm/loaders/GLTFLoader.js', () => ({
   GLTFLoader: class {
     setMeshoptDecoder() {}
+    setKTX2Loader() {}
     loadAsync = loadAsyncMock;
   },
 }));

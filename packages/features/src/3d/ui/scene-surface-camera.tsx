@@ -77,6 +77,10 @@ interface OrbitControlsLike {
 
 const raycaster = new Raycaster();
 raycaster.near = RAYCAST_NEAR;
+// hits[0].distance(최근접 표면)만 쓰므로 BVH raycast 를 첫 히트에서 조기
+// 종료시킨다(three-mesh-bvh, near/far 존중). 휠·피벗 재배치마다 지형
+// 백만 삼각형 BVH 를 상대로 도는 레이라 체감 차이가 크다.
+raycaster.firstHitOnly = true;
 const ndc = new Vector2();
 const forward = new Vector3();
 const planeHit = new Vector3();
@@ -172,6 +176,7 @@ export function SceneSurfaceCamera({
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as OrbitControlsLike | null;
+  const invalidate = useThree((s) => s.invalidate);
 
   const stateRef = useRef<DollyState>({
     pending: 0,
@@ -226,13 +231,18 @@ export function SceneSurfaceCamera({
       );
       state.dir.copy(cursorDir);
       state.pending += effective - goal;
+      // frameloop='demand' 캔버스(대시보드 미리보기 모달)에서 첫 휠이
+      // 무반응이 되지 않게 프레임을 깨운다 — 이후 easing 은 useFrame 의
+      // controls.update() 가 발행하는 change → drei invalidate 체인이 잇는다.
+      // 'always' 캔버스에선 무해한 no-op 이다.
+      invalidate();
     };
 
     element.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       element.removeEventListener('wheel', onWheel);
     };
-  }, [gl, camera, controls]);
+  }, [gl, camera, controls, invalidate]);
 
   // 드래그 시작 시 표면 피벗(구글 어스 5). 드래그 중(start~end)에는 매 프레임
   // 피벗을 옮기지 않는다 — 반경이 변해 각속도가 흔들린다.
@@ -302,6 +312,10 @@ export function SceneSurfaceCamera({
 
     if (state.pending === 0) {
       placePivot(camera, controls, fallbackRef.current, state.lastPivot);
+    } else {
+      // demand 캔버스에서 easing 이 끝날 때까지 체인을 자체 유지한다 —
+      // controls.update() 의 change 발행은 이동량 EPS 미만이면 생략될 수 있다.
+      invalidate();
     }
   });
 

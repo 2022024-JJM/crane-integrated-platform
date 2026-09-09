@@ -5,6 +5,8 @@ import { SkeletonUtils } from 'three/examples/jsm/Addons.js';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import '../lib/bvh-setup';
 import { bvhBuildQueue } from '../lib/bvh-build-queue';
+import { extendGltfLoaderWithKtx2 } from '../lib/ktx2-loader';
+import { invalidateShadows } from '../lib/shadow-invalidation';
 import { withBaseUrl } from '@crane/core/lib/asset-url';
 import { degToRad } from '../lib/math-utils';
 import { modelObjectRegistry } from '../lib/model-object-registry';
@@ -12,9 +14,20 @@ import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
 import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
+import {
+  assignSharedSeaMaterials,
+  createMeshMaterialBinding,
+  ensureClonedMaterials,
+  restoreOriginalMaterials,
+  type MeshMaterialBinding,
+} from '../lib/mesh-material-binding';
+import { useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
 import type { AlarmHighlightSeverity } from './model-label';
+
+/** 지형 LOD 사본 메시의 raycast 무력화 — 표면·클릭 히트는 LOD0 몫. */
+function noopRaycast(): void {}
 
 const ALARM_MESH_COLOR: Record<AlarmHighlightSeverity, number> = {
   critical: 0xdc2626,
@@ -36,13 +49,23 @@ interface ModelMeshProps {
    */
   seaSubmersion?: boolean;
   /**
-   * 그림자를 드리울지. 기본 true. 지도도 드리운다 — GLB에 건물이 함께
-   * 구워져 있어 끄면 건물 그림자가 통째로 사라진다(끄는 건 depth pass
-   * 비용이 실측으로 문제일 때만). 플래그는 Canvas `shadows`가 꺼져
-   * 있으면 무비용이라 항상 설정해 두고, On/Off 토글은 renderer 레벨
-   * (Canvas shadows + 조명 castShadow)이 담당한다 — scene-render-preset.tsx.
+   * 그림자를 드리울지. 기본 true. ground 지도도 드리운다 — GLB에 건물이 함께
+   * 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 예외는 컨텍스트 지형
+   * (philly-terrain 178만 삼각형): shadow map 은 매 프레임 다시 그려지는데
+   * 이 지형이 depth pass 의 대부분을 차지했고, 작업 구역 밖 도시 건물
+   * 그림자는 관제 줌에서 보이지 않아 끈다 — 호출부(outdoor-work-model-
+   * simulation·에디터)가 카탈로그 kind==='context' 로 판정한다. 플래그는
+   * Canvas `shadows`가 꺼져 있으면 무비용이라 항상 설정해 두고, On/Off
+   * 토글은 renderer 레벨(Canvas shadows + 조명 castShadow)이 담당한다 —
+   * scene-render-preset.tsx.
    */
   castShadow?: boolean;
+  /**
+   * 그림자를 받을지. 기본 true. 컨텍스트 지형만 false — 받을 그림자(자기
+   * 건물은 cast 를 껐고, 모델은 전부 작업 구역 안)가 없는데 화면의 큰
+   * 면적에서 PCF 섀도 샘플링(프래그먼트당 9탭)만 하게 된다.
+   */
+  receiveShadow?: boolean;
   position?: Vector3Tuple;
   rotation?: Vector3Tuple;
   scale?: Vector3Tuple;
@@ -90,19 +113,9 @@ interface ModelMeshProps {
   children?: React.ReactNode;
 }
 
-/**
- * GLTF 인스턴스의 메시 원본 material을 이후 lazy clone에서 복원할 수 있도록
- * 보관한다. 평소(opacity=1, alarm=null) fast-path에서는 mesh.material이
- * GLTF 원본 reference 그대로이며, alarm/opacity가 활성화되는 instance에서만
- * 1회 clone하여 instance 전용으로 mutate한다.
- */
-export interface MeshMaterialBinding {
-  mesh: Mesh;
-  /** 마운트 시점의 원본 material reference. fast-path 복원/판별에 사용. */
-  original: Material | Material[];
-  /** 이 instance용으로 lazy clone된 material(slow-path 진입 후). */
-  cloned: Material | Material[] | null;
-}
+// 머티리얼 상태 전이(원본 공유 ↔ 잠김 공유 ↔ 개별 클론)는
+// lib/mesh-material-binding.ts 가 소유한다 — 타입은 호환을 위해 재노출.
+export type { MeshMaterialBinding };
 
 /**
  * clone tree의 모든 Object3D에 대해 GLTF 원본 transform을 캐시. mesh override
@@ -132,7 +145,14 @@ export function useClonedModel(
   url: string,
   injected?: ClonedModel,
 ): ClonedModel {
-  const { scene } = useGLTF(withBaseUrl(url));
+  // 4번째 인자: KTX2(GPU 압축 텍스처) 디코드 배선 — lib/ktx2-loader.ts 주석.
+  // KTX2 GLB 를 로드하는 모든 경로가 같은 배선을 가져야 한다(누락 시 throw).
+  const { scene } = useGLTF(
+    withBaseUrl(url),
+    true,
+    true,
+    extendGltfLoaderWithKtx2,
+  );
 
   return useMemo(() => {
     if (injected) {
@@ -162,12 +182,9 @@ export function useClonedModel(
 
       // material reference는 GLTF 원본을 그대로 공유한다. 같은 GLTF의
       // 모든 instance가 같은 material을 쓰므로 메모리·GPU 업로드 비용이
-      // 1회로 줄어든다. 변경이 필요한 instance만 useEffect에서 lazy clone.
-      bindings.push({
-        mesh: child,
-        original: child.material,
-        cloned: null,
-      });
+      // 1회로 줄어든다. 변경이 필요한 instance만 useEffect에서 전이한다
+      // (mesh-material-binding.ts — 잠김 공유 또는 개별 clone).
+      bindings.push(createMeshMaterialBinding(child));
 
       // 지오메트리는 GLTF 캐시로 인스턴스 간 공유되므로 최초 1회만 계산한다.
       if (child.geometry && !child.geometry.boundingSphere) {
@@ -190,64 +207,38 @@ export function useClonedModel(
       }
     });
 
+    // 지형 타일 LOD 사본(tile-terrain-glb.mjs --lod, extras {lod>0}) 초기화 —
+    // 기본 숨김 + raycast 제외. clone 시점에 해야 첫 프레임부터 LOD0 만
+    // 그려진다(effect 는 한 프레임 늦어 4중 렌더가 잠깐 생긴다). raycast 는
+    // 항상 LOD0 이 담당한다 — three raycaster 는 visible 을 보지 않아 LOD0 이
+    // 숨겨져 있어도 히트되므로, 표면 높이·드롭·클릭이 LOD 상태와 무관하게
+    // 일정하다. 가시성 전환은 features 의 SceneTerrainLod 가 한다.
+    nextClone.traverse((child) => {
+      const lod = (child.userData as { lod?: unknown }).lod;
+      if (typeof lod !== 'number' || lod <= 0) return;
+      // GLTFLoader 는 다중 프리미티브 노드를 Group+자식 Mesh 로 펼치며 extras
+      // 를 자식에도 복제한다 — 가시성은 **최상위 캐리어만** 소유해야 한다.
+      // 자식까지 끄면 SceneTerrainLod 가 그룹을 켜도 자식이 꺼진 채 남아
+      // 타일이 통째로 사라진다(원경 지형 소실로 실측된 결함).
+      for (let p = child.parent; p; p = p.parent) {
+        const parentLod = (p.userData as { lod?: unknown }).lod;
+        if (typeof parentLod === 'number' && parentLod > 0) return;
+      }
+      child.visible = false;
+      child.traverse((sub) => {
+        if (!(sub instanceof Mesh)) return;
+        sub.raycast = noopRaycast;
+        // BVH·워밍업 큐 제외 표식(아래 enqueue 필터가 본다).
+        (sub.userData as { terrainLodProxy?: boolean }).terrainLodProxy = true;
+      });
+    });
+
     // 같은 url의 모델이 처음 mount될 때 unscaled bottom offset을 캐시에 채운다.
     // 드롭 시 이 캐시 값에 사용자의 scale.y를 곱해 모델 바닥을 지면에 닿게 한다.
     fillModelBottomOffsetFromClone(url, nextClone);
 
     return { clone: nextClone, meshBindings: bindings, originalTransforms };
   }, [scene, url, injected]);
-}
-
-/**
- * material에 mutation이 필요한 instance만 lazy clone 한다. 한 번 clone되면
- * 이후 같은 instance의 추가 변경은 cloned material을 재사용한다.
- */
-function ensureClonedMaterials(binding: MeshMaterialBinding): Material[] {
-  if (binding.cloned) {
-    return Array.isArray(binding.cloned) ? binding.cloned : [binding.cloned];
-  }
-
-  if (Array.isArray(binding.original)) {
-    const cloned = binding.original.map((material) => {
-      const c = material.clone();
-      if ('color' in c && c.color instanceof Color) {
-        (c as unknown as { _originalColor: Color })._originalColor =
-          c.color.clone();
-      }
-      return c;
-    });
-    binding.cloned = cloned;
-    binding.mesh.material = cloned;
-    return cloned;
-  }
-
-  const cloned = binding.original.clone();
-  if ('color' in cloned && cloned.color instanceof Color) {
-    (cloned as unknown as { _originalColor: Color })._originalColor = (
-      cloned.color as Color
-    ).clone();
-  }
-  binding.cloned = cloned;
-  binding.mesh.material = cloned;
-  return [cloned];
-}
-
-/**
- * fast-path 복원: cloned material이 있으면 dispose 하고 mesh.material을 다시
- * GLTF 원본 reference로 되돌린다. opacity/alarm 모두 비활성화된 상태로 돌아갈 때
- * 호출된다.
- */
-function restoreOriginalMaterials(binding: MeshMaterialBinding): void {
-  if (!binding.cloned) return;
-
-  const cloned = Array.isArray(binding.cloned)
-    ? binding.cloned
-    : [binding.cloned];
-  for (const c of cloned) {
-    c.dispose();
-  }
-  binding.cloned = null;
-  binding.mesh.material = binding.original;
 }
 
 export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
@@ -317,6 +308,7 @@ export function ModelMesh({
   alarmSeverity = null,
   seaSubmersion = false,
   castShadow = true,
+  receiveShadow = true,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -336,6 +328,11 @@ export function ModelMesh({
     url,
     clonedModel,
   );
+  // 아래 effect 들은 리컨실러 밖에서 머티리얼·노드를 직접 변조한다 — R3F 의
+  // auto-invalidate 가 걸리지 않아 frameloop='demand' 캔버스(대시보드 3D
+  // 미리보기 모달)에서 알람 색·잠김 안개·오버라이드가 다음 조작까지 화면에
+  // 안 나타난다. 변조 후 invalidate 로 프레임을 깨운다('always' 에선 무해).
+  const invalidate = useThree((s) => s.invalidate);
   const modelRef = useRef<Object3D | null>(null);
   // 이전 effect에서 override가 적용된 적이 있는 target들. 다음 effect 실행 시
   // 모두 originalTransforms로 reset한 뒤 현재 override를 다시 적용한다.
@@ -394,25 +391,32 @@ export function ModelMesh({
   );
 
   useEffect(() => {
-    // Fast path: opacity 100% + 알람 없음 + 잠김 없음 → mesh.material을
-    // GLTF 원본 reference 그대로 두어 같은 GLTF의 모든 instance가 material을
-    // 공유한다. 메모리·GPU 업로드 비용이 instance 수에 비례해 누적되지 않는다.
-    // seaSubmersion이 켜진 바다 씬에서는 모든 모델이 slow path다 — clone은
-    // 텍스처를 공유하고 프로그램은 customProgramCacheKey로 재사용되므로 비용은
-    // 머티리얼 객체 수 정도다.
-    const needsMutation =
-      opacity < 1 || alarmSeverity !== null || seaSubmersion;
+    // 머티리얼 상태 전이(mesh-material-binding.ts):
+    //   개별 클론 — opacity<1 또는 알람 tint. 인스턴스 전용 뮤테이션이라
+    //     원본에서 clone 해 이 인스턴스만 물들인다(잠김 씬이면 clone 시
+    //     패치 포함).
+    //   잠김 공유 — seaSubmersion 만 필요한 "기본 상태". 원본당 1개의 패치
+    //     클론을 전 인스턴스가 refcount 공유한다 — 예전엔 바다 씬 전 모델이
+    //     인스턴스별로 clone 해 모델 수에 비례해 머티리얼·refreshMaterial
+    //     비용이 늘었다. **공유본에는 어떤 프로퍼티도 쓰지 않는다.**
+    //   원본 공유 — 둘 다 아님. GLTF 원본 reference 그대로.
+    const needsIndividual = opacity < 1 || alarmSeverity !== null;
 
-    if (!needsMutation) {
+    if (!needsIndividual) {
       for (const binding of meshBindings) {
-        restoreOriginalMaterials(binding);
+        if (seaSubmersion) {
+          assignSharedSeaMaterials(binding);
+        } else {
+          restoreOriginalMaterials(binding);
+        }
       }
+      invalidate();
       return;
     }
 
-    // Slow path: 이 instance만 lazy clone하여 mutate.
+    // 개별 클론 경로: 이 instance만 lazy clone하여 mutate.
     for (const binding of meshBindings) {
-      const materials = ensureClonedMaterials(binding);
+      const materials = ensureClonedMaterials(binding, seaSubmersion);
       for (const material of materials) {
         const mat = material as Material & {
           opacity: number;
@@ -435,6 +439,8 @@ export function ModelMesh({
           }
         }
 
+        // 클론 생성 후 seaSubmersion prop 이 뒤바뀐 경우의 패치 갱신 —
+        // 생성 시 패치는 ensureClonedMaterials 가 했다(멱등).
         if (seaSubmersion) {
           applySeaSubmersion(mat);
         } else {
@@ -444,7 +450,8 @@ export function ModelMesh({
         mat.needsUpdate = true;
       }
     }
-  }, [meshBindings, opacity, alarmSeverity, seaSubmersion]);
+    invalidate();
+  }, [meshBindings, opacity, alarmSeverity, seaSubmersion, invalidate]);
 
   // 그림자 플래그 — clone은 인스턴스 전용 트리이므로 여기서 걸어도 다른
   // 인스턴스에 새지 않는다. useClonedModel의 useMemo에 넣지 않는 이유:
@@ -454,9 +461,10 @@ export function ModelMesh({
     clone.traverse((child) => {
       if (!(child instanceof Mesh)) return;
       child.castShadow = castShadow;
-      child.receiveShadow = true;
+      child.receiveShadow = receiveShadow;
     });
-  }, [clone, castShadow]);
+    invalidate();
+  }, [clone, castShadow, receiveShadow, invalidate]);
 
   // 인스턴스 언마운트 시 lazy clone된 material을 dispose 한다.
   useEffect(() => {
@@ -501,6 +509,8 @@ export function ModelMesh({
     touched.clear();
 
     if (!meshOverrides || meshOverrides.length === 0) {
+      // 위 (1) reset 이 노드를 되돌렸을 수 있다 — demand 캔버스 프레임 깨움.
+      invalidate();
       return;
     }
 
@@ -556,7 +566,10 @@ export function ModelMesh({
       if (typeof ov.opacity === 'number' && ov.opacity < 1) {
         const binding = bindingByMesh.get(target);
         if (binding) {
-          const materials = ensureClonedMaterials(binding);
+          // 잠김 공유 중이던 바인딩도 여기서 개별로 승격된다 — 승격은
+          // 원본에서 clone 하므로 seaSubmersion 을 넘겨 잠김 패치를 다시
+          // 건다(안 넘기면 이 메시만 안개가 빠지는 회귀).
+          const materials = ensureClonedMaterials(binding, seaSubmersion);
           for (const material of materials) {
             const mat = material as Material & {
               opacity: number;
@@ -572,7 +585,15 @@ export function ModelMesh({
         }
       }
     }
-  }, [meshOverrides, meshBindings, clone, originalTransforms]);
+    invalidate();
+  }, [
+    meshOverrides,
+    meshBindings,
+    clone,
+    originalTransforms,
+    seaSubmersion,
+    invalidate,
+  ]);
 
   useEffect(() => {
     const object = modelRef.current;
@@ -634,6 +655,20 @@ export function ModelMesh({
     };
   }, [id, clone, meshBindings]);
 
+  // 그림자 온디맨드 무효화(shadow-invalidation 주석의 깔때기 3) — 이
+  // 인스턴스가 캐스터 집합·자세를 바꾸는 React 커밋 전부를 한 effect 로
+  // 덮는다: GLB 로드 완료(clone 마운트), 배치 props 커밋(기즈모 커밋·인스펙터·
+  // undo/redo·정렬), meshOverrides(transform·visible), castShadow 플립,
+  // 언마운트(cleanup). 위 meshOverrides effect 뒤에 있어 같은 커밋의 mutate 가
+  // 끝난 상태로 다음 렌더에 실린다. 과잉 발화는 무해하다(그 프레임 shadow
+  // pass 1회일 뿐) — 그림자 꺼진 캔버스에선 no-op.
+  useEffect(() => {
+    invalidateShadows();
+    return () => {
+      invalidateShadows();
+    };
+  }, [clone, position, rotation, scale, meshOverrides, castShadow]);
+
   // 각 geometry에 BVH(boundsTree)를 빌드해 클릭 hit-test raycast를 가속한다.
   // BVH가 아직 없어도 raycast는 동작한다(acceleratedRaycast는 boundsTree가
   // 없으면 기본 raycast로 폴백). 빌드는 전역 큐가 유휴 시간에 나눠 한다 —
@@ -643,7 +678,15 @@ export function ModelMesh({
   // 실루엣 테두리용 사본 작업을 더 넣는다(BVH 뒤에 돈다).
   useEffect(() => {
     if (!enableRaycastBvh && !prepareOutline) return;
-    const meshes = meshBindings.map((binding) => binding.mesh);
+    // 지형 LOD 사본은 제외 — raycast 자체가 무력화돼 있어(BVH 무용) 큐만
+    // +131% 불린다. BVH 는 raycast 를 담당하는 LOD0 에만 빌드한다.
+    const meshes = meshBindings
+      .map((binding) => binding.mesh)
+      .filter(
+        (mesh) =>
+          (mesh.userData as { terrainLodProxy?: boolean }).terrainLodProxy !==
+          true,
+      );
     const options = { bvh: enableRaycastBvh, outline: prepareOutline };
     bvhBuildQueue.enqueue(meshes, options);
     return () => {

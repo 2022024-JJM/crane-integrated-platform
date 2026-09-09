@@ -51,7 +51,11 @@ export function useSceneDrop({
 }: UseSceneDropParams) {
   const cameraRef = useRef<Camera | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
-  const raycasterRef = useRef(new Raycaster());
+  // hits[0]만 쓰므로 BVH raycast 를 첫 히트에서 조기 종료(three-mesh-bvh).
+  // 드래그 오버 중 마우스 이동마다 지도 BVH 를 상대로 도는 레이다.
+  const raycasterRef = useRef(
+    Object.assign(new Raycaster(), { firstHitOnly: true }),
+  );
   const groundPlane = useMemo(() => new Plane(new Vector3(0, 1, 0), 0), []);
   const [pendingDropPosition, setPendingDropPosition] =
     useState<Vector3Tuple | null>(null);

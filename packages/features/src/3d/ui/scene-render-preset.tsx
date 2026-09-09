@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
 import type { DirectionalLight } from 'three';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
+  invalidateShadows,
   modelObjectRegistry,
+  registerShadowRenderer,
+  resolveCameraBoundsMaps,
+  unregisterShadowRenderer,
 } from '@crane/domain/3d';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { isSceneShadowEnabled } from '../lib/scene-shadow';
@@ -67,6 +71,20 @@ export const SCENE_DEFAULT_DPR = [1, 1.5] as const;
  *   하늘의 계조를 함께 살린다. 대신 전체가 어두워지므로 조명·노출을 같이
  *   재보정했다(SCENE_LIGHTING / SCENE_TONE_EXPOSURE 주석 참고).
  */
+/**
+ * R3F Canvas 기본 raycaster 옵션.
+ *
+ * firstHitOnly: three-mesh-bvh 의 acceleratedRaycast(bvh-setup)가 이 플래그를
+ * 읽어 **가장 가까운 히트 하나에서 조기 종료**한다. R3F 는 포인터가 움직일
+ * 때마다 핸들러 달린 모든 객체에 raycast 를 도는데, 기본값(false)이면 BVH 가
+ * 레이 위 모든 교차(겹겹이 쌓인 지도 레이어·선체 내벽까지)를 수집한다.
+ * 이 저장소의 포인터 핸들러는 전부 첫 히트에서 stopPropagation 하므로 첫
+ * 히트만 있으면 의미가 같다 — 수십만 삼각형 지형 위 마우스 이동 비용이
+ * 크게 준다. 자체 Raycaster 를 만드는 곳(표면 카메라·드롭 raycast)도 같은
+ * 이유로 각자 firstHitOnly 를 켠다.
+ */
+export const SCENE_RAYCASTER_OPTIONS = { firstHitOnly: true } as const;
+
 export const SCENE_GL_OPTIONS = {
   toneMapping: ACESFilmicToneMapping,
   /**
@@ -159,12 +177,48 @@ const SUN_SHADOW_MAP_SIZE = 4096;
 const SUN_SHADOW_RADIUS_MIN = 150;
 
 /**
+ * 온디맨드 shadow 의 주기 안전망(초). 무효화 신호(shadow-invalidation)를
+ * 놓친 경로가 있어도 그림자 staleness 가 이 시간을 넘지 않는다 — 스무딩
+ * epsilon 이 버린 sub-cm 잔여 드리프트도 여기서 흡수된다. 비용은 이 주기당
+ * shadow pass 1회뿐이다.
+ */
+const SHADOW_SAFETY_INTERVAL_S = 4;
+
+interface ShadowMapOwner {
+  shadowMap: { autoUpdate: boolean; needsUpdate: boolean };
+}
+
+/**
+ * 온디맨드 shadow 렌더 켜기/원복 — SceneLighting 의 effect 가 부른다.
+ * scene-environment 의 applyEquirectBackground 와 같은 패턴: 외부 시스템
+ * (renderer) 변조를 컴포넌트 밖 함수로 빼 훅 값 불변 규칙과 충돌하지 않는다.
+ */
+function enableOnDemandShadows(gl: ShadowMapOwner): () => void {
+  gl.shadowMap.autoUpdate = false;
+  gl.shadowMap.needsUpdate = true;
+  registerShadowRenderer(gl);
+  return () => {
+    unregisterShadowRenderer(gl);
+    // HMR·씬 전환 뒤 다른 코드가 이 규약을 모르고 그림자를 켜도 동작하게
+    // 기본값으로 되돌린다.
+    gl.shadowMap.autoUpdate = true;
+    gl.shadowMap.needsUpdate = true;
+  };
+}
+
+/**
  * 지도 실측 bbox의 XZ 꼭짓점 — 그림자 커버리지를 지도 전체로 넓히는 근거.
  *
  * 지도 GLB는 position이 원점(또는 없음)이고 지오메트리가 실좌표(km 스케일)로
  * 뻗어 있어 씬 데이터만으로는 범위를 알 수 없다. 지도 GLB에는 건물이 함께
  * 구워져 있어, 모델 기준 반경만 쓰면 씬 외곽 건물이 shadow camera 밖으로
  * 나가 그림자가 끊긴다.
+ *
+ * 기준 지도는 카메라 이동 범위·탑뷰와 같은 resolveCameraBoundsMaps(카메라
+ * 영역 제한 체크, 없으면 모든 지도)다 — 전체 지도로 잡으면 philly 의 수 km
+ * 컨텍스트 지형이 frustum 상한(maxRadius)을 6km 까지 끌어올려, 줌 아웃 시
+ * shadow pass 가 도시 전체를 그리고 텍셀은 m 급으로 뭉개진다. 작업 구역
+ * (cameraBounds 지도) 밖에는 그림자를 드리울 모델도 없다.
  *
  * 로드 완료 시점을 구독할 방법이 없어(modelObjectRegistry는 리렌더 없는
  * mutable Map) 0.3s 폴링으로 지도 객체를 찾고, bbox를 1회 계산하면 멈춘다.
@@ -174,7 +228,9 @@ const SUN_SHADOW_RADIUS_MIN = 150;
 function useMapShadowCorners(
   sceneInfo: SavedSceneInfo | null | undefined,
 ): Vector3Tuple[] | null {
-  const mapIdsKey = (sceneInfo?.maps ?? []).map((m) => m.id).join('|');
+  const mapIdsKey = resolveCameraBoundsMaps(sceneInfo?.maps)
+    .map((m) => m.id)
+    .join('|');
   const [result, setResult] = useState<{
     key: string;
     corners: Vector3Tuple[];
@@ -308,10 +364,30 @@ export function SceneLighting({
   );
 
   // 조명 target — three 기본 target은 씬에 붙어 있지 않아 원점만 바라본다.
-  // primitive로 씬에 넣고 매 프레임 초점으로 옮긴다.
+  // primitive로 씬에 넣고 초점이 바뀐 프레임에 옮긴다.
   const target = useMemo(() => new Object3D(), []);
   const lightRef = useRef<DirectionalLight | null>(null);
   const scratchForward = useMemo(() => new Vector3(), []);
+
+  // 온디맨드 shadow 렌더 — three 기본은 매 프레임 shadow map 재렌더인데,
+  // 캐스터가 움직인 프레임에만 그리도록 autoUpdate 를 끄고 무효화 신호
+  // (@crane/domain/3d shadow-invalidation — 값 저장소·기즈모·ModelMesh 커밋이
+  // 부른다)로 needsUpdate 를 세운다. 정지 화면·실시간 유휴·리플레이 프레임
+  // 사이의 depth pass(수십만 tris)가 0 이 된다. 그림자 꺼진 씬은 원래대로.
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    if (!shadowsEnabled) return;
+    return enableOnDemandShadows(gl);
+  }, [gl, shadowsEnabled]);
+
+  // 마지막으로 조명에 적용한 frustum 입력 — 달라진 프레임에만 쓰고 무효화한다.
+  const lastShadowInputRef = useRef<{
+    cx: number;
+    cz: number;
+    radius: number;
+    sunDir: Vector3 | null;
+  }>({ cx: Number.NaN, cz: Number.NaN, radius: 0, sunDir: null });
+  const lastShadowRenderAtRef = useRef(0);
 
   // 시점 추종 shadow frustum — 고정 frustum으로 씬 전체를 덮으면 텍셀이
   // m급이라 계단이 보인다(SUN_SHADOW_MAP_SIZE 주석). 대신 카메라 시선이
@@ -319,7 +395,11 @@ export function SceneLighting({
   // 어느 줌에서도 텍셀 크기 ≈ 화면 픽셀 크기를 유지한다(단일 캐스케이드
   // CSM과 같은 원리). React 상태 대신 useFrame에서 ref를 직접 mutate하는
   // 것이 이 저장소의 매-프레임 갱신 규칙이다(useFrame 내 setState 금지).
-  useFrame(({ camera }) => {
+  //
+  // 초점은 텍셀 격자 스냅·2배 단계 반경 양자화 덕에 카메라가 멈추면 값이
+  // 비트 단위로 같아진다 — 이 성질이 "달라진 프레임에만 쓰기+무효화"를
+  // 가능하게 한다(카메라 회전만으로는 shadow map 이 다시 그려지지 않는다).
+  useFrame(({ camera, clock }) => {
     const light = lightRef.current;
     if (!light) return;
 
@@ -355,29 +435,63 @@ export function SceneLighting({
     const cx = Math.round(focusX / texel) * texel;
     const cz = Math.round(focusZ / texel) * texel;
 
-    target.position.set(cx, 0, cz);
-    target.updateMatrixWorld();
-
     const orbitDistance = Math.max(frustumRadius * 2.5, 300);
-    light.position.set(
-      cx + sunDir.x * orbitDistance,
-      sunDir.y * orbitDistance,
-      cz + sunDir.z * orbitDistance,
-    );
-    // acne(자기 그림자 줄무늬)와 peter-panning(그림자 들뜸)의 균형점은
-    // 텍셀 크기에 비례한다 — 반경이 프레임마다 변하므로 같이 갱신한다.
-    light.shadow.normalBias = Math.max(0.05, texel);
+    const lightX = cx + sunDir.x * orbitDistance;
+    const lightY = sunDir.y * orbitDistance;
+    const lightZ = cz + sunDir.z * orbitDistance;
 
-    const shadowCamera = light.shadow.camera;
-    const shadowFar = orbitDistance + frustumRadius * 3;
-    if (shadowCamera.right !== frustumRadius || shadowCamera.far !== shadowFar) {
-      shadowCamera.left = -frustumRadius;
-      shadowCamera.right = frustumRadius;
-      shadowCamera.top = frustumRadius;
-      shadowCamera.bottom = -frustumRadius;
-      shadowCamera.near = 1;
-      shadowCamera.far = shadowFar;
-      shadowCamera.updateProjectionMatrix();
+    // 입력(cx·cz·반경·태양각)뿐 아니라 light/target 의 실제 위치도 본다 —
+    // R3F 리렌더의 prop 재적용이 초기값으로 되돌린 경우를 잡아 다시 쓴다
+    // (primitive position=anchor, directionalLight position=프리셋 초기값).
+    const last = lastShadowInputRef.current;
+    const changed =
+      last.cx !== cx ||
+      last.cz !== cz ||
+      last.radius !== frustumRadius ||
+      last.sunDir !== sunDir ||
+      light.position.x !== lightX ||
+      light.position.y !== lightY ||
+      light.position.z !== lightZ ||
+      target.position.x !== cx ||
+      target.position.z !== cz;
+
+    if (changed) {
+      last.cx = cx;
+      last.cz = cz;
+      last.radius = frustumRadius;
+      last.sunDir = sunDir;
+
+      target.position.set(cx, 0, cz);
+      target.updateMatrixWorld();
+      light.position.set(lightX, lightY, lightZ);
+      // acne(자기 그림자 줄무늬)와 peter-panning(그림자 들뜸)의 균형점은
+      // 텍셀 크기에 비례한다 — 반경이 변할 때 같이 갱신한다.
+      light.shadow.normalBias = Math.max(0.05, texel);
+
+      const shadowCamera = light.shadow.camera;
+      const shadowFar = orbitDistance + frustumRadius * 3;
+      if (
+        shadowCamera.right !== frustumRadius ||
+        shadowCamera.far !== shadowFar
+      ) {
+        shadowCamera.left = -frustumRadius;
+        shadowCamera.right = frustumRadius;
+        shadowCamera.top = frustumRadius;
+        shadowCamera.bottom = -frustumRadius;
+        shadowCamera.near = 1;
+        shadowCamera.far = shadowFar;
+        shadowCamera.updateProjectionMatrix();
+      }
+
+      invalidateShadows();
+      lastShadowRenderAtRef.current = clock.elapsedTime;
+    } else if (
+      shadowsEnabled &&
+      clock.elapsedTime - lastShadowRenderAtRef.current > SHADOW_SAFETY_INTERVAL_S
+    ) {
+      // 주기 안전망 — 상수 주석 참고.
+      lastShadowRenderAtRef.current = clock.elapsedTime;
+      invalidateShadows();
     }
   });
 

@@ -12,7 +12,7 @@ import {
   type Material,
   type MeshStandardMaterial,
 } from 'three';
-import { withBaseUrl } from '@crane/domain/3d';
+import { extendGltfLoaderWithKtx2, withBaseUrl } from '@crane/domain/3d';
 import type { DetectedObjectType } from '../model/use-collision-guard-store';
 
 /**
@@ -82,7 +82,8 @@ export const MODEL_VARIANT_COUNTS: Record<DetectedObjectType, number> =
 
 for (const sources of Object.values(MODEL_SOURCES)) {
   for (const source of sources) {
-    useGLTF.preload(withBaseUrl(source.path));
+    // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
+    useGLTF.preload(withBaseUrl(source.path), true, true, extendGltfLoaderWithKtx2);
   }
 }
 
@@ -144,7 +145,12 @@ export function DetectedObjectModel({
 }: DetectedObjectModelProps) {
   const sources = MODEL_SOURCES[type];
   const source = sources[Math.abs(variant) % sources.length];
-  const { scene, animations } = useGLTF(withBaseUrl(source.path));
+  const { scene, animations } = useGLTF(
+    withBaseUrl(source.path),
+    true,
+    true,
+    extendGltfLoaderWithKtx2,
+  );
 
   const prepared = useMemo(() => {
     const clone = SkeletonUtils.clone(scene);

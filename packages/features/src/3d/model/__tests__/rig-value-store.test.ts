@@ -1,4 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  registerShadowRenderer,
+  unregisterShadowRenderer,
+} from '@crane/domain/3d';
 import {
   createTagBindingSource,
   makeJointAddress,
@@ -133,6 +137,84 @@ describe('rigValueStore', () => {
     rigValueStore.set('m/j', 4);
     rigValueStore.step(1);
     expect(rigValueStore.get('m/j')).toBe(4);
+  });
+});
+
+describe('rigValueStore 그림자 무효화(shadow-invalidation)', () => {
+  const gl = { shadowMap: { needsUpdate: false } };
+
+  beforeEach(() => {
+    registerShadowRenderer(gl);
+    gl.shadowMap.needsUpdate = false;
+  });
+
+  afterEach(() => {
+    unregisterShadowRenderer(gl);
+  });
+
+  const consume = () => {
+    const fired = gl.shadowMap.needsUpdate;
+    gl.shadowMap.needsUpdate = false;
+    return fired;
+  };
+
+  it('즉시 set 으로 값이 실제로 바뀌면 무효화한다', () => {
+    rigValueStore.set('m/j', 5);
+    expect(consume()).toBe(true);
+  });
+
+  it('같은 값 재설정은 무효화하지 않는다', () => {
+    rigValueStore.set('m/j', 5);
+    consume();
+    rigValueStore.set('m/j', 5);
+    expect(consume()).toBe(false);
+  });
+
+  it('신규 채널을 0 으로 만드는 것은 rest 그대로라 무효화하지 않는다', () => {
+    rigValueStore.set('m/j', 0);
+    expect(consume()).toBe(false);
+  });
+
+  it('smooth set 자체는 무효화하지 않고, 움직인 step 이 무효화한다', () => {
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.2 });
+    expect(consume()).toBe(false);
+    rigValueStore.step(1 / 60);
+    expect(consume()).toBe(true);
+  });
+
+  it('스무딩이 정착하면(per-step < eps) step 무효화가 멈춘다', () => {
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.2 });
+    // 충분히 수렴시킨다 — 0.2s 스무딩은 3초면 per-step 변화가 eps 아래다.
+    for (let i = 0; i < 180; i++) rigValueStore.step(1 / 60);
+    consume();
+    rigValueStore.step(1 / 60);
+    expect(consume()).toBe(false);
+  });
+
+  it('채널이 있는 reset 은 무효화하고, 빈 reset 은 하지 않는다', () => {
+    rigValueStore.reset();
+    expect(consume()).toBe(false);
+    rigValueStore.set('m/j', 5);
+    consume();
+    rigValueStore.reset();
+    expect(consume()).toBe(true);
+  });
+
+  it('reset(modelId) 은 지운 채널이 있을 때만 무효화한다', () => {
+    rigValueStore.set(makeJointAddress('a', 'j'), 1);
+    consume();
+    rigValueStore.reset('없는모델');
+    expect(consume()).toBe(false);
+    rigValueStore.reset('a');
+    expect(consume()).toBe(true);
+  });
+
+  it('freeze 는 무효화하지 않는다 — 화면 자세가 그대로다', () => {
+    rigValueStore.set('m/j', 10, { smooth: true });
+    rigValueStore.step(1 / 60);
+    consume();
+    rigValueStore.freeze();
+    expect(consume()).toBe(false);
   });
 });
 

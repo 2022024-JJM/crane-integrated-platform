@@ -2,6 +2,7 @@ import { Box3, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { withBaseUrl } from '@crane/core/lib/asset-url';
+import { extendGltfLoaderWithKtx2 } from './ktx2-loader';
 
 /**
  * GLTF url 단위로 모델의 unscaled bottom offset을 캐시한다.
@@ -27,6 +28,16 @@ const inflight = new Map<string, Promise<number>>();
 // drei useGLTF는 기본으로 meshopt 디코더를 붙이지만, 이 로더는 별도 인스턴스라 직접 배선한다.
 const sharedLoader = new GLTFLoader();
 sharedLoader.setMeshoptDecoder(MeshoptDecoder);
+// KTX2(KHR_texture_basisu)도 마찬가지 — 배선이 빠지면 KTX2 GLB 파스가 throw
+// 된다. 단 모듈 로드 시점이 아니라 첫 로드 때 건다: ktx2-loader 의 지원 검사가
+// WebGL 컨텍스트를 잠깐 만드는데, 이 모듈은 jsdom 테스트와 로그인 번들에서도
+// import 되기 때문이다(멱등 — 로더 싱글턴은 1회만 만들어진다).
+let ktx2Wired = false;
+function ensureKtx2Wired(): void {
+  if (ktx2Wired) return;
+  ktx2Wired = true;
+  extendGltfLoaderWithKtx2(sharedLoader);
+}
 
 function measureBottomOffset(root: Object3D): number {
   // Box3.setFromObject는 내부에서 updateWorldMatrix(true, false)를 호출한 후
@@ -69,6 +80,7 @@ export function prefetchModelBottomOffset(url: string): Promise<number> {
     return existing;
   }
 
+  ensureKtx2Wired();
   const promise = sharedLoader
     .loadAsync(withBaseUrl(url))
     .then((gltf) => {
