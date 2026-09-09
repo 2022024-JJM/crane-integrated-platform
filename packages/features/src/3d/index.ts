@@ -45,6 +45,7 @@ export {
   MIN_SURFACE_DISTANCE,
   SceneSurfaceCamera,
 } from './ui/scene-surface-camera';
+export { SceneCameraLimits } from './ui/scene-camera-limits';
 export {
   useSceneViewsStore,
   SCENE_VIEWS_MAX,

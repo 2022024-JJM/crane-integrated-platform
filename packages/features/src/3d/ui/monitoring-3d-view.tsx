@@ -44,6 +44,7 @@ import {
 } from './outdoor-work-model-simulation';
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
+import { SceneCameraLimits } from './scene-camera-limits';
 import {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,
@@ -313,6 +314,9 @@ export function Monitoring3dView({
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
         />
+        {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
+            표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
+        <SceneCameraLimits sceneInfo={sceneInfo} />
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>

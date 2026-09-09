@@ -52,6 +52,7 @@ import {
   SceneSurfaceCamera,
   RigDriver,
   SceneCollisionDetector,
+  SceneCameraLimits,
   SceneCollisionHighlight,
   manualJointSource,
   resolveRecordNodes,
@@ -769,8 +770,13 @@ export function SceneObjectsEditCanvas({
     const cam = controls.object;
     let pose: CameraPose | null = null;
     if (bounds && cam instanceof PerspectiveCamera) {
+      // 상한은 controls.maxDistance(SceneCameraLimits 가 지도 크기로 정한 값)
+      // 에서 박스 반높이를 뺀 값 — 뷰어(ThreeSceneViewer)와 같은 계산. 넘기지
+      // 않으면 다음 update 의 반경 clamp 로 카메라가 튄다.
+      const halfHeight = (bounds.max.y - bounds.min.y) / 2;
       pose = computeTopViewPose(bounds, cam.aspect, cam.fov, {
         minDistance: FOCUS_MIN_DISTANCE,
+        maxDistance: Math.max(0, controls.maxDistance - halfHeight),
       });
     }
     if (!pose) {
@@ -874,6 +880,9 @@ export function SceneObjectsEditCanvas({
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
         />
+        {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
+            표면 피벗 뒤에 이동 범위·바닥을 clamp 한다(뷰어와 같은 제한). */}
+        <SceneCameraLimits sceneInfo={sceneInfo} />
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>
@@ -896,6 +905,7 @@ export function SceneObjectsEditCanvas({
           // clamp일 뿐이라 낮게 둔다(표면 피벗이 가까울 때 튕기지 않게).
           enableZoom={false}
           minDistance={5}
+          // 초기값 — SceneCameraLimits 가 지도 크기로 매 프레임 갱신한다.
           maxDistance={3000}
           mouseButtons={{
             LEFT: undefined,

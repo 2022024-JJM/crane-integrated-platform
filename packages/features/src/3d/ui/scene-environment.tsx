@@ -6,7 +6,6 @@ import {
   Mesh,
   type Scene,
   type Texture,
-  type Vector3,
 } from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { SEA_LEVEL_Y, resolveEnvironmentFileUrl } from '@crane/domain/3d';
@@ -80,23 +79,6 @@ const SEA_FADE_START = 3000;
 const SEA_FADE_END = 10_000;
 const SEA_WAVE_SPEED = 1;
 
-/**
- * 카메라 y 하한. 바다 평면(y=0) 바로 위 — 아래로 내려가면 단면 컬링으로
- * 바다 뒷면이 투명해진다.
- *
- * EXR 씬(goliath, philly-2dock)은 카메라 타깃이 지면 아래(y=-343, -235)라
- * OrbitControls 기본값으로는 하늘 쪽 회전만으로 카메라가 y<0에 도달한다.
- * 회전은 maxPolarAngle을 매 프레임 "카메라 y가 하한에 닿는 각"으로 갱신해
- * 막고(궤도 반경·타깃 높이에 따라 달라지므로 상수로 둘 수 없다), 팬은
- * maxPolarAngle로 못 막으니 update 이후 카메라·타깃을 같이 밀어 올린다.
- */
-const CAMERA_MIN_Y = 1;
-
-interface OrbitControlsLike {
-  target: Vector3;
-  maxPolarAngle: number;
-}
-
 function applyEquirectBackground(scene: Scene, texture: Texture) {
   texture.mapping = EquirectangularReflectionMapping;
   const previousIntensity = scene.environmentIntensity;
@@ -162,55 +144,7 @@ function SeaSurface({ texture }: { texture: Texture }) {
   return <primitive object={sea} />;
 }
 
-/**
- * 카메라가 바다 평면 아래로 내려가지 못하게 잡는다(CAMERA_MIN_Y 주석 참고).
- *
- * 회전 클램프는 drei OrbitControls의 update(useFrame -1)보다 먼저(-2) 걸어
- * 같은 프레임의 update가 반영하게 하고, 팬 백스톱은 update 이후(0)에 건다.
- * 배경이 사라지면(unmount) 회전 제한도 함께 푼다 — 바다가 없으면 카메라를
- * 지면 아래로 내릴 이유를 막을 근거가 없다.
- */
-function CameraAboveSea() {
-  const get = useThree((s) => s.get);
-
-  useEffect(
-    () => () => {
-      const controls = get().controls as OrbitControlsLike | null;
-      if (controls) controls.maxPolarAngle = Math.PI;
-    },
-    [get],
-  );
-
-  // 회전 클램프: camera.y = target.y + dist·cos(φ) ≥ MIN_Y 가 되는 φ 상한.
-  useFrame((state) => {
-    const controls = state.controls as OrbitControlsLike | null;
-    if (!controls) return;
-    // 카메라 up 은 항상 +Y 다(뷰어 탑뷰는 up 을 바꾸지 않고 미세 tilt 로
-    // 만든다 — @crane/core top-view-pose). 그래서 극각 공식이 늘 성립하고
-    // 탑뷰(phi≈1e-3)는 어떤 상한에도 잘리지 않는다.
-    const dist = state.camera.position.distanceTo(controls.target);
-    if (dist <= 0) return;
-    const cos = (CAMERA_MIN_Y - controls.target.y) / dist;
-    // cos ≥ 1: 타깃이 반경보다 깊이 지하라 어떤 극각으로도 y≥MIN_Y를 못 만든다.
-    // 예전엔 여기서 0(정수직 위)으로 강제해 세게 확대하면 버드아이뷰로 튀었다.
-    // 회전으로 풀 수 없는 상황이니 제한을 걸지 말고 팬 백스톱에 맡긴다.
-    controls.maxPolarAngle = Math.abs(cos) >= 1 ? Math.PI : Math.acos(cos);
-  }, -2);
-
-  // 팬 백스톱: 카메라·타깃을 같은 양만큼 올려 궤도(offset)를 보존한다.
-  useFrame((state) => {
-    const controls = state.controls as OrbitControlsLike | null;
-    const camera = state.camera;
-    if (camera.position.y >= CAMERA_MIN_Y) return;
-    const lift = CAMERA_MIN_Y - camera.position.y;
-    camera.position.y += lift;
-    if (controls) controls.target.y += lift;
-  });
-
-  return null;
-}
-
-/** 씬 배경 파노라마(EXR) + 바다 평면 + 카메라 하한. */
+/** 씬 배경 파노라마(EXR) + 바다 평면. 카메라 하한은 SceneCameraLimits 담당. */
 function EnvironmentBackground({ url }: { url: string }) {
   const texture = useLoader(EXRLoader, url);
   const scene = useThree((s) => s.scene);
@@ -220,7 +154,6 @@ function EnvironmentBackground({ url }: { url: string }) {
   return (
     <>
       <SeaSurface texture={texture} />
-      <CameraAboveSea />
     </>
   );
 }

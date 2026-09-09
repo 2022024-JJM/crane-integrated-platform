@@ -146,6 +146,22 @@ function isWebGLSupported(): boolean {
   return cachedWebGLSupport;
 }
 
+/**
+ * 탑뷰 포즈에 넘길 거리 상한 — OrbitControls maxDistance 에서 박스 반높이
+ * (target 은 박스 중심, 카메라는 윗면 기준)를 뺀 값. 상한이 없으면 undefined
+ * (core 기본 TOP_VIEW_MAX_DISTANCE).
+ */
+function topViewMaxDistance(
+  bounds: Box3,
+  maxDistance: number | undefined,
+): number | undefined {
+  if (maxDistance === undefined || !Number.isFinite(maxDistance)) {
+    return undefined;
+  }
+  const halfHeight = (bounds.max.y - bounds.min.y) / 2;
+  return Math.max(0, maxDistance - halfHeight);
+}
+
 function toVector3([x, y, z]: Vector3Tuple) {
   return new Vector3(x, y, z);
 }
@@ -216,10 +232,16 @@ function SceneControlsBridge({
   const moveToTopView = useCallback(() => {
     const bounds = getTopViewBounds?.();
     const perspective = camera as PerspectiveCamera;
+    const controls = controlsRef.current;
     // 지도 XZ가 세로 fov 기준으로 화면에 꽉 차는 높이(편집기와 같은 함수).
+    // 상한은 controls.maxDistance(features 의 SceneCameraLimits 가 지도
+    // 크기로 정한 값) — 포즈의 궤도 반경은 거리 + 박스 반높이라 그만큼 빼서
+    // 넘긴다. 넘기지 않으면 다음 update 의 반경 clamp 로 카메라가 튄다.
     const pose =
       bounds && perspective.isPerspectiveCamera
-        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov)
+        ? computeTopViewPose(bounds, perspective.aspect, perspective.fov, {
+            maxDistance: topViewMaxDistance(bounds, controls?.maxDistance),
+          })
         : null;
     if (pose) {
       applyCameraState(pose.position, pose.target);
@@ -344,7 +366,8 @@ function SceneControlsBridge({
       // 회전/팬 반경 clamp만 — 표면 피벗이 60m보다 가까울 때(경사면·크레인
       // 상부) 튕겨 나가지 않게 낮게 둔다. 확대 하한은 SceneSurfaceCamera가 지킨다.
       minDistance={5}
-      // 무한 줌 아웃 방지 — 지도가 점이 되기 전에 멈춘다 (camera far보다 작게)
+      // 무한 줌 아웃 방지 상한(camera far보다 작게). 초기값이며, features 의
+      // SceneCameraLimits 가 마운트된 화면에선 지도 크기로 매 프레임 갱신한다.
       maxDistance={3000}
     />
   );

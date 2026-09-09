@@ -33,6 +33,7 @@ import {
 import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
 import { SceneSurfaceCamera } from './scene-surface-camera';
+import { SceneCameraLimits } from './scene-camera-limits';
 import {
   SCENE_CAMERA_CLIP,
   SCENE_GL_OPTIONS,
@@ -217,6 +218,9 @@ export function Replay3dView({
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
         />
+        {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
+            표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
+        <SceneCameraLimits sceneInfo={sceneInfo} />
         {/* 실시간 뷰와 같은 배경 — 없으면 실시간↔리플레이 전환에서 하늘만
             사라져 다른 씬처럼 보인다. 자체 Suspense라 EXR 로드가 리플레이
             재생을 붙잡지 않는다. */}

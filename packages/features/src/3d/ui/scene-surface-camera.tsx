@@ -48,8 +48,6 @@ import {
  * 여기까지 튕겨 나간다.
  */
 export const MIN_SURFACE_DISTANCE = 60;
-/** 표면에서 이만큼 이상 멀어지지 않는다 — OrbitControls maxDistance와 동일. */
-const MAX_SURFACE_DISTANCE = 3000;
 /**
  * deltaY → 배율. 휠 위(deltaY ≈ −100) 1노치가 ×0.9(10% 줌인), 아래가 ×1.11.
  * 부호 관례는 OrbitControls와 같다(deltaY < 0 → dollyIn).
@@ -70,6 +68,8 @@ const RAYCAST_NEAR = 1;
 interface OrbitControlsLike {
   enabled: boolean;
   target: Vector3;
+  /** 줌아웃 상한 — SceneCameraLimits 가 지도 크기로 매 프레임 정한다. */
+  maxDistance: number;
   update: () => void;
   addEventListener: (type: string, listener: () => void) => void;
   removeEventListener: (type: string, listener: () => void) => void;
@@ -116,6 +116,11 @@ function centerSurfaceDistance(
 /**
  * 타깃을 화면 중앙 표면 지점으로 옮긴다(구글 어스 5). forward 축 위에서 거리만
  * 바뀌므로 lookAt 결과가 같다 — 화면은 변하지 않는다.
+ *
+ * 거리는 controls.maxDistance 까지만 — 지도 가장자리에서 바깥 지형·바다를
+ * 비스듬히 보면 표면점이 수 km 밖인데, 그대로 타깃에 놓으면 OrbitControls
+ * update 가 반경을 maxDistance 로 잘라 카메라가 타깃 쪽으로 훌쩍 튄다.
+ * 그 경우 피벗은 표면이 아니라 시선 위 maxDistance 지점(허공)이 된다.
  */
 function placePivot(
   camera: Camera,
@@ -123,8 +128,9 @@ function placePivot(
   fallbackPlaneY: number | null,
   lastPivot: Vector3,
 ): boolean {
-  const dist = centerSurfaceDistance(camera, fallbackPlaneY);
-  if (dist === null) return false;
+  const surface = centerSurfaceDistance(camera, fallbackPlaneY);
+  if (surface === null) return false;
+  const dist = Math.min(surface, controls.maxDistance);
   controls.target.copy(camera.position).addScaledVector(forward, dist);
   lastPivot.copy(controls.target);
   return true;
@@ -210,11 +216,13 @@ export function SceneSurfaceCamera({
 
       // 아직 적용 안 된 이동(pending)을 반영한 거리에서 목표를 잡아야 연속
       // 휠에서도 한 틱당 비율이 같다.
+      // 상한은 OrbitControls maxDistance 와 같은 값 — SceneCameraLimits 가
+      // 지도 크기(탑뷰 fit 거리 × 배수)로 정해 두는 단일 소스다.
       const effective = Math.max(MIN_SURFACE_DISTANCE, dist - state.pending);
       const goal = clamp(
         effective * factor,
         MIN_SURFACE_DISTANCE,
-        MAX_SURFACE_DISTANCE,
+        Math.max(MIN_SURFACE_DISTANCE, controls.maxDistance),
       );
       state.dir.copy(cursorDir);
       state.pending += effective - goal;
