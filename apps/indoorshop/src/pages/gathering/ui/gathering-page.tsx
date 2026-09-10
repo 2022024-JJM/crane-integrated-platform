@@ -1,11 +1,11 @@
 import type { CSSProperties } from 'react';
-import { SHIP_OPTIONS } from '../model/mock-data';
-import type { GatheringVM } from '../model/use-gathering';
+import type { KpiVM, MainVM } from '../model/use-gathering';
 import { useGathering } from '../model/use-gathering';
 import { BlockDashboard } from './block-dashboard';
 import { BlockDropdown } from './block-dropdown';
 import { BlockList } from './block-list';
 import { GatherView } from './gather-view';
+import { LoginScreen } from './login-screen';
 
 function tabStyle(on: boolean): CSSProperties {
   return {
@@ -26,42 +26,64 @@ function tabStyle(on: boolean): CSSProperties {
   };
 }
 
-function EmptyPrompt({ title, sub }: { title: string; sub: string }) {
+function KpiCell({ k }: { k: KpiVM }) {
   return (
     <div
+      onClick={k.onClick ?? undefined}
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-        gap: 10,
+        gap: 3,
+        padding: '10px 14px',
+        background: '#fff',
+        border: '1px solid #D3CBB4',
+        borderRadius: 3,
+        ...(k.warnColor
+          ? { borderLeft: `3px solid ${k.warnColor}`, cursor: 'pointer' }
+          : { cursor: 'default' }),
       }}
     >
-      <svg
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#C9B98E"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <span
+        style={{
+          fontSize: 10.5,
+          fontWeight: 700,
+          color: '#7A8699',
+          whiteSpace: 'nowrap',
+        }}
       >
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      </svg>
-      <span style={{ fontSize: 13.5, fontWeight: 700, color: '#7A8699' }}>
-        {title}
+        {k.label}
       </span>
-      <span style={{ fontSize: 11.5, color: '#909AAC' }}>{sub}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            letterSpacing: '-0.5px',
+            color: k.warnColor ?? '#23344C',
+          }}
+        >
+          {k.val}
+        </span>
+        <span style={{ fontSize: 11, color: '#909AAC', whiteSpace: 'nowrap' }}>
+          {k.unit}
+        </span>
+      </div>
+      <span
+        style={{
+          fontSize: 10,
+          color: k.warnColor ?? '#909AAC',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {k.sub}
+      </span>
     </div>
   );
 }
 
-/** 현황 대시보드 탭 — 블록 목록(마스터) ↔ 블록 대시보드(디테일) */
-function DashView({ g }: { g: GatheringVM }) {
-  const d = g.dash;
+/** 현황 대시보드 탭 — KPI + 블록 목록(마스터) ↔ 블록 대시보드(디테일) */
+function DashView({ m }: { m: MainVM }) {
+  const d = m.dash;
   if (!d) return null;
   return (
     <div
@@ -75,27 +97,21 @@ function DashView({ g }: { g: GatheringVM }) {
         overflowY: 'auto',
       }}
     >
-      {d.prompt && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#7A8699' }}>
-            블록을 선택한 후 [조회]를 클릭하세요
-          </span>
-          <span style={{ fontSize: 11.5, color: '#909AAC' }}>
-            복수 블록을 조회하면 탭으로 나란히 비교할 수 있습니다
-          </span>
-        </div>
-      )}
+      {/* 권역 요약 KPI (선택 블록 전체 기준) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5,1fr)',
+          gap: 8,
+          flex: 'none',
+        }}
+      >
+        {d.kpis.map((k) => (
+          <KpiCell key={k.label} k={k} />
+        ))}
+      </div>
 
-      {d.list && <BlockList list={d.list} />}
+      {d.list && <BlockList list={d.list} scopeName={m.scopeName} />}
 
       {d.nav && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
@@ -122,11 +138,7 @@ function DashView({ g }: { g: GatheringVM }) {
           {d.nav.hasNav && (
             <>
               <span
-                style={{
-                  fontSize: 10.5,
-                  color: '#909AAC',
-                  whiteSpace: 'nowrap',
-                }}
+                style={{ fontSize: 10.5, color: '#909AAC', whiteSpace: 'nowrap' }}
               >
                 {d.nav.pos} / {d.nav.total}
               </span>
@@ -173,27 +185,20 @@ function DashView({ g }: { g: GatheringVM }) {
         </div>
       )}
 
-      {d.detail && <BlockDashboard d={d.detail} />}
+      {d.detail && (
+        <BlockDashboard
+          d={d.detail}
+          scopeName={m.scopeName}
+          scopeSrc={m.scopeSrc}
+        />
+      )}
     </div>
   );
 }
 
-export function GatheringPage() {
-  const g = useGathering();
-
+function MainView({ m }: { m: MainVM }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 56px)',
-        overflow: 'hidden',
-        background: '#EDEAE0',
-        fontFamily: "Pretendard, '-apple-system', sans-serif",
-        color: '#1E2733',
-        fontVariantNumeric: 'tabular-nums',
-      }}
-    >
+    <>
       {/* ===== UTILITY BAR ===== */}
       <div
         style={{
@@ -233,16 +238,42 @@ export function GatheringPage() {
           >
             한화오션 내업 공정실적 자료수집 시스템
           </span>
-          <span
-            style={{ fontSize: 12, color: '#FFDFBC', whiteSpace: 'nowrap' }}
-          >
-            / 통합 현황 · 수집 데이터 조회
+          <span style={{ fontSize: 12, color: '#FFDFBC', whiteSpace: 'nowrap' }}>
+            / {m.scopeName} 권역 현황
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 11.5, color: '#FFE9CF' }}>
-            사용자: <b style={{ color: '#fff', fontWeight: 600 }}>생산계획팀</b>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#EE7A00',
+              background: '#fff',
+              padding: '2px 9px',
+              borderRadius: 2,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {m.scopeName} 권역
           </span>
+          <span style={{ fontSize: 11.5, color: '#FFE9CF', whiteSpace: 'nowrap' }}>
+            {m.userLabel}
+          </span>
+          <div
+            onClick={m.logout}
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,.55)',
+              padding: '2px 9px',
+              borderRadius: 2,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            로그아웃
+          </div>
         </div>
       </div>
 
@@ -270,12 +301,12 @@ export function GatheringPage() {
             marginRight: 18,
           }}
         >
-          <div onClick={() => g.setTab('dash')} style={tabStyle(g.tab === 'dash')}>
-            현황 대시보드
+          <div onClick={() => m.setTab('dash')} style={tabStyle(m.tab === 'dash')}>
+            {m.scopeName} 현황 대시보드
           </div>
           <div
-            onClick={() => g.setTab('gather')}
-            style={tabStyle(g.tab === 'gather')}
+            onClick={() => m.setTab('gather')}
+            style={tabStyle(m.tab === 'gather')}
           >
             수집 데이터 조회
           </div>
@@ -292,8 +323,8 @@ export function GatheringPage() {
             호선 번호 <b style={{ color: '#C42B2B' }}>*</b>
           </span>
           <select
-            value={g.fShip}
-            onChange={(e) => g.setFShip(e.target.value)}
+            value={m.fShip}
+            onChange={(e) => m.setFShip(e.target.value)}
             style={{
               height: 27,
               border: '1px solid #C9B98E',
@@ -304,19 +335,19 @@ export function GatheringPage() {
               color: '#1E2733',
               background: '#fff',
               outline: 'none',
-              minWidth: 140,
+              minWidth: 150,
             }}
           >
-            <option value="">— 선택 —</option>
-            {SHIP_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
+            <option value="">— 담당 호선 선택 —</option>
+            {m.shipOpts.map((s) => (
+              <option key={s.v} value={s.v}>
                 {s.label}
               </option>
             ))}
           </select>
         </div>
 
-        <BlockDropdown dd={g.blkDd} />
+        <BlockDropdown dd={m.blkDd} scopeName={m.scopeName} />
 
         <div
           style={{
@@ -327,7 +358,7 @@ export function GatheringPage() {
           }}
         >
           <div
-            onClick={g.doSearch}
+            onClick={m.doSearch}
             style={{
               flex: 'none',
               whiteSpace: 'nowrap',
@@ -346,7 +377,7 @@ export function GatheringPage() {
             조회
           </div>
           <div
-            onClick={g.doReset}
+            onClick={m.doReset}
             style={{
               flex: 'none',
               whiteSpace: 'nowrap',
@@ -369,14 +400,62 @@ export function GatheringPage() {
       </div>
 
       {/* ===== BODY ===== */}
-      {!g.searched && (
-        <EmptyPrompt
-          title="호선 번호와 블록 No를 입력한 후 [조회]를 클릭하세요"
-          sub="현황 대시보드 — 블록 공정률·WO 실적 / 수집 데이터 조회 — 수집 이벤트 로우데이터"
-        />
+      {!m.searched && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1,
+            gap: 10,
+          }}
+        >
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#C9B98E"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#7A8699' }}>
+            담당 호선과 블록을 선택한 후 [조회]를 클릭하세요
+          </span>
+          <span style={{ fontSize: 11.5, color: '#909AAC' }}>{m.scopeHint}</span>
+        </div>
       )}
-      {g.searched && g.tab === 'dash' && <DashView g={g} />}
-      {g.searched && g.tab === 'gather' && g.gather && <GatherView g={g.gather} />}
+      {m.searched && m.tab === 'dash' && <DashView m={m} />}
+      {m.searched && m.tab === 'gather' && m.gather && (
+        <GatherView g={m.gather} scopeName={m.scopeName} />
+      )}
+    </>
+  );
+}
+
+export function GatheringPage() {
+  const g = useGathering();
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100vh - 56px)',
+        overflow: 'hidden',
+        background: '#EDEAE0',
+        fontFamily: "Pretendard, '-apple-system', sans-serif",
+        color: '#1E2733',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {g.login && <LoginScreen l={g.login} />}
+      {g.main && <MainView m={g.main} />}
     </div>
   );
 }

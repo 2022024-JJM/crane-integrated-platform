@@ -1,7 +1,13 @@
 import type { BlkDropdownVM } from '../model/use-gathering';
 
-/** 블록 복수 선택 드롭다운 (필터 바) */
-export function BlockDropdown({ dd }: { dd: BlkDropdownVM }) {
+/** 블록 복수 선택 드롭다운 (필터 바) — 권역 재공 블록만 나열 */
+export function BlockDropdown({
+  dd,
+  scopeName,
+}: {
+  dd: BlkDropdownVM;
+  scopeName: string;
+}) {
   return (
     <div
       style={{
@@ -30,7 +36,7 @@ export function BlockDropdown({ dd }: { dd: BlkDropdownVM }) {
           justifyContent: 'space-between',
           gap: 8,
           height: 27,
-          minWidth: 150,
+          minWidth: 160,
           border: '1px solid #C9B98E',
           borderRadius: 2,
           padding: '0 8px',
@@ -59,7 +65,7 @@ export function BlockDropdown({ dd }: { dd: BlkDropdownVM }) {
             position: 'absolute',
             left: 34,
             top: 31,
-            width: 240,
+            width: 250,
             background: '#fff',
             border: '1px solid #C9B98E',
             borderRadius: 3,
@@ -87,7 +93,7 @@ export function BlockDropdown({ dd }: { dd: BlkDropdownVM }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              블록 선택 · {dd.selN} / {dd.totalN}개
+              {scopeName} 재공 블록 · {dd.selN} / {dd.totalN}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <span
@@ -187,13 +193,14 @@ export function BlockDropdown({ dd }: { dd: BlkDropdownVM }) {
                 </span>
                 <span
                   style={{
-                    fontSize: 10,
-                    color: '#909AAC',
-                    whiteSpace: 'nowrap',
                     marginLeft: 'auto',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                    color: bo.stDone ? '#5CA627' : '#909AAC',
                   }}
                 >
-                  {bo.fac}
+                  {bo.st}
                 </span>
               </div>
             ))}

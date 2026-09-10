@@ -1,31 +1,45 @@
 import type { CSSProperties } from 'react';
-import type { DetailVM, ProcCardVM } from '../model/use-gathering';
+import type { DetailVM, StageCardVM } from '../model/use-gathering';
 import type { TierKey } from '../model/types';
 
-const TIER_BAR: Record<TierKey, string> = {
+const BAR_COLOR: Record<TierKey, string> = {
   delay: '#C42B2B',
   warn: '#D9A11B',
   ok: '#56687E',
 };
 
-/** 진행 바 단일 중립색 — 색은 상태 신호에만 사용 */
-const BAR = '#56687E';
+function stChipStyle(kind: StageCardVM['stKind']): CSSProperties {
+  const base: CSSProperties = {
+    fontSize: 9.5,
+    fontWeight: 800,
+    padding: '1px 8px',
+    borderRadius: 2,
+    whiteSpace: 'nowrap',
+  };
+  if (kind === 'none')
+    return {
+      ...base,
+      color: '#8A93A6',
+      background: '#EFF1F4',
+      border: '1px solid #D5DBE4',
+    };
+  if (kind === 'done')
+    return {
+      ...base,
+      color: '#2F8F5B',
+      background: '#E9F4EE',
+      border: '1px solid #BFDECB',
+    };
+  return {
+    ...base,
+    color: '#5C6678',
+    background: '#fff',
+    border: '1px solid #C9CFD8',
+  };
+}
 
-const panel: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #D3CBB4',
-  borderRadius: 3,
-};
-
-const panelTitle: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 800,
-  color: '#28354A',
-  whiteSpace: 'nowrap',
-};
-
-function ProcCard({ p }: { p: ProcCardVM }) {
-  const v = p.pct;
+/** 권역 단계 카드 1장 */
+function StageCard({ p }: { p: StageCardVM }) {
   return (
     <div
       style={{
@@ -34,7 +48,7 @@ function ProcCard({ p }: { p: ProcCardVM }) {
         background: '#fff',
         borderRadius: 3,
         overflow: 'hidden',
-        border: '1px solid #D3CBB4',
+        border: p.cur ? '2px solid #EE7A00' : '1px solid #D3CBB4',
       }}
     >
       <div
@@ -48,45 +62,36 @@ function ProcCard({ p }: { p: ProcCardVM }) {
           flex: 'none',
         }}
       >
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: '-0.3px',
-            whiteSpace: 'nowrap',
-            color: '#28354A',
-          }}
-        >
-          {p.name}
-        </span>
-        <span
-          style={{
-            fontSize: 9.5,
-            fontWeight: 800,
-            padding: '1px 8px',
-            borderRadius: 2,
-            whiteSpace: 'nowrap',
-            ...(v == null
-              ? {
-                  color: '#8A93A6',
-                  background: '#EFF1F4',
-                  border: '1px solid #D5DBE4',
-                }
-              : v >= 100
-                ? {
-                    color: '#2F8F5B',
-                    background: '#E9F4EE',
-                    border: '1px solid #BFDECB',
-                  }
-                : {
-                    color: '#5C6678',
-                    background: '#fff',
-                    border: '1px solid #C9CFD8',
-                  }),
-          }}
-        >
-          {p.st}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span
+            style={{
+              fontSize: 13.5,
+              fontWeight: 800,
+              letterSpacing: '-0.3px',
+              whiteSpace: 'nowrap',
+              color: '#28354A',
+            }}
+          >
+            {p.name}
+          </span>
+          {p.cur && (
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: '#B55A00',
+                background: '#FDF3E7',
+                border: '1px solid #EDD3AE',
+                padding: '1px 7px',
+                borderRadius: 2,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              현재 단계
+            </span>
+          )}
+        </div>
+        <span style={stChipStyle(p.stKind)}>{p.st}</span>
       </div>
       <div
         style={{
@@ -113,15 +118,15 @@ function ProcCard({ p }: { p: ProcCardVM }) {
               fontWeight: 800,
               letterSpacing: '-1.5px',
               lineHeight: 1,
-              color: v == null ? '#C2C9D4' : p.stale ? '#A8AFBC' : '#1E2733',
+              color: p.pct == null ? '#C2C9D4' : p.stale ? '#A8AFBC' : '#1E2733',
             }}
           >
-            {v == null ? '—' : v}
+            {p.pct ?? '—'}
           </span>
           <span style={{ fontSize: 15, fontWeight: 800, color: '#8A93A6' }}>
-            {v == null ? '' : '%'}
+            {p.unit}
           </span>
-          {p.subTag && (
+          {p.tag && (
             <span
               style={{
                 fontSize: 10,
@@ -142,7 +147,7 @@ function ProcCard({ p }: { p: ProcCardVM }) {
                     }),
               }}
             >
-              {p.subTag}
+              {p.tag}
             </span>
           )}
         </div>
@@ -156,7 +161,7 @@ function ProcCard({ p }: { p: ProcCardVM }) {
             flex: 'none',
           }}
         >
-          {p.woCnt}
+          {p.sub}
         </span>
         <div
           style={{
@@ -169,7 +174,7 @@ function ProcCard({ p }: { p: ProcCardVM }) {
           }}
         >
           <div
-            style={{ height: '100%', width: `${v ?? 0}%`, background: BAR }}
+            style={{ height: '100%', width: `${p.barPct}%`, background: '#56687E' }}
           />
         </div>
         <div
@@ -185,12 +190,15 @@ function ProcCard({ p }: { p: ProcCardVM }) {
           {p.rows.map((r) => (
             <div
               key={r.k}
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
             >
               <span
                 style={{
-                  flex: 'none',
-                  width: 56,
                   fontSize: 10.5,
                   fontWeight: 700,
                   color: '#5C6678',
@@ -199,48 +207,21 @@ function ProcCard({ p }: { p: ProcCardVM }) {
               >
                 {r.k}
               </span>
-              <div
-                style={{
-                  flex: 1,
-                  height: 10,
-                  background: '#F4F1E8',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${r.val ?? 0}%`,
-                    background: r.val == null ? 'transparent' : BAR,
-                  }}
-                />
-              </div>
               <span
                 style={{
-                  flex: 'none',
-                  minWidth: 46,
-                  textAlign: 'right',
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: 800,
                   whiteSpace: 'nowrap',
-                  color:
-                    r.txt == null && r.val == null
-                      ? '#C2C9D4'
-                      : r.txt != null && r.val == null
-                        ? '#3C4859'
-                        : r.val == null
-                          ? '#C2C9D4'
-                          : '#3C4859',
+                  color: r.color,
                 }}
               >
-                {r.txt ?? (r.val == null ? '—' : `${r.val}%`)}
+                {r.v}
               </span>
             </div>
           ))}
         </div>
         <div
-          onClick={p.goProc}
+          onClick={p.go}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -280,8 +261,16 @@ function ProcCard({ p }: { p: ProcCardVM }) {
   );
 }
 
-/** 2단계: 블록 대시보드 (헤더 + 공정 카드 + 하단 패널) */
-export function BlockDashboard({ d }: { d: DetailVM }) {
+/** 2단계: 블록 대시보드 (권역 스코프) */
+export function BlockDashboard({
+  d,
+  scopeName,
+  scopeSrc,
+}: {
+  d: DetailVM;
+  scopeName: string;
+  scopeSrc: string;
+}) {
   return (
     <>
       {/* 블록 헤더 */}
@@ -290,7 +279,9 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
           display: 'flex',
           alignItems: 'stretch',
           flex: 'none',
-          ...panel,
+          background: '#fff',
+          border: '1px solid #D3CBB4',
+          borderRadius: 3,
           overflow: 'hidden',
         }}
       >
@@ -306,14 +297,9 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
           }}
         >
           <span
-            style={{
-              fontSize: 10.5,
-              fontWeight: 700,
-              color: '#AAB6C8',
-              whiteSpace: 'nowrap',
-            }}
+            style={{ fontSize: 10.5, fontWeight: 700, color: '#AAB6C8', whiteSpace: 'nowrap' }}
           >
-            {d.ship}호 · {d.fac}
+            {d.ship}호 · {scopeName} 권역
           </span>
           <span
             style={{
@@ -327,21 +313,11 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
           >
             블록 {d.no}
           </span>
-          <span
-            style={{ fontSize: 10.5, color: '#AAB6C8', whiteSpace: 'nowrap' }}
-          >
-            내업 재공 블록
+          <span style={{ fontSize: 10.5, color: '#AAB6C8', whiteSpace: 'nowrap' }}>
+            {d.stage}
           </span>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          {/* 종합 진행 */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <div
             style={{
               display: 'flex',
@@ -360,7 +336,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              종합 진행
+              {scopeName} 진행
             </span>
             <div
               style={{
@@ -379,7 +355,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                   top: 0,
                   height: '100%',
                   width: `${d.ovAct}%`,
-                  background: TIER_BAR[d.ovTier],
+                  background: BAR_COLOR[d.ovTier],
                 }}
               />
               <div
@@ -405,12 +381,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
               실적 {d.ovAct}%
             </span>
             <span
-              style={{
-                flex: 'none',
-                fontSize: 10.5,
-                color: '#8A93A6',
-                whiteSpace: 'nowrap',
-              }}
+              style={{ flex: 'none', fontSize: 10.5, color: '#8A93A6', whiteSpace: 'nowrap' }}
             >
               계획 {d.ovPlan}% ▏
             </span>
@@ -451,14 +422,12 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                     fontSize: 19,
                     fontWeight: 800,
                     letterSpacing: '-0.5px',
-                    color: ss.warm ? '#B5740A' : ss.dim ? '#5C6678' : '#23344C',
+                    color: ss.color,
                   }}
                 >
                   {ss.v}
                 </span>
-                <span
-                  style={{ fontSize: 10, color: '#7A8699', whiteSpace: 'nowrap' }}
-                >
+                <span style={{ fontSize: 10, color: '#7A8699', whiteSpace: 'nowrap' }}>
                   {ss.k}
                 </span>
               </div>
@@ -467,22 +436,22 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
         </div>
       </div>
 
-      {/* 공정 파이프라인 카드 4 */}
+      {/* 권역 단계 카드 */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4,1fr)',
+          gridTemplateColumns: `repeat(${d.cardCols},1fr)`,
           gap: 10,
           flex: 'none',
-          height: 238,
+          height: 224,
         }}
       >
-        {d.procCards.map((p) => (
-          <ProcCard key={p.name} p={p} />
+        {d.stageCards.map((p) => (
+          <StageCard key={p.name} p={p} />
         ))}
       </div>
 
-      {/* 2번째 로우: WO 분포 · 어셈블리 진행 · 최근 수집 · 확인 필요 */}
+      {/* 하단 패널 4 */}
       <div
         style={{
           display: 'grid',
@@ -494,7 +463,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
           maxHeight: 340,
         }}
       >
-        {/* WO 분포 */}
+        {/* A: WO 분포 */}
         <div
           style={{
             display: 'flex',
@@ -503,12 +472,22 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             minWidth: 0,
             minHeight: 0,
             overflow: 'hidden',
-            ...panel,
+            background: '#fff',
+            border: '1px solid #D3CBB4',
+            borderRadius: 3,
             padding: '10px 14px',
           }}
         >
-          <span style={{ ...panelTitle, flex: 'none' }}>
-            하위 WO 실적 분포{' '}
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: '#28354A',
+              whiteSpace: 'nowrap',
+              flex: 'none',
+            }}
+          >
+            {scopeName} WO 실적 분포{' '}
             <b style={{ color: '#909AAC', fontWeight: 700 }}>— {d.woN}개</b>
           </span>
           <div
@@ -521,10 +500,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             }}
           >
             {d.distSegs.map((s, i) => (
-              <div
-                key={i}
-                style={{ width: `${s.w}%`, background: s.color }}
-              />
+              <div key={i} style={{ width: `${s.w}%`, background: s.color }} />
             ))}
           </div>
           <div
@@ -546,7 +522,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                     width: 10,
                     height: 10,
                     borderRadius: 2,
-                    background: dc.color,
+                    background: dc.dot,
                   }}
                 />
                 <span
@@ -564,15 +540,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                     fontSize: 13,
                     fontWeight: 800,
                     whiteSpace: 'nowrap',
-                    color: dc.warm
-                      ? '#C42B2B'
-                      : dc.k === '수집 실패'
-                        ? '#C2C9D4'
-                        : dc.k === '완료'
-                          ? '#3C4859'
-                          : dc.k === '진행중'
-                            ? '#5C6678'
-                            : '#8A93A6',
+                    color: dc.color,
                   }}
                 >
                   {dc.v}
@@ -592,8 +560,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             ))}
           </div>
         </div>
-
-        {/* 어셈블리 진행률 */}
+        {/* B: 권역별 세부 바 */}
         <div
           style={{
             display: 'flex',
@@ -602,7 +569,9 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             minWidth: 0,
             minHeight: 0,
             overflow: 'hidden',
-            ...panel,
+            background: '#fff',
+            border: '1px solid #D3CBB4',
+            borderRadius: 3,
             padding: '10px 14px',
           }}
         >
@@ -614,14 +583,18 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
               flex: 'none',
             }}
           >
-            <span style={panelTitle}>
-              어셈블리 진행률{' '}
-              <b style={{ color: '#909AAC', fontWeight: 700 }}>(LiDAR)</b>
-            </span>
             <span
-              style={{ fontSize: 10, color: '#909AAC', whiteSpace: 'nowrap' }}
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: '#28354A',
+                whiteSpace: 'nowrap',
+              }}
             >
-              {d.asmN}개 중 하위 7
+              {d.panelBTitle}
+            </span>
+            <span style={{ fontSize: 10, color: '#909AAC', whiteSpace: 'nowrap' }}>
+              {d.panelBSub}
             </span>
           </div>
           <div
@@ -632,7 +605,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
               justifyContent: 'space-evenly',
             }}
           >
-            {d.asmBars.map((ab) => (
+            {d.panelBRows.map((ab) => (
               <div
                 key={ab.name}
                 style={{ display: 'flex', alignItems: 'center', gap: 8 }}
@@ -640,11 +613,13 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                 <span
                   style={{
                     flex: 'none',
-                    width: 56,
+                    width: 72,
                     fontSize: 10.5,
                     fontWeight: 800,
                     color: '#8A5A1A',
                     whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   {ab.name}
@@ -661,8 +636,8 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                   <div
                     style={{
                       height: '100%',
-                      width: `${ab.avg}%`,
-                      background: ab.avg < 40 ? '#C42B2B' : BAR,
+                      width: `${ab.pct}%`,
+                      background: ab.low ? '#C42B2B' : '#56687E',
                     }}
                   />
                 </div>
@@ -674,15 +649,15 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                     fontSize: 11,
                     fontWeight: 800,
                     whiteSpace: 'nowrap',
-                    color: ab.avg < 40 ? '#C42B2B' : '#3C4859',
+                    color: ab.low ? '#C42B2B' : '#3C4859',
                   }}
                 >
-                  {ab.avg}%
+                  {ab.v}
                 </span>
                 <span
                   style={{
                     flex: 'none',
-                    width: 52,
+                    width: 56,
                     textAlign: 'right',
                     fontSize: 9.5,
                     color: '#909AAC',
@@ -695,15 +670,16 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             ))}
           </div>
         </div>
-
-        {/* 최근 수집 이벤트 */}
+        {/* C: 최근 수집 */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             minWidth: 0,
             minHeight: 0,
-            ...panel,
+            background: '#fff',
+            border: '1px solid #D3CBB4',
+            borderRadius: 3,
             overflow: 'hidden',
           }}
         >
@@ -716,7 +692,17 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
               flex: 'none',
             }}
           >
-            <span style={panelTitle}>최근 수집 이벤트</span>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: '#28354A',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              최근 수집 이벤트{' '}
+              <b style={{ color: '#909AAC', fontWeight: 700 }}>({scopeSrc})</b>
+            </span>
             <span
               onClick={d.goGather}
               style={{
@@ -752,21 +738,6 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
               >
                 <span
                   style={{
-                    flex: 'none',
-                    fontSize: 9,
-                    fontWeight: 800,
-                    padding: '1px 7px',
-                    borderRadius: 2,
-                    whiteSpace: 'nowrap',
-                    color: '#5C6678',
-                    background: '#EFF1F4',
-                    border: '1px solid #D5DBE4',
-                  }}
-                >
-                  {re.proc}
-                </span>
-                <span
-                  style={{
                     flex: 1,
                     fontSize: 11,
                     fontWeight: 700,
@@ -778,21 +749,14 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                 >
                   {re.ev}
                 </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: '#909AAC',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <span style={{ fontSize: 10, color: '#909AAC', whiteSpace: 'nowrap' }}>
                   {re.t}
                 </span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* 확인 필요 + 저조 WO */}
+        {/* D: 확인 필요 + TOP10 */}
         <div
           style={{
             display: 'flex',
@@ -801,13 +765,25 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             minWidth: 0,
             minHeight: 0,
             overflow: 'hidden',
-            ...panel,
+            background: '#fff',
+            border: '1px solid #D3CBB4',
+            borderRadius: 3,
             padding: '10px 12px',
           }}
         >
-          <span style={{ ...panelTitle, flex: 'none' }}>확인 필요</span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: '#28354A',
+              whiteSpace: 'nowrap',
+              flex: 'none',
+            }}
+          >
+            확인 필요
+          </span>
           <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
-            {d.care.map((cr) => (
+            {d.careRows.map((cr) => (
               <div
                 key={cr.k}
                 onClick={cr.open}
@@ -820,10 +796,8 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                   padding: '6px 4px',
                   borderRadius: 3,
                   cursor: 'pointer',
-                  ...(cr.v > 0
-                    ? cr.warm
-                      ? { background: '#FBE8E8', border: '1px solid #E8B4B4' }
-                      : { background: '#FBF2DE', border: '1px solid #E8CB9C' }
+                  ...(cr.on
+                    ? { background: cr.bg, border: `1px solid ${cr.border}` }
                     : { background: '#F7F5EE', border: '1px solid #E5E0D2' }),
                 }}
               >
@@ -833,15 +807,10 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                     fontWeight: 800,
                     letterSpacing: '-0.5px',
                     whiteSpace: 'nowrap',
-                    color:
-                      cr.v > 0
-                        ? cr.warm
-                          ? '#C42B2B'
-                          : '#B5740A'
-                        : '#C2C9D4',
+                    color: cr.on ? cr.color : '#C2C9D4',
                   }}
                 >
-                  {cr.v > 0 ? `${cr.v}건` : '0'}
+                  {cr.v}
                 </span>
                 <span
                   style={{
@@ -877,9 +846,7 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
             >
               실적 저조 WO <b style={{ color: '#C42B2B' }}>TOP 10</b>
             </span>
-            <span
-              style={{ fontSize: 9.5, color: '#909AAC', whiteSpace: 'nowrap' }}
-            >
+            <span style={{ fontSize: 9.5, color: '#909AAC', whiteSpace: 'nowrap' }}>
               진행중 WO 중 진행률 낮은 순
             </span>
           </div>
@@ -889,34 +856,35 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                 borderCollapse: 'collapse',
                 fontSize: 10.5,
                 width: '100%',
+                tableLayout: 'fixed',
               }}
             >
               <thead>
                 <tr>
                   {(
                     [
-                      ['#', 'center', 22],
-                      ['공정', 'left', undefined],
-                      ['WO', 'left', undefined],
-                      ['진행률', 'left', undefined],
-                    ] as [string, 'left' | 'center', number | undefined][]
-                  ).map(([label, align, w]) => (
+                      ['#', 'center', 20],
+                      ['WO', 'left', 62],
+                      ['작업', 'left', undefined],
+                      ['진행률', 'left', 86],
+                    ] as const
+                  ).map(([h, al, w]) => (
                     <th
-                      key={label}
+                      key={h}
                       style={{
                         position: 'sticky',
                         top: 0,
                         background: '#F5F3EC',
                         borderBottom: '1px solid #E5E0D2',
                         padding: '3px 4px',
-                        textAlign: align,
+                        textAlign: al,
                         fontSize: 9,
                         color: '#5C6678',
                         whiteSpace: 'nowrap',
                         width: w,
                       }}
                     >
-                      {label}
+                      {h}
                     </th>
                   ))}
                 </tr>
@@ -940,22 +908,9 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                       style={{
                         padding: '3px 4px',
                         borderBottom: '1px solid #F2EFE6',
-                        color: '#5C6678',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {lw.proc}
-                    </td>
-                    <td
-                      style={{
-                        padding: '3px 4px',
-                        borderBottom: '1px solid #F2EFE6',
                         fontWeight: 700,
                         color: '#3C4859',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: 110,
                       }}
                     >
                       {lw.wo}
@@ -964,27 +919,37 @@ export function BlockDashboard({ d }: { d: DetailVM }) {
                       style={{
                         padding: '3px 4px',
                         borderBottom: '1px solid #F2EFE6',
+                        color: '#5C6678',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {lw.name}
+                    </td>
+                    <td
+                      style={{
+                        padding: '3px 4px',
+                        borderBottom: '1px solid #F2EFE6',
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                      >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <div
                           style={{
-                            width: 54,
+                            flex: 1,
+                            minWidth: 0,
                             height: 8,
                             background: '#F0EDE3',
                             borderRadius: 1,
                             overflow: 'hidden',
-                            flex: 'none',
                           }}
                         >
                           <div
                             style={{
                               height: '100%',
                               width: `${lw.pct}%`,
-                              background: lw.pct < 40 ? '#C42B2B' : BAR,
+                              background: lw.pct < 40 ? '#C42B2B' : '#56687E',
                             }}
                           />
                         </div>

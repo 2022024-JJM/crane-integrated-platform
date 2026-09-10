@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { DashVM, TierChipVM } from '../model/use-gathering';
+import type { ListVM, TierChipVM } from '../model/use-gathering';
 import type { TierKey } from '../model/types';
 
 /** 티어별 [라벨, 글자색, 배경, 테두리] */
@@ -15,7 +15,11 @@ const BAR_COLOR: Record<TierKey, string> = {
   ok: '#56687E',
 };
 
-function thStyle(align: 'left' | 'center' | 'right', sep?: boolean): CSSProperties {
+function thStyle(
+  align: 'left' | 'center' | 'right',
+  sep?: boolean,
+  bold?: boolean,
+): CSSProperties {
   return {
     position: 'sticky',
     top: 0,
@@ -28,6 +32,7 @@ function thStyle(align: 'left' | 'center' | 'right', sep?: boolean): CSSProperti
     fontSize: 10,
     color: '#5C6678',
     whiteSpace: 'nowrap',
+    fontWeight: bold ? 800 : undefined,
   };
 }
 
@@ -43,7 +48,6 @@ function chipStyle(c: TierChipVM): CSSProperties {
   return {
     display: 'flex',
     alignItems: 'center',
-    gap: 5,
     height: 24,
     padding: '0 11px',
     borderRadius: 2,
@@ -57,8 +61,14 @@ function chipStyle(c: TierChipVM): CSSProperties {
   };
 }
 
-/** 1단계: 블록 현황 목록 (복수 선택 시 마스터) */
-export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
+/** 1단계: 권역 블록 현황 목록 (복수 선택 시 마스터) */
+export function BlockList({
+  list,
+  scopeName,
+}: {
+  list: ListVM;
+  scopeName: string;
+}) {
   return (
     <div
       style={{
@@ -93,11 +103,9 @@ export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
             whiteSpace: 'nowrap',
           }}
         >
-          블록 현황 목록
+          {scopeName} 블록 현황 목록
         </span>
-        <span
-          style={{ fontSize: 10.5, color: '#909AAC', whiteSpace: 'nowrap' }}
-        >
+        <span style={{ fontSize: 10.5, color: '#909AAC', whiteSpace: 'nowrap' }}>
           {list.shownN} / {list.total}개 · 지연 큰 순 · 행 클릭 → 블록 대시보드
         </span>
         <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
@@ -114,18 +122,11 @@ export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
         >
           <thead>
             <tr>
-              <th style={thStyle('center')}>블록</th>
-              <th style={thStyle('center')}>상태</th>
-              <th style={thStyle('left')}>종합 진행 (▏계획)</th>
-              <th style={thStyle('right')}>실적</th>
-              <th style={thStyle('right')}>계획</th>
-              <th style={thStyle('right')}>지연</th>
-              <th style={thStyle('left', true)}>가공 (현재 단계)</th>
-              <th style={thStyle('right')}>조립</th>
-              <th style={thStyle('right')}>의장</th>
-              <th style={thStyle('center')}>도장</th>
-              <th style={thStyle('right', true)}>하위 WO</th>
-              <th style={thStyle('right')}>확인 필요</th>
+              {list.cols.map((c) => (
+                <th key={c.h} style={thStyle(c.align, c.sep, c.bold)}>
+                  {c.h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -166,11 +167,11 @@ export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
                       {tm[0]}
                     </span>
                   </td>
-                  <td style={{ ...td, width: '22%' }}>
+                  <td style={{ ...td, whiteSpace: undefined, width: '20%' }}>
                     <div
                       style={{
                         width: '100%',
-                        minWidth: 160,
+                        minWidth: 140,
                         height: 10,
                         background: '#F0EDE3',
                         borderRadius: 1,
@@ -228,66 +229,21 @@ export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
                   >
                     {lr.delayTxt}
                   </td>
-                  <td
-                    style={{
-                      ...td,
-                      borderLeft: '2px solid #EFEDE4',
-                      color: '#3C4859',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {lr.fab}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      textAlign: 'right',
-                      color: '#3C4859',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {lr.asm}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      textAlign: 'right',
-                      color: '#3C4859',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {lr.otf}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      textAlign: 'center',
-                      color: '#3C4859',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {lr.pnt}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      borderLeft: '2px solid #EFEDE4',
-                      textAlign: 'right',
-                      color: '#5C6678',
-                    }}
-                  >
-                    {lr.woN}
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      textAlign: 'right',
-                      fontWeight: 800,
-                      color: lr.iss > 0 ? '#C42B2B' : '#C2C9D4',
-                    }}
-                  >
-                    {lr.iss > 0 ? lr.iss : '—'}
-                  </td>
+                  {lr.cells.map((c, ci) => (
+                    <td
+                      key={ci}
+                      style={{
+                        ...td,
+                        textAlign: c.align,
+                        color: c.color,
+                        background: c.bg,
+                        fontWeight: c.bold ? 800 : undefined,
+                        borderLeft: c.sep ? '2px solid #EFEDE4' : undefined,
+                      }}
+                    >
+                      {c.v}
+                    </td>
+                  ))}
                 </tr>
               );
             })}
@@ -305,10 +261,14 @@ export function BlockList({ list }: { list: NonNullable<DashVM['list']> }) {
           flex: 'none',
           fontSize: 10,
           color: '#8A93A6',
+          flexWrap: 'wrap',
         }}
       >
-        <span>상태: 지연 = 계획 대비 -5%p 이상 · 주의 = -1~4%p · 정상 = 계획 달성</span>
-        <span>확인 필요 = 정합성 불일치 + Key-In 대기 + I/F 미수신 건수</span>
+        <span>
+          상태: 지연 = {scopeName} 계획 대비 -5%p 이상 · 주의 = -1~4%p · 정상 =
+          계획 달성
+        </span>
+        <span>{list.foot}</span>
       </div>
     </div>
   );

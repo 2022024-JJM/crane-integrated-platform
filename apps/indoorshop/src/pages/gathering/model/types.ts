@@ -1,75 +1,84 @@
+/** 내업 권역 (로그인 사용자의 부서가 결정) */
 export type GatherProc = '가공' | '조립' | '의장' | '도장';
 
-/** 확인 필요 이슈 구분 — 수집 이벤트 필터 키 */
-export type IssueKind = '정합성' | 'Key-In' | '수집실패';
+/** 확인 필요 이슈 종류 (권역별로 쓰이는 값이 다르다) */
+export type IssueKind = '정합성' | '수집실패' | 'Key-In' | '검사중';
 
-/** 블록 상태 티어 — 지연 = 계획 대비 -5%p 이상 · 주의 = -1~4%p · 정상 = 계획 달성 */
+/** 지연 티어: 계획 대비 -5%p↓=delay, -1~4%p=warn, 달성=ok */
 export type TierKey = 'delay' | 'warn' | 'ok';
 
-/** 내업 재공 블록 1건 (시드 파생) */
-export interface BlockInfo {
-  no: string;
-  /** 0~1 종합 진척 — 파생값 산출의 기준 */
-  prog: number;
-  /** 블록 전용 시드 */
-  seed: number;
-  /** 조립 공장 1~4 */
-  fac: number;
-  /** 하위 워크오더 수 */
-  woN: number;
-  /** 어셈블리 수 */
-  asmN: number;
-  /** 종합 실적 % */
-  act: number;
-  /** 계획 % */
-  plan: number;
-  /** 지연 %p (계획-실적, 0 이상) */
-  delay: number;
+/** MES 계정 (프로토타입 로그인) */
+export interface DemoUser {
+  id: string;
+  pw: string;
+  name: string;
+  type: '직영' | '협력사';
+  dept: string;
+  ban: string;
+  proc: GatherProc;
+  ships: string[];
 }
 
-/** 가공 5단계 중량가중 진척 (강재반입→불출→절단→사상→팔레트편성) */
+/** 권역별 수집 원천·힌트 */
+export interface ScopeInfo {
+  src: string;
+  srcLong: string;
+  hint: string;
+}
+
+export interface BlockInfo {
+  no: string;
+  prog: number;
+  seed: number;
+  woN: number;
+  asmN: number;
+  /** 계획-실적 차 (%p) — 권역 실적에 적용 */
+  planGap: number;
+}
+
+/** 가공 5단계 중량률 */
 export interface FabResult {
   rates: number[];
   total: number;
 }
 
-/** 도장 스텝 진행 — done: 완료된 스텝 수 (0~3) */
+/** 도장 완료 스텝 수 (0~3: —/S/P/T/UP/FINAL) */
 export interface PntResult {
-  txt: string;
-  done: number;
+  done: 0 | 1 | 2 | 3;
 }
 
-/** 블록 하위 워크오더 실적 */
-export interface BlockWo {
+export interface WoItem {
   wo: string;
-  proc: GatherProc;
   name: string;
   asm: string;
+  kind: string;
   pct: number;
-  /** 수집 실패 여부 */
   warn: boolean;
-  src: string;
-  recv: string;
 }
 
-/** 하위 상세 key-value 행의 값 톤 */
-export type KvTone = 'key' | 'g' | 'r' | 'o' | 'k' | '';
-
-/** [라벨, 값, 톤?] */
-export type KvRow = [string, string, KvTone?];
-
 /** 수집 이벤트 로우데이터 1건 */
-export interface GatherEvent {
+export interface EvItem {
   blk: string;
-  proc: GatherProc;
   ev: string;
   key: string;
+  /** 가공 단계 인덱스 (0~4) */
+  stage?: number;
+  /** 도장 스텝 */
+  step?: 'S/P' | 'T/UP' | 'FINAL';
+  /** 의장품 구분 */
+  kind?: string;
+  /** 가공: 자동(단계) 중량률 */
+  autoPct?: number;
+  /** 가공: 레거시 실적 중량률 (null=I/F 미수신) */
+  legacy?: number | null;
+  /** 가공: 정합성 불일치 */
+  mism?: boolean;
+  /** 가공: I/F 미수신 */
+  ifMiss?: boolean;
   start: string;
-  /** 완료(수신) 일시 — 미완료면 '' */
   end: string;
   note: string;
   warn: boolean;
   issue: IssueKind | '';
   src: string;
-  kv: KvRow[];
 }

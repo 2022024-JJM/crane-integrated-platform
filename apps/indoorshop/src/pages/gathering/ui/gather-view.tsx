@@ -1,8 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { GatherVM } from '../model/use-gathering';
-import type { KvTone } from '../model/types';
 
-function thStyle(align: 'left' | 'center'): CSSProperties {
+function thStyle(align: 'left' | 'center' | 'right'): CSSProperties {
   return {
     position: 'sticky',
     top: 0,
@@ -23,36 +22,27 @@ const td: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const procChip: CSSProperties = {
-  fontSize: 9.5,
-  fontWeight: 800,
-  padding: '1px 8px',
-  borderRadius: 2,
-  whiteSpace: 'nowrap',
-  color: '#5C6678',
-  background: '#EFF1F4',
-  border: '1px solid #D5DBE4',
-};
-
-function kvValueStyle(tone: KvTone | undefined): CSSProperties {
-  switch (tone) {
-    case 'key':
-      return { fontSize: 11.5, fontWeight: 800, color: '#B55A00', whiteSpace: 'nowrap' };
-    case 'g':
-      return { fontSize: 11.5, fontWeight: 800, color: '#2F8F5B', whiteSpace: 'nowrap' };
-    case 'r':
-      return { fontSize: 11.5, fontWeight: 800, color: '#C42B2B', whiteSpace: 'nowrap' };
-    case 'o':
-      return { fontSize: 11.5, fontWeight: 800, color: '#B5740A', whiteSpace: 'nowrap' };
-    case 'k':
-      return { fontSize: 11.5, color: '#909AAC', whiteSpace: 'nowrap' };
-    default:
-      return { fontSize: 11.5, fontWeight: 700, color: '#23344C', whiteSpace: 'nowrap' };
-  }
+function chip(warn: boolean, done: boolean): CSSProperties {
+  return {
+    fontSize: 9.5,
+    fontWeight: 800,
+    padding: '1px 8px',
+    borderRadius: 2,
+    whiteSpace: 'nowrap',
+    ...(warn
+      ? { color: '#C42B2B', background: '#FBE8E8', border: '1px solid #E8B4B4' }
+      : done
+        ? { color: '#2F8F5B', background: '#E9F4EE', border: '1px solid #BFDECB' }
+        : {
+            color: '#5C6678',
+            background: '#EFF1F4',
+            border: '1px solid #D5DBE4',
+          }),
+  };
 }
 
-/** 수집 데이터 조회 탭 — 로우데이터 테이블 + 하위 상세 드릴다운 */
-export function GatherView({ g }: { g: GatherVM }) {
+/** 수집 데이터 조회 탭 — 권역 수집 이벤트 로우데이터 */
+export function GatherView({ g, scopeName }: { g: GatherVM; scopeName: string }) {
   return (
     <div
       style={{
@@ -99,12 +89,10 @@ export function GatherView({ g }: { g: GatherVM }) {
                 whiteSpace: 'nowrap',
               }}
             >
-              수집 이벤트 로우데이터
+              {scopeName} 수집 이벤트 로우데이터
             </span>
-            <span
-              style={{ fontSize: 10.5, color: '#909AAC', whiteSpace: 'nowrap' }}
-            >
-              {g.cnt}건 · 행 클릭 → 하위 상세
+            <span style={{ fontSize: 10.5, color: '#909AAC', whiteSpace: 'nowrap' }}>
+              {g.cnt}건
             </span>
             {g.issueChip && (
               <span
@@ -158,10 +146,10 @@ export function GatherView({ g }: { g: GatherVM }) {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {g.procFilters.map((f) => (
+            {g.stFilters.map((gf) => (
               <div
-                key={f.label}
-                onClick={f.select}
+                key={gf.label}
+                onClick={gf.select}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -172,7 +160,7 @@ export function GatherView({ g }: { g: GatherVM }) {
                   cursor: 'pointer',
                   borderRadius: 2,
                   whiteSpace: 'nowrap',
-                  ...(f.active
+                  ...(gf.active
                     ? {
                         background: '#3C4859',
                         color: '#fff',
@@ -185,7 +173,7 @@ export function GatherView({ g }: { g: GatherVM }) {
                       }),
                 }}
               >
-                {f.label}
+                {gf.label}
               </div>
             ))}
           </div>
@@ -202,30 +190,29 @@ export function GatherView({ g }: { g: GatherVM }) {
             <thead>
               <tr>
                 <th style={thStyle('center')}>블록</th>
-                <th style={thStyle('center')}>공정</th>
                 <th style={thStyle('left')}>수집 이벤트</th>
                 <th style={thStyle('left')}>관리번호</th>
                 <th style={thStyle('left')}>발생(시작)</th>
                 <th style={thStyle('left')}>완료(수신)</th>
                 <th style={thStyle('center')}>상태</th>
                 <th style={thStyle('left')}>수집 내용</th>
+                {g.hasLegacy && (
+                  <>
+                    <th style={thStyle('right')}>자동 중량률</th>
+                    <th style={thStyle('right')}>레거시 실적</th>
+                    <th style={thStyle('center')}>정합성</th>
+                  </>
+                )}
                 <th style={thStyle('left')}>수집 원천</th>
               </tr>
             </thead>
             <tbody>
-              {g.rows.map((e) => (
+              {g.rows.map((e, i) => (
                 <tr
-                  key={e.id}
-                  onClick={e.open}
+                  key={`${e.key}-${e.ev}-${i}`}
                   style={{
-                    cursor: 'pointer',
                     borderTop: e.newBlk ? '2px solid #DDD8C8' : undefined,
-                    background: e.selected
-                      ? '#FBEBD5'
-                      : e.warn
-                        ? '#FDF7F7'
-                        : undefined,
-                    boxShadow: e.selected ? 'inset 3px 0 0 #EE7A00' : undefined,
+                    background: e.warn ? '#FDF7F7' : undefined,
                   }}
                 >
                   <td
@@ -238,9 +225,6 @@ export function GatherView({ g }: { g: GatherVM }) {
                   >
                     {e.blk}
                   </td>
-                  <td style={{ ...td, textAlign: 'center' }}>
-                    <span style={procChip}>{e.proc}</span>
-                  </td>
                   <td style={{ ...td, color: '#3C4859', fontWeight: 700 }}>
                     {e.ev}
                   </td>
@@ -250,34 +234,7 @@ export function GatherView({ g }: { g: GatherVM }) {
                   <td style={{ ...td, color: '#5C6678' }}>{e.start}</td>
                   <td style={{ ...td, color: '#5C6678' }}>{e.end}</td>
                   <td style={{ ...td, textAlign: 'center' }}>
-                    <span
-                      style={{
-                        fontSize: 9.5,
-                        fontWeight: 800,
-                        padding: '1px 8px',
-                        borderRadius: 2,
-                        whiteSpace: 'nowrap',
-                        ...(e.warn
-                          ? {
-                              color: '#C42B2B',
-                              background: '#FBE8E8',
-                              border: '1px solid #E8B4B4',
-                            }
-                          : e.done
-                            ? {
-                                color: '#2F8F5B',
-                                background: '#E9F4EE',
-                                border: '1px solid #BFDECB',
-                              }
-                            : {
-                                color: '#5C6678',
-                                background: '#EFF1F4',
-                                border: '1px solid #D5DBE4',
-                              }),
-                      }}
-                    >
-                      {e.warn ? '보완' : e.done ? '완료' : '진행중'}
-                    </span>
+                    <span style={chip(e.warn, e.st === '완료')}>{e.st}</span>
                   </td>
                   <td
                     style={{
@@ -289,6 +246,35 @@ export function GatherView({ g }: { g: GatherVM }) {
                   >
                     {e.note}
                   </td>
+                  {g.hasLegacy && (
+                    <>
+                      <td
+                        style={{
+                          ...td,
+                          textAlign: 'right',
+                          fontWeight: 700,
+                          color: '#3C4859',
+                        }}
+                      >
+                        {e.autoPct}
+                      </td>
+                      <td
+                        style={{
+                          ...td,
+                          textAlign: 'right',
+                          fontWeight: 700,
+                          color: e.legacyWarn ? '#C42B2B' : '#3C4859',
+                        }}
+                      >
+                        {e.legacy}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        <span style={chip(e.matchWarn, !e.matchWarn)}>
+                          {e.match}
+                        </span>
+                      </td>
+                    </>
+                  )}
                   <td style={{ ...td, color: '#8A93A6' }}>{e.src}</td>
                 </tr>
               ))}
@@ -296,123 +282,6 @@ export function GatherView({ g }: { g: GatherVM }) {
           </table>
         </div>
       </div>
-
-      {/* 하위 상세 드릴다운 */}
-      {g.drill && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 'none',
-            maxHeight: 300,
-            background: '#fff',
-            border: '1px solid #B9C8DA',
-            borderTop: '3px solid #2E5E96',
-            borderRadius: 3,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '7px 12px',
-              background: '#EEF3F9',
-              borderBottom: '1px solid #D5DEEA',
-              flex: 'none',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 800,
-                  color: '#2E5E96',
-                  background: '#E3EBF4',
-                  border: '1px solid #B9C8DA',
-                  padding: '1px 8px',
-                  borderRadius: 2,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                하위 상세
-              </span>
-              <span
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 800,
-                  color: '#28354A',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {g.drill.title}
-              </span>
-              <span
-                style={{
-                  fontSize: 10.5,
-                  color: '#7A8699',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {g.drill.sub}
-              </span>
-            </div>
-            <div
-              onClick={g.drill.close}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: 22,
-                padding: '0 10px',
-                background: '#fff',
-                border: '1px solid #A8B2C0',
-                color: '#3C4859',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-                borderRadius: 2,
-              }}
-            >
-              닫기 ✕
-            </div>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '10px 12px' }}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))',
-                gap: '6px 18px',
-              }}
-            >
-              {g.drill.kv.map((d) => (
-                <div
-                  key={d[0]}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    borderBottom: '1px dashed #E5E0D2',
-                    padding: '4px 0',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 10.5,
-                      color: '#7A8699',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {d[0]}
-                  </span>
-                  <span style={kvValueStyle(d[2])}>{d[1]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
