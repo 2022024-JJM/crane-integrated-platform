@@ -35,7 +35,16 @@
       "halted": "Collisione sistitur"
     },
     "pauseOn": "Sistere in collisione: activum",
-    "pauseOff": "Sistere in collisione: inactivum"
+    "pauseOff": "Sistere in collisione: inactivum",
+    "idleMeta": "Detectio operatur dum visus monitorationis 3D apertus est"
+  },
+  "collisionBanner": {
+    "title": "Collisio detecta",
+    "open": "Monitorationem aperire",
+    "dismiss": "Monitum claudere"
+  },
+  "emptyCta": {
+    "openMonitoring": "Monitorationem 3D aperire"
   },
   "source": {
     "state": {

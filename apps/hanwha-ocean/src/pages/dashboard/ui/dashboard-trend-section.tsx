@@ -111,7 +111,15 @@ export function DashboardTrendSection({
           ) : (
             <EmptyStateBox
               message={translate('dashboard:charts.dailyCollisions.empty')}
-              className="flex h-[240px] items-center justify-center py-0"
+              className="h-[240px] py-0"
+              action={
+                summary.monitoringHref
+                  ? {
+                      label: translate('dashboard:emptyCta.openMonitoring'),
+                      to: summary.monitoringHref,
+                    }
+                  : undefined
+              }
             />
           )}
           <Separator />
@@ -203,7 +211,7 @@ export function DashboardTrendSection({
           ) : (
             <EmptyStateBox
               message={translate('dashboard:charts.dailyAlarms.empty')}
-              className="flex h-[240px] items-center justify-center py-0"
+              className="h-[240px] py-0"
             />
           )}
           <Separator />

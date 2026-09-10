@@ -35,7 +35,16 @@
       "halted": "충돌 정지"
     },
     "pauseOn": "충돌 시 정지 켜짐",
-    "pauseOff": "충돌 시 정지 꺼짐"
+    "pauseOff": "충돌 시 정지 꺼짐",
+    "idleMeta": "감지는 3D 모니터링 화면이 열려 있는 동안 동작합니다"
+  },
+  "collisionBanner": {
+    "title": "충돌 감지됨",
+    "open": "모니터링으로 이동",
+    "dismiss": "경보 닫기"
+  },
+  "emptyCta": {
+    "openMonitoring": "3D 모니터링 열기"
   },
   "source": {
     "state": {

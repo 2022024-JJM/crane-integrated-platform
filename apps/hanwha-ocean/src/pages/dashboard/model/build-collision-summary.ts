@@ -26,6 +26,8 @@ import type {
 export const TREND_DAYS = 7;
 const RECENT_COLLISIONS_MAX = 6;
 const RECENT_ALARMS_MAX = 4;
+/** 이 시간 안의 최신 충돌은 상단 경보 배너로 승격한다. */
+export const ATTENTION_WINDOW_MS = 10 * 60 * 1000;
 
 export interface BuildCollisionSummaryInput {
   regions: Region[];
@@ -77,6 +79,13 @@ export function buildCollisionSummary(
     0,
   );
 
+  const monitoringHref = input.regions[0]?.navigateTo ?? null;
+  const latestCollision = collisions[0];
+  const attentionCollision =
+    latestCollision && input.now - latestCollision.at <= ATTENTION_WINDOW_MS
+      ? toCollisionRow(latestCollision, regionById)
+      : null;
+
   return {
     metrics: buildMetricCards({
       detection: input.detection,
@@ -84,6 +93,7 @@ export function buildCollisionSummary(
       activeAlarmStats: input.activeAlarmStats,
       todayCollisionCount,
       weekCollisionTotal,
+      monitoringHref,
     }),
     collisionTrend,
     alarmTrend,
@@ -101,6 +111,8 @@ export function buildCollisionSummary(
       .slice(0, RECENT_COLLISIONS_MAX)
       .map((entry) => toCollisionRow(entry, regionById)),
     recentAlarms: alarms.slice(0, RECENT_ALARMS_MAX),
+    attentionCollision,
+    monitoringHref,
   };
 }
 
@@ -125,15 +137,17 @@ function buildMetricCards({
   activeAlarmStats,
   todayCollisionCount,
   weekCollisionTotal,
+  monitoringHref,
 }: {
   detection: DashboardDetectionStatus;
   sources: DashboardDataSourceStatus;
   activeAlarmStats: DashboardActiveAlarmStats;
   todayCollisionCount: number;
   weekCollisionTotal: number;
+  monitoringHref: string | null;
 }): DashboardMetricCard[] {
   return [
-    buildDetectionCard(detection),
+    buildDetectionCard(detection, monitoringHref),
     {
       id: 'todayCollisions',
       titleKey: 'dashboard:metrics.todayCollisions.title',
@@ -141,6 +155,7 @@ function buildMetricCards({
       value: todayCollisionCount,
       format: 'number',
       tone: todayCollisionCount > 0 ? 'warning' : 'success',
+      href: monitoringHref ?? undefined,
       metaKey: 'dashboard:metrics.todayCollisions.meta',
       metaValues: { count: weekCollisionTotal },
     },
@@ -156,6 +171,7 @@ function buildMetricCards({
           : activeAlarmStats.total > 0
             ? 'warning'
             : 'success',
+      href: monitoringHref ? `${monitoringHref}/alarm-history` : undefined,
       metaKey: 'dashboard:metrics.activeAlarms.meta',
       metaValues: {
         critical: activeAlarmStats.critical,
@@ -168,6 +184,7 @@ function buildMetricCards({
 
 function buildDetectionCard(
   detection: DashboardDetectionStatus,
+  monitoringHref: string | null,
 ): DashboardMetricCard {
   const stateKey = detection.enabled
     ? `dashboard:collision.state.${detection.phase}`
@@ -188,9 +205,15 @@ function buildDetectionCard(
     value: stateKey,
     format: 'translation',
     tone,
-    metaKey: detection.pauseOnCollision
-      ? 'dashboard:collision.pauseOn'
-      : 'dashboard:collision.pauseOff',
+    href: monitoringHref ?? undefined,
+    // idle 은 "감지가 꺼졌나?" 로 읽히기 쉽다 — 실제로는 3D 모니터링 화면이
+    // 떠 있는 동안만 검사기가 돌기 때문이라, 그 맥락을 meta 로 알린다.
+    metaKey:
+      detection.enabled && detection.phase === 'idle'
+        ? 'dashboard:collision.idleMeta'
+        : detection.pauseOnCollision
+          ? 'dashboard:collision.pauseOn'
+          : 'dashboard:collision.pauseOff',
   };
 }
 

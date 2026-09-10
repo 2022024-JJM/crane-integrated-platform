@@ -192,6 +192,14 @@ export function DashboardCollisionHistorySection({
         ) : (
           <EmptyStateBox
             message={translate('dashboard:collisionHistory.empty')}
+            action={
+              summary.monitoringHref
+                ? {
+                    label: translate('dashboard:emptyCta.openMonitoring'),
+                    to: summary.monitoringHref,
+                  }
+                : undefined
+            }
           />
         )}
       </CardContent>

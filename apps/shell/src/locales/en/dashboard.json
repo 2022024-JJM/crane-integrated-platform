@@ -35,7 +35,16 @@
       "halted": "Halted on collision"
     },
     "pauseOn": "Pause on collision: on",
-    "pauseOff": "Pause on collision: off"
+    "pauseOff": "Pause on collision: off",
+    "idleMeta": "Detection runs while a 3D monitoring view is open"
+  },
+  "collisionBanner": {
+    "title": "Collision detected",
+    "open": "Open monitoring",
+    "dismiss": "Dismiss alert"
+  },
+  "emptyCta": {
+    "openMonitoring": "Open 3D monitoring"
   },
   "source": {
     "state": {

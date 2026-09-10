@@ -69,6 +69,9 @@ export interface DashboardEquipmentTag {
   /** 가상 태그 카탈로그 표시명. 정의가 없으면 tagKey 그대로. */
   label: string;
   unit: string | null;
+  /** 범위 바 용 — 가상 태그 정의의 범위. 정의가 없으면 null. */
+  min: number | null;
+  max: number | null;
 }
 
 export interface DashboardEquipmentRow {
@@ -91,4 +94,11 @@ export interface DashboardSummary {
   regionStatuses: DashboardRegionStatusDatum[];
   recentCollisions: DashboardCollisionRow[];
   recentAlarms: AlarmJournalEntry[];
+  /**
+   * 상단 경보 배너 대상 — 최근 ATTENTION_WINDOW_MS 안의 최신 충돌.
+   * 세션 activeRecord 는 모니터링을 떠나면 해제되므로 시간 창 기준을 쓴다.
+   */
+  attentionCollision: DashboardCollisionRow | null;
+  /** KPI·빈 상태 CTA 가 이동할 대표 모니터링 경로(첫 region). */
+  monitoringHref: string | null;
 }

@@ -73,7 +73,13 @@ export function useSceneOverview(regions: Region[]): SceneOverview {
           modelId: model.id,
           equipName: model.equipName,
           regionTitleKey: getRegionTitleKey(region.id),
-          tags: tagKeys.map((tagKey) => ({ tagKey, label: tagKey, unit: null })),
+          tags: tagKeys.map((tagKey) => ({
+            tagKey,
+            label: tagKey,
+            unit: null,
+            min: null,
+            max: null,
+          })),
         });
       }
     }

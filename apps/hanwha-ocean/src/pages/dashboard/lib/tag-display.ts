@@ -28,3 +28,26 @@ export function toTagDisplay(
     stale: now - live.at > TAG_STALE_MS,
   };
 }
+
+/**
+ * 범위 바의 채움 비율 [0,1]. 범위 정의가 없거나 퇴화(max<=min)·값 없음이면
+ * null — 바를 그리지 않는다.
+ */
+export function tagRangeRatio(
+  value: number | undefined,
+  min: number | null,
+  max: number | null,
+): number | null {
+  if (
+    value === undefined ||
+    !Number.isFinite(value) ||
+    min === null ||
+    max === null ||
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    max <= min
+  ) {
+    return null;
+  }
+  return Math.min(1, Math.max(0, (value - min) / (max - min)));
+}

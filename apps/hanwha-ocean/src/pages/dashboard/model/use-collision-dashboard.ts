@@ -114,6 +114,8 @@ export function useCollisionDashboard(): {
           tagKey: tag.tagKey,
           label: def?.name || tag.tagKey,
           unit: def?.unit ?? null,
+          min: def ? def.min : null,
+          max: def ? def.max : null,
         };
       }),
     }));

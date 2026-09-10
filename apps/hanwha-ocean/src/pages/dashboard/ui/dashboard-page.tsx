@@ -15,6 +15,7 @@ import {
   type DashboardPreviewSize,
 } from '@crane/core/lib/preview-helpers';
 import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
+import { DashboardCollisionBanner } from './dashboard-collision-banner';
 import { DashboardEquipmentLiveSection } from './dashboard-equipment-live';
 import {
   DashboardCollisionHistorySection,
@@ -37,6 +38,10 @@ export function DashboardPage() {
   const [previewSize, setPreviewSize] = useState<DashboardPreviewSize | null>(
     null,
   );
+  // 배너를 닫은 충돌 key — 같은 충돌은 다시 안 뜨고 새 충돌이 오면 뜬다.
+  const [dismissedCollisionKey, setDismissedCollisionKey] = useState<
+    string | null
+  >(null);
   const locale = useMemo(
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
@@ -68,8 +73,24 @@ export function DashboardPage() {
     [theme],
   );
 
+  const attentionCollision =
+    summary.attentionCollision &&
+    summary.attentionCollision.key !== dismissedCollisionKey
+      ? summary.attentionCollision
+      : null;
+
   return (
     <div className="space-y-6 p-4 md:p-6">
+      {attentionCollision ? (
+        <DashboardCollisionBanner
+          collision={attentionCollision}
+          translate={t}
+          formatTime={(at) => dateTimeFormatter.format(new Date(at))}
+          onDismiss={() => {
+            setDismissedCollisionKey(attentionCollision.key);
+          }}
+        />
+      ) : null}
       <section
         aria-labelledby="dashboard-metrics-title"
         className="grid grid-cols-1 gap-4 xl:grid-cols-4"

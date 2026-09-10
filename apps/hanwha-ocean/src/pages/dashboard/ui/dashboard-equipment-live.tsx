@@ -13,7 +13,7 @@ import {
 } from '@crane/ui/molecules/card';
 import type { DashboardEquipmentRow } from '../model';
 import { useNowTick } from '../model/use-now-tick';
-import { toTagDisplay } from '../lib/tag-display';
+import { tagRangeRatio, toTagDisplay } from '../lib/tag-display';
 import type { DashboardTranslate } from './dashboard-helpers';
 import { EmptyStateBox } from './dashboard-parts';
 
@@ -86,37 +86,49 @@ function EquipmentCard({
           {translate(row.regionTitleKey)}
         </span>
       </div>
-      <div className="mt-3 space-y-1.5">
+      <div className="mt-3 space-y-2">
         {row.tags.map((tag) => {
-          const display = toTagDisplay(tagLiveValues.get(tag.tagKey), now);
+          const live = tagLiveValues.get(tag.tagKey);
+          const display = toTagDisplay(live, now);
+          const ratio = tagRangeRatio(live?.value, tag.min, tag.max);
           return (
-            <div
-              key={tag.tagKey}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <span className="text-muted-foreground min-w-0 truncate text-xs">
-                {tag.label}
-              </span>
-              <span className="flex shrink-0 items-baseline gap-1">
-                {display.stale ? (
-                  <Badge className="border-border/90 bg-muted/60 text-muted-foreground border text-[10px]">
-                    {translate('dashboard:equipmentLive.stopped')}
-                  </Badge>
-                ) : null}
-                <span
-                  className={cn(
-                    'font-semibold tabular-nums',
-                    display.stale && 'text-muted-foreground',
-                  )}
-                >
-                  {display.text ?? '—'}
+            <div key={tag.tagKey}>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground min-w-0 truncate text-xs">
+                  {tag.label}
                 </span>
-                {tag.unit ? (
-                  <span className="text-muted-foreground text-xs">
-                    {tag.unit}
+                <span className="flex shrink-0 items-baseline gap-1">
+                  {display.stale ? (
+                    <Badge className="border-border/90 bg-muted/60 text-muted-foreground border text-[10px]">
+                      {translate('dashboard:equipmentLive.stopped')}
+                    </Badge>
+                  ) : null}
+                  <span
+                    className={cn(
+                      'font-semibold tabular-nums',
+                      display.stale && 'text-muted-foreground',
+                    )}
+                  >
+                    {display.text ?? '—'}
                   </span>
-                ) : null}
-              </span>
+                  {tag.unit ? (
+                    <span className="text-muted-foreground text-xs">
+                      {tag.unit}
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+              {ratio !== null ? (
+                <div className="bg-muted/40 mt-1 h-1 w-full overflow-hidden rounded-full">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-[width] duration-300',
+                      display.stale ? 'bg-muted-foreground/40' : 'bg-sky-500',
+                    )}
+                    style={{ width: `${ratio * 100}%` }}
+                  />
+                </div>
+              ) : null}
             </div>
           );
         })}

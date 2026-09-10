@@ -220,19 +220,31 @@ export function StatsRow({
 export function EmptyStateBox({
   message,
   className,
+  action,
 }: {
   message: string;
   /** 높이·정렬 조정용 — 차트 자리 등 나란한 카드끼리 라인을 맞출 때 쓴다. */
   className?: string;
+  /** 다음 행동 CTA — 빈 화면을 출발점으로 만든다. */
+  action?: { label: string; to: string };
 }) {
   return (
     <div
       className={cn(
-        'border-border/90 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm',
+        'border-border/90 text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-4 py-8 text-center text-sm',
         className,
       )}
     >
-      {message}
+      <span>{message}</span>
+      {action ? (
+        <AppLink
+          to={action.to}
+          className="border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent/30 inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition"
+        >
+          {action.label}
+          <ArrowRight className="size-3.5" />
+        </AppLink>
+      ) : null}
     </div>
   );
 }
