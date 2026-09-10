@@ -7,7 +7,7 @@ import type { SavedMapInfo } from '../model/types';
  * 인스펙터 카메라 탭의 "카메라 영역 제한" 체크(`SavedMapInfo.cameraBounds`)가
  * 켜진 지도들이고, 하나도 없으면 씬의 모든 지도다 — 체크가 없는 씬에서 탑뷰가
  * 아무것도 못 잡는 것보다 전부 보이는 편이 낫다. 드롭 raycast 바닥면은 여기가
- * 아니라 resolveGroundMap(카탈로그 kind) 이 정한다.
+ * 아니라 resolveGroundMaps(카탈로그 kind) 가 정한다.
  *
  * 반환은 입력 배열 항목 참조 그대로(복사 없음)이고, 체크가 없으면 입력 배열
  * 자체를 돌려준다 — 매 프레임 참조 비교로 무효화하는 캐시(SceneCameraLimits)가

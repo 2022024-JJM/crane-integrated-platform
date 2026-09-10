@@ -96,6 +96,8 @@ const SIMPLIFY_ERROR = 0.0002;
 const QUANTIZE_POSITION_BITS = 16;
 /** 이보다 가까운 Y 레벨은 "의도적 동일 평면"으로 보고 같은 층으로 병합한다. */
 const LAYER_MERGE_EPS = 0.005;
+/** [0,1] 밖 UV 가 전부 이 안이면 export 부동소수 노이즈로 보고 클램프한다. */
+const UV_CLAMP_EPS = 1e-4;
 const TRANSMISSION_EXT = 'KHR_materials_transmission';
 const keepDoubleSided = process.env.KEEP_DOUBLE_SIDED === '1';
 const forceMeshopt = process.env.FORCE_MESHOPT === '1';
@@ -163,6 +165,51 @@ function quantizationSafety(doc) {
 }
 
 /**
+ * [0,1] 을 부동소수 노이즈만큼 벗어난 TEXCOORD 를 클램프한다.
+ *
+ * meshopt 의 UV 양자화(unorm16)는 accessor 에 [0,1] 밖 값이 하나라도 있으면
+ * 그 accessor 를 통째로 건너뛰어 float 로 남긴다("Skipping TEXCOORD_n; out of
+ * [0,1] range"). 2026-09-11 Terrain 3차 전달본은 도로 3개 프리미티브의 UV
+ * 12개가 최대 2.6e-5 벗어나 float 로 남았고, 같은 머티리얼 그룹의 다른
+ * 프리미티브(unorm16)와 attribute 구성이 달라져 tile-terrain-glb.mjs 가 병합을
+ * 거부했다. 범위 밖 값이 **전부** UV_CLAMP_EPS 안일 때만 accessor 를 고치고,
+ * 하나라도 그 밖이면(타일링 UV 등 의도된 범위 밖) 손대지 않는다. 이동량은
+ * unorm16 계단(1.5e-5) 1~2칸 수준이라 양자화 자체의 오차와 같은 급이다.
+ */
+function clampNoisyTexcoords(doc) {
+  const texcoords = new Set();
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      for (const sem of prim.listSemantics()) {
+        if (sem.startsWith('TEXCOORD_')) texcoords.add(prim.getAttribute(sem));
+      }
+    }
+  }
+  let fixed = 0;
+  for (const accessor of texcoords) {
+    const array = accessor.getArray();
+    if (!(array instanceof Float32Array)) continue;
+    let outside = 0;
+    let noisyOnly = true;
+    for (const v of array) {
+      if (v >= 0 && v <= 1) continue;
+      outside++;
+      if (!(v >= -UV_CLAMP_EPS && v <= 1 + UV_CLAMP_EPS)) {
+        noisyOnly = false;
+        break;
+      }
+    }
+    if (outside === 0 || !noisyOnly) continue;
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.min(1, Math.max(0, array[i]));
+    }
+    accessor.setArray(array);
+    fixed++;
+  }
+  return fixed;
+}
+
+/**
  * ③ surgery: CLI 커맨드로는 불가능한 머티리얼/지오메트리 수술.
  *
  * - transmission 제거: 굴절 유리를 일반 알파 블렌딩 반투명으로 바꾼다.
@@ -206,6 +253,8 @@ async function surgery(inputPath, outputPath) {
   const { grid, minGap } = quantizationSafety(doc);
   const meshoptSafe = grid * 2 <= minGap;
   if (meshoptSafe || forceMeshopt) {
+    const clamped = clampNoisyTexcoords(doc);
+    if (clamped > 0) console.log(`  UV 노이즈 클램프: accessor ${clamped}개 (허용 ${UV_CLAMP_EPS})`);
     await doc.transform(
       meshopt({ encoder: MeshoptEncoder, quantizePosition: QUANTIZE_POSITION_BITS }),
     );

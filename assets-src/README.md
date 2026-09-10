@@ -74,6 +74,37 @@ cp 새버전.glb assets-src/maps/기존파일.glb
 pnpm optimize:map 기존파일.glb
 ```
 
+### philly-area-1.glb · philly-area-2.glb — 필리조선소 지도 (2026-09-11 분할)
+
+2026-09-11 디자이너가 조선소 지도를 `Philly Area 1.glb`(35MB)·`Philly Area 2.glb`
+(60MB) 두 장으로 나눠 보냈다. **옛 `phillyshipyard.glb` 는 은퇴**했다 — 카탈로그·
+씬·배포본·이 디렉터리 원본 모두 제거했고, 롤백 원본은 git 이력(V4 반입 `254c9af`)에
+있다. 아래의 phillyshipyard 이력은 좌표계 배경으로 남겨 둔다.
+
+- 두 파일 모두 루트 노드에 V4 와 같은 (-263.125, -3.482, 31.333) 오프셋이 실려
+  왔고, 오프셋을 지운 bbox 합집합이 V4 원본 bbox 와 정확히 같다(배포본 기준 차이
+  1.1cm = 양자화 그리드). 즉 **옛 조선소와 같은 좌표계**라 옛 지도 항목의 배치값
+  (goliath: 원점·무회전, philly-2dock: yaw 354.4)을 그대로 두 장에 주면 제자리다.
+- 둘 다 카탈로그 `kind: 'ground'` 이고 두 씬 모두 `cameraBounds: true` 다 — 카메라
+  제한 합집합이 옛 조선소 bbox 와 같다. 에디터 드롭 raycast 는 ground 지도 전부를
+  본다(`resolveGroundMaps`).
+- 지면 4096 텍스처 3장이 두 파일에 **중복**으로 들어 있어 텍스처 VRAM 이 옛 한 장
+  대비 늘었다(`pnpm perf:scene` 기준 181MB → 138.6 + 133.0MB). 드로우콜 41 → 36 + 26.
+- 경계에서 Ground·Sea·Water Front Wall 의 X 범위가 약 50m 겹친다.
+
+```bash
+node scripts/unbake-root-transform.mjs "Philly Area 1.glb" "Philly Area 2.glb"
+mv "assets-src/models/Philly Area 1.glb" assets-src/maps/philly-area-1.glb
+mv "assets-src/models/Philly Area 2.glb" assets-src/maps/philly-area-2.glb
+cp assets-src/maps/philly-area-{1,2}.glb apps/shell/public/maps/
+pnpm optimize:map philly-area-1.glb philly-area-2.glb   # 33.3→2.49MB, 57.1→6.00MB
+```
+
+⚠️ `pnpm optimize:map` 을 인자 없이 돌리면 `philly-terrain.glb` 까지 다시 돌아 타일·LOD
+구조가 망가진다. 항상 파일명을 지정한다.
+
+### phillyshipyard.glb (은퇴, 이력)
+
 `phillyshipyard.glb` 는 2026-09-04 반입본(`Philly Yard_20260903`)부터 **루트 노드가
 원점(0,0,0) 기준**이다. 그 전 버전은 루트 노드에 (-1552, -3.5, 1801) 오프셋이
 실려 있었고 씬 배치가 그 좌표를 전제로 했으므로, 교체 시 씬의 크레인·블록·카메라를
@@ -98,8 +129,8 @@ pnpm optimize:map phillyshipyard.glb
 
 2026-09-08 디자이너 전달본 `Terrain.glb`(175MB, 필라델피아 시 전역 OSM 지형 —
 건물 extrude·도로·항공사진 overlay, 삼각형 245만). **조선소 자리가 구멍으로
-잘려 있는 컨텍스트 레이어**라 `phillyshipyard.glb` 를 대체하지 않고 goliath.json ·
-philly-2dock.json 의 `maps[1]` 로 함께 깐다(`maps[0]` 조선소는 그대로).
+잘려 있는 컨텍스트 레이어**라 조선소 지도(현재 Area 1/2)를 대체하지 않고
+goliath.json · philly-2dock.json 에 함께 깐다.
 
 **원본은 커밋하지 않고 컨플루언스에서 별도 관리한다** (`.gitignore` 의
 `assets-src/maps/philly-terrain.glb`). GitHub 파일당 100MB 한도를 넘고(무손실 weld
@@ -121,6 +152,30 @@ FORCE_MESHOPT=1 pnpm optimize:map philly-terrain.glb   # 167MB → 14.8MB, 삼�
 재전달본도 위 절차 그대로 돌리면 되며, 시작 전에 루트 오프셋과 bbox 가 이전과
 같은지 먼저 비교해 배치값 유지 여부를 판단한다.
 
+2026-09-09 부터 배포본은 위 절차 뒤에 **타일 + LOD 재구성**을 한 번 더 거친다
+(AGENTS.md 의 philly-terrain 항목). 재반입의 마지막 단계는 항상 이것이다:
+
+```bash
+node scripts/tile-terrain-glb.mjs apps/shell/public/maps/philly-terrain.glb /tmp/philly-terrain.tiled.glb --lod
+cp /tmp/philly-terrain.tiled.glb apps/shell/public/maps/philly-terrain.glb
+```
+
+2026-09-11 3차 전달본 `Terrain.glb`(172MB)로 교체했다. 루트 오프셋이 같고 공통
+프리미티브(silver·black·grey 등) bbox 가 이전 원본과 정확히 같아 **같은 좌표계에서
+외곽만 잘린 것**이다(XZ 18.9×16.7km → 13.4×10.1km) — 씬 배치값은 그대로다.
+삼각형 241만 → 237만, 무텍스처 `vegetation.001` 이 1024 텍스처를 가진 `Vegetation
+Area` 로 바뀌었다(UV 가 전부 (0,1) 한 점이라 사실상 단색). 압축 163.9MB → 15.5MB
+(삼각형 176만), 타일링 후 24.1MB.
+
+- 도로 3개 프리미티브의 UV 12개가 [0,1] 을 최대 2.6e-5 벗어나 meshopt 가 그 UV 를
+  양자화하지 않고 float 로 남겼고, 굽기 그룹 안 attribute 구성이 섞여 타일 스크립트가
+  병합을 거부했다. `optimize-map.mjs` 에 노이즈 UV 클램프(범위 밖 값이 전부 1e-4
+  이내인 accessor 만)를 넣어 해결했다.
+- 범위가 줄어 8×8 그리드가 전부 채워지고(타일 45 → 64) `Vegetation Area` 가 타일마다
+  유지 머티리얼로 하나 더 붙어, LOD 레벨당 프리미티브가 약 82 → 181 로 늘었다.
+  LOD 잔존율은 71.2/49.3/35.3%(2/4/8m)로 이전과 같은 수준이다.
+- 원본(172MB)은 이전처럼 커밋하지 않는다 — 컨플루언스의 원본도 이 버전으로 교체한다.
+
 - `FORCE_MESHOPT=1` 인 이유: 폭 18.9km 라 16bit 그리드가 28.8cm 인데 도로(Y 0.3)·
   숲(0.1)·지면 평면(0) 층간이 10cm 라 가드가 생략한다. 그 평면층들은 2~57m 기복의
   지형 overlay 아래 묻혀 있어 z-fighting 이 보이지 않고, 건물·지형은 도시 스케일에서
@@ -131,8 +186,9 @@ FORCE_MESHOPT=1 pnpm optimize:map philly-terrain.glb   # 167MB → 14.8MB, 삼�
   V4 는 (-263.125, -3.482, 31.333) 에, Terrain 은 (515.305, 0, -814.879) 에 있었다.
   V4 반입 때 그 오프셋을 지웠으므로 Terrain 배치 = Terrain 오프셋 − V4 오프셋.
   50m 셀 실측으로 이 값에서 조선소 지면과 지형의 겹침이 3% (경계 노이즈)로,
-  구멍이 조선소 발자국과 맞물린다. philly-2dock.json 은 조선소 지도가 yaw 354.5°
-  라 같은 회전을 원점 기준으로 함께 적용한 (855.96, 3.482, -767.71) 이다.
+  구멍이 조선소 발자국과 맞물린다. philly-2dock.json 은 조선소 지도가 yaw 354.4°
+  라 같은 회전을 원점 기준으로 함께 적용한 값(현재 씬 파일은 에디터에서 미세 조정한
+  (858.135, 3.482, -765.266))이다.
 - 구멍 가장자리 지형 높이가 조선소 지면(3.68m)보다 약 1.8m 높다(SRTM 오차 수준).
   어색하면 에디터 계층 목록에서 터레인 잠금을 풀고 Y 를 내려 저장한다.
 - 도로·보도는 Y=0.3 평면이라 지형 아래 묻혀 보이지 않는다 — 원본 특성이며 여기서

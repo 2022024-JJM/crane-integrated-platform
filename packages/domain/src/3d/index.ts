@@ -111,7 +111,7 @@ export {
   getModelBottomOffset,
 } from './lib/model-bottom-offset-cache';
 export { raycastMapSurfaceY } from './lib/map-surface-raycast';
-export { resolveGroundMap } from './lib/resolve-ground-map';
+export { resolveGroundMaps } from './lib/resolve-ground-map';
 export {
   collectCameraBoundsBox,
   resolveCameraBoundsMaps,

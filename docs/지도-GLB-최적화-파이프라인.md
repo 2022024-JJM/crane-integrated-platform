@@ -71,6 +71,7 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 | 단면화 | 전 머티리얼 `doubleSided=false` | 래스터/레이캐스트 삼각형 테스트 절반. 뒤집힌 면이 구멍으로 보이면 `KEEP_DOUBLE_SIDED=1` 로 재실행 |
 | weld | 무손실 인덱스 dedup | simplify 가 프리미티브 경계를 넘어 동작하는 전제 |
 | simplify | meshopt simplifier, ratio 0.4 / error 0.0002(bbox 대각 상대값) | 정점을 제거만 하고 이동시키지 않으므로 평면은 평면으로, 드롭 레이캐스트 착지 높이는 오차 한도 안에서 유지 |
+| UV 노이즈 클램프 | meshopt 직전, [0,1] 밖 값이 **전부** 1e-4 이내인 TEXCOORD accessor 만 [0,1] 로 클램프 (2026-09-11 추가) | meshopt 는 범위 밖 값이 하나라도 있으면 그 UV 를 양자화하지 않고 float 로 남긴다. Terrain 3차 전달본의 도로 UV 가 2.6e-5 벗어나 float 로 남았고 tile-terrain-glb 의 굽기 그룹 병합이 거부됐다. 진짜 범위 밖(타일링) UV 는 건드리지 않는다 |
 | meshopt | 16bit 포지션 양자화 + 압축 | 아래 안전 가드를 통과할 때만 적용 |
 
 ## 4. 양자화 안전 가드 — 왜 있고 어떻게 동작하나

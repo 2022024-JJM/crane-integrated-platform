@@ -7,9 +7,10 @@
  * 그 지도 한 장만 append(addSceneMap) 하거나 제거(deletePlacedMap) 한다.
  * 같은 경로는 팔레트에서 한 장만 놓인다.
  *
- * `kind` 가 지도의 역할을 정한다. 드롭 raycast 바닥면은 씬의 **첫 ground
- * 지도**를 기준으로 하고(resolveGroundMap — 배열 순서가 아니라 이 표의 kind
- * 로 판정, ground 가 없으면 maps[0] 폴백), context 지도(philly-terrain 같은
+ * `kind` 가 지도의 역할을 정한다. 드롭 raycast 바닥면은 씬의 **ground 지도
+ * 전부**다(resolveGroundMaps — 배열 순서가 아니라 이 표의 kind 로 판정,
+ * ground 가 없으면 maps[0] 폴백. 필리조선소는 2026-09-11 부터 Area 1/2 두
+ * 장으로 나뉘어 둘 다 ground 다), context 지도(philly-terrain 같은
  * 주변 지형)는 렌더·잠금·이동·계층 목록에만 참여한다. 카메라 이동 범위·
  * 탑뷰 bounds 는 kind 가 아니라 씬 데이터 `SavedMapInfo.cameraBounds`
  * (인스펙터 카메라 탭 체크)가 정한다 — 팔레트로 ground 지도를 추가하면
@@ -19,8 +20,9 @@
  * `defaultPosition` 은 팔레트로 추가할 때의 초기 배치다. philly-terrain 의 값은
  * goliath.json 기준(조선소 지도 원점·무회전)이며 디자이너 Blender 씬의 조선소
  * V4 오프셋을 보정한 값이다(assets-src/README.md). philly-2dock.json 은 조선소
- * 지도가 yaw 354.5° 라 추가 후 인스펙터에서 (855.96, 3.482, -767.71)·rotation
- * y 354.5 로 맞춘다.
+ * 지도가 yaw 354.4° 라 추가 후 인스펙터에서 씬 파일의 값으로 맞춘다.
+ * Philly Area 1/2 는 옛 조선소 지도와 같은 좌표계라(루트 오프셋만 지워 반입)
+ * 원점에 두면 제자리다.
  *
  * 배경과 달리 저장본에는 id가 아니라 파일 경로(SavedMapInfo.path)가 실린다 —
  * 기존 씬 파일이 이미 경로 기반이라 스키마를 유지한다. 배치 표시는 경로
@@ -51,9 +53,15 @@ export const sceneMapCatalog: SceneMapCatalogItem[] = [
     kind: 'ground',
   },
   {
-    id: 'map-phillyshipyard',
-    label: 'Philly Shipyard',
-    path: '/maps/phillyshipyard.glb',
+    id: 'map-philly-area-1',
+    label: 'Philly Area 1',
+    path: '/maps/philly-area-1.glb',
+    kind: 'ground',
+  },
+  {
+    id: 'map-philly-area-2',
+    label: 'Philly Area 2',
+    path: '/maps/philly-area-2.glb',
     kind: 'ground',
   },
   {

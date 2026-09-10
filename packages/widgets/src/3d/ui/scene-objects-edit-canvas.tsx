@@ -30,7 +30,7 @@ import {
   prefetchModelBottomOffset,
   releaseGltfCache,
   resolveEnvironmentFileUrl,
-  resolveGroundMap,
+  resolveGroundMaps,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -397,6 +397,11 @@ export function SceneObjectsEditCanvas({
       ]),
     [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
   );
+  // 드롭 raycast 바닥면 — 카탈로그 kind 가 ground 인 지도 전부.
+  const groundMapIds = useMemo(
+    () => resolveGroundMaps(sceneInfo?.maps).map((m) => m.id),
+    [sceneInfo?.maps],
+  );
 
   const {
     cameraRef,
@@ -409,7 +414,7 @@ export function SceneObjectsEditCanvas({
   } = useSceneDrop({
     catalogItems,
     draggingModelCatalogItem,
-    mapObjectId: resolveGroundMap(sceneInfo?.maps)?.id ?? null,
+    mapObjectIds: groundMapIds,
     onAddModel,
   });
 

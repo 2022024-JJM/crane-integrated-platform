@@ -135,7 +135,7 @@ export function createSceneManipulationActions({
    * 지도 추가 — 팔레트 "맵" 탭의 타일 클릭. 배경(setEnvironmentId)과 달리 단일
    * 선택이 아니라 append 다: 씬에는 지도가 여러 장 놓일 수 있고(조선소 +
    * 주변 지형), 제거는 deletePlacedMap 이 맡는다. 바닥 지도 판정은 배열
-   * 순서가 아니라 카탈로그 kind(resolveGroundMap)라 뒤에 붙여도 무방하다.
+   * 순서가 아니라 카탈로그 kind(resolveGroundMaps)라 뒤에 붙여도 무방하다.
    *
    * 같은 경로가 이미 있으면(잠김 여부 무관) 아무것도 하지 않는다 — 팔레트는
    * 경로당 한 장만 관리하며, UI 도 배치된 타일을 "추가" 로 다루지 않지만

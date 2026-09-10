@@ -6,6 +6,7 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  type Object3D,
 } from 'three';
 import {
   SEA_LEVEL_Y,
@@ -17,6 +18,7 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 
 const SCENE_MODEL_DRAG_TYPE = 'application/x-scene-model-id';
+const NO_MAP_IDS: readonly string[] = [];
 
 function getDraggedCatalogItemId(event: DragEvent<HTMLDivElement>) {
   return (
@@ -34,9 +36,11 @@ function hasSceneDragData(event: DragEvent<HTMLDivElement>) {
 interface UseSceneDropParams {
   catalogItems: SceneModelCatalogItem[];
   draggingModelCatalogItem: SceneModelCatalogItem | null;
-  /** 지도가 배치되어 있다면 그 id. 드롭 raycast가 ground plane이 아닌 지도
-   *  표면을 대상으로 동작하도록 한다 (지도 표면 높이가 y!=0일 수 있음). */
-  mapObjectId?: string | null;
+  /** 바닥 지도들의 id (resolveGroundMaps). 드롭 raycast가 ground plane이 아닌
+   *  지도 표면을 대상으로 동작하도록 한다 (지도 표면 높이가 y!=0일 수 있음).
+   *  한 지도가 여러 장으로 나뉜 씬(필리조선소 Area 1/2)이 있어 전부 본다.
+   *  렌더마다 새 배열을 넘기면 resolveDropPosition 이 매번 재생성된다. */
+  mapObjectIds?: readonly string[];
   onAddModel: (
     catalogItem: SceneModelCatalogItem,
     position: Vector3Tuple,
@@ -46,7 +50,7 @@ interface UseSceneDropParams {
 export function useSceneDrop({
   catalogItems,
   draggingModelCatalogItem,
-  mapObjectId = null,
+  mapObjectIds = NO_MAP_IDS,
   onAddModel,
 }: UseSceneDropParams) {
   const cameraRef = useRef<Camera | null>(null);
@@ -84,9 +88,15 @@ export function useSceneDrop({
 
       // 1순위: 지도 mesh와 교차. 지도 표면 높이가 y!=0일 수 있어 ground plane
       // 으로 잡으면 모델이 항만 표면에서 떠 보이거나 박힌 채로 배치된다.
-      const mapObject = mapObjectId ? modelObjectRegistry.get(mapObjectId) : null;
-      if (mapObject) {
-        const hits = raycasterRef.current.intersectObject(mapObject, true);
+      // intersectObjects 는 모든 지도의 히트를 거리순으로 정렬하므로 hits[0]
+      // 이 가장 가까운 표면이다(firstHitOnly 는 메시별 최근접만 남긴다).
+      const mapObjects: Object3D[] = [];
+      for (const id of mapObjectIds) {
+        const object = modelObjectRegistry.get(id);
+        if (object) mapObjects.push(object);
+      }
+      if (mapObjects.length > 0) {
+        const hits = raycasterRef.current.intersectObjects(mapObjects, true);
         if (hits.length > 0) {
           const point = hits[0].point;
           return [numRound(point.x), numRound(point.y), numRound(point.z)];
@@ -101,7 +111,7 @@ export function useSceneDrop({
 
       return [numRound(hitPoint.x), numRound(hitPoint.y), numRound(hitPoint.z)];
     },
-    [groundPlane, mapObjectId],
+    [groundPlane, mapObjectIds],
   );
 
   const handleSceneDragOver = useCallback(

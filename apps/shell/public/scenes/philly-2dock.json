@@ -22,8 +22,8 @@
       "name": "Philly Terrain"
     },
     {
-      "id": "ec6ef723-1ecb-4647-8a62-cd483015d3fe",
-      "path": "/maps/phillyshipyard.glb",
+      "id": "9ddc366c-ffa8-4386-a96b-a2541b3bb7ac",
+      "path": "/maps/philly-area-1.glb",
       "locked": true,
       "cameraBounds": true,
       "position": [
@@ -41,13 +41,35 @@
         1,
         1
       ],
-      "name": "Philly Shipyard"
+      "name": "Philly Area 1"
+    },
+    {
+      "id": "9546994b-ffc3-4ef5-b18e-f4a7dd6a827b",
+      "path": "/maps/philly-area-2.glb",
+      "locked": true,
+      "cameraBounds": true,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        354.4,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "name": "Philly Area 2"
     }
   ],
   "models": [
     {
       "id": "id-mt0rhrsw-icvq0ukr",
-      "equipName": "Goliath Crane",
+      "equipName": "GC-04",
       "path": "/models/goliath_crane.glb",
       "opacity": 1,
       "position": [
@@ -272,14 +294,14 @@
   "texts": [],
   "camera": {
     "position": [
-      -573.4273371308989,
-      105.3691726436959,
-      249.35509665757723
+      -577.4981182124363,
+      101.34989266901127,
+      251.39161955602003
     ],
     "target": [
-      -653.1985039450494,
-      -8.90273535353754,
-      46.843907011210206
+      -687.8671596005646,
+      -8.900155021652736,
+      39.23606262605601
     ]
   },
   "rigs": [
