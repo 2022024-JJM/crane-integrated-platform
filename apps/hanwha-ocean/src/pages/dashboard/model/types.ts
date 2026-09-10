@@ -22,7 +22,12 @@ export interface DashboardMetricCard {
   href?: string;
   metaKey?: string;
   metaValues?: Record<string, string | number>;
+  /** 값 옆에 살아있음 점(pulse)을 그린다 — 화면에 하나만 두는 모션 위계. */
+  live?: boolean;
 }
+
+/** 대시보드 종합 신호 — 헤더 아이콘 색이 따라간다. */
+export type DashboardOverallStatus = 'safe' | 'warning' | 'danger';
 
 export interface DashboardRegionStatusDatum {
   regionId: Region['id'];
@@ -106,4 +111,5 @@ export interface DashboardSummary {
   attentionCollision: DashboardCollisionRow | null;
   /** KPI·빈 상태 CTA 가 이동할 대표 모니터링 경로(첫 region). */
   monitoringHref: string | null;
+  overallStatus: DashboardOverallStatus;
 }

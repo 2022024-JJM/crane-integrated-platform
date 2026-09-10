@@ -13,6 +13,7 @@ import type {
   DashboardDataSourceStatus,
   DashboardDetectionStatus,
   DashboardMetricCard,
+  DashboardOverallStatus,
   DashboardSummary,
 } from './types';
 
@@ -113,7 +114,37 @@ export function buildCollisionSummary(
     recentAlarms: alarms.slice(0, RECENT_ALARMS_MAX),
     attentionCollision,
     monitoringHref,
+    overallStatus: resolveOverallStatus({
+      detection: input.detection,
+      activeAlarmStats: input.activeAlarmStats,
+      todayCollisionCount,
+      hasAttentionCollision: attentionCollision !== null,
+    }),
   };
+}
+
+function resolveOverallStatus({
+  detection,
+  activeAlarmStats,
+  todayCollisionCount,
+  hasAttentionCollision,
+}: {
+  detection: DashboardDetectionStatus;
+  activeAlarmStats: DashboardActiveAlarmStats;
+  todayCollisionCount: number;
+  hasAttentionCollision: boolean;
+}): DashboardOverallStatus {
+  if (
+    hasAttentionCollision ||
+    activeAlarmStats.critical > 0 ||
+    detection.phase === 'halted'
+  ) {
+    return 'danger';
+  }
+  if (todayCollisionCount > 0 || activeAlarmStats.total > 0) {
+    return 'warning';
+  }
+  return 'safe';
 }
 
 function toCollisionRow(
@@ -205,6 +236,8 @@ function buildDetectionCard(
     value: stateKey,
     format: 'translation',
     tone,
+    // 감시 중일 때만 pulse — 화면의 모션 초점은 이 점 하나로 유지한다.
+    live: detection.enabled && detection.phase === 'scanning',
     href: monitoringHref ?? undefined,
     // idle 은 "감지가 꺼졌나?" 로 읽히기 쉽다 — 실제로는 3D 모니터링 화면이
     // 떠 있는 동안만 검사기가 돌기 때문이라, 그 맥락을 meta 로 알린다.

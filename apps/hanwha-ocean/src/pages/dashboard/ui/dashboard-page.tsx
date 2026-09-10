@@ -72,6 +72,15 @@ export function DashboardPage() {
     }),
     [theme],
   );
+  // 심각도 램프(critical→medium, 진할수록 위험) + info 파랑. 다크 모드는
+  // 자동 반전이 아니라 어두운 표면 대비로 고른 밝은 단계다.
+  const severityFills = useMemo(
+    () =>
+      theme === 'dark'
+        ? ['#dc2626', '#f87171', '#fecaca', '#60a5fa']
+        : ['#991b1b', '#ef4444', '#fca5a5', '#3b82f6'],
+    [theme],
+  );
 
   const attentionCollision =
     summary.attentionCollision &&
@@ -127,6 +136,7 @@ export function DashboardPage() {
             locale={locale}
             weekFormatter={weekFormatter}
             barChartTooltipCursor={barChartTooltipCursor}
+            severityFills={severityFills}
           />
           <DashboardRegionStatusSection
             summary={summary}

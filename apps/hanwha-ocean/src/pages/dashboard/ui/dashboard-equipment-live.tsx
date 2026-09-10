@@ -115,6 +115,9 @@ function EquipmentCard({
   now: number;
   translate: DashboardTranslate;
 }) {
+  const isLive = row.tags.some(
+    (tag) => !toTagDisplay(tagLiveValues.get(tag.tagKey), now).stale,
+  );
   return (
     <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
       <div className="flex items-center gap-3">
@@ -123,7 +126,15 @@ function EquipmentCard({
           alt={row.equipName}
         />
         <div className="min-w-0">
-          <p className="truncate font-medium">{row.equipName}</p>
+          <p className="flex items-center gap-1.5 truncate font-medium">
+            <span
+              className={cn(
+                'size-2 shrink-0 rounded-full',
+                isLive ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+              )}
+            />
+            {row.equipName}
+          </p>
           <p className="text-muted-foreground text-xs">
             {translate(row.regionTitleKey)}
           </p>
@@ -162,7 +173,10 @@ function EquipmentCard({
                 </span>
               </div>
               {ratio !== null ? (
-                <div className="bg-muted/40 mt-1 h-1 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-muted/40 mt-1 h-1 w-full overflow-hidden rounded-full"
+                  title={`${tag.min} ~ ${tag.max}${tag.unit ?? ''}`}
+                >
                   <div
                     className={cn(
                       'h-full rounded-full transition-[width] duration-300',

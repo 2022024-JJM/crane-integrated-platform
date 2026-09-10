@@ -46,6 +46,11 @@
   "emptyCta": {
     "openMonitoring": "Open 3D monitoring"
   },
+  "overall": {
+    "safe": "Overall status: safe",
+    "warning": "Overall status: caution",
+    "danger": "Overall status: danger"
+  },
   "source": {
     "state": {
       "simulation": "Simulation",

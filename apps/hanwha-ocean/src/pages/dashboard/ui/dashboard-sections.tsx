@@ -1,5 +1,7 @@
-import { ArrowRight, ShieldAlert } from 'lucide-react';
+import { ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useRegionRealtimeAlarms } from '@crane/features/alarm';
+
+import { cn } from '@crane/core/lib/utils';
 
 import { Badge } from '@crane/ui/atoms/badge';
 import {
@@ -31,12 +33,33 @@ export function DashboardOverviewHeader({
 }: Pick<DashboardSectionSharedProps, 'summary' | 'translate'> & {
   dayFormatter: Intl.DateTimeFormat;
 }) {
+  // 헤더 아이콘이 종합 상태를 입는다 — 안전 emerald / 주의 amber / 위험 red.
+  const status = summary.overallStatus;
+  const StatusIcon = status === 'safe' ? ShieldCheck : ShieldAlert;
   return (
     <div className="border-border/90 flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
-            <ShieldAlert className="size-4 text-amber-500" />
+          <div
+            className={cn(
+              'flex size-9 items-center justify-center rounded-xl border',
+              status === 'safe' && 'border-emerald-500/30 bg-emerald-500/10',
+              status === 'warning' && 'border-amber-500/30 bg-amber-500/10',
+              status === 'danger' && 'border-red-500/40 bg-red-500/10',
+            )}
+            title={translate(`dashboard:overall.${status}`)}
+          >
+            <StatusIcon
+              className={cn(
+                'size-4',
+                status === 'safe' && 'text-emerald-500',
+                status === 'warning' && 'text-amber-500',
+                status === 'danger' && 'text-red-500',
+              )}
+            />
+            <span className="sr-only">
+              {translate(`dashboard:overall.${status}`)}
+            </span>
           </div>
           <div>
             <h2 id="dashboard-overview-title" className="text-xl font-semibold">
@@ -191,6 +214,7 @@ export function DashboardCollisionHistorySection({
           </ScrollArea>
         ) : (
           <EmptyStateBox
+            variant="positive"
             message={translate('dashboard:collisionHistory.empty')}
             action={
               summary.monitoringHref

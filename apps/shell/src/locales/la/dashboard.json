@@ -46,6 +46,11 @@
   "emptyCta": {
     "openMonitoring": "Monitorationem 3D aperire"
   },
+  "overall": {
+    "safe": "Status universus: tutus",
+    "warning": "Status universus: cautio",
+    "danger": "Status universus: periculum"
+  },
   "source": {
     "state": {
       "simulation": "Simulatio",

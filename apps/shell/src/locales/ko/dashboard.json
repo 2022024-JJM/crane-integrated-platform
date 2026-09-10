@@ -46,6 +46,11 @@
   "emptyCta": {
     "openMonitoring": "3D 모니터링 열기"
   },
+  "overall": {
+    "safe": "종합 상태: 안전",
+    "warning": "종합 상태: 주의",
+    "danger": "종합 상태: 위험"
+  },
   "source": {
     "state": {
       "simulation": "시뮬레이션",

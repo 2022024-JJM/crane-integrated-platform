@@ -7,6 +7,7 @@ import {
   Radar,
   RadioTower,
   ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 
 import {
@@ -73,6 +74,7 @@ export function MetricCard({
           'border-amber-500/35 bg-amber-500/5 shadow-amber-500/5',
         metric.tone === 'danger' &&
           'border-red-500/35 bg-red-500/5 shadow-red-500/5',
+        metric.href && 'hover:border-primary/40 hover:shadow-md',
       )}
     >
       <CardHeader className="gap-2 pb-1">
@@ -96,13 +98,19 @@ export function MetricCard({
       <CardContent className="mt-auto space-y-1.5 pt-0">
         <p
           className={cn(
-            'ml-1 text-[1.8rem] leading-none font-semibold tracking-tight',
+            'ml-1 flex items-center gap-2 text-[1.8rem] leading-none font-semibold tracking-tight',
             metric.tone === 'success' && 'text-emerald-500',
             metric.tone === 'warning' && 'text-amber-500',
             metric.tone === 'danger' && 'text-red-500',
           )}
         >
           {formatMetric(metric, translate, locale)}
+          {metric.live ? (
+            <span className="relative flex size-2.5 shrink-0">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+              <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+            </span>
+          ) : null}
         </p>
         <p className="text-muted-foreground text-xs leading-4">
           {metric.metaKey
@@ -209,32 +217,44 @@ export function StatsRow({
       {items.map((item) => (
         <div key={item.label} className="space-y-1">
           <p className="text-muted-foreground text-xs">{item.label}</p>
-          <p className={cn('text-xl font-semibold', item.tone)}>{item.value}</p>
+          <p className={cn('text-xl font-semibold tabular-nums', item.tone)}>
+            {item.value}
+          </p>
         </div>
       ))}
     </div>
   );
 }
 
-/** journal·기록이 아직 없을 때의 정직한 빈 상태 — 가짜 숫자로 채우지 않는다. */
+/**
+ * journal·기록이 아직 없을 때의 정직한 빈 상태 — 가짜 숫자로 채우지 않는다.
+ * 충돌 없음은 부재가 아니라 **좋은 상태**이므로 `variant="positive"` 로
+ * emerald 체크를 함께 그린다(중립 회색 박스는 죽은 화면으로 읽힌다).
+ */
 export function EmptyStateBox({
   message,
   className,
   action,
+  variant = 'neutral',
 }: {
   message: string;
   /** 높이·정렬 조정용 — 차트 자리 등 나란한 카드끼리 라인을 맞출 때 쓴다. */
   className?: string;
   /** 다음 행동 CTA — 빈 화면을 출발점으로 만든다. */
   action?: { label: string; to: string };
+  variant?: 'neutral' | 'positive';
 }) {
   return (
     <div
       className={cn(
         'border-border/90 text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-4 py-8 text-center text-sm',
+        variant === 'positive' && 'border-emerald-500/30 bg-emerald-500/5',
         className,
       )}
     >
+      {variant === 'positive' ? (
+        <ShieldCheck className="size-6 text-emerald-500" />
+      ) : null}
       <span>{message}</span>
       {action ? (
         <AppLink
@@ -245,6 +265,30 @@ export function EmptyStateBox({
           <ArrowRight className="size-3.5" />
         </AppLink>
       ) : null}
+    </div>
+  );
+}
+
+/** 심각도 스택 차트의 범례 — 점 색은 차트 fill 과 동일한 값을 받는다. */
+export function SeverityLegend({
+  fills,
+  locale,
+}: {
+  /** critical, high, medium, info 순 — 차트 fill 과 같은 배열. */
+  fills: readonly string[];
+  locale: string;
+}) {
+  return (
+    <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      {SEVERITY_KEYS.map((severity, index) => (
+        <div key={severity} className="flex items-center gap-1.5">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: fills[index] }}
+          />
+          <span>{getAlarmSeverityLabel(severity, locale)}</span>
+        </div>
+      ))}
     </div>
   );
 }
