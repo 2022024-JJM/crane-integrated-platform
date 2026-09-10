@@ -3,25 +3,21 @@ import type { ReactNode } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
-  Building2,
+  BellRing,
+  Radar,
   RadioTower,
   ShieldAlert,
-  ShieldCheck,
 } from 'lucide-react';
 
 import {
   getAlarmSeverityLabel,
   getAlarmSeverityVisual,
-  getAlarmMessageTranslation,
-  type Alarm,
   type AlarmSeverity,
   type AlarmStatistics,
 } from '@crane/domain/alarm';
+import type { AlarmJournalEntry } from '@crane/domain/journal';
 import { cn } from '@crane/core/lib/utils';
-import {
-  severityBadgeClassName,
-  craneStatusBadgeClassName,
-} from '@crane/core/lib/status-colors';
+import { severityBadgeClassName } from '@crane/core/lib/status-colors';
 import { AppLink } from '@crane/ui/atoms/app-link';
 import { Badge } from '@crane/ui/atoms/badge';
 import {
@@ -33,43 +29,39 @@ import {
   CardTitle,
 } from '@crane/ui/molecules/card';
 import {
+  type DashboardCollisionRow,
   type DashboardMetricCard,
-  type DashboardRiskCraneDatum,
 } from '../model';
 import {
   formatMetric,
   formatTooltipValue,
-  getRiskColor,
   type DashboardStatItem,
   type DashboardTooltipPayloadEntry,
   type DashboardTranslate,
 } from './dashboard-helpers';
-import { DashboardMetricSkeleton } from './dashboard-skeletons';
 
 const metricIconMap = {
-  regionCount: Building2,
-  craneCount: RadioTower,
-  operatingRate: ShieldCheck,
-  urgentRegion: ShieldAlert,
+  detection: Radar,
+  todayCollisions: ShieldAlert,
+  activeAlarms: BellRing,
+  dataSource: RadioTower,
 } as const;
 
-const tooltipLabelKey = {
-  operationalRate: 'dashboard:legend.operatingRate',
-  alarmCount: 'dashboard:legend.alarmCount',
-  warningCount: 'dashboard:legend.warningCount',
-  score: 'dashboard:legend.riskScore',
-} as const;
+const SEVERITY_KEYS: readonly AlarmSeverity[] = [
+  'critical',
+  'high',
+  'medium',
+  'info',
+];
 
 export function MetricCard({
   metric,
   translate,
   locale,
-  isLoading = false,
 }: {
   metric: DashboardMetricCard;
   translate: DashboardTranslate;
   locale: string;
-  isLoading?: boolean;
 }) {
   const Icon = metricIconMap[metric.id];
   const content = (
@@ -79,6 +71,8 @@ export function MetricCard({
         'border-border/90 bg-card/80 h-full min-h-[132px] justify-between border shadow-sm transition',
         metric.tone === 'warning' &&
           'border-amber-500/35 bg-amber-500/5 shadow-amber-500/5',
+        metric.tone === 'danger' &&
+          'border-red-500/35 bg-red-500/5 shadow-red-500/5',
       )}
     >
       <CardHeader className="gap-2 pb-1">
@@ -100,26 +94,21 @@ export function MetricCard({
         ) : null}
       </CardHeader>
       <CardContent className="mt-auto space-y-1.5 pt-0">
-        {isLoading ? (
-          <DashboardMetricSkeleton />
-        ) : (
-          <>
-            <p
-              className={cn(
-                'ml-1 text-[1.8rem] leading-none font-semibold tracking-tight',
-                metric.tone === 'success' && 'text-emerald-500',
-                metric.tone === 'warning' && 'text-amber-500',
-              )}
-            >
-              {formatMetric(metric, translate, locale)}
-            </p>
-            <p className="text-muted-foreground text-xs leading-4">
-              {metric.metaKey
-                ? translate(metric.metaKey, metric.metaValues)
-                : '\u00A0'}
-            </p>
-          </>
-        )}
+        <p
+          className={cn(
+            'ml-1 text-[1.8rem] leading-none font-semibold tracking-tight',
+            metric.tone === 'success' && 'text-emerald-500',
+            metric.tone === 'warning' && 'text-amber-500',
+            metric.tone === 'danger' && 'text-red-500',
+          )}
+        >
+          {formatMetric(metric, translate, locale)}
+        </p>
+        <p className="text-muted-foreground text-xs leading-4">
+          {metric.metaKey
+            ? translate(metric.metaKey, metric.metaValues)
+            : ' '}
+        </p>
       </CardContent>
     </Card>
   );
@@ -173,10 +162,12 @@ export function ChartTooltip({
         {payload.map((entry) => {
           const dataKey =
             typeof entry.dataKey === 'string' ? entry.dataKey : entry.name;
-          const labelKey =
-            dataKey && dataKey in tooltipLabelKey
-              ? tooltipLabelKey[dataKey as keyof typeof tooltipLabelKey]
-              : null;
+          const seriesLabel =
+            dataKey === 'count'
+              ? translate('dashboard:legend.collisionCount')
+              : dataKey && SEVERITY_KEYS.includes(dataKey as AlarmSeverity)
+                ? getAlarmSeverityLabel(dataKey as AlarmSeverity, locale)
+                : (dataKey ?? '');
 
           return (
             <div
@@ -188,10 +179,10 @@ export function ChartTooltip({
                   className="size-2 rounded-full"
                   style={{ backgroundColor: entry.color ?? 'var(--chart-1)' }}
                 />
-                <span>{labelKey ? translate(labelKey) : dataKey}</span>
+                <span>{seriesLabel}</span>
               </div>
               <span className="text-foreground font-medium">
-                {formatTooltipValue(entry.value, dataKey, locale)}
+                {formatTooltipValue(entry.value, locale)}
               </span>
             </div>
           );
@@ -225,114 +216,23 @@ export function StatsRow({
   );
 }
 
-export function LegendPill({
-  colorClassName,
-  label,
+/** journal·기록이 아직 없을 때의 정직한 빈 상태 — 가짜 숫자로 채우지 않는다. */
+export function EmptyStateBox({
+  message,
+  className,
 }: {
-  colorClassName: string;
-  label: string;
+  message: string;
+  /** 높이·정렬 조정용 — 차트 자리 등 나란한 카드끼리 라인을 맞출 때 쓴다. */
+  className?: string;
 }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className={cn('size-2 rounded-full', colorClassName)} />
-      <span>{label}</span>
-    </div>
-  );
-}
-
-export function BarSegment({
-  value,
-  total,
-  colorClassName,
-}: {
-  value: number;
-  total: number;
-  colorClassName: string;
-}) {
-  if (value <= 0 || total <= 0) {
-    return null;
-  }
-
   return (
     <div
-      className={colorClassName}
-      style={{ width: `${(value / total) * 100}%` }}
-    />
-  );
-}
-
-export function StatusCount({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: string;
-}) {
-  return (
-    <div className="bg-muted/50 rounded-xl px-2.5 py-2">
-      <p className="text-muted-foreground text-[11px] tracking-[0.18em] uppercase">
-        {label}
-      </p>
-      <p className={cn('mt-1 text-base font-semibold', tone)}>{value}</p>
-    </div>
-  );
-}
-
-export function RiskCraneRow({
-  crane,
-  translate,
-  locale,
-}: {
-  crane: DashboardRiskCraneDatum;
-  translate: DashboardTranslate;
-  locale: string;
-}) {
-  return (
-    <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-medium">{crane.craneName}</p>
-          <p className="text-muted-foreground text-xs">
-            {translate(crane.regionTitleKey)}
-          </p>
-        </div>
-        <Badge
-          className={cn('border', craneStatusBadgeClassName[crane.status])}
-        >
-          {translate(`common:craneStatus.${crane.status}`)}
-        </Badge>
-      </div>
-      <div className="bg-muted/40 mt-2 h-1.5 w-full overflow-hidden rounded-full">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.min(crane.score, 100)}%`,
-            backgroundColor: getRiskColor(crane.score),
-          }}
-        />
-      </div>
-      <div className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
-        <div>
-          <p>{translate('dashboard:charts.riskCranes.riskScore')}</p>
-          <p className="text-foreground mt-1 text-sm font-semibold">
-            {new Intl.NumberFormat(locale).format(crane.score)}
-          </p>
-        </div>
-        <div>
-          <p>{translate('dashboard:charts.riskCranes.loadRatio')}</p>
-          <p className="text-foreground mt-1 text-sm font-semibold">
-            {crane.loadRatio}%
-          </p>
-        </div>
-        <div>
-          <p>{translate('dashboard:charts.riskCranes.windSpeed')}</p>
-          <p className="text-foreground mt-1 text-sm font-semibold">
-            {crane.windSpeed}m/s
-          </p>
-        </div>
-      </div>
+      className={cn(
+        'border-border/90 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm',
+        className,
+      )}
+    >
+      {message}
     </div>
   );
 }
@@ -344,11 +244,9 @@ export function DockAlarmStats({
   stats: AlarmStatistics;
   locale: string;
 }) {
-  const severities: AlarmSeverity[] = ['critical', 'high', 'medium', 'info'];
-
   return (
     <div className="mt-2.5 grid grid-cols-4 gap-1.5">
-      {severities.map((severity) => {
+      {SEVERITY_KEYS.map((severity) => {
         const visual = getAlarmSeverityVisual(severity);
         const count = stats[severity];
         return (
@@ -377,19 +275,72 @@ export function DockAlarmStats({
   );
 }
 
-export function RecentAlarmRow({
-  alarm,
+export function CollisionHistoryRow({
+  row,
   translate,
+  formatTime,
+}: {
+  row: DashboardCollisionRow;
+  translate: DashboardTranslate;
+  formatTime: (at: number) => string;
+}) {
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="size-4 text-red-500" />
+            <p className="font-medium">
+              {row.equipA}
+              <span className="text-muted-foreground mx-1.5">↔</span>
+              {row.equipB}
+            </p>
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {row.regionTitleKey
+              ? translate(row.regionTitleKey)
+              : translate('dashboard:collisionHistory.unknownRegion')}
+          </p>
+        </div>
+        {row.navigateTo ? (
+          <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+        ) : null}
+      </div>
+      <div className="text-muted-foreground mt-2 text-xs">
+        {formatTime(row.at)}
+      </div>
+    </>
+  );
+
+  const className =
+    'border-border/90 bg-card/70 block rounded-2xl border p-3 text-left';
+
+  if (!row.navigateTo) {
+    return <div className={className}>{body}</div>;
+  }
+
+  return (
+    <AppLink
+      to={row.navigateTo}
+      className={cn(
+        className,
+        'hover:border-primary/30 hover:bg-accent/20 w-full transition',
+      )}
+    >
+      {body}
+    </AppLink>
+  );
+}
+
+export function AlarmJournalRow({
+  entry,
   formatTimestamp,
   locale,
 }: {
-  alarm: Alarm;
-  translate: DashboardTranslate;
+  entry: AlarmJournalEntry;
   formatTimestamp: (value: string) => string;
   locale: string;
 }) {
-  const message = getAlarmMessageTranslation(alarm);
-
   return (
     <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
       <div className="flex items-start justify-between gap-3">
@@ -398,24 +349,24 @@ export function RecentAlarmRow({
             <AlertTriangle
               className={cn(
                 'size-4',
-                alarm.severity === 'critical' && 'text-red-500',
-                alarm.severity === 'high' && 'text-orange-500',
-                alarm.severity === 'medium' && 'text-amber-500',
-                alarm.severity === 'info' && 'text-blue-500',
+                entry.severity === 'critical' && 'text-red-500',
+                entry.severity === 'high' && 'text-orange-500',
+                entry.severity === 'medium' && 'text-amber-500',
+                entry.severity === 'info' && 'text-blue-500',
               )}
             />
-            <p className="font-medium">{alarm.craneName}</p>
+            <p className="font-medium">{entry.craneId}</p>
           </div>
           <p className="text-muted-foreground mt-2 text-sm">
-            {translate(message.key, message.values)}
+            {entry.alarmName ?? entry.alarmCode ?? '—'}
           </p>
         </div>
-        <Badge className={cn('border', severityBadgeClassName[alarm.severity])}>
-          {getAlarmSeverityLabel(alarm.severity, locale)}
+        <Badge className={cn('border', severityBadgeClassName[entry.severity])}>
+          {getAlarmSeverityLabel(entry.severity, locale)}
         </Badge>
       </div>
       <div className="text-muted-foreground mt-3 text-xs">
-        {formatTimestamp(alarm.timestamp)}
+        {formatTimestamp(entry.timestamp)}
       </div>
     </div>
   );

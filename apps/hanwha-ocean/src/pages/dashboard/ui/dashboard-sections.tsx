@@ -1,4 +1,4 @@
-import { Activity, ArrowRight } from 'lucide-react';
+import { ArrowRight, ShieldAlert } from 'lucide-react';
 import { useRegionRealtimeAlarms } from '@crane/features/alarm';
 
 import { Badge } from '@crane/ui/atoms/badge';
@@ -13,41 +13,33 @@ import {
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 import type { DashboardRegionStatusDatum } from '../model';
 import {
-  DashboardRegionStatusSkeleton,
-  DashboardRiskCranesSkeleton,
-} from './dashboard-skeletons';
-import {
-  formatYearMonth,
+  formatDateKey,
   type DashboardSectionSharedProps,
   type DashboardTranslate,
 } from './dashboard-helpers';
 import {
+  AlarmJournalRow,
+  CollisionHistoryRow,
   DockAlarmStats,
-  RecentAlarmRow,
-  RiskCraneRow,
+  EmptyStateBox,
 } from './dashboard-parts';
-
-interface DashboardRecentAlarmsSectionProps extends DashboardSectionSharedProps {
-  formatTimestamp: (value: string) => string;
-  locale: string;
-}
 
 export function DashboardOverviewHeader({
   summary,
   translate,
-}: Pick<DashboardSectionSharedProps, 'summary' | 'translate'>) {
+  dayFormatter,
+}: Pick<DashboardSectionSharedProps, 'summary' | 'translate'> & {
+  dayFormatter: Intl.DateTimeFormat;
+}) {
   return (
     <div className="border-border/90 flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <div className="flex size-9 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
-            <Activity className="size-4 text-amber-500" />
+            <ShieldAlert className="size-4 text-amber-500" />
           </div>
           <div>
-            <h2
-              id="dashboard-overview-title"
-              className="text-xl font-semibold"
-            >
+            <h2 id="dashboard-overview-title" className="text-xl font-semibold">
               {translate('dashboard:sections.trend.title')}
             </h2>
             <p className="text-muted-foreground text-sm">
@@ -62,9 +54,14 @@ export function DashboardOverviewHeader({
         </span>
         <span className="text-foreground font-semibold tracking-tight tabular-nums">
           {translate('dashboard:sections.trend.range', {
-            from: formatYearMonth(summary.monthlyTrend[0]?.dateKey),
-            to: formatYearMonth(
-              summary.monthlyTrend[summary.monthlyTrend.length - 1]?.dateKey,
+            from: formatDateKey(
+              summary.collisionTrend[0]?.dateKey,
+              dayFormatter,
+            ),
+            to: formatDateKey(
+              summary.collisionTrend[summary.collisionTrend.length - 1]
+                ?.dateKey,
+              dayFormatter,
             ),
           })}
         </span>
@@ -96,9 +93,11 @@ function DockCard({
         <div>
           <p className="font-medium">{translate(regionStatus.titleKey)}</p>
           <p className="text-muted-foreground text-xs">
-            {translate('dashboard:charts.regionStatus.totalCranes', {
-              count: regionStatus.total,
-            })}
+            {regionStatus.equipmentCount === null
+              ? translate('dashboard:charts.regionStatus.sceneUnavailable')
+              : translate('dashboard:charts.regionStatus.equipmentCount', {
+                  count: regionStatus.equipmentCount,
+                })}
           </p>
         </div>
         <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition" />
@@ -110,7 +109,6 @@ function DockCard({
 
 export function DashboardRegionStatusSection({
   summary,
-  isLoading,
   translate,
   locale,
   onRegionPreviewOpen,
@@ -136,69 +134,65 @@ export function DashboardRegionStatusSection({
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-4 xl:flex-1">
-        {isLoading ? (
-          <DashboardRegionStatusSkeleton />
-        ) : (
-          <>
-            <div className="space-y-3">
-              {summary.regionStatuses.map((regionStatus) => (
-                <DockCard
-                  key={regionStatus.regionId}
-                  regionStatus={regionStatus}
-                  translate={translate}
-                  locale={locale}
-                  onOpen={onRegionPreviewOpen}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        <div className="space-y-3">
+          {summary.regionStatuses.map((regionStatus) => (
+            <DockCard
+              key={regionStatus.regionId}
+              regionStatus={regionStatus}
+              translate={translate}
+              locale={locale}
+              onOpen={onRegionPreviewOpen}
+            />
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-export function DashboardRiskCranesSection({
+export function DashboardCollisionHistorySection({
   summary,
-  isLoading,
   translate,
-  locale,
+  formatTime,
 }: DashboardSectionSharedProps & {
-  locale: string;
+  formatTime: (at: number) => string;
 }) {
   return (
     <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
         <div>
           <CardTitle>
-            {translate('dashboard:charts.riskCranes.title')}
+            {translate('dashboard:collisionHistory.title')}
           </CardTitle>
           <CardDescription>
-            {translate('dashboard:charts.riskCranes.description')}
+            {translate('dashboard:collisionHistory.description')}
           </CardDescription>
         </div>
         <CardAction>
-          <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300">
-            {translate('dashboard:badges.priority')}
+          <Badge className="border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-300">
+            {summary.recentCollisions.length}
+            {translate('dashboard:units.count')}
           </Badge>
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {isLoading ? (
-          <DashboardRiskCranesSkeleton />
-        ) : (
+        {summary.recentCollisions.length > 0 ? (
           <ScrollArea className="pr-3">
             <div className="space-y-2">
-              {summary.riskCranes.map((crane) => (
-                <RiskCraneRow
-                  key={crane.craneId}
-                  crane={crane}
-                  locale={locale}
+              {summary.recentCollisions.map((row) => (
+                <CollisionHistoryRow
+                  key={row.key}
+                  row={row}
                   translate={translate}
+                  formatTime={formatTime}
                 />
               ))}
             </div>
           </ScrollArea>
+        ) : (
+          <EmptyStateBox
+            message={translate('dashboard:collisionHistory.empty')}
+          />
         )}
       </CardContent>
     </Card>
@@ -210,7 +204,10 @@ export function DashboardRecentAlarmsSection({
   translate,
   formatTimestamp,
   locale,
-}: DashboardRecentAlarmsSectionProps) {
+}: DashboardSectionSharedProps & {
+  formatTimestamp: (value: string) => string;
+  locale: string;
+}) {
   return (
     <Card className="border-border/90 bg-background/60 border shadow-none xl:h-full">
       <CardHeader>
@@ -232,20 +229,19 @@ export function DashboardRecentAlarmsSection({
       <CardContent className="flex flex-col gap-4">
         {summary.recentAlarms.length > 0 ? (
           <div className="space-y-2">
-            {summary.recentAlarms.map((alarm) => (
-              <RecentAlarmRow
-                key={alarm.id}
-                alarm={alarm}
+            {summary.recentAlarms.map((entry) => (
+              <AlarmJournalRow
+                key={entry.id}
+                entry={entry}
                 formatTimestamp={formatTimestamp}
                 locale={locale}
-                translate={translate}
               />
             ))}
           </div>
         ) : (
-          <div className="border-border/90 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
-            {translate('dashboard:sections.recentAlarms.empty')}
-          </div>
+          <EmptyStateBox
+            message={translate('dashboard:sections.recentAlarms.empty')}
+          />
         )}
       </CardContent>
     </Card>

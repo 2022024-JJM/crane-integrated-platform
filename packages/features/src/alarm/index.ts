@@ -1,4 +1,8 @@
 export { useRegionRealtimeAlarms } from './model/use-region-realtime-alarms';
+export {
+  useRealtimeAlarmStore,
+  getRealtimeAlarmStatsByRegion,
+} from './model/use-realtime-alarm-store';
 export { useRegionActiveAlarmsByCraneId } from './model/use-region-active-alarms-by-crane-id';
 export { useFullscreenAlarmOverlay } from './model/use-fullscreen-alarm-overlay';
 export { useCriticalAlarmBanner } from './model/use-critical-alarm-banner';
@@ -8,6 +12,11 @@ export {
   type ExternalAlarm,
 } from './model/use-external-alarm-feed';
 export { RealtimeAlarmSync } from './ui/realtime-alarm-sync';
+export { AlarmJournalSync } from './ui/alarm-journal-sync';
+export {
+  useAlarmJournalStore,
+  toAlarmJournalEntry,
+} from './model/use-alarm-journal-store';
 export { RuntimeAlarmDictionaryPreload } from './ui/runtime-alarm-dictionary-preload';
 export { HeaderAlarmButton } from './ui/header-alarm-button';
 export { AlarmFullscreenOverlay } from './ui/alarm-fullscreen-overlay';

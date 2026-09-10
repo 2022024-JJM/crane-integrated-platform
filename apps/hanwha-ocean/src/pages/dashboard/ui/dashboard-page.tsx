@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getFormatLocale } from '@crane/core/config/i18n';
 import { useSiteType } from '@crane/core/lib/site-type-context';
 import { useTheme } from '@crane/core/lib/theme-context';
-import { useDashboardSummary, type DashboardRegionStatusDatum } from '../model';
+import { useCollisionDashboard, type DashboardRegionStatusDatum } from '../model';
 import { DashboardGoliathCraneStatus } from './dashboard-goliath-crane-status';
 import { MetricCard } from './dashboard-parts';
 import {
@@ -15,11 +15,12 @@ import {
   type DashboardPreviewSize,
 } from '@crane/core/lib/preview-helpers';
 import { DashboardRegionPreviewModal } from './dashboard-region-preview-modal';
+import { DashboardEquipmentLiveSection } from './dashboard-equipment-live';
 import {
+  DashboardCollisionHistorySection,
   DashboardOverviewHeader,
   DashboardRecentAlarmsSection,
   DashboardRegionStatusSection,
-  DashboardRiskCranesSection,
 } from './dashboard-sections';
 import { DashboardTrendSection } from './dashboard-trend-section';
 
@@ -28,7 +29,7 @@ export function DashboardPage() {
   const { theme } = useTheme();
   const { siteType } = useSiteType();
   const isGoliath = siteType === 'goliath-crane';
-  const { summary, isLoading } = useDashboardSummary();
+  const { summary, equipment } = useCollisionDashboard();
   const [selectedPreviewRegion, setSelectedPreviewRegion] =
     useState<DashboardRegionStatusDatum | null>(null);
   const [previewPosition, setPreviewPosition] =
@@ -40,12 +41,12 @@ export function DashboardPage() {
     () => getFormatLocale(i18n.resolvedLanguage ?? i18n.language),
     [i18n.language, i18n.resolvedLanguage],
   );
-  const monthFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: 'short' }),
-    [locale],
-  );
   const weekFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { weekday: 'short' }),
+    [locale],
+  );
+  const dayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }),
     [locale],
   );
   const dateTimeFormatter = useMemo(
@@ -79,7 +80,6 @@ export function DashboardPage() {
         {summary.metrics.map((metric) => (
           <MetricCard
             key={metric.id}
-            isLoading={isLoading}
             metric={metric}
             translate={t}
             locale={locale}
@@ -93,21 +93,22 @@ export function DashboardPage() {
         aria-labelledby="dashboard-overview-title"
         className="border-border/90 bg-card/60 rounded border p-4 shadow-sm backdrop-blur-sm md:p-6"
       >
-        <DashboardOverviewHeader summary={summary} translate={t} />
+        <DashboardOverviewHeader
+          summary={summary}
+          translate={t}
+          dayFormatter={dayFormatter}
+        />
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <DashboardTrendSection
             summary={summary}
-            isLoading={isLoading}
             translate={t}
             locale={locale}
-            monthFormatter={monthFormatter}
             weekFormatter={weekFormatter}
             barChartTooltipCursor={barChartTooltipCursor}
           />
           <DashboardRegionStatusSection
             summary={summary}
-            isLoading={isLoading}
             translate={t}
             locale={locale}
             onRegionPreviewOpen={(regionStatus) => {
@@ -123,21 +124,23 @@ export function DashboardPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <DashboardRiskCranesSection
+          <DashboardCollisionHistorySection
             summary={summary}
-            isLoading={isLoading}
             translate={t}
-            locale={locale}
+            formatTime={(at) => dateTimeFormatter.format(new Date(at))}
           />
           <DashboardRecentAlarmsSection
             summary={summary}
-            isLoading={isLoading}
             translate={t}
             locale={locale}
             formatTimestamp={(value) =>
               dateTimeFormatter.format(new Date(value))
             }
           />
+        </div>
+
+        <div className="mt-4">
+          <DashboardEquipmentLiveSection equipment={equipment} translate={t} />
         </div>
       </section>
 

@@ -3,91 +3,110 @@
     "count": " numerus"
   },
   "badges": {
-    "sixMonths": "VI M",
     "sevenDays": "VII Dies",
-    "now": "NUNC",
-    "priority": "Prioritas"
+    "now": "NUNC"
   },
   "metrics": {
-    "regionCount": {
-      "title": "Regiones Operum",
-      "description": "Numerus regionum monitoratarum"
+    "detection": {
+      "title": "Detectio Collisionum",
+      "description": "Status detectionis collisionum scaenae"
     },
-    "craneCount": {
-      "title": "Grues Coniunctae",
-      "description": "Numerus totus gruium coniunctarum"
+    "todayCollisions": {
+      "title": "Collisiones Hodiernae",
+      "description": "Collisiones hodie notatae",
+      "meta": "{{count}} in VII diebus proximis"
     },
-    "operatingRate": {
-      "title": "Rata Sanae Operationis",
-      "description": "Ex gruibus operantibus et quiescentibus computata"
+    "activeAlarms": {
+      "title": "Monita Activa",
+      "description": "Monita activa ex fluxu temporis veri",
+      "meta": "{{critical}} critica · {{high}} alta"
     },
-    "urgentRegion": {
-      "title": "Regio Statim Inspicienda",
-      "description": "Regio summae prioritatis ex monitoribus praesentibus",
-      "meta": "{{critical}} critica · {{total}} monita omnia",
-      "emptyValue": "Omnia Tuta",
-      "emptyMeta": "Nulla nunc adsunt monita quae attentionem requirant."
+    "dataSource": {
+      "title": "Fons Datorum",
+      "description": "Status productoris valorum tag"
+    }
+  },
+  "collision": {
+    "state": {
+      "off": "Exstinctum",
+      "idle": "Otiosum",
+      "baseline": "Linea basis computatur",
+      "scanning": "Custoditur",
+      "halted": "Collisione sistitur"
+    },
+    "pauseOn": "Sistere in collisione: activum",
+    "pauseOff": "Sistere in collisione: inactivum"
+  },
+  "source": {
+    "state": {
+      "simulation": "Simulatio",
+      "realtime": "Tempus Verum",
+      "held": "Retentum",
+      "stopped": "Sistitur"
+    },
+    "meta": {
+      "simulation": "Valores simulationis tag virtualium accipiuntur",
+      "realtime": "Valores WebSocket temporis veri accipiuntur",
+      "held": "Ostensio retenta ob sistendum collisionis",
+      "stopped": "Colliguntur dum monitoratio 3D luditur"
     }
   },
   "sections": {
+    "metrics": {
+      "title": "Indices Custodiae"
+    },
     "trend": {
-      "title": "Relatio Cursus",
-      "description": "Cursus derivati sex mensium et septem dierum ex imagine hodierna compositi",
-      "rangeLabel": "Tempus",
+      "title": "Relatio Praeventionis Collisionum",
+      "description": "Summa mensurata VII dierum ex historia collisionum et monitorum",
+      "rangeLabel": "Periodus",
       "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {
       "title": "Monita Recentia",
-      "description": "Series recentissima secundum vera tempora monitorum ordinata",
-      "empty": "Nulla monita monstranda sunt."
+      "description": "Notationes novissimae ex historia monitorum servata",
+      "empty": "Nulla monita adhuc notata. Cum servo coniuncto tempore vero accumulantur."
     }
   },
   "charts": {
-    "monthlyOperating": {
-      "title": "Cursus Menstruus Operationis",
-      "description": "Stabilitas operationis per sex menses proximos derivata",
-      "average": "Rata media operationis",
-      "bestMonth": "Mensis optimus"
+    "dailyCollisions": {
+      "title": "Collisiones Cotidianae",
+      "description": "Detectiones collisionum VII dierum proximorum",
+      "empty": "Nullae collisiones adhuc notatae. Automatice notantur dum detectio collisionum in monitoratione 3D activa est.",
+      "today": "Hodie",
+      "weekTotal": "Summa VII dierum"
     },
-    "monthlyAlarms": {
-      "title": "Copia Menstrua Monitorum",
-      "description": "Copia monitorum per sex menses proximos derivata",
-      "total": "Summa sex mensium",
-      "peakMonth": "Mensis maximus"
+    "dailyAlarms": {
+      "title": "Monita Cotidiana",
+      "description": "Historia monitorum VII dierum secundum gravitatem",
+      "empty": "Nulla monita adhuc notata. Cum servo coniuncto tempore vero accumulantur.",
+      "weekTotal": "Summa VII dierum",
+      "weekCritical": "Critica VII dierum"
     },
     "regionStatus": {
-      "title": "Status Regionalis Gruium",
-      "description": "Status alarmarum realtempore per regionem — criticum, altum, medium, notitia",
-      "totalCranes": "{{count}} grues"
-    },
-    "weeklyTrend": {
-      "title": "Cursus Hebdomadalis Monitorum / Monitionum",
-      "description": "Distributio derivata monitorum per septem dies proximos",
-      "totalAlarms": "Monita hebdomadalia",
-      "totalWarnings": "Monitiones hebdomadales",
-      "average": "Media cotidiana",
-      "peakDay": "Dies maximus"
-    },
-    "riskCranes": {
-      "title": "Grues Periculi Prioris",
-      "description": "Punctum ex ratione oneris, velocitate venti et statu compositum",
-      "riskScore": "Punctum periculi",
-      "loadRatio": "Ratio oneris",
-      "windSpeed": "Velocitas venti"
+      "title": "Status Regionum",
+      "description": "Numerus apparatuum scaenae et monita temporis veri",
+      "equipmentCount": "{{count}} apparatus",
+      "sceneUnavailable": "Scaena non praesto"
     }
   },
+  "collisionHistory": {
+    "title": "Historia Collisionum",
+    "description": "Notationes collisionum recentes — preme ut monitorationem regionis aperias",
+    "empty": "Nullae collisiones notatae.",
+    "unknownRegion": "Regio ignota"
+  },
+  "equipmentLive": {
+    "title": "Status Vivus Apparatuum",
+    "description": "Valores tag vivi per apparatum ex mappationibus scaenae",
+    "empty": "Nullus apparatus cum mappationibus tag.",
+    "stopped": "Sistitur"
+  },
   "legend": {
-    "healthy": "Sanus",
-    "warning": "Monitum",
-    "offline": "Extra rete",
-    "alarmCount": "Monita",
-    "warningCount": "Monitiones",
-    "operatingRate": "Rata operationis",
-    "riskScore": "Punctum periculi"
+    "collisionCount": "Collisiones"
   },
   "preview": {
     "label": "Praevisio 3D",
-    "openFull": "Monitoratio plena aperire",
+    "openFull": "Monitorationem plenam aperire",
     "close": "Praevisionem claudere"
   }
 }

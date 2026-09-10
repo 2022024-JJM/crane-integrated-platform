@@ -19,7 +19,8 @@
     "./inventory": "./src/inventory/index.ts",
     "./compliance": "./src/compliance/index.ts",
     "./shared": "./src/shared/index.ts",
-    "./virtual-tag": "./src/virtual-tag/index.ts"
+    "./virtual-tag": "./src/virtual-tag/index.ts",
+    "./journal": "./src/journal/index.ts"
   },
   "scripts": {
     "test": "vitest run"

@@ -3,87 +3,106 @@
     "count": "건"
   },
   "badges": {
-    "sixMonths": "6M",
     "sevenDays": "7일",
-    "now": "NOW",
-    "priority": "우선 확인"
+    "now": "NOW"
   },
   "metrics": {
-    "regionCount": {
-      "title": "공사 지역",
-      "description": "모니터링 대상 지역 수"
+    "detection": {
+      "title": "충돌 감지",
+      "description": "씬 충돌 감지 런타임 상태"
     },
-    "craneCount": {
-      "title": "연결 크레인",
-      "description": "전체 연결 크레인 수"
+    "todayCollisions": {
+      "title": "금일 충돌",
+      "description": "오늘 기록된 충돌 건수",
+      "meta": "최근 7일 {{count}}건"
     },
-    "operatingRate": {
-      "title": "정상 운영률",
-      "description": "operating + idle 기준 비율"
+    "activeAlarms": {
+      "title": "활성 알람",
+      "description": "실시간 수신 중인 활성 알람 수",
+      "meta": "위험 {{critical}}건 · 높음 {{high}}건"
     },
-    "urgentRegion": {
-      "title": "즉시 확인 구역",
-      "description": "현재 알람 기준 최우선 region",
-      "meta": "위험 {{critical}}건 전체 알람 {{total}}건",
-      "emptyValue": "이상 없음",
-      "emptyMeta": "현재 확인이 필요한 알람이 없습니다."
+    "dataSource": {
+      "title": "데이터 소스",
+      "description": "태그 값 생산자 가동 상태"
+    }
+  },
+  "collision": {
+    "state": {
+      "off": "꺼짐",
+      "idle": "대기",
+      "baseline": "기준선 계산 중",
+      "scanning": "감시 중",
+      "halted": "충돌 정지"
+    },
+    "pauseOn": "충돌 시 정지 켜짐",
+    "pauseOff": "충돌 시 정지 꺼짐"
+  },
+  "source": {
+    "state": {
+      "simulation": "시뮬레이션",
+      "realtime": "실시간",
+      "held": "보류",
+      "stopped": "정지"
+    },
+    "meta": {
+      "simulation": "가상 태그 시뮬레이션 값 수신 중",
+      "realtime": "WebSocket 실시간 값 수신 중",
+      "held": "충돌 정지로 화면 반영 보류 중",
+      "stopped": "3D 모니터링에서 재생하면 수집됩니다"
     }
   },
   "sections": {
+    "metrics": {
+      "title": "관제 지표"
+    },
     "trend": {
-      "title": "Trend Report",
-      "description": "현재 snapshot 집계를 기반으로 만든 6개월/7일 파생 추이",
+      "title": "충돌방지 관제 리포트",
+      "description": "충돌·알람 이력 기반 최근 7일 실측 집계",
       "rangeLabel": "기간",
       "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {
       "title": "최근 알람",
-      "description": "실제 alarm timestamp 기준 최신 feed",
-      "empty": "표시할 알람이 없습니다."
+      "description": "실시간 알람 이력(보존) 최신 기록",
+      "empty": "기록된 알람이 없습니다. 서버 연결 시 실시간으로 쌓입니다."
     }
   },
   "charts": {
-    "monthlyOperating": {
-      "title": "월간 운영률 추이",
-      "description": "최근 6개월 운영 안정성 파생 추이",
-      "average": "평균 운영률",
-      "bestMonth": "최고 운영 월"
+    "dailyCollisions": {
+      "title": "일별 충돌 발생",
+      "description": "최근 7일 충돌 감지 기록",
+      "empty": "아직 기록된 충돌이 없습니다. 3D 모니터링에서 충돌 감지가 켜져 있으면 자동으로 기록됩니다.",
+      "today": "금일 충돌",
+      "weekTotal": "7일 합계"
     },
-    "monthlyAlarms": {
-      "title": "월간 알람 발생",
-      "description": "최근 6개월 알람 건수 파생 추이",
-      "total": "6개월 누적",
-      "peakMonth": "최다 발생 월"
+    "dailyAlarms": {
+      "title": "일별 알람 발생",
+      "description": "최근 7일 알람 이력, 심각도 분해",
+      "empty": "아직 기록된 알람이 없습니다. 서버 연결 시 실시간으로 쌓입니다.",
+      "weekTotal": "7일 합계",
+      "weekCritical": "7일 위험"
     },
     "regionStatus": {
-      "title": "지역별 크레인 현황",
-      "description": "지역별 위험·높음·중간·정보 실시간 알람 현황",
-      "totalCranes": "전체 {{count}}기"
-    },
-    "weeklyTrend": {
-      "title": "주간 알람 / 경고 추이",
-      "description": "최근 7일 알람 건수 파생 분포",
-      "totalAlarms": "주간 알람 합계",
-      "totalWarnings": "주간 경고 합계",
-      "average": "일평균 알람",
-      "peakDay": "최다 발생일"
-    },
-    "riskCranes": {
-      "title": "위험 크레인 우선순위",
-      "description": "부하율, 풍속, 상태 기반 점수",
-      "riskScore": "위험 점수",
-      "loadRatio": "부하율",
-      "windSpeed": "풍속"
+      "title": "지역별 현황",
+      "description": "씬 배치 장비 수와 실시간 알람 현황",
+      "equipmentCount": "장비 {{count}}대",
+      "sceneUnavailable": "씬 정보 없음"
     }
   },
+  "collisionHistory": {
+    "title": "충돌 이력",
+    "description": "최근 충돌 기록 — 클릭하면 해당 지역 모니터링으로 이동",
+    "empty": "기록된 충돌이 없습니다.",
+    "unknownRegion": "지역 미상"
+  },
+  "equipmentLive": {
+    "title": "장비 라이브 상태",
+    "description": "씬 태그 맵핑 기반 장비별 실시간 태그 값",
+    "empty": "태그 맵핑이 있는 장비가 없습니다.",
+    "stopped": "정지"
+  },
   "legend": {
-    "healthy": "정상",
-    "warning": "경고",
-    "offline": "오프라인",
-    "alarmCount": "알람",
-    "warningCount": "경고",
-    "operatingRate": "운영률",
-    "riskScore": "위험 점수"
+    "collisionCount": "충돌"
   },
   "preview": {
     "label": "3D 미리보기",

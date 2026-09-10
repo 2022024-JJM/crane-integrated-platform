@@ -93,6 +93,9 @@ export {
   type SceneCollisionRecordParty,
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export { CollisionJournalSync } from './ui/collision-journal-sync';
+export { useCollisionJournalStore } from './model/use-collision-journal-store';
+export { toCollisionJournalEntries } from './lib/collision-journal-map';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
 export { ScenePerfHud } from './ui/scene-perf-hud';
 export { ScenePerfProbe } from './ui/scene-perf-probe';
@@ -154,6 +157,7 @@ export {
   type TagValueSource,
 } from './model/tag-value-bus';
 export { useTagBindingSource } from './model/use-tag-binding-source';
+export { useRealtimeStore } from './model/use-realtime-store';
 export {
   buildTagMappingIndex,
   collectSceneTagKeys,

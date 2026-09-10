@@ -3,87 +3,106 @@
     "count": " count"
   },
   "badges": {
-    "sixMonths": "6M",
     "sevenDays": "7D",
-    "now": "NOW",
-    "priority": "Priority"
+    "now": "NOW"
   },
   "metrics": {
-    "regionCount": {
-      "title": "Work Regions",
-      "description": "Monitored region count"
+    "detection": {
+      "title": "Collision Detection",
+      "description": "Scene collision detection runtime state"
     },
-    "craneCount": {
-      "title": "Connected Cranes",
-      "description": "Total connected crane count"
+    "todayCollisions": {
+      "title": "Collisions Today",
+      "description": "Collisions recorded today",
+      "meta": "{{count}} in the last 7 days"
     },
-    "operatingRate": {
-      "title": "Healthy Operating Rate",
-      "description": "Based on operating + idle cranes"
+    "activeAlarms": {
+      "title": "Active Alarms",
+      "description": "Active alarms from the realtime feed",
+      "meta": "{{critical}} critical · {{high}} high"
     },
-    "urgentRegion": {
-      "title": "Immediate Check Area",
-      "description": "Highest-priority region from current alarms",
-      "meta": "{{critical}} critical · {{total}} total alarms",
-      "emptyValue": "All Clear",
-      "emptyMeta": "There are no alarms that need attention right now."
+    "dataSource": {
+      "title": "Data Source",
+      "description": "Tag value producer status"
+    }
+  },
+  "collision": {
+    "state": {
+      "off": "Off",
+      "idle": "Idle",
+      "baseline": "Calculating baseline",
+      "scanning": "Monitoring",
+      "halted": "Halted on collision"
+    },
+    "pauseOn": "Pause on collision: on",
+    "pauseOff": "Pause on collision: off"
+  },
+  "source": {
+    "state": {
+      "simulation": "Simulation",
+      "realtime": "Realtime",
+      "held": "Held",
+      "stopped": "Stopped"
+    },
+    "meta": {
+      "simulation": "Receiving virtual tag simulation values",
+      "realtime": "Receiving realtime WebSocket values",
+      "held": "Display held due to collision stop",
+      "stopped": "Collected while 3D monitoring is playing"
     }
   },
   "sections": {
+    "metrics": {
+      "title": "Control Metrics"
+    },
     "trend": {
-      "title": "Trend Report",
-      "description": "Derived 6-month and 7-day trends built from the current snapshot",
-      "rangeLabel": "Period",
+      "title": "Collision Prevention Report",
+      "description": "Measured 7-day aggregation from collision and alarm history",
+      "rangeLabel": "Range",
       "range": "{{from}} - {{to}}"
     },
     "recentAlarms": {
       "title": "Recent Alarms",
-      "description": "Latest feed sorted by real alarm timestamps",
-      "empty": "No alarms to display."
+      "description": "Latest entries from the persisted alarm history",
+      "empty": "No alarms recorded yet. They accumulate in realtime once the server is connected."
     }
   },
   "charts": {
-    "monthlyOperating": {
-      "title": "Monthly Operating Trend",
-      "description": "Derived operating stability across the last 6 months",
-      "average": "Average operating rate",
-      "bestMonth": "Best month"
+    "dailyCollisions": {
+      "title": "Daily Collisions",
+      "description": "Collision detections over the last 7 days",
+      "empty": "No collisions recorded yet. They are logged automatically while collision detection is on in 3D monitoring.",
+      "today": "Today",
+      "weekTotal": "7-day total"
     },
-    "monthlyAlarms": {
-      "title": "Monthly Alarm Volume",
-      "description": "Derived alarm volume across the last 6 months",
-      "total": "6-month total",
-      "peakMonth": "Peak month"
+    "dailyAlarms": {
+      "title": "Daily Alarms",
+      "description": "Alarm history over the last 7 days by severity",
+      "empty": "No alarms recorded yet. They accumulate in realtime once the server is connected.",
+      "weekTotal": "7-day total",
+      "weekCritical": "7-day critical"
     },
     "regionStatus": {
-      "title": "Regional Crane Status",
-      "description": "Real-time alarm status by region — critical, high, medium, info",
-      "totalCranes": "{{count}} cranes"
-    },
-    "weeklyTrend": {
-      "title": "Weekly Alarm / Warning Trend",
-      "description": "Derived alarm distribution over the last 7 days",
-      "totalAlarms": "Weekly alarms",
-      "totalWarnings": "Weekly warnings",
-      "average": "Daily average",
-      "peakDay": "Peak day"
-    },
-    "riskCranes": {
-      "title": "Priority Risk Cranes",
-      "description": "Score built from load ratio, wind speed, and status",
-      "riskScore": "Risk score",
-      "loadRatio": "Load ratio",
-      "windSpeed": "Wind speed"
+      "title": "Region Status",
+      "description": "Scene equipment count and realtime alarms",
+      "equipmentCount": "{{count}} equipment",
+      "sceneUnavailable": "Scene unavailable"
     }
   },
+  "collisionHistory": {
+    "title": "Collision History",
+    "description": "Recent collision records — click to open region monitoring",
+    "empty": "No collisions recorded.",
+    "unknownRegion": "Unknown region"
+  },
+  "equipmentLive": {
+    "title": "Equipment Live Status",
+    "description": "Live tag values per equipment from scene tag mappings",
+    "empty": "No equipment with tag mappings.",
+    "stopped": "Stopped"
+  },
   "legend": {
-    "healthy": "Healthy",
-    "warning": "Warning",
-    "offline": "Offline",
-    "alarmCount": "Alarms",
-    "warningCount": "Warnings",
-    "operatingRate": "Operating rate",
-    "riskScore": "Risk score"
+    "collisionCount": "Collisions"
   },
   "preview": {
     "label": "3D Preview",
