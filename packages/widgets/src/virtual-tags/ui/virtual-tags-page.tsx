@@ -59,6 +59,7 @@ import {
   useSceneUnsavedChangesGuard,
 } from '@crane/widgets/scene-editor';
 import { getTagKeyError, type TagKeyError } from '../lib/tag-key-validation';
+import { TextCell } from './text-cell';
 import { WaveformIcon } from './waveform-icon';
 
 /**
@@ -199,17 +200,17 @@ function TagRow({
         </Tooltip>
       </TableCell>
       <TableCell>
-        <Input
+        <TextCell
           value={tag.name}
           className={CELL_INPUT}
-          onChange={(event) => onUpdate({ name: event.target.value })}
+          onChange={(name) => onUpdate({ name })}
         />
       </TableCell>
       <TableCell>
-        <Input
+        <TextCell
           value={tag.unit ?? ''}
           className={CELL_INPUT}
-          onChange={(event) => onUpdate({ unit: event.target.value })}
+          onChange={(unit) => onUpdate({ unit })}
         />
       </TableCell>
       <TableCell>
