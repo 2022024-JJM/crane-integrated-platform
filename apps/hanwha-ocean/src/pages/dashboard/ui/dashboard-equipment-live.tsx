@@ -1,6 +1,9 @@
+import { useState } from 'react';
+
 import { Gauge } from 'lucide-react';
 
 import { cn } from '@crane/core/lib/utils';
+import { getModelPreviewAssetPath, withBaseUrl } from '@crane/domain/3d';
 import { tagLiveValues } from '@crane/features/3d';
 import { Badge } from '@crane/ui/atoms/badge';
 import {
@@ -68,6 +71,41 @@ export function DashboardEquipmentLiveSection({
   );
 }
 
+/**
+ * 모델 팔레트와 같은 정적 썸네일(`/previews/{id}.png`, 투명 PNG)을 쓴다.
+ * 카탈로그에 없는 모델·파일 부재(404)는 아이콘 폴백 — 대시보드에선 widgets
+ * 의 offscreen WebGL 폴백까지 끌어오지 않는다(three 로드 없이 가볍게 유지).
+ */
+function EquipmentThumbnail({
+  previewAssetId,
+  alt,
+}: {
+  previewAssetId: string | null;
+  alt: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showImage = previewAssetId !== null && !failed;
+
+  return (
+    <div className="border-border/60 bg-muted/40 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border">
+      {showImage ? (
+        <img
+          src={withBaseUrl(getModelPreviewAssetPath(previewAssetId))}
+          alt={alt}
+          loading="lazy"
+          draggable={false}
+          className="size-full object-contain p-1"
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+      ) : (
+        <Gauge className="text-muted-foreground size-5" />
+      )}
+    </div>
+  );
+}
+
 function EquipmentCard({
   row,
   now,
@@ -79,12 +117,17 @@ function EquipmentCard({
 }) {
   return (
     <div className="border-border/90 bg-card/70 rounded-2xl border p-3">
-      <div className="flex items-center gap-2">
-        <Gauge className="text-primary size-4 shrink-0" />
-        <p className="font-medium">{row.equipName}</p>
-        <span className="text-muted-foreground ml-auto text-xs">
-          {translate(row.regionTitleKey)}
-        </span>
+      <div className="flex items-center gap-3">
+        <EquipmentThumbnail
+          previewAssetId={row.previewAssetId}
+          alt={row.equipName}
+        />
+        <div className="min-w-0">
+          <p className="truncate font-medium">{row.equipName}</p>
+          <p className="text-muted-foreground text-xs">
+            {translate(row.regionTitleKey)}
+          </p>
+        </div>
       </div>
       <div className="mt-3 space-y-2">
         {row.tags.map((tag) => {
