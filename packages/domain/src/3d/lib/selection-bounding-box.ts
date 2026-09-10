@@ -18,6 +18,34 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 const boundingBoxPointsCache = new WeakMap<Object3D, Vector3Tuple[] | null>();
 
 /**
+ * `Box3` 를 drei `<Line segments>` 용 12모서리 24점 배열로 만든다. 좌표계는
+ * 호출자가 정한다 — 여기서는 모서리만 만든다.
+ */
+function boxEdgePoints(box: Box3): Vector3Tuple[] {
+  const { min, max } = box;
+  const points: Vector3Tuple[] = [];
+  const pushEdge = (a: Vector3Tuple, b: Vector3Tuple) => {
+    points.push(a, b);
+  };
+
+  // 12 모서리: bottom 4 + top 4 + vertical 4
+  pushEdge([min.x, min.y, min.z], [max.x, min.y, min.z]);
+  pushEdge([max.x, min.y, min.z], [max.x, min.y, max.z]);
+  pushEdge([max.x, min.y, max.z], [min.x, min.y, max.z]);
+  pushEdge([min.x, min.y, max.z], [min.x, min.y, min.z]);
+  pushEdge([min.x, max.y, min.z], [max.x, max.y, min.z]);
+  pushEdge([max.x, max.y, min.z], [max.x, max.y, max.z]);
+  pushEdge([max.x, max.y, max.z], [min.x, max.y, max.z]);
+  pushEdge([min.x, max.y, max.z], [min.x, max.y, min.z]);
+  pushEdge([min.x, min.y, min.z], [min.x, max.y, min.z]);
+  pushEdge([max.x, min.y, min.z], [max.x, max.y, min.z]);
+  pushEdge([max.x, min.y, max.z], [max.x, max.y, max.z]);
+  pushEdge([min.x, min.y, max.z], [min.x, max.y, max.z]);
+
+  return points;
+}
+
+/**
  * drei `<Line>` 은 three-stdlib `Line2`/`LineSegments2`(둘 다 Mesh 파생)라
  * 메쉬 순회에 잡힌다. `segments` 모드는 `LineSegments2` 이고 `isLine2` 를
  * 갖지 않으므로 두 플래그를 모두 본다.
@@ -52,28 +80,7 @@ export function computeLocalBoundingBoxPoints(
   });
 
   if (box.isEmpty()) return null;
-
-  const { min, max } = box;
-  const points: Vector3Tuple[] = [];
-  const pushEdge = (a: Vector3Tuple, b: Vector3Tuple) => {
-    points.push(a, b);
-  };
-
-  // 12 모서리: bottom 4 + top 4 + vertical 4
-  pushEdge([min.x, min.y, min.z], [max.x, min.y, min.z]);
-  pushEdge([max.x, min.y, min.z], [max.x, min.y, max.z]);
-  pushEdge([max.x, min.y, max.z], [min.x, min.y, max.z]);
-  pushEdge([min.x, min.y, max.z], [min.x, min.y, min.z]);
-  pushEdge([min.x, max.y, min.z], [max.x, max.y, min.z]);
-  pushEdge([max.x, max.y, min.z], [max.x, max.y, max.z]);
-  pushEdge([max.x, max.y, max.z], [min.x, max.y, max.z]);
-  pushEdge([min.x, max.y, max.z], [min.x, max.y, min.z]);
-  pushEdge([min.x, min.y, min.z], [min.x, max.y, min.z]);
-  pushEdge([max.x, min.y, min.z], [max.x, max.y, min.z]);
-  pushEdge([max.x, min.y, max.z], [max.x, max.y, max.z]);
-  pushEdge([min.x, min.y, max.z], [min.x, max.y, max.z]);
-
-  return points;
+  return boxEdgePoints(box);
 }
 
 /**

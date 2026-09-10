@@ -10,6 +10,7 @@ import {
   type BufferGeometry,
 } from 'three';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { markOverlayMesh } from './overlay-mesh';
 
 /**
  * 일체형 실루엣 테두리 — 스텐실 마스크 + 인플레이션 헐.
@@ -161,6 +162,10 @@ export function warmSilhouetteOutlineGeometry(
 }
 
 function detachOverlayMesh(mesh: Mesh): void {
+  // 씬 순회가 이 메시를 실제 콘텐츠로 착각하지 않게 표식을 남긴다 — 충돌
+  // 감지가 마스크(대상 지오메트리 재사용)와 헐(BVH 없는 사본)을 수집하던
+  // 결함의 차단점이다. 경위는 overlay-mesh.ts 주석.
+  markOverlayMesh(mesh);
   // raycast 는 끊는다 — 오버레이는 BVH(boundsTree)가 없어 그대로 두면 포인터
   // 이동마다 수만 삼각형 브루트포스 raycast 대상이 된다.
   mesh.raycast = () => {};

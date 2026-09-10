@@ -37,6 +37,64 @@ export const SEPARATION_MARGIN = 0.05;
 export const MIN_MESH_EXTENT = 0.01;
 /** 충돌 기록 보관 개수 — 초과하면 가장 오래된 것부터 버린다. */
 export const HISTORY_MAX = 10;
+
+// ---- 충돌 예측 ----
+
+/**
+ * 예측 사다리의 칸 간격(ms). 이 값이 예측의 정확도를 지배한다.
+ *
+ * 점 샘플링이라 한 칸 사이에 들어왔다 나가는 충돌은 놓친다. 실측 최대 속도는
+ * `LLC_002:slew_angle` 의 28.3°/s(진폭 180°, 주기 40초)이고, 반경 R 의 붐 끝은
+ * 0.49·R unit/s 로 움직인다 — R≈50 이면 250ms 에 약 6 unit 이다. 1초 칸이면
+ * 25~30 unit 을 건너뛰어 대표 유스케이스(붐이 상대 크레인 다리를 지나감)가
+ * 전부 안 보인다. 그래서 지평선이 아니라 **칸 간격**을 고정했다.
+ */
+export const PREDICTION_STEP_MS = 250;
+/** 예측 스윕 주기. 프레임 수가 아니라 performance.now() 로 잰다(demand 렌더 대응). */
+export const PREDICTION_INTERVAL_MS = 100;
+/** 한 스윕의 시간 예산. 초과하면 칸 커서로 다음 틱이 이어받는다. */
+export const PREDICTION_BUDGET_MS = 3;
+/** 예측 지평선(초) 기본값·범위 — 패널에서 조절한다. */
+export const PREDICTION_HORIZON_DEFAULT_SEC = 10;
+export const PREDICTION_HORIZON_MIN_SEC = 2;
+export const PREDICTION_HORIZON_MAX_SEC = 30;
+/**
+ * 리드타임 표시·스토어 쓰기의 양자화 단위(초).
+ *
+ * 사다리 간격(250ms)과는 무관하다 — 충돌 시각은 절대 시각으로 고정돼 있고
+ * 리드타임은 `그 시각 − 현재 경과` 라 연속적으로 줄어든다. 그래서 스윕
+ * 주기(100ms)만큼 촘촘히 표시할 수 있다. 0.5초였을 때는 카운트다운이
+ * 뚝뚝 끊겨 보였다(2026-09-10).
+ */
+export const PREDICTION_LEAD_QUANTUM_SEC = 0.1;
+
+export function clampPredictionHorizonSec(seconds: number): number {
+  if (!Number.isFinite(seconds)) return PREDICTION_HORIZON_DEFAULT_SEC;
+  return Math.min(
+    PREDICTION_HORIZON_MAX_SEC,
+    Math.max(PREDICTION_HORIZON_MIN_SEC, Math.round(seconds)),
+  );
+}
+
+/** 리드타임을 표시 단위로 반올림 — 0 미만은 0. */
+export function quantizeLeadTimeSec(seconds: number): number {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 0;
+  const q = PREDICTION_LEAD_QUANTUM_SEC;
+  return Math.round((Math.round(seconds / q) * q + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * 사다리 원점을 칸 간격 격자에 맞춘다.
+ *
+ * 원점을 "지금" 으로 잡으면 스윕마다 100ms 씩 흘러 칸 시각이 통째로 움직인다.
+ * 그러면 충돌 시각이 250ms 안쪽으로 붙어 있는 두 쌍의 **검출 순서가 스윕마다
+ * 뒤집혀** 예측 표시가 번갈아 뜬다(실측 2026-09-10). 격자에 맞추면 칸이 항상
+ * 같은 절대 시각에 놓여, 어느 쌍이 먼저 겹치는지가 스윕과 무관하게 정해진다.
+ */
+export function alignSweepBase(elapsedMs: number): number {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return 0;
+  return Math.floor(elapsedMs / PREDICTION_STEP_MS) * PREDICTION_STEP_MS;
+}
 /** 무정지 모드에서 빨간 박스를 보여 주는 시간. */
 export const FLASH_MS = 3000;
 

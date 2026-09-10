@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FLASH_MS, HISTORY_MAX } from '../../lib/scene-collision-pairs';
+import {
+  FLASH_MS,
+  HISTORY_MAX,
+  PREDICTION_HORIZON_DEFAULT_SEC,
+  PREDICTION_HORIZON_MAX_SEC,
+  PREDICTION_HORIZON_MIN_SEC,
+} from '../../lib/scene-collision-pairs';
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
 import {
   useSceneCollisionStore,
   type SceneCollisionRecord,
+  type ScenePredictedCollision,
 } from '../use-scene-collision-store';
 import { useRealtimeStore } from '../use-realtime-store';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
@@ -33,6 +40,9 @@ function reset(enabled = true) {
     activeRecordId: null,
     activeMode: null,
     baselinePending: false,
+    predictionEnabled: true,
+    predictionHorizonSec: PREDICTION_HORIZON_DEFAULT_SEC,
+    predicted: null,
   });
   useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
 }
@@ -320,5 +330,172 @@ describe('baselinePending', () => {
     useSceneCollisionStore.getState().setBaselinePending(true);
     useSceneCollisionStore.getState().clear();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+  });
+});
+
+function prediction(
+  patch: Partial<ScenePredictedCollision> = {},
+): ScenePredictedCollision {
+  return {
+    pairKey: patch.pairKey ?? 'a|b',
+    a: patch.a ?? { modelId: 'a', equipName: 'A', nodePath: '[0]Body' },
+    b: patch.b ?? { modelId: 'b', equipName: 'B', nodePath: '[0]Body' },
+    leadTimeSec: patch.leadTimeSec ?? 3,
+    initialLeadTimeSec: patch.initialLeadTimeSec ?? 5,
+    contactPoint: patch.contactPoint ?? [1, 2, 3],
+    ghosts: patch.ghosts ?? [
+      { modelId: 'a', path: '/models/a.glb', nodes: [] },
+    ],
+  };
+}
+
+describe('예측 토글·지평선', () => {
+  it('기본값은 켜짐이고 지평선은 기본 상수다', () => {
+    // 세션 전용이라 스토어를 새로 만들 수 없어 초기값 상수로 확인한다.
+    expect(PREDICTION_HORIZON_DEFAULT_SEC).toBeGreaterThan(0);
+    reset();
+    expect(useSceneCollisionStore.getState().predictionEnabled).toBe(true);
+  });
+
+  it('같은 값 재설정은 상태를 바꾸지 않는다', () => {
+    const before = useSceneCollisionStore.getState();
+    useSceneCollisionStore.getState().setPredictionEnabled(true);
+    expect(useSceneCollisionStore.getState()).toBe(before);
+    useSceneCollisionStore
+      .getState()
+      .setPredictionHorizonSec(PREDICTION_HORIZON_DEFAULT_SEC);
+    expect(useSceneCollisionStore.getState()).toBe(before);
+  });
+
+  it('예측을 끄면 현재 예측도 함께 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().setPredictionEnabled(false);
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('지평선은 경계 정확값을 통과하고 그 밖은 클램프된다', () => {
+    const set = (v: number) =>
+      useSceneCollisionStore.getState().setPredictionHorizonSec(v);
+    const get = () => useSceneCollisionStore.getState().predictionHorizonSec;
+
+    set(PREDICTION_HORIZON_MIN_SEC);
+    expect(get()).toBe(PREDICTION_HORIZON_MIN_SEC);
+    set(PREDICTION_HORIZON_MIN_SEC - 1);
+    expect(get()).toBe(PREDICTION_HORIZON_MIN_SEC);
+
+    set(PREDICTION_HORIZON_MAX_SEC);
+    expect(get()).toBe(PREDICTION_HORIZON_MAX_SEC);
+    set(PREDICTION_HORIZON_MAX_SEC + 1);
+    expect(get()).toBe(PREDICTION_HORIZON_MAX_SEC);
+  });
+
+  it('NaN·Infinity 지평선은 기본값으로 되돌아간다', () => {
+    const set = (v: number) =>
+      useSceneCollisionStore.getState().setPredictionHorizonSec(v);
+    set(PREDICTION_HORIZON_MAX_SEC);
+    set(Number.NaN);
+    expect(useSceneCollisionStore.getState().predictionHorizonSec).toBe(
+      PREDICTION_HORIZON_DEFAULT_SEC,
+    );
+    set(Number.POSITIVE_INFINITY);
+    expect(useSceneCollisionStore.getState().predictionHorizonSec).toBe(
+      PREDICTION_HORIZON_DEFAULT_SEC,
+    );
+  });
+
+  it('지평선이 바뀌면 현재 예측은 근거를 잃어 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().setPredictionHorizonSec(5);
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+});
+
+describe('setPredicted — 발행 정책', () => {
+  it('같은 쌍·같은 리드타임이면 참조를 유지한다', () => {
+    const first = prediction();
+    useSceneCollisionStore.getState().setPredicted(first);
+    const stored = useSceneCollisionStore.getState().predicted;
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    expect(useSceneCollisionStore.getState().predicted).toBe(stored);
+  });
+
+  it('같은 쌍이면 고스트·접촉점은 첫 값을 유지하고 리드타임만 갱신한다', () => {
+    const first = prediction({ leadTimeSec: 3, contactPoint: [1, 2, 3] });
+    useSceneCollisionStore.getState().setPredicted(first);
+    const stored = useSceneCollisionStore.getState().predicted;
+    useSceneCollisionStore.getState().setPredicted(
+      prediction({
+        leadTimeSec: 2,
+        contactPoint: [9, 9, 9],
+        ghosts: [{ modelId: 'z', path: '/models/z.glb', nodes: [] }],
+      }),
+    );
+    const next = useSceneCollisionStore.getState().predicted;
+    expect(next?.leadTimeSec).toBe(2);
+    // 발견 시점 고정 — 매 스윕 갱신하면 clone·라인이 계속 다시 만들어지고
+    // 캡처(자세 차용 십수 회)도 매번 돈다.
+    expect(next?.ghosts).toBe(stored?.ghosts);
+    expect(next?.contactPoint).toEqual([1, 2, 3]);
+    // 카운트다운 호의 분모도 첫 값이어야 줄어드는 것이 보인다.
+    expect(next?.initialLeadTimeSec).toBe(5);
+  });
+
+  it('쌍이 바뀌면 통째로 교체한다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore
+      .getState()
+      .setPredicted(prediction({ pairKey: 'b|c', contactPoint: [7, 7, 7] }));
+    expect(useSceneCollisionStore.getState().predicted?.pairKey).toBe('b|c');
+    expect(useSceneCollisionStore.getState().predicted?.contactPoint).toEqual([
+      7, 7, 7,
+    ]);
+  });
+
+  it('null 재설정은 no-op 이다', () => {
+    const before = useSceneCollisionStore.getState();
+    useSceneCollisionStore.getState().setPredicted(null);
+    expect(useSceneCollisionStore.getState()).toBe(before);
+  });
+});
+
+describe('예측이 내려가는 경로', () => {
+  it('감지를 끄면 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().setEnabled(false);
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('clearActive 로 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().clearActive();
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('clear(검사기 언마운트)로 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().clear();
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('resume 으로 내려간다', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().resume();
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('clearHistory 로 내려간다 — 기록이 비어 있어도', () => {
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    // 기록이 없으면 early return 하는 경로라 별도 확인이 필요하다.
+    expect(useSceneCollisionStore.getState().history).toEqual([]);
+    useSceneCollisionStore.getState().clearHistory();
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+  });
+
+  it('selectRecord 는 자세를 순간이동시키므로 예측을 먼저 내린다', () => {
+    useSceneCollisionStore.getState().pushRecord(record(1, [['m/j', 5]]));
+    useSceneCollisionStore.getState().setPredicted(prediction());
+    useSceneCollisionStore.getState().selectRecord(1);
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+    expect(useSceneCollisionStore.getState().activeMode).toBe('pinned');
   });
 });

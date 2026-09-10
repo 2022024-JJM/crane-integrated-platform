@@ -21,6 +21,7 @@ import {
   meshObbsIntersect,
   meshWorldBox,
 } from '../collision-volumes';
+import { isOverlayMesh, markOverlayMesh } from '../overlay-mesh';
 
 type BvhGeometry = BufferGeometry & { boundsTree?: MeshBVH };
 
@@ -60,6 +61,28 @@ describe('isCollidableMesh / collectCollidableMeshes', () => {
     expect(isCollidableMesh(line)).toBe(false);
   });
 
+  it('오버레이 표식이 있는 메쉬는 제외한다', () => {
+    const overlay = cube();
+    expect(isCollidableMesh(overlay)).toBe(true);
+    markOverlayMesh(overlay);
+    expect(isCollidableMesh(overlay)).toBe(false);
+  });
+
+  it('실루엣 마스크·헐(대상 메쉬의 자식)은 수집되지 않는다', () => {
+    // 실측 결함의 재현 — 마스크는 대상 지오메트리를 그대로 재사용하므로
+    // 표식이 없으면 같은 형상이 두 번 수집되고, 헐은 BVH 없는 사본이라
+    // 삼각형 판정이 영영 판정 불가를 답한다.
+    const target = cube();
+    const mask = new Mesh(target.geometry, new MeshBasicMaterial());
+    const hull = cube();
+    markOverlayMesh(mask);
+    markOverlayMesh(hull);
+    target.add(mask, hull);
+    const root = new Object3D();
+    root.add(target);
+    expect(collectCollidableMeshes(root, [])).toEqual([target]);
+  });
+
   it('boundingBox 가 없으면 계산해 두고 판정한다', () => {
     const mesh = cube();
     expect(mesh.geometry.boundingBox).toBeNull();
@@ -78,6 +101,25 @@ describe('isCollidableMesh / collectCollidableMeshes', () => {
     const result = collectCollidableMeshes(root, out);
     expect(result).toBe(out);
     expect(out).toEqual([visible]);
+  });
+});
+
+describe('markOverlayMesh / isOverlayMesh', () => {
+  it('표식 전에는 false, 표식 뒤에는 true — 다른 객체에 번지지 않는다', () => {
+    const a = new Object3D();
+    const b = new Object3D();
+    expect(isOverlayMesh(a)).toBe(false);
+    markOverlayMesh(a);
+    expect(isOverlayMesh(a)).toBe(true);
+    expect(isOverlayMesh(b)).toBe(false);
+  });
+
+  it('userData 를 쓰는 다른 코드와 충돌하지 않는다', () => {
+    const mesh = cube();
+    mesh.userData.somethingElse = 'keep';
+    markOverlayMesh(mesh);
+    expect(mesh.userData.somethingElse).toBe('keep');
+    expect(isOverlayMesh(mesh)).toBe(true);
   });
 });
 

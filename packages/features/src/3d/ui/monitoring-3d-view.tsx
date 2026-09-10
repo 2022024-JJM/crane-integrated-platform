@@ -38,6 +38,9 @@ import { RigDriver } from './rig-driver';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
+import { SceneCollisionPrediction } from './scene-collision-prediction';
+import { SceneCollisionPredictionHighlight } from './scene-collision-prediction-highlight';
+import { SceneCollisionPredictionOverlay } from './scene-collision-prediction-overlay';
 import { SceneCollisionMenu } from './scene-collision-menu';
 import {
   OutdoorWorkModelSimulation,
@@ -167,6 +170,9 @@ export function Monitoring3dView({
   // (scene-collision-hold)다. 리플레이는 기록 재생이라 정지·복원 대상이 아니다.
   const collisionActive = mode !== 'replay';
   const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
+  // 예측은 시뮬레이션 전용 — 가상 태그 파형만 미래 값이 정확하다
+  // (use-scene-collision-prediction 주석).
+  const predictionActive = mode === 'simulation';
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   useEffect(() => {
@@ -205,6 +211,24 @@ export function Monitoring3dView({
     const pose = computeCollisionViewPose(
       record.contactPoint,
       collisionViewRadius(resolveRecordNodes([record.a, record.b])),
+      sceneControllerRef.current?.getPose() ?? null,
+    );
+    sceneControllerRef.current?.moveTo(pose.position, pose.target);
+  }, []);
+
+  // "예상 지점 보기" — 충돌 지점 보기와 같은 수식. 대상 노드는 예측 당사자의
+  // 모델 루트다(예측 박스는 미래 위치지만 카메라는 현재 장비를 담아야 한다).
+  const handleViewPrediction = useCallback(() => {
+    const { predicted } = useSceneCollisionStore.getState();
+    if (!predicted) return;
+    const pose = computeCollisionViewPose(
+      predicted.contactPoint,
+      collisionViewRadius(
+        resolveRecordNodes([
+          { ...predicted.a, nodePath: '' },
+          { ...predicted.b, nodePath: '' },
+        ]),
+      ),
       sceneControllerRef.current?.getPose() ?? null,
     );
     sceneControllerRef.current?.moveTo(pose.position, pose.target);
@@ -307,6 +331,12 @@ export function Monitoring3dView({
                 onViewCollision={handleViewCollision}
               />
             ) : null}
+            {/* 예측 경보 — 실제 충돌 경보가 떠 있으면 스스로 내려간다. */}
+            {predictionActive ? (
+              <SceneCollisionPredictionOverlay
+                onViewPrediction={handleViewPrediction}
+              />
+            ) : null}
             {overlayExtras}
             {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
                 일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다. */}
@@ -378,7 +408,17 @@ export function Monitoring3dView({
               runner={collisionRunner}
             />
           ) : null}
+          {/* 검사기 직후 — 예측이 앞서면 감지의 변화 감지가 미래 행렬을
+              움직임으로 읽어 거짓 충돌을 보고한다. */}
+          {predictionActive ? (
+            <SceneCollisionPrediction
+              sceneInfo={sceneInfo}
+              enabled={collisionEnabled}
+              runner={collisionRunner}
+            />
+          ) : null}
           <SceneCollisionHighlight />
+          <SceneCollisionPredictionHighlight />
           {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍 — 감지가 도는 모드만. */}
           {collisionActive ? <SilhouetteOutlineWarmup /> : null}
           <OutdoorWorkModelSimulation

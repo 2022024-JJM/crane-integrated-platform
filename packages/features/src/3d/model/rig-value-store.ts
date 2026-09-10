@@ -245,6 +245,19 @@ export interface TagBindingTarget {
   offset: number;
 }
 
+/**
+ * 태그 값 → 저장소 값 환산. `applied = offset + value * scale`.
+ *
+ * 라이브 바인딩 소스(createTagBindingSource)와 충돌 예측의 미래 값 계산이
+ * **같은 공식을 써야** 한다 — 갈라지면 예측 자세가 실제 자세와 어긋난다.
+ */
+export function applyTagBinding(
+  target: TagBindingTarget,
+  value: number,
+): number {
+  return target.offset + value * target.scale;
+}
+
 export interface TagBindingSource extends JointValueSource {
   /** 값 버스(`publishTagValue`)가 호출한다. 시작 전이면 무시. */
   ingest(key: string, value: number): void;
@@ -271,7 +284,7 @@ export function createTagBindingSource(
     ingest(key, value) {
       if (!sink || !Number.isFinite(value)) return;
       for (const target of resolve(key)) {
-        sink.set(target.address, target.offset + value * target.scale, {
+        sink.set(target.address, applyTagBinding(target, value), {
           smooth: true,
         });
       }

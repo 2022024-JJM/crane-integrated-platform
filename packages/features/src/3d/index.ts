@@ -85,14 +85,19 @@ export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
 export { SceneCollisionMenu } from './ui/scene-collision-menu';
 export { SceneCollisionPanel } from './ui/scene-collision-panel';
+export { SceneCollisionPrediction } from './ui/scene-collision-prediction';
+export { SceneCollisionPredictionHighlight } from './ui/scene-collision-prediction-highlight';
+export { SceneCollisionPredictionOverlay } from './ui/scene-collision-prediction-overlay';
 export { type SceneCollisionRunner } from './model/scene-collision-hold';
 export {
   useSceneCollisionStore,
   type SceneCollisionActiveMode,
   type SceneCollisionRecord,
   type SceneCollisionRecordParty,
+  type ScenePredictedCollision,
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export { useSceneCollisionPrediction } from './model/use-scene-collision-prediction';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
 export { ScenePerfHud } from './ui/scene-perf-hud';
 export { ScenePerfProbe } from './ui/scene-perf-probe';

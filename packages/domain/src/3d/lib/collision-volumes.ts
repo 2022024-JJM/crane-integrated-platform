@@ -8,6 +8,7 @@ import {
 } from 'three';
 import { OBB } from 'three/examples/jsm/math/OBB.js';
 import type { HitPointInfo, MeshBVH } from 'three-mesh-bvh';
+import { isOverlayMesh } from './overlay-mesh';
 
 /**
  * 씬 객체 충돌 감지의 기하 프리미티브 — 3단계(AABB → OBB → 삼각형) 각각의
@@ -44,12 +45,18 @@ function isLineMesh(object: Object3D): boolean {
 }
 
 /**
- * 충돌 판정 대상이 되는 메쉬인지. 라인·정점 없는 지오메트리·빈 박스는 제외.
- * `geometry.boundingBox` 가 없으면 여기서 한 번 계산한다(인스턴스 간 공유
- * 지오메트리라 1회 비용).
+ * 충돌 판정 대상이 되는 메쉬인지. 라인·렌더 전용 오버레이·정점 없는
+ * 지오메트리·빈 박스는 제외. `geometry.boundingBox` 가 없으면 여기서 한 번
+ * 계산한다(인스턴스 간 공유 지오메트리라 1회 비용).
+ *
+ * 오버레이 제외가 필요한 이유는 실루엣 테두리가 대상 메시의 **자식**으로
+ * 붙기 때문이다 — 마스크는 대상 지오메트리를 그대로 재사용해 같은 형상이 두
+ * 번 수집되고, 헐은 BVH 없는 스무딩 사본이라 삼각형 판정이 영영 판정 불가를
+ * 답해 그 쌍이 BVH 재시도 주기마다 다시 큐에 들어간다(overlay-mesh.ts).
  */
 export function isCollidableMesh(object: Object3D): object is Mesh {
   if (!(object instanceof Mesh) || isLineMesh(object)) return false;
+  if (isOverlayMesh(object)) return false;
   const geometry = object.geometry as BufferGeometry | undefined;
   if (!geometry || !geometry.getAttribute('position')) return false;
   if (!geometry.boundingBox) geometry.computeBoundingBox();

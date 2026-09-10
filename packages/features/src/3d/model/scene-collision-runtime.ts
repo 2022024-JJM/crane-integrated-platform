@@ -1,11 +1,6 @@
 import { Box3, Vector3, type Mesh, type Object3D } from 'three';
 import {
   approxContactPoint,
-  collectCollidableMeshes,
-  getMeshPath,
-  meshesIntersectExact,
-  meshesWithinDistance,
-  meshObbsIntersect,
   meshWorldBox,
   modelObjectRegistry,
   type SavedModelInfo,
@@ -16,10 +11,17 @@ import {
   BVH_RETRY_MS,
   copyMatrix,
   matrixChanged,
-  MIN_MESH_EXTENT,
   pairKey,
-  SEPARATION_MARGIN,
 } from '../lib/scene-collision-pairs';
+import {
+  buildProbeMeshes,
+  probeEntriesSeparated,
+  probeEntryPair,
+  unionProbeBox,
+  type ProbeEntry,
+  type ProbeHitMeshes,
+  type ProbeMesh,
+} from '../lib/scene-collision-probe';
 
 /**
  * 씬 객체 충돌 감지 런타임 — React 밖 모듈 싱글턴. 훅(use-scene-collision-
@@ -61,19 +63,17 @@ import {
  * 건너뛰고 BVH_RETRY_MS 뒤 다시 본다.
  */
 
-interface MeshEntry {
-  mesh: Mesh;
-  nodePath: string;
-  box: Box3;
+/** 판정 캐스케이드의 ProbeMesh + 변화 감지용 행렬 서명. */
+interface MeshEntry extends ProbeMesh {
   lastMatrix: Float64Array;
 }
 
-interface ModelEntry {
+/** 판정 캐스케이드의 ProbeEntry + 스케줄링용 신원·dirty. */
+interface ModelEntry extends ProbeEntry {
   id: string;
   model: SavedModelInfo;
   root: Object3D;
   meshes: MeshEntry[];
-  box: Box3;
   dirty: boolean;
 }
 
@@ -112,13 +112,7 @@ export interface SceneCollisionHit {
 }
 
 const EMPTY_MODELS: SavedModelInfo[] = [];
-const _meshScratch: Mesh[] = [];
-const _box = new Box3();
-const _size = new Vector3();
 const _contact = new Vector3();
-const _candA: MeshEntry[] = [];
-const _candB: MeshEntry[] = [];
-const _marginBox = new Box3();
 
 function defaultClock(): number {
   return performance.now();
@@ -268,7 +262,7 @@ export class SceneCollisionRuntime {
         meshWorldBox(m.mesh, m.box);
         entry.dirty = true;
       }
-      if (entry.dirty) this.refreshModelBox(entry);
+      if (entry.dirty) unionProbeBox(entry);
     }
 
     // B. dirty 모델이 낀 쌍만 큐에. 억제된 쌍도 분리 판정을 위해 넣는다.
@@ -339,81 +333,29 @@ export class SceneCollisionRuntime {
 
   // ---- 내부 ----
 
-  private hitMeshA: MeshEntry | null = null;
-  private hitMeshB: MeshEntry | null = null;
+  /** probeEntryPair 의 출력 슬롯 — 인스턴스당 하나를 재사용한다. */
+  private readonly hitMeshes: ProbeHitMeshes = { a: null, b: null };
 
   /**
-   * 억제 해제 판정 — **메쉬 단위**로 떨어졌는지. 모델 전체 AABB 는 크레인처럼
-   * 길고 큰 모델끼리 붐이 상대 위를 지나는 동안 계속 겹쳐 있어, 그것을
-   * 기준으로 하면 메쉬는 떨어졌는데도 억제가 영영 풀리지 않는다(재충돌 미보고).
-   * 후보 메쉬 쌍 중 하나라도 "AABB 를 SEPARATION_MARGIN 만큼 넓혀도 겹치고,
-   * 같은 margin 으로 부풀린 OBB 도 교차하고, 삼각형 최단 거리까지 margin
-   * 이하" 면 아직 붙은 것이다. 카탈로그 크레인은 대부분 단일 메쉬라 OBB 가
-   * 실루엣 전체를 감싸 두 OBB 가 늘 겹치므로 삼각형 단계가 최종 판정이다.
-   * margin 이 경계 떨림을 막는 히스테리시스다.
+   * 억제 해제 판정 — 캐스케이드는 `probeEntriesSeparated` 가 한다(그 주석에
+   * 메쉬 단위로 보는 이유와 히스테리시스 근거가 있다). 여기서는 job 을 항목
+   * 두 개로 풀어 넘기기만 한다.
    */
   private meshPairsSeparated(job: PairJob): boolean {
-    _marginBox.copy(job.b.box).expandByScalar(SEPARATION_MARGIN);
-    if (!job.a.box.intersectsBox(_marginBox)) return true;
-    _candA.length = 0;
-    _candB.length = 0;
-    for (const m of job.a.meshes) {
-      if (m.box.intersectsBox(_marginBox)) _candA.push(m);
-    }
-    _marginBox.copy(job.a.box).expandByScalar(SEPARATION_MARGIN);
-    for (const m of job.b.meshes) {
-      if (m.box.intersectsBox(_marginBox)) _candB.push(m);
-    }
-    for (const ma of _candA) {
-      _marginBox.copy(ma.box).expandByScalar(SEPARATION_MARGIN);
-      for (const mb of _candB) {
-        if (!_marginBox.intersectsBox(mb.box)) continue;
-        if (!meshObbsIntersect(ma.mesh, mb.mesh, SEPARATION_MARGIN)) continue;
-        // OBB 는 실루엣 전체를 감싸므로(단일 메쉬 크레인) 삼각형 거리로 확정한다.
-        // BVH 가 아직 없으면 보수적으로 "붙음" — 빌드되면 다음 dirty 틱에 다시 본다.
-        const near = meshesWithinDistance(ma.mesh, mb.mesh, SEPARATION_MARGIN);
-        if (near === null || near) return false;
-      }
-    }
-    return true;
+    return probeEntriesSeparated(job.a, job.b);
   }
 
-  /** 모델 AABB 가 겹친 쌍의 메쉬 단위 검사. 'hit' 이면 hitMeshA/B 가 채워진다. */
+  /** 모델 AABB 가 겹친 쌍의 메쉬 단위 검사. 'hit' 이면 hitMeshes 가 채워진다. */
   private testPair(job: PairJob): 'hit' | 'clear' | 'no-bvh' {
-    _candA.length = 0;
-    _candB.length = 0;
-    for (const m of job.a.meshes) {
-      if (m.box.intersectsBox(job.b.box)) _candA.push(m);
-    }
-    for (const m of job.b.meshes) {
-      if (m.box.intersectsBox(job.a.box)) _candB.push(m);
-    }
-    let bvhMissing = false;
-    for (const ma of _candA) {
-      for (const mb of _candB) {
-        if (!ma.box.intersectsBox(mb.box)) continue;
-        if (!meshObbsIntersect(ma.mesh, mb.mesh)) continue;
-        const exact = meshesIntersectExact(ma.mesh, mb.mesh);
-        if (exact === null) {
-          bvhMissing = true;
-          continue;
-        }
-        if (exact) {
-          this.hitMeshA = ma;
-          this.hitMeshB = mb;
-          return 'hit';
-        }
-      }
-    }
-    return bvhMissing ? 'no-bvh' : 'clear';
+    return probeEntryPair(job.a, job.b, this.hitMeshes);
   }
 
   private buildHit(job: PairJob): SceneCollisionHit {
-    const ma = this.hitMeshA as MeshEntry;
-    const mb = this.hitMeshB as MeshEntry;
+    const ma = this.hitMeshes.a as ProbeMesh;
+    const mb = this.hitMeshes.b as ProbeMesh;
     approxContactPoint(ma.mesh, mb.mesh, _contact);
-    this.hitMeshA = null;
-    this.hitMeshB = null;
+    this.hitMeshes.a = null;
+    this.hitMeshes.b = null;
     return {
       key: job.key,
       a: {
@@ -453,20 +395,11 @@ export class SceneCollisionRuntime {
   }
 
   private buildEntry(model: SavedModelInfo, root: Object3D): ModelEntry {
-    const meshes: MeshEntry[] = [];
-    for (const mesh of collectCollidableMeshes(root, _meshScratch)) {
-      const nodePath = getMeshPath(root, mesh);
-      if (nodePath === null) continue;
-      meshWorldBox(mesh, _box);
-      if (_box.getSize(_size).length() < MIN_MESH_EXTENT) continue;
-      meshes.push({
-        mesh,
-        nodePath,
-        box: new Box3(),
-        lastMatrix: new Float64Array(16).fill(Number.NaN),
-      });
-    }
-    _meshScratch.length = 0;
+    const meshes: MeshEntry[] = buildProbeMeshes(root).map((m) => ({
+      ...m,
+      // 서명을 NaN 으로 시작해 첫 tick 이 반드시 모든 메쉬를 재게 한다.
+      lastMatrix: new Float64Array(16).fill(Number.NaN),
+    }));
     return { id: model.id, model, root, meshes, box: new Box3(), dirty: true };
   }
 
@@ -474,11 +407,6 @@ export class SceneCollisionRuntime {
   private markAllDirty(entry: ModelEntry): void {
     for (const m of entry.meshes) m.lastMatrix.fill(Number.NaN);
     entry.dirty = true;
-  }
-
-  private refreshModelBox(entry: ModelEntry): void {
-    entry.box.makeEmpty();
-    for (const m of entry.meshes) entry.box.union(m.box);
   }
 
   /**

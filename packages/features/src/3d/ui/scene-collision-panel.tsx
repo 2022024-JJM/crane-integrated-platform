@@ -3,8 +3,13 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
+import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
-import { HISTORY_MAX } from '../lib/scene-collision-pairs';
+import {
+  HISTORY_MAX,
+  PREDICTION_HORIZON_MAX_SEC,
+  PREDICTION_HORIZON_MIN_SEC,
+} from '../lib/scene-collision-pairs';
 import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 import {
   useSceneCollisionStore,
@@ -22,8 +27,16 @@ interface SceneCollisionPanelProps {
 }
 
 /**
- * 충돌 감지 패널 — 감지 on/off, 충돌 시 정지 여부, 충돌 기록. 에디터 팔레트
- * "충돌" 탭과 모니터링 독 팝업(SceneCollisionMenu)이 함께 쓴다.
+ * 충돌 감지 패널 — 감지 on/off, 충돌 시 정지 여부, 충돌 예측, 충돌 기록.
+ * 에디터 팔레트 "충돌" 탭과 모니터링 독 팝업(SceneCollisionMenu)이 함께 쓴다.
+ *
+ * 예측 줄은 **시뮬레이션에서만** 보인다. 실시간은 값의 미래가 없어 예측이
+ * 돌지 않으므로(use-scene-collision-prediction), 눌러도 아무 일이 없는 토글을
+ * 두지 않는다. 예측은 감지 하위 항목이라 감지가 꺼지면 함께 비활성이다.
+ *
+ * 예측 **결과**는 여기 두지 않는다 — 씬 안 카운트다운과 화면 경보가 같은
+ * 정보를 이미 보여 주는데 패널에 카드를 하나 더 두면 같은 말이 세 번
+ * 나온다(2026-09-10 제거). 이 패널의 역할은 설정과 충돌 기록이다.
  *
  * 기록은 최신이 위이고 HISTORY_MAX 개까지 남는다. 행을 누르면 값 생산자를
  * 멈추고 그 시점 자세로 돌아가며(선택 행 강조 + 빨간 박스), 같은 행을 다시
@@ -43,6 +56,16 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
   const setEnabled = useSceneCollisionStore((s) => s.setEnabled);
   const setPauseOnCollision = useSceneCollisionStore(
     (s) => s.setPauseOnCollision,
+  );
+  const predictionEnabled = useSceneCollisionStore((s) => s.predictionEnabled);
+  const predictionHorizonSec = useSceneCollisionStore(
+    (s) => s.predictionHorizonSec,
+  );
+  const setPredictionEnabled = useSceneCollisionStore(
+    (s) => s.setPredictionEnabled,
+  );
+  const setPredictionHorizonSec = useSceneCollisionStore(
+    (s) => s.setPredictionHorizonSec,
   );
   const selectRecord = useSceneCollisionStore((s) => s.selectRecord);
   const clearHistory = useSceneCollisionStore((s) => s.clearHistory);
@@ -70,6 +93,50 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           aria-label={t('monitoring:editor.collision.pauseOnCollision')}
         />
       </label>
+      {isRealtime ? null : (
+        <>
+          <label className="flex items-center justify-between gap-2 text-[11px]">
+            <span
+              className={cn('font-medium', !enabled && 'text-muted-foreground')}
+            >
+              {t('monitoring:editor.collision.predict')}
+            </span>
+            <Switch
+              checked={predictionEnabled}
+              disabled={!enabled}
+              onCheckedChange={setPredictionEnabled}
+              aria-label={t('monitoring:editor.collision.predict')}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-[11px]">
+            <span
+              className={cn(
+                'font-medium',
+                (!enabled || !predictionEnabled) && 'text-muted-foreground',
+              )}
+            >
+              {t('monitoring:editor.collision.predictHorizon')}
+            </span>
+            <InputNumber
+              value={predictionHorizonSec}
+              step={1}
+              min={PREDICTION_HORIZON_MIN_SEC}
+              max={PREDICTION_HORIZON_MAX_SEC}
+              disabled={!enabled || !predictionEnabled}
+              // 입력을 마치면 "N초 이내" 로 보여 준다 — 숫자만 있으면 그 값이
+              // 무엇을 뜻하는지 안 읽힌다. `unit` prop 은 편집 중
+              // 툴팁(editPreview)에만 쓰이므로 여기서는 `format` 이 맞다 —
+              // 포커스 중에는 raw 숫자로 돌아가 편집을 방해하지 않는다.
+              format={(value) =>
+                t('monitoring:editor.collision.predictHorizonValue', { value })
+              }
+              className="h-6 w-28"
+              inputClassName="text-[11px]"
+              onChange={setPredictionHorizonSec}
+            />
+          </label>
+        </>
+      )}
       <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
         {t(
           isRealtime

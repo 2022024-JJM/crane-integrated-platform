@@ -56,6 +56,8 @@ import {
   SceneSurfaceCamera,
   RigDriver,
   SceneCollisionDetector,
+  SceneCollisionPrediction,
+  SceneCollisionPredictionHighlight,
   SceneCameraLimits,
   SceneCollisionHighlight,
   ScenePerfHud,
@@ -291,7 +293,12 @@ export function SceneObjectsEditCanvas({
 
     const preloadItem = (item: SceneModelCatalogItem) => {
       // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
-      useGLTF.preload(withBaseUrl(item.path), true, true, extendGltfLoaderWithKtx2);
+      useGLTF.preload(
+        withBaseUrl(item.path),
+        true,
+        true,
+        extendGltfLoaderWithKtx2,
+      );
       void prefetchModelBottomOffset(item.path);
     };
 
@@ -884,7 +891,17 @@ export function SceneObjectsEditCanvas({
           enabled={collisionEnabled}
           runner="simulation"
         />
+        {/* 검사기 직후 — 예측이 앞서면 감지의 변화 감지가 미래 행렬을 움직임
+            으로 읽어 거짓 충돌을 보고한다. 에디터는 항상 시뮬레이션이다.
+            전체 화면 경보는 두지 않는다 — 빨간 충돌 경보도 없고, 설계 중인
+            화면에 배너가 뜨면 작업을 방해한다(패널 + 씬 표시로 충분). */}
+        <SceneCollisionPrediction
+          sceneInfo={sceneInfo}
+          enabled={collisionEnabled}
+          runner="simulation"
+        />
         <SceneCollisionHighlight />
+        <SceneCollisionPredictionHighlight />
         {/* 선택·충돌 테두리(실루엣) 셰이더 프리워밍 — 사본은 아래 모델의
             prepareOutline 이 워밍업 큐에 넣는다. */}
         <SilhouetteOutlineWarmup />

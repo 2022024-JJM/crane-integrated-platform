@@ -178,7 +178,13 @@
       "deselect": "Selectionem tolle",
       "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat.",
       "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
-      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
+      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat.",
+      "predict": "Praedictio collisionis",
+      "predictHorizon": "Prospectus",
+      "predictHorizonUnit": "s",
+      "predictHint": "Praedictio solum dum simulatio agitur operatur.\nQuantum ante prospiciatur statuit — spatium longius collisiones remotiores capit sed tardius renovatur, et propter lenitionem tempus reliquum circa 0.35s praematurum est.",
+      "viewPredictContact": "Punctum praevisum videre",
+      "predictHorizonValue": "intra {{value}}s"
     },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
@@ -321,6 +327,9 @@
     "contact": "Punctum contactus (proximum)",
     "alertTitle": "Collisio detecta",
     "pausedTitle": "Collisio — simulatio stetit",
-    "resume": "Perge"
+    "resume": "Perge",
+    "predictTitle": "Collisio praevisa",
+    "predictLead": "post ~{{seconds}}s",
+    "predictUntilImpact": "Ad impactum"
   }
 }

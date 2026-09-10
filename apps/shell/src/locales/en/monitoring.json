@@ -192,7 +192,13 @@
       "deselect": "Deselect",
       "selectedHint": "Click a record to pause the simulation and return to that pose.",
       "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
-      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
+      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values.",
+      "predict": "Collision prediction",
+      "predictHorizon": "Look ahead",
+      "predictHorizonUnit": "s",
+      "predictHint": "Prediction runs only while the simulation is playing.\nSets how far ahead to look — a longer window catches distant collisions but refreshes more slowly, and smoothing makes the remaining time about 0.35s early.",
+      "viewPredictContact": "View predicted point",
+      "predictHorizonValue": "within {{value}}s"
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -335,6 +341,9 @@
     "contact": "Contact point (approx.)",
     "alertTitle": "Collision detected",
     "pausedTitle": "Collision — simulation paused",
-    "resume": "Resume"
+    "resume": "Resume",
+    "predictTitle": "Predicted collision",
+    "predictLead": "in ~{{seconds}}s",
+    "predictUntilImpact": "To impact"
   }
 }

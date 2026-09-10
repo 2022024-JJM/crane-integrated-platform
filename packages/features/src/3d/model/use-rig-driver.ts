@@ -2,9 +2,11 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { Euler, Quaternion, Vector3, type Object3D } from 'three';
 import {
+  captureGhostNodePose,
   capturePose,
   degToRad,
   findMeshByPath,
+  getMeshPath,
   getRestPose,
   invalidateShadows,
   modelObjectRegistry,
@@ -12,6 +14,7 @@ import {
   type RigConstraint,
   type RigDefinition,
   type RigJoint,
+  type GhostNodePose,
   type SavedModelInfo,
   type TagMappingNodeTarget,
 } from '@crane/domain/3d';
@@ -232,6 +235,278 @@ type ChannelEntry = ChannelDelta;
 
 const EMPTY_DELTAS: ReadonlyArray<ChannelDelta> = [];
 
+/** 값 저장소 주소 → 값. 라이브는 rigValueStore, 예측은 미래 값 맵을 본다. */
+export type RigValueResolve = (address: string) => number;
+
+interface ApplyPoseOptions {
+  /** 기즈모 드래그 중 — 루트는 적용을 건너뛴다. */
+  dragging: boolean;
+  /**
+   * 루트 부기(`lastApplied`·`lastAppliedDeltas`)를 갱신할지. 라이브 경로만
+   * true 다. 차용(예측)은 자세를 되돌리므로 부기를 건드리면 handoff 가
+   * "기즈모가 옮겼다" 고 오판한다.
+   */
+  track: boolean;
+}
+
+interface AppliedPoseValues {
+  /** 한계 클램프·구속조건 계산까지 끝난 관절 값 */
+  jointValues: Map<string, number>;
+  /** node 대상 맵핑에 적용된 Δ(mapping id 기준) */
+  mappingValues: Map<string, number>;
+}
+
+/**
+ * 인스턴스 하나의 자세를 계산해 노드에 쓴다 — (1) 관절 값 수집 →
+ * (2) 구속조건 전개 → (3) 노드별 채널 Δ 누적 → (4) rest 기준 적용.
+ *
+ * `resolve` 로 값의 출처를 갈아 끼울 수 있게 두었다. 라이브 경로는
+ * `rigValueStore`, 충돌 예측은 "N초 뒤 태그 값" 맵을 넘겨 같은 계산으로
+ * 미래 자세를 만든다(rigPoseBorrow).
+ */
+function applyInstancePose(
+  instance: DriverInstance,
+  resolve: RigValueResolve,
+  { dragging, track }: ApplyPoseOptions,
+): AppliedPoseValues {
+  const modelId = instance.model.id;
+
+  // (1) 관절 값 수집 — 한계 클램프까지 해 두어야 구속조건의 입력이
+  //     화면에 실제 적용되는 값과 같다.
+  const jointValues = new Map<string, number>();
+  for (const { joint } of instance.joints) {
+    jointValues.set(
+      joint.id,
+      clampJointValue(joint, resolve(makeJointAddress(modelId, joint.id))),
+    );
+  }
+
+  // (2) 구속조건 — 배열 순서대로. 출력도 그 관절의 한계로 자른다.
+  for (const constraint of instance.constraints) {
+    const output = instance.joints.find(
+      (b) => b.joint.id === constraint.output,
+    );
+    if (!output) continue;
+    const input = jointValues.get(constraint.input) ?? 0;
+    jointValues.set(
+      constraint.output,
+      clampJointValue(
+        output.joint,
+        input * constraint.factor + (constraint.offset ?? 0),
+      ),
+    );
+  }
+
+  // (3) 노드별 채널 누적 — 맵핑 먼저, 관절이 같은 키를 덮는다.
+  const perNode = new Map<Object3D, Map<string, ChannelEntry>>();
+  const entryFor = (node: Object3D) => {
+    let m = perNode.get(node);
+    if (!m) {
+      m = new Map();
+      perNode.set(node, m);
+    }
+    return m;
+  };
+  // 드래그 중에도 루트 엔트리는 계산한다(적용만 건너뛴다) — readout 의
+  // mappingValues 가 드래그 중에 비지 않게.
+  const mappingValues = new Map<string, number>();
+  for (const binding of instance.mappings) {
+    const d = resolve(makeJointAddress(modelId, binding.id));
+    mappingValues.set(binding.id, d);
+    const { channel, axis } = binding.target;
+    entryFor(binding.node).set(`${channel}:${axis}`, {
+      channel,
+      axis,
+      delta: d,
+    });
+  }
+  for (const { joint, node } of instance.joints) {
+    const channel = jointChannel(joint);
+    entryFor(node).set(`${channel}:${joint.axis}`, {
+      channel,
+      axis: joint.axis,
+      delta: jointDelta(joint, jointValues.get(joint.id) ?? 0),
+    });
+  }
+
+  // (4) 적용. 드래그 중인 루트는 손대지 않는다 — lastApplied·Δ 도 드래그
+  //     직전 값으로 남아 handoff·커밋이 그것을 벗긴다.
+  for (const [node, entries] of perNode) {
+    const driven = instance.drivenNodes.get(node);
+    if (!driven || (driven.isRoot && dragging)) continue;
+    beginNodePose(node, driven.rest);
+    for (const { channel, axis, delta: d } of entries.values()) {
+      addChannelDelta(node, channel, axis, d);
+    }
+    if (driven.isRoot && track) {
+      if (driven.lastApplied) {
+        driven.lastApplied.position.copy(node.position);
+        driven.lastApplied.quaternion.copy(node.quaternion);
+        driven.lastApplied.scale.copy(node.scale);
+      } else {
+        driven.lastApplied = capturePose(node);
+      }
+      // 엔트리 객체는 이 프레임에 새로 만든 것이라 그대로 보관해도 된다.
+      const list = (driven.lastAppliedDeltas ??= []);
+      list.length = 0;
+      for (const entry of entries.values()) list.push(entry);
+    }
+  }
+
+  return { jointValues, mappingValues };
+}
+
+/** 라이브 경로의 값 출처. 모듈 레벨에 한 번 만들어 프레임당 할당을 없앤다. */
+const liveResolve: RigValueResolve = (address) => rigValueStore.get(address);
+
+// ---- 자세 차용(rigPoseBorrow) ----
+
+/** 차용 중 되돌릴 로컬 transform 스냅샷. 배열을 재사용해 할당을 없앤다. */
+interface BorrowedPose {
+  node: Object3D;
+  position: Vector3;
+  quaternion: Quaternion;
+  scale: Vector3;
+}
+
+const borrowedPoses: BorrowedPose[] = [];
+let borrowedCount = 0;
+let borrowedRoots: Object3D[] = [];
+/** 살아 있는 드라이버들의 인스턴스 맵. 훅이 마운트·언마운트에서 등록·해제한다. */
+const driverInstanceMaps = new Set<Map<string, DriverInstance>>();
+
+function savePose(node: Object3D): void {
+  let slot = borrowedPoses[borrowedCount];
+  if (!slot) {
+    slot = {
+      node,
+      position: new Vector3(),
+      quaternion: new Quaternion(),
+      scale: new Vector3(),
+    };
+    borrowedPoses[borrowedCount] = slot;
+  }
+  slot.node = node;
+  slot.position.copy(node.position);
+  slot.quaternion.copy(node.quaternion);
+  slot.scale.copy(node.scale);
+  borrowedCount += 1;
+}
+
+/**
+ * 자세 차용 — 같은 프레임 안에서 실제 노드 트리에 다른 값(미래 태그 값)을
+ * 적용해 무언가를 측정하고 즉시 되돌리는 통로. 충돌 예측이 쓴다.
+ *
+ * 사본(clone) 대신 실제 트리를 빌리는 이유: `getRestPose` 는
+ * `WeakMap<Object3D, RestPose>` 이고 clone 직후에 seed 되므로 이미 구동된
+ * 트리를 다시 clone 하면 "구동된 자세" 가 rest 로 굳는다. `accumulatedParentScale`
+ * 도 라이브 부모 체인을 걷고, `modelObjectRegistry` 는 같은 id 재등록을
+ * 덮어쓴다. 무엇보다 **루트 rest 는 기즈모 종료 프레임에 다시 잡히므로**
+ * (reanchorRootIfMoved) 인스턴스를 따로 만들면 rest 가 갈라진다.
+ *
+ * **`borrow`/`release` 는 같은 콜백 안에서 반드시 짝을 이뤄야 한다**
+ * (호출자가 try/finally 로 감싼다). R3F 는 모든 useFrame 뒤에 렌더하고 렌더가
+ * `scene.updateMatrixWorld()` 를 다시 도므로 화면에는 새어 나가지 않지만,
+ * 프레임 안의 다른 소비자를 막으려면 `release` 가 행렬까지 되돌려야 한다.
+ *
+ * `release` 의 `updateMatrixWorld(true)` 는 선택이 아니다. three 의
+ * `updateMatrixWorld(force)` 는 force 경로를 지나며 `matrixWorldNeedsUpdate`
+ * 를 내리고, `matrixAutoUpdate` 가 false 인 노드는 `matrix` 재합성을
+ * 건너뛴다 — 로컬만 되돌리면 그런 노드는 미래 자세로 굳는다.
+ *
+ * **`invalidateShadows()` 를 부르지 않는다.** 같은 프레임에 되돌리므로 화면이
+ * 바뀌지 않는, "노드를 움직이면 그림자를 무효화한다" 규칙의 유일한 예외다.
+ * 부르면 예측 주기마다 shadow pass 가 강제되어 온디맨드 최적화가 무력해진다.
+ */
+export const rigPoseBorrow = {
+  /** 드라이버가 실제로 구동하는(리그 또는 node 맵핑이 있는) 모델 id. */
+  drivenModelIds(): string[] {
+    const ids = new Set<string>();
+    for (const map of driverInstanceMaps) {
+      for (const id of map.keys()) ids.add(id);
+    }
+    return [...ids];
+  },
+
+  /** 차용 중인지 — 중첩 차용을 막는다. */
+  get active(): boolean {
+    return borrowedCount > 0;
+  },
+
+  /**
+   * `resolve` 가 주는 값으로 모든 구동 모델의 자세를 다시 쓰고 월드 행렬을
+   * 갱신한다. 이미 차용 중이면 아무것도 하지 않고 false 를 돌려준다.
+   */
+  borrow(resolve: RigValueResolve): boolean {
+    if (borrowedCount > 0) return false;
+    borrowedRoots.length = 0;
+    for (const map of driverInstanceMaps) {
+      for (const instance of map.values()) {
+        for (const driven of instance.drivenNodes.values()) {
+          savePose(driven.node);
+        }
+        applyInstancePose(instance, resolve, { dragging: false, track: false });
+        borrowedRoots.push(instance.root);
+      }
+    }
+    if (borrowedCount === 0) return false;
+    for (const root of borrowedRoots) root.updateMatrixWorld(true);
+    return true;
+  },
+
+  /** 저장한 로컬 transform 과 월드 행렬을 되돌린다. */
+  release(): void {
+    if (borrowedCount === 0) return;
+    for (let i = 0; i < borrowedCount; i += 1) {
+      const slot = borrowedPoses[i];
+      slot.node.position.copy(slot.position);
+      slot.node.quaternion.copy(slot.quaternion);
+      slot.node.scale.copy(slot.scale);
+    }
+    borrowedCount = 0;
+    for (const root of borrowedRoots) root.updateMatrixWorld(true);
+    borrowedRoots.length = 0;
+  },
+
+  /**
+   * 차용 중인 자세를 스냅샷으로 뜬다 — 충돌 예측의 고스트가 이 값으로
+   * 별도 clone 을 세운다. **`borrow` 와 `release` 사이에서만** 의미가 있다.
+   *
+   * 구동 노드만 담는다. 나머지 노드는 GLTF rest 그대로이고 고스트 clone 도
+   * 같은 rest 에서 시작하므로 덮어쓸 필요가 없다. 노드 경로는 여기서
+   * 계산한다 — 예측 쌍이 바뀔 때만 부르는 경로라 매 프레임 비용이 아니다.
+   *
+   * 구동 모델이 아니면(리그도 node 맵핑도 없는 정적 장비) null 이다. 그런
+   * 장비는 미래 자세가 현재와 같아 고스트를 그리면 실물과 겹친 이중상만 된다.
+   */
+  captureModelPose(modelId: string): {
+    path: string;
+    nodes: GhostNodePose[];
+  } | null {
+    for (const map of driverInstanceMaps) {
+      const instance = map.get(modelId);
+      if (!instance) continue;
+      const nodes: GhostNodePose[] = [];
+      for (const driven of instance.drivenNodes.values()) {
+        const path = driven.isRoot
+          ? ''
+          : getMeshPath(instance.root, driven.node);
+        if (path === null) continue;
+        nodes.push(captureGhostNodePose(path, driven.node));
+      }
+      return { path: instance.model.path, nodes };
+    }
+    return null;
+  },
+
+  /** 테스트 전용 — 전역 상태를 비운다. */
+  resetForTest(): void {
+    borrowedCount = 0;
+    borrowedRoots = [];
+    driverInstanceMaps.clear();
+  },
+};
+
 interface UseRigDriverParams {
   rigs: RigDefinition[] | undefined;
   models: SavedModelInfo[] | undefined;
@@ -260,7 +535,11 @@ export function useRigDriver({
   // 아닌 자세로 보이면 안 된다.
   useEffect(() => {
     const instances = instancesRef.current;
+    // 자세 차용(충돌 예측)이 이 맵을 읽는다 — 인스턴스를 따로 만들지 않는
+    // 이유는 rigPoseBorrow 주석에 있다.
+    driverInstanceMaps.add(instances);
     return () => {
+      driverInstanceMaps.delete(instances);
       for (const instance of instances.values()) disposeInstance(instance);
       instances.clear();
       rigLiveReadouts.clear();
@@ -322,94 +601,15 @@ export function useRigDriver({
         reanchorRootIfMoved(instance);
       }
 
-      // (1) 관절 값 수집 — 한계 클램프까지 해 두어야 구속조건의 입력이
-      //     화면에 실제 적용되는 값과 같다.
-      const values = new Map<string, number>();
-      for (const { joint } of instance.joints) {
-        values.set(
-          joint.id,
-          clampJointValue(
-            joint,
-            rigValueStore.get(makeJointAddress(model.id, joint.id)),
-          ),
-        );
-      }
-
-      // (2) 구속조건 — 배열 순서대로. 출력도 그 관절의 한계로 자른다.
-      for (const constraint of instance.constraints) {
-        const output = instance.joints.find(
-          (b) => b.joint.id === constraint.output,
-        );
-        if (!output) continue;
-        const input = values.get(constraint.input) ?? 0;
-        values.set(
-          constraint.output,
-          clampJointValue(
-            output.joint,
-            input * constraint.factor + (constraint.offset ?? 0),
-          ),
-        );
-      }
-
-      // (3) 노드별 채널 누적 — 맵핑 먼저, 관절이 같은 키를 덮는다.
-      const perNode = new Map<Object3D, Map<string, ChannelEntry>>();
-      const entryFor = (node: Object3D) => {
-        let m = perNode.get(node);
-        if (!m) {
-          m = new Map();
-          perNode.set(node, m);
-        }
-        return m;
-      };
-      // 드래그 중에도 루트 엔트리는 계산한다(적용만 건너뛴다) — readout 의
-      // mappingValues 가 드래그 중에 비지 않게.
-      const mappingValues = new Map<string, number>();
-      for (const binding of instance.mappings) {
-        const d = rigValueStore.get(makeJointAddress(model.id, binding.id));
-        mappingValues.set(binding.id, d);
-        const { channel, axis } = binding.target;
-        entryFor(binding.node).set(`${channel}:${axis}`, {
-          channel,
-          axis,
-          delta: d,
-        });
-      }
-      for (const { joint, node } of instance.joints) {
-        const channel = jointChannel(joint);
-        entryFor(node).set(`${channel}:${joint.axis}`, {
-          channel,
-          axis: joint.axis,
-          delta: jointDelta(joint, values.get(joint.id) ?? 0),
-        });
-      }
-
-      // (4) 적용. 드래그 중인 루트는 손대지 않는다 — lastApplied·Δ 도 드래그
-      //     직전 값으로 남아 handoff·커밋이 그것을 벗긴다.
-      for (const [node, entries] of perNode) {
-        const driven = instance.drivenNodes.get(node);
-        if (!driven || (driven.isRoot && dragging)) continue;
-        beginNodePose(node, driven.rest);
-        for (const { channel, axis, delta: d } of entries.values()) {
-          addChannelDelta(node, channel, axis, d);
-        }
-        if (driven.isRoot) {
-          if (driven.lastApplied) {
-            driven.lastApplied.position.copy(node.position);
-            driven.lastApplied.quaternion.copy(node.quaternion);
-            driven.lastApplied.scale.copy(node.scale);
-          } else {
-            driven.lastApplied = capturePose(node);
-          }
-          // 엔트리 객체는 이 프레임에 새로 만든 것이라 그대로 보관해도 된다.
-          const list = (driven.lastAppliedDeltas ??= []);
-          list.length = 0;
-          for (const entry of entries.values()) list.push(entry);
-        }
-      }
+      const { jointValues, mappingValues } = applyInstancePose(
+        instance,
+        liveResolve,
+        { dragging, track: true },
+      );
 
       rigLiveReadouts.set(model.id, {
         unresolvedJoints: instance.unresolvedJoints,
-        jointValues: values,
+        jointValues,
         unresolvedMappings: instance.unresolvedMappings,
         mappingValues,
         rootDeltas:

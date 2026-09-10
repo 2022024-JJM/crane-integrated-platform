@@ -93,9 +93,19 @@ export {
   meshObbsIntersect,
   meshWorldBox,
 } from './lib/collision-volumes';
+export { isOverlayMesh, markOverlayMesh } from './lib/overlay-mesh';
+export {
+  getHologramMaterial,
+  HOLOGRAM_RENDER_ORDER,
+} from './lib/hologram-material';
+export { captureGhostNodePose, type GhostNodePose } from './lib/ghost-pose';
+export { GhostModel } from './ui/ghost-model';
 export {
   COLLISION_LINE_COLOR,
   COLLISION_LINE_WIDTH,
+  PREDICTION_LINE_COLOR,
+  PREDICTION_LINE_RGB,
+  PREDICTION_LINE_WIDTH,
 } from './lib/selection-style';
 export {
   capturePose,

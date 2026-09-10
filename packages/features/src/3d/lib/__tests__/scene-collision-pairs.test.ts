@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Matrix4, Mesh, MeshBasicMaterial, Object3D } from 'three';
 import {
+  alignSweepBase,
   collisionViewRadius,
   computeCollisionViewPose,
   copyMatrix,
   matrixChanged,
   pairKey,
+  PREDICTION_STEP_MS,
+  quantizeLeadTimeSec,
 } from '../scene-collision-pairs';
 
 describe('pairKey', () => {
@@ -100,5 +103,57 @@ describe('computeCollisionViewPose', () => {
     const pose = computeCollisionViewPose(contact, 1, null);
     expect(pose.target).not.toBe(contact);
     expect(pose.target).toEqual(contact);
+  });
+});
+
+describe('alignSweepBase', () => {
+  it('칸 간격 격자로 내림한다', () => {
+    expect(alignSweepBase(0)).toBe(0);
+    expect(alignSweepBase(PREDICTION_STEP_MS - 1)).toBe(0);
+    expect(alignSweepBase(PREDICTION_STEP_MS)).toBe(PREDICTION_STEP_MS);
+    expect(alignSweepBase(PREDICTION_STEP_MS * 2.9)).toBe(
+      PREDICTION_STEP_MS * 2,
+    );
+  });
+
+  it('원점이 흘러도 칸 시각은 같은 절대 격자에 놓인다', () => {
+    // 이것이 "예측이 두 쌍을 번갈아 띄우던" 결함의 수정점이다. 원점을
+    // "지금" 으로 잡으면 스윕마다 칸 시각이 통째로 움직여, 충돌 시각이
+    // 붙어 있는 두 쌍의 검출 순서가 뒤집힌다.
+    const rungTimes = (elapsed: number) => {
+      const base = alignSweepBase(elapsed);
+      return [1, 2, 3].map((k) => base + k * PREDICTION_STEP_MS);
+    };
+    const first = rungTimes(0);
+    for (let elapsed = 0; elapsed < PREDICTION_STEP_MS; elapsed += 10) {
+      expect(rungTimes(elapsed)).toEqual(first);
+    }
+  });
+
+  it('음수·NaN 은 0', () => {
+    expect(alignSweepBase(-100)).toBe(0);
+    expect(alignSweepBase(Number.NaN)).toBe(0);
+  });
+});
+
+describe('quantizeLeadTimeSec', () => {
+  it('0.1초 단위로 반올림한다', () => {
+    expect(quantizeLeadTimeSec(3.14)).toBe(3.1);
+    expect(quantizeLeadTimeSec(3.16)).toBe(3.2);
+    expect(quantizeLeadTimeSec(3)).toBe(3);
+  });
+
+  it('0 이하·NaN 은 0', () => {
+    expect(quantizeLeadTimeSec(0)).toBe(0);
+    expect(quantizeLeadTimeSec(-2)).toBe(0);
+    expect(quantizeLeadTimeSec(Number.NaN)).toBe(0);
+  });
+
+  it('부동소수 잡음이 표시에 새지 않는다', () => {
+    // 0.1 배수 반올림은 0.30000000000000004 같은 값을 만들기 쉽다.
+    for (let i = 1; i <= 60; i += 1) {
+      const v = quantizeLeadTimeSec(i * 0.1);
+      expect(v).toBe(Number(v.toFixed(1)));
+    }
   });
 });

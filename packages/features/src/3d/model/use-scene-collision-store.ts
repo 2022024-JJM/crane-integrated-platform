@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import { FLASH_MS, HISTORY_MAX } from '../lib/scene-collision-pairs';
+import type { GhostNodePose } from '@crane/domain/3d';
+import {
+  clampPredictionHorizonSec,
+  FLASH_MS,
+  HISTORY_MAX,
+  PREDICTION_HORIZON_DEFAULT_SEC,
+} from '../lib/scene-collision-pairs';
 import { rigValueStore } from './rig-value-store';
 import { holdRunners, releaseRunners } from './scene-collision-hold';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
@@ -53,6 +59,38 @@ export interface SceneCollisionRecord {
 /** pinned = 정지·복원 상태(▶ 로 해제), flash = FLASH_MS 뒤 자동 해제. */
 export type SceneCollisionActiveMode = 'pinned' | 'flash';
 
+/** 고스트 한 벌 — 어떤 GLB 를 어떤 자세로 세울지. */
+export interface ScenePredictionGhost {
+  modelId: string;
+  /** GLB 경로. 고스트가 같은 자산을 로드해 clone 한다. */
+  path: string;
+  /** 구동 노드의 미래 로컬 transform. 루트는 nodePath ''. */
+  nodes: readonly GhostNodePose[];
+}
+
+/**
+ * 현재 예측 — "이대로 가면 leadTimeSec 뒤에 이 두 장비가 부딪힌다".
+ *
+ * 리드타임을 뺀 나머지는 **그 쌍을 처음 발견한 시점에 고정**한다(기록의
+ * `contactPoint` 와 같은 의미론). 고스트 자세·궤적·지면 높이를 매 스윕
+ * 갱신하면 clone 과 라인이 계속 다시 만들어져 처닝이 생기고, "여기서
+ * 부딪힌다" 는 메시지도 흔들린다. 캡처 자체도 자세 차용을 십수 번 더 하는
+ * 비싼 경로라 쌍이 바뀔 때만 돈다.
+ */
+export interface ScenePredictedCollision {
+  pairKey: string;
+  a: SceneCollisionRecordParty;
+  b: SceneCollisionRecordParty;
+  /** 표시 단위(PREDICTION_LEAD_QUANTUM_SEC)로 양자화된 남은 시간. */
+  leadTimeSec: number;
+  /** 처음 발견했을 때의 리드타임 — 카운트다운 진행 호의 분모. */
+  initialLeadTimeSec: number;
+  /** 미래 접촉점(씬 unit) — 발견 시점 고정. */
+  contactPoint: Vector3Tuple;
+  /** 부딪히는 순간의 자세. 구동 모델만 담는다(정적 장비는 지금과 같다). */
+  ghosts: readonly ScenePredictionGhost[];
+}
+
 interface SceneCollisionState {
   enabled: boolean;
   /** 충돌 시 시뮬레이션을 멈출지. 끄면 기록만 남기고 박스를 잠깐 보여 준다. */
@@ -71,6 +109,15 @@ interface SceneCollisionState {
    * (SceneWarmupIndicator)이 "충돌 감지 기준선 계산 중" 으로 보여 준다.
    */
   baselinePending: boolean;
+  /**
+   * 충돌 예측 on/off — 감지 하위 항목이라 `enabled` 가 false 면 의미가 없다.
+   * 기본 ON, 감지·정지와 같은 세션 전용 정책.
+   */
+  predictionEnabled: boolean;
+  /** 몇 초 앞까지 볼지. 칸 간격은 고정이므로 이 값이 칸 수를 정한다. */
+  predictionHorizonSec: number;
+  /** 현재 예측 — 없으면 null. 예측기 훅만 쓴다. */
+  predicted: ScenePredictedCollision | null;
   toggle: () => void;
   setEnabled: (enabled: boolean) => void;
   setPauseOnCollision: (pause: boolean) => void;
@@ -96,6 +143,15 @@ interface SceneCollisionState {
   clear: () => void;
   /** 검사기만 호출 — 런타임 phase 가 baseline 을 드나들 때. */
   setBaselinePending: (pending: boolean) => void;
+  setPredictionEnabled: (enabled: boolean) => void;
+  /** 범위 밖 값은 클램프된다. */
+  setPredictionHorizonSec: (seconds: number) => void;
+  /**
+   * 예측기만 호출. 같은 쌍·같은 리드타임이면 상태를 바꾸지 않는다(참조 유지)
+   * — 스윕마다 set 하면 패널·독·오버레이가 10Hz 로 리렌더된다. 쌍이 그대로면
+   * 박스·접촉점은 처음 값을 유지하고 리드타임만 갱신한다.
+   */
+  setPredicted: (predicted: ScenePredictedCollision | null) => void;
 }
 
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +173,9 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
   const deactivate = (): void => {
     cancelFlash();
     releaseRunners();
+    // 예측도 함께 내린다 — 자세가 곧 달라지거나(재개) 화면이 정리되는
+    // 순간이라 낡은 주황 박스가 틀린 위치를 가리킨다.
+    if (get().predicted !== null) set({ predicted: null });
     if (get().activeRecordId !== null) set(INACTIVE);
   };
 
@@ -127,6 +186,9 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
     activeRecordId: null,
     activeMode: null,
     baselinePending: false,
+    predictionEnabled: true,
+    predictionHorizonSec: PREDICTION_HORIZON_DEFAULT_SEC,
+    predicted: null,
 
     toggle: () => get().setEnabled(!get().enabled),
 
@@ -136,7 +198,7 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
         cancelFlash();
         releaseRunners();
       }
-      set(enabled ? { enabled } : { enabled, ...INACTIVE });
+      set(enabled ? { enabled } : { enabled, predicted: null, ...INACTIVE });
     },
 
     setPauseOnCollision: (pause) => {
@@ -187,6 +249,9 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
       // 최신 값으로 튀는 점프도 함께 흡수된다.
       sceneCollisionRuntime.rebaseline();
       holdRunners();
+      // 자세가 그 시점으로 순간이동했다 — 낡은 예측 박스는 완전히 틀린 곳을
+      // 가리키므로 pin 보다 먼저 내린다.
+      if (get().predicted !== null) set({ predicted: null });
       state.pin(id);
     },
 
@@ -205,6 +270,7 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
       cancelFlash();
       releaseRunners();
       const state = get();
+      if (state.predicted !== null) set({ predicted: null });
       if (state.history.length === 0 && state.activeRecordId === null) return;
       set({ history: [], ...INACTIVE });
     },
@@ -214,6 +280,41 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
     setBaselinePending: (pending) => {
       if (pending === get().baselinePending) return;
       set({ baselinePending: pending });
+    },
+
+    setPredictionEnabled: (enabled) => {
+      if (enabled === get().predictionEnabled) return;
+      set(
+        enabled
+          ? { predictionEnabled: enabled }
+          : {
+              predictionEnabled: enabled,
+              predicted: null,
+            },
+      );
+    },
+
+    setPredictionHorizonSec: (seconds) => {
+      const next = clampPredictionHorizonSec(seconds);
+      if (next === get().predictionHorizonSec) return;
+      // 지평선이 바뀌면 사다리가 다시 잡히므로 현재 예측은 근거를 잃는다.
+      set({ predictionHorizonSec: next, predicted: null });
+    },
+
+    setPredicted: (predicted) => {
+      const prev = get().predicted;
+      if (predicted === null) {
+        if (prev === null) return;
+        set({ predicted: null });
+        return;
+      }
+      if (prev && prev.pairKey === predicted.pairKey) {
+        // 같은 쌍이면 박스·접촉점은 처음 값을 유지하고 리드타임만 본다.
+        if (prev.leadTimeSec === predicted.leadTimeSec) return;
+        set({ predicted: { ...prev, leadTimeSec: predicted.leadTimeSec } });
+        return;
+      }
+      set({ predicted });
     },
   };
 });
