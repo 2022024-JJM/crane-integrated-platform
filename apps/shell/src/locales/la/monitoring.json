@@ -182,7 +182,7 @@
       "predict": "Praedictio collisionis",
       "predictHorizon": "Prospectus",
       "predictHorizonUnit": "s",
-      "predictHint": "Praedictio solum dum simulatio agitur operatur.\nQuantum ante prospiciatur statuit — spatium longius collisiones remotiores capit sed tardius renovatur, et propter lenitionem tempus reliquum circa 0.35s praematurum est.",
+      "predictHint": "Praedictio solum ex valoribus simulatis per ▶ inceptis operatur.\nQuantum ante prospiciatur statuit — spatium longius collisiones remotiores capit sed tardius renovatur, et propter lenitionem tempus reliquum circa 0.35s praematurum est.",
       "viewPredictContact": "Punctum praevisum videre",
       "predictHorizonValue": "intra {{value}}s"
     },

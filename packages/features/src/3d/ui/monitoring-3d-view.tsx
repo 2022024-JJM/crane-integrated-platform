@@ -170,9 +170,6 @@ export function Monitoring3dView({
   // (scene-collision-hold)다. 리플레이는 기록 재생이라 정지·복원 대상이 아니다.
   const collisionActive = mode !== 'replay';
   const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
-  // 예측은 시뮬레이션 전용 — 가상 태그 파형만 미래 값이 정확하다
-  // (use-scene-collision-prediction 주석).
-  const predictionActive = mode === 'simulation';
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   useEffect(() => {
@@ -332,7 +329,7 @@ export function Monitoring3dView({
               />
             ) : null}
             {/* 예측 경보 — 실제 충돌 경보가 떠 있으면 스스로 내려간다. */}
-            {predictionActive ? (
+            {collisionActive ? (
               <SceneCollisionPredictionOverlay
                 onViewPrediction={handleViewPrediction}
               />
@@ -409,12 +406,16 @@ export function Monitoring3dView({
             />
           ) : null}
           {/* 검사기 직후 — 예측이 앞서면 감지의 변화 감지가 미래 행렬을
-              움직임으로 읽어 거짓 충돌을 보고한다. */}
-          {predictionActive ? (
+              움직임으로 읽어 거짓 충돌을 보고한다.
+
+              감지와 같은 범위다(리플레이만 제외). 실제로 도는 조건은 "가상
+              태그 러너가 값을 만드는 중" 이고 그 판정은 훅 안에 있다 —
+              실시간 모니터링 화면도 독 ▶ 로 가상 태그를 켜면 그것이 장비를
+              움직이므로 예측이 성립한다. */}
+          {collisionActive ? (
             <SceneCollisionPrediction
               sceneInfo={sceneInfo}
               enabled={collisionEnabled}
-              runner={collisionRunner}
             />
           ) : null}
           <SceneCollisionHighlight />

@@ -93,50 +93,46 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           aria-label={t('monitoring:editor.collision.pauseOnCollision')}
         />
       </label>
-      {isRealtime ? null : (
-        <>
-          <label className="flex items-center justify-between gap-2 text-[11px]">
-            <span
-              className={cn('font-medium', !enabled && 'text-muted-foreground')}
-            >
-              {t('monitoring:editor.collision.predict')}
-            </span>
-            <Switch
-              checked={predictionEnabled}
-              disabled={!enabled}
-              onCheckedChange={setPredictionEnabled}
-              aria-label={t('monitoring:editor.collision.predict')}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-2 text-[11px]">
-            <span
-              className={cn(
-                'font-medium',
-                (!enabled || !predictionEnabled) && 'text-muted-foreground',
-              )}
-            >
-              {t('monitoring:editor.collision.predictHorizon')}
-            </span>
-            <InputNumber
-              value={predictionHorizonSec}
-              step={1}
-              min={PREDICTION_HORIZON_MIN_SEC}
-              max={PREDICTION_HORIZON_MAX_SEC}
-              disabled={!enabled || !predictionEnabled}
-              // 입력을 마치면 "N초 이내" 로 보여 준다 — 숫자만 있으면 그 값이
-              // 무엇을 뜻하는지 안 읽힌다. `unit` prop 은 편집 중
-              // 툴팁(editPreview)에만 쓰이므로 여기서는 `format` 이 맞다 —
-              // 포커스 중에는 raw 숫자로 돌아가 편집을 방해하지 않는다.
-              format={(value) =>
-                t('monitoring:editor.collision.predictHorizonValue', { value })
-              }
-              className="h-6 w-28"
-              inputClassName="text-[11px]"
-              onChange={setPredictionHorizonSec}
-            />
-          </label>
-        </>
-      )}
+      <label className="flex items-center justify-between gap-2 text-[11px]">
+        <span
+          className={cn('font-medium', !enabled && 'text-muted-foreground')}
+        >
+          {t('monitoring:editor.collision.predict')}
+        </span>
+        <Switch
+          checked={predictionEnabled}
+          disabled={!enabled}
+          onCheckedChange={setPredictionEnabled}
+          aria-label={t('monitoring:editor.collision.predict')}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-[11px]">
+        <span
+          className={cn(
+            'font-medium',
+            (!enabled || !predictionEnabled) && 'text-muted-foreground',
+          )}
+        >
+          {t('monitoring:editor.collision.predictHorizon')}
+        </span>
+        <InputNumber
+          value={predictionHorizonSec}
+          step={1}
+          min={PREDICTION_HORIZON_MIN_SEC}
+          max={PREDICTION_HORIZON_MAX_SEC}
+          disabled={!enabled || !predictionEnabled}
+          // 입력을 마치면 "N초 이내" 로 보여 준다 — 숫자만 있으면 그 값이
+          // 무엇을 뜻하는지 안 읽힌다. `unit` prop 은 편집 중
+          // 툴팁(editPreview)에만 쓰이므로 여기서는 `format` 이 맞다 —
+          // 포커스 중에는 raw 숫자로 돌아가 편집을 방해하지 않는다.
+          format={(value) =>
+            t('monitoring:editor.collision.predictHorizonValue', { value })
+          }
+          className="h-6 w-28"
+          inputClassName="text-[11px]"
+          onChange={setPredictionHorizonSec}
+        />
+      </label>
       <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
         {t(
           isRealtime

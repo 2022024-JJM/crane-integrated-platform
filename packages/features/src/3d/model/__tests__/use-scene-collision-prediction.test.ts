@@ -24,6 +24,7 @@ import {
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
 import { useSceneCollisionStore } from '../use-scene-collision-store';
+import { useRealtimeStore } from '../use-realtime-store';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
 import { virtualTagRuntime } from '../virtual-tag-runner';
 import { rigPoseBorrow, useRigDriver } from '../use-rig-driver';
@@ -135,11 +136,7 @@ function mountBoth(sceneInfo: SavedSceneInfo, enabled = true) {
       models: sceneInfo.models,
       enabled: true,
     });
-    useSceneCollisionPrediction({
-      sceneInfo,
-      enabled,
-      runner: 'simulation',
-    });
+    useSceneCollisionPrediction({ sceneInfo, enabled });
   });
 }
 
@@ -154,6 +151,7 @@ beforeEach(() => {
   virtualTagRuntime.resetValues();
   useVirtualTagStore.setState({ tags: [], isRunning: true });
   useActiveTransformStore.setState({ active: false });
+  useRealtimeStore.setState({ isRunning: false, held: false, buffer: [] });
   useSceneCollisionStore.setState({
     enabled: true,
     predictionEnabled: true,
@@ -239,7 +237,7 @@ describe('게이트', () => {
     expect(useSceneCollisionStore.getState().predicted).toBeNull();
   });
 
-  it('러너가 정지 중이면 예측하지 않는다', () => {
+  it('가상 태그 러너가 정지 중이면 예측하지 않는다', () => {
     const info = setupApproach();
     useVirtualTagStore.setState({ isRunning: false });
     mountBoth(info);
@@ -257,17 +255,23 @@ describe('게이트', () => {
     expect(useSceneCollisionStore.getState().predicted).toBeNull();
   });
 
-  it('실시간 러너는 예측 대상이 아니다', () => {
+  it('실시간 화면이어도 가상 태그가 돌면 예측한다', () => {
+    // 페이지 모드가 아니라 러너 상태가 기준이다 — 실시간 모니터링에서도
+    // 독 ▶ 가 켠 가상 태그가 장비를 움직이므로 예측이 성립한다.
     const info = setupApproach();
-    mountModel('a', 0);
-    renderHook(() => {
-      useRigDriver({ rigs: undefined, models: info.models, enabled: true });
-      useSceneCollisionPrediction({
-        sceneInfo: info,
-        enabled: true,
-        runner: 'realtime',
-      });
-    });
+    useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
+    mountBoth(info);
+    frame();
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).not.toBeNull();
+  });
+
+  it('WebSocket 값만 흐르면(가상 태그 정지) 예측하지 않는다', () => {
+    // 실제 서버 값에는 미래가 없다 — 러너가 꺼져 있어 저절로 빠진다.
+    const info = setupApproach();
+    useRealtimeStore.setState({ isRunning: true, held: false, buffer: [] });
+    useVirtualTagStore.setState({ isRunning: false });
+    mountBoth(info);
     frame();
     sweep();
     expect(useSceneCollisionStore.getState().predicted).toBeNull();
@@ -514,5 +518,59 @@ describe('표시 캡처', () => {
     sweep();
     const predicted = useSceneCollisionStore.getState().predicted;
     expect(predicted?.initialLeadTimeSec).toBe(predicted?.leadTimeSec);
+  });
+});
+
+describe('감지 on/off 재진입', () => {
+  it('감지를 껐다 켜면 예측이 다시 동작한다', () => {
+    // 실측 결함(2026-09-10): 훅의 정리 경로가 예측 런타임의 **씬 모델
+    // 목록까지** 비웠는데, 다시 켤 때 목록을 채우는 effect 는 `models`
+    // 참조가 그대로라 재실행되지 않았다. 검사 쌍이 0 인 채로 남아 예측이
+    // 영영 안 떴다.
+    const info = setupApproach();
+    const view = mountBoth(info, true);
+    frame();
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).not.toBeNull();
+
+    // 감지 끄기 — 훅이 정리되고 예측이 내려간다.
+    view.rerender();
+    act(() => {
+      view.unmount();
+    });
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+
+    // 다시 켜기 — 같은 씬(models 참조 동일)으로 새로 마운트한다.
+    captured.frameCallbacks = [];
+    mountBoth(info, true);
+    frame();
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).not.toBeNull();
+  });
+
+  it('enabled prop 만 false→true 로 바뀌어도 다시 동작한다', () => {
+    const info = setupApproach();
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => {
+        useRigDriver({
+          rigs: info.rigs,
+          models: info.models,
+          enabled: true,
+        });
+        useSceneCollisionPrediction({ sceneInfo: info, enabled });
+      },
+      { initialProps: { enabled: true } },
+    );
+    frame();
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).not.toBeNull();
+
+    act(() => rerender({ enabled: false }));
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).toBeNull();
+
+    act(() => rerender({ enabled: true }));
+    sweep();
+    expect(useSceneCollisionStore.getState().predicted).not.toBeNull();
   });
 });

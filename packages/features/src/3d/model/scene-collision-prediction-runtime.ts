@@ -97,9 +97,20 @@ export class SceneCollisionPredictionRuntime {
     this.pairsSignature = '';
   }
 
-  /** 항목·쌍·캐시를 비운다. 훅 언마운트에서 부른다. */
+  /**
+   * 해석한 항목·쌍 캐시를 비운다. 예측이 꺼질 때 부른다.
+   *
+   * **씬 모델 목록(`models`)은 남긴다.** 목록을 채우는 것은 `sync` 뿐이고
+   * 호출자는 그것을 `models` 참조가 바뀔 때만 부르므로, 여기서 지우면 예측을
+   * 껐다 켜도(같은 씬) 목록이 빈 채로 남아 검사 쌍이 0 이 된다 — 예측이 영영
+   * 안 뜬다(실측 2026-09-10). 감지 런타임의 `disarm` 도 같은 이유로
+   * `models` 는 건드리지 않는다.
+   *
+   * 항목·쌍은 다음 `scanSample` 의 `resolveEntries` 가 registry 에서 다시
+   * 만든다. 재개 시점의 마운트 상태를 새로 읽는 편이 낡은 참조를 들고 있는
+   * 것보다 안전하다.
+   */
   reset(): void {
-    this.models = [];
     this.entries.clear();
     this.pairs = [];
     this.touched = [];

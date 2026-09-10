@@ -15,10 +15,7 @@ import {
 } from '../lib/tag-prediction';
 import { rigPoseBorrow } from './use-rig-driver';
 import { rigValueStore } from './rig-value-store';
-import {
-  isRunnerRunning,
-  type SceneCollisionRunner,
-} from './scene-collision-hold';
+import { isRunnerRunning } from './scene-collision-hold';
 import {
   sceneCollisionPredictionRuntime,
   type ScenePredictionHit,
@@ -36,11 +33,18 @@ import { virtualTagRuntime } from './virtual-tag-runner';
 /**
  * 충돌 예측 — "이대로 가면 몇 초 뒤에 부딪히는가" 를 매 스윕 계산한다.
  *
- * **시뮬레이션 전용이다.** 가상 태그 파형은 경과 시간만의 순수 함수라 미래
- * 값이 정확히 나온다(tag-prediction 주석). 실시간(WebSocket)은 값의 미래가
- * 없고 SmoothDamp 속도는 0.35초 안에 target 으로 수렴해 외삽에 쓸 수 없다.
- * 리플레이는 미래 프레임을 이미 배열로 들고 있어 "예측" 이 아니라 정확한
- * 사후 계산이므로 섞지 않는다(검사기 자체도 리플레이에선 마운트되지 않는다).
+ * **가상 태그가 장비를 움직이는 동안만 돈다.** 가상 태그 파형은 경과 시간
+ * 만의 순수 함수라 미래 값이 정확히 나온다(tag-prediction 주석).
+ *
+ * 이것은 페이지 모드와 다른 조건이다. 실시간 모니터링 화면에서도 독 ▶ 로
+ * 가상 태그를 켜면 그것이 장비를 움직이므로 예측이 그대로 성립하고, 실제
+ * WebSocket 값만 흐르는 동안은 러너가 꺼져 있어 저절로 빠진다. 그래서
+ * `mode` 가 아니라 러너 상태를 본다.
+ *
+ * 미래를 모르는 값에는 쓸 수 없다 — WebSocket 값은 미래가 없고 SmoothDamp
+ * 속도는 0.35초 안에 target 으로 수렴해 외삽에 쓸 수 없다. 리플레이는 미래
+ * 프레임을 이미 배열로 들고 있어 "예측" 이 아니라 정확한 사후 계산이므로
+ * 섞지 않는다(검사기 자체도 리플레이에선 마운트되지 않는다).
  *
  * **마운트 위치는 `SceneCollisionDetector` 직후.** 같은 priority 의 useFrame
  * 은 마운트 순서로 돌고, 감지 런타임의 변화 감지는 생 `matrixWorld` 를 비교
@@ -66,17 +70,14 @@ import { virtualTagRuntime } from './virtual-tag-runner';
 export function useSceneCollisionPrediction({
   sceneInfo,
   enabled,
-  runner,
 }: {
   sceneInfo: SavedSceneInfo | null;
-  /** 감지가 켜져 있고 이 화면이 예측 대상인지(호출부 모드 게이트 포함). */
+  /** 감지가 켜져 있고 이 화면이 예측 대상인지(호출부 게이트 포함). */
   enabled: boolean;
-  runner: SceneCollisionRunner;
 }): void {
   const models = sceneInfo?.models;
   // useFrame 콜백이 읽는 값 — 렌더 중이 아니라 effect 에서 갱신(react-hooks/refs).
   const enabledRef = useRef(false);
-  const runnerRef = useRef<SceneCollisionRunner>(runner);
   const indexRef = useRef(buildTagMappingIndex(sceneInfo));
   const lastSweepRef = useRef(0);
   /** 현재 스윕의 시간 원점(ms). 예산 이월 중에는 유지된다. */
@@ -91,10 +92,6 @@ export function useSceneCollisionPrediction({
   useEffect(() => {
     sceneCollisionPredictionRuntime.sync(models);
   }, [models]);
-
-  useEffect(() => {
-    runnerRef.current = runner;
-  }, [runner]);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -112,8 +109,12 @@ export function useSceneCollisionPrediction({
       enabledRef.current &&
       store.enabled &&
       store.predictionEnabled &&
-      runnerRef.current === 'simulation' &&
-      isRunnerRunning(runnerRef.current) &&
+      // 페이지 모드가 아니라 **가상 태그 러너가 도는지** 를 본다. 실시간
+      // 모니터링 화면도 독 ▶ 로 가상 태그를 켜면 그것이 장비를 움직이므로
+      // (AGENTS.md 충돌 감지 항목) 예측이 그대로 성립한다. WebSocket 값만
+      // 흐르는 동안은 미래를 알 수 없어 러너가 꺼져 있고, 그래서 이 조건
+      // 하나로 두 경우가 갈린다.
+      isRunnerRunning('simulation') &&
       !useActiveTransformStore.getState().active;
 
     if (!gateOpen) {

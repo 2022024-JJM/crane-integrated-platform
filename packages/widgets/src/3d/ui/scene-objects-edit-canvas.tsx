@@ -898,7 +898,6 @@ export function SceneObjectsEditCanvas({
         <SceneCollisionPrediction
           sceneInfo={sceneInfo}
           enabled={collisionEnabled}
-          runner="simulation"
         />
         <SceneCollisionHighlight />
         <SceneCollisionPredictionHighlight />

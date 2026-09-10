@@ -196,7 +196,7 @@
       "predict": "Collision prediction",
       "predictHorizon": "Look ahead",
       "predictHorizonUnit": "s",
-      "predictHint": "Prediction runs only while the simulation is playing.\nSets how far ahead to look — a longer window catches distant collisions but refreshes more slowly, and smoothing makes the remaining time about 0.35s early.",
+      "predictHint": "Prediction works only from simulated values started with ▶.\nSets how far ahead to look — a longer window catches distant collisions but refreshes more slowly, and smoothing makes the remaining time about 0.35s early.",
       "viewPredictContact": "View predicted point",
       "predictHorizonValue": "within {{value}}s"
     },

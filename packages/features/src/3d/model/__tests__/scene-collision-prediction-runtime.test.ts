@@ -293,7 +293,7 @@ describe('sync / reset', () => {
     expect(runtime.scanSample(opts)).toBeNull();
   });
 
-  it('reset 은 항목·쌍을 비운다', () => {
+  it('reset 은 항목·쌍 캐시를 비운다', () => {
     mountModel('a', 0);
     mountModel('b', 0.5);
     runtime.sync([model('a', 0), model('b', 0.5)]);
@@ -304,12 +304,34 @@ describe('sync / reset', () => {
     expect(runtime.pairCount).toBe(1);
     runtime.reset();
     expect(runtime.pairCount).toBe(0);
-    expect(
-      runtime.scanSample({
-        drivenModelIds: ['a'],
-        excludedPairKeys: NO_EXCLUSION,
-      }),
-    ).toBeNull();
+  });
+
+  it('reset 뒤에도 씬 모델 목록은 남아 다음 스캔이 스스로 복구한다', () => {
+    // 예측을 껐다 켜는 경로다. 목록까지 지우면 `sync` 를 다시 부를 일이
+    // 없어(models 참조가 그대로) 검사 쌍이 0 인 채로 남는다 — 예측이 영영
+    // 안 뜨던 실측 결함(2026-09-10).
+    mountModel('a', 0);
+    mountModel('b', 0.5);
+    runtime.sync([model('a', 0), model('b', 0.5)]);
+    const opts = { drivenModelIds: ['a'], excludedPairKeys: NO_EXCLUSION };
+    expect(runtime.scanSample(opts)).not.toBeNull();
+
+    runtime.reset();
+    expect(runtime.scanSample(opts)).not.toBeNull();
+    expect(runtime.pairCount).toBe(1);
+  });
+
+  it('reset 은 항목을 다시 해석하므로 그 사이 리마운트를 따라간다', () => {
+    mountModel('a', 0);
+    mountModel('b', 0.5);
+    runtime.sync([model('a', 0), model('b', 0.5)]);
+    const opts = { drivenModelIds: ['a'], excludedPairKeys: NO_EXCLUSION };
+    expect(runtime.scanSample(opts)).not.toBeNull();
+
+    runtime.reset();
+    // 꺼져 있는 동안 모델이 멀리 리마운트됐다.
+    mountModel('a', 50);
+    expect(runtime.scanSample(opts)).toBeNull();
   });
 });
 
