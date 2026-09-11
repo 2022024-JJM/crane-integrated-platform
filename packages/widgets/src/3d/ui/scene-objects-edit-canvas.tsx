@@ -291,7 +291,12 @@ export function SceneObjectsEditCanvas({
 
     const preloadItem = (item: SceneModelCatalogItem) => {
       // 4번째 인자: KTX2 디코드 배선 — 모든 로드 경로 공통(ktx2-loader.ts).
-      useGLTF.preload(withBaseUrl(item.path), true, true, extendGltfLoaderWithKtx2);
+      useGLTF.preload(
+        withBaseUrl(item.path),
+        true,
+        true,
+        extendGltfLoaderWithKtx2,
+      );
       void prefetchModelBottomOffset(item.path);
     };
 
@@ -881,7 +886,9 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
-        <SceneLighting sceneInfo={sceneInfo} />
+        {/* regionId 는 solar 모드(현장 시각 낮/밤)의 위치·시간대 키 — 뷰어와
+            같은 하늘을 편집 중에도 본다. */}
+        <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
         <RigDriver sceneInfo={sceneInfo} />
         {/* 드라이버 바로 다음 — useFrame 실행 순서(마운트 순) 때문에 여기. */}
         <SceneCollisionDetector

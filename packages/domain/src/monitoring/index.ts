@@ -40,6 +40,7 @@ export {
 } from './lib/replay-mapper';
 export { isRealtimeCraneLiteMessage } from './lib/realtime-monitoring';
 export { formatReplayTimestamp } from './lib/format-replay-timestamp';
+export { parseReplayTimestamp } from './lib/parse-replay-timestamp';
 export { getReplayFrameDurationsMs } from './lib/parse-interval';
 export { normalizePlaybackResponse } from './lib/playback-adapter';
 export {

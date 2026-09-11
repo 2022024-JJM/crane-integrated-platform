@@ -19,14 +19,15 @@ import { clampToRange } from '@crane/core/lib/utils';
 export function sunDirectionFromAngles(
   azimuthDeg: number,
   elevationDeg: number,
+  /**
+   * 고도 하한(도). 기본은 수동 패드와 같은 SCENE_SUN_ELEVATION_MIN. solar
+   * 모드는 KEY_LIGHT_ELEVATION_MIN(10°)을, 하늘의 태양·달 표식은 −90 을
+   * 넣어 실제 고도(지평선 아래 포함)를 그대로 쓴다.
+   */
+  minElevationDeg: number = SCENE_SUN_ELEVATION_MIN,
 ): Vector3 {
   const az = azimuthDeg * (Math.PI / 180);
-  const el =
-    clampToRange(elevationDeg, SCENE_SUN_ELEVATION_MIN, 90) * (Math.PI / 180);
+  const el = clampToRange(elevationDeg, minElevationDeg, 90) * (Math.PI / 180);
   const cosEl = Math.cos(el);
-  return new Vector3(
-    Math.sin(az) * cosEl,
-    Math.sin(el),
-    -Math.cos(az) * cosEl,
-  );
+  return new Vector3(Math.sin(az) * cosEl, Math.sin(el), -Math.cos(az) * cosEl);
 }

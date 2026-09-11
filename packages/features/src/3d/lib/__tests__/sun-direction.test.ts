@@ -35,10 +35,21 @@ describe('sunDirectionFromAngles', () => {
 
   it('고도는 [MIN, 90]로 클램프한다 — 90이면 머리 위', () => {
     const belowMin = sunDirectionFromAngles(0, 0);
-    expect(belowMin).toEqual(sunDirectionFromAngles(0, SCENE_SUN_ELEVATION_MIN));
+    expect(belowMin).toEqual(
+      sunDirectionFromAngles(0, SCENE_SUN_ELEVATION_MIN),
+    );
 
     const overhead = sunDirectionFromAngles(123, 90);
     expect(overhead.y).toBeCloseTo(1, 12);
+  });
+
+  it('세 번째 인자로 하한을 낮추면 그 아래 고도도 그대로 쓴다 (solar·표식용)', () => {
+    const low = sunDirectionFromAngles(90, 5, 0);
+    expect(low.y).toBeCloseTo(Math.sin((5 * Math.PI) / 180), 12);
+    const below = sunDirectionFromAngles(90, -20, -90);
+    expect(below.y).toBeLessThan(0);
+    // 하한보다 낮은 값은 여전히 하한으로 클램프.
+    expect(sunDirectionFromAngles(90, -20, 0).y).toBeCloseTo(0, 12);
   });
 
   it('기본값은 종전 고정 조명 방향 normalize([0, 1, 0.2])를 재현한다', () => {

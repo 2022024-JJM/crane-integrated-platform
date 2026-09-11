@@ -303,6 +303,7 @@
     "simulationPlay": "Run simulation",
     "simulationPause": "Stop simulation",
     "collisionMenu": "Collision detection",
+    "clockMenu": "Site time · Day/Night",
     "warmup": {
       "bvh": "Preparing click detection ({{done}}/{{total}})",
       "outline": "Preparing outlines ({{done}}/{{total}})",

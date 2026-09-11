@@ -303,6 +303,7 @@
     "simulationPlay": "Simulationem age",
     "simulationPause": "Simulationem siste",
     "collisionMenu": "Collisionis detectio",
+    "clockMenu": "Hora loci · Dies/Nox",
     "warmup": {
       "bvh": "Detectio clicci paratur ({{done}}/{{total}})",
       "outline": "Lineae exteriores parantur ({{done}}/{{total}})",

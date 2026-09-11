@@ -1,19 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { ACESFilmicToneMapping, Box3, Object3D, Vector3 } from 'three';
-import type { DirectionalLight } from 'three';
+import {
+  ACESFilmicToneMapping,
+  AdditiveBlending,
+  Box3,
+  Object3D,
+  Sprite,
+  SpriteMaterial,
+  Vector3,
+} from 'three';
+import type { AmbientLight, DirectionalLight, Scene } from 'three';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
+  getSceneSiteGeo,
   invalidateShadows,
   modelObjectRegistry,
   registerShadowRenderer,
   resolveCameraBoundsMaps,
   unregisterShadowRenderer,
 } from '@crane/domain/3d';
-import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SavedSceneInfo, SceneSiteGeo } from '@crane/domain/3d';
 import { isSceneShadowEnabled } from '../lib/scene-shadow';
 import { sunDirectionFromAngles } from '../lib/sun-direction';
+import {
+  SCENE_ENVIRONMENT_INTENSITY,
+  SCENE_LIGHTING_BASE,
+  type RgbTuple,
+} from '../lib/sky-lighting';
+import {
+  KEY_LIGHT_ELEVATION_MIN,
+  resolveSolarLighting,
+  type SolarLightingSnapshot,
+} from '../lib/solar-lighting';
+import {
+  createMoonTexture,
+  createSunGlowTexture,
+} from '../lib/celestial-glow-texture';
+import {
+  createReplayTimeCache,
+  readSceneTimeMs,
+  type SceneTimeSource,
+} from '../model/scene-time-source';
+import { useSceneClockStore } from '../model/use-scene-clock-store';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -151,8 +180,10 @@ export const SCENE_GL_OPTIONS = {
  * 더 어둡게: 두 값을 같은 비율로 내린다.
  */
 export const SCENE_LIGHTING = {
-  ambientIntensity: 0.9,
-  directionalIntensity: 3.6,
+  // 숫자의 단일 소스는 lib/sky-lighting 의 SCENE_LIGHTING_BASE — solar 모드
+  // (낮/밤) 곡선이 같은 값을 낮 기준으로 쓴다.
+  ambientIntensity: SCENE_LIGHTING_BASE.ambientIntensity,
+  directionalIntensity: SCENE_LIGHTING_BASE.sunIntensity,
   directionalPosition: [0, 50, 10] as [number, number, number],
   directionalColor: '#ffffff',
 } as const;
@@ -325,6 +356,120 @@ function useSunAnchor(
 }
 
 /**
+ * 하늘의 태양·달 표식 거리(카메라 기준, 월드 unit). SCENE_CAMERA_CLIP.far
+ * (50000) 안이면서 지형·건물보다 멀어 자연스럽게 가려진다. 바다 평면(반경
+ * 40000, depthWrite 없음)은 표식을 가리지 않는다.
+ */
+const CELESTIAL_DISTANCE = 20_000;
+/** 태양 글로우 스프라이트 한 변 — 거리 20000 에서 시각 지름 약 7°(핵 ~0.8°). */
+const SUN_SPRITE_SIZE = 2400;
+/** 달 스프라이트 한 변 — 원판(텍스처의 42%)이 약 1.2°. 실제(0.5°)보다 키워 읽히게. */
+const MOON_SPRITE_SIZE = 1000;
+
+interface SolarFrameState {
+  geo: SceneSiteGeo | null;
+  /** 마지막으로 계산한 초 단위 시각 키 — 같은 초면 재계산하지 않는다. */
+  timeKey: number;
+  /** 마지막 계산에 쓴 야간 작업등 옵션 — 바뀌면 같은 초라도 재계산. */
+  yardLights: boolean;
+  snapshot: SolarLightingSnapshot | null;
+  keyAzimuth: number;
+  keyElevation: number;
+  /** 방향광(키 라이트) 방향 — keyAzimuth/Elevation 이 바뀔 때만 다시 쓴다. */
+  keyDir: Vector3;
+  /** 표식용 실제 태양·달 방향(지평선 아래 포함). */
+  sunDir: Vector3;
+  moonDir: Vector3;
+}
+
+function createSolarFrameState(): SolarFrameState {
+  return {
+    geo: null,
+    timeKey: Number.NaN,
+    yardLights: true,
+    snapshot: null,
+    keyAzimuth: Number.NaN,
+    keyElevation: Number.NaN,
+    keyDir: new Vector3(0, 1, 0),
+    sunDir: new Vector3(0, 1, 0),
+    moonDir: new Vector3(0, 1, 0),
+  };
+}
+
+function setColorIfChanged(
+  target: {
+    r: number;
+    g: number;
+    b: number;
+    setRGB: (r: number, g: number, b: number) => unknown;
+  },
+  rgb: RgbTuple,
+) {
+  if (target.r !== rgb[0] || target.g !== rgb[1] || target.b !== rgb[2]) {
+    target.setRGB(rgb[0], rgb[1], rgb[2]);
+  }
+}
+
+/**
+ * 조명·하늘을 수동 모드 기본값으로 되돌린다 — solar 모드를 떠날 때(씬 설정
+ * 변경·언마운트). R3F 는 바뀌지 않은 prop 을 다시 쓰지 않으므로 useFrame 이
+ * 덮어쓴 값은 직접 원복해야 한다.
+ */
+function resetToManualLook(
+  light: DirectionalLight | null,
+  ambient: AmbientLight | null,
+  scene: Scene,
+) {
+  if (light) {
+    light.intensity = SCENE_LIGHTING.directionalIntensity;
+    light.color.set(SCENE_LIGHTING.directionalColor);
+  }
+  if (ambient) {
+    ambient.intensity = SCENE_LIGHTING.ambientIntensity;
+    ambient.color.set('#ffffff');
+  }
+  scene.backgroundIntensity = 1;
+  if (scene.environment) {
+    scene.environmentIntensity = SCENE_ENVIRONMENT_INTENSITY;
+  }
+}
+
+/** 하늘 표식 스프라이트 — 텍스처가 없으면(문서 없는 환경) null. */
+function useCelestialSprite(
+  createTexture: () => ReturnType<typeof createSunGlowTexture>,
+  size: number,
+) {
+  const sprite = useMemo(() => {
+    const map = createTexture();
+    if (!map) return null;
+    const material = new SpriteMaterial({
+      map,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      opacity: 0,
+    });
+    const object = new Sprite(material);
+    object.scale.set(size, size, 1);
+    object.visible = false;
+    // 에디터 marquee·드롭 raycast 에 잡히면 안 된다(바다 평면과 같은 규칙).
+    object.raycast = () => {};
+    return object;
+  }, [createTexture, size]);
+
+  useEffect(
+    () => () => {
+      if (!sprite) return;
+      sprite.material.map?.dispose();
+      sprite.material.dispose();
+    },
+    [sprite],
+  );
+
+  return sprite;
+}
+
+/**
  * 씬 공통 조명. 세 화면이 이 컴포넌트 하나를 쓴다.
  *
  * 그림자는 씬 설정(sceneInfo.lighting.shadows)으로 켠다 — 기본 Off.
@@ -338,27 +483,53 @@ function useSunAnchor(
  * 셰이더 재컴파일은 아래 directionalLight의 castShadow가 같은 플래그에
  * 바인딩되어 있어 lights state 변경으로 자동 유발된다.
  *
- * 태양 위치(sunAzimuth/sunElevation)는 그림자가 꺼져 있어도 항상 적용된다 — 조명
- * 방향(셰이딩)은 그림자와 무관하게 씬의 인상을 정하는 값이다.
+ * 태양 위치는 두 모드가 있다(`lighting.sunMode`).
+ * - manual(기본): 씬의 sunAzimuth/sunElevation 고정. 그림자가 꺼져 있어도
+ *   항상 적용된다 — 조명 방향(셰이딩)은 그림자와 무관하게 씬의 인상을
+ *   정하는 값이다.
+ * - solar: 현장 위치(scene-site-geo, `regionId` 로 찾음)와 시각(`timeSource`
+ *   — 씬 시계 또는 리플레이 프레임)으로 매 프레임 태양·달 위치를 계산한다
+ *   (lib/solar-lighting). 낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향,
+ *   useSceneClockStore.yardLights 로 끌 수 있다)이 방향광이 되고 박명엔 둘을
+ *   세기 비율로 섞는다. 세기·색·환경광·배경(EXR)·환경맵 밝기가
+ *   lib/sky-lighting 곡선을 따른다. 달은 표식·위상 표시용이다. 하늘에는
+ *   태양 글로우·달 표식 스프라이트를 띄운다(EXR 배경이 있을 때만 — 검은
+ *   캔버스 위의 해는 어색하다). 현장 위치가 없는 region 은 manual 로 폴백.
+ *   방향은 CELESTIAL_ANGLE_STEP(0.05°) 격자에 양자화되어 정지 화면에서
+ *   shadow map 이 매 프레임 다시 그려지지 않는다.
+ *   세기·색·배경 밝기는 React 상태가 아니라 useFrame 에서 ref 로 직접 쓴다
+ *   (이 저장소의 매-프레임 갱신 규칙). 모드를 떠날 때는 resetToManualLook
+ *   으로 원복한다.
  *
  * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
  * GLB가 true로 실려 올 수 있어 방어하는 코드라 성격이 다르다.
  */
 export function SceneLighting({
   sceneInfo,
+  regionId,
+  timeSource = 'clock',
 }: {
   sceneInfo?: SavedSceneInfo | null;
+  /** solar 모드의 현장 위치를 찾는 키. 없으면 solar 설정이어도 manual. */
+  regionId?: string;
+  /** solar 모드의 시각 출처. 리플레이 화면은 'replay'. */
+  timeSource?: SceneTimeSource;
 } = {}) {
   const lighting = sceneInfo?.lighting;
   const shadowsEnabled = isSceneShadowEnabled(lighting);
   const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
   const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
+  // solar 모드는 씬 설정과 현장 위치가 모두 있어야 켜진다.
+  const solarGeo =
+    lighting?.sunMode === 'solar' && regionId
+      ? getSceneSiteGeo(regionId)
+      : null;
 
   const mapCorners = useMapShadowCorners(sceneInfo);
   // anchor는 시점 추종 초점의 폴백으로만, radius는 frustum 상한으로 쓴다.
   const { anchor, radius: maxRadius } = useSunAnchor(sceneInfo, mapCorners);
 
-  const sunDir = useMemo(
+  const manualSunDir = useMemo(
     () => sunDirectionFromAngles(sunAzimuth, sunElevation),
     [sunAzimuth, sunElevation],
   );
@@ -367,7 +538,39 @@ export function SceneLighting({
   // primitive로 씬에 넣고 초점이 바뀐 프레임에 옮긴다.
   const target = useMemo(() => new Object3D(), []);
   const lightRef = useRef<DirectionalLight | null>(null);
+  const ambientRef = useRef<AmbientLight | null>(null);
   const scratchForward = useMemo(() => new Vector3(), []);
+  const scene = useThree((s) => s.scene);
+
+  // solar 프레임 상태 — 시각·천체 계산 캐시. React 상태가 아니다.
+  const solarRef = useRef<SolarFrameState>(createSolarFrameState());
+  const replayTimeCacheRef = useRef(createReplayTimeCache());
+  const sunSprite = useCelestialSprite(createSunGlowTexture, SUN_SPRITE_SIZE);
+  const moonSprite = useCelestialSprite(createMoonTexture, MOON_SPRITE_SIZE);
+  // useFrame 은 메모 값(sunSprite)을 직접 고치지 않고 ref 를 거친다 —
+  // 훅이 돌려준 값을 변경하면 react-hooks/immutability 에 걸린다(SeaSurface
+  // 의 uniform ref 와 같은 사정).
+  const sunSpriteRef = useRef<Sprite | null>(null);
+  const moonSpriteRef = useRef<Sprite | null>(null);
+
+  // solar 모드를 떠나면(설정 변경·언마운트) useFrame 이 덮어쓴 조명·하늘을
+  // 수동 기본값으로 되돌리고 표식을 숨긴다. ref 는 effect 시점에 잡아 둔다
+  // — 언마운트 cleanup 에서는 ref 가 이미 null 일 수 있다.
+  useEffect(() => {
+    if (!solarGeo) return;
+    const light = lightRef.current;
+    const ambient = ambientRef.current;
+    const solar = solarRef.current;
+    const sun = sunSpriteRef.current;
+    const moon = moonSpriteRef.current;
+    return () => {
+      resetToManualLook(light, ambient, scene);
+      solar.snapshot = null;
+      solar.timeKey = Number.NaN;
+      if (sun) sun.visible = false;
+      if (moon) moon.visible = false;
+    };
+  }, [solarGeo, scene]);
 
   // 온디맨드 shadow 렌더 — three 기본은 매 프레임 shadow map 재렌더인데,
   // 캐스터가 움직인 프레임에만 그리도록 autoUpdate 를 끄고 무효화 신호
@@ -385,8 +588,8 @@ export function SceneLighting({
     cx: number;
     cz: number;
     radius: number;
-    sunDir: Vector3 | null;
-  }>({ cx: Number.NaN, cz: Number.NaN, radius: 0, sunDir: null });
+    sunDir: Vector3;
+  }>({ cx: Number.NaN, cz: Number.NaN, radius: 0, sunDir: new Vector3() });
   const lastShadowRenderAtRef = useRef(0);
 
   // 시점 추종 shadow frustum — 고정 frustum으로 씬 전체를 덮으면 텍셀이
@@ -399,9 +602,124 @@ export function SceneLighting({
   // 초점은 텍셀 격자 스냅·2배 단계 반경 양자화 덕에 카메라가 멈추면 값이
   // 비트 단위로 같아진다 — 이 성질이 "달라진 프레임에만 쓰기+무효화"를
   // 가능하게 한다(카메라 회전만으로는 shadow map 이 다시 그려지지 않는다).
-  useFrame(({ camera, clock }) => {
+  // scene 은 useThree 반환값이 아니라 프레임 상태에서 받는다 — 훅이 돌려준
+  // 값을 변경하면 react-hooks/immutability 에 걸린다.
+  useFrame(({ camera, clock, scene: frameScene }) => {
     const light = lightRef.current;
     if (!light) return;
+
+    // 0) 이 프레임의 태양 방향 — manual 은 메모 값, solar 는 시각으로 계산.
+    let sunDir = manualSunDir;
+    if (solarGeo) {
+      const solar = solarRef.current;
+      const timeMs = readSceneTimeMs(
+        timeSource,
+        solarGeo.timeZone,
+        replayTimeCacheRef.current,
+      );
+      // 초 단위로 자른다 — 태양은 1초에 0.004° 움직여 그 안의 차이는 없다.
+      const timeKey = Math.floor(timeMs / 1000);
+      const yardLights = useSceneClockStore.getState().yardLights;
+      if (
+        solar.timeKey !== timeKey ||
+        solar.geo !== solarGeo ||
+        solar.yardLights !== yardLights
+      ) {
+        solar.timeKey = timeKey;
+        solar.geo = solarGeo;
+        solar.yardLights = yardLights;
+        const snapshot = resolveSolarLighting(
+          timeMs,
+          solarGeo,
+          SCENE_LIGHTING_BASE,
+          { yardLights },
+        );
+        if (snapshot) {
+          solar.snapshot = snapshot;
+          if (
+            snapshot.keyAzimuth !== solar.keyAzimuth ||
+            snapshot.keyElevation !== solar.keyElevation
+          ) {
+            solar.keyAzimuth = snapshot.keyAzimuth;
+            solar.keyElevation = snapshot.keyElevation;
+            solar.keyDir.copy(
+              sunDirectionFromAngles(
+                snapshot.keyAzimuth,
+                snapshot.keyElevation,
+                KEY_LIGHT_ELEVATION_MIN,
+              ),
+            );
+          }
+          solar.sunDir.copy(
+            sunDirectionFromAngles(
+              snapshot.sun.azimuth,
+              snapshot.sun.elevation,
+              -90,
+            ),
+          );
+          solar.moonDir.copy(
+            sunDirectionFromAngles(
+              snapshot.moon.azimuth,
+              snapshot.moon.elevation,
+              -90,
+            ),
+          );
+        }
+      }
+
+      const snapshot = solar.snapshot;
+      if (snapshot) {
+        sunDir = solar.keyDir;
+        const sky = snapshot.sky;
+        // 세기·색·하늘 밝기 — 값이 다를 때만 쓴다(R3F 리렌더의 prop 재적용도
+        // 여기서 다시 잡힌다).
+        if (light.intensity !== sky.keyIntensity) {
+          light.intensity = sky.keyIntensity;
+        }
+        setColorIfChanged(light.color, sky.keyColor);
+        const ambient = ambientRef.current;
+        if (ambient) {
+          if (ambient.intensity !== sky.ambientIntensity) {
+            ambient.intensity = sky.ambientIntensity;
+          }
+          setColorIfChanged(ambient.color, sky.ambientColor);
+        }
+        if (frameScene.backgroundIntensity !== sky.skyIntensity) {
+          frameScene.backgroundIntensity = sky.skyIntensity;
+        }
+        if (frameScene.environment) {
+          const envIntensity = SCENE_ENVIRONMENT_INTENSITY * sky.skyIntensity;
+          if (frameScene.environmentIntensity !== envIntensity) {
+            frameScene.environmentIntensity = envIntensity;
+          }
+        }
+
+        // 하늘 표식 — EXR 배경이 있을 때만. 카메라를 따라 "무한 원점"에 둔다.
+        const hasSky = frameScene.background !== null;
+        const sun = sunSpriteRef.current;
+        if (sun) {
+          const opacity = hasSky ? sky.sunVisibility : 0;
+          sun.visible = opacity > 0.001;
+          if (sun.visible) {
+            sun.material.opacity = opacity;
+            sun.position
+              .copy(camera.position)
+              .addScaledVector(solar.sunDir, CELESTIAL_DISTANCE);
+          }
+        }
+        const moon = moonSpriteRef.current;
+        if (moon) {
+          const opacity = hasSky ? sky.moonVisibility : 0;
+          moon.visible = opacity > 0.001;
+          if (moon.visible) {
+            moon.material.opacity = opacity;
+            moon.position
+              .copy(camera.position)
+              .addScaledVector(solar.moonDir, CELESTIAL_DISTANCE);
+          }
+        }
+      }
+    }
 
     // 1) 초점 = 시선과 지면(y=0)의 교점. 수평·상향 시선이면 카메라 바로
     //    아래(폴백은 씬 앵커가 아니라 카메라 — 시점을 따라가는 게 목적).
@@ -420,11 +738,7 @@ export function SceneLighting({
 
     // 2) 반경: 시거리 비례를 2배 단계로 양자화 — 연속으로 변하면 텍셀
     //    크기가 매 프레임 달라져 아래 스냅이 무력화되고 그림자가 일렁인다.
-    const want = clampToRange(
-      viewDist * 1.2,
-      SUN_SHADOW_RADIUS_MIN,
-      maxRadius,
-    );
+    const want = clampToRange(viewDist * 1.2, SUN_SHADOW_RADIUS_MIN, maxRadius);
     let frustumRadius = SUN_SHADOW_RADIUS_MIN;
     while (frustumRadius < want) frustumRadius *= 2;
     frustumRadius = Math.min(frustumRadius, maxRadius);
@@ -443,12 +757,13 @@ export function SceneLighting({
     // 입력(cx·cz·반경·태양각)뿐 아니라 light/target 의 실제 위치도 본다 —
     // R3F 리렌더의 prop 재적용이 초기값으로 되돌린 경우를 잡아 다시 쓴다
     // (primitive position=anchor, directionalLight position=프리셋 초기값).
+    // 태양 방향은 성분 비교 — solar 모드는 같은 Vector3 를 제자리에서 고친다.
     const last = lastShadowInputRef.current;
     const changed =
       last.cx !== cx ||
       last.cz !== cz ||
       last.radius !== frustumRadius ||
-      last.sunDir !== sunDir ||
+      !last.sunDir.equals(sunDir) ||
       light.position.x !== lightX ||
       light.position.y !== lightY ||
       light.position.z !== lightZ ||
@@ -459,7 +774,7 @@ export function SceneLighting({
       last.cx = cx;
       last.cz = cz;
       last.radius = frustumRadius;
-      last.sunDir = sunDir;
+      last.sunDir.copy(sunDir);
 
       target.position.set(cx, 0, cz);
       target.updateMatrixWorld();
@@ -487,7 +802,8 @@ export function SceneLighting({
       lastShadowRenderAtRef.current = clock.elapsedTime;
     } else if (
       shadowsEnabled &&
-      clock.elapsedTime - lastShadowRenderAtRef.current > SHADOW_SAFETY_INTERVAL_S
+      clock.elapsedTime - lastShadowRenderAtRef.current >
+        SHADOW_SAFETY_INTERVAL_S
     ) {
       // 주기 안전망 — 상수 주석 참고.
       lastShadowRenderAtRef.current = clock.elapsedTime;
@@ -497,12 +813,16 @@ export function SceneLighting({
 
   return (
     <>
-      <ambientLight intensity={SCENE_LIGHTING.ambientIntensity} />
+      <ambientLight
+        ref={ambientRef}
+        intensity={SCENE_LIGHTING.ambientIntensity}
+      />
       <primitive object={target} position={anchor} />
       <directionalLight
         ref={lightRef}
         // position·shadow-camera 값은 useFrame이 매 프레임 덮어쓴다 —
-        // 여기 값은 첫 프레임 전의 초기값일 뿐이다.
+        // 여기 값은 첫 프레임 전의 초기값일 뿐이다. solar 모드는 intensity·
+        // color 도 useFrame 이 쓴다.
         position={SCENE_LIGHTING.directionalPosition}
         target={target}
         color={SCENE_LIGHTING.directionalColor}
@@ -523,6 +843,11 @@ export function SceneLighting({
           ]}
         />
       </directionalLight>
+      {/* 하늘 표식 — solar 모드에서만 보인다(useFrame 이 visible 을 켠다). */}
+      {sunSprite ? <primitive object={sunSprite} ref={sunSpriteRef} /> : null}
+      {moonSprite ? (
+        <primitive object={moonSprite} ref={moonSpriteRef} />
+      ) : null}
     </>
   );
 }

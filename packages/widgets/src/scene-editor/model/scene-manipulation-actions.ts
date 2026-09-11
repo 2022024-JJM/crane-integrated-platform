@@ -2,6 +2,7 @@ import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
+  SCENE_SUN_MODE_DEFAULT,
   createSceneModel,
   createSceneText,
   type SavedLightingInfo,
@@ -226,6 +227,11 @@ export function createSceneManipulationActions({
       if (merged.shadows === true) {
         normalized.shadows = true;
       }
+      // 'solar' 만 남긴다(sanitize 와 같은 규칙) — manual 은 기본값이라 생략.
+      // solar 로 바꿔도 수동 방위·고도는 지우지 않아 되돌리면 복원된다.
+      if (merged.sunMode === 'solar') {
+        normalized.sunMode = 'solar';
+      }
       // sanitize와 동일한 랩·클램프 — 여기서 안 맞추면 라이브 상태(az=360)와
       // 로드본(az=0)이 어긋나 저장 직후에도 dirty로 남는다.
       if (
@@ -256,6 +262,8 @@ export function createSceneManipulationActions({
       if (
         (prev.lighting?.shadows ?? false) ===
           (nextLighting?.shadows ?? false) &&
+        (prev.lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT) ===
+          (nextLighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT) &&
         (prev.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) ===
           (nextLighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT) &&
         (prev.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT) ===

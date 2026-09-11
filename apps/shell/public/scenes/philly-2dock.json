@@ -370,6 +370,7 @@
   "lighting": {
     "shadows": true,
     "sunAzimuth": 138.4220985145796,
-    "sunElevation": 34.46202509353292
+    "sunElevation": 34.46202509353292,
+    "sunMode": "solar"
   }
 }

@@ -14,6 +14,7 @@ import { getTagMappingTargetKey } from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
+  SCENE_SUN_MODE_DEFAULT,
   sanitizeSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -237,6 +238,12 @@ export function isSceneInfoEqual(
   // Off, 태양 기본 위치)은 같은 상태다(sanitize가 기본값 필드를 생략하는
   // 규칙과 짝).
   if ((a.lighting?.shadows ?? false) !== (b.lighting?.shadows ?? false)) {
+    return false;
+  }
+  if (
+    (a.lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT) !==
+    (b.lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT)
+  ) {
     return false;
   }
   if (

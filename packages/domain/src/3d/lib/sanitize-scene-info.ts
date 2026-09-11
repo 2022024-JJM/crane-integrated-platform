@@ -239,6 +239,11 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     if (rawLighting.shadows === true) {
       lighting.shadows = true;
     }
+    // sunMode 는 'solar' 만 남긴다 — 'manual' 은 기본값이라 생략하고, 알 수
+    // 없는 문자열(오타·미래 버전)은 기본값으로 정규화한다.
+    if (rawLighting.sunMode === 'solar') {
+      lighting.sunMode = 'solar';
+    }
     if (isFiniteNumber(rawLighting.sunAzimuth)) {
       // [0,360) 랩 — 360과 0이 다른 값으로 남으면 dirty 판정이 어긋난다.
       const sunAzimuth = ((Number(rawLighting.sunAzimuth) % 360) + 360) % 360;

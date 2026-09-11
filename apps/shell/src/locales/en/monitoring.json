@@ -264,6 +264,11 @@
     "lightingSunSouth": "S",
     "lightingSunAzimuth": "Azimuth",
     "lightingSunElevation": "Elevation",
+    "lightingSunMode": "Sun placement",
+    "lightingSunModeManual": "Manual",
+    "lightingSunModeSolar": "Follow site time",
+    "lightingSunModeSolarHint": "Computes the sun and moon from the site's coordinates and the time of day to render day and night. The time preview below is a session setting and is not saved.",
+    "lightingSunModeNoGeo": "This region has no site coordinates registered, so the sun can only be placed manually.",
     "searchModels": "Search models",
     "searchObjects": "Search objects",
     "multipleSelected": "{{count}} objects selected",
@@ -336,5 +341,35 @@
     "alertTitle": "Collision detected",
     "pausedTitle": "Collision — simulation paused",
     "resume": "Resume"
+  },
+  "sceneClock": {
+    "title": "Site time · Day/Night",
+    "live": "Live",
+    "manual": "Set time",
+    "backToLive": "Back to now",
+    "yardLights": "Yard lights",
+    "date": "Date",
+    "timeOfDay": "Time",
+    "sun": "Sun",
+    "moon": "Moon",
+    "azimuth": "Az",
+    "elevation": "Alt",
+    "belowHorizon": "Below horizon",
+    "moonIllumination": "{{percent}}% lit",
+    "sunrise": "Sunrise",
+    "sunset": "Sunset",
+    "noon": "Noon",
+    "midnight": "Midnight",
+    "noEvent": "—",
+    "timeZone": "{{timeZone}}",
+    "phase": {
+      "day": "Day",
+      "dawn": "Dawn",
+      "dusk": "Dusk",
+      "night": "Night"
+    },
+    "replayHint": "Follows the recorded time of the replay frame.",
+    "manualOff": "This scene uses a fixed (manual) sun. Turn on 'Follow site time' in Scene Editor › Background to switch between day and night by time.",
+    "noGeo": "This region has no site coordinates registered, so time-based lighting is unavailable."
   }
 }

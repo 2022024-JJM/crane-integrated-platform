@@ -327,6 +327,26 @@ describe('setLighting', () => {
     h.actions.setLighting({ sunAzimuth: 90 }, { recordHistory: false });
     expect(h.updateOptions.at(-1)).toEqual({ recordHistory: false });
   });
+
+  it("sunMode 'solar' 는 남고 'manual' 은 생략된다 — 수동 각도는 보존", () => {
+    const h = createHarness(scene({ lighting: { sunAzimuth: 90 } }));
+    h.actions.setLighting({ sunMode: 'solar' });
+    expect(h.scene?.lighting).toEqual({ sunMode: 'solar', sunAzimuth: 90 });
+
+    h.actions.setLighting({ sunMode: 'manual' });
+    expect(h.scene?.lighting).toEqual({ sunAzimuth: 90 });
+  });
+
+  it('sunMode 를 같은 값으로 다시 설정하면 참조를 유지한다', () => {
+    const h = createHarness(scene({ lighting: { sunMode: 'solar' } }));
+    const before = h.scene;
+    h.actions.setLighting({ sunMode: 'solar' });
+    expect(h.scene).toBe(before);
+    const h2 = createHarness();
+    const before2 = h2.scene;
+    h2.actions.setLighting({ sunMode: 'manual' });
+    expect(h2.scene).toBe(before2);
+  });
 });
 
 describe('duplicateSelectedObject', () => {

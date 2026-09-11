@@ -453,6 +453,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onAddMap={addSceneMap}
                   onRemoveMap={deletePlacedMap}
                   onToggleLock={setObjectLocked}
+                  regionId={regionId}
                   environmentId={sceneInfo?.environmentId}
                   onEnvironmentChange={setEnvironmentId}
                   lighting={sceneInfo?.lighting}
@@ -784,6 +785,7 @@ function ProjectPalettePanel({
   onAddMap,
   onRemoveMap,
   onToggleLock,
+  regionId,
   environmentId,
   onEnvironmentChange,
   lighting,
@@ -796,6 +798,8 @@ function ProjectPalettePanel({
 }: {
   items: SceneModelCatalogItem[];
   maps: SavedMapInfo[];
+  /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
+  regionId: string;
   /** 태그 탭 — 이 씬이 참조하는 태그 목록을 뽑는다. */
   sceneInfo: SavedSceneInfo | null;
   /** 가상 태그 관리 페이지 경로. */
@@ -898,10 +902,12 @@ function ProjectPalettePanel({
               />
             ) : (
               <PaletteEnvironmentSection
+                regionId={regionId}
                 environmentId={environmentId}
                 onChange={onEnvironmentChange}
                 lighting={lighting}
                 onShadowsChange={(shadows) => onLightingChange({ shadows })}
+                onSunModeChange={(sunMode) => onLightingChange({ sunMode })}
                 // 드래그 중에는 recordHistory: false — 종료 시
                 // onLightingInteractionEnd(endTransformInteraction)가 1회 커밋.
                 onSunAngleChange={({ azimuth, elevation }) =>

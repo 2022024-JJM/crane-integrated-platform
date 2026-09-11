@@ -264,6 +264,11 @@
     "lightingSunSouth": "남",
     "lightingSunAzimuth": "방위",
     "lightingSunElevation": "고도",
+    "lightingSunMode": "태양 위치 방식",
+    "lightingSunModeManual": "수동",
+    "lightingSunModeSolar": "현장 시각 연동",
+    "lightingSunModeSolarHint": "현장 위치(위경도)와 시각으로 태양·달 위치를 계산해 낮과 밤을 표현합니다. 아래 시각 미리보기는 저장되지 않는 세션 설정입니다.",
+    "lightingSunModeNoGeo": "이 지역은 현장 위치가 등록되지 않아 태양 위치를 수동으로만 설정할 수 있습니다.",
     "searchModels": "모델 검색",
     "searchObjects": "객체 검색",
     "multipleSelected": "{{count}}개 객체 선택됨",
@@ -336,5 +341,35 @@
     "alertTitle": "충돌 감지",
     "pausedTitle": "충돌 — 시뮬레이션 정지됨",
     "resume": "이어서 재생"
+  },
+  "sceneClock": {
+    "title": "현장 시각 · 낮/밤",
+    "live": "실시간",
+    "manual": "시각 지정",
+    "backToLive": "현재 시각으로",
+    "yardLights": "야간 작업등",
+    "date": "날짜",
+    "timeOfDay": "시각",
+    "sun": "태양",
+    "moon": "달",
+    "azimuth": "방위",
+    "elevation": "고도",
+    "belowHorizon": "지평선 아래",
+    "moonIllumination": "조명 {{percent}}%",
+    "sunrise": "일출",
+    "sunset": "일몰",
+    "noon": "정오",
+    "midnight": "자정",
+    "noEvent": "—",
+    "timeZone": "{{timeZone}}",
+    "phase": {
+      "day": "낮",
+      "dawn": "새벽",
+      "dusk": "황혼",
+      "night": "밤"
+    },
+    "replayHint": "리플레이 프레임의 기록 시각을 따라갑니다.",
+    "manualOff": "이 씬은 태양 위치가 고정(수동)입니다. 씬 편집 › 배경 탭에서 '현장 시각 연동'을 켜면 시각에 따라 낮과 밤이 바뀝니다.",
+    "noGeo": "이 지역은 현장 위치(위경도)가 등록되지 않아 시각 연동을 쓸 수 없습니다."
   }
 }

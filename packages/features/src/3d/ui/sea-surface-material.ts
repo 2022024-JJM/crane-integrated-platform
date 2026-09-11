@@ -41,6 +41,12 @@ export interface SeaSurfaceUniforms extends Record<string, IUniform> {
   /** 카메라 거리 기준 너울 감쇠 시작/끝(월드 unit). 잔물결은 시작 거리의 20~80% 구간에서 먼저 감쇠. */
   uFadeStart: { value: number };
   uFadeEnd: { value: number };
+  /**
+   * 색 배율 — `scene.backgroundIntensity` 를 그대로 미러링한다(SeaSurface 의
+   * useFrame). 낮/밤(solar 모드)이 배경 EXR 을 어둡게 할 때 바다도 같은
+   * 배율로 어두워져 수평선 이음새가 생기지 않는다. 배경처럼 톤매핑 전에 곱한다.
+   */
+  uEnvIntensity: { value: number };
 }
 
 // logdepthbuf 청크: 렌더러가 logarithmicDepthBuffer 모드라 raw ShaderMaterial도
@@ -70,6 +76,7 @@ uniform float uTime;
 uniform float uWaveStrength;
 uniform float uFadeStart;
 uniform float uFadeEnd;
+uniform float uEnvIntensity;
 
 varying vec3 vWorldPos;
 
@@ -172,7 +179,7 @@ void main() {
   d.y = min(d.y, -0.002);
   d = normalize(d);
 
-  vec3 color = texture2D(tEnv, equirectUv(d)).rgb;
+  vec3 color = texture2D(tEnv, equirectUv(d)).rgb * uEnvIntensity;
   gl_FragColor = vec4(color, 1.0);
 
   #include <tonemapping_fragment>
@@ -190,6 +197,7 @@ export function createSeaSurfaceMaterial(
     uWaveStrength: { value: options.waveStrength },
     uFadeStart: { value: options.fadeStart },
     uFadeEnd: { value: options.fadeEnd },
+    uEnvIntensity: { value: 1 },
   };
   const material = new ShaderMaterial({
     uniforms,

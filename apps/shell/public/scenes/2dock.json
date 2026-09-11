@@ -414,5 +414,9 @@
       "path": "/maps/okpo.glb",
       "cameraBounds": true
     }
-  ]
+  ],
+  "lighting": {
+    "shadows": true,
+    "sunMode": "solar"
+  }
 }

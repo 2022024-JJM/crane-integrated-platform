@@ -405,4 +405,24 @@ describe('sanitizeSceneInfo — 조명 (기본값이면 필드 생략)', () => {
       ),
     ).not.toHaveProperty('lighting');
   });
+
+  it("sunMode 는 'solar' 만 남기고 수동 방위·고도는 함께 보존한다", () => {
+    expect(
+      sanitizeSceneInfo(
+        scene({ lighting: { sunMode: 'solar', sunAzimuth: 90 } }),
+      ).lighting,
+    ).toEqual({ sunMode: 'solar', sunAzimuth: 90 });
+  });
+
+  it("sunMode 'manual'·알 수 없는 값·타입 오염은 기본값(필드 생략)", () => {
+    expect(
+      sanitizeSceneInfo(scene({ lighting: { sunMode: 'manual' } })),
+    ).not.toHaveProperty('lighting');
+    expect(
+      sanitizeSceneInfo(scene({ lighting: { sunMode: 'lunar' } })),
+    ).not.toHaveProperty('lighting');
+    expect(
+      sanitizeSceneInfo(scene({ lighting: { sunMode: true } })),
+    ).not.toHaveProperty('lighting');
+  });
 });

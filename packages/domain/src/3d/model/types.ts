@@ -66,9 +66,25 @@ export const SCENE_SUN_ELEVATION_MIN = 20;
  */
 export const SCENE_SUN_ELEVATION_DEFAULT = Math.atan2(1, 0.2) * (180 / Math.PI);
 
+/**
+ * 태양 위치를 정하는 방식.
+ * - `manual`: 씬에 저장된 sunAzimuth/sunElevation 고정(기본, 필드 생략).
+ * - `solar`: 현장 위치(scene-site-geo)·시각으로 매 프레임 계산 — 낮/밤이
+ *   시각을 따라 바뀌고 밤에는 달빛·어두운 하늘로 전환된다. 현장 위치가
+ *   등록되지 않은 region 은 런타임이 manual 로 폴백한다.
+ */
+export type SceneSunMode = 'manual' | 'solar';
+export const SCENE_SUN_MODE_DEFAULT: SceneSunMode = 'manual';
+
 export interface SavedLightingInfo {
   /** 그림자 On/Off. 필드 없음 = false (기존 저장본 하위호환). */
   shadows?: boolean;
+  /**
+   * 태양 위치 방식. 필드 없음 = 'manual'(아래 방위·고도 고정). 'solar' 면
+   * 방위·고도 필드는 무시되지만 저장본에는 남겨 둔다 — manual 로 되돌릴 때
+   * 이전 수동 값이 복원된다.
+   */
+  sunMode?: SceneSunMode;
   /**
    * 태양 방위각(도, [0,360) 나침반식). 0=북, 90=동, 180=남, 270=서.
    * 필드 없음 = 180(남).

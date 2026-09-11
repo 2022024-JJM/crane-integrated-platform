@@ -41,6 +41,31 @@ export {
   SceneLighting,
 } from './ui/scene-render-preset';
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
+export { SceneClockMenu } from './ui/scene-clock-menu';
+export { SceneClockPanel } from './ui/scene-clock-panel';
+export {
+  readSceneClockMs,
+  useSceneClockStore,
+  type SceneClockMode,
+} from './model/use-scene-clock-store';
+export { type SceneTimeSource } from './model/scene-time-source';
+export {
+  useSceneSunState,
+  type SceneSunUiState,
+} from './model/use-scene-sun-state';
+export {
+  SCENE_ENVIRONMENT_INTENSITY,
+  SCENE_LIGHTING_BASE,
+  classifySkyPhase,
+  resolveSkyLighting,
+  type SkyLighting,
+  type SkyPhase,
+} from './lib/sky-lighting';
+export {
+  KEY_LIGHT_ELEVATION_MIN,
+  resolveSolarLighting,
+  type SolarLightingSnapshot,
+} from './lib/solar-lighting';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export {
   MIN_SURFACE_DISTANCE,

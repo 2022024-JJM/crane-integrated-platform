@@ -9,6 +9,7 @@ import {
 } from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { SEA_LEVEL_Y, resolveEnvironmentFileUrl } from '@crane/domain/3d';
+import { SCENE_ENVIRONMENT_INTENSITY } from '../lib/sky-lighting';
 import { createSeaSurfaceMaterial } from './sea-surface-material';
 
 /**
@@ -25,6 +26,12 @@ import { createSeaSurfaceMaterial } from './sea-surface-material';
  * 조명처럼 작동해 화면이 과하게 밝아졌다 — 하늘 EXR 전체가 광원이 되므로
  * 체감 광량이 수치보다 크게 들어온다. 값을 올릴 일이 생기면 조명
  * (SCENE_LIGHTING)을 함께 내려 총 광량을 유지할 것.
+ *
+ * 낮/밤(SceneLighting solar 모드)은 여기 값을 직접 건드리지 않고
+ * `scene.backgroundIntensity` 와 `scene.environmentIntensity` 를 매 프레임
+ * 하늘 밝기로 맞춘다 — 그래서 상수는 lib/sky-lighting 의
+ * SCENE_ENVIRONMENT_INTENSITY 로 공유하고, 바다 평면은 backgroundIntensity 를
+ * 미러링해 배경과 같은 배율로 어두워진다(SeaSurface 의 useFrame).
  *
  * 텍스처는 useLoader 전역 캐시 소유이므로 unmount에 dispose하지 않는다
  * (재마운트 시 캐시된 텍스처를 다시 쓴다).
@@ -54,7 +61,7 @@ import { createSeaSurfaceMaterial } from './sea-surface-material';
  * 프레임버퍼를 복사해 수면 아래를 블러하는 오버레이도 시도했다가 뺐다 —
  * alpha:false 프레임버퍼와 텍스처 포맷 호환에 취약해 선체가 검게 덮였다.
  */
-const ENVIRONMENT_INTENSITY = 0.18;
+const ENVIRONMENT_INTENSITY = SCENE_ENVIRONMENT_INTENSITY;
 
 /**
  * 바다 평면 파라미터.
@@ -133,12 +140,18 @@ function SeaSurface({ texture }: { texture: Texture }) {
 
   // uTime은 useFrame에서 매 프레임 증가 — 훅 의존성으로 넘긴 sea를 직접
   // 변경하면 react-hooks/immutability에 걸리므로 uniform 객체만 ref로 든다.
-  const timeUniformRef = useRef(sea.material.uniforms.uTime);
+  // uEnvIntensity 는 배경 밝기(scene.backgroundIntensity — 낮/밤이 조절)를
+  // 그대로 따라간다. 바다가 배경과 다른 배율이면 수평선에 띠가 생긴다.
+  const uniformsRef = useRef(sea.material.uniforms);
   useEffect(() => {
-    timeUniformRef.current = sea.material.uniforms.uTime;
+    uniformsRef.current = sea.material.uniforms;
   }, [sea]);
-  useFrame((_, delta) => {
-    timeUniformRef.current.value += delta * SEA_WAVE_SPEED;
+  useFrame(({ scene }, delta) => {
+    const uniforms = uniformsRef.current;
+    uniforms.uTime.value += delta * SEA_WAVE_SPEED;
+    if (uniforms.uEnvIntensity.value !== scene.backgroundIntensity) {
+      uniforms.uEnvIntensity.value = scene.backgroundIntensity;
+    }
   });
 
   return <primitive object={sea} />;

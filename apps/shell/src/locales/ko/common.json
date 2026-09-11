@@ -303,6 +303,7 @@
     "simulationPlay": "시뮬레이션 실행",
     "simulationPause": "시뮬레이션 정지",
     "collisionMenu": "충돌 감지",
+    "clockMenu": "현장 시각 · 낮/밤",
     "warmup": {
       "bvh": "클릭 판정 준비 중 ({{done}}/{{total}})",
       "outline": "외곽선 준비 중 ({{done}}/{{total}})",

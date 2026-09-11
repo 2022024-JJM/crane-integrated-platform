@@ -86,6 +86,21 @@ describe('isSceneInfoEqual — 조명 기본값 정규화', () => {
       isSceneInfoEqual(scene(), scene({ lighting: { sunAzimuth: 90 } })),
     ).toBe(false);
   });
+
+  it("태양 방식(sunMode) — 'manual' 명시는 필드 없음과 같고 'solar' 는 dirty", () => {
+    expect(
+      isSceneInfoEqual(scene(), scene({ lighting: { sunMode: 'manual' } })),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(scene(), scene({ lighting: { sunMode: 'solar' } })),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ lighting: { sunMode: 'solar', sunAzimuth: 90 } }),
+        scene({ lighting: { sunMode: 'solar', sunAzimuth: 90 } }),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('isSceneInfoEqual — 지도', () => {

@@ -156,7 +156,25 @@ export {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
+  SCENE_SUN_MODE_DEFAULT,
 } from './model/types';
+export type { SceneSunMode } from './model/types';
+export {
+  SCENE_SITE_GEO_BY_REGION_ID,
+  getSceneSiteGeo,
+  type SceneSiteGeo,
+} from './model/scene-site-geo';
+export {
+  SUN_HORIZON_ELEVATION,
+  computeMoonIllumination,
+  computeMoonPosition,
+  computeSunDayEvents,
+  computeSunPosition,
+  type CelestialPosition,
+  type MoonIllumination,
+  type MoonPosition,
+  type SunDayEvents,
+} from './lib/solar-position';
 export {
   getSceneFileUrlByRegionId,
   getKnownRegionIds,

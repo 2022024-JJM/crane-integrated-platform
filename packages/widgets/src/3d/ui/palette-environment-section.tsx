@@ -5,13 +5,19 @@ import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
+  SCENE_SUN_MODE_DEFAULT,
+  getSceneSiteGeo,
   sceneEnvironmentCatalog,
 } from '@crane/domain/3d';
-import type { SavedLightingInfo } from '@crane/domain/3d';
+import type { SavedLightingInfo, SceneSunMode } from '@crane/domain/3d';
+import { SceneClockPanel } from '@crane/features/3d';
 import { clampToRange, cn } from '@crane/core/lib/utils';
 import { Switch } from '@crane/ui/atoms/switch';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 interface PaletteEnvironmentSectionProps {
+  /** solar 모드(현장 시각 연동)의 위치·시간대를 찾는 키. */
+  regionId: string;
   /**
    * 현재 씬의 배경 선택. 3-상태다 —
    * 문자열=카탈로그 id, null=배경 없음(명시), undefined=미지정(region 기본).
@@ -21,6 +27,8 @@ interface PaletteEnvironmentSectionProps {
   /** 씬 조명 설정. 필드 없음 = 기본값(그림자 Off, 태양 남쪽 기본 고도). */
   lighting: SavedLightingInfo | undefined;
   onShadowsChange: (shadows: boolean) => void;
+  /** 태양 위치 방식(수동 / 현장 시각 연동) — 씬 데이터, 히스토리에 남는다. */
+  onSunModeChange: (mode: SceneSunMode) => void;
   onSunAngleChange: (angles: { azimuth: number; elevation: number }) => void;
   /**
    * 태양 패드 드래그 시작/종료 — 드래그 중에는 히스토리를 쌓지 않고
@@ -44,10 +52,12 @@ interface PaletteEnvironmentSectionProps {
  */
 export const PaletteEnvironmentSection = memo(
   function PaletteEnvironmentSection({
+    regionId,
     environmentId,
     onChange,
     lighting,
     onShadowsChange,
+    onSunModeChange,
     onSunAngleChange,
     onSunDragStart,
     onSunDragEnd,
@@ -55,6 +65,11 @@ export const PaletteEnvironmentSection = memo(
     const { t } = useTranslation();
     const isUnset = environmentId === undefined;
     const shadowsEnabled = lighting?.shadows === true;
+    const sunMode = lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT;
+    // 현장 위치가 없는 region 은 solar 를 고를 수 없다 — 런타임이 어차피
+    // manual 로 폴백하므로 고르게 두면 "켰는데 아무 변화가 없는" 상태가 된다.
+    const hasSiteGeo = getSceneSiteGeo(regionId) !== null;
+    const isSolar = sunMode === 'solar' && hasSiteGeo;
     const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
     const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
 
@@ -116,15 +131,60 @@ export const PaletteEnvironmentSection = memo(
             />
           </div>
 
-          {/* 그림자 Off여도 활성 — 태양 위치는 그림자와 무관하게 조명
-              방향(셰이딩)에 항상 반영된다(scene-render-preset.tsx). */}
-          <SunPositionPad
-            azimuth={sunAzimuth}
-            elevation={sunElevation}
-            onAngleChange={onSunAngleChange}
-            onInteractionStart={handleSunInteractionStart}
-            onInteractionEnd={handleSunInteractionEnd}
-          />
+          {/* 태양 위치 방식 — 수동(패드) / 현장 시각 연동(낮·밤 자동). */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-foreground text-[11px]">
+              {t('monitoring:editor.lightingSunMode')}
+            </span>
+            <ToggleGroup
+              value={[isSolar ? 'solar' : 'manual']}
+              onValueChange={(next) => {
+                const choice = next[0];
+                if (choice === 'solar' || choice === 'manual') {
+                  onSunModeChange(choice);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              aria-label={t('monitoring:editor.lightingSunMode')}
+            >
+              <ToggleGroupItem value="manual" className="h-6 px-2 text-[10px]">
+                {t('monitoring:editor.lightingSunModeManual')}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="solar"
+                disabled={!hasSiteGeo}
+                className="h-6 px-2 text-[10px]"
+              >
+                {t('monitoring:editor.lightingSunModeSolar')}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          {!hasSiteGeo ? (
+            <p className="text-muted-foreground text-[10px] leading-snug">
+              {t('monitoring:editor.lightingSunModeNoGeo')}
+            </p>
+          ) : null}
+
+          {isSolar ? (
+            <>
+              <p className="text-muted-foreground text-[10px] leading-snug">
+                {t('monitoring:editor.lightingSunModeSolarHint')}
+              </p>
+              {/* 시각 미리보기 — 모니터링 독 팝업과 같은 패널·같은 전역 시계. */}
+              <SceneClockPanel regionId={regionId} solarEnabled />
+            </>
+          ) : (
+            // 그림자 Off여도 활성 — 태양 위치는 그림자와 무관하게 조명
+            // 방향(셰이딩)에 항상 반영된다(scene-render-preset.tsx).
+            <SunPositionPad
+              azimuth={sunAzimuth}
+              elevation={sunElevation}
+              onAngleChange={onSunAngleChange}
+              onInteractionStart={handleSunInteractionStart}
+              onInteractionEnd={handleSunInteractionEnd}
+            />
+          )}
         </div>
       </div>
     );
@@ -200,7 +260,9 @@ function SunPositionPad({
         <span className={cn(compassLabel, 'top-1/2 right-0 -translate-y-1/2')}>
           {t('monitoring:editor.lightingSunEast')}
         </span>
-        <span className={cn(compassLabel, 'bottom-0 left-1/2 -translate-x-1/2')}>
+        <span
+          className={cn(compassLabel, 'bottom-0 left-1/2 -translate-x-1/2')}
+        >
           {t('monitoring:editor.lightingSunSouth')}
         </span>
         <span className={cn(compassLabel, 'top-1/2 left-0 -translate-y-1/2')}>

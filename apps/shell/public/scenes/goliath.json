@@ -72,5 +72,9 @@
       11.291182743098457
     ]
   },
-  "environmentId": "overcast-atlantic"
+  "environmentId": "overcast-atlantic",
+  "lighting": {
+    "shadows": true,
+    "sunMode": "solar"
+  }
 }

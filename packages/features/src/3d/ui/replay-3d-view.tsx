@@ -233,7 +233,13 @@ export function Replay3dView({
         }
         onControllerReady={handleControllerReady}
       >
-        <SceneLighting sceneInfo={sceneInfo} />
+        {/* 리플레이의 낮/밤은 프레임 타임스탬프를 따른다 — 기록된 그 시각의
+            태양·그림자가 재현된다(solar 모드 씬 한정). */}
+        <SceneLighting
+          sceneInfo={sceneInfo}
+          regionId={regionId}
+          timeSource="replay"
+        />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}

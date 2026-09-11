@@ -31,6 +31,7 @@
     "./lib/use-fullscreen": "./src/lib/use-fullscreen.ts",
     "./lib/export-csv": "./src/lib/export-csv.ts",
     "./lib/top-view-pose": "./src/lib/top-view-pose.ts",
+    "./lib/time-zone": "./src/lib/time-zone.ts",
     "./providers": "./src/providers/index.ts",
     "./types/math": "./src/types/math.ts",
     "./types/navigation": "./src/types/navigation.ts",

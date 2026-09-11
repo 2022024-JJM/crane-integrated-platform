@@ -39,6 +39,7 @@ import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
+import { SceneClockMenu } from './scene-clock-menu';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -330,6 +331,9 @@ export function Monitoring3dView({
                   onViewCollision={handleViewCollision}
                 />
               ) : null}
+              {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
+                  의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. */}
+              <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
             </>
           ) : (
             toolbarExtras
@@ -349,7 +353,8 @@ export function Monitoring3dView({
         }
         onControllerReady={handleControllerReady}
       >
-        <SceneLighting sceneInfo={sceneInfo} />
+        {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키. */}
+        <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
