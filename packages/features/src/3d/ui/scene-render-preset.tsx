@@ -3,13 +3,22 @@ import { useFrame, useThree } from '@react-three/fiber';
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
+  BackSide,
   Box3,
+  Mesh,
+  MeshBasicMaterial,
   Object3D,
+  SphereGeometry,
   Sprite,
   SpriteMaterial,
   Vector3,
 } from 'three';
-import type { AmbientLight, DirectionalLight, Scene } from 'three';
+import type {
+  AmbientLight,
+  DirectionalLight,
+  HemisphereLight,
+  Scene,
+} from 'three';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -24,6 +33,9 @@ import type { SavedSceneInfo, SceneSiteGeo } from '@crane/domain/3d';
 import { isSceneShadowEnabled } from '../lib/scene-shadow';
 import { sunDirectionFromAngles } from '../lib/sun-direction';
 import {
+  FILL_LIGHT_AZIMUTH,
+  FILL_LIGHT_ELEVATION,
+  NIGHT_SKY_TINT_COLOR,
   SCENE_ENVIRONMENT_INTENSITY,
   SCENE_LIGHTING_BASE,
   type RgbTuple,
@@ -365,6 +377,13 @@ const CELESTIAL_DISTANCE = 20_000;
 const SUN_SPRITE_SIZE = 2400;
 /** 달 스프라이트 한 변 — 원판(텍스처의 42%)이 약 1.2°. 실제(0.5°)보다 키워 읽히게. */
 const MOON_SPRITE_SIZE = 1000;
+/**
+ * 밤하늘 틴트 돔 반경 — 표식(20000)보다 멀고 far(50000) 안. 카메라를 따라
+ * 다니며 하늘이 보이는 픽셀만 남색으로 덮는다(지형·모델은 깊이로 앞).
+ */
+const SKY_TINT_RADIUS = 45_000;
+/** 보조 투광등 위치 거리 — 방향광은 위치→타깃(원점) 방향만 쓴다. */
+const FILL_LIGHT_DISTANCE = 1000;
 
 interface SolarFrameState {
   geo: SceneSiteGeo | null;
@@ -418,6 +437,8 @@ function setColorIfChanged(
 function resetToManualLook(
   light: DirectionalLight | null,
   ambient: AmbientLight | null,
+  fill: DirectionalLight | null,
+  hemisphere: HemisphereLight | null,
   scene: Scene,
 ) {
   if (light) {
@@ -428,10 +449,43 @@ function resetToManualLook(
     ambient.intensity = SCENE_LIGHTING.ambientIntensity;
     ambient.color.set('#ffffff');
   }
+  if (fill) fill.intensity = 0;
+  if (hemisphere) hemisphere.intensity = 0;
   scene.backgroundIntensity = 1;
   if (scene.environment) {
     scene.environmentIntensity = SCENE_ENVIRONMENT_INTENSITY;
   }
+}
+
+/** 밤하늘 틴트 돔 — 안쪽이 보이는 구, 반투명 남색. useFrame 이 카메라에 붙인다. */
+function useSkyTintDome() {
+  const dome = useMemo(() => {
+    const geometry = new SphereGeometry(SKY_TINT_RADIUS, 32, 16);
+    const material = new MeshBasicMaterial({
+      color: NIGHT_SKY_TINT_COLOR,
+      transparent: true,
+      opacity: 0,
+      side: BackSide,
+      depthWrite: false,
+      // 표시 색 그대로 — 톤매핑을 거치면 남색이 회색으로 눌린다.
+      toneMapped: false,
+    });
+    const mesh = new Mesh(geometry, material);
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    mesh.raycast = () => {};
+    return mesh;
+  }, []);
+
+  useEffect(
+    () => () => {
+      dome.geometry.dispose();
+      dome.material.dispose();
+    },
+    [dome],
+  );
+
+  return dome;
 }
 
 /** 하늘 표식 스프라이트 — 텍스처가 없으면(문서 없는 환경) null. */
@@ -492,7 +546,9 @@ function useCelestialSprite(
  *   (lib/solar-lighting). 낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향,
  *   useSceneClockStore.yardLights 로 끌 수 있다)이 방향광이 되고 박명엔 둘을
  *   세기 비율로 섞는다. 세기·색·환경광·배경(EXR)·환경맵 밝기가
- *   lib/sky-lighting 곡선을 따른다. 달은 표식·위상 표시용이다. 하늘에는
+ *   lib/sky-lighting 곡선을 따른다. 밤에는 그림자 없는 보조 투광등(반대편
+ *   마스트)·남색/난색 반구광·밤하늘 남색 틴트 돔이 더해져 그림자 면이 죽지
+ *   않고 하늘이 회색으로 죽지 않는다. 달은 표식·위상 표시용이다. 하늘에는
  *   태양 글로우·달 표식 스프라이트를 띄운다(EXR 배경이 있을 때만 — 검은
  *   캔버스 위의 해는 어색하다). 현장 위치가 없는 region 은 manual 로 폴백.
  *   방향은 CELESTIAL_ANGLE_STEP(0.05°) 격자에 양자화되어 정지 화면에서
@@ -539,8 +595,19 @@ export function SceneLighting({
   const target = useMemo(() => new Object3D(), []);
   const lightRef = useRef<DirectionalLight | null>(null);
   const ambientRef = useRef<AmbientLight | null>(null);
+  const fillRef = useRef<DirectionalLight | null>(null);
+  const hemisphereRef = useRef<HemisphereLight | null>(null);
   const scratchForward = useMemo(() => new Vector3(), []);
   const scene = useThree((s) => s.scene);
+  // 보조 투광등 위치 — 고정 방향(타깃은 원점 기본값)이라 한 번만 계산.
+  const fillPosition = useMemo<Vector3Tuple>(() => {
+    const d = sunDirectionFromAngles(FILL_LIGHT_AZIMUTH, FILL_LIGHT_ELEVATION);
+    return [
+      d.x * FILL_LIGHT_DISTANCE,
+      d.y * FILL_LIGHT_DISTANCE,
+      d.z * FILL_LIGHT_DISTANCE,
+    ];
+  }, []);
 
   // solar 프레임 상태 — 시각·천체 계산 캐시. React 상태가 아니다.
   const solarRef = useRef<SolarFrameState>(createSolarFrameState());
@@ -552,6 +619,10 @@ export function SceneLighting({
   // 의 uniform ref 와 같은 사정).
   const sunSpriteRef = useRef<Sprite | null>(null);
   const moonSpriteRef = useRef<Sprite | null>(null);
+  const skyTintDome = useSkyTintDome();
+  const skyTintRef = useRef<Mesh<SphereGeometry, MeshBasicMaterial> | null>(
+    null,
+  );
 
   // solar 모드를 떠나면(설정 변경·언마운트) useFrame 이 덮어쓴 조명·하늘을
   // 수동 기본값으로 되돌리고 표식을 숨긴다. ref 는 effect 시점에 잡아 둔다
@@ -560,15 +631,19 @@ export function SceneLighting({
     if (!solarGeo) return;
     const light = lightRef.current;
     const ambient = ambientRef.current;
+    const fill = fillRef.current;
+    const hemisphere = hemisphereRef.current;
     const solar = solarRef.current;
     const sun = sunSpriteRef.current;
     const moon = moonSpriteRef.current;
+    const tint = skyTintRef.current;
     return () => {
-      resetToManualLook(light, ambient, scene);
+      resetToManualLook(light, ambient, fill, hemisphere, scene);
       solar.snapshot = null;
       solar.timeKey = Number.NaN;
       if (sun) sun.visible = false;
       if (moon) moon.visible = false;
+      if (tint) tint.visible = false;
     };
   }, [solarGeo, scene]);
 
@@ -684,6 +759,21 @@ export function SceneLighting({
           }
           setColorIfChanged(ambient.color, sky.ambientColor);
         }
+        const fill = fillRef.current;
+        if (fill) {
+          if (fill.intensity !== sky.fillIntensity) {
+            fill.intensity = sky.fillIntensity;
+          }
+          setColorIfChanged(fill.color, sky.fillColor);
+        }
+        const hemisphere = hemisphereRef.current;
+        if (hemisphere) {
+          if (hemisphere.intensity !== sky.hemisphereIntensity) {
+            hemisphere.intensity = sky.hemisphereIntensity;
+          }
+          setColorIfChanged(hemisphere.color, sky.hemisphereSkyColor);
+          setColorIfChanged(hemisphere.groundColor, sky.hemisphereGroundColor);
+        }
         if (frameScene.backgroundIntensity !== sky.skyIntensity) {
           frameScene.backgroundIntensity = sky.skyIntensity;
         }
@@ -716,6 +806,16 @@ export function SceneLighting({
             moon.position
               .copy(camera.position)
               .addScaledVector(solar.moonDir, CELESTIAL_DISTANCE);
+          }
+        }
+        // 밤하늘 틴트 — EXR 배경이 있을 때만, 카메라 중심.
+        const tint = skyTintRef.current;
+        if (tint) {
+          const opacity = hasSky ? sky.skyTintOpacity : 0;
+          tint.visible = opacity > 0.001;
+          if (tint.visible) {
+            tint.material.opacity = opacity;
+            tint.position.copy(camera.position);
           }
         }
       }
@@ -843,6 +943,18 @@ export function SceneLighting({
           ]}
         />
       </directionalLight>
+      {/* 보조 투광등·반구광 — solar 모드의 밤에만 세기가 오른다(useFrame).
+          그림자는 없다. 항상 마운트해 조명 개수(셰이더 컴파일)가 흔들리지
+          않게 한다. */}
+      <directionalLight
+        ref={fillRef}
+        position={fillPosition}
+        intensity={0}
+        color={SCENE_LIGHTING.directionalColor}
+      />
+      <hemisphereLight ref={hemisphereRef} intensity={0} />
+      {/* 밤하늘 틴트 돔 — solar 모드의 밤, EXR 배경이 있을 때만 보인다. */}
+      <primitive object={skyTintDome} ref={skyTintRef} />
       {/* 하늘 표식 — solar 모드에서만 보인다(useFrame 이 visible 을 켠다). */}
       {sunSprite ? <primitive object={sunSprite} ref={sunSpriteRef} /> : null}
       {moonSprite ? (

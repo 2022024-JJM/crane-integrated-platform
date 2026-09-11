@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   DAYLIGHT_FADE,
+  FILL_LIGHT_INTENSITY_RATIO,
   NIGHT_AMBIENT_COLOR_DARK,
   NIGHT_AMBIENT_COLOR_LIT,
   NIGHT_AMBIENT_INTENSITY_DARK,
   NIGHT_AMBIENT_INTENSITY_LIT,
+  NIGHT_HEMISPHERE_GROUND_COLOR,
+  NIGHT_HEMISPHERE_INTENSITY_DARK,
+  NIGHT_HEMISPHERE_INTENSITY_LIT,
   NIGHT_SKY_INTENSITY,
+  NIGHT_SKY_TINT_ALPHA,
   SUN_COLOR_HORIZON,
   SUN_COLOR_ZENITH,
   SUN_KEY_FADE,
@@ -57,6 +62,10 @@ describe('resolveSkyLighting — 낮', () => {
     const sky = at(60);
     expect(sky.sunIntensity).toBeCloseTo(BASE.sunIntensity, 12);
     expect(sky.yardIntensity).toBe(0);
+    // 밤 전용 요소는 전부 0 — 한낮 화면이 수동 모드와 같아지는 근거.
+    expect(sky.fillIntensity).toBe(0);
+    expect(sky.hemisphereIntensity).toBe(0);
+    expect(sky.skyTintOpacity).toBe(0);
     expect(sky.keyIntensity).toBeCloseTo(BASE.sunIntensity, 12);
     expect(sky.keyYardBlend).toBe(0);
     expect(sky.keyColor).toEqual(SUN_COLOR_ZENITH);
@@ -102,6 +111,18 @@ describe('resolveSkyLighting — 밤 (작업등 켜짐)', () => {
     expect(sky.ambientColor).toEqual(NIGHT_AMBIENT_COLOR_LIT);
     expect(sky.sunVisibility).toBe(0);
     expect(sky.moonVisibility).toBeGreaterThan(0.9);
+    // 보조 투광등·반구광·하늘 틴트가 모두 켜진다.
+    expect(sky.fillIntensity).toBeCloseTo(
+      YARD_FULL * FILL_LIGHT_INTENSITY_RATIO,
+      12,
+    );
+    expect(sky.fillColor).toEqual(YARD_LIGHT_COLOR);
+    expect(sky.hemisphereIntensity).toBeCloseTo(
+      NIGHT_HEMISPHERE_INTENSITY_LIT,
+      12,
+    );
+    expect(sky.hemisphereGroundColor).toEqual(NIGHT_HEMISPHERE_GROUND_COLOR);
+    expect(sky.skyTintOpacity).toBeCloseTo(NIGHT_SKY_TINT_ALPHA, 12);
   });
 
   it('달의 고도·위상은 조명 세기에 영향을 주지 않고 표식만 바꾼다', () => {
@@ -125,6 +146,14 @@ describe('resolveSkyLighting — 밤 (작업등 꺼짐)', () => {
     expect(sky.ambientIntensity).toBeCloseTo(NIGHT_AMBIENT_INTENSITY_DARK, 12);
     expect(sky.ambientColor).toEqual(NIGHT_AMBIENT_COLOR_DARK);
     expect(sky.skyIntensity).toBeCloseTo(NIGHT_SKY_INTENSITY, 12);
+    // 보조 투광등은 꺼지고 반구광은 약한 푸른 값, 하늘 틴트는 그대로(밤이니까).
+    expect(sky.fillIntensity).toBe(0);
+    expect(sky.hemisphereIntensity).toBeCloseTo(
+      NIGHT_HEMISPHERE_INTENSITY_DARK,
+      12,
+    );
+    expect(sky.hemisphereGroundColor).toEqual(NIGHT_AMBIENT_COLOR_DARK);
+    expect(sky.skyTintOpacity).toBeCloseTo(NIGHT_SKY_TINT_ALPHA, 12);
   });
 
   it('낮에는 옵션과 무관하게 같은 값이다', () => {
@@ -149,6 +178,15 @@ describe('resolveSkyLighting — 태양→작업등 인계 연속성', () => {
       expect(
         Math.abs(cur.ambientIntensity - prev.ambientIntensity),
       ).toBeLessThan(0.2);
+      expect(Math.abs(cur.fillIntensity - prev.fillIntensity)).toBeLessThan(
+        0.3,
+      );
+      expect(
+        Math.abs(cur.hemisphereIntensity - prev.hemisphereIntensity),
+      ).toBeLessThan(0.15);
+      expect(Math.abs(cur.skyTintOpacity - prev.skyTintOpacity)).toBeLessThan(
+        0.15,
+      );
       prev = cur;
     }
   });
@@ -174,10 +212,10 @@ describe('resolveSkyLighting — 태양→작업등 인계 연속성', () => {
     }
   });
 
-  it('밤에도 방향광이 낮의 절반 안팎으로 남아 장비가 보인다', () => {
+  it('밤에도 방향광이 낮의 절반~3/4 로 남아 장비가 보인다', () => {
     const night = at(-40);
     expect(night.keyIntensity).toBeGreaterThan(BASE.sunIntensity * 0.3);
-    expect(night.keyIntensity).toBeLessThan(BASE.sunIntensity * 0.6);
+    expect(night.keyIntensity).toBeLessThanOrEqual(BASE.sunIntensity * 0.75);
     expect(night.ambientIntensity).toBeGreaterThan(BASE.ambientIntensity * 0.6);
   });
 });

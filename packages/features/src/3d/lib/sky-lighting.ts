@@ -87,6 +87,24 @@ export interface SkyLighting {
   keyYardBlend: number;
   ambientIntensity: number;
   ambientColor: RgbTuple;
+  /**
+   * 보조 투광등(필 라이트, 그림자 없음) 세기·색 — 주 마스트 반대편
+   * (FILL_LIGHT_AZIMUTH/ELEVATION)에서 그림자 면을 들어 올린다. 낮엔 0.
+   */
+  fillIntensity: number;
+  fillColor: RgbTuple;
+  /**
+   * 밤 반구광 — 위(하늘)는 남색, 아래(조명 받은 바닥의 반사)는 난색.
+   * 면의 방향에 따라 색이 달라져 밤 장비에 입체감을 준다. 낮엔 0.
+   */
+  hemisphereIntensity: number;
+  hemisphereSkyColor: RgbTuple;
+  hemisphereGroundColor: RgbTuple;
+  /**
+   * 밤하늘 틴트 돔 불투명도 0~1 — EXR 배경을 배율로만 어둡게 하면 회색으로
+   * 죽어 남색을 덧입힌다(색은 NIGHT_SKY_TINT_COLOR). 낮엔 0.
+   */
+  skyTintOpacity: number;
   /** 하늘의 태양 표식(스프라이트) 불투명도 0~1. */
   sunVisibility: number;
   /** 달 표식 불투명도 0~1. */
@@ -105,8 +123,12 @@ export const SKY_FADE: readonly [number, number] = [-8, 6];
  * 0 이 되는 −3° 를 안에 품어 인계가 매끄럽다.
  */
 export const YARD_LIGHT_FADE: readonly [number, number] = [-5, 5];
-/** 작업등 세기 = 낮 태양 세기 × 이 비율(3.6 → 1.62). 낮보다 어둡되 장비가 환하다. */
-export const YARD_LIGHT_INTENSITY_RATIO = 0.45;
+/**
+ * 작업등 세기 = 낮 태양 세기 × 이 비율(3.6 → 2.16). 낮보다 어둡되 장비가
+ * 환하다. 0.45 로 시작했다가 "밤이 너무 어둡다" 피드백으로 올렸다
+ * (2026-09-11, 보조 투광등·반구광과 함께).
+ */
+export const YARD_LIGHT_INTENSITY_RATIO = 0.6;
 /** 작업등 색 — 따뜻한 백색 LED/메탈할라이드. */
 export const YARD_LIGHT_COLOR: RgbTuple = [1, 0.93, 0.8];
 /**
@@ -116,16 +138,40 @@ export const YARD_LIGHT_COLOR: RgbTuple = [1, 0.93, 0.8];
  */
 export const YARD_LIGHT_AZIMUTH = 210;
 export const YARD_LIGHT_ELEVATION = 62;
+/**
+ * 보조 투광등(필 라이트) — 주 마스트의 거의 반대편(북북동), 조금 낮은 각도.
+ * 야드에는 마스트가 여럿이라 한 방향 그림자 면이 새까맣지 않다는 사실을
+ * 대표한다. 그림자는 만들지 않는다(shadow map 은 주 방향광 하나).
+ */
+export const FILL_LIGHT_AZIMUTH = 20;
+export const FILL_LIGHT_ELEVATION = 50;
+/** 보조 투광등 세기 = 주 작업등 세기 × 이 비율. */
+export const FILL_LIGHT_INTENSITY_RATIO = 0.5;
+/** 밤 반구광 세기 — 작업등 켜짐/꺼짐. */
+export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.55;
+export const NIGHT_HEMISPHERE_INTENSITY_DARK = 0.12;
+/** 밤 반구광 색 — 위는 하늘 남색, 아래는 조명 받은 바닥의 난색 반사. */
+export const NIGHT_HEMISPHERE_SKY_COLOR: RgbTuple = [0.4, 0.5, 0.8];
+export const NIGHT_HEMISPHERE_GROUND_COLOR: RgbTuple = [1, 0.86, 0.66];
+/**
+ * 밤하늘 틴트 — sRGB hex(three Color 가 선형으로 바꾼다). 짙은 남색으로,
+ * 어두워진 EXR(회색 구름)이 비쳐 "구름 낀 밤하늘" 이 된다.
+ */
+export const NIGHT_SKY_TINT_COLOR = '#182040';
+export const NIGHT_SKY_TINT_ALPHA = 0.62;
+/** 틴트가 오르는 태양 고도 구간 — 4° 아래부터 시작해 −8° 에 완전. */
+export const NIGHT_SKY_TINT_FADE: readonly [number, number] = [-8, 4];
 /** 천체 표식이 지평선을 넘으며 나타나는 구간. */
 export const BODY_VISIBILITY_FADE: readonly [number, number] = [-1, 2];
 
 /**
  * 밤 하늘·환경맵 배율. 0 이면 배경이 검게 꺼져 수평선이 사라진다. 작업등
- * 켜진 야드 위 하늘은 광공해로 완전히 검지 않아 조금 올려 둔다.
+ * 켜진 야드 위 하늘은 광공해로 완전히 검지 않고, 위에 남색 틴트가 덮이므로
+ * 구름 결이 비칠 만큼 남긴다.
  */
-export const NIGHT_SKY_INTENSITY = 0.06;
-/** 작업등 켜진 밤의 환경광 — 난색, 낮의 ~80%. */
-export const NIGHT_AMBIENT_INTENSITY_LIT = 0.72;
+export const NIGHT_SKY_INTENSITY = 0.12;
+/** 작업등 켜진 밤의 환경광 — 난색, 낮과 거의 같은 세기(그림자 면이 죽지 않게). */
+export const NIGHT_AMBIENT_INTENSITY_LIT = 0.85;
 export const NIGHT_AMBIENT_COLOR_LIT: RgbTuple = [0.96, 0.92, 0.85];
 /** 작업등 끈 밤의 환경광 — 달·별빛 수준의 푸른 바닥값(형체만 남는다). */
 export const NIGHT_AMBIENT_INTENSITY_DARK = 0.28;
@@ -216,6 +262,25 @@ export function resolveSkyLighting(
   );
   const ambientColor = lerpRgb(nightAmbientColor, DAY_AMBIENT_COLOR, daylight);
 
+  // 보조 투광등·반구광·하늘 틴트 — 전부 밤에만(낮 값은 0 이라 한낮 화면은
+  // 수동 모드와 같다).
+  const fillIntensity = yardIntensity * FILL_LIGHT_INTENSITY_RATIO;
+  const nightness = 1 - daylight;
+  const hemisphereIntensity =
+    lerp(
+      NIGHT_HEMISPHERE_INTENSITY_DARK,
+      NIGHT_HEMISPHERE_INTENSITY_LIT,
+      yardOn,
+    ) * nightness;
+  const hemisphereGroundColor = lerpRgb(
+    NIGHT_AMBIENT_COLOR_DARK,
+    NIGHT_HEMISPHERE_GROUND_COLOR,
+    yardOn,
+  );
+  const skyTintOpacity =
+    NIGHT_SKY_TINT_ALPHA *
+    (1 - smoothstep(NIGHT_SKY_TINT_FADE[0], NIGHT_SKY_TINT_FADE[1], sunEl));
+
   const sunVisibility = smoothstep(
     BODY_VISIBILITY_FADE[0],
     BODY_VISIBILITY_FADE[1],
@@ -237,6 +302,12 @@ export function resolveSkyLighting(
     keyYardBlend,
     ambientIntensity,
     ambientColor,
+    fillIntensity,
+    fillColor: YARD_LIGHT_COLOR,
+    hemisphereIntensity,
+    hemisphereSkyColor: NIGHT_HEMISPHERE_SKY_COLOR,
+    hemisphereGroundColor,
+    skyTintOpacity,
     sunVisibility,
     moonVisibility,
   };
