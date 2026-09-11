@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   TERRAIN_LOD_HYSTERESIS,
   TERRAIN_LOD_THRESHOLD_PX,
+  lodCarrierKey,
   selectTerrainLod,
   terrainLodPixelFactor,
 } from '../terrain-lod';
@@ -42,7 +43,12 @@ describe('selectTerrainLod', () => {
     expect(selectTerrainLod(ERRORS, d1 + 0.01, FACTOR, 0)).toBe(0);
     // 마진(15%) 밖 — 전환.
     expect(
-      selectTerrainLod(ERRORS, d1 * (1 + TERRAIN_LOD_HYSTERESIS) + 0.01, FACTOR, 0),
+      selectTerrainLod(
+        ERRORS,
+        d1 * (1 + TERRAIN_LOD_HYSTERESIS) + 0.01,
+        FACTOR,
+        0,
+      ),
     ).toBe(1);
   });
 
@@ -70,5 +76,34 @@ describe('selectTerrainLod', () => {
   it('레벨을 건너뛴 전환도 허용된다(1→3, 탑뷰 순간 이동)', () => {
     const d3 = thresholdDistance(3) * (1 + TERRAIN_LOD_HYSTERESIS) + 1;
     expect(selectTerrainLod(ERRORS, d3, FACTOR, 1)).toBe(3);
+  });
+});
+
+describe('lodCarrierKey', () => {
+  it('지형 타일은 tile:[x,z], 모델은 group:<키>', () => {
+    expect(lodCarrierKey({ tile: [3, 7], lod: 0, lodError: 0 })).toBe(
+      'tile:3,7',
+    );
+    expect(lodCarrierKey({ lodGroup: 'Boom#2', lod: 1, lodError: 0.4 })).toBe(
+      'group:Boom#2',
+    );
+  });
+
+  it('lod 가 숫자가 아니거나 키가 없으면 캐리어가 아니다', () => {
+    expect(lodCarrierKey({ tile: [1, 2] })).toBeNull();
+    expect(lodCarrierKey({ lodGroup: 'x', lod: '1' })).toBeNull();
+    expect(lodCarrierKey({ lodGroup: '', lod: 1 })).toBeNull();
+    expect(lodCarrierKey({ lod: 1 })).toBeNull();
+    expect(lodCarrierKey({ tile: 'a,b', lod: 1 })).toBeNull();
+    expect(lodCarrierKey({ lodGroup: 'x', lod: Number.NaN })).toBeNull();
+    expect(lodCarrierKey(null)).toBeNull();
+    expect(lodCarrierKey(undefined)).toBeNull();
+    expect(lodCarrierKey('tile')).toBeNull();
+  });
+
+  it('tile 이 있으면 lodGroup 보다 우선한다', () => {
+    expect(lodCarrierKey({ tile: [0, 0], lodGroup: 'g', lod: 2 })).toBe(
+      'tile:0,0',
+    );
   });
 });

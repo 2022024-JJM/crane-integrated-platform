@@ -42,6 +42,11 @@ export {
 } from './ui/scene-render-preset';
 export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
 export { SceneClockMenu } from './ui/scene-clock-menu';
+export { SceneFrameGovernor } from './ui/scene-frame-governor';
+export {
+  ANIMATING_FPS as SCENE_ANIMATING_FPS,
+  resolveGovernorFps,
+} from './lib/frame-governor';
 export { SceneClockPanel } from './ui/scene-clock-panel';
 export {
   readSceneClockMs,

@@ -401,6 +401,9 @@ export function OutdoorWorkModelSimulation({
               // 구워져 있어 끄면 건물 그림자가 통째로 사라진다.
               castShadow={!isContextMap}
               receiveShadow={!isContextMap}
+              // 주변 지형은 PBR 대신 Lambert — 관제 대상이 아닌 수 km 도시의
+              // 픽셀 비용을 뺀다(model-mesh.tsx ModelShading). 에디터도 같은 규칙.
+              shading={isContextMap ? 'lambert' : 'standard'}
             />
           </SceneObjectBoundary>
         );

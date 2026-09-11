@@ -3,6 +3,7 @@ import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import {
+  type ModelShading,
   ModelMesh,
   useClonedModel,
   useModelLabelLocalAnchor,
@@ -38,6 +39,11 @@ interface GltfModelProps {
   castShadow?: boolean;
   /** 그림자를 받을지. 기본 true. 컨텍스트 지형만 false — model-mesh.tsx 주석. */
   receiveShadow?: boolean;
+  /**
+   * 셰이딩 등급. 기본 'standard'(PBR). 컨텍스트 지형만 'lambert' —
+   * model-mesh.tsx 의 ModelShading 주석.
+   */
+  shading?: ModelShading;
   meshOverrides?: SavedMeshOverride[];
   /**
    * 클릭 hit-test 가속용 BVH를 빌드할지. 기본 true. bbox 존 분류만 하는
@@ -100,6 +106,7 @@ export const GltfModel = memo(function GltfModel({
   seaSubmersion = false,
   castShadow = true,
   receiveShadow = true,
+  shading = 'standard',
   showLabel = true,
   labelDimmed = false,
   alarmSeverity = null,
@@ -123,7 +130,7 @@ export const GltfModel = memo(function GltfModel({
   // clone은 여기서 1회만 만들고 ModelMesh에 주입한다 — 예전엔 ModelMesh가
   // 따로 clone을 만들어 인스턴스당 clone·computeBoundingSphere가 2회 돌았고,
   // SelectionBox·라벨 앵커가 실제 렌더되는 트리와 다른 clone을 측정했다.
-  const clonedModel = useClonedModel(url);
+  const clonedModel = useClonedModel(url, undefined, { shading });
   const { clone } = clonedModel;
   const labelLocalAnchor = useModelLabelLocalAnchor(clone, showLabel);
   // 선택 표시 대상 — 자식 노드가 선택됐으면 그 노드, 아니면 모델 루트.
@@ -154,6 +161,7 @@ export const GltfModel = memo(function GltfModel({
       seaSubmersion={seaSubmersion}
       castShadow={castShadow}
       receiveShadow={receiveShadow}
+      shading={shading}
       position={position}
       rotation={rotation}
       scale={scale}

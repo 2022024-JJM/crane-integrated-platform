@@ -3,14 +3,21 @@ import { useFrame } from '@react-three/fiber';
 import { Box3, Vector3, type Object3D, type PerspectiveCamera } from 'three';
 import { modelObjectRegistry } from '@crane/domain/3d';
 import {
+  lodCarrierKey,
   selectTerrainLod,
   terrainLodPixelFactor,
 } from '../lib/terrain-lod';
 
 /**
- * 지형 타일 LOD 구동 — 씬에 로드된 타일 GLB(tile-terrain-glb.mjs --lod 산출물,
- * 노드 extras {tile,lod,lodError})의 LOD 노드 가시성을 카메라 거리에 따라
+ * LOD 구동 — 씬에 로드된 지형 타일 GLB(tile-terrain-glb.mjs --lod 산출물,
+ * 노드 extras {tile,lod,lodError})와 모델 GLB(add-model-lod.mjs 산출물,
+ * extras {lodGroup,lod,lodError})의 LOD 노드 가시성을 카메라 거리에 따라
  * 전환한다. 수식·임계는 lib/terrain-lod.ts(테스트 대상), 여기는 배선만.
+ *
+ * - 모델 그룹(lodGroup)은 움직인다(태그 맵핑·기즈모). 타일처럼 발견 시
+ *   AABB 를 고정하면 크레인이 주행한 뒤 거리 판정이 낡으므로, 모델은 매
+ *   프레임 LOD0 노드의 월드 위치 + 발견 시 잰 반경으로 거리를 재고 카메라
+ *   이동 게이트를 타지 않는다(그룹 수십 개 × 벡터 연산이라 무시할 비용).
  *
  * - 발견: modelObjectRegistry 루트를 훑어 userData.tile 캐리어를 그룹핑한다.
  *   레지스트리 크기가 변한 프레임에만 다시 훑는다(지도 GLB 늦은 로드 대응 —
@@ -33,19 +40,26 @@ interface TerrainLodTile {
   errors: number[];
   /** 레벨별 가시성 토글 대상 노드들. */
   levels: Object3D[][];
+  /** 고정 AABB(지형 타일) — 모델 그룹은 매 프레임 위치를 다시 읽는다. */
   box: Box3;
+  /**
+   * 모델 그룹: 거리 = |카메라 − LOD0 월드 위치| − 반경. 타일은 null.
+   * 반경은 발견 시 LOD0 AABB 의 반대각 절반(월드 스케일 포함).
+   */
+  dynamic: { anchor: Object3D; radius: number } | null;
   current: number;
 }
 
 const CAMERA_MOVE_EPS_SQ = 0.5 * 0.5;
 
 function isLodCarrier(object: Object3D): boolean {
-  const data = object.userData as { tile?: unknown; lod?: unknown };
-  return Array.isArray(data.tile) && typeof data.lod === 'number';
+  return lodCarrierKey(object.userData) !== null;
 }
 
 export function SceneTerrainLod() {
   const tilesRef = useRef<TerrainLodTile[]>([]);
+  const hasDynamicRef = useRef(false);
+  const scratchAnchorRef = useRef(new Vector3());
   const registrySizeRef = useRef(-1);
   const lastCameraRef = useRef(new Vector3(Number.NaN, 0, Number.NaN));
   const lastFactorRef = useRef(0);
@@ -57,6 +71,7 @@ export function SceneTerrainLod() {
     if (registrySize !== registrySizeRef.current) {
       registrySizeRef.current = registrySize;
       tilesRef.current = discoverTiles(scratchBoxRef.current);
+      hasDynamicRef.current = tilesRef.current.some((t) => t.dynamic !== null);
       discovered = true;
     }
     const tiles = tilesRef.current;
@@ -76,12 +91,26 @@ export function SceneTerrainLod() {
         CAMERA_MOVE_EPS_SQ ||
       Math.abs(camera.position.y - last.y) > 0.5;
     const factorChanged = factor !== lastFactorRef.current;
-    if (!discovered && !moved && !factorChanged) return;
+    const cameraStill = !discovered && !moved && !factorChanged;
+    if (cameraStill && !hasDynamicRef.current) return;
     last.copy(camera.position);
     lastFactorRef.current = factor;
 
     for (const tile of tiles) {
-      const distance = tile.box.distanceToPoint(camera.position);
+      // 카메라가 멈춰 있으면 움직이는 모델 그룹만 다시 판정한다.
+      if (cameraStill && !tile.dynamic) continue;
+      let distance: number;
+      if (tile.dynamic) {
+        const anchor = tile.dynamic.anchor;
+        scratchAnchorRef.current.setFromMatrixPosition(anchor.matrixWorld);
+        distance = Math.max(
+          0,
+          camera.position.distanceTo(scratchAnchorRef.current) -
+            tile.dynamic.radius,
+        );
+      } else {
+        distance = tile.box.distanceToPoint(camera.position);
+      }
       const level = selectTerrainLod(
         tile.errors,
         distance,
@@ -106,26 +135,33 @@ export function SceneTerrainLod() {
 function discoverTiles(scratchBox: Box3): TerrainLodTile[] {
   const groups = new Map<
     string,
-    { errors: number[]; levels: Object3D[][]; lod0: Object3D[] }
+    {
+      errors: number[];
+      levels: Object3D[][];
+      lod0: Object3D[];
+      dynamic: boolean;
+    }
   >();
 
   modelObjectRegistry.forEachRoot((root) => {
     root.traverse((object) => {
-      if (!isLodCarrier(object)) return;
+      const carrierKey = lodCarrierKey(object.userData);
+      if (carrierKey === null) return;
       // 캐리어 안에 캐리어가 중첩될 일은 없지만(스크립트 산출 구조), 조상이
       // 이미 캐리어면 중복 그룹핑을 막는다.
       for (let p = object.parent; p; p = p.parent) {
         if (isLodCarrier(p)) return;
       }
-      const data = object.userData as {
-        tile: [number, number];
-        lod: number;
-        lodError?: number;
-      };
-      const key = `${root.uuid}:${data.tile[0]},${data.tile[1]}`;
+      const data = object.userData as { lod: number; lodError?: number };
+      const key = `${root.uuid}:${carrierKey}`;
       let group = groups.get(key);
       if (!group) {
-        group = { errors: [], levels: [], lod0: [] };
+        group = {
+          errors: [],
+          levels: [],
+          lod0: [],
+          dynamic: carrierKey.startsWith('group:'),
+        };
         groups.set(key, group);
       }
       const lod = data.lod;
@@ -158,10 +194,17 @@ function discoverTiles(scratchBox: Box3): TerrainLodTile[] {
     }
     if (box.isEmpty()) continue;
 
+    // 모델 그룹의 반경 — LOD0 AABB 반대각 절반(월드 스케일 포함). 앵커는
+    // 첫 LOD0 노드(모델 하나의 프리미티브 노드).
+    const size = new Vector3();
+    box.getSize(size);
     tiles.push({
       errors: group.errors.slice(0, usable) as number[],
       levels: group.levels.slice(0, usable),
       box,
+      dynamic: group.dynamic
+        ? { anchor: group.lod0[0], radius: size.length() / 2 }
+        : null,
       // 발견 직후 첫 패스가 전 레벨 가시성을 정합 상태로 강제한다.
       current: -1,
     });

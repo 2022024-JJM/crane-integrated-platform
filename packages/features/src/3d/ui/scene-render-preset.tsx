@@ -96,6 +96,9 @@ export const SCENE_CAMERA_CLIP = { near: 0.1, far: 50000 } as const;
  * 지도급 씬(philly 지도 42만 삼각형)에서 프레임 예산을 다 먹는다. 1.5는
  * 골리앗 충돌가드 모드에서 먼저 검증된 값 — 라벨은 DOM(Html)이라 텍스트
  * 선명도와 무관하고, MSAA(antialias)가 켜져 있어 엣지도 깨끗하다.
+ * 2026-09-11 발열 절감 때 1.25 로 내렸다가 되돌렸다 — 핵심(야드 지도·
+ * 크레인)의 선명도가 우선이고, 절감은 주변 지형 Lambert·LOD·바다 감쇠
+ * 거리처럼 관제와 무관한 곳에서 한다.
  *
  * ThreeSceneViewer(@crane/ui)의 기본값도 같은 [1, 1.5]다 — 그 패키지는
  * features를 참조할 수 없어(SCENE_CAMERA_CLIP과 같은 사정) 리터럴로 들고
@@ -449,8 +452,14 @@ function resetToManualLook(
     ambient.intensity = SCENE_LIGHTING.ambientIntensity;
     ambient.color.set('#ffffff');
   }
-  if (fill) fill.intensity = 0;
-  if (hemisphere) hemisphere.intensity = 0;
+  if (fill) {
+    fill.intensity = 0;
+    fill.visible = false;
+  }
+  if (hemisphere) {
+    hemisphere.intensity = 0;
+    hemisphere.visible = false;
+  }
   scene.backgroundIntensity = 1;
   if (scene.environment) {
     scene.environmentIntensity = SCENE_ENVIRONMENT_INTENSITY;
@@ -759,8 +768,13 @@ export function SceneLighting({
           }
           setColorIfChanged(ambient.color, sky.ambientColor);
         }
+        // 밤 전용 조명은 세기가 0 이면 visible 도 끈다 — three 는 보이는
+        // 조명만 셰이더에 넣으므로 낮에는 두 광원분 프래그먼트 비용이 빠진다.
+        // 전환(해 뜰 때·질 때·작업등 토글)마다 머티리얼이 한 번 재컴파일된다.
         const fill = fillRef.current;
         if (fill) {
+          const on = sky.fillIntensity > 0.001;
+          if (fill.visible !== on) fill.visible = on;
           if (fill.intensity !== sky.fillIntensity) {
             fill.intensity = sky.fillIntensity;
           }
@@ -768,6 +782,8 @@ export function SceneLighting({
         }
         const hemisphere = hemisphereRef.current;
         if (hemisphere) {
+          const on = sky.hemisphereIntensity > 0.001;
+          if (hemisphere.visible !== on) hemisphere.visible = on;
           if (hemisphere.intensity !== sky.hemisphereIntensity) {
             hemisphere.intensity = sky.hemisphereIntensity;
           }
@@ -943,16 +959,17 @@ export function SceneLighting({
           ]}
         />
       </directionalLight>
-      {/* 보조 투광등·반구광 — solar 모드의 밤에만 세기가 오른다(useFrame).
-          그림자는 없다. 항상 마운트해 조명 개수(셰이더 컴파일)가 흔들리지
-          않게 한다. */}
+      {/* 보조 투광등·반구광 — solar 모드의 밤에만 켜진다(useFrame 이 visible·
+          세기를 함께 올린다). 그림자는 없다. 낮에는 visible=false 라 셰이더
+          조명 수에 들어가지 않는다. */}
       <directionalLight
         ref={fillRef}
         position={fillPosition}
         intensity={0}
+        visible={false}
         color={SCENE_LIGHTING.directionalColor}
       />
-      <hemisphereLight ref={hemisphereRef} intensity={0} />
+      <hemisphereLight ref={hemisphereRef} intensity={0} visible={false} />
       {/* 밤하늘 틴트 돔 — solar 모드의 밤, EXR 배경이 있을 때만 보인다. */}
       <primitive object={skyTintDome} ref={skyTintRef} />
       {/* 하늘 표식 — solar 모드에서만 보인다(useFrame 이 visible 을 켠다). */}

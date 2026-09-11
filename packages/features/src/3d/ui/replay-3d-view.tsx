@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import {
   modelObjectRegistry,
   resolveCameraBoundsMaps,
+  resolveEnvironmentFileUrl,
   unionObjectBounds,
 } from '@crane/domain/3d';
 import { Button } from '@crane/ui/atoms/button';
@@ -35,6 +36,7 @@ import {
 } from './outdoor-work-model-simulation';
 import { ReplayPlayerControls } from './replay-player-controls';
 import { SceneEnvironment } from './scene-environment';
+import { SceneFrameGovernor } from './scene-frame-governor';
 import { SceneSurfaceCamera } from './scene-surface-camera';
 import { SceneCameraLimits } from './scene-camera-limits';
 import { SceneTerrainLod } from './scene-terrain-lod';
@@ -218,6 +220,9 @@ export function Replay3dView({
           // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
           raycaster: SCENE_RAYCASTER_OPTIONS,
           shadows: sceneCanvasShadows(sceneInfo?.lighting),
+          // 프레임은 SceneFrameGovernor 가 만든다(모니터링과 같은 규칙) —
+          // 재생 중 30fps, 정지 프레임은 조작 invalidate 만.
+          frameloop: 'demand',
           onPointerMissed: exitFocus,
         }}
         overlay={
@@ -233,6 +238,13 @@ export function Replay3dView({
         }
         onControllerReady={handleControllerReady}
       >
+        <SceneFrameGovernor
+          animating={
+            resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !==
+            null
+          }
+          slow={sceneInfo?.lighting?.sunMode === 'solar'}
+        />
         {/* 리플레이의 낮/밤은 프레임 타임스탬프를 따른다 — 기록된 그 시각의
             태양·그림자가 재현된다(solar 모드 씬 한정). */}
         <SceneLighting

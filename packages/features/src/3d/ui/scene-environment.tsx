@@ -82,8 +82,11 @@ const ENVIRONMENT_INTENSITY = SCENE_ENVIRONMENT_INTENSITY;
  */
 const SEA_RADIUS = 40_000;
 const SEA_WAVE_STRENGTH = 1;
-const SEA_FADE_START = 3000;
-const SEA_FADE_END = 10_000;
+// 2026-09-11 3000/10000 → 1500/5000: 파도(픽셀당 노이즈 50여 회)는 야드
+// 앞 물에서만 보이면 된다. 셰이더가 감쇠 끝 너머 픽셀의 파도 계산을
+// 건너뛰므로(sea-surface-material early-out) 거리를 줄인 만큼 GPU 가 준다.
+const SEA_FADE_START = 1500;
+const SEA_FADE_END = 5000;
 const SEA_WAVE_SPEED = 1;
 
 function applyEquirectBackground(scene: Scene, texture: Texture) {

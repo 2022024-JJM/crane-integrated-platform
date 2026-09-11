@@ -4,6 +4,7 @@ import {
   WORST_FRAME_WINDOW_MS,
   createWorstFrameTracker,
   formatMs,
+  formatFps,
   formatPerfLine,
   formatTris,
   updateEma,
@@ -139,22 +140,22 @@ describe('formatPerfLine', () => {
 
   it('전체 형식: calls · tris · ms (worst n) · heap', () => {
     expect(formatPerfLine(base)).toBe(
-      '154 calls · 2.50M tris · 16.7ms (worst 41) · 512MB',
+      '154 calls · 2.50M tris · 16.7ms 60fps (worst 41) · 512MB',
     );
   });
 
   it('heap 이 null(비 Chrome)이면 heap 칸을 통째로 생략한다', () => {
     expect(formatPerfLine({ ...base, heapMB: null })).toBe(
-      '154 calls · 2.50M tris · 16.7ms (worst 41)',
+      '154 calls · 2.50M tris · 16.7ms 60fps (worst 41)',
     );
   });
 
   it('worst 가 0 또는 비유한 값이면 0 으로 표시한다', () => {
     expect(formatPerfLine({ ...base, worstMs: 0, heapMB: null })).toBe(
-      '154 calls · 2.50M tris · 16.7ms (worst 0)',
+      '154 calls · 2.50M tris · 16.7ms 60fps (worst 0)',
     );
     expect(formatPerfLine({ ...base, worstMs: Number.NaN, heapMB: null })).toBe(
-      '154 calls · 2.50M tris · 16.7ms (worst 0)',
+      '154 calls · 2.50M tris · 16.7ms 60fps (worst 0)',
     );
   });
 
@@ -167,6 +168,17 @@ describe('formatPerfLine', () => {
         worstMs: 0,
         heapMB: null,
       }),
-    ).toBe('0 calls · 0 tris · 0.0ms (worst 0)');
+    ).toBe('0 calls · 0 tris · 0.0ms 0fps (worst 0)');
+  });
+});
+
+describe('formatFps', () => {
+  it('dt → 초당 프레임 반올림, 0·음수·NaN 은 0fps', () => {
+    expect(formatFps(16.66)).toBe('60fps');
+    expect(formatFps(33.3)).toBe('30fps');
+    expect(formatFps(5000)).toBe('0fps');
+    expect(formatFps(0)).toBe('0fps');
+    expect(formatFps(-1)).toBe('0fps');
+    expect(formatFps(Number.NaN)).toBe('0fps');
   });
 });

@@ -68,13 +68,26 @@ const DEFAULT_SMOOTH_TIME = 0.35;
  * 그래서 채널마다 마지막 무효화 이후 |이동량|을 누적하고, 어느 채널이든
  * EPS 를 넘으면 무효화 + 전 채널 누적 리셋(그 프레임의 shadow 렌더가 모든
  * 채널의 현재 자세를 담으므로). 정착 후 잔여 누적은 유한(지수 수렴)이라
- * 무효화는 저절로 멈추고, 최종 오차는 EPS(1mm·0.001°) — 최소 텍셀 7.3cm
- * 보다 훨씬 작아 비가시.
+ * 무효화는 저절로 멈춘다.
+ *
+ * 값 2cm·0.02°: 처음엔 1mm 였는데 재생 중 매 프레임 넘겨 shadow pass 가
+ * 주사율로 돌았다(유휴 발열의 주범 중 하나, 2026-09-11). shadow map 최소
+ * 텍셀이 7.3cm 라 2cm 아래 이동은 어차피 그림자에 안 나타난다 — 0.02° 는
+ * 100m 붐 끝에서 3.5cm.
  */
-const SHADOW_STEP_EPS = 1e-3;
+const SHADOW_STEP_EPS = 0.02;
+/**
+ * 스무딩 중 그림자 무효화의 최소 간격(ms) — 초당 20회 상한. 임계를 넘어도
+ * 이 간격 안이면 미루고 누적을 유지해 다음 허용 프레임에 반드시 그린다
+ * (trailing). 재생 중 4096² shadow pass 가 60·120Hz 에서 20Hz 로 내려온다.
+ * 즉시 set(seek·리셋)은 이 제한을 받지 않는다 — 점프는 바로 보여야 한다.
+ */
+const SHADOW_STEP_MIN_INTERVAL_MS = 50;
 
 class RigValueStoreImpl implements RigValueSink {
   private readonly channels = new Map<JointAddress, Channel>();
+  /** step 이 마지막으로 그림자를 무효화한 시각(performance.now). */
+  private lastShadowStepAt = Number.NEGATIVE_INFINITY;
 
   set(
     address: JointAddress,
@@ -123,6 +136,8 @@ class RigValueStoreImpl implements RigValueSink {
   }
 
   reset(modelId?: string): void {
+    // 씬 전환·seek 뒤 첫 움직임의 그림자는 바로 그려야 한다.
+    this.lastShadowStepAt = Number.NEGATIVE_INFINITY;
     if (modelId === undefined) {
       // 채널이 지워지면 드라이버가 다음 프레임에 노드를 rest 로 되돌린다 —
       // 화면이 바뀌므로 그림자도 무효화한다(빈 상태 reset 은 no-op).
@@ -179,10 +194,11 @@ class RigValueStoreImpl implements RigValueSink {
   /**
    * 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0.
    * 누적 이동량이 SHADOW_STEP_EPS 를 넘는 채널이 생기면 그림자를 무효화한다
-   * (임계 주석 참고) — 재생 중엔 이동 속도에 비례한 주기로, 값이 정착하면
-   * 자동으로 멈춘다.
+   * (임계 주석 참고) — 재생 중엔 SHADOW_STEP_MIN_INTERVAL_MS 상한 주기로,
+   * 값이 정착하면 자동으로 멈춘다. `now` 는 테스트가 결정론적으로 넣는
+   * 시각(ms)이고 기본은 performance.now().
    */
-  step(dt: number): void {
+  step(dt: number, now: number = performance.now()): void {
     let moved = false;
     for (const ch of this.channels.values()) {
       if (ch.smoothTime <= 0 || ch.value === ch.target) continue;
@@ -191,11 +207,12 @@ class RigValueStoreImpl implements RigValueSink {
       ch.shadowDrift += Math.abs(ch.value - before);
       if (ch.shadowDrift > SHADOW_STEP_EPS) moved = true;
     }
-    if (moved) {
-      invalidateShadows();
-      // 이번 프레임의 shadow 렌더가 모든 채널의 현재 자세를 담는다.
-      for (const ch of this.channels.values()) ch.shadowDrift = 0;
-    }
+    if (!moved) return;
+    if (now - this.lastShadowStepAt < SHADOW_STEP_MIN_INTERVAL_MS) return;
+    this.lastShadowStepAt = now;
+    invalidateShadows();
+    // 이번 프레임의 shadow 렌더가 모든 채널의 현재 자세를 담는다.
+    for (const ch of this.channels.values()) ch.shadowDrift = 0;
   }
 
   get size(): number {

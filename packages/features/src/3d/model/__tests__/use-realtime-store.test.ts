@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useRealtimeStore } from '../use-realtime-store';
 
 beforeEach(() => {
-  useRealtimeStore.setState({ isRunning: false, held: false, buffer: [] });
+  useRealtimeStore.setState({
+    isRunning: false,
+    held: false,
+    buffer: [],
+    activity: { lastMessageAt: Number.NEGATIVE_INFINITY },
+  });
 });
 
 describe('useRealtimeStore — hold / release', () => {
@@ -77,5 +82,17 @@ describe('useRealtimeStore — buffer', () => {
     expect(useRealtimeStore.getState().drainBuffer()).toBe(filled);
     expect(useRealtimeStore.getState().buffer).toEqual([]);
     expect(useRealtimeStore.getState().buffer).not.toBe(filled);
+  });
+});
+
+describe('activity.lastMessageAt', () => {
+  it('pushValue 가 수신 시각을 제자리 갱신하고 리렌더용 상태는 바꾸지 않는다', () => {
+    const before = useRealtimeStore.getState();
+    expect(before.activity.lastMessageAt).toBe(Number.NEGATIVE_INFINITY);
+    useRealtimeStore.getState().pushValue('C_1:tag', 1);
+    const after = useRealtimeStore.getState();
+    expect(after).toBe(before);
+    expect(after.activity.lastMessageAt).toBeGreaterThan(0);
+    expect(after.activity.lastMessageAt).toBeLessThanOrEqual(performance.now());
   });
 });

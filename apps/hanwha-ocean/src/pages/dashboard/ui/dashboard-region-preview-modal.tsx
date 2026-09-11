@@ -323,12 +323,10 @@ export function DashboardRegionPreviewModal({
                 alarmsByCraneId={alarmsByCraneId}
                 alarmHighlightMesh={regionId === 'dock-in'}
                 toolbarLayout="none"
+                // 자동재생 off — 정지 씬은 프레임 거버너가 틱을 걸지 않아
+                // 유휴 렌더가 0 이다(알람 색 전환·조작은 각 경로의 invalidate 가
+                // 프레임을 깨운다). 바다 씬이면 거버너가 파도만 30fps 로 잇는다.
                 autoStartSimulation={false}
-                // 이 모달은 로드 후 완전 정지 씬(자동재생 off + 바다 없는
-                // region)이라 demand 로 유휴 렌더를 0 으로 만든다 — 알람 색
-                // 전환·조작은 각 경로의 invalidate 가 프레임을 깨운다
-                // (model-mesh 머티리얼 effect·SceneSurfaceCamera 휠).
-                frameloop="demand"
               />
             </div>
             <button

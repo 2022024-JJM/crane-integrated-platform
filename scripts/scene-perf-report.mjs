@@ -235,6 +235,10 @@ async function measureGlb(absPath) {
   for (const node of root.listNodes()) {
     const mesh = node.getMesh();
     if (!mesh) continue;
+    // LOD 사본(extras lod>0 — 지형 타일·모델 LOD)은 기본 숨김이라 렌더
+    // 기준에서 뺀다. 한 시점에 한 레벨만 보이므로 LOD0 이 상한이다.
+    const lod = node.getExtras()?.lod;
+    if (typeof lod === 'number' && lod > 0) continue;
     for (const prim of mesh.listPrimitives()) {
       drawCalls += 1;
       const idx = prim.getIndices();
@@ -347,7 +351,8 @@ async function analyzeScene(sceneFile) {
     entry.count += 1;
     byPath.set(key, entry);
   };
-  for (const m of scene.models ?? []) if (m?.path) addPlacement(m.path, 'model');
+  for (const m of scene.models ?? [])
+    if (m?.path) addPlacement(m.path, 'model');
   for (const m of scene.maps ?? []) if (m?.path) addPlacement(m.path, 'map');
 
   const assets = [];
@@ -402,7 +407,11 @@ function buildWarnings({ assets, missing, totals }) {
     warnings.push({ level, message, nextAction: nextAction ?? null });
 
   for (const path of missing) {
-    push('red', `참조 GLB 없음: ${path}`, '씬 JSON 의 path 와 public/ 배포 여부를 확인');
+    push(
+      'red',
+      `참조 GLB 없음: ${path}`,
+      '씬 JSON 의 path 와 public/ 배포 여부를 확인',
+    );
   }
 
   for (const a of assets) {
@@ -478,15 +487,41 @@ function buildWarnings({ assets, missing, totals }) {
 
   // 씬 합계 기준 — 지도 포함 전체 부하.
   const sceneChecks = [
-    [totals.drawCalls, SCENE_DRAWCALLS_WARN, SCENE_DRAWCALLS_RED, `씬 드로우콜 합계 ${num(totals.drawCalls)}`, (w) => `기준 ${num(w)}`],
-    [totals.renderTris, SCENE_RENDER_TRIS_WARN, SCENE_RENDER_TRIS_RED, `씬 렌더 삼각형 합계 ${num(totals.renderTris)}`, (w) => `기준 ${num(w)}`],
-    [mb(totals.texVramBytes), SCENE_TEX_VRAM_WARN_MB, SCENE_TEX_VRAM_RED_MB, `씬 텍스처 VRAM 합계 ${fmtMB(totals.texVramBytes)}MB`, (w) => `기준 ${w}MB`],
+    [
+      totals.drawCalls,
+      SCENE_DRAWCALLS_WARN,
+      SCENE_DRAWCALLS_RED,
+      `씬 드로우콜 합계 ${num(totals.drawCalls)}`,
+      (w) => `기준 ${num(w)}`,
+    ],
+    [
+      totals.renderTris,
+      SCENE_RENDER_TRIS_WARN,
+      SCENE_RENDER_TRIS_RED,
+      `씬 렌더 삼각형 합계 ${num(totals.renderTris)}`,
+      (w) => `기준 ${num(w)}`,
+    ],
+    [
+      mb(totals.texVramBytes),
+      SCENE_TEX_VRAM_WARN_MB,
+      SCENE_TEX_VRAM_RED_MB,
+      `씬 텍스처 VRAM 합계 ${fmtMB(totals.texVramBytes)}MB`,
+      (w) => `기준 ${w}MB`,
+    ],
   ];
   for (const [value, warnAt, redAt, label, fmtLimit] of sceneChecks) {
     if (value > redAt) {
-      push('red', `${label} (${fmtLimit(redAt)} 초과)`, '표에서 최대 기여 자산부터 병합·감축 검토');
+      push(
+        'red',
+        `${label} (${fmtLimit(redAt)} 초과)`,
+        '표에서 최대 기여 자산부터 병합·감축 검토',
+      );
     } else if (value > warnAt) {
-      push('warn', `${label} (${fmtLimit(warnAt)} 초과)`, '표에서 최대 기여 자산부터 병합·감축 검토');
+      push(
+        'warn',
+        `${label} (${fmtLimit(warnAt)} 초과)`,
+        '표에서 최대 기여 자산부터 병합·감축 검토',
+      );
     }
   }
 
@@ -660,7 +695,9 @@ if (jsonMode) {
           FLAT_TEXTURE_MAX_FILE_KB,
           MIPMAP_OVERHEAD,
         },
-        scenes: results.map(({ result, warnings }) => toJsonScene(result, warnings)),
+        scenes: results.map(({ result, warnings }) =>
+          toJsonScene(result, warnings),
+        ),
       },
       null,
       2,

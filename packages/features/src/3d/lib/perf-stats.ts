@@ -95,15 +95,23 @@ export function formatMs(ms: number): string {
 }
 
 /**
- * HUD 한 줄 전체 — 예: "154 calls · 2.50M tris · 16.7ms (worst 41) · 512MB".
+ * HUD 한 줄 전체 — 예: "154 calls · 2.50M tris · 16.7ms 60fps (worst 41) · 512MB".
+ * fps 는 프레임 거버너(frameloop demand)가 실제로 만든 빈도라 30fps 면
+ * 거버너가 재생 주기로, 그 아래면 정지 화면(조작 프레임만)이다.
  * heap 을 못 읽는 브라우저(비 Chrome)에서는 뒤 칸을 통째로 생략한다.
  */
+/** 프레임 dt(ms) → 초당 프레임. demand 루프에선 "실제로 그린 빈도" 다. */
+export function formatFps(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0fps';
+  return `${Math.round(1000 / ms)}fps`;
+}
+
 export function formatPerfLine(sample: ScenePerfSample): string {
   const worst =
     Number.isFinite(sample.worstMs) && sample.worstMs > 0
       ? Math.round(sample.worstMs)
       : 0;
-  const base = `${sample.calls} calls · ${formatTris(sample.triangles)} tris · ${formatMs(sample.frameMs)} (worst ${worst})`;
+  const base = `${sample.calls} calls · ${formatTris(sample.triangles)} tris · ${formatMs(sample.frameMs)} ${formatFps(sample.frameMs)} (worst ${worst})`;
   if (sample.heapMB === null || !Number.isFinite(sample.heapMB)) return base;
   return `${base} · ${Math.round(sample.heapMB)}MB`;
 }

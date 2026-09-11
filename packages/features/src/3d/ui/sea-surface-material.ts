@@ -154,9 +154,12 @@ vec3 waveNormal(vec2 p, float t, float rippleWeight) {
   addSwell(grad, p, normalize(vec2(1.0, 0.41)), 97.0, 0.55, 0.52, t);
   addSwell(grad, p, normalize(vec2(-0.37, 1.0)), 143.0, 0.45, 0.43, t);
 
-  // 잔물결 — 노이즈 한 층, 빠르게 흐른다. 원거리에선 먼저 감쇠.
-  vec3 n3 = fbmd(p / 7.5 + vec2(0.35, 0.2) * t);
-  grad += rippleWeight * (0.28 / 7.5) * n3.yz;
+  // 잔물결 — 노이즈 한 층, 빠르게 흐른다. 원거리에선 먼저 감쇠. 완전히
+  // 감쇠한 픽셀은 층 자체를 건너뛴다(FBM 4옥타브 = 노이즈 16회).
+  if (rippleWeight > 0.0) {
+    vec3 n3 = fbmd(p / 7.5 + vec2(0.35, 0.2) * t);
+    grad += rippleWeight * (0.28 / 7.5) * n3.yz;
+  }
 
   return normalize(vec3(-grad.x, 1.0, -grad.y));
 }
@@ -170,12 +173,21 @@ void main() {
   float swellFade = 1.0 - smoothstep(uFadeStart, uFadeEnd, dist);
   float rippleFade = 1.0 - smoothstep(uFadeStart * 0.2, uFadeStart * 0.8, dist);
 
-  vec3 n = waveNormal(vWorldPos.xz, uTime, rippleFade);
+  // 원거리 early-out — 너울까지 완전히 감쇠한 픽셀(uFadeEnd 너머, 수평선
+  // 띠와 원판 바깥쪽)은 배경과 같은 색이라 파도 계산(노이즈 50여 회)을
+  // 통째로 건너뛴다. 거리는 화면에서 연속이라 분기가 픽셀 단위로 갈리지
+  // 않는다(GPU 발산 없음). 원판이 항상 먼저 그려지고 깊이를 남기지 않아
+  // 지형 뒤 픽셀도 이 셰이더가 도는 구조라, 여기서 아끼는 만큼이 그대로
+  // 유휴 GPU 부하 절감이다.
+  vec3 d = dir;
+  if (swellFade > 0.0) {
+    vec3 n = waveNormal(vWorldPos.xz, uTime, rippleFade);
 
-  // 시선 방향을 노멀 기울기만큼 기울인다. 하반구(사진의 바다) 안에 머물게
-  // 클램프 — 위로 넘어가면 물 아래로 하늘이 비친다.
-  vec3 d = dir + (n - vec3(0.0, 1.0, 0.0)) * (uWaveStrength * swellFade);
-  d = normalize(d);
+    // 시선 방향을 노멀 기울기만큼 기울인다. 하반구(사진의 바다) 안에 머물게
+    // 클램프 — 위로 넘어가면 물 아래로 하늘이 비친다.
+    d = dir + (n - vec3(0.0, 1.0, 0.0)) * (uWaveStrength * swellFade);
+    d = normalize(d);
+  }
   d.y = min(d.y, -0.002);
   d = normalize(d);
 

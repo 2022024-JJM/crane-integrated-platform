@@ -32,7 +32,10 @@ function SilhouetteMeshOutline({
   material: ShaderMaterial;
 }) {
   const overlays = useMemo(
-    () => [createSilhouetteMaskMesh(mesh), createSilhouetteOutlineHull(mesh, material)],
+    () => [
+      createSilhouetteMaskMesh(mesh),
+      createSilhouetteOutlineHull(mesh, material),
+    ],
     [mesh, material],
   );
   return createPortal(
@@ -55,7 +58,14 @@ function SilhouetteNodeOutline({
   const meshes = useMemo(() => {
     const out: Mesh[] = [];
     node.traverse((child) => {
-      if (child instanceof Mesh) out.push(child);
+      if (!(child instanceof Mesh)) return;
+      // LOD 사본(지형 타일·모델, model-mesh.tsx 가 표식)은 뺀다 — 같은
+      // 발자국을 세 번 그리게 된다. 원본(LOD0)이 숨겨진 거리에서도 실루엣
+      // 모양은 같으므로 LOD0 만으로 충분하다.
+      if ((child.userData as { terrainLodProxy?: boolean }).terrainLodProxy) {
+        return;
+      }
+      out.push(child);
     });
     return out;
   }, [node]);
@@ -63,7 +73,11 @@ function SilhouetteNodeOutline({
   return (
     <>
       {meshes.map((mesh) => (
-        <SilhouetteMeshOutline key={mesh.uuid} mesh={mesh} material={material} />
+        <SilhouetteMeshOutline
+          key={mesh.uuid}
+          mesh={mesh}
+          material={material}
+        />
       ))}
     </>
   );
@@ -97,7 +111,10 @@ export function ObjectSilhouetteOutline({
 }: ObjectSilhouetteOutlineProps) {
   // 헐 공유 머티리얼 — 이 표시 단위의 모든 헐 메시가 하나를 쓴다. 색이
   // 바뀌면 새로 만든다(실제로는 용도별 상수라 수명 내 불변).
-  const material = useMemo(() => createSilhouetteOutlineMaterial(color), [color]);
+  const material = useMemo(
+    () => createSilhouetteOutlineMaterial(color),
+    [color],
+  );
   useEffect(() => () => material.dispose(), [material]);
 
   // 화면 두께(px) → 오프셋 계수. 훅 의존성인 material 을 effect 에서 직접
@@ -122,7 +139,11 @@ export function ObjectSilhouetteOutline({
   return (
     <>
       {objects.map((node) => (
-        <SilhouetteNodeOutline key={node.uuid} node={node} material={material} />
+        <SilhouetteNodeOutline
+          key={node.uuid}
+          node={node}
+          material={material}
+        />
       ))}
     </>
   );

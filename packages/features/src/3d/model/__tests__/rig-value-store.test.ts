@@ -144,6 +144,8 @@ describe('rigValueStore 그림자 무효화(shadow-invalidation)', () => {
   const gl = { shadowMap: { needsUpdate: false } };
 
   beforeEach(() => {
+    // 이전 테스트의 step 이 남긴 간격 제한을 푼다 — 싱글턴 상태.
+    rigValueStore.reset();
     registerShadowRenderer(gl);
     gl.shadowMap.needsUpdate = false;
   });
@@ -206,6 +208,47 @@ describe('rigValueStore 그림자 무효화(shadow-invalidation)', () => {
     rigValueStore.reset('없는모델');
     expect(consume()).toBe(false);
     rigValueStore.reset('a');
+    expect(consume()).toBe(true);
+  });
+
+  it('스무딩 중 step 무효화는 50ms 에 한 번으로 제한되고, 미룬 이동은 다음 허용 프레임에 그린다', () => {
+    // 시각은 명시 인자로 넣는다 — 타이머·performance.now 에 기대지 않는다.
+    rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
+    rigValueStore.step(1 / 60, 1000);
+    expect(consume()).toBe(true);
+    // 같은 50ms 창 안의 프레임들은 임계를 넘어도 미룬다.
+    rigValueStore.step(1 / 60, 1016);
+    expect(consume()).toBe(false);
+    rigValueStore.step(1 / 60, 1032);
+    expect(consume()).toBe(false);
+    // 창이 지나면 누적된 이동으로 반드시 한 번 그린다(trailing).
+    rigValueStore.step(1 / 60, 1052);
+    expect(consume()).toBe(true);
+    // 그 다음 창도 같은 규칙.
+    rigValueStore.step(1 / 60, 1060);
+    expect(consume()).toBe(false);
+    rigValueStore.step(1 / 60, 1110);
+    expect(consume()).toBe(true);
+  });
+
+  it('즉시 set 은 간격 제한을 받지 않는다 — 점프는 바로 보인다', () => {
+    rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
+    rigValueStore.step(1 / 60, 1000);
+    consume();
+    rigValueStore.set('m/j', 5);
+    expect(consume()).toBe(true);
+    rigValueStore.set('m/j', 7);
+    expect(consume()).toBe(true);
+  });
+
+  it('reset 은 간격 제한을 푼다 — 씬 전환·seek 뒤 첫 움직임이 바로 그려진다', () => {
+    rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
+    rigValueStore.step(1 / 60, 1000);
+    consume();
+    rigValueStore.reset();
+    consume();
+    rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
+    rigValueStore.step(1 / 60, 1010);
     expect(consume()).toBe(true);
   });
 

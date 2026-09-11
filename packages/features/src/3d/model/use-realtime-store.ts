@@ -14,6 +14,13 @@ interface RealtimeState {
    */
   held: boolean;
   buffer: RealtimeEntry[];
+  /**
+   * 수신 활동 — 마지막 메시지 시각(performance.now). 프레임 거버너가
+   * "값이 실제로 들어오고 있는가" 를 판정하는 데 쓴다(isRunning 은 연결 시도
+   * 중에도 true 라 서버가 없으면 30fps 가 헛돈다). buffer 처럼 set() 없이
+   * 제자리 갱신 — 메시지마다 리렌더가 나면 안 된다.
+   */
+  activity: { lastMessageAt: number };
   start: () => void;
   stop: () => void;
   hold: () => void;
@@ -26,6 +33,7 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
   isRunning: false,
   held: false,
   buffer: [],
+  activity: { lastMessageAt: Number.NEGATIVE_INFINITY },
 
   start: () => set({ isRunning: true, held: false }),
   stop: () => set({ isRunning: false, held: false }),
@@ -42,6 +50,7 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => ({
     // zustand set()을 호출하면 매 메시지마다 구독자 리렌더가 발생하므로
     // 배열을 직접 mutate하고 React 상태 변경은 일으키지 않는다.
     get().buffer.push({ key, value });
+    get().activity.lastMessageAt = performance.now();
   },
 
   drainBuffer: () => {

@@ -111,6 +111,7 @@ export {
   getModelBottomOffset,
 } from './lib/model-bottom-offset-cache';
 export { raycastMapSurfaceY } from './lib/map-surface-raycast';
+export { toLambertMaterial, toLambertMaterials } from './lib/lambert-material';
 export { resolveGroundMaps } from './lib/resolve-ground-map';
 export {
   collectCameraBoundsBox,
@@ -205,6 +206,7 @@ export type {
   CraneZoneRegion,
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
+export type { ModelShading } from './ui/model-mesh';
 export { ModelSelectionBox } from './ui/model-selection-box';
 export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';
 export { SilhouetteOutlineWarmup } from './ui/silhouette-outline-warmup';

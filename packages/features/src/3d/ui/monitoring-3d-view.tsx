@@ -40,6 +40,7 @@ import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
 import { SceneClockMenu } from './scene-clock-menu';
+import { SceneFrameGovernor } from './scene-frame-governor';
 import {
   OutdoorWorkModelSimulation,
   useSceneData,
@@ -99,17 +100,6 @@ interface Monitoring3dViewProps {
    */
   canvasDpr?: number | [number, number];
   /**
-   * R3F 프레임루프 모드. 기본 undefined(= 'always', 매 프레임 렌더).
-   * 'demand' 는 invalidate() 가 불린 프레임만 렌더한다 — **로드 후 완전
-   * 정지가 보장되는 뷰만** 켠다(대시보드 3D 미리보기 모달: autoStart
-   * Simulation=false). 재생 중 모니터링·realtime(WS 수신이 useFrame 드레인에
-   * 기댐)에는 켜지 말 것 — 화면이 다음 조작까지 낡은 프레임에 머문다.
-   * 바다 씬(파도 uTime 상시 애니메이션)은 호출부가 몰라도 되게 아래에서
-   * 씬의 environment 유무로 자동 무시된다 — goliath/philly 씬을 이 모달로
-   * 열면 파도가 얼어붙는 품질 저하가 있었다.
-   */
-  frameloop?: 'always' | 'demand';
-  /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
    * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
    * 버튼·toolbarExtras·북마크·시뮬레이션 토글. 독은 전체화면 루트 안이라
@@ -135,7 +125,6 @@ export function Monitoring3dView({
   sceneExtras,
   overlayExtras,
   canvasDpr,
-  frameloop,
   toolbarLayout = 'top-right',
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
@@ -148,15 +137,14 @@ export function Monitoring3dView({
   const { sceneInfo, isLoading } = useSceneData(regionId, mode, {
     autoStartSimulation,
   });
-  // 바다(EXR 배경) 씬은 파도가 상시 애니메이션이라 demand 로 돌리면 물이
-  // 사진처럼 얼어붙는다 — 호출부의 demand 요청을 씬 데이터 기준으로 무시한다
-  // (frameloop prop 주석). isLoading 동안은 sceneInfo 가 없어 캔버스도 아직
-  // 없으므로 판정 시점 문제가 없다.
-  const effectiveFrameloop =
-    frameloop === 'demand' &&
-    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null
-      ? undefined
-      : frameloop;
+  // 캔버스는 항상 frameloop='demand' 다 — 프레임은 SceneFrameGovernor 가
+  // 애니메이션 소스(재생·수신·기즈모)가 있을 때 30fps 로, 정지 씬은 조작
+  // invalidate 만으로 만든다(2026-09-11, 유휴 발열 절감). 바다(EXR 배경)
+  // 씬은 파도가 상시 애니메이션이라 거버너에 알려 30fps 를 유지한다 —
+  // 예전 demand 모달에서 파도가 얼어붙던 문제의 해법이다.
+  const hasSea =
+    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
+  const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
@@ -289,7 +277,7 @@ export function Monitoring3dView({
         cameraClip={SCENE_CAMERA_CLIP}
         canvasProps={{
           dpr: canvasDpr,
-          frameloop: effectiveFrameloop,
+          frameloop: 'demand',
           gl: SCENE_GL_OPTIONS,
           // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
           raycaster: SCENE_RAYCASTER_OPTIONS,
@@ -353,6 +341,8 @@ export function Monitoring3dView({
         }
         onControllerReady={handleControllerReady}
       >
+        {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
+        <SceneFrameGovernor animating={hasSea} slow={solarSun} />
         {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키. */}
         <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
         <SceneSurfaceCamera

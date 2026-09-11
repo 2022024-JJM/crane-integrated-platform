@@ -21,6 +21,7 @@ import {
   restoreOriginalMaterials,
   type MeshMaterialBinding,
 } from '../lib/mesh-material-binding';
+import { toLambertMaterials } from '../lib/lambert-material';
 import { useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
@@ -89,6 +90,8 @@ interface ModelMeshProps {
    * 않는다 — useClonedModel 주석 참고.
    */
   clonedModel?: ClonedModel;
+  /** 셰이딩 등급 — ModelShading 주석. clonedModel 이 주어지면 그쪽이 결정한다. */
+  shading?: ModelShading;
   onSelect?: (id: string, event?: ThreeEvent<MouseEvent>) => void;
   /**
    * 더블클릭 시 별도 호출. R3F의 onClick은 detail 카운트가 신뢰적이지 않아
@@ -136,6 +139,20 @@ export interface ClonedModel {
 }
 
 /**
+ * 머티리얼 셰이딩 등급. 'standard' = GLTF 의 PBR 그대로(기본, 야드 지도·
+ * 크레인). 'lambert' = clone 시점에 PBR 을 Lambert 로 바꾼다(lib/
+ * lambert-material.ts) — 관제와 무관한 컨텍스트 지형(카탈로그 kind
+ * 'context')용. 조명·낮/밤에는 똑같이 반응하고 스펙큘러·환경맵 radiance
+ * 샘플링만 없어 수 km 지형의 픽셀 비용이 준다. 호출부(outdoor-work-model-
+ * simulation·에디터)가 kind 로 판정한다 — 두 화면이 같아야 한다.
+ */
+export type ModelShading = 'standard' | 'lambert';
+
+export interface ClonedModelOptions {
+  shading?: ModelShading;
+}
+
+/**
  * GLTF를 인스턴스 전용 트리로 clone한다. `injected`가 있으면 clone을 새로
  * 만들지 않고 그대로 쓴다 — GltfModel이 만든 clone을 ModelMesh가 재사용해
  * 인스턴스당 clone·computeBoundingSphere가 1회만 일어나게 하고, SelectionBox·
@@ -144,6 +161,7 @@ export interface ClonedModel {
 export function useClonedModel(
   url: string,
   injected?: ClonedModel,
+  { shading = 'standard' }: ClonedModelOptions = {},
 ): ClonedModel {
   // 4번째 인자: KTX2(GPU 압축 텍스처) 디코드 배선 — lib/ktx2-loader.ts 주석.
   // KTX2 GLB 를 로드하는 모든 경로가 같은 배선을 가져야 한다(누락 시 throw).
@@ -178,6 +196,13 @@ export function useClonedModel(
 
       if (!(child instanceof Mesh)) {
         return;
+      }
+
+      // 저비용 셰이딩(컨텍스트 지형)은 바인딩을 만들기 전에 바꾼다 —
+      // 바인딩·opacity clone·바다 잠김 패치가 전부 바뀐 머티리얼 기준으로
+      // 돈다. 변환본은 원본당 하나로 캐시돼 clone 간 공유된다.
+      if (shading === 'lambert') {
+        child.material = toLambertMaterials(child.material);
       }
 
       // material reference는 GLTF 원본을 그대로 공유한다. 같은 GLTF의
@@ -238,7 +263,7 @@ export function useClonedModel(
     fillModelBottomOffsetFromClone(url, nextClone);
 
     return { clone: nextClone, meshBindings: bindings, originalTransforms };
-  }, [scene, url, injected]);
+  }, [scene, url, injected, shading]);
 }
 
 export function useModelLabelOffsetY(clone: Object3D, scale: Vector3Tuple) {
@@ -316,6 +341,7 @@ export function ModelMesh({
   enableRaycastBvh = true,
   prepareOutline = false,
   clonedModel,
+  shading = 'standard',
   onSelect,
   onDoubleSelect,
   onObjectReady,
@@ -327,6 +353,7 @@ export function ModelMesh({
   const { clone, meshBindings, originalTransforms } = useClonedModel(
     url,
     clonedModel,
+    { shading },
   );
   // 아래 effect 들은 리컨실러 밖에서 머티리얼·노드를 직접 변조한다 — R3F 의
   // auto-invalidate 가 걸리지 않아 frameloop='demand' 캔버스(대시보드 3D
