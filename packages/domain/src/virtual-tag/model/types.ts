@@ -52,7 +52,59 @@ export interface VirtualTagSet {
   /** 값 갱신 주기(ms). [VIRTUAL_TAG_TICK_MIN, VIRTUAL_TAG_TICK_MAX]. */
   tickMs: number;
   tags: VirtualTagDefinition[];
+  /** 시나리오 목록. 비면 생략(직렬화에서 빠진다). */
+  scenarios?: VirtualScenario[];
 }
+
+/**
+ * 시나리오 — 태그 키별 키프레임 타임라인. 파형(pattern)이 "계속 흔드는"
+ * 데모라면 시나리오는 "0초 주행 0m → 20초 주행 80m → 5초 정지 → …" 처럼
+ * 작업 순서를 기술한다. 재생 중 시나리오가 활성이면 트랙이 있는 태그는
+ * 키프레임 보간값이 파형을 대신하고, 트랙이 없는 태그는 파형 그대로다(배경
+ * 움직임 유지). 값은 태그 범위로 클램프된다.
+ *
+ * 키프레임의 `ease` 는 **직전 키프레임에서 이 키프레임으로 오는 구간**의
+ * 보간 방식이다(첫 키프레임의 ease 는 무의미). 트랙은 `atMs` 오름차순으로
+ * 저장된다(sanitize 가 정렬). 시나리오 길이 = 모든 트랙의 마지막 atMs.
+ */
+export type ScenarioEase = 'linear' | 'hold' | 'smooth';
+
+export interface ScenarioKeyframe {
+  /** 시나리오 시작 기준 시각(ms), ≥ 0. */
+  atMs: number;
+  value: number;
+  /** 생략 = linear. hold 는 이 키프레임 시각까지 이전 값을 유지(계단). */
+  ease?: ScenarioEase;
+}
+
+export interface ScenarioTrack {
+  /** 가상 태그 key(값 버스 키). 태그가 없어도 저장은 되고 러너가 무시한다. */
+  key: string;
+  /** ≥ 1개, atMs 오름차순·중복 없음. */
+  keyframes: ScenarioKeyframe[];
+}
+
+export interface VirtualScenario {
+  id: string;
+  name: string;
+  /** 끝에 도달하면 처음부터 반복. false 면 끝에서 러너가 일시정지한다. */
+  loop: boolean;
+  tracks: ScenarioTrack[];
+}
+
+export const SCENARIO_EASES = [
+  'linear',
+  'hold',
+  'smooth',
+] as const satisfies readonly ScenarioEase[];
+export const SCENARIOS_MAX = 50;
+export const SCENARIO_NAME_MAX = 40;
+export const SCENARIO_TRACKS_MAX = 100;
+export const SCENARIO_KEYFRAMES_MAX = 200;
+/** 키프레임 시각 상한(6시간) — 오타(ms/s 혼동)로 하루짜리 시나리오가 되는 것 방지. */
+export const SCENARIO_TIME_MAX_MS = 6 * 60 * 60 * 1000;
+/** 재생 배속 선택지. 시뮬레이션 시계에만 적용되고 저장하지 않는다(세션). */
+export const SIMULATION_SPEED_OPTIONS = [0.5, 1, 2, 4, 8] as const;
 
 export const VIRTUAL_TAG_KEY_MAX = 64;
 export const VIRTUAL_TAG_NAME_MAX = 40;

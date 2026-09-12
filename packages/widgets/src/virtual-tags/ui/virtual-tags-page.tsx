@@ -23,6 +23,7 @@ import {
   type VirtualTagPatternKind,
 } from '@crane/domain/virtual-tag';
 import {
+  serializeVirtualTagSet,
   useRigLivePoll,
   useVirtualTagStore,
   virtualTagRuntime,
@@ -59,6 +60,7 @@ import {
   useSceneUnsavedChangesGuard,
 } from '@crane/widgets/scene-editor';
 import { getTagKeyError, type TagKeyError } from '../lib/tag-key-validation';
+import { ScenarioSection } from './scenario-section';
 import { WaveformIcon } from './waveform-icon';
 
 /**
@@ -340,6 +342,7 @@ export function VirtualTagsPage() {
   const discard = useVirtualTagStore((s) => s.discard);
   const tags = useVirtualTagStore((s) => s.tags);
   const tickMs = useVirtualTagStore((s) => s.tickMs);
+  const scenarios = useVirtualTagStore((s) => s.scenarios);
   const savedSnapshot = useVirtualTagStore((s) => s.savedSnapshot);
   const isSaving = useVirtualTagStore((s) => s.isSaving);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
@@ -354,8 +357,8 @@ export function VirtualTagsPage() {
   const takenKeys = useMemo(() => tags.map((tag) => tag.key), [tags]);
   // dirty 는 스냅샷 비교 — 스토어의 isDirty() 는 구독이 안 되므로 여기서 파생.
   const isDirty = useMemo(
-    () => JSON.stringify({ version: 1, tickMs, tags }) !== savedSnapshot,
-    [savedSnapshot, tags, tickMs],
+    () => serializeVirtualTagSet({ tickMs, tags, scenarios }) !== savedSnapshot,
+    [savedSnapshot, tags, tickMs, scenarios],
   );
 
   useEffect(() => {
@@ -439,7 +442,7 @@ export function VirtualTagsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4">
       <SceneUnsavedChangesDialog
         open={unsavedChangesPrompt.open}
         isSaving={isSaving}
@@ -541,8 +544,8 @@ export function VirtualTagsPage() {
         </p>
       ) : null}
 
-      <Card className="min-h-0 flex-1 gap-0 overflow-hidden py-0">
-        <CardContent className="h-full min-h-0 overflow-auto p-0">
+      <Card className="min-h-64 shrink-0 gap-0 overflow-hidden py-0">
+        <CardContent className="max-h-[60vh] min-h-0 overflow-auto p-0">
           <TooltipProvider>
             <Table className="w-full table-fixed">
               <TableHeader>
@@ -584,6 +587,9 @@ export function VirtualTagsPage() {
           </TooltipProvider>
         </CardContent>
       </Card>
+
+      {/* 시나리오(키프레임 타임라인) — 태그와 같은 저장 버튼·dirty 로 묶인다. */}
+      <ScenarioSection />
     </div>
   );
 }

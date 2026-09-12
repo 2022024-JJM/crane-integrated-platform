@@ -10,11 +10,22 @@ import {
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAG_UNIT_MAX,
   VIRTUAL_TAGS_MAX,
+  SCENARIO_EASES,
+  SCENARIO_KEYFRAMES_MAX,
+  SCENARIO_NAME_MAX,
+  SCENARIO_TIME_MAX_MS,
+  SCENARIO_TRACKS_MAX,
+  SCENARIOS_MAX,
+  type ScenarioEase,
+  type ScenarioKeyframe,
+  type ScenarioTrack,
+  type VirtualScenario,
   type VirtualTagDefinition,
   type VirtualTagPattern,
   type VirtualTagPatternKind,
   type VirtualTagSet,
 } from '../model/types';
+import { normalizeKeyframes } from './scenario';
 
 /**
  * 저장소(localStorage·가져온 JSON)에서 읽은 가상 태그 방어. 손상 항목은 개별로
@@ -125,6 +136,84 @@ export function sanitizeVirtualTagList(raw: unknown): VirtualTagDefinition[] {
   return out;
 }
 
+function isEase(value: unknown): value is ScenarioEase {
+  return (SCENARIO_EASES as readonly unknown[]).includes(value);
+}
+
+/** 키프레임 하나 — atMs 는 [0, 상한] 클램프, value 유한수. 손상은 null. */
+export function sanitizeScenarioKeyframe(
+  raw: unknown,
+): ScenarioKeyframe | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const k = raw as Record<string, unknown>;
+  if (!isFiniteNumber(k.atMs) || !isFiniteNumber(k.value)) return null;
+  const frame: ScenarioKeyframe = {
+    atMs: Math.round(clamp(k.atMs, 0, SCENARIO_TIME_MAX_MS)),
+    value: k.value,
+  };
+  // linear 는 기본값이라 생략한다(저장본을 짧게).
+  if (isEase(k.ease) && k.ease !== 'linear') frame.ease = k.ease;
+  return frame;
+}
+
+/** 트랙 — 키 정규화, 키프레임 정렬·같은 시각 중복 제거(첫 항목), 빈 트랙은 null. */
+export function sanitizeScenarioTrack(raw: unknown): ScenarioTrack | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const t = raw as Record<string, unknown>;
+  const key = normalizeVirtualTagKey(t.key);
+  if (key === null || !Array.isArray(t.keyframes)) return null;
+  const frames: ScenarioKeyframe[] = [];
+  for (const item of t.keyframes) {
+    const frame = sanitizeScenarioKeyframe(item);
+    if (frame) frames.push(frame);
+    if (frames.length >= SCENARIO_KEYFRAMES_MAX) break;
+  }
+  const keyframes = normalizeKeyframes(frames);
+  if (keyframes.length === 0) return null;
+  return { key, keyframes };
+}
+
+export function sanitizeScenario(raw: unknown): VirtualScenario | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const s = raw as Record<string, unknown>;
+  if (typeof s.id !== 'string' || s.id.length === 0) return null;
+  const tracks: ScenarioTrack[] = [];
+  const seenKeys = new Set<string>();
+  if (Array.isArray(s.tracks)) {
+    for (const item of s.tracks) {
+      const track = sanitizeScenarioTrack(item);
+      if (!track || seenKeys.has(track.key)) continue;
+      seenKeys.add(track.key);
+      tracks.push(track);
+      if (tracks.length >= SCENARIO_TRACKS_MAX) break;
+    }
+  }
+  return {
+    id: s.id,
+    name:
+      typeof s.name === 'string'
+        ? s.name.trim().slice(0, SCENARIO_NAME_MAX)
+        : '',
+    loop: s.loop === true,
+    tracks,
+  };
+}
+
+/** 시나리오 목록 — id 중복은 첫 항목, 상한 초과는 잘라낸다. */
+export function sanitizeScenarioList(raw: unknown): VirtualScenario[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: VirtualScenario[] = [];
+  for (const item of raw) {
+    const scenario = sanitizeScenario(item);
+    if (!scenario || seen.has(scenario.id)) continue;
+    seen.add(scenario.id);
+    out.push(scenario);
+    if (out.length >= SCENARIOS_MAX) break;
+  }
+  return out;
+}
+
 export function createEmptyVirtualTagSet(): VirtualTagSet {
   return { version: 1, tickMs: VIRTUAL_TAG_TICK_DEFAULT, tags: [] };
 }
@@ -139,9 +228,12 @@ export function sanitizeVirtualTagSet(raw: unknown): VirtualTagSet {
   }
   if (!raw || typeof raw !== 'object') return createEmptyVirtualTagSet();
   const s = raw as Record<string, unknown>;
-  return {
+  const set: VirtualTagSet = {
     version: 1,
     tickMs: clampVirtualTagTick(s.tickMs),
     tags: sanitizeVirtualTagList(s.tags),
   };
+  const scenarios = sanitizeScenarioList(s.scenarios);
+  if (scenarios.length > 0) set.scenarios = scenarios;
+  return set;
 }

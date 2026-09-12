@@ -100,5 +100,202 @@
       "enabled": true,
       "unit": "m"
     }
+  ],
+  "scenarios": [
+    {
+      "id": "scenario-philly-block-demo",
+      "name": "필리 블록 운반 데모",
+      "loop": false,
+      "tracks": [
+        {
+          "key": "GC_04:gantry_position",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 5000,
+              "value": 0,
+              "ease": "hold"
+            },
+            {
+              "atMs": 45000,
+              "value": 80,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 60000,
+              "value": 80,
+              "ease": "hold"
+            },
+            {
+              "atMs": 90000,
+              "value": 20,
+              "ease": "smooth"
+            }
+          ]
+        },
+        {
+          "key": "GC_04:trolley_position",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 10000,
+              "value": 0,
+              "ease": "hold"
+            },
+            {
+              "atMs": 30000,
+              "value": -25,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 65000,
+              "value": -25,
+              "ease": "hold"
+            },
+            {
+              "atMs": 85000,
+              "value": -5,
+              "ease": "smooth"
+            }
+          ]
+        },
+        {
+          "key": "GC_04:trolley_position_2",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 20000,
+              "value": 0,
+              "ease": "hold"
+            },
+            {
+              "atMs": 40000,
+              "value": -15,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 70000,
+              "value": -15,
+              "ease": "hold"
+            },
+            {
+              "atMs": 90000,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        {
+          "key": "LLC_002:slew_angle",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 8000,
+              "value": 0,
+              "ease": "hold"
+            },
+            {
+              "atMs": 28000,
+              "value": 90,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 48000,
+              "value": 90,
+              "ease": "hold"
+            },
+            {
+              "atMs": 70000,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        {
+          "key": "LLC_002:luff_angle",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 15000,
+              "value": -20,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 30000,
+              "value": -20,
+              "ease": "hold"
+            },
+            {
+              "atMs": 50000,
+              "value": 10,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 75000,
+              "value": 0,
+              "ease": "smooth"
+            }
+          ]
+        },
+        {
+          "key": "LLC_002:gantry_position",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 50000,
+              "value": 40,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 90000,
+              "value": 40,
+              "ease": "hold"
+            }
+          ]
+        },
+        {
+          "key": "LLC_002:gantry_position_2",
+          "keyframes": [
+            {
+              "atMs": 0,
+              "value": 0
+            },
+            {
+              "atMs": 30000,
+              "value": 0,
+              "ease": "hold"
+            },
+            {
+              "atMs": 70000,
+              "value": -15,
+              "ease": "smooth"
+            },
+            {
+              "atMs": 90000,
+              "value": -15,
+              "ease": "hold"
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

@@ -322,7 +322,8 @@
     "minimapHide": "미니맵 숨기기",
     "minimapRefresh": "미니맵 새로 고침",
     "minimapHint": "누르거나 끌어서 카메라 이동",
-    "minimapMove": "끌어서 미니맵 위치 이동"
+    "minimapMove": "끌어서 미니맵 위치 이동",
+    "simulationMenu": "시뮬레이션 시계"
   },
   "undo": "실행 취소"
 }

@@ -1,8 +1,9 @@
-import { Pause, Play, RotateCcw, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
+  SceneSimulationPanel,
   collectSceneTagKeys,
   tagLiveValues,
   useRigLivePoll,
@@ -11,7 +12,6 @@ import {
 } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
 import { AppLink } from '@crane/ui/atoms/app-link';
-import { Button } from '@crane/ui/atoms/button';
 
 interface PaletteVirtualTagSectionProps {
   sceneInfo: SavedSceneInfo | null;
@@ -35,9 +35,6 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
   useRigLivePoll();
   const load = useVirtualTagStore((s) => s.load);
   const tags = useVirtualTagStore((s) => s.tags);
-  const isRunning = useVirtualTagStore((s) => s.isRunning);
-  const start = useVirtualTagStore((s) => s.start);
-  const pause = useVirtualTagStore((s) => s.pause);
   useEffect(() => {
     void load();
   }, [load]);
@@ -50,44 +47,17 @@ export const PaletteVirtualTagSection = memo(function PaletteVirtualTagSection({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <Button
-          type="button"
-          variant={isRunning ? 'default' : 'outline'}
-          size="sm"
-          className="h-7 flex-1 gap-1.5 text-[11px]"
-          aria-pressed={isRunning}
-          onClick={() => (isRunning ? pause() : start())}
-        >
-          {isRunning ? (
-            <Pause className="size-3.5" />
-          ) : (
-            <Play className="size-3.5" />
-          )}
-          {t(
-            isRunning
-              ? 'monitoring:editor.virtualTags.pause'
-              : 'monitoring:editor.virtualTags.play',
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="text-muted-foreground"
-          aria-label={t('monitoring:editor.virtualTags.resetValues')}
-          title={t('monitoring:editor.virtualTags.resetValues')}
-          onClick={() => virtualTagRuntime.resetValues()}
-        >
-          <RotateCcw className="size-3.5" />
-        </Button>
+      {/* 재생·배속·시나리오·스크럽 — 모니터링 독 시뮬레이션 시계 팝업과 같은 패널. */}
+      <SceneSimulationPanel />
+      <div className="flex justify-end">
         <AppLink
           to={managePath}
-          className="text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-md"
+          className="text-muted-foreground hover:text-foreground inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[10px]"
           aria-label={t('monitoring:editor.virtualTags.manage')}
           title={t('monitoring:editor.virtualTags.manage')}
         >
           <Settings2 className="size-3.5" />
+          {t('monitoring:editor.virtualTags.manage')}
         </AppLink>
       </div>
       <p className="text-muted-foreground text-[10px] leading-snug">

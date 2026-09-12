@@ -363,7 +363,35 @@
     "keyHint": "Use the same format as real server tags (craneId:tagCode).",
     "periodHint": "Time (ms) for one cycle (min→max→min)",
     "save": "Save",
-    "saveFailed": "Failed to save virtual tags."
+    "saveFailed": "Failed to save virtual tags.",
+    "scenarios": {
+      "title": "Scenarios",
+      "newName": "New scenario",
+      "add": "New scenario",
+      "duplicate": "Duplicate",
+      "remove": "Delete",
+      "run": "Run",
+      "name": "Name",
+      "loop": "Loop",
+      "duration": "Length {{seconds}}s",
+      "selectTag": "Select tag",
+      "noMoreTags": "No tags left to add",
+      "addTrack": "Add track",
+      "removeTrack": "Remove track",
+      "noTracks": "No tracks. Pick a tag and add a track.",
+      "time": "Time",
+      "value": "Value",
+      "ease": "Ease",
+      "eases": {
+        "linear": "Linear",
+        "hold": "Hold",
+        "smooth": "Smooth"
+      },
+      "addKeyframe": "Add keyframe",
+      "removeKeyframe": "Remove keyframe",
+      "empty": "No scenarios",
+      "hint": "A scenario is a keyframe timeline per tag key. Create one with \"New scenario\" and add tracks and keyframes. Tracks of the active scenario replace the waveform."
+    }
   },
   "sceneCollision": {
     "contact": "Contact point (approx.)",
@@ -458,5 +486,19 @@
     "zoneAlarmName": "Zone intrusion — {{owner}} · {{zone}} ← {{intruder}}",
     "zoneAlarmLevelWarn": "Warn-level zone",
     "zoneAlarmLevelStop": "Stop-level zone"
+  },
+  "simulation": {
+    "title": "Simulation clock",
+    "play": "Play",
+    "pause": "Pause",
+    "reset": "Reset values & time",
+    "speed": "Speed",
+    "scenario": "Scenario",
+    "none": "None (waveforms only)",
+    "unnamed": "Untitled",
+    "loop": "Loop",
+    "time": "Elapsed",
+    "seek": "Seek scenario time",
+    "finished": "Scenario finished. Reset or move the slider back to play again."
   }
 }

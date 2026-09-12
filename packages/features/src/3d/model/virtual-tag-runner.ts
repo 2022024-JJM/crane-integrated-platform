@@ -1,11 +1,22 @@
 import {
+  clampToTag,
+  evaluateScenarioTrack,
   initVirtualTagState,
+  isScenarioFinished,
+  scenarioDurationMs,
+  scenarioTimeMs,
   setVirtualTagManualValue,
   stepVirtualTag,
+  type ScenarioTrack,
+  type VirtualScenario,
   type VirtualTagDefinition,
   type VirtualTagRuntimeState,
 } from '@crane/domain/virtual-tag';
-import { publishTagValue, type TagPublish, type TagValueSource } from './tag-value-bus';
+import {
+  publishTagValue,
+  type TagPublish,
+  type TagValueSource,
+} from './tag-value-bus';
 
 /**
  * 가상 태그 값 러너 — 모듈 전역 `setInterval` 하나로 돈다.
@@ -18,12 +29,23 @@ import { publishTagValue, type TagPublish, type TagValueSource } from './tag-val
  *
  * 시간은 `Date.now()` 누적(elapsed) 이라 일시정지 후 재개하면 파형이 이어진다.
  * 테스트는 vi.useFakeTimers 로 Date 와 interval 을 함께 고정한다.
+ *
+ * 시뮬레이션 시계(2026-09-12): 벽시계 dt 에 `speed` 를 곱해 누적한다 — 배속은
+ * 파형 주기와 시나리오 시각을 함께 빠르게 한다. `seek(ms)` 는 경과 시간을
+ * 옮기고 모든 값을 그 시각으로 다시 계산해 내보낸다(파형·시나리오 모두 시각의
+ * 함수라 결정론적). 활성 시나리오가 있으면 트랙이 있는 태그는 키프레임
+ * 보간값이 파형을 대신하고, loop 가 아닌 시나리오가 끝에 닿으면 `onFinished`
+ * 를 한 번 부른다(스토어가 일시정지한다).
  */
 
 export interface VirtualTagRunnerConfig {
   tags: VirtualTagDefinition[];
   tickMs: number;
   isRunning: boolean;
+  /** 배속. 기본 1. */
+  speed: number;
+  /** 활성 시나리오. 없으면 null. */
+  scenario: VirtualScenario | null;
 }
 
 type GetConfig = () => VirtualTagRunnerConfig;
@@ -36,15 +58,34 @@ class VirtualTagRuntime {
   private elapsedMs = 0;
   private lastTickAt = 0;
   private getConfig: GetConfig | null = null;
+  private onFinished: (() => void) | null = null;
   private publish: TagPublish = publishTagValue;
+  /** 시나리오 참조별 트랙 인덱스 캐시 — 같은 시나리오면 틱마다 다시 만들지 않는다. */
+  private trackCacheFor: VirtualScenario | null = null;
+  private trackByKey = new Map<string, ScenarioTrack>();
+  private finishedNotified = false;
 
-  /** 스토어가 재생을 켤 때 부른다. 설정은 매 틱 getter 로 다시 읽는다. */
-  start(getConfig: GetConfig): void {
+  /**
+   * 스토어가 재생을 켤 때 부른다. 설정은 매 틱 getter 로 다시 읽는다.
+   * `onFinished` 는 loop 아닌 시나리오가 끝에 닿은 틱에 한 번.
+   */
+  start(getConfig: GetConfig, onFinished: (() => void) | null = null): void {
     this.getConfig = getConfig;
+    this.onFinished = onFinished;
     this.lastTickAt = Date.now();
+    this.finishedNotified = false;
     this.ensureTimer();
     // 재생 즉시 현재값을 한 번 내보내 첫 틱 전에도 노드가 초기값을 받는다.
+    this.evaluateAll();
     this.publishAll();
+  }
+
+  /**
+   * 설정 getter 만 붙인다(타이머 없음) — 정지 상태에서 seek·시나리오 전환이
+   * 값을 계산하려면 설정이 필요하다. 이미 있으면 교체.
+   */
+  attachConfig(getConfig: GetConfig): void {
+    this.getConfig = getConfig;
   }
 
   /** 값이 나갈 곳을 바꾼다(테스트·어댑터). 기본은 태그 값 버스. */
@@ -105,14 +146,79 @@ class VirtualTagRuntime {
   resetValues(): void {
     this.elapsedMs = 0;
     this.lastTickAt = Date.now();
+    this.finishedNotified = false;
     for (const def of this.defs.values()) {
       this.states.set(def.id, initVirtualTagState(def));
     }
+    // 시나리오가 활성이면 0초 값은 initial 이 아니라 첫 키프레임이다.
+    this.evaluateAll();
+    this.publishAll();
+  }
+
+  /**
+   * 경과 시간을 옮기고 모든 값을 그 시각으로 다시 계산해 내보낸다. 재생
+   * 여부와 무관(정지 상태에서 타임라인을 훑는 용도). 음수·NaN 은 0.
+   */
+  seek(elapsedMs: number): void {
+    this.elapsedMs =
+      Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
+    this.lastTickAt = Date.now();
+    this.finishedNotified = false;
+    this.evaluateAll();
     this.publishAll();
   }
 
   get elapsed(): number {
     return this.elapsedMs;
+  }
+
+  /** 활성 시나리오 기준 현재 시나리오 시각(ms). 시나리오가 없으면 elapsed. */
+  get scenarioTime(): number {
+    const scenario = this.getConfig?.().scenario ?? null;
+    if (!scenario) return this.elapsedMs;
+    return scenarioTimeMs(
+      this.elapsedMs,
+      scenarioDurationMs(scenario),
+      scenario.loop,
+    );
+  }
+
+  private tracksOf(scenario: VirtualScenario): Map<string, ScenarioTrack> {
+    if (this.trackCacheFor !== scenario) {
+      this.trackCacheFor = scenario;
+      this.trackByKey = new Map(scenario.tracks.map((t) => [t.key, t]));
+    }
+    return this.trackByKey;
+  }
+
+  /**
+   * 현재 elapsed 로 모든 태그 값을 계산한다(내보내지 않음). manual 은 시나리오
+   * 트랙이 있을 때만 바뀐다(파형이 없으니 슬라이더 값 유지).
+   */
+  private evaluateAll(): void {
+    const config = this.getConfig?.();
+    if (!config) return;
+    const scenario = config.scenario;
+    const tracks = scenario ? this.tracksOf(scenario) : null;
+    const tMs = scenario
+      ? scenarioTimeMs(
+          this.elapsedMs,
+          scenarioDurationMs(scenario),
+          scenario.loop,
+        )
+      : 0;
+    for (const def of config.tags) {
+      const state = this.states.get(def.id) ?? initVirtualTagState(def);
+      const track = tracks?.get(def.key);
+      if (track) {
+        const value = evaluateScenarioTrack(track, tMs);
+        if (value !== undefined) {
+          this.states.set(def.id, { value: clampToTag(def, value) });
+          continue;
+        }
+      }
+      this.states.set(def.id, stepVirtualTag(def, this.elapsedMs, state));
+    }
   }
 
   private ensureTimer(): void {
@@ -145,14 +251,42 @@ class VirtualTagRuntime {
     // 탭 비활성 등으로 오래 밀렸으면 한 번만 따라잡는다(최대 한 틱 분량 × 10).
     const dt = Math.min(Math.max(0, now - this.lastTickAt), config.tickMs * 10);
     this.lastTickAt = now;
-    this.elapsedMs += dt;
+    const speed =
+      Number.isFinite(config.speed) && config.speed > 0 ? config.speed : 1;
+    this.elapsedMs += dt * speed;
+
+    const scenario = config.scenario;
+    const tracks = scenario ? this.tracksOf(scenario) : null;
+    const durationMs = scenario ? scenarioDurationMs(scenario) : 0;
+    const tMs = scenario
+      ? scenarioTimeMs(this.elapsedMs, durationMs, scenario.loop)
+      : 0;
 
     for (const def of config.tags) {
       if (!def.enabled) continue;
       const state = this.states.get(def.id) ?? initVirtualTagState(def);
-      const next = stepVirtualTag(def, this.elapsedMs, state);
+      const track = tracks?.get(def.key);
+      let next: VirtualTagRuntimeState;
+      if (track) {
+        const value = evaluateScenarioTrack(track, tMs);
+        next =
+          value !== undefined
+            ? { value: clampToTag(def, value) }
+            : stepVirtualTag(def, this.elapsedMs, state);
+      } else {
+        next = stepVirtualTag(def, this.elapsedMs, state);
+      }
       this.states.set(def.id, next);
       this.publish(def.key, next.value);
+    }
+
+    if (
+      scenario &&
+      !this.finishedNotified &&
+      isScenarioFinished(this.elapsedMs, durationMs, scenario.loop)
+    ) {
+      this.finishedNotified = true;
+      this.onFinished?.();
     }
   }
 }

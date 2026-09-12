@@ -349,7 +349,35 @@
     "keyHint": "Eandem formam ac tags servi veri adhibe (craneId:tagCode).",
     "periodHint": "Tempus (ms) unius cycli (min→max→min)",
     "save": "Serva",
-    "saveFailed": "Signa virtualia servari non potuerunt."
+    "saveFailed": "Signa virtualia servari non potuerunt.",
+    "scenarios": {
+      "title": "Scaenaria",
+      "newName": "Novum scaenarium",
+      "add": "Novum scaenarium",
+      "duplicate": "Duplica",
+      "remove": "Dele",
+      "run": "Age",
+      "name": "Nomen",
+      "loop": "Repete",
+      "duration": "Longitudo {{seconds}}s",
+      "selectTag": "Notam elige",
+      "noMoreTags": "Nullae notae addendae",
+      "addTrack": "Vestigium adde",
+      "removeTrack": "Vestigium dele",
+      "noTracks": "Nulla vestigia. Notam elige et vestigium adde.",
+      "time": "Tempus",
+      "value": "Valor",
+      "ease": "Interpolatio",
+      "eases": {
+        "linear": "Recta",
+        "hold": "Tene",
+        "smooth": "Lenis"
+      },
+      "addKeyframe": "Clavem adde",
+      "removeKeyframe": "Clavem dele",
+      "empty": "Nulla scaenaria",
+      "hint": "Scaenarium est series clavium per notam. Novum crea et vestigia clavesque adde. Vestigia scaenarii activi undam substituunt."
+    }
   },
   "sceneCollision": {
     "contact": "Punctum contactus (proximum)",
@@ -444,5 +472,19 @@
     "zoneAlarmName": "Invasio regionis — {{owner}} · {{zone}} ← {{intruder}}",
     "zoneAlarmLevelWarn": "Regio gradus monitionis",
     "zoneAlarmLevelStop": "Regio gradus sistendi"
+  },
+  "simulation": {
+    "title": "Horologium simulationis",
+    "play": "Age",
+    "pause": "Siste",
+    "reset": "Valores et tempus restitue",
+    "speed": "Celeritas",
+    "scenario": "Scaenarium",
+    "none": "Nullum (undae tantum)",
+    "unnamed": "Sine nomine",
+    "loop": "Repete",
+    "time": "Elapsum",
+    "seek": "Tempus scaenarii move",
+    "finished": "Scaenarium finitum est. Restitue vel cursorem retro move ut iterum agas."
   }
 }

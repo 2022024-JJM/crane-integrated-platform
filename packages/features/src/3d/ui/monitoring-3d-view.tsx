@@ -75,6 +75,7 @@ import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
+import { SceneSimulationMenu } from './scene-simulation-menu';
 import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 
@@ -386,6 +387,7 @@ export function Monitoring3dView({
             // 맨 아래에 둔다. 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
             <>
               <SceneSimulationToggle />
+              <SceneSimulationMenu />
               {collisionActive ? (
                 <SceneCollisionMenu
                   runner={collisionRunner}

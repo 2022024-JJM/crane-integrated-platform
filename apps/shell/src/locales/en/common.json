@@ -322,7 +322,8 @@
     "minimapHide": "Hide minimap",
     "minimapRefresh": "Refresh minimap",
     "minimapHint": "Press or drag to move the camera",
-    "minimapMove": "Drag to move the minimap"
+    "minimapMove": "Drag to move the minimap",
+    "simulationMenu": "Simulation clock"
   },
   "undo": "Undo"
 }

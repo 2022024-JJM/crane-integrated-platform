@@ -26,6 +26,10 @@ import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
+import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { virtualTagRuntime } from '../model/virtual-tag-runner';
+import { useRigLivePoll } from '../model/rig-live-readouts';
+import { formatSimClock } from '../lib/sim-clock';
 import {
   useRealtimeConnectionState,
   type SceneConnectionMode,
@@ -79,6 +83,10 @@ export function SceneStatusHud({
   className,
 }: SceneStatusHudProps) {
   const { t } = useTranslation();
+  // 시뮬레이션 시계(배속·경과)는 러너 mutable 값 — 500ms 폴링.
+  useRigLivePoll(500);
+  const simSpeed = useVirtualTagStore((s) => s.speed);
+  const simRunning = useVirtualTagStore((s) => s.isRunning);
   const connection = useRealtimeConnectionState(mode);
   const collisionMode = useSceneCollisionStore((s) => s.activeMode);
   const zonesEnabled = useSceneZoneStore((s) => s.enabled);
@@ -215,7 +223,11 @@ export function SceneStatusHud({
       ) : null}
       <HudCell
         icon={<Radio className="size-3.5" aria-hidden />}
-        label={t('monitoring:hud.linkShort')}
+        label={
+          simRunning || mode === 'simulation'
+            ? `${t('monitoring:hud.linkShort')} · ×${simSpeed} ${formatSimClock(virtualTagRuntime.elapsed)}`
+            : t('monitoring:hud.linkShort')
+        }
         title={t('monitoring:hud.link')}
         value={t(`monitoring:hud.linkState.${connection.state}`)}
         valueClassName={cn(

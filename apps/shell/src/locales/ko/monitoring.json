@@ -363,7 +363,35 @@
     "keyHint": "실제 서버 태그와 같은 형식(크레인ID:태그코드)을 권장합니다.",
     "periodHint": "한 사이클(최소→최대→최소)이 걸리는 시간(ms)",
     "save": "저장",
-    "saveFailed": "가상 태그를 저장하지 못했습니다."
+    "saveFailed": "가상 태그를 저장하지 못했습니다.",
+    "scenarios": {
+      "title": "시나리오",
+      "newName": "새 시나리오",
+      "add": "새 시나리오",
+      "duplicate": "복제",
+      "remove": "삭제",
+      "run": "실행",
+      "name": "이름",
+      "loop": "반복",
+      "duration": "길이 {{seconds}}s",
+      "selectTag": "태그 선택",
+      "noMoreTags": "추가할 태그가 없습니다",
+      "addTrack": "트랙 추가",
+      "removeTrack": "트랙 삭제",
+      "noTracks": "트랙이 없습니다. 태그를 골라 트랙을 추가하세요.",
+      "time": "시각",
+      "value": "값",
+      "ease": "보간",
+      "eases": {
+        "linear": "직선",
+        "hold": "유지",
+        "smooth": "부드럽게"
+      },
+      "addKeyframe": "키프레임 추가",
+      "removeKeyframe": "키프레임 삭제",
+      "empty": "시나리오 없음",
+      "hint": "시나리오는 태그 키별 키프레임 타임라인입니다. \"새 시나리오\"로 만들고 트랙과 키프레임을 추가하세요. 활성 시나리오의 트랙은 파형 대신 키프레임 값으로 움직입니다."
+    }
   },
   "sceneCollision": {
     "contact": "접촉 지점(근사)",
@@ -458,5 +486,19 @@
     "zoneAlarmName": "영역 침범 — {{owner}} · {{zone}} ← {{intruder}}",
     "zoneAlarmLevelWarn": "경고 등급 영역",
     "zoneAlarmLevelStop": "정지 등급 영역"
+  },
+  "simulation": {
+    "title": "시뮬레이션 시계",
+    "play": "재생",
+    "pause": "일시정지",
+    "reset": "값·시간 초기화",
+    "speed": "배속",
+    "scenario": "시나리오",
+    "none": "없음(파형만)",
+    "unnamed": "이름 없음",
+    "loop": "반복",
+    "time": "경과",
+    "seek": "시나리오 시각 이동",
+    "finished": "시나리오가 끝났습니다. 다시 재생하려면 초기화 또는 슬라이더를 앞으로 옮기세요."
   }
 }

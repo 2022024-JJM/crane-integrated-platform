@@ -322,7 +322,8 @@
     "minimapHide": "Tabulam minimam cela",
     "minimapRefresh": "Tabulam minimam renova",
     "minimapHint": "Preme vel trahe ut cameram moveas",
-    "minimapMove": "Trahe ut tabulam minimam moveas"
+    "minimapMove": "Trahe ut tabulam minimam moveas",
+    "simulationMenu": "Horologium simulationis"
   },
   "undo": "Revoca"
 }

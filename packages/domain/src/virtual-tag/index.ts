@@ -1,9 +1,29 @@
 export type {
+  ScenarioEase,
+  ScenarioKeyframe,
+  ScenarioTrack,
+  VirtualScenario,
   VirtualTagDefinition,
   VirtualTagPattern,
   VirtualTagPatternKind,
   VirtualTagSet,
 } from './model/types';
+export {
+  SCENARIO_EASES,
+  SCENARIO_KEYFRAMES_MAX,
+  SCENARIO_NAME_MAX,
+  SCENARIO_TIME_MAX_MS,
+  SCENARIO_TRACKS_MAX,
+  SCENARIOS_MAX,
+  SIMULATION_SPEED_OPTIONS,
+} from './model/types';
+export {
+  evaluateScenarioTrack,
+  isScenarioFinished,
+  normalizeKeyframes,
+  scenarioDurationMs,
+  scenarioTimeMs,
+} from './lib/scenario';
 export {
   VIRTUAL_TAG_KEY_MAX,
   VIRTUAL_TAG_NAME_MAX,
@@ -33,6 +53,10 @@ export {
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
+  sanitizeScenario,
+  sanitizeScenarioKeyframe,
+  sanitizeScenarioList,
+  sanitizeScenarioTrack,
 } from './lib/sanitize-virtual-tags';
 export {
   isVirtualTagSetStoredLocallyOnly,

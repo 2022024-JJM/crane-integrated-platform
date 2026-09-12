@@ -81,6 +81,9 @@ export { SceneMinimap } from './ui/scene-minimap';
 export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
+export { SceneSimulationPanel } from './ui/scene-simulation-panel';
+export { formatSimClock } from './lib/sim-clock';
+export { SceneSimulationMenu } from './ui/scene-simulation-menu';
 export { SceneZoneAlertOverlay } from './ui/scene-zone-alert-overlay';
 export { SceneAlertNotifier } from './ui/scene-alert-notifier';
 export { ZoneJournalSync } from './ui/zone-journal-sync';
@@ -260,6 +263,9 @@ export {
 export {
   resetVirtualTagLoadState,
   useVirtualTagStore,
+  serializeVirtualTagSet,
+  SIMULATION_SPEED_MAX,
+  SIMULATION_SPEED_MIN,
   type VirtualTagAddResult,
   type VirtualTagDraft,
 } from './model/use-virtual-tag-store';

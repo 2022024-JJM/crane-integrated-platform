@@ -7,6 +7,10 @@ import {
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
+  sanitizeScenario,
+  sanitizeScenarioKeyframe,
+  sanitizeScenarioList,
+  sanitizeScenarioTrack,
 } from '../sanitize-virtual-tags';
 import {
   VIRTUAL_TAG_KEY_MAX,
@@ -18,6 +22,10 @@ import {
   VIRTUAL_TAG_TICK_MAX,
   VIRTUAL_TAG_TICK_MIN,
   VIRTUAL_TAGS_MAX,
+  SCENARIO_KEYFRAMES_MAX,
+  SCENARIO_NAME_MAX,
+  SCENARIO_TIME_MAX_MS,
+  SCENARIOS_MAX,
 } from '../../model/types';
 
 const valid = {
@@ -212,5 +220,103 @@ describe('sanitizeVirtualTagList / Set', () => {
       tickMs: 100,
       tags: [],
     });
+  });
+});
+
+describe('sanitizeScenario*', () => {
+  it('키프레임 — atMs 클램프·반올림, linear 는 생략, 손상은 null', () => {
+    expect(
+      sanitizeScenarioKeyframe({ atMs: 10.4, value: 1, ease: 'linear' }),
+    ).toEqual({ atMs: 10, value: 1 });
+    expect(
+      sanitizeScenarioKeyframe({ atMs: -5, value: 1, ease: 'hold' }),
+    ).toEqual({
+      atMs: 0,
+      value: 1,
+      ease: 'hold',
+    });
+    expect(
+      sanitizeScenarioKeyframe({ atMs: SCENARIO_TIME_MAX_MS + 1, value: 0 })
+        ?.atMs,
+    ).toBe(SCENARIO_TIME_MAX_MS);
+    expect(
+      sanitizeScenarioKeyframe({ atMs: 1, value: 1, ease: 'bounce' }),
+    ).toEqual({
+      atMs: 1,
+      value: 1,
+    });
+    expect(sanitizeScenarioKeyframe({ atMs: 'a', value: 1 })).toBeNull();
+    expect(sanitizeScenarioKeyframe({ atMs: 1, value: NaN })).toBeNull();
+    expect(sanitizeScenarioKeyframe(null)).toBeNull();
+  });
+
+  it('트랙 — 키 정규화, 정렬·중복 제거, 빈 트랙·나쁜 키는 null, 상한', () => {
+    const track = sanitizeScenarioTrack({
+      key: ' A:x ',
+      keyframes: [
+        { atMs: 500, value: 2 },
+        { atMs: 0, value: 1 },
+        { atMs: 500, value: 9 },
+        'garbage',
+      ],
+    });
+    expect(track).toEqual({
+      key: 'A:x',
+      keyframes: [
+        { atMs: 0, value: 1 },
+        { atMs: 500, value: 2 },
+      ],
+    });
+    expect(sanitizeScenarioTrack({ key: 'A:x', keyframes: [] })).toBeNull();
+    expect(
+      sanitizeScenarioTrack({ key: '', keyframes: [{ atMs: 0, value: 0 }] }),
+    ).toBeNull();
+    const many = Array.from({ length: SCENARIO_KEYFRAMES_MAX + 5 }, (_, i) => ({
+      atMs: i,
+      value: i,
+    }));
+    expect(
+      sanitizeScenarioTrack({ key: 'k', keyframes: many })?.keyframes,
+    ).toHaveLength(SCENARIO_KEYFRAMES_MAX);
+  });
+
+  it('시나리오 — id 필수, 이름 길이, loop 는 true 만, 트랙 키 중복 첫 항목', () => {
+    const scenario = sanitizeScenario({
+      id: 's1',
+      name: 'x'.repeat(SCENARIO_NAME_MAX + 10),
+      loop: 'yes',
+      tracks: [
+        { key: 'A', keyframes: [{ atMs: 0, value: 1 }] },
+        { key: 'A', keyframes: [{ atMs: 0, value: 2 }] },
+        { key: 'B', keyframes: [] },
+      ],
+    });
+    expect(scenario?.name).toHaveLength(SCENARIO_NAME_MAX);
+    expect(scenario?.loop).toBe(false);
+    expect(scenario?.tracks).toEqual([
+      { key: 'A', keyframes: [{ atMs: 0, value: 1 }] },
+    ]);
+    expect(sanitizeScenario({ name: 'no id' })).toBeNull();
+  });
+
+  it('목록 — id 중복 첫 항목, 상한, 배열 아님은 빈 배열; 세트에 비면 생략', () => {
+    const list = sanitizeScenarioList([
+      { id: 'a', tracks: [] },
+      { id: 'a', name: 'dup' },
+      { id: 'b' },
+    ]);
+    expect(list.map((s) => s.id)).toEqual(['a', 'b']);
+    expect(sanitizeScenarioList('x')).toEqual([]);
+    expect(
+      sanitizeScenarioList(
+        Array.from({ length: SCENARIOS_MAX + 3 }, (_, i) => ({ id: `s${i}` })),
+      ),
+    ).toHaveLength(SCENARIOS_MAX);
+    expect(
+      sanitizeVirtualTagSet({ tags: [], scenarios: [] }),
+    ).not.toHaveProperty('scenarios');
+    expect(
+      sanitizeVirtualTagSet({ tags: [], scenarios: [{ id: 's' }] }).scenarios,
+    ).toHaveLength(1);
   });
 });

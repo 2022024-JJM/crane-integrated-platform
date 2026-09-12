@@ -4,11 +4,17 @@ import {
   clampVirtualTagTick,
   createEmptyVirtualTagSet,
   loadVirtualTagSet,
+  normalizeKeyframes,
   normalizeVirtualTagKey,
+  sanitizeScenario,
   sanitizeVirtualTag,
   saveVirtualTagSet,
+  SCENARIO_NAME_MAX,
+  SCENARIOS_MAX,
   VIRTUAL_TAG_PERIOD_DEFAULT,
   VIRTUAL_TAGS_MAX,
+  type ScenarioKeyframe,
+  type VirtualScenario,
   type VirtualTagDefinition,
   type VirtualTagPattern,
   type VirtualTagSet,
@@ -26,7 +32,15 @@ import { virtualTagRuntime } from './virtual-tag-runner';
  * 값(현재값·파형 진행)은 여기 없다 — virtual-tag-runner 의 mutable 런타임이
  * 들고 있고, 이 스토어는 정의와 재생 여부만 React 상태로 둔다. 정의가 바뀌면
  * 러너가 다음 틱에서 반영한다.
+ *
+ * 시뮬레이션 시계(2026-09-12): `speed`(배속)·`activeScenarioId` 는 세션 전용
+ * (저장 안 함), `scenarios` 는 태그와 같은 세트에 저장된다. 시나리오가 활성인
+ * 채 끝에 닿으면(loop 아님) 러너가 알려 와 `pause()` 한다.
  */
+
+/** 배속 허용 범위 — 선택지(SIMULATION_SPEED_OPTIONS) 밖 값도 이 안이면 받는다. */
+export const SIMULATION_SPEED_MIN = 0.1;
+export const SIMULATION_SPEED_MAX = 16;
 
 export interface VirtualTagDraft {
   key: string;
@@ -46,6 +60,11 @@ export type VirtualTagAddResult =
 interface VirtualTagState {
   tags: VirtualTagDefinition[];
   tickMs: number;
+  scenarios: VirtualScenario[];
+  /** 배속(세션). */
+  speed: number;
+  /** 활성 시나리오 id(세션). 없으면 null = 파형만. */
+  activeScenarioId: string | null;
   /** 마지막 저장(또는 로드) 시점의 직렬화 — dirty 판정 기준. */
   savedSnapshot: string;
   hydrated: boolean;
@@ -73,14 +92,62 @@ interface VirtualTagState {
   setTickMs: (tickMs: number) => void;
   start: () => void;
   pause: () => void;
+  setSpeed: (speed: number) => void;
+  /** 활성 시나리오 선택 — 바꾸면 0초로 seek 한다(정지 중에도 첫 자세가 보이게). */
+  setActiveScenario: (id: string | null) => void;
+  /** 경과 시간 이동(ms). 재생 여부 무관. */
+  seek: (elapsedMs: number) => void;
+  addScenario: (name?: string) => string | null;
+  updateScenario: (
+    id: string,
+    patch: Partial<Pick<VirtualScenario, 'name' | 'loop'>>,
+  ) => boolean;
+  removeScenario: (id: string) => void;
+  duplicateScenario: (id: string) => string | null;
+  /** 트랙 추가 — 이미 있으면 false. 첫 키프레임은 태그 initial(없으면 0) at 0. */
+  addScenarioTrack: (scenarioId: string, key: string) => boolean;
+  /** 트랙 키프레임 교체(정렬·중복 제거 후). 비면 트랙 삭제. */
+  setScenarioTrackKeyframes: (
+    scenarioId: string,
+    key: string,
+    keyframes: readonly ScenarioKeyframe[],
+  ) => boolean;
+  removeScenarioTrack: (scenarioId: string, key: string) => void;
 }
 
-function toSet(state: Pick<VirtualTagState, 'tags' | 'tickMs'>): VirtualTagSet {
-  return { version: 1, tickMs: state.tickMs, tags: state.tags };
+type SetLike = Pick<VirtualTagState, 'tags' | 'tickMs' | 'scenarios'>;
+
+function toSet(state: SetLike): VirtualTagSet {
+  const set: VirtualTagSet = {
+    version: 1,
+    tickMs: state.tickMs,
+    tags: state.tags,
+  };
+  if (state.scenarios.length > 0) set.scenarios = state.scenarios;
+  return set;
 }
 
-function snapshotOf(state: Pick<VirtualTagState, 'tags' | 'tickMs'>): string {
+function snapshotOf(state: SetLike): string {
   return JSON.stringify(toSet(state));
+}
+
+/** 페이지의 dirty 파생이 스토어와 같은 직렬화를 쓰게 한다. */
+export function serializeVirtualTagSet(state: SetLike): string {
+  return snapshotOf(state);
+}
+
+function clampSpeed(speed: number): number {
+  if (!Number.isFinite(speed) || speed <= 0) return 1;
+  return Math.min(SIMULATION_SPEED_MAX, Math.max(SIMULATION_SPEED_MIN, speed));
+}
+
+function nextUniqueName(base: string, taken: Set<string>): string {
+  if (!taken.has(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${base} ${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${base} ${createId().slice(0, 4)}`;
 }
 
 function nextUniqueKey(base: string, taken: Set<string>): string {
@@ -97,7 +164,10 @@ let loadPromise: Promise<void> | null = null;
 export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
   tags: [],
   tickMs: createEmptyVirtualTagSet().tickMs,
-  savedSnapshot: snapshotOf(createEmptyVirtualTagSet()),
+  scenarios: [],
+  speed: 1,
+  activeScenarioId: null,
+  savedSnapshot: snapshotOf({ ...createEmptyVirtualTagSet(), scenarios: [] }),
   hydrated: false,
   isSaving: false,
   isRunning: false,
@@ -107,10 +177,12 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
     if (loadPromise) return loadPromise;
     loadPromise = loadVirtualTagSet()
       .then((loaded) => {
+        const scenarios = loaded.scenarios ?? [];
         set({
           tags: loaded.tags,
           tickMs: loaded.tickMs,
-          savedSnapshot: snapshotOf(loaded),
+          scenarios,
+          savedSnapshot: snapshotOf({ ...loaded, scenarios }),
           hydrated: true,
         });
         virtualTagRuntime.syncDefinitions(loaded.tags);
@@ -132,10 +204,12 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
     set({ isSaving: true });
     try {
       const saved = await saveVirtualTagSet(toSet(get()));
+      const scenarios = saved.scenarios ?? [];
       set({
         tags: saved.tags,
         tickMs: saved.tickMs,
-        savedSnapshot: snapshotOf(saved),
+        scenarios,
+        savedSnapshot: snapshotOf({ ...saved, scenarios }),
         isSaving: false,
       });
       virtualTagRuntime.syncDefinitions(saved.tags);
@@ -153,7 +227,18 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
     if (!get().isDirty()) return;
     // 스냅샷은 이 스토어가 toSet 으로 직렬화한 것이라 그대로 믿는다.
     const saved = JSON.parse(get().savedSnapshot) as VirtualTagSet;
-    set({ tags: saved.tags, tickMs: saved.tickMs });
+    const scenarios = saved.scenarios ?? [];
+    const activeScenarioId = scenarios.some(
+      (s) => s.id === get().activeScenarioId,
+    )
+      ? get().activeScenarioId
+      : null;
+    set({
+      tags: saved.tags,
+      tickMs: saved.tickMs,
+      scenarios,
+      activeScenarioId,
+    });
     virtualTagRuntime.syncDefinitions(saved.tags);
   },
 
@@ -240,10 +325,22 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
   start: () => {
     if (get().isRunning) return;
     set({ isRunning: true });
-    virtualTagRuntime.start(() => {
-      const { tags, tickMs, isRunning } = get();
-      return { tags, tickMs, isRunning };
-    });
+    virtualTagRuntime.start(
+      () => {
+        const { tags, tickMs, isRunning, speed, scenarios, activeScenarioId } =
+          get();
+        return {
+          tags,
+          tickMs,
+          isRunning,
+          speed,
+          scenario: scenarios.find((s) => s.id === activeScenarioId) ?? null,
+        };
+      },
+      // loop 아닌 시나리오가 끝나면 멈춘다 — 다시 ▶ 하면 이어서(끝에서) 돌고,
+      // 처음부터 보려면 seek(0)·리셋.
+      () => get().pause(),
+    );
   },
 
   pause: () => {
@@ -251,7 +348,153 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
     set({ isRunning: false });
     virtualTagRuntime.pause();
   },
+
+  setSpeed: (speed) => {
+    const next = clampSpeed(speed);
+    if (next === get().speed) return;
+    set({ speed: next });
+  },
+
+  setActiveScenario: (id) => {
+    const next =
+      id !== null && get().scenarios.some((s) => s.id === id) ? id : null;
+    if (next === get().activeScenarioId) return;
+    set({ activeScenarioId: next });
+    // 러너 getter 는 스토어를 읽으므로 set 뒤에 seek 하면 새 시나리오 기준.
+    ensureRunnerConfig(get);
+    virtualTagRuntime.seek(0);
+  },
+
+  seek: (elapsedMs) => {
+    ensureRunnerConfig(get);
+    virtualTagRuntime.seek(elapsedMs);
+  },
+
+  addScenario: (name) => {
+    const { scenarios } = get();
+    if (scenarios.length >= SCENARIOS_MAX) return null;
+    const taken = new Set(scenarios.map((s) => s.name));
+    const scenario: VirtualScenario = {
+      id: createId(),
+      name: nextUniqueName(
+        (name ?? 'Scenario').trim().slice(0, SCENARIO_NAME_MAX) || 'Scenario',
+        taken,
+      ),
+      loop: false,
+      tracks: [],
+    };
+    set({ scenarios: [...scenarios, scenario] });
+    return scenario.id;
+  },
+
+  updateScenario: (id, patch) => {
+    const { scenarios } = get();
+    const index = scenarios.findIndex((s) => s.id === id);
+    if (index < 0) return false;
+    const merged = sanitizeScenario({ ...scenarios[index], ...patch, id });
+    if (!merged) return false;
+    const next = scenarios.slice();
+    next[index] = merged;
+    set({ scenarios: next });
+    return true;
+  },
+
+  removeScenario: (id) => {
+    const { scenarios, activeScenarioId } = get();
+    const next = scenarios.filter((s) => s.id !== id);
+    if (next.length === scenarios.length) return;
+    set({
+      scenarios: next,
+      activeScenarioId: activeScenarioId === id ? null : activeScenarioId,
+    });
+  },
+
+  duplicateScenario: (id) => {
+    const { scenarios } = get();
+    const source = scenarios.find((s) => s.id === id);
+    if (!source || scenarios.length >= SCENARIOS_MAX) return null;
+    const taken = new Set(scenarios.map((s) => s.name));
+    const copy: VirtualScenario = {
+      ...structuredClone(source),
+      id: createId(),
+      name: nextUniqueName(source.name, taken).slice(0, SCENARIO_NAME_MAX),
+    };
+    set({ scenarios: [...scenarios, copy] });
+    return copy.id;
+  },
+
+  addScenarioTrack: (scenarioId, key) => {
+    const { scenarios, tags } = get();
+    const normalized = normalizeVirtualTagKey(key);
+    if (normalized === null) return false;
+    const index = scenarios.findIndex((s) => s.id === scenarioId);
+    if (index < 0) return false;
+    const scenario = scenarios[index];
+    if (scenario.tracks.some((t) => t.key === normalized)) return false;
+    const tag = tags.find((t) => t.key === normalized);
+    const next = scenarios.slice();
+    next[index] = {
+      ...scenario,
+      tracks: [
+        ...scenario.tracks,
+        { key: normalized, keyframes: [{ atMs: 0, value: tag?.initial ?? 0 }] },
+      ],
+    };
+    set({ scenarios: next });
+    return true;
+  },
+
+  setScenarioTrackKeyframes: (scenarioId, key, keyframes) => {
+    const { scenarios } = get();
+    const index = scenarios.findIndex((s) => s.id === scenarioId);
+    if (index < 0) return false;
+    const scenario = scenarios[index];
+    if (!scenario.tracks.some((t) => t.key === key)) return false;
+    const normalized = normalizeKeyframes(keyframes);
+    const tracks =
+      normalized.length === 0
+        ? scenario.tracks.filter((t) => t.key !== key)
+        : scenario.tracks.map((t) =>
+            t.key === key ? { key, keyframes: normalized } : t,
+          );
+    const next = scenarios.slice();
+    next[index] = { ...scenario, tracks };
+    set({ scenarios: next });
+    return true;
+  },
+
+  removeScenarioTrack: (scenarioId, key) => {
+    const { scenarios } = get();
+    const index = scenarios.findIndex((s) => s.id === scenarioId);
+    if (index < 0) return;
+    const scenario = scenarios[index];
+    if (!scenario.tracks.some((t) => t.key === key)) return;
+    const next = scenarios.slice();
+    next[index] = {
+      ...scenario,
+      tracks: scenario.tracks.filter((t) => t.key !== key),
+    };
+    set({ scenarios: next });
+  },
 }));
+
+/**
+ * 정지 상태에서 seek 하려면 러너가 설정 getter 를 갖고 있어야 한다 — 아직 한
+ * 번도 start 하지 않았으면 getter 만 붙인다(타이머는 켜지 않음).
+ */
+function ensureRunnerConfig(get: () => VirtualTagState): void {
+  virtualTagRuntime.attachConfig(() => {
+    const { tags, tickMs, isRunning, speed, scenarios, activeScenarioId } =
+      get();
+    return {
+      tags,
+      tickMs,
+      isRunning,
+      speed,
+      scenario: scenarios.find((s) => s.id === activeScenarioId) ?? null,
+    };
+  });
+}
 
 /** 스토어 밖(테스트·리셋)에서 로드 상태를 초기화할 때 쓴다. */
 export function resetVirtualTagLoadState(): void {
