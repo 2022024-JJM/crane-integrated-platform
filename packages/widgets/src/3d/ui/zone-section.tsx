@@ -29,6 +29,10 @@ import {
  * 입력과 같다(실제 단위는 씬 unit — position 과 동일). 편집은 전부 onUpdate(updater) 한 채널 —
  * undo/redo·dirty 에 잡힌다. 중심은 모델 루트(+오프셋)라 카드에 위치 입력이
  * 없다. 링은 캔버스가 선택 모델에 대해 토글과 무관하게 그린다.
+ *
+ * "영역 감지에서 제외"(zoneExempt)가 켜지면 그 모델의 영역은 감지에 쓰이지
+ * 않으므로 아래 목록 전체를 비활성화한다(추가·삭제·필드 편집 모두 막고 흐리게).
+ * 값은 그대로 남아 제외를 풀면 편집을 이어갈 수 있다.
  */
 export type ZonesUpdater = (zones: SavedModelZone[]) => SavedModelZone[];
 
@@ -37,7 +41,7 @@ const NO_ZONES: SavedModelZone[] = [];
 export interface ZoneSectionProps {
   model: SavedModelInfo;
   onUpdate: (updater: ZonesUpdater) => void;
-  /** "다른 영역 감지에서 제외"(zoneExempt) 토글. */
+  /** "영역 감지에서 제외"(zoneExempt) 토글. */
   onExemptChange: (exempt: boolean) => void;
   t: InspectorT;
 }
@@ -51,17 +55,25 @@ function AxisNumber({
   axis,
   value,
   onChange,
+  disabled,
 }: {
   axis: 'x' | 'z';
   value: number;
   onChange: (value: number | undefined) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1">
       <span className="text-muted-foreground shrink-0 font-mono text-[10px] uppercase">
         {axis}
       </span>
-      <NumberField value={value} step={0.5} unit=" m" onChange={onChange} />
+      <NumberField
+        value={value}
+        step={0.5}
+        unit=" m"
+        disabled={disabled}
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -69,12 +81,15 @@ function AxisNumber({
 function ZoneCard({
   zone,
   index,
+  disabled,
   onChange,
   onRemove,
   t,
 }: {
   zone: SavedModelZone;
   index: number;
+  /** 제외(zoneExempt) 모델 — 편집을 막는다. */
+  disabled: boolean;
   onChange: (next: SavedModelZone) => void;
   onRemove: () => void;
   t: InspectorT;
@@ -89,7 +104,11 @@ function ZoneCard({
           value={zone.color}
           aria-label={t('monitoring:inspector.zones.color')}
           title={zone.color}
-          className="border-border h-6 w-7 shrink-0 cursor-pointer rounded-sm border bg-transparent p-0"
+          disabled={disabled}
+          className={cn(
+            'border-border h-6 w-7 shrink-0 rounded-sm border bg-transparent p-0',
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          )}
           onChange={(event) => {
             const color = normalizeZoneColor(event.target.value);
             if (color) onChange({ ...zone, color });
@@ -99,6 +118,7 @@ function ZoneCard({
           value={zone.name}
           placeholder={placeholder}
           aria-label={t('monitoring:inspector.zones.name')}
+          disabled={disabled}
           className={cn(FIELD_INPUT, 'h-6 flex-1 font-medium')}
           onChange={(event) => onChange({ ...zone, name: event.target.value })}
         />
@@ -109,6 +129,7 @@ function ZoneCard({
           className="text-muted-foreground hover:text-red-300"
           aria-label={t('monitoring:inspector.zones.remove')}
           title={t('monitoring:inspector.zones.remove')}
+          disabled={disabled}
           onClick={onRemove}
         >
           <Trash2 className="size-3.5" />
@@ -119,6 +140,7 @@ function ZoneCard({
           value={zone.radius}
           step={0.5}
           unit=" m"
+          disabled={disabled}
           onChange={(value) => {
             // 비우거나 0 이하는 무시 — sanitize 가 그 항목을 버리므로 여기서 막는다.
             if (value === undefined || !Number.isFinite(value) || value <= 0)
@@ -131,11 +153,13 @@ function ZoneCard({
         <AxisNumber
           axis="x"
           value={dx}
+          disabled={disabled}
           onChange={(value) => onChange(withZoneOffsetAxis(zone, 'x', value))}
         />
         <AxisNumber
           axis="z"
           value={dz}
+          disabled={disabled}
           onChange={(value) => onChange(withZoneOffsetAxis(zone, 'z', value))}
         />
       </Field>
@@ -169,56 +193,69 @@ export function ZoneSection({
         {t('monitoring:inspector.zones.exempt')}
       </label>
 
-      <SubHeader
-        title={t('monitoring:inspector.zones.list')}
-        action={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="text-muted-foreground"
-            aria-label={t('monitoring:inspector.zones.add')}
-            title={t('monitoring:inspector.zones.add')}
-            onClick={() => {
-              // 클릭 시점에 잰다 — 모델이 아직 로드 전이면 기본 반경.
-              const radius = measureModelFootprintRadius(
-                modelObjectRegistry.get(model.id) ?? null,
-              );
-              onUpdate((prev) => [
-                ...prev,
-                createModelZone(
-                  prev,
-                  radius,
-                  t('monitoring:sceneZone.unnamed', { index: prev.length + 1 }),
-                ),
-              ]);
-            }}
-          >
-            <Plus className="size-3.5" />
-          </Button>
-        }
-      />
+      {/* 제외 모델은 목록 전체를 비활성화한다 — 감지에 쓰이지 않는 값을
+          편집하게 두면 토글 상태와 어긋나 보인다. 값은 그대로 남는다. */}
+      <div
+        className={cn('space-y-2', exempt && 'opacity-50')}
+        aria-disabled={exempt || undefined}
+      >
+        <SubHeader
+          title={t('monitoring:inspector.zones.list')}
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground"
+              aria-label={t('monitoring:inspector.zones.add')}
+              title={t('monitoring:inspector.zones.add')}
+              disabled={exempt}
+              onClick={() => {
+                // 클릭 시점에 잰다 — 모델이 아직 로드 전이면 기본 반경.
+                const radius = measureModelFootprintRadius(
+                  modelObjectRegistry.get(model.id) ?? null,
+                );
+                onUpdate((prev) => [
+                  ...prev,
+                  createModelZone(
+                    prev,
+                    radius,
+                    t('monitoring:sceneZone.unnamed', {
+                      index: prev.length + 1,
+                    }),
+                  ),
+                ]);
+              }}
+            >
+              <Plus className="size-3.5" />
+            </Button>
+          }
+        />
 
-      <div className="space-y-1.5">
-        {zones.map((zone, index) => (
-          <ZoneCard
-            key={zone.id}
-            zone={zone}
-            index={index}
-            onChange={(next) =>
-              onUpdate((prev) => prev.map((z) => (z.id === zone.id ? next : z)))
-            }
-            onRemove={() =>
-              onUpdate((prev) => prev.filter((z) => z.id !== zone.id))
-            }
-            t={t}
-          />
-        ))}
-        {zones.length === 0 ? (
-          <p className="text-muted-foreground text-[10px]">
-            {t('monitoring:inspector.zones.empty')}
-          </p>
-        ) : null}
+        <div className="space-y-1.5">
+          {zones.map((zone, index) => (
+            <ZoneCard
+              key={zone.id}
+              zone={zone}
+              index={index}
+              disabled={exempt}
+              onChange={(next) =>
+                onUpdate((prev) =>
+                  prev.map((z) => (z.id === zone.id ? next : z)),
+                )
+              }
+              onRemove={() =>
+                onUpdate((prev) => prev.filter((z) => z.id !== zone.id))
+              }
+              t={t}
+            />
+          ))}
+          {zones.length === 0 ? (
+            <p className="text-muted-foreground text-[10px]">
+              {t('monitoring:inspector.zones.empty')}
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

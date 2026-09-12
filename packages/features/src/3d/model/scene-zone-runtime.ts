@@ -28,6 +28,10 @@ import { ZONE_BVH_RETRY_MS, zoneExitMargin, zoneKey } from '../lib/scene-zones';
  * 없다: 영역 안에 있으면 "침범 중" 이고, 들어오는 순간이 enter, 나가는 순간이
  * exit 다. 재생 시작 시 이미 안에 있던 모델은 그냥 현재 상태다.
  *
+ * 제외(`zoneExempt`) 모델은 감지에서 통째로 빠진다 — 침범자도 되지 않고 자기
+ * 영역도 만들지 않는다(항목 생성 시 건너뛴다). 링도 그려지지 않는다
+ * (scene-zone-rings 가 같은 플래그를 본다).
+ *
  * 검사 대상:
  * - 영역 × 다른 모델의 메쉬(소유 모델 제외) — AABB XZ 로 거르고 BVH 삼각형을
  *   XZ 투영해 정확 판정(zone-volumes). BVH 가 없으면 상태를 바꾸지 않고
@@ -438,7 +442,11 @@ export class SceneZoneRuntime {
       zones: [],
     };
     const seen = new Set<string>();
-    for (const zone of model.zones ?? []) {
+    // 제외 모델은 자기 영역도 감지하지 않는다 — 항목을 만들지 않으면 소유자
+    // job·중심 추적이 전부 빠진다(liveZoneKeys 도 같은 기준이라 침범 중이던
+    // 영역은 합성 exit 로 풀린다).
+    const zones = model.zoneExempt === true ? [] : (model.zones ?? []);
+    for (const zone of zones) {
       // sanitize 와 같은 방어 — 무효 반경·중복 id 는 건너뛴다.
       if (!isValidZoneRadius(zone.radius) || seen.has(zone.id)) continue;
       seen.add(zone.id);
@@ -528,11 +536,12 @@ export class SceneZoneRuntime {
     // 보면 이름만 바꿔도 exit+enter 가 난다. 영역↔영역은 한 번만.
     const liveZoneKeys = new Set<string>();
     const liveModelIds = new Set<string>();
-    /** 침범자로 남을 수 있는 모델 — 제외(zoneExempt)로 바뀐 모델은 합성 exit. */
+    /** 감지에 남는 모델 — 제외(zoneExempt)로 바뀐 모델은 양쪽 모두 합성 exit. */
     const liveIntruderIds = new Set<string>();
     for (const m of this.models) {
       liveModelIds.add(m.id);
-      if (m.zoneExempt !== true) liveIntruderIds.add(m.id);
+      if (m.zoneExempt === true) continue;
+      liveIntruderIds.add(m.id);
       for (const z of m.zones ?? []) {
         if (isValidZoneRadius(z.radius)) liveZoneKeys.add(zoneKey(m.id, z.id));
       }

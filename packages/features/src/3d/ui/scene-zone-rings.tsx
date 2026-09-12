@@ -49,6 +49,10 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * 이름 배지는 `useSceneZoneStore.labelsVisible`(충돌 탭 토글)로 따로 끈다 —
  * 링·감지는 그대로 돌고 배지만 사라진다(영역이 많은 야드에서 화면을 덮는다).
  *
+ * 제외(`zoneExempt`) 모델의 영역은 아예 그리지 않는다 — 감지에 쓰이지 않고
+ * 인스펙터 목록도 비활성이라, 화면에 남으면 살아 있는 영역으로 읽힌다. 선택
+ * 중이어도 마찬가지다.
+ *
  * 에디터 규칙: 전역 토글이 꺼져 있어도 **선택된 모델**의 영역은 그린다
  * (반경을 편집하면서 보이지 않으면 편집이 불가능하다). 판정은 멈춘 상태라
  * 침범 표시는 없다. 모니터링은 `selectedModelId` 를 넘기지 않는다.
@@ -79,6 +83,7 @@ export function SceneZoneRings({
     <>
       {models.map((model) => {
         if (!model.zones?.length) return null;
+        if (model.zoneExempt === true) return null;
         if (!enabled && model.id !== selectedModelId) return null;
         return model.zones.map((zone, index) =>
           isValidZoneRadius(zone.radius) ? (

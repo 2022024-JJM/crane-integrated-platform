@@ -31,7 +31,7 @@
       "color": "Color",
       "radius": "Radius",
       "offset": "Offset",
-      "exempt": "Exclude from other zones"
+      "exempt": "Exclude from zone detection"
     },
     "rigging": {
       "title": "Rigging",

@@ -377,7 +377,7 @@ describe('SceneZoneRuntime — sync·항목 재생성', () => {
     expect([...(rt.intrudersOf('a#z') ?? [])]).toEqual(['c']);
   });
 
-  it('제외 모델의 자기 영역은 그대로 다른 모델을 감지한다', () => {
+  it('제외 모델의 자기 영역도 감지하지 않는다(양방향 제외)', () => {
     const rt = makeRuntime();
     mountModel('a', 0);
     mountModel('b', 1);
@@ -386,7 +386,53 @@ describe('SceneZoneRuntime — sync·항목 재생성', () => {
       model('b', 1),
     ]);
     rt.arm();
-    expect(kinds(rt.tick(0, 100).transitions)).toEqual(['enter:a#z<b']);
+    expect(rt.tick(0, 100).transitions).toEqual([]);
+    expect(rt.isIntruded('a#z')).toBe(false);
+    expect(rt.lastTickTests).toBe(0);
+  });
+
+  it('자기 영역이 침범 중인 모델을 제외로 바꾸면 그 침범자들도 exit', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 1);
+    mountModel('c', -1);
+    const b = model('b', 1);
+    const c = model('c', -1);
+    rt.sync([model('a', 0, [zone('z', 2)]), b, c]);
+    rt.arm();
+    expect(kinds(rt.tick(0, 100).transitions).sort()).toEqual([
+      'enter:a#z<b',
+      'enter:a#z<c',
+    ]);
+
+    rt.sync([model('a', 0, [zone('z', 2)], { zoneExempt: true }), b, c]);
+    expect(kinds(rt.tick(10, 100).transitions).sort()).toEqual([
+      'exit:a#z<b',
+      'exit:a#z<c',
+    ]);
+    expect(rt.isIntruded('a#z')).toBe(false);
+
+    // 제외를 풀면 다시 감지한다.
+    rt.sync([model('a', 0, [zone('z', 2)]), b, c]);
+    expect(kinds(rt.tick(20, 100).transitions).sort()).toEqual([
+      'enter:a#z<b',
+      'enter:a#z<c',
+    ]);
+  });
+
+  it('영역↔영역 침범 중 한쪽 소유 모델이 제외되면 exit 한 번, 양쪽 해제', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 9);
+    const a = model('a', 0, [zone('za', 5)]);
+    rt.sync([a, model('b', 9, [zone('zb', 5)])]);
+    rt.arm();
+    expect(kinds(rt.tick(0, 100).transitions)).toEqual(['enter:a#za<b#zb']);
+
+    rt.sync([a, model('b', 9, [zone('zb', 5)], { zoneExempt: true })]);
+    expect(kinds(rt.tick(10, 100).transitions)).toEqual(['exit:a#za<b#zb']);
+    expect(rt.isIntruded('a#za')).toBe(false);
+    expect(rt.isIntruded('b#zb')).toBe(false);
   });
 
   it('disarm 은 상태를 비우고 tick 을 멈춘다', () => {
