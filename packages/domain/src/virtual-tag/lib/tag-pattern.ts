@@ -8,6 +8,8 @@ import type { VirtualTagDefinition, VirtualTagPattern } from '../model/types';
  */
 export interface VirtualTagRuntimeState {
   value: number;
+  /** 속도·가속 한계가 있는 태그의 현재 속도(단위/초). 없으면 생략. */
+  velocity?: number;
 }
 
 export function clampToTag(def: VirtualTagDefinition, value: number): number {

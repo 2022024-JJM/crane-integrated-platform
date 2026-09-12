@@ -75,6 +75,10 @@ import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
+import {
+  SceneSimulationBadge,
+  SceneSimulationFrame,
+} from './scene-simulation-badge';
 import { SceneSimulationMenu } from './scene-simulation-menu';
 import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
@@ -210,6 +214,11 @@ export function Monitoring3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
+  const handleStopSimulation = useCallback(() => {
+    useObjectFocusStore.getState().exitFocus();
+    sceneControllerRef.current?.reset();
+  }, []);
+
   const handleGetPose = useCallback(
     () => sceneControllerRef.current?.getPose() ?? null,
     [],
@@ -282,6 +291,10 @@ export function Monitoring3dView({
   // 좌측 상단 열 — 포커스 복귀 버튼 위, 후처리 상태(BVH 빌드 등) 아래.
   const topLeftOverlay = (
     <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
+      {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 조작 UI 가 있는 배치에서만. */}
+      {toolbarLayout !== 'none' ? (
+        <SceneSimulationBadge onStop={handleStopSimulation} />
+      ) : null}
       {focusedModelId !== null ? (
         <Button
           variant="outline"
@@ -342,6 +355,8 @@ export function Monitoring3dView({
             <SceneLoadingOverlay ready={sceneReady} />
             {topLeftOverlay}
             {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
+            {/* 시뮬레이션 세션 테두리 — 오버레이 루트(캔버스 전체). */}
+            {toolbarLayout !== 'none' ? <SceneSimulationFrame /> : null}
             {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
                 알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
             {collisionActive ? (
@@ -387,7 +402,8 @@ export function Monitoring3dView({
             // 맨 아래에 둔다. 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
             <>
               <SceneSimulationToggle />
-              <SceneSimulationMenu />
+              {/* 종료 = 처음 화면: 자세는 스토어가, 카메라·포커스는 여기서. */}
+              <SceneSimulationMenu onStop={handleStopSimulation} />
               {collisionActive ? (
                 <SceneCollisionMenu
                   runner={collisionRunner}

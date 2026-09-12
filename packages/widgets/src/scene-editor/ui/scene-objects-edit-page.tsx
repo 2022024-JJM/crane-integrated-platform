@@ -16,7 +16,7 @@ import {
   useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
-  useVirtualTagStore,
+  stopSimulation,
   type SceneTransformMode,
 } from '@crane/features/3d';
 import { Images, Search } from 'lucide-react';
@@ -229,11 +229,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는 동안 항상 켜 둔다.
   // 일시정지는 러너 틱만 멈춰 노드가 마지막 값에서 그대로 서고, 초기값 복귀는
   // 탭의 리셋 버튼(virtualTagRuntime.resetValues)이 맡는다. 예전엔 토글에
-  // 바인딩 on/off 를 물려 정지할 때마다 rest 로 튀었다. 화면을 떠날 때는
-  // 재생을 멈추고 바인딩 cleanup 이 값 저장소를 비운다.
-  const pauseSimulation = useVirtualTagStore((s) => s.pause);
+  // 바인딩 on/off 를 물려 정지할 때마다 rest 로 튀었다. 화면에 들어올 때와
+  // 떠날 때는 시뮬레이션을 **종료**(시간 0·시나리오 해제·배속 1)해 다른 화면의
+  // 상태를 이어받거나 넘기지 않는다.
   useTagBindingSource(sceneInfo, true);
-  useEffect(() => () => pauseSimulation(), [pauseSimulation]);
+  useEffect(() => {
+    stopSimulation();
+    return () => stopSimulation();
+  }, []);
   // 관리 페이지는 편집 화면의 형제 서브라우트(…/virtual-tags).
   const { pathname } = useLocation();
   const virtualTagsPath = pathname.replace(

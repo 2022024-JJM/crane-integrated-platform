@@ -56,6 +56,7 @@ function reset() {
     scenarios: [SCENARIO],
     speed: 1,
     activeScenarioId: null,
+    hasSession: false,
     hydrated: true,
     isRunning: false,
   });
@@ -212,5 +213,131 @@ describe('시나리오 편집', () => {
     expect(store.isDirty()).toBe(false);
     store.updateScenario('s1', { loop: true });
     expect(useVirtualTagStore.getState().isDirty()).toBe(true);
+  });
+});
+
+describe('속도·가속 한계', () => {
+  it('한계가 있는 태그는 파형 목표를 maxSpeed 이하로 따라간다(배속 곱한 시뮬레이션 초 기준)', () => {
+    const limited: VirtualTagDefinition = {
+      ...TAG_A,
+      // sawtooth 10s 0→100 은 10 unit/s — 한계 2 unit/s 로 잘린다.
+      limits: { maxSpeed: 2 },
+    };
+    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
+    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
+    virtualTagRuntime.resetValues();
+    useVirtualTagStore.getState().start();
+    vi.advanceTimersByTime(1000);
+    // 벽시계 1s ×1 → 최대 2 (파형 목표는 10).
+    expect(last.get('A:x')).toBeCloseTo(2, 5);
+    useVirtualTagStore.getState().setSpeed(2);
+    vi.advanceTimersByTime(1000);
+    // 시뮬레이션 2초 더 → 2 + 4 = 6.
+    expect(last.get('A:x')).toBeCloseTo(6, 5);
+  });
+
+  it('seek·리셋은 한계와 무관하게 즉시 이동한다', () => {
+    const limited: VirtualTagDefinition = {
+      ...TAG_A,
+      limits: { maxSpeed: 0.1 },
+    };
+    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
+    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
+    useVirtualTagStore.getState().seek(5000);
+    expect(last.get('A:x')).toBeCloseTo(50, 5);
+    virtualTagRuntime.resetValues();
+    expect(last.get('A:x')).toBe(0);
+  });
+});
+
+describe('종료(관제 복귀)', () => {
+  it('러너 정지·시간 0·시나리오 해제, 값을 내보내지 않고 live 캐시·값 저장소를 비운다', () => {
+    const store = useVirtualTagStore.getState();
+    store.setActiveScenario('s1');
+    store.start();
+    vi.advanceTimersByTime(1000);
+    expect(tagLiveValues.size).toBeGreaterThan(0);
+    last.clear();
+    useVirtualTagStore.getState().stop();
+    const state = useVirtualTagStore.getState();
+    expect(state.isRunning).toBe(false);
+    expect(state.activeScenarioId).toBeNull();
+    expect(virtualTagRuntime.elapsed).toBe(0);
+    expect(last.size).toBe(0);
+    expect(tagLiveValues.size).toBe(0);
+    // 이후 틱이 돌지 않는다.
+    vi.advanceTimersByTime(1000);
+    expect(last.size).toBe(0);
+  });
+
+  it('정지 상태에서 종료해도 참조가 흔들리지 않는다(no-op 에 가깝게)', () => {
+    const before = useVirtualTagStore.getState();
+    before.stop();
+    expect(useVirtualTagStore.getState()).toBe(before);
+  });
+});
+
+describe('일시정지 → 재개', () => {
+  it('한계로 뒤처진 값이 재개 순간 목표로 점프하지 않고 이어서 간다', () => {
+    const limited: VirtualTagDefinition = { ...TAG_A, limits: { maxSpeed: 2 } };
+    useVirtualTagStore.setState({ tags: [limited, TAG_B] });
+    virtualTagRuntime.syncDefinitions([limited, TAG_B]);
+    virtualTagRuntime.resetValues();
+    const store = useVirtualTagStore.getState();
+    store.start();
+    vi.advanceTimersByTime(1000); // 값 2 (목표 10)
+    store.pause();
+    vi.advanceTimersByTime(5000); // 5초 정지
+    last.clear();
+    useVirtualTagStore.getState().start();
+    // 재개 직후 내보내는 값은 정지 시점 값(2)이어야 한다 — 목표(10)로 튀지 않음.
+    expect(last.get('A:x')).toBeCloseTo(2, 5);
+    vi.advanceTimersByTime(100);
+    expect(last.get('A:x')!).toBeLessThanOrEqual(2.2 + 1e-6);
+  });
+
+  it('종료는 배속도 1 로 되돌린다', () => {
+    useVirtualTagStore.getState().setSpeed(4);
+    useVirtualTagStore.getState().stop();
+    expect(useVirtualTagStore.getState().speed).toBe(1);
+  });
+});
+
+describe('세션 표시(hasSession)', () => {
+  it('재생하면 true, 일시정지해도 유지, 종료하면 false', () => {
+    expect(useVirtualTagStore.getState().hasSession).toBe(false);
+    useVirtualTagStore.getState().start();
+    expect(useVirtualTagStore.getState().hasSession).toBe(true);
+    useVirtualTagStore.getState().pause();
+    expect(useVirtualTagStore.getState().hasSession).toBe(true);
+    useVirtualTagStore.getState().stop();
+    expect(useVirtualTagStore.getState().hasSession).toBe(false);
+  });
+});
+
+describe('stopSimulation — 충돌 기록도 지운다', () => {
+  it('세션 충돌 기록·활성 기록이 비고 가상 태그도 종료된다', async () => {
+    const { stopSimulation } = await import('../stop-simulation');
+    const { useSceneCollisionStore } =
+      await import('../use-scene-collision-store');
+    useSceneCollisionStore.setState({
+      history: [
+        {
+          id: 1,
+          pairKey: 'a|b',
+          at: 1,
+          a: { modelId: 'a', equipName: 'A', nodePath: '' },
+          b: { modelId: 'b', equipName: 'B', nodePath: '' },
+          contactPoint: [0, 0, 0],
+          values: [],
+        },
+      ],
+    });
+    useVirtualTagStore.getState().start();
+    stopSimulation();
+    expect(useSceneCollisionStore.getState().history).toEqual([]);
+    expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
+    expect(useVirtualTagStore.getState().hasSession).toBe(false);
+    expect(useVirtualTagStore.getState().isRunning).toBe(false);
   });
 });

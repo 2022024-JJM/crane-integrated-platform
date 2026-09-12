@@ -4,6 +4,7 @@ import {
   clampVirtualTagTick,
   normalizeVirtualTagKey,
   sanitizeVirtualTag,
+  sanitizeVirtualTagLimits,
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
@@ -318,5 +319,30 @@ describe('sanitizeScenario*', () => {
     expect(
       sanitizeVirtualTagSet({ tags: [], scenarios: [{ id: 's' }] }).scenarios,
     ).toHaveLength(1);
+  });
+});
+
+describe('sanitizeVirtualTagLimits', () => {
+  it('양의 유한수만 남기고, 둘 다 없으면 undefined', () => {
+    expect(sanitizeVirtualTagLimits({ maxSpeed: 2, maxAccel: 0.5 })).toEqual({
+      maxSpeed: 2,
+      maxAccel: 0.5,
+    });
+    expect(
+      sanitizeVirtualTagLimits({ maxSpeed: 0, maxAccel: -1 }),
+    ).toBeUndefined();
+    expect(sanitizeVirtualTagLimits({ maxSpeed: NaN, maxAccel: 1 })).toEqual({
+      maxAccel: 1,
+    });
+    expect(sanitizeVirtualTagLimits('x')).toBeUndefined();
+    expect(sanitizeVirtualTagLimits(undefined)).toBeUndefined();
+    expect(
+      sanitizeVirtualTag({ ...valid, limits: { maxSpeed: 1 } })?.limits,
+    ).toEqual({
+      maxSpeed: 1,
+    });
+    expect(sanitizeVirtualTag({ ...valid, limits: {} })).not.toHaveProperty(
+      'limits',
+    );
   });
 });

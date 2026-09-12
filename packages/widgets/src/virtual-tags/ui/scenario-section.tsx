@@ -342,6 +342,9 @@ function TrackCard({
           <span className="text-muted-foreground shrink-0 truncate">
             {tag.name}
             {tag.unit ? ` (${tag.unit})` : ''}
+            {tag.limits?.maxSpeed !== undefined
+              ? ` · ≤${tag.limits.maxSpeed}${tag.unit ?? ''}/s`
+              : ''}
           </span>
         ) : (
           <span className="shrink-0 text-[10px] text-amber-500">

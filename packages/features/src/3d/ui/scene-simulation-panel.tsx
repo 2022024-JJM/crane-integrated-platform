@@ -1,4 +1,4 @@
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,6 +18,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import { formatSimClock } from '../lib/sim-clock';
 import { useRigLivePoll } from '../model/rig-live-readouts';
+import { stopSimulation } from '../model/stop-simulation';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { virtualTagRuntime } from '../model/virtual-tag-runner';
 
@@ -32,7 +33,14 @@ import { virtualTagRuntime } from '../model/virtual-tag-runner';
  */
 const NONE = '__none__';
 
-export function SceneSimulationPanel({ className }: { className?: string }) {
+export function SceneSimulationPanel({
+  className,
+  onStop,
+}: {
+  className?: string;
+  /** 종료 뒤 화면 쪽 후처리(카메라 원래 위치·포커스 해제). 모니터링 독이 넘긴다. */
+  onStop?: () => void;
+}) {
   const { t } = useTranslation();
   useRigLivePoll(200);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
@@ -100,6 +108,21 @@ export function SceneSimulationPanel({ className }: { className?: string }) {
           onClick={() => virtualTagRuntime.resetValues()}
         >
           <RotateCcw className="size-3.5" />
+        </Button>
+        {/* 종료 = 관제 복귀. 일시정지(자세 유지)와 달리 rest 로 돌아간다. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-red-400"
+          aria-label={t('monitoring:simulation.stop')}
+          title={t('monitoring:simulation.stopHint')}
+          onClick={() => {
+            stopSimulation();
+            onStop?.();
+          }}
+        >
+          <Square className="size-3.5" />
         </Button>
       </div>
 

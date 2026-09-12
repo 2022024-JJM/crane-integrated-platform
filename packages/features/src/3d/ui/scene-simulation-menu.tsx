@@ -21,7 +21,7 @@ import { SceneSimulationPanel } from './scene-simulation-panel';
  * 시나리오가 활성이면 아이콘을 sky 로 물들이고 배속 배지를 붙인다.
  * TooltipProvider 는 ThreeSceneViewer 가 감싸고 있어 여기서 두지 않는다.
  */
-export function SceneSimulationMenu() {
+export function SceneSimulationMenu({ onStop }: { onStop?: () => void } = {}) {
   const { t } = useTranslation();
   const speed = useVirtualTagStore((s) => s.speed);
   const activeScenarioId = useVirtualTagStore((s) => s.activeScenarioId);
@@ -65,7 +65,7 @@ export function SceneSimulationMenu() {
         <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>
       <PopoverPopup side="left" align="start" className="w-72 p-3">
-        <SceneSimulationPanel />
+        <SceneSimulationPanel onStop={onStop} />
       </PopoverPopup>
     </Popover>
   );

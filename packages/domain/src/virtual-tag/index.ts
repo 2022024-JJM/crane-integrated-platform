@@ -4,6 +4,7 @@ export type {
   ScenarioTrack,
   VirtualScenario,
   VirtualTagDefinition,
+  VirtualTagLimits,
   VirtualTagPattern,
   VirtualTagPatternKind,
   VirtualTagSet,
@@ -50,6 +51,7 @@ export {
   createEmptyVirtualTagSet,
   normalizeVirtualTagKey,
   sanitizeVirtualTag,
+  sanitizeVirtualTagLimits,
   sanitizeVirtualTagList,
   sanitizeVirtualTagPattern,
   sanitizeVirtualTagSet,
@@ -65,3 +67,8 @@ export {
   VIRTUAL_TAGS_PUBLIC_PATH,
   VIRTUAL_TAGS_STORAGE_KEY,
 } from './lib/virtual-tag-storage';
+export {
+  hasRateLimits,
+  rateLimitStep,
+  type RateLimitState,
+} from './lib/rate-limit';

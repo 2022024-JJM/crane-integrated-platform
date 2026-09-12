@@ -12,9 +12,16 @@ import {
  *
  * 헐(ShaderMaterial)·마스크(MeshBasicMaterial 변형) 프로그램은 첫 그리기
  * 프레임에 동기로 컴파일·링크된다(three `WebGLProgram.onFirstUse`). 마운트
- * 시 작은 상자 하나에 두 머티리얼을 붙인 임시 씬을 `compileAsync` 로 미리
- * 컴파일해 첫 선택·첫 충돌 프레임에서 그 정지를 뺀다. targetScene 은 실제
- * 씬이다 — 마스크 머티리얼의 프로그램 키에 씬 environment 가 들어가므로.
+ * 시 작은 상자 하나에 두 머티리얼을 붙인 임시 씬을 `compile` 로 미리
+ * 컴파일해 첫 선택·첫 충돌 프레임에서 그 정지를 뺀다(로딩 오버레이 뒤라
+ * 마운트 시점의 수 ms 정지는 보이지 않는다). targetScene 은 실제 씬이다 —
+ * 마스크 머티리얼의 프로그램 키에 씬 environment 가 들어가므로.
+ *
+ * `compileAsync` 를 쓰지 않는다(2026-09-12): 그 구현은 링크 완료를 10ms
+ * setTimeout 으로 폴링하는데, 폴링 중 캔버스가 언마운트되거나 머티리얼이
+ * dispose 되면 three 내부 `properties.get(material).currentProgram` 이
+ * undefined 라 `isReady` 접근에서 던진다(편집기 ↔ 모니터링을 몇 초 안에
+ * 오갈 때 실제 발생). 취소할 수단이 없어 타이머 없는 동기 compile 로 바꿨다.
  *
  * 헐 머티리얼은 **컴포넌트가 사는 동안 들고 있는다.** three 는 같은 셰이더를
  * 쓰는 마지막 머티리얼이 dispose 되면 프로그램도 지운다(`releaseProgram`) —
@@ -45,9 +52,11 @@ export function SilhouetteOutlineWarmup() {
       createSilhouetteMaskMesh(target),
       createSilhouetteOutlineHull(target, material),
     );
-    void gl.compileAsync(probe, camera, scene).catch(() => {
+    try {
+      gl.compile(probe, camera, scene);
+    } catch {
       /* 프리워밍 실패는 무시 — 첫 그리기가 컴파일한다. */
-    });
+    }
     return () => {
       // 헐 사본 캐시는 원본 geometry 의 dispose 이벤트로 함께 정리된다.
       geometry.dispose();

@@ -21,6 +21,7 @@ import {
   type ScenarioTrack,
   type VirtualScenario,
   type VirtualTagDefinition,
+  type VirtualTagLimits,
   type VirtualTagPattern,
   type VirtualTagPatternKind,
   type VirtualTagSet,
@@ -88,6 +89,22 @@ export function normalizeVirtualTagKey(raw: unknown): string | null {
   return key;
 }
 
+/** 한계 — 양의 유한수만 남기고, 둘 다 없으면 undefined. */
+export function sanitizeVirtualTagLimits(
+  raw: unknown,
+): VirtualTagLimits | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const l = raw as Record<string, unknown>;
+  const limits: VirtualTagLimits = {};
+  if (isFiniteNumber(l.maxSpeed) && l.maxSpeed > 0)
+    limits.maxSpeed = l.maxSpeed;
+  if (isFiniteNumber(l.maxAccel) && l.maxAccel > 0)
+    limits.maxAccel = l.maxAccel;
+  return limits.maxSpeed !== undefined || limits.maxAccel !== undefined
+    ? limits
+    : undefined;
+}
+
 export function sanitizeVirtualTag(raw: unknown): VirtualTagDefinition | null {
   if (!raw || typeof raw !== 'object') return null;
   const t = raw as Record<string, unknown>;
@@ -116,6 +133,8 @@ export function sanitizeVirtualTag(raw: unknown): VirtualTagDefinition | null {
   if (typeof t.unit === 'string' && t.unit.trim().length > 0) {
     tag.unit = t.unit.trim().slice(0, VIRTUAL_TAG_UNIT_MAX);
   }
+  const limits = sanitizeVirtualTagLimits(t.limits);
+  if (limits) tag.limits = limits;
   return tag;
 }
 

@@ -340,6 +340,8 @@
       "max": "Max",
       "pattern": "Pattern",
       "period": "Period (ms)",
+      "maxSpeed": "Max speed",
+      "maxAccel": "Max accel",
       "value": "Value",
       "actions": ""
     },
@@ -391,7 +393,9 @@
       "removeKeyframe": "Remove keyframe",
       "empty": "No scenarios",
       "hint": "A scenario is a keyframe timeline per tag key. Create one with \"New scenario\" and add tracks and keyframes. Tracks of the active scenario replace the waveform."
-    }
+    },
+    "maxSpeedHint": "Max speed (unit/s). Empty = no limit — the value follows waveform/scenario targets at or below this speed.",
+    "maxAccelHint": "Max acceleration (unit/s²). Empty = no limit."
   },
   "sceneCollision": {
     "contact": "Contact point (approx.)",
@@ -499,6 +503,10 @@
     "loop": "Loop",
     "time": "Elapsed",
     "seek": "Seek scenario time",
-    "finished": "Scenario finished. Reset or move the slider back to play again."
+    "finished": "Scenario finished. Reset or move the slider back to play again.",
+    "stop": "Stop simulation",
+    "stopHint": "Stop simulation — clear scenario, time 0, models back to rest (realtime view resumes live values)",
+    "badgeRunning": "Simulating",
+    "badgePaused": "Simulation paused"
   }
 }

@@ -16,9 +16,13 @@ import {
   type ScenarioKeyframe,
   type VirtualScenario,
   type VirtualTagDefinition,
+  type VirtualTagLimits,
   type VirtualTagPattern,
   type VirtualTagSet,
 } from '@crane/domain/virtual-tag';
+import { rigValueStore } from './rig-value-store';
+import { tagLiveValues } from './tag-value-bus';
+import { useRealtimeStore } from './use-realtime-store';
 import { virtualTagRuntime } from './virtual-tag-runner';
 
 /**
@@ -51,6 +55,7 @@ export interface VirtualTagDraft {
   initial?: number;
   pattern?: VirtualTagPattern;
   enabled?: boolean;
+  limits?: VirtualTagLimits;
 }
 
 export type VirtualTagAddResult =
@@ -65,6 +70,11 @@ interface VirtualTagState {
   speed: number;
   /** 활성 시나리오 id(세션). 없으면 null = 파형만. */
   activeScenarioId: string | null;
+  /**
+   * 시뮬레이션 세션이 살아 있는지 — 한 번 재생한 뒤 종료(stop) 전까지 true.
+   * 일시정지 중에도 true 라 "시뮬레이션 값이 화면에 남아 있다" 를 표시한다.
+   */
+  hasSession: boolean;
   /** 마지막 저장(또는 로드) 시점의 직렬화 — dirty 판정 기준. */
   savedSnapshot: string;
   hydrated: boolean;
@@ -92,6 +102,15 @@ interface VirtualTagState {
   setTickMs: (tickMs: number) => void;
   start: () => void;
   pause: () => void;
+  /**
+   * 시뮬레이션 종료 — 관제 원래 상태로. 일시정지와 달리 자세를 남기지 않는다:
+   * 러너 정지·시간 0·시나리오 해제, 값 저장소를 비워 모델이 rest(씬 배치)로
+   * 돌아가고, 시뮬레이션이 남긴 live 값을 지워 운전 상태가 미확인이 되며,
+   * 실시간 화면 반영 보류가 걸려 있었으면 풀어 다음 수신 값부터 실제 자세를
+   * 따라간다. 배속도 1 로. 파형·시나리오 정의는 그대로다. 모니터링·에디터
+   * 화면 진입과 이탈에서도 이걸 불러 화면마다 깨끗한 시뮬레이션으로 시작한다.
+   */
+  stop: () => void;
   setSpeed: (speed: number) => void;
   /** 활성 시나리오 선택 — 바꾸면 0초로 seek 한다(정지 중에도 첫 자세가 보이게). */
   setActiveScenario: (id: string | null) => void;
@@ -167,6 +186,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
   scenarios: [],
   speed: 1,
   activeScenarioId: null,
+  hasSession: false,
   savedSnapshot: snapshotOf({ ...createEmptyVirtualTagSet(), scenarios: [] }),
   hydrated: false,
   isSaving: false,
@@ -263,6 +283,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
         periodMs: VIRTUAL_TAG_PERIOD_DEFAULT,
       },
       enabled: draft.enabled ?? true,
+      limits: draft.limits,
     });
     if (!tag) return { ok: false, reason: 'invalid-key' };
     const nextTags = [...tags, tag];
@@ -324,7 +345,7 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
 
   start: () => {
     if (get().isRunning) return;
-    set({ isRunning: true });
+    set({ isRunning: true, hasSession: true });
     virtualTagRuntime.start(
       () => {
         const { tags, tickMs, isRunning, speed, scenarios, activeScenarioId } =
@@ -347,6 +368,30 @@ export const useVirtualTagStore = create<VirtualTagState>()((set, get) => ({
     if (!get().isRunning) return;
     set({ isRunning: false });
     virtualTagRuntime.pause();
+  },
+
+  stop: () => {
+    const state = get();
+    if (state.isRunning) virtualTagRuntime.pause();
+    virtualTagRuntime.resetValues(false);
+    if (
+      state.isRunning ||
+      state.activeScenarioId !== null ||
+      state.speed !== 1 ||
+      state.hasSession
+    ) {
+      set({
+        isRunning: false,
+        activeScenarioId: null,
+        speed: 1,
+        hasSession: false,
+      });
+    }
+    // 시뮬레이션이 버스에 남긴 값을 걷어낸다 — 채널이 비면 드라이버가 다음
+    // 프레임에 노드를 rest 로 되돌리고, live 캐시가 비면 상태 판정이 unknown.
+    rigValueStore.reset();
+    tagLiveValues.clear();
+    useRealtimeStore.getState().release();
   },
 
   setSpeed: (speed) => {

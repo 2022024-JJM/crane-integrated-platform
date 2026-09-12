@@ -1,6 +1,8 @@
 import {
   clampToTag,
   evaluateScenarioTrack,
+  hasRateLimits,
+  rateLimitStep,
   initVirtualTagState,
   isScenarioFinished,
   scenarioDurationMs,
@@ -75,8 +77,10 @@ class VirtualTagRuntime {
     this.lastTickAt = Date.now();
     this.finishedNotified = false;
     this.ensureTimer();
-    // 재생 즉시 현재값을 한 번 내보내 첫 틱 전에도 노드가 초기값을 받는다.
-    this.evaluateAll();
+    // 재생 즉시 **현재 상태값**을 한 번 내보내 첫 틱 전에도 노드가 값을 받는다.
+    // 여기서 evaluateAll 로 다시 계산하면 안 된다 — 속도·가속 한계로 목표보다
+    // 뒤처져 있던 값이 재개 순간 목표로 점프해 모델이 미끄러진다(2026-09-12).
+    // 시각 기준 재계산은 seek·리셋·시나리오 전환만 한다.
     this.publishAll();
   }
 
@@ -115,7 +119,9 @@ class VirtualTagRuntime {
         prev.min !== def.min ||
         prev.max !== def.max ||
         prev.initial !== def.initial ||
-        JSON.stringify(prev.pattern) !== JSON.stringify(def.pattern);
+        JSON.stringify(prev.pattern) !== JSON.stringify(def.pattern) ||
+        JSON.stringify(prev.limits ?? null) !==
+          JSON.stringify(def.limits ?? null);
       if (!state || changed) this.states.set(def.id, initVirtualTagState(def));
     }
     this.defs = nextDefs;
@@ -142,14 +148,19 @@ class VirtualTagRuntime {
     if (def.enabled) this.publish(def.key, next.value);
   }
 
-  /** 모든 상태를 initial 로 되돌린다(재생 중이면 파형 위상도 0 부터). */
-  resetValues(): void {
+  /**
+   * 모든 상태를 initial 로 되돌린다(재생 중이면 파형 위상도 0 부터).
+   * `publish=false` 면 버스에 내보내지 않는다 — 시뮬레이션 종료(관제 복귀)
+   * 처럼 모델을 초기값 자세가 아니라 rest 로 두고 싶을 때.
+   */
+  resetValues(publish = true): void {
     this.elapsedMs = 0;
     this.lastTickAt = Date.now();
     this.finishedNotified = false;
     for (const def of this.defs.values()) {
       this.states.set(def.id, initVirtualTagState(def));
     }
+    if (!publish) return;
     // 시나리오가 활성이면 0초 값은 initial 이 아니라 첫 키프레임이다.
     this.evaluateAll();
     this.publishAll();
@@ -262,19 +273,34 @@ class VirtualTagRuntime {
       ? scenarioTimeMs(this.elapsedMs, durationMs, scenario.loop)
       : 0;
 
+    // 시뮬레이션 시간(초) — 한계는 태그 단위/초라 배속을 곱한 dt 를 쓴다.
+    const dtSec = (dt * speed) / 1000;
     for (const def of config.tags) {
       if (!def.enabled) continue;
       const state = this.states.get(def.id) ?? initVirtualTagState(def);
       const track = tracks?.get(def.key);
-      let next: VirtualTagRuntimeState;
-      if (track) {
-        const value = evaluateScenarioTrack(track, tMs);
-        next =
-          value !== undefined
-            ? { value: clampToTag(def, value) }
-            : stepVirtualTag(def, this.elapsedMs, state);
+      // 목표값 — 시나리오 트랙이 있으면 키프레임, 없으면 파형(manual 은 현재값).
+      let target: number;
+      const scenarioValue = track
+        ? evaluateScenarioTrack(track, tMs)
+        : undefined;
+      if (scenarioValue !== undefined) {
+        target = clampToTag(def, scenarioValue);
       } else {
-        next = stepVirtualTag(def, this.elapsedMs, state);
+        target = stepVirtualTag(def, this.elapsedMs, state).value;
+      }
+      let next: VirtualTagRuntimeState;
+      if (hasRateLimits(def.limits)) {
+        const limited = rateLimitStep(
+          state.value,
+          state.velocity ?? 0,
+          target,
+          dtSec,
+          def.limits,
+        );
+        next = { value: limited.value, velocity: limited.velocity };
+      } else {
+        next = { value: target };
       }
       this.states.set(def.id, next);
       this.publish(def.key, next.value);

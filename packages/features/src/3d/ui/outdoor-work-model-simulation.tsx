@@ -19,6 +19,7 @@ import {
   type FocusCameraPose,
 } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
+import { stopSimulation } from '../model/stop-simulation';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
@@ -51,7 +52,6 @@ export function useSceneData(
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const loadVirtualTags = useVirtualTagStore((s) => s.load);
   const startSimulation = useVirtualTagStore((s) => s.start);
-  const pauseSimulation = useVirtualTagStore((s) => s.pause);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
   const startRealtime = useRealtimeStore((s) => s.start);
   const stopRealtime = useRealtimeStore((s) => s.stop);
@@ -104,6 +104,9 @@ export function useSceneData(
       }
     };
 
+    // 러너는 모듈 싱글턴이라 이전 화면(에디터·다른 리전)의 시간·시나리오·
+    // 자세가 남아 있다 — 화면에 들어올 때마다 처음 상태에서 시작한다.
+    stopSimulation();
     if (mode === 'simulation') {
       // 시뮬레이션 = 가상 태그 재생. 정의는 배포 파일에서 한 번 읽는다.
       void loadVirtualTags();
@@ -127,9 +130,9 @@ export function useSceneData(
       // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
       // 매 프레임 tick → applyValue를 호출, realtime/simulation의 값과 충돌.
       resetReplay();
-      // 가상 태그 재생은 이 화면이 켠 것이므로 떠날 때 멈춘다. 노드 복귀는
-      // 드라이버(useTagBindingSource 의 reset + RigDriver 언마운트)가 한다.
-      pauseSimulation();
+      // 가상 태그 재생은 이 화면이 켠 것이므로 떠날 때 **종료**한다(시간 0·
+      // 시나리오 해제·배속 1) — 다음 화면이 남은 자세·시간을 이어받지 않는다.
+      stopSimulation();
       clearSceneInfoFromStore(regionId);
       // 이 region의 GLB 캐시를 비운다. 해제하지 않으면 지역을 오갈수록
       // 메모리가 단조 증가해 장시간 세션에서 탭이 죽는다.
@@ -147,7 +150,6 @@ export function useSceneData(
     clearSceneInfoFromStore,
     loadVirtualTags,
     mode,
-    pauseSimulation,
     regionId,
     resetReplay,
     setSceneInfoInStore,

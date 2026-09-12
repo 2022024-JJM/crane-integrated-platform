@@ -80,15 +80,17 @@ import { WaveformIcon } from './waveform-icon';
 
 const COLUMNS = [
   ['enabled', 'w-[4%]'],
-  ['key', 'w-[18%]'],
-  ['name', 'w-[14%]'],
-  ['unit', 'w-[7%]'],
-  ['min', 'w-[8%]'],
-  ['max', 'w-[8%]'],
-  ['pattern', 'w-[11%]'],
-  ['period', 'w-[9%]'],
-  ['value', 'w-[16%]'],
-  ['actions', 'w-[5%]'],
+  ['key', 'w-[16%]'],
+  ['name', 'w-[12%]'],
+  ['unit', 'w-[6%]'],
+  ['min', 'w-[7%]'],
+  ['max', 'w-[7%]'],
+  ['pattern', 'w-[10%]'],
+  ['period', 'w-[8%]'],
+  ['maxSpeed', 'w-[7%]'],
+  ['maxAccel', 'w-[7%]'],
+  ['value', 'w-[12%]'],
+  ['actions', 'w-[4%]'],
 ] as const;
 
 const CELL_INPUT =
@@ -275,6 +277,42 @@ function TagRow({
             }
           />
         )}
+      </TableCell>
+      {/* 속도·가속 한계(단위/s, 단위/s²) — 비우면 없음. 러너가 파형·시나리오
+          목표값을 향해 램프한다(lib/rate-limit). */}
+      <TableCell>
+        <InputNumber
+          value={tag.limits?.maxSpeed ?? null}
+          min={0}
+          step={0.1}
+          placeholder="—"
+          title={t('monitoring:virtualTags.maxSpeedHint')}
+          className={CELL_NUMBER_WRAPPER}
+          inputClassName={CELL_NUMBER_INPUT}
+          onChange={(maxSpeed) =>
+            onUpdate({ limits: { ...tag.limits, maxSpeed } })
+          }
+          onEmpty={() =>
+            onUpdate({ limits: { ...tag.limits, maxSpeed: undefined } })
+          }
+        />
+      </TableCell>
+      <TableCell>
+        <InputNumber
+          value={tag.limits?.maxAccel ?? null}
+          min={0}
+          step={0.1}
+          placeholder="—"
+          title={t('monitoring:virtualTags.maxAccelHint')}
+          className={CELL_NUMBER_WRAPPER}
+          inputClassName={CELL_NUMBER_INPUT}
+          onChange={(maxAccel) =>
+            onUpdate({ limits: { ...tag.limits, maxAccel } })
+          }
+          onEmpty={() =>
+            onUpdate({ limits: { ...tag.limits, maxAccel: undefined } })
+          }
+        />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">

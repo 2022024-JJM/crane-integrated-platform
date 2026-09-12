@@ -326,6 +326,8 @@
       "max": "Max",
       "pattern": "Forma",
       "period": "Periodus (ms)",
+      "maxSpeed": "Celeritas max",
+      "maxAccel": "Acceleratio max",
       "value": "Valor",
       "actions": ""
     },
@@ -377,7 +379,9 @@
       "removeKeyframe": "Clavem dele",
       "empty": "Nulla scaenaria",
       "hint": "Scaenarium est series clavium per notam. Novum crea et vestigia clavesque adde. Vestigia scaenarii activi undam substituunt."
-    }
+    },
+    "maxSpeedHint": "Celeritas maxima (unitas/s). Vacuum = sine limite.",
+    "maxAccelHint": "Acceleratio maxima (unitas/s²). Vacuum = sine limite."
   },
   "sceneCollision": {
     "contact": "Punctum contactus (proximum)",
@@ -485,6 +489,10 @@
     "loop": "Repete",
     "time": "Elapsum",
     "seek": "Tempus scaenarii move",
-    "finished": "Scaenarium finitum est. Restitue vel cursorem retro move ut iterum agas."
+    "finished": "Scaenarium finitum est. Restitue vel cursorem retro move ut iterum agas.",
+    "stop": "Simulationem finire",
+    "stopHint": "Simulationem finire — scaenarium tolle, tempus 0, exemplaria in statum quietis",
+    "badgeRunning": "Simulatio agitur",
+    "badgePaused": "Simulatio sistitur"
   }
 }

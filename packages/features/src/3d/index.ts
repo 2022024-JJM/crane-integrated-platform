@@ -84,6 +84,11 @@ export { SceneStatusHud } from './ui/scene-status-hud';
 export { SceneSimulationPanel } from './ui/scene-simulation-panel';
 export { formatSimClock } from './lib/sim-clock';
 export { SceneSimulationMenu } from './ui/scene-simulation-menu';
+export { stopSimulation } from './model/stop-simulation';
+export {
+  SceneSimulationBadge,
+  SceneSimulationFrame,
+} from './ui/scene-simulation-badge';
 export { SceneZoneAlertOverlay } from './ui/scene-zone-alert-overlay';
 export { SceneAlertNotifier } from './ui/scene-alert-notifier';
 export { ZoneJournalSync } from './ui/zone-journal-sync';

@@ -29,6 +29,17 @@ export const VIRTUAL_TAG_PATTERN_KINDS = [
   'square',
 ] as const satisfies readonly VirtualTagPatternKind[];
 
+/**
+ * 속도·가속 한계(태그 단위/초, 단위/초²). 있으면 러너가 파형·시나리오 목표값을
+ * 향해 램프한다(lib/rate-limit.ts) — 사인파 주기를 줄이거나 배속을 올려도
+ * 장비가 순간이동하지 않는다. manual 슬라이더는 즉시 반영이라 적용되지 않는다.
+ * 둘 다 선택이고 0 이하·비유한수는 생략된다.
+ */
+export interface VirtualTagLimits {
+  maxSpeed?: number;
+  maxAccel?: number;
+}
+
 export interface VirtualTagDefinition {
   id: string;
   /** 값 버스 키. 유일·trim·최대 VIRTUAL_TAG_KEY_MAX 자. */
@@ -45,6 +56,8 @@ export interface VirtualTagDefinition {
   pattern: VirtualTagPattern;
   /** false 면 값을 내보내지 않는다. */
   enabled: boolean;
+  /** 속도·가속 한계. 없으면 목표값으로 바로 간다. */
+  limits?: VirtualTagLimits;
 }
 
 export interface VirtualTagSet {
