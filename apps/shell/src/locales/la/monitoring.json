@@ -194,6 +194,7 @@
       "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat.",
       "zones": {
         "enable": "Regionum detectio",
+        "labels": "Nomina regionum ostende",
         "hint": "Etiam dum editur operatur et simulationem numquam sistit.",
         "current": "Nunc intus",
         "none": "Nulla intrusio"

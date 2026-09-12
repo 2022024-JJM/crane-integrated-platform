@@ -138,12 +138,18 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
   );
 });
 
-/** 모델 영역 침범 — 감지 on/off, 현재 침범 중 목록. 기록은 없다(상태만). */
+/**
+ * 모델 영역 침범 — 감지 on/off, 씬 안 이름 배지 표시 on/off, 현재 침범 중
+ * 목록. 기록은 없다(상태만). 배지 토글은 감지와 독립이다 — 감지는 계속 돌고
+ * 링도 그대로이며 배지만 사라진다.
+ */
 function SceneZoneSection() {
   const { t } = useTranslation();
   const enabled = useSceneZoneStore((s) => s.enabled);
+  const labelsVisible = useSceneZoneStore((s) => s.labelsVisible);
   const intrusions = useSceneZoneStore((s) => s.intrusions);
   const setEnabled = useSceneZoneStore((s) => s.setEnabled);
+  const setLabelsVisible = useSceneZoneStore((s) => s.setLabelsVisible);
 
   return (
     <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
@@ -155,6 +161,16 @@ function SceneZoneSection() {
           checked={enabled}
           onCheckedChange={setEnabled}
           aria-label={t('monitoring:editor.collision.zones.enable')}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-[11px]">
+        <span className="font-medium">
+          {t('monitoring:editor.collision.zones.labels')}
+        </span>
+        <Switch
+          checked={labelsVisible}
+          onCheckedChange={setLabelsVisible}
+          aria-label={t('monitoring:editor.collision.zones.labels')}
         />
       </label>
       <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">

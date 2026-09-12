@@ -56,7 +56,11 @@ function zoneEnter(kind: 'enter' | 'exit' = 'enter'): ZoneTransition {
 }
 
 beforeEach(() => {
-  useSceneZoneStore.setState({ enabled: true, intrusions: [] });
+  useSceneZoneStore.setState({
+    enabled: true,
+    labelsVisible: true,
+    intrusions: [],
+  });
 });
 
 describe('useSceneZoneStore — 기본값·토글', () => {
@@ -79,6 +83,30 @@ describe('useSceneZoneStore — 기본값·토글', () => {
     const before = useSceneZoneStore.getState();
     before.setEnabled(true);
     expect(useSceneZoneStore.getState()).toBe(before);
+  });
+
+  it('labelsVisible 기본 ON, 토글해도 감지·침범 목록은 건드리지 않는다', () => {
+    const s = useSceneZoneStore.getState();
+    expect(s.labelsVisible).toBe(true);
+    s.applyTransitions([enter(B)]);
+    s.setLabelsVisible(false);
+    const after = useSceneZoneStore.getState();
+    expect(after.labelsVisible).toBe(false);
+    expect(after.enabled).toBe(true);
+    expect(after.intrusions).toHaveLength(1);
+  });
+
+  it('같은 값으로 setLabelsVisible 하면 상태 참조가 유지된다', () => {
+    const before = useSceneZoneStore.getState();
+    before.setLabelsVisible(true);
+    expect(useSceneZoneStore.getState()).toBe(before);
+  });
+
+  it('감지를 꺼도 labelsVisible 은 그대로다(독립 설정)', () => {
+    const s = useSceneZoneStore.getState();
+    s.setLabelsVisible(false);
+    s.setEnabled(false);
+    expect(useSceneZoneStore.getState().labelsVisible).toBe(false);
   });
 
   it('toggle 은 enabled 를 뒤집는다', () => {

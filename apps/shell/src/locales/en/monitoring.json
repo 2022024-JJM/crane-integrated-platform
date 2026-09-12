@@ -208,6 +208,7 @@
       "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values.",
       "zones": {
         "enable": "Zone detection",
+        "labels": "Show zone labels",
         "hint": "Runs while editing too and never pauses the simulation.",
         "current": "Currently inside",
         "none": "No intrusions"

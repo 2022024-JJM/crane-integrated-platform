@@ -46,6 +46,9 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * - key 는 zoneKey(영역 id) — 중심값으로 key 를 만들면 매 틱 리마운트된다
  *   (골리앗 가드 문서의 실측 결함).
  *
+ * 이름 배지는 `useSceneZoneStore.labelsVisible`(충돌 탭 토글)로 따로 끈다 —
+ * 링·감지는 그대로 돌고 배지만 사라진다(영역이 많은 야드에서 화면을 덮는다).
+ *
  * 에디터 규칙: 전역 토글이 꺼져 있어도 **선택된 모델**의 영역은 그린다
  * (반경을 편집하면서 보이지 않으면 편집이 불가능하다). 판정은 멈춘 상태라
  * 침범 표시는 없다. 모니터링은 `selectedModelId` 를 넘기지 않는다.
@@ -68,6 +71,7 @@ export function SceneZoneRings({
   selectedModelId = null,
 }: SceneZoneRingsProps) {
   const enabled = useSceneZoneStore((s) => s.enabled);
+  const labelsVisible = useSceneZoneStore((s) => s.labelsVisible);
   const reducedMotion = usePrefersReducedMotion();
   const models = sceneInfo?.models;
   if (!models) return null;
@@ -84,6 +88,7 @@ export function SceneZoneRings({
               zone={zone}
               index={index}
               live={enabled}
+              showLabel={labelsVisible}
               reducedMotion={reducedMotion}
             />
           ) : null,
@@ -98,6 +103,7 @@ function ZoneRing({
   zone,
   index,
   live,
+  showLabel,
   reducedMotion,
 }: {
   ownerId: string;
@@ -105,6 +111,8 @@ function ZoneRing({
   index: number;
   /** false 면(토글 off·선택 모델만 표시) 침범 상태를 읽지 않는다. */
   live: boolean;
+  /** 이름 배지(+침범자 수)를 그릴지. 링은 이 값과 무관하게 그린다. */
+  showLabel: boolean;
   reducedMotion: boolean;
 }) {
   const { t } = useTranslation();
@@ -175,24 +183,28 @@ function ZoneRing({
         </mesh>
       </group>
       {/* 링 +X 가장자리의 이름 배지. 라벨 [5,0]·충돌 표지 [6,0] 아래.
-          침범 중엔 배지 우상단에 빨간 점·흰 숫자(이 영역의 침범자 수). */}
-      <Html center position={[1, 0, 0]} zIndexRange={[4, 0]}>
-        <div
-          ref={badgeRef}
-          className="pointer-events-none relative flex items-center rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
-          style={{ borderLeftColor: zone.color }}
-        >
-          <span>{name}</span>
-          {intruderCount > 0 ? (
-            <span
-              aria-label={`intruders ${intruderCount}`}
-              className="absolute -top-2 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] leading-none font-bold text-white tabular-nums ring-1 ring-black/40"
-            >
-              {intruderCount > 99 ? '99+' : intruderCount}
-            </span>
-          ) : null}
-        </div>
-      </Html>
+          침범 중엔 배지 우상단에 빨간 점·흰 숫자(이 영역의 침범자 수).
+          충돌 탭의 "영역 이름 표시" 가 꺼지면 통째로 언마운트한다 — Html 은
+          매 프레임 화면 좌표를 계산하므로 숨기기보다 빼는 쪽이 싸다. */}
+      {showLabel ? (
+        <Html center position={[1, 0, 0]} zIndexRange={[4, 0]}>
+          <div
+            ref={badgeRef}
+            className="pointer-events-none relative flex items-center rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
+            style={{ borderLeftColor: zone.color }}
+          >
+            <span>{name}</span>
+            {intruderCount > 0 ? (
+              <span
+                aria-label={`intruders ${intruderCount}`}
+                className="absolute -top-2 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] leading-none font-bold text-white tabular-nums ring-1 ring-black/40"
+              >
+                {intruderCount > 99 ? '99+' : intruderCount}
+              </span>
+            ) : null}
+          </div>
+        </Html>
+      ) : null}
     </group>
   );
 }

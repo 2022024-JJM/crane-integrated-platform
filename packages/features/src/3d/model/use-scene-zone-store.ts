@@ -36,11 +36,18 @@ export interface ZoneIntrusion {
 
 interface SceneZoneState {
   enabled: boolean;
+  /**
+   * 씬 안 영역 이름 배지(+침범자 수)를 그릴지. 링·감지와는 무관한 표시
+   * 설정이라 감지를 끄지 않고 배지만 숨길 수 있다 — 영역이 여러 개인 야드에서
+   * 배지가 화면을 덮는다. 세션 전용(`enabled` 과 같은 규칙).
+   */
+  labelsVisible: boolean;
   /** 침범자가 하나라도 있는 영역만. zoneKey 순 정렬로 안정. */
   intrusions: ZoneIntrusion[];
   toggle: () => void;
   /** false 면 현재 침범 목록을 비운다. */
   setEnabled: (enabled: boolean) => void;
+  setLabelsVisible: (visible: boolean) => void;
   /** 검출기만 호출. 전이를 반영한다 — 빈 배열은 no-op. */
   applyTransitions: (transitions: readonly ZoneTransition[]) => void;
   /** 검출기 언마운트 — 현재 침범 목록을 비운다. */
@@ -118,6 +125,7 @@ function remove(
 
 export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
   enabled: true,
+  labelsVisible: true,
   intrusions: [],
 
   toggle: () => get().setEnabled(!get().enabled),
@@ -130,6 +138,11 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
         ? { enabled }
         : { enabled, intrusions: [] },
     );
+  },
+
+  setLabelsVisible: (visible) => {
+    if (visible === get().labelsVisible) return;
+    set({ labelsVisible: visible });
   },
 
   applyTransitions: (transitions) => {
