@@ -22,6 +22,8 @@ vi.mock('@react-three/fiber', () => ({
   useFrame: (callback: (state: unknown, delta: number) => void) => {
     captured.frameCallback = callback;
   },
+  // demand 캔버스 프레임 요청 — 테스트에선 no-op.
+  useThree: () => () => {},
 }));
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;

@@ -22,6 +22,7 @@ import {
   type MeshMaterialBinding,
 } from '../lib/mesh-material-binding';
 import { toLambertMaterials } from '../lib/lambert-material';
+import { markSceneOpaqueStencils } from '../lib/scene-stencil';
 import { useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { SavedMeshOverride } from '../model/types';
@@ -204,6 +205,11 @@ export function useClonedModel(
       if (shading === 'lambert') {
         child.material = toLambertMaterials(child.material);
       }
+      // "불투명 씬 메시가 그려졌다" 스텐실 표식 — 바다 평면이 이 비트가 없는
+      // 픽셀에서만 그려진다(lib/scene-stencil.ts). 원본(GLTF 캐시 공유)에
+      // 직접 켠다: 멱등이고 렌더 결과가 바뀌지 않으며, 알람 tint·잠김 공유
+      // variant 는 clone 으로 물려받는다. 스텐실 없는 캔버스에선 무효.
+      markSceneOpaqueStencils(child.material);
 
       // material reference는 GLTF 원본을 그대로 공유한다. 같은 GLTF의
       // 모든 instance가 같은 material을 쓰므로 메모리·GPU 업로드 비용이

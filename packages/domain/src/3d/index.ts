@@ -214,4 +214,11 @@ export {
   SILHOUETTE_OUTLINE_PX,
   outlineOffsetFactor,
 } from './lib/silhouette-outline';
+export {
+  SCENE_OPAQUE_STENCIL_BIT,
+  SILHOUETTE_STENCIL_BIT,
+  hasSceneOpaqueStencil,
+  markSceneOpaqueStencil,
+  markSceneOpaqueStencils,
+} from './lib/scene-stencil';
 export { SceneText } from './ui/scene-text';

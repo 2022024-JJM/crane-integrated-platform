@@ -44,6 +44,11 @@ export { isSceneShadowEnabled, sceneCanvasShadows } from './lib/scene-shadow';
 export { SceneClockMenu } from './ui/scene-clock-menu';
 export { SceneFrameGovernor } from './ui/scene-frame-governor';
 export {
+  registerSceneFrameRequester,
+  requestSceneFrame,
+  unregisterSceneFrameRequester,
+} from './model/scene-frame-request';
+export {
   ANIMATING_FPS as SCENE_ANIMATING_FPS,
   resolveGovernorFps,
 } from './lib/frame-governor';

@@ -5,6 +5,10 @@ import {
   governorIntervalMs,
   resolveGovernorFps,
 } from '../lib/frame-governor';
+import {
+  registerSceneFrameRequester,
+  unregisterSceneFrameRequester,
+} from '../model/scene-frame-request';
 import { useActiveTransformStore } from '../model/use-active-transform-store';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
@@ -48,6 +52,13 @@ export function SceneFrameGovernor({
   slow = false,
 }: SceneFrameGovernorProps) {
   const invalidate = useThree((s) => s.invalidate);
+
+  // React 밖에서 씬을 바꾸는 코드(값 저장소·시계 스토어 등)의 프레임 요청
+  // 깔때기 — model/scene-frame-request.ts. 이 캔버스의 invalidate 를 건다.
+  useEffect(() => {
+    registerSceneFrameRequester(invalidate);
+    return () => unregisterSceneFrameRequester(invalidate);
+  }, [invalidate]);
 
   useEffect(() => {
     let fps = -1;

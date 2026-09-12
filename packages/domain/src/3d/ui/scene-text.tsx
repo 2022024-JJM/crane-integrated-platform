@@ -49,6 +49,9 @@ function TextSelectionOutline({
       color={SELECTION_LINE_COLOR}
       lineWidth={SELECTION_LINE_WIDTH}
       depthTest={false}
+      // 모델 선택 박스와 같은 순서 — 바다 평면(불투명 패스 끝, renderOrder
+      // 0.25) 뒤에 그려져 물 위에서도 테두리가 덮이지 않는다.
+      renderOrder={1}
       raycast={noRaycast}
     />
   );

@@ -608,6 +608,19 @@ export function SceneLighting({
   const hemisphereRef = useRef<HemisphereLight | null>(null);
   const scratchForward = useMemo(() => new Vector3(), []);
   const scene = useThree((s) => s.scene);
+  const invalidate = useThree((s) => s.invalidate);
+
+  // demand 캔버스 깨우기 — 태양각·모드·그림자 같은 조명 설정과 씬 시계(시각
+  // 지정·작업등)는 useFrame 안에서 조명에 쓰이므로 프레임이 없으면 화면에
+  // 안 나타난다(에디터 배경 탭·시계 팝업 조작 직후). 'always' 루프에선 no-op.
+  // 시계 구독은 solar 씬에서만 — manual 씬은 시계를 읽지 않는다.
+  useEffect(() => {
+    invalidate();
+  }, [manualSunDir, solarGeo, shadowsEnabled, timeSource, invalidate]);
+  useEffect(() => {
+    if (!solarGeo) return;
+    return useSceneClockStore.subscribe(() => invalidate());
+  }, [solarGeo, invalidate]);
   // 보조 투광등 위치 — 고정 방향(타깃은 원점 기본값)이라 한 번만 계산.
   const fillPosition = useMemo<Vector3Tuple>(() => {
     const d = sunDirectionFromAngles(FILL_LIGHT_AZIMUTH, FILL_LIGHT_ELEVATION);

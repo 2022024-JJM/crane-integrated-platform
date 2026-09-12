@@ -50,6 +50,7 @@ import {
   SCENE_RAYCASTER_OPTIONS,
   MIN_SURFACE_DISTANCE,
   SceneEnvironment,
+  SceneFrameGovernor,
   SceneLighting,
   sceneCanvasShadows,
   SceneObjectBoundary,
@@ -870,6 +871,15 @@ export function SceneObjectsEditCanvas({
         raycaster={SCENE_RAYCASTER_OPTIONS}
         shadows={sceneCanvasShadows(sceneInfo?.lighting)}
         dpr={EDITOR_DPR}
+        // 모니터링과 같은 demand 루프(2026-09-12) — 프레임은 조작(궤도·휠·
+        // 기즈모, 각자 invalidate)·React 커밋(리컨실러가 invalidate)·아래
+        // SceneFrameGovernor(재생·드래그 중 30fps, 바다 씬 상시, solar 태양
+        // 저주기)·프레임 요청 깔때기(requestSceneFrame — 값 저장소·시계·조명
+        // 설정)가 만든다. 예전 'always' 는 정지 화면도 주사율로 전체 씬을 다시
+        // 그렸다. **React 밖에서 씬을 바꾸는 새 경로는 invalidate 또는
+        // requestSceneFrame 을 함께 불러야 한다** — 안 부르면 다음 조작까지
+        // 화면이 낡은 프레임에 머문다.
+        frameloop="demand"
         onCreated={({ camera, gl }) => {
           cameraRef.current = camera;
           rendererRef.current = gl;
@@ -886,6 +896,12 @@ export function SceneObjectsEditCanvas({
         }}
         onPointerMissed={handleClearSelection}
       >
+        {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. 바다 씬은
+            파도가 상시 애니메이션, solar 씬은 태양이 느리게 움직인다. */}
+        <SceneFrameGovernor
+          animating={hasSea}
+          slow={sceneInfo?.lighting?.sunMode === 'solar'}
+        />
         {/* regionId 는 solar 모드(현장 시각 낮/밤)의 위치·시간대 키 — 뷰어와
             같은 하늘을 편집 중에도 본다. */}
         <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />

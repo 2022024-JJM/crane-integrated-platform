@@ -1,5 +1,6 @@
 import { invalidateShadows } from '@crane/domain/3d';
 import { smoothDampStep, type SmoothDampState } from '../lib/smooth-damp';
+import { requestSceneFrame } from './scene-frame-request';
 
 /**
  * 관절 값의 단일 저장소 + 값 소스 추상화.
@@ -108,6 +109,7 @@ class RigValueStoreImpl implements RigValueSink {
       };
       this.channels.set(address, ch);
     }
+    const previousTarget = ch.target;
     ch.target = v;
     ch.smoothTime = smooth ? (options?.smoothTime ?? DEFAULT_SMOOTH_TIME) : 0;
     if (!smooth) {
@@ -118,7 +120,13 @@ class RigValueStoreImpl implements RigValueSink {
       // 하므로 step 쪽 판정에 맡긴다(신규 채널의 value 는 0 = rest 로 시작).
       if (previous !== v && !(previous === undefined && v === 0)) {
         invalidateShadows();
+        requestSceneFrame();
       }
+    } else if (previousTarget !== v || ch.value !== v) {
+      // demand 캔버스 깨우기 — 드라이버의 useFrame 이 이 값을 노드에 적용하는
+      // 곳이라 프레임이 없으면 화면이 안 바뀐다. 이후 스무딩 프레임은
+      // use-rig-driver 가 hasPendingSmoothing 으로 체인을 잇는다.
+      requestSceneFrame();
     }
   }
 
@@ -140,10 +148,12 @@ class RigValueStoreImpl implements RigValueSink {
     this.lastShadowStepAt = Number.NEGATIVE_INFINITY;
     if (modelId === undefined) {
       // 채널이 지워지면 드라이버가 다음 프레임에 노드를 rest 로 되돌린다 —
-      // 화면이 바뀌므로 그림자도 무효화한다(빈 상태 reset 은 no-op).
+      // 화면이 바뀌므로 그림자도 무효화하고 프레임을 요청한다(빈 상태
+      // reset 은 no-op).
       if (this.channels.size > 0) {
         this.channels.clear();
         invalidateShadows();
+        requestSceneFrame();
       }
       return;
     }
@@ -155,7 +165,10 @@ class RigValueStoreImpl implements RigValueSink {
         removed = true;
       }
     }
-    if (removed) invalidateShadows();
+    if (removed) {
+      invalidateShadows();
+      requestSceneFrame();
+    }
   }
 
   /**
@@ -213,6 +226,18 @@ class RigValueStoreImpl implements RigValueSink {
     invalidateShadows();
     // 이번 프레임의 shadow 렌더가 모든 채널의 현재 자세를 담는다.
     for (const ch of this.channels.values()) ch.shadowDrift = 0;
+  }
+
+  /**
+   * 아직 target 에 닿지 않은 스무딩 채널이 있는지 — demand 캔버스에서
+   * 드라이버가 다음 프레임을 스스로 요청할지 판정한다(use-rig-driver).
+   * 정착 판정은 step 의 skip 조건과 같다(value === target).
+   */
+  hasPendingSmoothing(): boolean {
+    for (const ch of this.channels.values()) {
+      if (ch.smoothTime > 0 && ch.value !== ch.target) return true;
+    }
+    return false;
   }
 
   get size(): number {

@@ -1,4 +1,10 @@
-import { type IUniform, ShaderMaterial, type Texture } from 'three';
+import {
+  EqualStencilFunc,
+  type IUniform,
+  ShaderMaterial,
+  type Texture,
+} from 'three';
+import { SCENE_OPAQUE_STENCIL_BIT } from '@crane/domain/3d';
 
 /**
  * 바다 평면 셰이더 — "사진 방향 샘플링 + 월드 고정 파도".
@@ -49,13 +55,14 @@ export interface SeaSurfaceUniforms extends Record<string, IUniform> {
   uEnvIntensity: { value: number };
 }
 
-// logdepthbuf 청크: 렌더러가 logarithmicDepthBuffer 모드라 raw ShaderMaterial도
-// 직접 include해야 깊이 테스트가 표준 머티리얼과 같은 좌표계에서 돈다.
-// (common은 logdepthbuf_vertex가 쓰는 isPerspectiveMatrix 제공. 청크 내부가
-// USE_LOGARITHMIC_DEPTH_BUFFER 가드라 옵션이 꺼진 렌더러에서도 무해하다.)
+// 깊이(logdepthbuf 청크)는 넣지 않는다 — 이 머티리얼은 깊이를 읽지도 쓰지도
+// 않는다(depthTest/depthWrite 모두 off). 가려짐은 스텐실이 정한다(아래
+// createSeaSurfaceMaterial 주석). gl_FragDepth 를 쓰지 않아야 GPU 가
+// 스텐실 테스트를 프래그먼트 셰이더 **앞**에서 끝내고(early test) 가려진
+// 픽셀의 파도 계산을 건너뛴다 — 그게 이 구조의 목적이다.
+// (common 은 equirectUv 제공.)
 const vertexShader = /* glsl */ `
 #include <common>
-#include <logdepthbuf_pars_vertex>
 
 varying vec3 vWorldPos;
 
@@ -63,13 +70,11 @@ void main() {
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
   vWorldPos = worldPos.xyz;
   gl_Position = projectionMatrix * viewMatrix * worldPos;
-  #include <logdepthbuf_vertex>
 }
 `;
 
 const fragmentShader = /* glsl */ `
 #include <common>
-#include <logdepthbuf_pars_fragment>
 
 uniform sampler2D tEnv;
 uniform float uTime;
@@ -165,8 +170,6 @@ vec3 waveNormal(vec2 p, float t, float rippleWeight) {
 }
 
 void main() {
-  #include <logdepthbuf_fragment>
-
   vec3 dir = normalize(vWorldPos - cameraPosition);
   float dist = distance(vWorldPos, cameraPosition);
 
@@ -176,9 +179,8 @@ void main() {
   // 원거리 early-out — 너울까지 완전히 감쇠한 픽셀(uFadeEnd 너머, 수평선
   // 띠와 원판 바깥쪽)은 배경과 같은 색이라 파도 계산(노이즈 50여 회)을
   // 통째로 건너뛴다. 거리는 화면에서 연속이라 분기가 픽셀 단위로 갈리지
-  // 않는다(GPU 발산 없음). 원판이 항상 먼저 그려지고 깊이를 남기지 않아
-  // 지형 뒤 픽셀도 이 셰이더가 도는 구조라, 여기서 아끼는 만큼이 그대로
-  // 유휴 GPU 부하 절감이다.
+  // 않는다(GPU 발산 없음). 지형·모델에 가려진 픽셀은 스텐실 early test 가
+  // 셰이더 전에 걸러내므로(createSeaSurfaceMaterial) 여기까지 오지 않는다.
   vec3 d = dir;
   if (swellFade > 0.0) {
     vec3 n = waveNormal(vWorldPos.xz, uTime, rippleFade);
@@ -215,8 +217,22 @@ export function createSeaSurfaceMaterial(
     uniforms,
     vertexShader,
     fragmentShader,
-    // 지도가 항상 위에 덮이게(GLB 바다 y≈-0.017과의 z-fighting 방지).
+    // 깊이는 읽지도 쓰지도 않는다. 예전(2026-09-11 이전)엔 바다를 맨 먼저
+    // 그리고(renderOrder -1) 깊이만 안 써서 지도(GLB 바다 y≈-0.017 포함)·
+    // 수면 아래 드라이독·잠긴 선체가 그 위에 덮이게 했는데, 그러면 야드가
+    // 덮을 픽셀에서도 파도 셰이더가 매 프레임 통째로 돌았다. 지금은 바다를
+    // 불투명 패스 **뒤**(scene-environment 의 renderOrder)에 그리되 스텐실로
+    // "불투명 씬 메시가 하나라도 그려진 픽셀" 을 거른다 — 깊이 순서와 무관
+    // 하게 무엇이든 그려졌으면 바다가 진다는 옛 규칙 그대로이고, 거른 픽셀은
+    // 셰이더 앞에서 탈락해 비용이 0 이다(@crane/domain/3d scene-stencil.ts).
     depthWrite: false,
+    depthTest: false,
+    stencilWrite: true,
+    // 테스트만 — 값은 쓰지 않는다.
+    stencilWriteMask: 0,
+    stencilRef: 0,
+    stencilFunc: EqualStencilFunc,
+    stencilFuncMask: SCENE_OPAQUE_STENCIL_BIT,
   });
   return material as ShaderMaterial & { uniforms: SeaSurfaceUniforms };
 }

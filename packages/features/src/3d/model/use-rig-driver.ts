@@ -1,4 +1,4 @@
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { Euler, Quaternion, Vector3, type Object3D } from 'three';
 import {
@@ -252,9 +252,14 @@ export function useRigDriver({
   const paramsRef = useRef({ rigs, models, enabled });
   // 기즈모 드래그 종료(true→false) 감지용. useFrame 콜백 안에서만 읽고 쓴다.
   const prevDraggingRef = useRef(false);
+  // demand 캔버스: 정의(관절·맵핑·배치)가 바뀌면 인스턴스 재생성·rest 복귀가
+  // 다음 useFrame 에서 일어나므로 프레임을 한 번 요청한다. 'always' 루프에선
+  // no-op. 스무딩이 남아 있으면 프레임마다 스스로 다음 프레임을 요청한다.
+  const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
     paramsRef.current = { rigs, models, enabled };
-  }, [rigs, models, enabled]);
+    invalidate();
+  }, [rigs, models, enabled, invalidate]);
 
   // 언마운트 시 구동 흔적을 지운다 — 같은 GLB clone 이 다른 화면에서 rest 가
   // 아닌 자세로 보이면 안 된다.
@@ -286,6 +291,10 @@ export function useRigDriver({
 
     // 탭 전환 등으로 delta 가 튀면 스무딩이 한 번에 목표로 점프한다 — 상한.
     rigValueStore.step(Math.min(delta, 0.1));
+    // 정착 전이면 다음 프레임을 스스로 요청 — 러너가 멈춘 뒤(거버너 유예
+    // 밖)나 슬라이더·수동 태그 값처럼 러너 없이 들어온 smooth 값도 끝까지
+    // 수렴한다. 정착하면 요청이 저절로 멈춘다.
+    if (rigValueStore.hasPendingSmoothing()) invalidate();
 
     const rigsById = new Map((currentRigs ?? []).map((r) => [r.id, r]));
     const liveModelIds = new Set<string>();

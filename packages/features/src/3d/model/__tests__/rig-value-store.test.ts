@@ -311,3 +311,73 @@ describe('createTagBindingSource', () => {
     expect(rigValueStore.getTarget('n/luff')).toBe(20);
   });
 });
+
+describe('rigValueStore — demand 캔버스 프레임 요청 (scene-frame-request)', () => {
+  let frames = 0;
+  const requester = () => {
+    frames += 1;
+  };
+  beforeEach(async () => {
+    const { registerSceneFrameRequester } =
+      await import('../scene-frame-request');
+    frames = 0;
+    registerSceneFrameRequester(requester);
+  });
+  afterEach(async () => {
+    const { unregisterSceneFrameRequester } =
+      await import('../scene-frame-request');
+    unregisterSceneFrameRequester(requester);
+  });
+
+  it('즉시 set 은 값이 실제로 바뀔 때만 프레임을 요청한다', () => {
+    rigValueStore.set('m/j', 5);
+    expect(frames).toBe(1);
+    rigValueStore.set('m/j', 5);
+    expect(frames).toBe(1);
+    // 신규 채널에 0(rest) 대입은 화면이 안 바뀐다 — 요청 없음.
+    rigValueStore.set('m/k', 0);
+    expect(frames).toBe(1);
+  });
+
+  it('smooth set 은 target 이 바뀌면 요청하고, 같은 target 재설정은 정착 후 요청하지 않는다', () => {
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.1 });
+    expect(frames).toBe(1);
+    // 정착 전 같은 target 재설정 — value !== target 이라 다시 요청(스무딩 계속).
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.1 });
+    expect(frames).toBe(2);
+    for (let i = 0; i < 600; i++) rigValueStore.step(1 / 60);
+    // 정착: value === target 이면 같은 target 재설정은 no-op.
+    const settled = rigValueStore.get('m/j');
+    rigValueStore.set('m/j', settled, { smooth: true, smoothTime: 0.1 });
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+  });
+
+  it('hasPendingSmoothing — 스무딩 중 true, 정착·freeze·reset 뒤 false', () => {
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+    rigValueStore.set('m/j', 10, { smooth: true, smoothTime: 0.1 });
+    expect(rigValueStore.hasPendingSmoothing()).toBe(true);
+    rigValueStore.freeze();
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+    rigValueStore.set('m/j', 20, { smooth: true, smoothTime: 0.1 });
+    expect(rigValueStore.hasPendingSmoothing()).toBe(true);
+    rigValueStore.reset();
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+  });
+
+  it('reset 은 채널이 있을 때만, restore 는 값마다 요청한다', () => {
+    rigValueStore.reset();
+    expect(frames).toBe(0);
+    rigValueStore.set('m/j', 3);
+    rigValueStore.set('m/k', 4);
+    expect(frames).toBe(2);
+    rigValueStore.reset('m');
+    expect(frames).toBe(3);
+    rigValueStore.reset();
+    expect(frames).toBe(3);
+    rigValueStore.restore([
+      ['m/j', 1],
+      ['m/k', 2],
+    ]);
+    expect(frames).toBe(5);
+  });
+});

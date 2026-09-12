@@ -88,6 +88,12 @@ const SEA_WAVE_STRENGTH = 1;
 const SEA_FADE_START = 1500;
 const SEA_FADE_END = 5000;
 const SEA_WAVE_SPEED = 1;
+/**
+ * 불투명 씬 메시(0) 뒤, 편집기 격자(0.5)·선택 박스(1) 앞. 스텐실 테스트
+ * (sea-surface-material)가 불투명 메시 **전부**가 그려진 뒤여야 맞으므로
+ * 0 보다 커야 하고, 오버레이는 바다 위에 보여야 하므로 그들보다 작아야 한다.
+ */
+const SEA_RENDER_ORDER = 0.25;
 
 function applyEquirectBackground(scene: Scene, texture: Texture) {
   texture.mapping = EquirectangularReflectionMapping;
@@ -109,8 +115,15 @@ function applyEquirectBackground(scene: Scene, texture: Texture) {
 /**
  * 바다 평면 — 셰이더 원리는 sea-surface-material.ts 참고.
  *
- * renderOrder -1 + depthWrite:false(머티리얼) — 항상 먼저 그려지고 깊이를
- * 남기지 않아 지도(GLB 바다 y≈-0.017 포함)가 위에 덮인다. z-fighting 없음.
+ * 그리는 순서: 불투명 씬 메시(renderOrder 0) **뒤**, 격자(0.5)·선택 박스(1)·
+ * 실루엣 마스크(10) 앞인 SEA_RENDER_ORDER. 깊이는 읽지도 쓰지도 않고
+ * 스텐실 "불투명 씬이 그려졌다" 비트가 없는 픽셀에서만 그려진다 —
+ * 지도(GLB 바다 y≈-0.017 포함)·드라이독·잠긴 선체는 깊이 순서와 무관하게
+ * 바다 위에 남고(예전의 "맨 먼저 그리고 깊이 안 쓰기" 와 같은 결과),
+ * 가려진 픽셀은 파도 셰이더가 아예 돌지 않는다. z-fighting 없음.
+ * 오버레이(격자·선택 박스·텍스트 테두리·가드 링)는 renderOrder ≥ 0.5 라
+ * 바다 뒤에 그려져 물 위에서도 덮이지 않는다 — 새 오버레이를 0 으로 두면
+ * 물 위에서 사라진다.
  * raycast는 noop — 에디터의 marquee 선택/드롭 배치 raycast에 40km 원판이
  * 잡히면 안 된다.
  *
@@ -128,7 +141,7 @@ function SeaSurface({ texture }: { texture: Texture }) {
     const mesh = new Mesh(geometry, material);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = SEA_LEVEL_Y;
-    mesh.renderOrder = -1;
+    mesh.renderOrder = SEA_RENDER_ORDER;
     mesh.raycast = () => {};
     return mesh;
   }, [texture]);
@@ -164,8 +177,18 @@ function SeaSurface({ texture }: { texture: Texture }) {
 function EnvironmentBackground({ url }: { url: string }) {
   const texture = useLoader(EXRLoader, url);
   const scene = useThree((s) => s.scene);
+  const invalidate = useThree((s) => s.invalidate);
 
-  useEffect(() => applyEquirectBackground(scene, texture), [scene, texture]);
+  // scene.background/environment 는 리컨실러 밖 변조라 demand 캔버스에서
+  // 프레임을 직접 깨운다(배경 교체·해제 직후 화면 반영).
+  useEffect(() => {
+    const cleanup = applyEquirectBackground(scene, texture);
+    invalidate();
+    return () => {
+      cleanup();
+      invalidate();
+    };
+  }, [scene, texture, invalidate]);
 
   return (
     <>

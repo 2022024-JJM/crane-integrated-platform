@@ -10,6 +10,7 @@ import {
   type BufferGeometry,
 } from 'three';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { SILHOUETTE_STENCIL_BIT } from './scene-stencil';
 
 /**
  * 일체형 실루엣 테두리 — 스텐실 마스크 + 인플레이션 헐.
@@ -53,8 +54,14 @@ import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.j
 /** 테두리 화면 두께(px). */
 export const SILHOUETTE_OUTLINE_PX = 4;
 
-/** 발자국 스텐실 값. autoClearStencil(기본 on)이 매 프레임 지운다. */
-const STENCIL_REF = 1;
+/**
+ * 발자국 스텐실 비트. autoClearStencil(기본 on)이 매 프레임 지운다. 스텐실은
+ * 바다 평면의 "불투명 씬이 그려졌다" 비트(SCENE_OPAQUE_STENCIL_BIT)와
+ * 나눠 쓰므로 마스크는 writeMask, 헐은 funcMask 로 자기 비트만 본다 —
+ * 마스크가 바이트 전체를 Replace 하면 발자국 픽셀의 바다 비트가 지워져
+ * 선택한 모델 위에 바다가 덧그려진다(lib/scene-stencil.ts).
+ */
+const STENCIL_REF = SILHOUETTE_STENCIL_BIT;
 
 /**
  * 렌더 순서 — 기존 오버레이(선택 박스 1, collision-guard 1~5) 뒤에 온다.
@@ -115,6 +122,8 @@ const silhouetteMaskMaterial = new MeshBasicMaterial({
   stencilRef: STENCIL_REF,
   stencilFunc: AlwaysStencilFunc,
   stencilZPass: ReplaceStencilOp,
+  // 자기 비트만 쓴다 — 바다 비트 보존.
+  stencilWriteMask: STENCIL_REF,
 });
 
 /**
@@ -192,6 +201,8 @@ export function createSilhouetteOutlineMaterial(color: string): ShaderMaterial {
     stencilWriteMask: 0, // 테스트만 하고 값은 건드리지 않는다
     stencilRef: STENCIL_REF,
     stencilFunc: NotEqualStencilFunc,
+    // 자기 비트만 비교한다 — 바다 비트가 섞이면 발자국 안이 NotEqual 이 된다.
+    stencilFuncMask: STENCIL_REF,
     // 톤매핑·포그를 타지 않는 원색. ShaderMaterial 은 기본으로 둘 다
     // 포함하지 않으므로 별도 처리 없음.
   });
