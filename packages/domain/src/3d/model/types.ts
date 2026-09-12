@@ -171,6 +171,12 @@ export interface SavedModelInfo {
    * sanitize-model-zones.ts.
    */
   zones?: SavedModelZone[];
+  /**
+   * 다른 모델의 영역 감지에서 이 모델을 제외한다(침범자 역할만 빠진다 — 자기
+   * 영역은 그대로 감지한다). 고정 설비·지형 장식처럼 "들어온 것" 으로 셀 필요가
+   * 없는 모델용. locked 과 같은 true-only 직렬화.
+   */
+  zoneExempt?: boolean;
 }
 
 /**

@@ -174,20 +174,21 @@ function ZoneRing({
           />
         </mesh>
       </group>
-      {/* 링 +X 가장자리의 이름 배지. 라벨 [5,0]·충돌 표지 [6,0] 아래. */}
+      {/* 링 +X 가장자리의 이름 배지. 라벨 [5,0]·충돌 표지 [6,0] 아래.
+          침범 중엔 배지 우상단에 빨간 점·흰 숫자(이 영역의 침범자 수). */}
       <Html center position={[1, 0, 0]} zIndexRange={[4, 0]}>
         <div
           ref={badgeRef}
-          className="pointer-events-none flex items-center gap-1 rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
+          className="pointer-events-none relative flex items-center rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
           style={{ borderLeftColor: zone.color }}
         >
           <span>{name}</span>
           {intruderCount > 0 ? (
             <span
-              className="rounded-sm px-1 font-semibold text-black tabular-nums"
-              style={{ background: zone.color }}
+              aria-label={`intruders ${intruderCount}`}
+              className="absolute -top-2 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] leading-none font-bold text-white tabular-nums ring-1 ring-black/40"
             >
-              {intruderCount}
+              {intruderCount > 99 ? '99+' : intruderCount}
             </span>
           ) : null}
         </div>

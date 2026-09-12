@@ -111,9 +111,10 @@ function getTabsForType(
   );
 }
 
-/** 영역 탭 — 목록 갱신 채널 하나. */
+/** 영역 탭 — 목록 갱신 채널 + 다른 영역 감지에서 제외 토글. */
 export interface InspectorZoneHandlers {
   onUpdate: (updater: ZonesUpdater) => void;
+  onExemptChange: (exempt: boolean) => void;
 }
 
 /** 리깅 탭 콜백 묶음 — 전부 있어야 탭이 뜬다. */
@@ -398,7 +399,12 @@ function ModelInspectorContent({
       ) : null}
 
       {activeTab === 'zones' && zones ? (
-        <ZoneSection model={selectedModel} onUpdate={zones.onUpdate} t={t} />
+        <ZoneSection
+          model={selectedModel}
+          onUpdate={zones.onUpdate}
+          onExemptChange={zones.onExemptChange}
+          t={t}
+        />
       ) : null}
 
       {activeTab === 'tagMapping' && tagMapping ? (

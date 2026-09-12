@@ -26,11 +26,12 @@
       "add": "Regionem adde",
       "remove": "Regionem dele",
       "empty": "Nullae regiones. Preme + ut regionem circularem circa exemplar addas.",
-      "hint": "Centrum originem exemplaris (+ translationem) vivo sequitur.\nRadius et translatio eadem unitate ac positio utuntur.\nAliorum exemplarium retia vel regiones intrantes in tabula Collisionis ostenduntur.",
+      "hint": "Aliorum exemplarium retia vel regiones intrantes in tabula Collisionis ostenduntur.",
       "name": "Nomen",
       "color": "Color",
       "radius": "Radius",
-      "offset": "Translatio"
+      "offset": "Translatio",
+      "exempt": "Ab aliis regionibus exclude"
     },
     "rigging": {
       "title": "Articulatio",

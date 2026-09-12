@@ -77,6 +77,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedZones: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedZones'];
+  updateSelectedZoneExempt: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedZoneExempt'];
   createRigForSelectedModel: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['createRigForSelectedModel'];
@@ -190,6 +193,7 @@ export function useSceneEditorSession({
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedZones,
+    updateSelectedZoneExempt,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,
@@ -301,6 +305,7 @@ export function useSceneEditorSession({
     updateSelectedTextColor,
     updateSelectedTagMappings,
     updateSelectedZones,
+    updateSelectedZoneExempt,
     createRigForSelectedModel,
     assignRigToSelectedModel,
     updateRig,

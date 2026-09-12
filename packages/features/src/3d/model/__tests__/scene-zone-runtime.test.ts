@@ -46,7 +46,12 @@ function zone(
   return { id, name: id.toUpperCase(), color: '#38bdf8', radius, ...extra };
 }
 
-function model(id: string, x = 0, zones?: SavedModelZone[]): SavedModelInfo {
+function model(
+  id: string,
+  x = 0,
+  zones?: SavedModelZone[],
+  extra: Partial<SavedModelInfo> = {},
+): SavedModelInfo {
   const info: SavedModelInfo = {
     id,
     equipName: id.toUpperCase(),
@@ -55,6 +60,7 @@ function model(id: string, x = 0, zones?: SavedModelZone[]): SavedModelInfo {
     position: [x, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
+    ...extra,
   };
   if (zones) info.zones = zones;
   return info;
@@ -353,6 +359,34 @@ describe('SceneZoneRuntime — sync·항목 재생성', () => {
     expect(rt.tick(0, 100).transitions).toEqual([]);
     expect(rt.isIntruded('a#bad')).toBe(false);
     expect(rt.isIntruded('a#z')).toBe(false);
+  });
+
+  it('zoneExempt 모델은 침범자가 되지 않고, 침범 중 제외로 바뀌면 합성 exit', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 1);
+    mountModel('c', 0, { z: 1 });
+    const a = model('a', 0, [zone('z', 2)]);
+    rt.sync([a, model('b', 1), model('c', 0, undefined, { zoneExempt: true })]);
+    rt.arm();
+    expect(kinds(rt.tick(0, 100).transitions)).toEqual(['enter:a#z<b']);
+
+    rt.sync([a, model('b', 1, undefined, { zoneExempt: true }), model('c')]);
+    const res = kinds(rt.tick(10, 100).transitions).sort();
+    expect(res).toEqual(['enter:a#z<c', 'exit:a#z<b']);
+    expect([...(rt.intrudersOf('a#z') ?? [])]).toEqual(['c']);
+  });
+
+  it('제외 모델의 자기 영역은 그대로 다른 모델을 감지한다', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0);
+    mountModel('b', 1);
+    rt.sync([
+      model('a', 0, [zone('z', 2)], { zoneExempt: true }),
+      model('b', 1),
+    ]);
+    rt.arm();
+    expect(kinds(rt.tick(0, 100).transitions)).toEqual(['enter:a#z<b']);
   });
 
   it('disarm 은 상태를 비우고 tick 을 멈춘다', () => {

@@ -169,6 +169,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectedMesh,
     updateSelectedTagMappings,
     updateSelectedZones,
+    updateSelectedZoneExempt,
     createRigForSelectedModel,
     assignRigToSelectedModel,
     updateRig,
@@ -217,7 +218,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     rigs: sceneInfo?.rigs ?? [],
     onUpdate: updateSelectedTagMappings,
   };
-  const zoneHandlers = { onUpdate: updateSelectedZones };
+  const zoneHandlers = {
+    onUpdate: updateSelectedZones,
+    onExemptChange: updateSelectedZoneExempt,
+  };
 
   // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 바인딩(버스 →
   // 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는 동안 항상 켜 둔다.

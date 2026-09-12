@@ -7,6 +7,7 @@ import {
 } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
+import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
 import {
   createModelZone,
@@ -36,6 +37,8 @@ const NO_ZONES: SavedModelZone[] = [];
 export interface ZoneSectionProps {
   model: SavedModelInfo;
   onUpdate: (updater: ZonesUpdater) => void;
+  /** "다른 영역 감지에서 제외"(zoneExempt) 토글. */
+  onExemptChange: (exempt: boolean) => void;
   t: InspectorT;
 }
 
@@ -140,8 +143,14 @@ function ZoneCard({
   );
 }
 
-export function ZoneSection({ model, onUpdate, t }: ZoneSectionProps) {
+export function ZoneSection({
+  model,
+  onUpdate,
+  onExemptChange,
+  t,
+}: ZoneSectionProps) {
   const zones = model.zones ?? NO_ZONES;
+  const exempt = model.zoneExempt === true;
 
   return (
     <div className="space-y-2">
@@ -151,6 +160,14 @@ export function ZoneSection({ model, onUpdate, t }: ZoneSectionProps) {
       <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
         {t('monitoring:inspector.zones.hint')}
       </p>
+      <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+        <Checkbox
+          checked={exempt}
+          onCheckedChange={(checked) => onExemptChange(checked === true)}
+          className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+        />
+        {t('monitoring:inspector.zones.exempt')}
+      </label>
 
       <SubHeader
         title={t('monitoring:inspector.zones.list')}

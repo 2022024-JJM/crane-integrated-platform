@@ -473,6 +473,21 @@ describe('isSceneInfoEqual — 모델 영역(zones)', () => {
     ).toBe(true);
   });
 
+  it('zoneExempt 는 true 만 상태다 — false·없음은 같고 true 는 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ zoneExempt: false })] }),
+        scene({ models: [model()] }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ zoneExempt: true })] }),
+        scene({ models: [model()] }),
+      ),
+    ).toBe(false);
+  });
+
   it('빈 배열과 필드 없음은 같다', () => {
     expect(
       isSceneInfoEqual(

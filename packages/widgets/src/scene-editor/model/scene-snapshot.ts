@@ -255,7 +255,8 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isVector3TupleEqual(a.scale, b.scale) &&
     isTagMappingListEqual(a.tagMappings, b.tagMappings) &&
     isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
-    isZoneListEqual(a.zones, b.zones)
+    isZoneListEqual(a.zones, b.zones) &&
+    (a.zoneExempt === true) === (b.zoneExempt === true)
   );
 }
 

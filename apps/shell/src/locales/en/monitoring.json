@@ -26,11 +26,12 @@
       "add": "Add zone",
       "remove": "Remove zone",
       "empty": "No zones. Press + to add a circular zone around the model.",
-      "hint": "The center follows the model origin (+offset) live.\nRadius and offset use the same units as position.\nOther models’ meshes or zones entering it are listed in the Collision tab.",
+      "hint": "Other models’ meshes or zones entering it are listed in the Collision tab.",
       "name": "Name",
       "color": "Color",
       "radius": "Radius",
-      "offset": "Offset"
+      "offset": "Offset",
+      "exempt": "Exclude from other zones"
     },
     "rigging": {
       "title": "Rigging",

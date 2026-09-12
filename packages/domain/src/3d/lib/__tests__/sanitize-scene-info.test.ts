@@ -428,6 +428,25 @@ describe('sanitizeSceneInfo — 조명 (기본값이면 필드 생략)', () => {
 });
 
 describe('sanitizeSceneInfo — 모델 영역(zones)', () => {
+  it('zoneExempt 는 true 만 남긴다(문자열·false·없음은 undefined)', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({ id: 'a', zoneExempt: true }),
+          model({ id: 'b', zoneExempt: 'yes' }),
+          model({ id: 'c', zoneExempt: false }),
+          model({ id: 'd' }),
+        ],
+      }),
+    );
+    expect(out.models.map((m) => m.zoneExempt)).toEqual([
+      true,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
   it('유효 항목만 남기고 색을 정규화하며, 전부 무효면 필드를 생략한다', () => {
     const out = sanitizeSceneInfo(
       scene({

@@ -64,6 +64,8 @@ interface UseSelectedSceneObjectEditorResult {
   updateSelectedZones: (
     updater: (zones: SavedModelZone[]) => SavedModelZone[],
   ) => void;
+  /** 선택 모델을 다른 모델 영역 감지에서 제외(zoneExempt, true-only). */
+  updateSelectedZoneExempt: (exempt: boolean) => void;
   updateSelectedOpacity: (value: number) => void;
   updateSelectedLabelHidden: (hidden: boolean) => void;
   updateSelectedTransform: (
@@ -612,6 +614,20 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedZoneExempt = (exempt: boolean) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) return model;
+          if ((model.zoneExempt === true) === exempt) return model;
+          return { ...model, zoneExempt: exempt ? true : undefined };
+        }),
+      };
+    });
+  };
+
   // ==== 리깅 ====
 
   /**
@@ -732,6 +748,7 @@ export function useSelectedSceneObjectEditor({
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedZones,
+    updateSelectedZoneExempt,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,

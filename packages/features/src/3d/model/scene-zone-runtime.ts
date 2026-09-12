@@ -496,6 +496,8 @@ export class SceneZoneRuntime {
     for (const zone of zones) {
       for (const target of entries) {
         if (target.id === zone.owner.id) continue;
+        // 제외(zoneExempt) 모델은 침범자가 되지 않는다 — 자기 영역은 그대로.
+        if (target.model.zoneExempt === true) continue;
         const key = `${zone.key}|${target.id}`;
         const prev = this.modelJobsByKey.get(key);
         const job: ZoneModelJob = {
@@ -526,8 +528,11 @@ export class SceneZoneRuntime {
     // 보면 이름만 바꿔도 exit+enter 가 난다. 영역↔영역은 한 번만.
     const liveZoneKeys = new Set<string>();
     const liveModelIds = new Set<string>();
+    /** 침범자로 남을 수 있는 모델 — 제외(zoneExempt)로 바뀐 모델은 합성 exit. */
+    const liveIntruderIds = new Set<string>();
     for (const m of this.models) {
       liveModelIds.add(m.id);
+      if (m.zoneExempt !== true) liveIntruderIds.add(m.id);
       for (const z of m.zones ?? []) {
         if (isValidZoneRadius(z.radius)) liveZoneKeys.add(zoneKey(m.id, z.id));
       }
@@ -535,7 +540,7 @@ export class SceneZoneRuntime {
     const isLive = (intruderId: string): boolean =>
       isZoneIntruderId(intruderId)
         ? liveZoneKeys.has(intruderId)
-        : liveModelIds.has(intruderId);
+        : liveIntruderIds.has(intruderId);
     for (const [key, inside] of this.insideByKey) {
       const zoneLive = liveZoneKeys.has(key);
       if (inside.size === 0) {
