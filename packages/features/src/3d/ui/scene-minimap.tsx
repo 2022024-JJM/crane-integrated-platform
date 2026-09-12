@@ -109,6 +109,15 @@ interface DrawnMarker {
   px: number;
   py: number;
   name: string;
+  modelId: string;
+}
+
+interface DrawnZone {
+  px: number;
+  py: number;
+  radiusPx: number;
+  zoneKey: string;
+  label: string;
 }
 
 const NO_STATUSES: RuntimeStatusRecord = Object.freeze({});
@@ -138,6 +147,7 @@ export function SceneMinimap({
   const draggingRef = useRef(false);
   const hoverRef = useRef<{ px: number; py: number } | null>(null);
   const markersRef = useRef<DrawnMarker[]>([]);
+  const zonesRef = useRef<DrawnZone[]>([]);
   const cacheRef = useRef<MarkerCache>({
     offsetByUuid: new Map(),
     box: new Box3(),
@@ -162,7 +172,13 @@ export function SceneMinimap({
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
       // 영역 원은 마커 아래.
-      drawZones(context, drawFrame, scale, sceneInfo, cacheRef.current);
+      zonesRef.current = drawZones(
+        context,
+        drawFrame,
+        scale,
+        sceneInfo,
+        cacheRef.current,
+      );
       markersRef.current = drawMarkers(
         context,
         drawFrame,
@@ -174,7 +190,15 @@ export function SceneMinimap({
         cacheRef.current,
       );
       drawCamera(context, drawFrame, scale, getPose());
-      drawHoverLabel(context, scale, markersRef.current, hoverRef.current);
+      const hit = resolveHover(
+        markersRef.current,
+        zonesRef.current,
+        hoverRef.current,
+        scale,
+      );
+      drawHoverLabel(context, scale, hit);
+      // 마커 위에서는 클릭이 포커스라 커서로 알려 준다.
+      canvas.style.cursor = hit?.kind === 'marker' ? 'pointer' : 'crosshair';
     };
 
     // prop 이 바뀌면 인터벌을 다시 건다 — 씬·알람·getPose 는 드물게 바뀌어
@@ -214,8 +238,25 @@ export function SceneMinimap({
   const handlePointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
     if (event.button !== 0) return;
     const pixel = localPixel(event);
-    if (!pixel) return;
+    if (!pixel || !frame) return;
     event.preventDefault();
+    // 마커를 누르면 카메라 팬이 아니라 그 모델 포커스(씬 안 클릭과 같은
+    // 경로 — 포커스 중인 모델을 다시 누르면 돌아가기). 드래그는 시작하지
+    // 않는다.
+    const hit = resolveHover(
+      markersRef.current,
+      zonesRef.current,
+      pixel,
+      frame.pxWidth / MINIMAP_CSS_WIDTH,
+    );
+    if (hit?.kind === 'marker') {
+      const focus = useObjectFocusStore.getState();
+      if (focus.focusedModelId === hit.marker.modelId) focus.exitFocus();
+      else if (focus.focusedModelId === null) {
+        focus.enterFocus(hit.marker.modelId, getPose());
+      }
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     draggingRef.current = true;
     moveCameraTo(pixel.px, pixel.py);
@@ -453,8 +494,9 @@ function drawZones(
   scale: number,
   sceneInfo: SavedSceneInfo | null,
   cache: MarkerCache,
-): void {
-  if (!useSceneZoneStore.getState().enabled) return;
+): DrawnZone[] {
+  const drawn: DrawnZone[] = [];
+  if (!useSceneZoneStore.getState().enabled) return drawn;
   const unitsPerPx = frame.worldWidth / frame.pxWidth;
   for (const model of sceneInfo?.models ?? []) {
     if (!model.zones?.length) continue;
@@ -470,7 +512,8 @@ function drawZones(
         cache.position.x,
         cache.position.z,
       );
-      const intruded = sceneZoneRuntime.isIntruded(zoneKey(model.id, zone.id));
+      const key = zoneKey(model.id, zone.id);
+      const intruded = sceneZoneRuntime.isIntruded(key);
       context.beginPath();
       context.arc(px, py, radiusPx, 0, Math.PI * 2);
       context.fillStyle = zoneColorWithAlpha(zone.color, intruded ? 0.3 : 0.12);
@@ -478,8 +521,16 @@ function drawZones(
       context.lineWidth = (intruded ? 2 : 1) * scale;
       context.strokeStyle = zone.color;
       context.stroke();
+      drawn.push({
+        px,
+        py,
+        radiusPx,
+        zoneKey: key,
+        label: `${model.equipName || model.id} · ${zone.name || zone.id}`,
+      });
     }
   }
+  return drawn;
 }
 
 function drawMarkers(
@@ -520,7 +571,12 @@ function drawMarkers(
     context.lineWidth = (isFocused ? 2 : 1) * scale;
     context.strokeStyle = isFocused ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
     context.stroke();
-    drawn.push({ px, py, name: model.equipName || model.id });
+    drawn.push({
+      px,
+      py,
+      name: model.equipName || model.id,
+      modelId: model.id,
+    });
   }
   return drawn;
 }
@@ -580,36 +636,74 @@ function drawCamera(
   context.stroke();
 }
 
-function drawHoverLabel(
-  context: CanvasRenderingContext2D,
-  scale: number,
+type HoverHit =
+  | { kind: 'marker'; marker: DrawnMarker }
+  | { kind: 'zone'; zone: DrawnZone };
+
+/**
+ * 포인터 아래의 것 — 마커(반경 안 최근접)가 우선, 없으면 그 점을 품는 영역
+ * 원 중 가장 작은 것(작은 원이 큰 원 안에 있을 때 안쪽을 고른다).
+ */
+function resolveHover(
   markers: DrawnMarker[],
+  zones: DrawnZone[],
   hover: { px: number; py: number } | null,
-): void {
-  if (!hover) return;
+  scale: number,
+): HoverHit | null {
+  if (!hover) return null;
   const index = nearestMarkerIndex(
     markers,
     hover.px,
     hover.py,
     MARKER_HIT_RADIUS_PX * scale,
   );
-  if (index < 0) return;
-  const marker = markers[index];
+  if (index >= 0) return { kind: 'marker', marker: markers[index] };
+  let best: DrawnZone | null = null;
+  for (const zone of zones) {
+    const dSq = (zone.px - hover.px) ** 2 + (zone.py - hover.py) ** 2;
+    if (dSq > zone.radiusPx * zone.radiusPx) continue;
+    if (!best || zone.radiusPx < best.radiusPx) best = zone;
+  }
+  return best ? { kind: 'zone', zone: best } : null;
+}
+
+function drawHoverLabel(
+  context: CanvasRenderingContext2D,
+  scale: number,
+  hit: HoverHit | null,
+): void {
+  if (!hit) return;
+  let text: string;
+  let px: number;
+  let py: number;
+  if (hit.kind === 'marker') {
+    text = hit.marker.name;
+    px = hit.marker.px;
+    py = hit.marker.py;
+  } else {
+    // 침범 중이면 침범자 이름을 이어 붙인다 — 미니맵에서 바로 "누가" 를 읽는다.
+    const intrusion = useSceneZoneStore
+      .getState()
+      .intrusions.find((i) => i.zoneKey === hit.zone.zoneKey);
+    text = intrusion
+      ? `${hit.zone.label} ← ${intrusion.intruders.map((i) => i.name).join(', ')}`
+      : hit.zone.label;
+    px = hit.zone.px;
+    py = hit.zone.py;
+  }
   const fontPx = 11 * scale;
   context.font = `${fontPx}px system-ui, sans-serif`;
   context.textBaseline = 'middle';
   const paddingX = 4 * scale;
-  const textWidth = context.measureText(marker.name).width;
+  const textWidth = context.measureText(text).width;
   const boxWidth = textWidth + paddingX * 2;
   const boxHeight = fontPx + 4 * scale;
   // 오른쪽에 자리가 없으면 왼쪽에 그린다.
-  const fitsRight = marker.px + 8 * scale + boxWidth <= context.canvas.width;
-  const boxX = fitsRight
-    ? marker.px + 8 * scale
-    : marker.px - 8 * scale - boxWidth;
-  const boxY = marker.py - boxHeight / 2;
+  const fitsRight = px + 8 * scale + boxWidth <= context.canvas.width;
+  const boxX = fitsRight ? px + 8 * scale : px - 8 * scale - boxWidth;
+  const boxY = py - boxHeight / 2;
   context.fillStyle = 'rgba(0, 0, 0, 0.75)';
   context.fillRect(boxX, boxY, boxWidth, boxHeight);
   context.fillStyle = '#ffffff';
-  context.fillText(marker.name, boxX + paddingX, marker.py);
+  context.fillText(text, boxX + paddingX, py);
 }

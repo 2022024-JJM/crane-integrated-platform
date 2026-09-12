@@ -31,7 +31,12 @@
     "brandAccent": "OPS",
     "brandIndoorshopPrimary": "HANWHA OCEANUS",
     "brandIndoorshopAccent": "Effectus Officinae Interioris",
-    "siteType": "Genus Loci"
+    "siteType": "Genus Loci",
+    "alertSection": "Nuntii monitionum",
+    "alertSound": "Sonus monitionis",
+    "alertBrowser": "Nuntii navigatri",
+    "alertBrowserDenied": "Nuntii navigatri prohibiti sunt. In optionibus navigatri permitte.",
+    "alertBrowserUnsupported": "Hic navigator nuntios non sustinet."
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Oceanus",
@@ -235,7 +240,8 @@
       "time": "Tempus",
       "device": "Instrumentum",
       "message": "Nuntius"
-    }
+    },
+    "zoneIntrusion": "Invasio regionis"
   },
   "regions": {
     "dock1": {

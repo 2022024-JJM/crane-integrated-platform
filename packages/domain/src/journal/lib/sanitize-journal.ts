@@ -2,6 +2,8 @@ import type {
   AlarmJournalEntry,
   CollisionJournalEntry,
   CollisionJournalParty,
+  StatusJournalEntry,
+  ZoneJournalEntry,
 } from '../model/types';
 
 /**
@@ -75,4 +77,53 @@ export function sanitizeAlarmJournalEntry(
     return null;
   }
   return raw as AlarmJournalEntry;
+}
+
+const ZONE_LEVELS = new Set(['warn', 'stop']);
+const RUNTIME_STATUSES = new Set(['running', 'idle', 'offline', 'unknown']);
+
+export function sanitizeZoneJournalEntry(
+  raw: unknown,
+): ZoneJournalEntry | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const entry = raw as Record<string, unknown>;
+  if (
+    !isNonEmptyString(entry.key) ||
+    !isFiniteNumber(entry.at) ||
+    !(entry.kind === 'enter' || entry.kind === 'exit') ||
+    !(entry.regionId === null || isNonEmptyString(entry.regionId)) ||
+    !isNonEmptyString(entry.zoneKey) ||
+    !isNonEmptyString(entry.ownerId) ||
+    typeof entry.ownerName !== 'string' ||
+    typeof entry.zoneName !== 'string' ||
+    typeof entry.level !== 'string' ||
+    !ZONE_LEVELS.has(entry.level) ||
+    !isNonEmptyString(entry.intruderId) ||
+    typeof entry.intruderName !== 'string' ||
+    !(entry.durationMs === null || isFiniteNumber(entry.durationMs))
+  ) {
+    return null;
+  }
+  return raw as ZoneJournalEntry;
+}
+
+export function sanitizeStatusJournalEntry(
+  raw: unknown,
+): StatusJournalEntry | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const entry = raw as Record<string, unknown>;
+  if (
+    !isNonEmptyString(entry.key) ||
+    !isFiniteNumber(entry.at) ||
+    typeof entry.regionId !== 'string' ||
+    !isNonEmptyString(entry.modelId) ||
+    typeof entry.equipName !== 'string' ||
+    typeof entry.from !== 'string' ||
+    !RUNTIME_STATUSES.has(entry.from) ||
+    typeof entry.to !== 'string' ||
+    !RUNTIME_STATUSES.has(entry.to)
+  ) {
+    return null;
+  }
+  return raw as StatusJournalEntry;
 }

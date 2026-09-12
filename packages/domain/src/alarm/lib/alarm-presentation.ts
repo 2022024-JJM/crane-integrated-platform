@@ -13,6 +13,7 @@ const alarmEventTranslationKey: Record<AlarmEventType, string> = {
   e_stop_on: 'common:alarms.emergencyStopTriggered',
   crane_system_error: 'common:alarms.workAreaChanged',
   unknown_realtime_alarm: 'common:alarms.workAreaChanged',
+  zone_intrusion: 'common:alarms.zoneIntrusion',
 };
 
 const alarmSeverityLabelMap = {

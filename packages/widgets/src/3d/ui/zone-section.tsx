@@ -9,10 +9,13 @@ import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import { Input } from '@crane/ui/atoms/input';
+import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
   createModelZone,
   measureModelFootprintRadius,
   withZoneOffsetAxis,
+  displayMetersToUnits,
+  unitsToDisplayMeters,
 } from '../lib/zone-editor';
 import { FIELD_INPUT } from './inspector-field-classes';
 import {
@@ -25,8 +28,9 @@ import {
 /**
  * 인스펙터 "영역" 탭 — 모델 기준 원형 영역 목록. 태그 매핑 탭과 같은 문법:
  * `+` 가 기본값 카드(반경 = 모델 가로 크기·미사용 프리셋 색·빈 이름)를 만들고
- * 카드 안에서 이름·색·반경·오프셋을 고친다. 단위 표기 " m" 는 트랜스폼 위치
- * 입력과 같다(실제 단위는 씬 unit — position 과 동일). 편집은 전부 onUpdate(updater) 한 채널 —
+ * 카드 안에서 이름·색·반경·오프셋을 고친다. 반경·오프셋은 m 로 보여 주고
+ * 저장은 씬 unit 이다(metersPerUnit 환산 — 옥포는 11.7 m/unit 이라 unit 을
+ * 그대로 " m" 로 보이면 틀린다). 편집은 전부 onUpdate(updater) 한 채널 —
  * undo/redo·dirty 에 잡힌다. 중심은 모델 루트(+오프셋)라 카드에 위치 입력이
  * 없다. 링은 캔버스가 선택 모델에 대해 토글과 무관하게 그린다.
  *
@@ -43,6 +47,11 @@ export interface ZoneSectionProps {
   onUpdate: (updater: ZonesUpdater) => void;
   /** "영역 감지에서 제외"(zoneExempt) 토글. */
   onExemptChange: (exempt: boolean) => void;
+  /**
+   * 씬 1 unit = 몇 m(domain getSceneMetersPerUnit). 반경·오프셋을 m 로 보여
+   * 주고 입력을 unit 으로 되돌린다 — 저장값은 항상 unit. 기본 1.
+   */
+  metersPerUnit?: number;
   t: InspectorT;
 }
 
@@ -56,11 +65,15 @@ function AxisNumber({
   value,
   onChange,
   disabled,
+  metersPerUnit,
 }: {
   axis: 'x' | 'z';
+  /** 씬 unit. */
   value: number;
+  /** 씬 unit 으로 돌려준다. */
   onChange: (value: number | undefined) => void;
   disabled?: boolean;
+  metersPerUnit: number;
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1">
@@ -68,11 +81,17 @@ function AxisNumber({
         {axis}
       </span>
       <NumberField
-        value={value}
+        value={unitsToDisplayMeters(value, metersPerUnit)}
         step={0.5}
         unit=" m"
         disabled={disabled}
-        onChange={onChange}
+        onChange={(meters) =>
+          onChange(
+            meters === undefined
+              ? undefined
+              : displayMetersToUnits(meters, metersPerUnit),
+          )
+        }
       />
     </div>
   );
@@ -84,6 +103,7 @@ function ZoneCard({
   disabled,
   onChange,
   onRemove,
+  metersPerUnit,
   t,
 }: {
   zone: SavedModelZone;
@@ -92,6 +112,7 @@ function ZoneCard({
   disabled: boolean;
   onChange: (next: SavedModelZone) => void;
   onRemove: () => void;
+  metersPerUnit: number;
   t: InspectorT;
 }) {
   const [dx, dz] = zone.offset ?? [0, 0];
@@ -137,29 +158,58 @@ function ZoneCard({
       </div>
       <Field label={t('monitoring:inspector.zones.radius')}>
         <NumberField
-          value={zone.radius}
+          value={unitsToDisplayMeters(zone.radius, metersPerUnit)}
           step={0.5}
           unit=" m"
           disabled={disabled}
-          onChange={(value) => {
+          onChange={(meters) => {
             // 비우거나 0 이하는 무시 — sanitize 가 그 항목을 버리므로 여기서 막는다.
-            if (value === undefined || !Number.isFinite(value) || value <= 0)
+            if (meters === undefined || !Number.isFinite(meters) || meters <= 0)
               return;
-            onChange({ ...zone, radius: value });
+            onChange({
+              ...zone,
+              radius: displayMetersToUnits(meters, metersPerUnit),
+            });
           }}
         />
+      </Field>
+      <Field label={t('monitoring:inspector.zones.level')}>
+        <ToggleGroup
+          value={[zone.level === 'stop' ? 'stop' : 'warn']}
+          onValueChange={(next) => {
+            const choice = next[0];
+            if (choice !== 'stop' && choice !== 'warn') return;
+            // 'warn' 은 기본값이라 필드를 지운다(저장본에 남기지 않음).
+            const rest: SavedModelZone = { ...zone };
+            delete rest.level;
+            onChange(choice === 'stop' ? { ...rest, level: 'stop' } : rest);
+          }}
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          aria-label={t('monitoring:inspector.zones.level')}
+        >
+          <ToggleGroupItem value="warn" className="h-6 px-2 text-[10px]">
+            {t('monitoring:inspector.zones.levelWarn')}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="stop" className="h-6 px-2 text-[10px]">
+            {t('monitoring:inspector.zones.levelStop')}
+          </ToggleGroupItem>
+        </ToggleGroup>
       </Field>
       <Field label={t('monitoring:inspector.zones.offset')}>
         <AxisNumber
           axis="x"
           value={dx}
           disabled={disabled}
+          metersPerUnit={metersPerUnit}
           onChange={(value) => onChange(withZoneOffsetAxis(zone, 'x', value))}
         />
         <AxisNumber
           axis="z"
           value={dz}
           disabled={disabled}
+          metersPerUnit={metersPerUnit}
           onChange={(value) => onChange(withZoneOffsetAxis(zone, 'z', value))}
         />
       </Field>
@@ -171,6 +221,7 @@ export function ZoneSection({
   model,
   onUpdate,
   onExemptChange,
+  metersPerUnit = 1,
   t,
 }: ZoneSectionProps) {
   const zones = model.zones ?? NO_ZONES;
@@ -235,6 +286,7 @@ export function ZoneSection({
         <div className="space-y-1.5">
           {zones.map((zone, index) => (
             <ZoneCard
+              metersPerUnit={metersPerUnit}
               key={zone.id}
               zone={zone}
               index={index}

@@ -31,7 +31,12 @@
     "brandAccent": "OPS",
     "brandIndoorshopPrimary": "HANWHA OCEAN",
     "brandIndoorshopAccent": "Indoor Shop Performance",
-    "siteType": "Site Type"
+    "siteType": "Site Type",
+    "alertSection": "Alert notifications",
+    "alertSound": "Alert sound",
+    "alertBrowser": "Browser notifications",
+    "alertBrowserDenied": "Browser notifications are blocked. Allow them in the browser settings.",
+    "alertBrowserUnsupported": "This browser does not support notifications."
   },
   "siteType": {
     "hanwha-ocean": "Hanwha Ocean",
@@ -235,7 +240,8 @@
       "time": "Time",
       "device": "Device",
       "message": "Message"
-    }
+    },
+    "zoneIntrusion": "Zone intrusion"
   },
   "regions": {
     "dock1": {

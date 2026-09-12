@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   SilhouetteOutlineWarmup,
   modelObjectRegistry,
+  zoneCenterWorld,
   resolveCameraBoundsMaps,
   resolveEnvironmentFileUrl,
   unionObjectBounds,
@@ -26,9 +27,11 @@ import {
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { SavedSceneInfo } from '@crane/domain/3d';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
+import { Vector3 } from 'three';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
 import {
@@ -41,6 +44,7 @@ import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
+import { SceneZoneAlertOverlay } from './scene-zone-alert-overlay';
 import { SceneZoneDetector } from './scene-zone-detector';
 import { SceneZoneMenu } from './scene-zone-menu';
 import { SceneZoneRings } from './scene-zone-rings';
@@ -67,6 +71,7 @@ import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
 import { useModelRuntimeStatuses } from '../model/use-model-runtime-statuses';
+import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
@@ -149,6 +154,11 @@ export function Monitoring3dView({
   const { sceneInfo, isLoading } = useSceneData(regionId, mode, {
     autoStartSimulation,
   });
+  // 콜백(영역 보기)이 최신 씬을 읽도록 — 렌더 중 ref 쓰기 금지라 effect 로.
+  const useSceneInfoStoreRef = useRef<SavedSceneInfo | null>(null);
+  useEffect(() => {
+    useSceneInfoStoreRef.current = sceneInfo;
+  }, [sceneInfo]);
   // 캔버스는 항상 frameloop='demand' 다 — 프레임은 SceneFrameGovernor 가
   // 애니메이션 소스(재생·수신·기즈모)가 있을 때 30fps 로, 정지 씬은 조작
   // invalidate 만으로 만든다(2026-09-11, 유휴 발열 절감). 바다(EXR 배경)
@@ -163,6 +173,8 @@ export function Monitoring3dView({
   // 모델별 운전 상태(태그 활동 기반) — 라벨 점·미니맵 마커·HUD 가 공유한다.
   // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정).
   const runtimeStatuses = useModelRuntimeStatuses(sceneInfo);
+  // 통신두절 진입·복귀를 저널에 남긴다(가동↔대기는 제외).
+  useStatusJournalSync(regionId, sceneInfo, runtimeStatuses);
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
@@ -211,6 +223,28 @@ export function Monitoring3dView({
     const pose = computeCollisionViewPose(
       record.contactPoint,
       collisionViewRadius(resolveRecordNodes([record.a, record.b])),
+      sceneControllerRef.current?.getPose() ?? null,
+    );
+    sceneControllerRef.current?.moveTo(pose.position, pose.target);
+  }, []);
+
+  // "영역 보기" — 영역 중심을 타깃으로 반경만큼 물러난다(충돌 지점 보기와 같은
+  // 수식). 영역 중심은 소유 모델 루트 월드 위치 + 오프셋(zoneCenterWorld).
+  const handleViewZone = useCallback((key: string) => {
+    const info = useSceneInfoStoreRef.current;
+    const [modelId, zoneId] = key.split('#');
+    const model = info?.models.find((m) => m.id === modelId);
+    const zone = model?.zones?.find((z) => z.id === zoneId);
+    const object = modelObjectRegistry.get(modelId);
+    if (!model || !zone || !object) return;
+    const center = zoneCenterWorld(
+      object.matrixWorld,
+      zone.offset,
+      new Vector3(),
+    );
+    const pose = computeCollisionViewPose(
+      [center.x, center.y, center.z],
+      Math.max(zone.radius * 2.5, 20),
       sceneControllerRef.current?.getPose() ?? null,
     );
     sceneControllerRef.current?.moveTo(pose.position, pose.target);
@@ -307,14 +341,12 @@ export function Monitoring3dView({
             <SceneLoadingOverlay ready={sceneReady} />
             {topLeftOverlay}
             {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
+            {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
+                알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
             {collisionActive ? (
-              <SceneCollisionAlertOverlay
-                runner={collisionRunner}
-                onViewCollision={handleViewCollision}
-                // 독 배치는 상단 중앙에 관제 HUD 가 있어 그 아래로 내린다.
-                bannerClassName={isDock ? 'top-16' : undefined}
-              />
+              <SceneCollisionAlertOverlay runner={collisionRunner} />
             ) : null}
+            <SceneZoneAlertOverlay />
             {overlayExtras}
             {/* 2D 미니맵(좌하단) — 독 배치(실시간 모니터링 화면)에서만. 배경은
                 Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링. */}
@@ -333,6 +365,8 @@ export function Monitoring3dView({
                 regionId={regionId}
                 runtimeStatuses={runtimeStatuses}
                 alarmsByCraneId={alarmsByCraneId}
+                sceneInfo={sceneInfo}
+                mode={mode}
               />
             ) : null}
             {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
@@ -359,7 +393,7 @@ export function Monitoring3dView({
                 />
               ) : null}
               {/* 영역 침범 — 충돌과 별도 스토어·의미라 아이콘도 따로 둔다. */}
-              <SceneZoneMenu />
+              <SceneZoneMenu onViewZone={handleViewZone} />
               <SceneDockRailSeparator />
               {toolbarExtras}
               <SceneMinimapToggle />

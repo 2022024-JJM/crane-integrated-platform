@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Alarm, AlarmSeverity } from '@crane/domain/alarm';
 import { getCraneIdsByRegion } from '@crane/domain/crane';
-import { useRealtimeAlarmStore } from './use-realtime-alarm-store';
+import { notifyAlert } from '@crane/core/lib/alert-notifications';
+import {
+  isAlarmInRegion,
+  useRealtimeAlarmStore,
+} from './use-realtime-alarm-store';
 
 const AUTO_DISMISS_MS = 5000;
 
@@ -13,8 +17,15 @@ const SEVERITY_RANK: Record<AlarmSeverity, number> = {
   info: 3,
 };
 
-function shouldNotifyForBanner(severity: AlarmSeverity) {
-  return severity === 'critical' || severity === 'high';
+/**
+ * 배너 대상 — critical·high. 영역 침범 로컬 알람은 제외한다: 3D 화면이 자체
+ * 경보 배너(SceneZoneAlertOverlay)를 띄우므로 같은 사건이 두 배너로 겹친다.
+ */
+function shouldNotifyForBanner(alarm: Alarm) {
+  return (
+    (alarm.severity === 'critical' || alarm.severity === 'high') &&
+    alarm.eventType !== 'zone_intrusion'
+  );
 }
 
 export interface CriticalAlarmBannerState {
@@ -53,9 +64,9 @@ export function useCriticalAlarmBanner(
 
     for (const candidate of Object.values(activeAlarms)) {
       if (
-        !allowedCraneIdsRef.has(candidate.craneId) ||
+        !isAlarmInRegion(candidate, regionId, allowedCraneIdsRef) ||
         !candidate.active ||
-        !shouldNotifyForBanner(candidate.severity)
+        !shouldNotifyForBanner(candidate)
       ) {
         continue;
       }
@@ -70,9 +81,9 @@ export function useCriticalAlarmBanner(
     const seen = seenIdsRef.current;
     for (const candidate of Object.values(activeAlarms)) {
       if (
-        !allowedCraneIdsRef.has(candidate.craneId) ||
+        !isAlarmInRegion(candidate, regionId, allowedCraneIdsRef) ||
         !candidate.active ||
-        !shouldNotifyForBanner(candidate.severity) ||
+        !shouldNotifyForBanner(candidate) ||
         seen.has(candidate.id)
       ) {
         continue;
@@ -83,7 +94,8 @@ export function useCriticalAlarmBanner(
       }
       // severity 우선 (critical > high), 같으면 더 최근 것 우선.
       const severityDiff =
-        SEVERITY_RANK[candidate.severity] - SEVERITY_RANK[bannerCandidate.severity];
+        SEVERITY_RANK[candidate.severity] -
+        SEVERITY_RANK[bannerCandidate.severity];
       if (severityDiff < 0) {
         bannerCandidate = candidate;
       } else if (
@@ -101,6 +113,16 @@ export function useCriticalAlarmBanner(
     }
 
     setAlarm(bannerCandidate);
+    // 배너 밖 채널(소리·브라우저 알림). toast 는 배너가 이미 화면을 차지해
+    // 띄우지 않는다.
+    notifyAlert({
+      id: `alarm:${bannerCandidate.id}`,
+      severity:
+        bannerCandidate.severity === 'critical' ? 'critical' : 'warning',
+      title: `${bannerCandidate.craneName} — ${bannerCandidate.alarmName ?? bannerCandidate.eventType}`,
+      description: bannerCandidate.alarmDescription ?? undefined,
+      toast: false,
+    });
 
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);

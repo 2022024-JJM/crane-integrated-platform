@@ -81,6 +81,18 @@ export { SceneMinimap } from './ui/scene-minimap';
 export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
+export { SceneZoneAlertOverlay } from './ui/scene-zone-alert-overlay';
+export { SceneAlertNotifier } from './ui/scene-alert-notifier';
+export { ZoneJournalSync } from './ui/zone-journal-sync';
+export { useZoneJournalStore } from './model/use-zone-journal-store';
+export { useStatusJournalStore } from './model/use-status-journal-store';
+export { diffZoneIntrusions, findRegionOfModel } from './lib/zone-journal-map';
+export {
+  resolveConnectionView,
+  useRealtimeConnectionState,
+  type SceneConnectionMode,
+  type SceneConnectionView,
+} from './model/use-realtime-connection-state';
 export { useModelRuntimeStatuses } from './model/use-model-runtime-statuses';
 export {
   RUNNING_WINDOW_MS,

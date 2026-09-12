@@ -60,6 +60,8 @@ export function sanitizeModelZones(raw: unknown): SavedModelZone[] | undefined {
     };
     const offset = sanitizeZoneOffset(z.offset);
     if (offset) zone.offset = offset;
+    // 등급은 'stop' 만 기록한다 — 그 외(누락·'warn'·오타)는 기본(경보만).
+    if (z.level === 'stop') zone.level = 'stop';
     out.push(zone);
   }
   return out.length > 0 ? out : undefined;

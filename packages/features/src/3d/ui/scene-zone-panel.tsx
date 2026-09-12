@@ -1,5 +1,7 @@
+import { Crosshair } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@crane/ui/atoms/button';
 import { Switch } from '@crane/ui/atoms/switch';
 import {
   useSceneZoneStore,
@@ -14,13 +16,24 @@ import {
  * 배지 토글은 감지와 독립이다 — 감지는 계속 돌고 링도 그대로이며 배지만
  * 사라진다.
  */
-export const SceneZonePanel = memo(function SceneZonePanel() {
+export const SceneZonePanel = memo(function SceneZonePanel({
+  onViewZone,
+}: {
+  /**
+   * 침범 행의 [영역 보기] — 영역 중심으로 카메라 이동(모니터링 독 팝업이
+   * 넘긴다). 없으면(에디터 팔레트) 버튼을 두지 않는다.
+   */
+  onViewZone?: (zoneKey: string) => void;
+} = {}) {
   const { t } = useTranslation();
   const enabled = useSceneZoneStore((s) => s.enabled);
   const labelsVisible = useSceneZoneStore((s) => s.labelsVisible);
   const intrusions = useSceneZoneStore((s) => s.intrusions);
   const setEnabled = useSceneZoneStore((s) => s.setEnabled);
   const setLabelsVisible = useSceneZoneStore((s) => s.setLabelsVisible);
+  const stopOnIntrusion = useSceneZoneStore((s) => s.stopOnIntrusion);
+  const setStopOnIntrusion = useSceneZoneStore((s) => s.setStopOnIntrusion);
+  const held = useSceneZoneStore((s) => s.held);
 
   return (
     <div className="flex flex-col gap-2">
@@ -45,6 +58,25 @@ export const SceneZonePanel = memo(function SceneZonePanel() {
         />
       </label>
 
+      <label className="flex items-center justify-between gap-2 text-[11px]">
+        <span className="font-medium">
+          {t('monitoring:editor.zones.stopOnIntrusion')}
+        </span>
+        <Switch
+          checked={stopOnIntrusion}
+          onCheckedChange={setStopOnIntrusion}
+          aria-label={t('monitoring:editor.zones.stopOnIntrusion')}
+        />
+      </label>
+      <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
+        {t('monitoring:editor.zones.stopHint')}
+      </p>
+      {held ? (
+        <p className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400">
+          {t('monitoring:editor.zones.paused')}
+        </p>
+      ) : null}
+
       <p className="text-muted-foreground pt-1 text-[10px] font-semibold tracking-[0.14em] uppercase">
         {t('monitoring:editor.zones.current')}
       </p>
@@ -55,7 +87,11 @@ export const SceneZonePanel = memo(function SceneZonePanel() {
       ) : (
         <ul className="max-h-40 space-y-1 overflow-y-auto">
           {intrusions.map((intrusion) => (
-            <ZoneIntrusionRow key={intrusion.zoneKey} intrusion={intrusion} />
+            <ZoneIntrusionRow
+              key={intrusion.zoneKey}
+              intrusion={intrusion}
+              onView={onViewZone}
+            />
           ))}
         </ul>
       )}
@@ -73,22 +109,57 @@ function ZoneDot({ color }: { color: string }) {
   );
 }
 
-function ZoneIntrusionRow({ intrusion }: { intrusion: ZoneIntrusion }) {
+function ZoneIntrusionRow({
+  intrusion,
+  onView,
+}: {
+  intrusion: ZoneIntrusion;
+  onView?: (zoneKey: string) => void;
+}) {
+  const { t } = useTranslation();
   // 이름은 추가 시 "영역 n" 으로 채워져 비는 일이 드물다 — 비웠으면 id.
   const zoneName = intrusion.zoneName || intrusion.zoneId;
   return (
     <li className="border-border bg-muted/30 flex items-start gap-1.5 rounded-md border p-1.5">
       <ZoneDot color={intrusion.color} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium">
-          {intrusion.ownerName}
-          <span className="text-muted-foreground mx-1">·</span>
-          {zoneName}
+        <p className="flex items-center gap-1 truncate text-[11px] font-medium">
+          <span className="truncate">
+            {intrusion.ownerName}
+            <span className="text-muted-foreground mx-1">·</span>
+            {zoneName}
+          </span>
+          <span
+            className={
+              intrusion.level === 'stop'
+                ? 'shrink-0 rounded bg-red-500/15 px-1 text-[9px] font-semibold text-red-600 dark:text-red-400'
+                : 'shrink-0 rounded bg-amber-500/15 px-1 text-[9px] font-semibold text-amber-700 dark:text-amber-400'
+            }
+          >
+            {t(
+              intrusion.level === 'stop'
+                ? 'monitoring:inspector.zones.levelStop'
+                : 'monitoring:inspector.zones.levelWarn',
+            )}
+          </span>
         </p>
         <p className="text-muted-foreground truncate text-[10px]">
           ← {intrusion.intruders.map((i) => i.name).join(', ')}
         </p>
       </div>
+      {onView ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          aria-label={t('monitoring:sceneZone.viewZone')}
+          title={t('monitoring:sceneZone.viewZone')}
+          onClick={() => onView(intrusion.zoneKey)}
+        >
+          <Crosshair className="size-3.5" />
+        </Button>
+      ) : null}
     </li>
   );
 }

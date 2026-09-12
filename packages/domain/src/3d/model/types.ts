@@ -197,7 +197,15 @@ export interface SavedModelZone {
   radius: number;
   /** 루트 월드 XZ 기준 오프셋 [dx, dz](월드 축). [0, 0] 이면 생략. */
   offset?: [number, number];
+  /**
+   * 침범 시 대응 등급. 'warn'(기본, 생략) 은 화면 경보만, 'stop' 은 경보와
+   * 함께 값 생산자를 멈춘다(충돌 시 정지와 같은 경로 — 시뮬레이션은 pause,
+   * 실시간은 화면 반영 보류). 'stop' 만 저장한다.
+   */
+  level?: SavedModelZoneLevel;
 }
+
+export type SavedModelZoneLevel = 'warn' | 'stop';
 
 export interface SavedMeshOverride {
   /** ModelMesh가 렌더하는 clone root에서 target mesh까지의 안정 path. */

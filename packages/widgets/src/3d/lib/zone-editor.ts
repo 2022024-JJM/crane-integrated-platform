@@ -120,3 +120,26 @@ export function withZoneOffsetAxis(
   delete next.offset;
   return offset ? { ...next, offset } : next;
 }
+
+/**
+ * 씬 unit ↔ 표시 m. 저장값은 unit 그대로 두고 인스펙터 입력만 환산한다
+ * (옥포 11.7 m/unit — domain scene-unit-scale). 반올림은 표시 쪽 0.01 m,
+ * 저장 쪽은 환산 그대로(사용자가 친 m 값이 unit 으로 정확히 들어가게).
+ */
+export function unitsToDisplayMeters(
+  units: number,
+  metersPerUnit: number,
+): number {
+  const scale =
+    Number.isFinite(metersPerUnit) && metersPerUnit > 0 ? metersPerUnit : 1;
+  return Math.round(units * scale * 100) / 100;
+}
+
+export function displayMetersToUnits(
+  meters: number,
+  metersPerUnit: number,
+): number {
+  const scale =
+    Number.isFinite(metersPerUnit) && metersPerUnit > 0 ? metersPerUnit : 1;
+  return meters / scale;
+}

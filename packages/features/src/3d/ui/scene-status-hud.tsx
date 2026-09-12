@@ -1,6 +1,16 @@
-import { Activity, Bell, Clock, Wind, WifiOff } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  Bell,
+  Clock,
+  Radar,
+  Radio,
+  Wind,
+  WifiOff,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SavedSceneInfo } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -12,8 +22,14 @@ import {
   formatClockHm,
   resolveWindAdvisory,
 } from '../lib/wind-advisory';
+import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
+import { useSceneZoneStore } from '../model/use-scene-zone-store';
+import {
+  useRealtimeConnectionState,
+  type SceneConnectionMode,
+} from '../model/use-realtime-connection-state';
 
 /**
  * 관제 요약 HUD — 3D 캔버스 상단 중앙 한 줄.
@@ -44,6 +60,10 @@ interface SceneStatusHudProps {
   regionId: string;
   runtimeStatuses: RuntimeStatusRecord;
   alarmsByCraneId: Record<string, AlarmSeverity>;
+  /** 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. */
+  sceneInfo?: SavedSceneInfo | null;
+  /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 리플레이). */
+  mode?: SceneConnectionMode;
   /** 시각 출처 — 리플레이 화면은 'replay'. */
   timeSource?: 'clock' | 'replay';
   className?: string;
@@ -53,10 +73,27 @@ export function SceneStatusHud({
   regionId,
   runtimeStatuses,
   alarmsByCraneId,
+  sceneInfo = null,
+  mode = 'simulation',
   timeSource = 'clock',
   className,
 }: SceneStatusHudProps) {
   const { t } = useTranslation();
+  const connection = useRealtimeConnectionState(mode);
+  const collisionMode = useSceneCollisionStore((s) => s.activeMode);
+  const zonesEnabled = useSceneZoneStore((s) => s.enabled);
+  const intrusions = useSceneZoneStore((s) => s.intrusions);
+  const zoneHeld = useSceneZoneStore((s) => s.held);
+  const sceneHasZones = (sceneInfo?.models ?? []).some(
+    (m) => (m.zones?.length ?? 0) > 0,
+  );
+  const stopIntruded = intrusions.some((i) => i.level === 'stop');
+  // 값 생산이 멈춘 상태 — 가동 "0 / N" 은 오해를 부르므로 "정지 중" 으로.
+  const paused =
+    collisionMode === 'pinned' ||
+    zoneHeld !== null ||
+    connection.state === 'held' ||
+    connection.state === 'simulationPaused';
   const sun = useSceneSunState(regionId, timeSource);
   const weather = useSceneWeather(regionId);
   const counts = countRuntimeStatuses(runtimeStatuses);
@@ -117,8 +154,15 @@ export function SceneStatusHud({
         icon={<Activity className="size-3.5" aria-hidden />}
         label={t('monitoring:hud.runningShort')}
         title={t('monitoring:hud.running')}
-        value={`${counts.running} / ${counts.known}`}
-        valueClassName={counts.running > 0 ? 'text-emerald-300' : undefined}
+        value={
+          paused
+            ? t('monitoring:hud.pausedValue')
+            : `${counts.running} / ${counts.known}`
+        }
+        valueClassName={cn(
+          paused && 'text-white/50',
+          !paused && counts.running > 0 && 'text-emerald-300',
+        )}
       />
       {counts.offline > 0 ? (
         <HudCell
@@ -137,6 +181,49 @@ export function SceneStatusHud({
         valueClassName={
           topSeverity ? SEVERITY_VALUE_CLASS[topSeverity] : undefined
         }
+      />
+      {sceneHasZones && zonesEnabled ? (
+        <HudCell
+          icon={<Radar className="size-3.5" aria-hidden />}
+          label={t('monitoring:hud.intrusionsShort')}
+          title={t('monitoring:hud.intrusions')}
+          value={
+            zoneHeld
+              ? t('monitoring:hud.intrusionsPaused', {
+                  count: intrusions.length,
+                })
+              : String(intrusions.length)
+          }
+          valueClassName={cn(
+            intrusions.length > 0 && 'text-amber-300',
+            (stopIntruded || zoneHeld) && 'text-red-400',
+          )}
+        />
+      ) : null}
+      {collisionMode !== null ? (
+        <HudCell
+          icon={<AlertTriangle className="size-3.5" aria-hidden />}
+          label={t('monitoring:hud.collisionShort')}
+          title={t('monitoring:hud.collision')}
+          value={t(
+            collisionMode === 'pinned'
+              ? 'monitoring:hud.collisionPaused'
+              : 'monitoring:hud.collisionDetected',
+          )}
+          valueClassName="text-red-400"
+        />
+      ) : null}
+      <HudCell
+        icon={<Radio className="size-3.5" aria-hidden />}
+        label={t('monitoring:hud.linkShort')}
+        title={t('monitoring:hud.link')}
+        value={t(`monitoring:hud.linkState.${connection.state}`)}
+        valueClassName={cn(
+          connection.tone === 'good' && 'text-emerald-300',
+          connection.tone === 'warn' && 'text-amber-300',
+          connection.tone === 'bad' && 'text-red-400',
+          connection.tone === 'muted' && 'text-white/50',
+        )}
       />
     </div>
   );

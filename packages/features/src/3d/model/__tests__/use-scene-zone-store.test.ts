@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SavedModelInfo, SavedModelZone } from '@crane/domain/3d';
 import type { ZoneTransition } from '../scene-zone-runtime';
+import { useRealtimeStore } from '../use-realtime-store';
 import { useSceneZoneStore } from '../use-scene-zone-store';
+import { useVirtualTagStore } from '../use-virtual-tag-store';
 
 function model(id: string, equipName = id.toUpperCase()): SavedModelInfo {
   return {
@@ -60,7 +62,13 @@ beforeEach(() => {
     enabled: true,
     labelsVisible: true,
     intrusions: [],
+    stopOnIntrusion: true,
+    held: null,
+    acknowledged: [],
   });
+  // 정지 경로(holdRunners)가 만지는 러너 스토어 — 재생 중·보류 없음에서 시작.
+  useVirtualTagStore.getState().start();
+  useRealtimeStore.getState().start();
 });
 
 describe('useSceneZoneStore — 기본값·토글', () => {
@@ -207,5 +215,106 @@ describe('useSceneZoneStore — clear', () => {
     const before = useSceneZoneStore.getState();
     before.clear();
     expect(useSceneZoneStore.getState()).toBe(before);
+  });
+});
+
+describe('정지 등급(level)·hold', () => {
+  const ZS: SavedModelZone = {
+    id: 'zs',
+    name: '정지',
+    color: '#ef4444',
+    radius: 4,
+    level: 'stop',
+  };
+  const stopEnter = (intruder = B): ZoneTransition => enter(intruder, ZS, A);
+  const stopExit = (intruder = B): ZoneTransition => exit(intruder, ZS, A);
+
+  it("'warn' 영역 진입은 정지하지 않는다", () => {
+    useSceneZoneStore.getState().applyTransitions([enter(B)]);
+    expect(useSceneZoneStore.getState().held).toBeNull();
+    expect(useSceneZoneStore.getState().intrusions[0].level).toBe('warn');
+    expect(useVirtualTagStore.getState().isRunning).toBe(true);
+  });
+
+  it("'stop' 영역 진입은 러너를 멈추고 held 를 기록한다", () => {
+    useSceneZoneStore.getState().applyTransitions([stopEnter()]);
+    const state = useSceneZoneStore.getState();
+    expect(state.held).toMatchObject({ zoneKey: 'a#zs', intruderId: 'b' });
+    expect(state.intrusions[0].level).toBe('stop');
+    expect(useVirtualTagStore.getState().isRunning).toBe(false);
+    expect(useRealtimeStore.getState().held).toBe(true);
+  });
+
+  it('stopOnIntrusion 이 꺼져 있으면 멈추지 않는다', () => {
+    useSceneZoneStore.getState().setStopOnIntrusion(false);
+    useSceneZoneStore.getState().applyTransitions([stopEnter()]);
+    expect(useSceneZoneStore.getState().held).toBeNull();
+    expect(useVirtualTagStore.getState().isRunning).toBe(true);
+  });
+
+  it('resume 은 보류를 풀고 그 쌍을 승인 — 이탈 전 재진입은 다시 멈추지 않고, 이탈 뒤엔 다시 멈춘다', () => {
+    const store = useSceneZoneStore;
+    store.getState().applyTransitions([stopEnter()]);
+    store.getState().resume();
+    expect(store.getState().held).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
+    expect(store.getState().acknowledged).toEqual(['a#zs|b']);
+    // 침범 상태 자체는 그대로.
+    expect(store.getState().intrusions).toHaveLength(1);
+    // 다른 침범자(C)는 새 쌍이라 다시 멈춘다.
+    useVirtualTagStore.getState().start();
+    store.getState().applyTransitions([stopEnter(C)]);
+    expect(store.getState().held?.intruderId).toBe('c');
+    store.getState().resume();
+    // B 이탈 → 승인 해제 → B 재진입 시 다시 멈춘다.
+    store.getState().applyTransitions([stopExit()]);
+    expect(store.getState().acknowledged).toEqual(['a#zs|c']);
+    useVirtualTagStore.getState().start();
+    store.getState().applyTransitions([stopEnter()]);
+    expect(store.getState().held?.intruderId).toBe('b');
+  });
+
+  it('resume 은 정지 중이 아니면 no-op(참조 유지)', () => {
+    const before = useSceneZoneStore.getState();
+    useSceneZoneStore.getState().resume();
+    expect(useSceneZoneStore.getState()).toBe(before);
+  });
+
+  it('정지시킨 쌍이 이탈하면 정지도 풀린다', () => {
+    useSceneZoneStore.getState().applyTransitions([stopEnter()]);
+    useSceneZoneStore.getState().applyTransitions([stopExit()]);
+    expect(useSceneZoneStore.getState().held).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
+  });
+
+  it('감지 off·clear·stopOnIntrusion off 는 정지를 풀고 승인을 비운다', () => {
+    const store = useSceneZoneStore;
+    store.getState().applyTransitions([stopEnter()]);
+    store.getState().setEnabled(false);
+    expect(store.getState().held).toBeNull();
+    expect(store.getState().acknowledged).toEqual([]);
+    expect(useRealtimeStore.getState().held).toBe(false);
+
+    store.getState().setEnabled(true);
+    store.getState().applyTransitions([stopEnter()]);
+    store.getState().clear();
+    expect(store.getState().held).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
+
+    store.getState().applyTransitions([stopEnter()]);
+    store.getState().setStopOnIntrusion(false);
+    expect(store.getState().held).toBeNull();
+    expect(useRealtimeStore.getState().held).toBe(false);
+  });
+
+  it('영역↔영역은 한쪽만 stop 이어도 stop 이다', () => {
+    const stopZoneEnter: ZoneTransition = {
+      ...zoneEnter('enter'),
+      intruderZone: { ...ZC, level: 'stop' },
+    };
+    useSceneZoneStore.getState().applyTransitions([stopZoneEnter]);
+    const state = useSceneZoneStore.getState();
+    expect(state.intrusions.every((i) => i.level === 'stop')).toBe(true);
+    expect(state.held).not.toBeNull();
   });
 });

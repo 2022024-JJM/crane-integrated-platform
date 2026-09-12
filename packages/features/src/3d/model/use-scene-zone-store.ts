@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { SavedModelZoneLevel } from '@crane/domain/3d';
+import { holdRunners, releaseRunners } from './scene-collision-hold';
 import type { ZoneTransition } from './scene-zone-runtime';
 
 /**
@@ -14,6 +16,14 @@ import type { ZoneTransition } from './scene-zone-runtime';
  * 프레임 루프(scene-zone-runtime)는 여기에 쓰지 않는다. 검출기 훅이 tick 의
  * 전이(enter/exit)를 `applyTransitions` 로 한 번에 넣는다 — 빈 배열이면
  * set 하지 않아 참조가 유지된다.
+ *
+ * 등급(2026-09-12): 영역마다 `level`(warn 기본 / stop). 'stop' 영역에 들어오면
+ * `stopOnIntrusion`(세션, 기본 ON)일 때 충돌 시 정지와 같은 경로로 값 생산자를
+ * 멈춘다(`holdRunners` — 시뮬레이션 pause, 실시간 화면 반영 보류). 멈춘 쌍은
+ * `held` 에 하나만 두고, 재개(`resume` — 경보 배너 [이어서 재생]·독 ▶)하면
+ * `acknowledged` 에 넣어 그 쌍이 **이탈하기 전까지** 다시 멈추지 않는다 —
+ * 그렇지 않으면 재생하자마자 같은 침범으로 또 멈춰 영영 못 나간다.
+ * 침범 중인 상태 자체(링·목록·경보)는 acknowledged 여도 그대로다.
  */
 
 export interface ZoneIntruderRef {
@@ -31,7 +41,29 @@ export interface ZoneIntrusion {
   zoneId: string;
   zoneName: string;
   color: string;
+  /** 영역 등급 — 경보 색·정지 여부의 근거. */
+  level: SavedModelZoneLevel;
+  /** 첫 침범자가 들어온 시각(ms) — 경보 배너 표시용. */
+  at: number;
   intruders: ZoneIntruderRef[];
+}
+
+/** 정지 중인 침범 쌍. */
+export interface ZoneHold {
+  zoneKey: string;
+  intruderId: string;
+  at: number;
+}
+
+function pairKey(zoneKey: string, intruderId: string): string {
+  return `${zoneKey}|${intruderId}`;
+}
+
+/** 영역↔영역은 어느 한쪽이 stop 이면 stop. */
+function transitionLevel(t: ZoneTransition): SavedModelZoneLevel {
+  return t.zone.level === 'stop' || t.intruderZone?.level === 'stop'
+    ? 'stop'
+    : 'warn';
 }
 
 interface SceneZoneState {
@@ -44,7 +76,20 @@ interface SceneZoneState {
   labelsVisible: boolean;
   /** 침범자가 하나라도 있는 영역만. zoneKey 순 정렬로 안정. */
   intrusions: ZoneIntrusion[];
+  /** 'stop' 등급 영역 침범 시 값 생산자를 멈출지. 세션 전용, 기본 ON. */
+  stopOnIntrusion: boolean;
+  /** 지금 정지시킨 침범 쌍. null 이면 정지 아님. */
+  held: ZoneHold | null;
+  /** 재개로 승인된 쌍(pairKey) — 이탈 전까지 다시 멈추지 않는다. */
+  acknowledged: string[];
   toggle: () => void;
+  setStopOnIntrusion: (stop: boolean) => void;
+  /**
+   * 정지 해제 — 경보 배너 [이어서 재생]·독 ▶ 재생 전이가 부른다. 정지 중이
+   * 아니면 no-op(참조 유지). 실시간 보류를 풀고(가상 태그는 호출자가 ▶ 로
+   * 켠다) 그 쌍을 승인한다.
+   */
+  resume: () => void;
   /** false 면 현재 침범 목록을 비운다. */
   setEnabled: (enabled: boolean) => void;
   setLabelsVisible: (visible: boolean) => void;
@@ -127,17 +172,52 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
   enabled: true,
   labelsVisible: true,
   intrusions: [],
+  stopOnIntrusion: true,
+  held: null,
+  acknowledged: [],
 
   toggle: () => get().setEnabled(!get().enabled),
 
   setEnabled: (enabled) => {
     const state = get();
     if (enabled === state.enabled) return;
-    set(
-      enabled || state.intrusions.length === 0
-        ? { enabled }
-        : { enabled, intrusions: [] },
-    );
+    if (enabled) {
+      set({ enabled });
+      return;
+    }
+    // 끄면 침범 목록·정지·승인을 전부 비운다 — 정지 중이었으면 풀어 준다.
+    if (state.held) releaseRunners();
+    set({
+      enabled,
+      intrusions: state.intrusions.length === 0 ? state.intrusions : [],
+      held: null,
+      acknowledged: state.acknowledged.length === 0 ? state.acknowledged : [],
+    });
+  },
+
+  setStopOnIntrusion: (stop) => {
+    const state = get();
+    if (stop === state.stopOnIntrusion) return;
+    // 끄는 순간 정지 중이면 풀어 준다(정지가 남아 있을 이유가 없다).
+    if (!stop && state.held) {
+      releaseRunners();
+      set({ stopOnIntrusion: stop, held: null });
+      return;
+    }
+    set({ stopOnIntrusion: stop });
+  },
+
+  resume: () => {
+    const state = get();
+    if (!state.held) return;
+    releaseRunners();
+    const key = pairKey(state.held.zoneKey, state.held.intruderId);
+    set({
+      held: null,
+      acknowledged: state.acknowledged.includes(key)
+        ? state.acknowledged
+        : [...state.acknowledged, key],
+    });
   },
 
   setLabelsVisible: (visible) => {
@@ -149,7 +229,11 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
     if (transitions.length === 0) return;
     const state = get();
     let intrusions = state.intrusions;
+    let held = state.held;
+    let acknowledged = state.acknowledged;
+    const now = Date.now();
     for (const t of transitions) {
+      const level = transitionLevel(t);
       if (t.kind === 'enter') {
         intrusions = upsert(
           intrusions,
@@ -161,6 +245,8 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
             zoneId: t.zone.id,
             zoneName: t.zone.name,
             color: t.zone.color,
+            level,
+            at: now,
           }),
           intruderRef(t),
         );
@@ -176,23 +262,63 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
               zoneId: other.id,
               zoneName: other.name,
               color: other.color,
+              level,
+              at: now,
             }),
             mirroredRef(t),
           );
+        }
+        // 'stop' 영역 진입 — 승인되지 않은 쌍이고 아직 정지 중이 아니면 멈춘다.
+        if (
+          level === 'stop' &&
+          state.stopOnIntrusion &&
+          held === null &&
+          !acknowledged.includes(pairKey(t.zoneKey, t.intruderId))
+        ) {
+          holdRunners();
+          held = { zoneKey: t.zoneKey, intruderId: t.intruderId, at: now };
         }
       } else {
         intrusions = remove(intrusions, t.zoneKey, t.intruderId);
         if (t.intruderKind === 'zone') {
           intrusions = remove(intrusions, t.intruderId, t.zoneKey);
         }
+        // 이탈한 쌍의 승인은 지운다 — 다시 들어오면 다시 멈춘다.
+        const key = pairKey(t.zoneKey, t.intruderId);
+        if (acknowledged.includes(key)) {
+          acknowledged = acknowledged.filter((k) => k !== key);
+        }
+        // 정지시킨 쌍이 (편집 등으로) 떨어졌으면 정지도 푼다.
+        if (
+          held &&
+          held.zoneKey === t.zoneKey &&
+          held.intruderId === t.intruderId
+        ) {
+          releaseRunners();
+          held = null;
+        }
       }
     }
-    if (intrusions === state.intrusions) return;
-    set({ intrusions });
+    if (
+      intrusions === state.intrusions &&
+      held === state.held &&
+      acknowledged === state.acknowledged
+    ) {
+      return;
+    }
+    set({ intrusions, held, acknowledged });
   },
 
   clear: () => {
-    if (get().intrusions.length === 0) return;
-    set({ intrusions: [] });
+    const state = get();
+    if (
+      state.intrusions.length === 0 &&
+      state.held === null &&
+      state.acknowledged.length === 0
+    ) {
+      return;
+    }
+    if (state.held) releaseRunners();
+    set({ intrusions: [], held: null, acknowledged: [] });
   },
 }));

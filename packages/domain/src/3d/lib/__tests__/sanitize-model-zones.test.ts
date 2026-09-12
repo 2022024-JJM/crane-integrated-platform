@@ -148,3 +148,19 @@ describe('sanitizeZoneOffset / offset', () => {
     expect(out?.[0]).not.toHaveProperty('offset');
   });
 });
+
+describe('level', () => {
+  it("'stop' 만 기록하고 그 외는 생략한다", () => {
+    const base = { id: 'z', name: '', color: '#38bdf8', radius: 1 };
+    expect(sanitizeModelZones([{ ...base, level: 'stop' }])?.[0].level).toBe(
+      'stop',
+    );
+    expect(
+      sanitizeModelZones([{ ...base, level: 'warn' }])?.[0],
+    ).not.toHaveProperty('level');
+    expect(
+      sanitizeModelZones([{ ...base, level: 'STOP' }])?.[0],
+    ).not.toHaveProperty('level');
+    expect(sanitizeModelZones([base])?.[0]).not.toHaveProperty('level');
+  });
+});

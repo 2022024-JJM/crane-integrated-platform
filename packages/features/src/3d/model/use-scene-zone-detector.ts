@@ -4,6 +4,7 @@ import type { SavedSceneInfo } from '@crane/domain/3d';
 import { ZONE_SCAN_BUDGET_MS, ZONE_SCAN_INTERVAL_MS } from '../lib/scene-zones';
 import { sceneZoneRuntime } from './scene-zone-runtime';
 import { useSceneZoneStore } from './use-scene-zone-store';
+import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
  * 모델 영역 침범 검출기 — R3F Canvas 안에서 useFrame 으로 런타임을 돌린다.
@@ -48,6 +49,18 @@ export function useSceneZoneDetector({
       useSceneZoneStore.getState().clear();
     };
   }, [enabled, invalidate]);
+
+  // 독 ▶(가상 태그 러너 false→true)도 영역 정지의 재개 경로다 — 충돌 검출기와
+  // 같은 규칙. resume 은 정지 중이 아니면 no-op 이라 항상 구독해 둔다.
+  useEffect(
+    () =>
+      useVirtualTagStore.subscribe((state, prev) => {
+        if (!prev.isRunning && state.isRunning) {
+          useSceneZoneStore.getState().resume();
+        }
+      }),
+    [],
+  );
 
   useFrame(() => {
     if (!enabledRef.current) return;

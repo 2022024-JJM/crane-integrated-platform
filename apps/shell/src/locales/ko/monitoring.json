@@ -31,7 +31,10 @@
       "color": "색상",
       "radius": "반경",
       "offset": "오프셋",
-      "exempt": "영역 감지에서 제외"
+      "exempt": "영역 감지에서 제외",
+      "level": "등급",
+      "levelWarn": "경고",
+      "levelStop": "정지"
     },
     "rigging": {
       "title": "리깅",
@@ -211,7 +214,10 @@
       "enable": "영역 감지",
       "labels": "영역 이름 표시",
       "current": "현재 침범 중",
-      "none": "침범 없음"
+      "none": "침범 없음",
+      "stopOnIntrusion": "정지 영역 침범 시 정지",
+      "stopHint": "등급이 '정지'인 영역에 들어오면 시뮬레이션을 멈춥니다(실시간은 화면 반영 보류). 이어서 재생하면 그 침범은 이탈 전까지 다시 멈추지 않습니다.",
+      "paused": "영역 침범으로 정지 중 — 경보 배너 [이어서 재생] 또는 ▶ 로 재개"
     },
     "duplicateSelected": "선택 객체 복제",
     "addText": "텍스트 추가",
@@ -411,7 +417,26 @@
     "windStopShort": "작업중지 풍속",
     "runningShort": "가동",
     "offlineShort": "통신두절",
-    "alarmsShort": "알람"
+    "alarmsShort": "알람",
+    "intrusions": "침범 중인 영역 수",
+    "intrusionsShort": "영역 침범",
+    "intrusionsPaused": "{{count}} · 정지",
+    "collision": "충돌 감지 상태",
+    "collisionShort": "충돌",
+    "collisionPaused": "정지 중",
+    "collisionDetected": "감지",
+    "link": "값 출처·연결 상태",
+    "linkShort": "연결",
+    "linkState": {
+      "simulationRunning": "시뮬레이션",
+      "simulationPaused": "시뮬 정지",
+      "open": "연결됨",
+      "connecting": "연결 중",
+      "closed": "끊김",
+      "held": "반영 보류",
+      "replay": "리플레이"
+    },
+    "pausedValue": "정지 중"
   },
   "runtimeStatus": {
     "running": "가동",
@@ -420,6 +445,18 @@
     "unknown": "상태 미확인"
   },
   "sceneZone": {
-    "unnamed": "영역 {{index}}"
+    "unnamed": "영역 {{index}}",
+    "alertTitle": "영역 침범",
+    "pausedTitle": "영역 침범 — 정지됨",
+    "moreZones": "외 {{count}}개 영역",
+    "viewZone": "영역 보기"
+  },
+  "sceneAlert": {
+    "collisionTitle": "충돌 감지",
+    "zoneWarnTitle": "영역 침범(경고)",
+    "zoneStopTitle": "영역 침범(정지)",
+    "zoneAlarmName": "영역 침범 — {{owner}} · {{zone}} ← {{intruder}}",
+    "zoneAlarmLevelWarn": "경고 등급 영역",
+    "zoneAlarmLevelStop": "정지 등급 영역"
   }
 }

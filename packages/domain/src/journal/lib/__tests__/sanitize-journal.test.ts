@@ -6,6 +6,8 @@ import type {
 import {
   sanitizeAlarmJournalEntry,
   sanitizeCollisionJournalEntry,
+  sanitizeZoneJournalEntry,
+  sanitizeStatusJournalEntry,
 } from '../sanitize-journal';
 
 const validCollision: CollisionJournalEntry = {
@@ -117,5 +119,58 @@ describe('sanitizeAlarmJournalEntry', () => {
     expect(
       sanitizeAlarmJournalEntry({ ...validAlarm, timestamp: 0 }),
     ).toBeNull();
+  });
+});
+
+describe('sanitizeZoneJournalEntry', () => {
+  const valid = {
+    key: '1:enter:a#z|b',
+    at: 1,
+    kind: 'enter',
+    regionId: 'dock-1',
+    zoneKey: 'a#z',
+    ownerId: 'a',
+    ownerName: 'A',
+    zoneName: '작업',
+    level: 'warn',
+    intruderId: 'b',
+    intruderName: 'B',
+    durationMs: null,
+  };
+
+  it('유효 항목은 같은 참조, 손상은 null', () => {
+    expect(sanitizeZoneJournalEntry(valid)).toBe(valid);
+    expect(
+      sanitizeZoneJournalEntry({ ...valid, regionId: null }),
+    ).not.toBeNull();
+    expect(
+      sanitizeZoneJournalEntry({ ...valid, kind: 'exit', durationMs: 1200 }),
+    ).not.toBeNull();
+    expect(sanitizeZoneJournalEntry({ ...valid, kind: 'inside' })).toBeNull();
+    expect(sanitizeZoneJournalEntry({ ...valid, level: 'panic' })).toBeNull();
+    expect(sanitizeZoneJournalEntry({ ...valid, durationMs: NaN })).toBeNull();
+    expect(sanitizeZoneJournalEntry({ ...valid, intruderId: '' })).toBeNull();
+    expect(sanitizeZoneJournalEntry(null)).toBeNull();
+    expect(sanitizeZoneJournalEntry('x')).toBeNull();
+  });
+});
+
+describe('sanitizeStatusJournalEntry', () => {
+  const valid = {
+    key: '1:m1:offline',
+    at: 1,
+    regionId: 'dock-1',
+    modelId: 'm1',
+    equipName: 'GC',
+    from: 'idle',
+    to: 'offline',
+  };
+
+  it('유효 항목은 같은 참조, 상태 밖 값·결손은 null', () => {
+    expect(sanitizeStatusJournalEntry(valid)).toBe(valid);
+    expect(sanitizeStatusJournalEntry({ ...valid, to: 'broken' })).toBeNull();
+    expect(sanitizeStatusJournalEntry({ ...valid, modelId: '' })).toBeNull();
+    expect(sanitizeStatusJournalEntry({ ...valid, at: 'now' })).toBeNull();
+    expect(sanitizeStatusJournalEntry(undefined)).toBeNull();
   });
 });

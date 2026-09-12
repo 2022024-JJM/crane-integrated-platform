@@ -31,7 +31,10 @@
       "color": "Color",
       "radius": "Radius",
       "offset": "Translatio",
-      "exempt": "A regionum detectione exclude"
+      "exempt": "A regionum detectione exclude",
+      "level": "Gradus",
+      "levelWarn": "Monitio",
+      "levelStop": "Sistere"
     },
     "rigging": {
       "title": "Articulatio",
@@ -197,7 +200,10 @@
       "enable": "Regionum detectio",
       "labels": "Nomina regionum ostende",
       "current": "Nunc intus",
-      "none": "Nulla intrusio"
+      "none": "Nulla intrusio",
+      "stopOnIntrusion": "Siste in invasione regionis 'Sistere'",
+      "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem sistit (tempus reale: ostensionem suspendit). Post resumptionem, ea invasio non iterum sistet donec exeat.",
+      "paused": "Sistitur ob invasionem regionis — resume e vexillo monitionis vel ▶"
     },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
@@ -397,7 +403,26 @@
     "windStopShort": "Ventus sistendi",
     "runningShort": "Operantes",
     "offlineShort": "Seiunctae",
-    "alarmsShort": "Monitiones"
+    "alarmsShort": "Monitiones",
+    "intrusions": "Regiones nunc invasae",
+    "intrusionsShort": "Invasiones",
+    "intrusionsPaused": "{{count}} · sistitur",
+    "collision": "Status detectionis collisionis",
+    "collisionShort": "Collisio",
+    "collisionPaused": "Sistitur",
+    "collisionDetected": "Detecta",
+    "link": "Fons valorum / status nexus",
+    "linkShort": "Nexus",
+    "linkState": {
+      "simulationRunning": "Simulatio",
+      "simulationPaused": "Sim sistitur",
+      "open": "Coniunctum",
+      "connecting": "Coniungitur",
+      "closed": "Disiunctum",
+      "held": "Suspensum",
+      "replay": "Repetitio"
+    },
+    "pausedValue": "Sistitur"
   },
   "runtimeStatus": {
     "running": "Operans",
@@ -406,6 +431,18 @@
     "unknown": "Ignota"
   },
   "sceneZone": {
-    "unnamed": "Regio {{index}}"
+    "unnamed": "Regio {{index}}",
+    "alertTitle": "Invasio regionis",
+    "pausedTitle": "Invasio regionis — sistitur",
+    "moreZones": "+{{count}} regiones",
+    "viewZone": "Regionem vide"
+  },
+  "sceneAlert": {
+    "collisionTitle": "Collisio detecta",
+    "zoneWarnTitle": "Invasio regionis (monitio)",
+    "zoneStopTitle": "Invasio regionis (sistere)",
+    "zoneAlarmName": "Invasio regionis — {{owner}} · {{zone}} ← {{intruder}}",
+    "zoneAlarmLevelWarn": "Regio gradus monitionis",
+    "zoneAlarmLevelStop": "Regio gradus sistendi"
   }
 }

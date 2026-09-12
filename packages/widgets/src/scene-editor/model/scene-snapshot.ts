@@ -90,6 +90,7 @@ function isZoneListEqual(
       az.name !== bz.name ||
       az.color !== bz.color ||
       az.radius !== bz.radius ||
+      (az.level ?? 'warn') !== (bz.level ?? 'warn') ||
       adx !== bdx ||
       adz !== bdz
     ) {

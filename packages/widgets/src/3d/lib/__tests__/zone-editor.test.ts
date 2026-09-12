@@ -9,6 +9,8 @@ import {
   normalizeZoneOffset,
   withZoneOffsetAxis,
   ZONE_COLOR_PRESETS,
+  displayMetersToUnits,
+  unitsToDisplayMeters,
 } from '../zone-editor';
 
 function zone(overrides: Partial<SavedModelZone> = {}): SavedModelZone {
@@ -149,5 +151,20 @@ describe('withZoneOffsetAxis', () => {
     const z = zone({ offset: [1, 2] });
     withZoneOffsetAxis(z, 'x', 9);
     expect(z.offset).toEqual([1, 2]);
+  });
+});
+
+describe('unitsToDisplayMeters / displayMetersToUnits', () => {
+  it('환산·왕복, 표시는 0.01 m 반올림', () => {
+    expect(unitsToDisplayMeters(4, 11.7)).toBe(46.8);
+    expect(unitsToDisplayMeters(1 / 3, 1)).toBe(0.33);
+    expect(displayMetersToUnits(46.8, 11.7)).toBeCloseTo(4, 10);
+    expect(displayMetersToUnits(unitsToDisplayMeters(2.5, 1), 1)).toBe(2.5);
+  });
+
+  it('비정상 배율(0·음수·NaN)은 1 로 본다', () => {
+    expect(unitsToDisplayMeters(3, 0)).toBe(3);
+    expect(unitsToDisplayMeters(3, NaN)).toBe(3);
+    expect(displayMetersToUnits(3, -2)).toBe(3);
   });
 });

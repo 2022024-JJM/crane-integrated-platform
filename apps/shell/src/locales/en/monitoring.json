@@ -31,7 +31,10 @@
       "color": "Color",
       "radius": "Radius",
       "offset": "Offset",
-      "exempt": "Exclude from zone detection"
+      "exempt": "Exclude from zone detection",
+      "level": "Level",
+      "levelWarn": "Warn",
+      "levelStop": "Stop"
     },
     "rigging": {
       "title": "Rigging",
@@ -211,7 +214,10 @@
       "enable": "Zone detection",
       "labels": "Show zone labels",
       "current": "Currently inside",
-      "none": "No intrusions"
+      "none": "No intrusions",
+      "stopOnIntrusion": "Pause on stop-zone intrusion",
+      "stopHint": "Entering a zone with level 'Stop' pauses the simulation (realtime: holds display). After resuming, that intrusion will not pause again until it exits.",
+      "paused": "Paused by zone intrusion — resume from the alert banner or ▶"
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -411,7 +417,26 @@
     "windStopShort": "Stop-work wind",
     "runningShort": "Running",
     "offlineShort": "Offline",
-    "alarmsShort": "Alarms"
+    "alarmsShort": "Alarms",
+    "intrusions": "Zones currently intruded",
+    "intrusionsShort": "Intrusions",
+    "intrusionsPaused": "{{count}} · paused",
+    "collision": "Collision detection state",
+    "collisionShort": "Collision",
+    "collisionPaused": "Paused",
+    "collisionDetected": "Detected",
+    "link": "Value source / link state",
+    "linkShort": "Link",
+    "linkState": {
+      "simulationRunning": "Simulation",
+      "simulationPaused": "Sim paused",
+      "open": "Connected",
+      "connecting": "Connecting",
+      "closed": "Disconnected",
+      "held": "On hold",
+      "replay": "Replay"
+    },
+    "pausedValue": "Paused"
   },
   "runtimeStatus": {
     "running": "Running",
@@ -420,6 +445,18 @@
     "unknown": "Unknown"
   },
   "sceneZone": {
-    "unnamed": "Zone {{index}}"
+    "unnamed": "Zone {{index}}",
+    "alertTitle": "Zone intrusion",
+    "pausedTitle": "Zone intrusion — paused",
+    "moreZones": "+{{count}} more zones",
+    "viewZone": "View zone"
+  },
+  "sceneAlert": {
+    "collisionTitle": "Collision detected",
+    "zoneWarnTitle": "Zone intrusion (warn)",
+    "zoneStopTitle": "Zone intrusion (stop)",
+    "zoneAlarmName": "Zone intrusion — {{owner}} · {{zone}} ← {{intruder}}",
+    "zoneAlarmLevelWarn": "Warn-level zone",
+    "zoneAlarmLevelStop": "Stop-level zone"
   }
 }

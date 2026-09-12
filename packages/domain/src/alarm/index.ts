@@ -25,3 +25,8 @@ export {
   type RealtimeAlarmCraneMetadata,
   type RealtimeAlarmMessage,
 } from './lib/realtime-alarm-mapper';
+export {
+  createLocalAlarm,
+  localAlarmActiveKey,
+  type LocalAlarmInput,
+} from './lib/local-alarm';

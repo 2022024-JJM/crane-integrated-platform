@@ -30,7 +30,12 @@ import { SceneZonePanel } from './scene-zone-panel';
  * 동안 접히지 않는다(scene-dock.tsx). TooltipProvider 는 ThreeSceneViewer 가
  * 감싸고 있어 여기서 두지 않는다.
  */
-export function SceneZoneMenu() {
+export function SceneZoneMenu({
+  onViewZone,
+}: {
+  /** 침범 행의 [영역 보기](SceneZonePanel 로 전달). */
+  onViewZone?: (zoneKey: string) => void;
+} = {}) {
   const { t } = useTranslation();
   const enabled = useSceneZoneStore((s) => s.enabled);
   const intrusionCount = useSceneZoneStore((s) => s.intrusions.length);
@@ -76,7 +81,7 @@ export function SceneZoneMenu() {
         <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>
       <PopoverPopup side="left" align="start" className="w-72 p-3">
-        <SceneZonePanel />
+        <SceneZonePanel onViewZone={onViewZone} />
       </PopoverPopup>
     </Popover>
   );

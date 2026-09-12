@@ -12,7 +12,9 @@ export type AlarmEventType =
   | 'work_resumed'
   | 'e_stop_on'
   | 'crane_system_error'
-  | 'unknown_realtime_alarm';
+  | 'unknown_realtime_alarm'
+  /** 3D 모델 영역 침범(로컬 발생 — 서버 알람이 아니라 화면이 만든 알람). */
+  | 'zone_intrusion';
 
 export interface Alarm {
   id: string;

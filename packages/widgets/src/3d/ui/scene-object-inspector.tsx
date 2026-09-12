@@ -161,6 +161,8 @@ interface SceneObjectInspectorProps {
   rigging?: InspectorRiggingHandlers;
   /** 영역 탭. 없으면 탭이 뜨지 않는다(같은 게이트). */
   zones?: InspectorZoneHandlers;
+  /** 씬 unit → m 환산(영역 탭 표시). 기본 1. */
+  metersPerUnit?: number;
   /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
   className?: string;
 }
@@ -359,6 +361,7 @@ function ModelInspectorContent({
   tagMapping,
   rigging,
   zones,
+  metersPerUnit,
   t,
 }: {
   selectedModel: SavedModelInfo;
@@ -375,6 +378,7 @@ function ModelInspectorContent({
   tagMapping?: InspectorTagMappingHandlers;
   rigging?: InspectorRiggingHandlers;
   zones?: InspectorZoneHandlers;
+  metersPerUnit?: number;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
@@ -404,6 +408,7 @@ function ModelInspectorContent({
           model={selectedModel}
           onUpdate={zones.onUpdate}
           onExemptChange={zones.onExemptChange}
+          metersPerUnit={metersPerUnit}
           t={t}
         />
       ) : null}
@@ -639,6 +644,7 @@ export function SceneObjectInspector({
   tagMapping,
   rigging,
   zones,
+  metersPerUnit,
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -723,6 +729,7 @@ export function SceneObjectInspector({
               tagMapping={tagMapping}
               rigging={rigging}
               zones={zones}
+              metersPerUnit={metersPerUnit}
               t={t}
             />
           ) : selectedText ? (

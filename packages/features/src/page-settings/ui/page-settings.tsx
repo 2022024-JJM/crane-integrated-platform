@@ -14,6 +14,11 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { type SupportedLanguage, i18n } from '@crane/core/config/i18n';
 import { useHeaderDisplaySettings } from '@crane/core/lib/header-display-settings-context';
+import {
+  getBrowserNotificationPermission,
+  requestBrowserNotificationPermission,
+  useAlertNotificationSettings,
+} from '@crane/core/lib/alert-notifications';
 import { useTheme } from '@crane/core/lib/theme-context';
 import { cn } from '@crane/core/lib/utils';
 import { useAuth } from '../../auth';
@@ -168,6 +173,31 @@ export function PageSettings() {
       icon: Moon,
     },
   ];
+  const alertSound = useAlertNotificationSettings((s) => s.sound);
+  const alertBrowser = useAlertNotificationSettings((s) => s.browser);
+  const setAlertSound = useAlertNotificationSettings((s) => s.setSound);
+  const setAlertBrowser = useAlertNotificationSettings((s) => s.setBrowser);
+  const browserPermission = getBrowserNotificationPermission();
+  const handleAlertBrowserChange = async (checked: boolean) => {
+    if (!checked) {
+      setAlertBrowser(false);
+      return;
+    }
+    // 권한은 사용자 제스처(이 스위치) 안에서만 요청할 수 있다.
+    const permission = await requestBrowserNotificationPermission();
+    if (permission === 'granted') {
+      setAlertBrowser(true);
+      return;
+    }
+    setAlertBrowser(false);
+    toast.warning(
+      t(
+        permission === 'unsupported'
+          ? 'header.alertBrowserUnsupported'
+          : 'header.alertBrowserDenied',
+      ),
+    );
+  };
   const displayOptions = [
     {
       key: 'showWeather' as const,
@@ -387,6 +417,39 @@ export function PageSettings() {
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
+              <div className="space-y-3">
+                <h4 className="text-[14px] font-semibold">
+                  {t('header.alertSection')}
+                </h4>
+                <div className="space-y-2">
+                  <div className="bg-muted/60 border-border/70 flex items-center justify-between rounded-md border px-3 py-2.5">
+                    <span className="text-[12px] font-medium">
+                      {t('header.alertSound')}
+                    </span>
+                    <Switch
+                      checked={alertSound}
+                      onCheckedChange={setAlertSound}
+                      aria-label={t('header.alertSound')}
+                    />
+                  </div>
+                  <div className="bg-muted/60 border-border/70 flex items-center justify-between rounded-md border px-3 py-2.5">
+                    <span className="text-[12px] font-medium">
+                      {t('header.alertBrowser')}
+                    </span>
+                    <Switch
+                      checked={alertBrowser && browserPermission === 'granted'}
+                      disabled={browserPermission === 'unsupported'}
+                      onCheckedChange={(checked) =>
+                        void handleAlertBrowserChange(checked)
+                      }
+                      aria-label={t('header.alertBrowser')}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

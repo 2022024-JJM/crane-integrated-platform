@@ -150,6 +150,7 @@ export type {
   SavedMeshOverride,
   SavedModelInfo,
   SavedModelZone,
+  SavedModelZoneLevel,
   SavedSceneInfo,
   SavedTextInfo,
   ValueMapItem,
@@ -238,3 +239,7 @@ export {
   markSceneOpaqueStencils,
 } from './lib/scene-stencil';
 export { SceneText } from './ui/scene-text';
+export {
+  SCENE_METERS_PER_UNIT_BY_REGION_ID,
+  getSceneMetersPerUnit,
+} from './model/scene-unit-scale';

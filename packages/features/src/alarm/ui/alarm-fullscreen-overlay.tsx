@@ -16,7 +16,10 @@ import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { ScrollArea } from '@crane/ui/molecules/scroll-area';
 
-import { useRealtimeAlarmStore } from '../model/use-realtime-alarm-store';
+import {
+  isAlarmInRegion,
+  useRealtimeAlarmStore,
+} from '../model/use-realtime-alarm-store';
 
 const SEVERITY_ORDER: Record<AlarmSeverity, number> = {
   critical: 0,
@@ -50,15 +53,13 @@ export function AlarmFullscreenOverlay({
   const { i18n } = useTranslation();
   const language = i18n.language;
 
-  const activeAlarms = useRealtimeAlarmStore(
-    useShallow((s) => s.activeAlarms),
-  );
+  const activeAlarms = useRealtimeAlarmStore(useShallow((s) => s.activeAlarms));
 
   const regionAlarms = useMemo(() => {
     const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
     const result: Alarm[] = [];
     for (const alarm of Object.values(activeAlarms)) {
-      if (allowedCraneIds.has(alarm.craneId) && alarm.active) {
+      if (isAlarmInRegion(alarm, regionId, allowedCraneIds) && alarm.active) {
         result.push(alarm);
       }
     }
@@ -126,10 +127,9 @@ export function AlarmFullscreenOverlay({
     return null;
   }
 
-  const headerLabel =
-    language.toLowerCase().startsWith('ko')
-      ? `알람 ${regionAlarms.length}`
-      : `Alarms ${regionAlarms.length}`;
+  const headerLabel = language.toLowerCase().startsWith('ko')
+    ? `알람 ${regionAlarms.length}`
+    : `Alarms ${regionAlarms.length}`;
 
   return (
     <div
@@ -212,9 +212,7 @@ function AlarmOverlayItem({ alarm, language, isNew }: AlarmOverlayItemProps) {
               {formatRelativeTime(alarm.timestamp, language)}
             </span>
           </div>
-          <p className="mt-1 truncate text-xs font-medium">
-            {alarm.craneName}
-          </p>
+          <p className="mt-1 truncate text-xs font-medium">{alarm.craneName}</p>
           <p className="text-foreground/75 mt-0.5 line-clamp-2 text-[11px]">
             {description}
           </p>

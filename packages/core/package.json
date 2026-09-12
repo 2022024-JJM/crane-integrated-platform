@@ -17,6 +17,7 @@
     "./lib/theme-context": "./src/lib/theme-context.tsx",
     "./lib/sidebar-context": "./src/lib/sidebar-context.tsx",
     "./lib/header-display-settings-context": "./src/lib/header-display-settings-context.tsx",
+    "./lib/alert-notifications": "./src/lib/alert-notifications.ts",
     "./lib/navigation-progress-context": "./src/lib/navigation-progress-context.tsx",
     "./lib/navigation-progress-state": "./src/lib/navigation-progress-state.ts",
     "./lib/use-navigation-progress": "./src/lib/use-navigation-progress.ts",

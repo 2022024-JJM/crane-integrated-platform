@@ -7,6 +7,7 @@ import {
   type SceneMapCatalogItem,
   type SceneModelCategory,
   type SceneModelCatalogItem,
+  getSceneMetersPerUnit,
 } from '@crane/domain/3d';
 import {
   SceneCollisionPanel,
@@ -653,6 +654,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         tagMapping={tagMappingHandlers}
                         rigging={riggingHandlers}
                         zones={zoneHandlers}
+                        metersPerUnit={getSceneMetersPerUnit(regionId)}
                       />
                     </div>
                   </ResizablePanel>

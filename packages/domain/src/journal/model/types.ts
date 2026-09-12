@@ -10,6 +10,8 @@ import type { AlarmSeverity } from '@crane/core/types/status';
 export const JOURNAL_MAX = 100;
 export const COLLISION_JOURNAL_STORAGE_KEY = 'crane:collision-journal';
 export const ALARM_JOURNAL_STORAGE_KEY = 'crane:alarm-journal';
+export const ZONE_JOURNAL_STORAGE_KEY = 'crane:zone-journal';
+export const STATUS_JOURNAL_STORAGE_KEY = 'crane:status-journal';
 
 export interface CollisionJournalParty {
   modelId: string;
@@ -43,6 +45,43 @@ export interface AlarmJournalEntry {
   alarmCode: string | null;
   alarmName: string | null;
   active: boolean;
+}
+
+/**
+ * 영역 침범 이력 — 진입·이탈을 각각 한 항목으로 남긴다(세션 영역 스토어는
+ * "현재 침범 중" 상태만 들고 기록이 없다). 이탈 항목은 `durationMs` 로 머문
+ * 시간을 담는다.
+ */
+export interface ZoneJournalEntry {
+  /** `${at}:${kind}:${zoneKey}|${intruderId}`. */
+  key: string;
+  at: number;
+  kind: 'enter' | 'exit';
+  regionId: string | null;
+  zoneKey: string;
+  ownerId: string;
+  ownerName: string;
+  zoneName: string;
+  level: 'warn' | 'stop';
+  intruderId: string;
+  intruderName: string;
+  /** 이탈 항목만 — 진입부터 이탈까지(ms). 진입을 못 본 이탈은 null. */
+  durationMs: number | null;
+}
+
+/**
+ * 장비 운전 상태 이력 — 통신두절 진입·복귀만 남긴다(가동↔대기는 수시로 바뀌어
+ * 이력으로서 의미가 없고 100건 상한을 금방 채운다).
+ */
+export interface StatusJournalEntry {
+  /** `${at}:${modelId}:${to}`. */
+  key: string;
+  at: number;
+  regionId: string;
+  modelId: string;
+  equipName: string;
+  from: 'running' | 'idle' | 'offline' | 'unknown';
+  to: 'running' | 'idle' | 'offline' | 'unknown';
 }
 
 export interface JournalEnvelope<T> {

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Alarm } from '@crane/domain/alarm';
 import { getCraneIdsByRegion } from '@crane/domain/crane';
-import { useRealtimeAlarmStore } from './use-realtime-alarm-store';
+import {
+  isAlarmInRegion,
+  useRealtimeAlarmStore,
+} from './use-realtime-alarm-store';
 
 const STORAGE_KEY = 'crane:alarm-fullscreen-overlay:visible';
 
@@ -40,7 +43,7 @@ function selectRegionActiveAlarms(
   const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
   const result: Alarm[] = [];
   for (const alarm of Object.values(activeAlarms)) {
-    if (allowedCraneIds.has(alarm.craneId) && alarm.active) {
+    if (isAlarmInRegion(alarm, regionId, allowedCraneIds) && alarm.active) {
       result.push(alarm);
     }
   }

@@ -4,6 +4,7 @@ export {
   getRealtimeAlarmStatsByRegion,
 } from './model/use-realtime-alarm-store';
 export { useRegionActiveAlarmsByCraneId } from './model/use-region-active-alarms-by-crane-id';
+export { isAlarmInRegion } from './model/use-realtime-alarm-store';
 export { useFullscreenAlarmOverlay } from './model/use-fullscreen-alarm-overlay';
 export { useCriticalAlarmBanner } from './model/use-critical-alarm-banner';
 export {

@@ -1,7 +1,10 @@
 import { useMemo, useRef } from 'react';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { getCraneIdsByRegion } from '@crane/domain/crane';
-import { useRealtimeAlarmStore } from './use-realtime-alarm-store';
+import {
+  isAlarmInRegion,
+  useRealtimeAlarmStore,
+} from './use-realtime-alarm-store';
 
 const SEVERITY_ORDER: AlarmSeverity[] = ['critical', 'high', 'medium', 'info'];
 
@@ -29,7 +32,7 @@ export function useRegionActiveAlarmsByCraneId(
     const allowedCraneIds = new Set(getCraneIdsByRegion(regionId));
 
     for (const alarm of Object.values(activeAlarms)) {
-      if (!allowedCraneIds.has(alarm.craneId) || !alarm.active) {
+      if (!isAlarmInRegion(alarm, regionId, allowedCraneIds) || !alarm.active) {
         continue;
       }
 
