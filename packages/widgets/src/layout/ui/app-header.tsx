@@ -5,6 +5,7 @@ import { useSidebar } from '@crane/core/lib/sidebar-context';
 import { useAuth } from '@crane/features/auth';
 import { AppLink } from '@crane/ui/atoms/app-link';
 import { HanwhaIcon } from '@crane/ui/atoms/hanwha-icon';
+import { SCENE_DOCK_RAIL_COLUMN_WIDTH } from '@crane/ui/organisms/scene-dock';
 import { HeaderAlarmButton } from '@crane/features/alarm';
 import { HeaderStatusStrip } from './header-status-strip';
 import { getHeaderBrandKeys } from '../lib/header-brand';
@@ -16,14 +17,21 @@ export function AppHeader() {
   const brand = getHeaderBrandKeys(user?.role);
 
   return (
-    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b px-4">
-      <button
-        onClick={toggle}
-        className="hover:bg-accent hover:text-accent-foreground inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md"
-        aria-label={t('header.toggleSidebar')}
+    <header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-1.5 border-b pr-4 pl-0">
+      {/* 햄버거는 접힌 사이드바 레일(독 레일과 같은 40px 열·28px 버튼)과 같은
+          열에 놓여 아래 레일 아이콘과 세로로 정렬된다 */}
+      <div
+        className="flex shrink-0 justify-center"
+        style={{ width: SCENE_DOCK_RAIL_COLUMN_WIDTH }}
       >
-        <MenuIcon className="h-5 w-5" />
-      </button>
+        <button
+          onClick={toggle}
+          className="hover:bg-accent hover:text-accent-foreground inline-flex size-7 cursor-pointer items-center justify-center rounded-[min(var(--radius-md),12px)]"
+          aria-label={t('header.toggleSidebar')}
+        >
+          <MenuIcon className="size-4" />
+        </button>
+      </div>
 
       <AppLink
         to="/"
