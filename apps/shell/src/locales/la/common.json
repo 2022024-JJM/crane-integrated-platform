@@ -309,7 +309,13 @@
       "outline": "Lineae exteriores parantur ({{done}}/{{total}})",
       "collision": "Linea basis collisionis computatur",
       "assets": "Exempla onerantur ({{loaded}}/{{total}})"
-    }
+    },
+    "minimap": "Tabula minima",
+    "minimapShow": "Tabulam minimam ostende",
+    "minimapHide": "Tabulam minimam cela",
+    "minimapRefresh": "Tabulam minimam renova",
+    "minimapHint": "Preme vel trahe ut cameram moveas",
+    "minimapMove": "Trahe ut tabulam minimam moveas"
   },
   "undo": "Revoca"
 }

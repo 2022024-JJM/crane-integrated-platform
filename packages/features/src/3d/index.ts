@@ -77,6 +77,21 @@ export {
   type SolarLightingSnapshot,
 } from './lib/solar-lighting';
 export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
+export { SceneMinimap } from './ui/scene-minimap';
+export { SceneMinimapCapture } from './ui/scene-minimap-capture';
+export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
+export {
+  useSceneMinimapStore,
+  type MinimapSnapshot,
+} from './model/use-scene-minimap-store';
+export {
+  cameraFootprint,
+  computeMinimapFrame,
+  minimapToWorld,
+  panPoseToPoint,
+  worldToMinimap,
+  type MinimapFrame,
+} from './lib/minimap';
 export {
   MIN_SURFACE_DISTANCE,
   SceneSurfaceCamera,

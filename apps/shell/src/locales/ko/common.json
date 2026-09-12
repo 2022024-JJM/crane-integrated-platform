@@ -309,7 +309,13 @@
       "outline": "외곽선 준비 중 ({{done}}/{{total}})",
       "collision": "충돌 감지 기준선 계산 중",
       "assets": "모델 불러오는 중 ({{loaded}}/{{total}})"
-    }
+    },
+    "minimap": "미니맵",
+    "minimapShow": "미니맵 표시",
+    "minimapHide": "미니맵 숨기기",
+    "minimapRefresh": "미니맵 새로 고침",
+    "minimapHint": "누르거나 끌어서 카메라 이동",
+    "minimapMove": "끌어서 미니맵 위치 이동"
   },
   "undo": "실행 취소"
 }

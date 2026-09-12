@@ -57,6 +57,9 @@ import {
 } from './scene-render-preset';
 import { sceneCanvasShadows } from '../lib/scene-shadow';
 import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
+import { SceneMinimap } from './scene-minimap';
+import { SceneMinimapCapture } from './scene-minimap-capture';
+import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
@@ -297,9 +300,20 @@ export function Monitoring3dView({
               />
             ) : null}
             {overlayExtras}
+            {/* 2D 미니맵(좌하단) — 독 배치(실시간 모니터링 화면)에서만. 배경은
+                Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링. */}
+            {isDock ? (
+              <SceneMinimap
+                sceneInfo={sceneInfo}
+                alarmsByCraneId={alarmsByCraneId}
+                getPose={handleGetPose}
+                onMoveTo={handleMoveTo}
+              />
+            ) : null}
             {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
-                일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다. */}
-            <ScenePerfHud />
+                일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다.
+                미니맵과 겹치지 않게 그 오른쪽에 둔다. */}
+            <ScenePerfHud className={isDock ? 'left-60' : undefined} />
           </>
         }
         fullscreenOverlay={fullscreenOverlay}
@@ -313,6 +327,7 @@ export function Monitoring3dView({
             <>
               {toolbarExtras}
               <SceneSimulationToggle />
+              <SceneMinimapToggle />
               {collisionActive ? (
                 <SceneCollisionMenu
                   runner={collisionRunner}
@@ -390,6 +405,10 @@ export function Monitoring3dView({
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />
           <ScenePerfProbe />
+          {/* 미니맵 배경 스냅샷 — 씬 준비 뒤 한 번 탑뷰를 렌더 타깃에 찍는다. */}
+          {isDock ? (
+            <SceneMinimapCapture sceneInfo={sceneInfo} ready={sceneReady} />
+          ) : null}
         </Suspense>
       </ThreeSceneViewer>
     </div>

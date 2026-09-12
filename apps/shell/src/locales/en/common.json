@@ -309,7 +309,13 @@
       "outline": "Preparing outlines ({{done}}/{{total}})",
       "collision": "Computing collision baseline",
       "assets": "Loading models ({{loaded}}/{{total}})"
-    }
+    },
+    "minimap": "Minimap",
+    "minimapShow": "Show minimap",
+    "minimapHide": "Hide minimap",
+    "minimapRefresh": "Refresh minimap",
+    "minimapHint": "Press or drag to move the camera",
+    "minimapMove": "Drag to move the minimap"
   },
   "undo": "Undo"
 }
