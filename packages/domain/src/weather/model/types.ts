@@ -49,6 +49,10 @@ export interface WeatherSnapshot {
   temperature: number;
   conditionCode: WeatherConditionCode;
   isDay: boolean;
+  /** 10m 풍속(m/s). 응답에 없으면 null — 크레인 작업 판단용(3D 관제 HUD). */
+  windSpeed: number | null;
+  /** 풍향(도, 바람이 불어오는 방위, 0=북). 없으면 null. */
+  windDirection: number | null;
 }
 
 export interface WeatherLocationTarget {

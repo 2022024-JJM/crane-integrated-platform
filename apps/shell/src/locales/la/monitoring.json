@@ -357,5 +357,29 @@
     "replayHint": "Horam in quadro repetitionis servatam sequitur.",
     "manualOff": "Haec scaena solem fixum (manu) adhibet. In Editore scaenae › Fundo 'Horam loci sequere' accende, ut dies et nox hora mutentur.",
     "noGeo": "Haec regio coordinatas loci non habet, ergo lumen horae subiectum non praesto est."
+  },
+  "hud": {
+    "siteTime": "Hora loci",
+    "wind": "Venti celeritas",
+    "windCaution": "Cautio venti — 10 m/s vel plus",
+    "windStop": "Ventus operis sistendi — 15 m/s vel plus",
+    "windUnavailable": "Ventus ignotus",
+    "running": "Machinae operantes / machinae statu noto",
+    "runningValue": "Operantes {{running}}/{{total}}",
+    "offline": "Machinae seiunctae",
+    "offlineValue": "Seiunctae {{count}}",
+    "alarms": "Machinae cum monitionibus",
+    "alarmsValue": "Monitiones {{count}}",
+    "windCautionShort": "Cautio venti",
+    "windStopShort": "Ventus sistendi",
+    "runningShort": "Operantes",
+    "offlineShort": "Seiunctae",
+    "alarmsShort": "Monitiones"
+  },
+  "runtimeStatus": {
+    "running": "Operans",
+    "idle": "Otiosa",
+    "offline": "Seiuncta",
+    "unknown": "Ignota"
   }
 }

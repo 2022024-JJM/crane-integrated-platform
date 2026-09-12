@@ -371,5 +371,29 @@
     "replayHint": "Follows the recorded time of the replay frame.",
     "manualOff": "This scene uses a fixed (manual) sun. Turn on 'Follow site time' in Scene Editor › Background to switch between day and night by time.",
     "noGeo": "This region has no site coordinates registered, so time-based lighting is unavailable."
+  },
+  "hud": {
+    "siteTime": "Site time",
+    "wind": "Wind speed",
+    "windCaution": "Wind caution — 10 m/s or more",
+    "windStop": "Stop-work wind — 15 m/s or more",
+    "windUnavailable": "Wind n/a",
+    "running": "Running equipment / equipment with known status",
+    "runningValue": "Running {{running}}/{{total}}",
+    "offline": "Equipment offline",
+    "offlineValue": "Offline {{count}}",
+    "alarms": "Equipment with alarms",
+    "alarmsValue": "Alarms {{count}}",
+    "windCautionShort": "Wind caution",
+    "windStopShort": "Stop-work wind",
+    "runningShort": "Running",
+    "offlineShort": "Offline",
+    "alarmsShort": "Alarms"
+  },
+  "runtimeStatus": {
+    "running": "Running",
+    "idle": "Idle",
+    "offline": "Offline",
+    "unknown": "Unknown"
   }
 }

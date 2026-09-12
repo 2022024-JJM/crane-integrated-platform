@@ -13,6 +13,10 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import {
+  RUNTIME_STATUS_COLORS,
+  type RuntimeStatusRecord,
+} from '../lib/model-runtime-status';
+import {
   cameraFootprint,
   clampPanelPosition,
   horizontalFovDeg,
@@ -77,6 +81,8 @@ const FOOTPRINT_STROKE = 'rgba(255, 255, 255, 0.85)';
 interface SceneMinimapProps {
   sceneInfo: SavedSceneInfo | null;
   alarmsByCraneId: Record<string, AlarmSeverity>;
+  /** 모델별 운전 상태 — 알람이 없는 마커의 색(running·idle·offline). */
+  runtimeStatuses?: RuntimeStatusRecord;
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
   /** 카메라를 즉시 옮긴다 — 북마크·포커스 복귀와 같은 경로. */
@@ -98,9 +104,12 @@ interface DrawnMarker {
   name: string;
 }
 
+const NO_STATUSES: RuntimeStatusRecord = Object.freeze({});
+
 export function SceneMinimap({
   sceneInfo,
   alarmsByCraneId,
+  runtimeStatuses = NO_STATUSES,
   getPose,
   onMoveTo,
   className,
@@ -151,6 +160,7 @@ export function SceneMinimap({
         scale,
         sceneInfo,
         alarmsByCraneId,
+        runtimeStatuses,
         useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
@@ -164,7 +174,7 @@ export function SceneMinimap({
     draw();
     const timer = window.setInterval(draw, DRAW_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [visible, snapshot, sceneInfo, alarmsByCraneId, getPose]);
+  }, [visible, snapshot, sceneInfo, alarmsByCraneId, runtimeStatuses, getPose]);
 
   const localPixel = useCallback(
     (event: PointerEvent<HTMLCanvasElement>) => {
@@ -426,6 +436,7 @@ function drawMarkers(
   scale: number,
   sceneInfo: SavedSceneInfo | null,
   alarms: Record<string, AlarmSeverity>,
+  statuses: RuntimeStatusRecord,
   focusedModelId: string | null,
   cache: MarkerCache,
 ): DrawnMarker[] {
@@ -448,7 +459,11 @@ function drawMarkers(
     const isFocused = focusedModelId === model.id;
     context.beginPath();
     context.arc(px, py, isFocused ? radius * 1.4 : radius, 0, Math.PI * 2);
-    context.fillStyle = severity ? SEVERITY_COLORS[severity] : MARKER_COLOR;
+    // 알람 > 운전 상태 > 기본(상태 미확인).
+    const statusColor = RUNTIME_STATUS_COLORS[statuses[model.id] ?? 'unknown'];
+    context.fillStyle = severity
+      ? SEVERITY_COLORS[severity]
+      : (statusColor ?? MARKER_COLOR);
     context.fill();
     context.lineWidth = (isFocused ? 2 : 1) * scale;
     context.strokeStyle = isFocused ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';

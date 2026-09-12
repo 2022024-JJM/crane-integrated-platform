@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
   type ModelShading,
   ModelMesh,
@@ -31,6 +32,8 @@ interface GltfModelProps {
   labelDimmed?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   alarmHighlightMesh?: boolean;
+  /** 라벨의 운전 상태 점(model-label.tsx). 모니터링 뷰가 판정해 넘긴다. */
+  runtimeStatus?: EquipmentRuntimeStatus;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델에만(model-mesh.tsx). */
   seaSubmersion?: boolean;
   /**
@@ -111,6 +114,7 @@ export const GltfModel = memo(function GltfModel({
   labelDimmed = false,
   alarmSeverity = null,
   alarmHighlightMesh = false,
+  runtimeStatus,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -194,6 +198,7 @@ export const GltfModel = memo(function GltfModel({
           equipName={equipName}
           localAnchor={labelLocalAnchor}
           alarmSeverity={alarmSeverity}
+          runtimeStatus={runtimeStatus}
           dimmed={labelDimmed}
           onSelect={onSelect}
           onHoverStart={onHoverStart}

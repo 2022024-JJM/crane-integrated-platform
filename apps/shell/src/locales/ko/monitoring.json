@@ -371,5 +371,29 @@
     "replayHint": "리플레이 프레임의 기록 시각을 따라갑니다.",
     "manualOff": "이 씬은 태양 위치가 고정(수동)입니다. 씬 편집 › 배경 탭에서 '현장 시각 연동'을 켜면 시각에 따라 낮과 밤이 바뀝니다.",
     "noGeo": "이 지역은 현장 위치(위경도)가 등록되지 않아 시각 연동을 쓸 수 없습니다."
+  },
+  "hud": {
+    "siteTime": "현장 시각",
+    "wind": "풍속",
+    "windCaution": "풍속 주의 — 10 m/s 이상",
+    "windStop": "작업 중지 풍속 — 15 m/s 이상",
+    "windUnavailable": "풍속 정보 없음",
+    "running": "가동 중인 장비 / 상태 확인된 장비",
+    "runningValue": "가동 {{running}}/{{total}}",
+    "offline": "통신두절 장비",
+    "offlineValue": "두절 {{count}}",
+    "alarms": "알람 발생 장비",
+    "alarmsValue": "알람 {{count}}",
+    "windCautionShort": "풍속 주의",
+    "windStopShort": "작업중지 풍속",
+    "runningShort": "가동",
+    "offlineShort": "통신두절",
+    "alarmsShort": "알람"
+  },
+  "runtimeStatus": {
+    "running": "가동",
+    "idle": "대기",
+    "offline": "통신두절",
+    "unknown": "상태 미확인"
   }
 }

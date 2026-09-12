@@ -26,6 +26,7 @@ import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
+import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
 export interface UseSceneDataOptions {
@@ -177,7 +178,14 @@ interface OutdoorWorkModelSimulationProps {
    * 충돌 감지가 없다. 지도에는 켜지 않는다.
    */
   prepareOutline?: boolean;
+  /**
+   * 모델별 운전 상태(useModelRuntimeStatuses). 라벨의 상태 점으로 넘긴다.
+   * 뷰가 한 번 판정해 미니맵·HUD 와 공유한다.
+   */
+  runtimeStatuses?: RuntimeStatusRecord;
 }
+
+const NO_STATUSES: RuntimeStatusRecord = Object.freeze({});
 
 export function OutdoorWorkModelSimulation({
   sceneInfo,
@@ -189,6 +197,7 @@ export function OutdoorWorkModelSimulation({
   onResetCamera,
   getPose,
   prepareOutline = false,
+  runtimeStatuses = NO_STATUSES,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
   // 바다(EXR 배경)가 있는 씬에서만 모델의 수면 아래를 잠김 처리한다 — 바다가
@@ -431,6 +440,7 @@ export function OutdoorWorkModelSimulation({
               model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
             }
             alarmHighlightMesh={alarmHighlightMesh}
+            runtimeStatus={runtimeStatuses[model.id]}
             seaSubmersion={hasSea}
             prepareOutline={prepareOutline}
             position={model.position}

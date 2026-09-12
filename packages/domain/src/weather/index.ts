@@ -7,7 +7,10 @@ export type {
   WeatherSiteId,
   WeatherSnapshot,
 } from './model/types';
-export { fetchOpenMeteoCurrentWeather } from './lib/open-meteo';
+export {
+  fetchOpenMeteoCurrentWeather,
+  parseOpenMeteoCurrentWeatherResponse,
+} from './lib/open-meteo';
 export { getWeatherPresentation } from './lib/weather-presentation';
 export {
   getDefaultSiteWeatherTargetId,

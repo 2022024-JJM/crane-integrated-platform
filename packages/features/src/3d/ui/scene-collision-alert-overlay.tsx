@@ -1,5 +1,6 @@
 import { AlertTriangle, Crosshair, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
@@ -35,9 +36,15 @@ import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 export function SceneCollisionAlertOverlay({
   runner,
   onViewCollision,
+  bannerClassName,
 }: {
   runner: SceneCollisionRunner;
   onViewCollision: () => void;
+  /**
+   * 배너 위치 보정 — 같은 상단 중앙을 쓰는 관제 HUD(SceneStatusHud) 아래로
+   * 내릴 때 `top-*` 를 덮어쓴다(cn 이 뒤 클래스를 우선). 기본 top-3.
+   */
+  bannerClassName?: string;
 }) {
   const { t } = useTranslation();
   const history = useSceneCollisionStore((s) => s.history);
@@ -78,7 +85,10 @@ export function SceneCollisionAlertOverlay({
       <div
         role="alert"
         aria-live="assertive"
-        className="animate-in slide-in-from-top-4 fade-in-0 pointer-events-auto absolute top-3 left-1/2 flex w-fit max-w-[min(90%,32rem)] -translate-x-1/2 items-center gap-3 rounded-lg border-2 border-red-500/70 bg-red-600/95 px-4 py-2.5 text-white shadow-2xl backdrop-blur-sm duration-300 motion-reduce:animate-none"
+        className={cn(
+          'animate-in slide-in-from-top-4 fade-in-0 pointer-events-auto absolute top-3 left-1/2 flex w-fit max-w-[min(90%,32rem)] -translate-x-1/2 items-center gap-3 rounded-lg border-2 border-red-500/70 bg-red-600/95 px-4 py-2.5 text-white shadow-2xl backdrop-blur-sm duration-300 motion-reduce:animate-none',
+          bannerClassName,
+        )}
       >
         <AlertTriangle className="size-6 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">

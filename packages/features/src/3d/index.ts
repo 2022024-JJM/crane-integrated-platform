@@ -80,6 +80,22 @@ export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
 export { SceneMinimap } from './ui/scene-minimap';
 export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
+export { SceneStatusHud } from './ui/scene-status-hud';
+export { useModelRuntimeStatuses } from './model/use-model-runtime-statuses';
+export {
+  RUNNING_WINDOW_MS,
+  OFFLINE_WINDOW_MS,
+  RUNTIME_STATUS_COLORS,
+  countRuntimeStatuses,
+  resolveRuntimeStatus,
+  type RuntimeStatusRecord,
+} from './lib/model-runtime-status';
+export {
+  WIND_CAUTION_MS,
+  WIND_STOP_MS,
+  resolveWindAdvisory,
+  type WindAdvisory,
+} from './lib/wind-advisory';
 export {
   useSceneMinimapStore,
   type MinimapSnapshot,

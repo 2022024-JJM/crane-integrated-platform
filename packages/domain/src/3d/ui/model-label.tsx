@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import { Vector3, type Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 
 /**
  * 이 거리(world units, 카메라 ↔ 라벨 위치)를 초과하면 라벨 DOM을 숨긴다.
@@ -31,6 +32,28 @@ const ALARM_LABEL_CLASS: Record<AlarmHighlightSeverity, string> = {
   info: 'bg-blue-500 text-white',
 };
 
+/**
+ * 운전 상태 표시 — features/3d lib/model-runtime-status.ts 의
+ * RUNTIME_STATUS_COLORS(hex) 와 같은 팔레트(emerald·sky·zinc). 알람이 없을 때
+ * 라벨 배경을 상태색으로 물들이고 이름 앞에 점을 둔다(점만으로는 먼 거리에서
+ * 읽히지 않았다). 알람이 있으면 배경은 알람색, 점만 남는다. unknown 은 기본
+ * 검정 배경·점 없음.
+ */
+const RUNTIME_STATUS_DOT_CLASS: Record<
+  Exclude<EquipmentRuntimeStatus, 'unknown'>,
+  string
+> = {
+  running: 'bg-emerald-300',
+  idle: 'bg-sky-200',
+  offline: 'bg-zinc-300',
+};
+const RUNTIME_STATUS_LABEL_CLASS: Record<EquipmentRuntimeStatus, string> = {
+  running: 'bg-emerald-700/90 text-white ring-1 ring-emerald-300/60',
+  idle: 'bg-sky-800/90 text-white ring-1 ring-sky-300/50',
+  offline: 'bg-zinc-700/90 text-zinc-100 ring-1 ring-zinc-400/60',
+  unknown: 'bg-black/60 text-white',
+};
+
 interface ModelLabelProps {
   id: string;
   equipName?: string;
@@ -42,6 +65,12 @@ interface ModelLabelProps {
    */
   localAnchor: Vector3Tuple;
   alarmSeverity?: AlarmHighlightSeverity | null;
+  /**
+   * 운전 상태(태그 활동 기반, features 가 판정해 넘긴다). 이름 앞 작은 점으로
+   * 표시하고 offline 은 라벨을 살짝 흐리게 — 알람 배경색과 겹쳐도 점은
+   * 남는다. 생략·unknown 이면 점 없음.
+   */
+  runtimeStatus?: EquipmentRuntimeStatus;
   /**
    * 흐림 표시. 모니터링 포커스 중 포커스 밖 모델의 라벨 — 모델 본체가
    * 투명해지는 것과 맞춰 라벨도 흐리게 하고 포인터 이벤트를 끊는다(클릭·
@@ -59,6 +88,7 @@ export function ModelLabel({
   equipName,
   localAnchor,
   alarmSeverity = null,
+  runtimeStatus = 'unknown',
   dimmed = false,
   onSelect,
   onHoverStart,
@@ -121,7 +151,7 @@ export function ModelLabel({
       <Html center zIndexRange={[5, 0]}>
         <div
           ref={divRef}
-          className={`rounded px-1 py-px font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : 'bg-black/60 text-white'} ${dimmed ? 'pointer-events-none opacity-30' : 'cursor-pointer'}`}
+          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : RUNTIME_STATUS_LABEL_CLASS[runtimeStatus]} ${dimmed ? 'pointer-events-none opacity-30' : runtimeStatus === 'offline' && !alarmSeverity ? 'cursor-pointer opacity-70' : 'cursor-pointer'}`}
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
@@ -158,6 +188,12 @@ export function ModelLabel({
                 }
           }
         >
+          {runtimeStatus !== 'unknown' ? (
+            <span
+              aria-hidden
+              className={`inline-block size-2 shrink-0 rounded-full ring-1 ring-black/40 ${RUNTIME_STATUS_DOT_CLASS[runtimeStatus]}`}
+            />
+          ) : null}
           {equipName}
         </div>
       </Html>

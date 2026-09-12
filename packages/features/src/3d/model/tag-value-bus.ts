@@ -24,6 +24,12 @@ export interface TagLiveValue {
   value: number;
   /** performance.now() 기준이 아니라 Date.now() — 표시용이라 정밀도 불필요. */
   at: number;
+  /**
+   * 값이 직전과 **달라진** 마지막 시각. 같은 값이 반복 수신되면(가상 태그
+   * manual 패턴, 정지한 장비의 주기 스냅샷) `at` 만 갱신되고 이건 남는다 —
+   * 운전 상태(running/idle) 판정의 근거(lib/model-runtime-status.ts).
+   */
+  changedAt: number;
 }
 
 const liveValues = new Map<string, TagLiveValue>();
@@ -60,6 +66,12 @@ export function hasTagIngest(): boolean {
 export function publishTagValue(key: string, value: number): void {
   if (typeof key !== 'string' || key.length === 0) return;
   if (!Number.isFinite(value)) return;
-  liveValues.set(key, { value, at: Date.now() });
+  const now = Date.now();
+  const prev = liveValues.get(key);
+  liveValues.set(key, {
+    value,
+    at: now,
+    changedAt: prev && prev.value === value ? prev.changedAt : now,
+  });
   tagIngest?.(key, value);
 }

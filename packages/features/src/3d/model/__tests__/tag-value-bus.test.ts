@@ -49,3 +49,27 @@ describe('publishTagValue', () => {
     expect(ingest).not.toHaveBeenCalled();
   });
 });
+
+describe('changedAt', () => {
+  it('같은 값 재수신은 at 만 갱신하고 changedAt 은 남는다', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    publishTagValue('C_1:x', 5);
+    expect(tagLiveValues.get('C_1:x')).toEqual({
+      value: 5,
+      at: 10_000,
+      changedAt: 10_000,
+    });
+    vi.setSystemTime(12_000);
+    publishTagValue('C_1:x', 5);
+    expect(tagLiveValues.get('C_1:x')).toEqual({
+      value: 5,
+      at: 12_000,
+      changedAt: 10_000,
+    });
+    vi.setSystemTime(13_000);
+    publishTagValue('C_1:x', 6);
+    expect(tagLiveValues.get('C_1:x')?.changedAt).toBe(13_000);
+    vi.useRealTimers();
+  });
+});

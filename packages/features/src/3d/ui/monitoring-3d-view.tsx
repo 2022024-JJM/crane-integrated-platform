@@ -60,6 +60,8 @@ import { SceneLoadingOverlay, SceneReadyProbe } from './scene-loading-overlay';
 import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
+import { SceneStatusHud } from './scene-status-hud';
+import { useModelRuntimeStatuses } from '../model/use-model-runtime-statuses';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
@@ -151,6 +153,9 @@ export function Monitoring3dView({
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
+  // 모델별 운전 상태(태그 활동 기반) — 라벨 점·미니맵 마커·HUD 가 공유한다.
+  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정).
+  const runtimeStatuses = useModelRuntimeStatuses(sceneInfo);
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
@@ -297,6 +302,8 @@ export function Monitoring3dView({
               <SceneCollisionAlertOverlay
                 runner={collisionRunner}
                 onViewCollision={handleViewCollision}
+                // 독 배치는 상단 중앙에 관제 HUD 가 있어 그 아래로 내린다.
+                bannerClassName={isDock ? 'top-16' : undefined}
               />
             ) : null}
             {overlayExtras}
@@ -306,8 +313,17 @@ export function Monitoring3dView({
               <SceneMinimap
                 sceneInfo={sceneInfo}
                 alarmsByCraneId={alarmsByCraneId}
+                runtimeStatuses={runtimeStatuses}
                 getPose={handleGetPose}
                 onMoveTo={handleMoveTo}
+              />
+            ) : null}
+            {/* 관제 요약 HUD(상단 중앙) — 독 배치에서만. */}
+            {isDock ? (
+              <SceneStatusHud
+                regionId={regionId}
+                runtimeStatuses={runtimeStatuses}
+                alarmsByCraneId={alarmsByCraneId}
               />
             ) : null}
             {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
@@ -401,6 +417,7 @@ export function Monitoring3dView({
             onResetCamera={handleResetCamera}
             getPose={handleGetPose}
             prepareOutline={collisionActive}
+            runtimeStatuses={runtimeStatuses}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />
