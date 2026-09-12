@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   DAYLIGHT_FADE,
+  DAY_AMBIENT_BOOST,
+  DAY_HEMISPHERE_GROUND_COLOR,
+  DAY_HEMISPHERE_INTENSITY,
+  DAY_HEMISPHERE_SKY_COLOR,
   FILL_LIGHT_INTENSITY_RATIO,
   NIGHT_AMBIENT_COLOR_DARK,
   NIGHT_AMBIENT_COLOR_LIT,
@@ -9,10 +13,13 @@ import {
   NIGHT_HEMISPHERE_GROUND_COLOR,
   NIGHT_HEMISPHERE_INTENSITY_DARK,
   NIGHT_HEMISPHERE_INTENSITY_LIT,
+  NIGHT_HEMISPHERE_SKY_COLOR,
   NIGHT_SKY_INTENSITY,
   NIGHT_SKY_TINT_ALPHA,
   SUN_COLOR_HORIZON,
   SUN_COLOR_ZENITH,
+  SUN_COMPENSATION_MAX,
+  SUN_COMPENSATION_REF_ELEVATION,
   SUN_KEY_FADE,
   YARD_LIGHT_COLOR,
   YARD_LIGHT_FADE,
@@ -58,28 +65,52 @@ describe('smoothstep', () => {
 });
 
 describe('resolveSkyLighting — 낮', () => {
-  it('한낮(60°)은 기존 화면과 같은 값 — 태양 백색·낮 세기·하늘 1·작업등 꺼짐', () => {
-    const sky = at(60);
+  it('기준 고도(수동 기본값 78.7°)의 태양은 기존 세기 그대로 — 백색·하늘 1·작업등 꺼짐', () => {
+    const sky = at(SUN_COMPENSATION_REF_ELEVATION);
     expect(sky.sunIntensity).toBeCloseTo(BASE.sunIntensity, 12);
     expect(sky.yardIntensity).toBe(0);
-    // 밤 전용 요소는 전부 0 — 한낮 화면이 수동 모드와 같아지는 근거.
+    // 밤 전용 요소는 0 — 낮엔 하늘빛 반구광만 더해진다.
     expect(sky.fillIntensity).toBe(0);
-    expect(sky.hemisphereIntensity).toBe(0);
+    expect(sky.hemisphereIntensity).toBeCloseTo(DAY_HEMISPHERE_INTENSITY, 12);
+    expect(sky.hemisphereSkyColor).toEqual(DAY_HEMISPHERE_SKY_COLOR);
     expect(sky.skyTintOpacity).toBe(0);
-    expect(sky.keyIntensity).toBeCloseTo(BASE.sunIntensity, 12);
     expect(sky.keyYardBlend).toBe(0);
     expect(sky.keyColor).toEqual(SUN_COLOR_ZENITH);
-    expect(sky.ambientIntensity).toBeCloseTo(BASE.ambientIntensity, 12);
+    expect(sky.ambientIntensity).toBeCloseTo(
+      BASE.ambientIntensity * DAY_AMBIENT_BOOST,
+      12,
+    );
     expect(sky.ambientColor).toEqual([1, 1, 1]);
     expect(sky.skyIntensity).toBe(1);
     expect(sky.daylight).toBe(1);
     expect(sky.sunVisibility).toBe(1);
   });
 
+  it('낮은 태양은 지면 조도 보상으로 세기가 오르되 상한이 있다 — 오후·겨울도 밝다', () => {
+    expect(at(60).sunIntensity).toBeGreaterThan(BASE.sunIntensity);
+    expect(at(60).sunIntensity).toBeCloseTo(
+      BASE.sunIntensity *
+        (Math.sin((SUN_COMPENSATION_REF_ELEVATION * Math.PI) / 180) /
+          Math.sin((60 * Math.PI) / 180)),
+      10,
+    );
+    expect(at(30).sunIntensity).toBeCloseTo(
+      BASE.sunIntensity * SUN_COMPENSATION_MAX,
+      10,
+    );
+    // 지평선 위에서는 세기·색·하늘이 낮 그대로다(전환은 지평선 근처 몇 도).
+    for (const el of [10, 20, 45]) {
+      expect(at(el).skyIntensity).toBe(1);
+      expect(at(el).daylight).toBe(1);
+      expect(at(el).keyColor).toEqual(SUN_COLOR_ZENITH);
+      expect(at(el).yardIntensity).toBe(0);
+    }
+  });
+
   it('지평선(0°)의 태양은 노을색이 섞이고 세기·하늘이 낮보다 낮다', () => {
     const sky = at(0);
     expect(sky.sunIntensity).toBeGreaterThan(0);
-    expect(sky.sunIntensity).toBeLessThan(BASE.sunIntensity);
+    expect(sky.sunIntensity).toBeLessThan(at(10).sunIntensity);
     // 작업등이 켜지기 시작해 색은 노을과 작업등의 혼합 — 어느 한쪽 순색은 아니다.
     expect(sky.keyYardBlend).toBeGreaterThan(0);
     expect(sky.keyYardBlend).toBeLessThan(1);
@@ -171,10 +202,12 @@ describe('resolveSkyLighting — 태양→작업등 인계 연속성', () => {
     let prev = at(30, -30, 0);
     for (let el = 29; el >= -30; el -= 1) {
       const cur = at(el, -30, 0);
+      // 인계 구간이 7°(SUN_KEY_FADE)로 좁아 1° 당 변화가 크지만, 실제로는
+      // 수 분에 걸친 변화라 프레임 단위론 연속이다.
       expect(Math.abs(cur.keyIntensity - prev.keyIntensity)).toBeLessThan(
-        BASE.sunIntensity * 0.25,
+        BASE.sunIntensity * 0.4,
       );
-      expect(Math.abs(cur.keyYardBlend - prev.keyYardBlend)).toBeLessThan(0.35);
+      expect(Math.abs(cur.keyYardBlend - prev.keyYardBlend)).toBeLessThan(0.5);
       expect(
         Math.abs(cur.ambientIntensity - prev.ambientIntensity),
       ).toBeLessThan(0.2);
@@ -241,8 +274,8 @@ describe('resolveSkyLighting — 잘못된 입력', () => {
     expect(at(-40, 60, 7).moonVisibility).toBe(at(-40, 60, 1).moonVisibility);
   });
 
-  it('SUN_COLOR_HORIZON 은 작업등을 끈 지평선 태양의 색이다', () => {
-    expect(at(0, -30, 0.5, false).keyColor).toEqual(SUN_COLOR_HORIZON);
+  it('SUN_COLOR_HORIZON 은 작업등을 끈 지평선 아래(-2°) 태양의 색이다', () => {
+    expect(at(-2, -30, 0.5, false).keyColor).toEqual(SUN_COLOR_HORIZON);
   });
 });
 
@@ -266,5 +299,14 @@ describe('classifySkyPhase', () => {
     expect(classifySkyPhase(0, -90)).toBe('dusk'); // 270°
     expect(classifySkyPhase(0, Number.NaN)).toBe('dawn');
     expect(classifySkyPhase(Number.NaN, 0)).toBe('day');
+  });
+});
+
+describe('resolveSkyLighting — 반구광 색', () => {
+  it('밤은 남색 하늘·난색 지면, 낮은 하늘색·지면색', () => {
+    expect(at(-40, 50, 1).hemisphereSkyColor).toEqual(
+      NIGHT_HEMISPHERE_SKY_COLOR,
+    );
+    expect(at(60).hemisphereGroundColor).toEqual(DAY_HEMISPHERE_GROUND_COLOR);
   });
 });

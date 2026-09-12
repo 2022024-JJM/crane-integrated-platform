@@ -111,18 +111,32 @@ export interface SkyLighting {
   moonVisibility: number;
 }
 
-/** 태양 방향광 세기가 0→1 로 오르는 고도 구간(도). */
-export const SUN_KEY_FADE: readonly [number, number] = [-3, 10];
-/** 낮 판정(daylight) 구간 — 시민 박명(−6°)에서 시작해 8° 에서 완전한 낮. */
-export const DAYLIGHT_FADE: readonly [number, number] = [-6, 8];
-/** 하늘 밝기 구간. 일몰(0°)에서 약 0.6 — 저녁 하늘이 낮보다 어둡다. */
-export const SKY_FADE: readonly [number, number] = [-8, 6];
+/**
+ * 태양 방향광 세기가 0→1 로 오르는 고도 구간(도). 해가 지평선 위에 있는
+ * 동안은 거의 전부 "완전한 낮" — 아침·저녁이 어둡게 느껴진다는 피드백으로
+ * 2026-09-12 에 [-3, 10] → [-3, 4] 로 좁혔다. 어두워지는 것은 일몰 직전
+ * 몇 분뿐이고, 그림자 방향만 태양을 따라 돈다.
+ */
+export const SUN_KEY_FADE: readonly [number, number] = [-3, 4];
+/**
+ * 낮은 태양의 지면 조도 보상. 방향광 세기는 고도와 무관한데 지면·수평면이
+ * 받는 빛은 sin(고도)에 비례해 아침·저녁·겨울 정오가 어두워 보인다.
+ * 그래서 sin(기준 고도)/sin(고도) 만큼 세기를 올린다 — 기준 고도는 수동
+ * 모드 기본값(SCENE_SUN_ELEVATION_DEFAULT ≈ 78.7°)이라 그 높이의 태양이
+ * 곧 기존 화면이다. 상한은 수직면(크레인 측면)이 타지 않는 선.
+ */
+export const SUN_COMPENSATION_REF_ELEVATION = 78.69006752597979;
+export const SUN_COMPENSATION_MAX = 1.6;
+/** 낮 판정(daylight) 구간 — 시민 박명(−6°)에서 시작해 3° 에서 완전한 낮. */
+export const DAYLIGHT_FADE: readonly [number, number] = [-6, 3];
+/** 하늘 밝기 구간. 해가 지평선 위면 하늘은 낮 그대로다. */
+export const SKY_FADE: readonly [number, number] = [-8, 1];
 /**
  * 야간 작업등 점등 구간(태양 고도). 5° 아래부터 켜지기 시작해 −5° 에
  * 완전 점등 — 실제 야드가 해 질 무렵 조명을 켜는 것과 같고, 태양 세기가
  * 0 이 되는 −3° 를 안에 품어 인계가 매끄럽다.
  */
-export const YARD_LIGHT_FADE: readonly [number, number] = [-5, 5];
+export const YARD_LIGHT_FADE: readonly [number, number] = [-5, 2];
 /**
  * 작업등 세기 = 낮 태양 세기 × 이 비율(3.6 → 2.16). 낮보다 어둡되 장비가
  * 환하다. 0.45 로 시작했다가 "밤이 너무 어둡다" 피드백으로 올렸다
@@ -178,8 +192,20 @@ export const NIGHT_AMBIENT_INTENSITY_DARK = 0.28;
 export const NIGHT_AMBIENT_COLOR_DARK: RgbTuple = [0.55, 0.66, 0.95];
 /** 낮 환경광 색 — 기존 화면과 같은 무채색. */
 export const DAY_AMBIENT_COLOR: RgbTuple = [1, 1, 1];
-/** 지평선 태양 색(노을) → 천정 태양 색(백색) 전환 구간. */
-export const SUN_COLOR_FADE: readonly [number, number] = [0, 25];
+/**
+ * 지평선 태양 색(노을) → 백색 전환 구간. 노을은 일출·일몰 직후 몇 분에만 —
+ * 넓게 잡으면(옛 [0,25]) 오후 내내 누렇게 어두워 보였다.
+ */
+export const SUN_COLOR_FADE: readonly [number, number] = [-2, 6];
+/**
+ * 낮 반구광 — 위는 하늘색, 아래는 지면 반사. 그림자 면(태양 반대편)이
+ * 새까맣지 않게 하는 낮의 채움광. 수동 모드에는 없고 solar 모드 낮에만.
+ */
+export const DAY_HEMISPHERE_INTENSITY = 0.45;
+export const DAY_HEMISPHERE_SKY_COLOR: RgbTuple = [0.78, 0.87, 1];
+export const DAY_HEMISPHERE_GROUND_COLOR: RgbTuple = [0.92, 0.88, 0.8];
+/** solar 모드 낮 환경광 배율 — 수동 모드 기준값 대비. "낮은 밝게" 피드백. */
+export const DAY_AMBIENT_BOOST = 1.15;
 export const SUN_COLOR_HORIZON: RgbTuple = [1, 0.64, 0.38];
 export const SUN_COLOR_ZENITH: RgbTuple = [1, 1, 1];
 
@@ -223,7 +249,11 @@ export function resolveSkyLighting(
     (1 - NIGHT_SKY_INTENSITY) * smoothstep(SKY_FADE[0], SKY_FADE[1], sunEl);
 
   const sunFactor = smoothstep(SUN_KEY_FADE[0], SUN_KEY_FADE[1], sunEl);
-  const sunIntensity = base.sunIntensity * sunFactor;
+  // 지면 조도 보상(상수 주석). 고도 ≤ 0 은 sin 이 0 이하라 상한으로.
+  const sinRef = Math.sin((SUN_COMPENSATION_REF_ELEVATION * Math.PI) / 180);
+  const sinEl = Math.sin((Math.max(sunEl, 0.01) * Math.PI) / 180);
+  const compensation = clampToRange(sinRef / sinEl, 1, SUN_COMPENSATION_MAX);
+  const sunIntensity = base.sunIntensity * sunFactor * compensation;
   const sunColor = lerpRgb(
     SUN_COLOR_HORIZON,
     SUN_COLOR_ZENITH,
@@ -257,25 +287,38 @@ export function resolveSkyLighting(
   );
   const ambientIntensity = lerp(
     nightAmbientIntensity,
-    base.ambientIntensity,
+    base.ambientIntensity * DAY_AMBIENT_BOOST,
     daylight,
   );
   const ambientColor = lerpRgb(nightAmbientColor, DAY_AMBIENT_COLOR, daylight);
 
-  // 보조 투광등·반구광·하늘 틴트 — 전부 밤에만(낮 값은 0 이라 한낮 화면은
-  // 수동 모드와 같다).
+  // 보조 투광등·하늘 틴트는 밤에만. 반구광은 밤(작업등/달빛)과 낮(하늘·
+  // 지면 채움) 값을 daylight 로 잇는다.
   const fillIntensity = yardIntensity * FILL_LIGHT_INTENSITY_RATIO;
-  const nightness = 1 - daylight;
-  const hemisphereIntensity =
-    lerp(
-      NIGHT_HEMISPHERE_INTENSITY_DARK,
-      NIGHT_HEMISPHERE_INTENSITY_LIT,
-      yardOn,
-    ) * nightness;
-  const hemisphereGroundColor = lerpRgb(
+  const nightHemisphere = lerp(
+    NIGHT_HEMISPHERE_INTENSITY_DARK,
+    NIGHT_HEMISPHERE_INTENSITY_LIT,
+    yardOn,
+  );
+  const hemisphereIntensity = lerp(
+    nightHemisphere,
+    DAY_HEMISPHERE_INTENSITY,
+    daylight,
+  );
+  const nightHemisphereGround = lerpRgb(
     NIGHT_AMBIENT_COLOR_DARK,
     NIGHT_HEMISPHERE_GROUND_COLOR,
     yardOn,
+  );
+  const hemisphereSkyColor = lerpRgb(
+    NIGHT_HEMISPHERE_SKY_COLOR,
+    DAY_HEMISPHERE_SKY_COLOR,
+    daylight,
+  );
+  const hemisphereGroundColor = lerpRgb(
+    nightHemisphereGround,
+    DAY_HEMISPHERE_GROUND_COLOR,
+    daylight,
   );
   const skyTintOpacity =
     NIGHT_SKY_TINT_ALPHA *
@@ -305,7 +348,7 @@ export function resolveSkyLighting(
     fillIntensity,
     fillColor: YARD_LIGHT_COLOR,
     hemisphereIntensity,
-    hemisphereSkyColor: NIGHT_HEMISPHERE_SKY_COLOR,
+    hemisphereSkyColor,
     hemisphereGroundColor,
     skyTintOpacity,
     sunVisibility,
