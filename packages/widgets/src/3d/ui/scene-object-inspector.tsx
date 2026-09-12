@@ -1,9 +1,9 @@
 import {
   Bone,
   Camera,
-  CircleDot,
   Eye,
   Palette,
+  Radar,
   SlidersHorizontal,
   Tag,
   Type,
@@ -69,7 +69,8 @@ type InspectorObjectType = 'model' | 'text' | 'map';
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
   display: Eye,
-  zones: CircleDot,
+  // 모니터링 독의 영역 감지 팝업(SceneZoneMenu)과 같은 아이콘.
+  zones: Radar,
   tagMapping: Tag,
   rigging: Bone,
   textContent: Type,

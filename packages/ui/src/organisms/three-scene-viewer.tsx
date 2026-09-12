@@ -35,6 +35,7 @@ import {
   SCENE_DOCK_RAIL_COLUMN_WIDTH,
   SCENE_DOCK_RAIL_HANDLE_WIDTH,
   SceneDockRail,
+  SceneDockRailSeparator,
   type SceneDockState,
 } from './scene-dock';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -437,15 +438,18 @@ export function ThreeSceneViewer({
   }
 
   // 툴바 아이콘 순서: 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면.
-  // 앞(왼쪽)에는 toolbarTrailing(씬 뷰 북마크 — 저장된 뷰 칩 + 저장 버튼)이 붙어
-  // "추가한 뷰들 / 현재 뷰 저장 / 원래위치 / 탑뷰 / 확대 / 축소 / 전체화면"이 된다.
-  // 독 레일(세로)에서는 툴팁을 왼쪽으로 연다.
+  // 가로 툴바에서는 앞(왼쪽)에 toolbarTrailing(씬 뷰 북마크 — 저장된 뷰 칩 +
+  // 저장 버튼)이 붙어 "추가한 뷰들 / 현재 뷰 저장 / 원래위치 / 탑뷰 / 확대 /
+  // 축소 / 전체화면"이 된다. 독 레일(세로)에서는 북마크가 카메라 묶음 안,
+  // 탑뷰 바로 아래에 들어간다(저장한 뷰도 곧 카메라 이동이라 시선 조작끼리
+  // 모아 둔 것) — 그래서 버튼을 앞/뒤 두 조각으로 나눠 둔다. 레일에서는
+  // 툴팁을 왼쪽으로 연다.
   const tooltipSide: SceneToolbarTooltipSide = isDock
     ? 'left'
     : isTopRightToolbar
       ? 'bottom'
       : 'top';
-  const cameraToolbarButtons = (
+  const cameraToolbarButtonsHead = (
     <>
       <SceneToolbarButton
         label={t('common:viewer3d.resetView')}
@@ -465,6 +469,10 @@ export function ThreeSceneViewer({
       >
         <Binoculars />
       </SceneToolbarButton>
+    </>
+  );
+  const cameraToolbarButtonsTail = (
+    <>
       <SceneToolbarButton
         label={t('common:viewer3d.zoomIn')}
         side={tooltipSide}
@@ -496,6 +504,12 @@ export function ThreeSceneViewer({
           {isFullscreen ? <Minimize2 /> : <Maximize2 />}
         </SceneToolbarButton>
       ) : null}
+    </>
+  );
+  const cameraToolbarButtons = (
+    <>
+      {cameraToolbarButtonsHead}
+      {cameraToolbarButtonsTail}
     </>
   );
 
@@ -622,8 +636,8 @@ export function ThreeSceneViewer({
         ) : null}
 
         {/* 화면 조작 툴바.
-            'dock': 우측 독 레일 안에 세로로 — 카메라 버튼, toolbarExtras,
-            toolbarTrailing 순.
+            'dock': 우측 독 레일 안에 세로로 — 카메라 버튼(원래위치·탑뷰 →
+            toolbarTrailing → 확대·축소·전체화면), 그 아래 toolbarExtras.
             'top-right': 우측 상단 세로 스택 — 1줄 카메라 조작, 2줄 toolbarExtras
             (전체화면 알람 토글 등), 그 아래 전체화면 우측 상단 슬롯(알람 패널).
             좌우 여백을 함께 잡아 두어 북마크 칩이 많아도 왼쪽 화면 밖으로
@@ -641,17 +655,14 @@ export function ThreeSceneViewer({
                   onPinnedChange={dockRight.onPinnedChange}
                   handlers={dockRight.handlers}
                 >
-                  {cameraToolbarButtons}
+                  {cameraToolbarButtonsHead}
+                  {/* 저장한 뷰 — 탑뷰 바로 아래(위 주석). */}
+                  {toolbarTrailing}
+                  {cameraToolbarButtonsTail}
                   {toolbarExtras ? (
                     <>
-                      <DockRailSeparator />
+                      <SceneDockRailSeparator />
                       {toolbarExtras}
-                    </>
-                  ) : null}
-                  {toolbarTrailing ? (
-                    <>
-                      <DockRailSeparator />
-                      {toolbarTrailing}
                     </>
                   ) : null}
                 </SceneDockRail>
@@ -702,12 +713,3 @@ export function ThreeSceneViewer({
   );
 }
 
-/** 독 레일 안에서 버튼 그룹을 나누는 가로 구분선. */
-function DockRailSeparator() {
-  return (
-    <span
-      aria-hidden
-      className="my-0.5 h-px w-5 shrink-0 bg-black/25 dark:bg-white/25"
-    />
-  );
-}

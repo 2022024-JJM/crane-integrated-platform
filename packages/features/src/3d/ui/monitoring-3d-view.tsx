@@ -20,6 +20,7 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
+import { SceneDockRailSeparator } from '@crane/ui/organisms/scene-dock';
 import {
   ThreeSceneViewer,
   type SceneController,
@@ -41,6 +42,7 @@ import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
 import { SceneZoneDetector } from './scene-zone-detector';
+import { SceneZoneMenu } from './scene-zone-menu';
 import { SceneZoneRings } from './scene-zone-rings';
 import { SceneClockMenu } from './scene-clock-menu';
 import { SceneFrameGovernor } from './scene-frame-governor';
@@ -109,9 +111,11 @@ interface Monitoring3dViewProps {
   canvasDpr?: number | [number, number];
   /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
-   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 카메라
-   * 버튼·toolbarExtras·북마크·시뮬레이션 토글. 독은 전체화면 루트 안이라
-   * 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링 화면).
+   * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 위에서부터
+   * 카메라 버튼(원래위치·탑뷰·저장한 뷰·확대·축소·전체화면), 씬 감지
+   * (시뮬레이션 재생·충돌·영역), 구분선 아래 화면 표시(toolbarExtras 로 받은
+   * 페이지 버튼·미니맵·현장 시각). 독은 전체화면 루트 안이라 전체화면에서도
+   * 같은 구성이 유지된다 (실시간 모니터링 화면).
    * 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
    */
   toolbarLayout?: 'top-right' | 'dock' | 'none';
@@ -342,19 +346,23 @@ export function Monitoring3dView({
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={
           isDock ? (
-            // 독 레일에는 페이지가 준 버튼 뒤에 시뮬레이션 재생 토글과 충돌
-            // 감지 팝업을 붙인다(실시간 모니터링 화면 공통). 작은 뷰(top-right)
-            // 에는 두지 않는다.
+            // 독 레일에서 카메라 묶음 아래 구성(실시간 모니터링 화면 공통).
+            // 먼저 씬 감지(재생·충돌·영역), 구분선 아래에 화면 표시 계열 —
+            // 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·현장 시각을 모아
+            // 맨 아래에 둔다. 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
             <>
-              {toolbarExtras}
               <SceneSimulationToggle />
-              <SceneMinimapToggle />
               {collisionActive ? (
                 <SceneCollisionMenu
                   runner={collisionRunner}
                   onViewCollision={handleViewCollision}
                 />
               ) : null}
+              {/* 영역 침범 — 충돌과 별도 스토어·의미라 아이콘도 따로 둔다. */}
+              <SceneZoneMenu />
+              <SceneDockRailSeparator />
+              {toolbarExtras}
+              <SceneMinimapToggle />
               {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
                   의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. */}
               <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />

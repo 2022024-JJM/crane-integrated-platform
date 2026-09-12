@@ -70,6 +70,21 @@ export interface SceneDockState {
  */
 const BACKING_CLASS = 'bg-background text-foreground';
 
+/**
+ * 독 레일 안에서 버튼 그룹을 나누는 가로 구분선. 뷰어가 카메라 조작 묶음과
+ * toolbarExtras 사이에 끼우고, 레일 내용을 조립하는 쪽(모니터링 뷰)도 자기
+ * 묶음을 나눌 때 같은 것을 쓴다 — 3D 런타임을 끌어오는 three-scene-viewer
+ * 대신 여기 두는 이유는 그 파일 상단 주석 참고.
+ */
+export function SceneDockRailSeparator() {
+  return (
+    <span
+      aria-hidden
+      className="my-0.5 h-px w-5 shrink-0 bg-black/25 dark:bg-white/25"
+    />
+  );
+}
+
 function isFocusVisible(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) {
     return false;

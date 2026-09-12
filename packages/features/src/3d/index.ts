@@ -151,6 +151,7 @@ export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
 export { SceneCollisionMenu } from './ui/scene-collision-menu';
 export { SceneCollisionPanel } from './ui/scene-collision-panel';
+export { SceneZoneMenu } from './ui/scene-zone-menu';
 export { SceneZonePanel } from './ui/scene-zone-panel';
 export { type SceneCollisionRunner } from './model/scene-collision-hold';
 export {
