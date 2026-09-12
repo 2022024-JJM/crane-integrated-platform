@@ -16,6 +16,7 @@ import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-bu
 import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { SceneCollisionPanel } from './scene-collision-panel';
+import { SceneZonePanel } from './scene-zone-panel';
 
 interface SceneCollisionMenuProps {
   onViewCollision: () => void;
@@ -24,8 +25,9 @@ interface SceneCollisionMenuProps {
 
 /**
  * 충돌 감지 팝업 — 모니터링 독 우측 레일용 아이콘 버튼(SceneSimulationToggle
- * 과 같은 형태). 누르면 에디터 "충돌" 탭과 같은 패널(SceneCollisionPanel)이
- * 왼쪽으로 열린다. 레일에선 버튼 배경이 평면화되므로 감지 켜짐(amber)·충돌
+ * 과 같은 형태). 누르면 에디터 시뮬레이션 탭 충돌 하위 탭와 같은 패널(SceneCollisionPanel)이
+ * 왼쪽으로 열리고, 그 아래에 에디터 "영역" 탭의 패널(SceneZonePanel)이 이어
+ * 붙는다 — 독 레일 아이콘을 하나 더 늘리지 않으려는 것. 레일에선 버튼 배경이 평면화되므로 감지 켜짐(amber)·충돌
  * 정지(red)는 테두리·글자색으로 구분한다.
  *
  * PopoverTrigger 가 붙이는 data-popup-open 을 독 레일이 세어 팝업이 열린
@@ -90,6 +92,9 @@ export function SceneCollisionMenu({
           runner={runner}
           onViewCollision={onViewCollision}
         />
+        <div className="border-border mt-3 border-t pt-2">
+          <SceneZonePanel />
+        </div>
       </PopoverPopup>
     </Popover>
   );

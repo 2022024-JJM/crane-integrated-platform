@@ -10,6 +10,7 @@ import {
 } from '@crane/domain/3d';
 import {
   SceneCollisionPanel,
+  SceneZonePanel,
   SceneWarmupIndicator,
   useSceneCollisionStore,
   useSceneEditorViewStore,
@@ -137,7 +138,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     (state) => state.setTransformPivot,
   );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
-  // 충돌 감지 on/off 는 팔레트 "충돌" 탭이 조작하는 전역 세션 상태
+  // 충돌 감지 on/off 는 팔레트 "시뮬레이션" 탭(충돌 하위 탭)이 조작하는 전역 세션 상태
   // (useSceneCollisionStore, 모니터링과 공유). 캔버스는 스토어를 직접 구독하지
   // 않고 prop 으로 받는다(showGrid 와 같은 규칙).
   const collisionEnabled = useSceneCollisionStore((state) => state.enabled);
@@ -223,7 +224,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     onExemptChange: updateSelectedZoneExempt,
   };
 
-  // 가상 태그 시뮬레이션 — 팔레트 "태그" 탭의 재생 토글이 켠다. 바인딩(버스 →
+  // 가상 태그 시뮬레이션 — 팔레트 "시뮬레이션" 탭(태그 하위 탭)의 재생 토글이 켠다. 바인딩(버스 →
   // 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는 동안 항상 켜 둔다.
   // 일시정지는 러너 틱만 멈춰 노드가 마지막 값에서 그대로 서고, 초기값 복귀는
   // 탭의 리셋 버튼(virtualTagRuntime.resetValues)이 맡는다. 예전엔 토글에
@@ -444,7 +445,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           <>
             <ResizablePanel
               id="project-palette"
-              defaultSize="13rem"
+              defaultSize="14rem"
               minSize="10rem"
               maxSize="22rem"
               groupResizeBehavior="preserve-pixel-size"
@@ -747,13 +748,19 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 카탈로그·드롭 경로까지 모델처럼 다루게 된다. 그래서 모델 탭 안의 좌측
  * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
  * 같은 층위의 탭으로 분리한다.
+ *
+ * 태그(가상 태그 재생)와 충돌(충돌 감지·기록)은 "시뮬레이션" 탭 하나에 묶고
+ * 그 아래 둘째 줄 하위 탭으로 나눈다 — 둘 다 시뮬레이션 재생 중에만 의미가
+ * 있고, 탭이 6개면 기본 팔레트 폭(14rem)에 들어가지 않아 스크롤이 생기는데
+ * 스크롤바로는 뒤쪽 탭이 있는지 알기 어렵다(2026-09-12). 영역 감지는 편집
+ * 중에도 도는 상태라 별도 탭.
  */
 const PANEL_TABS = [
   'models',
   'map',
   'background',
-  'tags',
-  'collision',
+  'simulation',
+  'zones',
 ] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
@@ -761,8 +768,16 @@ const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   models: 'monitoring:editor.paletteTabs.models',
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
-  tags: 'monitoring:editor.paletteTabs.tags',
-  collision: 'monitoring:editor.paletteTabs.collision',
+  simulation: 'monitoring:editor.paletteTabs.simulation',
+  zones: 'monitoring:editor.paletteTabs.zones',
+};
+
+const SIMULATION_SECTIONS = ['tags', 'collision'] as const;
+type SimulationSection = (typeof SIMULATION_SECTIONS)[number];
+
+const SIMULATION_SECTION_LABEL_KEY: Record<SimulationSection, string> = {
+  tags: 'monitoring:editor.simulationSections.tags',
+  collision: 'monitoring:editor.simulationSections.collision',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -807,11 +822,11 @@ function ProjectPalettePanel({
   maps: SavedMapInfo[];
   /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
   regionId: string;
-  /** 태그 탭 — 이 씬이 참조하는 태그 목록을 뽑는다. */
+  /** 시뮬레이션 탭(태그 하위 탭) — 이 씬이 참조하는 태그 목록을 뽑는다. */
   sceneInfo: SavedSceneInfo | null;
   /** 가상 태그 관리 페이지 경로. */
   virtualTagsPath: string;
-  /** 충돌 탭 — 선택된 기록의 두 노드로 카메라를 맞춘다. */
+  /** 시뮬레이션 탭(충돌 하위 탭) — 선택된 기록의 두 노드로 카메라를 맞춘다. */
   onViewCollision: () => void;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
@@ -831,6 +846,8 @@ function ProjectPalettePanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
+  const [simulationSection, setSimulationSection] =
+    useState<SimulationSection>('tags');
   const [activeCategory, setActiveCategory] = useState<ModelPanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
@@ -853,39 +870,60 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경/태그/충돌 (언더라인 탭, 패널보다 넓어지면 가로
-          스크롤). 접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다.
+      {/* 탭 헤더 — 모델/맵/배경/시뮬레이션/영역 (언더라인 탭). 가로 스크롤을
+          두지 않는다 — 탭이 남는 폭을 나눠 채우고(flex-auto), 패널을 최소 폭까지
+          줄이면 긴 라벨이 말줄임된다. 스크롤바는 뒤쪽 탭의 존재를 알리지 못했다.
+          접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다.
           높이 h-9 는 캔버스 위 EditorHeaderBar·우측 PaletteHeader 와 같은
           값 — 세 컬럼 하단선을 한 줄에 맞춘다. */}
       <div className="border-border flex h-9 shrink-0 items-stretch border-b">
-        <div className="flex min-w-0 flex-1 items-stretch gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {PANEL_TABS.map((tab) => {
-            const isActive = activeTab === tab;
+        {PANEL_TABS.map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-b-2 px-2 text-[11px] font-medium transition-colors',
+                isActive
+                  ? 'border-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent',
+              )}
+            >
+              <span className="truncate">{t(PANEL_TAB_LABEL_KEY[tab])}</span>
+            </button>
+          );
+        })}
+      </div>
+      {/* 시뮬레이션 하위 탭 — 태그/충돌. 상단 탭과 같은 언더라인 형식의 둘째
+          줄이며 한 단계 낮은 높이(h-8)·색으로 계층을 드러낸다. */}
+      {activeTab === 'simulation' ? (
+        <div className="border-border bg-muted/30 flex h-8 shrink-0 items-stretch border-b">
+          {SIMULATION_SECTIONS.map((section) => {
+            const isActive = simulationSection === section;
             return (
               <button
-                key={tab}
+                key={section}
                 type="button"
                 aria-pressed={isActive}
-                onClick={(event) => {
-                  setActiveTab(tab);
-                  event.currentTarget.scrollIntoView({
-                    inline: 'nearest',
-                    block: 'nearest',
-                  });
-                }}
+                onClick={() => setSimulationSection(section)}
                 className={cn(
-                  'flex h-full shrink-0 cursor-pointer items-center border-b-2 px-3 text-[11px] font-medium whitespace-nowrap transition-colors',
+                  'flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-b-2 px-2 text-[11px] font-medium transition-colors',
                   isActive
                     ? 'border-primary text-foreground'
                     : 'text-muted-foreground hover:text-foreground border-transparent',
                 )}
               >
-                {t(PANEL_TAB_LABEL_KEY[tab])}
+                <span className="truncate">
+                  {t(SIMULATION_SECTION_LABEL_KEY[section])}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-hidden p-2">
         {activeTab !== 'models' ? (
@@ -897,16 +935,20 @@ function ProjectPalettePanel({
                 onRemoveMap={onRemoveMap}
                 onToggleLock={onToggleLock}
               />
-            ) : activeTab === 'tags' ? (
-              <PaletteVirtualTagSection
-                sceneInfo={sceneInfo}
-                managePath={virtualTagsPath}
-              />
-            ) : activeTab === 'collision' ? (
-              <SceneCollisionPanel
-                runner="simulation"
-                onViewCollision={onViewCollision}
-              />
+            ) : activeTab === 'simulation' ? (
+              simulationSection === 'tags' ? (
+                <PaletteVirtualTagSection
+                  sceneInfo={sceneInfo}
+                  managePath={virtualTagsPath}
+                />
+              ) : (
+                <SceneCollisionPanel
+                  runner="simulation"
+                  onViewCollision={onViewCollision}
+                />
+              )
+            ) : activeTab === 'zones' ? (
+              <SceneZonePanel />
             ) : (
               <PaletteEnvironmentSection
                 regionId={regionId}

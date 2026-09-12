@@ -13,7 +13,7 @@ import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 /**
  * 가상 태그 시뮬레이션 재생/정지 토글 — 모니터링 독 우측 레일용 아이콘 버튼.
  *
- * 값 흐름은 에디터 팔레트 "태그" 탭의 토글과 같다(useVirtualTagStore 의
+ * 값 흐름은 에디터 팔레트 "시뮬레이션" 탭 태그 하위 탭의 토글과 같다(useVirtualTagStore 의
  * start/pause). 실시간 모드에선 useSceneData 가 자동으로 켜지 않으므로 첫
  * 재생 전에 정의를 로드한다(load 는 한 번만 실제로 읽고 이후 no-op).
  * 화면을 떠날 때의 정지는 useSceneData cleanup 이 담당한다.

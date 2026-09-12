@@ -10,10 +10,6 @@ import {
   useSceneCollisionStore,
   type SceneCollisionRecord,
 } from '../model/use-scene-collision-store';
-import {
-  useSceneZoneStore,
-  type ZoneIntrusion,
-} from '../model/use-scene-zone-store';
 
 interface SceneCollisionPanelProps {
   /** 선택된 기록의 접촉점으로 카메라를 맞춘다(카메라 이동은 호출자가). */
@@ -27,9 +23,9 @@ interface SceneCollisionPanelProps {
 
 /**
  * 충돌 감지 패널 — 감지 on/off, 충돌 시 정지 여부, 충돌 기록. 에디터 팔레트
- * "충돌" 탭과 모니터링 독 팝업(SceneCollisionMenu)이 함께 쓴다. 아래쪽 블록은
- * 모델 영역 침범(SceneZoneSection) — 별도 스토어지만 사용자 요청대로 같은 탭에
- * 둔다. 영역은 상태(현재 침범 중)라 행을 눌러도 아무 일도 없다.
+ * "시뮬레이션" 탭의 충돌 하위 탭와 모니터링 독 팝업(SceneCollisionMenu)이 함께 쓴다. 모델 영역
+ * 침범은 별도 패널(SceneZonePanel) — 에디터는 "영역" 탭으로 분리돼 있고
+ * 독 팝업은 이 패널 아래에 이어 붙인다.
  *
  * 기록은 최신이 위이고 HISTORY_MAX 개까지 남는다. 행을 누르면 값 생산자를
  * 멈추고 그 시점 자세로 돌아가며(선택 행 강조 + 빨간 박스), 같은 행을 다시
@@ -132,98 +128,9 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
             : 'monitoring:editor.collision.selectedHint',
         )}
       </p>
-
-      <SceneZoneSection />
     </div>
   );
 });
-
-/**
- * 모델 영역 침범 — 감지 on/off, 씬 안 이름 배지 표시 on/off, 현재 침범 중
- * 목록. 기록은 없다(상태만). 배지 토글은 감지와 독립이다 — 감지는 계속 돌고
- * 링도 그대로이며 배지만 사라진다.
- */
-function SceneZoneSection() {
-  const { t } = useTranslation();
-  const enabled = useSceneZoneStore((s) => s.enabled);
-  const labelsVisible = useSceneZoneStore((s) => s.labelsVisible);
-  const intrusions = useSceneZoneStore((s) => s.intrusions);
-  const setEnabled = useSceneZoneStore((s) => s.setEnabled);
-  const setLabelsVisible = useSceneZoneStore((s) => s.setLabelsVisible);
-
-  return (
-    <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
-      <label className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="font-medium">
-          {t('monitoring:editor.collision.zones.enable')}
-        </span>
-        <Switch
-          checked={enabled}
-          onCheckedChange={setEnabled}
-          aria-label={t('monitoring:editor.collision.zones.enable')}
-        />
-      </label>
-      <label className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="font-medium">
-          {t('monitoring:editor.collision.zones.labels')}
-        </span>
-        <Switch
-          checked={labelsVisible}
-          onCheckedChange={setLabelsVisible}
-          aria-label={t('monitoring:editor.collision.zones.labels')}
-        />
-      </label>
-      <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
-        {t('monitoring:editor.collision.zones.hint')}
-      </p>
-
-      <p className="text-muted-foreground pt-1 text-[10px] font-semibold tracking-[0.14em] uppercase">
-        {t('monitoring:editor.collision.zones.current')}
-      </p>
-      {intrusions.length === 0 ? (
-        <p className="text-muted-foreground text-[10px]">
-          {t('monitoring:editor.collision.zones.none')}
-        </p>
-      ) : (
-        <ul className="max-h-40 space-y-1 overflow-y-auto">
-          {intrusions.map((intrusion) => (
-            <ZoneIntrusionRow key={intrusion.zoneKey} intrusion={intrusion} />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ZoneDot({ color }: { color: string }) {
-  return (
-    <span
-      aria-hidden
-      className="inline-block size-2 shrink-0 rounded-full"
-      style={{ background: color }}
-    />
-  );
-}
-
-function ZoneIntrusionRow({ intrusion }: { intrusion: ZoneIntrusion }) {
-  // 이름은 추가 시 "영역 n" 으로 채워져 비는 일이 드물다 — 비웠으면 id.
-  const zoneName = intrusion.zoneName || intrusion.zoneId;
-  return (
-    <li className="border-border bg-muted/30 flex items-start gap-1.5 rounded-md border p-1.5">
-      <ZoneDot color={intrusion.color} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium">
-          {intrusion.ownerName}
-          <span className="text-muted-foreground mx-1">·</span>
-          {zoneName}
-        </p>
-        <p className="text-muted-foreground truncate text-[10px]">
-          ← {intrusion.intruders.map((i) => i.name).join(', ')}
-        </p>
-      </div>
-    </li>
-  );
-}
 
 function CollisionRecordRow({
   record,

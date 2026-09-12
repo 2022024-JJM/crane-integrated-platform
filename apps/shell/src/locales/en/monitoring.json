@@ -26,7 +26,7 @@
       "add": "Add zone",
       "remove": "Remove zone",
       "empty": "No zones. Press + to add a circular zone around the model.",
-      "hint": "Other models’ meshes or zones entering it are listed in the Collision tab.",
+      "hint": "Other models’ meshes or zones entering it are listed in the Zones tab.",
       "name": "Name",
       "color": "Color",
       "radius": "Radius",
@@ -205,14 +205,13 @@
       "deselect": "Deselect",
       "selectedHint": "Click a record to pause the simulation and return to that pose.",
       "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
-      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values.",
-      "zones": {
-        "enable": "Zone detection",
-        "labels": "Show zone labels",
-        "hint": "Runs while editing too and never pauses the simulation.",
-        "current": "Currently inside",
-        "none": "No intrusions"
-      }
+      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
+    },
+    "zones": {
+      "enable": "Zone detection",
+      "labels": "Show zone labels",
+      "current": "Currently inside",
+      "none": "No intrusions"
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -270,6 +269,10 @@
       "models": "Models",
       "map": "Map",
       "background": "Background",
+      "simulation": "Simulation",
+      "zones": "Zones"
+    },
+    "simulationSections": {
       "tags": "Tags",
       "collision": "Collision"
     },

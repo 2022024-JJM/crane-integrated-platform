@@ -26,7 +26,7 @@
       "add": "Regionem adde",
       "remove": "Regionem dele",
       "empty": "Nullae regiones. Preme + ut regionem circularem circa exemplar addas.",
-      "hint": "Aliorum exemplarium retia vel regiones intrantes in tabula Collisionis ostenduntur.",
+      "hint": "Aliorum exemplarium retia vel regiones intrantes in tabula Regionum ostenduntur.",
       "name": "Nomen",
       "color": "Color",
       "radius": "Radius",
@@ -191,14 +191,13 @@
       "deselect": "Selectionem tolle",
       "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat.",
       "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
-      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat.",
-      "zones": {
-        "enable": "Regionum detectio",
-        "labels": "Nomina regionum ostende",
-        "hint": "Etiam dum editur operatur et simulationem numquam sistit.",
-        "current": "Nunc intus",
-        "none": "Nulla intrusio"
-      }
+      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
+    },
+    "zones": {
+      "enable": "Regionum detectio",
+      "labels": "Nomina regionum ostende",
+      "current": "Nunc intus",
+      "none": "Nulla intrusio"
     },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
@@ -256,6 +255,10 @@
       "models": "Exempla",
       "map": "Tabula",
       "background": "Fundus",
+      "simulation": "Simulatio",
+      "zones": "Regiones"
+    },
+    "simulationSections": {
       "tags": "Tags",
       "collision": "Collisio"
     },
