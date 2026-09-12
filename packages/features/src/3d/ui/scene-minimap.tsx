@@ -2,7 +2,11 @@ import { GripHorizontal, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type Object3D } from 'three';
-import { modelObjectRegistry, type SavedSceneInfo } from '@crane/domain/3d';
+import {
+  modelObjectRegistry,
+  zoneCenterWorld,
+  type SavedSceneInfo,
+} from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
@@ -26,7 +30,10 @@ import {
   worldToMinimap,
   type MinimapFrame,
 } from '../lib/minimap';
+import { zoneColorWithAlpha, zoneKey } from '../lib/scene-zones';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { sceneZoneRuntime } from '../model/scene-zone-runtime';
+import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import {
   minimapCameraInfo,
   useSceneMinimapStore,
@@ -154,6 +161,8 @@ export function SceneMinimap({
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
+      // 영역 원은 마커 아래.
+      drawZones(context, drawFrame, scale, sceneInfo, cacheRef.current);
       markersRef.current = drawMarkers(
         context,
         drawFrame,
@@ -428,6 +437,49 @@ function markerOffset(
       })();
   cache.offsetByUuid.set(object.uuid, offset);
   return offset;
+}
+
+/** 영역 원이 이보다 작게 그려지면 생략한다(CSS px). */
+const ZONE_MIN_RADIUS_PX = 2;
+
+/**
+ * 모델 영역 원 — 3D 링과 같은 중심(루트 월드 XZ + 오프셋)·색. 침범 중이면
+ * 채움이 진해진다(런타임 싱글턴을 직접 읽는다). 토글이 꺼져 있으면 그리지
+ * 않는다.
+ */
+function drawZones(
+  context: CanvasRenderingContext2D,
+  frame: MinimapFrame,
+  scale: number,
+  sceneInfo: SavedSceneInfo | null,
+  cache: MarkerCache,
+): void {
+  if (!useSceneZoneStore.getState().enabled) return;
+  const unitsPerPx = frame.worldWidth / frame.pxWidth;
+  for (const model of sceneInfo?.models ?? []) {
+    if (!model.zones?.length) continue;
+    const object = modelObjectRegistry.get(model.id);
+    if (!object) continue;
+    for (const zone of model.zones) {
+      if (!Number.isFinite(zone.radius) || zone.radius <= 0) continue;
+      const radiusPx = zone.radius / unitsPerPx;
+      if (radiusPx < ZONE_MIN_RADIUS_PX * scale) continue;
+      zoneCenterWorld(object.matrixWorld, zone.offset, cache.position);
+      const { px, py } = worldToMinimap(
+        frame,
+        cache.position.x,
+        cache.position.z,
+      );
+      const intruded = sceneZoneRuntime.isIntruded(zoneKey(model.id, zone.id));
+      context.beginPath();
+      context.arc(px, py, radiusPx, 0, Math.PI * 2);
+      context.fillStyle = zoneColorWithAlpha(zone.color, intruded ? 0.3 : 0.12);
+      context.fill();
+      context.lineWidth = (intruded ? 2 : 1) * scale;
+      context.strokeStyle = zone.color;
+      context.stroke();
+    }
+  }
 }
 
 function drawMarkers(

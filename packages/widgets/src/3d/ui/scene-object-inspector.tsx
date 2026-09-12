@@ -1,6 +1,7 @@
 import {
   Bone,
   Camera,
+  CircleDot,
   Eye,
   Palette,
   SlidersHorizontal,
@@ -21,6 +22,7 @@ import {
   TagMappingSection,
   type TagMappingsUpdater,
 } from './tag-mapping-section';
+import { ZoneSection, type ZonesUpdater } from './zone-section';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -55,6 +57,7 @@ const DEFAULT_MAP_SCALE: Vector3Tuple = [1, 1, 1];
 type InspectorTabKey =
   | 'transform'
   | 'display'
+  | 'zones'
   | 'tagMapping'
   | 'rigging'
   | 'textContent'
@@ -66,6 +69,7 @@ type InspectorObjectType = 'model' | 'text' | 'map';
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
   display: Eye,
+  zones: CircleDot,
   tagMapping: Tag,
   rigging: Bone,
   textContent: Type,
@@ -76,6 +80,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
 const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   transform: 'monitoring:inspector.transform',
   display: 'monitoring:inspector.display',
+  zones: 'monitoring:inspector.zones.title',
   tagMapping: 'monitoring:inspector.tagMapping',
   rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
@@ -84,7 +89,7 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
 };
 
 const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
-  model: ['transform', 'display', 'tagMapping', 'rigging'],
+  model: ['transform', 'display', 'zones', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform', 'camera'],
 };
@@ -93,15 +98,22 @@ function getTabsForType(
   type: InspectorObjectType,
   hasTagMapping: boolean,
   hasRigging: boolean,
+  hasZones: boolean,
 ): readonly InspectorTabKey[] {
   const tabs = TABS_BY_TYPE[type];
   if (type !== 'model') return tabs;
-  // 태그 매핑·리깅은 콜백이 배선된 화면에서만 존재하는 섹션이다.
+  // 태그 매핑·리깅·영역은 콜백이 배선된 화면에서만 존재하는 섹션이다.
   return tabs.filter(
     (tab) =>
       (tab !== 'tagMapping' || hasTagMapping) &&
-      (tab !== 'rigging' || hasRigging),
+      (tab !== 'rigging' || hasRigging) &&
+      (tab !== 'zones' || hasZones),
   );
+}
+
+/** 영역 탭 — 목록 갱신 채널 하나. */
+export interface InspectorZoneHandlers {
+  onUpdate: (updater: ZonesUpdater) => void;
 }
 
 /** 리깅 탭 콜백 묶음 — 전부 있어야 탭이 뜬다. */
@@ -145,6 +157,8 @@ interface SceneObjectInspectorProps {
   tagMapping?: InspectorTagMappingHandlers;
   /** 리깅 탭. 없으면 탭이 뜨지 않는다(tagMapping 과 같은 게이트). */
   rigging?: InspectorRiggingHandlers;
+  /** 영역 탭. 없으면 탭이 뜨지 않는다(같은 게이트). */
+  zones?: InspectorZoneHandlers;
   /** 루트 Card에 병합할 클래스. 도킹 컬럼에선 rounded/ring 제거에 쓴다. */
   className?: string;
 }
@@ -342,6 +356,7 @@ function ModelInspectorContent({
   onTransformChange,
   tagMapping,
   rigging,
+  zones,
   t,
 }: {
   selectedModel: SavedModelInfo;
@@ -357,6 +372,7 @@ function ModelInspectorContent({
   ) => void;
   tagMapping?: InspectorTagMappingHandlers;
   rigging?: InspectorRiggingHandlers;
+  zones?: InspectorZoneHandlers;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
@@ -379,6 +395,10 @@ function ModelInspectorContent({
           onLabelHiddenChange={onLabelHiddenChange}
           t={t}
         />
+      ) : null}
+
+      {activeTab === 'zones' && zones ? (
+        <ZoneSection model={selectedModel} onUpdate={zones.onUpdate} t={t} />
       ) : null}
 
       {activeTab === 'tagMapping' && tagMapping ? (
@@ -611,6 +631,7 @@ export function SceneObjectInspector({
   onMapCameraBoundsChange,
   tagMapping,
   rigging,
+  zones,
   className,
 }: SceneObjectInspectorProps) {
   const { t } = useTranslation();
@@ -636,7 +657,12 @@ export function SceneObjectInspector({
             : null;
 
   const tabs = selectedType
-    ? getTabsForType(selectedType, Boolean(tagMapping), Boolean(rigging))
+    ? getTabsForType(
+        selectedType,
+        Boolean(tagMapping),
+        Boolean(rigging),
+        Boolean(zones),
+      )
     : [];
   // 타입 전환 시 같은 섹션이 있으면 유지, 없으면 첫 탭 — effect 대신 렌더 시
   // 파생 보정이라 stale 탭이 한 프레임도 렌더되지 않는다. activeTab은 사용자의
@@ -689,6 +715,7 @@ export function SceneObjectInspector({
               onTransformChange={onTransformChange}
               tagMapping={tagMapping}
               rigging={rigging}
+              zones={zones}
               t={t}
             />
           ) : selectedText ? (

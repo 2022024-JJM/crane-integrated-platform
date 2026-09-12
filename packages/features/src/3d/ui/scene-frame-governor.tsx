@@ -12,6 +12,7 @@ import {
 import { useActiveTransformStore } from '../model/use-active-transform-store';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
+import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 
 /** 애니메이션 소스 상태를 다시 읽는 주기(ms). 유예(1.5s)보다 충분히 짧다. */
@@ -90,7 +91,9 @@ export function SceneFrameGovernor({
         (realtime.isRunning &&
           now - realtime.activity.lastMessageAt < REALTIME_ACTIVE_MS) ||
         useReplayPlayerStore.getState().isPlaying ||
-        useActiveTransformStore.getState().active;
+        useActiveTransformStore.getState().active ||
+        // 영역 침범 중엔 링이 맥동한다(scene-zone-rings) — 30fps 틱 소스.
+        useSceneZoneStore.getState().intrusions.length > 0;
       graceUntil = extendAnimationGrace(graceUntil, active, now);
       applyFps(
         resolveGovernorFps({

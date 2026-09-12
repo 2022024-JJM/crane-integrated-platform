@@ -159,6 +159,20 @@ export {
   type SceneCollisionRecordParty,
 } from './model/use-scene-collision-store';
 export { useSceneCollisionDetector } from './model/use-scene-collision-detector';
+export { SceneZoneDetector } from './ui/scene-zone-detector';
+export { SceneZoneRings } from './ui/scene-zone-rings';
+export { useSceneZoneDetector } from './model/use-scene-zone-detector';
+export {
+  useSceneZoneStore,
+  type ZoneIntruderRef,
+  type ZoneIntrusion,
+} from './model/use-scene-zone-store';
+export {
+  sceneZoneRuntime,
+  type ZoneTickResult,
+  type ZoneTransition,
+} from './model/scene-zone-runtime';
+export { zoneKey } from './lib/scene-zones';
 export { CollisionJournalSync } from './ui/collision-journal-sync';
 export { useCollisionJournalStore } from './model/use-collision-journal-store';
 export { toCollisionJournalEntries } from './lib/collision-journal-map';

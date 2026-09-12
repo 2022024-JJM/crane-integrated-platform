@@ -22,6 +22,7 @@ import {
   SCENE_SUN_ELEVATION_MIN,
 } from '../model/types';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
+import { sanitizeModelZones } from './sanitize-model-zones';
 import { resolveModelTagMappings } from './sanitize-tag-mappings';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
@@ -167,6 +168,9 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
             labelHidden: model.labelHidden === true ? true : undefined,
             rigId,
             tagMappings,
+            // `...rest` 가 원본 zones 를 실어 오므로 반드시 덮어쓴다 —
+            // 무효면 undefined 로 필드가 빠진다.
+            zones: sanitizeModelZones(model.zones),
           },
         ];
       })

@@ -27,6 +27,7 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
+import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
 import {
@@ -39,6 +40,8 @@ import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
 import { SceneCollisionMenu } from './scene-collision-menu';
+import { SceneZoneDetector } from './scene-zone-detector';
+import { SceneZoneRings } from './scene-zone-rings';
 import { SceneClockMenu } from './scene-clock-menu';
 import { SceneFrameGovernor } from './scene-frame-governor';
 import {
@@ -165,6 +168,8 @@ export function Monitoring3dView({
   const collisionActive = mode !== 'replay';
   const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
+  // 영역 침범은 상태 표시라 리플레이 포함 전 모드에서 돈다(정지·복원 없음).
+  const zonesEnabled = useSceneZoneStore((s) => s.enabled);
 
   useEffect(() => {
     onLoadingChange?.(isLoading);
@@ -405,6 +410,9 @@ export function Monitoring3dView({
             />
           ) : null}
           <SceneCollisionHighlight />
+          {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
+          <SceneZoneDetector sceneInfo={sceneInfo} enabled={zonesEnabled} />
+          <SceneZoneRings sceneInfo={sceneInfo} />
           {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍 — 감지가 도는 모드만. */}
           {collisionActive ? <SilhouetteOutlineWarmup /> : null}
           <OutdoorWorkModelSimulation

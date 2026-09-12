@@ -426,3 +426,28 @@ describe('sanitizeSceneInfo — 조명 (기본값이면 필드 생략)', () => {
     ).not.toHaveProperty('lighting');
   });
 });
+
+describe('sanitizeSceneInfo — 모델 영역(zones)', () => {
+  it('유효 항목만 남기고 색을 정규화하며, 전부 무효면 필드를 생략한다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            zones: [
+              { id: 'z1', name: 'A', color: '#FF0000', radius: 5 },
+              { id: 'z2', name: 'B', color: '#00ff00', radius: 0 },
+            ],
+          }),
+          model({ id: 'model-2', zones: [{ id: 'z', radius: -1 }] }),
+          model({ id: 'model-3' }),
+        ],
+      }),
+    );
+    expect(out.models[0].zones).toEqual([
+      { id: 'z1', name: 'A', color: '#ff0000', radius: 5 },
+    ]);
+    // undefined 는 JSON 직렬화에서 빠진다(locked·tagMappings 와 같은 규칙).
+    expect(out.models[1].zones).toBeUndefined();
+    expect(out.models[2].zones).toBeUndefined();
+  });
+});

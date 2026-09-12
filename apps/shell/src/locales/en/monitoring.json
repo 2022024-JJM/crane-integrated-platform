@@ -20,6 +20,18 @@
     "camera": "Camera",
     "cameraBounds": "Limit camera to this map",
     "cameraBoundsHint": "The camera stays within the checked maps.\nWith none checked, all maps count.",
+    "zones": {
+      "title": "Zones",
+      "list": "Zones",
+      "add": "Add zone",
+      "remove": "Remove zone",
+      "empty": "No zones. Press + to add a circular zone around the model.",
+      "hint": "The center follows the model origin (+offset) live.\nRadius and offset use the same units as position.\nOther models’ meshes or zones entering it are listed in the Collision tab.",
+      "name": "Name",
+      "color": "Color",
+      "radius": "Radius",
+      "offset": "Offset"
+    },
     "rigging": {
       "title": "Rigging",
       "none": "No rig",
@@ -192,7 +204,13 @@
       "deselect": "Deselect",
       "selectedHint": "Click a record to pause the simulation and return to that pose.",
       "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
-      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
+      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values.",
+      "zones": {
+        "enable": "Zone detection",
+        "hint": "Runs while editing too and never pauses the simulation.",
+        "current": "Currently inside",
+        "none": "No intrusions"
+      }
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -395,5 +413,8 @@
     "idle": "Idle",
     "offline": "Offline",
     "unknown": "Unknown"
+  },
+  "sceneZone": {
+    "unnamed": "Zone {{index}}"
   }
 }

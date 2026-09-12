@@ -431,3 +431,54 @@ describe('isSceneInfoEqual — 리깅', () => {
     ).toBe(false);
   });
 });
+
+describe('isSceneInfoEqual — 모델 영역(zones)', () => {
+  const zone = { id: 'z1', name: 'A', color: '#38bdf8', radius: 10 };
+
+  it('영역 추가·삭제는 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ zones: [zone] })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('이름·색·반경·오프셋 변경은 각각 다르다', () => {
+    const base = scene({ models: [model({ zones: [zone] })] });
+    for (const patch of [
+      { name: 'B' },
+      { color: '#ff0000' },
+      { radius: 11 },
+      { offset: [1, 0] as [number, number] },
+    ]) {
+      expect(
+        isSceneInfoEqual(
+          base,
+          scene({ models: [model({ zones: [{ ...zone, ...patch }] })] }),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it('offset 없음과 [0,0] 은 같은 상태, 순서가 달라도 같다', () => {
+    const z2 = { id: 'z2', name: '', color: '#fbbf24', radius: 3 };
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ zones: [zone, z2] })] }),
+        scene({
+          models: [model({ zones: [z2, { ...zone, offset: [0, 0] }] })],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('빈 배열과 필드 없음은 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ zones: [] })] }),
+        scene({ models: [model()] }),
+      ),
+    ).toBe(true);
+  });
+});

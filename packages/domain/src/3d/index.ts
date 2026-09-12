@@ -94,6 +94,21 @@ export {
   meshWorldBox,
 } from './lib/collision-volumes';
 export {
+  circleIntersectsBoxXZ,
+  isValidZoneRadius,
+  meshIntersectsVerticalCylinder,
+  pointInCircleXZ,
+  segmentDistanceSqXZ,
+  triangleIntersectsCircleXZ,
+  zoneCenterWorld,
+} from './lib/zone-volumes';
+export {
+  DEFAULT_ZONE_COLOR,
+  normalizeZoneColor,
+  sanitizeModelZones,
+  sanitizeZoneOffset,
+} from './lib/sanitize-model-zones';
+export {
   COLLISION_LINE_COLOR,
   COLLISION_LINE_WIDTH,
 } from './lib/selection-style';
@@ -134,6 +149,7 @@ export type {
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
+  SavedModelZone,
   SavedSceneInfo,
   SavedTextInfo,
   ValueMapItem,

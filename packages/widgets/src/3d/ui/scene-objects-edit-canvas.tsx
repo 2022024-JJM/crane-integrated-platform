@@ -59,6 +59,8 @@ import {
   SceneCollisionDetector,
   SceneCameraLimits,
   SceneCollisionHighlight,
+  SceneZoneDetector,
+  SceneZoneRings,
   ScenePerfHud,
   ScenePerfProbe,
   SceneTerrainLod,
@@ -68,6 +70,7 @@ import {
   useIsObjectSelected,
   useSceneCollisionStore,
   useSceneObjectSelectionStore,
+  useSceneZoneStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
@@ -366,6 +369,8 @@ export function SceneObjectsEditCanvas({
   const primarySelectedId = useSceneObjectSelectionStore(
     (state) => state.primarySelectedId,
   );
+  // 영역 침범 감지 — 꺼져 있어도 선택 모델의 영역은 그린다(반경 편집 피드백).
+  const zonesEnabled = useSceneZoneStore((state) => state.enabled);
   const selectModel = useSceneObjectSelectionStore(
     (state) => state.selectModel,
   );
@@ -913,6 +918,12 @@ export function SceneObjectsEditCanvas({
           runner="simulation"
         />
         <SceneCollisionHighlight />
+        {/* 영역 침범 검출·링 — 검출기 뒤에 링(같은 틱 상태). */}
+        <SceneZoneDetector sceneInfo={sceneInfo} enabled={zonesEnabled} />
+        <SceneZoneRings
+          sceneInfo={sceneInfo}
+          selectedModelId={primarySelectedId}
+        />
         {/* 선택·충돌 테두리(실루엣) 셰이더 프리워밍 — 사본은 아래 모델의
             prepareOutline 이 워밍업 큐에 넣는다. */}
         <SilhouetteOutlineWarmup />

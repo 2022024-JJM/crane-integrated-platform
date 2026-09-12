@@ -6,6 +6,7 @@ import type {
   SavedMapInfo,
   SavedMeshOverride,
   SavedModelInfo,
+  SavedModelZone,
   SavedSceneInfo,
   SavedTextInfo,
   TagMapping,
@@ -59,6 +60,38 @@ function isTagMappingListEqual(
       getTagMappingTargetKey(am.target) !== getTagMappingTargetKey(bm.target) ||
       (am.scale ?? 1) !== (bm.scale ?? 1) ||
       (am.offset ?? 0) !== (bm.offset ?? 0)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 영역 목록 — id 기준 lookup, offset 은 [0,0] 으로 정규화해 비교(sanitize 가
+ * [0,0] 을 생략하는 규칙과 짝). 빠뜨리면 영역 편집이 updateScene 의 동등
+ * 단락에 먹혀 히스토리·dirty·저장이 전부 무시된다.
+ */
+function isZoneListEqual(
+  a: SavedModelZone[] | undefined,
+  b: SavedModelZone[] | undefined,
+): boolean {
+  const aLen = a?.length ?? 0;
+  const bLen = b?.length ?? 0;
+  if (aLen !== bLen) return false;
+  if (aLen === 0) return true;
+  const bMap = new Map((b ?? []).map((z) => [z.id, z]));
+  for (const az of a ?? []) {
+    const bz = bMap.get(az.id);
+    if (!bz) return false;
+    const [adx, adz] = az.offset ?? [0, 0];
+    const [bdx, bdz] = bz.offset ?? [0, 0];
+    if (
+      az.name !== bz.name ||
+      az.color !== bz.color ||
+      az.radius !== bz.radius ||
+      adx !== bdx ||
+      adz !== bdz
     ) {
       return false;
     }
@@ -221,7 +254,8 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
     isTagMappingListEqual(a.tagMappings, b.tagMappings) &&
-    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides)
+    isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
+    isZoneListEqual(a.zones, b.zones)
   );
 }
 

@@ -164,6 +164,31 @@ export interface SavedModelInfo {
    * joint 대상으로 흡수됐다. sanitize 가 변환하며 출력에는 싣지 않는다.
    */
   rigBindings?: RigBinding[];
+  /**
+   * 모델 기준 원형 영역(침범 감지) — 없으면 필드 생략(tagMappings 와 같은
+   * 규칙, 기존 저장본과 diff 0). 중심은 모델 루트의 **실시간 월드 XZ**
+   * (+offset)라 주행 크레인은 영역을 데리고 다닌다. 스키마·방어는
+   * sanitize-model-zones.ts.
+   */
+  zones?: SavedModelZone[];
+}
+
+/**
+ * 모델에 붙는 원형 영역 하나. 판정은 Y 를 무시한 무한 수직 원기둥이고 그림은
+ * 루트 높이의 바닥 원이다. 반경·오프셋 단위는 position 과 같은 씬 unit.
+ * 이름이 `CraneZone`(BOM 구역)·`CollisionGuardZone`(LiDAR 센서 원)과 겹치지
+ * 않게 Saved 접두를 쓴다.
+ */
+export interface SavedModelZone {
+  id: string;
+  /** 표시 이름. 빈 문자열 허용 — UI 가 "영역 n" 으로 폴백한다. */
+  name: string;
+  /** `#rrggbb` 소문자. 식별자일 뿐 상태(침범)를 실어 나르지 않는다. */
+  color: string;
+  /** 반경(씬 unit), > 0. */
+  radius: number;
+  /** 루트 월드 XZ 기준 오프셋 [dx, dz](월드 축). [0, 0] 이면 생략. */
+  offset?: [number, number];
 }
 
 export interface SavedMeshOverride {
