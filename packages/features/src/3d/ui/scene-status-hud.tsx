@@ -3,8 +3,8 @@ import {
   AlertTriangle,
   Bell,
   Clock,
-  Radar,
   Radio,
+  Radius,
   Wind,
   WifiOff,
 } from 'lucide-react';
@@ -192,7 +192,7 @@ export function SceneStatusHud({
       />
       {sceneHasZones && zonesEnabled ? (
         <HudCell
-          icon={<Radar className="size-3.5" aria-hidden />}
+          icon={<Radius className="size-3.5" aria-hidden />}
           label={t('monitoring:hud.intrusionsShort')}
           title={t('monitoring:hud.intrusions')}
           value={

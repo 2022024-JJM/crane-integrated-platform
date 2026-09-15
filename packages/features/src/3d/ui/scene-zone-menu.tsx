@@ -1,4 +1,4 @@
-import { Radar } from 'lucide-react';
+import { Radius } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
@@ -68,7 +68,7 @@ export function SceneZoneMenu({
             />
           }
         >
-          <Radar />
+          <Radius />
           {intruded ? (
             <span
               aria-hidden
