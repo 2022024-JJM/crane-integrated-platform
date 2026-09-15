@@ -11,6 +11,7 @@ import {
   type MeshStandardMaterial,
   type Group,
 } from 'three';
+import type { SavedMapInfo } from '@crane/domain/3d';
 import {
   distanceFromZone,
   nearestZone,
@@ -22,6 +23,7 @@ import {
   type DetectedTrack,
 } from '../model/use-collision-guard-store';
 import { useCollisionGuardSimulation } from '../model/use-collision-guard-simulation';
+import { useCollisionGuardGroundZones } from '../model/use-collision-guard-ground';
 import { usePrefersReducedMotion } from '../model/use-prefers-reduced-motion';
 import {
   CUT_DISABLED,
@@ -835,7 +837,8 @@ function DetectedObjectMesh({
     labelClock: 1,
   });
 
-  // 스케일/지면 높이 설정은 전체 존 공통이므로 첫 존의 값을 쓴다.
+  // 스케일·단위 설정은 전체 존 공통이므로 첫 존의 값을 쓴다 (지면 높이는
+  // 존마다 다를 수 있어 useFrame 에서 가장 가까운 존의 y 를 읽는다).
   const baseZone = zones[0];
   const worldScale = baseZone.sizeMultiplier / baseZone.metersPerUnit;
   const objectHeight = OBJECT_HEIGHT[track.type];
@@ -891,7 +894,10 @@ function DetectedObjectMesh({
       }
     }
 
-    group.position.set(smooth.x, baseZone.y, smooth.z);
+    // 지면 높이는 가장 가까운 존의 것 — 존 y 는 다리 아래 지도 표면으로
+    // 해석된 값이라(useCollisionGuardGroundZones) 존마다 다를 수 있다.
+    const groundY = nearest.zone.y;
+    group.position.set(smooth.x, groundY, smooth.z);
     group.rotation.y = -smooth.heading;
 
     // 제자리 등장: 스케일은 85% → 100%만 완만하게 채운다 (0에서 튀어
@@ -939,7 +945,7 @@ function DetectedObjectMesh({
     } else {
       const travel = objectHeight * (1 + SCAN_BAND_RATIO + 0.05) * s;
       const eased = easeInOutCubic(Math.max(0, smooth.sweep));
-      uniforms.uCutY.value = baseZone.y + eased * travel;
+      uniforms.uCutY.value = groundY + eased * travel;
       uniforms.uBand.value = SCAN_BAND_RATIO * objectHeight * s;
     }
 
@@ -1187,9 +1193,17 @@ function CollisionGuardWarmup() {
   );
 }
 
+const NO_GROUND_MAPS: readonly SavedMapInfo[] = [];
+
 interface CollisionGuardProps {
   /** 센서(라이다) 설치 지점별 감지 존 — 거더 양쪽 다리에 1개씩 */
   zones: CollisionGuardZone[];
+  /**
+   * 바닥 지도(씬 `maps` 중 resolveGroundMaps 결과). 주어지면 존의 지면
+   * 높이(`zone.y`)를 각 존 중심 아래 지도 표면으로 해석해 링·감지 객체가
+   * 지도 위에 놓인다. 없으면 `zone.y` 그대로.
+   */
+  groundMaps?: readonly SavedMapInfo[];
   /** 카메라 근거리 커버 링 표시 (기본 숨김 — 설정/범례용) */
   showCameraCoverage?: boolean;
 }
@@ -1199,9 +1213,11 @@ interface CollisionGuardProps {
  * Monitoring3dView의 sceneExtras 슬롯으로 주입한다.
  */
 export function CollisionGuard({
-  zones,
+  zones: inputZones,
+  groundMaps = NO_GROUND_MAPS,
   showCameraCoverage = false,
 }: CollisionGuardProps) {
+  const zones = useCollisionGuardGroundZones(inputZones, groundMaps);
   useCollisionGuardSimulation(zones);
 
   const enabled = useCollisionGuardStore((s) => s.enabled);

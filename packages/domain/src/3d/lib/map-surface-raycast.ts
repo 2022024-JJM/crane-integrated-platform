@@ -1,4 +1,6 @@
 import { Raycaster, Vector3, type Object3D } from 'three';
+import type { SavedMapInfo } from '../model/types';
+import { modelObjectRegistry } from './model-object-registry';
 
 const sharedRay = new Raycaster();
 // 아래에서 hits[0](최상단 표면)만 쓰므로 BVH raycast 를 첫 히트에서 조기
@@ -26,4 +28,28 @@ export function raycastMapSurfaceY(
   const hits = sharedRay.intersectObject(mapObject, true);
   if (hits.length === 0) return null;
   return hits[0].point.y;
+}
+
+/**
+ * 여러 지도(씬 `maps` 항목) 중 (x, z) 아래 표면의 **가장 높은** y.
+ *
+ * 각 지도를 `modelObjectRegistry` 에서 id 로 찾는다 — 아직 로드되지 않아
+ * 등록이 없는 지도는 건너뛴다. 히트가 하나도 없으면(지도 없음·전부 미등록·
+ * 전부 miss) null. 폴백(해수면·배치 y 등)은 호출자가 정한다 — 카메라 바닥
+ * 한계(scene-camera-limits)와 골리앗 가드 존 높이가 같은 헬퍼를 쓴다.
+ */
+export function sampleMapsSurfaceY(
+  maps: readonly SavedMapInfo[] | null | undefined,
+  x: number,
+  z: number,
+): number | null {
+  if (!maps) return null;
+  let best: number | null = null;
+  for (const map of maps) {
+    const object = modelObjectRegistry.get(map.id);
+    if (!object) continue;
+    const y = raycastMapSurfaceY(object, x, z);
+    if (y !== null && (best === null || y > best)) best = y;
+  }
+  return best;
 }

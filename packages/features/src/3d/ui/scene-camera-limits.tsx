@@ -10,8 +10,8 @@ import {
 import {
   SEA_LEVEL_Y,
   modelObjectRegistry,
-  raycastMapSurfaceY,
   resolveCameraBoundsMaps,
+  sampleMapsSurfaceY,
   unionObjectBounds,
   type SavedMapInfo,
   type SavedSceneInfo,
@@ -141,15 +141,9 @@ function sampleFloorY(
   x: number,
   z: number,
 ): number {
-  let floor = SEA_LEVEL_Y;
-  if (!maps) return floor;
-  for (const map of maps) {
-    const object = modelObjectRegistry.get(map.id);
-    if (!object) continue;
-    const y = raycastMapSurfaceY(object, x, z);
-    if (y !== null && y > floor) floor = y;
-  }
-  return floor;
+  const y = sampleMapsSurfaceY(maps, x, z);
+  // 표면이 해수면보다 낮으면(드라이독) 해수면을 바닥으로 — 예전 동작 유지.
+  return y !== null && y > SEA_LEVEL_Y ? y : SEA_LEVEL_Y;
 }
 
 export function SceneCameraLimits({

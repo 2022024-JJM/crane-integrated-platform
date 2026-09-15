@@ -24,7 +24,7 @@ export function GoliathCollisionGuardScene() {
 
   return (
     <>
-      <CollisionGuard zones={derived.zones} />
+      <CollisionGuard zones={derived.zones} groundMaps={derived.groundMaps} />
       {/* 에고 프레이밍: 토글 ON에 크레인 중심 상공으로 날아가고, OFF에
           진입 직전 시점으로 되돌아온다. 카메라 조작으로 인한 자동 진입은
           두지 않는다 — 토글이 유일한 트리거라야 복귀 지점이 명확하다. */}

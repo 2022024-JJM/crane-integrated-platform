@@ -19,6 +19,11 @@ import type {
  *   센서가 실제로 다리에 1기씩 붙으므로 커버리지가 센서 배치와 일치한다.
  * - obstacle: A프레임 하부 풋프린트(주행 방향 약 55m × 횡 17m) 키프아웃.
  * - sizeMultiplier 4: 감지 객체 시각적 과장 배율.
+ * - 존 높이(y)는 여기서 정하지 않는다. 런타임(`CollisionGuard` 의 `groundMaps`)
+ *   이 각 다리 중심 아래 **바닥 지도 표면**을 raycast 해 놓는다 — 크레인 배치
+ *   y 는 지도가 로드되기 전·miss 일 때의 폴백일 뿐이다. 고정 상수(0.05)를
+ *   쓰던 시절 크레인이 필리 지도(지면 y≈3.6) 위로 옮겨지자 링이 지도 아래
+ *   묻혔다(2026-09-15).
  *
  * 크레인 중심 동심원 하나로 통합했던 시기가 있으나(2026-08-13~14) 다리별
  * 두 원으로 되돌렸다 — 통합 원은 거더 중앙 아래 넓은 영역까지 "감지 중"으로
@@ -59,7 +64,6 @@ const L2_LANE_BANDS_M: Array<[number, number]> = [
  * 아니다. 중앙 통과 인원까지 잡으려면 센서 추가 또는 반경 상향이 필요하다.
  */
 const LEG_ZONE_BASE = {
-  y: 0.05,
   /** 라이다 감지 반경 60 unit ≈ 70m */
   radius: 60,
   /** 위험 반경 25.6 unit ≈ 30m */
@@ -77,7 +81,7 @@ const LEG_ZONE_BASE = {
    * 침범하지 않는" 절충점.
    */
   sizeMultiplier: 4,
-} satisfies Omit<CollisionGuardZone, 'center' | 'label' | 'travel'>;
+} satisfies Omit<CollisionGuardZone, 'center' | 'y' | 'label' | 'travel'>;
 
 /** rotation Y(도)로부터 거더 방향 단위 벡터 (로컬 +X의 월드 사영) */
 function girderDir(rotationYDeg: number): [number, number] {
@@ -95,7 +99,7 @@ export function buildGoliathCollisionZones(
   cranePosition: Vector3Tuple,
   rotationYDeg: number,
 ): CollisionGuardZone[] {
-  const [cx, , cz] = cranePosition;
+  const [cx, cy, cz] = cranePosition;
   const [gx, gz] = girderDir(rotationYDeg);
   // 주행(레일) 방향 — 거더의 수직.
   const travel: [number, number] = [-gz, gx];
@@ -104,6 +108,7 @@ export function buildGoliathCollisionZones(
     {
       ...LEG_ZONE_BASE,
       center: [cx + gx * LEG_OFFSETS.L1, cz + gz * LEG_OFFSETS.L1],
+      y: cy,
       travel,
       laneBandsM: L1_LANE_BANDS_M,
       label: 'L1',
@@ -111,6 +116,7 @@ export function buildGoliathCollisionZones(
     {
       ...LEG_ZONE_BASE,
       center: [cx + gx * LEG_OFFSETS.L2, cz + gz * LEG_OFFSETS.L2],
+      y: cy,
       travel,
       laneBandsM: L2_LANE_BANDS_M,
       label: 'L2',

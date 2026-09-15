@@ -125,7 +125,10 @@ export {
   fillModelBottomOffsetFromClone,
   getModelBottomOffset,
 } from './lib/model-bottom-offset-cache';
-export { raycastMapSurfaceY } from './lib/map-surface-raycast';
+export {
+  raycastMapSurfaceY,
+  sampleMapsSurfaceY,
+} from './lib/map-surface-raycast';
 export { toLambertMaterial, toLambertMaterials } from './lib/lambert-material';
 export { resolveGroundMaps } from './lib/resolve-ground-map';
 export {

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { resolveGroundMaps } from '@crane/domain/3d';
 import { useSceneInfoStore } from '@crane/features/3d';
 import {
   buildGoliathCollisionZones,
@@ -28,6 +29,8 @@ export function useGoliathCollisionZones() {
     if (!crane) return null;
     return {
       zones: buildGoliathCollisionZones(crane.position, crane.rotation[1]),
+      // 존 지면 높이의 기준 — 드롭 raycast 와 같은 바닥 지도(터레인 제외).
+      groundMaps: resolveGroundMaps(sceneInfo.maps),
       egoTopPose: buildGoliathEgoTopPose(crane.position, crane.rotation[1]),
       // 현재 소비처 없음 — CollisionGuardTopViewSync(카메라 주목 자동 ON)의
       // 입력이었다. 자동 진입을 되살릴 때 그대로 쓴다.

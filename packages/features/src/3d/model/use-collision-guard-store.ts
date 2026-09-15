@@ -19,7 +19,11 @@ export type DetectedObjectType = 'person' | 'car' | 'forklift';
 export interface CollisionGuardZone {
   /** 감지 원 중심 (x, z) — 골리앗은 크레인(거더) 중심 */
   center: [number, number];
-  /** 지면 높이 (y) */
+  /**
+   * 지면 높이 (y) — 폴백. `CollisionGuard` 에 `groundMaps` 를 주면 존 중심
+   * 아래 지도 표면 높이로 대체된다(use-collision-guard-ground.ts). 지도가
+   * 아직 없거나 miss 인 동안만 이 값이 쓰인다.
+   */
   y: number;
   /** 감지 반경 (씬 unit) — 중심에서 이 안에 들어오면 객체가 나타난다 */
   radius: number;
