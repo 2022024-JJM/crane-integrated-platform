@@ -257,8 +257,11 @@ export function PageSettings() {
           isSettingsOpen && 'pointer-events-auto translate-y-0 opacity-100',
         )}
       >
-        <div className="bg-muted/96 border-border/70 rounded-xl border p-2 shadow-2xl backdrop-blur-md">
-          <div className="flex items-center justify-between px-3 py-2">
+        {/* 헤더(3.5rem) 아래 3.75rem 에서 시작하므로 그만큼과 하단 여백 1rem 을
+            뺀 높이를 상한으로 두고, 넘치면 제목은 고정한 채 본문만 스크롤한다 —
+            창이 낮으면 알림·로그아웃 절이 화면 밖으로 밀려 닿을 수 없었다. */}
+        <div className="bg-muted/96 border-border/70 flex max-h-[calc(100dvh-4.75rem)] flex-col rounded-xl border p-2 shadow-2xl backdrop-blur-md">
+          <div className="flex shrink-0 items-center justify-between px-3 py-2">
             <h3 className="text-base font-semibold tracking-[-0.02em]">
               {t('header.pageSettings')}
             </h3>
@@ -274,7 +277,7 @@ export function PageSettings() {
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-h-0 space-y-2 overflow-y-auto">
             {user && (
               <div className="bg-card border-border/70 rounded-lg border p-4 shadow-sm">
                 <div className="space-y-3">
