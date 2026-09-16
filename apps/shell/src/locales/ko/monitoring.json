@@ -545,7 +545,8 @@
       "running": "가동 비율",
       "firstAt": "첫 충돌 {{time}}",
       "stopEnters": "정지 등급 {{count}}회",
-      "holdWall": "총 {{time}} (벽시계)"
+      "holdWall": "총 {{time}} (벽시계)",
+      "runningOf": "장비 {{count}}대 기준"
     },
     "col": {
       "equipment": "장비",
@@ -570,6 +571,22 @@
       "sectionEquipment": "장비",
       "sectionZones": "영역",
       "sectionTags": "태그"
+    },
+    "timeline": {
+      "title": "타임라인",
+      "events": "사건",
+      "zoneDwell": "영역 체류",
+      "unscanned": "빗금 = 미검사 구간"
+    },
+    "ranking": {
+      "title": "원인 상위"
+    },
+    "filter": {
+      "all": "전체",
+      "collision": "충돌",
+      "zone": "영역",
+      "hold": "정지",
+      "offline": "두절"
     }
   }
 }

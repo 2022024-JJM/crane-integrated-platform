@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
   accumulateTagValue,
   addScannedInterval,
   computePlaybackStats,
   createTagAggregate,
+  cumulativeSeries,
   emptyStatusMs,
+  holdBands,
   loopIterationOf,
+  rankZoneIntruders,
+  runningRatioSeries,
+  statusBands,
   sumScanned,
+  tagRangeBar,
+  topN,
+  zoneBands,
   type PlaybackEvent,
   type PlaybackStatsInput,
 } from '../playback-stats';
@@ -246,5 +255,231 @@ describe('computePlaybackStats', () => {
         input({ windowEndMs: 2500, scenarioDurationMs: 1000 }),
       ).loopIteration,
     ).toBe(2);
+  });
+});
+
+describe('시간 축 파생 — cumulativeSeries', () => {
+  it('격자마다 누적 개수, 창 끝에서 멈추고 창 밖 사건은 세지 않는다', () => {
+    const events = [
+      ev('collision', 1000, 'a'),
+      ev('collision', 2500, 'a'),
+      ev('collision', 9000, 'a'),
+      ev('zoneEnter', 500, 'z'),
+    ];
+    const pts = cumulativeSeries(events, ['collision'], 10_000, 4000, 4);
+    expect(pts).toEqual([
+      { t: 0, v: 0 },
+      { t: 2500, v: 2 },
+      { t: 4000, v: 2 },
+    ]);
+  });
+
+  it('빈 사건·축 0 은 창 끝 한 점', () => {
+    expect(cumulativeSeries([], ['collision'], 0, 0)).toEqual([{ t: 0, v: 0 }]);
+    expect(cumulativeSeries([], ['collision'], 5000, 3000, 5)).toEqual([
+      { t: 0, v: 0 },
+      { t: 1000, v: 0 },
+      { t: 2000, v: 0 },
+      { t: 3000, v: 0 },
+    ]);
+  });
+});
+
+describe('시간 축 파생 — statusBands / clipBands', () => {
+  const tr = (
+    atMs: number,
+    modelId: string,
+    from: EquipmentRuntimeStatus,
+    to: EquipmentRuntimeStatus,
+  ) => ({
+    atMs,
+    modelId,
+    from,
+    to,
+  });
+
+  it('전이 사이가 밴드, 마지막 전이는 창 끝까지, 다른 장비는 무시', () => {
+    const bands = statusBands(
+      [
+        tr(1000, 'm', 'unknown', 'running'),
+        tr(4000, 'm', 'running', 'idle'),
+        tr(2000, 'x', 'unknown', 'offline'),
+      ],
+      'm',
+      6000,
+    );
+    expect(bands).toEqual([
+      { fromMs: 1000, toMs: 4000, status: 'running' },
+      { fromMs: 4000, toMs: 6000, status: 'idle' },
+    ]);
+  });
+
+  it('전이 0개는 빈 배열, 창 끝 이후 전이는 잘린다', () => {
+    expect(statusBands([], 'm', 5000)).toEqual([]);
+    expect(
+      statusBands([tr(7000, 'm', 'unknown', 'running')], 'm', 5000),
+    ).toEqual([]);
+  });
+
+  it('검사 구간 밖은 지운다(뒤로 seek 뒤 건너뛴 구간)', () => {
+    const bands = statusBands([tr(0, 'm', 'unknown', 'running')], 'm', 10_000, [
+      { fromMs: 0, toMs: 2000 },
+      { fromMs: 6000, toMs: 8000 },
+    ]);
+    expect(bands).toEqual([
+      { fromMs: 0, toMs: 2000, status: 'running' },
+      { fromMs: 6000, toMs: 8000, status: 'running' },
+    ]);
+  });
+});
+
+describe('시간 축 파생 — zoneBands / holdBands', () => {
+  const zone = {
+    zoneKey: 'm#z',
+    zoneName: 'Z',
+    intruderId: 'c',
+    intruderName: 'C',
+  };
+
+  it('진입~이탈 밴드, 미이탈은 창 끝까지 open, 진입 없는 이탈 무시', () => {
+    const events = [
+      ev('zoneEnter', 1000, 'm#z|c', { ...zone, level: 'stop' }),
+      ev('zoneExit', 3000, 'm#z|c', zone),
+      ev('zoneEnter', 5000, 'm#z|c', zone),
+      ev('zoneExit', 100, 'm#z|d', { ...zone, intruderId: 'd' }),
+      ev('zoneEnter', 9000, 'm#z|c', zone), // 창 밖
+    ];
+    const bands = zoneBands(events, 7000);
+    expect(bands).toHaveLength(2);
+    expect(bands[0]).toMatchObject({
+      fromMs: 1000,
+      toMs: 3000,
+      level: 'stop',
+      open: false,
+    });
+    expect(bands[1]).toMatchObject({ fromMs: 5000, toMs: 7000, open: true });
+  });
+
+  it('중복 진입은 앞 밴드를 닫는다', () => {
+    const bands = zoneBands(
+      [
+        ev('zoneEnter', 1000, 'm#z|c', zone),
+        ev('zoneEnter', 2000, 'm#z|c', zone),
+      ],
+      4000,
+    );
+    expect(bands.map((b) => [b.fromMs, b.toMs, b.open])).toEqual([
+      [1000, 2000, false],
+      [2000, 4000, true],
+    ]);
+  });
+
+  it('정지 시작·해제 짝짓기, 미해제는 창 끝까지', () => {
+    const bands = holdBands(
+      [
+        ev('holdStart', 1000, 'collision'),
+        ev('holdEnd', 1000, 'hold'),
+        ev('holdStart', 3000, 'zone'),
+      ],
+      5000,
+    );
+    expect(bands).toEqual([
+      { fromMs: 1000, toMs: 1000, subject: 'collision' },
+      { fromMs: 3000, toMs: 5000, subject: 'zone' },
+    ]);
+  });
+});
+
+describe('시간 축 파생 — runningRatioSeries', () => {
+  it('상태를 아는 시간 대비 가동 시간의 누적 비율, 분모 0 인 격자는 건너뛴다', () => {
+    const transitions = [
+      {
+        atMs: 0,
+        modelId: 'm',
+        from: 'unknown' as const,
+        to: 'running' as const,
+      },
+      {
+        atMs: 2000,
+        modelId: 'm',
+        from: 'running' as const,
+        to: 'idle' as const,
+      },
+    ];
+    const pts = runningRatioSeries(
+      transitions,
+      [{ fromMs: 0, toMs: 4000 }],
+      4000,
+      4000,
+      4,
+    );
+    expect(pts.map((p) => [p.t, Number(p.v.toFixed(2))])).toEqual([
+      [1000, 1],
+      [2000, 1],
+      [3000, 0.67],
+      [4000, 0.5],
+    ]);
+  });
+});
+
+describe('순위·range bar', () => {
+  it('rankZoneIntruders 는 횟수 내림차순 상위 N, 동률은 원래 순서', () => {
+    const zones = [
+      {
+        zoneKey: 'a',
+        zoneName: 'A',
+        level: 'warn' as const,
+        enters: 3,
+        stopEnters: 0,
+        dwellMs: 0,
+        maxDwellMs: 0,
+        open: 0,
+        byIntruder: [
+          { intruderId: 'x', intruderName: 'X', count: 1 },
+          { intruderId: 'y', intruderName: 'Y', count: 2 },
+        ],
+      },
+      {
+        zoneKey: 'b',
+        zoneName: 'B',
+        level: 'stop' as const,
+        enters: 2,
+        stopEnters: 2,
+        dwellMs: 0,
+        maxDwellMs: 0,
+        open: 0,
+        byIntruder: [{ intruderId: 'z', intruderName: 'Z', count: 2 }],
+      },
+    ];
+    const ranks = rankZoneIntruders(zones, 2);
+    expect(ranks.map((r) => `${r.zoneKey}|${r.intruderId}`)).toEqual([
+      'a|y',
+      'b|z',
+    ]);
+    expect(topN([1, 2, 3], 0)).toEqual([]);
+    expect(topN([1, 2, 3], 9)).toEqual([1, 2, 3]);
+  });
+
+  it('tagRangeBar 는 정의 범위 안 위치, 범위 밖은 clamp, 0건·NaN 은 null', () => {
+    const agg = { min: 10, max: 30, sum: 60, count: 3 };
+    expect(tagRangeBar(agg, { min: 0, max: 40 })).toEqual({
+      min: 0.25,
+      mean: 0.5,
+      max: 0.75,
+      lo: 0,
+      hi: 40,
+    });
+    expect(tagRangeBar(agg, { min: 15, max: 25 })).toMatchObject({
+      min: 0,
+      max: 1,
+    });
+    // 정의 없음 → 관측 범위, min=0 max=1
+    expect(tagRangeBar(agg, null)).toMatchObject({ min: 0, max: 1, mean: 0.5 });
+    expect(
+      tagRangeBar({ min: 5, max: 5, sum: 10, count: 2 }, null),
+    ).toMatchObject({ min: 0, max: 0, hi: 6 });
+    expect(
+      tagRangeBar({ min: Number.NaN, max: Number.NaN, sum: 0, count: 0 }, null),
+    ).toBeNull();
   });
 });

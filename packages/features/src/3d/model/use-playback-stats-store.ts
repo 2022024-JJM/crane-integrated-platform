@@ -6,6 +6,7 @@ import {
   type PlaybackStats,
   type ScannedInterval,
   type StatusAggregate,
+  type StatusTransition,
   type TagAggregate,
 } from '../lib/playback-stats';
 import type { PlaybackSource } from './use-playback-store';
@@ -35,6 +36,8 @@ export interface PlaybackStatsMeta {
 export interface PlaybackStatsData {
   meta: PlaybackStatsMeta;
   events: PlaybackEvent[];
+  /** 장비 상태 전이 전부(unknown→x 포함) — 밴드 타임라인용. */
+  statusTransitions: StatusTransition[];
   statuses: Record<string, StatusAggregate>;
   tags: Record<string, TagAggregate>;
   scanned: ScannedInterval[];
@@ -52,6 +55,7 @@ export function createPlaybackStatsData(
   return {
     meta,
     events: [],
+    statusTransitions: [],
     statuses: {},
     tags: {},
     scanned: [],

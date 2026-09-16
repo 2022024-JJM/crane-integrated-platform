@@ -531,7 +531,8 @@
       "running": "Ratio operationis",
       "firstAt": "prima {{time}}",
       "stopEnters": "gradus sistendi {{count}}",
-      "holdWall": "summa {{time}} (horologium)"
+      "holdWall": "summa {{time}} (horologium)",
+      "runningOf": "ex {{count}} machinis"
     },
     "col": {
       "equipment": "Machina",
@@ -556,6 +557,22 @@
       "sectionEquipment": "Machinae",
       "sectionZones": "Zonae",
       "sectionTags": "Tesserae"
+    },
+    "timeline": {
+      "title": "Linea temporis",
+      "events": "Eventus",
+      "zoneDwell": "Mora in zona",
+      "unscanned": "lineatum = non inspectum"
+    },
+    "ranking": {
+      "title": "Causae praecipuae"
+    },
+    "filter": {
+      "all": "Omnia",
+      "collision": "Collisio",
+      "zone": "Zona",
+      "hold": "Sistentia",
+      "offline": "Disiunctum"
     }
   }
 }

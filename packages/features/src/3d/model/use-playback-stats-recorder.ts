@@ -132,14 +132,21 @@ export function usePlaybackStatsRecorder(regionId: string): void {
     sourceRef.current = source;
   }, [source]);
 
-  // 실행 시작점 — 마운트·소스 전환과, 소스별 재시작 신호.
+  // 실행 시작점 — 마운트·소스 전환과, 소스별 재시작 신호. reset 뒤엔 지금
+  // 알고 있는 상태를 첫 전이(unknown→x)로 심어 밴드가 창 시작부터 그려진다.
   useEffect(() => {
-    const store = usePlaybackStatsStore.getState();
-    const restart = () =>
+    const restart = () => {
       usePlaybackStatsStore
         .getState()
         .reset(buildMeta(source, regionId), activeScenarioDurationMs(source));
-    store.reset(buildMeta(source, regionId), activeScenarioDurationMs(source));
+      const { data } = usePlaybackStatsStore.getState();
+      const atMs = readPlaybackPositionMs();
+      for (const [modelId, to] of Object.entries(statusesRef.current)) {
+        if (to === 'unknown') continue;
+        data.statusTransitions.push({ atMs, modelId, from: 'unknown', to });
+      }
+    };
+    restart();
     const unsubReplay = useReplayPlayerStore.subscribe((state, prev) => {
       if (source === 'replay' && state.frames !== prev.frames) restart();
     });
@@ -239,7 +246,8 @@ export function usePlaybackStatsRecorder(regionId: string): void {
     };
   }, []);
 
-  // 두절 진입·복귀 사건 — 상태 기록의 전이(첫 unknown→x 는 제외).
+  // 상태 전이 — 전부 밴드 타임라인용으로 남기고, 두절 진입·복귀만 사건으로
+  // (첫 unknown→x 는 사건이 아니다).
   useEffect(() => {
     const prev = statusesRef.current;
     statusesRef.current = statuses;
@@ -247,7 +255,15 @@ export function usePlaybackStatsRecorder(regionId: string): void {
     let changed = false;
     for (const [modelId, to] of Object.entries(statuses)) {
       const from: EquipmentRuntimeStatus = prev[modelId] ?? 'unknown';
-      if (from === to || from === 'unknown') continue;
+      if (from === to) continue;
+      data.statusTransitions.push({
+        atMs: readPlaybackPositionMs(),
+        modelId,
+        from,
+        to,
+      });
+      changed = true;
+      if (from === 'unknown') continue;
       if (from !== 'offline' && to !== 'offline') continue;
       pushEvent(data, {
         kind: to === 'offline' ? 'offlineEnter' : 'offlineExit',

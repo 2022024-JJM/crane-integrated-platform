@@ -1,4 +1,5 @@
 import { Download } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   buildCsv,
@@ -10,12 +11,24 @@ import { cn } from '@crane/core/lib/utils';
 import { formatReplayTimestamp } from '@crane/domain/monitoring';
 import { Button } from '@crane/ui/atoms/button';
 import {
-  PLAYBACK_EVENT_COLORS,
   formatRatio,
   formatTagNumber,
   markerSeekLeadMs,
+  pairRankingRows,
+  timelineAxisMs,
+  zoneRankingRows,
 } from '../lib/playback-format';
-import type { PlaybackEvent } from '../lib/playback-stats';
+import {
+  cumulativeSeries,
+  holdBands,
+  rankZoneIntruders,
+  runningRatioSeries,
+  statusBands,
+  tagRangeBar,
+  topN,
+  zoneBands,
+  type PlaybackEvent,
+} from '../lib/playback-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import { usePlaybackTransport } from '../model/playback-transport';
 import {
@@ -23,11 +36,26 @@ import {
   usePlaybackStatsMeta,
 } from '../model/use-playback-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
+import { useVirtualTagStore } from '../model/use-virtual-tag-store';
+import { PlaybackKpiCard } from './playback-report-kpi';
+import {
+  EquipmentTable,
+  EventList,
+  RankingBars,
+  TagTable,
+  ZoneTable,
+} from './playback-report-tables';
+import { PlaybackReportTimeline } from './playback-report-timeline';
+
+const RANK_N = 5;
 
 /**
- * 플레이백 실행 리포트 — 창 정보 → 요약 타일 → 사건 목록(클릭 = seek) →
- * 장비 표 → 영역 표 → 태그 표 → CSV. 통계는 usePlaybackStats(version 구독,
- * 4Hz 이하)가 준다. 수치 계산은 lib/playback-stats·playback-format 에 있다.
+ * 플레이백 실행 리포트 — 헤더(실행·창) → KPI 카드(누적 스파크라인) → 스윔레인
+ * 타임라인(장비 상태·영역 체류·충돌·정지) → 원인 상위 → 장비·영역·태그 표 →
+ * 사건 목록(필터·클릭 seek) → CSV. 통계는 usePlaybackStats(version 구독,
+ * 4Hz 이하), 시각화 입력은 lib/playback-stats 파생 함수를 useMemo 로.
+ * 레퍼런스: Foxglove State Transitions(타임라인), ISA-18.2 bad actors(원인
+ * 상위), MoTeC 채널 리포트(range bar). PASS/FAIL 판정은 두지 않는다(2026-09-16).
  */
 export function PlaybackReportPanel({ className }: { className?: string }) {
   const { t } = useTranslation();
@@ -36,6 +64,75 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
   const transport = usePlaybackTransport();
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
+  const tagDefs = useVirtualTagStore((s) => s.tags);
+  const [eventFilter, setEventFilter] = useState('all');
+
+  const lastEventMs =
+    stats.events.length > 0 ? stats.events[stats.events.length - 1].atMs : 0;
+  const axisMs = timelineAxisMs(
+    transport.durationMs,
+    stats.windowEndMs,
+    lastEventMs,
+  );
+
+  const derived = useMemo(() => {
+    const end = stats.windowEndMs;
+    const modelIds = [
+      ...new Set([
+        ...stats.equipment.map((e) => e.modelId),
+        ...stats.statusTransitions.map((s) => s.modelId),
+      ]),
+    ];
+    const nameOf = (id: string) =>
+      stats.equipment.find((e) => e.modelId === id)?.name ?? id;
+    const zones = zoneBands(stats.events, end);
+    const zoneRows = [...new Set(zones.map((z) => z.zoneKey))].map((key) => ({
+      zoneKey: key,
+      zoneName: zones.find((z) => z.zoneKey === key)?.zoneName ?? key,
+      bands: zones.filter((z) => z.zoneKey === key),
+    }));
+    return {
+      collisionSeries: cumulativeSeries(
+        stats.events,
+        ['collision'],
+        axisMs,
+        end,
+      ),
+      intrusionSeries: cumulativeSeries(
+        stats.events,
+        ['zoneEnter'],
+        axisMs,
+        end,
+      ),
+      holdSeries: cumulativeSeries(stats.events, ['holdStart'], axisMs, end),
+      runningSeries: runningRatioSeries(
+        stats.statusTransitions,
+        stats.scanned,
+        axisMs,
+        end,
+      ),
+      equipmentRows: modelIds.map((id) => ({
+        modelId: id,
+        name: nameOf(id),
+        bands: statusBands(stats.statusTransitions, id, end, stats.scanned),
+      })),
+      zoneRows,
+      holds: holdBands(stats.events, end),
+      collisions: stats.events.filter((e) => e.kind === 'collision'),
+      pairRanks: topN(stats.collisions.byPair, RANK_N),
+      zoneRanks: rankZoneIntruders(stats.zones.byZone, RANK_N),
+      tagRows: stats.tags.map((stat) => {
+        const def =
+          meta.source === 'simulation'
+            ? tagDefs.find((d) => d.key === stat.key)
+            : undefined;
+        return {
+          stat,
+          range: tagRangeBar(stat, def ? { min: def.min, max: def.max } : null),
+        };
+      }),
+    };
+  }, [stats, axisMs, meta.source, tagDefs]);
 
   const eventTime = (e: PlaybackEvent): string => {
     if (e.frameIndex !== null) {
@@ -46,12 +143,12 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
     return formatSimClock(e.atMs);
   };
 
-  const seekEvent = (e: PlaybackEvent) => {
+  const seekMs = (atMs: number, frameIndex: number | null = null) => {
     const lead = markerSeekLeadMs(
       meta.source,
-      e.frameIndex !== null ? replayDurations[e.frameIndex] : undefined,
+      frameIndex !== null ? replayDurations[frameIndex] : undefined,
     );
-    transport.seek(Math.max(0, e.atMs - lead));
+    transport.seek(Math.max(0, atMs - lead));
   };
 
   const exportEvents = () => {
@@ -80,12 +177,13 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
   const exportTables = () => {
     const rows: CsvRow[] = [];
     for (const eq of stats.equipment) {
+      const total = eq.totalMs - eq.ms.unknown;
       rows.push([
         t('monitoring:playback.csv.sectionEquipment'),
         eq.name,
-        formatRatio(eq.totalMs > 0 ? eq.ms.running / eq.totalMs : null),
-        formatRatio(eq.totalMs > 0 ? eq.ms.idle / eq.totalMs : null),
-        formatRatio(eq.totalMs > 0 ? eq.ms.offline / eq.totalMs : null),
+        formatRatio(total > 0 ? eq.ms.running / total : null),
+        formatRatio(total > 0 ? eq.ms.idle / total : null),
+        formatRatio(total > 0 ? eq.ms.offline / total : null),
         eq.offlineEpisodes,
       ]);
     }
@@ -137,14 +235,17 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           .join(' ~ ') || t('common:replay.noData')
       : (meta.scenarioName ?? t('monitoring:simulation.none'));
 
-  const runningTotal = stats.equipment.reduce(
-    (acc, e) => acc + e.ms.running,
-    0,
-  );
+  const runningTotal = stats.equipment.reduce((a, e) => a + e.ms.running, 0);
   const knownTotal = stats.equipment.reduce(
-    (acc, e) => acc + e.totalMs - e.ms.unknown,
+    (a, e) => a + e.totalMs - e.ms.unknown,
     0,
   );
+  const runningRatio = knownTotal > 0 ? runningTotal / knownTotal : null;
+  const isReplay = meta.source === 'replay';
+  const hasSummary =
+    stats.equipment.length > 0 ||
+    stats.zones.byZone.length > 0 ||
+    stats.tags.length > 0;
 
   return (
     <div
@@ -154,6 +255,7 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
         className,
       )}
     >
+      {/* 헤더 */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
@@ -161,11 +263,16 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           </p>
           <p className="truncate font-medium" title={windowLabel}>
             {t(
-              meta.source === 'replay'
+              isReplay
                 ? 'monitoring:playback.sourceReplay'
                 : 'monitoring:playback.sourceSimulation',
             )}{' '}
             · {windowLabel}
+          </p>
+          <p className="text-muted-foreground font-mono text-[10px] tabular-nums">
+            {t('monitoring:playback.window')} {formatSimClock(0)}~
+            {formatSimClock(stats.windowEndMs)} ·{' '}
+            {t('monitoring:playback.scanned')} {formatSimClock(stats.scannedMs)}
             {stats.loopIteration !== null && meta.scenarioLoop
               ? ` · ${t('monitoring:playback.iteration', { n: stats.loopIteration + 1 })}`
               : null}
@@ -188,11 +295,7 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
             variant="outline"
             size="xs"
             onClick={exportTables}
-            disabled={
-              stats.equipment.length === 0 &&
-              stats.zones.byZone.length === 0 &&
-              stats.tags.length === 0
-            }
+            disabled={!hasSummary}
             title={t('monitoring:playback.exportSummary')}
           >
             <Download className="size-3" />
@@ -200,25 +303,15 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           </Button>
         </div>
       </div>
-
-      <dl className="text-muted-foreground grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-        <dt>{t('monitoring:playback.window')}</dt>
-        <dd className="text-foreground font-mono tabular-nums">
-          {formatSimClock(0)} ~ {formatSimClock(stats.windowEndMs)}
-        </dd>
-        <dt>{t('monitoring:playback.scanned')}</dt>
-        <dd className="text-foreground font-mono tabular-nums">
-          {formatSimClock(stats.scannedMs)}
-        </dd>
-      </dl>
       {stats.detectionOffSeen ? (
         <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-300">
           {t('monitoring:playback.detectionOff')}
         </p>
       ) : null}
 
+      {/* KPI */}
       <div className="grid grid-cols-2 gap-2">
-        <Tile
+        <PlaybackKpiCard
           label={t('monitoring:playback.tile.collisions')}
           value={String(stats.collisions.count)}
           tone={stats.collisions.count > 0 ? 'bad' : 'good'}
@@ -229,8 +322,11 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
                 })
               : undefined
           }
+          series={derived.collisionSeries}
+          axisMs={axisMs}
+          windowEndMs={stats.windowEndMs}
         />
-        <Tile
+        <PlaybackKpiCard
           label={t('monitoring:playback.tile.intrusions')}
           value={String(stats.zones.enters)}
           tone={
@@ -243,230 +339,125 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           hint={t('monitoring:playback.tile.stopEnters', {
             count: stats.zones.stopEnters,
           })}
+          series={derived.intrusionSeries}
+          axisMs={axisMs}
+          windowEndMs={stats.windowEndMs}
         />
-        <Tile
+        <PlaybackKpiCard
           label={t('monitoring:playback.tile.holds')}
           value={String(stats.holds.count)}
           tone={stats.holds.count > 0 ? 'warn' : 'good'}
           hint={t('monitoring:playback.tile.holdWall', {
             time: formatSimClock(stats.holds.wallMs),
           })}
+          series={derived.holdSeries}
+          axisMs={axisMs}
+          windowEndMs={stats.windowEndMs}
         />
-        <Tile
+        <PlaybackKpiCard
           label={t('monitoring:playback.tile.running')}
-          value={formatRatio(knownTotal > 0 ? runningTotal / knownTotal : null)}
+          value={formatRatio(runningRatio)}
           tone="neutral"
+          hint={t('monitoring:playback.tile.runningOf', {
+            count: stats.equipment.length,
+          })}
+          series={derived.runningSeries}
+          axisMs={axisMs}
+          windowEndMs={stats.windowEndMs}
+          maxV={1}
         />
       </div>
 
-      <Section title={t('monitoring:playback.events')}>
-        {stats.events.length === 0 ? (
-          <Empty>{t('monitoring:playback.noEvents')}</Empty>
-        ) : (
-          <ul className="max-h-48 space-y-0.5 overflow-y-auto">
-            {stats.events.map((e) => (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  className="hover:bg-accent flex w-full items-center gap-2 rounded px-1.5 py-0.5 text-left"
-                  onClick={() => seekEvent(e)}
-                  title={t('monitoring:playback.seekToEvent')}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'size-2 shrink-0 rounded-full',
-                      PLAYBACK_EVENT_COLORS[e.kind],
-                    )}
-                  />
-                  <span className="text-muted-foreground w-16 shrink-0 font-mono text-[10px] tabular-nums">
-                    {eventTime(e)}
-                  </span>
-                  <span className="w-14 shrink-0 text-[10px]">
-                    {t(`monitoring:playback.event.${e.kind}`)}
-                  </span>
-                  <span className="truncate text-[11px]">{e.label}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+      {/* 타임라인 */}
+      <Section title={t('monitoring:playback.timeline.title')}>
+        <PlaybackReportTimeline
+          axisMs={axisMs}
+          windowEndMs={stats.windowEndMs}
+          scanned={stats.scanned}
+          collisions={derived.collisions}
+          holds={derived.holds}
+          equipment={derived.equipmentRows}
+          zones={derived.zoneRows}
+          onSeek={(ms) => transport.seek(ms)}
+        />
+        <p className="text-muted-foreground flex flex-wrap gap-x-2 text-[9px]">
+          <LegendDot
+            className="bg-emerald-400"
+            label={t('monitoring:runtimeStatus.running')}
+          />
+          <LegendDot
+            className="bg-sky-300"
+            label={t('monitoring:runtimeStatus.idle')}
+          />
+          {isReplay ? (
+            <LegendDot
+              className="bg-zinc-400"
+              label={t('monitoring:runtimeStatus.offline')}
+            />
+          ) : null}
+          <LegendDot
+            className="bg-amber-400"
+            label={t('monitoring:playback.timeline.zoneDwell')}
+          />
+          <LegendDot
+            className="bg-red-500"
+            label={t('monitoring:playback.event.collision')}
+          />
+          <LegendDot
+            className="bg-violet-400"
+            label={t('monitoring:playback.event.holdStart')}
+          />
+          <span>{t('monitoring:playback.timeline.unscanned')}</span>
+        </p>
       </Section>
 
+      {/* 원인 상위 */}
+      {derived.pairRanks.length > 0 || derived.zoneRanks.length > 0 ? (
+        <Section title={t('monitoring:playback.ranking.title')}>
+          {derived.pairRanks.length > 0 ? (
+            <RankingBars rows={pairRankingRows(derived.pairRanks)} />
+          ) : null}
+          {derived.zoneRanks.length > 0 ? (
+            <RankingBars rows={zoneRankingRows(derived.zoneRanks)} />
+          ) : null}
+        </Section>
+      ) : null}
+
+      {/* 장비 */}
       <Section title={t('monitoring:playback.equipment')}>
         {stats.equipment.length === 0 ? (
           <Empty>{t('monitoring:playback.noData')}</Empty>
         ) : (
-          <table className="w-full text-[11px]">
-            <thead className="text-muted-foreground text-[10px]">
-              <tr>
-                <th className="text-left font-medium">
-                  {t('monitoring:playback.col.equipment')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:runtimeStatus.running')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:runtimeStatus.idle')}
-                </th>
-                {meta.source === 'replay' ? (
-                  <>
-                    <th className="text-right font-medium">
-                      {t('monitoring:runtimeStatus.offline')}
-                    </th>
-                    <th className="text-right font-medium">
-                      {t('monitoring:playback.col.offlineEpisodes')}
-                    </th>
-                  </>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody className="font-mono tabular-nums">
-              {stats.equipment.map((eq) => (
-                <tr key={eq.modelId}>
-                  <td className="truncate font-sans">{eq.name}</td>
-                  <td className="text-right">
-                    {formatRatio(
-                      eq.totalMs > 0 ? eq.ms.running / eq.totalMs : null,
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {formatRatio(
-                      eq.totalMs > 0 ? eq.ms.idle / eq.totalMs : null,
-                    )}
-                  </td>
-                  {meta.source === 'replay' ? (
-                    <>
-                      <td className="text-right">
-                        {formatRatio(
-                          eq.totalMs > 0 ? eq.ms.offline / eq.totalMs : null,
-                        )}
-                      </td>
-                      <td className="text-right">{eq.offlineEpisodes}</td>
-                    </>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <EquipmentTable rows={stats.equipment} showOffline={isReplay} />
         )}
       </Section>
 
-      <Section title={t('monitoring:playback.zones')}>
-        {stats.zones.byZone.length === 0 ? (
-          <Empty>{t('monitoring:playback.noData')}</Empty>
-        ) : (
-          <table className="w-full text-[11px]">
-            <thead className="text-muted-foreground text-[10px]">
-              <tr>
-                <th className="text-left font-medium">
-                  {t('monitoring:playback.col.zone')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:playback.col.enters')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:playback.col.dwell')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:playback.col.maxDwell')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="font-mono tabular-nums">
-              {stats.zones.byZone.map((z) => (
-                <tr key={z.zoneKey}>
-                  <td className="truncate font-sans">
-                    {z.zoneName}
-                    {z.level === 'stop' ? (
-                      <span className="ml-1 text-red-500">■</span>
-                    ) : null}
-                  </td>
-                  <td className="text-right">{z.enters}</td>
-                  <td className="text-right">{formatSimClock(z.dwellMs)}</td>
-                  <td className="text-right">{formatSimClock(z.maxDwellMs)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Section>
-
-      <Section title={t('monitoring:playback.tags')}>
-        {stats.tags.length === 0 ? (
-          <Empty>{t('monitoring:playback.noData')}</Empty>
-        ) : (
-          <table className="w-full text-[11px]">
-            <thead className="text-muted-foreground text-[10px]">
-              <tr>
-                <th className="text-left font-medium">
-                  {t('monitoring:playback.col.tag')}
-                </th>
-                <th className="text-right font-medium">min</th>
-                <th className="text-right font-medium">max</th>
-                <th className="text-right font-medium">
-                  {t('monitoring:playback.col.mean')}
-                </th>
-                <th className="text-right font-medium">
-                  {t('monitoring:playback.col.travel')}
-                </th>
-                {meta.source === 'simulation' ? (
-                  <th className="text-right font-medium">
-                    {t('monitoring:playback.col.saturation')}
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody className="font-mono tabular-nums">
-              {stats.tags.map((tag) => (
-                <tr key={tag.key}>
-                  <td className="truncate">{tag.key}</td>
-                  <td className="text-right">{formatTagNumber(tag.min)}</td>
-                  <td className="text-right">{formatTagNumber(tag.max)}</td>
-                  <td className="text-right">{formatTagNumber(tag.mean)}</td>
-                  <td className="text-right">{formatTagNumber(tag.travel)}</td>
-                  {meta.source === 'simulation' ? (
-                    <td className="text-right">
-                      {formatRatio(tag.saturationRatio)}
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Section>
-    </div>
-  );
-}
-
-function Tile({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone: 'good' | 'warn' | 'bad' | 'neutral';
-}) {
-  return (
-    <div className="bg-muted/50 rounded-md border px-2 py-1.5">
-      <p className="text-muted-foreground text-[10px]">{label}</p>
-      <p
-        className={cn(
-          'font-mono text-lg leading-6 font-bold tabular-nums',
-          tone === 'good' && 'text-emerald-600 dark:text-emerald-400',
-          tone === 'warn' && 'text-amber-600 dark:text-amber-300',
-          tone === 'bad' && 'text-red-600 dark:text-red-400',
-        )}
-      >
-        {value}
-      </p>
-      {hint ? (
-        <p className="text-muted-foreground text-[10px]">{hint}</p>
+      {/* 영역 */}
+      {stats.zones.byZone.length > 0 ? (
+        <Section title={t('monitoring:playback.zones')}>
+          <ZoneTable rows={stats.zones.byZone} />
+        </Section>
       ) : null}
+
+      {/* 태그 */}
+      <Section title={t('monitoring:playback.tags')}>
+        {derived.tagRows.length === 0 ? (
+          <Empty>{t('monitoring:playback.noData')}</Empty>
+        ) : (
+          <TagTable rows={derived.tagRows} showSaturation={!isReplay} />
+        )}
+      </Section>
+
+      {/* 사건 */}
+      <Section title={t('monitoring:playback.events')}>
+        <EventList
+          events={stats.events}
+          filter={eventFilter}
+          onFilterChange={setEventFilter}
+          timeLabel={eventTime}
+          onSeek={(e) => seekMs(e.atMs, e.frameIndex)}
+        />
+      </Section>
     </div>
   );
 }
@@ -490,4 +481,16 @@ function Section({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-muted-foreground text-[10px]">{children}</p>;
+}
+
+function LegendDot({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        aria-hidden
+        className={cn('inline-block size-1.5 rounded-sm', className)}
+      />
+      {label}
+    </span>
+  );
 }

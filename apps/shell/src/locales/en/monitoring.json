@@ -545,7 +545,8 @@
       "running": "Running ratio",
       "firstAt": "first at {{time}}",
       "stopEnters": "stop-level {{count}}",
-      "holdWall": "total {{time}} (wall clock)"
+      "holdWall": "total {{time}} (wall clock)",
+      "runningOf": "of {{count}} equipment"
     },
     "col": {
       "equipment": "Equipment",
@@ -570,6 +571,22 @@
       "sectionEquipment": "Equipment",
       "sectionZones": "Zones",
       "sectionTags": "Tags"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "events": "Events",
+      "zoneDwell": "Zone dwell",
+      "unscanned": "hatched = not scanned"
+    },
+    "ranking": {
+      "title": "Top causes"
+    },
+    "filter": {
+      "all": "All",
+      "collision": "Collision",
+      "zone": "Zone",
+      "hold": "Hold",
+      "offline": "Offline"
     }
   }
 }

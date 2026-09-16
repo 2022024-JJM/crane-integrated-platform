@@ -21,7 +21,7 @@ function ReplayMonitoringViewContent({ regionId }: { regionId: string }) {
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-      <ResizablePanel defaultSize={74} minSize={50}>
+      <ResizablePanel defaultSize={66} minSize={45}>
         <div className="relative h-full min-h-0 w-full">
           {is3dViewLoading ? (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-xs">
@@ -39,7 +39,7 @@ function ReplayMonitoringViewContent({ regionId }: { regionId: string }) {
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={26} minSize={18}>
+      <ResizablePanel defaultSize={34} minSize={26}>
         <PlaybackReportPanel />
       </ResizablePanel>
     </ResizablePanelGroup>

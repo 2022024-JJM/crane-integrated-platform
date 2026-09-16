@@ -76,6 +76,8 @@ export interface ScannedInterval {
 
 export interface PlaybackStatsInput {
   events: readonly PlaybackEvent[];
+  /** 장비 상태 전이(밴드 타임라인·가동 비율 곡선용). 없으면 빈 배열. */
+  statusTransitions?: readonly StatusTransition[];
   statuses: Readonly<Record<string, StatusAggregate>>;
   tags: Readonly<Record<string, TagAggregate>>;
   scanned: readonly ScannedInterval[];
@@ -123,6 +125,9 @@ export interface TagStat extends TagAggregate {
 
 export interface PlaybackStats {
   windowEndMs: number;
+  /** 입력 그대로 통과 — 시각화가 lib 함수(statusBands 등)로 파생한다. */
+  statusTransitions: readonly StatusTransition[];
+  scanned: readonly ScannedInterval[];
   scannedMs: number;
   /** 시나리오 회차(0부터). 열린 구간이면 null. */
   loopIteration: number | null;
@@ -377,6 +382,8 @@ export function computePlaybackStats(input: PlaybackStatsInput): PlaybackStats {
 
   return {
     windowEndMs,
+    statusTransitions: input.statusTransitions ?? [],
+    scanned: input.scanned,
     scannedMs,
     loopIteration: loopIterationOf(windowEndMs, input.scenarioDurationMs),
     detectionOffSeen: input.detectionOffSeen,
@@ -395,4 +402,319 @@ export function computePlaybackStats(input: PlaybackStatsInput): PlaybackStats {
     equipment,
     tags,
   };
+}
+
+// ---- 시간 축 파생(리포트 시각화용) ----
+
+/** 장비 운전 상태 전이 — 밴드 타임라인의 유일한 출처. */
+export interface StatusTransition {
+  atMs: number;
+  modelId: string;
+  from: EquipmentRuntimeStatus;
+  to: EquipmentRuntimeStatus;
+}
+
+export interface SeriesPoint {
+  t: number;
+  v: number;
+}
+
+export interface TimeBand {
+  fromMs: number;
+  toMs: number;
+}
+
+export interface StatusBand extends TimeBand {
+  status: EquipmentRuntimeStatus;
+}
+
+export interface ZoneBand extends TimeBand {
+  zoneKey: string;
+  zoneName: string;
+  level: 'warn' | 'stop';
+  intruderId: string;
+  intruderName: string;
+  /** 창 끝에서 아직 이탈하지 않았는지. */
+  open: boolean;
+}
+
+export interface HoldBand extends TimeBand {
+  subject: string;
+}
+
+/** 균등 눈금(0 ~ axisMs, n 등분 경계 n+1 개). axis 가 0 이하면 [0]. */
+export function seriesGrid(axisMs: number, buckets: number): number[] {
+  if (!(axisMs > 0) || !(buckets > 0)) return [0];
+  const out: number[] = [];
+  for (let i = 0; i <= buckets; i += 1) out.push((axisMs * i) / buckets);
+  return out;
+}
+
+/**
+ * 사건 누적 스텝 시리즈 — 격자 시각마다 "그 시각까지의 사건 수". 창 끝
+ * (`windowEndMs`) 이후 격자는 제외하고 마지막 점을 창 끝에 찍어 곡선이
+ * 현재 위치에서 멈춘다.
+ */
+export function cumulativeSeries(
+  events: readonly PlaybackEvent[],
+  kinds: readonly PlaybackEventKind[],
+  axisMs: number,
+  windowEndMs: number,
+  buckets = 60,
+): SeriesPoint[] {
+  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
+  const times = events
+    .filter((e) => kinds.includes(e.kind) && Number.isFinite(e.atMs))
+    .map((e) => e.atMs)
+    .sort((a, b) => a - b);
+  const countUpTo = (t: number): number => {
+    let n = 0;
+    while (n < times.length && times[n] <= t) n += 1;
+    return n;
+  };
+  const points: SeriesPoint[] = [];
+  for (const t of seriesGrid(axisMs, buckets)) {
+    if (t > end) break;
+    points.push({ t, v: countUpTo(t) });
+  }
+  if (points.length === 0 || points[points.length - 1].t < end) {
+    points.push({ t: end, v: countUpTo(end) });
+  }
+  return points;
+}
+
+/** 구간 목록과의 교집합으로 잘라낸다(검사된 구간만 남기기). */
+export function clipBands<T extends TimeBand>(
+  bands: readonly T[],
+  intervals: readonly ScannedInterval[],
+): T[] {
+  const out: T[] = [];
+  for (const band of bands) {
+    for (const it of intervals) {
+      const fromMs = Math.max(band.fromMs, it.fromMs);
+      const toMs = Math.min(band.toMs, it.toMs);
+      if (toMs > fromMs) out.push({ ...band, fromMs, toMs });
+    }
+  }
+  return out;
+}
+
+/**
+ * 한 장비의 상태 밴드 — 전이 시각 사이 구간에 `to` 상태, 마지막 전이는 창
+ * 끝까지. 첫 전이 전(unknown)은 그리지 않는다. `scanned` 를 주면 검사된
+ * 구간만 남긴다.
+ */
+export function statusBands(
+  transitions: readonly StatusTransition[],
+  modelId: string,
+  windowEndMs: number,
+  scanned?: readonly ScannedInterval[],
+): StatusBand[] {
+  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
+  const own = transitions
+    .filter((t) => t.modelId === modelId && Number.isFinite(t.atMs))
+    .sort((a, b) => a.atMs - b.atMs);
+  const bands: StatusBand[] = [];
+  for (let i = 0; i < own.length; i += 1) {
+    const fromMs = Math.max(0, own[i].atMs);
+    const toMs = Math.min(end, i + 1 < own.length ? own[i + 1].atMs : end);
+    if (toMs <= fromMs) continue;
+    bands.push({ fromMs, toMs, status: own[i].to });
+  }
+  return scanned ? clipBands(bands, scanned) : bands;
+}
+
+/** 영역 진입·이탈 짝짓기 → 체류 밴드. 이탈 없는 진입은 창 끝까지(open). */
+export function zoneBands(
+  events: readonly PlaybackEvent[],
+  windowEndMs: number,
+): ZoneBand[] {
+  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
+  const sorted = events
+    .filter(
+      (e) =>
+        (e.kind === 'zoneEnter' || e.kind === 'zoneExit') &&
+        Number.isFinite(e.atMs) &&
+        e.atMs <= end,
+    )
+    .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
+  const open = new Map<string, PlaybackEvent>();
+  const out: ZoneBand[] = [];
+  const close = (enter: PlaybackEvent, toMs: number, isOpen: boolean) => {
+    out.push({
+      fromMs: enter.atMs,
+      toMs: Math.max(enter.atMs, toMs),
+      zoneKey: enter.zoneKey ?? enter.subject,
+      zoneName: enter.zoneName ?? enter.zoneKey ?? enter.subject,
+      level: enter.level ?? 'warn',
+      intruderId: enter.intruderId ?? enter.subject,
+      intruderName: enter.intruderName ?? enter.intruderId ?? enter.subject,
+      open: isOpen,
+    });
+  };
+  for (const e of sorted) {
+    if (e.kind === 'zoneEnter') {
+      const prev = open.get(e.subject);
+      if (prev) close(prev, e.atMs, false);
+      open.set(e.subject, e);
+    } else {
+      const prev = open.get(e.subject);
+      if (!prev) continue;
+      open.delete(e.subject);
+      close(prev, e.atMs, false);
+    }
+  }
+  for (const [, enter] of open) close(enter, end, true);
+  return out.sort((a, b) => a.fromMs - b.fromMs);
+}
+
+/** 정지 시작·해제 짝짓기 → 정지 밴드(씬 시간은 정지 중 흐르지 않아 폭은 0 에 가깝다). */
+export function holdBands(
+  events: readonly PlaybackEvent[],
+  windowEndMs: number,
+): HoldBand[] {
+  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
+  const sorted = events
+    .filter(
+      (e) =>
+        (e.kind === 'holdStart' || e.kind === 'holdEnd') &&
+        Number.isFinite(e.atMs) &&
+        e.atMs <= end,
+    )
+    .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
+  const out: HoldBand[] = [];
+  let current: PlaybackEvent | null = null;
+  for (const e of sorted) {
+    if (e.kind === 'holdStart') {
+      if (current) {
+        out.push({
+          fromMs: current.atMs,
+          toMs: e.atMs,
+          subject: current.subject,
+        });
+      }
+      current = e;
+    } else if (current) {
+      out.push({
+        fromMs: current.atMs,
+        toMs: e.atMs,
+        subject: current.subject,
+      });
+      current = null;
+    }
+  }
+  if (current)
+    out.push({ fromMs: current.atMs, toMs: end, subject: current.subject });
+  return out;
+}
+
+/**
+ * 가동 비율 누적 시리즈 — 격자 시각 t 마다 "[0,t] ∩ 검사 구간 안에서 running
+ * 이었던 시간 ÷ 상태를 아는(unknown 제외) 시간". 분모 0 이면 점을 만들지
+ * 않는다.
+ */
+export function runningRatioSeries(
+  transitions: readonly StatusTransition[],
+  scanned: readonly ScannedInterval[],
+  axisMs: number,
+  windowEndMs: number,
+  buckets = 60,
+): SeriesPoint[] {
+  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
+  const modelIds = [...new Set(transitions.map((t) => t.modelId))];
+  const bands = modelIds.flatMap((id) =>
+    statusBands(transitions, id, end, scanned),
+  );
+  const overlapUpTo = (
+    t: number,
+    pick: (s: EquipmentRuntimeStatus) => boolean,
+  ) => {
+    let sum = 0;
+    for (const b of bands) {
+      if (!pick(b.status)) continue;
+      const toMs = Math.min(b.toMs, t);
+      if (toMs > b.fromMs) sum += toMs - b.fromMs;
+    }
+    return sum;
+  };
+  const points: SeriesPoint[] = [];
+  const grid = seriesGrid(axisMs, buckets).filter((t) => t <= end);
+  if (grid.length === 0 || grid[grid.length - 1] < end) grid.push(end);
+  for (const t of grid) {
+    const known = overlapUpTo(t, (s) => s !== 'unknown');
+    if (known <= 0) continue;
+    points.push({ t, v: overlapUpTo(t, (s) => s === 'running') / known });
+  }
+  return points;
+}
+
+/** 상위 N — 정렬은 호출자가 이미 했다고 보고 앞에서 자른다(동률은 원래 순서). */
+export function topN<T>(items: readonly T[], n: number): T[] {
+  return items.slice(0, Math.max(0, n));
+}
+
+export interface ZoneIntruderRank {
+  zoneKey: string;
+  zoneName: string;
+  level: 'warn' | 'stop';
+  intruderId: string;
+  intruderName: string;
+  count: number;
+}
+
+/** 영역×침범자 상위 N(횟수 내림차순, 동률은 영역 순서·침범자 순서). */
+export function rankZoneIntruders(
+  zones: readonly ZoneStat[],
+  n: number,
+): ZoneIntruderRank[] {
+  const rows: ZoneIntruderRank[] = [];
+  for (const z of zones) {
+    for (const r of z.byIntruder) {
+      rows.push({
+        zoneKey: z.zoneKey,
+        zoneName: z.zoneName,
+        level: z.level,
+        intruderId: r.intruderId,
+        intruderName: r.intruderName,
+        count: r.count,
+      });
+    }
+  }
+  rows.sort((a, b) => b.count - a.count);
+  return topN(rows, n);
+}
+
+export interface TagRangeBar {
+  /** 0~1 정규화 위치. */
+  min: number;
+  mean: number;
+  max: number;
+  /** 정규화 기준 범위(정의 범위 또는 관측 범위). */
+  lo: number;
+  hi: number;
+}
+
+/**
+ * 태그 range bar — `range`(가상 태그 정의 min~max)가 있으면 그 안에서, 없으면
+ * 관측 min~max 를 기준으로 min·평균·max 위치를 0~1 로 정규화한다. 범위 밖
+ * 값은 clamp, 관측 0 건·비정상 값은 null.
+ */
+export function tagRangeBar(
+  agg: Pick<TagAggregate, 'min' | 'max' | 'sum' | 'count'>,
+  range: { min: number; max: number } | null,
+): TagRangeBar | null {
+  if (
+    agg.count <= 0 ||
+    !Number.isFinite(agg.min) ||
+    !Number.isFinite(agg.max)
+  ) {
+    return null;
+  }
+  const mean = agg.sum / agg.count;
+  let lo = range && Number.isFinite(range.min) ? range.min : agg.min;
+  let hi = range && Number.isFinite(range.max) ? range.max : agg.max;
+  if (hi < lo) [lo, hi] = [hi, lo];
+  if (hi === lo) hi = lo + 1;
+  const norm = (v: number) => Math.min(1, Math.max(0, (v - lo) / (hi - lo)));
+  return { min: norm(agg.min), mean: norm(mean), max: norm(agg.max), lo, hi };
 }

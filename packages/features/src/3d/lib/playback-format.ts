@@ -1,4 +1,10 @@
-import type { PlaybackEventKind } from './playback-stats';
+import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
+import type {
+  CollisionPairStat,
+  PlaybackEventKind,
+  ZoneIntruderRank,
+} from './playback-stats';
 
 /**
  * 플레이백 표시 보조 — 마커 색·seek 선행량. ui 파일의 수치 계산 금지 규칙
@@ -64,4 +70,84 @@ export function formatTagNumber(value: number | null): string {
   const abs = Math.abs(value);
   const digits = abs >= 100 ? 0 : abs >= 10 ? 1 : 2;
   return value.toFixed(digits);
+}
+
+/** 상태 밴드 색(hex) — 미니맵·HUD 와 같은 팔레트. unknown 은 그리지 않는다. */
+export const PLAYBACK_STATUS_FILL: Record<
+  EquipmentRuntimeStatus,
+  string | null
+> = RUNTIME_STATUS_COLORS;
+
+/** 균등 축 눈금(ms) — 0 과 axis 를 포함해 n+1 개. */
+export function timelineTicks(axisMs: number, n = 4): number[] {
+  if (!(axisMs > 0) || !(n > 0)) return [0];
+  const out: number[] = [];
+  for (let i = 0; i <= n; i += 1) out.push((axisMs * i) / n);
+  return out;
+}
+
+/** 축 위 상대 위치(0~1) → 씬 시간. */
+export function msAtFraction(fraction: number, axisMs: number): number {
+  if (!(axisMs > 0) || !Number.isFinite(fraction)) return 0;
+  return Math.min(axisMs, Math.max(0, fraction * axisMs));
+}
+
+/** 스파크라인 스텝 경로 — viewBox 0..100 × 0..height. 점이 없으면 ''. */
+export function sparklinePath(
+  points: readonly { t: number; v: number }[],
+  axisMs: number,
+  maxV: number,
+  height: number,
+): string {
+  if (points.length === 0 || !(axisMs > 0)) return '';
+  const top = maxV > 0 ? maxV : 1;
+  const x = (t: number) => Math.min(100, Math.max(0, (t / axisMs) * 100));
+  const y = (v: number) => height - Math.min(1, Math.max(0, v / top)) * height;
+  let d = `M${x(points[0].t).toFixed(2)},${y(points[0].v).toFixed(2)}`;
+  for (let i = 1; i < points.length; i += 1) {
+    // 스텝: 이전 값을 다음 시각까지 끌고 간 뒤 올린다.
+    d += ` H${x(points[i].t).toFixed(2)} V${y(points[i].v).toFixed(2)}`;
+  }
+  return d;
+}
+
+/** 사건 목록 필터 칩 — 키는 i18n `monitoring:playback.filter.*`. */
+export const PLAYBACK_EVENT_FILTERS: readonly {
+  key: string;
+  kinds: readonly PlaybackEventKind[];
+}[] = [
+  { key: 'all', kinds: [] },
+  { key: 'collision', kinds: ['collision'] },
+  { key: 'zone', kinds: ['zoneEnter', 'zoneExit'] },
+  { key: 'hold', kinds: ['holdStart', 'holdEnd'] },
+  { key: 'offline', kinds: ['offlineEnter', 'offlineExit'] },
+];
+
+export interface RankingRow {
+  key: string;
+  label: string;
+  count: number;
+  tone: 'bad' | 'warn';
+}
+
+export function pairRankingRows(
+  pairs: readonly CollisionPairStat[],
+): RankingRow[] {
+  return pairs.map((p) => ({
+    key: p.pairKey,
+    label: p.label,
+    count: p.count,
+    tone: 'bad',
+  }));
+}
+
+export function zoneRankingRows(
+  rows: readonly ZoneIntruderRank[],
+): RankingRow[] {
+  return rows.map((r) => ({
+    key: `${r.zoneKey}|${r.intruderId}`,
+    label: `${r.zoneName} ← ${r.intruderName}`,
+    count: r.count,
+    tone: r.level === 'stop' ? 'bad' : 'warn',
+  }));
 }
