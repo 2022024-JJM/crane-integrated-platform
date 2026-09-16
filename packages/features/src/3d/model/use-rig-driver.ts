@@ -26,6 +26,7 @@ import {
   type ChannelDelta,
 } from '../lib/strip-channel-delta';
 import { rigLiveReadouts } from './rig-live-readouts';
+import { isSceneFrameTickerActive } from './scene-frame-request';
 import { makeJointAddress, rigValueStore } from './rig-value-store';
 import { useActiveTransformStore } from './use-active-transform-store';
 
@@ -293,8 +294,12 @@ export function useRigDriver({
     rigValueStore.step(Math.min(delta, 0.1));
     // 정착 전이면 다음 프레임을 스스로 요청 — 러너가 멈춘 뒤(거버너 유예
     // 밖)나 슬라이더·수동 태그 값처럼 러너 없이 들어온 smooth 값도 끝까지
-    // 수렴한다. 정착하면 요청이 저절로 멈춘다.
-    if (rigValueStore.hasPendingSmoothing()) invalidate();
+    // 수렴한다. 정착하면 요청이 저절로 멈춘다. 거버너가 주기 틱을 돌리는
+    // 동안은 부르지 않는다 — useFrame 안 invalidate 는 rAF 루프를 주사율로
+    // 자체 지속시켜 30fps 상한을 무력화한다(scene-frame-request 주석).
+    if (rigValueStore.hasPendingSmoothing() && !isSceneFrameTickerActive()) {
+      invalidate();
+    }
 
     const rigsById = new Map((currentRigs ?? []).map((r) => [r.id, r]));
     const liveModelIds = new Set<string>();

@@ -7,6 +7,7 @@ import {
 } from '../lib/frame-governor';
 import {
   registerSceneFrameRequester,
+  setSceneFrameTickerActive,
   unregisterSceneFrameRequester,
 } from '../model/scene-frame-request';
 import { useActiveTransformStore } from '../model/use-active-transform-store';
@@ -80,6 +81,8 @@ export function SceneFrameGovernor({
         invalidate();
         ticker = setInterval(() => invalidate(), interval);
       }
+      // 드라이버의 스무딩 self‑invalidate 가 이 틱과 겹쳐 주사율로 돌지 않게.
+      setSceneFrameTickerActive(interval !== null);
     };
 
     const evaluate = () => {
@@ -111,6 +114,7 @@ export function SceneFrameGovernor({
       clearInterval(poll);
       document.removeEventListener('visibilitychange', evaluate);
       if (ticker !== null) clearInterval(ticker);
+      setSceneFrameTickerActive(false);
     };
   }, [animating, slow, invalidate]);
 

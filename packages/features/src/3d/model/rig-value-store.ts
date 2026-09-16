@@ -77,18 +77,18 @@ const DEFAULT_SMOOTH_TIME = 0.35;
  * 100m 붐 끝에서 3.5cm.
  */
 const SHADOW_STEP_EPS = 0.02;
-/**
- * 스무딩 중 그림자 무효화의 최소 간격(ms) — 초당 20회 상한. 임계를 넘어도
- * 이 간격 안이면 미루고 누적을 유지해 다음 허용 프레임에 반드시 그린다
- * (trailing). 재생 중 4096² shadow pass 가 60·120Hz 에서 20Hz 로 내려온다.
- * 즉시 set(seek·리셋)은 이 제한을 받지 않는다 — 점프는 바로 보여야 한다.
+/*
+ * 그림자 무효화는 **프레임 정렬**이다 — 임계를 넘긴 프레임엔 그 프레임에
+ * 바로 무효화한다. 예전엔 벽시계 50ms 스로틀(초당 20회 상한)이 있었는데,
+ * 렌더가 주사율로 도는 동안 3프레임 중 2프레임이 이전 자세의 depth map 으로
+ * 그려져 배속 ≥2 에서 자기 그림자 오차가 켜졌다 꺼졌다 하며 모델 밝기가
+ * 명멸했다(2026-09-16). shadow pass 상한은 이제 거버너 fps(재생 중 30)가
+ * 정한다 — 드라이버가 거버너 틱 중엔 self‑invalidate 하지 않아 렌더가
+ * 30fps 를 넘지 않는다(scene-frame-request).
  */
-const SHADOW_STEP_MIN_INTERVAL_MS = 50;
 
 class RigValueStoreImpl implements RigValueSink {
   private readonly channels = new Map<JointAddress, Channel>();
-  /** step 이 마지막으로 그림자를 무효화한 시각(performance.now). */
-  private lastShadowStepAt = Number.NEGATIVE_INFINITY;
 
   set(
     address: JointAddress,
@@ -144,8 +144,6 @@ class RigValueStoreImpl implements RigValueSink {
   }
 
   reset(modelId?: string): void {
-    // 씬 전환·seek 뒤 첫 움직임의 그림자는 바로 그려야 한다.
-    this.lastShadowStepAt = Number.NEGATIVE_INFINITY;
     if (modelId === undefined) {
       // 채널이 지워지면 드라이버가 다음 프레임에 노드를 rest 로 되돌린다 —
       // 화면이 바뀌므로 그림자도 무효화하고 프레임을 요청한다(빈 상태
@@ -206,12 +204,10 @@ class RigValueStoreImpl implements RigValueSink {
 
   /**
    * 프레임마다 한 번. 스무딩 채널만 갱신하고, 정착한 채널은 비용 0.
-   * 누적 이동량이 SHADOW_STEP_EPS 를 넘는 채널이 생기면 그림자를 무효화한다
-   * (임계 주석 참고) — 재생 중엔 SHADOW_STEP_MIN_INTERVAL_MS 상한 주기로,
-   * 값이 정착하면 자동으로 멈춘다. `now` 는 테스트가 결정론적으로 넣는
-   * 시각(ms)이고 기본은 performance.now().
+   * 누적 이동량이 SHADOW_STEP_EPS 를 넘는 채널이 생기면 **그 프레임에**
+   * 그림자를 무효화한다(임계 주석 참고) — 값이 정착하면 자동으로 멈춘다.
    */
-  step(dt: number, now: number = performance.now()): void {
+  step(dt: number): void {
     let moved = false;
     for (const ch of this.channels.values()) {
       if (ch.smoothTime <= 0 || ch.value === ch.target) continue;
@@ -221,8 +217,6 @@ class RigValueStoreImpl implements RigValueSink {
       if (ch.shadowDrift > SHADOW_STEP_EPS) moved = true;
     }
     if (!moved) return;
-    if (now - this.lastShadowStepAt < SHADOW_STEP_MIN_INTERVAL_MS) return;
-    this.lastShadowStepAt = now;
     invalidateShadows();
     // 이번 프레임의 shadow 렌더가 모든 채널의 현재 자세를 담는다.
     for (const ch of this.channels.values()) ch.shadowDrift = 0;

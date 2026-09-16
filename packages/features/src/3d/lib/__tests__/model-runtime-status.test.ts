@@ -8,6 +8,7 @@ import {
   isSameRuntimeStatusRecord,
   resolveRuntimeStatus,
   scaleStatusWindows,
+  STATUS_WINDOW_FLOOR_MS,
   type TagActivity,
 } from '../model-runtime-status';
 
@@ -129,10 +130,22 @@ describe('scaleStatusWindows', () => {
       runningMs: RUNNING_WINDOW_MS * 2,
       offlineMs: OFFLINE_WINDOW_MS * 2,
     });
-    expect(scaleStatusWindows(8)).toEqual({
-      runningMs: RUNNING_WINDOW_MS / 8,
-      offlineMs: OFFLINE_WINDOW_MS / 8,
+    expect(scaleStatusWindows(2)).toEqual({
+      runningMs: RUNNING_WINDOW_MS / 2,
+      offlineMs: OFFLINE_WINDOW_MS / 2,
     });
+  });
+
+  it('고배속에서도 폴링 격자보다 좁아지지 않는다(하한) — 라벨 상태 점 깜빡임 방지', () => {
+    expect(scaleStatusWindows(8)).toEqual({
+      runningMs: STATUS_WINDOW_FLOOR_MS.running,
+      offlineMs: STATUS_WINDOW_FLOOR_MS.offline,
+    });
+    // 하한 정확값: 창/배속 이 하한과 같으면 그대로.
+    expect(
+      scaleStatusWindows(RUNNING_WINDOW_MS / STATUS_WINDOW_FLOOR_MS.running)
+        .runningMs,
+    ).toBe(STATUS_WINDOW_FLOOR_MS.running);
   });
 
   it('0·음수·NaN·무한은 기본 창', () => {

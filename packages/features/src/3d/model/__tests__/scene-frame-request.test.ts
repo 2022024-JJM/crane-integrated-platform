@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  isSceneFrameTickerActive,
   registerSceneFrameRequester,
   requestSceneFrame,
   sceneFrameRequesterCount,
+  setSceneFrameTickerActive,
   unregisterSceneFrameRequester,
 } from '../scene-frame-request';
 
@@ -47,5 +49,13 @@ describe('scene-frame-request', () => {
     requestSceneFrame();
     expect(a).not.toHaveBeenCalled();
     expect(sceneFrameRequesterCount()).toBe(0);
+  });
+
+  it('거버너 틱 플래그 — 기본 false, 켜고 끈 값을 그대로 돌려준다', () => {
+    expect(isSceneFrameTickerActive()).toBe(false);
+    setSceneFrameTickerActive(true);
+    expect(isSceneFrameTickerActive()).toBe(true);
+    setSceneFrameTickerActive(false);
+    expect(isSceneFrameTickerActive()).toBe(false);
   });
 });

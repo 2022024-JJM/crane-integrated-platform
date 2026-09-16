@@ -211,29 +211,36 @@ describe('rigValueStore 그림자 무효화(shadow-invalidation)', () => {
     expect(consume()).toBe(true);
   });
 
-  it('스무딩 중 step 무효화는 50ms 에 한 번으로 제한되고, 미룬 이동은 다음 허용 프레임에 그린다', () => {
-    // 시각은 명시 인자로 넣는다 — 타이머·performance.now 에 기대지 않는다.
+  it('스무딩 중 step 은 임계를 넘긴 프레임마다 무효화한다(프레임 정렬, 벽시계 스로틀 없음)', () => {
     rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
-    rigValueStore.step(1 / 60, 1000);
+    // 큰 목표라 매 프레임 이동이 임계(0.02)를 넘는다 — 연속 프레임 전부 그린다.
+    rigValueStore.step(1 / 60);
     expect(consume()).toBe(true);
-    // 같은 50ms 창 안의 프레임들은 임계를 넘어도 미룬다.
-    rigValueStore.step(1 / 60, 1016);
-    expect(consume()).toBe(false);
-    rigValueStore.step(1 / 60, 1032);
-    expect(consume()).toBe(false);
-    // 창이 지나면 누적된 이동으로 반드시 한 번 그린다(trailing).
-    rigValueStore.step(1 / 60, 1052);
+    rigValueStore.step(1 / 60);
     expect(consume()).toBe(true);
-    // 그 다음 창도 같은 규칙.
-    rigValueStore.step(1 / 60, 1060);
-    expect(consume()).toBe(false);
-    rigValueStore.step(1 / 60, 1110);
+    rigValueStore.step(1 / 60);
     expect(consume()).toBe(true);
   });
 
-  it('즉시 set 은 간격 제한을 받지 않는다 — 점프는 바로 보인다', () => {
+  it('프레임당 이동이 임계 아래면 누적이 임계를 넘는 프레임에만 그리고, 정착하면 멈춘다', () => {
+    // 목표 0.05 — 첫 프레임 이동은 임계 아래, 몇 프레임 누적으로 한 번 넘긴다.
+    rigValueStore.set('m/j', 0.05, { smooth: true, smoothTime: 0.3 });
+    let fired = 0;
+    for (let i = 0; i < 60; i += 1) {
+      rigValueStore.step(1 / 60);
+      if (consume()) fired += 1;
+    }
+    // 총 이동 0.05 이니 임계 0.02 를 넘길 수 있는 횟수는 최대 2회.
+    expect(fired).toBeGreaterThanOrEqual(1);
+    expect(fired).toBeLessThanOrEqual(2);
+    // 정착 뒤 잔여 누적(< 임계)으로는 더 그리지 않는다.
+    for (let i = 0; i < 60; i += 1) rigValueStore.step(1 / 60);
+    expect(consume()).toBe(false);
+  });
+
+  it('즉시 set 은 스무딩과 무관하게 바로 무효화한다 — 점프는 바로 보인다', () => {
     rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
-    rigValueStore.step(1 / 60, 1000);
+    rigValueStore.step(1 / 60);
     consume();
     rigValueStore.set('m/j', 5);
     expect(consume()).toBe(true);
@@ -241,14 +248,14 @@ describe('rigValueStore 그림자 무효화(shadow-invalidation)', () => {
     expect(consume()).toBe(true);
   });
 
-  it('reset 은 간격 제한을 푼다 — 씬 전환·seek 뒤 첫 움직임이 바로 그려진다', () => {
+  it('reset 뒤 첫 움직임이 바로 그려진다 — 씬 전환·seek', () => {
     rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
-    rigValueStore.step(1 / 60, 1000);
+    rigValueStore.step(1 / 60);
     consume();
     rigValueStore.reset();
     consume();
     rigValueStore.set('m/j', 100, { smooth: true, smoothTime: 0.3 });
-    rigValueStore.step(1 / 60, 1010);
+    rigValueStore.step(1 / 60);
     expect(consume()).toBe(true);
   });
 

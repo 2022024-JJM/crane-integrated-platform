@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasRateLimits, rateLimitStep } from '../rate-limit';
+import { hasRateLimits, rateLimitStep, rateLimitSteps } from '../rate-limit';
 
 describe('hasRateLimits', () => {
   it('양수 한계가 하나라도 있어야 true', () => {
@@ -82,5 +82,68 @@ describe('rateLimitStep', () => {
       value: 3,
       velocity: 0,
     });
+  });
+});
+
+describe('rateLimitSteps', () => {
+  const limits = { maxSpeed: 6, maxAccel: 2 };
+
+  it('dt 가 maxStep 이하면 rateLimitStep 한 번과 같다', () => {
+    expect(rateLimitSteps(0, 0, 10, 0.1, limits, 0.1)).toEqual(
+      rateLimitStep(0, 0, 10, 0.1, limits),
+    );
+  });
+
+  it('큰 dt 는 서브스텝으로 나뉘어 가속 프로파일이 유지된다 — ×8 한 틱이 ×1 여덟 틱과 같은 궤적', () => {
+    let s1 = { value: 0, velocity: 0 };
+    for (let i = 0; i < 8; i += 1) {
+      s1 = rateLimitStep(s1.value, s1.velocity, 10, 0.1, limits);
+    }
+    const s8 = rateLimitSteps(0, 0, 10, 0.8, limits, 0.1);
+    expect(s8.value).toBeCloseTo(s1.value, 10);
+    expect(s8.velocity).toBeCloseTo(s1.velocity, 10);
+    // 한 스텝으로 넣으면 가속 한계가 무력화돼 더 멀리 간다(회귀 방지 근거).
+    const single = rateLimitStep(0, 0, 10, 0.8, limits);
+    expect(single.value).toBeGreaterThan(s8.value);
+  });
+
+  it('서브스텝 경계: dt/maxStep 이 정수면 그 수, 살짝 넘으면 +1', () => {
+    // 속도 한계만 두면 한 스텝 이동량이 maxSpeed·step 이라 스텝 수를 값으로 셀 수 있다.
+    const speedOnly = { maxSpeed: 1 };
+    expect(rateLimitSteps(0, 0, 100, 0.3, speedOnly, 0.1).value).toBeCloseTo(
+      0.3,
+      10,
+    );
+    expect(rateLimitSteps(0, 0, 100, 0.31, speedOnly, 0.1).value).toBeCloseTo(
+      0.31,
+      10,
+    );
+  });
+
+  it('maxStep 비정상은 1회, dt·한계 비정상은 목표로 바로', () => {
+    expect(rateLimitSteps(0, 0, 10, 0.8, limits, 0)).toEqual(
+      rateLimitStep(0, 0, 10, 0.8, limits),
+    );
+    expect(rateLimitSteps(0, 0, 10, 0.8, limits, Number.NaN)).toEqual(
+      rateLimitStep(0, 0, 10, 0.8, limits),
+    );
+    expect(rateLimitSteps(0, 5, 10, 0, limits, 0.1)).toEqual({
+      value: 10,
+      velocity: 0,
+    });
+    expect(rateLimitSteps(0, 5, 10, 0.5, undefined, 0.1)).toEqual({
+      value: 10,
+      velocity: 0,
+    });
+    expect(rateLimitSteps(Number.NaN, 5, 10, 0.5, limits, 0.1)).toEqual({
+      value: 10,
+      velocity: 0,
+    });
+  });
+
+  it('NaN 속도는 0 으로 본다', () => {
+    expect(rateLimitSteps(0, Number.NaN, 10, 0.2, limits, 0.1)).toEqual(
+      rateLimitSteps(0, 0, 10, 0.2, limits, 0.1),
+    );
   });
 });

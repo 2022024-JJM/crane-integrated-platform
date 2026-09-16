@@ -77,3 +77,42 @@ export function rateLimitStep(
   }
   return { value, velocity: u };
 }
+
+/**
+ * 큰 dt 를 `maxStepSec` 이하 서브스텝으로 나눠 `rateLimitStep` 을 반복한다.
+ * 배속을 곱한 dt(×8 이면 틱당 0.8s)를 한 스텝에 넣으면 가속 프로파일이
+ * 1~2틱으로 붕괴하고(`maxAccel·dt` 가 `maxSpeed` 를 넘는다) 오버슈트 클램프가
+ * 잦아져 stop‑go 히치가 난다(2026-09-16). 서브스텝 수 `ceil(dt/maxStep)` —
+ * `maxStepSec` 이 비정상이면 1회. 비정상 dt·한계 없음은 `rateLimitStep` 규칙.
+ */
+export function rateLimitSteps(
+  current: number,
+  velocity: number,
+  target: number,
+  dtSec: number,
+  limits: VirtualTagLimits | undefined,
+  maxStepSec: number,
+): RateLimitState {
+  if (
+    !hasRateLimits(limits) ||
+    !Number.isFinite(dtSec) ||
+    dtSec <= 0 ||
+    !Number.isFinite(current) ||
+    !Number.isFinite(target)
+  ) {
+    return { value: target, velocity: 0 };
+  }
+  const n =
+    Number.isFinite(maxStepSec) && maxStepSec > 0
+      ? Math.max(1, Math.ceil(dtSec / maxStepSec))
+      : 1;
+  const step = dtSec / n;
+  let state: RateLimitState = {
+    value: current,
+    velocity: Number.isFinite(velocity) ? velocity : 0,
+  };
+  for (let i = 0; i < n; i += 1) {
+    state = rateLimitStep(state.value, state.velocity, target, step, limits);
+  }
+  return state;
+}

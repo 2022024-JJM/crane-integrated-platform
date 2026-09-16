@@ -70,5 +70,6 @@ export {
 export {
   hasRateLimits,
   rateLimitStep,
+  rateLimitSteps,
   type RateLimitState,
 } from './lib/rate-limit';

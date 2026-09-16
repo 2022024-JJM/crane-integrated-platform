@@ -33,3 +33,21 @@ export function requestSceneFrame(): void {
 export function sceneFrameRequesterCount(): number {
   return requesters.size;
 }
+
+let tickerActive = false;
+
+/**
+ * 거버너가 주기 틱(30fps 등)을 돌리는 중인지. `SceneFrameGovernor` 가 켜고
+ * 끈다. 드라이버의 스무딩 self‑invalidate 는 이게 true 면 건너뛴다 — useFrame
+ * 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로
+ * 자체 지속되므로, 거버너가 있는 동안 부르면 30fps 상한이 무력화된다
+ * (2026-09-16, 배속 ≥2 에서 그림자 20Hz 스로틀과 주사율 렌더가 어긋나
+ * 모델 밝기가 명멸하던 원인의 절반).
+ */
+export function setSceneFrameTickerActive(active: boolean): void {
+  tickerActive = active;
+}
+
+export function isSceneFrameTickerActive(): boolean {
+  return tickerActive;
+}

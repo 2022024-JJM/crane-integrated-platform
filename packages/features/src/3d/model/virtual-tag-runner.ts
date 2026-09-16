@@ -2,7 +2,7 @@ import {
   clampToTag,
   evaluateScenarioTrack,
   hasRateLimits,
-  rateLimitStep,
+  rateLimitSteps,
   initVirtualTagState,
   isScenarioFinished,
   scenarioDurationMs,
@@ -291,12 +291,15 @@ class VirtualTagRuntime {
       }
       let next: VirtualTagRuntimeState;
       if (hasRateLimits(def.limits)) {
-        const limited = rateLimitStep(
+        // 배속을 곱한 dt 를 틱 길이(sim 100ms) 이하로 나눠 적분 — 가속
+        // 프로파일이 배속과 무관하게 유지된다(rate-limit.ts 주석).
+        const limited = rateLimitSteps(
           state.value,
           state.velocity ?? 0,
           target,
           dtSec,
           def.limits,
+          config.tickMs / 1000,
         );
         next = { value: limited.value, velocity: limited.velocity };
       } else {

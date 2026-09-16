@@ -43,10 +43,25 @@ export const DEFAULT_STATUS_WINDOWS: RuntimeStatusWindows = {
 export function scaleStatusWindows(timeScale: number): RuntimeStatusWindows {
   const scale = Number.isFinite(timeScale) && timeScale > 0 ? 1 / timeScale : 1;
   return {
-    runningMs: RUNNING_WINDOW_MS * scale,
-    offlineMs: OFFLINE_WINDOW_MS * scale,
+    runningMs: Math.max(
+      STATUS_WINDOW_FLOOR_MS.running,
+      RUNNING_WINDOW_MS * scale,
+    ),
+    offlineMs: Math.max(
+      STATUS_WINDOW_FLOOR_MS.offline,
+      OFFLINE_WINDOW_MS * scale,
+    ),
   };
 }
+
+/**
+ * 배속 축소의 하한 — 1Hz 폴링 격자보다 좁아지면 파형 정점에 멈춘 태그가 폴링마다
+ * running↔idle 로 뒤집혀 라벨 상태 점이 깜빡인다(×8 에서 1s 창, 2026-09-16).
+ */
+export const STATUS_WINDOW_FLOOR_MS = {
+  running: 2_000,
+  offline: 4_000,
+} as const;
 
 /** 모델이 참조하는 태그 키 목록(중복 제거, 맵핑 순서 유지). */
 export function collectModelTagKeys(
