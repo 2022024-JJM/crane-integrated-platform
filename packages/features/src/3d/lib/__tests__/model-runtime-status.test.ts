@@ -7,6 +7,7 @@ import {
   countRuntimeStatuses,
   isSameRuntimeStatusRecord,
   resolveRuntimeStatus,
+  scaleStatusWindows,
   type TagActivity,
 } from '../model-runtime-status';
 
@@ -119,5 +120,37 @@ describe('isSameRuntimeStatusRecord / countRuntimeStatuses', () => {
   it('unknown 은 색이 없다(기본 색 유지)', () => {
     expect(RUNTIME_STATUS_COLORS.unknown).toBeNull();
     expect(RUNTIME_STATUS_COLORS.running).toMatch(/^#/);
+  });
+});
+
+describe('scaleStatusWindows', () => {
+  it('배속의 역수로 창을 늘이거나 줄인다', () => {
+    expect(scaleStatusWindows(0.5)).toEqual({
+      runningMs: RUNNING_WINDOW_MS * 2,
+      offlineMs: OFFLINE_WINDOW_MS * 2,
+    });
+    expect(scaleStatusWindows(8)).toEqual({
+      runningMs: RUNNING_WINDOW_MS / 8,
+      offlineMs: OFFLINE_WINDOW_MS / 8,
+    });
+  });
+
+  it('0·음수·NaN·무한은 기본 창', () => {
+    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(scaleStatusWindows(bad)).toEqual({
+        runningMs: RUNNING_WINDOW_MS,
+        offlineMs: OFFLINE_WINDOW_MS,
+      });
+    }
+  });
+
+  it('resolveRuntimeStatus 가 넓힌 창을 쓴다 — 0.5배속 리플레이의 10초 프레임 간격', () => {
+    const get = activities({
+      k: { at: NOW - 10_000, changedAt: NOW - 10_000 },
+    });
+    expect(resolveRuntimeStatus(['k'], get, NOW)).toBe('idle');
+    expect(resolveRuntimeStatus(['k'], get, NOW, scaleStatusWindows(0.5))).toBe(
+      'running',
+    );
   });
 });

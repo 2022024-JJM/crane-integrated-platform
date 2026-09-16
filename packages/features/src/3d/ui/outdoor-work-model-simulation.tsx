@@ -20,6 +20,7 @@ import {
 } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { stopSimulation } from '../model/stop-simulation';
+import type { MonitoringViewMode } from '../model/types';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
@@ -41,7 +42,7 @@ export interface UseSceneDataOptions {
 
 export function useSceneData(
   regionId: string,
-  mode: 'simulation' | 'replay' | 'realtime' = 'simulation',
+  mode: MonitoringViewMode = 'simulation',
   { autoStartSimulation = true }: UseSceneDataOptions = {},
 ) {
   const [sceneInfo, setSceneInfo] = useState<SavedSceneInfo | null>(null);
@@ -50,6 +51,7 @@ export function useSceneData(
   const loadedAssetPathsRef = useRef<string[]>([]);
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
+  const setActiveMode = useSceneInfoStore((s) => s.setActiveMode);
   const loadVirtualTags = useVirtualTagStore((s) => s.load);
   const startSimulation = useVirtualTagStore((s) => s.start);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
@@ -62,6 +64,8 @@ export function useSceneData(
     // 서로 다른 컴포넌트라 언마운트/마운트로 전환되므로, 컴포넌트 ref로는
     // "같은 지역으로 이어졌다"를 알 수 없다(markSceneRegionActive 주석 참고).
     markSceneRegionActive(regionId);
+    // 저널·알람·알림 브릿지가 "실시간 화면의 사건인가" 를 판정하는 근거.
+    setActiveMode(mode);
 
     const load = async () => {
       setIsLoading(true);
@@ -119,12 +123,17 @@ export function useSceneData(
       startRealtime();
       resetReplay();
     } else {
+      // 플레이백 — 소스(리플레이|시뮬레이션)는 usePlaybackStore 가 들고
+      // PlaybackView 가 전환을 정리한다. 여기서는 둘 다 깨끗이 시작하고
+      // 정의만 읽어 둔다(자동 재생 없음 — ▶ 가 실행의 시작점이다).
       resetReplay();
+      void loadVirtualTags();
     }
     void load();
 
     return () => {
       isMounted = false;
+      setActiveMode(null);
       stopRealtime();
       // unmount 시 replay 재생 상태도 함께 정리. 그렇지 않으면 다른 페이지로
       // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
@@ -152,6 +161,7 @@ export function useSceneData(
     mode,
     regionId,
     resetReplay,
+    setActiveMode,
     setSceneInfoInStore,
     startRealtime,
     startSimulation,
@@ -166,7 +176,7 @@ interface OutdoorWorkModelSimulationProps {
   regionId: string;
   alarmsByCraneId: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
-  mode?: 'simulation' | 'replay' | 'realtime';
+  mode?: MonitoringViewMode;
   onMoveTo?: (position: Vector3Tuple, target: Vector3Tuple) => void;
   onResetCamera?: () => void;
   /**

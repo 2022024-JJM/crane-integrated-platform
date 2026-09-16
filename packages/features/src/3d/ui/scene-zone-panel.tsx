@@ -1,4 +1,4 @@
-import { Crosshair } from 'lucide-react';
+import { Crosshair, Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@crane/ui/atoms/button';
@@ -18,12 +18,18 @@ import {
  */
 export const SceneZonePanel = memo(function SceneZonePanel({
   onViewZone,
+  stopControls = true,
 }: {
   /**
    * 침범 행의 [영역 보기] — 영역 중심으로 카메라 이동(모니터링 독 팝업이
    * 넘긴다). 없으면(에디터 팔레트) 버튼을 두지 않는다.
    */
   onViewZone?: (zoneKey: string) => void;
+  /**
+   * 'stop' 영역 진입 시 정지 스위치·정지 표시를 둘지. 실시간 모니터링은
+   * 자동 정지가 없어 false(검출기가 hold 를 건너뛴다).
+   */
+  stopControls?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const enabled = useSceneZoneStore((s) => s.enabled);
@@ -34,6 +40,7 @@ export const SceneZonePanel = memo(function SceneZonePanel({
   const stopOnIntrusion = useSceneZoneStore((s) => s.stopOnIntrusion);
   const setStopOnIntrusion = useSceneZoneStore((s) => s.setStopOnIntrusion);
   const held = useSceneZoneStore((s) => s.held);
+  const resume = useSceneZoneStore((s) => s.resume);
 
   return (
     <div className="flex flex-col gap-2">
@@ -58,23 +65,40 @@ export const SceneZonePanel = memo(function SceneZonePanel({
         />
       </label>
 
-      <label className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="font-medium">
-          {t('monitoring:editor.zones.stopOnIntrusion')}
-        </span>
-        <Switch
-          checked={stopOnIntrusion}
-          onCheckedChange={setStopOnIntrusion}
-          aria-label={t('monitoring:editor.zones.stopOnIntrusion')}
-        />
-      </label>
-      <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
-        {t('monitoring:editor.zones.stopHint')}
-      </p>
-      {held ? (
-        <p className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400">
-          {t('monitoring:editor.zones.paused')}
-        </p>
+      {/* 정지 스위치·정지 표시 — 실시간 모니터링은 자동 정지가 없어 숨긴다. */}
+      {stopControls ? (
+        <>
+          <label className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="font-medium">
+              {t('monitoring:editor.zones.stopOnIntrusion')}
+            </span>
+            <Switch
+              checked={stopOnIntrusion}
+              onCheckedChange={setStopOnIntrusion}
+              aria-label={t('monitoring:editor.zones.stopOnIntrusion')}
+            />
+          </label>
+          <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
+            {t('monitoring:editor.zones.stopHint')}
+          </p>
+          {held ? (
+            <div className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400">
+              <span>{t('monitoring:editor.zones.paused')}</span>
+              {/* ▶ 와 같은 일을 한다(정지 해제 + 그 쌍 승인) — 팝업을 연 채
+                  바로 풀 수 있게 여기에도 둔다. */}
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-6 shrink-0 gap-1 px-1.5 text-[10px]"
+                onClick={resume}
+              >
+                <Play className="size-3" />
+                {t('monitoring:editor.zones.resume')}
+              </Button>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       <p className="text-muted-foreground pt-1 text-[10px] font-semibold tracking-[0.14em] uppercase">

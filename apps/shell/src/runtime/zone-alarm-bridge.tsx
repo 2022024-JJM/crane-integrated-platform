@@ -4,7 +4,9 @@ import { createLocalAlarm, localAlarmActiveKey } from '@crane/domain/alarm';
 import { useRealtimeAlarmStore } from '@crane/features/alarm';
 import {
   diffZoneIntrusions,
+  filterAcceptedZoneTransitions,
   findRegionOfModel,
+  isRealtimeSceneActive,
   useSceneInfoStore,
   useSceneZoneStore,
 } from '@crane/features/3d';
@@ -16,6 +18,9 @@ import {
  * 레코드를 같은 키로 넣어 알람 이력 페이지·헤더 배지·전체화면 알람 패널이
  * 서버 알람과 같이 보여 준다. craneId 는 소유 모델의 craneId, 없으면 모델 id —
  * 지역 필터는 alarm.regionId 로도 통과한다(features/alarm isAlarmInRegion).
+ *
+ * 실시간 화면의 침범만 알람이 된다(filterAcceptedZoneTransitions — 진입은
+ * 실시간일 때만, 해제는 그렇게 열린 알람만). `openedAt` 이 곧 승인 집합이다.
  */
 export function ZoneAlarmBridge() {
   const { t } = useTranslation();
@@ -23,9 +28,12 @@ export function ZoneAlarmBridge() {
     const openedAt = new Map<string, number>();
     return useSceneZoneStore.subscribe((state, prev) => {
       if (state.intrusions === prev.intrusions) return;
-      const { entered, exited } = diffZoneIntrusions(
-        prev.intrusions,
-        state.intrusions,
+      const diff = diffZoneIntrusions(prev.intrusions, state.intrusions);
+      const { entered, exited } = filterAcceptedZoneTransitions(
+        diff.entered,
+        diff.exited,
+        (key) => openedAt.has(key),
+        isRealtimeSceneActive(),
       );
       if (entered.length === 0 && exited.length === 0) return;
       const now = Date.now();

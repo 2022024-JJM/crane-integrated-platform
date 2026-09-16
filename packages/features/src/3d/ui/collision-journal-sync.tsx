@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 import { toCollisionJournalEntries } from '../lib/collision-journal-map';
 import { useCollisionJournalStore } from '../model/use-collision-journal-store';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
-import { useSceneInfoStore } from '../model/use-scene-info-store';
+import {
+  isRealtimeSceneActive,
+  useSceneInfoStore,
+} from '../model/use-scene-info-store';
 
 /**
  * 세션 충돌 스토어 → 영속 journal 브릿지. 앱 셸 runtime effects 에 1회
@@ -12,18 +15,20 @@ import { useSceneInfoStore } from '../model/use-scene-info-store';
  * 쪽 동작(정지·억제·기록 10건)은 불변이다. `clearHistory` 는 세션 기록만
  * 비우고 journal 에는 영향이 없다(append-only, 의도된 동작). 같은 record 가
  * 다시 흘러도 key(`at:pairKey`) dedupe 로 중복되지 않는다.
+ *
+ * 실시간 화면의 충돌만 남긴다 — 플레이백·에디터·미리보기의 충돌은 실행
+ * 리포트(플레이백)나 화면 안 기록으로 충분하고 대시보드 통계에 섞이면 안 된다.
  */
 export function CollisionJournalSync() {
   useEffect(() => {
     useCollisionJournalStore.getState().hydrate();
     return useSceneCollisionStore.subscribe((state, prev) => {
       if (state.history === prev.history) return;
+      if (!isRealtimeSceneActive()) return;
       // pushRecord 는 앞에 붙인다 — prev 에 없는 id 가 새 기록이다
       // (id 는 세션 내 단조증가라 세션 내 비교로는 유효하다).
       const prevIds = new Set(prev.history.map((record) => record.id));
-      const fresh = state.history.filter(
-        (record) => !prevIds.has(record.id),
-      );
+      const fresh = state.history.filter((record) => !prevIds.has(record.id));
       if (fresh.length === 0) return;
       useCollisionJournalStore
         .getState()

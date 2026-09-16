@@ -71,7 +71,7 @@
     "craneStatus": "크레인 상태 목록",
     "workHistory": "작업 이력",
     "alarmHistory": "알람 이력",
-    "replayMonitoring": "3D 리플레이",
+    "replayMonitoring": "3D 플레이백",
     "goliathCrane": "골리앗 크레인",
     "goliathCraneMonitoring": "GC-04 모니터링",
     "craneDetail": "상세 크레인",

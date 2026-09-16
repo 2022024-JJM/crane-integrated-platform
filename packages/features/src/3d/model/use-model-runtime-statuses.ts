@@ -4,6 +4,7 @@ import {
   collectModelTagKeys,
   isSameRuntimeStatusRecord,
   resolveRuntimeStatus,
+  scaleStatusWindows,
   type RuntimeStatusRecord,
 } from '../lib/model-runtime-status';
 import { tagLiveValues } from './tag-value-bus';
@@ -12,6 +13,17 @@ import { tagLiveValues } from './tag-value-bus';
 export const RUNTIME_STATUS_POLL_MS = 1_000;
 
 const EMPTY: RuntimeStatusRecord = Object.freeze({});
+
+export interface UseModelRuntimeStatusesOptions {
+  /**
+   * 값 생산이 멈춰 있는 동안(플레이백 일시정지) true — 재판정을 건너뛰어
+   * 마지막 기록을 유지한다. 벽시계 창으로 판정하면 정지 20초 뒤 전 장비가
+   * 두절이 되어 버린다.
+   */
+  paused?: boolean;
+  /** 재생 배속 — 창을 1/배속 으로 조정(scaleStatusWindows). 기본 1. */
+  timeScale?: number;
+}
 
 /**
  * 씬 모델별 운전 상태 — 태그 값 버스의 live 캐시를 1초마다 읽어 판정한다.
@@ -24,6 +36,7 @@ const EMPTY: RuntimeStatusRecord = Object.freeze({});
  */
 export function useModelRuntimeStatuses(
   sceneInfo: SavedSceneInfo | null,
+  { paused = false, timeScale = 1 }: UseModelRuntimeStatusesOptions = {},
 ): RuntimeStatusRecord {
   const keysByModel = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -36,7 +49,9 @@ export function useModelRuntimeStatuses(
   const [record, setRecord] = useState<RuntimeStatusRecord>(EMPTY);
 
   useEffect(() => {
+    const windows = scaleStatusWindows(timeScale);
     const evaluate = () => {
+      if (paused) return;
       const now = Date.now();
       const next: Record<string, RuntimeStatusRecord[string]> = {};
       for (const [modelId, keys] of keysByModel) {
@@ -44,6 +59,7 @@ export function useModelRuntimeStatuses(
           keys,
           (key) => tagLiveValues.get(key),
           now,
+          windows,
         );
       }
       setRecord((prev) =>
@@ -53,7 +69,7 @@ export function useModelRuntimeStatuses(
     evaluate();
     const timer = window.setInterval(evaluate, RUNTIME_STATUS_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [keysByModel]);
+  }, [keysByModel, paused, timeScale]);
 
   return record;
 }

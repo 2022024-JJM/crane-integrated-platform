@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
 import {
   diffZoneIntrusions,
+  filterAcceptedZoneTransitions,
   findRegionOfModel,
   pairKeyOf,
   toZoneJournalEntry,
 } from '../lib/zone-journal-map';
-import { useSceneInfoStore } from '../model/use-scene-info-store';
+import {
+  isRealtimeSceneActive,
+  useSceneInfoStore,
+} from '../model/use-scene-info-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import { useZoneJournalStore } from '../model/use-zone-journal-store';
 
@@ -13,7 +17,11 @@ import { useZoneJournalStore } from '../model/use-zone-journal-store';
  * 영역 침범 스토어 → 영속 journal 브릿지. 앱 셸 runtime effects 에
  * CollisionJournalSync 옆에 1회 마운트한다. 스토어는 밖에서 구독만 한다 —
  * 두 스냅샷의 쌍 차이로 진입·이탈을 복원하고, 진입 시각을 모듈 Map 에 들고
- * 있다가 이탈 항목의 머문 시간으로 쓴다(새로고침으로 잃으면 null).
+ * 있다가 이탈 항목의 머문 시간으로 쓴다.
+ *
+ * 실시간 화면의 사건만 남긴다(filterAcceptedZoneTransitions) — 진입은 실시간
+ * 화면이 떠 있을 때만, 이탈은 그렇게 승인된 쌍만. `enteredAt` 이 곧 승인
+ * 집합이다.
  */
 export function ZoneJournalSync() {
   useEffect(() => {
@@ -21,9 +29,12 @@ export function ZoneJournalSync() {
     const enteredAt = new Map<string, number>();
     return useSceneZoneStore.subscribe((state, prev) => {
       if (state.intrusions === prev.intrusions) return;
-      const { entered, exited } = diffZoneIntrusions(
-        prev.intrusions,
-        state.intrusions,
+      const diff = diffZoneIntrusions(prev.intrusions, state.intrusions);
+      const { entered, exited } = filterAcceptedZoneTransitions(
+        diff.entered,
+        diff.exited,
+        (key) => enteredAt.has(key),
+        isRealtimeSceneActive(),
       );
       if (entered.length === 0 && exited.length === 0) return;
       const now = Date.now();

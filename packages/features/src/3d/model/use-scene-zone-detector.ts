@@ -2,9 +2,12 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { ZONE_SCAN_BUDGET_MS, ZONE_SCAN_INTERVAL_MS } from '../lib/scene-zones';
+import {
+  subscribeRunnerResume,
+  type SceneCollisionRunner,
+} from './scene-collision-hold';
 import { sceneZoneRuntime } from './scene-zone-runtime';
 import { useSceneZoneStore } from './use-scene-zone-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
  * 모델 영역 침범 검출기 — R3F Canvas 안에서 useFrame 으로 런타임을 돌린다.
@@ -23,15 +26,23 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
 export function useSceneZoneDetector({
   sceneInfo,
   enabled,
+  runner = 'simulation',
 }: {
   sceneInfo: SavedSceneInfo | null;
   enabled: boolean;
+  /** 영역 정지의 ▶ 재개 전이를 어느 러너에서 볼지(스캔 게이트는 아니다). */
+  runner?: SceneCollisionRunner;
 }): void {
   const models = sceneInfo?.models;
   const invalidate = useThree((s) => s.invalidate);
   // useFrame 콜백이 읽는 값 — 렌더 중이 아니라 effect 에서 갱신(react-hooks/refs).
   const enabledRef = useRef(false);
+  const runnerRef = useRef<SceneCollisionRunner>(runner);
   const lastScanRef = useRef(0);
+
+  useEffect(() => {
+    runnerRef.current = runner;
+  }, [runner]);
 
   useEffect(() => {
     sceneZoneRuntime.sync(models);
@@ -50,16 +61,15 @@ export function useSceneZoneDetector({
     };
   }, [enabled, invalidate]);
 
-  // 독 ▶(가상 태그 러너 false→true)도 영역 정지의 재개 경로다 — 충돌 검출기와
-  // 같은 규칙. resume 은 정지 중이 아니면 no-op 이라 항상 구독해 둔다.
+  // ▶ 재생 전이(러너 false→true)도 영역 정지의 재개 경로다 — 충돌 검출기와
+  // 같은 규칙(scene-collision-hold). resume 은 정지 중이 아니면 no-op 이라
+  // 항상 구독해 둔다. 실시간은 전이가 없어 영역 패널의 재개 버튼이 푼다.
   useEffect(
     () =>
-      useVirtualTagStore.subscribe((state, prev) => {
-        if (!prev.isRunning && state.isRunning) {
-          useSceneZoneStore.getState().resume();
-        }
-      }),
-    [],
+      subscribeRunnerResume(runner, () =>
+        useSceneZoneStore.getState().resume(),
+      ),
+    [runner],
   );
 
   useFrame(() => {
@@ -71,7 +81,9 @@ export function useSceneZoneDetector({
     const result = sceneZoneRuntime.tick(now, ZONE_SCAN_BUDGET_MS);
     if (result.moved) invalidate();
     if (result.transitions.length === 0) return;
-    useSceneZoneStore.getState().applyTransitions(result.transitions);
+    useSceneZoneStore
+      .getState()
+      .applyTransitions(result.transitions, runnerRef.current !== 'realtime');
     invalidate();
   });
 }

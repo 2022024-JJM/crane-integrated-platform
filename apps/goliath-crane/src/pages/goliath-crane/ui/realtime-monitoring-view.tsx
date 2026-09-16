@@ -44,6 +44,7 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           <Monitoring3dView
             regionId={regionId}
             alarmsByCraneId={alarmsByCraneId}
+            mode="realtime"
             onLoadingChange={setIs3dViewLoading}
             sceneExtras={<GoliathCollisionGuardScene />}
             toolbarExtras={<GoliathCollisionGuardToggle />}

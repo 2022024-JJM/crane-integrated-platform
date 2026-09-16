@@ -32,9 +32,12 @@ import { SceneZonePanel } from './scene-zone-panel';
  */
 export function SceneZoneMenu({
   onViewZone,
+  stopControls = true,
 }: {
   /** 침범 행의 [영역 보기](SceneZonePanel 로 전달). */
   onViewZone?: (zoneKey: string) => void;
+  /** 정지 스위치·정지 표시(SceneZonePanel 로 전달). 실시간은 false. */
+  stopControls?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const enabled = useSceneZoneStore((s) => s.enabled);
@@ -81,7 +84,7 @@ export function SceneZoneMenu({
         <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>
       <PopoverPopup side="left" align="start" className="w-72 p-3">
-        <SceneZonePanel onViewZone={onViewZone} />
+        <SceneZonePanel onViewZone={onViewZone} stopControls={stopControls} />
       </PopoverPopup>
     </Popover>
   );

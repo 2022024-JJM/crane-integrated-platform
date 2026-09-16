@@ -23,10 +23,40 @@ export {
   type HudTrack,
 } from './model/use-collision-guard-hud';
 export { usePrefersReducedMotion } from './model/use-prefers-reduced-motion';
-export { useSceneInfoStore } from './model/use-scene-info-store';
-export { Replay3dView } from './ui/replay-3d-view';
+export {
+  isRealtimeSceneActive,
+  useSceneInfoStore,
+} from './model/use-scene-info-store';
+export type { MonitoringViewMode } from './model/types';
+export { PlaybackView } from './ui/playback-view';
+export { PlaybackReportPanel } from './ui/playback-report-panel';
+export { PlaybackTransportBar } from './ui/playback-transport-bar';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';
+export {
+  usePlaybackStore,
+  type PlaybackSource,
+} from './model/use-playback-store';
+export {
+  REPLAY_SPEED_OPTIONS,
+  readPlaybackPositionMs,
+  readPlaybackTransport,
+  usePlaybackTransport,
+  type PlaybackTransport,
+} from './model/playback-transport';
+export {
+  usePlaybackStats,
+  usePlaybackStatsMeta,
+  usePlaybackStatsStore,
+  type PlaybackStatsMeta,
+} from './model/use-playback-stats-store';
+export { usePlaybackStatsRecorder } from './model/use-playback-stats-recorder';
+export {
+  computePlaybackStats,
+  type PlaybackEvent,
+  type PlaybackEventKind,
+  type PlaybackStats,
+} from './lib/playback-stats';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';
@@ -94,7 +124,11 @@ export { SceneAlertNotifier } from './ui/scene-alert-notifier';
 export { ZoneJournalSync } from './ui/zone-journal-sync';
 export { useZoneJournalStore } from './model/use-zone-journal-store';
 export { useStatusJournalStore } from './model/use-status-journal-store';
-export { diffZoneIntrusions, findRegionOfModel } from './lib/zone-journal-map';
+export {
+  diffZoneIntrusions,
+  filterAcceptedZoneTransitions,
+  findRegionOfModel,
+} from './lib/zone-journal-map';
 export {
   resolveConnectionView,
   useRealtimeConnectionState,
@@ -173,7 +207,10 @@ export { SceneCollisionMenu } from './ui/scene-collision-menu';
 export { SceneCollisionPanel } from './ui/scene-collision-panel';
 export { SceneZoneMenu } from './ui/scene-zone-menu';
 export { SceneZonePanel } from './ui/scene-zone-panel';
-export { type SceneCollisionRunner } from './model/scene-collision-hold';
+export {
+  subscribeRunnerResume,
+  type SceneCollisionRunner,
+} from './model/scene-collision-hold';
 export {
   useSceneCollisionStore,
   type SceneCollisionActiveMode,
@@ -253,6 +290,7 @@ export {
 export {
   publishTagValue,
   setTagIngest,
+  subscribeTagValues,
   tagLiveValues,
   type TagLiveValue,
   type TagPublish,

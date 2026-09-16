@@ -206,9 +206,7 @@
       "clearHistory": "Clear history",
       "viewContact": "View contact",
       "deselect": "Deselect",
-      "selectedHint": "Click a record to pause the simulation and return to that pose.",
-      "pauseHintRealtime": "When off, the view keeps updating and only the record is kept.",
-      "selectedHintRealtime": "Click a record to hold the live view and return to that pose. Click the selected record again to catch up to the latest values."
+      "selectedHint": "Click a record to pause the simulation and return to that pose."
     },
     "zones": {
       "enable": "Zone detection",
@@ -216,8 +214,9 @@
       "current": "Currently inside",
       "none": "No intrusions",
       "stopOnIntrusion": "Pause on stop-zone intrusion",
-      "stopHint": "Entering a zone with level 'Stop' pauses the simulation (realtime: holds display). After resuming, that intrusion will not pause again until it exits.",
-      "paused": "Paused by zone intrusion — resume from the alert banner or ▶"
+      "stopHint": "Entering a zone with level 'Stop' pauses simulation and playback. After resuming, that intrusion will not pause again until it exits. Realtime monitoring never pauses.",
+      "paused": "Paused by zone intrusion — continue with ▶ or Resume",
+      "resume": "Resume"
     },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
@@ -466,7 +465,8 @@
       "connecting": "Connecting",
       "closed": "Disconnected",
       "held": "On hold",
-      "replay": "Replay"
+      "playbackPlaying": "Playing",
+      "playbackPaused": "Paused"
     },
     "pausedValue": "Paused"
   },
@@ -508,5 +508,68 @@
     "stopHint": "Stop simulation — clear scenario, time 0, models back to rest (realtime view resumes live values)",
     "badgeRunning": "Simulating",
     "badgePaused": "Simulation paused"
+  },
+  "playback": {
+    "report": "Run report",
+    "source": "Source",
+    "sourceReplay": "Recorded replay",
+    "sourceSimulation": "Simulation",
+    "seek": "Position",
+    "openEnded": "open",
+    "window": "Window",
+    "scanned": "Scanned",
+    "iteration": "loop #{{n}}",
+    "detectionOff": "Collision detection was off for part of the run — collision counts are incomplete.",
+    "events": "Events",
+    "noEvents": "No events in this window.",
+    "noData": "No data",
+    "seekToEvent": "Seek to this time",
+    "equipment": "Equipment",
+    "zones": "Zones",
+    "tags": "Tags",
+    "exportEvents": "Events CSV",
+    "exportSummary": "Summary CSV",
+    "event": {
+      "collision": "Collision",
+      "zoneEnter": "Zone enter",
+      "zoneExit": "Zone exit",
+      "holdStart": "Hold",
+      "holdEnd": "Resume",
+      "offlineEnter": "Offline",
+      "offlineExit": "Back online"
+    },
+    "tile": {
+      "collisions": "Collisions",
+      "intrusions": "Intrusions",
+      "holds": "Holds",
+      "running": "Running ratio",
+      "firstAt": "first at {{time}}",
+      "stopEnters": "stop-level {{count}}",
+      "holdWall": "total {{time}} (wall clock)"
+    },
+    "col": {
+      "equipment": "Equipment",
+      "offlineEpisodes": "Offline episodes",
+      "zone": "Zone",
+      "enters": "Enters",
+      "dwell": "Dwell total",
+      "maxDwell": "Max dwell",
+      "tag": "Tag",
+      "mean": "Mean",
+      "travel": "Travel",
+      "saturation": "Limit saturation"
+    },
+    "csv": {
+      "time": "Time",
+      "sceneMs": "Scene ms",
+      "kind": "Kind",
+      "subject": "Subject",
+      "level": "Level",
+      "section": "Section",
+      "name": "Name",
+      "sectionEquipment": "Equipment",
+      "sectionZones": "Zones",
+      "sectionTags": "Tags"
+    }
   }
 }

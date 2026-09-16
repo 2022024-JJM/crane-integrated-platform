@@ -93,8 +93,15 @@ interface SceneZoneState {
   /** false 면 현재 침범 목록을 비운다. */
   setEnabled: (enabled: boolean) => void;
   setLabelsVisible: (visible: boolean) => void;
-  /** 검출기만 호출. 전이를 반영한다 — 빈 배열은 no-op. */
-  applyTransitions: (transitions: readonly ZoneTransition[]) => void;
+  /**
+   * 검출기만 호출. 전이를 반영한다 — 빈 배열은 no-op. `allowHold=false` 면
+   * 'stop' 영역 진입에도 값 생산자를 멈추지 않는다(실시간 모니터링 —
+   * 실제 장비는 멈추지 않는데 화면만 얼리는 것은 관제에 해롭다, 2026-09-16).
+   */
+  applyTransitions: (
+    transitions: readonly ZoneTransition[],
+    allowHold?: boolean,
+  ) => void;
   /** 검출기 언마운트 — 현재 침범 목록을 비운다. */
   clear: () => void;
 }
@@ -225,7 +232,7 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
     set({ labelsVisible: visible });
   },
 
-  applyTransitions: (transitions) => {
+  applyTransitions: (transitions, allowHold = true) => {
     if (transitions.length === 0) return;
     const state = get();
     let intrusions = state.intrusions;
@@ -270,6 +277,7 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
         }
         // 'stop' 영역 진입 — 승인되지 않은 쌍이고 아직 정지 중이 아니면 멈춘다.
         if (
+          allowHold &&
           level === 'stop' &&
           state.stopOnIntrusion &&
           held === null &&

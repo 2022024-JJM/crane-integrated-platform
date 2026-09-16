@@ -6,13 +6,13 @@ import { rigValueStore } from './rig-value-store';
 import {
   holdRunners,
   isRunnerRunning,
+  subscribeRunnerResume,
   type SceneCollisionRunner,
 } from './scene-collision-hold';
 import { buildCollisionRecord } from './scene-collision-record';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
 import { useActiveTransformStore } from './use-active-transform-store';
 import { useSceneCollisionStore } from './use-scene-collision-store';
-import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /**
  * 씬 충돌 감지기 — R3F Canvas 안에서 useFrame 으로 런타임을 돌린다.
@@ -40,7 +40,7 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
  *   오버레이 X 가 resume 으로 고정을 풀고, 재생 첫 프레임의 재기준선이 아직
  *   겹친 쌍을 조용히 넘긴다 — 가상 태그 러너는 경과 시간을 보존하므로 멈춘
  *   지점에서 이어지고, 실시간은 다음 수신 값부터 따라간다.
- * - 정지 안 함: 박스는 FLASH_MS 동안만.
+ * - 정지 안 함(또는 실시간 러너): 박스는 FLASH_MS 동안만.
  */
 export function useSceneCollisionDetector({
   sceneInfo,
@@ -84,15 +84,14 @@ export function useSceneCollisionDetector({
   }, [enabled]);
 
   // ▶ 재생 전이 — 정지·복원 상태를 풀고 재무장. 정지 상태를 만든 쪽(충돌·
-  // 기록 클릭)이 어디든 해제 경로는 이 하나다.
+  // 기록 클릭)이 어디든 해제 경로는 이 하나다. 어느 러너의 ▶ 인지는
+  // scene-collision-hold 가 안다(실시간은 전이가 없어 구독하지 않는다).
   useEffect(
     () =>
-      useVirtualTagStore.subscribe((state, prev) => {
-        if (state.isRunning && !prev.isRunning) {
-          useSceneCollisionStore.getState().resume();
-        }
-      }),
-    [],
+      subscribeRunnerResume(runner, () =>
+        useSceneCollisionStore.getState().resume(),
+      ),
+    [runner],
   );
 
   useFrame(() => {
@@ -129,7 +128,10 @@ export function useSceneCollisionDetector({
     // 어느 모드든 그 쌍만 억제하고 감시는 계속한다 — 런타임을 멈추면 떼었다
     // 다시 붙인 충돌이 보고되지 않는다. 억제는 메쉬가 떨어지면 풀린다.
     sceneCollisionRuntime.suppress(hit.key);
-    if (store.pauseOnCollision) {
+    // 실시간(WebSocket)은 자동 정지하지 않는다 — 실제 장비는 멈추지 않는데
+    // 화면만 얼리는 것은 관제에 해롭다(2026-09-16). 기록 + 잠깐 표시만.
+    // 기록 행 클릭(수동 복원)은 그대로 보류를 쓴다.
+    if (store.pauseOnCollision && runnerRef.current !== 'realtime') {
       holdRunners();
       rigValueStore.freeze();
       store.pin(record.id);

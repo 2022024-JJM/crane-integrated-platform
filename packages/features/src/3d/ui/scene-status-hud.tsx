@@ -26,6 +26,7 @@ import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneSunState } from '../model/use-scene-sun-state';
 import { useSceneWeather } from '../model/use-scene-weather';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
+import { usePlaybackStore } from '../model/use-playback-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { virtualTagRuntime } from '../model/virtual-tag-runner';
 import { useRigLivePoll } from '../model/rig-live-readouts';
@@ -66,7 +67,7 @@ interface SceneStatusHudProps {
   alarmsByCraneId: Record<string, AlarmSeverity>;
   /** 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. */
   sceneInfo?: SavedSceneInfo | null;
-  /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 리플레이). */
+  /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 플레이백). */
   mode?: SceneConnectionMode;
   /** 시각 출처 — 리플레이 화면은 'replay'. */
   timeSource?: 'clock' | 'replay';
@@ -88,6 +89,12 @@ export function SceneStatusHud({
   const simSpeed = useVirtualTagStore((s) => s.speed);
   const simRunning = useVirtualTagStore((s) => s.isRunning);
   const connection = useRealtimeConnectionState(mode);
+  const playbackSource = usePlaybackStore((s) => s.source);
+  // 시뮬레이션 시계(배속·경과)를 연결 라벨에 잇는 화면 — 미리보기·플레이백
+  // 시뮬레이션 소스. 실시간은 시뮬레이션이 없다.
+  const showSimClock =
+    mode === 'simulation' ||
+    (mode === 'playback' && playbackSource === 'simulation');
   const collisionMode = useSceneCollisionStore((s) => s.activeMode);
   const zonesEnabled = useSceneZoneStore((s) => s.enabled);
   const intrusions = useSceneZoneStore((s) => s.intrusions);
@@ -101,7 +108,8 @@ export function SceneStatusHud({
     collisionMode === 'pinned' ||
     zoneHeld !== null ||
     connection.state === 'held' ||
-    connection.state === 'simulationPaused';
+    connection.state === 'simulationPaused' ||
+    connection.state === 'playbackPaused';
   const sun = useSceneSunState(regionId, timeSource);
   const weather = useSceneWeather(regionId);
   const counts = countRuntimeStatuses(runtimeStatuses);
@@ -224,7 +232,7 @@ export function SceneStatusHud({
       <HudCell
         icon={<Radio className="size-3.5" aria-hidden />}
         label={
-          simRunning || mode === 'simulation'
+          showSimClock || simRunning
             ? `${t('monitoring:hud.linkShort')} · ×${simSpeed} ${formatSimClock(virtualTagRuntime.elapsed)}`
             : t('monitoring:hud.linkShort')
         }

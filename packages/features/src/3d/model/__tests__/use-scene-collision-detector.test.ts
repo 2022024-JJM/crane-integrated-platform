@@ -439,6 +439,30 @@ describe('useSceneCollisionDetector — 정지 안 함 모드', () => {
   });
 });
 
+describe('useSceneCollisionDetector — 실시간 러너', () => {
+  it("runner='realtime' 은 '충돌 시 정지' 가 켜져 있어도 flash 만 하고 보류하지 않는다", () => {
+    useSceneCollisionStore.setState({ pauseOnCollision: true });
+    useRealtimeStore.setState({ isRunning: true, held: false });
+    const a = mountModel('a', 0);
+    mountModel('b', 5);
+    renderHook(() =>
+      useSceneCollisionDetector({
+        sceneInfo: scene(['a', 'b']),
+        enabled: true,
+        runner: 'realtime',
+      }),
+    );
+    settle();
+    moveX(a, 4.6);
+    scan();
+    const state = useSceneCollisionStore.getState();
+    expect(state.history).toHaveLength(1);
+    expect(state.activeMode).toBe('flash');
+    expect(useRealtimeStore.getState().held).toBe(false);
+    expect(sceneCollisionRuntime.currentPhase).toBe('scanning');
+  });
+});
+
 describe('useSceneCollisionDetector — 수명', () => {
   it('enabled=false 전환·언마운트 시 런타임을 내리고 active 를 비운다(enabled·기록 유지)', () => {
     const disarm = vi.spyOn(sceneCollisionRuntime, 'disarm');

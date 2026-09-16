@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { cranesLiteWebSocketClient } from '@crane/core/ws';
 import type { WebSocketConnectionState } from '@crane/core/ws';
+import { usePlaybackStore, type PlaybackSource } from './use-playback-store';
 import { useRealtimeStore } from './use-realtime-store';
+import { useReplayPlayerStore } from './use-replay-player-store';
 import { useVirtualTagStore } from './use-virtual-tag-store';
 
-export type SceneConnectionMode = 'simulation' | 'realtime' | 'replay';
+export type SceneConnectionMode = 'simulation' | 'realtime' | 'playback';
 
 /**
  * 관제 HUD "연결" 칸의 상태 키와 색조. 키는 i18n `monitoring:hud.linkState.*`
@@ -13,7 +15,8 @@ export type SceneConnectionMode = 'simulation' | 'realtime' | 'replay';
  * - realtime: cranes-lite WebSocket 연결 상태(open·connecting·closed…)에
  *   화면 반영 보류(held)를 덧입힌다 — 연결돼 있어도 보류 중이면 그걸 보여야
  *   "값이 안 오는 게 서버 탓인지 정지 탓인지" 를 HUD 에서 구분한다.
- * - replay: 항상 replay.
+ * - playback: 활성 소스(리플레이·시뮬레이션)의 재생 여부(playbackPlaying /
+ *   playbackPaused). 정지(hold)는 HUD 가 충돌·영역 스토어에서 따로 본다.
  */
 export interface SceneConnectionView {
   state:
@@ -23,7 +26,8 @@ export interface SceneConnectionView {
     | 'connecting'
     | 'closed'
     | 'held'
-    | 'replay';
+    | 'playbackPlaying'
+    | 'playbackPaused';
   tone: 'good' | 'warn' | 'bad' | 'muted';
 }
 
@@ -32,8 +36,13 @@ export function resolveConnectionView(
   socket: WebSocketConnectionState,
   held: boolean,
   simulationRunning: boolean,
+  playbackPlaying = false,
 ): SceneConnectionView {
-  if (mode === 'replay') return { state: 'replay', tone: 'muted' };
+  if (mode === 'playback') {
+    return playbackPlaying
+      ? { state: 'playbackPlaying', tone: 'good' }
+      : { state: 'playbackPaused', tone: 'muted' };
+  }
   if (mode === 'simulation') {
     return simulationRunning
       ? { state: 'simulationRunning', tone: 'good' }
@@ -69,5 +78,21 @@ export function useRealtimeConnectionState(
   const socket = useSyncExternalStore(subscribeSocket, readSocket, readSocket);
   const held = useRealtimeStore((s) => s.held);
   const simulationRunning = useVirtualTagStore((s) => s.isRunning);
-  return resolveConnectionView(mode, socket, held, simulationRunning);
+  const source = usePlaybackStore((s) => s.source);
+  const replayPlaying = useReplayPlayerStore((s) => s.isPlaying);
+  return resolveConnectionView(
+    mode,
+    socket,
+    held,
+    simulationRunning,
+    isPlaybackPlaying(source, replayPlaying, simulationRunning),
+  );
+}
+
+function isPlaybackPlaying(
+  source: PlaybackSource,
+  replayPlaying: boolean,
+  simulationRunning: boolean,
+): boolean {
+  return source === 'replay' ? replayPlaying : simulationRunning;
 }

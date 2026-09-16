@@ -192,9 +192,7 @@
       "clearHistory": "Memoriam dele",
       "viewContact": "Punctum collisionis vide",
       "deselect": "Selectionem tolle",
-      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat.",
-      "pauseHintRealtime": "Si exstinctum, imago pergit et solum memoria servatur.",
-      "selectedHintRealtime": "Memoriam preme ut imago viva sistatur et ad illum habitum redeat. Memoriam selectam iterum preme ut ad novissimos valores redeat."
+      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat."
     },
     "zones": {
       "enable": "Regionum detectio",
@@ -202,8 +200,9 @@
       "current": "Nunc intus",
       "none": "Nulla intrusio",
       "stopOnIntrusion": "Siste in invasione regionis 'Sistere'",
-      "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem sistit (tempus reale: ostensionem suspendit). Post resumptionem, ea invasio non iterum sistet donec exeat.",
-      "paused": "Sistitur ob invasionem regionis — resume e vexillo monitionis vel ▶"
+      "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat. Observatio temporis realis numquam sistit.",
+      "paused": "Sistitur ob invasionem regionis — perge cum ▶ vel Resumere",
+      "resume": "Resumere"
     },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
@@ -452,7 +451,8 @@
       "connecting": "Coniungitur",
       "closed": "Disiunctum",
       "held": "Suspensum",
-      "replay": "Repetitio"
+      "playbackPlaying": "Ludens",
+      "playbackPaused": "Pausatum"
     },
     "pausedValue": "Sistitur"
   },
@@ -494,5 +494,68 @@
     "stopHint": "Simulationem finire — scaenarium tolle, tempus 0, exemplaria in statum quietis",
     "badgeRunning": "Simulatio agitur",
     "badgePaused": "Simulatio sistitur"
+  },
+  "playback": {
+    "report": "Relatio cursus",
+    "source": "Fons",
+    "sourceReplay": "Repetitio recordata",
+    "sourceSimulation": "Simulatio",
+    "seek": "Locus",
+    "openEnded": "apertum",
+    "window": "Fenestra",
+    "scanned": "Inspectum",
+    "iteration": "iteratio {{n}}",
+    "detectionOff": "Detectio collisionum per partem cursus exstincta erat — numeri collisionum incompleti.",
+    "events": "Eventus",
+    "noEvents": "Nulli eventus in hac fenestra.",
+    "noData": "Nulla data",
+    "seekToEvent": "Ad hoc tempus ire",
+    "equipment": "Machinae",
+    "zones": "Zonae",
+    "tags": "Tesserae",
+    "exportEvents": "Eventus CSV",
+    "exportSummary": "Summa CSV",
+    "event": {
+      "collision": "Collisio",
+      "zoneEnter": "Ingressus zonae",
+      "zoneExit": "Exitus zonae",
+      "holdStart": "Sistere",
+      "holdEnd": "Resumere",
+      "offlineEnter": "Disiunctum",
+      "offlineExit": "Reconiunctum"
+    },
+    "tile": {
+      "collisions": "Collisiones",
+      "intrusions": "Intrusiones",
+      "holds": "Sistentiae",
+      "running": "Ratio operationis",
+      "firstAt": "prima {{time}}",
+      "stopEnters": "gradus sistendi {{count}}",
+      "holdWall": "summa {{time}} (horologium)"
+    },
+    "col": {
+      "equipment": "Machina",
+      "offlineEpisodes": "Disiunctiones",
+      "zone": "Zona",
+      "enters": "Ingressus",
+      "dwell": "Mora summa",
+      "maxDwell": "Mora maxima",
+      "tag": "Tessera",
+      "mean": "Medium",
+      "travel": "Motus",
+      "saturation": "Saturatio limitis"
+    },
+    "csv": {
+      "time": "Tempus",
+      "sceneMs": "Scaena ms",
+      "kind": "Genus",
+      "subject": "Res",
+      "level": "Gradus",
+      "section": "Sectio",
+      "name": "Nomen",
+      "sectionEquipment": "Machinae",
+      "sectionZones": "Zonae",
+      "sectionTags": "Tesserae"
+    }
   }
 }

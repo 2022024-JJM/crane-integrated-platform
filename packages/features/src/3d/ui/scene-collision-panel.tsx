@@ -15,8 +15,9 @@ interface SceneCollisionPanelProps {
   /** 선택된 기록의 접촉점으로 카메라를 맞춘다(카메라 이동은 호출자가). */
   onViewCollision: () => void;
   /**
-   * 'simulation'(에디터·가상 태그 모니터링)은 ▶ 가 재생을 잇고,
-   * 'realtime' 은 화면 반영 보류라 재개 버튼이 최신 값으로 돌려놓는다.
+   * 'simulation'·'playback' 은 충돌 시 러너를 멈추고 ▶ 가 재생을 잇는다.
+   * 'realtime' 은 자동 정지가 없어 스위치를 숨기고, 기록 행 클릭(수동 복원)
+   * 만 화면 반영을 보류한다 — 재클릭이 최신 값으로 돌려놓는다.
    */
   runner: SceneCollisionRunner;
 }
@@ -62,23 +63,26 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           aria-label={t('monitoring:editor.collision.enable')}
         />
       </label>
-      <label className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="font-medium">
-          {t('monitoring:editor.collision.pauseOnCollision')}
-        </span>
-        <Switch
-          checked={pauseOnCollision}
-          onCheckedChange={setPauseOnCollision}
-          aria-label={t('monitoring:editor.collision.pauseOnCollision')}
-        />
-      </label>
-      <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
-        {t(
-          isRealtime
-            ? 'monitoring:editor.collision.pauseHintRealtime'
-            : 'monitoring:editor.collision.pauseHint',
-        )}
-      </p>
+      {/* 실시간은 자동 정지가 없다(검출기가 러너를 보고 flash 만) — 스위치를
+          두지 않는다. */}
+      {isRealtime ? null : (
+        <label className="flex items-center justify-between gap-2 text-[11px]">
+          <span className="font-medium">
+            {t('monitoring:editor.collision.pauseOnCollision')}
+          </span>
+          <Switch
+            checked={pauseOnCollision}
+            onCheckedChange={setPauseOnCollision}
+            aria-label={t('monitoring:editor.collision.pauseOnCollision')}
+          />
+        </label>
+      )}
+      {/* 실시간은 정지 설정이 없으니 안내도 없다 — 팝업은 감지 토글과 기록만. */}
+      {isRealtime ? null : (
+        <p className="text-muted-foreground text-[10px] leading-snug whitespace-pre-line">
+          {t('monitoring:editor.collision.pauseHint')}
+        </p>
+      )}
 
       <div className="flex items-center justify-between pt-1">
         <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
@@ -121,13 +125,11 @@ export const SceneCollisionPanel = memo(function SceneCollisionPanel({
           ))}
         </ul>
       )}
-      <p className="text-muted-foreground text-[10px] leading-snug">
-        {t(
-          isRealtime
-            ? 'monitoring:editor.collision.selectedHintRealtime'
-            : 'monitoring:editor.collision.selectedHint',
-        )}
-      </p>
+      {isRealtime ? null : (
+        <p className="text-muted-foreground text-[10px] leading-snug">
+          {t('monitoring:editor.collision.selectedHint')}
+        </p>
+      )}
     </div>
   );
 });

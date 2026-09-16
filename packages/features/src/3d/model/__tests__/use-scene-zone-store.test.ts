@@ -245,6 +245,15 @@ describe('정지 등급(level)·hold', () => {
     expect(useRealtimeStore.getState().held).toBe(true);
   });
 
+  it("allowHold=false(실시간 모니터링)면 'stop' 진입에도 멈추지 않고 침범·등급만 기록한다", () => {
+    useSceneZoneStore.getState().applyTransitions([stopEnter()], false);
+    const state = useSceneZoneStore.getState();
+    expect(state.held).toBeNull();
+    expect(state.intrusions).toHaveLength(1);
+    expect(state.intrusions[0].level).toBe('stop');
+    expect(useRealtimeStore.getState().held).toBe(false);
+  });
+
   it('stopOnIntrusion 이 꺼져 있으면 멈추지 않는다', () => {
     useSceneZoneStore.getState().setStopOnIntrusion(false);
     useSceneZoneStore.getState().applyTransitions([stopEnter()]);

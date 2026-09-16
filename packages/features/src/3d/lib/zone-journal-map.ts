@@ -54,6 +54,28 @@ export function diffZoneIntrusions(
   return { entered, exited };
 }
 
+/**
+ * 브릿지(저널·로컬 알람·알림)의 승인 규칙 — 진입은 `acceptEnter`(실시간 화면이
+ * 떠 있는가)일 때만, 이탈은 진입을 승인했던 쌍(`isAccepted`)만 받는다.
+ * 플레이백·에디터의 침범은 진입에서 걸러지고, 그 이탈도 승인이 없어 걸러진다.
+ * 실시간 화면을 떠나며 오는 이탈은 진입이 승인돼 있어 화면 상태와 무관하게
+ * 통과한다 — 언마운트 cleanup 순서(부모가 먼저라 activeMode 가 먼저 null 이
+ * 된다)에 기대지 않는다. 진입을 못 본 이탈(새로고침 뒤)도 버린다.
+ */
+export function filterAcceptedZoneTransitions(
+  entered: readonly ZonePairRef[],
+  exited: readonly ZonePairRef[],
+  isAccepted: (pairKey: string) => boolean,
+  acceptEnter: boolean,
+): { entered: ZonePairRef[]; exited: ZonePairRef[] } {
+  return {
+    entered: acceptEnter ? [...entered] : [],
+    exited: exited.filter((ref) =>
+      isAccepted(pairKeyOf(ref.intrusion.zoneKey, ref.intruderId)),
+    ),
+  };
+}
+
 /** 모델 id 가 속한 region — 여러 씬이 떠 있을 일은 없지만 전부 훑는다. */
 export function findRegionOfModel(
   modelId: string,

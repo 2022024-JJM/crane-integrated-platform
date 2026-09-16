@@ -1,4 +1,5 @@
 import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SceneCollisionRunner } from '../model/scene-collision-hold';
 import { useSceneZoneDetector } from '../model/use-scene-zone-detector';
 
 /**
@@ -9,10 +10,13 @@ import { useSceneZoneDetector } from '../model/use-scene-zone-detector';
 export function SceneZoneDetector({
   sceneInfo,
   enabled,
+  runner,
 }: {
   sceneInfo: SavedSceneInfo | null;
   enabled: boolean;
+  /** 영역 정지의 ▶ 재개 전이를 볼 러너(기본 'simulation' — 에디터). */
+  runner?: SceneCollisionRunner;
 }) {
-  useSceneZoneDetector({ sceneInfo, enabled });
+  useSceneZoneDetector({ sceneInfo, enabled, runner });
   return null;
 }

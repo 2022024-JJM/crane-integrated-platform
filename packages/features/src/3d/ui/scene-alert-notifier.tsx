@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { notifyAlert } from '@crane/core/lib/alert-notifications';
 import { diffZoneIntrusions } from '../lib/zone-journal-map';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
+import { isRealtimeSceneActive } from '../model/use-scene-info-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
 
 /**
@@ -14,6 +15,9 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * 알림이다.
  * critical 알람은 alarm 슬라이스(useCriticalAlarmBanner)가 같은 notifyAlert
  * 로 내보낸다.
+ *
+ * 실시간 화면의 사건만 울린다 — 플레이백(리플레이·시뮬레이션)의 충돌·침범은
+ * 분석 결과이지 경보가 아니다(진입 사건뿐이라 승인 집합은 필요 없다).
  */
 export function SceneAlertNotifier() {
   const { t } = useTranslation();
@@ -21,6 +25,7 @@ export function SceneAlertNotifier() {
   useEffect(() => {
     const unsubCollision = useSceneCollisionStore.subscribe((state, prev) => {
       if (state.history === prev.history) return;
+      if (!isRealtimeSceneActive()) return;
       const prevIds = new Set(prev.history.map((r) => r.id));
       for (const record of state.history) {
         if (prevIds.has(record.id)) continue;
@@ -35,6 +40,7 @@ export function SceneAlertNotifier() {
     });
     const unsubZone = useSceneZoneStore.subscribe((state, prev) => {
       if (state.intrusions === prev.intrusions) return;
+      if (!isRealtimeSceneActive()) return;
       const { entered } = diffZoneIntrusions(prev.intrusions, state.intrusions);
       for (const ref of entered) {
         const { intrusion } = ref;

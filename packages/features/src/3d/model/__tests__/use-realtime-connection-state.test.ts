@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { resolveConnectionView } from '../use-realtime-connection-state';
 
 describe('resolveConnectionView', () => {
-  it('리플레이는 항상 replay/muted', () => {
-    expect(resolveConnectionView('replay', 'open', true, true)).toEqual({
-      state: 'replay',
+  it('플레이백은 활성 소스의 재생 여부만 본다(소켓·보류 무관)', () => {
+    expect(
+      resolveConnectionView('playback', 'closed', true, false, true),
+    ).toEqual({ state: 'playbackPlaying', tone: 'good' });
+    expect(resolveConnectionView('playback', 'open', false, true)).toEqual({
+      state: 'playbackPaused',
       tone: 'muted',
     });
   });

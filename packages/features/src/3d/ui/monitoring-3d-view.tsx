@@ -29,8 +29,11 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
+import { usePlaybackStore } from '../model/use-playback-store';
+import { usePlaybackTransport } from '../model/playback-transport';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
+import type { MonitoringViewMode } from '../model/types';
 import { Vector3 } from 'three';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
@@ -90,11 +93,16 @@ interface Monitoring3dViewProps {
   regionId: string;
   alarmsByCraneId?: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
-  mode?: 'simulation' | 'replay' | 'realtime';
+  /**
+   * 화면 종류(model/types MonitoringViewMode). 'realtime' 은 WebSocket 만,
+   * 'playback' 은 리플레이|시뮬레이션(소스는 usePlaybackStore, 재생 조작은
+   * PlaybackView 의 하단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
+   */
+  mode?: MonitoringViewMode;
   /**
    * `mode='simulation'` 일 때 진입 즉시 가상 태그 재생을 켤지. 기본 true.
    * 독 ▶ 토글이 없는 뷰(대시보드 3D 미리보기 모달)는 false 로 두어 정지
-   * 상태로 연다.
+   * 상태로 연다. 플레이백은 이 값과 무관하게 정지로 연다.
    */
   autoStartSimulation?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
@@ -151,6 +159,19 @@ export function Monitoring3dView({
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const isDock = toolbarLayout === 'dock';
+  const playbackSource = usePlaybackStore((s) => s.source);
+  const transport = usePlaybackTransport();
+  const isPlayback = mode === 'playback';
+  const isReplaySource = isPlayback && playbackSource === 'replay';
+  // 시뮬레이션 조작·표시(독 ▶·시계 팝업·배지·테두리)는 시뮬레이션 값이 화면을
+  // 움직이는 화면에서만 — 실시간은 WebSocket 만 보여 준다(2026-09-16).
+  const simulationUiVisible =
+    mode === 'simulation' || (isPlayback && playbackSource === 'simulation');
+  // 조명·HUD 현장 시각의 출처 — 리플레이 소스는 프레임 타임스탬프를 따른다.
+  const timeSource = isReplaySource ? 'replay' : 'clock';
+  // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 플레이백은 분석 화면이라
+  // 트랜스포트 바·리포트가 그 자리를 대신한다(2026-09-16).
+  const showControlRoomWidgets = isDock && !isPlayback;
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
@@ -176,20 +197,31 @@ export function Monitoring3dView({
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
   // 모델별 운전 상태(태그 활동 기반) — 라벨 점·미니맵 마커·HUD 가 공유한다.
-  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정).
-  const runtimeStatuses = useModelRuntimeStatuses(sceneInfo);
-  // 통신두절 진입·복귀를 저널에 남긴다(가동↔대기는 제외).
-  useStatusJournalSync(regionId, sceneInfo, runtimeStatuses);
+  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 플레이백은 정지 중
+  // 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면 일시정지 뒤
+  // 전 장비가 두절이 된다.
+  const runtimeStatuses = useModelRuntimeStatuses(
+    sceneInfo,
+    isPlayback
+      ? { paused: !transport.isPlaying, timeScale: transport.speed }
+      : undefined,
+  );
+  // 통신두절 진입·복귀를 저널에 남긴다(가동↔대기는 제외) — 실시간 화면만.
+  useStatusJournalSync(
+    regionId,
+    sceneInfo,
+    runtimeStatuses,
+    mode === 'realtime',
+  );
   const [sceneReady, setSceneReady] = useState(false);
   const handleSceneReady = useCallback(() => setSceneReady(true), []);
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const exitFocus = useObjectFocusStore((s) => s.exitFocus);
-  // 충돌 감지는 시뮬레이션·실시간에서 켠다. 실시간 정지는 화면 반영 보류
-  // (scene-collision-hold)다. 리플레이는 기록 재생이라 정지·복원 대상이 아니다.
-  const collisionActive = mode !== 'replay';
-  const collisionRunner = mode === 'realtime' ? 'realtime' : 'simulation';
+  // 충돌 감지는 전 모드에서 켠다. 정지 방식은 러너가 정한다(scene-collision-
+  // hold) — 시뮬레이션·플레이백은 러너 pause, 실시간은 화면 반영 보류.
+  const collisionRunner = mode;
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
-  // 영역 침범은 상태 표시라 리플레이 포함 전 모드에서 돈다(정지·복원 없음).
+  // 영역 침범은 상태 표시라 전 모드에서 돈다.
   const zonesEnabled = useSceneZoneStore((s) => s.enabled);
 
   useEffect(() => {
@@ -291,8 +323,9 @@ export function Monitoring3dView({
   // 좌측 상단 열 — 포커스 복귀 버튼 위, 후처리 상태(BVH 빌드 등) 아래.
   const topLeftOverlay = (
     <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
-      {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 조작 UI 가 있는 배치에서만. */}
-      {toolbarLayout !== 'none' ? (
+      {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 시뮬레이션 값이 화면을
+          움직이는 배치에서만. */}
+      {simulationUiVisible && toolbarLayout !== 'none' ? (
         <SceneSimulationBadge onStop={handleStopSimulation} />
       ) : null}
       {focusedModelId !== null ? (
@@ -356,17 +389,17 @@ export function Monitoring3dView({
             {topLeftOverlay}
             {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
             {/* 시뮬레이션 세션 테두리 — 오버레이 루트(캔버스 전체). */}
-            {toolbarLayout !== 'none' ? <SceneSimulationFrame /> : null}
+            {simulationUiVisible && toolbarLayout !== 'none' ? (
+              <SceneSimulationFrame />
+            ) : null}
             {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
                 알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
-            {collisionActive ? (
-              <SceneCollisionAlertOverlay runner={collisionRunner} />
-            ) : null}
+            <SceneCollisionAlertOverlay runner={collisionRunner} />
             <SceneZoneAlertOverlay />
             {overlayExtras}
-            {/* 2D 미니맵(좌하단) — 독 배치(실시간 모니터링 화면)에서만. 배경은
+            {/* 2D 미니맵(좌하단) — 실시간 관제 화면에서만. 배경은
                 Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링. */}
-            {isDock ? (
+            {showControlRoomWidgets ? (
               <SceneMinimap
                 sceneInfo={sceneInfo}
                 alarmsByCraneId={alarmsByCraneId}
@@ -375,20 +408,23 @@ export function Monitoring3dView({
                 onMoveTo={handleMoveTo}
               />
             ) : null}
-            {/* 관제 요약 HUD(상단 중앙) — 독 배치에서만. */}
-            {isDock ? (
+            {/* 관제 요약 HUD(상단 중앙) — 실시간 관제 화면에서만. */}
+            {showControlRoomWidgets ? (
               <SceneStatusHud
                 regionId={regionId}
                 runtimeStatuses={runtimeStatuses}
                 alarmsByCraneId={alarmsByCraneId}
                 sceneInfo={sceneInfo}
                 mode={mode}
+                timeSource={timeSource}
               />
             ) : null}
             {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
                 일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다.
                 미니맵과 겹치지 않게 그 오른쪽에 둔다. */}
-            <ScenePerfHud className={isDock ? 'left-60' : undefined} />
+            <ScenePerfHud
+              className={showControlRoomWidgets ? 'left-60' : undefined}
+            />
           </>
         }
         fullscreenOverlay={fullscreenOverlay}
@@ -401,23 +437,33 @@ export function Monitoring3dView({
             // 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·현장 시각을 모아
             // 맨 아래에 둔다. 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
             <>
-              <SceneSimulationToggle />
-              {/* 종료 = 처음 화면: 자세는 스토어가, 카메라·포커스는 여기서. */}
-              <SceneSimulationMenu onStop={handleStopSimulation} />
-              {collisionActive ? (
-                <SceneCollisionMenu
-                  runner={collisionRunner}
-                  onViewCollision={handleViewCollision}
-                />
+              {/* 독 ▶·시계 팝업은 시뮬레이션 화면(미리보기)만 — 플레이백은 하단
+                  트랜스포트 바가, 실시간은 아무것도 재생하지 않는다. */}
+              {mode === 'simulation' ? (
+                <>
+                  <SceneSimulationToggle />
+                  {/* 종료 = 처음 화면: 자세는 스토어가, 카메라·포커스는 여기서. */}
+                  <SceneSimulationMenu onStop={handleStopSimulation} />
+                </>
               ) : null}
+              <SceneCollisionMenu
+                runner={collisionRunner}
+                onViewCollision={handleViewCollision}
+              />
               {/* 영역 침범 — 충돌과 별도 스토어·의미라 아이콘도 따로 둔다. */}
-              <SceneZoneMenu onViewZone={handleViewZone} />
+              <SceneZoneMenu
+                onViewZone={handleViewZone}
+                stopControls={mode !== 'realtime'}
+              />
               <SceneDockRailSeparator />
               {toolbarExtras}
-              <SceneMinimapToggle />
+              {showControlRoomWidgets ? <SceneMinimapToggle /> : null}
               {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
-                  의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. */}
-              <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
+                  의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
+                  소스는 프레임 시각을 따르므로 숨긴다. */}
+              {isReplaySource ? null : (
+                <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
+              )}
             </>
           ) : (
             toolbarExtras
@@ -439,8 +485,13 @@ export function Monitoring3dView({
       >
         {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
         <SceneFrameGovernor animating={hasSea} slow={solarSun} />
-        {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키. */}
-        <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
+        {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키.
+            리플레이 소스의 낮/밤은 프레임 타임스탬프를 따른다. */}
+        <SceneLighting
+          sceneInfo={sceneInfo}
+          regionId={regionId}
+          timeSource={timeSource}
+        />
         <SceneSurfaceCamera
           regionId={regionId}
           environmentId={sceneInfo?.environmentId}
@@ -462,19 +513,21 @@ export function Monitoring3dView({
           <RigDriver sceneInfo={sceneInfo} />
           {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
               실행되므로 노드가 움직인 뒤 검사한다. */}
-          {collisionActive ? (
-            <SceneCollisionDetector
-              sceneInfo={sceneInfo}
-              enabled={collisionEnabled}
-              runner={collisionRunner}
-            />
-          ) : null}
+          <SceneCollisionDetector
+            sceneInfo={sceneInfo}
+            enabled={collisionEnabled}
+            runner={collisionRunner}
+          />
           <SceneCollisionHighlight />
           {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
-          <SceneZoneDetector sceneInfo={sceneInfo} enabled={zonesEnabled} />
+          <SceneZoneDetector
+            sceneInfo={sceneInfo}
+            enabled={zonesEnabled}
+            runner={collisionRunner}
+          />
           <SceneZoneRings sceneInfo={sceneInfo} />
-          {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍 — 감지가 도는 모드만. */}
-          {collisionActive ? <SilhouetteOutlineWarmup /> : null}
+          {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍. */}
+          <SilhouetteOutlineWarmup />
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}
@@ -484,14 +537,14 @@ export function Monitoring3dView({
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
             getPose={handleGetPose}
-            prepareOutline={collisionActive}
+            prepareOutline
             runtimeStatuses={runtimeStatuses}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />
           <ScenePerfProbe />
           {/* 미니맵 배경 스냅샷 — 씬 준비 뒤 한 번 탑뷰를 렌더 타깃에 찍는다. */}
-          {isDock ? (
+          {showControlRoomWidgets ? (
             <SceneMinimapCapture sceneInfo={sceneInfo} ready={sceneReady} />
           ) : null}
         </Suspense>
