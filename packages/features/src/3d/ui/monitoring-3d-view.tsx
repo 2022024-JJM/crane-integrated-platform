@@ -29,8 +29,8 @@ import {
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { usePlaybackStore } from '../model/use-playback-store';
-import { usePlaybackTransport } from '../model/playback-transport';
+import { usePlay3dStore } from '../model/use-play3d-store';
+import { usePlay3dTransport } from '../model/play3d-transport';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import type { MonitoringViewMode } from '../model/types';
@@ -99,14 +99,14 @@ interface Monitoring3dViewProps {
   alarmHighlightMesh?: boolean;
   /**
    * 화면 종류(model/types MonitoringViewMode). 'realtime' 은 WebSocket 만,
-   * 'playback' 은 리플레이|시뮬레이션(소스는 usePlaybackStore, 재생 조작은
-   * PlaybackView 의 상단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
+   * 'play3d' 은 리플레이|시뮬레이션(소스는 usePlay3dStore, 재생 조작은
+   * Play3dView 의 상단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
    */
   mode?: MonitoringViewMode;
   /**
    * `mode='simulation'` 일 때 진입 즉시 가상 태그 재생을 켤지. 기본 true.
    * 독 ▶ 토글이 없는 뷰(대시보드 3D 미리보기 모달)는 false 로 두어 정지
-   * 상태로 연다. 플레이백은 이 값과 무관하게 정지로 연다.
+   * 상태로 연다. 3D 플레이는 이 값과 무관하게 정지로 연다.
    */
   autoStartSimulation?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
@@ -166,19 +166,19 @@ export function Monitoring3dView({
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const isDock = toolbarLayout === 'dock';
-  const playbackSource = usePlaybackStore((s) => s.source);
-  const transport = usePlaybackTransport();
-  const isPlayback = mode === 'playback';
-  const isReplaySource = isPlayback && playbackSource === 'replay';
+  const play3dSource = usePlay3dStore((s) => s.source);
+  const transport = usePlay3dTransport();
+  const isPlay3d = mode === 'play3d';
+  const isReplaySource = isPlay3d && play3dSource === 'replay';
   // 시뮬레이션 조작·표시(독 ▶·시계 팝업·배지·테두리)는 시뮬레이션 값이 화면을
   // 움직이는 화면에서만 — 실시간은 WebSocket 만 보여 준다(2026-09-16).
   const simulationUiVisible =
-    mode === 'simulation' || (isPlayback && playbackSource === 'simulation');
+    mode === 'simulation' || (isPlay3d && play3dSource === 'simulation');
   // 조명·HUD 현장 시각의 출처 — 리플레이 소스는 프레임 타임스탬프를 따른다.
   const timeSource = isReplaySource ? 'replay' : 'clock';
-  // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 플레이백은 분석 화면이라
+  // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 3D 플레이는 분석 화면이라
   // 트랜스포트 바·리포트가 그 자리를 대신한다(2026-09-16).
-  const showControlRoomWidgets = isDock && !isPlayback;
+  const showControlRoomWidgets = isDock && !isPlay3d;
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
@@ -204,12 +204,12 @@ export function Monitoring3dView({
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
   // 모델별 운전 상태(태그 활동 기반) — 라벨 점·미니맵 마커·HUD 가 공유한다.
-  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 플레이백은 정지 중
+  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D 플레이는 정지 중
   // 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면 일시정지 뒤
   // 전 장비가 두절이 된다.
   const runtimeStatuses = useModelRuntimeStatuses(
     sceneInfo,
-    isPlayback
+    isPlay3d
       ? { paused: !transport.isPlaying, timeScale: transport.speed }
       : undefined,
   );
@@ -225,7 +225,7 @@ export function Monitoring3dView({
   const focusedModelId = useObjectFocusStore((s) => s.focusedModelId);
   const exitFocus = useObjectFocusStore((s) => s.exitFocus);
   // 충돌 감지는 전 모드에서 켠다. 정지 방식은 러너가 정한다(scene-collision-
-  // hold) — 시뮬레이션·플레이백은 러너 pause, 실시간은 화면 반영 보류.
+  // hold) — 시뮬레이션·3D 플레이는 러너 pause, 실시간은 화면 반영 보류.
   const collisionRunner = mode;
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
   // 영역 침범은 상태 표시라 전 모드에서 돈다.
@@ -435,7 +435,7 @@ export function Monitoring3dView({
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={
           isDock ? (
-            // 독 레일에서 카메라 묶음 아래 구성(실시간·플레이백 공통) — 화면
+            // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
             // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
             // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
             // (2026-09-17). 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.

@@ -4,7 +4,7 @@ import {
   isRunnerRunning,
   subscribeRunnerResume,
 } from '../scene-collision-hold';
-import { usePlaybackStore } from '../use-playback-store';
+import { usePlay3dStore } from '../use-play3d-store';
 import { useRealtimeStore } from '../use-realtime-store';
 import { useReplayPlayerStore } from '../use-replay-player-store';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
@@ -13,18 +13,18 @@ beforeEach(() => {
   useReplayPlayerStore.getState().reset();
   useVirtualTagStore.getState().stop();
   useRealtimeStore.getState().stop();
-  usePlaybackStore.setState({ source: 'replay' });
+  usePlay3dStore.setState({ source: 'replay' });
 });
 
 describe('isRunnerRunning', () => {
-  it("'playback' 은 활성 소스의 러너를 본다", () => {
+  it("'play3d' 은 활성 소스의 러너를 본다", () => {
     useReplayPlayerStore.setState({ isPlaying: true });
     useVirtualTagStore.setState({ isRunning: false });
-    expect(isRunnerRunning('playback')).toBe(true);
-    usePlaybackStore.setState({ source: 'simulation' });
-    expect(isRunnerRunning('playback')).toBe(false);
+    expect(isRunnerRunning('play3d')).toBe(true);
+    usePlay3dStore.setState({ source: 'simulation' });
+    expect(isRunnerRunning('play3d')).toBe(false);
     useVirtualTagStore.setState({ isRunning: true });
-    expect(isRunnerRunning('playback')).toBe(true);
+    expect(isRunnerRunning('play3d')).toBe(true);
   });
 
   it("'simulation' 은 가상 태그, 'realtime' 은 WebSocket 러너", () => {
@@ -46,9 +46,9 @@ describe('holdRunners', () => {
 });
 
 describe('subscribeRunnerResume', () => {
-  it("'playback' 은 리플레이·가상 태그 어느 쪽의 ▶ 전이에도 부른다", () => {
+  it("'play3d' 은 리플레이·가상 태그 어느 쪽의 ▶ 전이에도 부른다", () => {
     const cb = vi.fn();
-    const unsub = subscribeRunnerResume('playback', cb);
+    const unsub = subscribeRunnerResume('play3d', cb);
     useReplayPlayerStore.setState({ isPlaying: true });
     expect(cb).toHaveBeenCalledTimes(1);
     useReplayPlayerStore.setState({ isPlaying: true }); // 전이 아님

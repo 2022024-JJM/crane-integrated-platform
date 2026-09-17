@@ -2,17 +2,17 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
 import type {
   CollisionPairStat,
-  PlaybackEventKind,
+  Play3dEventKind,
   ZoneIntruderRank,
-} from './playback-stats';
+} from './play3d-stats';
 
 /**
- * 플레이백 표시 보조 — 마커 색·seek 선행량. ui 파일의 수치 계산 금지 규칙
+ * 3D 플레이 표시 보조 — 마커 색·seek 선행량. ui 파일의 수치 계산 금지 규칙
  * (scene-shadow.ts 선례)에 따라 lib 에 둔다.
  */
 
 /** 사건 종류별 마커 색(Tailwind 배경 클래스). 정지·이탈·복귀는 흐리게. */
-export const PLAYBACK_EVENT_COLORS: Record<PlaybackEventKind, string> = {
+export const PLAY3D_EVENT_COLORS: Record<Play3dEventKind, string> = {
   collision: 'bg-red-500',
   zoneEnter: 'bg-amber-400',
   zoneExit: 'bg-amber-400/40',
@@ -23,7 +23,7 @@ export const PLAYBACK_EVENT_COLORS: Record<PlaybackEventKind, string> = {
 };
 
 /** 타임라인에 그리는 종류 — 이탈·복귀·정지 해제는 표에만 두고 띠는 비운다. */
-export const PLAYBACK_MARKER_KINDS: readonly PlaybackEventKind[] = [
+export const PLAY3D_MARKER_KINDS: readonly Play3dEventKind[] = [
   'collision',
   'zoneEnter',
   'holdStart',
@@ -73,7 +73,7 @@ export function formatTagNumber(value: number | null): string {
 }
 
 /** 상태 밴드 색(hex) — 미니맵·HUD 와 같은 팔레트. unknown 은 그리지 않는다. */
-export const PLAYBACK_STATUS_FILL: Record<
+export const PLAY3D_STATUS_FILL: Record<
   EquipmentRuntimeStatus,
   string | null
 > = RUNTIME_STATUS_COLORS;
@@ -111,10 +111,10 @@ export function sparklinePath(
   return d;
 }
 
-/** 사건 목록 필터 칩 — 키는 i18n `monitoring:playback.filter.*`. */
-export const PLAYBACK_EVENT_FILTERS: readonly {
+/** 사건 목록 필터 칩 — 키는 i18n `monitoring:play3d.filter.*`. */
+export const PLAY3D_EVENT_FILTERS: readonly {
   key: string;
-  kinds: readonly PlaybackEventKind[];
+  kinds: readonly Play3dEventKind[];
 }[] = [
   { key: 'all', kinds: [] },
   { key: 'collision', kinds: ['collision'] },

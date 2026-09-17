@@ -1,7 +1,7 @@
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 
 /**
- * 플레이백 실행 통계 — 순수 집계. 기록기(use-playback-stats-recorder)가 재생
+ * 3D 플레이 실행 통계 — 순수 집계. 기록기(use-play3d-stats-recorder)가 재생
  * 중 쌓은 사건·상태·태그 누적을 받아 "시작점 ~ 현재 재생 위치" 창의 리포트를
  * 만든다.
  *
@@ -12,7 +12,7 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
  * 중엔 씬 시간이 흐르지 않아 씬 시간으로 재면 항상 0 이다.
  */
 
-export type PlaybackEventKind =
+export type Play3dEventKind =
   | 'collision'
   | 'zoneEnter'
   | 'zoneExit'
@@ -21,10 +21,10 @@ export type PlaybackEventKind =
   | 'offlineEnter'
   | 'offlineExit';
 
-export interface PlaybackEvent {
+export interface Play3dEvent {
   /** 세션 내 증가 카운터 — 목록 key. */
   id: number;
-  kind: PlaybackEventKind;
+  kind: Play3dEventKind;
   /** 씬 시간(ms). */
   atMs: number;
   /** 리플레이면 그 프레임 index, 시뮬레이션은 null. */
@@ -74,8 +74,8 @@ export interface ScannedInterval {
   toMs: number;
 }
 
-export interface PlaybackStatsInput {
-  events: readonly PlaybackEvent[];
+export interface Play3dStatsInput {
+  events: readonly Play3dEvent[];
   /** 장비 상태 전이(밴드 타임라인·가동 비율 곡선용). 없으면 빈 배열. */
   statusTransitions?: readonly StatusTransition[];
   statuses: Readonly<Record<string, StatusAggregate>>;
@@ -123,7 +123,7 @@ export interface TagStat extends TagAggregate {
   saturationRatio: number | null;
 }
 
-export interface PlaybackStats {
+export interface Play3dStats {
   windowEndMs: number;
   /** 입력 그대로 통과 — 시각화가 lib 함수(statusBands 등)로 파생한다. */
   statusTransitions: readonly StatusTransition[];
@@ -133,7 +133,7 @@ export interface PlaybackStats {
   loopIteration: number | null;
   detectionOffSeen: boolean;
   /** 창 안 사건(시각 오름차순). */
-  events: PlaybackEvent[];
+  events: Play3dEvent[];
   collisions: {
     count: number;
     firstAtMs: number | null;
@@ -259,7 +259,7 @@ export function createTagAggregate(
   };
 }
 
-export function computePlaybackStats(input: PlaybackStatsInput): PlaybackStats {
+export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
   const windowEndMs = Number.isFinite(input.windowEndMs)
     ? Math.max(0, input.windowEndMs)
     : 0;
@@ -288,7 +288,7 @@ export function computePlaybackStats(input: PlaybackStatsInput): PlaybackStats {
   // 영역 — 진입·이탈 짝짓기. 이탈 없는 진입은 창 끝까지 체류.
   const zones = new Map<string, ZoneStat>();
   const open = new Map<string, { zoneKey: string; atMs: number }>();
-  const zoneOf = (e: PlaybackEvent): ZoneStat => {
+  const zoneOf = (e: Play3dEvent): ZoneStat => {
     const key = e.zoneKey ?? e.subject;
     let z = zones.get(key);
     if (!z) {
@@ -456,8 +456,8 @@ export function seriesGrid(axisMs: number, buckets: number): number[] {
  * 현재 위치에서 멈춘다.
  */
 export function cumulativeSeries(
-  events: readonly PlaybackEvent[],
-  kinds: readonly PlaybackEventKind[],
+  events: readonly Play3dEvent[],
+  kinds: readonly Play3dEventKind[],
   axisMs: number,
   windowEndMs: number,
   buckets = 60,
@@ -526,7 +526,7 @@ export function statusBands(
 
 /** 영역 진입·이탈 짝짓기 → 체류 밴드. 이탈 없는 진입은 창 끝까지(open). */
 export function zoneBands(
-  events: readonly PlaybackEvent[],
+  events: readonly Play3dEvent[],
   windowEndMs: number,
 ): ZoneBand[] {
   const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
@@ -538,9 +538,9 @@ export function zoneBands(
         e.atMs <= end,
     )
     .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
-  const open = new Map<string, PlaybackEvent>();
+  const open = new Map<string, Play3dEvent>();
   const out: ZoneBand[] = [];
-  const close = (enter: PlaybackEvent, toMs: number, isOpen: boolean) => {
+  const close = (enter: Play3dEvent, toMs: number, isOpen: boolean) => {
     out.push({
       fromMs: enter.atMs,
       toMs: Math.max(enter.atMs, toMs),
@@ -570,7 +570,7 @@ export function zoneBands(
 
 /** 정지 시작·해제 짝짓기 → 정지 밴드(씬 시간은 정지 중 흐르지 않아 폭은 0 에 가깝다). */
 export function holdBands(
-  events: readonly PlaybackEvent[],
+  events: readonly Play3dEvent[],
   windowEndMs: number,
 ): HoldBand[] {
   const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
@@ -583,7 +583,7 @@ export function holdBands(
     )
     .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
   const out: HoldBand[] = [];
-  let current: PlaybackEvent | null = null;
+  let current: Play3dEvent | null = null;
   for (const e of sorted) {
     if (e.kind === 'holdStart') {
       if (current) {

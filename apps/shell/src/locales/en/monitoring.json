@@ -281,19 +281,19 @@
   },
   "detectionSettings": {
     "title": "Settings",
-    "subtitle": "Configure collision detection and zone intrusion detection in one place. Applies to realtime monitoring, playback and scene editing.",
+    "subtitle": "Configure collision detection and zone intrusion detection in one place. Applies to realtime monitoring, 3D Play and scene editing.",
     "collision": {
       "title": "Collision detection",
       "enable": "Collision detection",
       "pauseOnCollision": "Pause on collision",
-      "pauseHint": "Pause on collision applies only to simulation and playback. When off, only the record is kept.\nRealtime monitoring never pauses."
+      "pauseHint": "Pause on collision applies only to simulation and 3D Play. When off, only the record is kept.\nRealtime monitoring never pauses."
     },
     "zones": {
       "title": "Zone detection",
       "enable": "Zone detection",
       "labels": "Show zone labels",
       "stopOnIntrusion": "Pause on stop-zone intrusion",
-      "stopHint": "Entering a zone with level 'Stop' pauses simulation and playback. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
+      "stopHint": "Entering a zone with level 'Stop' pauses simulation and 3D Play. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
     }
   },
   "craneList": {
@@ -444,8 +444,8 @@
       "connecting": "Connecting",
       "closed": "Disconnected",
       "held": "On hold",
-      "playbackPlaying": "Playing",
-      "playbackPaused": "Paused"
+      "play3dPlaying": "Playing",
+      "play3dPaused": "Paused"
     },
     "pausedValue": "Paused"
   },
@@ -488,7 +488,7 @@
     "badgeRunning": "Simulating",
     "badgePaused": "Simulation paused"
   },
-  "playback": {
+  "play3d": {
     "report": "Run report",
     "source": "Source",
     "sourceReplay": "Replay",

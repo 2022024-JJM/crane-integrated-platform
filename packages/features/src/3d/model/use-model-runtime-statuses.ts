@@ -16,7 +16,7 @@ const EMPTY: RuntimeStatusRecord = Object.freeze({});
 
 export interface UseModelRuntimeStatusesOptions {
   /**
-   * 값 생산이 멈춰 있는 동안(플레이백 일시정지) true — 재판정을 건너뛰어
+   * 값 생산이 멈춰 있는 동안(3D 플레이 일시정지) true — 재판정을 건너뛰어
    * 마지막 기록을 유지한다. 벽시계 창으로 판정하면 정지 20초 뒤 전 장비가
    * 두절이 되어 버린다.
    */

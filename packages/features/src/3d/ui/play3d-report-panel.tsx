@@ -8,7 +8,7 @@ import {
   pairRankingRows,
   timelineAxisMs,
   zoneRankingRows,
-} from '../lib/playback-format';
+} from '../lib/play3d-format';
 import {
   cumulativeSeries,
   holdBands,
@@ -18,41 +18,41 @@ import {
   tagRangeBar,
   topN,
   zoneBands,
-  type PlaybackEvent,
-} from '../lib/playback-stats';
+  type Play3dEvent,
+} from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
-import { usePlaybackTransport } from '../model/playback-transport';
+import { usePlay3dTransport } from '../model/play3d-transport';
 import {
-  usePlaybackStats,
-  usePlaybackStatsMeta,
-} from '../model/use-playback-stats-store';
+  usePlay3dStats,
+  usePlay3dStatsMeta,
+} from '../model/use-play3d-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
-import { PlaybackKpiCard } from './playback-report-kpi';
+import { Play3dKpiCard } from './play3d-report-kpi';
 import {
   EquipmentTable,
   EventList,
   RankingBars,
   TagTable,
   ZoneTable,
-} from './playback-report-tables';
-import { PlaybackReportTimeline } from './playback-report-timeline';
+} from './play3d-report-tables';
+import { Play3dReportTimeline } from './play3d-report-timeline';
 
 const RANK_N = 5;
 
 /**
- * 플레이백 실행 리포트 — 헤더(실행·창) → KPI 카드(누적 스파크라인) → 스윔레인
+ * 3D 플레이 실행 리포트 — 헤더(실행·창) → KPI 카드(누적 스파크라인) → 스윔레인
  * 타임라인(장비 상태·영역 체류·충돌·정지) → 원인 상위 → 장비·영역·태그 표 →
- * 사건 목록(필터·클릭 seek). 통계는 usePlaybackStats(version 구독,
- * 4Hz 이하), 시각화 입력은 lib/playback-stats 파생 함수를 useMemo 로.
+ * 사건 목록(필터·클릭 seek). 통계는 usePlay3dStats(version 구독,
+ * 4Hz 이하), 시각화 입력은 lib/play3d-stats 파생 함수를 useMemo 로.
  * 레퍼런스: Foxglove State Transitions(타임라인), ISA-18.2 bad actors(원인
  * 상위), MoTeC 채널 리포트(range bar). PASS/FAIL 판정은 두지 않는다(2026-09-16).
  */
-export function PlaybackReportPanel({ className }: { className?: string }) {
+export function Play3dReportPanel({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const stats = usePlaybackStats();
-  const meta = usePlaybackStatsMeta();
-  const transport = usePlaybackTransport();
+  const stats = usePlay3dStats();
+  const meta = usePlay3dStatsMeta();
+  const transport = usePlay3dTransport();
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
   const tagDefs = useVirtualTagStore((s) => s.tags);
@@ -125,7 +125,7 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
     };
   }, [stats, axisMs, meta.source, tagDefs]);
 
-  const eventTime = (e: PlaybackEvent): string => {
+  const eventTime = (e: Play3dEvent): string => {
     if (e.frameIndex !== null) {
       const stamp = replayFrames[e.frameIndex]?.timestamp ?? null;
       const label = formatReplayTimestamp(stamp, 'time');
@@ -162,7 +162,7 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
 
   return (
     <div
-      data-slot="playback-report-panel"
+      data-slot="play3d-report-panel"
       className={cn(
         'flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 text-xs',
         className,
@@ -172,41 +172,41 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
-            {t('monitoring:playback.report')}
+            {t('monitoring:play3d.report')}
           </p>
           <p className="truncate font-medium" title={windowLabel}>
             {t(
               isReplay
-                ? 'monitoring:playback.sourceReplay'
-                : 'monitoring:playback.sourceSimulation',
+                ? 'monitoring:play3d.sourceReplay'
+                : 'monitoring:play3d.sourceSimulation',
             )}{' '}
             · {windowLabel}
           </p>
           <p className="text-muted-foreground font-mono text-[10px] tabular-nums">
-            {t('monitoring:playback.window')} {formatSimClock(0)}~
+            {t('monitoring:play3d.window')} {formatSimClock(0)}~
             {formatSimClock(stats.windowEndMs)} ·{' '}
-            {t('monitoring:playback.scanned')} {formatSimClock(stats.scannedMs)}
+            {t('monitoring:play3d.scanned')} {formatSimClock(stats.scannedMs)}
             {stats.loopIteration !== null && meta.scenarioLoop
-              ? ` · ${t('monitoring:playback.iteration', { n: stats.loopIteration + 1 })}`
+              ? ` · ${t('monitoring:play3d.iteration', { n: stats.loopIteration + 1 })}`
               : null}
           </p>
         </div>
       </div>
       {stats.detectionOffSeen ? (
         <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-700 dark:text-amber-300">
-          {t('monitoring:playback.detectionOff')}
+          {t('monitoring:play3d.detectionOff')}
         </p>
       ) : null}
 
       {/* KPI */}
       <div className="grid grid-cols-2 gap-2">
-        <PlaybackKpiCard
-          label={t('monitoring:playback.tile.collisions')}
+        <Play3dKpiCard
+          label={t('monitoring:play3d.tile.collisions')}
           value={String(stats.collisions.count)}
           tone={stats.collisions.count > 0 ? 'bad' : 'good'}
           hint={
             stats.collisions.firstAtMs !== null
-              ? t('monitoring:playback.tile.firstAt', {
+              ? t('monitoring:play3d.tile.firstAt', {
                   time: formatSimClock(stats.collisions.firstAtMs),
                 })
               : undefined
@@ -215,8 +215,8 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           axisMs={axisMs}
           windowEndMs={stats.windowEndMs}
         />
-        <PlaybackKpiCard
-          label={t('monitoring:playback.tile.intrusions')}
+        <Play3dKpiCard
+          label={t('monitoring:play3d.tile.intrusions')}
           value={String(stats.zones.enters)}
           tone={
             stats.zones.stopEnters > 0
@@ -225,29 +225,29 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
                 ? 'warn'
                 : 'good'
           }
-          hint={t('monitoring:playback.tile.stopEnters', {
+          hint={t('monitoring:play3d.tile.stopEnters', {
             count: stats.zones.stopEnters,
           })}
           series={derived.intrusionSeries}
           axisMs={axisMs}
           windowEndMs={stats.windowEndMs}
         />
-        <PlaybackKpiCard
-          label={t('monitoring:playback.tile.holds')}
+        <Play3dKpiCard
+          label={t('monitoring:play3d.tile.holds')}
           value={String(stats.holds.count)}
           tone={stats.holds.count > 0 ? 'warn' : 'good'}
-          hint={t('monitoring:playback.tile.holdWall', {
+          hint={t('monitoring:play3d.tile.holdWall', {
             time: formatSimClock(stats.holds.wallMs),
           })}
           series={derived.holdSeries}
           axisMs={axisMs}
           windowEndMs={stats.windowEndMs}
         />
-        <PlaybackKpiCard
-          label={t('monitoring:playback.tile.running')}
+        <Play3dKpiCard
+          label={t('monitoring:play3d.tile.running')}
           value={formatRatio(runningRatio)}
           tone="neutral"
-          hint={t('monitoring:playback.tile.runningOf', {
+          hint={t('monitoring:play3d.tile.runningOf', {
             count: stats.equipment.length,
           })}
           series={derived.runningSeries}
@@ -258,8 +258,8 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
       </div>
 
       {/* 타임라인 */}
-      <Section title={t('monitoring:playback.timeline.title')}>
-        <PlaybackReportTimeline
+      <Section title={t('monitoring:play3d.timeline.title')}>
+        <Play3dReportTimeline
           axisMs={axisMs}
           windowEndMs={stats.windowEndMs}
           scanned={stats.scanned}
@@ -286,23 +286,23 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
           ) : null}
           <LegendDot
             className="bg-amber-400"
-            label={t('monitoring:playback.timeline.zoneDwell')}
+            label={t('monitoring:play3d.timeline.zoneDwell')}
           />
           <LegendDot
             className="bg-red-500"
-            label={t('monitoring:playback.event.collision')}
+            label={t('monitoring:play3d.event.collision')}
           />
           <LegendDot
             className="bg-violet-400"
-            label={t('monitoring:playback.event.holdStart')}
+            label={t('monitoring:play3d.event.holdStart')}
           />
-          <span>{t('monitoring:playback.timeline.unscanned')}</span>
+          <span>{t('monitoring:play3d.timeline.unscanned')}</span>
         </p>
       </Section>
 
       {/* 원인 상위 */}
       {derived.pairRanks.length > 0 || derived.zoneRanks.length > 0 ? (
-        <Section title={t('monitoring:playback.ranking.title')}>
+        <Section title={t('monitoring:play3d.ranking.title')}>
           {derived.pairRanks.length > 0 ? (
             <RankingBars rows={pairRankingRows(derived.pairRanks)} />
           ) : null}
@@ -313,9 +313,9 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
       ) : null}
 
       {/* 장비 */}
-      <Section title={t('monitoring:playback.equipment')}>
+      <Section title={t('monitoring:play3d.equipment')}>
         {stats.equipment.length === 0 ? (
-          <Empty>{t('monitoring:playback.noData')}</Empty>
+          <Empty>{t('monitoring:play3d.noData')}</Empty>
         ) : (
           <EquipmentTable rows={stats.equipment} showOffline={isReplay} />
         )}
@@ -323,22 +323,22 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
 
       {/* 영역 */}
       {stats.zones.byZone.length > 0 ? (
-        <Section title={t('monitoring:playback.zones')}>
+        <Section title={t('monitoring:play3d.zones')}>
           <ZoneTable rows={stats.zones.byZone} />
         </Section>
       ) : null}
 
       {/* 태그 */}
-      <Section title={t('monitoring:playback.tags')}>
+      <Section title={t('monitoring:play3d.tags')}>
         {derived.tagRows.length === 0 ? (
-          <Empty>{t('monitoring:playback.noData')}</Empty>
+          <Empty>{t('monitoring:play3d.noData')}</Empty>
         ) : (
           <TagTable rows={derived.tagRows} showSaturation={!isReplay} />
         )}
       </Section>
 
       {/* 사건 */}
-      <Section title={t('monitoring:playback.events')}>
+      <Section title={t('monitoring:play3d.events')}>
         <EventList
           events={stats.events}
           filter={eventFilter}

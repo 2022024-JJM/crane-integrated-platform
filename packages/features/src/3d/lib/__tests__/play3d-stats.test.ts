@@ -3,7 +3,7 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
   accumulateTagValue,
   addScannedInterval,
-  computePlaybackStats,
+  computePlay3dStats,
   createTagAggregate,
   cumulativeSeries,
   emptyStatusMs,
@@ -16,17 +16,17 @@ import {
   tagRangeBar,
   topN,
   zoneBands,
-  type PlaybackEvent,
-  type PlaybackStatsInput,
-} from '../playback-stats';
+  type Play3dEvent,
+  type Play3dStatsInput,
+} from '../play3d-stats';
 
 let nextId = 1;
 function ev(
-  kind: PlaybackEvent['kind'],
+  kind: Play3dEvent['kind'],
   atMs: number,
   subject: string,
-  extra: Partial<PlaybackEvent> = {},
-): PlaybackEvent {
+  extra: Partial<Play3dEvent> = {},
+): Play3dEvent {
   return {
     id: nextId++,
     kind,
@@ -38,7 +38,7 @@ function ev(
   };
 }
 
-function input(patch: Partial<PlaybackStatsInput> = {}): PlaybackStatsInput {
+function input(patch: Partial<Play3dStatsInput> = {}): Play3dStatsInput {
   return {
     events: [],
     statuses: {},
@@ -126,9 +126,9 @@ describe('accumulateTagValue', () => {
   });
 });
 
-describe('computePlaybackStats', () => {
+describe('computePlay3dStats', () => {
   it('빈 입력은 0 으로 채운 리포트', () => {
-    const stats = computePlaybackStats(input({ windowEndMs: 0 }));
+    const stats = computePlay3dStats(input({ windowEndMs: 0 }));
     expect(stats.events).toEqual([]);
     expect(stats.collisions).toEqual({ count: 0, firstAtMs: null, byPair: [] });
     expect(stats.zones).toEqual({ enters: 0, stopEnters: 0, byZone: [] });
@@ -144,10 +144,10 @@ describe('computePlaybackStats', () => {
       ev('collision', 50_000, 'a|b'),
     ];
     expect(
-      computePlaybackStats(input({ events, windowEndMs: 60_000 })).collisions
+      computePlay3dStats(input({ events, windowEndMs: 60_000 })).collisions
         .count,
     ).toBe(2);
-    const back = computePlaybackStats(input({ events, windowEndMs: 20_000 }));
+    const back = computePlay3dStats(input({ events, windowEndMs: 20_000 }));
     expect(back.collisions.count).toBe(1);
     expect(back.events).toHaveLength(1);
   });
@@ -158,7 +158,7 @@ describe('computePlaybackStats', () => {
       ev('collision', 3000, 'a|b'),
       ev('collision', 7000, 'x|y', { label: 'X ↔ Y' }),
     ];
-    const stats = computePlaybackStats(input({ events }));
+    const stats = computePlay3dStats(input({ events }));
     expect(stats.collisions.firstAtMs).toBe(3000);
     expect(stats.collisions.byPair[0]).toEqual({
       pairKey: 'x|y',
@@ -176,7 +176,7 @@ describe('computePlaybackStats', () => {
       ev('zoneEnter', 10_000, 'm#z|c', { ...zone, level: 'stop' }),
       ev('zoneExit', 500, 'm#z|d', { ...zone, intruderId: 'd' }),
     ];
-    const stats = computePlaybackStats(input({ events, windowEndMs: 15_000 }));
+    const stats = computePlay3dStats(input({ events, windowEndMs: 15_000 }));
     expect(stats.zones.enters).toBe(2);
     expect(stats.zones.stopEnters).toBe(2);
     const z = stats.zones.byZone[0];
@@ -195,7 +195,7 @@ describe('computePlaybackStats', () => {
       ev('zoneEnter', 3000, 'm#z|c', zone),
       ev('zoneExit', 4000, 'm#z|c', zone),
     ];
-    const z = computePlaybackStats(input({ events })).zones.byZone[0];
+    const z = computePlay3dStats(input({ events })).zones.byZone[0];
     expect(z.enters).toBe(2);
     expect(z.dwellMs).toBe(2000 + 1000);
     expect(z.open).toBe(0);
@@ -207,7 +207,7 @@ describe('computePlaybackStats', () => {
       ev('holdEnd', 2000, 'hold'),
       ev('holdStart', 8000, 'collision'),
     ];
-    const stats = computePlaybackStats(input({ events, holdWallMs: 12_345 }));
+    const stats = computePlay3dStats(input({ events, holdWallMs: 12_345 }));
     expect(stats.holds).toEqual({ count: 2, wallMs: 12_345 });
   });
 
@@ -215,7 +215,7 @@ describe('computePlaybackStats', () => {
     const ms = emptyStatusMs();
     ms.running = 6000;
     ms.idle = 4000;
-    const stats = computePlaybackStats(
+    const stats = computePlay3dStats(
       input({
         statuses: { m1: { modelId: 'm1', name: 'GC', ms } },
         events: [ev('offlineEnter', 100, 'm1'), ev('offlineEnter', 200, 'm1')],
@@ -231,7 +231,7 @@ describe('computePlaybackStats', () => {
     a.count = 3;
     a.saturatedMs = 5000;
     const b = createTagAggregate('b', false);
-    const stats = computePlaybackStats(
+    const stats = computePlay3dStats(
       input({
         tags: { a, b },
         scanned: [{ fromMs: 0, toMs: 4000 }],
@@ -245,13 +245,13 @@ describe('computePlaybackStats', () => {
   });
 
   it('회차·검사 시간·NaN 창 방어', () => {
-    const stats = computePlaybackStats(
+    const stats = computePlay3dStats(
       input({ windowEndMs: Number.NaN, scenarioDurationMs: 1000 }),
     );
     expect(stats.windowEndMs).toBe(0);
     expect(stats.loopIteration).toBe(0);
     expect(
-      computePlaybackStats(
+      computePlay3dStats(
         input({ windowEndMs: 2500, scenarioDurationMs: 1000 }),
       ).loopIteration,
     ).toBe(2);

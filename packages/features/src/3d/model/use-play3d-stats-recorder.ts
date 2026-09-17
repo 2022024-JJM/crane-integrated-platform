@@ -7,24 +7,24 @@ import {
   addScannedInterval,
   createTagAggregate,
   emptyStatusMs,
-  type PlaybackEvent,
-} from '../lib/playback-stats';
+  type Play3dEvent,
+} from '../lib/play3d-stats';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import { diffZoneIntrusions, pairKeyOf } from '../lib/zone-journal-map';
 import {
-  readPlaybackFrameIndex,
-  readPlaybackPositionMs,
-  usePlaybackTransport,
-} from './playback-transport';
+  readPlay3dFrameIndex,
+  readPlay3dPositionMs,
+  usePlay3dTransport,
+} from './play3d-transport';
 import { subscribeTagValues } from './tag-value-bus';
 import { useModelRuntimeStatuses } from './use-model-runtime-statuses';
-import { usePlaybackStore, type PlaybackSource } from './use-playback-store';
+import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
 import {
-  usePlaybackStatsStore,
-  type PlaybackStatsData,
-  type PlaybackStatsMeta,
-} from './use-playback-stats-store';
+  usePlay3dStatsStore,
+  type Play3dStatsData,
+  type Play3dStatsMeta,
+} from './use-play3d-stats-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
 import { useSceneCollisionStore } from './use-scene-collision-store';
 import { useSceneInfoStore } from './use-scene-info-store';
@@ -32,7 +32,7 @@ import { useSceneZoneStore } from './use-scene-zone-store';
 import { useVirtualTagStore } from './use-virtual-tag-store';
 
 /** 위치·검사 구간·상태 누적 폴링 주기. */
-export const PLAYBACK_STATS_POLL_MS = 250;
+export const PLAY3D_STATS_POLL_MS = 250;
 /**
  * 한 폴링에서 이만큼 넘게 건너뛴 위치 변화는 seek 로 본다 — 검사 구간·상태
  * 누적에 넣지 않는다(재생이 지나간 시간이 아니다). 배속 × 폴링 주기의 몇 배.
@@ -40,9 +40,9 @@ export const PLAYBACK_STATS_POLL_MS = 250;
 const SEEK_JUMP_FACTOR = 6;
 
 function buildMeta(
-  source: PlaybackSource,
+  source: Play3dSource,
   regionId: string,
-): PlaybackStatsMeta {
+): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
   const sim = useVirtualTagStore.getState();
   const scenario =
@@ -63,7 +63,7 @@ function buildMeta(
   };
 }
 
-function activeScenarioDurationMs(source: PlaybackSource): number | null {
+function activeScenarioDurationMs(source: Play3dSource): number | null {
   if (source !== 'simulation') return null;
   const sim = useVirtualTagStore.getState();
   const scenario = sim.scenarios.find((s) => s.id === sim.activeScenarioId);
@@ -71,14 +71,14 @@ function activeScenarioDurationMs(source: PlaybackSource): number | null {
 }
 
 function pushEvent(
-  data: PlaybackStatsData,
-  event: Omit<PlaybackEvent, 'id' | 'atMs' | 'frameIndex'>,
+  data: Play3dStatsData,
+  event: Omit<Play3dEvent, 'id' | 'atMs' | 'frameIndex'>,
 ): void {
   data.events.push({
     ...event,
     id: data.nextEventId++,
-    atMs: readPlaybackPositionMs(),
-    frameIndex: readPlaybackFrameIndex(),
+    atMs: readPlay3dPositionMs(),
+    frameIndex: readPlay3dFrameIndex(),
   });
 }
 
@@ -88,7 +88,7 @@ function modelName(scene: SavedSceneInfo | null, modelId: string): string {
 }
 
 /**
- * 플레이백 실행 통계 기록기 — PlaybackView 가 Canvas 밖에서 한 번 마운트한다.
+ * 3D 플레이 실행 통계 기록기 — Play3dView 가 Canvas 밖에서 한 번 마운트한다.
  * 충돌 기록·영역 침범·정지(hold)·두절 전이를 사건으로, 재생 중 지나간 씬 시간을
  * 검사 구간·장비 상태 누적으로, 버스 publish 를 태그 집계로 쌓는다. 사건 시각은
  * 스토어의 벽시계 `at` 이 아니라 그 순간의 트랜스포트 위치(씬 시간)다 —
@@ -99,12 +99,12 @@ function modelName(scene: SavedSceneInfo | null, modelId: string): string {
  * (resetValues)와 seek(0) 은 reset 이 아니라 뒤로 seek 다 — 창이 0 으로
  * 줄어 사건이 감춰질 뿐 기록은 남는다.
  */
-export function usePlaybackStatsRecorder(regionId: string): void {
+export function usePlay3dStatsRecorder(regionId: string): void {
   const sceneInfo = useSceneInfoStore(
     (s) => s.sceneInfoByRegion[regionId] ?? null,
   );
-  const source = usePlaybackStore((s) => s.source);
-  const transport = usePlaybackTransport();
+  const source = usePlay3dStore((s) => s.source);
+  const transport = usePlay3dTransport();
   const statuses = useModelRuntimeStatuses(sceneInfo, {
     paused: !transport.isPlaying,
     timeScale: transport.speed,
@@ -117,7 +117,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
   const playingRef = useRef(false);
   const speedRef = useRef(1);
   const collisionEnabledRef = useRef(true);
-  const sourceRef = useRef<PlaybackSource>(source);
+  const sourceRef = useRef<Play3dSource>(source);
   useEffect(() => {
     sceneRef.current = sceneInfo;
   }, [sceneInfo]);
@@ -136,11 +136,11 @@ export function usePlaybackStatsRecorder(regionId: string): void {
   // 알고 있는 상태를 첫 전이(unknown→x)로 심어 밴드가 창 시작부터 그려진다.
   useEffect(() => {
     const restart = () => {
-      usePlaybackStatsStore
+      usePlay3dStatsStore
         .getState()
         .reset(buildMeta(source, regionId), activeScenarioDurationMs(source));
-      const { data } = usePlaybackStatsStore.getState();
-      const atMs = readPlaybackPositionMs();
+      const { data } = usePlay3dStatsStore.getState();
+      const atMs = readPlay3dPositionMs();
       for (const [modelId, to] of Object.entries(statusesRef.current)) {
         if (to === 'unknown') continue;
         data.statusTransitions.push({ atMs, modelId, from: 'unknown', to });
@@ -171,7 +171,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
           .filter((r) => !prevIds.has(r.id))
           .sort((a, b) => a.id - b.id);
         if (fresh.length === 0) return;
-        const { data, bump } = usePlaybackStatsStore.getState();
+        const { data, bump } = usePlay3dStatsStore.getState();
         for (const record of fresh) {
           pushEvent(data, {
             kind: 'collision',
@@ -194,7 +194,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
           state.intrusions,
         );
         if (entered.length === 0 && exited.length === 0) return;
-        const { data, bump } = usePlaybackStatsStore.getState();
+        const { data, bump } = usePlay3dStatsStore.getState();
         for (const kind of ['zoneEnter', 'zoneExit'] as const) {
           for (const ref of kind === 'zoneEnter' ? entered : exited) {
             const { intrusion } = ref;
@@ -223,7 +223,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
       const zoneHeld = useSceneZoneStore.getState().held !== null;
       const holding = pinned || zoneHeld;
       if (holding === (holdingSince !== null)) return;
-      const { data, bump } = usePlaybackStatsStore.getState();
+      const { data, bump } = usePlay3dStatsStore.getState();
       if (holding) {
         holdingSince = Date.now();
         pushEvent(data, {
@@ -251,13 +251,13 @@ export function usePlaybackStatsRecorder(regionId: string): void {
   useEffect(() => {
     const prev = statusesRef.current;
     statusesRef.current = statuses;
-    const { data, bump } = usePlaybackStatsStore.getState();
+    const { data, bump } = usePlay3dStatsStore.getState();
     let changed = false;
     for (const [modelId, to] of Object.entries(statuses)) {
       const from: EquipmentRuntimeStatus = prev[modelId] ?? 'unknown';
       if (from === to) continue;
       data.statusTransitions.push({
-        atMs: readPlaybackPositionMs(),
+        atMs: readPlay3dPositionMs(),
         modelId,
         from,
         to,
@@ -277,13 +277,13 @@ export function usePlaybackStatsRecorder(regionId: string): void {
 
   // 위치·검사 구간·상태 누적 폴링.
   useEffect(() => {
-    let lastPos = readPlaybackPositionMs();
+    let lastPos = readPlay3dPositionMs();
     const timer = window.setInterval(() => {
-      const pos = readPlaybackPositionMs();
-      const { data, bump } = usePlaybackStatsStore.getState();
+      const pos = readPlay3dPositionMs();
+      const { data, bump } = usePlay3dStatsStore.getState();
       const delta = pos - lastPos;
       const maxStep =
-        PLAYBACK_STATS_POLL_MS * speedRef.current * SEEK_JUMP_FACTOR + 500;
+        PLAY3D_STATS_POLL_MS * speedRef.current * SEEK_JUMP_FACTOR + 500;
       if (playingRef.current && delta > 0 && delta <= maxStep) {
         data.scanned = addScannedInterval(data.scanned, lastPos, pos);
         if (!collisionEnabledRef.current) data.detectionOffSeen = true;
@@ -306,7 +306,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
         data.windowEndMs = pos;
         bump();
       }
-    }, PLAYBACK_STATS_POLL_MS);
+    }, PLAY3D_STATS_POLL_MS);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -316,7 +316,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
     if (keys.size === 0) return;
     return subscribeTagValues((key, value) => {
       if (!keys.has(key)) return;
-      const { data } = usePlaybackStatsStore.getState();
+      const { data } = usePlay3dStatsStore.getState();
       let agg = data.tags[key];
       let maxSpeed: number | null = null;
       if (sourceRef.current === 'simulation') {
@@ -329,7 +329,7 @@ export function usePlaybackStatsRecorder(regionId: string): void {
         agg = createTagAggregate(key, maxSpeed !== null);
         data.tags[key] = agg;
       }
-      accumulateTagValue(agg, value, readPlaybackPositionMs(), maxSpeed);
+      accumulateTagValue(agg, value, readPlay3dPositionMs(), maxSpeed);
     });
   }, [sceneInfo]);
 }

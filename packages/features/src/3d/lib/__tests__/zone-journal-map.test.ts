@@ -90,7 +90,7 @@ describe('filterAcceptedZoneTransitions', () => {
   const entered = diffZoneIntrusions([], [intrusion('a#z', ['b'])]).entered;
   const exited = diffZoneIntrusions([intrusion('a#z', ['b'])], []).exited;
 
-  it('실시간이 아니면 진입을 버리고, 승인 없는 이탈도 버린다(플레이백·에디터)', () => {
+  it('실시간이 아니면 진입을 버리고, 승인 없는 이탈도 버린다(3D 플레이·에디터)', () => {
     const out = filterAcceptedZoneTransitions(
       entered,
       exited,

@@ -1,4 +1,4 @@
-import { usePlaybackStore } from './use-playback-store';
+import { usePlay3dStore } from './use-play3d-store';
 import { useRealtimeStore } from './use-realtime-store';
 import { useReplayPlayerStore } from './use-replay-player-store';
 import { useVirtualTagStore } from './use-virtual-tag-store';
@@ -17,10 +17,10 @@ import { useVirtualTagStore } from './use-virtual-tag-store';
  * 감지 대상 값 생산자 — 스캔 게이트·정지 방식·안내 문구·재개 경로가 갈린다.
  * - 'simulation': 에디터·대시보드 미리보기(가상 태그 러너)
  * - 'realtime': 실시간 모니터링(WebSocket)
- * - 'playback': 플레이백 페이지 — 활성 소스(usePlaybackStore)가 리플레이면
+ * - 'play3d': 3D 플레이 페이지 — 활성 소스(usePlay3dStore)가 리플레이면
  *   리플레이 러너, 시뮬레이션이면 가상 태그 러너
  */
-export type SceneCollisionRunner = 'simulation' | 'realtime' | 'playback';
+export type SceneCollisionRunner = 'simulation' | 'realtime' | 'play3d';
 
 /**
  * 러너가 재생 중인지 — 검사기의 스캔 게이트. 실시간은 WebSocket 러너의
@@ -32,8 +32,8 @@ export function isRunnerRunning(runner: SceneCollisionRunner): boolean {
   switch (runner) {
     case 'realtime':
       return useRealtimeStore.getState().isRunning;
-    case 'playback':
-      return usePlaybackStore.getState().source === 'replay'
+    case 'play3d':
+      return usePlay3dStore.getState().source === 'replay'
         ? useReplayPlayerStore.getState().isPlaying
         : useVirtualTagStore.getState().isRunning;
     default:
@@ -57,7 +57,7 @@ export function releaseRunners(): void {
 
 /**
  * ▶ 재생 전이(false→true) 구독 — 충돌 pinned·영역 정지의 재개 경로. 시뮬레이션은
- * 가상 태그 러너, 플레이백은 두 러너 모두(활성 소스만 켜질 수 있다), 실시간은
+ * 가상 태그 러너, 3D 플레이는 두 러너 모두(활성 소스만 켜질 수 있다), 실시간은
  * 러너 재생 전이가 없어(진입~이탈 내내 true) 구독하지 않는다 — 실시간은
  * 자동 정지 자체가 없다(2026-09-16).
  */

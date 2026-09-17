@@ -31,36 +31,36 @@ export {
   useSceneInfoStore,
 } from './model/use-scene-info-store';
 export type { MonitoringViewMode } from './model/types';
-export { PlaybackView } from './ui/playback-view';
-export { PlaybackReportPanel } from './ui/playback-report-panel';
-export { PlaybackTransportBar } from './ui/playback-transport-bar';
-export { PlaybackSourceTabs } from './ui/playback-source-tabs';
+export { Play3dView } from './ui/play3d-view';
+export { Play3dReportPanel } from './ui/play3d-report-panel';
+export { Play3dTransportBar } from './ui/play3d-transport-bar';
+export { Play3dSourceTabs } from './ui/play3d-source-tabs';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';
 export {
-  usePlaybackStore,
-  type PlaybackSource,
-} from './model/use-playback-store';
+  usePlay3dStore,
+  type Play3dSource,
+} from './model/use-play3d-store';
 export {
   REPLAY_SPEED_OPTIONS,
-  readPlaybackPositionMs,
-  readPlaybackTransport,
-  usePlaybackTransport,
-  type PlaybackTransport,
-} from './model/playback-transport';
+  readPlay3dPositionMs,
+  readPlay3dTransport,
+  usePlay3dTransport,
+  type Play3dTransport,
+} from './model/play3d-transport';
 export {
-  usePlaybackStats,
-  usePlaybackStatsMeta,
-  usePlaybackStatsStore,
-  type PlaybackStatsMeta,
-} from './model/use-playback-stats-store';
-export { usePlaybackStatsRecorder } from './model/use-playback-stats-recorder';
+  usePlay3dStats,
+  usePlay3dStatsMeta,
+  usePlay3dStatsStore,
+  type Play3dStatsMeta,
+} from './model/use-play3d-stats-store';
+export { usePlay3dStatsRecorder } from './model/use-play3d-stats-recorder';
 export {
-  computePlaybackStats,
-  type PlaybackEvent,
-  type PlaybackEventKind,
-  type PlaybackStats,
-} from './lib/playback-stats';
+  computePlay3dStats,
+  type Play3dEvent,
+  type Play3dEventKind,
+  type Play3dStats,
+} from './lib/play3d-stats';
 export { PositionController } from './ui/position-controller';
 export { RotationController } from './ui/rotation-controller';
 export { ScaleController } from './ui/scale-controller';

@@ -123,8 +123,8 @@ export function useSceneData(
       startRealtime();
       resetReplay();
     } else {
-      // 플레이백 — 소스(리플레이|시뮬레이션)는 usePlaybackStore 가 들고
-      // PlaybackView 가 전환을 정리한다. 여기서는 둘 다 깨끗이 시작하고
+      // 3D 플레이 — 소스(리플레이|시뮬레이션)는 usePlay3dStore 가 들고
+      // Play3dView 가 전환을 정리한다. 여기서는 둘 다 깨끗이 시작하고
       // 정의만 읽어 둔다(자동 재생 없음 — ▶ 가 실행의 시작점이다).
       resetReplay();
       void loadVirtualTags();

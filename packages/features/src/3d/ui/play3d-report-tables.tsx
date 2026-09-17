@@ -1,20 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import {
-  PLAYBACK_EVENT_COLORS,
-  PLAYBACK_EVENT_FILTERS,
-  PLAYBACK_STATUS_FILL,
+  PLAY3D_EVENT_COLORS,
+  PLAY3D_EVENT_FILTERS,
+  PLAY3D_STATUS_FILL,
   formatRatio,
   formatTagNumber,
   type RankingRow,
-} from '../lib/playback-format';
+} from '../lib/play3d-format';
 import type {
   EquipmentStat,
-  PlaybackEvent,
+  Play3dEvent,
   TagRangeBar,
   TagStat,
   ZoneStat,
-} from '../lib/playback-stats';
+} from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 
 /**
@@ -82,7 +82,7 @@ export function EquipmentTable({
                 className="absolute inset-y-0 left-0"
                 style={{
                   width: `${pct(eq.ms.running)}%`,
-                  background: PLAYBACK_STATUS_FILL.running ?? undefined,
+                  background: PLAY3D_STATUS_FILL.running ?? undefined,
                 }}
               />
               <span
@@ -90,7 +90,7 @@ export function EquipmentTable({
                 style={{
                   left: `${pct(eq.ms.running)}%`,
                   width: `${pct(eq.ms.idle)}%`,
-                  background: PLAYBACK_STATUS_FILL.idle ?? undefined,
+                  background: PLAY3D_STATUS_FILL.idle ?? undefined,
                 }}
               />
               {showOffline ? (
@@ -99,7 +99,7 @@ export function EquipmentTable({
                   style={{
                     left: `${pct(eq.ms.running) + pct(eq.ms.idle)}%`,
                     width: `${pct(eq.ms.offline)}%`,
-                    background: PLAYBACK_STATUS_FILL.offline ?? undefined,
+                    background: PLAY3D_STATUS_FILL.offline ?? undefined,
                   }}
                 />
               ) : null}
@@ -115,7 +115,7 @@ export function EquipmentTable({
                     ? 'text-amber-600 dark:text-amber-300'
                     : 'text-muted-foreground',
                 )}
-                title={t('monitoring:playback.col.offlineEpisodes')}
+                title={t('monitoring:play3d.col.offlineEpisodes')}
               >
                 {eq.offlineEpisodes}
               </span>
@@ -146,7 +146,7 @@ export function TagTable({
             className="bg-muted relative h-2.5 min-w-0 flex-1 rounded-sm"
             title={
               range
-                ? `min ${formatTagNumber(stat.min)} · ${t('monitoring:playback.col.mean')} ${formatTagNumber(stat.mean)} · max ${formatTagNumber(stat.max)} (${formatTagNumber(range.lo)}~${formatTagNumber(range.hi)})`
+                ? `min ${formatTagNumber(stat.min)} · ${t('monitoring:play3d.col.mean')} ${formatTagNumber(stat.mean)} · max ${formatTagNumber(stat.max)} (${formatTagNumber(range.lo)}~${formatTagNumber(range.hi)})`
                 : undefined
             }
           >
@@ -168,14 +168,14 @@ export function TagTable({
           </span>
           <span
             className="w-12 shrink-0 text-right font-mono tabular-nums"
-            title={t('monitoring:playback.col.travel')}
+            title={t('monitoring:play3d.col.travel')}
           >
             {formatTagNumber(stat.travel)}
           </span>
           {showSaturation ? (
             <span
               className="bg-muted relative h-2.5 w-10 shrink-0 overflow-hidden rounded-sm"
-              title={`${t('monitoring:playback.col.saturation')} ${formatRatio(stat.saturationRatio)}`}
+              title={`${t('monitoring:play3d.col.saturation')} ${formatRatio(stat.saturationRatio)}`}
             >
               {stat.saturationRatio !== null ? (
                 <span
@@ -231,16 +231,16 @@ export function EventList({
   timeLabel,
   onSeek,
 }: {
-  events: readonly PlaybackEvent[];
+  events: readonly Play3dEvent[];
   filter: string;
   onFilterChange: (key: string) => void;
-  timeLabel: (event: PlaybackEvent) => string;
-  onSeek: (event: PlaybackEvent) => void;
+  timeLabel: (event: Play3dEvent) => string;
+  onSeek: (event: Play3dEvent) => void;
 }) {
   const { t } = useTranslation();
   const active =
-    PLAYBACK_EVENT_FILTERS.find((f) => f.key === filter) ??
-    PLAYBACK_EVENT_FILTERS[0];
+    PLAY3D_EVENT_FILTERS.find((f) => f.key === filter) ??
+    PLAY3D_EVENT_FILTERS[0];
   const visible =
     active.kinds.length === 0
       ? events
@@ -248,7 +248,7 @@ export function EventList({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-1">
-        {PLAYBACK_EVENT_FILTERS.map((f) => (
+        {PLAY3D_EVENT_FILTERS.map((f) => (
           <button
             key={f.key}
             type="button"
@@ -260,13 +260,13 @@ export function EventList({
             )}
             onClick={() => onFilterChange(f.key)}
           >
-            {t(`monitoring:playback.filter.${f.key}`)}
+            {t(`monitoring:play3d.filter.${f.key}`)}
           </button>
         ))}
       </div>
       {visible.length === 0 ? (
         <p className="text-muted-foreground text-[10px]">
-          {t('monitoring:playback.noEvents')}
+          {t('monitoring:play3d.noEvents')}
         </p>
       ) : (
         <ul className="max-h-48 space-y-0.5 overflow-y-auto">
@@ -276,20 +276,20 @@ export function EventList({
                 type="button"
                 className="hover:bg-accent flex w-full items-center gap-2 rounded px-1.5 py-0.5 text-left"
                 onClick={() => onSeek(e)}
-                title={t('monitoring:playback.seekToEvent')}
+                title={t('monitoring:play3d.seekToEvent')}
               >
                 <span
                   aria-hidden
                   className={cn(
                     'size-2 shrink-0 rounded-full',
-                    PLAYBACK_EVENT_COLORS[e.kind],
+                    PLAY3D_EVENT_COLORS[e.kind],
                   )}
                 />
                 <span className="text-muted-foreground w-16 shrink-0 font-mono text-[10px] tabular-nums">
                   {timeLabel(e)}
                 </span>
                 <span className="w-14 shrink-0 text-[10px]">
-                  {t(`monitoring:playback.event.${e.kind}`)}
+                  {t(`monitoring:play3d.event.${e.kind}`)}
                 </span>
                 <span className="truncate text-[11px]">{e.label}</span>
               </button>

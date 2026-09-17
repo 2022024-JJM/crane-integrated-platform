@@ -1,24 +1,24 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import {
-  PLAYBACK_STATUS_FILL,
+  PLAY3D_STATUS_FILL,
   markerPercent,
   msAtFraction,
   timelineTicks,
-} from '../lib/playback-format';
+} from '../lib/play3d-format';
 import type {
   HoldBand,
-  PlaybackEvent,
+  Play3dEvent,
   ScannedInterval,
   StatusBand,
   ZoneBand,
-} from '../lib/playback-stats';
+} from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 
 /**
  * 스윔레인 타임라인 — 행마다 대상(사건 행·장비·영역), 시간 축 위 밴드,
  * 현재 위치 세로선, 클릭 = seek(Foxglove State Transitions 방식). 밴드 목록은
- * lib/playback-stats(statusBands·zoneBands·holdBands)가 만들고 여기서는
+ * lib/play3d-stats(statusBands·zoneBands·holdBands)가 만들고 여기서는
  * 위치(%)만 lib 함수로 옮겨 그린다. 검사되지 않은 구간은 배경 빗금으로 남겨
  * "감지가 없었던 곳" 이 빈 밴드와 구분된다.
  */
@@ -37,7 +37,7 @@ export interface TimelineZoneRow {
 
 const ROW_H = 'h-4';
 
-export function PlaybackReportTimeline({
+export function Play3dReportTimeline({
   axisMs,
   windowEndMs,
   scanned,
@@ -51,7 +51,7 @@ export function PlaybackReportTimeline({
   axisMs: number;
   windowEndMs: number;
   scanned: readonly ScannedInterval[];
-  collisions: readonly PlaybackEvent[];
+  collisions: readonly Play3dEvent[];
   holds: readonly HoldBand[];
   equipment: readonly TimelineEquipmentRow[];
   zones: readonly TimelineZoneRow[];
@@ -72,13 +72,13 @@ export function PlaybackReportTimeline({
   const rows: { key: string; label: string; content: React.ReactNode }[] = [
     {
       key: '__events',
-      label: t('monitoring:playback.timeline.events'),
+      label: t('monitoring:play3d.timeline.events'),
       content: (
         <>
           {holds.map((h, i) => (
             <span
               key={`h${i}`}
-              title={`${t('monitoring:playback.event.holdStart')} ${formatSimClock(h.fromMs)}`}
+              title={`${t('monitoring:play3d.event.holdStart')} ${formatSimClock(h.fromMs)}`}
               className="absolute inset-y-0.5 min-w-[2px] rounded-sm bg-violet-400/70"
               style={bandStyle(h.fromMs, h.toMs, axisMs)}
             />
@@ -100,7 +100,7 @@ export function PlaybackReportTimeline({
       content: (
         <>
           {row.bands.map((b, i) => {
-            const fill = PLAYBACK_STATUS_FILL[b.status];
+            const fill = PLAY3D_STATUS_FILL[b.status];
             if (!fill) return null;
             return (
               <span

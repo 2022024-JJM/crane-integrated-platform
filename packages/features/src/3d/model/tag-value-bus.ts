@@ -60,7 +60,7 @@ const listeners = new Set<TagValueListener>();
 
 /**
  * 관찰자 구독 — 소비자(`setTagIngest`, 단일 슬롯)와 달리 여럿이 붙을 수 있고
- * 값을 바꾸지 못한다. 플레이백 통계가 publish 마다 집계하는 데 쓴다(1Hz 샘플은
+ * 값을 바꾸지 못한다. 3D 플레이 통계가 publish 마다 집계하는 데 쓴다(1Hz 샘플은
  * 8배속에서 이동량을 크게 놓친다). 리스너는 ingest 뒤에 불린다.
  */
 export function subscribeTagValues(listener: TagValueListener): () => void {

@@ -1,15 +1,15 @@
 import { cn } from '@crane/core/lib/utils';
-import { markerPercent, sparklinePath } from '../lib/playback-format';
-import type { SeriesPoint } from '../lib/playback-stats';
+import { markerPercent, sparklinePath } from '../lib/play3d-format';
+import type { SeriesPoint } from '../lib/play3d-stats';
 
 const SPARK_H = 28;
 
 /**
  * KPI 카드 — 큰 숫자 + 씬 시간 축 누적 스파크라인(스텝) + 보조 문구. 곡선은
  * 창 끝(현재 위치)에서 멈추고 세로선이 현재 위치를 표시한다. 수치→경로 변환은
- * lib/playback-format(sparklinePath).
+ * lib/play3d-format(sparklinePath).
  */
-export function PlaybackKpiCard({
+export function Play3dKpiCard({
   label,
   value,
   hint,

@@ -38,7 +38,7 @@ export const DEFAULT_STATUS_WINDOWS: RuntimeStatusWindows = {
 /**
  * 배속에 맞춘 판정 창 — 창은 벽시계 기준이라 리플레이 0.5배속(프레임 간격
  * 10초)에선 running 창 8초를 넘어 프레임 사이에서 idle 로 깜빡이고, 8배속에선
- * 너무 느슨하다. 플레이백은 창을 1/배속 으로 늘이거나 줄인다. 0·NaN 은 1.
+ * 너무 느슨하다. 3D 플레이는 창을 1/배속 으로 늘이거나 줄인다. 0·NaN 은 1.
  */
 export function scaleStatusWindows(timeScale: number): RuntimeStatusWindows {
   const scale = Number.isFinite(timeScale) && timeScale > 0 ? 1 / timeScale : 1;

@@ -6,7 +6,7 @@ import {
   sparklinePath,
   timelineAxisMs,
   timelineTicks,
-} from '../playback-format';
+} from '../play3d-format';
 
 describe('timelineTicks / msAtFraction / markerPercent', () => {
   it('눈금은 0 과 축 끝을 포함해 n+1 개', () => {

@@ -11,7 +11,7 @@ import { sceneCollisionRuntime } from './scene-collision-runtime';
 
 /**
  * 씬 객체 충돌 감지의 React 상태. `enabled`·`pauseOnCollision` 은 모니터링
- * (플레이백·실시간)이 공유하는 설정으로 감지 설정 페이지가 바꾸고 localStorage
+ * (3D 플레이·실시간)이 공유하는 설정으로 감지 설정 페이지가 바꾸고 localStorage
  * `crane:detection-settings`(lib/detection-settings-storage)에 영속된다
  * (2026-09-17 — 그 전엔 세션 전용이라 새로고침마다 ON 으로 돌아갔다). 감지는
  * 기본 ON, 충돌 시 정지는 기본 OFF(2026-09-18). 기록·활성 상태는 세션

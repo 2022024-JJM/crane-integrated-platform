@@ -16,8 +16,8 @@ import {
  * 비우고 journal 에는 영향이 없다(append-only, 의도된 동작). 같은 record 가
  * 다시 흘러도 key(`at:pairKey`) dedupe 로 중복되지 않는다.
  *
- * 실시간 화면의 충돌만 남긴다 — 플레이백·에디터·미리보기의 충돌은 실행
- * 리포트(플레이백)나 화면 안 기록으로 충분하고 대시보드 통계에 섞이면 안 된다.
+ * 실시간 화면의 충돌만 남긴다 — 3D 플레이·에디터·미리보기의 충돌은 실행
+ * 리포트(3D 플레이)나 화면 안 기록으로 충분하고 대시보드 통계에 섞이면 안 된다.
  */
 export function CollisionJournalSync() {
   useEffect(() => {

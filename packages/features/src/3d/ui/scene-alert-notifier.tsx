@@ -16,7 +16,7 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * critical 알람은 alarm 슬라이스(useCriticalAlarmBanner)가 같은 notifyAlert
  * 로 내보낸다.
  *
- * 실시간 화면의 사건만 울린다 — 플레이백(리플레이·시뮬레이션)의 충돌·침범은
+ * 실시간 화면의 사건만 울린다 — 3D 플레이(리플레이·시뮬레이션)의 충돌·침범은
  * 분석 결과이지 경보가 아니다(진입 사건뿐이라 승인 집합은 필요 없다).
  */
 export function SceneAlertNotifier() {

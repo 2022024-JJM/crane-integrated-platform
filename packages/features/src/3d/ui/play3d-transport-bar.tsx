@@ -25,19 +25,19 @@ import {
 } from '@crane/ui/molecules/popover';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
-  PLAYBACK_EVENT_COLORS,
-  PLAYBACK_MARKER_KINDS,
+  PLAY3D_EVENT_COLORS,
+  PLAY3D_MARKER_KINDS,
   markerPercent,
   markerSeekLeadMs,
   timelineAxisMs,
-} from '../lib/playback-format';
+} from '../lib/play3d-format';
 import { formatSimClock } from '../lib/sim-clock';
 import {
-  readPlaybackPositionMs,
-  usePlaybackTransport,
-} from '../model/playback-transport';
+  readPlay3dPositionMs,
+  usePlay3dTransport,
+} from '../model/play3d-transport';
 import { useRigLivePoll } from '../model/rig-live-readouts';
-import { usePlaybackStatsStore } from '../model/use-playback-stats-store';
+import { usePlay3dStatsStore } from '../model/use-play3d-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { ReplaySearchForm } from './replay-search-form';
 import { SceneSimulationPanel } from './scene-simulation-panel';
@@ -45,16 +45,16 @@ import { SceneSimulationPanel } from './scene-simulation-panel';
 const JUMP_MS = 5_000;
 
 /**
- * 플레이백 상단 트랜스포트 바 — ▶/⏸·이동, 사건 마커 띠가 얹힌 스크럽, 배속,
+ * 3D 플레이 상단 트랜스포트 바 — ▶/⏸·이동, 사건 마커 띠가 얹힌 스크럽, 배속,
  * 위치/길이, 소스별 슬롯(리플레이=구간 검색 팝오버, 시뮬레이션=시계 패널
- * 팝오버). 소스 선택은 위의 탭(PlaybackSourceTabs)이 한다. 두 소스의 차이는
- * 트랜스포트 어댑터(playback-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
+ * 팝오버). 소스 선택은 위의 탭(Play3dSourceTabs)이 한다. 두 소스의 차이는
+ * 트랜스포트 어댑터(play3d-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
  *
  * 캔버스 위 별도 행(오버레이가 아님)이라 HUD·좌상단 열과 겹치지 않는다(옛
  * 리플레이 바는 캔버스 오버레이라 그 둘을 덮었다). 위치는 폴링으로 읽는다
  * (200ms).
  */
-export function PlaybackTransportBar({
+export function Play3dTransportBar({
   search,
   className,
 }: {
@@ -64,10 +64,10 @@ export function PlaybackTransportBar({
 }) {
   const { t } = useTranslation();
   useRigLivePoll(200);
-  const transport = usePlaybackTransport();
-  const version = usePlaybackStatsStore((s) => s.version);
-  const events = usePlaybackStatsStore((s) => s.data.events);
-  const windowEndMs = usePlaybackStatsStore((s) => s.data.windowEndMs);
+  const transport = usePlay3dTransport();
+  const version = usePlay3dStatsStore((s) => s.version);
+  const events = usePlay3dStatsStore((s) => s.data.events);
+  const windowEndMs = usePlay3dStatsStore((s) => s.data.windowEndMs);
   const replayTimestamp = useReplayPlayerStore(
     (s) => s.frames[s.frameIndex]?.timestamp ?? null,
   );
@@ -76,7 +76,7 @@ export function PlaybackTransportBar({
   const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
 
   const { source, isPlaying, durationMs, hasContent, speed } = transport;
-  const positionMs = readPlaybackPositionMs(source);
+  const positionMs = readPlay3dPositionMs(source);
   const lastEventMs = events.length > 0 ? events[events.length - 1].atMs : 0;
   const axisMs = timelineAxisMs(durationMs, positionMs, lastEventMs);
   const scrubbable = hasContent && durationMs !== null && durationMs > 0;
@@ -100,11 +100,11 @@ export function PlaybackTransportBar({
   const lengthLabel =
     durationMs !== null
       ? formatSimClock(durationMs)
-      : t('monitoring:playback.openEnded');
+      : t('monitoring:play3d.openEnded');
 
   return (
     <div
-      data-slot="playback-transport-bar"
+      data-slot="play3d-transport-bar"
       className={cn(
         'bg-background/95 border-border/60 flex shrink-0 flex-col gap-1.5 border-b px-3 py-2 backdrop-blur-sm',
         className,
@@ -117,16 +117,16 @@ export function PlaybackTransportBar({
           className="pointer-events-none absolute inset-x-0 top-0 h-2.5"
         >
           {events
-            .filter((e) => PLAYBACK_MARKER_KINDS.includes(e.kind))
+            .filter((e) => PLAY3D_MARKER_KINDS.includes(e.kind))
             .map((e) => (
               <button
                 key={e.id}
                 type="button"
-                title={`${formatSimClock(e.atMs)} · ${t(`monitoring:playback.event.${e.kind}`)} · ${e.label}`}
-                aria-label={t(`monitoring:playback.event.${e.kind}`)}
+                title={`${formatSimClock(e.atMs)} · ${t(`monitoring:play3d.event.${e.kind}`)} · ${e.label}`}
+                aria-label={t(`monitoring:play3d.event.${e.kind}`)}
                 className={cn(
                   'pointer-events-auto absolute top-0 h-2.5 w-1 -translate-x-1/2 cursor-pointer rounded-sm',
-                  PLAYBACK_EVENT_COLORS[e.kind],
+                  PLAY3D_EVENT_COLORS[e.kind],
                   e.atMs > windowEndMs && 'opacity-30',
                 )}
                 style={{ left: `${markerPercent(e.atMs, axisMs)}%` }}
@@ -141,7 +141,7 @@ export function PlaybackTransportBar({
           step={100}
           value={Math.min(Math.round(positionMs), Math.round(axisMs))}
           disabled={!scrubbable}
-          aria-label={t('monitoring:playback.seek')}
+          aria-label={t('monitoring:play3d.seek')}
           onChange={(event) => transport.seek(Number(event.target.value))}
           className="accent-primary h-1.5 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
         />

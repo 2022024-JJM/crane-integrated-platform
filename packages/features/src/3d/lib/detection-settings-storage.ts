@@ -17,19 +17,19 @@ export const DETECTION_SETTINGS_STORAGE_KEY = 'crane:detection-settings';
 export interface DetectionSettings {
   /** 충돌 감지 on/off. */
   collisionEnabled: boolean;
-  /** 충돌 시 정지(시뮬레이션·플레이백만 — 실시간은 정지하지 않는다). */
+  /** 충돌 시 정지(시뮬레이션·3D 플레이만 — 실시간은 정지하지 않는다). */
   pauseOnCollision: boolean;
   /** 영역 침범 감지 on/off. */
   zoneEnabled: boolean;
   /** 영역 이름 배지 표시. */
   zoneLabelsVisible: boolean;
-  /** 'stop' 영역 침범 시 정지(시뮬레이션·플레이백만). */
+  /** 'stop' 영역 침범 시 정지(시뮬레이션·3D 플레이만). */
   stopOnIntrusion: boolean;
 }
 
 /**
  * 감지·표시는 ON(관제자가 매번 켜지 않아도 되게), 정지 둘은 OFF(2026-09-18 —
- * 기본으로 재생을 멈추면 시뮬레이션·플레이백이 첫 충돌·침범에서 서 버린다.
+ * 기본으로 재생을 멈추면 시뮬레이션·3D 플레이가 첫 충돌·침범에서 서 버린다.
  * 필요한 사람이 설정 페이지에서 켠다).
  */
 export const DETECTION_SETTINGS_DEFAULTS: DetectionSettings = {

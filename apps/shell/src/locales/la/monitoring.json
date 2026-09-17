@@ -430,8 +430,8 @@
       "connecting": "Coniungitur",
       "closed": "Disiunctum",
       "held": "Suspensum",
-      "playbackPlaying": "Ludens",
-      "playbackPaused": "Pausatum"
+      "play3dPlaying": "Ludens",
+      "play3dPaused": "Pausatum"
     },
     "pausedValue": "Sistitur"
   },
@@ -474,7 +474,7 @@
     "badgeRunning": "Simulatio agitur",
     "badgePaused": "Simulatio sistitur"
   },
-  "playback": {
+  "play3d": {
     "report": "Relatio cursus",
     "source": "Fons",
     "sourceReplay": "Repetitio",

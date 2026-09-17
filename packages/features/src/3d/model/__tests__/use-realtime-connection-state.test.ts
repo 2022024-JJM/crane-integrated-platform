@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { resolveConnectionView } from '../use-realtime-connection-state';
 
 describe('resolveConnectionView', () => {
-  it('플레이백은 활성 소스의 재생 여부만 본다(소켓·보류 무관)', () => {
+  it('3D 플레이는 활성 소스의 재생 여부만 본다(소켓·보류 무관)', () => {
     expect(
-      resolveConnectionView('playback', 'closed', true, false, true),
-    ).toEqual({ state: 'playbackPlaying', tone: 'good' });
-    expect(resolveConnectionView('playback', 'open', false, true)).toEqual({
-      state: 'playbackPaused',
+      resolveConnectionView('play3d', 'closed', true, false, true),
+    ).toEqual({ state: 'play3dPlaying', tone: 'good' });
+    expect(resolveConnectionView('play3d', 'open', false, true)).toEqual({
+      state: 'play3dPaused',
       tone: 'muted',
     });
   });

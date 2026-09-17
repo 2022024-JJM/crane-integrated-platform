@@ -4,9 +4,9 @@ export type AxisKey = 'x' | 'y' | 'z';
  * 모니터링 3D 뷰의 화면 종류 — 값 생산자·감지 러너·조작 UI 가 갈린다.
  * - simulation: 대시보드 3D 미리보기(가상 태그, 정지 상태로 연다)
  * - realtime: 실시간 모니터링(WebSocket 만)
- * - playback: 플레이백 페이지(리플레이 | 시뮬레이션, 소스는 usePlaybackStore)
+ * - play3d: 3D 플레이 페이지(리플레이 | 시뮬레이션, 소스는 usePlay3dStore)
  */
-export type MonitoringViewMode = 'simulation' | 'realtime' | 'playback';
+export type MonitoringViewMode = 'simulation' | 'realtime' | 'play3d';
 
 export type SceneTransformField = 'position' | 'rotation' | 'scale';
 export type SceneTransformMode = 'translate' | 'rotate' | 'scale';
