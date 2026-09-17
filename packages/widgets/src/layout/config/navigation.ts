@@ -27,8 +27,9 @@ import {
   DatabaseZap,
   Boxes,
   Brush,
-  Waves,
   MonitorPlay,
+  RadioTower,
+  Tags,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -128,12 +129,12 @@ function buildWorkGroup(title: string, base: string): NavGroup {
       {
         label: i18n.t('common:nav.realTimeMonitoring'),
         path: `${base}/3d-monitoring`,
-        icon: Box,
+        icon: RadioTower,
       },
       {
         label: i18n.t('common:nav.threeViewerEdit'),
         path: `${base}/3d-viewer-edit`,
-        icon: SquarePen,
+        icon: Box,
       },
       {
         label: i18n.t('common:nav.replayMonitoring'),
@@ -143,7 +144,7 @@ function buildWorkGroup(title: string, base: string): NavGroup {
       {
         label: i18n.t('common:nav.virtualTags'),
         path: `${base}/virtual-tags`,
-        icon: Waves,
+        icon: Tags,
       },
       {
         label: i18n.t('common:nav.craneStatus'),
