@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,7 +22,6 @@ import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
 import { Button } from '@crane/ui/atoms/button';
 import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
-import { SceneDockRailSeparator } from '@crane/ui/organisms/scene-dock';
 import {
   ThreeSceneViewer,
   type SceneController,
@@ -37,19 +37,13 @@ import type { MonitoringViewMode } from '../model/types';
 import { Vector3 } from 'three';
 import { useSceneDock } from '../model/use-scene-dock';
 import { useTagBindingSource } from '../model/use-tag-binding-source';
-import {
-  collisionViewRadius,
-  computeCollisionViewPose,
-  resolveRecordNodes,
-} from '../lib/scene-collision-pairs';
+import { computeCollisionViewPose } from '../lib/scene-collision-pairs';
 import { RigDriver } from './rig-driver';
 import { SceneCollisionAlertOverlay } from './scene-collision-alert-overlay';
 import { SceneCollisionDetector } from './scene-collision-detector';
 import { SceneCollisionHighlight } from './scene-collision-highlight';
-import { SceneCollisionMenu } from './scene-collision-menu';
 import { SceneZoneAlertOverlay } from './scene-zone-alert-overlay';
 import { SceneZoneDetector } from './scene-zone-detector';
-import { SceneZoneMenu } from './scene-zone-menu';
 import { SceneZoneRings } from './scene-zone-rings';
 import { SceneClockMenu } from './scene-clock-menu';
 import { SceneFrameGovernor } from './scene-frame-governor';
@@ -82,12 +76,22 @@ import {
   SceneSimulationBadge,
   SceneSimulationFrame,
 } from './scene-simulation-badge';
-import { SceneSimulationMenu } from './scene-simulation-menu';
-import { SceneSimulationToggle } from './scene-simulation-toggle';
 import { SceneViewBookmarks } from './scene-view-bookmarks';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
+
+/**
+ * 페이지가 씬 카메라를 움직일 수 있게 내주는 동작. 우상단 알람 목록
+ * (features/alarm `AlarmFullscreenOverlay`)의 영역 침범 행 [영역 보기]가
+ * 이걸 부른다 — 알람 슬라이스는 같은 레이어라 이 뷰를 import 하지 못하므로
+ * 페이지가 `actionsRef` 로 받아 콜백으로 넘긴다(2026-09-17, 독 영역 팝업의
+ * 같은 버튼을 알람 목록으로 옮긴 것).
+ */
+export interface Monitoring3dViewActions {
+  /** 영역(`modelId#zoneId`) 중심을 타깃으로 카메라를 옮긴다. */
+  viewZone: (zoneKey: string) => void;
+}
 
 interface Monitoring3dViewProps {
   regionId: string;
@@ -96,7 +100,7 @@ interface Monitoring3dViewProps {
   /**
    * 화면 종류(model/types MonitoringViewMode). 'realtime' 은 WebSocket 만,
    * 'playback' 은 리플레이|시뮬레이션(소스는 usePlaybackStore, 재생 조작은
-   * PlaybackView 의 하단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
+   * PlaybackView 의 상단 트랜스포트 바), 'simulation' 은 대시보드 미리보기.
    */
   mode?: MonitoringViewMode;
   /**
@@ -130,13 +134,15 @@ interface Monitoring3dViewProps {
   /**
    * 조작 UI 배치. 'top-right'(기본)는 우측 상단 툴바(대시보드 미리보기 등
    * 작은 뷰). 'dock' 은 hover 펼침·고정 가능한 우측 독 레일 — 위에서부터
-   * 카메라 버튼(원래위치·탑뷰·저장한 뷰·확대·축소·전체화면), 씬 감지
-   * (시뮬레이션 재생·충돌·영역), 구분선 아래 화면 표시(toolbarExtras 로 받은
-   * 페이지 버튼·미니맵·현장 시각). 독은 전체화면 루트 안이라 전체화면에서도
-   * 같은 구성이 유지된다 (실시간 모니터링 화면).
-   * 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
+   * 카메라 버튼(원래위치·탑뷰·저장한 뷰·확대·축소·전체화면), 그 아래 화면
+   * 표시(toolbarExtras 로 받은 페이지 버튼·미니맵·현장 시각). 충돌·영역
+   * 감지 팝업은 2026-09-17 에 감지 설정 페이지로 옮겨 독에서 뺐다. 독은
+   * 전체화면 루트 안이라 전체화면에서도 같은 구성이 유지된다 (실시간 모니터링
+   * 화면). 'none' 은 조작 UI 없이 씬만 보여준다 (대시보드 미리보기 모달).
    */
   toolbarLayout?: 'top-right' | 'dock' | 'none';
+  /** 페이지가 씬 카메라 동작(영역 보기)을 받을 ref — `Monitoring3dViewActions`. */
+  actionsRef?: RefObject<Monitoring3dViewActions | null>;
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
@@ -156,6 +162,7 @@ export function Monitoring3dView({
   overlayExtras,
   canvasDpr,
   toolbarLayout = 'top-right',
+  actionsRef,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
   const isDock = toolbarLayout === 'dock';
@@ -256,22 +263,10 @@ export function Monitoring3dView({
     [],
   );
 
-  // "충돌 지점 보기" — 접촉점을 타깃으로, 현재 시선 방향을 유지한 채 두 노드가
-  // 들어오는 거리로 물러난다(수치 계산은 lib/scene-collision-pairs).
-  const handleViewCollision = useCallback(() => {
-    const { history, activeRecordId } = useSceneCollisionStore.getState();
-    const record = history.find((r) => r.id === activeRecordId);
-    if (!record) return;
-    const pose = computeCollisionViewPose(
-      record.contactPoint,
-      collisionViewRadius(resolveRecordNodes([record.a, record.b])),
-      sceneControllerRef.current?.getPose() ?? null,
-    );
-    sceneControllerRef.current?.moveTo(pose.position, pose.target);
-  }, []);
-
-  // "영역 보기" — 영역 중심을 타깃으로 반경만큼 물러난다(충돌 지점 보기와 같은
-  // 수식). 영역 중심은 소유 모델 루트 월드 위치 + 오프셋(zoneCenterWorld).
+  // "영역 보기" — 영역 중심을 타깃으로, 현재 시선 방향을 유지한 채 반경만큼
+  // 물러난다(수치 계산은 lib/scene-collision-pairs). 영역 중심은 소유 모델
+  // 루트 월드 위치 + 오프셋(zoneCenterWorld). 우상단 알람 목록의 영역 침범
+  // 행이 `actionsRef.viewZone` 으로 부른다.
   const handleViewZone = useCallback((key: string) => {
     const info = useSceneInfoStoreRef.current;
     const [modelId, zoneId] = key.split('#');
@@ -291,6 +286,14 @@ export function Monitoring3dView({
     );
     sceneControllerRef.current?.moveTo(pose.position, pose.target);
   }, []);
+
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = { viewZone: handleViewZone };
+    return () => {
+      actionsRef.current = null;
+    };
+  }, [actionsRef, handleViewZone]);
 
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
@@ -432,30 +435,11 @@ export function Monitoring3dView({
         fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
         toolbarExtras={
           isDock ? (
-            // 독 레일에서 카메라 묶음 아래 구성(실시간 모니터링 화면 공통).
-            // 먼저 씬 감지(재생·충돌·영역), 구분선 아래에 화면 표시 계열 —
-            // 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·현장 시각을 모아
-            // 맨 아래에 둔다. 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
+            // 독 레일에서 카메라 묶음 아래 구성(실시간·플레이백 공통) — 화면
+            // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
+            // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
+            // (2026-09-17). 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
             <>
-              {/* 독 ▶·시계 팝업은 시뮬레이션 화면(미리보기)만 — 플레이백은 하단
-                  트랜스포트 바가, 실시간은 아무것도 재생하지 않는다. */}
-              {mode === 'simulation' ? (
-                <>
-                  <SceneSimulationToggle />
-                  {/* 종료 = 처음 화면: 자세는 스토어가, 카메라·포커스는 여기서. */}
-                  <SceneSimulationMenu onStop={handleStopSimulation} />
-                </>
-              ) : null}
-              <SceneCollisionMenu
-                runner={collisionRunner}
-                onViewCollision={handleViewCollision}
-              />
-              {/* 영역 침범 — 충돌과 별도 스토어·의미라 아이콘도 따로 둔다. */}
-              <SceneZoneMenu
-                onViewZone={handleViewZone}
-                stopControls={mode !== 'realtime'}
-              />
-              <SceneDockRailSeparator />
               {toolbarExtras}
               {showControlRoomWidgets ? <SceneMinimapToggle /> : null}
               {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)

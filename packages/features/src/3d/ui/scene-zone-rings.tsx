@@ -46,7 +46,7 @@ import { useSceneZoneStore } from '../model/use-scene-zone-store';
  * - key 는 zoneKey(영역 id) — 중심값으로 key 를 만들면 매 틱 리마운트된다
  *   (골리앗 가드 문서의 실측 결함).
  *
- * 이름 배지는 `useSceneZoneStore.labelsVisible`(충돌 탭 토글)로 따로 끈다 —
+ * 이름 배지는 `useSceneZoneStore.labelsVisible`(감지 설정 페이지 토글)로 따로 끈다 —
  * 링·감지는 그대로 돌고 배지만 사라진다(영역이 많은 야드에서 화면을 덮는다).
  *
  * 제외(`zoneExempt`) 모델의 영역은 아예 그리지 않는다 — 감지에 쓰이지 않고
@@ -189,7 +189,7 @@ function ZoneRing({
       </group>
       {/* 링 +X 가장자리의 이름 배지. 라벨 [5,0]·충돌 표지 [6,0] 아래.
           침범 중엔 배지 우상단에 빨간 점·흰 숫자(이 영역의 침범자 수).
-          충돌 탭의 "영역 이름 표시" 가 꺼지면 통째로 언마운트한다 — Html 은
+          감지 설정의 "영역 이름 표시" 가 꺼지면 통째로 언마운트한다 — Html 은
           매 프레임 화면 좌표를 계산하므로 숨기기보다 빼는 쪽이 싸다. */}
       {showLabel ? (
         <Html center position={[1, 0, 0]} zIndexRange={[4, 0]}>

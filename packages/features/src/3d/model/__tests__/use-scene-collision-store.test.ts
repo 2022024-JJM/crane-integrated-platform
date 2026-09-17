@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DETECTION_SETTINGS_STORAGE_KEY } from '../../lib/detection-settings-storage';
 import { FLASH_MS, HISTORY_MAX } from '../../lib/scene-collision-pairs';
 import { rigValueStore } from '../rig-value-store';
 import { sceneCollisionRuntime } from '../scene-collision-runtime';
@@ -40,6 +41,7 @@ function reset(enabled = true) {
 let runtimePhase: 'idle' | 'halted' | 'scanning' = 'halted';
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.useFakeTimers();
   reset();
   runtimePhase = 'halted';
@@ -320,5 +322,40 @@ describe('baselinePending', () => {
     useSceneCollisionStore.getState().setBaselinePending(true);
     useSceneCollisionStore.getState().clear();
     expect(useSceneCollisionStore.getState().baselinePending).toBe(true);
+  });
+});
+
+describe('영속화(crane:detection-settings)', () => {
+  const stored = () =>
+    JSON.parse(window.localStorage.getItem(DETECTION_SETTINGS_STORAGE_KEY)!);
+
+  it('setEnabled·setPauseOnCollision 이 자기 필드만 기록한다', () => {
+    useSceneCollisionStore.getState().setEnabled(false);
+    expect(stored()).toMatchObject({
+      collisionEnabled: false,
+      pauseOnCollision: true,
+      zoneEnabled: true,
+    });
+    useSceneCollisionStore.getState().setPauseOnCollision(false);
+    expect(stored()).toMatchObject({
+      collisionEnabled: false,
+      pauseOnCollision: false,
+    });
+  });
+
+  it('같은 값 재설정은 기록하지 않는다', () => {
+    useSceneCollisionStore.getState().setEnabled(true);
+    useSceneCollisionStore.getState().setPauseOnCollision(true);
+    expect(window.localStorage.getItem(DETECTION_SETTINGS_STORAGE_KEY)).toBe(
+      null,
+    );
+  });
+
+  it('clear·clearHistory 는 설정을 기록하지 않는다', () => {
+    useSceneCollisionStore.getState().clearHistory();
+    useSceneCollisionStore.getState().clear();
+    expect(window.localStorage.getItem(DETECTION_SETTINGS_STORAGE_KEY)).toBe(
+      null,
+    );
   });
 });

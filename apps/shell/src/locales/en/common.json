@@ -103,7 +103,8 @@
     "indoorshopYard": "Yard Status",
     "indoorshopReference": "Reference",
     "indoorshopDocs": "Documents",
-    "virtualTags": "Virtual Tags"
+    "virtualTags": "Virtual Tags",
+    "settings": "Settings"
   },
   "phillyDashboard": {
     "subtitle": "Quick access to MRO management menu.",
@@ -306,10 +307,6 @@
     "dockExpand": "Expand",
     "dockCollapse": "Collapse",
     "dockTools": "View controls",
-    "simulationPlay": "Run simulation",
-    "simulationPause": "Stop simulation",
-    "collisionMenu": "Collision detection",
-    "zoneMenu": "Zone intrusion",
     "clockMenu": "Site time · Day/Night",
     "warmup": {
       "bvh": "Preparing click detection ({{done}}/{{total}})",
@@ -322,8 +319,7 @@
     "minimapHide": "Hide minimap",
     "minimapRefresh": "Refresh minimap",
     "minimapHint": "Press or drag to move the camera",
-    "minimapMove": "Drag to move the minimap",
-    "simulationMenu": "Simulation clock"
+    "minimapMove": "Drag to move the minimap"
   },
   "undo": "Undo"
 }

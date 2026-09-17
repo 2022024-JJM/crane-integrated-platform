@@ -1,4 +1,4 @@
-import { Box3, Vector3, type Matrix4, type Object3D } from 'three';
+import { Vector3, type Matrix4, type Object3D } from 'three';
 import { makeMeshId, modelObjectRegistry } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
 
@@ -97,20 +97,6 @@ const VIEW_DISTANCE_RATIO = 2.5;
 
 const _dir = new Vector3();
 const _pos = new Vector3();
-const _box = new Box3();
-const _union = new Box3();
-const _size = new Vector3();
-
-/** 노드들의 월드 AABB 합집합의 바운딩 구 반지름. 비어 있으면 0. */
-export function collisionViewRadius(nodes: readonly Object3D[]): number {
-  _union.makeEmpty();
-  for (const node of nodes) {
-    _box.setFromObject(node);
-    if (!_box.isEmpty()) _union.union(_box);
-  }
-  if (_union.isEmpty()) return 0;
-  return _union.getSize(_size).length() / 2;
-}
 
 /**
  * "충돌 지점 보기" 카메라 포즈 — 접촉점을 타깃으로, 현재 카메라의 시선

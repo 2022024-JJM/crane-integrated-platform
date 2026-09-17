@@ -103,7 +103,8 @@
     "indoorshopYard": "야드 현황",
     "indoorshopReference": "참고",
     "indoorshopDocs": "문서",
-    "virtualTags": "가상 태그"
+    "virtualTags": "가상 태그",
+    "settings": "설정"
   },
   "phillyDashboard": {
     "subtitle": "MRO 관리 메뉴에 빠르게 접근하세요.",
@@ -306,10 +307,6 @@
     "dockExpand": "펼치기",
     "dockCollapse": "접기",
     "dockTools": "화면 조작",
-    "simulationPlay": "시뮬레이션 실행",
-    "simulationPause": "시뮬레이션 정지",
-    "collisionMenu": "충돌 감지",
-    "zoneMenu": "영역 감지",
     "clockMenu": "현장 시각 · 낮/밤",
     "warmup": {
       "bvh": "클릭 판정 준비 중 ({{done}}/{{total}})",
@@ -322,8 +319,7 @@
     "minimapHide": "미니맵 숨기기",
     "minimapRefresh": "미니맵 새로 고침",
     "minimapHint": "누르거나 끌어서 카메라 이동",
-    "minimapMove": "끌어서 미니맵 위치 이동",
-    "simulationMenu": "시뮬레이션 시계"
+    "minimapMove": "끌어서 미니맵 위치 이동"
   },
   "undo": "실행 취소"
 }

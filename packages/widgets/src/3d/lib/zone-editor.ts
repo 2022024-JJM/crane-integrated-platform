@@ -76,7 +76,7 @@ export function nextZoneColor(existing: readonly SavedModelZone[]): string {
 
 /**
  * 새 영역 — 고유 id, 반경(모델 크기 또는 기본값), 미사용 색, 이름. 이름은
- * 호출자(UI)가 번역한 "영역 n" 을 넘긴다 — 저장본에 그대로 남아 충돌 탭·배지
+ * 호출자(UI)가 번역한 "영역 n" 을 넘긴다 — 저장본에 그대로 남아 알람 목록·배지
  * 어디서도 id 가 보이지 않는다. 비우면 빈 이름(배지는 "영역 n" 폴백).
  */
 export function createModelZone(

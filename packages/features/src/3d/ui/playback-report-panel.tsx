@@ -1,18 +1,9 @@
-import { Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  buildCsv,
-  downloadCsv,
-  formatCsvTimestamp,
-  type CsvRow,
-} from '@crane/core/lib/export-csv';
 import { cn } from '@crane/core/lib/utils';
 import { formatReplayTimestamp } from '@crane/domain/monitoring';
-import { Button } from '@crane/ui/atoms/button';
 import {
   formatRatio,
-  formatTagNumber,
   markerSeekLeadMs,
   pairRankingRows,
   timelineAxisMs,
@@ -52,7 +43,7 @@ const RANK_N = 5;
 /**
  * 플레이백 실행 리포트 — 헤더(실행·창) → KPI 카드(누적 스파크라인) → 스윔레인
  * 타임라인(장비 상태·영역 체류·충돌·정지) → 원인 상위 → 장비·영역·태그 표 →
- * 사건 목록(필터·클릭 seek) → CSV. 통계는 usePlaybackStats(version 구독,
+ * 사건 목록(필터·클릭 seek). 통계는 usePlaybackStats(version 구독,
  * 4Hz 이하), 시각화 입력은 lib/playback-stats 파생 함수를 useMemo 로.
  * 레퍼런스: Foxglove State Transitions(타임라인), ISA-18.2 bad actors(원인
  * 상위), MoTeC 채널 리포트(range bar). PASS/FAIL 판정은 두지 않는다(2026-09-16).
@@ -151,80 +142,6 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
     transport.seek(Math.max(0, atMs - lead));
   };
 
-  const exportEvents = () => {
-    const rows: CsvRow[] = stats.events.map((e) => [
-      eventTime(e),
-      Math.round(e.atMs),
-      t(`monitoring:playback.event.${e.kind}`),
-      e.label,
-      e.level ?? '',
-    ]);
-    downloadCsv(
-      `playback-events-${meta.regionId}-${formatCsvTimestamp()}.csv`,
-      buildCsv(
-        [
-          t('monitoring:playback.csv.time'),
-          t('monitoring:playback.csv.sceneMs'),
-          t('monitoring:playback.csv.kind'),
-          t('monitoring:playback.csv.subject'),
-          t('monitoring:playback.csv.level'),
-        ],
-        rows,
-      ),
-    );
-  };
-
-  const exportTables = () => {
-    const rows: CsvRow[] = [];
-    for (const eq of stats.equipment) {
-      const total = eq.totalMs - eq.ms.unknown;
-      rows.push([
-        t('monitoring:playback.csv.sectionEquipment'),
-        eq.name,
-        formatRatio(total > 0 ? eq.ms.running / total : null),
-        formatRatio(total > 0 ? eq.ms.idle / total : null),
-        formatRatio(total > 0 ? eq.ms.offline / total : null),
-        eq.offlineEpisodes,
-      ]);
-    }
-    for (const z of stats.zones.byZone) {
-      rows.push([
-        t('monitoring:playback.csv.sectionZones'),
-        z.zoneName,
-        z.enters,
-        z.stopEnters,
-        Math.round(z.dwellMs / 1000),
-        Math.round(z.maxDwellMs / 1000),
-      ]);
-    }
-    for (const tag of stats.tags) {
-      rows.push([
-        t('monitoring:playback.csv.sectionTags'),
-        tag.key,
-        formatTagNumber(tag.min),
-        formatTagNumber(tag.max),
-        formatTagNumber(tag.mean),
-        formatTagNumber(tag.travel),
-        formatRatio(tag.saturationRatio),
-      ]);
-    }
-    downloadCsv(
-      `playback-summary-${meta.regionId}-${formatCsvTimestamp()}.csv`,
-      buildCsv(
-        [
-          t('monitoring:playback.csv.section'),
-          t('monitoring:playback.csv.name'),
-          'a',
-          'b',
-          'c',
-          'd',
-          'e',
-        ],
-        rows,
-      ),
-    );
-  };
-
   const windowLabel =
     meta.source === 'replay'
       ? [
@@ -242,10 +159,6 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
   );
   const runningRatio = knownTotal > 0 ? runningTotal / knownTotal : null;
   const isReplay = meta.source === 'replay';
-  const hasSummary =
-    stats.equipment.length > 0 ||
-    stats.zones.byZone.length > 0 ||
-    stats.tags.length > 0;
 
   return (
     <div
@@ -277,30 +190,6 @@ export function PlaybackReportPanel({ className }: { className?: string }) {
               ? ` · ${t('monitoring:playback.iteration', { n: stats.loopIteration + 1 })}`
               : null}
           </p>
-        </div>
-        <div className="flex shrink-0 gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={exportEvents}
-            disabled={stats.events.length === 0}
-            title={t('monitoring:playback.exportEvents')}
-          >
-            <Download className="size-3" />
-            {t('monitoring:playback.exportEvents')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            onClick={exportTables}
-            disabled={!hasSummary}
-            title={t('monitoring:playback.exportSummary')}
-          >
-            <Download className="size-3" />
-            {t('monitoring:playback.exportSummary')}
-          </Button>
         </div>
       </div>
       {stats.detectionOffSeen ? (

@@ -37,6 +37,27 @@ const alarmSeverityLabelMap = {
   },
 } as const;
 
+/**
+ * 위험 수준 라벨 — 3D 모니터링 화면의 알람 목록 배지용(2026-09-17). 심각도
+ * 라벨(위험/높음/중간/정보)은 이력·통계 표의 분류 이름이고, 관제 화면에서는
+ * "지금 얼마나 위험한가" 로 읽히는 경고/위험 계열이 낫다.
+ */
+const alarmRiskLevelLabelMap = {
+  ko: { critical: '위험', high: '경고', medium: '주의', info: '정보' },
+  en: { critical: 'Danger', high: 'Warning', medium: 'Caution', info: 'Info' },
+  la: {
+    critical: 'Periculum',
+    high: 'Monitum',
+    medium: 'Cautio',
+    info: 'Notitia',
+  },
+} as const;
+
+function resolveLabelLocale(language: string): 'ko' | 'en' | 'la' {
+  const lower = language.toLowerCase();
+  return lower.startsWith('ko') ? 'ko' : lower.startsWith('la') ? 'la' : 'en';
+}
+
 const alarmSeverityVisualMap = {
   critical: {
     iconClassName: 'text-red-600 dark:text-red-400',
@@ -109,13 +130,14 @@ export function getAlarmSeverityLabel(
   severity: AlarmSeverity,
   language: string,
 ) {
-  const locale = language.toLowerCase().startsWith('ko')
-    ? 'ko'
-    : language.toLowerCase().startsWith('la')
-      ? 'la'
-      : 'en';
+  return alarmSeverityLabelMap[resolveLabelLocale(language)][severity];
+}
 
-  return alarmSeverityLabelMap[locale][severity];
+export function getAlarmRiskLevelLabel(
+  severity: AlarmSeverity,
+  language: string,
+) {
+  return alarmRiskLevelLabelMap[resolveLabelLocale(language)][severity];
 }
 
 export function getAlarmSeverityVisual(severity: AlarmSeverity) {

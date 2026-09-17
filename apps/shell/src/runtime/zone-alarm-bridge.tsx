@@ -72,7 +72,12 @@ export function ZoneAlarmBridge() {
             active: kind === 'enter',
             at: now,
             openedAt: openedAt.get(subject),
-            eventData: { zoneKey: intrusion.zoneKey, intruder: ref.intruderId },
+            // color 는 우상단 알람 목록의 색 점(getZoneAlarmMeta) — 영역 정의 색.
+            eventData: {
+              zoneKey: intrusion.zoneKey,
+              intruder: ref.intruderId,
+              color: intrusion.color,
+            },
           };
           if (kind === 'exit') openedAt.delete(subject);
           store.upsertLocalAlarm(

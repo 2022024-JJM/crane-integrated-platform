@@ -160,6 +160,12 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         path: `${base}/3d-replay`,
         icon: Play,
       },
+      {
+        // 감지 설정 페이지(경로는 detection-settings) — 메뉴는 "설정", 맨 아래.
+        label: i18n.t('common:nav.settings'),
+        path: `${base}/detection-settings`,
+        icon: Settings,
+      },
     ],
   };
 }

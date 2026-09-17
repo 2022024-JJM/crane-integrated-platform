@@ -1,15 +1,21 @@
 import { create } from 'zustand';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import {
+  readDetectionSettings,
+  writeDetectionSettings,
+} from '../lib/detection-settings-storage';
 import { FLASH_MS, HISTORY_MAX } from '../lib/scene-collision-pairs';
 import { rigValueStore } from './rig-value-store';
 import { holdRunners, releaseRunners } from './scene-collision-hold';
 import { sceneCollisionRuntime } from './scene-collision-runtime';
 
 /**
- * 씬 객체 충돌 감지의 React 상태 — 세션 전용(씬 데이터·localStorage 아님).
- * `enabled`·`pauseOnCollision` 은 모니터링(시뮬레이션·실시간)·에디터가 공유한다.
- * 둘 다 기본 ON — 관제자가 매번 켜지 않아도 되게 한다. 세션 전용이라 사용자가
- * 끄면 새로고침 전까지만 OFF 이고, 검사기 언마운트(`clear`)는 되돌리지 않는다.
+ * 씬 객체 충돌 감지의 React 상태. `enabled`·`pauseOnCollision` 은 모니터링
+ * (플레이백·실시간)이 공유하는 설정으로 감지 설정 페이지가 바꾸고 localStorage
+ * `crane:detection-settings`(lib/detection-settings-storage)에 영속된다
+ * (2026-09-17 — 그 전엔 세션 전용이라 새로고침마다 ON 으로 돌아갔다). 둘 다
+ * 기본 ON — 관제자가 매번 켜지 않아도 되게 한다. 기록·활성 상태는 세션
+ * 전용이며 검사기 언마운트(`clear`)는 설정을 되돌리지 않는다.
  *
  * 프레임 루프(scene-collision-runtime)는 여기에 쓰지 않는다. 검사기 훅이
  * 충돌을 받았을 때 기록을 한 번 넣고(`pushRecord`) 정지 모드면 `pin`,
@@ -120,9 +126,11 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
     if (get().activeRecordId !== null) set(INACTIVE);
   };
 
+  const persisted = readDetectionSettings();
+
   return {
-    enabled: true,
-    pauseOnCollision: true,
+    enabled: persisted.collisionEnabled,
+    pauseOnCollision: persisted.pauseOnCollision,
     history: [],
     activeRecordId: null,
     activeMode: null,
@@ -137,11 +145,13 @@ export const useSceneCollisionStore = create<SceneCollisionState>()((
         releaseRunners();
       }
       set(enabled ? { enabled } : { enabled, ...INACTIVE });
+      writeDetectionSettings({ collisionEnabled: enabled });
     },
 
     setPauseOnCollision: (pause) => {
       if (pause === get().pauseOnCollision) return;
       set({ pauseOnCollision: pause });
+      writeDetectionSettings({ pauseOnCollision: pause });
     },
 
     pushRecord: (record) => {

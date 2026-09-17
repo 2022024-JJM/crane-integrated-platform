@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SavedModelInfo, SavedModelZone } from '@crane/domain/3d';
+import { DETECTION_SETTINGS_STORAGE_KEY } from '../../lib/detection-settings-storage';
 import type { ZoneTransition } from '../scene-zone-runtime';
 import { useRealtimeStore } from '../use-realtime-store';
 import { useSceneZoneStore } from '../use-scene-zone-store';
@@ -58,6 +60,7 @@ function zoneEnter(kind: 'enter' | 'exit' = 'enter'): ZoneTransition {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   useSceneZoneStore.setState({
     enabled: true,
     labelsVisible: true,
@@ -325,5 +328,49 @@ describe('정지 등급(level)·hold', () => {
     const state = useSceneZoneStore.getState();
     expect(state.intrusions.every((i) => i.level === 'stop')).toBe(true);
     expect(state.held).not.toBeNull();
+  });
+});
+
+describe('영속화(crane:detection-settings)', () => {
+  const stored = () =>
+    JSON.parse(window.localStorage.getItem(DETECTION_SETTINGS_STORAGE_KEY)!);
+
+  it('setEnabled·setLabelsVisible·setStopOnIntrusion 이 자기 필드만 기록한다', () => {
+    const store = useSceneZoneStore.getState();
+    store.setEnabled(false);
+    expect(stored()).toMatchObject({
+      zoneEnabled: false,
+      zoneLabelsVisible: true,
+      stopOnIntrusion: true,
+      collisionEnabled: true,
+    });
+    store.setLabelsVisible(false);
+    store.setStopOnIntrusion(false);
+    expect(stored()).toMatchObject({
+      zoneEnabled: false,
+      zoneLabelsVisible: false,
+      stopOnIntrusion: false,
+    });
+  });
+
+  it('정지 중에 stopOnIntrusion 을 꺼도(정지 해제 경로) 기록된다', () => {
+    useSceneZoneStore
+      .getState()
+      .applyTransitions([enter(B, { ...ZA, level: 'stop' }, A)]);
+    expect(useSceneZoneStore.getState().held).not.toBeNull();
+    useSceneZoneStore.getState().setStopOnIntrusion(false);
+    expect(useSceneZoneStore.getState().held).toBeNull();
+    expect(stored()).toMatchObject({ stopOnIntrusion: false });
+  });
+
+  it('같은 값 재설정·clear 는 기록하지 않는다', () => {
+    const store = useSceneZoneStore.getState();
+    store.setEnabled(true);
+    store.setLabelsVisible(true);
+    store.setStopOnIntrusion(true);
+    store.clear();
+    expect(window.localStorage.getItem(DETECTION_SETTINGS_STORAGE_KEY)).toBe(
+      null,
+    );
   });
 });

@@ -16,6 +16,7 @@ export { getRuntimeAlarmDictionary } from './api/get-runtime-alarm-dictionary';
 export {
   formatAlarmHistoryMessage,
   getAlarmMessageTranslation,
+  getAlarmRiskLevelLabel,
   getAlarmSeverityLabel,
   getAlarmSeverityVisual,
 } from './lib/alarm-presentation';
@@ -30,3 +31,4 @@ export {
   localAlarmActiveKey,
   type LocalAlarmInput,
 } from './lib/local-alarm';
+export { getZoneAlarmMeta, type ZoneAlarmMeta } from './lib/zone-alarm-meta';

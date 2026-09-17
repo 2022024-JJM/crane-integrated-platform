@@ -196,28 +196,6 @@
     "snapRotation": "Rotate",
     "snapScale": "Scale",
     "grid": "Ground grid",
-    "collision": {
-      "enable": "Collision detection",
-      "pauseOnCollision": "Pause on collision",
-      "pauseHint": "Detection runs only while the simulation is playing.\nWhen pause on collision is off, the simulation keeps running and only the record is kept.",
-      "history": "Collision history",
-      "historyLimit": "({{current}}/{{max}})",
-      "empty": "No collisions recorded yet.",
-      "clearHistory": "Clear history",
-      "viewContact": "View contact",
-      "deselect": "Deselect",
-      "selectedHint": "Click a record to pause the simulation and return to that pose."
-    },
-    "zones": {
-      "enable": "Zone detection",
-      "labels": "Show zone labels",
-      "current": "Currently inside",
-      "none": "No intrusions",
-      "stopOnIntrusion": "Pause on stop-zone intrusion",
-      "stopHint": "Entering a zone with level 'Stop' pauses simulation and playback. After resuming, that intrusion will not pause again until it exits. Realtime monitoring never pauses.",
-      "paused": "Paused by zone intrusion — continue with ▶ or Resume",
-      "resume": "Resume"
-    },
     "duplicateSelected": "Duplicate selected",
     "addText": "Add Text",
     "textObject": "Text",
@@ -273,13 +251,7 @@
     "paletteTabs": {
       "models": "Models",
       "map": "Map",
-      "background": "Background",
-      "simulation": "Simulation",
-      "zones": "Zones"
-    },
-    "simulationSections": {
-      "tags": "Tags",
-      "collision": "Collision"
+      "background": "Background"
     },
     "environmentNone": "No background",
     "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
@@ -304,17 +276,24 @@
     "collapseNodes": "Collapse nodes",
     "jointNode": "Joint node",
     "virtualTags": {
-      "paletteTab": "Tags",
-      "play": "Play simulation",
-      "pause": "Pause simulation",
-      "playing": "Playing",
-      "paused": "Paused",
-      "resetValues": "Reset values",
-      "manage": "Manage all",
-      "sceneTags": "Tags referenced by this scene",
-      "noSceneTags": "This scene has no tag mappings. Add one in the inspector Tag Mapping tab.",
-      "unregistered": "unregistered",
-      "hint": "While playing, virtual tag values drive models through the mappings."
+      "unregistered": "unregistered"
+    }
+  },
+  "detectionSettings": {
+    "title": "Settings",
+    "subtitle": "Configure collision detection and zone intrusion detection in one place. Applies to realtime monitoring, playback and scene editing.",
+    "collision": {
+      "title": "Collision detection",
+      "enable": "Collision detection",
+      "pauseOnCollision": "Pause on collision",
+      "pauseHint": "Pause on collision applies only to simulation and playback. When off, only the record is kept.\nRealtime monitoring never pauses."
+    },
+    "zones": {
+      "title": "Zone detection",
+      "enable": "Zone detection",
+      "labels": "Show zone labels",
+      "stopOnIntrusion": "Pause on stop-zone intrusion",
+      "stopHint": "Entering a zone with level 'Stop' pauses simulation and playback. After resuming, that intrusion will not pause again until it exits.\nRealtime monitoring never pauses."
     }
   },
   "craneList": {
@@ -527,8 +506,6 @@
     "equipment": "Equipment",
     "zones": "Zones",
     "tags": "Tags",
-    "exportEvents": "Events CSV",
-    "exportSummary": "Summary CSV",
     "event": {
       "collision": "Collision",
       "zoneEnter": "Zone enter",
@@ -559,18 +536,6 @@
       "mean": "Mean",
       "travel": "Travel",
       "saturation": "Limit saturation"
-    },
-    "csv": {
-      "time": "Time",
-      "sceneMs": "Scene ms",
-      "kind": "Kind",
-      "subject": "Subject",
-      "level": "Level",
-      "section": "Section",
-      "name": "Name",
-      "sectionEquipment": "Equipment",
-      "sectionZones": "Zones",
-      "sectionTags": "Tags"
     },
     "timeline": {
       "title": "Timeline",

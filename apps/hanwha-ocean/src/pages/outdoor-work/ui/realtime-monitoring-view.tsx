@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlarmCriticalBanner,
@@ -12,6 +12,7 @@ import {
   Monitoring3dView,
   useCraneIdFromFocusedModel,
   useObjectFocusStore,
+  type Monitoring3dViewActions,
 } from '@crane/features/3d';
 import { Spinner } from '@crane/ui/atoms/spinner';
 import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
@@ -29,6 +30,12 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const handleAlarmOverlayClose = useCallback(() => {
     setAlarmOverlayVisible(false);
   }, [setAlarmOverlayVisible]);
+  // 알람 목록의 영역 침범 행 [영역 보기] → 3D 뷰 카메라(features/alarm 과
+  // features/3d 는 같은 레이어라 페이지가 잇는다).
+  const sceneActionsRef = useRef<Monitoring3dViewActions | null>(null);
+  const handleViewZone = useCallback((zoneKey: string) => {
+    sceneActionsRef.current?.viewZone(zoneKey);
+  }, []);
   const { alarm: criticalBannerAlarm, dismiss: dismissCriticalBanner } =
     useCriticalAlarmBanner(regionId);
   const { craneId, craneName } = useCraneIdFromFocusedModel(regionId);
@@ -59,11 +66,13 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
         fullscreenOverlay={fullscreenCmmsOverlay}
+        actionsRef={sceneActionsRef}
         fullscreenTopRightOverlay={
           <AlarmFullscreenOverlay
             regionId={regionId}
             visible={alarmOverlayVisible}
             onClose={handleAlarmOverlayClose}
+            onViewZone={handleViewZone}
           />
         }
         fullscreenTopCenterOverlay={

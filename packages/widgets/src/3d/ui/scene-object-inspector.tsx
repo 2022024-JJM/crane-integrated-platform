@@ -69,7 +69,6 @@ type InspectorObjectType = 'model' | 'text' | 'map';
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
   display: Eye,
-  // 모니터링 독의 영역 감지 팝업(SceneZoneMenu)과 같은 아이콘.
   zones: Radius,
   tagMapping: Tag,
   rigging: Bone,

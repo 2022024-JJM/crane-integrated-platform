@@ -63,7 +63,7 @@ export function useSceneZoneDetector({
 
   // ▶ 재생 전이(러너 false→true)도 영역 정지의 재개 경로다 — 충돌 검출기와
   // 같은 규칙(scene-collision-hold). resume 은 정지 중이 아니면 no-op 이라
-  // 항상 구독해 둔다. 실시간은 전이가 없어 영역 패널의 재개 버튼이 푼다.
+  // 항상 구독해 둔다. 실시간은 전이가 없지만 정지도 없다(allowHold=false).
   useEffect(
     () =>
       subscribeRunnerResume(runner, () =>

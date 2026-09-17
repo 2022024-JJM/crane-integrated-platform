@@ -182,28 +182,6 @@
     "snapRotation": "Rotatio",
     "snapScale": "Scala",
     "grid": "Crates soli",
-    "collision": {
-      "enable": "Collisionis detectio",
-      "pauseOnCollision": "In collisione siste",
-      "pauseHint": "Detectio tantum dum simulatio currit operatur.\nSi sistere in collisione exstinctum est, simulatio pergit et solum memoria servatur.",
-      "history": "Collisionum memoria",
-      "historyLimit": "({{current}}/{{max}})",
-      "empty": "Nulla collisio adhuc notata.",
-      "clearHistory": "Memoriam dele",
-      "viewContact": "Punctum collisionis vide",
-      "deselect": "Selectionem tolle",
-      "selectedHint": "Memoriam preme ut simulatio sistatur et ad illum habitum redeat."
-    },
-    "zones": {
-      "enable": "Regionum detectio",
-      "labels": "Nomina regionum ostende",
-      "current": "Nunc intus",
-      "none": "Nulla intrusio",
-      "stopOnIntrusion": "Siste in invasione regionis 'Sistere'",
-      "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat. Observatio temporis realis numquam sistit.",
-      "paused": "Sistitur ob invasionem regionis — perge cum ▶ vel Resumere",
-      "resume": "Resumere"
-    },
     "duplicateSelected": "Selectum duplica",
     "addText": "Textum adde",
     "textObject": "Textus",
@@ -259,13 +237,7 @@
     "paletteTabs": {
       "models": "Exempla",
       "map": "Tabula",
-      "background": "Fundus",
-      "simulation": "Simulatio",
-      "zones": "Regiones"
-    },
-    "simulationSections": {
-      "tags": "Tags",
-      "collision": "Collisio"
+      "background": "Fundus"
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
@@ -290,17 +262,24 @@
     "collapseNodes": "Nodos plicare",
     "jointNode": "Nodus iuncturae",
     "virtualTags": {
-      "paletteTab": "Tags",
-      "play": "Simulationem age",
-      "pause": "Simulationem siste",
-      "playing": "Currit",
-      "paused": "Sistit",
-      "resetValues": "Valores restitue",
-      "manage": "Omnia administra",
-      "sceneTags": "Tags quibus haec scaena utitur",
-      "noSceneTags": "Haec scaena designationes tag non habet. In tabula Designatio Tags inspectoris adde.",
-      "unregistered": "non inscriptum",
-      "hint": "Dum currit, valores tags fictorum exemplaria per designationes movent."
+      "unregistered": "non inscriptum"
+    }
+  },
+  "detectionSettings": {
+    "title": "Optiones",
+    "subtitle": "Collisionis et invasionis regionum detectionem uno loco constitue. Ad observationem temporis realis, lusum et scaenae editionem pertinet.",
+    "collision": {
+      "title": "Collisionis detectio",
+      "enable": "Collisionis detectio",
+      "pauseOnCollision": "In collisione siste",
+      "pauseHint": "Sistere in collisione tantum ad simulationem et lusum pertinet. Si exstinctum est, solum memoria servatur.\nObservatio temporis realis numquam sistit."
+    },
+    "zones": {
+      "title": "Regionum detectio",
+      "enable": "Regionum detectio",
+      "labels": "Nomina regionum ostende",
+      "stopOnIntrusion": "Siste in invasione regionis 'Sistere'",
+      "stopHint": "Ingressus in regionem gradus 'Sistere' simulationem et lusum sistit. Post resumptionem, ea invasio non iterum sistet donec exeat.\nObservatio temporis realis numquam sistit."
     }
   },
   "craneList": {
@@ -513,8 +492,6 @@
     "equipment": "Machinae",
     "zones": "Zonae",
     "tags": "Tesserae",
-    "exportEvents": "Eventus CSV",
-    "exportSummary": "Summa CSV",
     "event": {
       "collision": "Collisio",
       "zoneEnter": "Ingressus zonae",
@@ -545,18 +522,6 @@
       "mean": "Medium",
       "travel": "Motus",
       "saturation": "Saturatio limitis"
-    },
-    "csv": {
-      "time": "Tempus",
-      "sceneMs": "Scaena ms",
-      "kind": "Genus",
-      "subject": "Res",
-      "level": "Gradus",
-      "section": "Sectio",
-      "name": "Nomen",
-      "sectionEquipment": "Machinae",
-      "sectionZones": "Zonae",
-      "sectionTags": "Tesserae"
     },
     "timeline": {
       "title": "Linea temporis",

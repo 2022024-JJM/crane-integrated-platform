@@ -58,8 +58,8 @@ export function releaseRunners(): void {
 /**
  * ▶ 재생 전이(false→true) 구독 — 충돌 pinned·영역 정지의 재개 경로. 시뮬레이션은
  * 가상 태그 러너, 플레이백은 두 러너 모두(활성 소스만 켜질 수 있다), 실시간은
- * 러너 재생 전이가 없어(진입~이탈 내내 true) 구독하지 않는다 — 실시간의 재개는
- * 기록 행 재클릭·영역 패널 재개 버튼이다.
+ * 러너 재생 전이가 없어(진입~이탈 내내 true) 구독하지 않는다 — 실시간은
+ * 자동 정지 자체가 없다(2026-09-16).
  */
 export function subscribeRunnerResume(
   runner: SceneCollisionRunner,

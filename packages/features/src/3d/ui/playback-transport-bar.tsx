@@ -37,10 +37,6 @@ import {
   usePlaybackTransport,
 } from '../model/playback-transport';
 import { useRigLivePoll } from '../model/rig-live-readouts';
-import {
-  usePlaybackStore,
-  type PlaybackSource,
-} from '../model/use-playback-store';
 import { usePlaybackStatsStore } from '../model/use-playback-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
 import { ReplaySearchForm } from './replay-search-form';
@@ -49,13 +45,14 @@ import { SceneSimulationPanel } from './scene-simulation-panel';
 const JUMP_MS = 5_000;
 
 /**
- * 플레이백 하단 트랜스포트 바 — 소스 선택(리플레이|시뮬레이션), ▶/⏸·이동,
- * 사건 마커 띠가 얹힌 스크럽, 배속, 위치/길이, 소스별 슬롯(리플레이=구간 검색
- * 팝오버, 시뮬레이션=시계 패널 팝오버). 두 소스의 차이는 트랜스포트 어댑터
- * (playback-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
+ * 플레이백 상단 트랜스포트 바 — ▶/⏸·이동, 사건 마커 띠가 얹힌 스크럽, 배속,
+ * 위치/길이, 소스별 슬롯(리플레이=구간 검색 팝오버, 시뮬레이션=시계 패널
+ * 팝오버). 소스 선택은 위의 탭(PlaybackSourceTabs)이 한다. 두 소스의 차이는
+ * 트랜스포트 어댑터(playback-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
  *
- * 캔버스 아래 별도 행이라 HUD·좌상단 열·미니맵과 겹치지 않는다(옛 상단
- * 리플레이 바는 그 셋을 덮었다). 위치는 폴링으로 읽는다(200ms).
+ * 캔버스 위 별도 행(오버레이가 아님)이라 HUD·좌상단 열과 겹치지 않는다(옛
+ * 리플레이 바는 캔버스 오버레이라 그 둘을 덮었다). 위치는 폴링으로 읽는다
+ * (200ms).
  */
 export function PlaybackTransportBar({
   search,
@@ -68,7 +65,6 @@ export function PlaybackTransportBar({
   const { t } = useTranslation();
   useRigLivePoll(200);
   const transport = usePlaybackTransport();
-  const setSource = usePlaybackStore((s) => s.setSource);
   const version = usePlaybackStatsStore((s) => s.version);
   const events = usePlaybackStatsStore((s) => s.data.events);
   const windowEndMs = usePlaybackStatsStore((s) => s.data.windowEndMs);
@@ -110,7 +106,7 @@ export function PlaybackTransportBar({
     <div
       data-slot="playback-transport-bar"
       className={cn(
-        'bg-background/95 border-border/60 flex shrink-0 flex-col gap-1.5 border-t px-3 py-2 backdrop-blur-sm',
+        'bg-background/95 border-border/60 flex shrink-0 flex-col gap-1.5 border-b px-3 py-2 backdrop-blur-sm',
         className,
       )}
     >
@@ -152,29 +148,6 @@ export function PlaybackTransportBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {/* 소스 */}
-        <ToggleGroup
-          value={[source]}
-          onValueChange={(next) => {
-            const choice = next[0] as PlaybackSource | undefined;
-            if (choice === 'replay' || choice === 'simulation') {
-              setSource(choice);
-            }
-          }}
-          variant="outline"
-          size="sm"
-          aria-label={t('monitoring:playback.source')}
-        >
-          <ToggleGroupItem value="replay" className="h-7 px-2 text-[11px]">
-            {t('monitoring:playback.sourceReplay')}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="simulation" className="h-7 px-2 text-[11px]">
-            {t('monitoring:playback.sourceSimulation')}
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        <div className="bg-border mx-1 h-5 w-px" />
-
         {/* 소스별 슬롯 */}
         {source === 'replay' && search ? (
           <Popover>
@@ -193,7 +166,7 @@ export function PlaybackTransportBar({
                 </Button>
               }
             />
-            <PopoverPopup align="start" side="top" className="w-72 p-3">
+            <PopoverPopup align="start" side="bottom" className="w-72 p-3">
               <ReplaySearchForm
                 bare
                 draftFrom={search.draftFrom}
@@ -227,7 +200,7 @@ export function PlaybackTransportBar({
                 </Button>
               }
             />
-            <PopoverPopup align="start" side="top" className="w-72 p-3">
+            <PopoverPopup align="start" side="bottom" className="w-72 p-3">
               <SceneSimulationPanel />
             </PopoverPopup>
           </Popover>

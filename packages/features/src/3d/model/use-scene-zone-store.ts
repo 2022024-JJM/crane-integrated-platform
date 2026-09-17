@@ -1,11 +1,18 @@
 import { create } from 'zustand';
 import type { SavedModelZoneLevel } from '@crane/domain/3d';
+import {
+  readDetectionSettings,
+  writeDetectionSettings,
+} from '../lib/detection-settings-storage';
 import { holdRunners, releaseRunners } from './scene-collision-hold';
 import type { ZoneTransition } from './scene-zone-runtime';
 
 /**
- * 모델 영역 침범 감지의 React 상태 — 세션 전용(씬 데이터·localStorage 아님).
- * 충돌 스토어(use-scene-collision-store)와 같은 자리(충돌 탭)에 UI 가 놓이지만
+ * 모델 영역 침범 감지의 React 상태. 설정 세 값(`enabled`·`labelsVisible`·
+ * `stopOnIntrusion`)은 감지 설정 페이지가 바꾸고 localStorage
+ * `crane:detection-settings`(lib/detection-settings-storage)에 영속된다
+ * (2026-09-17 — 그 전엔 세션 전용). 침범 목록·정지·승인은 세션 전용이다.
+ * 충돌 스토어(use-scene-collision-store)와 같은 페이지에 설정이 놓이지만
  * 의미가 달라 합치지 않는다 — 영역은 **상태**(지금 누가 안에 있나)일 뿐이고
  * 정지·자세 복원·기록이 없다(진입 기록은 2026-09-12 에 뺐다 — 현재 목록과
  * 링만으로 충분하고 편집 드래그가 기록을 오염시켰다).
@@ -20,7 +27,7 @@ import type { ZoneTransition } from './scene-zone-runtime';
  * 등급(2026-09-12): 영역마다 `level`(warn 기본 / stop). 'stop' 영역에 들어오면
  * `stopOnIntrusion`(세션, 기본 ON)일 때 충돌 시 정지와 같은 경로로 값 생산자를
  * 멈춘다(`holdRunners` — 시뮬레이션 pause, 실시간 화면 반영 보류). 멈춘 쌍은
- * `held` 에 하나만 두고, 재개(`resume` — 경보 배너 [이어서 재생]·독 ▶)하면
+ * `held` 에 하나만 두고, 재개(`resume` — 러너 ▶ 전이)하면
  * `acknowledged` 에 넣어 그 쌍이 **이탈하기 전까지** 다시 멈추지 않는다 —
  * 그렇지 않으면 재생하자마자 같은 침범으로 또 멈춰 영영 못 나간다.
  * 침범 중인 상태 자체(링·목록·경보)는 acknowledged 여도 그대로다.
@@ -175,11 +182,13 @@ function remove(
   return next;
 }
 
+const persisted = readDetectionSettings();
+
 export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
-  enabled: true,
-  labelsVisible: true,
+  enabled: persisted.zoneEnabled,
+  labelsVisible: persisted.zoneLabelsVisible,
   intrusions: [],
-  stopOnIntrusion: true,
+  stopOnIntrusion: persisted.stopOnIntrusion,
   held: null,
   acknowledged: [],
 
@@ -190,16 +199,17 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
     if (enabled === state.enabled) return;
     if (enabled) {
       set({ enabled });
-      return;
+    } else {
+      // 끄면 침범 목록·정지·승인을 전부 비운다 — 정지 중이었으면 풀어 준다.
+      if (state.held) releaseRunners();
+      set({
+        enabled,
+        intrusions: state.intrusions.length === 0 ? state.intrusions : [],
+        held: null,
+        acknowledged: state.acknowledged.length === 0 ? state.acknowledged : [],
+      });
     }
-    // 끄면 침범 목록·정지·승인을 전부 비운다 — 정지 중이었으면 풀어 준다.
-    if (state.held) releaseRunners();
-    set({
-      enabled,
-      intrusions: state.intrusions.length === 0 ? state.intrusions : [],
-      held: null,
-      acknowledged: state.acknowledged.length === 0 ? state.acknowledged : [],
-    });
+    writeDetectionSettings({ zoneEnabled: enabled });
   },
 
   setStopOnIntrusion: (stop) => {
@@ -209,9 +219,10 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
     if (!stop && state.held) {
       releaseRunners();
       set({ stopOnIntrusion: stop, held: null });
-      return;
+    } else {
+      set({ stopOnIntrusion: stop });
     }
-    set({ stopOnIntrusion: stop });
+    writeDetectionSettings({ stopOnIntrusion: stop });
   },
 
   resume: () => {
@@ -230,6 +241,7 @@ export const useSceneZoneStore = create<SceneZoneState>()((set, get) => ({
   setLabelsVisible: (visible) => {
     if (visible === get().labelsVisible) return;
     set({ labelsVisible: visible });
+    writeDetectionSettings({ zoneLabelsVisible: visible });
   },
 
   applyTransitions: (transitions, allowHold = true) => {

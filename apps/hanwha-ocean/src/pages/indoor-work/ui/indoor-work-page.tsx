@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SceneObjectsEditPage } from '@crane/widgets/scene-editor';
 import { VirtualTagsPage } from '@crane/widgets/virtual-tags';
+import { DetectionSettingsPage } from '@crane/widgets/detection-settings';
 import { useProgressNavigate } from '@crane/core/lib/use-progress-navigate';
 import {
   AlarmHistoryPage,
@@ -76,6 +77,7 @@ export function IndoorWorkPage() {
         <SceneObjectsEditPage regionId={regionId} />
       )}
       {subRoute === 'virtual-tags' && <VirtualTagsPage />}
+      {subRoute === 'detection-settings' && <DetectionSettingsPage />}
       {subRoute === 'crane-status' && (
         <PlaceholderView
           title={

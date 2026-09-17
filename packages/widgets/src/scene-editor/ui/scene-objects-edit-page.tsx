@@ -10,10 +10,7 @@ import {
   getSceneMetersPerUnit,
 } from '@crane/domain/3d';
 import {
-  SceneCollisionPanel,
-  SceneZonePanel,
   SceneWarmupIndicator,
-  useSceneCollisionStore,
   useSceneEditorViewStore,
   useTagBindingSource,
   stopSimulation,
@@ -22,7 +19,6 @@ import {
 import { Images, Search } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
 import { useFullscreen } from '@crane/core/lib/use-fullscreen';
 import { cn } from '@crane/core/lib/utils';
 import { Input } from '@crane/ui/atoms/input';
@@ -43,7 +39,6 @@ import {
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
-  PaletteVirtualTagSection,
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
@@ -139,10 +134,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     (state) => state.setTransformPivot,
   );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
-  // 충돌 감지 on/off 는 팔레트 "시뮬레이션" 탭(충돌 하위 탭)이 조작하는 전역 세션 상태
-  // (useSceneCollisionStore, 모니터링과 공유). 캔버스는 스토어를 직접 구독하지
-  // 않고 prop 으로 받는다(showGrid 와 같은 규칙).
-  const collisionEnabled = useSceneCollisionStore((state) => state.enabled);
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -225,24 +216,16 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     onExemptChange: updateSelectedZoneExempt,
   };
 
-  // 가상 태그 시뮬레이션 — 팔레트 "시뮬레이션" 탭(태그 하위 탭)의 재생 토글이 켠다. 바인딩(버스 →
-  // 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는 동안 항상 켜 둔다.
-  // 일시정지는 러너 틱만 멈춰 노드가 마지막 값에서 그대로 서고, 초기값 복귀는
-  // 탭의 리셋 버튼(virtualTagRuntime.resetValues)이 맡는다. 예전엔 토글에
-  // 바인딩 on/off 를 물려 정지할 때마다 rest 로 튀었다. 화면에 들어올 때와
-  // 떠날 때는 시뮬레이션을 **종료**(시간 0·시나리오 해제·배속 1)해 다른 화면의
-  // 상태를 이어받거나 넘기지 않는다.
+  // 태그 바인딩(버스 → 씬 맵핑 → 값 저장소)은 모니터링 뷰처럼 화면이 떠 있는
+  // 동안 항상 켜 둔다. 에디터에는 시뮬레이션을 켜는 UI 가 없다(팔레트
+  // "시뮬레이션" 탭은 2026-09-17 에 뺐다) — 화면에 들어올 때와 떠날 때
+  // 시뮬레이션을 **종료**(시간 0·시나리오 해제·배속 1)하는 것은 가상 태그
+  // 관리 페이지 ▶ 로 켜진 전역 러너가 여기로 넘어오지 않게 하는 방어다.
   useTagBindingSource(sceneInfo, true);
   useEffect(() => {
     stopSimulation();
     return () => stopSimulation();
   }, []);
-  // 관리 페이지는 편집 화면의 형제 서브라우트(…/virtual-tags).
-  const { pathname } = useLocation();
-  const virtualTagsPath = pathname.replace(
-    /\/3d-viewer-edit(?:\/.*)?$/,
-    '/virtual-tags',
-  );
 
   // 계층 목록의 관절 배지용 — 모델별 관절 노드 경로 집합.
   const jointNodePathsByModel = useMemo(() => {
@@ -471,11 +454,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onLightingChange={setLighting}
                   onLightingInteractionStart={startTransformInteraction}
                   onLightingInteractionEnd={endTransformInteraction}
-                  sceneInfo={sceneInfo}
-                  virtualTagsPath={virtualTagsPath}
-                  onViewCollision={() =>
-                    cameraActionsRef.current?.focusCollision()
-                  }
                 />
               </aside>
             </ResizablePanel>
@@ -565,7 +543,6 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 transformSpace={transformSpace}
                 transformPivot={transformPivot}
                 showGrid={showGrid}
-                collisionEnabled={collisionEnabled}
               />
 
               <EditorSelectionBar
@@ -754,35 +731,18 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 카테고리 목록에는 실제 모델 분류(내업/외업/기타)만 남기고, 맵·배경은
  * 같은 층위의 탭으로 분리한다.
  *
- * 태그(가상 태그 재생)와 충돌(충돌 감지·기록)은 "시뮬레이션" 탭 하나에 묶고
- * 그 아래 둘째 줄 하위 탭으로 나눈다 — 둘 다 시뮬레이션 재생 중에만 의미가
- * 있고, 탭이 6개면 기본 팔레트 폭(14rem)에 들어가지 않아 스크롤이 생기는데
- * 스크롤바로는 뒤쪽 탭이 있는지 알기 어렵다(2026-09-12). 영역 감지는 편집
- * 중에도 도는 상태라 별도 탭.
+ * 시뮬레이션(태그 재생·충돌 기록)과 영역 감지 탭은 2026-09-17 에 뺐다 —
+ * 감지 설정은 사이드바의 감지 설정 페이지가, 영역 정의는 인스펙터 "영역"
+ * 탭이 맡는다. 탭이 6개면 기본 팔레트 폭(14rem)에 들어가지 않으므로 새 탭을
+ * 더할 때는 폭을 먼저 본다.
  */
-const PANEL_TABS = [
-  'models',
-  'map',
-  'background',
-  'simulation',
-  'zones',
-] as const;
+const PANEL_TABS = ['models', 'map', 'background'] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
 const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   models: 'monitoring:editor.paletteTabs.models',
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
-  simulation: 'monitoring:editor.paletteTabs.simulation',
-  zones: 'monitoring:editor.paletteTabs.zones',
-};
-
-const SIMULATION_SECTIONS = ['tags', 'collision'] as const;
-type SimulationSection = (typeof SIMULATION_SECTIONS)[number];
-
-const SIMULATION_SECTION_LABEL_KEY: Record<SimulationSection, string> = {
-  tags: 'monitoring:editor.simulationSections.tags',
-  collision: 'monitoring:editor.simulationSections.collision',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -819,20 +779,11 @@ function ProjectPalettePanel({
   onLightingChange,
   onLightingInteractionStart,
   onLightingInteractionEnd,
-  sceneInfo,
-  virtualTagsPath,
-  onViewCollision,
 }: {
   items: SceneModelCatalogItem[];
   maps: SavedMapInfo[];
   /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
   regionId: string;
-  /** 시뮬레이션 탭(태그 하위 탭) — 이 씬이 참조하는 태그 목록을 뽑는다. */
-  sceneInfo: SavedSceneInfo | null;
-  /** 가상 태그 관리 페이지 경로. */
-  virtualTagsPath: string;
-  /** 시뮬레이션 탭(충돌 하위 탭) — 선택된 기록의 두 노드로 카메라를 맞춘다. */
-  onViewCollision: () => void;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   lighting: SavedLightingInfo | undefined;
@@ -851,8 +802,6 @@ function ProjectPalettePanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
-  const [simulationSection, setSimulationSection] =
-    useState<SimulationSection>('tags');
   const [activeCategory, setActiveCategory] = useState<ModelPanelCategory>(
     DEFAULT_MODEL_CATEGORY,
   );
@@ -875,7 +824,7 @@ function ProjectPalettePanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 탭 헤더 — 모델/맵/배경/시뮬레이션/영역 (언더라인 탭). 가로 스크롤을
+      {/* 탭 헤더 — 모델/맵/배경 (언더라인 탭). 가로 스크롤을
           두지 않는다 — 탭이 남는 폭을 나눠 채우고(flex-auto), 패널을 최소 폭까지
           줄이면 긴 라벨이 말줄임된다. 스크롤바는 뒤쪽 탭의 존재를 알리지 못했다.
           접기/펼치기는 헤더 바 왼쪽 끝의 고정 토글이 맡는다.
@@ -902,34 +851,6 @@ function ProjectPalettePanel({
           );
         })}
       </div>
-      {/* 시뮬레이션 하위 탭 — 태그/충돌. 상단 탭과 같은 언더라인 형식의 둘째
-          줄이며 한 단계 낮은 높이(h-8)·색으로 계층을 드러낸다. */}
-      {activeTab === 'simulation' ? (
-        <div className="border-border bg-muted/30 flex h-8 shrink-0 items-stretch border-b">
-          {SIMULATION_SECTIONS.map((section) => {
-            const isActive = simulationSection === section;
-            return (
-              <button
-                key={section}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => setSimulationSection(section)}
-                className={cn(
-                  'flex h-full min-w-0 flex-auto cursor-pointer items-center justify-center border-b-2 px-2 text-[11px] font-medium transition-colors',
-                  isActive
-                    ? 'border-primary text-foreground'
-                    : 'text-muted-foreground hover:text-foreground border-transparent',
-                )}
-              >
-                <span className="truncate">
-                  {t(SIMULATION_SECTION_LABEL_KEY[section])}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       <div className="min-h-0 flex-1 overflow-hidden p-2">
         {activeTab !== 'models' ? (
           <div className="h-full min-h-0 overflow-y-auto">
@@ -940,20 +861,6 @@ function ProjectPalettePanel({
                 onRemoveMap={onRemoveMap}
                 onToggleLock={onToggleLock}
               />
-            ) : activeTab === 'simulation' ? (
-              simulationSection === 'tags' ? (
-                <PaletteVirtualTagSection
-                  sceneInfo={sceneInfo}
-                  managePath={virtualTagsPath}
-                />
-              ) : (
-                <SceneCollisionPanel
-                  runner="simulation"
-                  onViewCollision={onViewCollision}
-                />
-              )
-            ) : activeTab === 'zones' ? (
-              <SceneZonePanel />
             ) : (
               <PaletteEnvironmentSection
                 regionId={regionId}

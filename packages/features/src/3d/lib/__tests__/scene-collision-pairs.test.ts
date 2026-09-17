@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BoxGeometry, Matrix4, Mesh, MeshBasicMaterial, Object3D } from 'three';
+import { Matrix4 } from 'three';
 import {
-  collisionViewRadius,
   computeCollisionViewPose,
   copyMatrix,
   matrixChanged,
@@ -40,23 +39,6 @@ describe('matrixChanged / copyMatrix', () => {
     m.elements[0] = Number.NaN;
     const snap = copyMatrix(m, new Float64Array(16));
     expect(matrixChanged(snap, m)).toBe(true);
-  });
-});
-
-describe('collisionViewRadius', () => {
-  it('노드들의 월드 박스 합집합 바운딩 구 반지름', () => {
-    const a = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial());
-    const b = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial());
-    b.position.set(2, 0, 0);
-    a.updateMatrixWorld(true);
-    b.updateMatrixWorld(true);
-    // 합집합 x ∈ [-1, 3], y,z ∈ [-1, 1] → 대각선 √(16+4+4)=√24 → 반지름 √6
-    expect(collisionViewRadius([a, b])).toBeCloseTo(Math.sqrt(6));
-  });
-
-  it('빈 배열·지오메트리 없는 노드는 0', () => {
-    expect(collisionViewRadius([])).toBe(0);
-    expect(collisionViewRadius([new Object3D()])).toBe(0);
   });
 });
 

@@ -56,19 +56,15 @@ import {
   SceneObjectBoundary,
   SceneSurfaceCamera,
   RigDriver,
-  SceneCollisionDetector,
   SceneCameraLimits,
-  SceneCollisionHighlight,
   SceneZoneDetector,
   SceneZoneRings,
   ScenePerfHud,
   ScenePerfProbe,
   SceneTerrainLod,
   manualJointSource,
-  resolveRecordNodes,
   rigValueStore,
   useIsObjectSelected,
-  useSceneCollisionStore,
   useSceneObjectSelectionStore,
   useSceneZoneStore,
 } from '@crane/features/3d';
@@ -181,8 +177,6 @@ export interface SceneEditorCameraActions {
   resetView: () => void;
   /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
   topView: () => void;
-  /** 활성 충돌 기록의 두 노드가 화면에 들어오도록 카메라를 맞춘다. 기록이 없으면 no-op. */
-  focusCollision: () => void;
 }
 
 interface SceneObjectsEditCanvasProps {
@@ -235,8 +229,6 @@ interface SceneObjectsEditCanvasProps {
   transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
-  /** 씬 객체 충돌 감지(시뮬레이션 정지·보고) 활성 여부. */
-  collisionEnabled: boolean;
 }
 
 export function SceneObjectsEditCanvas({
@@ -261,7 +253,6 @@ export function SceneObjectsEditCanvas({
   transformSpace,
   transformPivot,
   showGrid,
-  collisionEnabled,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -814,18 +805,11 @@ export function SceneObjectsEditCanvas({
     applyCameraPose(pose);
   }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
 
-  const focusCollision = useCallback(() => {
-    const { history, activeRecordId } = useSceneCollisionStore.getState();
-    const record = history.find((r) => r.id === activeRecordId);
-    if (!record) return;
-    fitToObjects(resolveRecordNodes([record.a, record.b]));
-  }, [fitToObjects]);
-
   useEffect(() => {
     if (cameraActionsRef) {
-      cameraActionsRef.current = { resetView, topView, focusCollision };
+      cameraActionsRef.current = { resetView, topView };
     }
-  }, [cameraActionsRef, focusCollision, resetView, topView]);
+  }, [cameraActionsRef, resetView, topView]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -911,14 +895,10 @@ export function SceneObjectsEditCanvas({
             같은 하늘을 편집 중에도 본다. */}
         <SceneLighting sceneInfo={sceneInfo} regionId={regionId} />
         <RigDriver sceneInfo={sceneInfo} />
-        {/* 드라이버 바로 다음 — useFrame 실행 순서(마운트 순) 때문에 여기. */}
-        <SceneCollisionDetector
-          sceneInfo={sceneInfo}
-          enabled={collisionEnabled}
-          runner="simulation"
-        />
-        <SceneCollisionHighlight />
-        {/* 영역 침범 검출·링 — 검출기 뒤에 링(같은 틱 상태). */}
+        {/* 영역 침범 검출·링 — 드라이버 바로 다음(useFrame 실행 순서 = 마운트
+            순), 검출기 뒤에 링(같은 틱 상태). 충돌 검출기는 두지 않는다 —
+            러너 재생 중에만 스캔하는데 에디터엔 러너를 켤 UI 가 없다
+            (2026-09-17, 팔레트 시뮬레이션 탭 제거). */}
         <SceneZoneDetector sceneInfo={sceneInfo} enabled={zonesEnabled} />
         <SceneZoneRings
           sceneInfo={sceneInfo}

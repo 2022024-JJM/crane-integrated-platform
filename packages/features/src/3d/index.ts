@@ -1,4 +1,7 @@
-export { Monitoring3dView } from './ui/monitoring-3d-view';
+export {
+  Monitoring3dView,
+  type Monitoring3dViewActions,
+} from './ui/monitoring-3d-view';
 export { CollisionGuard, COLLISION_GUARD_COLORS } from './ui/collision-guard';
 export {
   CollisionGuardCameraRig,
@@ -31,6 +34,7 @@ export type { MonitoringViewMode } from './model/types';
 export { PlaybackView } from './ui/playback-view';
 export { PlaybackReportPanel } from './ui/playback-report-panel';
 export { PlaybackTransportBar } from './ui/playback-transport-bar';
+export { PlaybackSourceTabs } from './ui/playback-source-tabs';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';
 export {
@@ -113,7 +117,6 @@ export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
 export { SceneStatusHud } from './ui/scene-status-hud';
 export { SceneSimulationPanel } from './ui/scene-simulation-panel';
 export { formatSimClock } from './lib/sim-clock';
-export { SceneSimulationMenu } from './ui/scene-simulation-menu';
 export { stopSimulation } from './model/stop-simulation';
 export {
   SceneSimulationBadge,
@@ -203,10 +206,6 @@ export { useSceneTransformModeStore } from './model/use-scene-transform-mode-sto
 export { RigDriver } from './ui/rig-driver';
 export { SceneCollisionDetector } from './ui/scene-collision-detector';
 export { SceneCollisionHighlight } from './ui/scene-collision-highlight';
-export { SceneCollisionMenu } from './ui/scene-collision-menu';
-export { SceneCollisionPanel } from './ui/scene-collision-panel';
-export { SceneZoneMenu } from './ui/scene-zone-menu';
-export { SceneZonePanel } from './ui/scene-zone-panel';
 export {
   subscribeRunnerResume,
   type SceneCollisionRunner,
@@ -248,7 +247,6 @@ export {
   type SceneCollisionRuntimePhase,
 } from './model/scene-collision-runtime';
 export {
-  collisionViewRadius,
   computeCollisionViewPose,
   FLASH_MS as SCENE_COLLISION_FLASH_MS,
   HISTORY_MAX as SCENE_COLLISION_HISTORY_MAX,

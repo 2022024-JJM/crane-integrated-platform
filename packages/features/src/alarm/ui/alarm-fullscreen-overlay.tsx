@@ -1,12 +1,12 @@
-import { Bell, X } from 'lucide-react';
+import { Bell, Crosshair, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
-  formatAlarmHistoryMessage,
-  getAlarmSeverityLabel,
+  getAlarmRiskLevelLabel,
   getAlarmSeverityVisual,
+  getZoneAlarmMeta,
   type Alarm,
   type AlarmSeverity,
 } from '@crane/domain/alarm';
@@ -41,6 +41,12 @@ interface AlarmFullscreenOverlayProps {
   regionId: string;
   visible: boolean;
   onClose: () => void;
+  /**
+   * 영역 침범 알람 행의 [영역 보기] — 카메라를 그 영역으로 옮긴다. 페이지가
+   * `Monitoring3dView actionsRef.viewZone` 을 이어 준다(features/3d 는 같은
+   * 레이어라 여기서 import 하지 않는다). 없으면 버튼을 그리지 않는다.
+   */
+  onViewZone?: (zoneKey: string) => void;
 }
 
 const HIGHLIGHT_DURATION_MS = 1500;
@@ -49,8 +55,9 @@ export function AlarmFullscreenOverlay({
   regionId,
   visible,
   onClose,
+  onViewZone,
 }: AlarmFullscreenOverlayProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const language = i18n.language;
 
   const activeAlarms = useRealtimeAlarmStore(useShallow((s) => s.activeAlarms));
@@ -159,6 +166,8 @@ export function AlarmFullscreenOverlay({
               alarm={alarm}
               language={language}
               isNew={highlightedIds.has(alarm.id)}
+              viewZoneLabel={t('monitoring:sceneZone.viewZone')}
+              onViewZone={onViewZone}
             />
           ))}
         </ul>
@@ -171,13 +180,24 @@ interface AlarmOverlayItemProps {
   alarm: Alarm;
   language: string;
   isNew: boolean;
+  viewZoneLabel: string;
+  onViewZone?: (zoneKey: string) => void;
 }
 
-function AlarmOverlayItem({ alarm, language, isNew }: AlarmOverlayItemProps) {
+function AlarmOverlayItem({
+  alarm,
+  language,
+  isNew,
+  viewZoneLabel,
+  onViewZone,
+}: AlarmOverlayItemProps) {
   const visual = getAlarmSeverityVisual(alarm.severity);
-  const severityLabel = getAlarmSeverityLabel(alarm.severity, language);
-  const description = formatAlarmHistoryMessage(alarm, language);
+  // 배지는 심각도 분류명이 아니라 위험 수준(위험/경고/주의/정보)으로 읽힌다.
+  const severityLabel = getAlarmRiskLevelLabel(alarm.severity, language);
   const isUrgent = alarm.severity === 'critical' || alarm.severity === 'high';
+  // 영역 침범 로컬 알람 — 영역 색 점과 [영역 보기](2026-09-17, 독 영역 팝업의
+  // 침범 목록에서 옮겨 온 것). 색은 상태가 아니라 영역 식별자다.
+  const zoneMeta = getZoneAlarmMeta(alarm);
 
   return (
     <li
@@ -197,26 +217,45 @@ function AlarmOverlayItem({ alarm, language, isNew }: AlarmOverlayItemProps) {
           aria-hidden="true"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                visual.surfaceClassName,
-                visual.emphasisClassName,
-                isNew && isUrgent && 'animate-pulse',
-              )}
-            >
-              {severityLabel}
-            </span>
-            <span className="text-muted-foreground text-[10px]">
-              {formatRelativeTime(alarm.timestamp, language)}
-            </span>
-          </div>
-          <p className="mt-1 truncate text-xs font-medium">{alarm.craneName}</p>
-          <p className="text-foreground/75 mt-0.5 line-clamp-2 text-[11px]">
-            {description}
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+              visual.surfaceClassName,
+              visual.emphasisClassName,
+              isNew && isUrgent && 'animate-pulse',
+            )}
+          >
+            {severityLabel}
+          </span>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium">
+            {zoneMeta?.color ? (
+              <span
+                aria-hidden
+                className="inline-block size-2 shrink-0 rounded-full"
+                style={{ background: zoneMeta.color }}
+              />
+            ) : null}
+            <span className="truncate">{alarm.craneName}</span>
+          </p>
+          {/* 알람 설명 대신 발생 시각 — 목록이 좁아 설명은 두 줄로 넘쳤고,
+              같은 내용은 헤더 알람 패널·알람 이력이 보여 준다(2026-09-17). */}
+          <p className="text-muted-foreground mt-0.5 text-[10px]">
+            {formatRelativeTime(alarm.timestamp, language)}
           </p>
         </div>
+        {zoneMeta && onViewZone ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-foreground shrink-0 self-center"
+            aria-label={viewZoneLabel}
+            title={viewZoneLabel}
+            onClick={() => onViewZone(zoneMeta.zoneKey)}
+          >
+            <Crosshair className="size-3.5" />
+          </Button>
+        ) : null}
       </div>
     </li>
   );
