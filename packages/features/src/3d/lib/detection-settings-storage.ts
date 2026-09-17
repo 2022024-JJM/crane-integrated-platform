@@ -27,13 +27,17 @@ export interface DetectionSettings {
   stopOnIntrusion: boolean;
 }
 
-/** 전부 ON — 관제자가 매번 켜지 않아도 되게 한다. */
+/**
+ * 감지·표시는 ON(관제자가 매번 켜지 않아도 되게), 정지 둘은 OFF(2026-09-18 —
+ * 기본으로 재생을 멈추면 시뮬레이션·플레이백이 첫 충돌·침범에서 서 버린다.
+ * 필요한 사람이 설정 페이지에서 켠다).
+ */
 export const DETECTION_SETTINGS_DEFAULTS: DetectionSettings = {
   collisionEnabled: true,
-  pauseOnCollision: true,
+  pauseOnCollision: false,
   zoneEnabled: true,
   zoneLabelsVisible: true,
-  stopOnIntrusion: true,
+  stopOnIntrusion: false,
 };
 
 const FIELDS = Object.keys(

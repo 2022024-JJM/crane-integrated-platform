@@ -25,7 +25,7 @@ import type { ZoneTransition } from './scene-zone-runtime';
  * set 하지 않아 참조가 유지된다.
  *
  * 등급(2026-09-12): 영역마다 `level`(warn 기본 / stop). 'stop' 영역에 들어오면
- * `stopOnIntrusion`(세션, 기본 ON)일 때 충돌 시 정지와 같은 경로로 값 생산자를
+ * `stopOnIntrusion`(영속, 기본 OFF)일 때 충돌 시 정지와 같은 경로로 값 생산자를
  * 멈춘다(`holdRunners` — 시뮬레이션 pause, 실시간 화면 반영 보류). 멈춘 쌍은
  * `held` 에 하나만 두고, 재개(`resume` — 러너 ▶ 전이)하면
  * `acknowledged` 에 넣어 그 쌍이 **이탈하기 전까지** 다시 멈추지 않는다 —
@@ -83,7 +83,7 @@ interface SceneZoneState {
   labelsVisible: boolean;
   /** 침범자가 하나라도 있는 영역만. zoneKey 순 정렬로 안정. */
   intrusions: ZoneIntrusion[];
-  /** 'stop' 등급 영역 침범 시 값 생산자를 멈출지. 세션 전용, 기본 ON. */
+  /** 'stop' 등급 영역 침범 시 값 생산자를 멈출지. 영속, 기본 OFF(2026-09-18). */
   stopOnIntrusion: boolean;
   /** 지금 정지시킨 침범 쌍. null 이면 정지 아님. */
   held: ZoneHold | null;

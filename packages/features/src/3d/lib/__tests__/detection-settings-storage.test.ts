@@ -53,8 +53,15 @@ describe('sanitizeDetectionSettings', () => {
 });
 
 describe('readDetectionSettings', () => {
-  it('저장값이 없으면 기본값', () => {
+  it('저장값이 없으면 기본값 — 감지·표시 ON, 정지 둘은 OFF', () => {
     expect(readDetectionSettings()).toEqual(DETECTION_SETTINGS_DEFAULTS);
+    expect(DETECTION_SETTINGS_DEFAULTS).toEqual({
+      collisionEnabled: true,
+      pauseOnCollision: false,
+      zoneEnabled: true,
+      zoneLabelsVisible: true,
+      stopOnIntrusion: false,
+    });
   });
 
   it('손상된 JSON 이면 기본값', () => {

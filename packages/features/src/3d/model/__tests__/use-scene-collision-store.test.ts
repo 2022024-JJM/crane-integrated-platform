@@ -64,12 +64,13 @@ afterEach(() => {
 });
 
 describe('초기값', () => {
-  it('모듈 초기 상태는 감지 ON·충돌 시 정지 ON·기록 없음이다', () => {
+  it('모듈 초기 상태는 감지 ON·충돌 시 정지 OFF·기록 없음이다', () => {
     // beforeEach 의 reset 이 현재 상태를 덮어쓰므로 zustand 가 보관한
     // 초기 상태를 본다(vi.resetModules 는 three 까지 재평가해 경고를 낸다).
+    // 저장값이 없는 환경이라 lib/detection-settings-storage 의 기본값과 같다.
     expect(useSceneCollisionStore.getInitialState()).toMatchObject({
       enabled: true,
-      pauseOnCollision: true,
+      pauseOnCollision: false,
       history: [],
       activeRecordId: null,
       activeMode: null,
@@ -333,14 +334,17 @@ describe('영속화(crane:detection-settings)', () => {
     useSceneCollisionStore.getState().setEnabled(false);
     expect(stored()).toMatchObject({
       collisionEnabled: false,
-      pauseOnCollision: true,
+      pauseOnCollision: false,
       zoneEnabled: true,
     });
+    // beforeEach 가 상태를 true 로 심어 두므로 false 로 바꾸는 것이 변경이다.
     useSceneCollisionStore.getState().setPauseOnCollision(false);
     expect(stored()).toMatchObject({
       collisionEnabled: false,
       pauseOnCollision: false,
     });
+    useSceneCollisionStore.getState().setPauseOnCollision(true);
+    expect(stored()).toMatchObject({ pauseOnCollision: true });
   });
 
   it('같은 값 재설정은 기록하지 않는다', () => {

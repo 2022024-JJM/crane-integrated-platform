@@ -341,7 +341,7 @@ describe('영속화(crane:detection-settings)', () => {
     expect(stored()).toMatchObject({
       zoneEnabled: false,
       zoneLabelsVisible: true,
-      stopOnIntrusion: true,
+      stopOnIntrusion: false,
       collisionEnabled: true,
     });
     store.setLabelsVisible(false);
