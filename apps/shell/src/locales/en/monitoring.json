@@ -491,7 +491,7 @@
   "playback": {
     "report": "Run report",
     "source": "Source",
-    "sourceReplay": "Recorded replay",
+    "sourceReplay": "Replay",
     "sourceSimulation": "Simulation",
     "seek": "Position",
     "openEnded": "open",

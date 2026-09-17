@@ -491,7 +491,7 @@
   "playback": {
     "report": "실행 리포트",
     "source": "값 소스",
-    "sourceReplay": "기록 리플레이",
+    "sourceReplay": "리플레이",
     "sourceSimulation": "시뮬레이션",
     "seek": "재생 위치",
     "openEnded": "열린 구간",

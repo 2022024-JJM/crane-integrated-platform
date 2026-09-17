@@ -6,7 +6,6 @@ import {
   Map,
   MonitorCheck,
   LayoutGrid,
-  Play,
   SquarePen,
   Activity,
   ArrowUpDown,
@@ -29,6 +28,7 @@ import {
   Boxes,
   Brush,
   Waves,
+  MonitorPlay,
 } from 'lucide-react';
 import { i18n } from '@crane/core/config/i18n';
 import type { NavGroup } from '@crane/core/types/navigation';
@@ -136,6 +136,11 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         icon: SquarePen,
       },
       {
+        label: i18n.t('common:nav.replayMonitoring'),
+        path: `${base}/3d-replay`,
+        icon: MonitorPlay,
+      },
+      {
         label: i18n.t('common:nav.virtualTags'),
         path: `${base}/virtual-tags`,
         icon: Waves,
@@ -154,11 +159,6 @@ function buildWorkGroup(title: string, base: string): NavGroup {
         label: i18n.t('common:nav.alarmHistory'),
         path: `${base}/alarm-history`,
         icon: Bell,
-      },
-      {
-        label: i18n.t('common:nav.replayMonitoring'),
-        path: `${base}/3d-replay`,
-        icon: Play,
       },
       {
         // 감지 설정 페이지(경로는 detection-settings) — 메뉴는 "설정", 맨 아래.
