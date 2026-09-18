@@ -485,13 +485,15 @@
     "scanned": "Inspectum",
     "iteration": "iteratio {{n}}",
     "detectionOff": "Detectio collisionum per partem cursus exstincta erat — numeri collisionum incompleti.",
+    "noTagMappings": "Haec scaena mappationes tesserarum non habet — detectio et relatio non operantur.",
+    "holdsSummary": "sistentiae {{count}} · {{time}}",
     "events": "Eventus",
     "noEvents": "Nulli eventus in hac fenestra.",
     "noData": "Nulla data",
     "seekToEvent": "Ad hoc tempus ire",
     "equipment": "Machinae",
     "zones": "Zonae",
-    "tags": "Tesserae",
+    "tags": "Axes",
     "event": {
       "collision": "Collisio",
       "zoneEnter": "Ingressus zonae",
@@ -504,21 +506,31 @@
     "tile": {
       "collisions": "Collisiones",
       "intrusions": "Intrusiones",
-      "holds": "Sistentiae",
       "running": "Ratio operationis",
       "firstAt": "prima {{time}}",
-      "stopEnters": "gradus sistendi {{count}}",
-      "holdWall": "summa {{time}} (horologium)",
-      "runningOf": "ex {{count}} machinis"
+      "topPair": "plurimum {{pair}} ({{count}})",
+      "stopEnters": "sistendi {{count}}",
+      "dwellTotal": "mora summa {{time}}",
+      "equipmentCount": "{{count}} machinae",
+      "idleRatio": "otiosa {{ratio}}",
+      "offline": "Disiunctiones",
+      "offlineTotal": "summa {{time}}",
+      "saturation": "Saturatio limitis celeritatis",
+      "noSpeedLimit": "limes celeritatis non definitus"
     },
     "col": {
       "equipment": "Machina",
+      "status": "Status",
+      "running": "Operatio %",
       "offlineEpisodes": "Disiunctiones",
+      "zoneDwell": "Mora in zona",
+      "collisions": "Collisiones",
       "zone": "Zona",
       "enters": "Ingressus",
-      "dwell": "Mora summa",
-      "maxDwell": "Mora maxima",
-      "tag": "Tessera",
+      "topIntruder": "Intrusor praecipuus",
+      "dwell": "Mora",
+      "tag": "Axis",
+      "range": "Ambitus",
       "mean": "Medium",
       "travel": "Motus",
       "saturation": "Saturatio limitis"
@@ -526,11 +538,13 @@
     "timeline": {
       "title": "Linea temporis",
       "events": "Eventus",
-      "zoneDwell": "Mora in zona",
-      "unscanned": "lineatum = non inspectum"
+      "zoneDwell": "Mora in zona"
     },
-    "ranking": {
-      "title": "Causae praecipuae"
+    "summary": {
+      "events": "{{count}} eventus",
+      "equipment": "{{count}} machinae · operatio {{ratio}}",
+      "zones": "{{count}} zonae · {{enters}} intrusiones · mora {{time}}",
+      "tags": "{{count}} axes"
     },
     "filter": {
       "all": "Omnia",

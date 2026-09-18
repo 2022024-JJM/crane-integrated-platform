@@ -39,10 +39,7 @@ export const PLAY3D_STATS_POLL_MS = 250;
  */
 const SEEK_JUMP_FACTOR = 6;
 
-function buildMeta(
-  source: Play3dSource,
-  regionId: string,
-): Play3dStatsMeta {
+function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
   const sim = useVirtualTagStore.getState();
   const scenario =
@@ -177,6 +174,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
             kind: 'collision',
             subject: record.pairKey,
             label: `${record.a.equipName || record.a.modelId} ↔ ${record.b.equipName || record.b.modelId}`,
+            modelIds: [record.a.modelId, record.b.modelId],
           });
         }
         bump();
@@ -205,6 +203,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
               level: intrusion.level,
               zoneKey: intrusion.zoneKey,
               zoneName: `${intrusion.ownerName} · ${intrusion.zoneName || intrusion.zoneId}`,
+              ownerId: intrusion.ownerId,
               intruderId: ref.intruderId,
               intruderName: ref.intruderName,
             });

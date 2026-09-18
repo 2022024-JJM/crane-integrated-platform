@@ -1,13 +1,17 @@
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import type { SavedSceneInfo } from '@crane/domain/3d';
+import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
+import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
 import type {
-  CollisionPairStat,
+  EquipmentStat,
   Play3dEventKind,
-  ZoneIntruderRank,
+  TagRangeBar,
 } from './play3d-stats';
 
 /**
- * 3D 플레이 표시 보조 — 마커 색·seek 선행량. ui 파일의 수치 계산 금지 규칙
+ * 3D 플레이 표시 보조 — 마커 색·seek 선행량·위치/비율 환산·타임라인 확대와
+ * 재생 위치 따라가기 판단·태그 행 라벨. ui 파일의 수치 계산 금지 규칙
  * (scene-shadow.ts 선례)에 따라 lib 에 둔다.
  */
 
@@ -22,7 +26,7 @@ export const PLAY3D_EVENT_COLORS: Record<Play3dEventKind, string> = {
   offlineExit: 'bg-zinc-400/40',
 };
 
-/** 타임라인에 그리는 종류 — 이탈·복귀·정지 해제는 표에만 두고 띠는 비운다. */
+/** 트랜스포트 바 마커 띠에 그리는 종류 — 이탈·복귀·정지 해제는 표에만. */
 export const PLAY3D_MARKER_KINDS: readonly Play3dEventKind[] = [
   'collision',
   'zoneEnter',
@@ -48,6 +52,17 @@ export function markerPercent(atMs: number, axisMs: number): number {
   return Math.min(100, Math.max(0, (atMs / axisMs) * 100));
 }
 
+/** 밴드의 축 위 위치·폭(%) — 역방향은 폭 0, 축 밖은 clamp. */
+export function bandPercent(
+  fromMs: number,
+  toMs: number,
+  axisMs: number,
+): { left: number; width: number } {
+  const left = markerPercent(fromMs, axisMs);
+  const right = markerPercent(toMs, axisMs);
+  return { left, width: Math.max(0, right - left) };
+}
+
 /** 타임라인 축 길이 — 시나리오·리플레이 길이, 없으면 지금까지 본 최대 시각. */
 export function timelineAxisMs(
   durationMs: number | null,
@@ -58,13 +73,170 @@ export function timelineAxisMs(
   return Math.max(1_000, positionMs, lastEventMs);
 }
 
+/**
+ * 리포트 타임라인 축 길이 — `timelineAxisMs` 에 더해 위치·마지막 사건이 길이를
+ * 넘으면 그만큼 자란다. 반복 시나리오는 경과가 되감기지 않아(회차 = 경과 ÷
+ * 길이) 길이에 고정하면 첫 회차 뒤의 커서·표식이 전부 축 끝에 쌓인다. 트랜스포트
+ * 바 스크럽은 길이 기준이어야 해서 `timelineAxisMs` 는 그대로 둔다.
+ */
+export function reportAxisMs(
+  durationMs: number | null,
+  positionMs: number,
+  lastEventMs: number,
+): number {
+  const candidates = [
+    timelineAxisMs(durationMs, positionMs, lastEventMs),
+    positionMs,
+    lastEventMs,
+  ].filter((v) => Number.isFinite(v));
+  return candidates.length > 0 ? Math.max(...candidates) : 1_000;
+}
+
+/** 리포트 타임라인이 한 화면(트랙 폭)에 담는 시간. 축이 더 길면 가로로 늘린다. */
+export const TIMELINE_FIT_MS = 5 * 60_000;
+/** 확대된 타임라인의 눈금 간격 — FIT 의 약수라 한 화면의 눈금이 정수 칸이다. */
+export const TIMELINE_TICK_STEP_MS = 60_000;
+/** 확대 배율 상한 — 폭과 눈금 수가 끝없이 커지지 않게 한다. */
+export const TIMELINE_MAX_SCALE = 144;
+/** 타임라인 라벨(장비 이름) 열 폭(rem). */
+export const TIMELINE_LABEL_REM = 6;
+
+/** 트랙 확대 배율 — FIT 이하는 1, 넘으면 축 ÷ FIT(상한 있음). 비정상 값은 1. */
+export function timelineTrackScale(axisMs: number): number {
+  if (!Number.isFinite(axisMs) || axisMs <= TIMELINE_FIT_MS) return 1;
+  return Math.min(TIMELINE_MAX_SCALE, axisMs / TIMELINE_FIT_MS);
+}
+
+/**
+ * 스크롤되는 내용물의 CSS 폭 — 라벨 열은 그대로 두고 트랙만 배율만큼 넓힌다.
+ * 배율 1 이하·비정상은 정확히 `100%`(가로 스크롤바가 생기지 않는다).
+ */
+export function timelineContentWidth(scale: number, labelRem: number): string {
+  if (
+    !Number.isFinite(scale) ||
+    scale <= 1 ||
+    !Number.isFinite(labelRem) ||
+    labelRem < 0
+  ) {
+    return '100%';
+  }
+  return `calc(${labelRem}rem + ${scale} * (100% - ${labelRem}rem))`;
+}
+
+/**
+ * 눈금 시각(ms). FIT 이하는 4등분(0 과 축 끝 포함). 넘으면 눈금 간격의 배수에
+ * 고정해 축이 자라도 눈금이 움직이지 않는다 — 끝 반 칸 안의 배수는 라벨이
+ * 잘려서 빼고, 축 끝과 정확히 같은 배수는 넣는다. 배율 상한을 넘는 축은
+ * 간격을 늘려 개수를 묶는다.
+ */
+export function timelineTickTimes(axisMs: number): number[] {
+  if (!Number.isFinite(axisMs) || axisMs <= 0) return [0];
+  if (axisMs <= TIMELINE_FIT_MS) return timelineTicks(axisMs, 4);
+  const perFit = TIMELINE_FIT_MS / TIMELINE_TICK_STEP_MS;
+  const step = Math.max(
+    TIMELINE_TICK_STEP_MS,
+    axisMs / (TIMELINE_MAX_SCALE * perFit),
+  );
+  const out: number[] = [];
+  for (let i = 0; i * step <= axisMs; i += 1) {
+    const t = i * step;
+    if (t === axisMs || t <= axisMs - step / 2) out.push(t);
+  }
+  return out;
+}
+
+/** 스크롤 컨테이너의 치수와 커서 위치 — ui 가 DOM 에서 읽어 넘긴다. */
+export interface TimelineScrollGeometry {
+  /** 커서 위치(트랙 기준 0~100%). */
+  cursorPercent: number;
+  scrollLeft: number;
+  clientWidth: number;
+  scrollWidth: number;
+  /** sticky 라벨 열 폭(px) — 트랙은 그 오른쪽에서 시작한다. */
+  labelPx: number;
+}
+
+/**
+ * scrollLeft·scrollWidth 는 정수로 반올림된다 — 허용오차가 없으면 프로그램
+ * 스크롤 직후의 scroll 이벤트가 "안 보임"으로 읽어 따라가기가 꺼진다.
+ */
+const TIMELINE_IN_VIEW_TOLERANCE_PX = 1;
+/** 재생 중 페이지를 넘길 때 커서를 보이는 트랙의 이 비율 지점에 둔다. */
+const TIMELINE_FOLLOW_LEAD_RATIO = 0.1;
+
+function resolveTimelineGeometry(g: TimelineScrollGeometry) {
+  const values = [
+    g.cursorPercent,
+    g.scrollLeft,
+    g.clientWidth,
+    g.scrollWidth,
+    g.labelPx,
+  ];
+  if (!values.every((v) => Number.isFinite(v))) return null;
+  const labelPx = Math.max(0, g.labelPx);
+  const visibleTrack = g.clientWidth - labelPx;
+  if (g.scrollWidth <= g.clientWidth || visibleTrack <= 0) return null;
+  const percent = Math.min(100, Math.max(0, g.cursorPercent));
+  return {
+    labelPx,
+    visibleTrack,
+    cursorX: labelPx + (percent * (g.scrollWidth - labelPx)) / 100,
+    left: g.scrollLeft + labelPx,
+    right: g.scrollLeft + g.clientWidth,
+    maxScroll: g.scrollWidth - g.clientWidth,
+  };
+}
+
+/** 커서가 (라벨 열에 가리지 않고) 보이는지. 넘침이 없으면 항상 true. */
+export function timelineCursorInView(g: TimelineScrollGeometry): boolean {
+  const r = resolveTimelineGeometry(g);
+  if (!r) return true;
+  return (
+    r.cursorX >= r.left - TIMELINE_IN_VIEW_TOLERANCE_PX &&
+    r.cursorX <= r.right + TIMELINE_IN_VIEW_TOLERANCE_PX
+  );
+}
+
+/**
+ * 재생 위치 따라가기 — 새 scrollLeft(바꿀 필요 없으면 null)와 그 뒤 커서가
+ * 보이는지. 재생 중에는 보이던 커서가 벗어났을 때만 넘긴다(오른쪽 이탈은 한
+ * 페이지 넘김, 뒤로 점프는 가운데) — 사용자가 직접 스크롤해 둔 위치
+ * (`wasInView` false)는 되돌리지 않는다. 일시정지 중에는 화면 밖이면 가운데로.
+ */
+export function timelineFollowScroll(
+  input: TimelineScrollGeometry & { wasInView: boolean; isPlaying: boolean },
+): { scrollLeft: number | null; inView: boolean } {
+  const r = resolveTimelineGeometry(input);
+  if (!r || timelineCursorInView(input)) {
+    return { scrollLeft: null, inView: true };
+  }
+  if (input.isPlaying && !input.wasInView) {
+    return { scrollLeft: null, inView: false };
+  }
+  const lead =
+    input.isPlaying && r.cursorX > r.right
+      ? r.visibleTrack * TIMELINE_FOLLOW_LEAD_RATIO
+      : r.visibleTrack / 2;
+  const target = r.cursorX - r.labelPx - lead;
+  return {
+    scrollLeft: Math.round(Math.min(r.maxScroll, Math.max(0, target))),
+    inView: true,
+  };
+}
+
 /** 비율(0~1) → "83%". null 은 "—". */
 export function formatRatio(ratio: number | null): string {
   if (ratio === null || !Number.isFinite(ratio)) return '—';
   return `${Math.round(ratio * 100)}%`;
 }
 
-/** 소수 자리를 값 크기에 맞춰 줄인다(태그 표). */
+/** 퍼센트(0~100) → "83%". null 은 "—". */
+export function formatPercent(percent: number | null): string {
+  if (percent === null || !Number.isFinite(percent)) return '—';
+  return `${Math.round(percent)}%`;
+}
+
+/** 소수 자리를 값 크기에 맞춰 줄인다(축 표). */
 export function formatTagNumber(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return '—';
   const abs = Math.abs(value);
@@ -72,11 +244,18 @@ export function formatTagNumber(value: number | null): string {
   return value.toFixed(digits);
 }
 
-/** 상태 밴드 색(hex) — 미니맵·HUD 와 같은 팔레트. unknown 은 그리지 않는다. */
-export const PLAY3D_STATUS_FILL: Record<
-  EquipmentRuntimeStatus,
-  string | null
-> = RUNTIME_STATUS_COLORS;
+/**
+ * 상태 밴드·적층 막대·범례의 색(hex) — 리포트 전용 팔레트. 가동만 전역
+ * RUNTIME_STATUS_COLORS 와 같고, 대기·두절은 트랙 배경 위에서 면으로 읽히는
+ * 회색 계열이다(대기가 더 밝다). unknown 은 그리지 않는다.
+ */
+export const PLAY3D_STATUS_FILL: Record<EquipmentRuntimeStatus, string | null> =
+  {
+    running: RUNTIME_STATUS_COLORS.running,
+    idle: '#94a3b8',
+    offline: '#52525b',
+    unknown: null,
+  };
 
 /** 균등 축 눈금(ms) — 0 과 axis 를 포함해 n+1 개. */
 export function timelineTicks(axisMs: number, n = 4): number[] {
@@ -92,23 +271,62 @@ export function msAtFraction(fraction: number, axisMs: number): number {
   return Math.min(axisMs, Math.max(0, fraction * axisMs));
 }
 
-/** 스파크라인 스텝 경로 — viewBox 0..100 × 0..height. 점이 없으면 ''. */
-export function sparklinePath(
-  points: readonly { t: number; v: number }[],
-  axisMs: number,
-  maxV: number,
-  height: number,
-): string {
-  if (points.length === 0 || !(axisMs > 0)) return '';
-  const top = maxV > 0 ? maxV : 1;
-  const x = (t: number) => Math.min(100, Math.max(0, (t / axisMs) * 100));
-  const y = (v: number) => height - Math.min(1, Math.max(0, v / top)) * height;
-  let d = `M${x(points[0].t).toFixed(2)},${y(points[0].v).toFixed(2)}`;
-  for (let i = 1; i < points.length; i += 1) {
-    // 스텝: 이전 값을 다음 시각까지 끌고 간 뒤 올린다.
-    d += ` H${x(points[i].t).toFixed(2)} V${y(points[i].v).toFixed(2)}`;
-  }
-  return d;
+/** 검사된 시간 ÷ 창 길이(0~1). 창이 0·NaN 이면 null, 1 상한. */
+export function coverageRatio(
+  scannedMs: number,
+  windowEndMs: number,
+): number | null {
+  if (!(windowEndMs > 0) || !Number.isFinite(scannedMs)) return null;
+  return Math.min(1, Math.max(0, scannedMs / windowEndMs));
+}
+
+/** value ÷ max 를 0~100 으로. max 가 0 이하이거나 값이 비정상이면 0. */
+export function percentOf(value: number, max: number): number {
+  if (!(max > 0) || !Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, (value * 100) / max));
+}
+
+export interface StatusShare {
+  running: number;
+  idle: number;
+  offline: number;
+  /** 적층 시작 위치(%) — 대기는 가동 뒤, 두절은 대기 뒤. */
+  idleLeft: number;
+  offlineLeft: number;
+}
+
+/** 장비 상태 적층 막대 — unknown 을 뺀 시간 대비 %. 분모 0 이면 null. */
+export function statusSharePercents(
+  eq: Pick<EquipmentStat, 'ms' | 'totalMs'>,
+): StatusShare | null {
+  const known = eq.totalMs - eq.ms.unknown;
+  if (!(known > 0)) return null;
+  const running = percentOf(eq.ms.running, known);
+  const idle = percentOf(eq.ms.idle, known);
+  return {
+    running,
+    idle,
+    offline: percentOf(eq.ms.offline, known),
+    idleLeft: running,
+    offlineLeft: Math.min(100, running + idle),
+  };
+}
+
+export interface RangeBarPercent {
+  left: number;
+  width: number;
+  mean: number;
+}
+
+/** range bar 의 0~1 위치를 %(left·width·평균 점)로. */
+export function rangeBarPercent(range: TagRangeBar): RangeBarPercent {
+  const left = percentOf(range.min, 1);
+  const right = percentOf(range.max, 1);
+  return {
+    left,
+    width: Math.max(0, right - left),
+    mean: percentOf(range.mean, 1),
+  };
 }
 
 /** 사건 목록 필터 칩 — 키는 i18n `monitoring:play3d.filter.*`. */
@@ -123,31 +341,41 @@ export const PLAY3D_EVENT_FILTERS: readonly {
   { key: 'offline', kinds: ['offlineEnter', 'offlineExit'] },
 ];
 
-export interface RankingRow {
-  key: string;
+export interface TagRowLabel {
   label: string;
-  count: number;
-  tone: 'bad' | 'warn';
+  unit: string;
 }
 
-export function pairRankingRows(
-  pairs: readonly CollisionPairStat[],
-): RankingRow[] {
-  return pairs.map((p) => ({
-    key: p.pairKey,
-    label: p.label,
-    count: p.count,
-    tone: 'bad',
-  }));
-}
-
-export function zoneRankingRows(
-  rows: readonly ZoneIntruderRank[],
-): RankingRow[] {
-  return rows.map((r) => ({
-    key: `${r.zoneKey}|${r.intruderId}`,
-    label: `${r.zoneName} ← ${r.intruderName}`,
-    count: r.count,
-    tone: r.level === 'stop' ? 'bad' : 'warn',
-  }));
+/**
+ * 축 표의 행 라벨 — 원시 태그 키 대신 이름·단위. 시뮬레이션은 가상 태그 정의의
+ * 이름·단위, 리플레이는 버스 키 `${craneId(하이픈→밑줄)}:${tagCode}` 를 나눠
+ * 씬 모델의 장비 이름 + 태그 카탈로그 표시명·단위. 어느 쪽도 못 풀면 키 그대로.
+ */
+export function tagRowLabel(
+  key: string,
+  ctx: {
+    source: 'replay' | 'simulation';
+    defs: readonly VirtualTagDefinition[];
+    scene: SavedSceneInfo | null;
+  },
+): TagRowLabel {
+  if (ctx.source === 'simulation') {
+    const def = ctx.defs.find((d) => d.key === key);
+    if (!def) return { label: key, unit: '' };
+    return { label: def.name || key, unit: def.unit ?? '' };
+  }
+  const sep = key.indexOf(':');
+  if (sep <= 0 || sep >= key.length - 1) return { label: key, unit: '' };
+  const craneKey = key.slice(0, sep);
+  const tagCode = key.slice(sep + 1);
+  const model = ctx.scene?.models.find(
+    (m) =>
+      typeof m.craneId === 'string' &&
+      m.craneId.replace(/-/g, '_') === craneKey,
+  );
+  const meta = getMonitoringTagMetadata(tagCode);
+  return {
+    label: `${model?.equipName || craneKey} · ${meta.displayName}`,
+    unit: meta.unit ?? '',
+  };
 }

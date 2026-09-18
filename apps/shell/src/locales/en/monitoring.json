@@ -499,13 +499,15 @@
     "scanned": "Scanned",
     "iteration": "loop #{{n}}",
     "detectionOff": "Collision detection was off for part of the run — collision counts are incomplete.",
+    "noTagMappings": "This scene has no tag mappings — detection and the report will not work.",
+    "holdsSummary": "holds {{count}} · {{time}}",
     "events": "Events",
     "noEvents": "No events in this window.",
     "noData": "No data",
     "seekToEvent": "Seek to this time",
     "equipment": "Equipment",
     "zones": "Zones",
-    "tags": "Tags",
+    "tags": "Axes",
     "event": {
       "collision": "Collision",
       "zoneEnter": "Zone enter",
@@ -518,21 +520,31 @@
     "tile": {
       "collisions": "Collisions",
       "intrusions": "Intrusions",
-      "holds": "Holds",
       "running": "Running ratio",
       "firstAt": "first at {{time}}",
-      "stopEnters": "stop-level {{count}}",
-      "holdWall": "total {{time}} (wall clock)",
-      "runningOf": "of {{count}} equipment"
+      "topPair": "most {{pair}} ({{count}})",
+      "stopEnters": "stop {{count}}",
+      "dwellTotal": "dwell total {{time}}",
+      "equipmentCount": "{{count}} equipment",
+      "idleRatio": "idle {{ratio}}",
+      "offline": "Offline",
+      "offlineTotal": "total {{time}}",
+      "saturation": "Speed-limit saturation",
+      "noSpeedLimit": "no speed limit defined"
     },
     "col": {
       "equipment": "Equipment",
-      "offlineEpisodes": "Offline episodes",
+      "status": "Status",
+      "running": "Running %",
+      "offlineEpisodes": "Offline",
+      "zoneDwell": "Zone dwell",
+      "collisions": "Collisions",
       "zone": "Zone",
       "enters": "Enters",
-      "dwell": "Dwell total",
-      "maxDwell": "Max dwell",
-      "tag": "Tag",
+      "topIntruder": "Top intruder",
+      "dwell": "Dwell",
+      "tag": "Axis",
+      "range": "Range",
       "mean": "Mean",
       "travel": "Travel",
       "saturation": "Limit saturation"
@@ -540,11 +552,13 @@
     "timeline": {
       "title": "Timeline",
       "events": "Events",
-      "zoneDwell": "Zone dwell",
-      "unscanned": "hatched = not scanned"
+      "zoneDwell": "Zone dwell"
     },
-    "ranking": {
-      "title": "Top causes"
+    "summary": {
+      "events": "{{count}} events",
+      "equipment": "{{count}} equipment · running {{ratio}}",
+      "zones": "{{count}} zones · {{enters}} intrusions · dwell {{time}}",
+      "tags": "{{count}} axes"
     },
     "filter": {
       "all": "All",

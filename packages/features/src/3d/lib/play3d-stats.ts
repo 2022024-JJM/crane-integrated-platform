@@ -41,8 +41,12 @@ export interface Play3dEvent {
   /** 영역 사건의 zoneKey(집계 키). */
   zoneKey?: string;
   zoneName?: string;
+  /** 영역 사건의 소유 모델 id — 체류 띠 배정의 폴백 행. */
+  ownerId?: string;
   intruderId?: string;
   intruderName?: string;
+  /** 충돌 양쪽 modelId — 장비별 충돌 관여 집계. */
+  modelIds?: readonly [string, string];
 }
 
 export interface TagAggregate {
@@ -76,7 +80,7 @@ export interface ScannedInterval {
 
 export interface Play3dStatsInput {
   events: readonly Play3dEvent[];
-  /** 장비 상태 전이(밴드 타임라인·가동 비율 곡선용). 없으면 빈 배열. */
+  /** 장비 상태 전이(밴드 타임라인용). 없으면 빈 배열. */
   statusTransitions?: readonly StatusTransition[];
   statuses: Readonly<Record<string, StatusAggregate>>;
   tags: Readonly<Record<string, TagAggregate>>;
@@ -105,9 +109,11 @@ export interface ZoneStat {
   enters: number;
   stopEnters: number;
   dwellMs: number;
+  /** 한 번의 체류 중 가장 긴 것. */
   maxDwellMs: number;
   /** 아직 이탈하지 않은 침범자 수(창 끝 기준). */
   open: number;
+  /** 횟수 내림차순(동률은 먼저 본 순서) — 첫 항목이 주 침범자. */
   byIntruder: { intruderId: string; intruderName: string; count: number }[];
 }
 
@@ -115,12 +121,28 @@ export interface EquipmentStat extends StatusAggregate {
   totalMs: number;
   /** 두절 진입 횟수. */
   offlineEpisodes: number;
+  /** 영역 체류(ms) — 타임라인 띠와 같은 배정 규칙(assignZoneBandsToRows). */
+  zoneDwellMs: number;
+  zoneEnters: number;
+  /** 충돌 관여 횟수 — `modelIds` 에 포함된 충돌 사건 수. */
+  collisions: number;
 }
 
 export interface TagStat extends TagAggregate {
   mean: number | null;
   /** saturatedMs ÷ 검사된 시간. 한계 정의가 없으면 null. */
   saturationRatio: number | null;
+}
+
+export interface Play3dSummary {
+  equipmentCount: number;
+  /** 가동·대기 비율 — 분모는 상태를 아는(unknown 제외) 시간. 0 이면 null. */
+  runningRatio: number | null;
+  idleRatio: number | null;
+  offlineEpisodes: number;
+  offlineMs: number;
+  /** 속도 한계 도달 비율이 가장 큰 태그(동률은 키 순서 앞). 없으면 null. */
+  saturation: { maxRatio: number | null; key: string | null };
 }
 
 export interface Play3dStats {
@@ -142,11 +164,16 @@ export interface Play3dStats {
   zones: {
     enters: number;
     stopEnters: number;
+    /** 전 영역 체류 합. */
+    dwellMs: number;
+    /** 영역별 체류 합 중 최대 — 영역 표 막대의 기준. */
+    maxDwellMs: number;
     byZone: ZoneStat[];
   };
   holds: { count: number; wallMs: number };
   equipment: EquipmentStat[];
   tags: TagStat[];
+  summary: Play3dSummary;
 }
 
 export const STATUS_KEYS: readonly EquipmentRuntimeStatus[] = [
@@ -349,22 +376,58 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     z.open += 1;
     addDwell(z, Math.max(0, windowEndMs - o.atMs));
   }
+  const byZone = [...zones.values()].sort((a, b) => b.enters - a.enters);
+  let zoneDwellTotal = 0;
+  let zoneDwellMax = 0;
+  for (const z of byZone) {
+    z.byIntruder.sort((a, b) => b.count - a.count);
+    zoneDwellTotal += z.dwellMs;
+    if (z.dwellMs > zoneDwellMax) zoneDwellMax = z.dwellMs;
+  }
 
   // 정지
   const holdCount = events.filter((e) => e.kind === 'holdStart').length;
 
-  // 장비
+  // 장비 — 행은 상태 누적이 있는 장비 ∪ 전이만 있는 장비.
   const offlineEpisodes = new Map<string, number>();
+  const collisionsOf = new Map<string, number>();
   for (const e of events) {
-    if (e.kind !== 'offlineEnter') continue;
-    offlineEpisodes.set(e.subject, (offlineEpisodes.get(e.subject) ?? 0) + 1);
+    if (e.kind === 'offlineEnter') {
+      offlineEpisodes.set(e.subject, (offlineEpisodes.get(e.subject) ?? 0) + 1);
+    } else if (e.kind === 'collision' && e.modelIds) {
+      for (const id of new Set(e.modelIds)) {
+        collisionsOf.set(id, (collisionsOf.get(id) ?? 0) + 1);
+      }
+    }
   }
-  const equipment: EquipmentStat[] = Object.values(input.statuses)
-    .map((s) => ({
-      ...s,
-      totalMs: STATUS_KEYS.reduce((acc, k) => acc + (s.ms[k] ?? 0), 0),
-      offlineEpisodes: offlineEpisodes.get(s.modelId) ?? 0,
-    }))
+  const statusesById = new Map<string, StatusAggregate>();
+  for (const s of Object.values(input.statuses)) statusesById.set(s.modelId, s);
+  const equipmentIds = new Set<string>(statusesById.keys());
+  for (const tr of input.statusTransitions ?? []) equipmentIds.add(tr.modelId);
+  const rowBands = assignZoneBandsToRows(
+    zoneBands(events, windowEndMs),
+    equipmentIds,
+  );
+  const equipment: EquipmentStat[] = [...equipmentIds]
+    .map((modelId) => {
+      const s = statusesById.get(modelId) ?? {
+        modelId,
+        name: modelId,
+        ms: emptyStatusMs(),
+      };
+      const bands = rowBands.get(modelId) ?? [];
+      return {
+        ...s,
+        totalMs: STATUS_KEYS.reduce((acc, k) => acc + (s.ms[k] ?? 0), 0),
+        offlineEpisodes: offlineEpisodes.get(modelId) ?? 0,
+        zoneDwellMs: bands.reduce(
+          (acc, b) => acc + Math.max(0, b.toMs - b.fromMs),
+          0,
+        ),
+        zoneEnters: bands.length,
+        collisions: collisionsOf.get(modelId) ?? 0,
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // 태그
@@ -379,6 +442,29 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
           : null,
     }))
     .sort((a, b) => a.key.localeCompare(b.key));
+
+  // 요약
+  let knownMs = 0;
+  let runningMs = 0;
+  let idleMs = 0;
+  let offlineMs = 0;
+  let offlineEpisodeTotal = 0;
+  for (const eq of equipment) {
+    knownMs += eq.totalMs - eq.ms.unknown;
+    runningMs += eq.ms.running;
+    idleMs += eq.ms.idle;
+    offlineMs += eq.ms.offline;
+    offlineEpisodeTotal += eq.offlineEpisodes;
+  }
+  let saturationMax: number | null = null;
+  let saturationKey: string | null = null;
+  for (const t of tags) {
+    if (t.saturationRatio === null) continue;
+    if (saturationMax === null || t.saturationRatio > saturationMax) {
+      saturationMax = t.saturationRatio;
+      saturationKey = t.key;
+    }
+  }
 
   return {
     windowEndMs,
@@ -396,11 +482,21 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     zones: {
       enters,
       stopEnters,
-      byZone: [...zones.values()].sort((a, b) => b.enters - a.enters),
+      dwellMs: zoneDwellTotal,
+      maxDwellMs: zoneDwellMax,
+      byZone,
     },
     holds: { count: holdCount, wallMs: Math.max(0, input.holdWallMs) },
     equipment,
     tags,
+    summary: {
+      equipmentCount: equipment.length,
+      runningRatio: knownMs > 0 ? runningMs / knownMs : null,
+      idleRatio: knownMs > 0 ? idleMs / knownMs : null,
+      offlineEpisodes: offlineEpisodeTotal,
+      offlineMs,
+      saturation: { maxRatio: saturationMax, key: saturationKey },
+    },
   };
 }
 
@@ -412,11 +508,6 @@ export interface StatusTransition {
   modelId: string;
   from: EquipmentRuntimeStatus;
   to: EquipmentRuntimeStatus;
-}
-
-export interface SeriesPoint {
-  t: number;
-  v: number;
 }
 
 export interface TimeBand {
@@ -432,55 +523,12 @@ export interface ZoneBand extends TimeBand {
   zoneKey: string;
   zoneName: string;
   level: 'warn' | 'stop';
+  /** 영역 소유 모델 id — 침범자가 행이 아닐 때의 폴백 행. */
+  ownerId?: string;
   intruderId: string;
   intruderName: string;
   /** 창 끝에서 아직 이탈하지 않았는지. */
   open: boolean;
-}
-
-export interface HoldBand extends TimeBand {
-  subject: string;
-}
-
-/** 균등 눈금(0 ~ axisMs, n 등분 경계 n+1 개). axis 가 0 이하면 [0]. */
-export function seriesGrid(axisMs: number, buckets: number): number[] {
-  if (!(axisMs > 0) || !(buckets > 0)) return [0];
-  const out: number[] = [];
-  for (let i = 0; i <= buckets; i += 1) out.push((axisMs * i) / buckets);
-  return out;
-}
-
-/**
- * 사건 누적 스텝 시리즈 — 격자 시각마다 "그 시각까지의 사건 수". 창 끝
- * (`windowEndMs`) 이후 격자는 제외하고 마지막 점을 창 끝에 찍어 곡선이
- * 현재 위치에서 멈춘다.
- */
-export function cumulativeSeries(
-  events: readonly Play3dEvent[],
-  kinds: readonly Play3dEventKind[],
-  axisMs: number,
-  windowEndMs: number,
-  buckets = 60,
-): SeriesPoint[] {
-  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
-  const times = events
-    .filter((e) => kinds.includes(e.kind) && Number.isFinite(e.atMs))
-    .map((e) => e.atMs)
-    .sort((a, b) => a - b);
-  const countUpTo = (t: number): number => {
-    let n = 0;
-    while (n < times.length && times[n] <= t) n += 1;
-    return n;
-  };
-  const points: SeriesPoint[] = [];
-  for (const t of seriesGrid(axisMs, buckets)) {
-    if (t > end) break;
-    points.push({ t, v: countUpTo(t) });
-  }
-  if (points.length === 0 || points[points.length - 1].t < end) {
-    points.push({ t: end, v: countUpTo(end) });
-  }
-  return points;
 }
 
 /** 구간 목록과의 교집합으로 잘라낸다(검사된 구간만 남기기). */
@@ -547,6 +595,7 @@ export function zoneBands(
       zoneKey: enter.zoneKey ?? enter.subject,
       zoneName: enter.zoneName ?? enter.zoneKey ?? enter.subject,
       level: enter.level ?? 'warn',
+      ownerId: enter.ownerId,
       intruderId: enter.intruderId ?? enter.subject,
       intruderName: enter.intruderName ?? enter.intruderId ?? enter.subject,
       open: isOpen,
@@ -568,120 +617,28 @@ export function zoneBands(
   return out.sort((a, b) => a.fromMs - b.fromMs);
 }
 
-/** 정지 시작·해제 짝짓기 → 정지 밴드(씬 시간은 정지 중 흐르지 않아 폭은 0 에 가깝다). */
-export function holdBands(
-  events: readonly Play3dEvent[],
-  windowEndMs: number,
-): HoldBand[] {
-  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
-  const sorted = events
-    .filter(
-      (e) =>
-        (e.kind === 'holdStart' || e.kind === 'holdEnd') &&
-        Number.isFinite(e.atMs) &&
-        e.atMs <= end,
-    )
-    .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
-  const out: HoldBand[] = [];
-  let current: Play3dEvent | null = null;
-  for (const e of sorted) {
-    if (e.kind === 'holdStart') {
-      if (current) {
-        out.push({
-          fromMs: current.atMs,
-          toMs: e.atMs,
-          subject: current.subject,
-        });
-      }
-      current = e;
-    } else if (current) {
-      out.push({
-        fromMs: current.atMs,
-        toMs: e.atMs,
-        subject: current.subject,
-      });
-      current = null;
-    }
-  }
-  if (current)
-    out.push({ fromMs: current.atMs, toMs: end, subject: current.subject });
-  return out;
-}
-
 /**
- * 가동 비율 누적 시리즈 — 격자 시각 t 마다 "[0,t] ∩ 검사 구간 안에서 running
- * 이었던 시간 ÷ 상태를 아는(unknown 제외) 시간". 분모 0 이면 점을 만들지
- * 않는다.
+ * 체류 밴드를 타임라인 행(장비)에 배정한다 — 침범자가 행이면 침범자 행,
+ * 아니면(정적 모델·영역↔영역) 소유 모델 행, 둘 다 없으면 버린다. 장비 표의
+ * 체류값과 타임라인 띠가 이 한 규칙을 함께 쓴다. 입력 순서를 유지한다.
  */
-export function runningRatioSeries(
-  transitions: readonly StatusTransition[],
-  scanned: readonly ScannedInterval[],
-  axisMs: number,
-  windowEndMs: number,
-  buckets = 60,
-): SeriesPoint[] {
-  const end = Number.isFinite(windowEndMs) ? Math.max(0, windowEndMs) : 0;
-  const modelIds = [...new Set(transitions.map((t) => t.modelId))];
-  const bands = modelIds.flatMap((id) =>
-    statusBands(transitions, id, end, scanned),
-  );
-  const overlapUpTo = (
-    t: number,
-    pick: (s: EquipmentRuntimeStatus) => boolean,
-  ) => {
-    let sum = 0;
-    for (const b of bands) {
-      if (!pick(b.status)) continue;
-      const toMs = Math.min(b.toMs, t);
-      if (toMs > b.fromMs) sum += toMs - b.fromMs;
+export function assignZoneBandsToRows(
+  bands: readonly ZoneBand[],
+  rowIds: ReadonlySet<string>,
+): Map<string, ZoneBand[]> {
+  const out = new Map<string, ZoneBand[]>();
+  for (const band of bands) {
+    let rowId: string | null = null;
+    if (rowIds.has(band.intruderId)) rowId = band.intruderId;
+    else if (band.ownerId !== undefined && rowIds.has(band.ownerId)) {
+      rowId = band.ownerId;
     }
-    return sum;
-  };
-  const points: SeriesPoint[] = [];
-  const grid = seriesGrid(axisMs, buckets).filter((t) => t <= end);
-  if (grid.length === 0 || grid[grid.length - 1] < end) grid.push(end);
-  for (const t of grid) {
-    const known = overlapUpTo(t, (s) => s !== 'unknown');
-    if (known <= 0) continue;
-    points.push({ t, v: overlapUpTo(t, (s) => s === 'running') / known });
+    if (rowId === null) continue;
+    const list = out.get(rowId);
+    if (list) list.push(band);
+    else out.set(rowId, [band]);
   }
-  return points;
-}
-
-/** 상위 N — 정렬은 호출자가 이미 했다고 보고 앞에서 자른다(동률은 원래 순서). */
-export function topN<T>(items: readonly T[], n: number): T[] {
-  return items.slice(0, Math.max(0, n));
-}
-
-export interface ZoneIntruderRank {
-  zoneKey: string;
-  zoneName: string;
-  level: 'warn' | 'stop';
-  intruderId: string;
-  intruderName: string;
-  count: number;
-}
-
-/** 영역×침범자 상위 N(횟수 내림차순, 동률은 영역 순서·침범자 순서). */
-export function rankZoneIntruders(
-  zones: readonly ZoneStat[],
-  n: number,
-): ZoneIntruderRank[] {
-  const rows: ZoneIntruderRank[] = [];
-  for (const z of zones) {
-    for (const r of z.byIntruder) {
-      rows.push({
-        zoneKey: z.zoneKey,
-        zoneName: z.zoneName,
-        level: z.level,
-        intruderId: r.intruderId,
-        intruderName: r.intruderName,
-        count: r.count,
-      });
-    }
-  }
-  rows.sort((a, b) => b.count - a.count);
-  return topN(rows, n);
+  return out;
 }
 
 export interface TagRangeBar {

@@ -3,21 +3,18 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
   accumulateTagValue,
   addScannedInterval,
+  assignZoneBandsToRows,
   computePlay3dStats,
   createTagAggregate,
-  cumulativeSeries,
   emptyStatusMs,
-  holdBands,
   loopIterationOf,
-  rankZoneIntruders,
-  runningRatioSeries,
   statusBands,
   sumScanned,
   tagRangeBar,
-  topN,
   zoneBands,
   type Play3dEvent,
   type Play3dStatsInput,
+  type ZoneBand,
 } from '../play3d-stats';
 
 let nextId = 1;
@@ -131,11 +128,25 @@ describe('computePlay3dStats', () => {
     const stats = computePlay3dStats(input({ windowEndMs: 0 }));
     expect(stats.events).toEqual([]);
     expect(stats.collisions).toEqual({ count: 0, firstAtMs: null, byPair: [] });
-    expect(stats.zones).toEqual({ enters: 0, stopEnters: 0, byZone: [] });
+    expect(stats.zones).toEqual({
+      enters: 0,
+      stopEnters: 0,
+      dwellMs: 0,
+      maxDwellMs: 0,
+      byZone: [],
+    });
     expect(stats.holds).toEqual({ count: 0, wallMs: 0 });
     expect(stats.equipment).toEqual([]);
     expect(stats.tags).toEqual([]);
     expect(stats.loopIteration).toBeNull();
+    expect(stats.summary).toEqual({
+      equipmentCount: 0,
+      runningRatio: null,
+      idleRatio: null,
+      offlineEpisodes: 0,
+      offlineMs: 0,
+      saturation: { maxRatio: null, key: null },
+    });
   });
 
   it('창 밖(현재 위치 이후) 사건은 감춘다 — 뒤로 seek 하면 표시가 줄어든다', () => {
@@ -211,18 +222,232 @@ describe('computePlay3dStats', () => {
     expect(stats.holds).toEqual({ count: 2, wallMs: 12_345 });
   });
 
-  it('장비: 비율 분모와 두절 횟수', () => {
+  it('장비: 비율 분모(unknown 제외)와 두절 횟수, 노출 기본값 0', () => {
     const ms = emptyStatusMs();
     ms.running = 6000;
     ms.idle = 4000;
+    ms.unknown = 5000;
     const stats = computePlay3dStats(
       input({
         statuses: { m1: { modelId: 'm1', name: 'GC', ms } },
         events: [ev('offlineEnter', 100, 'm1'), ev('offlineEnter', 200, 'm1')],
       }),
     );
-    expect(stats.equipment[0].totalMs).toBe(10_000);
-    expect(stats.equipment[0].offlineEpisodes).toBe(2);
+    expect(stats.equipment[0]).toMatchObject({
+      totalMs: 15_000,
+      offlineEpisodes: 2,
+      zoneDwellMs: 0,
+      zoneEnters: 0,
+      collisions: 0,
+    });
+    expect(stats.summary).toMatchObject({
+      equipmentCount: 1,
+      runningRatio: 0.6,
+      idleRatio: 0.4,
+      offlineEpisodes: 2,
+      offlineMs: 0,
+    });
+  });
+
+  it('summary: unknown 만 있는 장비는 가동·대기 비율 null', () => {
+    const ms = emptyStatusMs();
+    ms.unknown = 3000;
+    const stats = computePlay3dStats(
+      input({ statuses: { m1: { modelId: 'm1', name: 'A', ms } } }),
+    );
+    expect(stats.summary.equipmentCount).toBe(1);
+    expect(stats.summary.runningRatio).toBeNull();
+    expect(stats.summary.idleRatio).toBeNull();
+  });
+
+  it('summary: 두절 횟수·시간은 장비 합', () => {
+    const a = emptyStatusMs();
+    a.offline = 2000;
+    a.running = 1000;
+    const b = emptyStatusMs();
+    b.offline = 3000;
+    const stats = computePlay3dStats(
+      input({
+        statuses: {
+          a: { modelId: 'a', name: 'A', ms: a },
+          b: { modelId: 'b', name: 'B', ms: b },
+        },
+        events: [
+          ev('offlineEnter', 100, 'a'),
+          ev('offlineEnter', 200, 'b'),
+          ev('offlineEnter', 300, 'b'),
+        ],
+      }),
+    );
+    expect(stats.summary.offlineEpisodes).toBe(3);
+    expect(stats.summary.offlineMs).toBe(5000);
+  });
+
+  it('summary: 포화 최대는 한계 있는 태그 중 최댓값, 동률은 키 순서 앞, 없으면 null', () => {
+    const a = createTagAggregate('a', true);
+    a.saturatedMs = 2000;
+    const b = createTagAggregate('b', true);
+    b.saturatedMs = 4000;
+    const c = createTagAggregate('c', false);
+    c.saturatedMs = 9000;
+    const scanned = [{ fromMs: 0, toMs: 4000 }];
+    expect(
+      computePlay3dStats(input({ tags: { a, b, c }, scanned })).summary
+        .saturation,
+    ).toEqual({ maxRatio: 1, key: 'b' });
+    b.saturatedMs = 2000;
+    expect(
+      computePlay3dStats(input({ tags: { b, a }, scanned })).summary.saturation,
+    ).toEqual({ maxRatio: 0.5, key: 'a' });
+    expect(
+      computePlay3dStats(input({ tags: { c }, scanned })).summary.saturation,
+    ).toEqual({ maxRatio: null, key: null });
+    expect(
+      computePlay3dStats(input({ tags: { a }, scanned: [] })).summary
+        .saturation,
+    ).toEqual({ maxRatio: null, key: null });
+  });
+
+  it('장비 행은 statuses ∪ statusTransitions — 전이만 있는 장비는 0ms·이름=id, 이름순', () => {
+    const ms = emptyStatusMs();
+    ms.running = 1000;
+    const stats = computePlay3dStats(
+      input({
+        statuses: { z: { modelId: 'z', name: 'Zed', ms } },
+        statusTransitions: [
+          { atMs: 0, modelId: 'a', from: 'unknown', to: 'idle' },
+          { atMs: 0, modelId: 'z', from: 'unknown', to: 'running' },
+        ],
+      }),
+    );
+    expect(stats.equipment.map((e) => [e.modelId, e.name, e.totalMs])).toEqual([
+      ['a', 'a', 0],
+      ['z', 'Zed', 1000],
+    ]);
+    expect(stats.summary.equipmentCount).toBe(2);
+  });
+
+  it('장비 충돌 관여 수는 modelIds 로 센다 — 없는 충돌은 아무도, 같은 id 쌍은 한 번', () => {
+    const stats = computePlay3dStats(
+      input({
+        statusTransitions: [
+          { atMs: 0, modelId: 'a', from: 'unknown', to: 'running' },
+          { atMs: 0, modelId: 'b', from: 'unknown', to: 'running' },
+        ],
+        events: [
+          ev('collision', 1000, 'a|b', { modelIds: ['a', 'b'] }),
+          ev('collision', 2000, 'a|b', { modelIds: ['b', 'a'] }),
+          ev('collision', 3000, 'a|a', { modelIds: ['a', 'a'] }),
+          ev('collision', 4000, 'x|y'),
+          ev('collision', 5000, 'a|c', { modelIds: ['a', 'c'] }),
+        ],
+      }),
+    );
+    const byId = Object.fromEntries(
+      stats.equipment.map((e) => [e.modelId, e.collisions]),
+    );
+    expect(byId).toEqual({ a: 4, b: 2 });
+    expect(stats.collisions.count).toBe(5);
+  });
+
+  it('장비 영역 체류·진입은 띠 배정 규칙과 같다 — 침범자 행, 없으면 소유자 행, 둘 다 없으면 버림', () => {
+    const tr = (modelId: string) => ({
+      atMs: 0,
+      modelId,
+      from: 'unknown' as const,
+      to: 'running' as const,
+    });
+    const z = (zoneKey: string, ownerId: string, intruderId: string) => ({
+      zoneKey,
+      ownerId,
+      intruderId,
+    });
+    const events = [
+      // 침범자 c 가 행 → c 에 배정
+      ev('zoneEnter', 1000, 'o#z|c', z('o#z', 'o', 'c')),
+      ev('zoneExit', 3000, 'o#z|c', z('o#z', 'o', 'c')),
+      // 침범자 s(정적)는 행이 아님 → 소유자 o 에 배정, 미이탈은 창 끝까지
+      ev('zoneEnter', 5000, 'o#z|s', z('o#z', 'o', 's')),
+      // 둘 다 행이 아님 → 버림(영역 합계에는 남는다)
+      ev('zoneEnter', 6000, 'q#z|s', z('q#z', 'q', 's')),
+    ];
+    const stats = computePlay3dStats(
+      input({
+        events,
+        windowEndMs: 8000,
+        statusTransitions: [tr('c'), tr('o')],
+      }),
+    );
+    const byId = Object.fromEntries(
+      stats.equipment.map((e) => [e.modelId, [e.zoneEnters, e.zoneDwellMs]]),
+    );
+    expect(byId).toEqual({ c: [1, 2000], o: [1, 3000] });
+    expect(stats.zones.dwellMs).toBe(2000 + 3000 + 2000);
+    expect(stats.zones.maxDwellMs).toBe(5000);
+  });
+
+  it('창 밖 사건은 장비 충돌·체류·summary 에도 들어가지 않는다', () => {
+    const stats = computePlay3dStats(
+      input({
+        windowEndMs: 500,
+        statusTransitions: [
+          { atMs: 0, modelId: 'a', from: 'unknown', to: 'running' },
+        ],
+        events: [
+          ev('collision', 1000, 'a|b', { modelIds: ['a', 'b'] }),
+          ev('zoneEnter', 2000, 'o#z|a', {
+            zoneKey: 'o#z',
+            ownerId: 'o',
+            intruderId: 'a',
+          }),
+          ev('offlineEnter', 3000, 'a'),
+        ],
+      }),
+    );
+    expect(stats.equipment[0]).toMatchObject({
+      collisions: 0,
+      zoneEnters: 0,
+      zoneDwellMs: 0,
+      offlineEpisodes: 0,
+    });
+    expect(stats.summary.offlineEpisodes).toBe(0);
+    expect(stats.zones.dwellMs).toBe(0);
+  });
+
+  it('zones: dwellMs 합·maxDwellMs, byIntruder 는 횟수 내림차순·동률은 먼저 본 순서', () => {
+    const z1 = { zoneKey: 'm#1', zoneName: 'Z1' };
+    const z2 = { zoneKey: 'm#2', zoneName: 'Z2' };
+    const events = [
+      ev('zoneEnter', 0, 'm#1|x', { ...z1, intruderId: 'x' }),
+      ev('zoneExit', 1000, 'm#1|x', { ...z1, intruderId: 'x' }),
+      ev('zoneEnter', 0, 'm#1|y', { ...z1, intruderId: 'y' }),
+      ev('zoneExit', 3000, 'm#1|y', { ...z1, intruderId: 'y' }),
+      ev('zoneEnter', 4000, 'm#1|y', { ...z1, intruderId: 'y' }),
+      ev('zoneExit', 5000, 'm#1|y', { ...z1, intruderId: 'y' }),
+      ev('zoneEnter', 0, 'm#2|w', { ...z2, intruderId: 'w' }),
+      ev('zoneExit', 500, 'm#2|w', { ...z2, intruderId: 'w' }),
+    ];
+    const stats = computePlay3dStats(input({ events, windowEndMs: 10_000 }));
+    expect(stats.zones.dwellMs).toBe(5500);
+    expect(stats.zones.maxDwellMs).toBe(5000);
+    expect(
+      stats.zones.byZone[0].byIntruder.map((r) => [r.intruderId, r.count]),
+    ).toEqual([
+      ['y', 2],
+      ['x', 1],
+    ]);
+    const tie = computePlay3dStats(
+      input({
+        events: [
+          ev('zoneEnter', 0, 'm#1|x', { ...z1, intruderId: 'x' }),
+          ev('zoneEnter', 0, 'm#1|y', { ...z1, intruderId: 'y' }),
+        ],
+      }),
+    );
+    expect(tie.zones.byZone[0].byIntruder.map((r) => r.intruderId)).toEqual([
+      'x',
+      'y',
+    ]);
   });
 
   it('태그: 평균과 포화 비율(검사 시간 대비, 1 상한, 한계 없으면 null)', () => {
@@ -251,37 +476,9 @@ describe('computePlay3dStats', () => {
     expect(stats.windowEndMs).toBe(0);
     expect(stats.loopIteration).toBe(0);
     expect(
-      computePlay3dStats(
-        input({ windowEndMs: 2500, scenarioDurationMs: 1000 }),
-      ).loopIteration,
+      computePlay3dStats(input({ windowEndMs: 2500, scenarioDurationMs: 1000 }))
+        .loopIteration,
     ).toBe(2);
-  });
-});
-
-describe('시간 축 파생 — cumulativeSeries', () => {
-  it('격자마다 누적 개수, 창 끝에서 멈추고 창 밖 사건은 세지 않는다', () => {
-    const events = [
-      ev('collision', 1000, 'a'),
-      ev('collision', 2500, 'a'),
-      ev('collision', 9000, 'a'),
-      ev('zoneEnter', 500, 'z'),
-    ];
-    const pts = cumulativeSeries(events, ['collision'], 10_000, 4000, 4);
-    expect(pts).toEqual([
-      { t: 0, v: 0 },
-      { t: 2500, v: 2 },
-      { t: 4000, v: 2 },
-    ]);
-  });
-
-  it('빈 사건·축 0 은 창 끝 한 점', () => {
-    expect(cumulativeSeries([], ['collision'], 0, 0)).toEqual([{ t: 0, v: 0 }]);
-    expect(cumulativeSeries([], ['collision'], 5000, 3000, 5)).toEqual([
-      { t: 0, v: 0 },
-      { t: 1000, v: 0 },
-      { t: 2000, v: 0 },
-      { t: 3000, v: 0 },
-    ]);
   });
 });
 
@@ -333,7 +530,7 @@ describe('시간 축 파생 — statusBands / clipBands', () => {
   });
 });
 
-describe('시간 축 파생 — zoneBands / holdBands', () => {
+describe('시간 축 파생 — zoneBands', () => {
   const zone = {
     zoneKey: 'm#z',
     zoneName: 'Z',
@@ -374,92 +571,70 @@ describe('시간 축 파생 — zoneBands / holdBands', () => {
     ]);
   });
 
-  it('정지 시작·해제 짝짓기, 미해제는 창 끝까지', () => {
-    const bands = holdBands(
+  it('ownerId 를 밴드에 넘긴다(없으면 undefined)', () => {
+    const bands = zoneBands(
       [
-        ev('holdStart', 1000, 'collision'),
-        ev('holdEnd', 1000, 'hold'),
-        ev('holdStart', 3000, 'zone'),
+        ev('zoneEnter', 1000, 'm#z|c', { ...zone, ownerId: 'm' }),
+        ev('zoneEnter', 2000, 'n#z|c', { ...zone, zoneKey: 'n#z' }),
       ],
-      5000,
+      4000,
     );
-    expect(bands).toEqual([
-      { fromMs: 1000, toMs: 1000, subject: 'collision' },
-      { fromMs: 3000, toMs: 5000, subject: 'zone' },
-    ]);
+    expect(bands[0].ownerId).toBe('m');
+    expect(bands[1].ownerId).toBeUndefined();
   });
 });
 
-describe('시간 축 파생 — runningRatioSeries', () => {
-  it('상태를 아는 시간 대비 가동 시간의 누적 비율, 분모 0 인 격자는 건너뛴다', () => {
-    const transitions = [
-      {
-        atMs: 0,
-        modelId: 'm',
-        from: 'unknown' as const,
-        to: 'running' as const,
-      },
-      {
-        atMs: 2000,
-        modelId: 'm',
-        from: 'running' as const,
-        to: 'idle' as const,
-      },
-    ];
-    const pts = runningRatioSeries(
-      transitions,
-      [{ fromMs: 0, toMs: 4000 }],
-      4000,
-      4000,
-      4,
+describe('assignZoneBandsToRows', () => {
+  const band = (patch: Partial<ZoneBand>): ZoneBand => ({
+    fromMs: 0,
+    toMs: 1000,
+    zoneKey: 'o#z',
+    zoneName: 'Z',
+    level: 'warn',
+    ownerId: 'o',
+    intruderId: 'c',
+    intruderName: 'C',
+    open: false,
+    ...patch,
+  });
+
+  it('침범자가 행이면 침범자 행, 아니면 소유자 행, 둘 다 아니면 버린다', () => {
+    const rows = assignZoneBandsToRows(
+      [
+        band({ intruderId: 'c' }),
+        band({ intruderId: 's' }),
+        band({ intruderId: 's', ownerId: 'q' }),
+        band({ intruderId: 's', ownerId: undefined }),
+      ],
+      new Set(['c', 'o']),
     );
-    expect(pts.map((p) => [p.t, Number(p.v.toFixed(2))])).toEqual([
-      [1000, 1],
-      [2000, 1],
-      [3000, 0.67],
-      [4000, 0.5],
-    ]);
+    expect([...rows.keys()]).toEqual(['c', 'o']);
+    expect(rows.get('c')).toHaveLength(1);
+    expect(rows.get('o')).toHaveLength(1);
+  });
+
+  it('열린 밴드도 그대로 배정되고 같은 행의 밴드는 입력 순서를 유지한다', () => {
+    const first = band({ fromMs: 0, toMs: 500, open: true });
+    const second = band({ fromMs: 800, toMs: 900 });
+    const rows = assignZoneBandsToRows([first, second], new Set(['c']));
+    expect(rows.get('c')).toEqual([first, second]);
+  });
+
+  it('빈 밴드·빈 행 집합은 빈 Map', () => {
+    expect(assignZoneBandsToRows([], new Set(['c'])).size).toBe(0);
+    expect(assignZoneBandsToRows([band({})], new Set()).size).toBe(0);
+  });
+
+  it('intruderId 가 zoneKey(영역↔영역)면 소유자 행으로 간다', () => {
+    const rows = assignZoneBandsToRows(
+      [band({ intruderId: 'p#z', ownerId: 'o' })],
+      new Set(['o', 'p']),
+    );
+    expect([...rows.keys()]).toEqual(['o']);
   });
 });
 
-describe('순위·range bar', () => {
-  it('rankZoneIntruders 는 횟수 내림차순 상위 N, 동률은 원래 순서', () => {
-    const zones = [
-      {
-        zoneKey: 'a',
-        zoneName: 'A',
-        level: 'warn' as const,
-        enters: 3,
-        stopEnters: 0,
-        dwellMs: 0,
-        maxDwellMs: 0,
-        open: 0,
-        byIntruder: [
-          { intruderId: 'x', intruderName: 'X', count: 1 },
-          { intruderId: 'y', intruderName: 'Y', count: 2 },
-        ],
-      },
-      {
-        zoneKey: 'b',
-        zoneName: 'B',
-        level: 'stop' as const,
-        enters: 2,
-        stopEnters: 2,
-        dwellMs: 0,
-        maxDwellMs: 0,
-        open: 0,
-        byIntruder: [{ intruderId: 'z', intruderName: 'Z', count: 2 }],
-      },
-    ];
-    const ranks = rankZoneIntruders(zones, 2);
-    expect(ranks.map((r) => `${r.zoneKey}|${r.intruderId}`)).toEqual([
-      'a|y',
-      'b|z',
-    ]);
-    expect(topN([1, 2, 3], 0)).toEqual([]);
-    expect(topN([1, 2, 3], 9)).toEqual([1, 2, 3]);
-  });
-
+describe('range bar', () => {
   it('tagRangeBar 는 정의 범위 안 위치, 범위 밖은 clamp, 0건·NaN 은 null', () => {
     const agg = { min: 10, max: 30, sum: 60, count: 3 };
     expect(tagRangeBar(agg, { min: 0, max: 40 })).toEqual({

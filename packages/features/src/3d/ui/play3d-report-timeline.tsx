@@ -1,13 +1,19 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import {
   PLAY3D_STATUS_FILL,
+  TIMELINE_LABEL_REM,
+  bandPercent,
   markerPercent,
   msAtFraction,
-  timelineTicks,
+  timelineContentWidth,
+  timelineCursorInView,
+  timelineFollowScroll,
+  timelineTickTimes,
+  timelineTrackScale,
 } from '../lib/play3d-format';
 import type {
-  HoldBand,
   Play3dEvent,
   ScannedInterval,
   StatusBand,
@@ -16,52 +22,92 @@ import type {
 import { formatSimClock } from '../lib/sim-clock';
 
 /**
- * 스윔레인 타임라인 — 행마다 대상(사건 행·장비·영역), 시간 축 위 밴드,
- * 현재 위치 세로선, 클릭 = seek(Foxglove State Transitions 방식). 밴드 목록은
- * lib/play3d-stats(statusBands·zoneBands·holdBands)가 만들고 여기서는
- * 위치(%)만 lib 함수로 옮겨 그린다. 검사되지 않은 구간은 배경 빗금으로 남겨
- * "감지가 없었던 곳" 이 빈 밴드와 구분된다.
+ * 스윔레인 타임라인 — 첫 행은 사건(충돌·영역 진입을 같은 모양의 세로 선으로,
+ * 영역은 그 체류 띠와 같은 등급 색), 그 아래 장비마다 한 행: 운전 상태 밴드 +
+ * 그 장비가 영역에 머문 구간의 얇은 띠(아래쪽). 현재 위치 세로선, 클릭 =
+ * seek(Foxglove State Transitions 방식). 검사되지 않은 구간은 배경 빗금이다.
+ *
+ * 축이 한 화면 분량(TIMELINE_FIT_MS)을 넘으면 트랙이 배율만큼 넓어지고 한
+ * 스크롤 컨테이너가 세로·가로를 함께 맡는다 — 장비 이름 열은 sticky-left,
+ * 눈금 행은 sticky-bottom. 밴드·배율·눈금·재생 위치 따라가기 판단은 전부
+ * lib(play3d-stats·play3d-format)에 있고 여기서는 DOM 치수를 읽어 넘기고
+ * 결과를 그리기만 한다.
  */
 
 export interface TimelineEquipmentRow {
   modelId: string;
   name: string;
   bands: StatusBand[];
+  /** 이 장비 행에 배정된 영역 체류 밴드. */
+  zoneBands: ZoneBand[];
 }
 
-export interface TimelineZoneRow {
-  zoneKey: string;
-  zoneName: string;
-  bands: ZoneBand[];
-}
-
-const ROW_H = 'h-4';
+const LABEL_STYLE = { width: `${TIMELINE_LABEL_REM}rem` };
 
 export function Play3dReportTimeline({
   axisMs,
   windowEndMs,
+  isPlaying,
   scanned,
   collisions,
-  holds,
+  zoneEnters,
   equipment,
-  zones,
   onSeek,
   className,
 }: {
   axisMs: number;
   windowEndMs: number;
+  /** 재생 중인지 — 재생 위치 따라가기 규칙이 갈린다. */
+  isPlaying: boolean;
   scanned: readonly ScannedInterval[];
   collisions: readonly Play3dEvent[];
-  holds: readonly HoldBand[];
+  zoneEnters: readonly Play3dEvent[];
   equipment: readonly TimelineEquipmentRow[];
-  zones: readonly TimelineZoneRow[];
   /** 축 위 클릭 → 그 씬 시간으로 이동. */
   onSeek: (atMs: number) => void;
   className?: string;
 }) {
   const { t } = useTranslation();
   const cursor = markerPercent(windowEndMs, axisMs);
-  const ticks = timelineTicks(axisMs, 4);
+  const scale = timelineTrackScale(axisMs);
+  const ticks = timelineTickTimes(axisMs);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const labelRef = useRef<HTMLSpanElement | null>(null);
+  // 커서가 보이고 있는지 — 재생 중 사용자가 스크롤해 떠난 위치를 되돌리지 않는 근거.
+  const inViewRef = useRef(true);
+
+  // ▶ 를 누르면 따라가기를 다시 켠다. 아래 effect 보다 먼저 선언해 같은 커밋에서 먼저 돈다.
+  useEffect(() => {
+    if (isPlaying) inViewRef.current = true;
+  }, [isPlaying]);
+
+  // 재생 위치 따라가기 — 판단은 lib, 여기서는 치수를 읽고 scrollLeft 만 대입한다.
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const next = timelineFollowScroll({
+      cursorPercent: cursor,
+      scrollLeft: scroller.scrollLeft,
+      clientWidth: scroller.clientWidth,
+      scrollWidth: scroller.scrollWidth,
+      labelPx: labelRef.current?.offsetWidth ?? 0,
+      wasInView: inViewRef.current,
+      isPlaying,
+    });
+    if (next.scrollLeft !== null) scroller.scrollLeft = next.scrollLeft;
+    inViewRef.current = next.inView;
+  }, [cursor, isPlaying, scale]);
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const scroller = event.currentTarget;
+    inViewRef.current = timelineCursorInView({
+      cursorPercent: cursor,
+      scrollLeft: scroller.scrollLeft,
+      clientWidth: scroller.clientWidth,
+      scrollWidth: scroller.scrollWidth,
+      labelPx: labelRef.current?.offsetWidth ?? 0,
+    });
+  };
 
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -75,20 +121,23 @@ export function Play3dReportTimeline({
       label: t('monitoring:play3d.timeline.events'),
       content: (
         <>
-          {holds.map((h, i) => (
+          {zoneEnters.map((e) => (
             <span
-              key={`h${i}`}
-              title={`${t('monitoring:play3d.event.holdStart')} ${formatSimClock(h.fromMs)}`}
-              className="absolute inset-y-0.5 min-w-[2px] rounded-sm bg-violet-400/70"
-              style={bandStyle(h.fromMs, h.toMs, axisMs)}
+              key={e.id}
+              title={`${formatSimClock(e.atMs)} · ${e.label}`}
+              className={cn(
+                'absolute inset-y-0 w-0.5',
+                e.level === 'stop' ? 'bg-red-500' : 'bg-amber-400',
+              )}
+              style={{ left: edgeLeft(markerPercent(e.atMs, axisMs), 2) }}
             />
           ))}
           {collisions.map((e) => (
             <span
               key={e.id}
               title={`${formatSimClock(e.atMs)} · ${e.label}`}
-              className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-red-500"
-              style={{ left: `${markerPercent(e.atMs, axisMs)}%` }}
+              className="absolute inset-y-0 w-0.5 bg-red-500"
+              style={{ left: edgeLeft(markerPercent(e.atMs, axisMs), 2) }}
             />
           ))}
         </>
@@ -104,9 +153,9 @@ export function Play3dReportTimeline({
             if (!fill) return null;
             return (
               <span
-                key={i}
+                key={`s${i}`}
                 title={`${t(`monitoring:runtimeStatus.${b.status}`)} ${formatSimClock(b.fromMs)}~${formatSimClock(b.toMs)}`}
-                className="absolute inset-y-1"
+                className="absolute top-1 bottom-2"
                 style={{
                   ...bandStyle(b.fromMs, b.toMs, axisMs),
                   background: fill,
@@ -114,21 +163,13 @@ export function Play3dReportTimeline({
               />
             );
           })}
-        </>
-      ),
-    })),
-    ...zones.map((row) => ({
-      key: row.zoneKey,
-      label: row.zoneName,
-      content: (
-        <>
-          {row.bands.map((b, i) => (
+          {row.zoneBands.map((b, i) => (
             <span
-              key={i}
-              title={`${b.intruderName} ${formatSimClock(b.fromMs)}~${formatSimClock(b.toMs)}`}
+              key={`z${i}`}
+              title={`${b.zoneName} ← ${b.intruderName} ${formatSimClock(b.fromMs)}~${formatSimClock(b.toMs)}`}
               className={cn(
-                'absolute inset-y-1 min-w-[2px] rounded-sm',
-                b.level === 'stop' ? 'bg-red-500/80' : 'bg-amber-400/80',
+                'absolute bottom-0.5 h-1 min-w-[2px]',
+                b.level === 'stop' ? 'bg-red-500/90' : 'bg-amber-400/90',
                 b.open && 'border-r border-dashed border-white/70',
               )}
               style={bandStyle(b.fromMs, b.toMs, axisMs)}
@@ -140,18 +181,28 @@ export function Play3dReportTimeline({
   ];
 
   return (
-    <div className={cn('flex flex-col gap-0.5', className)}>
-      <div className="max-h-44 overflow-y-auto">
+    <div
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className={cn('max-h-48 overflow-auto overscroll-x-contain', className)}
+    >
+      {/* 이 래퍼와 행에는 overflow 를 두지 않는다 — sticky 의 기준이 스크롤러여야 한다. */}
+      <div
+        className="min-w-full"
+        style={{ width: timelineContentWidth(scale, TIMELINE_LABEL_REM) }}
+      >
         {rows.map((row) => (
-          <div key={row.key} className={cn('flex items-center gap-1.5', ROW_H)}>
+          <div key={row.key} className="flex h-5">
             <span
-              className="text-muted-foreground w-20 shrink-0 truncate text-[10px]"
+              className="bg-background text-muted-foreground sticky left-0 z-10 shrink-0 truncate pr-1.5 text-[10px] leading-5"
+              style={LABEL_STYLE}
               title={row.label}
             >
               {row.label}
             </span>
+            {/* overflow-hidden 필수 — 100% 지점의 표식이 scrollWidth 를 넓혀 가짜 가로 스크롤바를 만든다. */}
             <div
-              className="bg-muted/60 relative h-full min-w-0 flex-1 cursor-pointer overflow-hidden rounded-sm"
+              className="bg-muted/60 relative h-full min-w-0 flex-1 cursor-pointer overflow-hidden"
               onClick={handleClick}
             >
               {/* 검사된 구간 — 그 밖은 빗금(감지 없음). */}
@@ -167,33 +218,41 @@ export function Play3dReportTimeline({
               <span
                 aria-hidden
                 className="bg-foreground/50 absolute inset-y-0 w-px"
-                style={{ left: `${cursor}%` }}
+                style={{ left: edgeLeft(cursor, 1) }}
               />
             </div>
           </div>
         ))}
-      </div>
-      <div className="flex items-center gap-1.5">
-        <span className="w-20 shrink-0" />
-        <div className="text-muted-foreground relative h-3 min-w-0 flex-1 font-mono text-[9px] tabular-nums">
-          {ticks.map((tick, i) => (
-            <span
-              key={i}
-              className={cn(
-                'absolute top-0',
-                i === 0 && 'left-0',
-                i === ticks.length - 1 && 'right-0',
-                i > 0 && i < ticks.length - 1 && '-translate-x-1/2',
-              )}
-              style={
-                i > 0 && i < ticks.length - 1
-                  ? { left: `${markerPercent(tick, axisMs)}%` }
-                  : undefined
-              }
-            >
-              {formatSimClock(tick)}
-            </span>
-          ))}
+        <div className="bg-background sticky bottom-0 z-10 flex pt-0.5">
+          <span
+            ref={labelRef}
+            className="bg-background sticky left-0 z-10 shrink-0"
+            style={LABEL_STYLE}
+          />
+          <div className="text-muted-foreground relative h-3 min-w-0 flex-1 font-mono text-[9px] tabular-nums">
+            {ticks.map((tick, i) => {
+              const atStart = i === 0;
+              const atEnd = tick >= axisMs;
+              return (
+                <span
+                  key={tick}
+                  className={cn(
+                    'absolute top-0',
+                    atStart && 'left-0',
+                    atEnd && 'right-0',
+                    !atStart && !atEnd && '-translate-x-1/2',
+                  )}
+                  style={
+                    !atStart && !atEnd
+                      ? { left: `${markerPercent(tick, axisMs)}%` }
+                      : undefined
+                  }
+                >
+                  {formatSimClock(tick)}
+                </span>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -201,7 +260,11 @@ export function Play3dReportTimeline({
 }
 
 function bandStyle(fromMs: number, toMs: number, axisMs: number) {
-  const left = markerPercent(fromMs, axisMs);
-  const right = markerPercent(toMs, axisMs);
-  return { left: `${left}%`, width: `${Math.max(0, right - left)}%` };
+  const { left, width } = bandPercent(fromMs, toMs, axisMs);
+  return { left: `${left}%`, width: `${width}%` };
+}
+
+/** 축 끝(100%)의 표식도 자기 폭만큼 안쪽에 그려 overflow-hidden 에 잘리지 않게 한다. */
+function edgeLeft(percent: number, widthPx: number) {
+  return `min(${percent}%, calc(100% - ${widthPx}px))`;
 }

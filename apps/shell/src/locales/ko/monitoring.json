@@ -499,13 +499,15 @@
     "scanned": "검사된 구간",
     "iteration": "{{n}}회째 반복",
     "detectionOff": "재생 중 충돌 감지가 꺼져 있던 구간이 있어 충돌 수가 불완전합니다.",
+    "noTagMappings": "이 씬에는 태그 맵핑이 없어 감지·리포트가 동작하지 않습니다.",
+    "holdsSummary": "정지 {{count}}회 · {{time}}",
     "events": "사건",
     "noEvents": "이 창에 사건이 없습니다.",
     "noData": "데이터 없음",
     "seekToEvent": "이 시각으로 이동",
     "equipment": "장비",
     "zones": "영역",
-    "tags": "태그",
+    "tags": "축",
     "event": {
       "collision": "충돌",
       "zoneEnter": "영역 진입",
@@ -518,21 +520,31 @@
     "tile": {
       "collisions": "충돌",
       "intrusions": "영역 침범",
-      "holds": "정지",
-      "running": "가동 비율",
+      "running": "가동률",
       "firstAt": "첫 충돌 {{time}}",
-      "stopEnters": "정지 등급 {{count}}회",
-      "holdWall": "총 {{time}} (벽시계)",
-      "runningOf": "장비 {{count}}대 기준"
+      "topPair": "최다 {{pair}} ({{count}})",
+      "stopEnters": "정지 {{count}}",
+      "dwellTotal": "체류 합계 {{time}}",
+      "equipmentCount": "장비 {{count}}대",
+      "idleRatio": "대기 {{ratio}}",
+      "offline": "통신 두절",
+      "offlineTotal": "합계 {{time}}",
+      "saturation": "속도 한계 도달",
+      "noSpeedLimit": "속도 한계 미정의"
     },
     "col": {
       "equipment": "장비",
-      "offlineEpisodes": "두절 횟수",
+      "status": "상태",
+      "running": "가동%",
+      "offlineEpisodes": "두절",
+      "zoneDwell": "영역 체류",
+      "collisions": "충돌",
       "zone": "영역",
       "enters": "진입",
-      "dwell": "체류 합",
-      "maxDwell": "최대 체류",
-      "tag": "태그",
+      "topIntruder": "주 침범자",
+      "dwell": "체류",
+      "tag": "축",
+      "range": "범위",
       "mean": "평균",
       "travel": "이동량",
       "saturation": "한계 포화"
@@ -540,11 +552,13 @@
     "timeline": {
       "title": "타임라인",
       "events": "사건",
-      "zoneDwell": "영역 체류",
-      "unscanned": "빗금 = 미검사 구간"
+      "zoneDwell": "영역 체류"
     },
-    "ranking": {
-      "title": "원인 상위"
+    "summary": {
+      "events": "{{count}}건",
+      "equipment": "장비 {{count}} · 가동률 {{ratio}}",
+      "zones": "영역 {{count}} · 침범 {{enters}}회 · 체류 {{time}}",
+      "tags": "축 {{count}}"
     },
     "filter": {
       "all": "전체",
