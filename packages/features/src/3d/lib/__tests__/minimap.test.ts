@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { BoundsLike } from '@crane/core/lib/top-view-pose';
 import {
+  CAMERA_GLYPH_SHAPE,
   MINIMAP_MIN_PX,
   MINIMAP_PADDING_RATIO,
+  MINIMAP_TWILIGHT_ELEVATION_STEP,
   cameraFootprint,
+  cameraGlyphPolygon,
   clampPanelPosition,
   computeMinimapFrame,
   horizontalFovDeg,
+  minimapLightingKey,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
@@ -212,5 +216,94 @@ describe('clampPanelPosition', () => {
       x: 0,
       y: 0,
     });
+  });
+});
+
+describe('cameraGlyphPolygon', () => {
+  it('heading 0 이면 렌즈 앞이 +x, π/2 면 +y(이미지 아래) 로 향한다', () => {
+    const right = cameraGlyphPolygon(10, 20, 0, 10);
+    const rightFront = Math.max(...right.map((p) => p.px));
+    const rightRear = Math.min(...right.map((p) => p.px));
+    expect(rightFront).toBeCloseTo(18.5, 10);
+    expect(rightRear).toBeCloseTo(0, 10);
+    const down = cameraGlyphPolygon(10, 20, Math.PI / 2, 10);
+    expect(Math.max(...down.map((p) => p.py))).toBeCloseTo(28.5, 10);
+    expect(Math.min(...down.map((p) => p.py))).toBeCloseTo(10, 10);
+    // 회전해도 가로 폭은 좌우 대칭이다.
+    expect(Math.max(...down.map((p) => p.px)) - 10).toBeCloseTo(
+      10 - Math.min(...down.map((p) => p.px)),
+      10,
+    );
+  });
+
+  it('점 수·순서는 CAMERA_GLYPH_SHAPE 를 따르고 heading 축에 대칭이다', () => {
+    const points = cameraGlyphPolygon(0, 0, 0, 10);
+    expect(points).toHaveLength(CAMERA_GLYPH_SHAPE.length);
+    const n = points.length;
+    for (let i = 0; i < n / 2; i += 1) {
+      expect(points[i].px).toBeCloseTo(points[n - 1 - i].px, 10);
+      expect(points[i].py).toBeCloseTo(-points[n - 1 - i].py, 10);
+    }
+  });
+
+  it('size 0·NaN 은 원점, heading NaN 은 0 으로 본다(NaN 없음)', () => {
+    for (const points of [
+      cameraGlyphPolygon(3, 4, 1, 0),
+      cameraGlyphPolygon(3, 4, 1, Number.NaN),
+    ]) {
+      for (const point of points) {
+        expect(point.px).toBeCloseTo(3, 10);
+        expect(point.py).toBeCloseTo(4, 10);
+      }
+    }
+    const nanHeading = cameraGlyphPolygon(0, 0, Number.NaN, 5);
+    const zeroHeading = cameraGlyphPolygon(0, 0, 0, 5);
+    nanHeading.forEach((p, i) => {
+      expect(p.px).toBeCloseTo(zeroHeading[i].px, 10);
+      expect(p.py).toBeCloseTo(zeroHeading[i].py, 10);
+    });
+  });
+});
+
+describe('minimapLightingKey', () => {
+  it('solar 조명이 아니면(phase null) 빈 키', () => {
+    expect(minimapLightingKey(null, 30, true)).toBe('');
+  });
+
+  it('낮·밤은 고도가 달라도 같은 키, 작업등 토글로만 달라진다', () => {
+    expect(minimapLightingKey('day', 10, true)).toBe(
+      minimapLightingKey('day', 60, true),
+    );
+    expect(minimapLightingKey('night', -20, false)).toBe(
+      minimapLightingKey('night', -5, false),
+    );
+    expect(minimapLightingKey('day', 10, true)).not.toBe(
+      minimapLightingKey('day', 10, false),
+    );
+    expect(minimapLightingKey('day', 10, true)).not.toBe(
+      minimapLightingKey('night', 10, true),
+    );
+  });
+
+  it('박명은 고도 STEP 버킷 경계에서 갈리고 같은 버킷 안에선 같다', () => {
+    const step = MINIMAP_TWILIGHT_ELEVATION_STEP;
+    expect(minimapLightingKey('dusk', step, true)).toBe(
+      minimapLightingKey('dusk', step * 2 - 0.001, true),
+    );
+    expect(minimapLightingKey('dusk', step, true)).not.toBe(
+      minimapLightingKey('dusk', step - 0.001, true),
+    );
+    expect(minimapLightingKey('dusk', -0.5, true)).toBe(
+      minimapLightingKey('dusk', -step + 0.001, true),
+    );
+    expect(minimapLightingKey('dawn', 1, true)).not.toBe(
+      minimapLightingKey('dusk', 1, true),
+    );
+  });
+
+  it('NaN 고도는 버킷 0', () => {
+    expect(minimapLightingKey('dawn', Number.NaN, true)).toBe(
+      minimapLightingKey('dawn', 0.5, true),
+    );
   });
 });

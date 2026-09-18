@@ -83,12 +83,12 @@
 
 ### 미니맵 (기본 좌하단)
 
-- 순수 계산 `minimap.ts`(bounds→프레임, 픽셀↔월드, 팬 포즈 `panPoseToPoint`, 카메라 발자국, 패널 위치 `clampPanelPosition` — 테스트 대상).
+- 순수 계산 `minimap.ts`(bounds→프레임, 픽셀↔월드, 팬 포즈 `panPoseToPoint`, 카메라 발자국·픽토그램 `cameraGlyphPolygon`(실루엣 `CAMERA_GLYPH_SHAPE`), 재캡처 키 `minimapLightingKey`, 패널 위치 `clampPanelPosition` — 테스트 대상).
 - 픽셀 후처리 `minimap-image.ts` — 렌더 타깃 readback 은 톤매핑·sRGB 가 걸리지 않아 ACES→sRGB 를 JS 로 적용하고, 밤 스냅샷은 평균 휘도 기반 자동 노출을 준다.
-- 스토어 `use-scene-minimap-store.ts` — 스냅샷, 표시 여부(영속 `crane:scene-minimap:visible`), 새로 고침 카운터, 패널 위치(영속 `crane:scene-minimap:position`, null = 기본 좌하단). fov/종횡비는 mutable `minimapCameraInfo`.
-- 캡처 `scene-minimap-capture.tsx`(Canvas 안) — 씬 준비 + 로더 idle 뒤 useFrame 에서 기준 지도 합집합(`resolveCameraBoundsMaps`, 위 카메라 제한과 같은 기준) 위를 직교 카메라(up=(0,0,-1) → 이미지 위 = −Z)로 렌더 타깃에 한 번 그려 readback 한다. **렌더 타깃에 stencilBuffer 가 필수**다 — 없으면 바다가 야드를 덮는다(`docs/agents/rendering-perf.md` 바다 스텐실). 지도 목록 변경·수동 새로 고침에만 재캡처.
-- 표시 `scene-minimap.tsx` — DOM 2D 캔버스에 짧은 인터벌로 직접 그린다, setState 없음. 레지스트리 월드 위치 마커(색 우선순위 알람 severity > 운전 상태 > 기본, 포커스 테두리, 루트→AABB 중심 오프셋은 첫 관측 때 캐시), 카메라 부채꼴·타깃 십자, 영역 원(`drawZones` — 마커 아래, 같은 중심·색, 침범 시 채움 진해짐, 너무 작으면 생략).
-- 조작 — 누르기·끌기는 `panPoseToPoint` 로 타깃만 옮기는 팬을 컨트롤러 `moveTo` 로 보내 `SceneCameraLimits` 가 그대로 걸린다. 마커 클릭 = 그 모델 포커스(포커스 중 재클릭 = 돌아가기, 드래그 시작 안 함, 커서 pointer). 영역 원 hover = 소유·이름·침범자 목록 라벨. 패널은 상단 그립 바를 끌어 캔버스 영역 안 어디든 놓을 수 있고 복원 시 `clampPanelPosition` 으로 창 안에 넣는다.
+- 스토어 `use-scene-minimap-store.ts` — 스냅샷, 표시 여부(영속 `crane:scene-minimap:visible`), 패널 위치(영속 `crane:scene-minimap:position`, null = 기본 좌하단). fov/종횡비는 mutable `minimapCameraInfo`.
+- 캡처 `scene-minimap-capture.tsx`(Canvas 안) — 씬 준비 + 로더 idle 뒤 useFrame 에서 기준 지도 합집합(`resolveCameraBoundsMaps`, 위 카메라 제한과 같은 기준) 위를 직교 카메라(up=(0,0,-1) → 이미지 위 = −Z)로 렌더 타깃에 한 번 그려 readback 한다. **렌더 타깃에 stencilBuffer 가 필수**다 — 없으면 바다가 야드를 덮는다(`docs/agents/rendering-perf.md` 바다 스텐실). 재캡처는 지도 목록 변경과 하늘 국면 변경(`SceneLighting` 이 `model/scene-lighting-info.ts` 의 mutable `sceneLightingInfo` 로 내보낸 낮/박명/밤·작업등, 키는 `minimapLightingKey` — 박명은 고도 버킷까지) 두 경우뿐이고 수동 새로 고침은 없다.
+- 표시 `scene-minimap.tsx` — DOM 2D 캔버스에 짧은 인터벌로 직접 그린다, setState 없음. 레지스트리 월드 위치 마커(색은 알람 severity, 없으면 노랑 `MARKER_COLOR` — 운전 상태 색은 미니맵에 쓰지 않는다, 포커스 테두리, 루트→AABB 중심 오프셋은 첫 관측 때 캐시), 카메라(시선 방향으로 돌린 카메라 픽토그램 `cameraGlyphPolygon` + 흰색 부채꼴 `FOOTPRINT_COLOR`(카메라에서 멀어질수록 투명해지는 그라데이션 채움, 테두리는 호 없이 양쪽 모서리 직선만), 픽토그램 색 `CAMERA_COLOR` 청록, 정수직 탑뷰는 점). 영역 원·타깃 십자는 그리지 않는다.
+- 조작 — 누르기·끌기는 `panPoseToPoint` 로 타깃만 옮기는 팬을 컨트롤러 `moveTo` 로 보내 `SceneCameraLimits` 가 그대로 걸린다. 마커 클릭 = 그 모델 포커스(포커스 중 재클릭 = 돌아가기, 드래그 시작 안 함, 커서 pointer). 패널은 상단 그립 바를 끌어 캔버스 영역 안 어디든 놓을 수 있고 복원 시 `clampPanelPosition` 으로 창 안에 넣는다.
 - 독 토글 `scene-minimap-toggle.tsx`.
 
 ### 씬 독 (우측 레일, hover 펼침·고정)

@@ -30,7 +30,6 @@ beforeEach(() => {
   useSceneMinimapStore.setState({
     snapshot: null,
     visible: MINIMAP_VISIBLE_DEFAULT,
-    captureRequest: 0,
     position: null,
   });
 });
@@ -117,13 +116,5 @@ describe('snapshot', () => {
     expect(useSceneMinimapStore.getState()).toBe(before);
     useSceneMinimapStore.getState().setSnapshot(null);
     expect(useSceneMinimapStore.getState().snapshot).toBeNull();
-  });
-});
-
-describe('requestCapture', () => {
-  it('호출마다 카운터가 증가한다', () => {
-    useSceneMinimapStore.getState().requestCapture();
-    useSceneMinimapStore.getState().requestCapture();
-    expect(useSceneMinimapStore.getState().captureRequest).toBe(2);
   });
 });

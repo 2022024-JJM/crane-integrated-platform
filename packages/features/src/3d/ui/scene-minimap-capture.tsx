@@ -15,12 +15,17 @@ import {
   unionObjectBounds,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
-import { computeMinimapFrame, type MinimapFrame } from '../lib/minimap';
+import {
+  computeMinimapFrame,
+  minimapLightingKey,
+  type MinimapFrame,
+} from '../lib/minimap';
 import {
   autoExposure,
   meanLinearLuminance,
   toDisplayPixels,
 } from '../lib/minimap-image';
+import { sceneLightingInfo } from '../model/scene-lighting-info';
 import {
   minimapCameraInfo,
   useSceneMinimapStore,
@@ -33,8 +38,10 @@ import {
  * 같은 resolveCameraBoundsMaps 합집합)을 직교 카메라로 한 번 내려다보며 렌더
  * 타깃에 그리고, 픽셀을 읽어 2D 캔버스 이미지로 만들어 스토어에 둔다. 장비는
  * 스냅샷 시점의 자세로 굳지만 미니맵이 그 위에 실시간 마커를 따로 찍으므로
- * 배경 용도로 충분하다. 다시 찍는 때: 기준 지도 목록이 바뀔 때, 수동 새로
- * 고침(스토어 captureRequest). 낮/밤은 자동 노출(lib/minimap-image)이 보정한다.
+ * 배경 용도로 충분하다. 다시 찍는 때: 기준 지도 목록이 바뀔 때, 하늘 국면
+ * (낮/박명/밤·작업등 — SceneLighting 이 sceneLightingInfo 로 내보내고 키는
+ * lib/minimap minimapLightingKey)이 바뀔 때. 밤 스냅샷은 자동 노출
+ * (lib/minimap-image)이 읽히는 밝기로 올린다.
  *
  * 렌더는 useFrame 안에서 한다 — 그 시점엔 씬의 matrixWorld 가 이 프레임
  * 기준으로 갱신돼 있고, R3F 는 useFrame 뒤에 메인 프레임을 그리므로 렌더
@@ -74,15 +81,16 @@ export function SceneMinimapCapture({
   ready,
 }: SceneMinimapCaptureProps) {
   const assetsActive = useProgress((s) => s.active);
-  const captureRequest = useSceneMinimapStore((s) => s.captureRequest);
   const setSnapshot = useSceneMinimapStore((s) => s.setSnapshot);
   const invalidate = useThree((s) => s.invalidate);
   const boundsMaps = resolveCameraBoundsMaps(sceneInfo?.maps);
   const boundsKey = boundsMaps.map((m) => m.id).join('|');
   const pendingRef = useRef(false);
   const boundsMapsRef = useRef(boundsMaps);
+  /** 마지막 캡처 때의 하늘 국면 키 — 달라지면 다시 찍는다. */
+  const capturedLightingKeyRef = useRef('');
 
-  // 캡처 무장 — 준비 조건이 갖춰지거나 기준 지도·새로 고침 요청이 바뀔 때.
+  // 캡처 무장 — 준비 조건이 갖춰지거나 기준 지도가 바뀔 때.
   // useFrame 이 읽을 기준 지도 목록도 여기서 갱신한다(렌더 중 ref 쓰기 금지).
   useEffect(() => {
     boundsMapsRef.current = boundsMaps;
@@ -91,7 +99,7 @@ export function SceneMinimapCapture({
     invalidate();
     // boundsMaps 는 boundsKey 가 같으면 같은 지도 목록이다(id 로 판정).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, assetsActive, boundsKey, captureRequest, invalidate]);
+  }, [ready, assetsActive, boundsKey, invalidate]);
 
   // 화면을 떠나면 스냅샷을 비운다 — 다른 리전의 미니맵이 옛 이미지를 잠깐
   // 보이지 않게.
@@ -102,6 +110,22 @@ export function SceneMinimapCapture({
     if (perspective.isPerspectiveCamera) {
       minimapCameraInfo.fovDeg = perspective.fov;
       minimapCameraInfo.aspect = perspective.aspect;
+    }
+    // 하늘 국면이 바뀌면 재캡처 — SceneLighting 이 앞서 마운트돼 같은
+    // 프레임의 갱신값을 읽는다. 첫 캡처 전(스냅샷 없음)엔 무장 effect 가
+    // 맡고, solar 조명이 아니면(빈 키) 배경이 변하지 않으니 건너뛴다.
+    const lightingKey = minimapLightingKey(
+      sceneLightingInfo.skyPhase,
+      sceneLightingInfo.sunElevation,
+      sceneLightingInfo.yardLights,
+    );
+    if (
+      !pendingRef.current &&
+      lightingKey !== '' &&
+      lightingKey !== capturedLightingKeyRef.current &&
+      useSceneMinimapStore.getState().snapshot !== null
+    ) {
+      pendingRef.current = true;
     }
     if (!pendingRef.current) return;
 
@@ -121,6 +145,7 @@ export function SceneMinimapCapture({
     pendingRef.current = false;
     const image = captureTopView(gl, scene, frame, bounds);
     if (image) {
+      capturedLightingKeyRef.current = lightingKey;
       setSnapshot({ image, frame, capturedAt: Date.now() });
     }
   });

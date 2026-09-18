@@ -54,6 +54,7 @@ import {
   readSceneTimeMs,
   type SceneTimeSource,
 } from '../model/scene-time-source';
+import { sceneLightingInfo } from '../model/scene-lighting-info';
 import { useSceneClockStore } from '../model/use-scene-clock-store';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -663,6 +664,7 @@ export function SceneLighting({
       resetToManualLook(light, ambient, fill, hemisphere, scene);
       solar.snapshot = null;
       solar.timeKey = Number.NaN;
+      sceneLightingInfo.skyPhase = null;
       if (sun) sun.visible = false;
       if (moon) moon.visible = false;
       if (tint) tint.visible = false;
@@ -733,6 +735,10 @@ export function SceneLighting({
         );
         if (snapshot) {
           solar.snapshot = snapshot;
+          // 하늘 국면 내보내기 — 미니맵 캡처가 재캡처 판단에 읽는다.
+          sceneLightingInfo.skyPhase = snapshot.phase;
+          sceneLightingInfo.sunElevation = snapshot.sun.elevation;
+          sceneLightingInfo.yardLights = yardLights;
           if (
             snapshot.keyAzimuth !== solar.keyAzimuth ||
             snapshot.keyElevation !== solar.keyElevation

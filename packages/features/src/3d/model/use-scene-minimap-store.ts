@@ -10,14 +10,12 @@ import type { MinimapFrame, PanelPosition } from '../lib/minimap';
  * 모니터링 2D 미니맵 상태.
  *
  * - `snapshot`: Canvas 안 SceneMinimapCapture 가 찍은 탑뷰 이미지(sRGB 로
- *   후처리된 2D 캔버스)와 그 픽셀↔월드 프레임. 씬 로드·지도 변경·수동 새로
- *   고침에만 바뀌므로 React 상태로 둬도 커밋이 잦지 않다(프레임 속도로 바뀌는
+ *   후처리된 2D 캔버스)와 그 픽셀↔월드 프레임. 씬 로드·지도 변경·하늘
+ *   국면 변경에만 바뀌므로 React 상태로 둬도 커밋이 잦지 않다(프레임 속도로 바뀌는
  *   카메라·마커는 여기 두지 않고 미니맵이 폴링으로 직접 읽는다 —
  *   rig-live-readouts 와 같은 규칙).
  * - `visible`: 표시 여부. 리전 무관 전역 설정이고 localStorage 에 영속한다
  *   (독 pin 과 같은 계열 `crane:<feature>`). 기본 표시.
- * - `captureRequest`: 수동 새로 고침 카운터 — 캡처 컴포넌트가 값 변화를 보고
- *   다시 찍는다(낮/밤이 바뀐 뒤 등).
  * - `position`: 패널 좌상단의 캔버스 영역 기준 좌표(px). null 이면 기본 자리
  *   (좌하단). 헤더 바를 끌어 옮기면 저장되고, 복원 시 창 크기에 맞춰 클램프
  *   한다(lib/minimap clampPanelPosition).
@@ -77,12 +75,10 @@ export function writeMinimapPosition(position: PanelPosition | null): void {
 interface SceneMinimapState {
   snapshot: MinimapSnapshot | null;
   visible: boolean;
-  captureRequest: number;
   position: PanelPosition | null;
   setSnapshot: (snapshot: MinimapSnapshot | null) => void;
   setVisible: (visible: boolean) => void;
   toggleVisible: () => void;
-  requestCapture: () => void;
   /** 같은 좌표 재설정은 no-op(참조 유지). null 은 기본 자리로 복귀. */
   setPosition: (position: PanelPosition | null) => void;
 }
@@ -90,7 +86,6 @@ interface SceneMinimapState {
 export const useSceneMinimapStore = create<SceneMinimapState>()((set, get) => ({
   snapshot: null,
   visible: readMinimapVisible(),
-  captureRequest: 0,
   position: readMinimapPosition(),
   setSnapshot: (snapshot) => {
     // 같은 스냅샷 재설정은 no-op(참조 유지) — 캡처 컴포넌트의 effect 가
@@ -105,9 +100,6 @@ export const useSceneMinimapStore = create<SceneMinimapState>()((set, get) => ({
   },
   toggleVisible: () => {
     get().setVisible(!get().visible);
-  },
-  requestCapture: () => {
-    set({ captureRequest: get().captureRequest + 1 });
   },
   setPosition: (position) => {
     const current = get().position;

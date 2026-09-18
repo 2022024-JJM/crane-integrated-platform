@@ -406,7 +406,6 @@ export function Monitoring3dView({
               <SceneMinimap
                 sceneInfo={sceneInfo}
                 alarmsByCraneId={alarmsByCraneId}
-                runtimeStatuses={runtimeStatuses}
                 getPose={handleGetPose}
                 onMoveTo={handleMoveTo}
               />

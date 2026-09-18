@@ -1,5 +1,6 @@
 import type { BoundsLike } from '@crane/core/lib/top-view-pose';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import type { SkyPhase } from './sky-lighting';
 
 /**
  * 2D 미니맵의 순수 계산 — 적용은 ui/scene-minimap.tsx(DOM 캔버스)와
@@ -219,6 +220,70 @@ export function nearestMarkerIndex(
     }
   }
   return best;
+}
+
+/**
+ * 카메라 글리프의 로컬 실루엣 — 비디오 카메라 픽토그램(몸통 사각형 + 앞으로
+ * 벌어지는 렌즈 사다리꼴). x 가 시선 방향(+ 가 앞), y 가 좌우, 단위는
+ * sizePx 배율. 원점(카메라 위치)은 몸통 앞쪽 가까이에 둬 부채꼴이 렌즈에서
+ * 시작하는 것처럼 읽힌다.
+ */
+export const CAMERA_GLYPH_SHAPE: ReadonlyArray<readonly [number, number]> = [
+  [-1, -0.55],
+  [0.15, -0.55],
+  [0.15, -0.3],
+  [0.85, -0.6],
+  [0.85, 0.6],
+  [0.15, 0.3],
+  [0.15, 0.55],
+  [-1, 0.55],
+];
+
+/**
+ * 카메라 위치 글리프 — CAMERA_GLYPH_SHAPE 를 heading 만큼 돌려 (px, py) 에
+ * 놓은 폴리곤. heading 규약은 cameraFootprint 와 같고(+X = 0, +Z = π/2)
+ * 미니맵 픽셀 좌표계와 방향이 일치하므로 그대로 회전한다. sizePx 가 0·NaN
+ * 이면 모든 점이 원점(NaN 을 내보내지 않는다).
+ */
+export function cameraGlyphPolygon(
+  px: number,
+  py: number,
+  headingRad: number,
+  sizePx: number,
+): Array<{ px: number; py: number }> {
+  const size = Number.isFinite(sizePx) ? sizePx : 0;
+  const heading = Number.isFinite(headingRad) ? headingRad : 0;
+  const cos = Math.cos(heading);
+  const sin = Math.sin(heading);
+  return CAMERA_GLYPH_SHAPE.map(([fx, fy]) => {
+    const x = fx * size;
+    const y = fy * size;
+    return { px: px + x * cos - y * sin, py: py + x * sin + y * cos };
+  });
+}
+
+/** 박명 구간에서 배경을 다시 찍는 태양 고도 단위(도). */
+export const MINIMAP_TWILIGHT_ELEVATION_STEP = 3;
+
+/**
+ * 미니맵 배경 재캡처 키 — 값이 바뀌면 탑뷰 스냅샷을 다시 찍는다. 낮·밤은
+ * 국면 + 작업등만 보고(낮 동안 태양이 움직여도 배경은 그대로), 박명은
+ * 밝기가 빠르게 변하므로 고도를 MINIMAP_TWILIGHT_ELEVATION_STEP 단위로
+ * 내림한 버킷을 더한다. solar 조명이 아니면(phase null) 빈 문자열 — 읽는
+ * 쪽은 빈 키를 "재캡처 없음" 으로 본다. NaN 고도는 버킷 0.
+ */
+export function minimapLightingKey(
+  phase: SkyPhase | null,
+  sunElevation: number,
+  yardLights: boolean,
+): string {
+  if (phase === null) return '';
+  const lights = yardLights ? 'on' : 'off';
+  if (phase === 'day' || phase === 'night') return `${phase}|${lights}`;
+  const bucket = Number.isFinite(sunElevation)
+    ? Math.floor(sunElevation / MINIMAP_TWILIGHT_ELEVATION_STEP)
+    : 0;
+  return `${phase}|${lights}|${bucket}`;
 }
 
 export interface PanelPosition {

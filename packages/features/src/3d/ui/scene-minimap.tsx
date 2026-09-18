@@ -1,12 +1,8 @@
-import { GripHorizontal, RefreshCw, X } from 'lucide-react';
+import { GripHorizontal, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box3, Vector3, type Object3D } from 'three';
-import {
-  modelObjectRegistry,
-  zoneCenterWorld,
-  type SavedSceneInfo,
-} from '@crane/domain/3d';
+import { modelObjectRegistry, type SavedSceneInfo } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import { cn } from '@crane/core/lib/utils';
@@ -17,11 +13,8 @@ import {
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
 import {
-  RUNTIME_STATUS_COLORS,
-  type RuntimeStatusRecord,
-} from '../lib/model-runtime-status';
-import {
   cameraFootprint,
+  cameraGlyphPolygon,
   clampPanelPosition,
   horizontalFovDeg,
   minimapToWorld,
@@ -30,10 +23,8 @@ import {
   worldToMinimap,
   type MinimapFrame,
 } from '../lib/minimap';
-import { zoneColorWithAlpha, zoneKey } from '../lib/scene-zones';
+import { zoneColorWithAlpha } from '../lib/scene-zones';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import { sceneZoneRuntime } from '../model/scene-zone-runtime';
-import { useSceneZoneStore } from '../model/use-scene-zone-store';
 import {
   minimapCameraInfo,
   useSceneMinimapStore,
@@ -44,7 +35,9 @@ import {
  *
  * 배경은 SceneMinimapCapture 가 찍어 둔 탑뷰 스냅샷이고, 그 위에 매 폴링
  * 틱마다 장비 마커(레지스트리의 현재 월드 위치 — 리그·태그로 움직인 자세를
- * 따라간다)와 카메라 발자국(부채꼴)을 그린다. 그리기는 setInterval 로 2D
+ * 따라간다)와 카메라(시선 방향으로 도는 카메라 픽토그램 + 시야 부채꼴,
+ * 강조색 CAMERA_COLOR 청록)를 그린다. 영역 원은 그리지 않는다 — 3D 링과
+ * HUD 가 담당하고 미니맵에선 마커를 가린다. 그리기는 setInterval 로 2D
  * 캔버스에 직접 하고 React 상태를 건드리지 않는다 — 카메라·장비는 프레임
  * 속도로 바뀌므로 setState 로 따라가면 커밋이 그 속도로 돈다(perf HUD 와
  * 같은 규칙).
@@ -57,8 +50,8 @@ import {
  * 걸린다.
  *
  * 마커 위에 포인터를 올리면 장비 이름을 그 옆에 그린다. 마커 색은 알람
- * severity(critical·high·medium·info) 를 따르고 없으면 청록, 포커스 중인
- * 모델은 흰 테두리다.
+ * severity(critical·high·medium·info) 를 따르고 없으면 노랑(MARKER_COLOR —
+ * 운전 상태 색은 HUD·3D 라벨이 담당한다), 포커스 중인 모델은 흰 테두리다.
  *
  * 패널 자체는 상단 헤더 바(그립)를 끌어 캔버스 영역 안 어디든 놓을 수 있다.
  * 끄는 동안은 스타일을 직접 써서 리렌더하지 않고, 놓을 때 스토어에 저장한다
@@ -70,7 +63,7 @@ import {
 /** 미니맵 표시 폭(CSS px). 높이는 스냅샷 종횡비를 따른다. */
 const MINIMAP_CSS_WIDTH = 224;
 const DRAW_INTERVAL_MS = 66;
-const MARKER_RADIUS_PX = 3.5;
+const MARKER_RADIUS_PX = 2;
 const MARKER_HIT_RADIUS_PX = 8;
 /** 부채꼴을 카메라→타깃 거리보다 이만큼 더 그린다 — 타깃 너머도 보인다. */
 const FOOTPRINT_LENGTH_RATIO = 1.6;
@@ -81,15 +74,25 @@ const SEVERITY_COLORS: Record<AlarmSeverity, string> = {
   medium: '#f59e0b',
   info: '#3b82f6',
 };
-const MARKER_COLOR = '#22d3ee';
-const FOOTPRINT_FILL = 'rgba(255, 255, 255, 0.22)';
-const FOOTPRINT_STROKE = 'rgba(255, 255, 255, 0.85)';
+const MARKER_COLOR = '#fde047';
+/** 카메라 픽토그램 색. 부채꼴은 FOOTPRINT_COLOR. */
+const CAMERA_COLOR = '#22d3ee';
+/**
+ * 시야 부채꼴 — 흰색, 카메라에서 멀어질수록 투명해지는 그라데이션 채움.
+ * 테두리는 호 없이 양쪽 모서리 직선만 그린다.
+ */
+const FOOTPRINT_COLOR = '#ffffff';
+const FOOTPRINT_FILL_NEAR = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.65);
+const FOOTPRINT_FILL_MID = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.35);
+const FOOTPRINT_FILL_FAR = zoneColorWithAlpha(FOOTPRINT_COLOR, 0);
+const FOOTPRINT_EDGE = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.9);
+/** 모서리 직선 굵기(CSS px). */
+const FOOTPRINT_EDGE_WIDTH_PX = 0.35;
+const CAMERA_GLYPH_SIZE_PX = 5;
 
 interface SceneMinimapProps {
   sceneInfo: SavedSceneInfo | null;
   alarmsByCraneId: Record<string, AlarmSeverity>;
-  /** 모델별 운전 상태 — 알람이 없는 마커의 색(running·idle·offline). */
-  runtimeStatuses?: RuntimeStatusRecord;
   /** 현재 카메라 포즈. 컨트롤러 준비 전이면 null. */
   getPose: () => { position: Vector3Tuple; target: Vector3Tuple } | null;
   /** 카메라를 즉시 옮긴다 — 북마크·포커스 복귀와 같은 경로. */
@@ -112,20 +115,9 @@ interface DrawnMarker {
   modelId: string;
 }
 
-interface DrawnZone {
-  px: number;
-  py: number;
-  radiusPx: number;
-  zoneKey: string;
-  label: string;
-}
-
-const NO_STATUSES: RuntimeStatusRecord = Object.freeze({});
-
 export function SceneMinimap({
   sceneInfo,
   alarmsByCraneId,
-  runtimeStatuses = NO_STATUSES,
   getPose,
   onMoveTo,
   className,
@@ -134,7 +126,6 @@ export function SceneMinimap({
   const snapshot = useSceneMinimapStore((s) => s.snapshot);
   const visible = useSceneMinimapStore((s) => s.visible);
   const setVisible = useSceneMinimapStore((s) => s.setVisible);
-  const requestCapture = useSceneMinimapStore((s) => s.requestCapture);
   const position = useSceneMinimapStore((s) => s.position);
   const setPosition = useSceneMinimapStore((s) => s.setPosition);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -147,7 +138,6 @@ export function SceneMinimap({
   const draggingRef = useRef(false);
   const hoverRef = useRef<{ px: number; py: number } | null>(null);
   const markersRef = useRef<DrawnMarker[]>([]);
-  const zonesRef = useRef<DrawnZone[]>([]);
   const cacheRef = useRef<MarkerCache>({
     offsetByUuid: new Map(),
     box: new Box3(),
@@ -171,34 +161,20 @@ export function SceneMinimap({
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
-      // 영역 원은 마커 아래.
-      zonesRef.current = drawZones(
-        context,
-        drawFrame,
-        scale,
-        sceneInfo,
-        cacheRef.current,
-      );
       markersRef.current = drawMarkers(
         context,
         drawFrame,
         scale,
         sceneInfo,
         alarmsByCraneId,
-        runtimeStatuses,
         useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
       drawCamera(context, drawFrame, scale, getPose());
-      const hit = resolveHover(
-        markersRef.current,
-        zonesRef.current,
-        hoverRef.current,
-        scale,
-      );
+      const hit = resolveHover(markersRef.current, hoverRef.current, scale);
       drawHoverLabel(context, scale, hit);
       // 마커 위에서는 클릭이 포커스라 커서로 알려 준다.
-      canvas.style.cursor = hit?.kind === 'marker' ? 'pointer' : 'crosshair';
+      canvas.style.cursor = hit ? 'pointer' : 'crosshair';
     };
 
     // prop 이 바뀌면 인터벌을 다시 건다 — 씬·알람·getPose 는 드물게 바뀌어
@@ -207,7 +183,7 @@ export function SceneMinimap({
     draw();
     const timer = window.setInterval(draw, DRAW_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [visible, snapshot, sceneInfo, alarmsByCraneId, runtimeStatuses, getPose]);
+  }, [visible, snapshot, sceneInfo, alarmsByCraneId, getPose]);
 
   const localPixel = useCallback(
     (event: PointerEvent<HTMLCanvasElement>) => {
@@ -245,15 +221,14 @@ export function SceneMinimap({
     // 않는다.
     const hit = resolveHover(
       markersRef.current,
-      zonesRef.current,
       pixel,
       frame.pxWidth / MINIMAP_CSS_WIDTH,
     );
-    if (hit?.kind === 'marker') {
+    if (hit) {
       const focus = useObjectFocusStore.getState();
-      if (focus.focusedModelId === hit.marker.modelId) focus.exitFocus();
+      if (focus.focusedModelId === hit.modelId) focus.exitFocus();
       else if (focus.focusedModelId === null) {
-        focus.enterFocus(hit.marker.modelId, getPose());
+        focus.enterFocus(hit.modelId, getPose());
       }
       return;
     }
@@ -364,9 +339,6 @@ export function SceneMinimap({
   const hideLabel = t('common:viewer3d.minimapHide', {
     defaultValue: '미니맵 숨기기',
   });
-  const refreshLabel = t('common:viewer3d.minimapRefresh', {
-    defaultValue: '미니맵 새로 고침',
-  });
 
   return (
     <div
@@ -397,22 +369,6 @@ export function SceneMinimap({
           // 버튼 클릭이 패널 드래그를 시작하지 않게 한다.
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={refreshLabel}
-                  className="text-white/80 hover:bg-white/20 hover:text-white"
-                />
-              }
-              onClick={requestCapture}
-            >
-              <RefreshCw className="size-3" />
-            </TooltipTrigger>
-            <TooltipContent side="top">{refreshLabel}</TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger
               render={
@@ -480,66 +436,12 @@ function markerOffset(
   return offset;
 }
 
-/** 영역 원이 이보다 작게 그려지면 생략한다(CSS px). */
-const ZONE_MIN_RADIUS_PX = 2;
-
-/**
- * 모델 영역 원 — 3D 링과 같은 중심(루트 월드 XZ + 오프셋)·색. 침범 중이면
- * 채움이 진해진다(런타임 싱글턴을 직접 읽는다). 토글이 꺼져 있으면 그리지
- * 않는다.
- */
-function drawZones(
-  context: CanvasRenderingContext2D,
-  frame: MinimapFrame,
-  scale: number,
-  sceneInfo: SavedSceneInfo | null,
-  cache: MarkerCache,
-): DrawnZone[] {
-  const drawn: DrawnZone[] = [];
-  if (!useSceneZoneStore.getState().enabled) return drawn;
-  const unitsPerPx = frame.worldWidth / frame.pxWidth;
-  for (const model of sceneInfo?.models ?? []) {
-    if (!model.zones?.length) continue;
-    const object = modelObjectRegistry.get(model.id);
-    if (!object) continue;
-    for (const zone of model.zones) {
-      if (!Number.isFinite(zone.radius) || zone.radius <= 0) continue;
-      const radiusPx = zone.radius / unitsPerPx;
-      if (radiusPx < ZONE_MIN_RADIUS_PX * scale) continue;
-      zoneCenterWorld(object.matrixWorld, zone.offset, cache.position);
-      const { px, py } = worldToMinimap(
-        frame,
-        cache.position.x,
-        cache.position.z,
-      );
-      const key = zoneKey(model.id, zone.id);
-      const intruded = sceneZoneRuntime.isIntruded(key);
-      context.beginPath();
-      context.arc(px, py, radiusPx, 0, Math.PI * 2);
-      context.fillStyle = zoneColorWithAlpha(zone.color, intruded ? 0.3 : 0.12);
-      context.fill();
-      context.lineWidth = (intruded ? 2 : 1) * scale;
-      context.strokeStyle = zone.color;
-      context.stroke();
-      drawn.push({
-        px,
-        py,
-        radiusPx,
-        zoneKey: key,
-        label: `${model.equipName || model.id} · ${zone.name || zone.id}`,
-      });
-    }
-  }
-  return drawn;
-}
-
 function drawMarkers(
   context: CanvasRenderingContext2D,
   frame: MinimapFrame,
   scale: number,
   sceneInfo: SavedSceneInfo | null,
   alarms: Record<string, AlarmSeverity>,
-  statuses: RuntimeStatusRecord,
   focusedModelId: string | null,
   cache: MarkerCache,
 ): DrawnMarker[] {
@@ -562,11 +464,8 @@ function drawMarkers(
     const isFocused = focusedModelId === model.id;
     context.beginPath();
     context.arc(px, py, isFocused ? radius * 1.4 : radius, 0, Math.PI * 2);
-    // 알람 > 운전 상태 > 기본(상태 미확인).
-    const statusColor = RUNTIME_STATUS_COLORS[statuses[model.id] ?? 'unknown'];
-    context.fillStyle = severity
-      ? SEVERITY_COLORS[severity]
-      : (statusColor ?? MARKER_COLOR);
+    // 알람 > 기본.
+    context.fillStyle = severity ? SEVERITY_COLORS[severity] : MARKER_COLOR;
     context.fill();
     context.lineWidth = (isFocused ? 2 : 1) * scale;
     context.strokeStyle = isFocused ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
@@ -596,7 +495,20 @@ function drawCamera(
   const unitsPerPx = frame.worldWidth / frame.pxWidth;
   const lengthPx = (footprint.length * FOOTPRINT_LENGTH_RATIO) / unitsPerPx;
 
-  if (lengthPx > 2 * scale) {
+  // 시선 방향이 정의되는(정수직 탑뷰가 아닌) 경우에만 부채꼴·화살촉.
+  const hasHeading = lengthPx > 2 * scale;
+  if (hasHeading) {
+    const gradient = context.createRadialGradient(
+      origin.px,
+      origin.py,
+      0,
+      origin.px,
+      origin.py,
+      lengthPx,
+    );
+    gradient.addColorStop(0, FOOTPRINT_FILL_NEAR);
+    gradient.addColorStop(0.45, FOOTPRINT_FILL_MID);
+    gradient.addColorStop(1, FOOTPRINT_FILL_FAR);
     context.beginPath();
     context.moveTo(origin.px, origin.py);
     context.arc(
@@ -607,49 +519,55 @@ function drawCamera(
       footprint.heading + footprint.halfAngle,
     );
     context.closePath();
-    context.fillStyle = FOOTPRINT_FILL;
+    context.fillStyle = gradient;
     context.fill();
-    context.lineWidth = 1 * scale;
-    context.strokeStyle = FOOTPRINT_STROKE;
+    // 모서리 직선 — 호는 그리지 않는다.
+    context.beginPath();
+    for (const angle of [
+      footprint.heading - footprint.halfAngle,
+      footprint.heading + footprint.halfAngle,
+    ]) {
+      context.moveTo(origin.px, origin.py);
+      context.lineTo(
+        origin.px + Math.cos(angle) * lengthPx,
+        origin.py + Math.sin(angle) * lengthPx,
+      );
+    }
+    context.lineWidth = FOOTPRINT_EDGE_WIDTH_PX * scale;
+    context.strokeStyle = FOOTPRINT_EDGE;
     context.stroke();
   }
 
-  // 타깃(화면 중앙이 보는 지점) 십자.
-  const target = worldToMinimap(frame, pose.target[0], pose.target[2]);
-  const arm = 4 * scale;
+  // 카메라 위치 — 시선 방향으로 돌린 카메라 픽토그램. 탑뷰(방향 없음)면 점.
   context.beginPath();
-  context.moveTo(target.px - arm, target.py);
-  context.lineTo(target.px + arm, target.py);
-  context.moveTo(target.px, target.py - arm);
-  context.lineTo(target.px, target.py + arm);
-  context.lineWidth = 1.5 * scale;
-  context.strokeStyle = FOOTPRINT_STROKE;
-  context.stroke();
-
-  // 카메라 위치 점.
-  context.beginPath();
-  context.arc(origin.px, origin.py, 3 * scale, 0, Math.PI * 2);
-  context.fillStyle = '#ffffff';
+  if (hasHeading) {
+    const points = cameraGlyphPolygon(
+      origin.px,
+      origin.py,
+      footprint.heading,
+      CAMERA_GLYPH_SIZE_PX * scale,
+    );
+    context.moveTo(points[0].px, points[0].py);
+    for (let i = 1; i < points.length; i += 1) {
+      context.lineTo(points[i].px, points[i].py);
+    }
+    context.closePath();
+  } else {
+    context.arc(origin.px, origin.py, 2 * scale, 0, Math.PI * 2);
+  }
+  context.fillStyle = CAMERA_COLOR;
   context.fill();
   context.lineWidth = 1 * scale;
   context.strokeStyle = 'rgba(0, 0, 0, 0.7)';
   context.stroke();
 }
 
-type HoverHit =
-  | { kind: 'marker'; marker: DrawnMarker }
-  | { kind: 'zone'; zone: DrawnZone };
-
-/**
- * 포인터 아래의 것 — 마커(반경 안 최근접)가 우선, 없으면 그 점을 품는 영역
- * 원 중 가장 작은 것(작은 원이 큰 원 안에 있을 때 안쪽을 고른다).
- */
+/** 포인터 아래의 마커(반경 안 최근접). 없으면 null. */
 function resolveHover(
   markers: DrawnMarker[],
-  zones: DrawnZone[],
   hover: { px: number; py: number } | null,
   scale: number,
-): HoverHit | null {
+): DrawnMarker | null {
   if (!hover) return null;
   const index = nearestMarkerIndex(
     markers,
@@ -657,40 +575,17 @@ function resolveHover(
     hover.py,
     MARKER_HIT_RADIUS_PX * scale,
   );
-  if (index >= 0) return { kind: 'marker', marker: markers[index] };
-  let best: DrawnZone | null = null;
-  for (const zone of zones) {
-    const dSq = (zone.px - hover.px) ** 2 + (zone.py - hover.py) ** 2;
-    if (dSq > zone.radiusPx * zone.radiusPx) continue;
-    if (!best || zone.radiusPx < best.radiusPx) best = zone;
-  }
-  return best ? { kind: 'zone', zone: best } : null;
+  return index >= 0 ? markers[index] : null;
 }
 
 function drawHoverLabel(
   context: CanvasRenderingContext2D,
   scale: number,
-  hit: HoverHit | null,
+  hit: DrawnMarker | null,
 ): void {
   if (!hit) return;
-  let text: string;
-  let px: number;
-  let py: number;
-  if (hit.kind === 'marker') {
-    text = hit.marker.name;
-    px = hit.marker.px;
-    py = hit.marker.py;
-  } else {
-    // 침범 중이면 침범자 이름을 이어 붙인다 — 미니맵에서 바로 "누가" 를 읽는다.
-    const intrusion = useSceneZoneStore
-      .getState()
-      .intrusions.find((i) => i.zoneKey === hit.zone.zoneKey);
-    text = intrusion
-      ? `${hit.zone.label} ← ${intrusion.intruders.map((i) => i.name).join(', ')}`
-      : hit.zone.label;
-    px = hit.zone.px;
-    py = hit.zone.py;
-  }
+  const text = hit.name;
+  const { px, py } = hit;
   const fontPx = 11 * scale;
   context.font = `${fontPx}px system-ui, sans-serif`;
   context.textBaseline = 'middle';
