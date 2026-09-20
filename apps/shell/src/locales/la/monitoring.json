@@ -537,8 +537,12 @@
     },
     "timeline": {
       "title": "Linea temporis",
-      "events": "Eventus",
       "zoneDwell": "Mora in zona"
+    },
+    "hover": {
+      "pairOrdinal": "collisio {{n}} ex {{total}} huius paris",
+      "zoneTitle": "Mora in zona · gradus {{level}}",
+      "ongoing": "adhuc durat"
     },
     "summary": {
       "events": "{{count}} eventus",

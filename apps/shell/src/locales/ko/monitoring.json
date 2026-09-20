@@ -551,8 +551,12 @@
     },
     "timeline": {
       "title": "타임라인",
-      "events": "사건",
       "zoneDwell": "영역 체류"
+    },
+    "hover": {
+      "pairOrdinal": "이 쌍 {{n}}번째 · 전체 {{total}}회",
+      "zoneTitle": "영역 체류 · {{level}} 등급",
+      "ongoing": "진행 중"
     },
     "summary": {
       "events": "{{count}}건",

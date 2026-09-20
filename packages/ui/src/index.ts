@@ -17,6 +17,7 @@ export * from './molecules/date-picker';
 export * from './molecules/date-time-picker';
 export * from './molecules/table';
 export * from './molecules/tooltip';
+export * from './molecules/tooltip-handle';
 export * from './molecules/select';
 export * from './molecules/popover';
 export * from './molecules/portal-container';

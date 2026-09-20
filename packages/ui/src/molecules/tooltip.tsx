@@ -24,11 +24,19 @@ function TooltipProvider({
   );
 }
 
-function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
+/**
+ * Payload 제네릭 — 분리 트리거(`handle` + `payload`, tooltip-handle.ts)를 쓸 때
+ * Root 의 render-function 자식이 payload 타입을 받는다. 일반 사용은 그대로다.
+ */
+function Tooltip<Payload = unknown>({
+  ...props
+}: TooltipPrimitive.Root.Props<Payload>) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
+function TooltipTrigger<Payload = unknown>({
+  ...props
+}: TooltipPrimitive.Trigger.Props<Payload>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 

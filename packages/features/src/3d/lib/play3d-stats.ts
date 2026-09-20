@@ -225,6 +225,27 @@ export function sumScanned(intervals: readonly ScannedInterval[]): number {
   return sum;
 }
 
+/** 재생이 지나간 가장 먼 씬 시각 — 시간 축이 실행 중 줄지 않게 하는 기준. */
+export function scannedEndMs(intervals: readonly ScannedInterval[]): number {
+  let end = 0;
+  for (const it of intervals) {
+    if (Number.isFinite(it.toMs) && it.toMs > end) end = it.toMs;
+  }
+  return end;
+}
+
+/**
+ * 사건 중 가장 늦은 시각. 기록은 push 순이라 뒤로 seek 한 뒤에는 마지막 원소가
+ * 최댓값이 아니다. 빈 배열·비정상 시각은 0.
+ */
+export function lastEventAtMs(events: readonly Play3dEvent[]): number {
+  let last = 0;
+  for (const e of events) {
+    if (Number.isFinite(e.atMs) && e.atMs > last) last = e.atMs;
+  }
+  return last;
+}
+
 /** 시나리오 회차 — 경과 ÷ 길이. 길이가 0·없음이면 null. */
 export function loopIterationOf(
   elapsedMs: number,
@@ -390,15 +411,9 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
 
   // 장비 — 행은 상태 누적이 있는 장비 ∪ 전이만 있는 장비.
   const offlineEpisodes = new Map<string, number>();
-  const collisionsOf = new Map<string, number>();
   for (const e of events) {
-    if (e.kind === 'offlineEnter') {
-      offlineEpisodes.set(e.subject, (offlineEpisodes.get(e.subject) ?? 0) + 1);
-    } else if (e.kind === 'collision' && e.modelIds) {
-      for (const id of new Set(e.modelIds)) {
-        collisionsOf.set(id, (collisionsOf.get(id) ?? 0) + 1);
-      }
-    }
+    if (e.kind !== 'offlineEnter') continue;
+    offlineEpisodes.set(e.subject, (offlineEpisodes.get(e.subject) ?? 0) + 1);
   }
   const statusesById = new Map<string, StatusAggregate>();
   for (const s of Object.values(input.statuses)) statusesById.set(s.modelId, s);
@@ -408,6 +423,7 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     zoneBands(events, windowEndMs),
     equipmentIds,
   );
+  const rowCollisions = assignCollisionsToRows(events, equipmentIds);
   const equipment: EquipmentStat[] = [...equipmentIds]
     .map((modelId) => {
       const s = statusesById.get(modelId) ?? {
@@ -425,7 +441,7 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
           0,
         ),
         zoneEnters: bands.length,
-        collisions: collisionsOf.get(modelId) ?? 0,
+        collisions: rowCollisions.get(modelId)?.length ?? 0,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -520,6 +536,8 @@ export interface StatusBand extends TimeBand {
 }
 
 export interface ZoneBand extends TimeBand {
+  /** 이 체류를 연 진입 사건의 id — 밴드의 안정 key. */
+  enterId: number;
   zoneKey: string;
   zoneName: string;
   level: 'warn' | 'stop';
@@ -590,6 +608,7 @@ export function zoneBands(
   const out: ZoneBand[] = [];
   const close = (enter: Play3dEvent, toMs: number, isOpen: boolean) => {
     out.push({
+      enterId: enter.id,
       fromMs: enter.atMs,
       toMs: Math.max(enter.atMs, toMs),
       zoneKey: enter.zoneKey ?? enter.subject,
@@ -637,6 +656,56 @@ export function assignZoneBandsToRows(
     const list = out.get(rowId);
     if (list) list.push(band);
     else out.set(rowId, [band]);
+  }
+  return out;
+}
+
+/**
+ * 충돌 사건을 타임라인 행(장비)에 배정한다 — 충돌한 두 모델 중 행인 쪽 모두에.
+ * `modelIds` 가 없는 사건은 아무 행에도 가지 않고, 같은 id 쌍은 한 번만 센다.
+ * 장비 표의 충돌 값과 타임라인 충돌 선이 이 한 규칙을 함께 쓴다. 입력 순서 유지.
+ */
+export function assignCollisionsToRows(
+  events: readonly Play3dEvent[],
+  rowIds: ReadonlySet<string>,
+): Map<string, Play3dEvent[]> {
+  const out = new Map<string, Play3dEvent[]>();
+  for (const e of events) {
+    if (e.kind !== 'collision' || !e.modelIds) continue;
+    for (const id of new Set(e.modelIds)) {
+      if (!rowIds.has(id)) continue;
+      const list = out.get(id);
+      if (list) list.push(e);
+      else out.set(id, [e]);
+    }
+  }
+  return out;
+}
+
+export interface CollisionSummary {
+  /** 같은 쌍의 충돌 중 몇 번째인지(1부터, 시각·id 순). */
+  ordinal: number;
+  /** 같은 쌍의 충돌 수. */
+  total: number;
+}
+
+/** 충돌 사건 id → 같은 쌍 안에서의 순번·전체. 시각이 비정상인 사건은 뺀다. */
+export function collisionSummaries(
+  events: readonly Play3dEvent[],
+): Map<number, CollisionSummary> {
+  const byPair = new Map<string, Play3dEvent[]>();
+  for (const e of events) {
+    if (e.kind !== 'collision' || !Number.isFinite(e.atMs)) continue;
+    const list = byPair.get(e.subject);
+    if (list) list.push(e);
+    else byPair.set(e.subject, [e]);
+  }
+  const out = new Map<number, CollisionSummary>();
+  for (const list of byPair.values()) {
+    const sorted = [...list].sort((a, b) => a.atMs - b.atMs || a.id - b.id);
+    sorted.forEach((e, i) => {
+      out.set(e.id, { ordinal: i + 1, total: sorted.length });
+    });
   }
   return out;
 }

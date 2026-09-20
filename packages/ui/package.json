@@ -45,6 +45,7 @@
     "./molecules/toggle-group": "./src/molecules/toggle-group.tsx",
     "./molecules/tree": "./src/molecules/tree.tsx",
     "./molecules/tooltip": "./src/molecules/tooltip.tsx",
+    "./molecules/tooltip-handle": "./src/molecules/tooltip-handle.ts",
     "./organisms/app-error-boundary": "./src/organisms/app-error-boundary.tsx",
     "./organisms/app-toaster": "./src/organisms/app-toaster.tsx",
     "./organisms/navigation-progress-bar": "./src/organisms/navigation-progress-bar.tsx",

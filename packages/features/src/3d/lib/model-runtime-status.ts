@@ -4,7 +4,7 @@ import type { SavedModelInfo } from '@crane/domain/3d';
 /**
  * 장비 운전 상태 판정 — 태그 값 버스의 수신·변화 시각에서 파생한다.
  * 적용은 model/use-model-runtime-statuses.ts(1Hz 폴링 훅), 표시는 라벨
- * 상태 점(domain model-label)·미니맵 마커·관제 HUD 집계.
+ * 상태 점(domain model-label)·관제 HUD 집계·3D 플레이 실행 리포트.
  *
  * 왜 PLC 상태 태그가 아니라 활동인가: 씬마다 태그 체계가 다르고(옥포는
  * `C_868:...`, 필리는 `GC_04:...`) 운전 상태 태그가 정의된 곳이 없다. 값이
@@ -156,9 +156,10 @@ export function countRuntimeStatuses(
 }
 
 /**
- * 미니맵 마커·HUD 점의 상태 색(hex). 라벨(DOM)은 Tailwind 클래스로 같은
- * 팔레트를 쓴다(model-label.tsx) — 바꾸면 함께 바꾼다. unknown 은 null:
- * 상태를 모르는 장비는 기본 색 그대로.
+ * 운전 상태 색(hex). 라벨(DOM)은 Tailwind 클래스로 같은 팔레트를 쓴다
+ * (model-label.tsx) — 바꾸면 함께 바꾼다. hex 를 직접 읽는 곳은 실행 리포트의
+ * 가동 색(PLAY3D_STATUS_FILL.running)뿐이다. unknown 은 null: 상태를 모르는
+ * 장비는 기본 색 그대로.
  */
 export const RUNTIME_STATUS_COLORS: Record<
   EquipmentRuntimeStatus,

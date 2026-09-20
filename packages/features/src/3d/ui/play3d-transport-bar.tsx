@@ -11,6 +11,7 @@ import {
   SkipBack,
   SkipForward,
 } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
 import {
@@ -25,29 +26,48 @@ import {
 } from '@crane/ui/molecules/popover';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import { createTooltipHandle } from '@crane/ui/molecules/tooltip-handle';
+import {
+  PLAY3D_DWELL_BOX_CLASS,
+  PLAY3D_DWELL_HATCH,
+  PLAY3D_DWELL_TONE,
   PLAY3D_EVENT_COLORS,
-  PLAY3D_MARKER_KINDS,
+  bandPercent,
+  eventTimeLabel,
   markerPercent,
-  markerSeekLeadMs,
+  markerSeekTargetMs,
   timelineAxisMs,
+  transportMarks,
+  transportTicks,
+  type Play3dHoverPayload,
+  type TransportMarks,
 } from '../lib/play3d-format';
+import { lastEventAtMs, scannedEndMs } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import {
   readPlay3dPositionMs,
+  readPlay3dTransport,
   usePlay3dTransport,
 } from '../model/play3d-transport';
 import { useRigLivePoll } from '../model/rig-live-readouts';
 import { usePlay3dStatsStore } from '../model/use-play3d-stats-store';
 import { useReplayPlayerStore } from '../model/use-replay-player-store';
+import { Play3dHoverSummary } from './play3d-hover-summary';
+import { Play3dTickRow } from './play3d-tick-row';
 import { ReplaySearchForm } from './replay-search-form';
 import { SceneSimulationPanel } from './scene-simulation-panel';
 
 const JUMP_MS = 5_000;
 
 /**
- * 3D 플레이 상단 트랜스포트 바 — ▶/⏸·이동, 사건 마커 띠가 얹힌 스크럽, 배속,
- * 위치/길이, 소스별 슬롯(리플레이=구간 검색 팝오버, 시뮬레이션=시계 패널
- * 팝오버). 소스 선택은 위의 탭(Play3dSourceTabs)이 한다. 두 소스의 차이는
+ * 3D 플레이 상단 트랜스포트 바 — ▶/⏸·이동, 시간 눈금과 사건 표식 띠(영역 체류
+ * 구간 = 대각선 박스, 충돌·정지·두절 = 세로 선, 리포트 타임라인과 같은 모양·
+ * 같은 시간 축·같은 hover 요약)가 얹힌 스크럽, 배속, 위치/길이, 소스별 슬롯
+ * (리플레이=구간 검색 팝오버, 시뮬레이션=시계 패널 팝오버). 소스 선택은 위의 탭(Play3dSourceTabs)이 한다. 두 소스의 차이는
  * 트랜스포트 어댑터(play3d-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
  *
  * 캔버스 위 별도 행(오버레이가 아님)이라 HUD·좌상단 열과 겹치지 않는다(옛
@@ -67,31 +87,36 @@ export function Play3dTransportBar({
   const transport = usePlay3dTransport();
   const version = usePlay3dStatsStore((s) => s.version);
   const events = usePlay3dStatsStore((s) => s.data.events);
+  const scanned = usePlay3dStatsStore((s) => s.data.scanned);
   const windowEndMs = usePlay3dStatsStore((s) => s.data.windowEndMs);
+  const replayFrames = useReplayPlayerStore((s) => s.frames);
   const replayTimestamp = useReplayPlayerStore(
     (s) => s.frames[s.frameIndex]?.timestamp ?? null,
   );
   const replayFrameCount = useReplayPlayerStore((s) => s.frames.length);
   const replayFrameIndex = useReplayPlayerStore((s) => s.frameIndex);
-  const replayDurations = useReplayPlayerStore((s) => s.frameDurationsMs);
 
   const { source, isPlaying, durationMs, hasContent, speed } = transport;
   const positionMs = readPlay3dPositionMs(source);
-  const lastEventMs = events.length > 0 ? events[events.length - 1].atMs : 0;
-  const axisMs = timelineAxisMs(durationMs, positionMs, lastEventMs);
+  // 리포트 타임라인과 같은 축 — 실행 중 줄지 않아 손잡이를 끌어도 값이 무너지지 않는다.
+  const axisMs = timelineAxisMs(
+    durationMs,
+    positionMs,
+    lastEventAtMs(events),
+    scannedEndMs(scanned),
+  );
   const scrubbable = hasContent && durationMs !== null && durationMs > 0;
   const atStart = positionMs <= 0;
   const atEnd = durationMs !== null && positionMs >= durationMs;
-  // version 은 마커 띠의 재계산 키 — events 는 제자리 갱신이라 참조가 같다.
-  void version;
-
-  const seekMarker = (atMs: number) => {
-    const lead = markerSeekLeadMs(
-      source,
-      source === 'replay' ? replayDurations[replayFrameIndex] : undefined,
-    );
-    transport.seek(Math.max(0, atMs - lead));
-  };
+  const marks = useMemo(
+    () =>
+      transportMarks(events, windowEndMs, (e) =>
+        eventTimeLabel(e, replayFrames),
+      ),
+    // events 는 제자리 갱신이라 참조가 같다 — version 이 재계산의 키다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, windowEndMs, replayFrames, version],
+  );
 
   const positionLabel =
     source === 'replay'
@@ -110,30 +135,15 @@ export function Play3dTransportBar({
         className,
       )}
     >
-      {/* 마커 띠 + 스크럽 */}
-      <div className="relative pt-3">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-2.5"
-        >
-          {events
-            .filter((e) => PLAY3D_MARKER_KINDS.includes(e.kind))
-            .map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                title={`${formatSimClock(e.atMs)} · ${t(`monitoring:play3d.event.${e.kind}`)} · ${e.label}`}
-                aria-label={t(`monitoring:play3d.event.${e.kind}`)}
-                className={cn(
-                  'pointer-events-auto absolute top-0 h-2.5 w-1 -translate-x-1/2 cursor-pointer rounded-sm',
-                  PLAY3D_EVENT_COLORS[e.kind],
-                  e.atMs > windowEndMs && 'opacity-30',
-                )}
-                style={{ left: `${markerPercent(e.atMs, axisMs)}%` }}
-                onClick={() => seekMarker(e.atMs)}
-              />
-            ))}
-        </div>
+      {/* 시간 눈금 + 사건 표식 띠 + 스크럽 */}
+      <div className="flex flex-col gap-0.5">
+        {/* mx-2 — range 손잡이가 양 끝에서 안쪽으로 들어오는 만큼(대략) 맞춘다. */}
+        <Play3dTickRow
+          ticks={transportTicks(axisMs)}
+          axisMs={axisMs}
+          className="mx-2 h-3 leading-3"
+        />
+        <TransportMarkStrip marks={marks} axisMs={axisMs} />
         <input
           type="range"
           min={0}
@@ -333,6 +343,109 @@ export function Play3dTransportBar({
     </div>
   );
 }
+
+/** 세로 선의 hover·클릭 영역 폭(px)과 그 안에서 선이 놓이는 위치(px). */
+const LINE_HIT_PX = 8;
+const LINE_INSET_PX = 3;
+
+/** 표식 클릭 — 누르는 순간의 어댑터 스냅샷으로 이동한다(prop 으로 받지 않아 memo 가 산다). */
+function seekToMark(atMs: number) {
+  const transport = readPlay3dTransport();
+  const replay = useReplayPlayerStore.getState();
+  transport.seek(
+    markerSeekTargetMs(
+      atMs,
+      transport.source,
+      transport.source === 'replay'
+        ? replay.frameDurationsMs[replay.frameIndex]
+        : undefined,
+    ),
+  );
+}
+
+/**
+ * 사건 표식 띠 — 바는 위치 폴링으로 계속 리렌더되므로 띠는 memo 로 떼어 표식이
+ * 바뀔 때만 다시 그린다. 팝업 하나에 트리거 여럿(분리 트리거).
+ */
+const TransportMarkStrip = memo(function TransportMarkStrip({
+  marks,
+  axisMs,
+}: {
+  marks: TransportMarks;
+  axisMs: number;
+}) {
+  const { t } = useTranslation();
+  const [hover] = useState(() => createTooltipHandle<Play3dHoverPayload>());
+  return (
+    <div className="bg-foreground/10 relative mx-2 h-3 overflow-hidden">
+      {/* Root 를 트리거보다 먼저 렌더한다. */}
+      <Tooltip handle={hover} trackCursorAxis="x" disableHoverablePopup>
+        {({ payload }) => (
+          <TooltipContent className="max-w-64 animate-none! flex-col items-start gap-0.5 px-2 py-1.5 text-[11px]">
+            {payload ? <Play3dHoverSummary payload={payload} /> : null}
+          </TooltipContent>
+        )}
+      </Tooltip>
+      {marks.zones.map((mark) => {
+        const { left, width } = bandPercent(
+          mark.band.fromMs,
+          mark.band.toMs,
+          axisMs,
+        );
+        return (
+          <TooltipTrigger
+            key={mark.key}
+            handle={hover}
+            payload={mark.payload}
+            delay={0}
+            render={<button type="button" tabIndex={-1} />}
+            aria-label={t('monitoring:play3d.timeline.zoneDwell')}
+            className={cn(
+              'absolute inset-y-0 min-w-1.5 cursor-pointer',
+              PLAY3D_DWELL_BOX_CLASS,
+              PLAY3D_DWELL_TONE[mark.band.level],
+              mark.band.open && '[border-right-style:dashed]',
+              mark.dim && 'opacity-30',
+            )}
+            style={{
+              left: `${left}%`,
+              width: `${width}%`,
+              backgroundImage: PLAY3D_DWELL_HATCH,
+            }}
+            onClick={() => seekToMark(mark.band.fromMs)}
+          />
+        );
+      })}
+      {marks.lines.map((mark) => (
+        <TooltipTrigger
+          key={mark.key}
+          handle={hover}
+          payload={mark.payload}
+          delay={0}
+          render={<button type="button" tabIndex={-1} />}
+          aria-label={t(`monitoring:play3d.event.${mark.event.kind}`)}
+          className={cn(
+            'absolute inset-y-0 cursor-pointer',
+            mark.dim && 'opacity-30',
+          )}
+          style={{
+            width: LINE_HIT_PX,
+            left: `clamp(0px, calc(${markerPercent(mark.event.atMs, axisMs)}% - ${LINE_INSET_PX}px), calc(100% - ${LINE_HIT_PX}px))`,
+          }}
+          onClick={() => seekToMark(mark.event.atMs)}
+        >
+          <span
+            className={cn(
+              'absolute inset-y-0 w-0.5',
+              PLAY3D_EVENT_COLORS[mark.event.kind],
+            )}
+            style={{ left: LINE_INSET_PX }}
+          />
+        </TooltipTrigger>
+      ))}
+    </div>
+  );
+});
 
 function formatRangeLabel(viewingFrom: string, viewingTo: string): string {
   const from = formatReplayTimestamp(viewingFrom, 'datetime');

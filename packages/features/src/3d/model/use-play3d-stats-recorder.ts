@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { scenarioDurationMs } from '@crane/domain/virtual-tag';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import type { SavedSceneInfo } from '@crane/domain/3d';
@@ -9,6 +9,11 @@ import {
   emptyStatusMs,
   type Play3dEvent,
 } from '../lib/play3d-stats';
+import {
+  isCollisionExcluded,
+  omitRuntimeStatuses,
+  reportExcludedModelIds,
+} from '../lib/play3d-scope';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
 import { diffZoneIntrusions, pairKeyOf } from '../lib/zone-journal-map';
@@ -95,6 +100,11 @@ function modelName(scene: SavedSceneInfo | null, modelId: string): string {
  * 시나리오 변경, 시뮬레이션 종료(hasSession true→false). 값·시간 초기화
  * (resetValues)와 seek(0) 은 reset 이 아니라 뒤로 seek 다 — 창이 0 으로
  * 줄어 사건이 감춰질 뿐 기록은 남는다.
+ *
+ * "영역 감지에서 제외"(zoneExempt) 모델은 리포트에서 뺀다(lib/play3d-scope) —
+ * 상태 기록을 여기서 한 번 걸러 누적·전이·시딩이 모두 따라오고, 그 모델이 끼인
+ * 충돌은 사건으로 남기지 않는다. 영역 사건은 런타임이 애초에 감지하지 않는다.
+ * 공용 훅(useModelRuntimeStatuses)은 라벨·HUD 가 전 모델을 전제로 써서 그대로다.
  */
 export function usePlay3dStatsRecorder(regionId: string): void {
   const sceneInfo = useSceneInfoStore(
@@ -102,10 +112,18 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   );
   const source = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
-  const statuses = useModelRuntimeStatuses(sceneInfo, {
+  const rawStatuses = useModelRuntimeStatuses(sceneInfo, {
     paused: !transport.isPlaying,
     timeScale: transport.speed,
   });
+  const excluded = useMemo(
+    () => reportExcludedModelIds(sceneInfo),
+    [sceneInfo],
+  );
+  const statuses = useMemo(
+    () => omitRuntimeStatuses(rawStatuses, excluded),
+    [rawStatuses, excluded],
+  );
   const collisionEnabled = useSceneCollisionStore((s) => s.enabled);
 
   // useFrame 급 콜백(폴링·구독)이 읽는 값 — effect 에서만 갱신.
@@ -115,9 +133,13 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   const speedRef = useRef(1);
   const collisionEnabledRef = useRef(true);
   const sourceRef = useRef<Play3dSource>(source);
+  const excludedRef = useRef<ReadonlySet<string>>(excluded);
   useEffect(() => {
     sceneRef.current = sceneInfo;
   }, [sceneInfo]);
+  useEffect(() => {
+    excludedRef.current = excluded;
+  }, [excluded]);
   useEffect(() => {
     playingRef.current = transport.isPlaying;
     speedRef.current = transport.speed;
@@ -166,6 +188,14 @@ export function usePlay3dStatsRecorder(regionId: string): void {
         const prevIds = new Set(prev.history.map((r) => r.id));
         const fresh = state.history
           .filter((r) => !prevIds.has(r.id))
+          .filter(
+            (r) =>
+              !isCollisionExcluded(
+                r.a.modelId,
+                r.b.modelId,
+                excludedRef.current,
+              ),
+          )
           .sort((a, b) => a.id - b.id);
         if (fresh.length === 0) return;
         const { data, bump } = usePlay3dStatsStore.getState();

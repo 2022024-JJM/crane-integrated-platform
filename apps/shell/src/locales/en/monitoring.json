@@ -551,8 +551,12 @@
     },
     "timeline": {
       "title": "Timeline",
-      "events": "Events",
       "zoneDwell": "Zone dwell"
+    },
+    "hover": {
+      "pairOrdinal": "#{{n}} of {{total}} for this pair",
+      "zoneTitle": "Zone dwell · {{level}} level",
+      "ongoing": "ongoing"
     },
     "summary": {
       "events": "{{count}} events",

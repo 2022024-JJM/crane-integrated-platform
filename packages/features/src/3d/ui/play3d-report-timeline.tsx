@@ -1,56 +1,56 @@
-import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@crane/core/lib/utils';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@crane/ui/molecules/tooltip';
+import { createTooltipHandle } from '@crane/ui/molecules/tooltip-handle';
+import {
+  PLAY3D_DWELL_BOX_CLASS,
+  PLAY3D_DWELL_HATCH,
+  PLAY3D_DWELL_TONE,
   PLAY3D_STATUS_FILL,
-  TIMELINE_LABEL_REM,
   bandPercent,
   markerPercent,
   msAtFraction,
   timelineContentWidth,
   timelineCursorInView,
   timelineFollowScroll,
-  timelineTickTimes,
   timelineTrackScale,
+  timelineViewTicks,
+  type Play3dHoverPayload,
+  type TimelineEquipmentRow,
 } from '../lib/play3d-format';
-import type {
-  Play3dEvent,
-  ScannedInterval,
-  StatusBand,
-  ZoneBand,
-} from '../lib/play3d-stats';
-import { formatSimClock } from '../lib/sim-clock';
+import type { ScannedInterval } from '../lib/play3d-stats';
+import { Play3dHoverSummary } from './play3d-hover-summary';
+import { Play3dTickRow } from './play3d-tick-row';
 
 /**
- * 스윔레인 타임라인 — 첫 행은 사건(충돌·영역 진입을 같은 모양의 세로 선으로,
- * 영역은 그 체류 띠와 같은 등급 색), 그 아래 장비마다 한 행: 운전 상태 밴드 +
- * 그 장비가 영역에 머문 구간의 얇은 띠(아래쪽). 현재 위치 세로선, 클릭 =
- * seek(Foxglove State Transitions 방식). 검사되지 않은 구간은 배경 빗금이다.
+ * 스윔레인 타임라인 — 장비마다 한 행이고 사건은 그 행에 겹쳐 그린다: 운전 상태
+ * 막대 위에 영역 체류(대각선 박스), 그 위에 충돌(빨간 세로 선, 부딪힌 두 장비
+ * 행 모두). 현재 위치 세로선, 클릭 = seek(Foxglove State Transitions 방식).
+ * 표식에 마우스를 올리면 요약이 즉시 뜬다 — 팝업 하나에 트리거 여럿(분리
+ * 트리거)이라 표식이 많아도 팝업은 하나다.
  *
- * 축이 한 화면 분량(TIMELINE_FIT_MS)을 넘으면 트랙이 배율만큼 넓어지고 한
- * 스크롤 컨테이너가 세로·가로를 함께 맡는다 — 장비 이름 열은 sticky-left,
- * 눈금 행은 sticky-bottom. 밴드·배율·눈금·재생 위치 따라가기 판단은 전부
- * lib(play3d-stats·play3d-format)에 있고 여기서는 DOM 치수를 읽어 넘기고
- * 결과를 그리기만 한다.
+ * 왼쪽 장비 이름 열은 고정이고 오른쪽 트랙 영역만 가로로 스크롤된다(스크롤바가
+ * 이름 열 아래로 뻗지 않는다). 시간 눈금은 트랙 위. 축이 한 화면 분량
+ * (TIMELINE_FIT_MS)을 넘으면 트랙이 배율만큼 넓어진다. 행·표식·배율·눈금·재생
+ * 위치 따라가기 판단은 전부 lib(play3d-stats·play3d-format)에 있고 여기서는
+ * DOM 치수를 읽어 넘기고 결과를 그리기만 한다.
  */
 
-export interface TimelineEquipmentRow {
-  modelId: string;
-  name: string;
-  bands: StatusBand[];
-  /** 이 장비 행에 배정된 영역 체류 밴드. */
-  zoneBands: ZoneBand[];
-}
-
-const LABEL_STYLE = { width: `${TIMELINE_LABEL_REM}rem` };
+/** 눈금 행과 이름 열 스페이서가 함께 쓰는 높이 — 다르면 이름과 트랙이 어긋난다. */
+const TICK_ROW_CLASS = 'h-4 leading-4';
+/** 충돌 선의 hover 영역 폭(px)과 그 안에서 선이 놓이는 위치(px). */
+const LINE_HIT_PX = 8;
+const LINE_INSET_PX = 3;
 
 export function Play3dReportTimeline({
   axisMs,
   windowEndMs,
   isPlaying,
   scanned,
-  collisions,
-  zoneEnters,
   equipment,
   onSeek,
   className,
@@ -60,19 +60,16 @@ export function Play3dReportTimeline({
   /** 재생 중인지 — 재생 위치 따라가기 규칙이 갈린다. */
   isPlaying: boolean;
   scanned: readonly ScannedInterval[];
-  collisions: readonly Play3dEvent[];
-  zoneEnters: readonly Play3dEvent[];
   equipment: readonly TimelineEquipmentRow[];
   /** 축 위 클릭 → 그 씬 시간으로 이동. */
   onSeek: (atMs: number) => void;
   className?: string;
 }) {
-  const { t } = useTranslation();
   const cursor = markerPercent(windowEndMs, axisMs);
   const scale = timelineTrackScale(axisMs);
-  const ticks = timelineTickTimes(axisMs);
+  const ticks = timelineViewTicks(axisMs);
+  const [hover] = useState(() => createTooltipHandle<Play3dHoverPayload>());
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const labelRef = useRef<HTMLSpanElement | null>(null);
   // 커서가 보이고 있는지 — 재생 중 사용자가 스크롤해 떠난 위치를 되돌리지 않는 근거.
   const inViewRef = useRef(true);
 
@@ -90,7 +87,6 @@ export function Play3dReportTimeline({
       scrollLeft: scroller.scrollLeft,
       clientWidth: scroller.clientWidth,
       scrollWidth: scroller.scrollWidth,
-      labelPx: labelRef.current?.offsetWidth ?? 0,
       wasInView: inViewRef.current,
       isPlaying,
     });
@@ -105,7 +101,6 @@ export function Play3dReportTimeline({
       scrollLeft: scroller.scrollLeft,
       clientWidth: scroller.clientWidth,
       scrollWidth: scroller.scrollWidth,
-      labelPx: labelRef.current?.offsetWidth ?? 0,
     });
   };
 
@@ -115,144 +110,116 @@ export function Play3dReportTimeline({
     onSeek(msAtFraction((event.clientX - rect.left) / rect.width, axisMs));
   };
 
-  const rows: { key: string; label: string; content: React.ReactNode }[] = [
-    {
-      key: '__events',
-      label: t('monitoring:play3d.timeline.events'),
-      content: (
-        <>
-          {zoneEnters.map((e) => (
-            <span
-              key={e.id}
-              title={`${formatSimClock(e.atMs)} · ${e.label}`}
-              className={cn(
-                'absolute inset-y-0 w-0.5',
-                e.level === 'stop' ? 'bg-red-500' : 'bg-amber-400',
-              )}
-              style={{ left: edgeLeft(markerPercent(e.atMs, axisMs), 2) }}
-            />
-          ))}
-          {collisions.map((e) => (
-            <span
-              key={e.id}
-              title={`${formatSimClock(e.atMs)} · ${e.label}`}
-              className="absolute inset-y-0 w-0.5 bg-red-500"
-              style={{ left: edgeLeft(markerPercent(e.atMs, axisMs), 2) }}
-            />
-          ))}
-        </>
-      ),
-    },
-    ...equipment.map((row) => ({
-      key: row.modelId,
-      label: row.name,
-      content: (
-        <>
-          {row.bands.map((b, i) => {
-            const fill = PLAY3D_STATUS_FILL[b.status];
-            if (!fill) return null;
-            return (
-              <span
-                key={`s${i}`}
-                title={`${t(`monitoring:runtimeStatus.${b.status}`)} ${formatSimClock(b.fromMs)}~${formatSimClock(b.toMs)}`}
-                className="absolute top-1 bottom-2"
-                style={{
-                  ...bandStyle(b.fromMs, b.toMs, axisMs),
-                  background: fill,
-                }}
-              />
-            );
-          })}
-          {row.zoneBands.map((b, i) => (
-            <span
-              key={`z${i}`}
-              title={`${b.zoneName} ← ${b.intruderName} ${formatSimClock(b.fromMs)}~${formatSimClock(b.toMs)}`}
-              className={cn(
-                'absolute bottom-0.5 h-1 min-w-[2px]',
-                b.level === 'stop' ? 'bg-red-500/90' : 'bg-amber-400/90',
-                b.open && 'border-r border-dashed border-white/70',
-              )}
-              style={bandStyle(b.fromMs, b.toMs, axisMs)}
-            />
-          ))}
-        </>
-      ),
-    })),
-  ];
-
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className={cn('max-h-48 overflow-auto overscroll-x-contain', className)}
-    >
-      {/* 이 래퍼와 행에는 overflow 를 두지 않는다 — sticky 의 기준이 스크롤러여야 한다. */}
+    <div className={cn('flex items-start', className)}>
+      {/* Root 를 트리거보다 먼저 렌더한다 — 트리거가 이 핸들의 팝업 컨텍스트를 읽는다. */}
+      <Tooltip handle={hover} trackCursorAxis="x" disableHoverablePopup>
+        {({ payload }) => (
+          <TooltipContent className="max-w-64 animate-none! flex-col items-start gap-0.5 px-2 py-1.5 text-[11px]">
+            {payload ? <Play3dHoverSummary payload={payload} /> : null}
+          </TooltipContent>
+        )}
+      </Tooltip>
+
+      {/* 장비 이름 열 — 스크롤러 밖이라 가로 스크롤바가 이 아래로 뻗지 않는다. */}
+      <div className="w-24 shrink-0">
+        <div className={TICK_ROW_CLASS} />
+        {equipment.map((row) => (
+          <div
+            key={row.modelId}
+            className="text-muted-foreground h-5 truncate pr-1.5 text-[10px] leading-5"
+            title={row.name}
+          >
+            {row.name}
+          </div>
+        ))}
+      </div>
+
       <div
-        className="min-w-full"
-        style={{ width: timelineContentWidth(scale, TIMELINE_LABEL_REM) }}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
       >
-        {rows.map((row) => (
-          <div key={row.key} className="flex h-5">
-            <span
-              className="bg-background text-muted-foreground sticky left-0 z-10 shrink-0 truncate pr-1.5 text-[10px] leading-5"
-              style={LABEL_STYLE}
-              title={row.label}
-            >
-              {row.label}
-            </span>
-            {/* overflow-hidden 필수 — 100% 지점의 표식이 scrollWidth 를 넓혀 가짜 가로 스크롤바를 만든다. */}
+        <div style={{ width: timelineContentWidth(scale) }}>
+          <Play3dTickRow
+            ticks={ticks}
+            axisMs={axisMs}
+            className={TICK_ROW_CLASS}
+          />
+          {equipment.map((row) => (
+            // overflow-hidden 필수 — 축 끝의 표식이 scrollWidth 를 넓혀 확대가 없을 때도
+            // 가로 스크롤바를 만든다.
             <div
-              className="bg-muted/60 relative h-full min-w-0 flex-1 cursor-pointer overflow-hidden"
+              key={row.modelId}
+              className="bg-foreground/10 relative h-5 cursor-pointer overflow-hidden"
               onClick={handleClick}
             >
-              {/* 검사된 구간 — 그 밖은 빗금(감지 없음). */}
-              <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,transparent_0_3px,rgba(120,120,120,0.18)_3px_4px)]" />
+              {/* 검사된 구간은 밝게 — 그 밖(감지가 없었던 곳)은 트랙 바탕색 그대로. */}
               {scanned.map((s, i) => (
                 <span
                   key={i}
-                  className="bg-background/70 absolute inset-y-0"
+                  className="bg-background/80 absolute inset-y-0"
                   style={bandStyle(s.fromMs, s.toMs, axisMs)}
                 />
               ))}
-              {row.content}
+              {row.status.map((mark) => (
+                <TooltipTrigger
+                  key={mark.key}
+                  handle={hover}
+                  payload={mark.payload}
+                  delay={0}
+                  render={<span />}
+                  className="absolute top-1 bottom-1"
+                  style={{
+                    ...bandStyle(mark.band.fromMs, mark.band.toMs, axisMs),
+                    background:
+                      PLAY3D_STATUS_FILL[mark.band.status] ?? undefined,
+                  }}
+                />
+              ))}
+              {row.zones.map((mark) => (
+                <TooltipTrigger
+                  key={mark.key}
+                  handle={hover}
+                  payload={mark.payload}
+                  delay={0}
+                  render={<span />}
+                  className={cn(
+                    'absolute top-0.5 bottom-0.5 min-w-1.5',
+                    PLAY3D_DWELL_BOX_CLASS,
+                    PLAY3D_DWELL_TONE[mark.band.level],
+                    mark.band.open && '[border-right-style:dashed]',
+                  )}
+                  style={{
+                    ...bandStyle(mark.band.fromMs, mark.band.toMs, axisMs),
+                    backgroundImage: PLAY3D_DWELL_HATCH,
+                  }}
+                />
+              ))}
+              {row.collisions.map((mark) => (
+                <TooltipTrigger
+                  key={mark.key}
+                  handle={hover}
+                  payload={mark.payload}
+                  delay={0}
+                  render={<span />}
+                  className="absolute inset-y-0"
+                  style={lineHitStyle(markerPercent(mark.event.atMs, axisMs))}
+                >
+                  <span
+                    className="absolute inset-y-0 w-0.5 bg-red-500"
+                    style={{ left: LINE_INSET_PX }}
+                  />
+                </TooltipTrigger>
+              ))}
+              {/* pointer-events-none — 최신 충돌 선 위에 놓여 hover 를 가로채지 않게. */}
               <span
                 aria-hidden
-                className="bg-foreground/50 absolute inset-y-0 w-px"
-                style={{ left: edgeLeft(cursor, 1) }}
+                className="bg-foreground/50 pointer-events-none absolute inset-y-0 w-px"
+                style={{ left: `min(${cursor}%, calc(100% - 1px))` }}
               />
             </div>
-          </div>
-        ))}
-        <div className="bg-background sticky bottom-0 z-10 flex pt-0.5">
-          <span
-            ref={labelRef}
-            className="bg-background sticky left-0 z-10 shrink-0"
-            style={LABEL_STYLE}
-          />
-          <div className="text-muted-foreground relative h-3 min-w-0 flex-1 font-mono text-[9px] tabular-nums">
-            {ticks.map((tick, i) => {
-              const atStart = i === 0;
-              const atEnd = tick >= axisMs;
-              return (
-                <span
-                  key={tick}
-                  className={cn(
-                    'absolute top-0',
-                    atStart && 'left-0',
-                    atEnd && 'right-0',
-                    !atStart && !atEnd && '-translate-x-1/2',
-                  )}
-                  style={
-                    !atStart && !atEnd
-                      ? { left: `${markerPercent(tick, axisMs)}%` }
-                      : undefined
-                  }
-                >
-                  {formatSimClock(tick)}
-                </span>
-              );
-            })}
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -264,7 +231,13 @@ function bandStyle(fromMs: number, toMs: number, axisMs: number) {
   return { left: `${left}%`, width: `${width}%` };
 }
 
-/** 축 끝(100%)의 표식도 자기 폭만큼 안쪽에 그려 overflow-hidden 에 잘리지 않게 한다. */
-function edgeLeft(percent: number, widthPx: number) {
-  return `min(${percent}%, calc(100% - ${widthPx}px))`;
+/**
+ * 세로 선의 hover 영역 — 선(2px)보다 넓게 잡아 올리기 쉽게 하고, 축 양 끝에서는
+ * 트랙 안쪽으로 밀어 overflow-hidden 에 잘리지 않게 한다.
+ */
+function lineHitStyle(percent: number) {
+  return {
+    width: LINE_HIT_PX,
+    left: `clamp(0px, calc(${percent}% - ${LINE_INSET_PX}px), calc(100% - ${LINE_HIT_PX}px))`,
+  };
 }

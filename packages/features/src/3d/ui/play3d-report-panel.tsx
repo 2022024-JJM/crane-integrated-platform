@@ -4,18 +4,21 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@crane/core/lib/utils';
 import { formatReplayTimestamp } from '@crane/domain/monitoring';
 import {
+  PLAY3D_DWELL_BOX_CLASS,
+  PLAY3D_DWELL_HATCH,
+  PLAY3D_DWELL_TONE,
   PLAY3D_STATUS_FILL,
   coverageRatio,
+  eventTimeLabel,
   formatRatio,
-  markerSeekLeadMs,
-  reportAxisMs,
+  markerSeekTargetMs,
   tagRowLabel,
+  timelineAxisMs,
+  timelineRows,
 } from '../lib/play3d-format';
 import {
-  assignZoneBandsToRows,
-  statusBands,
+  scannedEndMs,
   tagRangeBar,
-  zoneBands,
   type Play3dEvent,
 } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
@@ -40,8 +43,9 @@ import { Play3dReportTimeline } from './play3d-report-timeline';
 /**
  * 3D 플레이 실행 리포트 — 개요 → 상세(Grafana 식). 헤더(실행·창·검사 비율)
  * → KPI 카드 4장(충돌 · 영역 침범 · 가동률 · 소스별: 통신 두절 | 속도 한계
- * 도달) → 스윔레인 타임라인(사건 lane + 장비 행에 상태 밴드·영역 체류 띠) →
- * 접이식 상세(사건 목록·장비·영역·축). 같은 사실은 한 자리에서만 보인다.
+ * 도달) → 스윔레인 타임라인(장비 행에 상태 막대·영역 체류 박스·충돌 선을 겹쳐
+ * 그린다) → 접이식 상세(사건 목록·장비·영역·축). 같은 사실은 한 자리에서만
+ * 보인다.
  * 통계는 usePlay3dStats(version 구독, 4Hz 이하), 시각화 입력은
  * lib/play3d-stats·play3d-format 파생 함수를 useMemo 로. PASS/FAIL 판정은
  * 두지 않는다.
@@ -61,11 +65,12 @@ export function Play3dReportPanel({ className }: { className?: string }) {
 
   const lastEventMs =
     stats.events.length > 0 ? stats.events[stats.events.length - 1].atMs : 0;
-  // 반복 시나리오는 경과가 길이를 넘어 자란다 — 축도 함께 자라야 표식이 끝에 쌓이지 않는다.
-  const axisMs = reportAxisMs(
+  // 재생바와 같은 축 — 반복 시나리오는 경과가 길이를 넘어 자라고, 실행 중 줄지 않는다.
+  const axisMs = timelineAxisMs(
     transport.durationMs,
     stats.windowEndMs,
     lastEventMs,
+    scannedEndMs(stats.scanned),
   );
   const isReplay = meta.source === 'replay';
 
@@ -75,9 +80,6 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   );
 
   const derived = useMemo(() => {
-    const end = stats.windowEndMs;
-    const rowIds = new Set(stats.equipment.map((e) => e.modelId));
-    const strips = assignZoneBandsToRows(zoneBands(stats.events, end), rowIds);
     const tagRows = stats.tags.map((stat) => {
       const def =
         meta.source === 'simulation'
@@ -94,41 +96,26 @@ export function Play3dReportPanel({ className }: { className?: string }) {
       };
     });
     return {
-      equipmentRows: stats.equipment.map((eq) => ({
-        modelId: eq.modelId,
-        name: eq.name,
-        bands: statusBands(
-          stats.statusTransitions,
-          eq.modelId,
-          end,
-          stats.scanned,
-        ),
-        zoneBands: strips.get(eq.modelId) ?? [],
-      })),
-      collisions: stats.events.filter((e) => e.kind === 'collision'),
-      zoneEnters: stats.events.filter((e) => e.kind === 'zoneEnter'),
+      equipmentRows: timelineRows(stats, (e) =>
+        eventTimeLabel(e, replayFrames),
+      ),
       tagRows,
       saturationLabel:
         tagRows.find((r) => r.stat.key === stats.summary.saturation.key)
           ?.label ?? null,
     };
-  }, [stats, meta.source, tagDefs, sceneInfo]);
+  }, [stats, meta.source, tagDefs, sceneInfo, replayFrames]);
 
-  const eventTime = (e: Play3dEvent): string => {
-    if (e.frameIndex !== null) {
-      const stamp = replayFrames[e.frameIndex]?.timestamp ?? null;
-      const label = formatReplayTimestamp(stamp, 'time');
-      if (label) return label;
-    }
-    return formatSimClock(e.atMs);
-  };
+  const eventTime = (e: Play3dEvent): string => eventTimeLabel(e, replayFrames);
 
   const seekMs = (atMs: number, frameIndex: number | null = null) => {
-    const lead = markerSeekLeadMs(
-      meta.source,
-      frameIndex !== null ? replayDurations[frameIndex] : undefined,
+    transport.seek(
+      markerSeekTargetMs(
+        atMs,
+        meta.source,
+        frameIndex !== null ? replayDurations[frameIndex] : undefined,
+      ),
     );
-    transport.seek(Math.max(0, atMs - lead));
   };
 
   const windowLabel = isReplay
@@ -262,17 +249,19 @@ export function Play3dReportPanel({ className }: { className?: string }) {
 
       {/* 타임라인 */}
       <Section title={t('monitoring:play3d.timeline.title')}>
-        <Play3dReportTimeline
-          axisMs={axisMs}
-          windowEndMs={stats.windowEndMs}
-          isPlaying={transport.isPlaying}
-          scanned={stats.scanned}
-          collisions={derived.collisions}
-          zoneEnters={derived.zoneEnters}
-          equipment={derived.equipmentRows}
-          onSeek={(ms) => transport.seek(ms)}
-        />
-        <p className="text-muted-foreground flex flex-wrap gap-x-2 text-[9px]">
+        {derived.equipmentRows.length === 0 ? (
+          <Empty>{t('monitoring:play3d.noData')}</Empty>
+        ) : (
+          <Play3dReportTimeline
+            axisMs={axisMs}
+            windowEndMs={stats.windowEndMs}
+            isPlaying={transport.isPlaying}
+            scanned={stats.scanned}
+            equipment={derived.equipmentRows}
+            onSeek={(ms) => transport.seek(ms)}
+          />
+        )}
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-[9px]">
           <LegendMark
             color={PLAY3D_STATUS_FILL.running}
             label={t('monitoring:runtimeStatus.running')}
@@ -288,8 +277,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
             />
           ) : null}
           <LegendMark
-            shape="bar"
-            className="bg-amber-400"
+            shape="hatch"
             label={t('monitoring:play3d.timeline.zoneDwell')}
           />
           <LegendMark
@@ -424,14 +412,14 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-muted-foreground text-[10px]">{children}</p>;
 }
 
-/** 범례 표식 — 타임라인의 실제 모양과 같다(상태 = 사각, 체류 = 막대, 충돌 = 세로 선). */
+/** 범례 표식 — 타임라인의 실제 모양과 같다(상태 = 사각, 체류 = 대각선 박스, 충돌 = 세로 선). */
 function LegendMark({
   shape = 'dot',
   className,
   color,
   label,
 }: {
-  shape?: 'dot' | 'bar' | 'tick';
+  shape?: 'dot' | 'hatch' | 'tick';
   className?: string;
   /** 상태 색처럼 lib 상수(hex)에서 오는 색. */
   color?: string | null;
@@ -444,11 +432,21 @@ function LegendMark({
         className={cn(
           'inline-block',
           shape === 'dot' && 'size-1.5',
-          shape === 'bar' && 'h-1 w-3',
           shape === 'tick' && 'h-2.5 w-0.5',
+          shape === 'hatch' && [
+            'h-2.5 w-4',
+            PLAY3D_DWELL_BOX_CLASS,
+            PLAY3D_DWELL_TONE.warn,
+          ],
           className,
         )}
-        style={color ? { background: color } : undefined}
+        style={
+          shape === 'hatch'
+            ? { backgroundImage: PLAY3D_DWELL_HATCH }
+            : color
+              ? { background: color }
+              : undefined
+        }
       />
       {label}
     </span>

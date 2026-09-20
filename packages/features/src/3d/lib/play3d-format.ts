@@ -1,18 +1,33 @@
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import type { SavedSceneInfo } from '@crane/domain/3d';
-import { getMonitoringTagMetadata } from '@crane/domain/monitoring';
+import {
+  formatReplayTimestamp,
+  getMonitoringTagMetadata,
+} from '@crane/domain/monitoring';
 import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from './model-runtime-status';
-import type {
-  EquipmentStat,
-  Play3dEventKind,
-  TagRangeBar,
+import {
+  assignCollisionsToRows,
+  assignZoneBandsToRows,
+  collisionSummaries,
+  lastEventAtMs,
+  statusBands,
+  zoneBands,
+  type CollisionSummary,
+  type EquipmentStat,
+  type Play3dEvent,
+  type Play3dEventKind,
+  type Play3dStats,
+  type StatusBand,
+  type TagRangeBar,
+  type ZoneBand,
 } from './play3d-stats';
+import { formatSimClock } from './sim-clock';
 
 /**
- * 3D 플레이 표시 보조 — 마커 색·seek 선행량·위치/비율 환산·타임라인 확대와
- * 재생 위치 따라가기 판단·태그 행 라벨. ui 파일의 수치 계산 금지 규칙
- * (scene-shadow.ts 선례)에 따라 lib 에 둔다.
+ * 3D 플레이 표시 보조 — 마커 색·seek 선행량·위치/비율 환산·시간 축과 눈금·
+ * 타임라인 확대와 재생 위치 따라가기 판단·표식과 hover 요약 조립·태그 행 라벨.
+ * ui 파일의 수치 계산 금지 규칙(scene-shadow.ts 선례)에 따라 lib 에 둔다.
  */
 
 /** 사건 종류별 마커 색(Tailwind 배경 클래스). 정지·이탈·복귀는 흐리게. */
@@ -26,10 +41,12 @@ export const PLAY3D_EVENT_COLORS: Record<Play3dEventKind, string> = {
   offlineExit: 'bg-zinc-400/40',
 };
 
-/** 트랜스포트 바 마커 띠에 그리는 종류 — 이탈·복귀·정지 해제는 표에만. */
+/**
+ * 재생바 표식 띠에 세로 선으로 그리는 종류 — 영역은 선이 아니라 체류 구간
+ * (대각선 박스)으로 그리고, 이탈·복귀·정지 해제는 사건 목록에만 둔다.
+ */
 export const PLAY3D_MARKER_KINDS: readonly Play3dEventKind[] = [
   'collision',
-  'zoneEnter',
   'holdStart',
   'offlineEnter',
 ];
@@ -44,6 +61,16 @@ export function markerSeekLeadMs(
 ): number {
   if (source === 'replay') return Math.max(0, frameDurationMs ?? 5_000);
   return 500;
+}
+
+/** 표식으로 이동할 씬 시간 — 선행량만큼 앞, 0 밑으로는 가지 않는다. */
+export function markerSeekTargetMs(
+  atMs: number,
+  source: 'replay' | 'simulation',
+  frameDurationMs: number | undefined,
+): number {
+  if (!Number.isFinite(atMs)) return 0;
+  return Math.max(0, atMs - markerSeekLeadMs(source, frameDurationMs));
 }
 
 /** 마커 위치(%) — 축 길이 밖은 100 으로 clamp. */
@@ -63,43 +90,38 @@ export function bandPercent(
   return { left, width: Math.max(0, right - left) };
 }
 
-/** 타임라인 축 길이 — 시나리오·리플레이 길이, 없으면 지금까지 본 최대 시각. */
+/**
+ * 시간 축 길이 — 리포트 타임라인과 재생바가 함께 쓴다. 길이(없으면 1초 바닥)·
+ * 위치·마지막 사건·재생이 지나간 가장 먼 지점 중 최대다. 반복 시나리오는 경과가
+ * 되감기지 않아(회차 = 경과 ÷ 길이) 길이에 고정하면 첫 회차 뒤의 커서·표식이
+ * 전부 축 끝에 쌓인다. 가장 먼 지점을 넣는 이유는 실행 중 축이 줄지 않게
+ * 하려는 것 — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때 축이 같이 줄어 값이
+ * 무너진다. 비정상 값은 건너뛴다.
+ */
 export function timelineAxisMs(
   durationMs: number | null,
   positionMs: number,
   lastEventMs: number,
+  scannedEndMs = 0,
 ): number {
-  if (durationMs !== null && durationMs > 0) return durationMs;
-  return Math.max(1_000, positionMs, lastEventMs);
-}
-
-/**
- * 리포트 타임라인 축 길이 — `timelineAxisMs` 에 더해 위치·마지막 사건이 길이를
- * 넘으면 그만큼 자란다. 반복 시나리오는 경과가 되감기지 않아(회차 = 경과 ÷
- * 길이) 길이에 고정하면 첫 회차 뒤의 커서·표식이 전부 축 끝에 쌓인다. 트랜스포트
- * 바 스크럽은 길이 기준이어야 해서 `timelineAxisMs` 는 그대로 둔다.
- */
-export function reportAxisMs(
-  durationMs: number | null,
-  positionMs: number,
-  lastEventMs: number,
-): number {
-  const candidates = [
-    timelineAxisMs(durationMs, positionMs, lastEventMs),
-    positionMs,
-    lastEventMs,
-  ].filter((v) => Number.isFinite(v));
-  return candidates.length > 0 ? Math.max(...candidates) : 1_000;
+  const base = durationMs !== null && durationMs > 0 ? durationMs : 1_000;
+  let axis = Number.isFinite(base) ? base : 1_000;
+  for (const v of [positionMs, lastEventMs, scannedEndMs]) {
+    if (Number.isFinite(v) && v > axis) axis = v;
+  }
+  return axis;
 }
 
 /** 리포트 타임라인이 한 화면(트랙 폭)에 담는 시간. 축이 더 길면 가로로 늘린다. */
-export const TIMELINE_FIT_MS = 5 * 60_000;
-/** 확대된 타임라인의 눈금 간격 — FIT 의 약수라 한 화면의 눈금이 정수 칸이다. */
-export const TIMELINE_TICK_STEP_MS = 60_000;
+export const TIMELINE_FIT_MS = 3 * 60_000;
 /** 확대 배율 상한 — 폭과 눈금 수가 끝없이 커지지 않게 한다. */
 export const TIMELINE_MAX_SCALE = 144;
-/** 타임라인 라벨(장비 이름) 열 폭(rem). */
-export const TIMELINE_LABEL_REM = 6;
+/** 타임라인 한 화면의 눈금 칸 수 상한. */
+export const TIMELINE_VIEW_TICKS = 6;
+/** 재생바(축 전체)의 눈금 칸 수 상한. */
+export const TRANSPORT_TICKS = 10;
+/** 눈금 개수의 안전 상한 — 간격이 지나치게 작아도 DOM 이 폭주하지 않는다. */
+export const TICK_COUNT_MAX = 1_000;
 
 /** 트랙 확대 배율 — FIT 이하는 1, 넘으면 축 ÷ FIT(상한 있음). 비정상 값은 1. */
 export function timelineTrackScale(axisMs: number): number {
@@ -108,41 +130,70 @@ export function timelineTrackScale(axisMs: number): number {
 }
 
 /**
- * 스크롤되는 내용물의 CSS 폭 — 라벨 열은 그대로 두고 트랙만 배율만큼 넓힌다.
- * 배율 1 이하·비정상은 정확히 `100%`(가로 스크롤바가 생기지 않는다).
+ * 가로 스크롤되는 트랙 내용물의 CSS 폭. 배율 1 이하·비정상은 정확히 `100%`
+ * (가로 스크롤바가 생기지 않는다). 장비 이름 열은 스크롤러 밖이라 빼지 않는다.
  */
-export function timelineContentWidth(scale: number, labelRem: number): string {
-  if (
-    !Number.isFinite(scale) ||
-    scale <= 1 ||
-    !Number.isFinite(labelRem) ||
-    labelRem < 0
-  ) {
-    return '100%';
+export function timelineContentWidth(scale: number): string {
+  if (!Number.isFinite(scale) || scale <= 1) return '100%';
+  return `${scale * 100}%`;
+}
+
+/** 눈금 간격 후보(ms) — 1초 … 6시간. */
+export const TIMELINE_TICK_STEPS_MS: readonly number[] = [
+  1_000, 2_000, 5_000, 10_000, 15_000, 30_000, 60_000, 120_000, 300_000,
+  600_000, 900_000, 1_800_000, 3_600_000, 7_200_000, 21_600_000,
+];
+
+/**
+ * 둥근 눈금 간격 — `spanMs ÷ 간격 ≤ maxTicks` 인 가장 작은 후보. 후보를 다
+ * 넘으면 마지막 후보의 배수. 비정상 span 은 첫 후보, 비정상 maxTicks 는 1.
+ */
+export function niceTickStepMs(spanMs: number, maxTicks: number): number {
+  const steps = TIMELINE_TICK_STEPS_MS;
+  const max =
+    Number.isFinite(maxTicks) && maxTicks >= 1 ? Math.floor(maxTicks) : 1;
+  if (!Number.isFinite(spanMs) || spanMs <= 0) return steps[0];
+  for (const step of steps) {
+    if (spanMs / step <= max) return step;
   }
-  return `calc(${labelRem}rem + ${scale} * (100% - ${labelRem}rem))`;
+  const last = steps[steps.length - 1];
+  return Math.ceil(spanMs / max / last) * last;
 }
 
 /**
- * 눈금 시각(ms). FIT 이하는 4등분(0 과 축 끝 포함). 넘으면 눈금 간격의 배수에
- * 고정해 축이 자라도 눈금이 움직이지 않는다 — 끝 반 칸 안의 배수는 라벨이
- * 잘려서 빼고, 축 끝과 정확히 같은 배수는 넣는다. 배율 상한을 넘는 축은
- * 간격을 늘려 개수를 묶는다.
+ * 눈금 시각(ms) — 0 부터 간격의 배수. 끝 반 칸 안의 배수는 라벨이 잘려서 빼고,
+ * 축 끝과 정확히 같은 배수는 넣는다. 간격이 고정이라 축이 자라도 앞 눈금은
+ * 움직이지 않는다. 비정상 입력은 [0], 개수는 TICK_COUNT_MAX 를 넘지 않는다.
  */
-export function timelineTickTimes(axisMs: number): number[] {
-  if (!Number.isFinite(axisMs) || axisMs <= 0) return [0];
-  if (axisMs <= TIMELINE_FIT_MS) return timelineTicks(axisMs, 4);
-  const perFit = TIMELINE_FIT_MS / TIMELINE_TICK_STEP_MS;
-  const step = Math.max(
-    TIMELINE_TICK_STEP_MS,
-    axisMs / (TIMELINE_MAX_SCALE * perFit),
-  );
+export function tickTimes(axisMs: number, stepMs: number): number[] {
+  if (
+    !Number.isFinite(axisMs) ||
+    axisMs <= 0 ||
+    !Number.isFinite(stepMs) ||
+    stepMs <= 0
+  ) {
+    return [0];
+  }
+  const step = Math.max(stepMs, axisMs / TICK_COUNT_MAX);
   const out: number[] = [];
   for (let i = 0; i * step <= axisMs; i += 1) {
     const t = i * step;
     if (t === axisMs || t <= axisMs - step / 2) out.push(t);
   }
   return out;
+}
+
+/** 리포트 타임라인 눈금 — 한 화면 구간(축 ÷ 배율)에 맞춘 둥근 간격. */
+export function timelineViewTicks(axisMs: number): number[] {
+  if (!Number.isFinite(axisMs) || axisMs <= 0) return [0];
+  const viewSpan = axisMs / timelineTrackScale(axisMs);
+  return tickTimes(axisMs, niceTickStepMs(viewSpan, TIMELINE_VIEW_TICKS));
+}
+
+/** 재생바 눈금 — 축 전체에 맞춘 둥근 간격. */
+export function transportTicks(axisMs: number): number[] {
+  if (!Number.isFinite(axisMs) || axisMs <= 0) return [0];
+  return tickTimes(axisMs, niceTickStepMs(axisMs, TRANSPORT_TICKS));
 }
 
 /** 스크롤 컨테이너의 치수와 커서 위치 — ui 가 DOM 에서 읽어 넘긴다. */
@@ -152,8 +203,6 @@ export interface TimelineScrollGeometry {
   scrollLeft: number;
   clientWidth: number;
   scrollWidth: number;
-  /** sticky 라벨 열 폭(px) — 트랙은 그 오른쪽에서 시작한다. */
-  labelPx: number;
 }
 
 /**
@@ -165,29 +214,20 @@ const TIMELINE_IN_VIEW_TOLERANCE_PX = 1;
 const TIMELINE_FOLLOW_LEAD_RATIO = 0.1;
 
 function resolveTimelineGeometry(g: TimelineScrollGeometry) {
-  const values = [
-    g.cursorPercent,
-    g.scrollLeft,
-    g.clientWidth,
-    g.scrollWidth,
-    g.labelPx,
-  ];
+  const values = [g.cursorPercent, g.scrollLeft, g.clientWidth, g.scrollWidth];
   if (!values.every((v) => Number.isFinite(v))) return null;
-  const labelPx = Math.max(0, g.labelPx);
-  const visibleTrack = g.clientWidth - labelPx;
-  if (g.scrollWidth <= g.clientWidth || visibleTrack <= 0) return null;
+  if (g.scrollWidth <= g.clientWidth || g.clientWidth <= 0) return null;
   const percent = Math.min(100, Math.max(0, g.cursorPercent));
   return {
-    labelPx,
-    visibleTrack,
-    cursorX: labelPx + (percent * (g.scrollWidth - labelPx)) / 100,
-    left: g.scrollLeft + labelPx,
+    visibleTrack: g.clientWidth,
+    cursorX: (percent * g.scrollWidth) / 100,
+    left: g.scrollLeft,
     right: g.scrollLeft + g.clientWidth,
     maxScroll: g.scrollWidth - g.clientWidth,
   };
 }
 
-/** 커서가 (라벨 열에 가리지 않고) 보이는지. 넘침이 없으면 항상 true. */
+/** 커서가 스크롤러 안에 보이는지. 넘침이 없으면 항상 true. */
 export function timelineCursorInView(g: TimelineScrollGeometry): boolean {
   const r = resolveTimelineGeometry(g);
   if (!r) return true;
@@ -217,7 +257,7 @@ export function timelineFollowScroll(
     input.isPlaying && r.cursorX > r.right
       ? r.visibleTrack * TIMELINE_FOLLOW_LEAD_RATIO
       : r.visibleTrack / 2;
-  const target = r.cursorX - r.labelPx - lead;
+  const target = r.cursorX - lead;
   return {
     scrollLeft: Math.round(Math.min(r.maxScroll, Math.max(0, target))),
     inView: true,
@@ -256,14 +296,6 @@ export const PLAY3D_STATUS_FILL: Record<EquipmentRuntimeStatus, string | null> =
     offline: '#52525b',
     unknown: null,
   };
-
-/** 균등 축 눈금(ms) — 0 과 axis 를 포함해 n+1 개. */
-export function timelineTicks(axisMs: number, n = 4): number[] {
-  if (!(axisMs > 0) || !(n > 0)) return [0];
-  const out: number[] = [];
-  for (let i = 0; i <= n; i += 1) out.push((axisMs * i) / n);
-  return out;
-}
 
 /** 축 위 상대 위치(0~1) → 씬 시간. */
 export function msAtFraction(fraction: number, axisMs: number): number {
@@ -377,5 +409,189 @@ export function tagRowLabel(
   return {
     label: `${model?.equipName || craneKey} · ${meta.displayName}`,
     unit: meta.unit ?? '',
+  };
+}
+
+// ---- 영역 체류 표식 · hover 요약(리포트 타임라인과 재생바 공용) ----
+
+/**
+ * 영역 체류 = 대각선 박스. 색 줄은 `currentColor`(등급 톤 클래스가 정한다), 그
+ * 옆 어두운 1px 이 초록·밝은 트랙 위에서, 색 줄이 회색·어두운 트랙 위에서
+ * 형태를 잡는다. 바탕은 투명이라 아래 상태 색이 비친다. 대각선은 영역 체류
+ * 전용이다 — 다른 뜻(미검사 구간 등)으로 쓰지 않는다.
+ */
+export const PLAY3D_DWELL_HATCH =
+  'repeating-linear-gradient(135deg, currentColor 0 2px, rgb(0 0 0 / 0.45) 2px 3px, transparent 3px 6px)';
+
+/** 등급별 톤(Tailwind 글자색 → currentColor). */
+export const PLAY3D_DWELL_TONE: Record<'warn' | 'stop', string> = {
+  warn: 'text-amber-400',
+  stop: 'text-red-500',
+};
+
+/** 박스 테두리 — 등급 색 1px + 어두운 링(밝은 배경에서 윤곽을 잡는다). */
+export const PLAY3D_DWELL_BOX_CLASS =
+  'border border-current ring-1 ring-black/30';
+
+/** 표식에 마우스를 올렸을 때의 요약 내용 — 트리거가 payload 로 넘긴다. */
+export type Play3dHoverPayload =
+  | {
+      kind: 'collision';
+      event: Play3dEvent;
+      timeLabel: string;
+      summary: CollisionSummary | null;
+    }
+  | { kind: 'zone'; band: ZoneBand }
+  | { kind: 'status'; band: StatusBand; name: string }
+  | { kind: 'event'; event: Play3dEvent; timeLabel: string };
+
+/** 사건 시각 표시 — 리플레이는 그 프레임의 실제 시각, 아니면 씬 시계(mm:ss). */
+export function eventTimeLabel(
+  event: Pick<Play3dEvent, 'atMs' | 'frameIndex'>,
+  frames: readonly { timestamp: string }[],
+): string {
+  if (event.frameIndex !== null) {
+    const stamp = frames[event.frameIndex]?.timestamp ?? null;
+    const label = formatReplayTimestamp(stamp, 'time');
+    if (label) return label;
+  }
+  return formatSimClock(event.atMs);
+}
+
+/** 구간 표시 — "04:00 ~ 05:10 (01:10)". 진행 중이면 끝 자리에 그 문구. */
+export function formatBandSpan(
+  fromMs: number,
+  toMs: number,
+  ongoingLabel: string | null = null,
+): string {
+  const duration = formatSimClock(Math.max(0, toMs - fromMs));
+  const end = ongoingLabel ?? formatSimClock(toMs);
+  return `${formatSimClock(fromMs)} ~ ${end} (${duration})`;
+}
+
+export interface TimelineStatusMark {
+  key: string;
+  band: StatusBand;
+  payload: Play3dHoverPayload;
+}
+
+export interface TimelineZoneMark {
+  key: string;
+  band: ZoneBand;
+  /** 현재 위치 뒤의 구간(재생바에서 흐리게). 타임라인은 항상 false. */
+  dim: boolean;
+  payload: Play3dHoverPayload;
+}
+
+export interface TimelineLineMark {
+  key: string;
+  event: Play3dEvent;
+  dim: boolean;
+  payload: Play3dHoverPayload;
+}
+
+export interface TimelineEquipmentRow {
+  modelId: string;
+  name: string;
+  status: TimelineStatusMark[];
+  zones: TimelineZoneMark[];
+  collisions: TimelineLineMark[];
+}
+
+/**
+ * 리포트 타임라인의 행 — 장비마다 상태 막대·배정된 영역 체류·관여한 충돌과 그
+ * hover 요약. 사건 행은 따로 없다(사건은 장비 행에 겹쳐 그린다). 상태를 모르는
+ * (unknown) 구간은 그리지 않는다.
+ */
+export function timelineRows(
+  stats: Pick<
+    Play3dStats,
+    'equipment' | 'events' | 'statusTransitions' | 'scanned' | 'windowEndMs'
+  >,
+  timeLabel: (event: Play3dEvent) => string,
+): TimelineEquipmentRow[] {
+  const end = stats.windowEndMs;
+  const rowIds = new Set(stats.equipment.map((eq) => eq.modelId));
+  const strips = assignZoneBandsToRows(zoneBands(stats.events, end), rowIds);
+  const hits = assignCollisionsToRows(stats.events, rowIds);
+  const summaries = collisionSummaries(stats.events);
+  return stats.equipment.map((eq) => ({
+    modelId: eq.modelId,
+    name: eq.name,
+    status: statusBands(stats.statusTransitions, eq.modelId, end, stats.scanned)
+      .filter((band) => PLAY3D_STATUS_FILL[band.status] !== null)
+      .map((band) => ({
+        key: `s${band.fromMs}`,
+        band,
+        payload: { kind: 'status', band, name: eq.name },
+      })),
+    zones: (strips.get(eq.modelId) ?? []).map((band) => ({
+      key: `z${band.enterId}`,
+      band,
+      dim: false,
+      payload: { kind: 'zone', band },
+    })),
+    collisions: (hits.get(eq.modelId) ?? []).map((event) => ({
+      key: `c${event.id}`,
+      event,
+      dim: false,
+      payload: {
+        kind: 'collision',
+        event,
+        timeLabel: timeLabel(event),
+        summary: summaries.get(event.id) ?? null,
+      },
+    })),
+  }));
+}
+
+export interface TransportMarks {
+  zones: TimelineZoneMark[];
+  lines: TimelineLineMark[];
+}
+
+/**
+ * 재생바 표식 — 영역은 체류 구간(박스), 나머지(PLAY3D_MARKER_KINDS)는 세로 선.
+ * 원시 사건(기록 순, 뒤로 seek 하면 시각순이 아니다)을 받아 실행 전체를 그리고,
+ * 현재 위치 뒤의 표식은 dim 으로 표시한다. 충돌 선을 마지막에 둬 위에 그려진다.
+ */
+export function transportMarks(
+  events: readonly Play3dEvent[],
+  windowEndMs: number,
+  timeLabel: (event: Play3dEvent) => string,
+): TransportMarks {
+  const windowEnd =
+    Number.isFinite(windowEndMs) && windowEndMs > 0 ? windowEndMs : 0;
+  const end = Math.max(windowEnd, lastEventAtMs(events));
+  const summaries = collisionSummaries(events);
+  const lines: TimelineLineMark[] = events
+    .filter(
+      (e) => PLAY3D_MARKER_KINDS.includes(e.kind) && Number.isFinite(e.atMs),
+    )
+    .map((event) => ({
+      key: `e${event.id}`,
+      event,
+      dim: event.atMs > windowEnd,
+      payload:
+        event.kind === 'collision'
+          ? {
+              kind: 'collision' as const,
+              event,
+              timeLabel: timeLabel(event),
+              summary: summaries.get(event.id) ?? null,
+            }
+          : { kind: 'event' as const, event, timeLabel: timeLabel(event) },
+    }));
+  return {
+    zones: zoneBands(events, end).map((band) => ({
+      key: `z${band.enterId}`,
+      band,
+      dim: band.fromMs > windowEnd,
+      payload: { kind: 'zone', band },
+    })),
+    lines: [
+      ...lines.filter((m) => m.event.kind !== 'collision'),
+      ...lines.filter((m) => m.event.kind === 'collision'),
+    ],
   };
 }

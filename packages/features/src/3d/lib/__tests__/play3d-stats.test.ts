@@ -3,11 +3,15 @@ import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
   accumulateTagValue,
   addScannedInterval,
+  assignCollisionsToRows,
   assignZoneBandsToRows,
+  collisionSummaries,
   computePlay3dStats,
   createTagAggregate,
   emptyStatusMs,
+  lastEventAtMs,
   loopIterationOf,
+  scannedEndMs,
   statusBands,
   sumScanned,
   tagRangeBar,
@@ -582,10 +586,22 @@ describe('시간 축 파생 — zoneBands', () => {
     expect(bands[0].ownerId).toBe('m');
     expect(bands[1].ownerId).toBeUndefined();
   });
+
+  it('enterId 는 그 체류를 연 진입 사건의 id — 중복 진입으로 닫힌 밴드도 자기 id', () => {
+    const first = ev('zoneEnter', 1000, 'm#z|c', zone);
+    const second = ev('zoneEnter', 2000, 'm#z|c', zone);
+    const exit = ev('zoneExit', 3000, 'm#z|c', zone);
+    const bands = zoneBands([first, second, exit], 5000);
+    expect(bands.map((b) => [b.enterId, b.fromMs, b.toMs])).toEqual([
+      [first.id, 1000, 2000],
+      [second.id, 2000, 3000],
+    ]);
+  });
 });
 
 describe('assignZoneBandsToRows', () => {
   const band = (patch: Partial<ZoneBand>): ZoneBand => ({
+    enterId: 1,
     fromMs: 0,
     toMs: 1000,
     zoneKey: 'o#z',
@@ -656,5 +672,113 @@ describe('range bar', () => {
     expect(
       tagRangeBar({ min: Number.NaN, max: Number.NaN, sum: 0, count: 0 }, null),
     ).toBeNull();
+  });
+});
+
+describe('assignCollisionsToRows / collisionSummaries', () => {
+  it('assignCollisionsToRows: 양쪽이 행이면 두 행, 한쪽만 행이면 한 행, 둘 다 아니면 버림 — 입력 순서 유지', () => {
+    const both = ev('collision', 1000, 'a|b', { modelIds: ['a', 'b'] });
+    const one = ev('collision', 2000, 'a|s', { modelIds: ['a', 's'] });
+    const none = ev('collision', 3000, 's|t', { modelIds: ['s', 't'] });
+    const later = ev('collision', 500, 'a|b', { modelIds: ['b', 'a'] });
+    const rows = assignCollisionsToRows(
+      [both, one, none, later],
+      new Set(['a', 'b']),
+    );
+    expect([...rows.keys()]).toEqual(['a', 'b']);
+    expect(rows.get('a')).toEqual([both, one, later]);
+    expect(rows.get('b')).toEqual([both, later]);
+  });
+
+  it('assignCollisionsToRows: modelIds 없음·같은 id 쌍은 한 번·충돌 아닌 사건 무시·빈 입력은 빈 Map', () => {
+    const rows = assignCollisionsToRows(
+      [
+        ev('collision', 1000, 'x|y'),
+        ev('collision', 2000, 'a|a', { modelIds: ['a', 'a'] }),
+        ev('zoneEnter', 3000, 'a#z|b', { modelIds: ['a', 'b'] }),
+      ],
+      new Set(['a', 'b']),
+    );
+    expect([...rows.keys()]).toEqual(['a']);
+    expect(rows.get('a')).toHaveLength(1);
+    expect(assignCollisionsToRows([], new Set(['a'])).size).toBe(0);
+    expect(
+      assignCollisionsToRows(
+        [ev('collision', 1, 'a|b', { modelIds: ['a', 'b'] })],
+        new Set(),
+      ).size,
+    ).toBe(0);
+  });
+
+  it('computePlay3dStats: 장비 충돌 값은 assignCollisionsToRows 와 같은 규칙이다', () => {
+    const events = [
+      ev('collision', 1000, 'a|b', { modelIds: ['a', 'b'] }),
+      ev('collision', 2000, 'a|s', { modelIds: ['a', 's'] }),
+      ev('collision', 3000, 'x|y'),
+    ];
+    const stats = computePlay3dStats(
+      input({
+        events,
+        statusTransitions: [
+          { atMs: 0, modelId: 'a', from: 'unknown', to: 'running' },
+          { atMs: 0, modelId: 'b', from: 'unknown', to: 'running' },
+        ],
+      }),
+    );
+    const rows = assignCollisionsToRows(stats.events, new Set(['a', 'b']));
+    for (const eq of stats.equipment) {
+      expect(eq.collisions).toBe(rows.get(eq.modelId)?.length ?? 0);
+    }
+    expect(stats.equipment.map((e) => e.collisions)).toEqual([2, 1]);
+  });
+
+  it('collisionSummaries: 쌍별 순번·전체 — 같은 시각은 id 순, 다른 쌍은 독립, 시각순이 아닌 입력도 시각 기준', () => {
+    const late = ev('collision', 5000, 'a|b');
+    const early = ev('collision', 1000, 'a|b');
+    const tieA = ev('collision', 3000, 'a|b');
+    const tieB = ev('collision', 3000, 'a|b');
+    const other = ev('collision', 2000, 'c|d');
+    const map = collisionSummaries([late, early, tieA, tieB, other]);
+    expect(map.get(early.id)).toEqual({ ordinal: 1, total: 4 });
+    expect(map.get(tieA.id)).toEqual({ ordinal: 2, total: 4 });
+    expect(map.get(tieB.id)).toEqual({ ordinal: 3, total: 4 });
+    expect(map.get(late.id)).toEqual({ ordinal: 4, total: 4 });
+    expect(map.get(other.id)).toEqual({ ordinal: 1, total: 1 });
+  });
+
+  it('collisionSummaries: 충돌 아닌 사건·NaN 시각은 빼고, 빈 입력은 빈 Map', () => {
+    const broken = ev('collision', Number.NaN, 'a|b');
+    const zone = ev('zoneEnter', 1000, 'a|b');
+    const ok = ev('collision', 1000, 'a|b');
+    const map = collisionSummaries([broken, zone, ok]);
+    expect(map.size).toBe(1);
+    expect(map.get(ok.id)).toEqual({ ordinal: 1, total: 1 });
+    expect(collisionSummaries([]).size).toBe(0);
+  });
+});
+
+describe('lastEventAtMs / scannedEndMs', () => {
+  it('lastEventAtMs: 마지막 원소가 아니라 최댓값 — 빈 배열·NaN·음수는 0', () => {
+    expect(
+      lastEventAtMs([
+        ev('collision', 5000, 'a'),
+        ev('collision', 1000, 'a'),
+        ev('collision', Number.NaN, 'a'),
+      ]),
+    ).toBe(5000);
+    expect(lastEventAtMs([])).toBe(0);
+    expect(lastEventAtMs([ev('collision', Number.NaN, 'a')])).toBe(0);
+    expect(lastEventAtMs([ev('collision', -10, 'a')])).toBe(0);
+  });
+
+  it('scannedEndMs: 구간 끝 중 최댓값 — 빈 배열·NaN 은 0', () => {
+    expect(
+      scannedEndMs([
+        { fromMs: 0, toMs: 2000 },
+        { fromMs: 6000, toMs: 8000 },
+      ]),
+    ).toBe(8000);
+    expect(scannedEndMs([])).toBe(0);
+    expect(scannedEndMs([{ fromMs: 0, toMs: Number.NaN }])).toBe(0);
   });
 });
