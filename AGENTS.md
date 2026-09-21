@@ -266,6 +266,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다. 캔버스가 전부 `frameloop='demand'` 다 (rendering-perf).
 - `SceneLighting` 에는 `regionId` 를 반드시 넘긴다. 조명·하늘 밝기 기준값은 `lib/sky-lighting.ts` 상수만 고치고 다른 곳에서 같은 값을 세팅하지 않는다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
+- 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
 - 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
 - Canvas 안 마운트 순서는 계약이다: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui).
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).

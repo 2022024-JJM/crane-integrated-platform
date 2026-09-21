@@ -578,6 +578,86 @@ describe('SceneCollisionRuntime — BVH·registry 상태', () => {
     void b;
   });
 
+  it('BVH 가 끝내 없는 쌍이 기준선을 붙잡지 않는다 — 다른 쌍은 scanning 에서 정상 보고된다', () => {
+    const rt = makeRuntime();
+    mountModel('a', 0, { bvh: false });
+    mountModel('b', 0.5);
+    const c = mountModel('c', 10);
+    mountModel('d', 15);
+    rt.sync([model('a'), model('b', 0.5), model('c', 10), model('d', 15)]);
+    rt.arm();
+    expect(settle(rt)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+    // 판정하지 못한 쌍은 억제된 것이 아니다 — 미결로 남아 재시도된다.
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+
+    moveTo(c.root, 14.5);
+    expect(rt.tick(BASELINE_SETTLE_MS + 100, 100)?.key).toBe('c|d');
+  });
+
+  it('기준선에서 미결이던 쌍은 BVH 가 생긴 뒤 첫 hit 을 보고 대신 억제하고, 떼었다 붙이면 보고한다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0, { bvh: false });
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt);
+    expect(rt.currentPhase).toBe('scanning');
+
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    const retryAt = BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS;
+    expect(rt.tick(retryAt, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(true);
+
+    moveTo(a.root, -10);
+    expect(rt.tick(retryAt + 10, 100)).toBeNull();
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+    moveTo(a.root, 0);
+    expect(rt.tick(retryAt + 20, 100)?.key).toBe('a|b');
+  });
+
+  it('미결 쌍이 BVH 없이 떨어지면 미결이 풀린다 — 그 뒤의 접근은 억제 없이 보고된다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0, { bvh: false });
+    mountModel('b', 0.5);
+    rt.sync([model('a'), model('b', 0.5)]);
+    rt.arm();
+    settle(rt);
+
+    moveTo(a.root, -10);
+    expect(rt.tick(BASELINE_SETTLE_MS + 100, 100)).toBeNull();
+    (a.body.geometry as BvhGeometry).boundsTree = new MeshBVH(a.body.geometry);
+    moveTo(a.root, 0);
+    // 기준선에서 잡힌 BVH 재시도 시각은 그대로다 — 그 전엔 다시 보지 않는다.
+    expect(rt.tick(BASELINE_SETTLE_MS + 200, 100)).toBeNull();
+    expect(
+      rt.tick(BASELINE_SETTLE_MS + 10 + BVH_RETRY_MS, 100)?.key,
+    ).toBe('a|b');
+    expect(rt.suppressedKeys.has('a|b')).toBe(false);
+  });
+
+  it('LOD 모델 — LOD0 이 숨겨지고 BVH 없는 LOD 사본만 보여도 LOD0 으로 기준선을 끝내고 감지한다', () => {
+    const rt = makeRuntime();
+    const a = mountModel('a', 0);
+    a.body.userData = { lodGroup: 'Body#0', lod: 0 };
+    a.body.visible = false;
+    const proxy = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+    proxy.name = 'Body-lod2';
+    proxy.userData = { lodGroup: 'Body#0', lod: 2 };
+    a.root.add(proxy);
+    a.root.updateMatrixWorld(true);
+    mountModel('b', 5);
+    rt.sync([model('a'), model('b', 5)]);
+    rt.arm();
+    expect(settle(rt)).toBeNull();
+    expect(rt.currentPhase).toBe('scanning');
+
+    moveTo(a.root, 4.5);
+    const hit = rt.tick(BASELINE_SETTLE_MS + 100, 100);
+    expect(hit?.key).toBe('a|b');
+    expect(hit?.a.mesh).toBe(a.body);
+  });
+
   it('registry 에 아직 없는 모델은 보류했다가 등록되면 다음 tick 에 합류한다', () => {
     const rt = makeRuntime();
     const a = mountModel('a', 0);

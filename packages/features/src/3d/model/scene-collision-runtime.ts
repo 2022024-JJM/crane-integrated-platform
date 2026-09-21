@@ -48,8 +48,10 @@ import {
  * `arm()` 1회가 아니라 **시뮬레이션 이외의 움직임이 들어올 때마다** 다시
  * 잡힌다: 검사기가 스캔을 멈췄다 재개할 때(러너 재생·기즈모 드래그 종료)
  * `rebaseline()`, 모델 항목이 새로 만들어질 때(첫 마운트·리마운트·참조 교체)
- * tick 내부에서 자동. baseline 은 큐가 비고 BASELINE_SETTLE_MS 안정화 창이
- * 지나야 scanning 이 된다(matrixWorld 1프레임 지연·스무딩 흡수, 상수 주석).
+ * tick 내부에서 자동. baseline 은 큐가 비고(BVH 재시도 대기 쌍은 세지 않는다)
+ * BASELINE_SETTLE_MS 안정화 창이 지나야 scanning 이 된다(matrixWorld 1프레임
+ * 지연·스무딩 흡수, 상수 주석). 기준선 중 BVH 가 없어 판정하지 못한 쌍은
+ * baselineDeferred 로 넘겨, 뒤늦은 첫 hit 을 보고 대신 억제한다.
  * 그래서 창 안에서 시뮬레이션이 만든 겹침도 그 쌍이 분리될 때까지 보고되지
  * 않는다 — 허용된 부작용이다.
  * 억제(보고 뒤 포함)는 두 모델의 **메쉬**가 전부 떨어지면 풀린다
@@ -58,7 +60,8 @@ import {
  * 붙으면 새로 보고된다.
  *
  * BVH 는 여기서 빌드하지 않는다(collision-volumes 주석). 없는 메쉬 쌍은
- * 건너뛰고 BVH_RETRY_MS 뒤 다시 본다.
+ * 건너뛰고 BVH_RETRY_MS 뒤 다시 본다. 메쉬는 LOD 가시성과 무관하게 LOD0 만
+ * 모은다(collectCollidableMeshes) — LOD>0 사본에는 BVH 가 없다.
  */
 
 interface MeshEntry {
@@ -87,6 +90,11 @@ interface PairJob {
   state: PairState;
   /** BVH 미준비로 미룬 경우 이 시각 전엔 다시 보지 않는다. */
   bvhRetryAt: number;
+  /**
+   * 기준선 단계에서 BVH 가 없어 판정을 못 내린 쌍 — 기준선은 이 쌍을 기다리지
+   * 않고 끝나며, 뒤늦게 난 첫 hit 은 기준선 겹침으로 보고 억제한다.
+   */
+  baselineDeferred: boolean;
 }
 
 export type SceneCollisionRuntimePhase =
@@ -298,6 +306,7 @@ export class SceneCollisionRuntime {
       }
       if (!job.a.box.intersectsBox(job.b.box)) {
         job.state = 'clear';
+        job.baselineDeferred = false;
         continue;
       }
       if (job.bvhRetryAt > now) {
@@ -307,7 +316,8 @@ export class SceneCollisionRuntime {
 
       const result = this.testPair(job);
       if (result === 'hit') {
-        if (this.phase === 'baseline') {
+        if (this.phase === 'baseline' || job.baselineDeferred) {
+          job.baselineDeferred = false;
           this.suppressed.add(job.key);
           job.state = 'suppressed';
           continue;
@@ -318,18 +328,22 @@ export class SceneCollisionRuntime {
         return this.buildHit(job);
       }
       if (result === 'no-bvh') {
+        if (this.phase === 'baseline') job.baselineDeferred = true;
         job.state = 'untested';
         job.bvhRetryAt = now + BVH_RETRY_MS;
         this.enqueue(job);
         continue;
       }
       job.state = 'clear';
+      job.baselineDeferred = false;
     }
 
+    // BVH 재시도 대기 쌍은 기다리지 않는다 — BVH 가 끝내 안 생기는 메쉬 하나가
+    // 기준선 전체를 붙잡으면 안 된다(그 쌍은 baselineDeferred 로 따로 넘긴다).
     if (
       this.phase === 'baseline' &&
-      this.queue.length === 0 &&
-      now >= this.settleUntil
+      now >= this.settleUntil &&
+      this.queue.every((job) => job.bvhRetryAt > now)
     ) {
       this.phase = 'scanning';
     }
@@ -510,6 +524,10 @@ export class SceneCollisionRuntime {
               ? prev.state
               : 'untested',
           bvhRetryAt: prev?.bvhRetryAt ?? 0,
+          baselineDeferred:
+            prev !== undefined && prev.a === a && prev.b === b
+              ? prev.baselineDeferred
+              : false,
         };
         next.push(job);
         nextByKey.set(key, job);

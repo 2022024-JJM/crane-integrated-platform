@@ -43,7 +43,7 @@
 
 ### 런타임(scene-zone-runtime)
 
-- 충돌 런타임과 같은 골격: 모델 레지스트리 루트가 항목, 메쉬 `matrixWorld` 서명으로 dirty 판정, job 사이 시간 예산(`ZONE_SCAN_BUDGET_MS`).
+- 충돌 런타임과 같은 골격: 모델 레지스트리 루트가 항목, 메쉬 `matrixWorld` 서명으로 dirty 판정, job 사이 시간 예산(`ZONE_SCAN_BUDGET_MS`). 메쉬 수집도 같은 `collectCollidableMeshes`(LOD 는 항상 LOD0, `docs/agents/3d-collision.md`).
 - **상태 기반**이다. 기준선·억제 없이 "안에 있으면 침범 중" 이고, 돌려주는 것은 전이(enter/exit)뿐이다.
 - 영역 중심은 소유 루트의 `rootLast` 서명으로 따로 추적한다 — 트롤리만 움직이면 그 모델은 침범자로만 재검사한다.
 - 영역 × 다른 모델 메쉬는 AABB XZ → 삼각형, 영역 × 다른 모델 영역은 중심 거리 ≤ r1+r2 인라인. 같은 모델의 영역끼리·소유 모델 자신은 제외하고, 영역↔영역 전이는 a 쪽에서 한 번만 낸다.

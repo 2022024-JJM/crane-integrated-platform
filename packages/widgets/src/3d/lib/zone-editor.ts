@@ -25,7 +25,8 @@ const _meshes: Mesh[] = [];
  * 즉 모델을 딱 감싸는 원이다. 가로 폭 전체를 반경으로 잡으면 링 지름이 모델의
  * 두 배가 되어 너무 컸다(2026-09-12). 원점이 발자국 한쪽에 치우친 모델은 그만큼
  * 커진다 — 사용자가 오프셋으로 중심을 옮기면 줄일 수 있다. 메쉬는 충돌 감지와
- * 같은 기준(collectCollidableMeshes — Line2·숨김 LOD 제외)으로 모은다.
+ * 같은 기준(collectCollidableMeshes — Line2·숨김 제외, LOD 는 항상 LOD0)으로
+ * 모은다.
  * 모델이 아직 마운트되지 않았거나 박스가 비면 null.
  */
 export function measureModelFootprintRadius(

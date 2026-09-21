@@ -56,15 +56,31 @@ export function isCollidableMesh(object: Object3D): object is Mesh {
   return geometry.boundingBox !== null && !geometry.boundingBox.isEmpty();
 }
 
+/** 노드 extras 의 LOD 레벨(지형 타일·모델 LOD 공통). 유한 숫자가 아니면 null. */
+function lodLevelOf(object: Object3D): number | null {
+  const lod = (object.userData as { lod?: unknown }).lod;
+  return typeof lod === 'number' && Number.isFinite(lod) ? lod : null;
+}
+
+function collectInto(object: Object3D, out: Mesh[]): void {
+  const lod = lodLevelOf(object);
+  if (lod !== null && lod > 0) return;
+  if (!object.visible && lod !== 0) return;
+  if (isCollidableMesh(object)) out.push(object);
+  for (const child of object.children) collectInto(child, out);
+}
+
 /**
- * `root` 아래 보이는 충돌 대상 메쉬를 `out` 에 모은다(`out` 은 비우고 재사용).
- * `traverseVisible` 이라 `visible=false` 서브트리는 통째로 빠진다.
+ * `root` 아래 충돌 대상 메쉬를 `out` 에 모은다(`out` 은 비우고 재사용).
+ * `visible=false` 서브트리는 통째로 빠진다 — 단 LOD 는 가시성과 무관하게
+ * **항상 LOD0** 을 모은다. LOD>0 사본은 서브트리째 건너뛰고(BVH 를 만들지
+ * 않아 삼각형 판정이 영영 불가), LOD0 노드는 SceneTerrainLod 가 거리에 따라
+ * 숨겨 놓았어도 내려간다. raycast 가 항상 LOD0 을 보는 것과 같은 계약이라
+ * 판정이 카메라 거리에 따라 달라지지 않는다.
  */
 export function collectCollidableMeshes(root: Object3D, out: Mesh[]): Mesh[] {
   out.length = 0;
-  root.traverseVisible((child) => {
-    if (isCollidableMesh(child)) out.push(child);
-  });
+  collectInto(root, out);
   return out;
 }
 

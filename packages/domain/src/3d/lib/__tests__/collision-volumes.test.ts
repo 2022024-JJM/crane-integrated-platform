@@ -79,6 +79,73 @@ describe('isCollidableMesh / collectCollidableMeshes', () => {
     expect(result).toBe(out);
     expect(out).toEqual([visible]);
   });
+
+  it('root 자체가 숨겨져 있으면 아무것도 모으지 않는다', () => {
+    const root = new Group();
+    root.visible = false;
+    root.add(cube());
+    expect(collectCollidableMeshes(root, [])).toEqual([]);
+  });
+
+  it('LOD 는 가시성과 무관하게 LOD0 만 모은다 — LOD0 이 숨겨지고 LOD2 가 보여도', () => {
+    const root = new Object3D();
+    const lod0 = cube();
+    lod0.userData = { lodGroup: 'a#0', lod: 0 };
+    lod0.visible = false;
+    const lod1 = cube();
+    lod1.userData = { lodGroup: 'a#0', lod: 1 };
+    lod1.visible = false;
+    const lod2 = cube();
+    lod2.userData = { lodGroup: 'a#0', lod: 2 };
+    const plain = cube();
+    root.add(lod0, plain, lod1, lod2);
+    expect(collectCollidableMeshes(root, [])).toEqual([lod0, plain]);
+  });
+
+  it('다중 프리미티브 캐리어(Group + extras 가 복제된 자식 Mesh)도 LOD0 만 내려간다', () => {
+    const root = new Object3D();
+    const carrier0 = new Group();
+    carrier0.userData = { lodGroup: 'b#0', lod: 0 };
+    carrier0.visible = false;
+    const prim0a = cube();
+    prim0a.userData = { lodGroup: 'b#0', lod: 0 };
+    const prim0b = cube();
+    prim0b.userData = { lodGroup: 'b#0', lod: 0 };
+    carrier0.add(prim0a, prim0b);
+    const carrier1 = new Group();
+    carrier1.userData = { lodGroup: 'b#0', lod: 1 };
+    const prim1 = cube();
+    prim1.userData = { lodGroup: 'b#0', lod: 1 };
+    carrier1.add(prim1);
+    root.add(carrier0, carrier1);
+    expect(collectCollidableMeshes(root, [])).toEqual([prim0a, prim0b]);
+  });
+
+  it('숨겨진 일반 Group 아래의 LOD0 은 빠진다(사용자 숨김 존중)', () => {
+    const root = new Object3D();
+    const hidden = new Group();
+    hidden.visible = false;
+    const lod0 = cube();
+    lod0.userData = { lodGroup: 'c#0', lod: 0 };
+    hidden.add(lod0);
+    root.add(hidden);
+    expect(collectCollidableMeshes(root, [])).toEqual([]);
+  });
+
+  it('오염된 lod(문자열·NaN·Infinity)는 일반 노드로 본다 — 보이면 수집, 숨기면 제외', () => {
+    const root = new Object3D();
+    const text = cube();
+    text.userData = { lod: '2' };
+    const nan = cube();
+    nan.userData = { lod: Number.NaN };
+    const inf = cube();
+    inf.userData = { lod: Number.POSITIVE_INFINITY };
+    const hiddenText = cube();
+    hiddenText.userData = { lod: '0' };
+    hiddenText.visible = false;
+    root.add(text, nan, inf, hiddenText);
+    expect(collectCollidableMeshes(root, [])).toEqual([text, nan, inf]);
+  });
 });
 
 describe('meshWorldBox', () => {
