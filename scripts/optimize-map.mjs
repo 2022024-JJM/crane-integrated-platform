@@ -32,7 +32,8 @@
 // 파이프라인 (순서가 중요하다):
 //   ① resize    텍스처 최대 2048px
 //   ② webp      전 슬롯 손실 압축(q80) — 노멀/ORM 포함
-//   ③ surgery   (in-process) transmission 제거 → 단면화 → weld → simplify
+//   ③ surgery   (in-process) transmission 제거 → 단면화 → 미사용 UV 제거
+//               → weld → simplify
 //               → meshopt 압축  ← meshopt 는 반드시 마지막 (텍스처 커맨드가
 //               EXT_meshopt_compression 을 제거하므로, optimize-glb.mjs 참고)
 //
@@ -80,7 +81,12 @@ import { fileURLToPath } from 'node:url';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { meshopt, simplify, weld } from '@gltf-transform/functions';
+import {
+  listTextureInfoByMaterial,
+  meshopt,
+  simplify,
+  weld,
+} from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -210,8 +216,44 @@ function clampNoisyTexcoords(doc) {
 }
 
 /**
+ * 어떤 텍스처도 참조하지 않는 TEXCOORD_n (n ≥ 1) 을 프리미티브에서 뗀다.
+ *
+ * Blender export 가 UV 맵을 전부 실어 보내는 경우가 있다(okpo-tree.glb 는
+ * 정점 370만 개에 TEXCOORD_1~4 가 붙어 왔다). 렌더에 쓰이지 않는데 배포 용량과
+ * 정점 버퍼 VRAM 만 먹고, weld 의 정점 동등 비교도 방해한다. TEXCOORD_0 은
+ * 무텍스처 머티리얼이어도 남긴다 — 타일 스크립트의 attribute 구성 검사와
+ * 기존 지도 산출물을 건드리지 않기 위함이다.
+ */
+function stripUnusedTexcoords(doc) {
+  let removed = 0;
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      const material = prim.getMaterial();
+      const used = new Set(
+        material
+          ? listTextureInfoByMaterial(material).map((info) => info.getTexCoord())
+          : [],
+      );
+      for (const sem of prim.listSemantics()) {
+        if (!sem.startsWith('TEXCOORD_')) continue;
+        const index = Number(sem.slice('TEXCOORD_'.length));
+        if (index === 0 || used.has(index)) continue;
+        const accessor = prim.getAttribute(sem);
+        prim.setAttribute(sem, null);
+        if (accessor.listParents().every((p) => p.propertyType === 'Root')) {
+          accessor.dispose();
+        }
+        removed++;
+      }
+    }
+  }
+  return removed;
+}
+
+/**
  * ③ surgery: CLI 커맨드로는 불가능한 머티리얼/지오메트리 수술.
  *
+ * - 미사용 UV 제거: stripUnusedTexcoords 참고. weld 보다 먼저 돈다.
  * - transmission 제거: 굴절 유리를 일반 알파 블렌딩 반투명으로 바꾼다.
  *   유리 삼각형은 소수라 알파 정렬 비용은 미미하다.
  * - 단면화: doubleSided 해제로 래스터/레이캐스트 삼각형 테스트가 절반이 된다.
@@ -243,6 +285,9 @@ async function surgery(inputPath, outputPath) {
   for (const ext of root.listExtensionsUsed()) {
     if (ext.extensionName === TRANSMISSION_EXT) ext.dispose();
   }
+
+  const strippedUvs = stripUnusedTexcoords(doc);
+  if (strippedUvs > 0) console.log(`  미사용 UV 제거: attribute ${strippedUvs}개`);
 
   await doc.transform(
     weld(),

@@ -35,7 +35,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 
 - 신규 반입: `public/` 에 놓고 `pnpm optimize:glb <파일>`(지도는 `pnpm optimize:map <파일>`). 원본이 `assets-src/` 로 자동 백업된다.
 - **기존 파일 교체는 순서가 반대다.** 스크립트가 백업본을 원본으로 취급하므로 새 버전을 `assets-src/` 에 먼저 넣고 실행한다. `public/` 에 덮어쓰고 실행하면 옛 백업이 새 파일을 되돌린다.
-- 예외: `assets-src/maps/philly-terrain.glb` 는 GitHub 100MB 한도를 넘어 **커밋하지 않는다**(`.gitignore`). 원본은 컨플루언스에서 별도 관리하며, 재압축·롤백은 거기서 받아 `assets-src/maps/` 에 놓고 돌린다. 반입 명령은 `assets-src/README.md`.
+- 예외: `assets-src/maps/` 의 `philly-terrain.glb`·`okpo.glb`·`okpo-terrain.glb`·`okpo-tree.glb` 는 GitHub 100MB 한도를 넘어 **커밋하지 않는다**(`.gitignore`). 원본은 컨플루언스에서 별도 관리하며, 재압축·롤백은 거기서 받아 `assets-src/maps/` 에 놓고 돌린다. 반입 명령은 `assets-src/README.md`.
 - Blender export 에 월드 좌표가 베이크돼 오면 `unbake-goliath-crane.mjs` 또는 `unbake-root-transform.mjs` 로 원점을 복원한 뒤 압축한다. 그냥 등록하면 존·기즈모가 수 km 어긋난다.
 - `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·노드 이름이 보존된다(리깅 자산의 전제 — `docs/agents/tag-mapping-rig.md`).
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다**. `pnpm perf:scene` 은 진단 리포트일 뿐(경고와 join 후보 표기, LOD>0 노드는 렌더 집계에서 제외)이며 모델 추가·교체 후 한 번 돌려 본다.
@@ -47,7 +47,12 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - 8×8 공간 타일(64) × LOD0~3 형제 노드, extras `{tile, lod, lodError}`. 무텍스처 머티리얼은 COLOR_0 정점색으로 1개 병합하고 텍스처 머티리얼(overlay·Vegetation Area)은 유지한다(타일당 최대 3 프리미티브). LOD0 은 삼각형·bbox 완전 보존, LOD1~3 은 정점 accessor 를 LOD0 과 공유하고 인덱스만 별도.
 - 단일 노드 시절엔 frustum 컬링이 전무해 어느 방위든 전량 렌더였고, 타일+LOD 로 최악 방위에서도 크게 줄었다 — 타일 구조를 유지하는 이유.
 - **이 파일에 `pnpm optimize:map` 재실행 금지** — 데시메이션·정리 스테이지가 타일·LOD·정점색을 훼손한다.
-- 재반입 순서: 컨플루언스 원본 → `pnpm optimize:map philly-terrain.glb` → `node scripts/tile-terrain-glb.mjs --lod`. 다른 대형 컨텍스트 지형도 같은 스크립트를 검토한다.
+- 재반입 순서: 컨플루언스 원본 → `pnpm optimize:map philly-terrain.glb` → `node scripts/tile-terrain-glb.mjs --lod`.
+- 텍스처 머티리얼은 정점색으로 병합되지 않아 드로우콜이 타일 × 머티리얼로 는다. 텍스처 머티리얼이 많은 지형은 `--grid` 를 줄인다(옥포 두 장은 4).
+
+### 옥포 지도 3장
+
+`okpo.glb`(야드, `ground`)·`okpo-terrain.glb`·`okpo-tree.glb`(둘 다 `context`, 4×4 타일 + LOD)는 같은 좌표계이고 카탈로그 `defaultPosition` 이 야드 슬래브를 y=0 에 맞춘 값이다 — 한 장을 옮기면 나머지도 같은 양만큼 옮긴다. Tree 는 잎이 양면 alpha 카드라 `KEEP_DOUBLE_SIDED=1` 로 압축하고, 야드는 머티리얼이 많아 타일화하지 않는다. 명령·배치값 유도·실측은 `assets-src/README.md`.
 
 ### 런타임 LOD 전환
 
@@ -97,6 +102,8 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - **기존 GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돈다.** `public/` 에 덮어쓰면 옛 백업이 되돌린다.
 - **`philly-terrain.glb` 에 `pnpm optimize:map` 재실행 금지.** 재반입은 원본 → `optimize:map`(파일명 지정) → `tile-terrain-glb --lod` 순서.
 - `pnpm optimize:map` 은 항상 파일명을 지정한다 — 인자 없이 돌리면 모든 지도가 대상.
+- 잎 카드처럼 양면 alpha 머티리얼이 있는 지도는 `KEEP_DOUBLE_SIDED=1` 로 돌린다. 단면화는 머티리얼을 가리지 않는다.
+- 타일·LOD 가 적용된 `okpo-terrain.glb`·`okpo-tree.glb` 도 `philly-terrain.glb` 와 같다 — 원본 없이 `optimize:map` 을 돌리지 않고, 재반입은 원본 → `optimize:map` → `tile-terrain-glb --grid=4 --lod` 순서.
 - `add-model-lod`·`join-static-glb` 뒤에는 `pnpm optimize:glb <파일>` 을 이어 돌린다.
 - `meshOverrides`·내부 노드 `tagMappings`·`rigId`·skin 이 있는 모델에 LOD·join 을 걸지 않는다(스크립트가 거부하지만 손으로도 지킨다).
 - 자산을 새 버전으로 교체할 때 `assets-src/models/<파일>.nolod`·`.orig` 도 함께 갱신·삭제한다.
@@ -118,4 +125,5 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 
 ## 미룬 것
 
-- 지도 KTX2 전환(운영 장비 확인 후), 타워크레인 데시메이션/LOD 확대, 다른 대형 컨텍스트 지형의 타일화.
+- 지도 KTX2 전환(운영 장비 확인 후), 타워크레인 데시메이션/LOD 확대.
+- 1dock·2dock 씬의 미터 축척 재배치(모델·카메라가 옛 축소 지도 축척 그대로다)와 `scene-unit-scale.ts` 의 dock-1·dock-2 전환.

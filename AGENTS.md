@@ -277,7 +277,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
-- GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. `philly-terrain.glb` 에 `pnpm optimize:map` 을 재실행하지 않는다 (assets-glb).
+- GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. 타일·LOD 지도(`philly-terrain.glb`·`okpo-terrain.glb`·`okpo-tree.glb`)에 `pnpm optimize:map` 을 원본 없이 재실행하지 않는다 (assets-glb).
 - GLB·씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 `pnpm perf:scene` 등으로 직접 확인한다. 자동 성능 게이트는 없다 (assets-glb).
 
 ### 다시 시도하지 않는 것

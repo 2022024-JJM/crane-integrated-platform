@@ -38,3 +38,6 @@ dist-ssr
 
 # 3D 지도 원본 중 GitHub 100MB 한도를 넘는 파일 — 컨플루언스에서 별도 관리 (assets-src/README.md 참고)
 assets-src/maps/philly-terrain.glb
+assets-src/maps/okpo.glb
+assets-src/maps/okpo-terrain.glb
+assets-src/maps/okpo-tree.glb

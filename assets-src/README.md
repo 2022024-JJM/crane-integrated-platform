@@ -74,6 +74,58 @@ cp 새버전.glb assets-src/maps/기존파일.glb
 pnpm optimize:map 기존파일.glb
 ```
 
+### okpo.glb · okpo-terrain.glb · okpo-tree.glb — 옥포 지도 3장 (원본 미커밋 ⚠️)
+
+디자이너 전달본 `Okpo Yard.glb`(192MB, 야드 3.3×3.8km, 삼각형 104만)·`Terrain.glb`
+(198MB, 주변 지형 12.4×11.2km, 77만)·`Tree.glb`(271MB, 나무 레이어, 227만). 야드는
+옛 `okpo.glb`(614 unit 사각 · 11.7 m/unit 축소 지도)를 같은 경로로 대체했고, 옛 파일은
+백업이 없었으므로 롤백 원본은 git 이력이다. 나머지 두 장은 카탈로그 `kind: "context"`.
+
+**세 원본 모두 100MB 를 넘어 커밋하지 않고 컨플루언스에서 관리한다**(`.gitignore`).
+여기 놓이는 원본은 디자이너 파일에 무손실 가공(루트 오프셋 제거, 단색 텍스처 4×4 축소)만
+한 것이다.
+
+```bash
+node scripts/unbake-root-transform.mjs "Okpo Yard.glb" Tree.glb   # Terrain 은 루트 오프셋 없음
+mv "assets-src/models/Okpo Yard.glb" assets-src/maps/okpo.glb
+mv assets-src/models/Tree.glb        assets-src/maps/okpo-tree.glb
+cp Terrain.glb                       assets-src/maps/okpo-terrain.glb
+cp assets-src/maps/okpo-{terrain,tree}.glb apps/shell/public/maps/   # 스크립트는 public 에서만 파일을 찾는다
+
+# 단색 텍스처(1024² 재질색) 무손실 축소 — 스크립트가 assets-src/models/ 고정이라 잠시 옮긴다
+for f in okpo.glb okpo-terrain.glb; do
+  mv assets-src/maps/$f assets-src/models/ && node scripts/shrink-flat-textures.mjs $f
+  mv assets-src/models/$f assets-src/maps/ && rm assets-src/models/$f.orig
+done
+
+FORCE_MESHOPT=1 pnpm optimize:map okpo.glb okpo-terrain.glb          # 183→17.6MB, 188→9.6MB
+KEEP_DOUBLE_SIDED=1 FORCE_MESHOPT=1 pnpm optimize:map okpo-tree.glb  # 258→34.4MB
+node scripts/tile-terrain-glb.mjs apps/shell/public/maps/okpo-terrain.glb /tmp/okpo-terrain.tiled.glb --grid=4 --lod
+node scripts/tile-terrain-glb.mjs apps/shell/public/maps/okpo-tree.glb    /tmp/okpo-tree.tiled.glb    --grid=4 --lod
+cp /tmp/okpo-terrain.tiled.glb apps/shell/public/maps/okpo-terrain.glb   # 11.0MB
+cp /tmp/okpo-tree.tiled.glb    apps/shell/public/maps/okpo-tree.glb      # 37.8MB
+```
+
+- 야드의 `FORCE_MESHOPT=1`: 그리드 5.8cm, 최소 층간 10cm(아스팔트 40.55 ↔ 차선 돌출 윗면
+  40.65)라 가드(그리드×2)가 생략한다. 갭이 그리드 1칸보다 커서 같은 셀로 붕괴하지 않음을
+  배포본에서 확인했다(슬래브 40.325 / 아스팔트 40.558 / 차선 40.674). 생략하면 73MB 다.
+- Tree 의 `KEEP_DOUBLE_SIDED=1`: 잎이 alpha MASK 양면 카드라 단면화하면 절반이 사라진다.
+  TEXCOORD_1~4 는 미사용이라 파이프라인이 제거한다.
+- `--grid=4`: 텍스처 머티리얼은 정점색으로 병합되지 않아 드로우콜 ≈ 타일 × 머티리얼이다.
+  LOD 레벨당 Terrain 82 · Tree 36. Tree 의 LOD 는 멀수록 잎 카드가 Prune 으로 빠진다
+  (LOD1 잎 41%, LOD3 잎 0) — 1080p 기준 LOD1 이 약 1.4km 밖이다.
+- 야드는 31 머티리얼 단일 메시라 타일화하지 않는다(드로우콜 폭증).
+- `pnpm perf:scene` 실측: 야드 87만 tris · 31 드로우콜 · 텍스처 VRAM 139MB(단색 축소 전
+  267MB), Terrain LOD0 60만 · 97MB, Tree LOD0 169만 · 33MB.
+- **씬 배치값**: 디자이너 Blender 씬에서 야드 (0, −6.882, 0), Terrain 원점, Tree
+  (215.251, 30.479, 379.802). 야드 슬래브가 로컬 Y 40.35 라 슬래브를 y=0 에 두려고
+  야드를 (0, −40.35, 0) 에 놓고, 나머지는 (자기 오프셋 − 야드 오프셋) 에 같은 양을
+  더했다 → Terrain (0, −33.468, 0), Tree (215.251, −2.989, 379.802). 카탈로그
+  `defaultPosition` 이 이 값이다.
+- 1dock.json · 2dock.json 은 지도 높이만 맞췄다. 모델·텍스트·카메라는 옛 11.7 m/unit
+  축척 그대로라 에디터에서 미터 축척으로 다시 놓아야 하고, 그때
+  `scene-unit-scale.ts` 의 dock-1 · dock-2 를 1 로 바꾼다.
+
 ### philly-area-1.glb · philly-area-2.glb — 필리조선소 지도 (2026-09-11 분할)
 
 2026-09-11 디자이너가 조선소 지도를 `Philly Area 1.glb`(35MB)·`Philly Area 2.glb`
@@ -194,7 +246,7 @@ Area` 로 바뀌었다(UV 가 전부 (0,1) 한 점이라 사실상 단색). 압�
 - 도로·보도는 Y=0.3 평면이라 지형 아래 묻혀 보이지 않는다 — 원본 특성이며 여기서
   고치지 않는다(드레이핑은 디자이너 요청 사항).
 
-소형 지도(okpo·1dock·plane)는 대상이 아니다 — 절감 효과가 없고 unlit 플레인은
+소형 지도(1dock·plane)는 대상이 아니다 — 절감 효과가 없고 unlit 플레인은
 단면화가 오히려 위험하다. 자세한 단계·안전 가드·문제 해결은
 `docs/지도-GLB-최적화-파이프라인.md` 참고. 모델 파이프라인 설명은
 `docs/GLB-압축-파이프라인-작업보고.md`.

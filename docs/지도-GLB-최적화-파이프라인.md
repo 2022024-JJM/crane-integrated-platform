@@ -16,8 +16,8 @@
 ## 1. 언제 실행하나
 
 **새 대형 지도를 반입할 때 1회.** 빌드 파이프라인이 아니라 수동 도구다.
-기존 소형 지도(okpo 255KB, 1dock 20KB, plane 1.4KB)는 최적화 대상이 아니다 —
-절감 효과가 없고, 1dock/plane 은 unlit 2m 플레인이라 단면화가 오히려 위험하다.
+기존 소형 지도(1dock 20KB, plane 1.4KB)는 최적화 대상이 아니다 —
+절감 효과가 없고, unlit 2m 플레인이라 단면화가 오히려 위험하다.
 
 ## 2. 운영 순서
 
@@ -56,7 +56,7 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 |---|---|---|
 | ① resize | CLI | 텍스처 최대 **2048px** (도입 당시 1024 — 2026-09-04 phillyshipyard 재반입본이 지면을 4096px 베이크 1장(타일링 없음)으로 바꿔 와서 1024 로는 약 2.3m/px 로 흐려져 상향) |
 | ② webp | CLI | **전 슬롯 손실 압축 q80** — 노멀/ORM 포함 (모델은 무손실 — 원거리 지형은 셰이딩 얼룩이 비가시) |
-| ③ surgery | in-process | transmission 제거 → 단면화 → weld → simplify → **양자화 안전 가드** → meshopt |
+| ③ surgery | in-process | transmission 제거 → 단면화 → 미사용 UV 제거 → weld → simplify → **양자화 안전 가드** → meshopt |
 
 - **meshopt 는 반드시 마지막**: gltf-transform 텍스처 커맨드가 `EXT_meshopt_compression`
   을 제거한다 (optimize-glb 문서의 실측 사고 참고).
@@ -69,6 +69,7 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 |---|---|---|
 | transmission 제거 | `KHR_materials_transmission` 을 벗기고 알파 블렌딩 반투명(알파 0.5, roughness 0.1)으로 변환 | three.js 는 transmission 머티리얼이 하나라도 보이면 **매 프레임 씬 전체를 별도 렌더 타겟에 한 번 더 렌더링**한다 — 프레임 비용 2배의 주범 |
 | 단면화 | 전 머티리얼 `doubleSided=false` | 래스터/레이캐스트 삼각형 테스트 절반. 뒤집힌 면이 구멍으로 보이면 `KEEP_DOUBLE_SIDED=1` 로 재실행 |
+| 미사용 UV 제거 | 어떤 텍스처도 참조하지 않는 `TEXCOORD_n`(n ≥ 1)을 프리미티브에서 뗀다. `TEXCOORD_0` 은 항상 유지 | Blender export 가 UV 맵을 전부 실어 보내면(okpo-tree 는 TEXCOORD_1~4) 렌더에 안 쓰이는 채로 배포 용량·정점 VRAM 을 먹고 weld 의 정점 동등 비교를 방해한다 |
 | weld | 무손실 인덱스 dedup | simplify 가 프리미티브 경계를 넘어 동작하는 전제 |
 | simplify | meshopt simplifier, ratio 0.4 / error 0.0002(bbox 대각 상대값) | 정점을 제거만 하고 이동시키지 않으므로 평면은 평면으로, 드롭 레이캐스트 착지 높이는 오차 한도 안에서 유지 |
 | UV 노이즈 클램프 | meshopt 직전, [0,1] 밖 값이 **전부** 1e-4 이내인 TEXCOORD accessor 만 [0,1] 로 클램프 (2026-09-11 추가) | meshopt 는 범위 밖 값이 하나라도 있으면 그 UV 를 양자화하지 않고 float 로 남긴다. Terrain 3차 전달본의 도로 UV 가 2.6e-5 벗어나 float 로 남았고 tile-terrain-glb 의 굽기 그룹 병합이 거부됐다. 진짜 범위 밖(타일링) UV 는 건드리지 않는다 |
@@ -123,7 +124,7 @@ OK  167.45MB -> 14.84MB (-91.1%)  philly-terrain.glb  [그리드 28.8cm / 층간
 | `SIMPLIFY_RATIO` | 0.4 | 삼각형 감소 목표. 더 줄이려면 낮춘다 |
 | `SIMPLIFY_ERROR` | 0.0002 | bbox 대각 상대 오차(philly 기준 최대 편차 ~0.6m). 감소가 부족하면 0.001 까지 |
 | `MAX_TEXTURE_SIZE` / `LOSSY_QUALITY` | 2048 / 80 | 텍스처 상한·품질 |
-| `KEEP_DOUBLE_SIDED=1` | off | 단면화로 뒷면 구멍이 보일 때 양면 유지 |
+| `KEEP_DOUBLE_SIDED=1` | off | 단면화로 뒷면 구멍이 보일 때 양면 유지. 잎 카드(alpha MASK) 레이어는 필수 — okpo-tree |
 | `FORCE_MESHOPT=1` | off | 양자화 가드 무시 — 감지된 작은 층간 갭이 의도가 아님을 사람이 확인한 경우만 |
 
 ## 6. 문제 해결

@@ -23,6 +23,10 @@
  * 지도가 yaw 354.4° 라 추가 후 인스펙터에서 씬 파일의 값으로 맞춘다.
  * Philly Area 1/2 는 옛 조선소 지도와 같은 좌표계라(루트 오프셋만 지워 반입)
  * 원점에 두면 제자리다.
+ * Okpo 세 장(야드·Terrain·Tree)은 야드 슬래브가 y=0 에 오도록 함께 내린
+ * 값이다 — 디자이너 Blender 씬의 각 루트 오프셋에서 야드 오프셋을 빼고 슬래브
+ * 높이를 뺐다(유도는 assets-src/README.md). 셋은 같은 좌표계라 한 장을 옮기면
+ * 나머지도 같은 양만큼 옮긴다.
  *
  * 배경과 달리 저장본에는 id가 아니라 파일 경로(SavedMapInfo.path)가 실린다 —
  * 기존 씬 파일이 이미 경로 기반이라 스키마를 유지한다. 배치 표시는 경로
@@ -51,6 +55,21 @@ export const sceneMapCatalog: SceneMapCatalogItem[] = [
     label: 'Okpo',
     path: '/maps/okpo.glb',
     kind: 'ground',
+    defaultPosition: [0, -40.35, 0],
+  },
+  {
+    id: 'map-okpo-terrain',
+    label: 'Okpo Terrain',
+    path: '/maps/okpo-terrain.glb',
+    kind: 'context',
+    defaultPosition: [0, -33.468, 0],
+  },
+  {
+    id: 'map-okpo-tree',
+    label: 'Okpo Tree',
+    path: '/maps/okpo-tree.glb',
+    kind: 'context',
+    defaultPosition: [215.251, -2.989, 379.802],
   },
   {
     id: 'map-philly-area-1',
