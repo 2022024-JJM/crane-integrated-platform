@@ -126,4 +126,3 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 ## 미룬 것
 
 - 지도 KTX2 전환(운영 장비 확인 후), 타워크레인 데시메이션/LOD 확대.
-- 1dock·2dock 씬의 미터 축척 재배치(모델·카메라가 옛 축소 지도 축척 그대로다)와 `scene-unit-scale.ts` 의 dock-1·dock-2 전환.

@@ -122,9 +122,10 @@ cp /tmp/okpo-tree.tiled.glb    apps/shell/public/maps/okpo-tree.glb      # 37.8M
   야드를 (0, −40.35, 0) 에 놓고, 나머지는 (자기 오프셋 − 야드 오프셋) 에 같은 양을
   더했다 → Terrain (0, −33.468, 0), Tree (215.251, −2.989, 379.802). 카탈로그
   `defaultPosition` 이 이 값이다.
-- 1dock.json · 2dock.json 은 지도 높이만 맞췄다. 모델·텍스트·카메라는 옛 11.7 m/unit
-  축척 그대로라 에디터에서 미터 축척으로 다시 놓아야 하고, 그때
-  `scene-unit-scale.ts` 의 dock-1 · dock-2 를 1 로 바꾼다.
+- 1dock.json · 2dock.json 은 새 지도 위에 미터 축척으로 다시 배치했다
+  (`scene-unit-scale.ts` 의 dock-1 · dock-2 는 1). 두 씬은 야드와 Terrain 을 모두
+  원점에 둬 슬래브가 y≈40.3 이고, Terrain 이 디자이너 씬 기준보다 6.882m 낮다
+  (야드 루트 오프셋만큼) — 경계가 어색하면 Terrain 의 Y 를 6.882 로 올린다.
 
 ### philly-area-1.glb · philly-area-2.glb — 필리조선소 지도 (2026-09-11 분할)
 

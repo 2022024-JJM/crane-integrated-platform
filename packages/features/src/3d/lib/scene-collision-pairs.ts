@@ -29,7 +29,7 @@ export const BVH_RETRY_MS = 1000;
 export const BASELINE_SETTLE_MS = 1000;
 /**
  * 억제(기준선·닫기) 해제에 필요한 분리 간격 — 씬 unit. 씬마다 metersPerUnit
- * 이 달라(okpo 지도 11.7 m/unit) m 로 두지 않는다. 경계 떨림 방지용
+ * 이 달라(dock-in 11.7 m/unit) m 로 두지 않는다. 경계 떨림 방지용
  * 히스테리시스는 이 하나로 충분하다.
  */
 export const SEPARATION_MARGIN = 0.05;
