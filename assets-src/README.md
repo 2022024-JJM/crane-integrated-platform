@@ -73,7 +73,9 @@ pnpm optimize:glb LLC_002.glb                                           # 9.9MB 
 
 현재본(`LLC_Rigged_20260922`)은 `Upper Link_02` 아래 `Upper Link_03/Link_End`(끝단
 메쉬) 체인이 추가된 것 외에 계층·rest 회전·bbox 가 이전과 같다. `Upper Link_03` 은
-리그에 관절로 등록하지 않았다(Upper Link_02 를 따라 강체로 움직임).
+후크 피벗(rest 에서 로컬 Y 가 연직 아래)이라 `philly-2dock.json` 리그에 hinge 관절
+`hook` 으로 등록했고, 상위 체인 `Upper Link_01`(luff×1.14)·`Upper Link_02`(luff×−2.4)를
+상쇄하는 luff×1.26 선형 구속으로 러핑 중에도 연직을 유지한다.
 
 ## okpo_{goliath,oc,tc,ttc}.glb — 옥포 크레인 4종
 

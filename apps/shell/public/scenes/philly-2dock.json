@@ -349,6 +349,13 @@
           "type": "hinge",
           "axis": "x",
           "label": "bone"
+        },
+        {
+          "id": "joint-f15d6c81",
+          "node": "[0]LLC/[0]Base/[0]Link_01/[1]Upper_Link_01/[0]Upper_Link_02/[0]Upper_Link_03",
+          "type": "hinge",
+          "axis": "x",
+          "label": "hook"
         }
       ],
       "constraints": [
@@ -372,6 +379,13 @@
           "input": "joint-8d326e4d",
           "output": "joint-bdd69fb9",
           "factor": -1.5
+        },
+        {
+          "type": "linear",
+          "id": "link-69d9c8ae",
+          "input": "joint-8d326e4d",
+          "output": "joint-f15d6c81",
+          "factor": 1.26
         }
       ]
     }
