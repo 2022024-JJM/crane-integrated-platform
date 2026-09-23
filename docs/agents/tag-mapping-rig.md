@@ -80,7 +80,7 @@
 - 정의는 자산 단위라 씬 상위 `rigs[]` 에 두고, 모델 인스턴스는 `rigId` 만 가진다. 관절 ← 태그는 `tagMappings` 의 joint 대상.
 - 관절 값은 **항상 rest pose 기준 Δ** 다. `rest-pose-cache.ts` 가 clone 직후 잡은 GLTF 원본을 기준으로 매 프레임 `q = rest ∘ Δ` 를 다시 만든다. 노드 경로는 `mesh-path.ts` 의 `[index]name/...` 형식 그대로.
 - 값 소스는 `JointValueSource` 하나로 통한다. 에디터 슬라이더는 `manualJointSource`(씬 데이터·히스토리에 남지 않음), 태그는 `createTagBindingSource`. 시뮬레이션 재생 중 태그가 꽂힌 관절의 슬라이더는 잠긴다.
-- 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`, `Base/Top/Link_*` Empty)도 피벗 계층이 있고, 옥포 Goliath·TC·TTC 는 `Trolly_*`·`*_Top` 노드를 노드 맵핑 대상으로 쓸 수 있다. 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
+- 리깅 가능한 자산은 피벗에 Empty 노드가 있어야 한다. `LLC_002.glb` 는 참고 프로젝트의 리깅본(루트 scale 을 `scripts/unbake-root-transform.mjs --fold-scale` 로 자식에 접어 넣어 실제 미터, 배치 scale 1)이다. 옥포 OC(`okpo_oc.glb`)는 `okpo.json` 의 `rigs[]` 에 리그가 있다 — 입력 관절 `Link_Upper.001` 하나에 나머지 5개(`Link_Upper.002/003`·`Connector`·`Link_Lower.001`·`Link_End`)가 디자이너 비율의 선형 구속으로 매달리며, 모든 Empty 의 로컬 X 가 러핑 평면 법선이라 관절 축은 전부 `x` 다. 옥포 Goliath·TC·TTC 는 `Trolly_*`·`*_Top` 노드를 노드 맵핑 대상으로 쓸 수 있다. 그 외 카탈로그 크레인은 단일 메쉬라 관절을 정의할 수 없다. `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·이름이 보존된다.
 - 리깅 노드에 `meshOverrides` 가 함께 있으면 드라이버가 이긴다(rest = GLTF 원본).
 - 관절·맵핑 정의 편집으로 드라이버 인스턴스가 해체·재생성되면 rest 점프가 생기므로 그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
 

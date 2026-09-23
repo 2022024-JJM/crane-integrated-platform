@@ -84,7 +84,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "f1ffd800-3265-462a-ad61-91ba60e25876",
@@ -105,7 +106,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "54aba53a-2c2b-47fd-905b-75a5bdca01ee",
@@ -189,7 +191,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "a777d569-a381-43c4-b556-a039907b5141",
@@ -210,7 +213,8 @@
         1,
         1,
         1
-      ]
+      ],
+      "rigId": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf"
     },
     {
       "id": "009dc1ba-5983-4be3-a62c-95426add69ff",
@@ -279,16 +283,106 @@
   "texts": [],
   "camera": {
     "position": [
-      331.3041152884033,
-      246.94444728090207,
-      88.63261967622566
+      1052.0663900228492,
+      273.39683915701016,
+      98.02883978647242
     ],
     "target": [
-      188.99465844853384,
-      -4.725105014715513,
-      -143.64635565034325
+      852.4808990608668,
+      17.23977627880094,
+      281.9772764206473
     ]
   },
+  "rigs": [
+    {
+      "id": "rig-e338ad00-19b6-41dd-b0c1-460e56339edf",
+      "name": "Okpo OC",
+      "modelPath": "/models/okpo_oc.glb",
+      "joints": [
+        {
+          "id": "joint-dc5f2798",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[1]Link_Upper001",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Link_Upper.001",
+          "min": -45,
+          "max": 11.75
+        },
+        {
+          "id": "joint-d35d2f29",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[0]Link_Lower001/[0]Link_Upper003/[1]Link_Upper002",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Link_Upper.002"
+        },
+        {
+          "id": "joint-55a5002c",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[0]Link_Lower001/[0]Link_Upper003",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Link_Upper.003"
+        },
+        {
+          "id": "joint-67880504",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[1]Link_Upper001/[0]Connector",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Connector"
+        },
+        {
+          "id": "joint-1afe6ac2",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[0]Link_Lower001",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Link_Lower.001"
+        },
+        {
+          "id": "joint-ca2d05f8",
+          "node": "[0]OC_크레인/[0]Base/[0]Top/[0]Link_Lower001/[0]Link_Upper003/[0]Link_End",
+          "type": "hinge",
+          "axis": "x",
+          "label": "Link_End"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "linear",
+          "id": "link-18b6b297",
+          "input": "joint-dc5f2798",
+          "output": "joint-d35d2f29",
+          "factor": 1.542461538
+        },
+        {
+          "type": "linear",
+          "id": "link-5d6bde27",
+          "input": "joint-dc5f2798",
+          "output": "joint-55a5002c",
+          "factor": -1.531230769
+        },
+        {
+          "type": "linear",
+          "id": "link-50b7a5d6",
+          "input": "joint-dc5f2798",
+          "output": "joint-67880504",
+          "factor": 1.468892308
+        },
+        {
+          "type": "linear",
+          "id": "link-372ebaae",
+          "input": "joint-dc5f2798",
+          "output": "joint-1afe6ac2",
+          "factor": 0.604769231
+        },
+        {
+          "type": "linear",
+          "id": "link-beb6bf56",
+          "input": "joint-dc5f2798",
+          "output": "joint-ca2d05f8",
+          "factor": -0.937815385
+        }
+      ]
+    }
+  ],
   "cameraByRegion": {
     "dock-1": {
       "position": [
@@ -305,8 +399,8 @@
     "dock-2": {
       "position": [
         1052.0663900228492,
-        273.3968391570102,
-        98.02883978647239
+        273.39683915701016,
+        98.02883978647242
       ],
       "target": [
         852.4808990608668,
