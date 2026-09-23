@@ -44,6 +44,37 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     path: '/models/goliath_crane.glb',
     defaultScale: [0.1, 0.1, 0.1],
   }),
+  // 옥포 크레인 4종: 미터 실척(옥포 1dock·2dock 은 1 m/unit). 루트에 베이크된
+  // 월드 오프셋은 scripts/unbake-root-transform.mjs 로 제거해 반입했다.
+  // Top/Trolly/Link 노드가 구동용 피벗이라 LOD·join 을 걸지 않는다.
+  withDefaultPreview({
+    id: 'okpo-goliath',
+    label: 'Okpo Goliath',
+    category: 'outdoor',
+    path: '/models/okpo_goliath.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'okpo-oc',
+    label: 'Okpo OC',
+    category: 'outdoor',
+    path: '/models/okpo_oc.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'okpo-tc',
+    label: 'Okpo TC',
+    category: 'outdoor',
+    path: '/models/okpo_tc.glb',
+    defaultScale: [1, 1, 1],
+  }),
+  withDefaultPreview({
+    id: 'okpo-ttc',
+    label: 'Okpo TTC',
+    category: 'outdoor',
+    path: '/models/okpo_ttc.glb',
+    defaultScale: [1, 1, 1],
+  }),
   withDefaultPreview({
     id: 'llc-002',
     label: 'LLC-002',

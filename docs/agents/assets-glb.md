@@ -34,10 +34,12 @@
 GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축 전 원본은 `assets-src/` 에 보관한다. 압축은 되돌릴 수 없으므로 이 디렉토리를 지우지 않는다.
 
 - 신규 반입: `public/` 에 놓고 `pnpm optimize:glb <파일>`(지도는 `pnpm optimize:map <파일>`). 원본이 `assets-src/` 로 자동 백업된다.
+- 루트 Empty 에 uniform scale 이 실린 리깅본(`LLC_002.glb`)은 `unbake-root-transform.mjs --fold-scale` 로 scale 을 직계 자식에 접어 넣는다. 출력 파일명은 입력 basename 이라 교체 시 먼저 기존 파일명으로 맞춘다.
 - **기존 파일 교체는 순서가 반대다.** 스크립트가 백업본을 원본으로 취급하므로 새 버전을 `assets-src/` 에 먼저 넣고 실행한다. `public/` 에 덮어쓰고 실행하면 옛 백업이 새 파일을 되돌린다.
 - 예외: `assets-src/maps/` 의 `philly-terrain.glb`·`okpo.glb`·`okpo-terrain.glb`·`okpo-tree.glb` 는 GitHub 100MB 한도를 넘어 **커밋하지 않는다**(`.gitignore`). 원본은 컨플루언스에서 별도 관리하며, 재압축·롤백은 거기서 받아 `assets-src/maps/` 에 놓고 돌린다. 반입 명령은 `assets-src/README.md`.
 - Blender export 에 월드 좌표가 베이크돼 오면 `unbake-goliath-crane.mjs` 또는 `unbake-root-transform.mjs` 로 원점을 복원한 뒤 압축한다. 그냥 등록하면 존·기즈모가 수 km 어긋난다.
 - `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·노드 이름이 보존된다(리깅 자산의 전제 — `docs/agents/tag-mapping-rig.md`).
+- `pnpm optimize:glb` 는 지도 파이프라인과 같이 `KHR_materials_transmission` 을 알파 블렌딩 반투명으로 치환한다(`stripTransmission`). transmission 머티리얼 하나가 씬 전체를 한 번 더 그리게 만들기 때문이며, 배포 모델에는 이 확장이 남아 있지 않다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다**. `pnpm perf:scene` 은 진단 리포트일 뿐(경고와 join 후보 표기, LOD>0 노드는 렌더 집계에서 제외)이며 모델 추가·교체 후 한 번 돌려 본다.
 
 ### philly-terrain: 공간 타일 + LOD 체인

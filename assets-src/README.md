@@ -56,6 +56,49 @@ pnpm optimize:glb Block_001.glb                                          # 압�
 # 출력된 "씬 배치값"을 원래 자리에 두고 싶을 때 씬 JSON 에 기입
 ```
 
+## LLC_002.glb — 리깅본 교체 (⚠️ `--fold-scale` + 파일명)
+
+디자이너 리깅본은 루트 `LLC` Empty 에 월드 포즈와 uniform scale 20.267 이 실려
+온다. 루트 scale 을 직계 자식 `Base` 에 접어 넣어야 배치 scale 1 로 실제 미터가
+된다. unbake 출력 파일명이 입력 basename 이므로 먼저 `LLC_002.glb` 로 이름을
+맞춘다. 씬(`philly-2dock.json`)의 리그 관절·노드 맵핑은 `[0]LLC/[0]Base/[0]Link_01/…`
+경로를 참조하므로 교체 후 `Link_01` 자식 순서([0] Lower, [1] Upper)가 유지되는지 본다.
+
+```bash
+cp LLC_Rigged_YYYYMMDD.glb /tmp/LLC_002.glb
+node scripts/unbake-root-transform.mjs --fold-scale /tmp/LLC_002.glb   # → assets-src/models/LLC_002.glb
+node scripts/shrink-flat-textures.mjs LLC_002.glb && rm assets-src/models/LLC_002.glb.orig  # 단색 1024² 3장 → 4×4 (무손실)
+pnpm optimize:glb LLC_002.glb                                           # 9.9MB → 0.93MB
+```
+
+현재본(`LLC_Rigged_20260922`)은 `Upper Link_02` 아래 `Upper Link_03/Link_End`(끝단
+메쉬) 체인이 추가된 것 외에 계층·rest 회전·bbox 가 이전과 같다. `Upper Link_03` 은
+리그에 관절로 등록하지 않았다(Upper Link_02 를 따라 강체로 움직임).
+
+## okpo_{goliath,oc,tc,ttc}.glb — 옥포 크레인 4종
+
+디자이너 전달본 `Goliath/OC/TC/TTC 크레인_옥포.glb`. 미터 실척이고 루트 노드에
+월드 오프셋이 베이크돼 있어(Goliath (178.8, 0.06, −234.0), OC (−6.0, 0, 0), TC
+(0, 0, 15.2), TTC ≈0) 범용 언베이크로 제거했다. 카탈로그 `okpo-*`, 배치 scale 1.
+
+```bash
+cp "Goliath 크레인_옥포.glb" /tmp/okpo_goliath.glb   # OC/TC/TTC 도 같은 식으로 ASCII 이름
+node scripts/unbake-root-transform.mjs /tmp/okpo_{goliath,oc,tc,ttc}.glb
+for f in okpo_goliath okpo_oc okpo_tc okpo_ttc; do
+  node scripts/shrink-flat-textures.mjs $f.glb && rm assets-src/models/$f.glb.orig
+done
+cp assets-src/models/okpo_*.glb apps/shell/public/models/   # optimize:glb 는 public 을 스캔한다
+pnpm optimize:glb okpo_goliath.glb okpo_oc.glb okpo_tc.glb okpo_ttc.glb   # 20.9MB → 5.8MB
+```
+
+- OC·TC 의 캐빈 유리 `Window Glass` 는 `KHR_materials_transmission` 을 달고 온다.
+  `optimize:glb` 의 transmission 제거 스테이지가 알파 블렌딩 반투명으로 바꾼다.
+- 단색 텍스처(Orange/Black/Yellow, Metallic-Roughness 흰색)는 4×4 로 축소하고
+  Concrete/Beton 의 diffuse·normal 은 유지된다.
+- **LOD·join 을 걸지 않는다.** `Trolly_Goliath_*`, `Base/Top/Link_*`(OC), `TC_Top`,
+  `TTC_Top` 이 구동용 피벗 노드라 노드 맵핑·리깅 대상이고 LOD 사본은 따라가지 못한다.
+- OC 는 루트 원점이 한쪽 다리 쪽에 있다(bbox x −12.8 ~ 72.2). 디자이너 피벗 그대로.
+
 ## maps/ (지형) — 전용 파이프라인 `pnpm optimize:map`
 
 지형은 `optimize:glb` 가 아니라 **전용 파이프라인**을 쓴다 (2026-08-20 도입,

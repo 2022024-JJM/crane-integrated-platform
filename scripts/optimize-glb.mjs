@@ -18,7 +18,9 @@
 //   ① resize   텍스처 최대 2048px
 //   ② webp     baseColor/emissive 를 손실 압축(q85)
 //   ③ webp     normal/ORM 을 무손실 압축
-//   ④ meshopt  지오메트리 압축  ← 반드시 마지막
+//   ④ transmission 제거 (in-process) — KHR_materials_transmission 을 알파
+//              블렌딩 반투명으로 치환. 확장이 없는 파일은 그대로 통과.
+//   ⑤ meshopt  지오메트리 압축  ← 반드시 마지막
 //
 // 정책 (docs/GLB-압축-파이프라인-작업보고.md 참고):
 //   - `optimize` 만능 커맨드는 절대 쓰지 않는다. join/prune 이 노드 계층을
@@ -45,6 +47,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MODELS_DIR = join(repoRoot, 'apps/shell/public/models');
@@ -80,8 +84,46 @@ const STAGES = [
   ['resize', ['--width', String(MAX_TEXTURE_SIZE), '--height', String(MAX_TEXTURE_SIZE)]],
   ['webp', ['--slots', '{baseColorTexture,emissiveTexture}', '--quality', String(LOSSY_QUALITY)]],
   ['webp', ['--slots', '{normalTexture,occlusionTexture,metallicRoughnessTexture}', '--lossless']],
+  [stripTransmission],
   ['meshopt', []],
 ];
+
+const TRANSMISSION_EXT = 'KHR_materials_transmission';
+
+/**
+ * ④ transmission 제거 (in-process, optimize-map.mjs 의 surgery 와 같은 치환).
+ *
+ * KHR_materials_transmission 머티리얼이 씬에 하나라도 있으면 three.js 가 매
+ * 프레임 씬 전체를 별도 렌더 타겟에 한 번 더 그려 프레임 비용이 사실상 2배가
+ * 된다. 크레인 캐빈 유리(옥포 OC·TC 의 `Window Glass`)가 이 확장을 달고 오므로
+ * 일반 알파 블렌딩 반투명으로 바꾼다. 확장이 없는 파일은 그대로 복사한다.
+ * meshopt 앞에서 돌아야 한다 — NodeIO 재기록이 meshopt 인코딩을 해제한다.
+ */
+async function stripTransmission(inputPath, outputPath) {
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+  const doc = await io.read(inputPath);
+  const root = doc.getRoot();
+  let count = 0;
+  for (const material of root.listMaterials()) {
+    if (!material.getExtension(TRANSMISSION_EXT)) continue;
+    material.setExtension(TRANSMISSION_EXT, null);
+    material.setAlphaMode('BLEND');
+    const [r, g, b] = material.getBaseColorFactor();
+    material.setBaseColorFactor([r, g, b, 0.5]);
+    material.setRoughnessFactor(0.1);
+    material.setMetallicFactor(0);
+    count += 1;
+  }
+  if (count === 0) {
+    copyFileSync(inputPath, outputPath);
+    return;
+  }
+  for (const ext of root.listExtensionsUsed()) {
+    if (ext.extensionName === TRANSMISSION_EXT) ext.dispose();
+  }
+  await io.write(outputPath, doc);
+  console.log(`      transmission 제거: 머티리얼 ${count}개`);
+}
 
 const only = process.argv.slice(2); // 파일명 인자로 부분 실행 가능
 
@@ -132,12 +174,16 @@ try {
 
     try {
       let input = backupPath;
-      STAGES.forEach(([cmd, args], i) => {
+      for (const [i, [cmd, args]] of STAGES.entries()) {
         const isLast = i === STAGES.length - 1;
         const output = isLast ? publicPath : join(workDir, `${stem}.${i}.glb`);
-        execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
+        if (typeof cmd === 'function') {
+          await cmd(input, output);
+        } else {
+          execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
+        }
         input = output;
-      });
+      }
     } catch (error) {
       failures.push(file);
       console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);
