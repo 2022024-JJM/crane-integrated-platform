@@ -1,3 +1,4 @@
+import { getSceneFileNameByRegionId } from '../model/scene-file-map';
 import {
   getKnownRegionIds,
   getSceneFileUrlByRegionId,
@@ -6,6 +7,7 @@ import {
 } from '../model/scene-file-registry';
 import type { SavedSceneInfo } from '../model/types';
 import { sanitizeSceneInfo } from './sanitize-scene-info';
+import { resolveSceneCameraForRegion } from './scene-region-camera';
 
 /**
  * Scene 정보 저장 / 로드 어댑터.
@@ -17,6 +19,11 @@ import { sanitizeSceneInfo } from './sanitize-scene-info';
  * - 운영 (Docker/nginx):
  *     localStorage 에 저장. nginx 에는 /__dev/scene 엔드포인트가 없으므로 사용 불가.
  *     → 사용자별/브라우저별로 분리 저장되며, 빈 상태에서는 public/scenes 의 기본값을 보여준다.
+ *     저장 단위는 region 이 아니라 **씬 파일**이다 — 한 파일을 공유하는
+ *     region(옥포 dock-1·dock-2)이 같은 로컬 저장본을 보게 하려는 것.
+ *
+ * 어느 경로로 로드되든 마지막에 `resolveSceneCameraForRegion` 으로 자기
+ * region 의 카메라 슬롯을 `camera` 에 해석해 넣는다(scene-region-camera.ts).
  *
  * TODO(backend): 운영용 백엔드 API 가 준비되면 운영 분기를 fetch('/api/scene/<regionId>')
  *   호출로 교체한다. 호출부(saveSceneInfoByRegionId / loadSceneInfoByRegionId) 는 그대로 두고
@@ -31,8 +38,22 @@ function buildSceneDevApiUrl(regionId: string) {
   return `${DEV_SCENE_API_PATH}?${searchParams.toString()}`;
 }
 
+/**
+ * 씬 파일 기준 키. 호출 전에 isKnownRegionId 로 걸러지므로 파일명은 항상
+ * 있지만, 방어적으로 regionId 로 떨어뜨린다.
+ */
 function buildLocalStorageKey(regionId: string) {
-  return `${LOCAL_STORAGE_KEY_PREFIX}${regionId}`;
+  return `${LOCAL_STORAGE_KEY_PREFIX}${getSceneFileNameByRegionId(regionId) ?? regionId}`;
+}
+
+/**
+ * 저장 단위가 region → 씬 파일로 바뀌기 전의 키. 더 이상 읽지 않으므로
+ * 남아 있으면 지운다 — 운영 브라우저에 옛 봉투가 영구 잔류하지 않게.
+ */
+function removeLegacyRegionKey(regionId: string) {
+  const legacyKey = `${LOCAL_STORAGE_KEY_PREFIX}${regionId}`;
+  if (legacyKey === buildLocalStorageKey(regionId)) return;
+  window.localStorage.removeItem(legacyKey);
 }
 
 function isDevEnv() {
@@ -53,7 +74,9 @@ export function isSceneStoredLocallyOnly(): boolean {
 }
 
 function isBrowser() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  return (
+    typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  );
 }
 
 async function loadSceneInfoFromUrl(url: string) {
@@ -188,8 +211,12 @@ export async function loadSceneInfoByRegionId(regionId: string) {
   // 운영: 사용자가 편집해 둔 localStorage 값이 **현재 배포 기준이면** 우선
   // 사용. stale(배포가 그 후 바뀜/구포맷)이면 배포본을 먼저 시도한다.
   const stored = isDevEnv() ? null : readSceneRecordFromLocalStorage(regionId);
+  if (isBrowser() && isKnownRegionId(regionId)) removeLegacyRegionKey(regionId);
   if (stored?.isCurrent) {
-    return sanitizeSceneInfo(stored.sceneInfo);
+    return resolveSceneCameraForRegion(
+      sanitizeSceneInfo(stored.sceneInfo),
+      regionId,
+    );
   }
 
   const sceneFileUrl = getSceneFileUrlByRegionId(regionId);
@@ -203,7 +230,10 @@ export async function loadSceneInfoByRegionId(regionId: string) {
 
   try {
     // 파일이 404여도 다른 지역 파일로 대체하지 않는다 — 같은 이유다.
-    const deployed = sanitizeSceneInfo(await loadSceneInfoFromUrl(sceneFileUrl));
+    const deployed = resolveSceneCameraForRegion(
+      sanitizeSceneInfo(await loadSceneInfoFromUrl(sceneFileUrl)),
+      regionId,
+    );
 
     // stale 로컬 저장본은 배포본 로드가 **성공한 뒤에만** 지운다. 먼저
     // 지우면 일시 장애로 fetch 가 실패했을 때 로컬 씬까지 잃는다.
@@ -219,7 +249,10 @@ export async function loadSceneInfoByRegionId(regionId: string) {
         `[scene-storage] Failed to load deployed scene for region "${regionId}". Falling back to stale local copy.`,
         error,
       );
-      return sanitizeSceneInfo(stored.sceneInfo);
+      return resolveSceneCameraForRegion(
+        sanitizeSceneInfo(stored.sceneInfo),
+        regionId,
+      );
     }
     throw error;
   }

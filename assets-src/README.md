@@ -165,7 +165,7 @@ cp /tmp/okpo-tree.tiled.glb    apps/shell/public/maps/okpo-tree.glb      # 37.8M
   야드를 (0, −40.35, 0) 에 놓고, 나머지는 (자기 오프셋 − 야드 오프셋) 에 같은 양을
   더했다 → Terrain (0, −33.468, 0), Tree (215.251, −2.989, 379.802). 카탈로그
   `defaultPosition` 이 이 값이다.
-- 1dock.json · 2dock.json 은 새 지도 위에 미터 축척으로 다시 배치했다
+- okpo.json(dock-1·dock-2 공유 씬)은 새 지도 위에 미터 축척으로 배치돼 있다
   (`scene-unit-scale.ts` 의 dock-1 · dock-2 는 1). 두 씬은 야드와 Terrain 을 모두
   원점에 둬 슬래브가 y≈40.3 이고, Terrain 이 디자이너 씬 기준보다 6.882m 낮다
   (야드 루트 오프셋만큼) — 경계가 어색하면 Terrain 의 Y 를 6.882 로 올린다.

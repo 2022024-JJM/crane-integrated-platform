@@ -11,6 +11,7 @@ import {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
   UnknownRegionError,
+  withRegionCamera,
   type SavedCameraInfo,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
@@ -134,10 +135,13 @@ export function useScenePersistence({
 
     try {
       const cameraState = getCameraState?.() ?? null;
-      const sceneWithCamera: SavedSceneInfo = {
-        ...sceneInfo,
-        camera: cameraState,
-      };
+      // 공유 씬 파일이면 자기 region 슬롯(cameraByRegion)에 쓴다 — camera 를
+      // 그대로 덮어쓰면 다른 region 의 구도가 사라진다(scene-region-camera.ts).
+      const sceneWithCamera = withRegionCamera(
+        sceneInfo,
+        regionId,
+        cameraState,
+      );
       const sanitizedSceneInfo = sanitizeSceneInfo(sceneWithCamera);
       const savedSceneInfo = await saveSceneInfoByRegionId(
         regionId,

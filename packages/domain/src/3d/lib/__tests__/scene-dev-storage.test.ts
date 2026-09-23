@@ -10,13 +10,33 @@ import { registerAssetHashManifest } from '@crane/core/lib/asset-url';
 import type { SavedSceneInfo } from '../../model/types';
 
 /**
- * 등록된 region 'dock-1' → scenes/1dock.json 을 기준으로 저장·로드 왕복과
+ * 등록된 region 'dock-1' → scenes/okpo.json 을 기준으로 저장·로드 왕복과
  * "배포 해시가 더 새로우면 로컬 저장본 폐기" 규칙을 특성화한다.
  * 배포 해시는 asset-url의 매니페스트 주입으로 통제한다.
+ *
+ * okpo.json 은 dock-1·dock-2 가 공유하는 파일이라 localStorage 키는 region 이
+ * 아니라 파일명 기준이고, 로드는 자기 region 의 cameraByRegion 슬롯을
+ * camera 로 해석해 돌려준다.
  */
 const REGION = 'dock-1';
-const STORAGE_KEY = `crane:scene:${REGION}`;
-const SCENE_MANIFEST_PATH = '/scenes/1dock.json';
+const SIBLING_REGION = 'dock-2';
+const STORAGE_KEY = 'crane:scene:okpo.json';
+const LEGACY_STORAGE_KEY = `crane:scene:${REGION}`;
+const SCENE_MANIFEST_PATH = '/scenes/okpo.json';
+const CAM_1 = { position: [1, 1, 1], target: [0, 0, 0] } as const;
+const CAM_2 = { position: [2, 2, 2], target: [0, 0, 0] } as const;
+const CAM_FALLBACK = { position: [9, 9, 9], target: [0, 0, 0] } as const;
+
+function sharedScene(): SavedSceneInfo {
+  return {
+    ...scene(),
+    camera: { position: [...CAM_FALLBACK.position], target: [0, 0, 0] },
+    cameraByRegion: {
+      [REGION]: { position: [...CAM_1.position], target: [0, 0, 0] },
+      [SIBLING_REGION]: { position: [...CAM_2.position], target: [0, 0, 0] },
+    },
+  };
+}
 
 function scene(environmentId?: string): SavedSceneInfo {
   const base: SavedSceneInfo = {
@@ -94,6 +114,24 @@ describe('dev 환경 (파일 저장 경유)', () => {
     );
   });
 
+  it('배포본 로드는 자기 region 의 cameraByRegion 슬롯을 camera 로 해석한다', async () => {
+    fetchOk(sharedScene());
+    const first = await loadSceneInfoByRegionId(REGION);
+    expect(first.camera).toEqual(CAM_1);
+    const second = await loadSceneInfoByRegionId(SIBLING_REGION);
+    expect(second.camera).toEqual(CAM_2);
+    // 슬롯 맵 자체는 보존된다 — 에디터가 저장할 때 다른 region 슬롯이 살아야 한다.
+    expect(second.cameraByRegion).toEqual(sharedScene().cameraByRegion);
+  });
+
+  it('슬롯이 없는 region 은 camera 폴백을 쓴다', async () => {
+    const deployed = sharedScene();
+    delete deployed.cameraByRegion![SIBLING_REGION];
+    fetchOk(deployed);
+    const loaded = await loadSceneInfoByRegionId(SIBLING_REGION);
+    expect(loaded.camera).toEqual(CAM_FALLBACK);
+  });
+
   it('로드는 localStorage에 최신 저장본이 있어도 배포 파일만 본다', async () => {
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -137,6 +175,28 @@ describe('운영 환경 (localStorage)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('공유 파일의 두 region 은 같은 로컬 저장본을 본다 — dock-1 저장 → dock-2 로드', async () => {
+    await saveSceneInfoByRegionId(REGION, sharedScene());
+
+    const loaded = await loadSceneInfoByRegionId(SIBLING_REGION);
+    expect(fetchMock).not.toHaveBeenCalled();
+    // 같은 저장본이지만 카메라는 자기 슬롯이다.
+    expect(loaded.camera).toEqual(CAM_2);
+    expect(loaded.cameraByRegion).toEqual(sharedScene().cameraByRegion);
+  });
+
+  it('로드 시 옛 region 키 저장본은 읽지 않고 지운다', async () => {
+    window.localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify({ baseVersion: 'hash-v1', sceneInfo: scene('legacy') }),
+    );
+    fetchOk(scene('deployed'));
+
+    const loaded = await loadSceneInfoByRegionId(REGION);
+    expect(loaded.environmentId).toBe('deployed');
+    expect(window.localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
+  });
+
   it('배포 해시가 더 새로우면(불일치) 로컬 저장본을 버리고 배포본을 쓴다', async () => {
     await saveSceneInfoByRegionId(REGION, scene('mine'));
     // 이후 재배포로 해시가 바뀐 상황.
@@ -156,6 +216,19 @@ describe('운영 환경 (localStorage)', () => {
     const loaded = await loadSceneInfoByRegionId(REGION);
     expect(loaded.environmentId).toBe('deployed');
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('stale 폴백도 자기 region 슬롯을 camera 로 해석한다', async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ baseVersion: 'hash-old', sceneInfo: sharedScene() }),
+    );
+    fetchMock.mockRejectedValue(new Error('offline'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const loaded = await loadSceneInfoByRegionId(SIBLING_REGION);
+    expect(loaded.camera).toEqual(CAM_2);
+    warn.mockRestore();
   });
 
   it('stale 저장본 + 배포본 로드 실패면 stale이라도 보여주고, 저장본은 지우지 않는다', async () => {

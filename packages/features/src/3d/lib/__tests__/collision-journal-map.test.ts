@@ -48,6 +48,23 @@ describe('toCollisionJournalEntries', () => {
     expect(entry.regionId).toBe('philly-dock-2');
   });
 
+  it('두 region 이 같은 모델을 가지면(공유 씬) 화면에 뜬 region 을 우선한다', () => {
+    const scenes = {
+      'dock-1': sceneWithModels(['goliath', 'llc']),
+      'dock-2': sceneWithModels(['goliath', 'llc']),
+    };
+    expect(
+      toCollisionJournalEntries([record()], scenes, 'dock-2')[0].regionId,
+    ).toBe('dock-2');
+    // preferred 씬에 없으면 기존 순회.
+    expect(
+      toCollisionJournalEntries([record()], scenes, 'goliath')[0].regionId,
+    ).toBe('dock-1');
+    expect(toCollisionJournalEntries([record()], scenes)[0].regionId).toBe(
+      'dock-1',
+    );
+  });
+
   it('어느 씬에도 없으면 regionId 는 null (에디터 씬 등)', () => {
     const [entry] = toCollisionJournalEntries([record()], {
       'dock-1': sceneWithModels(['unrelated']),

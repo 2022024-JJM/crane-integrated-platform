@@ -51,14 +51,12 @@ export function DashboardEquipmentLiveSection({
       </CardHeader>
       <CardContent>
         {equipment.length === 0 ? (
-          <EmptyStateBox
-            message={translate('dashboard:equipmentLive.empty')}
-          />
+          <EmptyStateBox message={translate('dashboard:equipmentLive.empty')} />
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {equipment.map((row) => (
               <EquipmentCard
-                key={row.modelId}
+                key={`${row.regionId}:${row.modelId}`}
                 row={row}
                 now={now}
                 translate={translate}

@@ -40,6 +40,8 @@
 
 - 단일 소스는 `packages/domain/src/3d/model/scene-file-map.ts`. 브라우저 런타임(`scene-file-registry.ts`)과 Node 컨텍스트인 `apps/shell/vite.config.ts` 의 저장 미들웨어가 같은 표를 읽는다.
 - 미등록 region 은 양쪽 모두 `null` 을 반환한다. 표를 복제하거나 기본 파일로 fallback 시키지 않는다 — 파일 자체 주석에 경위가 있다.
+- 여러 region 이 한 파일을 **공유**할 수 있다(옥포 `dock-1`·`dock-2` → `okpo.json`, `isSceneFileShared`). 지도·모델·배경·조명은 하나이고 region 별로 다른 것은 카메라뿐이다 — 씬 JSON 의 `cameraByRegion[regionId]` 슬롯에 두고 `camera` 는 폴백. 로드 경계 `loadSceneInfoByRegionId` 가 `resolveSceneCameraForRegion` 으로 자기 슬롯을 `camera` 에 해석해 넣으므로 소비자는 `camera` 만 본다. 에디터 저장은 `withRegionCamera` 로 자기 슬롯만 기록한다(`lib/scene-region-camera.ts`). 두 region 의 에디터가 동시에 저장하면 마지막 저장이 이긴다.
+- 운영 localStorage 저장 키는 region 이 아니라 **씬 파일**(`crane:scene:<파일명>`) 기준이라 공유 region 이 같은 로컬 저장본을 본다. GLB 캐시 해제(`gltf-cache-release.ts`)도 씬 파일 단위라 공유 region 사이 이동은 캐시를 유지한다.
 
 ### 카메라 up 과 탑뷰
 
@@ -85,6 +87,7 @@
 - 기즈모·스테퍼 스냅은 `snap-transform.ts` 순수 함수 한 곳. three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 은 쓰지 않는다.
 - 씬 스키마에 필드를 추가하면 `sanitize-scene-info.ts`(또는 해당 `sanitize-*`)와 `scene-snapshot.ts` 의 동등 비교를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 dirty 가 서지 않고 저장되지 않는다(`isZoneListEqual` 이 선례 — `docs/agents/3d-zone.md`).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.
+- 공유 씬의 카메라는 `camera` 를 직접 저장하지 않고 `withRegionCamera` 로 자기 region 슬롯에 쓴다. 씬을 로드하는 새 경로는 `loadSceneInfoByRegionId` 를 거쳐 `cameraByRegion` 해석을 받는다.
 - 새 dev 저장 미들웨어를 만들면 쓰는 디렉토리를 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다.
 - 루트 맵핑 모델의 배치값을 읽는 새 경로는 `rootDeltas` 를 벗겨야 한다(`readRootPlacement`). 기즈모 자세를 그대로 저장하면 Δ 가 이중 적용된다.
 - 다중 선택 `primary` 피벗의 세컨더리 위치는 배치 프레임(`writeRootPlacement`)으로 써넣고 개별 스냅하지 않는다.

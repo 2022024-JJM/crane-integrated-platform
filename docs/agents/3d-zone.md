@@ -95,6 +95,7 @@
 - 로컬 알람은 `@crane/domain/alarm` 의 `createLocalAlarm`/`localAlarmActiveKey`(id `local:<type>:<subject>:<at>`(+`:clear`), `eventType 'zone_intrusion'`), 스토어 `useRealtimeAlarmStore.upsertLocalAlarm(alarm, key)`.
 - 브릿지는 **앱 셸** `apps/shell/src/runtime/zone-alarm-bridge.tsx` 다. 침범 쌍 생성 = 발생(`stop` → high, `warn` → medium), 소멸 = 해제. `eventData` 는 `zoneKey`·`intruder`·`color`.
 - 실시간 화면의 침범만 알람이 된다(`filterAcceptedZoneTransitions`, 아래 저널과 같은 규칙).
+- 사건의 regionId 는 `findRegionOfModel` 이 `useSceneInfoStore.activeRegionId`(실시간·플레이 화면의 region)를 우선해 정한다 — 한 씬 파일을 공유하는 region 들은 같은 모델 id 를 가지므로 순회만으로는 구분할 수 없다. 충돌 저널의 `toCollisionJournalEntries` 도 같은 규칙.
 - craneId 는 소유 모델의 craneId, 없으면 모델 id 다. 그래서 지역 필터는 `isAlarmInRegion`(레지스트리 craneId **또는** `alarm.regionId === regionId`)으로 통과시키며, 알람 슬라이스의 모든 필터 지점이 이 헬퍼를 쓴다.
 - 영역 침범 로컬 알람은 critical 배너 대상에서 제외한다(`eventType 'zone_intrusion'`) — 3D 화면 경보와 겹침 방지. 경보 소리·브라우저 알림은 `docs/agents/monitoring-ui.md`.
 
@@ -108,7 +109,7 @@
 
 ### 씬 unit 스케일
 
-- `getSceneMetersPerUnit(regionId)` — 옥포 3개 region 은 unit 당 수 m, 필리 2개는 1 m(미등록도 1).
+- `getSceneMetersPerUnit(regionId)` — 옥포 `dock-in` 만 unit 당 수 m 이고 옥포 실외(`dock-1`·`dock-2`)·필리 2개는 1 m(미등록도 1).
 - 지금 m 로 환산해 보이는 곳은 인스펙터 영역 탭의 반경·오프셋만이다. 트랜스폼 위치 필드는 아직 unit 을 " m" 로 표기한다.
 - 골리앗 LiDAR 의 `METERS_PER_UNIT` 은 센서 보정값이라 별개다.
 

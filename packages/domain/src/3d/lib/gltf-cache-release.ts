@@ -1,5 +1,6 @@
 import { useGLTF } from '@react-three/drei';
 import { withBaseUrl } from '@crane/core/lib/asset-url';
+import { getSceneFileNameByRegionId } from '../model/scene-file-map';
 import { extendGltfLoaderWithKtx2 } from './ktx2-loader';
 
 /**
@@ -77,11 +78,20 @@ export function releaseGltfCache(paths: readonly string[]) {
  * 모듈 전역이면 인스턴스가 바뀌어도 값이 이어지므로, 지연 해제가 "지역
  * 이탈"과 "같은 지역 내 화면 전환"을 정확히 구분한다.
  */
-let activeSceneRegionId: string | null = null;
+let activeSceneKey: string | null = null;
+
+/**
+ * 비교 단위는 region 이 아니라 **씬 파일**이다. 한 파일을 공유하는 region
+ * (옥포 dock-1·dock-2) 사이 이동은 같은 GLB 를 쓰므로 "같은 지역 내 화면
+ * 전환" 으로 취급해 캐시를 유지한다. 미등록 region 은 regionId 그대로.
+ */
+function toSceneKey(regionId: string): string {
+  return getSceneFileNameByRegionId(regionId) ?? regionId;
+}
 
 /** 이 region 화면이 올라왔음을 알린다(effect 진입 시 호출). */
 export function markSceneRegionActive(regionId: string) {
-  activeSceneRegionId = regionId;
+  activeSceneKey = toSceneKey(regionId);
 }
 
 /**
@@ -95,12 +105,13 @@ export function releaseSceneRegionAssets(
   regionId: string,
   paths: readonly string[],
 ) {
-  if (activeSceneRegionId === regionId) {
-    activeSceneRegionId = null;
+  const sceneKey = toSceneKey(regionId);
+  if (activeSceneKey === sceneKey) {
+    activeSceneKey = null;
   }
   queueMicrotask(() => {
-    // 같은 지역의 다른 화면이 이어받았으면 캐시를 유지한다.
-    if (activeSceneRegionId === regionId) return;
+    // 같은 씬 파일의 다른 화면이 이어받았으면 캐시를 유지한다.
+    if (activeSceneKey === sceneKey) return;
     releaseGltfCache(paths);
   });
 }

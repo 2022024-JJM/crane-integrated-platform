@@ -3,6 +3,7 @@ import { toCollisionJournalEntries } from '../lib/collision-journal-map';
 import { useCollisionJournalStore } from '../model/use-collision-journal-store';
 import { useSceneCollisionStore } from '../model/use-scene-collision-store';
 import {
+  getActiveSceneRegionId,
   isRealtimeSceneActive,
   useSceneInfoStore,
 } from '../model/use-scene-info-store';
@@ -36,6 +37,7 @@ export function CollisionJournalSync() {
           toCollisionJournalEntries(
             fresh,
             useSceneInfoStore.getState().sceneInfoByRegion,
+            getActiveSceneRegionId(),
           ),
         );
     });

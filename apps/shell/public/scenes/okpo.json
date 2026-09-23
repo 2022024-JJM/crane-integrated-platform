@@ -1,0 +1,323 @@
+{
+  "maps": [
+    {
+      "id": "fe08c38c-6cab-4126-8225-a023b09f02b0",
+      "path": "/maps/okpo.glb",
+      "locked": true,
+      "cameraBounds": true,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        309.4,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "e5ffd36c-8b3c-4bdd-8ebd-3af5efab90f8",
+      "path": "/maps/okpo-terrain.glb",
+      "locked": true,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        309.4,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "name": "Okpo Terrain"
+    }
+  ],
+  "models": [
+    {
+      "id": "85d60f80-146b-4870-8786-3839398931cd",
+      "equipName": "2Dock Goliath",
+      "path": "/models/okpo_goliath.glb",
+      "opacity": 1,
+      "position": [
+        674.307,
+        40.832,
+        206.672
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "0d0818cb-3eeb-4832-98fd-2944e778c940",
+      "equipName": "OC",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        807.891,
+        40.324,
+        254.733
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "f1ffd800-3265-462a-ad61-91ba60e25876",
+      "equipName": "OC",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        980.872,
+        40.324,
+        139.056
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "54aba53a-2c2b-47fd-905b-75a5bdca01ee",
+      "equipName": "TC",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        477.41,
+        40.589,
+        208.447
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "181492b6-122e-4afe-a680-809928707c06",
+      "equipName": "TTC",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        993.953,
+        40.873,
+        252.355
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "f37f44b8-1a5e-41b1-8b6a-b5d776720846",
+      "equipName": "1Dock Goliath",
+      "path": "/models/okpo_goliath.glb",
+      "opacity": 1,
+      "position": [
+        49.293,
+        40.832,
+        -94.739
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "14fdd3e2-3c7e-4570-97c6-80bb53be8241",
+      "equipName": "OC",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        477.241,
+        40.324,
+        -2.397
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "a777d569-a381-43c4-b556-a039907b5141",
+      "equipName": "OC",
+      "path": "/models/okpo_oc.glb",
+      "opacity": 1,
+      "position": [
+        195.035,
+        40.324,
+        -165.221
+      ],
+      "rotation": [
+        0,
+        270,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "009dc1ba-5983-4be3-a62c-95426add69ff",
+      "equipName": "TTC",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        358.267,
+        40.873,
+        -162.13
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "c3b1f038-e735-4083-8695-2684d938343b",
+      "equipName": "TC",
+      "path": "/models/okpo_tc.glb",
+      "opacity": 1,
+      "position": [
+        -213.596,
+        40.589,
+        12.174
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "0f7d5737-9896-41f6-9fc9-89212e132630",
+      "equipName": "TTC",
+      "path": "/models/okpo_ttc.glb",
+      "opacity": 1,
+      "position": [
+        158.024,
+        40.873,
+        4.796
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "texts": [],
+  "camera": {
+    "position": [
+      331.3041152884033,
+      246.94444728090207,
+      88.63261967622566
+    ],
+    "target": [
+      188.99465844853384,
+      -4.725105014715513,
+      -143.64635565034325
+    ]
+  },
+  "cameraByRegion": {
+    "dock-1": {
+      "position": [
+        331.3041152884033,
+        246.94444728090207,
+        88.63261967622566
+      ],
+      "target": [
+        188.99465844853384,
+        -4.725105014715513,
+        -143.64635565034325
+      ]
+    },
+    "dock-2": {
+      "position": [
+        1052.0663900228492,
+        273.3968391570102,
+        98.02883978647239
+      ],
+      "target": [
+        852.4808990608668,
+        17.23977627880094,
+        281.9772764206473
+      ]
+    }
+  },
+  "environmentId": "blue-open-water",
+  "lighting": {
+    "shadows": true,
+    "sunMode": "solar"
+  }
+}

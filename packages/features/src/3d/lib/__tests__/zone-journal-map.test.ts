@@ -84,6 +84,17 @@ describe('findRegionOfModel', () => {
     expect(findRegionOfModel('m9', scenes)).toBeNull();
     expect(findRegionOfModel('m1', {})).toBeNull();
   });
+
+  it('두 region 이 같은 모델을 가지면(공유 씬) 화면에 뜬 region 을 우선한다', () => {
+    const scenes = {
+      'dock-1': { maps: [], models: [{ id: 'shared' }] },
+      'dock-2': { maps: [], models: [{ id: 'shared' }] },
+    } as unknown as Record<string, SavedSceneInfo>;
+    expect(findRegionOfModel('shared', scenes, 'dock-2')).toBe('dock-2');
+    // preferred 에 모델이 없으면 기존 순회.
+    expect(findRegionOfModel('shared', scenes, 'goliath')).toBe('dock-1');
+    expect(findRegionOfModel('shared', scenes, null)).toBe('dock-1');
+  });
 });
 
 describe('filterAcceptedZoneTransitions', () => {

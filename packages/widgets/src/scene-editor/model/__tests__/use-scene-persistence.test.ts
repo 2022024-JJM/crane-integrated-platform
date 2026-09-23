@@ -52,11 +52,14 @@ function storedScene(): SavedSceneInfo {
 
 const noopReset = () => {};
 
-function setup(getCameraState?: () => SavedCameraInfo | null) {
+function setup(
+  getCameraState?: () => SavedCameraInfo | null,
+  regionId = 'dock-1',
+) {
   return renderHook(() => {
     const history = useSceneHistory();
     const persistence = useScenePersistence({
-      regionId: 'dock-1',
+      regionId,
       sceneInfo: history.sceneInfo,
       replaceScene: history.replaceScene,
       updateScene: history.updateScene,
@@ -158,6 +161,10 @@ describe('저장', () => {
       position: [1, 1, 1],
       target: [2, 2, 2],
     });
+    // dock-1 은 okpo.json 을 dock-2 와 공유하므로 자기 슬롯에도 쓴다.
+    expect(sentScene.cameraByRegion).toEqual({
+      'dock-1': { position: [1, 1, 1], target: [2, 2, 2] },
+    });
 
     expect(result.current.persistence.isDirty).toBe(false);
     expect(result.current.persistence.initialCamera).toEqual({
@@ -168,6 +175,32 @@ describe('저장', () => {
     expect(toastMock.success).toHaveBeenCalledWith(
       'monitoring:editor.statusSaved',
     );
+  });
+
+  it('단독 씬 파일(goliath)은 camera 만 보내고 cameraByRegion 은 없다', async () => {
+    const { result } = setup(
+      () => ({ position: [1, 1, 1], target: [2, 2, 2] }),
+      'goliath',
+    );
+    await waitFor(() =>
+      expect(result.current.history.sceneInfo).not.toBeNull(),
+    );
+    act(() =>
+      result.current.history.updateScene((prev) => ({
+        ...prev!,
+        environmentId: 'env-2',
+      })),
+    );
+    await act(async () => {
+      await result.current.persistence.saveCurrentScene();
+    });
+    const [regionId, sentScene] = saveMock.mock.calls[0];
+    expect(regionId).toBe('goliath');
+    expect(sentScene.camera).toEqual({
+      position: [1, 1, 1],
+      target: [2, 2, 2],
+    });
+    expect('cameraByRegion' in sentScene).toBe(false);
   });
 
   it('운영(localStorage 전용) 저장은 "이 브라우저에만" 고지 + 힌트를 토스트로 알린다', async () => {

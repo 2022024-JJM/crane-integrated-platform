@@ -272,7 +272,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
 - 씬 스키마 필드를 추가하면 `sanitize-*` 와 `scene-snapshot.ts` 의 동등 비교(`isZoneListEqual` 류)를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다 (3d-editor, 3d-zone).
-- region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다 (3d-editor).
+- region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).

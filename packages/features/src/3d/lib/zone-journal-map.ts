@@ -76,11 +76,22 @@ export function filterAcceptedZoneTransitions(
   };
 }
 
-/** 모델 id 가 속한 region — 여러 씬이 떠 있을 일은 없지만 전부 훑는다. */
+/**
+ * 모델 id 가 속한 region. 한 씬 파일을 공유하는 region 들은 같은 모델 id 를
+ * 가지므로(대시보드가 모든 region 을 채워 둔다) 화면에 떠 있는 region 을
+ * 먼저 본다. 없으면 전부 훑는다.
+ */
 export function findRegionOfModel(
   modelId: string,
   sceneInfoByRegion: Readonly<Record<string, SavedSceneInfo>>,
+  preferredRegionId?: string | null,
 ): string | null {
+  if (
+    preferredRegionId &&
+    sceneInfoByRegion[preferredRegionId]?.models.some((m) => m.id === modelId)
+  ) {
+    return preferredRegionId;
+  }
   for (const [regionId, scene] of Object.entries(sceneInfoByRegion)) {
     if (scene.models.some((m) => m.id === modelId)) return regionId;
   }

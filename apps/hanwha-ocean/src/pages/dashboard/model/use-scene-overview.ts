@@ -76,6 +76,7 @@ export function useSceneOverview(regions: Region[]): SceneOverview {
         if (tagKeys.length === 0) continue;
         equipment.push({
           modelId: model.id,
+          regionId: region.id,
           equipName: model.equipName,
           regionTitleKey: getRegionTitleKey(region.id),
           previewAssetId: catalogIdByPath.get(model.path) ?? null,

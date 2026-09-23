@@ -25,6 +25,14 @@ export interface SavedSceneInfo {
   texts?: SavedTextInfo[];
   camera?: SavedCameraInfo | null;
   /**
+   * 여러 region 이 한 씬 파일을 공유할 때(scene-file-map.ts) region 별
+   * 카메라. 로드 경계(loadSceneInfoByRegionId)가 자기 region 슬롯을
+   * `camera` 로 해석해 넣고, 에디터 저장은 자기 슬롯만 기록한다
+   * (lib/scene-region-camera.ts). 슬롯이 없는 region 은 `camera` 폴백.
+   * 비어 있으면 필드 자체가 빠져 공유하지 않는 씬과 diff 가 없다.
+   */
+  cameraByRegion?: Record<string, SavedCameraInfo>;
+  /**
    * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
    *
    * - `undefined`: 씬이 배경을 지정하지 않음 → region 기본값으로 떨어진다

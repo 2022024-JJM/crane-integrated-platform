@@ -226,6 +226,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     sanitized.rigs = safeRigs;
   }
 
+  // 공유 씬의 region 별 카메라 — 유효한 슬롯만 남기고, 없으면 필드를 뺀다.
+  const safeCameraByRegion = sanitizeCameraByRegion(
+    (sceneInfo as SavedSceneInfo).cameraByRegion,
+  );
+  if (safeCameraByRegion) {
+    sanitized.cameraByRegion = safeCameraByRegion;
+  }
+
   // environmentId는 3-상태다(문자열=선택 / null=배경 없음 / 없음=region 기본).
   // 셋을 구분해 실어야 하므로 값이 있을 때만 넣는다 — 미지정 씬에 null을
   // 채워 넣으면 region 기본 배경이 꺼져버린다.
@@ -272,6 +280,25 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   }
 
   return sanitized;
+}
+
+function sanitizeCameraByRegion(
+  cameraByRegion: unknown,
+): Record<string, SavedCameraInfo> | null {
+  if (
+    typeof cameraByRegion !== 'object' ||
+    cameraByRegion === null ||
+    Array.isArray(cameraByRegion)
+  ) {
+    return null;
+  }
+  const out: Record<string, SavedCameraInfo> = {};
+  for (const [regionId, raw] of Object.entries(cameraByRegion)) {
+    if (!regionId) continue;
+    const camera = sanitizeCamera(raw as SavedCameraInfo | null | undefined);
+    if (camera) out[regionId] = camera;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }
 
 function sanitizeCamera(

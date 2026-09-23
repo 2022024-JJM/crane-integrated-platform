@@ -81,6 +81,8 @@ export interface DashboardEquipmentTag {
 
 export interface DashboardEquipmentRow {
   modelId: string;
+  /** 한 씬 파일을 공유하는 region 들은 같은 모델을 각자 보이므로 행 key 에 쓴다. */
+  regionId: Region['id'];
   equipName: string;
   regionTitleKey: string;
   /**

@@ -52,6 +52,7 @@ export function useSceneData(
   const setSceneInfoInStore = useSceneInfoStore((s) => s.setSceneInfo);
   const clearSceneInfoFromStore = useSceneInfoStore((s) => s.clearSceneInfo);
   const setActiveMode = useSceneInfoStore((s) => s.setActiveMode);
+  const setActiveRegionId = useSceneInfoStore((s) => s.setActiveRegionId);
   const loadVirtualTags = useVirtualTagStore((s) => s.load);
   const startSimulation = useVirtualTagStore((s) => s.start);
   const resetReplay = useReplayPlayerStore((s) => s.reset);
@@ -66,6 +67,7 @@ export function useSceneData(
     markSceneRegionActive(regionId);
     // 저널·알람·알림 브릿지가 "실시간 화면의 사건인가" 를 판정하는 근거.
     setActiveMode(mode);
+    setActiveRegionId(regionId);
 
     const load = async () => {
       setIsLoading(true);
@@ -134,6 +136,7 @@ export function useSceneData(
     return () => {
       isMounted = false;
       setActiveMode(null);
+      setActiveRegionId(null);
       stopRealtime();
       // unmount 시 replay 재생 상태도 함께 정리. 그렇지 않으면 다른 페이지로
       // 이동해도 store는 유지되어 useReplayPlayerRunner가 isPlaying=true일 때
@@ -162,6 +165,7 @@ export function useSceneData(
     regionId,
     resetReplay,
     setActiveMode,
+    setActiveRegionId,
     setSceneInfoInStore,
     startRealtime,
     startSimulation,

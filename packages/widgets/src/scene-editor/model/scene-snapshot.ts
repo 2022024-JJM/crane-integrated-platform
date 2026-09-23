@@ -296,6 +296,9 @@ export function isSceneInfoEqual(
   }
   if (!isMapsInfoEqual(a.maps ?? [], b.maps ?? [])) return false;
   if (!isCameraInfoEqual(a.camera ?? null, b.camera ?? null)) return false;
+  // 공유 씬의 region 별 카메라 슬롯 — 저장 뒤 updateScene 동등 단락이
+  // 맞으려면 camera 와 같이 비교해야 한다.
+  if (!isCameraByRegionEqual(a.cameraByRegion, b.cameraByRegion)) return false;
   // 리그 정의 편집이 dirty/undo 에 잡혀야 저장된다.
   if (!isRigDefinitionListEqual(a.rigs, b.rigs)) return false;
   if (a.models.length !== b.models.length) return false;
@@ -307,6 +310,22 @@ export function isSceneInfoEqual(
   if (aTexts.length !== bTexts.length) return false;
   for (let i = 0; i < aTexts.length; i++) {
     if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
+  }
+  return true;
+}
+
+/** undefined 와 {} 는 같다(sanitize 가 빈 슬롯 맵을 생략한다). */
+function isCameraByRegionEqual(
+  a: Record<string, SavedCameraInfo> | undefined,
+  b: Record<string, SavedCameraInfo> | undefined,
+): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a ?? {});
+  const bKeys = Object.keys(b ?? {});
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (!b || !Object.hasOwn(b, key)) return false;
+    if (!isCameraInfoEqual(a![key], b[key])) return false;
   }
   return true;
 }

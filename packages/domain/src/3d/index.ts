@@ -16,6 +16,10 @@ export {
 } from './lib/scene-dev-storage';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export {
+  resolveSceneCameraForRegion,
+  withRegionCamera,
+} from './lib/scene-region-camera';
+export {
   sanitizeModelRigId,
   sanitizeRigDefinition,
   sanitizeRigDefinitions,

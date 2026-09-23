@@ -7,6 +7,7 @@ import {
   toZoneJournalEntry,
 } from '../lib/zone-journal-map';
 import {
+  getActiveSceneRegionId,
   isRealtimeSceneActive,
   useSceneInfoStore,
 } from '../model/use-scene-info-store';
@@ -39,6 +40,7 @@ export function ZoneJournalSync() {
       if (entered.length === 0 && exited.length === 0) return;
       const now = Date.now();
       const scenes = useSceneInfoStore.getState().sceneInfoByRegion;
+      const activeRegionId = getActiveSceneRegionId();
       const entries = [
         ...entered.map((ref) => {
           enteredAt.set(pairKeyOf(ref.intrusion.zoneKey, ref.intruderId), now);
@@ -46,7 +48,7 @@ export function ZoneJournalSync() {
             ref,
             'enter',
             now,
-            findRegionOfModel(ref.intrusion.ownerId, scenes),
+            findRegionOfModel(ref.intrusion.ownerId, scenes, activeRegionId),
             null,
           );
         }),
@@ -58,7 +60,7 @@ export function ZoneJournalSync() {
             ref,
             'exit',
             now,
-            findRegionOfModel(ref.intrusion.ownerId, scenes),
+            findRegionOfModel(ref.intrusion.ownerId, scenes, activeRegionId),
             at,
           );
         }),

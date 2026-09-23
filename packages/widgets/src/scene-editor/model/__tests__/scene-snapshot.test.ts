@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { SavedModelInfo, SavedSceneInfo } from '@crane/domain/3d';
+import type {
+  SavedCameraInfo,
+  SavedModelInfo,
+  SavedSceneInfo,
+} from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -327,6 +331,52 @@ describe('isSceneInfoEqual — 카메라', () => {
       isSceneInfoEqual(
         scene({ camera: { position: [...cam.position], target: [0, 0, 0] } }),
         scene({ camera: null }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('isSceneInfoEqual — cameraByRegion (공유 씬)', () => {
+  const c1 = 1;
+  const c2 = 2;
+  const slot = (n: number): SavedCameraInfo => ({
+    position: [n, n, n],
+    target: [0, 0, 0],
+  });
+
+  it('같은 슬롯 내용이면 equal, undefined 와 {} 도 equal', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+      ),
+    ).toBe(true);
+    expect(isSceneInfoEqual(scene({ cameraByRegion: {} }), scene())).toBe(true);
+  });
+
+  it('슬롯 값이 다르거나 키 집합이 다르면 not equal', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+        scene({ cameraByRegion: { 'dock-1': slot(c2) } }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+        scene({ cameraByRegion: { 'dock-1': slot(c1), 'dock-2': slot(c2) } }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+        scene({ cameraByRegion: { 'dock-2': slot(c1) } }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ cameraByRegion: { 'dock-1': slot(c1) } }),
+        scene(),
       ),
     ).toBe(false);
   });

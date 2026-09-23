@@ -6,6 +6,7 @@ import {
   diffZoneIntrusions,
   filterAcceptedZoneTransitions,
   findRegionOfModel,
+  getActiveSceneRegionId,
   isRealtimeSceneActive,
   useSceneInfoStore,
   useSceneZoneStore,
@@ -38,11 +39,16 @@ export function ZoneAlarmBridge() {
       if (entered.length === 0 && exited.length === 0) return;
       const now = Date.now();
       const scenes = useSceneInfoStore.getState().sceneInfoByRegion;
+      const activeRegionId = getActiveSceneRegionId();
       const store = useRealtimeAlarmStore.getState();
       for (const kind of ['enter', 'exit'] as const) {
         for (const ref of kind === 'enter' ? entered : exited) {
           const { intrusion } = ref;
-          const regionId = findRegionOfModel(intrusion.ownerId, scenes);
+          const regionId = findRegionOfModel(
+            intrusion.ownerId,
+            scenes,
+            activeRegionId,
+          );
           if (!regionId) continue;
           const owner = scenes[regionId]?.models.find(
             (m) => m.id === intrusion.ownerId,

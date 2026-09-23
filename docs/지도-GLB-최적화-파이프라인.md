@@ -194,7 +194,7 @@ sha256 해싱해 매니페스트를 만들고, `withBaseUrl()`(`packages/domain/
 `?v=` 도입 후에도 "배포했는데 옛 씬이 보인다"가 재발했는데, 원인은 HTTP
 캐시가 아니라 **씬 로드 우선순위**였다. 운영 환경의
 `loadSceneInfoByRegionId`(`packages/domain/src/3d/lib/scene-dev-storage.ts`)는
-에디터에서 저장한 `localStorage(crane:scene:<regionId>)` 값을 배포된 씬
+에디터에서 저장한 `localStorage(crane:scene:<씬 파일명>)` 값을 배포된 씬
 JSON 보다 우선한다. 한 번이라도 저장한 브라우저는 이후 어떤 배포도 보지
 못했고, 브라우저 "캐시 삭제"가 사이트 데이터(localStorage)까지 지우니까
 그때만 고쳐지는 것처럼 보였다.

@@ -12,14 +12,23 @@ interface SceneInfoState {
    * 브릿지는 진입 사건만 이 값으로 받고 이탈은 승인된 쌍만 받는다.
    */
   activeMode: MonitoringViewMode | null;
+  /**
+   * 지금 떠 있는 모니터링 화면의 region(useSceneData 가 진입에 set, 이탈에
+   * null). 사건(충돌·침범)의 모델 id → region 역조회가 이 값을 우선한다 —
+   * 한 씬 파일을 공유하는 region 들(옥포 dock-1·dock-2)은 같은 모델 id 를
+   * 가지므로 `sceneInfoByRegion` 순회만으로는 어느 화면의 사건인지 알 수 없다.
+   */
+  activeRegionId: string | null;
   setSceneInfo: (regionId: string, info: SavedSceneInfo) => void;
   clearSceneInfo: (regionId: string) => void;
   setActiveMode: (mode: MonitoringViewMode | null) => void;
+  setActiveRegionId: (regionId: string | null) => void;
 }
 
 export const useSceneInfoStore = create<SceneInfoState>()((set, get) => ({
   sceneInfoByRegion: {},
   activeMode: null,
+  activeRegionId: null,
   setSceneInfo: (regionId, info) =>
     set((state) => ({
       sceneInfoByRegion: { ...state.sceneInfoByRegion, [regionId]: info },
@@ -34,7 +43,16 @@ export const useSceneInfoStore = create<SceneInfoState>()((set, get) => ({
     if (mode === get().activeMode) return;
     set({ activeMode: mode });
   },
+  setActiveRegionId: (regionId) => {
+    if (regionId === get().activeRegionId) return;
+    set({ activeRegionId: regionId });
+  },
 }));
+
+/** 실시간·플레이 화면이 떠 있는 region — 사건의 region 귀속에 우선한다. */
+export function getActiveSceneRegionId(): string | null {
+  return useSceneInfoStore.getState().activeRegionId;
+}
 
 /** 실시간 모니터링 화면이 떠 있는가 — 브릿지의 진입 사건 게이트. */
 export function isRealtimeSceneActive(): boolean {

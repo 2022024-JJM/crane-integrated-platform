@@ -27,6 +27,7 @@ export {
 } from './model/use-collision-guard-hud';
 export { usePrefersReducedMotion } from './model/use-prefers-reduced-motion';
 export {
+  getActiveSceneRegionId,
   isRealtimeSceneActive,
   useSceneInfoStore,
 } from './model/use-scene-info-store';
@@ -37,10 +38,7 @@ export { Play3dTransportBar } from './ui/play3d-transport-bar';
 export { Play3dSourceTabs } from './ui/play3d-source-tabs';
 export { ReplaySearchForm } from './ui/replay-search-form';
 export { useReplayPlayerStore } from './model/use-replay-player-store';
-export {
-  usePlay3dStore,
-  type Play3dSource,
-} from './model/use-play3d-store';
+export { usePlay3dStore, type Play3dSource } from './model/use-play3d-store';
 export {
   REPLAY_SPEED_OPTIONS,
   readPlay3dPositionMs,

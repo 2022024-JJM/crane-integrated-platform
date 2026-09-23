@@ -58,7 +58,7 @@ const MODEL_DRAWCALLS_WARN = 30;
 const MODEL_PRIM_TO_MATERIAL_RATIO_WARN = 3;
 
 /**
- * 씬 GLB 기원 드로우콜 합계. 현 최대 214(1dock/2dock) — 모델 수십 개
+ * 씬 GLB 기원 드로우콜 합계. 현 최대 214(okpo) — 모델 수십 개
  * 성장분을 반영해 300, 명백한 이상은 600.
  */
 const SCENE_DRAWCALLS_WARN = 300;

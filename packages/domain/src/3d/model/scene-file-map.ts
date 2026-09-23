@@ -10,12 +10,18 @@
  * 씬 파일 파괴다. 그래서 표를 하나로 묶고, 미등록 region은 양쪽 모두
  * "모른다"고 답하도록(null) 만들었다 — 기본 파일로 떨어지는 fallback은
  * 남의 씬을 덮어쓰는 사고의 직접적 원인이었다.
+ *
+ * 여러 region 이 한 파일을 **공유**할 수 있다(옥포 dock-1·dock-2 → okpo.json).
+ * 지도·모델 구성은 하나이고 region 별로 다른 것은 카메라뿐이라, 씬 JSON 의
+ * `cameraByRegion` 슬롯에 region 별 카메라를 두고 `camera` 는 폴백이다
+ * (lib/scene-region-camera.ts). 두 region 의 에디터 탭이 동시에 저장하면
+ * 마지막 저장이 이긴다.
  */
 
 /** 씬 파일 이름 (public/scenes/ 기준). */
 export const SCENE_FILE_NAME_BY_REGION_ID: Record<string, string> = {
-  'dock-1': '1dock.json',
-  'dock-2': '2dock.json',
+  'dock-1': 'okpo.json',
+  'dock-2': 'okpo.json',
   'dock-in': 'dock-in.json',
   goliath: 'goliath.json',
   'philly-dock-2': 'philly-2dock.json',
@@ -45,4 +51,18 @@ export function getSceneFileNameByRegionId(regionId: string): string | null {
 /** 등록된 모든 region id. 에러 메시지에 후보를 보여줄 때 쓴다. */
 export function getKnownRegionIds(): string[] {
   return Object.keys(SCENE_FILE_NAME_BY_REGION_ID);
+}
+
+/**
+ * 이 region 의 씬 파일을 다른 region 도 쓰는가. 공유 파일에서는 카메라를
+ * `cameraByRegion` 슬롯에 저장한다(scene-region-camera.ts). 미등록이면 false.
+ */
+export function isSceneFileShared(regionId: string): boolean {
+  const fileName = SCENE_FILE_NAME_BY_REGION_ID[regionId];
+  if (!fileName) return false;
+  let count = 0;
+  for (const name of Object.values(SCENE_FILE_NAME_BY_REGION_ID)) {
+    if (name === fileName) count += 1;
+  }
+  return count > 1;
 }

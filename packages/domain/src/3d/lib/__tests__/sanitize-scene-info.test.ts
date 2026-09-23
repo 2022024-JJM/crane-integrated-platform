@@ -344,6 +344,54 @@ describe('sanitizeSceneInfo — 카메라', () => {
   });
 });
 
+describe('sanitizeSceneInfo — cameraByRegion (공유 씬)', () => {
+  it('유효한 슬롯만 남기고 position/target 외 필드는 버린다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        cameraByRegion: {
+          'dock-1': { position: [1, 2, 3], target: [0, 0, 0], extra: 1 },
+          'dock-2': { position: [1, 2, 3] },
+          'dock-3': 'nope',
+          'dock-4': null,
+          '': { position: [1, 2, 3], target: [0, 0, 0] },
+        },
+      }),
+    );
+    expect(result.cameraByRegion).toEqual({
+      'dock-1': { position: [1, 2, 3], target: [0, 0, 0] },
+    });
+  });
+
+  it('없거나 비었거나 배열·문자열이면 필드 자체를 뺀다', () => {
+    expect('cameraByRegion' in sanitizeSceneInfo(scene())).toBe(false);
+    expect(
+      'cameraByRegion' in sanitizeSceneInfo(scene({ cameraByRegion: {} })),
+    ).toBe(false);
+    expect(
+      'cameraByRegion' in
+        sanitizeSceneInfo(scene({ cameraByRegion: { a: { position: 'x' } } })),
+    ).toBe(false);
+    expect(
+      'cameraByRegion' in sanitizeSceneInfo(scene({ cameraByRegion: [] })),
+    ).toBe(false);
+    expect(
+      'cameraByRegion' in sanitizeSceneInfo(scene({ cameraByRegion: 'x' })),
+    ).toBe(false);
+  });
+
+  it('camera 폴백과 슬롯은 독립이다 — 슬롯이 있어도 camera 를 바꾸지 않는다', () => {
+    const result = sanitizeSceneInfo(
+      scene({
+        camera: { position: [9, 9, 9], target: [0, 0, 0] },
+        cameraByRegion: {
+          'dock-1': { position: [1, 2, 3], target: [0, 0, 0] },
+        },
+      }),
+    );
+    expect(result.camera).toEqual({ position: [9, 9, 9], target: [0, 0, 0] });
+  });
+});
+
 describe('sanitizeSceneInfo — environmentId (3-상태)', () => {
   it('문자열은 유지, null(배경 없음)도 유지, 미지정/빈 문자열은 필드 생략', () => {
     expect(
