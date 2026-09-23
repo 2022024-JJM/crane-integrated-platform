@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { scenarioDurationMs } from '@crane/domain/virtual-tag';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import {
+  REPASS_JITTER_MS,
   accumulateTagValue,
   addScannedInterval,
   createTagAggregate,
+  decideZoneEvent,
   emptyStatusMs,
+  hasEventNear,
+  openZoneSubjectsAt,
   type Play3dEvent,
 } from '../lib/play3d-stats';
 import {
@@ -16,12 +20,17 @@ import {
 } from '../lib/play3d-scope';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
 import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
-import { diffZoneIntrusions, pairKeyOf } from '../lib/zone-journal-map';
+import {
+  diffZoneIntrusions,
+  pairKeyOf,
+  type ZonePairRef,
+} from '../lib/zone-journal-map';
 import {
   readPlay3dFrameIndex,
   readPlay3dPositionMs,
   usePlay3dTransport,
 } from './play3d-transport';
+import { subscribeSceneSeek } from './scene-seek-signal';
 import { subscribeTagValues } from './tag-value-bus';
 import { useModelRuntimeStatuses } from './use-model-runtime-statuses';
 import { usePlay3dStore, type Play3dSource } from './use-play3d-store';
@@ -43,6 +52,14 @@ export const PLAY3D_STATS_POLL_MS = 250;
  * 누적에 넣지 않는다(재생이 지나간 시간이 아니다). 배속 × 폴링 주기의 몇 배.
  */
 const SEEK_JUMP_FACTOR = 6;
+/**
+ * seek 뒤 자세가 정착할 때까지(벽시계) 영역·충돌 전이를 사건으로 남기지 않는
+ * 창. 리깅 스무딩(SmoothDamp, smoothTime 0.35s)의 임계감쇠 잔여가 1.2s 에
+ * 0.8% 이고 영역 스캔 50ms + 프레임 1개를 더한 값. 리플레이 seek 는 rest 를
+ * 거쳐 이동이 커서 충돌 재기준선(BASELINE_SETTLE_MS)보다 보수적이다.
+ * `hasPendingSmoothing` 으로 판정하지 않는다 — 값 도달이 수 초까지 늦다.
+ */
+const SEEK_SETTLE_MS = 1200;
 
 function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
@@ -74,14 +91,145 @@ function activeScenarioDurationMs(source: Play3dSource): number | null {
 
 function pushEvent(
   data: Play3dStatsData,
-  event: Omit<Play3dEvent, 'id' | 'atMs' | 'frameIndex'>,
+  event: Omit<Play3dEvent, 'id' | 'atMs' | 'frameIndex' | 'provisional'>,
+  provisional = false,
 ): void {
   data.events.push({
     ...event,
     id: data.nextEventId++,
     atMs: readPlay3dPositionMs(),
     frameIndex: readPlay3dFrameIndex(),
+    ...(provisional ? { provisional: true } : {}),
   });
+}
+
+/** 기존 사건의 시각을 지금 위치로 옮긴다(제자리 수정 — id·타임라인 key 유지). */
+function replaceEventTime(
+  data: Play3dStatsData,
+  id: number,
+  provisional: boolean,
+): void {
+  const target = data.events.find((e) => e.id === id);
+  if (!target) return;
+  target.atMs = readPlay3dPositionMs();
+  target.frameIndex = readPlay3dFrameIndex();
+  if (provisional) target.provisional = true;
+  else delete target.provisional;
+}
+
+type ZoneEventFields = Omit<
+  Play3dEvent,
+  'id' | 'atMs' | 'frameIndex' | 'kind' | 'provisional'
+>;
+
+/** 영역 침범 쌍 → 사건 필드. diff 와 정착 화해가 같이 쓴다. */
+function zoneEventFields(ref: ZonePairRef): ZoneEventFields {
+  const { intrusion } = ref;
+  const zoneName = `${intrusion.ownerName} · ${intrusion.zoneName || intrusion.zoneId}`;
+  return {
+    subject: pairKeyOf(intrusion.zoneKey, ref.intruderId),
+    label: `${zoneName} ← ${ref.intruderName}`,
+    level: intrusion.level,
+    zoneKey: intrusion.zoneKey,
+    zoneName,
+    ownerId: intrusion.ownerId,
+    intruderId: ref.intruderId,
+    intruderName: ref.intruderName,
+  };
+}
+
+/** 로그의 열린 진입 사건 → 그 이탈 사건의 필드(침범 쌍이 스토어에 없을 때). */
+function zoneExitFieldsOf(enter: Play3dEvent): ZoneEventFields {
+  return {
+    subject: enter.subject,
+    label: enter.label,
+    level: enter.level,
+    zoneKey: enter.zoneKey,
+    zoneName: enter.zoneName,
+    ownerId: enter.ownerId,
+    intruderId: enter.intruderId,
+    intruderName: enter.intruderName,
+  };
+}
+
+/**
+ * 영역 전이를 로그 기준 결정(decideZoneEvent)에 따라 반영한다 — seek 는 로그를
+ * 바꾸지 않는다. 정착 화해가 넣는 사건은 잠정(provisional)이고 실제 전이가
+ * 교체한다. 무언가 바뀌었으면 true.
+ */
+function recordZoneEvent(
+  data: Play3dStatsData,
+  kind: 'zoneEnter' | 'zoneExit',
+  fields: ZoneEventFields,
+  provisional: boolean,
+): boolean {
+  const decision = decideZoneEvent(
+    data.events,
+    kind,
+    fields.subject,
+    readPlay3dPositionMs(),
+  );
+  if (decision.action === 'skip') return false;
+  if (decision.action === 'replace') {
+    replaceEventTime(data, decision.id, provisional);
+    return true;
+  }
+  pushEvent(data, { kind, ...fields }, provisional);
+  return true;
+}
+
+/**
+ * seek 정착 뒤 화해 — 런타임(영역 스토어 intrusions)과 로그의 지금 위치 상태를
+ * 맞춘다. 런타임이 안인데 로그가 밖이면 진입, 로그가 안인데 런타임이 밖이면
+ * 이탈을 잠정으로 넣는다(교체 규칙은 decideZoneEvent).
+ */
+function reconcileZones(): void {
+  const { data, bump } = usePlay3dStatsStore.getState();
+  const current = diffZoneIntrusions(
+    [],
+    useSceneZoneStore.getState().intrusions,
+  ).entered;
+  const runtimeInside = new Set<string>();
+  let changed = false;
+  for (const ref of current) {
+    const fields = zoneEventFields(ref);
+    runtimeInside.add(fields.subject);
+    if (recordZoneEvent(data, 'zoneEnter', fields, true)) changed = true;
+  }
+  const open = openZoneSubjectsAt(data.events, readPlay3dPositionMs());
+  for (const [subject, enter] of open) {
+    if (runtimeInside.has(subject)) continue;
+    if (recordZoneEvent(data, 'zoneExit', zoneExitFieldsOf(enter), true)) {
+      changed = true;
+    }
+  }
+  if (changed) bump();
+}
+
+/**
+ * 정착 타이머 — seek 마다 (재)무장하고 마지막 seek 뒤 `delayMs` 에 한 번
+ * `onSettled`. 무장~만료 사이가 정착 중이다.
+ */
+function createSeekSettle(delayMs: number, onSettled: () => void) {
+  let timer: number | null = null;
+  let settling = false;
+  return {
+    arm(): void {
+      settling = true;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        settling = false;
+        onSettled();
+      }, delayMs);
+    },
+    isSettling: (): boolean => settling,
+    dispose(): void {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+      settling = false;
+    },
+  };
 }
 
 function modelName(scene: SavedSceneInfo | null, modelId: string): string {
@@ -105,6 +253,14 @@ function modelName(scene: SavedSceneInfo | null, modelId: string): string {
  * 상태 기록을 여기서 한 번 걸러 누적·전이·시딩이 모두 따라오고, 그 모델이 끼인
  * 충돌은 사건으로 남기지 않는다. 영역 사건은 런타임이 애초에 감지하지 않는다.
  * 공용 훅(useModelRuntimeStatuses)은 라벨·HUD 가 전 모델을 전제로 써서 그대로다.
+ *
+ * seek 는 로그를 바꾸지 않는다: seek 신호(scene-seek-signal)와 reset 뒤
+ * `SEEK_SETTLE_MS` 동안 영역·충돌 전이를 사건으로 남기지 않고(자세가 스무딩으로
+ * 미끄러지는 동안의 전이는 seek 목표 시각의 사건이 아니다), 정착하면 런타임과
+ * 로그를 화해한다. 정착 뒤의 전이도 로그 기준 결정(decideZoneEvent)을 거쳐
+ * 재통과 중복을 넣지 않는다. 정착 창 안의 실제 전이(시뮬레이션 재생 중 seek,
+ * 창 × 배속)는 남지 않고, 정착 중 미끄러짐이 충돌 정지를 일으키면 holdStart 만
+ * 남는다.
  */
 export function usePlay3dStatsRecorder(regionId: string): void {
   const sceneInfo = useSceneInfoStore(
@@ -134,6 +290,10 @@ export function usePlay3dStatsRecorder(regionId: string): void {
   const collisionEnabledRef = useRef(true);
   const sourceRef = useRef<Play3dSource>(source);
   const excludedRef = useRef<ReadonlySet<string>>(excluded);
+  // seek 정착 타이머 — 인스턴스당 하나. 구독 콜백이 isSettling 을 읽는다.
+  const [settle] = useState(() =>
+    createSeekSettle(SEEK_SETTLE_MS, reconcileZones),
+  );
   useEffect(() => {
     sceneRef.current = sceneInfo;
   }, [sceneInfo]);
@@ -151,8 +311,19 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     sourceRef.current = source;
   }, [source]);
 
+  // seek 신호 → 정착 창. 언마운트에서 타이머를 지운다.
+  useEffect(() => {
+    const unsubscribe = subscribeSceneSeek(() => settle.arm());
+    return () => {
+      unsubscribe();
+      settle.dispose();
+    };
+  }, [settle]);
+
   // 실행 시작점 — 마운트·소스 전환과, 소스별 재시작 신호. reset 뒤엔 지금
   // 알고 있는 상태를 첫 전이(unknown→x)로 심어 밴드가 창 시작부터 그려진다.
+  // reset 도 자세 불연속이라 정착 창을 무장한다 — 정착 뒤 화해가 처음부터 안에
+  // 있던 쌍의 진입을 심는다.
   useEffect(() => {
     const restart = () => {
       usePlay3dStatsStore
@@ -164,6 +335,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
         if (to === 'unknown') continue;
         data.statusTransitions.push({ atMs, modelId, from: 'unknown', to });
       }
+      settle.arm();
     };
     restart();
     const unsubReplay = useReplayPlayerStore.subscribe((state, prev) => {
@@ -178,13 +350,14 @@ export function usePlay3dStatsRecorder(regionId: string): void {
       unsubReplay();
       unsubSim();
     };
-  }, [source, regionId]);
+  }, [source, regionId, settle]);
 
-  // 충돌 기록 → 사건.
+  // 충돌 기록 → 사건. 정착 중은 버리고, 재통과 중복(같은 쌍 ±jitter)은 넣지 않는다.
   useEffect(
     () =>
       useSceneCollisionStore.subscribe((state, prev) => {
         if (state.history === prev.history) return;
+        if (settle.isSettling()) return;
         const prevIds = new Set(prev.history.map((r) => r.id));
         const fresh = state.history
           .filter((r) => !prevIds.has(r.id))
@@ -199,49 +372,56 @@ export function usePlay3dStatsRecorder(regionId: string): void {
           .sort((a, b) => a.id - b.id);
         if (fresh.length === 0) return;
         const { data, bump } = usePlay3dStatsStore.getState();
+        const atMs = readPlay3dPositionMs();
+        let changed = false;
         for (const record of fresh) {
+          if (
+            hasEventNear(
+              data.events,
+              'collision',
+              record.pairKey,
+              atMs,
+              REPASS_JITTER_MS,
+            )
+          ) {
+            continue;
+          }
           pushEvent(data, {
             kind: 'collision',
             subject: record.pairKey,
             label: `${record.a.equipName || record.a.modelId} ↔ ${record.b.equipName || record.b.modelId}`,
             modelIds: [record.a.modelId, record.b.modelId],
           });
+          changed = true;
         }
-        bump();
+        if (changed) bump();
       }),
-    [],
+    [settle],
   );
 
-  // 영역 침범 diff → 진입·이탈 사건.
+  // 영역 침범 diff → 진입·이탈 사건. 정착 중은 버린다(정착 뒤 화해가 맞춘다).
   useEffect(
     () =>
       useSceneZoneStore.subscribe((state, prev) => {
         if (state.intrusions === prev.intrusions) return;
+        if (settle.isSettling()) return;
         const { entered, exited } = diffZoneIntrusions(
           prev.intrusions,
           state.intrusions,
         );
         if (entered.length === 0 && exited.length === 0) return;
         const { data, bump } = usePlay3dStatsStore.getState();
+        let changed = false;
         for (const kind of ['zoneEnter', 'zoneExit'] as const) {
           for (const ref of kind === 'zoneEnter' ? entered : exited) {
-            const { intrusion } = ref;
-            pushEvent(data, {
-              kind,
-              subject: pairKeyOf(intrusion.zoneKey, ref.intruderId),
-              label: `${intrusion.ownerName} · ${intrusion.zoneName || intrusion.zoneId} ← ${ref.intruderName}`,
-              level: intrusion.level,
-              zoneKey: intrusion.zoneKey,
-              zoneName: `${intrusion.ownerName} · ${intrusion.zoneName || intrusion.zoneId}`,
-              ownerId: intrusion.ownerId,
-              intruderId: ref.intruderId,
-              intruderName: ref.intruderName,
-            });
+            if (recordZoneEvent(data, kind, zoneEventFields(ref), false)) {
+              changed = true;
+            }
           }
         }
-        bump();
+        if (changed) bump();
       }),
-    [],
+    [settle],
   );
 
   // 정지(hold) — 충돌 pinned 또는 영역 held 인 동안. 벽시계로 누적한다.

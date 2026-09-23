@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ReplayLiteFrame } from '@crane/domain/monitoring';
 import { useReplayPlayerStore } from '../use-replay-player-store';
 import { rigValueStore } from '../rig-value-store';
+import { subscribeSceneSeek } from '../scene-seek-signal';
 import { setTagIngest, tagLiveValues } from '../tag-value-bus';
 
 /**
@@ -197,5 +198,29 @@ describe('reset', () => {
     expect(store().frameIndex).toBe(0);
     // 값 저장소가 비면 드라이버가 다음 프레임에 rest(Δ 0)를 적용한다.
     expect(rigValueStore.size).toBe(0);
+  });
+});
+
+describe('seek 신호', () => {
+  it('seekTo·seekByFrames 는 알리고, tick 의 프레임 전진과 loadFrames 는 알리지 않는다. 언서브 뒤엔 오지 않는다', () => {
+    store().loadFrames([frame(0), frame(10), frame(20)], [1000, 1000, 1000]);
+    let count = 0;
+    const unsubscribe = subscribeSceneSeek(() => {
+      count += 1;
+    });
+    store().seekTo(1);
+    expect(count).toBe(1);
+    store().seekByFrames(1);
+    expect(count).toBe(2);
+    store().seekTo(0);
+    store().play();
+    store().tick();
+    expect(store().frameIndex).toBe(1);
+    expect(count).toBe(3);
+    store().loadFrames([frame(0)], [1000]);
+    expect(count).toBe(3);
+    unsubscribe();
+    store().seekTo(0);
+    expect(count).toBe(3);
   });
 });

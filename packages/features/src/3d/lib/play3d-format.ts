@@ -417,23 +417,15 @@ export function tagRowLabel(
 // ---- 영역 체류 표식 · hover 요약(리포트 타임라인과 재생바 공용) ----
 
 /**
- * 영역 체류 = 대각선 박스. 색 줄은 `currentColor`(등급 톤 클래스가 정한다), 그
- * 옆 어두운 1px 이 초록·밝은 트랙 위에서, 색 줄이 회색·어두운 트랙 위에서
- * 형태를 잡는다. 바탕은 투명이라 아래 상태 색이 비친다. 대각선은 영역 체류
- * 전용이다 — 다른 뜻(미검사 구간 등)으로 쓰지 않는다.
+ * 영역 체류 = 채운 노란 박스(등급 무관, 사건 목록 점 zoneEnter 와 같은 색 —
+ * 빨강은 충돌 선에만 남는다). amber 는 가동 초록과 명도가 거의 같아 어두운
+ * 링으로 경계를 잡는다 — ring 은 요소 밖 1px 라 트랙의 overflow-hidden 에
+ * 잘리지 않는다. 타임라인·재생바·범례가 함께 읽는다.
  */
-export const PLAY3D_DWELL_HATCH =
-  'repeating-linear-gradient(135deg, currentColor 0 2px, rgb(0 0 0 / 0.45) 2px 3px, transparent 3px 6px)';
+export const PLAY3D_DWELL_BOX_CLASS = 'bg-amber-400 ring-1 ring-black/30';
 
-/** 등급별 톤(Tailwind 글자색 → currentColor). */
-export const PLAY3D_DWELL_TONE: Record<'warn' | 'stop', string> = {
-  warn: 'text-amber-400',
-  stop: 'text-red-500',
-};
-
-/** 박스 테두리 — 등급 색 1px + 어두운 링(밝은 배경에서 윤곽을 잡는다). */
-export const PLAY3D_DWELL_BOX_CLASS =
-  'border border-current ring-1 ring-black/30';
+/** 미이탈(open) 띠의 오른쪽 가장자리 — 채운 박스라 같은 색 점선은 안 보인다. */
+export const PLAY3D_DWELL_OPEN_CLASS = 'border-r border-dashed border-black/50';
 
 /** 표식에 마우스를 올렸을 때의 요약 내용 — 트리거가 payload 로 넘긴다. */
 export type Play3dHoverPayload =
@@ -480,7 +472,7 @@ export interface TimelineStatusMark {
 export interface TimelineZoneMark {
   key: string;
   band: ZoneBand;
-  /** 현재 위치 뒤의 구간(재생바에서 흐리게). 타임라인은 항상 false. */
+  /** 현재 위치 뒤에서 시작한 구간 — 재생바·타임라인이 흐리게(고스트) 그린다. */
   dim: boolean;
   payload: Play3dHoverPayload;
 }
@@ -501,22 +493,49 @@ export interface TimelineEquipmentRow {
 }
 
 /**
+ * 실행의 끝(씬 ms) — 창 끝·마지막 사건·위치가 닿은 가장 먼 지점의 최대. 열린
+ * 체류 띠를 여기까지 그린다. 재생바·타임라인 고스트가 함께 쓴다. 비정상 값은 0.
+ */
+export function runEndMs(
+  events: readonly Play3dEvent[],
+  windowEndMs: number,
+  reachedMs = 0,
+): number {
+  const windowEnd =
+    Number.isFinite(windowEndMs) && windowEndMs > 0 ? windowEndMs : 0;
+  const reached = Number.isFinite(reachedMs) && reachedMs > 0 ? reachedMs : 0;
+  return Math.max(windowEnd, lastEventAtMs(events), reached);
+}
+
+/**
  * 리포트 타임라인의 행 — 장비마다 상태 막대·배정된 영역 체류·관여한 충돌과 그
  * hover 요약. 사건 행은 따로 없다(사건은 장비 행에 겹쳐 그린다). 상태를 모르는
- * (unknown) 구간은 그리지 않는다.
+ * (unknown) 구간은 그리지 않는다. 사건은 실행 전체(`allEvents`)를 그리고 현재
+ * 위치 뒤는 dim(고스트) — 재생바와 같다. 상태 막대만 창 끝까지다.
  */
 export function timelineRows(
   stats: Pick<
     Play3dStats,
-    'equipment' | 'events' | 'statusTransitions' | 'scanned' | 'windowEndMs'
+    | 'equipment'
+    | 'allEvents'
+    | 'statusTransitions'
+    | 'scanned'
+    | 'windowEndMs'
+    | 'reachedMs'
   >,
   timeLabel: (event: Play3dEvent) => string,
 ): TimelineEquipmentRow[] {
   const end = stats.windowEndMs;
+  const windowEnd = Number.isFinite(end) && end > 0 ? end : 0;
+  // 원시 사건은 기록 순(뒤로 seek 하면 시각순이 아니다) — 창 집계와 같이 시각·id 순.
+  const events = stats.allEvents
+    .filter((e) => Number.isFinite(e.atMs))
+    .sort((a, b) => a.atMs - b.atMs || a.id - b.id);
+  const runEnd = runEndMs(events, windowEnd, stats.reachedMs);
   const rowIds = new Set(stats.equipment.map((eq) => eq.modelId));
-  const strips = assignZoneBandsToRows(zoneBands(stats.events, end), rowIds);
-  const hits = assignCollisionsToRows(stats.events, rowIds);
-  const summaries = collisionSummaries(stats.events);
+  const strips = assignZoneBandsToRows(zoneBands(events, runEnd), rowIds);
+  const hits = assignCollisionsToRows(events, rowIds);
+  const summaries = collisionSummaries(events);
   return stats.equipment.map((eq) => ({
     modelId: eq.modelId,
     name: eq.name,
@@ -530,13 +549,13 @@ export function timelineRows(
     zones: (strips.get(eq.modelId) ?? []).map((band) => ({
       key: `z${band.enterId}`,
       band,
-      dim: false,
+      dim: band.fromMs > windowEnd,
       payload: { kind: 'zone', band },
     })),
     collisions: (hits.get(eq.modelId) ?? []).map((event) => ({
       key: `c${event.id}`,
       event,
-      dim: false,
+      dim: event.atMs > windowEnd,
       payload: {
         kind: 'collision',
         event,
@@ -555,16 +574,19 @@ export interface TransportMarks {
 /**
  * 재생바 표식 — 영역은 체류 구간(박스), 나머지(PLAY3D_MARKER_KINDS)는 세로 선.
  * 원시 사건(기록 순, 뒤로 seek 하면 시각순이 아니다)을 받아 실행 전체를 그리고,
- * 현재 위치 뒤의 표식은 dim 으로 표시한다. 충돌 선을 마지막에 둬 위에 그려진다.
+ * 현재 위치 뒤의 표식은 dim 으로 표시한다. 열린 띠는 `runEndMs`(닿은 지점
+ * 포함)까지 — 뒤로 seek 해도 꼬리로 무너지지 않는다. 충돌 선을 마지막에 둬
+ * 위에 그려진다.
  */
 export function transportMarks(
   events: readonly Play3dEvent[],
   windowEndMs: number,
   timeLabel: (event: Play3dEvent) => string,
+  reachedMs = 0,
 ): TransportMarks {
   const windowEnd =
     Number.isFinite(windowEndMs) && windowEndMs > 0 ? windowEndMs : 0;
-  const end = Math.max(windowEnd, lastEventAtMs(events));
+  const end = runEndMs(events, windowEnd, reachedMs);
   const summaries = collisionSummaries(events);
   const lines: TimelineLineMark[] = events
     .filter(

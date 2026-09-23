@@ -14,6 +14,7 @@ import {
   type VirtualTagDefinition,
   type VirtualTagRuntimeState,
 } from '@crane/domain/virtual-tag';
+import { notifySceneSeek } from './scene-seek-signal';
 import {
   publishTagValue,
   type TagPublish,
@@ -160,6 +161,8 @@ class VirtualTagRuntime {
     for (const def of this.defs.values()) {
       this.states.set(def.id, initVirtualTagState(def));
     }
+    // 시각 불연속 — 스토어를 거치지 않는 호출(시뮬레이션 패널 리셋)도 여기로 온다.
+    notifySceneSeek();
     if (!publish) return;
     // 시나리오가 활성이면 0초 값은 initial 이 아니라 첫 키프레임이다.
     this.evaluateAll();
@@ -175,6 +178,7 @@ class VirtualTagRuntime {
       Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
     this.lastTickAt = Date.now();
     this.finishedNotified = false;
+    notifySceneSeek();
     this.evaluateAll();
     this.publishAll();
   }

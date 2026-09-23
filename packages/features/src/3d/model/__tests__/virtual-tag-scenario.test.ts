@@ -3,6 +3,7 @@ import type {
   VirtualScenario,
   VirtualTagDefinition,
 } from '@crane/domain/virtual-tag';
+import { subscribeSceneSeek } from '../scene-seek-signal';
 import { useVirtualTagStore } from '../use-virtual-tag-store';
 import { virtualTagRuntime } from '../virtual-tag-runner';
 import { setTagIngest, tagLiveValues } from '../tag-value-bus';
@@ -339,5 +340,29 @@ describe('stopSimulation — 충돌 기록도 지운다', () => {
     expect(useSceneCollisionStore.getState().activeRecordId).toBeNull();
     expect(useVirtualTagStore.getState().hasSession).toBe(false);
     expect(useVirtualTagStore.getState().isRunning).toBe(false);
+  });
+});
+
+describe('seek 신호', () => {
+  it('러너 seek·resetValues(스토어 seek·시나리오 선택·패널 리셋·종료 경로)는 알리고, 틱은 알리지 않는다. 언서브 뒤엔 오지 않는다', () => {
+    let count = 0;
+    const unsubscribe = subscribeSceneSeek(() => {
+      count += 1;
+    });
+    useVirtualTagStore.getState().seek(2500);
+    expect(count).toBe(1);
+    useVirtualTagStore.getState().setActiveScenario('s1');
+    expect(count).toBe(2);
+    virtualTagRuntime.resetValues();
+    expect(count).toBe(3);
+    virtualTagRuntime.resetValues(false);
+    expect(count).toBe(4);
+    useVirtualTagStore.getState().start();
+    vi.advanceTimersByTime(500);
+    expect(virtualTagRuntime.elapsed).toBeGreaterThan(0);
+    expect(count).toBe(4);
+    unsubscribe();
+    useVirtualTagStore.getState().seek(0);
+    expect(count).toBe(4);
   });
 });

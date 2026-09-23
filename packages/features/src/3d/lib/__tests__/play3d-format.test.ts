@@ -4,8 +4,8 @@ import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from '../model-runtime-status';
 import {
   PLAY3D_DWELL_BOX_CLASS,
-  PLAY3D_DWELL_HATCH,
-  PLAY3D_DWELL_TONE,
+  PLAY3D_DWELL_OPEN_CLASS,
+  PLAY3D_EVENT_COLORS,
   PLAY3D_STATUS_FILL,
   TICK_COUNT_MAX,
   TIMELINE_FIT_MS,
@@ -24,6 +24,7 @@ import {
   niceTickStepMs,
   percentOf,
   rangeBarPercent,
+  runEndMs,
   statusSharePercents,
   tagRowLabel,
   tickTimes,
@@ -498,14 +499,13 @@ describe('PLAY3D_STATUS_FILL / PLAY3D_DWELL_*', () => {
     }
   });
 
-  it('PLAY3D_DWELL_*: 빗금은 currentColor 줄 + 투명 바탕의 한 문자열, 등급별 톤이 다르고 박스는 그 색 테두리', () => {
-    expect(PLAY3D_DWELL_HATCH).toContain('repeating-linear-gradient');
-    expect(PLAY3D_DWELL_HATCH).toContain('currentColor');
-    expect(PLAY3D_DWELL_HATCH).toContain('transparent');
-    expect(PLAY3D_DWELL_TONE.warn).not.toBe(PLAY3D_DWELL_TONE.stop);
-    expect(PLAY3D_DWELL_TONE.warn).toMatch(/^text-/);
-    expect(PLAY3D_DWELL_TONE.stop).toMatch(/^text-/);
-    expect(PLAY3D_DWELL_BOX_CLASS).toContain('border-current');
+  it('PLAY3D_DWELL_*: 체류는 채운 노란 박스(등급 무관, 사건 점 zoneEnter 와 같은 색) + 어두운 링, 미이탈은 어두운 점선 가장자리', () => {
+    expect(PLAY3D_DWELL_BOX_CLASS).toContain('bg-amber-400');
+    expect(PLAY3D_EVENT_COLORS.zoneEnter).toBe('bg-amber-400');
+    expect(PLAY3D_DWELL_BOX_CLASS).toMatch(/ring-1 ring-black/);
+    expect(PLAY3D_DWELL_BOX_CLASS).not.toContain('border');
+    expect(PLAY3D_DWELL_OPEN_CLASS).toContain('border-r');
+    expect(PLAY3D_DWELL_OPEN_CLASS).toContain('border-dashed');
   });
 });
 
@@ -623,12 +623,68 @@ describe('timelineRows / transportMarks', () => {
     ]);
   });
 
+  it('timelineRows: 현재 위치 뒤 사건은 고스트(dim) — 열린 띠는 닿은 지점까지, 상태 막대는 창 끝까지, 순번은 실행 전체 기준', () => {
+    const c1 = ev('collision', 1000, 'a|b', { modelIds: ['a', 'b'] });
+    const c2 = ev('collision', 3000, 'a|b', { modelIds: ['a', 'b'] });
+    const enter = ev('zoneEnter', 2000, 'a#z|b', {
+      zoneKey: 'a#z',
+      ownerId: 'a',
+      intruderId: 'b',
+    });
+    const build = (windowEndMs: number) =>
+      computePlay3dStats({
+        events: [c2, enter, c1],
+        statusTransitions: [
+          { atMs: 0, modelId: 'b', from: 'unknown', to: 'running' },
+        ],
+        statuses: {
+          a: { modelId: 'a', name: 'A', ms: running() },
+          b: { modelId: 'b', name: 'B', ms: running() },
+        },
+        tags: {},
+        scanned: [{ fromMs: 0, toMs: 6000 }],
+        reachedMs: 6000,
+        windowEndMs,
+        scenarioDurationMs: null,
+        holdWallMs: 0,
+        detectionOffSeen: false,
+      });
+    const rows = timelineRows(build(1500), timeLabel);
+    // 창 안 충돌은 그대로, 창 뒤 충돌·체류는 dim. 열린 띠는 reachedMs 까지.
+    expect(rows[0].collisions.map((m) => [m.key, m.dim])).toEqual([
+      [`c${c1.id}`, false],
+      [`c${c2.id}`, true],
+    ]);
+    expect(rows[1].zones.map((m) => [m.key, m.dim])).toEqual([
+      [`z${enter.id}`, true],
+    ]);
+    expect(rows[1].zones[0].band).toMatchObject({
+      fromMs: 2000,
+      toMs: 6000,
+      open: true,
+    });
+    // 상태 막대는 창 끝까지. 순번은 실행 전체(창 밖 충돌 포함) 기준.
+    expect(rows[1].status.map((m) => [m.band.fromMs, m.band.toMs])).toEqual([
+      [0, 1500],
+    ]);
+    expect(rows[0].collisions[0].payload).toMatchObject({
+      summary: { ordinal: 1, total: 2 },
+    });
+    // 창 안에서 시작해 창 뒤까지 이어지는 띠는 dim 아님.
+    const later = timelineRows(build(2500), timeLabel);
+    expect(later[1].zones[0]).toMatchObject({
+      dim: false,
+      band: { fromMs: 2000, toMs: 6000 },
+    });
+  });
+
   it('timelineRows: 장비가 없으면 빈 배열, 사건이 없으면 행마다 빈 표식', () => {
     const base = {
-      events: [],
+      allEvents: [],
       statusTransitions: [],
       scanned: [],
       windowEndMs: 0,
+      reachedMs: 0,
     };
     expect(timelineRows({ ...base, equipment: [] }, timeLabel)).toEqual([]);
     const stats = computePlay3dStats({
@@ -687,6 +743,34 @@ describe('timelineRows / transportMarks', () => {
       kind: 'collision',
       summary: { ordinal: 1, total: 2 },
     });
+  });
+
+  it('transportMarks: 열린 띠는 닿은 지점(reachedMs)까지 — 뒤로 seek 해도 꼬리로 무너지지 않는다', () => {
+    const enter = ev('zoneEnter', 20_000, 'a#z|b', {
+      zoneKey: 'a#z',
+      intruderId: 'b',
+    });
+    const back = transportMarks([enter], 5000, timeLabel, 25_000);
+    expect(back.zones[0]).toMatchObject({
+      dim: true,
+      band: { fromMs: 20_000, toMs: 25_000, open: true },
+    });
+    // reachedMs 생략·비정상은 기존과 같다(마지막 사건까지).
+    expect(transportMarks([enter], 5000, timeLabel).zones[0].band.toMs).toBe(
+      20_000,
+    );
+    expect(
+      transportMarks([enter], 5000, timeLabel, Number.NaN).zones[0].band.toMs,
+    ).toBe(20_000);
+  });
+
+  it('runEndMs: 창 끝·마지막 사건·닿은 지점의 최대, 비정상·음수는 0', () => {
+    const c = ev('collision', 1000, 'a|b');
+    expect(runEndMs([c], 500)).toBe(1000);
+    expect(runEndMs([c], 1500)).toBe(1500);
+    expect(runEndMs([c], 500, 3000)).toBe(3000);
+    expect(runEndMs([], Number.NaN, -1)).toBe(0);
+    expect(runEndMs([], 0, Infinity)).toBe(0);
   });
 
   it('transportMarks: 빈 사건은 빈 표식, 창 끝이 NaN·음수면 0 으로 보고 그 뒤는 전부 dim', () => {

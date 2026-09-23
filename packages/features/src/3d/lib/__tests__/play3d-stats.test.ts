@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
 import {
+  REPASS_JITTER_MS,
   accumulateTagValue,
   addScannedInterval,
   assignCollisionsToRows,
@@ -8,13 +9,17 @@ import {
   collisionSummaries,
   computePlay3dStats,
   createTagAggregate,
+  decideZoneEvent,
   emptyStatusMs,
+  hasEventNear,
   lastEventAtMs,
   loopIterationOf,
+  openZoneSubjectsAt,
   statusBands,
   sumScanned,
   tagRangeBar,
   zoneBands,
+  zoneLogStateAt,
   type Play3dEvent,
   type Play3dStatsInput,
   type ZoneBand,
@@ -792,5 +797,240 @@ describe('reachedMs — 시간 축 앵커 passthrough', () => {
     );
     expect(stats.reachedMs).toBe(60_000);
     expect(stats.windowEndMs).toBe(10_000);
+  });
+});
+
+describe('allEvents — 실행 전체 원시 사건 passthrough', () => {
+  it('창 뒤 사건을 포함해 입력 참조 그대로(정렬·복사 없음), 창 안 사건과 별개', () => {
+    const late = ev('collision', 90_000, 'a|b');
+    const early = ev('collision', 1000, 'a|b');
+    const events = [late, early];
+    const stats = computePlay3dStats(input({ events, windowEndMs: 5000 }));
+    expect(stats.allEvents).toBe(events);
+    expect(stats.events).toEqual([early]);
+  });
+});
+
+describe('로그 기준 판정 — zoneLogStateAt / openZoneSubjectsAt', () => {
+  const zone = {
+    zoneKey: 'm#z',
+    zoneName: 'Z',
+    intruderId: 'c',
+    intruderName: 'C',
+  };
+
+  it('zoneLogStateAt: t 이하 마지막 사건(경계 ≤ 포함) — 다른 subject·영역 아닌 사건·NaN 은 무시, 빈 로그·앞은 null', () => {
+    const enter = ev('zoneEnter', 1000, 'm#z|c', zone);
+    const exit = ev('zoneExit', 3000, 'm#z|c', zone);
+    const other = ev('zoneEnter', 2000, 'm#z|d', { ...zone, intruderId: 'd' });
+    const hold = ev('holdStart', 2500, 'm#z|c');
+    const broken = ev('zoneExit', Number.NaN, 'm#z|c', zone);
+    const log = [exit, hold, other, enter, broken];
+    expect(zoneLogStateAt(log, 'm#z|c', 999)).toBeNull();
+    expect(zoneLogStateAt(log, 'm#z|c', 1000)).toBe(enter);
+    expect(zoneLogStateAt(log, 'm#z|c', 2999)).toBe(enter);
+    expect(zoneLogStateAt(log, 'm#z|c', 3000)).toBe(exit);
+    expect(zoneLogStateAt([], 'm#z|c', 5000)).toBeNull();
+  });
+
+  it('zoneLogStateAt: 같은 시각이면 id 가 큰 쪽(나중 기록)', () => {
+    const a = ev('zoneEnter', 1000, 'm#z|c', zone);
+    const b = ev('zoneExit', 1000, 'm#z|c', zone);
+    expect(zoneLogStateAt([b, a], 'm#z|c', 1000)).toBe(b);
+  });
+
+  it('openZoneSubjectsAt: t 에 안에 있는 subject → 그 진입 사건', () => {
+    const e1 = ev('zoneEnter', 1000, 'm#z|c', zone);
+    const x1 = ev('zoneExit', 3000, 'm#z|c', zone);
+    const e2 = ev('zoneEnter', 2000, 'm#z|d', { ...zone, intruderId: 'd' });
+    const log = [e1, x1, e2];
+    expect([...openZoneSubjectsAt(log, 2500).entries()]).toEqual([
+      ['m#z|c', e1],
+      ['m#z|d', e2],
+    ]);
+    expect([...openZoneSubjectsAt(log, 3000).keys()]).toEqual(['m#z|d']);
+    expect(openZoneSubjectsAt(log, 500).size).toBe(0);
+    expect(openZoneSubjectsAt([], 500).size).toBe(0);
+  });
+});
+
+describe('decideZoneEvent — seek 는 로그를 바꾸지 않는다', () => {
+  const zone = {
+    zoneKey: 'm#z',
+    zoneName: 'Z',
+    intruderId: 'c',
+    intruderName: 'C',
+  };
+  const S = 'm#z|c';
+  const J = REPASS_JITTER_MS;
+
+  it('진입: 로그가 밖이면 push, 안이면 skip. NaN 은 skip', () => {
+    const enter = ev('zoneEnter', 1000, S, zone);
+    expect(decideZoneEvent([], 'zoneEnter', S, 500)).toEqual({
+      action: 'push',
+    });
+    expect(decideZoneEvent([enter], 'zoneEnter', S, 1000)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent([enter], 'zoneEnter', S, Number.NaN)).toEqual({
+      action: 'skip',
+    });
+  });
+
+  it('진입: 뒤 진입이 jitter 안이면 앞당김(replace) — 정확값은 replace, +1 은 push', () => {
+    const later = ev('zoneEnter', 10_000, S, zone);
+    expect(decideZoneEvent([later], 'zoneEnter', S, 10_000 - J)).toEqual({
+      action: 'replace',
+      id: later.id,
+    });
+    expect(decideZoneEvent([later], 'zoneEnter', S, 10_000 - J - 1)).toEqual({
+      action: 'push',
+    });
+  });
+
+  it('진입: 뒤 진입이 잠정이면 jitter 밖이어도 replace, 다른 subject 는 무관', () => {
+    const prov = ev('zoneEnter', 40_000, S, { ...zone, provisional: true });
+    const other = ev('zoneEnter', 30_500, 'm#z|d', {
+      ...zone,
+      intruderId: 'd',
+    });
+    expect(decideZoneEvent([prov, other], 'zoneEnter', S, 30_000)).toEqual({
+      action: 'replace',
+      id: prov.id,
+    });
+  });
+
+  it('이탈: 로그가 안이면 뒤 사건 없음→push·잠정 이탈→replace·실제 사건→skip. 밖이면 skip, 단 잠정 이탈 뒤면 그 이탈을 미룸', () => {
+    const enter = ev('zoneEnter', 1000, S, zone);
+    expect(decideZoneEvent([enter], 'zoneExit', S, 2000)).toEqual({
+      action: 'push',
+    });
+    const provExit = ev('zoneExit', 5000, S, { ...zone, provisional: true });
+    expect(decideZoneEvent([enter, provExit], 'zoneExit', S, 2000)).toEqual({
+      action: 'replace',
+      id: provExit.id,
+    });
+    const realExit = ev('zoneExit', 5000, S, zone);
+    expect(decideZoneEvent([enter, realExit], 'zoneExit', S, 2000)).toEqual({
+      action: 'skip',
+    });
+    const reenter = ev('zoneEnter', 4000, S, zone);
+    expect(decideZoneEvent([enter, reenter], 'zoneExit', S, 2000)).toEqual({
+      action: 'skip',
+    });
+    // 로그가 밖
+    expect(decideZoneEvent([], 'zoneExit', S, 2000)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent([enter, realExit], 'zoneExit', S, 6000)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent([enter, provExit], 'zoneExit', S, 6000)).toEqual({
+      action: 'replace',
+      id: provExit.id,
+    });
+  });
+
+  it('추적 (1): 닫힌 띠 안으로 되돌아온 뒤 재통과 — 아무것도 넣지 않는다', () => {
+    const enter = ev('zoneEnter', 10_000, S, zone);
+    const exit = ev('zoneExit', 20_000, S, zone);
+    const log = [enter, exit];
+    // 정착 화해(런타임 안, 15s)
+    expect(decideZoneEvent(log, 'zoneEnter', S, 15_000)).toEqual({
+      action: 'skip',
+    });
+    for (const t of [19_900, 20_000, 20_100]) {
+      expect(decideZoneEvent(log, 'zoneExit', S, t)).toEqual({
+        action: 'skip',
+      });
+    }
+    expect(zoneBands(log, 25_000).map((b) => [b.fromMs, b.toMs])).toEqual([
+      [10_000, 20_000],
+    ]);
+  });
+
+  it('추적 (2): 열린 띠에서 뒤로 seek → 화해 없음, 재통과 진입은 앞당김/skip, 이탈은 push', () => {
+    const enter = ev('zoneEnter', 20_000, S, zone);
+    const log = [enter];
+    expect(decideZoneEvent(log, 'zoneExit', S, 5000)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent(log, 'zoneEnter', S, 19_900)).toEqual({
+      action: 'replace',
+      id: enter.id,
+    });
+    expect(decideZoneEvent(log, 'zoneEnter', S, 20_000)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent(log, 'zoneEnter', S, 20_100)).toEqual({
+      action: 'skip',
+    });
+    expect(decideZoneEvent(log, 'zoneExit', S, 28_000)).toEqual({
+      action: 'push',
+    });
+  });
+
+  it('추적 (3): 앞으로 점프한 잠정 이탈은 실제 이탈이 교체하고(지나쳐도 미룸), 잠정 진입은 실제 진입이 앞당긴다', () => {
+    const enter = ev('zoneEnter', 20_000, S, zone);
+    const provExit = ev('zoneExit', 40_000, S, { ...zone, provisional: true });
+    expect(decideZoneEvent([enter, provExit], 'zoneExit', S, 33_000)).toEqual({
+      action: 'replace',
+      id: provExit.id,
+    });
+    expect(decideZoneEvent([enter, provExit], 'zoneExit', S, 45_000)).toEqual({
+      action: 'replace',
+      id: provExit.id,
+    });
+    const provEnter = ev('zoneEnter', 40_000, S, {
+      ...zone,
+      provisional: true,
+    });
+    expect(decideZoneEvent([provEnter], 'zoneEnter', S, 30_000)).toEqual({
+      action: 'replace',
+      id: provEnter.id,
+    });
+    expect(decideZoneEvent([provEnter], 'zoneExit', S, 50_000)).toEqual({
+      action: 'push',
+    });
+  });
+
+  it('짧은 두 체류의 자기치유 — 첫 통과가 늦게 시작해 두 번째 진입만 있을 때(jitter 안) 재통과가 앞 체류를 복원한다', () => {
+    // 진실 enter@10 exit@10.5 enter@11 exit@15, 첫 통과는 10.7s 부터라 로그엔 enter@11 만.
+    const second = ev('zoneEnter', 11_000, S, zone);
+    const log: Play3dEvent[] = [second];
+    expect(decideZoneEvent(log, 'zoneEnter', S, 10_000)).toEqual({
+      action: 'replace',
+      id: second.id,
+    });
+    second.atMs = 10_000;
+    expect(decideZoneEvent(log, 'zoneExit', S, 10_500)).toEqual({
+      action: 'push',
+    });
+    log.push(ev('zoneExit', 10_500, S, zone));
+    expect(decideZoneEvent(log, 'zoneEnter', S, 11_000)).toEqual({
+      action: 'push',
+    });
+    log.push(ev('zoneEnter', 11_000, S, zone));
+    expect(decideZoneEvent(log, 'zoneExit', S, 15_000)).toEqual({
+      action: 'push',
+    });
+    log.push(ev('zoneExit', 15_000, S, zone));
+    expect(zoneBands(log, 20_000).map((b) => [b.fromMs, b.toMs])).toEqual([
+      [10_000, 10_500],
+      [11_000, 15_000],
+    ]);
+  });
+});
+
+describe('hasEventNear — 충돌 재통과 중복', () => {
+  it('같은 종류·subject 가 ±tol 안(경계 포함)이면 true — 밖·다른 종류·다른 subject·NaN·빈 로그는 false', () => {
+    const c = ev('collision', 10_000, 'a|b');
+    expect(hasEventNear([c], 'collision', 'a|b', 11_500, 1500)).toBe(true);
+    expect(hasEventNear([c], 'collision', 'a|b', 8500, 1500)).toBe(true);
+    expect(hasEventNear([c], 'collision', 'a|b', 11_501, 1500)).toBe(false);
+    expect(hasEventNear([c], 'collision', 'a|c', 10_000, 1500)).toBe(false);
+    expect(hasEventNear([c], 'holdStart', 'a|b', 10_000, 1500)).toBe(false);
+    expect(hasEventNear([c], 'collision', 'a|b', Number.NaN, 1500)).toBe(false);
+    expect(hasEventNear([], 'collision', 'a|b', 10_000, 1500)).toBe(false);
   });
 });

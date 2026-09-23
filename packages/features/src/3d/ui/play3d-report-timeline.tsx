@@ -8,8 +8,7 @@ import {
 import { createTooltipHandle } from '@crane/ui/molecules/tooltip-handle';
 import {
   PLAY3D_DWELL_BOX_CLASS,
-  PLAY3D_DWELL_HATCH,
-  PLAY3D_DWELL_TONE,
+  PLAY3D_DWELL_OPEN_CLASS,
   PLAY3D_STATUS_FILL,
   bandPercent,
   markerPercent,
@@ -28,8 +27,9 @@ import { Play3dTickRow } from './play3d-tick-row';
 
 /**
  * 스윔레인 타임라인 — 장비마다 한 행이고 사건은 그 행에 겹쳐 그린다: 운전 상태
- * 막대 위에 영역 체류(대각선 박스), 그 위에 충돌(빨간 세로 선, 부딪힌 두 장비
- * 행 모두). 현재 위치 세로선, 클릭 = seek(Foxglove State Transitions 방식).
+ * 막대 위에 영역 체류(같은 높이의 노란 박스), 그 위에 충돌(빨간 세로 선, 부딪힌
+ * 두 장비 행 모두). 현재 위치 뒤의 사건은 흐리게(고스트) 남는다 — 재생바와
+ * 같다. 현재 위치 세로선, 클릭 = seek(Foxglove State Transitions 방식).
  * 표식에 마우스를 올리면 요약이 즉시 뜬다 — 팝업 하나에 트리거 여럿(분리
  * 트리거)이라 표식이 많아도 팝업은 하나다.
  *
@@ -177,6 +177,7 @@ export function Play3dReportTimeline({
                   }}
                 />
               ))}
+              {/* 체류 박스는 상태 막대와 같은 높이·위치 — 체류 중엔 상태 색을 덮는다. */}
               {row.zones.map((mark) => (
                 <TooltipTrigger
                   key={mark.key}
@@ -185,15 +186,12 @@ export function Play3dReportTimeline({
                   delay={0}
                   render={<span />}
                   className={cn(
-                    'absolute top-0.5 bottom-0.5 min-w-1.5',
+                    'absolute top-1 bottom-1 min-w-1.5',
                     PLAY3D_DWELL_BOX_CLASS,
-                    PLAY3D_DWELL_TONE[mark.band.level],
-                    mark.band.open && '[border-right-style:dashed]',
+                    mark.band.open && PLAY3D_DWELL_OPEN_CLASS,
+                    mark.dim && 'opacity-30',
                   )}
-                  style={{
-                    ...bandStyle(mark.band.fromMs, mark.band.toMs, axisMs),
-                    backgroundImage: PLAY3D_DWELL_HATCH,
-                  }}
+                  style={bandStyle(mark.band.fromMs, mark.band.toMs, axisMs)}
                 />
               ))}
               {row.collisions.map((mark) => (
@@ -203,7 +201,7 @@ export function Play3dReportTimeline({
                   payload={mark.payload}
                   delay={0}
                   render={<span />}
-                  className="absolute inset-y-0"
+                  className={cn('absolute inset-y-0', mark.dim && 'opacity-30')}
                   style={lineHitStyle(markerPercent(mark.event.atMs, axisMs))}
                 >
                   <span

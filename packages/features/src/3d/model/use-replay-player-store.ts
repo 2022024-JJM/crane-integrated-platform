@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ReplayLiteFrame } from '@crane/domain/monitoring';
 import { rigValueStore } from './rig-value-store';
+import { notifySceneSeek } from './scene-seek-signal';
 import { publishTagValue } from './tag-value-bus';
 
 const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
@@ -106,6 +107,8 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
     rigValueStore.reset();
     set({ frameIndex: clamped, isPlaying: false });
     applyReplayFrame(frames[clamped]);
+    // 위치 불연속 — 자세가 rest 를 거쳐 미끄러진다. 정상 전진(tick)은 알리지 않는다.
+    notifySceneSeek();
   },
 
   seekByFrames: (delta) => {

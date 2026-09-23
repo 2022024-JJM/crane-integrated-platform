@@ -5,8 +5,6 @@ import { cn } from '@crane/core/lib/utils';
 import { formatReplayTimestamp } from '@crane/domain/monitoring';
 import {
   PLAY3D_DWELL_BOX_CLASS,
-  PLAY3D_DWELL_HATCH,
-  PLAY3D_DWELL_TONE,
   PLAY3D_STATUS_FILL,
   coverageRatio,
   eventTimeLabel,
@@ -16,7 +14,11 @@ import {
   timelineAxisMs,
   timelineRows,
 } from '../lib/play3d-format';
-import { tagRangeBar, type Play3dEvent } from '../lib/play3d-stats';
+import {
+  lastEventAtMs,
+  tagRangeBar,
+  type Play3dEvent,
+} from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
 import { usePlay3dTransport } from '../model/play3d-transport';
@@ -59,13 +61,12 @@ export function Play3dReportPanel({ className }: { className?: string }) {
   );
   const [eventFilter, setEventFilter] = useState('all');
 
-  const lastEventMs =
-    stats.events.length > 0 ? stats.events[stats.events.length - 1].atMs : 0;
-  // 재생바와 같은 축 — 반복 시나리오는 경과가 길이를 넘어 자라고, 실행 중 줄지 않는다.
+  // 재생바와 같은 축 — 실행 전체 사건 기준(고스트가 축 밖으로 나가지 않는다),
+  // 반복 시나리오는 경과가 길이를 넘어 자라고, 실행 중 줄지 않는다.
   const axisMs = timelineAxisMs(
     transport.durationMs,
     stats.windowEndMs,
-    lastEventMs,
+    lastEventAtMs(stats.allEvents),
     stats.reachedMs,
   );
   const isReplay = meta.source === 'replay';
@@ -273,7 +274,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
             />
           ) : null}
           <LegendMark
-            shape="hatch"
+            shape="box"
             label={t('monitoring:play3d.timeline.zoneDwell')}
           />
           <LegendMark
@@ -408,14 +409,14 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-muted-foreground text-[10px]">{children}</p>;
 }
 
-/** 범례 표식 — 타임라인의 실제 모양과 같다(상태 = 사각, 체류 = 대각선 박스, 충돌 = 세로 선). */
+/** 범례 표식 — 타임라인의 실제 모양과 같다(상태 = 사각, 체류 = 노란 박스, 충돌 = 세로 선). */
 function LegendMark({
   shape = 'dot',
   className,
   color,
   label,
 }: {
-  shape?: 'dot' | 'hatch' | 'tick';
+  shape?: 'dot' | 'box' | 'tick';
   className?: string;
   /** 상태 색처럼 lib 상수(hex)에서 오는 색. */
   color?: string | null;
@@ -429,20 +430,11 @@ function LegendMark({
           'inline-block',
           shape === 'dot' && 'size-1.5',
           shape === 'tick' && 'h-2.5 w-0.5',
-          shape === 'hatch' && [
-            'h-2.5 w-4',
-            PLAY3D_DWELL_BOX_CLASS,
-            PLAY3D_DWELL_TONE.warn,
-          ],
+          // 상태 점(dot)과 같은 크기 — 범례 항목의 견본 크기를 맞춘다.
+          shape === 'box' && ['size-1.5', PLAY3D_DWELL_BOX_CLASS],
           className,
         )}
-        style={
-          shape === 'hatch'
-            ? { backgroundImage: PLAY3D_DWELL_HATCH }
-            : color
-              ? { background: color }
-              : undefined
-        }
+        style={color ? { background: color } : undefined}
       />
       {label}
     </span>

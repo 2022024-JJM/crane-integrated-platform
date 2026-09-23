@@ -33,8 +33,7 @@ import {
 import { createTooltipHandle } from '@crane/ui/molecules/tooltip-handle';
 import {
   PLAY3D_DWELL_BOX_CLASS,
-  PLAY3D_DWELL_HATCH,
-  PLAY3D_DWELL_TONE,
+  PLAY3D_DWELL_OPEN_CLASS,
   PLAY3D_EVENT_COLORS,
   bandPercent,
   eventTimeLabel,
@@ -65,8 +64,8 @@ const JUMP_MS = 5_000;
 
 /**
  * 3D 플레이 상단 트랜스포트 바 — ▶/⏸·이동, 시간 눈금과 사건 표식 띠(영역 체류
- * 구간 = 대각선 박스, 충돌·정지·두절 = 세로 선, 리포트 타임라인과 같은 모양·
- * 같은 시간 축·같은 hover 요약)가 얹힌 스크럽, 배속, 위치/길이, 소스별 슬롯
+ * 구간 = 선보다 낮은 노란 박스, 충돌·정지·두절 = 세로 선, 리포트 타임라인과 같은
+ * 모양·같은 시간 축·같은 hover 요약)가 얹힌 스크럽, 배속, 위치/길이, 소스별 슬롯
  * (리플레이=구간 검색 팝오버, 시뮬레이션=시계 패널 팝오버). 소스 선택은 위의 탭(Play3dSourceTabs)이 한다. 두 소스의 차이는
  * 트랜스포트 어댑터(play3d-transport) 뒤에 숨고 여기서는 소스 슬롯만 갈린다.
  *
@@ -109,12 +108,15 @@ export function Play3dTransportBar({
   const atEnd = durationMs !== null && positionMs >= durationMs;
   const marks = useMemo(
     () =>
-      transportMarks(events, windowEndMs, (e) =>
-        eventTimeLabel(e, replayFrames),
+      transportMarks(
+        events,
+        windowEndMs,
+        (e) => eventTimeLabel(e, replayFrames),
+        reachedMs,
       ),
     // events 는 제자리 갱신이라 참조가 같다 — version 이 재계산의 키다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events, windowEndMs, replayFrames, version],
+    [events, windowEndMs, replayFrames, reachedMs, version],
   );
 
   const positionLabel =
@@ -136,11 +138,11 @@ export function Play3dTransportBar({
     >
       {/* 시간 눈금 + 사건 표식 띠 + 스크럽 */}
       <div className="flex flex-col gap-0.5">
-        {/* mx-2 — range 손잡이가 양 끝에서 안쪽으로 들어오는 만큼(대략) 맞춘다. */}
+        {/* 눈금·표식 띠·range 는 같은 전체 너비 — 좌우 여백을 두지 않는다. */}
         <Play3dTickRow
           ticks={transportTicks(axisMs)}
           axisMs={axisMs}
-          className="mx-2 h-3 leading-3"
+          className="h-3 leading-3"
         />
         <TransportMarkStrip marks={marks} axisMs={axisMs} />
         {/* 열린 구간(시나리오 없음)도 축 전체를 끈다 — 재생 중엔 손잡이가 오른쪽
@@ -154,7 +156,7 @@ export function Play3dTransportBar({
           disabled={!hasContent}
           aria-label={t('monitoring:play3d.seek')}
           onChange={(event) => transport.seek(Number(event.target.value))}
-          className="accent-primary h-1.5 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+          className="accent-primary mt-2 h-1.5 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
         />
       </div>
 
@@ -378,7 +380,7 @@ const TransportMarkStrip = memo(function TransportMarkStrip({
   const { t } = useTranslation();
   const [hover] = useState(() => createTooltipHandle<Play3dHoverPayload>());
   return (
-    <div className="bg-foreground/10 relative mx-2 h-3 overflow-hidden">
+    <div className="bg-foreground/10 relative h-3 overflow-hidden">
       {/* Root 를 트리거보다 먼저 렌더한다. */}
       <Tooltip handle={hover} trackCursorAxis="x" disableHoverablePopup>
         {({ payload }) => (
@@ -401,18 +403,14 @@ const TransportMarkStrip = memo(function TransportMarkStrip({
             delay={0}
             render={<button type="button" tabIndex={-1} />}
             aria-label={t('monitoring:play3d.timeline.zoneDwell')}
+            // 선(inset-y-0)보다 낮게 — 체류 박스 위로 충돌 선이 드러난다.
             className={cn(
-              'absolute inset-y-0 min-w-1.5 cursor-pointer',
+              'absolute inset-y-0.5 min-w-1.5 cursor-pointer',
               PLAY3D_DWELL_BOX_CLASS,
-              PLAY3D_DWELL_TONE[mark.band.level],
-              mark.band.open && '[border-right-style:dashed]',
+              mark.band.open && PLAY3D_DWELL_OPEN_CLASS,
               mark.dim && 'opacity-30',
             )}
-            style={{
-              left: `${left}%`,
-              width: `${width}%`,
-              backgroundImage: PLAY3D_DWELL_HATCH,
-            }}
+            style={{ left: `${left}%`, width: `${width}%` }}
             onClick={() => seekToMark(mark.band.fromMs)}
           />
         );

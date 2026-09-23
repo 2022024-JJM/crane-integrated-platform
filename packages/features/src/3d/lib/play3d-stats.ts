@@ -47,6 +47,11 @@ export interface Play3dEvent {
   intruderName?: string;
   /** 충돌 양쪽 modelId — 장비별 충돌 관여 집계. */
   modelIds?: readonly [string, string];
+  /**
+   * seek 정착 뒤 화해가 넣은 "아는 범위의 경계" 사건 — 실제 전이가 관측되면
+   * 그 시각으로 교체된다(decideZoneEvent). 표시는 구분하지 않는다.
+   */
+  provisional?: boolean;
 }
 
 export interface TagAggregate {
@@ -158,6 +163,8 @@ export interface Play3dStats {
   /** 시나리오 회차(0부터). 열린 구간이면 null. */
   loopIteration: number | null;
   detectionOffSeen: boolean;
+  /** 실행 전체의 원시 사건(입력 그대로, 기록 순) — 타임라인 고스트·축용. */
+  allEvents: readonly Play3dEvent[];
   /** 창 안 사건(시각 오름차순). */
   events: Play3dEvent[];
   collisions: {
@@ -487,6 +494,7 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     reachedMs,
     loopIteration: loopIterationOf(windowEndMs, input.scenarioDurationMs),
     detectionOffSeen: input.detectionOffSeen,
+    allEvents: input.events,
     events,
     collisions: {
       count: events.filter((e) => e.kind === 'collision').length,
@@ -656,6 +664,150 @@ export function assignZoneBandsToRows(
     else out.set(rowId, [band]);
   }
   return out;
+}
+
+// ---- 기록 시점 판정 — seek 뒤 재통과·정착 화해 (기록기가 쓴다) ----
+
+/**
+ * 재통과 중복 판정의 시각 허용폭(씬 ms). 같은 배속으로 같은 구간을 다시
+ * 지나면 러너 틱(100ms)·영역 스캔(50ms)·프레임(≈33ms)의 위상 차 × 배속만큼
+ * 어긋나고, 최대 배속 8 에서 ≈1440ms 다. 배속을 낮춰 재통과해 더 이르게
+ * 관측되는 경우는 교체 규칙이 흡수하므로 이보다 크게 잡지 않는다.
+ */
+export const REPASS_JITTER_MS = 1500;
+
+function isZoneKind(kind: Play3dEventKind): boolean {
+  return kind === 'zoneEnter' || kind === 'zoneExit';
+}
+
+/**
+ * 로그가 말하는 t 시점의 영역 상태 — 같은 subject 의 `atMs ≤ t` 사건 중
+ * 마지막(시각·id 순). 없으면 null. 안(inside) = 마지막이 zoneEnter.
+ */
+export function zoneLogStateAt(
+  events: readonly Play3dEvent[],
+  subject: string,
+  atMs: number,
+): Play3dEvent | null {
+  let last: Play3dEvent | null = null;
+  for (const e of events) {
+    if (e.subject !== subject || !isZoneKind(e.kind)) continue;
+    if (!Number.isFinite(e.atMs) || e.atMs > atMs) continue;
+    if (
+      !last ||
+      e.atMs > last.atMs ||
+      (e.atMs === last.atMs && e.id > last.id)
+    ) {
+      last = e;
+    }
+  }
+  return last;
+}
+
+/** 같은 subject 의 `atMs > t` 사건 중 첫 번째(시각·id 순). */
+function nextZoneEventAfter(
+  events: readonly Play3dEvent[],
+  subject: string,
+  atMs: number,
+): Play3dEvent | null {
+  let next: Play3dEvent | null = null;
+  for (const e of events) {
+    if (e.subject !== subject || !isZoneKind(e.kind)) continue;
+    if (!Number.isFinite(e.atMs) || e.atMs <= atMs) continue;
+    if (
+      !next ||
+      e.atMs < next.atMs ||
+      (e.atMs === next.atMs && e.id < next.id)
+    ) {
+      next = e;
+    }
+  }
+  return next;
+}
+
+/** t 시점에 로그상 안에 있는 subject → 그 진입 사건. 정착 화해의 입력. */
+export function openZoneSubjectsAt(
+  events: readonly Play3dEvent[],
+  atMs: number,
+): Map<string, Play3dEvent> {
+  const subjects = new Set<string>();
+  for (const e of events) if (isZoneKind(e.kind)) subjects.add(e.subject);
+  const out = new Map<string, Play3dEvent>();
+  for (const subject of subjects) {
+    const last = zoneLogStateAt(events, subject, atMs);
+    if (last && last.kind === 'zoneEnter') out.set(subject, last);
+  }
+  return out;
+}
+
+export type ZoneEventDecision =
+  | { action: 'push' }
+  | { action: 'replace'; id: number }
+  | { action: 'skip' };
+
+/**
+ * 영역 전이를 로그에 어떻게 반영할지 — seek 는 로그를 바꾸지 않아야 하므로
+ * 이미 로그에 있는 시각의 전이(재통과)는 다시 넣지 않고, 정착 화해가 넣은
+ * 잠정 사건은 실제 전이가 교체한다.
+ * - 진입: 로그가 안이면 skip. 아니면 뒤 첫 사건이 진입이고 (잠정이거나
+ *   `jitterMs` 안이면) 그 사건을 t 로 앞당긴다(replace) — 감지는 늘 늦으므로
+ *   이른 관측이 진실에 가깝다. 그 외 push.
+ * - 이탈: 로그가 안이면 — 뒤 사건이 없으면 push, 잠정 이탈이면 replace, 실제
+ *   사건이 있으면 skip(닫힌 띠 안으로 되돌아온 뒤의 히스테리시스 이탈은
+ *   로그를 믿는다). 로그가 밖이면 — 마지막이 잠정 이탈이면 그 뒤로도 계속
+ *   안에 있었다는 뜻이라 t 로 미룬다(replace), 아니면 skip.
+ */
+export function decideZoneEvent(
+  events: readonly Play3dEvent[],
+  kind: 'zoneEnter' | 'zoneExit',
+  subject: string,
+  atMs: number,
+  jitterMs = REPASS_JITTER_MS,
+): ZoneEventDecision {
+  if (!Number.isFinite(atMs)) return { action: 'skip' };
+  const last = zoneLogStateAt(events, subject, atMs);
+  const inside = last !== null && last.kind === 'zoneEnter';
+  const next = nextZoneEventAfter(events, subject, atMs);
+  if (kind === 'zoneEnter') {
+    if (inside) return { action: 'skip' };
+    if (
+      next &&
+      next.kind === 'zoneEnter' &&
+      (next.provisional === true || next.atMs <= atMs + jitterMs)
+    ) {
+      return { action: 'replace', id: next.id };
+    }
+    return { action: 'push' };
+  }
+  if (!inside) {
+    if (last && last.kind === 'zoneExit' && last.provisional === true) {
+      return { action: 'replace', id: last.id };
+    }
+    return { action: 'skip' };
+  }
+  if (!next) return { action: 'push' };
+  if (next.kind === 'zoneExit' && next.provisional === true) {
+    return { action: 'replace', id: next.id };
+  }
+  return { action: 'skip' };
+}
+
+/** 같은 종류·subject 의 사건이 `atMs ± toleranceMs` 안에 있는지 — 충돌 재통과 중복. */
+export function hasEventNear(
+  events: readonly Play3dEvent[],
+  kind: Play3dEventKind,
+  subject: string,
+  atMs: number,
+  toleranceMs: number,
+): boolean {
+  if (!Number.isFinite(atMs)) return false;
+  return events.some(
+    (e) =>
+      e.kind === kind &&
+      e.subject === subject &&
+      Number.isFinite(e.atMs) &&
+      Math.abs(e.atMs - atMs) <= toleranceMs,
+  );
 }
 
 /**
