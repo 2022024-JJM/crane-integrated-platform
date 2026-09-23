@@ -168,6 +168,9 @@ export function SceneMinimap({
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
+      // 카메라(부채꼴·픽토그램)를 먼저, 장비 마커를 그 위에 — 부채꼴 안의
+      // 장비가 가려지지 않는다.
+      drawCamera(context, drawFrame, scale, getPose());
       markersRef.current = drawMarkers(
         context,
         drawFrame,
@@ -177,7 +180,6 @@ export function SceneMinimap({
         useObjectFocusStore.getState().focusedModelId,
         cacheRef.current,
       );
-      drawCamera(context, drawFrame, scale, getPose());
       const hit = resolveHover(markersRef.current, hoverRef.current, scale);
       drawHoverLabel(context, scale, hit);
       // 마커 위에서는 클릭이 포커스라 커서로 알려 준다.
