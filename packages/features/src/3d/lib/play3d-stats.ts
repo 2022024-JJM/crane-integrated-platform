@@ -85,6 +85,8 @@ export interface Play3dStatsInput {
   statuses: Readonly<Record<string, StatusAggregate>>;
   tags: Readonly<Record<string, TagAggregate>>;
   scanned: readonly ScannedInterval[];
+  /** 위치가 닿은 가장 먼 씬 시각(seek·정지 중 포함) — 시간 축 앵커. 없으면 0. */
+  reachedMs?: number;
   /** 현재 재생 위치(씬 ms) — 창의 끝. */
   windowEndMs: number;
   /** 활성 시나리오 길이(ms). 없으면 null(열린 구간). */
@@ -151,6 +153,8 @@ export interface Play3dStats {
   statusTransitions: readonly StatusTransition[];
   scanned: readonly ScannedInterval[];
   scannedMs: number;
+  /** 입력 그대로 — 비정상·음수는 0. 창보다 커도 줄이지 않는다(뒤로 seek 한 상태). */
+  reachedMs: number;
   /** 시나리오 회차(0부터). 열린 구간이면 null. */
   loopIteration: number | null;
   detectionOffSeen: boolean;
@@ -223,15 +227,6 @@ export function sumScanned(intervals: readonly ScannedInterval[]): number {
   let sum = 0;
   for (const it of intervals) sum += Math.max(0, it.toMs - it.fromMs);
   return sum;
-}
-
-/** 재생이 지나간 가장 먼 씬 시각 — 시간 축이 실행 중 줄지 않게 하는 기준. */
-export function scannedEndMs(intervals: readonly ScannedInterval[]): number {
-  let end = 0;
-  for (const it of intervals) {
-    if (Number.isFinite(it.toMs) && it.toMs > end) end = it.toMs;
-  }
-  return end;
 }
 
 /**
@@ -448,6 +443,8 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
 
   // 태그
   const scannedMs = sumScanned(input.scanned);
+  const reached = input.reachedMs ?? 0;
+  const reachedMs = Number.isFinite(reached) ? Math.max(0, reached) : 0;
   const tags: TagStat[] = Object.values(input.tags)
     .map((t) => ({
       ...t,
@@ -487,6 +484,7 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     statusTransitions: input.statusTransitions ?? [],
     scanned: input.scanned,
     scannedMs,
+    reachedMs,
     loopIteration: loopIterationOf(windowEndMs, input.scenarioDurationMs),
     detectionOffSeen: input.detectionOffSeen,
     events,

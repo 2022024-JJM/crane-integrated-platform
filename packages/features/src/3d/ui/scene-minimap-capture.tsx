@@ -5,7 +5,6 @@ import {
   Box3,
   OrthographicCamera,
   WebGLRenderTarget,
-  type PerspectiveCamera,
   type Scene,
   type WebGLRenderer,
 } from 'three';
@@ -26,10 +25,7 @@ import {
   toDisplayPixels,
 } from '../lib/minimap-image';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
-import {
-  minimapCameraInfo,
-  useSceneMinimapStore,
-} from '../model/use-scene-minimap-store';
+import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
 
 /**
  * 미니맵 탑뷰 스냅샷 — Canvas 안 null 렌더 컴포넌트.
@@ -105,12 +101,7 @@ export function SceneMinimapCapture({
   // 보이지 않게.
   useEffect(() => () => setSnapshot(null), [setSnapshot]);
 
-  useFrame(({ gl, scene, camera }) => {
-    const perspective = camera as PerspectiveCamera;
-    if (perspective.isPerspectiveCamera) {
-      minimapCameraInfo.fovDeg = perspective.fov;
-      minimapCameraInfo.aspect = perspective.aspect;
-    }
+  useFrame(({ gl, scene }) => {
     // 하늘 국면이 바뀌면 재캡처 — SceneLighting 이 앞서 마운트돼 같은
     // 프레임의 갱신값을 읽는다. 첫 캡처 전(스냅샷 없음)엔 무장 effect 가
     // 맡고, solar 조명이 아니면(빈 키) 배경이 변하지 않으니 건너뛴다.

@@ -46,7 +46,7 @@ import {
   type Play3dHoverPayload,
   type TransportMarks,
 } from '../lib/play3d-format';
-import { lastEventAtMs, scannedEndMs } from '../lib/play3d-stats';
+import { lastEventAtMs } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import {
   readPlay3dPositionMs,
@@ -87,7 +87,7 @@ export function Play3dTransportBar({
   const transport = usePlay3dTransport();
   const version = usePlay3dStatsStore((s) => s.version);
   const events = usePlay3dStatsStore((s) => s.data.events);
-  const scanned = usePlay3dStatsStore((s) => s.data.scanned);
+  const reachedMs = usePlay3dStatsStore((s) => s.data.reachedMs);
   const windowEndMs = usePlay3dStatsStore((s) => s.data.windowEndMs);
   const replayFrames = useReplayPlayerStore((s) => s.frames);
   const replayTimestamp = useReplayPlayerStore(
@@ -103,9 +103,8 @@ export function Play3dTransportBar({
     durationMs,
     positionMs,
     lastEventAtMs(events),
-    scannedEndMs(scanned),
+    reachedMs,
   );
-  const scrubbable = hasContent && durationMs !== null && durationMs > 0;
   const atStart = positionMs <= 0;
   const atEnd = durationMs !== null && positionMs >= durationMs;
   const marks = useMemo(
@@ -144,13 +143,15 @@ export function Play3dTransportBar({
           className="mx-2 h-3 leading-3"
         />
         <TransportMarkStrip marks={marks} axisMs={axisMs} />
+        {/* 열린 구간(시나리오 없음)도 축 전체를 끈다 — 재생 중엔 손잡이가 오른쪽
+            끝(닿은 지점)에 붙고, 왼쪽으로 끌면 그 시점부터 이어서 재생된다. */}
         <input
           type="range"
           min={0}
           max={Math.max(1, Math.round(axisMs))}
           step={100}
           value={Math.min(Math.round(positionMs), Math.round(axisMs))}
-          disabled={!scrubbable}
+          disabled={!hasContent}
           aria-label={t('monitoring:play3d.seek')}
           onChange={(event) => transport.seek(Number(event.target.value))}
           className="accent-primary h-1.5 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"

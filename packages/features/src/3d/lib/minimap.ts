@@ -155,37 +155,29 @@ export function panPoseToPoint(
   };
 }
 
-/** 세로 fov(도)·종횡비 → 가로 fov(도). */
-export function horizontalFovDeg(
-  verticalFovDeg: number,
-  aspect: number,
-): number {
-  const half = (verticalFovDeg * Math.PI) / 360;
-  return (Math.atan(Math.tan(half) * aspect) * 360) / Math.PI;
-}
-
 export interface MinimapFootprint {
   /** 카메라 월드 XZ. */
   x: number;
   z: number;
   /** 카메라→타깃의 XZ 방향(rad). atan2(dz, dx) — +X 가 0, +Z 가 π/2. */
   heading: number;
-  /** 가로 fov 의 절반(rad). */
+  /** 부채꼴 벌어짐 각의 절반(rad). */
   halfAngle: number;
   /** 카메라→타깃 XZ 거리(m). 정수직 탑뷰면 0 에 가깝다. */
   length: number;
 }
 
 /**
- * 카메라 발자국 — 카메라 XZ 에서 타깃 방향으로 가로 fov 만큼 벌어지는 부채꼴.
- * 기울어진 원근 카메라의 지면 절단면(사다리꼴)의 근사이고, 관제 미니맵에서
- * "어디를 보고 있는가"를 읽는 데는 충분하다. 카메라가 타깃 바로 위(탑뷰)면
- * 방향이 정의되지 않아 length 0·heading 0 을 돌려주며, 그리는 쪽은 length
- * 가 짧으면 점만 찍는다.
+ * 카메라 발자국 — 카메라 XZ 에서 타깃 방향으로 fanAngleDeg 만큼 벌어지는
+ * 부채꼴. 각은 카메라 fov 가 아니라 표시용 고정값이고, 그리는 쪽이 길이도
+ * 고정 픽셀로 잡는다 — 관제 미니맵에선 "어디를 보고 있는가"의 방향만 읽으면
+ * 되고, 실제 절단면을 따라가면 탑뷰 근처에서 사라지거나 멀리서 지도를 덮는다.
+ * 카메라가 타깃 바로 위(탑뷰)면 방향이 정의되지 않아 length 0·heading 0 을
+ * 돌려주며, 그리는 쪽은 length 가 짧으면 점만 찍는다.
  */
 export function cameraFootprint(
   pose: MinimapPose,
-  hFovDeg: number,
+  fanAngleDeg: number,
 ): MinimapFootprint {
   const dx = pose.target[0] - pose.position[0];
   const dz = pose.target[2] - pose.position[2];
@@ -194,7 +186,7 @@ export function cameraFootprint(
     x: pose.position[0],
     z: pose.position[2],
     heading: length > 1e-6 ? Math.atan2(dz, dx) : 0,
-    halfAngle: (hFovDeg * Math.PI) / 360,
+    halfAngle: (fanAngleDeg * Math.PI) / 360,
     length: Number.isFinite(length) ? length : 0,
   };
 }

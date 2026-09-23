@@ -11,7 +11,6 @@ import {
   emptyStatusMs,
   lastEventAtMs,
   loopIterationOf,
-  scannedEndMs,
   statusBands,
   sumScanned,
   tagRangeBar,
@@ -757,7 +756,7 @@ describe('assignCollisionsToRows / collisionSummaries', () => {
   });
 });
 
-describe('lastEventAtMs / scannedEndMs', () => {
+describe('lastEventAtMs', () => {
   it('lastEventAtMs: 마지막 원소가 아니라 최댓값 — 빈 배열·NaN·음수는 0', () => {
     expect(
       lastEventAtMs([
@@ -770,15 +769,28 @@ describe('lastEventAtMs / scannedEndMs', () => {
     expect(lastEventAtMs([ev('collision', Number.NaN, 'a')])).toBe(0);
     expect(lastEventAtMs([ev('collision', -10, 'a')])).toBe(0);
   });
+});
 
-  it('scannedEndMs: 구간 끝 중 최댓값 — 빈 배열·NaN 은 0', () => {
-    expect(
-      scannedEndMs([
-        { fromMs: 0, toMs: 2000 },
-        { fromMs: 6000, toMs: 8000 },
-      ]),
-    ).toBe(8000);
-    expect(scannedEndMs([])).toBe(0);
-    expect(scannedEndMs([{ fromMs: 0, toMs: Number.NaN }])).toBe(0);
+describe('reachedMs — 시간 축 앵커 passthrough', () => {
+  it('그대로 내놓고, 생략·NaN·음수·Infinity 는 0', () => {
+    expect(computePlay3dStats(input({ reachedMs: 25_000 })).reachedMs).toBe(
+      25_000,
+    );
+    expect(computePlay3dStats(input()).reachedMs).toBe(0);
+    expect(computePlay3dStats(input({ reachedMs: 0 })).reachedMs).toBe(0);
+    expect(computePlay3dStats(input({ reachedMs: Number.NaN })).reachedMs).toBe(
+      0,
+    );
+    expect(computePlay3dStats(input({ reachedMs: -1 })).reachedMs).toBe(0);
+    expect(computePlay3dStats(input({ reachedMs: Infinity })).reachedMs).toBe(
+      0,
+    );
+  });
+  it('창(windowEndMs)보다 커도 줄이지 않는다 — 뒤로 seek 한 상태', () => {
+    const stats = computePlay3dStats(
+      input({ windowEndMs: 10_000, reachedMs: 60_000 }),
+    );
+    expect(stats.reachedMs).toBe(60_000);
+    expect(stats.windowEndMs).toBe(10_000);
   });
 });

@@ -16,7 +16,6 @@ import {
   cameraFootprint,
   cameraGlyphPolygon,
   clampPanelPosition,
-  horizontalFovDeg,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
@@ -25,18 +24,17 @@ import {
 } from '../lib/minimap';
 import { zoneColorWithAlpha } from '../lib/scene-zones';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
-import {
-  minimapCameraInfo,
-  useSceneMinimapStore,
-} from '../model/use-scene-minimap-store';
+import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
 
 /**
  * 모니터링 2D 미니맵 — 캔버스 좌하단 오버레이.
  *
  * 배경은 SceneMinimapCapture 가 찍어 둔 탑뷰 스냅샷이고, 그 위에 매 폴링
  * 틱마다 장비 마커(레지스트리의 현재 월드 위치 — 리그·태그로 움직인 자세를
- * 따라간다)와 카메라(시선 방향으로 도는 카메라 픽토그램 + 시야 부채꼴,
- * 강조색 CAMERA_COLOR 청록)를 그린다. 영역 원은 그리지 않는다 — 3D 링과
+ * 따라간다)와 카메라(시선 방향으로 도는 카메라 픽토그램 + 같은 색의 시야
+ * 부채꼴, 강조색 CAMERA_COLOR 청록)를 그린다. 부채꼴은 방향 표시일 뿐이라
+ * 각·길이가 고정이고 카메라 fov·타깃 거리를 따라가지 않는다. 영역 원은
+ * 그리지 않는다 — 3D 링과
  * HUD 가 담당하고 미니맵에선 마커를 가린다. 그리기는 setInterval 로 2D
  * 캔버스에 직접 하고 React 상태를 건드리지 않는다 — 카메라·장비는 프레임
  * 속도로 바뀌므로 setState 로 따라가면 커밋이 그 속도로 돈다(perf HUD 와
@@ -65,8 +63,18 @@ const MINIMAP_CSS_WIDTH = 224;
 const DRAW_INTERVAL_MS = 66;
 const MARKER_RADIUS_PX = 2;
 const MARKER_HIT_RADIUS_PX = 8;
-/** 부채꼴을 카메라→타깃 거리보다 이만큼 더 그린다 — 타깃 너머도 보인다. */
-const FOOTPRINT_LENGTH_RATIO = 1.6;
+/**
+ * 시야 부채꼴의 벌어짐 각(도)·길이(CSS px) — 카메라 fov·타깃 거리와 무관한
+ * 고정값이다. 방향만 읽는 표시라 실제 절단면을 따라가면 탑뷰 근처에서
+ * 사라지고 멀리서 낮게 보면 지도를 덮어 오히려 눈에 안 띈다.
+ */
+const FOOTPRINT_ANGLE_DEG = 60;
+const FOOTPRINT_LENGTH_PX = 28;
+/**
+ * 카메라→타깃 XZ 거리가 이 CSS px 보다 짧으면 시선 방향이 정의되지 않은
+ * 것(정수직 탑뷰)으로 보고 부채꼴·픽토그램 대신 점을 찍는다.
+ */
+const HEADING_MIN_DISTANCE_PX = 2;
 
 const SEVERITY_COLORS: Record<AlarmSeverity, string> = {
   critical: '#ef4444',
@@ -75,19 +83,18 @@ const SEVERITY_COLORS: Record<AlarmSeverity, string> = {
   info: '#3b82f6',
 };
 const MARKER_COLOR = '#fde047';
-/** 카메라 픽토그램 색. 부채꼴은 FOOTPRINT_COLOR. */
+/** 카메라 픽토그램·시야 부채꼴 공통 색. */
 const CAMERA_COLOR = '#22d3ee';
 /**
- * 시야 부채꼴 — 흰색, 카메라에서 멀어질수록 투명해지는 그라데이션 채움.
- * 테두리는 호 없이 양쪽 모서리 직선만 그린다.
+ * 시야 부채꼴 — 픽토그램과 같은 색, 카메라에서 멀어질수록 투명해지는
+ * 그라데이션 채움. 테두리는 호 없이 양쪽 모서리 직선만 그린다.
  */
-const FOOTPRINT_COLOR = '#ffffff';
-const FOOTPRINT_FILL_NEAR = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.65);
-const FOOTPRINT_FILL_MID = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.35);
-const FOOTPRINT_FILL_FAR = zoneColorWithAlpha(FOOTPRINT_COLOR, 0);
-const FOOTPRINT_EDGE = zoneColorWithAlpha(FOOTPRINT_COLOR, 0.9);
+const FOOTPRINT_FILL_NEAR = zoneColorWithAlpha(CAMERA_COLOR, 0.7);
+const FOOTPRINT_FILL_MID = zoneColorWithAlpha(CAMERA_COLOR, 0.4);
+const FOOTPRINT_FILL_FAR = zoneColorWithAlpha(CAMERA_COLOR, 0);
+const FOOTPRINT_EDGE = zoneColorWithAlpha(CAMERA_COLOR, 0.9);
 /** 모서리 직선 굵기(CSS px). */
-const FOOTPRINT_EDGE_WIDTH_PX = 0.35;
+const FOOTPRINT_EDGE_WIDTH_PX = 1;
 const CAMERA_GLYPH_SIZE_PX = 5;
 
 interface SceneMinimapProps {
@@ -356,7 +363,7 @@ export function SceneMinimap({
       }
     >
       <div
-        className="flex h-6 cursor-move touch-none items-center justify-between bg-black/40 px-1 select-none"
+        className="flex h-5 cursor-move touch-none items-center justify-between bg-black/40 pl-1 select-none"
         title={moveLabel}
         onPointerDown={handlePanelPointerDown}
         onPointerMove={handlePanelPointerMove}
@@ -376,7 +383,7 @@ export function SceneMinimap({
                   variant="ghost"
                   size="icon-xs"
                   aria-label={hideLabel}
-                  className="text-white/80 hover:bg-white/20 hover:text-white"
+                  className="size-5 rounded-none text-white/80 hover:bg-white/20 hover:text-white"
                 />
               }
               onClick={() => setVisible(false)}
@@ -487,16 +494,15 @@ function drawCamera(
   pose: { position: Vector3Tuple; target: Vector3Tuple } | null,
 ): void {
   if (!pose) return;
-  const footprint = cameraFootprint(
-    pose,
-    horizontalFovDeg(minimapCameraInfo.fovDeg, minimapCameraInfo.aspect),
-  );
+  const footprint = cameraFootprint(pose, FOOTPRINT_ANGLE_DEG);
   const origin = worldToMinimap(frame, footprint.x, footprint.z);
   const unitsPerPx = frame.worldWidth / frame.pxWidth;
-  const lengthPx = (footprint.length * FOOTPRINT_LENGTH_RATIO) / unitsPerPx;
 
-  // 시선 방향이 정의되는(정수직 탑뷰가 아닌) 경우에만 부채꼴·화살촉.
-  const hasHeading = lengthPx > 2 * scale;
+  // 시선 방향이 정의되는(정수직 탑뷰가 아닌) 경우에만 부채꼴·픽토그램.
+  // 카메라→타깃 거리는 이 판정에만 쓰고 부채꼴 길이는 고정 픽셀이다.
+  const hasHeading =
+    footprint.length / unitsPerPx > HEADING_MIN_DISTANCE_PX * scale;
+  const lengthPx = FOOTPRINT_LENGTH_PX * scale;
   if (hasHeading) {
     const gradient = context.createRadialGradient(
       origin.px,

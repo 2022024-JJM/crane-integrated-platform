@@ -92,21 +92,23 @@ export function bandPercent(
 
 /**
  * 시간 축 길이 — 리포트 타임라인과 재생바가 함께 쓴다. 길이(없으면 1초 바닥)·
- * 위치·마지막 사건·재생이 지나간 가장 먼 지점 중 최대다. 반복 시나리오는 경과가
- * 되감기지 않아(회차 = 경과 ÷ 길이) 길이에 고정하면 첫 회차 뒤의 커서·표식이
- * 전부 축 끝에 쌓인다. 가장 먼 지점을 넣는 이유는 실행 중 축이 줄지 않게
- * 하려는 것 — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때 축이 같이 줄어 값이
- * 무너진다. 비정상 값은 건너뛴다.
+ * 위치·마지막 사건·위치가 닿은 가장 먼 지점(seek·정지 중 포함) 중 최대다.
+ * 반복 시나리오는 경과가 되감기지 않아(회차 = 경과 ÷ 길이) 길이에 고정하면
+ * 첫 회차 뒤의 커서·표식이 전부 축 끝에 쌓인다. 닿은 지점을 넣는 이유는 실행
+ * 중 축이 줄지 않게 하려는 것 — 위치만 따라가면 재생바 손잡이를 뒤로 끌 때
+ * 축이 같이 줄어 값이 무너진다. 검사 구간(scanned) 끝이 아닌 이유는 정지 중
+ * ⏩ 로 뛴 곳은 검사되지 않아 열린 구간에서 같은 붕괴가 나기 때문이다.
+ * 비정상 값은 건너뛴다.
  */
 export function timelineAxisMs(
   durationMs: number | null,
   positionMs: number,
   lastEventMs: number,
-  scannedEndMs = 0,
+  reachedMs = 0,
 ): number {
   const base = durationMs !== null && durationMs > 0 ? durationMs : 1_000;
   let axis = Number.isFinite(base) ? base : 1_000;
-  for (const v of [positionMs, lastEventMs, scannedEndMs]) {
+  for (const v of [positionMs, lastEventMs, reachedMs]) {
     if (Number.isFinite(v) && v > axis) axis = v;
   }
   return axis;

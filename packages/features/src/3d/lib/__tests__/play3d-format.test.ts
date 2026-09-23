@@ -203,17 +203,26 @@ describe('tagRowLabel', () => {
 });
 
 describe('timelineAxisMs — 네 입력의 최대', () => {
-  it('timelineAxisMs: 길이·위치·마지막 사건·검사 끝 중 최대 — 위치가 길이와 같음·+1ms', () => {
+  it('timelineAxisMs: 길이·위치·마지막 사건·닿은 지점 중 최대 — 위치가 길이와 같음·+1ms', () => {
     expect(timelineAxisMs(90_000, 5, 5)).toBe(90_000);
     expect(timelineAxisMs(90_000, 90_000, 0)).toBe(90_000);
     expect(timelineAxisMs(90_000, 90_001, 0)).toBe(90_001);
     expect(timelineAxisMs(90_000, 1000, 250_000)).toBe(250_000);
   });
-  it('timelineAxisMs: 검사 끝만 넘는 경우 — 뒤로 seek 해도 축은 줄지 않는다', () => {
+  it('timelineAxisMs: 닿은 지점만 넘는 경우 — 뒤로 seek 해도 축은 줄지 않는다', () => {
     // 반복 시나리오: 5분까지 재생한 뒤 1분으로 되돌아가도 축은 5분이다.
     expect(timelineAxisMs(90_000, 60_000, 0, 300_000)).toBe(300_000);
     expect(timelineAxisMs(90_000, 60_000, 0, 89_999)).toBe(90_000);
     expect(timelineAxisMs(null, 60_000, 0, 300_000)).toBe(300_000);
+  });
+  it('timelineAxisMs: 열린 구간에서 정지 중 앞으로 뛴 뒤 뒤로 seek — 축은 닿은 지점에 고정', () => {
+    // 검사 구간이 없어도(재생한 적 없음) 닿은 지점이 축을 잡아 손잡이가 끝으로 튀지 않는다.
+    expect(timelineAxisMs(null, 12_500, 0, 25_000)).toBe(25_000);
+    expect(timelineAxisMs(null, 25_000, 0, 25_000)).toBe(25_000);
+    expect(timelineAxisMs(null, 25_001, 0, 25_000)).toBe(25_001);
+    expect(timelineAxisMs(null, 0, 0, 0)).toBe(1000);
+    expect(timelineAxisMs(null, 500, 0, Number.NaN)).toBe(1000);
+    expect(timelineAxisMs(null, 500, 0, -1)).toBe(1000);
   });
   it('timelineAxisMs: 길이 null·0 은 1초 바닥, NaN·Infinity 는 건너뛰고 네 번째 인자 생략 가능', () => {
     expect(timelineAxisMs(null, 200, 7000)).toBe(7000);

@@ -16,11 +16,7 @@ import {
   timelineAxisMs,
   timelineRows,
 } from '../lib/play3d-format';
-import {
-  scannedEndMs,
-  tagRangeBar,
-  type Play3dEvent,
-} from '../lib/play3d-stats';
+import { tagRangeBar, type Play3dEvent } from '../lib/play3d-stats';
 import { formatSimClock } from '../lib/sim-clock';
 import { collectSceneTagKeys } from '../lib/tag-mapping-index';
 import { usePlay3dTransport } from '../model/play3d-transport';
@@ -70,7 +66,7 @@ export function Play3dReportPanel({ className }: { className?: string }) {
     transport.durationMs,
     stats.windowEndMs,
     lastEventMs,
-    scannedEndMs(stats.scanned),
+    stats.reachedMs,
   );
   const isReplay = meta.source === 'replay';
 

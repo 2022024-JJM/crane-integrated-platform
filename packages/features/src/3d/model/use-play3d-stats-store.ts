@@ -41,6 +41,11 @@ export interface Play3dStatsData {
   statuses: Record<string, StatusAggregate>;
   tags: Record<string, TagAggregate>;
   scanned: ScannedInterval[];
+  /**
+   * 위치가 닿은 가장 먼 씬 시각 — seek·정지 중 포함. 시간 축(timelineAxisMs)의
+   * 앵커라 뒤로 끌어도 축이 줄지 않는다. reset 에서만 0 으로 돌아간다.
+   */
+  reachedMs: number;
   windowEndMs: number;
   scenarioDurationMs: number | null;
   holdWallMs: number;
@@ -59,6 +64,7 @@ export function createPlay3dStatsData(
     statuses: {},
     tags: {},
     scanned: [],
+    reachedMs: 0,
     windowEndMs: 0,
     scenarioDurationMs,
     holdWallMs: 0,

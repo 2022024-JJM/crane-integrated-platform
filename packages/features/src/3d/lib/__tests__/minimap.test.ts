@@ -9,7 +9,6 @@ import {
   cameraGlyphPolygon,
   clampPanelPosition,
   computeMinimapFrame,
-  horizontalFovDeg,
   minimapLightingKey,
   minimapToWorld,
   nearestMarkerIndex,
@@ -126,18 +125,8 @@ describe('panPoseToPoint', () => {
   });
 });
 
-describe('horizontalFovDeg', () => {
-  it('종횡비 1 이면 세로 fov 와 같다', () => {
-    expect(horizontalFovDeg(60, 1)).toBeCloseTo(60, 10);
-  });
-
-  it('16:9 · 75° → 약 107.5°', () => {
-    expect(horizontalFovDeg(75, 16 / 9)).toBeCloseTo(107.5, 1);
-  });
-});
-
 describe('cameraFootprint', () => {
-  it('+X 방향을 보면 heading 0, +Z 방향은 π/2', () => {
+  it('+X 방향을 보면 heading 0, +Z 방향은 π/2, halfAngle 은 각의 절반', () => {
     const px = cameraFootprint(
       { position: [0, 10, 0], target: [10, 0, 0] },
       90,

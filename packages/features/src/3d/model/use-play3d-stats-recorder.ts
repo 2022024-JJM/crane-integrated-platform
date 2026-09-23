@@ -330,6 +330,12 @@ export function usePlay3dStatsRecorder(regionId: string): void {
           agg.ms[status] += delta;
         }
       }
+      // 위치가 닿은 가장 먼 지점 — 재생 여부·seek 와 무관. 시간 축의 앵커라
+      // 뒤로 끌어도 축이 줄지 않는다. 아래 windowEndMs 비교보다 앞에 둔다 —
+      // reachedMs ≥ windowEndMs 라 여기서 자라면 그 비교가 반드시 bump 한다.
+      // 폴링 사이에 뛰었다 돌아온 지점은 남지 않는다(어댑터 seek 가 통계에
+      // 쓰면 역의존이라 받아들인다).
+      if (pos > data.reachedMs) data.reachedMs = pos;
       lastPos = pos;
       if (data.windowEndMs !== pos) {
         data.windowEndMs = pos;

@@ -116,14 +116,3 @@ export const useSceneMinimapStore = create<SceneMinimapState>()((set, get) => ({
     set({ position });
   },
 }));
-
-/**
- * 스냅샷 카메라의 fov·종횡비 — 미니맵의 카메라 발자국(부채꼴) 폭에 쓴다.
- * 캡처 컴포넌트가 useFrame 에서 쓰고 미니맵이 폴링으로 읽는 mutable 값
- * (프레임 속도 setState 금지 규약). 리사이즈로 종횡비가 바뀌어도 다음 폴링에
- * 반영된다.
- */
-export const minimapCameraInfo = {
-  fovDeg: 75,
-  aspect: 1,
-};
