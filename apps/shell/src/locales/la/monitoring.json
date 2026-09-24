@@ -231,8 +231,7 @@
     "noModelsInCategory": "Nulla exemplaria in hac categoria adhuc sunt.",
     "modelCategories": {
       "indoor": "Interior",
-      "outdoor": "Exterior",
-      "etc": "Cetera"
+      "outdoor": "Exterior"
     },
     "paletteTabs": {
       "models": "Exempla",

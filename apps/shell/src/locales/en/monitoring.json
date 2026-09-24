@@ -245,8 +245,7 @@
     "noModelsInCategory": "No models in this category yet.",
     "modelCategories": {
       "indoor": "Indoor",
-      "outdoor": "Outdoor",
-      "etc": "Etc"
+      "outdoor": "Outdoor"
     },
     "paletteTabs": {
       "models": "Models",

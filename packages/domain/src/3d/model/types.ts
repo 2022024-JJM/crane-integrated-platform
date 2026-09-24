@@ -300,7 +300,6 @@ export const SCENE_MODEL_CATEGORIES = [
   'indoor',
   'outdoor',
   'map',
-  'etc',
 ] as const;
 
 export type SceneModelCategory = (typeof SCENE_MODEL_CATEGORIES)[number];

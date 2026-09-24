@@ -755,7 +755,6 @@ const MODEL_PANEL_CATEGORIES = SCENE_MODEL_CATEGORIES.filter(
 const MODEL_CATEGORY_LABEL_KEY: Record<ModelPanelCategory, string> = {
   indoor: 'monitoring:editor.modelCategories.indoor',
   outdoor: 'monitoring:editor.modelCategories.outdoor',
-  etc: 'monitoring:editor.modelCategories.etc',
 };
 
 /**

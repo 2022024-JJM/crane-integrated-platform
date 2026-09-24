@@ -14,29 +14,11 @@ function withDefaultPreview(
   };
 }
 
+// 샘플 모델(house·crane·gantry_crane·ship·R370·TTC-27·TTC-28·TTC-K5000)과
+// 'etc' 카테고리(gc-04 파트 4종)는 어떤 씬도 참조하지 않아 카탈로그에서 뺐다.
+// 단 crane·gantry_crane·TTC-27 GLB 는 crane-type-model.ts(자산 크레인 타입 →
+// 모델 표)와 goliath-3d-viewer.tsx 가 직접 로드하므로 파일은 남아 있다.
 export const sceneModelCatalog: SceneModelCatalogItem[] = [
-  {
-    id: 'crane',
-    label: 'Crane',
-    category: 'outdoor',
-    path: '/models/crane.glb',
-    defaultScale: [0.8, 0.8, 0.8],
-    preview: {
-      cameraDirection: [1.08, 0.72, 1.12],
-      paddingScale: 1.24,
-    },
-  },
-  {
-    id: 'gantry-crane',
-    label: 'Gantry Crane',
-    category: 'outdoor',
-    path: '/models/gantry_crane.glb',
-    defaultScale: [1.2, 1.2, 1.2],
-    preview: {
-      cameraDirection: [1, 0.62, 1.12],
-      paddingScale: 1.28,
-    },
-  },
   withDefaultPreview({
     id: 'goliath-crane',
     label: 'Goliath Crane',
@@ -101,26 +83,6 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
     defaultScale: [1, 1, 1],
   }),
   {
-    id: 'house',
-    label: 'House',
-    category: 'indoor',
-    path: '/models/house.glb',
-    defaultScale: [1, 1, 1],
-  },
-  {
-    id: 'ship',
-    label: 'Ship',
-    category: 'outdoor',
-    path: '/models/ship.glb',
-    defaultScale: [1, 1, 1],
-    preview: {
-      cameraDirection: [1.24, 0.58, 1.3],
-      paddingScale: 1.32,
-    },
-    // ship.glb는 origin이 흘수선(용골 -1.03, 상부 +4.63)이라 수면에 그대로 놓는다.
-    floating: true,
-  },
-  {
     id: 'hanwha-ocean-lngc-174k',
     label: 'LNGC 174K',
     category: 'outdoor',
@@ -133,34 +95,6 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
       paddingScale: 1.32,
     },
   },
-  withDefaultPreview({
-    id: 'r370',
-    label: 'R370',
-    category: 'outdoor',
-    path: '/models/R370.glb',
-    defaultScale: [0.1, 0.1, 0.1],
-  }),
-  withDefaultPreview({
-    id: 'ttc-27',
-    label: 'TTC-27',
-    category: 'outdoor',
-    path: '/models/TTC-27.glb',
-    defaultScale: [0.1, 0.1, 0.1],
-  }),
-  withDefaultPreview({
-    id: 'ttc-28',
-    label: 'TTC-28',
-    category: 'outdoor',
-    path: '/models/TTC-28.glb',
-    defaultScale: [0.1, 0.1, 0.1],
-  }),
-  withDefaultPreview({
-    id: 'ttc-k5000',
-    label: 'TTC-K5000',
-    category: 'outdoor',
-    path: '/models/TTC-K5000.glb',
-    defaultScale: [0.1, 0.1, 0.1],
-  }),
   withDefaultPreview({
     id: '1p-3bay',
     label: '1P 3Bay',
@@ -319,35 +253,4 @@ export const sceneModelCatalog: SceneModelCatalogItem[] = [
   // 리포에 없어 팔레트에 깨진 타일이 뜨고, 에디터를 열 때마다 404 프리로드가
   // 나가고, 드롭하면 실패했다. 어떤 씬도 참조하지 않아 안전하게 뺐다.
   // 에셋을 확보하면 다시 추가할 것 — 파일부터 넣고 등록하는 순서로.
-  withDefaultPreview({
-    id: 'gc-04-body',
-    label: 'GC-04 Body',
-    category: 'etc',
-    path: '/models/gc-04/gc_04_body.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'gc-04-hook',
-    label: 'GC-04 Hook',
-    category: 'etc',
-    path: '/models/gc-04/gc_04_hook.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'gc-04-hook-rope',
-    label: 'GC-04 Hook Rope',
-    category: 'etc',
-    path: '/models/gc-04/gc_04_hook_rope.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  withDefaultPreview({
-    id: 'gc-04-trolly',
-    label: 'GC-04 Trolly',
-    category: 'etc',
-    path: '/models/gc-04/gc_04_trolly.glb',
-    defaultScale: [1, 1, 1],
-  }),
-  // gc-04 카메라/포인트/라이다 FOV(soslab, ouster) 4종 제거 (2026-09-01):
-  // 어떤 씬도 참조하지 않았고, GLB(배포본·assets-src 원본)와 썸네일도 함께
-  // 삭제했다. 다시 필요하면 git 히스토리에서 파일부터 복구하고 재등록할 것.
 ];

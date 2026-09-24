@@ -41,6 +41,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - `pnpm optimize:glb` 는 join/prune 을 쓰지 않아 Empty 계층·노드 이름이 보존된다(리깅 자산의 전제 — `docs/agents/tag-mapping-rig.md`).
 - `pnpm optimize:glb` 는 지도 파이프라인과 같이 `KHR_materials_transmission` 을 알파 블렌딩 반투명으로 치환한다(`stripTransmission`). transmission 머티리얼 하나가 씬 전체를 한 번 더 그리게 만들기 때문이며, 배포 모델에는 이 확장이 남아 있지 않다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다**. `pnpm perf:scene` 은 진단 리포트일 뿐(경고와 join 후보 표기, LOD>0 노드는 렌더 집계에서 제외)이며 모델 추가·교체 후 한 번 돌려 본다.
+- 카탈로그(`sceneModelCatalog`)에 없어도 런타임이 직접 로드하는 GLB 가 있다: `crane.glb`·`gantry_crane.glb`·`TTC-27.glb`(자산 크레인 타입 → 모델 표 `packages/domain/src/3d/model/crane-type-model.ts`, `packages/widgets/src/goliath-crane/ui/goliath-3d-viewer.tsx`), `goliath_crane_body.glb`·`goliath_crane_trolley.glb`(`crane-zone-config.ts` parts), `man.glb`·`car.glb`·`fork_lift.glb`(충돌 가드 시뮬레이션 `collision-guard-object-model.tsx`). 씬 JSON·카탈로그만 보고 GLB 를 지우지 않는다.
 
 ### philly-terrain: 공간 타일 + LOD 체인
 
@@ -69,7 +70,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 
 - **거부 조건**: 어떤 씬에서든 그 모델에 `meshOverrides`·내부 노드 대상 `tagMappings`·`rigId` 가 있거나 GLB 에 skin·animation 이 있으면 스크립트가 거부한다 — LOD 사본이 구동을 못 따라간다(`goliath_crane` 이 그 예). 노드당 `MIN_NODE_TRIS` 미만은 대상 아님(Block 류).
 - 이어서 `pnpm optimize:glb <파일>` 필수. LOD 전 원본은 `assets-src/models/<파일>.nolod` — 자산을 새 버전으로 교체할 때 함께 지운다.
-- 적용됨: TTC-27·TTC-28·TTC-K5000·R370·gantry_crane·crane·hanwha-ocean-lngc-174k.
+- 적용됨: TTC-27·gantry_crane·crane·hanwha-ocean-lngc-174k.
 
 ### 정적 장식 모델의 프리미티브 병합
 
@@ -112,6 +113,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - LOD 노드 숨김은 최상위 캐리어만 — 자식 Mesh 의 복제된 extras 로 끄지 않는다.
 - three 를 업그레이드하면 `apps/shell/public/basis/r<REVISION>/` 을 새 REVISION 으로 재복사한다.
 - `sceneModelCatalog` 변경·미리보기 룩 변경 시 `public/previews/` 를 재생성해 함께 커밋한다.
+- GLB 를 지우기 전에 씬 JSON·카탈로그뿐 아니라 코드 참조(`grep -rn <파일명> packages apps scripts`)까지 확인한다 — 카탈로그 밖에서 직접 로드하는 GLB 목록은 위 "배포본과 원본".
 - 새 카탈로그 지도는 `kind` 를 정한다 — `ground` 는 드롭 바닥·(체크 시) 카메라 기준, `context` 는 Lambert·LOD·그림자 제외 규칙을 받는다.
 - 배포 GLB 를 KTX2 로 일괄 전환하지 않는다(운영 장비 육안 A/B·BC7 확인 전).
 

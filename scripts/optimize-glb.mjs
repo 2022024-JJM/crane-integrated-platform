@@ -127,7 +127,7 @@ async function stripTransmission(inputPath, outputPath) {
 
 const only = process.argv.slice(2); // 파일명 인자로 부분 실행 가능
 
-/** models/ 를 재귀 탐색한다(gc-04/ 등 하위 디렉토리 포함). MODELS_DIR 기준 상대 경로 반환. */
+/** models/ 를 재귀 탐색한다(하위 디렉토리 포함). MODELS_DIR 기준 상대 경로 반환. */
 function listGlbFiles(dir, prefix = '') {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

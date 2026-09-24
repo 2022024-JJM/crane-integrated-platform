@@ -245,8 +245,7 @@
     "noModelsInCategory": "이 카테고리에 등록된 모델이 없습니다.",
     "modelCategories": {
       "indoor": "내업",
-      "outdoor": "외업",
-      "etc": "기타"
+      "outdoor": "외업"
     },
     "paletteTabs": {
       "models": "모델",
