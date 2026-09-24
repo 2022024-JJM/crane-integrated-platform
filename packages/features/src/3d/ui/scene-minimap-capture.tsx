@@ -3,8 +3,10 @@ import { useProgress } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   Box3,
+  Color,
   OrthographicCamera,
   WebGLRenderTarget,
+  type Object3D,
   type Scene,
   type WebGLRenderer,
 } from 'three';
@@ -20,10 +22,12 @@ import {
   type MinimapFrame,
 } from '../lib/minimap';
 import {
+  MINIMAP_SEA_CLEAR_COLOR,
   autoExposure,
   meanLinearLuminance,
   toDisplayPixels,
 } from '../lib/minimap-image';
+import { isOceanWater } from '../lib/ocean-water';
 import { sceneLightingInfo } from '../model/scene-lighting-info';
 import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
 
@@ -44,11 +48,18 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 타깃 전환을 되돌려 두기만 하면 화면에 영향이 없다. demand 루프라 캡처를
  * 무장(arm)할 때 invalidate 로 프레임 하나를 요청한다.
  *
- * 렌더 타깃에 스텐실 버퍼가 **꼭** 있어야 한다: 바다 평면은 깊이 대신
- * "불투명 씬이 그려졌다" 스텐실 비트가 없는 픽셀에만 그려지는데(scene-stencil
- * .ts), 스텐실 없는 프레임버퍼에선 스텐실 테스트가 항상 통과라 바다가 야드
- * 위를 덮어 버린다. MSAA(samples)는 쓰지 않는다 — 멀티샘플 타깃의 readback
- * 은 resolve 경로가 따로 필요하고 미니맵 해상도에선 이득이 없다.
+ * 렌더 타깃에 스텐실 버퍼가 **꼭** 있어야 한다: 실루엣 마스크/헐(충돌
+ * 하이라이트 중 캡처)이 자기 스텐실 비트로 발자국을 거르는데(silhouette-
+ * outline.ts), 스텐실 없는 프레임버퍼에선 테스트가 항상 통과라 헐이 모델
+ * 위를 덩어리로 덮는다. MSAA(samples)는 쓰지 않는다 — 멀티샘플 타깃의
+ * readback 은 resolve 경로가 따로 필요하고 미니맵 해상도에선 이득이 없다.
+ *
+ * 바다(OceanWater)는 캡처 동안 숨긴다 — 직교 카메라엔 미러 패스가 없고
+ * (포크가 건너뛴다) 반사 없는 물은 검다. 숨기기만 하면 바다 영역이 clear
+ * color(검정)로 남는다: 직교 카메라에선 equirect 배경이 1m 큐브로 그려져
+ * 보이지 않기 때문이다. 그래서 물을 숨긴 캡처에서만 clear color 를 바다 톤
+ * (lib/minimap-image MINIMAP_SEA_CLEAR_COLOR)으로 바꾸고 끝나면 되돌린다.
+ * 바다 없는 씬은 종전과 같은 검정 배경·노출이다.
  *
  * 그림자는 shadowMap.autoUpdate=false 라 메인 카메라 기준의 마지막 맵이 그대로
  * 쓰인다 — 탑뷰에선 일부만 맞지만 미니맵에서 티가 나지 않는다. 셰이더
@@ -178,8 +189,26 @@ function captureTopView(
   });
   const previousTarget = gl.getRenderTarget();
   const pixels = new Uint8Array(width * height * 4);
+  /** 캡처 동안 숨긴 바다 — finally 에서 되켠다. */
+  const hiddenWater: Object3D[] = [];
+  let previousClearColor: Color | null = null;
+  let previousClearAlpha = 1;
   try {
+    scene.traverse((object) => {
+      if (isOceanWater(object) && object.visible) {
+        object.visible = false;
+        hiddenWater.push(object);
+      }
+    });
     gl.setRenderTarget(target);
+    if (hiddenWater.length > 0) {
+      // RT 를 바인딩한 **뒤**에 부른다 — setClearColor 는 호출 시점의 출력
+      // 색공간으로 변환하므로 앞에서 부르면 sRGB 로 인코딩된 값이 linear RT
+      // 에 들어가 toDisplayPixels 가 두 번 인코딩한다.
+      previousClearColor = gl.getClearColor(new Color());
+      previousClearAlpha = gl.getClearAlpha();
+      gl.setClearColor(MINIMAP_SEA_CLEAR_COLOR, 1);
+    }
     gl.clear(true, true, true);
     gl.render(scene, camera);
     gl.readRenderTargetPixels(target, 0, 0, width, height, pixels);
@@ -187,7 +216,12 @@ function captureTopView(
     console.warn('[scene-minimap] 탑뷰 스냅샷 실패', error);
     return null;
   } finally {
+    for (const water of hiddenWater) water.visible = true;
     gl.setRenderTarget(previousTarget);
+    // 화면 타깃으로 돌아온 뒤 원래 clear color 를 다시 변환해 넣는다.
+    if (previousClearColor) {
+      gl.setClearColor(previousClearColor, previousClearAlpha);
+    }
     target.dispose();
   }
 

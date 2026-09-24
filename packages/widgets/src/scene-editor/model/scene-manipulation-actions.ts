@@ -207,6 +207,20 @@ export function createSceneManipulationActions({
   };
 
   /**
+   * 바다 표시 설정. 항상 명시 boolean 을 쓴다 — 미지정(undefined) 씬은
+   * 첫 호출부터 레거시 규칙 → 명시 상태로 바뀌는 편집이라 저장 대상이다
+   * (스위치는 유효값의 반대를 넘긴다). 같은 명시값이면 참조를 유지해
+   * 히스토리에 쌓이지 않는다.
+   */
+  const setSeaVisible = (visible: boolean) => {
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (prev.sea === visible) return prev;
+      return { ...prev, sea: visible };
+    });
+  };
+
+  /**
    * 조명 설정(그림자·태양 위치) 변경. patch를 기존 값에 merge한 뒤 기본값
    * 필드는 제거해 정규화한다 — "필드 없음 = 기본값"이라(sanitize와 같은 규칙)
    * 기본값으로 되돌린 씬이 저장본에 lighting 필드를 남기지 않고, 기본값으로의
@@ -381,6 +395,7 @@ export function createSceneManipulationActions({
     addSceneMap,
     selectPlacedMap,
     setEnvironmentId,
+    setSeaVisible,
     setLighting,
     selectPlacedModel,
     selectPlacedText,

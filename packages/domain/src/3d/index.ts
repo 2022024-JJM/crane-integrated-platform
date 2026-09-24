@@ -209,6 +209,7 @@ export {
   getEnvironmentFileUrlByRegionId,
   resolveEnvironmentFileUrl,
 } from './model/scene-environment-registry';
+export { resolveSeaVisible } from './lib/scene-sea';
 export {
   withBaseUrl,
   registerAssetHashManifest,

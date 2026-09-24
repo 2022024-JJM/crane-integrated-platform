@@ -325,7 +325,8 @@ export function DashboardRegionPreviewModal({
                 toolbarLayout="none"
                 // 자동재생 off — 정지 씬은 프레임 거버너가 틱을 걸지 않아
                 // 유휴 렌더가 0 이다(알람 색 전환·조작은 각 경로의 invalidate 가
-                // 프레임을 깨운다). 바다 씬이면 거버너가 파도만 30fps 로 잇는다.
+                // 프레임을 깨운다). 바다가 켜진 씬(resolveSeaVisible)이면
+                // 거버너가 파도·반사만 30fps 로 잇는다.
                 autoStartSimulation={false}
               />
             </div>

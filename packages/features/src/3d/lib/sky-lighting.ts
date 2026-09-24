@@ -74,6 +74,11 @@ export interface SkyLighting {
   skyIntensity: number;
   /** 태양이 방향광에 기여하는 세기(고도 곡선). */
   sunIntensity: number;
+  /**
+   * 태양 자체의 색(고도 곡선, 노을→백색) — 작업등과 섞기 **전** 값. 바다의
+   * 태양 하이라이트가 읽는다(keyColor 는 밤에 작업등 색이 섞여 부적합).
+   */
+  sunColor: RgbTuple;
   /** 야간 작업등이 방향광에 기여하는 세기(점등 곡선 × 옵션). */
   yardIntensity: number;
   /** 방향광 세기 = sunIntensity + yardIntensity. */
@@ -339,6 +344,7 @@ export function resolveSkyLighting(
     daylight,
     skyIntensity,
     sunIntensity,
+    sunColor,
     yardIntensity,
     keyIntensity,
     keyColor,

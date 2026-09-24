@@ -54,7 +54,11 @@ import {
   readSceneTimeMs,
   type SceneTimeSource,
 } from '../model/scene-time-source';
-import { sceneLightingInfo } from '../model/scene-lighting-info';
+import {
+  publishSunLight,
+  sceneLightingInfo,
+} from '../model/scene-lighting-info';
+import { excludeFromReflection } from '../model/scene-reflection-exclusions';
 import { useSceneClockStore } from '../model/use-scene-clock-store';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -76,10 +80,9 @@ import type { Vector3Tuple } from '@crane/core/types/math';
  *
  * far: 기본값(1000)이면 줌 아웃 시 카메라-타깃 거리가 1000을 넘는 순간
  *   지도 중앙부터 잘려나간다. 최대 궤도 반경(camera-limits.ts
- *   CAMERA_MAX_DISTANCE 30000) + 씬 반폭보다 커야 잘림이 없다. 바다 평면
- *   (scene-environment.tsx SeaSurface, 반경 40000)이 들어오면서 50000으로
- *   올렸다 — 원판이 far에 잘리면 잘린 경계가 직선으로 드러나므로 원판
- *   반경보다 커야 한다.
+ *   CAMERA_MAX_DISTANCE 30000) + 씬 반폭보다 커야 잘림이 없다. 바다 원판
+ *   (scene-water.tsx SEA_RADIUS 40000)이 far 에 잘리면 잘린 경계가 직선으로
+ *   드러나므로 원판 반경보다 커야 한다.
  * near: 0.1(three 기본)을 쓴다. 에디터만 0.5를 쓰고 있었는데, near를 올리면
  *   깊이 정밀도는 좋아지지만 카메라에 바짝 붙은 지오메트리가 잘려 보인다 —
  *   뷰어와 다른 값을 쓸 이유가 없다.
@@ -98,8 +101,8 @@ export const SCENE_CAMERA_CLIP = { near: 0.1, far: 50000 } as const;
  * 골리앗 충돌가드 모드에서 먼저 검증된 값 — 라벨은 DOM(Html)이라 텍스트
  * 선명도와 무관하고, MSAA(antialias)가 켜져 있어 엣지도 깨끗하다.
  * 2026-09-11 발열 절감 때 1.25 로 내렸다가 되돌렸다 — 핵심(야드 지도·
- * 크레인)의 선명도가 우선이고, 절감은 주변 지형 Lambert·LOD·바다 감쇠
- * 거리처럼 관제와 무관한 곳에서 한다.
+ * 크레인)의 선명도가 우선이고, 절감은 주변 지형 Lambert·LOD·바다 반사 제외
+ * (미러 패스)처럼 관제와 무관한 곳에서 한다.
  *
  * ThreeSceneViewer(@crane/ui)의 기본값도 같은 [1, 1.5]다 — 그 패키지는
  * features를 참조할 수 없어(SCENE_CAMERA_CLIP과 같은 사정) 리터럴로 들고
@@ -151,9 +154,10 @@ export const SCENE_GL_OPTIONS = {
    *
    * 비용: three(r183)가 프래그먼트에서 gl_FragDepth를 써 early-Z가 꺼진다 —
    * DPR 상한 1.5로 프래그먼트 예산은 이미 관리 중이라 감수한다.
-   * 제약: raw ShaderMaterial은 logdepthbuf 청크를 직접 include해야 깊이가
-   * 맞는다(sea-surface-material.ts 참고). onBeforeCompile 패치는 표준 셰이더
-   * 템플릿에 청크가 이미 있어 무관하다.
+   * 제약: 깊이를 쓰는 raw ShaderMaterial 은 logdepthbuf 청크를 직접 include
+   * 해야 깊이가 맞는다 — 이 저장소의 raw 셰이더(바다 lib/ocean-water.ts,
+   * 에디터 격자)는 깊이를 읽지도 쓰지도 않아 청크가 없다. onBeforeCompile
+   * 패치는 표준 셰이더 템플릿에 청크가 이미 있어 무관하다.
    */
   logarithmicDepthBuffer: true,
   powerPreference: 'high-performance',
@@ -373,8 +377,10 @@ function useSunAnchor(
 
 /**
  * 하늘의 태양·달 표식 거리(카메라 기준, 월드 unit). SCENE_CAMERA_CLIP.far
- * (50000) 안이면서 지형·건물보다 멀어 자연스럽게 가려진다. 바다 평면(반경
- * 40000, depthWrite 없음)은 표식을 가리지 않는다.
+ * (50000) 안이면서 지형·건물보다 멀어 자연스럽게 가려진다. 바다(scene-water
+ * .tsx, 반경 40000, 깊이 안 씀)는 표식을 가리지 않고, 표식은 바다 미러
+ * 패스에서 빠진다(excludeFromReflection — 메인 카메라 기준 위치라 반사에선
+ * 어긋난다).
  */
 const CELESTIAL_DISTANCE = 20_000;
 /** 태양 글로우 스프라이트 한 변 — 거리 20000 에서 시각 지름 약 7°(핵 ~0.8°). */
@@ -388,6 +394,8 @@ const MOON_SPRITE_SIZE = 1000;
 const SKY_TINT_RADIUS = 45_000;
 /** 보조 투광등 위치 거리 — 방향광은 위치→타깃(원점) 방향만 쓴다. */
 const FILL_LIGHT_DISTANCE = 1000;
+/** manual 태양의 색(백색) — 바다 태양 유니폼(publishSunLight)이 읽는다. */
+const MANUAL_SUN_COLOR: RgbTuple = [1, 1, 1];
 
 interface SolarFrameState {
   geo: SceneSiteGeo | null;
@@ -487,13 +495,16 @@ function useSkyTintDome() {
     return mesh;
   }, []);
 
-  useEffect(
-    () => () => {
+  // 메인 패스에서 이미 물 픽셀을 덮으므로 반사 RT 에도 그리면 이중 틴트 +
+  // 톤매핑 회색화가 된다 — 바다 미러 패스에서 뺀다.
+  useEffect(() => {
+    const release = excludeFromReflection(dome);
+    return () => {
+      release();
       dome.geometry.dispose();
       dome.material.dispose();
-    },
-    [dome],
-  );
+    };
+  }, [dome]);
 
   return dome;
 }
@@ -521,14 +532,16 @@ function useCelestialSprite(
     return object;
   }, [createTexture, size]);
 
-  useEffect(
-    () => () => {
-      if (!sprite) return;
+  // 메인 카메라 기준 위치라 미러 카메라에선 어긋난다 — 바다 미러 패스에서 뺀다.
+  useEffect(() => {
+    if (!sprite) return;
+    const release = excludeFromReflection(sprite);
+    return () => {
+      release();
       sprite.material.map?.dispose();
       sprite.material.dispose();
-    },
-    [sprite],
-  );
+    };
+  }, [sprite]);
 
   return sprite;
 }
@@ -566,6 +579,9 @@ function useCelestialSprite(
  *   세기·색·배경 밝기는 React 상태가 아니라 useFrame 에서 ref 로 직접 쓴다
  *   (이 저장소의 매-프레임 갱신 규칙). 모드를 떠날 때는 resetToManualLook
  *   으로 원복한다.
+ * 두 모드 모두 실제 태양의 방향·색·세기를 sceneLightingInfo 로 발행한다
+ * (publishSunLight) — 바다(SceneWater)의 하이라이트가 읽는다. 밤하늘 틴트
+ * 돔·태양/달 스프라이트는 바다 미러 패스에서 빠진다(excludeFromReflection).
  *
  * 예외: collision-guard-object-model은 `= false`를 **명시적으로** 넣는다.
  * GLB가 true로 실려 올 수 있어 방어하는 코드라 성격이 다르다.
@@ -638,8 +654,8 @@ export function SceneLighting({
   const sunSprite = useCelestialSprite(createSunGlowTexture, SUN_SPRITE_SIZE);
   const moonSprite = useCelestialSprite(createMoonTexture, MOON_SPRITE_SIZE);
   // useFrame 은 메모 값(sunSprite)을 직접 고치지 않고 ref 를 거친다 —
-  // 훅이 돌려준 값을 변경하면 react-hooks/immutability 에 걸린다(SeaSurface
-  // 의 uniform ref 와 같은 사정).
+  // 훅이 돌려준 값을 변경하면 react-hooks/immutability 에 걸린다(SceneWater
+  // 의 프레임 상태 ref 와 같은 사정).
   const sunSpriteRef = useRef<Sprite | null>(null);
   const moonSpriteRef = useRef<Sprite | null>(null);
   const skyTintDome = useSkyTintDome();
@@ -709,6 +725,13 @@ export function SceneLighting({
 
     // 0) 이 프레임의 태양 방향 — manual 은 메모 값, solar 는 시각으로 계산.
     let sunDir = manualSunDir;
+    // 바다 태양 유니폼의 출처는 키 라이트가 아니라 실제 태양 — 밤엔 키에
+    // 작업등(마스트 방향)이 섞여 물 위에 난색 글린트가 생기고, 박명엔 키 고도
+    // 클램프로 하늘의 태양 스프라이트와 어긋난다. manual 은 수동 태양·백색·
+    // 기준 세기(배율 1).
+    let waterSunDir = manualSunDir;
+    let waterSunColor = MANUAL_SUN_COLOR;
+    let waterSunIntensity = SCENE_LIGHTING.directionalIntensity;
     if (solarGeo) {
       const solar = solarRef.current;
       const timeMs = readSceneTimeMs(
@@ -774,6 +797,10 @@ export function SceneLighting({
       if (snapshot) {
         sunDir = solar.keyDir;
         const sky = snapshot.sky;
+        // 진짜 태양(고도 클램프 없음)·작업등 혼합 전 색·세기.
+        waterSunDir = solar.sunDir;
+        waterSunColor = sky.sunColor;
+        waterSunIntensity = sky.sunIntensity;
         // 세기·색·하늘 밝기 — 값이 다를 때만 쓴다(R3F 리렌더의 prop 재적용도
         // 여기서 다시 잡힌다).
         if (light.intensity !== sky.keyIntensity) {
@@ -855,6 +882,14 @@ export function SceneLighting({
         }
       }
     }
+
+    // 바다(SceneWater)가 읽는 태양 — 값이 바뀔 때만 새 튜플이 발행된다.
+    publishSunLight(
+      sceneLightingInfo,
+      waterSunDir,
+      waterSunColor,
+      waterSunIntensity,
+    );
 
     // 1) 초점 = 시선과 지면(y=0)의 교점. 수평·상향 시선이면 카메라 바로
     //    아래(폴백은 씬 앵커가 아니라 카메라 — 시점을 따라가는 게 목적).

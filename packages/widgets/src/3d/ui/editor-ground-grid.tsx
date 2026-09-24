@@ -23,7 +23,7 @@ const noRaycast = () => null;
  * depthTest 를 끄고 renderOrder 0.5 로 그려 씬 객체(0) 위, 선택 박스(1)·
  * 기즈모(Infinity) 아래에 놓인다 — 모델 안쪽이어도 선택 박스처럼 보인다.
  * raycast 를 끊어 마퀴·드롭·빈 곳 클릭(선택 해제)이 격자에 먹히지 않게
- * 한다(바다 평면 scene-environment 와 같은 규칙).
+ * 한다(바다 scene-water.tsx 와 같은 규칙).
  */
 export function EditorGroundGrid() {
   const meshRef = useRef<Mesh | null>(null);

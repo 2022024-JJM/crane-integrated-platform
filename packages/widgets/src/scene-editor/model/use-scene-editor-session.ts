@@ -105,6 +105,7 @@ interface UseSceneEditorSessionResult {
   addSceneMap: (catalogItem: SceneMapCatalogItem) => void;
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
+  setSeaVisible: (visible: boolean) => void;
   setLighting: (
     patch: Partial<SavedLightingInfo>,
     options?: { recordHistory?: boolean },
@@ -324,6 +325,7 @@ export function useSceneEditorSession({
     addSceneMap: manipulation.addSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
+    setSeaVisible: manipulation.setSeaVisible,
     setLighting: manipulation.setLighting,
     selectedMap,
     updateSelectedMapCameraBounds,

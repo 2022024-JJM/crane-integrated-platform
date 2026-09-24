@@ -42,6 +42,17 @@ export interface SavedSceneInfo {
    */
   environmentId?: string | null;
   /**
+   * 바다 표시. 판정은 resolveSeaVisible(lib/scene-sea.ts) 한 곳이다.
+   *
+   * - `undefined`: 지정한 적 없는 씬 → 배경(EXR)이 resolve 되면 바다가 있다는
+   *   레거시 규칙. 기존 저장본이 바다를 잃지 않게 하는 경로다.
+   * - `true` / `false`: 사용자가 에디터에서 **명시**한 값. 배경 유무와 무관.
+   *
+   * `environmentId`·`lighting` 과 같이 씬 **파일 단위**로 저장된다 — okpo.json
+   * 은 dock-1·dock-2 가 공유하므로 한쪽에서 끄면 둘 다 꺼진다.
+   */
+  sea?: boolean;
+  /**
    * 조명 설정 — 없으면 전부 기본값(그림자 Off, 태양 남중). 기본값 씬은
    * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
    */
@@ -296,11 +307,7 @@ export interface SceneModelCatalogItem {
   floating?: boolean;
 }
 
-export const SCENE_MODEL_CATEGORIES = [
-  'indoor',
-  'outdoor',
-  'map',
-] as const;
+export const SCENE_MODEL_CATEGORIES = ['indoor', 'outdoor', 'map'] as const;
 
 export type SceneModelCategory = (typeof SCENE_MODEL_CATEGORIES)[number];
 

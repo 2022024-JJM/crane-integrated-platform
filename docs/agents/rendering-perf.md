@@ -1,4 +1,4 @@
-# 3D 렌더링·성능 — demand 프레임루프, 그림자, 바다 스텐실, 낮/밤 조명, 워밍업 큐
+# 3D 렌더링·성능 — demand 프레임루프, 그림자, 바다 미러 반사·스텐실, 낮/밤 조명, 워밍업 큐
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -17,7 +17,7 @@
 | 씬 시계·태양 UI 상태 | `packages/features/src/3d/model/use-scene-clock-store.ts`, `model/use-scene-sun-state.ts`, `model/scene-time-source.ts` |
 | 씬 시계 UI | `packages/features/src/3d/ui/scene-clock-panel.tsx`, `ui/scene-clock-menu.tsx`(모니터링 독), `packages/widgets/src/3d/ui/palette-environment-section.tsx`(에디터 배경 탭) |
 | shadow map 온디맨드 무효화 | `packages/domain/src/3d/lib/shadow-invalidation.ts`(`invalidateShadows`) |
-| 바다 셰이더·배경 환경 | `packages/features/src/3d/ui/sea-surface-material.ts`, `ui/scene-environment.tsx` |
+| 바다(미러 반사)·배경 환경 | 포크 `packages/features/src/3d/lib/ocean-water.ts`(`OceanWater` — three r183 `examples/jsm/objects/Water.js` 포크, MIT 헤더), 컴포넌트 `ui/scene-water.tsx`(`SceneWater`), 배경 `ui/scene-environment.tsx`(`SceneEnvironment`), 태양 유니폼 `lib/water-sun-uniforms.ts`(`resolveWaterSunUniforms`), 반사 제외 `lib/water-reflection.ts`·`model/scene-reflection-exclusions.ts`(`excludeFromReflection`), 표시 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`). 노멀맵 `apps/shell/public/textures/waternormals.jpg` 는 three.js r183 examples 의 파일이다(MIT) |
 | 불투명 씬 스텐실 표식 | `packages/domain/src/3d/lib/scene-stencil.ts`(`markSceneOpaqueStencil`), 켜는 곳 `packages/domain/src/3d/ui/model-mesh.tsx`(`useClonedModel`) |
 | 컨텍스트 지형 Lambert 변환 | `packages/domain/src/3d/lib/lambert-material.ts`, `GltfModel shading='lambert'` |
 | 지형·모델 LOD 런타임 전환 | `packages/features/src/3d/ui/scene-terrain-lod.tsx`(`SceneTerrainLod`), 수식 `lib/terrain-lod.ts`(`TERRAIN_LOD_THRESHOLD_PX`) |
@@ -32,14 +32,14 @@
 
 세 캔버스 모두 `frameloop='demand'` 다. 프레임은 `SceneFrameGovernor` 가 만든다.
 
-- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다 EXR 씬, 영역 침범 활성.
+- 애니메이션 소스가 하나라도 있으면 `ANIMATING_FPS` 로 틱을 돌린다. 소스: 가상 태그 재생, 실시간(최근 메시지 수신이 있는 경우만 — `useRealtimeStore.activity.lastMessageAt`), 리플레이 재생, 기즈모 드래그, 바다가 켜진 씬(`resolveSeaVisible`), 영역 침범 활성.
 - 소스가 멈춘 뒤 `ANIMATION_GRACE_MS` 동안은 계속 틱을 돌려 스무딩이 정착하게 한다.
 - solar 태양만 있으면 `SLOW_FPS` 로 드물게 그린다. 정지 씬은 틱이 없다.
 - 조작(OrbitControls·표면 카메라)은 스스로 `invalidate` 해 주사율로 그려진다. drei `OrbitControls`·`TransformControls`·`Text` 와 R3F 리컨실러(prop 변경·마운트)도 스스로 invalidate 한다.
 
 React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestSceneFrame()` 을 부른다. 거버너가 자기 `invalidate` 를 여기에 등록한다. 이미 배선된 곳: `rigValueStore` 의 set/reset/restore, `SceneLighting` 의 조명 설정·씬 시계 구독, `SceneEnvironment` 의 배경 교체. 스무딩 잔여는 `useRigDriver` 가 `hasPendingSmoothing()` 으로 프레임마다 다음 프레임을 스스로 요청해 러너 없이 들어온 값도 끝까지 수렴한다 — 단 거버너가 주기 틱을 돌리는 동안(`isSceneFrameTickerActive()`)은 부르지 않는다. useFrame 안에서 부른 invalidate 는 R3F 가 `frames=2` 로 두어 rAF 루프가 주사율로 자체 지속되므로, 이 가드가 없으면 재생 중 fps 상한이 무력화된다.
 
-성능 확인은 `localStorage crane:perf-hud='1'` 로 켜는 HUD(드로우콜·삼각형·프레임 ms·fps — demand 루프라 fps 는 실제로 그린 빈도). 에디터 perf HUD 의 드로우콜·삼각형은 GizmoHelper 의 Hud 가 마지막으로 그린 기즈모 씬 값이라 참고하지 않고 fps·ms 만 본다.
+성능 확인은 `localStorage crane:perf-hud='1'` 로 켜는 HUD(드로우콜·삼각형·프레임 ms·fps — demand 루프라 fps 는 실제로 그린 빈도). 드로우콜·삼각형은 shadow pass 뒤 메인 패스 + 바다 미러 패스의 합이다(shadow pass 는 three 가 그 뒤 `info.reset()` 을 불러 빠진다). 에디터 perf HUD 의 드로우콜·삼각형은 GizmoHelper 의 Hud 가 마지막으로 그린 기즈모 씬 값이라 참고하지 않고 fps·ms 만 본다.
 
 ### 절감은 핵심이 아니라 주변에서
 
@@ -48,11 +48,16 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - DPR 상한은 `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 기본값 두 곳이 같은 값(1.5)이어야 한다 — 함께 바꾼다.
 - 컨텍스트 지형(kind `'context'`)은 `GltfModel shading='lambert'` 로 PBR 대신 Lambert 다(`lambert-material.ts`, 원본 머티리얼당 변환본 캐시). 조명·낮/밤엔 똑같이 반응하고 스펙큘러·radiance 샘플링만 없다. 모니터링·에디터 같은 규칙.
 - 타일 LOD 임계는 `TERRAIN_LOD_THRESHOLD_PX`(device px). 컨텍스트 지형과 LOD 체인이 붙은 모델에만 LOD 가 있다(생성 절차는 `docs/agents/assets-glb.md`).
-- 바다 파도는 셰이더가 감쇠 거리 밖 픽셀의 파도 계산을 건너뛴다(`sea-surface-material.ts` early-out).
+- 바다 미러 패스는 컨텍스트 지형 루트·밤하늘 틴트 돔·태양/달 스프라이트를 빼고 그린다(`OceanWater` 의 `excludedObjects` — `resolveReflectionExcludedMapIds` + `excludeFromReflection`). 지형 루트 하나를 숨기면 three 가 서브트리를 통째로 건너뛰어 LOD 타일 전부가 빠진다. 반사 RT 크기는 `scene-water.tsx` 의 `WATER_REFLECTION_SIZE` 하나.
 
-### 바다 평면은 불투명 패스 뒤에 스텐실로
+### 바다는 미러 반사 + 불투명 패스 뒤 스텐실
 
-바다는 renderOrder 0.25 로 불투명 패스 뒤에 그려진다. 모든 GLTF 인스턴스 메시 머티리얼이 `markSceneOpaqueStencil`(`useClonedModel` 이 원본에 켬, clone 이 물려받음)로 "불투명 씬이 그려졌다" 비트를 ZPass 에 찍고, 바다(`sea-surface-material.ts`)는 depthTest/depthWrite 없이 그 비트가 없는 픽셀에서만 그려진다. 지도·드라이독·잠긴 선체가 깊이 순서와 무관하게 바다 위에 남으면서, 가려진 픽셀은 early stencil 로 셰이더 앞에서 탈락한다. 실루엣 마스크·헐은 자기 비트만 writeMask/funcMask 로 본다(비트 값은 `scene-stencil.ts`).
+바다는 `ui/scene-water.tsx` 의 `SceneWater` 가 만드는 `OceanWater`(`lib/ocean-water.ts`, three r183 `Water.js` 포크) 원판 하나다. 켜짐 여부는 `resolveSeaVisible(regionId, sceneInfo)`(`scene-sea.ts`) 한 곳이 정하고, 세 캔버스가 그 값을 `SceneEnvironment`·`SceneFrameGovernor`·`SceneSurfaceCamera`·모델 `seaSubmersion` 에 넘긴다. `SceneEnvironment` 는 EXR 배경(`EnvironmentBackground`)과 `SceneWater` 를 한 `Suspense` 경계 안에 두어 둘이 같이 나타나고 배경 교체에 물이 리마운트되지 않는다. 씬별 켜고 끄기는 `docs/agents/3d-editor.md`.
+
+- **미러 패스** — `OceanWater.onBeforeRender` 가 메인 카메라를 수면에 반사한 미러 카메라로 씬을 스텐실 딸린 HalfFloat RT 에 한 번 더 그린다(중첩 render). 그동안 물 자신과 제외 객체(`excludedObjects` 게터 — `excludeFromReflection` 으로 등록된 틴트 돔·태양/달 스프라이트, `resolveReflectionExcludedMapIds` 가 고른 컨텍스트 지형 id 를 `modelObjectRegistry` 에서 매 패스 조회)는 `visible=false` 로 빠지고, shadow map 은 다시 그리지 않는다(`shadowMap.autoUpdate` 저장/복원). 직교 카메라면 통째로 건너뛴다(미니맵 캡처). 숨김·플래그·렌더 타깃 복원은 try/finally. RT 에도 스텐실이 있어 실루엣 마스크·헐이 반사에서 뭉개지지 않는다. 미러 패스는 `renderer.info` 를 리셋하지 않아(`info.autoReset` 을 패스 동안 끔) HUD 값은 메인 + 미러 합이다.
+- **메인 패스** — 물은 `SEA_RENDER_ORDER` 로 불투명 패스 뒤에 그려진다. 모든 GLTF 인스턴스 메시 머티리얼이 `markSceneOpaqueStencil`(`useClonedModel` 이 원본에 켬, clone 이 물려받음)로 "불투명 씬이 그려졌다" 비트를 ZPass 에 찍고, 물 머티리얼은 depthTest/depthWrite 없이 그 비트(`SCENE_OPAQUE_STENCIL_BIT`)가 없는 픽셀에서만 그려진다(Equal 스텐실, writeMask 0). 지도·드라이독·잠긴 선체가 깊이 순서와 무관하게 바다 위에 남으면서, 가려진 픽셀은 early stencil 로 셰이더 앞에서 탈락한다. 실루엣 마스크·헐은 자기 비트만 writeMask/funcMask 로 본다(비트 값은 `scene-stencil.ts`).
+- **태양 유니폼** — `SceneWater` 의 useFrame 이 `sceneLightingInfo.sunDirection/sunColor/sunIntensity` 의 튜플 참조가 바뀐 프레임에만 `resolveWaterSunUniforms`(방향 정규화, `SCENE_LIGHTING_BASE.sunIntensity` 기준 배율 상한 1, 수평선 페이드 `WATER_SUN_HORIZON_FADE_Y`, 비유한 값은 낮 폴백)를 거쳐 `sunDirection`·`sunColor` 유니폼에 쓴다. 키 라이트(밤엔 작업등 혼합)가 아니라 실제 태양이라 밤 바다는 어두운 하늘 반사 + `waterColor` 산란으로 어둡다.
+- 포크가 원본과 다른 점: logdepthbuf 청크 없음·depthTest/depthWrite 없음·스텐실 Equal, RT 에 stencil, `excludedObjects`, 직교 스킵, `dispose()`(RT·머티리얼), `info.autoReset` 보존, try/finally, `lights`·shadowmap 청크·`getShadowMask()` 제거(receiveShadow false 라 결과가 같다). 파도 시간은 useFrame 의 delta 누적, 노멀맵은 `ensureRepeatWrapping`(`lib/water-normals.ts`) 으로 useLoader 캐시 텍스처를 멱등 설정. `raycast` 는 no-op 이라 에디터 marquee·드롭에 잡히지 않는다. 폐기는 `SceneWater` cleanup 이 geometry·물을 dispose 하고 `invalidate` 한다(R3F 가 removeChild 에서 invalidate 하지 않는다).
 
 `useClonedModel` 을 거치지 않는 GLTF 로드 경로(collision-guard 감지 객체 등)는 transparent 머티리얼이라 바다 뒤에 블렌딩돼 무관하다.
 
@@ -71,7 +76,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - 방향광은 하나뿐이라 박명엔 태양·작업등 세기의 합을 세기로, 비율(`keyYardBlend`)로 방향·색을 섞어 그림자가 마스트 방향으로 돈다.
 - 작업등은 `useSceneClockStore.yardLights`(세션, 기본 ON, 팝업 스위치)로 끌 수 있고 끄면 달·별빛 수준의 푸른 바닥값 `NIGHT_*_DARK`. 달은 표식·위상 표시용.
 - 합성은 `solar-lighting.ts`: 시각+위치(+옵션) → 스냅샷. 방향광 고도 하한 `KEY_LIGHT_ELEVATION_MIN`, 방향은 `CELESTIAL_ANGLE_STEP` 격자로 양자화 — 정지 화면에서 shadow map 이 매 프레임 다시 그려지지 않는 근거.
-- 적용은 `scene-render-preset.tsx` 의 `SceneLighting`(`regionId`·`timeSource` prop — 세 캔버스가 넘긴다). useFrame 에서 초 단위로 재계산해 방향광·환경광·`scene.backgroundIntensity`·`environmentIntensity` 를 직접 쓰고, 바다 평면은 `backgroundIntensity` 를 `uEnvIntensity` 로 미러링해 수평선 이음새가 없다. 하늘의 태양 글로우·달 표식은 카메라 추종 스프라이트로 EXR 배경이 있을 때만. 모드를 떠나면 `resetToManualLook`. 계산한 하늘 국면·태양 고도·작업등은 `model/scene-lighting-info.ts` 의 mutable `sceneLightingInfo` 로 내보낸다(미니맵 재캡처가 읽는다, 모드를 떠나면 `skyPhase` null).
+- 적용은 `scene-render-preset.tsx` 의 `SceneLighting`(`regionId`·`timeSource` prop — 세 캔버스가 넘긴다). useFrame 에서 초 단위로 재계산해 방향광·환경광·`scene.backgroundIntensity`·`environmentIntensity` 를 직접 쓴다. 바다는 미러 패스가 `backgroundIntensity` 가 적용된 EXR 을 그대로 반사해 배경과 같은 배율로 어두워지고, 태양 하이라이트는 `sceneLightingInfo.sunDirection/sunColor/sunIntensity` 를 따른다 — `SceneLighting` 이 manual·solar 두 모드 모두 `publishSunLight` 로 쓴다(solar 는 고도 클램프 없는 진짜 태양 방향·`sky.sunColor`·`sky.sunIntensity`, manual 은 수동 태양·백색·기준 세기). 하늘의 태양 글로우·달 표식은 카메라 추종 스프라이트로 EXR 배경이 있을 때만이며, 틴트 돔과 함께 `excludeFromReflection` 으로 바다 반사에서 뺀다. 모드를 떠나면 `resetToManualLook`. 계산한 하늘 국면·태양 고도·작업등(solar 만, 떠나면 `skyPhase` null)과 태양 방향·색·세기(두 모드)는 `model/scene-lighting-info.ts` 의 mutable `sceneLightingInfo` 로 내보낸다(미니맵 재캡처와 바다가 읽는다).
 - 시각 출처: 씬 시계 `use-scene-clock-store.ts`(세션 전역 live/manual — 에디터·모니터링 공유, 저장 안 됨) 또는 리플레이 프레임 타임스탬프(`scene-time-source.ts` + `@crane/domain/monitoring` 의 `parseReplayTimestamp` — `Z` 없는 값은 현장 벽시계로 해석).
 - UI 는 `scene-clock-panel.tsx`(위상·현장 시각·태양/달 위치·일출/일몰, 실시간/시각 지정 토글, 날짜·시각 슬라이더·프리셋) 하나를 모니터링 독 팝업 `scene-clock-menu.tsx`(아이콘이 위상을 따라 해·일출·일몰·달, 시각 고정 중엔 하늘색)와 에디터 배경 탭(`palette-environment-section.tsx`, 방식 토글 수동/현장 시각 연동)이 공유한다. UI 상태는 `use-scene-sun-state.ts`(live 는 주기 갱신 — 렌더 중 `Date.now()` 금지라 스토어 `liveNowMs` 캐시).
 - 배포 씬은 실외 4개(dock-1·dock-2·goliath·philly-dock-2)가 `sunMode: 'solar'` + `shadows: true`, 실내 dock-in 은 수동.
@@ -94,7 +99,12 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **조명·하늘 밝기를 다른 곳에서 세팅하지 않는다.** `SceneLighting` 이 solar 모드에서 방향광 세기·색, 환경광, `scene.backgroundIntensity`·`environmentIntensity` 를 매 프레임 덮어쓰므로 프레임마다 서로 되돌린다. 기준값은 `sky-lighting.ts` 상수를 고치고, 환경맵 세기는 `SCENE_ENVIRONMENT_INTENSITY` 하나를 쓴다.
 - **새 불투명 GLTF 로드 경로(`useClonedModel` 을 거치지 않는 것)는 `markSceneOpaqueStencil` 을 켠다.** 아니면 물 위에서 바다에 덮여 사라진다.
 - **바다 위에 보여야 하는 불투명 오버레이(선택 박스·텍스트 테두리·격자·가드 링)는 `renderOrder ≥ 0.5`.** 0 이면 물 위에서 바다에 덮인다.
-- 바다 셰이더에 `gl_FragDepth`(logdepthbuf 청크)를 다시 넣거나 depthTest 를 켜지 않는다 — early stencil test 가 꺼져 절감이 사라진다.
+- `ocean-water.ts` 에 `gl_FragDepth`(logdepthbuf 청크)를 다시 넣거나 depthTest 를 켜지 않는다 — early stencil test 가 꺼져 절감이 사라진다.
+- **바다 반사에서 빼야 하는 객체(대형 객체, 메인 패스에서 이미 물 픽셀을 덮는 것)는 `OceanWater` 의 `excludedObjects`/`excludeFromReflection` 으로 뺀다.** 미러 카메라 `layers` 는 쓰지 않는다.
+- **직교 카메라로 씬 전체를 RT 에 그리는 새 경로는 `OceanWater` 를 숨기고 clear color 를 바다 톤으로 둔다.** 직교 투영에선 미러 패스가 돌지 않고 equirect 배경도 보이지 않아 바다 영역이 검게 남는다(미니맵 캡처가 선례 — `docs/agents/monitoring-ui.md`).
+- **`sceneLightingInfo.sun*` 은 `SceneLighting` 만 쓴다(`publishSunLight`).** 다른 곳에서 쓰면 프레임마다 서로 되돌린다.
+- **바다 유무는 `resolveSeaVisible(regionId, sceneInfo)` 하나로 판정한다.** `environmentId`·EXR URL 로 바다를 유추하는 코드를 만들지 않는다.
+- three 를 올리면 `ocean-water.ts` 를 새 버전의 `examples/jsm/objects/Water.js` 와 대조한다 — 포크라 자동으로 따라가지 않는다.
 - `SceneFrameGovernor` 주기 틱 중에는 useFrame 안에서 `requestSceneFrame()`/`invalidate()` 를 부르지 않는다(`isSceneFrameTickerActive()` 가드) — 30fps 상한이 무력화된다.
 - `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 의 DPR 기본값은 함께 바꾼다.
 - `bvh-build-queue` 의 `cancel` 은 `enqueue` 와 같은 옵션(`outline`)으로 부른다.
@@ -110,7 +120,13 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **바다를 맨 먼저 그리기** — 화면 전체가 매 프레임 파도 계산이었다. 불투명 뒤 스텐실로 바꿨다.
 - **인스턴스별 유휴 콜백 체인(requestIdleCallback) 워밍업** — 로딩 직후엔 콜백이 타임아웃으로만 돌아 지오메트리 수십 개 씬이 수십 초 걸렸다. 고정 예산 큐로 통합.
 - **shadow 캐스터에 컨텍스트 지형 포함** — 약 180만 삼각형이 매 shadow pass 에 들어갔다.
+- **EXR 을 시선 방향으로 샘플링하는 자체 바다 셰이더** — 하늘 사진 톤은 유지되지만 크레인·야드가 물에 비치지 않는다. 미러 반사 포크로 바꿨다.
+- **GroundedSkybox(EXR 하반구를 바닥 평면에 투영)** — EXR 의 바다는 시점 의존 프레넬 그라데이션이라 월드 한 점에 고정하면 어두운 점이 박히고 밝은 수평선이 방사형으로 늘어지며, 돔 밖으로 나가면 구멍이 난다.
+- **수면 아래를 프레임버퍼 복사로 블러하는 오버레이** — alpha:false 프레임버퍼·텍스처 포맷 호환에 취약해 선체가 검게 덮였다. 모델 셰이더 패치(`sea-submersion.ts`)로 대신한다.
 
 ## 미룬 것
 
 - 타워크레인 데시메이션/LOD 확대, 지도 KTX2 전환(`docs/agents/assets-glb.md`), 바다만 애니메이션인 유휴(sea-only)를 `ANIMATING_FPS` 아래로 낮추는 거버너 단계.
+- 바다 미러 패스의 격프레임 갱신·`WATER_REFLECTION_SIZE` 축소 — 미러 패스는 머티리얼마다 RT/화면 프로그램 전환과 `updateMatrixWorld` 한 번이 더 도는 상시 비용이라 실측 뒤 부족하면 적용한다.
+- 실루엣 헐·마스크의 미러 RT 변형 프리컴파일 — `SilhouetteOutlineWarmup` 은 화면 변형만 컴파일해, 반사에 첫 선택·충돌 테두리가 나타나는 프레임에 일회성 동기 컴파일이 있다.
+- 바다 `time` 유니폼의 정밀도 — 예제와 같이 delta 를 무한 누적해 며칠 연속 가동하면 float32 정밀도로 파도가 거칠어진다(이전 셰이더도 같았다). 단순 wrap 은 노이즈 레이어 주기가 서로 소수라 어딘가에서 튄다 — 레이어별 uv 오프셋을 JS 에서 mod 로 계산해 넘기는 방식이 후보.

@@ -27,8 +27,9 @@ import {
  *   어두워진다.
  * - **오버레이**: depthTest/depthWrite 를 모두 끄고 renderOrder 로만 순서를
  *   정한다(선택 박스 model-selection-box 와 같은 방식). 그래서 렌더러의
- *   logarithmicDepthBuffer 청크(sea-surface-material 참고)가 필요 없다 —
- *   depthTest 를 켜게 되면 그 청크를 함께 넣어야 한다.
+ *   logarithmicDepthBuffer 청크(logdepthbuf_*)가 필요 없다 — 바다(features
+ *   lib/ocean-water.ts)도 같은 이유로 뺐다. depthTest 를 켜게 되면 그 청크를
+ *   함께 넣어야 한다.
  * - three 는 WebGL2 전용(`#version 300 es` 자동 삽입)이라 `fwidth` 가 기본
  *   제공된다. `#extension GL_OES_standard_derivatives` 를 넣으면 오히려
  *   ES 3.00 에서 에러다.

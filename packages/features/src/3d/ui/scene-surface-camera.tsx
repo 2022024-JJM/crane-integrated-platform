@@ -8,11 +8,7 @@ import {
   type Camera,
   type Object3D,
 } from 'three';
-import {
-  SEA_LEVEL_Y,
-  modelObjectRegistry,
-  resolveEnvironmentFileUrl,
-} from '@crane/domain/3d';
+import { SEA_LEVEL_Y, modelObjectRegistry } from '@crane/domain/3d';
 
 /**
  * 구글 어스식 카메라 줌 — 표면 기준 dolly + 표면 피벗.
@@ -38,8 +34,9 @@ import {
  *
  * 표면 레이캐스트 대상은 modelObjectRegistry 루트(지도·모델·텍스트)다. 씬 전체를
  * 쏘면 에디터 TransformControls의 보이지 않는 picker 평면·충돌가드 링까지
- * 맞는다. 히트가 없으면 바다 씬에서는 수면(SEA_LEVEL_Y) 평면, 그것도 없으면
- * 화면 중앙 표면 거리 → 타깃 거리 순으로 폴백한다.
+ * 맞는다. 히트가 없으면 바다가 켜진 씬(seaVisible — resolveSeaVisible)에서는
+ * 수면(SEA_LEVEL_Y) 평면, 그것도 없으면 화면 중앙 표면 거리 → 타깃 거리 순으로
+ * 폴백한다.
  */
 
 /**
@@ -157,17 +154,13 @@ interface DollyState {
 }
 
 export function SceneSurfaceCamera({
-  regionId,
-  environmentId,
+  seaVisible,
 }: {
-  regionId: string;
-  environmentId?: string | null;
+  /** 바다가 켜진 씬인지(resolveSeaVisible) — 캔버스가 판정해 준다. */
+  seaVisible: boolean;
 }) {
-  // 바다(EXR 배경) 씬이면 히트가 없을 때 수면 평면으로 폴백한다.
-  const fallbackPlaneY =
-    resolveEnvironmentFileUrl(regionId, environmentId) !== null
-      ? SEA_LEVEL_Y
-      : null;
+  // 바다가 켜진 씬이면 히트가 없을 때 수면 평면으로 폴백한다.
+  const fallbackPlaneY = seaVisible ? SEA_LEVEL_Y : null;
   const fallbackRef = useRef(fallbackPlaneY);
   useEffect(() => {
     fallbackRef.current = fallbackPlaneY;

@@ -407,6 +407,23 @@ describe('sanitizeSceneInfo — environmentId (3-상태)', () => {
   });
 });
 
+describe('sanitizeSceneInfo — sea (3-상태, boolean 만 유지)', () => {
+  it('true·false 는 그대로 유지한다', () => {
+    expect(sanitizeSceneInfo(scene({ sea: true })).sea).toBe(true);
+    expect(sanitizeSceneInfo(scene({ sea: false })).sea).toBe(false);
+  });
+
+  it('미지정이면 필드 자체가 빠진다 (레거시 규칙으로 판정)', () => {
+    expect(sanitizeSceneInfo(scene())).not.toHaveProperty('sea');
+  });
+
+  it("boolean 이 아닌 오염값('yes'·1·null·NaN)은 필드를 생략한다", () => {
+    for (const sea of ['yes', 1, null, Number.NaN, 0, '']) {
+      expect(sanitizeSceneInfo(scene({ sea }))).not.toHaveProperty('sea');
+    }
+  });
+});
+
 describe('sanitizeSceneInfo — 조명 (기본값이면 필드 생략)', () => {
   it('전부 기본값이면 lighting 필드 자체가 빠진다', () => {
     expect(

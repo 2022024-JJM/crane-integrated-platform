@@ -1,3 +1,5 @@
+import { Color } from 'three';
+
 /**
  * 미니맵 탑뷰 스냅샷의 픽셀 후처리 — 렌더 타깃 readback 결과를 화면용 sRGB
  * 이미지로 만든다. 적용은 ui/scene-minimap-capture.tsx.
@@ -13,6 +15,17 @@
  * 평균 휘도를 목표값으로 끌어올리는 노출 배율을 계산한다(상한 있음 — 새까만
  * 스냅샷을 무한히 증폭해 노이즈만 남기지 않게).
  */
+
+/**
+ * 캡처가 바다(OceanWater)를 숨긴 동안만 쓰는 clear color — 직교 카메라에선
+ * equirect 배경이 1m 큐브로 그려져 보이지 않아, 물만 숨기면 바다 영역이 검게
+ * 남는다. 바다 톤으로 지우고 캡처 뒤 원래 clear color 로 되돌린다(적용은
+ * ui/scene-minimap-capture.tsx, RT 바인딩 **뒤**에 setClearColor). 값은 linear
+ * working space(setRGB)이며 눈으로 맞춘 것 — readback 뒤 toDisplayPixels 가
+ * ACES·sRGB 를 입힌다. Color 인스턴스인 이유: renderer.setClearColor 는
+ * Color·hex·문자열만 받고 튜플은 조용히 무시한다.
+ */
+export const MINIMAP_SEA_CLEAR_COLOR = new Color().setRGB(0.02, 0.07, 0.1);
 
 /** 자동 노출 목표 평균 휘도(선형, 0~1). 낮 야드 스냅샷 실측 근처 값. */
 export const MINIMAP_TARGET_LUMINANCE = 0.18;

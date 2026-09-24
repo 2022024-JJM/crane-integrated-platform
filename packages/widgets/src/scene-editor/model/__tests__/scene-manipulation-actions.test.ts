@@ -282,6 +282,45 @@ describe('setEnvironmentId', () => {
   });
 });
 
+describe('setSeaVisible', () => {
+  it('바다를 켜고, 같은 값이면 참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.setSeaVisible(true);
+    expect(h.scene?.sea).toBe(true);
+
+    const before = h.scene;
+    h.actions.setSeaVisible(true);
+    expect(h.scene).toBe(before);
+  });
+
+  it('미지정 씬에 false 를 누르면 명시 false 가 저장된다 (레거시 → 명시 전환)', () => {
+    const h = createHarness();
+    expect(h.scene).not.toHaveProperty('sea');
+    h.actions.setSeaVisible(false);
+    expect(h.scene?.sea).toBe(false);
+  });
+
+  it('true ↔ false 전환은 새 객체를 만든다', () => {
+    const h = createHarness(scene({ sea: true }));
+    const before = h.scene;
+    h.actions.setSeaVisible(false);
+    expect(h.scene).not.toBe(before);
+    expect(h.scene?.sea).toBe(false);
+  });
+
+  it('옵션 없이 updateScene 을 부른다 (히스토리 기본 기록)', () => {
+    const h = createHarness();
+    h.actions.setSeaVisible(true);
+    expect(h.updateOptions).toEqual([undefined]);
+  });
+
+  it('씬이 null 이면 null 그대로', () => {
+    const h = createHarness(null);
+    h.actions.setSeaVisible(true);
+    expect(h.scene).toBeNull();
+  });
+});
+
 describe('setLighting', () => {
   it('기본값 필드는 제거해 정규화한다 — 전부 기본값이면 lighting 자체가 빠진다', () => {
     const h = createHarness(scene({ lighting: { shadows: true } }));

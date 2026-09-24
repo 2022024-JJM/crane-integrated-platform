@@ -8,6 +8,7 @@ import {
   type SceneModelCategory,
   type SceneModelCatalogItem,
   getSceneMetersPerUnit,
+  resolveSeaVisible,
 } from '@crane/domain/3d';
 import {
   SceneWarmupIndicator,
@@ -180,6 +181,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     addSceneMap,
     selectPlacedMap,
     setEnvironmentId,
+    setSeaVisible,
     setLighting,
     selectedMap,
     updateSelectedMapCameraBounds,
@@ -197,6 +199,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   } = useSceneEditorSession({
     regionId,
   });
+
+  // 맵 탭의 바다 스위치는 유효값(명시 boolean 또는 레거시 규칙)을 보이고,
+  // 미지정 씬에는 안내 문구를 붙인다 — 캔버스와 같은 판정 함수 하나를 쓴다.
+  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const seaExplicit = sceneInfo?.sea !== undefined;
 
   // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
   // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
@@ -447,6 +454,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onAddMap={addSceneMap}
                   onRemoveMap={deletePlacedMap}
                   onToggleLock={setObjectLocked}
+                  seaVisible={seaVisible}
+                  seaExplicit={seaExplicit}
+                  onSeaVisibleChange={setSeaVisible}
                   regionId={regionId}
                   environmentId={sceneInfo?.environmentId}
                   onEnvironmentChange={setEnvironmentId}
@@ -760,7 +770,7 @@ const MODEL_CATEGORY_LABEL_KEY: Record<ModelPanelCategory, string> = {
 /**
  * 좌측 도킹 Project 팔레트 — 상단 탭(모델/맵/배경)으로 전환하는 세로 패널.
  * 모델 탭은 카테고리 칩 + 검색 + 드래그 가능한 에셋 그리드,
- * 배경 탭은 클릭 단일 선택, 맵 탭은 추가/제거 토글 타일 그리드다.
+ * 배경 탭은 클릭 단일 선택, 맵 탭은 추가/제거 토글 타일 그리드 + 바다 스위치다.
  */
 function ProjectPalettePanel({
   items,
@@ -771,6 +781,9 @@ function ProjectPalettePanel({
   onAddMap,
   onRemoveMap,
   onToggleLock,
+  seaVisible,
+  seaExplicit,
+  onSeaVisibleChange,
   regionId,
   environmentId,
   onEnvironmentChange,
@@ -798,6 +811,10 @@ function ProjectPalettePanel({
   onAddMap: (catalogItem: SceneMapCatalogItem) => void;
   onRemoveMap: (id: string) => void;
   onToggleLock: (id: string, locked: boolean) => void;
+  /** 맵 탭 — 바다 스위치. 유효값·명시 여부·토글(setSeaVisible). */
+  seaVisible: boolean;
+  seaExplicit: boolean;
+  onSeaVisibleChange: (visible: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -859,6 +876,9 @@ function ProjectPalettePanel({
                 onAddMap={onAddMap}
                 onRemoveMap={onRemoveMap}
                 onToggleLock={onToggleLock}
+                seaVisible={seaVisible}
+                seaExplicit={seaExplicit}
+                onSeaVisibleChange={onSeaVisibleChange}
               />
             ) : (
               <PaletteEnvironmentSection

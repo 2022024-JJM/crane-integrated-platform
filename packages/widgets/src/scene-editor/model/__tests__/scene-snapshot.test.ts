@@ -66,6 +66,29 @@ describe('isSceneInfoEqual — environmentId 3-상태', () => {
   });
 });
 
+describe('isSceneInfoEqual — sea 3-상태', () => {
+  it('undefined(레거시 규칙)와 명시 boolean 은 다른 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ sea: false }))).toBe(false);
+    expect(isSceneInfoEqual(scene(), scene({ sea: true }))).toBe(false);
+  });
+
+  it('true 와 false 는 다르다', () => {
+    expect(isSceneInfoEqual(scene({ sea: true }), scene({ sea: false }))).toBe(
+      false,
+    );
+  });
+
+  it('같은 명시값·둘 다 미지정은 같다', () => {
+    expect(isSceneInfoEqual(scene({ sea: true }), scene({ sea: true }))).toBe(
+      true,
+    );
+    expect(isSceneInfoEqual(scene({ sea: false }), scene({ sea: false }))).toBe(
+      true,
+    );
+    expect(isSceneInfoEqual(scene(), scene())).toBe(true);
+  });
+});
+
 describe('isSceneInfoEqual — 조명 기본값 정규화', () => {
   it('필드 없음과 명시적 기본값은 같은 상태다', () => {
     expect(
@@ -397,6 +420,16 @@ describe('createSceneSnapshot', () => {
     );
     expect(a).toBeTypeOf('string');
     expect(a).toBe(b);
+  });
+
+  it('sea:false 는 직렬화에 남고, 미지정은 빠진다 (false 가 기본값 생략이 아니다)', () => {
+    const explicitOff = JSON.parse(createSceneSnapshot(scene({ sea: false }))!);
+    expect(explicitOff).toHaveProperty('sea', false);
+    const unset = JSON.parse(createSceneSnapshot(scene())!);
+    expect(unset).not.toHaveProperty('sea');
+    expect(createSceneSnapshot(scene({ sea: false }))).not.toBe(
+      createSceneSnapshot(scene()),
+    );
   });
 });
 

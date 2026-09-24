@@ -9,7 +9,7 @@
 
 /** HUD 샘플 한 벌 — heapMB 는 Chrome 전용(performance.memory)이라 없으면 null. */
 export interface ScenePerfSample {
-  /** 직전 프레임의 드로우콜 수 (gl.info.render.calls — shadow pass 포함). */
+  /** 직전 프레임의 드로우콜 수 (gl.info.render.calls — shadow pass 제외, 바다 미러 패스 포함). */
   calls: number;
   /** 직전 프레임의 렌더 삼각형 수 (gl.info.render.triangles). */
   triangles: number;

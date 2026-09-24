@@ -29,8 +29,8 @@ import {
   parseMeshId,
   prefetchModelBottomOffset,
   releaseGltfCache,
-  resolveEnvironmentFileUrl,
   resolveGroundMaps,
+  resolveSeaVisible,
   withBaseUrl,
   type SavedCameraInfo,
   type SavedSceneInfo,
@@ -264,10 +264,10 @@ export function SceneObjectsEditCanvas({
     };
   }, []);
 
-  // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 있는 씬의 모델에만
-  // 수면 아래 잠김 처리. 지도에는 걸지 않는다.
-  const hasSea =
-    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
+  // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 켜진 씬
+  // (resolveSeaVisible — 맵 탭 스위치가 고치는 `sea` 필드)의 모델에만 수면
+  // 아래 잠김 처리. 지도에는 걸지 않는다.
+  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
   // 의존성에 넣지 않고 여기서 최신값을 따라간다.
@@ -888,7 +888,7 @@ export function SceneObjectsEditCanvas({
         {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. 바다 씬은
             파도가 상시 애니메이션, solar 씬은 태양이 느리게 움직인다. */}
         <SceneFrameGovernor
-          animating={hasSea}
+          animating={seaVisible}
           slow={sceneInfo?.lighting?.sunMode === 'solar'}
         />
         {/* regionId 는 solar 모드(현장 시각 낮/밤)의 위치·시간대 키 — 뷰어와
@@ -907,10 +907,7 @@ export function SceneObjectsEditCanvas({
         {/* 선택·충돌 테두리(실루엣) 셰이더 프리워밍 — 사본은 아래 모델의
             prepareOutline 이 워밍업 큐에 넣는다. */}
         <SilhouetteOutlineWarmup />
-        <SceneSurfaceCamera
-          regionId={regionId}
-          environmentId={sceneInfo?.environmentId}
-        />
+        <SceneSurfaceCamera seaVisible={seaVisible} />
         {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다(뷰어와 같은 제한). */}
         <SceneCameraLimits sceneInfo={sceneInfo} />
@@ -922,6 +919,8 @@ export function SceneObjectsEditCanvas({
           <SceneEnvironment
             regionId={regionId}
             environmentId={sceneInfo?.environmentId}
+            seaVisible={seaVisible}
+            maps={sceneInfo?.maps}
           />
         </Suspense>
         <OrbitControls
@@ -1041,7 +1040,7 @@ export function SceneObjectsEditCanvas({
               equipName={model.equipName}
               showLabel={!model.labelHidden}
               opacity={model.opacity}
-              seaSubmersion={hasSea}
+              seaSubmersion={seaVisible}
               position={model.position}
               rotation={model.rotation}
               scale={model.scale}

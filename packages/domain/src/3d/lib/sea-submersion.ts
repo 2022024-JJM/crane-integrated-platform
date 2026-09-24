@@ -13,7 +13,8 @@ import { SEA_LEVEL_Y } from '../model/sea-level';
  * 바다 평면이 깊이를 써서 가리거나 클리핑으로 잘라내지 않는 이유: 전자는
  * 지도의 수면 아래 지형(드라이독 -12.4m)까지 물로 채우고, 후자는 형체가
  * 아예 사라진다. 프레임버퍼를 복사해 진짜 블러를 거는 오버레이는
- * alpha:false 프레임버퍼·텍스처 포맷 호환에 취약해 뺐다(scene-environment.tsx).
+ * alpha:false 프레임버퍼·텍스처 포맷 호환에 취약해 뺐다(docs/agents/
+ * rendering-perf.md 하지 않기로 한 것).
  *
  * 주입 지점:
  * - vertex `<worldpos_vertex>` 뒤 — three의 worldPosition은 특정 define에서만

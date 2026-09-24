@@ -244,6 +244,15 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
     sanitized.environmentId = null;
   }
 
+  // 바다 표시도 3-상태다(true/false=명시 / 없음=레거시 규칙: 배경이 있으면
+  // 바다, resolveSeaVisible). boolean 만 싣는다 — 'yes'·1 같은 오염값을
+  // truthy 로 받으면 지정한 적 없는 씬이 명시 상태로 굳어 배경 변경을 따라
+  // 가지 못한다.
+  const rawSea = (sceneInfo as SavedSceneInfo).sea;
+  if (typeof rawSea === 'boolean') {
+    sanitized.sea = rawSea;
+  }
+
   // 조명은 "기본값이면 필드 생략" 규칙이다 — 그림자 Off·태양 기본 위치인
   // 씬은 lighting 필드 자체가 빠져 기존 저장본과 diff가 없다.
   const rawLighting = (sceneInfo as SavedSceneInfo).lighting;

@@ -27,8 +27,8 @@ const REALTIME_ACTIVE_MS = 1500;
 
 interface SceneFrameGovernorProps {
   /**
-   * 호출자가 아는 상시 애니메이션 — 바다(EXR 배경) 씬은 파도가 항상
-   * 움직인다. 스토어로 알 수 없는 소스는 여기로 준다.
+   * 호출자가 아는 상시 애니메이션 — 바다가 켜진 씬(resolveSeaVisible)은
+   * 파도·미러 패스가 항상 움직인다. 스토어로 알 수 없는 소스는 여기로 준다.
    */
   animating?: boolean;
   /** 느린 변화 소스(solar 모드 태양)가 있는지. */

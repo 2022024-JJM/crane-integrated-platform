@@ -10,7 +10,7 @@ import {
   markSceneRegionActive,
   preloadGltf,
   releaseSceneRegionAssets,
-  resolveEnvironmentFileUrl,
+  resolveSeaVisible,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -216,10 +216,9 @@ export function OutdoorWorkModelSimulation({
   runtimeStatuses = NO_STATUSES,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
-  // 바다(EXR 배경)가 있는 씬에서만 모델의 수면 아래를 잠김 처리한다 — 바다가
-  // 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다. 지도에는 걸지 않는다.
-  const hasSea =
-    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
+  // 바다가 켜진 씬(resolveSeaVisible)에서만 모델의 수면 아래를 잠김 처리한다
+  // — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다. 지도에는 걸지 않는다.
+  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
   useReplayPlayerRunner();
@@ -457,7 +456,7 @@ export function OutdoorWorkModelSimulation({
             }
             alarmHighlightMesh={alarmHighlightMesh}
             runtimeStatus={runtimeStatuses[model.id]}
-            seaSubmersion={hasSea}
+            seaSubmersion={seaVisible}
             prepareOutline={prepareOutline}
             position={model.position}
             rotation={model.rotation}

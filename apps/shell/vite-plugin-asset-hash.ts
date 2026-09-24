@@ -27,7 +27,10 @@ import type { Plugin } from 'vite';
 export const ASSET_HASH_MODULE_ID = 'virtual:asset-hash-manifest';
 const RESOLVED_MODULE_ID = `\0${ASSET_HASH_MODULE_ID}`;
 
-/** 해시를 붙일 디렉터리 (public/ 기준). 번들러가 안 건드리는 것들만. */
+/**
+ * 해시를 붙일 디렉터리 (public/ 기준). 번들러가 안 건드리는 것들만.
+ * textures: 바다 노멀맵(waternormals.jpg) — 3D 자산이라 GLB 와 같은 캐시 규칙.
+ */
 const HASHED_DIRS = [
   'models',
   'maps',
@@ -37,6 +40,7 @@ const HASHED_DIRS = [
   'drawings',
   'previews',
   'simulation',
+  'textures',
 ];
 
 /**

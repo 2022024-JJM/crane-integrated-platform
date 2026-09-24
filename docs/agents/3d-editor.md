@@ -1,6 +1,6 @@
 # 3D 씬 에디터
 
-씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, region → 씬 파일 매핑.
+씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 씬 설정(배경·조명·바다), 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, region → 씬 파일 매핑.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -14,6 +14,7 @@
 | 인스펙터 / 선택 객체 편집 채널 | `packages/widgets/src/3d/ui/scene-object-inspector.tsx`, `packages/features/src/3d/model/use-selected-scene-object-editor.ts` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → 씬 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `packages/domain/src/3d/model/scene-file-registry.ts` |
+| 씬 설정 팔레트(배경·조명·바다) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`) |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
 | 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
@@ -42,6 +43,13 @@
 - 미등록 region 은 양쪽 모두 `null` 을 반환한다. 표를 복제하거나 기본 파일로 fallback 시키지 않는다 — 파일 자체 주석에 경위가 있다.
 - 여러 region 이 한 파일을 **공유**할 수 있다(옥포 `dock-1`·`dock-2` → `okpo.json`, `isSceneFileShared`). 지도·모델·배경·조명은 하나이고 region 별로 다른 것은 카메라뿐이다 — 씬 JSON 의 `cameraByRegion[regionId]` 슬롯에 두고 `camera` 는 폴백. 로드 경계 `loadSceneInfoByRegionId` 가 `resolveSceneCameraForRegion` 으로 자기 슬롯을 `camera` 에 해석해 넣으므로 소비자는 `camera` 만 본다. 에디터 저장은 `withRegionCamera` 로 자기 슬롯만 기록한다(`lib/scene-region-camera.ts`). 두 region 의 에디터가 동시에 저장하면 마지막 저장이 이긴다.
 - 운영 localStorage 저장 키는 region 이 아니라 **씬 파일**(`crane:scene:<파일명>`) 기준이라 공유 region 이 같은 로컬 저장본을 본다. GLB 캐시 해제(`gltf-cache-release.ts`)도 씬 파일 단위라 공유 region 사이 이동은 캐시를 유지한다.
+
+### 씬 설정(배경·조명·바다)
+
+- 배경(EXR `environmentId`)·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx`), 바다는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래 스위치다. 셋 다 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
+- 바다 필드 `sea` 는 3-상태다 — `undefined` 는 레거시 규칙(EXR 이 resolve 되면 바다), `true`/`false` 는 명시. 유효값은 `resolveSeaVisible(regionId, sceneInfo)` 하나가 정하고 스위치는 그 유효값을 보여 준다. 미지정 씬은 절 제목과 스위치 사이에 안내 문구가 붙는다.
+- 스위치를 누르면 `setSeaVisible` 이 유효값의 반대를 **명시 boolean** 으로 쓴다(미지정 씬도 첫 토글부터 명시 상태가 되어 dirty·히스토리에 잡힌다. 유효값을 그대로 명시로 굳히는 조작은 없다). 같은 명시값 재설정은 참조를 유지한다.
+- 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environmentId`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
 
 ### 카메라 up 과 탑뷰
 
@@ -87,6 +95,7 @@
 - 기즈모·스테퍼 스냅은 `snap-transform.ts` 순수 함수 한 곳. three `TransformControls` 의 `translationSnap`/`rotationSnap`/`scaleSnap` 은 쓰지 않는다.
 - 씬 스키마에 필드를 추가하면 `sanitize-scene-info.ts`(또는 해당 `sanitize-*`)와 `scene-snapshot.ts` 의 동등 비교를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 dirty 가 서지 않고 저장되지 않는다(`isZoneListEqual` 이 선례 — `docs/agents/3d-zone.md`).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.
+- `sea` 는 boolean 만 저장·비교한다 — `sanitizeSceneInfo` 는 boolean 이 아니면 필드를 버리고, `isSceneInfoEqual` 은 `!==` 로 본다(`undefined` 와 `false` 는 다르다). 바다 유무를 `environmentId` 로 유추하는 코드를 다른 곳에 두지 않는다(`resolveSeaVisible` 하나).
 - 공유 씬의 카메라는 `camera` 를 직접 저장하지 않고 `withRegionCamera` 로 자기 region 슬롯에 쓴다. 씬을 로드하는 새 경로는 `loadSceneInfoByRegionId` 를 거쳐 `cameraByRegion` 해석을 받는다.
 - 새 dev 저장 미들웨어를 만들면 쓰는 디렉토리를 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다.
 - 루트 맵핑 모델의 배치값을 읽는 새 경로는 `rootDeltas` 를 벗겨야 한다(`readRootPlacement`). 기즈모 자세를 그대로 저장하면 Δ 가 이중 적용된다.

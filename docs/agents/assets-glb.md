@@ -23,7 +23,7 @@
 | 지도 카탈로그(`kind: 'ground' | 'context'`, `defaultPosition`) | `packages/domain/src/3d/model/scene-map-catalog.ts` |
 | 드롭 바닥 지도 판정 | `packages/domain/src/3d/lib/resolve-ground-map.ts`(`resolveGroundMaps`), 사용 `packages/widgets/src/3d/ui/use-scene-drop.ts` |
 | 카메라 범위 기준 지도 | `packages/domain/src/3d/lib/camera-bounds-maps.ts`(`resolveCameraBoundsMaps`) — 상세 `docs/agents/monitoring-ui.md` |
-| 팔레트 맵 타일 상태 | `packages/widgets/src/3d/lib/map-palette-tiles.ts`, `packages/widgets/src/3d/ui/palette-map-section.tsx` |
+| 팔레트 맵 타일 상태 | `packages/widgets/src/3d/lib/map-palette-tiles.ts`, `packages/widgets/src/3d/ui/palette-map-section.tsx`(바다 표시 스위치도 이 절에 있다 — `docs/agents/3d-editor.md`) |
 | 모델 카탈로그·팔레트 썸네일 | `packages/domain/src/3d/model/scene-model-catalog.ts`(`sceneModelCatalog`), `apps/shell/public/previews/{catalogId}.png`, 폴백 렌더 `packages/widgets/src/3d/lib/offscreen-preview-renderer.ts`, 재생성 `packages/widgets/src/3d/ui/preview-thumbnail-generator.tsx` |
 | 파이프라인 상세 문서 | `docs/지도-GLB-최적화-파이프라인.md`, `docs/GLB-압축-파이프라인-작업보고.md` |
 

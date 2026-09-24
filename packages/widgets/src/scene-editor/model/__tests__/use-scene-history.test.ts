@@ -6,9 +6,22 @@ import { useSceneHistory } from '../use-scene-history';
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** environmentId만 다른 씬 — isSceneInfoEqual이 구분하는 최소 차이 */
-function scene(environmentId: string): SavedSceneInfo {
-  return { maps: [], models: [], texts: [], camera: null, environmentId };
+/**
+ * environmentId만 다른 씬 — isSceneInfoEqual이 구분하는 최소 차이.
+ * overrides 로 다른 씬 설정(sea 등)을 덮어쓴다.
+ */
+function scene(
+  environmentId: string,
+  overrides: Partial<SavedSceneInfo> = {},
+): SavedSceneInfo {
+  return {
+    maps: [],
+    models: [],
+    texts: [],
+    camera: null,
+    environmentId,
+    ...overrides,
+  };
 }
 
 function setup() {
@@ -45,7 +58,9 @@ describe('updateScene', () => {
     const { result } = setup();
     act(() => result.current.replaceScene(scene('a')));
     act(() => result.current.updateScene(scene('b')));
-    act(() => result.current.updateScene((prev) => ({ ...prev!, environmentId: 'c' })));
+    act(() =>
+      result.current.updateScene((prev) => ({ ...prev!, environmentId: 'c' })),
+    );
 
     expect(result.current.sceneInfo?.environmentId).toBe('c');
 
@@ -132,6 +147,49 @@ describe('updateScene', () => {
   });
 });
 
+describe('updateScene — sea (바다 표시, 3-상태)', () => {
+  it('sea 만 다른 씬은 변경으로 기록된다 (미지정 → 명시 false 도 편집)', () => {
+    const { result } = setup();
+    act(() => result.current.replaceScene(scene('a')));
+    expect(result.current.canUndo).toBe(false);
+
+    act(() => result.current.updateScene(scene('a', { sea: false })));
+    expect(result.current.sceneInfo?.sea).toBe(false);
+    expect(result.current.canUndo).toBe(true);
+  });
+
+  it('undo 하면 sea 가 없는 원본 참조로 돌아간다', () => {
+    const { result } = setup();
+    const initial = scene('a');
+    act(() => result.current.replaceScene(initial));
+    act(() => result.current.updateScene(scene('a', { sea: true })));
+
+    act(() => result.current.undo());
+    expect(result.current.sceneInfo).toBe(initial);
+    expect(result.current.sceneInfo).not.toHaveProperty('sea');
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it('같은 sea 값을 다시 적용하면 참조를 유지하고 canUndo 는 변하지 않는다', () => {
+    const { result } = setup();
+    const initial = scene('a', { sea: true });
+    act(() => result.current.replaceScene(initial));
+    act(() => result.current.updateScene(scene('a', { sea: true })));
+    expect(result.current.sceneInfo).toBe(initial);
+    expect(result.current.canUndo).toBe(false);
+
+    // 실제 변경 뒤에도 같은 값 재적용은 히스토리를 늘리지 않는다.
+    act(() => result.current.updateScene(scene('a', { sea: false })));
+    const changed = result.current.sceneInfo;
+    expect(result.current.canUndo).toBe(true);
+    act(() => result.current.updateScene(scene('a', { sea: false })));
+    expect(result.current.sceneInfo).toBe(changed);
+    act(() => result.current.undo());
+    expect(result.current.sceneInfo).toBe(initial);
+    expect(result.current.canUndo).toBe(false);
+  });
+});
+
 describe('undo / redo 경계', () => {
   it('빈 스택에서의 undo/redo는 no-op', () => {
     const { result } = setup();
@@ -148,8 +206,12 @@ describe('commitHistoryFrom', () => {
     const base = scene('base');
     act(() => result.current.replaceScene(base));
     // 드래그 중간 프레임들 — 히스토리 미기록
-    act(() => result.current.updateScene(scene('mid'), { recordHistory: false }));
-    act(() => result.current.updateScene(scene('final'), { recordHistory: false }));
+    act(() =>
+      result.current.updateScene(scene('mid'), { recordHistory: false }),
+    );
+    act(() =>
+      result.current.updateScene(scene('final'), { recordHistory: false }),
+    );
     expect(result.current.canUndo).toBe(false);
 
     act(() => result.current.commitHistoryFrom(base));

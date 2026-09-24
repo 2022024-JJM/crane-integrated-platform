@@ -302,6 +302,38 @@ describe('classifySkyPhase', () => {
   });
 });
 
+describe('resolveSkyLighting — sunColor (작업등 혼합 전 태양 색, 바다가 읽는다)', () => {
+  it('SUN_COLOR_FADE 상한(6°) 이상은 SUN_COLOR_ZENITH', () => {
+    for (const el of [6, 10, SUN_COMPENSATION_REF_ELEVATION, 90]) {
+      expect(at(el).sunColor).toEqual(SUN_COLOR_ZENITH);
+    }
+  });
+
+  it('SUN_COLOR_FADE 하한(−2°) 이하는 SUN_COLOR_HORIZON — 작업등 on/off 와 무관', () => {
+    for (const el of [-2, -10, -40]) {
+      expect(at(el, 50, 1, true).sunColor).toEqual(SUN_COLOR_HORIZON);
+      expect(at(el, 50, 1, false).sunColor).toEqual(SUN_COLOR_HORIZON);
+    }
+    // keyColor 는 작업등이 섞여 다르다 — sunColor 가 혼합 전 값이라는 근거.
+    expect(at(-40, 50, 1, true).keyColor).toEqual(YARD_LIGHT_COLOR);
+    expect(at(-40, 50, 1, true).sunColor).not.toEqual(YARD_LIGHT_COLOR);
+  });
+
+  it('구간 중간(2°)은 두 색 사이', () => {
+    const mid = at(2).sunColor;
+    expect(mid[1]).toBeGreaterThan(SUN_COLOR_HORIZON[1]);
+    expect(mid[1]).toBeLessThan(SUN_COLOR_ZENITH[1]);
+    expect(mid[1]).toBeCloseTo(
+      (SUN_COLOR_HORIZON[1] + SUN_COLOR_ZENITH[1]) / 2,
+      12,
+    );
+  });
+
+  it('NaN 고도는 낮이라 SUN_COLOR_ZENITH', () => {
+    expect(at(Number.NaN).sunColor).toEqual(SUN_COLOR_ZENITH);
+  });
+});
+
 describe('resolveSkyLighting — 반구광 색', () => {
   it('밤은 남색 하늘·난색 지면, 낮은 하늘색·지면색', () => {
     expect(at(-40, 50, 1).hemisphereSkyColor).toEqual(

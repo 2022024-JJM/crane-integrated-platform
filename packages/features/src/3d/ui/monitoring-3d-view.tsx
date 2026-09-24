@@ -15,7 +15,7 @@ import {
   modelObjectRegistry,
   zoneCenterWorld,
   resolveCameraBoundsMaps,
-  resolveEnvironmentFileUrl,
+  resolveSeaVisible,
   unionObjectBounds,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -194,11 +194,11 @@ export function Monitoring3dView({
   }, [sceneInfo]);
   // 캔버스는 항상 frameloop='demand' 다 — 프레임은 SceneFrameGovernor 가
   // 애니메이션 소스(재생·수신·기즈모)가 있을 때 30fps 로, 정지 씬은 조작
-  // invalidate 만으로 만든다(2026-09-11, 유휴 발열 절감). 바다(EXR 배경)
-  // 씬은 파도가 상시 애니메이션이라 거버너에 알려 30fps 를 유지한다 —
-  // 예전 demand 모달에서 파도가 얼어붙던 문제의 해법이다.
-  const hasSea =
-    resolveEnvironmentFileUrl(regionId, sceneInfo?.environmentId) !== null;
+  // invalidate 만으로 만든다(2026-09-11, 유휴 발열 절감). 바다가 켜진 씬
+  // (resolveSeaVisible — 판정은 이 한 곳)은 파도·미러 패스가 상시
+  // 애니메이션이라 거버너에 알려 30fps 를 유지한다 — 예전 demand 모달에서
+  // 파도가 얼어붙던 문제의 해법이다.
+  const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
@@ -467,7 +467,7 @@ export function Monitoring3dView({
         onControllerReady={handleControllerReady}
       >
         {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
-        <SceneFrameGovernor animating={hasSea} slow={solarSun} />
+        <SceneFrameGovernor animating={seaVisible} slow={solarSun} />
         {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키.
             리플레이 소스의 낮/밤은 프레임 타임스탬프를 따른다. */}
         <SceneLighting
@@ -475,10 +475,7 @@ export function Monitoring3dView({
           regionId={regionId}
           timeSource={timeSource}
         />
-        <SceneSurfaceCamera
-          regionId={regionId}
-          environmentId={sceneInfo?.environmentId}
-        />
+        <SceneSurfaceCamera seaVisible={seaVisible} />
         {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
         <SceneCameraLimits sceneInfo={sceneInfo} />
@@ -490,6 +487,8 @@ export function Monitoring3dView({
           <SceneEnvironment
             regionId={regionId}
             environmentId={sceneInfo?.environmentId}
+            seaVisible={seaVisible}
+            maps={sceneInfo?.maps}
           />
         </Suspense>
         <Suspense fallback={null}>
