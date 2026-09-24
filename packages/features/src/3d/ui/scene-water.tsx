@@ -73,6 +73,12 @@ const WATER_REFLECTION_SIZE = 512;
 const WATER_COLOR = 0x001e0f;
 /** 예제의 distortionScale — 반사상을 파도가 흔드는 세기. */
 const WATER_DISTORTION_SCALE = 3.7;
+/**
+ * 파도 시간 배율 — useFrame 의 delta 에 곱해 `time` 유니폼에 누적한다. 예제
+ * 그대로(1)면 씬 단위가 m 인 야드에서 물결이 급류처럼 흐른다. 파도 모양·
+ * 반사 왜곡은 그대로고 흐르는 속도만 이 값에 비례한다.
+ */
+const WATER_TIME_SCALE = 0.35;
 /** three.js r183 examples/textures/waternormals.jpg (MIT) — HASHED_DIRS 의 textures. */
 const WATER_NORMALS_PATH = '/textures/waternormals.jpg';
 
@@ -186,7 +192,7 @@ export function SceneWater({ maps }: { maps?: SavedMapInfo[] }) {
     // 예제와 같이 무한 누적 — 며칠 연속 가동하면 float32 정밀도로 파도가
     // 거칠어진다(이전 셰이더도 같았다). wrap 은 레이어 주기가 서로 소수라
     // 어디서든 튄다 — docs/agents/rendering-perf.md 미룬 것.
-    state.uniforms.time.value += delta;
+    state.uniforms.time.value += delta * WATER_TIME_SCALE;
 
     const { sunDirection, sunColor, sunIntensity } = sceneLightingInfo;
     if (
