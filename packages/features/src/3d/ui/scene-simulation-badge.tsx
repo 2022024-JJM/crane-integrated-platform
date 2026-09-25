@@ -1,8 +1,6 @@
-import { FlaskConical, Square } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
-import { Button } from '@crane/ui/atoms/button';
-import { stopSimulation } from '../model/stop-simulation';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 
 /**
@@ -14,19 +12,13 @@ import { useVirtualTagStore } from '../model/use-virtual-tag-store';
  *   (캔버스 영역 inset-0)에 직접 마운트해야 한다 — 좌측 상단 열 안에 두면
  *   그 열 크기만 두른다.
  * - 좌측 상단 배지: 재생 중엔 맥동 점 + "시뮬레이션 중", 일시정지면 흐린
- *   "시뮬레이션 일시정지". 시나리오 이름·배속을 잇고 ■ 로 바로 종료(관제
- *   복귀)한다. 종료 후처리(카메라 원래 위치)는 부모가 `onStop` 으로.
+ *   "시뮬레이션 일시정지". 시나리오 이름·배속을 잇는다. 표시 전용이고 조작
+ *   버튼은 없다 — 종료는 트랜스포트 바의 시뮬레이션 패널 ■ 에서 한다.
  *
  * 실시간 화면에서 독 ▶ 로 켠 시뮬레이션이 실제 값을 덮어쓰는 것을 사용자가
  * 놓치지 않게 하는 것이 목적이다(2026-09-12).
  */
-export function SceneSimulationBadge({
-  onStop,
-  className,
-}: {
-  onStop?: () => void;
-  className?: string;
-}) {
+export function SceneSimulationBadge({ className }: { className?: string }) {
   const { t } = useTranslation();
   const hasSession = useVirtualTagStore((s) => s.hasSession);
   const isRunning = useVirtualTagStore((s) => s.isRunning);
@@ -77,20 +69,6 @@ export function SceneSimulationBadge({
             </span>
           ) : null}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="-mr-1 text-white/90 hover:bg-white/20 hover:text-white"
-          aria-label={t('monitoring:simulation.stop')}
-          title={t('monitoring:simulation.stopHint')}
-          onClick={() => {
-            stopSimulation();
-            onStop?.();
-          }}
-        >
-          <Square className="size-3" />
-        </Button>
       </div>
     </>
   );

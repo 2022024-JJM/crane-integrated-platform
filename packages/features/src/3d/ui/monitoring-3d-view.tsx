@@ -253,11 +253,6 @@ export function Monitoring3dView({
     sceneControllerRef.current?.reset();
   }, []);
 
-  const handleStopSimulation = useCallback(() => {
-    useObjectFocusStore.getState().exitFocus();
-    sceneControllerRef.current?.reset();
-  }, []);
-
   const handleGetPose = useCallback(
     () => sceneControllerRef.current?.getPose() ?? null,
     [],
@@ -329,7 +324,7 @@ export function Monitoring3dView({
       {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 시뮬레이션 값이 화면을
           움직이는 배치에서만. */}
       {simulationUiVisible && toolbarLayout !== 'none' ? (
-        <SceneSimulationBadge onStop={handleStopSimulation} />
+        <SceneSimulationBadge />
       ) : null}
       {focusedModelId !== null ? (
         <Button

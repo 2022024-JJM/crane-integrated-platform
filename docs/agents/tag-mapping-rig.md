@@ -60,10 +60,10 @@
 - `start()` 는 현재 상태값만 내보내고 시각 기준 재계산(evaluateAll)을 하지 않는다.
 - **시나리오** `VirtualScenario`(id·name·loop·tracks[key, keyframes[atMs,value,ease?]])는 세트 `scenarios[]` 에 태그와 함께 저장된다. `sanitizeScenario*`·`normalizeKeyframes` 가 정렬·중복 제거·상한을 맡는다. `activeScenarioId`(세션)로 하나만 활성이다.
 - 트랙이 있는 태그는 `evaluateScenarioTrack`(첫/마지막 값 유지, 구간 ease linear/hold/smooth)이 파형을 대신하고, 트랙 없는 태그는 파형 그대로다. loop 아닌 시나리오가 끝에 닿으면 러너 `onFinished` → 스토어 `pause()`. 시나리오 선택은 `seek(0)`.
-- **종료(관제 복귀)** 는 `stop-simulation.ts` 의 `stopSimulation()` 한 곳이다 — 패널 ■·배지·화면 진입/이탈이 전부 이걸 부른다. 내용은 충돌 세션 기록·정지 상태 `clearHistory()` + 스토어 `stop()`(러너 정지·시간 0 — publish 없는 `resetValues(false)`·시나리오 해제) + `rigValueStore.reset()`(rest 복귀) + `tagLiveValues.clear()`(운전 상태 unknown) + 실시간 `release()`. 일시정지(자세 유지)와 다른 경로다. 모니터링의 ■ 은 `onStop` 으로 카메라 원래 위치·포커스 해제까지 = 처음 화면.
+- **종료(관제 복귀)** 는 `stop-simulation.ts` 의 `stopSimulation()` 한 곳이다 — 패널 ■·화면 진입/이탈이 전부 이걸 부른다. 내용은 충돌 세션 기록·정지 상태 `clearHistory()` + 스토어 `stop()`(러너 정지·시간 0 — publish 없는 `resetValues(false)`·시나리오 해제) + `rigValueStore.reset()`(rest 복귀) + `tagLiveValues.clear()`(운전 상태 unknown) + 실시간 `release()`. 일시정지(자세 유지)와 다른 경로다.
 - 모니터링 `useSceneData` 와 에디터 페이지는 **진입·이탈 모두** `stopSimulation()` 을 불러 화면마다 깨끗한 시뮬레이션으로 시작한다.
 - UI: 공용 패널 `scene-simulation-panel.tsx`(재생·리셋·배속·시나리오·반복·스크럽)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 편집은 관리 페이지의 `scenario-section.tsx`(목록·이름·반복·실행, 트랙별 키프레임 표 — 초 단위 입력·태그 단위 값·보간, SVG 미리보기). HUD 연결 칸 라벨의 `×배속 mm:ss` 는 `sim-clock.ts`.
-- **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·시나리오 이름·배속·■ 종료). `Monitoring3dView` 좌측 상단 열 첫 항목이고 `toolbarLayout='none'` 은 제외.
+- **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·시나리오 이름·배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 `toolbarLayout='none'` 은 제외.
 - 배포 세트에 필리 데모 시나리오 1개(`scenario-philly-block-demo`)가 있다.
 
 ### 속도·가속 한계
