@@ -1,6 +1,7 @@
 import { invalidateShadows } from '@crane/domain/3d';
 import { smoothDampStep, type SmoothDampState } from '../lib/smooth-damp';
 import { requestSceneFrame } from './scene-frame-request';
+import type { TagPublishOptions } from './tag-value-bus';
 
 /**
  * 관절 값의 단일 저장소 + 값 소스 추상화.
@@ -283,14 +284,34 @@ export interface TagBindingTarget {
 
 export interface TagBindingSource extends JointValueSource {
   /** 값 버스(`publishTagValue`)가 호출한다. 시작 전이면 무시. */
-  ingest(key: string, value: number): void;
+  ingest(key: string, value: number, options?: TagPublishOptions): void;
+}
+
+/**
+ * publish 옵션 → 값 저장소 set 옵션. 생략·비정상 = 기본 스무딩, 0 = 즉시 대입
+ * (seek·리셋 — 자세가 미끄러지지 않는다), 양수 = 그 초로 스무딩(러너의 publish
+ * 간격).
+ */
+export function tagSetOptions(
+  smoothTime: number | undefined,
+): SetJointValueOptions {
+  if (smoothTime === 0) return { smooth: false };
+  if (
+    smoothTime !== undefined &&
+    Number.isFinite(smoothTime) &&
+    smoothTime > 0
+  ) {
+    return { smooth: true, smoothTime };
+  }
+  return { smooth: true };
 }
 
 /**
  * 태그 키 → 값 저장소 주소 바인딩 소스. `resolve` 는 키에 꽂힌 주소 목록을
  * 돌려준다(씬의 tagMappings 에서 buildTagMappingIndex 가 만든다). 적용 공식:
  * applied = offset + value * scale. 서버·시뮬 값은 프레임 사이에서 튀므로
- * smooth 로 쓴다.
+ * 기본은 smooth 이고, 생산자가 publish 옵션으로 즉시 대입·스무딩 시간을
+ * 정한다(`tagSetOptions`).
  */
 export function createTagBindingSource(
   resolve: (key: string) => readonly TagBindingTarget[],
@@ -304,12 +325,15 @@ export function createTagBindingSource(
     stop() {
       sink = null;
     },
-    ingest(key, value) {
+    ingest(key, value, options) {
       if (!sink || !Number.isFinite(value)) return;
+      const setOptions = tagSetOptions(options?.smoothTime);
       for (const target of resolve(key)) {
-        sink.set(target.address, target.offset + value * target.scale, {
-          smooth: true,
-        });
+        sink.set(
+          target.address,
+          target.offset + value * target.scale,
+          setOptions,
+        );
       }
     },
   };

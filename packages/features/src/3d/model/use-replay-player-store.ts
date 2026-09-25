@@ -2,11 +2,17 @@ import { create } from 'zustand';
 import type { ReplayLiteFrame } from '@crane/domain/monitoring';
 import { rigValueStore } from './rig-value-store';
 import { notifySceneSeek } from './scene-seek-signal';
-import { publishTagValue } from './tag-value-bus';
+import { publishTagValue, type TagPublishOptions } from './tag-value-bus';
 
 const DEFAULT_REPLAY_FRAME_DURATION_MS = 5_000;
 
-function applyReplayFrame(frame: ReplayLiteFrame | undefined) {
+/** seek — 위치 불연속. 화면에 즉시 대입해 rest 를 거쳐 미끄러지지 않는다. */
+const PUBLISH_IMMEDIATE: TagPublishOptions = { smoothTime: 0 };
+
+function applyReplayFrame(
+  frame: ReplayLiteFrame | undefined,
+  options?: TagPublishOptions,
+) {
   if (!frame) {
     return;
   }
@@ -19,7 +25,7 @@ function applyReplayFrame(frame: ReplayLiteFrame | undefined) {
         continue;
       }
 
-      publishTagValue(`${craneId}:${tagCode}`, value);
+      publishTagValue(`${craneId}:${tagCode}`, value, options);
     }
   }
 }
@@ -63,8 +69,7 @@ function findFrameIndexByMsOffset(
   }
 
   while (index > 0 && remaining > 0) {
-    const dur =
-      frameDurationsMs[index - 1] ?? DEFAULT_REPLAY_FRAME_DURATION_MS;
+    const dur = frameDurationsMs[index - 1] ?? DEFAULT_REPLAY_FRAME_DURATION_MS;
     if (remaining <= dur) return index - 1;
     remaining -= dur;
     index -= 1;
@@ -85,7 +90,9 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
     const normalizedDurations =
       frameDurationsMs.length === frames.length
         ? frameDurationsMs
-        : new Array<number>(frames.length).fill(DEFAULT_REPLAY_FRAME_DURATION_MS);
+        : new Array<number>(frames.length).fill(
+            DEFAULT_REPLAY_FRAME_DURATION_MS,
+          );
 
     set({
       frames,
@@ -106,8 +113,9 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
 
     rigValueStore.reset();
     set({ frameIndex: clamped, isPlaying: false });
-    applyReplayFrame(frames[clamped]);
-    // 위치 불연속 — 자세가 rest 를 거쳐 미끄러진다. 정상 전진(tick)은 알리지 않는다.
+    applyReplayFrame(frames[clamped], PUBLISH_IMMEDIATE);
+    // 위치 불연속 — 감지기가 새 자세를 볼 때까지 기록기가 전이를 가린다.
+    // 정상 전진(tick)은 알리지 않는다.
     notifySceneSeek();
   },
 
@@ -118,7 +126,11 @@ export const useReplayPlayerStore = create<ReplayPlayerState>()((set, get) => ({
 
   seekByMs: (deltaMs) => {
     const { frameIndex, frameDurationsMs } = get();
-    const next = findFrameIndexByMsOffset(frameDurationsMs, frameIndex, deltaMs);
+    const next = findFrameIndexByMsOffset(
+      frameDurationsMs,
+      frameIndex,
+      deltaMs,
+    );
     get().seekTo(next);
   },
 

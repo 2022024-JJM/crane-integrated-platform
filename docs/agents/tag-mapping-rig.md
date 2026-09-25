@@ -41,6 +41,7 @@
 - 바인딩은 모니터링 뷰·에디터 모두 화면이 떠 있는 동안 항상 켜 두고 언마운트 시 값 저장소를 비운다.
 - 재생 토글(가상 태그 관리 페이지·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
 - 기즈모 드래그 중엔 루트 맵핑을 건너뛴다. 드래그 종료 프레임의 루트 rest handoff 는 `docs/agents/3d-editor.md`.
+- publish 옵션 `smoothTime`(`TagPublishOptions`): 생략은 기본 스무딩, 0 은 즉시 대입. 가상 태그 러너의 정상 전진은 publish 벽시계 간격(`tickMs / speed`)을 넣어 스텝 계단을 숨기고(화면 지연은 씬 시간 한 스텝), 러너 seek·리셋과 리플레이 seek 는 0 으로 내보낸다. 소비자 `createTagBindingSource` 가 `tagSetOptions` 로 값 저장소 set 옵션으로 바꾼다. 관찰자에게는 전달하지 않는다.
 - 버스 관찰자 `subscribeTagValues` 는 소비자 슬롯과 별개의 다중 구독이다(3D 플레이 통계 등이 쓴다 — `docs/agents/3d-play.md`).
 - 값 저장소의 set/reset/restore 와 스무딩 잔여는 프레임 요청·그림자 무효화가 배선돼 있다 — `docs/agents/rendering-perf.md`.
 
@@ -56,22 +57,22 @@
 
 ### 시뮬레이션 시계·시나리오
 
-- 러너(`virtual-tag-runner.ts`)는 벽시계 dt × `speed`(스토어 세션값, 선택지 `SIMULATION_SPEED_OPTIONS`)를 누적한다. `seek(ms)` 는 경과를 옮겨 모든 값을 그 시각으로 다시 계산해 내보낸다 — 정지 중에도 동작하도록 `attachConfig` 로 getter 만 붙여 둔다.
-- `start()` 는 현재 상태값만 내보내고 시각 기준 재계산(evaluateAll)을 하지 않는다.
+- 러너(`virtual-tag-runner.ts`)는 벽시계 dt × `speed`(스토어 세션값, 선택지 `SIMULATION_SPEED_OPTIONS`)를 씬 시간으로 누적하고, 값은 `tickMs` 고정 스텝으로만 적분한다(`advanceTo`) — 같은 씬 시각의 값은 경로·틱 지터와 무관하게 같다. `seek(ms)` 는 0 초 상태에서 ms 까지 다시 적분해 내보낸다(재시뮬레이션, 비용은 스텝 수에 선형). 정지 중에도 동작하도록 `attachConfig` 로 getter 만 붙여 둔다. 타이머 간격은 `tickMs / speed`(하한 `TIMER_MIN_MS`)라 배속이 높아도 스텝마다 내보낸다.
+- `start()` 는 현재 상태값만 내보내고 재시뮬레이션하지 않는다. 0 초 상태는 트랙이 있는 태그는 첫 키프레임 값, 나머지는 initial 이다. seek 는 트랙 없는 manual 태그의 슬라이더 값을 유지하고, 리셋은 전부 initial 로 돌린다.
 - **시나리오** `VirtualScenario`(id·name·loop·tracks[key, keyframes[atMs,value,ease?]])는 세트 `scenarios[]` 에 태그와 함께 저장된다. `sanitizeScenario*`·`normalizeKeyframes` 가 정렬·중복 제거·상한을 맡는다. `activeScenarioId`(세션)로 하나만 활성이다.
 - 트랙이 있는 태그는 `evaluateScenarioTrack`(첫/마지막 값 유지, 구간 ease linear/hold/smooth)이 파형을 대신하고, 트랙 없는 태그는 파형 그대로다. loop 아닌 시나리오가 끝에 닿으면 러너 `onFinished` → 스토어 `pause()`. 시나리오 선택은 `seek(0)`.
 - **종료(관제 복귀)** 는 `stop-simulation.ts` 의 `stopSimulation()` 한 곳이다 — 패널 ■·화면 진입/이탈이 전부 이걸 부른다. 내용은 충돌 세션 기록·정지 상태 `clearHistory()` + 스토어 `stop()`(러너 정지·시간 0 — publish 없는 `resetValues(false)`·시나리오 해제) + `rigValueStore.reset()`(rest 복귀) + `tagLiveValues.clear()`(운전 상태 unknown) + 실시간 `release()`. 일시정지(자세 유지)와 다른 경로다.
 - 모니터링 `useSceneData` 와 에디터 페이지는 **진입·이탈 모두** `stopSimulation()` 을 불러 화면마다 깨끗한 시뮬레이션으로 시작한다.
-- UI: 공용 패널 `scene-simulation-panel.tsx`(재생·리셋·배속·시나리오·반복·스크럽)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 편집은 관리 페이지의 `scenario-section.tsx`(목록·이름·반복·실행, 트랙별 키프레임 표 — 초 단위 입력·태그 단위 값·보간, SVG 미리보기). HUD 연결 칸 라벨의 `×배속 mm:ss` 는 `sim-clock.ts`.
+- UI: 공용 패널 `scene-simulation-panel.tsx`(재생·리셋·배속·시나리오·반복·경과 시각)를 3D 플레이 트랜스포트 바 팝오버가 쓴다. 재생 위치 이동은 트랜스포트 바의 스크럽 하나다. 편집은 관리 페이지의 `scenario-section.tsx`(목록·이름·반복·실행, 트랙별 키프레임 표 — 초 단위 입력·태그 단위 값·보간, SVG 미리보기). HUD 연결 칸 라벨의 `×배속 mm:ss` 는 `sim-clock.ts`.
 - **시뮬레이션 중 표시** `scene-simulation-badge.tsx` 는 스토어 `hasSession`(start 에 true, stop 에 false, 일시정지 중에도 true)을 본다 — 캔버스 가장자리 하늘색 inset 테두리(재생 진하게·정지 흐리게) + 좌측 상단 배지(맥동 점·시나리오 이름·배속 — 표시 전용, 조작 버튼 없음). `Monitoring3dView` 좌측 상단 열 첫 항목이고 `toolbarLayout='none'` 은 제외.
 - 배포 세트에 필리 데모 시나리오 1개(`scenario-philly-block-demo`)가 있다.
 
 ### 속도·가속 한계
 
 - `VirtualTagDefinition.limits?: {maxSpeed?, maxAccel?}` — 태그 단위/초·초², 양수만. 관리 표의 두 열.
-- 러너가 파형·시나리오 **목표값**을 향해 `rateLimitSteps`(`rate-limit.ts` — `rateLimitStep` 은 속도 상한, 가속 상한 + 정지 거리 √(2a·d) 상한, 오버슈트 클램프, 상태에 `velocity`)를 틱 길이 이하 서브스텝으로 반복해 램프한다.
-- dt 는 배속을 곱한 시뮬레이션 시간이라 한계는 배속과 무관하게 시뮬레이션 초 기준이고, 서브스텝 덕에 가속 프로파일도 배속과 무관하다.
-- manual 슬라이더·seek·리셋은 즉시(텔레포트).
+- 러너가 파형·시나리오 **목표값**을 향해 `rateLimitStep`(`rate-limit.ts` — 속도 상한, 가속 상한 + 정지 거리 √(2a·d) 상한, 오버슈트 클램프, 상태에 `velocity`)을 씬 시간 `tickMs` 고정 스텝마다 한 번 적용해 램프한다.
+- 스텝이 씬 시간이라 한계는 배속과 무관하게 시뮬레이션 초 기준이고, 가속 프로파일도 배속·틱 지터와 무관하다.
+- manual 슬라이더·리셋은 즉시(텔레포트). seek 는 재시뮬레이션이라 한계를 지킨 값이 나온다.
 - 배포 필리 태그에 한계가 들어 있어 sine 파형은 한계에 잘려 평평해진다(의도 — 순간이동 방지).
 
 ### 리깅(관절 연동)
@@ -91,12 +92,15 @@
 - 시뮬레이션을 끝내는 코드는 `stopSimulation()` 을 부른다. 스토어 `stop()` 만 부르면 값 저장소·충돌 기록·실시간 보류가 남는다.
 - 같은 대상(노드·채널·축 / 관절)에 맵핑을 두 개 만들지 않는다 — sanitize 가 뒤 항목을 조용히 버린다.
 - 가상 태그 배포 파일 `virtual-tags.json` 을 바꿨으면 커밋한다 — 운영 localStorage 는 `baseVersion` 이 다르면 배포본으로 덮인다.
-- 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·seek·리셋 경로(텔레포트)를 쓴다.
+- 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·리셋 경로(텔레포트)를 쓴다. seek 는 우회하지 않는다.
+- 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 적분기(`advanceTo`)를 쓴다. seek 에서 목표값을 직접 대입하거나 벽시계 dt 로 적분하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
+- 위치 불연속(seek·리셋)의 publish 는 `smoothTime: 0` 이다 — 스무딩을 타면 자세가 미끄러져 감지기가 가짜 전이를 낸다.
 
 ## 하지 않기로 한 것
 
-- 러너 `start()` 에서 시각 기준 재계산(evaluateAll) — 한계로 뒤처진 값이 재개 순간 목표로 점프해 미끄러진다. 현재 상태값만 내보낸다.
-- 한 스텝에 큰 dt 를 넣는 rate limit — 가속 프로파일이 1~2틱으로 붕괴해 stop‑go 히치가 난다. 틱 길이 이하 서브스텝으로 나눈다.
+- 러너 `start()` 에서 재시뮬레이션 — 한계로 뒤처진 값이 재개 순간 목표로 점프해 미끄러진다. 현재 상태값만 내보낸다.
+- seek 에서 그 시각의 목표값을 바로 대입 — 한계로 뒤처진 재생 자세와 어긋나, 3D 플레이 타임라인 사건 시각으로 옮기면 크레인이 최대 수 초 앞선 자세로 보였다. 0 초부터 다시 적분한다.
+- 벽시계 dt 를 그대로 적분하는 rate limit — 큰 dt 는 가속 프로파일이 1~2틱으로 붕괴해 stop‑go 히치가 나고, 틱 지터로 같은 씬 시각의 값이 달라진다. 씬 시간 `tickMs` 고정 스텝으로 적분한다.
 - 에디터에 시뮬레이션·시나리오 UI 를 두지 않는다 — 진입·이탈의 `stopSimulation()` 은 관리 페이지에서 켜진 러너가 넘어오지 않게 하는 방어다. 재생 UI 는 관리 페이지와 3D 플레이 트랜스포트 바에만 있다.
 - 시뮬레이션 알림 toast — 배너·HUD·헤더 배지와 겹쳐 보여 소리·브라우저 알림만 쓴다(`docs/agents/monitoring-ui.md`).
 - 레거시 `valueMapList`·`rigBindings` 를 저장본에 다시 쓰는 것 — 입력 전용, 로드 시 변환 후 소멸.

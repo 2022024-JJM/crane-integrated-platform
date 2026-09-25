@@ -3,6 +3,7 @@ import {
   hasTagIngest,
   publishTagValue,
   setTagIngest,
+  subscribeTagValues,
   tagLiveValues,
 } from '../tag-value-bus';
 
@@ -21,7 +22,7 @@ describe('publishTagValue', () => {
     setTagIngest(ingest);
     expect(hasTagIngest()).toBe(true);
     publishTagValue('C_1:x', 12);
-    expect(ingest).toHaveBeenCalledWith('C_1:x', 12);
+    expect(ingest).toHaveBeenCalledWith('C_1:x', 12, undefined);
     expect(tagLiveValues.get('C_1:x')?.value).toBe(12);
   });
 
@@ -39,6 +40,18 @@ describe('publishTagValue', () => {
     publishTagValue('k', Infinity);
     expect(ingest).not.toHaveBeenCalled();
     expect(tagLiveValues.size).toBe(0);
+  });
+
+  it('publish 옵션은 소비자에게만 전달되고 관찰자에게는 가지 않는다', () => {
+    const ingest = vi.fn();
+    const listener = vi.fn();
+    setTagIngest(ingest);
+    const unsubscribe = subscribeTagValues(listener);
+    publishTagValue('k', 1, { smoothTime: 0 });
+    expect(ingest).toHaveBeenCalledWith('k', 1, { smoothTime: 0 });
+    expect(listener).toHaveBeenCalledWith('k', 1, expect.any(Number));
+    expect(listener.mock.calls[0]).toHaveLength(3);
+    unsubscribe();
   });
 
   it('setTagIngest(null) 이후에는 전달하지 않는다', () => {

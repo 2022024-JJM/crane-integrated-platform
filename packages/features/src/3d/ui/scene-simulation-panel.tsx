@@ -23,13 +23,14 @@ import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { virtualTagRuntime } from '../model/virtual-tag-runner';
 
 /**
- * 시뮬레이션 시계 패널 — 재생/정지·리셋, 배속, 시나리오 선택·반복, 경과 시간과
- * 타임라인 스크럽. 3D 플레이 트랜스포트 바의 시뮬레이션 팝오버가 쓴다(독
- * 팝업·에디터 팔레트 탭은 2026-09-17 에 뺐다).
+ * 시뮬레이션 시계 패널 — 재생/정지·리셋, 배속, 시나리오 선택·반복, 경과 시간.
+ * 3D 플레이 트랜스포트 바의 시뮬레이션 팝오버가 쓴다(독 팝업·에디터 팔레트 탭은
+ * 2026-09-17 에 뺐다).
  *
  * 경과 시간은 러너(mutable)에서 200ms 폴링으로 읽는다 — 프레임 속도 값을
- * React 상태로 올리지 않는 규칙. 스크럽은 시나리오가 있을 때만(길이가 있어야
- * 슬라이더 범위가 정해진다) — 파형만이면 경과 시간과 리셋뿐이다.
+ * React 상태로 올리지 않는 규칙. 재생 위치 이동은 트랜스포트 바의 스크럽
+ * 하나다 — 여기에도 두면 회차를 접은 시나리오 시각과 경과 시각 두 기준이 생겨
+ * 반복 시나리오에서 커서가 튄다.
  */
 const NONE = '__none__';
 
@@ -52,7 +53,6 @@ export function SceneSimulationPanel({
   const activeScenarioId = useVirtualTagStore((s) => s.activeScenarioId);
   const setActiveScenario = useVirtualTagStore((s) => s.setActiveScenario);
   const updateScenario = useVirtualTagStore((s) => s.updateScenario);
-  const seek = useVirtualTagStore((s) => s.seek);
   const load = useVirtualTagStore((s) => s.load);
   // 실시간 모드는 useSceneData 가 정의를 읽지 않는다 — 시나리오 목록을 보이려면
   // 여기서 읽는다(load 는 한 번만 실제로 읽고 이후 no-op).
@@ -197,18 +197,11 @@ export function SceneSimulationPanel({
               aria-label={t('monitoring:simulation.loop')}
             />
           </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min={0}
-              max={Math.max(durationMs, 1)}
-              step={100}
-              value={Math.min(timeMs, durationMs)}
-              aria-label={t('monitoring:simulation.seek')}
-              className="accent-primary h-2 min-w-0 flex-1 cursor-pointer"
-              onChange={(event) => seek(Number(event.target.value))}
-            />
-            <span className="text-muted-foreground shrink-0 font-mono text-[10px] tabular-nums">
+          <div className="text-muted-foreground flex items-center justify-between text-[11px]">
+            <span className="font-medium">
+              {t('monitoring:simulation.time')}
+            </span>
+            <span className="font-mono text-[10px] tabular-nums">
               {formatSimClock(timeMs)} / {formatSimClock(durationMs)}
             </span>
           </div>

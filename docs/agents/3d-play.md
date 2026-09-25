@@ -45,6 +45,7 @@ i18n 은 `monitoring:play3d.*`.
 - **위치는 트랜스포트에 포함하지 않는다** — `readPlay3dPositionMs()` 를 폴링한다.
 - 리플레이는 프레임 누적 ms ↔ index 를 `lib/replay-position.ts` 로 변환한다. seek 는 충돌 스토어 `clearActive` 를 불러 옛 자세를 가리키는 pinned 박스가 남지 않게 한다.
 - 시간 축은 **씬 시간**(리플레이 = 프레임 누적 ms, 시뮬레이션 = 러너 경과 ms)이다.
+- 시뮬레이션 seek 는 러너의 재시뮬레이션이라(`docs/agents/tag-mapping-rig.md`) 타임라인 사건 시각으로 옮기면 재생 때 그 시각에 보이던 자세가 나온다. 잔여 오차는 적분 스텝 한 개(`tickMs`)와 정상 전진의 publish 간격 스무딩 한 스텝뿐이다. seek UI 는 트랜스포트 바의 스크럽 하나다 — 시뮬레이션 패널에는 없다.
 - 트랜스포트 바·마커 seek·통계·`scene-collision-hold` 가 전부 이 어댑터 하나만 본다. 충돌·영역 정지 시 어느 러너를 멈추는지(`'play3d'` 러너 = 활성 소스에 따라 리플레이 러너 또는 가상 태그 러너)는 `docs/agents/3d-collision.md`.
 
 ### 실행 통계
@@ -68,8 +69,8 @@ i18n 은 `monitoring:play3d.*`.
 
 - 사건 = 충돌 기록, 영역 diff, 정지(충돌 pinned ∪ 영역 held) 전이, 두절 전이. 사건 시각은 스토어의 벽시계 `at` 이 아니라 **구독 콜백 안에서 읽은 트랜스포트 위치**(같은 틱, 동기)다. 충돌 사건은 양쪽 `modelIds`·`modelNames`(같은 순서), 영역 사건은 소유 모델 `ownerId` 를 싣는다.
 - 짧은 주기 폴링으로 재생 중 지나간 구간을 `scanned`(합집합)·장비 상태 ms 에 더한다. 한 폴링에 배속 기준 기대치를 크게 넘게 뛰면 seek 로 보고 제외한다. `reachedMs`(위치가 닿은 가장 먼 지점)는 재생 여부·seek 와 무관하게 폴링마다 최댓값으로 갱신한다 — 시간 축의 앵커.
-- **seek 는 로그를 바꾸지 않는다.** seek 신호(`model/scene-seek-signal.ts` — 발신처는 리플레이 스토어 `seekTo` 와 가상 태그 러너 `seek`/`resetValues` 뿐, 러너의 정상 전진은 알리지 않는다)와 reset 뒤 `SEEK_SETTLE_MS`(벽시계) 동안 영역·충돌 전이를 사건으로 남기지 않는다 — 자세가 리깅 스무딩으로 미끄러지는 동안의 전이는 seek 목표 시각의 사건이 아니다. 정착하면 런타임(영역 스토어 `intrusions`)과 로그를 화해한다: 런타임이 안인데 로그가 밖이면 진입, 로그가 안인데 런타임이 밖이면 이탈을 **잠정**(`provisional`)으로 넣는다. 정착 뒤의 전이와 화해는 모두 로그 기준 결정 `decideZoneEvent`(`lib/play3d-stats.ts`)를 거친다 — 로그에 이미 있는 시각의 재통과 전이는 넣지 않고(`REPASS_JITTER_MS` 안의 이른 관측은 그 사건을 앞당김), 잠정 사건은 실제 전이가 교체한다(제자리 수정이라 id·타임라인 key 유지). 충돌은 같은 쌍 ±`REPASS_JITTER_MS` 안의 중복을 넣지 않는다(`hasEventNear`). 정지·두절·상태 전이는 정착과 무관.
-  - 정착 창 안(`SEEK_SETTLE_MS` × 배속, 시뮬레이션 재생 중 seek 에서만 — 리플레이 seek 는 항상 정지)의 실제 전이는 남지 않는다(짧은 체류·짧은 이탈). 정착 중 미끄러짐이 충돌 검출기(재기준선 없음)에서 hit 를 내면 스토어 기록·정지는 그대로 일어나고 리포트에는 `holdStart` 만 남는다. 폴링의 seek 휴리스틱(`maxStep`)은 1·2배속 리플레이의 긴 프레임 전진을 seek 로 오판해 `scanned` 가 비는 기존 문제가 있다 — seek 신호로 대체하는 것이 후속.
+- **seek 는 로그를 바꾸지 않는다.** seek 신호(`model/scene-seek-signal.ts` — 발신처는 리플레이 스토어 `seekTo` 와 가상 태그 러너 `seek`/`resetValues` 뿐, 러너의 정상 전진은 알리지 않는다)와 reset 뒤 `SEEK_SETTLE_MS`(벽시계) 동안 영역·충돌 전이를 사건으로 남기지 않는다 — seek 값은 화면에 즉시 대입되므로 창은 스캔 지연(영역·충돌 스캔 주기와 예산 분할 프레임)만 덮고, 순간이동한 자세를 감지기가 새로 보며 내는 전이는 seek 목표 시각의 사건이 아니다. 정착하면 런타임(영역 스토어 `intrusions`)과 로그를 화해한다: 런타임이 안인데 로그가 밖이면 진입, 로그가 안인데 런타임이 밖이면 이탈을 **잠정**(`provisional`)으로 넣는다. 정착 뒤의 전이와 화해는 모두 로그 기준 결정 `decideZoneEvent`(`lib/play3d-stats.ts`)를 거친다 — 로그에 이미 있는 시각의 재통과 전이는 넣지 않고(`REPASS_JITTER_MS` 안의 이른 관측은 그 사건을 앞당김), 잠정 사건은 실제 전이가 교체한다(제자리 수정이라 id·타임라인 key 유지). 충돌은 같은 쌍 ±`REPASS_JITTER_MS` 안의 중복을 넣지 않는다(`hasEventNear`). 정지·두절·상태 전이는 정착과 무관.
+  - 정착 창 안(`SEEK_SETTLE_MS` × 배속, 시뮬레이션 재생 중 seek 에서만 — 리플레이 seek 는 항상 정지)의 실제 전이는 남지 않는다(짧은 체류·짧은 이탈). 정착 중 순간이동한 자세가 충돌 검출기(재기준선 없음)에서 hit 를 내면 스토어 기록·정지는 그대로 일어나고 리포트에는 `holdStart` 만 남는다. 폴링의 seek 휴리스틱(`maxStep`)은 1·2배속 리플레이의 긴 프레임 전진을 seek 로 오판해 `scanned` 가 비는 기존 문제가 있다 — seek 신호로 대체하는 것이 후속.
 - 충돌 감지 off 는 `detectionOffSeen` 으로 남긴다.
 - 태그는 버스 관찰자 `subscribeTagValues`(`tag-value-bus.ts`, 소비자 슬롯과 별개·다중 가능)로 publish 마다 집계한다 — 맵핑된 키만.
 - 운전 상태는 `useModelRuntimeStatuses(scene, { paused, timeScale })` 로 받는다(아래). 밴드의 출처는 기록기가 남기는 `statusTransitions`(모든 전이, reset 직후 현재 상태를 unknown→x 로 심는다).
@@ -152,7 +153,8 @@ i18n 은 `monitoring:play3d.*`.
 - 영역 체류를 대각선 빗금·등급별 색으로 — 사용자 요청으로 등급 무관 노란 채운 박스. 빨강은 충돌 선에만.
 - `scanned` 를 재통과 중복 판정 기준으로 — 리플레이는 프레임 간격이 폴링의 seek 임계보다 크면 검사 구간이 비어 있다.
 - 화해 사건을 잠정 없이 boolean 판정으로만 넣기 — 앞으로 점프 뒤 되돌아가 재통과하면 띠가 다시 쪼개진다.
-- `hasPendingSmoothing` 으로 seek 정착 판정 — 값 도달이 수 초까지 늦다.
+- `hasPendingSmoothing` 으로 seek 정착 판정 — 정상 전진의 스무딩이 남아 있어 끝나지 않는다.
+- 시뮬레이션 패널의 스크럽 — 회차를 접은 시나리오 시각으로 seek 해 트랜스포트 바·타임라인(경과 시각)과 어긋난다.
 - 타임라인 안쪽 세로 스크롤·sticky 이름 열 — 가로 스크롤바가 이름 열 아래까지 뻗는다. 이름 열을 스크롤러 밖에 둔다.
 - 재생바 축을 길이에 고정하기 — 반복 시나리오에서 표식이 끝에 쌓인다.
 - 시간 축 앵커를 검사 구간(`scanned`) 끝으로 — 정지 중 seek 로 뛴 곳이 빠져 뒤로 끌 때 축이 손잡이 밑에서 무너진다.

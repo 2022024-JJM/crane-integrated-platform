@@ -290,6 +290,7 @@ export {
   tagLiveValues,
   type TagLiveValue,
   type TagPublish,
+  type TagPublishOptions,
   type TagValueSource,
 } from './model/tag-value-bus';
 export { useTagBindingSource } from './model/use-tag-binding-source';

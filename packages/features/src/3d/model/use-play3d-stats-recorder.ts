@@ -53,13 +53,14 @@ export const PLAY3D_STATS_POLL_MS = 250;
  */
 const SEEK_JUMP_FACTOR = 6;
 /**
- * seek 뒤 자세가 정착할 때까지(벽시계) 영역·충돌 전이를 사건으로 남기지 않는
- * 창. 리깅 스무딩(SmoothDamp, smoothTime 0.35s)의 임계감쇠 잔여가 1.2s 에
- * 0.8% 이고 영역 스캔 50ms + 프레임 1개를 더한 값. 리플레이 seek 는 rest 를
- * 거쳐 이동이 커서 충돌 재기준선(BASELINE_SETTLE_MS)보다 보수적이다.
- * `hasPendingSmoothing` 으로 판정하지 않는다 — 값 도달이 수 초까지 늦다.
+ * seek 뒤 감지기가 새 자세를 다 볼 때까지(벽시계) 영역·충돌 전이를 사건으로
+ * 남기지 않는 창. seek 값은 화면에 즉시 대입되므로(publish `smoothTime: 0`)
+ * 자세는 다음 프레임에 끝나고 남는 것은 스캔 지연이다 — 영역·충돌 스캔 주기
+ * 50ms 와 예산 분할로 몇 프레임(30fps 기준 ~100ms)에 걸치는 전체 스캔, 그 위에
+ * 여유. `hasPendingSmoothing` 으로 판정하지 않는다 — 정상 전진의 스무딩이
+ * 남아 있어 끝나지 않는다.
  */
-const SEEK_SETTLE_MS = 1200;
+const SEEK_SETTLE_MS = 300;
 
 function buildMeta(source: Play3dSource, regionId: string): Play3dStatsMeta {
   const replay = useReplayPlayerStore.getState();
@@ -255,9 +256,9 @@ function modelName(scene: SavedSceneInfo | null, modelId: string): string {
  * 공용 훅(useModelRuntimeStatuses)은 라벨·HUD 가 전 모델을 전제로 써서 그대로다.
  *
  * seek 는 로그를 바꾸지 않는다: seek 신호(scene-seek-signal)와 reset 뒤
- * `SEEK_SETTLE_MS` 동안 영역·충돌 전이를 사건으로 남기지 않고(자세가 스무딩으로
- * 미끄러지는 동안의 전이는 seek 목표 시각의 사건이 아니다), 정착하면 런타임과
- * 로그를 화해한다. 정착 뒤의 전이도 로그 기준 결정(decideZoneEvent)을 거쳐
+ * `SEEK_SETTLE_MS` 동안 영역·충돌 전이를 사건으로 남기지 않고(순간이동한 자세를
+ * 감지기가 새로 보며 내는 전이는 seek 목표 시각의 사건이 아니다), 정착하면
+ * 런타임과 로그를 화해한다. 정착 뒤의 전이도 로그 기준 결정(decideZoneEvent)을 거쳐
  * 재통과 중복을 넣지 않는다. 정착 창 안의 실제 전이(시뮬레이션 재생 중 seek,
  * 창 × 배속)는 남지 않고, 정착 중 미끄러짐이 충돌 정지를 일으키면 holdStart 만
  * 남는다.

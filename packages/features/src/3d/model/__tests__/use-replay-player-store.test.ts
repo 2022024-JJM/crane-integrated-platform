@@ -3,7 +3,11 @@ import type { ReplayLiteFrame } from '@crane/domain/monitoring';
 import { useReplayPlayerStore } from '../use-replay-player-store';
 import { rigValueStore } from '../rig-value-store';
 import { subscribeSceneSeek } from '../scene-seek-signal';
-import { setTagIngest, tagLiveValues } from '../tag-value-bus';
+import {
+  setTagIngest,
+  tagLiveValues,
+  type TagPublishOptions,
+} from '../tag-value-bus';
 
 /**
  * craneId의 하이픈은 태그 키에서 언더스코어로 치환된다 —
@@ -222,5 +226,21 @@ describe('seek 신호', () => {
     unsubscribe();
     store().seekTo(0);
     expect(count).toBe(3);
+  });
+});
+
+describe('seek 의 화면 적용', () => {
+  it('seekTo 는 즉시 대입(smoothTime 0)으로, loadFrames·tick 은 기본 스무딩으로 내보낸다', () => {
+    const options: Array<TagPublishOptions | undefined> = [];
+    setTagIngest((_key, _value, o) => options.push(o));
+    store().loadFrames([frame(0), frame(10), frame(20)], [1000, 1000, 1000]);
+    expect(options).toEqual([undefined]);
+    store().seekTo(2);
+    expect(options.at(-1)).toEqual({ smoothTime: 0 });
+    store().seekTo(0);
+    store().play();
+    store().tick();
+    expect(options.length).toBe(4);
+    expect(options.at(-1)).toBeUndefined();
   });
 });

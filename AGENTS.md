@@ -276,6 +276,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
+- 시뮬레이션 값은 씬 시간의 함수다 — 가상 태그 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).

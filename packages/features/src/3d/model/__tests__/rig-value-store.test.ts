@@ -8,6 +8,7 @@ import {
   makeJointAddress,
   manualJointSource,
   rigValueStore,
+  tagSetOptions,
 } from '../rig-value-store';
 
 beforeEach(() => {
@@ -386,5 +387,31 @@ describe('rigValueStore — demand 캔버스 프레임 요청 (scene-frame-reque
       ['m/k', 2],
     ]);
     expect(frames).toBe(5);
+  });
+});
+
+describe('tagSetOptions / 바인딩 소스 publish 옵션', () => {
+  it('0 은 즉시, 양수는 그 초, 생략·NaN·음수·Infinity 는 기본 스무딩', () => {
+    expect(tagSetOptions(0)).toEqual({ smooth: false });
+    expect(tagSetOptions(0.05)).toEqual({ smooth: true, smoothTime: 0.05 });
+    expect(tagSetOptions(undefined)).toEqual({ smooth: true });
+    expect(tagSetOptions(NaN)).toEqual({ smooth: true });
+    expect(tagSetOptions(-1)).toEqual({ smooth: true });
+    expect(tagSetOptions(Infinity)).toEqual({ smooth: true });
+  });
+
+  it('ingest 는 옵션을 set 옵션으로 넘긴다 — 즉시는 바로 값, 생략은 목표만', () => {
+    const source = createTagBindingSource(() => [
+      { address: 'm/j', scale: 1, offset: 0 },
+    ]);
+    source.start(rigValueStore);
+    source.ingest('k', 5, { smoothTime: 0 });
+    expect(rigValueStore.get('m/j')).toBe(5);
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+    source.ingest('k', 9);
+    expect(rigValueStore.get('m/j')).toBe(5);
+    expect(rigValueStore.getTarget('m/j')).toBe(9);
+    expect(rigValueStore.hasPendingSmoothing()).toBe(true);
+    source.stop();
   });
 });

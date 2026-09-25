@@ -48,6 +48,22 @@ describe('useTagBindingSource', () => {
     expect(rigValueStore.getTarget('m1/map-1')).toBe(21);
   });
 
+  it('publish 옵션 — smoothTime 0 은 즉시 대입, 양수는 그 초로 스무딩, 생략은 기본', () => {
+    renderHook(() => useTagBindingSource(scene('k'), true));
+    publishTagValue('k', 10, { smoothTime: 0 });
+    expect(rigValueStore.get('m1/map-1')).toBe(21);
+    expect(rigValueStore.hasPendingSmoothing()).toBe(false);
+    publishTagValue('k', 20, { smoothTime: 0.05 });
+    expect(rigValueStore.get('m1/map-1')).toBe(21);
+    expect(rigValueStore.getTarget('m1/map-1')).toBe(41);
+    rigValueStore.step(0.1);
+    // 0.05s 스무딩은 0.1s 에 거의 도달한다(기본 0.35s 면 절반도 못 간다).
+    expect(rigValueStore.get('m1/map-1')).toBeGreaterThan(35);
+    publishTagValue('k', 0);
+    rigValueStore.step(0.1);
+    expect(rigValueStore.get('m1/map-1')).toBeGreaterThan(10);
+  });
+
   it('씬이 바뀌면 재시작 없이 인덱스만 갈아 끼운다', () => {
     const { rerender } = renderHook(
       ({ info }) => useTagBindingSource(info, true),

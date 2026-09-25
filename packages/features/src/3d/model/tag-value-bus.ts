@@ -11,7 +11,21 @@
  * 리렌더된다. UI 는 useRigLivePoll(15Hz) 로 폴링해 읽는다.
  */
 
-export type TagPublish = (key: string, value: number) => void;
+export interface TagPublishOptions {
+  /**
+   * 화면 적용 스무딩(초). 생략 = 소비자 기본(리깅 스무딩 기본값), 0 = 즉시
+   * 대입. seek·리셋처럼 위치가 불연속인 값은 0 으로 내보내 자세가 미끄러지지
+   * 않게 하고, 러너의 정상 전진은 publish 간격을 넣어 스텝 계단을 숨긴다.
+   * 관찰자(`subscribeTagValues`)에게는 전달하지 않는다 — 값·시각만 본다.
+   */
+  smoothTime?: number;
+}
+
+export type TagPublish = (
+  key: string,
+  value: number,
+  options?: TagPublishOptions,
+) => void;
 
 /** 값 생산자. start 에 받은 publish 로 값을 내보내고 stop 에서 멈춘다. */
 export interface TagValueSource {
@@ -79,7 +93,11 @@ export function hasTagIngest(): boolean {
   return tagIngest !== null;
 }
 
-export function publishTagValue(key: string, value: number): void {
+export function publishTagValue(
+  key: string,
+  value: number,
+  options?: TagPublishOptions,
+): void {
   if (typeof key !== 'string' || key.length === 0) return;
   if (!Number.isFinite(value)) return;
   const now = Date.now();
@@ -89,6 +107,6 @@ export function publishTagValue(key: string, value: number): void {
     at: now,
     changedAt: prev && prev.value === value ? prev.changedAt : now,
   });
-  tagIngest?.(key, value);
+  tagIngest?.(key, value, options);
   for (const listener of listeners) listener(key, value, now);
 }
