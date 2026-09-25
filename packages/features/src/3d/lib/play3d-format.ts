@@ -427,6 +427,12 @@ export const PLAY3D_DWELL_BOX_CLASS = 'bg-amber-400 ring-1 ring-black/30';
 /** 미이탈(open) 띠의 오른쪽 가장자리 — 채운 박스라 같은 색 점선은 안 보인다. */
 export const PLAY3D_DWELL_OPEN_CLASS = 'border-r border-dashed border-black/50';
 
+/**
+ * hover 요약의 영역 프레임(점선 테두리) — 체류 박스와 같은 amber 라 "트랙의
+ * 노란 박스 = 이 상자" 로 읽힌다.
+ */
+export const PLAY3D_DWELL_FRAME_CLASS = 'border-dashed border-amber-400/80';
+
 /** 표식에 마우스를 올렸을 때의 요약 내용 — 트리거가 payload 로 넘긴다. */
 export type Play3dHoverPayload =
   | {

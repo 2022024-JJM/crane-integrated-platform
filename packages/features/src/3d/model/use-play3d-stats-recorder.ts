@@ -386,11 +386,14 @@ export function usePlay3dStatsRecorder(regionId: string): void {
           ) {
             continue;
           }
+          const nameA = record.a.equipName || record.a.modelId;
+          const nameB = record.b.equipName || record.b.modelId;
           pushEvent(data, {
             kind: 'collision',
             subject: record.pairKey,
-            label: `${record.a.equipName || record.a.modelId} ↔ ${record.b.equipName || record.b.modelId}`,
+            label: `${nameA} ↔ ${nameB}`,
             modelIds: [record.a.modelId, record.b.modelId],
+            modelNames: [nameA, nameB],
           });
           changed = true;
         }

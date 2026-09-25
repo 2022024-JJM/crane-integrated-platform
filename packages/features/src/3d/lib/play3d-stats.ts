@@ -47,6 +47,8 @@ export interface Play3dEvent {
   intruderName?: string;
   /** 충돌 양쪽 modelId — 장비별 충돌 관여 집계. */
   modelIds?: readonly [string, string];
+  /** 충돌 양쪽 표시 이름(`modelIds` 와 같은 순서) — hover 요약이 배지로 나눠 그린다. */
+  modelNames?: readonly [string, string];
   /**
    * seek 정착 뒤 화해가 넣은 "아는 범위의 경계" 사건 — 실제 전이가 관측되면
    * 그 시각으로 교체된다(decideZoneEvent). 표시는 구분하지 않는다.
