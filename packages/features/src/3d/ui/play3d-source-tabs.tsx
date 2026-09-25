@@ -1,9 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@crane/core/lib/utils';
-import {
-  usePlay3dStore,
-  type Play3dSource,
-} from '../model/use-play3d-store';
+import { usePlay3dStore, type Play3dSource } from '../model/use-play3d-store';
 
 const SOURCES: readonly Play3dSource[] = ['replay', 'simulation'];
 
@@ -34,7 +31,7 @@ export function Play3dSourceTabs({ className }: { className?: string }) {
             role="tab"
             aria-selected={selected}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors',
+              '-mb-px cursor-pointer border-b-2 px-3 py-2 text-xs font-medium transition-colors',
               selected
                 ? 'border-primary text-foreground'
                 : 'text-muted-foreground hover:text-foreground border-transparent',
