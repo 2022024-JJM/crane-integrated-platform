@@ -1,6 +1,5 @@
 import type { BoundsLike } from '@crane/core/lib/top-view-pose';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { SkyPhase } from './sky-lighting';
 
 /**
  * 2D 미니맵의 순수 계산 — 적용은 ui/scene-minimap.tsx(DOM 캔버스)와
@@ -252,30 +251,6 @@ export function cameraGlyphPolygon(
     const y = fy * size;
     return { px: px + x * cos - y * sin, py: py + x * sin + y * cos };
   });
-}
-
-/** 박명 구간에서 배경을 다시 찍는 태양 고도 단위(도). */
-export const MINIMAP_TWILIGHT_ELEVATION_STEP = 3;
-
-/**
- * 미니맵 배경 재캡처 키 — 값이 바뀌면 탑뷰 스냅샷을 다시 찍는다. 낮·밤은
- * 국면 + 작업등만 보고(낮 동안 태양이 움직여도 배경은 그대로), 박명은
- * 밝기가 빠르게 변하므로 고도를 MINIMAP_TWILIGHT_ELEVATION_STEP 단위로
- * 내림한 버킷을 더한다. solar 조명이 아니면(phase null) 빈 문자열 — 읽는
- * 쪽은 빈 키를 "재캡처 없음" 으로 본다. NaN 고도는 버킷 0.
- */
-export function minimapLightingKey(
-  phase: SkyPhase | null,
-  sunElevation: number,
-  yardLights: boolean,
-): string {
-  if (phase === null) return '';
-  const lights = yardLights ? 'on' : 'off';
-  if (phase === 'day' || phase === 'night') return `${phase}|${lights}`;
-  const bucket = Number.isFinite(sunElevation)
-    ? Math.floor(sunElevation / MINIMAP_TWILIGHT_ELEVATION_STEP)
-    : 0;
-  return `${phase}|${lights}|${bucket}`;
 }
 
 export interface PanelPosition {

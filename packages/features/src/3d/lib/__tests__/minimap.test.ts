@@ -4,12 +4,10 @@ import {
   CAMERA_GLYPH_SHAPE,
   MINIMAP_MIN_PX,
   MINIMAP_PADDING_RATIO,
-  MINIMAP_TWILIGHT_ELEVATION_STEP,
   cameraFootprint,
   cameraGlyphPolygon,
   clampPanelPosition,
   computeMinimapFrame,
-  minimapLightingKey,
   minimapToWorld,
   nearestMarkerIndex,
   panPoseToPoint,
@@ -251,48 +249,5 @@ describe('cameraGlyphPolygon', () => {
       expect(p.px).toBeCloseTo(zeroHeading[i].px, 10);
       expect(p.py).toBeCloseTo(zeroHeading[i].py, 10);
     });
-  });
-});
-
-describe('minimapLightingKey', () => {
-  it('solar 조명이 아니면(phase null) 빈 키', () => {
-    expect(minimapLightingKey(null, 30, true)).toBe('');
-  });
-
-  it('낮·밤은 고도가 달라도 같은 키, 작업등 토글로만 달라진다', () => {
-    expect(minimapLightingKey('day', 10, true)).toBe(
-      minimapLightingKey('day', 60, true),
-    );
-    expect(minimapLightingKey('night', -20, false)).toBe(
-      minimapLightingKey('night', -5, false),
-    );
-    expect(minimapLightingKey('day', 10, true)).not.toBe(
-      minimapLightingKey('day', 10, false),
-    );
-    expect(minimapLightingKey('day', 10, true)).not.toBe(
-      minimapLightingKey('night', 10, true),
-    );
-  });
-
-  it('박명은 고도 STEP 버킷 경계에서 갈리고 같은 버킷 안에선 같다', () => {
-    const step = MINIMAP_TWILIGHT_ELEVATION_STEP;
-    expect(minimapLightingKey('dusk', step, true)).toBe(
-      minimapLightingKey('dusk', step * 2 - 0.001, true),
-    );
-    expect(minimapLightingKey('dusk', step, true)).not.toBe(
-      minimapLightingKey('dusk', step - 0.001, true),
-    );
-    expect(minimapLightingKey('dusk', -0.5, true)).toBe(
-      minimapLightingKey('dusk', -step + 0.001, true),
-    );
-    expect(minimapLightingKey('dawn', 1, true)).not.toBe(
-      minimapLightingKey('dusk', 1, true),
-    );
-  });
-
-  it('NaN 고도는 버킷 0', () => {
-    expect(minimapLightingKey('dawn', Number.NaN, true)).toBe(
-      minimapLightingKey('dawn', 0.5, true),
-    );
   });
 });

@@ -9,9 +9,6 @@ import {
 
 function createInfo(): SceneLightingInfo {
   return {
-    skyPhase: null,
-    sunElevation: 0,
-    yardLights: true,
     sunDirection: [0, 1, 0],
     sunColor: [1, 1, 1],
     sunIntensity: SCENE_LIGHTING_BASE.sunIntensity,
@@ -19,10 +16,7 @@ function createInfo(): SceneLightingInfo {
 }
 
 describe('sceneLightingInfo 기본값', () => {
-  it('천정 백색 태양·기준 세기, 하늘 국면 없음', () => {
-    expect(sceneLightingInfo.skyPhase).toBeNull();
-    expect(sceneLightingInfo.sunElevation).toBe(0);
-    expect(sceneLightingInfo.yardLights).toBe(true);
+  it('천정 백색 태양·기준 세기', () => {
     expect(sceneLightingInfo.sunDirection).toEqual([0, 1, 0]);
     expect(sceneLightingInfo.sunColor).toEqual([1, 1, 1]);
     expect(sceneLightingInfo.sunIntensity).toBe(
@@ -141,14 +135,4 @@ describe('publishSunLight', () => {
     expect(info.sunDirection).not.toBe(stored);
   });
 
-  it('다른 필드(skyPhase·sunElevation·yardLights)는 건드리지 않는다', () => {
-    const info = createInfo();
-    info.skyPhase = 'night';
-    info.sunElevation = -20;
-    info.yardLights = false;
-    publishSunLight(info, new Vector3(1, 0, 0), [0, 0, 0], 0);
-    expect(info.skyPhase).toBe('night');
-    expect(info.sunElevation).toBe(-20);
-    expect(info.yardLights).toBe(false);
-  });
 });

@@ -5,7 +5,6 @@ import {
   EqualStencilFunc,
   FrontSide,
   Group,
-  HalfFloatType,
   Matrix4,
   Object3D,
   OrthographicCamera,
@@ -14,6 +13,7 @@ import {
   Scene,
   Texture,
   Vector3,
+  UnsignedByteType,
   Vector4,
   WebGLRenderTarget,
   type Camera,
@@ -178,6 +178,9 @@ describe('OceanWater — 머티리얼 규약', () => {
     expect(fragmentShader).toContain('#include <tonemapping_fragment>');
     expect(fragmentShader).toContain('#include <colorspace_fragment>');
     expect(fragmentShader).toContain('#include <fog_fragment>');
+    // 포크 전용 — 비친 상·태양 확산항에 곱하는 배율.
+    expect(fragmentShader).toMatch(/\)\s*\*\s*reflectionIntensity;/);
+    expect(fragmentShader).toMatch(/0\.3\s*\*\s*sunDiffuseIntensity/);
   });
 
   it('side·fog 옵션은 머티리얼로 전달되고 기본은 FrontSide·fog 없음', () => {
@@ -201,6 +204,8 @@ describe('OceanWater — 유니폼', () => {
     expect(u.time.value).toBe(0);
     expect(u.size.value).toBe(1);
     expect(u.distortionScale.value).toBe(20);
+    expect(u.reflectionIntensity.value).toBe(1);
+    expect(u.sunDiffuseIntensity.value).toBe(1);
     expect(u.sunColor.value.getHex()).toBe(0xffffff);
     expect(u.waterColor.value.getHex()).toBe(0x7f7f7f);
     expect(u.sunDirection.value.toArray()).toEqual([0.70707, 0.70707, 0]);
@@ -219,6 +224,8 @@ describe('OceanWater — 유니폼', () => {
         sunColor: 0x102030,
         waterColor: 0x001e0f,
         distortionScale: 3.7,
+        reflectionIntensity: 0.35,
+        sunDiffuseIntensity: 0.25,
         alpha: 0.5,
         time: 7,
       },
@@ -229,6 +236,8 @@ describe('OceanWater — 유니폼', () => {
     expect(u.sunColor.value.getHex()).toBe(0x102030);
     expect(u.waterColor.value.equals(new Color(0x001e0f))).toBe(true);
     expect(u.distortionScale.value).toBe(3.7);
+    expect(u.reflectionIntensity.value).toBe(0.35);
+    expect(u.sunDiffuseIntensity.value).toBe(0.25);
     expect(u.alpha.value).toBe(0.5);
     expect(u.time.value).toBe(7);
   });
@@ -256,13 +265,24 @@ describe('OceanWater — 유니폼', () => {
 });
 
 describe('OceanWater.onBeforeRender — 건너뛰는 경우', () => {
-  it('직교 카메라면 아무것도 하지 않는다', () => {
+  it('직교 카메라면 미러 패스 없이 eye 만 시선 반대쪽 아주 먼 점으로 둔다', () => {
     const { water, scene, renderer, gl } = createFixture();
-    water.onBeforeRender(gl, scene, new OrthographicCamera());
+    // 미니맵 캡처와 같은 탑뷰: 아래를 보므로 시선 반대 = +Y.
+    const camera = new OrthographicCamera();
+    camera.position.set(5, 100, 7);
+    camera.up.set(0, 0, -1);
+    camera.lookAt(5, 0, 7);
+    camera.updateMatrixWorld();
+    water.onBeforeRender(gl, scene, camera);
     expect(renderer.render).not.toHaveBeenCalled();
     expect(renderer.setRenderTarget).not.toHaveBeenCalled();
     expect(renderer.getRenderTarget).not.toHaveBeenCalled();
     expect(water.visible).toBe(true);
+    const eye = water.uniforms.eye.value;
+    expect(eye.x).toBeCloseTo(5, 3);
+    expect(eye.z).toBeCloseTo(7, 3);
+    // 카메라 위치가 아니라 훨씬 위 — 픽셀마다 시선이 평행해진다.
+    expect(eye.y).toBeGreaterThan(100 + 1e5);
   });
 
   it('수면을 등진(아래쪽) 카메라면 그리지 않는다', () => {
@@ -423,7 +443,7 @@ describe('OceanWater.onBeforeRender — 미러 패스', () => {
     );
   });
 
-  it('반사 RT 는 HalfFloat + 깊이/스텐실 버퍼이고 mirrorSampler 가 그 텍스처다', () => {
+  it('반사 RT 는 8bit(HDR 클램프) + 깊이/스텐실 버퍼이고 mirrorSampler 가 그 텍스처다', () => {
     const { water, scene, renderer, gl } = createFixture({
       water: { textureWidth: 64, textureHeight: 32 },
     });
@@ -431,7 +451,7 @@ describe('OceanWater.onBeforeRender — 미러 패스', () => {
     const rt = renderer.setRenderTarget.mock.calls[0][0];
     expect(rt).toBeInstanceOf(WebGLRenderTarget);
     if (!rt) throw new Error('unreachable');
-    expect(rt.texture.type).toBe(HalfFloatType);
+    expect(rt.texture.type).toBe(UnsignedByteType);
     expect(rt.depthBuffer).toBe(true);
     expect(rt.stencilBuffer).toBe(true);
     expect(rt.width).toBe(64);

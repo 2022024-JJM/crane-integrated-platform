@@ -37,14 +37,29 @@
  *   scene-stencil.ts).
  * - 반사 RT 에 깊이+스텐실 버퍼를 둔다 — 실루엣 마스크/헐(SILHOUETTE_STENCIL_BIT)
  *   이 RT 에서도 동작해 선택·충돌 테두리가 반사에서 덩어리로 뭉개지지 않는다.
+ * - 반사 RT 는 원본의 HalfFloat 이 아니라 8bit 다 — EXR 하늘은 수평선 띠가
+ *   백색의 몇 배(HDR)라 그대로 비추면 얕은 각도의 바다가 통째로 흰색이 된다.
+ *   8bit 는 1.0 에서 잘라 EXR 이 달라도 반사 상한이 같고 RT 도 절반이다. 그 위에
+ *   `reflectionIntensity` 유니폼을 곱해 비친 하늘을 누그러뜨린다(원본은 1).
+ *   원본 예제는 렌더러 노출 0.1 로 같은 문제를 숨기는데 이 씬은 조명 전체가
+ *   노출 1 기준이라 쓸 수 없다.
+ * - `sunDiffuseIntensity` 유니폼 — 원본이 수면 전체에 더하는 태양 확산 회색
+ *   (0.15·sin(고도)·sunColor²)의 배율(원본은 1). 우리 하늘·노출에선 낮에 이
+ *   회색이 waterColor 산란을 덮어 물이 회색이 되므로 낮춰 쓴다.
+ * - 직교 카메라(미니맵 캡처)는 미러 패스를 건너뛰고 `eye` 유니폼만 갱신한다
+ *   — 카메라 위치가 아니라 시선 **반대쪽 아주 먼 점**(`ORTHO_EYE_DISTANCE`)에
+ *   둔다. 직교 투영은 시선이 평행이라 카메라 위치를 그대로 쓰면 픽셀마다
+ *   시선이 부채꼴로 퍼져 산란·프레넬이 중심에서 가장자리로 어두워지는
+ *   비네트가 생기고, 갱신하지 않으면 마지막 원근 카메라 기준이 된다.
  * - `excludedObjects` 게터 — 미러 패스 동안만 `visible=false` 로 숨길 객체
  *   (컨텍스트 지형·밤하늘 틴트 돔·태양/달 스프라이트). 매 패스 호출하며
  *   `undefined`/`null` 항목은 건너뛴다(늦게 등록되는 지도 루트). three 는
  *   `visible=false` 루트의 서브트리를 통째로 건너뛰므로 지도 루트 하나로 LOD
  *   타일 전부가 빠진다. 메인 패스 렌더 리스트는 이미 만들어진 뒤라 메인
  *   프레임엔 영향 없다. `layers` 는 쓰지 않는다.
- * - 직교 카메라면 아무것도 하지 않는다 — 미러 카메라가 projectionMatrix 를
- *   복사하므로 직교 투영에선 무의미하다(미니맵 캡처는 물을 숨기고 찍는다).
+ * - 직교 카메라엔 미러 패스가 없다 — 미러 카메라가 projectionMatrix 를
+ *   복사하므로 직교 투영에선 무의미하다. 미니맵 캡처는 물을 보이는 채로
+ *   `reflectionIntensity` 0 으로 그려 낡은 반사 RT 가 섞이지 않게 한다.
  * - 중첩 render 동안 `renderer.info.autoReset` 을 끈다 — 안 끄면 중첩 render 의
  *   `info.reset()` 이 물 앞에 그린 드로우콜을 지워 perf HUD 가 "물 뒤 + 미러"
  *   만 보고한다. HUD 값은 "shadow pass 뒤 메인 패스 + 미러 패스" 다.
@@ -64,7 +79,6 @@ import {
   Color,
   EqualStencilFunc,
   FrontSide,
-  HalfFloatType,
   Matrix4,
   Mesh,
   PerspectiveCamera,
@@ -105,6 +119,10 @@ export interface OceanWaterOptions {
   eye?: Vector3;
   /** 반사 왜곡 세기. 기본 20. */
   distortionScale?: number;
+  /** 비친 상의 밝기 배율. 기본 1(원본과 같음). HDR 하늘이면 1 미만으로 둔다. */
+  reflectionIntensity?: number;
+  /** 태양 확산 회색항의 배율. 기본 1(원본과 같음). */
+  sunDiffuseIntensity?: number;
   side?: Side;
   fog?: boolean;
   /** 미러 패스 동안만 숨길 객체. 매 패스 호출된다. */
@@ -118,6 +136,8 @@ export interface OceanWaterUniforms extends Record<string, IUniform> {
   time: { value: number };
   size: { value: number };
   distortionScale: { value: number };
+  reflectionIntensity: { value: number };
+  sunDiffuseIntensity: { value: number };
   textureMatrix: { value: Matrix4 };
   sunColor: { value: Color };
   sunDirection: { value: Vector3 };
@@ -126,6 +146,8 @@ export interface OceanWaterUniforms extends Record<string, IUniform> {
 }
 
 const DEFAULT_TEXTURE_SIZE = 512;
+/** 직교 카메라의 eye 를 시선 반대쪽으로 띄우는 거리(m). 씬 크기보다 훨씬 커서 시선이 사실상 평행이면 된다. */
+const ORTHO_EYE_DISTANCE = 1e6;
 const DEFAULT_SUN_DIRECTION = (): Vector3 => new Vector3(0.70707, 0.70707, 0);
 
 const VERTEX_SHADER = /* glsl */ `
@@ -157,6 +179,8 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float time;
   uniform float size;
   uniform float distortionScale;
+  uniform float reflectionIntensity;
+  uniform float sunDiffuseIntensity;
   uniform sampler2D normalSampler;
   uniform vec3 sunColor;
   uniform vec3 sunDirection;
@@ -204,14 +228,14 @@ const FRAGMENT_SHADER = /* glsl */ `
     float distance = length(worldToEye);
 
     vec2 distortion = surfaceNormal.xz * ( 0.001 + 1.0 / distance ) * distortionScale;
-    vec3 reflectionSample = vec3( texture2D( mirrorSampler, mirrorCoord.xy / mirrorCoord.w + distortion ) );
+    vec3 reflectionSample = vec3( texture2D( mirrorSampler, mirrorCoord.xy / mirrorCoord.w + distortion ) ) * reflectionIntensity;
 
     float theta = max( dot( eyeDirection, surfaceNormal ), 0.0 );
     float rf0 = 0.02;
     float reflectance = rf0 + ( 1.0 - rf0 ) * pow( ( 1.0 - theta ), 5.0 );
     vec3 scatter = max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor;
     // 원본의 그림자 마스크 자리 — receiveShadow=false 라 항상 1.0 이다.
-    vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 + scatter ) * 1.0, reflectionSample + specularLight, reflectance );
+    vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 * sunDiffuseIntensity + scatter ) * 1.0, reflectionSample + specularLight, reflectance );
     vec3 outgoingLight = albedo;
     gl_FragColor = vec4( outgoingLight, alpha );
 
@@ -232,6 +256,8 @@ function createUniforms(): OceanWaterUniforms {
       time: { value: 0.0 },
       size: { value: 1.0 },
       distortionScale: { value: 20.0 },
+      reflectionIntensity: { value: 1.0 },
+      sunDiffuseIntensity: { value: 1.0 },
       textureMatrix: { value: new Matrix4() },
       sunColor: { value: new Color(0x7f7f7f) },
       sunDirection: { value: DEFAULT_SUN_DIRECTION() },
@@ -281,11 +307,13 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     const waterColor = new Color(options.waterColor ?? 0x7f7f7f);
     const eye = options.eye ?? new Vector3(0, 0, 0);
     const distortionScale = options.distortionScale ?? 20.0;
+    const reflectionIntensity = options.reflectionIntensity ?? 1.0;
+    const sunDiffuseIntensity = options.sunDiffuseIntensity ?? 1.0;
     const side = options.side ?? FrontSide;
     const fog = options.fog ?? false;
 
+    // 8bit(기본 UnsignedByte) — 파일 상단 주석(HDR 하늘 클램프).
     this.renderTarget = new WebGLRenderTarget(textureWidth, textureHeight, {
-      type: HalfFloatType,
       depthBuffer: true,
       stencilBuffer: true,
     });
@@ -318,6 +346,8 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     uniforms.waterColor.value = waterColor;
     uniforms.sunDirection.value = sunDirection;
     uniforms.distortionScale.value = distortionScale;
+    uniforms.reflectionIntensity.value = reflectionIntensity;
+    uniforms.sunDiffuseIntensity.value = sunDiffuseIntensity;
     uniforms.eye.value = eye;
 
     this.material = material;
@@ -332,9 +362,19 @@ export class OceanWater extends Mesh<BufferGeometry, ShaderMaterial> {
     scene: Scene,
     camera: Camera,
   ): void {
-    // 미러 카메라가 projectionMatrix 를 복사하므로 직교 투영엔 의미가 없다.
+    // 미러 카메라가 projectionMatrix 를 복사하므로 직교 투영엔 의미가 없다 —
+    // 미러 패스는 건너뛰고 eye 만 시선 반대쪽 먼 점으로 둔다(파일 상단 주석).
+    // 카메라 로컬 +Z(matrixWorld 셋째 열)가 시선의 반대 방향이다.
     const perspective = camera as PerspectiveCamera;
-    if (!perspective.isPerspectiveCamera) return;
+    if (!perspective.isPerspectiveCamera) {
+      this.cameraWorldPosition.setFromMatrixPosition(camera.matrixWorld);
+      this.uniforms.eye.value
+        .setFromMatrixColumn(camera.matrixWorld, 2)
+        .normalize()
+        .multiplyScalar(ORTHO_EYE_DISTANCE)
+        .add(this.cameraWorldPosition);
+      return;
+    }
 
     const {
       mirrorWorldPosition,

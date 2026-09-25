@@ -55,6 +55,7 @@ import {
   type SceneTimeSource,
 } from '../model/scene-time-source';
 import {
+  SCENE_KEY_LIGHT_NAME,
   publishSunLight,
   sceneLightingInfo,
 } from '../model/scene-lighting-info';
@@ -680,7 +681,6 @@ export function SceneLighting({
       resetToManualLook(light, ambient, fill, hemisphere, scene);
       solar.snapshot = null;
       solar.timeKey = Number.NaN;
-      sceneLightingInfo.skyPhase = null;
       if (sun) sun.visible = false;
       if (moon) moon.visible = false;
       if (tint) tint.visible = false;
@@ -758,10 +758,6 @@ export function SceneLighting({
         );
         if (snapshot) {
           solar.snapshot = snapshot;
-          // 하늘 국면 내보내기 — 미니맵 캡처가 재캡처 판단에 읽는다.
-          sceneLightingInfo.skyPhase = snapshot.phase;
-          sceneLightingInfo.sunElevation = snapshot.sun.elevation;
-          sceneLightingInfo.yardLights = yardLights;
           if (
             snapshot.keyAzimuth !== solar.keyAzimuth ||
             snapshot.keyElevation !== solar.keyElevation
@@ -990,6 +986,8 @@ export function SceneLighting({
       <primitive object={target} position={anchor} />
       <directionalLight
         ref={lightRef}
+        // 미니맵 캡처가 이 이름으로 키 라이트를 찾는다(scene-lighting-info).
+        name={SCENE_KEY_LIGHT_NAME}
         // position·shadow-camera 값은 useFrame이 매 프레임 덮어쓴다 —
         // 여기 값은 첫 프레임 전의 초기값일 뿐이다. solar 모드는 intensity·
         // color 도 useFrame 이 쓴다.

@@ -6,7 +6,9 @@ import type { Object3D } from 'three';
  * 돔은 메인 패스에서 이미 물 픽셀을 덮으므로 반사 RT 에도 그리면 이중 틴트
  * + 톤매핑 회색화가 생기고, 스프라이트는 메인 카메라 기준 위치라 미러에서
  * 어긋난다. SceneLighting 이 생성 effect 에서 등록하고 cleanup 에서 해제하며,
- * SceneWater 의 excludedObjects 게터가 매 패스 읽는다. 컨텍스트 지형은 여기가
+ * SceneWater 의 excludedObjects 게터가 매 패스 읽는다. 미니맵 캡처
+ * (ui/scene-minimap-capture.tsx)도 같은 객체를 캡처 동안 숨긴다 — 돔은
+ * 카메라를 감싸는 구라 직교 캡처 전체를 틴트한다. 컨텍스트 지형은 여기가
  * 아니라 lib/water-reflection 의 id 판정 + modelObjectRegistry 조회다.
  *
  * 모듈 레벨 Set 인 이유: 조명과 물은 같은 캔버스의 형제 컴포넌트라 prop 으로

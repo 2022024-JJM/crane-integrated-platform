@@ -28,8 +28,8 @@ import { getReflectionExclusions } from '../model/scene-reflection-exclusions';
  *
  * 그리는 순서: 불투명 씬 메시(renderOrder 0) **뒤**, 격자(0.5)·선택 박스(1)·
  * 실루엣 마스크(10) 앞인 SEA_RENDER_ORDER. 깊이는 읽지도 쓰지도 않고 스텐실
- * "불투명 씬이 그려졌다" 비트가 없는 픽셀에서만 그려진다 — 지도(GLB 바다
- * y≈-0.017 포함)·드라이독·잠긴 선체는 깊이 순서와 무관하게 바다 위에 남고,
+ * "불투명 씬이 그려졌다" 비트가 없는 픽셀에서만 그려진다 — 지도·드라이독·
+ * 잠긴 선체는 깊이 순서와 무관하게 바다 위에 남고,
  * 가려진 픽셀은 셰이더가 아예 돌지 않는다. 오버레이(격자·선택 박스·텍스트
  * 테두리·가드 링)는 renderOrder ≥ 0.5 라 바다 뒤에 그려져 물 위에서도 덮이지
  * 않는다 — 새 오버레이를 0 으로 두면 물 위에서 사라진다.
@@ -69,10 +69,24 @@ const SEA_SEGMENTS = 96;
 const SEA_RENDER_ORDER = 0.25;
 /** 반사 RT 한 변(px). 예제와 같다 — 줄이면 반사가 뭉개지는 대신 미러 패스가 싸진다. */
 const WATER_REFLECTION_SIZE = 512;
-/** 예제의 waterColor — 수면 아래 산란색. */
-const WATER_COLOR = 0x001e0f;
+/**
+ * 수면 아래 산란색. 예제값(0x001e0f)은 거의 검정이라 낮엔 태양 확산 회색이,
+ * 저녁엔 검정이 남았다 — 시각과 무관하게 "바다 파랑" 이 깔리도록 밝게 둔다.
+ */
+const WATER_COLOR = 0x123f5e;
 /** 예제의 distortionScale — 반사상을 파도가 흔드는 세기. */
 const WATER_DISTORTION_SCALE = 3.7;
+/**
+ * 비친 하늘의 밝기 배율(포크 전용, 예제엔 없다). EXR 수평선은 HDR 이라 1 이면
+ * 얕은 각도의 바다가 흰색으로 날아간다 — 8bit RT 클램프 위에 이 값을 곱한다.
+ * 멀리 있는 바다가 너무 희거나 어두우면 이 값 하나만 조정한다.
+ */
+const WATER_REFLECTION_INTENSITY = 0.3;
+/**
+ * 태양 확산 회색항 배율(포크 전용, 예제는 1). 예제 원값이면 낮에 이 회색이
+ * 산란색을 8배로 덮어 물이 회색이 된다 — 낮에도 파랑이 남는 값으로 둔다.
+ */
+const WATER_SUN_DIFFUSE_INTENSITY = 0.25;
 /**
  * 파도 시간 배율 — useFrame 의 delta 에 곱해 `time` 유니폼에 누적한다. 예제
  * 그대로(1)면 씬 단위가 m 인 야드에서 물결이 급류처럼 흐른다. 파도 모양·
@@ -145,6 +159,8 @@ export function SceneWater({ maps }: { maps?: SavedMapInfo[] }) {
       sunColor: 0xffffff,
       waterColor: WATER_COLOR,
       distortionScale: WATER_DISTORTION_SCALE,
+      reflectionIntensity: WATER_REFLECTION_INTENSITY,
+      sunDiffuseIntensity: WATER_SUN_DIFFUSE_INTENSITY,
       alpha: 1,
       fog: false,
       // 미러 패스마다 호출 — 이 물의 슬롯(excludedMapIdsByWater)을 읽는다.

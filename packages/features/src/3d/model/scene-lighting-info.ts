@@ -1,28 +1,17 @@
 import type { Vector3, Vector3Tuple } from 'three';
-import {
-  SCENE_LIGHTING_BASE,
-  type RgbTuple,
-  type SkyPhase,
-} from '../lib/sky-lighting';
+import { SCENE_LIGHTING_BASE, type RgbTuple } from '../lib/sky-lighting';
 
 /**
  * SceneLighting 이 매 프레임 내보내는 조명 상태 — manual·solar 두 모드 모두
  * 쓴다. useFrame 에서 쓰고 다른 useFrame 이 읽는 mutable 값이라 React 상태로
  * 두지 않는다(프레임 속도 setState 금지). 쓰는 쪽은 SceneLighting 하나뿐이다.
  *
- * 읽는 쪽:
- * - 미니맵 캡처: `skyPhase`/`sunElevation`/`yardLights` — "낮/박명/밤·작업등이
- *   바뀌었으니 배경을 다시 찍자" 판단. solar 조명이 아닌 씬(현장 위치가 없는
- *   region·manual 태양)은 `skyPhase` 가 null 이고 그때는 재캡처하지 않는다.
- * - 바다(SceneWater): `sunDirection`/`sunColor`/`sunIntensity` — 태양
- *   하이라이트 유니폼. 튜플은 publishSunLight 가 값이 바뀔 때만 새로 만드므로
- *   읽는 쪽은 참조 비교로 변경을 감지한다.
+ * 읽는 쪽은 바다(SceneWater)뿐이다: `sunDirection`/`sunColor`/`sunIntensity`
+ * — 태양 하이라이트 유니폼. 튜플은 publishSunLight 가 값이 바뀔 때만 새로
+ * 만드므로 읽는 쪽은 참조 비교로 변경을 감지한다. 미니맵 캡처는 기준(수동
+ * 모드) 조명으로 찍어(lib/minimap-capture-lighting) 조명 상태를 읽지 않는다.
  */
 export interface SceneLightingInfo {
-  skyPhase: SkyPhase | null;
-  /** 태양 고도(도). 박명 구간의 밝기 버킷용. */
-  sunElevation: number;
-  yardLights: boolean;
   /** 태양 방향(단위 벡터, 고도 클램프 없음). manual 은 수동 태양. */
   sunDirection: Vector3Tuple;
   /** 태양 색(작업등 혼합 전). manual 은 백색. */
@@ -31,10 +20,14 @@ export interface SceneLightingInfo {
   sunIntensity: number;
 }
 
+/**
+ * SceneLighting 의 키 방향광(그림자를 드리우는 태양/작업등) 이름 — 미니맵
+ * 캡처가 씬을 순회해 이 이름으로 찾아 캡처용 기준 조명으로 바꿨다 되돌린다.
+ * fill 방향광은 이름이 없다.
+ */
+export const SCENE_KEY_LIGHT_NAME = 'scene-key-light';
+
 export const sceneLightingInfo: SceneLightingInfo = {
-  skyPhase: null,
-  sunElevation: 0,
-  yardLights: true,
   sunDirection: [0, 1, 0],
   sunColor: [1, 1, 1],
   sunIntensity: SCENE_LIGHTING_BASE.sunIntensity,

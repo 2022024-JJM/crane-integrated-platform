@@ -1,8 +1,6 @@
-import { Color } from 'three';
-
 /**
- * 미니맵 탑뷰 스냅샷의 픽셀 후처리 — 렌더 타깃 readback 결과를 화면용 sRGB
- * 이미지로 만든다. 적용은 ui/scene-minimap-capture.tsx.
+ * 미니맵 탑뷰 스냅샷의 픽셀 후처리 — Float 렌더 타깃 readback(선형 RGBA)을
+ * 화면용 sRGB 이미지로 만든다. 적용은 ui/scene-minimap-capture.tsx.
  *
  * 왜 여기서 톤매핑을 하는가: three(r183)는 렌더 타깃에 그릴 때 톤매핑·출력
  * 색공간 변환을 건너뛴다(WebGLPrograms.getParameters — `currentRenderTarget
@@ -11,63 +9,76 @@ import { Color } from 'three';
  * sRGB)을 JS 로 한 번 적용한다. 512² 이하 이미지를 한 번 처리하는 비용이라
  * 셰이더 패스를 따로 두지 않는다.
  *
- * 자동 노출: solar 모드 밤에 찍힌 스냅샷은 야드가 어두워 미니맵으로 못 쓴다.
- * 평균 휘도를 목표값으로 끌어올리는 노출 배율을 계산한다(상한 있음 — 새까만
- * 스냅샷을 무한히 증폭해 노이즈만 남기지 않게).
+ * 톤매핑은 three 의 `ACESFilmicToneMapping`(ShaderChunk
+ * tonemapping_pars_fragment)을 그대로 옮긴 것이다 — 근사식(Narkowicz)은
+ * 같은 곡선군이어도 중간 회색이 한 단계 밝게 나와 3D 화면과 색이 어긋난다.
+ * 행렬이 채널을 섞으므로 채널별 룩업 테이블로 접을 수 없다. 노출은 렌더러와
+ * 같은 1 이고 노출 보정은 없다 — 캡처가 기준 조명(lib/minimap-capture-
+ * lighting)으로 찍히므로 입력 밝기가 시각과 무관하게 일정하다.
+ *
+ * 입력이 Float 인 이유: 8bit 선형 RT 는 어두운 값(지도의 그림자 면·바다)이
+ * 몇 단계로 양자화돼 sRGB 로 펴면 띠·색 편향이 생긴다.
  */
+
+export type RgbTriplet = [number, number, number];
 
 /**
- * 캡처가 바다(OceanWater)를 숨긴 동안만 쓰는 clear color — 직교 카메라에선
- * equirect 배경이 1m 큐브로 그려져 보이지 않아, 물만 숨기면 바다 영역이 검게
- * 남는다. 바다 톤으로 지우고 캡처 뒤 원래 clear color 로 되돌린다(적용은
- * ui/scene-minimap-capture.tsx, RT 바인딩 **뒤**에 setClearColor). 값은 linear
- * working space(setRGB)이며 눈으로 맞춘 것 — readback 뒤 toDisplayPixels 가
- * ACES·sRGB 를 입힌다. Color 인스턴스인 이유: renderer.setClearColor 는
- * Color·hex·문자열만 받고 튜플은 조용히 무시한다.
+ * 입력 상한 — 이 위는 곡선이 이미 1 에 붙어 있고, 무한대를 그대로 넣으면
+ * 유리식이 NaN 이 된다. float16 최대값.
  */
-export const MINIMAP_SEA_CLEAR_COLOR = new Color().setRGB(0.02, 0.07, 0.1);
+const TONE_MAP_INPUT_MAX = 65504;
 
-/** 자동 노출 목표 평균 휘도(선형, 0~1). 낮 야드 스냅샷 실측 근처 값. */
-export const MINIMAP_TARGET_LUMINANCE = 0.18;
-export const MINIMAP_EXPOSURE_MIN = 1;
-export const MINIMAP_EXPOSURE_MAX = 6;
+/** three 의 렌더러 노출(SCENE_GL_OPTIONS.toneMappingExposure)과 같은 값. */
+const TONE_MAP_EXPOSURE = 1;
 
-/**
- * 선형 RGBA(0~255) 버퍼의 평균 휘도(0~1). 알파는 무시한다. 빈 버퍼는 0.
- */
-export function meanLinearLuminance(
-  rgba: Uint8Array | Uint8ClampedArray,
-): number {
-  const pixels = rgba.length >> 2;
-  if (pixels === 0) return 0;
-  let sum = 0;
-  for (let i = 0; i < rgba.length; i += 4) {
-    sum +=
-      (0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]) / 255;
-  }
-  return sum / pixels;
+function rrtAndOdtFit(v: number): number {
+  const a = v * (v + 0.0245786) - 0.000090537;
+  const b = v * (0.983729 * v + 0.432951) + 0.238081;
+  return a / b;
+}
+
+function saturate(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
+
+/** 음수·NaN 은 0, 무한대는 상한으로. */
+function sanitizeInput(x: number): number {
+  if (!(x > 0)) return 0;
+  return x > TONE_MAP_INPUT_MAX ? TONE_MAP_INPUT_MAX : x;
 }
 
 /**
- * 평균 휘도 → 노출 배율. 목표보다 밝으면 1(낮 화면은 손대지 않는다), 어두우면
- * 목표/평균 을 상한까지. 평균이 0·NaN 이면 상한.
+ * three r183 `ACESFilmicToneMapping` 의 픽셀 단위 이식 — 노출 1/0.6 →
+ * ACESInputMat → RRT+ODT 유리식 → ACESOutputMat → [0,1] 클램프. GLSL mat3 은
+ * 열 우선이라 세 vec3 가 열이고, 아래는 그것을 행 곱으로 풀어 쓴 것이다.
+ * 입력·출력 선형. `out` 을 주면 그 튜플에 쓰고 돌려준다(픽셀 루프의 할당
+ * 회피).
  */
-export function autoExposure(meanLuminance: number): number {
-  if (!Number.isFinite(meanLuminance) || meanLuminance <= 0) {
-    return MINIMAP_EXPOSURE_MAX;
-  }
-  const raw = MINIMAP_TARGET_LUMINANCE / meanLuminance;
-  return Math.min(Math.max(raw, MINIMAP_EXPOSURE_MIN), MINIMAP_EXPOSURE_MAX);
-}
+export function acesFilmicToneMap(
+  r: number,
+  g: number,
+  b: number,
+  out: RgbTriplet = [0, 0, 0],
+): RgbTriplet {
+  const scale = TONE_MAP_EXPOSURE / 0.6;
+  const ir = sanitizeInput(r) * scale;
+  const ig = sanitizeInput(g) * scale;
+  const ib = sanitizeInput(b) * scale;
 
-/**
- * ACES filmic 근사(Narkowicz 2015) — three 의 ACESFilmicToneMapping 과 같은
- * 곡선군이고 미니맵 용도로 충분히 가깝다. 입력·출력 선형 0~1.
- */
-export function acesFilmic(x: number): number {
-  const v = Math.max(0, x);
-  const mapped = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14);
-  return Math.min(1, Math.max(0, mapped));
+  // ACESInputMat: sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+  const ar = 0.59719 * ir + 0.35458 * ig + 0.04823 * ib;
+  const ag = 0.076 * ir + 0.90834 * ig + 0.01566 * ib;
+  const ab = 0.0284 * ir + 0.13383 * ig + 0.83777 * ib;
+
+  const fr = rrtAndOdtFit(ar);
+  const fg = rrtAndOdtFit(ag);
+  const fb = rrtAndOdtFit(ab);
+
+  // ACESOutputMat: ODT_SAT => XYZ => D60_2_D65 => sRGB
+  out[0] = saturate(1.60475 * fr - 0.53108 * fg - 0.07367 * fb);
+  out[1] = saturate(-0.10208 * fr + 1.10813 * fg - 0.00605 * fb);
+  out[2] = saturate(-0.00327 * fr - 0.07276 * fg + 1.07602 * fb);
+  return out;
 }
 
 /** 선형 → sRGB 전달 함수(0~1). */
@@ -77,19 +88,29 @@ export function linearToSrgb(x: number): number {
 }
 
 /**
- * 렌더 타깃 readback(선형 RGBA, **아래 행부터** — WebGL readPixels 규약) →
- * ImageData 용 버퍼(sRGB, 위 행부터, 알파 255). 새 버퍼를 돌려주고 입력은
- * 건드리지 않는다. 길이가 width×height×4 와 다르면 null.
- *
- * 룩업 테이블(256)로 픽셀당 곱셈 한 번 + 조회 한 번 — 노출 배율은 선형 공간
- * 에서 곱하고, 톤매핑·sRGB 는 테이블에 접어 둔다. 노출 곱 뒤 값이 1 을 넘을 수
- * 있어 테이블은 [0, exposure] 범위를 256 칸으로 나눈다.
+ * 렌더 타깃 readback 을 선형 float 버퍼로 — Float RT 는 그대로(같은 인스턴스),
+ * 8bit 폴백(EXT_color_buffer_float 없는 환경)은 0~255 를 0~1 로 편다. 8bit
+ * 는 1.0 위가 잘리고 어두운 값이 양자화되지만 미니맵 배경으로는 쓸 만하다.
+ */
+export function toLinearFloatPixels(
+  rgba: Float32Array | Uint8Array,
+): Float32Array {
+  if (rgba instanceof Float32Array) return rgba;
+  const out = new Float32Array(rgba.length);
+  for (let i = 0; i < rgba.length; i += 1) out[i] = rgba[i] / 255;
+  return out;
+}
+
+/**
+ * Float 렌더 타깃 readback(선형 RGBA, **아래 행부터** — WebGL readPixels
+ * 규약) → ImageData 용 버퍼(ACES 톤매핑 + sRGB, 위 행부터, 알파 255). 새
+ * 버퍼를 돌려주고 입력은 건드리지 않는다. 길이가 width×height×4 와 다르면
+ * null.
  */
 export function toDisplayPixels(
-  rgba: Uint8Array | Uint8ClampedArray,
+  rgba: Float32Array,
   width: number,
   height: number,
-  exposure: number,
 ): Uint8ClampedArray<ArrayBuffer> | null {
   if (
     !Number.isInteger(width) ||
@@ -100,22 +121,24 @@ export function toDisplayPixels(
   ) {
     return null;
   }
-  const gain = Number.isFinite(exposure) && exposure > 0 ? exposure : 1;
-  const lut = new Uint8ClampedArray(256);
-  for (let i = 0; i < 256; i += 1) {
-    lut[i] = Math.round(linearToSrgb(acesFilmic((i / 255) * gain)) * 255);
-  }
 
   // ImageData 생성자가 SharedArrayBuffer 를 거부하므로 ArrayBuffer 로 명시.
   const out = new Uint8ClampedArray(new ArrayBuffer(rgba.length));
-  const rowBytes = width * 4;
+  const rowStride = width * 4;
+  const mapped: RgbTriplet = [0, 0, 0];
   for (let row = 0; row < height; row += 1) {
-    const src = (height - 1 - row) * rowBytes;
-    const dst = row * rowBytes;
-    for (let i = 0; i < rowBytes; i += 4) {
-      out[dst + i] = lut[rgba[src + i]];
-      out[dst + i + 1] = lut[rgba[src + i + 1]];
-      out[dst + i + 2] = lut[rgba[src + i + 2]];
+    const src = (height - 1 - row) * rowStride;
+    const dst = row * rowStride;
+    for (let i = 0; i < rowStride; i += 4) {
+      acesFilmicToneMap(
+        rgba[src + i],
+        rgba[src + i + 1],
+        rgba[src + i + 2],
+        mapped,
+      );
+      out[dst + i] = Math.round(linearToSrgb(mapped[0]) * 255);
+      out[dst + i + 1] = Math.round(linearToSrgb(mapped[1]) * 255);
+      out[dst + i + 2] = Math.round(linearToSrgb(mapped[2]) * 255);
       out[dst + i + 3] = 255;
     }
   }
