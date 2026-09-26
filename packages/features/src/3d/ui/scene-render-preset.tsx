@@ -217,9 +217,9 @@ export const SCENE_LIGHTING = {
  * 계단이 남았다. 지금은 shadow camera가 **카메라 시점을 따라다니며**
  * (SceneLighting의 useFrame) 보고 있는 영역에만 텍셀을 집중시키므로,
  * 4096 한 장이면 어느 줌에서도 텍셀이 화면 픽셀보다 작거나 비슷하다 —
- * 더 올릴 필요가 없고 VRAM도 64MB로 끝난다. 경계는 Canvas
- * `shadows: 'soft'`(PCFSoftShadowMap, scene-shadow.ts)가 추가로 부드럽게
- * 만든다.
+ * 더 올릴 필요가 없고 VRAM도 64MB로 끝난다. 필터는 Canvas
+ * `shadows: 'percentage'`(PCFShadowMap, scene-shadow.ts — PCFSoft 를 쓰지
+ * 않는 이유도 거기)다.
  */
 const SUN_SHADOW_MAP_SIZE = 4096;
 /**

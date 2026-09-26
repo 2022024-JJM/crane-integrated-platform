@@ -295,6 +295,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 다중 선택용 임시 Group 재부모화·프록시 객체 — `ModelMesh` 가 래퍼 group 을 걷어낸 구조(리그 rest·선택 박스 포털)와 충돌한다.
 - 그림자 무효화의 벽시계 스로틀 — 배속 재생에서 자기 그림자가 명멸한다. 상한은 거버너 fps 가 정한다.
 - `compileAsync` 셰이더 프리워밍 — 캔버스 언마운트 중 three 내부가 던진다. 동기 `compile` 을 쓴다.
+- Canvas `shadows` 의 PCFSoft(`true`·`'soft'`) — R3F 가 재렌더마다 타입을 되돌려 shadow pass 전 컴파일된 셰이더가 그림자 받는 메시를 못 그린다. `sceneCanvasShadows` 의 PCF 만 쓴다.
 
 ## docs/ 지도
 

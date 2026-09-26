@@ -21,8 +21,10 @@ describe('isSceneShadowEnabled', () => {
 });
 
 describe('sceneCanvasShadows', () => {
-  it("켜면 'soft'(PCFSoftShadowMap), 끄면 false", () => {
-    expect(sceneCanvasShadows({ shadows: true })).toBe('soft');
+  it("켜면 'percentage'(PCFShadowMap), 끄면 false", () => {
+    // 'soft'(PCFSoftShadowMap)는 r183 에서 타입이 뒤바뀌며 셰이더가 BASIC
+    // 변형으로 컴파일될 수 있어 쓰지 않는다(scene-shadow.ts 주석).
+    expect(sceneCanvasShadows({ shadows: true })).toBe('percentage');
     expect(sceneCanvasShadows({ shadows: false })).toBe(false);
     expect(sceneCanvasShadows(null)).toBe(false);
     expect(sceneCanvasShadows(undefined)).toBe(false);

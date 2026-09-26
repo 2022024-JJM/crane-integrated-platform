@@ -116,6 +116,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **DPR 상한 1.25** — 내렸다 되돌렸다. 1.5 를 유지한다(`SCENE_DEFAULT_DPR` 와 뷰어 기본값 함께).
 - **shadow 무효화 벽시계 스로틀(20Hz 상한)** — 렌더가 주사율로 도는 동안 대부분 프레임이 이전 자세의 depth map 이라 배속 ≥2 에서 자기 그림자 오차가 명멸했다. 임계 `SHADOW_STEP_EPS` 를 넘긴 프레임마다 무효화한다.
 - **`compileAsync` 프리워밍** — 폴링 중 캔버스 언마운트·머티리얼 dispose 에 three 내부가 던진다. 동기 `compile` 을 쓴다.
+- **PCFSoftShadowMap(Canvas `shadows` true·`'soft'`)** — r183 은 첫 shadow pass 에서 PCF 로 바꾸고 R3F 는 Canvas 재렌더마다 되돌린다. 그 사이 컴파일된 셰이더는 BASIC 변형(`sampler2D`)이 되어 그림자 받는 메시의 드로우를 WebGL 이 버린다(shadow pass 를 막고 찍는 미니맵 캡처에서 조선소 지도가 빠졌다). `sceneCanvasShadows` 의 `'percentage'` 만 쓴다.
 - **달빛만 두는 밤** — 관제용으로 너무 어두웠다. 야간 작업등이 기본.
 - **바다를 맨 먼저 그리기** — 화면 전체가 매 프레임 파도 계산이었다. 불투명 뒤 스텐실로 바꿨다.
 - **인스턴스별 유휴 콜백 체인(requestIdleCallback) 워밍업** — 로딩 직후엔 콜백이 타임아웃으로만 돌아 지오메트리 수십 개 씬이 수십 초 걸렸다. 고정 예산 큐로 통합.
