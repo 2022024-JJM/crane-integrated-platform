@@ -106,7 +106,9 @@ pnpm optimize:glb okpo_goliath.glb okpo_oc.glb okpo_tc.glb okpo_ttc.glb   # 20.9
 지형은 `optimize:glb` 가 아니라 **전용 파이프라인**을 쓴다 (2026-08-20 도입,
 그 전의 "텍스처만 수동 압축" 절차를 대체). 텍스처 상한 2048px·노멀/ORM 손실
 압축에 더해, transmission 제거·단면화·데시메이션·양자화 안전 가드(층간 높이 차
-실측으로 z-fighting 위험 시 meshopt 자동 생략)까지 처리한다. 백업·멱등·교체
+실측으로 z-fighting 위험 시 meshopt 자동 생략)·평면 레이어 보호(차선·횡단보도를
+데시메이션에서 빼고, 바닥에 얹힌 표시는 띄우고, 뒤집힌 표시는 바로 세움)·출력
+검증(동일 평면 겹침)까지 처리한다. 백업·멱등·교체
 관례는 `optimize:glb` 와 동일하다:
 
 ```bash
@@ -143,7 +145,7 @@ for f in okpo.glb okpo-terrain.glb; do
   mv assets-src/models/$f assets-src/maps/ && rm assets-src/models/$f.orig
 done
 
-FORCE_MESHOPT=1 pnpm optimize:map okpo.glb okpo-terrain.glb          # 183→17.6MB, 188→9.6MB
+FORCE_MESHOPT=1 pnpm optimize:map okpo.glb okpo-terrain.glb          # 183→17.8MB, 188→9.6MB
 KEEP_DOUBLE_SIDED=1 FORCE_MESHOPT=1 pnpm optimize:map okpo-tree.glb  # 258→34.4MB
 node scripts/tile-terrain-glb.mjs apps/shell/public/maps/okpo-terrain.glb /tmp/okpo-terrain.tiled.glb --grid=4 --lod
 node scripts/tile-terrain-glb.mjs apps/shell/public/maps/okpo-tree.glb    /tmp/okpo-tree.tiled.glb    --grid=4 --lod
@@ -151,16 +153,23 @@ cp /tmp/okpo-terrain.tiled.glb apps/shell/public/maps/okpo-terrain.glb   # 11.0M
 cp /tmp/okpo-tree.tiled.glb    apps/shell/public/maps/okpo-tree.glb      # 37.8MB
 ```
 
-- 야드의 `FORCE_MESHOPT=1`: 그리드 5.8cm, 최소 층간 10cm(아스팔트 40.55 ↔ 차선 돌출 윗면
-  40.65)라 가드(그리드×2)가 생략한다. 갭이 그리드 1칸보다 커서 같은 셀로 붕괴하지 않음을
-  배포본에서 확인했다(슬래브 40.325 / 아스팔트 40.558 / 차선 40.674). 생략하면 73MB 다.
+- 야드의 `FORCE_MESHOPT=1`: 그리드 5.8cm 인데 가드가 재는 최소 층간이 2cm 다. 디자이너가
+  10cm 띄운 표시(40.650)와 파이프라인이 띄운 횡단보도(40.670)의 차이로, 둘은 같은
+  머티리얼이고 서로 겹치지 않아 같은 셀로 가도 보이지 않는다. 배포본 실측: 슬래브
+  40.325 / 아스팔트 40.558 / 표시 40.558·40.674. 생략하면 73MB 다.
+- 도로 표시(`Road Marking_White`)는 원본에서 세 높이다. 아스팔트와 같은 높이(40.550)는
+  아스팔트가 그 자리만큼 도려져 맞물려 있고, 5mm 위(40.554)는 횡단보도·정지선으로
+  아스팔트 위에 얹혀 있으며, 10cm 위(40.650)는 중앙선 등으로 면이 아래를 향한다.
+  파이프라인이 둘째를 11.6cm(그리드 2칸) 띄우고 셋째를 뒤집는다. 재생성 뒤
+  `node scripts/audit-map-layers.mjs apps/shell/public/maps/okpo.glb` 출력에
+  "← 얹힌 표시" 가 없어야 한다 — 있으면 횡단보도가 화면에서 깜빡인다.
 - Tree 의 `KEEP_DOUBLE_SIDED=1`: 잎이 alpha MASK 양면 카드라 단면화하면 절반이 사라진다.
   TEXCOORD_1~4 는 미사용이라 파이프라인이 제거한다.
 - `--grid=4`: 텍스처 머티리얼은 정점색으로 병합되지 않아 드로우콜 ≈ 타일 × 머티리얼이다.
   LOD 레벨당 Terrain 82 · Tree 36. Tree 의 LOD 는 멀수록 잎 카드가 Prune 으로 빠진다
   (LOD1 잎 41%, LOD3 잎 0) — 1080p 기준 LOD1 이 약 1.4km 밖이다.
 - 야드는 31 머티리얼 단일 메시라 타일화하지 않는다(드로우콜 폭증).
-- `pnpm perf:scene` 실측: 야드 87만 tris · 31 드로우콜 · 텍스처 VRAM 139MB(단색 축소 전
+- `pnpm perf:scene` 실측: 야드 89만 tris · 31 드로우콜 · 텍스처 VRAM 139MB(단색 축소 전
   267MB), Terrain LOD0 60만 · 97MB, Tree LOD0 169만 · 33MB.
 - **씬 배치값**: 디자이너 Blender 씬에서 야드 (0, −6.882, 0), Terrain 원점, Tree
   (215.251, 30.479, 379.802). 야드 슬래브가 로컬 Y 40.35 라 슬래브를 y=0 에 두려고
@@ -195,7 +204,7 @@ node scripts/unbake-root-transform.mjs "Philly Area 1.glb" "Philly Area 2.glb"
 mv "assets-src/models/Philly Area 1.glb" assets-src/maps/philly-area-1.glb
 mv "assets-src/models/Philly Area 2.glb" assets-src/maps/philly-area-2.glb
 cp assets-src/maps/philly-area-{1,2}.glb apps/shell/public/maps/
-pnpm optimize:map philly-area-1.glb philly-area-2.glb   # 33.3→2.49MB, 57.1→6.00MB
+pnpm optimize:map philly-area-1.glb philly-area-2.glb   # 33.3→1.87MB, 57.1→4.18MB
 ```
 
 ⚠️ `pnpm optimize:map` 을 인자 없이 돌리면 `philly-terrain.glb` 까지 다시 돌아 타일·LOD

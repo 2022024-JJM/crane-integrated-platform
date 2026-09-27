@@ -56,7 +56,7 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 |---|---|---|
 | ① resize | CLI | 텍스처 최대 **2048px** (도입 당시 1024 — 2026-09-04 phillyshipyard 재반입본이 지면을 4096px 베이크 1장(타일링 없음)으로 바꿔 와서 1024 로는 약 2.3m/px 로 흐려져 상향) |
 | ② webp | CLI | **전 슬롯 손실 압축 q80** — 노멀/ORM 포함 (모델은 무손실 — 원거리 지형은 셰이딩 얼룩이 비가시) |
-| ③ surgery | in-process | transmission 제거 → 단면화 → 미사용 UV 제거 → weld → simplify → **양자화 안전 가드** → meshopt |
+| ③ surgery | in-process | transmission 제거 → 단면화 → 미사용 UV 제거 → weld → **평면 레이어 보호**(뒤집기 → 띄우기) → simplify → **양자화 안전 가드** → meshopt → **출력 검증** |
 
 - **meshopt 는 반드시 마지막**: gltf-transform 텍스처 커맨드가 `EXT_meshopt_compression`
   을 제거한다 (optimize-glb 문서의 실측 사고 참고).
@@ -71,9 +71,12 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 | 단면화 | 전 머티리얼 `doubleSided=false` | 래스터/레이캐스트 삼각형 테스트 절반. 뒤집힌 면이 구멍으로 보이면 `KEEP_DOUBLE_SIDED=1` 로 재실행 |
 | 미사용 UV 제거 | 어떤 텍스처도 참조하지 않는 `TEXCOORD_n`(n ≥ 1)을 프리미티브에서 뗀다. `TEXCOORD_0` 은 항상 유지 | Blender export 가 UV 맵을 전부 실어 보내면(okpo-tree 는 TEXCOORD_1~4) 렌더에 안 쓰이는 채로 배포 용량·정점 VRAM 을 먹고 weld 의 정점 동등 비교를 방해한다 |
 | weld | 무손실 인덱스 dedup | simplify 가 프리미티브 경계를 넘어 동작하는 전제 |
-| simplify | meshopt simplifier, ratio 0.4 / error 0.0002(bbox 대각 상대값) | 정점을 제거만 하고 이동시키지 않으므로 평면은 평면으로, 드롭 레이캐스트 착지 높이는 오차 한도 안에서 유지 |
+| 평면 레이어 뒤집기 | 평면 레이어(삼각형이 전부 수평면인 프리미티브)의 아래 향한 면 중, 다른 레이어의 윗면 위 `OVERLAY_REACH` 안쪽에 놓인 높이를 위로 뒤집는다 | 원본은 양면이라 뒤집힌 표시도 보이는데 단면화하면 위에서 사라진다(okpo 의 중앙선). 받치는 면이 없는 아래 향한 면(philly 지도의 `Sea` 평면)은 런타임 바다가 그 자리를 그리므로 가려 둔다 |
+| 평면 레이어 띄우기 | 평면 레이어의 한 높이가 다른 레이어와 `COPLANAR_EPS` 안쪽으로 겹치고 그 면적이 그 높이의 `OVERLAY_MIN_SHARE` 이상이면, 그 높이의 정점을 전부 `OVERLAY_LIFT` 이상(그리드의 정수 배) 올린다 | 바닥에서 수 mm 띄워 얹은 표시는 그리드(수 cm)에 삼켜져 바닥과 완전히 같은 높이가 된다. 간격 0 의 겹침은 로그 깊이로도 갈리지 않아 카메라가 움직이는 동안 깜빡인다(okpo 의 횡단보도) |
+| simplify | meshopt simplifier, ratio 0.4 / error 0.0002(bbox 대각 상대값). **평면 레이어는 건너뛴다** | 정점을 제거만 하고 이동시키지 않으므로 평면은 평면으로, 드롭 레이캐스트 착지 높이는 오차 한도 안에서 유지. 평면 안의 붕괴는 오차가 0 으로 계산돼 허용 오차보다 좁은 줄무늬를 쐐기로 접고, 아스팔트가 차선 자리만큼 도려져 맞물린 경계를 서로 다르게 깎아 겹치게 만든다 |
 | UV 노이즈 클램프 | meshopt 직전, [0,1] 밖 값이 **전부** 1e-4 이내인 TEXCOORD accessor 만 [0,1] 로 클램프 (2026-09-11 추가) | meshopt 는 범위 밖 값이 하나라도 있으면 그 UV 를 양자화하지 않고 float 로 남긴다. Terrain 3차 전달본의 도로 UV 가 2.6e-5 벗어나 float 로 남았고 tile-terrain-glb 의 굽기 그룹 병합이 거부됐다. 진짜 범위 밖(타일링) UV 는 건드리지 않는다 |
 | meshopt | 16bit 포지션 양자화 + 압축 | 아래 안전 가드를 통과할 때만 적용 |
+| 출력 검증 | 양자화까지 끝난 문서에서 동일 평면 겹침을 다시 잰다(`scripts/audit-map-layers.mjs`). 얹힌 표시가 남으면 그 파일은 실패, `FORCE_MESHOPT=1` 이면 경고 | 가드와 보호 스테이지가 놓친 겹침을 결과에서 직접 잡는다 |
 
 ## 4. 양자화 안전 가드 — 왜 있고 어떻게 동작하나
 
@@ -89,9 +92,10 @@ cp assets-src/maps/<파일> apps/shell/public/maps/<파일>
 1. 프리미티브 정점 Y 히스토그램(1mm 단위)에서 정점의 20% 이상 + 32개 이상이
    몰린 값만 "지배적 평면 레벨"로 수집한다 — z-fighting 은 넓은 평면끼리
    겹칠 때만 문제라, 벽·나무 같은 입체물의 bbox 경계가 우연히 가깝다고
-   오발되지 않는다. 5mm 이내 레벨은 의도적 동일 평면(차선↔아스팔트,
-   도크 라인↔도크 바닥)으로 병합한다 — 같은 입력값은 같은 셀로 가므로
-   어떤 비트 수에서도 유지된다.
+   오발되지 않는다. 5mm 이내 레벨은 같은 층으로 병합해 갭 계산에서 뺀다.
+   같은 높이의 쌍은 가드가 아니라 평면 레이어 보호가 맡는다 — 맞물린 쌍
+   (philly 의 차선↔아스팔트, XZ 로 겹치지 않음)은 simplify 에서 빼서 맞물림을
+   지키고, 얹힌 쌍(okpo 의 횡단보도, 아스팔트 5mm 위)은 띄운다.
 2. 인접 레벨 간 최소 높이 차(minGap)와 16bit 그리드를 비교해
    **그리드×2 ≤ minGap 일 때만 meshopt 를 적용**한다.
 3. 조건을 못 넘으면 meshopt 를 생략하고 f32 로 남긴다 — simplify 까지만으로도
@@ -125,14 +129,16 @@ OK  167.45MB -> 14.84MB (-91.1%)  philly-terrain.glb  [그리드 28.8cm / 층간
 | `SIMPLIFY_ERROR` | 0.0002 | bbox 대각 상대 오차(philly 기준 최대 편차 ~0.6m). 감소가 부족하면 0.001 까지 |
 | `MAX_TEXTURE_SIZE` / `LOSSY_QUALITY` | 2048 / 80 | 텍스처 상한·품질 |
 | `KEEP_DOUBLE_SIDED=1` | off | 단면화로 뒷면 구멍이 보일 때 양면 유지. 잎 카드(alpha MASK) 레이어는 필수 — okpo-tree |
-| `FORCE_MESHOPT=1` | off | 양자화 가드 무시 — 감지된 작은 층간 갭이 의도가 아님을 사람이 확인한 경우만 |
+| `FORCE_MESHOPT=1` | off | 양자화 가드 무시 + 출력 검증 실패를 경고로 낮춤 — 감지된 작은 층간 갭·겹침이 의도가 아니거나 화면에 안 보임을 사람이 확인한 경우만 |
+| `OVERLAY_LIFT` / `OVERLAY_REACH` | 0.1m / 그 2배 | 얹힌 표시를 띄우는 최소 높이 / 아래 향한 면을 뒤집힌 표시로 볼 높이 범위 |
 
 ## 6. 문제 해결
 
 | 증상 | 원인 | 조치 |
 |---|---|---|
 | 도로/바닥이 깜빡이며 지워졌다 생김 | 양자화가 층간 높이 차를 붕괴 (z-fighting) | 로그의 그리드/층간 수치 확인. 가드가 `FORCE_MESHOPT` 로 우회됐다면 해제하고 재실행 |
-| 특정 면이 안 보이거나 구멍 | 단면화 + 원본의 뒤집힌 노멀 | `KEEP_DOUBLE_SIDED=1` 로 재실행 후 육안 비교 |
+| 차선·횡단보도가 카메라를 움직일 때만 반짝이고 멈추면 얼룩진 채 굳음 | 표시가 바닥과 완전히 같은 높이로 겹침 | `node scripts/audit-map-layers.mjs <배포본>` 의 "← 얹힌 표시" 줄 확인. 런타임 `polygonOffset` 은 로그 깊이에서 무시되므로 파이프라인에서 고친다 |
+| 특정 면이 안 보이거나 구멍 | 단면화 + 원본의 뒤집힌 노멀 | 바닥에 얹힌 표시는 파이프라인이 뒤집는다. 그 밖의 면은 `KEEP_DOUBLE_SIDED=1` 로 재실행 후 육안 비교 |
 | 유리가 어색함 | transmission → 알파 반투명 변환의 한계(굴절/블러 없음) | 알파값(스크립트의 0.5)·roughness 조정. transmission 복원은 금지 — 프레임 비용 2배 |
 | 근접 시 형태 뭉개짐 | simplify 과다 | `SIMPLIFY_ERROR` 를 낮추거나 `SIMPLIFY_RATIO` 를 올려 재실행 |
 | 파일이 기대만큼 안 줄어듦 | 가드가 meshopt 를 생략했거나, simplify 가 오차 한도에 걸림 | 로그 확인. philly 의 경우 나무 잎(Leaf Dark/Light 63.9만 정점)이 오차 한도에 걸려 전혀 줄지 않았다 — 추가 절감이 필요하면 잎 프리미티브만 공격적 simplify 가 다음 수단 |
@@ -155,6 +161,8 @@ OK  167.45MB -> 14.84MB (-91.1%)  philly-terrain.glb  [그리드 28.8cm / 층간
 1. **정적**: `node node_modules/@gltf-transform/cli/bin/cli.js inspect apps/shell/public/maps/<파일>`
    — extensionsUsed 에 `KHR_materials_transmission` 이 없고, 가드 적용 시
    `EXT_meshopt_compression` 이 있는지, 삼각형 수·크기 확인.
+   `node scripts/audit-map-layers.mjs apps/shell/public/maps/<파일>` 출력에
+   "← 얹힌 표시" 가 없는지 확인.
 2. **비주얼**: `pnpm dev:shell` 후 해당 지도를 쓰는 화면(goliath / philly-dock-2 모니터링,
    씬 에디터)에서 — 도로·도크 마킹 깜빡임 없음, 뒷면 구멍 없음, 유리 외관 수용 가능,
    에디터에서 모델 드롭 시 지면 높이에 정확히 안착(드롭 레이캐스트).

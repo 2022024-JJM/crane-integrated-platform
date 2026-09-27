@@ -12,6 +12,7 @@
 | 압축 전 원본 보관 | `assets-src/models/`, `assets-src/maps/` (+ `.nolod`·`.orig` 부산물), 절차 전문 `assets-src/README.md` |
 | 모델 압축 `pnpm optimize:glb <파일>` | `scripts/optimize-glb.mjs` — 원본을 `assets-src/` 로 자동 백업 |
 | 지도 압축 `pnpm optimize:map <파일>` | `scripts/optimize-map.mjs` — 파일명 인자 필수(없으면 모든 지도가 대상) |
+| 지도 동일 평면 겹침 검사 `node scripts/audit-map-layers.mjs <파일>` | `scripts/audit-map-layers.mjs` — 진단 전용(항상 exit 0). `optimize:map` 이 같은 함수로 표시를 띄우고 출력을 검증한다 |
 | 지형 타일+LOD `node scripts/tile-terrain-glb.mjs --lod` | `scripts/tile-terrain-glb.mjs` |
 | 모델 거리별 LOD `node scripts/add-model-lod.mjs <파일>` | `scripts/add-model-lod.mjs` — 이어서 `pnpm optimize:glb` 필수 |
 | 정적 모델 프리미티브 병합 `node scripts/join-static-glb.mjs <파일>` | `scripts/join-static-glb.mjs` — 이어서 `pnpm optimize:glb` |
@@ -42,6 +43,15 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - `pnpm optimize:glb` 는 지도 파이프라인과 같이 `KHR_materials_transmission` 을 알파 블렌딩 반투명으로 치환한다(`stripTransmission`). transmission 머티리얼 하나가 씬 전체를 한 번 더 그리게 만들기 때문이며, 배포 모델에는 이 확장이 남아 있지 않다.
 - GLB/씬 자산을 추가하면 삼각형 수·텍스처 VRAM·로딩 시간 영향을 직접 확인한다. 자동화된 성능 게이트는 **없다**. `pnpm perf:scene` 은 진단 리포트일 뿐(경고와 join 후보 표기, LOD>0 노드는 렌더 집계에서 제외)이며 모델 추가·교체 후 한 번 돌려 본다.
 - 카탈로그(`sceneModelCatalog`)에 없어도 런타임이 직접 로드하는 GLB 가 있다: `crane.glb`·`gantry_crane.glb`·`TTC-27.glb`(자산 크레인 타입 → 모델 표 `packages/domain/src/3d/model/crane-type-model.ts`, `packages/widgets/src/goliath-crane/ui/goliath-3d-viewer.tsx`), `goliath_crane_body.glb`·`goliath_crane_trolley.glb`(`crane-zone-config.ts` parts), `man.glb`·`car.glb`·`fork_lift.glb`(충돌 가드 시뮬레이션 `collision-guard-object-model.tsx`). 씬 JSON·카탈로그만 보고 GLB 를 지우지 않는다.
+
+### 지도의 평면 레이어(차선·횡단보도) 보호
+
+`pnpm optimize:map` 은 삼각형이 전부 수평면인 프리미티브를 평면 레이어로 보고 따로 다룬다. 판정은 머티리얼 이름이 아니라 지오메트리 실측이다(`audit-map-layers.mjs`).
+
+- **simplify 제외** — 허용 오차보다 좁은 줄무늬가 쐐기로 접히고, 아스팔트가 차선 자리만큼 도려져 맞물린 경계(같은 높이지만 겹치지 않음)가 깨져 겹친다.
+- **띄우기** — 다른 레이어 위에 `COPLANAR_EPS` 안쪽으로 얹힌 높이는 `OVERLAY_LIFT` 이상, 양자화 그리드의 정수 배만큼 올린다. 간격 0 인 겹침은 로그 깊이로도 갈리지 않아 카메라가 움직이는 동안 깜빡인다.
+- **뒤집기** — 받치는 윗면 위 `OVERLAY_REACH` 안쪽의 아래 향한 면은 위로 뒤집는다(단면화로 사라지는 표시). 받치는 면이 없는 것은 가려 둔다.
+- **출력 검증** — 양자화된 결과에 얹힌 표시가 남으면 그 파일은 실패하고, `FORCE_MESHOPT=1` 이면 경고로 낮춘다. 로그의 "동일 평면 겹침" 중 "← 얹힌 표시" 표식이 없는 줄은 건물 모서리·타일 이음매의 국소 겹침이다.
 
 ### philly-terrain: 공간 타일 + LOD 체인
 
@@ -114,6 +124,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - three 를 업그레이드하면 `apps/shell/public/basis/r<REVISION>/` 을 새 REVISION 으로 재복사한다.
 - `sceneModelCatalog` 변경·미리보기 룩 변경 시 `public/previews/` 를 재생성해 함께 커밋한다.
 - GLB 를 지우기 전에 씬 JSON·카탈로그뿐 아니라 코드 참조(`grep -rn <파일명> packages apps scripts`)까지 확인한다 — 카탈로그 밖에서 직접 로드하는 GLB 목록은 위 "배포본과 원본".
+- 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 출력에 "← 얹힌 표시" 가 없어야 한다.
 - 새 카탈로그 지도는 `kind` 를 정한다 — `ground` 는 드롭 바닥·(체크 시) 카메라 기준, `context` 는 Lambert·LOD·그림자 제외 규칙을 받는다.
 - 배포 GLB 를 KTX2 로 일괄 전환하지 않는다(운영 장비 육안 A/B·BC7 확인 전).
 
@@ -125,6 +136,8 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - **베이크된 월드 좌표 그대로 등록** — 존·기즈모가 수 km 어긋난다. unbake 먼저.
 - **FLAT_TEXTURE 경고만 보고 텍스처 축소** — 파일 크기 기반 후보라 오탐. 픽셀 검증 스크립트가 최종.
 - **`philly-terrain.glb` 원본 커밋** — 100MB 한도 초과. 컨플루언스 관리.
+- **지도 z-fighting 을 런타임 `polygonOffset` 으로** — 로그 깊이는 프래그먼트가 `gl_FragDepth` 를 직접 써 오프셋이 무시된다. 파이프라인에서 띄운다.
+- **평면 레이어의 아래 향한 면 일괄 뒤집기** — philly 지도에 딸려 온 `Sea` 평면까지 위를 향해 런타임 바다를 덮는다. 받치는 면이 있는 높이만 뒤집는다.
 - **모델 LOD 를 첫 노드 앞에 삽입** — `[index]name` 메쉬 경로가 바뀌어 meshOverrides·맵핑이 깨진다. 기존 노드 뒤에만 붙인다.
 
 ## 미룬 것
