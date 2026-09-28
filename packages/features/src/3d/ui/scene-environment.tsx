@@ -45,10 +45,11 @@ import { SceneWater } from './scene-water';
  * 건 배경을 덮어써 하늘이 사라진다. 자기 것만 걷어내면 순서와 무관하게
  * 안전하다.
  *
- * 수면 아래에 잠긴 모델은 바다가 가리지 않는다 — 바다는 깊이를 쓰지 않아
- * 지도의 수면 아래 지형(드라이독)을 보호하기 때문이다. 대신 바다가 켜진 씬의
- * 모든 모델에 셰이더 패치를 걸어 깊이에 따라 물 색으로 흐리게 섞는다
- * (domain lib/sea-submersion.ts, GltfModel seaSubmersion).
+ * 수면 아래에 잠긴 모델·지형은 바다가 가리지 않는다 — 바다는 깊이를 쓰지
+ * 않아 지도의 드라이독을 보호하기 때문이다. 대신 바다가 켜진 씬의 모든
+ * 모델·지도에 셰이더 패치를 걸어 깊이에 따라 물 색으로 흐리게 섞고, 지도의
+ * 드라이독만 뺀다(domain lib/sea-submersion.ts·sea-dry-basin.ts, GltfModel
+ * seaSubmersion·seaDryBasins).
  */
 const ENVIRONMENT_INTENSITY = SCENE_ENVIRONMENT_INTENSITY;
 

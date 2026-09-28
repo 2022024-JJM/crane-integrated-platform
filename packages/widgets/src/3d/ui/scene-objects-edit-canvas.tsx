@@ -265,8 +265,8 @@ export function SceneObjectsEditCanvas({
   }, []);
 
   // 뷰어(OutdoorWorkModelSimulation)와 같은 규칙 — 바다가 켜진 씬
-  // (resolveSeaVisible — 맵 탭 스위치가 고치는 `sea` 필드)의 모델에만 수면
-  // 아래 잠김 처리. 지도에는 걸지 않는다.
+  // (resolveSeaVisible — 맵 탭 스위치가 고치는 `sea` 필드)의 모델·지도에만
+  // 수면 아래 잠김 처리.
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   // 언마운트 시점의 씬을 읽기 위한 ref — 프리로드 effect는 catalogItems에만
   // 의존해야 하므로(씬이 바뀔 때마다 재프리로드하면 안 된다) sceneInfo를
@@ -1020,6 +1020,9 @@ export function SceneObjectsEditCanvas({
                 receiveShadow={!isContextMap}
                 // 주변 지형 Lambert — 모니터링과 같은 규칙(저작 화면 = 실제 화면).
                 shading={isContextMap ? 'lambert' : 'standard'}
+                // 수면 아래 지형 잠김, 드라이독 제외 — 모니터링과 같은 규칙.
+                seaSubmersion={seaVisible}
+                seaDryBasins
                 onSelect={
                   m.locked === false ? handleSelectMap : handleClearSelection
                 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MeshStandardMaterial } from 'three';
+import { MeshLambertMaterial, MeshStandardMaterial, ShaderLib } from 'three';
 import {
   SEA_FOG_DENSITY,
   SEA_FOG_MAX,
@@ -47,6 +47,30 @@ describe('applySeaSubmersion', () => {
     expect(
       shader.fragmentShader.indexOf('seaFog'),
     ).toBeLessThan(shader.fragmentShader.indexOf('#include <tonemapping_fragment>'));
+  });
+
+  // 지도는 PBR(ground)·Lambert(context 지형) 두 셰이더로 그려진다 — 주입
+  // 지점 include 가 three 의 실제 셰이더에서 빠지면 replace 가 조용히 no-op
+  // 이 되어 안개만 사라진다.
+  it.each([
+    ['standard', new MeshStandardMaterial()],
+    ['lambert', new MeshLambertMaterial()],
+  ] as const)('three 의 실제 %s 셰이더에 주입된다', (key, material) => {
+    applySeaSubmersion(material);
+
+    const shader = {
+      vertexShader: ShaderLib[key].vertexShader,
+      fragmentShader: ShaderLib[key].fragmentShader,
+    };
+    material.onBeforeCompile(
+      shader as Parameters<typeof material.onBeforeCompile>[0],
+      null as unknown as Parameters<typeof material.onBeforeCompile>[1],
+    );
+
+    expect(shader.vertexShader).toContain('varying float vSeaWorldY;');
+    expect(shader.vertexShader).toContain('vSeaWorldY = ');
+    expect(shader.fragmentShader).toContain('varying float vSeaWorldY;');
+    expect(shader.fragmentShader).toContain('seaFog');
   });
 
   it('customProgramCacheKey를 반드시 지정한다 — 없으면 원본 프로그램이 재사용된다', () => {

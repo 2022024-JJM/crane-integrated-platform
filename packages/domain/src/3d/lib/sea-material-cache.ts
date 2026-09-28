@@ -5,7 +5,7 @@ import { applySeaSubmersion } from './sea-submersion';
  * seaSubmersion 전용 공유 머티리얼 캐시 — 원본 머티리얼당 패치된 클론 1개를
  * refcount 로 공유한다.
  *
- * 왜: 바다 씬에서는 모든 모델 인스턴스가 slow path(머티리얼 clone)를 타는데,
+ * 왜: 바다 씬에서는 모든 모델·지도 인스턴스가 slow path(머티리얼 clone)를 타는데,
  * 잠김 안개 패치는 월드 Y 만 쓰는 per-object 데이터가 필요 없는 효과라
  * 인스턴스별 클론이 전부 낭비다. 같은 GLB 를 N 개 배치하면 클론이 N×메시
  * 수만큼 생기고(실측: 인스턴스별 uniforms 딥클론 8.9KB + 드로우콜마다

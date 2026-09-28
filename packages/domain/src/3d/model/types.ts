@@ -302,7 +302,7 @@ export interface SceneModelCatalogItem {
    * 떠 있는 모델 — **배치 전용** 플래그. origin이 흘수선(설계 수면)에 있다는
    * 뜻으로, 드롭 시 bbox 바닥을 지면에 맞추는 대신 origin을 수면(SEA_LEVEL_Y)에
    * 놓는다. 수면 아래 잠김 표현은 이 플래그와 무관하게 바다가 있는 씬의 모든
-   * 모델에 적용된다(model-mesh.tsx seaSubmersion).
+   * 모델·지도에 적용된다(model-mesh.tsx seaSubmersion).
    */
   floating?: boolean;
 }

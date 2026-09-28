@@ -216,8 +216,8 @@ export function OutdoorWorkModelSimulation({
   runtimeStatuses = NO_STATUSES,
 }: OutdoorWorkModelSimulationProps) {
   const camera = useThree((s) => s.camera);
-  // 바다가 켜진 씬(resolveSeaVisible)에서만 모델의 수면 아래를 잠김 처리한다
-  // — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다. 지도에는 걸지 않는다.
+  // 바다가 켜진 씬(resolveSeaVisible)에서만 모델·지도의 수면 아래를 잠김
+  // 처리한다 — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다.
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   // runner 는 항상 mount — 각자 내부 플래그(isRunning / isPlaying)로 비활성화.
   // 가상 태그는 Canvas 밖 setInterval 러너라 여기 없다(virtual-tag-runner).
@@ -428,6 +428,10 @@ export function OutdoorWorkModelSimulation({
               // 주변 지형은 PBR 대신 Lambert — 관제 대상이 아닌 수 km 도시의
               // 픽셀 비용을 뺀다(model-mesh.tsx ModelShading). 에디터도 같은 규칙.
               shading={isContextMap ? 'lambert' : 'standard'}
+              // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 드라이독은
+              // 수면보다 낮아도 물이 없어 뺀다(domain lib/sea-dry-basin.ts).
+              seaSubmersion={seaVisible}
+              seaDryBasins
             />
           </SceneObjectBoundary>
         );

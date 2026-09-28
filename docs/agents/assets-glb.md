@@ -126,6 +126,7 @@ GLB 는 압축본만 `apps/shell/public/{models,maps}/` 에 배포되고, 압축
 - GLB 를 지우기 전에 씬 JSON·카탈로그뿐 아니라 코드 참조(`grep -rn <파일명> packages apps scripts`)까지 확인한다 — 카탈로그 밖에서 직접 로드하는 GLB 목록은 위 "배포본과 원본".
 - 지도를 반입·재생성하면 `node scripts/audit-map-layers.mjs <배포본>` 출력에 "← 얹힌 표시" 가 없어야 한다.
 - 새 카탈로그 지도는 `kind` 를 정한다 — `ground` 는 드롭 바닥·(체크 시) 카메라 기준, `context` 는 Lambert·LOD·그림자 제외 규칙을 받는다.
+- 지도의 드라이독(벽·바닥·바닥선)은 이름이 `Dock` 으로 시작하는 머티리얼로 둔다(`SEA_DRY_BASIN_MATERIAL_PATTERN`). 다른 이름이면 수면 아래 잠김 안개가 도크 안에 낀다(`docs/agents/rendering-perf.md`).
 - 배포 GLB 를 KTX2 로 일괄 전환하지 않는다(운영 장비 육안 A/B·BC7 확인 전).
 
 ## 하지 않기로 한 것

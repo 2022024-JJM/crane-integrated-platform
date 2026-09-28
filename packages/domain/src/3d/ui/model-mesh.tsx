@@ -14,6 +14,7 @@ import { findMeshByPath, getMeshPath, makeMeshId } from '../lib/mesh-path';
 import { seedRestPose } from '../lib/rest-pose-cache';
 import { fillModelBottomOffsetFromClone } from '../lib/model-bottom-offset-cache';
 import { applySeaSubmersion, clearSeaSubmersion } from '../lib/sea-submersion';
+import { resolveMeshSeaSubmersion } from '../lib/sea-dry-basin';
 import {
   assignSharedSeaMaterials,
   createMeshMaterialBinding,
@@ -45,11 +46,16 @@ interface ModelMeshProps {
   alarmSeverity?: AlarmHighlightSeverity | null;
   /**
    * 수면 아래(y < SEA_LEVEL_Y)를 깊이 안개로 흐리게 한다(lib/sea-submersion.ts).
-   * 바다가 있는 씬의 모든 모델에 켠다 — 물 위에 있는 모델엔 시각적 변화가
-   * 없지만 slow path(머티리얼 clone)를 타게 된다. 지도는 켜지 않는다(드라이독
-   * 등 수면 아래 지형에 안개가 끼면 안 된다).
+   * 바다가 있는 씬의 모든 모델·지도에 켠다 — 물 위에 있는 부분엔 시각적
+   * 변화가 없지만 slow path(머티리얼 clone)를 타게 된다.
    */
   seaSubmersion?: boolean;
+  /**
+   * 드라이독 머티리얼의 메시를 잠김에서 뺀다(lib/sea-dry-basin.ts). 기본
+   * false. **지도에만** 켠다 — 드라이독은 수면보다 낮아도 물이 없는 곳이라
+   * 안개가 끼면 안 된다. `seaSubmersion` 이 꺼져 있으면 의미가 없다.
+   */
+  seaDryBasins?: boolean;
   /**
    * 그림자를 드리울지. 기본 true. ground 지도도 드리운다 — GLB에 건물이 함께
    * 구워져 있어 끄면 건물 그림자가 통째로 사라진다. 예외는 컨텍스트 지형
@@ -338,6 +344,7 @@ export function ModelMesh({
   opacity = 1,
   alarmSeverity = null,
   seaSubmersion = false,
+  seaDryBasins = false,
   castShadow = true,
   receiveShadow = true,
   position = [0, 0, 0],
@@ -433,11 +440,18 @@ export function ModelMesh({
     //     인스턴스별로 clone 해 모델 수에 비례해 머티리얼·refreshMaterial
     //     비용이 늘었다. **공유본에는 어떤 프로퍼티도 쓰지 않는다.**
     //   원본 공유 — 둘 다 아님. GLTF 원본 reference 그대로.
+    // 잠김 여부는 메시마다 다르다 — 지도의 드라이독 메시는 바다 씬에서도
+    // 잠기지 않는다(lib/sea-dry-basin.ts).
     const needsIndividual = opacity < 1 || alarmSeverity !== null;
 
     if (!needsIndividual) {
       for (const binding of meshBindings) {
-        if (seaSubmersion) {
+        const submerged = resolveMeshSeaSubmersion(
+          binding.original,
+          seaSubmersion,
+          seaDryBasins,
+        );
+        if (submerged) {
           assignSharedSeaMaterials(binding);
         } else {
           restoreOriginalMaterials(binding);
@@ -449,7 +463,12 @@ export function ModelMesh({
 
     // 개별 클론 경로: 이 instance만 lazy clone하여 mutate.
     for (const binding of meshBindings) {
-      const materials = ensureClonedMaterials(binding, seaSubmersion);
+      const submerged = resolveMeshSeaSubmersion(
+        binding.original,
+        seaSubmersion,
+        seaDryBasins,
+      );
+      const materials = ensureClonedMaterials(binding, submerged);
       for (const material of materials) {
         const mat = material as Material & {
           opacity: number;
@@ -474,7 +493,7 @@ export function ModelMesh({
 
         // 클론 생성 후 seaSubmersion prop 이 뒤바뀐 경우의 패치 갱신 —
         // 생성 시 패치는 ensureClonedMaterials 가 했다(멱등).
-        if (seaSubmersion) {
+        if (submerged) {
           applySeaSubmersion(mat);
         } else {
           clearSeaSubmersion(mat);
@@ -484,7 +503,14 @@ export function ModelMesh({
       }
     }
     invalidate();
-  }, [meshBindings, opacity, alarmSeverity, seaSubmersion, invalidate]);
+  }, [
+    meshBindings,
+    opacity,
+    alarmSeverity,
+    seaSubmersion,
+    seaDryBasins,
+    invalidate,
+  ]);
 
   // 그림자 플래그 — clone은 인스턴스 전용 트리이므로 여기서 걸어도 다른
   // 인스턴스에 새지 않는다. useClonedModel의 useMemo에 넣지 않는 이유:
@@ -600,9 +626,16 @@ export function ModelMesh({
         const binding = bindingByMesh.get(target);
         if (binding) {
           // 잠김 공유 중이던 바인딩도 여기서 개별로 승격된다 — 승격은
-          // 원본에서 clone 하므로 seaSubmersion 을 넘겨 잠김 패치를 다시
+          // 원본에서 clone 하므로 잠김 여부를 넘겨 잠김 패치를 다시
           // 건다(안 넘기면 이 메시만 안개가 빠지는 회귀).
-          const materials = ensureClonedMaterials(binding, seaSubmersion);
+          const materials = ensureClonedMaterials(
+            binding,
+            resolveMeshSeaSubmersion(
+              binding.original,
+              seaSubmersion,
+              seaDryBasins,
+            ),
+          );
           for (const material of materials) {
             const mat = material as Material & {
               opacity: number;
@@ -625,6 +658,7 @@ export function ModelMesh({
     clone,
     originalTransforms,
     seaSubmersion,
+    seaDryBasins,
     invalidate,
   ]);
 
