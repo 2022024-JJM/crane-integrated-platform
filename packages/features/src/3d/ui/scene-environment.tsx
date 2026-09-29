@@ -9,6 +9,7 @@ import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { resolveEnvironmentFileUrl, type SavedMapInfo } from '@crane/domain/3d';
 import { SCENE_ENVIRONMENT_INTENSITY } from '../lib/sky-lighting';
 import { SceneObjectBoundary } from './scene-object-boundary';
+import { SceneSeaReach } from './scene-sea-reach';
 import { SceneWater } from './scene-water';
 
 /**
@@ -47,9 +48,9 @@ import { SceneWater } from './scene-water';
  *
  * 수면 아래에 잠긴 모델·지형은 바다가 가리지 않는다 — 바다는 깊이를 쓰지
  * 않아 지도의 드라이독을 보호하기 때문이다. 대신 바다가 켜진 씬의 모든
- * 모델·지도에 셰이더 패치를 걸어 깊이에 따라 물 색으로 흐리게 섞고, 지도의
- * 드라이독만 뺀다(domain lib/sea-submersion.ts·sea-dry-basin.ts, GltfModel
- * seaSubmersion·seaDryBasins).
+ * 모델·지도에 셰이더 패치를 걸어 깊이에 따라 물 색으로 흐리게 섞는다
+ * (domain lib/sea-submersion.ts, GltfModel seaSubmersion). 안개는 바다가
+ * 실제로 닿는 위치에만 끼고, 그 마스크는 SceneSeaReach 가 지도에서 만든다.
  */
 const ENVIRONMENT_INTENSITY = SCENE_ENVIRONMENT_INTENSITY;
 
@@ -117,24 +118,28 @@ export function SceneEnvironment({
   regionId: string;
   environmentId?: string | null;
   seaVisible: boolean;
-  /** 씬 지도 — 컨텍스트 지형을 바다 반사에서 뺄 때 쓴다. */
+  /** 씬 지도 — 컨텍스트 지형을 바다 반사에서 빼고, 바다 도달 마스크를 만든다. */
   maps?: SavedMapInfo[];
 }) {
   const url = resolveEnvironmentFileUrl(regionId, environmentId);
   if (!url && !seaVisible) return null;
   return (
-    <Suspense fallback={null}>
-      {url ? (
-        // key 는 경계에 — 배경이 바뀌면 에러 상태도 함께 초기화된다.
-        <SceneObjectBoundary key={url} label={`environment ${url}`}>
-          <EnvironmentBackground url={url} />
-        </SceneObjectBoundary>
-      ) : null}
-      {seaVisible ? (
-        <SceneObjectBoundary label="sea water">
-          <SceneWater maps={maps} />
-        </SceneObjectBoundary>
-      ) : null}
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        {url ? (
+          // key 는 경계에 — 배경이 바뀌면 에러 상태도 함께 초기화된다.
+          <SceneObjectBoundary key={url} label={`environment ${url}`}>
+            <EnvironmentBackground url={url} />
+          </SceneObjectBoundary>
+        ) : null}
+        {seaVisible ? (
+          <SceneObjectBoundary label="sea water">
+            <SceneWater maps={maps} />
+          </SceneObjectBoundary>
+        ) : null}
+      </Suspense>
+      {/* Suspense 밖 — EXR·노멀맵 로딩이 마스크 계산을 붙잡지 않는다. */}
+      {seaVisible ? <SceneSeaReach maps={maps} /> : null}
+    </>
   );
 }

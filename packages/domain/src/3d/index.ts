@@ -211,6 +211,16 @@ export {
 } from './model/scene-environment-registry';
 export { resolveSeaVisible } from './lib/scene-sea';
 export {
+  buildSeaReachMask,
+  type SeaReachMask,
+  type SeaReachSource,
+} from './lib/sea-reach-mask';
+export {
+  getSeaReachSignature,
+  publishSeaReachMask,
+  resetSeaReachMask,
+} from './lib/sea-reach-uniforms';
+export {
   withBaseUrl,
   registerAssetHashManifest,
 } from '@crane/core/lib/asset-url';

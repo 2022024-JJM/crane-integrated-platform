@@ -1020,9 +1020,8 @@ export function SceneObjectsEditCanvas({
                 receiveShadow={!isContextMap}
                 // 주변 지형 Lambert — 모니터링과 같은 규칙(저작 화면 = 실제 화면).
                 shading={isContextMap ? 'lambert' : 'standard'}
-                // 수면 아래 지형 잠김, 드라이독 제외 — 모니터링과 같은 규칙.
+                // 수면 아래 지형 잠김 — 모니터링과 같은 규칙.
                 seaSubmersion={seaVisible}
-                seaDryBasins
                 onSelect={
                   m.locked === false ? handleSelectMap : handleClearSelection
                 }

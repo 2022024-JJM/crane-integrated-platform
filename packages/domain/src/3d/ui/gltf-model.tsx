@@ -36,8 +36,6 @@ interface GltfModelProps {
   runtimeStatus?: EquipmentRuntimeStatus;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델·지도(model-mesh.tsx). */
   seaSubmersion?: boolean;
-  /** 드라이독 메시를 잠김에서 뺀다. 지도에만 켠다 — model-mesh.tsx 주석. */
-  seaDryBasins?: boolean;
   /**
    * 그림자를 드리울지. 기본 true. 상세는 model-mesh.tsx의 같은 prop 주석 참고.
    */
@@ -109,7 +107,6 @@ export const GltfModel = memo(function GltfModel({
   equipName,
   opacity = 1,
   seaSubmersion = false,
-  seaDryBasins = false,
   castShadow = true,
   receiveShadow = true,
   shading = 'standard',
@@ -166,7 +163,6 @@ export const GltfModel = memo(function GltfModel({
       opacity={opacity}
       alarmSeverity={alarmHighlightMesh ? alarmSeverity : null}
       seaSubmersion={seaSubmersion}
-      seaDryBasins={seaDryBasins}
       castShadow={castShadow}
       receiveShadow={receiveShadow}
       shading={shading}

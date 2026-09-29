@@ -428,10 +428,9 @@ export function OutdoorWorkModelSimulation({
               // 주변 지형은 PBR 대신 Lambert — 관제 대상이 아닌 수 km 도시의
               // 픽셀 비용을 뺀다(model-mesh.tsx ModelShading). 에디터도 같은 규칙.
               shading={isContextMap ? 'lambert' : 'standard'}
-              // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 드라이독은
-              // 수면보다 낮아도 물이 없어 뺀다(domain lib/sea-dry-basin.ts).
+              // 수면 아래 지형(해안 경사·안벽)도 모델처럼 잠긴다. 바다가 닿지
+              // 않는 곳(드라이독)은 셰이더가 마스크로 거른다.
               seaSubmersion={seaVisible}
-              seaDryBasins
             />
           </SceneObjectBoundary>
         );

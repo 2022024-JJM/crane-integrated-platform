@@ -1,17 +1,20 @@
-import type { Material } from 'three';
+import type { IUniform, Material } from 'three';
 import { SEA_LEVEL_Y } from '../model/sea-level';
+import { seaReachUniforms } from './sea-reach-uniforms';
 
 /**
- * 수면 아래 잠김 패치 — 바다가 있는 씬의 모델·지도 머티리얼에 **월드 y
- * 기준 깊이 안개**를 주입한다(model-mesh.tsx seaSubmersion). 수면 위
- * 프래그먼트는 건드리지 않으므로 물 위에 있는 부분엔 변화가 없다.
+ * 수면 아래 잠김 패치 — 바다가 있는 씬의 모델·지도 머티리얼에 **깊이 안개**를
+ * 주입한다(model-mesh.tsx seaSubmersion). 수면 위 프래그먼트는 건드리지
+ * 않으므로 물 위에 있는 부분엔 변화가 없다.
  *
  * 물속 물체는 깊이에 따라 물 색으로 흡수·산란되어 흐려진다. 수면 근처는
  * 원래 색이 거의 그대로, 깊어질수록 물 색으로 섞여 형체만 남는다 — 색을
  * 유지한 채 "물 너머로 보이는" 느낌을 낸다.
  *
- * 안개는 y 만 보므로 수면보다 낮지만 물이 없는 곳(드라이독)은 메시 단위로
- * 패치에서 뺀다 — 판정은 sea-dry-basin.ts, 지도에만 적용한다.
+ * 안개가 끼는 조건은 둘이다: 수면보다 낮고(월드 y), **그 위치에 바다가
+ * 닿는다**(바다 도달 마스크를 월드 XZ 로 조회 — sea-reach-mask.ts). 드라이독
+ * 안의 블록처럼 수면보다 낮아도 물이 닿지 않는 곳에 있으면 안개가 없다.
+ * 모델과 지도가 같은 조건을 쓴다. 마스크 격자 밖은 바다로 본다.
  *
  * 바다 평면이 깊이를 써서 가리거나 클리핑으로 잘라내지 않는 이유: 전자는
  * 지도의 수면 아래 지형(드라이독)까지 물로 채우고, 후자는 형체가
@@ -21,7 +24,7 @@ import { SEA_LEVEL_Y } from '../model/sea-level';
  *
  * 주입 지점:
  * - vertex `<worldpos_vertex>` 뒤 — three의 worldPosition은 특정 define에서만
- *   계산되므로 자체 varying(vSeaWorldY)을 만든다. `transformed`는 스킨/모프
+ *   계산되므로 자체 varying(vSeaWorldPos)을 만든다. `transformed`는 스킨/모프
  *   적용 후 값이고, 인스턴싱이면 instanceMatrix를 먼저 곱한다.
  * - fragment `<tonemapping_fragment>` 앞 — 톤매핑 전(linear)에서 섞어 바다
  *   평면과 같은 ACES 경로를 탄다.
@@ -30,7 +33,9 @@ import { SEA_LEVEL_Y } from '../model/sea-level';
  * 프로그램을 구분하지 않아, 없으면 원본 머티리얼의 프로그램을 재사용해 패치가
  * 먹지 않는다(features/lib/materialize-material.ts와 같은 규칙).
  *
- * 상수는 GLSL 리터럴로 굽는다 — 런타임에 바뀔 값이 없어 uniform이 필요 없다.
+ * 안개 상수는 GLSL 리터럴로 굽는다. 마스크만 uniform 이고, 패치된 머티리얼
+ * 전부가 sea-reach-uniforms.ts 의 같은 유니폼 객체를 참조한다 — 잠김 공유
+ * 머티리얼(sea-material-cache.ts)에 인스턴스별 값을 쓰지 않는다.
  */
 
 /** 안개 밀도(1/m). 2m: 39%, 5m: 71%, 10m: 92%가 물 색으로 섞인다. */
@@ -44,10 +49,18 @@ export const SEA_FOG_MAX = 0.9;
 export const SEA_WATER_COLOR: readonly [number, number, number] = [
   0.05, 0.09, 0.12,
 ];
+/**
+ * 마스크 값(0‥1)을 안개 배율로 바꾸는 문턱. 마스크는 선형 보간으로 읽으므로
+ * 칸 경계에서 0.5 를 지난다 — 그 둘레의 좁은 폭에서만 부드럽게 넘어간다.
+ */
+export const SEA_REACH_EDGE: readonly [number, number] = [0.4, 0.6];
 
 const CACHE_KEY = 'sea-submersion';
 
 const glslFloat = (v: number) => v.toFixed(4);
+
+const VERTEX_DECLARE = /* glsl */ `#include <common>
+varying vec3 vSeaWorldPos;`;
 
 const VERTEX_INJECT = /* glsl */ `
 #include <worldpos_vertex>
@@ -56,14 +69,29 @@ const VERTEX_INJECT = /* glsl */ `
   #ifdef USE_INSTANCING
     seaWp = instanceMatrix * seaWp;
   #endif
-  vSeaWorldY = (modelMatrix * seaWp).y;
+  vSeaWorldPos = (modelMatrix * seaWp).xyz;
 }
 `;
 
+const FRAGMENT_DECLARE = /* glsl */ `#include <common>
+varying vec3 vSeaWorldPos;
+uniform sampler2D seaReachMask;
+uniform mat3 seaReachTransform;`;
+
+// 마스크는 분기 밖에서 항상 읽는다 — 분기 안의 텍스처 조회는 미분이 정의되지
+// 않는다. 격자 밖(seaInside 0)은 바다다.
 const FRAGMENT_INJECT = /* glsl */ `
 {
-  float seaDepth = max(0.0, ${glslFloat(SEA_LEVEL_Y)} - vSeaWorldY);
-  float seaFog = (1.0 - exp(-seaDepth * ${glslFloat(SEA_FOG_DENSITY)})) * ${glslFloat(SEA_FOG_MAX)};
+  float seaDepth = max(0.0, ${glslFloat(SEA_LEVEL_Y)} - vSeaWorldPos.y);
+  vec2 seaUv = (seaReachTransform * vec3(vSeaWorldPos.xz, 1.0)).xy;
+  float seaInside = step(0.0, seaUv.x) * step(seaUv.x, 1.0)
+    * step(0.0, seaUv.y) * step(seaUv.y, 1.0);
+  float seaReach = mix(
+    1.0,
+    smoothstep(${SEA_REACH_EDGE.map(glslFloat).join(', ')}, texture2D(seaReachMask, seaUv).r),
+    seaInside
+  );
+  float seaFog = (1.0 - exp(-seaDepth * ${glslFloat(SEA_FOG_DENSITY)})) * ${glslFloat(SEA_FOG_MAX)} * seaReach;
   gl_FragColor.rgb = mix(
     gl_FragColor.rgb,
     vec3(${SEA_WATER_COLOR.map(glslFloat).join(', ')}),
@@ -75,6 +103,7 @@ const FRAGMENT_INJECT = /* glsl */ `
 
 type PatchableMaterial = Material & {
   onBeforeCompile: (shader: {
+    uniforms: Record<string, IUniform>;
     vertexShader: string;
     fragmentShader: string;
   }) => void;
@@ -84,11 +113,15 @@ type PatchableMaterial = Material & {
 export function applySeaSubmersion(material: Material): void {
   const target = material as PatchableMaterial;
   target.onBeforeCompile = (shader) => {
+    // 값이 아니라 유니폼 객체를 물려 준다 — 마스크가 바뀌면 전 머티리얼이
+    // 다음 프레임에 새 값을 본다.
+    shader.uniforms.seaReachMask = seaReachUniforms.seaReachMask;
+    shader.uniforms.seaReachTransform = seaReachUniforms.seaReachTransform;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vSeaWorldY;')
+      .replace('#include <common>', VERTEX_DECLARE)
       .replace('#include <worldpos_vertex>', VERTEX_INJECT);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vSeaWorldY;')
+      .replace('#include <common>', FRAGMENT_DECLARE)
       .replace('#include <tonemapping_fragment>', FRAGMENT_INJECT);
   };
   target.customProgramCacheKey = () => CACHE_KEY;
