@@ -89,8 +89,16 @@ export {
   TAG_MAPPING_CHANNELS,
 } from './model/tag-mapping-types';
 export { sanitizeModelStatusTags } from './lib/sanitize-status-tags';
-export { STATUS_TAG_ROLES } from './model/status-tag-types';
-export type { ModelStatusTags, StatusTagRole } from './model/status-tag-types';
+export {
+  LABEL_STATUS_TAG_ROLES,
+  OUTLINE_STATUS_TAG_ROLES,
+  STATUS_TAG_ROLES,
+} from './model/status-tag-types';
+export type {
+  ModelStatusTags,
+  OutlineStatusTagRole,
+  StatusTagRole,
+} from './model/status-tag-types';
 export type {
   TagMapping,
   TagMappingChannel,
@@ -303,8 +311,16 @@ export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';
 export { SilhouetteOutlineWarmup } from './ui/silhouette-outline-warmup';
 export {
   SILHOUETTE_OUTLINE_PX,
+  SILHOUETTE_OUTLINE_RENDER_ORDER,
   outlineOffsetFactor,
 } from './lib/silhouette-outline';
+export {
+  STATUS_OUTLINE_COLORS,
+  STATUS_OUTLINE_PX,
+  isStatusOutlineVisible,
+  statusOutlineRenderOrder,
+  type StatusOutlineKind,
+} from './lib/status-outline-style';
 export {
   SCENE_OPAQUE_STENCIL_BIT,
   SILHOUETTE_STENCIL_BIT,

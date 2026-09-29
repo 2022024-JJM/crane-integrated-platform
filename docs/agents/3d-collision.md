@@ -66,7 +66,10 @@
 
 - 충돌 장비는 일체형 빨간 실루엣 테두리로 표시한다. `@crane/domain/3d` 의 `ObjectSilhouetteOutline` — 스텐실 마스크 + 인플레이션 헐(`lib/silhouette-outline.ts`)이라 캔버스에 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다. 실루엣 마스크·헐은 자기 스텐실 비트만 writeMask/funcMask 로 본다(바다 스텐실 비트와 분리, `docs/agents/rendering-perf.md`).
 - 에디터의 **선택 표시**도 같은 컴포넌트를 노랑으로 쓴다 — 모델 전체와 안쪽 노드(계층 목록·drill-in, `selectedMeshTarget`) 모두. `GltfModel` 의 `selectionStyle='outline'` 이며 스텐실 없는 캔버스에선 기본 `'box'` 를 유지한다. 에디터의 **지도**는 `'box'` 다 — 수 km 지형을 실루엣으로 두르면 화면 가장자리 전체가 테두리가 되고 헐이 지형 메시를 매 프레임 두 번 더 그린다.
-- 경고 표지는 `scene-collision-highlight.tsx`. 헐 셰이더 프리워밍(`silhouette-outline-warmup.tsx`)은 그 옆에 마운트한다(`docs/agents/rendering-perf.md`).
+- **장비 상태 외곽선**(통신불량·Slowdown·Endstop)도 같은 컴포넌트다. `GltfModel` 이 모델 전체에 두르고, 두께와 헐 렌더 순서를 따로 넘겨 선택·충돌 테두리보다 얇게, 먼저 그린다(`lib/status-outline-style.ts`). 같은 장비에 충돌 테두리가 겹치면 충돌 색이 위에 온다. 판정은 `docs/agents/3d-play.md`.
+  - 모델 전체가 선택돼 있으면 선택 테두리를 그리지 않고 상태 외곽선이 그 자리를 맡는다(에디터 미리보기).
+  - 상태 외곽선이 있는 모델의 안쪽 노드 선택 테두리는 모델 발자국 밖으로 나온 부분만 보인다 — 마스크가 전역 합집합이다.
+- 경고 표지는 `scene-collision-highlight.tsx`. 헐 셰이더 프리워밍(`silhouette-outline-warmup.tsx`)은 그 옆에 마운트한다(`docs/agents/rendering-perf.md`). 색·두께는 유니폼이라 상태 외곽선도 같은 프로그램을 쓴다.
 
 ### 기록·소비자
 
@@ -75,7 +78,8 @@
 
 ## 불변식
 
-- 실루엣 테두리(`ObjectSilhouetteOutline`, `selectionStyle='outline'`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 여야 한다. 스텐실 없는 캔버스는 `'box'` 로 둔다.
+- 실루엣 테두리(`ObjectSilhouetteOutline`, `selectionStyle='outline'`, 장비 상태 외곽선)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 여야 한다. 스텐실 없는 캔버스는 `'box'` 로 두고 상태 외곽선을 넘기지 않는다.
+- 상태 외곽선의 헐 렌더 순서는 마스크와 선택·충돌 헐(`SILHOUETTE_OUTLINE_RENDER_ORDER`) 사이다. 같거나 크면 같은 장비의 충돌 테두리 색이 정해지지 않는다.
 - Canvas 마운트 순서를 지킨다: `RigDriver` → 충돌 검출기(`SceneCollisionDetector`) → `SceneCollisionHighlight`(+`SilhouetteOutlineWarmup`) → 영역 검출기(`SceneZoneDetector`) → `SceneZoneRings`. 같은 priority useFrame 은 마운트 순이라 순서가 바뀌면 한 프레임 늦은 자세를 검사한다.
 - 값 생산자를 멈추거나 되살리는 코드는 `scene-collision-hold.ts` 의 `holdRunners`/`releaseRunners`/`subscribeRunnerResume` 만 쓴다. 러너 스토어를 직접 pause 하는 새 경로를 만들지 않는다.
 - 실시간 러너(`'realtime'`)는 어떤 감지에서도 자동 정지하지 않는다. 새 정지 조건을 추가해도 `runner === 'realtime'` 은 flash 로 끝낸다.

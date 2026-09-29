@@ -16,7 +16,7 @@
 | 통계 스토어 / 기록기 | `packages/features/src/3d/model/use-play3d-stats-store.ts`, `model/use-play3d-stats-recorder.ts` |
 | 리포트 패널 | `packages/features/src/3d/ui/play3d-report-panel.tsx` (+ `play3d-report-kpi.tsx`, `play3d-report-timeline.tsx`, `play3d-report-tables.tsx`) |
 | 타임라인·재생바 공용 | 눈금 행 `ui/play3d-tick-row.tsx`, hover 요약 `ui/play3d-hover-summary.tsx`, 분리 트리거 핸들 `@crane/ui/molecules/tooltip-handle` |
-| 장비 운전 상태 · 라벨 표시 상태 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`, `EquipmentLabelState`), 판정 `packages/features/src/3d/lib/{model-runtime-status,model-label-state}.ts`, 훅 `model/use-model-runtime-statuses.ts` |
+| 장비 운전 상태 · 라벨 표시 상태 · 외곽선 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`, `EquipmentLabelState`, `EquipmentOutlineState`), 판정 `packages/features/src/3d/lib/{model-runtime-status,model-label-state,model-outline-state}.ts`, 훅 `model/use-model-runtime-statuses.ts`, 외곽선 모양 `packages/domain/src/3d/lib/status-outline-style.ts` |
 | 리플레이 프레임 시각 | `packages/features/src/3d/model/scene-time-source.ts`, `@crane/domain/monitoring` 의 `parseReplayTimestamp` |
 | 앱 배치 | `apps/{hanwha-ocean,goliath-crane}/src/pages/*/ui/replay-monitoring-view.tsx` (`ResizablePanelGroup` 우측에 리포트) |
 
@@ -100,7 +100,7 @@ i18n 은 `monitoring:play3d.*`.
 - **노란 박스 = 영역 체류**: 채움·링과 미이탈 가장자리는 `PLAY3D_DWELL_BOX_CLASS`·`PLAY3D_DWELL_OPEN_CLASS`, hover 요약의 영역 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS` 한 곳이고 타임라인·재생바·범례·툴팁이 함께 읽는다. 등급은 hover 요약·KPI·영역 표에서 본다. 빨강은 충돌 선에만.
 - **hover 요약은 즉시**: 화면마다 툴팁 하나에 트리거 여럿(base-ui 분리 트리거 — `createTooltipHandle`, 트리거가 `payload` 로 `Play3dHoverPayload` 를 넘긴다, 지연 0, 팝업 애니메이션 없음). 내용은 `Play3dHoverSummary` — 충돌(시각·[장비] ↔ [장비] 배지 쌍 `CollisionPair`·같은 쌍의 순번 `collisionSummaries`), 영역 체류(등급·영역 이름을 단 점선 상자 안에 [침범자] 배지 `ZoneFrame`·구간 `formatBandSpan`), 상태 막대(장비 · 상태·구간), 재생바의 정지·두절(시각·대상). 영역은 포함 관계라 화살표를 쓰지 않고, 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS`. 영역 이름 라벨은 툴팁 글자 그대로이며 흐름 안에서 음수 위 여백으로 테두리에 걸친다(절대 배치면 프레임 폭이 배지 폭으로 정해져 긴 이름이 잘린다). 이름 배지는 프레임과 같은 작은 모서리의 테두리 없는 칩이고, 툴팁 판이 `bg-foreground` 라 판 색을 뒤집은 채움이다. 사건 시각은 `eventTimeLabel` — 리플레이는 그 프레임의 실제 시각. 팝업은 body 로 포털돼 트랙의 `overflow-hidden` 에 잘리지 않는다.
 
-### 장비 운전 상태 · 라벨 표시 상태
+### 장비 운전 상태 · 라벨 표시 상태 · 외곽선
 
 - `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트·저널이 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
 - 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 tagKey 들로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
@@ -109,7 +109,11 @@ i18n 은 `monitoring:play3d.*`.
   - 운전 전원 off 가 움직임보다 앞선다. 받은 적이 없거나 수신이 끊기면 아이콘을 끈다(낡은 값).
   - 수신은 되지만 운전 전원을 모르는 멈춘 장비는 unknown 이다(색 없음, 아는 아이콘은 그린다). 상태 태그가 없는 씬은 움직일 때만 가동이고 멈추면 unknown 이라, HUD 의 "상태 확인" 수와 리포트 가동률의 분모에도 멈춘 시간이 들어가지 않는다.
   - 에디터의 미리보기(`docs/agents/tag-mapping-rig.md`)는 같은 우선순위를 고른 값으로 탄다. 모니터링 화면의 판정에는 들어가지 않는다.
-- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링이고 `useModelStatusRecords` 가 두 기록을 **같은 판정 한 번**에서 낸다. 운전 상태는 라벨의 tone 그 자체다. 기록마다 같으면 참조를 유지하고, 표시 상태 객체는 내용이 같으면 같은 객체다(`getLabelState`). 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다. `useModelRuntimeStatuses` 는 운전 상태만 돌려주는 같은 훅이다(통계 기록기).
+- **외곽선** `EquipmentOutlineState` = none · commError · slowdown · endstop. ACMS 의 Crane 외곽선 네 가지이고 모델의 외곽선 상태 태그로 가른다. 판정·우선순위는 `model-outline-state.ts`(`resolveOutlineState`, 테스트 대상).
+  - 라벨의 색과 독립이다 — 가동 중인 장비도 외곽선이 생기고, 외곽선 비트는 tone·아이콘을 바꾸지 않는다.
+  - 통신불량이 Endstop·Slowdown 보다 앞선다. 수신이 끊기면(tone offline) 비트와 무관하게 통신불량이고, 받은 적이 없으면 외곽선이 없다.
+  - 그리기는 `GltfModel` 이 모델 전체를 실루엣 테두리로 두른다(`docs/agents/3d-collision.md`). 색·두께·렌더 순서는 `status-outline-style.ts` — 색은 ACMS 매뉴얼 그림에서 뽑았고, 황색은 매뉴얼에 외곽선 그림이 없어 Crane ID Box 의 황색이다.
+- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링이고 `useModelStatusRecords` 가 세 기록(운전 상태·라벨 표시 상태·외곽선)을 **같은 판정 한 번**에서 낸다. 운전 상태는 라벨의 tone 그 자체다. 기록마다 같으면 참조를 유지하고, 표시 상태 객체는 내용이 같으면 같은 객체다(`getLabelState`). 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다. `useModelRuntimeStatuses` 는 운전 상태만 돌려주는 같은 훅이다(통계 기록기).
   - 라벨: `@crane/domain/3d` `ModelLabel` 의 `state` prop. 상자 색이 곧 tone 이다. 고장·가동·운전 전원 On·Off 는 ACMS 매뉴얼의 Crane ID Box 그대로(그림에서 뽑은 색, 검은 테두리)이고 통신두절·미확인은 기존 색이다. 통신두절만 이름 앞에 끊김 아이콘을 두고 흐리게 한다. Bypass·Free Swing 은 상자 안 이름 뒤의 흰 칩에 붉은 아이콘으로 그린다. 알람이 있으면 상자는 알람색이 되고 그동안만 tone 이 이름 앞 점으로 옮겨 간다. 거리 숨김·축소에서 빠지는 것은 알람 라벨뿐이다. 툴팁 문구는 `titles` prop 으로 호출자가 번역해 넘긴다.
 - 옵션 `{ paused, timeScale }`: 정지 중 재판정을 건너뛰고 창을 1/배속(`scaleStatusWindows`)으로 조정한다 — 일시정지 뒤 전 장비 두절, 저배속에서 프레임 사이마다 멈춘 것으로 깜빡이는 것 방지. 기록기와 `Monitoring3dView` 3D 플레이 모드가 같은 옵션을 넘긴다.
 
@@ -124,6 +128,8 @@ i18n 은 `monitoring:play3d.*`.
 ## 불변식
 
 - 운전 상태와 라벨 표시 상태를 따로 판정하지 않는다. 운전 상태는 라벨의 tone 이다 — 따로 판정하면 HUD 의 가동 수와 녹색 라벨 수가 어긋난다.
+- 외곽선의 수신 끊김은 라벨의 tone 에서 받는다. 외곽선 쪽에서 수신을 따로 판정하지 않는다 — 회색 외곽선과 통신두절 라벨이 어긋난다.
+- `resolveOutlineState` 에는 `collectModelStatusKeys` 가 거른 상태 태그만 넘긴다. 거르지 않은 씬 값을 넘기면 문자열이 아닌 키도 읽는다.
 - `RUNTIME_STATUS_COLORS`(hex, `model-runtime-status.ts`)의 가동 색과 `ModelLabel` 의 가동 색 클래스는 **두 곳을 함께 바꾼다** — 3D 플레이에서 라벨과 리포트가 한 화면에 있다. `PLAY3D_STATUS_FILL` 은 리포트 전용 팔레트다 — 가동만 라벨 색을 공유한다. 운전 전원 On·고장은 라벨의 황·적을 쓰지 않는다(타임라인에서 노랑은 영역 체류 박스, 빨강은 충돌 선). 타임라인 밴드·장비 표 적층 막대·범례가 이 상수 하나를 읽는다.
 - 통계 스토어 `data` 는 제자리 갱신 + `version` bump 만. publish 마다 setState 금지.
 - 사건 시각은 트랜스포트 위치를 구독 콜백 안에서 동기로 읽는다. 스토어의 벽시계 `at` 을 쓰지 않는다.

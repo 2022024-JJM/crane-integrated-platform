@@ -145,10 +145,12 @@ export type {
   LabelStatePreview,
   LabelStateRecord,
 } from './lib/model-label-state';
+export type { OutlineStateRecord } from './lib/model-outline-state';
 export {
   useLabelPreview,
   useLabelPreviewState,
   useLabelPreviewStore,
+  useOutlinePreviewState,
 } from './model/use-label-preview-store';
 export {
   RUNNING_WINDOW_MS,

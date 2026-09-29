@@ -9,13 +9,36 @@ describe('sanitizeModelStatusTags', () => {
         fault: 'GC_04:crane_system_error',
         bypass: 'GC_04:accs_bypass_on',
         freeSwing: 'GC_04:free_swing_on',
+        commError: 'GC_04:plc_comm_error',
+        slowdown: 'GC_04:accs_slowdown',
+        endstop: 'GC_04:accs_endstop',
       }),
     ).toEqual({
       controlOn: 'GC_04:crane_control_on',
       fault: 'GC_04:crane_system_error',
       bypass: 'GC_04:accs_bypass_on',
       freeSwing: 'GC_04:free_swing_on',
+      commError: 'GC_04:plc_comm_error',
+      slowdown: 'GC_04:accs_slowdown',
+      endstop: 'GC_04:accs_endstop',
     });
+  });
+
+  it('외곽선 역할만 있어도 된다 — 라벨 역할과 독립', () => {
+    expect(
+      sanitizeModelStatusTags({ slowdown: ' A:slow ', endstop: 'A:end' }),
+    ).toEqual({ slowdown: 'A:slow', endstop: 'A:end' });
+  });
+
+  it('외곽선 역할도 문자열이 아니거나 비면 그 역할만 버린다', () => {
+    expect(
+      sanitizeModelStatusTags({
+        commError: true,
+        slowdown: ['A:slow'],
+        endstop: '  ',
+        fault: 'A:fault',
+      }),
+    ).toEqual({ fault: 'A:fault' });
   });
 
   it('일부 역할만 있어도 된다', () => {
@@ -56,7 +79,7 @@ describe('sanitizeModelStatusTags', () => {
 
   it('모르는 역할은 싣지 않는다', () => {
     expect(
-      sanitizeModelStatusTags({ commError: 'A:comm', fault: 'A:fault' }),
+      sanitizeModelStatusTags({ notOperator: 'A:op', fault: 'A:fault' }),
     ).toEqual({ fault: 'A:fault' });
   });
 
@@ -69,6 +92,9 @@ describe('sanitizeModelStatusTags', () => {
 
   it('출력의 역할 순서는 입력 순서와 무관하게 고정이다', () => {
     const out = sanitizeModelStatusTags({
+      endstop: 'A:e',
+      slowdown: 'A:sd',
+      commError: 'A:ce',
       freeSwing: 'A:s',
       bypass: 'A:b',
       fault: 'A:f',
@@ -79,6 +105,9 @@ describe('sanitizeModelStatusTags', () => {
       'fault',
       'bypass',
       'freeSwing',
+      'commError',
+      'slowdown',
+      'endstop',
     ]);
   });
 

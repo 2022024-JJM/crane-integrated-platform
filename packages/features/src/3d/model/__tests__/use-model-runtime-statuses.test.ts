@@ -97,7 +97,7 @@ describe('useModelRuntimeStatuses', () => {
   });
 });
 
-/** 축 하나 + 상태 태그 넷을 단 모델 하나. */
+/** 축 하나 + 상태 태그 일곱을 단 모델 하나. */
 function statusScene(): SavedSceneInfo {
   return {
     maps: [],
@@ -122,6 +122,9 @@ function statusScene(): SavedSceneInfo {
           fault: 'GC_04:fault',
           bypass: 'GC_04:bypass',
           freeSwing: 'GC_04:swing',
+          commError: 'GC_04:comm',
+          slowdown: 'GC_04:slow',
+          endstop: 'GC_04:end',
         },
       },
     ],
@@ -135,9 +138,9 @@ function poll(times = 1) {
 }
 
 describe('useModelStatusRecords', () => {
-  it('씬이 없으면 두 기록 모두 빈다', () => {
+  it('씬이 없으면 세 기록 모두 빈다', () => {
     const { result } = renderHook(() => useModelStatusRecords(null));
-    expect(result.current).toEqual({ runtime: {}, labels: {} });
+    expect(result.current).toEqual({ runtime: {}, labels: {}, outlines: {} });
   });
 
   it('아무것도 못 받았으면 unknown — 아이콘도 없다', () => {
@@ -327,5 +330,133 @@ describe('useModelStatusRecords', () => {
     const { unmount } = renderHook(() => useModelStatusRecords(scene));
     unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('useModelStatusRecords — 외곽선', () => {
+  it('아무것도 못 받았으면 외곽선이 없다 — 상태 태그가 없는 모델도', () => {
+    const plain = scene();
+    const { result } = renderHook(() => useModelStatusRecords(plain));
+    expect(result.current.outlines).toEqual({ m1: 'none', m2: 'none' });
+  });
+
+  it('Slowdown → Endstop → 해제', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:slow', 1);
+    });
+    poll();
+    expect(result.current.outlines.m1).toBe('slowdown');
+
+    act(() => publishTagValue('GC_04:end', 1));
+    poll();
+    expect(result.current.outlines.m1).toBe('endstop');
+
+    act(() => {
+      publishTagValue('GC_04:end', 0);
+      publishTagValue('GC_04:slow', 0);
+    });
+    poll();
+    expect(result.current.outlines.m1).toBe('none');
+  });
+
+  it('통신불량 비트는 Endstop 보다 앞서고 라벨의 색은 바꾸지 않는다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:end', 1);
+      publishTagValue('GC_04:comm', 1);
+    });
+    poll();
+    expect(result.current.outlines.m1).toBe('commError');
+    expect(result.current.labels.m1.tone).toBe('standby');
+    expect(result.current.runtime.m1).toBe('standby');
+  });
+
+  it('수신이 끊기면 회색 — 낡은 Endstop 은 표시하지 않는다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:end', 1);
+    });
+    poll();
+    expect(result.current.outlines.m1).toBe('endstop');
+    poll(60);
+    expect(result.current.labels.m1.tone).toBe('offline');
+    expect(result.current.outlines.m1).toBe('commError');
+  });
+
+  it('외곽선만 바뀌면 외곽선 기록만 바뀐다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04:on', 1));
+    poll();
+    const before = result.current;
+    act(() => publishTagValue('GC_04:slow', 1));
+    poll();
+    expect(result.current.outlines).not.toBe(before.outlines);
+    expect(result.current.labels).toBe(before.labels);
+    expect(result.current.runtime).toBe(before.runtime);
+  });
+
+  it('외곽선이 그대로면 기록의 참조를 유지한다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:slow', 1);
+    });
+    poll(10);
+    const before = result.current;
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:slow', 1);
+    });
+    poll(3);
+    expect(result.current).toBe(before);
+  });
+
+  it('외곽선 비트가 바뀐 것은 움직임이 아니다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:slow', 1);
+    });
+    poll();
+    expect(result.current.labels.m1.tone).toBe('standby');
+  });
+
+  it('paused 면 외곽선도 마지막 기록을 유지한다', () => {
+    const scene = statusScene();
+    const { result, rerender } = renderHook(
+      ({ paused }) => useModelStatusRecords(scene, { paused }),
+      { initialProps: { paused: false } },
+    );
+    act(() => {
+      publishTagValue('GC_04:on', 1);
+      publishTagValue('GC_04:end', 1);
+    });
+    poll();
+    rerender({ paused: true });
+    poll(60);
+    expect(result.current.outlines.m1).toBe('endstop');
+    rerender({ paused: false });
+    expect(result.current.outlines.m1).toBe('commError');
+  });
+
+  it('값 캐시가 비워지면 외곽선이 사라진다', () => {
+    const scene = statusScene();
+    const { result } = renderHook(() => useModelStatusRecords(scene));
+    act(() => publishTagValue('GC_04:end', 1));
+    poll();
+    expect(result.current.outlines.m1).toBe('endstop');
+    act(() => tagLiveValues.clear());
+    poll();
+    expect(result.current.outlines.m1).toBe('none');
   });
 });

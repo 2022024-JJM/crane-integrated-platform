@@ -195,7 +195,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 거리 눈금(그려서 추가하는 씬 객체) 스키마·기하 / 렌더 / 그리기·편집 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/ruler.ts`, `packages/domain/src/3d/ui/scene-ruler.tsx`, `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx` — `docs/agents/3d-editor.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 모델 라벨의 태그 값 줄(PLC 원시값) | `packages/domain/src/3d/lib/label-reading.ts`, `packages/domain/src/3d/ui/model-label.tsx` — `docs/agents/tag-mapping-rig.md` |
-| 상태 태그(라벨 색·아이콘) 스키마 / 서버 값 → 버스 숫자 / 라벨 표시 상태 판정 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/monitoring/lib/tag-number.ts`, `packages/features/src/3d/lib/model-label-state.ts` — `docs/agents/tag-mapping-rig.md`, `docs/agents/3d-play.md` |
+| 상태 태그(라벨 색·아이콘·장비 외곽선) 스키마 / 서버 값 → 버스 숫자 / 라벨 표시 상태·외곽선 판정 / 외곽선 모양 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/monitoring/lib/tag-number.ts`, `packages/features/src/3d/lib/{model-label-state,model-outline-state}.ts`, `packages/domain/src/3d/lib/status-outline-style.ts` — `docs/agents/tag-mapping-rig.md`, `docs/agents/3d-play.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 씬 객체 충돌 감지(모델↔모델, 골리앗 LiDAR collision guard 와 별개) | 기하 `packages/domain/src/3d/lib/collision-volumes.ts`, 런타임 `packages/features/src/3d/model/scene-collision-runtime.ts`, 정지·재개 `model/scene-collision-hold.ts`. 설정 UI 는 감지 설정 페이지뿐 — `docs/agents/3d-collision.md` |
@@ -255,7 +255,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 |---|---|
 | 충돌 감지·정지/재개(hold)·감지 설정 페이지 | `docs/agents/3d-collision.md` |
 | 영역(zone) 침범·영역 알람·저널·unit 스케일 | `docs/agents/3d-zone.md` |
-| 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태·라벨 표시 상태 | `docs/agents/3d-play.md` |
+| 3D 플레이 페이지·트랜스포트·실행 리포트·운전 상태·라벨 표시 상태·장비 외곽선 판정 | `docs/agents/3d-play.md` |
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치·썸네일 | `docs/agents/assets-glb.md` |
 | 태그 맵핑·상태 태그·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
@@ -273,7 +273,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 바다 표시 판정은 `resolveSeaVisible(regionId, sceneInfo)` 한 곳이다. `environmentId` 로 바다를 유추하지 않는다 (rendering-perf).
 - 수면 아래 잠김 안개는 바다가 닿는 위치(바다 도달 마스크)에만 낀다. 안개를 뺄 곳을 머티리얼 이름·객체 종류로 가리지 않고, 마스크 유니폼은 `publishSeaReachMask` 로 값만 바꾼다 (rendering-perf).
 - 씬 메쉬를 기하 판정(충돌·영역 등)에 쓰는 새 경로는 `collectCollidableMeshes` 로 모은다. LOD>0 사본에는 BVH 가 없어 직접 `traverseVisible` 하면 판정이 영영 보류된다 (3d-collision).
-- 실루엣 테두리(`ObjectSilhouetteOutline`)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
+- 실루엣 테두리(`ObjectSilhouetteOutline`, 장비 상태 외곽선 포함)를 쓰는 캔버스는 `SCENE_GL_OPTIONS.stencil: true` 가 필요하다 (3d-collision).
 - Canvas 안 마운트 순서는 계약이다: `RigDriver` → 충돌 검출기 → `SceneCollisionHighlight` → 영역 검출기 → `SceneZoneRings`, `SceneSurfaceCamera` 바로 다음 `SceneCameraLimits`. 같은 priority 의 useFrame 은 마운트 순으로 돈다 (3d-collision, 3d-zone, monitoring-ui).
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
@@ -286,6 +286,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 모델 라벨의 태그 값 줄은 태그 원시값(`readTagLiveValue`)이고, 거리 눈금의 숫자는 씬에서 잰 거리다. 서로의 값을 끌어 쓰지 않는다 (tag-mapping-rig, 3d-editor).
 - 버스는 숫자 전용이다. 서버 값은 `toTagNumber` 로 바꿔 싣고, 상태 비트는 0/1 로 흐른다 (tag-mapping-rig).
 - 장비 운전 상태는 `EquipmentRuntimeStatus` 여섯 가지 하나다. 라벨·HUD·리포트·저널이 같은 값을 쓰고(`useModelStatusRecords`), 화면마다 다른 상태 목록을 두지 않는다 (3d-play).
+- 장비 외곽선의 통신불량은 운전 상태 offline 에서 받는다(`resolveOutlineState`). 외곽선 쪽에서 수신을 따로 판정하지 않는다 (3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).
 - 저널·로컬 알람·경보 소리는 실시간 화면의 사건만 받는다(`isRealtimeSceneActive`). 3D 플레이·에디터·미리보기 사건은 어디에도 가지 않는다 (3d-zone).
 - GLB 교체는 `assets-src/` 에 새 버전을 먼저 넣고 스크립트를 돌린다. 타일·LOD 지도(`philly-terrain.glb`·`okpo-terrain.glb`·`okpo-tree.glb`)에 `pnpm optimize:map` 을 원본 없이 재실행하지 않는다 (assets-glb).

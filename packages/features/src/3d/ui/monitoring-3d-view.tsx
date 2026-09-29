@@ -209,17 +209,20 @@ export function Monitoring3dView({
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
-  // 모델별 운전 상태(HUD)와 라벨 표시 상태(색·아이콘) — 같은 판정 한 번에서
-  // 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D 플레이는
-  // 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면 일시정지
-  // 뒤 전 장비가 두절이 된다.
-  const { runtime: runtimeStatuses, labels: labelStates } =
-    useModelStatusRecords(
-      sceneInfo,
-      isPlay3d
-        ? { paused: !transport.isPlaying, timeScale: transport.speed }
-        : undefined,
-    );
+  // 모델별 운전 상태(HUD)·라벨 표시 상태(색·아이콘)·외곽선 — 같은 판정 한
+  // 번에서 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D
+  // 플레이는 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면
+  // 일시정지 뒤 전 장비가 두절이 된다.
+  const {
+    runtime: runtimeStatuses,
+    labels: labelStates,
+    outlines: outlineStates,
+  } = useModelStatusRecords(
+    sceneInfo,
+    isPlay3d
+      ? { paused: !transport.isPlaying, timeScale: transport.speed }
+      : undefined,
+  );
   // 통신두절 진입·복귀를 저널에 남긴다(그 밖의 전환은 제외) — 실시간 화면만.
   useStatusJournalSync(
     regionId,
@@ -523,6 +526,7 @@ export function Monitoring3dView({
             getPose={handleGetPose}
             prepareOutline
             labelStates={labelStates}
+            outlineStates={outlineStates}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />

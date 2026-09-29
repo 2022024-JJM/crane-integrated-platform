@@ -647,6 +647,65 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
       controlOn: 'A:on',
     });
   });
+
+  it('외곽선 역할도 역할마다 비교한다 — 빠지면 외곽선 연결이 저장되지 않는다', () => {
+    const base = scene({ models: [model({ statusTags: tags })] });
+    for (const role of ['commError', 'slowdown', 'endstop'] as const) {
+      const linked = scene({
+        models: [model({ statusTags: { ...tags, [role]: 'A:bit' } })],
+      });
+      expect(isSceneInfoEqual(base, linked)).toBe(false);
+      expect(
+        isSceneInfoEqual(
+          linked,
+          scene({
+            models: [model({ statusTags: { ...tags, [role]: 'A:other' } })],
+          }),
+        ),
+      ).toBe(false);
+      expect(
+        isSceneInfoEqual(
+          linked,
+          scene({
+            models: [model({ statusTags: { [role]: 'A:bit', ...tags } })],
+          }),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('Slowdown 과 Endstop 을 맞바꾸면 다르다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({
+          models: [model({ statusTags: { slowdown: 'A:a', endstop: 'A:b' } })],
+        }),
+        scene({
+          models: [model({ statusTags: { slowdown: 'A:b', endstop: 'A:a' } })],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('외곽선 역할이 스냅샷(JSON)에 실린다', () => {
+    const snapshot = createSceneSnapshot(
+      scene({
+        models: [
+          model({
+            statusTags: {
+              endstop: ' A:end ',
+              slowdown: 'A:slow',
+              commError: '',
+            },
+          }),
+        ],
+      }),
+    );
+    expect(JSON.parse(snapshot ?? '{}').models[0].statusTags).toEqual({
+      slowdown: 'A:slow',
+      endstop: 'A:end',
+    });
+  });
 });
 
 describe('isSceneInfoEqual — 거리 눈금(rulers)', () => {

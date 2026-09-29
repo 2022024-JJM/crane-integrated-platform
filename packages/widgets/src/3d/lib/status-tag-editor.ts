@@ -1,4 +1,7 @@
-import type { EquipmentLabelState } from '@crane/core/types/status';
+import type {
+  EquipmentLabelState,
+  EquipmentOutlineState,
+} from '@crane/core/types/status';
 import type { ModelStatusTags, StatusTagRole } from '@crane/domain/3d';
 
 /**
@@ -37,17 +40,23 @@ export function fromPreviewChoice(choice: PreviewChoice): boolean | null {
   return choice === 'on';
 }
 
-/** 표시 상태를 한 줄로 — 색 이름 뒤에 켜진 아이콘 이름을 잇는다. */
+/**
+ * 표시 상태를 한 줄로 — 색 이름 뒤에 켜진 아이콘 이름, 그 뒤에 외곽선 이름을
+ * 잇는다. 외곽선이 없으면('none'·생략) 외곽선은 적지 않는다.
+ */
 export function describeLabelState(
   state: EquipmentLabelState,
   names: {
     tone: Record<EquipmentLabelState['tone'], string>;
     bypass: string;
     freeSwing: string;
+    outline: Record<Exclude<EquipmentOutlineState, 'none'>, string>;
   },
+  outline: EquipmentOutlineState = 'none',
 ): string {
   const parts = [names.tone[state.tone]];
   if (state.bypass) parts.push(names.bypass);
   if (state.freeSwing) parts.push(names.freeSwing);
+  if (outline !== 'none') parts.push(names.outline[outline]);
   return parts.join(' · ');
 }

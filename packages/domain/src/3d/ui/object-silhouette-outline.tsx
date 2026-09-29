@@ -8,6 +8,7 @@ import {
 } from 'three';
 import {
   SILHOUETTE_OUTLINE_PX,
+  SILHOUETTE_OUTLINE_RENDER_ORDER,
   createSilhouetteMaskMesh,
   createSilhouetteOutlineHull,
   createSilhouetteOutlineMaterial,
@@ -27,16 +28,18 @@ import {
 function SilhouetteMeshOutline({
   mesh,
   material,
+  renderOrder,
 }: {
   mesh: Mesh;
   material: ShaderMaterial;
+  renderOrder: number;
 }) {
   const overlays = useMemo(
     () => [
       createSilhouetteMaskMesh(mesh),
-      createSilhouetteOutlineHull(mesh, material),
+      createSilhouetteOutlineHull(mesh, material, renderOrder),
     ],
-    [mesh, material],
+    [mesh, material, renderOrder],
   );
   return createPortal(
     <>
@@ -51,9 +54,11 @@ function SilhouetteMeshOutline({
 function SilhouetteNodeOutline({
   node,
   material,
+  renderOrder,
 }: {
   node: Object3D;
   material: ShaderMaterial;
+  renderOrder: number;
 }) {
   const meshes = useMemo(() => {
     const out: Mesh[] = [];
@@ -77,6 +82,7 @@ function SilhouetteNodeOutline({
           key={mesh.uuid}
           mesh={mesh}
           material={material}
+          renderOrder={renderOrder}
         />
       ))}
     </>
@@ -92,6 +98,14 @@ interface ObjectSilhouetteOutlineProps {
   objects: readonly Object3D[];
   /** 테두리 색 (선택 SELECTION_LINE_COLOR / 충돌 COLLISION_LINE_COLOR 등). */
   color: string;
+  /** 테두리 화면 두께(px). 기본은 선택·충돌 테두리의 SILHOUETTE_OUTLINE_PX. */
+  thicknessPx?: number;
+  /**
+   * 헐의 렌더 순서. 작을수록 먼저 그려져 같은 픽셀에서 다른 테두리에 덮인다.
+   * 기본은 선택·충돌 테두리의 값이고, 장비 상태 외곽선은 그보다 작은 값을
+   * 넘긴다(lib/status-outline-style.ts).
+   */
+  renderOrder?: number;
 }
 
 /**
@@ -108,6 +122,8 @@ interface ObjectSilhouetteOutlineProps {
 export function ObjectSilhouetteOutline({
   objects,
   color,
+  thicknessPx = SILHOUETTE_OUTLINE_PX,
+  renderOrder = SILHOUETTE_OUTLINE_RENDER_ORDER,
 }: ObjectSilhouetteOutlineProps) {
   // 헐 공유 머티리얼 — 이 표시 단위의 모든 헐 메시가 하나를 쓴다. 색이
   // 바뀌면 새로 만든다(실제로는 용도별 상수라 수명 내 불변).
@@ -130,11 +146,11 @@ export function ObjectSilhouetteOutline({
   }, [material]);
   useEffect(() => {
     offsetUniformRef.current.value = outlineOffsetFactor(
-      SILHOUETTE_OUTLINE_PX,
+      thicknessPx,
       fov,
       heightPx,
     );
-  }, [material, fov, heightPx]);
+  }, [material, thicknessPx, fov, heightPx]);
 
   return (
     <>
@@ -143,6 +159,7 @@ export function ObjectSilhouetteOutline({
           key={node.uuid}
           node={node}
           material={material}
+          renderOrder={renderOrder}
         />
       ))}
     </>

@@ -67,9 +67,11 @@ const STENCIL_REF = SILHOUETTE_STENCIL_BIT;
  * 렌더 순서 — 기존 오버레이(선택 박스 1, collision-guard 1~5) 뒤에 온다.
  * 마스크(opaque 리스트)는 어차피 모든 transparent 앞에 그려지지만, 헐은
  * transparent 리스트에서 바다·가드 링 등보다 뒤여야 테두리가 덮이지 않는다.
+ * 헐 값은 선택·충돌 테두리의 기본값이다 — 장비 상태 외곽선은 마스크와 이 값
+ * 사이에 놓여 먼저 그려진다(lib/status-outline-style.ts).
  */
 const MASK_RENDER_ORDER = 10;
-const OUTLINE_RENDER_ORDER = 11;
+export const SILHOUETTE_OUTLINE_RENDER_ORDER = 11;
 
 const VERTEX_SHADER = /* glsl */ `
   uniform float uOffsetFactor; // 두께px × (2·tan(fov/2) / 뷰포트 높이px)
@@ -224,17 +226,19 @@ export function createSilhouetteMaskMesh(target: Mesh): Mesh {
  * 대상 메시에 자식으로 붙일 헐 메시. geometry 는 스무딩 사본 캐시(위)를
  * 쓴다 — 헐을 지울 때 geometry 를 dispose 하면 안 된다(캐시 소유).
  * material 은 공유본이라 소유자(생성한 컴포넌트)가 dispose 한다.
+ * `renderOrder` 가 작은 헐이 먼저 그려져 같은 픽셀에서 큰 쪽에 덮인다.
  */
 export function createSilhouetteOutlineHull(
   target: Mesh,
   material: ShaderMaterial,
+  renderOrder: number = SILHOUETTE_OUTLINE_RENDER_ORDER,
 ): Mesh {
   const hull = new Mesh(
     warmSilhouetteOutlineGeometry(target.geometry),
     material,
   );
   detachOverlayMesh(hull);
-  hull.renderOrder = OUTLINE_RENDER_ORDER;
+  hull.renderOrder = renderOrder;
   hull.name = 'silhouette-outline';
   return hull;
 }

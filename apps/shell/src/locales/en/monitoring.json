@@ -113,7 +113,7 @@
     },
     "statusTags": {
       "title": "Status",
-      "hint": "Link status bits (0/1) to set the label color and icons. Pick a preview value to see it on the label right away; previews are not saved.",
+      "hint": "Link status bits (0/1) to set the label color, icons and the equipment outline. Pick a preview value to see it on screen right away; previews are not saved.",
       "clear": "Unlink",
       "preview": "Preview",
       "previewChoices": {
@@ -130,11 +130,18 @@
       "motionHint": "Whether the axis values are changing. There is no tag to link.",
       "previewResult": "Label: {{state}}",
       "previewReset": "Reset preview",
+      "groups": {
+        "label": "Label",
+        "outline": "Outline"
+      },
       "roles": {
         "controlOn": "Control",
         "fault": "Fault",
         "bypass": "Bypass",
-        "freeSwing": "Free Swing"
+        "freeSwing": "Free Swing",
+        "commError": "Comm. Error",
+        "slowdown": "Slowdown",
+        "endstop": "Endstop"
       }
     },
     "ruler": {
@@ -513,6 +520,11 @@
   "labelState": {
     "bypass": "Bypass On",
     "freeSwing": "Free Swing On"
+  },
+  "outlineState": {
+    "commError": "Gray outline (Comm. Error)",
+    "slowdown": "Yellow outline (Slowdown)",
+    "endstop": "Red outline (Endstop)"
   },
   "sceneZone": {
     "unnamed": "Zone {{index}}",

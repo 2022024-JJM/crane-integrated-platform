@@ -57,6 +57,24 @@ describe('setStatusTag', () => {
     setStatusTag(before, 'controlOn', '');
     expect(before).toEqual({ controlOn: 'A:on' });
   });
+
+  it('외곽선 역할도 같은 규칙으로 잇고 뗀다 — 역할마다 따로', () => {
+    const linked = setStatusTag(
+      setStatusTag({ controlOn: 'A:on' }, 'slowdown', 'A:slow'),
+      'endstop',
+      'A:end',
+    );
+    expect(linked).toEqual({
+      controlOn: 'A:on',
+      slowdown: 'A:slow',
+      endstop: 'A:end',
+    });
+    expect(setStatusTag(linked, 'slowdown', '')).toEqual({
+      controlOn: 'A:on',
+      endstop: 'A:end',
+    });
+    expect(setStatusTag(linked, 'commError', '  ')).toBe(linked);
+  });
 });
 
 describe('toPreviewChoice / fromPreviewChoice', () => {
@@ -90,6 +108,11 @@ describe('describeLabelState', () => {
     },
     bypass: 'Bypass On',
     freeSwing: 'Free Swing On',
+    outline: {
+      commError: '외곽선 회색',
+      slowdown: '외곽선 황색',
+      endstop: '외곽선 적색',
+    },
   };
 
   it('아이콘이 없으면 색 이름만', () => {
@@ -120,5 +143,38 @@ describe('describeLabelState', () => {
         names,
       ),
     ).toBe('꺼짐 · Free Swing On');
+  });
+
+  it('외곽선이 없으면 적지 않는다 — 생략과 none 이 같다', () => {
+    const state = { tone: 'running', bypass: true, freeSwing: false } as const;
+    expect(describeLabelState(state, names)).toBe('가동 · Bypass On');
+    expect(describeLabelState(state, names, 'none')).toBe('가동 · Bypass On');
+  });
+
+  it('외곽선은 아이콘 뒤, 맨 끝에 잇는다', () => {
+    expect(
+      describeLabelState(
+        { tone: 'running', bypass: true, freeSwing: true },
+        names,
+        'endstop',
+      ),
+    ).toBe('가동 · Bypass On · Free Swing On · 외곽선 적색');
+    expect(
+      describeLabelState(
+        { tone: 'standby', bypass: false, freeSwing: false },
+        names,
+        'slowdown',
+      ),
+    ).toBe('대기 · 외곽선 황색');
+  });
+
+  it('라벨 색이 없어도(미확인) 외곽선은 적는다', () => {
+    expect(
+      describeLabelState(
+        { tone: 'unknown', bypass: false, freeSwing: false },
+        names,
+        'commError',
+      ),
+    ).toBe('미확인 · 외곽선 회색');
   });
 });

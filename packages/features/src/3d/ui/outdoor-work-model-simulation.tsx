@@ -35,6 +35,7 @@ import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
 import type { LabelStateRecord } from '../lib/model-label-state';
+import type { OutlineStateRecord } from '../lib/model-outline-state';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
 export interface UseSceneDataOptions {
@@ -205,9 +206,15 @@ interface OutdoorWorkModelSimulationProps {
    * 넘긴다. 뷰가 한 번 판정해 HUD 의 운전 상태와 함께 낸다.
    */
   labelStates?: LabelStateRecord;
+  /**
+   * 모델별 외곽선(useModelStatusRecords) — 통신불량·Slowdown·Endstop. 캔버스에
+   * 스텐실 버퍼가 있어야 한다(SCENE_GL_OPTIONS).
+   */
+  outlineStates?: OutlineStateRecord;
 }
 
 const NO_LABEL_STATES: LabelStateRecord = Object.freeze({});
+const NO_OUTLINE_STATES: OutlineStateRecord = Object.freeze({});
 
 export function OutdoorWorkModelSimulation({
   sceneInfo,
@@ -220,6 +227,7 @@ export function OutdoorWorkModelSimulation({
   getPose,
   prepareOutline = false,
   labelStates = NO_LABEL_STATES,
+  outlineStates = NO_OUTLINE_STATES,
 }: OutdoorWorkModelSimulationProps) {
   const { t } = useTranslation();
   const camera = useThree((s) => s.camera);
@@ -498,6 +506,7 @@ export function OutdoorWorkModelSimulation({
             }
             alarmHighlightMesh={alarmHighlightMesh}
             labelState={labelStates[model.id]}
+            outlineState={outlineStates[model.id]}
             labelTitles={labelTitles}
             labelReadings={labelReadingsById.get(model.id)}
             readLabelValue={readTagLiveValue}

@@ -8,6 +8,11 @@ import {
   type ModelStatusKeys,
 } from '../lib/model-label-state';
 import {
+  isSameOutlineStateRecord,
+  resolveOutlineState,
+  type OutlineStateRecord,
+} from '../lib/model-outline-state';
+import {
   isSameRuntimeStatusRecord,
   scaleStatusWindows,
   type RuntimeStatusRecord,
@@ -22,11 +27,14 @@ export interface ModelStatusRecords {
   runtime: RuntimeStatusRecord;
   /** 라벨 표시 상태 — 색과 아이콘. */
   labels: LabelStateRecord;
+  /** 장비 외곽선 — 통신불량·Slowdown·Endstop. */
+  outlines: OutlineStateRecord;
 }
 
 const EMPTY: ModelStatusRecords = Object.freeze({
   runtime: Object.freeze({}),
   labels: Object.freeze({}),
+  outlines: Object.freeze({}),
 });
 
 export interface UseModelRuntimeStatusesOptions {
@@ -41,13 +49,14 @@ export interface UseModelRuntimeStatusesOptions {
 }
 
 /**
- * 씬 모델별 운전 상태·라벨 표시 상태 — 태그 값 버스의 live 캐시를 1초마다 읽어
- * 판정한다. 운전 상태는 라벨의 상자 색(tone) 그 자체다(lib/model-label-state.ts
- * `resolveLabelState`) — 따로 판정하면 HUD 의 가동 수와 녹색 라벨 수가
- * 어긋난다.
+ * 씬 모델별 운전 상태·라벨 표시 상태·외곽선 — 태그 값 버스의 live 캐시를
+ * 1초마다 읽어 판정한다. 운전 상태는 라벨의 상자 색(tone) 그 자체다
+ * (lib/model-label-state.ts `resolveLabelState`) — 따로 판정하면 HUD 의 가동
+ * 수와 녹색 라벨 수가 어긋난다. 외곽선의 수신 끊김도 같은 tone 에서 온다
+ * (lib/model-outline-state.ts).
  *
  * 결과가 같으면 이전 참조를 그대로 돌려줘 리렌더가 없다(상태가 실제로 바뀌는
- * 순간에만 커밋, 두 기록 각각). 프레임 속도 값(tagLiveValues)을 React 상태로
+ * 순간에만 커밋, 세 기록 각각). 프레임 속도 값(tagLiveValues)을 React 상태로
  * 올리지 않는 규칙은 rig-live-readouts 와 같다.
  *
  * 맵핑이 없는 모델도 'unknown' 으로 기록에 들어간다 — 소비자가 "모델 수"와
@@ -74,15 +83,13 @@ export function useModelStatusRecords(
       const now = Date.now();
       const runtime: Record<string, RuntimeStatusRecord[string]> = {};
       const labels: Record<string, LabelStateRecord[string]> = {};
+      const outlines: Record<string, OutlineStateRecord[string]> = {};
+      const get = (key: string) => tagLiveValues.get(key);
       for (const [modelId, keys] of keysByModel) {
-        const state = resolveLabelState(
-          keys,
-          (key) => tagLiveValues.get(key),
-          now,
-          windows,
-        );
+        const state = resolveLabelState(keys, get, now, windows);
         labels[modelId] = state;
         runtime[modelId] = state.tone;
+        outlines[modelId] = resolveOutlineState(state.tone, keys.status, get);
       }
       setRecords((prev) => {
         const nextRuntime = isSameRuntimeStatusRecord(prev.runtime, runtime)
@@ -91,9 +98,18 @@ export function useModelStatusRecords(
         const nextLabels = isSameLabelStateRecord(prev.labels, labels)
           ? prev.labels
           : labels;
-        return nextRuntime === prev.runtime && nextLabels === prev.labels
+        const nextOutlines = isSameOutlineStateRecord(prev.outlines, outlines)
+          ? prev.outlines
+          : outlines;
+        return nextRuntime === prev.runtime &&
+          nextLabels === prev.labels &&
+          nextOutlines === prev.outlines
           ? prev
-          : { runtime: nextRuntime, labels: nextLabels };
+          : {
+              runtime: nextRuntime,
+              labels: nextLabels,
+              outlines: nextOutlines,
+            };
       });
     };
     evaluate();

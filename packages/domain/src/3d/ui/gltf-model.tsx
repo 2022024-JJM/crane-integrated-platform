@@ -2,7 +2,10 @@ import { memo, useCallback, useMemo } from 'react';
 import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { EquipmentLabelState } from '@crane/core/types/status';
+import type {
+  EquipmentLabelState,
+  EquipmentOutlineState,
+} from '@crane/core/types/status';
 import {
   type ModelShading,
   ModelMesh,
@@ -21,6 +24,12 @@ import type {
   ModelLabelValueReader,
 } from '../lib/label-reading';
 import { SELECTION_LINE_COLOR } from '../lib/selection-style';
+import {
+  STATUS_OUTLINE_COLORS,
+  STATUS_OUTLINE_PX,
+  isStatusOutlineVisible,
+  statusOutlineRenderOrder,
+} from '../lib/status-outline-style';
 import type { SavedMeshOverride } from '../model/types';
 
 interface GltfModelProps {
@@ -44,6 +53,14 @@ interface GltfModelProps {
   labelState?: EquipmentLabelState;
   /** 라벨 상태·아이콘의 툴팁 문구(번역된 값). */
   labelTitles?: ModelLabelTitles;
+  /**
+   * 장비 상태 외곽선(통신불량·Slowdown·Endstop) — 모델 전체를 두른다. 색·두께는
+   * lib/status-outline-style.ts. 실루엣 테두리라 **캔버스에 스텐실 버퍼가
+   * 있어야 한다**(selectionStyle 주석과 같은 전제). 생략·'none' 이면 없다.
+   * 모델 전체가 선택돼 있으면 선택 테두리 자리에 이 외곽선을 그린다 — 같은
+   * 실루엣을 두 색으로 두르면 굵은 선택 테두리가 상태 색을 덮는다.
+   */
+  outlineState?: EquipmentOutlineState;
   /**
    * 라벨 위에 쌓일 태그 값 목록과 값 읽기 함수(model-label.tsx). 목록은
    * 참조가 안정적이어야 한다 — buildLabelReadings 결과를 memo 해서 넘긴다.
@@ -132,6 +149,7 @@ export const GltfModel = memo(function GltfModel({
   alarmHighlightMesh = false,
   labelState,
   labelTitles,
+  outlineState,
   labelReadings,
   readLabelValue,
   position = [0, 0, 0],
@@ -162,11 +180,20 @@ export const GltfModel = memo(function GltfModel({
   // key 를 주면 공유 ShaderMaterial 만 재생성돼 손해다.
   const outlineTarget = selectedMeshTarget ?? clone;
   const outlineObjects = useMemo(() => [outlineTarget], [outlineTarget]);
+  // 상태 외곽선은 언제나 모델 전체를 두른다.
+  const statusOutlineObjects = useMemo(() => [clone], [clone]);
+  const statusOutline = isStatusOutlineVisible(outlineState)
+    ? outlineState
+    : null;
 
   // 모델 전체든 자식 노드든 실루엣 테두리로 그린다. 박스는 스텐실이 없어
   // 'box' 를 넘기는 캔버스(지도·모니터링·존 뷰어) 몫이다(prop 주석 참고).
   const useOutline =
     selectionStyle === 'outline' && (isSelected || Boolean(selectedMeshTarget));
+  // 모델 전체 선택 + 상태 외곽선 — 선택 테두리를 그리지 않고 상태 외곽선이 그
+  // 자리를 맡는다. 자식 노드 선택은 대상이 달라 둘 다 그린다.
+  const selectionReplaced =
+    useOutline && statusOutline !== null && !selectedMeshTarget;
 
   const handleObjectReady = useCallback(
     (readyId: string, object: Object3D | null) => {
@@ -199,11 +226,21 @@ export const GltfModel = memo(function GltfModel({
       onHoverMove={onHoverMove}
       onHoverEnd={onHoverEnd}
     >
-      {useOutline ? (
+      {statusOutline ? (
         <ObjectSilhouetteOutline
-          objects={outlineObjects}
-          color={SELECTION_LINE_COLOR}
+          objects={statusOutlineObjects}
+          color={STATUS_OUTLINE_COLORS[statusOutline]}
+          thicknessPx={STATUS_OUTLINE_PX}
+          renderOrder={statusOutlineRenderOrder(statusOutline)}
         />
+      ) : null}
+      {useOutline ? (
+        selectionReplaced ? null : (
+          <ObjectSilhouetteOutline
+            objects={outlineObjects}
+            color={SELECTION_LINE_COLOR}
+          />
+        )
       ) : (
         <ModelSelectionBox
           clone={clone}

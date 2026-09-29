@@ -39,6 +39,21 @@ export interface EquipmentLabelState {
   freeSwing: boolean;
 }
 
+/**
+ * 3D 관제 화면의 장비 외곽선 — ACMS 의 Crane 외곽선 네 가지. 라벨의 색과는
+ * 독립이다(가동 중인 장비도 외곽선이 생긴다). 판정은 features/3d
+ * lib/model-outline-state.ts.
+ * - none: 외곽선 없음(정상, 또는 받은 적이 없어 모름)
+ * - commError: 통신불량(회색) — 통신불량 비트 on, 또는 수신이 끊김
+ * - slowdown: 충돌방지 Slowdown 구간(황색)
+ * - endstop: 충돌방지 Endstop 구간(적색)
+ */
+export type EquipmentOutlineState =
+  | 'none'
+  | 'commError'
+  | 'slowdown'
+  | 'endstop';
+
 // ─── CMMS 상태 타입 ──────────────────────────────────────────────
 export type OnOff = 'ON' | 'OFF';
 export type OkNg = 'OK' | 'NG';
