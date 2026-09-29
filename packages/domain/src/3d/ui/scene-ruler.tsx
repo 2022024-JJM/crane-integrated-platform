@@ -18,10 +18,13 @@ import {
   pixelsPerUnitAtDistance,
   resolveRulerInterval,
   rulerAxisPoints,
+  rulerDotCenterPx,
+  rulerDotSizePx,
   rulerGuidePoints,
+  rulerLabelMinSpacingPx,
   rulerLabelStride,
+  rulerTextSizePx,
   rulerTicks,
-  RULER_LABEL_MIN_SPACING_PX,
   RULER_LINE_LIFT_M,
   type RulerViewScale,
 } from '../lib/ruler';
@@ -32,6 +35,7 @@ import {
 import {
   RULER_GUIDE_OPACITY_DEFAULT,
   type SavedRulerGuide,
+  type SceneRulerSize,
 } from '../model/ruler-types';
 
 /**
@@ -39,7 +43,8 @@ import {
  *
  * - 눈금 자리의 점과 그 아래 화면을 향한 숫자는 ACMS 매뉴얼 그림 그대로다.
  *   둘 다 DOM(drei Html)이라 바닥에 메시를 깔지 않는다 — 바닥과 겹쳐 깜빡일
- *   것이 없다. 글자에 그림자·테두리는 두지 않는다.
+ *   것이 없다. 글자에 그림자·테두리는 두지 않는다. 크기는 점·글자 각각
+ *   세 단계이고 픽셀 값은 lib/ruler.ts 다.
  * - 점과 숫자는 **모델 라벨과 같은 거리 규칙**(lib/label-scale.ts)으로 멀어질
  *   수록 줄고 같은 거리에서 사라진다. 축소의 기준점은 점의 중심이라 줄어도
  *   점이 눈금 자리를 벗어나지 않는다.
@@ -54,16 +59,36 @@ import {
  */
 
 const LINE_WIDTH_PX = 1.5;
-const DOT_SIZE_PX = 6;
-const DOT_CENTER_PX = DOT_SIZE_PX / 2;
 
 const noRaycast = () => null;
 const _tickWorld = new Vector3();
 
 /** 점의 중심이 눈금 자리에 오게 옮긴 뒤, 그 점을 기준으로 줄인다. */
-function labelTransform(scale: number): string {
-  const translate = `translate(-50%, -${DOT_CENTER_PX}px)`;
+function labelTransform(scale: number, dotCenterPx: number): string {
+  const translate = `translate(-50%, -${dotCenterPx}px)`;
   return scale === 1 ? translate : `${translate} scale(${scale})`;
+}
+
+/**
+ * 눈금 하나의 transform 을 쓴다. 배율과 점 중심을 DOM 에 적어 두고 둘 중
+ * 하나라도 바뀌었을 때만 고친다 — React 는 transform 을 관리하지 않는다.
+ */
+function writeLabelTransform(
+  element: HTMLDivElement,
+  scale: number,
+  dotCenterPx: number,
+): void {
+  const scaleKey = String(scale);
+  const centerKey = String(dotCenterPx);
+  if (
+    element.dataset.scale === scaleKey &&
+    element.dataset.center === centerKey
+  ) {
+    return;
+  }
+  element.style.transform = labelTransform(scale, dotCenterPx);
+  element.dataset.scale = scaleKey;
+  element.dataset.center = centerKey;
 }
 
 function resolveViewScale(camera: Camera, heightPx: number): RulerViewScale {
@@ -89,6 +114,9 @@ interface RulerBodyProps {
   interval: number;
   textColor: string;
   dotColor: string;
+  /** 숫자·점의 크기. 생략하면 기본(M). */
+  textSize?: SceneRulerSize;
+  dotSize?: SceneRulerSize;
   /** 보조선. 없으면 점과 숫자만 그린다. */
   guide?: SavedRulerGuide;
   startValue?: number;
@@ -108,6 +136,8 @@ function RulerBody({
   interval,
   textColor,
   dotColor,
+  textSize,
+  dotSize,
   guide,
   startValue = 0,
   unitHidden = false,
@@ -118,6 +148,11 @@ function RulerBody({
 }: RulerBodyProps) {
   const scaledRef = useRef<Group>(null);
   const labelRefs = useRef<Array<HTMLDivElement | null>>([]);
+
+  const dotSizePx = rulerDotSizePx(dotSize);
+  const dotCenterPx = rulerDotCenterPx(dotSize);
+  const textSizePx = rulerTextSizePx(textSize);
+  const labelMinSpacingPx = rulerLabelMinSpacingPx(textSize);
 
   const scale = metersPerUnit > 0 ? metersPerUnit : 1;
   const lengthM = length * scale;
@@ -167,10 +202,7 @@ function RulerBody({
         isLabelInRange(distance) &&
         isRulerLabelVisible(
           ticks[i].index,
-          rulerLabelStride(
-            pxPerInterval,
-            RULER_LABEL_MIN_SPACING_PX * labelScale,
-          ),
+          rulerLabelStride(pxPerInterval, labelMinSpacingPx * labelScale),
         );
       // 현재 상태는 DOM 에서 읽는다 — React 는 display·transform 을 관리하지
       // 않으므로 리렌더 뒤에도 직전에 쓴 값이 그대로 남아 있다.
@@ -179,11 +211,7 @@ function RulerBody({
         element.style.display = visible ? '' : 'none';
       }
       if (!visible) continue;
-      const scaleKey = String(labelScale);
-      if (element.dataset.scale !== scaleKey) {
-        element.style.transform = labelTransform(labelScale);
-        element.dataset.scale = scaleKey;
-      }
+      writeLabelTransform(element, labelScale, dotCenterPx);
     }
   });
 
@@ -230,15 +258,20 @@ function RulerBody({
             <div
               ref={(element) => {
                 labelRefs.current[i] = element;
+                if (!element) return;
                 // 첫 프레임 전에도 점이 눈금 자리에 있게 한다. 배율은
-                // useFrame 이 거리로 다시 정한다.
-                if (element && element.dataset.scale === undefined) {
-                  element.style.transform = labelTransform(1);
-                  element.dataset.scale = '1';
-                }
+                // useFrame 이 거리로 다시 정한다. 점 크기가 바뀐 렌더에서는
+                // 직전 배율 그대로 중심만 고친다 — 캔버스가 demand 라 다음
+                // 프레임이 바로 오지 않는다.
+                const lastScale = Number(element.dataset.scale);
+                writeLabelTransform(
+                  element,
+                  Number.isFinite(lastScale) && lastScale > 0 ? lastScale : 1,
+                  dotCenterPx,
+                );
               }}
               className={`flex flex-col items-center gap-0.5 whitespace-nowrap select-none ${onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
-              style={{ transformOrigin: `50% ${DOT_CENTER_PX}px` }}
+              style={{ transformOrigin: `50% ${dotCenterPx}px` }}
               onPointerDown={
                 onSelect
                   ? (event) => {
@@ -252,14 +285,14 @@ function RulerBody({
                 aria-hidden
                 className="block rounded-full"
                 style={{
-                  width: DOT_SIZE_PX,
-                  height: DOT_SIZE_PX,
+                  width: dotSizePx,
+                  height: dotSizePx,
                   backgroundColor: dotColor,
                 }}
               />
               <span
-                className="font-sans text-[13px] leading-none font-medium tabular-nums"
-                style={{ color: textColor }}
+                className="font-sans leading-none font-medium tabular-nums"
+                style={{ color: textColor, fontSize: textSizePx }}
               >
                 {formatRulerValue(tick.value, shownInterval, unitHidden)}
               </span>

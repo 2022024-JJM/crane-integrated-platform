@@ -31,6 +31,18 @@ export function isRulerInterval(value: unknown): value is SceneRulerInterval {
 /** ACMS 그림의 점·글자 색. 색이 깨진 저장본의 폴백이기도 하다. */
 export const RULER_DEFAULT_COLOR = '#ffffff';
 
+/** 점·글자의 크기 단계(작은 순). 픽셀 값은 lib/ruler.ts. */
+export const RULER_SIZES = ['s', 'm', 'l'] as const;
+
+export type SceneRulerSize = (typeof RULER_SIZES)[number];
+
+/** ACMS 그림의 크기. 기본이라 저장하지 않는다. */
+export const RULER_SIZE_DEFAULT: SceneRulerSize = 'm';
+
+export function isRulerSize(value: unknown): value is SceneRulerSize {
+  return (RULER_SIZES as readonly unknown[]).includes(value);
+}
+
 /** 새 보조선의 길이(m). 켤 때 씬 unit 으로 환산해 저장한다. */
 export const RULER_GUIDE_DEFAULT_LENGTH_M = 100;
 
@@ -82,6 +94,10 @@ export interface SavedRulerInfo {
   textColor: string;
   /** 눈금 점의 색. `#rrggbb` 소문자. */
   dotColor: string;
+  /** 거리 숫자의 크기. 기본(`'m'`)이면 생략. */
+  textSize?: SceneRulerSize;
+  /** 눈금 점의 크기. 기본(`'m'`)이면 생략. */
+  dotSize?: SceneRulerSize;
   /** 보조선. 없으면 점과 숫자만 그린다. */
   guide?: SavedRulerGuide;
   /** 시작점의 거리 값(m). 0 이면 생략. */

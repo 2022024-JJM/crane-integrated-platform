@@ -4,12 +4,16 @@ import {
   RULER_GUIDE_SIDE_DEFAULT,
   RULER_GUIDE_SIDES,
   RULER_INTERVALS,
+  RULER_SIZE_DEFAULT,
+  RULER_SIZES,
   type SavedRulerInfo,
+  type SceneRulerSize,
 } from '@crane/domain/3d';
 import { Checkbox } from '@crane/ui/atoms/checkbox';
 import {
   rulerUnitsToMeters,
   withRulerDotColor,
+  withRulerDotSize,
   withRulerGuideColor,
   withRulerGuideEnabled,
   withRulerGuideLengthMeters,
@@ -19,6 +23,7 @@ import {
   withRulerLengthMeters,
   withRulerStartValue,
   withRulerTextColor,
+  withRulerTextSize,
   withRulerUnitHidden,
 } from '../lib/ruler-editor';
 import {
@@ -49,14 +54,30 @@ export interface RulerSectionProps {
   t: InspectorT;
 }
 
+/** 크기 선택지 — 글자는 번역하지 않는다(S·M·L). */
+const SIZE_OPTIONS = RULER_SIZES.map((size) => ({
+  value: size,
+  label: size.toUpperCase(),
+}));
+
+/**
+ * 색 한 줄 — 색 입력과 hex 값. `size` 를 주면 hex 값 오른쪽, 줄 끝에 크기
+ * (S·M·L)를 고르는 세그먼트가 붙는다(점·글자). 보조선은 색만이다.
+ */
 function ColorField({
   label,
   value,
   onChange,
+  size,
 }: {
   label: string;
   value: string;
   onChange: (color: string) => void;
+  size?: {
+    label: string;
+    value: SceneRulerSize;
+    onChange: (size: SceneRulerSize) => void;
+  };
 }) {
   return (
     <Field label={label}>
@@ -71,6 +92,15 @@ function ColorField({
       <span className="text-muted-foreground font-mono text-[10px]">
         {value}
       </span>
+      {size ? (
+        <ChoiceSegment
+          compact
+          value={size.value}
+          options={SIZE_OPTIONS}
+          label={size.label}
+          onChange={size.onChange}
+        />
+      ) : null}
     </Field>
   );
 }
@@ -96,6 +126,9 @@ export function RulerSection({
     label: t(`monitoring:inspector.ruler.guideSides.${side}`),
   }));
   const guideOpacity = guide?.opacity ?? RULER_GUIDE_OPACITY_DEFAULT;
+  const sizeLabel = t('monitoring:inspector.ruler.size');
+  const dotLabel = t('monitoring:inspector.ruler.dot');
+  const textLabel = t('monitoring:inspector.ruler.text');
 
   return (
     <div className="space-y-2">
@@ -145,14 +178,24 @@ export function RulerSection({
         />
       </Field>
       <ColorField
-        label={t('monitoring:inspector.ruler.dotColor')}
+        label={dotLabel}
         value={ruler.dotColor}
         onChange={(color) => onChange((r) => withRulerDotColor(r, color))}
+        size={{
+          label: `${dotLabel} ${sizeLabel}`,
+          value: ruler.dotSize ?? RULER_SIZE_DEFAULT,
+          onChange: (size) => onChange((r) => withRulerDotSize(r, size)),
+        }}
       />
       <ColorField
-        label={t('monitoring:inspector.ruler.textColor')}
+        label={textLabel}
         value={ruler.textColor}
         onChange={(color) => onChange((r) => withRulerTextColor(r, color))}
+        size={{
+          label: `${textLabel} ${sizeLabel}`,
+          value: ruler.textSize ?? RULER_SIZE_DEFAULT,
+          onChange: (size) => onChange((r) => withRulerTextSize(r, size)),
+        }}
       />
 
       <SubHeader

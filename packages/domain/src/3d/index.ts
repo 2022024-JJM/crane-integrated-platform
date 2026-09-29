@@ -16,11 +16,17 @@ export {
   pixelsPerUnitAtDistance,
   resolveRulerInterval,
   rulerAxisPoints,
+  rulerDotCenterPx,
+  rulerDotSizePx,
   rulerGuidePoints,
+  rulerLabelMinSpacingPx,
   rulerLabelStride,
   rulerPlacementFromPoints,
+  rulerTextSizePx,
   rulerTicks,
+  RULER_DOT_SIZE_PX,
   RULER_MAX_TICKS,
+  RULER_TEXT_SIZE_PX,
   type RulerPlacement,
   type RulerTick,
 } from './lib/ruler';
@@ -34,6 +40,7 @@ export {
 } from './lib/label-scale';
 export {
   isRulerInterval,
+  isRulerSize,
   RULER_DEFAULT_COLOR,
   RULER_GUIDE_DEFAULT_LENGTH_M,
   RULER_GUIDE_OPACITY_DEFAULT,
@@ -43,12 +50,15 @@ export {
   RULER_INTERVAL_DEFAULT,
   RULER_INTERVALS,
   RULER_MIN_LENGTH,
+  RULER_SIZE_DEFAULT,
+  RULER_SIZES,
 } from './model/ruler-types';
 export type {
   SavedRulerGuide,
   SavedRulerInfo,
   SceneRulerGuideSide,
   SceneRulerInterval,
+  SceneRulerSize,
 } from './model/ruler-types';
 export {
   buildLabelReadings,

@@ -18,6 +18,7 @@ import { getTagMappingTargetKey, STATUS_TAG_ROLES } from '@crane/domain/3d';
 import {
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_SIDE_DEFAULT,
+  RULER_SIZE_DEFAULT,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_MODE_DEFAULT,
@@ -176,6 +177,8 @@ function isRulerInfoEqual(a: SavedRulerInfo, b: SavedRulerInfo): boolean {
     a.name === b.name &&
     a.textColor === b.textColor &&
     a.dotColor === b.dotColor &&
+    (a.textSize ?? RULER_SIZE_DEFAULT) === (b.textSize ?? RULER_SIZE_DEFAULT) &&
+    (a.dotSize ?? RULER_SIZE_DEFAULT) === (b.dotSize ?? RULER_SIZE_DEFAULT) &&
     a.length === b.length &&
     a.interval === b.interval &&
     isRulerGuideEqual(a.guide, b.guide) &&

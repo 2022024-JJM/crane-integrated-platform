@@ -223,21 +223,31 @@ export function CollapsibleSection({
   );
 }
 
-/** 선택지 몇 개 중 하나 — AxisSegment 와 같은 모양, 글자 폭에 맞춘다. */
+/**
+ * 선택지 몇 개 중 하나 — AxisSegment 와 같은 모양, 글자 폭에 맞춘다. `compact`
+ * 는 한두 글자짜리 선택지를 줄 끝에 붙일 때 쓴다 — 남는 폭을 채우지 않고
+ * 칸마다 AxisSegment 와 같은 고정 폭이다.
+ */
 export function ChoiceSegment<T extends string>({
   value,
   options,
   onChange,
   label,
+  compact = false,
 }: {
   value: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
   label: string;
+  compact?: boolean;
 }) {
   return (
     <div
-      className="flex min-w-0 flex-1 gap-0.5"
+      className={
+        compact
+          ? 'ml-auto flex shrink-0 gap-0.5'
+          : 'flex min-w-0 flex-1 gap-0.5'
+      }
       role="group"
       aria-label={label}
     >
@@ -247,7 +257,8 @@ export function ChoiceSegment<T extends string>({
           type="button"
           aria-pressed={value === option.value}
           className={cn(
-            'h-6 min-w-0 flex-1 cursor-pointer truncate rounded-sm border px-1 text-[10px]',
+            'h-6 cursor-pointer truncate rounded-sm border text-[10px]',
+            compact ? 'w-6' : 'min-w-0 flex-1 px-1',
             value === option.value
               ? 'border-primary/50 bg-primary/15 text-foreground'
               : 'border-border text-muted-foreground hover:bg-muted',

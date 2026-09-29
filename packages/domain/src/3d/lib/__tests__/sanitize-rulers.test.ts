@@ -186,9 +186,57 @@ describe('sanitizeRulerFields — 표시 옵션은 기본값으로 되돌린다'
     }
   });
 
+  it('크기는 S·L 만 남긴다 — 기본(M)은 생략', () => {
+    const out = sanitizeRulerFields(ruler({ textSize: 's', dotSize: 'l' }));
+    expect(out?.textSize).toBe('s');
+    expect(out?.dotSize).toBe('l');
+
+    const medium = sanitizeRulerFields(ruler({ textSize: 'm', dotSize: 'm' }));
+    expect(medium).not.toBeNull();
+    expect('textSize' in (medium ?? {})).toBe(false);
+    expect('dotSize' in (medium ?? {})).toBe(false);
+  });
+
+  it('글자 크기와 점 크기는 서로 독립이다', () => {
+    const out = sanitizeRulerFields(ruler({ textSize: 'l' }));
+    expect(out?.textSize).toBe('l');
+    expect('dotSize' in (out ?? {})).toBe(false);
+  });
+
+  it('크기가 깨졌으면 눈금을 버리지 않고 기본 크기로 되돌린다', () => {
+    for (const bad of [
+      'S',
+      'L',
+      'xl',
+      '',
+      1,
+      true,
+      null,
+      ['s'],
+      { size: 's' },
+    ]) {
+      const out = sanitizeRulerFields(ruler({ textSize: bad, dotSize: bad }));
+      expect(out).not.toBeNull();
+      expect('textSize' in (out ?? {})).toBe(false);
+      expect('dotSize' in (out ?? {})).toBe(false);
+    }
+  });
+
+  it('한쪽 크기만 깨졌으면 그쪽만 되돌린다', () => {
+    const out = sanitizeRulerFields(ruler({ textSize: 'huge', dotSize: 's' }));
+    expect('textSize' in (out ?? {})).toBe(false);
+    expect(out?.dotSize).toBe('s');
+  });
+
   it('기본값뿐인 눈금은 선택 필드가 저장본(JSON)에 남지 않는다', () => {
     const out = sanitizeRulerFields(
-      ruler({ startValue: 0, unitHidden: false, locked: false }),
+      ruler({
+        startValue: 0,
+        unitHidden: false,
+        locked: false,
+        textSize: 'm',
+        dotSize: 'm',
+      }),
     );
     expect(Object.keys(JSON.parse(JSON.stringify(out))).sort()).toEqual([
       'dotColor',

@@ -100,10 +100,10 @@
 - 새 눈금의 표시 옵션은 전부 기본값이고(`createSceneRuler`, 보조선 없음) 간격만 그린 길이에 맞춰 고른다(`pickRulerInterval`). 이름은 번역한 실제 값으로 저장한다.
 - **편집**: 표시 옵션은 인스펙터 눈금 탭(`updateSelectedRuler`), 배치는 트랜스폼 탭과 기즈모, 이름·잠금·삭제는 계층 목록이다. 선택·이름·잠금·트랜스폼·삭제는 모델·텍스트와 같은 공통 경로를 탄다.
 - **크기(scale)는 없다.** 공통 트랜스폼 경로가 실어 온 scale 은 저장 전에 떼고, 눈금이 프라이머리일 때 크기 모드에서는 기즈모를 붙이지 않는다. 다중 선택 크기 드래그가 늘려 놓은 그룹은 렌더가 되돌린다.
-- **점과 숫자**는 DOM(drei `Html`)으로 그려 바닥 메시가 없다. 숫자는 화면을 향하고 그림자·테두리가 없다. 글자 색과 점 색은 따로 정한다.
-- **거리 축소**: 점과 숫자는 모델 라벨과 같은 규칙(`label-scale.ts`)으로 카메라가 멀어지면 줄고 같은 거리에서 사라진다. 축소의 기준점은 점의 중심이라 줄어도 점이 눈금 자리를 벗어나지 않는다.
+- **점과 숫자**는 DOM(drei `Html`)으로 그려 바닥 메시가 없다. 숫자는 화면을 향하고 그림자·테두리가 없다. 색과 크기는 점·글자 각각 따로 정한다. 크기는 세 단계(`RULER_SIZES`)이고 기본(`RULER_SIZE_DEFAULT`)이 ACMS 그림의 크기다. 픽셀 값은 `ruler.ts` 의 `RULER_DOT_SIZE_PX`·`RULER_TEXT_SIZE_PX`. 크기가 깨진 저장본은 눈금을 버리지 않고 기본 크기로 되돌린다.
+- **거리 축소**: 점과 숫자는 모델 라벨과 같은 규칙(`label-scale.ts`)으로 카메라가 멀어지면 줄고 같은 거리에서 사라진다. 축소의 기준점은 점의 중심(`rulerDotCenterPx`)이라 줄어도, 점 크기를 바꿔도 점이 눈금 자리를 벗어나지 않는다.
 - **보조선**은 선택 옵션이다(`SavedRulerInfo.guide`). 눈금 점마다 진행 방향의 수직으로 긋고, 점에서 시작해 **한쪽으로만** 뻗는다 — 길이를 늘려도 반대쪽으로 자라지 않는다. 방향(진행 방향 기준 왼쪽·오른쪽)·길이·색·불투명도를 정한다. 화면 픽셀 두께 선을 바닥에서 `RULER_LINE_LIFT_M` 띄워 깊이 테스트를 켠다. 중심선은 그리지 않는다.
-- 숫자는 눈금마다 카메라 거리로 화면 간격을 구해 촘촘하면 건너뛴다(`rulerLabelStride`, 줄어든 글자만큼 기준 간격도 줄인다). 눈금 개수는 `RULER_MAX_TICKS` 를 넘지 않게 렌더가 간격을 정수 배로 올린다(`resolveRulerInterval`).
+- 숫자는 눈금마다 카메라 거리로 화면 간격을 구해 촘촘하면 건너뛴다(`rulerLabelStride`). 기준 간격은 글자 크기에 비례하고(`rulerLabelMinSpacingPx`) 거리로 줄어든 만큼 함께 줄인다. 눈금 개수는 `RULER_MAX_TICKS` 를 넘지 않게 렌더가 간격을 정수 배로 올린다(`resolveRulerInterval`).
 - 선택한 눈금은 시작점에서 끝점까지의 축선을 선택 색으로 보인다(`rulerAxisPoints`).
 - 마퀴 선택에서는 지도처럼 항상 제외한다. Ctrl 토글·전체 선택에는 참여한다. 관제 화면에서는 클릭을 받지 않는다.
 
@@ -125,7 +125,8 @@
 - 노드 박스·실루엣 포털은 대상 `uuid` 를 key 로 재마운트한다.
 - 인스펙터 안의 수치 계산은 `packages/widgets/src/3d/lib/` 로 뺀다(`zone-editor.ts`, `tag-mapping-editor.ts` 선례) — 공통 규칙 "`ui/*.tsx` 안 수치 계산 금지".
 - 씬 객체 종류를 새로 만들면 id 를 모델·텍스트·눈금과 같은 집합에서 발급한다(`sanitizeSceneInfo` 의 `seenIds`). 선택·기즈모·레지스트리가 id 하나로 객체를 찾는다.
-- `SavedRulerInfo`·`SavedRulerGuide` 에 필드를 추가하면 `sanitize-rulers.ts` 와 `scene-snapshot.ts` 의 `isRulerInfoEqual`·`isRulerGuideEqual` 을 함께 고친다. 기본값은 저장하지 않는다(시작 값 0·단위 표시·보조선 왼쪽·불투명도 1).
+- `SavedRulerInfo`·`SavedRulerGuide` 에 필드를 추가하면 `sanitize-rulers.ts` 와 `scene-snapshot.ts` 의 `isRulerInfoEqual`·`isRulerGuideEqual` 을 함께 고친다. 기본값은 저장하지 않는다(시작 값 0·단위 표시·점과 글자의 기본 크기·보조선 왼쪽·불투명도 1).
+- 눈금의 점·글자 transform 은 React 가 아니라 렌더 코드가 DOM 에 직접 쓴다(`scene-ruler.tsx` 의 `writeLabelTransform`). 점의 중심을 바꾸는 옵션은 프레임을 기다리지 않고 렌더에서 바로 다시 쓴다 — 캔버스가 demand 라 다음 프레임이 바로 오지 않는다.
 - 모델 라벨과 눈금의 거리 축소·숨김 기준은 `label-scale.ts` 하나다. 한쪽만 다른 거리·배율을 쓰지 않는다.
 - 눈금 옵션을 고치는 함수는 값이 같으면 같은 참조를 돌려준다(`ruler-editor.ts` 의 `withRuler*`). 새 옵션도 같은 규칙으로 만든다 — 아니면 히스토리·dirty 가 오염된다.
 - 눈금 보조선은 `renderOrder ≥ 0.5` 로 둔다(바다 위 오버레이 규칙, `docs/agents/rendering-perf.md`).
@@ -148,5 +149,5 @@
 
 ## 미룬 것
 
-- 눈금: 끝점을 끌어서 길이 바꾸기, 글자 크기 옵션, 복제, 지형 굴곡을 따라 붙이기, m 외 단위 환산.
+- 눈금: 끝점을 끌어서 길이 바꾸기, 복제, 지형 굴곡을 따라 붙이기, m 외 단위 환산.
 - 눈금은 미니맵 재캡처 조건에 없다 — 보조선은 캡처 시점의 것만 미니맵 배경에 찍힌다.

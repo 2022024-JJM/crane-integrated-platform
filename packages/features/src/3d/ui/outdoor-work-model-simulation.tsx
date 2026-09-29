@@ -542,6 +542,8 @@ export function OutdoorWorkModelSimulation({
           interval={ruler.interval}
           textColor={ruler.textColor}
           dotColor={ruler.dotColor}
+          textSize={ruler.textSize}
+          dotSize={ruler.dotSize}
           guide={ruler.guide}
           startValue={ruler.startValue}
           unitHidden={ruler.unitHidden}

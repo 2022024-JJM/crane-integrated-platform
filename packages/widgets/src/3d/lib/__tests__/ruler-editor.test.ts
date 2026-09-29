@@ -12,6 +12,7 @@ import {
   rulerUnitsToMeters,
   snapRulerPoint,
   withRulerDotColor,
+  withRulerDotSize,
   withRulerGuideColor,
   withRulerGuideEnabled,
   withRulerGuideLengthMeters,
@@ -21,6 +22,7 @@ import {
   withRulerLengthMeters,
   withRulerStartValue,
   withRulerTextColor,
+  withRulerTextSize,
   withRulerUnitHidden,
 } from '../ruler-editor';
 
@@ -254,6 +256,69 @@ describe('withRulerTextColor / withRulerDotColor — 색은 따로 정한다', (
     }
     expect(withRulerTextColor(base, '#FFFFFF')).toBe(base);
     expect(withRulerDotColor(base, '#FFFFFF')).toBe(base);
+  });
+});
+
+describe('withRulerTextSize / withRulerDotSize — 크기는 따로 정한다', () => {
+  it('S·L 은 필드로 싣는다', () => {
+    expect(withRulerTextSize(ruler(), 's').textSize).toBe('s');
+    expect(withRulerTextSize(ruler(), 'l').textSize).toBe('l');
+    expect(withRulerDotSize(ruler(), 's').dotSize).toBe('s');
+    expect(withRulerDotSize(ruler(), 'l').dotSize).toBe('l');
+  });
+
+  it('기본(M)으로 되돌리면 필드를 지운다', () => {
+    const text = withRulerTextSize(ruler({ textSize: 'l' }), 'm');
+    expect('textSize' in text).toBe(false);
+    const dot = withRulerDotSize(ruler({ dotSize: 's' }), 'm');
+    expect('dotSize' in dot).toBe(false);
+  });
+
+  it('한쪽을 바꿔도 다른 쪽과 색은 그대로다', () => {
+    const base = ruler({ textColor: '#ff0000', dotColor: '#00ff00' });
+    const text = withRulerTextSize(base, 'l');
+    expect('dotSize' in text).toBe(false);
+    const both = withRulerDotSize(text, 's');
+    expect(both.textSize).toBe('l');
+    expect(both.dotSize).toBe('s');
+    expect(both.textColor).toBe('#ff0000');
+    expect(both.dotColor).toBe('#00ff00');
+  });
+
+  it('S ↔ L 로 바로 바꿀 수 있다', () => {
+    expect(withRulerTextSize(ruler({ textSize: 's' }), 'l').textSize).toBe('l');
+    expect(withRulerDotSize(ruler({ dotSize: 'l' }), 's').dotSize).toBe('s');
+  });
+
+  it('같은 크기면 같은 참조 — 필드 없음과 M 은 같은 상태다', () => {
+    const base = ruler();
+    expect(withRulerTextSize(base, 'm')).toBe(base);
+    expect(withRulerDotSize(base, 'm')).toBe(base);
+    const sized = ruler({ textSize: 's', dotSize: 'l' });
+    expect(withRulerTextSize(sized, 's')).toBe(sized);
+    expect(withRulerDotSize(sized, 'l')).toBe(sized);
+  });
+
+  it('고를 수 없는 값은 무시한다(같은 참조)', () => {
+    const base = ruler({ textSize: 'l', dotSize: 's' });
+    for (const bad of ['S', 'xl', '', ' m', 1, null, undefined, {}, ['s']]) {
+      expect(withRulerTextSize(base, bad)).toBe(base);
+      expect(withRulerDotSize(base, bad)).toBe(base);
+    }
+  });
+
+  it('보조선을 건드리지 않는다', () => {
+    const base = guided({ color: '#123456' });
+    expect(withRulerTextSize(base, 'l').guide).toBe(base.guide);
+    expect(withRulerDotSize(base, 's').guide).toBe(base.guide);
+  });
+
+  it('입력 객체를 바꾸지 않는다', () => {
+    const base = ruler({ textSize: 's' });
+    withRulerTextSize(base, 'l');
+    withRulerTextSize(base, 'm');
+    withRulerDotSize(base, 'l');
+    expect(base).toEqual(ruler({ textSize: 's' }));
   });
 });
 

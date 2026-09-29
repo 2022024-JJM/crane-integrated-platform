@@ -1,9 +1,11 @@
 import {
   isRulerInterval,
+  isRulerSize,
   RULER_DEFAULT_COLOR,
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_OPACITY_MIN,
   RULER_INTERVAL_DEFAULT,
+  RULER_SIZE_DEFAULT,
   type SavedRulerGuide,
   type SavedRulerInfo,
 } from '../model/ruler-types';
@@ -73,6 +75,13 @@ export function sanitizeRulerFields(raw: unknown): SanitizedRulerFields | null {
     textColor: normalizeZoneColor(r.textColor) ?? RULER_DEFAULT_COLOR,
     dotColor: normalizeZoneColor(r.dotColor) ?? RULER_DEFAULT_COLOR,
   };
+  // 크기가 깨졌으면(오타·타입 오염) 기본 크기다 — 기본은 싣지 않는다.
+  if (isRulerSize(r.textSize) && r.textSize !== RULER_SIZE_DEFAULT) {
+    ruler.textSize = r.textSize;
+  }
+  if (isRulerSize(r.dotSize) && r.dotSize !== RULER_SIZE_DEFAULT) {
+    ruler.dotSize = r.dotSize;
+  }
   const guide = sanitizeRulerGuide(r.guide);
   if (guide) ruler.guide = guide;
   // 기본값은 싣지 않는다 — 0·false 는 필드 없음과 같은 상태다.

@@ -1,9 +1,12 @@
 import {
+  isRulerSize,
   RULER_GUIDE_SIDE_DEFAULT,
   RULER_INTERVALS,
   RULER_MIN_LENGTH,
+  RULER_SIZE_DEFAULT,
   type SceneRulerGuideSide,
   type SceneRulerInterval,
+  type SceneRulerSize,
 } from '../model/ruler-types';
 import { normalizeDegrees, numRound, radToDeg } from './math-utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -23,8 +26,52 @@ export const RULER_MAX_TICKS = 200;
 /** 기본 간격은 그린 길이 안에 이만큼의 칸이 들어가는 가장 큰 간격이다. */
 export const RULER_DEFAULT_MIN_SPANS = 4;
 
-/** 숫자끼리 이 픽셀보다 가까워지면 건너뛴다 — "800m" 글자 폭에 여백을 더한 값. */
+/**
+ * 숫자끼리 이 픽셀보다 가까워지면 건너뛴다 — 기본 크기(M) "800m" 글자 폭에
+ * 여백을 더한 값. 다른 크기는 `rulerLabelMinSpacingPx` 가 글자 크기만큼 늘리고
+ * 줄인다.
+ */
 export const RULER_LABEL_MIN_SPACING_PX = 56;
+
+/** 점의 지름(px). M 이 ACMS 그림의 크기다. */
+export const RULER_DOT_SIZE_PX: Record<SceneRulerSize, number> = {
+  s: 4,
+  m: 6,
+  l: 8,
+};
+
+/** 숫자의 글자 크기(px). M 이 ACMS 그림의 크기다. */
+export const RULER_TEXT_SIZE_PX: Record<SceneRulerSize, number> = {
+  s: 11,
+  m: 13,
+  l: 16,
+};
+
+/** 모르는 값(누락·오타)은 기본 크기로 본다. */
+function resolveRulerSize(size: unknown): SceneRulerSize {
+  return isRulerSize(size) ? size : RULER_SIZE_DEFAULT;
+}
+
+export function rulerDotSizePx(size?: SceneRulerSize): number {
+  return RULER_DOT_SIZE_PX[resolveRulerSize(size)];
+}
+
+/** 점의 중심까지의 거리(px) — 점을 눈금 자리에 맞추고 축소하는 기준점. */
+export function rulerDotCenterPx(size?: SceneRulerSize): number {
+  return rulerDotSizePx(size) / 2;
+}
+
+export function rulerTextSizePx(size?: SceneRulerSize): number {
+  return RULER_TEXT_SIZE_PX[resolveRulerSize(size)];
+}
+
+/** 숫자 건너뛰기의 기준 간격(px) — 글자가 커진 만큼 넓어진다. */
+export function rulerLabelMinSpacingPx(size?: SceneRulerSize): number {
+  return (
+    (RULER_LABEL_MIN_SPACING_PX * rulerTextSizePx(size)) /
+    RULER_TEXT_SIZE_PX[RULER_SIZE_DEFAULT]
+  );
+}
 
 /** 숫자 건너뛰기 배수 후보(오름차순). */
 export const RULER_LABEL_STRIDES = [1, 2, 5, 10, 20, 50, 100] as const;

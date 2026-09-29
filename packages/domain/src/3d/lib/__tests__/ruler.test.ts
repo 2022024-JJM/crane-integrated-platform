@@ -6,14 +6,26 @@ import {
   pixelsPerUnitAtDistance,
   resolveRulerInterval,
   rulerAxisPoints,
+  rulerDotCenterPx,
+  rulerDotSizePx,
   rulerGuidePoints,
+  rulerLabelMinSpacingPx,
   rulerLabelStride,
   rulerPlacementFromPoints,
+  rulerTextSizePx,
   rulerTicks,
+  RULER_DOT_SIZE_PX,
   RULER_LABEL_MIN_SPACING_PX,
   RULER_MAX_TICKS,
+  RULER_TEXT_SIZE_PX,
 } from '../ruler';
-import { RULER_MIN_LENGTH } from '../../model/ruler-types';
+import {
+  isRulerSize,
+  RULER_MIN_LENGTH,
+  RULER_SIZE_DEFAULT,
+  RULER_SIZES,
+  type SceneRulerSize,
+} from '../../model/ruler-types';
 
 function values(ticks: ReturnType<typeof rulerTicks>): number[] {
   return ticks.map((tick) => tick.value);
@@ -281,6 +293,112 @@ describe('rulerLabelStride / isRulerLabelVisible — 숫자 건너뛰기', () =>
   it('배수 0 이하는 전부 숨김', () => {
     expect(isRulerLabelVisible(0, 0)).toBe(false);
     expect(isRulerLabelVisible(4, -2)).toBe(false);
+  });
+});
+
+describe('isRulerSize', () => {
+  it('세 단계만 받는다', () => {
+    for (const size of RULER_SIZES) {
+      expect(isRulerSize(size)).toBe(true);
+    }
+    expect(RULER_SIZES).toEqual(['s', 'm', 'l']);
+    expect(RULER_SIZE_DEFAULT).toBe('m');
+  });
+
+  it('대문자·다른 글자·타입 오염은 받지 않는다', () => {
+    for (const bad of [
+      'S',
+      'M',
+      'L',
+      'xl',
+      '',
+      ' m',
+      1,
+      true,
+      null,
+      undefined,
+      [],
+      {},
+    ]) {
+      expect(isRulerSize(bad)).toBe(false);
+    }
+  });
+});
+
+describe('rulerDotSizePx / rulerTextSizePx — 크기 단계', () => {
+  it('작은 순으로 커진다', () => {
+    expect(rulerDotSizePx('s')).toBeLessThan(rulerDotSizePx('m'));
+    expect(rulerDotSizePx('m')).toBeLessThan(rulerDotSizePx('l'));
+    expect(rulerTextSizePx('s')).toBeLessThan(rulerTextSizePx('m'));
+    expect(rulerTextSizePx('m')).toBeLessThan(rulerTextSizePx('l'));
+  });
+
+  it('생략하면 기본(M) 크기다', () => {
+    expect(rulerDotSizePx()).toBe(RULER_DOT_SIZE_PX.m);
+    expect(rulerTextSizePx()).toBe(RULER_TEXT_SIZE_PX.m);
+    expect(rulerDotSizePx(undefined)).toBe(rulerDotSizePx('m'));
+    expect(rulerTextSizePx(undefined)).toBe(rulerTextSizePx('m'));
+  });
+
+  it('모르는 값은 기본 크기로 본다 — NaN·undefined 픽셀을 내지 않는다', () => {
+    for (const bad of ['xl', 'M', '', 0, null, {}, 'toString']) {
+      const size = bad as unknown as SceneRulerSize;
+      expect(rulerDotSizePx(size)).toBe(RULER_DOT_SIZE_PX.m);
+      expect(rulerTextSizePx(size)).toBe(RULER_TEXT_SIZE_PX.m);
+      expect(rulerDotCenterPx(size)).toBe(RULER_DOT_SIZE_PX.m / 2);
+      expect(rulerLabelMinSpacingPx(size)).toBe(RULER_LABEL_MIN_SPACING_PX);
+    }
+  });
+
+  it('점과 글자의 크기는 서로 독립이다', () => {
+    expect(rulerDotSizePx('l')).toBe(RULER_DOT_SIZE_PX.l);
+    expect(rulerTextSizePx('s')).toBe(RULER_TEXT_SIZE_PX.s);
+  });
+
+  it('모든 단계의 픽셀 값이 양의 유한수다', () => {
+    for (const size of RULER_SIZES) {
+      for (const px of [RULER_DOT_SIZE_PX[size], RULER_TEXT_SIZE_PX[size]]) {
+        expect(Number.isFinite(px)).toBe(true);
+        expect(px).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('rulerDotCenterPx — 축소 기준점', () => {
+  it('점 지름의 절반이다', () => {
+    for (const size of RULER_SIZES) {
+      expect(rulerDotCenterPx(size)).toBe(rulerDotSizePx(size) / 2);
+    }
+  });
+});
+
+describe('rulerLabelMinSpacingPx — 글자 크기에 따른 숫자 간격', () => {
+  it('기본(M)은 기준 간격 그대로다', () => {
+    expect(rulerLabelMinSpacingPx('m')).toBe(RULER_LABEL_MIN_SPACING_PX);
+    expect(rulerLabelMinSpacingPx()).toBe(RULER_LABEL_MIN_SPACING_PX);
+  });
+
+  it('글자 크기에 비례한다 — 작으면 좁고 크면 넓다', () => {
+    for (const size of RULER_SIZES) {
+      expect(rulerLabelMinSpacingPx(size)).toBeCloseTo(
+        (RULER_LABEL_MIN_SPACING_PX * RULER_TEXT_SIZE_PX[size]) /
+          RULER_TEXT_SIZE_PX.m,
+      );
+    }
+    expect(rulerLabelMinSpacingPx('s')).toBeLessThan(
+      rulerLabelMinSpacingPx('m'),
+    );
+    expect(rulerLabelMinSpacingPx('l')).toBeGreaterThan(
+      rulerLabelMinSpacingPx('m'),
+    );
+  });
+
+  it('같은 화면 간격에서 큰 글자가 먼저 건너뛴다', () => {
+    const px = RULER_LABEL_MIN_SPACING_PX;
+    expect(rulerLabelStride(px, rulerLabelMinSpacingPx('s'))).toBe(1);
+    expect(rulerLabelStride(px, rulerLabelMinSpacingPx('m'))).toBe(1);
+    expect(rulerLabelStride(px, rulerLabelMinSpacingPx('l'))).toBe(2);
   });
 });
 

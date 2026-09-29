@@ -1,5 +1,6 @@
 import {
   isRulerInterval,
+  isRulerSize,
   normalizeZoneColor,
   numRound,
   RULER_DEFAULT_COLOR,
@@ -7,6 +8,7 @@ import {
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_OPACITY_MIN,
   RULER_GUIDE_SIDE_DEFAULT,
+  RULER_SIZE_DEFAULT,
   type SavedRulerGuide,
   type SavedRulerInfo,
   type SceneRulerGuideSide,
@@ -143,6 +145,33 @@ export function withRulerDotColor(
   const next = normalizeZoneColor(color);
   if (!next || ruler.dotColor === next) return ruler;
   return { ...ruler, dotColor: next };
+}
+
+/**
+ * 글자 크기 — 고를 수 있는 단계(RULER_SIZES)만 받는다. 기본(M)은 필드를
+ * 지운다. `size` 가 unknown 인 것은 화면 값(문자열)을 그대로 받기 때문이다.
+ */
+export function withRulerTextSize(
+  ruler: SavedRulerInfo,
+  size: unknown,
+): SavedRulerInfo {
+  if (!isRulerSize(size)) return ruler;
+  if ((ruler.textSize ?? RULER_SIZE_DEFAULT) === size) return ruler;
+  const { textSize: _textSize, ...rest } = ruler;
+  void _textSize;
+  return size === RULER_SIZE_DEFAULT ? rest : { ...rest, textSize: size };
+}
+
+/** 점 크기 — 글자 크기와 같은 규칙. */
+export function withRulerDotSize(
+  ruler: SavedRulerInfo,
+  size: unknown,
+): SavedRulerInfo {
+  if (!isRulerSize(size)) return ruler;
+  if ((ruler.dotSize ?? RULER_SIZE_DEFAULT) === size) return ruler;
+  const { dotSize: _dotSize, ...rest } = ruler;
+  void _dotSize;
+  return size === RULER_SIZE_DEFAULT ? rest : { ...rest, dotSize: size };
 }
 
 /**
