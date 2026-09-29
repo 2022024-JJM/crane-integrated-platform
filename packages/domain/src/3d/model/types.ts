@@ -1,5 +1,6 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { RigBinding, RigDefinition } from './rig-types';
+import type { ModelStatusTags } from './status-tag-types';
 import type { TagMapping } from './tag-mapping-types';
 
 /** @deprecated 레거시 `valueMapList` 의 슬롯. 새 맵핑은 채널+축으로 표현한다. */
@@ -151,6 +152,12 @@ export interface SavedModelInfo {
    * 로드 시 sanitize 가 이 필드로 변환하고 저장본에서는 사라진다.
    */
   tagMappings?: TagMapping[];
+  /**
+   * 상태 역할 → 태그 키(운전 전원·고장·충돌방지 우회·자유선회). 라벨의 색과
+   * 아이콘을 정한다. 없으면 필드 생략(tagMappings 와 같은 규칙, 기존 저장본과
+   * diff 0). 스키마는 status-tag-types.ts, 방어는 sanitize-status-tags.ts.
+   */
+  statusTags?: ModelStatusTags;
   /**
    * @deprecated 레거시 입력 전용. 모델 루트 6칸 고정 맵핑이었다. sanitize 가
    * `tagMappings` 로 변환하며 출력에는 싣지 않는다.

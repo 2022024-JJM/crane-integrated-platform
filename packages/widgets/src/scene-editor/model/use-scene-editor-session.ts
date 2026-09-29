@@ -74,6 +74,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedTagMappings: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTagMappings'];
+  updateSelectedStatusTags: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedStatusTags'];
   updateSelectedZones: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedZones'];
@@ -193,6 +196,7 @@ export function useSceneEditorSession({
     updateSelectedTextColor,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
+    updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
     selectedMap,
@@ -305,6 +309,7 @@ export function useSceneEditorSession({
     updateSelectedTextContent,
     updateSelectedTextColor,
     updateSelectedTagMappings,
+    updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
     createRigForSelectedModel,

@@ -162,6 +162,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectedText,
     selectedMesh,
     updateSelectedTagMappings,
+    updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
     createRigForSelectedModel,
@@ -217,6 +218,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const tagMappingHandlers = {
     rigs: sceneInfo?.rigs ?? [],
     onUpdate: updateSelectedTagMappings,
+    onUpdateStatusTags: updateSelectedStatusTags,
   };
   const zoneHandlers = {
     onUpdate: updateSelectedZones,

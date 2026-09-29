@@ -288,16 +288,32 @@ export function formatTagNumber(value: number | null): string {
 
 /**
  * 상태 밴드·적층 막대·범례의 색(hex) — 리포트 전용 팔레트. 가동만 전역
- * RUNTIME_STATUS_COLORS 와 같고, 대기·두절은 트랙 배경 위에서 면으로 읽히는
- * 회색 계열이다(대기가 더 밝다). unknown 은 그리지 않는다.
+ * RUNTIME_STATUS_COLORS(라벨 색)와 같다. 나머지는 라벨 색을 쓰지 못한다 —
+ * 타임라인에서 노랑은 영역 체류 박스, 빨강은 충돌 선의 색이라 운전 전원 On
+ * (황)·고장(적)을 그대로 칠하면 사건과 섞인다. 운전 전원 On·Off·두절은 트랙
+ * 배경 위에서 면으로 읽히는 회색 계열(밝은 순), 고장은 보라다. unknown 은
+ * 그리지 않는다.
  */
 export const PLAY3D_STATUS_FILL: Record<EquipmentRuntimeStatus, string | null> =
   {
     running: RUNTIME_STATUS_COLORS.running,
-    idle: '#94a3b8',
+    standby: '#cbd5e1',
+    off: '#94a3b8',
+    fault: '#a855f7',
     offline: '#52525b',
     unknown: null,
   };
+
+/** 리포트가 그리는 상태 — 적층·범례 순서. unknown 은 그리지 않는다. */
+export const PLAY3D_DRAWN_STATUSES = [
+  'running',
+  'standby',
+  'off',
+  'fault',
+  'offline',
+] as const satisfies readonly EquipmentRuntimeStatus[];
+
+export type Play3dDrawnStatus = (typeof PLAY3D_DRAWN_STATUSES)[number];
 
 /** 축 위 상대 위치(0~1) → 씬 시간. */
 export function msAtFraction(fraction: number, axisMs: number): number {
@@ -320,30 +336,57 @@ export function percentOf(value: number, max: number): number {
   return Math.min(100, Math.max(0, (value * 100) / max));
 }
 
-export interface StatusShare {
-  running: number;
-  idle: number;
-  offline: number;
-  /** 적층 시작 위치(%) — 대기는 가동 뒤, 두절은 대기 뒤. */
-  idleLeft: number;
-  offlineLeft: number;
+export interface StatusShareSegment {
+  status: Play3dDrawnStatus;
+  /** unknown 을 뺀 시간 대비 %. */
+  percent: number;
+  /** 적층 시작 위치(%) — 앞선 상태들의 합. */
+  left: number;
 }
 
-/** 장비 상태 적층 막대 — unknown 을 뺀 시간 대비 %. 분모 0 이면 null. */
+export interface StatusShare {
+  /** 가동 % — 표의 숫자 열. */
+  running: number;
+  /** `PLAY3D_DRAWN_STATUSES` 순서, 0% 인 상태는 뺀다. */
+  segments: StatusShareSegment[];
+}
+
+/**
+ * 장비 상태 적층 막대 — unknown 을 뺀 시간 대비 %. 분모 0 이면 null.
+ * `includeOffline` 이 false 면 두절 조각을 빼되(시뮬레이션에는 두절이 없다)
+ * 분모는 그대로다.
+ */
 export function statusSharePercents(
   eq: Pick<EquipmentStat, 'ms' | 'totalMs'>,
+  includeOffline = true,
 ): StatusShare | null {
   const known = eq.totalMs - eq.ms.unknown;
   if (!(known > 0)) return null;
-  const running = percentOf(eq.ms.running, known);
-  const idle = percentOf(eq.ms.idle, known);
-  return {
-    running,
-    idle,
-    offline: percentOf(eq.ms.offline, known),
-    idleLeft: running,
-    offlineLeft: Math.min(100, running + idle),
-  };
+  const segments: StatusShareSegment[] = [];
+  let left = 0;
+  for (const status of PLAY3D_DRAWN_STATUSES) {
+    const percent = percentOf(eq.ms[status], known);
+    if (percent > 0 && (includeOffline || status !== 'offline')) {
+      segments.push({ status, percent, left: Math.min(100, left) });
+    }
+    left += percent;
+  }
+  return { running: percentOf(eq.ms.running, known), segments };
+}
+
+/**
+ * 범례에 올릴 상태 — 가동은 항상, 나머지는 이번 실행에서 시간이 쌓인 것만.
+ * 상태 태그가 없는 씬의 범례에 쓰이지 않는 상태가 줄줄이 서지 않게 한다.
+ */
+export function legendStatuses(
+  equipment: readonly Pick<EquipmentStat, 'ms'>[],
+  includeOffline: boolean,
+): Play3dDrawnStatus[] {
+  return PLAY3D_DRAWN_STATUSES.filter((status) => {
+    if (status === 'running') return true;
+    if (status === 'offline' && !includeOffline) return false;
+    return equipment.some((eq) => eq.ms[status] > 0);
+  });
 }
 
 export interface RangeBarPercent {

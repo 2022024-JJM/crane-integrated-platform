@@ -76,7 +76,7 @@
     },
     "mapping": {
       "title": "Tag Mapping",
-      "list": "Mappings",
+      "list": "Transform",
       "add": "Add mapping",
       "remove": "Remove mapping",
       "empty": "No mappings. Pick a node, type and axis, then link a tag.",
@@ -108,6 +108,32 @@
       },
       "joinLabel": "Tag linked: {{tag}}",
       "sliderLockedByTag": "Simulation is playing — a tag drives this joint."
+    },
+    "statusTags": {
+      "title": "Status",
+      "hint": "Link status bits (0/1) to set the label color and icons. Pick a preview value to see it on the label right away; previews are not saved.",
+      "clear": "Unlink",
+      "preview": "Preview",
+      "previewChoices": {
+        "none": "None",
+        "off": "Off",
+        "on": "On"
+      },
+      "motion": "Motion",
+      "motionChoices": {
+        "none": "None",
+        "off": "Stopped",
+        "on": "Moving"
+      },
+      "motionHint": "Whether the axis values are changing. There is no tag to link.",
+      "previewResult": "Label: {{state}}",
+      "previewReset": "Reset preview",
+      "roles": {
+        "controlOn": "Control",
+        "fault": "Fault",
+        "bypass": "Bypass",
+        "freeSwing": "Free Swing"
+      }
     }
   },
   "transform": {
@@ -452,10 +478,16 @@
     "pausedValue": "Paused"
   },
   "runtimeStatus": {
+    "fault": "Fault",
     "running": "Running",
-    "idle": "Idle",
+    "standby": "Control on",
+    "off": "Control off",
     "offline": "Offline",
     "unknown": "Unknown"
+  },
+  "labelState": {
+    "bypass": "Bypass On",
+    "freeSwing": "Free Swing On"
   },
   "sceneZone": {
     "unnamed": "Zone {{index}}",
@@ -527,7 +559,6 @@
       "stopEnters": "stop {{count}}",
       "dwellTotal": "dwell total {{time}}",
       "equipmentCount": "{{count}} equipment",
-      "idleRatio": "idle {{ratio}}",
       "offline": "Offline",
       "offlineTotal": "total {{time}}",
       "saturation": "Speed-limit saturation",

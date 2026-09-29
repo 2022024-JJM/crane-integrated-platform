@@ -10,15 +10,34 @@ export type CraneStatus =
 export type StatusLevel = 'normal' | 'warning' | 'critical';
 
 /**
- * 3D 관제 화면의 장비 운전 상태 — 태그 값 수신 활동에서 파생한다
- * (features/3d lib/model-runtime-status.ts). PLC 상태 태그가 아니라 값의
- * 변화·수신 시각으로 판정하므로 시뮬레이션·실시간·리플레이 모두 같은 규칙.
- * - running: 최근 창 안에 값이 바뀜(움직이는 중)
- * - idle: 수신은 되지만 값이 안 바뀜
+ * 3D 관제 화면의 장비 운전 상태 — ACMS 의 Crane ID Box 네 가지(고장·가동·운전
+ * 전원 On·운전 전원 Off)와 통신두절·미확인. 라벨·관제 HUD·3D 플레이 리포트·
+ * 저널이 전부 이 여섯 가지를 쓴다. 판정은 features/3d
+ * lib/model-label-state.ts — 움직임·수신은 태그 값의 변화·수신 시각에서, 나머지는
+ * 모델의 상태 태그(`statusTags`)에서 온다.
+ * - fault: 고장 비트 on
+ * - running: 움직이는 중
+ * - standby: 운전 전원 on, 멈춰 있음
+ * - off: 운전 전원 off
  * - offline: 한 번은 받았지만 수신이 끊김
- * - unknown: 맵핑된 태그가 없거나 아직 한 번도 받지 못함
+ * - unknown: 받은 적이 없거나, 멈춰 있는데 운전 전원을 모른다
  */
-export type EquipmentRuntimeStatus = 'running' | 'idle' | 'offline' | 'unknown';
+export type EquipmentRuntimeStatus =
+  | 'fault'
+  | 'running'
+  | 'standby'
+  | 'off'
+  | 'offline'
+  | 'unknown';
+
+/** 라벨 한 개가 그리는 것 전부 — 상자 색(tone = 운전 상태) 하나와 아이콘 둘. */
+export interface EquipmentLabelState {
+  tone: EquipmentRuntimeStatus;
+  /** Bypass(충돌방지 우회) on. */
+  bypass: boolean;
+  /** Free Swing(자유선회) on. */
+  freeSwing: boolean;
+}
 
 // ─── CMMS 상태 타입 ──────────────────────────────────────────────
 export type OnOff = 'ON' | 'OFF';

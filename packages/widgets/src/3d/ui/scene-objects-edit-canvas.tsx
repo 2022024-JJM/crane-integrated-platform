@@ -65,6 +65,7 @@ import {
   manualJointSource,
   rigValueStore,
   useIsObjectSelected,
+  useLabelPreviewState,
   useSceneObjectSelectionStore,
   useSceneZoneStore,
 } from '@crane/features/3d';
@@ -108,7 +109,7 @@ const PRELOAD_BATCH_SIZE = 4;
  */
 type SelectionAwareGltfModelProps = Omit<
   React.ComponentProps<typeof GltfModel>,
-  'isSelected' | 'selectedMeshTarget'
+  'isSelected' | 'selectedMeshTarget' | 'labelState'
 >;
 
 function getSelectedMeshIdForModel(
@@ -151,9 +152,12 @@ function SelectionAwareGltfModel({
   const selectedMeshTarget = selectedMeshId
     ? (sharedModelObjectRegistry.get(selectedMeshId) ?? null)
     : null;
+  // 인스펙터 상태 태그 구역에서 고른 미리보기 값 — 대상 모델만 받는다.
+  const labelState = useLabelPreviewState(props.id);
   return (
     <GltfModel
       {...props}
+      labelState={labelState}
       isSelected={isSelected}
       selectionStyle={selectionStyle}
       selectedMeshTarget={selectedMeshTarget}

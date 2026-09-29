@@ -76,7 +76,7 @@
     },
     "mapping": {
       "title": "태그 매핑",
-      "list": "맵핑",
+      "list": "트랜스폼",
       "add": "맵핑 추가",
       "remove": "맵핑 삭제",
       "empty": "맵핑이 없습니다. 노드·타입·축을 고르고 태그를 연결하세요.",
@@ -108,6 +108,32 @@
       },
       "joinLabel": "태그 연결됨: {{tag}}",
       "sliderLockedByTag": "시뮬레이션 재생 중 — 태그가 이 관절을 구동합니다."
+    },
+    "statusTags": {
+      "title": "상태",
+      "hint": "운전 상태 비트(0/1)를 연결하면 라벨의 색과 아이콘이 정해집니다. 미리보기 값을 고르면 라벨에 바로 나타나며 저장되지 않습니다.",
+      "clear": "연결 해제",
+      "preview": "미리보기",
+      "previewChoices": {
+        "none": "없음",
+        "off": "Off",
+        "on": "On"
+      },
+      "motion": "움직임",
+      "motionChoices": {
+        "none": "없음",
+        "off": "정지",
+        "on": "가동"
+      },
+      "motionHint": "축 값이 바뀌는 중인지를 고릅니다. 연결할 태그는 없습니다.",
+      "previewResult": "라벨 표시: {{state}}",
+      "previewReset": "미리보기 초기화",
+      "roles": {
+        "controlOn": "운전 전원",
+        "fault": "고장",
+        "bypass": "Bypass",
+        "freeSwing": "Free Swing"
+      }
     }
   },
   "transform": {
@@ -452,10 +478,16 @@
     "pausedValue": "정지 중"
   },
   "runtimeStatus": {
+    "fault": "고장",
     "running": "가동",
-    "idle": "대기",
+    "standby": "운전 전원 On",
+    "off": "운전 전원 Off",
     "offline": "통신두절",
     "unknown": "상태 미확인"
+  },
+  "labelState": {
+    "bypass": "Bypass On",
+    "freeSwing": "Free Swing On"
   },
   "sceneZone": {
     "unnamed": "영역 {{index}}",
@@ -527,7 +559,6 @@
       "stopEnters": "정지 {{count}}",
       "dwellTotal": "체류 합계 {{time}}",
       "equipmentCount": "장비 {{count}}대",
-      "idleRatio": "대기 {{ratio}}",
       "offline": "통신 두절",
       "offlineTotal": "합계 {{time}}",
       "saturation": "속도 한계 도달",

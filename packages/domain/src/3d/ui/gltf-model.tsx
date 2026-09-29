@@ -2,14 +2,18 @@ import { memo, useCallback, useMemo } from 'react';
 import { Object3D } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import type { EquipmentLabelState } from '@crane/core/types/status';
 import {
   type ModelShading,
   ModelMesh,
   useClonedModel,
   useModelLabelLocalAnchor,
 } from './model-mesh';
-import { ModelLabel, type AlarmHighlightSeverity } from './model-label';
+import {
+  ModelLabel,
+  type AlarmHighlightSeverity,
+  type ModelLabelTitles,
+} from './model-label';
 import { ModelSelectionBox } from './model-selection-box';
 import { ObjectSilhouetteOutline } from './object-silhouette-outline';
 import { SELECTION_LINE_COLOR } from '../lib/selection-style';
@@ -32,8 +36,10 @@ interface GltfModelProps {
   labelDimmed?: boolean;
   alarmSeverity?: AlarmHighlightSeverity | null;
   alarmHighlightMesh?: boolean;
-  /** 라벨의 운전 상태 점(model-label.tsx). 모니터링 뷰가 판정해 넘긴다. */
-  runtimeStatus?: EquipmentRuntimeStatus;
+  /** 라벨의 표시 상태 — 색·아이콘(model-label.tsx). 모니터링 뷰가 판정해 넘긴다. */
+  labelState?: EquipmentLabelState;
+  /** 라벨 상태·아이콘의 툴팁 문구(번역된 값). */
+  labelTitles?: ModelLabelTitles;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델·지도(model-mesh.tsx). */
   seaSubmersion?: boolean;
   /**
@@ -114,7 +120,8 @@ export const GltfModel = memo(function GltfModel({
   labelDimmed = false,
   alarmSeverity = null,
   alarmHighlightMesh = false,
-  runtimeStatus,
+  labelState,
+  labelTitles,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -198,7 +205,8 @@ export const GltfModel = memo(function GltfModel({
           equipName={equipName}
           localAnchor={labelLocalAnchor}
           alarmSeverity={alarmSeverity}
-          runtimeStatus={runtimeStatus}
+          state={labelState}
+          titles={labelTitles}
           dimmed={labelDimmed}
           onSelect={onSelect}
           onHoverStart={onHoverStart}

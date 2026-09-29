@@ -535,3 +535,33 @@ describe('sanitizeSceneInfo — 모델 영역(zones)', () => {
     expect(out.models[2].zones).toBeUndefined();
   });
 });
+
+describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
+  it('유효한 역할만 남기고, 전부 무효·미지정이면 필드를 생략한다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [
+          model({
+            id: 'a',
+            statusTags: { controlOn: ' A:on ', fault: 1, junk: 'A:x' },
+          }),
+          model({ id: 'b', statusTags: { controlOn: '' } }),
+          model({ id: 'c', statusTags: ['A:on'] }),
+          model({ id: 'd' }),
+        ],
+      }),
+    );
+    expect(out.models[0].statusTags).toEqual({ controlOn: 'A:on' });
+    expect(out.models[1].statusTags).toBeUndefined();
+    expect(out.models[2].statusTags).toBeUndefined();
+    expect(out.models[3].statusTags).toBeUndefined();
+  });
+
+  it('무효인 필드는 저장본(JSON)에 남지 않는다', () => {
+    const out = sanitizeSceneInfo(
+      scene({ models: [model({ statusTags: { controlOn: '   ' } })] }),
+    );
+    const json = JSON.parse(JSON.stringify(out));
+    expect('statusTags' in json.models[0]).toBe(false);
+  });
+});

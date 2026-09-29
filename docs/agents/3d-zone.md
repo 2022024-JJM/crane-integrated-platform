@@ -101,7 +101,7 @@
 
 ### 영역·운전 상태 저널
 
-- `@crane/domain/journal` 의 `ZoneJournalEntry`(진입·이탈 각 항목, 이탈에 `durationMs`)·`StatusJournalEntry`(**통신두절 진입·복귀만** — 가동↔대기는 제외, 첫 unknown→x 도 제외). 키는 `ZONE_JOURNAL_STORAGE_KEY`·`STATUS_JOURNAL_STORAGE_KEY`.
+- `@crane/domain/journal` 의 `ZoneJournalEntry`(진입·이탈 각 항목, 이탈에 `durationMs`)·`StatusJournalEntry`(**통신두절 진입·복귀만** — 그 밖의 전환은 제외, 직전 기록에 없던 모델의 첫 판정도 제외. 예전 저장본의 `idle` 은 sanitize 가 `unknown` 으로 읽는다). 키는 `ZONE_JOURNAL_STORAGE_KEY`·`STATUS_JOURNAL_STORAGE_KEY`.
 - 순수 diff `diffZoneIntrusions`(두 스냅샷의 쌍 차이로 사건 복원 — 경보 알림·알람 브릿지도 같은 함수)·`diffOfflineTransitions`(`status-journal-map.ts`). 동기화는 `zone-journal-sync.tsx`(앱 셸 runtime effects)와 `use-status-journal-sync.ts`(`Monitoring3dView`, `enabled` = 실시간만).
 - **실시간 화면의 사건만 남긴다.** `useSceneInfoStore.activeMode`(`useSceneData` 가 진입 set·이탈 null)와 `isRealtimeSceneActive()` 로 충돌 기록·영역 진입·두절 진입을 받고, 영역 이탈은 `filterAcceptedZoneTransitions` 로 **진입을 승인했던 쌍만** 받는다 — 언마운트 cleanup 은 부모(`useSceneData`)가 자식(검출기 clear)보다 먼저라 `activeMode` 만 보면 실시간을 떠날 때의 이탈이 버려진다.
 - 3D 플레이·에디터·미리보기의 사건은 저널·로컬 알람·경보 소리 어디에도 가지 않는다(3D 플레이는 실행 리포트가 대신, `docs/agents/3d-play.md`).

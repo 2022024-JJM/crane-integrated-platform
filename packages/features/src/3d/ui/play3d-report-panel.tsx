@@ -6,6 +6,7 @@ import { formatReplayTimestamp } from '@crane/domain/monitoring';
 import {
   PLAY3D_DWELL_BOX_CLASS,
   PLAY3D_STATUS_FILL,
+  legendStatuses,
   coverageRatio,
   eventTimeLabel,
   formatRatio,
@@ -215,7 +216,9 @@ export function Play3dReportPanel({ className }: { className?: string }) {
           label={t('monitoring:play3d.tile.running')}
           value={formatRatio(summary.runningRatio)}
           tone="neutral"
-          hint={`${t('monitoring:play3d.tile.equipmentCount', { count: summary.equipmentCount })} · ${t('monitoring:play3d.tile.idleRatio', { ratio: formatRatio(summary.idleRatio) })}`}
+          hint={t('monitoring:play3d.tile.equipmentCount', {
+            count: summary.equipmentCount,
+          })}
         />
         {isReplay ? (
           <Play3dKpiCard
@@ -259,20 +262,13 @@ export function Play3dReportPanel({ className }: { className?: string }) {
           />
         )}
         <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-[9px]">
-          <LegendMark
-            color={PLAY3D_STATUS_FILL.running}
-            label={t('monitoring:runtimeStatus.running')}
-          />
-          <LegendMark
-            color={PLAY3D_STATUS_FILL.idle}
-            label={t('monitoring:runtimeStatus.idle')}
-          />
-          {isReplay ? (
+          {legendStatuses(stats.equipment, isReplay).map((status) => (
             <LegendMark
-              color={PLAY3D_STATUS_FILL.offline}
-              label={t('monitoring:runtimeStatus.offline')}
+              key={status}
+              color={PLAY3D_STATUS_FILL[status]}
+              label={t(`monitoring:runtimeStatus.${status}`)}
             />
-          ) : null}
+          ))}
           <LegendMark
             shape="box"
             label={t('monitoring:play3d.timeline.zoneDwell')}

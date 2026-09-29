@@ -41,7 +41,7 @@ export interface TagLiveValue {
   /**
    * 값이 직전과 **달라진** 마지막 시각. 같은 값이 반복 수신되면(가상 태그
    * manual 패턴, 정지한 장비의 주기 스냅샷) `at` 만 갱신되고 이건 남는다 —
-   * 운전 상태(running/idle) 판정의 근거(lib/model-runtime-status.ts).
+   * 움직임 판정의 근거(lib/model-runtime-status.ts).
    */
   changedAt: number;
 }

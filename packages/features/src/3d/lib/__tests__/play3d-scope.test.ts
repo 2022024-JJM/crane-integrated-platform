@@ -37,7 +37,7 @@ describe('reportExcludedModelIds', () => {
 describe('omitRuntimeStatuses', () => {
   const record: RuntimeStatusRecord = {
     a: 'running',
-    b: 'idle',
+    b: 'standby',
     c: 'unknown',
   };
 

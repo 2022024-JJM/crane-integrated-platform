@@ -459,15 +459,18 @@ export function usePlay3dStatsRecorder(regionId: string): void {
     };
   }, []);
 
-  // 상태 전이 — 전부 밴드 타임라인용으로 남기고, 두절 진입·복귀만 사건으로
-  // (첫 unknown→x 는 사건이 아니다).
+  // 상태 전이 — 전부 밴드 타임라인용으로 남기고, 두절 진입·복귀만 사건으로.
+  // 직전 기록에 없던 모델의 첫 판정은 사건이 아니다. 직전이 unknown 인
+  // 것만으로는 거르지 않는다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그
+  // 장비의 unknown → offline 은 실제 두절이다.
   useEffect(() => {
     const prev = statusesRef.current;
     statusesRef.current = statuses;
     const { data, bump } = usePlay3dStatsStore.getState();
     let changed = false;
     for (const [modelId, to] of Object.entries(statuses)) {
-      const from: EquipmentRuntimeStatus = prev[modelId] ?? 'unknown';
+      const known = prev[modelId];
+      const from: EquipmentRuntimeStatus = known ?? 'unknown';
       if (from === to) continue;
       data.statusTransitions.push({
         atMs: readPlay3dPositionMs(),
@@ -476,7 +479,7 @@ export function usePlay3dStatsRecorder(regionId: string): void {
         to,
       });
       changed = true;
-      if (from === 'unknown') continue;
+      if (known === undefined) continue;
       if (from !== 'offline' && to !== 'offline') continue;
       pushEvent(data, {
         kind: to === 'offline' ? 'offlineEnter' : 'offlineExit',

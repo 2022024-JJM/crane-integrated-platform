@@ -6,7 +6,6 @@ import {
   AlarmFullscreenToggleButton,
   useCriticalAlarmBanner,
   useFullscreenAlarmOverlay,
-  useRegionActiveAlarmsByCraneId,
 } from '@crane/features/alarm';
 import {
   Monitoring3dView,
@@ -19,7 +18,6 @@ import { CraneCmmsDetailPanel } from '@crane/widgets/crane';
 
 function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
   const { t } = useTranslation();
-  const alarmsByCraneId = useRegionActiveAlarmsByCraneId(regionId);
   const [is3dViewLoading, setIs3dViewLoading] = useState(true);
   const {
     visible: alarmOverlayVisible,
@@ -60,9 +58,10 @@ function RealtimeMonitoringViewContent({ regionId }: { regionId: string }) {
           </p>
         </div>
       ) : null}
+      {/* 장면 안(라벨 색·미니맵 마커·HUD 칸)에는 알람을 그리지 않는다 —
+          라벨 색은 운전 상태만 나타낸다. 알람은 아래 목록·배너로 본다. */}
       <Monitoring3dView
         regionId={regionId}
-        alarmsByCraneId={alarmsByCraneId}
         mode="realtime"
         onLoadingChange={setIs3dViewLoading}
         fullscreenOverlay={fullscreenCmmsOverlay}

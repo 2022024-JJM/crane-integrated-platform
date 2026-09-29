@@ -1,6 +1,7 @@
 import {
   numRound,
   parseMeshId,
+  type ModelStatusTags,
   type RigDefinition,
   type SavedMapInfo,
   type SavedModelInfo,
@@ -59,6 +60,13 @@ interface UseSelectedSceneObjectEditorResult {
    */
   updateSelectedTagMappings: (
     updater: (mappings: TagMapping[]) => TagMapping[],
+  ) => void;
+  /**
+   * 선택 모델의 상태 태그(statusTags) 갱신 — updateSelectedTagMappings 와 같은
+   * 규칙. 연결된 역할이 없는 결과를 돌려주면 필드가 빠진다.
+   */
+  updateSelectedStatusTags: (
+    updater: (tags: ModelStatusTags) => ModelStatusTags,
   ) => void;
   /** 선택 모델의 영역(zones) 목록 갱신 — updateSelectedTagMappings 와 같은 규칙. */
   updateSelectedZones: (
@@ -590,6 +598,33 @@ export function useSelectedSceneObjectEditor({
   };
 
   /**
+   * 선택 모델의 상태 태그 편집 — tagMappings 와 같은 규칙. updater 가 같은
+   * 참조를 돌려주면 모델도 그대로(히스토리·dirty 무변화), 연결된 역할이 없으면
+   * 필드를 지워 직렬화에서 빠진다.
+   */
+  const updateSelectedStatusTags = (
+    updater: (tags: ModelStatusTags) => ModelStatusTags,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) return prev;
+      return {
+        ...prev,
+        models: prev.models.map((model) => {
+          if (model.id !== selectedModelId) return model;
+          const current = model.statusTags ?? {};
+          const next = updater(current);
+          if (next === current) return model;
+          const rest = { ...model };
+          delete rest.statusTags;
+          return Object.keys(next).length > 0
+            ? { ...rest, statusTags: next }
+            : rest;
+        }),
+      };
+    });
+  };
+
+  /**
    * 선택 모델의 영역(zones) 편집 — tagMappings 와 같은 규칙. updater 가 같은
    * 참조를 돌려주면 모델도 그대로(히스토리·dirty 무변화), 빈 배열이면 필드를
    * 지워 직렬화에서 빠진다.
@@ -747,6 +782,7 @@ export function useSelectedSceneObjectEditor({
     updateSelectedTextColor,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
+    updateSelectedStatusTags,
     updateSelectedZones,
     updateSelectedZoneExempt,
     selectedMap,

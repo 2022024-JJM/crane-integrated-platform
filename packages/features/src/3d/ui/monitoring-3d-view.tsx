@@ -67,7 +67,7 @@ import { SceneMinimap } from './scene-minimap';
 import { SceneMinimapCapture } from './scene-minimap-capture';
 import { SceneMinimapToggle } from './scene-minimap-toggle';
 import { SceneStatusHud } from './scene-status-hud';
-import { useModelRuntimeStatuses } from '../model/use-model-runtime-statuses';
+import { useModelStatusRecords } from '../model/use-model-runtime-statuses';
 import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
@@ -95,6 +95,11 @@ export interface Monitoring3dViewActions {
 
 interface Monitoring3dViewProps {
   regionId: string;
+  /**
+   * 크레인별 활성 알람. 넘기면 라벨 배경·미니맵 마커·HUD 알람 칸이 알람을
+   * 표시한다. 넘기지 않는 화면은 세 곳 모두 알람을 그리지 않는다(HUD 는 칸
+   * 자체를 숨긴다) — 라벨 색을 운전 상태에만 쓰는 화면이다.
+   */
   alarmsByCraneId?: Record<string, AlarmSeverity>;
   alarmHighlightMesh?: boolean;
   /**
@@ -149,7 +154,7 @@ const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
 
 export function Monitoring3dView({
   regionId,
-  alarmsByCraneId = EMPTY_ALARMS,
+  alarmsByCraneId,
   alarmHighlightMesh = false,
   mode = 'simulation',
   autoStartSimulation = true,
@@ -165,6 +170,7 @@ export function Monitoring3dView({
   actionsRef,
 }: Monitoring3dViewProps) {
   const { t } = useTranslation();
+  const sceneAlarms = alarmsByCraneId ?? EMPTY_ALARMS;
   const isDock = toolbarLayout === 'dock';
   const play3dSource = usePlay3dStore((s) => s.source);
   const transport = usePlay3dTransport();
@@ -203,17 +209,18 @@ export function Monitoring3dView({
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
   useTagBindingSource(sceneInfo, true);
-  // 모델별 운전 상태(태그 활동 기반) — 라벨 점·미니맵 마커·HUD 가 공유한다.
-  // 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D 플레이는 정지 중
-  // 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면 일시정지 뒤
-  // 전 장비가 두절이 된다.
-  const runtimeStatuses = useModelRuntimeStatuses(
-    sceneInfo,
-    isPlay3d
-      ? { paused: !transport.isPlaying, timeScale: transport.speed }
-      : undefined,
-  );
-  // 통신두절 진입·복귀를 저널에 남긴다(가동↔대기는 제외) — 실시간 화면만.
+  // 모델별 운전 상태(HUD)와 라벨 표시 상태(색·아이콘) — 같은 판정 한 번에서
+  // 함께 나온다. 상태가 실제로 바뀔 때만 참조가 바뀐다(1Hz 판정). 3D 플레이는
+  // 정지 중 재판정을 멈추고 창을 배속에 맞춘다 — 벽시계 창 그대로면 일시정지
+  // 뒤 전 장비가 두절이 된다.
+  const { runtime: runtimeStatuses, labels: labelStates } =
+    useModelStatusRecords(
+      sceneInfo,
+      isPlay3d
+        ? { paused: !transport.isPlaying, timeScale: transport.speed }
+        : undefined,
+    );
+  // 통신두절 진입·복귀를 저널에 남긴다(그 밖의 전환은 제외) — 실시간 화면만.
   useStatusJournalSync(
     regionId,
     sceneInfo,
@@ -400,7 +407,7 @@ export function Monitoring3dView({
             {showControlRoomWidgets ? (
               <SceneMinimap
                 sceneInfo={sceneInfo}
-                alarmsByCraneId={alarmsByCraneId}
+                alarmsByCraneId={sceneAlarms}
                 getPose={handleGetPose}
                 onMoveTo={handleMoveTo}
               />
@@ -508,14 +515,14 @@ export function Monitoring3dView({
           <OutdoorWorkModelSimulation
             sceneInfo={sceneInfo}
             regionId={regionId}
-            alarmsByCraneId={alarmsByCraneId}
+            alarmsByCraneId={sceneAlarms}
             alarmHighlightMesh={alarmHighlightMesh}
             mode={mode}
             onMoveTo={handleMoveTo}
             onResetCamera={handleResetCamera}
             getPose={handleGetPose}
             prepareOutline
-            runtimeStatuses={runtimeStatuses}
+            labelStates={labelStates}
           />
           {sceneExtras}
           <SceneReadyProbe onReady={handleSceneReady} />

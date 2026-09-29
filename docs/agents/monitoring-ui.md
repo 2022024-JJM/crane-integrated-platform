@@ -59,10 +59,14 @@
 - 풍속/풍향 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다. 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. `@crane/domain/weather` 의 `WeatherSnapshot.windSpeed`(m/s)·`windDirection` 은 응답에 없으면 null. 권고 단계는 `wind-advisory.ts`(`WIND_CAUTION_MS`·`WIND_STOP_MS`, 현장 규정에 맞춰 상수만 조정).
 - 가동 n / 상태 확인 N — 장비 운전 상태(`docs/agents/3d-play.md`). 값 생산이 멈춘 동안(충돌 pinned·영역 hold·실시간 보류·시뮬 정지)은 "정지 중".
 - 두절 — 0 이면 숨김.
-- 알람 장비 수 — 페이지가 넘긴 `alarmsByCraneId`, 최고 severity 색.
+- 알람 장비 수 — 페이지가 넘긴 `alarmsByCraneId`, 최고 severity 색. 페이지가 넘기지 않으면 칸을 숨긴다.
 - 영역 침범 수 — 씬에 영역이 있을 때만, 정지 중엔 "n · 정지"(`docs/agents/3d-zone.md`).
 - 충돌 상태 — 활성일 때만(`docs/agents/3d-collision.md`).
 - 연결 — `use-realtime-connection-state.ts`. 시뮬레이션은 재생/정지(라벨에 `×배속 mm:ss`, `lib/sim-clock.ts`), 실시간은 cranes-lite WebSocket `subscribeState` 상태에 화면 반영 보류를 덧입힘, 3D 플레이는 `play3dPlaying` / `play3dPaused`.
+
+### 장면 안 알람 표시
+
+`Monitoring3dView` 의 `alarmsByCraneId` 를 넘긴 화면만 라벨 배경·미니맵 마커·HUD 알람 칸에 알람을 그린다. 실외 실시간 화면(`apps/hanwha-ocean` outdoor-work)은 넘기지 않는다 — 라벨 색을 운전 상태에만 쓰고(`docs/agents/3d-play.md`), 알람은 독의 알람 목록·상단 배너·헤더 벨로 본다. 실내·골리앗·대시보드 미리보기는 넘긴다.
 
 ### 경보 알림 채널
 
@@ -116,6 +120,7 @@
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.
 - `notifyAlert` 호출자가 제목·본문을 번역한다. 채널에 i18n 을 넣지 않는다.
 - HUD·미니맵은 독 배치의 실시간 화면(`toolbarLayout='dock'` 이고 `mode !== 'play3d'`)에만 마운트한다.
+- HUD 알람 칸을 0 으로 그리지 않는다. 알람을 받지 않는 화면은 칸을 숨긴다 — 0 은 "알람 없음"으로 읽힌다.
 - 독 레일 순서는 카메라 묶음 → 화면 표시 묶음. 감지 스위치·시뮬레이션 ▶ 는 독에 두지 않는다(감지 설정 페이지·3D 플레이 트랜스포트 바가 담당).
 
 ## 하지 않기로 한 것

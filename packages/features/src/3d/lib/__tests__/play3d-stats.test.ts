@@ -150,7 +150,6 @@ describe('computePlay3dStats', () => {
     expect(stats.summary).toEqual({
       equipmentCount: 0,
       runningRatio: null,
-      idleRatio: null,
       offlineEpisodes: 0,
       offlineMs: 0,
       saturation: { maxRatio: null, key: null },
@@ -233,7 +232,8 @@ describe('computePlay3dStats', () => {
   it('장비: 비율 분모(unknown 제외)와 두절 횟수, 노출 기본값 0', () => {
     const ms = emptyStatusMs();
     ms.running = 6000;
-    ms.idle = 4000;
+    ms.standby = 3000;
+    ms.off = 1000;
     ms.unknown = 5000;
     const stats = computePlay3dStats(
       input({
@@ -251,13 +251,12 @@ describe('computePlay3dStats', () => {
     expect(stats.summary).toMatchObject({
       equipmentCount: 1,
       runningRatio: 0.6,
-      idleRatio: 0.4,
       offlineEpisodes: 2,
       offlineMs: 0,
     });
   });
 
-  it('summary: unknown 만 있는 장비는 가동·대기 비율 null', () => {
+  it('summary: unknown 만 있는 장비는 가동 비율 null', () => {
     const ms = emptyStatusMs();
     ms.unknown = 3000;
     const stats = computePlay3dStats(
@@ -265,7 +264,6 @@ describe('computePlay3dStats', () => {
     );
     expect(stats.summary.equipmentCount).toBe(1);
     expect(stats.summary.runningRatio).toBeNull();
-    expect(stats.summary.idleRatio).toBeNull();
   });
 
   it('summary: 두절 횟수·시간은 장비 합', () => {
@@ -323,7 +321,7 @@ describe('computePlay3dStats', () => {
       input({
         statuses: { z: { modelId: 'z', name: 'Zed', ms } },
         statusTransitions: [
-          { atMs: 0, modelId: 'a', from: 'unknown', to: 'idle' },
+          { atMs: 0, modelId: 'a', from: 'unknown', to: 'standby' },
           { atMs: 0, modelId: 'z', from: 'unknown', to: 'running' },
         ],
       }),
@@ -507,7 +505,7 @@ describe('시간 축 파생 — statusBands / clipBands', () => {
     const bands = statusBands(
       [
         tr(1000, 'm', 'unknown', 'running'),
-        tr(4000, 'm', 'running', 'idle'),
+        tr(4000, 'm', 'running', 'standby'),
         tr(2000, 'x', 'unknown', 'offline'),
       ],
       'm',
@@ -515,7 +513,7 @@ describe('시간 축 파생 — statusBands / clipBands', () => {
     );
     expect(bands).toEqual([
       { fromMs: 1000, toMs: 4000, status: 'running' },
-      { fromMs: 4000, toMs: 6000, status: 'idle' },
+      { fromMs: 4000, toMs: 6000, status: 'standby' },
     ]);
   });
 

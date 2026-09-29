@@ -1,4 +1,5 @@
 import type {
+  ModelStatusTags,
   RigConstraint,
   RigDefinition,
   RigJoint,
@@ -11,7 +12,7 @@ import type {
   SavedTextInfo,
   TagMapping,
 } from '@crane/domain/3d';
-import { getTagMappingTargetKey } from '@crane/domain/3d';
+import { getTagMappingTargetKey, STATUS_TAG_ROLES } from '@crane/domain/3d';
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
@@ -241,6 +242,20 @@ function isRigDefinitionListEqual(
   return true;
 }
 
+/**
+ * 상태 태그는 역할별 키만 비교한다 — 필드 없음·빈 객체·빈 문자열은 전부
+ * "연결 안 함"으로 같은 상태다(sanitize 가 셋 다 필드를 생략한다).
+ */
+function isStatusTagsEqual(
+  a: ModelStatusTags | undefined,
+  b: ModelStatusTags | undefined,
+): boolean {
+  for (const role of STATUS_TAG_ROLES) {
+    if ((a?.[role] ?? '') !== (b?.[role] ?? '')) return false;
+  }
+  return true;
+}
+
 function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
   return (
     a.id === b.id &&
@@ -255,6 +270,7 @@ function isModelInfoEqual(a: SavedModelInfo, b: SavedModelInfo): boolean {
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale) &&
     isTagMappingListEqual(a.tagMappings, b.tagMappings) &&
+    isStatusTagsEqual(a.statusTags, b.statusTags) &&
     isMeshOverrideListEqual(a.meshOverrides, b.meshOverrides) &&
     isZoneListEqual(a.zones, b.zones) &&
     (a.zoneExempt === true) === (b.zoneExempt === true)

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useThree } from '@react-three/fiber';
 import { Box3, MathUtils, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -11,6 +12,7 @@ import {
   preloadGltf,
   releaseSceneRegionAssets,
   resolveSeaVisible,
+  type ModelLabelTitles,
   type SavedSceneInfo,
 } from '@crane/domain/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -28,7 +30,7 @@ import { useRealtimeRunner } from '../model/use-realtime-runner';
 import { useRealtimeStore } from '../model/use-realtime-store';
 import { useRealtimeWebSocketBridge } from '../model/use-realtime-websocket-bridge';
 import { isFocusGhosted, resolveFocusOpacity } from '../lib/focus-ghost';
-import type { RuntimeStatusRecord } from '../lib/model-runtime-status';
+import type { LabelStateRecord } from '../lib/model-label-state';
 import { SceneObjectBoundary } from './scene-object-boundary';
 
 export interface UseSceneDataOptions {
@@ -195,13 +197,13 @@ interface OutdoorWorkModelSimulationProps {
    */
   prepareOutline?: boolean;
   /**
-   * 모델별 운전 상태(useModelRuntimeStatuses). 라벨의 상태 점으로 넘긴다.
-   * 뷰가 한 번 판정해 미니맵·HUD 와 공유한다.
+   * 모델별 라벨 표시 상태(useModelStatusRecords). 라벨의 색·아이콘으로
+   * 넘긴다. 뷰가 한 번 판정해 HUD 의 운전 상태와 함께 낸다.
    */
-  runtimeStatuses?: RuntimeStatusRecord;
+  labelStates?: LabelStateRecord;
 }
 
-const NO_STATUSES: RuntimeStatusRecord = Object.freeze({});
+const NO_LABEL_STATES: LabelStateRecord = Object.freeze({});
 
 export function OutdoorWorkModelSimulation({
   sceneInfo,
@@ -213,9 +215,27 @@ export function OutdoorWorkModelSimulation({
   onResetCamera,
   getPose,
   prepareOutline = false,
-  runtimeStatuses = NO_STATUSES,
+  labelStates = NO_LABEL_STATES,
 }: OutdoorWorkModelSimulationProps) {
+  const { t } = useTranslation();
   const camera = useThree((s) => s.camera);
+  // 라벨(domain)은 i18n 을 모른다 — 번역한 문구를 한 묶음으로 넘긴다. 참조가
+  // 유지돼야 memo 된 모델이 리렌더되지 않는다.
+  const labelTitles = useMemo<ModelLabelTitles>(
+    () => ({
+      tone: {
+        fault: t('monitoring:runtimeStatus.fault'),
+        running: t('monitoring:runtimeStatus.running'),
+        standby: t('monitoring:runtimeStatus.standby'),
+        off: t('monitoring:runtimeStatus.off'),
+        offline: t('monitoring:runtimeStatus.offline'),
+        unknown: t('monitoring:runtimeStatus.unknown'),
+      },
+      bypass: t('monitoring:labelState.bypass'),
+      freeSwing: t('monitoring:labelState.freeSwing'),
+    }),
+    [t],
+  );
   // 바다가 켜진 씬(resolveSeaVisible)에서만 모델·지도의 수면 아래를 잠김
   // 처리한다 — 바다가 없는 씬에서 y<0 부분에 물 색이 끼면 안 된다.
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
@@ -458,7 +478,8 @@ export function OutdoorWorkModelSimulation({
               model.craneId ? (alarmsByCraneId[model.craneId] ?? null) : null
             }
             alarmHighlightMesh={alarmHighlightMesh}
-            runtimeStatus={runtimeStatuses[model.id]}
+            labelState={labelStates[model.id]}
+            labelTitles={labelTitles}
             seaSubmersion={seaVisible}
             prepareOutline={prepareOutline}
             position={model.position}

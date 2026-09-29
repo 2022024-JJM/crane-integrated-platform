@@ -136,14 +136,29 @@ export {
   type SceneConnectionMode,
   type SceneConnectionView,
 } from './model/use-realtime-connection-state';
-export { useModelRuntimeStatuses } from './model/use-model-runtime-statuses';
+export {
+  useModelRuntimeStatuses,
+  useModelStatusRecords,
+  type ModelStatusRecords,
+} from './model/use-model-runtime-statuses';
+export type {
+  LabelStatePreview,
+  LabelStateRecord,
+} from './lib/model-label-state';
+export {
+  useLabelPreview,
+  useLabelPreviewState,
+  useLabelPreviewStore,
+} from './model/use-label-preview-store';
 export {
   RUNNING_WINDOW_MS,
   OFFLINE_WINDOW_MS,
   RUNTIME_STATUS_COLORS,
+  RUNTIME_STATUS_KEYS,
   countRuntimeStatuses,
-  resolveRuntimeStatus,
+  resolveTagActivity,
   type RuntimeStatusRecord,
+  type TagActivityState,
 } from './lib/model-runtime-status';
 export {
   WIND_CAUTION_MS,

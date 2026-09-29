@@ -76,6 +76,32 @@ describe('loadFrames', () => {
     expect(xValue()).toBe(5);
     expect(received.has('crane_1:NOTE')).toBe(false);
   });
+
+  it("상태 비트('true'/'false')는 1/0 으로 싣고, 숫자 문자열·null 은 버린다", () => {
+    const bits: ReplayLiteFrame = {
+      timestamp: '2026-01-01T00:00:00Z',
+      cranes: [
+        {
+          craneId: 'crane-1',
+          craneNo: '1',
+          snapshotAt: null,
+          tagSchema: null,
+          values: {
+            crane_control_on: 'true',
+            accs_bypass_on: 'false',
+            NUMERIC_TEXT: '12',
+            EMPTY: null,
+          },
+        },
+      ],
+    };
+    store().loadFrames([bits], [1000]);
+
+    expect(received.get('crane_1:crane_control_on')).toBe(1);
+    expect(received.get('crane_1:accs_bypass_on')).toBe(0);
+    expect(received.has('crane_1:NUMERIC_TEXT')).toBe(false);
+    expect(received.has('crane_1:EMPTY')).toBe(false);
+  });
 });
 
 describe('빈 프레임 (예외 경계)', () => {

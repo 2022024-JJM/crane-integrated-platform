@@ -1,4 +1,7 @@
-import type { AlarmSeverity } from '@crane/core/types/status';
+import type {
+  AlarmSeverity,
+  EquipmentRuntimeStatus,
+} from '@crane/core/types/status';
 
 /**
  * 관제 이력 journal — 세션 휘발 스토어(충돌 10건·알람 100건)와 별개로
@@ -70,8 +73,8 @@ export interface ZoneJournalEntry {
 }
 
 /**
- * 장비 운전 상태 이력 — 통신두절 진입·복귀만 남긴다(가동↔대기는 수시로 바뀌어
- * 이력으로서 의미가 없고 100건 상한을 금방 채운다).
+ * 장비 운전 상태 이력 — 통신두절 진입·복귀만 남긴다(그 밖의 전환은 수시로
+ * 바뀌어 이력으로서 의미가 없고 100건 상한을 금방 채운다).
  */
 export interface StatusJournalEntry {
   /** `${at}:${modelId}:${to}`. */
@@ -80,8 +83,8 @@ export interface StatusJournalEntry {
   regionId: string;
   modelId: string;
   equipName: string;
-  from: 'running' | 'idle' | 'offline' | 'unknown';
-  to: 'running' | 'idle' | 'offline' | 'unknown';
+  from: EquipmentRuntimeStatus;
+  to: EquipmentRuntimeStatus;
 }
 
 export interface JournalEnvelope<T> {

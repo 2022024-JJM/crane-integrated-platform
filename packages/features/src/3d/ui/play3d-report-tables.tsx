@@ -21,7 +21,7 @@ import type {
 import { formatSimClock } from '../lib/sim-clock';
 
 /**
- * 리포트 표·목록 — 장비 적층 비율(가동·대기·두절)과 노출(영역 체류·충돌 관여),
+ * 리포트 표·목록 — 장비 적층 비율(운전 상태별)과 노출(영역 체류·충돌 관여),
  * 영역 체류 막대와 주 침범자, 축 range bar(MoTeC 채널 리포트), 사건 목록(종류
  * 필터). 표마다 헤더 행을 두고, 수치는 전부 lib 에서 받은 값을 그리기만 한다.
  */
@@ -80,7 +80,7 @@ export function EquipmentTable({
       <HeaderRow cells={header} />
       <ul className="space-y-1">
         {rows.map((eq) => {
-          const share = statusSharePercents(eq);
+          const share = statusSharePercents(eq, showOffline);
           return (
             <li
               key={eq.modelId}
@@ -93,39 +93,27 @@ export function EquipmentTable({
                 className="bg-muted relative h-2.5 min-w-0 flex-1 overflow-hidden rounded-sm"
                 title={
                   share
-                    ? `${t('monitoring:runtimeStatus.running')} ${formatPercent(share.running)} · ${t('monitoring:runtimeStatus.idle')} ${formatPercent(share.idle)}${showOffline ? ` · ${t('monitoring:runtimeStatus.offline')} ${formatPercent(share.offline)}` : ''}`
+                    ? share.segments
+                        .map(
+                          (segment) =>
+                            `${t(`monitoring:runtimeStatus.${segment.status}`)} ${formatPercent(segment.percent)}`,
+                        )
+                        .join(' · ')
                     : undefined
                 }
               >
-                {share ? (
-                  <>
-                    <span
-                      className="absolute inset-y-0 left-0"
-                      style={{
-                        width: `${share.running}%`,
-                        background: PLAY3D_STATUS_FILL.running ?? undefined,
-                      }}
-                    />
-                    <span
-                      className="absolute inset-y-0"
-                      style={{
-                        left: `${share.idleLeft}%`,
-                        width: `${share.idle}%`,
-                        background: PLAY3D_STATUS_FILL.idle ?? undefined,
-                      }}
-                    />
-                    {showOffline ? (
-                      <span
-                        className="absolute inset-y-0"
-                        style={{
-                          left: `${share.offlineLeft}%`,
-                          width: `${share.offline}%`,
-                          background: PLAY3D_STATUS_FILL.offline ?? undefined,
-                        }}
-                      />
-                    ) : null}
-                  </>
-                ) : null}
+                {share?.segments.map((segment) => (
+                  <span
+                    key={segment.status}
+                    className="absolute inset-y-0"
+                    style={{
+                      left: `${segment.left}%`,
+                      width: `${segment.percent}%`,
+                      background:
+                        PLAY3D_STATUS_FILL[segment.status] ?? undefined,
+                    }}
+                  />
+                ))}
               </span>
               <span className="w-9 shrink-0 text-right font-mono tabular-nums">
                 {formatPercent(share ? share.running : null)}

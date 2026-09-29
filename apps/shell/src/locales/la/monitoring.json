@@ -76,7 +76,7 @@
     },
     "mapping": {
       "title": "Designatio Tags",
-      "list": "Designationes",
+      "list": "Transformatio",
       "add": "Designationem adde",
       "remove": "Designationem dele",
       "empty": "Nullae designationes. Nodum, genus et axem selige, deinde tag iunge.",
@@ -108,6 +108,32 @@
       },
       "joinLabel": "Tag iunctum: {{tag}}",
       "sliderLockedByTag": "Simulatio currit — tag hunc articulum agit."
+    },
+    "statusTags": {
+      "title": "Status",
+      "hint": "Iunge signa status (0/1) ut color et icones tituli statuantur. Valorem praevisionis selige ut statim in titulo appareat; praevisiones non servantur.",
+      "clear": "Solve",
+      "preview": "Praevisio",
+      "previewChoices": {
+        "none": "Nulla",
+        "off": "Off",
+        "on": "On"
+      },
+      "motion": "Motus",
+      "motionChoices": {
+        "none": "Nullus",
+        "off": "Sistit",
+        "on": "Movetur"
+      },
+      "motionHint": "An valores axium mutentur. Nullum tag iungendum est.",
+      "previewResult": "Titulus: {{state}}",
+      "previewReset": "Praevisionem restitue",
+      "roles": {
+        "controlOn": "Imperium",
+        "fault": "Vitium",
+        "bypass": "Bypass",
+        "freeSwing": "Free Swing"
+      }
     }
   },
   "transform": {
@@ -438,10 +464,16 @@
     "pausedValue": "Sistitur"
   },
   "runtimeStatus": {
+    "fault": "Vitium",
     "running": "Operans",
-    "idle": "Otiosa",
+    "standby": "Imperium accensum",
+    "off": "Imperium exstinctum",
     "offline": "Seiuncta",
     "unknown": "Ignota"
+  },
+  "labelState": {
+    "bypass": "Bypass On",
+    "freeSwing": "Free Swing On"
   },
   "sceneZone": {
     "unnamed": "Regio {{index}}",
@@ -513,7 +545,6 @@
       "stopEnters": "sistendi {{count}}",
       "dwellTotal": "mora summa {{time}}",
       "equipmentCount": "{{count}} machinae",
-      "idleRatio": "otiosa {{ratio}}",
       "offline": "Disiunctiones",
       "offlineTotal": "summa {{time}}",
       "saturation": "Saturatio limitis celeritatis",

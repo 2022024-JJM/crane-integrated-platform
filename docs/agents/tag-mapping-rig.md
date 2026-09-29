@@ -1,6 +1,6 @@
-# 태그 맵핑 · 가상 태그 시뮬레이션 · 리깅
+# 태그 맵핑 · 상태 태그 · 가상 태그 시뮬레이션 · 리깅
 
-서버(PLC) 태그 값이 3D 모델의 트랜스폼·관절을 움직이는 경로 전체 — 맵핑 스키마, 값 버스, 가상 태그 러너·시나리오, 리그 정의·드라이버.
+서버(PLC) 태그 값이 3D 모델의 트랜스폼·관절을 움직이고 라벨을 칠하는 경로 전체 — 맵핑 스키마, 상태 태그, 값 버스, 가상 태그 러너·시나리오, 리그 정의·드라이버.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -9,6 +9,8 @@
 | 관심사 | 위치 |
 |---|---|
 | 태그 맵핑 스키마 / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts` |
+| 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/3d/lib/sanitize-status-tags.ts`, `packages/widgets/src/3d/lib/status-tag-editor.ts`, `packages/features/src/3d/model/use-label-preview-store.ts` |
+| 서버 값 → 버스 숫자 | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`) |
 | 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts` |
 | 채널 Δ 적용 / 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/apply-channel.ts`, `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts` |
 | 태그 맵핑 편집 UI(인스펙터 탭) | `packages/widgets/src/3d/ui/tag-mapping-section.tsx`, `packages/widgets/src/3d/ui/tag-key-combobox.tsx`, `packages/widgets/src/3d/lib/tag-mapping-editor.ts`(충돌 판정·기본값, 테스트 대상) |
@@ -34,10 +36,22 @@
 - 같은 대상 중복은 sanitize 가 첫 항목만 남기고(first-wins), 리그 관절이 점유한 노드·축은 드라이버가 관절을 우선한다. 편집 UI 는 둘 다 amber 로 경고한다(`tag-mapping-editor.ts`).
 - 레거시 `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 `tagMappings` 로 변환하고 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` 이며 테스트가 좌표 동일성을 고정한다. 두 필드는 타입에 `@deprecated` 입력 전용으로만 남아 있다.
 
+### 상태 태그 `statusTags`
+
+모델 인스턴스 필드. "상태 역할 하나 ← 태그 하나" 의 객체이고 역할은 `STATUS_TAG_ROLES`(운전 전원·고장·Bypass·Free Swing)다. 노드를 움직이지 않고 라벨의 색·아이콘을 정한다. Bypass·Free Swing 은 화면 문구도 언어와 무관하게 영어다.
+
+- 태그는 `tagMappings` 와 같은 키 공간의 `tagKey` 문자열로 참조한다. 값은 0/1 숫자이고 on 문턱·판정 우선순위는 `docs/agents/3d-play.md` 의 "장비 운전 상태 · 라벨 표시 상태".
+- 연결하지 않은 역할은 키가 없고, 연결된 역할이 없으면 필드가 빠진다. sanitize 는 모르는 역할·문자열이 아닌 값·빈 키를 버리고 역할 순서를 고정한다.
+- 편집은 인스펙터 "태그 매핑" 탭의 목록 아래 구역이다(`tag-mapping-section.tsx` 의 `StatusTagRows`). 역할마다 카드 하나 — 머리줄에 역할 이름과 미리보기 값, 아랫줄에 태그 선택. 연결된 역할은 카드 테두리를 강조한다. 카드 위 한 줄에는 지금 라벨이 그려지는 모양(왼쪽)과 미리보기 초기화 버튼(오른쪽, 항상 보인다)이 있다. 편집 채널은 `updateSelectedStatusTags` 로 `tagMappings` 와 같은 규칙(같은 참조 = no-op)이다.
+- 탭의 두 구역은 화면에서 "트랜스폼"(맵핑 목록)·"상태"(상태 태그)라고 부른다. 각각 접고 펼 수 있고 접힌 채 연다(`inspector-fields.tsx` 의 `CollapsibleSection`, 열림 상태는 탭이 가진다). 제목 옆 개수가 접힌 구역의 내용 유무를 알리고, 내용은 열려 있을 때만 마운트한다.
+- **미리보기**: 역할마다, 그리고 움직임에 값(없음·Off·On)을 고르면 에디터 캔버스의 그 모델 라벨이 고른 값으로 바로 그려진다. 에디터에는 값 생산자가 없어 연결만으로는 라벨이 늘 상태 미확인이기 때문이다. 태그 연결 여부와 무관하고, 판정은 실제 값과 같은 우선순위를 탄다(`resolvePreviewLabelState`). 값은 세션 스토어 `useLabelPreviewStore` 에 있고 대상은 한 번에 모델 하나다.
+- 시뮬레이션·리플레이에서 확인하려면 0/1 범위의 가상 태그를 만들어 연결한다. 시나리오 키프레임은 `hold` 보간을 쓴다.
+
 ### 값 흐름
 
 생산자(가상 태그 러너 / WebSocket 러너 / 리플레이) → `publishTagValue(key, v)`(`tag-value-bus.ts`, 표시용 `tagLiveValues` 캐시) → `useTagBindingSource` 가 건 `createTagBindingSource(resolve)` → `rigValueStore`(smooth) → `useRigDriver`(Canvas 안 `RigDriver`) 가 매 프레임 노드별로 rest 로 되돌린 뒤 채널 Δ 를 누적한다(`apply-channel.ts`).
 
+- 버스는 숫자 전용이다. WebSocket 브리지와 리플레이 스토어는 서버 값을 `toTagNumber` 로 바꿔 싣는다 — boolean 과 `'true'`/`'false'` 문자열은 1/0, 그 밖의 문자열·null 은 버린다.
 - 바인딩은 모니터링 뷰·에디터 모두 화면이 떠 있는 동안 항상 켜 두고 언마운트 시 값 저장소를 비운다.
 - 재생 토글(가상 태그 관리 페이지·3D 플레이 트랜스포트 바)은 러너 틱만 켜고 끈다. 일시정지하면 노드가 마지막 값에 머물고, 초기값 복귀는 리셋 버튼이 한다.
 - 기즈모 드래그 중엔 루트 맵핑을 건너뛴다. 드래그 종료 프레임의 루트 rest handoff 는 `docs/agents/3d-editor.md`.
@@ -91,6 +105,9 @@
 - 태그 값 생산자를 새로 만들면 `publishTagValue` 로만 내보낸다 — 버스가 단일 진입점이고, 표시 캐시·바인딩·운전 상태 판정·3D 플레이 통계가 전부 여기서 갈라진다.
 - 시뮬레이션을 끝내는 코드는 `stopSimulation()` 을 부른다. 스토어 `stop()` 만 부르면 값 저장소·충돌 기록·실시간 보류가 남는다.
 - 같은 대상(노드·채널·축 / 관절)에 맵핑을 두 개 만들지 않는다 — sanitize 가 뒤 항목을 조용히 버린다.
+- 버스에 숫자가 아닌 값을 싣지 않는다. 서버 값의 형식이 늘면 `toTagNumber` 한 곳에서 받는다.
+- 상태 태그를 craneId 규칙으로 유추하지 않는다 — craneId 없는 모델이 있고 사이트마다 태그 코드가 다르다. 씬에 연결된 키만 읽는다.
+- 라벨 미리보기는 씬 데이터·히스토리·태그 값 버스에 쓰지 않는다. 상태 태그 구역을 접거나 탭·선택 모델이 바뀌면 `clear()` 한다 — 남으면 에디터 라벨이 저장된 상태처럼 보인다.
 - 가상 태그 배포 파일 `virtual-tags.json` 을 바꿨으면 커밋한다 — 운영 localStorage 는 `baseVersion` 이 다르면 배포본으로 덮인다.
 - 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·리셋 경로(텔레포트)를 쓴다. seek 는 우회하지 않는다.
 - 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 적분기(`advanceTo`)를 쓴다. seek 에서 목표값을 직접 대입하거나 벽시계 dt 로 적분하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
@@ -109,3 +126,4 @@
 
 - 실서버 태그 합류: `useTagCatalog` 에 `getMonitoringTags()` 결과를 `source:'server'` 로 합치고 WebSocket 러너를 켜는 것. 씬 JSON·맵핑 UI·드라이버는 그대로 둔다.
 - 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 태그만)·dock-in(서버 리플레이만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
+- 상태 태그를 연결한 배포 씬은 없다. 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다).

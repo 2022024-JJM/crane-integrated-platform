@@ -1,4 +1,5 @@
 import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import { RUNTIME_STATUS_KEYS } from './model-runtime-status';
 
 /**
  * 3D 플레이 실행 통계 — 순수 집계. 기록기(use-play3d-stats-recorder)가 재생
@@ -145,9 +146,8 @@ export interface TagStat extends TagAggregate {
 
 export interface Play3dSummary {
   equipmentCount: number;
-  /** 가동·대기 비율 — 분모는 상태를 아는(unknown 제외) 시간. 0 이면 null. */
+  /** 가동 비율 — 분모는 상태를 아는(unknown 제외) 시간. 0 이면 null. */
   runningRatio: number | null;
-  idleRatio: number | null;
   offlineEpisodes: number;
   offlineMs: number;
   /** 속도 한계 도달 비율이 가장 큰 태그(동률은 키 순서 앞). 없으면 null. */
@@ -189,15 +189,11 @@ export interface Play3dStats {
   summary: Play3dSummary;
 }
 
-export const STATUS_KEYS: readonly EquipmentRuntimeStatus[] = [
-  'running',
-  'idle',
-  'offline',
-  'unknown',
-];
+export const STATUS_KEYS: readonly EquipmentRuntimeStatus[] =
+  RUNTIME_STATUS_KEYS;
 
 export function emptyStatusMs(): StatusMs {
-  return { running: 0, idle: 0, offline: 0, unknown: 0 };
+  return { running: 0, standby: 0, off: 0, fault: 0, offline: 0, unknown: 0 };
 }
 
 /** 구간 목록에 하나를 더해 겹침·인접을 합친다(정렬 유지, 새 배열). */
@@ -468,13 +464,11 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
   // 요약
   let knownMs = 0;
   let runningMs = 0;
-  let idleMs = 0;
   let offlineMs = 0;
   let offlineEpisodeTotal = 0;
   for (const eq of equipment) {
     knownMs += eq.totalMs - eq.ms.unknown;
     runningMs += eq.ms.running;
-    idleMs += eq.ms.idle;
     offlineMs += eq.ms.offline;
     offlineEpisodeTotal += eq.offlineEpisodes;
   }
@@ -516,7 +510,6 @@ export function computePlay3dStats(input: Play3dStatsInput): Play3dStats {
     summary: {
       equipmentCount: equipment.length,
       runningRatio: knownMs > 0 ? runningMs / knownMs : null,
-      idleRatio: knownMs > 0 ? idleMs / knownMs : null,
       offlineEpisodes: offlineEpisodeTotal,
       offlineMs,
       saturation: { maxRatio: saturationMax, key: saturationKey },

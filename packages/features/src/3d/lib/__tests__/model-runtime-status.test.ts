@@ -3,10 +3,11 @@ import {
   OFFLINE_WINDOW_MS,
   RUNNING_WINDOW_MS,
   RUNTIME_STATUS_COLORS,
+  RUNTIME_STATUS_KEYS,
   collectModelTagKeys,
   countRuntimeStatuses,
   isSameRuntimeStatusRecord,
-  resolveRuntimeStatus,
+  resolveTagActivity,
   scaleStatusWindows,
   STATUS_WINDOW_FLOOR_MS,
   type TagActivity,
@@ -38,12 +39,12 @@ describe('collectModelTagKeys', () => {
   });
 });
 
-describe('resolveRuntimeStatus', () => {
+describe('resolveTagActivity', () => {
   it('키가 없거나 한 번도 못 받았으면 unknown', () => {
-    expect(resolveRuntimeStatus([], activities({}), NOW)).toBe('unknown');
-    expect(resolveRuntimeStatus(['k'], activities({}), NOW)).toBe('unknown');
+    expect(resolveTagActivity([], activities({}), NOW)).toBe('unknown');
+    expect(resolveTagActivity(['k'], activities({}), NOW)).toBe('unknown');
     expect(
-      resolveRuntimeStatus(
+      resolveTagActivity(
         ['k'],
         activities({ k: { at: NaN, changedAt: NaN } }),
         NOW,
@@ -51,76 +52,158 @@ describe('resolveRuntimeStatus', () => {
     ).toBe('unknown');
   });
 
-  it('변화가 창 안이면 running — 경계 정확값 포함, +1ms 는 idle', () => {
+  it('변화가 창 안이면 moving — 경계 정확값 포함, +1ms 는 still', () => {
     const edge = { at: NOW, changedAt: NOW - RUNNING_WINDOW_MS };
-    expect(resolveRuntimeStatus(['k'], activities({ k: edge }), NOW)).toBe(
-      'running',
+    expect(resolveTagActivity(['k'], activities({ k: edge }), NOW)).toBe(
+      'moving',
     );
     const past = { at: NOW, changedAt: NOW - RUNNING_WINDOW_MS - 1 };
-    expect(resolveRuntimeStatus(['k'], activities({ k: past }), NOW)).toBe(
-      'idle',
+    expect(resolveTagActivity(['k'], activities({ k: past }), NOW)).toBe(
+      'still',
     );
   });
 
-  it('수신이 창 안이면 idle, 넘으면 offline (경계 쌍)', () => {
+  it('수신이 창 안이면 still, 넘으면 offline (경계 쌍)', () => {
     const edge = { at: NOW - OFFLINE_WINDOW_MS, changedAt: 0 };
-    expect(resolveRuntimeStatus(['k'], activities({ k: edge }), NOW)).toBe(
-      'idle',
+    expect(resolveTagActivity(['k'], activities({ k: edge }), NOW)).toBe(
+      'still',
     );
     const past = { at: NOW - OFFLINE_WINDOW_MS - 1, changedAt: 0 };
-    expect(resolveRuntimeStatus(['k'], activities({ k: past }), NOW)).toBe(
+    expect(resolveTagActivity(['k'], activities({ k: past }), NOW)).toBe(
       'offline',
     );
   });
 
-  it('여러 키 중 하나만 움직여도 running, 가장 최근 수신이 기준', () => {
+  it('여러 키 중 하나만 움직여도 moving, 가장 최근 수신이 기준', () => {
     const get = activities({
       a: { at: NOW - 100_000, changedAt: NOW - 100_000 },
       b: { at: NOW - 100, changedAt: NOW - 100 },
     });
-    expect(resolveRuntimeStatus(['a', 'b'], get, NOW)).toBe('running');
+    expect(resolveTagActivity(['a', 'b'], get, NOW)).toBe('moving');
     const stale = activities({
       a: { at: NOW - 100_000, changedAt: NOW - 100_000 },
       b: { at: NOW - 10_000, changedAt: NOW - 100_000 },
     });
-    expect(resolveRuntimeStatus(['a', 'b'], stale, NOW)).toBe('idle');
+    expect(resolveTagActivity(['a', 'b'], stale, NOW)).toBe('still');
+  });
+
+  describe('livenessKeys — 수신만 보는 키', () => {
+    it('수신만 보는 키의 값 변화는 moving 으로 치지 않는다', () => {
+      const get = activities({
+        axis: { at: NOW - 100, changedAt: NOW - 100_000 },
+        bit: { at: NOW - 100, changedAt: NOW - 100 },
+      });
+      expect(
+        resolveTagActivity(['axis'], get, NOW, undefined, ['axis', 'bit']),
+      ).toBe('still');
+    });
+
+    it('움직임 키가 끊겨도 수신만 보는 키가 오고 있으면 offline 이 아니다', () => {
+      const get = activities({
+        axis: { at: NOW - 100_000, changedAt: NOW - 100_000 },
+        bit: { at: NOW - 100, changedAt: NOW - 100_000 },
+      });
+      expect(resolveTagActivity(['axis'], get, NOW)).toBe('offline');
+      expect(
+        resolveTagActivity(['axis'], get, NOW, undefined, ['axis', 'bit']),
+      ).toBe('still');
+    });
+
+    it('움직임 키가 없어도 수신만 보는 키로 상태가 나온다', () => {
+      const get = activities({ bit: { at: NOW, changedAt: NOW } });
+      expect(resolveTagActivity([], get, NOW)).toBe('unknown');
+      expect(resolveTagActivity([], get, NOW, undefined, ['bit'])).toBe(
+        'still',
+      );
+    });
+
+    it('수신 키를 하나도 못 받았으면 움직임 키가 있어도 unknown', () => {
+      const get = activities({ axis: { at: NOW, changedAt: NOW } });
+      expect(resolveTagActivity(['axis'], get, NOW, undefined, [])).toBe(
+        'unknown',
+      );
+    });
+
+    it('생략하면 움직임 키와 같다', () => {
+      const get = activities({ axis: { at: NOW, changedAt: NOW } });
+      expect(resolveTagActivity(['axis'], get, NOW)).toBe(
+        resolveTagActivity(['axis'], get, NOW, undefined, ['axis']),
+      );
+    });
   });
 });
 
 describe('isSameRuntimeStatusRecord / countRuntimeStatuses', () => {
   it('같은 내용이면 true, 키·값 다르면 false', () => {
-    expect(isSameRuntimeStatusRecord({ a: 'idle' }, { a: 'idle' })).toBe(true);
-    expect(isSameRuntimeStatusRecord({ a: 'idle' }, { a: 'running' })).toBe(
+    expect(isSameRuntimeStatusRecord({ a: 'standby' }, { a: 'standby' })).toBe(
+      true,
+    );
+    expect(isSameRuntimeStatusRecord({ a: 'standby' }, { a: 'running' })).toBe(
       false,
     );
     expect(
-      isSameRuntimeStatusRecord({ a: 'idle' }, { a: 'idle', b: 'idle' }),
+      isSameRuntimeStatusRecord(
+        { a: 'standby' },
+        { a: 'standby', b: 'standby' },
+      ),
     ).toBe(false);
     expect(isSameRuntimeStatusRecord({}, {})).toBe(true);
   });
 
-  it('집계 — known 은 unknown 제외', () => {
+  it('집계 — 상태마다 세고 known 은 unknown 제외', () => {
     expect(
       countRuntimeStatuses({
         a: 'running',
         b: 'running',
-        c: 'idle',
-        d: 'offline',
-        e: 'unknown',
+        c: 'standby',
+        d: 'off',
+        e: 'fault',
+        f: 'offline',
+        g: 'unknown',
+        h: 'unknown',
       }),
-    ).toEqual({ running: 2, idle: 1, offline: 1, unknown: 1, known: 4 });
+    ).toEqual({
+      running: 2,
+      standby: 1,
+      off: 1,
+      fault: 1,
+      offline: 1,
+      unknown: 2,
+      known: 6,
+    });
+  });
+
+  it('집계 — 빈 기록은 전부 0', () => {
     expect(countRuntimeStatuses({})).toEqual({
       running: 0,
-      idle: 0,
+      standby: 0,
+      off: 0,
+      fault: 0,
       offline: 0,
       unknown: 0,
       known: 0,
     });
   });
 
-  it('unknown 은 색이 없다(기본 색 유지)', () => {
+  it('집계 — 전부 unknown 이면 known 은 0', () => {
+    expect(countRuntimeStatuses({ a: 'unknown', b: 'unknown' }).known).toBe(0);
+  });
+
+  it('상태 목록은 여섯 가지이고 겹치지 않는다', () => {
+    expect([...RUNTIME_STATUS_KEYS].sort()).toEqual(
+      ['fault', 'off', 'offline', 'running', 'standby', 'unknown'].sort(),
+    );
+    expect(Object.keys(RUNTIME_STATUS_COLORS).sort()).toEqual(
+      [...RUNTIME_STATUS_KEYS].sort(),
+    );
+  });
+
+  it('unknown 은 색이 없고(기본 색 유지) 나머지는 전부 hex', () => {
     expect(RUNTIME_STATUS_COLORS.unknown).toBeNull();
-    expect(RUNTIME_STATUS_COLORS.running).toMatch(/^#/);
+    for (const status of RUNTIME_STATUS_KEYS) {
+      if (status === 'unknown') continue;
+      expect(RUNTIME_STATUS_COLORS[status]).toMatch(/^#[0-9a-f]{6}$/);
+    }
   });
 });
 
@@ -157,13 +240,13 @@ describe('scaleStatusWindows', () => {
     }
   });
 
-  it('resolveRuntimeStatus 가 넓힌 창을 쓴다 — 0.5배속 리플레이의 10초 프레임 간격', () => {
+  it('resolveTagActivity 가 넓힌 창을 쓴다 — 0.5배속 리플레이의 10초 프레임 간격', () => {
     const get = activities({
       k: { at: NOW - 10_000, changedAt: NOW - 10_000 },
     });
-    expect(resolveRuntimeStatus(['k'], get, NOW)).toBe('idle');
-    expect(resolveRuntimeStatus(['k'], get, NOW, scaleStatusWindows(0.5))).toBe(
-      'running',
+    expect(resolveTagActivity(['k'], get, NOW)).toBe('still');
+    expect(resolveTagActivity(['k'], get, NOW, scaleStatusWindows(0.5))).toBe(
+      'moving',
     );
   });
 });

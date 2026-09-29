@@ -42,9 +42,10 @@ import {
  *
  * 값의 출처는 전부 이미 있는 것들이다: 현장 시각은 씬 시계(useSceneSunState,
  * 리플레이면 프레임 시각), 풍속은 현장 좌표의 open-meteo(useSceneWeather),
- * 가동·두절은 태그 활동 기반 운전 상태(useModelRuntimeStatuses — 뷰가 한 번
- * 판정해 넘긴다), 알람은 페이지가 넘긴 크레인별 활성 알람. 클릭할 것이
- * 없어 pointer-events-none — 아래 캔버스 조작을 막지 않는다.
+ * 가동·두절은 운전 상태(useModelStatusRecords — 뷰가 한 번 판정해 넘긴다),
+ * 알람은 페이지가 넘긴 크레인별 활성 알람 — 페이지가 넘기지 않으면 칸을
+ * 숨긴다(0 으로 그리면 "알람 없음"으로 읽힌다). 클릭할 것이 없어
+ * pointer-events-none — 아래 캔버스 조작을 막지 않는다.
  *
  * 각 칸은 [아이콘·작은 라벨 / 큰 값] 세로 2줄이라 값이 먼저 읽힌다. 색
  * 규칙: 풍속은 작업 권고 단계(lib/wind-advisory — 주의 amber·중지 red), 가동은
@@ -64,7 +65,8 @@ const SEVERITY_VALUE_CLASS: Record<AlarmSeverity, string> = {
 interface SceneStatusHudProps {
   regionId: string;
   runtimeStatuses: RuntimeStatusRecord;
-  alarmsByCraneId: Record<string, AlarmSeverity>;
+  /** 없으면 알람 칸을 숨긴다 — 알람을 장면에 그리지 않는 화면. */
+  alarmsByCraneId?: Record<string, AlarmSeverity>;
   /** 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. */
   sceneInfo?: SavedSceneInfo | null;
   /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 3D 플레이). */
@@ -121,9 +123,11 @@ export function SceneStatusHud({
   const hasWind =
     weather?.windSpeed !== null && weather?.windSpeed !== undefined;
 
-  const alarmCranes = Object.keys(alarmsByCraneId).length;
+  const alarmSeverities = alarmsByCraneId
+    ? Object.values(alarmsByCraneId)
+    : null;
   const topSeverity = SEVERITY_ORDER.find((severity) =>
-    Object.values(alarmsByCraneId).includes(severity),
+    alarmSeverities?.includes(severity),
   );
 
   return (
@@ -189,15 +193,17 @@ export function SceneStatusHud({
           valueClassName="text-amber-300"
         />
       ) : null}
-      <HudCell
-        icon={<Bell className="size-3.5" aria-hidden />}
-        label={t('monitoring:hud.alarmsShort')}
-        title={t('monitoring:hud.alarms')}
-        value={String(alarmCranes)}
-        valueClassName={
-          topSeverity ? SEVERITY_VALUE_CLASS[topSeverity] : undefined
-        }
-      />
+      {alarmSeverities ? (
+        <HudCell
+          icon={<Bell className="size-3.5" aria-hidden />}
+          label={t('monitoring:hud.alarmsShort')}
+          title={t('monitoring:hud.alarms')}
+          value={String(alarmSeverities.length)}
+          valueClassName={
+            topSeverity ? SEVERITY_VALUE_CLASS[topSeverity] : undefined
+          }
+        />
+      ) : null}
       {sceneHasZones && zonesEnabled ? (
         <HudCell
           icon={<Radius className="size-3.5" aria-hidden />}

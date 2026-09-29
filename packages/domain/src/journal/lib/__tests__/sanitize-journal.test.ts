@@ -162,15 +162,44 @@ describe('sanitizeStatusJournalEntry', () => {
     regionId: 'dock-1',
     modelId: 'm1',
     equipName: 'GC',
-    from: 'idle',
+    from: 'standby',
     to: 'offline',
   };
 
   it('유효 항목은 같은 참조, 상태 밖 값·결손은 null', () => {
     expect(sanitizeStatusJournalEntry(valid)).toBe(valid);
     expect(sanitizeStatusJournalEntry({ ...valid, to: 'broken' })).toBeNull();
+    expect(sanitizeStatusJournalEntry({ ...valid, from: 1 })).toBeNull();
+    expect(sanitizeStatusJournalEntry({ ...valid, from: null })).toBeNull();
     expect(sanitizeStatusJournalEntry({ ...valid, modelId: '' })).toBeNull();
     expect(sanitizeStatusJournalEntry({ ...valid, at: 'now' })).toBeNull();
     expect(sanitizeStatusJournalEntry(undefined)).toBeNull();
+  });
+
+  it('운전 상태 여섯 가지는 전부 받는다', () => {
+    for (const status of [
+      'fault',
+      'running',
+      'standby',
+      'off',
+      'offline',
+      'unknown',
+    ]) {
+      const entry = { ...valid, from: status };
+      expect(sanitizeStatusJournalEntry(entry)).toBe(entry);
+    }
+  });
+
+  it("예전 저장본의 'idle' 은 unknown 으로 읽는다 — 항목은 살린다", () => {
+    const legacy = { ...valid, from: 'idle', to: 'offline' };
+    expect(sanitizeStatusJournalEntry(legacy)).toEqual({
+      ...valid,
+      from: 'unknown',
+    });
+    expect(
+      sanitizeStatusJournalEntry({ ...valid, from: 'offline', to: 'idle' }),
+    ).toEqual({ ...valid, from: 'offline', to: 'unknown' });
+    // 입력은 바꾸지 않는다.
+    expect(legacy.from).toBe('idle');
   });
 });

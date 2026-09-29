@@ -80,7 +80,25 @@ export function sanitizeAlarmJournalEntry(
 }
 
 const ZONE_LEVELS = new Set(['warn', 'stop']);
-const RUNTIME_STATUSES = new Set(['running', 'idle', 'offline', 'unknown']);
+const RUNTIME_STATUSES = new Set([
+  'fault',
+  'running',
+  'standby',
+  'off',
+  'offline',
+  'unknown',
+]);
+/**
+ * 예전 저장본의 상태 값. 운전 전원을 모르는 멈춘 장비를 따로 부르던 이름이라
+ * 지금의 `unknown` 으로 읽는다.
+ */
+const LEGACY_IDLE_STATUS = 'idle';
+
+function normalizeRuntimeStatus(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  if (value === LEGACY_IDLE_STATUS) return 'unknown';
+  return RUNTIME_STATUSES.has(value) ? value : null;
+}
 
 export function sanitizeZoneJournalEntry(
   raw: unknown,
@@ -117,13 +135,16 @@ export function sanitizeStatusJournalEntry(
     !isFiniteNumber(entry.at) ||
     typeof entry.regionId !== 'string' ||
     !isNonEmptyString(entry.modelId) ||
-    typeof entry.equipName !== 'string' ||
-    typeof entry.from !== 'string' ||
-    !RUNTIME_STATUSES.has(entry.from) ||
-    typeof entry.to !== 'string' ||
-    !RUNTIME_STATUSES.has(entry.to)
+    typeof entry.equipName !== 'string'
   ) {
     return null;
+  }
+  const from = normalizeRuntimeStatus(entry.from);
+  const to = normalizeRuntimeStatus(entry.to);
+  if (from === null || to === null) return null;
+  // 예전 값이 섞인 항목만 새 객체로 바꾼다 — 유효한 입력은 같은 참조.
+  if (from !== entry.from || to !== entry.to) {
+    return { ...entry, from, to } as unknown as StatusJournalEntry;
   }
   return raw as StatusJournalEntry;
 }

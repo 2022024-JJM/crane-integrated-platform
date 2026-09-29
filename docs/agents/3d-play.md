@@ -16,7 +16,7 @@
 | 통계 스토어 / 기록기 | `packages/features/src/3d/model/use-play3d-stats-store.ts`, `model/use-play3d-stats-recorder.ts` |
 | 리포트 패널 | `packages/features/src/3d/ui/play3d-report-panel.tsx` (+ `play3d-report-kpi.tsx`, `play3d-report-timeline.tsx`, `play3d-report-tables.tsx`) |
 | 타임라인·재생바 공용 | 눈금 행 `ui/play3d-tick-row.tsx`, hover 요약 `ui/play3d-hover-summary.tsx`, 분리 트리거 핸들 `@crane/ui/molecules/tooltip-handle` |
-| 장비 운전 상태 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`), 판정 `packages/features/src/3d/lib/model-runtime-status.ts`, 훅 `model/use-model-runtime-statuses.ts` |
+| 장비 운전 상태 · 라벨 표시 상태 | 타입 `packages/core/src/types/status.ts` (`EquipmentRuntimeStatus`, `EquipmentLabelState`), 판정 `packages/features/src/3d/lib/{model-runtime-status,model-label-state}.ts`, 훅 `model/use-model-runtime-statuses.ts` |
 | 리플레이 프레임 시각 | `packages/features/src/3d/model/scene-time-source.ts`, `@crane/domain/monitoring` 의 `parseReplayTimestamp` |
 | 앱 배치 | `apps/{hanwha-ocean,goliath-crane}/src/pages/*/ui/replay-monitoring-view.tsx` (`ResizablePanelGroup` 우측에 리포트) |
 
@@ -56,7 +56,7 @@ i18n 은 `monitoring:play3d.*`.
 - 장비 상태·태그 누적은 단조 누적. 정지(hold) 시간만 벽시계다 — 씬 시간은 정지 중 흐르지 않는다.
 - 영역 체류는 진입~이탈, 미이탈은 창 끝까지, 진입 없는 이탈은 무시. 영역별 `byIntruder` 는 횟수 내림차순이라 첫 항목이 주 침범자다. 영역↔영역 침범은 양쪽 소유자에 거울상으로 기록되어 체류 합에 두 번 들어간다(현재 동작).
 - 장비 행은 상태 누적이 있는 모델 ∪ 상태 전이가 있는 모델. 행마다 두절 횟수 외에 **노출**을 가진다 — 충돌 관여 횟수(사건의 `modelIds`)와 영역 체류(`assignZoneBandsToRows`: 침범자가 행이면 침범자 행, 아니면 소유 모델 행, 둘 다 없으면 버림). 타임라인의 체류 띠가 같은 배정을 쓴다.
-- `summary` 는 KPI 카드용 전체 값 — 가동·대기 비율(분모는 unknown 을 뺀 시간), 두절 횟수·시간 합, 속도 한계 도달 비율이 가장 큰 태그.
+- `summary` 는 KPI 카드용 전체 값 — 가동 비율(분모는 unknown 을 뺀 시간), 두절 횟수·시간 합, 속도 한계 도달 비율이 가장 큰 태그.
 - 회차 = floor(경과 / 시나리오 길이).
 - 태그 `saturatedMs` = 연속 publish 속도가 `limits.maxSpeed` 근처(계수는 파일 상수) 이상인 씬 시간. 시뮬레이션만 — 러너가 한계로 자르므로 "최고 속도" 는 정보가 없다.
 
@@ -81,13 +81,13 @@ i18n 은 `monitoring:play3d.*`.
 `play3d-report-panel.tsx` 가 조립한다. 개요 → 상세 순이고, 같은 사실은 한 자리에서만 보인다.
 
 1. 헤더 — 소스·구간, 창·검사된 구간(창 대비 비율)·회차, 정지가 있었을 때만 정지 횟수·벽시계. 감지가 꺼져 있던 구간 안내와, 씬에 `tagMappings` 가 없을 때의 안내(`collectSceneTagKeys`).
-2. KPI 카드 4장 `play3d-report-kpi.tsx` — 충돌(첫 충돌·최다 쌍) · 영역 침범(정지 등급 수·체류 합) · 가동률(장비 수·대기율) · 소스별 4번째: 리플레이는 통신 두절(횟수·합계), 시뮬레이션은 속도 한계 도달(최대 축). 색은 문제일 때만(충돌·정지 등급 침범은 빨강, 경고 침범·두절·포화는 호박). 스파크라인 없음. 패널 루트가 컨테이너 쿼리 기준이라 넓으면 한 줄 4장, 좁으면 2×2.
+2. KPI 카드 4장 `play3d-report-kpi.tsx` — 충돌(첫 충돌·최다 쌍) · 영역 침범(정지 등급 수·체류 합) · 가동률(장비 수) · 소스별 4번째: 리플레이는 통신 두절(횟수·합계), 시뮬레이션은 속도 한계 도달(최대 축). 색은 문제일 때만(충돌·정지 등급 침범은 빨강, 경고 침범·두절·포화는 호박). 스파크라인 없음. 패널 루트가 컨테이너 쿼리 기준이라 넓으면 한 줄 4장, 좁으면 2×2.
 3. 스윔레인 타임라인 `play3d-report-timeline.tsx` — 장비마다 한 행이고 **사건은 그 행에 겹쳐 그린다**(별도 사건 행 없음). 행 조립은 `timelineRows`.
    - 아래부터 상태 막대(`statusBands`, 색 `PLAY3D_STATUS_FILL`, 창 끝까지) → 영역 체류 = **상태 막대와 같은 높이·위치의 노란 박스**(`zoneBands` → `assignZoneBandsToRows`, 등급 무관, 체류 중엔 상태 색을 덮는다, 미이탈은 오른쪽 어두운 점선 가장자리) → 충돌 = 빨간 각진 세로 선(`assignCollisionsToRows`, 부딪힌 두 장비 행 모두) → 현재 위치 세로선. 이 DOM 순서가 hover 우선순위(충돌 > 체류 > 상태)다. 사건(체류·충돌)은 실행 전체(`allEvents`)를 그리고 현재 위치 뒤에서 시작한 것은 흐리게(고스트) — 재생바와 같다. 열린 띠는 `runEndMs`(창 끝·마지막 사건·닿은 지점의 최대)까지. 검사 안 된 구간은 트랙 바탕색 그대로, 검사된 구간만 밝게 덮는다. 축 클릭 = `msAtFraction` 으로 seek. HTML 절대 배치 % 라 SVG 늘림이 없다.
    - 장비 이름 열은 고정이고 오른쪽 트랙 영역만 가로 스크롤러다(스크롤바가 이름 열 아래로 뻗지 않는다). 시간 눈금 행은 트랙 위. 안쪽 세로 스크롤은 없고 패널이 세로로 스크롤한다. 장비가 없으면 "데이터 없음".
    - 축이 `TIMELINE_FIT_MS` 를 넘으면 트랙이 `timelineTrackScale` 배로 넓어진다(`timelineContentWidth`). 확대된 뒤에는 px/ms 가 일정해 축이 자라도 표식은 제자리다.
    - 재생 위치 따라가기는 `timelineFollowScroll` 이 판단한다. 재생 중에는 보이던 커서가 벗어날 때만 넘기고(오른쪽 이탈은 한 페이지, 뒤로 점프는 가운데) 사용자가 직접 스크롤해 둔 위치는 되돌리지 않는다(`onScroll` 이 `timelineCursorInView` 로 갱신, ▶ 전이가 다시 무장). 일시정지 중에는 화면 밖 커서를 가운데로 보인다. 자라는 축은 오른쪽 끝에 붙어 따라간다.
-   - 범례는 가동·대기·(리플레이) 두절·영역 체류(노란 박스 견본)·충돌. 상태 색은 `PLAY3D_STATUS_FILL` 을, 박스는 `PLAY3D_DWELL_BOX_CLASS` 를 그대로 읽는다.
+   - 범례는 운전 상태·영역 체류(노란 박스 견본)·충돌. 운전 상태는 가동을 항상 올리고 나머지는 이번 실행에서 시간이 쌓인 것만 올린다(`legendStatuses`, 두절은 리플레이만). 상태 색은 `PLAY3D_STATUS_FILL` 을, 박스는 `PLAY3D_DWELL_BOX_CLASS` 를 그대로 읽는다.
 4. 접이식 상세 — 네이티브 `details` 네 개(사건만 기본 펼침), 제목 옆에 요약 한 줄. 사건 목록(종류 필터 칩 `PLAY3D_EVENT_FILTERS`, 클릭 = seek — 리플레이는 한 프레임·시뮬레이션은 조금 앞, `markerSeekLeadMs`) · 장비 표(적층 비율 막대·가동%·두절·영역 체류·충돌 관여) · 영역 표(체류 막대·진입·주 침범자, 영역 사건이 없으면 섹션 생략) · 축 표(`tagRowLabel` 로 이름·단위, range bar `tagRangeBar` — 시뮬레이션은 가상 태그 정의 min~max 기준·리플레이는 관측 범위, 이동량, 포화는 시뮬레이션만). 표마다 헤더 행이 있다.
 
 표·목록 컴포넌트는 `play3d-report-tables.tsx`(컴포넌트만). 행 변환·비율/위치 환산·라벨 해석은 `lib/play3d-format.ts` 에 둔다(react-refresh 규칙, ui 수치 계산 금지). 차트는 전부 인라인 SVG/DIV 다.
@@ -100,13 +100,18 @@ i18n 은 `monitoring:play3d.*`.
 - **노란 박스 = 영역 체류**: 채움·링과 미이탈 가장자리는 `PLAY3D_DWELL_BOX_CLASS`·`PLAY3D_DWELL_OPEN_CLASS`, hover 요약의 영역 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS` 한 곳이고 타임라인·재생바·범례·툴팁이 함께 읽는다. 등급은 hover 요약·KPI·영역 표에서 본다. 빨강은 충돌 선에만.
 - **hover 요약은 즉시**: 화면마다 툴팁 하나에 트리거 여럿(base-ui 분리 트리거 — `createTooltipHandle`, 트리거가 `payload` 로 `Play3dHoverPayload` 를 넘긴다, 지연 0, 팝업 애니메이션 없음). 내용은 `Play3dHoverSummary` — 충돌(시각·[장비] ↔ [장비] 배지 쌍 `CollisionPair`·같은 쌍의 순번 `collisionSummaries`), 영역 체류(등급·영역 이름을 단 점선 상자 안에 [침범자] 배지 `ZoneFrame`·구간 `formatBandSpan`), 상태 막대(장비 · 상태·구간), 재생바의 정지·두절(시각·대상). 영역은 포함 관계라 화살표를 쓰지 않고, 프레임 점선은 `PLAY3D_DWELL_FRAME_CLASS`. 영역 이름 라벨은 툴팁 글자 그대로이며 흐름 안에서 음수 위 여백으로 테두리에 걸친다(절대 배치면 프레임 폭이 배지 폭으로 정해져 긴 이름이 잘린다). 이름 배지는 프레임과 같은 작은 모서리의 테두리 없는 칩이고, 툴팁 판이 `bg-foreground` 라 판 색을 뒤집은 채움이다. 사건 시각은 `eventTimeLabel` — 리플레이는 그 프레임의 실제 시각. 팝업은 body 로 포털돼 트랙의 `overflow-hidden` 에 잘리지 않는다.
 
-### 장비 운전 상태
+### 장비 운전 상태 · 라벨 표시 상태
 
-- `EquipmentRuntimeStatus` = running · idle · offline · unknown (`@crane/core/types/status`).
-- PLC 상태 태그가 아니라 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 tagKey 들로 모아 판정한다(`model-runtime-status.ts`, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). craneId 없는 필리 모델도 맵핑만 있으면 상태가 나온다.
-- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링, 같으면 참조를 유지한다. 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다.
-  - 라벨: `@crane/domain/3d` `ModelLabel` 의 `runtimeStatus` prop. 알람이 없으면 배경을 상태색으로 물들이고 이름 앞에 점, offline 은 라벨 흐림. 알람이 있으면 배경은 알람색·점만 남는다.
-- 옵션 `{ paused, timeScale }`: 정지 중 재판정을 건너뛰고 창을 1/배속(`scaleStatusWindows`)으로 조정한다 — 일시정지 뒤 전 장비 두절, 저배속 idle 깜빡임 방지. 기록기와 `Monitoring3dView` 3D 플레이 모드가 같은 옵션을 넘긴다.
+- `EquipmentRuntimeStatus` = fault · running · standby · off · offline · unknown (`@crane/core/types/status`, 순서는 `RUNTIME_STATUS_KEYS`). 앞의 넷은 ACMS 의 Crane ID Box 네 가지다. 라벨·HUD·실행 리포트·저널이 전부 이 여섯 가지를 쓴다 — 화면마다 다른 상태 목록을 두지 않는다.
+- 움직임과 수신은 **태그 값 버스 활동**에서 파생한다. `tag-value-bus.ts` 의 `TagLiveValue.changedAt`(값이 달라진 마지막 시각)과 `at` 을 모델 `tagMappings` 의 tagKey 들로 모아 판정한다(`model-runtime-status.ts` 의 `resolveTagActivity` — moving · still · offline · unknown, 창 `RUNNING_WINDOW_MS` · `OFFLINE_WINDOW_MS`, 테스트 대상). 활동은 운전 상태의 재료일 뿐 화면에 나오지 않는다.
+- **라벨 표시 상태** `EquipmentLabelState` = tone(fault · running · standby · off · offline · unknown) + 아이콘 둘(bypass · freeSwing). 앞의 넷은 ACMS 의 Crane ID Box 네 가지이고, 모델의 상태 태그(`statusTags` — `docs/agents/tag-mapping-rig.md`)로 가른다. 판정·우선순위는 `model-label-state.ts`(`resolveLabelState`, 비트 문턱 `STATUS_BIT_ON_THRESHOLD`, 테스트 대상). tone 이 곧 운전 상태다.
+  - 수신 판정에는 상태 태그 키도 들어가고, 움직임 판정에는 축 태그(`tagMappings`)만 들어간다.
+  - 운전 전원 off 가 움직임보다 앞선다. 받은 적이 없거나 수신이 끊기면 아이콘을 끈다(낡은 값).
+  - 수신은 되지만 운전 전원을 모르는 멈춘 장비는 unknown 이다(색 없음, 아는 아이콘은 그린다). 상태 태그가 없는 씬은 움직일 때만 가동이고 멈추면 unknown 이라, HUD 의 "상태 확인" 수와 리포트 가동률의 분모에도 멈춘 시간이 들어가지 않는다.
+  - 에디터의 미리보기(`docs/agents/tag-mapping-rig.md`)는 같은 우선순위를 고른 값으로 탄다. 모니터링 화면의 판정에는 들어가지 않는다.
+- 훅 `use-model-runtime-statuses.ts` 는 1Hz 폴링이고 `useModelStatusRecords` 가 두 기록을 **같은 판정 한 번**에서 낸다. 운전 상태는 라벨의 tone 그 자체다. 기록마다 같으면 참조를 유지하고, 표시 상태 객체는 내용이 같으면 같은 객체다(`getLabelState`). 맵핑이 없는 모델도 unknown 으로 기록에 들어간다(전 모델). `Monitoring3dView` 가 한 번 부르고 라벨·관제 HUD 가 공유한다. `useModelRuntimeStatuses` 는 운전 상태만 돌려주는 같은 훅이다(통계 기록기).
+  - 라벨: `@crane/domain/3d` `ModelLabel` 의 `state` prop. 상자 색이 곧 tone 이다. 고장·가동·운전 전원 On·Off 는 ACMS 매뉴얼의 Crane ID Box 그대로(그림에서 뽑은 색, 검은 테두리)이고 통신두절·미확인은 기존 색이다. 통신두절만 이름 앞에 끊김 아이콘을 두고 흐리게 한다. Bypass·Free Swing 은 상자 안 이름 뒤의 흰 칩에 붉은 아이콘으로 그린다. 알람이 있으면 상자는 알람색이 되고 그동안만 tone 이 이름 앞 점으로 옮겨 간다. 거리 숨김·축소에서 빠지는 것은 알람 라벨뿐이다. 툴팁 문구는 `titles` prop 으로 호출자가 번역해 넘긴다.
+- 옵션 `{ paused, timeScale }`: 정지 중 재판정을 건너뛰고 창을 1/배속(`scaleStatusWindows`)으로 조정한다 — 일시정지 뒤 전 장비 두절, 저배속에서 프레임 사이마다 멈춘 것으로 깜빡이는 것 방지. 기록기와 `Monitoring3dView` 3D 플레이 모드가 같은 옵션을 넘긴다.
 
 ### HUD 연결 칸
 
@@ -118,12 +123,14 @@ i18n 은 `monitoring:play3d.*`.
 
 ## 불변식
 
-- `RUNTIME_STATUS_COLORS`(hex, `model-runtime-status.ts`)와 `ModelLabel` 의 Tailwind 상태색 클래스는 **두 곳을 함께 바꾼다**. `PLAY3D_STATUS_FILL` 은 리포트 전용 팔레트다 — 가동만 전역 색을 공유하고 대기·두절은 트랙 위에서 면으로 읽히는 회색 계열이며, 타임라인 밴드·장비 표 적층 막대·범례가 이 상수 하나를 읽는다.
+- 운전 상태와 라벨 표시 상태를 따로 판정하지 않는다. 운전 상태는 라벨의 tone 이다 — 따로 판정하면 HUD 의 가동 수와 녹색 라벨 수가 어긋난다.
+- `RUNTIME_STATUS_COLORS`(hex, `model-runtime-status.ts`)의 가동 색과 `ModelLabel` 의 가동 색 클래스는 **두 곳을 함께 바꾼다** — 3D 플레이에서 라벨과 리포트가 한 화면에 있다. `PLAY3D_STATUS_FILL` 은 리포트 전용 팔레트다 — 가동만 라벨 색을 공유한다. 운전 전원 On·고장은 라벨의 황·적을 쓰지 않는다(타임라인에서 노랑은 영역 체류 박스, 빨강은 충돌 선). 타임라인 밴드·장비 표 적층 막대·범례가 이 상수 하나를 읽는다.
 - 통계 스토어 `data` 는 제자리 갱신 + `version` bump 만. publish 마다 setState 금지.
 - 사건 시각은 트랜스포트 위치를 구독 콜백 안에서 동기로 읽는다. 스토어의 벽시계 `at` 을 쓰지 않는다.
 - 시간을 바꾸는 코드(바·마커·리포트 seek·정지 재개)는 `Play3dTransport` 하나만 통한다. 리플레이 러너·가상 태그 러너를 직접 부르지 않는다.
 - 소스 전환은 상태 전환으로 유지한다. `key={source}` 리마운트는 `useSceneData` 진입의 resetReplay 로 프레임을 잃고 loadFrames effect 가 다시 돌지 않는다.
-- `RUNNING_WINDOW_MS` 는 리플레이 프레임 간격보다 넓어야 한다. 좁으면 프레임 사이마다 idle 로 떨어진다.
+- `RUNNING_WINDOW_MS` 는 리플레이 프레임 간격보다 넓어야 한다. 좁으면 프레임 사이마다 멈춘 것으로 떨어진다.
+- 두절 진입·복귀를 거를 때 직전 상태가 unknown 인 것만으로 빼지 않는다. 직전 기록에 없던 모델의 첫 판정만 뺀다 — 운전 전원을 모르는 멈춘 장비도 unknown 이라 그 장비의 unknown → offline 은 실제 두절이다(기록기·`status-journal-map.ts` 같은 규칙).
 - 새 실행의 시작은 `reset(meta)` 한 곳. 뒤로 seek·resetValues 에서 reset 하지 않는다.
 - 리포트 행 변환·상수는 `lib/play3d-format.ts` 에, `ui/*.tsx` 에는 컴포넌트만.
 - 새 사건 종류를 추가하면 `PLAY3D_EVENT_FILTERS`·`PLAY3D_EVENT_COLORS`·`Play3dHoverPayload`·`computePlay3dStats` 창 필터를 함께 고치고, 재생바에 선으로 그릴 것이면 `PLAY3D_MARKER_KINDS` 에 넣는다.
@@ -164,6 +171,12 @@ i18n 은 `monitoring:play3d.*`.
 - 재생 중 사용자가 스크롤해 둔 타임라인 위치를 커서로 되돌리기 — 지난 구간을 살펴보는 중에 화면이 튄다.
 - 소스 전환 시 뷰 리마운트(위 불변식).
 - 정지 중·저배속에서 운전 상태를 실시간과 같은 창으로 판정하는 것 — `paused`·`timeScale` 옵션이 그 대안.
+- 상자 색이 상태를 나타내는데 이름 앞에 같은 색 점을 또 두는 것 — ACMS 에 없는 표시이고 같은 정보를 두 번 그린다. 점은 알람이 상자 색을 차지한 동안에만 쓴다.
+- 고장·Bypass 라벨을 거리 축소에서 빼는 것 — 그 라벨만 커 보인다. 상태는 색과 아이콘으로만 나타낸다.
+- Bypass 아이콘의 흐려졌다 밝아지는 애니메이션(`animate-pulse`) — 그라데이션처럼 보인다.
+- Bypass·Free Swing 아이콘을 상자 밖에 두는 것 — 상자 안의 흰 칩이 더 잘 읽힌다.
+- 운전 전원을 모르는 멈춘 장비를 따로 부르는 상태("대기") — ACMS 의 Crane ID Box 에 없다. 라벨·HUD·리포트·저널 어디에도 두지 않는다. 그 장비는 unknown 이다.
+- 화면마다 다른 상태 목록 — 라벨은 여섯 가지인데 리포트는 네 가지인 식으로 나누면 같은 장비가 화면마다 다른 이름으로 불린다.
 
 ## 미룬 것
 

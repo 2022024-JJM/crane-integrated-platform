@@ -36,6 +36,9 @@ export {
   getTagMappingUnit,
   TAG_MAPPING_CHANNELS,
 } from './model/tag-mapping-types';
+export { sanitizeModelStatusTags } from './lib/sanitize-status-tags';
+export { STATUS_TAG_ROLES } from './model/status-tag-types';
+export type { ModelStatusTags, StatusTagRole } from './model/status-tag-types';
 export type {
   TagMapping,
   TagMappingChannel,
@@ -241,6 +244,7 @@ export type {
   CraneZoneRegion,
 } from './model/crane-zone-config';
 export { GltfModel } from './ui/gltf-model';
+export type { ModelLabelTitles } from './ui/model-label';
 export type { ModelShading } from './ui/model-mesh';
 export { ModelSelectionBox } from './ui/model-selection-box';
 export { ObjectSilhouetteOutline } from './ui/object-silhouette-outline';

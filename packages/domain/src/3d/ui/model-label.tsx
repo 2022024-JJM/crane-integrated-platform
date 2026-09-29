@@ -1,9 +1,13 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import { KeyRound, RefreshCw, WifiOff } from 'lucide-react';
 import { useRef } from 'react';
 import { Vector3, type Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { EquipmentRuntimeStatus } from '@crane/core/types/status';
+import type {
+  EquipmentLabelState,
+  EquipmentRuntimeStatus,
+} from '@crane/core/types/status';
 
 /**
  * 이 거리(world units, 카메라 ↔ 라벨 위치)를 초과하면 라벨 DOM을 숨긴다.
@@ -18,7 +22,8 @@ const LABEL_VISIBILITY_DISTANCE = 1000;
  * 멀어질수록 REF/dist 비율로 줄어들되 MIN 밑으로는 내려가지 않는다.
  * 순수 원근 스케일(distanceFactor)과 달리 근접 시 라벨이 과도하게
  * 커지지 않고, 원거리에서도 최소 가독 크기를 유지한다.
- * 알람 라벨은 시인성이 우선이라 축소하지 않는다.
+ * 알람 라벨은 시인성이 우선이라 축소하지 않는다. 표시 상태(고장·Bypass)는
+ * 크기를 바꾸지 않는다 — 상태는 색과 아이콘으로만 나타낸다.
  */
 const LABEL_SCALE_REF_DISTANCE = 300;
 const LABEL_MIN_SCALE = 0.45;
@@ -33,26 +38,56 @@ const ALARM_LABEL_CLASS: Record<AlarmHighlightSeverity, string> = {
 };
 
 /**
- * 운전 상태 표시 — features/3d lib/model-runtime-status.ts 의
- * RUNTIME_STATUS_COLORS(hex) 와 같은 팔레트(emerald·sky·zinc). 알람이 없을 때
- * 라벨 배경을 상태색으로 물들이고 이름 앞에 점을 둔다(점만으로는 먼 거리에서
- * 읽히지 않았다). 알람이 있으면 배경은 알람색, 점만 남는다. unknown 은 기본
- * 검정 배경·점 없음.
+ * 표시 상태 색 — 판정은 features/3d lib/model-label-state.ts. 알람이 없으면
+ * 라벨 배경이 곧 상태다(점 없음 — 같은 정보를 두 번 그리지 않는다). 알람이
+ * 있으면 배경은 알람색이 차지하므로 상태는 이름 앞 점으로만 남는다. unknown 은
+ * 기본 검정 배경.
+ *
+ * 고장·가동·운전 전원 On·Off 는 ACMS 매뉴얼의 Crane ID Box 그대로다 — 그림에서 뽑은
+ * 색(적·녹·황·회), 검은 테두리, 글자는 적색만 흰색이고 나머지는 검정. 가동
+ * 색은 features/3d lib/model-runtime-status.ts 의 RUNTIME_STATUS_COLORS 와
+ * 함께 바꾼다. 통신두절은 ACMS 에 없는 상태라 기존 색(zinc)을 쓴다. 꺼짐과
+ * 통신두절은 둘 다 회색이라 통신두절만 흐리고 이름 앞에 끊김 아이콘을 둔다.
  */
-const RUNTIME_STATUS_DOT_CLASS: Record<
-  Exclude<EquipmentRuntimeStatus, 'unknown'>,
+const LABEL_TONE_DOT_CLASS: Record<
+  Exclude<EquipmentRuntimeStatus, 'offline' | 'unknown'>,
   string
 > = {
-  running: 'bg-emerald-300',
-  idle: 'bg-sky-200',
-  offline: 'bg-zinc-300',
+  fault: 'bg-[#ff0000]',
+  running: 'bg-[#3ab426]',
+  standby: 'bg-[#ffff00]',
+  off: 'bg-[#a6a6a6]',
 };
-const RUNTIME_STATUS_LABEL_CLASS: Record<EquipmentRuntimeStatus, string> = {
-  running: 'bg-emerald-700/90 text-white ring-1 ring-emerald-300/60',
-  idle: 'bg-sky-800/90 text-white ring-1 ring-sky-300/50',
+const LABEL_TONE_CLASS: Record<EquipmentRuntimeStatus, string> = {
+  fault: 'border border-black bg-[#ff0000] text-white',
+  running: 'border border-black bg-[#3ab426] text-black',
+  standby: 'border border-black bg-[#ffff00] text-black',
+  off: 'border border-black bg-[#a6a6a6] text-black',
   offline: 'bg-zinc-700/90 text-zinc-100 ring-1 ring-zinc-400/60',
   unknown: 'bg-black/60 text-white',
 };
+
+/**
+ * Bypass·Free Swing 아이콘 칩 — 상자 안, 이름 뒤. 흰 바탕이라 어떤 상자 색
+ * 위에서도(적색 포함) 붉은 아이콘이 읽힌다. 아이콘 색은 둘 다 ACMS 기호의
+ * 붉은색이다.
+ */
+const LABEL_BADGE_CLASS =
+  'inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm bg-white ring-1 ring-black/30';
+const LABEL_BADGE_ICON_CLASS = 'size-2.5 text-[#ff152d]';
+
+const UNKNOWN_STATE: EquipmentLabelState = {
+  tone: 'unknown',
+  bypass: false,
+  freeSwing: false,
+};
+
+/** 라벨의 툴팁 문구 — 라벨은 i18n 을 모르므로 호출자가 번역해 넘긴다. */
+export interface ModelLabelTitles {
+  tone: Record<EquipmentRuntimeStatus, string>;
+  bypass: string;
+  freeSwing: string;
+}
 
 interface ModelLabelProps {
   id: string;
@@ -66,11 +101,13 @@ interface ModelLabelProps {
   localAnchor: Vector3Tuple;
   alarmSeverity?: AlarmHighlightSeverity | null;
   /**
-   * 운전 상태(태그 활동 기반, features 가 판정해 넘긴다). 이름 앞 작은 점으로
-   * 표시하고 offline 은 라벨을 살짝 흐리게 — 알람 배경색과 겹쳐도 점은
-   * 남는다. 생략·unknown 이면 점 없음.
+   * 표시 상태(features 가 판정해 넘긴다). tone 은 상자 색이고, 알람이 상자를
+   * 차지한 동안만 이름 앞 점으로 옮겨 간다. Bypass 는 열쇠, Free Swing 은 회전
+   * 아이콘으로 상자 안 이름 뒤에 붙는다. 생략·unknown 이면 기본 색.
    */
-  runtimeStatus?: EquipmentRuntimeStatus;
+  state?: EquipmentLabelState;
+  /** 상태·아이콘 툴팁 문구. 없으면 툴팁 없이 그린다. */
+  titles?: ModelLabelTitles;
   /**
    * 흐림 표시. 모니터링 포커스 중 포커스 밖 모델의 라벨 — 모델 본체가
    * 투명해지는 것과 맞춰 라벨도 흐리게 하고 포인터 이벤트를 끊는다(클릭·
@@ -88,7 +125,8 @@ export function ModelLabel({
   equipName,
   localAnchor,
   alarmSeverity = null,
-  runtimeStatus = 'unknown',
+  state = UNKNOWN_STATE,
+  titles,
   dimmed = false,
   onSelect,
   onHoverStart,
@@ -100,10 +138,11 @@ export function ModelLabel({
   const tempWorldPos = useRef(new Vector3());
   const lastVisibleRef = useRef(true);
   const lastScaleRef = useRef(1);
+  const { tone, bypass, freeSwing } = state;
 
   // 카메라 거리에 따라 라벨을 숨긴다. setState 대신 ref 기반 style mutate라
   // React 리렌더가 발생하지 않는다. 알람이 활성화된 라벨은 항상 보여준다.
-  useFrame((state) => {
+  useFrame((frame) => {
     const div = divRef.current;
     const group = groupRef.current;
     if (!div || !group) return;
@@ -123,7 +162,7 @@ export function ModelLabel({
     // group은 primitive(clone)의 자식이므로 부모 transform이 적용된 worldMatrix
     // 를 갖는다. getWorldPosition이 그 결과를 추출.
     group.getWorldPosition(tempWorldPos.current);
-    const dist = state.camera.position.distanceTo(tempWorldPos.current);
+    const dist = frame.camera.position.distanceTo(tempWorldPos.current);
     const visible = dist <= LABEL_VISIBILITY_DISTANCE;
     if (visible !== lastVisibleRef.current) {
       div.style.display = visible ? '' : 'none';
@@ -151,7 +190,8 @@ export function ModelLabel({
       <Html center zIndexRange={[5, 0]}>
         <div
           ref={divRef}
-          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : RUNTIME_STATUS_LABEL_CLASS[runtimeStatus]} ${dimmed ? 'pointer-events-none opacity-30' : runtimeStatus === 'offline' && !alarmSeverity ? 'cursor-pointer opacity-70' : 'cursor-pointer'}`}
+          title={titles?.tone[tone]}
+          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${dimmed ? 'pointer-events-none opacity-30' : tone === 'offline' && !alarmSeverity ? 'cursor-pointer opacity-70' : 'cursor-pointer'}`}
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
@@ -188,13 +228,25 @@ export function ModelLabel({
                 }
           }
         >
-          {runtimeStatus !== 'unknown' ? (
+          {tone === 'offline' ? (
+            <WifiOff aria-hidden className="size-3 shrink-0" />
+          ) : alarmSeverity && tone !== 'unknown' ? (
             <span
               aria-hidden
-              className={`inline-block size-2 shrink-0 rounded-full ring-1 ring-black/40 ${RUNTIME_STATUS_DOT_CLASS[runtimeStatus]}`}
+              className={`inline-block size-2 shrink-0 rounded-full ring-1 ring-black/40 ${LABEL_TONE_DOT_CLASS[tone]}`}
             />
           ) : null}
           {equipName}
+          {bypass ? (
+            <span title={titles?.bypass} className={LABEL_BADGE_CLASS}>
+              <KeyRound aria-hidden className={LABEL_BADGE_ICON_CLASS} />
+            </span>
+          ) : null}
+          {freeSwing ? (
+            <span title={titles?.freeSwing} className={LABEL_BADGE_CLASS}>
+              <RefreshCw aria-hidden className={LABEL_BADGE_ICON_CLASS} />
+            </span>
+          ) : null}
         </div>
       </Html>
     </group>

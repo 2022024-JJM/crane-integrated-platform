@@ -39,6 +39,7 @@ export {
   mapReplayResponseToRows,
 } from './lib/replay-mapper';
 export { isRealtimeCraneLiteMessage } from './lib/realtime-monitoring';
+export { toTagNumber } from './lib/tag-number';
 export { formatReplayTimestamp } from './lib/format-replay-timestamp';
 export { parseReplayTimestamp } from './lib/parse-replay-timestamp';
 export { getReplayFrameDurationsMs } from './lib/parse-interval';

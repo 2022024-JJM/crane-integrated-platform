@@ -1,10 +1,12 @@
-import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { AlertTriangle, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getDrivenJointIds,
   getTagMappingUnit,
   modelObjectRegistry,
+  STATUS_TAG_ROLES,
   TAG_MAPPING_CHANNELS,
+  type ModelStatusTags,
   type RigDefinition,
   type SavedModelInfo,
   type TagMapping,
@@ -12,15 +14,26 @@ import {
 import {
   rigLiveReadouts,
   tagLiveValues,
+  useLabelPreview,
+  useLabelPreviewState,
+  useLabelPreviewStore,
   useRigLivePoll,
 } from '@crane/features/3d';
 import { cn } from '@crane/core/lib/utils';
+import type { EquipmentLabelState } from '@crane/core/types/status';
 import { Button } from '@crane/ui/atoms/button';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
   type ModelNodeOption,
 } from '../lib/model-node-tree';
+import {
+  PREVIEW_CHOICES,
+  describeLabelState,
+  fromPreviewChoice,
+  setStatusTag,
+  toPreviewChoice,
+} from '../lib/status-tag-editor';
 import {
   computeAppliedValue,
   createTagMapping,
@@ -32,10 +45,11 @@ import {
 import { FIELD_SELECT } from './inspector-field-classes';
 import {
   AxisSegment,
+  ChoiceSegment,
+  CollapsibleSection,
   Field,
   NodeSelect,
   NumberField,
-  SubHeader,
   type InspectorT,
 } from './inspector-fields';
 import { TagKeyCombobox } from './tag-key-combobox';
@@ -51,15 +65,32 @@ import { TagKeyCombobox } from './tag-key-combobox';
  * 편집은 전부 onUpdate(updater) 한 채널 — undo/redo·dirty 에 잡힌다. 라이브
  * readout(태그값 → 적용값)은 15Hz 폴링으로 tagLiveValues/rigLiveReadouts 를
  * 읽는다. 중복·리그 충돌 판정은 lib/tag-mapping-editor 가 한다.
+ *
+ * 목록 아래 "상태 태그"는 역할(운전 전원·고장·Bypass·Free Swing)마다 태그
+ * 하나를 잇는 고정 네 줄이다 — 노드를 움직이지 않고 라벨의 색·아이콘을
+ * 정한다. 편집 채널은 onUpdateStatusTags 로 따로지만 규칙은 같다.
+ *
+ * 역할마다 카드 하나다 — 머리줄에 역할 이름과 미리보기 값(없음·Off·On),
+ * 아랫줄에 태그 선택. 카드 위 한 줄에 지금 라벨이 그려지는 모양(왼쪽)과
+ * 미리보기 초기화(오른쪽, 항상 보인다)를 둔다. 값을 고르면 캔버스의 라벨이
+ * 그 값으로 바로 그려진다 — 에디터에는 값 생산자가 없어 연결만으로는 모양을
+ * 볼 수 없다. 미리보기는 세션 상태(features useLabelPreviewStore)라 저장되지
+ * 않고, 구역을 접거나 다른 모델을 고르면 지워진다.
+ *
+ * 화면에서 두 구역의 이름은 "트랜스폼"(맵핑 목록)·"상태"(상태 태그)다. 각각
+ * 접고 펼 수 있고 접힌 채 연다.
  */
 export type TagMappingsUpdater = (mappings: TagMapping[]) => TagMapping[];
+export type StatusTagsUpdater = (tags: ModelStatusTags) => ModelStatusTags;
 
 const NO_MAPPINGS: TagMapping[] = [];
+const NO_STATUS_TAGS: ModelStatusTags = {};
 
 export interface TagMappingSectionProps {
   model: SavedModelInfo;
   rigs: RigDefinition[];
   onUpdate: (updater: TagMappingsUpdater) => void;
+  onUpdateStatusTags: (updater: StatusTagsUpdater) => void;
   t: InspectorT;
 }
 
@@ -309,16 +340,195 @@ function MappingCard({
   );
 }
 
+/** 카드 머리줄의 값 선택 폭 — 카드마다 같은 자리에 선다. */
+const PREVIEW_COLUMN = 'flex w-32 shrink-0';
+
+/** 고른 값이 없을 때 에디터 라벨의 모양 — 값 생산자가 없어 늘 상태 미확인이다. */
+const NO_PREVIEW_STATE: EquipmentLabelState = {
+  tone: 'unknown',
+  bypass: false,
+  freeSwing: false,
+};
+
+/** 역할 하나의 묶음 — 맵핑 카드와 같은 테두리. 연결된 역할은 테두리를 강조한다. */
+function StatusTagCard({
+  linked,
+  children,
+}: {
+  linked: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'bg-muted/30 space-y-1.5 rounded-md border p-2',
+        linked ? 'border-primary/40' : 'border-border',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StatusTagRows({
+  modelId,
+  tags,
+  onUpdate,
+  t,
+}: {
+  modelId: string;
+  tags: ModelStatusTags;
+  onUpdate: (updater: StatusTagsUpdater) => void;
+  t: InspectorT;
+}) {
+  const preview = useLabelPreview(modelId);
+  const previewState = useLabelPreviewState(modelId);
+  const setBit = useLabelPreviewStore((s) => s.setBit);
+  const setMoving = useLabelPreviewStore((s) => s.setMoving);
+  const clearPreview = useLabelPreviewStore((s) => s.clear);
+
+  // 미리보기는 이 구역이 떠 있는 동안, 이 모델에만 — 남아 있으면 라벨이
+  // 저장된 상태처럼 보인다.
+  useEffect(() => clearPreview, [clearPreview, modelId]);
+
+  const bitChoices = PREVIEW_CHOICES.map((value) => ({
+    value,
+    label: t(`monitoring:inspector.statusTags.previewChoices.${value}`),
+  }));
+  const motionChoices = PREVIEW_CHOICES.map((value) => ({
+    value,
+    label: t(`monitoring:inspector.statusTags.motionChoices.${value}`),
+  }));
+  const previewLabel = t('monitoring:inspector.statusTags.preview');
+  const motionLabel = t('monitoring:inspector.statusTags.motion');
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground text-[10px]">
+        {t('monitoring:inspector.statusTags.hint')}
+      </p>
+
+      {/* 지금 라벨이 그려지는 모양(왼쪽)과 미리보기 초기화(오른쪽). 고른 값이
+          없으면 에디터의 라벨은 상태 미확인이다. */}
+      <div className="flex min-h-6 items-center gap-1.5 px-2">
+        <p className="text-foreground min-w-0 flex-1 truncate text-left text-[10px]">
+          {t('monitoring:inspector.statusTags.previewResult', {
+            state: describeLabelState(previewState ?? NO_PREVIEW_STATE, {
+              tone: {
+                fault: t('monitoring:runtimeStatus.fault'),
+                running: t('monitoring:runtimeStatus.running'),
+                standby: t('monitoring:runtimeStatus.standby'),
+                off: t('monitoring:runtimeStatus.off'),
+                offline: t('monitoring:runtimeStatus.offline'),
+                unknown: t('monitoring:runtimeStatus.unknown'),
+              },
+              bypass: t('monitoring:labelState.bypass'),
+              freeSwing: t('monitoring:labelState.freeSwing'),
+            }),
+          })}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground shrink-0"
+          aria-label={t('monitoring:inspector.statusTags.previewReset')}
+          title={t('monitoring:inspector.statusTags.previewReset')}
+          onClick={clearPreview}
+        >
+          <RotateCcw className="size-3.5" />
+        </Button>
+      </div>
+
+      {STATUS_TAG_ROLES.map((role) => {
+        const key = tags[role] ?? '';
+        const roleLabel = t(`monitoring:inspector.statusTags.roles.${role}`);
+        return (
+          <StatusTagCard key={role} linked={key !== ''}>
+            <div className="flex items-center gap-2">
+              <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
+                {roleLabel}
+              </span>
+              <div className={PREVIEW_COLUMN}>
+                <ChoiceSegment
+                  value={toPreviewChoice(preview.bits[role])}
+                  options={bitChoices}
+                  onChange={(choice) =>
+                    setBit(modelId, role, fromPreviewChoice(choice))
+                  }
+                  label={`${roleLabel} ${previewLabel}`}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <TagKeyCombobox
+                value={key}
+                onChange={(next) =>
+                  onUpdate((prev) => setStatusTag(prev, role, next))
+                }
+                className="h-6 rounded-sm text-[11px]"
+                t={t}
+              />
+              {key ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-muted-foreground shrink-0"
+                  aria-label={t('monitoring:inspector.statusTags.clear')}
+                  title={t('monitoring:inspector.statusTags.clear')}
+                  onClick={() =>
+                    onUpdate((prev) => setStatusTag(prev, role, ''))
+                  }
+                >
+                  <X className="size-3.5" />
+                </Button>
+              ) : null}
+            </div>
+          </StatusTagCard>
+        );
+      })}
+
+      {/* 움직임은 태그가 아니라 축 값의 변화다 — 연결할 것이 없어 값만 고른다. */}
+      <StatusTagCard linked={false}>
+        <div className="flex items-center gap-2">
+          <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
+            {motionLabel}
+          </span>
+          <div className={PREVIEW_COLUMN}>
+            <ChoiceSegment
+              value={toPreviewChoice(preview.moving)}
+              options={motionChoices}
+              onChange={(choice) =>
+                setMoving(modelId, fromPreviewChoice(choice))
+              }
+              label={`${motionLabel} ${previewLabel}`}
+            />
+          </div>
+        </div>
+        <p className="text-muted-foreground text-[10px]">
+          {t('monitoring:inspector.statusTags.motionHint')}
+        </p>
+      </StatusTagCard>
+    </div>
+  );
+}
+
 export function TagMappingSection({
   model,
   rigs,
   onUpdate,
+  onUpdateStatusTags,
   t,
 }: TagMappingSectionProps) {
   useRigLivePoll();
+  // 두 구역 모두 접힌 채 연다 — 제목 옆 개수로 내용 유무를 알린다.
+  const [mappingsOpen, setMappingsOpen] = useState(false);
+  const [statusTagsOpen, setStatusTagsOpen] = useState(false);
 
   const rig = rigs.find((r) => r.id === model.rigId);
   const mappings = model.tagMappings ?? NO_MAPPINGS;
+  const statusTags = model.statusTags ?? NO_STATUS_TAGS;
   const root = modelObjectRegistry.get(model.id) ?? null;
   const options = useMemo(
     () => (root ? listModelNodeOptions(buildModelNodeTree(root)) : []),
@@ -346,8 +556,11 @@ export function TagMappingSection({
         {t('monitoring:inspector.mapping.title')}
       </div>
 
-      <SubHeader
+      <CollapsibleSection
         title={t('monitoring:inspector.mapping.list')}
+        count={mappings.length}
+        open={mappingsOpen}
+        onOpenChange={setMappingsOpen}
         action={
           <Button
             type="button"
@@ -356,56 +569,74 @@ export function TagMappingSection({
             className="text-muted-foreground"
             aria-label={t('monitoring:inspector.mapping.add')}
             title={t('monitoring:inspector.mapping.add')}
-            onClick={() => onUpdate((prev) => [...prev, createTagMapping()])}
+            onClick={() => {
+              onUpdate((prev) => [...prev, createTagMapping()]);
+              // 접힌 채 추가하면 새 카드가 보이지 않는다.
+              setMappingsOpen(true);
+            }}
           >
             <Plus className="size-3.5" />
           </Button>
         }
-      />
+      >
+        <div className="space-y-1.5">
+          {mappings.map((mapping) => {
+            const nodeUnresolved =
+              mapping.target.kind === 'node' &&
+              root !== null &&
+              mapping.target.node !== '' &&
+              !knownPaths.has(mapping.target.node);
+            const tagValue = mapping.tagKey
+              ? tagLiveValues.get(mapping.tagKey)?.value
+              : undefined;
+            const applied =
+              mapping.target.kind === 'joint'
+                ? readout?.jointValues.get(mapping.target.jointId)
+                : (readout?.mappingValues.get(mapping.id) ??
+                  computeAppliedValue(mapping, tagValue));
+            return (
+              <MappingCard
+                key={mapping.id}
+                mapping={mapping}
+                rig={rig}
+                options={options}
+                nodesReady={root !== null}
+                conflict={conflicts.get(mapping.id)}
+                unresolved={
+                  nodeUnresolved ||
+                  (readout?.unresolvedMappings.includes(mapping.id) ?? false)
+                }
+                tagValue={tagValue}
+                appliedValue={applied}
+                onChange={(patch) => updateMapping(mapping.id, patch)}
+                onRemove={() =>
+                  onUpdate((prev) => prev.filter((m) => m.id !== mapping.id))
+                }
+                t={t}
+              />
+            );
+          })}
+          {mappings.length === 0 ? (
+            <p className="text-muted-foreground text-[10px]">
+              {t('monitoring:inspector.mapping.empty')}
+            </p>
+          ) : null}
+        </div>
+      </CollapsibleSection>
 
-      <div className="space-y-1.5">
-        {mappings.map((mapping) => {
-          const nodeUnresolved =
-            mapping.target.kind === 'node' &&
-            root !== null &&
-            mapping.target.node !== '' &&
-            !knownPaths.has(mapping.target.node);
-          const tagValue = mapping.tagKey
-            ? tagLiveValues.get(mapping.tagKey)?.value
-            : undefined;
-          const applied =
-            mapping.target.kind === 'joint'
-              ? readout?.jointValues.get(mapping.target.jointId)
-              : (readout?.mappingValues.get(mapping.id) ??
-                computeAppliedValue(mapping, tagValue));
-          return (
-            <MappingCard
-              key={mapping.id}
-              mapping={mapping}
-              rig={rig}
-              options={options}
-              nodesReady={root !== null}
-              conflict={conflicts.get(mapping.id)}
-              unresolved={
-                nodeUnresolved ||
-                (readout?.unresolvedMappings.includes(mapping.id) ?? false)
-              }
-              tagValue={tagValue}
-              appliedValue={applied}
-              onChange={(patch) => updateMapping(mapping.id, patch)}
-              onRemove={() =>
-                onUpdate((prev) => prev.filter((m) => m.id !== mapping.id))
-              }
-              t={t}
-            />
-          );
-        })}
-        {mappings.length === 0 ? (
-          <p className="text-muted-foreground text-[10px]">
-            {t('monitoring:inspector.mapping.empty')}
-          </p>
-        ) : null}
-      </div>
+      <CollapsibleSection
+        title={t('monitoring:inspector.statusTags.title')}
+        count={Object.keys(statusTags).length}
+        open={statusTagsOpen}
+        onOpenChange={setStatusTagsOpen}
+      >
+        <StatusTagRows
+          modelId={model.id}
+          tags={statusTags}
+          onUpdate={onUpdateStatusTags}
+          t={t}
+        />
+      </CollapsibleSection>
     </div>
   );
 }

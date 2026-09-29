@@ -3,6 +3,7 @@ import type { SavedSceneInfo } from '@crane/domain/3d';
 import type { VirtualTagDefinition } from '@crane/domain/virtual-tag';
 import { RUNTIME_STATUS_COLORS } from '../model-runtime-status';
 import {
+  PLAY3D_DRAWN_STATUSES,
   PLAY3D_DWELL_BOX_CLASS,
   PLAY3D_DWELL_OPEN_CLASS,
   PLAY3D_EVENT_COLORS,
@@ -17,6 +18,7 @@ import {
   eventTimeLabel,
   formatBandSpan,
   formatPercent,
+  legendStatuses,
   markerPercent,
   markerSeekLeadMs,
   markerSeekTargetMs,
@@ -43,6 +45,7 @@ import {
   computePlay3dStats,
   emptyStatusMs,
   type Play3dEvent,
+  type StatusMs,
 } from '../play3d-stats';
 
 describe('msAtFraction / markerPercent', () => {
@@ -90,27 +93,96 @@ describe('coverageRatio / percentOf / bandPercent / formatPercent', () => {
 });
 
 describe('statusSharePercents / rangeBarPercent', () => {
-  it('statusSharePercents: unknown 을 뺀 시간 대비 %, 적층 시작 위치, 분모 0 이면 null', () => {
-    const ms = { running: 6000, idle: 3000, offline: 1000, unknown: 5000 };
-    expect(statusSharePercents({ ms, totalMs: 15_000 })).toEqual({
-      running: 60,
-      idle: 30,
-      offline: 10,
-      idleLeft: 60,
-      offlineLeft: 90,
+  const statusMs = (patch: Partial<StatusMs>): StatusMs => ({
+    ...emptyStatusMs(),
+    ...patch,
+  });
+
+  it('statusSharePercents: unknown 을 뺀 시간 대비 %, 적층 시작 위치는 앞선 상태의 합', () => {
+    const ms = statusMs({
+      running: 5000,
+      standby: 2000,
+      off: 1000,
+      fault: 1000,
+      offline: 1000,
+      unknown: 5000,
     });
+    expect(statusSharePercents({ ms, totalMs: 15_000 })).toEqual({
+      running: 50,
+      segments: [
+        { status: 'running', percent: 50, left: 0 },
+        { status: 'standby', percent: 20, left: 50 },
+        { status: 'off', percent: 10, left: 70 },
+        { status: 'fault', percent: 10, left: 80 },
+        { status: 'offline', percent: 10, left: 90 },
+      ],
+    });
+  });
+
+  it('statusSharePercents: 시간이 없는 상태는 조각을 만들지 않는다', () => {
+    const share = statusSharePercents({
+      ms: statusMs({ running: 3000, off: 1000 }),
+      totalMs: 4000,
+    });
+    expect(share?.segments).toEqual([
+      { status: 'running', percent: 75, left: 0 },
+      { status: 'off', percent: 25, left: 75 },
+    ]);
+  });
+
+  it('statusSharePercents: 두절을 빼도 분모와 앞 조각 위치는 그대로', () => {
+    const ms = statusMs({ running: 6000, offline: 4000 });
+    const share = statusSharePercents({ ms, totalMs: 10_000 }, false);
+    expect(share).toEqual({
+      running: 60,
+      segments: [{ status: 'running', percent: 60, left: 0 }],
+    });
+  });
+
+  it('statusSharePercents: 가동이 없으면 가동 0% — 조각은 나머지 상태만', () => {
+    const share = statusSharePercents({
+      ms: statusMs({ standby: 1000 }),
+      totalMs: 1000,
+    });
+    expect(share).toEqual({
+      running: 0,
+      segments: [{ status: 'standby', percent: 100, left: 0 }],
+    });
+  });
+
+  it('statusSharePercents: 아는 시간이 없으면 null — unknown 뿐·전부 0', () => {
     expect(
       statusSharePercents({
-        ms: { running: 0, idle: 0, offline: 0, unknown: 5000 },
+        ms: statusMs({ unknown: 5000 }),
         totalMs: 5000,
       }),
     ).toBeNull();
+    expect(statusSharePercents({ ms: statusMs({}), totalMs: 0 })).toBeNull();
+  });
+
+  it('legendStatuses: 가동은 항상, 나머지는 시간이 쌓인 것만, 순서 고정', () => {
+    expect(legendStatuses([], true)).toEqual(['running']);
     expect(
-      statusSharePercents({
-        ms: { running: 0, idle: 0, offline: 0, unknown: 0 },
-        totalMs: 0,
-      }),
-    ).toBeNull();
+      legendStatuses(
+        [
+          { ms: statusMs({ fault: 1 }) },
+          { ms: statusMs({ standby: 10, offline: 5 }) },
+        ],
+        true,
+      ),
+    ).toEqual(['running', 'standby', 'fault', 'offline']);
+  });
+
+  it('legendStatuses: 두절을 빼는 화면에서는 시간이 쌓였어도 올리지 않는다', () => {
+    expect(
+      legendStatuses([{ ms: statusMs({ off: 1, offline: 5 }) }], false),
+    ).toEqual(['running', 'off']);
+  });
+
+  it('legendStatuses: unknown 만 쌓인 실행은 가동만', () => {
+    expect(legendStatuses([{ ms: statusMs({ unknown: 9000 }) }], true)).toEqual(
+      ['running'],
+    );
   });
   it('rangeBarPercent: 0~1 위치 → %', () => {
     expect(
@@ -480,23 +552,39 @@ describe('PLAY3D_STATUS_FILL / PLAY3D_DWELL_*', () => {
     [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
   const luma = (hex: string) => channels(hex).reduce((a, b) => a + b, 0);
 
-  it('PLAY3D_STATUS_FILL: 리포트 전용 — 가동은 전역 색 그대로, 대기·두절은 서로 다른 회색 계열·대기가 더 밝다, unknown 은 null', () => {
+  it('PLAY3D_STATUS_FILL: 가동은 전역 색 그대로, unknown 은 null, 그리는 상태는 전부 hex', () => {
     expect(PLAY3D_STATUS_FILL.running).toBe(RUNTIME_STATUS_COLORS.running);
     expect(PLAY3D_STATUS_FILL.unknown).toBeNull();
-    const idle = PLAY3D_STATUS_FILL.idle ?? '';
-    const offline = PLAY3D_STATUS_FILL.offline ?? '';
-    for (const hex of [PLAY3D_STATUS_FILL.running ?? '', idle, offline]) {
-      expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    for (const status of PLAY3D_DRAWN_STATUSES) {
+      expect(PLAY3D_STATUS_FILL[status]).toMatch(/^#[0-9a-f]{6}$/);
     }
-    expect(idle).not.toBe(RUNTIME_STATUS_COLORS.idle);
-    // 3D 라벨의 두절이 중립 회색 계열이라 같은 값이면 한 화면에서 뜻이 뒤집힌다.
-    expect(idle).not.toBe(RUNTIME_STATUS_COLORS.offline);
-    expect(idle).not.toBe(offline);
-    expect(luma(idle)).toBeGreaterThan(luma(offline));
-    for (const hex of [idle, offline]) {
+    expect(PLAY3D_DRAWN_STATUSES).not.toContain('unknown');
+  });
+
+  it('PLAY3D_STATUS_FILL: 그리는 상태의 색은 서로 다르다', () => {
+    const fills = PLAY3D_DRAWN_STATUSES.map((s) => PLAY3D_STATUS_FILL[s]);
+    expect(new Set(fills).size).toBe(fills.length);
+  });
+
+  it('PLAY3D_STATUS_FILL: 운전 전원 On·Off·두절은 회색 계열이고 이 순서로 어두워진다', () => {
+    const standby = PLAY3D_STATUS_FILL.standby ?? '';
+    const off = PLAY3D_STATUS_FILL.off ?? '';
+    const offline = PLAY3D_STATUS_FILL.offline ?? '';
+    expect(luma(standby)).toBeGreaterThan(luma(off));
+    expect(luma(off)).toBeGreaterThan(luma(offline));
+    for (const hex of [standby, off, offline]) {
       const c = channels(hex);
       expect(Math.max(...c) - Math.min(...c)).toBeLessThanOrEqual(48);
     }
+  });
+
+  it('PLAY3D_STATUS_FILL: 라벨의 황·적을 쓰지 않는다 — 타임라인에서 영역 체류·충돌의 색이다', () => {
+    expect(PLAY3D_STATUS_FILL.standby).not.toBe(RUNTIME_STATUS_COLORS.standby);
+    expect(PLAY3D_STATUS_FILL.fault).not.toBe(RUNTIME_STATUS_COLORS.fault);
+    const [r, g, b] = channels(PLAY3D_STATUS_FILL.fault ?? '');
+    // 빨강(충돌 선)으로도 노랑(체류 박스)으로도 읽히지 않게 파랑 성분이 크다.
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g);
   });
 
   it('PLAY3D_DWELL_*: 체류는 채운 노란 박스(등급 무관, 사건 점 zoneEnter 와 같은 색) + 어두운 링, 미이탈은 어두운 점선 가장자리', () => {
@@ -572,8 +660,8 @@ describe('timelineRows / transportMarks', () => {
       events: [c2, enter, c1],
       statusTransitions: [
         { atMs: 0, modelId: 'a', from: 'unknown', to: 'running' },
-        { atMs: 0, modelId: 'b', from: 'unknown', to: 'idle' },
-        { atMs: 4000, modelId: 'b', from: 'idle', to: 'unknown' },
+        { atMs: 0, modelId: 'b', from: 'unknown', to: 'standby' },
+        { atMs: 4000, modelId: 'b', from: 'standby', to: 'unknown' },
       ],
       statuses: {
         a: { modelId: 'a', name: 'A', ms: running() },

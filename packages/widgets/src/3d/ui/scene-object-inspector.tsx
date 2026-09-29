@@ -20,6 +20,7 @@ import {
 import { RiggingSection, type RigUpdater } from './rigging-section';
 import {
   TagMappingSection,
+  type StatusTagsUpdater,
   type TagMappingsUpdater,
 } from './tag-mapping-section';
 import { ZoneSection, type ZonesUpdater } from './zone-section';
@@ -130,6 +131,7 @@ export interface InspectorRiggingHandlers {
 export interface InspectorTagMappingHandlers {
   rigs: RigDefinition[];
   onUpdate: (updater: TagMappingsUpdater) => void;
+  onUpdateStatusTags: (updater: StatusTagsUpdater) => void;
 }
 
 interface SceneObjectInspectorProps {
@@ -417,6 +419,7 @@ function ModelInspectorContent({
           model={selectedModel}
           rigs={tagMapping.rigs}
           onUpdate={tagMapping.onUpdate}
+          onUpdateStatusTags={tagMapping.onUpdateStatusTags}
           t={t}
         />
       ) : null}

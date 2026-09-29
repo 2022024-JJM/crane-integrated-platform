@@ -580,3 +580,69 @@ describe('isSceneInfoEqual — 모델 영역(zones)', () => {
     ).toBe(true);
   });
 });
+
+describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
+  const tags = { controlOn: 'A:on', bypass: 'A:bypass' };
+
+  it('역할 추가·삭제·키 변경은 각각 다르다', () => {
+    const base = scene({ models: [model({ statusTags: tags })] });
+    for (const next of [
+      { ...tags, fault: 'A:fault' },
+      { controlOn: 'A:on' },
+      { ...tags, bypass: 'A:other' },
+    ]) {
+      expect(
+        isSceneInfoEqual(
+          base,
+          scene({ models: [model({ statusTags: next })] }),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it('필드가 새로 생기면 다르다 — 빠지면 첫 연결이 저장되지 않는다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model()] }),
+        scene({ models: [model({ statusTags: { freeSwing: 'A:swing' } })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('내용이 같으면 객체·역할 순서가 달라도 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [model({ statusTags: tags })] }),
+        scene({
+          models: [
+            model({ statusTags: { bypass: 'A:bypass', controlOn: 'A:on' } }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('필드 없음·빈 객체·빈 문자열은 같은 상태다', () => {
+    const none = scene({ models: [model()] });
+    expect(
+      isSceneInfoEqual(none, scene({ models: [model({ statusTags: {} })] })),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        none,
+        scene({ models: [model({ statusTags: { controlOn: '' } })] }),
+      ),
+    ).toBe(true);
+  });
+
+  it('스냅샷(JSON)에도 실린다 — 저장 직전 정규화를 거친 값으로', () => {
+    const snapshot = createSceneSnapshot(
+      scene({
+        models: [model({ statusTags: { controlOn: ' A:on ', fault: '' } })],
+      }),
+    );
+    expect(JSON.parse(snapshot ?? '{}').models[0].statusTags).toEqual({
+      controlOn: 'A:on',
+    });
+  });
+});

@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { RIG_AXES, type RigAxis } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -159,6 +160,94 @@ export function SubHeader({
         {title}
       </p>
       {action}
+    </div>
+  );
+}
+
+/**
+ * 접고 펴는 소제목 구역 — SubHeader 와 같은 제목에 chevron 을 붙인 네이티브
+ * details. 우측 액션은 summary 밖에 둔다(안에 두면 버튼 클릭이 접힘을
+ * 토글한다). 열림 상태는 호출자가 가진다 — 액션이 접힌 구역을 펼 수 있게.
+ * 내용은 열려 있을 때만 마운트한다 — 접으면 안쪽 세션 상태가 정리된다.
+ */
+export function CollapsibleSection({
+  title,
+  count,
+  action,
+  open,
+  onOpenChange,
+  children,
+}: {
+  title: string;
+  /** 제목 옆 개수(접혀 있어도 내용 유무가 보인다). */
+  count?: number;
+  action?: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <details
+        className="group"
+        open={open}
+        onToggle={(event) => onOpenChange(event.currentTarget.open)}
+      >
+        <summary className="flex min-h-6 cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+          <ChevronDown
+            aria-hidden
+            className="text-muted-foreground size-3 shrink-0 -rotate-90 transition-transform group-open:rotate-0"
+          />
+          <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+            {title}
+          </span>
+          {count !== undefined ? (
+            <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+              {count}
+            </span>
+          ) : null}
+        </summary>
+        {open ? <div className="mt-1.5">{children}</div> : null}
+      </details>
+      {action ? <div className="absolute top-0 right-0">{action}</div> : null}
+    </div>
+  );
+}
+
+/** 선택지 몇 개 중 하나 — AxisSegment 와 같은 모양, 글자 폭에 맞춘다. */
+export function ChoiceSegment<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div
+      className="flex min-w-0 flex-1 gap-0.5"
+      role="group"
+      aria-label={label}
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          className={cn(
+            'h-6 min-w-0 flex-1 cursor-pointer truncate rounded-sm border px-1 text-[10px]',
+            value === option.value
+              ? 'border-primary/50 bg-primary/15 text-foreground'
+              : 'border-border text-muted-foreground hover:bg-muted',
+          )}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }
