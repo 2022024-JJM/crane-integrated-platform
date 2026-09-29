@@ -1,5 +1,6 @@
 import {
   humanizeModelPath,
+  type RulerPlacement,
   type SavedCameraInfo,
   type SavedLightingInfo,
   type SceneMapCatalogItem,
@@ -35,6 +36,9 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['selectedModel'];
   selectedText: ReturnType<typeof useSelectedSceneObjectEditor>['selectedText'];
+  selectedRuler: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['selectedRuler'];
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
   isSaving: boolean;
   isDirty: boolean;
@@ -71,6 +75,9 @@ interface UseSceneEditorSessionResult {
   updateSelectedTextColor: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTextColor'];
+  updateSelectedRuler: ReturnType<
+    typeof useSelectedSceneObjectEditor
+  >['updateSelectedRuler'];
   updateSelectedTagMappings: ReturnType<
     typeof useSelectedSceneObjectEditor
   >['updateSelectedTagMappings'];
@@ -100,10 +107,18 @@ interface UseSceneEditorSessionResult {
     position: [number, number, number],
   ) => void;
   addText: (position: [number, number, number]) => void;
+  /** 캔버스에서 그린 눈금을 씬에 추가한다(두 점 → 배치는 캔버스가 계산). */
+  addRuler: (
+    placement: RulerPlacement,
+    metersPerUnit: number,
+    name: string,
+  ) => void;
   selectPlacedModel: (id: string) => void;
   selectPlacedText: (id: string) => void;
+  selectPlacedRuler: (id: string) => void;
   deletePlacedModel: (id: string) => void;
   deletePlacedText: (id: string) => void;
+  deletePlacedRuler: (id: string) => void;
   deletePlacedMap: (id: string) => void;
   addSceneMap: (catalogItem: SceneMapCatalogItem) => void;
   selectPlacedMap: (id: string) => void;
@@ -123,6 +138,7 @@ interface UseSceneEditorSessionResult {
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMap: (id: string) => void;
+  toggleRuler: (id: string) => void;
   selectAll: (entries: Array<{ id: string; type: SelectedObjectType }>) => void;
   updateMultiObjectTransforms: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -168,12 +184,18 @@ export function useSceneEditorSession({
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
+  const selectRuler = useSceneObjectSelectionStore(
+    (state) => state.selectRuler,
+  );
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
   const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
+  const toggleRuler = useSceneObjectSelectionStore(
+    (state) => state.toggleRuler,
+  );
   const selectAllStore = useSceneObjectSelectionStore(
     (state) => state.selectAll,
   );
@@ -185,6 +207,7 @@ export function useSceneEditorSession({
   const {
     selectedModel,
     selectedText,
+    selectedRuler,
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
@@ -194,6 +217,7 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
+    updateSelectedRuler,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
@@ -239,6 +263,7 @@ export function useSceneEditorSession({
         selectModel,
         selectText,
         selectMap,
+        selectRuler,
         clearSelectedModel,
         selectedIds,
         sceneInfoRef,
@@ -251,6 +276,7 @@ export function useSceneEditorSession({
       selectModel,
       selectText,
       selectMap,
+      selectRuler,
       clearSelectedModel,
       selectedIds,
       selectAllStore,
@@ -286,10 +312,12 @@ export function useSceneEditorSession({
     selectedModelLabel:
       selectedModel?.equipName.trim() ||
       selectedText?.content.trim() ||
+      selectedRuler?.name.trim() ||
       (selectedMap ? humanizeModelPath(selectedMap.path) : null) ||
       null,
     selectedModel,
     selectedText,
+    selectedRuler,
     selectedMesh,
     isSaving,
     isDirty,
@@ -308,6 +336,7 @@ export function useSceneEditorSession({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
+    updateSelectedRuler,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
     updateSelectedZones,
@@ -322,10 +351,13 @@ export function useSceneEditorSession({
     duplicateSelectedObject: manipulation.duplicateSelectedObject,
     addModel: manipulation.addModel,
     addText: manipulation.addText,
+    addRuler: manipulation.addRuler,
     selectPlacedModel: manipulation.selectPlacedModel,
     selectPlacedText: manipulation.selectPlacedText,
+    selectPlacedRuler: manipulation.selectPlacedRuler,
     deletePlacedModel: manipulation.deletePlacedModel,
     deletePlacedText: manipulation.deletePlacedText,
+    deletePlacedRuler: manipulation.deletePlacedRuler,
     deletePlacedMap: manipulation.deletePlacedMap,
     addSceneMap: manipulation.addSceneMap,
     selectPlacedMap: manipulation.selectPlacedMap,
@@ -338,6 +370,7 @@ export function useSceneEditorSession({
     toggleModel,
     toggleText,
     toggleMap,
+    toggleRuler,
     selectAll: selectAllStore,
     startTransformInteraction: manipulation.startTransformInteraction,
     endTransformInteraction: manipulation.endTransformInteraction,

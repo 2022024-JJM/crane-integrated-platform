@@ -25,6 +25,7 @@ beforeEach(() => {
     transformSpace: 'local',
     transformPivot: 'individual',
     showGrid: false,
+    rulerDrawing: false,
   });
 });
 
@@ -133,5 +134,38 @@ describe('useSceneEditorViewStore — setSnapStep', () => {
   it('snapEnabled 는 단위 변경에 영향받지 않는다 — 켜기는 toggleSnap 만', () => {
     store.getState().setSnapStep('translation', 0.1);
     expect(store.getState().snapEnabled).toBe(false);
+  });
+});
+
+describe('useSceneEditorViewStore — 눈금 그리기 모드', () => {
+  it('꺼진 채로 시작한다', () => {
+    expect(store.getState().rulerDrawing).toBe(false);
+  });
+
+  it('켜고 끈다', () => {
+    store.getState().setRulerDrawing(true);
+    expect(store.getState().rulerDrawing).toBe(true);
+    store.getState().setRulerDrawing(false);
+    expect(store.getState().rulerDrawing).toBe(false);
+  });
+
+  it('같은 값을 다시 설정하면 no-op — 상태 참조 유지', () => {
+    const before = store.getState();
+    store.getState().setRulerDrawing(false);
+    expect(store.getState()).toBe(before);
+
+    store.getState().setRulerDrawing(true);
+    const drawing = store.getState();
+    store.getState().setRulerDrawing(true);
+    expect(store.getState()).toBe(drawing);
+  });
+
+  it('다른 필드를 건드리지 않는다', () => {
+    store.getState().toggleSnap();
+    store.getState().setRulerDrawing(true);
+    const s = store.getState();
+    expect(s.snapEnabled).toBe(true);
+    expect(s.showGrid).toBe(false);
+    expect(s.transformSpace).toBe('local');
   });
 });

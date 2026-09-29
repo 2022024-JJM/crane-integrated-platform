@@ -6,6 +6,7 @@ import { InputNumber } from '@crane/ui/atoms/input-number';
 import type { ModelNodeOption } from '../lib/model-node-tree';
 import {
   FIELD_LABEL,
+  FIELD_LABEL_COMPACT,
   FIELD_SELECT,
   NUMBER_INPUT,
   NUMBER_WRAPPER,
@@ -16,17 +17,25 @@ export type InspectorT = (
   options?: Record<string, unknown>,
 ) => string;
 
-/** 라벨 + 컨트롤 한 줄. 라벨 폭은 고정(w-14)이라 여러 행이 정렬된다. */
+/**
+ * 라벨 + 컨트롤 한 줄. 라벨 폭은 고정(w-14)이라 여러 행이 정렬된다. `compact`
+ * 는 라벨이 짧은 카드용 좁은 라벨 열이다 — 라벨 없는 줄은
+ * FIELD_INDENT_COMPACT 로 들여쓴다.
+ */
 export function Field({
   label,
+  compact = false,
   children,
 }: {
   label: string;
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className={FIELD_LABEL}>{label}</span>
+      <span className={compact ? FIELD_LABEL_COMPACT : FIELD_LABEL}>
+        {label}
+      </span>
       {children}
     </div>
   );

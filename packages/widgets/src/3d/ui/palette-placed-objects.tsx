@@ -5,6 +5,7 @@ import {
   Lock,
   LockOpen,
   Map as MapIcon,
+  Ruler,
   Shapes,
   Trash2,
   Type,
@@ -17,6 +18,7 @@ import {
   parseMeshId,
   type SavedMapInfo,
   type SavedModelInfo,
+  type SavedRulerInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -46,6 +48,7 @@ import {
 interface PalettePlacedObjectsProps {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
+  placedRulers?: SavedRulerInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
   selectedIds: Set<string>;
@@ -53,8 +56,11 @@ interface PalettePlacedObjectsProps {
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText?: (id: string) => void;
   onDeletePlacedText?: (id: string) => void;
+  onSelectPlacedRuler?: (id: string) => void;
+  onDeletePlacedRuler?: (id: string) => void;
   onTogglePlacedModel?: (id: string) => void;
   onTogglePlacedText?: (id: string) => void;
+  onTogglePlacedRuler?: (id: string) => void;
   onTogglePlacedMap?: (id: string) => void;
   onSelectPlacedMap?: (id: string) => void;
   onDeletePlacedMap?: (id: string) => void;
@@ -73,6 +79,7 @@ interface PalettePlacedObjectsProps {
 export function PalettePlacedObjects({
   placedModels,
   placedTexts = [],
+  placedRulers = [],
   placedMaps = [],
   objectSearch = '',
   selectedIds,
@@ -80,8 +87,11 @@ export function PalettePlacedObjects({
   onDeletePlacedModel,
   onSelectPlacedText,
   onDeletePlacedText,
+  onSelectPlacedRuler,
+  onDeletePlacedRuler,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onTogglePlacedRuler,
   onTogglePlacedMap,
   onSelectPlacedMap,
   onDeletePlacedMap,
@@ -184,10 +194,11 @@ export function PalettePlacedObjects({
     return getPlacedObjectItems({
       placedModels,
       placedTexts,
+      placedRulers,
       placedMaps,
       objectSearch,
     });
-  }, [objectSearch, placedMaps, placedModels, placedTexts]);
+  }, [objectSearch, placedMaps, placedModels, placedRulers, placedTexts]);
 
   // 편집 중이던 객체가 삭제·필터링으로 목록에서 사라지면 편집을 접는다.
   useEffect(() => {
@@ -244,6 +255,8 @@ export function PalettePlacedObjects({
                   onSelectPlacedMap?.(targetItem.id);
                 } else if (targetItem.type === 'text') {
                   onSelectPlacedText?.(targetItem.id);
+                } else if (targetItem.type === 'ruler') {
+                  onSelectPlacedRuler?.(targetItem.id);
                 } else {
                   onSelectPlacedModel(targetItem.id);
                 }
@@ -258,6 +271,8 @@ export function PalettePlacedObjects({
                     onTogglePlacedMap?.(item.id);
                   } else if (item.type === 'text') {
                     onTogglePlacedText?.(item.id);
+                  } else if (item.type === 'ruler') {
+                    onTogglePlacedRuler?.(item.id);
                   } else {
                     onTogglePlacedModel?.(item.id);
                   }
@@ -351,6 +366,8 @@ export function PalettePlacedObjects({
                     <MapIcon className={iconClassName} />
                   ) : item.type === 'text' ? (
                     <Type className={iconClassName} />
+                  ) : item.type === 'ruler' ? (
+                    <Ruler className={iconClassName} />
                   ) : (
                     <Box className={iconClassName} />
                   )}
@@ -406,6 +423,8 @@ export function PalettePlacedObjects({
                           onDeletePlacedMap?.(item.id);
                         } else if (item.type === 'text') {
                           onDeletePlacedText?.(item.id);
+                        } else if (item.type === 'ruler') {
+                          onDeletePlacedRuler?.(item.id);
                         } else {
                           onDeletePlacedModel(item.id);
                         }

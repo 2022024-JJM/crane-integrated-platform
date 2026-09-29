@@ -1,6 +1,7 @@
 import {
   SCENE_MODEL_CATEGORIES,
   sceneModelCatalog,
+  type RulerPlacement,
   type SavedLightingInfo,
   type SavedMapInfo,
   type SavedSceneInfo,
@@ -135,6 +136,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     (state) => state.setTransformPivot,
   );
   const toggleGrid = useSceneEditorViewStore((state) => state.toggleGrid);
+  const rulerDrawing = useSceneEditorViewStore((state) => state.rulerDrawing);
+  const setRulerDrawing = useSceneEditorViewStore(
+    (state) => state.setRulerDrawing,
+  );
   // 계층 패널(추가된 객체 리스트) 루트 — 행이 div[role=button]이라 클릭하면
   // 포커스가 여기로 오는데, 이때도 F/Delete가 먹어야 한다.
   const hierarchyRootRef = useRef<HTMLDivElement | null>(null);
@@ -160,6 +165,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     updateSelectedTextContent,
     updateSelectedTextColor,
     selectedText,
+    selectedRuler,
+    updateSelectedRuler,
     selectedMesh,
     updateSelectedTagMappings,
     updateSelectedStatusTags,
@@ -174,10 +181,13 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     duplicateSelectedObject,
     addModel,
     addText,
+    addRuler,
     selectPlacedModel,
     deletePlacedModel,
     selectPlacedText,
     deletePlacedText,
+    selectPlacedRuler,
+    deletePlacedRuler,
     deletePlacedMap,
     addSceneMap,
     selectPlacedMap,
@@ -190,6 +200,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     toggleModel,
     toggleText,
     toggleMap,
+    toggleRuler,
     selectAll,
     updateMultiObjectTransforms,
     startTransformInteraction,
@@ -278,6 +289,32 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     const target = cameraStateRef.current?.target;
     addText(target ? [target[0], target[1], target[2]] : [0, 0, 0]);
   };
+  const metersPerUnit = getSceneMetersPerUnit(regionId);
+  // 눈금 그리기 — 켜는 순간 선택을 비워 기즈모를 내린다(그리는 클릭이 기즈모
+  // 손잡이에 걸리지 않게). 페이지를 떠나면 모드도 끈다(세션 스토어라 남는다).
+  const handleToggleRulerDrawing = () => {
+    if (!sceneInfo) {
+      return;
+    }
+    if (!rulerDrawing) {
+      selectAll([]);
+    }
+    setRulerDrawing(!rulerDrawing);
+  };
+  const handleRulerDraw = (placement: RulerPlacement) => {
+    // 이름은 실제 값으로 저장한다 — 비워 두면 계층 목록이 폴백을 보인다
+    // (영역 "영역 n" 과 같은 규칙).
+    addRuler(
+      placement,
+      metersPerUnit,
+      t('monitoring:editor.rulerName', {
+        index: (sceneInfo?.rulers?.length ?? 0) + 1,
+      }),
+    );
+    setRulerDrawing(false);
+  };
+  useEffect(() => () => setRulerDrawing(false), [setRulerDrawing]);
+
   const hasSelection = selectedIds.size > 0;
   const canDuplicate = useMemo(
     () => hasDuplicableSelection(selectedIds, sceneInfo),
@@ -298,6 +335,18 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
         if (!saveDisabled && !isSaving) {
           void saveCurrentScene();
         }
+        return;
+      }
+
+      // Esc = 눈금 그리기 취소. 아래 입력 대상 검사보다 먼저 본다 — 헤더
+      // 버튼으로 켠 직후에는 포커스가 그 버튼에 있어(isEditableTarget 이
+      // button 을 거른다) 뒤에 두면 Esc 가 먹지 않는다.
+      if (
+        event.code === 'Escape' &&
+        useSceneEditorViewStore.getState().rulerDrawing
+      ) {
+        event.preventDefault();
+        setRulerDrawing(false);
         return;
       }
 
@@ -358,6 +407,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
           ...(currentSceneInfo.texts ?? [])
             .filter((t) => !t.locked)
             .map((t) => ({ id: t.id, type: 'text' as const })),
+          ...(currentSceneInfo.rulers ?? [])
+            .filter((r) => !r.locked)
+            .map((r) => ({ id: r.id, type: 'ruler' as const })),
           ...(currentSceneInfo.maps ?? [])
             .filter((m) => m.locked === false)
             .map((m) => ({ id: m.id, type: 'map' as const })),
@@ -419,6 +471,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     saveCurrentScene,
     saveDisabled,
     selectAll,
+    setRulerDrawing,
     setTransformMode,
     undo,
   ]);
@@ -492,6 +545,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               mode={transformMode}
               onModeChange={setTransformMode}
               onAddText={handleAddTextAtView}
+              rulerDrawing={rulerDrawing}
+              onToggleRulerDrawing={handleToggleRulerDrawing}
               transformSpace={transformSpace}
               onTransformSpaceChange={setTransformSpace}
               transformPivot={transformPivot}
@@ -555,6 +610,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 transformSpace={transformSpace}
                 transformPivot={transformPivot}
                 showGrid={showGrid}
+                rulerDrawing={rulerDrawing}
+                onRulerDraw={handleRulerDraw}
               />
 
               <EditorSelectionBar
@@ -615,8 +672,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         onDeletePlacedModel={deletePlacedModel}
                         onSelectPlacedText={selectPlacedText}
                         onDeletePlacedText={deletePlacedText}
+                        onSelectPlacedRuler={selectPlacedRuler}
+                        onDeletePlacedRuler={deletePlacedRuler}
                         onTogglePlacedModel={toggleModel}
                         onTogglePlacedText={toggleText}
+                        onTogglePlacedRuler={toggleRuler}
                         onTogglePlacedMap={toggleMap}
                         onSelectPlacedMap={selectPlacedMap}
                         onDeletePlacedMap={deletePlacedMap}
@@ -634,6 +694,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         className="rounded-none bg-transparent ring-0"
                         selectedModel={selectedModel}
                         selectedText={selectedText}
+                        selectedRuler={selectedRuler}
+                        onRulerChange={updateSelectedRuler}
                         selectedMesh={selectedMesh}
                         selectedMap={selectedMap}
                         multiSelectCount={selectedIds.size}
@@ -646,7 +708,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                         tagMapping={tagMappingHandlers}
                         rigging={riggingHandlers}
                         zones={zoneHandlers}
-                        metersPerUnit={getSceneMetersPerUnit(regionId)}
+                        metersPerUnit={metersPerUnit}
                       />
                     </div>
                   </ResizablePanel>
@@ -672,8 +734,11 @@ function HierarchyPanel({
   onDeletePlacedModel,
   onSelectPlacedText,
   onDeletePlacedText,
+  onSelectPlacedRuler,
+  onDeletePlacedRuler,
   onTogglePlacedModel,
   onTogglePlacedText,
+  onTogglePlacedRuler,
   onTogglePlacedMap,
   onSelectPlacedMap,
   onDeletePlacedMap,
@@ -694,8 +759,11 @@ function HierarchyPanel({
   onDeletePlacedModel: (id: string) => void;
   onSelectPlacedText: (id: string) => void;
   onDeletePlacedText: (id: string) => void;
+  onSelectPlacedRuler: (id: string) => void;
+  onDeletePlacedRuler: (id: string) => void;
   onTogglePlacedModel: (id: string) => void;
   onTogglePlacedText: (id: string) => void;
+  onTogglePlacedRuler: (id: string) => void;
   onTogglePlacedMap: (id: string) => void;
 }) {
   const [objectSearch, setObjectSearch] = useState('');
@@ -710,6 +778,7 @@ function HierarchyPanel({
         <PalettePlacedObjects
           placedModels={sceneInfo?.models ?? []}
           placedTexts={sceneInfo?.texts ?? []}
+          placedRulers={sceneInfo?.rulers ?? []}
           placedMaps={sceneInfo?.maps ?? []}
           objectSearch={objectSearch}
           selectedIds={selectedIds}
@@ -717,8 +786,11 @@ function HierarchyPanel({
           onDeletePlacedModel={onDeletePlacedModel}
           onSelectPlacedText={onSelectPlacedText}
           onDeletePlacedText={onDeletePlacedText}
+          onSelectPlacedRuler={onSelectPlacedRuler}
+          onDeletePlacedRuler={onDeletePlacedRuler}
           onTogglePlacedModel={onTogglePlacedModel}
           onTogglePlacedText={onTogglePlacedText}
+          onTogglePlacedRuler={onTogglePlacedRuler}
           onTogglePlacedMap={onTogglePlacedMap}
           onSelectPlacedMap={onSelectPlacedMap}
           onDeletePlacedMap={onDeletePlacedMap}

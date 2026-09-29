@@ -8,12 +8,16 @@ import type {
   SavedMeshOverride,
   SavedModelInfo,
   SavedModelZone,
+  SavedRulerGuide,
+  SavedRulerInfo,
   SavedSceneInfo,
   SavedTextInfo,
   TagMapping,
 } from '@crane/domain/3d';
 import { getTagMappingTargetKey, STATUS_TAG_ROLES } from '@crane/domain/3d';
 import {
+  RULER_GUIDE_OPACITY_DEFAULT,
+  RULER_GUIDE_SIDE_DEFAULT,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_MODE_DEFAULT,
@@ -60,7 +64,10 @@ function isTagMappingListEqual(
       am.tagKey !== bm.tagKey ||
       getTagMappingTargetKey(am.target) !== getTagMappingTargetKey(bm.target) ||
       (am.scale ?? 1) !== (bm.scale ?? 1) ||
-      (am.offset ?? 0) !== (bm.offset ?? 0)
+      (am.offset ?? 0) !== (bm.offset ?? 0) ||
+      // 라벨 표시는 true 만 남는 옵트인, 이름은 빈 문자열과 없음이 같다.
+      (am.showOnLabel === true) !== (bm.showOnLabel === true) ||
+      (am.caption ?? '') !== (bm.caption ?? '')
     ) {
       return false;
     }
@@ -140,6 +147,43 @@ function isTextInfoEqual(a: SavedTextInfo, b: SavedTextInfo): boolean {
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.rotation, b.rotation) &&
     isVector3TupleEqual(a.scale, b.scale)
+  );
+}
+
+/** 보조선 — 없음과 있음은 다르고, 있으면 기본값(왼쪽·불투명도 1)으로 정규화해 비교한다. */
+function isRulerGuideEqual(
+  a: SavedRulerGuide | undefined,
+  b: SavedRulerGuide | undefined,
+): boolean {
+  if (!a || !b) return a === b;
+  return (
+    a.length === b.length &&
+    a.color === b.color &&
+    (a.side ?? RULER_GUIDE_SIDE_DEFAULT) ===
+      (b.side ?? RULER_GUIDE_SIDE_DEFAULT) &&
+    (a.opacity ?? RULER_GUIDE_OPACITY_DEFAULT) ===
+      (b.opacity ?? RULER_GUIDE_OPACITY_DEFAULT)
+  );
+}
+
+/**
+ * 거리 눈금 — 기본값으로 정규화해 비교한다(sanitize-rulers 가 0·false 를
+ * 생략하는 규칙과 짝). 빠진 필드는 편집이 동등 단락에 먹혀 저장되지 않는다.
+ */
+function isRulerInfoEqual(a: SavedRulerInfo, b: SavedRulerInfo): boolean {
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    a.textColor === b.textColor &&
+    a.dotColor === b.dotColor &&
+    a.length === b.length &&
+    a.interval === b.interval &&
+    isRulerGuideEqual(a.guide, b.guide) &&
+    (a.startValue ?? 0) === (b.startValue ?? 0) &&
+    (a.unitHidden === true) === (b.unitHidden === true) &&
+    (a.locked ?? false) === (b.locked ?? false) &&
+    isVector3TupleEqual(a.position, b.position) &&
+    isVector3TupleEqual(a.rotation, b.rotation)
   );
 }
 
@@ -329,6 +373,13 @@ export function isSceneInfoEqual(
   if (aTexts.length !== bTexts.length) return false;
   for (let i = 0; i < aTexts.length; i++) {
     if (!isTextInfoEqual(aTexts[i], bTexts[i])) return false;
+  }
+  // undefined 와 [] 는 같다(sanitize 가 빈 목록을 생략한다).
+  const aRulers = a.rulers ?? [];
+  const bRulers = b.rulers ?? [];
+  if (aRulers.length !== bRulers.length) return false;
+  for (let i = 0; i < aRulers.length; i++) {
+    if (!isRulerInfoEqual(aRulers[i], bRulers[i])) return false;
   }
   return true;
 }

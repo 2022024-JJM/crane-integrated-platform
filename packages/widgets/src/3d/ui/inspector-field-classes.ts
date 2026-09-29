@@ -7,5 +7,14 @@ export const FIELD_INPUT =
 export const FIELD_SELECT =
   'border-border bg-muted text-foreground h-6 w-full min-w-0 rounded-sm border px-1 text-[11px]';
 export const FIELD_LABEL = 'text-muted-foreground w-14 shrink-0 text-[10px]';
-export const NUMBER_WRAPPER = 'border-border bg-muted h-6 w-full min-w-0 rounded-sm';
+/**
+ * 라벨이 두세 글자뿐인 카드(태그 맵핑)용 좁은 라벨 열. 고정 폭이 아니라 최소
+ * 폭이라 긴 번역은 잘리거나 입력과 겹치지 않고 그 줄만 밀린다.
+ */
+export const FIELD_LABEL_COMPACT =
+  'text-muted-foreground min-w-8 shrink-0 text-[10px]';
+/** 좁은 라벨 열(min-w-8) + Field 의 gap-2 — 라벨 없는 줄의 들여쓰기. */
+export const FIELD_INDENT_COMPACT = 'ml-10';
+export const NUMBER_WRAPPER =
+  'border-border bg-muted h-6 w-full min-w-0 rounded-sm';
 export const NUMBER_INPUT = 'px-2 text-[11px]';

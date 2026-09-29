@@ -18,20 +18,27 @@ import { useTranslation } from 'react-i18next';
 import { MOUSE, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import {
   GltfModel,
+  RULER_DEFAULT_COLOR,
+  SceneRuler,
+  SceneRulerPreview,
   SceneText,
   SilhouetteOutlineWarmup,
+  buildLabelReadings,
   collectCameraBoundsBox,
   extendGltfLoaderWithKtx2,
   getMeshPath,
   getSceneMapCatalogItemByPath,
+  getSceneMetersPerUnit,
   makeMeshId,
   modelObjectRegistry as sharedModelObjectRegistry,
   parseMeshId,
+  pickRulerInterval,
   prefetchModelBottomOffset,
   releaseGltfCache,
   resolveGroundMaps,
   resolveSeaVisible,
   withBaseUrl,
+  type RulerPlacement,
   type SavedCameraInfo,
   type SavedSceneInfo,
   type SceneModelCatalogItem,
@@ -63,7 +70,9 @@ import {
   ScenePerfProbe,
   SceneTerrainLod,
   manualJointSource,
+  readTagLiveValue,
   rigValueStore,
+  snapStepFor,
   useIsObjectSelected,
   useLabelPreviewState,
   useSceneObjectSelectionStore,
@@ -73,6 +82,8 @@ import type { Vector3Tuple } from '@crane/core/types/math';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 import { useMarqueeSelection } from './use-marquee-selection';
+import { useRulerDraw } from './use-ruler-draw';
+import { formatRulerLength } from '../lib/ruler-editor';
 import {
   computeTopViewFallbackPose,
   computeTopViewPose,
@@ -175,6 +186,16 @@ function SelectionAwareSceneText(props: SelectionAwareSceneTextProps) {
   return <SceneText {...props} isSelected={isSelected} />;
 }
 
+type SelectionAwareSceneRulerProps = Omit<
+  React.ComponentProps<typeof SceneRuler>,
+  'isSelected'
+>;
+
+function SelectionAwareSceneRuler(props: SelectionAwareSceneRulerProps) {
+  const isSelected = useIsObjectSelected(props.id);
+  return <SceneRuler {...props} isSelected={isSelected} />;
+}
+
 /** 도구 모음의 카메라 버튼이 호출하는 액션(focusSelectedRef 와 같은 방식). */
 export interface SceneEditorCameraActions {
   /** 마지막으로 로드/저장된 카메라(없으면 편집기 기본 시점)로 복귀. */
@@ -233,6 +254,12 @@ interface SceneObjectsEditCanvasProps {
   transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
+  /**
+   * 눈금 그리기 모드. 켜져 있는 동안 캔버스 클릭 두 번이 시작점·끝점이 되고
+   * 선택·마퀴는 쉰다(use-ruler-draw). 그린 결과는 onRulerDraw 로 나간다.
+   */
+  rulerDrawing?: boolean;
+  onRulerDraw?: (placement: RulerPlacement) => void;
 }
 
 export function SceneObjectsEditCanvas({
@@ -257,6 +284,8 @@ export function SceneObjectsEditCanvas({
   transformSpace,
   transformPivot,
   showGrid,
+  rulerDrawing = false,
+  onRulerDraw,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -371,11 +400,17 @@ export function SceneObjectsEditCanvas({
   );
   const selectText = useSceneObjectSelectionStore((state) => state.selectText);
   const selectMap = useSceneObjectSelectionStore((state) => state.selectMap);
+  const selectRuler = useSceneObjectSelectionStore(
+    (state) => state.selectRuler,
+  );
   const selectMesh = useSceneObjectSelectionStore((state) => state.selectMesh);
   const toggleModel = useSceneObjectSelectionStore(
     (state) => state.toggleModel,
   );
   const toggleText = useSceneObjectSelectionStore((state) => state.toggleText);
+  const toggleRuler = useSceneObjectSelectionStore(
+    (state) => state.toggleRuler,
+  );
   const toggleMap = useSceneObjectSelectionStore((state) => state.toggleMap);
   const clearSelectedModel = useSceneObjectSelectionStore(
     (state) => state.clearSelectedModel,
@@ -393,15 +428,17 @@ export function SceneObjectsEditCanvas({
   // 마퀴에서 제외할 id 집합 — 지도는 잠금과 무관하게 항상 제외한다:
   // 지형 AABB가 화면을 덮어 스크린 공간 교차 판정에 어떤 마퀴든 반드시
   // 걸리기 때문이다(Ctrl 토글·Ctrl+A는 잠금 해제 시 참여). 잠긴
-  // 모델·텍스트도 선택 불가 규칙에 따라 제외한다.
+  // 모델·텍스트도 선택 불가 규칙에 따라 제외한다. 눈금도 지도처럼 항상
+  // 제외한다 — 수백 m 짜리 눈금의 AABB 는 어떤 마퀴에도 걸린다.
   const marqueeExcludedIds = useMemo(
     () =>
       new Set([
         ...(sceneInfo?.maps ?? []).map((m) => m.id),
+        ...(sceneInfo?.rulers ?? []).map((r) => r.id),
         ...(sceneInfo?.models ?? []).filter((m) => m.locked).map((m) => m.id),
         ...(sceneInfo?.texts ?? []).filter((t) => t.locked).map((t) => t.id),
       ]),
-    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.rulers, sceneInfo?.texts],
   );
   // 드롭 raycast 바닥면 — 카탈로그 kind 가 ground 인 지도 전부.
   const groundMapIds = useMemo(
@@ -414,6 +451,7 @@ export function SceneObjectsEditCanvas({
     rendererRef,
     pendingDropPosition,
     setPendingDropPosition,
+    resolveDropPosition,
     handleSceneDragOver,
     handleSceneDrop,
     handleDragLeave,
@@ -440,6 +478,7 @@ export function SceneObjectsEditCanvas({
     transformMode,
     sceneModels: sceneInfo?.models,
     sceneTexts: sceneInfo?.texts,
+    sceneRulers: sceneInfo?.rulers,
     sceneMaps: unlockedMaps,
     modelObjectRegistryRef,
     onTransformVectorChange,
@@ -540,6 +579,22 @@ export function SceneObjectsEditCanvas({
     [dragJustEndedRef, selectText, toggleText, setSelectedObject],
   );
 
+  const handleSelectRuler = useCallback(
+    (id: string) => {
+      if (dragJustEndedRef.current) return;
+      const isCtrl =
+        lastPointerEventRef.current?.ctrlKey ||
+        lastPointerEventRef.current?.metaKey;
+      if (isCtrl) {
+        toggleRuler(id);
+      } else {
+        setSelectedObject(modelObjectRegistryRef.current.get(id) ?? null);
+        selectRuler(id);
+      }
+    },
+    [dragJustEndedRef, selectRuler, toggleRuler, setSelectedObject],
+  );
+
   // 지도 선택 — 잠금 해제된 지도는 Ctrl 토글로 다중 선택에 참여한다
   // (마퀴만 제외, selectMap 주석 참고). 더블클릭 drill-in은 두지 않는다 —
   // 지형 메시는 수만 개라 자식 단위 편집이 의미가 없다.
@@ -590,7 +645,8 @@ export function SceneObjectsEditCanvas({
     modelObjectRegistryRef,
     isTransformDragging,
     dragJustEndedRef,
-    isDraggingExternalItem: !!draggingModelCatalogItem,
+    // 눈금을 그리는 동안에도 마퀴를 쉰다 — 왼쪽 클릭은 점 찍기다.
+    isDraggingExternalItem: !!draggingModelCatalogItem || rulerDrawing,
     excludedIds: marqueeExcludedIds,
     selectAll: selectAllClassified,
     clearSelectedModel,
@@ -692,10 +748,43 @@ export function SceneObjectsEditCanvas({
     () => ({
       models: new Set(sceneInfo?.models.map((model) => model.id) ?? []),
       texts: new Set(sceneInfo?.texts?.map((text) => text.id) ?? []),
+      rulers: new Set(sceneInfo?.rulers?.map((ruler) => ruler.id) ?? []),
       maps: new Set(sceneInfo?.maps?.map((map) => map.id) ?? []),
     }),
-    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.texts],
+    [sceneInfo?.maps, sceneInfo?.models, sceneInfo?.rulers, sceneInfo?.texts],
   );
+
+  const metersPerUnit = getSceneMetersPerUnit(regionId);
+  // 라벨 위 태그 값 목록 — 모델마다 참조를 고정한다(뷰어와 같은 이유).
+  const sceneModels = sceneInfo?.models;
+  const labelReadingsById = useMemo(
+    () =>
+      new Map(
+        (sceneModels ?? []).map((model) => [
+          model.id,
+          buildLabelReadings(model.tagMappings),
+        ]),
+      ),
+    [sceneModels],
+  );
+
+  // 눈금 그리기 — 클릭 두 번. 점은 드롭과 같은 바닥 raycast 로 찍는다.
+  const handleRulerDraw = useCallback(
+    (placement: RulerPlacement) => onRulerDraw?.(placement),
+    [onRulerDraw],
+  );
+  const rulerDraw = useRulerDraw({
+    active: rulerDrawing,
+    resolvePoint: resolveDropPosition,
+    snapStep: snapEnabled ? snapStepFor('position', snapStep) : 0,
+    lastPointerDownRef: lastPointerEventRef,
+    onDraw: handleRulerDraw,
+  });
+  // 눈금에는 크기가 없다 — 크기 모드에서는 기즈모를 붙이지 않는다.
+  const isRulerScaleTarget =
+    transformMode === 'scale' &&
+    primarySelectedId !== null &&
+    sceneObjectIds.rulers.has(primarySelectedId);
 
   // F 포커스 — 모델·텍스트·지도·드릴인 메시 모두 대상. 조회 순서는
   // use-scene-transform과 같다(캔버스 로컬 registry → 도메인 전역 registry;
@@ -718,6 +807,7 @@ export function SceneObjectsEditCanvas({
         if (
           !sceneObjectIds.models.has(id) &&
           !sceneObjectIds.texts.has(id) &&
+          !sceneObjectIds.rulers.has(id) &&
           !sceneObjectIds.maps.has(id)
         ) {
           continue;
@@ -845,11 +935,13 @@ export function SceneObjectsEditCanvas({
     <div
       ref={combinedRootRef}
       tabIndex={0}
-      className="border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background)"
+      className={`border-border/70 relative isolate h-full min-h-0 overflow-hidden border bg-(--canvas-background) ${rulerDrawing ? 'cursor-crosshair' : ''}`}
       onPointerDownCapture={(event) => {
         event.currentTarget.focus();
         lastPointerEventRef.current = event.nativeEvent;
       }}
+      onClickCapture={rulerDraw.handleClickCapture}
+      onPointerMove={rulerDraw.handlePointerMove}
       onDragOver={handleSceneDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleSceneDrop}
@@ -967,7 +1059,7 @@ export function SceneObjectsEditCanvas({
         </GizmoHelper>
         {/* 바닥 격자 — 높이·범위 규칙은 EditorGroundGrid 주석 참고. */}
         {showGrid ? <EditorGroundGrid /> : null}
-        {transformTarget ? (
+        {transformTarget && !isRulerScaleTarget ? (
           <TransformControls
             key={transformTarget.uuid}
             ref={transformControlsRef}
@@ -1062,6 +1154,8 @@ export function SceneObjectsEditCanvas({
                 model.locked ? undefined : handleDoubleSelectModel
               }
               onObjectReady={handleModelObjectReady}
+              labelReadings={labelReadingsById.get(model.id)}
+              readLabelValue={readTagLiveValue}
             />
           </SceneObjectBoundary>
         ))}
@@ -1086,6 +1180,42 @@ export function SceneObjectsEditCanvas({
             />
           </Suspense>
         ))}
+        {(sceneInfo?.rulers ?? []).map((ruler) => (
+          <SelectionAwareSceneRuler
+            key={ruler.id}
+            id={ruler.id}
+            position={ruler.position}
+            rotation={ruler.rotation}
+            length={ruler.length}
+            interval={ruler.interval}
+            textColor={ruler.textColor}
+            dotColor={ruler.dotColor}
+            guide={ruler.guide}
+            startValue={ruler.startValue}
+            unitHidden={ruler.unitHidden}
+            metersPerUnit={metersPerUnit}
+            // 잠긴 눈금은 클릭이 선택 해제로 떨어진다 — 잠긴 텍스트와 같은 규칙.
+            onSelect={ruler.locked ? handleClearSelection : handleSelectRuler}
+            onObjectReady={handleModelObjectReady}
+          />
+        ))}
+        {/* 그리는 중의 미리보기 — 씬 데이터가 아니다(use-ruler-draw). */}
+        {rulerDraw.preview ? (
+          <SceneRulerPreview
+            position={rulerDraw.preview.position}
+            rotation={rulerDraw.preview.rotation}
+            length={rulerDraw.preview.length}
+            interval={pickRulerInterval(
+              rulerDraw.preview.length * metersPerUnit,
+            )}
+            textColor={RULER_DEFAULT_COLOR}
+            dotColor={RULER_DEFAULT_COLOR}
+            metersPerUnit={metersPerUnit}
+            endLabel={formatRulerLength(
+              rulerDraw.preview.length * metersPerUnit,
+            )}
+          />
+        ) : null}
         {pendingDropPosition ? (
           <mesh
             position={[
@@ -1106,6 +1236,20 @@ export function SceneObjectsEditCanvas({
 
       {/* dev 전용 성능 HUD — 모니터링 뷰와 같은 좌하단(bottom-3 left-3). */}
       <ScenePerfHud />
+
+      {/* 눈금 그리기 안내 — 하단 중앙. 그리는 동안은 선택이 없어 선택 컨텍스트
+          바와 겹치지 않는다(뷰포트 중앙 상단은 비워 둔다). */}
+      {rulerDrawing ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+          <p className="bg-card/95 border-border text-foreground rounded-md border px-3 py-1.5 text-xs shadow-sm">
+            {t(
+              rulerDraw.hasStart
+                ? 'monitoring:editor.rulerDrawEndHint'
+                : 'monitoring:editor.rulerDrawStartHint',
+            )}
+          </p>
+        </div>
+      ) : null}
 
       {isMarqueeActive && (
         <div

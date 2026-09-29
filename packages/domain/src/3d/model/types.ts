@@ -1,5 +1,6 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { RigBinding, RigDefinition } from './rig-types';
+import type { SavedRulerInfo } from './ruler-types';
 import type { ModelStatusTags } from './status-tag-types';
 import type { TagMapping } from './tag-mapping-types';
 
@@ -24,6 +25,11 @@ export interface SavedSceneInfo {
   maps: SavedMapInfo[];
   models: SavedModelInfo[];
   texts?: SavedTextInfo[];
+  /**
+   * 거리 눈금 — 에디터에서 그린 씬 객체(ruler-types.ts). 없으면 필드 자체가
+   * 빠져 기존 저장본과 diff 가 없다.
+   */
+  rulers?: SavedRulerInfo[];
   camera?: SavedCameraInfo | null;
   /**
    * 여러 region 이 한 씬 파일을 공유할 때(scene-file-map.ts) region 별

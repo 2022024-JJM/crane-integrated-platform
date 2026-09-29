@@ -565,3 +565,141 @@ describe('sanitizeSceneInfo — 상태 태그(statusTags)', () => {
     expect('statusTags' in json.models[0]).toBe(false);
   });
 });
+
+describe('sanitizeSceneInfo — 거리 눈금(rulers)', () => {
+  function ruler(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ruler-1',
+      name: '1Dock 레일',
+      position: [10, 5, -20],
+      rotation: [0, 90, 0],
+      length: 750,
+      interval: 100,
+      textColor: '#ffffff',
+      dotColor: '#ffffff',
+      ...overrides,
+    };
+  }
+
+  it('유효한 눈금은 id 와 함께 보존한다', () => {
+    const out = sanitizeSceneInfo(scene({ rulers: [ruler()] }));
+    expect(out.rulers).toEqual([ruler()]);
+  });
+
+  it('눈금이 없거나 전부 무효·배열이 아니면 필드 자체가 빠진다', () => {
+    for (const rulers of [
+      undefined,
+      [],
+      [null, 'x', 3, {}],
+      [ruler({ length: 0 })],
+      { id: 'ruler-1' },
+      'rulers',
+    ]) {
+      const out = sanitizeSceneInfo(scene({ rulers }));
+      expect(out).not.toHaveProperty('rulers');
+      expect('rulers' in JSON.parse(JSON.stringify(out))).toBe(false);
+    }
+  });
+
+  it('깨진 항목만 버리고 나머지는 순서대로 살린다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        rulers: [
+          ruler({ id: 'a' }),
+          ruler({ id: 'b', length: Number.NaN }),
+          null,
+          ruler({ id: 'c', position: [1, 2] }),
+          ruler({ id: 'd', guide: { length: 10, color: '#ffffff' } }),
+        ],
+      }),
+    );
+    expect(out.rulers?.map((r) => r.id)).toEqual(['a', 'd']);
+    expect(out.rulers?.[1].guide).toEqual({ length: 10, color: '#ffffff' });
+  });
+
+  it('표시 옵션이 깨진 눈금은 버리지 않고 기본값으로 되돌린다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        rulers: [
+          ruler({
+            interval: 30,
+            textColor: 'red',
+            guide: { length: -1, color: '#ffffff' },
+          }),
+        ],
+      }),
+    );
+    expect(out.rulers).toHaveLength(1);
+    expect(out.rulers?.[0].interval).toBe(100);
+    expect(out.rulers?.[0].textColor).toBe('#ffffff');
+    expect(out.rulers?.[0]).not.toHaveProperty('guide');
+  });
+
+  it('id 가 없거나 비면 새로 발급한다', () => {
+    const { id: _id, ...noId } = ruler();
+    void _id;
+    const out = sanitizeSceneInfo(
+      scene({ rulers: [noId, ruler({ id: '' }), ruler({ id: 7 })] }),
+    );
+    const ids = out.rulers!.map((r) => r.id);
+    expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(
+      true,
+    );
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it('중복 id 는 뒤의 것에 새 id 를 발급한다 (모델·텍스트와도 공유)', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        models: [model({ id: 'shared' })],
+        texts: [
+          {
+            id: 'text-1',
+            content: 'T',
+            color: '#ffffff',
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1],
+          },
+        ],
+        rulers: [
+          ruler({ id: 'shared' }),
+          ruler({ id: 'text-1' }),
+          ruler({ id: 'own' }),
+          ruler({ id: 'own' }),
+        ],
+      }),
+    );
+    const ids = out.rulers!.map((r) => r.id);
+    expect(out.models[0].id).toBe('shared');
+    expect(ids).toHaveLength(4);
+    expect(ids).not.toContain('shared');
+    expect(ids).not.toContain('text-1');
+    expect(ids[2]).toBe('own');
+    expect(ids[3]).not.toBe('own');
+    expect(new Set([...ids, 'shared', 'text-1']).size).toBe(6);
+  });
+
+  it('스키마에 없는 scale 은 저장본에 남지 않는다', () => {
+    const out = sanitizeSceneInfo(
+      scene({ rulers: [ruler({ scale: [2, 2, 2] })] }),
+    );
+    expect(out.rulers?.[0]).not.toHaveProperty('scale');
+  });
+
+  it('정규화는 멱등이다 — 결과를 다시 넣어도 같다', () => {
+    const once = sanitizeSceneInfo(
+      scene({
+        rulers: [
+          ruler({
+            textColor: '#FFAA00',
+            startValue: 150,
+            guide: { length: 10, color: '#00FF00', side: 'right', opacity: 0 },
+          }),
+          ruler({ id: 'r2', interval: 50, unitHidden: true, locked: true }),
+        ],
+      }),
+    );
+    expect(sanitizeSceneInfo(once)).toEqual(once);
+  });
+});

@@ -6,7 +6,10 @@ import {
   sanitizeTagMappings,
 } from '../sanitize-tag-mappings';
 import type { RigDefinition } from '../../model/rig-types';
-import type { TagMapping } from '../../model/tag-mapping-types';
+import {
+  TAG_MAPPING_CAPTION_MAX,
+  type TagMapping,
+} from '../../model/tag-mapping-types';
 
 const rig: RigDefinition = {
   id: 'rig-a',
@@ -23,7 +26,10 @@ const rig: RigDefinition = {
 
 function node(
   id: string,
-  overrides: Partial<TagMapping> & { node?: string; axis?: 'x' | 'y' | 'z' } = {},
+  overrides: Partial<TagMapping> & {
+    node?: string;
+    axis?: 'x' | 'y' | 'z';
+  } = {},
 ): TagMapping {
   const { node: path = '', axis = 'z', ...rest } = overrides;
   return {
@@ -56,9 +62,21 @@ describe('sanitizeTagMappings', () => {
       node('m1', { axis: 'x' }), // id 중복
       { ...node('m2', { axis: 'y' }), id: '' },
       node('m3', { axis: 'x', tagKey: '   ' }),
-      { id: 'm4', target: { kind: 'node', node: '', channel: 'spin', axis: 'x' }, tagKey: 'k' },
-      { id: 'm5', target: { kind: 'node', node: '', channel: 'scale', axis: 'w' }, tagKey: 'k' },
-      { id: 'm6', target: { kind: 'node', node: 3, channel: 'scale', axis: 'x' }, tagKey: 'k' },
+      {
+        id: 'm4',
+        target: { kind: 'node', node: '', channel: 'spin', axis: 'x' },
+        tagKey: 'k',
+      },
+      {
+        id: 'm5',
+        target: { kind: 'node', node: '', channel: 'scale', axis: 'w' },
+        tagKey: 'k',
+      },
+      {
+        id: 'm6',
+        target: { kind: 'node', node: 3, channel: 'scale', axis: 'x' },
+        tagKey: 'k',
+      },
       { id: 'm7', target: { kind: 'ghost' }, tagKey: 'k' },
       { id: 'm8', target: null, tagKey: 'k' },
     ]);
@@ -90,9 +108,78 @@ describe('sanitizeTagMappings', () => {
     });
     expect(sanitizeTagMappings([j('a', 'luff')])).toBeUndefined();
     expect(
-      sanitizeTagMappings([j('a', 'luff'), j('b', 'ghost'), j('c', 'upper'), j('d', 'luff', 'dup')], { rig }),
+      sanitizeTagMappings(
+        [
+          j('a', 'luff'),
+          j('b', 'ghost'),
+          j('c', 'upper'),
+          j('d', 'luff', 'dup'),
+        ],
+        { rig },
+      ),
     ).toEqual([j('a', 'luff')]);
-    expect(sanitizeTagMappings([{ id: 'x', target: { kind: 'joint', jointId: '' }, tagKey: 'k' }], { rig })).toBeUndefined();
+    expect(
+      sanitizeTagMappings(
+        [{ id: 'x', target: { kind: 'joint', jointId: '' }, tagKey: 'k' }],
+        { rig },
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe('sanitizeTagMappings — 라벨 표시(showOnLabel·caption)', () => {
+  it('showOnLabel 은 true 만 남긴다', () => {
+    const out = sanitizeTagMappings([
+      node('m1', { showOnLabel: true }),
+      node('m2', { axis: 'x', showOnLabel: false }),
+      {
+        ...node('m3', { axis: 'y' }),
+        showOnLabel: 'yes',
+      },
+      { ...node('m4', { node: '[0]A' }), showOnLabel: 1 },
+    ]);
+    expect(out?.[0].showOnLabel).toBe(true);
+    for (const mapping of out!.slice(1)) {
+      expect(mapping).not.toHaveProperty('showOnLabel');
+    }
+  });
+
+  it('이름은 trim 하고, 비거나 문자열이 아니면 필드를 생략한다', () => {
+    const out = sanitizeTagMappings([
+      node('m1', { caption: '  주행  ' }),
+      node('m2', { axis: 'x', caption: '   ' }),
+      node('m3', { axis: 'y', caption: '' }),
+      { ...node('m4', { node: '[0]A' }), caption: 12 },
+    ]);
+    expect(out?.[0].caption).toBe('주행');
+    for (const mapping of out!.slice(1)) {
+      expect(mapping).not.toHaveProperty('caption');
+    }
+  });
+
+  it('이름은 최대 길이에서 자른다 — 경계 정확값은 그대로, +1 은 잘린다', () => {
+    const exact = 'a'.repeat(TAG_MAPPING_CAPTION_MAX);
+    const out = sanitizeTagMappings([
+      node('m1', { caption: exact }),
+      node('m2', { axis: 'x', caption: `${exact}b` }),
+    ]);
+    expect(out?.[0].caption).toBe(exact);
+    expect(out?.[1].caption).toBe(exact);
+  });
+
+  it('표시를 꺼도 이름은 보존한다 — 다시 켜면 되살아난다', () => {
+    expect(sanitizeTagMappings([node('m1', { caption: '주행' })])).toEqual([
+      node('m1', { caption: '주행' }),
+    ]);
+  });
+
+  it('라벨 필드가 없는 맵핑은 저장본(JSON)에 새 키가 생기지 않는다', () => {
+    const out = sanitizeTagMappings([node('m1')]);
+    expect(Object.keys(JSON.parse(JSON.stringify(out))[0]).sort()).toEqual([
+      'id',
+      'tagKey',
+      'target',
+    ]);
   });
 });
 
@@ -127,7 +214,8 @@ describe('convertLegacyValueMapList', () => {
     );
     const v = 118.3;
     const oldWorld = 71 + v * 0.1;
-    const newWorld = placement.position[2] + (m.offset ?? 0) + v * (m.scale ?? 1);
+    const newWorld =
+      placement.position[2] + (m.offset ?? 0) + v * (m.scale ?? 1);
     expect(newWorld).toBeCloseTo(oldWorld, 10);
   });
 
@@ -213,7 +301,9 @@ describe('resolveModelTagMappings', () => {
       rig,
     );
     expect(out?.map((m) => m.id)).toEqual(['m1']);
-    expect(resolveModelTagMappings({ ...base, tagMappings: [] }, rig)).toBeUndefined();
+    expect(
+      resolveModelTagMappings({ ...base, tagMappings: [] }, rig),
+    ).toBeUndefined();
   });
 
   it('tagMappings 가 없으면 레거시 둘을 합쳐 변환·정규화한다 (driven 관절 제외)', () => {
@@ -245,12 +335,17 @@ describe('resolveModelTagMappings', () => {
   });
 
   it('레거시도 비어 있으면 undefined', () => {
-    expect(resolveModelTagMappings({ ...base, valueMapList: [] }, undefined)).toBeUndefined();
+    expect(
+      resolveModelTagMappings({ ...base, valueMapList: [] }, undefined),
+    ).toBeUndefined();
     expect(resolveModelTagMappings(base, undefined)).toBeUndefined();
   });
 
   it('변환은 멱등이다 — 같은 입력을 두 번 넣어도 같은 결과', () => {
-    const input = { ...base, valueMapList: [{ type: 'PX', key: 'k', offset: 3 }] };
+    const input = {
+      ...base,
+      valueMapList: [{ type: 'PX', key: 'k', offset: 3 }],
+    };
     expect(resolveModelTagMappings(input, undefined)).toEqual(
       resolveModelTagMappings(input, undefined),
     );

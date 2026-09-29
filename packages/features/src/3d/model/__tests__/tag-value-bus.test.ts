@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   hasTagIngest,
   publishTagValue,
+  readTagLiveValue,
   setTagIngest,
   subscribeTagValues,
   tagLiveValues,
@@ -84,5 +85,37 @@ describe('changedAt', () => {
     publishTagValue('C_1:x', 6);
     expect(tagLiveValues.get('C_1:x')?.changedAt).toBe(13_000);
     vi.useRealTimers();
+  });
+});
+
+describe('readTagLiveValue', () => {
+  it('마지막으로 내보낸 값을 돌려준다', () => {
+    publishTagValue('GC_04:gantry_position', 777.2);
+    expect(readTagLiveValue('GC_04:gantry_position')).toBe(777.2);
+    publishTagValue('GC_04:gantry_position', 0);
+    expect(readTagLiveValue('GC_04:gantry_position')).toBe(0);
+  });
+
+  it('받은 적 없는 키·빈 키는 undefined', () => {
+    expect(readTagLiveValue('GC_04:unknown')).toBeUndefined();
+    expect(readTagLiveValue('')).toBeUndefined();
+  });
+
+  it('버려진 publish(비유한수)는 이전 값을 덮지 않는다', () => {
+    publishTagValue('k', 5);
+    publishTagValue('k', Number.NaN);
+    expect(readTagLiveValue('k')).toBe(5);
+  });
+
+  it('캐시를 비우면 undefined 로 돌아간다 (시뮬레이션 종료)', () => {
+    publishTagValue('k', 5);
+    tagLiveValues.clear();
+    expect(readTagLiveValue('k')).toBeUndefined();
+  });
+
+  it('소비자가 없어도 읽힌다', () => {
+    expect(hasTagIngest()).toBe(false);
+    publishTagValue('k', 9);
+    expect(readTagLiveValue('k')).toBe(9);
   });
 });

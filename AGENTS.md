@@ -192,7 +192,9 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → scene 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`(단일 소스), `scene-file-registry.ts` — `docs/agents/3d-editor.md` |
 | 3D editor session/history/persistence, 스냅·피벗·탑뷰 포즈 | `packages/widgets/src/scene-editor/model/`, `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/core/src/lib/top-view-pose.ts` — `docs/agents/3d-editor.md` |
+| 거리 눈금(그려서 추가하는 씬 객체) 스키마·기하 / 렌더 / 그리기·편집 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/ruler.ts`, `packages/domain/src/3d/ui/scene-ruler.tsx`, `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx` — `docs/agents/3d-editor.md` |
 | 태그 맵핑 스키마·방어 / 값 버스 / 편집 UI | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/features/src/3d/model/tag-value-bus.ts`, `packages/widgets/src/3d/ui/tag-mapping-section.tsx` — `docs/agents/tag-mapping-rig.md` |
+| 모델 라벨의 태그 값 줄(PLC 원시값) | `packages/domain/src/3d/lib/label-reading.ts`, `packages/domain/src/3d/ui/model-label.tsx` — `docs/agents/tag-mapping-rig.md` |
 | 상태 태그(라벨 색·아이콘) 스키마 / 서버 값 → 버스 숫자 / 라벨 표시 상태 판정 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/monitoring/lib/tag-number.ts`, `packages/features/src/3d/lib/model-label-state.ts` — `docs/agents/tag-mapping-rig.md`, `docs/agents/3d-play.md` |
 | 가상 태그 정의 / 스토어·러너 / 관리 페이지 | `packages/domain/src/virtual-tag/`, `packages/features/src/3d/model/{use-virtual-tag-store,virtual-tag-runner}.ts`, `packages/widgets/src/virtual-tags/` — `docs/agents/tag-mapping-rig.md` |
 | 리깅 스키마 / 런타임 / 편집 UI | `packages/domain/src/3d/model/rig-types.ts`, `packages/features/src/3d/model/{rig-value-store,use-rig-driver}.ts`, `packages/widgets/src/3d/ui/rigging-section.tsx` — `docs/agents/tag-mapping-rig.md` |
@@ -257,7 +259,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 프레임루프·조명/낮밤·그림자·바다·LOD 런타임·워밍업 큐·성능 | `docs/agents/rendering-perf.md` |
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치·썸네일 | `docs/agents/assets-glb.md` |
 | 태그 맵핑·상태 태그·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
-| 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·씬 파일 매핑) | `docs/agents/3d-editor.md` |
+| 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·거리 눈금·씬 파일 매핑) | `docs/agents/3d-editor.md` |
 | 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림·장면 안 알람 표시) | `docs/agents/monitoring-ui.md` |
 
 ### 3D 불변식 체크리스트
@@ -281,6 +283,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 관절·태그 값은 항상 rest 기준 Δ 다. `rotation.x = θ` 절대 대입은 금지 (tag-mapping-rig).
 - 시뮬레이션 값은 씬 시간의 함수다 — 가상 태그 러너의 재생 tick 과 seek 는 같은 고정 스텝 적분기를 쓴다. seek 에서 목표값을 직접 대입하지 않고, 위치 불연속(seek·리셋)의 publish 는 즉시 대입(`smoothTime: 0`)이다 (tag-mapping-rig).
 - 새 태그 값 생산자는 `publishTagValue` 로만 내보낸다. 버스가 단일 진입점이다 (tag-mapping-rig).
+- 모델 라벨의 태그 값 줄은 태그 원시값(`readTagLiveValue`)이고, 거리 눈금의 숫자는 씬에서 잰 거리다. 서로의 값을 끌어 쓰지 않는다 (tag-mapping-rig, 3d-editor).
 - 버스는 숫자 전용이다. 서버 값은 `toTagNumber` 로 바꿔 싣고, 상태 비트는 0/1 로 흐른다 (tag-mapping-rig).
 - 장비 운전 상태는 `EquipmentRuntimeStatus` 여섯 가지 하나다. 라벨·HUD·리포트·저널이 같은 값을 쓰고(`useModelStatusRecords`), 화면마다 다른 상태 목록을 두지 않는다 (3d-play).
 - 값 생산자 정지·재개는 `scene-collision-hold.ts` 한 곳(`holdRunners`/`releaseRunners`/`subscribeRunnerResume`)을 거친다. 실시간 러너는 어떤 감지에서도 자동 정지하지 않는다 (3d-collision).

@@ -166,7 +166,8 @@ export function useSceneDrop({
         // fillModelBottomOffsetFromClone으로 채워진다.
         const unscaledOffset =
           getModelBottomOffset(droppedCatalogItem.path) ?? 0;
-        const scaledOffset = unscaledOffset * droppedCatalogItem.defaultScale[1];
+        const scaledOffset =
+          unscaledOffset * droppedCatalogItem.defaultScale[1];
         const adjustedPosition: Vector3Tuple = [
           nextPosition[0],
           numRound(nextPosition[1] + scaledOffset),
@@ -190,6 +191,8 @@ export function useSceneDrop({
     rendererRef,
     pendingDropPosition,
     setPendingDropPosition,
+    // 눈금 그리기(use-ruler-draw)가 같은 바닥 raycast 로 점을 찍는다.
+    resolveDropPosition,
     handleSceneDragOver,
     handleSceneDrop,
     handleDragLeave,

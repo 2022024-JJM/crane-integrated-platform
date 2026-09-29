@@ -97,7 +97,6 @@
       "scale": "scale",
       "offset": "offset",
       "readout": "태그 {{tag}} → 적용 {{applied}} {{unit}}",
-      "readoutIdle": "값 없음",
       "conflictDuplicate": "앞선 맵핑이 이미 이 대상을 씁니다. 저장 시 이 항목은 버려집니다.",
       "conflictRig": "리그 관절이 같은 노드·축을 구동합니다. 관절이 우선되어 이 맵핑은 무시됩니다.",
       "noJoints": "할당된 리그에 관절이 없습니다.",
@@ -107,7 +106,10 @@
         "scale": "크기"
       },
       "joinLabel": "태그 연결됨: {{tag}}",
-      "sliderLockedByTag": "시뮬레이션 재생 중 — 태그가 이 관절을 구동합니다."
+      "sliderLockedByTag": "시뮬레이션 재생 중 — 태그가 이 관절을 구동합니다.",
+      "showOnLabel": "라벨에 표시",
+      "caption": "라벨 이름",
+      "captionPlaceholder": "이름 (예: 주행)"
     },
     "statusTags": {
       "title": "상태",
@@ -134,6 +136,25 @@
         "bypass": "Bypass",
         "freeSwing": "Free Swing"
       }
+    },
+    "ruler": {
+      "title": "눈금",
+      "interval": "간격",
+      "unit": "단위",
+      "unitShown": "m 표시",
+      "unitHidden": "숫자만",
+      "startValue": "시작 값",
+      "length": "길이",
+      "dotColor": "점 색",
+      "textColor": "글자 색",
+      "guide": "보조선",
+      "guideLength": "길이",
+      "guideSide": "방향",
+      "guideSides": {
+        "left": "왼쪽",
+        "right": "오른쪽"
+      },
+      "guideColor": "색상"
     }
   },
   "transform": {
@@ -305,7 +326,11 @@
     "jointNode": "관절 노드",
     "virtualTags": {
       "unregistered": "미등록"
-    }
+    },
+    "drawRuler": "눈금 그리기",
+    "rulerName": "눈금 {{index}}",
+    "rulerDrawStartHint": "시작점을 클릭하세요 · Esc 취소",
+    "rulerDrawEndHint": "끝점을 클릭하세요 · Esc 취소"
   },
   "detectionSettings": {
     "title": "설정",

@@ -6,6 +6,7 @@ import {
 } from '../model/rig-types';
 import {
   getTagMappingTargetKey,
+  TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
   type TagMapping,
   type TagMappingChannel,
@@ -95,6 +96,12 @@ export function sanitizeTagMappings(
     const mapping: TagMapping = { id: m.id, target, tagKey: m.tagKey.trim() };
     if (isFiniteNumber(m.scale)) mapping.scale = m.scale;
     if (isFiniteNumber(m.offset)) mapping.offset = m.offset;
+    // 라벨 표시는 true 만, 이름은 trim 해서 비지 않을 때만 싣는다.
+    if (m.showOnLabel === true) mapping.showOnLabel = true;
+    if (typeof m.caption === 'string') {
+      const caption = m.caption.trim().slice(0, TAG_MAPPING_CAPTION_MAX);
+      if (caption.length > 0) mapping.caption = caption;
+    }
     seenIds.add(mapping.id);
     seenTargets.add(targetKey);
     out.push(mapping);
@@ -157,7 +164,12 @@ export function convertLegacyValueMapList(
       spec.channel === 'position' && isFiniteNumber(v.offset) ? v.offset : 0;
     const mapping: TagMapping = {
       id: `legacy-${type.toLowerCase()}`,
-      target: { kind: 'node', node: '', channel: spec.channel, axis: spec.axis },
+      target: {
+        kind: 'node',
+        node: '',
+        channel: spec.channel,
+        axis: spec.axis,
+      },
       tagKey: v.key.trim(),
     };
     if (isFiniteNumber(v.scale)) mapping.scale = v.scale;

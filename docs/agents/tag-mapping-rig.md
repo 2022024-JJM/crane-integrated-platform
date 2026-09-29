@@ -9,6 +9,7 @@
 | 관심사 | 위치 |
 |---|---|
 | 태그 맵핑 스키마 / 방어 / 레거시 변환 | `packages/domain/src/3d/model/tag-mapping-types.ts`, `packages/domain/src/3d/lib/sanitize-tag-mappings.ts` |
+| 라벨의 태그 값 줄(목록 구성·표기 / 값 읽기 / 표시) | `packages/domain/src/3d/lib/label-reading.ts`(테스트 대상), `packages/features/src/3d/model/tag-value-bus.ts`(`readTagLiveValue`), `packages/domain/src/3d/ui/model-label.tsx` |
 | 상태 태그 스키마 / 방어 / 편집 로직 / 미리보기 | `packages/domain/src/3d/model/status-tag-types.ts`, `packages/domain/src/3d/lib/sanitize-status-tags.ts`, `packages/widgets/src/3d/lib/status-tag-editor.ts`, `packages/features/src/3d/model/use-label-preview-store.ts` |
 | 서버 값 → 버스 숫자 | `packages/domain/src/monitoring/lib/tag-number.ts` (`toTagNumber`) |
 | 태그 값 버스 / 맵핑 인덱스 / 바인딩 소스 | `packages/features/src/3d/model/tag-value-bus.ts`, `packages/features/src/3d/lib/tag-mapping-index.ts`, `packages/features/src/3d/model/use-tag-binding-source.ts` |
@@ -35,6 +36,16 @@
 - 적용 공식은 `offset + value × scale` 을 **rest 기준 Δ** 로 더하는 것. 루트의 rest 는 씬 배치 transform, 내부 노드는 GLTF rest 다.
 - 같은 대상 중복은 sanitize 가 첫 항목만 남기고(first-wins), 리그 관절이 점유한 노드·축은 드라이버가 관절을 우선한다. 편집 UI 는 둘 다 amber 로 경고한다(`tag-mapping-editor.ts`).
 - 레거시 `valueMapList`(루트 6칸 절대 대입)·`rigBindings`(관절 바인딩)는 로드 시 `sanitize-tag-mappings.ts` 가 `tagMappings` 로 변환하고 저장본에서 사라진다. 절대 좌표 → Δ 변환은 `offset' = offset − placement[axis]` 이며 테스트가 좌표 동일성을 고정한다. 두 필드는 타입에 `@deprecated` 입력 전용으로만 남아 있다.
+
+### 라벨의 태그 값 줄
+
+맵핑 카드의 "라벨에 표시"(`TagMapping.showOnLabel`, true 만 저장)를 켜면 모델 라벨의 상자 위에 그 태그 값이 한 줄로 붙는다. 여러 개면 위쪽으로 쌓이고 첫 맵핑이 상자에 가장 가깝다. 상자는 값 줄 수와 무관하게 제자리에 있다. 짧은 이름(`caption`)을 넣으면 값 앞에 붙고, 표시를 꺼도 이름은 보존한다.
+
+- 값은 scale·offset 을 거치지 않은 **태그 원시값**이다. 화면 구성(배치·맵핑 계수)이 틀려도 숫자는 PLC 와 같아야 한다.
+- 라벨은 domain 이라 값 버스를 모른다. features·widgets 가 목록(`buildLabelReadings`)과 읽기 함수(`readTagLiveValue`)를 `GltfModel` prop 으로 넘기고, 라벨은 `useFrame` 에서 표기가 바뀔 때만 DOM 에 쓴다.
+- 목록은 모델마다 참조를 고정해 넘긴다 — 아니면 memo 된 `GltfModel` 이 렌더마다 다시 그려진다.
+- 모양은 ACMS 매뉴얼의 GC 원점 거리 그대로 상자 없는 청록색 숫자다. 단위는 붙이지 않는다.
+- 라벨을 숨긴 모델(`labelHidden`)·이름이 빈 모델은 값 줄도 없다.
 
 ### 상태 태그 `statusTags`
 
@@ -112,6 +123,8 @@
 - 러너가 한계를 적용하는 대상은 목표값이다. 한계를 우회해 값을 즉시 넣어야 하면 manual·리셋 경로(텔레포트)를 쓴다. seek 는 우회하지 않는다.
 - 시뮬레이션 값은 씬 시간의 함수다 — 재생 tick 과 seek 가 같은 고정 스텝 적분기(`advanceTo`)를 쓴다. seek 에서 목표값을 직접 대입하거나 벽시계 dt 로 적분하지 않는다. 3D 플레이 타임라인의 사건 시각으로 옮기면 재생 때 그 시각의 자세가 나와야 한다(`docs/agents/3d-play.md`).
 - 위치 불연속(seek·리셋)의 publish 는 `smoothTime: 0` 이다 — 스무딩을 타면 자세가 미끄러져 감지기가 가짜 전이를 낸다.
+- `TagMapping` 에 필드를 추가하면 `sanitize-tag-mappings.ts` 와 `scene-snapshot.ts` 의 `isTagMappingListEqual` 을 함께 고친다.
+- 라벨의 태그 값 줄은 버스의 마지막 값(`readTagLiveValue`)만 읽는다. 맵핑의 적용값(`offset + value × scale`)이나 화면 위치에서 계산하지 않는다.
 
 ## 하지 않기로 한 것
 
@@ -124,6 +137,8 @@
 
 ## 미룬 것
 
+- 라벨 값 줄의 단위 표시·표시용 환산. 서버 태그의 원시 단위가 m 가 아니면(dock-in `tl_distance` 는 맵핑 scale 이 0.1 이다) 숫자가 m 로 읽히지 않는다.
+- 맵핑되지 않은 태그(Load 등)를 라벨에 보이는 것.
 - 실서버 태그 합류: `useTagCatalog` 에 `getMonitoringTags()` 결과를 `source:'server'` 로 합치고 WebSocket 러너를 켜는 것. 씬 JSON·맵핑 UI·드라이버는 그대로 둔다.
 - 감지·3D 플레이 리포트가 의미 있는 씬은 `tagMappings` 가 있는 philly-2dock(가상 태그만)·dock-in(서버 리플레이만)뿐이다. 옥포 실외·골리앗 씬은 맵핑이 없어 아무것도 움직이지 않는다.
 - 상태 태그를 연결한 배포 씬은 없다. 서버의 상태 값 형식이 정해지면 맞춘다 — 비트 묶음 워드(역할별 비트 번호), 반전 비트, 모션 run 비트(지금 가동은 축 값 변화로 추정한다).

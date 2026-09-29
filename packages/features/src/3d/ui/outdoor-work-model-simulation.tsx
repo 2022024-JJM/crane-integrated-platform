@@ -5,8 +5,11 @@ import { Box3, MathUtils, Object3D, PerspectiveCamera, Vector3 } from 'three';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import {
   GltfModel,
+  SceneRuler,
   SceneText,
+  buildLabelReadings,
   getSceneMapCatalogItemByPath,
+  getSceneMetersPerUnit,
   loadSceneInfoByRegionId,
   markSceneRegionActive,
   preloadGltf,
@@ -22,6 +25,7 @@ import {
 } from '../model/use-object-focus-store';
 import { useSceneInfoStore } from '../model/use-scene-info-store';
 import { stopSimulation } from '../model/stop-simulation';
+import { readTagLiveValue } from '../model/tag-value-bus';
 import type { MonitoringViewMode } from '../model/types';
 import { useVirtualTagStore } from '../model/use-virtual-tag-store';
 import { useReplayPlayerRunner } from '../model/use-replay-player-runner';
@@ -268,6 +272,21 @@ export function OutdoorWorkModelSimulation({
   const maps = sceneInfo?.maps ?? [];
   const models = sceneInfo?.models ?? [];
   const texts = sceneInfo?.texts ?? [];
+  const rulers = sceneInfo?.rulers ?? [];
+  const metersPerUnit = getSceneMetersPerUnit(regionId);
+  // 라벨 위 태그 값 목록 — 모델마다 참조를 고정해야 memo 된 GltfModel 이
+  // 렌더마다 다시 그려지지 않는다.
+  const sceneModels = sceneInfo?.models;
+  const labelReadingsById = useMemo(
+    () =>
+      new Map(
+        (sceneModels ?? []).map((model) => [
+          model.id,
+          buildLabelReadings(model.tagMappings),
+        ]),
+      ),
+    [sceneModels],
+  );
 
   const handleModelClick = useCallback(
     (id: string) => {
@@ -480,6 +499,8 @@ export function OutdoorWorkModelSimulation({
             alarmHighlightMesh={alarmHighlightMesh}
             labelState={labelStates[model.id]}
             labelTitles={labelTitles}
+            labelReadings={labelReadingsById.get(model.id)}
+            readLabelValue={readTagLiveValue}
             seaSubmersion={seaVisible}
             prepareOutline={prepareOutline}
             position={model.position}
@@ -499,6 +520,23 @@ export function OutdoorWorkModelSimulation({
           position={text.position}
           rotation={text.rotation}
           scale={text.scale}
+        />
+      ))}
+      {/* 거리 눈금 — onSelect 를 넘기지 않아 클릭이 통과한다(관제 화면). */}
+      {rulers.map((ruler) => (
+        <SceneRuler
+          key={ruler.id}
+          id={ruler.id}
+          position={ruler.position}
+          rotation={ruler.rotation}
+          length={ruler.length}
+          interval={ruler.interval}
+          textColor={ruler.textColor}
+          dotColor={ruler.dotColor}
+          guide={ruler.guide}
+          startValue={ruler.startValue}
+          unitHidden={ruler.unitHidden}
+          metersPerUnit={metersPerUnit}
         />
       ))}
     </>

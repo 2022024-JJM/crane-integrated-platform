@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type {
   SavedCameraInfo,
   SavedModelInfo,
+  SavedRulerGuide,
+  SavedRulerInfo,
   SavedSceneInfo,
 } from '@crane/domain/3d';
 import {
@@ -644,5 +646,201 @@ describe('isSceneInfoEqual — 상태 태그(statusTags)', () => {
     expect(JSON.parse(snapshot ?? '{}').models[0].statusTags).toEqual({
       controlOn: 'A:on',
     });
+  });
+});
+
+describe('isSceneInfoEqual — 거리 눈금(rulers)', () => {
+  function ruler(overrides: Partial<SavedRulerInfo> = {}): SavedRulerInfo {
+    return {
+      id: 'r1',
+      name: '눈금 1',
+      position: [10, 5, -20],
+      rotation: [0, 90, 0],
+      length: 750,
+      interval: 100,
+      textColor: '#ffffff',
+      dotColor: '#ffffff',
+      ...overrides,
+    };
+  }
+
+  it('눈금 추가·삭제는 다르다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ rulers: [ruler()] }))).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler(), ruler({ id: 'r2' })] }),
+        scene({ rulers: [ruler()] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('필드 없음과 빈 배열은 같은 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ rulers: [] }))).toBe(true);
+  });
+
+  it('내용이 같은 다른 객체는 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler()] }),
+        scene({ rulers: [ruler()] }),
+      ),
+    ).toBe(true);
+  });
+
+  it.each<[string, Partial<SavedRulerInfo>]>([
+    ['이름', { name: '눈금 2' }],
+    ['글자 색', { textColor: '#ffaa00' }],
+    ['점 색', { dotColor: '#ffaa00' }],
+    ['길이', { length: 751 }],
+    ['간격', { interval: 50 }],
+    ['보조선 추가', { guide: { length: 10, color: '#ffffff' } }],
+    ['시작 값', { startValue: 150 }],
+    ['단위 숨김', { unitHidden: true }],
+    ['잠금', { locked: true }],
+    ['위치', { position: [10, 5, -21] }],
+    ['회전', { rotation: [0, 91, 0] }],
+  ])('%s 변경은 dirty 로 잡힌다', (_label, change) => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler()] }),
+        scene({ rulers: [ruler(change)] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('기본값 명시는 필드 없음과 같은 상태다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler()] }),
+        scene({
+          rulers: [
+            ruler({
+              startValue: 0,
+              unitHidden: false,
+              locked: false,
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it.each<[string, Partial<SavedRulerGuide>]>([
+    ['길이', { length: 11 }],
+    ['색', { color: '#ffaa00' }],
+    ['방향', { side: 'right' }],
+    ['불투명도', { opacity: 0.5 }],
+  ])('보조선 %s 변경은 dirty 로 잡힌다', (_label, change) => {
+    const base: SavedRulerGuide = { length: 10, color: '#ffffff' };
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler({ guide: base })] }),
+        scene({ rulers: [ruler({ guide: { ...base, ...change } })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('보조선 제거는 dirty 로 잡힌다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler({ guide: { length: 10, color: '#ffffff' } })] }),
+        scene({ rulers: [ruler()] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('보조선의 기본값 명시(왼쪽·불투명도 1)는 필드 없음과 같은 상태다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ rulers: [ruler({ guide: { length: 10, color: '#ffffff' } })] }),
+        scene({
+          rulers: [
+            ruler({
+              guide: { length: 10, color: '#ffffff', side: 'left', opacity: 1 },
+            }),
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('눈금 배열은 순서까지 같아야 한다', () => {
+    const a = ruler({ id: 'a' });
+    const b = ruler({ id: 'b' });
+    expect(
+      isSceneInfoEqual(scene({ rulers: [a, b] }), scene({ rulers: [b, a] })),
+    ).toBe(false);
+  });
+
+  it('스냅샷(JSON)에도 실린다 — 저장 직전 정규화를 거친 값으로', () => {
+    const snapshot = createSceneSnapshot(
+      scene({
+        rulers: [
+          ruler({
+            textColor: '#FFAA00',
+            guide: { length: 10, color: '#ffffff', side: 'left' },
+          }),
+        ],
+      }),
+    );
+    const parsed = JSON.parse(snapshot!) as SavedSceneInfo;
+    expect(parsed.rulers?.[0].textColor).toBe('#ffaa00');
+    expect(parsed.rulers?.[0].guide).not.toHaveProperty('side');
+    // 눈금이 없는 씬은 필드가 생기지 않는다.
+    expect(JSON.parse(createSceneSnapshot(scene())!)).not.toHaveProperty(
+      'rulers',
+    );
+  });
+});
+
+describe('isSceneInfoEqual — 태그 맵핑의 라벨 표시', () => {
+  function mapped(overrides: Record<string, unknown> = {}): SavedModelInfo {
+    return model({
+      tagMappings: [
+        {
+          id: 'tm1',
+          target: { kind: 'node', node: '', channel: 'position', axis: 'z' },
+          tagKey: 'GC_04:gantry_position',
+          ...overrides,
+        },
+      ],
+    });
+  }
+
+  it('라벨 표시를 켜면 dirty — 빠지면 체크가 저장되지 않는다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [mapped()] }),
+        scene({ models: [mapped({ showOnLabel: true })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('이름 변경은 dirty 로 잡힌다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [mapped({ showOnLabel: true, caption: '주행' })] }),
+        scene({ models: [mapped({ showOnLabel: true, caption: '횡행' })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('표시 없음·false·undefined 는 같고, 이름 없음·빈 문자열도 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [mapped()] }),
+        scene({
+          models: [mapped({ showOnLabel: false, caption: '' })],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ models: [mapped()] }),
+        scene({
+          models: [mapped({ showOnLabel: undefined, caption: undefined })],
+        }),
+      ),
+    ).toBe(true);
   });
 });

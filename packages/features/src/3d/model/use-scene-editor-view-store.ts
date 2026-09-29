@@ -29,11 +29,17 @@ interface SceneEditorViewState {
   transformPivot: SceneTransformPivot;
   /** 원점 기준 바닥 격자(시각 전용) 표시 여부. */
   showGrid: boolean;
+  /**
+   * 눈금 그리기 모드. 켜져 있는 동안 캔버스의 클릭은 선택이 아니라 눈금의
+   * 시작점·끝점이다. 눈금을 하나 그리거나 Esc 를 누르면 꺼진다.
+   */
+  rulerDrawing: boolean;
   toggleSnap: () => void;
   setSnapStep: (channel: SceneSnapChannel, value: number) => void;
   setTransformSpace: (space: SceneTransformSpace) => void;
   setTransformPivot: (pivot: SceneTransformPivot) => void;
   toggleGrid: () => void;
+  setRulerDrawing: (drawing: boolean) => void;
 }
 
 /**
@@ -51,6 +57,7 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
     transformSpace: 'local',
     transformPivot: 'individual',
     showGrid: false,
+    rulerDrawing: false,
     toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
     setSnapStep: (channel, value) => {
       const current = get().snapStep;
@@ -70,5 +77,9 @@ export const useSceneEditorViewStore = create<SceneEditorViewState>()(
         state.transformPivot === pivot ? state : { transformPivot: pivot },
       ),
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+    setRulerDrawing: (drawing) =>
+      set((state) =>
+        state.rulerDrawing === drawing ? state : { rulerDrawing: drawing },
+      ),
   }),
 );

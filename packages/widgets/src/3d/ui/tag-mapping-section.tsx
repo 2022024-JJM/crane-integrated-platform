@@ -5,6 +5,7 @@ import {
   getTagMappingUnit,
   modelObjectRegistry,
   STATUS_TAG_ROLES,
+  TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
   type ModelStatusTags,
   type RigDefinition,
@@ -22,6 +23,8 @@ import {
 import { cn } from '@crane/core/lib/utils';
 import type { EquipmentLabelState } from '@crane/core/types/status';
 import { Button } from '@crane/ui/atoms/button';
+import { Checkbox } from '@crane/ui/atoms/checkbox';
+import { Input } from '@crane/ui/atoms/input';
 import {
   buildModelNodeTree,
   listModelNodeOptions,
@@ -42,7 +45,12 @@ import {
   switchTargetKind,
   type TagMappingConflict,
 } from '../lib/tag-mapping-editor';
-import { FIELD_SELECT } from './inspector-field-classes';
+import {
+  FIELD_INDENT_COMPACT,
+  FIELD_INPUT,
+  FIELD_LABEL_COMPACT,
+  FIELD_SELECT,
+} from './inspector-field-classes';
 import {
   AxisSegment,
   ChoiceSegment,
@@ -214,7 +222,7 @@ function MappingCard({
 
       {target.kind === 'node' ? (
         <>
-          <Field label={t('monitoring:inspector.mapping.node')}>
+          <Field compact label={t('monitoring:inspector.mapping.node')}>
             <NodeSelect
               value={target.node}
               options={options}
@@ -223,7 +231,7 @@ function MappingCard({
               t={t}
             />
           </Field>
-          <Field label={t('monitoring:inspector.mapping.channel')}>
+          <Field compact label={t('monitoring:inspector.mapping.channel')}>
             <select
               className={FIELD_SELECT}
               value={target.channel}
@@ -256,7 +264,7 @@ function MappingCard({
           ) : null}
         </>
       ) : (
-        <Field label={t('monitoring:inspector.mapping.joint')}>
+        <Field compact label={t('monitoring:inspector.mapping.joint')}>
           <select
             className={cn(
               FIELD_SELECT,
@@ -289,7 +297,7 @@ function MappingCard({
         </Field>
       )}
 
-      <Field label={t('monitoring:inspector.mapping.tag')}>
+      <Field compact label={t('monitoring:inspector.mapping.tag')}>
         <TagKeyCombobox
           value={mapping.tagKey}
           onChange={(tagKey) => onChange({ tagKey })}
@@ -300,17 +308,17 @@ function MappingCard({
 
       {mapping.tagKey ? (
         <>
-          <div className="ml-16 flex items-center gap-2 text-[10px]">
-            <span className="text-muted-foreground w-8 shrink-0">
-              {t('monitoring:inspector.mapping.scale')}
-            </span>
+          {/* scale·offset 은 한 줄이다. scale 라벨을 라벨 열에 두어 첫 입력이
+              위 줄들의 입력과 같은 자리에서 시작하고, 두 입력이 남는 폭을
+              반씩 나눠 오른쪽 끝까지 채운다. */}
+          <Field compact label={t('monitoring:inspector.mapping.scale')}>
             <NumberField
               value={mapping.scale}
               placeholder="1"
               step={0.01}
               onChange={(scale) => onChange({ scale })}
             />
-            <span className="text-muted-foreground w-8 shrink-0">
+            <span className={FIELD_LABEL_COMPACT}>
               {t('monitoring:inspector.mapping.offset')}
             </span>
             <NumberField
@@ -318,16 +326,56 @@ function MappingCard({
               placeholder="0"
               onChange={(offset) => onChange({ offset })}
             />
+          </Field>
+          {/* 값이 들어올 때만 보인다 — 에디터처럼 값 생산자가 없는 화면에서는
+              줄 자체가 없다. */}
+          {tagValue === undefined ? null : (
+            <p
+              className={cn(
+                FIELD_INDENT_COMPACT,
+                'text-muted-foreground font-mono text-[10px]',
+              )}
+            >
+              {t('monitoring:inspector.mapping.readout', {
+                tag: formatMappingValue(tagValue),
+                applied: formatMappingValue(appliedValue),
+                unit,
+              })}
+            </p>
+          )}
+          {/* 라벨 표시 — 모델 라벨 위에 이 태그의 원시값을 보인다. 끄면
+              필드를 지워 저장본에 남기지 않는다(이름은 보존). */}
+          <div
+            className={cn(
+              FIELD_INDENT_COMPACT,
+              'flex min-h-6 items-center gap-2',
+            )}
+          >
+            <label className="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+              <Checkbox
+                checked={mapping.showOnLabel === true}
+                onCheckedChange={(checked) =>
+                  onChange({ showOnLabel: checked ? true : undefined })
+                }
+                className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+              />
+              {t('monitoring:inspector.mapping.showOnLabel')}
+            </label>
+            {mapping.showOnLabel === true ? (
+              <Input
+                value={mapping.caption ?? ''}
+                maxLength={TAG_MAPPING_CAPTION_MAX}
+                placeholder={t(
+                  'monitoring:inspector.mapping.captionPlaceholder',
+                )}
+                aria-label={t('monitoring:inspector.mapping.caption')}
+                className={cn(FIELD_INPUT, 'min-w-0 flex-1')}
+                onChange={(event) =>
+                  onChange({ caption: event.target.value || undefined })
+                }
+              />
+            ) : null}
           </div>
-          <p className="text-muted-foreground ml-16 font-mono text-[10px]">
-            {tagValue === undefined
-              ? t('monitoring:inspector.mapping.readoutIdle')
-              : t('monitoring:inspector.mapping.readout', {
-                  tag: formatMappingValue(tagValue),
-                  applied: formatMappingValue(appliedValue),
-                  unit,
-                })}
-          </p>
         </>
       ) : (
         <p className="text-muted-foreground text-[10px]">

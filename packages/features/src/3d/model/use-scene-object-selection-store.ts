@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SelectedObjectType = 'model' | 'text' | 'mesh' | 'map';
+export type SelectedObjectType = 'model' | 'text' | 'mesh' | 'map' | 'ruler';
 
 interface SceneObjectSelectionState {
   selectedIds: Set<string>;
@@ -22,26 +22,35 @@ interface SceneObjectSelectionState {
    * 덮어 스크린 공간 교차 판정에 어떤 마퀴든 반드시 걸리기 때문이다.
    */
   selectMap: (id: string) => void;
+  /**
+   * 거리 눈금 선택. 텍스트처럼 Ctrl 토글·Ctrl+A 에 참여하지만 마퀴에서는
+   * 지도처럼 제외된다 — 긴 눈금의 AABB 는 어떤 마퀴에도 걸린다.
+   */
+  selectRuler: (id: string) => void;
   toggleModel: (id: string) => void;
   toggleText: (id: string) => void;
   toggleMap: (id: string) => void;
+  toggleRuler: (id: string) => void;
   /**
    * 다중 선택 일괄 설정. 타입은 호출자가 안다 — 마퀴/Ctrl+A/복제 결과에
    * 텍스트가 섞일 수 있어 'model'로 하드코딩하면 단일 텍스트 선택이 존재
    * 검증(use-selected-scene-object-editor)에서 즉시 풀린다.
    */
-  selectAll: (
-    entries: Array<{ id: string; type: SelectedObjectType }>,
-  ) => void;
+  selectAll: (entries: Array<{ id: string; type: SelectedObjectType }>) => void;
   clearSelectedModel: () => void;
 }
 
-function deriveCompat(ids: Set<string>, type: SelectedObjectType | null, primaryId?: string | null) {
-  const resolvedPrimary = primaryId && ids.has(primaryId)
-    ? primaryId
-    : ids.size > 0
-      ? ids.values().next().value!
-      : null;
+function deriveCompat(
+  ids: Set<string>,
+  type: SelectedObjectType | null,
+  primaryId?: string | null,
+) {
+  const resolvedPrimary =
+    primaryId && ids.has(primaryId)
+      ? primaryId
+      : ids.size > 0
+        ? ids.values().next().value!
+        : null;
 
   return {
     selectedIds: ids,
@@ -58,17 +67,16 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
     primarySelectedId: null,
     selectedObjectType: null,
 
-    selectModel: (id) =>
-      set(deriveCompat(new Set([id]), 'model', id)),
+    selectModel: (id) => set(deriveCompat(new Set([id]), 'model', id)),
 
-    selectText: (id) =>
-      set(deriveCompat(new Set([id]), 'text', id)),
+    selectText: (id) => set(deriveCompat(new Set([id]), 'text', id)),
 
     selectMesh: (meshId) =>
       set(deriveCompat(new Set([meshId]), 'mesh', meshId)),
 
-    selectMap: (id) =>
-      set(deriveCompat(new Set([id]), 'map', id)),
+    selectMap: (id) => set(deriveCompat(new Set([id]), 'map', id)),
+
+    selectRuler: (id) => set(deriveCompat(new Set([id]), 'ruler', id)),
 
     toggleModel: (id) =>
       set((state) => {
@@ -121,6 +129,23 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
         return deriveCompat(next, next.size > 0 ? 'map' : null, primary);
       }),
 
+    toggleRuler: (id) =>
+      set((state) => {
+        const next = new Set(state.selectedIds);
+        const isAdding = !next.has(id);
+        if (isAdding) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        const primary = isAdding
+          ? id
+          : state.primarySelectedId === id
+            ? undefined
+            : state.primarySelectedId;
+        return deriveCompat(next, next.size > 0 ? 'ruler' : null, primary);
+      }),
+
     // 태그는 primary(첫 항목)의 타입을 쓴다 — size 1에서 정확하면 충분하다.
     // size>1에서는 selectedModelId가 null이라 타입 태그를 읽는 소비자가
     // 사실상 없다(멀티 경로는 전부 id 기반).
@@ -133,8 +158,7 @@ export const useSceneObjectSelectionStore = create<SceneObjectSelectionState>()(
         ),
       ),
 
-    clearSelectedModel: () =>
-      set(deriveCompat(new Set(), null, null)),
+    clearSelectedModel: () => set(deriveCompat(new Set(), null, null)),
   }),
 );
 

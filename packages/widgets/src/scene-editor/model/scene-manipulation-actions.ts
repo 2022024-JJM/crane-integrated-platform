@@ -4,7 +4,9 @@ import {
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
   createSceneModel,
+  createSceneRuler,
   createSceneText,
+  type RulerPlacement,
   type SavedLightingInfo,
   type SavedSceneInfo,
   type SceneMapCatalogItem,
@@ -26,6 +28,7 @@ interface SceneManipulationDeps {
   selectModel: (id: string) => void;
   selectText: (id: string) => void;
   selectMap: (id: string) => void;
+  selectRuler: (id: string) => void;
   clearSelectedModel: () => void;
   selectedIds: Set<string>;
   sceneInfoRef: MutableRefObject<SavedSceneInfo | null>;
@@ -39,6 +42,7 @@ export function createSceneManipulationActions({
   selectModel,
   selectText,
   selectMap,
+  selectRuler,
   clearSelectedModel,
   selectedIds,
   sceneInfoRef,
@@ -83,6 +87,61 @@ export function createSceneManipulationActions({
     });
 
     selectText(nextText.id);
+  };
+
+  /**
+   * 거리 눈금 추가 — 캔버스에서 두 점을 찍어 그린 결과(placement)를 받는다.
+   * 표시 옵션은 전부 기본값으로 시작하고 인스펙터 눈금 탭에서 고친다. 곧바로
+   * 선택해 기즈모·인스펙터가 붙는다(addText 와 같은 규약). 이름은 호출자가
+   * 번역해 넘긴다("눈금 1") — 비워 두면 계층 목록이 id 대신 폴백을 보인다.
+   */
+  const addRuler = (
+    placement: RulerPlacement,
+    metersPerUnit: number,
+    name: string,
+  ) => {
+    const nextRuler = createSceneRuler({ placement, metersPerUnit, name });
+
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        rulers: [...(prev.rulers ?? []), nextRuler],
+      };
+    });
+
+    selectRuler(nextRuler.id);
+  };
+
+  const selectPlacedRuler = (id: string) => {
+    selectRuler(id);
+  };
+
+  const deletePlacedRuler = (id: string) => {
+    updateScene((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const rulers = prev.rulers ?? [];
+      // 잠긴 눈금은 삭제 불가 — deletePlacedText 와 같은 이중 방어.
+      if (!rulers.some((r) => r.id === id && !r.locked)) {
+        return prev;
+      }
+
+      const next = rulers.filter((r) => r.id !== id);
+      // 마지막 눈금을 지우면 필드째 뺀다(직렬화 diff 0).
+      const { rulers: _removed, ...rest } = prev;
+      void _removed;
+      return next.length > 0 ? { ...rest, rulers: next } : rest;
+    });
+
+    if (selectedIds.has(id)) {
+      clearSelectedModel();
+    }
   };
 
   const deletePlacedText = (id: string) => {
@@ -392,6 +451,9 @@ export function createSceneManipulationActions({
   return {
     addModel,
     addText,
+    addRuler,
+    selectPlacedRuler,
+    deletePlacedRuler,
     addSceneMap,
     selectPlacedMap,
     setEnvironmentId,

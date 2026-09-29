@@ -97,7 +97,6 @@
       "scale": "scale",
       "offset": "offset",
       "readout": "tag {{tag}} → applicatum {{applied}} {{unit}}",
-      "readoutIdle": "nullus valor",
       "conflictDuplicate": "Designatio prior hunc scopum iam utitur. Haec in servando abicitur.",
       "conflictRig": "Articulus rig eundem nodum et axem agit. Articulus praevalet; haec designatio neglegitur.",
       "noJoints": "Rig assignatum articulos non habet.",
@@ -107,7 +106,10 @@
         "scale": "Scala"
       },
       "joinLabel": "Tag iunctum: {{tag}}",
-      "sliderLockedByTag": "Simulatio currit — tag hunc articulum agit."
+      "sliderLockedByTag": "Simulatio currit — tag hunc articulum agit.",
+      "showOnLabel": "In titulo ostende",
+      "caption": "Nomen tituli",
+      "captionPlaceholder": "Nomen (e.g. Cursus)"
     },
     "statusTags": {
       "title": "Status",
@@ -134,6 +136,25 @@
         "bypass": "Bypass",
         "freeSwing": "Free Swing"
       }
+    },
+    "ruler": {
+      "title": "Regula",
+      "interval": "Intervallum",
+      "unit": "Unitas",
+      "unitShown": "m ostende",
+      "unitHidden": "Numerus tantum",
+      "startValue": "Valor initii",
+      "length": "Longitudo",
+      "dotColor": "Color puncti",
+      "textColor": "Color litterarum",
+      "guide": "Linea auxiliaris",
+      "guideLength": "Longitudo",
+      "guideSide": "Latus",
+      "guideSides": {
+        "left": "Sinistra",
+        "right": "Dextra"
+      },
+      "guideColor": "Color"
     }
   },
   "transform": {
@@ -291,7 +312,11 @@
     "jointNode": "Nodus iuncturae",
     "virtualTags": {
       "unregistered": "non inscriptum"
-    }
+    },
+    "drawRuler": "Regulam duce",
+    "rulerName": "Regula {{index}}",
+    "rulerDrawStartHint": "Punctum initii preme · Esc ut abroges",
+    "rulerDrawEndHint": "Punctum finis preme · Esc ut abroges"
   },
   "detectionSettings": {
     "title": "Optiones",

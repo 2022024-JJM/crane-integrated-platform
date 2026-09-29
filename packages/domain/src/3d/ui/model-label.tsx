@@ -8,25 +8,20 @@ import type {
   EquipmentLabelState,
   EquipmentRuntimeStatus,
 } from '@crane/core/types/status';
+import {
+  formatLabelReading,
+  LABEL_READING_EMPTY,
+  type ModelLabelReading,
+  type ModelLabelValueReader,
+} from '../lib/label-reading';
+import { isLabelInRange, labelScaleAtDistance } from '../lib/label-scale';
 
 /**
- * 이 거리(world units, 카메라 ↔ 라벨 위치)를 초과하면 라벨 DOM을 숨긴다.
- * drei <Html>은 매 프레임 화면 좌표 project + transform 계산을 수행하므로,
- * 멀리 있어 작아 보이는 라벨까지 그리면 100+ 모델 씬에서 hot path가 된다.
- * 알람이 활성화된 라벨은 멀리서도 보여야 하므로 culling 면제.
+ * 거리에 따른 숨김·축소는 lib/label-scale.ts 의 규칙이다(눈금의 점·숫자와
+ * 공유). 알람이 활성화된 라벨은 멀리서도 보여야 하므로 숨김·축소 모두 면제.
+ * 표시 상태(고장·Bypass)는 크기를 바꾸지 않는다 — 상태는 색과 아이콘으로만
+ * 나타낸다.
  */
-const LABEL_VISIBILITY_DISTANCE = 1000;
-
-/**
- * 거리 기반 라벨 축소. 카메라가 REF보다 가까우면 원래 크기(1x),
- * 멀어질수록 REF/dist 비율로 줄어들되 MIN 밑으로는 내려가지 않는다.
- * 순수 원근 스케일(distanceFactor)과 달리 근접 시 라벨이 과도하게
- * 커지지 않고, 원거리에서도 최소 가독 크기를 유지한다.
- * 알람 라벨은 시인성이 우선이라 축소하지 않는다. 표시 상태(고장·Bypass)는
- * 크기를 바꾸지 않는다 — 상태는 색과 아이콘으로만 나타낸다.
- */
-const LABEL_SCALE_REF_DISTANCE = 300;
-const LABEL_MIN_SCALE = 0.45;
 
 type AlarmHighlightSeverity = 'critical' | 'high' | 'medium' | 'info';
 
@@ -76,6 +71,17 @@ const LABEL_BADGE_CLASS =
   'inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm bg-white ring-1 ring-black/30';
 const LABEL_BADGE_ICON_CLASS = 'size-2.5 text-[#ff152d]';
 
+/**
+ * 태그 값 줄 — 상자 위. ACMS 매뉴얼 그림의 GC 원점 거리 그대로 상자 없는
+ * 청록색 굵은 숫자다(색은 그림에서 뽑았다). 어두운 그림자는 밝은 지면 위에서
+ * 읽히게 하는 용도다.
+ */
+const READING_TEXT_COLOR = '#51fff6';
+const READING_TEXT_SHADOW =
+  '0 0 2px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8)';
+
+const NO_READINGS: readonly ModelLabelReading[] = [];
+
 const UNKNOWN_STATE: EquipmentLabelState = {
   tone: 'unknown',
   bypass: false,
@@ -109,6 +115,13 @@ interface ModelLabelProps {
   /** 상태·아이콘 툴팁 문구. 없으면 툴팁 없이 그린다. */
   titles?: ModelLabelTitles;
   /**
+   * 상자 위에 쌓일 태그 값 목록(lib/label-reading.ts buildLabelReadings).
+   * 값은 `readValue` 로 프레임마다 읽어 바뀔 때만 DOM 에 쓴다 — 라벨은 값
+   * 버스를 모르므로 읽기 함수는 features 가 넘긴다.
+   */
+  readings?: readonly ModelLabelReading[];
+  readValue?: ModelLabelValueReader;
+  /**
    * 흐림 표시. 모니터링 포커스 중 포커스 밖 모델의 라벨 — 모델 본체가
    * 투명해지는 것과 맞춰 라벨도 흐리게 하고 포인터 이벤트를 끊는다(클릭·
    * hover 콜백 미부착). 라벨은 DOM 이라 material 투명도의 영향을 받지 않는다.
@@ -127,6 +140,8 @@ export function ModelLabel({
   alarmSeverity = null,
   state = UNKNOWN_STATE,
   titles,
+  readings = NO_READINGS,
+  readValue,
   dimmed = false,
   onSelect,
   onHoverStart,
@@ -135,10 +150,21 @@ export function ModelLabel({
 }: ModelLabelProps) {
   const divRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<Group>(null);
+  const valueRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const tempWorldPos = useRef(new Vector3());
   const lastVisibleRef = useRef(true);
   const lastScaleRef = useRef(1);
   const { tone, bypass, freeSwing } = state;
+
+  // 태그 값 줄 — 보이는 라벨만, 표기가 바뀔 때만 쓴다(값은 초당 수십 번 온다).
+  const writeReadings = () => {
+    for (let i = 0; i < readings.length; i += 1) {
+      const span = valueRefs.current[i];
+      if (!span) continue;
+      const text = formatLabelReading(readValue?.(readings[i].tagKey));
+      if (span.textContent !== text) span.textContent = text;
+    }
+  };
 
   // 카메라 거리에 따라 라벨을 숨긴다. setState 대신 ref 기반 style mutate라
   // React 리렌더가 발생하지 않는다. 알람이 활성화된 라벨은 항상 보여준다.
@@ -156,6 +182,7 @@ export function ModelLabel({
         div.style.transform = '';
         lastScaleRef.current = 1;
       }
+      writeReadings();
       return;
     }
 
@@ -163,7 +190,7 @@ export function ModelLabel({
     // 를 갖는다. getWorldPosition이 그 결과를 추출.
     group.getWorldPosition(tempWorldPos.current);
     const dist = frame.camera.position.distanceTo(tempWorldPos.current);
-    const visible = dist <= LABEL_VISIBILITY_DISTANCE;
+    const visible = isLabelInRange(dist);
     if (visible !== lastVisibleRef.current) {
       div.style.display = visible ? '' : 'none';
       lastVisibleRef.current = visible;
@@ -171,14 +198,14 @@ export function ModelLabel({
     if (!visible) return;
 
     // drei <Html>은 wrapper에 자체 transform을 걸므로, 스케일은 우리가 소유한
-    // 안쪽 div에 적용해 충돌을 피한다. 0.02 단위 스냅으로 매 프레임 style
-    // 재작성을 방지.
-    const rawScale = Math.min(1, LABEL_SCALE_REF_DISTANCE / dist);
-    const scale = Math.max(LABEL_MIN_SCALE, Math.round(rawScale * 50) / 50);
+    // 안쪽 div에 적용해 충돌을 피한다. 배율은 단계로 끊겨 나와 매 프레임
+    // style 재작성이 없다.
+    const scale = labelScaleAtDistance(dist);
     if (scale !== lastScaleRef.current) {
       div.style.transform = scale === 1 ? '' : `scale(${scale})`;
       lastScaleRef.current = scale;
     }
+    writeReadings();
   });
 
   if (!equipName) {
@@ -188,64 +215,95 @@ export function ModelLabel({
   return (
     <group ref={groupRef} position={localAnchor}>
       <Html center zIndexRange={[5, 0]}>
-        <div
-          ref={divRef}
-          title={titles?.tone[tone]}
-          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${dimmed ? 'pointer-events-none opacity-30' : tone === 'offline' && !alarmSeverity ? 'cursor-pointer opacity-70' : 'cursor-pointer'}`}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-          onPointerEnter={
-            dimmed
-              ? undefined
-              : (event) => {
-                  event.stopPropagation();
-                  onHoverStart?.(id, event.clientX, event.clientY);
-                }
-          }
-          onPointerMove={
-            dimmed
-              ? undefined
-              : (event) => {
-                  event.stopPropagation();
-                  onHoverMove?.(id, event.clientX, event.clientY);
-                }
-          }
-          onPointerLeave={
-            dimmed
-              ? undefined
-              : (event) => {
-                  event.stopPropagation();
-                  onHoverEnd?.(id);
-                }
-          }
-          onClick={
-            dimmed
-              ? undefined
-              : (event) => {
-                  event.stopPropagation();
-                  onSelect?.(id);
-                }
-          }
-        >
-          {tone === 'offline' ? (
-            <WifiOff aria-hidden className="size-3 shrink-0" />
-          ) : alarmSeverity && tone !== 'unknown' ? (
-            <span
-              aria-hidden
-              className={`inline-block size-2 shrink-0 rounded-full ring-1 ring-black/40 ${LABEL_TONE_DOT_CLASS[tone]}`}
-            />
-          ) : null}
-          {equipName}
-          {bypass ? (
-            <span title={titles?.bypass} className={LABEL_BADGE_CLASS}>
-              <KeyRound aria-hidden className={LABEL_BADGE_ICON_CLASS} />
-            </span>
-          ) : null}
-          {freeSwing ? (
-            <span title={titles?.freeSwing} className={LABEL_BADGE_CLASS}>
-              <RefreshCw aria-hidden className={LABEL_BADGE_ICON_CLASS} />
-            </span>
+        {/* 숨김·축소는 상자와 값 줄을 함께 감싼 이 요소에 건다. 감싼 요소의
+            크기는 상자 하나다 — 값 줄은 흐름 밖(absolute)에서 상자 위로 쌓여,
+            값 줄이 몇 개든 상자는 제자리에 있다. 포인터는 상자만 받는다. */}
+        <div ref={divRef} className="pointer-events-none relative">
+          <div
+            title={titles?.tone[tone]}
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${dimmed ? 'pointer-events-none opacity-30' : tone === 'offline' && !alarmSeverity ? 'pointer-events-auto cursor-pointer opacity-70' : 'pointer-events-auto cursor-pointer'}`}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerEnter={
+              dimmed
+                ? undefined
+                : (event) => {
+                    event.stopPropagation();
+                    onHoverStart?.(id, event.clientX, event.clientY);
+                  }
+            }
+            onPointerMove={
+              dimmed
+                ? undefined
+                : (event) => {
+                    event.stopPropagation();
+                    onHoverMove?.(id, event.clientX, event.clientY);
+                  }
+            }
+            onPointerLeave={
+              dimmed
+                ? undefined
+                : (event) => {
+                    event.stopPropagation();
+                    onHoverEnd?.(id);
+                  }
+            }
+            onClick={
+              dimmed
+                ? undefined
+                : (event) => {
+                    event.stopPropagation();
+                    onSelect?.(id);
+                  }
+            }
+          >
+            {tone === 'offline' ? (
+              <WifiOff aria-hidden className="size-3 shrink-0" />
+            ) : alarmSeverity && tone !== 'unknown' ? (
+              <span
+                aria-hidden
+                className={`inline-block size-2 shrink-0 rounded-full ring-1 ring-black/40 ${LABEL_TONE_DOT_CLASS[tone]}`}
+              />
+            ) : null}
+            {equipName}
+            {bypass ? (
+              <span title={titles?.bypass} className={LABEL_BADGE_CLASS}>
+                <KeyRound aria-hidden className={LABEL_BADGE_ICON_CLASS} />
+              </span>
+            ) : null}
+            {freeSwing ? (
+              <span title={titles?.freeSwing} className={LABEL_BADGE_CLASS}>
+                <RefreshCw aria-hidden className={LABEL_BADGE_ICON_CLASS} />
+              </span>
+            ) : null}
+          </div>
+          {readings.length > 0 ? (
+            // 상자 바로 위에서 위쪽으로 쌓는다 — 첫 값이 상자에 가장 가깝다.
+            <div className="absolute bottom-full left-1/2 mb-0.5 flex -translate-x-1/2 flex-col-reverse items-center gap-0.5">
+              {readings.map((reading, i) => (
+                <div
+                  key={reading.id}
+                  className={`flex items-baseline gap-1 font-sans text-[12px] leading-none font-bold whitespace-nowrap select-none ${dimmed ? 'opacity-30' : ''}`}
+                  style={{
+                    color: READING_TEXT_COLOR,
+                    textShadow: READING_TEXT_SHADOW,
+                  }}
+                >
+                  {reading.caption ? <span>{reading.caption}</span> : null}
+                  {/* 값은 useFrame 이 textContent 로 쓴다 — React 자식을 두지 않는다. */}
+                  <span
+                    ref={(element) => {
+                      valueRefs.current[i] = element;
+                      if (element && !element.textContent) {
+                        element.textContent = LABEL_READING_EMPTY;
+                      }
+                    }}
+                    className="tabular-nums"
+                  />
+                </div>
+              ))}
+            </div>
           ) : null}
         </div>
       </Html>

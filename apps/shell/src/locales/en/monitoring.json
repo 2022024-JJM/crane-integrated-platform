@@ -97,7 +97,6 @@
       "scale": "scale",
       "offset": "offset",
       "readout": "tag {{tag}} → applied {{applied}} {{unit}}",
-      "readoutIdle": "no value",
       "conflictDuplicate": "An earlier mapping already uses this target. This one is dropped on save.",
       "conflictRig": "A rig joint drives the same node and axis. The joint wins; this mapping is ignored.",
       "noJoints": "The assigned rig has no joints.",
@@ -107,7 +106,10 @@
         "scale": "Scale"
       },
       "joinLabel": "Tag linked: {{tag}}",
-      "sliderLockedByTag": "Simulation is playing — a tag drives this joint."
+      "sliderLockedByTag": "Simulation is playing — a tag drives this joint.",
+      "showOnLabel": "Show on label",
+      "caption": "Label name",
+      "captionPlaceholder": "Name (e.g. Travel)"
     },
     "statusTags": {
       "title": "Status",
@@ -134,6 +136,25 @@
         "bypass": "Bypass",
         "freeSwing": "Free Swing"
       }
+    },
+    "ruler": {
+      "title": "Ruler",
+      "interval": "Interval",
+      "unit": "Unit",
+      "unitShown": "Show m",
+      "unitHidden": "Number only",
+      "startValue": "Start value",
+      "length": "Length",
+      "dotColor": "Dot color",
+      "textColor": "Text color",
+      "guide": "Guide line",
+      "guideLength": "Length",
+      "guideSide": "Side",
+      "guideSides": {
+        "left": "Left",
+        "right": "Right"
+      },
+      "guideColor": "Color"
     }
   },
   "transform": {
@@ -305,7 +326,11 @@
     "jointNode": "Joint node",
     "virtualTags": {
       "unregistered": "unregistered"
-    }
+    },
+    "drawRuler": "Draw ruler",
+    "rulerName": "Ruler {{index}}",
+    "rulerDrawStartHint": "Click the start point · Esc to cancel",
+    "rulerDrawEndHint": "Click the end point · Esc to cancel"
   },
   "detectionSettings": {
     "title": "Settings",

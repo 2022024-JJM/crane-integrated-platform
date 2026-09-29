@@ -2,13 +2,14 @@ import {
   humanizeModelPath,
   type SavedMapInfo,
   type SavedModelInfo,
+  type SavedRulerInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 
 export interface PlacedObjectItem {
   id: string;
   displayName: string;
-  type: 'model' | 'text' | 'map';
+  type: 'model' | 'text' | 'map' | 'ruler';
   /**
    * 편집 잠금 — 씬 데이터(locked)에서 파생. 잠긴 행은 목록에서 선택되지
    * 않고 삭제 버튼도 숨긴다.
@@ -19,6 +20,7 @@ export interface PlacedObjectItem {
 interface GetPlacedObjectItemsParams {
   placedModels: SavedModelInfo[];
   placedTexts?: SavedTextInfo[];
+  placedRulers?: SavedRulerInfo[];
   placedMaps?: SavedMapInfo[];
   objectSearch: string;
 }
@@ -26,6 +28,7 @@ interface GetPlacedObjectItemsParams {
 export function getPlacedObjectItems({
   placedModels,
   placedTexts = [],
+  placedRulers = [],
   placedMaps = [],
   objectSearch = '',
 }: GetPlacedObjectItemsParams): PlacedObjectItem[] {
@@ -55,7 +58,14 @@ export function getPlacedObjectItems({
     locked: text.locked === true,
   }));
 
-  const items = [...mapItems, ...modelItems, ...textItems];
+  const rulerItems: PlacedObjectItem[] = placedRulers.map((ruler) => ({
+    id: ruler.id,
+    displayName: ruler.name.trim() || 'Ruler',
+    type: 'ruler',
+    locked: ruler.locked === true,
+  }));
+
+  const items = [...mapItems, ...modelItems, ...textItems, ...rulerItems];
 
   if (!normalizedObjectSearch) {
     return items;

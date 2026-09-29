@@ -16,6 +16,10 @@ import {
 } from './model-label';
 import { ModelSelectionBox } from './model-selection-box';
 import { ObjectSilhouetteOutline } from './object-silhouette-outline';
+import type {
+  ModelLabelReading,
+  ModelLabelValueReader,
+} from '../lib/label-reading';
 import { SELECTION_LINE_COLOR } from '../lib/selection-style';
 import type { SavedMeshOverride } from '../model/types';
 
@@ -40,6 +44,12 @@ interface GltfModelProps {
   labelState?: EquipmentLabelState;
   /** 라벨 상태·아이콘의 툴팁 문구(번역된 값). */
   labelTitles?: ModelLabelTitles;
+  /**
+   * 라벨 위에 쌓일 태그 값 목록과 값 읽기 함수(model-label.tsx). 목록은
+   * 참조가 안정적이어야 한다 — buildLabelReadings 결과를 memo 해서 넘긴다.
+   */
+  labelReadings?: readonly ModelLabelReading[];
+  readLabelValue?: ModelLabelValueReader;
   /** 수면 아래를 깊이 안개로 흐리게 한다 — 바다 씬의 모델·지도(model-mesh.tsx). */
   seaSubmersion?: boolean;
   /**
@@ -122,6 +132,8 @@ export const GltfModel = memo(function GltfModel({
   alarmHighlightMesh = false,
   labelState,
   labelTitles,
+  labelReadings,
+  readLabelValue,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -207,6 +219,8 @@ export const GltfModel = memo(function GltfModel({
           alarmSeverity={alarmSeverity}
           state={labelState}
           titles={labelTitles}
+          readings={labelReadings}
+          readValue={readLabelValue}
           dimmed={labelDimmed}
           onSelect={onSelect}
           onHoverStart={onHoverStart}

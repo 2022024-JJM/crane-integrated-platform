@@ -23,6 +23,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Redo2,
+  Ruler,
   Save,
   Type,
   Undo2,
@@ -69,6 +70,9 @@ interface EditorHeaderBarProps {
   mode: SceneTransformMode;
   onModeChange: (mode: SceneTransformMode) => void;
   onAddText: () => void;
+  /** 눈금 그리기 모드 — 켜면 캔버스 클릭 두 번으로 눈금을 그린다. */
+  rulerDrawing: boolean;
+  onToggleRulerDrawing: () => void;
   // 도구 동작 설정
   transformSpace: SceneTransformSpace;
   onTransformSpaceChange: (space: SceneTransformSpace) => void;
@@ -104,7 +108,7 @@ interface EditorHeaderBarProps {
  *
  * - 좌측: 씬 전체·파일에 작용하는 문서 동작(실행취소·다시실행 | 저장·내보내기)
  * - 중앙: 모달 도구(이동/회전/크기) · 피벗(좌표축·원점 팝업) | 스냅 · 격자 ·
- *   홈 · 탑뷰 | 텍스트 추가
+ *   홈 · 탑뷰 | 텍스트 추가 · 눈금 그리기
  * - 우측: 전체화면 · 우측 패널 토글
  *
  * 그룹 사이는 간격으로만 나누고, 구분선은 "기즈모(도구·피벗) | 스냅·보기 |
@@ -128,6 +132,8 @@ export function EditorHeaderBar({
   mode,
   onModeChange,
   onAddText,
+  rulerDrawing,
+  onToggleRulerDrawing,
   transformSpace,
   onTransformSpaceChange,
   transformPivot,
@@ -291,6 +297,16 @@ export function EditorHeaderBar({
             onClick={onAddText}
           >
             <Type className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            label={t('monitoring:editor.drawRuler')}
+            kind="toggle"
+            pressed={rulerDrawing}
+            side="bottom"
+            disabled={sceneDisabled}
+            onClick={onToggleRulerDrawing}
+          >
+            <Ruler className="size-4" />
           </EditorToolbarButton>
         </div>
 

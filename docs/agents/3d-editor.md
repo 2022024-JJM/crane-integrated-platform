@@ -1,6 +1,6 @@
 # 3D 씬 에디터
 
-씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 씬 설정(배경·조명·바다), 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, region → 씬 파일 매핑.
+씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 씬 설정(배경·조명·바다), 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, 거리 눈금, region → 씬 파일 매핑.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -20,6 +20,9 @@
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
 | 루트 Δ 벗기기 / 배치 프레임 | `packages/features/src/3d/lib/strip-channel-delta.ts`, `packages/features/src/3d/model/root-placement.ts`, `packages/features/src/3d/model/use-rig-driver.ts` |
 | 선택 표시(박스·실루엣) | `packages/domain/src/3d/lib/selection-bounding-box.ts`, `packages/domain/src/3d/lib/silhouette-outline.ts`, `packages/domain/src/3d/ui/gltf-model.tsx`, `packages/domain/src/3d/ui/model-mesh.tsx` |
+| 거리 눈금 스키마 / 방어 / 기하 / 렌더 | `packages/domain/src/3d/model/ruler-types.ts`, `packages/domain/src/3d/lib/sanitize-rulers.ts`, `packages/domain/src/3d/lib/ruler.ts`(테스트 대상), `packages/domain/src/3d/ui/scene-ruler.tsx` |
+| 화면을 향한 표시(모델 라벨·눈금)의 거리 축소·숨김 | `packages/domain/src/3d/lib/label-scale.ts`(테스트 대상) |
+| 거리 눈금 그리기 / 인스펙터 탭 / 편집 로직 | `packages/widgets/src/3d/ui/use-ruler-draw.ts`, `packages/widgets/src/3d/ui/ruler-section.tsx`, `packages/widgets/src/3d/lib/ruler-editor.ts`(테스트 대상) |
 | 검색 가능 콤보박스 | `packages/ui/src/molecules/combobox.tsx`(base-ui `Combobox` 래핑, `usePortalContainer` + `z-9999` 규약) |
 | 수치 입력 스테퍼 | `packages/ui/src/atoms/input-number.tsx`(`stepValue` 주입) |
 
@@ -85,6 +88,25 @@
 - 하위에 메시가 없는 리프 Empty 노드는 그릴 것이 없어 아무 표시도 나오지 않는다.
 - 저장 씬의 `meshOverrides` 는 렌더에만 쓰이고 에디터에서 새로 만들지 않는다.
 
+### 거리 눈금
+
+바닥에 두 점을 찍어 그리는 씬 객체다(`SavedSceneInfo.rulers`). 시작점에서 끝점까지 간격마다 점과 거리 숫자를 보이고, 모니터링·3D 플레이·에디터 세 캔버스가 같은 컴포넌트(`SceneRuler`)로 그린다.
+
+- **숫자는 씬에서 잰 거리**다. 태그(PLC) 값과 무관하므로 둘을 맞추려면 시작점을 PLC 원점에 두거나 시작 값에 그 지점의 PLC 값을 넣는다. 눈금은 시작점이 아니라 간격의 배수 값에 선다(`rulerTicks`).
+- **단위가 섞여 있다**: 그린 기하(길이·보조선 길이)는 position 과 같은 씬 unit, 숫자에 해당하는 값(간격·시작 값)은 m 다. 표시·입력은 `getSceneMetersPerUnit` 으로 환산한다.
+- **간격**은 `RULER_INTERVALS` 중에서만 고른다. 그 밖의 값이 든 저장본은 눈금을 버리지 않고 `RULER_INTERVAL_DEFAULT` 로 되돌린다.
+- **그리기**: 헤더의 눈금 버튼이 세션 스토어 `useSceneEditorViewStore.rulerDrawing` 을 켠다. 캔버스 루트가 클릭을 **캡처 단계**에서 받아 전파를 끊고(선택·`onPointerMissed` 가 함께 돌지 않게) 드롭과 같은 바닥 raycast(`resolveDropPosition`)로 점을 찍는다. 클릭 두 번이고, 누른 자리와 뗀 자리가 멀면 카메라 드래그로 보고 무시한다. 그리는 동안 마퀴는 쉬고, 켜는 순간 선택을 비운다. 눈금 하나를 그리거나 Esc 를 누르면 꺼진다.
+- 미리보기(`SceneRulerPreview`)는 훅 상태일 뿐 씬 데이터·레지스트리에 들어가지 않는다. 히스토리에는 추가 한 번만 남는다.
+- 새 눈금의 표시 옵션은 전부 기본값이고(`createSceneRuler`, 보조선 없음) 간격만 그린 길이에 맞춰 고른다(`pickRulerInterval`). 이름은 번역한 실제 값으로 저장한다.
+- **편집**: 표시 옵션은 인스펙터 눈금 탭(`updateSelectedRuler`), 배치는 트랜스폼 탭과 기즈모, 이름·잠금·삭제는 계층 목록이다. 선택·이름·잠금·트랜스폼·삭제는 모델·텍스트와 같은 공통 경로를 탄다.
+- **크기(scale)는 없다.** 공통 트랜스폼 경로가 실어 온 scale 은 저장 전에 떼고, 눈금이 프라이머리일 때 크기 모드에서는 기즈모를 붙이지 않는다. 다중 선택 크기 드래그가 늘려 놓은 그룹은 렌더가 되돌린다.
+- **점과 숫자**는 DOM(drei `Html`)으로 그려 바닥 메시가 없다. 숫자는 화면을 향하고 그림자·테두리가 없다. 글자 색과 점 색은 따로 정한다.
+- **거리 축소**: 점과 숫자는 모델 라벨과 같은 규칙(`label-scale.ts`)으로 카메라가 멀어지면 줄고 같은 거리에서 사라진다. 축소의 기준점은 점의 중심이라 줄어도 점이 눈금 자리를 벗어나지 않는다.
+- **보조선**은 선택 옵션이다(`SavedRulerInfo.guide`). 눈금 점마다 진행 방향의 수직으로 긋고, 점에서 시작해 **한쪽으로만** 뻗는다 — 길이를 늘려도 반대쪽으로 자라지 않는다. 방향(진행 방향 기준 왼쪽·오른쪽)·길이·색·불투명도를 정한다. 화면 픽셀 두께 선을 바닥에서 `RULER_LINE_LIFT_M` 띄워 깊이 테스트를 켠다. 중심선은 그리지 않는다.
+- 숫자는 눈금마다 카메라 거리로 화면 간격을 구해 촘촘하면 건너뛴다(`rulerLabelStride`, 줄어든 글자만큼 기준 간격도 줄인다). 눈금 개수는 `RULER_MAX_TICKS` 를 넘지 않게 렌더가 간격을 정수 배로 올린다(`resolveRulerInterval`).
+- 선택한 눈금은 시작점에서 끝점까지의 축선을 선택 색으로 보인다(`rulerAxisPoints`).
+- 마퀴 선택에서는 지도처럼 항상 제외한다. Ctrl 토글·전체 선택에는 참여한다. 관제 화면에서는 클릭을 받지 않는다.
+
 ### 콤보박스 규약
 
 `packages/ui/src/molecules/combobox.tsx` 는 base-ui `Combobox` 래핑이며 `usePortalContainer()` 로 포털하고 `z-9999` 를 쓴다. 인스펙터 안의 새 드롭다운은 이 규약을 따른다.
@@ -102,6 +124,11 @@
 - 다중 선택 `primary` 피벗의 세컨더리 위치는 배치 프레임(`writeRootPlacement`)으로 써넣고 개별 스냅하지 않는다.
 - 노드 박스·실루엣 포털은 대상 `uuid` 를 key 로 재마운트한다.
 - 인스펙터 안의 수치 계산은 `packages/widgets/src/3d/lib/` 로 뺀다(`zone-editor.ts`, `tag-mapping-editor.ts` 선례) — 공통 규칙 "`ui/*.tsx` 안 수치 계산 금지".
+- 씬 객체 종류를 새로 만들면 id 를 모델·텍스트·눈금과 같은 집합에서 발급한다(`sanitizeSceneInfo` 의 `seenIds`). 선택·기즈모·레지스트리가 id 하나로 객체를 찾는다.
+- `SavedRulerInfo`·`SavedRulerGuide` 에 필드를 추가하면 `sanitize-rulers.ts` 와 `scene-snapshot.ts` 의 `isRulerInfoEqual`·`isRulerGuideEqual` 을 함께 고친다. 기본값은 저장하지 않는다(시작 값 0·단위 표시·보조선 왼쪽·불투명도 1).
+- 모델 라벨과 눈금의 거리 축소·숨김 기준은 `label-scale.ts` 하나다. 한쪽만 다른 거리·배율을 쓰지 않는다.
+- 눈금 옵션을 고치는 함수는 값이 같으면 같은 참조를 돌려준다(`ruler-editor.ts` 의 `withRuler*`). 새 옵션도 같은 규칙으로 만든다 — 아니면 히스토리·dirty 가 오염된다.
+- 눈금 보조선은 `renderOrder ≥ 0.5` 로 둔다(바다 위 오버레이 규칙, `docs/agents/rendering-perf.md`).
 
 ## 하지 않기로 한 것
 
@@ -112,3 +139,14 @@
 - `server.watch.ignored` 로 dev 저장 디렉토리 무시 — 기동 후 생긴 파일이 404.
 - 안쪽 노드에 기즈모·다중 선택·`meshOverrides` 생성 — 읽기 전용으로 유지.
 - 에디터에서 `meshOverrides` 를 새로 만드는 것 — 렌더 전용 데이터.
+- 눈금을 누른 채 끌어서 그리기 — 왼쪽 드래그는 마퀴, 가운데·오른쪽 드래그는 카메라라 겹치고, 긴 레일은 시작점을 찍은 뒤 카메라를 옮겨야 끝점을 찍을 수 있다.
+- 눈금을 지도 GLB 에 굽거나 깊이 테스트 없는 오버레이로 그리기 — 앞쪽은 에디터에서 저작할 수 없고, 뒤쪽은 선이 크레인·선박을 뚫고 보인다.
+- 눈금 보조선에 `polygonOffset` — 로그 깊이에서는 무시된다. 바닥에서 띄운다.
+- 눈금의 중심선·"선" 표시 방식 — 점에 보조선을 더하는 옵션으로 바꿨다. 점을 가운데 두고 양쪽으로 뻗는 가로 선도 두지 않는다.
+- 눈금 간격의 자유 입력 — 고를 수 있는 값만 받는다.
+- 눈금 숫자를 태그 값에서 가져오기 — 눈금은 씬 거리다. PLC 값은 모델 라벨의 태그 값 줄이 보인다(`docs/agents/tag-mapping-rig.md`).
+
+## 미룬 것
+
+- 눈금: 끝점을 끌어서 길이 바꾸기, 글자 크기 옵션, 복제, 지형 굴곡을 따라 붙이기, m 외 단위 환산.
+- 눈금은 미니맵 재캡처 조건에 없다 — 보조선은 캡처 시점의 것만 미니맵 배경에 찍힌다.

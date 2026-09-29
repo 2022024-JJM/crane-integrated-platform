@@ -9,6 +9,7 @@
  * 지금은 loadSceneInfoByRegionId가 이 함수를 통과시키므로 에디터·뷰어·
  * 리플레이가 **같은 데이터**를 본다. 이 파일이 도메인에 있는 이유다.
  */
+import type { SavedRulerInfo } from '../model/ruler-types';
 import type {
   SavedCameraInfo,
   SavedLightingInfo,
@@ -23,6 +24,7 @@ import {
 } from '../model/types';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
 import { sanitizeModelZones } from './sanitize-model-zones';
+import { sanitizeRulerFields } from './sanitize-rulers';
 import { sanitizeModelStatusTags } from './sanitize-status-tags';
 import { resolveModelTagMappings } from './sanitize-tag-mappings';
 import { createId } from '@crane/core/lib/create-id';
@@ -216,6 +218,29 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
       })
     : [];
 
+  // 거리 눈금 — id 는 모델·텍스트와 같은 집합에서 중복을 가린다(선택·기즈모가
+  // id 하나로 객체를 찾는다).
+  const rawRulers = (sceneInfo as SavedSceneInfo | undefined)?.rulers;
+  const safeRulers: SavedRulerInfo[] = Array.isArray(rawRulers)
+    ? rawRulers.flatMap((ruler) => {
+        const fields = sanitizeRulerFields(ruler);
+        if (!fields) return [];
+
+        let nextId =
+          typeof ruler.id === 'string' && ruler.id.length > 0
+            ? ruler.id
+            : createSceneModelId();
+
+        if (seenIds.has(nextId)) {
+          nextId = createSceneModelId();
+        }
+
+        seenIds.add(nextId);
+
+        return [{ id: nextId, ...fields }];
+      })
+    : [];
+
   const safeCamera = sanitizeCamera(sceneInfo?.camera);
 
   const sanitized: SavedSceneInfo = {
@@ -227,6 +252,11 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
 
   if (safeRigs) {
     sanitized.rigs = safeRigs;
+  }
+
+  // 눈금이 없는 씬은 필드 자체가 빠진다 — 기존 저장본과 diff 0.
+  if (safeRulers.length > 0) {
+    sanitized.rulers = safeRulers;
   }
 
   // 공유 씬의 region 별 카메라 — 유효한 슬롯만 남기고, 없으면 필드를 뺀다.

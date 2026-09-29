@@ -50,7 +50,20 @@ export interface TagMapping {
   scale?: number;
   /** 태그 값 0 에 대응하는 Δ. 생략 시 0. */
   offset?: number;
+  /**
+   * 모델 라벨 위에 이 태그의 **원시값**(scale·offset 적용 전, PLC 값 그대로)을
+   * 보인다. true 만 저장. 값 읽기·표기는 lib/label-reading.ts.
+   */
+  showOnLabel?: boolean;
+  /**
+   * 라벨 값 앞에 붙는 짧은 이름(예: `주행`). 비면 숫자만 보인다. 표시를 꺼도
+   * 보존해 다시 켜면 되살아난다. 최대 TAG_MAPPING_CAPTION_MAX 자.
+   */
+  caption?: string;
 }
+
+/** 라벨 값 이름의 최대 길이 — 라벨이 모델을 가리지 않을 만큼만. */
+export const TAG_MAPPING_CAPTION_MAX = 12;
 
 /**
  * 같은 대상을 두 맵핑이 가리키는지 판정하는 키. UI 의 중복 경고와 sanitize

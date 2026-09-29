@@ -300,6 +300,7 @@ export {
 } from './lib/snap-transform';
 export {
   publishTagValue,
+  readTagLiveValue,
   setTagIngest,
   subscribeTagValues,
   tagLiveValues,

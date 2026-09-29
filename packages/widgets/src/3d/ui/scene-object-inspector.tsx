@@ -4,6 +4,7 @@ import {
   Eye,
   Palette,
   Radius,
+  Ruler,
   SlidersHorizontal,
   Tag,
   Type,
@@ -15,9 +16,11 @@ import {
   type RigDefinition,
   type SavedMapInfo,
   type SavedModelInfo,
+  type SavedRulerInfo,
   type SavedTextInfo,
 } from '@crane/domain/3d';
 import { RiggingSection, type RigUpdater } from './rigging-section';
+import { RulerSection, type RulerUpdater } from './ruler-section';
 import {
   TagMappingSection,
   type StatusTagsUpdater,
@@ -63,9 +66,10 @@ type InspectorTabKey =
   | 'rigging'
   | 'textContent'
   | 'textColor'
+  | 'ruler'
   | 'camera';
 
-type InspectorObjectType = 'model' | 'text' | 'map';
+type InspectorObjectType = 'model' | 'text' | 'map' | 'ruler';
 
 const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   transform: SlidersHorizontal,
@@ -75,6 +79,7 @@ const TAB_ICON: Record<InspectorTabKey, LucideIcon> = {
   rigging: Bone,
   textContent: Type,
   textColor: Palette,
+  ruler: Ruler,
   camera: Camera,
 };
 
@@ -86,6 +91,7 @@ const TAB_LABEL_KEY: Record<InspectorTabKey, string> = {
   rigging: 'monitoring:inspector.rigging.title',
   textContent: 'monitoring:inspector.textContent',
   textColor: 'monitoring:inspector.textColor',
+  ruler: 'monitoring:inspector.ruler.title',
   camera: 'monitoring:inspector.camera',
 };
 
@@ -93,6 +99,7 @@ const TABS_BY_TYPE: Record<InspectorObjectType, readonly InspectorTabKey[]> = {
   model: ['transform', 'display', 'zones', 'tagMapping', 'rigging'],
   text: ['textContent', 'textColor', 'transform'],
   map: ['transform', 'camera'],
+  ruler: ['ruler', 'transform'],
 };
 
 function getTabsForType(
@@ -137,6 +144,9 @@ export interface InspectorTagMappingHandlers {
 interface SceneObjectInspectorProps {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  /** 거리 눈금 선택 — 눈금 탭(표시 옵션)과 트랜스폼 탭(위치·회전). */
+  selectedRuler?: SavedRulerInfo | null;
+  onRulerChange?: (updater: RulerUpdater) => void;
   /**
    * 모델 안쪽 노드 선택. 노드는 읽기 전용이라 편집 섹션 없이 안내 문구만
    * 보이고, 바운딩 박스는 캔버스가 그린다.
@@ -211,6 +221,8 @@ interface TransformSectionProps {
     value: number,
     options?: { uniformScale?: boolean },
   ) => void;
+  /** 크기 그룹을 숨긴다 — 크기가 없는 객체(눈금). */
+  hideScale?: boolean;
   t: (key: string) => string;
 }
 
@@ -219,6 +231,7 @@ function TransformSection({
   rotation,
   scale,
   onTransformChange,
+  hideScale = false,
   t,
 }: TransformSectionProps) {
   // 드래그 중에는 sceneInfo write가 끊긴 상태이므로 props로 받은 값이 멈춘다.
@@ -272,28 +285,30 @@ function TransformSection({
             }}
           />
         </TransformGroup>
-        <TransformGroup
-          title={t('monitoring:inspector.scale')}
-          action={
-            <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
-              <Checkbox
-                checked={uniformScale}
-                onCheckedChange={(checked) => setUniformScale(checked)}
-                className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
-              />
-              {t('monitoring:inspector.uniformScale')}
-            </label>
-          }
-        >
-          <ScaleController
-            vec={displayScale}
-            step={stepFor('scale')}
-            stepValue={stepValue}
-            onChange={(axis, value) => {
-              onTransformChange('scale', axis, value, { uniformScale });
-            }}
-          />
-        </TransformGroup>
+        {hideScale ? null : (
+          <TransformGroup
+            title={t('monitoring:inspector.scale')}
+            action={
+              <label className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-[10px] transition-colors">
+                <Checkbox
+                  checked={uniformScale}
+                  onCheckedChange={(checked) => setUniformScale(checked)}
+                  className="size-3.5 cursor-pointer [&>[data-slot=checkbox-indicator]>svg]:size-3"
+                />
+                {t('monitoring:inspector.uniformScale')}
+              </label>
+            }
+          >
+            <ScaleController
+              vec={displayScale}
+              step={stepFor('scale')}
+              stepValue={stepValue}
+              onChange={(axis, value) => {
+                onTransformChange('scale', axis, value, { uniformScale });
+              }}
+            />
+          </TransformGroup>
+        )}
       </div>
     </div>
   );
@@ -519,6 +534,51 @@ function TextInspectorContent({
   );
 }
 
+const RULER_DISPLAY_SCALE: Vector3Tuple = [1, 1, 1];
+
+function RulerInspectorContent({
+  selectedRuler,
+  activeTab,
+  onRulerChange,
+  onTransformChange,
+  metersPerUnit,
+  t,
+}: {
+  selectedRuler: SavedRulerInfo;
+  activeTab: InspectorTabKey;
+  onRulerChange?: (updater: RulerUpdater) => void;
+  onTransformChange: (
+    field: SceneTransformField,
+    axis: AxisKey,
+    value: number,
+    options?: { uniformScale?: boolean },
+  ) => void;
+  metersPerUnit?: number;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  if (activeTab === 'transform') {
+    return (
+      <TransformSection
+        position={selectedRuler.position}
+        rotation={selectedRuler.rotation}
+        scale={RULER_DISPLAY_SCALE}
+        hideScale
+        onTransformChange={onTransformChange}
+        t={t}
+      />
+    );
+  }
+  if (!onRulerChange) return null;
+  return (
+    <RulerSection
+      ruler={selectedRuler}
+      onChange={onRulerChange}
+      metersPerUnit={metersPerUnit}
+      t={t}
+    />
+  );
+}
+
 /**
  * 지도 인스펙터 — transform 과 카메라 탭.
  *
@@ -634,6 +694,8 @@ function InspectorTabRail({
 export function SceneObjectInspector({
   selectedModel,
   selectedText,
+  selectedRuler = null,
+  onRulerChange,
   selectedMesh,
   selectedMap = null,
   multiSelectCount = 0,
@@ -658,8 +720,8 @@ export function SceneObjectInspector({
     setContentDraft(selectedText?.content ?? '');
   }, [selectedText?.content]);
 
-  // 분기 순서 multi > mesh > model > text > map. 노드(mesh)는 편집 탭이 없어
-  // 타입 null 로 두고 아래에서 안내 문구만 그린다.
+  // 분기 순서 multi > mesh > model > text > ruler > map. 노드(mesh)는 편집
+  // 탭이 없어 타입 null 로 두고 아래에서 안내 문구만 그린다.
   const selectedType: InspectorObjectType | null =
     multiSelectCount > 1 || selectedMesh
       ? null
@@ -667,9 +729,11 @@ export function SceneObjectInspector({
         ? 'model'
         : selectedText
           ? 'text'
-          : selectedMap
-            ? 'map'
-            : null;
+          : selectedRuler
+            ? 'ruler'
+            : selectedMap
+              ? 'map'
+              : null;
 
   const tabs = selectedType
     ? getTabsForType(
@@ -743,6 +807,15 @@ export function SceneObjectInspector({
               onTextContentChange={onTextContentChange}
               onTextColorChange={onTextColorChange}
               onTransformChange={onTransformChange}
+              t={t}
+            />
+          ) : selectedRuler ? (
+            <RulerInspectorContent
+              selectedRuler={selectedRuler}
+              activeTab={resolvedTab}
+              onRulerChange={onRulerChange}
+              onTransformChange={onTransformChange}
+              metersPerUnit={metersPerUnit}
               t={t}
             />
           ) : selectedMap ? (

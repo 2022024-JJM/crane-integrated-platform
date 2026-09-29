@@ -66,6 +66,14 @@ export const tagLiveValues = {
   },
 };
 
+/**
+ * 태그의 마지막 값(없으면 undefined). 모델 라벨의 태그 값 줄이 프레임마다
+ * 부른다 — 참조가 고정된 함수라 memo 된 모델에 prop 으로 넘겨도 된다.
+ */
+export function readTagLiveValue(key: string): number | undefined {
+  return liveValues.get(key)?.value;
+}
+
 let tagIngest: TagPublish | null = null;
 
 export type TagValueListener = (key: string, value: number, at: number) => void;

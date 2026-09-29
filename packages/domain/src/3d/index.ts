@@ -8,6 +8,57 @@ export { resolveEulerContinuity } from './lib/euler-continuity';
 export { humanizeModelPath, normalizeModelLabel } from './lib/model-path-utils';
 export { createSceneModel } from './lib/create-scene-model';
 export { createSceneText } from './lib/create-scene-text';
+export { createSceneRuler } from './lib/create-scene-ruler';
+export {
+  formatRulerValue,
+  isRulerLabelVisible,
+  pickRulerInterval,
+  pixelsPerUnitAtDistance,
+  resolveRulerInterval,
+  rulerAxisPoints,
+  rulerGuidePoints,
+  rulerLabelStride,
+  rulerPlacementFromPoints,
+  rulerTicks,
+  RULER_MAX_TICKS,
+  type RulerPlacement,
+  type RulerTick,
+} from './lib/ruler';
+export { sanitizeRulerFields, sanitizeRulerGuide } from './lib/sanitize-rulers';
+export {
+  isLabelInRange,
+  labelScaleAtDistance,
+  LABEL_MIN_SCALE,
+  LABEL_SCALE_REF_DISTANCE,
+  LABEL_VISIBILITY_DISTANCE,
+} from './lib/label-scale';
+export {
+  isRulerInterval,
+  RULER_DEFAULT_COLOR,
+  RULER_GUIDE_DEFAULT_LENGTH_M,
+  RULER_GUIDE_OPACITY_DEFAULT,
+  RULER_GUIDE_OPACITY_MIN,
+  RULER_GUIDE_SIDE_DEFAULT,
+  RULER_GUIDE_SIDES,
+  RULER_INTERVAL_DEFAULT,
+  RULER_INTERVALS,
+  RULER_MIN_LENGTH,
+} from './model/ruler-types';
+export type {
+  SavedRulerGuide,
+  SavedRulerInfo,
+  SceneRulerGuideSide,
+  SceneRulerInterval,
+} from './model/ruler-types';
+export {
+  buildLabelReadings,
+  formatLabelReading,
+  LABEL_READING_EMPTY,
+} from './lib/label-reading';
+export type {
+  ModelLabelReading,
+  ModelLabelValueReader,
+} from './lib/label-reading';
 export {
   loadSceneInfoByRegionId,
   saveSceneInfoByRegionId,
@@ -34,6 +85,7 @@ export {
   getRigOccupiedTargetKeys,
   getTagMappingTargetKey,
   getTagMappingUnit,
+  TAG_MAPPING_CAPTION_MAX,
   TAG_MAPPING_CHANNELS,
 } from './model/tag-mapping-types';
 export { sanitizeModelStatusTags } from './lib/sanitize-status-tags';
@@ -261,6 +313,7 @@ export {
   markSceneOpaqueStencils,
 } from './lib/scene-stencil';
 export { SceneText } from './ui/scene-text';
+export { SceneRuler, SceneRulerPreview } from './ui/scene-ruler';
 export {
   SCENE_METERS_PER_UNIT_BY_REGION_ID,
   getSceneMetersPerUnit,

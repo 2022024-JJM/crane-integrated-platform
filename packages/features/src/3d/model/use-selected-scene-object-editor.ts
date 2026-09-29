@@ -6,6 +6,7 @@ import {
   type SavedMapInfo,
   type SavedModelInfo,
   type SavedModelZone,
+  type SavedRulerInfo,
   type SavedSceneInfo,
   type SavedTextInfo,
   type TagMapping,
@@ -25,6 +26,19 @@ import {
 
 function clampOpacity(value: number) {
   return numRound(clampToRange(value, 0.1, 1));
+}
+
+/**
+ * 눈금에는 scale 이 없다. 공통 transform 경로가 실어 온 scale 을 떼어 낸다 —
+ * 남겨 두면 저장본에 스키마에 없는 필드가 생긴다.
+ */
+function withoutScale(ruler: SavedRulerInfo): SavedRulerInfo {
+  if (!('scale' in ruler)) return ruler;
+  const { scale: _scale, ...rest } = ruler as SavedRulerInfo & {
+    scale?: unknown;
+  };
+  void _scale;
+  return rest;
 }
 
 interface UseSelectedSceneObjectEditorParams {
@@ -51,6 +65,7 @@ export interface SelectedMeshInfo {
 interface UseSelectedSceneObjectEditorResult {
   selectedModel: SavedModelInfo | null;
   selectedText: SavedTextInfo | null;
+  selectedRuler: SavedRulerInfo | null;
   selectedMesh: SelectedMeshInfo | null;
   renameObject: (id: string, name: string) => void;
   /**
@@ -96,6 +111,14 @@ interface UseSelectedSceneObjectEditorResult {
   ) => void;
   updateSelectedTextContent: (content: string) => void;
   updateSelectedTextColor: (color: string) => void;
+  /**
+   * 선택 눈금의 옵션(표시 방식·간격·단위·시작 값·길이·선 길이·색) 갱신.
+   * updater 가 같은 참조를 돌려주면 씬도 그대로다(히스토리·dirty 무변화).
+   * 배치(position·rotation)는 트랜스폼 경로가 맡는다.
+   */
+  updateSelectedRuler: (
+    updater: (ruler: SavedRulerInfo) => SavedRulerInfo,
+  ) => void;
   updateMultiObjectTransforms: (
     updates: Array<{
       id: string;
@@ -161,11 +184,12 @@ export function useSelectedSceneObjectEditor({
       return;
     }
 
-    // model/text/map은 id가 전역 고유하므로 타입 분기 없이 세 컬렉션
+    // model/text/map/ruler 는 id가 전역 고유하므로 타입 분기 없이 네 컬렉션
     // 어디에든 존재하면 선택을 유지한다.
     const exists =
       sceneInfo.models.some((m) => m.id === selectedModelId) ||
       (sceneInfo.texts ?? []).some((t) => t.id === selectedModelId) ||
+      (sceneInfo.rulers ?? []).some((r) => r.id === selectedModelId) ||
       (sceneInfo.maps ?? []).some((m) => m.id === selectedModelId);
 
     if (!exists) {
@@ -186,6 +210,9 @@ export function useSelectedSceneObjectEditor({
       ) ||
       (sceneInfo.texts ?? []).some(
         (t) => t.locked === true && selectedIds.has(t.id),
+      ) ||
+      (sceneInfo.rulers ?? []).some(
+        (r) => r.locked === true && selectedIds.has(r.id),
       ) ||
       (sceneInfo.maps ?? []).some(
         (m) => m.locked !== false && selectedIds.has(m.id),
@@ -213,6 +240,15 @@ export function useSelectedSceneObjectEditor({
     [sceneInfo?.texts, selectedModelId, selectedObjectType],
   );
 
+  const selectedRuler = useMemo(
+    () =>
+      selectedObjectType === 'ruler'
+        ? ((sceneInfo?.rulers ?? []).find((r) => r.id === selectedModelId) ??
+          null)
+        : null,
+    [sceneInfo?.rulers, selectedModelId, selectedObjectType],
+  );
+
   const selectedMap = useMemo(
     () =>
       selectedObjectType === 'map'
@@ -235,8 +271,8 @@ export function useSelectedSceneObjectEditor({
 
   /**
    * id 기반 이름 변경 — 모델은 equipName, 텍스트는 content(내용이 곧
-   * 표시 이름), 지도는 name(없으면 경로 파생 이름으로 표시)을 바꾼다.
-   * 빈 이름은 무시한다.
+   * 표시 이름), 눈금·지도는 name(지도는 없으면 경로 파생 이름으로 표시)을
+   * 바꾼다. 빈 이름은 무시한다.
    */
   const renameObject = (id: string, name: string) => {
     const trimmed = name.trim();
@@ -261,6 +297,14 @@ export function useSelectedSceneObjectEditor({
           ...prev,
           texts: (prev.texts ?? []).map((text) =>
             text.id === id ? { ...text, content: trimmed } : text,
+          ),
+        };
+      }
+      if ((prev.rulers ?? []).some((ruler) => ruler.id === id)) {
+        return {
+          ...prev,
+          rulers: (prev.rulers ?? []).map((ruler) =>
+            ruler.id === id ? { ...ruler, name: trimmed } : ruler,
           ),
         };
       }
@@ -348,9 +392,10 @@ export function useSelectedSceneObjectEditor({
   };
 
   /**
-   * transform 편집 공통 경로 — 모델/텍스트/지도는 transform 필드 형태가
-   * 같으므로 selectedModelId가 속한 컬렉션(models → texts → maps)을 찾아
-   * patch를 병합한다(renameObject/setObjectLocked와 같은 컬렉션 해석 패턴).
+   * transform 편집 공통 경로 — 모델/텍스트/눈금/지도는 transform 필드 형태가
+   * 같으므로 selectedModelId가 속한 컬렉션(models → texts → rulers → maps)을
+   * 찾아 patch를 병합한다(renameObject/setObjectLocked와 같은 컬렉션 해석
+   * 패턴). 눈금에는 scale 이 없어 그 patch 는 버린다.
    * 지도는 transform 필드가 optional이지만 스프레드 병합은 터치한 필드만
    * 기록하므로 "손대지 않은 필드는 저장본에서도 없는 채로 유지" 계약이
    * 그대로 지켜진다. 모델 안쪽 노드 선택은 읽기 전용이라 편집 함수가 없다.
@@ -380,6 +425,16 @@ export function useSelectedSceneObjectEditor({
     }
     if ((prev.texts ?? []).some((t) => t.id === selectedModelId)) {
       return { ...prev, texts: (prev.texts ?? []).map(patchItem) };
+    }
+    if ((prev.rulers ?? []).some((r) => r.id === selectedModelId)) {
+      return {
+        ...prev,
+        rulers: (prev.rulers ?? []).map((ruler) =>
+          ruler.id === selectedModelId
+            ? withoutScale({ ...ruler, ...makePatch(ruler) })
+            : ruler,
+        ),
+      };
     }
     return { ...prev, maps: (prev.maps ?? []).map(patchItem) };
   };
@@ -441,6 +496,25 @@ export function useSelectedSceneObjectEditor({
     });
   };
 
+  const updateSelectedRuler = (
+    updater: (ruler: SavedRulerInfo) => SavedRulerInfo,
+  ) => {
+    updateSceneInfo((prev) => {
+      if (!prev || !selectedModelId) {
+        return prev;
+      }
+      const rulers = prev.rulers ?? [];
+      const current = rulers.find((r) => r.id === selectedModelId);
+      if (!current) return prev;
+      const next = updater(current);
+      if (next === current) return prev;
+      return {
+        ...prev,
+        rulers: rulers.map((r) => (r.id === selectedModelId ? next : r)),
+      };
+    });
+  };
+
   const updateSelectedTextColor = (color: string) => {
     updateSceneInfo((prev) => {
       if (!prev || !selectedModelId) {
@@ -482,6 +556,18 @@ export function useSelectedSceneObjectEditor({
             if (t.id !== id) return t;
             if (locked) return { ...t, locked: true };
             const { locked: _removed, ...rest } = t;
+            return rest;
+          }),
+        };
+      }
+      if ((prev.rulers ?? []).some((r) => r.id === id)) {
+        return {
+          ...prev,
+          rulers: (prev.rulers ?? []).map((r) => {
+            if (r.id !== id) return r;
+            if (locked) return { ...r, locked: true };
+            const rest = { ...r };
+            delete rest.locked;
             return rest;
           }),
         };
@@ -570,6 +656,10 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.map(applyUpdate),
         texts: (prev.texts ?? []).map(applyUpdate),
+        // 눈금은 필드가 없던 씬에 빈 배열을 만들지 않는다(직렬화 diff 0).
+        ...(prev.rulers && {
+          rulers: prev.rulers.map((ruler) => withoutScale(applyUpdate(ruler))),
+        }),
         // 잠금 해제된 지도는 Ctrl 토글·Ctrl+A로 다중 선택에 참여한다.
         // 터치한 필드만 병합되므로 optional transform 계약도 유지된다.
         maps: (prev.maps ?? []).map(applyUpdate),
@@ -759,6 +849,9 @@ export function useSelectedSceneObjectEditor({
         ...prev,
         models: prev.models.filter((model) => !selectedIds.has(model.id)),
         texts: (prev.texts ?? []).filter((t) => !selectedIds.has(t.id)),
+        ...(prev.rulers && {
+          rulers: prev.rulers.filter((r) => !selectedIds.has(r.id)),
+        }),
         // 잠금 해제된 지도도 선택·삭제 대상이다. 지도가 없어지면 드롭
         // raycast는 y=0 평면으로 폴백한다(use-scene-drop 참고).
         maps: (prev.maps ?? []).filter((m) => !selectedIds.has(m.id)),
@@ -771,6 +864,7 @@ export function useSelectedSceneObjectEditor({
   return {
     selectedModel,
     selectedText,
+    selectedRuler,
     selectedMesh,
     renameObject,
     updateSelectedOpacity,
@@ -780,6 +874,7 @@ export function useSelectedSceneObjectEditor({
     commitSelectedTransform,
     updateSelectedTextContent,
     updateSelectedTextColor,
+    updateSelectedRuler,
     updateMultiObjectTransforms,
     updateSelectedTagMappings,
     updateSelectedStatusTags,

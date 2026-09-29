@@ -71,3 +71,70 @@ describe('useSceneObjectSelectionStore — 노드(mesh) 선택', () => {
     expect(store.getState().primarySelectedId).toBe('');
   });
 });
+
+describe('useSceneObjectSelectionStore — 눈금(ruler) 선택', () => {
+  it('selectRuler 는 ruler 타입 단일 선택을 만든다', () => {
+    store.getState().selectRuler('r1');
+    const s = store.getState();
+    expect(s.selectedObjectType).toBe('ruler');
+    expect([...s.selectedIds]).toEqual(['r1']);
+    expect(s.primarySelectedId).toBe('r1');
+    expect(s.selectedModelId).toBe('r1');
+  });
+
+  it('다른 선택을 대체한다', () => {
+    store.getState().selectModel('m1');
+    store.getState().toggleModel('m2');
+    store.getState().selectRuler('r1');
+    const s = store.getState();
+    expect([...s.selectedIds]).toEqual(['r1']);
+    expect(s.selectedObjectType).toBe('ruler');
+  });
+
+  it('toggleRuler 로 더하면 마지막에 더한 것이 프라이머리다', () => {
+    store.getState().selectModel('m1');
+    store.getState().toggleRuler('r1');
+    const s = store.getState();
+    expect(s.selectedIds.size).toBe(2);
+    expect(s.primarySelectedId).toBe('r1');
+    // 다중 선택에서는 단일 선택 id 가 없다.
+    expect(s.selectedModelId).toBeNull();
+  });
+
+  it('toggleRuler 로 빼면 남은 선택에서 프라이머리를 다시 고른다', () => {
+    store.getState().selectModel('m1');
+    store.getState().toggleRuler('r1');
+    store.getState().toggleRuler('r1');
+    const s = store.getState();
+    expect([...s.selectedIds]).toEqual(['m1']);
+    expect(s.primarySelectedId).toBe('m1');
+  });
+
+  it('하나 남은 눈금을 토글로 빼면 선택이 비고 타입도 null', () => {
+    store.getState().selectRuler('r1');
+    store.getState().toggleRuler('r1');
+    const s = store.getState();
+    expect(s.selectedIds.size).toBe(0);
+    expect(s.selectedObjectType).toBeNull();
+    expect(s.primarySelectedId).toBeNull();
+  });
+
+  it('selectAll 의 첫 항목이 눈금이면 타입은 ruler', () => {
+    store.getState().selectAll([
+      { id: 'r1', type: 'ruler' },
+      { id: 'm1', type: 'model' },
+    ]);
+    expect(store.getState().selectedObjectType).toBe('ruler');
+    expect(store.getState().selectedIds.size).toBe(2);
+  });
+
+  it('빈 selectAll 은 선택 해제와 같다 (눈금 그리기 진입이 쓴다)', () => {
+    store.getState().selectRuler('r1');
+    store.getState().selectAll([]);
+    const s = store.getState();
+    expect(s.selectedIds.size).toBe(0);
+    expect(s.selectedObjectType).toBeNull();
+    expect(s.primarySelectedId).toBeNull();
+    expect(s.selectedModelId).toBeNull();
+  });
+});

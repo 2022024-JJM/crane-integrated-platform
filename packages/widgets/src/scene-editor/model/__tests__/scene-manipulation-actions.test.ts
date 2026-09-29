@@ -69,6 +69,7 @@ function createHarness(initial: SavedSceneInfo | null = scene()) {
     selectModel: vi.fn(),
     selectText: vi.fn(),
     selectMap: vi.fn(),
+    selectRuler: vi.fn(),
     clearSelectedModel: vi.fn(),
     selectedIds,
     sceneInfoRef,
@@ -191,6 +192,101 @@ describe('삭제 — 잠금 방어', () => {
     const h2 = createHarness(scene({ texts: [{ ...text, locked: false }] }));
     h2.actions.deletePlacedText('t');
     expect(h2.scene?.texts).toHaveLength(0);
+  });
+});
+
+describe('addRuler / deletePlacedRuler', () => {
+  const placement = {
+    position: [10, 5, -20] as [number, number, number],
+    rotation: [0, 90, 0] as [number, number, number],
+    length: 750,
+  };
+
+  it('그린 배치로 눈금을 만들어 붙이고 선택한다 — 표시 옵션은 기본값', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, '눈금 1');
+
+    expect(h.scene?.rulers).toHaveLength(1);
+    const added = h.scene!.rulers![0];
+    expect(added).toEqual({
+      id: added.id,
+      name: '눈금 1',
+      position: [10, 5, -20],
+      rotation: [0, 90, 0],
+      length: 750,
+      interval: 100,
+      textColor: '#ffffff',
+      dotColor: '#ffffff',
+    });
+    expect(h.deps.selectRuler).toHaveBeenCalledWith(added.id);
+  });
+
+  it('축척이 1 이 아닌 씬은 간격을 m 길이로 고른다', () => {
+    const h = createHarness();
+    // 40 unit × 11.7 m = 468 m → 100 m 가 4칸 이상 들어간다.
+    h.actions.addRuler({ ...placement, length: 40 }, 11.7, 'R');
+    expect(h.scene!.rulers![0]).toMatchObject({ length: 40, interval: 100 });
+    // 같은 40 unit 도 축척 1 이면 40 m 라 가장 작은 간격이다.
+    h.actions.addRuler({ ...placement, length: 40 }, 1, 'S');
+    expect(h.scene!.rulers![1]).toMatchObject({ length: 40, interval: 50 });
+  });
+
+  it('새 눈금에는 보조선이 없다', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, 'A');
+    expect(h.scene!.rulers![0]).not.toHaveProperty('guide');
+  });
+
+  it('기존 눈금 뒤에 붙이고 기존 항목의 참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, 'A');
+    const first = h.scene!.rulers![0];
+    h.actions.addRuler(placement, 1, 'B');
+    expect(h.scene!.rulers).toHaveLength(2);
+    expect(h.scene!.rulers![0]).toBe(first);
+    expect(h.scene!.rulers![1].id).not.toBe(first.id);
+  });
+
+  it('씬이 없으면(로드 전) no-op', () => {
+    const h = createHarness(null);
+    h.actions.addRuler(placement, 1, 'A');
+    expect(h.scene).toBeNull();
+  });
+
+  it('마지막 눈금을 지우면 rulers 필드째 빠지고, 선택 중이었다면 선택 해제된다', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, 'A');
+    const id = h.scene!.rulers![0].id;
+    h.deps.selectedIds.add(id);
+
+    h.actions.deletePlacedRuler(id);
+    expect(h.scene).not.toHaveProperty('rulers');
+    expect(h.deps.clearSelectedModel).toHaveBeenCalledTimes(1);
+  });
+
+  it('여럿 중 하나를 지우면 나머지는 순서·참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, 'A');
+    h.actions.addRuler(placement, 1, 'B');
+    const [a, b] = h.scene!.rulers!;
+    h.actions.deletePlacedRuler(a.id);
+    expect(h.scene!.rulers).toEqual([b]);
+    expect(h.scene!.rulers![0]).toBe(b);
+  });
+
+  it('잠긴 눈금·없는 id 는 삭제되지 않고 씬 참조가 유지된다', () => {
+    const h = createHarness();
+    h.actions.addRuler(placement, 1, 'A');
+    const id = h.scene!.rulers![0].id;
+    const locked = scene({
+      rulers: [{ ...h.scene!.rulers![0], locked: true }],
+    });
+    const h2 = createHarness(locked);
+
+    h2.actions.deletePlacedRuler(id);
+    expect(h2.scene).toBe(locked);
+    h2.actions.deletePlacedRuler('missing');
+    expect(h2.scene).toBe(locked);
   });
 });
 
