@@ -1097,12 +1097,12 @@ export function SceneObjectsEditCanvas({
           }}
         />
         {/* margin은 기즈모 "중심"과 모서리 사이 거리다. scale(≈시각 반경
-            27px) + 12px(오버레이들의 top-3/right-3 와 같은 여백) + 여유로
-            52px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
+            27px) + 6px(오버레이들의 top-1.5/right-1.5 와 같은 여백) + 여유로
+            46px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
             내비게이션 기즈모 위치). */}
         <GizmoHelper
           alignment="top-right"
-          margin={[52, 52 + axisGizmoTopOffset]}
+          margin={[46, 46 + axisGizmoTopOffset]}
         >
           <GizmoViewport
             // 기본 40의 2/3 크기.
@@ -1293,13 +1293,13 @@ export function SceneObjectsEditCanvas({
         <ScenePerfProbe />
       </Canvas>
 
-      {/* dev 전용 성능 HUD — 모니터링 뷰와 같은 좌하단(bottom-3 left-3). */}
+      {/* dev 전용 성능 HUD — 모니터링 뷰와 같은 좌하단(bottom-1.5 left-1.5). */}
       <ScenePerfHud />
 
       {/* 눈금 그리기 안내 — 하단 중앙. 그리는 동안은 선택이 없어 선택 컨텍스트
           바와 겹치지 않는다(뷰포트 중앙 상단은 비워 둔다). */}
       {rulerDrawing ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 z-10 flex justify-center">
           <p className="bg-card/95 border-border text-foreground rounded-md border px-3 py-1.5 text-xs shadow-sm">
             {t(
               rulerDraw.hasStart

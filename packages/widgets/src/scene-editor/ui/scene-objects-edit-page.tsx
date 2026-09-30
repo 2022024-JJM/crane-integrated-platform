@@ -716,14 +716,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
                   충돌 기준선·카탈로그 로드). 우상단 축 기즈모·하단 바와
                   겹치지 않는다. 비차단이다. */}
-              <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-start gap-2">
+              <div className="pointer-events-none absolute top-1.5 left-1.5 z-10 flex items-start gap-2">
                 <SceneCompass ref={compassRef} />
                 <SceneWarmupIndicator />
               </div>
               {/* 우상단 — 고정한 뷰·분할 버튼 줄. 있으면 축 기즈모가 이 아래로
                   내려간다(axisGizmoTopOffset). 모니터링의 같은 줄과 같은 모양. */}
               {viewBarVisible ? (
-                <div className="pointer-events-none absolute top-3 right-3 z-10 flex justify-end">
+                <div className="pointer-events-none absolute top-1.5 right-1.5 z-10 flex justify-end">
                   <SceneViewBar
                     views={pinnedViews}
                     onSelectView={viewHandlers.onFlyTo}

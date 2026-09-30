@@ -177,7 +177,7 @@ export function SceneSplitOverlay({
                 />
                 {/* 방위 표시 — 고정 카메라라 한 번만 쓴다. */}
                 {compassView ? (
-                  <div className="pointer-events-none absolute top-3 left-3">
+                  <div className="pointer-events-none absolute top-1.5 left-1.5">
                     <SceneCompass
                       ref={(handle: SceneCompassHandle | null) => {
                         handle?.update(compassView);

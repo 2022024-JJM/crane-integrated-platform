@@ -40,7 +40,7 @@ export function EditorSelectionBar({
         aria-label={t('monitoring:editor.selectionActions')}
         className={cn(
           EDITOR_OVERLAY_SURFACE_CLASS,
-          'absolute bottom-3 left-1/2 z-10 -translate-x-1/2',
+          'absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2',
         )}
       >
         <EditorToolbarButton

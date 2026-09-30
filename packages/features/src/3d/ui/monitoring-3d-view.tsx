@@ -423,7 +423,7 @@ export function Monitoring3dView({
   // 고정이어야 해서 일시 표시들보다 먼저 둔다. 방위 표시가 없는 배치(독이
   // 아닌 작은 뷰)는 후처리 상태가 열 맨 아래다.
   const topLeftOverlay = (
-    <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
+    <div className="pointer-events-none absolute top-1.5 left-1.5 flex flex-col items-start gap-2">
       {isDock ? (
         <div className="flex items-start gap-2">
           {/* 분할 중엔 타일마다 방위 표시가 있어 전역 것은 숨긴다. */}

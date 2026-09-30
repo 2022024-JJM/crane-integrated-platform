@@ -134,7 +134,7 @@ export function SceneStatusHud({
     <div
       data-slot="scene-status-hud"
       className={cn(
-        'pointer-events-none absolute top-3 left-1/2 z-10 flex -translate-x-1/2 items-stretch divide-x divide-white/15 rounded-lg border border-white/15 bg-black/75 px-1 text-white shadow-lg backdrop-blur-md',
+        'pointer-events-none absolute top-1.5 left-1/2 z-10 flex -translate-x-1/2 items-stretch divide-x divide-white/15 rounded-lg border border-white/15 bg-black/75 px-1 text-white shadow-lg backdrop-blur-md',
         className,
       )}
     >

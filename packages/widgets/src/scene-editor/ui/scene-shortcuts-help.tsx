@@ -92,7 +92,7 @@ const SHORTCUT_COLUMNS: string[][] = [
 ];
 
 const OVERLAY_BUTTON_CLASS =
-  'border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground data-popup-open:text-foreground absolute right-3 bottom-3 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition';
+  'border-border bg-card/95 text-muted-foreground hover:bg-card hover:text-foreground data-popup-open:text-foreground absolute right-1.5 bottom-1.5 z-10 flex size-8 cursor-pointer items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition';
 
 /** 캔버스 우측 하단의 단축키 도움말 버튼 + 팝업. */
 export function SceneShortcutsHelp() {

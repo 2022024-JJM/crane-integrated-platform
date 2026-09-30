@@ -617,9 +617,9 @@ export function ThreeSceneViewer({
                   안쪽으로 온다. */}
               {isDock && fullscreenTopRightOverlay ? (
                 <div
-                  className="pointer-events-auto absolute top-3 z-50"
+                  className="pointer-events-auto absolute top-1.5 z-50"
                   style={{
-                    right: 'calc(0.75rem + var(--dock-right-inset))',
+                    right: 'calc(0.375rem + var(--dock-right-inset))',
                   }}
                 >
                   {fullscreenTopRightOverlay}
@@ -646,7 +646,7 @@ export function ThreeSceneViewer({
         </div>
 
         {isFullscreen && fullscreenTopCenterOverlay ? (
-          <div className="pointer-events-auto absolute top-3 left-1/2 z-50 -translate-x-1/2">
+          <div className="pointer-events-auto absolute top-1.5 left-1/2 z-50 -translate-x-1/2">
             {fullscreenTopCenterOverlay}
           </div>
         ) : null}
@@ -686,10 +686,10 @@ export function ThreeSceneViewer({
             </>
           ) : isTopRightToolbar ? (
             <div
-              className={`pointer-events-none absolute top-3 left-3 z-1 flex flex-col items-end gap-2 ${
+              className={`pointer-events-none absolute top-1.5 left-1.5 z-1 flex flex-col items-end gap-2 ${
                 // 분할 전체화면(CMMS 패널)에서는 캔버스가 왼쪽 절반이라
                 // 우측 기준을 화면 절반으로 당겨야 툴바가 패널 위로 넘어가지 않는다.
-                showSplitPanel ? 'right-[calc(50%+0.75rem)]' : 'right-3'
+                showSplitPanel ? 'right-[calc(50%+0.375rem)]' : 'right-1.5'
               }`}
             >
               <div className="pointer-events-auto flex max-w-full items-center gap-2">
@@ -710,11 +710,11 @@ export function ThreeSceneViewer({
           ) : (
             <>
               {isFullscreen && fullscreenTopRightOverlay ? (
-                <div className="pointer-events-auto absolute top-3 right-3 z-50">
+                <div className="pointer-events-auto absolute top-1.5 right-1.5 z-50">
                   {fullscreenTopRightOverlay}
                 </div>
               ) : null}
-              <div className="pointer-events-none absolute inset-x-3 bottom-3 z-1 flex items-end">
+              <div className="pointer-events-none absolute inset-x-1.5 bottom-1.5 z-1 flex items-end">
                 <div className="pointer-events-auto flex max-w-full items-center gap-2">
                   {toolbarExtras}
                   {toolbarTrailing}

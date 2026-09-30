@@ -355,7 +355,7 @@ export function SceneMinimap({
       data-slot="scene-minimap"
       className={cn(
         'pointer-events-auto absolute z-20 overflow-hidden rounded-md border border-white/20 bg-black/50 shadow-md backdrop-blur-sm',
-        position === null && 'bottom-3 left-3',
+        position === null && 'bottom-1.5 left-1.5',
         className,
       )}
       style={

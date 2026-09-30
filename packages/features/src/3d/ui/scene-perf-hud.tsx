@@ -44,7 +44,7 @@ export function ScenePerfHud({ className }: { className?: string }) {
     <div
       title="gl.info 실측 — shadow pass 는 빠지고(r183 은 shadow pass 뒤 info.reset) 바다 미러 패스는 더해져 정적 리포트(scene-perf-report)와 다르다. 끄기: localStorage 'crane:perf-hud' 제거 후 새로고침"
       className={cn(
-        'pointer-events-none absolute bottom-3 left-3 z-10 rounded bg-black/60 px-2 py-1 font-mono text-xs leading-none text-white/90 tabular-nums',
+        'pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded bg-black/60 px-2 py-1 font-mono text-xs leading-none text-white/90 tabular-nums',
         className,
       )}
     >
