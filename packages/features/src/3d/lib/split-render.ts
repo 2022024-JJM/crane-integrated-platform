@@ -74,7 +74,8 @@ export interface SplitFrameArgs {
  * 남지 않게), 타일마다 카메라 종횡비·fov 를 맞추고 LOD 를 그 카메라 기준으로
  * 다시 쓴 뒤 viewport·scissor 를 타일 사각형으로 두고 그린다. 끝나면 캔버스
  * 전체로 되돌린다. 타일 사각형은 DOM 오버레이가 잰 값이라 캔버스 크기와
- * 소수점이 다를 수 있어 캔버스 안으로 자른다.
+ * 소수점이 다를 수 있어 캔버스 안으로 자른다. viewport·scissor 는 three 가
+ * 중첩 패스 뒤 복원하는 값(내림)과 같게 둔다 — 루프 안 주석.
  *
  * 지우기 전에 clear 색을 명시한다 — GL 의 clear 색 상태는 마지막으로 그린
  * 패스가 남긴 값이다. shadow pass 가 흰색으로 두고 가고, 텍스처 배경(EXR)은
@@ -127,6 +128,11 @@ export function renderSplitFrame({
     );
     renderer.setViewport(glRect.x, glRect.y, glRect.width, glRect.height);
     renderer.setScissor(glRect.x, glRect.y, glRect.width, glRect.height);
+    // 복원 경로로 한 번 더 적용한다 — setViewport·setScissor 는 device px 를
+    // 반올림하지만 중첩 패스(shadow pass·바다 미러 패스) 뒤의
+    // setRenderTarget(null) 복원은 내림한다. 이대로 두면 shadow pass 를
+    // 소비하는 첫 타일만 그 프레임에 1px 어긋난 사각형에 그려져 들썩인다.
+    renderer.setRenderTarget(null);
     renderer.render(scene, camera);
   }
 

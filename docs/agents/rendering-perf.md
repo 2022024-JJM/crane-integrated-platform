@@ -96,6 +96,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 분할 화면(`docs/agents/monitoring-ui.md`)은 캔버스를 늘리지 않고 한 씬을 타일마다 다른 카메라로 여러 번 그린다. `SceneSplitRenderer` 가 `useFrame(…, 1)` 로 R3F 자동 렌더를 넘겨받고, 프레임의 일은 `lib/split-render.ts` 다: 캔버스를 한 번 지우고 → 타일마다 카메라 종횡비·fov(기본 카메라와 같게) → LOD 를 그 카메라 기준으로 다시 쓰기 → viewport·scissor 를 타일 사각형으로 → `gl.render` → 끝나면 캔버스 전체로 복원. 언마운트하면 자동 렌더가 돌아온다.
 
+타일 viewport·scissor 는 `setViewport`·`setScissor` 뒤 `setRenderTarget(null)` 로 한 번 더 적용한다. three 는 앞의 둘을 device px 로 반올림하고, 중첩 패스(shadow pass·바다 미러 패스) 뒤의 복원은 내림한다 — 맞추지 않으면 shadow pass 를 소비하는 첫 타일만 그 프레임에 1px 어긋나 들썩인다(DPR 1.5, 테스트 `lib/__tests__/split-render.test.ts`).
+
 빈 칸·타일 사이 간격의 색은 캔버스 요소의 `--canvas-background`(컨테이너와 같은 토큰, `readCanvasBackgroundColor`)를 clear 색으로 명시해 지운다 — GL 의 clear 색 상태는 마지막 패스가 남긴 값이라(shadow pass 는 흰색) 그대로 `clear()` 하면 빈 칸이 희다. 텍스처 배경은 three 가 clear 색을 되돌리지 않는다. 렌더러의 clear 색은 프레임 뒤 원복하고, 테마 전환(`<html>` class)은 MutationObserver 로 다시 읽는다.
 
 기본 카메라 하나를 전제한 곳은 이렇게 맞춘다. **기본 카메라·캔버스 크기를 읽는 새 코드는 이 목록에 자기 처리를 더한다.**
