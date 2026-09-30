@@ -568,9 +568,9 @@ function useCelestialSprite(
  * 바인딩되어 있어 lights state 변경으로 자동 유발된다.
  *
  * 태양 위치는 두 모드가 있다(`lighting.sunMode`).
- * - manual(기본): 씬의 sunAzimuth/sunElevation 고정. 그림자가 꺼져 있어도
- *   항상 적용된다 — 조명 방향(셰이딩)은 그림자와 무관하게 씬의 인상을
- *   정하는 값이다.
+ * - manual(기본): 씬의 sunAzimuth/sunElevation 고정. 방위는 지리 방위라
+ *   씬 진북만큼 돌려 쓴다. 그림자가 꺼져 있어도 항상 적용된다 — 조명
+ *   방향(셰이딩)은 그림자와 무관하게 씬의 인상을 정하는 값이다.
  * - solar: 현장 위치(씬 지역 — resolveSceneSiteGeo)와 시각(`timeSource`
  *   — 씬 시계 또는 리플레이 프레임)으로 매 프레임 태양·달 위치를 계산한다
  *   (lib/solar-lighting). 천체의 지리 방위는 씬 진북(`trueNorth`,
@@ -617,11 +617,15 @@ export function SceneLighting({
 } = {}) {
   const lighting = sceneInfo?.lighting;
   const shadowsEnabled = isSceneShadowEnabled(lighting);
-  const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
-  const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
-  // solar 모드의 태양·달(지리 방위)을 월드 방향으로 돌리는 기준. 수동 태양은
-  // 월드 기준 값이라 쓰지 않는다.
+  // 태양·달(지리 방위)을 월드 방향으로 돌리는 기준 — solar 천체와 수동
+  // 태양 모두 이 북쪽을 따른다.
   const trueNorth = resolveTrueNorth(sceneInfo);
+  // 수동 태양의 월드 방위. 저장값은 지리 방위(패드의 북 = 진북)다.
+  const sunAzimuth = bearingToWorldAzimuth(
+    lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT,
+    trueNorth,
+  );
+  const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
   // solar 모드는 씬 설정과 현장 위치(씬 지역)가 모두 있어야 켜진다.
   const solarGeo =
     lighting?.sunMode === 'solar' && regionId

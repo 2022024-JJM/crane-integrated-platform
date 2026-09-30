@@ -60,7 +60,7 @@
 - 스위치를 누르면 `setSeaVisible` 이 유효값의 반대를 **명시 boolean** 으로 쓴다(미지정 씬도 첫 토글부터 명시 상태가 되어 dirty·히스토리에 잡힌다. 유효값을 그대로 명시로 굳히는 조작은 없다). 같은 명시값 재설정은 참조를 유지한다.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environmentId`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
 - 지역 `siteLocation` 은 현장 시각의 시간 기준(시간대 + 대표 좌표)이다. `undefined` 는 region 기본 지역, 값은 명시이고 유효값은 `resolveSceneSiteLocation(regionId, sceneInfo)` 하나가 정한다. 드롭다운은 현장 시각 연동일 때 배경 탭 시각 패널의 날짜 위에 있고(수동 태양 씬은 region 기본 지역 그대로), 유효값을 보여 주다가 고르면 `setSiteLocation` 이 명시값으로 쓴다(바다와 같은 규칙 — 같은 값은 참조 유지). 모니터링 시계 팝업은 지역 이름만 보이고 바꾸지 않는다(`docs/agents/rendering-perf.md`).
-- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돈다. 수동 태양 패드의 방위는 월드 기준이라 진북과 무관하다.
+- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돈다. 수동 태양 패드의 방위도 지리 방위(패드 위 = 진북)라 진북을 바꾸면 수동 태양이 같이 돈다.
 
 ### 씬 뷰와 분할 지정 (뷰 탭)
 

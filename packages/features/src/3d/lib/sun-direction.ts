@@ -7,7 +7,7 @@ import { clampToRange } from '@crane/core/lib/utils';
  * normalize가 필요 없다.
  *
  * 방위는 **월드 방위**다: 0 = −Z, 90 = +X, 180 = +Z, 270 = −X (탑뷰 화면
- * 위쪽에서 시계 방향, SavedLightingInfo 주석 참고). 지리 방위(천체 위치)는
+ * 위쪽에서 시계 방향). 지리 방위(천체 위치, 수동 태양 sunAzimuth)는
  * bearingToWorldAzimuth 로 씬의 진북만큼 돌려서 넣는다.
  *
  * 기본값(az=180, el=SCENE_SUN_ELEVATION_DEFAULT)을 넣으면 종전 고정 조명

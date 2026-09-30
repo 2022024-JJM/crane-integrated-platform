@@ -157,10 +157,10 @@ export interface SavedLightingInfo {
   /**
    * 수동 태양 방위각(도, [0,360)). 필드 없음 = 180.
    *
-   * **월드 기준**이다: 0 = 월드 −Z, 90 = +X, 180 = +Z, 270 = −X (패드 UI의
-   * 위쪽 = −Z = 탑뷰 화면 위쪽). 씬의 진북(`trueNorth`)은 적용하지 않는다
-   * — solar 모드의 실제 태양 방위만 진북만큼 돌려 월드 방향으로 바꾼다.
-   * 방향 벡터 계산은 scene-render-preset.tsx가 담당한다.
+   * **지리 방위**다: 0 = 북, 90 = 동, 180 = 남, 270 = 서 (패드 UI의 위쪽 =
+   * 진북). solar 모드의 태양과 같이 씬의 진북(`trueNorth`)만큼 돌려 월드
+   * 방향으로 쓴다(`bearingToWorldAzimuth`) — 진북이 기본값 0 이면 월드 −Z
+   * 가 북이다. 방향 벡터 계산은 scene-render-preset.tsx가 담당한다.
    */
   sunAzimuth?: number;
   /**

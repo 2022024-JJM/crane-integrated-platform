@@ -218,7 +218,8 @@ const SUN_PAD_OUTER = SUN_PAD_SIZE + 32;
 /**
  * 태양 위치 패드 — 하늘을 위에서 내려다본 원판. 중심=머리 위(고도 90°,
  * 그림자 최소), 가장자리=최저 고도(SCENE_SUN_ELEVATION_MIN, 그림자 최대).
- * 각도=방위 360°(위=북=-Z, 오른쪽=동=+X — SavedLightingInfo 규약).
+ * 각도=지리 방위 360°(위=진북, 오른쪽=동 — SavedLightingInfo 규약). 월드
+ * 방향은 런타임이 씬 진북만큼 돌린다(SceneLighting).
  *
  * 태양 아이콘이 드래그 핸들이다. 핸들 자체는 pointer-events를 받지 않고
  * 패드 전체가 받는다 — 누르는 즉시 그 지점으로 점프하고 setPointerCapture로

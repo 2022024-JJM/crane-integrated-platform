@@ -13,8 +13,10 @@ import {
   type WebGLRenderer,
 } from 'three';
 import {
+  bearingToWorldAzimuth,
   modelObjectRegistry,
   resolveCameraBoundsMaps,
+  resolveTrueNorth,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   unionObjectBounds,
@@ -39,7 +41,7 @@ import { useSceneMinimapStore } from '../model/use-scene-minimap-store';
  * 타깃에 그리고, 픽셀을 읽어 2D 캔버스 이미지로 만들어 스토어에 둔다. 장비는
  * 스냅샷 시점의 자세로 굳지만 미니맵이 그 위에 실시간 마커를 따로 찍으므로
  * 배경 용도로 충분하다. 다시 찍는 때는 기준 지도 목록이나 씬의 수동 태양
- * 각도(에디터에서 바꿀 때)가 바뀔 때뿐이다.
+ * 각도·진북(에디터에서 바꿀 때)이 바뀔 때뿐이다.
  *
  * 렌더는 useFrame 안에서 한다 — 그 시점엔 씬의 matrixWorld 가 이 프레임
  * 기준으로 갱신돼 있고, R3F 는 useFrame 뒤에 메인 프레임을 그리므로 렌더
@@ -107,17 +109,20 @@ export function SceneMinimapCapture({
   const invalidate = useThree((s) => s.invalidate);
   const boundsMaps = resolveCameraBoundsMaps(sceneInfo?.maps);
   const boundsKey = boundsMaps.map((m) => m.id).join('|');
-  // 기준 태양 = 씬의 수동 태양(SceneLighting 의 manual 모드와 같은 식).
-  // solar 씬도 저장된 수동 각도를 쓴다 — 시각과 무관한 기준이 목적이다.
-  const sunAzimuth =
-    sceneInfo?.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
+  // 기준 태양 = 씬의 수동 태양(SceneLighting 의 manual 모드와 같은 식 —
+  // 저장된 지리 방위를 씬 진북만큼 돌린 월드 방위). solar 씬도 저장된 수동
+  // 각도를 쓴다 — 시각과 무관한 기준이 목적이다.
+  const sunAzimuth = bearingToWorldAzimuth(
+    sceneInfo?.lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT,
+    resolveTrueNorth(sceneInfo),
+  );
   const sunElevation =
     sceneInfo?.lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
   const pendingRef = useRef(false);
   const boundsMapsRef = useRef(boundsMaps);
   const sunDirectionRef = useRef<Vector3>(new Vector3(0, 1, 0));
 
-  // 캡처 무장 — 준비 조건이 갖춰지거나 기준 지도·수동 태양 각도가 바뀔 때.
+  // 캡처 무장 — 준비 조건이 갖춰지거나 기준 지도·수동 태양 방향이 바뀔 때.
   // useFrame 이 읽을 기준 지도 목록·태양 방향도 여기서 갱신한다(렌더 중 ref
   // 쓰기 금지).
   useEffect(() => {
