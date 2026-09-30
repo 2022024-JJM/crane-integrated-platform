@@ -6,9 +6,12 @@ import { clampToRange } from '@crane/core/lib/utils';
  * 방위각·고도(도) → 태양 방향 벡터(씬 → 태양). 구성상 단위 벡터라
  * normalize가 필요 없다.
  *
- * 방위 규약: **월드 +X = 동, -Z = 북**, azimuth 0=북·90=동·180=남·270=서
- * (SavedLightingInfo 주석 참고). 기본값(az=180, el=SCENE_SUN_ELEVATION_DEFAULT)
- * 을 넣으면 종전 고정 조명 directionalPosition [0, 50, 10]의 방향이 부동소수
+ * 방위는 **월드 방위**다: 0 = −Z, 90 = +X, 180 = +Z, 270 = −X (탑뷰 화면
+ * 위쪽에서 시계 방향, SavedLightingInfo 주석 참고). 지리 방위(천체 위치)는
+ * bearingToWorldAzimuth 로 씬의 진북만큼 돌려서 넣는다.
+ *
+ * 기본값(az=180, el=SCENE_SUN_ELEVATION_DEFAULT)을 넣으면 종전 고정 조명
+ * directionalPosition [0, 50, 10]의 방향이 부동소수
  * 오차 ~1e-16 이내로 재현된다 — lighting 필드가 없는 기존 씬의 셰이딩이
  * 유지되는 근거이며, SCENE_LIGHTING.directionalPosition을 지우지 않고 두는
  * 이유이기도 하다(이 일치의 기준점). 상세는 SCENE_SUN_ELEVATION_DEFAULT 주석.

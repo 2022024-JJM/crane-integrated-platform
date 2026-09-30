@@ -206,7 +206,8 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | 수면 아래 잠김 안개 / 바다 도달 마스크 | `packages/domain/src/3d/lib/{sea-submersion,sea-reach-grid,sea-reach-mask,sea-reach-uniforms}.ts`, `packages/features/src/3d/model/sea-reach-controller.ts`, `ui/scene-sea-reach.tsx` — `docs/agents/rendering-perf.md` |
 | 프레임 거버너 / shadow map 온디맨드 / 바다 미러 반사·스텐실 / 낮·밤 태양 / 워밍업 큐 | `packages/features/src/3d/ui/scene-frame-governor.tsx`, `ui/scene-render-preset.tsx`(`SceneLighting`), `ui/scene-water.tsx`, `lib/ocean-water.ts`, `lib/sky-lighting.ts`, `packages/domain/src/3d/lib/{scene-stencil,bvh-build-queue}.ts` — `docs/agents/rendering-perf.md` |
 | GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장·썸네일) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
-| 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
+| 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 방위 표시 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-compass,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
+| 씬 진북(나침반·solar 태양 방향의 북쪽) | 스키마 `SavedSceneInfo.trueNorth`(`types.ts`), 변환 `packages/domain/src/3d/lib/true-north.ts`, 편집 맵 탭 `palette-map-section.tsx` — `docs/agents/3d-editor.md` |
 
 ## packages/ui 구조 (Atomic Design)
 
@@ -260,7 +261,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | GLB 반입·압축·타일·LOD·KTX2·지도 배치·썸네일 | `docs/agents/assets-glb.md` |
 | 태그 맵핑·상태 태그·가상 태그·시뮬레이션·시나리오·리깅 | `docs/agents/tag-mapping-rig.md` |
 | 씬 편집기(저장 미들웨어·카메라·스냅·피벗·선택·거리 눈금·씬 파일 매핑) | `docs/agents/3d-editor.md` |
-| 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·독·경보 알림·장면 안 알람 표시) | `docs/agents/monitoring-ui.md` |
+| 모니터링 화면 요소(카메라 제한·전체화면·HUD·미니맵·방위 표시·독·경보 알림·장면 안 알람 표시) | `docs/agents/monitoring-ui.md` |
 
 ### 3D 불변식 체크리스트
 
@@ -268,6 +269,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 
 - 모델·노드를 새 경로로 움직이면 `invalidateShadows()` 를 부른다. shadow map 은 온디맨드라 빼먹으면 그림자가 안전망 주기까지 동결된다 (rendering-perf).
 - 씬을 매 프레임 바꾸는 새 경로는 `SceneFrameGovernor` 소스 목록에 넣거나 스스로 `invalidate()`/`requestSceneFrame()` 한다. 캔버스가 전부 `frameloop='demand'` 다 (rendering-perf).
+- 지리 방위(천체·나침반)를 월드 방향으로 바꿀 때는 `bearingToWorldAzimuth`(씬 진북 `trueNorth`)를 거친다. 월드 −Z 를 북으로 가정하지 않는다 — 지도를 돌려 놓은 씬은 진북이 다르다 (rendering-perf, 3d-editor).
 - `SceneLighting` 에는 `regionId` 를 반드시 넘긴다. 조명·하늘 밝기 기준값은 `lib/sky-lighting.ts` 상수만 고치고 다른 곳에서 같은 값을 세팅하지 않는다 (rendering-perf).
 - 새 GLTF 로드 경로는 `extendGltfLoaderWithKtx2` 를 걸고, 불투명 머티리얼이면 `markSceneOpaqueStencil` 을 켠다. 바다 위에 보여야 하는 불투명 오버레이는 `renderOrder ≥ 0.5` (assets-glb, rendering-perf).
 - 바다 표시 판정은 `resolveSeaVisible(regionId, sceneInfo)` 한 곳이다. `environmentId` 로 바다를 유추하지 않는다 (rendering-perf).

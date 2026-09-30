@@ -37,6 +37,7 @@ import {
   releaseGltfCache,
   resolveGroundMaps,
   resolveSeaVisible,
+  resolveTrueNorth,
   withBaseUrl,
   type RulerPlacement,
   type SavedCameraInfo,
@@ -64,6 +65,8 @@ import {
   SceneSurfaceCamera,
   RigDriver,
   SceneCameraLimits,
+  SceneCompassDriver,
+  type SceneCompassHandle,
   SceneZoneDetector,
   SceneZoneRings,
   ScenePerfHud,
@@ -264,6 +267,11 @@ interface SceneObjectsEditCanvasProps {
    */
   rulerDrawing?: boolean;
   onRulerDraw?: (placement: RulerPlacement) => void;
+  /**
+   * 방위 표시(캔버스 밖 DOM, 페이지가 좌상단에 둔다) 핸들. 넘기면 Canvas 안
+   * 드라이버가 카메라 자세·씬 진북으로 자세를 쓴다 — 모니터링과 같은 짝.
+   */
+  compassRef?: RefObject<SceneCompassHandle | null>;
 }
 
 export function SceneObjectsEditCanvas({
@@ -290,6 +298,7 @@ export function SceneObjectsEditCanvas({
   showGrid,
   rulerDrawing = false,
   onRulerDraw,
+  compassRef,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -1013,6 +1022,13 @@ export function SceneObjectsEditCanvas({
         <SceneCameraLimits sceneInfo={sceneInfo} />
         {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 뷰어와 같은 화면 원칙. */}
         <SceneTerrainLod />
+        {/* 방위 표시 자세 — 카메라 확정 뒤. 진북 입력을 바꾸면 바로 돈다. */}
+        {compassRef ? (
+          <SceneCompassDriver
+            compassRef={compassRef}
+            trueNorth={resolveTrueNorth(sceneInfo)}
+          />
+        ) : null}
         {/* 배경도 편집 대상이므로 에디터에서 그대로 보여준다 — 뷰어와 같은
             자체 Suspense라 EXR(수 MB)이 맵·모델 표시를 붙잡지 않는다. */}
         <Suspense fallback={null}>

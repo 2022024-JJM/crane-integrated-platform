@@ -164,3 +164,104 @@ describe('resolveSolarLighting', () => {
     ).toBeNull();
   });
 });
+
+describe('resolveSolarLighting — 진북(trueNorth)', () => {
+  const PHILLY_NOON = Date.UTC(2026, 5, 21, 17, 2, 0);
+  const GEOJE_MIDNIGHT = Date.UTC(2026, 5, 21, 15, 0, 0);
+
+  it('낮 방향광은 태양 지리 방위에 진북을 더한 월드 방위다', () => {
+    const base = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+    )!;
+    const rotated = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+      { trueNorth: 50.6 },
+    )!;
+    expect(rotated.sky.keyYardBlend).toBe(0);
+    expect(rotated.keyAzimuth).toBeCloseTo(base.keyAzimuth + 50.6, 1);
+    expect(rotated.keyElevation).toBe(base.keyElevation);
+  });
+
+  it('sun·moon 방위는 지리 방위 그대로다 (HUD·시계 패널 표시용)', () => {
+    const base = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+    )!;
+    const rotated = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+      { trueNorth: 50.6 },
+    )!;
+    expect(rotated.sun).toEqual(base.sun);
+    expect(rotated.moon).toEqual(base.moon);
+    expect(rotated.phase).toBe(base.phase);
+  });
+
+  it('밤 방향광(작업등 마스트)은 월드 고정이라 진북과 무관하다', () => {
+    const snap = resolveSolarLighting(
+      GEOJE_MIDNIGHT,
+      GEOJE,
+      SCENE_LIGHTING_BASE,
+      { trueNorth: 50.6 },
+    )!;
+    expect(snap.sky.keyYardBlend).toBe(1);
+    expect(snap.keyAzimuth).toBeCloseTo(YARD_LIGHT_AZIMUTH, 1);
+    expect(snap.keyElevation).toBeCloseTo(YARD_LIGHT_ELEVATION, 1);
+  });
+
+  it('합이 360 을 넘으면 [0,360) 로 랩한다', () => {
+    const base = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+    )!;
+    const rotated = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+      { trueNorth: 270 },
+    )!;
+    expect(rotated.keyAzimuth).toBeGreaterThanOrEqual(0);
+    expect(rotated.keyAzimuth).toBeLessThan(360);
+    expect(rotated.keyAzimuth).toBeCloseTo((base.keyAzimuth + 270) % 360, 1);
+  });
+
+  it('진북 0·비유한 값은 옵션을 안 준 것과 같다', () => {
+    const base = resolveSolarLighting(
+      PHILLY_NOON,
+      PHILLY,
+      SCENE_LIGHTING_BASE,
+    )!;
+    for (const trueNorth of [
+      0,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      const snap = resolveSolarLighting(
+        PHILLY_NOON,
+        PHILLY,
+        SCENE_LIGHTING_BASE,
+        { trueNorth },
+      )!;
+      expect(snap.keyAzimuth).toBe(base.keyAzimuth);
+      expect(snap.keyElevation).toBe(base.keyElevation);
+    }
+  });
+
+  it('진북은 조명 곡선 옵션을 가리지 않는다 — 작업등 끔이 그대로 적용된다', () => {
+    const snap = resolveSolarLighting(
+      GEOJE_MIDNIGHT,
+      GEOJE,
+      SCENE_LIGHTING_BASE,
+      { trueNorth: 50.6, yardLights: false },
+    )!;
+    expect(snap.sky.keyIntensity).toBe(0);
+  });
+});

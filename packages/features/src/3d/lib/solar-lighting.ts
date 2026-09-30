@@ -1,7 +1,9 @@
 import {
+  bearingToWorldAzimuth,
   computeMoonIllumination,
   computeMoonPosition,
   computeSunPosition,
+  SCENE_TRUE_NORTH_DEFAULT,
   type CelestialPosition,
   type MoonIllumination,
   type MoonPosition,
@@ -50,10 +52,11 @@ export interface SolarLightingSnapshot {
   sky: SkyLighting;
   phase: SkyPhase;
   /**
-   * 방향광이 향할 방위·고도(도). 태양 방향(KEY_LIGHT_ELEVATION_MIN 클램프)과
-   * 작업등 마스트 방향을 세기 비율(sky.keyYardBlend)로 섞은 뒤
-   * CELESTIAL_ANGLE_STEP 로 양자화한 값 — sunDirectionFromAngles 에 그대로
-   * 넣는다(고도가 이미 하한 이상이라 재클램프는 무해).
+   * 방향광이 향할 **월드** 방위·고도(도). 태양 방향(진북만큼 돌린 뒤
+   * KEY_LIGHT_ELEVATION_MIN 클램프)과 작업등 마스트 방향(월드 고정)을 세기
+   * 비율(sky.keyYardBlend)로 섞은 뒤 CELESTIAL_ANGLE_STEP 로 양자화한 값 —
+   * sunDirectionFromAngles 에 그대로 넣는다(고도가 이미 하한 이상이라
+   * 재클램프는 무해). `sun`·`moon` 의 방위는 지리 방위 그대로다.
    */
   keyAzimuth: number;
   keyElevation: number;
@@ -61,7 +64,7 @@ export interface SolarLightingSnapshot {
 
 type Vec3 = readonly [number, number, number];
 
-/** 방위·고도(도) → 단위 벡터. sun-direction.ts 와 같은 규약(+X 동, −Z 북). */
+/** 월드 방위·고도(도) → 단위 벡터. sun-direction.ts 와 같은 규약(0 = −Z, 90 = +X). */
 function directionFromAngles(azimuthDeg: number, elevationDeg: number): Vec3 {
   const az = azimuthDeg * (Math.PI / 180);
   const el = elevationDeg * (Math.PI / 180);
@@ -86,12 +89,27 @@ export function quantizeAngle(
   return Math.round(deg / step) * step;
 }
 
+export interface SolarLightingOptions extends SkyLightingOptions {
+  /**
+   * 씬의 진북(월드 방위, 도 — resolveTrueNorth). 태양을 방향광 월드 방향으로
+   * 바꿀 때만 쓴다. 작업등 마스트 방향은 씬 연출값이라 돌리지 않는다.
+   * 기본 SCENE_TRUE_NORTH_DEFAULT(−Z 가 북).
+   */
+  trueNorth?: number;
+}
+
 export function resolveSolarLighting(
   timeMs: number,
   geo: Pick<SceneSiteGeo, 'latitude' | 'longitude'>,
   base: SkyLightingBase,
-  options: SkyLightingOptions = {},
+  options: SolarLightingOptions = {},
 ): SolarLightingSnapshot | null {
+  const { trueNorth: rawTrueNorth, ...skyOptions } = options;
+  // 비유한 진북은 기본값으로 — 그대로 더하면 방위가 0(북)으로 굳는다.
+  const trueNorth =
+    typeof rawTrueNorth === 'number' && Number.isFinite(rawTrueNorth)
+      ? rawTrueNorth
+      : SCENE_TRUE_NORTH_DEFAULT;
   const sun = computeSunPosition(timeMs, geo.latitude, geo.longitude);
   const moon = computeMoonPosition(timeMs, geo.latitude, geo.longitude);
   if (!sun || !moon) return null;
@@ -103,13 +121,13 @@ export function resolveSolarLighting(
       moonFraction: moonIllumination.fraction,
     },
     base,
-    options,
+    skyOptions,
   );
 
   // 방향광 방향 — 태양(고도 하한 클램프)과 마스트 방향을 세기 비율로 섞는다.
   // 두 벡터 모두 고도 ≥ KEY_LIGHT_ELEVATION_MIN 이라 합이 0 이 되지 않는다.
   const sunDir = directionFromAngles(
-    sun.azimuth,
+    bearingToWorldAzimuth(sun.azimuth, trueNorth),
     clampToRange(sun.elevation, KEY_LIGHT_ELEVATION_MIN, 90),
   );
   const yardDir = directionFromAngles(YARD_LIGHT_AZIMUTH, YARD_LIGHT_ELEVATION);

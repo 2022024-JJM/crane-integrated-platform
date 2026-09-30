@@ -1,8 +1,8 @@
-# 모니터링 화면 UI — 전체화면·카메라 이동 범위 제한·관제 HUD·경보 알림·미니맵·씬 독·워밍업 표시
+# 모니터링 화면 UI — 전체화면·카메라 이동 범위 제한·관제 HUD·경보 알림·미니맵·방위 표시·씬 독·워밍업 표시
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
-조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. `toolbarLayout='dock'` 이 실시간 관제 화면 배치이고, HUD·미니맵은 그 배치에서 `mode !== 'play3d'` 일 때만 마운트된다. 좌측 상단 열은 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 워밍업 표시 → 포커스 복귀 버튼 순의 세로 스택이다.
+조립은 `packages/features/src/3d/ui/monitoring-3d-view.tsx`(`Monitoring3dView`)다. `toolbarLayout='dock'` 이 실시간 관제 화면 배치이고, HUD·미니맵은 그 배치에서 `mode !== 'play3d'` 일 때만, 방위 표시는 독 배치 전부(3D 플레이 포함)와 에디터에 마운트된다. 좌측 상단 열은 첫 줄에 방위 표시와 그 오른쪽 워밍업 표시, 그 아래 시뮬레이션 배지(`ui/scene-simulation-badge.tsx`) → 포커스 복귀 버튼 순의 세로 스택이다(방위 표시가 없는 독 아닌 배치는 워밍업 표시가 열 맨 아래).
 
 ## 진입점
 
@@ -16,6 +16,7 @@
 | 알림 발신자 | `packages/features/src/3d/ui/scene-alert-notifier.tsx`, `packages/features/src/alarm/model/use-critical-alarm-banner.ts` |
 | 미니맵 | 계산 `packages/features/src/3d/lib/minimap.ts`, 픽셀 후처리 `lib/minimap-image.ts`, 스토어 `model/use-scene-minimap-store.ts` |
 | 미니맵 UI | `packages/features/src/3d/ui/scene-minimap-capture.tsx`, `ui/scene-minimap.tsx`, `ui/scene-minimap-toggle.tsx` |
+| 방위 표시 | 기하 `packages/features/src/3d/lib/compass.ts`(테스트 대상), 표시·드라이버 `ui/scene-compass.tsx`, 씬 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | 씬 독 | 껍데기 `packages/ui/src/organisms/scene-dock.tsx` (`SceneDockRail`, `SceneDockRailSeparator`), 상태 `packages/features/src/3d/model/use-scene-dock.ts`, 리듀서·영속화 `lib/dock-hover-state.ts`, `lib/dock-storage.ts` |
 | 워밍업 표시 | 단계 선택 `packages/features/src/3d/lib/scene-warmup-step.ts`, 훅 `model/use-scene-warmup-step.ts`, 표시 `ui/scene-warmup-indicator.tsx` |
 
@@ -95,6 +96,15 @@
 - 조작 — 누르기·끌기는 `panPoseToPoint` 로 타깃만 옮기는 팬을 컨트롤러 `moveTo` 로 보내 `SceneCameraLimits` 가 그대로 걸린다. 마커 클릭 = 그 모델 포커스(포커스 중 재클릭 = 돌아가기, 드래그 시작 안 함, 커서 pointer). 패널은 상단 그립 바를 끌어 캔버스 영역 안 어디든 놓을 수 있고 복원 시 `clampPanelPosition` 으로 창 안에 넣는다.
 - 독 토글 `scene-minimap-toggle.tsx`.
 
+### 방위 표시 (좌상단)
+
+- 모양은 ACMS 매뉴얼의 방위 표시(가는 흰 원 + N·E·S·W)에 바늘(북 적색·남 흰색)을 더한 것이다. 지면에 놓인 원을 카메라가 보는 모습이라 원과 바늘은 카메라 기울기만큼 눕고(세로 비율 = 내려다본 각의 사인, 탑뷰 1), 글자는 타원 위 자리에서 바깥으로 `COMPASS_LABEL_OFFSET_PX` 띄워 서 있다. 글자는 기호라 번역하지 않는다.
+- 북쪽은 씬 진북(`SavedSceneInfo.trueNorth`, 에디터 맵 탭 — `docs/agents/3d-editor.md`)이다. solar 모드의 태양·달과 같은 값을 본다(`docs/agents/rendering-perf.md`).
+- 화면 위쪽이 가리키는 지면 방향은 카메라 전방·위 벡터 XZ 성분의 합이다(`resolveCompassView`) — roll 이 없어 둘이 같은 쪽을 향하고, 정수직 탑뷰에서도 위 벡터로 방향이 남는다.
+- 갱신: Canvas 안 `SceneCompassDriver` 가 useFrame 에서 자세가 바뀐 프레임에만 `SceneCompass` 핸들의 `update` 로 SVG 속성을 직접 쓴다. setState 없음, frameloop demand 라 카메라가 멈추면 비용 0. 카메라가 확정된 뒤 읽도록 `SceneTerrainLod` 다음에 마운트한다. 첫 `update` 전에는 숨긴다.
+- 배치: 모니터링·3D 플레이는 overlay 슬롯 좌측 상단 열의 첫 줄, 에디터는 캔버스 컨테이너 좌측 상단이다. 두 화면 모두 워밍업 표시가 바로 오른쪽에 붙는다(에디터는 `scene-objects-edit-page.tsx` 가 DOM 을 두고 `SceneObjectsEditCanvas` 의 `compassRef` 로 드라이버를 붙인다). 에디터는 편집 중인 씬의 진북을 읽어 맵 탭 입력을 바꾸면 바로 돈다.
+- 조작은 없다(pointer-events-none).
+
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
@@ -107,7 +117,7 @@
 초기 로딩 오버레이(`ui/scene-loading-overlay.tsx`)가 걷힌 뒤 이어지는 비차단 표시다(스피너 + 문구 한 줄, `common:viewer3d.warmup.*`).
 
 - 단계 선택 `selectSceneWarmupStep`(`scene-warmup-step.ts`): bvh 잔여 → outline 잔여 → 충돌 런타임 baseline(스토어 `baselinePending`) → drei `useProgress` 활성. 타이머 추측은 없다. 큐 자체·셰이더 프리워밍은 `docs/agents/rendering-perf.md`, baseline 은 `docs/agents/3d-collision.md`.
-- 배치: 모니터링·리플레이는 overlay 슬롯의 좌측 상단 열(포커스 복귀 버튼과 세로 스택), 편집은 캔버스 컨테이너 좌측 상단.
+- 배치: 방위 표시 바로 오른쪽이다 — 모니터링·리플레이는 overlay 슬롯 좌측 상단 열의 첫 줄, 편집은 캔버스 컨테이너 좌측 상단. 방위 표시가 없는 독 아닌 배치는 좌측 상단 열 맨 아래.
 
 ## 불변식
 
@@ -119,7 +129,8 @@
 - 미니맵 표시는 setState 없이 2D 캔버스에 직접 그린다. 팬은 컨트롤러 `moveTo` 로 보내 카메라 제한을 통과시킨다.
 - 전체화면 주인이 언마운트되면 전체화면을 끝낸다. 한 시점에 주인은 하나다.
 - `notifyAlert` 호출자가 제목·본문을 번역한다. 채널에 i18n 을 넣지 않는다.
-- HUD·미니맵은 독 배치의 실시간 화면(`toolbarLayout='dock'` 이고 `mode !== 'play3d'`)에만 마운트한다.
+- HUD·미니맵은 독 배치의 실시간 화면(`toolbarLayout='dock'` 이고 `mode !== 'play3d'`)에만 마운트한다. 방위 표시는 독 배치 전부(실시간·3D 플레이)와 에디터다.
+- 방위 표시의 자세는 React 상태로 두지 않는다. 드라이버가 SVG 에 직접 쓰고, `SceneCompass` 의 JSX 에는 자세와 무관한 속성만 둔다 — 리렌더가 직접 쓴 값을 덮지 않게.
 - HUD 알람 칸을 0 으로 그리지 않는다. 알람을 받지 않는 화면은 칸을 숨긴다 — 0 은 "알람 없음"으로 읽힌다.
 - 독 레일 순서는 카메라 묶음 → 화면 표시 묶음. 감지 스위치·시뮬레이션 ▶ 는 독에 두지 않는다(감지 설정 페이지·3D 플레이 트랜스포트 바가 담당).
 

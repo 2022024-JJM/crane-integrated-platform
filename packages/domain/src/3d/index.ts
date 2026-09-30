@@ -255,6 +255,7 @@ export {
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
+  SCENE_TRUE_NORTH_DEFAULT,
 } from './model/types';
 export type { SceneSunMode } from './model/types';
 export {
@@ -283,6 +284,7 @@ export {
   resolveEnvironmentFileUrl,
 } from './model/scene-environment-registry';
 export { resolveSeaVisible } from './lib/scene-sea';
+export { bearingToWorldAzimuth, resolveTrueNorth } from './lib/true-north';
 export {
   buildSeaReachMask,
   type SeaReachMask,

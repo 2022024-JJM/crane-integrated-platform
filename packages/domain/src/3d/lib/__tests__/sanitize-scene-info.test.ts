@@ -424,6 +424,54 @@ describe('sanitizeSceneInfo — sea (3-상태, boolean 만 유지)', () => {
   });
 });
 
+describe('sanitizeSceneInfo — trueNorth (기본값이면 필드 생략)', () => {
+  it('범위 안의 값은 그대로 유지한다', () => {
+    expect(sanitizeSceneInfo(scene({ trueNorth: 50.6 })).trueNorth).toBe(50.6);
+    expect(sanitizeSceneInfo(scene({ trueNorth: 359.9 })).trueNorth).toBe(
+      359.9,
+    );
+  });
+
+  it('미지정·0(기본값)이면 필드 자체가 빠진다', () => {
+    expect(sanitizeSceneInfo(scene())).not.toHaveProperty('trueNorth');
+    expect(sanitizeSceneInfo(scene({ trueNorth: 0 }))).not.toHaveProperty(
+      'trueNorth',
+    );
+  });
+
+  it('[0,360) 로 랩한다 — 360 은 기본값이 되어 필드가 빠진다', () => {
+    expect(sanitizeSceneInfo(scene({ trueNorth: 360 }))).not.toHaveProperty(
+      'trueNorth',
+    );
+    expect(sanitizeSceneInfo(scene({ trueNorth: 410.5 })).trueNorth).toBe(50.5);
+    expect(sanitizeSceneInfo(scene({ trueNorth: -5.6 })).trueNorth).toBeCloseTo(
+      354.4,
+      10,
+    );
+    // -0 은 기본값과 같다.
+    expect(sanitizeSceneInfo(scene({ trueNorth: -0 }))).not.toHaveProperty(
+      'trueNorth',
+    );
+  });
+
+  it("숫자가 아닌 오염값('50'·null·NaN·Infinity·배열)은 필드를 생략한다", () => {
+    for (const trueNorth of [
+      '50',
+      null,
+      true,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      [50],
+      { deg: 50 },
+    ]) {
+      expect(sanitizeSceneInfo(scene({ trueNorth }))).not.toHaveProperty(
+        'trueNorth',
+      );
+    }
+  });
+});
+
 describe('sanitizeSceneInfo — 조명 (기본값이면 필드 생략)', () => {
   it('전부 기본값이면 lighting 필드 자체가 빠진다', () => {
     expect(

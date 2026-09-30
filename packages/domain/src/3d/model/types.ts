@@ -60,6 +60,15 @@ export interface SavedSceneInfo {
    */
   sea?: boolean;
   /**
+   * 진북 방향(도, [0,360)) — 월드 −Z 에서 +X 쪽(탑뷰 화면 기준 시계 방향)
+   * 으로 잰 각도. 필드 없음 = SCENE_TRUE_NORTH_DEFAULT(−Z 가 북).
+   *
+   * 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오고, 씬이 지도를 Y축으로
+   * ψ° 돌려 놓았다면 진북은 (360 − ψ)° 다. 나침반 표시와 solar 모드의
+   * 태양·달 방향이 이 값을 읽는다(lib/true-north.ts). 씬 파일 단위 저장.
+   */
+  trueNorth?: number;
+  /**
    * 조명 설정 — 없으면 전부 기본값(그림자 Off, 태양 남중). 기본값 씬은
    * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
    */
@@ -92,6 +101,9 @@ export const SCENE_SUN_ELEVATION_MIN = 20;
  */
 export const SCENE_SUN_ELEVATION_DEFAULT = Math.atan2(1, 0.2) * (180 / Math.PI);
 
+/** 진북 기본값 — 월드 −Z 가 북. `trueNorth` 필드가 없는 씬의 규약. */
+export const SCENE_TRUE_NORTH_DEFAULT = 0;
+
 /**
  * 태양 위치를 정하는 방식.
  * - `manual`: 씬에 저장된 sunAzimuth/sunElevation 고정(기본, 필드 생략).
@@ -112,12 +124,12 @@ export interface SavedLightingInfo {
    */
   sunMode?: SceneSunMode;
   /**
-   * 태양 방위각(도, [0,360) 나침반식). 0=북, 90=동, 180=남, 270=서.
-   * 필드 없음 = 180(남).
+   * 수동 태양 방위각(도, [0,360)). 필드 없음 = 180.
    *
-   * 방위 규약: **월드 +X = 동, -Z = 북** (패드 UI의 위쪽 = 북, 지도 관례).
-   * 씬에 나침반·방위 데이터가 없어 실제 지리 방위를 알 수 없으므로 축
-   * 규약으로 못박는다. 방향 벡터 계산은 scene-render-preset.tsx가 담당한다.
+   * **월드 기준**이다: 0 = 월드 −Z, 90 = +X, 180 = +Z, 270 = −X (패드 UI의
+   * 위쪽 = −Z = 탑뷰 화면 위쪽). 씬의 진북(`trueNorth`)은 적용하지 않는다
+   * — solar 모드의 실제 태양 방위만 진북만큼 돌려 월드 방향으로 바꾼다.
+   * 방향 벡터 계산은 scene-render-preset.tsx가 담당한다.
    */
   sunAzimuth?: number;
   /**

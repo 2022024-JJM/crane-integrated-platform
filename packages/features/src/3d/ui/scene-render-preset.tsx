@@ -22,11 +22,13 @@ import type {
 import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
+  bearingToWorldAzimuth,
   getSceneSiteGeo,
   invalidateShadows,
   modelObjectRegistry,
   registerShadowRenderer,
   resolveCameraBoundsMaps,
+  resolveTrueNorth,
   unregisterShadowRenderer,
 } from '@crane/domain/3d';
 import type { SavedSceneInfo, SceneSiteGeo } from '@crane/domain/3d';
@@ -404,12 +406,14 @@ interface SolarFrameState {
   timeKey: number;
   /** 마지막 계산에 쓴 야간 작업등 옵션 — 바뀌면 같은 초라도 재계산. */
   yardLights: boolean;
+  /** 마지막 계산에 쓴 씬 진북 — 에디터에서 바꾸면 같은 초라도 재계산. */
+  trueNorth: number;
   snapshot: SolarLightingSnapshot | null;
   keyAzimuth: number;
   keyElevation: number;
   /** 방향광(키 라이트) 방향 — keyAzimuth/Elevation 이 바뀔 때만 다시 쓴다. */
   keyDir: Vector3;
-  /** 표식용 실제 태양·달 방향(지평선 아래 포함). */
+  /** 표식용 실제 태양·달 월드 방향(진북 적용, 지평선 아래 포함). */
   sunDir: Vector3;
   moonDir: Vector3;
 }
@@ -419,6 +423,7 @@ function createSolarFrameState(): SolarFrameState {
     geo: null,
     timeKey: Number.NaN,
     yardLights: true,
+    trueNorth: Number.NaN,
     snapshot: null,
     keyAzimuth: Number.NaN,
     keyElevation: Number.NaN,
@@ -567,7 +572,9 @@ function useCelestialSprite(
  *   정하는 값이다.
  * - solar: 현장 위치(scene-site-geo, `regionId` 로 찾음)와 시각(`timeSource`
  *   — 씬 시계 또는 리플레이 프레임)으로 매 프레임 태양·달 위치를 계산한다
- *   (lib/solar-lighting). 낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향,
+ *   (lib/solar-lighting). 천체의 지리 방위는 씬 진북(`trueNorth`,
+ *   resolveTrueNorth)만큼 돌려 월드 방향으로 쓴다 — 나침반과 같은 북쪽이다.
+ *   낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향,
  *   useSceneClockStore.yardLights 로 끌 수 있다)이 방향광이 되고 박명엔 둘을
  *   세기 비율로 섞는다. 세기·색·환경광·배경(EXR)·환경맵 밝기가
  *   lib/sky-lighting 곡선을 따른다. 밤에는 그림자 없는 보조 투광등(반대편
@@ -602,6 +609,9 @@ export function SceneLighting({
   const shadowsEnabled = isSceneShadowEnabled(lighting);
   const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
   const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
+  // solar 모드의 태양·달(지리 방위)을 월드 방향으로 돌리는 기준. 수동 태양은
+  // 월드 기준 값이라 쓰지 않는다.
+  const trueNorth = resolveTrueNorth(sceneInfo);
   // solar 모드는 씬 설정과 현장 위치가 모두 있어야 켜진다.
   const solarGeo =
     lighting?.sunMode === 'solar' && regionId
@@ -634,7 +644,14 @@ export function SceneLighting({
   // 시계 구독은 solar 씬에서만 — manual 씬은 시계를 읽지 않는다.
   useEffect(() => {
     invalidate();
-  }, [manualSunDir, solarGeo, shadowsEnabled, timeSource, invalidate]);
+  }, [
+    manualSunDir,
+    solarGeo,
+    shadowsEnabled,
+    timeSource,
+    trueNorth,
+    invalidate,
+  ]);
   useEffect(() => {
     if (!solarGeo) return;
     return useSceneClockStore.subscribe(() => invalidate());
@@ -745,16 +762,18 @@ export function SceneLighting({
       if (
         solar.timeKey !== timeKey ||
         solar.geo !== solarGeo ||
-        solar.yardLights !== yardLights
+        solar.yardLights !== yardLights ||
+        solar.trueNorth !== trueNorth
       ) {
         solar.timeKey = timeKey;
         solar.geo = solarGeo;
         solar.yardLights = yardLights;
+        solar.trueNorth = trueNorth;
         const snapshot = resolveSolarLighting(
           timeMs,
           solarGeo,
           SCENE_LIGHTING_BASE,
-          { yardLights },
+          { yardLights, trueNorth },
         );
         if (snapshot) {
           solar.snapshot = snapshot;
@@ -774,14 +793,14 @@ export function SceneLighting({
           }
           solar.sunDir.copy(
             sunDirectionFromAngles(
-              snapshot.sun.azimuth,
+              bearingToWorldAzimuth(snapshot.sun.azimuth, trueNorth),
               snapshot.sun.elevation,
               -90,
             ),
           );
           solar.moonDir.copy(
             sunDirectionFromAngles(
-              snapshot.moon.azimuth,
+              bearingToWorldAzimuth(snapshot.moon.azimuth, trueNorth),
               snapshot.moon.elevation,
               -90,
             ),

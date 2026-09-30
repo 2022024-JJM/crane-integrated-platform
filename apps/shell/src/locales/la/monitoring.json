@@ -224,6 +224,8 @@
     "seaSection": "Mare",
     "seaVisible": "Mare ostende",
     "seaUnsetHint": "Haec scaena mare non designat, ergo mare fundum sequitur. Si vertis, in scaena servabitur.",
+    "trueNorthSection": "Plagae",
+    "trueNorth": "Septentrio verus",
     "collapsePanel": "Tabulam claude",
     "expandPanel": "Tabulam aperi",
     "lockObject": "Editionem obsera",
@@ -427,6 +429,9 @@
     "alertTitle": "Collisio detecta",
     "pausedTitle": "Collisio — simulatio stetit",
     "resume": "Perge"
+  },
+  "compass": {
+    "label": "Pyxis"
   },
   "sceneClock": {
     "title": "Hora loci · Dies/Nox",

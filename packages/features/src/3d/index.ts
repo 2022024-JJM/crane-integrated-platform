@@ -250,6 +250,11 @@ export { CollisionJournalSync } from './ui/collision-journal-sync';
 export { useCollisionJournalStore } from './model/use-collision-journal-store';
 export { toCollisionJournalEntries } from './lib/collision-journal-map';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
+export {
+  SceneCompass,
+  SceneCompassDriver,
+  type SceneCompassHandle,
+} from './ui/scene-compass';
 export { ScenePerfHud } from './ui/scene-perf-hud';
 export { ScenePerfProbe } from './ui/scene-perf-probe';
 export { useSceneWarmupStep } from './model/use-scene-warmup-step';

@@ -3,9 +3,12 @@ import {
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
+  SCENE_TRUE_NORTH_DEFAULT,
   createSceneModel,
   createSceneRuler,
   createSceneText,
+  normalizeDegrees,
+  resolveTrueNorth,
   type RulerPlacement,
   type SavedLightingInfo,
   type SavedSceneInfo,
@@ -280,6 +283,26 @@ export function createSceneManipulationActions({
   };
 
   /**
+   * 진북 방향(도) 설정. [0,360) 로 랩하고 기본값(0)이면 필드를 지운다 —
+   * sanitize 와 같은 "기본값이면 생략" 규칙. 비유한 입력과 같은 값(랩 후)
+   * 재설정은 참조를 유지해 히스토리에 쌓이지 않는다.
+   */
+  const setTrueNorth = (degrees: number) => {
+    if (!Number.isFinite(degrees)) return;
+    const next = normalizeDegrees(degrees);
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (resolveTrueNorth(prev) === next) return prev;
+      if (next === SCENE_TRUE_NORTH_DEFAULT) {
+        const { trueNorth: _removed, ...rest } = prev;
+        void _removed;
+        return rest;
+      }
+      return { ...prev, trueNorth: next };
+    });
+  };
+
+  /**
    * 조명 설정(그림자·태양 위치) 변경. patch를 기존 값에 merge한 뒤 기본값
    * 필드는 제거해 정규화한다 — "필드 없음 = 기본값"이라(sanitize와 같은 규칙)
    * 기본값으로 되돌린 씬이 저장본에 lighting 필드를 남기지 않고, 기본값으로의
@@ -458,6 +481,7 @@ export function createSceneManipulationActions({
     selectPlacedMap,
     setEnvironmentId,
     setSeaVisible,
+    setTrueNorth,
     setLighting,
     selectPlacedModel,
     selectPlacedText,

@@ -124,6 +124,7 @@ interface UseSceneEditorSessionResult {
   selectPlacedMap: (id: string) => void;
   setEnvironmentId: (environmentId: string | null) => void;
   setSeaVisible: (visible: boolean) => void;
+  setTrueNorth: (degrees: number) => void;
   setLighting: (
     patch: Partial<SavedLightingInfo>,
     options?: { recordHistory?: boolean },
@@ -363,6 +364,7 @@ export function useSceneEditorSession({
     selectPlacedMap: manipulation.selectPlacedMap,
     setEnvironmentId: manipulation.setEnvironmentId,
     setSeaVisible: manipulation.setSeaVisible,
+    setTrueNorth: manipulation.setTrueNorth,
     setLighting: manipulation.setLighting,
     selectedMap,
     updateSelectedMapCameraBounds,

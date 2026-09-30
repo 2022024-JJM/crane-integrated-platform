@@ -1,6 +1,6 @@
 # 3D 씬 에디터
 
-씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 씬 설정(배경·조명·바다), 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, 거리 눈금, region → 씬 파일 매핑.
+씬 편집 페이지(`3d-viewer-edit`)의 저장 경로, 씬 설정(배경·조명·바다·진북), 카메라·탑뷰 규약, 기즈모 스냅·다중 선택 피벗·루트 rest handoff, 노드 선택 표시, 거리 눈금, region → 씬 파일 매핑.
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -14,7 +14,7 @@
 | 인스펙터 / 선택 객체 편집 채널 | `packages/widgets/src/3d/ui/scene-object-inspector.tsx`, `packages/features/src/3d/model/use-selected-scene-object-editor.ts` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → 씬 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `packages/domain/src/3d/model/scene-file-registry.ts` |
-| 씬 설정 팔레트(배경·조명·바다) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`) |
+| 씬 설정 팔레트(배경·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치 + 진북 입력), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
 | 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
@@ -47,12 +47,13 @@
 - 여러 region 이 한 파일을 **공유**할 수 있다(옥포 `dock-1`·`dock-2` → `okpo.json`, `isSceneFileShared`). 지도·모델·배경·조명은 하나이고 region 별로 다른 것은 카메라뿐이다 — 씬 JSON 의 `cameraByRegion[regionId]` 슬롯에 두고 `camera` 는 폴백. 로드 경계 `loadSceneInfoByRegionId` 가 `resolveSceneCameraForRegion` 으로 자기 슬롯을 `camera` 에 해석해 넣으므로 소비자는 `camera` 만 본다. 에디터 저장은 `withRegionCamera` 로 자기 슬롯만 기록한다(`lib/scene-region-camera.ts`). 두 region 의 에디터가 동시에 저장하면 마지막 저장이 이긴다.
 - 운영 localStorage 저장 키는 region 이 아니라 **씬 파일**(`crane:scene:<파일명>`) 기준이라 공유 region 이 같은 로컬 저장본을 본다. GLB 캐시 해제(`gltf-cache-release.ts`)도 씬 파일 단위라 공유 region 사이 이동은 캐시를 유지한다.
 
-### 씬 설정(배경·조명·바다)
+### 씬 설정(배경·조명·바다·진북)
 
-- 배경(EXR `environmentId`)·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx`), 바다는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래 스위치다. 셋 다 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
+- 배경(EXR `environmentId`)·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx`), 바다·진북은 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
 - 바다 필드 `sea` 는 3-상태다 — `undefined` 는 레거시 규칙(EXR 이 resolve 되면 바다), `true`/`false` 는 명시. 유효값은 `resolveSeaVisible(regionId, sceneInfo)` 하나가 정하고 스위치는 그 유효값을 보여 준다. 미지정 씬은 절 제목과 스위치 사이에 안내 문구가 붙는다.
 - 스위치를 누르면 `setSeaVisible` 이 유효값의 반대를 **명시 boolean** 으로 쓴다(미지정 씬도 첫 토글부터 명시 상태가 되어 dirty·히스토리에 잡힌다. 유효값을 그대로 명시로 굳히는 조작은 없다). 같은 명시값 재설정은 참조를 유지한다.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environmentId`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.
+- 진북 `trueNorth` 는 월드 −Z 에서 시계 방향(+X 쪽)으로 잰 진북 각도다. 기본값 0(−Z 가 북)이면 필드를 생략하고, sanitize·세터(`setTrueNorth`)가 [0,360) 로 랩한다(같은 값 재설정은 참조 유지). 지도 GLB 는 북쪽이 로컬 −Z 인 채로 들어오므로 지도를 Y축으로 ψ° 돌려 놓은 씬은 (360 − ψ)° 다 — 지도 회전을 바꾸면 진북도 같이 고친다. 나침반과 solar 모드 태양·달 방향이 읽는다(`docs/agents/monitoring-ui.md`, `docs/agents/rendering-perf.md`). 에디터 캔버스 좌상단에도 나침반이 있어 입력하면 바로 돈다. 수동 태양 패드의 방위는 월드 기준이라 진북과 무관하다.
 
 ### 카메라 up 과 탑뷰
 

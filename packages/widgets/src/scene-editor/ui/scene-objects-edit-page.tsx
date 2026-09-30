@@ -10,9 +10,12 @@ import {
   type SceneModelCatalogItem,
   getSceneMetersPerUnit,
   resolveSeaVisible,
+  resolveTrueNorth,
 } from '@crane/domain/3d';
 import {
+  SceneCompass,
   SceneWarmupIndicator,
+  type SceneCompassHandle,
   useSceneEditorViewStore,
   useTagBindingSource,
   stopSimulation,
@@ -108,6 +111,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const canvasRootRef = useRef<HTMLDivElement | null>(null);
+  // 방위 표시 핸들 — DOM 은 좌상단 슬롯, 자세는 캔버스 안 드라이버가 쓴다.
+  const compassRef = useRef<SceneCompassHandle | null>(null);
   // 전체화면은 문서 전체를 올린다 — AppLayout 이 헤더·사이드바를
   // 숨기면 이 페이지가 화면을 채운다. 포털·토스트는 손댈 것 없다
   // (useFullscreen 주석).
@@ -193,6 +198,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     selectPlacedMap,
     setEnvironmentId,
     setSeaVisible,
+    setTrueNorth,
     setLighting,
     selectedMap,
     updateSelectedMapCameraBounds,
@@ -216,6 +222,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   // 미지정 씬에는 안내 문구를 붙인다 — 캔버스와 같은 판정 함수 하나를 쓴다.
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   const seaExplicit = sceneInfo?.sea !== undefined;
+  const trueNorth = resolveTrueNorth(sceneInfo);
 
   // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
   // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
@@ -512,6 +519,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   seaVisible={seaVisible}
                   seaExplicit={seaExplicit}
                   onSeaVisibleChange={setSeaVisible}
+                  trueNorth={trueNorth}
+                  onTrueNorthChange={setTrueNorth}
                   regionId={regionId}
                   environmentId={sceneInfo?.environmentId}
                   onEnvironmentChange={setEnvironmentId}
@@ -612,6 +621,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 showGrid={showGrid}
                 rulerDrawing={rulerDrawing}
                 onRulerDraw={handleRulerDraw}
+                compassRef={compassRef}
               />
 
               <EditorSelectionBar
@@ -623,9 +633,11 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
               {/* 우측 하단 단축키 도움말 — 선택 컨텍스트 바는 하단 중앙이라
                   겹치지 않는다. */}
               <SceneShortcutsHelp />
-              {/* 좌측 상단 후처리 상태(BVH 빌드·충돌 기준선·카탈로그 로드) —
-                  우상단 축 기즈모·하단 바와 겹치지 않는다. 비차단이다. */}
-              <div className="pointer-events-none absolute top-3 left-3 z-10">
+              {/* 좌측 상단 — 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드·
+                  충돌 기준선·카탈로그 로드). 우상단 축 기즈모·하단 바와
+                  겹치지 않는다. 비차단이다. */}
+              <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-start gap-2">
+                <SceneCompass ref={compassRef} />
                 <SceneWarmupIndicator />
               </div>
 
@@ -858,6 +870,8 @@ function ProjectPalettePanel({
   seaVisible,
   seaExplicit,
   onSeaVisibleChange,
+  trueNorth,
+  onTrueNorthChange,
   regionId,
   environmentId,
   onEnvironmentChange,
@@ -889,6 +903,9 @@ function ProjectPalettePanel({
   seaVisible: boolean;
   seaExplicit: boolean;
   onSeaVisibleChange: (visible: boolean) => void;
+  /** 맵 탭 — 진북 입력. 유효값(resolveTrueNorth)·세터(setTrueNorth). */
+  trueNorth: number;
+  onTrueNorthChange: (degrees: number) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -953,6 +970,8 @@ function ProjectPalettePanel({
                 seaVisible={seaVisible}
                 seaExplicit={seaExplicit}
                 onSeaVisibleChange={onSeaVisibleChange}
+                trueNorth={trueNorth}
+                onTrueNorthChange={onTrueNorthChange}
               />
             ) : (
               <PaletteEnvironmentSection

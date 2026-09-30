@@ -417,6 +417,87 @@ describe('setSeaVisible', () => {
   });
 });
 
+describe('setTrueNorth', () => {
+  it('값을 저장하고, 같은 값이면 참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.setTrueNorth(50.6);
+    expect(h.scene?.trueNorth).toBe(50.6);
+
+    const before = h.scene;
+    h.actions.setTrueNorth(50.6);
+    expect(h.scene).toBe(before);
+  });
+
+  it('[0,360) 로 랩해 저장한다 — 스테퍼가 359 를 넘기거나 0 아래로 내려도', () => {
+    const h = createHarness(scene({ trueNorth: 359 }));
+    h.actions.setTrueNorth(361);
+    expect(h.scene?.trueNorth).toBe(1);
+    h.actions.setTrueNorth(-1);
+    expect(h.scene?.trueNorth).toBe(359);
+  });
+
+  it('랩한 결과가 같으면 참조를 유지한다 (410.5 ≡ 50.5)', () => {
+    const h = createHarness(scene({ trueNorth: 50.5 }));
+    const before = h.scene;
+    h.actions.setTrueNorth(410.5);
+    expect(h.scene).toBe(before);
+  });
+
+  it('기본값(0·360)으로 되돌리면 필드를 지운다', () => {
+    const h = createHarness(scene({ trueNorth: 50.6 }));
+    h.actions.setTrueNorth(0);
+    expect(h.scene).not.toHaveProperty('trueNorth');
+
+    const h2 = createHarness(scene({ trueNorth: 50.6 }));
+    h2.actions.setTrueNorth(360);
+    expect(h2.scene).not.toHaveProperty('trueNorth');
+  });
+
+  it('미지정 씬에 0 을 넣으면 no-op (참조 유지, 필드 없음)', () => {
+    const h = createHarness();
+    const before = h.scene;
+    h.actions.setTrueNorth(0);
+    expect(h.scene).toBe(before);
+    expect(h.scene).not.toHaveProperty('trueNorth');
+  });
+
+  it('비유한 입력은 updateScene 을 부르지 않는다', () => {
+    const h = createHarness(scene({ trueNorth: 50.6 }));
+    const before = h.scene;
+    for (const bad of [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      h.actions.setTrueNorth(bad);
+    }
+    expect(h.scene).toBe(before);
+    expect(h.updateOptions).toEqual([]);
+  });
+
+  it('다른 필드는 건드리지 않는다', () => {
+    const h = createHarness(scene({ sea: true, environmentId: 'sky' }));
+    h.actions.setTrueNorth(5.6);
+    expect(h.scene).toMatchObject({
+      sea: true,
+      environmentId: 'sky',
+      trueNorth: 5.6,
+    });
+  });
+
+  it('옵션 없이 updateScene 을 부른다 (히스토리 기본 기록)', () => {
+    const h = createHarness();
+    h.actions.setTrueNorth(10);
+    expect(h.updateOptions).toEqual([undefined]);
+  });
+
+  it('씬이 null 이면 null 그대로', () => {
+    const h = createHarness(null);
+    h.actions.setTrueNorth(10);
+    expect(h.scene).toBeNull();
+  });
+});
+
 describe('setLighting', () => {
   it('기본값 필드는 제거해 정규화한다 — 전부 기본값이면 lighting 자체가 빠진다', () => {
     const h = createHarness(scene({ lighting: { shadows: true } }));

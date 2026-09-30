@@ -238,6 +238,8 @@
     "seaSection": "바다",
     "seaVisible": "바다 표시",
     "seaUnsetHint": "이 씬은 바다를 지정하지 않아 배경이 있을 때만 표시됩니다. 스위치를 누르면 씬에 저장됩니다.",
+    "trueNorthSection": "방위",
+    "trueNorth": "진북",
     "collapsePanel": "패널 접기",
     "expandPanel": "패널 열기",
     "lockObject": "편집 잠그기",
@@ -441,6 +443,9 @@
     "alertTitle": "충돌 감지",
     "pausedTitle": "충돌 — 시뮬레이션 정지됨",
     "resume": "이어서 재생"
+  },
+  "compass": {
+    "label": "방위 표시"
   },
   "sceneClock": {
     "title": "현장 시각 · 낮/밤",

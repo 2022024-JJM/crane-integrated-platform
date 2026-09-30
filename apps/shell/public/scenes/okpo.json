@@ -411,6 +411,7 @@
   },
   "environmentId": "blue-open-water",
   "sea": true,
+  "trueNorth": 50.6,
   "lighting": {
     "shadows": true,
     "sunMode": "solar"

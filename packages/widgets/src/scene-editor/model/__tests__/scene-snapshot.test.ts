@@ -91,6 +91,25 @@ describe('isSceneInfoEqual — sea 3-상태', () => {
   });
 });
 
+describe('isSceneInfoEqual — trueNorth', () => {
+  it('값이 다르면 다른 상태다 (빠지면 진북 편집이 dirty 를 세우지 못한다)', () => {
+    expect(
+      isSceneInfoEqual(scene({ trueNorth: 50.6 }), scene({ trueNorth: 5.6 })),
+    ).toBe(false);
+    expect(isSceneInfoEqual(scene(), scene({ trueNorth: 50.6 }))).toBe(false);
+  });
+
+  it('필드 없음과 명시적 기본값(0)은 같은 상태다', () => {
+    expect(isSceneInfoEqual(scene(), scene({ trueNorth: 0 }))).toBe(true);
+  });
+
+  it('같은 값은 같다', () => {
+    expect(
+      isSceneInfoEqual(scene({ trueNorth: 50.6 }), scene({ trueNorth: 50.6 })),
+    ).toBe(true);
+  });
+});
+
 describe('isSceneInfoEqual — 조명 기본값 정규화', () => {
   it('필드 없음과 명시적 기본값은 같은 상태다', () => {
     expect(
@@ -422,6 +441,14 @@ describe('createSceneSnapshot', () => {
     );
     expect(a).toBeTypeOf('string');
     expect(a).toBe(b);
+  });
+
+  it('trueNorth 는 기본값(0)이면 직렬화에서 빠지고, 값이 있으면 남는다', () => {
+    expect(createSceneSnapshot(scene({ trueNorth: 0 }))).toBe(
+      createSceneSnapshot(scene()),
+    );
+    const set = JSON.parse(createSceneSnapshot(scene({ trueNorth: 50.6 }))!);
+    expect(set).toHaveProperty('trueNorth', 50.6);
   });
 
   it('sea:false 는 직렬화에 남고, 미지정은 빠진다 (false 가 기본값 생략이 아니다)', () => {

@@ -21,7 +21,9 @@ import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
+  SCENE_TRUE_NORTH_DEFAULT,
 } from '../model/types';
+import { normalizeDegrees } from './math-utils';
 import { sanitizeModelRigId, sanitizeRigDefinitions } from './sanitize-rig';
 import { sanitizeModelZones } from './sanitize-model-zones';
 import { sanitizeRulerFields } from './sanitize-rulers';
@@ -284,6 +286,17 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const rawSea = (sceneInfo as SavedSceneInfo).sea;
   if (typeof rawSea === 'boolean') {
     sanitized.sea = rawSea;
+  }
+
+  // 진북은 "기본값이면 필드 생략" — [0,360) 로 랩한 뒤 0(−Z 가 북)이면
+  // 싣지 않는다. 360 과 0 이 다른 값으로 남으면 dirty 판정이 어긋난다.
+  // 숫자만 받는다 — '50' 같은 문자열을 살리면 저장본마다 타입이 갈린다.
+  const rawTrueNorth = (sceneInfo as SavedSceneInfo).trueNorth;
+  if (isFiniteNumber(rawTrueNorth)) {
+    const trueNorth = normalizeDegrees(rawTrueNorth as number);
+    if (trueNorth !== SCENE_TRUE_NORTH_DEFAULT) {
+      sanitized.trueNorth = trueNorth;
+    }
   }
 
   // 조명은 "기본값이면 필드 생략" 규칙이다 — 그림자 Off·태양 기본 위치인

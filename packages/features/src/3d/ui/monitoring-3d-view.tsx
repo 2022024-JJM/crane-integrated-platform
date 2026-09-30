@@ -16,6 +16,7 @@ import {
   zoneCenterWorld,
   resolveCameraBoundsMaps,
   resolveSeaVisible,
+  resolveTrueNorth,
   unionObjectBounds,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
@@ -72,6 +73,11 @@ import { useStatusJournalSync } from '../model/use-status-journal-sync';
 import { ScenePerfHud } from './scene-perf-hud';
 import { ScenePerfProbe } from './scene-perf-probe';
 import { SceneWarmupIndicator } from './scene-warmup-indicator';
+import {
+  SceneCompass,
+  SceneCompassDriver,
+  type SceneCompassHandle,
+} from './scene-compass';
 import {
   SceneSimulationBadge,
   SceneSimulationFrame,
@@ -185,6 +191,9 @@ export function Monitoring3dView({
   // 관제 HUD·미니맵은 실시간 관제 화면에서만 — 3D 플레이는 분석 화면이라
   // 트랜스포트 바·리포트가 그 자리를 대신한다(2026-09-16).
   const showControlRoomWidgets = isDock && !isPlay3d;
+  // 방위 표시는 독 배치 전부(실시간·3D 플레이) — ACMS 는 실시간과 Play Back
+  // 화면 모두 좌상단에 방위를 둔다. 자세는 Canvas 안 드라이버가 직접 쓴다.
+  const compassRef = useRef<SceneCompassHandle | null>(null);
   // 독 상태는 여기서 소유한다 — 앱 페이지에 두면 페이지 리렌더가 cameraPreset
   // 참조를 흔들어 카메라가 리셋되는 사고(아래 주석)로 이어진다.
   const toolsDock = useSceneDock('tools');
@@ -205,6 +214,7 @@ export function Monitoring3dView({
   // 애니메이션이라 거버너에 알려 30fps 를 유지한다 — 예전 demand 모달에서
   // 파도가 얼어붙던 문제의 해법이다.
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
+  const trueNorth = resolveTrueNorth(sceneInfo);
   const solarSun = sceneInfo?.lighting?.sunMode === 'solar';
   // 태그 값 버스(가상 태그·WebSocket·리플레이) → 씬 맵핑 → 값 저장소. 드라이버는
   // Canvas 안(RigDriver)에서 매 프레임 노드에 적용한다.
@@ -328,9 +338,18 @@ export function Monitoring3dView({
     [cameraPosition, cameraTarget, cameraBoundsKey],
   );
 
-  // 좌측 상단 열 — 포커스 복귀 버튼 위, 후처리 상태(BVH 빌드 등) 아래.
+  // 좌측 상단 열 — 첫 줄은 방위 표시와 그 오른쪽의 후처리 상태(BVH 빌드
+  // 등), 그 아래 시뮬레이션 배지 → 포커스 복귀 버튼. 방위 표시는 자리가
+  // 고정이어야 해서 일시 표시들보다 먼저 둔다. 방위 표시가 없는 배치(독이
+  // 아닌 작은 뷰)는 후처리 상태가 열 맨 아래다.
   const topLeftOverlay = (
     <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
+      {isDock ? (
+        <div className="flex items-start gap-2">
+          <SceneCompass ref={compassRef} />
+          <SceneWarmupIndicator />
+        </div>
+      ) : null}
       {/* 시뮬레이션 세션 표시(배지 + 캔버스 테두리) — 시뮬레이션 값이 화면을
           움직이는 배치에서만. */}
       {simulationUiVisible && toolbarLayout !== 'none' ? (
@@ -350,7 +369,7 @@ export function Monitoring3dView({
           {t('monitoring:focus.back')}
         </Button>
       ) : null}
-      <SceneWarmupIndicator />
+      {isDock ? null : <SceneWarmupIndicator />}
     </div>
   );
 
@@ -486,6 +505,10 @@ export function Monitoring3dView({
         <SceneCameraLimits sceneInfo={sceneInfo} />
         {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 이 프레임의 최종 시점 기준. */}
         <SceneTerrainLod />
+        {/* 방위 표시 자세 — 카메라 확정 뒤 이 프레임의 최종 시점을 읽는다. */}
+        {isDock ? (
+          <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
+        ) : null}
         {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
             표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
         <Suspense fallback={null}>

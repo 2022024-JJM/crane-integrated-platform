@@ -238,6 +238,8 @@
     "seaSection": "Sea",
     "seaVisible": "Show sea",
     "seaUnsetHint": "This scene has no sea setting, so the sea follows the background. Toggling saves it to the scene.",
+    "trueNorthSection": "Orientation",
+    "trueNorth": "True north",
     "collapsePanel": "Collapse panel",
     "expandPanel": "Expand panel",
     "lockObject": "Lock editing",
@@ -441,6 +443,9 @@
     "alertTitle": "Collision detected",
     "pausedTitle": "Collision — simulation paused",
     "resume": "Resume"
+  },
+  "compass": {
+    "label": "Compass"
   },
   "sceneClock": {
     "title": "Site time · Day/Night",
