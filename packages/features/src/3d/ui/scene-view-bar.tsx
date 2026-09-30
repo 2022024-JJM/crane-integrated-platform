@@ -63,12 +63,12 @@ export function SceneViewBar({
       <div
         data-slot="scene-view-bar"
         className={cn(
-          'pointer-events-auto flex max-w-[40vw] items-center gap-1.5',
+          'pointer-events-auto flex max-w-[40vw] items-center gap-0.75',
           className,
         )}
       >
         {views.length > 0 ? (
-          <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto py-px">
+          <div className="flex min-w-0 items-center gap-0.75 overflow-x-auto py-px">
             {views.map((view) => (
               <Tooltip key={view.id}>
                 <TooltipTrigger
