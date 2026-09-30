@@ -282,11 +282,13 @@ export const SceneClockPanel = memo(function SceneClockPanel({
                 <span className="text-muted-foreground">
                   {t('monitoring:sceneClock.date')}
                 </span>
+                {/* 네이티브 달력 아이콘은 검정이라 다크 테마에서 배경에 묻힌다 —
+                  scheme-dark 로 아이콘·달력 팝업을 어두운 테마로 그린다. */}
                 <input
                   type="date"
                   value={parts ? toDateInputValue(parts) : ''}
                   disabled={controlsDisabled}
-                  className="border-border bg-background text-foreground h-6 rounded-md border px-1.5 text-[10px] tabular-nums"
+                  className="border-border bg-background text-foreground h-6 rounded-md border px-1.5 text-[10px] tabular-nums dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60 hover:[&::-webkit-calendar-picker-indicator]:opacity-90"
                   onChange={(event) => {
                     const [y, m, d] = event.target.value
                       .split('-')
