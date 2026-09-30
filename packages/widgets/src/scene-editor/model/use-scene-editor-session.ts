@@ -40,6 +40,8 @@ interface UseSceneEditorSessionResult {
     typeof useSelectedSceneObjectEditor
   >['selectedRuler'];
   selectedMesh: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMesh'];
+  /** 씬 파일을 읽는 중. 성공·실패 어느 쪽으로 끝나도 false 다. */
+  isLoading: boolean;
   isSaving: boolean;
   isDirty: boolean;
   /** 미저장 이탈 다이얼로그 상태. 페이지가 이걸로 다이얼로그를 렌더한다. */
@@ -256,7 +258,7 @@ export function useSceneEditorSession({
 
   const getCameraState = useCallback(() => cameraStateRef.current, []);
 
-  const { isDirty, isSaving, initialCamera, saveCurrentScene } =
+  const { isLoading, isDirty, isSaving, initialCamera, saveCurrentScene } =
     useScenePersistence({
       regionId,
       sceneInfo,
@@ -330,6 +332,7 @@ export function useSceneEditorSession({
     selectedText,
     selectedRuler,
     selectedMesh,
+    isLoading,
     isSaving,
     isDirty,
     canUndo,

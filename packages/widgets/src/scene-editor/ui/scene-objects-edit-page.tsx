@@ -19,6 +19,7 @@ import {
 } from '@crane/domain/3d';
 import {
   SceneCompass,
+  SceneLoadingOverlay,
   SceneViewBar,
   SceneWarmupIndicator,
   type SceneCompassHandle,
@@ -180,6 +181,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     sceneInfo,
     selectedIds,
     selectedModel,
+    isLoading,
     isSaving,
     isDirty,
     canUndo,
@@ -743,13 +745,10 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 </div>
               ) : null}
 
-              {!sceneInfo ? (
-                <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
-                  <p className="text-muted-foreground text-sm font-medium">
-                    {t('monitoring:editor.loading')}
-                  </p>
-                </div>
-              ) : null}
+              {/* 진입 로딩 — 모니터링과 같은 불투명 커버. 씬 파일 로드가 끝난
+                  (실패 포함) 뒤 에셋 로더가 쉬면 한 번 걷힌다. 위 오버레이들
+                  (z-10)까지 덮는다. region 이 바뀌면 새 씬이라 다시 덮는다. */}
+              <SceneLoadingOverlay key={regionId} ready={!isLoading} />
             </div>
           </div>
         </ResizablePanel>

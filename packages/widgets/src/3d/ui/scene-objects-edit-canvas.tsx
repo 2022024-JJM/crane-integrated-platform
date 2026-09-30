@@ -1141,8 +1141,10 @@ export function SceneObjectsEditCanvas({
             차이는 클릭 핸들러(선택 vs 선택 해제)뿐이다. */}
         {/* GLB를 로드하는 객체는 개별 경계로 감싼다 — 경로가 틀린 모델
             하나가 캔버스 전체를 비우지 않도록. SceneObjectBoundary 주석 참고.
-            에디터는 로딩 오버레이가 없으므로 Suspense도 객체별로 분리해
-            준비된 것부터 보여준다(뷰어는 오버레이 때문에 공유 Suspense 유지). */}
+            Suspense도 객체별로 분리한다 — 편집 중 새로 놓은 모델이 로드되는
+            동안 공유 경계면 씬 전체가 사라진다. 페이지의 진입 로딩 커버는 첫
+            로드만 덮는다(뷰어는 객체가 늘지 않아 커버의 준비 신호용 공유
+            Suspense 유지). */}
         {sceneInfo?.maps?.map((m) => {
           // 컨텍스트 지형은 그림자 시스템에서 뺀다 — 뷰어(outdoor-work-model-
           // simulation)와 같은 규칙·같은 이유(178만 삼각형 shadow depth pass).

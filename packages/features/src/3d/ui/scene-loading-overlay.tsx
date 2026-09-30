@@ -13,10 +13,11 @@ import { cn } from '@crane/core/lib/utils';
  * 모든 것이 준비된 뒤 한 번에 걷힌다.
  *
  * 걷힘 조건은 두 신호의 AND다:
- *  - `ready` — 씬 Suspense가 resolve됨 (SceneReadyProbe가 씬 안에서 보냄).
- *    타이머 추측이 아니라 실제 마운트 신호라, dev 모드처럼 로더 시작이
- *    수 초 늦어져도 오판하지 않는다. 캐시 완주(재방문)면 로더가 아예
- *    안 돌아도 이 신호로 즉시 걷힌다.
+ *  - `ready` — 뷰어는 씬 Suspense가 resolve됨 (SceneReadyProbe가 씬 안에서
+ *    보냄). 타이머 추측이 아니라 실제 마운트 신호라, dev 모드처럼 로더
+ *    시작이 수 초 늦어져도 오판하지 않는다. 캐시 완주(재방문)면 로더가 아예
+ *    안 돌아도 이 신호로 즉시 걷힌다. 에디터는 모델 Suspense가 객체별이라
+ *    씬 파일 로드 종료(실패 포함)를 넘긴다.
  *  - 로더 idle(`!active`) — EXR 등 씬 밖 Suspense의 에셋까지 끝났다는 뜻.
  * 짧은 유예(grace)를 둬 배치 사이 순간적인 idle에 일찍 걷히지 않는다.
  * 한 번 걷히면 이후 로드(충돌감지 워밍업 등)에는 다시 덮지 않는다. 걷힌 뒤의
@@ -27,7 +28,7 @@ const DISMISS_GRACE_MS = 300;
 const FADE_OUT_MS = 500;
 
 interface SceneLoadingOverlayProps {
-  /** 씬 Suspense가 resolve되어 모델이 마운트됐는지 (SceneReadyProbe 신호) */
+  /** 씬이 준비됐는지 — 뷰어는 SceneReadyProbe 신호, 에디터는 씬 파일 로드 종료 */
   ready: boolean;
 }
 

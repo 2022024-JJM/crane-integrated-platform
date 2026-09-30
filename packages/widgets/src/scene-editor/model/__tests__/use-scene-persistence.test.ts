@@ -108,6 +108,100 @@ describe('로드', () => {
   });
 });
 
+describe('isLoading (진입 로딩 커버의 준비 신호)', () => {
+  /** 로드 응답을 테스트가 원하는 순간에 풀기 위한 지연 promise. */
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it('로드 중에는 true, 성공하면 false', async () => {
+    const pending = deferred<SavedSceneInfo>();
+    loadMock.mockReturnValue(pending.promise);
+
+    const { result } = setup();
+    expect(result.current.persistence.isLoading).toBe(true);
+
+    await act(async () => pending.resolve(storedScene()));
+
+    expect(result.current.persistence.isLoading).toBe(false);
+    expect(result.current.history.sceneInfo).not.toBeNull();
+  });
+
+  it('로드 실패도 false 로 끝난다 — 씬은 null 로 남는다', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const pending = deferred<SavedSceneInfo>();
+    loadMock.mockReturnValue(pending.promise);
+
+    const { result } = setup();
+    expect(result.current.persistence.isLoading).toBe(true);
+
+    await act(async () => pending.reject(new Error('network')));
+
+    expect(result.current.persistence.isLoading).toBe(false);
+    expect(result.current.history.sceneInfo).toBeNull();
+    expect(result.current.persistence.initialCamera).toBeNull();
+    errorSpy.mockRestore();
+  });
+
+  it('region 이 바뀌면 다시 true — 이전 region 의 늦은 응답은 false 로 만들지 않는다', async () => {
+    const first = deferred<SavedSceneInfo>();
+    const second = deferred<SavedSceneInfo>();
+    loadMock
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+
+    const { result, rerender } = renderHook(
+      ({ regionId }: { regionId: string }) => {
+        const history = useSceneHistory();
+        const persistence = useScenePersistence({
+          regionId,
+          sceneInfo: history.sceneInfo,
+          replaceScene: history.replaceScene,
+          updateScene: history.updateScene,
+          onLoadReset: noopReset,
+        });
+        return { history, persistence };
+      },
+      { initialProps: { regionId: 'dock-1' } },
+    );
+
+    rerender({ regionId: 'dock-2' });
+    expect(loadMock).toHaveBeenLastCalledWith('dock-2');
+    expect(result.current.persistence.isLoading).toBe(true);
+
+    // 먼저 떠난 region 의 응답 — 로딩 상태도 씬도 건드리지 않는다.
+    await act(async () => first.resolve(storedScene()));
+    expect(result.current.persistence.isLoading).toBe(true);
+    expect(result.current.history.sceneInfo).toBeNull();
+
+    await act(async () =>
+      second.resolve({ ...storedScene(), environmentId: 'env-2' }),
+    );
+    expect(result.current.persistence.isLoading).toBe(false);
+    expect(result.current.history.sceneInfo?.environmentId).toBe('env-2');
+  });
+
+  it('로드가 끝난 뒤 저장해도 false 그대로다', async () => {
+    const { result } = setup();
+    await waitFor(() =>
+      expect(result.current.persistence.isLoading).toBe(false),
+    );
+
+    await act(async () => {
+      await result.current.persistence.saveCurrentScene();
+    });
+
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    expect(result.current.persistence.isLoading).toBe(false);
+  });
+});
+
 describe('dirty 판정', () => {
   it('편집하면 dirty, 같은 내용으로 되돌리는 updateScene은 참조 유지로 clean', async () => {
     const { result } = setup();

@@ -36,6 +36,8 @@ interface UseScenePersistenceParams {
 }
 
 interface UseScenePersistenceResult {
+  /** 씬 파일을 읽는 중. 성공·실패 어느 쪽으로 끝나도 false 다. */
+  isLoading: boolean;
   isDirty: boolean;
   isSaving: boolean;
   initialCamera: SavedCameraInfo | null;
@@ -67,6 +69,7 @@ export function useScenePersistence({
   useEffect(() => {
     tRef.current = t;
   }, [t]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   // 마지막으로 저장된 sceneInfo의 참조. sceneInfo는 모든 mutation에서
   // 새 객체로 교체되므로 참조 비교만으로 dirty 판단이 가능하다.
@@ -115,6 +118,10 @@ export function useScenePersistence({
               : tRef.current('monitoring:editor.loadFailed'),
           );
         }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -122,6 +129,7 @@ export function useScenePersistence({
     replaceScene(null);
     setInitialCamera(null);
     setSavedSceneRef(null);
+    setIsLoading(true);
     void loadScene();
 
     return () => {
@@ -204,6 +212,7 @@ export function useScenePersistence({
   }, [getCameraState, isSaving, regionId, sceneInfo, t, updateScene]);
 
   return {
+    isLoading,
     isDirty,
     isSaving,
     initialCamera,

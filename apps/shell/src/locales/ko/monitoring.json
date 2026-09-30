@@ -219,7 +219,6 @@
     "previewLoadError": "미리보기를 표시할 수 없습니다"
   },
   "editor": {
-    "loading": "씬 편집기를 불러오는 중입니다...",
     "exportJson": "JSON 내보내기",
     "dropHint": "씬 위에 놓으면 모델이 배치됩니다",
     "loadFailed": "씬을 불러오지 못했습니다.",

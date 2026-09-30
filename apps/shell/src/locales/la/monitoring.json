@@ -219,7 +219,6 @@
     "previewLoadError": "Praevisio praesto non est"
   },
   "editor": {
-    "loading": "Editor scaenae oneratur...",
     "exportJson": "JSON Exporta",
     "dropHint": "In scaenam depone ut exemplar ponatur",
     "loadFailed": "Scaena onerari non potuit.",

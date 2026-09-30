@@ -36,6 +36,11 @@
 - 저장 미들웨어의 region → 파일 결정은 브라우저와 **같은 표**(`scene-file-map.ts`)를 읽는다. 아래 "region → 씬 파일 매핑".
 - `scene-dev-storage.ts` 는 fetch 성공 뒤에만 로컬 사본을 지운다(실패 경로 테스트의 선례).
 
+### 진입 로딩
+
+- 페이지가 캔버스 영역 위(나침반·고정 뷰 줄 포함)에 모니터링과 같은 `SceneLoadingOverlay` 를 둔다. 준비 신호는 씬 파일 로드 종료(`use-scene-persistence` 의 `isLoading`, 실패 포함)이고, 그 뒤 에셋 로더가 쉬면 한 번 걷힌다. region 이 바뀌면 다시 덮는다.
+- 모델 Suspense 는 객체별이다 — 편집 중 새로 놓은 모델이 로드되는 동안 공유 경계면 씬 전체가 사라진다. 커버는 첫 로드만 덮는다.
+
 ### public 자산 변경과 전체 리로드
 
 - dev 미들웨어가 `public/` 에 쓰는 디렉토리(`scenes`, `simulation`, `previews`)는 `apps/shell/vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 등록돼 있어야 저장 시 전체 리로드가 나지 않는다. 이 플러그인이 public 자산 변경마다 `full-reload` 를 보내는 주체다 — Vite 코어는 보내지 않는다.

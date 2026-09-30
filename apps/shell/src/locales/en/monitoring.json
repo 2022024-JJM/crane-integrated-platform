@@ -219,7 +219,6 @@
     "previewLoadError": "Preview unavailable"
   },
   "editor": {
-    "loading": "Loading scene editor...",
     "exportJson": "Export JSON",
     "dropHint": "Drop on the scene to place the model",
     "loadFailed": "Failed to load scene.",

@@ -247,6 +247,7 @@ export { zoneKey } from './lib/scene-zones';
 export { CollisionJournalSync } from './ui/collision-journal-sync';
 export { useCollisionJournalStore } from './model/use-collision-journal-store';
 export { toCollisionJournalEntries } from './lib/collision-journal-map';
+export { SceneLoadingOverlay } from './ui/scene-loading-overlay';
 export { SceneWarmupIndicator } from './ui/scene-warmup-indicator';
 export {
   SceneCompass,
