@@ -646,3 +646,73 @@ describe('transform 인터랙션 히스토리', () => {
     expect(h.deps.transformHistoryBaseRef.current).toBeNull();
   });
 });
+
+describe('씬 뷰·분할 세터', () => {
+  const pose = {
+    position: [10, 20, 30] as [number, number, number],
+    target: [0, 0, 0] as [number, number, number],
+  };
+
+  it('addSceneView 는 id 를 발급해 붙이고, 무효 이름은 씬을 바꾸지 않는다', () => {
+    const h = createHarness();
+    h.actions.addSceneView(' N ', pose);
+    expect(h.scene?.views).toHaveLength(1);
+    expect(h.scene?.views?.[0]).toMatchObject({ name: 'N', ...pose });
+    expect(h.scene?.views?.[0].id.length).toBeGreaterThan(0);
+
+    const before = h.scene;
+    h.actions.addSceneView('n', pose);
+    expect(h.scene).toBe(before);
+  });
+
+  it('이름·구도·고정 변경과 삭제가 순서대로 반영된다', () => {
+    const h = createHarness();
+    h.actions.addSceneView('A', pose);
+    const id = h.scene!.views![0].id;
+
+    h.actions.renameSceneView(id, 'A2');
+    expect(h.scene?.views?.[0].name).toBe('A2');
+
+    h.actions.updateSceneViewPose(id, {
+      position: [1, 1, 1],
+      target: [2, 2, 2],
+    });
+    expect(h.scene?.views?.[0].position).toEqual([1, 1, 1]);
+
+    h.actions.setSceneViewPinned(id, true);
+    expect(h.scene?.views?.[0].pinned).toBe(true);
+
+    h.actions.removeSceneView(id);
+    expect(h.scene).not.toHaveProperty('views');
+  });
+
+  it('칸 배정은 이동 의미이고 뷰를 지우면 칸도 비운다', () => {
+    const h = createHarness();
+    h.actions.addSceneView('A', pose);
+    h.actions.addSceneView('B', pose);
+    const [a, b] = h.scene!.views!.map((v) => v.id);
+
+    h.actions.setSplitSlot(0, a);
+    h.actions.setSplitSlot(1, b);
+    h.actions.setSplitSlot(3, a);
+    expect(h.scene?.viewSplit?.slots).toEqual([null, b, null, a]);
+
+    h.actions.setSplitPinned(true);
+    h.actions.removeSceneView(a);
+    h.actions.removeSceneView(b);
+    expect(h.scene?.viewSplit).toEqual({
+      slots: [null, null, null, null],
+      pinned: true,
+    });
+    h.actions.setSplitPinned(false);
+    expect(h.scene).not.toHaveProperty('viewSplit');
+  });
+
+  it('씬이 null 이면 아무 것도 하지 않는다', () => {
+    const h = createHarness(null);
+    h.actions.addSceneView('A', pose);
+    h.actions.setSplitSlot(0, 'x');
+    h.actions.setSplitPinned(true);
+    expect(h.scene).toBeNull();
+  });
+});

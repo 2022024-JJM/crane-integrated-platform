@@ -14,6 +14,7 @@ import {
   createSilhouetteOutlineMaterial,
   outlineOffsetFactor,
 } from '../lib/silhouette-outline';
+import { useSceneViewportHeight } from '../model/scene-viewports-context';
 
 /**
  * 메시 하나의 마스크 + 헐 — 생성·수치 계산은 lib/silhouette-outline.ts.
@@ -136,8 +137,9 @@ export function ObjectSilhouetteOutline({
   // 화면 두께(px) → 오프셋 계수. 훅 의존성인 material 을 effect 에서 직접
   // 변경하면 react-hooks/immutability 에 걸리므로 uniform 객체만 ref 로
   // 든다(scene-water 의 프레임 상태 ref 와 같은 선례). material 이
-  // 바뀌면(색 변경) 첫 effect 가 ref 를 갈아 끼운다.
-  const heightPx = useThree((s) => s.size.height);
+  // 바뀌면(색 변경) 첫 effect 가 ref 를 갈아 끼운다. 세로 px 는 캔버스가
+  // 아니라 그리는 뷰포트 높이다 — 분할 화면은 타일 높이(전부 같다).
+  const heightPx = useSceneViewportHeight();
   const camera = useThree((s) => s.camera);
   const fov = camera instanceof PerspectiveCamera ? camera.fov : 60;
   const offsetUniformRef = useRef(material.uniforms.uOffsetFactor);

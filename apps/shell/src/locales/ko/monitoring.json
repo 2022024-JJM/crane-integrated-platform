@@ -192,18 +192,17 @@
     "redo": "다시 실행"
   },
   "sceneViews": {
-    "add": "뷰 추가",
-    "empty": "저장한 뷰가 없습니다",
-    "title": "저장한 뷰",
-    "saveCurrent": "현재 뷰 저장",
     "namePlaceholder": "뷰 이름",
-    "save": "저장",
-    "cancel": "취소",
     "flyTo": "{{name}} 뷰로 이동",
-    "delete": "삭제",
-    "deleteHint": "우클릭으로 삭제",
     "duplicateName": "이미 사용 중인 이름입니다",
     "limitReached": "뷰는 최대 {{max}}개까지 저장할 수 있습니다"
+  },
+  "sceneSplit": {
+    "enter": "분할 화면",
+    "exit": "분할 해제",
+    "editorOnly": "분할 화면은 모니터링 화면에서만 확인할 수 있습니다",
+    "disabledInSplit": "분할 화면에서는 사용할 수 없습니다",
+    "openTile": "{{name}} 뷰로 보기"
   },
   "focus": {
     "back": "돌아가기"
@@ -310,7 +309,8 @@
     "paletteTabs": {
       "models": "모델",
       "map": "맵",
-      "background": "배경"
+      "background": "배경",
+      "view": "뷰"
     },
     "environmentNone": "배경 없음",
     "environmentUnset": "이 씬은 배경을 지정하지 않아 지역 기본 배경이 적용됩니다. 아래에서 고르면 씬에 저장됩니다.",
@@ -340,7 +340,24 @@
     "drawRuler": "눈금 그리기",
     "rulerName": "눈금 {{index}}",
     "rulerDrawStartHint": "시작점을 클릭하세요 · Esc 취소",
-    "rulerDrawEndHint": "끝점을 클릭하세요 · Esc 취소"
+    "rulerDrawEndHint": "끝점을 클릭하세요 · Esc 취소",
+    "views": {
+      "splitSection": "분할 화면",
+      "splitSlot": "{{index}}번 칸",
+      "splitSlotEmpty": "뷰를 끌어다 놓기",
+      "splitSlotClear": "칸 비우기",
+      "splitHint": "칸이 2개 이상 차면 모니터링 화면에 분할 버튼이 생깁니다",
+      "pinSplit": "분할 버튼을 우상단에 고정",
+      "unpinSplit": "분할 버튼 고정 해제",
+      "listSection": "뷰",
+      "empty": "뷰가 없습니다. 카메라를 맞추고 추가하세요",
+      "add": "현재 화면을 뷰로 추가",
+      "rename": "이름 변경",
+      "recapture": "현재 화면으로 다시 지정",
+      "remove": "삭제",
+      "pin": "우상단에 고정",
+      "unpin": "고정 해제"
+    }
   },
   "detectionSettings": {
     "title": "설정",

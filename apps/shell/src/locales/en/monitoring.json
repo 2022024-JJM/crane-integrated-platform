@@ -192,18 +192,17 @@
     "redo": "Redo"
   },
   "sceneViews": {
-    "add": "Add view",
-    "empty": "No saved views",
-    "title": "Saved views",
-    "saveCurrent": "Save current view",
     "namePlaceholder": "View name",
-    "save": "Save",
-    "cancel": "Cancel",
     "flyTo": "Go to {{name}}",
-    "delete": "Delete",
-    "deleteHint": "Right-click to delete",
     "duplicateName": "This name is already in use",
     "limitReached": "You can save up to {{max}} views"
+  },
+  "sceneSplit": {
+    "enter": "Split screen",
+    "exit": "Exit split screen",
+    "editorOnly": "Split screen can only be viewed on the monitoring screen",
+    "disabledInSplit": "Not available in split screen",
+    "openTile": "Open {{name}}"
   },
   "focus": {
     "back": "Back"
@@ -310,7 +309,8 @@
     "paletteTabs": {
       "models": "Models",
       "map": "Map",
-      "background": "Background"
+      "background": "Background",
+      "view": "Views"
     },
     "environmentNone": "No background",
     "environmentUnset": "This scene has no background set, so the region default is applied. Choosing one below saves it to the scene.",
@@ -340,7 +340,24 @@
     "drawRuler": "Draw ruler",
     "rulerName": "Ruler {{index}}",
     "rulerDrawStartHint": "Click the start point · Esc to cancel",
-    "rulerDrawEndHint": "Click the end point · Esc to cancel"
+    "rulerDrawEndHint": "Click the end point · Esc to cancel",
+    "views": {
+      "splitSection": "Split screen",
+      "splitSlot": "Slot {{index}}",
+      "splitSlotEmpty": "Drop a view here",
+      "splitSlotClear": "Clear slot",
+      "splitHint": "Fill two or more slots to show the split button on the monitoring screen",
+      "pinSplit": "Pin split button to top right",
+      "unpinSplit": "Unpin split button",
+      "listSection": "Views",
+      "empty": "No views. Frame the camera and add one",
+      "add": "Add current view",
+      "rename": "Rename",
+      "recapture": "Reassign to current view",
+      "remove": "Delete",
+      "pin": "Pin to top right",
+      "unpin": "Unpin"
+    }
   },
   "detectionSettings": {
     "title": "Settings",

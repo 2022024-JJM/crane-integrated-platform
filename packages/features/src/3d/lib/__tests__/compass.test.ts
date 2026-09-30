@@ -9,6 +9,7 @@ import {
   resolveCompassView,
   type CompassVec3,
   type CompassView,
+  resolveCompassViewForPose,
 } from '../compass';
 
 const DEG2RAD = Math.PI / 180;
@@ -216,5 +217,36 @@ describe('compassLabelPosition', () => {
         }
       }
     }
+  });
+});
+
+describe('resolveCompassViewForPose', () => {
+  it('−Z 를 보는 구도(45° 내려다봄)는 북쪽이 위, 기울기 sin45°', () => {
+    const view = resolveCompassViewForPose([0, 100, 100], [0, 0, 0], 0)!;
+    expect(view.northDeg).toBeCloseTo(0);
+    expect(view.tilt).toBeCloseTo(Math.SQRT1_2);
+  });
+
+  it('+X 를 보면 북쪽(−Z)은 화면 왼쪽(270°)', () => {
+    const view = resolveCompassViewForPose([-100, 50, 0], [0, 0, 0], 0)!;
+    expect(view.northDeg).toBeCloseTo(270);
+  });
+
+  it('진북이 돌면 그만큼 더한다', () => {
+    const view = resolveCompassViewForPose([0, 100, 100], [0, 0, 0], 50)!;
+    expect(view.northDeg).toBeCloseTo(50);
+  });
+
+  it('정수직 탑뷰는 위 벡터 −Z 로 두어 북쪽이 위·기울기 1', () => {
+    const view = resolveCompassViewForPose([0, 100, 0], [0, 0, 0], 0)!;
+    expect(view.northDeg).toBeCloseTo(0);
+    expect(view.tilt).toBe(1);
+  });
+
+  it('거리 0·비유한은 null', () => {
+    expect(resolveCompassViewForPose([1, 2, 3], [1, 2, 3], 0)).toBeNull();
+    expect(
+      resolveCompassViewForPose([Number.NaN, 2, 3], [0, 0, 0], 0),
+    ).toBeNull();
   });
 });

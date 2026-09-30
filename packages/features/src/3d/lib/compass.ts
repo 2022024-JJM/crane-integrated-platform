@@ -120,3 +120,40 @@ export function compassLabelPosition(
     y: py + (dy / len) * COMPASS_LABEL_OFFSET_PX,
   };
 }
+
+/**
+ * 저장된 구도(position → target, up=+Y)의 방위 표시 — 분할 타일처럼 카메라가
+ * 고정된 뷰포트는 프레임마다 읽지 않고 이 값을 한 번 쓴다. 시선이 정확히
+ * 수직이면(정수직 탑뷰) 위 벡터를 −Z 로 두어 화면 위 = 월드 −Z 다. 거리 0
+ * 이나 비유한 값은 null.
+ */
+export function resolveCompassViewForPose(
+  position: readonly [number, number, number],
+  target: readonly [number, number, number],
+  trueNorthDeg: number,
+): CompassView | null {
+  const fx = target[0] - position[0];
+  const fy = target[1] - position[1];
+  const fz = target[2] - position[2];
+  const length = Math.hypot(fx, fy, fz);
+  if (!Number.isFinite(length) || length === 0) return null;
+  const forward = { x: fx / length, y: fy / length, z: fz / length };
+  // right = forward × worldUp(+Y), up = right × forward.
+  const rx = -forward.z;
+  const rz = forward.x;
+  const rLength = Math.hypot(rx, rz);
+  let up: CompassVec3;
+  if (rLength < 1e-9) {
+    up = { x: 0, y: 0, z: -1 };
+  } else {
+    const nx = rx / rLength;
+    const nz = rz / rLength;
+    // (nx, 0, nz) × (fx, fy, fz)
+    up = {
+      x: -nz * forward.y,
+      y: nz * forward.x - nx * forward.z,
+      z: nx * forward.y,
+    };
+  }
+  return resolveCompassView(forward, up, trueNorthDeg);
+}

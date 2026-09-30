@@ -2,9 +2,12 @@ import {
   SCENE_MODEL_CATEGORIES,
   sceneModelCatalog,
   type RulerPlacement,
+  type SavedCameraInfo,
   type SavedLightingInfo,
   type SavedMapInfo,
   type SavedSceneInfo,
+  type SavedSceneView,
+  type SavedViewSplit,
   type SceneMapCatalogItem,
   type SceneModelCategory,
   type SceneModelCatalogItem,
@@ -14,6 +17,7 @@ import {
 } from '@crane/domain/3d';
 import {
   SceneCompass,
+  SceneViewBar,
   SceneWarmupIndicator,
   type SceneCompassHandle,
   useSceneEditorViewStore,
@@ -44,6 +48,7 @@ import {
   PaletteHeader,
   PaletteMapSection,
   PalettePlacedObjects,
+  PaletteViewSection,
   PreviewThumbnailGeneratorPanel,
   SceneObjectInspector,
   SceneObjectsEditCanvas,
@@ -60,6 +65,26 @@ interface SceneObjectsEditPageProps {
  */
 /** 씬 미로드 시 팔레트에 넘기는 빈 지도 목록 — memo 컴포넌트 참조 안정용. */
 const EMPTY_MAPS: SavedMapInfo[] = [];
+const EMPTY_VIEWS: SavedSceneView[] = [];
+/**
+ * 우상단 고정 뷰 줄이 있을 때 축 기즈모를 내리는 양(px) — 줄 높이(버튼 h-8)
+ * 에 오버레이 간격(gap-2)을 더한 값.
+ */
+const VIEW_BAR_GIZMO_OFFSET_PX = 40;
+
+/** 뷰 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 객체로 묶어 넘긴다. */
+interface SceneViewHandlers {
+  getPose: () => SavedCameraInfo | null;
+  onFlyTo: (view: SavedSceneView) => void;
+  onAdd: (name: string, pose: SavedCameraInfo) => void;
+  onRename: (id: string, name: string) => void;
+  onRecapture: (id: string, pose: SavedCameraInfo) => void;
+  onRemove: (id: string) => void;
+  onReorder: (id: string, insertBefore: number) => void;
+  onPinChange: (id: string, pinned: boolean) => void;
+  onSlotChange: (slot: number, viewId: string | null) => void;
+  onSplitPinnedChange: (pinned: boolean) => void;
+}
 
 const TRANSFORM_MODE_BY_KEY_CODE: Record<string, SceneTransformMode> = {
   KeyW: 'translate',
@@ -200,6 +225,14 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setSeaVisible,
     setTrueNorth,
     setLighting,
+    addSceneView,
+    renameSceneView,
+    updateSceneViewPose,
+    removeSceneView,
+    moveSceneView,
+    setSceneViewPinned,
+    setSplitSlot,
+    setSplitPinned,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,
@@ -223,6 +256,33 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
   const seaVisible = resolveSeaVisible(regionId, sceneInfo);
   const seaExplicit = sceneInfo?.sea !== undefined;
   const trueNorth = resolveTrueNorth(sceneInfo);
+
+  // 씬 뷰 — 뷰 탭이 편집하고, 고정한 뷰·고정한 분할은 캔버스 우상단 줄에
+  // 뜬다(모니터링과 같은 SceneViewBar). 에디터의 분할 버튼은 비활성이다 —
+  // 분할 화면은 모니터링에서만 확인한다(툴팁이 그렇게 안내한다).
+  const sceneViews = sceneInfo?.views ?? EMPTY_VIEWS;
+  const pinnedViews = useMemo(
+    () => sceneViews.filter((view) => view.pinned === true),
+    [sceneViews],
+  );
+  const splitPinned = sceneInfo?.viewSplit?.pinned === true;
+  const viewBarVisible = pinnedViews.length > 0 || splitPinned;
+  const viewHandlers: SceneViewHandlers = {
+    getPose: () => cameraStateRef.current,
+    onFlyTo: (view) =>
+      cameraActionsRef.current?.moveTo({
+        position: view.position,
+        target: view.target,
+      }),
+    onAdd: addSceneView,
+    onRename: renameSceneView,
+    onRecapture: updateSceneViewPose,
+    onRemove: removeSceneView,
+    onReorder: moveSceneView,
+    onPinChange: setSceneViewPinned,
+    onSlotChange: setSplitSlot,
+    onSplitPinnedChange: setSplitPinned,
+  };
 
   // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
   // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
@@ -521,6 +581,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onSeaVisibleChange={setSeaVisible}
                   trueNorth={trueNorth}
                   onTrueNorthChange={setTrueNorth}
+                  views={sceneViews}
+                  viewSplit={sceneInfo?.viewSplit}
+                  viewHandlers={viewHandlers}
                   regionId={regionId}
                   environmentId={sceneInfo?.environmentId}
                   onEnvironmentChange={setEnvironmentId}
@@ -622,6 +685,9 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 rulerDrawing={rulerDrawing}
                 onRulerDraw={handleRulerDraw}
                 compassRef={compassRef}
+                axisGizmoTopOffset={
+                  viewBarVisible ? VIEW_BAR_GIZMO_OFFSET_PX : 0
+                }
               />
 
               <EditorSelectionBar
@@ -640,6 +706,28 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 <SceneCompass ref={compassRef} />
                 <SceneWarmupIndicator />
               </div>
+              {/* 우상단 — 고정한 뷰·분할 버튼 줄. 있으면 축 기즈모가 이 아래로
+                  내려간다(axisGizmoTopOffset). 모니터링의 같은 줄과 같은 모양. */}
+              {viewBarVisible ? (
+                <div className="pointer-events-none absolute top-3 right-3 z-10 flex justify-end">
+                  <SceneViewBar
+                    views={pinnedViews}
+                    onSelectView={viewHandlers.onFlyTo}
+                    split={
+                      splitPinned
+                        ? {
+                            state: 'disabled',
+                            active: false,
+                            onToggle: () => {},
+                            disabledLabel: t(
+                              'monitoring:sceneSplit.editorOnly',
+                            ),
+                          }
+                        : null
+                    }
+                  />
+                </div>
+              ) : null}
 
               {!sceneInfo ? (
                 <div className="bg-background/75 absolute inset-0 flex items-center justify-center backdrop-blur-sm">
@@ -832,13 +920,14 @@ const DEFAULT_MODEL_CATEGORY: ModelPanelCategory = 'indoor';
  * 탭이 맡는다. 탭이 6개면 기본 팔레트 폭(14rem)에 들어가지 않으므로 새 탭을
  * 더할 때는 폭을 먼저 본다.
  */
-const PANEL_TABS = ['models', 'map', 'background'] as const;
+const PANEL_TABS = ['models', 'map', 'background', 'view'] as const;
 type PanelTab = (typeof PANEL_TABS)[number];
 
 const PANEL_TAB_LABEL_KEY: Record<PanelTab, string> = {
   models: 'monitoring:editor.paletteTabs.models',
   map: 'monitoring:editor.paletteTabs.map',
   background: 'monitoring:editor.paletteTabs.background',
+  view: 'monitoring:editor.paletteTabs.view',
 };
 
 // 'map' 카테고리는 카탈로그에 항목이 없고(맵은 맵 탭이 담당) 목록에
@@ -872,6 +961,9 @@ function ProjectPalettePanel({
   onSeaVisibleChange,
   trueNorth,
   onTrueNorthChange,
+  views,
+  viewSplit,
+  viewHandlers,
   regionId,
   environmentId,
   onEnvironmentChange,
@@ -882,6 +974,10 @@ function ProjectPalettePanel({
 }: {
   items: SceneModelCatalogItem[];
   maps: SavedMapInfo[];
+  /** 뷰 탭 — 씬 뷰 목록·분할 칸과 그 편집 콜백. */
+  views: SavedSceneView[];
+  viewSplit: SavedViewSplit | undefined;
+  viewHandlers: SceneViewHandlers;
   /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
   regionId: string;
   environmentId: string | null | undefined;
@@ -972,6 +1068,12 @@ function ProjectPalettePanel({
                 onSeaVisibleChange={onSeaVisibleChange}
                 trueNorth={trueNorth}
                 onTrueNorthChange={onTrueNorthChange}
+              />
+            ) : activeTab === 'view' ? (
+              <PaletteViewSection
+                views={views}
+                split={viewSplit}
+                {...viewHandlers}
               />
             ) : (
               <PaletteEnvironmentSection

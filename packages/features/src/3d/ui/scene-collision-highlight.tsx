@@ -1,9 +1,10 @@
 import { Html } from '@react-three/drei';
-import { useMemo } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   COLLISION_LINE_COLOR,
   ObjectSilhouetteOutline,
+  ViewportAnchor,
 } from '@crane/domain/3d';
 import { resolveRecordNodes } from '../lib/scene-collision-pairs';
 import {
@@ -57,23 +58,30 @@ export function SceneCollisionHighlight() {
         objects={nodes}
         color={COLLISION_LINE_COLOR}
       />
-      <group position={record.contactPoint}>
-        {/* 라벨(zIndexRange [5,0])보다 앞에 온다 — 겹치면 경고가 위. */}
-        <Html center zIndexRange={[6, 0]}>
-          <div className="pointer-events-none flex flex-col items-center gap-1">
-            <div className="animate-pulse motion-reduce:animate-none">
-              <WarningSign label={t('monitoring:sceneCollision.contact')} />
+      {/* 분할 화면이면 타일마다 복제(ViewportAnchor). */}
+      <ViewportAnchor position={record.contactPoint}>
+        {(viewport) => (
+          // 라벨(zIndexRange [5,0])보다 앞에 온다 — 겹치면 경고가 위.
+          <Html
+            center
+            zIndexRange={[6, 0]}
+            portal={viewport?.portal as RefObject<HTMLElement> | undefined}
+          >
+            <div className="pointer-events-none flex flex-col items-center gap-1">
+              <div className="animate-pulse motion-reduce:animate-none">
+                <WarningSign label={t('monitoring:sceneCollision.contact')} />
+              </div>
+              {/* 어떤 장비끼리인지 접촉 지점에서 바로 읽히게 — 팝업을 열지
+                  않아도 되는 1차 정보. */}
+              <p className="rounded bg-red-600/90 px-1.5 py-0.5 text-[11px] leading-tight font-semibold whitespace-nowrap text-white shadow">
+                {record.a.equipName || record.a.modelId}
+                <span className="mx-1 font-normal opacity-80">↔</span>
+                {record.b.equipName || record.b.modelId}
+              </p>
             </div>
-            {/* 어떤 장비끼리인지 접촉 지점에서 바로 읽히게 — 팝업을 열지
-                않아도 되는 1차 정보. */}
-            <p className="rounded bg-red-600/90 px-1.5 py-0.5 text-[11px] leading-tight font-semibold whitespace-nowrap text-white shadow">
-              {record.a.equipName || record.a.modelId}
-              <span className="mx-1 font-normal opacity-80">↔</span>
-              {record.b.equipName || record.b.modelId}
-            </p>
-          </div>
-        </Html>
-      </group>
+          </Html>
+        )}
+      </ViewportAnchor>
     </>
   );
 }

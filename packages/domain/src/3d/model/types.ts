@@ -3,6 +3,7 @@ import type { RigBinding, RigDefinition } from './rig-types';
 import type { SavedRulerInfo } from './ruler-types';
 import type { ModelStatusTags } from './status-tag-types';
 import type { TagMapping } from './tag-mapping-types';
+import type { SavedSceneView, SavedViewSplit } from './view-types';
 
 /** @deprecated 레거시 `valueMapList` 의 슬롯. 새 맵핑은 채널+축으로 표현한다. */
 export type ValueMapType =
@@ -39,6 +40,18 @@ export interface SavedSceneInfo {
    * 비어 있으면 필드 자체가 빠져 공유하지 않는 씬과 diff 가 없다.
    */
   cameraByRegion?: Record<string, SavedCameraInfo>;
+  /**
+   * 씬 뷰 — 에디터에서 저작한 이름 붙은 카메라 구도(view-types.ts). 모니터링·
+   * 3D 플레이·에디터가 같은 목록을 읽는다. 씬 파일 단위 저장이라 파일을
+   * 공유하는 region 은 같은 뷰를 본다. 비어 있으면 필드 자체가 빠진다.
+   */
+  views?: SavedSceneView[];
+  /**
+   * 분할 화면 — `views` 를 2×2 칸에 배정한 것(view-types.ts). 화면 배치는
+   * lib/view-split-layout.ts 가 정한다. 칸이 전부 비고 고정도 아니면 필드가
+   * 빠진다.
+   */
+  viewSplit?: SavedViewSplit;
   /**
    * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
    *

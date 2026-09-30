@@ -1,4 +1,4 @@
-# 3D 렌더링·성능 — demand 프레임루프, 그림자, 바다 미러 반사·스텐실, 낮/밤 조명, 워밍업 큐
+# 3D 렌더링·성능 — demand 프레임루프, 그림자, 바다 미러 반사·스텐실, 낮/밤 조명, 워밍업 큐, 분할 화면 렌더
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -22,7 +22,8 @@
 | 수면 아래 잠김(깊이 안개) | 셰이더 패치 `packages/domain/src/3d/lib/sea-submersion.ts`, 머티리얼 전이·공유 `lib/mesh-material-binding.ts`·`lib/sea-material-cache.ts`, 켜는 곳 `GltfModel` 의 `seaSubmersion` |
 | 바다 도달 마스크(안개가 끼는 위치) | 격자·물 퍼뜨리기 `packages/domain/src/3d/lib/sea-reach-grid.ts`, 지도 메시 → 마스크 `lib/sea-reach-mask.ts`(`buildSeaReachMask`), 전역 유니폼 `lib/sea-reach-uniforms.ts`, 수명 `packages/features/src/3d/model/sea-reach-controller.ts`, 나눠 돌리기 `lib/sliced-task.ts`, 캔버스 `ui/scene-sea-reach.tsx`(`SceneSeaReach`) — 전부 테스트 대상 |
 | 컨텍스트 지형 Lambert 변환 | `packages/domain/src/3d/lib/lambert-material.ts`, `GltfModel shading='lambert'` |
-| 지형·모델 LOD 런타임 전환 | `packages/features/src/3d/ui/scene-terrain-lod.tsx`(`SceneTerrainLod`), 수식 `lib/terrain-lod.ts`(`TERRAIN_LOD_THRESHOLD_PX`) |
+| 지형·모델 LOD 런타임 전환 | 배선 `packages/features/src/3d/ui/scene-terrain-lod.tsx`(`SceneTerrainLod`), 상태·카메라별 적용 `model/terrain-lod-controller.ts`(`TerrainLodController`, 테스트 대상), 수식 `lib/terrain-lod.ts`(`TERRAIN_LOD_THRESHOLD_PX`) |
+| 분할 화면 렌더(타일마다 카메라) | `packages/features/src/3d/ui/scene-split-renderer.tsx`, 프레임 `lib/split-render.ts`, 뷰포트별 DOM 포털 `packages/domain/src/3d/ui/scene-viewports.tsx`(`PerViewport`, `ViewportAnchor`) + `model/scene-viewports-context.ts`, 그림자 초점 합집합 `lib/scene-shadow.ts`(`unionShadowFocus`) — 화면 쪽은 `docs/agents/monitoring-ui.md` |
 | 워밍업 큐(BVH·아웃라인 사본) | `packages/domain/src/3d/lib/bvh-build-queue.ts`(테스트 대상) |
 | 실루엣 셰이더 프리워밍 | `packages/domain/src/3d/ui/silhouette-outline-warmup.tsx` |
 | 워밍업 단계 선택·표시 | `packages/features/src/3d/lib/scene-warmup-step.ts`, 표시 UI 는 `docs/agents/monitoring-ui.md` |
@@ -91,6 +92,27 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - UI 는 `scene-clock-panel.tsx`(위상·현장 시각·태양/달 위치·일출/일몰, 실시간/시각 지정 토글, 날짜·시각 슬라이더·프리셋) 하나를 모니터링 독 팝업 `scene-clock-menu.tsx`(아이콘이 위상을 따라 해·일출·일몰·달, 시각 고정 중엔 하늘색)와 에디터 배경 탭(`palette-environment-section.tsx`, 방식 토글 수동/현장 시각 연동)이 공유한다. UI 상태는 `use-scene-sun-state.ts`(live 는 주기 갱신 — 렌더 중 `Date.now()` 금지라 스토어 `liveNowMs` 캐시).
 - 배포 씬은 실외 4개(dock-1·dock-2·goliath·philly-dock-2)가 `sunMode: 'solar'` + `shadows: true`, 실내 dock-in 은 수동.
 
+### 분할 화면 렌더 (한 캔버스, 타일마다 카메라)
+
+분할 화면(`docs/agents/monitoring-ui.md`)은 캔버스를 늘리지 않고 한 씬을 타일마다 다른 카메라로 여러 번 그린다. `SceneSplitRenderer` 가 `useFrame(…, 1)` 로 R3F 자동 렌더를 넘겨받고, 프레임의 일은 `lib/split-render.ts` 다: 캔버스를 한 번 지우고 → 타일마다 카메라 종횡비·fov(기본 카메라와 같게) → LOD 를 그 카메라 기준으로 다시 쓰기 → viewport·scissor 를 타일 사각형으로 → `gl.render` → 끝나면 캔버스 전체로 복원. 언마운트하면 자동 렌더가 돌아온다.
+
+빈 칸·타일 사이 간격의 색은 캔버스 요소의 `--canvas-background`(컨테이너와 같은 토큰, `readCanvasBackgroundColor`)를 clear 색으로 명시해 지운다 — GL 의 clear 색 상태는 마지막 패스가 남긴 값이라(shadow pass 는 흰색) 그대로 `clear()` 하면 빈 칸이 희다. 텍스처 배경은 three 가 clear 색을 되돌리지 않는다. 렌더러의 clear 색은 프레임 뒤 원복하고, 테마 전환(`<html>` class)은 MutationObserver 로 다시 읽는다.
+
+기본 카메라 하나를 전제한 곳은 이렇게 맞춘다. **기본 카메라·캔버스 크기를 읽는 새 코드는 이 목록에 자기 처리를 더한다.**
+
+| 기본 카메라에 기대는 것 | 분할에서 |
+|---|---|
+| 지형·모델 LOD(`node.visible` 은 씬에 하나) | `TerrainLodController` 가 카메라 키마다 이동 게이트·현재 레벨을 따로 두고, 게이트에 걸려도 가시성은 매번 다시 쓴다. 렌더러가 타일 렌더 직전에 타일 높이(device px)로 적용 |
+| shadow frustum(시선 초점 추종) | `SceneLighting` 의 `shadowFocus` prop — 타일 구도들의 초점(`resolveShadowFocusForPose`) 합집합(`unionShadowFocus`)으로 고정. shadow pass 는 첫 타일 렌더가 `needsUpdate` 를 소비해 프레임당 1회 |
+| drei `Html` 표시(모델 라벨·눈금 숫자·영역 배지·충돌 표지) | `PerViewport`/`ViewportAnchor` 가 타일마다 R3F portal(state 의 camera·size 를 타일 것으로)로 복제하고 DOM 은 타일 컨테이너(`portal`)에 붙인다. 포털 key 에 타일 크기·컨테이너 uuid 가 들어가 리사이즈에 재마운트된다. 타일 라벨은 클릭·hover 를 받지 않는다 |
+| 실루엣 테두리 두께(캔버스 세로 px 기준) | `useSceneViewportHeight` — 분할이면 타일 높이(타일은 전부 같은 높이) |
+| 바다 미러 패스 | 수정 없음 — `OceanWater.onBeforeRender` 가 그리는 카메라 기준이라 타일마다 맞게 돌고 비용만 타일 수만큼 |
+| 태양·달 스프라이트·밤하늘 틴트 돔(기본 카메라 추종) | 그대로 둔다 — 각각 `CELESTIAL_DISTANCE`·`SKY_TINT_RADIUS` 거리라 타일 카메라가 몇 km 어긋나도 눈에 띄지 않는다 |
+| 방위 표시·미니맵·HUD·표면 카메라·카메라 범위 제한 | 화면 쪽에서 숨기거나 입력을 막는다(`monitoring-ui.md`). 표면 카메라·범위 제한은 마운트된 채 기본 카메라만 다룬다 |
+| `gl.info`(perf HUD) | 렌더러가 마운트 동안 `autoReset` 을 끄고 프레임 시작에 리셋해 타일 합(shadow pass 포함)을 보인다 |
+
+비용은 픽셀이 아니라 정점·드로우콜이 타일 수만큼 는다(지도 GLB 는 노드 하나라 절두체 컬링이 안 먹는다). 부족하면 분할 중 미러 패스 끄기 → 거버너 fps 낮추기 → 그림자 끄기 순으로 본다 — 실측 전이라 아직 아무것도 넣지 않았다.
+
 ### 씬 로딩 뒤 워밍업 큐
 
 `bvh-build-queue.ts` 의 전역 큐에 `ModelMesh` 가 넣고, 프레임급 간격의 고정 시간 예산 슬라이스로 처리한다.
@@ -124,6 +146,8 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - `SCENE_DEFAULT_DPR` 와 `three-scene-viewer.tsx` 의 DPR 기본값은 함께 바꾼다.
 - `bvh-build-queue` 의 `cancel` 은 `enqueue` 와 같은 옵션(`outline`)으로 부른다.
 - 새 캔버스를 만들면 `SceneLighting`(regionId)·`SceneFrameGovernor`·`SceneTerrainLod`·`SilhouetteOutlineWarmup` 을 기존 세 캔버스와 같이 마운트한다.
+- **기본 카메라(`useThree().camera`, useFrame 의 `camera`)나 캔버스 크기(`size`)로 화면 배치를 계산하는 새 코드는 분할 화면을 고려한다** — DOM 표시는 `PerViewport`/`ViewportAnchor`, 세로 px 는 `useSceneViewportHeight`, 씬 전역 가시성을 카메라로 정하는 것은 렌더 직전 타일 카메라로 다시 쓴다. 위 "분할 화면 렌더" 표에 더한다.
+- `useFrame` 에 양수 priority 를 쓰는 것은 분할 렌더러(와 drei GizmoHelper 의 Hud)뿐이다. 하나 더 두면 서로 렌더를 뺏는다.
 
 ## 하지 않기로 한 것
 

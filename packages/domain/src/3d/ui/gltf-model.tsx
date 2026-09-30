@@ -17,6 +17,7 @@ import {
   type AlarmHighlightSeverity,
   type ModelLabelTitles,
 } from './model-label';
+import { PerViewport } from './scene-viewports';
 import { ModelSelectionBox } from './model-selection-box';
 import { ObjectSilhouetteOutline } from './object-silhouette-outline';
 import type {
@@ -249,21 +250,29 @@ export const GltfModel = memo(function GltfModel({
         />
       )}
       {showLabel ? (
-        <ModelLabel
-          id={id}
-          equipName={equipName}
-          localAnchor={labelLocalAnchor}
-          alarmSeverity={alarmSeverity}
-          state={labelState}
-          titles={labelTitles}
-          readings={labelReadings}
-          readValue={readLabelValue}
-          dimmed={labelDimmed}
-          onSelect={onSelect}
-          onHoverStart={onHoverStart}
-          onHoverMove={onHoverMove}
-          onHoverEnd={onHoverEnd}
-        />
+        // 분할 화면이면 타일마다 복제(타일 카메라로 투영, 클릭 없음). 단일
+        // 화면이면 그대로 한 번.
+        <PerViewport container={clone}>
+          {(viewport) => (
+            <ModelLabel
+              id={id}
+              equipName={equipName}
+              localAnchor={labelLocalAnchor}
+              alarmSeverity={alarmSeverity}
+              state={labelState}
+              titles={labelTitles}
+              readings={labelReadings}
+              readValue={readLabelValue}
+              dimmed={labelDimmed}
+              interactive={viewport === null}
+              portal={viewport?.portal}
+              onSelect={onSelect}
+              onHoverStart={onHoverStart}
+              onHoverMove={onHoverMove}
+              onHoverEnd={onHoverEnd}
+            />
+          )}
+        </PerViewport>
       ) : null}
     </ModelMesh>
   );

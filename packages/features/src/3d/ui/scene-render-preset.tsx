@@ -32,7 +32,11 @@ import {
   unregisterShadowRenderer,
 } from '@crane/domain/3d';
 import type { SavedSceneInfo, SceneSiteGeo } from '@crane/domain/3d';
-import { isSceneShadowEnabled } from '../lib/scene-shadow';
+import {
+  isSceneShadowEnabled,
+  resolveShadowFocus,
+  type ShadowFocus,
+} from '../lib/scene-shadow';
 import { sunDirectionFromAngles } from '../lib/sun-direction';
 import {
   FILL_LIGHT_AZIMUTH,
@@ -598,12 +602,19 @@ export function SceneLighting({
   sceneInfo,
   regionId,
   timeSource = 'clock',
+  shadowFocus = null,
 }: {
   sceneInfo?: SavedSceneInfo | null;
   /** solar 모드의 현장 위치를 찾는 키. 없으면 solar 설정이어도 manual. */
   regionId?: string;
   /** solar 모드의 시각 출처. 리플레이 화면은 'replay'. */
   timeSource?: SceneTimeSource;
+  /**
+   * shadow frustum 초점 고정. 분할 화면은 기본 카메라가 보이지 않으므로
+   * 타일 구도들의 합집합(lib/scene-shadow unionShadowFocus)을 넘긴다. null
+   * 이면 기본 카메라 시선을 따라간다.
+   */
+  shadowFocus?: ShadowFocus | null;
 } = {}) {
   const lighting = sceneInfo?.lighting;
   const shadowsEnabled = isSceneShadowEnabled(lighting);
@@ -906,20 +917,22 @@ export function SceneLighting({
       waterSunIntensity,
     );
 
-    // 1) 초점 = 시선과 지면(y=0)의 교점. 수평·상향 시선이면 카메라 바로
-    //    아래(폴백은 씬 앵커가 아니라 카메라 — 시점을 따라가는 게 목적).
-    camera.getWorldDirection(scratchForward);
-    let focusX = camera.position.x;
-    let focusZ = camera.position.z;
-    let viewDist = Math.abs(camera.position.y) + 50;
-    if (scratchForward.y < -1e-4) {
-      const t = -camera.position.y / scratchForward.y;
-      if (t > 0 && Number.isFinite(t)) {
-        focusX = camera.position.x + scratchForward.x * t;
-        focusZ = camera.position.z + scratchForward.z * t;
-        viewDist = t;
-      }
+    // 1) 초점 = 시선과 지면(y=0)의 교점(lib/scene-shadow resolveShadowFocus).
+    //    수평·상향 시선이면 카메라 바로 아래(폴백은 씬 앵커가 아니라 카메라 —
+    //    시점을 따라가는 게 목적). 분할 화면은 prop 으로 고정된 합집합 초점.
+    let focus: ShadowFocus;
+    if (shadowFocus) {
+      focus = shadowFocus;
+    } else {
+      camera.getWorldDirection(scratchForward);
+      focus = resolveShadowFocus(
+        [camera.position.x, camera.position.y, camera.position.z],
+        [scratchForward.x, scratchForward.y, scratchForward.z],
+      );
     }
+    const focusX = focus.x;
+    const focusZ = focus.z;
+    const viewDist = focus.viewDist;
 
     // 2) 반경: 시거리 비례를 2배 단계로 양자화 — 연속으로 변하면 텍셀
     //    크기가 매 프레임 달라져 아래 스냅이 무력화되고 그림자가 일렁인다.

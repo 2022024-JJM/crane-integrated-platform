@@ -93,6 +93,12 @@ interface ThreeSceneViewerProps {
    * 소유하고 여기서는 그대로 넘긴다.
    */
   dockRight?: SceneDockState;
+  /**
+   * 카메라 버튼(원래위치·탑뷰·확대·축소) 비활성 사유. 넘기면 네 버튼이
+   * 회색으로 남고 툴팁이 이 문구를 보인다 — 기본 카메라가 화면에 보이지
+   * 않는 분할 화면. 전체화면 버튼은 그대로 동작한다.
+   */
+  cameraControlsDisabledLabel?: string;
   onControllerReady?: (controller: SceneController | null) => void;
 }
 
@@ -389,6 +395,7 @@ export function ThreeSceneViewer({
   toolbarTrailing,
   toolbarPlacement = 'bottom-left',
   dockRight,
+  cameraControlsDisabledLabel,
   onControllerReady,
 }: ThreeSceneViewerProps) {
   const { t } = useTranslation();
@@ -449,11 +456,14 @@ export function ThreeSceneViewer({
     : isTopRightToolbar
       ? 'bottom'
       : 'top';
+  const cameraDisabled = cameraControlsDisabledLabel !== undefined;
   const cameraToolbarButtonsHead = (
     <>
       <SceneToolbarButton
         label={t('common:viewer3d.resetView')}
         side={tooltipSide}
+        disabled={cameraDisabled}
+        disabledLabel={cameraControlsDisabledLabel}
         onClick={() => {
           controllerRef.current?.reset();
         }}
@@ -463,6 +473,8 @@ export function ThreeSceneViewer({
       <SceneToolbarButton
         label={t('common:viewer3d.topView')}
         side={tooltipSide}
+        disabled={cameraDisabled}
+        disabledLabel={cameraControlsDisabledLabel}
         onClick={() => {
           controllerRef.current?.moveToTopView();
         }}
@@ -476,6 +488,8 @@ export function ThreeSceneViewer({
       <SceneToolbarButton
         label={t('common:viewer3d.zoomIn')}
         side={tooltipSide}
+        disabled={cameraDisabled}
+        disabledLabel={cameraControlsDisabledLabel}
         onClick={() => {
           controllerRef.current?.zoomIn();
         }}
@@ -485,6 +499,8 @@ export function ThreeSceneViewer({
       <SceneToolbarButton
         label={t('common:viewer3d.zoomOut')}
         side={tooltipSide}
+        disabled={cameraDisabled}
+        disabledLabel={cameraControlsDisabledLabel}
         onClick={() => {
           controllerRef.current?.zoomOut();
         }}
@@ -712,4 +728,3 @@ export function ThreeSceneViewer({
     </div>
   );
 }
-

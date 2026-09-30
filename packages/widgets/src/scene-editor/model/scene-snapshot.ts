@@ -11,7 +11,9 @@ import type {
   SavedRulerGuide,
   SavedRulerInfo,
   SavedSceneInfo,
+  SavedSceneView,
   SavedTextInfo,
+  SavedViewSplit,
   TagMapping,
 } from '@crane/domain/3d';
 import { getTagMappingTargetKey, STATUS_TAG_ROLES } from '@crane/domain/3d';
@@ -19,6 +21,7 @@ import {
   RULER_GUIDE_OPACITY_DEFAULT,
   RULER_GUIDE_SIDE_DEFAULT,
   RULER_SIZE_DEFAULT,
+  SCENE_SPLIT_SLOT_COUNT,
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_MODE_DEFAULT,
@@ -373,6 +376,10 @@ export function isSceneInfoEqual(
   // 공유 씬의 region 별 카메라 슬롯 — 저장 뒤 updateScene 동등 단락이
   // 맞으려면 camera 와 같이 비교해야 한다.
   if (!isCameraByRegionEqual(a.cameraByRegion, b.cameraByRegion)) return false;
+  // 씬 뷰·분할 — 뷰 탭의 편집(추가·이름·재지정·고정·칸 배정)이 dirty/undo 에
+  // 잡혀야 저장된다.
+  if (!isSceneViewListEqual(a.views, b.views)) return false;
+  if (!isViewSplitEqual(a.viewSplit, b.viewSplit)) return false;
   // 리그 정의 편집이 dirty/undo 에 잡혀야 저장된다.
   if (!isRigDefinitionListEqual(a.rigs, b.rigs)) return false;
   if (a.models.length !== b.models.length) return false;
@@ -421,4 +428,45 @@ function isCameraInfoEqual(
     isVector3TupleEqual(a.position, b.position) &&
     isVector3TupleEqual(a.target, b.target)
   );
+}
+
+/** undefined 와 [] 는 같다(sanitize 가 빈 목록을 생략한다). 순서도 비교한다. */
+export function isSceneViewListEqual(
+  a: SavedSceneView[] | undefined,
+  b: SavedSceneView[] | undefined,
+): boolean {
+  if (a === b) return true;
+  const aViews = a ?? [];
+  const bViews = b ?? [];
+  if (aViews.length !== bViews.length) return false;
+  for (let i = 0; i < aViews.length; i++) {
+    const x = aViews[i];
+    const y = bViews[i];
+    if (
+      x.id !== y.id ||
+      x.name !== y.name ||
+      (x.pinned === true) !== (y.pinned === true) ||
+      !isVector3TupleEqual(x.position, y.position) ||
+      !isVector3TupleEqual(x.target, y.target)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * undefined 와 "빈 칸뿐이고 고정 아님" 은 같다(sanitize 가 그 분할을 생략한다).
+ * 칸은 SCENE_SPLIT_SLOT_COUNT 까지 index 로 비교하고 모자란 칸은 빈 칸이다.
+ */
+export function isViewSplitEqual(
+  a: SavedViewSplit | undefined,
+  b: SavedViewSplit | undefined,
+): boolean {
+  if (a === b) return true;
+  if ((a?.pinned === true) !== (b?.pinned === true)) return false;
+  for (let i = 0; i < SCENE_SPLIT_SLOT_COUNT; i++) {
+    if ((a?.slots?.[i] ?? null) !== (b?.slots?.[i] ?? null)) return false;
+  }
+  return true;
 }

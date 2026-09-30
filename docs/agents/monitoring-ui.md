@@ -1,4 +1,4 @@
-# 모니터링 화면 UI — 전체화면·카메라 이동 범위 제한·관제 HUD·경보 알림·미니맵·방위 표시·씬 독·워밍업 표시
+# 모니터링 화면 UI — 전체화면·카메라 이동 범위 제한·관제 HUD·경보 알림·미니맵·방위 표시·씬 독·워밍업 표시·씬 뷰·분할 화면
 
 > 이 문서는 현재 상태만 적는다. 갱신은 덧붙이기가 아니라 덮어쓰기. 날짜·경위·사라진 UI 는 쓰지 않는다.
 
@@ -19,6 +19,8 @@
 | 방위 표시 | 기하 `packages/features/src/3d/lib/compass.ts`(테스트 대상), 표시·드라이버 `ui/scene-compass.tsx`, 씬 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | 씬 독 | 껍데기 `packages/ui/src/organisms/scene-dock.tsx` (`SceneDockRail`, `SceneDockRailSeparator`), 상태 `packages/features/src/3d/model/use-scene-dock.ts`, 리듀서·영속화 `lib/dock-hover-state.ts`, `lib/dock-storage.ts` |
 | 워밍업 표시 | 단계 선택 `packages/features/src/3d/lib/scene-warmup-step.ts`, 훅 `model/use-scene-warmup-step.ts`, 표시 `ui/scene-warmup-indicator.tsx` |
+| 씬 뷰(우상단 고정 줄) | `packages/features/src/3d/ui/scene-view-bar.tsx`. 데이터·저작은 `docs/agents/3d-editor.md` |
+| 분할 화면 | 상태 `packages/features/src/3d/model/use-scene-split-store.ts`, 타일 DOM `ui/scene-split-overlay.tsx`, 렌더러 `ui/scene-split-renderer.tsx` + `lib/split-render.ts`, 타일 사각형 `lib/split-rects.ts`(테스트 대상), 배치 `packages/domain/src/3d/lib/view-split-layout.ts`. 렌더 쪽 규칙은 `docs/agents/rendering-perf.md` |
 
 ## 동작
 
@@ -108,9 +110,28 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·저장한 뷰 `toolbarTrailing`·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·골리앗 가드·미니맵·현장 시각 `ui/scene-clock-menu.tsx`).
-- `toolbarTrailing` 을 카메라 묶음 안에 끼우는 것은 dock 배치뿐이다. 가로 툴바는 앞에 붙는다.
+- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·골리앗 가드·미니맵·현장 시각 `ui/scene-clock-menu.tsx`). 독 배치는 `toolbarTrailing` 을 비운다 — 뷰·분할은 우상단 고정 줄이 전부다.
+- `toolbarTrailing` 은 독이 아닌 가로 툴바에서만 쓰고(고정한 뷰 칩) 카메라 버튼 앞에 붙는다.
+- 분할 화면 중에는 전체화면·알람 표시·현장 시각만 동작하고 나머지(원래위치·탑뷰·확대·축소·미니맵·페이지 버튼)는 비활성이다 — `ThreeSceneViewer` 의 `cameraControlsDisabledLabel`, `SceneMinimapToggle` 의 `disabledLabel`, 페이지 버튼은 `useSceneSplitStore` 를 읽어 스스로. 비활성은 `disabled` 속성이 아니라 `aria-disabled` + `SCENE_TOOLBAR_DISABLED_CLASS` 다(툴팁으로 사유를 보여야 해서).
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
+
+### 씬 뷰와 우상단 고정 줄
+
+뷰는 에디터가 저작해 씬 파일에 저장한 이름 붙은 카메라 구도(`SavedSceneInfo.views`, `docs/agents/3d-editor.md`)다. 브라우저별 북마크는 없다 — 모든 관제 PC 가 같은 뷰를 본다.
+
+- 모니터링이 보이는 뷰는 **에디터에서 고정한 뷰(`pinned`)뿐**이다 — 캔버스 우상단 고정 줄(`scene-view-bar.tsx`)에 목록 순서대로 상시 버튼으로 온다. 고정하지 않은 뷰는 모니터링 어디에도 없다(뷰 목록 팝오버 없음). 고정한 분할도 같은 줄의 버튼이다. 독 배치는 `fullscreenTopRightOverlay` 슬롯에 고정 줄 → 알람 패널 순으로 세로로 쌓고, 독이 아닌 툴바 배치는 `toolbarTrailing` 자리에 고정한 뷰 칩만 둔다. 에디터도 같은 컴포넌트를 캔버스 우상단에 쓴다.
+- 뷰 버튼은 누르면 그 구도로 옮길 뿐 선택 상태를 두지 않는다. 분할 중이면 분할에서 나간 뒤 옮긴다.
+
+### 분할 화면
+
+씬의 분할 지정(`SavedSceneInfo.viewSplit`, 뷰를 2×2 칸에 배정)이 2칸 이상이고 **에디터에서 분할을 고정했을 때** 실시간 독 배치(`mode='realtime'`·`toolbarLayout='dock'`)에서 분할을 켤 수 있다. 고정하지 않은 분할은 모니터링에 나타나지 않는다. 3D 플레이·대시보드 미리보기는 뷰 버튼만 있고 분할이 없다. 켜짐 여부는 세션 스토어(`use-scene-split-store.ts`, 키 = regionId)이고 저장하지 않는다 — 접속하면 기본 카메라 단일 화면으로 시작한다.
+
+- 진입: 우상단 고정 줄의 분할 버튼 하나다(독 레일에는 없다). 들어갈 때 모델 포커스를 푼다.
+- 배치: 빈 행·열을 접는다(`resolveSplitLayout`) — 좌상·우상만 채우면 좌우 2분할, 좌상·좌하만 채우면 상하 2분할, 그 밖은 2×2 이고 빈 칸은 캔버스 clear 색이다. 타일 사각형은 오버레이가 잰 캔버스 크기로 `computeSplitRects` 가 정하고 렌더러의 viewport·scissor 도 같은 값을 쓴다.
+- 타일(`scene-split-overlay.tsx`): 전체가 클릭 영역이라 캔버스는 포인터를 받지 않는다(회전·줌·크레인 클릭·hover 없음). 단일 클릭이면 그 뷰의 단일 화면으로 나간다. 타일마다 상단 중앙에 뷰 이름(상자 없는 흰 글자 + 진한 글자 그림자 `SPLIT_TITLE_TEXT_SHADOW`), 좌상단에 카메라가 고정이라 한 번만 쓰는 방위 표시(`resolveCompassViewForPose`), 안쪽 `overflow-hidden` 컨테이너에 그 타일의 라벨·표지 DOM 이 붙는다.
+- 분할 중 숨김: 관제 HUD, 미니맵, 전역 방위 표시(타일마다 있으므로). 경보 비네트·알람 패널·배너·우상단 고정 줄은 그대로다.
+- 나가는 경로: 타일 클릭, 고정 줄의 뷰 버튼, 분할 버튼(들어오기 전 구도로 복귀 — 기본 카메라는 분할 중 움직이지 않는다), 알람 목록의 "영역 보기"(분할에서 나가 그 영역으로 이동).
+- 그리는 방식(타일마다 카메라·LOD·라벨 포털·그림자 초점)은 `docs/agents/rendering-perf.md` 의 "분할 화면 렌더".
 
 ### 워밍업 표시
 
@@ -133,10 +154,17 @@
 - 방위 표시의 자세는 React 상태로 두지 않는다. 드라이버가 SVG 에 직접 쓰고, `SceneCompass` 의 JSX 에는 자세와 무관한 속성만 둔다 — 리렌더가 직접 쓴 값을 덮지 않게.
 - HUD 알람 칸을 0 으로 그리지 않는다. 알람을 받지 않는 화면은 칸을 숨긴다 — 0 은 "알람 없음"으로 읽힌다.
 - 독 레일 순서는 카메라 묶음 → 화면 표시 묶음. 감지 스위치·시뮬레이션 ▶ 는 독에 두지 않는다(감지 설정 페이지·3D 플레이 트랜스포트 바가 담당).
+- 뷰는 씬 파일에서만 온다. 모니터링 화면에 뷰를 만들거나 지우는 UI·브라우저 저장을 두지 않는다.
+- 분할 중 카메라를 옮기는 명령(뷰 선택·영역 보기)은 먼저 `useSceneSplitStore.exit()` 를 부른다. 분할 중 독 레일에서 동작하는 것은 전체화면·알람 표시·현장 시각뿐이고 나머지는 비활성 + 툴팁이다.
+- 모니터링의 뷰·분할 UI 는 우상단 고정 줄 하나다. 독 레일에 뷰 목록·분할 버튼을 두지 않는다 — 에디터가 고정한 것만 보인다.
+- 분할 타일은 단일 클릭이다. 더블클릭·hover 조작을 두지 않는다.
 
 ## 하지 않기로 한 것
 
 - 요소 단위 전체화면 — top layer 밖 DOM 이 생겨 `PortalContainerProvider` 와 두 번째 Toaster 가 필요해진다.
+- 브라우저별 뷰 북마크(localStorage) — 관제 PC 마다 뷰가 달라진다. 에디터가 저작해 씬 파일에 넣은 뷰로 대체했다.
+- 분할 중 카메라 버튼을 "분할에서 나간 뒤 수행" — 눌렀을 때 화면이 통째로 바뀌어 당황스럽다. 비활성 + 사유 툴팁으로 둔다.
+- 분할로 시작하기(ACMS 안벽 방식) — 접속하면 항상 기본 카메라 단일 화면이다.
 - 탑뷰·카메라 범위에 여유·여백 비율 — 지도가 작업 구역보다 훨씬 넓은 조선소에선 바깥 여유가 무의미하고 안쪽 여백은 가장자리 모델을 잘라낸다.
 - 타깃 기준 카메라 범위 제한 — 표면 피벗이 타깃을 지도 밖에 놓아 드래그마다 튄다.
 - 경계 위반 시 되밀기 — 프레임 평행이동 취소 + 투영이 대안.

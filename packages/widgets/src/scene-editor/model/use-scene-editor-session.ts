@@ -129,6 +129,15 @@ interface UseSceneEditorSessionResult {
     patch: Partial<SavedLightingInfo>,
     options?: { recordHistory?: boolean },
   ) => void;
+  /** 씬 뷰·분할(Project 팔레트 "뷰" 탭) — 의미는 3d/lib/view-editor.ts. */
+  addSceneView: (name: string, pose: SavedCameraInfo) => void;
+  renameSceneView: (id: string, name: string) => void;
+  updateSceneViewPose: (id: string, pose: SavedCameraInfo) => void;
+  removeSceneView: (id: string) => void;
+  moveSceneView: (id: string, insertBefore: number) => void;
+  setSceneViewPinned: (id: string, pinned: boolean) => void;
+  setSplitSlot: (slot: number, viewId: string | null) => void;
+  setSplitPinned: (pinned: boolean) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
   updateSelectedMapCameraBounds: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -366,6 +375,14 @@ export function useSceneEditorSession({
     setSeaVisible: manipulation.setSeaVisible,
     setTrueNorth: manipulation.setTrueNorth,
     setLighting: manipulation.setLighting,
+    addSceneView: manipulation.addSceneView,
+    renameSceneView: manipulation.renameSceneView,
+    updateSceneViewPose: manipulation.updateSceneViewPose,
+    removeSceneView: manipulation.removeSceneView,
+    moveSceneView: manipulation.moveSceneView,
+    setSceneViewPinned: manipulation.setSceneViewPinned,
+    setSplitSlot: manipulation.setSplitSlot,
+    setSplitPinned: manipulation.setSplitPinned,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,

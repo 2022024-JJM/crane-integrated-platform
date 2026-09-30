@@ -27,6 +27,14 @@ export const SCENE_TOOLBAR_BUTTON_CLASS =
   'in-data-[scene-dock]:bg-transparent in-data-[scene-dock]:text-foreground in-data-[scene-dock]:backdrop-blur-none in-data-[scene-dock]:hover:bg-accent in-data-[scene-dock]:hover:text-accent-foreground in-data-[scene-dock]:aria-expanded:bg-accent in-data-[scene-dock]:aria-expanded:text-accent-foreground in-data-[scene-dock]:aria-pressed:bg-accent ' +
   'dark:in-data-[scene-dock]:bg-transparent dark:in-data-[scene-dock]:text-foreground dark:in-data-[scene-dock]:hover:bg-accent dark:in-data-[scene-dock]:hover:text-accent-foreground dark:in-data-[scene-dock]:aria-expanded:bg-accent dark:in-data-[scene-dock]:aria-expanded:text-accent-foreground';
 
+/**
+ * 비활성 표시. `disabled` 속성이 아니라 `aria-disabled` 와 이 클래스를 쓴다 —
+ * `disabled` 는 포인터 이벤트를 막아 "왜 안 되는지" 툴팁이 뜨지 않는다.
+ * 클릭 무시는 호출자가 한다.
+ */
+export const SCENE_TOOLBAR_DISABLED_CLASS =
+  'cursor-not-allowed opacity-50 hover:bg-white/40 hover:text-black dark:hover:bg-black/40 dark:hover:text-white in-data-[scene-dock]:hover:bg-transparent in-data-[scene-dock]:hover:text-foreground';
+
 export type SceneToolbarTooltipSide = 'top' | 'bottom' | 'left' | 'right';
 
 interface SceneToolbarButtonProps {
@@ -37,6 +45,12 @@ interface SceneToolbarButtonProps {
   size?: 'icon-sm' | 'icon-xs';
   /** 토글 버튼일 때 눌림 상태 (aria-pressed). */
   pressed?: boolean;
+  /**
+   * 비활성 — 회색으로 남고 클릭을 무시하며, 툴팁은 `disabledLabel`(없으면
+   * label)을 보인다. 분할 화면에서 쓸 수 없는 카메라 버튼이 이렇게 남는다.
+   */
+  disabled?: boolean;
+  disabledLabel?: string;
   className?: string;
   children: ReactNode;
 }
@@ -47,9 +61,12 @@ export function SceneToolbarButton({
   side = 'top',
   size = 'icon-sm',
   pressed,
+  disabled = false,
+  disabledLabel,
   className,
   children,
 }: SceneToolbarButtonProps) {
+  const tooltip = disabled ? (disabledLabel ?? label) : label;
   return (
     <Tooltip>
       <TooltipTrigger
@@ -57,16 +74,24 @@ export function SceneToolbarButton({
           <Button
             variant="outline"
             size={size}
-            className={cn(SCENE_TOOLBAR_BUTTON_CLASS, className)}
-            aria-label={label}
+            className={cn(
+              SCENE_TOOLBAR_BUTTON_CLASS,
+              disabled && SCENE_TOOLBAR_DISABLED_CLASS,
+              className,
+            )}
+            aria-label={tooltip}
             aria-pressed={pressed}
+            aria-disabled={disabled || undefined}
           />
         }
-        onClick={onClick}
+        onClick={() => {
+          if (disabled) return;
+          onClick();
+        }}
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side={side}>{label}</TooltipContent>
+      <TooltipContent side={side}>{tooltip}</TooltipContent>
     </Tooltip>
   );
 }

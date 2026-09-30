@@ -751,3 +751,55 @@ describe('sanitizeSceneInfo — 거리 눈금(rulers)', () => {
     expect(sanitizeSceneInfo(once)).toEqual(once);
   });
 });
+
+describe('sanitizeSceneInfo — 씬 뷰(views)·분할(viewSplit)', () => {
+  const view = (id: string, name = id) => ({
+    id,
+    name,
+    position: [1, 2, 3],
+    target: [0, 0, 0],
+  });
+
+  it('뷰가 없는 씬은 두 필드 모두 빠진다 — 기존 저장본과 diff 0', () => {
+    const out = sanitizeSceneInfo(scene());
+    expect(out).not.toHaveProperty('views');
+    expect(out).not.toHaveProperty('viewSplit');
+    const empty = sanitizeSceneInfo(
+      scene({ views: [], viewSplit: { slots: [null, null, null, null] } }),
+    );
+    expect(empty).not.toHaveProperty('views');
+    expect(empty).not.toHaveProperty('viewSplit');
+  });
+
+  it('분할은 정규화된 뷰 목록 기준으로 걸러진다 — 버려진 뷰를 가리키는 칸은 빈다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        views: [view('a'), { id: 'broken', name: 'B', position: [1] }],
+        viewSplit: { slots: ['a', 'broken', null, null], pinned: true },
+      }),
+    );
+    expect(out.views!.map((v) => v.id)).toEqual(['a']);
+    expect(out.viewSplit).toEqual({
+      slots: ['a', null, null, null],
+      pinned: true,
+    });
+  });
+
+  it('뷰 id 는 씬 객체 id 와 겹쳐도 그대로 둔다 — 다른 집합이다', () => {
+    const out = sanitizeSceneInfo(
+      scene({ models: [model({ id: 'shared' })], views: [view('shared')] }),
+    );
+    expect(out.models[0].id).toBe('shared');
+    expect(out.views![0].id).toBe('shared');
+  });
+
+  it('정규화는 멱등이다', () => {
+    const once = sanitizeSceneInfo(
+      scene({
+        views: [view('a'), { ...view('b'), pinned: true }],
+        viewSplit: { slots: ['b', 'a'] },
+      }),
+    );
+    expect(sanitizeSceneInfo(once)).toEqual(once);
+  });
+});

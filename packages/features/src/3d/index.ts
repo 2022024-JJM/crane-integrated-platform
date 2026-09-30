@@ -108,7 +108,11 @@ export {
   resolveSolarLighting,
   type SolarLightingSnapshot,
 } from './lib/solar-lighting';
-export { SceneViewBookmarks } from './ui/scene-view-bookmarks';
+export { SceneViewBar, type SceneViewBarSplit } from './ui/scene-view-bar';
+export {
+  useSceneSplitActive,
+  useSceneSplitStore,
+} from './model/use-scene-split-store';
 export { SceneMinimap } from './ui/scene-minimap';
 export { SceneMinimapCapture } from './ui/scene-minimap-capture';
 export { SceneMinimapToggle } from './ui/scene-minimap-toggle';
@@ -186,12 +190,6 @@ export {
 } from './ui/scene-surface-camera';
 export { SceneCameraLimits } from './ui/scene-camera-limits';
 export { SceneTerrainLod } from './ui/scene-terrain-lod';
-export {
-  useSceneViewsStore,
-  SCENE_VIEWS_MAX,
-  SCENE_VIEW_NAME_MAX,
-  type SceneViewBookmark,
-} from './model/use-scene-views-store';
 export { SceneTransformModeToggle } from './ui/scene-transform-mode-toggle';
 export { SceneTransformPivotMenu } from './ui/scene-transform-pivot-menu';
 export {

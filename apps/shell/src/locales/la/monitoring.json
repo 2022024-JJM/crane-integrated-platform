@@ -191,6 +191,19 @@
     "undo": "Revoca",
     "redo": "Restitue"
   },
+  "sceneViews": {
+    "namePlaceholder": "Nomen prospectus",
+    "flyTo": "Ad {{name}} i",
+    "duplicateName": "Hoc nomen iam adhibetur",
+    "limitReached": "Usque ad {{max}} prospectus servari possunt"
+  },
+  "sceneSplit": {
+    "enter": "Scrinium divisum",
+    "exit": "Divisionem claude",
+    "editorOnly": "Scrinium divisum tantum in scrinio custodiae videri potest",
+    "disabledInSplit": "In scrinio diviso non praesto",
+    "openTile": "{{name}} aperi"
+  },
   "focus": {
     "back": "Redi"
   },
@@ -296,7 +309,8 @@
     "paletteTabs": {
       "models": "Exempla",
       "map": "Tabula",
-      "background": "Fundus"
+      "background": "Fundus",
+      "view": "Prospectus"
     },
     "environmentNone": "Sine fundo",
     "environmentUnset": "Haec scaena fundum non designat, ergo fundus regionis praedefinitus adhibetur. Si infra eligis, in scaena servabitur.",
@@ -326,7 +340,24 @@
     "drawRuler": "Regulam duce",
     "rulerName": "Regula {{index}}",
     "rulerDrawStartHint": "Punctum initii preme · Esc ut abroges",
-    "rulerDrawEndHint": "Punctum finis preme · Esc ut abroges"
+    "rulerDrawEndHint": "Punctum finis preme · Esc ut abroges",
+    "views": {
+      "splitSection": "Scrinium divisum",
+      "splitSlot": "Locus {{index}}",
+      "splitSlotEmpty": "Prospectum huc trahe",
+      "splitSlotClear": "Locum vacua",
+      "splitHint": "Duobus locis impletis, bulla divisionis in scrinio custodiae apparet",
+      "pinSplit": "Bullam divisionis dextrorsum supra fige",
+      "unpinSplit": "Bullam divisionis solve",
+      "listSection": "Prospectus",
+      "empty": "Nulli prospectus. Cameram dirige et adde",
+      "add": "Prospectum praesentem adde",
+      "rename": "Nomen muta",
+      "recapture": "Ad prospectum praesentem redige",
+      "remove": "Dele",
+      "pin": "Dextrorsum supra fige",
+      "unpin": "Solve"
+    }
   },
   "detectionSettings": {
     "title": "Optiones",

@@ -1,6 +1,14 @@
 import { Html, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import {
   Vector3,
   type Camera,
@@ -37,6 +45,7 @@ import {
   type SavedRulerGuide,
   type SceneRulerSize,
 } from '../model/ruler-types';
+import { PerViewport } from './scene-viewports';
 
 /**
  * 거리 눈금 — 에디터·모니터링(3D 플레이 포함) 공용.
@@ -130,62 +139,53 @@ interface RulerBodyProps {
   endLabel?: string;
 }
 
-function RulerBody({
-  id,
-  length,
-  interval,
+interface RulerLabelsProps {
+  /** 눈금 좌표계의 group(scale 1/metersPerUnit) — 거리 계산의 월드 기준. */
+  scaled: Group | null;
+  ticks: ReturnType<typeof rulerTicks>;
+  shownInterval: number;
+  scale: number;
+  lengthM: number;
+  dotSizePx: number;
+  dotCenterPx: number;
+  textSizePx: number;
+  labelMinSpacingPx: number;
+  textColor: string;
+  dotColor: string;
+  unitHidden: boolean;
+  endLabel?: string;
+  onSelect?: (id: string) => void;
+  onClick: (event: { stopPropagation: () => void }) => void;
+  /** 분할 타일의 DOM 컨테이너(drei Html portal). 단일 화면은 없음. */
+  portal?: RefObject<HTMLElement | null>;
+}
+
+/**
+ * 점·숫자(DOM) — 분할 화면에서는 타일마다 복제되므로 선(RulerBody)과 분리돼
+ * 있다. useFrame 의 camera·size 는 자기 뷰포트(포털 state)의 것이다.
+ */
+function RulerLabels({
+  scaled,
+  ticks,
+  shownInterval,
+  scale,
+  lengthM,
+  dotSizePx,
+  dotCenterPx,
+  textSizePx,
+  labelMinSpacingPx,
   textColor,
   dotColor,
-  textSize,
-  dotSize,
-  guide,
-  startValue = 0,
-  unitHidden = false,
-  metersPerUnit = 1,
-  isSelected = false,
-  onSelect,
+  unitHidden,
   endLabel,
-}: RulerBodyProps) {
-  const scaledRef = useRef<Group>(null);
+  onSelect,
+  onClick,
+  portal,
+}: RulerLabelsProps) {
   const labelRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  const dotSizePx = rulerDotSizePx(dotSize);
-  const dotCenterPx = rulerDotCenterPx(dotSize);
-  const textSizePx = rulerTextSizePx(textSize);
-  const labelMinSpacingPx = rulerLabelMinSpacingPx(textSize);
-
-  const scale = metersPerUnit > 0 ? metersPerUnit : 1;
-  const lengthM = length * scale;
-  const guideLengthM = guide ? guide.length * scale : 0;
-  const guideSide = guide?.side;
-
-  const ticks = useMemo(
-    () => rulerTicks({ lengthM, interval, startValue }),
-    [lengthM, interval, startValue],
-  );
-  const shownInterval = useMemo(
-    () => resolveRulerInterval({ lengthM, interval, startValue }),
-    [lengthM, interval, startValue],
-  );
-  // drei <Line> 은 points 참조가 바뀌면 geometry 를 다시 만들므로 memo.
-  const guidePoints = useMemo(
-    () => rulerGuidePoints(ticks, guideLengthM, guideSide),
-    [ticks, guideLengthM, guideSide],
-  );
-  const axisPoints = useMemo(() => rulerAxisPoints(lengthM), [lengthM]);
-
   useFrame(({ camera, size }) => {
-    const scaled = scaledRef.current;
     if (!scaled) return;
-    // 눈금에는 크기(scale)가 없다. 다중 선택 크기 드래그가 바깥 그룹을 늘려
-    // 놓았으면 되돌린다 — 저장값이 없어 React 가 되돌려 주지 않는다.
-    const outer = scaled.parent;
-    if (
-      outer &&
-      (outer.scale.x !== 1 || outer.scale.y !== 1 || outer.scale.z !== 1)
-    ) {
-      outer.scale.set(1, 1, 1);
-    }
     scaled.updateWorldMatrix(true, false);
     const view = resolveViewScale(camera, size.height);
     const intervalUnits = shownInterval / scale;
@@ -215,6 +215,138 @@ function RulerBody({
     }
   });
 
+  return (
+    <>
+      {ticks.map((tick, i) => (
+        <group key={tick.index} position={[tick.distance, 0, 0]}>
+          {/* 모델 라벨 [5,0]·영역 배지 [4,0] 아래. */}
+          <Html
+            zIndexRange={[3, 0]}
+            style={{ pointerEvents: 'none' }}
+            portal={portal as RefObject<HTMLElement> | undefined}
+          >
+            <div
+              ref={(element) => {
+                labelRefs.current[i] = element;
+                if (!element) return;
+                // 첫 프레임 전에도 점이 눈금 자리에 있게 한다. 배율은
+                // useFrame 이 거리로 다시 정한다. 점 크기가 바뀐 렌더에서는
+                // 직전 배율 그대로 중심만 고친다 — 캔버스가 demand 라 다음
+                // 프레임이 바로 오지 않는다.
+                const lastScale = Number(element.dataset.scale);
+                writeLabelTransform(
+                  element,
+                  Number.isFinite(lastScale) && lastScale > 0 ? lastScale : 1,
+                  dotCenterPx,
+                );
+              }}
+              className={`flex flex-col items-center gap-0.5 whitespace-nowrap select-none ${onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
+              style={{ transformOrigin: `50% ${dotCenterPx}px` }}
+              onPointerDown={
+                onSelect
+                  ? (event) => {
+                      event.stopPropagation();
+                    }
+                  : undefined
+              }
+              onClick={onSelect ? onClick : undefined}
+            >
+              <span
+                aria-hidden
+                className="block rounded-full"
+                style={{
+                  width: dotSizePx,
+                  height: dotSizePx,
+                  backgroundColor: dotColor,
+                }}
+              />
+              <span
+                className="font-sans leading-none font-medium tabular-nums"
+                style={{ color: textColor, fontSize: textSizePx }}
+              >
+                {formatRulerValue(tick.value, shownInterval, unitHidden)}
+              </span>
+            </div>
+          </Html>
+        </group>
+      ))}
+      {endLabel ? (
+        <group position={[lengthM, 0, 0]}>
+          <Html
+            zIndexRange={[3, 0]}
+            style={{ pointerEvents: 'none' }}
+            portal={portal as RefObject<HTMLElement> | undefined}
+          >
+            <div
+              className="rounded-sm bg-black/70 px-1.5 py-0.5 font-sans text-[12px] leading-none font-medium whitespace-nowrap text-white tabular-nums select-none"
+              style={{ transform: 'translate(-50%, calc(-100% - 10px))' }}
+            >
+              {endLabel}
+            </div>
+          </Html>
+        </group>
+      ) : null}
+    </>
+  );
+}
+
+function RulerBody({
+  id,
+  length,
+  interval,
+  textColor,
+  dotColor,
+  textSize,
+  dotSize,
+  guide,
+  startValue = 0,
+  unitHidden = false,
+  metersPerUnit = 1,
+  isSelected = false,
+  onSelect,
+  endLabel,
+}: RulerBodyProps) {
+  // 점·숫자 포털의 컨테이너로 쓰려고 group 을 상태로 든다(마운트 뒤 한 번).
+  const [scaled, setScaled] = useState<Group | null>(null);
+
+  const dotSizePx = rulerDotSizePx(dotSize);
+  const dotCenterPx = rulerDotCenterPx(dotSize);
+  const textSizePx = rulerTextSizePx(textSize);
+  const labelMinSpacingPx = rulerLabelMinSpacingPx(textSize);
+
+  const scale = metersPerUnit > 0 ? metersPerUnit : 1;
+  const lengthM = length * scale;
+  const guideLengthM = guide ? guide.length * scale : 0;
+  const guideSide = guide?.side;
+
+  const ticks = useMemo(
+    () => rulerTicks({ lengthM, interval, startValue }),
+    [lengthM, interval, startValue],
+  );
+  const shownInterval = useMemo(
+    () => resolveRulerInterval({ lengthM, interval, startValue }),
+    [lengthM, interval, startValue],
+  );
+  // drei <Line> 은 points 참조가 바뀌면 geometry 를 다시 만들므로 memo.
+  const guidePoints = useMemo(
+    () => rulerGuidePoints(ticks, guideLengthM, guideSide),
+    [ticks, guideLengthM, guideSide],
+  );
+  const axisPoints = useMemo(() => rulerAxisPoints(lengthM), [lengthM]);
+
+  useFrame(() => {
+    if (!scaled) return;
+    // 눈금에는 크기(scale)가 없다. 다중 선택 크기 드래그가 바깥 그룹을 늘려
+    // 놓았으면 되돌린다 — 저장값이 없어 React 가 되돌려 주지 않는다.
+    const outer = scaled.parent;
+    if (
+      outer &&
+      (outer.scale.x !== 1 || outer.scale.y !== 1 || outer.scale.z !== 1)
+    ) {
+      outer.scale.set(1, 1, 1);
+    }
+  });
+
   const handleClick = useCallback(
     (event: { stopPropagation: () => void }) => {
       event.stopPropagation();
@@ -224,7 +356,7 @@ function RulerBody({
   );
 
   return (
-    <group ref={scaledRef} scale={1 / scale}>
+    <group ref={setScaled} scale={1 / scale}>
       {guide && guidePoints.length > 0 ? (
         <Line
           segments
@@ -251,67 +383,29 @@ function RulerBody({
           raycast={noRaycast}
         />
       ) : null}
-      {ticks.map((tick, i) => (
-        <group key={tick.index} position={[tick.distance, 0, 0]}>
-          {/* 모델 라벨 [5,0]·영역 배지 [4,0] 아래. */}
-          <Html zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
-            <div
-              ref={(element) => {
-                labelRefs.current[i] = element;
-                if (!element) return;
-                // 첫 프레임 전에도 점이 눈금 자리에 있게 한다. 배율은
-                // useFrame 이 거리로 다시 정한다. 점 크기가 바뀐 렌더에서는
-                // 직전 배율 그대로 중심만 고친다 — 캔버스가 demand 라 다음
-                // 프레임이 바로 오지 않는다.
-                const lastScale = Number(element.dataset.scale);
-                writeLabelTransform(
-                  element,
-                  Number.isFinite(lastScale) && lastScale > 0 ? lastScale : 1,
-                  dotCenterPx,
-                );
-              }}
-              className={`flex flex-col items-center gap-0.5 whitespace-nowrap select-none ${onSelect ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
-              style={{ transformOrigin: `50% ${dotCenterPx}px` }}
-              onPointerDown={
-                onSelect
-                  ? (event) => {
-                      event.stopPropagation();
-                    }
-                  : undefined
-              }
-              onClick={onSelect ? handleClick : undefined}
-            >
-              <span
-                aria-hidden
-                className="block rounded-full"
-                style={{
-                  width: dotSizePx,
-                  height: dotSizePx,
-                  backgroundColor: dotColor,
-                }}
-              />
-              <span
-                className="font-sans leading-none font-medium tabular-nums"
-                style={{ color: textColor, fontSize: textSizePx }}
-              >
-                {formatRulerValue(tick.value, shownInterval, unitHidden)}
-              </span>
-            </div>
-          </Html>
-        </group>
-      ))}
-      {endLabel ? (
-        <group position={[lengthM, 0, 0]}>
-          <Html zIndexRange={[3, 0]} style={{ pointerEvents: 'none' }}>
-            <div
-              className="rounded-sm bg-black/70 px-1.5 py-0.5 font-sans text-[12px] leading-none font-medium whitespace-nowrap text-white tabular-nums select-none"
-              style={{ transform: 'translate(-50%, calc(-100% - 10px))' }}
-            >
-              {endLabel}
-            </div>
-          </Html>
-        </group>
-      ) : null}
+      {/* 점·숫자 — 분할 화면이면 타일마다 복제(선은 한 번만 그린다). */}
+      <PerViewport container={scaled}>
+        {(viewport) => (
+          <RulerLabels
+            scaled={scaled}
+            ticks={ticks}
+            shownInterval={shownInterval}
+            scale={scale}
+            lengthM={lengthM}
+            dotSizePx={dotSizePx}
+            dotCenterPx={dotCenterPx}
+            textSizePx={textSizePx}
+            labelMinSpacingPx={labelMinSpacingPx}
+            textColor={textColor}
+            dotColor={dotColor}
+            unitHidden={unitHidden}
+            endLabel={endLabel}
+            onSelect={viewport === null ? onSelect : undefined}
+            onClick={handleClick}
+            portal={viewport?.portal}
+          />
+        )}
+      </PerViewport>
     </group>
   );
 }

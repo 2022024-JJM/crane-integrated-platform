@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useRef, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CircleGeometry,
@@ -13,6 +13,7 @@ import {
 import {
   isValidZoneRadius,
   modelObjectRegistry,
+  ViewportAnchor,
   zoneCenterWorld,
   type SavedModelZone,
   type SavedSceneInfo,
@@ -125,7 +126,6 @@ function ZoneRing({
   const groupRef = useRef<Group>(null);
   const fillRef = useRef<MeshBasicMaterial>(null);
   const ringRef = useRef<MeshBasicMaterial>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
   // 원시값 셀렉터 — 전이 때만 리렌더된다.
   const intruderCount = useSceneZoneStore(
     (s) => s.intrusions.find((i) => i.zoneKey === key)?.intruders.length ?? 0,
@@ -139,11 +139,9 @@ function ZoneRing({
     const root = modelObjectRegistry.get(ownerId);
     if (!root) {
       group.visible = false;
-      if (badgeRef.current) badgeRef.current.hidden = true;
       return;
     }
     group.visible = true;
-    if (badgeRef.current) badgeRef.current.hidden = false;
     root.updateWorldMatrix(true, false);
     zoneCenterWorld(root.matrixWorld, zone.offset, _center);
     group.position.set(_center.x, _center.y + lift, _center.z);
@@ -192,24 +190,69 @@ function ZoneRing({
           감지 설정의 "영역 이름 표시" 가 꺼지면 통째로 언마운트한다 — Html 은
           매 프레임 화면 좌표를 계산하므로 숨기기보다 빼는 쪽이 싸다. */}
       {showLabel ? (
-        <Html center position={[1, 0, 0]} zIndexRange={[4, 0]}>
-          <div
-            ref={badgeRef}
-            className="pointer-events-none relative flex items-center rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
-            style={{ borderLeftColor: zone.color }}
-          >
-            <span>{name}</span>
-            {intruderCount > 0 ? (
-              <span
-                aria-label={`intruders ${intruderCount}`}
-                className="absolute -top-2 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] leading-none font-bold text-white tabular-nums ring-1 ring-black/40"
-              >
-                {intruderCount > 99 ? '99+' : intruderCount}
-              </span>
-            ) : null}
-          </div>
-        </Html>
+        // 분할 화면이면 타일마다 복제(ViewportAnchor).
+        <ViewportAnchor position={[1, 0, 0]}>
+          {(viewport) => (
+            <ZoneBadge
+              ownerId={ownerId}
+              name={name}
+              color={zone.color}
+              intruderCount={intruderCount}
+              portal={viewport?.portal}
+            />
+          )}
+        </ViewportAnchor>
       ) : null}
     </group>
+  );
+}
+
+/**
+ * 링 +X 가장자리의 이름 배지(DOM). 소유 모델이 레지스트리에 없으면 숨긴다 —
+ * 링의 visible 은 DOM 을 가리지 못한다. 분할 화면에서는 타일마다 하나씩이라
+ * 숨김 판정도 자기 useFrame 에서 한다.
+ */
+function ZoneBadge({
+  ownerId,
+  name,
+  color,
+  intruderCount,
+  portal,
+}: {
+  ownerId: string;
+  name: string;
+  color: string;
+  intruderCount: number;
+  portal?: RefObject<HTMLElement | null>;
+}) {
+  const badgeRef = useRef<HTMLDivElement>(null);
+  useFrame(() => {
+    const badge = badgeRef.current;
+    if (!badge) return;
+    const hidden = !modelObjectRegistry.get(ownerId);
+    if (badge.hidden !== hidden) badge.hidden = hidden;
+  });
+  return (
+    <Html
+      center
+      zIndexRange={[4, 0]}
+      portal={portal as RefObject<HTMLElement> | undefined}
+    >
+      <div
+        ref={badgeRef}
+        className="pointer-events-none relative flex items-center rounded-sm border-l-2 bg-black/60 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white select-none"
+        style={{ borderLeftColor: color }}
+      >
+        <span>{name}</span>
+        {intruderCount > 0 ? (
+          <span
+            aria-label={`intruders ${intruderCount}`}
+            className="absolute -top-2 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] leading-none font-bold text-white tabular-nums ring-1 ring-black/40"
+          >
+            {intruderCount > 99 ? '99+' : intruderCount}
+          </span>
+        ) : null}
+      </div>
+    </Html>
   );
 }

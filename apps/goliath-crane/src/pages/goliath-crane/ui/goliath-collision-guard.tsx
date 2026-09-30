@@ -4,6 +4,7 @@ import {
   CollisionGuard,
   CollisionGuardCameraRig,
   useCollisionGuardStore,
+  useSceneSplitStore,
 } from '@crane/features/3d';
 import { Button } from '@crane/ui/atoms/button';
 import {
@@ -11,7 +12,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@crane/ui/molecules/tooltip';
-import { SCENE_TOOLBAR_BUTTON_CLASS } from '@crane/ui/molecules/scene-toolbar-button';
+import {
+  SCENE_TOOLBAR_BUTTON_CLASS,
+  SCENE_TOOLBAR_DISABLED_CLASS,
+} from '@crane/ui/molecules/scene-toolbar-button';
 import { cn } from '@crane/core/lib/utils';
 import { useGoliathCollisionZones } from '../model/use-goliath-collision-zones';
 
@@ -38,10 +42,15 @@ export function GoliathCollisionGuardToggle() {
   const { t } = useTranslation('goliath-crane');
   const enabled = useCollisionGuardStore((s) => s.enabled);
   const toggle = useCollisionGuardStore((s) => s.toggle);
+  // 분할 화면 중엔 비활성 — 가드 카메라 리그가 기본 카메라를 움직이는데
+  // 분할에서는 그 카메라가 보이지 않는다(독 레일 규칙).
+  const splitActive = useSceneSplitStore((s) => s.activeKey !== null);
 
-  const label = enabled
-    ? t('collisionGuard.disable')
-    : t('collisionGuard.enable');
+  const label = splitActive
+    ? t('monitoring:sceneSplit.disabledInSplit')
+    : enabled
+      ? t('collisionGuard.disable')
+      : t('collisionGuard.enable');
 
   return (
     <Tooltip>
@@ -52,14 +61,19 @@ export function GoliathCollisionGuardToggle() {
             size="icon-sm"
             aria-label={label}
             aria-pressed={enabled}
+            aria-disabled={splitActive || undefined}
             className={cn(
               SCENE_TOOLBAR_BUTTON_CLASS,
               enabled &&
                 'border-sky-500/60 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-400',
+              splitActive && SCENE_TOOLBAR_DISABLED_CLASS,
             )}
           />
         }
-        onClick={toggle}
+        onClick={() => {
+          if (splitActive) return;
+          toggle();
+        }}
       >
         <Radar />
       </TooltipTrigger>

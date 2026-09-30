@@ -11,13 +11,16 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  SceneViewportsProvider,
   SilhouetteOutlineWarmup,
   modelObjectRegistry,
   zoneCenterWorld,
   resolveCameraBoundsMaps,
   resolveSeaVisible,
+  resolveSplitLayout,
   resolveTrueNorth,
   unionObjectBounds,
+  type SceneViewport,
 } from '@crane/domain/3d';
 import type { AlarmSeverity } from '@crane/domain/alarm';
 import { cn } from '@crane/core/lib/utils';
@@ -28,7 +31,7 @@ import {
   type SceneController,
 } from '@crane/ui/organisms/three-scene-viewer';
 import type { Vector3Tuple } from '@crane/core/types/math';
-import type { SavedSceneInfo } from '@crane/domain/3d';
+import type { SavedSceneInfo, SavedSceneView } from '@crane/domain/3d';
 import { useObjectFocusStore } from '../model/use-object-focus-store';
 import { usePlay3dStore } from '../model/use-play3d-store';
 import { usePlay3dTransport } from '../model/play3d-transport';
@@ -82,7 +85,14 @@ import {
   SceneSimulationBadge,
   SceneSimulationFrame,
 } from './scene-simulation-badge';
-import { SceneViewBookmarks } from './scene-view-bookmarks';
+import { SceneViewBar } from './scene-view-bar';
+import { SceneSplitOverlay } from './scene-split-overlay';
+import { SceneSplitRenderer } from './scene-split-renderer';
+import { useSceneSplitStore } from '../model/use-scene-split-store';
+import {
+  resolveShadowFocusForPose,
+  unionShadowFocus,
+} from '../lib/scene-shadow';
 
 const DEFAULT_CAMERA_POSITION: Vector3Tuple = [-65, 20, -10];
 const DEFAULT_CAMERA_TARGET: Vector3Tuple = [-65, 0, -35];
@@ -157,6 +167,7 @@ interface Monitoring3dViewProps {
 }
 
 const EMPTY_ALARMS: Record<string, AlarmSeverity> = {};
+const EMPTY_VIEWS: SavedSceneView[] = [];
 
 export function Monitoring3dView({
   regionId,
@@ -299,6 +310,8 @@ export function Monitoring3dView({
       Math.max(zone.radius * 2.5, 20),
       sceneControllerRef.current?.getPose() ?? null,
     );
+    // 분할 중이면 단일 화면으로 나가서 보여 준다 — 타일은 카메라가 고정이다.
+    useSceneSplitStore.getState().exit();
     sceneControllerRef.current?.moveTo(pose.position, pose.target);
   }, []);
 
@@ -309,6 +322,70 @@ export function Monitoring3dView({
       actionsRef.current = null;
     };
   }, [actionsRef, handleViewZone]);
+
+  // 씬 뷰(에디터가 저작해 씬 파일에 저장한 카메라 구도) — 모니터링에는
+  // 에디터에서 고정한 뷰만 우상단 고정 줄에 온다. 목록·북마크는 없다.
+  const sceneViews = sceneInfo?.views ?? EMPTY_VIEWS;
+  const pinnedViews = useMemo(
+    () => sceneViews.filter((view) => view.pinned === true),
+    [sceneViews],
+  );
+  // 분할 화면 — 씬의 viewSplit(뷰를 칸에 배정한 것)이 2칸 이상이고 에디터가
+  // 분할을 고정했을 때 실시간 독 배치의 우상단 고정 줄 버튼으로만 켠다(독
+  // 레일에는 두지 않는다). 켜짐 여부는 세션 스토어(키 = regionId), 타일
+  // 카메라·사각형·DOM 컨테이너는 오버레이가 뷰포트로 알리고 Provider 로
+  // 캔버스에 넘긴다(라벨 포털·분할 렌더러가 읽는다). 분할 중에는 기본
+  // 카메라가 보이지 않으므로 HUD·미니맵·전역 방위 표시를 숨기고, 레일의
+  // 카메라 버튼·미니맵 토글을 비활성한다. 카메라를 옮기는 명령(뷰 선택·영역
+  // 보기)은 분할에서 나간 뒤 수행한다.
+  const splitLayout = useMemo(
+    () => resolveSplitLayout(sceneInfo?.viewSplit, sceneInfo?.views),
+    [sceneInfo?.viewSplit, sceneInfo?.views],
+  );
+  const splitPinned = sceneInfo?.viewSplit?.pinned === true;
+  const splitAvailable =
+    isDock && mode === 'realtime' && splitPinned && splitLayout !== null;
+  const splitActiveKey = useSceneSplitStore((s) => s.activeKey);
+  const enterSplit = useSceneSplitStore((s) => s.enter);
+  const exitSplit = useSceneSplitStore((s) => s.exit);
+  const clearSplit = useSceneSplitStore((s) => s.clear);
+  const splitActive = splitAvailable && splitActiveKey === regionId;
+  const [splitViewports, setSplitViewports] = useState<SceneViewport[] | null>(
+    null,
+  );
+  useEffect(() => () => clearSplit(regionId), [clearSplit, regionId]);
+  const toggleSplit = useCallback(() => {
+    if (useSceneSplitStore.getState().activeKey === regionId) {
+      exitSplit();
+      return;
+    }
+    // 포커스 중이면 풀고 들어간다 — 포커스 패널·복귀 버튼은 단일 화면의 것.
+    exitFocus();
+    enterSplit(regionId);
+  }, [enterSplit, exitFocus, exitSplit, regionId]);
+  // shadow frustum 초점 — 분할 중엔 타일 구도들의 합집합으로 고정한다.
+  const splitShadowFocus = useMemo(
+    () =>
+      splitActive && splitLayout
+        ? unionShadowFocus(
+            splitLayout.tiles.map((tile) =>
+              resolveShadowFocusForPose(tile.view.position, tile.view.target),
+            ),
+          )
+        : null,
+    [splitActive, splitLayout],
+  );
+  const splitDisabledLabel = splitActive
+    ? t('monitoring:sceneSplit.disabledInSplit')
+    : undefined;
+
+  const handleSelectView = useCallback(
+    (view: SavedSceneView) => {
+      exitSplit();
+      sceneControllerRef.current?.moveTo(view.position, view.target);
+    },
+    [exitSplit],
+  );
 
   const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
@@ -346,7 +423,8 @@ export function Monitoring3dView({
     <div className="pointer-events-none absolute top-3 left-3 flex flex-col items-start gap-2">
       {isDock ? (
         <div className="flex items-start gap-2">
-          <SceneCompass ref={compassRef} />
+          {/* 분할 중엔 타일마다 방위 표시가 있어 전역 것은 숨긴다. */}
+          {splitActive ? null : <SceneCompass ref={compassRef} />}
           <SceneWarmupIndicator />
         </div>
       ) : null}
@@ -392,174 +470,219 @@ export function Monitoring3dView({
       }
     : undefined;
 
+  // 우상단 고정 줄의 분할 버튼 — 분할을 켜는 유일한 곳.
+  const splitBarProps = splitAvailable
+    ? { state: 'enabled' as const, active: splitActive, onToggle: toggleSplit }
+    : null;
+
   return (
-    <div
-      ref={rootRef}
-      className="relative h-full min-h-0 w-full bg-(--canvas-background)"
-    >
-      <ThreeSceneViewer
-        cameraPreset={cameraPreset}
-        cameraClip={SCENE_CAMERA_CLIP}
-        canvasProps={{
-          dpr: canvasDpr,
-          frameloop: 'demand',
-          gl: SCENE_GL_OPTIONS,
-          // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
-          raycaster: SCENE_RAYCASTER_OPTIONS,
-          shadows: sceneCanvasShadows(sceneInfo?.lighting),
-          onPointerMissed: exitFocus,
-        }}
-        overlay={
-          <>
-            {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
-            <SceneLoadingOverlay ready={sceneReady} />
-            {topLeftOverlay}
-            {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
-            {/* 시뮬레이션 세션 테두리 — 오버레이 루트(캔버스 전체). */}
-            {simulationUiVisible && toolbarLayout !== 'none' ? (
-              <SceneSimulationFrame />
-            ) : null}
-            {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
+    // 뷰포트 Provider 는 R3F 가 Canvas 안으로 다리 놓는 컨텍스트다 — 오버레이
+    // (DOM)와 캔버스 자식이 같은 뷰포트 목록을 본다. 분할이 아니면 null.
+    <SceneViewportsProvider value={splitActive ? splitViewports : null}>
+      <div
+        ref={rootRef}
+        className="relative h-full min-h-0 w-full bg-(--canvas-background)"
+      >
+        <ThreeSceneViewer
+          cameraPreset={cameraPreset}
+          cameraClip={SCENE_CAMERA_CLIP}
+          canvasProps={{
+            dpr: canvasDpr,
+            frameloop: 'demand',
+            gl: SCENE_GL_OPTIONS,
+            // BVH raycast 를 최근접 히트에서 조기 종료 — 프리셋 주석 참고.
+            raycaster: SCENE_RAYCASTER_OPTIONS,
+            shadows: sceneCanvasShadows(sceneInfo?.lighting),
+            onPointerMissed: exitFocus,
+          }}
+          overlay={
+            <>
+              {/* 에셋 로드가 끝날 때까지 캔버스를 덮는다 — 부분 팝인 깜빡임 방지 */}
+              <SceneLoadingOverlay ready={sceneReady} />
+              {topLeftOverlay}
+              {/* 충돌 경보 — 씬 안 표시와 달리 카메라가 어디를 보든 보인다. */}
+              {/* 시뮬레이션 세션 테두리 — 오버레이 루트(캔버스 전체). */}
+              {simulationUiVisible && toolbarLayout !== 'none' ? (
+                <SceneSimulationFrame />
+              ) : null}
+              {/* 충돌·영역 침범 경보 — 가장자리 비네트만(배너는 HUD·독 배지·
                 알람 패널과 겹쳐 2026-09-12 에 뺐다). */}
-            <SceneCollisionAlertOverlay runner={collisionRunner} />
-            <SceneZoneAlertOverlay />
-            {overlayExtras}
-            {/* 2D 미니맵(좌하단) — 실시간 관제 화면에서만. 배경은
-                Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링. */}
-            {showControlRoomWidgets ? (
-              <SceneMinimap
-                sceneInfo={sceneInfo}
-                alarmsByCraneId={sceneAlarms}
-                getPose={handleGetPose}
-                onMoveTo={handleMoveTo}
-              />
-            ) : null}
-            {/* 관제 요약 HUD(상단 중앙) — 실시간 관제 화면에서만. */}
-            {showControlRoomWidgets ? (
-              <SceneStatusHud
-                regionId={regionId}
-                runtimeStatuses={runtimeStatuses}
-                alarmsByCraneId={alarmsByCraneId}
-                sceneInfo={sceneInfo}
-                mode={mode}
-                timeSource={timeSource}
-              />
-            ) : null}
-            {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
+              <SceneCollisionAlertOverlay runner={collisionRunner} />
+              <SceneZoneAlertOverlay />
+              {/* 분할 타일(이름·방위·클릭) — 캔버스 위에 깔려 포인터를 전부
+                받는다. 비네트는 pointer-events-none 이라 위에 있어도 클릭이
+                통과한다. */}
+              {splitActive && splitLayout ? (
+                <SceneSplitOverlay
+                  layout={splitLayout}
+                  trueNorth={trueNorth}
+                  onSelectTile={handleSelectView}
+                  onViewportsChange={setSplitViewports}
+                />
+              ) : null}
+              {overlayExtras}
+              {/* 2D 미니맵(좌하단) — 실시간 관제 화면에서만. 배경은
+                Canvas 안 SceneMinimapCapture 의 탑뷰 스냅샷, 마커·카메라는 폴링.
+                분할 중엔 숨긴다(카메라 표시가 기본 카메라 것이라 의미가 없다). */}
+              {showControlRoomWidgets && !splitActive ? (
+                <SceneMinimap
+                  sceneInfo={sceneInfo}
+                  alarmsByCraneId={sceneAlarms}
+                  getPose={handleGetPose}
+                  onMoveTo={handleMoveTo}
+                />
+              ) : null}
+              {/* 관제 요약 HUD(상단 중앙) — 실시간 관제 화면에서만, 분할 중엔 숨김. */}
+              {showControlRoomWidgets && !splitActive ? (
+                <SceneStatusHud
+                  regionId={regionId}
+                  runtimeStatuses={runtimeStatuses}
+                  alarmsByCraneId={alarmsByCraneId}
+                  sceneInfo={sceneInfo}
+                  mode={mode}
+                  timeSource={timeSource}
+                />
+              ) : null}
+              {/* dev 전용 성능 HUD(좌하단) — localStorage crane:perf-hud='1'
                 일 때만 표시. 값은 Canvas 안 ScenePerfProbe 가 기록한다.
                 미니맵과 겹치지 않게 그 오른쪽에 둔다. */}
-            <ScenePerfHud
-              className={showControlRoomWidgets ? 'left-60' : undefined}
-            />
-          </>
-        }
-        fullscreenOverlay={fullscreenOverlay}
-        fullscreenTopRightOverlay={fullscreenTopRightOverlay}
-        fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
-        toolbarExtras={
-          isDock ? (
-            // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
-            // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
-            // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
-            // (2026-09-17). 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
-            <>
-              {toolbarExtras}
-              {showControlRoomWidgets ? <SceneMinimapToggle /> : null}
-              {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
+              <ScenePerfHud
+                className={showControlRoomWidgets ? 'left-60' : undefined}
+              />
+            </>
+          }
+          fullscreenOverlay={fullscreenOverlay}
+          fullscreenTopRightOverlay={
+            isDock ? (
+              // 우상단 슬롯 — 고정한 뷰 줄이 먼저, 페이지의 알람 패널이 그 아래.
+              <div className="flex flex-col items-end gap-2">
+                <SceneViewBar
+                  views={pinnedViews}
+                  onSelectView={handleSelectView}
+                  split={splitBarProps}
+                />
+                {fullscreenTopRightOverlay}
+              </div>
+            ) : (
+              fullscreenTopRightOverlay
+            )
+          }
+          fullscreenTopCenterOverlay={fullscreenTopCenterOverlay}
+          toolbarExtras={
+            isDock ? (
+              // 독 레일에서 카메라 묶음 아래 구성(실시간·3D 플레이 공통) — 화면
+              // 표시 계열만: 페이지가 준 버튼(알람 토글·골리앗 가드)·미니맵·
+              // 현장 시각. 충돌·영역 감지 팝업은 감지 설정 페이지로 옮겼다
+              // (2026-09-17). 작은 뷰(top-right)는 페이지 버튼만 그대로 둔다.
+              <>
+                {toolbarExtras}
+                {showControlRoomWidgets ? (
+                  <SceneMinimapToggle disabledLabel={splitDisabledLabel} />
+                ) : null}
+                {/* 현장 시각·낮/밤 — 태양 위치를 시각에 연동한 씬(sunMode solar)
                   의 시각 미리보기. 수동 태양 씬에서도 안내용으로 둔다. 리플레이
                   소스는 프레임 시각을 따르므로 숨긴다. */}
-              {isReplaySource ? null : (
-                <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
-              )}
-            </>
-          ) : (
-            toolbarExtras
-          )
-        }
-        toolbarPlacement={toolbarLayout}
-        dockRight={dockRight}
-        toolbarTrailing={
-          toolbarLayout === 'none' ? undefined : (
-            <SceneViewBookmarks
-              regionId={regionId}
-              variant={isDock ? 'rail' : 'toolbar'}
-              getPose={handleGetPose}
-              onMoveTo={handleMoveTo}
-            />
-          )
-        }
-        onControllerReady={handleControllerReady}
-      >
-        {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
-        <SceneFrameGovernor animating={seaVisible} slow={solarSun} />
-        {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키.
+                {isReplaySource ? null : (
+                  <SceneClockMenu regionId={regionId} sceneInfo={sceneInfo} />
+                )}
+              </>
+            ) : (
+              toolbarExtras
+            )
+          }
+          toolbarPlacement={toolbarLayout}
+          dockRight={dockRight}
+          cameraControlsDisabledLabel={splitDisabledLabel}
+          toolbarTrailing={
+            // 독 레일에는 뷰·분할 버튼을 두지 않는다 — 우상단 고정 줄이 전부다.
+            // 가로 툴바(작은 뷰)는 고정한 뷰만 칩으로.
+            toolbarLayout === 'none' || isDock ? undefined : (
+              <SceneViewBar
+                views={pinnedViews}
+                onSelectView={handleSelectView}
+              />
+            )
+          }
+          onControllerReady={handleControllerReady}
+        >
+          {/* 프레임 요청의 유일한 상시 틱 — 위 frameloop 주석 참고. */}
+          <SceneFrameGovernor animating={seaVisible} slow={solarSun} />
+          {/* regionId 는 solar 모드(현장 시각 기반 낮/밤)의 위치·시간대 키.
             리플레이 소스의 낮/밤은 프레임 타임스탬프를 따른다. */}
-        <SceneLighting
-          sceneInfo={sceneInfo}
-          regionId={regionId}
-          timeSource={timeSource}
-        />
-        <SceneSurfaceCamera seaVisible={seaVisible} />
-        {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
+          <SceneLighting
+            sceneInfo={sceneInfo}
+            regionId={regionId}
+            timeSource={timeSource}
+            shadowFocus={splitShadowFocus}
+          />
+          <SceneSurfaceCamera seaVisible={seaVisible} />
+          {/* 표면 카메라 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서라
             표면 피벗 뒤에 이동 범위·바닥을 clamp 한다. */}
-        <SceneCameraLimits sceneInfo={sceneInfo} />
-        {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 이 프레임의 최종 시점 기준. */}
-        <SceneTerrainLod />
-        {/* 방위 표시 자세 — 카메라 확정 뒤 이 프레임의 최종 시점을 읽는다. */}
-        {isDock ? (
-          <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
-        ) : null}
-        {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
-            표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
-        <Suspense fallback={null}>
-          <SceneEnvironment
-            regionId={regionId}
-            environmentId={sceneInfo?.environmentId}
-            seaVisible={seaVisible}
-            maps={sceneInfo?.maps}
-          />
-        </Suspense>
-        <Suspense fallback={null}>
-          <RigDriver sceneInfo={sceneInfo} />
-          {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
-              실행되므로 노드가 움직인 뒤 검사한다. */}
-          <SceneCollisionDetector
-            sceneInfo={sceneInfo}
-            enabled={collisionEnabled}
-            runner={collisionRunner}
-          />
-          <SceneCollisionHighlight />
-          {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
-          <SceneZoneDetector
-            sceneInfo={sceneInfo}
-            enabled={zonesEnabled}
-            runner={collisionRunner}
-          />
-          <SceneZoneRings sceneInfo={sceneInfo} />
-          {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍. */}
-          <SilhouetteOutlineWarmup />
-          <OutdoorWorkModelSimulation
-            sceneInfo={sceneInfo}
-            regionId={regionId}
-            alarmsByCraneId={sceneAlarms}
-            alarmHighlightMesh={alarmHighlightMesh}
-            mode={mode}
-            onMoveTo={handleMoveTo}
-            onResetCamera={handleResetCamera}
-            getPose={handleGetPose}
-            prepareOutline
-            labelStates={labelStates}
-            outlineStates={outlineStates}
-          />
-          {sceneExtras}
-          <SceneReadyProbe onReady={handleSceneReady} />
-          <ScenePerfProbe />
-          {/* 미니맵 배경 스냅샷 — 씬 준비 뒤 한 번 탑뷰를 렌더 타깃에 찍는다. */}
-          {showControlRoomWidgets ? (
-            <SceneMinimapCapture sceneInfo={sceneInfo} ready={sceneReady} />
+          <SceneCameraLimits sceneInfo={sceneInfo} />
+          {/* 카메라 확정 뒤 지형 타일 LOD 전환 — 이 프레임의 최종 시점 기준. */}
+          <SceneTerrainLod />
+          {/* 방위 표시 자세 — 카메라 확정 뒤 이 프레임의 최종 시점을 읽는다.
+            분할 중엔 전역 방위 표시가 없다. */}
+          {isDock && !splitActive ? (
+            <SceneCompassDriver compassRef={compassRef} trueNorth={trueNorth} />
           ) : null}
-        </Suspense>
-      </ThreeSceneViewer>
-    </div>
+          {/* 분할 렌더러 — 뷰포트(타일)가 잡힌 뒤 R3F 렌더를 넘겨받는다. 맨
+            마지막이 아니어도 된다(priority 1 은 0 들 뒤에 돈다). */}
+          {splitActive && splitViewports && splitViewports.length >= 2 ? (
+            <SceneSplitRenderer viewports={splitViewports} />
+          ) : null}
+          {/* 배경 파노라마는 자체 Suspense — 4K EXR(수~십수 MB)이 씬(맵·모델)
+            표시를 붙잡지 않고, 로드되는 대로 단색 배경을 대체한다 */}
+          <Suspense fallback={null}>
+            <SceneEnvironment
+              regionId={regionId}
+              environmentId={sceneInfo?.environmentId}
+              seaVisible={seaVisible}
+              maps={sceneInfo?.maps}
+            />
+          </Suspense>
+          <Suspense fallback={null}>
+            <RigDriver sceneInfo={sceneInfo} />
+            {/* 드라이버 바로 다음 — 같은 priority 의 useFrame 은 마운트 순서로
+              실행되므로 노드가 움직인 뒤 검사한다. */}
+            <SceneCollisionDetector
+              sceneInfo={sceneInfo}
+              enabled={collisionEnabled}
+              runner={collisionRunner}
+            />
+            <SceneCollisionHighlight />
+            {/* 영역 침범 검출·링 — 검출기 뒤에 링을 두어 같은 틱 상태를 읽는다. */}
+            <SceneZoneDetector
+              sceneInfo={sceneInfo}
+              enabled={zonesEnabled}
+              runner={collisionRunner}
+            />
+            <SceneZoneRings sceneInfo={sceneInfo} />
+            {/* 충돌 테두리(실루엣) 셰이더·사본 프리워밍. */}
+            <SilhouetteOutlineWarmup />
+            <OutdoorWorkModelSimulation
+              sceneInfo={sceneInfo}
+              regionId={regionId}
+              alarmsByCraneId={sceneAlarms}
+              alarmHighlightMesh={alarmHighlightMesh}
+              mode={mode}
+              onMoveTo={handleMoveTo}
+              onResetCamera={handleResetCamera}
+              getPose={handleGetPose}
+              prepareOutline
+              labelStates={labelStates}
+              outlineStates={outlineStates}
+            />
+            {sceneExtras}
+            <SceneReadyProbe onReady={handleSceneReady} />
+            <ScenePerfProbe />
+            {/* 미니맵 배경 스냅샷 — 씬 준비 뒤 한 번 탑뷰를 렌더 타깃에 찍는다. */}
+            {showControlRoomWidgets ? (
+              <SceneMinimapCapture sceneInfo={sceneInfo} ready={sceneReady} />
+            ) : null}
+          </Suspense>
+        </ThreeSceneViewer>
+      </div>
+    </SceneViewportsProvider>
   );
 }

@@ -75,7 +75,33 @@ export {
   isSceneStoredLocallyOnly,
   UnknownRegionError,
 } from './lib/scene-dev-storage';
+export { PerViewport, ViewportAnchor } from './ui/scene-viewports';
+export {
+  SceneViewportsProvider,
+  useSceneViewportHeight,
+  useSceneViewports,
+  type SceneViewport,
+} from './model/scene-viewports-context';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
+export {
+  sanitizeSceneViews,
+  sanitizeViewSplit,
+  sceneViewNameKey,
+} from './lib/sanitize-views';
+export {
+  resolveSplitLayout,
+  splitSlotPosition,
+  type SplitLayout,
+  type SplitTile,
+} from './lib/view-split-layout';
+export {
+  createEmptySplitSlots,
+  SCENE_SPLIT_COLUMNS,
+  SCENE_SPLIT_SLOT_COUNT,
+  SCENE_VIEW_NAME_MAX,
+  SCENE_VIEWS_MAX,
+} from './model/view-types';
+export type { SavedSceneView, SavedViewSplit } from './model/view-types';
 export {
   resolveSceneCameraForRegion,
   withRegionCamera,

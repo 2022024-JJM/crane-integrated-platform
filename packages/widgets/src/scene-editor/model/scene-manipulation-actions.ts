@@ -10,6 +10,7 @@ import {
   normalizeDegrees,
   resolveTrueNorth,
   type RulerPlacement,
+  type SavedCameraInfo,
   type SavedLightingInfo,
   type SavedSceneInfo,
   type SceneMapCatalogItem,
@@ -17,6 +18,16 @@ import {
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
 import type { MutableRefObject, SetStateAction } from 'react';
+import {
+  withSceneViewAdded,
+  withSceneViewMoved,
+  withSceneViewPinned,
+  withSceneViewPose,
+  withSceneViewRemoved,
+  withSceneViewRenamed,
+  withSplitPinned,
+  withSplitSlot,
+} from '../../3d/lib/view-editor';
 
 interface UpdateSceneOptions {
   recordHistory?: boolean;
@@ -372,6 +383,50 @@ export function createSceneManipulationActions({
     }, options);
   };
 
+  /**
+   * 씬 뷰·분할 — Project 팔레트 "뷰" 탭. 의미(이름 검증·최대 개수·칸 이동·
+   * 삭제 시 칸 정리)는 lib/view-editor.ts 의 순수 함수가 정하고, no-op 이면
+   * 같은 참조가 돌아와 히스토리에 쌓이지 않는다.
+   */
+  const addSceneView = (name: string, pose: SavedCameraInfo) => {
+    const id = createId();
+    updateScene((prev) =>
+      prev ? withSceneViewAdded(prev, id, name, pose) : prev,
+    );
+  };
+
+  const renameSceneView = (id: string, name: string) => {
+    updateScene((prev) => (prev ? withSceneViewRenamed(prev, id, name) : prev));
+  };
+
+  const updateSceneViewPose = (id: string, pose: SavedCameraInfo) => {
+    updateScene((prev) => (prev ? withSceneViewPose(prev, id, pose) : prev));
+  };
+
+  const removeSceneView = (id: string) => {
+    updateScene((prev) => (prev ? withSceneViewRemoved(prev, id) : prev));
+  };
+
+  const moveSceneView = (id: string, insertBefore: number) => {
+    updateScene((prev) =>
+      prev ? withSceneViewMoved(prev, id, insertBefore) : prev,
+    );
+  };
+
+  const setSceneViewPinned = (id: string, pinned: boolean) => {
+    updateScene((prev) =>
+      prev ? withSceneViewPinned(prev, id, pinned) : prev,
+    );
+  };
+
+  const setSplitSlot = (slot: number, viewId: string | null) => {
+    updateScene((prev) => (prev ? withSplitSlot(prev, slot, viewId) : prev));
+  };
+
+  const setSplitPinned = (pinned: boolean) => {
+    updateScene((prev) => (prev ? withSplitPinned(prev, pinned) : prev));
+  };
+
   const selectPlacedText = (id: string) => {
     selectText(id);
   };
@@ -483,6 +538,14 @@ export function createSceneManipulationActions({
     setSeaVisible,
     setTrueNorth,
     setLighting,
+    addSceneView,
+    renameSceneView,
+    updateSceneViewPose,
+    removeSceneView,
+    moveSceneView,
+    setSceneViewPinned,
+    setSplitSlot,
+    setSplitPinned,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

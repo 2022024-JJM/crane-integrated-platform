@@ -1,7 +1,7 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { KeyRound, RefreshCw, WifiOff } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, type RefObject } from 'react';
 import { Vector3, type Group } from 'three';
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type {
@@ -127,6 +127,16 @@ interface ModelLabelProps {
    * hover 콜백 미부착). 라벨은 DOM 이라 material 투명도의 영향을 받지 않는다.
    */
   dimmed?: boolean;
+  /**
+   * 클릭·hover 를 받을지. 분할 화면의 타일 라벨은 false — 타일 전체가 클릭
+   * 영역이라 라벨은 표시만 한다(포인터 이벤트도 끊어 타일 클릭이 통과한다).
+   */
+  interactive?: boolean;
+  /**
+   * DOM 을 붙일 컨테이너(drei Html 의 portal). 분할 화면은 타일 컨테이너를
+   * 넘긴다 — Html 이 이 요소 기준으로 위치를 쓴다. 없으면 캔버스 옆.
+   */
+  portal?: RefObject<HTMLElement | null>;
   onSelect?: (id: string, event?: never) => void;
   onHoverStart?: (id: string, clientX: number, clientY: number) => void;
   onHoverMove?: (id: string, clientX: number, clientY: number) => void;
@@ -143,6 +153,8 @@ export function ModelLabel({
   readings = NO_READINGS,
   readValue,
   dimmed = false,
+  interactive = true,
+  portal,
   onSelect,
   onHoverStart,
   onHoverMove,
@@ -212,21 +224,34 @@ export function ModelLabel({
     return null;
   }
 
+  // 흐린 라벨(포커스 밖)과 비대화형 라벨(분할 타일)은 포인터를 받지 않는다.
+  const inert = dimmed || !interactive;
+
   return (
     <group ref={groupRef} position={localAnchor}>
-      <Html center zIndexRange={[5, 0]}>
+      {/* drei 의 portal 타입은 non-null RefObject 라 캐스팅한다 — 분할
+          타일 컨테이너는 마운트 뒤에 채워진다. */}
+      <Html
+        center
+        zIndexRange={[5, 0]}
+        portal={portal as RefObject<HTMLElement> | undefined}
+      >
         {/* 숨김·축소는 상자와 값 줄을 함께 감싼 이 요소에 건다. 감싼 요소의
             크기는 상자 하나다 — 값 줄은 흐름 밖(absolute)에서 상자 위로 쌓여,
             값 줄이 몇 개든 상자는 제자리에 있다. 포인터는 상자만 받는다. */}
         <div ref={divRef} className="pointer-events-none relative">
           <div
             title={titles?.tone[tone]}
-            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${dimmed ? 'pointer-events-none opacity-30' : tone === 'offline' && !alarmSeverity ? 'pointer-events-auto cursor-pointer opacity-70' : 'pointer-events-auto cursor-pointer'}`}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-            }}
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-tight font-semibold whitespace-nowrap drop-shadow ${alarmSeverity ? ALARM_LABEL_CLASS[alarmSeverity] : LABEL_TONE_CLASS[tone]} ${inert ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${dimmed ? 'opacity-30' : tone === 'offline' && !alarmSeverity ? 'opacity-70' : ''}`}
+            onPointerDown={
+              inert
+                ? undefined
+                : (event) => {
+                    event.stopPropagation();
+                  }
+            }
             onPointerEnter={
-              dimmed
+              inert
                 ? undefined
                 : (event) => {
                     event.stopPropagation();
@@ -234,7 +259,7 @@ export function ModelLabel({
                   }
             }
             onPointerMove={
-              dimmed
+              inert
                 ? undefined
                 : (event) => {
                     event.stopPropagation();
@@ -242,7 +267,7 @@ export function ModelLabel({
                   }
             }
             onPointerLeave={
-              dimmed
+              inert
                 ? undefined
                 : (event) => {
                     event.stopPropagation();
@@ -250,7 +275,7 @@ export function ModelLabel({
                   }
             }
             onClick={
-              dimmed
+              inert
                 ? undefined
                 : (event) => {
                     event.stopPropagation();

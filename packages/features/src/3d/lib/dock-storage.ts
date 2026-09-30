@@ -2,7 +2,7 @@ import { getStorageItem, setStorageItem } from '@crane/core/lib/safe-storage';
 
 /**
  * 씬 독의 고정(pin) 영속화. 키는 최근 3D/알람 코드의 관례
- * `crane:<feature>:<scope>` 를 따른다 (use-scene-views-store,
+ * `crane:<feature>:<scope>` 를 따른다 (use-scene-minimap-store,
  * use-fullscreen-alarm-overlay 와 같은 계열). 리전과 무관한 전역 설정이다.
  */
 

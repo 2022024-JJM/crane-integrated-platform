@@ -934,3 +934,88 @@ describe('isSceneInfoEqual — 태그 맵핑의 라벨 표시', () => {
     ).toBe(true);
   });
 });
+
+describe('isSceneInfoEqual — 씬 뷰·분할', () => {
+  const view = (id: string, overrides: Record<string, unknown> = {}) => ({
+    id,
+    name: id,
+    position: [1, 2, 3] as [number, number, number],
+    target: [0, 0, 0] as [number, number, number],
+    ...overrides,
+  });
+
+  it('필드 없음과 빈 목록·빈 칸 분할은 같은 상태다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene(),
+        scene({ views: [], viewSplit: { slots: [null, null, null, null] } }),
+      ),
+    ).toBe(true);
+    expect(isSceneInfoEqual(scene(), scene({ viewSplit: { slots: [] } }))).toBe(
+      true,
+    );
+  });
+
+  it('추가·이름·구도·고정·순서 변경은 dirty 로 잡힌다', () => {
+    const base = scene({ views: [view('a'), view('b')] });
+    expect(isSceneInfoEqual(base, scene({ views: [view('a')] }))).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({ views: [view('a', { name: 'A2' }), view('b')] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({ views: [view('a', { target: [0, 0, 1] }), view('b')] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({ views: [view('a', { pinned: true }), view('b')] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(base, scene({ views: [view('b'), view('a')] })),
+    ).toBe(false);
+  });
+
+  it('고정 false 명시와 필드 없음은 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ views: [view('a')] }),
+        scene({ views: [view('a', { pinned: false })] }),
+      ),
+    ).toBe(true);
+  });
+
+  it('분할 칸·고정 변경은 dirty 로 잡히고, 모자란 칸은 빈 칸으로 본다', () => {
+    const base = scene({
+      views: [view('a')],
+      viewSplit: { slots: ['a', null, null, null] },
+    });
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({ views: [view('a')], viewSplit: { slots: ['a'] } }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({ views: [view('a')], viewSplit: { slots: [null, 'a'] } }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        base,
+        scene({
+          views: [view('a')],
+          viewSplit: { slots: ['a'], pinned: true },
+        }),
+      ),
+    ).toBe(false);
+  });
+});

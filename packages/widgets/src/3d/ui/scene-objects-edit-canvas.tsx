@@ -91,6 +91,7 @@ import { formatRulerLength } from '../lib/ruler-editor';
 import {
   computeTopViewFallbackPose,
   computeTopViewPose,
+  ensureTopViewTilt,
   type CameraPose,
 } from '@crane/core/lib/top-view-pose';
 import { collectWorldBounds } from '../lib/world-bounds';
@@ -209,6 +210,8 @@ export interface SceneEditorCameraActions {
   resetView: () => void;
   /** 지도(없으면 배치된 객체 전체)가 화면에 꽉 차는 탑뷰. */
   topView: () => void;
+  /** 저장된 구도(씬 뷰)로 즉시 이동 — 뷰 탭의 행 클릭·우상단 고정 뷰 버튼. */
+  moveTo: (pose: SavedCameraInfo) => void;
 }
 
 interface SceneObjectsEditCanvasProps {
@@ -272,6 +275,11 @@ interface SceneObjectsEditCanvasProps {
    * 드라이버가 카메라 자세·씬 진북으로 자세를 쓴다 — 모니터링과 같은 짝.
    */
   compassRef?: RefObject<SceneCompassHandle | null>;
+  /**
+   * 우상단 축 기즈모를 아래로 내릴 여백(px). 페이지가 캔버스 우상단에 고정 뷰
+   * 줄을 띄우면 그 높이만큼 넘겨 기즈모가 줄 아래로 밀린다. 0 이면 기본 자리.
+   */
+  axisGizmoTopOffset?: number;
 }
 
 export function SceneObjectsEditCanvas({
@@ -299,6 +307,7 @@ export function SceneObjectsEditCanvas({
   rulerDrawing = false,
   onRulerDraw,
   compassRef,
+  axisGizmoTopOffset = 0,
 }: SceneObjectsEditCanvasProps) {
   // 에디터에서는 수동 조작 소스만 켠다 — 슬라이더가 값 저장소에 직접 쓰고
   // RigDriver 가 매 프레임 노드에 적용한다. 서버 값은 이 화면에 흐르지 않는다.
@@ -912,11 +921,22 @@ export function SceneObjectsEditCanvas({
     applyCameraPose(pose);
   }, [applyCameraPose, orbitControlsRef, sceneInfo?.maps]);
 
+  // 씬 뷰로 이동 — 탑뷰와 같은 적용 경로(ensureTopViewTilt 로 정수직 방어).
+  const moveTo = useCallback(
+    (pose: SavedCameraInfo) => {
+      applyCameraPose({
+        position: ensureTopViewTilt(pose.position, pose.target),
+        target: pose.target,
+      });
+    },
+    [applyCameraPose],
+  );
+
   useEffect(() => {
     if (cameraActionsRef) {
-      cameraActionsRef.current = { resetView, topView };
+      cameraActionsRef.current = { resetView, topView, moveTo };
     }
-  }, [cameraActionsRef, resetView, topView]);
+  }, [cameraActionsRef, resetView, topView, moveTo]);
 
   const appliedCameraRef = useRef<SavedCameraInfo | null>(null);
   useEffect(() => {
@@ -1066,7 +1086,10 @@ export function SceneObjectsEditCanvas({
             27px) + 12px(오버레이들의 top-3/right-3 와 같은 여백) + 여유로
             52px. 우상단은 도구 모음이 헤더 바로 올라가 비어 있다(Blender 의
             내비게이션 기즈모 위치). */}
-        <GizmoHelper alignment="top-right" margin={[52, 52]}>
+        <GizmoHelper
+          alignment="top-right"
+          margin={[52, 52 + axisGizmoTopOffset]}
+        >
           <GizmoViewport
             // 기본 40의 2/3 크기.
             scale={40 * (2 / 3)}
