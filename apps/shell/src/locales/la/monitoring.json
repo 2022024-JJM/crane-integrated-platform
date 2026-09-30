@@ -338,8 +338,9 @@
     },
     "drawRuler": "Regulam duce",
     "rulerName": "Regula {{index}}",
-    "rulerDrawStartHint": "Punctum initii preme · Esc ut abroges",
-    "rulerDrawEndHint": "Punctum finis preme · Esc ut abroges",
+    "rulerDrawStartHint": "Punctum initii preme",
+    "rulerDrawEndHint": "Punctum finis preme",
+    "rulerDrawCancel": "ut abroges",
     "views": {
       "mainSection": "Prospectus principalis",
       "mainClear": "Prospectum principalem vacua",

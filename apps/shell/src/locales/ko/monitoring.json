@@ -338,8 +338,9 @@
     },
     "drawRuler": "눈금 그리기",
     "rulerName": "눈금 {{index}}",
-    "rulerDrawStartHint": "시작점을 클릭하세요 · Esc 취소",
-    "rulerDrawEndHint": "끝점을 클릭하세요 · Esc 취소",
+    "rulerDrawStartHint": "시작점을 클릭하세요",
+    "rulerDrawEndHint": "끝점을 클릭하세요",
+    "rulerDrawCancel": "취소",
     "views": {
       "mainSection": "메인 뷰",
       "mainClear": "메인 뷰 비우기",

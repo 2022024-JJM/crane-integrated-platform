@@ -338,8 +338,9 @@
     },
     "drawRuler": "Draw ruler",
     "rulerName": "Ruler {{index}}",
-    "rulerDrawStartHint": "Click the start point · Esc to cancel",
-    "rulerDrawEndHint": "Click the end point · Esc to cancel",
+    "rulerDrawStartHint": "Click the start point",
+    "rulerDrawEndHint": "Click the end point",
+    "rulerDrawCancel": "to cancel",
     "views": {
       "mainSection": "Main view",
       "mainClear": "Clear main view",

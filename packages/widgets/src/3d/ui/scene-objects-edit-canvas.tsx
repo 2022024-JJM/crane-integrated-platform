@@ -83,6 +83,7 @@ import {
   useSceneZoneStore,
 } from '@crane/features/3d';
 import type { Vector3Tuple } from '@crane/core/types/math';
+import { Kbd } from '@crane/ui/atoms/kbd';
 import { useSceneDrop } from './use-scene-drop';
 import { useSceneTransform } from './use-scene-transform';
 import { useMarqueeSelection } from './use-marquee-selection';
@@ -1299,15 +1300,21 @@ export function SceneObjectsEditCanvas({
       <ScenePerfHud />
 
       {/* 눈금 그리기 안내 — 하단 중앙. 그리는 동안은 선택이 없어 선택 컨텍스트
-          바와 겹치지 않는다(뷰포트 중앙 상단은 비워 둔다). */}
+          바와 겹치지 않는다(뷰포트 중앙 상단은 비워 둔다). 취소 키는 단축키
+          도움말과 같은 Kbd 로 그린다. */}
       {rulerDrawing ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 z-10 flex justify-center">
-          <p className="bg-card/95 border-border text-foreground rounded-md border px-3 py-1.5 text-xs shadow-sm">
-            {t(
-              rulerDraw.hasStart
-                ? 'monitoring:editor.rulerDrawEndHint'
-                : 'monitoring:editor.rulerDrawStartHint',
-            )}
+          <p className="bg-card/95 border-border text-foreground flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs shadow-sm">
+            <span>
+              {t(
+                rulerDraw.hasStart
+                  ? 'monitoring:editor.rulerDrawEndHint'
+                  : 'monitoring:editor.rulerDrawStartHint',
+              )}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <Kbd>Esc</Kbd>
+            <span>{t('monitoring:editor.rulerDrawCancel')}</span>
           </p>
         </div>
       ) : null}
