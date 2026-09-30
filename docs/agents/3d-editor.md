@@ -14,7 +14,7 @@
 | 인스펙터 / 선택 객체 편집 채널 | `packages/widgets/src/3d/ui/scene-object-inspector.tsx`, `packages/features/src/3d/model/use-selected-scene-object-editor.ts` |
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → 씬 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `packages/domain/src/3d/model/scene-file-registry.ts` |
-| 씬 설정 팔레트(배경·지역·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭 — 지역 드롭다운 포함), 지역 `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteLocation`), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치 + 진북 입력), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
+| 씬 설정 팔레트(배경·지역·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭 — 진북 입력·지역 드롭다운 포함), 지역 `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteLocation`), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
 | 씬 뷰·분할·메인 뷰 지정(뷰 탭) | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `packages/domain/src/3d/lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`(`resolveSceneHomeCamera`), 편집 `packages/widgets/src/3d/lib/view-editor.ts`(전부 테스트 대상), 팔레트 `packages/widgets/src/3d/ui/palette-view-section.tsx`, 우상단 고정 줄 `packages/features/src/3d/ui/scene-view-bar.tsx` |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
 | 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
@@ -55,7 +55,7 @@
 
 ### 씬 설정(배경·지역·조명·바다·진북)
 
-- 배경(EXR `environmentId`)·지역·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx`), 바다·진북은 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
+- 배경(EXR `environmentId`)·진북·지역·조명은 Project 팔레트 **배경 탭**(`palette-environment-section.tsx` — 진북 입력은 조명 절 바로 위), 바다는 **맵 탭**(`palette-map-section.tsx`)의 지도 타일 아래다. 전부 씬 JSON(`SavedSceneInfo`)에 저장되고 모니터링·3D 플레이·에디터 세 캔버스가 같은 값을 읽는다.
 - 바다 필드 `sea` 는 3-상태다 — `undefined` 는 레거시 규칙(EXR 이 resolve 되면 바다), `true`/`false` 는 명시. 유효값은 `resolveSeaVisible(regionId, sceneInfo)` 하나가 정하고 스위치는 그 유효값을 보여 준다. 미지정 씬은 절 제목과 스위치 사이에 안내 문구가 붙는다.
 - 스위치를 누르면 `setSeaVisible` 이 유효값의 반대를 **명시 boolean** 으로 쓴다(미지정 씬도 첫 토글부터 명시 상태가 되어 dirty·히스토리에 잡힌다. 유효값을 그대로 명시로 굳히는 조작은 없다). 같은 명시값 재설정은 참조를 유지한다.
 - 저장 단위는 **씬 파일**이다 — `okpo.json` 을 공유하는 `dock-1`·`dock-2` 는 한쪽에서 끄면 둘 다 꺼진다(`environmentId`·`lighting` 과 같은 규칙). 저장 경로는 위 dev 미들웨어 그대로.

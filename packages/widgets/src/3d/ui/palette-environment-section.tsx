@@ -16,8 +16,10 @@ import type {
 } from '@crane/domain/3d';
 import { SceneClockPanel } from '@crane/features/3d';
 import { clampToRange, cn } from '@crane/core/lib/utils';
+import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
+import { NUMBER_INPUT, NUMBER_WRAPPER } from './inspector-field-classes';
 
 interface PaletteEnvironmentSectionProps {
   /** 씬이 지역을 지정하지 않았을 때 region 기본 지역을 찾는 키. */
@@ -36,6 +38,10 @@ interface PaletteEnvironmentSectionProps {
    */
   environmentId: string | null | undefined;
   onChange: (environmentId: string | null) => void;
+  /** 진북 방향(도, resolveTrueNorth) — 나침반·태양 방향의 기준. */
+  trueNorth: number;
+  /** 진북 입력 — [0,360) 로 랩해 저장한다(setTrueNorth). */
+  onTrueNorthChange: (degrees: number) => void;
   /** 씬 조명 설정. 필드 없음 = 기본값(그림자 Off, 태양 남쪽 기본 고도). */
   lighting: SavedLightingInfo | undefined;
   onShadowsChange: (shadows: boolean) => void;
@@ -51,8 +57,8 @@ interface PaletteEnvironmentSectionProps {
 }
 
 /**
- * 배경(EXR 파노라마) 선택 + 조명(그림자·태양 위치·지역) — Project 패널의
- * Background 카테고리.
+ * 배경(EXR 파노라마) 선택 + 방위(진북) + 조명(그림자·태양 위치·지역) —
+ * Project 패널의 Background 카테고리.
  *
  * 목록은 카탈로그(sceneEnvironmentCatalog)에서 온다. 웹 최적화본만 등록되어
  * 있어 원본 해상도 업로드로 배경이 검게 나오는 사고가 원천 차단된다.
@@ -61,6 +67,10 @@ interface PaletteEnvironmentSectionProps {
  * 성능 확보), 목록 안에 있어야 "지금 무엇이 선택되어 있는가"가 한 화면에서
  * 읽힌다. 미지정(undefined) 씬은 아무것도 선택되지 않은 상태로 그린다 —
  * region 기본값이 적용 중이라는 사실을 별도 문구로 알린다.
+ *
+ * 방위 절은 진북 입력 하나다 — 태양(수동 패드·현장 시각)과 나침반이 같은
+ * 북쪽을 보므로 조명 절 바로 위에 둔다. 스테퍼로 359 를 넘기면 세터가 0 으로
+ * 랩한다.
  */
 export const PaletteEnvironmentSection = memo(
   function PaletteEnvironmentSection({
@@ -69,6 +79,8 @@ export const PaletteEnvironmentSection = memo(
     onSiteLocationChange,
     environmentId,
     onChange,
+    trueNorth,
+    onTrueNorthChange,
     lighting,
     onShadowsChange,
     onSunModeChange,
@@ -129,6 +141,29 @@ export const PaletteEnvironmentSection = memo(
               icon={<ImageIcon className="text-muted-foreground size-5" />}
             />
           ))}
+        </div>
+
+        {/* 방위 — 진북 입력(나침반·태양 방향의 기준) */}
+        <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
+          <span className="text-muted-foreground text-[11px] font-medium">
+            {t('monitoring:editor.trueNorthSection')}
+          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-foreground text-[11px]">
+              {t('monitoring:editor.trueNorth')}
+            </span>
+            <InputNumber
+              value={trueNorth}
+              step={1}
+              editPreview
+              unit="°"
+              format={(value) => `${value}°`}
+              className={cn(NUMBER_WRAPPER, 'w-20 shrink-0')}
+              inputClassName={cn(NUMBER_INPUT, 'text-right')}
+              aria-label={t('monitoring:editor.trueNorth')}
+              onChange={onTrueNorthChange}
+            />
+          </div>
         </div>
 
         {/* 조명 — 그림자 토글 + 태양 위치(방위·고도) 패드 */}

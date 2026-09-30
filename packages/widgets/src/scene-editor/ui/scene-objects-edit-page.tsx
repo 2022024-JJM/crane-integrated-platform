@@ -1006,6 +1006,9 @@ function ProjectPalettePanel({
   onSiteLocationChange: (location: SceneSiteLocation) => void;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
+  /** 배경 탭 — 진북 입력. 유효값(resolveTrueNorth)·세터(setTrueNorth). */
+  trueNorth: number;
+  onTrueNorthChange: (degrees: number) => void;
   lighting: SavedLightingInfo | undefined;
   onLightingChange: (
     patch: Partial<SavedLightingInfo>,
@@ -1023,9 +1026,6 @@ function ProjectPalettePanel({
   seaVisible: boolean;
   seaExplicit: boolean;
   onSeaVisibleChange: (visible: boolean) => void;
-  /** 맵 탭 — 진북 입력. 유효값(resolveTrueNorth)·세터(setTrueNorth). */
-  trueNorth: number;
-  onTrueNorthChange: (degrees: number) => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('models');
@@ -1090,8 +1090,6 @@ function ProjectPalettePanel({
                 seaVisible={seaVisible}
                 seaExplicit={seaExplicit}
                 onSeaVisibleChange={onSeaVisibleChange}
-                trueNorth={trueNorth}
-                onTrueNorthChange={onTrueNorthChange}
               />
             ) : activeTab === 'view' ? (
               <PaletteViewSection
@@ -1107,6 +1105,8 @@ function ProjectPalettePanel({
                 onSiteLocationChange={onSiteLocationChange}
                 environmentId={environmentId}
                 onChange={onEnvironmentChange}
+                trueNorth={trueNorth}
+                onTrueNorthChange={onTrueNorthChange}
                 lighting={lighting}
                 onShadowsChange={(shadows) => onLightingChange({ shadows })}
                 onSunModeChange={(sunMode) => onLightingChange({ sunMode })}

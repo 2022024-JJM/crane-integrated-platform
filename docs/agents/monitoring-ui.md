@@ -101,10 +101,10 @@
 ### 방위 표시 (좌상단)
 
 - 모양은 ACMS 매뉴얼의 방위 표시(가는 흰 원 + N·E·S·W)에 바늘(북 적색·남 흰색)을 더한 것이다. 지면에 놓인 원을 카메라가 보는 모습이라 원과 바늘은 카메라 기울기만큼 눕고(세로 비율 = 내려다본 각의 사인, 탑뷰 1), 글자는 타원 위 자리에서 바깥으로 `COMPASS_LABEL_OFFSET_PX` 띄워 서 있다. 글자는 기호라 번역하지 않는다.
-- 북쪽은 씬 진북(`SavedSceneInfo.trueNorth`, 에디터 맵 탭 — `docs/agents/3d-editor.md`)이다. solar 모드의 태양·달과 같은 값을 본다(`docs/agents/rendering-perf.md`).
+- 북쪽은 씬 진북(`SavedSceneInfo.trueNorth`, 에디터 배경 탭 — `docs/agents/3d-editor.md`)이다. solar 모드의 태양·달과 같은 값을 본다(`docs/agents/rendering-perf.md`).
 - 화면 위쪽이 가리키는 지면 방향은 카메라 전방·위 벡터 XZ 성분의 합이다(`resolveCompassView`) — roll 이 없어 둘이 같은 쪽을 향하고, 정수직 탑뷰에서도 위 벡터로 방향이 남는다.
 - 갱신: Canvas 안 `SceneCompassDriver` 가 useFrame 에서 자세가 바뀐 프레임에만 `SceneCompass` 핸들의 `update` 로 SVG 속성을 직접 쓴다. setState 없음, frameloop demand 라 카메라가 멈추면 비용 0. 카메라가 확정된 뒤 읽도록 `SceneTerrainLod` 다음에 마운트한다. 첫 `update` 전에는 숨긴다.
-- 배치: 모니터링·3D 플레이는 overlay 슬롯 좌측 상단 열의 첫 줄, 에디터는 캔버스 컨테이너 좌측 상단이다. 두 화면 모두 워밍업 표시가 바로 오른쪽에 붙는다(에디터는 `scene-objects-edit-page.tsx` 가 DOM 을 두고 `SceneObjectsEditCanvas` 의 `compassRef` 로 드라이버를 붙인다). 에디터는 편집 중인 씬의 진북을 읽어 맵 탭 입력을 바꾸면 바로 돈다.
+- 배치: 모니터링·3D 플레이는 overlay 슬롯 좌측 상단 열의 첫 줄, 에디터는 캔버스 컨테이너 좌측 상단이다. 두 화면 모두 워밍업 표시가 바로 오른쪽에 붙는다(에디터는 `scene-objects-edit-page.tsx` 가 DOM 을 두고 `SceneObjectsEditCanvas` 의 `compassRef` 로 드라이버를 붙인다). 에디터는 편집 중인 씬의 진북을 읽어 배경 탭 입력을 바꾸면 바로 돈다.
 - 조작은 없다(pointer-events-none).
 
 ### 씬 독 (우측 레일, hover 펼침·고정)

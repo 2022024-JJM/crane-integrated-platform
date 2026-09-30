@@ -3,13 +3,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedMapInfo, SceneMapCatalogItem } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
-import { InputNumber } from '@crane/ui/atoms/input-number';
 import { Switch } from '@crane/ui/atoms/switch';
 import {
   getMapPaletteTiles,
   type MapPaletteTile,
 } from '../lib/map-palette-tiles';
-import { NUMBER_INPUT, NUMBER_WRAPPER } from './inspector-field-classes';
 
 interface PaletteMapSectionProps {
   /** 씬에 놓인 지도 전체. 배치·잠금 표시는 경로 매칭으로 한다. */
@@ -29,10 +27,6 @@ interface PaletteMapSectionProps {
   seaExplicit: boolean;
   /** 바다 스위치 토글 — 항상 명시 boolean 을 저장한다(setSeaVisible). */
   onSeaVisibleChange: (visible: boolean) => void;
-  /** 진북 방향(도, resolveTrueNorth) — 나침반·solar 태양 방향의 기준. */
-  trueNorth: number;
-  /** 진북 입력 — [0,360) 로 랩해 저장한다(setTrueNorth). */
-  onTrueNorthChange: (degrees: number) => void;
 }
 
 /**
@@ -41,10 +35,6 @@ interface PaletteMapSectionProps {
  * 여러 장 놓일 수 있고(조선소 + 주변 지형), 타일은 그 한 장의 토글이다 —
  * 안 놓인 타일 클릭 = 추가, 놓인(잠금 해제) 타일 클릭 = 제거. 배치·잠금
  * 상태 파생은 getMapPaletteTiles.
- *
- * 바다 절 아래 방위 절은 진북 입력 하나다 — 지도를 돌려 놓은 각도에서
- * 나오는 값이라(types.ts `trueNorth`) 지도 탭에 둔다. 스테퍼로 359 를 넘기면
- * 세터가 0 으로 랩한다.
  *
  * 타일 아래 바다 절은 배경 탭의 조명 절과 같은 마크업이다. 스위치는 유효값을
  * 보이고 누르면 그 반대를 명시 boolean 으로 씬에 저장한다 — 미지정 씬은 첫
@@ -69,8 +59,6 @@ export const PaletteMapSection = memo(function PaletteMapSection({
   seaVisible,
   seaExplicit,
   onSeaVisibleChange,
-  trueNorth,
-  onTrueNorthChange,
 }: PaletteMapSectionProps) {
   const { t } = useTranslation();
   const tiles = getMapPaletteTiles(maps);
@@ -137,29 +125,6 @@ export const PaletteMapSection = memo(function PaletteMapSection({
             checked={seaVisible}
             onCheckedChange={onSeaVisibleChange}
             aria-label={t('monitoring:editor.seaVisible')}
-          />
-        </div>
-      </div>
-
-      {/* 방위 — 진북 입력(나침반·solar 태양 방향의 기준) */}
-      <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
-        <span className="text-muted-foreground text-[11px] font-medium">
-          {t('monitoring:editor.trueNorthSection')}
-        </span>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-foreground text-[11px]">
-            {t('monitoring:editor.trueNorth')}
-          </span>
-          <InputNumber
-            value={trueNorth}
-            step={1}
-            editPreview
-            unit="°"
-            format={(value) => `${value}°`}
-            className={cn(NUMBER_WRAPPER, 'w-20 shrink-0')}
-            inputClassName={cn(NUMBER_INPUT, 'text-right')}
-            aria-label={t('monitoring:editor.trueNorth')}
-            onChange={onTrueNorthChange}
           />
         </div>
       </div>
