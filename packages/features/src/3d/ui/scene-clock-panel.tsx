@@ -61,6 +61,11 @@ interface SceneClockPanelProps {
 const MINUTES_PER_DAY = 1440;
 /** 시각 슬라이더 아래 눈금 — 슬라이더가 하루(00~24시)라는 것을 보인다. */
 const TIME_AXIS_LABELS = ['00', '06', '12', '18', '24'];
+/**
+ * 지역 드롭다운·날짜 입력·시각 프리셋 토글의 공통 폭 — 세 줄의 오른쪽
+ * 끝과 왼쪽 끝을 맞춘다. 프리셋 네 개의 자연 폭보다 조금 넓다.
+ */
+const CONTROL_WIDTH_CLASS = 'w-36';
 
 const PRESET_ICON: Record<SceneClockPresetKey, typeof Sun> = {
   sunrise: Sunrise,
@@ -90,11 +95,11 @@ function toDateInputValue(parts: {
  * 현장 시각 · 낮/밤 패널 — 모니터링 독 팝업(SceneClockMenu)과 에디터 배경
  * 탭(palette-environment-section)이 함께 쓴다.
  *
- * 위: 현재 위상(낮·새벽·황혼·밤)과 현장 벽시계·날짜·지역, 태양 방위·고도.
- * 아래: 시각 출처 표시(현재 시각 초록 점 / 지정 시각 주황 점 + 현재 시각으로
- * 버튼), 지역 드롭다운(에디터만), 날짜·시각 슬라이더(00~24시 눈금)·프리셋
- * 아이콘 토글(일출·정오·일몰·자정 — 시각은 툴팁). 실시간 중에도 조작 UI 가
- * 보이고, 바꾸는 순간 지정 시각이 된다.
+ * 위에서부터: 현재 위상(낮·새벽·황혼·밤)과 현장 벽시계·날짜·지역, 시각
+ * 출처 표시(현재 시각 초록 점 / 지정 시각 주황 점 + 현재 시각으로 버튼),
+ * 태양 방위·고도, 지역 드롭다운(에디터만), 날짜·시각 슬라이더(00~24시
+ * 눈금)·프리셋 아이콘 토글(일출·정오·일몰·자정 — 시각은 툴팁). 실시간
+ * 중에도 조작 UI 가 보이고, 바꾸는 순간 지정 시각이 된다.
  * 값은 useSceneClockStore(세션 전역)에 있고 여기서는 그리기만 한다 —
  * 슬라이더 ↔ epoch 변환은 core/lib/time-zone, 프리셋 판정은
  * lib/scene-clock-presets.
@@ -193,6 +198,40 @@ export const SceneClockPanel = memo(function SceneClockPanel({
         </div>
       </div>
 
+      {/* 시각 출처 — 처음엔 현재 시각(초록 점), 날짜·슬라이더·프리셋으로
+        바꾸면 지정 시각(주황 점)과 되돌리기 버튼. 줄 높이를 고정해 버튼이
+        나타나도 아래가 밀리지 않는다. */}
+      {isReplay ? null : (
+        <div className="flex h-6 items-center justify-between gap-2 text-[10px]">
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className={cn(
+                'size-2 shrink-0 rounded-full',
+                isManual ? 'bg-orange-500' : 'bg-emerald-500',
+              )}
+            />
+            <span className="text-foreground font-medium">
+              {isManual
+                ? t('monitoring:sceneClock.manual')
+                : t('monitoring:sceneClock.live')}
+            </span>
+          </span>
+          {isManual ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground h-6 gap-1 px-1.5 text-[10px]"
+              onClick={setLive}
+            >
+              <RotateCcw className="size-3" />
+              {t('monitoring:sceneClock.backToLive')}
+            </Button>
+          ) : null}
+        </div>
+      )}
+
       {/* 태양 위치 */}
       <div className="flex items-center justify-between gap-3 text-[10px] tabular-nums">
         <span className="text-muted-foreground">
@@ -210,39 +249,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
           {t('monitoring:sceneClock.replayHint')}
         </p>
       ) : (
-        <div className="border-border flex flex-col gap-2 border-t pt-2">
-          {/* 시각 출처 — 처음엔 현재 시각(초록 점), 날짜·슬라이더·프리셋으로
-            바꾸면 지정 시각(주황 점)과 되돌리기 버튼. 줄 높이를 고정해
-            버튼이 나타나도 아래가 밀리지 않는다. */}
-          <div className="flex h-6 items-center justify-between gap-2 text-[10px]">
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className={cn(
-                  'size-2 shrink-0 rounded-full',
-                  isManual ? 'bg-orange-500' : 'bg-emerald-500',
-                )}
-              />
-              <span className="text-foreground font-medium">
-                {isManual
-                  ? t('monitoring:sceneClock.manual')
-                  : t('monitoring:sceneClock.live')}
-              </span>
-            </span>
-            {isManual ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="text-muted-foreground h-6 gap-1 px-1.5 text-[10px]"
-                onClick={setLive}
-              >
-                <RotateCcw className="size-3" />
-                {t('monitoring:sceneClock.backToLive')}
-              </Button>
-            ) : null}
-          </div>
-
+        <>
           {/* 지역 — 에디터만 바꾼다(onSiteLocationChange 가 있을 때만 보인다). */}
           {onSiteLocationChange ? (
             <div className="flex items-center justify-between gap-2 text-[10px]">
@@ -257,7 +264,10 @@ export const SceneClockPanel = memo(function SceneClockPanel({
               >
                 <SelectTrigger
                   aria-label={t('monitoring:sceneClock.siteLocation')}
-                  className="h-6 min-w-0 px-1.5 text-[10px] font-normal"
+                  className={cn(
+                    CONTROL_WIDTH_CLASS,
+                    'h-6 shrink-0 justify-between px-1.5 text-[10px] font-normal',
+                  )}
                 >
                   <span className="truncate">
                     {formatSceneSiteLocation(location)}
@@ -284,7 +294,10 @@ export const SceneClockPanel = memo(function SceneClockPanel({
               type="date"
               value={parts ? toDateInputValue(parts) : ''}
               disabled={controlsDisabled}
-              className="border-border bg-background text-foreground h-6 rounded-md border px-1.5 text-[10px] tabular-nums dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60 hover:[&::-webkit-calendar-picker-indicator]:opacity-90"
+              className={cn(
+                CONTROL_WIDTH_CLASS,
+                'border-border bg-background text-foreground h-6 shrink-0 rounded-md border px-1.5 text-[10px] tabular-nums dark:scheme-dark [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60 hover:[&::-webkit-calendar-picker-indicator]:opacity-90',
+              )}
               onChange={(event) => {
                 const [y, m, d] = event.target.value
                   .split('-')
@@ -323,6 +336,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
                 variant="outline"
                 size="sm"
                 aria-label={t('monitoring:sceneClock.presets')}
+                className={cn(CONTROL_WIDTH_CLASS, 'shrink-0')}
               >
                 {presets.map((preset) => {
                   const Icon = PRESET_ICON[preset.key];
@@ -335,7 +349,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
                             value={preset.key}
                             disabled={controlsDisabled || preset.ms === null}
                             aria-label={label}
-                            className="h-6 px-2"
+                            className="h-6 flex-1 px-2"
                           />
                         }
                       >
@@ -378,7 +392,7 @@ export const SceneClockPanel = memo(function SceneClockPanel({
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
