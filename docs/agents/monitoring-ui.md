@@ -59,7 +59,7 @@
 칸:
 
 - 현장 시각 — `useSceneSunState`(`docs/agents/rendering-perf.md`).
-- 풍속/풍향 — `use-scene-weather.ts` 가 `scene-site-geo` 좌표로 open-meteo 를 주기 조회한다. 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. `@crane/domain/weather` 의 `WeatherSnapshot.windSpeed`(m/s)·`windDirection` 은 응답에 없으면 null. 권고 단계는 `wind-advisory.ts`(`WIND_CAUTION_MS`·`WIND_STOP_MS`, 현장 규정에 맞춰 상수만 조정).
+- 풍속/풍향 — `use-scene-weather.ts` 가 씬 지역 좌표(`resolveSceneSiteGeo` — 현장 시각과 같은 지역)로 open-meteo 를 주기 조회한다. 헤더의 `useHeaderWeather` 는 라우트·옥포 독 좌표 전용이라 따로 둔다. `@crane/domain/weather` 의 `WeatherSnapshot.windSpeed`(m/s)·`windDirection` 은 응답에 없으면 null. 권고 단계는 `wind-advisory.ts`(`WIND_CAUTION_MS`·`WIND_STOP_MS`, 현장 규정에 맞춰 상수만 조정).
 - 가동 n / 상태 확인 N — 장비 운전 상태(`docs/agents/3d-play.md`). 값 생산이 멈춘 동안(충돌 pinned·영역 hold·실시간 보류·시뮬 정지)은 "정지 중".
 - 두절 — 0 이면 숨김.
 - 알람 장비 수 — 페이지가 넘긴 `alarmsByCraneId`, 최고 severity 색. 페이지가 넘기지 않으면 칸을 숨긴다.

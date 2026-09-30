@@ -1,6 +1,7 @@
 import type { Vector3Tuple } from '@crane/core/types/math';
 import type { RigBinding, RigDefinition } from './rig-types';
 import type { SavedRulerInfo } from './ruler-types';
+import type { SceneSiteLocation } from './scene-site-geo';
 import type { ModelStatusTags } from './status-tag-types';
 import type { TagMapping } from './tag-mapping-types';
 import type { SavedSceneView, SavedViewSplit } from './view-types';
@@ -90,6 +91,15 @@ export interface SavedSceneInfo {
    */
   trueNorth?: number;
   /**
+   * 지역(시간 기준) — 현장 시각·낮/밤·현장 날씨가 어느 시간대와 좌표를
+   * 쓰는지. 판정은 resolveSceneSiteLocation(model/scene-site-geo.ts) 한
+   * 곳이다.
+   *
+   * - `undefined`: 지정한 적 없는 씬 → region 기본 지역.
+   * - 값: 에디터 배경 탭에서 **명시**한 지역. 씬 파일 단위 저장.
+   */
+  siteLocation?: SceneSiteLocation;
+  /**
    * 조명 설정 — 없으면 전부 기본값(그림자 Off, 태양 남중). 기본값 씬은
    * 이 필드 자체가 직렬화에서 빠져 기존 저장본과 diff가 없다.
    */
@@ -128,9 +138,9 @@ export const SCENE_TRUE_NORTH_DEFAULT = 0;
 /**
  * 태양 위치를 정하는 방식.
  * - `manual`: 씬에 저장된 sunAzimuth/sunElevation 고정(기본, 필드 생략).
- * - `solar`: 현장 위치(scene-site-geo)·시각으로 매 프레임 계산 — 낮/밤이
- *   시각을 따라 바뀌고 밤에는 달빛·어두운 하늘로 전환된다. 현장 위치가
- *   등록되지 않은 region 은 런타임이 manual 로 폴백한다.
+ * - `solar`: 씬 지역(`siteLocation`, scene-site-geo)의 위치·시각으로 매
+ *   프레임 계산 — 낮/밤이 시각을 따라 바뀌고 밤에는 야간 작업등이 켜진다.
+ *   지역이 정해지지 않은 씬은 런타임이 manual 로 폴백한다.
  */
 export type SceneSunMode = 'manual' | 'solar';
 export const SCENE_SUN_MODE_DEFAULT: SceneSunMode = 'manual';

@@ -1,21 +1,22 @@
 /**
- * region → 현장 위치(위경도·시간대) 표.
+ * 씬의 지역(시간 기준) → 현장 위치(위경도·시간대) 표.
  *
- * 3D 씬의 낮/밤·태양 위치(`lighting.sunMode === 'solar'`)가 이 표를 읽는다.
- * 씬 JSON 이 아니라 region 표인 이유: 위치는 씬(배치 데이터)이 아니라
- * 현장의 사실이고, 같은 region 의 여러 씬(리플레이·에디터·모니터링)이
- * 같은 하늘을 봐야 한다. scene-file-map·scene-environment-registry 와 같은
- * 자리의 표다.
+ * 지역은 씬의 현장 시각·낮/밤이 어느 시간대를 기준으로 하는지다. 에디터
+ * 배경 탭의 드롭다운으로 고르고(`SavedSceneInfo.siteLocation`, 씬 파일 단위
+ * 저장), 모니터링·3D 플레이는 읽기만 한다. 필드가 없는 씬은 region 기본
+ * 지역(SCENE_SITE_LOCATION_BY_REGION_ID)을 쓴다.
  *
- * 위경도는 `@crane/domain/region` 의 `center`(대시보드 지도 핀)와 같은 값을
- * 쓴다 — 태양 위치는 km 단위 오차에 둔감해(1km ≈ 0.01°) 두 표가 조금
- * 어긋나도 화면에 차이가 없지만, 운영 좌표가 확정되면 두 곳을 함께
- * 고친다. 표에 없는 region 은 null — 호출자는 수동 태양(기존 동작)으로
- * 떨어진다.
+ * 지역 하나가 시간대와 대표 현장 좌표를 함께 갖는다. 태양 위치는 UTC 시각과
+ * 위경도로 정해지므로 시간대만 바꾸면 벽시계와 하늘이 어긋난다 — 좌표는
+ * 그 시간대에 있는 조선소(`@crane/domain/region` 의 site `center`)다. 태양
+ * 위치는 km 단위 오차에 둔감해(1km ≈ 0.01°) 같은 조선소의 독끼리 좌표를
+ * 나누지 않는다. 같은 좌표를 현장 날씨(use-scene-weather)도 쓴다.
  *
  * 시간대는 IANA 이름이다(core/lib/time-zone). 브라우저 로컬이 아니라 현장
  * 시각을 써야 한국에서 필리 조선소 화면을 봐도 필라델피아의 낮/밤이 나온다.
  */
+
+import type { SavedSceneInfo } from './types';
 
 export interface SceneSiteGeo {
   latitude: number;
@@ -24,41 +25,80 @@ export interface SceneSiteGeo {
   timeZone: string;
 }
 
-const GEOJE_OKPO_TIME_ZONE = 'Asia/Seoul';
-const PHILADELPHIA_TIME_ZONE = 'America/New_York';
+/** 드롭다운 순서 그대로다. */
+export const SCENE_SITE_LOCATIONS = ['asia-seoul', 'america-new-york'] as const;
 
-export const SCENE_SITE_GEO_BY_REGION_ID: Record<string, SceneSiteGeo> = {
+export type SceneSiteLocation = (typeof SCENE_SITE_LOCATIONS)[number];
+
+export const SCENE_SITE_GEO_BY_LOCATION: Record<
+  SceneSiteLocation,
+  SceneSiteGeo
+> = {
   // 한화오션 거제(옥포) 조선소
-  'dock-1': {
-    latitude: 34.871991,
-    longitude: 128.695966,
-    timeZone: GEOJE_OKPO_TIME_ZONE,
+  'asia-seoul': {
+    latitude: 34.873071,
+    longitude: 128.710288,
+    timeZone: 'Asia/Seoul',
   },
-  'dock-2': {
-    latitude: 34.874952,
-    longitude: 128.703929,
-    timeZone: GEOJE_OKPO_TIME_ZONE,
-  },
-  'dock-in': {
-    latitude: 34.865481,
-    longitude: 128.70622,
-    timeZone: GEOJE_OKPO_TIME_ZONE,
-  },
-  // 필리 조선소(Philly Shipyard, 필라델피아) — goliath.json 도 philly 지도를
-  // 쓰는 씬이라 같은 현장이다(AGENTS.md "philly 두 씬").
-  goliath: {
+  // 필리 조선소(Philly Shipyard, 필라델피아)
+  'america-new-york': {
     latitude: 39.8895,
     longitude: -75.1827,
-    timeZone: PHILADELPHIA_TIME_ZONE,
-  },
-  'philly-dock-2': {
-    latitude: 39.8895,
-    longitude: -75.1827,
-    timeZone: PHILADELPHIA_TIME_ZONE,
+    timeZone: 'America/New_York',
   },
 };
 
-/** 등록된 region 의 현장 위치. 미등록이면 null(수동 태양으로 폴백). */
-export function getSceneSiteGeo(regionId: string): SceneSiteGeo | null {
-  return SCENE_SITE_GEO_BY_REGION_ID[regionId] ?? null;
+/** region 기본 지역 — 씬이 `siteLocation` 을 지정하지 않았을 때. */
+export const SCENE_SITE_LOCATION_BY_REGION_ID: Record<
+  string,
+  SceneSiteLocation
+> = {
+  'dock-1': 'asia-seoul',
+  'dock-2': 'asia-seoul',
+  'dock-in': 'asia-seoul',
+  // goliath.json 도 philly 지도를 쓰는 씬이라 같은 현장이다.
+  goliath: 'america-new-york',
+  'philly-dock-2': 'america-new-york',
+};
+
+/**
+ * 지역 표시 이름 — IANA 시간대 이름 그대로(밑줄만 공백)라 화면 언어와
+ * 무관하게 같다. 드롭다운과 시계 패널이 이 이름을 쓴다.
+ */
+export function formatSceneSiteLocation(location: SceneSiteLocation): string {
+  return SCENE_SITE_GEO_BY_LOCATION[location].timeZone.replaceAll('_', ' ');
+}
+
+export function isSceneSiteLocation(
+  value: unknown,
+): value is SceneSiteLocation {
+  return (
+    typeof value === 'string' &&
+    (SCENE_SITE_LOCATIONS as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * 씬의 유효 지역. 명시값(`siteLocation`)이 우선이고, 없으면 region 기본값,
+ * 둘 다 없으면 null. 로드 경계의 sanitize 를 거치지 않은 편집 중 상태도
+ * 받으므로 목록에 없는 값은 미지정으로 본다.
+ */
+export function resolveSceneSiteLocation(
+  regionId: string,
+  sceneInfo: Pick<SavedSceneInfo, 'siteLocation'> | null | undefined,
+): SceneSiteLocation | null {
+  const explicit = sceneInfo?.siteLocation;
+  if (isSceneSiteLocation(explicit)) return explicit;
+  return Object.hasOwn(SCENE_SITE_LOCATION_BY_REGION_ID, regionId)
+    ? SCENE_SITE_LOCATION_BY_REGION_ID[regionId]
+    : null;
+}
+
+/** 씬의 현장 위치. 지역이 정해지지 않으면 null(수동 태양으로 폴백). */
+export function resolveSceneSiteGeo(
+  regionId: string,
+  sceneInfo: Pick<SavedSceneInfo, 'siteLocation'> | null | undefined,
+): SceneSiteGeo | null {
+  const location = resolveSceneSiteLocation(regionId, sceneInfo);
+  return location ? SCENE_SITE_GEO_BY_LOCATION[location] : null;
 }

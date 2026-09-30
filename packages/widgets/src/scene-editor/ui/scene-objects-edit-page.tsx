@@ -11,6 +11,7 @@ import {
   type SceneMapCatalogItem,
   type SceneModelCategory,
   type SceneModelCatalogItem,
+  type SceneSiteLocation,
   getSceneMetersPerUnit,
   resolveMainView,
   resolveSceneHomeCamera,
@@ -229,6 +230,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setEnvironmentId,
     setSeaVisible,
     setTrueNorth,
+    setSiteLocation,
     setLighting,
     addSceneView,
     renameSceneView,
@@ -600,6 +602,8 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   mainViewId={mainViewId}
                   viewHandlers={viewHandlers}
                   regionId={regionId}
+                  siteLocation={sceneInfo?.siteLocation}
+                  onSiteLocationChange={setSiteLocation}
                   environmentId={sceneInfo?.environmentId}
                   onEnvironmentChange={setEnvironmentId}
                   lighting={sceneInfo?.lighting}
@@ -979,6 +983,8 @@ function ProjectPalettePanel({
   mainViewId,
   viewHandlers,
   regionId,
+  siteLocation,
+  onSiteLocationChange,
   environmentId,
   onEnvironmentChange,
   lighting,
@@ -993,8 +999,11 @@ function ProjectPalettePanel({
   viewSplit: SavedViewSplit | undefined;
   mainViewId: string | null;
   viewHandlers: SceneViewHandlers;
-  /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
+  /** 배경 탭 — 씬 지역이 없을 때 region 기본 지역을 찾는 키. */
   regionId: string;
+  /** 배경 탭 — 씬 지역(시간 기준)·세터(setSiteLocation). */
+  siteLocation: SceneSiteLocation | undefined;
+  onSiteLocationChange: (location: SceneSiteLocation) => void;
   environmentId: string | null | undefined;
   onEnvironmentChange: (environmentId: string | null) => void;
   lighting: SavedLightingInfo | undefined;
@@ -1094,6 +1103,8 @@ function ProjectPalettePanel({
             ) : (
               <PaletteEnvironmentSection
                 regionId={regionId}
+                siteLocation={siteLocation}
+                onSiteLocationChange={onSiteLocationChange}
                 environmentId={environmentId}
                 onChange={onEnvironmentChange}
                 lighting={lighting}

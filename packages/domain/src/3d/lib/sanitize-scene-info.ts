@@ -10,6 +10,7 @@
  * 리플레이가 **같은 데이터**를 본다. 이 파일이 도메인에 있는 이유다.
  */
 import type { SavedRulerInfo } from '../model/ruler-types';
+import { isSceneSiteLocation } from '../model/scene-site-geo';
 import type {
   SavedCameraInfo,
   SavedLightingInfo,
@@ -312,6 +313,14 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   const rawSea = (sceneInfo as SavedSceneInfo).sea;
   if (typeof rawSea === 'boolean') {
     sanitized.sea = rawSea;
+  }
+
+  // 지역도 명시값/미지정(region 기본 지역, resolveSceneSiteLocation) 2-상태다.
+  // 목록에 있는 값만 싣는다 — 오타·미래 값을 살리면 런타임은 region 기본
+  // 지역으로 떨어지는데 저장본에는 모르는 값이 남는다.
+  const rawSiteLocation = (sceneInfo as SavedSceneInfo).siteLocation;
+  if (isSceneSiteLocation(rawSiteLocation)) {
+    sanitized.siteLocation = rawSiteLocation;
   }
 
   // 진북은 "기본값이면 필드 생략" — [0,360) 로 랩한 뒤 0(−Z 가 북)이면

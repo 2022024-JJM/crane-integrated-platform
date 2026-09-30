@@ -17,7 +17,6 @@ import {
   resolveSkyLighting,
   type SkyLighting,
   type SkyLightingBase,
-  type SkyLightingOptions,
   type SkyPhase,
 } from './sky-lighting';
 
@@ -89,7 +88,7 @@ export function quantizeAngle(
   return Math.round(deg / step) * step;
 }
 
-export interface SolarLightingOptions extends SkyLightingOptions {
+export interface SolarLightingOptions {
   /**
    * 씬의 진북(월드 방위, 도 — resolveTrueNorth). 태양을 방향광 월드 방향으로
    * 바꿀 때만 쓴다. 작업등 마스트 방향은 씬 연출값이라 돌리지 않는다.
@@ -104,7 +103,7 @@ export function resolveSolarLighting(
   base: SkyLightingBase,
   options: SolarLightingOptions = {},
 ): SolarLightingSnapshot | null {
-  const { trueNorth: rawTrueNorth, ...skyOptions } = options;
+  const { trueNorth: rawTrueNorth } = options;
   // 비유한 진북은 기본값으로 — 그대로 더하면 방위가 0(북)으로 굳는다.
   const trueNorth =
     typeof rawTrueNorth === 'number' && Number.isFinite(rawTrueNorth)
@@ -121,7 +120,6 @@ export function resolveSolarLighting(
       moonFraction: moonIllumination.fraction,
     },
     base,
-    skyOptions,
   );
 
   // 방향광 방향 — 태양(고도 하한 클램프)과 마스트 방향을 세기 비율로 섞는다.

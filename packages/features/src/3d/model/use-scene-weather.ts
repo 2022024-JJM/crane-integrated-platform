@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSceneSiteGeo } from '@crane/domain/3d';
+import { resolveSceneSiteGeo, type SceneSiteLocation } from '@crane/domain/3d';
 import {
   fetchOpenMeteoCurrentWeather,
   type WeatherSnapshot,
@@ -9,17 +9,22 @@ import {
 export const SCENE_WEATHER_REFRESH_MS = 10 * 60 * 1_000;
 
 /**
- * 3D 관제 HUD 용 현장 날씨(풍속·풍향). 위치는 씬 현장 표(scene-site-geo —
- * solar 낮/밤과 같은 좌표)에서 region 으로 찾는다. 헤더의 useHeaderWeather
+ * 3D 관제 HUD 용 현장 날씨(풍속·풍향). 위치는 씬 지역의 좌표(scene-site-geo
+ * — solar 낮/밤과 같은 좌표, 씬이 지역을 지정하지 않으면 region 기본 지역)다. 헤더의 useHeaderWeather
  * 는 라우트 경로 기반이고 옥포 독 좌표만 알아 필리 씬에 쓸 수 없어 따로 둔다
  * (요청 하나가 더 나가지만 10분에 한 번이다). 실패·미등록 region 은 null —
  * HUD 는 풍속 칸을 "정보 없음"으로 둔다.
  */
-export function useSceneWeather(regionId: string): WeatherSnapshot | null {
+export function useSceneWeather(
+  regionId: string,
+  /** 씬의 `siteLocation`(미지정이면 undefined). */
+  siteLocation: SceneSiteLocation | undefined,
+): WeatherSnapshot | null {
   const [snapshot, setSnapshot] = useState<WeatherSnapshot | null>(null);
+  // 표의 객체를 그대로 돌려주므로 지역이 바뀔 때만 참조가 바뀐다.
+  const geo = resolveSceneSiteGeo(regionId, { siteLocation });
 
   useEffect(() => {
-    const geo = getSceneSiteGeo(regionId);
     if (!geo) {
       setSnapshot(null);
       return;
@@ -45,7 +50,7 @@ export function useSceneWeather(regionId: string): WeatherSnapshot | null {
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [regionId]);
+  }, [geo]);
 
   return snapshot;
 }

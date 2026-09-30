@@ -417,6 +417,55 @@ describe('setSeaVisible', () => {
   });
 });
 
+describe('setSiteLocation', () => {
+  it('지역을 저장하고, 같은 값이면 참조를 유지한다', () => {
+    const h = createHarness();
+    h.actions.setSiteLocation('america-new-york');
+    expect(h.scene?.siteLocation).toBe('america-new-york');
+
+    const before = h.scene;
+    h.actions.setSiteLocation('america-new-york');
+    expect(h.scene).toBe(before);
+  });
+
+  it('미지정 씬에 고르면 region 기본 지역과 같아도 명시값으로 저장된다', () => {
+    const h = createHarness();
+    expect(h.scene).not.toHaveProperty('siteLocation');
+    h.actions.setSiteLocation('asia-seoul');
+    expect(h.scene?.siteLocation).toBe('asia-seoul');
+  });
+
+  it('지역 전환은 새 객체를 만든다', () => {
+    const h = createHarness(scene({ siteLocation: 'asia-seoul' }));
+    const before = h.scene;
+    h.actions.setSiteLocation('america-new-york');
+    expect(h.scene).not.toBe(before);
+    expect(h.scene?.siteLocation).toBe('america-new-york');
+  });
+
+  it('목록에 없는 값은 updateScene 을 부르지 않는다', () => {
+    const h = createHarness(scene({ siteLocation: 'asia-seoul' }));
+    const before = h.scene;
+    for (const bad of ['europe-paris', 'Asia/Seoul', '', 1, null]) {
+      h.actions.setSiteLocation(bad as unknown as 'asia-seoul');
+    }
+    expect(h.scene).toBe(before);
+    expect(h.updateOptions).toEqual([]);
+  });
+
+  it('옵션 없이 updateScene 을 부른다 (히스토리 기본 기록)', () => {
+    const h = createHarness();
+    h.actions.setSiteLocation('asia-seoul');
+    expect(h.updateOptions).toEqual([undefined]);
+  });
+
+  it('씬이 null 이면 null 그대로', () => {
+    const h = createHarness(null);
+    h.actions.setSiteLocation('asia-seoul');
+    expect(h.scene).toBeNull();
+  });
+});
+
 describe('setTrueNorth', () => {
   it('값을 저장하고, 같은 값이면 참조를 유지한다', () => {
     const h = createHarness();

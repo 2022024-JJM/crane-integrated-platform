@@ -61,16 +61,6 @@ describe('resolveSolarLighting', () => {
     expect(snap.keyElevation).toBeCloseTo(YARD_LIGHT_ELEVATION, 1);
   });
 
-  it('작업등을 끈 밤도 방향은 마스트 쪽이고 세기만 0 이다', () => {
-    const midnight = Date.UTC(2026, 5, 21, 15, 0, 0);
-    const snap = resolveSolarLighting(midnight, GEOJE, SCENE_LIGHTING_BASE, {
-      yardLights: false,
-    })!;
-    expect(snap.sky.keyIntensity).toBe(0);
-    expect(snap.keyAzimuth).toBeCloseTo(YARD_LIGHT_AZIMUTH, 1);
-    expect(snap.keyElevation).toBeCloseTo(YARD_LIGHT_ELEVATION, 1);
-  });
-
   it('박명엔 방향광이 태양과 마스트 사이를 매끄럽게 돈다 (1분 간격 최대 변화 < 8°)', () => {
     // 거제 9/11 일몰(18:39 KST) 앞뒤 2시간을 1분 간격으로 훑는다.
     const start = Date.UTC(2026, 8, 11, 8, 40, 0);
@@ -255,13 +245,18 @@ describe('resolveSolarLighting — 진북(trueNorth)', () => {
     }
   });
 
-  it('진북은 조명 곡선 옵션을 가리지 않는다 — 작업등 끔이 그대로 적용된다', () => {
-    const snap = resolveSolarLighting(
+  it('진북은 조명 곡선을 바꾸지 않는다 — 세기·색은 진북과 무관하다', () => {
+    const rotated = resolveSolarLighting(
       GEOJE_MIDNIGHT,
       GEOJE,
       SCENE_LIGHTING_BASE,
-      { trueNorth: 50.6, yardLights: false },
+      { trueNorth: 50.6 },
     )!;
-    expect(snap.sky.keyIntensity).toBe(0);
+    const plain = resolveSolarLighting(
+      GEOJE_MIDNIGHT,
+      GEOJE,
+      SCENE_LIGHTING_BASE,
+    )!;
+    expect(rotated.sky).toEqual(plain.sky);
   });
 });

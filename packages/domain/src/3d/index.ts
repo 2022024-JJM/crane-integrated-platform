@@ -290,9 +290,15 @@ export {
 } from './model/types';
 export type { SceneSunMode } from './model/types';
 export {
-  SCENE_SITE_GEO_BY_REGION_ID,
-  getSceneSiteGeo,
+  SCENE_SITE_GEO_BY_LOCATION,
+  SCENE_SITE_LOCATIONS,
+  SCENE_SITE_LOCATION_BY_REGION_ID,
+  formatSceneSiteLocation,
+  isSceneSiteLocation,
+  resolveSceneSiteGeo,
+  resolveSceneSiteLocation,
   type SceneSiteGeo,
+  type SceneSiteLocation,
 } from './model/scene-site-geo';
 export {
   SUN_HORIZON_ELEVATION,

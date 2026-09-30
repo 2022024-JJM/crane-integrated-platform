@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DAYLIGHT_FADE,
   DAY_AMBIENT_BOOST,
+  DAY_AMBIENT_COLOR,
   DAY_HEMISPHERE_GROUND_COLOR,
   DAY_HEMISPHERE_INTENSITY,
   DAY_HEMISPHERE_SKY_COLOR,
@@ -32,16 +33,10 @@ import {
 const BASE = { sunIntensity: 3.6, ambientIntensity: 0.9 };
 const YARD_FULL = BASE.sunIntensity * YARD_LIGHT_INTENSITY_RATIO;
 
-function at(
-  sunElevation: number,
-  moonElevation = -30,
-  moonFraction = 0.5,
-  yardLights = true,
-) {
+function at(sunElevation: number, moonElevation = -30, moonFraction = 0.5) {
   return resolveSkyLighting(
     { sunElevation, moonElevation, moonFraction },
     BASE,
-    { yardLights },
   );
 }
 
@@ -122,9 +117,8 @@ describe('resolveSkyLighting — 낮', () => {
   it('작업등 점등 상한(YARD_LIGHT_FADE[1]) 위에서는 작업등이 완전히 꺼져 있다', () => {
     const sky = at(YARD_LIGHT_FADE[1]);
     expect(sky.yardIntensity).toBe(0);
-    expect(sky.keyColor).toEqual(
-      at(YARD_LIGHT_FADE[1], -30, 0.5, false).keyColor,
-    );
+    expect(sky.keyYardBlend).toBe(0);
+    expect(sky.keyColor).toEqual(sky.sunColor);
   });
 });
 
@@ -168,27 +162,36 @@ describe('resolveSkyLighting — 밤 (작업등 켜짐)', () => {
   });
 });
 
-describe('resolveSkyLighting — 밤 (작업등 꺼짐)', () => {
-  it('방향광 0·푸른 바닥 환경광·방향은 마스트 쪽(1)', () => {
-    const sky = at(-40, 50, 1, false);
-    expect(sky.yardIntensity).toBe(0);
-    expect(sky.keyIntensity).toBe(0);
-    expect(sky.keyYardBlend).toBe(1);
-    expect(sky.ambientIntensity).toBeCloseTo(NIGHT_AMBIENT_INTENSITY_DARK, 12);
-    expect(sky.ambientColor).toEqual(NIGHT_AMBIENT_COLOR_DARK);
-    expect(sky.skyIntensity).toBeCloseTo(NIGHT_SKY_INTENSITY, 12);
-    // 보조 투광등은 꺼지고 반구광은 약한 푸른 값, 하늘 틴트는 그대로(밤이니까).
-    expect(sky.fillIntensity).toBe(0);
-    expect(sky.hemisphereIntensity).toBeCloseTo(
-      NIGHT_HEMISPHERE_INTENSITY_DARK,
-      12,
-    );
-    expect(sky.hemisphereGroundColor).toEqual(NIGHT_AMBIENT_COLOR_DARK);
-    expect(sky.skyTintOpacity).toBeCloseTo(NIGHT_SKY_TINT_ALPHA, 12);
+describe('resolveSkyLighting — 작업등은 항상 켜진다', () => {
+  it('고도 전 구간(−90°~90°)에서 방향광 세기가 0 이 되지 않는다', () => {
+    for (let el = -90; el <= 90; el += 0.25) {
+      expect(at(el).keyIntensity, String(el)).toBeGreaterThan(0);
+    }
   });
 
-  it('낮에는 옵션과 무관하게 같은 값이다', () => {
-    expect(at(60, -30, 0.5, false)).toEqual(at(60, -30, 0.5, true));
+  it('점등 전 박명(YARD_LIGHT_FADE 상한)의 밤 쪽 값은 NIGHT_*_DARK 바닥값이다', () => {
+    const sky = at(YARD_LIGHT_FADE[1]);
+    expect(sky.daylight).toBeGreaterThan(0);
+    expect(sky.daylight).toBeLessThan(1);
+    const dayAmbient = BASE.ambientIntensity * DAY_AMBIENT_BOOST;
+    expect(sky.ambientIntensity).toBeCloseTo(
+      NIGHT_AMBIENT_INTENSITY_DARK +
+        (dayAmbient - NIGHT_AMBIENT_INTENSITY_DARK) * sky.daylight,
+      12,
+    );
+    sky.ambientColor.forEach((channel, i) => {
+      expect(channel).toBeCloseTo(
+        NIGHT_AMBIENT_COLOR_DARK[i] +
+          (DAY_AMBIENT_COLOR[i] - NIGHT_AMBIENT_COLOR_DARK[i]) * sky.daylight,
+        12,
+      );
+    });
+    expect(sky.hemisphereIntensity).toBeCloseTo(
+      NIGHT_HEMISPHERE_INTENSITY_DARK +
+        (DAY_HEMISPHERE_INTENSITY - NIGHT_HEMISPHERE_INTENSITY_DARK) *
+          sky.daylight,
+      12,
+    );
   });
 });
 
@@ -273,10 +276,6 @@ describe('resolveSkyLighting — 잘못된 입력', () => {
     );
     expect(at(-40, 60, 7).moonVisibility).toBe(at(-40, 60, 1).moonVisibility);
   });
-
-  it('SUN_COLOR_HORIZON 은 작업등을 끈 지평선 아래(-2°) 태양의 색이다', () => {
-    expect(at(-2, -30, 0.5, false).keyColor).toEqual(SUN_COLOR_HORIZON);
-  });
 });
 
 describe('classifySkyPhase', () => {
@@ -309,14 +308,13 @@ describe('resolveSkyLighting — sunColor (작업등 혼합 전 태양 색, 바�
     }
   });
 
-  it('SUN_COLOR_FADE 하한(−2°) 이하는 SUN_COLOR_HORIZON — 작업등 on/off 와 무관', () => {
+  it('SUN_COLOR_FADE 하한(−2°) 이하는 SUN_COLOR_HORIZON — 작업등 점등과 무관', () => {
     for (const el of [-2, -10, -40]) {
-      expect(at(el, 50, 1, true).sunColor).toEqual(SUN_COLOR_HORIZON);
-      expect(at(el, 50, 1, false).sunColor).toEqual(SUN_COLOR_HORIZON);
+      expect(at(el, 50, 1).sunColor).toEqual(SUN_COLOR_HORIZON);
     }
     // keyColor 는 작업등이 섞여 다르다 — sunColor 가 혼합 전 값이라는 근거.
-    expect(at(-40, 50, 1, true).keyColor).toEqual(YARD_LIGHT_COLOR);
-    expect(at(-40, 50, 1, true).sunColor).not.toEqual(YARD_LIGHT_COLOR);
+    expect(at(-40, 50, 1).keyColor).toEqual(YARD_LIGHT_COLOR);
+    expect(at(-40, 50, 1).sunColor).not.toEqual(YARD_LIGHT_COLOR);
   });
 
   it('구간 중간(2°)은 두 색 사이', () => {

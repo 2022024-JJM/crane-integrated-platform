@@ -23,11 +23,11 @@ import {
   SCENE_SUN_AZIMUTH_DEFAULT,
   SCENE_SUN_ELEVATION_DEFAULT,
   bearingToWorldAzimuth,
-  getSceneSiteGeo,
   invalidateShadows,
   modelObjectRegistry,
   registerShadowRenderer,
   resolveCameraBoundsMaps,
+  resolveSceneSiteGeo,
   resolveTrueNorth,
   unregisterShadowRenderer,
 } from '@crane/domain/3d';
@@ -408,8 +408,6 @@ interface SolarFrameState {
   geo: SceneSiteGeo | null;
   /** 마지막으로 계산한 초 단위 시각 키 — 같은 초면 재계산하지 않는다. */
   timeKey: number;
-  /** 마지막 계산에 쓴 야간 작업등 옵션 — 바뀌면 같은 초라도 재계산. */
-  yardLights: boolean;
   /** 마지막 계산에 쓴 씬 진북 — 에디터에서 바꾸면 같은 초라도 재계산. */
   trueNorth: number;
   snapshot: SolarLightingSnapshot | null;
@@ -426,7 +424,6 @@ function createSolarFrameState(): SolarFrameState {
   return {
     geo: null,
     timeKey: Number.NaN,
-    yardLights: true,
     trueNorth: Number.NaN,
     snapshot: null,
     keyAzimuth: Number.NaN,
@@ -574,18 +571,17 @@ function useCelestialSprite(
  * - manual(기본): 씬의 sunAzimuth/sunElevation 고정. 그림자가 꺼져 있어도
  *   항상 적용된다 — 조명 방향(셰이딩)은 그림자와 무관하게 씬의 인상을
  *   정하는 값이다.
- * - solar: 현장 위치(scene-site-geo, `regionId` 로 찾음)와 시각(`timeSource`
+ * - solar: 현장 위치(씬 지역 — resolveSceneSiteGeo)와 시각(`timeSource`
  *   — 씬 시계 또는 리플레이 프레임)으로 매 프레임 태양·달 위치를 계산한다
  *   (lib/solar-lighting). 천체의 지리 방위는 씬 진북(`trueNorth`,
  *   resolveTrueNorth)만큼 돌려 월드 방향으로 쓴다 — 나침반과 같은 북쪽이다.
- *   낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향,
- *   useSceneClockStore.yardLights 로 끌 수 있다)이 방향광이 되고 박명엔 둘을
- *   세기 비율로 섞는다. 세기·색·환경광·배경(EXR)·환경맵 밝기가
+ *   낮에는 태양이, 밤에는 야간 작업등(고정 마스트 방향, 항상 켜짐)이
+ *   방향광이 되고 박명엔 둘을 세기 비율로 섞는다. 세기·색·환경광·배경(EXR)·환경맵 밝기가
  *   lib/sky-lighting 곡선을 따른다. 밤에는 그림자 없는 보조 투광등(반대편
  *   마스트)·남색/난색 반구광·밤하늘 남색 틴트 돔이 더해져 그림자 면이 죽지
  *   않고 하늘이 회색으로 죽지 않는다. 달은 표식·위상 표시용이다. 하늘에는
  *   태양 글로우·달 표식 스프라이트를 띄운다(EXR 배경이 있을 때만 — 검은
- *   캔버스 위의 해는 어색하다). 현장 위치가 없는 region 은 manual 로 폴백.
+ *   캔버스 위의 해는 어색하다). 지역이 정해지지 않은 씬은 manual 로 폴백.
  *   방향은 CELESTIAL_ANGLE_STEP(0.05°) 격자에 양자화되어 정지 화면에서
  *   shadow map 이 매 프레임 다시 그려지지 않는다.
  *   세기·색·배경 밝기는 React 상태가 아니라 useFrame 에서 ref 로 직접 쓴다
@@ -605,7 +601,10 @@ export function SceneLighting({
   shadowFocus = null,
 }: {
   sceneInfo?: SavedSceneInfo | null;
-  /** solar 모드의 현장 위치를 찾는 키. 없으면 solar 설정이어도 manual. */
+  /**
+   * 씬이 지역을 지정하지 않았을 때 region 기본 지역을 찾는 키. 지역이
+   * 정해지지 않으면 solar 설정이어도 manual.
+   */
   regionId?: string;
   /** solar 모드의 시각 출처. 리플레이 화면은 'replay'. */
   timeSource?: SceneTimeSource;
@@ -623,10 +622,10 @@ export function SceneLighting({
   // solar 모드의 태양·달(지리 방위)을 월드 방향으로 돌리는 기준. 수동 태양은
   // 월드 기준 값이라 쓰지 않는다.
   const trueNorth = resolveTrueNorth(sceneInfo);
-  // solar 모드는 씬 설정과 현장 위치가 모두 있어야 켜진다.
+  // solar 모드는 씬 설정과 현장 위치(씬 지역)가 모두 있어야 켜진다.
   const solarGeo =
     lighting?.sunMode === 'solar' && regionId
-      ? getSceneSiteGeo(regionId)
+      ? resolveSceneSiteGeo(regionId, sceneInfo)
       : null;
 
   const mapCorners = useMapShadowCorners(sceneInfo);
@@ -649,8 +648,8 @@ export function SceneLighting({
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
 
-  // demand 캔버스 깨우기 — 태양각·모드·그림자 같은 조명 설정과 씬 시계(시각
-  // 지정·작업등)는 useFrame 안에서 조명에 쓰이므로 프레임이 없으면 화면에
+  // demand 캔버스 깨우기 — 태양각·모드·지역·그림자 같은 조명 설정과 씬
+  // 시계(시각 지정)는 useFrame 안에서 조명에 쓰이므로 프레임이 없으면 화면에
   // 안 나타난다(에디터 배경 탭·시계 팝업 조작 직후). 'always' 루프에선 no-op.
   // 시계 구독은 solar 씬에서만 — manual 씬은 시계를 읽지 않는다.
   useEffect(() => {
@@ -769,22 +768,19 @@ export function SceneLighting({
       );
       // 초 단위로 자른다 — 태양은 1초에 0.004° 움직여 그 안의 차이는 없다.
       const timeKey = Math.floor(timeMs / 1000);
-      const yardLights = useSceneClockStore.getState().yardLights;
       if (
         solar.timeKey !== timeKey ||
         solar.geo !== solarGeo ||
-        solar.yardLights !== yardLights ||
         solar.trueNorth !== trueNorth
       ) {
         solar.timeKey = timeKey;
         solar.geo = solarGeo;
-        solar.yardLights = yardLights;
         solar.trueNorth = trueNorth;
         const snapshot = resolveSolarLighting(
           timeMs,
           solarGeo,
           SCENE_LIGHTING_BASE,
-          { yardLights, trueNorth },
+          { trueNorth },
         );
         if (snapshot) {
           solar.snapshot = snapshot;

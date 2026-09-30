@@ -13,8 +13,8 @@ import { clampToRange } from '@crane/core/lib/utils';
  * 조명(마스트 투광등)이 켜져 있어 장비가 환하다. 그래서 해가 지면
  * 따뜻한 백색 투광등이 고정 방향(마스트, YARD_LIGHT_AZIMUTH/ELEVATION)에서
  * 켜지고 환경광도 난색으로 오른다. 하늘(EXR 배경)만 어두워져 "밤인데
- * 조명이 켜진 야드" 로 읽힌다. 작업등은 옵션(useSceneClockStore.yardLights)
- * 이라 끄면 달·별빛 수준의 어두운 밤(NIGHT_*_DARK)이 된다.
+ * 조명이 켜진 야드" 로 읽힌다. 작업등은 끌 수 없다 — 관제 화면은 밤에도
+ * 장비가 보여야 한다. NIGHT_*_DARK 는 점등 전 박명의 바닥값이다.
  *
  * 방향광은 하나뿐이다(shadow map 하나). 박명에 태양이 지고 작업등이 켜지는
  * 동안은 두 세기의 **합**을 세기로, 세기 비율(keyYardBlend)로 방향·색을
@@ -62,11 +62,6 @@ export const SCENE_LIGHTING_BASE: SkyLightingBase = {
  */
 export const SCENE_ENVIRONMENT_INTENSITY = 0.18;
 
-export interface SkyLightingOptions {
-  /** 야간 작업등(투광등) 점등 여부. 기본 true. */
-  yardLights?: boolean;
-}
-
 export interface SkyLighting {
   /** 0(밤)~1(낮). 환경광·UI 아이콘 판정에 쓴다. */
   daylight: number;
@@ -79,7 +74,7 @@ export interface SkyLighting {
    * 태양 하이라이트가 읽는다(keyColor 는 밤에 작업등 색이 섞여 부적합).
    */
   sunColor: RgbTuple;
-  /** 야간 작업등이 방향광에 기여하는 세기(점등 곡선 × 옵션). */
+  /** 야간 작업등이 방향광에 기여하는 세기(점등 곡선). */
   yardIntensity: number;
   /** 방향광 세기 = sunIntensity + yardIntensity. */
   keyIntensity: number;
@@ -166,7 +161,7 @@ export const FILL_LIGHT_AZIMUTH = 20;
 export const FILL_LIGHT_ELEVATION = 50;
 /** 보조 투광등 세기 = 주 작업등 세기 × 이 비율. */
 export const FILL_LIGHT_INTENSITY_RATIO = 0.5;
-/** 밤 반구광 세기 — 작업등 켜짐/꺼짐. */
+/** 밤 반구광 세기 — 작업등 점등 후/점등 전. */
 export const NIGHT_HEMISPHERE_INTENSITY_LIT = 0.55;
 export const NIGHT_HEMISPHERE_INTENSITY_DARK = 0.12;
 /** 밤 반구광 색 — 위는 하늘 남색, 아래는 조명 받은 바닥의 난색 반사. */
@@ -192,7 +187,7 @@ export const NIGHT_SKY_INTENSITY = 0.12;
 /** 작업등 켜진 밤의 환경광 — 난색, 낮과 거의 같은 세기(그림자 면이 죽지 않게). */
 export const NIGHT_AMBIENT_INTENSITY_LIT = 0.85;
 export const NIGHT_AMBIENT_COLOR_LIT: RgbTuple = [0.96, 0.92, 0.85];
-/** 작업등 끈 밤의 환경광 — 달·별빛 수준의 푸른 바닥값(형체만 남는다). */
+/** 작업등 점등 전 박명의 환경광 — 달·별빛 수준의 푸른 바닥값. */
 export const NIGHT_AMBIENT_INTENSITY_DARK = 0.28;
 export const NIGHT_AMBIENT_COLOR_DARK: RgbTuple = [0.55, 0.66, 0.95];
 /** 낮 환경광 색 — 기존 화면과 같은 무채색. */
@@ -239,14 +234,12 @@ function sanitizeElevation(value: number): number {
 export function resolveSkyLighting(
   input: SkyLightingInput,
   base: SkyLightingBase,
-  options: SkyLightingOptions = {},
 ): SkyLighting {
   const sunEl = sanitizeElevation(input.sunElevation);
   const moonEl = sanitizeElevation(input.moonElevation);
   const moonFraction = Number.isFinite(input.moonFraction)
     ? clampToRange(input.moonFraction, 0, 1)
     : 0;
-  const yardLights = options.yardLights !== false;
 
   const daylight = smoothstep(DAYLIGHT_FADE[0], DAYLIGHT_FADE[1], sunEl);
   const skyIntensity =
@@ -266,14 +259,12 @@ export function resolveSkyLighting(
   );
 
   // 작업등 — 해가 지평선에 가까워지면 켜지기 시작한다(점등 곡선).
-  const yardOn = yardLights
-    ? 1 - smoothstep(YARD_LIGHT_FADE[0], YARD_LIGHT_FADE[1], sunEl)
-    : 0;
+  const yardOn = 1 - smoothstep(YARD_LIGHT_FADE[0], YARD_LIGHT_FADE[1], sunEl);
   const yardIntensity = base.sunIntensity * YARD_LIGHT_INTENSITY_RATIO * yardOn;
 
   const keyIntensity = sunIntensity + yardIntensity;
-  // 세기 가중 혼합. 둘 다 0(작업등 끈 깊은 밤)이면 방향은 마스트 쪽(1)로
-  // 두어 그림자 방향이 태양 쪽으로 되돌아가지 않게 한다.
+  // 세기 가중 혼합. 점등 구간이 태양 페이드 구간과 겹쳐 합이 0 이 되는 건
+  // 기준 세기가 0 일 때뿐이다 — 그때는 해가 졌으면 마스트 쪽(1)으로 둔다.
   const keyYardBlend =
     keyIntensity > 0 ? yardIntensity / keyIntensity : sunFactor > 0 ? 0 : 1;
   const keyColor = lerpRgb(sunColor, YARD_LIGHT_COLOR, keyYardBlend);

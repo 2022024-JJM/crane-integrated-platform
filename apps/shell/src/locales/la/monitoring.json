@@ -325,8 +325,7 @@
     "lightingSunMode": "Solis positio",
     "lightingSunModeManual": "Manu",
     "lightingSunModeSolar": "Horam loci sequere",
-    "lightingSunModeSolarHint": "Solem lunamque ex coordinatis loci et hora computat, ut dies noxque reddantur. Praevisio horae infra sessionis est nec servatur.",
-    "lightingSunModeNoGeo": "Haec regio coordinatas loci non habet, ergo sol manu tantum poni potest.",
+    "lightingSunModeNoGeo": "Haec scaena regionem non habet, ergo sol manu tantum poni potest.",
     "searchModels": "Exemplaria quaere",
     "searchObjects": "Objecta quaere",
     "multipleSelected": "{{count}} objecta selecta",
@@ -469,25 +468,22 @@
     "label": "Pyxis"
   },
   "sceneClock": {
-    "title": "Hora loci · Dies/Nox",
-    "live": "Vivum",
-    "manual": "Horam pone",
+    "live": "Hora praesens",
+    "manual": "Hora posita",
     "backToLive": "Ad nunc",
-    "yardLights": "Lumina nocturna",
+    "siteLocation": "Regio",
     "date": "Dies",
     "timeOfDay": "Hora",
     "sun": "Sol",
-    "moon": "Luna",
     "azimuth": "Az.",
     "elevation": "Alt.",
     "belowHorizon": "Sub horizonte",
-    "moonIllumination": "{{percent}}% illuminata",
     "sunrise": "Ortus",
     "sunset": "Occasus",
     "noon": "Meridies",
     "midnight": "Media nox",
+    "presets": "Horae celeres",
     "noEvent": "—",
-    "timeZone": "{{timeZone}}",
     "phase": {
       "day": "Dies",
       "dawn": "Aurora",
@@ -496,7 +492,7 @@
     },
     "replayHint": "Horam in quadro repetitionis servatam sequitur.",
     "manualOff": "Haec scaena solem fixum (manu) adhibet. In Editore scaenae › Fundo 'Horam loci sequere' accende, ut dies et nox hora mutentur.",
-    "noGeo": "Haec regio coordinatas loci non habet, ergo lumen horae subiectum non praesto est."
+    "noGeo": "Haec scaena regionem non habet, ergo lumen horae subiectum non praesto est."
   },
   "hud": {
     "siteTime": "Hora loci",

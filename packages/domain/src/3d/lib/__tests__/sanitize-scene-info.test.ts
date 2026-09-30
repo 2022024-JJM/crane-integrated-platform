@@ -424,6 +424,41 @@ describe('sanitizeSceneInfo — sea (3-상태, boolean 만 유지)', () => {
   });
 });
 
+describe('sanitizeSceneInfo — siteLocation (목록의 지역만 유지)', () => {
+  it('목록의 지역은 그대로 유지한다', () => {
+    expect(
+      sanitizeSceneInfo(scene({ siteLocation: 'asia-seoul' })).siteLocation,
+    ).toBe('asia-seoul');
+    expect(
+      sanitizeSceneInfo(scene({ siteLocation: 'america-new-york' }))
+        .siteLocation,
+    ).toBe('america-new-york');
+  });
+
+  it('미지정이면 필드 자체가 빠진다 (region 기본 지역으로 판정)', () => {
+    expect(sanitizeSceneInfo(scene())).not.toHaveProperty('siteLocation');
+  });
+
+  it('목록에 없는 문자열·IANA 이름·비문자열은 필드를 생략한다', () => {
+    for (const siteLocation of [
+      'europe-paris',
+      'Asia/Seoul',
+      'ASIA-SEOUL',
+      '',
+      'toString',
+      1,
+      null,
+      true,
+      ['asia-seoul'],
+    ]) {
+      expect(
+        sanitizeSceneInfo(scene({ siteLocation })),
+        String(siteLocation),
+      ).not.toHaveProperty('siteLocation');
+    }
+  });
+});
+
 describe('sanitizeSceneInfo — trueNorth (기본값이면 필드 생략)', () => {
   it('범위 안의 값은 그대로 유지한다', () => {
     expect(sanitizeSceneInfo(scene({ trueNorth: 50.6 })).trueNorth).toBe(50.6);

@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import {
   computeSunDayEvents,
-  getSceneSiteGeo,
+  resolveSceneSiteLocation,
+  SCENE_SITE_GEO_BY_LOCATION,
   type SceneSiteGeo,
+  type SceneSiteLocation,
   type SunDayEvents,
 } from '@crane/domain/3d';
 import { parseReplayTimestamp } from '@crane/domain/monitoring';
@@ -24,6 +26,8 @@ import { useSceneClockStore } from './use-scene-clock-store';
 export const SCENE_SUN_UI_TICK_MS = 20_000;
 
 export interface SceneSunUiState {
+  /** 씬 지역(시간 기준) — 패널이 이름을 보여 준다. */
+  location: SceneSiteLocation;
   geo: SceneSiteGeo;
   /** 표시 기준 시각(UTC epoch ms). */
   timeMs: number;
@@ -40,17 +44,20 @@ export interface SceneSunUiState {
  * UI(독 팝업·에디터 배경 탭)가 보는 태양 상태. 매 프레임 조명이 쓰는
  * 값과 같은 함수(resolveSolarLighting)를 쓰되, 갱신은 React 상태 기준이다
  * — live 는 SCENE_SUN_UI_TICK_MS 마다, manual 은 값이 바뀔 때, replay 는
- * 프레임이 바뀔 때. 현장 위치가 없는 region 은 null.
+ * 프레임이 바뀔 때. 현장 위치는 씬 지역(명시값, 없으면 region 기본
+ * 지역)이고 지역이 정해지지 않으면 null.
  */
 export function useSceneSunState(
   regionId: string,
+  /** 씬의 `siteLocation`(미지정이면 undefined). */
+  siteLocation: SceneSiteLocation | undefined,
   source: SceneTimeSource = 'clock',
 ): SceneSunUiState | null {
-  const geo = getSceneSiteGeo(regionId);
+  const location = resolveSceneSiteLocation(regionId, { siteLocation });
+  const geo = location ? SCENE_SITE_GEO_BY_LOCATION[location] : null;
   const mode = useSceneClockStore((s) => s.mode);
   const manualTimeMs = useSceneClockStore((s) => s.manualTimeMs);
   const liveNowMs = useSceneClockStore((s) => s.liveNowMs);
-  const yardLights = useSceneClockStore((s) => s.yardLights);
   const tickLive = useSceneClockStore((s) => s.tickLive);
   const replayTimestamp = useReplayPlayerStore((s) =>
     source === 'replay' ? (s.frames[s.frameIndex]?.timestamp ?? null) : null,
@@ -66,7 +73,7 @@ export function useSceneSunState(
   }, [mode, geo, tickLive]);
 
   return useMemo(() => {
-    if (!geo) return null;
+    if (!location || !geo) return null;
     const replayMs =
       replayTimestamp !== null
         ? parseReplayTimestamp(replayTimestamp, geo.timeZone)
@@ -74,12 +81,11 @@ export function useSceneSunState(
     const timeOrigin: SceneSunUiState['timeOrigin'] =
       replayMs !== null ? 'replay' : mode;
     const timeMs = replayMs ?? (mode === 'manual' ? manualTimeMs : liveNowMs);
-    const snapshot = resolveSolarLighting(timeMs, geo, SCENE_LIGHTING_BASE, {
-      yardLights,
-    });
+    const snapshot = resolveSolarLighting(timeMs, geo, SCENE_LIGHTING_BASE);
     if (!snapshot) return null;
     const dayStart = startOfZonedDay(timeMs, geo.timeZone);
     return {
+      location,
       geo,
       timeMs,
       parts: getZonedTimeParts(timeMs, geo.timeZone),
@@ -87,5 +93,5 @@ export function useSceneSunState(
       events: computeSunDayEvents(dayStart, geo.latitude, geo.longitude),
       timeOrigin,
     };
-  }, [geo, mode, manualTimeMs, liveNowMs, replayTimestamp, yardLights]);
+  }, [location, geo, mode, manualTimeMs, liveNowMs, replayTimestamp]);
 }

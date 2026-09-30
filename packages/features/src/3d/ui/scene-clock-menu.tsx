@@ -50,7 +50,7 @@ export function SceneClockMenu({
 }: SceneClockMenuProps) {
   const { t } = useTranslation();
   const solarEnabled = sceneInfo?.lighting?.sunMode === 'solar';
-  const state = useSceneSunState(regionId, source);
+  const state = useSceneSunState(regionId, sceneInfo?.siteLocation, source);
   const mode = useSceneClockStore((s) => s.mode);
   const pinned = mode === 'manual' && source !== 'replay' && solarEnabled;
   const Icon = solarEnabled && state ? PHASE_ICON[state.snapshot.phase] : Clock;
@@ -87,6 +87,7 @@ export function SceneClockMenu({
       <PopoverPopup side="left" align="start" className="w-72 p-3">
         <SceneClockPanel
           regionId={regionId}
+          siteLocation={sceneInfo?.siteLocation}
           source={source}
           solarEnabled={solarEnabled}
         />

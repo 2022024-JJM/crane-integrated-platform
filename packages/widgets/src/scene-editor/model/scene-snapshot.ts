@@ -340,6 +340,9 @@ export function isSceneInfoEqual(
   // 바다 표시도 3-상태(undefined=레거시 규칙 / boolean=명시)라 !== 로 구분한다.
   // 빠지면 스위치 토글이 동등 단락에 먹혀 dirty 가 서지 않는다.
   if (a.sea !== b.sea) return false;
+  // 지역도 미지정(region 기본 지역)과 명시값을 구분한다 — 명시로 고른 순간이
+  // 저장 대상이다(setSiteLocation).
+  if (a.siteLocation !== b.siteLocation) return false;
   // 진북은 필드 없음 = 기본값(0)이라 기본값으로 정규화해 비교한다.
   if (
     (a.trueNorth ?? SCENE_TRUE_NORTH_DEFAULT) !==

@@ -6,18 +6,30 @@ import {
   SCENE_SUN_ELEVATION_DEFAULT,
   SCENE_SUN_ELEVATION_MIN,
   SCENE_SUN_MODE_DEFAULT,
-  getSceneSiteGeo,
+  resolveSceneSiteLocation,
   sceneEnvironmentCatalog,
 } from '@crane/domain/3d';
-import type { SavedLightingInfo, SceneSunMode } from '@crane/domain/3d';
+import type {
+  SavedLightingInfo,
+  SceneSiteLocation,
+  SceneSunMode,
+} from '@crane/domain/3d';
 import { SceneClockPanel } from '@crane/features/3d';
 import { clampToRange, cn } from '@crane/core/lib/utils';
 import { Switch } from '@crane/ui/atoms/switch';
 import { ToggleGroup, ToggleGroupItem } from '@crane/ui/molecules/toggle-group';
 
 interface PaletteEnvironmentSectionProps {
-  /** solar 모드(현장 시각 연동)의 위치·시간대를 찾는 키. */
+  /** 씬이 지역을 지정하지 않았을 때 region 기본 지역을 찾는 키. */
   regionId: string;
+  /**
+   * 씬의 지역(시간 기준, `SavedSceneInfo.siteLocation`) — 미지정이면
+   * undefined 이고 드롭다운은 region 기본 지역을 보인다. 드롭다운은 현장
+   * 시각 연동일 때 시각 패널의 날짜 위에 있다. 현장 시각·낮/밤·현장 날씨가
+   * 이 지역을 따르고, 모니터링은 읽기만 한다.
+   */
+  siteLocation: SceneSiteLocation | undefined;
+  onSiteLocationChange: (location: SceneSiteLocation) => void;
   /**
    * 현재 씬의 배경 선택. 3-상태다 —
    * 문자열=카탈로그 id, null=배경 없음(명시), undefined=미지정(region 기본).
@@ -27,7 +39,7 @@ interface PaletteEnvironmentSectionProps {
   /** 씬 조명 설정. 필드 없음 = 기본값(그림자 Off, 태양 남쪽 기본 고도). */
   lighting: SavedLightingInfo | undefined;
   onShadowsChange: (shadows: boolean) => void;
-  /** 태양 위치 방식(수동 / 현장 시각 연동) — 씬 데이터, 히스토리에 남는다. */
+  /** 태양 위치(수동 / 현장 시각 연동) — 씬 데이터, 히스토리에 남는다. */
   onSunModeChange: (mode: SceneSunMode) => void;
   onSunAngleChange: (angles: { azimuth: number; elevation: number }) => void;
   /**
@@ -39,7 +51,7 @@ interface PaletteEnvironmentSectionProps {
 }
 
 /**
- * 배경(EXR 파노라마) 선택 + 조명(그림자·태양 위치) — Project 패널의
+ * 배경(EXR 파노라마) 선택 + 조명(그림자·태양 위치·지역) — Project 패널의
  * Background 카테고리.
  *
  * 목록은 카탈로그(sceneEnvironmentCatalog)에서 온다. 웹 최적화본만 등록되어
@@ -53,6 +65,8 @@ interface PaletteEnvironmentSectionProps {
 export const PaletteEnvironmentSection = memo(
   function PaletteEnvironmentSection({
     regionId,
+    siteLocation,
+    onSiteLocationChange,
     environmentId,
     onChange,
     lighting,
@@ -66,9 +80,12 @@ export const PaletteEnvironmentSection = memo(
     const isUnset = environmentId === undefined;
     const shadowsEnabled = lighting?.shadows === true;
     const sunMode = lighting?.sunMode ?? SCENE_SUN_MODE_DEFAULT;
-    // 현장 위치가 없는 region 은 solar 를 고를 수 없다 — 런타임이 어차피
+    const resolvedLocation = resolveSceneSiteLocation(regionId, {
+      siteLocation,
+    });
+    // 지역이 정해지지 않으면 solar 를 고를 수 없다 — 런타임이 어차피
     // manual 로 폴백하므로 고르게 두면 "켰는데 아무 변화가 없는" 상태가 된다.
-    const hasSiteGeo = getSceneSiteGeo(regionId) !== null;
+    const hasSiteGeo = resolvedLocation !== null;
     const isSolar = sunMode === 'solar' && hasSiteGeo;
     const sunAzimuth = lighting?.sunAzimuth ?? SCENE_SUN_AZIMUTH_DEFAULT;
     const sunElevation = lighting?.sunElevation ?? SCENE_SUN_ELEVATION_DEFAULT;
@@ -131,7 +148,7 @@ export const PaletteEnvironmentSection = memo(
             />
           </div>
 
-          {/* 태양 위치 방식 — 수동(패드) / 현장 시각 연동(낮·밤 자동). */}
+          {/* 태양 위치 — 수동(패드) / 현장 시각 연동(낮·밤 자동). */}
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground text-[11px]">
               {t('monitoring:editor.lightingSunMode')}
@@ -167,13 +184,13 @@ export const PaletteEnvironmentSection = memo(
           ) : null}
 
           {isSolar ? (
-            <>
-              <p className="text-muted-foreground text-[10px] leading-snug">
-                {t('monitoring:editor.lightingSunModeSolarHint')}
-              </p>
-              {/* 시각 미리보기 — 모니터링 독 팝업과 같은 패널·같은 전역 시계. */}
-              <SceneClockPanel regionId={regionId} solarEnabled />
-            </>
+            // 시각 미리보기 — 모니터링 독 팝업과 같은 패널·같은 전역 시계.
+            <SceneClockPanel
+              regionId={regionId}
+              siteLocation={siteLocation}
+              onSiteLocationChange={onSiteLocationChange}
+              solarEnabled
+            />
           ) : (
             // 그림자 Off여도 활성 — 태양 위치는 그림자와 무관하게 조명
             // 방향(셰이딩)에 항상 반영된다(scene-render-preset.tsx).

@@ -91,6 +91,32 @@ describe('isSceneInfoEqual — sea 3-상태', () => {
   });
 });
 
+describe('isSceneInfoEqual — siteLocation', () => {
+  it('미지정(region 기본 지역)과 명시값은 다른 상태다', () => {
+    expect(
+      isSceneInfoEqual(scene(), scene({ siteLocation: 'asia-seoul' })),
+    ).toBe(false);
+  });
+
+  it('지역이 다르면 다른 상태다 (빠지면 드롭다운 편집이 dirty 를 세우지 못한다)', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ siteLocation: 'asia-seoul' }),
+        scene({ siteLocation: 'america-new-york' }),
+      ),
+    ).toBe(false);
+  });
+
+  it('같은 명시값은 같다', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ siteLocation: 'america-new-york' }),
+        scene({ siteLocation: 'america-new-york' }),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('isSceneInfoEqual — trueNorth', () => {
   it('값이 다르면 다른 상태다 (빠지면 진북 편집이 dirty 를 세우지 못한다)', () => {
     expect(
@@ -449,6 +475,15 @@ describe('createSceneSnapshot', () => {
     );
     const set = JSON.parse(createSceneSnapshot(scene({ trueNorth: 50.6 }))!);
     expect(set).toHaveProperty('trueNorth', 50.6);
+  });
+
+  it('siteLocation 은 명시하면 직렬화에 남고, 미지정은 빠진다', () => {
+    const set = JSON.parse(
+      createSceneSnapshot(scene({ siteLocation: 'america-new-york' }))!,
+    );
+    expect(set).toHaveProperty('siteLocation', 'america-new-york');
+    const unset = JSON.parse(createSceneSnapshot(scene())!);
+    expect(unset).not.toHaveProperty('siteLocation');
   });
 
   it('sea:false 는 직렬화에 남고, 미지정은 빠진다 (false 가 기본값 생략이 아니다)', () => {

@@ -5,6 +5,7 @@ import {
   type SavedLightingInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
+  type SceneSiteLocation,
 } from '@crane/domain/3d';
 import {
   makeMeshId,
@@ -127,6 +128,7 @@ interface UseSceneEditorSessionResult {
   setEnvironmentId: (environmentId: string | null) => void;
   setSeaVisible: (visible: boolean) => void;
   setTrueNorth: (degrees: number) => void;
+  setSiteLocation: (location: SceneSiteLocation) => void;
   setLighting: (
     patch: Partial<SavedLightingInfo>,
     options?: { recordHistory?: boolean },
@@ -378,6 +380,7 @@ export function useSceneEditorSession({
     setEnvironmentId: manipulation.setEnvironmentId,
     setSeaVisible: manipulation.setSeaVisible,
     setTrueNorth: manipulation.setTrueNorth,
+    setSiteLocation: manipulation.setSiteLocation,
     setLighting: manipulation.setLighting,
     addSceneView: manipulation.addSceneView,
     renameSceneView: manipulation.renameSceneView,

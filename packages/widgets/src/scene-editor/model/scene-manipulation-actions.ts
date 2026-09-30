@@ -7,6 +7,7 @@ import {
   createSceneModel,
   createSceneRuler,
   createSceneText,
+  isSceneSiteLocation,
   normalizeDegrees,
   resolveTrueNorth,
   type RulerPlacement,
@@ -15,6 +16,7 @@ import {
   type SavedSceneInfo,
   type SceneMapCatalogItem,
   type SceneModelCatalogItem,
+  type SceneSiteLocation,
 } from '@crane/domain/3d';
 import { createId } from '@crane/core/lib/create-id';
 import type { MutableRefObject, SetStateAction } from 'react';
@@ -295,6 +297,21 @@ export function createSceneManipulationActions({
   };
 
   /**
+   * 지역(시간 기준) 설정. 항상 명시값을 쓴다 — 미지정 씬은 region 기본
+   * 지역을 보여 주다가 드롭다운에서 고른 순간 명시 상태가 된다(바다 표시와
+   * 같은 규칙). 목록에 없는 값은 무시하고, 같은 명시값이면 참조를 유지해
+   * 히스토리에 쌓이지 않는다.
+   */
+  const setSiteLocation = (location: SceneSiteLocation) => {
+    if (!isSceneSiteLocation(location)) return;
+    updateScene((prev) => {
+      if (!prev) return prev;
+      if (prev.siteLocation === location) return prev;
+      return { ...prev, siteLocation: location };
+    });
+  };
+
+  /**
    * 진북 방향(도) 설정. [0,360) 로 랩하고 기본값(0)이면 필드를 지운다 —
    * sanitize 와 같은 "기본값이면 생략" 규칙. 비유한 입력과 같은 값(랩 후)
    * 재설정은 참조를 유지해 히스토리에 쌓이지 않는다.
@@ -542,6 +559,7 @@ export function createSceneManipulationActions({
     setEnvironmentId,
     setSeaVisible,
     setTrueNorth,
+    setSiteLocation,
     setLighting,
     addSceneView,
     renameSceneView,

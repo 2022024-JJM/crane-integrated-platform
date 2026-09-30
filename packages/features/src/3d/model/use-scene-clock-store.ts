@@ -16,15 +16,9 @@ interface SceneClockState {
    * 만큼만 정확하다. 매 프레임 조명은 `readSceneClockMs` 로 실시계를 읽는다.
    */
   liveNowMs: number;
-  /**
-   * 야간 작업등(투광등) 점등. 기본 true — 관제 화면은 밤에도 장비가 보여야
-   * 한다. 끄면 달·별빛 수준의 어두운 밤이 된다(sky-lighting 의 NIGHT_*_DARK).
-   */
-  yardLights: boolean;
   setLive: () => void;
   /** 시각을 고정한다(manual 전환). 유한하지 않은 값은 무시. */
   setManualTime: (timeMs: number) => void;
-  setYardLights: (on: boolean) => void;
   tickLive: () => void;
 }
 
@@ -38,7 +32,6 @@ export const useSceneClockStore = create<SceneClockState>()((set) => ({
   mode: 'live',
   manualTimeMs: Date.now(),
   liveNowMs: Date.now(),
-  yardLights: true,
   setLive: () =>
     set((state) =>
       state.mode === 'live' ? state : { mode: 'live', liveNowMs: Date.now() },
@@ -51,8 +44,6 @@ export const useSceneClockStore = create<SceneClockState>()((set) => ({
         : { mode: 'manual', manualTimeMs: timeMs },
     );
   },
-  setYardLights: (on) =>
-    set((state) => (state.yardLights === on ? state : { yardLights: on })),
   tickLive: () => set({ liveNowMs: Date.now() }),
 }));
 

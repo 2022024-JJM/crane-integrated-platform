@@ -67,7 +67,10 @@ interface SceneStatusHudProps {
   runtimeStatuses: RuntimeStatusRecord;
   /** 없으면 알람 칸을 숨긴다 — 알람을 장면에 그리지 않는 화면. */
   alarmsByCraneId?: Record<string, AlarmSeverity>;
-  /** 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. */
+  /**
+   * 영역 칸은 씬에 영역이 하나라도 있을 때만 보인다. 현장 시각·풍속은 씬
+   * 지역(`siteLocation`)을 따른다.
+   */
   sceneInfo?: SavedSceneInfo | null;
   /** 값 출처 — 연결 칸의 문구·색(시뮬레이션 재생 / WebSocket 연결 / 3D 플레이). */
   mode?: SceneConnectionMode;
@@ -112,8 +115,8 @@ export function SceneStatusHud({
     connection.state === 'held' ||
     connection.state === 'simulationPaused' ||
     connection.state === 'play3dPaused';
-  const sun = useSceneSunState(regionId, timeSource);
-  const weather = useSceneWeather(regionId);
+  const sun = useSceneSunState(regionId, sceneInfo?.siteLocation, timeSource);
+  const weather = useSceneWeather(regionId, sceneInfo?.siteLocation);
   const counts = countRuntimeStatuses(runtimeStatuses);
   const clock = sun?.parts
     ? formatClockHm(sun.parts.hour, sun.parts.minute)

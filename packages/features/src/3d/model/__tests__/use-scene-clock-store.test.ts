@@ -10,7 +10,6 @@ beforeEach(() => {
     mode: 'live',
     manualTimeMs: Date.now(),
     liveNowMs: Date.now(),
-    yardLights: true,
   });
 });
 
@@ -66,16 +65,6 @@ describe('useSceneClockStore', () => {
     const before = store.getState();
     store.getState().setLive();
     expect(store.getState()).toBe(before);
-  });
-
-  it('야간 작업등은 기본 켜짐이고 같은 값 재설정은 참조를 유지한다', () => {
-    expect(store.getState().yardLights).toBe(true);
-    const before = store.getState();
-    store.getState().setYardLights(true);
-    expect(store.getState()).toBe(before);
-    store.getState().setYardLights(false);
-    expect(store.getState().yardLights).toBe(false);
-    expect(store.getState().mode).toBe('live');
   });
 
   it('tickLive 는 liveNowMs 만 실시계로 갱신한다', () => {

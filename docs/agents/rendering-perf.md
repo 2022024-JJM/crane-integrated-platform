@@ -13,9 +13,9 @@
 | 렌더 프리셋·GL 옵션·DPR·조명 적용 | `packages/features/src/3d/ui/scene-render-preset.tsx`(`SCENE_GL_OPTIONS`, `SCENE_DEFAULT_DPR`, `SceneLighting`) |
 | 낮 기준 조명값·밤 작업등·하늘 곡선 | `packages/features/src/3d/lib/sky-lighting.ts`(`SCENE_LIGHTING_BASE`, `SCENE_ENVIRONMENT_INTENSITY`, `YARD_LIGHT_*`, `FILL_LIGHT_*`, `NIGHT_*`) |
 | 시각+위치 → 조명 스냅샷 합성 | `packages/features/src/3d/lib/solar-lighting.ts`(`KEY_LIGHT_ELEVATION_MIN`, `CELESTIAL_ANGLE_STEP`) |
-| 천문 계산 / 시간대 변환 / 현장 위경도 | `packages/domain/src/3d/lib/solar-position.ts`, `packages/core/src/lib/time-zone.ts`, `packages/domain/src/3d/model/scene-site-geo.ts` |
+| 천문 계산 / 시간대 변환 / 씬 지역 → 현장 위경도·시간대 | `packages/domain/src/3d/lib/solar-position.ts`, `packages/core/src/lib/time-zone.ts`, `packages/domain/src/3d/model/scene-site-geo.ts`(`resolveSceneSiteGeo`) |
 | 씬 시계·태양 UI 상태 | `packages/features/src/3d/model/use-scene-clock-store.ts`, `model/use-scene-sun-state.ts`, `model/scene-time-source.ts` |
-| 씬 시계 UI | `packages/features/src/3d/ui/scene-clock-panel.tsx`, `ui/scene-clock-menu.tsx`(모니터링 독), `packages/widgets/src/3d/ui/palette-environment-section.tsx`(에디터 배경 탭) |
+| 씬 시계 UI | `packages/features/src/3d/ui/scene-clock-panel.tsx`, `lib/scene-clock-presets.ts`, `ui/scene-clock-menu.tsx`(모니터링 독), `packages/widgets/src/3d/ui/palette-environment-section.tsx`(에디터 배경 탭) |
 | shadow map 온디맨드 무효화 | `packages/domain/src/3d/lib/shadow-invalidation.ts`(`invalidateShadows`) |
 | 바다(미러 반사)·배경 환경 | 포크 `packages/features/src/3d/lib/ocean-water.ts`(`OceanWater` — three r183 `examples/jsm/objects/Water.js` 포크, MIT 헤더), 컴포넌트 `ui/scene-water.tsx`(`SceneWater`), 배경 `ui/scene-environment.tsx`(`SceneEnvironment`), 태양 유니폼 `lib/water-sun-uniforms.ts`(`resolveWaterSunUniforms`), 반사 제외 `lib/water-reflection.ts`·`model/scene-reflection-exclusions.ts`(`excludeFromReflection`), 표시 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`). 노멀맵 `apps/shell/public/textures/waternormals.jpg` 는 three.js r183 examples 의 파일이다(MIT) |
 | 불투명 씬 스텐실 표식 | `packages/domain/src/3d/lib/scene-stencil.ts`(`markSceneOpaqueStencil`), 켜는 곳 `packages/domain/src/3d/ui/model-mesh.tsx`(`useClonedModel`) |
@@ -79,17 +79,17 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 
 씬 설정 `lighting.sunMode: 'solar'`(`SceneSunMode`, 기본 `manual` = 수동 방위·고도 패드, 필드 생략). `'solar'` 만 저장하고 수동 각도는 보존돼 되돌리면 복원된다 — sanitize·에디터 dirty·`setLighting` 모두 같은 규칙.
 
-- 현장 위치·시간대는 `scene-site-geo.ts`(region → 위경도·IANA tz). 씬 파일이 등록된 region 은 전부 있어야 한다 — 테스트가 강제. 미등록 region 은 solar 설정이어도 런타임이 manual 로 폴백하고 에디터 토글이 비활성.
+- 현장 위치·시간대는 씬 지역(`SavedSceneInfo.siteLocation` — 에디터 배경 탭 시각 패널의 드롭다운, 미지정이면 region 기본 지역)으로 `scene-site-geo.ts` 의 `resolveSceneSiteGeo` 하나가 정한다. 지역 하나가 IANA 시간대와 그 시간대에 있는 조선소의 대표 좌표를 함께 갖는다(시간대만 바꾸면 벽시계와 하늘이 어긋난다). 표시 이름은 언어와 무관하게 시간대 이름이다(`formatSceneSiteLocation`). 씬 파일이 등록된 region 은 전부 기본 지역이 있어야 한다 — 테스트가 강제. 지역이 정해지지 않은 씬은 solar 설정이어도 manual 로 폴백하고 에디터 토글이 비활성. HUD 현장 시각·풍속도 같은 지역을 따른다.
 - 천문은 `solar-position.ts`(태양·달 방위/고도·달 위상·일출/일몰, Meeus 축약식, 의존성 0). 시간대 변환은 `time-zone.ts`(Intl 기반, 라이브러리 없음 — 폐쇄망).
 - 조명 곡선은 `sky-lighting.ts`: 고도 → 방향광 세기·색, 환경광, 하늘 배율. 낮 기준값 `SCENE_LIGHTING_BASE` 가 `SCENE_LIGHTING` 의 단일 소스, 환경맵 세기는 `SCENE_ENVIRONMENT_INTENSITY` 하나.
 - **밤은 야간 작업등이 밝힌다.** 해가 지면(`YARD_LIGHT_FADE`) 따뜻한 백색 투광등이 고정 마스트 방향(`YARD_LIGHT_AZIMUTH`/`YARD_LIGHT_ELEVATION`)에서 `YARD_LIGHT_INTENSITY_RATIO` 세기로 켜지고 환경광도 난색으로 오른다(`NIGHT_AMBIENT_INTENSITY_LIT`). 반대편(`FILL_LIGHT_*`)에 그림자 없는 보조 투광등과 위 남색·아래 난색의 반구광(`NIGHT_HEMISPHERE_INTENSITY_LIT`)이 더해져 그림자 면이 새까맣지 않다. 하늘(EXR)은 `NIGHT_SKY_INTENSITY` 로 어두워지고 그 위에 남색 틴트 돔(`NIGHT_SKY_TINT_*`, 카메라 추종 BackSide 구, EXR 있을 때만)이 덮인다. 밤 전용 요소는 낮에 전부 0 이라 한낮 화면은 수동 모드와 같다.
 - 방향광은 하나뿐이라 박명엔 태양·작업등 세기의 합을 세기로, 비율(`keyYardBlend`)로 방향·색을 섞어 그림자가 마스트 방향으로 돈다.
-- 작업등은 `useSceneClockStore.yardLights`(세션, 기본 ON, 팝업 스위치)로 끌 수 있고 끄면 달·별빛 수준의 푸른 바닥값 `NIGHT_*_DARK`. 달은 표식·위상 표시용.
+- 작업등은 항상 켜진다(끄는 옵션이 없다). `NIGHT_*_DARK` 는 점등 전 박명의 바닥값이다. 달은 하늘 표식·위상 아이콘용이고 시계 패널에는 나오지 않는다.
 - **천체 방위는 지리 방위다.** 월드 방향으로 바꿀 때 씬 진북(`SavedSceneInfo.trueNorth`, `resolveTrueNorth`)만큼 돌린다 — `bearingToWorldAzimuth`(`packages/domain/src/3d/lib/true-north.ts`). 방향광의 태양 성분(`resolveSolarLighting` 의 `trueNorth` 옵션)과 하늘의 태양·달 표식·바다 태양이 돌고, 작업등·보조 투광등 방향과 수동 태양 각도는 월드 기준 연출값이라 돌리지 않는다. 스냅샷의 `sun`·`moon` 방위는 지리 방위 그대로(시계 패널 표시), `keyAzimuth` 는 월드 방위다. 나침반(`docs/agents/monitoring-ui.md`)과 같은 북쪽이다.
 - 합성은 `solar-lighting.ts`: 시각+위치(+옵션) → 스냅샷. 방향광 고도 하한 `KEY_LIGHT_ELEVATION_MIN`, 방향은 `CELESTIAL_ANGLE_STEP` 격자로 양자화 — 정지 화면에서 shadow map 이 매 프레임 다시 그려지지 않는 근거.
 - 적용은 `scene-render-preset.tsx` 의 `SceneLighting`(`regionId`·`timeSource` prop — 세 캔버스가 넘긴다). useFrame 에서 초 단위로 재계산해 방향광·환경광·`scene.backgroundIntensity`·`environmentIntensity` 를 직접 쓴다. 바다는 미러 패스가 `backgroundIntensity` 가 적용된 EXR 을 그대로 반사해 배경과 같은 배율로 어두워지고, 태양 하이라이트는 `sceneLightingInfo.sunDirection/sunColor/sunIntensity` 를 따른다 — `SceneLighting` 이 manual·solar 두 모드 모두 `publishSunLight` 로 쓴다(solar 는 고도 클램프 없는 진짜 태양 방향·`sky.sunColor`·`sky.sunIntensity`, manual 은 수동 태양·백색·기준 세기). 하늘의 태양 글로우·달 표식은 카메라 추종 스프라이트로 EXR 배경이 있을 때만이며, 틴트 돔과 함께 `excludeFromReflection` 으로 바다 반사에서 뺀다. 모드를 떠나면 `resetToManualLook`. 태양 방향·색·세기(두 모드)는 `model/scene-lighting-info.ts` 의 mutable `sceneLightingInfo` 로 내보낸다(바다가 읽는다). 미니맵 캡처는 조명 상태를 읽지 않고 캡처 순간만 수동 모드 기준 조명(`applyCanonicalCaptureLighting`, 키 라이트는 `SCENE_KEY_LIGHT_NAME` 으로 찾는다)으로 바꾼다(`docs/agents/monitoring-ui.md`).
 - 시각 출처: 씬 시계 `use-scene-clock-store.ts`(세션 전역 live/manual — 에디터·모니터링 공유, 저장 안 됨) 또는 리플레이 프레임 타임스탬프(`scene-time-source.ts` + `@crane/domain/monitoring` 의 `parseReplayTimestamp` — `Z` 없는 값은 현장 벽시계로 해석).
-- UI 는 `scene-clock-panel.tsx`(위상·현장 시각·태양/달 위치·일출/일몰, 실시간/시각 지정 토글, 날짜·시각 슬라이더·프리셋) 하나를 모니터링 독 팝업 `scene-clock-menu.tsx`(아이콘이 위상을 따라 해·일출·일몰·달, 시각 고정 중엔 하늘색)와 에디터 배경 탭(`palette-environment-section.tsx`, 방식 토글 수동/현장 시각 연동)이 공유한다. UI 상태는 `use-scene-sun-state.ts`(live 는 주기 갱신 — 렌더 중 `Date.now()` 금지라 스토어 `liveNowMs` 캐시).
+- UI 는 `scene-clock-panel.tsx`(위상·현장 시각·날짜·지역 이름, 태양 방위·고도, 시각 출처 점 — 현재 시각 초록·지정 시각 주황 + 지정 중 "현재 시각으로" 버튼, 날짜·00~24시 눈금 시각 슬라이더·일출/정오/일몰/자정 아이콘 토글 — 시각은 툴팁, 선택 판정은 같은 분 기준 `lib/scene-clock-presets.ts`) 하나를 모니터링 독 팝업 `scene-clock-menu.tsx`(아이콘이 위상을 따라 해·일출·일몰·달, 시각 고정 중엔 하늘색)와 에디터 배경 탭(`palette-environment-section.tsx`, 태양 위치 토글 수동/현장 시각 연동)이 공유한다. 실시간/지정 전환 토글은 없다 — 날짜·슬라이더·프리셋을 건드리는 순간 지정 시각이 된다. 지역 드롭다운은 에디터가 `onSiteLocationChange` 를 넘길 때만 날짜 위에 보이고, 모니터링 패널은 날짜 옆 이름만 보인다. UI 상태는 `use-scene-sun-state.ts`(live 는 주기 갱신 — 렌더 중 `Date.now()` 금지라 스토어 `liveNowMs` 캐시).
 - 배포 씬은 실외 4개(dock-1·dock-2·goliath·philly-dock-2)가 `sunMode: 'solar'` + `shadows: true`, 실내 dock-in 은 수동.
 
 ### 분할 화면 렌더 (한 캔버스, 타일마다 카메라)
@@ -158,7 +158,7 @@ React 밖에서 씬을 바꾸는 코드는 Canvas 를 모르므로 `requestScene
 - **shadow 무효화 벽시계 스로틀(20Hz 상한)** — 렌더가 주사율로 도는 동안 대부분 프레임이 이전 자세의 depth map 이라 배속 ≥2 에서 자기 그림자 오차가 명멸했다. 임계 `SHADOW_STEP_EPS` 를 넘긴 프레임마다 무효화한다.
 - **`compileAsync` 프리워밍** — 폴링 중 캔버스 언마운트·머티리얼 dispose 에 three 내부가 던진다. 동기 `compile` 을 쓴다.
 - **PCFSoftShadowMap(Canvas `shadows` true·`'soft'`)** — r183 은 첫 shadow pass 에서 PCF 로 바꾸고 R3F 는 Canvas 재렌더마다 되돌린다. 그 사이 컴파일된 셰이더는 BASIC 변형(`sampler2D`)이 되어 그림자 받는 메시의 드로우를 WebGL 이 버린다(shadow pass 를 막고 찍는 미니맵 캡처에서 조선소 지도가 빠졌다). `sceneCanvasShadows` 의 `'percentage'` 만 쓴다.
-- **달빛만 두는 밤** — 관제용으로 너무 어두웠다. 야간 작업등이 기본.
+- **달빛만 두는 밤·작업등 끄기 스위치** — 관제용으로 너무 어두웠다. 야간 작업등은 항상 켠다.
 - **바다를 맨 먼저 그리기** — 화면 전체가 매 프레임 파도 계산이었다. 불투명 뒤 스텐실로 바꿨다.
 - **인스턴스별 유휴 콜백 체인(requestIdleCallback) 워밍업** — 로딩 직후엔 콜백이 타임아웃으로만 돌아 지오메트리 수십 개 씬이 수십 초 걸렸다. 고정 예산 큐로 통합.
 - **shadow 캐스터에 컨텍스트 지형 포함** — 약 180만 삼각형이 매 shadow pass 에 들어갔다.
