@@ -223,7 +223,13 @@ interface SceneObjectsEditCanvasProps {
   draggingModelCatalogItem: SceneModelCatalogItem | null;
   rootRef?: RefObject<HTMLDivElement | null>;
   cameraStateRef?: RefObject<SavedCameraInfo | null>;
+  /** 로드·저장 시점에 카메라를 놓을 구도 — 참조가 바뀔 때 한 번 적용한다. */
   initialCamera?: SavedCameraInfo | null;
+  /**
+   * "메인 뷰" 버튼(resetView)이 가는 구도(resolveSceneHomeCamera — 메인 뷰,
+   * 없으면 저장 시점 카메라). 없으면 initialCamera.
+   */
+  homeCamera?: SavedCameraInfo | null;
   onTransformVectorChange: (
     field: SceneTransformField,
     value: Vector3Tuple,
@@ -291,6 +297,7 @@ export function SceneObjectsEditCanvas({
   rootRef,
   cameraStateRef,
   initialCamera,
+  homeCamera,
   onTransformVectorChange,
   onTransformCommit,
   onAddModel,
@@ -847,8 +854,15 @@ export function SceneObjectsEditCanvas({
     fitToObjects(objects);
   }, [fitToObjects, sceneObjectIds]);
 
+  // Canvas·OrbitControls 의 초기값은 initialCamera 다(로드·저장 시점에만
+  // 바뀐다). 홈 카메라(메인 뷰)를 여기에 물리면 메인 뷰를 바꿀 때마다 R3F 가
+  // camera prop·OrbitControls target 을 다시 적용해 카메라가 엉뚱한 자세로
+  // 튄다 — 홈 카메라는 메인 뷰 버튼(resetView)만 쓴다.
   const cameraPosition = initialCamera?.position ?? DEFAULT_CAMERA_POSITION;
   const cameraTarget = initialCamera?.target ?? DEFAULT_CAMERA_TARGET;
+  const homePose = homeCamera ?? initialCamera;
+  const homePosition = homePose?.position ?? DEFAULT_CAMERA_POSITION;
+  const homeTarget = homePose?.target ?? DEFAULT_CAMERA_TARGET;
 
   useEffect(() => {
     if (focusSelectedRef) {
@@ -880,10 +894,10 @@ export function SceneObjectsEditCanvas({
     [cameraStateRef, orbitControlsRef],
   );
 
-  // initialCamera 는 저장 후에도 갱신되므로 "마지막으로 로드/저장된 시점"이다.
+  // 메인 뷰 버튼 — 홈 카메라(메인 뷰, 없으면 마지막으로 로드/저장된 시점).
   const resetView = useCallback(() => {
-    applyCameraPose({ position: cameraPosition, target: cameraTarget });
-  }, [applyCameraPose, cameraPosition, cameraTarget]);
+    applyCameraPose({ position: homePosition, target: homeTarget });
+  }, [applyCameraPose, homePosition, homeTarget]);
 
   // 바운즈 우선순위: 카메라 영역 제한에 체크된 지도들의 합집합(없으면 모든
   // 지도 — 뷰어·SceneCameraLimits 와 같은 기준) → 배치된 객체 전체 →

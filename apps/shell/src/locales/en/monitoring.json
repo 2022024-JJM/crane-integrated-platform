@@ -342,6 +342,10 @@
     "rulerDrawStartHint": "Click the start point · Esc to cancel",
     "rulerDrawEndHint": "Click the end point · Esc to cancel",
     "views": {
+      "mainSection": "Main view",
+      "mainClear": "Clear main view",
+      "mainHint": "The starting view and where the Main view button goes",
+      "mainHintEmpty": "Empty means the camera saved with the scene",
       "splitSection": "Split screen",
       "splitSlot": "Slot {{index}}",
       "splitSlotEmpty": "Drop a view here",

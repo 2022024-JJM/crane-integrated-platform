@@ -84,10 +84,15 @@ export {
 } from './model/scene-viewports-context';
 export { sanitizeSceneInfo } from './lib/sanitize-scene-info';
 export {
+  sanitizeMainViewByRegion,
   sanitizeSceneViews,
   sanitizeViewSplit,
   sceneViewNameKey,
 } from './lib/sanitize-views';
+export {
+  resolveMainView,
+  resolveSceneHomeCamera,
+} from './lib/scene-home-camera';
 export {
   resolveSplitLayout,
   splitSlotPosition,

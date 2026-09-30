@@ -803,3 +803,25 @@ describe('sanitizeSceneInfo — 씬 뷰(views)·분할(viewSplit)', () => {
     expect(sanitizeSceneInfo(once)).toEqual(once);
   });
 });
+
+describe('sanitizeSceneInfo — 메인 뷰(mainViewByRegion)', () => {
+  const view = (id: string) => ({
+    id,
+    name: id,
+    position: [1, 2, 3],
+    target: [0, 0, 0],
+  });
+
+  it('존재하는 뷰를 가리키는 슬롯만 남고, 없으면 필드가 빠진다', () => {
+    const out = sanitizeSceneInfo(
+      scene({
+        views: [view('a')],
+        mainViewByRegion: { 'dock-1': 'a', 'dock-2': 'zzz' },
+      }),
+    );
+    expect(out.mainViewByRegion).toEqual({ 'dock-1': 'a' });
+    expect(
+      sanitizeSceneInfo(scene({ mainViewByRegion: { 'dock-1': 'a' } })),
+    ).not.toHaveProperty('mainViewByRegion');
+  });
+});

@@ -16,6 +16,7 @@ import {
   modelObjectRegistry,
   zoneCenterWorld,
   resolveCameraBoundsMaps,
+  resolveSceneHomeCamera,
   resolveSeaVisible,
   resolveSplitLayout,
   resolveTrueNorth,
@@ -387,8 +388,10 @@ export function Monitoring3dView({
     [exitSplit],
   );
 
-  const cameraPosition = sceneInfo?.camera?.position ?? DEFAULT_CAMERA_POSITION;
-  const cameraTarget = sceneInfo?.camera?.target ?? DEFAULT_CAMERA_TARGET;
+  // 초기 시점·"메인 뷰" 버튼 = 홈 카메라(메인 뷰, 없으면 저장 시점 카메라).
+  const homeCamera = resolveSceneHomeCamera(sceneInfo, regionId);
+  const cameraPosition = homeCamera?.position ?? DEFAULT_CAMERA_POSITION;
+  const cameraTarget = homeCamera?.target ?? DEFAULT_CAMERA_TARGET;
   // 인라인 리터럴로 넘기면 부모 리렌더마다 새 객체 → SceneControlsBridge의
   // 컨트롤러 재등록 effect가 재실행되며 reset()이 사용자 카메라를 초기
   // 위치로 되돌린다(알람 배너 등 잦은 리렌더 화면에서 실제 발생).

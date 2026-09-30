@@ -77,6 +77,27 @@ export function sanitizeSceneViews(raw: unknown): SavedSceneView[] | null {
 }
 
 /**
+ * 메인 뷰 정규화 — region 키마다 존재하는 뷰 id 만 남기고, 남는 게 없으면
+ * null(필드 생략). 뷰 목록 뒤에 부른다.
+ */
+export function sanitizeMainViewByRegion(
+  raw: unknown,
+  views: readonly SavedSceneView[],
+): Record<string, string> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const validIds = new Set(views.map((view) => view.id));
+  const out: Record<string, string> = {};
+  for (const [regionId, viewId] of Object.entries(
+    raw as Record<string, unknown>,
+  )) {
+    if (!regionId) continue;
+    if (typeof viewId !== 'string' || !validIds.has(viewId)) continue;
+    out[regionId] = viewId;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/**
  * 분할 정규화. 칸은 항상 SCENE_SPLIT_SLOT_COUNT 길이로 맞추고(모자라면 빈 칸,
  * 넘치면 자름), 존재하지 않거나 이미 앞 칸에 쓰인 뷰는 빈 칸이 된다. 칸이
  * 전부 비었고 고정도 아니면 null — 필드를 생략한다. 고정만 남은 분할은

@@ -19,6 +19,7 @@ import {
 import { createId } from '@crane/core/lib/create-id';
 import type { MutableRefObject, SetStateAction } from 'react';
 import {
+  withMainView,
   withSceneViewAdded,
   withSceneViewMoved,
   withSceneViewPinned,
@@ -427,6 +428,10 @@ export function createSceneManipulationActions({
     updateScene((prev) => (prev ? withSplitPinned(prev, pinned) : prev));
   };
 
+  const setMainView = (regionId: string, viewId: string | null) => {
+    updateScene((prev) => (prev ? withMainView(prev, regionId, viewId) : prev));
+  };
+
   const selectPlacedText = (id: string) => {
     selectText(id);
   };
@@ -546,6 +551,7 @@ export function createSceneManipulationActions({
     setSceneViewPinned,
     setSplitSlot,
     setSplitPinned,
+    setMainView,
     selectPlacedModel,
     selectPlacedText,
     deletePlacedModel,

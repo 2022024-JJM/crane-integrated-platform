@@ -342,6 +342,10 @@
     "rulerDrawStartHint": "Punctum initii preme · Esc ut abroges",
     "rulerDrawEndHint": "Punctum finis preme · Esc ut abroges",
     "views": {
+      "mainSection": "Prospectus principalis",
+      "mainClear": "Prospectum principalem vacua",
+      "mainHint": "Visus initialis et quo bulla prospectus principalis it",
+      "mainHintEmpty": "Vacuus: camera cum scaena servata",
       "splitSection": "Scrinium divisum",
       "splitSlot": "Locus {{index}}",
       "splitSlotEmpty": "Prospectum huc trahe",

@@ -12,6 +12,8 @@ import {
   type SceneModelCategory,
   type SceneModelCatalogItem,
   getSceneMetersPerUnit,
+  resolveMainView,
+  resolveSceneHomeCamera,
   resolveSeaVisible,
   resolveTrueNorth,
 } from '@crane/domain/3d';
@@ -84,6 +86,7 @@ interface SceneViewHandlers {
   onPinChange: (id: string, pinned: boolean) => void;
   onSlotChange: (slot: number, viewId: string | null) => void;
   onSplitPinnedChange: (pinned: boolean) => void;
+  onMainViewChange: (viewId: string | null) => void;
 }
 
 const TRANSFORM_MODE_BY_KEY_CODE: Record<string, SceneTransformMode> = {
@@ -233,6 +236,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     setSceneViewPinned,
     setSplitSlot,
     setSplitPinned,
+    setMainView,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,
@@ -282,7 +286,15 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
     onPinChange: setSceneViewPinned,
     onSlotChange: setSplitSlot,
     onSplitPinnedChange: setSplitPinned,
+    onMainViewChange: (viewId) => setMainView(regionId, viewId),
   };
+  const mainViewId = resolveMainView(sceneInfo, regionId)?.id ?? null;
+  // 홈 카메라 — 메인 뷰가 있으면 그 구도, 없으면 저장 시점 카메라. 로드 때
+  // 초기 시점(use-scene-persistence)과 헤더의 메인 뷰 버튼이 같은 값을 본다.
+  const homeCamera = useMemo(
+    () => resolveSceneHomeCamera(sceneInfo, regionId),
+    [sceneInfo, regionId],
+  );
 
   // 인스펙터 리깅 탭 콜백 묶음 — 세션 액션은 렌더마다 새 함수라 useMemo 로
   // 묶어도 참조가 유지되지 않으므로 그냥 객체를 만든다(탭 존재 여부만 게이트).
@@ -583,6 +595,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                   onTrueNorthChange={setTrueNorth}
                   views={sceneViews}
                   viewSplit={sceneInfo?.viewSplit}
+                  mainViewId={mainViewId}
                   viewHandlers={viewHandlers}
                   regionId={regionId}
                   environmentId={sceneInfo?.environmentId}
@@ -645,6 +658,7 @@ export function SceneObjectsEditPage({ regionId }: SceneObjectsEditPageProps) {
                 rootRef={canvasRootRef}
                 cameraStateRef={cameraStateRef}
                 initialCamera={initialCamera}
+                homeCamera={homeCamera}
                 sceneInfo={sceneInfo}
                 regionId={regionId}
                 catalogItems={sceneModelCatalog}
@@ -963,6 +977,7 @@ function ProjectPalettePanel({
   onTrueNorthChange,
   views,
   viewSplit,
+  mainViewId,
   viewHandlers,
   regionId,
   environmentId,
@@ -977,6 +992,7 @@ function ProjectPalettePanel({
   /** 뷰 탭 — 씬 뷰 목록·분할 칸과 그 편집 콜백. */
   views: SavedSceneView[];
   viewSplit: SavedViewSplit | undefined;
+  mainViewId: string | null;
   viewHandlers: SceneViewHandlers;
   /** 배경 탭 — 현장 시각 연동(solar)의 위치·시간대 키. */
   regionId: string;
@@ -1073,6 +1089,7 @@ function ProjectPalettePanel({
               <PaletteViewSection
                 views={views}
                 split={viewSplit}
+                mainViewId={mainViewId}
                 {...viewHandlers}
               />
             ) : (

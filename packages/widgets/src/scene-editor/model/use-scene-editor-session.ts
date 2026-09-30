@@ -138,6 +138,7 @@ interface UseSceneEditorSessionResult {
   setSceneViewPinned: (id: string, pinned: boolean) => void;
   setSplitSlot: (slot: number, viewId: string | null) => void;
   setSplitPinned: (pinned: boolean) => void;
+  setMainView: (regionId: string, viewId: string | null) => void;
   selectedMap: ReturnType<typeof useSelectedSceneObjectEditor>['selectedMap'];
   updateSelectedMapCameraBounds: ReturnType<
     typeof useSelectedSceneObjectEditor
@@ -383,6 +384,7 @@ export function useSceneEditorSession({
     setSceneViewPinned: manipulation.setSceneViewPinned,
     setSplitSlot: manipulation.setSplitSlot,
     setSplitPinned: manipulation.setSplitPinned,
+    setMainView: manipulation.setMainView,
     selectedMap,
     updateSelectedMapCameraBounds,
     setObjectLocked,

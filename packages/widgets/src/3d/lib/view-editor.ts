@@ -164,7 +164,7 @@ export function withSceneViewPose(
   return withViews(scene, next);
 }
 
-/** 뷰를 지운다. 그 뷰가 든 분할 칸도 함께 비운다. */
+/** 뷰를 지운다. 그 뷰가 든 분할 칸·메인 뷰 슬롯도 함께 비운다. */
 export function withSceneViewRemoved(
   scene: SavedSceneInfo,
   id: string,
@@ -182,7 +182,53 @@ export function withSceneViewRemoved(
       slots: split.slots.map((slot) => (slot === id ? null : slot)),
     });
   }
+  const main = next.mainViewByRegion;
+  if (main && Object.values(main).includes(id)) {
+    const rest: Record<string, string> = {};
+    for (const [regionId, viewId] of Object.entries(main)) {
+      if (viewId !== id) rest[regionId] = viewId;
+    }
+    next = withMainViewByRegion(next, rest);
+  }
   return next;
+}
+
+function withMainViewByRegion(
+  scene: SavedSceneInfo,
+  map: Record<string, string>,
+): SavedSceneInfo {
+  if (Object.keys(map).length === 0) {
+    if (scene.mainViewByRegion === undefined) return scene;
+    const { mainViewByRegion: _removed, ...rest } = scene;
+    void _removed;
+    return rest;
+  }
+  return { ...scene, mainViewByRegion: map };
+}
+
+/**
+ * region 의 메인 뷰를 지정한다(`viewId` null 이면 비움). 존재하지 않는 뷰는
+ * 무시한다. 다른 region 의 슬롯은 건드리지 않는다 — 파일을 공유하는 region 이
+ * 각자 다른 메인 뷰를 갖는다(cameraByRegion 과 같은 규칙).
+ */
+export function withMainView(
+  scene: SavedSceneInfo,
+  regionId: string,
+  viewId: string | null,
+): SavedSceneInfo {
+  if (!regionId) return scene;
+  if (viewId !== null && !(scene.views ?? []).some((v) => v.id === viewId)) {
+    return scene;
+  }
+  const current = scene.mainViewByRegion?.[regionId] ?? null;
+  if (current === viewId) return scene;
+  const map = { ...scene.mainViewByRegion };
+  if (viewId === null) {
+    delete map[regionId];
+  } else {
+    map[regionId] = viewId;
+  }
+  return withMainViewByRegion(scene, map);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
 import {
   isSceneViewLimitReached,
   validateSceneViewName,
+  withMainView,
   withSceneViewAdded,
   withSceneViewMoved,
   withSceneViewPinned,
@@ -308,5 +309,46 @@ describe('withSceneViewMoved', () => {
     const moved = withSceneViewMoved(withSplit, 'b', 0);
     expect(moved.views![1]).toBe(withSplit.views![0]);
     expect(moved.viewSplit).toBe(withSplit.viewSplit);
+  });
+});
+
+describe('withMainView', () => {
+  const base = scene({ views: [view('a'), view('b')] });
+
+  it('region 슬롯에 뷰를 지정하고 다른 region 은 건드리지 않는다', () => {
+    const one = withMainView(base, 'dock-1', 'a');
+    expect(one.mainViewByRegion).toEqual({ 'dock-1': 'a' });
+    const two = withMainView(one, 'dock-2', 'b');
+    expect(two.mainViewByRegion).toEqual({ 'dock-1': 'a', 'dock-2': 'b' });
+    expect(withMainView(two, 'dock-1', 'b').mainViewByRegion).toEqual({
+      'dock-1': 'b',
+      'dock-2': 'b',
+    });
+  });
+
+  it('비우면 그 region 만 빠지고, 마지막 슬롯이 빠지면 필드가 사라진다', () => {
+    const two = withMainView(withMainView(base, 'dock-1', 'a'), 'dock-2', 'b');
+    const one = withMainView(two, 'dock-1', null);
+    expect(one.mainViewByRegion).toEqual({ 'dock-2': 'b' });
+    expect(withMainView(one, 'dock-2', null)).not.toHaveProperty(
+      'mainViewByRegion',
+    );
+  });
+
+  it('없는 뷰·빈 region·같은 값 재설정은 같은 참조', () => {
+    expect(withMainView(base, 'dock-1', 'zzz')).toBe(base);
+    expect(withMainView(base, '', 'a')).toBe(base);
+    expect(withMainView(base, 'dock-1', null)).toBe(base);
+    const set = withMainView(base, 'dock-1', 'a');
+    expect(withMainView(set, 'dock-1', 'a')).toBe(set);
+  });
+
+  it('뷰를 지우면 그 뷰를 가리키던 region 슬롯이 빈다', () => {
+    const two = withMainView(withMainView(base, 'dock-1', 'a'), 'dock-2', 'b');
+    const removed = withSceneViewRemoved(two, 'a');
+    expect(removed.mainViewByRegion).toEqual({ 'dock-2': 'b' });
+    expect(withSceneViewRemoved(removed, 'b')).not.toHaveProperty(
+      'mainViewByRegion',
+    );
   });
 });

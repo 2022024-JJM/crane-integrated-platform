@@ -53,6 +53,14 @@ export interface SavedSceneInfo {
    */
   viewSplit?: SavedViewSplit;
   /**
+   * 메인 뷰 — region 별로 `views` 의 id 하나. 모니터링·3D 플레이·에디터의
+   * 초기 시점과 "메인 뷰" 버튼이 이 구도로 간다(lib/scene-home-camera.ts).
+   * 없으면 `camera`(저장 시점 카메라)다. region 별인 이유는 `cameraByRegion`
+   * 과 같다 — 파일을 공유하는 region 의 초기 시점이 서로 다르다. 비면 필드가
+   * 빠진다.
+   */
+  mainViewByRegion?: Record<string, string>;
+  /**
    * 배경 파노라마(EXR) 카탈로그 id. sceneEnvironmentCatalog의 항목을 가리킨다.
    *
    * - `undefined`: 씬이 배경을 지정하지 않음 → region 기본값으로 떨어진다

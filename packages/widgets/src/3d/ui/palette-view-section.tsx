@@ -1,4 +1,4 @@
-import { Camera, GripVertical, Pin, PinOff, Plus, X } from 'lucide-react';
+import { Camera, GripVertical, Pin, PinOff, Plus, Star, X } from 'lucide-react';
 import { Fragment, memo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,8 @@ import {
 interface PaletteViewSectionProps {
   views: SavedSceneView[];
   split: SavedViewSplit | undefined;
+  /** 이 region 의 메인 뷰 id(없는 뷰를 가리키면 없는 것으로 본다). */
+  mainViewId: string | null;
   /** 현재 카메라 구도 — 추가·다시 지정 시점에 읽는다. 컨트롤러 준비 전이면 null. */
   getPose: () => SavedCameraInfo | null;
   /** 행 클릭 — 에디터 카메라를 그 구도로 옮긴다(확인용). */
@@ -38,10 +40,17 @@ interface PaletteViewSectionProps {
   onPinChange: (id: string, pinned: boolean) => void;
   onSlotChange: (slot: number, viewId: string | null) => void;
   onSplitPinnedChange: (pinned: boolean) => void;
+  /** 메인 뷰 지정(null 이면 비움) — 이 region 슬롯만(setMainView). */
+  onMainViewChange: (viewId: string | null) => void;
 }
 
 /**
- * Project 팔레트 "뷰" 탭 — 위는 분할 화면 칸(2×2, 번호), 아래는 뷰 목록이다.
+ * Project 팔레트 "뷰" 탭 — 맨 위 메인 뷰 슬롯, 분할 화면 칸(2×2, 번호), 아래는
+ * 뷰 목록이다.
+ *
+ * - 메인 뷰는 화면의 초기 시점이자 "메인 뷰" 버튼이 가는 구도다(region 별 —
+ *   lib/scene-home-camera.ts). 분할 칸과 같은 드래그로 놓고 ✕ 로 비운다.
+ *   놓아도 에디터 카메라는 움직이지 않는다 — 저작 중 시점을 잃지 않게.
  *
  * - 뷰는 "카메라를 맞추고 추가" 다. 이름은 목록 끝의 인라인 인풋으로 받는다
  *   (Enter 커밋·Esc 취소·blur 커밋). 이름 규칙은 lib/view-editor.ts.
@@ -69,10 +78,13 @@ export const PaletteViewSection = memo(function PaletteViewSection({
   onPinChange,
   onSlotChange,
   onSplitPinnedChange,
+  mainViewId,
+  onMainViewChange,
 }: PaletteViewSectionProps) {
   const { t } = useTranslation();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
+  const [dragOverMain, setDragOverMain] = useState(false);
 
   const viewById = new Map(views.map((view) => [view.id, view]));
   const slots = Array.from(
@@ -97,11 +109,76 @@ export const PaletteViewSection = memo(function PaletteViewSection({
     event.preventDefault();
     onSlotChange(slot, id);
   };
+  const mainView = mainViewId ? viewById.get(mainViewId) : undefined;
+  const handleMainDragOver = (event: DragEvent) => {
+    if (!isSceneViewDrag(event.dataTransfer)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    if (!dragOverMain) setDragOverMain(true);
+  };
+  const handleMainDrop = (event: DragEvent) => {
+    const id = readSceneViewDrag(event.dataTransfer);
+    setDragOverMain(false);
+    if (!id) return;
+    event.preventDefault();
+    onMainViewChange(id);
+  };
 
   return (
     <div className="flex flex-col gap-2">
-      {/* 분할 화면 — 칸 2×2 */}
+      {/* 메인 뷰 — 초기 시점·메인 뷰 버튼 */}
       <div className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-[11px] font-medium">
+          {t('monitoring:editor.views.mainSection')}
+        </span>
+        <div
+          role="group"
+          aria-label={t('monitoring:editor.views.mainSection')}
+          onDragOver={handleMainDragOver}
+          onDragLeave={() => setDragOverMain(false)}
+          onDrop={handleMainDrop}
+          className={cn(
+            'relative flex h-9 items-center justify-center rounded-md border px-1.5 text-center transition-colors',
+            mainView
+              ? 'border-primary/50 bg-primary/10'
+              : 'border-border border-dashed',
+            dragOverMain && 'border-primary bg-primary/20',
+          )}
+        >
+          {mainView ? (
+            <>
+              <Star
+                aria-hidden
+                className="text-primary absolute top-1/2 left-2 size-3.5 -translate-y-1/2"
+              />
+              <span className="text-foreground w-full truncate px-6 text-[11px] font-medium">
+                {mainView.name}
+              </span>
+              <button
+                type="button"
+                aria-label={t('monitoring:editor.views.mainClear')}
+                title={t('monitoring:editor.views.mainClear')}
+                onClick={() => onMainViewChange(null)}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-1/2 right-1 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm"
+              >
+                <X className="size-3" />
+              </button>
+            </>
+          ) : (
+            <span className="text-muted-foreground px-2 text-[10px] leading-snug">
+              {t('monitoring:editor.views.splitSlotEmpty')}
+            </span>
+          )}
+        </div>
+        <p className="text-muted-foreground text-[10px] leading-snug">
+          {t('monitoring:editor.views.mainHint')}
+          <br />
+          {t('monitoring:editor.views.mainHintEmpty')}
+        </p>
+      </div>
+
+      {/* 분할 화면 — 칸 2×2 */}
+      <div className="border-border mt-1 flex flex-col gap-2 border-t pt-2">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground text-[11px] font-medium">
             {t('monitoring:editor.views.splitSection')}

@@ -208,7 +208,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 | GLB 자산 파이프라인(압축·타일·LOD·KTX2·philly 지도 3장·썸네일) | `assets-src/README.md`, `scripts/*.mjs`, `packages/domain/src/3d/lib/ktx2-loader.ts` — `docs/agents/assets-glb.md` |
 | 카메라 이동 범위 제한 / 전체화면 / HUD / 미니맵 / 방위 표시 / 씬 독 / 경보 알림 / 워밍업 표시 | `packages/features/src/3d/ui/{scene-camera-limits,scene-status-hud,scene-minimap,scene-compass,scene-warmup-indicator}.tsx`, `packages/core/src/lib/{use-fullscreen,alert-notifications}.ts`, `packages/ui/src/organisms/scene-dock.tsx` — `docs/agents/monitoring-ui.md` |
 | 씬 진북(나침반·solar 태양 방향의 북쪽) | 스키마 `SavedSceneInfo.trueNorth`(`types.ts`), 변환 `packages/domain/src/3d/lib/true-north.ts`, 편집 맵 탭 `palette-map-section.tsx` — `docs/agents/3d-editor.md` |
-| 씬 뷰(저작된 카메라 구도)·분할 지정 / 모니터링 뷰 목록·우상단 고정 줄 / 분할 화면 렌더 | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 편집 `packages/widgets/src/3d/lib/view-editor.ts`·`ui/palette-view-section.tsx` — `docs/agents/3d-editor.md`; `packages/features/src/3d/ui/{scene-view-menu,scene-view-bar,scene-split-overlay,scene-split-renderer}.tsx`, `model/use-scene-split-store.ts` — `docs/agents/monitoring-ui.md`; 뷰포트별 DOM 포털 `packages/domain/src/3d/ui/scene-viewports.tsx` — `docs/agents/rendering-perf.md` |
+| 씬 뷰(저작된 카메라 구도)·분할·메인 뷰 지정 / 우상단 고정 줄 / 분할 화면 렌더 | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`, 편집 `packages/widgets/src/3d/lib/view-editor.ts`·`ui/palette-view-section.tsx` — `docs/agents/3d-editor.md`; `packages/features/src/3d/ui/{scene-view-menu,scene-view-bar,scene-split-overlay,scene-split-renderer}.tsx`, `model/use-scene-split-store.ts` — `docs/agents/monitoring-ui.md`; 뷰포트별 DOM 포털 `packages/domain/src/3d/ui/scene-viewports.tsx` — `docs/agents/rendering-perf.md` |
 
 ## packages/ui 구조 (Atomic Design)
 
@@ -281,7 +281,7 @@ Agent는 다음 계약을 전제로 수정 범위를 판단한다.
 - 카메라 `up` 은 항상 +Y, 탑뷰는 `ensureTopViewTilt` 의 미세 tilt 로 만든다 (3d-editor).
 - 기즈모 스냅은 `lib/snap-transform.ts` 순수 함수로 저장값 기준으로 한다. three `TransformControls` 의 `*Snap` 은 쓰지 않는다 (3d-editor).
 - 씬 스키마 필드를 추가하면 `sanitize-*` 와 `scene-snapshot.ts` 의 동등 비교(`isZoneListEqual` 류)를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 저장되지 않는다 (3d-editor, 3d-zone).
-- 뷰(카메라 구도)는 에디터가 저작해 씬 파일에 넣는다. 모니터링 화면에 뷰를 만들거나 브라우저에 저장하는 경로를 두지 않는다 (monitoring-ui, 3d-editor).
+- 뷰(카메라 구도)는 에디터가 저작해 씬 파일에 넣는다. 모니터링 화면에 뷰를 만들거나 브라우저에 저장하는 경로를 두지 않는다. 화면의 초기 시점·"메인 뷰" 버튼은 `resolveSceneHomeCamera`(메인 뷰, 없으면 저장 시점 카메라) 하나로 정한다 (monitoring-ui, 3d-editor).
 - 기본 카메라나 캔버스 크기로 화면 배치를 계산하는 새 코드(drei `Html`, 세로 px 기준 두께, 카메라로 정하는 씬 전역 가시성)는 분할 화면을 고려한다 — `PerViewport`/`ViewportAnchor`, `useSceneViewportHeight`, 타일 렌더 직전 재적용. `useFrame` 양수 priority 는 분할 렌더러뿐이다 (rendering-perf).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나다. 미등록 region 은 `null` 이며 기본 파일로 fallback 하지 않는다. 여러 region 이 한 파일을 공유할 수 있고 그때 카메라는 `cameraByRegion` 슬롯에 `withRegionCamera` 로 쓴다 (3d-editor).
 - 새 dev 저장 미들웨어는 `vite-plugin-asset-hash.ts` 의 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다 (3d-editor).

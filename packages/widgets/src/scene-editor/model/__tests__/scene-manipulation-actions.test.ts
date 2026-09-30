@@ -716,3 +716,21 @@ describe('씬 뷰·분할 세터', () => {
     expect(h.scene).toBeNull();
   });
 });
+
+describe('setMainView', () => {
+  it('region 슬롯에 지정·비움하고 없는 뷰는 무시한다', () => {
+    const h = createHarness();
+    h.actions.addSceneView('A', {
+      position: [1, 1, 1],
+      target: [0, 0, 0],
+    });
+    const id = h.scene!.views![0].id;
+    h.actions.setMainView('dock-1', id);
+    expect(h.scene?.mainViewByRegion).toEqual({ 'dock-1': id });
+    const before = h.scene;
+    h.actions.setMainView('dock-1', 'zzz');
+    expect(h.scene).toBe(before);
+    h.actions.setMainView('dock-1', null);
+    expect(h.scene).not.toHaveProperty('mainViewByRegion');
+  });
+});

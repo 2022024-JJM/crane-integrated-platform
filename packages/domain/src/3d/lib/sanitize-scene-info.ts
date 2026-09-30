@@ -29,7 +29,11 @@ import { sanitizeModelZones } from './sanitize-model-zones';
 import { sanitizeRulerFields } from './sanitize-rulers';
 import { sanitizeModelStatusTags } from './sanitize-status-tags';
 import { resolveModelTagMappings } from './sanitize-tag-mappings';
-import { sanitizeSceneViews, sanitizeViewSplit } from './sanitize-views';
+import {
+  sanitizeMainViewByRegion,
+  sanitizeSceneViews,
+  sanitizeViewSplit,
+} from './sanitize-views';
 import { createId } from '@crane/core/lib/create-id';
 import { clampToRange } from '@crane/core/lib/utils';
 import type { Vector3Tuple } from '@crane/core/types/math';
@@ -282,6 +286,13 @@ export function sanitizeSceneInfo(sceneInfo: SavedSceneInfo): SavedSceneInfo {
   );
   if (safeViewSplit) {
     sanitized.viewSplit = safeViewSplit;
+  }
+  const safeMainView = sanitizeMainViewByRegion(
+    (sceneInfo as SavedSceneInfo).mainViewByRegion,
+    safeViews ?? [],
+  );
+  if (safeMainView) {
+    sanitized.mainViewByRegion = safeMainView;
   }
 
   // environmentId는 3-상태다(문자열=선택 / null=배경 없음 / 없음=region 기본).

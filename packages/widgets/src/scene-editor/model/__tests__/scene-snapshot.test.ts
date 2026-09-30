@@ -1019,3 +1019,45 @@ describe('isSceneInfoEqual — 씬 뷰·분할', () => {
     ).toBe(false);
   });
 });
+
+describe('isSceneInfoEqual — 메인 뷰', () => {
+  const view = (id: string) => ({
+    id,
+    name: id,
+    position: [1, 2, 3] as [number, number, number],
+    target: [0, 0, 0] as [number, number, number],
+  });
+
+  it('필드 없음과 빈 객체는 같고, 슬롯이 다르면 dirty', () => {
+    expect(
+      isSceneInfoEqual(
+        scene({ views: [view('a')] }),
+        scene({ views: [view('a')], mainViewByRegion: {} }),
+      ),
+    ).toBe(true);
+    expect(
+      isSceneInfoEqual(
+        scene({ views: [view('a')], mainViewByRegion: { 'dock-1': 'a' } }),
+        scene({ views: [view('a')] }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({
+          views: [view('a'), view('b')],
+          mainViewByRegion: { 'dock-1': 'a' },
+        }),
+        scene({
+          views: [view('a'), view('b')],
+          mainViewByRegion: { 'dock-1': 'b' },
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isSceneInfoEqual(
+        scene({ views: [view('a')], mainViewByRegion: { 'dock-1': 'a' } }),
+        scene({ views: [view('a')], mainViewByRegion: { 'dock-2': 'a' } }),
+      ),
+    ).toBe(false);
+  });
+});

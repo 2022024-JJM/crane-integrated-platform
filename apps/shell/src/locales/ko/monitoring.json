@@ -342,6 +342,10 @@
     "rulerDrawStartHint": "시작점을 클릭하세요 · Esc 취소",
     "rulerDrawEndHint": "끝점을 클릭하세요 · Esc 취소",
     "views": {
+      "mainSection": "메인 뷰",
+      "mainClear": "메인 뷰 비우기",
+      "mainHint": "초기 시점과 메인 뷰 버튼이 가는 구도입니다",
+      "mainHintEmpty": "비우면 저장 시점의 카메라로 시작합니다",
       "splitSection": "분할 화면",
       "splitSlot": "{{index}}번 칸",
       "splitSlotEmpty": "뷰를 끌어다 놓기",

@@ -14,6 +14,7 @@ import {
   withRegionCamera,
   type SavedCameraInfo,
   type SavedSceneInfo,
+  resolveSceneHomeCamera,
 } from '@crane/domain/3d';
 import { toast } from 'sonner';
 import { isSceneInfoEqual, sanitizeSceneInfo } from './scene-snapshot';
@@ -99,7 +100,9 @@ export function useScenePersistence({
         // 풀 수 있고, 그 상태를 저장해도 다음 진입 때는 다시 잠긴다.
         const sanitized = lockMaps(sanitizeSceneInfo(data));
         replaceScene(sanitized);
-        setInitialCamera(sanitized.camera ?? null);
+        // 초기 시점은 홈 카메라 — 메인 뷰가 있으면 그 구도, 없으면 저장 시점
+        // 카메라(모니터링과 같은 규칙). 저장 뒤에는 현재 카메라를 그대로 둔다.
+        setInitialCamera(resolveSceneHomeCamera(sanitized, regionId));
         setSavedSceneRef(sanitized);
       } catch (error) {
         console.error('Failed to load scene editor data.', error);

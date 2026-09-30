@@ -380,6 +380,9 @@ export function isSceneInfoEqual(
   // 잡혀야 저장된다.
   if (!isSceneViewListEqual(a.views, b.views)) return false;
   if (!isViewSplitEqual(a.viewSplit, b.viewSplit)) return false;
+  if (!isMainViewByRegionEqual(a.mainViewByRegion, b.mainViewByRegion)) {
+    return false;
+  }
   // 리그 정의 편집이 dirty/undo 에 잡혀야 저장된다.
   if (!isRigDefinitionListEqual(a.rigs, b.rigs)) return false;
   if (a.models.length !== b.models.length) return false;
@@ -451,6 +454,22 @@ export function isSceneViewListEqual(
     ) {
       return false;
     }
+  }
+  return true;
+}
+
+/** undefined 와 {} 는 같다(sanitize 가 빈 맵을 생략한다). */
+export function isMainViewByRegionEqual(
+  a: Record<string, string> | undefined,
+  b: Record<string, string> | undefined,
+): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a ?? {});
+  const bKeys = Object.keys(b ?? {});
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (!b || !Object.hasOwn(b, key)) return false;
+    if (a![key] !== b[key]) return false;
   }
   return true;
 }

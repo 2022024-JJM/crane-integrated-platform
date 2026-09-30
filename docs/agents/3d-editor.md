@@ -15,7 +15,7 @@
 | 씬 JSON 스키마 / 방어 | `packages/domain/src/3d/model/types.ts`, `packages/domain/src/3d/lib/sanitize-scene-info.ts` |
 | region → 씬 파일 매핑 | `packages/domain/src/3d/model/scene-file-map.ts`, `packages/domain/src/3d/model/scene-file-registry.ts` |
 | 씬 설정 팔레트(배경·조명·바다·진북) | `packages/widgets/src/3d/ui/palette-environment-section.tsx`(배경 탭), `packages/widgets/src/3d/ui/palette-map-section.tsx`(맵 탭 — 지도 타일 + 바다 스위치 + 진북 입력), 바다 판정 `packages/domain/src/3d/lib/scene-sea.ts`(`resolveSeaVisible`), 진북 `packages/domain/src/3d/lib/true-north.ts`(`resolveTrueNorth`) |
-| 씬 뷰·분할 지정(뷰 탭) | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `packages/domain/src/3d/lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 편집 `packages/widgets/src/3d/lib/view-editor.ts`(전부 테스트 대상), 팔레트 `packages/widgets/src/3d/ui/palette-view-section.tsx`, 우상단 고정 줄 `packages/features/src/3d/ui/scene-view-bar.tsx` |
+| 씬 뷰·분할·메인 뷰 지정(뷰 탭) | 스키마 `packages/domain/src/3d/model/view-types.ts`, 방어 `packages/domain/src/3d/lib/sanitize-views.ts`, 배치 `lib/view-split-layout.ts`, 홈 카메라 `lib/scene-home-camera.ts`(`resolveSceneHomeCamera`), 편집 `packages/widgets/src/3d/lib/view-editor.ts`(전부 테스트 대상), 팔레트 `packages/widgets/src/3d/ui/palette-view-section.tsx`, 우상단 고정 줄 `packages/features/src/3d/ui/scene-view-bar.tsx` |
 | dev 저장 미들웨어 / public 자산 리로드 | `apps/shell/vite.config.ts`, `apps/shell/vite-plugin-asset-hash.ts`, `packages/domain/src/3d/lib/scene-dev-storage.ts` |
 | 탑뷰 포즈(정수직 회피 tilt, 뷰어·에디터 공용) | `packages/core/src/lib/top-view-pose.ts`(`computeTopViewPose`, `ensureTopViewTilt`, 테스트 대상) |
 | 기즈모 스냅 / 다중 선택 피벗 | `packages/features/src/3d/lib/snap-transform.ts`, `packages/widgets/src/3d/lib/pivot-transform.ts`, `packages/features/src/3d/ui/scene-transform-pivot-menu.tsx`, `packages/features/src/3d/model/use-scene-editor-view-store.ts` |
@@ -63,6 +63,8 @@
 - **저작은 뷰 탭뿐이다.** 카메라를 맞추고 "현재 화면을 뷰로 추가"(이름은 목록 끝 인라인 인풋 — Enter 커밋·Esc 취소·blur 커밋). 행 클릭은 그 구도로 이동, 이름 더블클릭은 이름 변경, 카메라 버튼은 현재 화면으로 다시 지정, 핀은 우상단 고정, ✕ 는 삭제. 이름은 공백·대소문자를 무시하고 유일해야 하고 최대 개수·길이는 `view-types.ts` 상수다.
 - **순서는 행을 목록 안에서 끌어 바꾼다**(`withSceneViewMoved`, `insertBefore` 는 현재 목록 기준). 끄는 동안 놓일 자리에 빈 행이 생겨 다른 행이 밀리고, 자기 자리 앞뒤에는 빈 행을 만들지 않는다. 순서가 곧 우상단 고정 줄의 버튼 순서다. 모니터링은 고정한 뷰·고정한 분할만 보이므로 고정하지 않으면 에디터 밖으로 나가지 않는다.
 - **분할 칸은 목록의 행을 끌어다 놓는다**(HTML5 DnD, `SCENE_VIEW_DRAG_TYPE` — `text/plain` 을 싣지 않아 캔버스 드롭이 모델 배치로 오해하지 않는다). 찬 칸에 놓으면 교체, 다른 칸에 있던 뷰면 이동이라 한 뷰는 한 칸에만 있다. 뷰를 지우면 그 칸도 빈다. 칸 순서는 좌상·우상·좌하·우하이고, 화면 배치(빈 행·열 접기)는 `resolveSplitLayout` 이 정한다.
+- **메인 뷰**는 탭 맨 위 슬롯이다 — 목록의 행을 끌어다 놓고 ✕ 로 비운다. region 별 슬롯(`SavedSceneInfo.mainViewByRegion[regionId]`, `cameraByRegion` 과 같은 이유 — 파일을 공유하는 region 의 초기 시점이 다르다)이고 에디터는 자기 region 슬롯만 쓴다. 뷰를 지우면 슬롯도 빈다. 놓아도 에디터 카메라는 움직이지 않는다.
+- **홈 카메라**(`resolveSceneHomeCamera(scene, regionId)`) = 메인 뷰의 구도, 없으면 `camera`(저장 시점 카메라). 세 캔버스의 초기 시점과 "메인 뷰" 버튼(구 원래 위치, `common:viewer3d.resetView`)이 이 값 하나를 본다. 에디터는 로드 때 홈 카메라에서 시작하고 저장 뒤에는 현재 카메라를 그대로 둔다. `camera`·`cameraByRegion` 은 여전히 저장 시점마다 기록되는 폴백이다.
 - **고정**은 뷰마다 하나, 분할에 하나다(`pinned`, true 만 저장). 고정한 것만 에디터·모니터링 캔버스 우상단 고정 줄(`SceneViewBar`)에 상시 버튼으로 온다. 에디터는 고정 줄이 있으면 축 기즈모를 그 아래로 내린다(`SceneObjectsEditCanvas` 의 `axisGizmoTopOffset`).
 - **에디터의 분할 버튼은 비활성**이다(`aria-disabled` + 툴팁 "모니터링 화면에서만") — 분할 화면은 모니터링에서 확인한다. 에디터 캔버스와 모니터링 타일은 가로세로 비율이 달라 세로 범위는 같고 가로 범위만 달라진다.
 - 편집 의미는 `view-editor.ts` 의 순수 함수(`withSceneView*`, `withSplit*`)가 정하고 결과가 같으면 같은 참조를 돌려준다. 세터(`scene-manipulation-actions.ts`)는 그 함수를 `updateScene` 에 넘길 뿐이다. undo·dirty 는 다른 씬 설정과 같다.
@@ -132,7 +134,8 @@
 - 씬 스키마에 필드를 추가하면 `sanitize-scene-info.ts`(또는 해당 `sanitize-*`)와 `scene-snapshot.ts` 의 동등 비교를 함께 고친다. 빠지면 편집이 동등 단락에 먹혀 dirty 가 서지 않고 저장되지 않는다(`isZoneListEqual` 이 선례 — `docs/agents/3d-zone.md`).
 - region → 씬 파일 표는 `scene-file-map.ts` 하나. 미등록 region 은 `null`, 기본 파일 fallback 금지.
 - `sea` 는 boolean 만 저장·비교한다 — `sanitizeSceneInfo` 는 boolean 이 아니면 필드를 버리고, `isSceneInfoEqual` 은 `!==` 로 본다(`undefined` 와 `false` 는 다르다). 바다 유무를 `environmentId` 로 유추하는 코드를 다른 곳에 두지 않는다(`resolveSeaVisible` 하나).
-- `views`·`viewSplit` 은 `sanitize-views.ts` 가 뷰 목록 **뒤에** 분할을 정규화한다(칸이 존재하는 뷰만 가리키게). 빈 목록·빈 칸뿐이고 고정 아닌 분할·고정 false 는 필드를 생략하고, `isSceneViewListEqual`·`isViewSplitEqual` 이 같은 규칙으로 비교한다. 필드를 추가하면 셋을 함께 고친다.
+- `views`·`viewSplit`·`mainViewByRegion` 은 `sanitize-views.ts` 가 뷰 목록 **뒤에** 분할·메인 뷰를 정규화한다(존재하는 뷰만 가리키게). 빈 목록·빈 칸뿐이고 고정 아닌 분할·고정 false·빈 메인 뷰 맵은 필드를 생략하고, `isSceneViewListEqual`·`isViewSplitEqual`·`isMainViewByRegionEqual` 이 같은 규칙으로 비교한다. 필드를 추가하면 셋을 함께 고친다.
+- 화면의 초기 시점·"메인 뷰" 버튼은 `resolveSceneHomeCamera` 하나로 정한다. `camera` 를 직접 읽어 초기 시점을 정하는 새 경로를 두지 않는다.
 - 뷰 편집 함수(`view-editor.ts`)는 결과가 같으면 같은 참조를 돌려준다. 새 조작도 같은 규칙이다.
 - 공유 씬의 카메라는 `camera` 를 직접 저장하지 않고 `withRegionCamera` 로 자기 region 슬롯에 쓴다. 씬을 로드하는 새 경로는 `loadSceneInfoByRegionId` 를 거쳐 `cameraByRegion` 해석을 받는다.
 - 새 dev 저장 미들웨어를 만들면 쓰는 디렉토리를 `DEV_WRITTEN_DIRS` 에 추가한다. `server.watch.ignored` 로 막지 않는다.

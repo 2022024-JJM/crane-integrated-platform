@@ -6,6 +6,7 @@ import {
   type SavedSceneView,
 } from '../../model/view-types';
 import {
+  sanitizeMainViewByRegion,
   sanitizeSceneViews,
   sanitizeViewSplit,
   sceneViewNameKey,
@@ -204,5 +205,28 @@ describe('sanitizeViewSplit — 칸', () => {
     expect(
       sanitizeViewSplit({ slots: ['a'], pinned: true }, views)!.pinned,
     ).toBe(true);
+  });
+});
+
+describe('sanitizeMainViewByRegion', () => {
+  const views = [saved('a'), saved('b')];
+
+  it('객체가 아니면 null (undefined·null·배열·문자열)', () => {
+    expect(sanitizeMainViewByRegion(undefined, views)).toBeNull();
+    expect(sanitizeMainViewByRegion(null, views)).toBeNull();
+    expect(sanitizeMainViewByRegion(['a'], views)).toBeNull();
+    expect(sanitizeMainViewByRegion('a', views)).toBeNull();
+  });
+
+  it('존재하는 뷰를 가리키는 region 만 남기고, 남는 게 없으면 null', () => {
+    expect(
+      sanitizeMainViewByRegion(
+        { 'dock-1': 'a', 'dock-2': 'zzz', '': 'b', 'dock-3': 3 },
+        views,
+      ),
+    ).toEqual({ 'dock-1': 'a' });
+    expect(sanitizeMainViewByRegion({ 'dock-1': 'zzz' }, views)).toBeNull();
+    expect(sanitizeMainViewByRegion({}, views)).toBeNull();
+    expect(sanitizeMainViewByRegion({ 'dock-1': 'a' }, [])).toBeNull();
   });
 });

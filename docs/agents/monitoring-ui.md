@@ -110,9 +110,10 @@
 ### 씬 독 (우측 레일, hover 펼침·고정)
 
 - 껍데기 `scene-dock.tsx` 는 완전 제어형이다. 도킹 프레임은 `three-scene-viewer.tsx` 의 `toolbarPlacement="dock"`.
-- 레일 순서(위에서부터): 카메라 묶음(원래위치·탑뷰·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·골리앗 가드·미니맵·현장 시각 `ui/scene-clock-menu.tsx`). 독 배치는 `toolbarTrailing` 을 비운다 — 뷰·분할은 우상단 고정 줄이 전부다.
+- 레일 순서(위에서부터): 카메라 묶음(메인 뷰·탑뷰·확대·축소·전체화면) → 화면 표시 묶음(페이지가 준 `toolbarExtras` — 알람 토글·골리앗 가드·미니맵·현장 시각 `ui/scene-clock-menu.tsx`). 독 배치는 `toolbarTrailing` 을 비운다 — 뷰·분할은 우상단 고정 줄이 전부다.
 - `toolbarTrailing` 은 독이 아닌 가로 툴바에서만 쓰고(고정한 뷰 칩) 카메라 버튼 앞에 붙는다.
-- 분할 화면 중에는 전체화면·알람 표시·현장 시각만 동작하고 나머지(원래위치·탑뷰·확대·축소·미니맵·페이지 버튼)는 비활성이다 — `ThreeSceneViewer` 의 `cameraControlsDisabledLabel`, `SceneMinimapToggle` 의 `disabledLabel`, 페이지 버튼은 `useSceneSplitStore` 를 읽어 스스로. 비활성은 `disabled` 속성이 아니라 `aria-disabled` + `SCENE_TOOLBAR_DISABLED_CLASS` 다(툴팁으로 사유를 보여야 해서).
+- "메인 뷰" 버튼(구 원래 위치)과 초기 시점은 홈 카메라(`resolveSceneHomeCamera` — 에디터에서 지정한 메인 뷰, 없으면 저장 시점 카메라)다. `ThreeSceneViewer` 의 `cameraPreset.defaultPosition/defaultTarget` 이 그 값이라 둘이 같다(`docs/agents/3d-editor.md`).
+- 분할 화면 중에는 전체화면·알람 표시·현장 시각만 동작하고 나머지(메인 뷰·탑뷰·확대·축소·미니맵·페이지 버튼)는 비활성이다 — `ThreeSceneViewer` 의 `cameraControlsDisabledLabel`, `SceneMinimapToggle` 의 `disabledLabel`, 페이지 버튼은 `useSceneSplitStore` 를 읽어 스스로. 비활성은 `disabled` 속성이 아니라 `aria-disabled` + `SCENE_TOOLBAR_DISABLED_CLASS` 다(툴팁으로 사유를 보여야 해서).
 - 상태·영속화는 `use-scene-dock.ts` + `dock-hover-state.ts`(순수 리듀서)·`dock-storage.ts`(pin 영속화), 테스트 대상.
 
 ### 씬 뷰와 우상단 고정 줄

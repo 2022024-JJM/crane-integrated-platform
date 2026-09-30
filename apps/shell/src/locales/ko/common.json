@@ -296,7 +296,7 @@
     "loading": "3D 화면 불러오는 중",
     "zoomIn": "확대",
     "zoomOut": "축소",
-    "resetView": "원래 위치",
+    "resetView": "메인 뷰",
     "topView": "탑뷰",
     "fullscreen": "전체화면",
     "exitFullscreen": "전체화면 복원",
