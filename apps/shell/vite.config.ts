@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs/promises';
+import { existsSync, readFileSync } from 'fs';
 import { assetHashManifestPlugin } from './vite-plugin-asset-hash';
 import {
   SCENE_DIR,
@@ -284,9 +285,77 @@ function normalizeBaseUrl(input: string | undefined): string {
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 }
 
+/**
+ * `vite --mode dev|stage|prod`(pnpm dev:dev 등) 는 저장소 루트 `deploy/env/<mode>.env` 의
+ * 환경 값(BASE_PATH · INDOOR_PATH · DEPLOY_ENV)을 읽어 VITE_* 로 넘긴다.
+ * 환경별 값의 단일 소스는 그 파일이라 여기서 다시 적지 않는다(docker 빌드도 같은
+ * 파일을 compose 인자로 읽는다). 셸에서 직접 export 한 VITE_* 가 있으면 그것이
+ * 우선이고, 없을 때만 채운다. process.env 에 넣는 이유: Vite 는 설정 함수가 끝난
+ * 뒤 다시 loadEnv 를 돌려 import.meta.env 를 만들고 그때 process.env 가 .env 파일보다
+ * 앞서므로, 앱 코드(resolveAppScope 등)가 같은 값을 받는다.
+ */
+const DEPLOY_ENV_MODES = ['dev', 'stage', 'prod'] as const;
+const DEPLOY_ENV_TO_VITE: Record<string, string> = {
+  BASE_PATH: 'VITE_BASE_URL',
+  INDOOR_PATH: 'VITE_INDOOR_BASE_URL',
+  DEPLOY_ENV: 'VITE_APP_ENV',
+};
+
+function applyDeployEnv(mode: string): Record<string, string> {
+  if (!(DEPLOY_ENV_MODES as readonly string[]).includes(mode)) return {};
+  const file = path.resolve(__dirname, '../../deploy/env', `${mode}.env`);
+  if (!existsSync(file)) {
+    throw new Error(`[vite] --mode ${mode} 인데 ${file} 이 없습니다.`);
+  }
+  const applied: Record<string, string> = {};
+  for (const rawLine of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    const value = line.slice(eq + 1).trim();
+    const viteKey = DEPLOY_ENV_TO_VITE[key];
+    if (!viteKey) continue;
+    if (process.env[viteKey] === undefined) process.env[viteKey] = value;
+    applied[viteKey] = process.env[viteKey]!;
+  }
+  return applied;
+}
+
+/**
+ * indoor 주소가 base 밖에 있을 때(dev · stage: /crane_rnd/indoor/dev/ vs /crane_rnd/dev/)
+ * 그 주소의 HTML 요청을 base 의 index.html 로 넘긴다. 운영의 nginx.conf.template 맨 아래
+ * `location /` catch-all 과 같은 역할이다. 브라우저 주소는 그대로라 앱의 resolveAppScope 가
+ * indoor 범위로 판정하고, 에셋은 base 접두어로 요청하므로 HTML 만 넘기면 된다.
+ * indoor 가 base 아래면(prod) Vite 의 기본 SPA 폴백이 이미 처리하므로 플러그인을 만들지 않는다.
+ */
+function devIndoorFallbackPlugin(
+  base: string,
+  indoorBaseUrl: string | undefined,
+): Plugin | null {
+  if (!indoorBaseUrl) return null;
+  const indoor = normalizeBaseUrl(indoorBaseUrl);
+  if (indoor === '/' || indoor.startsWith(base)) return null;
+  const indoorNoSlash = indoor.slice(0, -1);
+  return {
+    name: 'crane-dev-indoor-fallback',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const pathOnly = (req.url ?? '').split('?')[0];
+        const isIndoor = pathOnly === indoorNoSlash || pathOnly.startsWith(indoor);
+        const wantsHtml = (req.headers.accept ?? '').includes('text/html');
+        if (isIndoor && wantsHtml) req.url = `${base}index.html`;
+        next();
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = { ...loadEnv(mode, process.cwd(), ''), ...applyDeployEnv(mode) };
   // dev proxy 대상 IP 는 코드에 두지 않는다. 운영에서는 nginx 가 처리하고
   // 개발자는 apps/shell/.env.local 에 본인 환경의 백엔드/LiDAR 주소를 적는다.
   const proxyHttpTarget = env.VITE_DEV_PROXY_TARGET_HTTP;
@@ -328,6 +397,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      devIndoorFallbackPlugin(baseUrl, env.VITE_INDOOR_BASE_URL),
       devSceneSavePlugin(),
       devVirtualTagsSavePlugin(),
       devPreviewSavePlugin(),
