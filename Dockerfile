@@ -40,8 +40,18 @@ COPY tsconfig.json tsconfig.base.json turbo.json ./
 # Google Cloud Console 에서 HTTP referrer 제한을 반드시 적용한다.
 ARG VITE_GOOGLE_MAPS_API_KEY=""
 ARG VITE_GOOGLE_MAPS_MAP_ID=""
+# 환경별 경로 (prod · stage · dev). 기본값 = 지금 운영 값이라 인자 없이 빌드하면 지금과 같다.
+#   BASE_PATH   → crane 주소, Vite base   (예: /crane_rnd/dev/)
+#   INDOOR_PATH → indoor 주소             (예: /crane_rnd/indoor/dev/). 비우면 crane · indoor 를 나누지 않는다
+#   DEPLOY_ENV  → 헤더 환경 표시 (prod 는 표시 안 함)
+ARG BASE_PATH=/crane_rnd/
+ARG INDOOR_PATH=""
+ARG DEPLOY_ENV=prod
 ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY \
-    VITE_GOOGLE_MAPS_MAP_ID=$VITE_GOOGLE_MAPS_MAP_ID
+    VITE_GOOGLE_MAPS_MAP_ID=$VITE_GOOGLE_MAPS_MAP_ID \
+    VITE_BASE_URL=$BASE_PATH \
+    VITE_INDOOR_BASE_URL=$INDOOR_PATH \
+    VITE_APP_ENV=$DEPLOY_ENV
 
 RUN pnpm turbo run build --filter=@crane/shell...
 
@@ -49,11 +59,12 @@ RUN pnpm turbo run build --filter=@crane/shell...
 # Stage 2: runner
 # ============================================================
 FROM nginx:1.27-alpine AS runner
+ARG BASE_PATH=/crane_rnd/
 
 RUN rm -rf /usr/share/nginx/html/*
 
-# Vite 가 base='/crane_rnd/' 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
-COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html/crane_rnd
+# Vite 가 base=BASE_PATH 로 빌드하므로, 정적 파일도 동일 sub-path 아래에 배치한다.
+COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}
 
 # nginx 공식 이미지의 entrypoint 가 /etc/nginx/templates/*.template 을
 # envsubst 로 치환해 /etc/nginx/conf.d/ 로 출력한다.
