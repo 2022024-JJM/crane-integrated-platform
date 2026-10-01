@@ -1,0 +1,15 @@
+#!/bin/sh
+# nginx 공식 이미지의 entrypoint 가 /docker-entrypoint.d/*.envsh 를 템플릿 치환(20-envsubst) 전에
+# source 한다. 여기서 BASE_PATH(이미지 ENV, Dockerfile ARG 에서 옴)를 검사하고 파생 변수를 만든다.
+#   BASE_PATH          앱이 서비스되는 접두어, 끝 슬래시 포함   예) /crane_rnd/dev/
+#   BASE_PATH_NOSLASH  끝 슬래시 없는 형태 (슬래시 없는 주소 → 302 용)  예) /crane_rnd/dev
+# nginx.conf.template 의 location 은 변수를 못 받으므로 템플릿 치환으로만 경로를 바꾼다.
+case "${BASE_PATH:-}" in
+  /*/) ;;
+  *) echo >&2 "BASE_PATH 는 '/crane_rnd/' 처럼 /로 시작하고 /로 끝나는 서브패스여야 합니다 (지금: '${BASE_PATH:-}')"; exit 1 ;;
+esac
+if [ "$BASE_PATH" = "/" ]; then
+  echo >&2 "BASE_PATH '/' 는 지원하지 않습니다 — 루트 302 와 index.html 위치가 같은 자리를 가리킵니다"; exit 1
+fi
+BASE_PATH_NOSLASH="${BASE_PATH%/}"
+export BASE_PATH BASE_PATH_NOSLASH

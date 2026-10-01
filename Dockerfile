@@ -60,6 +60,8 @@ RUN pnpm turbo run build --filter=@crane/shell...
 # ============================================================
 FROM nginx:1.27-alpine AS runner
 ARG BASE_PATH=/crane_rnd/
+# nginx.conf.template 의 ${BASE_PATH} 치환용. 컨테이너 nginx 의 location 이 빌드와 같은 접두어를 따른다.
+ENV BASE_PATH=$BASE_PATH
 
 RUN rm -rf /usr/share/nginx/html/*
 
@@ -71,6 +73,8 @@ COPY --from=builder /app/apps/shell/dist /usr/share/nginx/html${BASE_PATH}
 # 따라서 BACKEND_HOST/PORT, LIDAR_HOST/PORT 환경변수만 주입하면
 # 이미지 재빌드 없이 IP 변경이 가능하다.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+# 템플릿 치환(20-envsubst) 전에 source 되어 BASE_PATH 검사 · BASE_PATH_NOSLASH 파생. 실행 비트가 있어야 entrypoint 가 읽는다.
+COPY --chmod=755 deploy/nginx/15-base-path.envsh /docker-entrypoint.d/15-base-path.envsh
 
 EXPOSE 80
 

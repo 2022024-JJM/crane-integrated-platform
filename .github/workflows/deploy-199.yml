@@ -1,0 +1,85 @@
+# develop · main push → 검사(GitHub 호스티드) → 이미지 빌드·전송(230 self-hosted 러너)
+# → 199 서버의 deploy/deploy.sh 가 load · up · 응답 확인 · 실패 시 직전 태그 복귀.
+# Secrets · Variables 목록과 절차는 docs/crane_rnd-호스팅-배포-전략.html §3.2.
+# pull_request 트리거는 두지 않는다 — 포크 PR 코드가 230 러너에서 실행된다.
+name: deploy-199
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:                 # 재배포: Actions → Run workflow → 브랜치 선택
+
+permissions:
+  contents: read
+
+jobs:
+  verify:                            # GitHub 호스티드. 230 · 199 자원을 쓰지 않는다
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4   # 버전은 package.json 의 packageManager 를 읽는다
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint && pnpm typecheck && pnpm test
+
+  deploy:
+    needs: verify
+    runs-on: self-hosted             # 230 서버에 이 저장소용으로 등록한 러너. 러너가 더 생기면 230 의 라벨을 추가해 고정
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: ${{ github.ref_name == 'develop' }}
+    env:
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/opt/crane-rnd' }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 환경 결정
+        run: |
+          case "$GITHUB_REF_NAME" in
+            main)    ENV=prod ;;
+            develop) ENV=dev ;;
+            *) echo "::error::develop · main 만 배포합니다 ($GITHUB_REF_NAME)"; exit 1 ;;
+          esac
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
+          echo "TAG=$ENV-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: 1. 이미지 빌드 (230)
+        run: |
+          set -a; . "deploy/env/$ENV.env"; set +a     # 경로 · 포트 · 지도 키 모두 env 파일에서
+          IMAGE_TAG="$TAG" docker compose build         # 프로젝트 이름은 compose name: 이 DEPLOY_ENV 로 정함
+
+      - name: 2. 이미지 저장 (230)
+        run: docker save "crane-shell:$TAG" | gzip > "crane-shell-$TAG.tar.gz"
+
+      - name: 3. 199 로 전송
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/crane_199 && chmod 600 ~/.ssh/crane_199
+          OPTS="-i $HOME/.ssh/crane_199 -o StrictHostKeyChecking=accept-new"
+          ssh $OPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p $DEPLOY_DIR/images"
+          scp $OPTS -P "$SSH_PORT" "crane-shell-$TAG.tar.gz" "$SSH_USER@$SSH_HOST:$DEPLOY_DIR/images/"
+          scp $OPTS -P "$SSH_PORT" -r docker-compose.yml deploy "$SSH_USER@$SSH_HOST:$DEPLOY_DIR/"
+
+      - name: 4. 199 에서 배포 셸 실행
+        env:
+          SUDO_PASS: ${{ secrets.SUDO_PASS }}      # 199 계정이 docker 그룹이면 비워 둔다
+        run: |
+          SSH="ssh -i $HOME/.ssh/crane_199 -p $SSH_PORT $SSH_USER@$SSH_HOST"
+          if [ -n "$SUDO_PASS" ]; then
+            printf '%s\n' "$SUDO_PASS" | $SSH "sudo -S -p '' bash $DEPLOY_DIR/deploy/deploy.sh $ENV $TAG"
+          else
+            $SSH "bash $DEPLOY_DIR/deploy/deploy.sh $ENV $TAG"
+          fi
+
+      - name: 정리 (실패해도 실행)
+        if: always()
+        run: |
+          rm -f crane-shell-*.tar.gz ~/.ssh/crane_199
+          docker image rm "crane-shell:$TAG" 2>/dev/null || true
