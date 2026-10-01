@@ -1,4 +1,5 @@
 import { Clock, Moon, Sun, Sunrise, Sunset } from 'lucide-react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedSceneInfo } from '@crane/domain/3d';
 import { cn } from '@crane/core/lib/utils';
@@ -39,6 +40,9 @@ const PHASE_ICON: Record<SkyPhase, typeof Sun> = {
  * 시각을 고정해 둔 동안(manual)은 하늘색 테두리로 "실시간이 아님"을 알린다.
  * 씬이 수동 태양이면 시계 아이콘으로 두고 팝업에서 안내한다.
  *
+ * 열릴 때 포커스는 팝업 자체에 둔다 — 기본 동작(첫 포커스 가능 요소)이면
+ * 날짜 입력이 포커스를 받아 연도 칸이 선택된 채로 열린다.
+ *
  * PopoverTrigger 가 붙이는 data-popup-open 을 독 레일이 세어 팝업이 열린
  * 동안 접히지 않는다(scene-dock.tsx). TooltipProvider 는 ThreeSceneViewer 가
  * 감싸고 있어 여기서 두지 않는다.
@@ -49,6 +53,7 @@ export function SceneClockMenu({
   source = 'clock',
 }: SceneClockMenuProps) {
   const { t } = useTranslation();
+  const popupRef = useRef<HTMLDivElement>(null);
   const solarEnabled = sceneInfo?.lighting?.sunMode === 'solar';
   const state = useSceneSunState(regionId, sceneInfo?.siteLocation, source);
   const mode = useSceneClockStore((s) => s.mode);
@@ -84,7 +89,13 @@ export function SceneClockMenu({
         </TooltipTrigger>
         <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>
-      <PopoverPopup side="left" align="start" className="w-72 p-3">
+      <PopoverPopup
+        ref={popupRef}
+        initialFocus={popupRef}
+        side="left"
+        align="start"
+        className="w-72 p-3"
+      >
         <SceneClockPanel
           regionId={regionId}
           siteLocation={sceneInfo?.siteLocation}
