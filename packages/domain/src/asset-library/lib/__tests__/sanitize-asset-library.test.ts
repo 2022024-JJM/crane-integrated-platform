@@ -369,3 +369,28 @@ describe('파일 경로의 상위 탈출 판정', () => {
     expect(withPath('/asset-library/files/a/v1/crane..v2.glb')).toHaveLength(1);
   });
 });
+
+describe('원본 크기(최적화 기록)', () => {
+  const withOriginal = (originalSizeBytes: unknown) =>
+    sanitizeAssetLibraryDocument({
+      assets: [
+        asset({
+          versions: [
+            version({
+              file: { ...version().file, originalSizeBytes } as never,
+            }),
+          ],
+        }),
+      ],
+    }).assets[0].versions[0].file;
+
+  it('양수만 받고 정수로 내린다', () => {
+    expect(withOriginal(1234.9).originalSizeBytes).toBe(1234);
+  });
+
+  it('0·음수·숫자가 아닌 값·NaN 은 필드 자체를 두지 않는다', () => {
+    for (const value of [0, -5, '100', Number.NaN, null, undefined]) {
+      expect(withOriginal(value)).not.toHaveProperty('originalSizeBytes');
+    }
+  });
+});

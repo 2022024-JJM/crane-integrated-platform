@@ -36,6 +36,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
   const saved: AssetLibraryDocument[] = [];
   const files = new Map<string, Blob>();
   const removed: string[] = [];
+  const optimizeRequests: boolean[] = [];
   let failSave = false;
   let conflictSave = false;
   let failPut = false;
@@ -44,6 +45,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
 
   const repository: AssetLibraryRepository = {
     localOnly: true,
+    canOptimize: true,
     load: async () => {
       loadCalls += 1;
       return initial;
@@ -54,11 +56,16 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
       if (failSave) throw new Error('save failed');
       saved.push(structuredClone(document));
     },
-    putVersionFile: async (target, blob) => {
+    putVersionFile: async (target, blob, options) => {
       if (failPut) throw new Error('put failed');
       const key = `files/${target.assetId}/v${target.version}/${target.fileName}`;
       files.set(key, blob);
-      return { storage: 'browser', key } satisfies AssetFileRef;
+      optimizeRequests.push(options?.optimize === true);
+      const ref = { storage: 'browser', key } satisfies AssetFileRef;
+      // 최적화를 요청받으면 절반 크기로 줄어든 것으로 친다.
+      return options?.optimize
+        ? { ref, sizeBytes: Math.floor(blob.size / 2), optimized: true }
+        : { ref, sizeBytes: blob.size, optimized: false };
     },
     putThumbnail: async (assetId, blob) => {
       if (failPut) throw new Error('put failed');
@@ -80,6 +87,7 @@ function createRepository(initial: AssetLibraryDocument = emptyDocument) {
     saved,
     files,
     removed,
+    optimizeRequests,
     get loadCalls() {
       return loadCalls;
     },
@@ -771,5 +779,79 @@ describe('버전 지우기·일괄 작업', () => {
     ).toBe(2);
     expect(repo.removed.sort()).toEqual([a!.id, b!.id].sort());
     expect(store.getState().assets.map((x) => x.id)).toEqual(['okpo-ttc']);
+  });
+});
+
+describe('등록 시 최적화', () => {
+  const base = {
+    description: '',
+    sites: [],
+    tags: [],
+    note: '',
+    contentHash: 'sha256:orig',
+  };
+
+  it('모델 GLB 에 요청하면 최적화해 저장하고 원본 크기를 남긴다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    expect(store.getState().canOptimize).toBe(true);
+    const record = await store.getState().importAsset(
+      { ...base, file: glbFile(), kind: 'model', name: 'Opt', optimize: true },
+      'me',
+    );
+    expect(repo.optimizeRequests).toEqual([true]);
+    expect(record?.versions[0].file).toMatchObject({
+      sizeBytes: 2,
+      originalSizeBytes: 4,
+      // 해시는 올린 원본의 것이다.
+      contentHash: 'sha256:orig',
+    });
+  });
+
+  it('요청하지 않으면 올린 그대로 — 원본 크기 필드가 없다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const record = await store
+      .getState()
+      .importAsset({ ...base, file: glbFile(), kind: 'model', name: 'Raw' }, 'me');
+    expect(repo.optimizeRequests).toEqual([false]);
+    expect(record?.versions[0].file.sizeBytes).toBe(4);
+    expect(record?.versions[0].file).not.toHaveProperty('originalSizeBytes');
+  });
+
+  it('지도·도면에는 요청해도 걸지 않는다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    await store.getState().importAsset(
+      { ...base, file: glbFile(), kind: 'map', name: 'Map', optimize: true },
+      'me',
+    );
+    await store.getState().importAsset(
+      {
+        ...base,
+        file: new File([new Uint8Array([1])], 'plan.pdf'),
+        kind: 'drawing',
+        name: 'Plan',
+        optimize: true,
+      },
+      'me',
+    );
+    expect(repo.optimizeRequests).toEqual([false, false]);
+  });
+
+  it('새 버전에도 같은 규칙이다', async () => {
+    const { store, repo } = setup();
+    await store.getState().load();
+    const record = await store
+      .getState()
+      .importAsset({ ...base, file: glbFile(), kind: 'model', name: 'V' }, 'me');
+    await store.getState().addVersion(
+      record!.id,
+      { file: glbFile('b.glb'), note: '', contentHash: null, optimize: true },
+      'me',
+    );
+    expect(repo.optimizeRequests).toEqual([false, true]);
+    const after = store.getState().assets.find((a) => a.id === record!.id)!;
+    expect(after.versions[1].file.originalSizeBytes).toBe(4);
   });
 });

@@ -394,6 +394,11 @@ export function AssetInfoTab({
               </button>
             </span>
           </ReadOnlyRow>
+          {version.file.originalSizeBytes !== undefined ? (
+            <ReadOnlyRow label={t('asset-library:optimize.original')}>
+              {formatBytes(version.file.originalSizeBytes)}
+            </ReadOnlyRow>
+          ) : null}
           <ReadOnlyRow label={t('asset-library:field.hash')}>
             <span title={version.file.contentHash ?? undefined}>
               {shortenContentHash(version.file.contentHash)}

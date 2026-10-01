@@ -33,6 +33,7 @@ import {
 } from '../lib/analyze-asset-file';
 import { AssetKindIcon } from './asset-badges';
 import { FormRow, SitePicker, TagEditor, TextArea } from './asset-form-fields';
+import { AssetOptimizeOption } from './asset-optimize-option';
 
 const ACCEPT = ASSET_UPLOAD_EXTENSIONS.map((ext) => `.${ext}`).join(',');
 
@@ -46,6 +47,8 @@ interface AssetImportDialogProps {
   /** 목록이 보고 있던 분류 — 그 위치에서 등록하면 그 분류로 시작한다. */
   defaultCategory: string;
   localOnly: boolean;
+  /** 등록할 때 모델을 최적화할 수 있는 환경인지. */
+  canOptimize: boolean;
   onClose: () => void;
   /** 등록을 수행한다. 성공하면 true — 다이얼로그는 호출부가 닫는다. */
   onSubmit: (input: ImportAssetInput) => Promise<boolean>;
@@ -59,6 +62,7 @@ export function AssetImportDialog({
   defaultSites,
   defaultCategory,
   localOnly,
+  canOptimize,
   onClose,
   onSubmit,
 }: AssetImportDialogProps) {
@@ -79,6 +83,7 @@ export function AssetImportDialog({
             defaultSites={defaultSites}
             defaultCategory={defaultCategory}
             localOnly={localOnly}
+            canOptimize={canOptimize}
             onClose={onClose}
             onSubmit={onSubmit}
           />
@@ -95,6 +100,7 @@ function ImportForm({
   defaultSites,
   defaultCategory,
   localOnly,
+  canOptimize,
   onClose,
   onSubmit,
 }: Omit<AssetImportDialogProps, 'open'>) {
@@ -111,6 +117,7 @@ function ImportForm({
   const [nameEdited, setNameEdited] = useState(false);
   const [kind, setKind] = useState<AssetKind | null>(null);
   const [sites, setSites] = useState<AssetSiteId[]>(defaultSites);
+  const [optimize, setOptimize] = useState(true);
   const [category, setCategory] = useState(defaultCategory);
   const [tags, setTags] = useState<string[]>([]);
   const [description, setDescription] = useState('');
@@ -174,6 +181,7 @@ function ImportForm({
       name: name.trim(),
       description: description.trim(),
       category: category.trim(),
+      optimize: canOptimize && kind === 'model' && optimize,
       sites,
       tags,
       note: note.trim(),
@@ -333,6 +341,11 @@ function ImportForm({
                 ))}
               </div>
             </div>
+          ) : null}
+
+          {/* 모델만 — 지도는 타일·LOD 를 만드는 전용 파이프라인이 따로 있다. */}
+          {canOptimize && kind === 'model' ? (
+            <AssetOptimizeOption checked={optimize} onChange={setOptimize} />
           ) : null}
 
           <div className="flex flex-col gap-1">

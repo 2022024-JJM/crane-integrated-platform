@@ -138,6 +138,9 @@ function sanitizeFile(value: unknown): AssetFile | null {
         ? Math.floor(value.sizeBytes)
         : null,
     contentHash: toText(value.contentHash, 160) || null,
+    ...(isFiniteNumber(value.originalSizeBytes) && value.originalSizeBytes > 0
+      ? { originalSizeBytes: Math.floor(value.originalSizeBytes) }
+      : {}),
   };
 }
 

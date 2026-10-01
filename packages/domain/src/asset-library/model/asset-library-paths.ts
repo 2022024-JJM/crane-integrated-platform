@@ -18,6 +18,13 @@ export const ASSET_LIBRARY_DIR = 'asset-library';
 export const ASSET_LIBRARY_DOCUMENT_PATH = `/${ASSET_LIBRARY_DIR}/library.json`;
 /** 배포 파일에서 미리 뽑아 둔 통계 표(scripts/asset-library-stats.mjs). */
 export const ASSET_LIBRARY_STATS_PATH = `/${ASSET_LIBRARY_DIR}/stats.json`;
+/**
+ * 최적화해 저장한 버전의 **원본**을 두는 곳(저장소 루트 기준). 배포되지 않고,
+ * 파이프라인을 고친 뒤 다시 최적화할 때의 입력이다(`assets-src/models` 와 같은
+ * 역할). 그 아래는 버전 파일 키와 같은 `<id>/v<N>/<name>` 이다.
+ */
+export const ASSET_LIBRARY_ORIGINALS_DIR = 'assets-src/asset-library';
+
 /** dev 저장 미들웨어 경로. `/file` 하위는 바이너리 업로드·삭제. */
 export const DEV_ASSET_LIBRARY_API_PATH = '/__dev/asset-library';
 

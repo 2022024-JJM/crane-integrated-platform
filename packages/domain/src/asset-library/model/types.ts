@@ -61,8 +61,17 @@ export interface AssetFile {
   format: string;
   /** 바이트 크기. 배포 파일은 통계 표에서 채우므로 null 일 수 있다. */
   sizeBytes: number | null;
-  /** `sha256:<hex>` 또는 `fnv1a64:<hex>`. 중복 감지·무결성 확인용. */
+  /**
+   * `sha256:<hex>` 또는 `fnv:<hex>`. 중복 감지·무결성 확인용. 올린 **원본**의
+   * 해시다 — 최적화해 저장한 파일의 해시가 아니다(같은 원본을 다시 올리는 것을
+   * 알아보려는 값이라).
+   */
   contentHash: string | null;
+  /**
+   * 등록할 때 최적화해 저장했으면 올린 원본의 바이트 크기. 없으면 올린 그대로다.
+   * `sizeBytes` 는 저장된(최적화된) 파일의 크기다.
+   */
+  originalSizeBytes?: number;
 }
 
 /** GLB 한 개의 기하 통계. 크기(size)는 모델 고유 단위다. */

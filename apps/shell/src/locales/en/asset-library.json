@@ -481,5 +481,14 @@
     "path": "Location",
     "expand": "Expand {{name}}",
     "collapse": "Collapse {{name}}"
+  },
+  "optimize": {
+    "label": "Optimize model",
+    "hint": "Shrinks and re-encodes textures and compresses geometry before storing. The uploaded original is kept separately.",
+    "result": "Optimized: {{before}} → {{after}}",
+    "skipped": "Optimizing did not make it smaller, so the file was stored as uploaded.",
+    "from": "← {{before}}",
+    "stored": "Stored optimized. Left is the stored size, right is the uploaded original.",
+    "original": "Original size"
   }
 }

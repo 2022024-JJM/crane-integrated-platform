@@ -54,6 +54,7 @@ import {
 } from '../model/use-asset-save-report';
 import { AssetStatusBadge } from './asset-badges';
 import { AssetConfirmDialog } from './asset-confirm-dialog';
+import { AssetOptimizeOption } from './asset-optimize-option';
 import { CommitInput } from './asset-form-fields';
 import { AssetVersionDiff } from './asset-version-diff';
 
@@ -103,6 +104,9 @@ function VersionUpload({
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
   const [revision, setRevision] = useState('');
+  const canOptimize = useAssetLibraryStore((state) => state.canOptimize);
+  const [optimize, setOptimize] = useState(true);
+  const offerOptimize = canOptimize && asset.kind === 'model';
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -148,6 +152,7 @@ function VersionUpload({
         file,
         note: note.trim(),
         contentHash: analysis.contentHash,
+        optimize: offerOptimize && optimize,
         ...(isDocumentAssetKind(asset.kind) && revision.trim()
           ? { revision: revision.trim() }
           : {}),
@@ -215,6 +220,14 @@ function VersionUpload({
               />
             ) : null}
           </div>
+          {offerOptimize ? (
+            <AssetOptimizeOption
+              compact
+              checked={optimize}
+              disabled={busy}
+              onChange={setOptimize}
+            />
+          ) : null}
           {problem ? (
             <p role="alert" className="text-destructive text-xs">
               {problem}
@@ -451,6 +464,17 @@ export function AssetVersionsTab({
                   <dt className="sr-only">{t('asset-library:field.size')}</dt>
                   <dd>
                     {formatBytes(resolveVersionSizeBytes(version, statsTable))}
+                    {/* 최적화해 저장한 버전 — 올린 원본에서 얼마나 줄었는지. */}
+                    {version.file.originalSizeBytes !== undefined ? (
+                      <span
+                        className="text-muted-foreground/80 ml-1.5"
+                        title={t('asset-library:optimize.stored')}
+                      >
+                        {t('asset-library:optimize.from', {
+                          before: formatBytes(version.file.originalSizeBytes),
+                        })}
+                      </span>
+                    ) : null}
                   </dd>
                 </div>
                 {stats ? (

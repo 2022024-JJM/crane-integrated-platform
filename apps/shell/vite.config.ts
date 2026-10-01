@@ -2,7 +2,10 @@ import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+import os from 'os';
 import fs from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { assetHashManifestPlugin } from './vite-plugin-asset-hash';
 import {
   SCENE_DIR,
@@ -17,6 +20,7 @@ import {
   parseAssetLibraryFileKey,
   ASSET_LIBRARY_REVISION_HEADER,
   hashAssetLibraryText,
+  ASSET_LIBRARY_ORIGINALS_DIR,
 } from '../../packages/domain/src/asset-library/model/asset-library-paths';
 
 const DEV_SCENE_API_PATH = '/__dev/scene';
@@ -203,6 +207,8 @@ function devVirtualTagsSavePlugin(): Plugin {
   };
 }
 
+const execFileAsync = promisify(execFile);
+
 const DEV_PREVIEW_API_PATH = '/__dev/preview-thumbnail';
 
 // PNG 시그니처(매직 넘버). 잘못된 바디가 public/previews/ 를 오염시키지 않게
@@ -284,6 +290,44 @@ function devPreviewSavePlugin(): Plugin {
   };
 }
 
+/** 최적화가 이보다 오래 걸리면 포기하고 원본을 쓴다. */
+const GLB_OPTIMIZE_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * GLB 를 최적화 파이프라인(`scripts/optimize-glb.mjs --single`)에 통과시킨다.
+ * 스크립트를 그대로 자식 프로세스로 돌린다 — 파이프라인의 순서·정책이 한 곳에만
+ * 있어야 `pnpm optimize:glb` 와 결과가 같다. 실패하면 null(호출부가 원본을 쓴다).
+ */
+async function optimizeGlbBuffer(
+  repoRoot: string,
+  input: Buffer,
+): Promise<Buffer | null> {
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'asset-optimize-'));
+  const inputPath = path.join(workDir, 'input.glb');
+  const outputPath = path.join(workDir, 'output.glb');
+  try {
+    await fs.writeFile(inputPath, input);
+    await execFileAsync(
+      process.execPath,
+      [
+        path.join(repoRoot, 'scripts', 'optimize-glb.mjs'),
+        '--single',
+        inputPath,
+        outputPath,
+      ],
+      { timeout: GLB_OPTIMIZE_TIMEOUT_MS },
+    );
+    const output = await fs.readFile(outputPath);
+    // 이미 최적화된 파일은 더 커질 수 있다 — 그때는 원본이 낫다.
+    return output.length > 0 && output.length < input.length ? output : null;
+  } catch (error) {
+    console.warn('Failed to optimize GLB. Storing the original.', error);
+    return null;
+  } finally {
+    await fs.rm(workDir, { recursive: true, force: true });
+  }
+}
+
 /** 라이브러리 문서의 최소 형태 — 객체이고 assets 가 배열. 정규화는 브라우저가 한다. */
 function isAssetLibraryShaped(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -314,6 +358,8 @@ function devAssetLibraryPlugin(): Plugin {
         'public',
         ASSET_LIBRARY_DIR,
       );
+      // 저장소 루트 — 최적화 스크립트와 원본 보관 위치의 기준.
+      const repoRoot = path.resolve(server.config.root, '..', '..');
 
       server.middlewares.use(
         DEV_ASSET_LIBRARY_API_PATH,
@@ -400,11 +446,37 @@ function devAssetLibraryPlugin(): Plugin {
                 });
                 return;
               }
+              // 최적화 요청 — GLB 버전 파일을 scripts/optimize-glb.mjs 의
+              // 파이프라인에 통과시켜 저장한다. 올린 원본은 assets-src 에 남긴다
+              // (파이프라인을 고친 뒤 다시 최적화할 때의 입력). 실패하면 원본
+              // 그대로 저장하고 그렇게 알린다 — 등록 자체를 막지 않는다.
+              let payload = body;
+              let optimized = false;
+              if (
+                parsed.kind === 'version' &&
+                requestUrl.searchParams.get('optimize') === '1' &&
+                parsed.fileName.toLowerCase().endsWith('.glb')
+              ) {
+                const result = await optimizeGlbBuffer(repoRoot, body);
+                if (result) {
+                  payload = result;
+                  optimized = true;
+                  const originalPath = path.join(
+                    repoRoot,
+                    ASSET_LIBRARY_ORIGINALS_DIR,
+                    parsed.assetId,
+                    `v${parsed.version}`,
+                    parsed.fileName,
+                  );
+                  await fs.mkdir(path.dirname(originalPath), { recursive: true });
+                  await fs.writeFile(originalPath, body);
+                }
+              }
               await fs.mkdir(path.dirname(filePath), { recursive: true });
               // 버전 파일은 "없을 때만" 쓴다(wx) — 위의 존재 확인과 쓰기
               // 사이에 다른 요청이 끼어들어도 덮어쓰지 않는다.
               try {
-                await fs.writeFile(filePath, body, {
+                await fs.writeFile(filePath, payload, {
                   flag: parsed.kind === 'version' ? 'wx' : 'w',
                 });
               } catch (error) {
@@ -416,7 +488,11 @@ function devAssetLibraryPlugin(): Plugin {
                 }
                 throw error;
               }
-              jsonResponse(res, 200, { key, bytes: body.length });
+              jsonResponse(res, 200, {
+                key,
+                bytes: payload.length,
+                optimized,
+              });
               return;
             }
 
@@ -442,6 +518,15 @@ function devAssetLibraryPlugin(): Plugin {
                   path.join(libraryDir, 'files', assetId, `v${versionParam}`),
                   { recursive: true, force: true },
                 );
+                await fs.rm(
+                  path.join(
+                    repoRoot,
+                    ASSET_LIBRARY_ORIGINALS_DIR,
+                    assetId,
+                    `v${versionParam}`,
+                  ),
+                  { recursive: true, force: true },
+                );
                 jsonResponse(res, 200, { ok: true });
                 return;
               }
@@ -449,6 +534,10 @@ function devAssetLibraryPlugin(): Plugin {
                 recursive: true,
                 force: true,
               });
+              await fs.rm(
+                path.join(repoRoot, ASSET_LIBRARY_ORIGINALS_DIR, assetId),
+                { recursive: true, force: true },
+              );
               await fs.rm(
                 path.join(libraryDir, 'thumbnails', `${assetId}.png`),
                 { force: true },

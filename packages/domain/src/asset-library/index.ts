@@ -165,7 +165,10 @@ export {
 export { hashBytes } from './lib/content-hash';
 export type { AssetBlobStore } from './lib/asset-blob-store';
 export { createMemoryBlobStore } from './lib/asset-blob-store';
-export type { AssetLibraryRepository } from './lib/asset-library-storage';
+export type {
+  AssetLibraryRepository,
+  AssetStoredFile,
+} from './lib/asset-library-storage';
 export {
   ASSET_LIBRARY_STORAGE_KEY,
   AssetLibraryConflictError,

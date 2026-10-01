@@ -481,5 +481,14 @@
     "path": "Locus",
     "expand": "{{name}} explica",
     "collapse": "{{name}} complica"
+  },
+  "optimize": {
+    "label": "Exemplar optima",
+    "hint": "Texturas minuit et recodit, geometriam comprimit antequam servet. Archetypum missum seorsum servatur.",
+    "result": "Optimatum: {{before}} → {{after}}",
+    "skipped": "Optimatio nihil minuit; fasciculus ut missus servatus est.",
+    "from": "← {{before}}",
+    "stored": "Optimatum servatum. Sinistra magnitudo servata, dextra archetypi.",
+    "original": "Magnitudo archetypi"
   }
 }

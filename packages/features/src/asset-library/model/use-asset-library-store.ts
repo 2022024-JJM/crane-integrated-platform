@@ -39,6 +39,8 @@ import {
   getCurrentAssetVersion,
   getNextAssetVersionNumber,
   removeAssetVersion,
+  type AssetFile,
+  type AssetStoredFile,
 } from '@crane/domain/asset-library';
 import { collectBuiltinAssetSources } from '../lib/builtin-asset-sources';
 import { loadSceneAssetSources } from '../lib/scene-asset-sources';
@@ -79,6 +81,8 @@ export interface ImportAssetInput {
   revision?: string;
   drawingNo?: string;
   contentHash: string | null;
+  /** 모델을 최적화해 저장한다(할 수 있는 환경에서만 듣는다). */
+  optimize?: boolean;
 }
 
 export interface AddVersionInput {
@@ -86,6 +90,7 @@ export interface AddVersionInput {
   note: string;
   revision?: string;
   contentHash: string | null;
+  optimize?: boolean;
 }
 
 export interface AssetLibraryState {
@@ -101,6 +106,8 @@ export interface AssetLibraryState {
   saveState: AssetLibrarySaveState;
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   localOnly: boolean;
+  /** 등록할 때 모델을 최적화할 수 있는 환경인지(dev 서버). */
+  canOptimize: boolean;
 
   /** `force` 는 이미 읽었어도 다시 읽는다(다른 곳에서 바뀌었을 때). */
   load: (options?: { force?: boolean }) => Promise<void>;
@@ -245,6 +252,34 @@ export function createAssetLibraryStore(
      */
     const isReady = () => get().status === 'ready';
 
+    /**
+     * 최적화를 걸지 — 요청했고, 모델이고, GLB 일 때만. 지도는 전용
+     * 파이프라인(타일·LOD)이 따로 있어 여기서 건드리지 않는다.
+     */
+    const canOptimizeFile = (
+      requested: boolean | undefined,
+      kind: AssetRecord['kind'],
+      fileName: string,
+    ) =>
+      requested === true &&
+      kind === 'model' &&
+      getFileExtension(fileName) === 'glb';
+
+    /** 저장 결과를 버전의 파일 정보로. */
+    const toAssetFile = (
+      stored: AssetStoredFile,
+      fileName: string,
+      upload: File,
+      contentHash: string | null,
+    ): AssetFile => ({
+      ref: stored.ref,
+      fileName,
+      format: getFileExtension(fileName),
+      sizeBytes: stored.sizeBytes,
+      contentHash,
+      ...(stored.optimized ? { originalSizeBytes: upload.size } : {}),
+    });
+
     const persist = (): Promise<boolean> => {
       if (!isReady()) return Promise.resolve(false);
       // 다른 곳에서 바뀐 뒤로는 다시 읽기 전까지 쓰지 않는다 — 어차피 거부되고,
@@ -331,6 +366,7 @@ export function createAssetLibraryStore(
       favorites: readFavorites(),
       saveState: 'idle',
       localOnly: false,
+      canOptimize: false,
 
       load: (options) => {
         // 여러 화면이 동시에 불러도 한 번만 읽는다.
@@ -355,6 +391,7 @@ export function createAssetLibraryStore(
               collections: merged.collections,
               statsTable,
               localOnly: repository.localOnly,
+              canOptimize: repository.canOptimize,
               // 다시 읽었으니 저장 못 한 변경과 충돌은 여기서 끝난다.
               saveState: 'idle',
             });
@@ -419,11 +456,13 @@ export function createAssetLibraryStore(
         const existingIds = new Set(get().assets.map((asset) => asset.id));
         const id = createAssetId(input.name, existingIds, deps.createId());
         const fileName = sanitizeAssetFileName(input.file.name);
-        let ref;
+        let stored;
         try {
-          ref = await deps
+          stored = await deps
             .getRepository()
-            .putVersionFile({ assetId: id, version: 1, fileName }, input.file);
+            .putVersionFile({ assetId: id, version: 1, fileName }, input.file, {
+              optimize: canOptimizeFile(input.optimize, input.kind, fileName),
+            });
         } catch (error) {
           console.error('[asset-library] Failed to store file.', error);
           return null;
@@ -437,13 +476,7 @@ export function createAssetLibraryStore(
             category: (input.category ?? '').trim().slice(0, ASSET_CATEGORY_MAX),
             sites: input.sites,
             tags: input.tags,
-            file: {
-              ref,
-              fileName,
-              format: getFileExtension(fileName),
-              sizeBytes: input.file.size,
-              contentHash: input.contentHash,
-            },
+            file: toAssetFile(stored, fileName, input.file, input.contentHash),
             note: input.note,
             revision: input.revision,
             drawingNo: input.drawingNo,
@@ -463,11 +496,13 @@ export function createAssetLibraryStore(
         if (asset.versions.length >= ASSET_VERSIONS_MAX) return null;
         const version = getNextAssetVersionNumber(asset);
         const fileName = sanitizeAssetFileName(input.file.name);
-        let ref;
+        let stored;
         try {
-          ref = await deps
+          stored = await deps
             .getRepository()
-            .putVersionFile({ assetId, version, fileName }, input.file);
+            .putVersionFile({ assetId, version, fileName }, input.file, {
+              optimize: canOptimizeFile(input.optimize, asset.kind, fileName),
+            });
         } catch (error) {
           console.error('[asset-library] Failed to store file.', error);
           return null;
@@ -477,13 +512,7 @@ export function createAssetLibraryStore(
           const next = addAssetVersion(
             current,
             {
-              file: {
-                ref,
-                fileName,
-                format: getFileExtension(fileName),
-                sizeBytes: input.file.size,
-                contentHash: input.contentHash,
-              },
+              file: toAssetFile(stored, fileName, input.file, input.contentHash),
               note: input.note,
               revision: input.revision,
             },

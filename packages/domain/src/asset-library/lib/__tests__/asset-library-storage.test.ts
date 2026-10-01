@@ -140,11 +140,19 @@ describe('브라우저 저장소 — save·파일', () => {
     const blobs = createMemoryBlobStore();
     const repo = createBrowserAssetLibraryRepository(blobs);
 
-    const ref = await repo.putVersionFile(
+    const stored = await repo.putVersionFile(
       { assetId: 'a', version: 2, fileName: 'a.glb' },
       new Blob(['x']),
+      // 브라우저에서는 최적화할 수 없다 — 요청해도 올린 그대로 저장한다.
+      { optimize: true },
     );
-    expect(ref).toEqual({ storage: 'browser', key: 'files/a/v2/a.glb' });
+    expect(repo.canOptimize).toBe(false);
+    expect(stored).toEqual({
+      ref: { storage: 'browser', key: 'files/a/v2/a.glb' },
+      sizeBytes: 1,
+      optimized: false,
+    });
+    const { ref } = stored;
     expect(await repo.resolveUrl(ref)).toBe('blob:one');
     expect(await repo.resolveUrl(ref)).toBe('blob:one');
     expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -164,7 +172,7 @@ describe('브라우저 저장소 — save·파일', () => {
     vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
     const blobs = createMemoryBlobStore();
     const repo = createBrowserAssetLibraryRepository(blobs);
-    const mine = await repo.putVersionFile(
+    const { ref: mine } = await repo.putVersionFile(
       { assetId: 'a', version: 1, fileName: 'a.glb' },
       new Blob(['x']),
     );
@@ -220,13 +228,16 @@ describe('dev 저장소', () => {
     fetchMock.mockResolvedValue(respond({ ok: true }));
     const repo = createDevAssetLibraryRepository();
     const blob = new Blob(['x']);
-    const ref = await repo.putVersionFile(
+    const stored = await repo.putVersionFile(
       { assetId: 'a', version: 3, fileName: 'a.glb' },
       blob,
     );
-    expect(ref).toEqual({
-      storage: 'public',
-      path: '/asset-library/files/a/v3/a.glb',
+    expect(repo.canOptimize).toBe(true);
+    // 서버가 크기를 알려 주지 않으면 올린 크기로 본다.
+    expect(stored).toEqual({
+      ref: { storage: 'public', path: '/asset-library/files/a/v3/a.glb' },
+      sizeBytes: 1,
+      optimized: false,
     });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(
@@ -377,5 +388,39 @@ describe('다른 곳에서 바뀐 문서를 덮어쓰지 않는다', () => {
         ASSET_LIBRARY_REVISION_HEADER
       ],
     ).toBe('');
+  });
+});
+
+describe('dev 저장소 — 최적화 요청', () => {
+  it('optimize 를 붙여 올리고, 서버가 알려 준 크기·결과를 돌려준다', async () => {
+    fetchMock.mockResolvedValue(respond({ bytes: 40, optimized: true }));
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'a', version: 1, fileName: 'a.glb' },
+      new Blob(['x'.repeat(100)]),
+      { optimize: true },
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${DEV_ASSET_LIBRARY_API_PATH}/file?key=files%2Fa%2Fv1%2Fa.glb&optimize=1`,
+    );
+    expect(stored).toMatchObject({ sizeBytes: 40, optimized: true });
+  });
+
+  it('서버가 최적화에 실패해 원본을 저장했으면 optimized 는 false 다', async () => {
+    fetchMock.mockResolvedValue(respond({ bytes: 100, optimized: false }));
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'a', version: 1, fileName: 'a.glb' },
+      new Blob(['x'.repeat(100)]),
+      { optimize: true },
+    );
+    expect(stored).toMatchObject({ sizeBytes: 100, optimized: false });
+  });
+
+  it('응답의 크기가 비정상이면 올린 크기로 본다', async () => {
+    fetchMock.mockResolvedValue(respond({ bytes: 'big', optimized: 'yes' }));
+    const stored = await createDevAssetLibraryRepository().putVersionFile(
+      { assetId: 'a', version: 1, fileName: 'a.glb' },
+      new Blob(['xyz']),
+    );
+    expect(stored).toMatchObject({ sizeBytes: 3, optimized: false });
   });
 });

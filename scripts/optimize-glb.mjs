@@ -3,6 +3,10 @@
 // 사용법:
 //   pnpm optimize:glb           # 전체 모델
 //   pnpm optimize:glb car.glb   # 특정 파일만
+//   node scripts/optimize-glb.mjs --single <입력.glb> <출력.glb>
+//                               # 파일 하나에 같은 파이프라인만 돌린다(백업·models/
+//                               # 탐색 없음). 자산 라이브러리의 등록 시 최적화가
+//                               # 쓴다(apps/shell/vite.config.ts devAssetLibraryPlugin).
 //
 // 동작:
 //   1. apps/shell/public/models/*.glb 원본을 assets-src/models/ 에 백업한다
@@ -125,6 +129,40 @@ async function stripTransmission(inputPath, outputPath) {
   console.log(`      transmission 제거: 머티리얼 ${count}개`);
 }
 
+/** 한 파일에 STAGES 를 차례로 돌린다. 중간 산출물은 workDir 에 둔다. */
+async function runPipeline(inputPath, outputPath, workDir, stem) {
+  let input = inputPath;
+  for (const [i, [cmd, args]] of STAGES.entries()) {
+    const isLast = i === STAGES.length - 1;
+    const output = isLast ? outputPath : join(workDir, `${stem}.${i}.glb`);
+    if (typeof cmd === 'function') {
+      await cmd(input, output);
+    } else {
+      execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
+    }
+    input = output;
+  }
+}
+
+// --single: 파일 하나만. 원본은 건드리지 않고 출력만 쓴다. 실패하면 exit 1.
+if (process.argv[2] === '--single') {
+  const [, , , inputPath, outputPath] = process.argv;
+  if (!inputPath || !outputPath) {
+    console.error('사용법: optimize-glb.mjs --single <입력.glb> <출력.glb>');
+    process.exit(1);
+  }
+  const singleWorkDir = mkdtempSync(join(tmpdir(), 'glb-optimize-'));
+  try {
+    await runPipeline(resolve(inputPath), resolve(outputPath), singleWorkDir, 'single');
+  } catch (error) {
+    console.error(error.stderr?.toString().trim() ?? error.message);
+    process.exit(1);
+  } finally {
+    rmSync(singleWorkDir, { recursive: true, force: true });
+  }
+  process.exit(0);
+}
+
 const only = process.argv.slice(2); // 파일명 인자로 부분 실행 가능
 
 /** models/ 를 재귀 탐색한다(하위 디렉토리 포함). MODELS_DIR 기준 상대 경로 반환. */
@@ -173,17 +211,7 @@ try {
     const stem = file.replace(/[/\\]/g, '_');
 
     try {
-      let input = backupPath;
-      for (const [i, [cmd, args]] of STAGES.entries()) {
-        const isLast = i === STAGES.length - 1;
-        const output = isLast ? publicPath : join(workDir, `${stem}.${i}.glb`);
-        if (typeof cmd === 'function') {
-          await cmd(input, output);
-        } else {
-          execFileSync(process.execPath, [CLI, cmd, input, output, ...args], { stdio: 'pipe' });
-        }
-        input = output;
-      }
+      await runPipeline(backupPath, publicPath, workDir, stem);
     } catch (error) {
       failures.push(file);
       console.error(`FAIL  ${file}: ${error.stderr?.toString().trim() ?? error.message}`);

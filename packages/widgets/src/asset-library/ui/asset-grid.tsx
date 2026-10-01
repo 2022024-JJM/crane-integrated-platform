@@ -200,7 +200,7 @@ const AssetCard = memo(function AssetCard({
         />
 
         {/* 카드 위 조작 — 덮개보다 위(z-10)에 있다. 왼쪽 위는 선택, 오른쪽
-            위는 즐겨찾기와 더 보기. */}
+            위는 더 보기와 즐겨찾기. */}
         <div
           className={cn(
             'absolute top-3.5 left-3.5 z-10 transition-opacity',
@@ -223,28 +223,6 @@ const AssetCard = memo(function AssetCard({
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
           <button
             type="button"
-            aria-pressed={favorite}
-            aria-label={t(
-              favorite
-                ? 'asset-library:browser.unfavorite'
-                : 'asset-library:browser.favorite',
-              { name: asset.name },
-            )}
-            onClick={() => onToggleFavorite(asset.id)}
-            className={cn(
-              'bg-background/85 focus-visible:ring-ring/60 flex size-7 cursor-pointer items-center justify-center rounded-full backdrop-blur-sm transition-opacity outline-none focus-visible:ring-2',
-              favorite
-                ? 'text-(--hanwha-orange-100) opacity-100'
-                : cn(
-                    'text-muted-foreground hover:text-foreground',
-                    overlayVisible,
-                  ),
-            )}
-          >
-            <Star className={cn('size-3.5', favorite && 'fill-current')} />
-          </button>
-          <button
-            type="button"
             aria-haspopup="menu"
             aria-label={t('asset-library:menu.more', { name: asset.name })}
             // 우클릭 메뉴를 같은 자리에서 연다 — 메뉴가 있다는 것이 보인다.
@@ -265,6 +243,28 @@ const AssetCard = memo(function AssetCard({
             )}
           >
             <Ellipsis className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-pressed={favorite}
+            aria-label={t(
+              favorite
+                ? 'asset-library:browser.unfavorite'
+                : 'asset-library:browser.favorite',
+              { name: asset.name },
+            )}
+            onClick={() => onToggleFavorite(asset.id)}
+            className={cn(
+              'bg-background/85 focus-visible:ring-ring/60 flex size-7 cursor-pointer items-center justify-center rounded-full backdrop-blur-sm transition-opacity outline-none focus-visible:ring-2',
+              favorite
+                ? 'text-(--hanwha-orange-100) opacity-100'
+                : cn(
+                    'text-muted-foreground hover:text-foreground',
+                    overlayVisible,
+                  ),
+            )}
+          >
+            <Star className={cn('size-3.5', favorite && 'fill-current')} />
           </button>
         </div>
       </ContextMenuTrigger>

@@ -56,9 +56,23 @@ export class AssetLibraryConflictError extends Error {
   }
 }
 
+/** 버전 파일을 저장한 결과. */
+export interface AssetStoredFile {
+  ref: AssetFileRef;
+  /** 저장된 파일의 바이트 크기(최적화했으면 최적화한 뒤의 크기). */
+  sizeBytes: number;
+  /** 최적화해 저장했는가. 요청했어도 실패하면 원본 그대로 저장하고 false 다. */
+  optimized: boolean;
+}
+
 export interface AssetLibraryRepository {
   /** 저장이 이 브라우저 안에만 남는 환경인지. */
   readonly localOnly: boolean;
+  /**
+   * 등록할 때 모델을 최적화할 수 있는 환경인지. 최적화는 Node 스크립트
+   * (`scripts/optimize-glb.mjs`)라 dev 서버에서만 된다.
+   */
+  readonly canOptimize: boolean;
   load(): Promise<AssetLibraryDocument>;
   loadStatsTable(): Promise<AssetStatsTable>;
   /**
@@ -66,11 +80,16 @@ export interface AssetLibraryRepository {
    * `AssetLibraryConflictError` 를 던진다.
    */
   save(document: AssetLibraryDocument): Promise<void>;
-  /** 버전 파일을 저장하고 그 위치를 돌려준다. 같은 위치에 덮어쓰지 않는다. */
+  /**
+   * 버전 파일을 저장하고 그 위치를 돌려준다. 같은 위치에 덮어쓰지 않는다.
+   * `optimize` 는 GLB 를 최적화 파이프라인에 통과시켜 저장한다(할 수 있는
+   * 환경에서만).
+   */
   putVersionFile(
     target: { assetId: string; version: number; fileName: string },
     blob: Blob,
-  ): Promise<AssetFileRef>;
+    options?: { optimize?: boolean },
+  ): Promise<AssetStoredFile>;
   putThumbnail(assetId: string, blob: Blob): Promise<AssetFileRef>;
   /** 자산의 모든 파일(버전·썸네일)을 지운다. */
   removeAssetFiles(assetId: string): Promise<void>;
@@ -167,6 +186,7 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
 
   return {
     localOnly: false,
+    canOptimize: true,
     load: async () => {
       const loaded = await fetchDeployedDocument();
       revision = loaded.revision;
@@ -205,15 +225,35 @@ export function createDevAssetLibraryRepository(): AssetLibraryRepository {
         revision = result.revision;
       }
     },
-    putVersionFile: (target, blob) =>
-      postFile(
-        buildAssetVersionFileKey(
-          target.assetId,
-          target.version,
-          target.fileName,
-        ),
-        blob,
-      ),
+    putVersionFile: async (target, blob, options) => {
+      const key = buildAssetVersionFileKey(
+        target.assetId,
+        target.version,
+        target.fileName,
+      );
+      const params = new URLSearchParams({ key });
+      if (options?.optimize) params.set('optimize', '1');
+      const response = await fetch(
+        `${DEV_ASSET_LIBRARY_API_PATH}/file?${params.toString()}`,
+        { method: 'POST', body: blob },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to store asset file. HTTP ${response.status}`);
+      }
+      const result: unknown = await response.json().catch(() => null);
+      const info =
+        typeof result === 'object' && result !== null
+          ? (result as { bytes?: unknown; optimized?: unknown })
+          : {};
+      return {
+        ref: { storage: 'public', path: toAssetLibraryPublicPath(key) },
+        sizeBytes:
+          typeof info.bytes === 'number' && Number.isFinite(info.bytes)
+            ? info.bytes
+            : blob.size,
+        optimized: info.optimized === true,
+      };
+    },
     putThumbnail: (assetId, blob) =>
       postFile(buildAssetThumbnailKey(assetId), blob),
     removeAssetFiles: async (assetId) => {
@@ -345,6 +385,7 @@ export function createBrowserAssetLibraryRepository(
 
   return {
     localOnly: true,
+    canOptimize: false,
     load: async () => {
       const stored = readStoredRecord();
       if (stored?.isCurrent) {
@@ -396,8 +437,8 @@ export function createBrowserAssetLibraryRepository(
       );
       revision = current + 1;
     },
-    putVersionFile: (target, blob) =>
-      put(
+    putVersionFile: async (target, blob) => ({
+      ref: await put(
         buildAssetVersionFileKey(
           target.assetId,
           target.version,
@@ -405,6 +446,9 @@ export function createBrowserAssetLibraryRepository(
         ),
         blob,
       ),
+      sizeBytes: blob.size,
+      optimized: false,
+    }),
     putThumbnail: (assetId, blob) => put(buildAssetThumbnailKey(assetId), blob),
     removeAssetFiles: async (assetId) => {
       const prefix = `files/${assetId}/`;

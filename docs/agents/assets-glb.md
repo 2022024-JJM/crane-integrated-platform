@@ -11,6 +11,8 @@
 | 배포 GLB(압축본) | `apps/shell/public/models/`, `apps/shell/public/maps/` |
 | 압축 전 원본 보관 | `assets-src/models/`, `assets-src/maps/` (+ `.nolod`·`.orig` 부산물), 절차 전문 `assets-src/README.md` |
 | 모델 압축 `pnpm optimize:glb <파일>` | `scripts/optimize-glb.mjs` — 원본을 `assets-src/` 로 자동 백업 |
+| 파일 하나만 압축 `node scripts/optimize-glb.mjs --single <입력> <출력>` | 같은 스크립트 — 백업·`models/` 탐색 없이 파이프라인만. 자산 라이브러리의 등록 시 최적화가 쓴다(`docs/agents/asset-library.md`) |
+| 압축 전 원본 보관(자산 라이브러리 등록분) | `assets-src/asset-library/<id>/v<N>/` |
 | 지도 압축 `pnpm optimize:map <파일>` | `scripts/optimize-map.mjs` — 파일명 인자 필수(없으면 모든 지도가 대상) |
 | 지도 동일 평면 겹침 검사 `node scripts/audit-map-layers.mjs <파일>` | `scripts/audit-map-layers.mjs` — 진단 전용(항상 exit 0). `optimize:map` 이 같은 함수로 표시를 띄우고 출력을 검증한다 |
 | 지형 타일+LOD `node scripts/tile-terrain-glb.mjs --lod` | `scripts/tile-terrain-glb.mjs` |

@@ -39,6 +39,7 @@ import {
   countAssetPlacements,
   countAssetScope,
   DEFAULT_ASSET_QUERY,
+  formatBytes,
   getAssetAttention,
   getAssetScope,
   getCurrentAssetVersion,
@@ -196,6 +197,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
   const favoriteIds = useAssetLibraryStore((state) => state.favorites);
   const saveState = useAssetLibraryStore((state) => state.saveState);
   const localOnly = useAssetLibraryStore((state) => state.localOnly);
+  const canOptimize = useAssetLibraryStore((state) => state.canOptimize);
   const load = useAssetLibraryStore((state) => state.load);
   const loadUsage = useAssetLibraryStore((state) => state.loadUsage);
   const updateManyMetadata = useAssetLibraryStore(
@@ -593,7 +595,18 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
     if (isAssetSaveFailed()) {
       toast.error(t('asset-library:toast.saveFailed'));
     } else {
-      toast.success(t('asset-library:toast.imported', { name: record.name }));
+      const stored = record.versions[0].file;
+      toast.success(t('asset-library:toast.imported', { name: record.name }), {
+        description:
+          stored.originalSizeBytes !== undefined
+            ? t('asset-library:optimize.result', {
+                before: formatBytes(stored.originalSizeBytes),
+                after: formatBytes(stored.sizeBytes),
+              })
+            : input.optimize
+              ? t('asset-library:optimize.skipped')
+              : undefined,
+      });
     }
     navigate(hrefFor(record.id));
     return true;
@@ -1258,6 +1271,7 @@ export function AssetLibraryPage({ basePath }: AssetLibraryPageProps) {
         defaultSites={defaultSites}
         defaultCategory={scope.category ?? ''}
         localOnly={localOnly}
+        canOptimize={canOptimize}
         onClose={() => {
           setImportOpen(false);
           setDroppedFile(null);
